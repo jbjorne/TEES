@@ -63,3 +63,7 @@ def indent(elem, level=0):
             e.tail = i
     if level and (not elem.tail or not elem.tail.strip()):
         elem.tail = i
+
+def write(rootElement, filename):        
+    indent(rootElement)
+    ElementTree.ElementTree(rootElement).write(filename)
