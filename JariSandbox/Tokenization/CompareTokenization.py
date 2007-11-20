@@ -1,11 +1,34 @@
+"""
+  Program:    Compare Tokenization
+  Date:       Nov. 20, 2007
+  Author:     Jari Bjorne
+
+  Description: This program compares two tokenizations, which could be f.e.
+               created with two different tokenizators.
+                
+  Status: Working
+
+  Dependencies: None
+"""
+
 def compareSentences(sentence1, sentence2):
+    """Compares two sentences.
+
+    Sentence2 is compared two sentence1. The return value is a tuple containing
+    statistics and a list of the differing areas.
+
+    Keyword arguments:
+    sentence1 -- string
+    sentence2 -- string
+    """ 
+               
     truePositives = 0
     falsePositives = 0
     falseNegatives = 0
     
     index2 = 0
-    begin1 = 0
-    begin2 = 0
+    begin1 = 0 # Begin position for possible difference area
+    begin2 = 0 # Begin position for possible difference area
     differences = []
     difference = False
     for i in range(len(sentence1)):
@@ -40,7 +63,8 @@ if __name__=="__main__":
     except ImportError:
         print "Psyco not installed"
     
-    optparser = OptionParser(usage="%prog [options]\nCompare two tokenizations")
+    progDescription = "Compare two tokenizations. The input files must have the tokenizations in the following format: One sentence per line, and tokens separated by a single whitespace. The program will print to stdout statistics and the differences in the tokenization."    
+    optparser = OptionParser(usage="%prog [options]\n" + progDescription)
     optparser.add_option("-m", "--model", dest="model", default="BioInferMedpostTokenization.txt", help="The model tokenization", metavar="FILE")
     optparser.add_option("-t", "--test", dest="test", default="BioInferJulieTokenization.txt", help="The tokenization that will be compared to the model tokenization", metavar="FILE")
     (options, args) = optparser.parse_args()
@@ -54,6 +78,8 @@ if __name__=="__main__":
     
     print
     print "Comparing: " + options.model + " / " + options.test
+    print "Line: Precision, Recall, True Positives, False Positives, False Negatives"
+    print
     precisionSum = 0.0
     recallSum = 0.0
     for i in range(len(modelLines)):
