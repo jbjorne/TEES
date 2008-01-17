@@ -1,5 +1,8 @@
 def overlap(range1, range2):
-    """ Checks whether two ranges (f.e. characted offsets overlap)
+    """ Checks whether two ranges (f.e. character offsets overlap)
+    
+    This snippet by Steven D'Aprano is from the forum of
+    www.thescripts.com.
     
     Keyword arguments:
     range1 -- a tuple where range1[0] <= range1[1]
