@@ -1,3 +1,19 @@
+def charOffsetToTuples(charOffset):
+    """ Splits a comma separated list of character offsets into tuples of integers.
+
+    Keyword arguments:
+    charOffset -- a string in the format "0-2,5-20"
+    
+    Returns:
+    A list of tuples of two integers each
+    """
+    tuples = []
+    ranges = charOffset.split(",")
+    for r in ranges:
+        numbers = r.split("-")
+        tuples.append( (int(numbers[0]),int(numbers[1])) )
+    return tuples
+
 def overlap(range1, range2):
     """ Checks whether two ranges (f.e. character offsets overlap)
     
