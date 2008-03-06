@@ -1,3 +1,8 @@
+def charOffsetToSingleTuple(charOffset):
+    tuples = charOffsetToTuples(charOffset)
+    assert(len(tuples) == 1)
+    return tuples[0] 
+
 def charOffsetToTuples(charOffset):
     """ Splits a comma separated list of character offsets into tuples of integers.
 
