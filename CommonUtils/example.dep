@@ -1,0 +1,23 @@
+#First line are the tokens, space-separated
+#you can append "_[0-9]+" to a token to make it unique
+#for specifying the dependencies. The part starting with _ won't be
+#printed
+
+#here are the tokens - see how the second "a" is marked
+I have a dog and a_2 cat with no tail .
+
+#Once the tokens have been specified, here go the dependencies
+#
+# * one dependency per line
+# * left_token type right_token
+
+I <nsubj have
+have dobj> dog
+a <det dog
+dog conj> cat
+dog cc> and
+a_2 <det cat
+dog prep> with
+with pobj> tail
+no <det tail
+have punct> .
