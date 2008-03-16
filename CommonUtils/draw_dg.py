@@ -291,12 +291,12 @@ if __name__=="__main__":
     desc=\
 """A program for plotting dependency structures into SVG.
 
-cat dependencies | python draw_dg.py > dependencies.svg
+cat example.dep | python draw_dg.py > example.svg
 
 The format of the dependency file is specified in example.dep
 To get a PDF version of the plot, use the script svg2pdf.sh as follows:
 
-cat dependencies | python draw_dg.py | ./svg2pdf.sh > dependencies.pdf
+cat example.svg | ./svg2pdf.sh > example.pdf
 
 For this to work, you need inkscape, pdf2ps, ps2epsi, and epstopdf. See
 the script svg2pdf for details if needed.
