@@ -30,6 +30,7 @@ class Token:
     def __init__(self,txt,pos,styleDict={}):
         
         self.txt,self.spec=tokSpec(txt)
+        self.otherLines=[] #text in all other lines
         self.pos=pos
         self.x=0#layout() fills this
         self.y=0#layout() fills this
@@ -43,9 +44,15 @@ class Token:
         return self.txt==txt and self.spec==spec
 
     def width(self):
-        return textWidth(self.txt,SVGOptions.fontSize)
+        mainW=textWidth(self.txt,SVGOptions.fontSize)
+        if self.otherLines:
+            lineW=max(textWidth(txt,SVGOptions.fontSize) for txt in self.otherLines)
+        else:
+            lineW=0
+        return max(mainW,lineW)
 
     def toSVG(self):
+        nodes=[]
         node=ET.Element("text")
         node.set("systemLanguage","en")
         node.set("x",strint(self.x))
@@ -55,7 +62,8 @@ class Token:
         styleStr=";".join("%s:%s"%(var,val) for var,val in self.style().items())
         node.set("style",styleStr)
         node.text=self.txt
-        return [node]
+        nodes.append(node)
+        return nodes
 
     def style(self):
         return self.styleDict
@@ -300,7 +308,13 @@ def readInput(lines):
             continue
         if line.startswith("tokens:"):
             tokLine=line[7:].strip()
-            tokens=[Token(txt,idx) for (idx,txt) in enumerate(tokLine.split())]
+            if not tokens:
+                tokens=[Token(txt,idx) for (idx,txt) in enumerate(tokLine.split())]
+            else:
+                texts=tokLine.split()
+                assert len(texts)==len(tokens), "This token line has an uneven number of tokens: %s"%tokLine
+                for tok,txt in zip(tokens,texts):
+                    tok.otherLines.append(txt)
         else: #we have a dependency or token style
             if not tokens:
                 raise ValueError("You must have tokens line, starting with \"tokens:\"")
