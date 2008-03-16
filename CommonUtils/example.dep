@@ -4,8 +4,9 @@
 #printed
 
 #here are the tokens - see how the second "a" is marked
-tokens: I        have a dog and a_2 cat with no tail .
-
+tokens: I have a dog       and a_2 cat with no tail .
+tokens: 1  2   3  <<NONE>>   5   6   7   8    9  10  11
+tokens: I have a dog       and a cat with no tail .
 #Once the tokens have been specified, here go the dependencies
 #
 # * one dependency per line

@@ -10,6 +10,7 @@ class SVGOptions:
     tokenSpace=10 #horizontal space between tokens
     depVertSpace=20
     minDepPadding=10 #How many points, at least, should be reserved horizontally for the dependency rounded corner
+    lineSep=5 #How many points, vertically, should go between lines?
 
 def strint(i):
     return str(int(i))
@@ -52,17 +53,22 @@ class Token:
         return max(mainW,lineW)
 
     def toSVG(self):
+        runningY=self.y
+        texts=[self.txt]+self.otherLines
+        texts.reverse()
         nodes=[]
-        node=ET.Element("text")
-        node.set("systemLanguage","en")
-        node.set("x",strint(self.x))
-        node.set("y",strint(self.y))
-        node.set("font-size",strint(SVGOptions.fontSize))
-        node.set("font-family","monospace")
-        styleStr=";".join("%s:%s"%(var,val) for var,val in self.style().items())
-        node.set("style",styleStr)
-        node.text=self.txt
-        nodes.append(node)
+        for txt in texts:
+            node=ET.Element("text")
+            node.set("systemLanguage","en")
+            node.set("x",strint(self.x))
+            node.set("y",strint(runningY))
+            node.set("font-size",strint(SVGOptions.fontSize))
+            node.set("font-family","monospace")
+            styleStr=";".join("%s:%s"%(var,val) for var,val in self.style().items())
+            node.set("style",styleStr)
+            node.text=txt
+            nodes.append(node)
+            runningY-=SVGOptions.fontSize+SVGOptions.lineSep
         return nodes
 
     def style(self):
@@ -96,8 +102,8 @@ class Dep:
     def minWidth(self):
         return textWidth(self.type,SVGOptions.labelFontSize)+2*SVGOptions.minDepPadding
 
-    def computeParameters(self):
-        y=self.tok1.y-SVGOptions.fontSize
+    def computeParameters(self,textLines):
+        y=self.tok1.y-(SVGOptions.fontSize+SVGOptions.lineSep)*textLines
         frox=self.tok1.x
         tox=self.tok2.x
         corner1x,corner1y=frox,y-self.height*SVGOptions.depVertSpace
@@ -273,11 +279,11 @@ def generateSVG(tokens,dependencies):
 #The main layout function -> fills in all the parameters needed to draw the tree
 def layout(tokens,deps):
     maxHeight=depHeights(len(tokens),deps)
-    baseY=SVGOptions.fontSize+maxHeight*SVGOptions.depVertSpace+SVGOptions.labelFontSize//2+5
+    baseY=(len(tokens[0].otherLines)+1)*(SVGOptions.fontSize+SVGOptions.lineSep)+SVGOptions.lineSep+maxHeight*SVGOptions.depVertSpace+SVGOptions.labelFontSize//2+5
     simpleTokenLayout(tokens,deps,baseY)
     improveTokenLayout(tokens,deps)
     for dep in deps:
-        dep.computeParameters()
+        dep.computeParameters(1+len(tokens[0].otherLines))
 
 
 def styleStr2Dict(s):
@@ -314,7 +320,10 @@ def readInput(lines):
                 texts=tokLine.split()
                 assert len(texts)==len(tokens), "This token line has an uneven number of tokens: %s"%tokLine
                 for tok,txt in zip(tokens,texts):
-                    tok.otherLines.append(txt)
+                    if txt!="<<NONE>>":
+                        tok.otherLines.append(txt)
+                    else:
+                        tok.otherLines.append("")
         else: #we have a dependency or token style
             if not tokens:
                 raise ValueError("You must have tokens line, starting with \"tokens:\"")
