@@ -27,7 +27,7 @@ def tokSpec(tokTxt):
 
 class Token:
 
-    def __init__(self,txt,pos):
+    def __init__(self,txt,pos,styleDict={}):
         
         self.txt,self.spec=tokSpec(txt)
         self.pos=pos
@@ -35,6 +35,9 @@ class Token:
         self.y=0#layout() fills this
         self.styleDict={"text-anchor":"middle",
                     "fill":"black"}
+        #override the defaults
+        for k,v in styleDict.items():
+            self.styleDict[k]=v
 
     def matches(self,txt,spec):
         return self.txt==txt and self.spec==spec
@@ -61,7 +64,7 @@ class Token:
 class Dep:
 
     #Makes dependency from tok1 to tok2
-    def __init__(self,tok1,tok2,dType):
+    def __init__(self,tok1,tok2,dType,arcStyleDict={},labelStyleDict={}):
         self.tok1=tok1
         self.tok2=tok2
         if tok1.pos>tok2.pos:
@@ -74,6 +77,13 @@ class Dep:
                        "stroke-width":"1"}
         self.labelStyleDict={"text-anchor":"middle",
                             "fill":"black"}
+        #override the defaults
+        for k,v in arcStyleDict.items():
+            self.arcStyleDict[k]=v
+        #override the defaults
+        for k,v in labelStyleDict.items():
+            self.labelStyleDict[k]=v
+
 
     def minWidth(self):
         return textWidth(self.type,SVGOptions.labelFontSize)+2*SVGOptions.minDepPadding
@@ -128,9 +138,9 @@ class Dep:
 
             recNode=ET.Element("rect")
             recNode.set("x",strint(txtX-textW/2-1))
-            recNode.set("y",strint(self.param["midy"]-2))
+            recNode.set("y",strint(self.param["midy"]-4))
             recNode.set("width",strint(textW+4))
-            recNode.set("height",strint(4))
+            recNode.set("height",strint(8))
             recNode.set("style","fill:white")
             
             labNode=ET.Element("text")
@@ -252,6 +262,24 @@ def layout(tokens,deps):
         dep.computeParameters()
 
 
+def styleStr2Dict(s):
+    if not s:
+        return {}
+    s=s.strip()
+    if s.endswith(";"):
+        s=s[:-1]
+    d={}
+    for x in s.split(";"):
+        try:
+            k,v=x.split(":")
+        except:
+            print >> sys.stderr, ">>",x,"<<"
+            raise
+        d[k]=v
+    return d
+
+depRe=re.compile(r"^(\S+) +(\S+) +(\S+) *(#ARC *(.*?))? *(#LAB *(.*))?$")
+
 def readInput(lines):
     tokens=None
     deps=[]
@@ -264,10 +292,13 @@ def readInput(lines):
             tokensRead=True
             tokens=[Token(txt,idx) for (idx,txt) in enumerate(line.split())]
         else: #we have a dependency
-            try:
-                t1,dType,t2=line.split()
-            except ValueError:
+            match=depRe.match(line)
+            if not match:
                 raise ValueError("This is not a dependency line: %s"%line)
+            
+            t1=match.group(1)
+            dType=match.group(2)
+            t2=match.group(3)
             t1txt,t1spec=tokSpec(t1)
             matching1=[tok for tok in tokens if tok.matches(t1txt,t1spec)]
             if len(matching1)!=1:
@@ -278,7 +309,10 @@ def readInput(lines):
                 raise ValueError("I have %d candidates for %s in dependency \"%s\""%(len(matching2),t2,line))
             tok1=matching1[0]
             tok2=matching2[0]
-            deps.append(Dep(tok1,tok2,dType))
+            arcStyleDict=styleStr2Dict(match.group(5))
+            labStyleDict=styleStr2Dict(match.group(7))
+
+            deps.append(Dep(tok1,tok2,dType,arcStyleDict,labStyleDict))
     if len(deps)==0:
         raise ValueError("Zero dependencies read!")
     return tokens,deps
