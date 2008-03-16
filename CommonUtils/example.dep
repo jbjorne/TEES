@@ -1,10 +1,15 @@
 #First line are the tokens, space-separated
 #you can append "_[0-9]+" to a token to make it unique
 #for specifying the dependencies. The part starting with _ won't be
-#printed
+#printed.
 
 #here are the tokens - see how the second "a" is marked
 tokens: I have a dog       and a_2 cat with no tail .
+
+# You can also specify additional token lines. These will be printed as well
+# These lines must have exactly as many tokens as the first, main, token line
+# if you want to skip some string, use <<NONE>> instead
+
 tokens: 1  2   3  <<NONE>>   5   6   7   8    9  10  11
 tokens: I have a dog       and a cat with no tail .
 #Once the tokens have been specified, here go the dependencies
