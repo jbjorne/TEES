@@ -219,6 +219,14 @@ def depHeights(tokenCount,deps):
             heights[tPos]=maxH+1
     return max(heights)
 
+widthRe=re.compile(r".*stroke-width:([0-9]+).*")
+def recoverWidth(styleStr):
+    match=widthRe.match(styleStr)
+    if match:
+        return int(match.group(1))
+    else:
+        return 0
+
 def drawOrder(a,b):
     if a.tag!=b.tag:
         if a.tag=="path": #always draw the arcs first
@@ -231,6 +239,8 @@ def drawOrder(a,b):
         if b.tag=="text":
             return -1
         assert False
+    elif a.tag=="path" and b.tag=="path":
+        return cmp(recoverWidth(a.get("style")),recoverWidth(b.get("style")))
     else:
         return 0
     
