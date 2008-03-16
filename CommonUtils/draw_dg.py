@@ -300,6 +300,14 @@ cat example.svg | ./svg2pdf.sh > example.pdf
 
 For this to work, you need inkscape, pdf2ps, ps2epsi, and epstopdf. See
 the script svg2pdf for details if needed.
+
+ON BABELFISH
+
+On babelfish, use:
+
+inkscape -E example.eps example.svg
+
+to obtain an EPS version.
 """
     parser=optparse.OptionParser(usage=desc)
     (options,args)=parser.parse_args()
