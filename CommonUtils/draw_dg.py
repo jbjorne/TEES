@@ -289,40 +289,54 @@ def styleStr2Dict(s):
     return d
 
 depRe=re.compile(r"^(\S+) +(\S+) +(\S+) *(#ARC *(.*?))? *(#LAB *(.*))?$")
+tokRe=re.compile(r"^(\S+) *#TXT *(.*)")
 
 def readInput(lines):
     tokens=None
     deps=[]
-    tokensRead=False
     for line in lines:
         line=line.strip()
         if not line or line[0]=="#":
             continue
-        if not tokensRead: #We have the tokens
-            tokensRead=True
-            tokens=[Token(txt,idx) for (idx,txt) in enumerate(line.split())]
-        else: #we have a dependency
+        if line.startswith("tokens:"):
+            tokLine=line[7:].strip()
+            tokens=[Token(txt,idx) for (idx,txt) in enumerate(tokLine.split())]
+        else: #we have a dependency or token style
+            if not tokens:
+                raise ValueError("You must have tokens line, starting with \"tokens:\"")
+            match=tokRe.match(line)
+            if match:
+                tokTxt,tokenSpec=tokSpec(match.group(1))
+                candidates=[tok for tok in tokens if tok.matches(tokTxt,tokenSpec)]
+                if len(candidates)!=1:
+                    raise ValueError("I have %d candidates for %s in dependency \"%s\""%(len(candidates),match.group(1),line))
+                token=candidates[0]
+                txtStyleDict=styleStr2Dict(match.group(2))
+                for k,v in txtStyleDict.items():
+                    token.styleDict[k]=v
+                continue
             match=depRe.match(line)
-            if not match:
-                raise ValueError("This is not a dependency line: %s"%line)
-            
-            t1=match.group(1)
-            dType=match.group(2)
-            t2=match.group(3)
-            t1txt,t1spec=tokSpec(t1)
-            matching1=[tok for tok in tokens if tok.matches(t1txt,t1spec)]
-            if len(matching1)!=1:
-                raise ValueError("I have %d candidates for %s in dependency \"%s\""%(len(matching1),t1,line))
-            t2txt,t2spec=tokSpec(t2)
-            matching2=[tok for tok in tokens if tok.matches(t2txt,t2spec)]
-            if len(matching2)!=1:
-                raise ValueError("I have %d candidates for %s in dependency \"%s\""%(len(matching2),t2,line))
-            tok1=matching1[0]
-            tok2=matching2[0]
-            arcStyleDict=styleStr2Dict(match.group(5))
-            labStyleDict=styleStr2Dict(match.group(7))
+            if match:
+                t1=match.group(1)
+                dType=match.group(2)
+                t2=match.group(3)
+                t1txt,t1spec=tokSpec(t1)
+                matching1=[tok for tok in tokens if tok.matches(t1txt,t1spec)]
+                if len(matching1)!=1:
+                    raise ValueError("I have %d candidates for %s in dependency \"%s\""%(len(matching1),t1,line))
+                t2txt,t2spec=tokSpec(t2)
+                matching2=[tok for tok in tokens if tok.matches(t2txt,t2spec)]
+                if len(matching2)!=1:
+                    raise ValueError("I have %d candidates for %s in dependency \"%s\""%(len(matching2),t2,line))
+                tok1=matching1[0]
+                tok2=matching2[0]
+                arcStyleDict=styleStr2Dict(match.group(5))
+                labStyleDict=styleStr2Dict(match.group(7))
 
-            deps.append(Dep(tok1,tok2,dType,arcStyleDict,labStyleDict))
+                deps.append(Dep(tok1,tok2,dType,arcStyleDict,labStyleDict))
+                continue
+            raise ValueError("Do not understand this line: %s"%line)
+            
     if len(deps)==0:
         raise ValueError("Zero dependencies read!")
     return tokens,deps
