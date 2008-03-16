@@ -11,16 +11,16 @@ I have a dog and a_2 cat with no tail .
 # * one dependency per line
 # * left_token type right_token
 # #ARC and #LAB (in this order!) specify the style for the arc and label
-# see the SVG documentation
+# see the SVG documentation: http://www.w3.org/TR/SVG/painting.html
 
 
-I <nsubj have #ARC stroke-width:3;stroke:red #LAB font-weight:bold;fill:red
-have dobj> dog
-a <det dog
+I <nsubj have #ARC stroke-width:3;stroke:red;stroke-dasharray:5,2 #LAB font-weight:bold;fill:red
+have dobj> dog #LAB fill:green
+a <det dog 
 dog conj> cat
 dog cc> and
 a_2 <det cat
 dog prep> with
 with pobj> tail
 no <det tail
-have punct> .
+have punct> . #ARC stroke-dasharray:10,3,5,3
