@@ -11,7 +11,7 @@ tokens: I have a dog       and a_2 cat with no tail .
 # if you want to skip some string, use <<NONE>> instead
 
 tokens: 1  2   3  <<NONE>>   5   6   7   8    9  10  11
-tokens: I have a dog       and a cat with no tail .
+tokens: I have a dog       and a cat with no xxtailxx .
 #Once the tokens have been specified, here go the dependencies
 #
 # * one dependency per line

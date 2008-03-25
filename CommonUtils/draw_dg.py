@@ -117,6 +117,13 @@ class Dep:
         lineby=corner1y+(y-corner1y)*0.6
         lineey=lineby
         midx,midy=frox+(tox-frox)//2,y-self.height*SVGOptions.depVertSpace
+
+        textW=textWidth(self.type,SVGOptions.labelFontSize)
+        textH=SVGOptions.labelFontSize
+        txtX,txtY=midx,midy+textH/2-4
+        recx=txtX-textW/2-1
+        recy=txtY-SVGOptions.labelFontSize
+        recw=textW+4
         self.param={'frox':frox,
                     'y':y,
                     'c1bx':c1bx,
@@ -133,34 +140,49 @@ class Dep:
                     'linebx':linebx,
                     'lineby':lineby,
                     'lineex':lineex,
-                    'lineey':lineey}
+                    'lineey':lineey,
+                    'textW':textW,
+                    'textH':textH,
+                    'txtX':txtX,
+                    'txtY':txtY,
+                    'recx':recx,
+                    'recy':recy,
+                    'recxe':recx+recw,
+                    'recw':recw,
+                    'rech':SVGOptions.labelFontSize+8}
 
     def arcSVG(self):
         
-        spec="M%(frox)d,%(y)d L%(linebx)d,%(lineby)d C%(c1bx)d,%(c1by)d %(c1ex)d,%(c1ey)d %(midx)d,%(midy)d C%(c2bx)d,%(c2by)d %(c2ex)d,%(c2ey)d %(lineex)d,%(lineey)d L%(tox)d,%(y)d"%self.param
-        arcN=ET.Element("path")
-        arcN.set("d",spec)
+        #spec="M%(frox)d,%(y)d L%(linebx)d,%(lineby)d C%(c1bx)d,%(c1by)d %(c1ex)d,%(c1ey)d %(midx)d,%(midy)d C%(c2bx)d,%(c2by)d %(c2ex)d,%(c2ey)d %(lineex)d,%(lineey)d L%(tox)d,%(y)d"%self.param
+        spec1="M%(frox)d,%(y)d L%(linebx)d,%(lineby)d C%(c1bx)d,%(c1by)d %(c1ex)d,%(c1ey)d %(recx)d,%(midy)d"%self.param
+        spec2="M%(recxe)d,%(midy)d C%(c2bx)d,%(c2by)d %(c2ex)d,%(c2ey)d %(lineex)d,%(lineey)d L%(tox)d,%(y)d"%self.param
+        arcN1=ET.Element("path")
+        arcN1.set("d",spec1)
         styleStr=";".join("%s:%s"%(var,val) for var,val in self.arcStyle().items())
-        arcN.set("style",styleStr)
+        arcN1.set("style",styleStr)
+        
+        arcN2=ET.Element("path")
+        arcN2.set("d",spec2)
+        styleStr=";".join("%s:%s"%(var,val) for var,val in self.arcStyle().items())
+        arcN2.set("style",styleStr)
+
         #pathStr='<path d=%(spec)s style="fill:none;%(style)s"/>'%{'spec':spec,'style':highlightToStyle('depLine',highlight)}
-        return [arcN]
+        return [arcN1,arcN2]
 
     def labelSVG(self):
-            textW=textWidth(self.type,SVGOptions.labelFontSize)
-            textH=SVGOptions.labelFontSize
-            txtX,txtY=self.param["midx"],self.param["midy"]+textH/2-4
+            
 
             recNode=ET.Element("rect")
-            recNode.set("x",strint(txtX-textW/2-1))
-            recNode.set("y",strint(self.param["midy"]-4))
-            recNode.set("width",strint(textW+4))
-            recNode.set("height",strint(8))
-            recNode.set("style","fill:white")
+            recNode.set("x",strint(self.param["recx"]))
+            recNode.set("y",strint(self.param["recy"]))
+            recNode.set("width",strint(self.param["recw"]))
+            recNode.set("height",strint(self.param["rech"]))
+            recNode.set("style","fill:white;")#stroke:black")
             
             labNode=ET.Element("text")
             labNode.set("systemlanguage","en")
-            labNode.set("x",strint(txtX))
-            labNode.set("y",strint(txtY))
+            labNode.set("x",strint(self.param['txtX']))
+            labNode.set("y",strint(self.param['txtY']))
             labNode.set("txt",self.type)
             labNode.set("font-size",strint(SVGOptions.labelFontSize))
             labNode.set("font-family","monospace")
@@ -383,7 +405,24 @@ For this to work, you need inkscape and epstopdf. See
 the script svg2pdf for details if needed.
 """
     parser=optparse.OptionParser(usage=desc)
+    parser.add_option("--tokenSize", dest="fontSize",action="store",default=24,help="Token font size.", metavar="INTEGER")
+    parser.add_option("--labelSize", dest="labelFontSize",action="store",default=20,help="Dependency label font size.", metavar="INTEGER")
+    parser.add_option("--depVSpace", dest="depVertSpace",action="store",default=20,help="Vertical space between dependency layers.", metavar="INTEGER")
+    parser.add_option("--tokenHSpace", dest="tokenSpace",action="store",default=10,help="Horizontal space between tokens.", metavar="INTEGER")
+    parser.add_option("--lineVSpace", dest="lineSep",action="store",default=5,help="Vertical separation between text lines.", metavar="INTEGER")
+    parser.add_option("--minDepPadding", dest="minDepPadding",action="store",default=10,help="Horizontal space reserved for the curve of a dependency.", metavar="INTEGER")
     (options,args)=parser.parse_args()
+
+    SVGOptions.fontSize=int(options.fontSize)
+    SVGOptions.labelFontSize=int(options.labelFontSize)
+    SVGOptions.depVertSpace=int(options.depVertSpace)
+    SVGOptions.tokenSpace=int(options.tokenSpace)
+    SVGOptions.lineSep=int(options.lineSep)
+    SVGOptions.minDepPadding=int(options.minDepPadding)
+    
+    
+    
+    
     tokens,deps=readInput(sys.stdin)
     t=generateSVG(tokens,deps)
     ETUtils.write(t,sys.stdout)
