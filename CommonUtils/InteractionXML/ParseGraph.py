@@ -161,3 +161,7 @@ class ParseGraph:
                 if tempText.lower() in texts:
                     matchingTokens.append(node.id)
         return matchingTokens
+    
+    def stemTokens(self):
+        for token in self.tokensById.values():
+            token.stem = stemmer.stem(token.text)
