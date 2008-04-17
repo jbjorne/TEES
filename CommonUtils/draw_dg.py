@@ -288,8 +288,15 @@ def generateSVG(tokens,dependencies):
     tree.set("version","1.1")
     tree.set("baseProfile","full")
     allNodes=[]
+    totalWidth=0
+    totalHeight=tokens[0].y+10
+    tree.set("height",strint(totalHeight))
     for t in tokens:
         allNodes.extend(t.toSVG())
+        tokX=t.x+t.width()
+        if tokX>totalWidth:
+            totalWidth=tokX
+    tree.set("width",strint(totalWidth))
     for d in dependencies:
         allNodes.extend(d.arcSVG())
         allNodes.extend(d.labelSVG())
