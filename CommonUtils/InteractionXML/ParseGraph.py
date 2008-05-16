@@ -165,3 +165,38 @@ class ParseGraph:
     def stemTokens(self):
         for token in self.tokensById.values():
             token.stem = stemmer.stem(token.text)
+    
+    ###########################################################################
+    # NetworkX-based shortest path
+    ###########################################################################
+    
+    def buildNXGraph(self):
+        """ Initializes the graph structure used by NetworkX.
+        Called automatically when needed.
+        """
+        import networkx as NX
+        self.nXGraph = NX.Graph()
+        for token in self.tokensById.values():
+            self.nXGraph.add_node(token.id)
+        for dependency in self.dependenciesById.values(): #self.depByOrder:
+            self.nXGraph.add_node(dependency.id)
+            self.nXGraph.add_edge((dependency.fro.id,dependency.id))
+            self.nXGraph.add_edge((dependency.id,dependency.to.id))
+
+    def buildShortestPathNX(self, startTokenId, endTokenId, directed=False):
+        """ Build shortest path using NetworkX
+        """
+        import networkx as NX
+        if (not hasattr(self,"nXGraph")) or self.nXGraph == None:
+            self.buildNXGraph()
+        path = NX.shortest_path(self.nXGraph, startTokenId, endTokenId)
+        if path == False:
+            return []
+        isTokenPhase = True
+        for i in range(len(path)):
+            if isTokenPhase:
+                path[i] = self.tokensById[path[i]]
+            else:
+                path[i] = self.dependenciesById[path[i]]
+            isTokenPhase = not isTokenPhase
+        return path
