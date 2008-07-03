@@ -46,3 +46,7 @@ class SentenceGraph:
                 headTokens.append(token)
         assert(len(headTokens)==1) # Terrible hack, but should work for now
         return headTokens[0]
+    
+    def findHeadToken(self, charOffsets):
+        pass
+        # Kopioi GeniaParseGraphista
