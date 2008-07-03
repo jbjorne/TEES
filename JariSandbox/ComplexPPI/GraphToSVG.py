@@ -2,7 +2,7 @@ import draw_dg
 import cElementTreeUtils as ETUtils
 
 def tokensToSVG(tokenElements, showPOS=False):
-    svgTokensById = {}
+    #svgTokensById = {}
     svgTokens = []
     position = 0
     for token in tokenElements:
@@ -13,12 +13,18 @@ def tokensToSVG(tokenElements, showPOS=False):
             svgToken.otherLines.append(token.entityType)
         else:
             svgToken.otherLines.append(" ")
-        svgTokensById[token.attrib["id"]] = svgToken
+        #svgTokensById[token.attrib["id"]] = svgToken
+        svgToken.id = token.attrib["id"]
         svgTokens.append(svgToken)
         position += 1
-    return svgTokensById, svgTokens
+    #return svgTokensById, svgTokens
+    return svgTokens
 
-def edgesToSVG(svgTokensById, graph, edgeTypeAttrib="type"):
+def edgesToSVG(svgTokens, graph, edgeTypeAttrib="type"):
+    svgTokensById = {}
+    for token in svgTokens:
+        svgTokensById[token.id] = token
+    
     edges = graph.edges()
     svgEdges = []    
     for edge in edges:
