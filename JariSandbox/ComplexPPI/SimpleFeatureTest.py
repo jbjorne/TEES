@@ -3,13 +3,14 @@ import cElementTree as ET
 from InteractionXML.CorpusElements import CorpusElements
 from SentenceGraph import *
 import GraphToSVG
+import MakeSets
 
 featureIds = {}
 
 def defFeature(featureName):
     global featureIds
     if not featureIds.has_key(featureName):
-        featureIds[featureName] = len(featureIds)
+        featureIds[featureName] = len(featureIds) + 1
     return featureIds[featureName]
 
 def writeExamples(file, examples, featuresByExample):
@@ -59,8 +60,9 @@ def defineExamples(sentence, graph):
                     category = True
                 elif hasDep and not hasInt:
                     category = False
-                examples.append( (sentence.sentence.attrib["id"]+".x"+str(exampleIndex),category,t1,t2) )
-                exampleIndex += 1
+                if hasDep:
+                    examples.append( (sentence.sentence.attrib["id"]+".x"+str(exampleIndex),category,t1,t2) )
+                    exampleIndex += 1
     return examples
 
 if __name__=="__main__":
@@ -74,13 +76,23 @@ if __name__=="__main__":
     keys.sort()
     outfile = open("Data/FeatureTest.txt","wt")
     for key in keys:
-        print >> sys.stderr, "Processing sentence", key
+        print >> sys.stderr, "\rProcessing sentence", key, "          ",
         sentence = corpusElements.sentencesById[key]
-        print >> sys.stderr, "Building graph"
+        #print >> sys.stderr, "Building graph"
         graph = SentenceGraph(sentence.tokens, sentence.dependencies)
-        print >> sys.stderr, "Mapping interactions"
+        #print >> sys.stderr, "Mapping interactions"
         graph.mapInteractions(sentence.entities, sentence.interactions)
         examples = defineExamples(sentence, graph)
         featuresByExample = buildFeatures(examples, graph)
         writeExamples(outfile,examples,featuresByExample)
+    print
+    outfile.close()
+    
+    # Save feature names
+    outfile = open("Data/FeatureNames.txt","wt")
+    features = ["UNUSED"] + [None] * len(featureIds)
+    for k,v in featureIds.iteritems():
+        features[v] = k
+    for i in range(len(features)):
+        outfile.write(features[i]+": "+str(i)+"\n")
     outfile.close()
