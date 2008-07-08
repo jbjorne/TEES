@@ -2,7 +2,8 @@ import networkx as NX
 import Range
 
 class SentenceGraph:
-    def __init__(self, tokenElements, dependencyElements):
+    def __init__(self, sentenceElement, tokenElements, dependencyElements):
+        self.sentenceElement = sentenceElement
         self.tokens = tokenElements
         self.dependencies = dependencyElements
         self.dependencyGraph = NX.XDiGraph()
@@ -21,10 +22,15 @@ class SentenceGraph:
                                           dependency)
             #self.dependenciesById[dependency.attrib["id"]] = dependency
     
-    def mapInteractions(self, entityElements, interactionElements):
+    def getSentenceId(self):
+        return self.sentenceElement.attrib["id"]
+    
+    def mapInteractions(self, entityElements, interactionElements, verbose=False):
         self.interactions = interactionElements
         self.entities = entityElements
         self.interactionGraph = NX.XDiGraph()
+        
+        self.__markNamedEntities()
         
         for token in self.tokens:
             self.interactionGraph.add_node(token)
@@ -33,11 +39,11 @@ class SentenceGraph:
         for entity in self.entities:
             self.entitiesById[entity.attrib["id"]] = entity
         for interaction in self.interactions:
-            token1 = self.mapEntity(self.entitiesById[interaction.attrib["e1"]])
-            token2 = self.mapEntity(self.entitiesById[interaction.attrib["e2"]])
+            token1 = self.mapEntity(self.entitiesById[interaction.attrib["e1"]], verbose)
+            token2 = self.mapEntity(self.entitiesById[interaction.attrib["e2"]], verbose)
             self.interactionGraph.add_edge(token1, token2, interaction)
     
-    def mapEntity(self, entityElement):
+    def mapEntity(self, entityElement, verbose=False):
         headOffset = Range.charOffsetToSingleTuple(entityElement.attrib["headOffset"])
         headTokens = []
         for token in self.tokens:
@@ -49,7 +55,8 @@ class SentenceGraph:
             return headTokens[0]
         else:
             token = self.findHeadToken(headTokens)
-            print "Selected head:", token.attrib["id"], token.attrib["text"]
+            if verbose:
+                print >> sys.stderr, "Selected head:", token.attrib["id"], token.attrib["text"]
             return token
     
     def findHeadToken(self, candidateTokens):
@@ -79,3 +86,22 @@ class SentenceGraph:
         for i in range(len(candidateTokens)):
             if tokenScores[i] == highestScore:
                 return candidateTokens[i]
+
+    def __markNamedEntities(self):
+        self.tokenIsName = {}
+        for token in self.tokens:
+            self.tokenIsName[token] = False
+        for entity in self.entities:
+            entityOffsets = Range.charOffsetToTuples(entity.attrib["charOffset"])
+            for token in self.tokens:
+                tokenOffset = Range.charOffsetToSingleTuple(token.attrib["charOffset"])
+                for entityOffset in entityOffsets:
+                    if Range.overlap(entityOffset, tokenOffset):
+                        self.tokenIsName[token] = True
+                        break
+
+    def getTokenText(self, token):
+        if self.tokenIsName[token]:
+            return "NAMED_ENT"
+        else:
+            return token.attrib["text"]
