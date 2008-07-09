@@ -49,12 +49,12 @@ if __name__=="__main__":
     classifier = Classifier()
     
     # Optimize
-    print >> sys.stderr, "Optimizing c-parameter"
     optimizationSets = Example.divideExamples(exampleSets[0])
     bestResults = classifier.optimize(optimizationSets[0], optimizationSets[1])
     
     # Classify
     print >> sys.stderr, "Classifying test data"    
+    print >> sys.stderr, "Parameters:", bestResults[2]
     classifier.train(exampleSets[0], bestResults[2])
     predictions = classifier.classify(exampleSets[1])
     
