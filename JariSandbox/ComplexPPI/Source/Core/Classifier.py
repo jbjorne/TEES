@@ -29,11 +29,11 @@ class Classifier:
         bestResult = None
         count = 1
         for combination in combinations:
-            print >> sys.stderr, "Parameters "+str(count)+"/"+str(len(combinations))+":", str(combination)
+            print >> sys.stderr, " Parameters "+str(count)+"/"+str(len(combinations))+":", str(combination)
             self.train(trainExamples, combination)
             predictions = self.classify(classifyExamples)        
             evaluation = evaluationClass(predictions)
-            print >> sys.stderr, " " + evaluation.toStringConcise()
+            print >> sys.stderr, "  " + evaluation.toStringConcise()
             if bestResult == None or evaluation.fScore > bestResult[1].fScore:
                 bestResult = (predictions, evaluation, combination)
             count += 1
