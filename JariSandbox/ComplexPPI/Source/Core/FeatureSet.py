@@ -16,6 +16,22 @@ class FeatureSet:
             f.write(str(key)+": "+str(self.featureIds[key])+"\n")
         f.close()
     
+    def toStrings(self, rowLength=80):
+        strings = [""]
+        keys = self.featureIds.keys()
+        keys.sort()
+        currLen = 0
+        for key in keys:
+            pair = str(key)+":"+str(self.featureIds[key])
+            currLen += len(pair) + 1
+            if currLen > rowLength:
+                currLen = 0
+                strings.append("")
+            if strings[-1] != "":
+                strings[-1] += ";"
+            strings[-1] += pair
+        return strings
+    
     def load(self, filename):
         self.featureIds = {}
         self.firstNumber = 0

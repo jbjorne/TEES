@@ -11,9 +11,10 @@ from optparse import OptionParser
 if __name__=="__main__":
     defaultAnalysisFilename = "/usr/share/biotext/ComplexPPI/BioInferForComplexPPI.xml"
     optparser = OptionParser(usage="%prog [options]\nCreate an html visualization for a corpus.")
-    optparser.add_option("-i", "--input", default=defaultAnalysisFilename, dest="input", help="Corpus", metavar="FILE")
-    optparser.add_option("-c", "--classifier", default="SVMLightClassifier", dest="classifier", help="Corpus", metavar="FILE")
-    optparser.add_option("-e", "--exampleBuilder", default="SimpleDependencyExampleBuilder", dest="exampleBuilder", help="Corpus", metavar="FILE")
+    optparser.add_option("-i", "--input", default=defaultAnalysisFilename, dest="input", help="Corpus in analysis format", metavar="FILE")
+    optparser.add_option("-o", "--output", default=None, dest="output", help="Example output file")
+    optparser.add_option("-c", "--classifier", default="SVMLightClassifier", dest="classifier", help="Classifier Class")
+    optparser.add_option("-e", "--exampleBuilder", default="SimpleDependencyExampleBuilder", dest="exampleBuilder", help="Example Builder Class")
     (options, args) = optparser.parse_args()
 
     print >> sys.stderr, "Importing modules"
@@ -26,22 +27,25 @@ if __name__=="__main__":
     corpusElements = CorpusElements(corpusRoot, "split_gs", "split_gs")
     
     # Build examples
-    examples = []
     exampleBuilder = ExampleBuilder()
-    for sentence in corpusElements.sentences:
-        print >> sys.stderr, "\rProcessing sentence", sentence.sentence.attrib["id"], "          ",
-        #print >> sys.stderr, "Building graph"
-        graph = SentenceGraph(sentence.sentence, sentence.tokens, sentence.dependencies)
-        #print >> sys.stderr, "Mapping interactions"
-        graph.mapInteractions(sentence.entities, sentence.interactions)
-        examples.extend( exampleBuilder.buildExamples(graph) )
-    print >> sys.stderr
+    examples = exampleBuilder.buildExamplesForCorpus(corpusElements)
+    
+    # Save examples
+    if options.output != None:
+        print >> sys.stderr, "Saving examples to", options.output
+        commentLines = []
+        commentLines.append("Input file: " + options.input)
+        commentLines.append("Example builder: " + options.exampleBuilder)
+        commentLines.append("Features:")
+        commentLines.extend(exampleBuilder.featureSet.toStrings())
+        Example.writeExamples(examples, options.output, commentLines)
     
     # Make test and training sets
     print >> sys.stderr, "Dividing data into test and training sets"
     corpusDivision = Example.makeCorpusDivision(corpusElements)
     exampleSets = Example.divideExamples(examples, corpusDivision)
-
+    
+    # Create classifier object
     classifier = Classifier()
     
     # Optimize

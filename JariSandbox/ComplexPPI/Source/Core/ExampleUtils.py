@@ -6,6 +6,9 @@ import Split
 
 def writeExamples(examples, filename, commentLines=None):
     f = open(filename,"wt")
+    if commentLines != None:
+        for commentLine in commentLines:
+            f.write("# "+commentLine+"\n")
     for example in examples:
         f.write(str(example[1]))
         keys = example[2].keys()
