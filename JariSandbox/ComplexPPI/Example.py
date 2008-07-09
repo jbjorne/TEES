@@ -2,6 +2,8 @@
 # class is an int (-1 or +1) and features is a dictionary of int:float -pairs, where
 # the int is the feature id and the float is the feature value
 
+import Split
+
 def writeExamples(examples, filename, commentLines=None):
     f = open(filename,"wt")
     for example in examples:
@@ -13,7 +15,28 @@ def writeExamples(examples, filename, commentLines=None):
         f.write(" # " + example[0] + "\n")
     f.close()
 
-def divideExamples(examples, division):
+def makeCorpusDivision(corpusElements, fraction=0.5):
+    documentIds = corpusElements.documentsById.keys()
+    return makeDivision(documentIds, fraction)
+
+def makeExampleDivision(examples, fraction=0.5):
+    documentIds = set()
+    for example in examples:
+        documentIds.add(example[0].rsplit(".",2)[0])
+    documentIds = list(documentIds)
+    return makeDivision(documentIds, fraction)
+
+def makeDivision(ids, fraction=0.5):
+    sample = Split.getSample(len(ids),fraction)
+    division = {}
+    for i in range(len(ids)): 
+        division[ids[i]] = sample[i]
+    return division
+
+def divideExamples(examples, division=None):
+    if division == None:
+        division = makeExampleDivision(examples)
+    
     exampleSets = {}
     for example in examples:
         documentId = example[0].rsplit(".",2)[0]

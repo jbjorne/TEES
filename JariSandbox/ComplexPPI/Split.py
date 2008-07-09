@@ -1,13 +1,5 @@
 import random
 
-def makeDivision(corpusElements, fraction=0.5):
-    documentIds = corpusElements.documentsById.keys()
-    sample = getSample(len(documentIds),fraction)
-    division = {}
-    for i in range(len(documentIds)): 
-        division[documentIds[i]] = sample[i]
-    return division
-
 def getSample(popSize, sampleFraction, seed=0):
     random.seed(seed)
     sample = random.sample( xrange(popSize), int(sampleFraction*float(popSize)) )
