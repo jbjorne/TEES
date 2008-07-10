@@ -20,7 +20,8 @@ class SimpleDependencyExampleBuilder(ExampleBuilder):
                         category = -1
                     if hasDep:
                         features = self.buildFeatures(t1,t2,sentenceGraph)
-                        examples.append( (sentenceGraph.getSentenceId()+".x"+str(exampleIndex),category,features) )
+                        extra = {"type":"edge","t1":t1,"t2":t2}
+                        examples.append( (sentenceGraph.getSentenceId()+".x"+str(exampleIndex),category,features,extra) )
                         exampleIndex += 1
         return examples
 

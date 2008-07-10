@@ -20,7 +20,7 @@ def tokensToSVG(tokenElements, showPOS=False):
     #return svgTokensById, svgTokens
     return svgTokens
 
-def edgesToSVG(svgTokens, graph, edgeTypeAttrib="type"):
+def edgesToSVG(svgTokens, graph, arcStyles={}, labelStyles={}, edgeTypeAttrib="type"):
     svgTokensById = {}
     for token in svgTokens:
         svgTokensById[token.id] = token
@@ -30,13 +30,24 @@ def edgesToSVG(svgTokens, graph, edgeTypeAttrib="type"):
     for edge in edges:
         token1 = edge[0].attrib["id"]
         token2 = edge[1].attrib["id"]
-        type = edge[2].attrib[edgeTypeAttrib]
-        if int(token1.split("_")[-1]) < int(token2.split("_")[-1]):
-            type += ">"
-            svgEdge = draw_dg.Dep(svgTokensById[token1], svgTokensById[token2], type)
+        if edgeTypeAttrib != None:
+            type = edge[2].attrib[edgeTypeAttrib]
+            if int(token1.split("_")[-1]) < int(token2.split("_")[-1]):
+                type += ">"
+                svgEdge = draw_dg.Dep(svgTokensById[token1], svgTokensById[token2], type)
+            else:
+                type = "<" + type
+                svgEdge = draw_dg.Dep(svgTokensById[token2], svgTokensById[token1], type)
         else:
-            type = "<" + type
-            svgEdge = draw_dg.Dep(svgTokensById[token2], svgTokensById[token1], type)
+            svgEdge = draw_dg.Dep(svgTokensById[token1], svgTokensById[token2], "i")
+        # Set styles
+        if arcStyles.has_key(edge):
+            for key in arcStyles[edge]:
+                svgEdge.arcStyleDict[key] = arcStyles[edge][key]
+        if labelStyles.has_key(edge):
+            for key in labelStyles[edge]:
+                svgEdge.labelStyleDict[key] = labelStyles[edge][key]
+        # Add to list
         svgEdges.append(svgEdge)
     return svgEdges
 
@@ -49,4 +60,6 @@ def makeSVG(svgTokens, svgEdges):
     return draw_dg.generateSVG(svgTokens, svgEdges)
 
 def writeSVG(svgTokens, svgEdges, fileName):
-    ETUtils.write(makeSVG(svgTokens, svgEdges), fileName)
+    svgElement = makeSVG(svgTokens, svgEdges)
+    ETUtils.write(svgElement, fileName)
+    return svgElement
