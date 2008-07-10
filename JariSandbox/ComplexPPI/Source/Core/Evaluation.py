@@ -19,13 +19,17 @@ class Evaluation:
             if trueClass > 0:
                 if predictedClass > 0:
                     self.truePositives += 1
+                    prediction[0][3]["binClass"] = "tp"
                 else:
                     self.falseNegatives += 1
+                    prediction[0][3]["binClass"] = "fn"
             else:
                 if predictedClass > 0:
                     self.falsePositives += 1
+                    prediction[0][3]["binClass"] = "fp"
                 else:
                     self.trueNegatives += 1
+                    prediction[0][3]["binClass"] = "tn"
         # Then calculate statistics
         totalPositives = float(self.truePositives + self.falsePositives)
         if totalPositives > 0.0:

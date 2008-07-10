@@ -39,12 +39,24 @@ class CorpusVisualizer:
         exampleGraph = NX.XDiGraph()
         for token in sentenceGraph.tokens:
             exampleGraph.add_node(token)
+        arcStyles = {}
+        labelStyles = {}
         for example in examples:
-            exampleGraph.add_edge(example[3]["t1"], example[3]["t2"])
+            if example[3].has_key("binClass"):
+                if example[3]["binClass"] != "tn" and example[3]["binClass"] != "fn":
+                    exampleGraph.add_edge(example[3]["t1"], example[3]["t2"], example[3]["binClass"])
+        for edge in exampleGraph.edges():
+            classification = edge[2]
+            if classification == "tp":
+                arcStyles[edge] = {"stroke":"green"}
+                labelStyles[edge] = {"stroke":"green"}
+            elif classification == "fp":
+                arcStyles[edge] = {"stroke":"red"}
+                labelStyles[edge] = {"stroke":"red"}
 
         builder.header("Classification",4)
         svgTokens = GraphToSVG.tokensToSVG(sentenceGraph.tokens)
-        arcStyles, labelStyles = self.getMatchingEdgeStyles(exampleGraph, sentenceGraph.interactionGraph, "green", "red" )
+        #arcStyles, labelStyles = self.getMatchingEdgeStyles(exampleGraph, sentenceGraph.interactionGraph, "green", "red" )
         svgEdges = GraphToSVG.edgesToSVG(svgTokens, exampleGraph, arcStyles, labelStyles, None)
         sentenceId = sentenceGraph.getSentenceId()
         svgElement = GraphToSVG.writeSVG(svgTokens, svgEdges, self.outDir+"/svg/"+sentenceId+"_learned.svg")
