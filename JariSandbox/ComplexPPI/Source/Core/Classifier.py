@@ -1,10 +1,20 @@
-import sys
+import sys, os
 import combine
 from Evaluation import Evaluation
+import ExampleUtils
+import tempfile
 
 defaultOptimizationParameters = {"c":[0.0001,0.001,0.01,0.1,1,10,100]}
 
 class Classifier:
+    def _makeTempDir(self, workDir=None):
+        self._workDir = workDir
+        if workDir == None:
+            self.tempDir = tempfile.mkdtemp() #(dir=tempDir)
+        else:
+            self.tempDir = workDir
+        self.debugFile = open(self.tempDir + "/debug.txt", "wt")
+
     def train(self, examples, parameters=None):        
         pass
     
@@ -12,7 +22,7 @@ class Classifier:
         pass
     
     def optimize(self, trainExamples, classifyExamples, parameters=defaultOptimizationParameters, evaluationClass=Evaluation, evaluationArgs=None):
-        print >> sys.stderr, "Optimizing parameters"        
+        print >> sys.stderr, "Optimizing parameters"              
         parameterNames = parameters.keys()
         parameterNames.sort()
         parameterValues = []
@@ -26,15 +36,32 @@ class Classifier:
             combinations.append({})
             for value in combinationList:
                 combinations[-1][value[0]] = value[1]
+        
         bestResult = None
         count = 1
+        if hasattr(self, "tempDir"):
+            mainTempDir = self.tempDir
+            mainDebugFile = self.debugFile
         for combination in combinations:
+            # Make copies of examples in case they are modified
+            trainExamplesCopy = ExampleUtils.copyExamples(trainExamples)
+            classifyExamplesCopy = ExampleUtils.copyExamples(classifyExamples)
+            if hasattr(self, "tempDir"):
+                self.tempDir = mainTempDir+"/optimization"+str(count)
+                if not os.path.exists(self.tempDir):
+                    os.mkdir(self.tempDir)
+                self.debugFile = open(self.tempDir + "/debug.txt", "wt")
             print >> sys.stderr, " Parameters "+str(count)+"/"+str(len(combinations))+":", str(combination)
-            self.train(trainExamples, combination)
-            predictions = self.classify(classifyExamples)        
+            self.train(trainExamplesCopy, combination)
+            predictions = self.classify(classifyExamplesCopy)        
             evaluation = evaluationClass(predictions)
             print >> sys.stderr, "  " + evaluation.toStringConcise()
             if bestResult == None or evaluation.fScore > bestResult[1].fScore:
                 bestResult = (predictions, evaluation, combination)
             count += 1
+            if hasattr(self, "tempDir"):
+                self.debugFile.close()
+        if hasattr(self, "tempDir"):
+            self.tempDir = mainTempDir
+            self.debugFile = mainDebugFile
         return bestResult

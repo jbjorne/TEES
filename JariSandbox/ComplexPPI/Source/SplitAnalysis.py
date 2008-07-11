@@ -9,6 +9,18 @@ from Core.Evaluation import Evaluation
 from Visualization.CorpusVisualizer import CorpusVisualizer
 from optparse import OptionParser
 
+def splitParameters(string):
+    paramDict = {}
+    paramSets = string.split(";")
+    for paramSet in paramSets:
+        paramName, paramValueString = paramSet.split(":")
+        paramValues = paramValueString.split(",")
+        paramDict[paramName] = []
+        count = 0
+        for value in paramValues:
+            paramDict[paramName].append(float(value))
+    return paramDict
+
 class ProgressCounter:
     def __init__(self, total):
         self.total = float(total)
@@ -29,11 +41,18 @@ if __name__=="__main__":
     defaultAnalysisFilename = "/usr/share/biotext/ComplexPPI/BioInferForComplexPPI.xml"
     optparser = OptionParser(usage="%prog [options]\nCreate an html visualization for a corpus.")
     optparser.add_option("-i", "--input", default=defaultAnalysisFilename, dest="input", help="Corpus in analysis format", metavar="FILE")
-    optparser.add_option("-o", "--output", default=None, dest="output", help="Example output file")
+    optparser.add_option("-o", "--output", default=None, dest="output", help="Output directory, useful for debugging")
     optparser.add_option("-c", "--classifier", default="SVMLightClassifier", dest="classifier", help="Classifier Class")
+    optparser.add_option("-p", "--parameters", default=None, dest="parameters", help="Parameters for the classifier")
     optparser.add_option("-e", "--exampleBuilder", default="SimpleDependencyExampleBuilder", dest="exampleBuilder", help="Example Builder Class")
     optparser.add_option("-v", "--visualization", default=None, dest="visualization", help="Visualization output directory. NOTE: If the directory exists, it will be deleted!")
     (options, args) = optparser.parse_args()
+    
+    if options.output != None:
+        if not os.path.exists(options.output):
+            os.mkdir(options.output)
+        if not os.path.exists(options.output+"/classifier"):
+            os.mkdir(options.output+"/classifier")
 
     print >> sys.stderr, "Importing modules"
     exec "from ExampleBuilders." + options.exampleBuilder + " import " + options.exampleBuilder + " as ExampleBuilder"
@@ -61,16 +80,17 @@ if __name__=="__main__":
         counter.update(1, "Building examples: ")
         sentence[1] = exampleBuilder.buildExamples(sentence[0])
         examples.extend(sentence[1])
+    print >> sys.stderr, "Examples built:", len(examples)
    
     # Save examples
     if options.output != None:
-        print >> sys.stderr, "Saving examples to", options.output
+        print >> sys.stderr, "Saving examples to", options.output + "/examples.txt"
         commentLines = []
         commentLines.append("Input file: " + options.input)
         commentLines.append("Example builder: " + options.exampleBuilder)
         commentLines.append("Features:")
         commentLines.extend(exampleBuilder.featureSet.toStrings())
-        Example.writeExamples(examples, options.output, commentLines)
+        Example.writeExamples(examples, options.output + "/examples.txt", commentLines)
     
     # Make test and training sets
     print >> sys.stderr, "Dividing data into test and training sets"
@@ -78,11 +98,26 @@ if __name__=="__main__":
     exampleSets = Example.divideExamples(examples, corpusDivision)
     
     # Create classifier object
-    classifier = Classifier()
+    if options.output != None:
+        classifier = Classifier(workDir = options.output + "/classifier")
+    else:
+        classifier = Classifier()
     
     # Optimize
     optimizationSets = Example.divideExamples(exampleSets[0])
-    bestResults = classifier.optimize(optimizationSets[0], optimizationSets[1])
+    if options.parameters != None:
+        paramDict = splitParameters(options.parameters)
+        bestResults = classifier.optimize(optimizationSets[0], optimizationSets[1], paramDict)
+    else:
+        bestResults = classifier.optimize(optimizationSets[0], optimizationSets[1])
+
+    # Save example sets
+    if options.output != None:
+        print >> sys.stderr, "Saving example sets to", options.output
+        Example.writeExamples(exampleSets[0], options.output + "/examplesTest.txt")
+        Example.writeExamples(exampleSets[1], options.output + "/examplesTrain.txt")
+        Example.writeExamples(optimizationSets[0], options.output + "/examplesOptimizationTest.txt")
+        Example.writeExamples(optimizationSets[1], options.output + "/examplesOptimizationTrain.txt")
     
     # Classify
     print >> sys.stderr, "Classifying test data"    
@@ -97,6 +132,10 @@ if __name__=="__main__":
     # Visualize
     if options.visualization != None:
         print >> sys.stderr, "Making visualization"
+        classifications = evaluation.classifications
+        classificationsByExample = {}
+        for classification in classifications:
+            classificationsByExample[classification[0][0]] = classification
         visualizer = CorpusVisualizer(options.visualization, True)
         for i in range(len(sentences)):
             sentence = sentences[i]
@@ -106,5 +145,5 @@ if __name__=="__main__":
                 prevAndNextId[0] = sentences[i-1][0].getSentenceId()
             if i < len(sentences)-1:
                 prevAndNextId[1] = sentences[i+1][0].getSentenceId()
-            visualizer.makeSentencePage(sentence[0],sentence[1],prevAndNextId)
+            visualizer.makeSentencePage(sentence[0],sentence[1],classificationsByExample,prevAndNextId)
         print >> sys.stderr

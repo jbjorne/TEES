@@ -2,6 +2,12 @@ import sys
 sys.path.append("..")
 from Core.ExampleBuilder import ExampleBuilder
 
+# The first example builder written, used in the first tests
+# between July 8th and 11th 2008.
+# Builds very simle examples, but SVMLightClassifier gives:
+# Parameters: {'c': 50.0}
+# p/n:908/5118 tp/fp|tn/fn:899/937|4181/9 p/r/f:0.4896/0.9900/0.6552
+
 class SimpleDependencyExampleBuilder(ExampleBuilder):
         
     def buildExamples(self, sentenceGraph):

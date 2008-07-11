@@ -9,27 +9,29 @@ class Evaluation:
         self.recall = None
         self.fScore = None
         #self.AUC = None
+        self.type = "binary"
         self.__calculate(predictions)
     
     def __calculate(self, predictions):
         # First count instances
+        self.classifications = []
         for prediction in predictions:
             trueClass = prediction[0][1]
             predictedClass = prediction[1]
             if trueClass > 0:
                 if predictedClass > 0:
                     self.truePositives += 1
-                    prediction[0][3]["binClass"] = "tp"
+                    self.classifications.append((prediction[0],"tp",self.type))
                 else:
                     self.falseNegatives += 1
-                    prediction[0][3]["binClass"] = "fn"
+                    self.classifications.append((prediction[0],"fn",self.type))
             else:
                 if predictedClass > 0:
                     self.falsePositives += 1
-                    prediction[0][3]["binClass"] = "fp"
+                    self.classifications.append((prediction[0],"fp",self.type))
                 else:
                     self.trueNegatives += 1
-                    prediction[0][3]["binClass"] = "tn"
+                    self.classifications.append((prediction[0],"tn",self.type))
         # Then calculate statistics
         totalPositives = float(self.truePositives + self.falsePositives)
         if totalPositives > 0.0:

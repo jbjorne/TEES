@@ -8,6 +8,13 @@ class FeatureSet:
             self.featureIds[name] = len(self.featureIds) + self.firstNumber
         return self.featureIds[name]
     
+    def getName(self, id):
+        for k, v in self.featureIds:
+            if v == id:
+                return k
+            else:
+                return None
+    
     def write(self, filename):
         f = open(filename, "wt")
         keys = self.featureIds.keys()

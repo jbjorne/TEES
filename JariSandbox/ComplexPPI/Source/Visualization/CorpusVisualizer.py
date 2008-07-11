@@ -35,16 +35,17 @@ class CorpusVisualizer:
                 labelStyles[annEdge] = {"fill":negColor}
         return arcStyles, labelStyles
     
-    def makeExampleGraph(self, builder, sentenceGraph, examples):
+    def makeExampleGraph(self, builder, sentenceGraph, examples, classificationsByExample):
         exampleGraph = NX.XDiGraph()
         for token in sentenceGraph.tokens:
             exampleGraph.add_node(token)
         arcStyles = {}
         labelStyles = {}
         for example in examples:
-            if example[3].has_key("binClass"):
-                if example[3]["binClass"] != "tn" and example[3]["binClass"] != "fn":
-                    exampleGraph.add_edge(example[3]["t1"], example[3]["t2"], example[3]["binClass"])
+            if classificationsByExample.has_key(example[0]):
+                a = classificationsByExample[example[0]]
+                if a[1] != "tn" and a[1] != "fn":
+                    exampleGraph.add_edge(example[3]["t1"], example[3]["t2"], a[1])
         for edge in exampleGraph.edges():
             classification = edge[2]
             if classification == "tp":
@@ -63,7 +64,7 @@ class CorpusVisualizer:
         builder.svg("../svg/" + sentenceId + "_learned.svg",svgElement.attrib["width"],svgElement.attrib["height"],id="learned_graph")
         builder.lineBreak()
     
-    def makeSentencePage(self, sentenceGraph, examples, prevAndNextId=None):
+    def makeSentencePage(self, sentenceGraph, examples, classificationsByExample, prevAndNextId=None):
         entityElements = sentenceGraph.entities
         entityTextById = {}
         for entityElement in entityElements:
@@ -112,7 +113,7 @@ class CorpusVisualizer:
             builder.lineBreak()
         
         # Classification svg
-        self.makeExampleGraph(builder, sentenceGraph, examples)      
+        self.makeExampleGraph(builder, sentenceGraph, examples, classificationsByExample)      
         
         builder.table(0,align="center",width="100%")
         builder.tableRow()
@@ -186,6 +187,9 @@ class CorpusVisualizer:
             
         builder.write(self.outDir + "/sentences/"+sentenceId+".html")
         repairApostrophes(self.outDir + "/sentences/"+sentenceId+".html")
+    
+    def makeSentenceListPage(self):
+        pass
 
 def repairApostrophes(filename):
     f = open(filename)

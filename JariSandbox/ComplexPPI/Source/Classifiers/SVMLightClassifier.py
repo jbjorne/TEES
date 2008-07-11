@@ -2,7 +2,6 @@ import sys,os
 sys.path.append("..")
 import shutil
 import subprocess
-import tempfile
 import Core.ExampleUtils as Example
 import combine
 from Core.Evaluation import Evaluation
@@ -14,19 +13,13 @@ defaultOptimizationParameters = {"c":[0.0001,0.001,0.01,0.1,1,10,100]}
 
 class SVMLightClassifier(Classifier):
     def __init__(self, workDir=None):
-        global tempDir
+        #global tempDir
         
-        self.__workDir = workDir
-        if workDir == None:
-            self.tempDir = tempfile.mkdtemp() #(dir=tempDir)
-        else:
-            self.tempDir = workDir
-        
-        self.debugFile = open(self.tempDir + "/debug.txt", "wt")
+        self._makeTempDir(workDir)        
     
     def __del__(self):
         self.debugFile.close()
-        if self.__workDir == None and os.path.exists(self.tempDir):
+        if self._workDir == None and os.path.exists(self.tempDir):
             print >> sys.stderr, "Removing temporary SVM-light work directory", self.tempDir
             shutil.rmtree(self.tempDir)
     
@@ -51,7 +44,7 @@ class SVMLightClassifier(Classifier):
         predictionsFile.close()
         predictions = []
         for i in range(len(lines)):
-            predictions.append( (examples[i],float(lines[i])) )
+            predictions.append( (examples[i],float(lines[i]),"binary") )
         return predictions
     
     def __addParametersToSubprocessCall(self, args, parameters):

@@ -1,8 +1,14 @@
-# example is a 3-tuple (or list) of the format: (id, class, features). id is a string,
+# example is a 3-tuple (or list) of the format: (id, class, features, extra). id is a string,
 # class is an int (-1 or +1) and features is a dictionary of int:float -pairs, where
 # the int is the feature id and the float is the feature value
 
 import Split
+
+def copyExamples(examples):
+    examplesCopy = []
+    for example in examples:
+        examplesCopy.append([example[0], example[1], example[2].copy(), example[3]])
+    return examplesCopy
 
 def writeExamples(examples, filename, commentLines=None):
     f = open(filename,"wt")
