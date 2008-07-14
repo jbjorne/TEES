@@ -44,7 +44,7 @@ class CorpusVisualizer:
         for example in examples:
             if classificationsByExample.has_key(example[0]):
                 a = classificationsByExample[example[0]]
-                if a[1] != "tn" and a[1] != "fn":
+                if a[1] != "tn": #and a[1] != "fn":
                     exampleGraph.add_edge(example[3]["t1"], example[3]["t2"], a[1])
         for edge in exampleGraph.edges():
             classification = edge[2]
@@ -54,6 +54,9 @@ class CorpusVisualizer:
             elif classification == "fp":
                 arcStyles[edge] = {"stroke":"red"}
                 labelStyles[edge] = {"stroke":"red"}
+            elif classification == "fn":
+                arcStyles[edge] = {"stroke":"#BDEDFF"}
+                labelStyles[edge] = {"stroke":"#BDEDFF"}
 
         builder.header("Classification",4)
         svgTokens = GraphToSVG.tokensToSVG(sentenceGraph.tokens)
@@ -97,16 +100,17 @@ class CorpusVisualizer:
         
         # Parse SVG
         builder.header("Parse",4)
-        svgTokens = GraphToSVG.tokensToSVG(sentenceGraph.tokens)
+        svgTokens = GraphToSVG.tokensToSVG(sentenceGraph.tokens, True)
         svgDependencies = GraphToSVG.edgesToSVG(svgTokens, sentenceGraph.dependencyGraph)
         svgElement = GraphToSVG.writeSVG(svgTokens, svgDependencies,self.outDir+"/svg/"+sentenceId+".svg")
         builder.svg("../svg/" + sentenceId + ".svg",svgElement.attrib["width"],svgElement.attrib["height"],id="dep_graph")
         builder.lineBreak()
         
-        # Interaction SVG
+        # Annotation SVG
         if sentenceGraph.interactionGraph != None:
             builder.header("Annotation",4)
             arcStyles, labelStyles = self.getMatchingEdgeStyles(sentenceGraph.interactionGraph, sentenceGraph.dependencyGraph, "orange", "#F660AB" )
+            svgTokens = GraphToSVG.tokensToSVG(sentenceGraph.tokens, False, sentenceGraph.entitiesByToken)
             svgInteractionEdges = GraphToSVG.edgesToSVG(svgTokens, sentenceGraph.interactionGraph, arcStyles, labelStyles)
             svgElement = GraphToSVG.writeSVG(svgTokens, svgInteractionEdges,self.outDir+"/svg/"+sentenceId+"_ann.svg")
             builder.svg("../svg/" + sentenceId + "_ann.svg",svgElement.attrib["width"],svgElement.attrib["height"],id="ann_graph")
@@ -174,7 +178,18 @@ class CorpusVisualizer:
             builder.tableData(entityElement.get("id").split(".")[-1][1:], True)
             builder.tableData(entityElement.get("text"), True)
             builder.tableData(entityElement.get("type"), True)
-            builder.tableData(entityElement.get("charOffset"), True)
+            charOffset = entityElement.get("charOffset")
+            charOffsetSplits = charOffset.split(",")
+            headOffset = entityElement.get("headOffset")
+            charOffset = ""
+            for charOffsetSplit in charOffsetSplits:
+                if charOffset != "":
+                    charOffset += ","
+                if charOffsetSplit == headOffset:
+                    charOffset += "<u>" + charOffsetSplit + "</u>"
+                else:
+                    charOffset += charOffsetSplit
+            builder.tableData(charOffset, True)
             builder.closeElement()
         builder.closeElement() # close tableBody
         builder.closeElement() # close table

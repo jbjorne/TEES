@@ -1,16 +1,20 @@
 import draw_dg
 import cElementTreeUtils as ETUtils
 
-def tokensToSVG(tokenElements, showPOS=False):
+def tokensToSVG(tokenElements, showPOS=False, entitiesByToken=None):
     #svgTokensById = {}
     svgTokens = []
     position = 0
     for token in tokenElements:
         svgToken = draw_dg.Token(token.attrib["text"], int(token.attrib["id"].split("_")[-1])-1)
         if showPOS:
-            svgToken.otherLines.append(token.pos)
-        if hasattr(token, "entityType"):
-            svgToken.otherLines.append(token.entityType)
+            svgToken.otherLines.append(token.attrib["POS"])
+        if entitiesByToken != None and entitiesByToken.has_key(token):
+            entity = entitiesByToken[token][0]
+            if entity.attrib["isName"] == "True":
+                svgToken.otherLines.append("["+entity.attrib["type"]+"]")
+            else:
+                svgToken.otherLines.append(entity.attrib["type"])
         else:
             svgToken.otherLines.append(" ")
         #svgTokensById[token.attrib["id"]] = svgToken

@@ -29,6 +29,7 @@ class SentenceGraph:
         self.interactions = interactionElements
         self.entities = entityElements
         self.interactionGraph = NX.XDiGraph()
+        self.entitiesByToken = {}
         
         self.__markNamedEntities()
         
@@ -52,12 +53,15 @@ class SentenceGraph:
                 headTokens.append(token)
         #assert(len(headTokens)==1) # Terrible hack, but should work for now
         if len(headTokens)==1:
-            return headTokens[0]
+            token = headTokens[0]
         else:
             token = self.findHeadToken(headTokens)
             if verbose:
                 print >> sys.stderr, "Selected head:", token.attrib["id"], token.attrib["text"]
-            return token
+        if not self.entitiesByToken.has_key(token):
+            self.entitiesByToken[token] = []
+        self.entitiesByToken[token].append(entityElement)
+        return token
     
     def findHeadToken(self, candidateTokens):
         # Remove tokens that clearly can't be head and are probably produced by hyphen-splitter
