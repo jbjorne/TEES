@@ -177,7 +177,10 @@ class CorpusVisualizer:
             builder.tableRow()
             builder.tableData(entityElement.get("id").split(".")[-1][1:], True)
             builder.tableData(entityElement.get("text"), True)
-            builder.tableData(entityElement.get("type"), True)
+            if entityElement.attrib["isName"] == "True":
+                builder.tableData("["+entityElement.get("type")+"]", True)
+            else:
+                builder.tableData(entityElement.get("type"), True)
             charOffset = entityElement.get("charOffset")
             charOffsetSplits = charOffset.split(",")
             headOffset = entityElement.get("headOffset")

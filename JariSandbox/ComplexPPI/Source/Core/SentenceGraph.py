@@ -37,11 +37,13 @@ class SentenceGraph:
             self.interactionGraph.add_node(token)
         
         self.entitiesById = {}
+        entityHeadTokenByEntity = {}
         for entity in self.entities:
             self.entitiesById[entity.attrib["id"]] = entity
+            entityHeadTokenByEntity[entity] = self.mapEntity(entity, verbose)
         for interaction in self.interactions:
-            token1 = self.mapEntity(self.entitiesById[interaction.attrib["e1"]], verbose)
-            token2 = self.mapEntity(self.entitiesById[interaction.attrib["e2"]], verbose)
+            token1 = entityHeadTokenByEntity[self.entitiesById[interaction.attrib["e1"]]]
+            token2 = entityHeadTokenByEntity[self.entitiesById[interaction.attrib["e2"]]]
             self.interactionGraph.add_edge(token1, token2, interaction)
     
     def mapEntity(self, entityElement, verbose=False):

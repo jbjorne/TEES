@@ -30,4 +30,20 @@ class SimpleDependencyExampleBuilder2(ExampleBuilder):
         features[self.featureSet.getId("t1POS_"+depEdge[0].attrib["POS"])] = 1
         features[self.featureSet.getId("t2txt_"+sentenceGraph.getTokenText(depEdge[1]))] = 1
         features[self.featureSet.getId("t2POS_"+depEdge[1].attrib["POS"])] = 1
+        
+        # Attached edges
+        sentenceGraph
+        
+        # Linear order
+#        if int(depEdge[0].attrib["id"].split("_")[-1]) < int(depEdge[1].attrib["id"].split("_")[-1]):
+#            features[self.featureSet.getId("l1txt_"+sentenceGraph.getTokenText(depEdge[0]))] = 1
+#            features[self.featureSet.getId("l1POS_"+depEdge[0].attrib["POS"])] = 1
+#            features[self.featureSet.getId("l2txt_"+sentenceGraph.getTokenText(depEdge[1]))] = 1
+#            features[self.featureSet.getId("l2POS_"+depEdge[1].attrib["POS"])] = 1
+#        else:
+#            features[self.featureSet.getId("l2txt_"+sentenceGraph.getTokenText(depEdge[0]))] = 1
+#            features[self.featureSet.getId("l2POS_"+depEdge[0].attrib["POS"])] = 1
+#            features[self.featureSet.getId("l1txt_"+sentenceGraph.getTokenText(depEdge[1]))] = 1
+#            features[self.featureSet.getId("l1POS_"+depEdge[1].attrib["POS"])] = 1
+
         return features
