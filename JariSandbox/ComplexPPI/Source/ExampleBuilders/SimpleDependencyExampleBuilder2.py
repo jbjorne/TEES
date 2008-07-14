@@ -1,6 +1,7 @@
 import sys
 sys.path.append("..")
 from Core.ExampleBuilder import ExampleBuilder
+#import Stemming.PorterStemmer as PorterStemmer
 
 class SimpleDependencyExampleBuilder2(ExampleBuilder):
         
@@ -26,24 +27,56 @@ class SimpleDependencyExampleBuilder2(ExampleBuilder):
     def buildFeatures(self, depEdge, sentenceGraph):
         features = {}
         features[self.featureSet.getId("dep_"+depEdge[2].attrib["type"])] = 1
+        # Token 1
         features[self.featureSet.getId("t1txt_"+sentenceGraph.getTokenText(depEdge[0]))] = 1
+        #features[self.featureSet.getId("t1stem_"+PorterStemmer.stem(sentenceGraph.getTokenText(depEdge[0])))] = 1
         features[self.featureSet.getId("t1POS_"+depEdge[0].attrib["POS"])] = 1
+        # Token 2
         features[self.featureSet.getId("t2txt_"+sentenceGraph.getTokenText(depEdge[1]))] = 1
+        #features[self.featureSet.getId("t2stem_"+PorterStemmer.stem(sentenceGraph.getTokenText(depEdge[1])))] = 1
         features[self.featureSet.getId("t2POS_"+depEdge[1].attrib["POS"])] = 1
         
         # Attached edges
-        sentenceGraph
+        t1InEdges = sentenceGraph.dependencyGraph.in_edges(depEdge[0])
+        for edge in t1InEdges:
+            features[self.featureSet.getId("t1HangingIn_"+edge[2].attrib["type"])] = 1
+            features[self.featureSet.getId("t1HangingIn_"+edge[0].attrib["POS"])] = 1
+            #features[self.featureSet.getId("t1HangingIn_"+sentenceGraph.getTokenText(edge[0]))] = 1
+        t1OutEdges = sentenceGraph.dependencyGraph.out_edges(depEdge[0])
+        for edge in t1OutEdges:
+            features[self.featureSet.getId("t1HangingOut_"+edge[2].attrib["type"])] = 1
+            features[self.featureSet.getId("t1HangingOut_"+edge[1].attrib["POS"])] = 1
+            #features[self.featureSet.getId("t1HangingOut_"+sentenceGraph.getTokenText(edge[1]))] = 1
+        
+        t2InEdges = sentenceGraph.dependencyGraph.in_edges(depEdge[1])
+        for edge in t2InEdges:
+            features[self.featureSet.getId("t2HangingIn_"+edge[2].attrib["type"])] = 1
+            features[self.featureSet.getId("t2HangingIn_"+edge[0].attrib["POS"])] = 1
+            #features[self.featureSet.getId("t2HangingIn_"+sentenceGraph.getTokenText(edge[0]))] = 1
+        t2OutEdges = sentenceGraph.dependencyGraph.out_edges(depEdge[1])
+        for edge in t2OutEdges:
+            features[self.featureSet.getId("t2HangingOut_"+edge[2].attrib["type"])] = 1
+            features[self.featureSet.getId("t2HangingOut_"+edge[1].attrib["POS"])] = 1
+            #features[self.featureSet.getId("t2HangingOut_"+sentenceGraph.getTokenText(edge[1]))] = 1
         
         # Linear order
-#        if int(depEdge[0].attrib["id"].split("_")[-1]) < int(depEdge[1].attrib["id"].split("_")[-1]):
-#            features[self.featureSet.getId("l1txt_"+sentenceGraph.getTokenText(depEdge[0]))] = 1
-#            features[self.featureSet.getId("l1POS_"+depEdge[0].attrib["POS"])] = 1
-#            features[self.featureSet.getId("l2txt_"+sentenceGraph.getTokenText(depEdge[1]))] = 1
-#            features[self.featureSet.getId("l2POS_"+depEdge[1].attrib["POS"])] = 1
+#        t1Position = int(depEdge[0].attrib["id"].split("_")[-1])
+#        t2Position = int(depEdge[1].attrib["id"].split("_")[-1])
+#        features[self.featureSet.getId("lin_distance")] = t2Position - t1Position
+
+#        if t1Position < t2Position:
+#            features[self.featureSet.getId("forward")] = 1
+#            features[self.featureSet.getId("lin_distance")] = t2Position - t1Position
+#            #features[self.featureSet.getId("l1txt_"+sentenceGraph.getTokenText(depEdge[0]))] = 1
+#            #features[self.featureSet.getId("l1POS_"+depEdge[0].attrib["POS"])] = 1
+#            #features[self.featureSet.getId("l2txt_"+sentenceGraph.getTokenText(depEdge[1]))] = 1
+#            #features[self.featureSet.getId("l2POS_"+depEdge[1].attrib["POS"])] = 1
 #        else:
-#            features[self.featureSet.getId("l2txt_"+sentenceGraph.getTokenText(depEdge[0]))] = 1
-#            features[self.featureSet.getId("l2POS_"+depEdge[0].attrib["POS"])] = 1
-#            features[self.featureSet.getId("l1txt_"+sentenceGraph.getTokenText(depEdge[1]))] = 1
-#            features[self.featureSet.getId("l1POS_"+depEdge[1].attrib["POS"])] = 1
+#            features[self.featureSet.getId("reverse")] = 1
+#            features[self.featureSet.getId("lin_distance")] = t2Position - t1Position
+#            #features[self.featureSet.getId("l2txt_"+sentenceGraph.getTokenText(depEdge[0]))] = 1
+#            #features[self.featureSet.getId("l2POS_"+depEdge[0].attrib["POS"])] = 1
+#            #features[self.featureSet.getId("l1txt_"+sentenceGraph.getTokenText(depEdge[1]))] = 1
+#            #features[self.featureSet.getId("l1POS_"+depEdge[1].attrib["POS"])] = 1
 
         return features
