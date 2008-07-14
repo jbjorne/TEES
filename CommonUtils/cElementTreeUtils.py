@@ -9,9 +9,9 @@
 """
 
 try:
-    import xml.etree.cElementTree as ET
+    import xml.etree.cElementTree as ElementTree
 except ImportError:
-    import cElementTree as ET
+    import cElementTree as ElementTree
 
 def iterparse(file, elementName, callback, limit = -1):
     """ Parse iteratively xml-files
