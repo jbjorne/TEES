@@ -2,7 +2,10 @@
 # have time to document this yes, but still in CommonUtils because
 # it was needed to visualize the PPI_learning stuff.
 
-import cElementTree as ET
+try:
+    import xml.etree.cElementTree as ET
+except ImportError:
+    import cElementTree as ET
 import cElementTreeUtils as ETUtils
 
 # Doesn't work yet

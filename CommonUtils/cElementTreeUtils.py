@@ -8,7 +8,10 @@
   Status: UNDER CONSTRUCTION, doesn't work yet!
 """
 
-import cElementTree as ElementTree
+try:
+    import xml.etree.cElementTree as ET
+except ImportError:
+    import cElementTree as ET
 
 def iterparse(file, elementName, callback, limit = -1):
     """ Parse iteratively xml-files

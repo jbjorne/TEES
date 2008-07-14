@@ -1,6 +1,9 @@
 import Core.ExampleUtils as Example
 import sys, os
-import cElementTree as ET
+try:
+    import xml.etree.cElementTree as ET
+except ImportError:
+    import cElementTree as ET
 #from ExampleBuilders.SimpleDependencyExampleBuilder import SimpleDependencyExampleBuilder
 from InteractionXML.CorpusElements import CorpusElements
 from Core.SentenceGraph import *
