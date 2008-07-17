@@ -24,7 +24,7 @@ def tokensToSVG(tokenElements, showPOS=False, entitiesByToken=None):
     #return svgTokensById, svgTokens
     return svgTokens
 
-def edgesToSVG(svgTokens, graph, arcStyles={}, labelStyles={}, edgeTypeAttrib="type"):
+def edgesToSVG(svgTokens, graph, arcStyles={}, labelStyles={}, edgeTypeAttrib="type", edgeTypes={}):
     svgTokensById = {}
     for token in svgTokens:
         svgTokensById[token.id] = token
@@ -43,7 +43,11 @@ def edgesToSVG(svgTokens, graph, arcStyles={}, labelStyles={}, edgeTypeAttrib="t
                 type = "<" + type
                 svgEdge = draw_dg.Dep(svgTokensById[token2], svgTokensById[token1], type)
         else:
-            svgEdge = draw_dg.Dep(svgTokensById[token1], svgTokensById[token2], "i")
+            if edgeTypes.has_key(edge):
+                svgEdge = draw_dg.Dep(svgTokensById[token1], svgTokensById[token2], edgeTypes[edge])
+            else:
+                svgEdge = draw_dg.Dep(svgTokensById[token1], svgTokensById[token2], "i")
+               
         # Set styles
         if arcStyles.has_key(edge):
             for key in arcStyles[edge]:

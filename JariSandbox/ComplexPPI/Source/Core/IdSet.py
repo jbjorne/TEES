@@ -1,15 +1,15 @@
-class FeatureSet:    
+class IdSet:    
     def __init__(self, firstNumber=1):
-        self.featureIds = {}
+        self.Ids = {}
         self.firstNumber = firstNumber
 
     def getId(self, name):
-        if not self.featureIds.has_key(name):
-            self.featureIds[name] = len(self.featureIds) + self.firstNumber
-        return self.featureIds[name]
+        if not self.Ids.has_key(name):
+            self.Ids[name] = len(self.Ids) + self.firstNumber
+        return self.Ids[name]
     
     def getName(self, id):
-        for k, v in self.featureIds:
+        for k, v in self.Ids:
             if v == id:
                 return k
             else:
@@ -17,19 +17,19 @@ class FeatureSet:
     
     def write(self, filename):
         f = open(filename, "wt")
-        keys = self.featureIds.keys()
+        keys = self.Ids.keys()
         keys.sort()
         for key in keys:
-            f.write(str(key)+": "+str(self.featureIds[key])+"\n")
+            f.write(str(key)+": "+str(self.Ids[key])+"\n")
         f.close()
     
     def toStrings(self, rowLength=80):
         strings = [""]
-        keys = self.featureIds.keys()
+        keys = self.Ids.keys()
         keys.sort()
         currLen = 0
         for key in keys:
-            pair = str(key)+":"+str(self.featureIds[key])
+            pair = str(key)+":"+str(self.Ids[key])
             currLen += len(pair) + 1
             if currLen > rowLength:
                 currLen = 0
@@ -40,7 +40,7 @@ class FeatureSet:
         return strings
     
     def load(self, filename):
-        self.featureIds = {}
+        self.Ids = {}
         self.firstNumber = 0
         
         f = open(filename, "rt")
@@ -52,4 +52,4 @@ class FeatureSet:
             value = int(value.strip())
             if self.firstNumber > value:
                 self.firstNumber = value
-            self.featureIds[key] = value
+            self.Ids[key] = value

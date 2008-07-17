@@ -8,7 +8,7 @@ except ImportError:
 from InteractionXML.CorpusElements import CorpusElements
 from Core.SentenceGraph import *
 #from Classifiers.SVMLightClassifier import SVMLightClassifier as Classifier
-from Core.Evaluation import Evaluation
+#from Core.Evaluation import Evaluation
 from Visualization.CorpusVisualizer import CorpusVisualizer
 from optparse import OptionParser
 
@@ -47,7 +47,8 @@ if __name__=="__main__":
     optparser.add_option("-o", "--output", default=None, dest="output", help="Output directory, useful for debugging")
     optparser.add_option("-c", "--classifier", default="SVMLightClassifier", dest="classifier", help="Classifier Class")
     optparser.add_option("-p", "--parameters", default=None, dest="parameters", help="Parameters for the classifier")
-    optparser.add_option("-e", "--exampleBuilder", default="SimpleDependencyExampleBuilder", dest="exampleBuilder", help="Example Builder Class")
+    optparser.add_option("-b", "--exampleBuilder", default="SimpleDependencyExampleBuilder", dest="exampleBuilder", help="Example Builder Class")
+    optparser.add_option("-e", "--evaluator", default="Evaluation", dest="evaluator", help="Prediction evaluator class")
     optparser.add_option("-v", "--visualization", default=None, dest="visualization", help="Visualization output directory. NOTE: If the directory exists, it will be deleted!")
     (options, args) = optparser.parse_args()
     
@@ -60,6 +61,7 @@ if __name__=="__main__":
     print >> sys.stderr, "Importing modules"
     exec "from ExampleBuilders." + options.exampleBuilder + " import " + options.exampleBuilder + " as ExampleBuilder"
     exec "from Classifiers." + options.classifier + " import " + options.classifier + " as Classifier"
+    exec "from Evaluators." + options.evaluator + " import " + options.evaluator + " as Evaluation"
     
     print >> sys.stderr, "Loading corpus file", options.input
     corpusTree = ET.parse(options.input)
@@ -110,9 +112,9 @@ if __name__=="__main__":
     optimizationSets = Example.divideExamples(exampleSets[0])
     if options.parameters != None:
         paramDict = splitParameters(options.parameters)
-        bestResults = classifier.optimize(optimizationSets[0], optimizationSets[1], paramDict)
+        bestResults = classifier.optimize(optimizationSets[0], optimizationSets[1], paramDict, Evaluation)
     else:
-        bestResults = classifier.optimize(optimizationSets[0], optimizationSets[1])
+        bestResults = classifier.optimize(optimizationSets[0], optimizationSets[1], evaluationClass=Evaluation)
 
     # Save example sets
     if options.output != None:

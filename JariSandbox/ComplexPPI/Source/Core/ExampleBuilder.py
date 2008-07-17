@@ -1,10 +1,10 @@
 from SentenceGraph import SentenceGraph
-from FeatureSet import FeatureSet
+from IdSet import IdSet
 import sys
 
 class ExampleBuilder:
     def __init__(self):
-        self.featureSet = FeatureSet()
+        self.featureSet = IdSet()
     
     def buildExamplesForCorpus(self, corpusElements, visualizer=None):
         print >> sys.stderr, "Building examples"

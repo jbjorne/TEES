@@ -2,8 +2,12 @@ import sys
 sys.path.append("..")
 from Core.ExampleBuilder import ExampleBuilder
 #import Stemming.PorterStemmer as PorterStemmer
+from Core.IdSet import IdSet
 
-class SimpleDependencyExampleBuilder2(ExampleBuilder):
+class SingleDependencyTypeExampleBuilder(ExampleBuilder):
+    def __init__(self):
+        ExampleBuilder.__init__(self)
+        self.classSet = IdSet(2)
         
     def buildExamples(self, sentenceGraph):
         examples = []
@@ -12,11 +16,19 @@ class SimpleDependencyExampleBuilder2(ExampleBuilder):
         for depEdge in dependencyEdges:
             if (not sentenceGraph.tokenIsEntityHead[depEdge[0]]) or (not sentenceGraph.tokenIsEntityHead[depEdge[1]]):
                 continue
-            hasInt = sentenceGraph.interactionGraph.has_edge(depEdge[0], depEdge[1]) or sentenceGraph.interactionGraph.has_edge(depEdge[1], depEdge[0])
-            if hasInt:
-                category = 1
+            
+            if sentenceGraph.interactionGraph.has_edge(depEdge[0], depEdge[1]):
+                categoryName = sentenceGraph.interactionGraph.get_edge(depEdge[0], depEdge[1]).attrib["type"]
+                categoryName += ">"
+                category = self.classSet.getId(categoryName)
+            elif sentenceGraph.interactionGraph.has_edge(depEdge[1], depEdge[0]):
+                categoryName = sentenceGraph.interactionGraph.get_edge(depEdge[1], depEdge[0]).attrib["type"]
+                categoryName += "<"
+                category = self.classSet.getId(categoryName)
             else:
-                category = -1
+                categoryName = "neg"
+                category = 1
+
             features = self.buildFeatures(depEdge,sentenceGraph)
             # Normalize features
 #            total = 0.0
@@ -26,9 +38,9 @@ class SimpleDependencyExampleBuilder2(ExampleBuilder):
 #                features[k] = float(v) / total
             # Define extra attributes f.e. for the visualizer
             if int(depEdge[0].attrib["id"].split("_")[-1]) < int(depEdge[1].attrib["id"].split("_")[-1]):
-                extra = {"type":"i","t1":depEdge[0],"t2":depEdge[1]}
+                extra = {"type":categoryName,"t1":depEdge[0],"t2":depEdge[1]}
             else:
-                extra = {"type":"i","t1":depEdge[1],"t2":depEdge[0]}
+                extra = {"type":categoryName,"t1":depEdge[1],"t2":depEdge[0]}
             examples.append( (sentenceGraph.getSentenceId()+".x"+str(exampleIndex),category,features,extra) )
             exampleIndex += 1
         return examples

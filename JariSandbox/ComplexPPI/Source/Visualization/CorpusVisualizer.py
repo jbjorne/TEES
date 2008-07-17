@@ -41,27 +41,31 @@ class CorpusVisualizer:
             exampleGraph.add_node(token)
         arcStyles = {}
         labelStyles = {}
+        edgeTypes = {}
         for example in examples:
             if classificationsByExample.has_key(example[0]):
-                a = classificationsByExample[example[0]]
-                if a[1] != "tn": #and a[1] != "fn":
-                    exampleGraph.add_edge(example[3]["t1"], example[3]["t2"], a[1])
+                classification = classificationsByExample[example[0]]
+                if classification[1] != "tn": #and a[1] != "fn":
+                    exampleGraph.add_edge(example[3]["t1"], example[3]["t2"], example[0])
         for edge in exampleGraph.edges():
-            classification = edge[2]
+            classification = classificationsByExample[edge[2]][1]
             if classification == "tp":
                 arcStyles[edge] = {"stroke":"green"}
-                labelStyles[edge] = {"stroke":"green"}
+                labelStyles[edge] = {"fill":"green"}
+                edgeTypes[edge] = classificationsByExample[edge[2]][0][3]["type"]
             elif classification == "fp":
                 arcStyles[edge] = {"stroke":"red"}
-                labelStyles[edge] = {"stroke":"red"}
+                labelStyles[edge] = {"fill":"red"}
+                edgeTypes[edge] = classificationsByExample[edge[2]][0][3]["type"]
             elif classification == "fn":
                 arcStyles[edge] = {"stroke":"#BDEDFF"}
-                labelStyles[edge] = {"stroke":"#BDEDFF"}
+                labelStyles[edge] = {"fill":"#BDEDFF"}
+                edgeTypes[edge] = classificationsByExample[edge[2]][0][3]["type"]
 
         builder.header("Classification",4)
         svgTokens = GraphToSVG.tokensToSVG(sentenceGraph.tokens)
         #arcStyles, labelStyles = self.getMatchingEdgeStyles(exampleGraph, sentenceGraph.interactionGraph, "green", "red" )
-        svgEdges = GraphToSVG.edgesToSVG(svgTokens, exampleGraph, arcStyles, labelStyles, None)
+        svgEdges = GraphToSVG.edgesToSVG(svgTokens, exampleGraph, arcStyles, labelStyles, None, edgeTypes)
         sentenceId = sentenceGraph.getSentenceId()
         svgElement = GraphToSVG.writeSVG(svgTokens, svgEdges, self.outDir+"/svg/"+sentenceId+"_learned.svg")
         builder.svg("../svg/" + sentenceId + "_learned.svg",svgElement.attrib["width"],svgElement.attrib["height"],id="learned_graph")
