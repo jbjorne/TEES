@@ -95,16 +95,24 @@ class SentenceGraph:
 
     def __markNamedEntities(self):
         self.tokenIsName = {}
+        self.tokenIsEntity = {}
+        self.tokenIsEntityHead = {}
         for token in self.tokens:
             self.tokenIsName[token] = False
+            self.tokenIsEntity[token] = False
+            self.tokenIsEntityHead[token] = False
         for entity in self.entities:
             entityOffsets = Range.charOffsetToTuples(entity.attrib["charOffset"])
+            entityHeadOffset = Range.charOffsetToSingleTuple(entity.attrib["headOffset"])
             for token in self.tokens:
                 tokenOffset = Range.charOffsetToSingleTuple(token.attrib["charOffset"])
                 for entityOffset in entityOffsets:
                     if Range.overlap(entityOffset, tokenOffset):
-                        self.tokenIsName[token] = True
-                        break
+                        self.tokenIsEntity[token] = True
+                        if entity.attrib["isName"] == "True":
+                            self.tokenIsName[token] = True
+                if Range.overlap(entityHeadOffset, tokenOffset):
+                    self.tokenIsEntityHead[token] = True
 
     def getTokenText(self, token):
         if self.tokenIsName[token]:
