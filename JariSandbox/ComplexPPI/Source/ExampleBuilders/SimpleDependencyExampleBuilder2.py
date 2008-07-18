@@ -10,7 +10,7 @@ class SimpleDependencyExampleBuilder2(ExampleBuilder):
         exampleIndex = 0
         dependencyEdges = sentenceGraph.dependencyGraph.edges()
         for depEdge in dependencyEdges:
-            if (not sentenceGraph.tokenIsEntityHead[depEdge[0]]) or (not sentenceGraph.tokenIsEntityHead[depEdge[1]]):
+            if (sentenceGraph.tokenIsEntityHead[depEdge[0]] == None) or (sentenceGraph.tokenIsEntityHead[depEdge[1]] == None):
                 continue
             hasInt = sentenceGraph.interactionGraph.has_edge(depEdge[0], depEdge[1]) or sentenceGraph.interactionGraph.has_edge(depEdge[1], depEdge[0])
             if hasInt:
@@ -40,21 +40,27 @@ class SimpleDependencyExampleBuilder2(ExampleBuilder):
         features[self.featureSet.getId("t1txt_"+sentenceGraph.getTokenText(depEdge[0]))] = 1
         #features[self.featureSet.getId("t1stem_"+PorterStemmer.stem(sentenceGraph.getTokenText(depEdge[0])))] = 1
         features[self.featureSet.getId("t1POS_"+depEdge[0].attrib["POS"])] = 1
+        features[self.featureSet.getId("t1AnnType_"+sentenceGraph.tokenIsEntityHead[depEdge[0]].attrib["type"])] = 1
         # Token 2
         features[self.featureSet.getId("t2txt_"+sentenceGraph.getTokenText(depEdge[1]))] = 1
         #features[self.featureSet.getId("t2stem_"+PorterStemmer.stem(sentenceGraph.getTokenText(depEdge[1])))] = 1
         features[self.featureSet.getId("t2POS_"+depEdge[1].attrib["POS"])] = 1
+        features[self.featureSet.getId("t2AnnType_"+sentenceGraph.tokenIsEntityHead[depEdge[1]].attrib["type"])] = 1
         
         # Attached edges
         t1InEdges = sentenceGraph.dependencyGraph.in_edges(depEdge[0])
         for edge in t1InEdges:
             features[self.featureSet.getId("t1HangingIn_"+edge[2].attrib["type"])] = 1
             features[self.featureSet.getId("t1HangingIn_"+edge[0].attrib["POS"])] = 1
+            if sentenceGraph.tokenIsEntityHead[edge[0]] != None:
+                features[self.featureSet.getId("t1HangingIn_AnnType_"+sentenceGraph.tokenIsEntityHead[edge[0]].attrib["type"])] = 1
             #features[self.featureSet.getId("t1HangingIn_"+sentenceGraph.getTokenText(edge[0]))] = 1
         t1OutEdges = sentenceGraph.dependencyGraph.out_edges(depEdge[0])
         for edge in t1OutEdges:
             features[self.featureSet.getId("t1HangingOut_"+edge[2].attrib["type"])] = 1
             features[self.featureSet.getId("t1HangingOut_"+edge[1].attrib["POS"])] = 1
+            if sentenceGraph.tokenIsEntityHead[edge[1]] != None:
+                features[self.featureSet.getId("t1HangingOut_AnnType_"+sentenceGraph.tokenIsEntityHead[edge[1]].attrib["type"])] = 1
             #features[self.featureSet.getId("t1HangingOut_"+sentenceGraph.getTokenText(edge[1]))] = 1
         
         t2InEdges = sentenceGraph.dependencyGraph.in_edges(depEdge[1])
@@ -62,10 +68,14 @@ class SimpleDependencyExampleBuilder2(ExampleBuilder):
             features[self.featureSet.getId("t2HangingIn_"+edge[2].attrib["type"])] = 1
             features[self.featureSet.getId("t2HangingIn_"+edge[0].attrib["POS"])] = 1
             #features[self.featureSet.getId("t2HangingIn_"+sentenceGraph.getTokenText(edge[0]))] = 1
+            if sentenceGraph.tokenIsEntityHead[edge[0]] != None:
+                features[self.featureSet.getId("t2HangingIn_AnnType_"+sentenceGraph.tokenIsEntityHead[edge[0]].attrib["type"])] = 1
         t2OutEdges = sentenceGraph.dependencyGraph.out_edges(depEdge[1])
         for edge in t2OutEdges:
             features[self.featureSet.getId("t2HangingOut_"+edge[2].attrib["type"])] = 1
             features[self.featureSet.getId("t2HangingOut_"+edge[1].attrib["POS"])] = 1
+            if sentenceGraph.tokenIsEntityHead[edge[1]] != None:
+                features[self.featureSet.getId("t2HangingIn_AnnType_"+sentenceGraph.tokenIsEntityHead[edge[1]].attrib["type"])] = 1
             #features[self.featureSet.getId("t2HangingOut_"+sentenceGraph.getTokenText(edge[1]))] = 1
         
         # Linear order
