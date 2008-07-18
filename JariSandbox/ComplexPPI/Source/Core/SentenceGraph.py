@@ -100,7 +100,7 @@ class SentenceGraph:
         for token in self.tokens:
             self.tokenIsName[token] = False
             self.tokenIsEntity[token] = False
-            self.tokenIsEntityHead[token] = False
+            self.tokenIsEntityHead[token] = None
         for entity in self.entities:
             entityOffsets = Range.charOffsetToTuples(entity.attrib["charOffset"])
             entityHeadOffset = Range.charOffsetToSingleTuple(entity.attrib["headOffset"])
@@ -112,7 +112,7 @@ class SentenceGraph:
                         if entity.attrib["isName"] == "True":
                             self.tokenIsName[token] = True
                 if Range.overlap(entityHeadOffset, tokenOffset):
-                    self.tokenIsEntityHead[token] = True
+                    self.tokenIsEntityHead[token] = entity
 
     def getTokenText(self, token):
         if self.tokenIsName[token]:
