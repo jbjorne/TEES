@@ -14,7 +14,7 @@ class SingleDependencyTypeExampleBuilder(ExampleBuilder):
         exampleIndex = 0
         dependencyEdges = sentenceGraph.dependencyGraph.edges()
         for depEdge in dependencyEdges:
-            if (not sentenceGraph.tokenIsEntityHead[depEdge[0]]) or (not sentenceGraph.tokenIsEntityHead[depEdge[1]]):
+            if (sentenceGraph.tokenIsEntityHead[depEdge[0]] == None) or (sentenceGraph.tokenIsEntityHead[depEdge[1]] == None):
                 continue
             
             if sentenceGraph.interactionGraph.has_edge(depEdge[0], depEdge[1]):

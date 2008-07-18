@@ -55,8 +55,8 @@ class DirectedMultiEdgeExampleBuilder(ExampleBuilder):
                 tI = sentenceGraph.tokens[i]
                 tJ = sentenceGraph.tokens[j]
                 # only consider paths between entities (NOTE! entities, not only named entities)
-                if (not sentenceGraph.tokenIsEntityHead[tI]) or (not sentenceGraph.tokenIsEntityHead[tJ]):
-                    continue
+#                if (sentenceGraph.tokenIsEntityHead[tI] == None) or (sentenceGraph.tokenIsEntityHead[tJ] == None):
+#                    continue
                 # find the path
                 if paths.has_key(tI) and paths[tI].has_key(tJ):
                     path = paths[tI][tJ]
