@@ -26,9 +26,9 @@ class SimpleDependencyExampleBuilder2(ExampleBuilder):
 #                features[k] = float(v) / total
             # Define extra attributes f.e. for the visualizer
             if int(depEdge[0].attrib["id"].split("_")[-1]) < int(depEdge[1].attrib["id"].split("_")[-1]):
-                extra = {"type":"i","t1":depEdge[0],"t2":depEdge[1]}
+                extra = {"xtype":"edge","type":"i","t1":depEdge[0],"t2":depEdge[1]}
             else:
-                extra = {"type":"i","t1":depEdge[1],"t2":depEdge[0]}
+                extra = {"xtype":"edge","type":"i","t1":depEdge[1],"t2":depEdge[0]}
             examples.append( (sentenceGraph.getSentenceId()+".x"+str(exampleIndex),category,features,extra) )
             exampleIndex += 1
         return examples

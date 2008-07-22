@@ -55,8 +55,8 @@ class DirectedMultiEdgeExampleBuilder(ExampleBuilder):
                 tI = sentenceGraph.tokens[i]
                 tJ = sentenceGraph.tokens[j]
                 # only consider paths between entities (NOTE! entities, not only named entities)
-#                if (sentenceGraph.tokenIsEntityHead[tI] == None) or (sentenceGraph.tokenIsEntityHead[tJ] == None):
-#                    continue
+                if (sentenceGraph.tokenIsEntityHead[tI] == None) or (sentenceGraph.tokenIsEntityHead[tJ] == None):
+                    continue
                 # find the path
                 if paths.has_key(tI) and paths[tI].has_key(tJ):
                     path = paths[tI][tJ]
@@ -86,6 +86,8 @@ class DirectedMultiEdgeExampleBuilder(ExampleBuilder):
         # define features
         features = {}
         edges = self.getEdges(sentenceGraph.dependencyGraph, path)
+        features[self.featureSet.getId("len_edges_"+str(len(edges)))] = 1
+        features[self.featureSet.getId("len")] = len(edges)
         for edge in edges:
             self.buildPathEdgeFeatures(edge[0], sentenceGraph, features)
         if edges[0][0][0] == path[0]:
@@ -102,9 +104,9 @@ class DirectedMultiEdgeExampleBuilder(ExampleBuilder):
         self.buildTerminusFeatures(t1, t2, sentenceGraph, features)
         # define extra attributes              
         if int(path[0].attrib["id"].split("_")[-1]) < int(path[-1].attrib["id"].split("_")[-1]):
-            extra = {"type":"edge","t1":path[0],"t2":path[-1]}
+            extra = {"xtype":"edge","type":"edge","t1":path[0],"t2":path[-1]}
         else:
-            extra = {"type":"edge","t1":path[-1],"t2":path[0]}
+            extra = {"xtype":"edge","type":"edge","t1":path[-1],"t2":path[0]}
         # make example
         examples.append( (sentenceGraph.getSentenceId()+".x"+str(exampleIndex),category,features,extra) )
 
@@ -114,9 +116,13 @@ class DirectedMultiEdgeExampleBuilder(ExampleBuilder):
         # Token 1
         features[self.featureSet.getId("txt_"+sentenceGraph.getTokenText(depEdge[0]))] = 1
         features[self.featureSet.getId("POS_"+depEdge[0].attrib["POS"])] = 1
+        if sentenceGraph.tokenIsEntityHead[depEdge[0]] != None:
+            features[self.featureSet.getId("annType_"+sentenceGraph.tokenIsEntityHead[depEdge[0]].attrib["type"])] = 1
         # Token 2
         features[self.featureSet.getId("txt_"+sentenceGraph.getTokenText(depEdge[1]))] = 1
         features[self.featureSet.getId("POS_"+depEdge[1].attrib["POS"])] = 1
+        if sentenceGraph.tokenIsEntityHead[depEdge[1]] != None:
+            features[self.featureSet.getId("annType_"+sentenceGraph.tokenIsEntityHead[depEdge[1]].attrib["type"])] = 1
     
     def buildEdgeCombinations(self, edges, sentenceGraph, features):
         # Edges directed relative to the path

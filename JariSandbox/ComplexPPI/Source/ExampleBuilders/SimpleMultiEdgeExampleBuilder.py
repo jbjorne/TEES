@@ -86,9 +86,9 @@ class SimpleMultiEdgeExampleBuilder(ExampleBuilder):
                     self.buildTerminusFeatures(t1, t2, sentenceGraph, features)
                     # define extra attributes              
                     if int(path[0].attrib["id"].split("_")[-1]) < int(path[-1].attrib["id"].split("_")[-1]):
-                        extra = {"type":"edge","t1":path[0],"t2":path[-1]}
+                        extra = {"xtype":"edge","type":"edge","t1":path[0],"t2":path[-1]}
                     else:
-                        extra = {"type":"edge","t1":path[-1],"t2":path[0]}
+                        extra = {"xtype":"edge","type":"edge","t1":path[-1],"t2":path[0]}
                     # make example
                     examples.append( (sentenceGraph.getSentenceId()+".x"+str(exampleIndex),category,features,extra) )
                     exampleIndex += 1

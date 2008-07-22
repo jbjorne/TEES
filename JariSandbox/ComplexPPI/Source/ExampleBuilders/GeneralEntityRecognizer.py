@@ -90,7 +90,7 @@ class GeneralEntityRecognizer(ExampleBuilder):
                 features[self.featureSet.getId("t1HangingOut_"+edge[1].attrib["POS"])] = 1
                 features[self.featureSet.getId("t1HangingOut_"+sentenceGraph.getTokenText(edge[1]))] = 1
              
-            extra = {}
+            extra = {"xtype":"token","t":token}
             examples.append( (sentenceGraph.getSentenceId()+".x"+str(exampleIndex),category,features,extra) )
             exampleIndex += 1
         return examples
