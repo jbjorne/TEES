@@ -2,18 +2,20 @@ class IdSet:
     def __init__(self, firstNumber=1):
         self.Ids = {}
         self.firstNumber = firstNumber
-
+        self._namesById = {}
+    
     def getId(self, name):
         if not self.Ids.has_key(name):
-            self.Ids[name] = len(self.Ids) + self.firstNumber
+            id = len(self.Ids) + self.firstNumber
+            self.Ids[name] = id
+            self._namesById[id] = name
         return self.Ids[name]
     
     def getName(self, id):
-        for k, v in self.Ids:
-            if v == id:
-                return k
-            else:
-                return None
+        if self._namesById.has_key(id):
+            return self._namesById[id]
+        else:
+            return None
     
     def write(self, filename):
         f = open(filename, "wt")
