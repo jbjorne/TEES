@@ -5,6 +5,7 @@ import sys
 class ExampleBuilder:
     def __init__(self):
         self.featureSet = IdSet()
+        self.classSet = None
     
     def buildExamplesForCorpus(self, corpusElements, visualizer=None):
         print >> sys.stderr, "Building examples"
