@@ -1,7 +1,7 @@
 import draw_dg
 import cElementTreeUtils as ETUtils
 
-def tokensToSVG(tokenElements, showPOS=False, entitiesByToken=None):
+def tokensToSVG(tokenElements, showPOS=False, entitiesByToken=None, extraByToken=None):
     #svgTokensById = {}
     svgTokens = []
     position = 0
@@ -17,6 +17,10 @@ def tokensToSVG(tokenElements, showPOS=False, entitiesByToken=None):
                 svgToken.otherLines.append(entity.attrib["type"])
         else:
             svgToken.otherLines.append(" ")
+        if extraByToken != None and extraByToken.has_key(token):
+            svgToken.otherLines.append(extraByToken[token][0])
+            for k,v in extraByToken[token][1].items():
+                svgToken.styleDict[k]=v
         #svgTokensById[token.attrib["id"]] = svgToken
         svgToken.id = token.attrib["id"]
         svgTokens.append(svgToken)
