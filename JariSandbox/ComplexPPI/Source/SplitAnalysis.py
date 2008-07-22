@@ -110,11 +110,12 @@ if __name__=="__main__":
     
     # Optimize
     optimizationSets = Example.divideExamples(exampleSets[0])
+    evaluationArgs = {"classSet":exampleBuilder.classSet}
     if options.parameters != None:
         paramDict = splitParameters(options.parameters)
-        bestResults = classifier.optimize(optimizationSets[0], optimizationSets[1], paramDict, Evaluation)
+        bestResults = classifier.optimize(optimizationSets[0], optimizationSets[1], paramDict, Evaluation, evaluationArgs)
     else:
-        bestResults = classifier.optimize(optimizationSets[0], optimizationSets[1], evaluationClass=Evaluation)
+        bestResults = classifier.optimize(optimizationSets[0], optimizationSets[1], evaluationClass=Evaluation, evaluationArgs=evaluationArgs)
 
     # Save example sets
     if options.output != None:
@@ -131,7 +132,7 @@ if __name__=="__main__":
     predictions = classifier.classify(exampleSets[1])
     
     # Calculate statistics
-    evaluation = Evaluation(predictions)
+    evaluation = Evaluation(predictions, classSet=exampleBuilder.classSet)
     print >> sys.stderr, evaluation.toStringConcise()
     
     # Visualize
@@ -142,6 +143,8 @@ if __name__=="__main__":
         for classification in classifications:
             classificationsByExample[classification[0][0]] = classification
         visualizer = CorpusVisualizer(options.visualization, True)
+        visualizer.featureSet = exampleBuilder.featureSet
+        visualizer.classSet = exampleBuilder.classSet
         for i in range(len(sentences)):
             sentence = sentences[i]
             print >> sys.stderr, "\rProcessing sentence", sentence[0].getSentenceId(), "          ",
@@ -151,4 +154,5 @@ if __name__=="__main__":
             if i < len(sentences)-1:
                 prevAndNextId[1] = sentences[i+1][0].getSentenceId()
             visualizer.makeSentencePage(sentence[0],sentence[1],classificationsByExample,prevAndNextId)
+        visualizer.makeSentenceListPage()
         print >> sys.stderr
