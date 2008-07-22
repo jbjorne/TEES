@@ -1,5 +1,5 @@
 class Evaluation:
-    def __init__(self, predictions):
+    def __init__(self, predictions, classSet):
         self.predictions = predictions
         self.truePositives = 0
         self.falsePositives = 0

@@ -1,5 +1,5 @@
 class Evaluation:
-    def __init__(self, predictions):
+    def __init__(self, predictions, classSet=None):
         self.predictions = predictions
         self.truePositives = 0
         self.falsePositives = 0
@@ -48,8 +48,8 @@ class Evaluation:
         else:
             self.fScore = 0.0
     
-    def toStringConcise(self):
-        string = "p/n:" + str(self.truePositives+self.falseNegatives) + "/" + str(self.trueNegatives+self.falsePositives)
+    def toStringConcise(self, indent=""):
+        string = indent  + "p/n:" + str(self.truePositives+self.falseNegatives) + "/" + str(self.trueNegatives+self.falsePositives)
         string += " tp/fp|tn/fn:" + str(self.truePositives) + "/" + str(self.falsePositives) + "|" + str(self.trueNegatives) + "/" + str(self.falseNegatives)
         string += " p/r/f:" + str(self.precision)[0:6] + "/" + str(self.recall)[0:6] + "/" + str(self.fScore)[0:6]
         return string

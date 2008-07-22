@@ -1,5 +1,5 @@
 class MultiClassEvaluator:
-    def __init__(self, predictions):
+    def __init__(self, predictions, classSet=None):
         self.predictions = predictions
         self.truePositives = 0
         self.falsePositives = 0
