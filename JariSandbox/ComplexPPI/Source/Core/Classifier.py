@@ -21,7 +21,7 @@ class Classifier:
     def classify(self, examples, parameters=None):
         pass
     
-    def optimize(self, trainExamples, classifyExamples, parameters=defaultOptimizationParameters, evaluationClass=Evaluation, evaluationArgs=None):
+    def optimize(self, trainExamples, classifyExamples, parameters=defaultOptimizationParameters, evaluationClass=Evaluation, evaluationArgs={}):
         print >> sys.stderr, "Optimizing parameters"              
         parameterNames = parameters.keys()
         parameterNames.sort()
@@ -54,8 +54,8 @@ class Classifier:
             print >> sys.stderr, " Parameters "+str(count)+"/"+str(len(combinations))+":", str(combination)
             self.train(trainExamplesCopy, combination)
             predictions = self.classify(classifyExamplesCopy)        
-            evaluation = evaluationClass(predictions)
-            print >> sys.stderr, "  " + evaluation.toStringConcise()
+            evaluation = evaluationClass(predictions, **evaluationArgs)
+            print >> sys.stderr, evaluation.toStringConcise("  ")
             if bestResult == None or evaluation.fScore > bestResult[1].fScore:
                 bestResult = (predictions, evaluation, combination)
             count += 1
