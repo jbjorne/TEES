@@ -16,10 +16,10 @@ class Classifier:
         self.debugFile = open(self.tempDir + "/debug.txt", "wt")
 
     def train(self, examples, parameters=None):        
-        pass
+        raise NotImplementedError
     
     def classify(self, examples, parameters=None):
-        pass
+        raise NotImplementedError
     
     def optimize(self, trainExamples, classifyExamples, parameters=defaultOptimizationParameters, evaluationClass=Evaluation, evaluationArgs={}):
         print >> sys.stderr, "Optimizing parameters"              
