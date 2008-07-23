@@ -90,33 +90,53 @@ class AveragingMultiClassEvaluator:
         # Calculate micro-f-score
         totalWeight = 0.0
         for cls in self.classes:
-            weigth = self.instancesByClass[cls]
-            self.microPrecision += weigth * self.precisionByClass[cls]
-            self.microRecall += weigth * self.recallByClass[cls]
-            self.microFScore += weigth * self.fScoreByClass[cls]
-            totalWeight += float(weigth)
+            if cls != self.classSet.getId("neg", False):
+                weigth = self.instancesByClass[cls]
+                self.microPrecision += weigth * self.precisionByClass[cls]
+                self.microRecall += weigth * self.recallByClass[cls]
+                self.microFScore += weigth * self.fScoreByClass[cls]
+                totalWeight += float(weigth)
         if totalWeight != 0.0:
             if self.microPrecision != 0: self.microPrecision /= totalWeight
             if self.microRecall != 0: self.microRecall /= totalWeight
             if self.microFScore != 0: self.microFScore /= totalWeight 
         
         # Finally calculate macro-f-score
+        numClassesWithInstances = 0
         for cls in self.classes:
-            self.precision += self.precisionByClass[cls]
-            self.recall += self.recallByClass[cls]
-            self.fScore += self.fScoreByClass[cls]
-        if self.precision != 0: self.precision /= float(len(self.classes))
-        if self.recall != 0: self.recall /= float(len(self.classes))
-        if self.fScore != 0: self.fScore /= float(len(self.classes))            
+            if (self.instancesByClass[cls] > 0 or self.falsePositivesByClass[cls] > 0) and cls != self.classSet.getId("neg", False):
+                numClassesWithInstances += 1
+                self.precision += self.precisionByClass[cls]
+                self.recall += self.recallByClass[cls]
+                self.fScore += self.fScoreByClass[cls]
+        if numClassesWithInstances > 0:
+            if self.precision != 0: self.precision /= float(numClassesWithInstances)
+            if self.recall != 0: self.recall /= float(numClassesWithInstances)
+            if self.fScore != 0: self.fScore /= float(numClassesWithInstances)            
     
     def toStringConcise(self, indent=""):
         string = indent
+        negativeClassId = None
         for cls in self.classes:
-            string += self.classSet.getName(cls)
+            if cls != self.classSet.getId("neg", False):
+                string += self.classSet.getName(cls)
+                string += " p/n:" + str(self.truePositivesByClass[cls]+self.falseNegativesByClass[cls]) + "/" + str(self.trueNegativesByClass[cls]+self.falsePositivesByClass[cls])
+                string += " tp/fp|tn/fn:" + str(self.truePositivesByClass[cls]) + "/" + str(self.falsePositivesByClass[cls]) + "|" + str(self.trueNegativesByClass[cls]) + "/" + str(self.falseNegativesByClass[cls])
+                if self.instancesByClass[cls] > 0 or self.falsePositivesByClass[cls] > 0:
+                    string += " p/r/f:" + str(self.precisionByClass[cls])[0:6] + "/" + str(self.recallByClass[cls])[0:6] + "/" + str(self.fScoreByClass[cls])[0:6]
+                else:
+                    string += " p/r/f:N/A"
+                string += "\n" + indent
+            else:
+                negativeClassId = cls
+        if negativeClassId != None:
+            cls = negativeClassId
+            string += "(neg"
             string += " p/n:" + str(self.truePositivesByClass[cls]+self.falseNegativesByClass[cls]) + "/" + str(self.trueNegativesByClass[cls]+self.falsePositivesByClass[cls])
             string += " tp/fp|tn/fn:" + str(self.truePositivesByClass[cls]) + "/" + str(self.falsePositivesByClass[cls]) + "|" + str(self.trueNegativesByClass[cls]) + "/" + str(self.falseNegativesByClass[cls])
             string += " p/r/f:" + str(self.precisionByClass[cls])[0:6] + "/" + str(self.recallByClass[cls])[0:6] + "/" + str(self.fScoreByClass[cls])[0:6]
-            string += "\n" + indent
+            string += ")\n" + indent
+        
         string += "averages:\n" + indent
         string += "micro p/r/f:" + str(self.microPrecision)[0:6] + "/" + str(self.microRecall)[0:6] + "/" + str(self.microFScore)[0:6]
         string += "\n" + indent
