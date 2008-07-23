@@ -66,7 +66,7 @@ class TokenRoleMultiEdgeTypeExampleBuilder(ExampleBuilder):
                         exampleIndex += 1
                     if sentenceGraph.interactionGraph.has_edge(path[-1], path[0]):
                         categoryName = sentenceGraph.interactionGraph.get_edge(path[-1], path[0]).attrib["type"]
-                        categoryName += "_rev"
+                        #categoryName += "_rev"
                         self.buildExample(path[::-1], sentenceGraph, categoryName, examples, exampleIndex)
                         exampleIndex += 1
                     else:
