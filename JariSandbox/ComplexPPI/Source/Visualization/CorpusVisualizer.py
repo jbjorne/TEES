@@ -61,7 +61,10 @@ class CorpusVisualizer:
                         style = {"fill":"red"}
                     if classification[1] == "fn":
                         style = {"fill":"#79BAEC"}
-                    extraByToken[example[3]["t"]] = (classification[1],style)
+                    if classification[2] != "multiclass":
+                        extraByToken[example[3]["t"]] = (classification[1],style)
+                    else:
+                        extraByToken[example[3]["t"]] = (self.classSet.getName(classification[3]),style)
         for edge in exampleGraph.edges():
             addType = False
             classification = classificationsByExample[edge[2]][1]
