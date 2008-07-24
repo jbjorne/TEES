@@ -6,7 +6,7 @@ class SentenceGraph:
         self.sentenceElement = sentenceElement
         self.tokens = tokenElements
         self.dependencies = dependencyElements
-        self.dependencyGraph = NX.XDiGraph()
+        self.dependencyGraph = NX.XDiGraph(multiedges = True)
         self.interactions = None
         self.entities = None
         self.interactionGraph = None
@@ -28,7 +28,7 @@ class SentenceGraph:
     def mapInteractions(self, entityElements, interactionElements, verbose=False):
         self.interactions = interactionElements
         self.entities = entityElements
-        self.interactionGraph = NX.XDiGraph()
+        self.interactionGraph = NX.XDiGraph(multiedges = True)
         self.entitiesByToken = {}
         
         self.__markNamedEntities()
