@@ -48,6 +48,12 @@ class GeneralEntityTypeRecognizer(ExampleBuilder):
                 features[self.featureSet.getId("linear_-2_POS_"+t.attrib["POS"])] = 1
                 if sentenceGraph.tokenIsName[t]:
                     features[self.featureSet.getId("linear_-2_isName")] = 1
+            if i > 2:
+                t = sentenceGraph.tokens[i-3]
+                features[self.featureSet.getId("linear_-3_txt_"+sentenceGraph.getTokenText(t))] = 1
+                features[self.featureSet.getId("linear_-3_POS_"+t.attrib["POS"])] = 1
+                if sentenceGraph.tokenIsName[t]:
+                    features[self.featureSet.getId("linear_-3_isName")] = 1
             if i < len(sentenceGraph.tokens) - 1:
                 t = sentenceGraph.tokens[i+1]
                 features[self.featureSet.getId("linear_+1_txt_"+sentenceGraph.getTokenText(t))] = 1
@@ -60,6 +66,12 @@ class GeneralEntityTypeRecognizer(ExampleBuilder):
                 features[self.featureSet.getId("linear_+2_POS_"+t.attrib["POS"])] = 1
                 if sentenceGraph.tokenIsName[t]:
                     features[self.featureSet.getId("linear_+2_isName")] = 1
+            if i < len(sentenceGraph.tokens) - 3:
+                t = sentenceGraph.tokens[i+3]
+                features[self.featureSet.getId("linear_+3_txt_"+sentenceGraph.getTokenText(t))] = 1
+                features[self.featureSet.getId("linear_+3_POS_"+t.attrib["POS"])] = 1
+                if sentenceGraph.tokenIsName[t]:
+                    features[self.featureSet.getId("linear_+3_isName")] = 1
             # Content
             if i > 0 and text[0].isalpha() and text[0].isupper():
                 features[self.featureSet.getId("upper_case_start")] = 1
@@ -86,14 +98,22 @@ class GeneralEntityTypeRecognizer(ExampleBuilder):
             # Attached edges
             t1InEdges = sentenceGraph.dependencyGraph.in_edges(token)
             for edge in t1InEdges:
-                features[self.featureSet.getId("t1HangingIn_"+edge[2].attrib["type"])] = 1
+                edgeType = edge[2].attrib["type"]
+                features[self.featureSet.getId("t1HangingIn_"+edgeType)] = 1
                 features[self.featureSet.getId("t1HangingIn_"+edge[0].attrib["POS"])] = 1
-                features[self.featureSet.getId("t1HangingIn_"+sentenceGraph.getTokenText(edge[0]))] = 1
+                features[self.featureSet.getId("t1HangingIn_"+edgeType+"_"+edge[0].attrib["POS"])] = 1
+                tokenText = sentenceGraph.getTokenText(edge[0])
+                features[self.featureSet.getId("t1HangingIn_"+tokenText)] = 1
+                features[self.featureSet.getId("t1HangingIn_"+edgeType+"_"+tokenText)] = 1
             t1OutEdges = sentenceGraph.dependencyGraph.out_edges(token)
             for edge in t1OutEdges:
-                features[self.featureSet.getId("t1HangingOut_"+edge[2].attrib["type"])] = 1
+                edgeType = edge[2].attrib["type"]
+                features[self.featureSet.getId("t1HangingOut_"+edgeType)] = 1
                 features[self.featureSet.getId("t1HangingOut_"+edge[1].attrib["POS"])] = 1
-                features[self.featureSet.getId("t1HangingOut_"+sentenceGraph.getTokenText(edge[1]))] = 1
+                features[self.featureSet.getId("t1HangingOut_"+edgeType+"_"+edge[1].attrib["POS"])] = 1
+                tokenText = sentenceGraph.getTokenText(edge[1])
+                features[self.featureSet.getId("t1HangingOut_"+tokenText)] = 1
+                features[self.featureSet.getId("t1HangingOut_"+edgeType+"_"+tokenText)] = 1
              
             extra = {"xtype":"token","t":token}
             examples.append( (sentenceGraph.getSentenceId()+".x"+str(exampleIndex),category,features,extra) )
