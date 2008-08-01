@@ -39,7 +39,7 @@ class CorpusVisualizer:
         return arcStyles, labelStyles
     
     def makeExampleGraph(self, builder, sentenceGraph, examples, classificationsByExample):
-        exampleGraph = NX.XDiGraph(multiedges = True)
+        exampleGraph = NX.XDiGraph()#multiedges = True)
         for token in sentenceGraph.tokens:
             exampleGraph.add_node(token)
         arcStyles = {}
