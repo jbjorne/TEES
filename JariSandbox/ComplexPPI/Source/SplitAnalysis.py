@@ -10,6 +10,7 @@ from Core.SentenceGraph import *
 #from Classifiers.SVMLightClassifier import SVMLightClassifier as Classifier
 #from Core.Evaluation import Evaluation
 from Visualization.CorpusVisualizer import CorpusVisualizer
+from Utils.ProgressCounter import ProgressCounter
 from optparse import OptionParser
 
 def splitParameters(string):
@@ -23,22 +24,6 @@ def splitParameters(string):
         for value in paramValues:
             paramDict[paramName].append(float(value))
     return paramDict
-
-class ProgressCounter:
-    def __init__(self, total):
-        self.total = float(total)
-        self.current = 0
-        self.progress = 0.0
-        self.prevProgress = -99.0
-    
-    def update(self, amount=1, string="Processing: "):
-        self.current += amount
-        self.progress = self.current / self.total * 100.0
-        if self.progress >= 100.0 or self.progress - self.prevProgress >= 5.0:
-            print >> sys.stderr, "\r" + string + "%.2f" % self.progress + " %",
-            self.prevProgress = self.progress
-        if self.progress >= 100.0:
-            print >> sys.stderr
 
 if __name__=="__main__":
     defaultAnalysisFilename = "/usr/share/biotext/ComplexPPI/BioInferForComplexPPI.xml"
@@ -70,9 +55,9 @@ if __name__=="__main__":
     
     # Make sentence graphs
     sentences = []
-    counter = ProgressCounter(len(corpusElements.sentences))
+    counter = ProgressCounter(len(corpusElements.sentences), "Make sentence graphs")
     for sentence in corpusElements.sentences:
-        counter.update(1, "Making sentence graphs: ")
+        counter.update(1, "Making sentence graphs ("+sentence.sentence.attrib["id"]+"): ")
         graph = SentenceGraph(sentence.sentence, sentence.tokens, sentence.dependencies)
         graph.mapInteractions(sentence.entities, sentence.interactions)
         sentences.append( [graph,None,None] )
@@ -80,9 +65,9 @@ if __name__=="__main__":
     # Build examples
     exampleBuilder = ExampleBuilder()
     examples = []
-    counter = ProgressCounter(len(sentences))
+    counter = ProgressCounter(len(sentences), "Build examples")
     for sentence in sentences:
-        counter.update(1, "Building examples: ")
+        counter.update(1, "Building examples ("+sentence[0].getSentenceId()+"): ")
         sentence[1] = exampleBuilder.buildExamples(sentence[0])
         examples.extend(sentence[1])
     print >> sys.stderr, "Examples built:", len(examples)
