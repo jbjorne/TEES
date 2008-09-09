@@ -1,7 +1,6 @@
 import sys
 sys.path.append("..")
 from Core.ExampleBuilder import ExampleBuilder
-#import Stemming.PorterStemmer as PorterStemmer
 from Core.IdSet import IdSet
 from FeatureBuilders.EdgeFeatureBuilder import EdgeFeatureBuilder
 
@@ -11,10 +10,6 @@ class SingleDependencyTypeExampleBuilder(ExampleBuilder):
         self.classSet = IdSet(1)
         assert( self.classSet.getId("neg") == 1 )
         self.featureBuilder = EdgeFeatureBuilder(self.featureSet)
-
-    def addType(self, token, features, sentenceGraph, prefix="annType_"):
-        if sentenceGraph.tokenIsEntityHead[token] != None:
-            features[self.featureSet.getId("annType_"+sentenceGraph.tokenIsEntityHead[token].attrib["type"])] = 1
         
     def buildExamples(self, sentenceGraph):
         examples = []
@@ -67,19 +62,6 @@ class SingleDependencyTypeExampleBuilder(ExampleBuilder):
         features = {}
         self.featureBuilder.setFeatureVector(features)
         self.featureBuilder.buildEdgeFeatures(depEdge, sentenceGraph, "dep_", text=True, POS=True, annType=True, maskNames=True)
-#        features[self.featureSet.getId("dep_"+depEdge[2].attrib["type"])] = 1
-#        # Token 1
-#        features[self.featureSet.getId("t1txt_"+sentenceGraph.getTokenText(depEdge[0]))] = 1
-#        features[self.featureSet.getId("t1POS_"+depEdge[0].attrib["POS"])] = 1
-#        #self.addType(depEdge[0], features, sentenceGraph, prefix="t1Ann_")
-#        if sentenceGraph.tokenIsEntityHead[depEdge[0]] != None:
-#            features[self.featureSet.getId("annType_"+sentenceGraph.tokenIsEntityHead[depEdge[0]].attrib["type"])] = 1
-#        # Token 2
-#        features[self.featureSet.getId("t2txt_"+sentenceGraph.getTokenText(depEdge[1]))] = 1
-#        features[self.featureSet.getId("t2POS_"+depEdge[1].attrib["POS"])] = 1
-#        #self.addType(depEdge[1], features, sentenceGraph, prefix="t2Ann_")
-#        if sentenceGraph.tokenIsEntityHead[depEdge[1]] != None:
-#            features[self.featureSet.getId("annType_"+sentenceGraph.tokenIsEntityHead[depEdge[1]].attrib["type"])] = 1
         
         # Attached edges
         self.featureBuilder.buildAttachedEdgeFeatures(depEdge, sentenceGraph, "", text=False, POS=True, annType=False, maskNames=True)               
@@ -110,23 +92,6 @@ class SingleDependencyTypeExampleBuilder(ExampleBuilder):
 #            #features[self.featureSet.getId("t2HangingOut_"+sentenceGraph.getTokenText(edge[1]))] = 1
         
         # Linear order
-#        t1Position = int(depEdge[0].attrib["id"].split("_")[-1])
-#        t2Position = int(depEdge[1].attrib["id"].split("_")[-1])
-#        features[self.featureSet.getId("lin_distance")] = t2Position - t1Position
-
-#        if t1Position < t2Position:
-#            features[self.featureSet.getId("forward")] = 1
-#            features[self.featureSet.getId("lin_distance")] = t2Position - t1Position
-#            #features[self.featureSet.getId("l1txt_"+sentenceGraph.getTokenText(depEdge[0]))] = 1
-#            #features[self.featureSet.getId("l1POS_"+depEdge[0].attrib["POS"])] = 1
-#            #features[self.featureSet.getId("l2txt_"+sentenceGraph.getTokenText(depEdge[1]))] = 1
-#            #features[self.featureSet.getId("l2POS_"+depEdge[1].attrib["POS"])] = 1
-#        else:
-#            features[self.featureSet.getId("reverse")] = 1
-#            features[self.featureSet.getId("lin_distance")] = t2Position - t1Position
-#            #features[self.featureSet.getId("l2txt_"+sentenceGraph.getTokenText(depEdge[0]))] = 1
-#            #features[self.featureSet.getId("l2POS_"+depEdge[0].attrib["POS"])] = 1
-#            #features[self.featureSet.getId("l1txt_"+sentenceGraph.getTokenText(depEdge[1]))] = 1
-#            #features[self.featureSet.getId("l1POS_"+depEdge[1].attrib["POS"])] = 1
+        self.featureBuilder.buildLinearOrderFeatures(depEdge)
         self.featureBuilder.setFeatureVector(None)
         return features
