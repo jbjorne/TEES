@@ -17,53 +17,43 @@ class EdgeFeatureBuilder(FeatureBuilder):
         #features[self.featureSet.getId("t1stem_"+PorterStemmer.stem(sentenceGraph.getTokenText(depEdge[0])))] = 1
         #features[self.featureSet.getId("t2stem_"+PorterStemmer.stem(sentenceGraph.getTokenText(depEdge[1])))] = 1
         if POS:
+            self.features[self.featureSet.getId(tag+"POS_"+depEdge[0].attrib["POS"])] = 1
+            self.features[self.featureSet.getId(tag+"POS_"+depEdge[1].attrib["POS"])] = 1
             self.features[self.featureSet.getId(tag+"t1POS_"+depEdge[0].attrib["POS"])] = 1
             self.features[self.featureSet.getId(tag+"t2POS_"+depEdge[1].attrib["POS"])] = 1
+            
         if annType:
             if sentenceGraph.tokenIsEntityHead[depEdge[0]] != None:
+                self.features[self.featureSet.getId(tag+"annType_"+sentenceGraph.tokenIsEntityHead[depEdge[0]].attrib["type"])] = 1
                 self.features[self.featureSet.getId(tag+"t1AnnType_"+sentenceGraph.tokenIsEntityHead[depEdge[0]].attrib["type"])] = 1
             if sentenceGraph.tokenIsEntityHead[depEdge[1]] != None:
+                self.features[self.featureSet.getId(tag+"annType_"+sentenceGraph.tokenIsEntityHead[depEdge[1]].attrib["type"])] = 1
                 self.features[self.featureSet.getId(tag+"t2AnnType_"+sentenceGraph.tokenIsEntityHead[depEdge[1]].attrib["type"])] = 1
-
+    
+    def buildTerminusFeatures(self, token, sentenceGraph, prefix = "term", text=True, POS=True, annType=True, maskNames=True):
+        inEdges = sentenceGraph.dependencyGraph.in_edges(token)
+        for edge in inEdges:
+            self.features[self.featureSet.getId(prefix+"HangingIn_"+edge[2].attrib["type"])] = 1
+            if POS: self.features[self.featureSet.getId(prefix+"HangingIn_"+edge[0].attrib["POS"])] = 1
+            if annType and sentenceGraph.tokenIsEntityHead[edge[0]] != None:
+                self.features[self.featureSet.getId(prefix+"HangingIn_AnnType_"+sentenceGraph.tokenIsEntityHead[edge[0]].attrib["type"])] = 1
+            if text:
+                if maskNames: self.features[self.featureSet.getId(prefix+"HangingIn_"+sentenceGraph.getTokenText(edge[0]))] = 1
+                else: self.features[self.featureSet.getId(prefix+"HangingIn_"+edge[0].attrib["text"])] = 1
+        outEdges = sentenceGraph.dependencyGraph.out_edges(token)
+        for edge in outEdges:
+            self.features[self.featureSet.getId(prefix+"HangingOut_"+edge[2].attrib["type"])] = 1
+            if POS: self.features[self.featureSet.getId(prefix+"HangingOut_"+edge[1].attrib["POS"])] = 1
+            if annType and sentenceGraph.tokenIsEntityHead[edge[1]] != None:
+                self.features[self.featureSet.getId(prefix+"HangingOut_AnnType_"+sentenceGraph.tokenIsEntityHead[edge[1]].attrib["type"])] = 1
+            if text:
+                if maskNames: self.features[self.featureSet.getId(prefix+"HangingOut_"+sentenceGraph.getTokenText(edge[1]))] = 1
+                else: self.features[self.featureSet.getId(prefix+"HangingOut_"+edge[1].attrib["text"])] = 1
+    
     def buildAttachedEdgeFeatures(self, depEdge, sentenceGraph, tag = "", text=True, POS=True, annType=True, maskNames=True):
-        # Attached edges
-        t1InEdges = sentenceGraph.dependencyGraph.in_edges(depEdge[0])
-        for edge in t1InEdges:
-            self.features[self.featureSet.getId("t1HangingIn_"+edge[2].attrib["type"])] = 1
-            if POS: self.features[self.featureSet.getId("t1HangingIn_"+edge[0].attrib["POS"])] = 1
-            if annType and sentenceGraph.tokenIsEntityHead[edge[0]] != None:
-                self.features[self.featureSet.getId("t1HangingIn_AnnType_"+sentenceGraph.tokenIsEntityHead[edge[0]].attrib["type"])] = 1
-            if text:
-                if maskNames: self.features[self.featureSet.getId("t1HangingIn_"+sentenceGraph.getTokenText(edge[0]))] = 1
-                else: self.features[self.featureSet.getId("t1HangingIn_"+edge[0].attrib["text"])] = 1
-        t1OutEdges = sentenceGraph.dependencyGraph.out_edges(depEdge[0])
-        for edge in t1OutEdges:
-            self.features[self.featureSet.getId("t1HangingOut_"+edge[2].attrib["type"])] = 1
-            if POS: self.features[self.featureSet.getId("t1HangingOut_"+edge[1].attrib["POS"])] = 1
-            if annType and sentenceGraph.tokenIsEntityHead[edge[1]] != None:
-                self.features[self.featureSet.getId("t1HangingOut_AnnType_"+sentenceGraph.tokenIsEntityHead[edge[1]].attrib["type"])] = 1
-            if text:
-                if maskNames: self.features[self.featureSet.getId("t1HangingOut_"+sentenceGraph.getTokenText(edge[1]))] = 1
-                else: self.features[self.featureSet.getId("t1HangingOut_"+edge[1].attrib["text"])] = 1
-        
-        t2InEdges = sentenceGraph.dependencyGraph.in_edges(depEdge[1])
-        for edge in t2InEdges:
-            self.features[self.featureSet.getId("t2HangingIn_"+edge[2].attrib["type"])] = 1
-            if POS: self.features[self.featureSet.getId("t2HangingIn_"+edge[0].attrib["POS"])] = 1
-            if annType and sentenceGraph.tokenIsEntityHead[edge[0]] != None:
-                self.features[self.featureSet.getId("t2HangingIn_AnnType_"+sentenceGraph.tokenIsEntityHead[edge[0]].attrib["type"])] = 1
-            if text:
-                if maskNames: self.features[self.featureSet.getId("t2HangingIn_"+sentenceGraph.getTokenText(edge[0]))] = 1
-                else: self.features[self.featureSet.getId("t2HangingIn_"+edge[0].attrib["text"])] = 1
-        t2OutEdges = sentenceGraph.dependencyGraph.out_edges(depEdge[1])
-        for edge in t2OutEdges:
-            self.features[self.featureSet.getId("t2HangingOut_"+edge[2].attrib["type"])] = 1
-            if POS: self.features[self.featureSet.getId("t2HangingOut_"+edge[1].attrib["POS"])] = 1
-            if annType and sentenceGraph.tokenIsEntityHead[edge[1]] != None:
-                self.features[self.featureSet.getId("t2HangingOut_AnnType_"+sentenceGraph.tokenIsEntityHead[edge[1]].attrib["type"])] = 1
-            if text:
-                if maskNames: self.features[self.featureSet.getId("t2HangingOut_"+sentenceGraph.getTokenText(edge[1]))] = 1
-                else: self.features[self.featureSet.getId("t2HangingOut_"+edge[1].attrib["text"])] = 1
+        self.buildTerminusFeatures(depEdge[0], sentenceGraph, prefix = tag+"t1", text=text, POS=POS, annType=annType, maskNames=maskNames)
+        self.buildTerminusFeatures(depEdge[1], sentenceGraph, prefix = tag+"t2", text=text, POS=POS, annType=annType, maskNames=maskNames)
+        return
                 
     def buildLinearOrderFeatures(self, depEdge):
         t1Position = int(depEdge[0].attrib["id"].split("_")[-1])
