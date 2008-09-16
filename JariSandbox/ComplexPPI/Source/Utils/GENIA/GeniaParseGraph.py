@@ -77,15 +77,15 @@ class GeniaEvent:
     
     def toString(self):
         return "Event: "+self.id+","+self.type+", Themes:"+str(self.themes)+", Causes:"+str(self.causes)+", clueTypes:"+str(self.clueTypeCharOffsets)+","+str(self.clueTypeTexts)
-
-    def toElements(self, sentenceId, entitiesById, interactionsById):
+    
+    def interactionWordToElement(self, sentenceId, entitiesById):   
         interactionWordElement = None
-        for entity in entitiesById.values():
-            if entity.attrib["charOffset"] == Range.tuplesToCharOffset(self.clueTypeCharOffsets):
-                interactionWordElement = entity
-                interactionWordElement.attrib["type"] = self.type
-                interactionWordElement.attrib["isName"] = "False"
-                break
+#        for entity in entitiesById.values():
+#            if entity.attrib["charOffset"] == Range.tuplesToCharOffset(self.clueTypeCharOffsets):
+#                interactionWordElement = entity
+#                interactionWordElement.attrib["type"] = self.type
+#                interactionWordElement.attrib["isName"] = "False"
+#                break
         if interactionWordElement == None:
             interactionWordElement = ET.Element("entity")
             interactionWordElement.attrib["origId"] = self.id
@@ -100,9 +100,13 @@ class GeniaEvent:
                 interactionWordElement.attrib["headOffset"] = interactionWordElement.attrib["charOffset"]
             interactionWordElement.attrib["text"] = str(self.clueTypeTexts)
             interactionWordElement.attrib["id"] = sentenceId + ".e" + str(len(entitiesById))
-            entitiesById[interactionWordElement.attrib["id"]] = interactionWordElement
-        
-        interactionElements = []
+            entitiesById[self.id] = interactionWordElement
+
+    def toElements(self, sentenceId, entitiesById, interactionsById):
+        if entitiesById.has_key(self.id):
+            interactionWordElement = entitiesById[self.id]
+        else:
+            return
         for theme in self.themes:
             if entitiesById.has_key(theme):
                 entity = entitiesById[theme]
@@ -154,6 +158,8 @@ class GeniaParseGraph(InteractionParseGraph):
             self.geniaEntitiesById[key].toElement(sentenceId, entitiesById)
         keys = self.eventsById.keys()
         keys.sort()
+        for key in keys:
+            self.eventsById[key].interactionWordToElement(sentenceId, entitiesById)
         for key in keys:
             self.eventsById[key].toElements(sentenceId, entitiesById, interactionsById)
         

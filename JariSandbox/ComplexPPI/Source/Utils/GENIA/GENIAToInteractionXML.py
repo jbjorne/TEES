@@ -16,6 +16,9 @@ from BIGraph.core.sentence import RelEdge
 import GeniaParseGraph
 import os
 
+sys.path.append("../..")
+import Core.Split as Split
+
 def getNestedChildren(text, children):
     for child in children:
         #assert(child.tag == "term")
@@ -43,13 +46,9 @@ if __name__=="__main__":
     optparser.add_option("-i", "--input", default=defaultGeniaBioInferFilename, dest="input", help="", metavar="FILE")
     optparser.add_option("-e", "--events", default=defaultEventFolder, dest="events", help="", metavar="FILE")
 #    optparser.add_option("-l", "--limit", type="int", default=None, dest="limit", help="Max number of paths to load.")
+    optparser.add_option("-v", "--visibleSet", type="float", default=1.0, dest="visibleSet", help="Visible set fraction")
     optparser.add_option("-o", "--output", default="/usr/share/biotext/ComplexPPI/GENIAForComplexPPI.xml", dest="output", help="Output directory.")
-#    optparser.add_option("-t", "--tokenization", default="split_gs", dest="tokenization", help="Tokenization element name, default=medpost")
-#    optparser.add_option("-p", "--parse", default="split_gs", dest="parse", help="Parse element name, default=stanford_medpost")
-#    optparser.add_option("-c", "--cache", dest="cache", default=False, help="Use cached BioInfer.", action="store_true")
     optparser.add_option("-r", "--reverse", dest="reverseDependencies", default=False, help="Reverse direction of BioInfer-style dependencies", action="store_true")
-    optparser.add_option("-p", "--printSentenceText", dest="printSentenceText", default=False, help="Print text with correct whitespace for the GENIA sentences to stdout", action="store_true")
-#    optparser.add_option("-s", "--sentence", default="BioInfer.d6.s6", dest="sentence", help="", metavar="FILE")    
     (options, args) = optparser.parse_args()
 
     if options.input == None:
@@ -116,8 +115,8 @@ if __name__=="__main__":
                         BioInferId = "UNKNOWN"
                         sentenceId = medlineCitation.find("PMID").text + "." + sentence.attrib["id"]
                         if parseGraphsByText.has_key(mergedText):
-                            if options.printSentenceText:
-                                BioInferId = parseGraphsByText[mergedText].sentence.sentence.attrib["id"]
+#                            if options.printSentenceText:
+#                                BioInferId = parseGraphsByText[mergedText].sentence.sentence.attrib["id"]
                             eventFilesWithParse.add(eventFileName)
                             numSentencesWithParse += 1
                             #parseGraphsByText[mergedText].addEvents(sentence)
@@ -129,8 +128,8 @@ if __name__=="__main__":
                             parseGraph.addEntities(sentence)
                             parseGraph.origGeniaId = articleElement.attrib["id"]
                             prevParseGraph = parseGraph
-                        if options.printSentenceText:
-                            print BioInferId + ";" + sentenceId + ";" + text
+#                        if options.printSentenceText:
+#                            print BioInferId + ";" + sentenceId + ";" + text
                     elif articleElement.tag == "event":
                         if prevParseGraph != None:
                             prevParseGraph.addEvent(articleElement)
@@ -155,6 +154,7 @@ if __name__=="__main__":
     corpusElement = ET.Element("corpus")
     corpusElement.attrib["source"] = "GENIA"
     totalSentences = 0
+    documentsWithSentences = []
     for documentElement in documentElements:
         parseGraphs = documentElement.attrib["parseGraphs"]
         del documentElement.attrib["parseGraphs"]
@@ -163,7 +163,21 @@ if __name__=="__main__":
             parseGraph.writeToInteractionXML(documentElement, sentenceCount)
             sentenceCount += 1
         if sentenceCount > 0:
-            corpusElement.append(documentElement)
+            documentsWithSentences.append(documentElement)
         totalSentences += sentenceCount
+    
+    visibleSet = Split.getSample(len(documentsWithSentences), options.visibleSet, 0)
+    visibleSetDocuments = 0
+    visibleSetSentences = 0
+    for i in range(len(documentsWithSentences)):
+        if visibleSet[i] == 0:
+            documentElement = documentsWithSentences[i]
+            corpusElement.append(documentElement)
+            visibleSetDocuments += 1
+            visibleSetSentences += len(documentElement.findall("sentence"))
     ETUtils.write(corpusElement, options.output)
-    print >> sys.stderr, str(totalSentences), "sentences written"
+    print >> sys.stderr, "Total:", str(len(documentElements)) + " documents"
+    print >> sys.stderr, "Total:", str(len(documentsWithSentences)) + " documents with sentences"
+    print >> sys.stderr, "Total:", str(totalSentences) + " sentences"
+    print >> sys.stderr, "Visible Set:", str(visibleSetDocuments) + " documents"
+    print >> sys.stderr, "Visible Set:", str(visibleSetSentences) + " sentences"
