@@ -28,18 +28,27 @@ class SingleEdgeExampleBuilder(ExampleBuilder):
                 if (sentenceGraph.tokenIsEntityHead[depEdge[0]] == None) or (sentenceGraph.tokenIsEntityHead[depEdge[1]] == None):
                     continue
             
+            edgeFound = False
             if sentenceGraph.interactionGraph.has_edge(depEdge[0], depEdge[1]):
                 intEdges = sentenceGraph.interactionGraph.get_edge(depEdge[0], depEdge[1])
                 for intEdge in intEdges:
                     examples.append( self.buildExample(depEdge, intEdge, False, exampleIndex, sentenceGraph) )
                     exampleIndex += 1
-            elif sentenceGraph.interactionGraph.has_edge(depEdge[1], depEdge[0]):
-                if "binary" or "directed" in self.style:
-                    intEdges = sentenceGraph.interactionGraph.get_edge(depEdge[1], depEdge[0])
-                    for intEdge in intEdges:
-                        examples.append( self.buildExample(depEdge, intEdge, True, exampleIndex, sentenceGraph) )
-                        exampleIndex += 1
-            else:
+                    edgeFound = True
+            elif "directed" in self.style:
+                examples.append( self.buildExample(depEdge, None, None, exampleIndex, sentenceGraph) )
+                exampleIndex += 1
+            if sentenceGraph.interactionGraph.has_edge(depEdge[1], depEdge[0]):
+                intEdges = sentenceGraph.interactionGraph.get_edge(depEdge[1], depEdge[0])
+                for intEdge in intEdges:
+                    examples.append( self.buildExample(depEdge, intEdge, True, exampleIndex, sentenceGraph) )
+                    exampleIndex += 1
+                    edgeFound = True
+            elif "directed" in self.style:
+                examples.append( self.buildExample(depEdge, None, None, exampleIndex, sentenceGraph) )
+                exampleIndex += 1
+            
+            if (not edgeFound) and (not "directed" in self.style):
                 examples.append( self.buildExample(depEdge, None, None, exampleIndex, sentenceGraph) )
                 exampleIndex += 1
 
