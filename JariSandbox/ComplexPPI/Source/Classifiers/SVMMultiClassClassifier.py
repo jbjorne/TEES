@@ -24,7 +24,8 @@ class SVMMultiClassClassifier(Classifier):
             print >> sys.stderr, "Removing temporary SVM-multi-class work directory", self.tempDir
             shutil.rmtree(self.tempDir)
     
-    def train(self, examples, parameters=None):        
+    def train(self, examples, parameters=None):
+        examples = self.filterTrainingSet(examples)      
         Example.writeExamples(examples, self.tempDir+"/train.dat")
         args = [binDir+"/svm_multiclass_learn"]
         if parameters != None:
@@ -33,6 +34,7 @@ class SVMMultiClassClassifier(Classifier):
         subprocess.call(args, stdout = self.debugFile)
         
     def classify(self, examples, parameters=None):
+        examples, predictions = self.filterClassificationSet(examples, False)
         Example.writeExamples(examples, self.tempDir+"/test.dat")
         args = [binDir+"/svm_multiclass_classify"]
         if parameters != None:
@@ -43,7 +45,7 @@ class SVMMultiClassClassifier(Classifier):
         predictionsFile = open(self.tempDir+"/predictions", "rt")
         lines = predictionsFile.readlines()
         predictionsFile.close()
-        predictions = []
+        #predictions = []
         for i in range(len(lines)):
             predictions.append( (examples[i],int(lines[i].split()[0]),"multiclass") )
         return predictions

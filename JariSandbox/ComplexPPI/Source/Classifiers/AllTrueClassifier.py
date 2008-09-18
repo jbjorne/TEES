@@ -5,7 +5,8 @@ class AllTrueClassifier(Classifier):
         pass
     
     def classify(self, examples, parameters=None):
-        predictions = []
+        examples, predictions = self.filterClassificationSet(examples, True)
+        #predictions = []
         for example in examples:
             predictions.append( (example, 1.0) )
         return predictions

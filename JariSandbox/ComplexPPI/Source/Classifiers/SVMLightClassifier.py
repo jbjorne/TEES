@@ -23,7 +23,8 @@ class SVMLightClassifier(Classifier):
             print >> sys.stderr, "Removing temporary SVM-light work directory", self.tempDir
             shutil.rmtree(self.tempDir)
     
-    def train(self, examples, parameters=None):        
+    def train(self, examples, parameters=None):
+        examples = self.filterTrainingSet(examples)      
         Example.writeExamples(examples, self.tempDir+"/train.dat")
         args = [binDir+"/svm_learn"]
         if parameters != None:
@@ -32,6 +33,7 @@ class SVMLightClassifier(Classifier):
         subprocess.call(args, stdout = self.debugFile)
         
     def classify(self, examples, parameters=None):
+        examples, predictions = self.filterClassificationSet(examples, True)
         Example.writeExamples(examples, self.tempDir+"/test.dat")
         args = [binDir+"/svm_classify"]
         if parameters != None:
@@ -42,7 +44,7 @@ class SVMLightClassifier(Classifier):
         predictionsFile = open(self.tempDir+"/predictions", "rt")
         lines = predictionsFile.readlines()
         predictionsFile.close()
-        predictions = []
+        #predictions = []
         for i in range(len(lines)):
             predictions.append( (examples[i],float(lines[i]),"binary") )
         return predictions
