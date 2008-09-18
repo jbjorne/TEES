@@ -2,7 +2,6 @@ import sys
 sys.path.append("..")
 from Core.ExampleBuilder import ExampleBuilder
 from Core.IdSet import IdSet
-#import Stemming.PorterStemmer as PorterStemmer
 import networkx as NX
 
 class TokenRoleMultiEdgeTypeExampleBuilder(ExampleBuilder):
@@ -55,7 +54,7 @@ class TokenRoleMultiEdgeTypeExampleBuilder(ExampleBuilder):
                     path = paths[tJ][tI]
                 else:
                     continue
-                if len(path) > 2:
+                if len(path) > 1:#> 2:
                     # define class
                     if sentenceGraph.interactionGraph.has_edge(path[0], path[-1]):
                         categoryName = sentenceGraph.interactionGraph.get_edge(path[0], path[-1]).attrib["type"]                      
