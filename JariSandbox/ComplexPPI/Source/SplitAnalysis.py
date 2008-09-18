@@ -14,6 +14,8 @@ from Utils.ProgressCounter import ProgressCounter
 from optparse import OptionParser
 
 def splitParameters(string):
+    if string == None:
+        return {}
     paramDict = {}
     paramSets = string.split(";")
     for paramSet in paramSets:
@@ -22,7 +24,15 @@ def splitParameters(string):
         paramDict[paramName] = []
         count = 0
         for value in paramValues:
-            paramDict[paramName].append(float(value))
+            try:
+               floatValue = float(value)
+               intValue = int(value)
+               if floatValue != float(intValue):
+                   paramDict[paramName].append(floatValue)
+               else:
+                   paramDict[paramName].append(intValue)
+            except:
+               paramDict[paramName].append(value) 
     return paramDict
 
 if __name__=="__main__":
@@ -31,7 +41,10 @@ if __name__=="__main__":
     optparser.add_option("-i", "--input", default=defaultAnalysisFilename, dest="input", help="Corpus in analysis format", metavar="FILE")
     optparser.add_option("-o", "--output", default=None, dest="output", help="Output directory, useful for debugging")
     optparser.add_option("-c", "--classifier", default="SVMLightClassifier", dest="classifier", help="Classifier Class")
-    optparser.add_option("-p", "--parameters", default=None, dest="parameters", help="Parameters for the classifier")
+    optparser.add_option("-t", "--tokenization", default="split_gs", dest="tokenization", help="tokenization")
+    optparser.add_option("-p", "--parse", default="split_gs", dest="parse", help="parse")
+    optparser.add_option("-x", "--exampleBuilderParameters", default=None, dest="exampleBuilderParameters", help="Parameters for the example builder")
+    optparser.add_option("-y", "--parameters", default=None, dest="parameters", help="Parameters for the classifier")
     optparser.add_option("-b", "--exampleBuilder", default="SimpleDependencyExampleBuilder", dest="exampleBuilder", help="Example Builder Class")
     optparser.add_option("-e", "--evaluator", default="Evaluation", dest="evaluator", help="Prediction evaluator class")
     optparser.add_option("-v", "--visualization", default=None, dest="visualization", help="Visualization output directory. NOTE: If the directory exists, it will be deleted!")
@@ -51,7 +64,10 @@ if __name__=="__main__":
     print >> sys.stderr, "Loading corpus file", options.input
     corpusTree = ET.parse(options.input)
     corpusRoot = corpusTree.getroot()
-    corpusElements = CorpusElements(corpusRoot, "split_gs", "split_gs")
+    corpusElements = CorpusElements(corpusRoot, options.parse, options.tokenization)
+    #corpusElements = CorpusElements(corpusRoot, "split_gs", "split_gs")
+    #corpusElements = CorpusElements(corpusRoot, "gold", "gold")
+    print >> sys.stderr, str(len(corpusElements.documentsById)) + " documents, " + str(len(corpusElements.sentencesById)) + " sentences"
     
     # Make sentence graphs
     sentences = []
@@ -63,7 +79,7 @@ if __name__=="__main__":
         sentences.append( [graph,None,None] )
     
     # Build examples
-    exampleBuilder = ExampleBuilder()
+    exampleBuilder = ExampleBuilder(**splitParameters(options.exampleBuilderParameters))
     examples = []
     counter = ProgressCounter(len(sentences), "Build examples")
     for sentence in sentences:
