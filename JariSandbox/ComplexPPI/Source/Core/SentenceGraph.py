@@ -1,12 +1,14 @@
 import networkx as NX
 import Range
 
+multiedges = True
+
 class SentenceGraph:
     def __init__(self, sentenceElement, tokenElements, dependencyElements):
         self.sentenceElement = sentenceElement
         self.tokens = tokenElements
         self.dependencies = dependencyElements
-        self.dependencyGraph = NX.XDiGraph()#multiedges = True)
+        self.dependencyGraph = NX.XDiGraph(multiedges = multiedges)
         self.interactions = None
         self.entities = None
         self.interactionGraph = None
@@ -28,7 +30,7 @@ class SentenceGraph:
     def mapInteractions(self, entityElements, interactionElements, verbose=False):
         self.interactions = interactionElements
         self.entities = entityElements
-        self.interactionGraph = NX.XDiGraph()#multiedges = True)
+        self.interactionGraph = NX.XDiGraph(multiedges = multiedges)
         self.entitiesByToken = {}
         
         self.__markNamedEntities()
@@ -44,7 +46,16 @@ class SentenceGraph:
         for interaction in self.interactions:
             token1 = entityHeadTokenByEntity[self.entitiesById[interaction.attrib["e1"]]]
             token2 = entityHeadTokenByEntity[self.entitiesById[interaction.attrib["e2"]]]
-            self.interactionGraph.add_edge(token1, token2, interaction)
+            
+            found = False
+            if multiedges:
+                edges = self.interactionGraph.get_edge(token1, token2)
+                for edge in edges:
+                    if edge.attrib["type"] == interaction.attrib["type"]:
+                        found = True
+                        break
+            if not found:
+                self.interactionGraph.add_edge(token1, token2, interaction)
     
     def mapEntity(self, entityElement, verbose=False):
         headOffset = Range.charOffsetToSingleTuple(entityElement.attrib["headOffset"])
