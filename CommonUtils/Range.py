@@ -44,3 +44,15 @@ def overlap(range1, range2):
     # x1 <= x2 < y1 <= y2
     # y1 <= y2 < x1 <= x2
     return not (range1[1] < range2[0] or range2[1] < range1[0])
+
+def tuplesToCharOffset(tuples):
+    if not isinstance(tuples,list):
+        tuples = [tuples]
+    charOffset = ""
+    isFirst = True
+    for tuple in tuples:
+        if not isFirst:
+            charOffset += ","
+        charOffset += str(tuple[0]) + "-" + str(tuple[1])
+        isFirst = False
+    return charOffset
