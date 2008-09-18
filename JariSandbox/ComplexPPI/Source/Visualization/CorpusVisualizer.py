@@ -263,12 +263,19 @@ class CorpusVisualizer:
                 string += " (" + classificationsByExample[example[0]][1] + ")"
             string += ":"
             features = example[2]
-            for k,v in features.iteritems():
-                if self.featureSet != None:
-                    featureName = self.featureSet.getName(k)
-                else:
-                    featureName = str(k)
-                string += " " + featureName + ":" + str(v)
+            if self.featureSet != None:
+                featureNames = []
+                for key in features.keys():
+                    featureNames.append(self.featureSet.getName(key))
+                featureNames.sort()
+                for featureName in featureNames:
+                    string += " " + featureName + ":" + str(features[self.featureSet.getId(featureName)])
+            else:
+                keys = features.keys()
+                keys.sort()
+                for key in keys:
+                    featureName = str(key)
+                    string += " " + featureName + ":" + str(features[key])
             #string += "\n"
             builder.span(string)
             builder.lineBreak()
