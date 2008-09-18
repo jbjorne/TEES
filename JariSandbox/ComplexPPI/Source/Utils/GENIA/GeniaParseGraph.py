@@ -189,8 +189,10 @@ class GeniaParseGraph(InteractionParseGraph):
             
             node.origid = tokenElement.attrib["id"]
             node.id = len(tokensById)+1
-            
-            node.pos = "N/A"#tokenElement.attrib["POS"]
+            if tokenElement.attrib.has_key("POS"):
+                node.pos = tokenElement.attrib["POS"]
+            else:
+                node.pos = "N/A"
             subtokenElement = tokenElement.find("subtoken")
             node.text = subtokenElement.attrib["text"]
             charFrom = int(tokenElement.attrib["charOffset"])
