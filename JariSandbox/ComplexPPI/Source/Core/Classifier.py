@@ -21,6 +21,27 @@ class Classifier:
     def classify(self, examples, parameters=None):
         raise NotImplementedError
     
+    def filterTrainingSet(self, examples):
+        trainingSet = []
+        for example in examples:
+            if not example[2].has_key(self.featureSet.getId("always_negative")):
+                trainingSet.append(example)
+        return trainingSet
+    
+    def filterClassificationSet(self, examples, isBinary):
+        classificationSet = []
+        predictions = []
+        for example in examples:
+            if not example[2].has_key(self.featureSet.getId("always_negative")):
+                classificationSet.append(example)
+            else:
+                if not example[2].has_key(self.featureSet.getId("out_of_scope")):
+                    if isBinary:
+                        predictions.append( (example,0.0,"binary") )
+                    else:
+                        predictions.append( (example,1,"multiclass") )
+        return classificationSet, predictions
+    
     def optimize(self, trainExamples, classifyExamples, parameters=defaultOptimizationParameters, evaluationClass=Evaluation, evaluationArgs={}):
         print >> sys.stderr, "Optimizing parameters"              
         parameterNames = parameters.keys()
