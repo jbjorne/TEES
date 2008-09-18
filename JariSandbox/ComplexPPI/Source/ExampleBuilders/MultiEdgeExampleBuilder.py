@@ -5,7 +5,7 @@ from Core.IdSet import IdSet
 import networkx as NX
 
 class MultiEdgeExampleBuilder(ExampleBuilder):
-    def __init__(self):
+    def __init__(self, styles=["typed","headsOnly"], length=[1,2,3], ignore=[]):
         ExampleBuilder.__init__(self)
         self.classSet = IdSet(1)
         assert( self.classSet.getId("neg") == 1 )
@@ -87,6 +87,7 @@ class MultiEdgeExampleBuilder(ExampleBuilder):
         features[self.featureSet.getId("len_edges_"+str(len(edges)))] = 1
         features[self.featureSet.getId("len")] = len(edges)
         self.buildPathRoleFeatures(path, edges, sentenceGraph, features)
+        self.buildPathGrams(2, path, edges, sentenceGraph, features)
         self.buildEdgeCombinations(path, edges, sentenceGraph, features)
         #self.buildTerminusFeatures(path[0], "t1", sentenceGraph, features)
         #self.buildTerminusFeatures(path[-1], "t2", sentenceGraph, features)
@@ -107,12 +108,57 @@ class MultiEdgeExampleBuilder(ExampleBuilder):
         category = self.classSet.getId(categoryName)
         examples.append( (sentenceGraph.getSentenceId()+".x"+str(exampleIndex),category,features,extra) )
     
+    def getWalks(self, pathTokens, pathEdges, position=1, walk=None):
+        """
+        A path is defined by a list of tokens. But since there can be more than one edge
+        between the same two tokens, there are multiple ways of getting from the first
+        token to the last token. This function returns all of these "walks", i.e. the combinations
+        of edges that can be travelled to get from the first to the last token of the path.
+        """
+        allWalks = []
+        if walk == None:
+            walk = []
+        
+        edges = pathEdges[position-1][position] + pathEdges[position][position-1]
+        for edge in edges:
+            if position < len(pathTokens)-1:
+                allWalks.extend(self.getWalks(pathTokens, pathEdges, position+1, walk + [edge]))
+            else:
+                allWalks.append(walk + [edge])
+        return allWalks
+    
+    def buildPathGrams(self, length, pathTokens, pathEdges, sentenceGraph, features):
+        walks = self.getWalks(pathTokens, pathEdges)
+        dirGrams = []
+        for walk in walks:
+            dirGrams.append("")
+        for i in range(len(pathTokens)-1): # len(pathTokens) == len(walk)
+            for j in range(len(walks)):
+                if walks[j][i][0] == pathTokens[i]:
+                    dirGrams[j] += "F"
+                else:
+                    dirGrams[j] += "R"
+                if i >= length-1:
+                    styleGram = dirGrams[j][i-(length-1):i+1]
+                    edgeGram = "depGram_" + styleGram
+                    # Label tokens by their role in the xgram
+                    for token in pathTokens[i-(length-1)+1:i+1]:
+                        features[self.featureSet.getId("tok_"+styleGram+"_POS_"+token.attrib["POS"])] = 1
+                        features[self.featureSet.getId("tok_"+styleGram+"_Txt_"+sentenceGraph.getTokenText(token))] = 1
+                    # Label edges by their role in the xgram
+                    position = 0
+                    for edge in walks[j][i-(length-1):i+1]:
+                        features[self.featureSet.getId("dep_"+styleGram+str(position)+"_"+edge[2].attrib["type"])] = 1
+                        position += 1
+    
     def buildPathRoleFeatures(self, pathTokens, pathEdges, sentenceGraph, features):
         #print len(pathTokens), len(pathEdges)
         features[self.featureSet.getId("tokTerm1POS_"+pathTokens[0].attrib["POS"])] = 1
         features[self.featureSet.getId("tokTerm1txt_"+sentenceGraph.getTokenText(pathTokens[0]))] = 1
         features[self.featureSet.getId("tokTerm2POS_"+pathTokens[-1].attrib["POS"])] = 1
         features[self.featureSet.getId("tokTerm2txt_"+sentenceGraph.getTokenText(pathTokens[-1]))] = 1
+        
+        return
 #        for i in range(0,len(pathEdges)):
 #            if pathEdges[i][1]:
 #                features[self.featureSet.getId("depRight_"+pathEdges[i][0][2].attrib["type"])] = 1
