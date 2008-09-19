@@ -3,6 +3,31 @@ import Range
 
 multiedges = True
 
+def loadCorpus(corpusFilename, parse, tokenization=None):
+    try:
+        import xml.etree.cElementTree as ET
+    except ImportError:
+        import cElementTree as ET
+    import sys
+    sys.path.append("..")
+    from Utils.ProgressCounter import ProgressCounter
+    from InteractionXML.CorpusElements import CorpusElements
+    
+    print >> sys.stderr, "Loading corpus file", corpusFilename
+    corpusTree = ET.parse(corpusFilename)
+    corpusRoot = corpusTree.getroot()
+    corpusElements = CorpusElements(corpusRoot, parse, tokenization)
+    print >> sys.stderr, str(len(corpusElements.documentsById)) + " documents, " + str(len(corpusElements.sentencesById)) + " sentences"
+    # Make sentence graphs
+    sentences = []
+    counter = ProgressCounter(len(corpusElements.sentences), "Make sentence graphs")
+    for sentence in corpusElements.sentences:
+        counter.update(1, "Making sentence graphs ("+sentence.sentence.attrib["id"]+"): ")
+        graph = SentenceGraph(sentence.sentence, sentence.tokens, sentence.dependencies)
+        graph.mapInteractions(sentence.entities, sentence.interactions)
+        sentence.sentenceGraph = graph
+    return corpusElements
+
 class SentenceGraph:
     def __init__(self, sentenceElement, tokenElements, dependencyElements):
         self.sentenceElement = sentenceElement
