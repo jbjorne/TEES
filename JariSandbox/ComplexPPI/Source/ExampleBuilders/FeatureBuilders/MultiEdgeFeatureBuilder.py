@@ -124,6 +124,21 @@ class MultiEdgeFeatureBuilder(FeatureBuilder):
             self.features[self.featureSet.getId("txt_"+sentenceGraph.getTokenText(edge[1]))] = 1
             self.features[self.featureSet.getId("POS_"+edge[1].attrib["POS"])] = 1
             self.addType(edge[1], sentenceGraph, prefix="annType_")
+            
+            # g-d features
+            gText = sentenceGraph.getTokenText(edge[0])
+            dText = sentenceGraph.getTokenText(edge[1])
+            gPOS = edge[0].attrib["POS"]
+            dPOS = edge[1].attrib["POS"]
+            gAT = "x"
+            dAT = "x"
+            if sentenceGraph.tokenIsEntityHead[edge[0]] != None:
+                gAT = sentenceGraph.tokenIsEntityHead[edge[0]].attrib["type"]
+            if sentenceGraph.tokenIsEntityHead[edge[1]] != None:
+                dAT = sentenceGraph.tokenIsEntityHead[edge[1]].attrib["type"]
+            self.features[self.featureSet.getId("gov_"+gText+"_"+dText)] = 1
+            self.features[self.featureSet.getId("gov_"+gPOS+"_"+dPOS)] = 1
+            self.features[self.featureSet.getId("gov_"+gAT+"_"+dAT)] = 1
 
     def buildSingleElementFeatures(self, pathTokens, pathEdges, sentenceGraph):
         # Edges directed relative to the path
