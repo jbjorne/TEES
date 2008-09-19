@@ -14,6 +14,15 @@ class MultiEdgeExampleBuilder(ExampleBuilder):
         self.styles = style
         self.pathLengths = length
         self.types = types
+    
+    def filterEdgesByType(self, edges, typesToInclude):
+        if len(typesToInclude) == 0:
+            return edges
+        edgesToKeep = []
+        for edge in edges:
+            if edge.attrib["type"] in typesToInclude:
+                edgesToKeep.append(edge)
+        return edgesToKeep
      
     def buildExamples(self, sentenceGraph):
         examples = []
@@ -32,23 +41,29 @@ class MultiEdgeExampleBuilder(ExampleBuilder):
                         continue
 
                 # define class
+                positive = False
                 if sentenceGraph.interactionGraph.has_edge(tI, tJ):
                     intEdges = sentenceGraph.interactionGraph.get_edge(tI, tJ)
+                    intEdges = self.filterEdgesByType(intEdges, self.types)
                     for intEdge in intEdges:
                         categoryName = intEdge.attrib["type"]                      
                         self.buildExample(tI, tJ, paths, sentenceGraph, categoryName, examples, exampleIndex)
                         exampleIndex += 1
-                else:
+                        positive = True
+                if not positive:
                     self.buildExample(tI, tJ, paths, sentenceGraph, "neg", examples, exampleIndex)
                     exampleIndex += 1
                 
+                positive = False
                 if sentenceGraph.interactionGraph.has_edge(tJ, tI):
                     intEdges = sentenceGraph.interactionGraph.get_edge(tJ, tI)
+                    intEdges = self.filterEdgesByType(intEdges, self.types)
                     for intEdge in intEdges:
                         categoryName = intEdge.attrib["type"]
                         self.buildExample(tJ, tI, paths, sentenceGraph, categoryName, examples, exampleIndex)
                         exampleIndex += 1
-                else:
+                        positive = True
+                if not positive:
                     self.buildExample(tJ, tI, paths, sentenceGraph, "neg", examples, exampleIndex)
                     exampleIndex += 1
 
