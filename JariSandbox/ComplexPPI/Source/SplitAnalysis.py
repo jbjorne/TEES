@@ -108,6 +108,7 @@ if __name__=="__main__":
         classifier = Classifier(workDir = options.output + "/classifier")
     else:
         classifier = Classifier()
+    classifier.featureSet = exampleBuilder.featureSet
     
     # Optimize
     optimizationSets = Example.divideExamples(exampleSets[0])
