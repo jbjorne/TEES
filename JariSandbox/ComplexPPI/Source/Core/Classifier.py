@@ -1,6 +1,7 @@
 import sys, os
 import combine
-from Evaluation import Evaluation
+#from Evaluation import Evaluation
+import Evaluators.Evaluation as EvaluationBase
 import ExampleUtils
 import tempfile
 
@@ -42,7 +43,7 @@ class Classifier:
                         predictions.append( (example,1,"multiclass") )
         return classificationSet, predictions
     
-    def optimize(self, trainExamples, classifyExamples, parameters=defaultOptimizationParameters, evaluationClass=Evaluation, evaluationArgs={}):
+    def optimize(self, trainSets, classifySets, parameters=defaultOptimizationParameters, evaluationClass=EvaluationBase.Evaluation, evaluationArgs={}):
         print >> sys.stderr, "Optimizing parameters"              
         parameterNames = parameters.keys()
         parameterNames.sort()
@@ -64,21 +65,37 @@ class Classifier:
             mainTempDir = self.tempDir
             mainDebugFile = self.debugFile
         for combination in combinations:
-            # Make copies of examples in case they are modified
-            trainExamplesCopy = ExampleUtils.copyExamples(trainExamples)
-            classifyExamplesCopy = ExampleUtils.copyExamples(classifyExamples)
-            if hasattr(self, "tempDir"):
-                self.tempDir = mainTempDir+"/optimization"+str(count)
-                if not os.path.exists(self.tempDir):
-                    os.mkdir(self.tempDir)
-                self.debugFile = open(self.tempDir + "/debug.txt", "wt")
             print >> sys.stderr, " Parameters "+str(count)+"/"+str(len(combinations))+":", str(combination)
-            self.train(trainExamplesCopy, combination)
-            predictions = self.classify(classifyExamplesCopy)        
-            evaluation = evaluationClass(predictions, **evaluationArgs)
-            print >> sys.stderr, evaluation.toStringConcise("  ")
-            if bestResult == None or evaluation.fScore > bestResult[1].fScore:
-                bestResult = (predictions, evaluation, combination)
+            # Make copies of examples in case they are modified
+            fold = 1
+            foldResults = []
+            for classifyExamples in classifySets:
+                trainExamples = []
+                for trainSet in trainSets:
+                    if trainSet != classifyExamples:
+                        trainExamples.extend(trainSet)
+                trainExamplesCopy = ExampleUtils.copyExamples(trainExamples)
+                classifyExamplesCopy = ExampleUtils.copyExamples(classifyExamples)
+                if hasattr(self, "tempDir"):
+                    self.tempDir = mainTempDir+"/optimization"+str(count)
+                    if not os.path.exists(self.tempDir):
+                        os.mkdir(self.tempDir)
+                    self.debugFile = open(self.tempDir + "/debug.txt", "wt")
+                self.train(trainExamplesCopy, combination)
+                predictions = self.classify(classifyExamplesCopy)        
+                evaluation = evaluationClass(predictions, **evaluationArgs)
+                if len(classifySets) == 1:
+                    print >> sys.stderr, evaluation.toStringConcise("  ")
+                else:
+                    print >> sys.stderr, evaluation.toStringConcise(indent="  ", title="Fold "+str(fold))
+                foldResults.append(evaluation)
+                fold += 1
+            averageResult = EvaluationBase.averageEvaluations(foldResults)
+            if len(classifySets) > 1:
+                print >> sys.stderr, averageResult.toStringConcise("  Avg: ")
+            if bestResult == None or averageResult.fScore > bestResult[1].fScore:
+                #bestResult = (predictions, averageResult, combination)
+                bestResult = (None, averageResult, combination)
             count += 1
             if hasattr(self, "tempDir"):
                 self.debugFile.close()
