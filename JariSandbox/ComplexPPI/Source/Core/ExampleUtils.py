@@ -28,6 +28,10 @@ def makeCorpusDivision(corpusElements, fraction=0.5):
     documentIds = corpusElements.documentsById.keys()
     return makeDivision(documentIds, fraction)
 
+def makeCorpusFolds(corpusElements, folds=10):
+    documentIds = corpusElements.documentsById.keys()
+    return makeFolds(documentIds, folds)
+
 def makeExampleDivision(examples, fraction=0.5):
     documentIds = set()
     for example in examples:
@@ -35,8 +39,22 @@ def makeExampleDivision(examples, fraction=0.5):
     documentIds = list(documentIds)
     return makeDivision(documentIds, fraction)
 
+def makeExampleFolds(examples, folds=10):
+    documentIds = set()
+    for example in examples:
+        documentIds.add(example[0].rsplit(".",2)[0])
+    documentIds = list(documentIds)
+    return makeFolds(documentIds, folds)
+
 def makeDivision(ids, fraction=0.5):
     sample = Split.getSample(len(ids),fraction)
+    division = {}
+    for i in range(len(ids)): 
+        division[ids[i]] = sample[i]
+    return division
+
+def makeFolds(ids, folds=10):
+    sample = Split.getFolds(len(ids),folds)
     division = {}
     for i in range(len(ids)): 
         division[ids[i]] = sample[i]
