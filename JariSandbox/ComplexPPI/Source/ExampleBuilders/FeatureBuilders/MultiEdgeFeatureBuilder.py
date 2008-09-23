@@ -145,10 +145,10 @@ class MultiEdgeFeatureBuilder(FeatureBuilder):
         for i in range(1,len(pathTokens)):
             for edge in pathEdges[i][i-1]:
                 depType = edge[2].attrib["type"]
-                self.features[self.featureSet.getId("dep_"+depType+">")] = 1
+                self.features[self.featureSet.getId("dep_"+depType+"Forward_")] = 1
             for edge in pathEdges[i-1][i]:
                 depType = edge[2].attrib["type"]
-                self.features[self.featureSet.getId("dep_<"+depType)] = 1
+                self.features[self.featureSet.getId("dep_Reverse_"+depType)] = 1
 
         # Internal tokens
         for i in range(1,len(pathTokens)-1):
