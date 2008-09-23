@@ -11,29 +11,50 @@ from Core.SentenceGraph import *
 #from Core.Evaluation import Evaluation
 from Visualization.CorpusVisualizer import CorpusVisualizer
 from Utils.ProgressCounter import ProgressCounter
+from Utils.Parameters import splitParameters
 from optparse import OptionParser
 
-def splitParameters(string):
-    if string == None:
-        return {}
-    paramDict = {}
-    paramSets = string.split(";")
-    for paramSet in paramSets:
-        paramName, paramValueString = paramSet.split(":")
-        paramValues = paramValueString.split(",")
-        paramDict[paramName] = []
-        count = 0
-        for value in paramValues:
-            try:
-               floatValue = float(value)
-               intValue = int(value)
-               if floatValue != float(intValue):
-                   paramDict[paramName].append(floatValue)
-               else:
-                   paramDict[paramName].append(intValue)
-            except:
-               paramDict[paramName].append(value) 
-    return paramDict
+def buildExamples(exampleBuilder, sentences, options):
+    examples = []
+    counter = ProgressCounter(len(sentences), "Build examples")
+    for sentence in sentences:
+        counter.update(1, "Building examples ("+sentence[0].getSentenceId()+"): ")
+        sentence[1] = exampleBuilder.buildExamples(sentence[0])
+        examples.extend(sentence[1])
+    print >> sys.stderr, "Examples built:", len(examples)    
+    # Save examples
+    if options.output != None:
+        print >> sys.stderr, "Saving examples to", options.output + "/examples.txt"
+        commentLines = []
+        commentLines.append("Input file: " + options.input)
+        commentLines.append("Example builder: " + options.exampleBuilder)
+        commentLines.append("Features:")
+        commentLines.extend(exampleBuilder.featureSet.toStrings())
+        Example.writeExamples(examples, options.output + "/examples.txt", commentLines)
+    return examples
+
+def visualize(sentences, classifications, options):   
+    print >> sys.stderr, "Making visualization"
+    classificationsByExample = {}
+    for classification in classifications:
+        classificationsByExample[classification[0][0]] = classification
+    visualizer = CorpusVisualizer(options.visualization, True)
+    visualizer.featureSet = exampleBuilder.featureSet
+    visualizer.classSet = exampleBuilder.classSet
+    for i in range(len(sentences)):
+        sentence = sentences[i]
+        print >> sys.stderr, "\rProcessing sentence", sentence[0].getSentenceId(), "          ",
+        prevAndNextId = [None,None]
+        if i > 0:
+            prevAndNextId[0] = sentences[i-1][0].getSentenceId()
+        if i < len(sentences)-1:
+            prevAndNextId[1] = sentences[i+1][0].getSentenceId()
+        visualizer.makeSentencePage(sentence[0],sentence[1],classificationsByExample,prevAndNextId)
+    visualizer.makeSentenceListPage()
+    print >> sys.stderr
+
+def classify(trainSet, testSet):
+    pass
 
 if __name__=="__main__":
     defaultAnalysisFilename = "/usr/share/biotext/ComplexPPI/BioInferForComplexPPI.xml"
@@ -61,43 +82,16 @@ if __name__=="__main__":
     exec "from Classifiers." + options.classifier + " import " + options.classifier + " as Classifier"
     exec "from Evaluators." + options.evaluator + " import " + options.evaluator + " as Evaluation"
     
-    print >> sys.stderr, "Loading corpus file", options.input
-    corpusTree = ET.parse(options.input)
-    corpusRoot = corpusTree.getroot()
-    corpusElements = CorpusElements(corpusRoot, options.parse, options.tokenization)
-    #corpusElements = CorpusElements(corpusRoot, "split_gs", "split_gs")
-    #corpusElements = CorpusElements(corpusRoot, "gold", "gold")
-    print >> sys.stderr, str(len(corpusElements.documentsById)) + " documents, " + str(len(corpusElements.sentencesById)) + " sentences"
-    
-    # Make sentence graphs
+    # Load corpus and make sentence graphs
+    corpusElements = loadCorpus(options.input, options.parse, options.tokenization)
     sentences = []
-    counter = ProgressCounter(len(corpusElements.sentences), "Make sentence graphs")
     for sentence in corpusElements.sentences:
-        counter.update(1, "Making sentence graphs ("+sentence.sentence.attrib["id"]+"): ")
-        graph = SentenceGraph(sentence.sentence, sentence.tokens, sentence.dependencies)
-        graph.mapInteractions(sentence.entities, sentence.interactions)
-        sentences.append( [graph,None,None] )
+        sentences.append( [sentence.sentenceGraph,None] )
     
     # Build examples
     exampleBuilder = ExampleBuilder(**splitParameters(options.exampleBuilderParameters))
-    examples = []
-    counter = ProgressCounter(len(sentences), "Build examples")
-    for sentence in sentences:
-        counter.update(1, "Building examples ("+sentence[0].getSentenceId()+"): ")
-        sentence[1] = exampleBuilder.buildExamples(sentence[0])
-        examples.extend(sentence[1])
-    print >> sys.stderr, "Examples built:", len(examples)
-   
-    # Save examples
-    if options.output != None:
-        print >> sys.stderr, "Saving examples to", options.output + "/examples.txt"
-        commentLines = []
-        commentLines.append("Input file: " + options.input)
-        commentLines.append("Example builder: " + options.exampleBuilder)
-        commentLines.append("Features:")
-        commentLines.extend(exampleBuilder.featureSet.toStrings())
-        Example.writeExamples(examples, options.output + "/examples.txt", commentLines)
-    
+    examples = buildExamples(exampleBuilder, sentences, options)
+       
     # Make test and training sets
     print >> sys.stderr, "Dividing data into test and training sets"
     corpusDivision = Example.makeCorpusDivision(corpusElements)
@@ -115,9 +109,9 @@ if __name__=="__main__":
     evaluationArgs = {"classSet":exampleBuilder.classSet}
     if options.parameters != None:
         paramDict = splitParameters(options.parameters)
-        bestResults = classifier.optimize(optimizationSets[0], optimizationSets[1], paramDict, Evaluation, evaluationArgs)
+        bestResults = classifier.optimize([optimizationSets[0]], [optimizationSets[1]], paramDict, Evaluation, evaluationArgs)
     else:
-        bestResults = classifier.optimize(optimizationSets[0], optimizationSets[1], evaluationClass=Evaluation, evaluationArgs=evaluationArgs)
+        bestResults = classifier.optimize([optimizationSets[0]], [optimizationSets[1]], evaluationClass=Evaluation, evaluationArgs=evaluationArgs)
 
     # Save example sets
     if options.output != None:
@@ -139,22 +133,4 @@ if __name__=="__main__":
     
     # Visualize
     if options.visualization != None:
-        print >> sys.stderr, "Making visualization"
-        classifications = evaluation.classifications
-        classificationsByExample = {}
-        for classification in classifications:
-            classificationsByExample[classification[0][0]] = classification
-        visualizer = CorpusVisualizer(options.visualization, True)
-        visualizer.featureSet = exampleBuilder.featureSet
-        visualizer.classSet = exampleBuilder.classSet
-        for i in range(len(sentences)):
-            sentence = sentences[i]
-            print >> sys.stderr, "\rProcessing sentence", sentence[0].getSentenceId(), "          ",
-            prevAndNextId = [None,None]
-            if i > 0:
-                prevAndNextId[0] = sentences[i-1][0].getSentenceId()
-            if i < len(sentences)-1:
-                prevAndNextId[1] = sentences[i+1][0].getSentenceId()
-            visualizer.makeSentencePage(sentence[0],sentence[1],classificationsByExample,prevAndNextId)
-        visualizer.makeSentenceListPage()
-        print >> sys.stderr
+        visualize(sentences, evaluation.classifications, options)
