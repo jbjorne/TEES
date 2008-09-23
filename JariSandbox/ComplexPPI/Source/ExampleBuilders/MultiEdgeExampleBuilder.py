@@ -3,14 +3,16 @@ sys.path.append("..")
 from Core.ExampleBuilder import ExampleBuilder
 from Core.IdSet import IdSet
 from FeatureBuilders.MultiEdgeFeatureBuilder import MultiEdgeFeatureBuilder
+from FeatureBuilders.TokenFeatureBuilder import TokenFeatureBuilder
 import networkx as NX
 
 class MultiEdgeExampleBuilder(ExampleBuilder):
-    def __init__(self, style=["typed","headsOnly"], length=[1,2,3], types=[]):
+    def __init__(self, style=["typed","headsOnly"], length=None, types=[]):
         ExampleBuilder.__init__(self)
         self.classSet = IdSet(1)
         assert( self.classSet.getId("neg") == 1 )
         self.multiEdgeFeatureBuilder = MultiEdgeFeatureBuilder(self.featureSet)
+        self.tokenFeatureBuilder = TokenFeatureBuilder(self.featureSet)
         self.styles = style
         self.pathLengths = length
         self.types = types
@@ -23,14 +25,30 @@ class MultiEdgeExampleBuilder(ExampleBuilder):
             if edge.attrib["type"] in typesToInclude:
                 edgesToKeep.append(edge)
         return edgesToKeep
-     
+    
+    def getType(self, intEdges):
+        intEdges = self.filterEdgesByType(intEdges, self.types)
+        categoryNames = []
+        for intEdge in intEdges:
+            categoryNames.append(intEdge.attrib["type"])
+        categoryNames.sort()
+        categoryName = ""
+        for name in categoryNames:
+            if categoryName != "":
+                categoryName += "-"
+            categoryName += name
+        if categoryName != "":
+            return categoryName
+        else:
+            return None 
+                        
     def buildExamples(self, sentenceGraph):
         examples = []
         exampleIndex = 0
         
         undirected = sentenceGraph.dependencyGraph.to_undirected()
         #undirected = self.makeUndirected(sentenceGraph.dependencyGraph)
-        paths = NX.all_pairs_shortest_path(undirected, cutoff=4)
+        paths = NX.all_pairs_shortest_path(undirected, cutoff=999)
         for i in range(len(sentenceGraph.tokens)-1):
             for j in range(i+1,len(sentenceGraph.tokens)):
                 tI = sentenceGraph.tokens[i]
@@ -44,9 +62,8 @@ class MultiEdgeExampleBuilder(ExampleBuilder):
                 positive = False
                 if sentenceGraph.interactionGraph.has_edge(tI, tJ):
                     intEdges = sentenceGraph.interactionGraph.get_edge(tI, tJ)
-                    intEdges = self.filterEdgesByType(intEdges, self.types)
-                    for intEdge in intEdges:
-                        categoryName = intEdge.attrib["type"]                      
+                    categoryName = self.getType(intEdges)
+                    if categoryName != None:
                         self.buildExample(tI, tJ, paths, sentenceGraph, categoryName, examples, exampleIndex)
                         exampleIndex += 1
                         positive = True
@@ -57,9 +74,8 @@ class MultiEdgeExampleBuilder(ExampleBuilder):
                 positive = False
                 if sentenceGraph.interactionGraph.has_edge(tJ, tI):
                     intEdges = sentenceGraph.interactionGraph.get_edge(tJ, tI)
-                    intEdges = self.filterEdgesByType(intEdges, self.types)
-                    for intEdge in intEdges:
-                        categoryName = intEdge.attrib["type"]
+                    categoryName = self.getType(intEdges)
+                    if categoryName != None:
                         self.buildExample(tJ, tI, paths, sentenceGraph, categoryName, examples, exampleIndex)
                         exampleIndex += 1
                         positive = True
@@ -74,7 +90,7 @@ class MultiEdgeExampleBuilder(ExampleBuilder):
         features = {}
         if paths.has_key(token1) and paths[token1].has_key(token2):
             path = paths[token1][token2]
-            if len(self.pathLengths) != 0 and len(path)-1 in self.pathLengths:
+            if self.pathLengths == None or len(path)-1 in self.pathLengths:
                 edges = self.multiEdgeFeatureBuilder.getEdges(sentenceGraph.dependencyGraph, path)
                 self.multiEdgeFeatureBuilder.setFeatureVector(features)
                 self.multiEdgeFeatureBuilder.buildPathLengthFeatures(path)
@@ -87,6 +103,21 @@ class MultiEdgeExampleBuilder(ExampleBuilder):
                 #self.buildTerminusFeatures(path[-1], "t2", sentenceGraph, features)
                 self.multiEdgeFeatureBuilder.buildPathEdgeFeatures(path, edges, sentenceGraph)
                 self.multiEdgeFeatureBuilder.setFeatureVector(None)
+                # Build token ngrams
+#                self.tokenFeatureBuilder.setFeatureVector(features)
+#                for i in range(len(sentenceGraph.tokens)):
+#                    if sentenceGraph.tokens[i] == token1:
+#                        token1Index = i
+#                    if sentenceGraph.tokens[i] == token2:
+#                        token2Index = i
+#                if token1Index > token2Index: token1Index, token2Index = token2Index, token1Index
+##                self.tokenFeatureBuilder.buildTokenGrams(0, token1Index-1, sentenceGraph, "bf")
+##                self.tokenFeatureBuilder.buildTokenGrams(token1Index+1, token2Index-1, sentenceGraph, "bw")
+##                self.tokenFeatureBuilder.buildTokenGrams(token2Index+1, len(sentenceGraph.tokens)-1, sentenceGraph, "af")
+#                self.tokenFeatureBuilder.buildTokenGrams(0, token2Index-1, sentenceGraph, "bf", max=2)
+#                self.tokenFeatureBuilder.buildTokenGrams(token1Index+1, token2Index-1, sentenceGraph, "bw", max=2)
+#                self.tokenFeatureBuilder.buildTokenGrams(token1Index+1, len(sentenceGraph.tokens)-1, sentenceGraph, "af", max=2)
+#                self.tokenFeatureBuilder.setFeatureVector(None)
             else:
                 features[self.featureSet.getId("always_negative")] = 1
                 if "subset" in self.styles:
