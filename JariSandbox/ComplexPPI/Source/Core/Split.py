@@ -25,9 +25,18 @@ def getFolds(popSize, folds, seed=0):
         for j in sample:
             vector[j] = i
             population.remove(j)
+    # add -1 cases roughly evenly to all folds
+    currentFold = 0
+    for i in range(len(vector)):
+        if vector[i] == -1:
+            assert(currentFold < folds-1)
+            vector[i] = currentFold
+            currentFold += 1
     return vector
 
 if __name__=="__main__":
+    print "Testing 20, 0.0:"
+    print getSample(20,0.0)
     print "Testing 20, 0.5:"
     print getSample(20,0.5)
     print "Folds 20 / 2:"
