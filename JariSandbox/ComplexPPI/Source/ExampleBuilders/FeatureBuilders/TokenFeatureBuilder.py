@@ -50,3 +50,19 @@ class TokenFeatureBuilder(FeatureBuilder):
             if j > 1 and triplets:
                 self.features[self.featureSet.getId("tt_"+text[j-2:j+1].lower())] = 1
 
+    def buildTokenGrams(self, startTokenIndex, endTokenIndex, sentenceGraph, tag="", max = 3):
+        tag = "lin_" + tag
+        for i in range(startTokenIndex,endTokenIndex+1):
+            text = ""
+            POS = ""
+            annType = ""
+            count = 0
+            for j in range(i,startTokenIndex-1,-1):
+                if count >= max:
+                    break
+                token = sentenceGraph.tokens[j]
+                text = "_" + sentenceGraph.getTokenText(token) + text
+                POS = "_" + token.attrib["POS"] + POS
+                self.features[self.featureSet.getId(tag+"_text"+text)] = 1
+                self.features[self.featureSet.getId(tag+"_POS"+POS)] = 1
+                count += 1
