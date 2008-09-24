@@ -114,8 +114,13 @@ class AveragingMultiClassEvaluator:
             if self.recall != 0: self.recall /= float(numClassesWithInstances)
             if self.fScore != 0: self.fScore /= float(numClassesWithInstances)            
     
-    def toStringConcise(self, indent=""):
-        string = indent
+    def toStringConcise(self, indent="", title=None):
+        if title != None:
+            string = indent + title + "\n"
+            indent += " "
+            string += indent
+        else:
+            string = indent
         negativeClassId = None
         for cls in self.classes:
             if cls != self.classSet.getId("neg", False):
