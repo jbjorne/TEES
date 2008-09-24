@@ -1,3 +1,30 @@
+def averageEvaluations(evaluations):
+    average = Evaluation(None)
+    average.precision = 0
+    average.recall = 0
+    average.fScore = 0
+    average.truePositives = "-"
+    average.falsePositives = "-"
+    average.trueNegatives = "-"
+    average.falseNegatives = "-"
+    sumWeight = 0.0
+    precisions = []
+    recalls = []
+    fScores = []
+    for evaluation in evaluations:
+        weight = float(len(evaluation.predictions))
+        sumWeight += weight
+        average.precision += weight * evaluation.precision
+        average.recall += weight * evaluation.recall
+        average.fScore += weight * evaluation.fScore
+        precisions.append(evaluation.precision)
+        recalls.append(evaluation.recall)
+        fScores.append(evaluation.fScore)
+    average.precision /= sumWeight
+    average.recall /= sumWeight
+    average.fScore /= sumWeight
+    return average
+
 class Evaluation:
     def __init__(self, predictions, classSet=None):
         self.predictions = predictions
@@ -8,9 +35,40 @@ class Evaluation:
         self.precision = None
         self.recall = None
         self.fScore = None
-        #self.AUC = None
+        self.AUC = None
         self.type = "binary"
-        self.__calculate(predictions)
+        if predictions != None:
+            self.__calculate(predictions)
+    
+    def __calculateAUC(self, predictions):
+        numPositiveExamples = 0
+        numNegativeExamples = 0
+        predictionsForPositives = []
+        predictionsForNegatives = []
+        for prediction in predictions:
+            trueClass = prediction[0][1]
+            predictedClass = prediction[1]
+            if trueClass > 0:
+                numPositiveExamples += 1
+                if predictedClass > 0:
+                    predictionsForPositives.append(1)
+                else:
+                    predictionsForPositives.append(0)
+            else:
+                numNegativeExamples += 1
+                if predictedClass > 0:
+                    predictionsForNegatives.append(1)
+                else:
+                    predictionsForNegatives.append(0)
+        auc = 0
+        for i in predictionsForPositives:
+           for j in predictionsForNegatives:
+               if i > j:
+                   auc += 1.
+               elif i == j:
+                   auc += 0.5
+        auc /= float(numPositiveExamples * numNegativeExamples)
+        return auc
     
     def __calculate(self, predictions):
         # First count instances
@@ -47,9 +105,18 @@ class Evaluation:
             self.fScore = (2*self.precision*self.recall) / (self.precision + self.recall)
         else:
             self.fScore = 0.0
+        
+        self.AUC = self.__calculateAUC(predictions)
     
-    def toStringConcise(self, indent=""):
-        string = indent  + "p/n:" + str(self.truePositives+self.falseNegatives) + "/" + str(self.trueNegatives+self.falsePositives)
+    def toStringConcise(self, indent="", title=None):
+        if title != None:
+            string = indent + Title + ": "
+        else:
+            string = indent
+        string += "p/n:" + str(self.truePositives+self.falseNegatives) + "/" + str(self.trueNegatives+self.falsePositives)
         string += " tp/fp|tn/fn:" + str(self.truePositives) + "/" + str(self.falsePositives) + "|" + str(self.trueNegatives) + "/" + str(self.falseNegatives)
-        string += " p/r/f:" + str(self.precision)[0:6] + "/" + str(self.recall)[0:6] + "/" + str(self.fScore)[0:6]
+        if self.AUC != None:
+            string += " p/r/f/a:" + str(self.precision)[0:6] + "/" + str(self.recall)[0:6] + "/" + str(self.fScore)[0:6] + "/" + str(self.AUC)[0:6]
+        else:
+            string += " p/r/f:" + str(self.precision)[0:6] + "/" + str(self.recall)[0:6] + "/" + str(self.fScore)[0:6]            
         return string
