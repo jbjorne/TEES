@@ -7,7 +7,7 @@ from FeatureBuilders.TokenFeatureBuilder import TokenFeatureBuilder
 import networkx as NX
 
 class MultiEdgeExampleBuilder(ExampleBuilder):
-    def __init__(self, style=["typed","headsOnly"], length=None, types=[]):
+    def __init__(self, style=["typed","directed","headsOnly"], length=None, types=[]):
         ExampleBuilder.__init__(self)
         self.classSet = IdSet(1)
         assert( self.classSet.getId("neg") == 1 )
@@ -57,35 +57,58 @@ class MultiEdgeExampleBuilder(ExampleBuilder):
                 if "headsOnly" in self.styles:
                     if (sentenceGraph.tokenIsEntityHead[tI] == None) or (sentenceGraph.tokenIsEntityHead[tJ] == None):
                         continue
-
-                # define class
-                positive = False
-                if sentenceGraph.interactionGraph.has_edge(tI, tJ):
-                    intEdges = sentenceGraph.interactionGraph.get_edge(tI, tJ)
-                    categoryName = self.getType(intEdges)
-                    if categoryName != None:
-                        self.buildExample(tI, tJ, paths, sentenceGraph, categoryName, examples, exampleIndex)
-                        exampleIndex += 1
-                        positive = True
-                if not positive:
-                    self.buildExample(tI, tJ, paths, sentenceGraph, "neg", examples, exampleIndex)
-                    exampleIndex += 1
                 
-                positive = False
-                if sentenceGraph.interactionGraph.has_edge(tJ, tI):
-                    intEdges = sentenceGraph.interactionGraph.get_edge(tJ, tI)
-                    categoryName = self.getType(intEdges)
-                    if categoryName != None:
-                        self.buildExample(tJ, tI, paths, sentenceGraph, categoryName, examples, exampleIndex)
+                if "directed" in self.styles:
+                    # define forward
+                    forwardExample = None
+                    if sentenceGraph.interactionGraph.has_edge(tI, tJ):
+                        intEdges = sentenceGraph.interactionGraph.get_edge(tI, tJ)
+                        categoryName = self.getType(intEdges)
+                        if categoryName != None:
+                            forwardExample = self.buildExample(tI, tJ, paths, sentenceGraph, categoryName, exampleIndex)
+                            examples.append(forwardExample)
+                            exampleIndex += 1
+                    if forwardExample == None:
+                        examples.append( self.buildExample(tI, tJ, paths, sentenceGraph, "neg", exampleIndex) )
                         exampleIndex += 1
-                        positive = True
-                if not positive:
-                    self.buildExample(tJ, tI, paths, sentenceGraph, "neg", examples, exampleIndex)
-                    exampleIndex += 1
+                    # define reverse
+                    reverseExample = None
+                    if sentenceGraph.interactionGraph.has_edge(tJ, tI):
+                        intEdges = sentenceGraph.interactionGraph.get_edge(tJ, tI)
+                        categoryName = self.getType(intEdges)
+                        if categoryName != None:
+                            reverseExample = self.buildExample(tJ, tI, paths, sentenceGraph, categoryName, exampleIndex)
+                            examples.append(reverseExample)
+                            exampleIndex += 1
+                    if reverseExample == None:
+                        examples.append( self.buildExample(tJ, tI, paths, sentenceGraph, "neg", exampleIndex) )
+                        exampleIndex += 1
+                else:
+                    forwardExample = None
+                    intEdges = []
+                    if sentenceGraph.interactionGraph.has_edge(tI, tJ):
+                        intEdges.extend( sentenceGraph.interactionGraph.get_edge(tI, tJ) )
+                    if sentenceGraph.interactionGraph.has_edge(tJ, tI):
+                        intEdges.extend( sentenceGraph.interactionGraph.get_edge(tJ, tI) )
+                    undirectedExample = None
+                    if len(intEdges) > 0:
+                        categoryName = self.getType(intEdges)
+                        if categoryName != None:
+                            undirectedExample = self.buildExample(tI, tJ, paths, sentenceGraph, categoryName, exampleIndex)
+                            tempReverseExample = self.buildExample(tJ, tI, paths, sentenceGraph, "temp", "temp")
+                            undirectedExample[2].update(tempReverseExample[2])
+                            examples.append(undirectedExample)
+                            exampleIndex += 1
+                    if undirectedExample == None:
+                        undirectedExample = self.buildExample(tI, tJ, paths, sentenceGraph, "neg", exampleIndex)
+                        tempReverseExample = self.buildExample(tJ, tI, paths, sentenceGraph, "temp", "temp")
+                        undirectedExample[2].update(tempReverseExample[2])
+                        examples.append(undirectedExample)
+                        exampleIndex += 1
 
         return examples
     
-    def buildExample(self, token1, token2, paths, sentenceGraph, categoryName, examples, exampleIndex):
+    def buildExample(self, token1, token2, paths, sentenceGraph, categoryName, exampleIndex):
         # define features
         features = {}
         if paths.has_key(token1) and paths[token1].has_key(token2):
@@ -143,4 +166,5 @@ class MultiEdgeExampleBuilder(ExampleBuilder):
             categoryName = "i"
         else:
             category = self.classSet.getId(categoryName)
-        examples.append( (sentenceGraph.getSentenceId()+".x"+str(exampleIndex),category,features,extra) )
+        return (sentenceGraph.getSentenceId()+".x"+str(exampleIndex),category,features,extra)
+        #examples.append(  )
