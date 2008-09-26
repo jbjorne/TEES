@@ -1,7 +1,7 @@
 import sys, os
 import combine
 #from Evaluation import Evaluation
-import Evaluators.Evaluation as EvaluationBase
+#import Evaluators.Evaluation as EvaluationBase
 import ExampleUtils
 import tempfile
 
@@ -47,7 +47,7 @@ class Classifier:
                         predictions.append( (example,1,"multiclass") )
         return classificationSet, predictions
     
-    def optimize(self, trainSets, classifySets, parameters=defaultOptimizationParameters, evaluationClass=EvaluationBase.Evaluation, evaluationArgs={}):
+    def optimize(self, trainSets, classifySets, parameters=defaultOptimizationParameters, evaluationClass=None, evaluationArgs={}):
         print >> sys.stderr, "Optimizing parameters"              
         parameterNames = parameters.keys()
         parameterNames.sort()
