@@ -16,6 +16,9 @@ class MultiEdgeExampleBuilder(ExampleBuilder):
         self.styles = style
         self.pathLengths = length
         self.types = types
+        if "random" in self.styles:
+            from FeatureBuilders.RandomFeatureBuilder import RandomFeatureBuilder
+            self.randomFeatureBuilder = RandomFeatureBuilder(self.featureSet)
     
     def filterEdgesByType(self, edges, typesToInclude):
         if len(typesToInclude) == 0:
@@ -114,33 +117,41 @@ class MultiEdgeExampleBuilder(ExampleBuilder):
         if paths.has_key(token1) and paths[token1].has_key(token2):
             path = paths[token1][token2]
             if self.pathLengths == None or len(path)-1 in self.pathLengths:
-                edges = self.multiEdgeFeatureBuilder.getEdges(sentenceGraph.dependencyGraph, path)
-                self.multiEdgeFeatureBuilder.setFeatureVector(features)
-                self.multiEdgeFeatureBuilder.buildPathLengthFeatures(path)
-                self.multiEdgeFeatureBuilder.buildTerminusTokenFeatures(path, sentenceGraph)
-                self.multiEdgeFeatureBuilder.buildSingleElementFeatures(path, edges, sentenceGraph)
-                self.multiEdgeFeatureBuilder.buildPathGrams(2, path, edges, sentenceGraph)
-                self.multiEdgeFeatureBuilder.buildPathGrams(3, path, edges, sentenceGraph)
-                #self.buildEdgeCombinations(path, edges, sentenceGraph, features)
-                #self.buildTerminusFeatures(path[0], "t1", sentenceGraph, features)
-                #self.buildTerminusFeatures(path[-1], "t2", sentenceGraph, features)
-                self.multiEdgeFeatureBuilder.buildPathEdgeFeatures(path, edges, sentenceGraph)
-                self.multiEdgeFeatureBuilder.setFeatureVector(None)
+                if not "no_dependency" in self.styles:
+                    edges = self.multiEdgeFeatureBuilder.getEdges(sentenceGraph.dependencyGraph, path)
+                    self.multiEdgeFeatureBuilder.setFeatureVector(features)
+                    self.multiEdgeFeatureBuilder.buildPathLengthFeatures(path)
+                    self.multiEdgeFeatureBuilder.buildTerminusTokenFeatures(path, sentenceGraph)
+                    self.multiEdgeFeatureBuilder.buildSingleElementFeatures(path, edges, sentenceGraph)
+                    self.multiEdgeFeatureBuilder.buildPathGrams(2, path, edges, sentenceGraph)
+                    self.multiEdgeFeatureBuilder.buildPathGrams(3, path, edges, sentenceGraph)
+                    #self.buildEdgeCombinations(path, edges, sentenceGraph, features)
+                    #self.buildTerminusFeatures(path[0], "t1", sentenceGraph, features)
+                    #self.buildTerminusFeatures(path[-1], "t2", sentenceGraph, features)
+                    self.multiEdgeFeatureBuilder.buildPathEdgeFeatures(path, edges, sentenceGraph)
+                    self.multiEdgeFeatureBuilder.setFeatureVector(None)
                 # Build token ngrams
-#                self.tokenFeatureBuilder.setFeatureVector(features)
-#                for i in range(len(sentenceGraph.tokens)):
-#                    if sentenceGraph.tokens[i] == token1:
-#                        token1Index = i
-#                    if sentenceGraph.tokens[i] == token2:
-#                        token2Index = i
-#                if token1Index > token2Index: token1Index, token2Index = token2Index, token1Index
-##                self.tokenFeatureBuilder.buildTokenGrams(0, token1Index-1, sentenceGraph, "bf")
-##                self.tokenFeatureBuilder.buildTokenGrams(token1Index+1, token2Index-1, sentenceGraph, "bw")
-##                self.tokenFeatureBuilder.buildTokenGrams(token2Index+1, len(sentenceGraph.tokens)-1, sentenceGraph, "af")
-#                self.tokenFeatureBuilder.buildTokenGrams(0, token2Index-1, sentenceGraph, "bf", max=2)
-#                self.tokenFeatureBuilder.buildTokenGrams(token1Index+1, token2Index-1, sentenceGraph, "bw", max=2)
-#                self.tokenFeatureBuilder.buildTokenGrams(token1Index+1, len(sentenceGraph.tokens)-1, sentenceGraph, "af", max=2)
-#                self.tokenFeatureBuilder.setFeatureVector(None)
+                if not "no_linear" in self.styles:
+                    self.tokenFeatureBuilder.setFeatureVector(features)
+                    for i in range(len(sentenceGraph.tokens)):
+                        if sentenceGraph.tokens[i] == token1:
+                            token1Index = i
+                        if sentenceGraph.tokens[i] == token2:
+                            token2Index = i
+                    if token1Index > token2Index: token1Index, token2Index = token2Index, token1Index
+                    # Before, middle, after
+    #                self.tokenFeatureBuilder.buildTokenGrams(0, token1Index-1, sentenceGraph, "bf")
+    #                self.tokenFeatureBuilder.buildTokenGrams(token1Index+1, token2Index-1, sentenceGraph, "bw")
+    #                self.tokenFeatureBuilder.buildTokenGrams(token2Index+1, len(sentenceGraph.tokens)-1, sentenceGraph, "af")
+                    # before-middle, middle, middle-after
+                    self.tokenFeatureBuilder.buildTokenGrams(0, token2Index-1, sentenceGraph, "bf", max=2)
+                    self.tokenFeatureBuilder.buildTokenGrams(token1Index+1, token2Index-1, sentenceGraph, "bw", max=2)
+                    self.tokenFeatureBuilder.buildTokenGrams(token1Index+1, len(sentenceGraph.tokens)-1, sentenceGraph, "af", max=2)
+                    self.tokenFeatureBuilder.setFeatureVector(None)
+                if "random" in self.styles:
+                    self.randomFeatureBuilder.setFeatureVector(features)
+                    self.randomFeatureBuilder.buildRandomFeatures(100, 0.01)
+                    self.randomFeatureBuilder.setFeatureVector(None)
             else:
                 features[self.featureSet.getId("always_negative")] = 1
                 if "subset" in self.styles:
