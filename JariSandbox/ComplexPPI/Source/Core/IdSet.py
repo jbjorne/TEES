@@ -20,6 +20,11 @@ class IdSet:
         else:
             return None
     
+    def getNames(self):
+        names = self.Ids.keys()
+        names.sort()
+        return names
+    
     def write(self, filename):
         f = open(filename, "wt")
         keys = self.Ids.keys()
