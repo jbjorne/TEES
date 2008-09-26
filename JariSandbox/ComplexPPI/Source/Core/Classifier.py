@@ -8,6 +8,10 @@ import tempfile
 defaultOptimizationParameters = {"c":[0.0001,0.001,0.01,0.1,1,10,100]}
 
 class Classifier:
+    def __init__(self):
+        self.classSet = None
+        self.featureSet = None
+    
     def _makeTempDir(self, workDir=None):
         self._workDir = workDir
         if workDir == None:
@@ -89,11 +93,15 @@ class Classifier:
                 else:
                     print >> sys.stderr, evaluation.toStringConcise(indent="  ", title="Fold "+str(fold))
                 foldResults.append(evaluation)
+                if hasattr(self, "tempDir"):
+                    evaluation.saveCSV( self.tempDir+"/optimizationResultsF"+str(count)+".csv" )
                 fold += 1
-            averageResult = EvaluationBase.averageEvaluations(foldResults)
+            averageResult = evaluationClass.average(foldResults)
+            if hasattr(self, "tempDir"):
+                averageResult.saveCSV( self.tempDir+"/optimizationResultsAvg"+str(count)+".csv" )
             if len(classifySets) > 1:
                 print >> sys.stderr, averageResult.toStringConcise("  Avg: ")
-            if bestResult == None or averageResult.fScore > bestResult[1].fScore:
+            if bestResult == None or averageResult.compare(bestResult[1]) > 0: #: averageResult.fScore > bestResult[1].fScore:
                 #bestResult = (predictions, averageResult, combination)
                 bestResult = (None, averageResult, combination)
             count += 1
