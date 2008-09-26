@@ -1,5 +1,7 @@
-class AveragingMultiClassEvaluator:
-    def __init__(self, predictions, classSet=None):
+from Evaluator import Evaluator
+
+class AveragingMultiClassEvaluator(Evaluator):
+    def __init__(self, predictions=None, classSet=None):
         self.predictions = predictions
         self.truePositivesByClass = {}
         self.falsePositivesByClass = {}
@@ -10,7 +12,10 @@ class AveragingMultiClassEvaluator:
         self.fScoreByClass = {}
         self.classSet = classSet
         # define class ids in alphabetical order
-        classNames = classSet.Ids.keys()
+        if classSet != None:
+            classNames = classSet.Ids.keys()
+        else:
+            classNames = []
         classNames.sort()
         self.classes = []
         for className in classNames:
@@ -27,9 +32,9 @@ class AveragingMultiClassEvaluator:
             self.fScoreByClass[cls] = 0
             self.instancesByClass[cls] = 0
 
-        self.precision = 0
-        self.recall = 0
-        self.fScore = 0
+        self.macroPrecision = 0
+        self.macroRecall = 0
+        self.macroFScore = 0
         
         self.microPrecision = 0
         self.microRecall = 0
@@ -37,9 +42,58 @@ class AveragingMultiClassEvaluator:
 
         #self.AUC = None
         self.type = "multiclass"
-        self.__calculate(predictions)
+        if predictions != None:
+            self._calculate(predictions)
+
+    def compare(self, evaluation):
+        if self.microFScore > evaluation.microFScore:
+            return 1
+        elif self.microFScore == evaluation.microFScore:
+            return 0
+        else:
+            return -1
     
-    def __calculate(self, predictions):
+    def pool(evaluators):
+        predictions = []
+        for evaluator in evaluators:
+            assert(isinstance(evaluator,AveragingMultiClassEvaluator))
+            predictions.extend(evaluator.predictions)
+        return AveragingMultiClassEvaluator(predictions)
+    pool = staticmethod(pool) 
+    
+    def average(evaluators):
+        averageEvaluator = AveragingMultiClassEvaluator(None, None)
+        averageEvaluator.microPrecision = 0
+        averageEvaluator.microRecall = 0
+        averageEvaluator.microFScore = 0
+        averageEvaluator.macroPrecision = 0
+        averageEvaluator.macroRecall = 0
+        averageEvaluator.macroFScore = 0
+        averageEvaluator.truePositives = "-"
+        averageEvaluator.falsePositives = "-"
+        averageEvaluator.trueNegatives = "-"
+        averageEvaluator.falseNegatives = "-"
+        sumWeight = 0.0
+        for evaluator in evaluators:
+            assert(isinstance(evaluator,AveragingMultiClassEvaluator))
+            weight = float(len(evaluator.predictions))
+            sumWeight += weight
+            averageEvaluator.macroPrecision += weight * evaluator.macroPrecision
+            averageEvaluator.macroRecall += weight * evaluator.macroRecall
+            averageEvaluator.macroFScore += weight * evaluator.macroFScore
+            averageEvaluator.microPrecision += weight * evaluator.microPrecision
+            averageEvaluator.microRecall += weight * evaluator.microRecall
+            averageEvaluator.microFScore += weight * evaluator.microFScore
+        averageEvaluator.macroPrecision /= sumWeight
+        averageEvaluator.macroRecall /= sumWeight
+        averageEvaluator.macroFScore /= sumWeight
+        averageEvaluator.microPrecision /= sumWeight
+        averageEvaluator.microRecall /= sumWeight
+        averageEvaluator.microFScore /= sumWeight
+        return averageEvaluator
+    average = staticmethod(average)
+            
+    def _calculate(self, predictions):
         # First count instances
         self.classifications = []
         for prediction in predictions:
@@ -106,13 +160,13 @@ class AveragingMultiClassEvaluator:
         for cls in self.classes:
             if (self.instancesByClass[cls] > 0 or self.falsePositivesByClass[cls] > 0) and cls != self.classSet.getId("neg", False):
                 numClassesWithInstances += 1
-                self.precision += self.precisionByClass[cls]
-                self.recall += self.recallByClass[cls]
-                self.fScore += self.fScoreByClass[cls]
+                self.macroPrecision += self.precisionByClass[cls]
+                self.macroRecall += self.recallByClass[cls]
+                self.macroFScore += self.fScoreByClass[cls]
         if numClassesWithInstances > 0:
-            if self.precision != 0: self.precision /= float(numClassesWithInstances)
-            if self.recall != 0: self.recall /= float(numClassesWithInstances)
-            if self.fScore != 0: self.fScore /= float(numClassesWithInstances)            
+            if self.macroPrecision != 0: self.macroPrecision /= float(numClassesWithInstances)
+            if self.macroRecall != 0: self.macroRecall /= float(numClassesWithInstances)
+            if self.macroFScore != 0: self.macroFScore /= float(numClassesWithInstances)            
     
     def toStringConcise(self, indent="", title=None):
         if title != None:
@@ -145,5 +199,40 @@ class AveragingMultiClassEvaluator:
         string += "averages:\n" + indent
         string += "micro p/r/f:" + str(self.microPrecision)[0:6] + "/" + str(self.microRecall)[0:6] + "/" + str(self.microFScore)[0:6]
         string += "\n" + indent
-        string += "macro p/r/f:" + str(self.precision)[0:6] + "/" + str(self.recall)[0:6] + "/" + str(self.fScore)[0:6]
+        string += "macro p/r/f:" + str(self.macroPrecision)[0:6] + "/" + str(self.macroRecall)[0:6] + "/" + str(self.macroFScore)[0:6]
         return string
+    
+    def __addClassToCSV(self, csvWriter, cls):
+        values = []        
+        values.append( self.classSet.getName(cls) )
+        values.append( self.truePositivesByClass[cls]+self.falseNegativesByClass[cls] )
+        values.append( self.trueNegativesByClass[cls]+self.falsePositivesByClass[cls] )
+        values.append(self.truePositivesByClass[cls])
+        values.append(self.falsePositivesByClass[cls])
+        values.append(self.trueNegativesByClass[cls])
+        values.append(self.falseNegativesByClass[cls])
+        if self.instancesByClass[cls] > 0 or self.falsePositivesByClass[cls] > 0:
+            values.append(self.precisionByClass[cls])
+            values.append(self.recallByClass[cls])
+            values.append(self.fScoreByClass[cls])
+        else:
+            values.extend(["N/A","N/A","N/A"])
+        csvWriter.writerow(values)       
+    
+    def saveCSV(self, filename):
+        import csv
+        csvFile = open(filename, "wb")        
+        writer = csv.writer(csvFile)
+        writer.writerow(["class","positives","negatives","true positives","false positives","true negatives","false negatives","precision","recall","f-score"])
+        negativeClassId = None
+        for cls in self.classes:
+            if cls != self.classSet.getId("neg", False):
+                self.__addClassToCSV(writer, cls)
+            else:
+                negativeClassId = cls
+        if negativeClassId != None:
+            self.__addClassToCSV(writer, negativeClassId)
+        # add averages
+        writer.writerow(["micro","N/A","N/A","N/A","N/A","N/A","N/A",self.microPrecision,self.microRecall,self.microFScore])
+        writer.writerow(["macro","N/A","N/A","N/A","N/A","N/A","N/A",self.macroPrecision,self.macroRecall,self.macroFScore])
+        csvFile.close()
