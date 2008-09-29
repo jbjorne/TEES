@@ -140,6 +140,14 @@ class MultiEdgeFeatureBuilder(FeatureBuilder):
             self.features[self.featureSet.getId("gov_"+gPOS+"_"+dPOS)] = 1
             self.features[self.featureSet.getId("gov_"+gAT+"_"+dAT)] = 1
 
+#            # Features for edge-type/token combinations that define the governor/dependent roles
+#            self.features[self.featureSet.getId("depgov_"+depType+"_"+dText)] = 1
+#            self.features[self.featureSet.getId("depgov_"+depType+"_"+dPOS)] = 1
+#            self.features[self.featureSet.getId("depgov_"+depType+"_"+dAT)] = 1
+#            self.features[self.featureSet.getId("depdep_"+gText+"_"+depType)] = 1
+#            self.features[self.featureSet.getId("depdep_"+gPOS+"_"+depType)] = 1
+#            self.features[self.featureSet.getId("depdep_"+gAT+"_"+depType)] = 1
+
     def buildSingleElementFeatures(self, pathTokens, pathEdges, sentenceGraph):
         # Edges directed relative to the path
         for i in range(1,len(pathTokens)):
