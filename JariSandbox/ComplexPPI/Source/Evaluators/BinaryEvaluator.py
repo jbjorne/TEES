@@ -1,4 +1,4 @@
-import Evaluator
+from Evaluator import Evaluator
 
 class BinaryEvaluator(Evaluator):
     def __init__(self, predictions, classSet=None):
@@ -28,28 +28,30 @@ class BinaryEvaluator(Evaluator):
         averageEvaluator.precision = 0
         averageEvaluator.recall = 0
         averageEvaluator.fScore = 0
+        averageEvaluator.AUC = 0
         averageEvaluator.truePositives = "-"
         averageEvaluator.falsePositives = "-"
         averageEvaluator.trueNegatives = "-"
         averageEvaluator.falseNegatives = "-"
         sumWeight = 0.0
-        precisions = []
-        recalls = []
-        fScores = []
         for evaluator in evaluators:
             assert(isinstance(evaluator,BinaryEvaluator))
-            weight = float(len(evaluators.predictions))
+            weight = float(len(evaluator.predictions))
             sumWeight += weight
-            averageEvaluator.precision += weight * evaluators.precision
-            averageEvaluator.recall += weight * evaluators.recall
-            averageEvaluator.fScore += weight * evaluators.fScore
-            precisions.append(evaluators.precision)
-            recalls.append(evaluators.recall)
-            fScores.append(evaluators.fScore)
+            averageEvaluator.precision += weight * evaluator.precision
+            averageEvaluator.recall += weight * evaluator.recall
+            averageEvaluator.fScore += weight * evaluator.fScore
+            if evaluator.AUC != None:
+                averageEvaluator.AUC += weight * evaluator.AUC
+        if averageEvaluator.AUC > 0:
+            averageEvaluator.AUC /= sumWeight
+        else:
+            averageEvaluator.AUC = None
         averageEvaluator.precision /= sumWeight
         averageEvaluator.recall /= sumWeight
         averageEvaluator.fScore /= sumWeight
         return averageEvaluator
+    average = staticmethod(average)
     
     def pool(evaluators):
         predictions = []
@@ -129,7 +131,7 @@ class BinaryEvaluator(Evaluator):
     
     def toStringConcise(self, indent="", title=None):
         if title != None:
-            string = indent + Title + ": "
+            string = indent + title + ": "
         else:
             string = indent
         string += "p/n:" + str(self.truePositives+self.falseNegatives) + "/" + str(self.trueNegatives+self.falsePositives)
@@ -147,8 +149,8 @@ class BinaryEvaluator(Evaluator):
         writer.writerow(["positives","negatives","true positives","false positives","true negatives","false negatives","precision","recall","f-score","AUC"])
         values = [self.truePositives+self.falseNegatives,self.trueNegatives+self.falsePositives,self.truePositives,self.falsePositives,self.trueNegatives,self.falseNegatives,self.precision,self.recall,self.fScore]
         if self.AUC != None:
-            values.extend(self.AUC)
+            values.append(self.AUC)
         else:
-            values.extend("N/A")
+            values.append("N/A")
         writer.writerow(values)
         csvFile.close()
