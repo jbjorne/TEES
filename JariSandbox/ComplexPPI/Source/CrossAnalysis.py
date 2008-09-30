@@ -13,32 +13,40 @@ from Visualization.CorpusVisualizer import CorpusVisualizer
 from Utils.ProgressCounter import ProgressCounter
 from Utils.Timer import Timer
 from Utils.Parameters import splitParameters
+import Utils.TableUtils as TableUtils
 import Evaluators.Evaluation as EvaluationBase
 from optparse import OptionParser
 from SplitAnalysis import *
 
-def crossValidate(exampleBuilder, corpusElements, examples, options):
+def crossValidate(exampleBuilder, corpusElements, examples, options, timer):
     print >> sys.stderr, "Dividing data into folds"
-    corpusFolds = Example.makeCorpusFolds(corpusElements, options.folds)
+    corpusFolds = Example.makeCorpusFolds(corpusElements, options.folds[0])
     exampleSets = Example.divideExamples(examples, corpusFolds)
     keys = exampleSets.keys()
     keys.sort()
     evaluations = []
     for key in keys:
         testSet = exampleSets[key]
+        for example in testSet:
+            example[3]["visualizationSet"] = key + 1
         trainSet = []
         for key2 in keys:
             if key != key2:
                 trainSet.extend(exampleSets[key2])
-        print >> sys.stderr, "Fold", str(key)
+        print >> sys.stderr, "Fold", str(key + 1)
         # Create classifier object
         if options.output != None:
-            classifier = Classifier(workDir = options.output + "fold"+str(key)+"/classifier")
+            if not os.path.exists(options.output+"/fold"+str(key+1)):
+                os.mkdir(options.output+"/fold"+str(key+1))
+#                if not os.path.exists(options.output+"/fold"+str(key+1)+"/classifier"):
+#                    os.mkdir(options.output+"/fold"+str(key+1)+"/classifier")
+            classifier = Classifier(workDir = options.output + "/fold"+str(key + 1))
         else:
             classifier = Classifier()
         classifier.featureSet = exampleBuilder.featureSet
         # Optimize
-        optimizationFolds = Example.makeExampleFolds(trainSet, options.folds)
+        assert (options.folds[1] >= 2)
+        optimizationFolds = Example.makeExampleFolds(trainSet, options.folds[1])
         optimizationSets = Example.divideExamples(trainSet, optimizationFolds)
         optimizationSetList = []
         optSetKeys = optimizationSets.keys()
@@ -51,14 +59,6 @@ def crossValidate(exampleBuilder, corpusElements, examples, options):
             bestResults = classifier.optimize(optimizationSetList, optimizationSetList, paramDict, Evaluation, evaluationArgs)
         else:
             bestResults = classifier.optimize(optimizationSetList, optimizationSetList, evaluationClass=Evaluation, evaluationArgs=evaluationArgs)
-
-        # Save example sets
-        if options.output != None:
-            print >> sys.stderr, "Saving example sets to", options.output
-            Example.writeExamples(exampleSets[0], options.output + "/examplesTest.txt")
-            Example.writeExamples(exampleSets[1], options.output + "/examplesTrain.txt")
-            Example.writeExamples(optimizationSets[0], options.output + "/examplesOptimizationTest.txt")
-            Example.writeExamples(optimizationSets[1], options.output + "/examplesOptimizationTrain.txt")
         
         # Classify
         print >> sys.stderr, "Classifying test data"    
@@ -69,16 +69,32 @@ def crossValidate(exampleBuilder, corpusElements, examples, options):
         # Calculate statistics
         evaluation = Evaluation(predictions, classSet=exampleBuilder.classSet)
         print >> sys.stderr, evaluation.toStringConcise()
+        print >> sys.stderr, timer.toString()
         evaluations.append(evaluation)
+        
+        # Save example sets
+        if options.output != None:
+            print >> sys.stderr, "Saving example sets to", options.output
+            Example.writeExamples(exampleSets[0], options.output +"/fold"+str(key+1) + "/examplesTest.txt")
+            Example.writeExamples(exampleSets[1], options.output +"/fold"+str(key+1) + "/examplesTrain.txt")
+            Example.writeExamples(optimizationSets[0], options.output +"/fold"+str(key+1) + "/examplesOptimizationTest.txt")
+            Example.writeExamples(optimizationSets[1], options.output +"/fold"+str(key+1) + "/examplesOptimizationTrain.txt")
+            TableUtils.writeCSV(bestResults[2], options.output +"/fold"+str(key+1) + "/parameters.csv")
+            evaluation.saveCSV(options.output +"/fold"+str(key+1) + "/results.csv")
     
-    averageResult = EvaluationBase.averageEvaluations(evaluations)
     print >> sys.stderr, "Cross-validation Results"
     for i in range(len(evaluations)):
         print >> sys.stderr, evaluations[i].toStringConcise("  Fold "+str(i)+": ")
-    print >> sys.stderr, averageResult.toStringConcise("  Avg: ")    
+    averageResult = Evaluation.average(evaluations)
+    print >> sys.stderr, averageResult.toStringConcise("  Avg: ")
+    pooledResult = Evaluation.pool(evaluations)
+    print >> sys.stderr, pooledResult.toStringConcise("  Pool: ")
+    if options.output != None:
+        averageResult.saveCSV(options.output+"/resultsAverage.csv")
+        pooledResult.saveCSV(options.output+"/resultsPooled.csv")
     # Visualize
     if options.visualization != None:
-        visualize(sentences, evaluation.classifications, options)
+        visualize(sentences, pooledResult.classifications, options, exampleBuilder)
 
 if __name__=="__main__":
     defaultAnalysisFilename = "/usr/share/biotext/ComplexPPI/BioInferForComplexPPI.xml"
@@ -91,21 +107,29 @@ if __name__=="__main__":
     optparser.add_option("-x", "--exampleBuilderParameters", default=None, dest="exampleBuilderParameters", help="Parameters for the example builder")
     optparser.add_option("-y", "--parameters", default=None, dest="parameters", help="Parameters for the classifier")
     optparser.add_option("-b", "--exampleBuilder", default="SimpleDependencyExampleBuilder", dest="exampleBuilder", help="Example Builder Class")
-    optparser.add_option("-e", "--evaluator", default="Evaluation", dest="evaluator", help="Prediction evaluator class")
+    optparser.add_option("-e", "--evaluator", default="BinaryEvaluator", dest="evaluator", help="Prediction evaluator class")
     optparser.add_option("-v", "--visualization", default=None, dest="visualization", help="Visualization output directory. NOTE: If the directory exists, it will be deleted!")
-    optparser.add_option("-f", "--folds", type="int", default=10, dest="folds", help="X-fold cross validation")
+    optparser.add_option("-f", "--folds", default="10", dest="folds", help="X-fold cross validation")
     (options, args) = optparser.parse_args()
     
+    timer = Timer()
+    print >> sys.stderr, timer.toString()
+    
+    if options.folds.find(",") != 0:
+        options.folds = options.folds.split(",")
+        assert(len(options.folds)==2)
+        options.folds[0] = int(options.folds[0])
+        options.folds[1] = int(options.folds[1])
+    else:
+        options.folds = (int(options.folds),int(options.folds))
+
     if options.output != None:
-        if not os.path.exists(options.output):
-            os.mkdir(options.output)
-        if not os.path.exists(options.output+"/classifier"):
-            os.mkdir(options.output+"/classifier")
-        for i in range(10):
-            if not os.path.exists(options.output+"/fold"+str(i+1)):
-                os.mkdir(options.output+"/fold"+str(i+1))
-                if not os.path.exists(options.output+"/fold"+str(i+1)+"/classifier"):
-                    os.mkdir(options.output+"/fold"+str(i+1)+"/classifier")
+        if os.path.exists(options.output):
+            print >> sys.stderr, "Output directory exists, removing", options.output
+            shutil.rmtree(options.output)
+        os.makedirs(options.output)
+#        if not os.path.exists(options.output+"/classifier"):
+#            os.mkdir(options.output+"/classifier")
 
     print >> sys.stderr, "Importing modules"
     exec "from ExampleBuilders." + options.exampleBuilder + " import " + options.exampleBuilder + " as ExampleBuilder"
@@ -122,11 +146,8 @@ if __name__=="__main__":
     exampleBuilder = ExampleBuilder(**splitParameters(options.exampleBuilderParameters))
     examples = buildExamples(exampleBuilder, sentences, options)
     
-    crossValidate(exampleBuilder, corpusElements, examples, options)    
-    
-    # Visualize
-    if options.visualization != None:
-        visualize(sentences, evaluation.classifications, options)
+    crossValidate(exampleBuilder, corpusElements, examples, options, timer)
+    print >> sys.stderr, timer.toString()
         
         
                 
