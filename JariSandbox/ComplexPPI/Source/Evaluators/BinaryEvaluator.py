@@ -154,3 +154,20 @@ class BinaryEvaluator(Evaluator):
             values.append("N/A")
         writer.writerow(values)
         csvFile.close()
+    
+    def toDict(self):
+        dict = {}
+        dict["positives"] = self.truePositives+self.falseNegatives
+        dict["negatives"] = self.trueNegatives+self.falsePositives
+        dict["true positives"] = self.truePositives
+        dict["false positives"] = self.falsePositives
+        dict["true negatives"] = self.trueNegatives
+        dict["false negatives"] = self.falseNegatives 
+        dict["precision"] = self.precision
+        dict["recall"] = self.recall
+        dict["f-score"] = self.fScore
+        if self.AUC != None:
+            dict["AUC"] = self.AUC
+        else:
+            dict["AUC"] = "N/A"
+        return dict

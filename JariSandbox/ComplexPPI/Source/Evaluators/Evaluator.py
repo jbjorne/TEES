@@ -16,5 +16,8 @@ class Evaluator:
     def toStringConcise(self, indent="", title=None):
         raise NotImplementedError
     
+    def toDict(self):
+        raise NotImplementedError
+    
     def saveCSV(self, filename):
         raise NotImplementedError
