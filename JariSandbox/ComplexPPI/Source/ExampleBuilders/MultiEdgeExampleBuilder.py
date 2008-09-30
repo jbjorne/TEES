@@ -138,15 +138,18 @@ class MultiEdgeExampleBuilder(ExampleBuilder):
                             token1Index = i
                         if sentenceGraph.tokens[i] == token2:
                             token2Index = i
-                    if token1Index > token2Index: token1Index, token2Index = token2Index, token1Index
+                    linearPreTag = "linfw_"
+                    if token1Index > token2Index: 
+                        token1Index, token2Index = token2Index, token1Index
+                        linearPreTag = "linrv_"
                     # Before, middle, after
     #                self.tokenFeatureBuilder.buildTokenGrams(0, token1Index-1, sentenceGraph, "bf")
     #                self.tokenFeatureBuilder.buildTokenGrams(token1Index+1, token2Index-1, sentenceGraph, "bw")
     #                self.tokenFeatureBuilder.buildTokenGrams(token2Index+1, len(sentenceGraph.tokens)-1, sentenceGraph, "af")
                     # before-middle, middle, middle-after
-                    self.tokenFeatureBuilder.buildTokenGrams(0, token2Index-1, sentenceGraph, "bf", max=2)
-                    self.tokenFeatureBuilder.buildTokenGrams(token1Index+1, token2Index-1, sentenceGraph, "bw", max=2)
-                    self.tokenFeatureBuilder.buildTokenGrams(token1Index+1, len(sentenceGraph.tokens)-1, sentenceGraph, "af", max=2)
+                    self.tokenFeatureBuilder.buildTokenGrams(0, token2Index-1, sentenceGraph, linearPreTag+"bf", max=2)
+                    self.tokenFeatureBuilder.buildTokenGrams(token1Index+1, token2Index-1, sentenceGraph, linearPreTag+"bw", max=2)
+                    self.tokenFeatureBuilder.buildTokenGrams(token1Index+1, len(sentenceGraph.tokens)-1, sentenceGraph, linearPreTag+"af", max=2)
                     self.tokenFeatureBuilder.setFeatureVector(None)
                 if "random" in self.styles:
                     self.randomFeatureBuilder.setFeatureVector(features)
