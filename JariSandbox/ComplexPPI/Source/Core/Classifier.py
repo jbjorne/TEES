@@ -4,6 +4,8 @@ import combine
 #import Evaluators.Evaluation as EvaluationBase
 import ExampleUtils
 import tempfile
+sys.path.append("..")
+import Utils.TableUtils as TableUtils
 
 defaultOptimizationParameters = {"c":[0.0001,0.001,0.01,0.1,1,10,100]}
 
@@ -64,12 +66,12 @@ class Classifier:
                 combinations[-1][value[0]] = value[1]
         
         bestResult = None
-        count = 1
+        combinationCount = 1
         if hasattr(self, "tempDir"):
             mainTempDir = self.tempDir
             mainDebugFile = self.debugFile
         for combination in combinations:
-            print >> sys.stderr, " Parameters "+str(count)+"/"+str(len(combinations))+":", str(combination)
+            print >> sys.stderr, " Parameters "+str(combinationCount)+"/"+str(len(combinations))+":", str(combination)
             # Make copies of examples in case they are modified
             fold = 1
             foldResults = []
@@ -81,9 +83,9 @@ class Classifier:
                 trainExamplesCopy = ExampleUtils.copyExamples(trainExamples)
                 classifyExamplesCopy = ExampleUtils.copyExamples(classifyExamples)
                 if hasattr(self, "tempDir"):
-                    self.tempDir = mainTempDir+"/optimization"+str(count)
+                    self.tempDir = mainTempDir+"/parameters"+str(combinationCount)+"/optimization"+str(fold)
                     if not os.path.exists(self.tempDir):
-                        os.mkdir(self.tempDir)
+                        os.makedirs(self.tempDir)
                     self.debugFile = open(self.tempDir + "/debug.txt", "wt")
                 self.train(trainExamplesCopy, combination)
                 predictions = self.classify(classifyExamplesCopy)        
@@ -94,17 +96,21 @@ class Classifier:
                     print >> sys.stderr, evaluation.toStringConcise(indent="  ", title="Fold "+str(fold))
                 foldResults.append(evaluation)
                 if hasattr(self, "tempDir"):
-                    evaluation.saveCSV( self.tempDir+"/optimizationResultsF"+str(count)+".csv" )
+                    evaluation.saveCSV( self.tempDir+"/results.csv" )
                 fold += 1
             averageResult = evaluationClass.average(foldResults)
+            poolResult = evaluationClass.pool(foldResults)
             if hasattr(self, "tempDir"):
-                averageResult.saveCSV( self.tempDir+"/optimizationResultsAvg"+str(count)+".csv" )
+                TableUtils.writeCSV(combination, mainTempDir + "/parameters"+str(combinationCount)+".csv")
+                averageResult.saveCSV( mainTempDir+"/parameters"+str(combinationCount)+"/resultsAverage.csv" )
+                poolResult.saveCSV( mainTempDir+"/parameters"+str(combinationCount)+"/resultsPooled.csv" )
             if len(classifySets) > 1:
                 print >> sys.stderr, averageResult.toStringConcise("  Avg: ")
-            if bestResult == None or averageResult.compare(bestResult[1]) > 0: #: averageResult.fScore > bestResult[1].fScore:
+                print >> sys.stderr, poolResult.toStringConcise("  Pool: ")
+            if bestResult == None or poolResult.compare(bestResult[1]) > 0: #: averageResult.fScore > bestResult[1].fScore:
                 #bestResult = (predictions, averageResult, combination)
-                bestResult = (None, averageResult, combination)
-            count += 1
+                bestResult = (None, poolResult, combination)
+            combinationCount += 1
             if hasattr(self, "tempDir"):
                 self.debugFile.close()
         if hasattr(self, "tempDir"):
