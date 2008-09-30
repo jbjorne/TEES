@@ -12,6 +12,7 @@ class AveragingMultiClassEvaluator(Evaluator):
         self.fScoreByClass = {}
         self.classSet = classSet
         # define class ids in alphabetical order
+        self.classSet = classSet
         if classSet != None:
             classNames = classSet.Ids.keys()
         else:
@@ -36,6 +37,10 @@ class AveragingMultiClassEvaluator(Evaluator):
         self.macroRecall = 0
         self.macroFScore = 0
         
+        self.microTP = 0
+        self.microFP = 0
+        self.microTN = 0
+        self.microFN = 0
         self.microPrecision = 0
         self.microRecall = 0
         self.microFScore = 0
@@ -58,7 +63,7 @@ class AveragingMultiClassEvaluator(Evaluator):
         for evaluator in evaluators:
             assert(isinstance(evaluator,AveragingMultiClassEvaluator))
             predictions.extend(evaluator.predictions)
-        return AveragingMultiClassEvaluator(predictions)
+        return AveragingMultiClassEvaluator(predictions, evaluators[0].classSet)
     pool = staticmethod(pool) 
     
     def average(evaluators):
@@ -95,6 +100,10 @@ class AveragingMultiClassEvaluator(Evaluator):
             
     def _calculate(self, predictions):
         # First count instances
+        self.microTP = 0
+        self.microFP = 0
+        self.microTN = 0
+        self.microFN = 0
         self.classifications = []
         for prediction in predictions:
             trueClass = prediction[0][1]
@@ -107,8 +116,10 @@ class AveragingMultiClassEvaluator(Evaluator):
                 self.truePositivesByClass[trueClass] += 1
                 if trueClass != 1:
                     self.classifications.append((prediction[0],"tp",self.type,prediction[1]))
+                    self.microTP += 1
                 else:
                     self.classifications.append((prediction[0],"tn",self.type,prediction[1]))
+                    self.microTN += 1
                 for cls in self.classes:
                     if cls != trueClass:
                         self.trueNegativesByClass[cls] += 1
@@ -116,8 +127,10 @@ class AveragingMultiClassEvaluator(Evaluator):
                 self.falsePositivesByClass[predictedClass] += 1
                 if predictedClass == 1:
                     self.classifications.append((prediction[0],"fn",self.type,prediction[1]))
+                    self.microFN += 1
                 else:
                     self.classifications.append((prediction[0],"fp",self.type,prediction[1]))
+                    self.microFP += 1
                 for cls in self.classes:
                     if cls == trueClass:
                         self.falseNegativesByClass[cls] += 1
@@ -142,18 +155,29 @@ class AveragingMultiClassEvaluator(Evaluator):
                 self.fScoreByClass[cls] = 0.0
         
         # Calculate micro-f-score
-        totalWeight = 0.0
-        for cls in self.classes:
-            if cls != self.classSet.getId("neg", False):
-                weigth = self.instancesByClass[cls]
-                self.microPrecision += weigth * self.precisionByClass[cls]
-                self.microRecall += weigth * self.recallByClass[cls]
-                self.microFScore += weigth * self.fScoreByClass[cls]
-                totalWeight += float(weigth)
-        if totalWeight != 0.0:
-            if self.microPrecision != 0: self.microPrecision /= totalWeight
-            if self.microRecall != 0: self.microRecall /= totalWeight
-            if self.microFScore != 0: self.microFScore /= totalWeight 
+#        totalWeight = 0.0
+#        for cls in self.classes:
+#            if cls != self.classSet.getId("neg", False):
+#                if self.instancesByClass[cls] > 0 or self.falsePositivesByClass[cls] > 0:
+#                    self.microTP += self.truePositivesByClass[cls]
+#                    self.microTN += self.trueNegativesByClass[cls]
+#                    self.microFP += self.falsePositivesByClass[cls]
+#                    self.microFN += self.falseNegativesByClass[cls]
+#                weigth = self.instancesByClass[cls]
+#                self.microPrecision += weigth * self.precisionByClass[cls]
+#                self.microRecall += weigth * self.recallByClass[cls]
+#                self.microFScore += weigth * self.fScoreByClass[cls]
+#                totalWeight += float(weigth)
+#        if totalWeight != 0.0:
+#            if self.microPrecision != 0: self.microPrecision /= totalWeight
+#            if self.microRecall != 0: self.microRecall /= totalWeight
+#            if self.microFScore != 0: self.microFScore /= totalWeight
+        if self.microTP + self.microFP > 0:
+            self.microPrecision = float(self.microTP) / float(self.microTP + self.microFP)
+        if self.microTP + self.microFN > 0:
+            self.microRecall = float(self.microTP) / float(self.microTP + self.microFN)
+        if self.microPrecision + self.microRecall > 0.0:
+            self.microFScore = (2*self.microPrecision*self.microRecall) / (self.microPrecision + self.microRecall)
         
         # Finally calculate macro-f-score
         numClassesWithInstances = 0
@@ -197,7 +221,9 @@ class AveragingMultiClassEvaluator(Evaluator):
             string += ")\n" + indent
         
         string += "averages:\n" + indent
-        string += "micro p/r/f:" + str(self.microPrecision)[0:6] + "/" + str(self.microRecall)[0:6] + "/" + str(self.microFScore)[0:6]
+        string += "micro p/n:" + str(self.microTP+self.microFN) + "/" + str(self.microTN+self.microFP)
+        string += " tp/fp|tn/fn:" + str(self.microTP) + "/" + str(self.microFP) + "|" + str(self.microTN) + "/" + str(self.microFN)
+        string += " p/r/f:" + str(self.microPrecision)[0:6] + "/" + str(self.microRecall)[0:6] + "/" + str(self.microFScore)[0:6]
         string += "\n" + indent
         string += "macro p/r/f:" + str(self.macroPrecision)[0:6] + "/" + str(self.macroRecall)[0:6] + "/" + str(self.macroFScore)[0:6]
         return string
