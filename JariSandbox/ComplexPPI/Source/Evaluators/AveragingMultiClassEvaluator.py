@@ -259,6 +259,6 @@ class AveragingMultiClassEvaluator(Evaluator):
         if negativeClassId != None:
             self.__addClassToCSV(writer, negativeClassId)
         # add averages
-        writer.writerow(["micro","N/A","N/A","N/A","N/A","N/A","N/A",self.microPrecision,self.microRecall,self.microFScore])
+        writer.writerow(["micro",self.microTP+self.microFN,self.microTN+self.microFP,self.microTP,self.microFP,self.microTN,self.microFN,self.microPrecision,self.microRecall,self.microFScore])
         writer.writerow(["macro","N/A","N/A","N/A","N/A","N/A","N/A",self.macroPrecision,self.macroRecall,self.macroFScore])
         csvFile.close()
