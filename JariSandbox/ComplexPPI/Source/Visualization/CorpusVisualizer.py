@@ -110,7 +110,12 @@ class CorpusVisualizer:
         # Store info for sentence list
         sentenceId = sentenceGraph.getSentenceId()
         self.sentences.append([sentenceGraph,0,0,0,0])
+        visualizationSet = None
         for example in examples:
+            if visualizationSet == None:
+                visualizationSet = example[3]["visualizationSet"]
+            else:
+                assert(visualizationSet == example[3]["visualizationSet"])
             self.sentences[-1][1] += 1
             if classificationsByExample.has_key(example[0]):
                 classification = classificationsByExample[example[0]]
@@ -119,6 +124,7 @@ class CorpusVisualizer:
                     self.sentences[-1][3] += 1
                 elif classification[1] == "fp":
                     self.sentences[-1][4] += 1
+        sentenceGraph.visualizationSet = visualizationSet
         
         # Make the page
         entityElements = sentenceGraph.entities
@@ -295,6 +301,7 @@ class CorpusVisualizer:
         builder.tableHeader("id",True)
         builder.tableHeader("text",True)
         builder.tableHeader("origId",True)
+        builder.tableHeader("set",True)
         builder.tableHeader("examples",True)
         builder.tableHeader("classifications",True)
         #builder.tableHeader("pairs",True)
@@ -318,6 +325,7 @@ class CorpusVisualizer:
                 text = text[:80] + "..."
             builder.tableData(text,True)
             builder.tableData(sentence[0].sentenceElement.get("origId"),True)
+            builder.tableData(str(sentence[0].visualizationSet),True)
             builder.tableData(str(sentence[1]),True)
             builder.tableData(str(sentence[2]),True)
             #builder.tableData(str(len(sentence.annotationDependencies)),True)
