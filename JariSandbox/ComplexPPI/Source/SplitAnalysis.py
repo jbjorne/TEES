@@ -1,5 +1,5 @@
 import Core.ExampleUtils as Example
-import sys, os
+import sys, os, shutil
 try:
     import xml.etree.cElementTree as ET
 except ImportError:
@@ -33,7 +33,7 @@ def buildExamples(exampleBuilder, sentences, options):
         Example.writeExamples(examples, options.output + "/examples.txt", commentLines)
     return examples
 
-def visualize(sentences, classifications, options):   
+def visualize(sentences, classifications, options, exampleBuilder):   
     print >> sys.stderr, "Making visualization"
     classificationsByExample = {}
     for classification in classifications:
@@ -57,7 +57,7 @@ def classify(trainSet, testSet):
     pass
 
 if __name__=="__main__":
-    defaultAnalysisFilename = "/usr/share/biotext/ComplexPPI/BioInferForComplexPPI.xml"
+    defaultAnalysisFilename = "/usr/share/biotext/ComplexPPI/BioInferForComplexPPIVisible.xml"
     optparser = OptionParser(usage="%prog [options]\nCreate an html visualization for a corpus.")
     optparser.add_option("-i", "--input", default=defaultAnalysisFilename, dest="input", help="Corpus in analysis format", metavar="FILE")
     optparser.add_option("-o", "--output", default=None, dest="output", help="Output directory, useful for debugging")
@@ -67,13 +67,15 @@ if __name__=="__main__":
     optparser.add_option("-x", "--exampleBuilderParameters", default=None, dest="exampleBuilderParameters", help="Parameters for the example builder")
     optparser.add_option("-y", "--parameters", default=None, dest="parameters", help="Parameters for the classifier")
     optparser.add_option("-b", "--exampleBuilder", default="SimpleDependencyExampleBuilder", dest="exampleBuilder", help="Example Builder Class")
-    optparser.add_option("-e", "--evaluator", default="Evaluation", dest="evaluator", help="Prediction evaluator class")
+    optparser.add_option("-e", "--evaluator", default="BinaryEvaluator", dest="evaluator", help="Prediction evaluator class")
     optparser.add_option("-v", "--visualization", default=None, dest="visualization", help="Visualization output directory. NOTE: If the directory exists, it will be deleted!")
     (options, args) = optparser.parse_args()
     
     if options.output != None:
-        if not os.path.exists(options.output):
-            os.mkdir(options.output)
+        if os.path.exists(options.output):
+            print >> sys.stderr, "Output directory exists, removing", options.output
+            shutil.rmtree(options.output)
+        os.mkdir(options.output)
         if not os.path.exists(options.output+"/classifier"):
             os.mkdir(options.output+"/classifier")
 
@@ -103,6 +105,8 @@ if __name__=="__main__":
     else:
         classifier = Classifier()
     classifier.featureSet = exampleBuilder.featureSet
+    if hasattr(exampleBuilder,"classSet"):
+        classifier.classSet = None
     
     # Optimize
     optimizationSets = Example.divideExamples(exampleSets[0])
@@ -130,7 +134,15 @@ if __name__=="__main__":
     # Calculate statistics
     evaluation = Evaluation(predictions, classSet=exampleBuilder.classSet)
     print >> sys.stderr, evaluation.toStringConcise()
+    if options.output != None:
+        evaluation.saveCSV(options.output + "/results.csv")
     
     # Visualize
+    for example in exampleSets[0]:
+        example[3]["visualizationSet"] = "train"
+        #corpusElements.sentencesById[example[0].rsplit(".",1)[0]].sentenceGraph.visualizationSet = "train"
+    for example in exampleSets[1]:
+        example[3]["visualizationSet"] = "test"
+        #corpusElements.sentencesById[example[0].rsplit(".",1)[0]].sentenceGraph.visualizationSet = "test"
     if options.visualization != None:
-        visualize(sentences, evaluation.classifications, options)
+        visualize(sentences, evaluation.classifications, options, exampleBuilder)
