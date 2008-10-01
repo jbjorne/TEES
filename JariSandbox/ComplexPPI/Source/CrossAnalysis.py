@@ -17,6 +17,16 @@ import Utils.TableUtils as TableUtils
 import Evaluators.Evaluation as EvaluationBase
 from optparse import OptionParser
 from SplitAnalysis import *
+import subprocess
+
+def zipTree(path, target):
+    tempCwd = os.getcwd()
+    os.chdir(path)
+    #print os.getcwd()
+    zipCall = ["zip", "-rmq", target+".zip", target]
+    #print zipCall
+    subprocess.call(zipCall)
+    os.chdir(tempCwd)
 
 def crossValidate(exampleBuilder, corpusElements, examples, options, timer):
     print >> sys.stderr, "Dividing data into folds"
@@ -81,6 +91,8 @@ def crossValidate(exampleBuilder, corpusElements, examples, options, timer):
             Example.writeExamples(optimizationSets[1], options.output +"/fold"+str(key+1) + "/examplesOptimizationTrain.txt")
             TableUtils.writeCSV(bestResults[2], options.output +"/fold"+str(key+1) + "/parameters.csv")
             evaluation.saveCSV(options.output +"/fold"+str(key+1) + "/results.csv")
+            print >> sys.stderr, "Compressing folder"
+            zipTree(options.output, "fold"+str(key+1))
     
     print >> sys.stderr, "Cross-validation Results"
     for i in range(len(evaluations)):
