@@ -14,7 +14,6 @@ from Utils.ProgressCounter import ProgressCounter
 from Utils.Timer import Timer
 from Utils.Parameters import splitParameters
 import Utils.TableUtils as TableUtils
-import Evaluators.Evaluation as EvaluationBase
 from optparse import OptionParser
 from SplitAnalysis import *
 import subprocess

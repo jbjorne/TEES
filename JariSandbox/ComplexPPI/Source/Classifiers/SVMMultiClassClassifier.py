@@ -4,7 +4,7 @@ import shutil
 import subprocess
 import Core.ExampleUtils as Example
 import combine
-from Core.Evaluation import Evaluation
+#from Core.Evaluation import Evaluation
 from Core.Classifier import Classifier
 import Core.Split as Split
 from Evaluators.MultiClassEvaluator import MultiClassEvaluator
