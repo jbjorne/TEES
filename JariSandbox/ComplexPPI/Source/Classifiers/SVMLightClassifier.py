@@ -40,7 +40,7 @@ class SVMLightClassifier(Classifier):
             self.__addParametersToSubprocessCall(args, parameters)
         args += [self.tempDir+"/test.dat", self.tempDir+"/model", self.tempDir+"/predictions"]
         subprocess.call(args, stdout = self.debugFile)
-        
+        os.remove(self.tempDir+"/model")
         predictionsFile = open(self.tempDir+"/predictions", "rt")
         lines = predictionsFile.readlines()
         predictionsFile.close()
