@@ -1,5 +1,7 @@
 import csv
 
+decimals = 3
+
 def getKeys(dicts):
     for dict in dicts:
         keys = set()
@@ -23,7 +25,43 @@ def writeCSV(dict, filename):
         writer.writerow(row)
     csvFile.close()
 
+def readCSV(filename):
+    csvFile = open(filename, "rb")
+    reader = csv.DictReader(csvFile)
+    rows = []
+    row = reader.next()
+    while True:
+        try:    
+            rows.append(row)
+            row = reader.next()
+        except StopIteration:
+            break
+    csvFile.close()
+    return rows
+
+def interpret(data):
+    try:
+       floatValue = float(data)
+       try:
+           intValue = int(data)
+           if floatValue != float(intValue):
+               return floatValue
+           else:
+               return intValue
+       except:
+           return floatValue
+    except:
+       return data
+    
+def floatToString(data):
+    if isinstance(data,float):
+        return ("%."+str(decimals)+"f") % data
+    else:
+        return data
+
 def getLatexString(data):
+    data = interpret(data)
+    data = floatToString(data)
     string = str(data)
     string = string.replace("_","\\_")
     return string
@@ -43,17 +81,26 @@ def writeLatex(dict, filename, keys = None, empty=" "):
         file.write(" c |")
     file.write( "}\n")
     file.write("\\hline\n")                       
-    file.write(empty)
+    isFirst = True
     for key in keys:
-        file.write(" & " + getLatexString(key))
+        if isFirst:
+            file.write(getLatexString(key))
+            isFirst = False
+        else:
+            file.write(" & " + getLatexString(key))
     file.write(" \\\\\n")
     file.write("\\hline\n")                     
     for row in dict:
+        isFirst = True
         for key in keys:
-            if row.has_key(key):
-                file.write(" & " + getLatexString(row[key]))
+            if not isFirst:
+                file.write(" & ")
             else:
-                file.write(" & " + empty)
+                isFirst = False
+            if row.has_key(key):
+                file.write(getLatexString(row[key]))
+            else:
+                file.write(empty)
         file.write(" \\\\\n")
     #file.write("1 & 2 & 3 \\\\\n")
     #file.write("4 & 5 & 6 \\\\\n")
