@@ -80,6 +80,7 @@ def printPathDistribution(pathsByLength):
 
 def countMultipleEdges(corpusElements):
     parallelEdgesByType = {}
+    nonParallelEdgesByType = {}
     circular = 0
     total = 0
     for sentence in corpusElements.sentences:
@@ -102,12 +103,22 @@ def countMultipleEdges(corpusElements):
                     parallelEdgesByType[types] = [0,0]
                 parallelEdgesByType[types][0] += 1
                 if isCircular: parallelEdgesByType[types][1] += 1
+            elif len(types) == 1:
+                if not nonParallelEdgesByType.has_key(types[0]):
+                    nonParallelEdgesByType[types[0]] = 0
+                nonParallelEdgesByType[types[0]] += 1
     types = parallelEdgesByType.keys()
     types.sort()
     print >> sys.stderr, "Parallel edges:"
     print >> sys.stderr, "  Total:", total, "Circular:", circular
     for type in types:
         print >> sys.stderr, "  " + str(type) + ": " + str(parallelEdgesByType[type][0]) + " (circular: " + str(parallelEdgesByType[type][1]) + ")"
+
+    types = nonParallelEdgesByType.keys()
+    types.sort()
+    print >> sys.stderr, "Non-Parallel edges:"
+    for type in types:
+        print >> sys.stderr, "  " + str(type) + ": " + str(nonParallelEdgesByType[type])
                              
 
 if __name__=="__main__":
