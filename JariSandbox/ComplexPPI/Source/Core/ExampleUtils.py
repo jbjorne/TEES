@@ -4,6 +4,16 @@
 
 import Split
 
+def normalizeFeatureVectors(examples):
+    for example in examples:
+        # Normalize features
+        total = 0.0
+        for v in example[2].values(): total += abs(v)
+        if total == 0.0: 
+            total = 1.0
+        for k,v in example[2].iteritems():
+            example[2][k] = float(v) / total
+
 def copyExamples(examples):
     examplesCopy = []
     for example in examples:
