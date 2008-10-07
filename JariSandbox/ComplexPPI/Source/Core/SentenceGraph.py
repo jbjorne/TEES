@@ -65,17 +65,20 @@ class SentenceGraph:
         
         self.entitiesById = {}
         entityHeadTokenByEntity = {}
-        for entity in self.entities[:]:
-            entityIsPartOfInteractionGraph = False
-            for interaction in self.interactions:
-                if interaction.attrib["e1"] == entity.attrib["id"] or interaction.attrib["e2"] == entity.attrib["id"]:
-                    entityIsPartOfInteractionGraph = True
-                    break
-            if entityIsPartOfInteractionGraph:
-                self.entitiesById[entity.attrib["id"]] = entity
-                entityHeadTokenByEntity[entity] = self.mapEntity(entity, verbose)
-            else:
-                self.entities.remove(entity)
+#        for entity in self.entities[:]:
+#            entityIsPartOfInteractionGraph = False
+#            for interaction in self.interactions:
+#                if interaction.attrib["e1"] == entity.attrib["id"] or interaction.attrib["e2"] == entity.attrib["id"]:
+#                    entityIsPartOfInteractionGraph = True
+#                    break
+#            if entityIsPartOfInteractionGraph:
+#                self.entitiesById[entity.attrib["id"]] = entity
+#                entityHeadTokenByEntity[entity] = self.mapEntity(entity, verbose)
+#            else:
+#                self.entities.remove(entity)
+        for entity in self.entities:
+            self.entitiesById[entity.attrib["id"]] = entity
+            entityHeadTokenByEntity[entity] = self.mapEntity(entity, verbose)
         for interaction in self.interactions:
             token1 = entityHeadTokenByEntity[self.entitiesById[interaction.attrib["e1"]]]
             token2 = entityHeadTokenByEntity[self.entitiesById[interaction.attrib["e2"]]]
