@@ -73,13 +73,34 @@ class MultiEdgeFeatureBuilder(FeatureBuilder):
         self.features[self.featureSet.getId("tokTerm1txt_"+sentenceGraph.getTokenText(pathTokens[0]))] = 1
         self.features[self.featureSet.getId("tokTerm2POS_"+pathTokens[-1].attrib["POS"])] = 1
         self.features[self.featureSet.getId("tokTerm2txt_"+sentenceGraph.getTokenText(pathTokens[-1]))] = 1
-  
+    
+    def buildWalkPaths(self, pathTokens, walks, sentenceGraph):
+        t1 = "noAnnType"
+        t2 = "noAnnType"
+        if sentenceGraph.tokenIsEntityHead[pathTokens[0]] != None:
+            t1 = sentenceGraph.tokenIsEntityHead[pathTokens[0]].attrib["type"]
+        if sentenceGraph.tokenIsEntityHead[pathTokens[-1]] != None:
+            t2 = sentenceGraph.tokenIsEntityHead[pathTokens[-1]].attrib["type"]
+        for walk in walks:
+            edgeString = ""
+            for edge in walk:
+                edgeString += "_" + edge[2].attrib["type"]
+            self.features[self.featureSet.getId("walkPath_"+t1+edgeString+"_"+t2)] = 1
+    
     def buildPathGrams(self, length, pathTokens, pathEdges, sentenceGraph):
         """
         Goes through all the possible walks and builds features for subsections
         of "length" edges.
         """
+        t1 = "noAnnType"
+        t2 = "noAnnType"
+        if sentenceGraph.tokenIsEntityHead[pathTokens[0]] != None:
+            t1 = sentenceGraph.tokenIsEntityHead[pathTokens[0]].attrib["type"]
+        if sentenceGraph.tokenIsEntityHead[pathTokens[-1]] != None:
+            t2 = sentenceGraph.tokenIsEntityHead[pathTokens[-1]].attrib["type"]
+
         walks = self.getWalks(pathTokens, pathEdges)
+        #self.buildWalkPaths(pathTokens, walks, sentenceGraph)
         dirGrams = []
         for walk in walks:
             dirGrams.append("")
@@ -103,6 +124,7 @@ class MultiEdgeFeatureBuilder(FeatureBuilder):
                         position += 1
                         edgeGram += "_" + edge[2].attrib["type"]
                     self.features[self.featureSet.getId(edgeGram)] = 1
+                    self.features[self.featureSet.getId(t1+"_"+edgeGram+"_"+t2)] = 1
     
     def addType(self, token, sentenceGraph, prefix="annType_"):
         if sentenceGraph.tokenIsEntityHead[token] != None:
@@ -130,8 +152,8 @@ class MultiEdgeFeatureBuilder(FeatureBuilder):
             dText = sentenceGraph.getTokenText(edge[1])
             gPOS = edge[0].attrib["POS"]
             dPOS = edge[1].attrib["POS"]
-            gAT = "x"
-            dAT = "x"
+            gAT = "noAnnType"
+            dAT = "noAnnType"
             if sentenceGraph.tokenIsEntityHead[edge[0]] != None:
                 gAT = sentenceGraph.tokenIsEntityHead[edge[0]].attrib["type"]
             if sentenceGraph.tokenIsEntityHead[edge[1]] != None:
@@ -139,6 +161,10 @@ class MultiEdgeFeatureBuilder(FeatureBuilder):
             self.features[self.featureSet.getId("gov_"+gText+"_"+dText)] = 1
             self.features[self.featureSet.getId("gov_"+gPOS+"_"+dPOS)] = 1
             self.features[self.featureSet.getId("gov_"+gAT+"_"+dAT)] = 1
+            
+            self.features[self.featureSet.getId("triple_"+gAT+"_"+depType+"_"+dAT)] = 1
+            #self.features[self.featureSet.getId("triple_"+gPOS+"_"+depType+"_"+dPOS)] = 1
+            #self.features[self.featureSet.getId("triple_"+gText+"_"+depType+"_"+dText)] = 1
 
 #            # Features for edge-type/token combinations that define the governor/dependent roles
 #            self.features[self.featureSet.getId("depgov_"+depType+"_"+dText)] = 1
