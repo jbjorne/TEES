@@ -2,6 +2,7 @@ import sys
 sys.path.append("..")
 from Core.ExampleBuilder import ExampleBuilder
 from Core.IdSet import IdSet
+import Core.ExampleUtils as ExampleUtils
 from FeatureBuilders.MultiEdgeFeatureBuilder import MultiEdgeFeatureBuilder
 from FeatureBuilders.TokenFeatureBuilder import TokenFeatureBuilder
 import networkx as NX
@@ -108,7 +109,9 @@ class MultiEdgeExampleBuilder(ExampleBuilder):
                         undirectedExample[2].update(tempReverseExample[2])
                         examples.append(undirectedExample)
                         exampleIndex += 1
-
+        
+        if "normalize" in self.styles:
+            ExampleUtils.normalizeFeatureVectors(examples)
         return examples
     
     def buildExample(self, token1, token2, paths, sentenceGraph, categoryName, exampleIndex):
