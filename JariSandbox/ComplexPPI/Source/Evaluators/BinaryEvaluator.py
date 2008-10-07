@@ -47,9 +47,10 @@ class BinaryEvaluator(Evaluator):
             averageEvaluator.AUC /= sumWeight
         else:
             averageEvaluator.AUC = None
-        averageEvaluator.precision /= sumWeight
-        averageEvaluator.recall /= sumWeight
-        averageEvaluator.fScore /= sumWeight
+        if sumWeight > 0:
+            averageEvaluator.precision /= sumWeight
+            averageEvaluator.recall /= sumWeight
+            averageEvaluator.fScore /= sumWeight
         return averageEvaluator
     average = staticmethod(average)
     
@@ -88,7 +89,10 @@ class BinaryEvaluator(Evaluator):
                    auc += 1.
                elif i == j:
                    auc += 0.5
-        auc /= float(numPositiveExamples * numNegativeExamples)
+        if numPositiveExamples * numNegativeExamples > 0:
+            auc /= float(numPositiveExamples * numNegativeExamples)
+        else:
+            auc = 0
         return auc
     
     def _calculate(self, predictions):
@@ -136,10 +140,11 @@ class BinaryEvaluator(Evaluator):
             string = indent
         string += "p/n:" + str(self.truePositives+self.falseNegatives) + "/" + str(self.trueNegatives+self.falsePositives)
         string += " tp/fp|tn/fn:" + str(self.truePositives) + "/" + str(self.falsePositives) + "|" + str(self.trueNegatives) + "/" + str(self.falseNegatives)
+        string += " p/r/f:" + str(self.precision)[0:6] + "/" + str(self.recall)[0:6] + "/" + str(self.fScore)[0:6]            
         if self.AUC != None:
-            string += " p/r/f/a:" + str(self.precision)[0:6] + "/" + str(self.recall)[0:6] + "/" + str(self.fScore)[0:6] + "/" + str(self.AUC)[0:6]
+            string += " a:" + str(self.AUC)[0:6]
         else:
-            string += " p/r/f:" + str(self.precision)[0:6] + "/" + str(self.recall)[0:6] + "/" + str(self.fScore)[0:6]            
+            string += " a:N/A"
         return string
     
     def saveCSV(self, filename):
