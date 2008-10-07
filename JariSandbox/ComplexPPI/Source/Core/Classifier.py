@@ -13,6 +13,7 @@ class Classifier:
     def __init__(self):
         self.classSet = None
         self.featureSet = None
+        #self.notOptimizedParameters = []
     
     def _makeTempDir(self, workDir=None):
         self._workDir = workDir
@@ -20,6 +21,10 @@ class Classifier:
             self.tempDir = tempfile.mkdtemp() #(dir=tempDir)
         else:
             self.tempDir = workDir
+        if not os.path.exists(self.tempDir):
+            os.makedirs(self.tempDir)
+        if not os.path.exists(self._workDir):
+            os.makedirs(self._workDir)
         self.debugFile = open(self.tempDir + "/debug.txt", "wt")
 
     def train(self, examples, parameters=None):        
@@ -53,6 +58,9 @@ class Classifier:
         print >> sys.stderr, "Optimizing parameters"              
         parameterNames = parameters.keys()
         parameterNames.sort()
+#        for p in self.notOptimizedParameters:
+#            if p in parameterNames:
+#                parameterNames.remove(p)
         parameterValues = []
         for parameterName in parameterNames:
             parameterValues.append([])
@@ -64,6 +72,11 @@ class Classifier:
             combinations.append({})
             for value in combinationList:
                 combinations[-1][value[0]] = value[1]
+#        # re-add non-optimized parameters to combinations
+#        for p in self.notOptimizedParameters:
+#            if parameters.has_key(p):
+#                for combination in combinations:
+#                    combination[p] = parameters[p]
         
         bestResult = None
         combinationCount = 1
