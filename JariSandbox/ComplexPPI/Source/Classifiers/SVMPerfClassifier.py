@@ -4,7 +4,7 @@ import shutil
 import subprocess
 import Core.ExampleUtils as Example
 import combine
-from Core.Evaluation import Evaluation
+#from Core.Evaluation import Evaluation
 from Core.Classifier import Classifier
 
 binDir = "/usr/share/biotext/ComplexPPI/SVMPerf"
@@ -23,7 +23,8 @@ class SVMPerfClassifier(Classifier):
             print >> sys.stderr, "Removing temporary SVM-perf work directory", self.tempDir
             shutil.rmtree(self.tempDir)
     
-    def train(self, examples, parameters=None):        
+    def train(self, examples, parameters=None):
+        examples = self.filterTrainingSet(examples)       
         Example.writeExamples(examples, self.tempDir+"/train.dat")
         args = [binDir+"/svm_perf_learn"]
         if parameters != None:
@@ -32,13 +33,14 @@ class SVMPerfClassifier(Classifier):
         subprocess.call(args, stdout = self.debugFile)
         
     def classify(self, examples, parameters=None):
+        examples, predictions = self.filterClassificationSet(examples, True)
         Example.writeExamples(examples, self.tempDir+"/test.dat")
         args = [binDir+"/svm_perf_classify"]
         if parameters != None:
             self.__addParametersToSubprocessCall(args, parameters)
         args += [self.tempDir+"/test.dat", self.tempDir+"/model", self.tempDir+"/predictions"]
         subprocess.call(args, stdout = self.debugFile)
-        
+        os.remove(self.tempDir+"/model")
         predictionsFile = open(self.tempDir+"/predictions", "rt")
         lines = predictionsFile.readlines()
         predictionsFile.close()
