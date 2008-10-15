@@ -6,6 +6,7 @@ import Core.ExampleUtils as Example
 import combine
 #from Core.Evaluation import Evaluation
 from Core.Classifier import Classifier
+import copy
 
 binDir = "/usr/share/biotext/ComplexPPI/SVMLight"
 
@@ -24,7 +25,11 @@ class SVMLightClassifier(Classifier):
             shutil.rmtree(self.tempDir)
     
     def train(self, examples, parameters=None):
-        examples = self.filterTrainingSet(examples)      
+        examples = self.filterTrainingSet(examples)
+        if parameters.has_key("style") and "no_duplicates" in parameters["style"]:
+            parameters = copy.copy(parameters)
+            examples = Example.removeDuplicates(examples)
+            del parameters["style"]
         Example.writeExamples(examples, self.tempDir+"/train.dat")
         args = [binDir+"/svm_learn"]
         if parameters != None:
