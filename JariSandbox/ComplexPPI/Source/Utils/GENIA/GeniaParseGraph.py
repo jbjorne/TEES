@@ -312,12 +312,18 @@ class GeniaParseGraph(InteractionParseGraph):
         event.id = eventElement.attrib["id"]
         if eventElement.find("type").attrib.has_key("class"):
             event.type = eventElement.find("type").attrib["class"]
+        # What is the difference between one theme/cause element having multiple idrefs, or there
+        # being multiple theme/cause elements with one idref each?
         themeElements = eventElement.findall("theme")
         for themeElement in themeElements:
-            event.themes.append(themeElement.attrib["idref"])
+            for key in themeElement.attrib.keys():
+                if key[0:5] == "idref":
+                    event.themes.append(themeElement.attrib[key])
         causeElements = eventElement.findall("cause")
         for causeElement in causeElements:
-            event.causes.append(causeElement.attrib["idref"])
+            for key in causeElement.attrib.keys():
+                if key[0:5] == "idref":
+                    event.causes.append(causeElement.attrib[key])
         assert(not self.eventsById.has_key(event.id))
         self.findEventTextBinding(eventElement, event)
         self.eventsById[event.id] = event
