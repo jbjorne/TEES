@@ -21,7 +21,9 @@ def buildExamples(exampleBuilder, sentences, options):
         counter.update(1, "Building examples ("+sentence[0].getSentenceId()+"): ")
         sentence[1] = exampleBuilder.buildExamples(sentence[0])
         examples.extend(sentence[1])
-    print >> sys.stderr, "Examples built:", len(examples)    
+    print >> sys.stderr, "Examples built:", len(examples)
+    print >> sys.stderr, "Preprocessing examples:"
+    examples = exampleBuilder.preProcessExamples(examples)
     # Save examples
     if options.output != None:
         print >> sys.stderr, "Saving examples to", options.output + "/examples.txt"
@@ -31,6 +33,23 @@ def buildExamples(exampleBuilder, sentences, options):
         commentLines.append("Features:")
         commentLines.extend(exampleBuilder.featureSet.toStrings())
         Example.writeExamples(examples, options.output + "/examples.txt", commentLines)
+    #examples = filterFeatures(exampleBuilder.featureSet, examples)
+    #Example.normalizeFeatureVectors(examples)
+    return examples
+
+def filterFeatures(featureSet, examples):
+    featureCounts = {}
+    for key in featureSet.getIds():
+        featureCounts[key] = 0
+    
+    for example in examples:
+        for k in example[2].keys():
+            featureCounts[k] += 1
+    
+    for example in examples:
+        for k in example[2].keys():
+            if featureCounts[k] <= 2:
+                del example[2][k]
     return examples
 
 def visualize(sentences, classifications, options, exampleBuilder):   
