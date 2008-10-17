@@ -25,6 +25,11 @@ class IdSet:
         names.sort()
         return names
     
+    def getIds(self):
+        values = self.Ids.values()
+        values.sort()
+        return values
+    
     def write(self, filename):
         f = open(filename, "wt")
         keys = self.Ids.keys()
