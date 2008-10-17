@@ -1,7 +1,11 @@
 import Core.SentenceGraph as SentenceGraph
 from optparse import OptionParser
 import networkx as NX
-import sys
+import sys, os
+import shutil
+import Utils.TableUtils as TableUtils
+
+options = None
 
 def calculateMainStatistics(corpusElements):
     totalTokens = 0
@@ -65,8 +69,16 @@ def analyzeLengths(corpusElements):
     print >> sys.stderr, "Dependency edges:", dependencyEdges
     print >> sys.stderr, "Shortest path of dependencies for interaction edge:"
     printPathDistribution(pathsByLength)
+    if options.output != None:
+        pathsByLength["corpus"] = options.input
+        pathsByLength["parse"] = options.parse
+        TableUtils.addToCSV(pathsByLength, options.output+"/pathsByLength.csv")
     print >> sys.stderr, "Shortest path of dependencies between all entities:"
     printPathDistribution(pathsBetweenAllEntitiesByLength)
+    if options.output != None:
+        pathsByLength["corpus"] = options.input
+        pathsByLength["parse"] = options.parse
+        TableUtils.addToCSV(pathsBetweenAllEntitiesByLength, options.output+"/pathsBetweenAllEntitiesByLength.csv")
 
 def printPathDistribution(pathsByLength):
     lengths = pathsByLength.keys()
@@ -119,15 +131,42 @@ def countMultipleEdges(corpusElements):
     print >> sys.stderr, "Non-Parallel edges:"
     for type in types:
         print >> sys.stderr, "  " + str(type) + ": " + str(nonParallelEdgesByType[type])
-                             
+
+def listEntities(corpusElements):
+    entitiesByType = {}
+    for sentence in corpusElements.sentences:
+        sentenceGraph = sentence.sentenceGraph
+        for entity in sentenceGraph.entities:
+            type = entity.attrib["type"]
+            if not entitiesByType.has_key(type):
+                entitiesByType[type] = [0,0,set()]
+            entitiesByType[type][0] += 1
+            entitiesByType[type][2].add(entity.attrib["text"])
+            if entity.attrib["isName"] == "True":
+                entitiesByType[type][1] += 1
+    keys = entitiesByType.keys()
+    keys.sort()
+    print >> sys.stderr, "Entities (all, named):"
+    for k in keys:
+        print >> sys.stderr, "  " + k + ": " + str(entitiesByType[k][0]) + ", " + str(entitiesByType[k][1])
+        texts = list(entitiesByType[k][2])
+        texts.sort()
+        for text in texts:
+            print >> sys.stderr, "    " + text
 
 if __name__=="__main__":
-    defaultAnalysisFilename = "/usr/share/biotext/ComplexPPI/BioInferForComplexPPI.xml"
+    defaultAnalysisFilename = "/usr/share/biotext/ComplexPPI/BioInferForComplexPPIVisible_noCL.xml"
     optparser = OptionParser(usage="%prog [options]\nCreate an html visualization for a corpus.")
     optparser.add_option("-i", "--input", default=defaultAnalysisFilename, dest="input", help="Corpus in analysis format", metavar="FILE")
     optparser.add_option("-t", "--tokenization", default="split_gs", dest="tokenization", help="tokenization")
     optparser.add_option("-p", "--parse", default="split_gs", dest="parse", help="parse")
+    optparser.add_option("-o", "--output", default=None, dest="output", help="output-folder")
+    optparser.add_option("-a", "--analyses", default="", dest="analyses", help="selected optional analyses")
     (options, args) = optparser.parse_args()
+
+    if options.output != None:
+        if not os.path.exists(options.output):
+            os.makedirs(options.output)
     
     corpusElements = SentenceGraph.loadCorpus(options.input, options.parse, options.tokenization)
     print >> sys.stderr, "tokenization:", options.tokenization
@@ -136,3 +175,5 @@ if __name__=="__main__":
     calculateMainStatistics(corpusElements)
     analyzeLengths(corpusElements)
     countMultipleEdges(corpusElements)
+    if options.analyses.find("entities") != -1:
+        listEntities(corpusElements)
