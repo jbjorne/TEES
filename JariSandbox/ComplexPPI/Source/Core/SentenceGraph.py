@@ -44,6 +44,8 @@ class SentenceGraph:
             self.dependencyGraph.add_node(token)
         #self.dependenciesById = {}
         for dependency in self.dependencies:
+            #if dependency.attrib["type"] == "conj_and":
+            #    continue
             self.dependencyGraph.add_edge(self.tokensById[dependency.attrib["t1"]],\
                                           self.tokensById[dependency.attrib["t2"]],\
                                           dependency)
@@ -51,7 +53,7 @@ class SentenceGraph:
     
     def getSentenceId(self):
         return self.sentenceElement.attrib["id"]
-    
+        
     def mapInteractions(self, entityElements, interactionElements, verbose=False):
         self.interactions = interactionElements
         self.entities = entityElements
