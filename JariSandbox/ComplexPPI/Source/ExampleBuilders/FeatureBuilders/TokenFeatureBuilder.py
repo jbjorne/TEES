@@ -5,10 +5,10 @@ class TokenFeatureBuilder(FeatureBuilder):
     def __init__(self, featureSet):
         FeatureBuilder.__init__(self, featureSet)
     
-    def buildLinearOrderFeatures(self, tokenIndex, sentenceGraph, rangePos = 999, rangeNeg = 999 ):
+    def buildLinearOrderFeatures(self, tokenIndex, sentenceGraph, rangePos = 999, rangeNeg = 999, preTag="" ):
         count = 1
         for i in range(tokenIndex+1,min(len(sentenceGraph.tokens), tokenIndex+rangePos+1)):
-            tag = "linear_+" + str(count) + "_"
+            tag = preTag + "linear_+" + str(count) + "_"
             t = sentenceGraph.tokens[i]
             self.features[self.featureSet.getId(tag+"txt_"+sentenceGraph.getTokenText(t))] = 1
             self.features[self.featureSet.getId(tag+"POS_"+t.attrib["POS"])] = 1
@@ -17,7 +17,7 @@ class TokenFeatureBuilder(FeatureBuilder):
             count += 1
         count = 1
         for i in range(tokenIndex-1,max(tokenIndex-rangeNeg-1, -1),-1):
-            tag = "linear_-" + str(count) + "_"
+            tag = preTag + "linear_-" + str(count) + "_"
             t = sentenceGraph.tokens[i]
             self.features[self.featureSet.getId(tag+"txt_"+sentenceGraph.getTokenText(t))] = 1
             self.features[self.featureSet.getId(tag+"POS_"+t.attrib["POS"])] = 1
@@ -63,6 +63,11 @@ class TokenFeatureBuilder(FeatureBuilder):
                 token = sentenceGraph.tokens[j]
                 text = "_" + sentenceGraph.getTokenText(token) + text
                 POS = "_" + token.attrib["POS"] + POS
+                if sentenceGraph.tokenIsEntityHead[token] != None:
+                    annType = "_" + sentenceGraph.tokenIsEntityHead[token].attrib["type"] + annType
+                else:
+                    annType = "_" + "noAnnType" + annType
                 self.features[self.featureSet.getId(tag+"_text"+text)] = 1
                 self.features[self.featureSet.getId(tag+"_POS"+POS)] = 1
+                self.features[self.featureSet.getId(tag+"_annType"+POS)] = 1
                 count += 1
