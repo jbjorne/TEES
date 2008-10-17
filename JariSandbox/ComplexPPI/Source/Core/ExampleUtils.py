@@ -4,6 +4,28 @@
 
 import Split
 
+def isDuplicate(example1, example2):
+    if example1[1] != example2[1]:
+        return False
+    if example1[2] != example2[2]:
+        return False
+    return True
+
+def removeDuplicates(examples):
+    """ removes all but one of the examples that have the same class and identical feature vectors"""
+    duplicateList = [False] * len(examples)
+    for i in range(len(examples)):
+        if not duplicateList[i]:
+            for j in range(i+1, len(examples)):
+                if not duplicateList[j]:
+                    if isDuplicate(examples[i], examples[j]):
+                        duplicateList[j] = True
+    newExamples = []
+    for i in range(len(examples)):
+        if not duplicateList[i]:
+            newExamples.append(examples[i])
+    return newExamples
+
 def normalizeFeatureVectors(examples):
     for example in examples:
         # Normalize features
