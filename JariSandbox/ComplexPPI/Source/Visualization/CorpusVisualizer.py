@@ -111,20 +111,21 @@ class CorpusVisualizer:
         sentenceId = sentenceGraph.getSentenceId()
         self.sentences.append([sentenceGraph,0,0,0,0])
         visualizationSet = None
-        for example in examples:
-            if visualizationSet == None:
-                visualizationSet = example[3]["visualizationSet"]
-            else:
-                assert(visualizationSet == example[3]["visualizationSet"])
-            self.sentences[-1][1] += 1
-            if classificationsByExample.has_key(example[0]):
-                classification = classificationsByExample[example[0]]
-                self.sentences[-1][2] += 1
-                if classification[1] == "tp":
-                    self.sentences[-1][3] += 1
-                elif classification[1] == "fp":
-                    self.sentences[-1][4] += 1
-        sentenceGraph.visualizationSet = visualizationSet
+        if examples != None:
+            for example in examples:
+                if visualizationSet == None:
+                    visualizationSet = example[3]["visualizationSet"]
+                else:
+                    assert(visualizationSet == example[3]["visualizationSet"])
+                self.sentences[-1][1] += 1
+                if classificationsByExample.has_key(example[0]):
+                    classification = classificationsByExample[example[0]]
+                    self.sentences[-1][2] += 1
+                    if classification[1] == "tp":
+                        self.sentences[-1][3] += 1
+                    elif classification[1] == "fp":
+                        self.sentences[-1][4] += 1
+            sentenceGraph.visualizationSet = visualizationSet
         
         # Make the page
         entityElements = sentenceGraph.entities
@@ -175,7 +176,8 @@ class CorpusVisualizer:
             builder.lineBreak()
         
         # Classification svg
-        self.makeExampleGraph(builder, sentenceGraph, examples, classificationsByExample)      
+        if classificationsByExample != None:
+            self.makeExampleGraph(builder, sentenceGraph, examples, classificationsByExample)      
         
         builder.table(0,align="center",width="100%")
         builder.tableRow()
@@ -243,13 +245,17 @@ class CorpusVisualizer:
             charOffsetSplits = charOffset.split(",")
             headOffset = entityElement.get("headOffset")
             charOffset = ""
+            headFound = False
             for charOffsetSplit in charOffsetSplits:
                 if charOffset != "":
                     charOffset += ","
                 if charOffsetSplit == headOffset:
                     charOffset += "<u>" + charOffsetSplit + "</u>"
+                    headFound = True
                 else:
                     charOffset += charOffsetSplit
+            if not headFound:
+                charOffset += " (<u>" + headOffset + "</u>)"
             builder.tableData(charOffset, True)
             builder.closeElement()
         builder.closeElement() # close tableBody
@@ -262,30 +268,31 @@ class CorpusVisualizer:
         builder.closeElement() # close table
         
         # Examples
-        builder.header("Examples",4)
-        for example in examples:
-            string = example[0]
-            if classificationsByExample.has_key(example[0]):
-                string += " (" + classificationsByExample[example[0]][1] + ")"
-            string += ":"
-            features = example[2]
-            if self.featureSet != None:
-                featureNames = []
-                for key in features.keys():
-                    featureNames.append(self.featureSet.getName(key))
-                featureNames.sort()
-                for featureName in featureNames:
-                    string += " " + featureName + ":" + str(features[self.featureSet.getId(featureName)])
-            else:
-                keys = features.keys()
-                keys.sort()
-                for key in keys:
-                    featureName = str(key)
-                    string += " " + featureName + ":" + str(features[key])
-            #string += "\n"
-            builder.span(string)
-            builder.lineBreak()
-            builder.lineBreak()
+        if examples != None:
+            builder.header("Examples",4)
+            for example in examples:
+                string = example[0]
+                if classificationsByExample.has_key(example[0]):
+                    string += " (" + classificationsByExample[example[0]][1] + ")"
+                string += ":"
+                features = example[2]
+                if self.featureSet != None:
+                    featureNames = []
+                    for key in features.keys():
+                        featureNames.append(self.featureSet.getName(key))
+                    featureNames.sort()
+                    for featureName in featureNames:
+                        string += " " + featureName + ":" + str(features[self.featureSet.getId(featureName)])
+                else:
+                    keys = features.keys()
+                    keys.sort()
+                    for key in keys:
+                        featureName = str(key)
+                        string += " " + featureName + ":" + str(features[key])
+                #string += "\n"
+                builder.span(string)
+                builder.lineBreak()
+                builder.lineBreak()
             
         builder.write(self.outDir + "/sentences/"+sentenceId+".html")
         repairApostrophes(self.outDir + "/sentences/"+sentenceId+".html")
@@ -325,7 +332,10 @@ class CorpusVisualizer:
                 text = text[:80] + "..."
             builder.tableData(text,True)
             builder.tableData(sentence[0].sentenceElement.get("origId"),True)
-            builder.tableData(str(sentence[0].visualizationSet),True)
+            if hasattr(sentence[0], "visualizationSet"):
+                builder.tableData(str(sentence[0].visualizationSet),True)
+            else:
+                builder.tableData("N/A",True)
             builder.tableData(str(sentence[1]),True)
             builder.tableData(str(sentence[2]),True)
             #builder.tableData(str(len(sentence.annotationDependencies)),True)
