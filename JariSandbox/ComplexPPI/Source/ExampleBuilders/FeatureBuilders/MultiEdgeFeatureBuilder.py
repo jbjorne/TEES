@@ -1,16 +1,46 @@
 from FeatureBuilder import FeatureBuilder
-#import Stemming.PorterStemmer as PorterStemmer
+import Stemming.PorterStemmer as PorterStemmer
 from EdgeFeatureBuilder import EdgeFeatureBuilder
 
 class MultiEdgeFeatureBuilder(FeatureBuilder):
     def __init__(self, featureSet):
         FeatureBuilder.__init__(self, featureSet)
         self.edgeFeatureBuilder = EdgeFeatureBuilder(featureSet)
+        self.ontologyFeatureBuilder = None
         
     def setFeatureVector(self, features):
         self.features = features
         self.edgeFeatureBuilder.setFeatureVector(features)
-
+        if self.ontologyFeatureBuilder != None:
+            self.ontologyFeatureBuilder.setFeatureVector(features)
+    
+    def getTokenFeatures(self, token, sentenceGraph, text=True, POS=True, annotatedType=True, stem=False, ontology=True):
+        featureList = []
+        if text:
+            featureList.append("txt_"+sentenceGraph.getTokenText(token))
+        if POS:
+            pos = token.attrib["POS"]
+            if pos.find("_") != None:
+                for split in pos.split("_"):
+                    featureList.append("POS_"+split)
+            featureList.append("POS_"+pos)
+        if annotatedType:
+            if sentenceGraph.tokenIsEntityHead[token] != None:
+                annType = sentenceGraph.tokenIsEntityHead[token].attrib["type"]
+                featureList.append("annType_"+annType)
+                if ontology and (self.ontologyFeatureBuilder != None):
+                    featureList.extend(self.ontologyFeatureBuilder.getParents(annType))
+        if stem:
+            featureList.append("stem_"+PorterStemmer.stem(sentenceGraph.getTokenText(token)))
+                    
+        return featureList
+    
+    def getTokenAnnotatedType(self, token, sentenceGraph):    
+        if sentenceGraph.tokenIsEntityHead[token] != None:
+            return sentenceGraph.tokenIsEntityHead[token].attrib["type"]
+        else:
+            return "noAnnType"
+                
     def getEdges(self, graph, path):
         """
         graph = Directed NetworkX graph
@@ -64,43 +94,58 @@ class MultiEdgeFeatureBuilder(FeatureBuilder):
         """
         self.features[self.featureSet.getId("len_tokens_"+str(len(pathTokens)))] = 1
         self.features[self.featureSet.getId("len")] = len(pathTokens)
+    
+    def buildSentenceFeatures(self, sentenceGraph):
+        textCounts = {}
+        for token in sentenceGraph.tokens:
+            text = "noAnnType"
+            if sentenceGraph.tokenIsEntityHead[token] != None:
+                text = sentenceGraph.tokenIsEntityHead[token].attrib["type"]
+            #text = sentenceGraph.getTokenText(token)
+            if not textCounts.has_key(text):
+                textCounts[text] = 0
+            textCounts[text] += 1
+        for k, v in textCounts.iteritems():
+            self.features[self.featureSet.getId("count_"+k)] = v
 
     def buildTerminusTokenFeatures(self, pathTokens, sentenceGraph):
         """
         Token features for the first and last tokens of the path
         """
-        self.features[self.featureSet.getId("tokTerm1POS_"+pathTokens[0].attrib["POS"])] = 1
-        self.features[self.featureSet.getId("tokTerm1txt_"+sentenceGraph.getTokenText(pathTokens[0]))] = 1
-        self.features[self.featureSet.getId("tokTerm2POS_"+pathTokens[-1].attrib["POS"])] = 1
-        self.features[self.featureSet.getId("tokTerm2txt_"+sentenceGraph.getTokenText(pathTokens[-1]))] = 1
+        for feature in self.getTokenFeatures(pathTokens[0], sentenceGraph):
+            self.features[self.featureSet.getId("tokTerm1_"+feature)] = 1
+        for feature in self.getTokenFeatures(pathTokens[-1], sentenceGraph):
+            self.features[self.featureSet.getId("tokTerm2_"+feature)] = 1
+        
+        #self.features[self.featureSet.getId("tokTerm1POS_"+pathTokens[0].attrib["POS"])] = 1
+        #self.features[self.featureSet.getId("tokTerm1txt_"+sentenceGraph.getTokenText(pathTokens[0]))] = 1
+        #self.features[self.featureSet.getId("tokTerm2POS_"+pathTokens[-1].attrib["POS"])] = 1
+        #self.features[self.featureSet.getId("tokTerm2txt_"+sentenceGraph.getTokenText(pathTokens[-1]))] = 1
     
     def buildWalkPaths(self, pathTokens, walks, sentenceGraph):
-        t1 = "noAnnType"
-        t2 = "noAnnType"
-        if sentenceGraph.tokenIsEntityHead[pathTokens[0]] != None:
-            t1 = sentenceGraph.tokenIsEntityHead[pathTokens[0]].attrib["type"]
-        if sentenceGraph.tokenIsEntityHead[pathTokens[-1]] != None:
-            t2 = sentenceGraph.tokenIsEntityHead[pathTokens[-1]].attrib["type"]
-        for walk in walks:
-            edgeString = ""
-            for edge in walk:
-                edgeString += "_" + edge[2].attrib["type"]
-            self.features[self.featureSet.getId("walkPath_"+t1+edgeString+"_"+t2)] = 1
+        t1 = self.getTokenAnnotatedType(pathTokens[0], sentenceGraph)
+        t2 = self.getTokenAnnotatedType(pathTokens[-1], sentenceGraph)
+        internalTypes = ""
+        for token in pathTokens[1:-1]:
+            internalTypes += "_" + self.getTokenAnnotatedType(token, sentenceGraph)
+        self.features[self.featureSet.getId("tokenPath_"+t1+internalTypes+"_"+t2)] = 1
+        
+#        for walk in walks:
+#            edgeString = ""
+#            for edge in walk:
+#                edgeString += "_" + edge[2].attrib["type"]
+#            self.features[self.featureSet.getId("walkPath_"+t1+edgeString+"_"+t2)] = 1
     
     def buildPathGrams(self, length, pathTokens, pathEdges, sentenceGraph):
         """
         Goes through all the possible walks and builds features for subsections
         of "length" edges.
         """
-        t1 = "noAnnType"
-        t2 = "noAnnType"
-        if sentenceGraph.tokenIsEntityHead[pathTokens[0]] != None:
-            t1 = sentenceGraph.tokenIsEntityHead[pathTokens[0]].attrib["type"]
-        if sentenceGraph.tokenIsEntityHead[pathTokens[-1]] != None:
-            t2 = sentenceGraph.tokenIsEntityHead[pathTokens[-1]].attrib["type"]
+        t1 = self.getTokenAnnotatedType(pathTokens[0], sentenceGraph)
+        t2 = self.getTokenAnnotatedType(pathTokens[-1], sentenceGraph)
 
         walks = self.getWalks(pathTokens, pathEdges)
-        #self.buildWalkPaths(pathTokens, walks, sentenceGraph)
+        self.buildWalkPaths(pathTokens, walks, sentenceGraph)
         dirGrams = []
         for walk in walks:
             dirGrams.append("")
@@ -115,16 +160,19 @@ class MultiEdgeFeatureBuilder(FeatureBuilder):
                     edgeGram = "depGram_" + styleGram
                     # Label tokens by their role in the xgram
                     for token in pathTokens[i-(length-1)+1:i+1]:
-                        self.features[self.featureSet.getId("tok_"+styleGram+"_POS_"+token.attrib["POS"])] = 1
-                        self.features[self.featureSet.getId("tok_"+styleGram+"_Txt_"+sentenceGraph.getTokenText(token))] = 1
+                        for feature in self.getTokenFeatures(token, sentenceGraph):
+                            self.features[self.featureSet.getId("tok_"+styleGram+feature)] = 1
                     # Label edges by their role in the xgram
                     position = 0
+                    tokenTypeGram = ""
                     for edge in walks[j][i-(length-1):i+1]:
                         self.features[self.featureSet.getId("dep_"+styleGram+str(position)+"_"+edge[2].attrib["type"])] = 1
                         position += 1
                         edgeGram += "_" + edge[2].attrib["type"]
                     self.features[self.featureSet.getId(edgeGram)] = 1
                     self.features[self.featureSet.getId(t1+"_"+edgeGram+"_"+t2)] = 1
+        for dirGram in dirGrams:
+            self.features[self.featureSet.getId("edge_directions_"+dirGram)] = 1
     
     def addType(self, token, sentenceGraph, prefix="annType_"):
         if sentenceGraph.tokenIsEntityHead[token] != None:
@@ -248,15 +296,19 @@ class MultiEdgeFeatureBuilder(FeatureBuilder):
 #            elif edges[i-1][0] and edges[i][1]:
 #                features[self.featureSet.getId("dep_"+type1+"<"+type2+">")] = 1
 
-    def buildTerminusFeatures(self, token, prefix, sentenceGraph, features): 
+    def buildTerminusFeatures(self, token, ignoreEdges, prefix, sentenceGraph): 
         # Attached edges
-        t1InEdges = sentenceGraph.dependencyGraph.in_edges(token)
-        for edge in t1InEdges:
-            features[self.featureSet.getId(prefix+"HangingIn_"+edge[2].attrib["type"])] = 1
-            features[self.featureSet.getId(prefix+"HangingIn_"+edge[0].attrib["POS"])] = 1
-            features[self.featureSet.getId("t1HangingIn_"+sentenceGraph.getTokenText(edge[0]))] = 1
-        t1OutEdges = sentenceGraph.dependencyGraph.out_edges(token)
-        for edge in t1OutEdges:
-            features[self.featureSet.getId(prefix+"HangingOut_"+edge[2].attrib["type"])] = 1
-            features[self.featureSet.getId(prefix+"HangingOut_"+edge[1].attrib["POS"])] = 1
-            features[self.featureSet.getId("t1HangingOut_"+sentenceGraph.getTokenText(edge[1]))] = 1    
+        inEdges = sentenceGraph.dependencyGraph.in_edges(token)
+        for edge in inEdges:
+            if edge in ignoreEdges:
+                continue
+            self.features[self.featureSet.getId(prefix+"HangingIn_"+edge[2].attrib["type"])] = 1
+            for feature in self.getTokenFeatures(edge[0], sentenceGraph):
+                self.features[self.featureSet.getId(prefix+"HangingIn_"+feature)] = 1
+        outEdges = sentenceGraph.dependencyGraph.out_edges(token)
+        for edge in outEdges:
+            if edge in ignoreEdges:
+                continue
+            self.features[self.featureSet.getId(prefix+"HangingOut_"+edge[2].attrib["type"])] = 1
+            for feature in self.getTokenFeatures(edge[1], sentenceGraph):
+                self.features[self.featureSet.getId(prefix+"HangingOut_"+feature)] = 1
