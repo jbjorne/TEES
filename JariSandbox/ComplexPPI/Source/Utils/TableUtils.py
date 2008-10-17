@@ -1,4 +1,5 @@
 import csv
+import os
 
 decimals = 3
 
@@ -13,7 +14,15 @@ def getKeys(dicts):
     for key in keys:
         keyDict[key] = key
     return (keys, keyDict)
-        
+
+def addToCSV(dict, filename):
+    rows = []
+    if os.path.exists(filename):
+        rows = readCSV(filename)
+    if not isinstance(dict, list):
+        dict = [dict]
+    writeCSV(rows+dict, filename)
+  
 def writeCSV(dict, filename):
     if not isinstance(dict, list):
         dict = [dict]
