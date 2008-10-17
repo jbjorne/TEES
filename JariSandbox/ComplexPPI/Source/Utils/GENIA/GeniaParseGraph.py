@@ -58,7 +58,11 @@ class GeniaEntity:
         entityElement.attrib["type"] = self.sem
         entityElement.attrib["isName"] = "True"
         entityElement.attrib["charOffset"] = Range.tuplesToCharOffset(self.charOffset)
-        entityElement.attrib["headOffset"] = entityElement.attrib["charOffset"]
+        #entityElement.attrib["headOffset"] = entityElement.attrib["charOffset"]
+        if self.headToken != None:
+            entityElement.attrib["headOffset"] = Range.tuplesToCharOffset(self.headToken.charOffset)
+        else:
+            entityElement.attrib["headOffset"] = interactionWordElement.attrib["charOffset"]
         entityElement.attrib["text"] = self.text
         
 class GeniaEvent:
@@ -390,6 +394,7 @@ class GeniaParseGraph(InteractionParseGraph):
         for i in range(len(candidateTokenIds)):
             if tokenScores[i] == highestScore:
                 return self.tokensById[candidateTokenIds[i]]
+        assert(False)    
     
     def findHeadTokenSimple(self, charOffsets):
         # Takes always leftmost token
