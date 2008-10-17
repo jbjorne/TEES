@@ -39,7 +39,9 @@ import cElementTreeUtils as ETUtils
 
 def getMatchConditions(matchString):
     """Split the match options string"""
-    if matchString.find(",") != -1:
+    if matchString == None:
+        return []
+    elif matchString.find(",") != -1:
         return matchString.split(",")
     else:
         return [matchString]
