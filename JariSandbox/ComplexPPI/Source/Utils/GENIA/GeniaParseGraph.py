@@ -368,7 +368,7 @@ class GeniaParseGraph(InteractionParseGraph):
         candidateTokenIds = list(candidateTokenIds)
         candidateTokenIds.sort()
         
-        depTypesToRemove = ["nn", "det", "hyphen", "num", "amod", "nmod"]
+        depTypesToRemove = ["nn", "det", "hyphen", "num", "amod", "nmod", "appos", "measure", "dep"]
         depTypesToRemoveReverse = ["A/AN"]
         if len(candidateTokenIds)>1:
             tokenScores = len(candidateTokenIds) * [0]
@@ -381,6 +381,8 @@ class GeniaParseGraph(InteractionParseGraph):
                             tokenScores[i] -= 1
                         elif dep.fro == tokenI and dep.to == tokenJ and (dep.dependencyType in depTypesToRemoveReverse):
                             tokenScores[i] -= 1
+                if len(tokenI.dependencies) == 0:
+                    tokenScores[i] -= 10
                 #if tokenI.pos == "IN":
                 #    tokenScores[i] -= 1
         else:
