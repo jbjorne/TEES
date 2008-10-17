@@ -7,6 +7,9 @@ class ExampleBuilder:
         self.featureSet = IdSet()
         self.classSet = None
     
+    def preProcessExamples(self, allExamples):
+        return allExamples
+    
     def buildExamplesForCorpus(self, corpusElements, visualizer=None):
         print >> sys.stderr, "Building examples"
         examples = []
