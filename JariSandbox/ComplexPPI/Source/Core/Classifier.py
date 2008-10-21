@@ -123,6 +123,10 @@ class Classifier:
             if bestResult == None or poolResult.compare(bestResult[1]) > 0: #: averageResult.fScore > bestResult[1].fScore:
                 #bestResult = (predictions, averageResult, combination)
                 bestResult = (None, poolResult, combination)
+                # Make sure memory is released, especially important since some of the previous steps
+                # copy examples
+                bestResult[1].classifications = None
+                bestResult[1].predictions = None
             combinationCount += 1
             if hasattr(self, "tempDir"):
                 self.debugFile.close()
