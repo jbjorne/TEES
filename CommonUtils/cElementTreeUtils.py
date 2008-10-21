@@ -11,9 +11,10 @@
 import sys
 
 try:
-    import xml.etree.cElementTree as ElementTree
-except ImportError:
     import cElementTree as ElementTree
+except ImportError:
+    import xml.etree.cElementTree as ElementTree
+
 
 def iterparse(file, elementName, callback, limit = -1):
     """ Parse iteratively xml-files

@@ -1,7 +1,8 @@
 try:
-    import xml.etree.cElementTree as ET
-except ImportError:
     import cElementTree as ET
+except ImportError:
+    import xml.etree.cElementTree as ET
+    
 import cElementTreeUtils as ETUtils
 import sys
 import re
