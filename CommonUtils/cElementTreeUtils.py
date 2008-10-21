@@ -8,6 +8,8 @@
   Status: UNDER CONSTRUCTION, doesn't work yet!
 """
 
+import sys
+
 try:
     import xml.etree.cElementTree as ElementTree
 except ImportError:
@@ -70,3 +72,14 @@ def indent(elem, level=0):
 def write(rootElement, filename):        
     indent(rootElement)
     ElementTree.ElementTree(rootElement).write(filename)
+
+def writeUTF8(rootElement,out):
+    indent(rootElement)
+    if isinstance(out,str):
+        f=open(out,"wt")
+        print >> f, '<?xml version="1.0" encoding="UTF-8"?>'
+        ElementTree.ElementTree(rootElement).write(f,"utf-8")
+        f.close()
+    else:
+        print >> out, '<?xml version="1.0" encoding="UTF-8"?>'
+        ElementTree.ElementTree(rootElement).write(out,"utf-8")
