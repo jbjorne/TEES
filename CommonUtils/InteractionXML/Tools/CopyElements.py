@@ -123,14 +123,15 @@ def copyElements(pairs, elementPath, identifiers):
         #if sourceElement == None:
         #    return
         
-        # Locate the target element
-        targetPath = element
+        # Locate the target element       
         # The subelement is added to the same level in the target XML that it existed in the source XML
-        if elementPath.find("/") != None:
+        if elementPath.find("/") != -1:
             targetPath = elementPath.rsplit("/",1)[0]
-        targetElements = targetParent.findall(targetPath) # Find the immediate parent for the copied element
-        assert(len(targetElements) == 1) # The place to add the element must be identified uniquely
-        targetElement = targetElements[0]
+            targetElements = targetParent.findall(targetPath) # Find the immediate parent for the copied element
+            assert(len(targetElements) == 1) # The place to add the element must be identified uniquely
+            targetElement = targetElements[0]
+        else:
+            targetElement = targetParent
         targetElement.append(sourceElement)
         copied += 1
     print >> sys.stderr, "Copied", str(copied), "elements"
@@ -151,7 +152,10 @@ if __name__=="__main__":
     assert(options.target != None)
     if options.output == None:
         options.output = options.target
-    options.identifiers = eval(options.identifiers)
+    if options.identifiers != None:
+        options.identifiers = eval(options.identifiers)
+    else:
+        options.identifiers = {}
     
     print >> sys.stderr, "Loading source file", options.source
     sourceTree = ET.parse(options.source)
