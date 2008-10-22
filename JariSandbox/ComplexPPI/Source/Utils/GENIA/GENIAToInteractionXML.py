@@ -127,6 +127,7 @@ if __name__=="__main__":
                             documentElement.attrib["parseGraphs"].append(parseGraph)
                             parseGraph.addEntities(sentence)
                             parseGraph.origGeniaId = articleElement.attrib["id"]
+                            parseGraph.origGeniaDocumentId = documentElement.attrib["origId"]
                             prevParseGraph = parseGraph
 #                        if options.printSentenceText:
 #                            print BioInferId + ";" + sentenceId + ";" + text
