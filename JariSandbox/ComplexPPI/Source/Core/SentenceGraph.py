@@ -21,8 +21,16 @@ def loadCorpus(corpusFilename, parse, tokenization=None):
     # Make sentence graphs
     sentences = []
     counter = ProgressCounter(len(corpusElements.sentences), "Make sentence graphs")
-    for sentence in corpusElements.sentences:
+    for sentence in corpusElements.sentences[:]:
         counter.update(1, "Making sentence graphs ("+sentence.sentence.attrib["id"]+"): ")
+        if len(sentence.tokens) == 0:
+            corpusElements.sentences.remove(sentence)
+            continue
+        for pair in sentence.pairs:
+            if pair.attrib["interaction"] == "True":
+                sentence.interactions.append(pair)
+                if not pair.attrib.has_key("type"):
+                    pair.attrib["type"] = "undefined"
         graph = SentenceGraph(sentence.sentence, sentence.tokens, sentence.dependencies)
         graph.mapInteractions(sentence.entities, sentence.interactions)
         sentence.sentenceGraph = graph
@@ -57,10 +65,11 @@ class SentenceGraph:
     def mapInteractions(self, entityElements, interactionElements, verbose=False):
         self.interactions = interactionElements
         self.entities = entityElements
+        for entity in self.entities[:]:
+            if entity.attrib["charOffset"] == "":
+                self.entities.remove(entity)
         self.interactionGraph = NX.XDiGraph(multiedges = multiedges)
         self.entitiesByToken = {}
-        
-        self.__markNamedEntities()
         
         for token in self.tokens:
             self.interactionGraph.add_node(token)
@@ -81,7 +90,13 @@ class SentenceGraph:
         for entity in self.entities:
             self.entitiesById[entity.attrib["id"]] = entity
             entityHeadTokenByEntity[entity] = self.mapEntity(entity, verbose)
+        self.__markNamedEntities()
+        
         for interaction in self.interactions:
+            if not self.entitiesById.has_key(interaction.attrib["e1"]):
+                continue
+            if not self.entitiesById.has_key(interaction.attrib["e2"]):
+                continue
             token1 = entityHeadTokenByEntity[self.entitiesById[interaction.attrib["e1"]]]
             token2 = entityHeadTokenByEntity[self.entitiesById[interaction.attrib["e2"]]]
             
@@ -96,12 +111,23 @@ class SentenceGraph:
                 self.interactionGraph.add_edge(token1, token2, interaction)
     
     def mapEntity(self, entityElement, verbose=False):
-        headOffset = Range.charOffsetToSingleTuple(entityElement.attrib["headOffset"])
+        headOffset = None
+        if entityElement.attrib.has_key("headOffset"):
+            headOffset = Range.charOffsetToSingleTuple(entityElement.attrib["headOffset"])
+        if entityElement.attrib["charOffset"] != "":
+            charOffsets = Range.charOffsetToTuples(entityElement.attrib["charOffset"])
+        else:
+            charOffsets = []
         headTokens = []
         for token in self.tokens:
             tokenOffset = Range.charOffsetToSingleTuple(token.attrib["charOffset"])
-            if Range.overlap(headOffset,tokenOffset):
-                headTokens.append(token)
+            if headOffset != None:
+                if Range.overlap(headOffset,tokenOffset):
+                    headTokens.append(token)
+            else:
+                for offset in charOffsets:
+                    if Range.overlap(offset,tokenOffset):
+                        headTokens.append(token)
         #assert(len(headTokens)==1) # Terrible hack, but should work for now
         if len(headTokens)==1:
             token = headTokens[0]
@@ -109,9 +135,12 @@ class SentenceGraph:
             token = self.findHeadToken(headTokens)
             if verbose:
                 print >> sys.stderr, "Selected head:", token.attrib["id"], token.attrib["text"]
-        if not self.entitiesByToken.has_key(token):
-            self.entitiesByToken[token] = []
-        self.entitiesByToken[token].append(entityElement)
+        if token != None:
+            if not entityElement.attrib.has_key("headOffset"):
+                entityElement.attrib["headOffset"] = token.attrib["charOffset"]
+            if not self.entitiesByToken.has_key(token):
+                self.entitiesByToken[token] = []
+            self.entitiesByToken[token].append(entityElement)
         return token
     
     def findHeadToken(self, candidateTokens):
@@ -141,6 +170,7 @@ class SentenceGraph:
         for i in range(len(candidateTokens)):
             if tokenScores[i] == highestScore:
                 return candidateTokens[i]
+        return None
 
     def __markNamedEntities(self):
         self.tokenIsName = {}
@@ -158,7 +188,10 @@ class SentenceGraph:
                 for entityOffset in entityOffsets:
                     if Range.overlap(entityOffset, tokenOffset):
                         self.tokenIsEntity[token] = True
-                        if entity.attrib["isName"] == "True":
+                        if entity.attrib.has_key("isName"):
+                            if entity.attrib["isName"] == "True":
+                                self.tokenIsName[token] = True
+                        else:
                             self.tokenIsName[token] = True
                 if Range.overlap(entityHeadOffset, tokenOffset):
                     self.tokenIsEntityHead[token] = entity
