@@ -146,12 +146,13 @@ class GeniaParseGraph(InteractionParseGraph):
         self.sentence.annotationDependenciesWithParseDependency = 0
         
         self.eventsById = {}
+        self.tokenHeadScores = None
     
     def writeToInteractionXML(self, documentElement, sentenceCount):
         sentenceElement = ET.Element("sentence")
         sentenceId = documentElement.attrib["id"] + ".s" + str(sentenceCount)
         sentenceElement.attrib["id"] = sentenceId
-        sentenceElement.attrib["origId"] = self.origGeniaId
+        sentenceElement.attrib["origId"] = self.origGeniaDocumentId + "." + self.origGeniaId
         sentenceElement.attrib["text"] = self.sentence.sentence.attrib["origText"]
         entitiesById = {}
         interactionsById = {}
@@ -353,6 +354,40 @@ class GeniaParseGraph(InteractionParseGraph):
                     assert(clueTypeToken.id != causeToken.id)
                     self.addAnnotationDependency(clueTypeToken.id-1, causeToken.id-1, "cause", "UNIDIRECTIONAL")
     
+    def scoreTokens(self):
+        if self.tokenHeadScores != None:
+            return self.tokenHeadScores
+        else:
+            self.tokenHeadScores = {}
+        tokenKeys = self.tokensById.keys()
+        tokenKeys.sort()
+        depTypesToRemove = ["nn", "det", "hyphen", "num", "amod", "nmod", "appos", "measure", "dep"]
+        depTypesToRemoveReverse = ["A/AN"]
+        for key in tokenKeys:
+            if len(self.tokensById[key].dependencies) > 0:
+                self.tokenHeadScores[key] = 1
+            else:
+                self.tokenHeadScores[key] = 0
+        modifiedScores = True
+        while modifiedScores == True:
+            modifiedScores = False
+            for i in tokenKeys:
+                tokenI = self.tokensById[i]
+                for j in tokenKeys:
+                    tokenJ = self.tokensById[j]
+                    for dep in tokenI.dependencies:
+                        if dep.to == tokenI and dep.fro == tokenJ and (dep.dependencyType in depTypesToRemove):
+                            #tokenScores[i] -= 1
+                            if self.tokenHeadScores[j] <= self.tokenHeadScores[i]:
+                                self.tokenHeadScores[j] = self.tokenHeadScores[i] + 1
+                                modifiedScores = True
+                        elif dep.fro == tokenI and dep.to == tokenJ and (dep.dependencyType in depTypesToRemoveReverse):
+                            #tokenScores[i] -= 1
+                            if self.tokenHeadScores[j] <= self.tokenHeadScores[i]:
+                                self.tokenHeadScores[j] = self.tokenHeadScores[i] + 1
+                                modifiedScores = True
+        return self.tokenHeadScores 
+    
     def findHeadToken(self, charOffsets):
         debug = False
         tokenKeys = self.tokensById.keys()
@@ -368,40 +403,59 @@ class GeniaParseGraph(InteractionParseGraph):
         candidateTokenIds = list(candidateTokenIds)
         candidateTokenIds.sort()
         
-        depTypesToRemove = ["nn", "det", "hyphen", "num", "amod", "nmod", "appos", "measure", "dep"]
-        depTypesToRemoveReverse = ["A/AN"]
-        if len(candidateTokenIds)>1:
-            tokenScores = len(candidateTokenIds) * [0]
-            for i in range(len(candidateTokenIds)):
-                tokenI = self.tokensById[candidateTokenIds[i]]
-                for j in range(len(candidateTokenIds)):
-                    tokenJ = self.tokensById[candidateTokenIds[j]]
-                    for dep in tokenI.dependencies:
-                        if dep.to == tokenI and dep.fro == tokenJ and (dep.dependencyType in depTypesToRemove):
-                            tokenScores[i] -= 1
-                        elif dep.fro == tokenI and dep.to == tokenJ and (dep.dependencyType in depTypesToRemoveReverse):
-                            tokenScores[i] -= 1
-                if len(tokenI.dependencies) == 0:
-                    tokenScores[i] -= 10
-                #if tokenI.pos == "IN":
-                #    tokenScores[i] -= 1
-        else:
-            if len(candidateTokenIds)==1:
-                return self.tokensById[candidateTokenIds[0]]
-            else:
-                return None
+        tokenHeadScores = self.scoreTokens()
+        
+#        depTypesToRemove = ["nn", "det", "hyphen", "num", "amod", "nmod", "appos", "measure", "dep"]
+#        depTypesToRemoveReverse = ["A/AN"]
+#        if len(candidateTokenIds)>1:
+#            tokenScores = len(candidateTokenIds) * [1]
+#            modifiedScores = True
+#            while modifiedScores == True:
+#                modifiedScores = False
+#                for i in range(len(candidateTokenIds)):
+#                    tokenI = self.tokensById[candidateTokenIds[i]]
+#                    for j in range(len(candidateTokenIds)):
+#                        tokenJ = self.tokensById[candidateTokenIds[j]]
+#                        for dep in tokenI.dependencies:
+#                            if dep.to == tokenI and dep.fro == tokenJ and (dep.dependencyType in depTypesToRemove):
+#                                #tokenScores[i] -= 1
+#                                if tokenScores[j] <= tokenScores[i]:
+#                                    tokenScores[j] = tokenScores[i] + 1
+#                                    modifiedScores = True
+#                            elif dep.fro == tokenI and dep.to == tokenJ and (dep.dependencyType in depTypesToRemoveReverse):
+#                                #tokenScores[i] -= 1
+#                                if tokenScores[j] <= tokenScores[i]:
+#                                    tokenScores[j] = tokenScores[i] + 1
+#                                    modifiedScores = True
+#                    if len(tokenI.dependencies) == 0:
+#                        tokenScores[i] = 0
+#                    #if tokenI.pos == "IN":
+#                    #    tokenScores[i] -= 1
+#        else:
+#            if len(candidateTokenIds)==1:
+#                return self.tokensById[candidateTokenIds[0]]
+#            else:
+#                return None
         
         #if debug:
         #    print "Tokens:", candidateTokenIds
         #    print "Scores:", tokenScores
         
+        if len(candidateTokenIds) == 0:
+            return None
+        
         highestScore = -9999999
+        bestTokens = []
+        for i in candidateTokenIds:
+            if tokenHeadScores[i] > highestScore:
+                highestScore = tokenHeadScores[i]
         for i in range(len(candidateTokenIds)):
-            if tokenScores[i] > highestScore:
-                highestScore = tokenScores[i]
+            if tokenHeadScores[candidateTokenIds[i]] == highestScore:
+                bestTokens.append(candidateTokenIds[i])
+        print "tokens:"
         for i in range(len(candidateTokenIds)):
-            if tokenScores[i] == highestScore:
-                return self.tokensById[candidateTokenIds[i]]
+            print "[", candidateTokenIds[i], self.tokensById[candidateTokenIds[i]].text, tokenHeadScores[candidateTokenIds[i]], "]"
+        return self.tokensById[bestTokens[-1]]
         assert(False)    
     
     def findHeadTokenSimple(self, charOffsets):
