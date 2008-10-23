@@ -75,6 +75,7 @@ class GeniaEvent:
         self.type = "unknown"
         self.themes = []
         self.causes = []
+        self.scatters = []
         self.clueTypeCharOffsets = []
         self.clueTypeTexts = []
         self.headToken = None
@@ -105,7 +106,10 @@ class GeniaEvent:
             interactionWordElement.attrib["text"] = str(self.clueTypeTexts)
             interactionWordElement.attrib["id"] = sentenceId + ".e" + str(len(entitiesById))
             entitiesById[self.id] = interactionWordElement
-
+    
+#    def __getIdrefOffsets(self, element):
+#        idref = ""        
+    
     def toElements(self, sentenceId, entitiesById, interactionsById):
         if entitiesById.has_key(self.id):
             interactionWordElement = entitiesById[self.id]
@@ -128,6 +132,17 @@ class GeniaEvent:
                 interactionElement = ET.Element("interaction")
                 interactionElement.attrib["origId"] = self.id
                 interactionElement.attrib["type"] = "cause"
+                interactionElement.attrib["directed"] = "True"
+                interactionElement.attrib["e1"] = interactionWordElement.attrib["id"]
+                interactionElement.attrib["e2"] = entity.attrib["id"]
+                interactionElement.attrib["id"] = sentenceId + ".i" + str(len(interactionsById))
+                interactionsById[interactionElement.attrib["id"]] = interactionElement
+        for scatter in self.scatters:
+            if entitiesById.has_key(scatter):
+                entity = entitiesById[scatter]
+                interactionElement = ET.Element("interaction")
+                interactionElement.attrib["origId"] = self.id
+                interactionElement.attrib["type"] = "scatter"
                 interactionElement.attrib["directed"] = "True"
                 interactionElement.attrib["e1"] = interactionWordElement.attrib["id"]
                 interactionElement.attrib["e2"] = entity.attrib["id"]
@@ -317,18 +332,19 @@ class GeniaParseGraph(InteractionParseGraph):
         # being multiple theme/cause elements with one idref each?
         themeElements = eventElement.findall("theme")
         for themeElement in themeElements:
-            for key in themeElement.attrib.keys():
-                if key[0:5] == "idref":
-                    event.themes.append(themeElement.attrib[key])
+            event.themes.append(themeElement.attrib["idref"])
         causeElements = eventElement.findall("cause")
         for causeElement in causeElements:
-            for key in causeElement.attrib.keys():
-                if key[0:5] == "idref":
-                    event.causes.append(causeElement.attrib[key])
+            event.causes.append(causeElement.attrib["idref"])
         assert(not self.eventsById.has_key(event.id))
         self.findEventTextBinding(eventElement, event)
         self.eventsById[event.id] = event
-    
+        # Add possible scatter events
+        for themeElement in themeElements:
+            self.addScatterEvent(themeElement)
+        for causeElement in causeElements:
+            self.addScatterEvent(causeElement)
+
     def getHeadTokenByGeniaId(self, geniaId):
         token = None
         if self.geniaEntitiesById.has_key(geniaId):
@@ -405,38 +421,6 @@ class GeniaParseGraph(InteractionParseGraph):
         
         tokenHeadScores = self.scoreTokens()
         
-#        depTypesToRemove = ["nn", "det", "hyphen", "num", "amod", "nmod", "appos", "measure", "dep"]
-#        depTypesToRemoveReverse = ["A/AN"]
-#        if len(candidateTokenIds)>1:
-#            tokenScores = len(candidateTokenIds) * [1]
-#            modifiedScores = True
-#            while modifiedScores == True:
-#                modifiedScores = False
-#                for i in range(len(candidateTokenIds)):
-#                    tokenI = self.tokensById[candidateTokenIds[i]]
-#                    for j in range(len(candidateTokenIds)):
-#                        tokenJ = self.tokensById[candidateTokenIds[j]]
-#                        for dep in tokenI.dependencies:
-#                            if dep.to == tokenI and dep.fro == tokenJ and (dep.dependencyType in depTypesToRemove):
-#                                #tokenScores[i] -= 1
-#                                if tokenScores[j] <= tokenScores[i]:
-#                                    tokenScores[j] = tokenScores[i] + 1
-#                                    modifiedScores = True
-#                            elif dep.fro == tokenI and dep.to == tokenJ and (dep.dependencyType in depTypesToRemoveReverse):
-#                                #tokenScores[i] -= 1
-#                                if tokenScores[j] <= tokenScores[i]:
-#                                    tokenScores[j] = tokenScores[i] + 1
-#                                    modifiedScores = True
-#                    if len(tokenI.dependencies) == 0:
-#                        tokenScores[i] = 0
-#                    #if tokenI.pos == "IN":
-#                    #    tokenScores[i] -= 1
-#        else:
-#            if len(candidateTokenIds)==1:
-#                return self.tokensById[candidateTokenIds[0]]
-#            else:
-#                return None
-        
         #if debug:
         #    print "Tokens:", candidateTokenIds
         #    print "Scores:", tokenScores
@@ -452,9 +436,10 @@ class GeniaParseGraph(InteractionParseGraph):
         for i in range(len(candidateTokenIds)):
             if tokenHeadScores[candidateTokenIds[i]] == highestScore:
                 bestTokens.append(candidateTokenIds[i])
-        print "tokens:"
-        for i in range(len(candidateTokenIds)):
-            print "[", candidateTokenIds[i], self.tokensById[candidateTokenIds[i]].text, tokenHeadScores[candidateTokenIds[i]], "]"
+        if debug:
+            print "tokens:"
+            for i in range(len(candidateTokenIds)):
+                print "[", candidateTokenIds[i], self.tokensById[candidateTokenIds[i]].text, tokenHeadScores[candidateTokenIds[i]], "]"
         return self.tokensById[bestTokens[-1]]
         assert(False)    
     
@@ -517,3 +502,29 @@ class GeniaParseGraph(InteractionParseGraph):
             tokenElement.attrib["text"] = token.text
             tokenElement.attrib["charOffset"] = Range.tuplesToCharOffset(token.charOffset)
             tokenizationElement.append(tokenElement)
+    
+    def addScatterEvent(self, element):
+        if not element.attrib.has_key("idref1"):
+            return # only one idref
+
+        if not self.geniaEntitiesById.has_key(element.attrib["idref"]):
+            return
+        iwEntity = self.geniaEntitiesById[element.attrib["idref"]]
+        
+        newEvent = GeniaEvent()
+        newEvent.id = "scatter_" + iwEntity.id
+        newEvent.type = iwEntity.sem
+        newEvent.clueTypeCharOffsets = [iwEntity.charOffset]
+        newEvent.headToken = iwEntity.headToken
+        newEvent.clueTypeTexts = iwEntity.text
+        
+        # numbered idrefs
+        keys = element.attrib.keys()
+        keys.sort()
+        for key in keys:
+            if key[0:5] == "idref" and len(key) > 5:
+                newEvent.scatters.append(element.attrib[key])
+                newEvent.id += "_" + element.attrib[key]
+        
+        if not self.eventsById.has_key(newEvent.id):
+            self.eventsById[newEvent.id] = newEvent
