@@ -46,6 +46,7 @@ class GeniaEntity:
         self.charOffset = None
         self.headToken = None
         self.text = "unknown"
+        self.InteractionXMLelement = None
     
     def toString(self):
         return "Entity: "+self.id+","+self.elementType+","+self.sem+","+str(self.charOffset)+",\""+self.text+"\""
@@ -64,6 +65,7 @@ class GeniaEntity:
         else:
             entityElement.attrib["headOffset"] = interactionWordElement.attrib["charOffset"]
         entityElement.attrib["text"] = self.text
+        self.InteractionXMLelement = entityElement
         
 class GeniaEvent:
     def __init__(self):
@@ -78,6 +80,12 @@ class GeniaEvent:
         self.scatters = []
         self.clueTypeCharOffsets = []
         self.clueTypeTexts = []
+        self.corefThemeCharOffsets = []
+        self.corefThemeTexts = []
+        self.corefCauseCharOffsets = []
+        self.corefCauseTexts = []
+        self.corefCauseEntity = None
+        self.corefThemeEntity = None
         self.headToken = None
     
     def toString(self):
@@ -110,44 +118,44 @@ class GeniaEvent:
 #    def __getIdrefOffsets(self, element):
 #        idref = ""        
     
+    def addInteractionElement(self, entity1, entity2, origId, type, interactionsById, sentenceId):
+        interactionElement = ET.Element("interaction")
+        interactionElement.attrib["origId"] = origId
+        interactionElement.attrib["type"] = type
+        interactionElement.attrib["directed"] = "True"
+        interactionElement.attrib["e1"] = entity1.attrib["id"]
+        interactionElement.attrib["e2"] = entity2.attrib["id"]
+        interactionElement.attrib["id"] = sentenceId + ".i" + str(len(interactionsById))
+        interactionsById[interactionElement.attrib["id"]] = interactionElement
+    
     def toElements(self, sentenceId, entitiesById, interactionsById):
         if entitiesById.has_key(self.id):
             interactionWordElement = entitiesById[self.id]
         else:
             return
+        if self.corefThemeEntity != None:
+            self.addInteractionElement(interactionWordElement, self.corefThemeEntity.InteractionXMLelement, self.id, "theme", interactionsById, sentenceId)
         for theme in self.themes:
             if entitiesById.has_key(theme):
-                entity = entitiesById[theme]
-                interactionElement = ET.Element("interaction")
-                interactionElement.attrib["origId"] = self.id
-                interactionElement.attrib["type"] = "theme"
-                interactionElement.attrib["directed"] = "True"
-                interactionElement.attrib["e1"] = interactionWordElement.attrib["id"]
-                interactionElement.attrib["e2"] = entity.attrib["id"]
-                interactionElement.attrib["id"] = sentenceId + ".i" + str(len(interactionsById))
-                interactionsById[interactionElement.attrib["id"]] = interactionElement
+                targetEntity = entitiesById[theme]
+                if self.corefThemeEntity == None:
+                    self.addInteractionElement(interactionWordElement, targetEntity, self.id, "theme", interactionsById, sentenceId)
+                else:
+                    self.addInteractionElement(self.corefThemeEntity.InteractionXMLelement, targetEntity, self.id, "coref", interactionsById, sentenceId)
+        if self.corefCauseEntity != None:
+            self.addInteractionElement(interactionWordElement, self.corefCauseEntity.InteractionXMLelement, self.id, "theme", interactionsById, sentenceId)
         for cause in self.causes:
             if entitiesById.has_key(cause):
-                entity = entitiesById[cause]
-                interactionElement = ET.Element("interaction")
-                interactionElement.attrib["origId"] = self.id
-                interactionElement.attrib["type"] = "cause"
-                interactionElement.attrib["directed"] = "True"
-                interactionElement.attrib["e1"] = interactionWordElement.attrib["id"]
-                interactionElement.attrib["e2"] = entity.attrib["id"]
-                interactionElement.attrib["id"] = sentenceId + ".i" + str(len(interactionsById))
-                interactionsById[interactionElement.attrib["id"]] = interactionElement
+                targetEntity = entitiesById[cause]
+                if self.corefCauseEntity == None:
+                    self.addInteractionElement(interactionWordElement, targetEntity, self.id, "cause", interactionsById, sentenceId)
+                else:
+                    self.addInteractionElement(self.corefCauseEntity.InteractionXMLelement, targetEntity, self.id, "coref", interactionsById, sentenceId)
         for scatter in self.scatters:
+            # scatters abuse the way the Event-class should work
             if entitiesById.has_key(scatter):
-                entity = entitiesById[scatter]
-                interactionElement = ET.Element("interaction")
-                interactionElement.attrib["origId"] = self.id
-                interactionElement.attrib["type"] = "scatter"
-                interactionElement.attrib["directed"] = "True"
-                interactionElement.attrib["e1"] = interactionWordElement.attrib["id"]
-                interactionElement.attrib["e2"] = entity.attrib["id"]
-                interactionElement.attrib["id"] = sentenceId + ".i" + str(len(interactionsById))
-                interactionsById[interactionElement.attrib["id"]] = interactionElement
+                targetEntity = entitiesById[scatter]
+                self.addInteractionElement(interactionWordElement, targetEntity, self.id, "scatter", interactionsById, sentenceId)
         
 class GeniaParseGraph(InteractionParseGraph):
     
@@ -298,6 +306,32 @@ class GeniaParseGraph(InteractionParseGraph):
         text = sentenceElement.text
         if text == None: text = ""
         self.__addNestedEntities(text, sentenceElement.getchildren())
+
+    def addCorefEntities(self, event):
+        event.corefThemeEntity = None
+        if len(event.corefThemeTexts) > 0:
+            # TODO: Solve coref=multilayer cases
+            #assert(len(event.corefThemeTexts) == 1)
+            entity = GeniaEntity()
+            entity.elementType = "undefined"
+            entity.sem = "coref"       
+            entity.id = event.id + "_corefTheme"
+            entity.charOffset = event.corefThemeCharOffsets[0]
+            entity.text = event.corefThemeTexts[0]
+            self.geniaEntitiesById[entity.id] = entity
+            event.corefThemeEntity = entity
+        event.corefCauseEntity = None
+        if len(event.corefCauseTexts) > 0:
+            # TODO: Solve coref=multilayer cases
+            #assert(len(event.corefCauseTexts) == 1)
+            entity = GeniaEntity()
+            entity.elementType = "undefined"
+            entity.sem = "coref"       
+            entity.id = event.id + "_corefCause"
+            entity.charOffset = event.corefCauseCharOffsets[0]
+            entity.text = event.corefCauseTexts[0]
+            self.geniaEntitiesById[entity.id] = entity
+            event.corefCauseEntity = entity
     
     def __findNestedEventTextBinding(self, text, children, event):
         for child in children:
@@ -314,6 +348,12 @@ class GeniaParseGraph(InteractionParseGraph):
             if child.tag == "clueType":
                 event.clueTypeCharOffsets.append( (charOffsetBegin, charOffsetEnd) )
                 event.clueTypeTexts.append( text[charOffsetBegin:charOffsetEnd+1] )
+            if child.tag == "corefTheme":
+                event.corefThemeCharOffsets.append( (charOffsetBegin, charOffsetEnd) )
+                event.corefThemeTexts.append( text[charOffsetBegin:charOffsetEnd+1] )
+            if child.tag == "corefCause":
+                event.corefCauseCharOffsets.append( (charOffsetBegin, charOffsetEnd) )
+                event.corefCauseTexts.append( text[charOffsetBegin:charOffsetEnd+1] )
         return text
     
     def findEventTextBinding(self, eventElement, event):
@@ -328,6 +368,8 @@ class GeniaParseGraph(InteractionParseGraph):
         event.id = eventElement.attrib["id"]
         if eventElement.find("type").attrib.has_key("class"):
             event.type = eventElement.find("type").attrib["class"]
+        self.findEventTextBinding(eventElement, event)
+        self.addCorefEntities(event)
         # What is the difference between one theme/cause element having multiple idrefs, or there
         # being multiple theme/cause elements with one idref each?
         themeElements = eventElement.findall("theme")
@@ -337,7 +379,6 @@ class GeniaParseGraph(InteractionParseGraph):
         for causeElement in causeElements:
             event.causes.append(causeElement.attrib["idref"])
         assert(not self.eventsById.has_key(event.id))
-        self.findEventTextBinding(eventElement, event)
         self.eventsById[event.id] = event
         # Add possible scatter events
         for themeElement in themeElements:
