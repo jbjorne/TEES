@@ -28,9 +28,23 @@ def zipTree(path, target):
     os.chdir(tempCwd)
 
 def crossValidate(exampleBuilder, corpusElements, examples, options, timer):
+    parameterOptimizationSet = None
+    if options.paramOptData != None:
+        print >> sys.stderr, "Separating parameter optimization set"
+        parameterOptimizationDivision = Example.makeCorpusDivision(corpusElements, float(options.paramOptData))
+        exampleSets = Example.divideExamples(examples, parameterOptimizationDivision)
+        parameterOptimizationSet = exampleSets[0]
+        optDocs = 0
+        for k,v in parameterOptimizationDivision.iteritems():
+            if v == 0:
+                del corpusElements.documentsById[k]
+                optDocs += 1
+        print >> sys.stderr, "  Documents for parameter optimization:", optDocs
+
     print >> sys.stderr, "Dividing data into folds"
     corpusFolds = Example.makeCorpusFolds(corpusElements, options.folds[0])
     exampleSets = Example.divideExamples(examples, corpusFolds)
+    
     keys = exampleSets.keys()
     keys.sort()
     evaluations = []
@@ -54,20 +68,28 @@ def crossValidate(exampleBuilder, corpusElements, examples, options, timer):
             classifier = Classifier()
         classifier.featureSet = exampleBuilder.featureSet
         # Optimize
-        assert (options.folds[1] >= 2)
-        optimizationFolds = Example.makeExampleFolds(trainSet, options.folds[1])
-        optimizationSets = Example.divideExamples(trainSet, optimizationFolds)
-        optimizationSetList = []
-        optSetKeys = optimizationSets.keys()
-        optSetKeys.sort()
-        for optSetKey in optSetKeys:
-            optimizationSetList.append(optimizationSets[optSetKey])
-        evaluationArgs = {"classSet":exampleBuilder.classSet}
-        if options.parameters != None:
-            paramDict = splitParameters(options.parameters)
-            bestResults = classifier.optimize(optimizationSetList, optimizationSetList, paramDict, Evaluation, evaluationArgs)
+        if parameterOptimizationSet != None:
+            evaluationArgs = {"classSet":exampleBuilder.classSet}
+            if options.parameters != None:
+                paramDict = splitParameters(options.parameters)
+                bestResults = classifier.optimize([trainSet], [parameterOptimizationSet], paramDict, Evaluation, evaluationArgs)
+            else:
+                bestResults = classifier.optimize([trainSet], [parameterOptimizationSet], evaluationClass=Evaluation, evaluationArgs=evaluationArgs)
         else:
-            bestResults = classifier.optimize(optimizationSetList, optimizationSetList, evaluationClass=Evaluation, evaluationArgs=evaluationArgs)
+            assert (options.folds[1] >= 2)
+            optimizationFolds = Example.makeExampleFolds(trainSet, options.folds[1])
+            optimizationSets = Example.divideExamples(trainSet, optimizationFolds)
+            optimizationSetList = []
+            optSetKeys = optimizationSets.keys()
+            optSetKeys.sort()
+            for optSetKey in optSetKeys:
+                optimizationSetList.append(optimizationSets[optSetKey])
+            evaluationArgs = {"classSet":exampleBuilder.classSet}
+            if options.parameters != None:
+                paramDict = splitParameters(options.parameters)
+                bestResults = classifier.optimize(optimizationSetList, optimizationSetList, paramDict, Evaluation, evaluationArgs)
+            else:
+                bestResults = classifier.optimize(optimizationSetList, optimizationSetList, evaluationClass=Evaluation, evaluationArgs=evaluationArgs)
         
         # Classify
         print >> sys.stderr, "Classifying test data"    
@@ -86,8 +108,11 @@ def crossValidate(exampleBuilder, corpusElements, examples, options, timer):
             print >> sys.stderr, "Saving example sets to", options.output
             Example.writeExamples(exampleSets[0], options.output +"/fold"+str(key+1) + "/examplesTest.txt")
             Example.writeExamples(exampleSets[1], options.output +"/fold"+str(key+1) + "/examplesTrain.txt")
-            Example.writeExamples(optimizationSets[0], options.output +"/fold"+str(key+1) + "/examplesOptimizationTest.txt")
-            Example.writeExamples(optimizationSets[1], options.output +"/fold"+str(key+1) + "/examplesOptimizationTrain.txt")
+            if parameterOptimizationSet == None:
+                for k,v in optimizationSets.iteritems():
+                    Example.writeExamples(v, options.output +"/fold"+str(key+1) + "/examplesOptimizationSet" + str(k) + ".txt")
+            else:
+                Example.writeExamples(parameterOptimizationSet, options.output +"/fold"+str(key+1) + "/examplesOptimizationSetPredefined.txt")
             TableUtils.writeCSV(bestResults[2], options.output +"/fold"+str(key+1) + "/parameters.csv")
             evaluation.saveCSV(options.output +"/fold"+str(key+1) + "/results.csv")
             print >> sys.stderr, "Compressing folder"
@@ -121,6 +146,7 @@ if __name__=="__main__":
     optparser.add_option("-e", "--evaluator", default="BinaryEvaluator", dest="evaluator", help="Prediction evaluator class")
     optparser.add_option("-v", "--visualization", default=None, dest="visualization", help="Visualization output directory. NOTE: If the directory exists, it will be deleted!")
     optparser.add_option("-f", "--folds", default="10", dest="folds", help="X-fold cross validation")
+    optparser.add_option("-d", "--paramOptData", default=None, dest="paramOptData", help="The fraction of the corpus to be always used for parameter optimization")
     (options, args) = optparser.parse_args()
     
     timer = Timer()
@@ -131,6 +157,8 @@ if __name__=="__main__":
         assert(len(options.folds)==2)
         options.folds[0] = int(options.folds[0])
         options.folds[1] = int(options.folds[1])
+        if options.paramOptData != None:
+            print >> sys.stderr, "Parameter optimization set defined, parameter " + str(options.folds[1]) + "-fold cross validation will not be performed." 
     else:
         options.folds = (int(options.folds),int(options.folds))
 
