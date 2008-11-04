@@ -15,6 +15,11 @@ class MultiEdgeExampleBuilder(ExampleBuilder):
         self.classSet = IdSet(1)
         assert( self.classSet.getId("neg") == 1 )
         self.multiEdgeFeatureBuilder = MultiEdgeFeatureBuilder(self.featureSet)
+        if "graphKernel" in self.styles:
+            from FeatureBuilders.GraphKernelFeatureBuilder import GraphKernelFeatureBuilder
+            self.graphKernelFeatureBuilder = GraphKernelFeatureBuilder(self.featureSet)
+        if "noAnnType" in self.styles:
+            self.multiEdgeFeatureBuilder.noAnnType = True
         self.tokenFeatureBuilder = TokenFeatureBuilder(self.featureSet)
         if "ontology" in self.styles:
             self.multiEdgeFeatureBuilder.ontologyFeatureBuilder = BioInferOntologyFeatureBuilder(self.featureSet)
@@ -75,7 +80,7 @@ class MultiEdgeExampleBuilder(ExampleBuilder):
                 tJ = sentenceGraph.tokens[j]
                 # only consider paths between entities (NOTE! entities, not only named entities)
                 if "headsOnly" in self.styles:
-                    if (sentenceGraph.tokenIsEntityHead[tI] == None) or (sentenceGraph.tokenIsEntityHead[tJ] == None):
+                    if (len(sentenceGraph.tokenIsEntityHead[tI]) == 0) or (len(sentenceGraph.tokenIsEntityHead[tJ]) == 0):
                         continue
                 
                 if "directed" in self.styles:
@@ -142,8 +147,13 @@ class MultiEdgeExampleBuilder(ExampleBuilder):
 #                    self.ontologyFeatureBuilder.setFeatureVector(features)
 #                    self.ontologyFeatureBuilder.buildOntologyFeaturesForPath(sentenceGraph, path)
 #                    self.ontologyFeatureBuilder.setFeatureVector(None)
-                if not "no_dependency" in self.styles:
+                if "graphKernel" in self.styles or not "no_dependency" in self.styles:
                     edges = self.multiEdgeFeatureBuilder.getEdges(sentenceGraph.dependencyGraph, path)
+                if "graphKernel" in self.styles:
+                    self.graphKernelFeatureBuilder.setFeatureVector(features)
+                    self.graphKernelFeatureBuilder.buildGraphKernelFeatures(sentenceGraph, path, edges)
+                    self.graphKernelFeatureBuilder.setFeatureVector(None)
+                if not "no_dependency" in self.styles:
                     self.multiEdgeFeatureBuilder.setFeatureVector(features)
                     self.multiEdgeFeatureBuilder.buildPathLengthFeatures(path)
                     self.multiEdgeFeatureBuilder.buildTerminusTokenFeatures(path, sentenceGraph)
