@@ -11,6 +11,14 @@ class CorpusVisualizer:
         self.sentences = []
         self.featureSet = None
         self.classSet = None
+    
+    def __getOrigId(self, element):
+        if element.attrib.has_key("origId"):
+            return element.attrib["origId"]
+        elif element.attrib.has_key("seqId"):
+            return element.attrib["seqId"]
+        else:
+            return "N/A"
 
     def __makeOutputDirectory(self, deleteDirectoryIfItExists):
         if os.path.exists(self.outDir):
@@ -153,7 +161,7 @@ class CorpusVisualizer:
             else:
                 builder.span("next","color:#0000FF;")
     
-        builder.span("BioInfer-ID: " + sentenceGraph.sentenceElement.attrib["origId"])
+        builder.span("BioInfer-ID: " + self.__getOrigId(sentenceGraph.sentenceElement))
         builder.closeElement() # div      
         builder.lineBreak()
         
@@ -331,7 +339,7 @@ class CorpusVisualizer:
             if len(text) > 80:
                 text = text[:80] + "..."
             builder.tableData(text,True)
-            builder.tableData(sentence[0].sentenceElement.get("origId"),True)
+            builder.tableData(self.__getOrigId(sentence[0].sentenceElement),True)
             if hasattr(sentence[0], "visualizationSet"):
                 builder.tableData(str(sentence[0].visualizationSet),True)
             else:
