@@ -14,7 +14,11 @@ def loadCorpus(corpusFilename, parse, tokenization=None):
     from InteractionXML.CorpusElements import CorpusElements
     
     print >> sys.stderr, "Loading corpus file", corpusFilename
-    corpusTree = ET.parse(corpusFilename)
+    if corpusFilename.rsplit(".",1)[-1] == "gz":
+        import gzip
+        corpusTree = ET.parse(gzip.open(corpusFilename))
+    else:
+        corpusTree = ET.parse(corpusFilename)
     corpusRoot = corpusTree.getroot()
     corpusElements = CorpusElements(corpusRoot, parse, tokenization)
     print >> sys.stderr, str(len(corpusElements.documentsById)) + " documents, " + str(len(corpusElements.sentencesById)) + " sentences"
@@ -75,7 +79,7 @@ class SentenceGraph:
             self.interactionGraph.add_node(token)
         
         self.entitiesById = {}
-        entityHeadTokenByEntity = {}
+        self.entityHeadTokenByEntity = {}
 #        for entity in self.entities[:]:
 #            entityIsPartOfInteractionGraph = False
 #            for interaction in self.interactions:
@@ -89,7 +93,7 @@ class SentenceGraph:
 #                self.entities.remove(entity)
         for entity in self.entities:
             self.entitiesById[entity.attrib["id"]] = entity
-            entityHeadTokenByEntity[entity] = self.mapEntity(entity, verbose)
+            self.entityHeadTokenByEntity[entity] = self.mapEntity(entity, verbose)
         self.__markNamedEntities()
         
         for interaction in self.interactions:
@@ -97,8 +101,8 @@ class SentenceGraph:
                 continue
             if not self.entitiesById.has_key(interaction.attrib["e2"]):
                 continue
-            token1 = entityHeadTokenByEntity[self.entitiesById[interaction.attrib["e1"]]]
-            token2 = entityHeadTokenByEntity[self.entitiesById[interaction.attrib["e2"]]]
+            token1 = self.entityHeadTokenByEntity[self.entitiesById[interaction.attrib["e1"]]]
+            token2 = self.entityHeadTokenByEntity[self.entitiesById[interaction.attrib["e2"]]]
             
             found = False
             if multiedges:
@@ -179,7 +183,7 @@ class SentenceGraph:
         for token in self.tokens:
             self.tokenIsName[token] = False
             self.tokenIsEntity[token] = False
-            self.tokenIsEntityHead[token] = None
+            self.tokenIsEntityHead[token] = []
         for entity in self.entities:
             entityOffsets = Range.charOffsetToTuples(entity.attrib["charOffset"])
             entityHeadOffset = Range.charOffsetToSingleTuple(entity.attrib["headOffset"])
@@ -192,10 +196,11 @@ class SentenceGraph:
                             if entity.attrib["isName"] == "True":
                                 self.tokenIsName[token] = True
                         else:
+                            entity.attrib["isName"] = "True"
                             self.tokenIsName[token] = True
                 if Range.overlap(entityHeadOffset, tokenOffset):
-                    self.tokenIsEntityHead[token] = entity
-
+                    self.tokenIsEntityHead[token].append(entity)
+                                                          
     def getTokenText(self, token):
         if self.tokenIsName[token]:
             return "NAMED_ENT"
