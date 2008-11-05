@@ -5,18 +5,29 @@ def tokensToSVG(tokenElements, showPOS=False, entitiesByToken=None, extraByToken
     #svgTokensById = {}
     svgTokens = []
     position = 0
+    maxOtherLines = 0
+    for token in tokenElements:
+        if entitiesByToken != None and entitiesByToken.has_key(token):
+            if len(entitiesByToken[token]) > maxOtherLines:
+                maxOtherLines = len(entitiesByToken[token])
+                
     for token in tokenElements:
         svgToken = draw_dg.Token(token.attrib["text"], int(token.attrib["id"].split("_")[-1])-1)
         if showPOS:
             svgToken.otherLines.append(token.attrib["POS"])
         if entitiesByToken != None and entitiesByToken.has_key(token):
-            entity = entitiesByToken[token][0]
-            if entity.attrib["isName"] == "True":
-                svgToken.otherLines.append("["+entity.attrib["type"]+"]")
-            else:
-                svgToken.otherLines.append(entity.attrib["type"])
+            count = maxOtherLines
+            for entity in entitiesByToken[token]:
+                if entity.attrib["isName"] == "True":
+                    svgToken.otherLines.append("["+entity.attrib["type"]+"]")
+                else:
+                    svgToken.otherLines.append(entity.attrib["type"])
+                count -= 1
+            for i in range(0,count):
+                svgToken.otherLines.append("")
         else:
-            svgToken.otherLines.append(" ")
+            for i in range(0,maxOtherLines):
+                svgToken.otherLines.append("")
         if extraByToken != None and extraByToken.has_key(token):
             svgToken.otherLines.append(extraByToken[token][0])
             for k,v in extraByToken[token][1].items():
