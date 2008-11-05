@@ -13,6 +13,64 @@ from Visualization.CorpusVisualizer import CorpusVisualizer
 from Utils.ProgressCounter import ProgressCounter
 from Utils.Parameters import splitParameters
 from optparse import OptionParser
+import networkx as NX
+
+def compareToBinary(complexSentencesById, classifications, exampleBuilder, options):
+    # Load corpus and make sentence graphs
+    print >> sys.stderr, "Calculating performance on binary corpus"
+    classificationsBySentence = {}
+    for classification in classifications:
+        example = classification[0][0]
+        sentenceId = example[0].rsplit(".",1)[0]
+        sentenceOrigId = complexSentencesById[sentenceId].sentence.attrib["origId"]
+        if not classificationsBySentence.has_key(sentenceOrigId):
+            classificationsBySentence[sentenceOrigId] = []
+        classificationsBySentence[sentenceOrigId].append(classification)
+    
+    print >> sys.stderr, "Loading Binary corpus"
+    binaryCorpusElements = loadCorpus(options.binaryCorpus)
+    binaryClassifications = []
+    counter = ProgressCounter(len(binaryCorpusElements.sentences), "Build binary classifications")
+    for binarySentence in binaryCorpusElements.sentences:
+        counter.update(1, "Building binary classifications ("+binarySentence.sentence.attrib["id"]+"): ")
+        if(classificationsBySentence.has_key(binarySentence.sentence.attrib["origId"])):
+            complexClassificationGraph = NX.XGraph(multiedges = multiedges)
+            for token in binarySentence.sentenceGraph.tokens:
+                complexClassificationGraph.add_node(token)
+            for classification in classificationsBySentence[binarySentence.sentence.attrib["origId"]]:
+                if classification[1] > 0:
+                    example = classification[0][0]       
+                    t1 = example[3]["t1"]
+                    t2 = example[3]["t2"]
+                    t1Binary = None
+                    for token in binarySentence.sentenceGraph.tokens:
+                        if token.attrib["charOffset"] == t1.attrib["charOffset"]:
+                            t1Binary = token
+                    t2Binary = None
+                    for token in binarySentence.sentenceGraph.tokens:
+                        if token.attrib["charOffset"] == t2.attrib["charOffset"]:
+                            t2Binary = token
+                    assert(t1Binary != None and t2Binary != None)
+                    complexClassificationGraph.add_edge(t1Binary, t2Binary)
+            paths = NX.all_pairs_shortest_path(complexClassificationGraph, cutoff=999)
+            for pair in binarySentence.pairs:
+                t1 = binarySentence.sentenceGraph.entityHeadTokenByEntity[pair.attrib["e1"]]
+                t2 = binarySentence.sentenceGraph.entityHeadTokenByEntity[pair.attrib["e2"]]
+                assert(pair.attrib["interaction"] == "True" or pair.attrib["interaction"] == "False")
+                if pair.attrib["interaction"] == "True":
+                    pairClass = 1
+                else:
+                    pairClass = -1
+                extra = {"xtype":"edge","type":"i","t1":t1,"t2":t2}
+                if paths.has_key(t1) and paths[t1].has_key(t2):
+                    binaryClassifications.append( [[pair.attrib["id"], pairClass, None, extra], 1, "binary"] )
+                else:
+                    binaryClassifications.append( [[pair.attrib["id"], pairClass, None, extra], -1, "binary"] )
+    print >> sys.stderr, "Evaluating binary classifications"
+    evaluation = Evaluation(predictions, classSet=exampleBuilder.classSet)
+    print >> sys.stderr, evaluation.toStringConcise()
+    if options.output != None:
+        evaluation.saveCSV(options.output + "/binary_comparison_results.csv")                    
 
 def buildExamples(exampleBuilder, sentences, options):
     examples = []
@@ -22,6 +80,7 @@ def buildExamples(exampleBuilder, sentences, options):
         sentence[1] = exampleBuilder.buildExamples(sentence[0])
         examples.extend(sentence[1])
     print >> sys.stderr, "Examples built:", len(examples)
+    print >> sys.stderr, "Features:", len(exampleBuilder.featureSet.getNames())
     print >> sys.stderr, "Preprocessing examples:"
     examples = exampleBuilder.preProcessExamples(examples)
     # Save examples
@@ -72,9 +131,6 @@ def visualize(sentences, classifications, options, exampleBuilder):
     visualizer.makeSentenceListPage()
     print >> sys.stderr
 
-def classify(trainSet, testSet):
-    pass
-
 if __name__=="__main__":
     defaultAnalysisFilename = "/usr/share/biotext/ComplexPPI/BioInferForComplexPPIVisible.xml"
     optparser = OptionParser(usage="%prog [options]\nCreate an html visualization for a corpus.")
@@ -88,6 +144,7 @@ if __name__=="__main__":
     optparser.add_option("-b", "--exampleBuilder", default="SimpleDependencyExampleBuilder", dest="exampleBuilder", help="Example Builder Class")
     optparser.add_option("-e", "--evaluator", default="BinaryEvaluator", dest="evaluator", help="Prediction evaluator class")
     optparser.add_option("-v", "--visualization", default=None, dest="visualization", help="Visualization output directory. NOTE: If the directory exists, it will be deleted!")
+    optparser.add_option("-n", "--binaryCorpus", default=None, dest="binaryCorpus", help="Binary corpus in analysis xml. NOTE: pairs, not interactions")
     (options, args) = optparser.parse_args()
     
     if options.output != None:
@@ -156,6 +213,10 @@ if __name__=="__main__":
     if options.output != None:
         evaluation.saveCSV(options.output + "/results.csv")
     
+    # Compare to binary
+    if options.binaryCorpus != None:
+        compareToBinary(corpusElements.sentencesById, predictions, exampleBuilder, options)
+        
     # Visualize
     for example in exampleSets[0]:
         example[3]["visualizationSet"] = "train"
