@@ -7,6 +7,7 @@ class MultiEdgeFeatureBuilder(FeatureBuilder):
         FeatureBuilder.__init__(self, featureSet)
         self.edgeFeatureBuilder = EdgeFeatureBuilder(featureSet)
         self.ontologyFeatureBuilder = None
+        self.noAnnType = False
         
     def setFeatureVector(self, features):
         self.features = features
@@ -24,22 +25,28 @@ class MultiEdgeFeatureBuilder(FeatureBuilder):
                 for split in pos.split("_"):
                     featureList.append("POS_"+split)
             featureList.append("POS_"+pos)
-        if annotatedType:
-            if sentenceGraph.tokenIsEntityHead[token] != None:
-                annType = sentenceGraph.tokenIsEntityHead[token].attrib["type"]
+        if annotatedType and not self.noAnnType:
+            annTypes = self.getTokenAnnotatedType(token, sentenceGraph)
+            for annType in annTypes:
                 featureList.append("annType_"+annType)
-                if ontology and (self.ontologyFeatureBuilder != None):
+            if ontology and (self.ontologyFeatureBuilder != None):
+                for annType in annTypes:
                     featureList.extend(self.ontologyFeatureBuilder.getParents(annType))
         if stem:
             featureList.append("stem_"+PorterStemmer.stem(sentenceGraph.getTokenText(token)))
                     
         return featureList
     
-    def getTokenAnnotatedType(self, token, sentenceGraph):    
-        if sentenceGraph.tokenIsEntityHead[token] != None:
-            return sentenceGraph.tokenIsEntityHead[token].attrib["type"]
+    def getTokenAnnotatedType(self, token, sentenceGraph):
+        if len(sentenceGraph.tokenIsEntityHead[token]) > 0 and not self.noAnnType:
+            annTypes = []
+            for entity in sentenceGraph.tokenIsEntityHead[token]:
+                if entity.attrib.has_key("type") and not entity.attrib["type"] in annTypes:
+                    annTypes.append(entity.attrib["type"])
+            annTypes.sort()
+            return annTypes[0:2]
         else:
-            return "noAnnType"
+            return ["noAnnType"]
                 
     def getEdges(self, graph, path):
         """
@@ -98,13 +105,12 @@ class MultiEdgeFeatureBuilder(FeatureBuilder):
     def buildSentenceFeatures(self, sentenceGraph):
         textCounts = {}
         for token in sentenceGraph.tokens:
-            text = "noAnnType"
-            if sentenceGraph.tokenIsEntityHead[token] != None:
-                text = sentenceGraph.tokenIsEntityHead[token].attrib["type"]
+            texts = self.getTokenAnnotatedType(token, sentenceGraph)
             #text = sentenceGraph.getTokenText(token)
-            if not textCounts.has_key(text):
-                textCounts[text] = 0
-            textCounts[text] += 1
+            for text in texts:
+                if not textCounts.has_key(text):
+                    textCounts[text] = 0
+                textCounts[text] += 1
         for k, v in textCounts.iteritems():
             self.features[self.featureSet.getId("count_"+k)] = v
 
@@ -123,12 +129,15 @@ class MultiEdgeFeatureBuilder(FeatureBuilder):
         #self.features[self.featureSet.getId("tokTerm2txt_"+sentenceGraph.getTokenText(pathTokens[-1]))] = 1
     
     def buildWalkPaths(self, pathTokens, walks, sentenceGraph):
-        t1 = self.getTokenAnnotatedType(pathTokens[0], sentenceGraph)
-        t2 = self.getTokenAnnotatedType(pathTokens[-1], sentenceGraph)
+#        t1 = self.getTokenAnnotatedType(pathTokens[0], sentenceGraph)
+#        t2 = self.getTokenAnnotatedType(pathTokens[-1], sentenceGraph)
         internalTypes = ""
-        for token in pathTokens[1:-1]:
-            internalTypes += "_" + self.getTokenAnnotatedType(token, sentenceGraph)
-        self.features[self.featureSet.getId("tokenPath_"+t1+internalTypes+"_"+t2)] = 1
+        for token in pathTokens[0:-1]:
+            annTypes = self.getTokenAnnotatedType(token, sentenceGraph)
+            for annType in annTypes:
+                internalTypes += "_" + annType
+            internalTypes += "__"
+        self.features[self.featureSet.getId("tokenPath"+internalTypes)] = 1
         
 #        for walk in walks:
 #            edgeString = ""
@@ -170,13 +179,16 @@ class MultiEdgeFeatureBuilder(FeatureBuilder):
                         position += 1
                         edgeGram += "_" + edge[2].attrib["type"]
                     self.features[self.featureSet.getId(edgeGram)] = 1
-                    self.features[self.featureSet.getId(t1+"_"+edgeGram+"_"+t2)] = 1
+                    for type1 in t1:
+                        for type2 in t2:
+                            self.features[self.featureSet.getId(type1+"_"+edgeGram+"_"+type2)] = 1
         for dirGram in dirGrams:
             self.features[self.featureSet.getId("edge_directions_"+dirGram)] = 1
     
     def addType(self, token, sentenceGraph, prefix="annType_"):
-        if sentenceGraph.tokenIsEntityHead[token] != None:
-            self.features[self.featureSet.getId("annType_"+sentenceGraph.tokenIsEntityHead[token].attrib["type"])] = 1
+        types = self.getTokenAnnotatedType(token, sentenceGraph)
+        for type in types:
+            self.features[self.featureSet.getId(prefix+type)] = 1
     
     def buildPathEdgeFeatures(self, pathTokens, pathEdges, sentenceGraph):
         edgeList = []
@@ -203,14 +215,17 @@ class MultiEdgeFeatureBuilder(FeatureBuilder):
             gAT = "noAnnType"
             dAT = "noAnnType"
             if sentenceGraph.tokenIsEntityHead[edge[0]] != None:
-                gAT = sentenceGraph.tokenIsEntityHead[edge[0]].attrib["type"]
+                gATs = self.getTokenAnnotatedType(edge[0], sentenceGraph)
             if sentenceGraph.tokenIsEntityHead[edge[1]] != None:
-                dAT = sentenceGraph.tokenIsEntityHead[edge[1]].attrib["type"]
+                dATs = self.getTokenAnnotatedType(edge[1], sentenceGraph)
             self.features[self.featureSet.getId("gov_"+gText+"_"+dText)] = 1
             self.features[self.featureSet.getId("gov_"+gPOS+"_"+dPOS)] = 1
-            self.features[self.featureSet.getId("gov_"+gAT+"_"+dAT)] = 1
+            for gAT in gATs:
+                for dAT in dATs:
+                    self.features[self.featureSet.getId("gov_"+gAT+"_"+dAT)] = 1
             
-            self.features[self.featureSet.getId("triple_"+gAT+"_"+depType+"_"+dAT)] = 1
+            for gAT in gATs:
+                self.features[self.featureSet.getId("triple_"+gAT+"_"+depType+"_"+dAT)] = 1
             #self.features[self.featureSet.getId("triple_"+gPOS+"_"+depType+"_"+dPOS)] = 1
             #self.features[self.featureSet.getId("triple_"+gText+"_"+depType+"_"+dText)] = 1
 
