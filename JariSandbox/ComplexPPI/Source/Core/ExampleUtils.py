@@ -56,9 +56,9 @@ def writeExamples(examples, filename, commentLines=None):
         f.write(" # " + example[0] + "\n")
     f.close()
 
-def makeCorpusDivision(corpusElements, fraction=0.5):
+def makeCorpusDivision(corpusElements, fraction=0.5, seed=0):
     documentIds = corpusElements.documentsById.keys()
-    return makeDivision(documentIds, fraction)
+    return makeDivision(documentIds, fraction, seed)
 
 def makeCorpusFolds(corpusElements, folds=10):
     documentIds = corpusElements.documentsById.keys()
@@ -78,8 +78,8 @@ def makeExampleFolds(examples, folds=10):
     documentIds = list(documentIds)
     return makeFolds(documentIds, folds)
 
-def makeDivision(ids, fraction=0.5):
-    sample = Split.getSample(len(ids),fraction)
+def makeDivision(ids, fraction=0.5, seed=0):
+    sample = Split.getSample(len(ids),fraction, seed)
     division = {}
     for i in range(len(ids)): 
         division[ids[i]] = sample[i]
@@ -99,9 +99,10 @@ def divideExamples(examples, division=None):
     exampleSets = {}
     for example in examples:
         documentId = example[0].rsplit(".",2)[0]
-        if not exampleSets.has_key(division[documentId]):
-            exampleSets[division[documentId]] = []
-        exampleSets[division[documentId]].append(example)
+        if division.has_key(documentId):
+            if not exampleSets.has_key(division[documentId]):
+                exampleSets[division[documentId]] = []
+            exampleSets[division[documentId]].append(example)
     return exampleSets
 
 def divideExampleFile(exampleFileName, division, outputDir):
