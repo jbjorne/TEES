@@ -29,11 +29,13 @@ def zipTree(path, target):
 
 def crossValidate(exampleBuilder, corpusElements, examples, options, timer):
     parameterOptimizationSet = None
+    constantParameterOptimizationSet = None
     if options.paramOptData != None:
         print >> sys.stderr, "Separating parameter optimization set"
         parameterOptimizationDivision = Example.makeCorpusDivision(corpusElements, float(options.paramOptData))
         exampleSets = Example.divideExamples(examples, parameterOptimizationDivision)
-        parameterOptimizationSet = exampleSets[0]
+        constantParameterOptimizationSet = exampleSets[0]
+        parameterOptimizationSet = constantParameterOptimizationSet
         optDocs = 0
         for k,v in parameterOptimizationDivision.iteritems():
             if v == 0:
@@ -67,15 +69,28 @@ def crossValidate(exampleBuilder, corpusElements, examples, options, timer):
         else:
             classifier = Classifier()
         classifier.featureSet = exampleBuilder.featureSet
-        # Optimize
-        if parameterOptimizationSet != None:
+        # Optimize ####################
+        # Check whether there is need for included param opt set
+        if parameterOptimizationSet == None and options.folds[1] == 0: # 8-1-1 folds
+            assert(len(keys) > 1)
+            if keys.index(key) == 0:
+                parameterOptimizationSetKey = keys[-1]
+            else:
+                parameterOptimizationSetKey = keys[keys.index(key)-1]
+            parameterOptimizationSet = exampleSets[parameterOptimizationSetKey]
+            trainSet = []
+            for key2 in keys:
+                if key2 != key and key2 != parameterOptimizationSetKey:
+                    trainSet.extend(exampleSets[key2])
+
+        if parameterOptimizationSet != None: # constant external parameter optimization set
             evaluationArgs = {"classSet":exampleBuilder.classSet}
             if options.parameters != None:
                 paramDict = splitParameters(options.parameters)
                 bestResults = classifier.optimize([trainSet], [parameterOptimizationSet], paramDict, Evaluation, evaluationArgs)
             else:
                 bestResults = classifier.optimize([trainSet], [parameterOptimizationSet], evaluationClass=Evaluation, evaluationArgs=evaluationArgs)
-        else:
+        else: # nested x-fold parameter optimization
             assert (options.folds[1] >= 2)
             optimizationFolds = Example.makeExampleFolds(trainSet, options.folds[1])
             optimizationSets = Example.divideExamples(trainSet, optimizationFolds)
@@ -117,6 +132,8 @@ def crossValidate(exampleBuilder, corpusElements, examples, options, timer):
             evaluation.saveCSV(options.output +"/fold"+str(key+1) + "/results.csv")
             print >> sys.stderr, "Compressing folder"
             zipTree(options.output, "fold"+str(key+1))
+        
+        parameterOptimizationSet = constantParameterOptimizationSet
     
     print >> sys.stderr, "Cross-validation Results"
     for i in range(len(evaluations)):
