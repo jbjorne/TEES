@@ -2,6 +2,7 @@ from FeatureBuilder import FeatureBuilder
 import numpy
 #from numpy import *
 import numpy.linalg
+import networkx as NX
 import copy
 
 class GraphKernelFeatureBuilder(FeatureBuilder):
@@ -20,7 +21,7 @@ class GraphKernelFeatureBuilder(FeatureBuilder):
         linear = {}
         for i in range(W.shape[0]):
             for j in range(W.shape[1]):
-                if W[i,j] > 0.00001:
+                if W[i,j] > 0.00001: #i != j and W[i,j] > 0.3: #0.00001:
                     for label1 in labels[i]:
                         for label2 in labels[j]:
                             #if label1 in proteins or label2 in proteins:
@@ -65,6 +66,7 @@ class GraphKernelFeatureBuilder(FeatureBuilder):
         weightByDependency = {}
         self._setAllDependencyWeights(sentenceGraph, weightByDependency, 0.3)
         self._setDependencyWeightsByPath(edges, weightByDependency, 0.9)
+        self._reduceWeightByDistance(sentenceGraph, weightByDependency)
         
         # Build dependency types
         allEdges = self._getEdgeList(edges)
@@ -84,9 +86,10 @@ class GraphKernelFeatureBuilder(FeatureBuilder):
 #                    labels[index].add(i)
 #            else:
 #                labels[index].add(dep.ppiType)
-            labels[index].add(dep[2].attrib["type"])
             if dep in allEdges:
                 labels[index].add("sp_" + dep[2].attrib["type"])
+            else:
+                labels[index].add(dep[2].attrib["type"])
             
         #Add the linear order of the sentence to the matrix
         for i in range(len(sentenceGraph.tokens),2*len(sentenceGraph.tokens)-1):
@@ -147,33 +150,53 @@ class GraphKernelFeatureBuilder(FeatureBuilder):
             assert(weights.has_key(edge[2]))
             weights[edge[2]] = weight
                     
-#    def reduceWeightByDistance(self, zeroDistanceThreshold = 0.9, reduceFactor = 0.5):
-#        """ Reduces the weight of dependencies based on their distance
-#        from the nearest dependency whose weight is >= the threshold.
-#        """
-#        zeroDistanceDependencies = []
-#        # Initialize distances to a large number
-#        for node in self.dependenciesById.values():
-#            node.weightDistance = 99999999
-#            if node.ppiWeight >= zeroDistanceThreshold:
-#                node.weightDistance = 0
-#                zeroDistanceDependencies.append(node)
-#            for i in node.fro.dependencies:
-#                assert(i in self.dependenciesById.values())
-#            for i in node.to.dependencies:
-#                assert(i in self.dependenciesById.values())
-#        
-#        # Cannot reduce weight if no node is over threshold
-#        if len(zeroDistanceDependencies) == 0:
-#            return
-#        
-#        # Calculate distances
-#        for node in zeroDistanceDependencies:
-#            node.setDistance(0)
-#        
-#        # Reduce weight
-#        for node in self.dependenciesById.values():
-#            node.ppiWeight *= pow(reduceFactor, max(node.weightDistance - 1, 0))
+    def _reduceWeightByDistance(self, sentenceGraph, weights, zeroDistanceThreshold = 0.9, reduceFactor = 0.5):
+        """ Reduces the weight of dependencies based on their distance
+        from the nearest dependency whose weight is >= the threshold.
+        """
+        undirected = sentenceGraph.dependencyGraph.to_undirected()
+        edges = undirected.edges()
+        tokenDistanceDict = NX.all_pairs_shortest_path_length(undirected, cutoff=999)
+        dependencyDistances = {}
+
+        zeroDistanceEdges = []
+        for edge in edges:
+            if weights[edge[2]] >= zeroDistanceThreshold:
+                zeroDistanceEdges.append(edge)
+                dependencyDistances[edge[2]] = 0
+        
+        # Cannot reduce weight if no node is over threshold
+        if len(zeroDistanceEdges) == 0:
+            return
+        
+        # Calculate distances
+        for edge in edges:
+            if edge in zeroDistanceEdges:
+                continue
+            shortestDistance = 99
+            for zeroDistanceEdge in zeroDistanceEdges:
+                if tokenDistanceDict.has_key(edge[0]):
+                    if tokenDistanceDict[edge[0]].has_key(zeroDistanceEdge[0]):
+                        if tokenDistanceDict[ edge[0] ][ zeroDistanceEdge[0] ] < shortestDistance:
+                            shortestDistance = tokenDistanceDict[ edge[0] ][ zeroDistanceEdge[0] ]
+                    if tokenDistanceDict[edge[0]].has_key(zeroDistanceEdge[1]):
+                        if tokenDistanceDict[ edge[0] ][ zeroDistanceEdge[1] ] < shortestDistance:
+                            shortestDistance = tokenDistanceDict[ edge[0] ][ zeroDistanceEdge[1] ]
+                if tokenDistanceDict.has_key(edge[1]):
+                    if tokenDistanceDict[edge[1]].has_key(zeroDistanceEdge[0]):
+                        if tokenDistanceDict[ edge[1] ][ zeroDistanceEdge[0] ] < shortestDistance:
+                            shortestDistance = tokenDistanceDict[ edge[1] ][ zeroDistanceEdge[0] ]
+                    if tokenDistanceDict[edge[1]].has_key(zeroDistanceEdge[1]):
+                        if tokenDistanceDict[ edge[1] ][ zeroDistanceEdge[1] ] < shortestDistance:
+                            shortestDistance = tokenDistanceDict[ edge[1] ][ zeroDistanceEdge[1] ]
+            assert(not dependencyDistances.has_key(edge[2]))
+            dependencyDistances[edge[2]] = shortestDistance + 1
+
+        # Reduce weight
+        for dependency in sentenceGraph.dependencies:
+            if not dependencyDistances.has_key(dependency):
+                dependencyDistances[dependency] = 99
+            weights[dependency] *= pow(reduceFactor, max(dependencyDistances[dependency] - 1, 0))
 
 #    def setPPIPrefixForDependencies(self, sentenceGraph, weightByDependency, prefix, threshold):
 #        """ Sets the dependencies ppiType to their dependencyType, 
