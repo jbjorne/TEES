@@ -56,7 +56,7 @@ class Classifier:
         return classificationSet, predictions
     
     def _dictIsIdentical(self, c1, c2):
-        k = list(set(c1.keys() + c2.keys()))
+        keys = list(set(c1.keys() + c2.keys()))
         for k in keys:
             if (not c1.has_key(k)) or (not c2.has_key(k)):
                 return False
@@ -98,6 +98,7 @@ class Classifier:
         for combination in combinations:
             print >> sys.stderr, " Parameters "+str(combinationCount)+"/"+str(len(combinations))+":", str(combination),
             skip = False
+            #print combinationsThatTimedOut
             for discarded in combinationsThatTimedOut:
                 if self._dictIsIdentical(combination, discarded):
                     print >> sys.stderr
