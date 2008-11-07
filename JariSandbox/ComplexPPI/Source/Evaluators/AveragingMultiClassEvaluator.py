@@ -44,6 +44,14 @@ class AveragingMultiClassEvaluator(Evaluator):
         self.microPrecision = 0
         self.microRecall = 0
         self.microFScore = 0
+        
+        self.binaryTP = 0
+        self.binaryFP = 0
+        self.binaryTN = 0
+        self.binaryFN = 0
+        self.binaryPrecision = 0
+        self.binaryRecall = 0
+        self.binaryFScore = 0
 
         #self.AUC = None
         self.type = "multiclass"
@@ -117,9 +125,11 @@ class AveragingMultiClassEvaluator(Evaluator):
                 if trueClass != 1:
                     self.classifications.append((prediction[0],"tp",self.type,prediction[1]))
                     self.microTP += 1
+                    self.binaryTP += 1
                 else:
                     self.classifications.append((prediction[0],"tn",self.type,prediction[1]))
                     self.microTN += 1
+                    self.binaryTN += 1
                 for cls in self.classes:
                     if cls != trueClass:
                         self.trueNegativesByClass[cls] += 1
@@ -128,9 +138,14 @@ class AveragingMultiClassEvaluator(Evaluator):
                 if predictedClass == 1:
                     self.classifications.append((prediction[0],"fn",self.type,prediction[1]))
                     self.microFN += 1
+                    self.binaryFN += 1
                 else:
                     self.classifications.append((prediction[0],"fp",self.type,prediction[1]))
                     self.microFP += 1
+                    if trueClass == 1:
+                        self.binaryFP += 1
+                    else:
+                        self.binaryTP += 1
                 for cls in self.classes:
                     if cls == trueClass:
                         self.falseNegativesByClass[cls] += 1
@@ -178,6 +193,13 @@ class AveragingMultiClassEvaluator(Evaluator):
             self.microRecall = float(self.microTP) / float(self.microTP + self.microFN)
         if self.microPrecision + self.microRecall > 0.0:
             self.microFScore = (2*self.microPrecision*self.microRecall) / (self.microPrecision + self.microRecall)
+
+        if self.binaryTP + self.binaryFP > 0:
+            self.binaryPrecision = float(self.binaryTP) / float(self.binaryTP + self.binaryFP)
+        if self.binaryTP + self.binaryFN > 0:
+            self.binaryRecall = float(self.binaryTP) / float(self.binaryTP + self.binaryFN)
+        if self.binaryPrecision + self.binaryRecall > 0.0:
+            self.binaryFScore = (2*self.binaryPrecision*self.binaryRecall) / (self.binaryPrecision + self.binaryRecall)
         
         # Finally calculate macro-f-score
         numClassesWithInstances = 0
@@ -221,11 +243,19 @@ class AveragingMultiClassEvaluator(Evaluator):
             string += ")\n" + indent
         
         string += "averages:\n" + indent
+        # Micro results
         string += "micro p/n:" + str(self.microTP+self.microFN) + "/" + str(self.microTN+self.microFP)
         string += " tp/fp|tn/fn:" + str(self.microTP) + "/" + str(self.microFP) + "|" + str(self.microTN) + "/" + str(self.microFN)
         string += " p/r/f:" + str(self.microPrecision)[0:6] + "/" + str(self.microRecall)[0:6] + "/" + str(self.microFScore)[0:6]
         string += "\n" + indent
+        # Macro results
         string += "macro p/r/f:" + str(self.macroPrecision)[0:6] + "/" + str(self.macroRecall)[0:6] + "/" + str(self.macroFScore)[0:6]
+        string += "\n" + indent
+        # Binary results
+        string += "binary p/n:" + str(self.binaryTP+self.binaryFN) + "/" + str(self.binaryTN+self.binaryFP)
+        string += " tp/fp|tn/fn:" + str(self.binaryTP) + "/" + str(self.binaryFP) + "|" + str(self.binaryTN) + "/" + str(self.binaryFN)
+        string += " p/r/f:" + str(self.binaryPrecision)[0:6] + "/" + str(self.binaryRecall)[0:6] + "/" + str(self.binaryFScore)[0:6]
+        string += "\n" + indent
         return string
     
     def __addClassToCSV(self, csvWriter, cls):
@@ -261,4 +291,5 @@ class AveragingMultiClassEvaluator(Evaluator):
         # add averages
         writer.writerow(["micro",self.microTP+self.microFN,self.microTN+self.microFP,self.microTP,self.microFP,self.microTN,self.microFN,self.microPrecision,self.microRecall,self.microFScore])
         writer.writerow(["macro","N/A","N/A","N/A","N/A","N/A","N/A",self.macroPrecision,self.macroRecall,self.macroFScore])
+        writer.writerow(["binary",self.binaryTP+self.binaryFN,self.binaryTN+self.binaryFP,self.binaryTP,self.binaryFP,self.binaryTN,self.binaryFN,self.binaryPrecision,self.binaryRecall,self.binaryFScore])
         csvFile.close()
