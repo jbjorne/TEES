@@ -173,11 +173,19 @@ class CorpusVisualizer:
         builder.svg("../svg/" + sentenceId + ".svg",svgElement.attrib["width"],svgElement.attrib["height"],id="dep_graph")
         builder.lineBreak()
         
+        # Check for named entities
+        isNameByToken = {}
+        for token in sentenceGraph.tokens:
+            if sentenceGraph.getTokenText(token) == "NAMED_ENT":
+                isNameByToken[token] = True
+            else:
+                isNameByToken[token] = False
+        
         # Annotation SVG
         if sentenceGraph.interactionGraph != None:
             builder.header("Annotation",4)
             arcStyles, labelStyles = self.getMatchingEdgeStyles(sentenceGraph.interactionGraph, sentenceGraph.dependencyGraph, "orange", "#F660AB" )
-            svgTokens = GraphToSVG.tokensToSVG(sentenceGraph.tokens, False, sentenceGraph.entitiesByToken)
+            svgTokens = GraphToSVG.tokensToSVG(sentenceGraph.tokens, False, sentenceGraph.entitiesByToken, None, isNameByToken)
             svgInteractionEdges = GraphToSVG.edgesToSVG(svgTokens, sentenceGraph.interactionGraph, arcStyles, labelStyles)
             svgElement = GraphToSVG.writeSVG(svgTokens, svgInteractionEdges,self.outDir+"/svg/"+sentenceId+"_ann.svg")
             builder.svg("../svg/" + sentenceId + "_ann.svg",svgElement.attrib["width"],svgElement.attrib["height"],id="ann_graph")
