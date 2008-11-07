@@ -26,8 +26,8 @@ class SVMPerfClassifier(Classifier):
     
     def train(self, examples, parameters=None):
         examples = self.filterTrainingSet(examples)
+        parameters = copy.copy(parameters)
         if parameters.has_key("style") and "no_duplicates" in parameters["style"]:
-            parameters = copy.copy(parameters)
             examples = Example.removeDuplicates(examples)
             del parameters["style"]
         # Convert SVM-light c-values to SVM-perf c-values

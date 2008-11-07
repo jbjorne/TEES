@@ -29,8 +29,8 @@ class SVMLightClassifier(Classifier):
     def train(self, examples, parameters=None):
         examples = self.filterTrainingSet(examples)
         timeout = -1
+        parameters = copy.copy(parameters)
         if parameters.has_key("style"):
-            parameters = copy.copy(parameters)
             if "no_duplicates" in parameters["style"]:
                 examples = Example.removeDuplicates(examples)
             del parameters["style"]
