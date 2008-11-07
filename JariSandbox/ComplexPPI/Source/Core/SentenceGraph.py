@@ -23,6 +23,7 @@ def loadCorpus(corpusFilename, parse, tokenization=None):
     corpusElements = CorpusElements(corpusRoot, parse, tokenization)
     print >> sys.stderr, str(len(corpusElements.documentsById)) + " documents, " + str(len(corpusElements.sentencesById)) + " sentences"
     # Make sentence graphs
+    duplicateInteractionEdgesRemoved = 0
     sentences = []
     counter = ProgressCounter(len(corpusElements.sentences), "Make sentence graphs")
     for sentence in corpusElements.sentences[:]:
@@ -37,7 +38,9 @@ def loadCorpus(corpusFilename, parse, tokenization=None):
                     pair.attrib["type"] = "undefined"
         graph = SentenceGraph(sentence.sentence, sentence.tokens, sentence.dependencies)
         graph.mapInteractions(sentence.entities, sentence.interactions)
+        duplicateInteractionEdgesRemoved += graph.duplicateInteractionEdgesRemoved
         sentence.sentenceGraph = graph
+    print >> sys.stderr, "Removed", duplicateInteractionEdgesRemoved, "duplicate interaction edges"
     return corpusElements
 
 class SentenceGraph:
@@ -49,6 +52,7 @@ class SentenceGraph:
         self.interactions = None
         self.entities = None
         self.interactionGraph = None
+        self.duplicateInteractionEdgesRemoved = 0
         
         self.tokensById = {}
         for token in self.tokens:
@@ -65,7 +69,14 @@ class SentenceGraph:
     
     def getSentenceId(self):
         return self.sentenceElement.attrib["id"]
-        
+    
+    def getInteractions(self, entity1, entity2):
+        rv = []
+        for interaction in self.interactions:
+            if interaction.attrib["e1"] == entity1.attrib["id"] and interaction.attrib["e2"] == entity2.attrib["id"]:
+                rv.append(interaction)
+        return rv
+    
     def mapInteractions(self, entityElements, interactionElements, verbose=False):
         self.interactions = interactionElements
         self.entities = entityElements
@@ -113,6 +124,8 @@ class SentenceGraph:
                         break
             if not found:
                 self.interactionGraph.add_edge(token1, token2, interaction)
+            else:
+                self.duplicateInteractionEdgesRemoved += 1
     
     def mapEntity(self, entityElement, verbose=False):
         headOffset = None
