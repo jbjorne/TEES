@@ -1,7 +1,7 @@
 import sys,os
 sys.path.append("..")
 import shutil
-import subprocess
+import killableprocess
 import Core.ExampleUtils as Example
 import combine
 #from Core.Evaluation import Evaluation
@@ -29,12 +29,21 @@ class SVMMultiClassClassifier(Classifier):
         examples = self.filterTrainingSet(examples)
         if self.negRatio != None:
             examples = self.downSampleNegatives(examples, self.negRatio)
+        timeout = -1
+        if parameters.has_key("style"):
+            parameters = copy.copy(parameters)
+            if "no_duplicates" in parameters["style"]:
+                examples = Example.removeDuplicates(examples)
+            del parameters["style"]
+        if parameters.has_key("timeout"):
+            timeout = parameters["timeout"]
+            del parameters["timeout"]
         Example.writeExamples(examples, self.tempDir+"/train.dat")
         args = [binDir+"/svm_multiclass_learn"]
         if parameters != None:
             self.__addParametersToSubprocessCall(args, parameters)
         args += [self.tempDir+"/train.dat", self.tempDir+"/model"]
-        subprocess.call(args, stdout = self.debugFile)
+        return killableprocess.call(args, stdout = self.debugFile, timeout = timeout)
         
     def classify(self, examples, parameters=None):
         examples, predictions = self.filterClassificationSet(examples, False)

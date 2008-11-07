@@ -7,6 +7,8 @@ import combine
 #from Core.Evaluation import Evaluation
 from Core.Classifier import Classifier
 import copy
+import time
+import killableprocess
 
 binDir = "/usr/share/biotext/ComplexPPI/SVMLight"
 
@@ -26,16 +28,21 @@ class SVMLightClassifier(Classifier):
     
     def train(self, examples, parameters=None):
         examples = self.filterTrainingSet(examples)
-        if parameters.has_key("style") and "no_duplicates" in parameters["style"]:
+        timeout = -1
+        if parameters.has_key("style"):
             parameters = copy.copy(parameters)
-            examples = Example.removeDuplicates(examples)
+            if "no_duplicates" in parameters["style"]:
+                examples = Example.removeDuplicates(examples)
             del parameters["style"]
+        if parameters.has_key("timeout"):
+            timeout = parameters["timeout"]
+            del parameters["timeout"]
         Example.writeExamples(examples, self.tempDir+"/train.dat")
         args = [binDir+"/svm_learn"]
         if parameters != None:
             self.__addParametersToSubprocessCall(args, parameters)
         args += [self.tempDir+"/train.dat", self.tempDir+"/model"]
-        subprocess.call(args, stdout = self.debugFile)
+        return killableprocess.call(args, stdout = self.debugFile, timeout = timeout)
         
     def classify(self, examples, parameters=None):
         examples, predictions = self.filterClassificationSet(examples, True)

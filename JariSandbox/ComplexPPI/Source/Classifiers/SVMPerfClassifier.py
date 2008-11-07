@@ -1,4 +1,4 @@
-import sys,os
+import sys,os,copy
 sys.path.append("..")
 import shutil
 import subprocess
@@ -15,7 +15,8 @@ class SVMPerfClassifier(Classifier):
     def __init__(self, workDir=None):
         #global tempDir
         
-        self._makeTempDir(workDir)        
+        self._makeTempDir(workDir)
+        self.numberOfTrainingExamples = None
     
     def __del__(self):
         self.debugFile.close()
@@ -24,7 +25,16 @@ class SVMPerfClassifier(Classifier):
             shutil.rmtree(self.tempDir)
     
     def train(self, examples, parameters=None):
-        examples = self.filterTrainingSet(examples)       
+        examples = self.filterTrainingSet(examples)
+        if parameters.has_key("style") and "no_duplicates" in parameters["style"]:
+            parameters = copy.copy(parameters)
+            examples = Example.removeDuplicates(examples)
+            del parameters["style"]
+        # Convert SVM-light c-values to SVM-perf c-values
+        self.numberOfTrainingExamples = len(examples)
+        parameters = copy.deepcopy(parameters)
+        parameters["c"] = str(float(parameters["c"]) * self.numberOfTrainingExamples / 100.0)
+        # Train
         Example.writeExamples(examples, self.tempDir+"/train.dat")
         args = [binDir+"/svm_perf_learn"]
         if parameters != None:

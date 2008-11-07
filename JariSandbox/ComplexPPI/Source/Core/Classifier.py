@@ -6,6 +6,7 @@ import ExampleUtils
 import tempfile
 sys.path.append("..")
 import Utils.TableUtils as TableUtils
+import time
 
 defaultOptimizationParameters = {"c":[0.0001,0.001,0.01,0.1,1,10,100]}
 
@@ -54,7 +55,16 @@ class Classifier:
                         predictions.append( (example,1,"multiclass") )
         return classificationSet, predictions
     
-    def optimize(self, trainSets, classifySets, parameters=defaultOptimizationParameters, evaluationClass=None, evaluationArgs={}):
+    def _dictIsIdentical(self, c1, c2):
+        k = list(set(c1.keys() + c2.keys()))
+        for k in keys:
+            if (not c1.has_key(k)) or (not c2.has_key(k)):
+                return False
+            if c1[k] != c2[k]:
+                return False
+        return True
+    
+    def optimize(self, trainSets, classifySets, parameters=defaultOptimizationParameters, evaluationClass=None, evaluationArgs={}, combinationsThatTimedOut=None):
         print >> sys.stderr, "Optimizing parameters"              
         parameterNames = parameters.keys()
         parameterNames.sort()
@@ -72,6 +82,8 @@ class Classifier:
             combinations.append({})
             for value in combinationList:
                 combinations[-1][value[0]] = value[1]
+        if combinationsThatTimedOut == None:
+            combinationsThatTimedOut = []
 #        # re-add non-optimized parameters to combinations
 #        for p in self.notOptimizedParameters:
 #            if parameters.has_key(p):
@@ -84,7 +96,16 @@ class Classifier:
             mainTempDir = self.tempDir
             mainDebugFile = self.debugFile
         for combination in combinations:
-            print >> sys.stderr, " Parameters "+str(combinationCount)+"/"+str(len(combinations))+":", str(combination)
+            print >> sys.stderr, " Parameters "+str(combinationCount)+"/"+str(len(combinations))+":", str(combination),
+            skip = False
+            for discarded in combinationsThatTimedOut:
+                if self._dictIsIdentical(combination, discarded):
+                    print >> sys.stderr
+                    print >> sys.stderr, "  Discarded before, skipping"
+                    skip = True
+                    break
+            if skip:
+                continue
             # Make copies of examples in case they are modified
             fold = 1
             foldResults = []
@@ -100,16 +121,24 @@ class Classifier:
                     if not os.path.exists(self.tempDir):
                         os.makedirs(self.tempDir)
                     self.debugFile = open(self.tempDir + "/debug.txt", "wt")
-                self.train(trainExamplesCopy, combination)
-                predictions = self.classify(classifyExamplesCopy)        
-                evaluation = evaluationClass(predictions, **evaluationArgs)
-                if len(classifySets) == 1:
-                    print >> sys.stderr, evaluation.toStringConcise("  ")
+                
+                trainStartTime = time.time()
+                trainRV = self.train(trainExamplesCopy, combination)
+                trainTime = time.time() - trainStartTime
+                print >> sys.stderr, " Time spent:", trainTime, "s"
+                if trainRV == 0:
+                    predictions = self.classify(classifyExamplesCopy)        
+                    evaluation = evaluationClass(predictions, **evaluationArgs)
+                    if len(classifySets) == 1:
+                        print >> sys.stderr, evaluation.toStringConcise("  ")
+                    else:
+                        print >> sys.stderr, evaluation.toStringConcise(indent="  ", title="Fold "+str(fold))
+                    foldResults.append(evaluation)
+                    if hasattr(self, "tempDir"):
+                        evaluation.saveCSV( self.tempDir+"/results.csv" )
                 else:
-                    print >> sys.stderr, evaluation.toStringConcise(indent="  ", title="Fold "+str(fold))
-                foldResults.append(evaluation)
-                if hasattr(self, "tempDir"):
-                    evaluation.saveCSV( self.tempDir+"/results.csv" )
+                    combinationsThatTimedOut.append(combination)
+                    print >> sys.stderr, "  Timed out"
                 fold += 1
             averageResult = evaluationClass.average(foldResults)
             poolResult = evaluationClass.pool(foldResults)
