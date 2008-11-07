@@ -42,6 +42,7 @@ def crossValidate(exampleBuilder, corpusElements, examples, options, timer):
                 del corpusElements.documentsById[k]
                 optDocs += 1
         print >> sys.stderr, "  Documents for parameter optimization:", optDocs
+    discardedParameterCombinations = []
 
     print >> sys.stderr, "Dividing data into folds"
     corpusFolds = Example.makeCorpusFolds(corpusElements, options.folds[0])
@@ -87,9 +88,9 @@ def crossValidate(exampleBuilder, corpusElements, examples, options, timer):
             evaluationArgs = {"classSet":exampleBuilder.classSet}
             if options.parameters != None:
                 paramDict = splitParameters(options.parameters)
-                bestResults = classifier.optimize([trainSet], [parameterOptimizationSet], paramDict, Evaluation, evaluationArgs)
+                bestResults = classifier.optimize([trainSet], [parameterOptimizationSet], paramDict, Evaluation, evaluationArgs, combinationsThatTimedOut=discardedParameterCombinations)
             else:
-                bestResults = classifier.optimize([trainSet], [parameterOptimizationSet], evaluationClass=Evaluation, evaluationArgs=evaluationArgs)
+                bestResults = classifier.optimize([trainSet], [parameterOptimizationSet], evaluationClass=Evaluation, evaluationArgs=evaluationArgs, combinationsThatTimedOut=discardedParameterCombinations)
         else: # nested x-fold parameter optimization
             assert (options.folds[1] >= 2)
             optimizationFolds = Example.makeExampleFolds(trainSet, options.folds[1])
@@ -102,14 +103,17 @@ def crossValidate(exampleBuilder, corpusElements, examples, options, timer):
             evaluationArgs = {"classSet":exampleBuilder.classSet}
             if options.parameters != None:
                 paramDict = splitParameters(options.parameters)
-                bestResults = classifier.optimize(optimizationSetList, optimizationSetList, paramDict, Evaluation, evaluationArgs)
+                bestResults = classifier.optimize(optimizationSetList, optimizationSetList, paramDict, Evaluation, evaluationArgs, combinationsThatTimedOut=discardedParameterCombinations)
             else:
-                bestResults = classifier.optimize(optimizationSetList, optimizationSetList, evaluationClass=Evaluation, evaluationArgs=evaluationArgs)
+                bestResults = classifier.optimize(optimizationSetList, optimizationSetList, evaluationClass=Evaluation, evaluationArgs=evaluationArgs, combinationsThatTimedOut=discardedParameterCombinations)
         
         # Classify
-        print >> sys.stderr, "Classifying test data"    
-        print >> sys.stderr, "Parameters:", bestResults[2]
-        classifier.train(trainSet, bestResults[2])
+        print >> sys.stderr, "Classifying test data"
+        bestParams = bestResults[2]
+        if bestParams.has_key("timeout"):
+            del bestParams["timeout"]
+        print >> sys.stderr, "Parameters:", bestParams
+        classifier.train(trainSet, bestParams)
         predictions = classifier.classify(testSet)
         
         # Calculate statistics
