@@ -1,5 +1,5 @@
 import Core.ExampleUtils as Example
-import sys, os, shutil
+import sys, os, shutil, time
 try:
     import xml.etree.cElementTree as ET
 except ImportError:
@@ -74,7 +74,10 @@ def compareToBinary(complexSentencesById, classifications, exampleBuilder, optio
 
 def buildExamples(exampleBuilder, sentences, options):
     examples = []
-    counter = ProgressCounter(len(sentences), "Build examples")
+    if "graphKernel" in exampleBuilder.styles:
+        counter = ProgressCounter(len(sentences), "Build examples", 0)
+    else:
+        counter = ProgressCounter(len(sentences), "Build examples")
     for sentence in sentences:
         counter.update(1, "Building examples ("+sentence[0].getSentenceId()+"): ")
         sentence[1] = exampleBuilder.buildExamples(sentence[0])
@@ -204,8 +207,14 @@ if __name__=="__main__":
     # Classify
     print >> sys.stderr, "Classifying test data"    
     print >> sys.stderr, "Parameters:", bestResults[2]
+    print >> sys.stderr, "Training",
+    startTime = time.time()
     classifier.train(exampleSets[0], bestResults[2])
+    print >> sys.stderr, "(Time spent:", time.time() - startTime, "s)"
+    print >> sys.stderr, "Testing",
+    startTime = time.time()
     predictions = classifier.classify(exampleSets[1])
+    print >> sys.stderr, "(Time spent:", time.time() - startTime, "s)"
     
     # Calculate statistics
     evaluation = Evaluation(predictions, classSet=exampleBuilder.classSet)
