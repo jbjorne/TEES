@@ -4,6 +4,86 @@ import numpy
 import numpy.linalg
 import networkx as NX
 import copy
+import sys
+
+def getHexColor(red, green, blue):
+    """ convert an (R, G, B) tuple to #RRGGBB """
+    hexcolor = '#%02x%02x%02x' % (int(red),int(green),int(blue))
+    # that's it! '%02x' means zero-padded, 2-digit hex values
+    return hexcolor
+
+def getColorFromBRGSpectrum(value, minVal=0.0, maxVal=1.0):
+    span = maxVal - minVal
+    pos = value / span
+    spanHalf = span / 2.0 
+    blue = max((spanHalf - value)/spanHalf, 0.0) * 255
+    red = max((spanHalf - abs(value-spanHalf))/spanHalf, 0.0) * 255
+    green = max((value-spanHalf)/spanHalf, 0.0) * 255
+    return getHexColor(red, green, blue)
+
+def adjacencyMatrixToHtml(matrix, labels, filename):
+    from HtmlBuilder import HtmlBuilder
+    h = HtmlBuilder()
+    h.newPage("test","")
+    
+    h.header("Adjacency Matrix", 3)
+    h.table(1)
+    rows, columns = matrix.shape
+    h.tableRow() # title row
+    h.tableData(None, True) # corner cell
+    for i in range(columns):
+        h.tableData(None, False)
+        h.span( str(i), "font-size:smaller;font-weight:bold" )
+        h.closeElement() # tableData
+    h.closeElement() # title row
+    
+    for i in range(rows):
+        h.tableRow()
+        h.tableData(None, False)
+        h.span( str(i), "font-size:smaller;font-weight:bold" )
+        h.closeElement() # tableData
+        for j in range(columns):            
+            h.tableData(None, False)
+            if matrix[i,j] != 0.0:
+                style = "font-size:smaller;background-color:" + getColorFromBRGSpectrum(matrix[i,j]) #00FF00"
+                h.span( str(matrix[i,j])[0:4], style )
+            else:
+                style = "font-size:smaller"
+                h.span( "0", style )
+            h.closeElement() # tableData
+        h.closeElement() # tableRow
+    
+    h.closeElement() # table
+    
+    h.header("Legend", 4)
+    h.table(1)
+    h.tableRow()
+    h.tableData(None, False)
+    h.span( "0.0", "font-size:smaller" )
+    h.closeElement() # tableData
+    i = 0.1
+    while i <= 1.0:
+        h.tableData(None, False)
+        h.span( str(i), "font-size:smaller;background-color:" + getColorFromBRGSpectrum(i) )
+        h.closeElement() # tableData
+        i += 0.1
+    h.closeElement() # tableRow
+    h.closeElement() # table
+    
+    if labels != None:
+        h.header("Labels", 3)
+        for i in range(len(labels)):
+            string = str(i) + ": "
+            first = True
+            for label in labels[i]:
+                if not first:
+                    string += ", "
+                string += label
+                first = False
+            h.span(string)
+            h.lineBreak()
+    
+    h.write(filename)
 
 class GraphKernelFeatureBuilder(FeatureBuilder):
     def __init__(self, featureSet):
@@ -12,6 +92,11 @@ class GraphKernelFeatureBuilder(FeatureBuilder):
     def buildGraphKernelFeatures(self, sentenceGraph, path, edges):
         adjacencyMatrix, labels = self._buildAdjacencyMatrix(sentenceGraph, path, edges)
         node_count = 2*len(sentenceGraph.tokens) + len(sentenceGraph.dependencies)
+        
+#        if sentenceGraph.sentenceElement.attrib["id"] == "AIMed.d0.s5":
+#            adjacencyMatrixToHtml(adjacencyMatrix, labels, "debugMatrix.html")
+#            sys.exit("Debug file created")
+        
         allPathsMatrix = self._prepareMatrix(adjacencyMatrix, node_count)
         self._matrixToFeatures(allPathsMatrix, labels)
 
@@ -23,10 +108,11 @@ class GraphKernelFeatureBuilder(FeatureBuilder):
             for j in range(W.shape[1]):
                 if W[i,j] > 0.00001: #i != j and W[i,j] > 0.3: #0.00001:
                     for label1 in labels[i]:
-                        for label2 in labels[j]:
-                            #if label1 in proteins or label2 in proteins:
-                            label = label1+"_$_"+label2
-                            self.features[self.featureSet.getId(label)] = W[i,j]
+                        if (not "punct" in labels[i]) and (not "punct" in labels[j]):
+                            for label2 in labels[j]:
+                                #if label1 in proteins or label2 in proteins:
+                                label = label1+"_$_"+label2
+                                self.features[self.featureSet.getId(label)] = W[i,j]
 
     def _prepareMatrix(self, adjacencyMatrix, node_count, dtyp=numpy.float64):
         W = adjacencyMatrix * -1.0
@@ -131,13 +217,14 @@ class GraphKernelFeatureBuilder(FeatureBuilder):
     
     def _getEdgeList(self, edgeDict):
         allEdges = []
-        keys1 = edgeDict.keys()
-        keys1.sort()
-        for k1 in keys1:
-            keys2 = edgeDict[k1].keys()
-            keys2.sort()
-            for k2 in keys2:
-                allEdges.extend(edgeDict[k1][k2])
+        if edgeDict != None:
+            keys1 = edgeDict.keys()
+            keys1.sort()
+            for k1 in keys1:
+                keys2 = edgeDict[k1].keys()
+                keys2.sort()
+                for k2 in keys2:
+                    allEdges.extend(edgeDict[k1][k2])
         return allEdges
     
     def _setDependencyWeightsByPath(self, edges, weights, weight):
