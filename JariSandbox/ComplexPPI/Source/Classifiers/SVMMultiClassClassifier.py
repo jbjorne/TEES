@@ -4,6 +4,7 @@ import shutil
 import killableprocess
 import Core.ExampleUtils as Example
 import combine
+import copy
 #from Core.Evaluation import Evaluation
 from Core.Classifier import Classifier
 import Core.Split as Split
