@@ -17,6 +17,7 @@ import Utils.TableUtils as TableUtils
 from optparse import OptionParser
 from SplitAnalysis import *
 import subprocess
+import time
 
 def zipTree(path, target):
     tempCwd = os.getcwd()
@@ -113,8 +114,14 @@ def crossValidate(exampleBuilder, corpusElements, examples, options, timer):
         if bestParams.has_key("timeout"):
             del bestParams["timeout"]
         print >> sys.stderr, "Parameters:", bestParams
+        print >> sys.stderr, "Training",
+        startTime = time.time()
         classifier.train(trainSet, bestParams)
+        print >> sys.stderr, "(Time spent:", time.time() - startTime, "s)"
+        print >> sys.stderr, "Testing",
+        startTime = time.time()
         predictions = classifier.classify(testSet)
+        print >> sys.stderr, "(Time spent:", time.time() - startTime, "s)"
         
         # Calculate statistics
         evaluation = Evaluation(predictions, classSet=exampleBuilder.classSet)
