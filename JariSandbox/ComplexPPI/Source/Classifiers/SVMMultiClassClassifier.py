@@ -1,6 +1,7 @@
 import sys,os
 sys.path.append("..")
 import shutil
+import subprocess
 import killableprocess
 import Core.ExampleUtils as Example
 import combine
