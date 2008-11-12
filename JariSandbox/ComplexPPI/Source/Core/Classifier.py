@@ -24,7 +24,7 @@ class Classifier:
             self.tempDir = workDir
         if not os.path.exists(self.tempDir):
             os.makedirs(self.tempDir)
-        if not os.path.exists(self._workDir):
+        if self._workDir != None and not os.path.exists(self._workDir):
             os.makedirs(self._workDir)
         self.debugFile = open(self.tempDir + "/debug.txt", "wt")
 
