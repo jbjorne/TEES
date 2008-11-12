@@ -5,6 +5,8 @@ import numpy.linalg
 import networkx as NX
 import copy
 import sys
+sys.path.append("../..")
+import Core.ExampleUtils as ExampleUtils
 
 def getHexColor(red, green, blue):
     """ convert an (R, G, B) tuple to #RRGGBB """
@@ -93,12 +95,18 @@ class GraphKernelFeatureBuilder(FeatureBuilder):
         adjacencyMatrix, labels = self._buildAdjacencyMatrix(sentenceGraph, path, edges)
         node_count = 2*len(sentenceGraph.tokens) + len(sentenceGraph.dependencies)
         
-#        if sentenceGraph.sentenceElement.attrib["id"] == "AIMed.d0.s5":
-#            adjacencyMatrixToHtml(adjacencyMatrix, labels, "debugMatrix.html")
-#            sys.exit("Debug file created")
+        if sentenceGraph.sentenceElement.attrib["id"] == "LLL.d0.s0":
+            adjacencyMatrixToHtml(adjacencyMatrix, labels, "LLL.d0.s0_adjacency_matrix.html")
         
         allPathsMatrix = self._prepareMatrix(adjacencyMatrix, node_count)
         self._matrixToFeatures(allPathsMatrix, labels)
+        if sentenceGraph.sentenceElement.attrib["id"] == "LLL.d0.s0":
+            adjacencyMatrixToHtml(allPathsMatrix, labels, "LLL.d0.s0_all_paths_matrix.html")
+            commentLines = []
+            commentLines.extend(self.featureSet.toStrings())
+            example = ["example_"+self.entity1.attrib["id"]+"_"+self.entity2.attrib["id"],"unknown",self.features]
+            ExampleUtils.writeExamples([example],"LLL.d0.s0_example.txt",commentLines)
+            #sys.exit("Debug files created")
 
     def _matrixToFeatures(self, W, labels):
         #proteins = set(["PROTEIN1", "PROTEIN2", "$$PROTEIN1", "$$PROTEIN2"]) 
@@ -158,7 +166,16 @@ class GraphKernelFeatureBuilder(FeatureBuilder):
         allEdges = self._getEdgeList(edges)
         
         #For each dependency
-        for dep, index in zip(sentenceGraph.dependencyGraph.edges(), dep_indices):
+        depEdgePairs = []
+        depGraphEdges = sentenceGraph.dependencyGraph.edges()
+        for dependency in sentenceGraph.dependencies:
+            for edge in depGraphEdges:
+                if edge[2] == dependency:
+                    depEdgePairs.append( (dependency, edge) )
+                    depGraphEdges.remove(edge)
+            
+        for depPair, index in zip(depEdgePairs, dep_indices):
+            dep = depPair[1]
             #Token1-dependency, and dependency-token2 weights are added        
             adjMatrix[self._getTokenId(dep[0])-1, index] = weightByDependency[dep[2]]
             adjMatrix[index, self._getTokenId(dep[1])-1] = weightByDependency[dep[2]]
