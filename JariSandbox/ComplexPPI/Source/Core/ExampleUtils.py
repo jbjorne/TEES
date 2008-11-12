@@ -121,3 +121,65 @@ def divideExampleFile(exampleFileName, division, outputDir):
         divisionFiles[division[documentId]].write(line)
     for v in divisionFiles.values():
         v.close()
+
+def writeToInteractionXML(classifications, corpusElements, outputFile):
+    import sys
+    print >> sys.stderr, "Writing output to Interaction XML"
+    try:
+        import xml.etree.cElementTree as ET
+    except ImportError:
+        import cElementTree as ET
+    import cElementTreeUtils as ETUtils
+    
+    print >> sys.stderr, "Grouping examples"
+    classificationsBySentence = {}
+    for classification in classifications:
+        exampleId = classification[0][0]
+        sentenceId = exampleId.rsplit(".",1)[0]
+        if not classificationsBySentence.has_key(sentenceId):
+            classificationsBySentence[sentenceId] = []
+        classificationsBySentence[sentenceId].append(classification)
+    
+    print >> sys.stderr, "Processing sentence elements"
+    sentenceElements = corpusElements.sentences
+    for sentenceObject in sentenceElements:
+        sentenceElement = sentenceObject.sentence
+        sentenceId = sentenceElement.attrib["id"]
+        # detach analyses
+        sentenceAnalysesElement = sentenceElement.find("sentenceanalyses")
+        if sentenceAnalysesElement != None:
+            sentenceElement.remove(sentenceAnalysesElement)
+        # remove pairs and interactions
+        pairElements = sentenceElement.findall("pair")
+        if pairElements != None:
+            for pairElement in pairElements:
+                sentenceElement.remove(pairElement)
+        interactionElements = sentenceElement.findall("interaction")
+        if interactionElements != None:
+            for interactionElement in interactionElements:
+                sentenceElement.remove(interactionElement)
+        # add new pairs
+        pairCount = 0
+        if classificationsBySentence.has_key(sentenceId):
+            for classification in classificationsBySentence[sentenceId]:
+                example = classification[0]
+                pairElement = ET.Element("pair")
+                #pairElement.attrib["origId"] = origId
+                pairElement.attrib["type"] = example[3]["categoryName"]
+                pairElement.attrib["directed"] = "True"
+                pairElement.attrib["e1"] = example[3]["e1"].attrib["id"]
+                pairElement.attrib["e2"] = example[3]["e2"].attrib["id"]
+                pairElement.attrib["id"] = sentenceId + ".p" + str(pairCount)
+                if classification[1] == "tp" or classification[1] == "fp":
+                    pairElement.attrib["interaction"] = str(True)
+                else:
+                    pairElement.attrib["interaction"] = str(False)
+                sentenceElement.append(pairElement)
+                pairCount += 1
+        # re-attach the analyses-element
+#        if sentenceAnalysesElement != None:
+#            sentenceElement.append(sentenceAnalysesElement)
+    # Write corpus
+    print >> sys.stderr, "Writing corpus to", outputFile
+    ETUtils.write(corpusElements.rootElement, outputFile)
+    
