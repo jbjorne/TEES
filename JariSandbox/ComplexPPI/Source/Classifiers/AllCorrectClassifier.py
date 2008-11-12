@@ -1,7 +1,7 @@
 from Core.Classifier import Classifier
 import sys, os, shutil
 
-class AllTrueClassifier(Classifier):
+class AllCorrectClassifier(Classifier):
     def __init__(self, workDir=None):
         self._makeTempDir(workDir)        
     
@@ -18,5 +18,5 @@ class AllTrueClassifier(Classifier):
         examples, predictions = self.filterClassificationSet(examples, True)
         #predictions = []
         for example in examples:
-            predictions.append( (example, 1.0) )
+            predictions.append( (example, example[1]) )
         return predictions
