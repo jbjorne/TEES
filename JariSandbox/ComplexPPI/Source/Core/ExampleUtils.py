@@ -42,18 +42,21 @@ def copyExamples(examples):
         examplesCopy.append([example[0], example[1], example[2].copy(), example[3]])
     return examplesCopy
 
+def appendExamples(examples, file):
+    for example in examples:
+        file.write(str(example[1]))
+        keys = example[2].keys()
+        keys.sort()
+        for key in keys:
+            file.write(" " + str(key)+":"+str(example[2][key]))
+        file.write(" # " + example[0] + "\n")
+
 def writeExamples(examples, filename, commentLines=None):
     f = open(filename,"wt")
     if commentLines != None:
         for commentLine in commentLines:
             f.write("# "+commentLine+"\n")
-    for example in examples:
-        f.write(str(example[1]))
-        keys = example[2].keys()
-        keys.sort()
-        for key in keys:
-            f.write(" " + str(key)+":"+str(example[2][key]))
-        f.write(" # " + example[0] + "\n")
+    appendExamples(examples, f)
     f.close()
 
 def makeCorpusDivision(corpusElements, fraction=0.5, seed=0):
