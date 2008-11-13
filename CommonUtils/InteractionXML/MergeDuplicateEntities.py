@@ -12,17 +12,15 @@ def compareEntities(entity1, entity2):
     else:
         return False
 
-if __name__=="__main__":
-    optparser = OptionParser(usage="%prog [options]\nCreate an html visualization for a corpus.")
-    optparser.add_option("-i", "--input", default=None, dest="input", help="Corpus in analysis format", metavar="FILE")
-    optparser.add_option("-o", "--output", default=None, dest="output", help="Corpus in analysis format", metavar="FILE")
-    (options, args) = optparser.parse_args()
-    assert(options.input != None)
-    assert(options.output != None)
-    
-    corpusElements = CorpusElements.loadCorpus(options.input)
-    
-    print >> sys.stderr, "Merging duplicates"
+def compareInteractions(interaction1, interaction2):
+    if interaction1.get("e1") == interaction2.get("e1") and interaction1.get("e2") == interaction2.get("e2") and interaction1.get("type") == interaction2.get("type"):
+        assert(interaction1.get("interaction") == interaction2.get("interaction"))
+        return True
+    else:
+        return False
+
+def mergeDuplicateEntities(corpusElements):
+    print >> sys.stderr, "Merging duplicate entities"
     entitiesByType = {}
     duplicatesRemovedByType = {}
     for sentence in corpusElements.sentences:
@@ -53,13 +51,67 @@ if __name__=="__main__":
             if entityIsDuplicateOf[pair.attrib["e2"]] != None:
                 pair.attrib["e2"] = entityIsDuplicateOf[pair.attrib["e2"]]
     
+    printStats(entitiesByType, duplicatesRemovedByType)
+
+def mergeDuplicateInteractions(corpusElements):
+    print >> sys.stderr, "Merging duplicate interactions"
+    interactionsByType = {}
+    duplicatesRemovedByType = {}
+    for sentence in corpusElements.sentences:
+        interactions = sentence.pairs + sentence.interactions
+        interactionIsDuplicateOf = {}
+        for interaction in interactions:
+            interactionIsDuplicateOf[interaction.attrib["id"]] = None
+            if not interactionsByType.has_key(interaction.attrib["type"]):
+                interactionsByType[interaction.attrib["type"]] = 0
+            interactionsByType[interaction.attrib["type"]] += 1
+        # Mark entities for removal
+        for i in range(len(interactions)-1):
+            if interactionIsDuplicateOf[interactions[i].attrib["id"]] == None:
+                for j in range(i+1,len(interactions)):
+                    if compareInteractions(interactions[i], interactions[j]):
+                        interactionIsDuplicateOf[interactions[j].attrib["id"]] = interactions[i].attrib["id"]                    
+        # Remove entities from sentence element
+        for k,v in interactionIsDuplicateOf.iteritems():
+            if v != None:
+                elementToRemove = None
+                if k.rsplit(".",1)[-1][0] == "p":
+                    for pair in sentence.pairs:
+                        if pair.attrib["id"] == k:
+                            elementToRemove = pair
+                            break
+                elif k.rsplit(".",1)[-1][0] == "i":
+                    for interaction in sentence.interactions:
+                        if interaction.attrib["id"] == k:
+                            elementToRemove = interaction
+                            break
+
+                if not duplicatesRemovedByType.has_key(elementToRemove.attrib["type"]):
+                    duplicatesRemovedByType[elementToRemove.attrib["type"]] = 0
+                duplicatesRemovedByType[elementToRemove.attrib["type"]] += 1
+                sentence.sentence.remove(elementToRemove)
+    
+    printStats(interactionsByType, duplicatesRemovedByType)
+
+def printStats(origItemsByType, duplicatesRemovedByType):    
     print >> sys.stderr, "Removed duplicates (original count in parenthesis):"
     keys = duplicatesRemovedByType.keys()
     keys.sort()
     for key in keys:
-        print >> sys.stderr, "  " + key + ": " + str(duplicatesRemovedByType[key]) + " (" + str(entitiesByType[key]) + ")"
+        print >> sys.stderr, "  " + key + ": " + str(duplicatesRemovedByType[key]) + " (" + str(origItemsByType[key]) + ")"
     print >> sys.stderr, "  ---------------------------------"
-    print >> sys.stderr, "  Total: " + str(sum(duplicatesRemovedByType.values())) + " (" + str(sum(entitiesByType.values())) + ")"
+    print >> sys.stderr, "  Total: " + str(sum(duplicatesRemovedByType.values())) + " (" + str(sum(origItemsByType.values())) + ")"
+
+if __name__=="__main__":
+    optparser = OptionParser(usage="%prog [options]\nCreate an html visualization for a corpus.")
+    optparser.add_option("-i", "--input", default=None, dest="input", help="Corpus in analysis format", metavar="FILE")
+    optparser.add_option("-o", "--output", default=None, dest="output", help="Corpus in analysis format", metavar="FILE")
+    (options, args) = optparser.parse_args()
+    assert(options.input != None)
+    assert(options.output != None)
     
+    corpusElements = CorpusElements.loadCorpus(options.input)
+    mergeDuplicateEntities(corpusElements)
+    mergeDuplicateInteractions(corpusElements)
     print >> sys.stderr, "Writing output to", options.output
     ETUtils.write(corpusElements.rootElement, options.output)
