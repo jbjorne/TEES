@@ -53,6 +53,7 @@ class SentenceGraph:
         self.entities = None
         self.interactionGraph = None
         self.duplicateInteractionEdgesRemoved = 0
+        self.tokenHeadScores = None
         
         self.tokensById = {}
         for token in self.tokens:
@@ -160,34 +161,97 @@ class SentenceGraph:
             self.entitiesByToken[token].append(entityElement)
         return token
     
-    def findHeadToken(self, candidateTokens):
-        # Remove tokens that clearly can't be head and are probably produced by hyphen-splitter
-        for token in candidateTokens[:]:
+#    def findHeadToken(self, candidateTokens):
+#        # Remove tokens that clearly can't be head and are probably produced by hyphen-splitter
+#        for token in candidateTokens[:]:
+#            tokenText = token.attrib["text"]
+#            if tokenText == "\\" or tokenText == "/" or tokenText == "-":
+#                if len(candidateTokens) > 1:
+#                    candidateTokens.remove(token)
+#        if len(candidateTokens) == 1:
+#            return candidateTokens[0]
+#        
+#        # Remove tokens that are linked to the probable head with certain link-types
+#        tokenScores = len(candidateTokens) * [0]
+#        depTypesToRemove = ["nn", "det", "hyphen", "num", "amod", "nmod"]
+#        edges = self.dependencyGraph.edges()
+#        for edge in edges:
+#            if edge[0] in candidateTokens and edge[1] in candidateTokens:
+#                if edge[2].attrib["type"] in depTypesToRemove:
+#                    tokenScores[candidateTokens.index(edge[1])] -= 1
+#        
+#        # Return head token based on score
+#        highestScore = -9999999
+#        for i in range(len(candidateTokens)):
+#            if tokenScores[i] > highestScore:
+#                highestScore = tokenScores[i]
+#        for i in range(len(candidateTokens)):
+#            if tokenScores[i] == highestScore:
+#                return candidateTokens[i]
+#        return None
+
+    def findHeadToken(self, candidateTokens):        
+        tokenHeadScores = self._getTokenHeadScores()
+        
+        #if debug:
+        #    print "Tokens:", candidateTokenIds
+        #    print "Scores:", tokenScores
+        
+        if len(candidateTokens) == 0:
+            return None
+        
+        highestScore = -9999999
+        bestTokens = []
+        for token in candidateTokens:
+            if tokenHeadScores[token] > highestScore:
+                highestScore = tokenHeadScores[token]
+        for token in candidateTokens:
+            if tokenHeadScores[token] == highestScore:
+                bestTokens.append(token)
+#        if debug:
+#            print "tokens:"
+#            for i in range(len(candidateTokenIds)):
+#                print "[", candidateTokenIds[i], self.tokensById[candidateTokenIds[i]].text, tokenHeadScores[candidateTokenIds[i]], "]"
+        return bestTokens[-1]
+
+    def _getTokenHeadScores(self):
+        if self.tokenHeadScores != None:
+            return self.tokenHeadScores
+        else:
+            self.tokenHeadScores = {}
+        depTypesToRemove = ["nn", "det", "hyphen", "num", "amod", "nmod", "appos", "measure", "dep"]
+        depTypesToRemoveReverse = ["A/AN"]
+        for token in self.tokens:
+            self.tokenHeadScores[token] = 0
+            for dependency in self.dependencies:
+                if dependency.attrib["t1"] == token.attrib["id"] or dependency.attrib["t2"] == token.attrib["id"]:
+                    self.tokenHeadScores[token] = 1
+                    break               
+        
+        # Give a low score for tokens that clearly can't be head and are probably produced by hyphen-splitter
+        for token in self.tokens:
             tokenText = token.attrib["text"]
             if tokenText == "\\" or tokenText == "/" or tokenText == "-":
-                if len(candidateTokens) > 1:
-                    candidateTokens.remove(token)
-        if len(candidateTokens) == 1:
-            return candidateTokens[0]
+                self.tokenHeadScores[token] = -1
         
-        # Remove tokens that are linked to the probable head with certain link-types
-        tokenScores = len(candidateTokens) * [0]
-        depTypesToRemove = ["nn", "det", "hyphen", "num", "amod", "nmod"]
-        edges = self.dependencyGraph.edges()
-        for edge in edges:
-            if edge[0] in candidateTokens and edge[1] in candidateTokens:
-                if edge[2].attrib["type"] in depTypesToRemove:
-                    tokenScores[candidateTokens.index(edge[1])] -= 1
-        
-        # Return head token based on score
-        highestScore = -9999999
-        for i in range(len(candidateTokens)):
-            if tokenScores[i] > highestScore:
-                highestScore = tokenScores[i]
-        for i in range(len(candidateTokens)):
-            if tokenScores[i] == highestScore:
-                return candidateTokens[i]
-        return None
+        modifiedScores = True
+        while modifiedScores == True:
+            modifiedScores = False
+            for tokenI in self.tokens:
+                for tokenJ in self.tokens:
+                    for dep in self.dependencies:
+                        if dep.attrib["t2"] == tokenI.attrib["id"] and dep.attrib["t1"] == tokenJ.attrib["id"] and (dep.attrib["type"] in depTypesToRemove):
+                            #tokenScores[i] -= 1
+                            if self.tokenHeadScores[tokenJ] <= self.tokenHeadScores[tokenI]:
+                                self.tokenHeadScores[tokenJ] = self.tokenHeadScores[tokenI] + 1
+                                modifiedScores = True
+                        elif dep.attrib["t1"] == tokenI.attrib["id"] and dep.attrib["t2"] == tokenJ.attrib["id"] and (dep.attrib["type"] in depTypesToRemoveReverse):
+                            #tokenScores[i] -= 1
+                            if self.tokenHeadScores[tokenJ] <= self.tokenHeadScores[tokenI]:
+                                self.tokenHeadScores[tokenJ] = self.tokenHeadScores[tokenI] + 1
+                                modifiedScores = True
+        #print self.tokenHeadScores
+        return self.tokenHeadScores
 
     def __markNamedEntities(self):
         self.tokenIsName = {}
