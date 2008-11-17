@@ -16,4 +16,10 @@ python ../../../../../PPI_Learning/Analysers/ProteinNameSplitter.py -f BioInfer.
 python ../../../../../PPI_Learning/Analysers/ProteinNameSplitter.py -f BioInfer.xml -t Charniak-Lease -p Charniak-Lease -s split_Charniak-Lease -n split_Charniak-Lease -o BioInfer.xml
 
 # Detect heads
+cd ..
 python FindHeads.py -i BioInfer/BioInfer.xml -t split_bioinfer_gs -p split_bioinfer_gs -o BioInfer/BioInferWithHeads.xml
+
+# Visualize corpus
+cd ..
+python VisualizeCorpus.py -i Utils/BioInfer/BioInfer.xml -t split_bioinfer_gs -p split_bioinfer_gs -o Utils/BioInfer/Visualization
+cd Utils/BioInfer
