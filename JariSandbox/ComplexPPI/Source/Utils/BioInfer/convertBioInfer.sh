@@ -17,7 +17,7 @@ python ../../../../../PPI_Learning/Analysers/ProteinNameSplitter.py -f BioInfer.
 
 # Detect heads
 cd ..
-python FindHeads.py -i BioInfer/BioInfer.xml -t split_bioinfer_gs -p split_bioinfer_gs -o BioInfer/BioInferWithHeads.xml
+python FindHeads.py -i BioInfer/BioInfer.xml -t split_bioinfer_gs -p split_bioinfer_gs -o BioInfer/BioInfer.xml
 
 # Visualize corpus
 cd ..
