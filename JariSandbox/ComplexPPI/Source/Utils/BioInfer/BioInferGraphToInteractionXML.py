@@ -94,6 +94,8 @@ def compareInteractionOrigId(x, y):
        return -1
 
 if __name__=="__main__":
+    print >> sys.stderr, "##### Convert graph-format BioInfer to interaction XML #####"
+    
     defaultGraphBioInferFilename = "/usr/share/biotext/BinaryBioInfer/BI.all.nestingresolved.identityresolved.anonymousResolved.relaxed.visibleSet.xml"
     defaultAnalysisFilename = "/usr/share/biotext/Tampere_project/PPI_Learning/Data/BioInfer/BioInferAnalysisWithGSAllSplitsVisible.xml"
 #    defaultAnalysisFilename = "/usr/share/biotext/Tampere_project/PPI_Learning/Data/BioInfer/BioInferAnalysisWithGSWithParallelVisible.xml"
