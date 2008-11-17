@@ -103,6 +103,15 @@ def printStats(origItemsByType, duplicatesRemovedByType):
     print >> sys.stderr, "  Total: " + str(sum(duplicatesRemovedByType.values())) + " (" + str(sum(origItemsByType.values())) + ")"
 
 if __name__=="__main__":
+    print >> sys.stderr, "##### Merge duplicate entities and interactions #####"
+    # Import Psyco if available
+    try:
+        import psyco
+        psyco.full()
+        print >> sys.stderr, "Found Psyco, using"
+    except ImportError:
+        print >> sys.stderr, "Psyco not installed"
+
     optparser = OptionParser(usage="%prog [options]\nCreate an html visualization for a corpus.")
     optparser.add_option("-i", "--input", default=None, dest="input", help="Corpus in analysis format", metavar="FILE")
     optparser.add_option("-o", "--output", default=None, dest="output", help="Corpus in analysis format", metavar="FILE")
