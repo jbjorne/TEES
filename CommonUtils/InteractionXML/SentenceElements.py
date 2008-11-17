@@ -1,6 +1,6 @@
 
 class SentenceElements:
-    def __init__(self, sentenceElement, parse, tokenization=None):
+    def __init__(self, sentenceElement, parse=None, tokenization=None):
         self.sentence = sentenceElement
         self.entities = []
         self.entitiesById = {}
@@ -8,6 +8,9 @@ class SentenceElements:
         self.interactions = []
         self.tokens = []
         self.dependencies = []
+        
+        self.parseElement = None
+        self.tokenizationElement = None
         
         pairElements = sentenceElement.findall("pair")
         if pairElements != None:
@@ -24,31 +27,35 @@ class SentenceElements:
         
         sentenceAnalysesElement = sentenceElement.find("sentenceanalyses")
         if sentenceAnalysesElement != None:
-            parsesElement = sentenceAnalysesElement.find("parses")
+            parsesElement = None
+            if parse != None:
+                parsesElement = sentenceAnalysesElement.find("parses")
             if parsesElement != None:
                 parseElements = parsesElement.findall("parse")
                 if len(parseElements) > 0: # new format
-                    parseElement = None
+                    self.parseElement = None
                     for element in parseElements:
                         if element.attrib["parser"] == parse:
-                            parseElement = element
+                            self.parseElement = element
                             break
-                    tokenization = parseElement.attrib["tokenizer"]
+                    tokenization = self.parseElement.attrib["tokenizer"]
                     tokenizationsElement = sentenceAnalysesElement.find("tokenizations")
                     tokenizationElements = tokenizationsElement.findall("tokenization")
                     for element in tokenizationElements:
                         if element.attrib["tokenizer"] == tokenization:
-                            tokenizationElement = element
+                            self.tokenizationElement = element
                             break                
                 else: # old format
-                    parseElement = parsesElement.find(parse)
-                    tokenizationsElement = sentenceAnalysesElement.find("tokenizations")
-                    tokenizationElement = tokenizationsElement.find(tokenization)
+                    if parse != None:
+                        self.parseElement = parsesElement.find(parse)
+                    if tokenization != None:
+                        tokenizationsElement = sentenceAnalysesElement.find("tokenizations")
+                        self.tokenizationElement = tokenizationsElement.find(tokenization)
                 
-                dependencyElements = parseElement.findall("dependency")
+                dependencyElements = self.parseElement.findall("dependency")
                 if dependencyElements != None:
                     self.dependencies = dependencyElements
-                tokenElements = tokenizationElement.findall("token")
+                tokenElements = self.tokenizationElement.findall("token")
                 if tokenElements != None:
                     self.tokens = tokenElements
 
