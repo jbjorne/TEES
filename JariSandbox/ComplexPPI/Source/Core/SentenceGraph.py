@@ -213,13 +213,24 @@ class SentenceGraph:
 #            for i in range(len(candidateTokenIds)):
 #                print "[", candidateTokenIds[i], self.tokensById[candidateTokenIds[i]].text, tokenHeadScores[candidateTokenIds[i]], "]"
         return bestTokens[-1]
+    
+#    def setTokenHeadScore(self, token, visited, dependencies):
+#        if visited == None:
+#            visited = []
+#        visited.append(token.attrib["id"])
+#        for dependency in dependencies:
+#            if dep.attrib["t2"] == token.attrib["id"]:
+#                if self.tokenHeadScores[dep.attrib["t1"]] <= self.tokenHeadScores[dep.attrib["t2"]]:
+#                    self.tokenHeadScores[dep.attrib["t1"]] = self.tokenHeadScores[dep.attrib["t2"]] + 1
+#                if dep.attrib["t1"] not in visited:
+#                    setTokenHeadScore(self, self.tokensById[dep.attrib["t1"]], visited, dependencies)
 
     def _getTokenHeadScores(self):
         if self.tokenHeadScores != None:
             return self.tokenHeadScores
         else:
             self.tokenHeadScores = {}
-        depTypesToRemove = ["nn", "det", "hyphen", "num", "amod", "nmod", "appos", "measure", "dep"]
+        depTypesToRemove = ["prep", "nn", "det", "hyphen", "num", "amod", "nmod", "appos", "measure", "dep", "partmod"]
         depTypesToRemoveReverse = ["A/AN"]
         for token in self.tokens:
             self.tokenHeadScores[token] = 0
@@ -237,19 +248,19 @@ class SentenceGraph:
         modifiedScores = True
         while modifiedScores == True:
             modifiedScores = False
-            for tokenI in self.tokens:
-                for tokenJ in self.tokens:
+            for token1 in self.tokens:
+                for token2 in self.tokens:
                     for dep in self.dependencies:
-                        if dep.attrib["t2"] == tokenI.attrib["id"] and dep.attrib["t1"] == tokenJ.attrib["id"] and (dep.attrib["type"] in depTypesToRemove):
+                        if dep.attrib["t1"] == token1.attrib["id"] and dep.attrib["t2"] == token2.attrib["id"] and (dep.attrib["type"] in depTypesToRemove):
                             #tokenScores[i] -= 1
-                            if self.tokenHeadScores[tokenJ] <= self.tokenHeadScores[tokenI]:
-                                self.tokenHeadScores[tokenJ] = self.tokenHeadScores[tokenI] + 1
+                            if self.tokenHeadScores[token1] <= self.tokenHeadScores[token2]:
+                                self.tokenHeadScores[token1] = self.tokenHeadScores[token2] + 1
                                 modifiedScores = True
-                        elif dep.attrib["t1"] == tokenI.attrib["id"] and dep.attrib["t2"] == tokenJ.attrib["id"] and (dep.attrib["type"] in depTypesToRemoveReverse):
-                            #tokenScores[i] -= 1
-                            if self.tokenHeadScores[tokenJ] <= self.tokenHeadScores[tokenI]:
-                                self.tokenHeadScores[tokenJ] = self.tokenHeadScores[tokenI] + 1
-                                modifiedScores = True
+#                        elif dep.attrib["t1"] == tokenI.attrib["id"] and dep.attrib["t2"] == tokenJ.attrib["id"] and (dep.attrib["type"] in depTypesToRemoveReverse):
+#                            #tokenScores[i] -= 1
+#                            if self.tokenHeadScores[tokenJ] <= self.tokenHeadScores[tokenI]:
+#                                self.tokenHeadScores[tokenJ] = self.tokenHeadScores[tokenI] + 1
+#                                modifiedScores = True
         #print self.tokenHeadScores
         return self.tokenHeadScores
 
