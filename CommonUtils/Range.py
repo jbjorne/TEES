@@ -1,3 +1,16 @@
+def merge(range1, range2):
+    mergedRange = [0,0]
+    assert(overlap(range1, range2))
+    if range1[0] < range2[0]:
+        mergedRange[0] = range1[0]
+    else:
+        mergedRange[0] = range2[0]
+    if range1[1] > range2[1]:
+        mergedRange[1] = range1[1]
+    else:
+        mergedRange[1] = range2[1]
+    return (mergedRange[0],mergedRange[1])
+
 def charOffsetToSingleTuple(charOffset):
     tuples = charOffsetToTuples(charOffset)
     assert(len(tuples) == 1)
