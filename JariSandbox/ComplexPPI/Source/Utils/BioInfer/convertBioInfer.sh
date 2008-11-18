@@ -1,4 +1,4 @@
-python BioInferGraphToInteractionXML.py -o BioInfer.xml
+python BioInferGraphToInteractionXML.py -i /usr/share/biotext/BinaryBioInfer/BI.all.nestingResolved.anonymousResolved.relaxed.r185.xml -o BioInfer.xml
 python ../../../../../CommonUtils/InteractionXML/MergeDuplicateEntities.py -i BioInfer.xml -o BioInfer.xml
 python GroupSentencesByDocument.py -i BioInfer.xml -o BioInfer.xml
 python ../../../../../CommonUtils/InteractionXML/RecalculateIds.py -i BioInfer.xml -o BioInfer.xml
@@ -18,6 +18,12 @@ python ../../../../../PPI_Learning/Analysers/ProteinNameSplitter.py -f BioInfer.
 # Detect heads
 cd ..
 python FindHeads.py -i BioInfer/BioInfer.xml -t split_bioinfer_gs -p split_bioinfer_gs -o BioInfer/BioInfer.xml
+
+# Make hidden and visible subset
+cd BioInfer
+python ../../../../../CommonUtils/InteractionXML/Subset.py -i BioInfer.xml -o BioInferVisible.xml -d ../../../../../BioInfer/data/BioInfer_id_visible.txt
+python ../../../../../CommonUtils/InteractionXML/Subset.py -i BioInfer.xml -o BioInferHidden.xml -d ../../../../../BioInfer/data/BioInfer_id_visible.txt -v
+cd ..
 
 # Visualize corpus
 cd ..
