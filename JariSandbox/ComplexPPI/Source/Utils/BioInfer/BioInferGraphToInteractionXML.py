@@ -59,6 +59,7 @@ def buildEntityElement(interactionGraphNode, sentenceText):
     entityElement.attrib["origId"] = interactionGraphNode.entity.id
     entityElement.attrib["id"] = None
     entityElement.attrib["type"] = interactionGraphNode.entity.type
+    entityElement.attrib["isName"] = str(interactionGraphNode.entity.isName)
     texts = getTextByOffsets(offset, sentenceText)
     if len(texts) == 1:
         entityElement.attrib["text"] = texts[0]
