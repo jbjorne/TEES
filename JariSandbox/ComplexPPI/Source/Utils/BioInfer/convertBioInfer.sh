@@ -1,4 +1,4 @@
-python BioInferGraphToInteractionXML.py -i /usr/share/biotext/BinaryBioInfer/BI.all.nestingResolved.anonymousResolved.relaxed.r185.xml -o BioInfer.xml
+python BioInferGraphToInteractionXML.py -i /usr/share/biotext/BinaryBioInfer/bioinfer.nestingResolved.anonymousResolved.relaxed.r205.xml -o BioInfer.xml
 python ../../../../../CommonUtils/InteractionXML/MergeDuplicateEntities.py -i BioInfer.xml -o BioInfer.xml
 python GroupSentencesByDocument.py -i BioInfer.xml -o BioInfer.xml
 python ../../../../../CommonUtils/InteractionXML/RecalculateIds.py -i BioInfer.xml -o BioInfer.xml
@@ -10,9 +10,13 @@ python ../../../../../CommonUtils/InteractionXML/CopyParse.py -i BioInfer.xml -s
 python ../../../../../CommonUtils/InteractionXML/CopyParse.py -i BioInfer.xml -s /usr/share/biotext/Tampere_project/PPI_Learning/Data/BioInfer/BioInferAnalysisWithGSWithParallel.xml -o BioInfer.xml -t bioinfer_gs -p bioinfer_uncollapsed_stanford
 python ../../../../../CommonUtils/InteractionXML/CopyParse.py -i BioInfer.xml -s /usr/share/biotext/ComplexPPI/BioInferCLAnalysis_split_SMBM_version.xml -o BioInfer.xml -t Charniak-Lease -p Charniak-Lease
 
+# Create union parse
+python ../../../../../CommonUtils/InteractionXML/MergeParse.py -i BioInfer.xml -p bioinfer_gs -q bioinfer_uncollapsed_stanford -n bioinfer_union -o BioInfer.xml
+
 # Split parses
 python ../../../../../PPI_Learning/Analysers/ProteinNameSplitter.py -f BioInfer.xml -t bioinfer_gs -p bioinfer_gs -s split_bioinfer_gs -n split_bioinfer_gs -o BioInfer.xml
 python ../../../../../PPI_Learning/Analysers/ProteinNameSplitter.py -f BioInfer.xml -t bioinfer_gs -p bioinfer_uncollapsed_stanford -s split_bioinfer_uncollapsed_stanford -n split_bioinfer_uncollapsed_stanford -o BioInfer.xml
+python ../../../../../PPI_Learning/Analysers/ProteinNameSplitter.py -f BioInfer.xml -t bioinfer_gs -p bioinfer_union -s split_bioinfer_union -n split_bioinfer_union -o BioInfer.xml
 python ../../../../../PPI_Learning/Analysers/ProteinNameSplitter.py -f BioInfer.xml -t Charniak-Lease -p Charniak-Lease -s split_Charniak-Lease -n split_Charniak-Lease -o BioInfer.xml
 
 # Detect heads
