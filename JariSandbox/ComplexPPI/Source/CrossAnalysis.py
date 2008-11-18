@@ -159,6 +159,10 @@ def crossValidate(exampleBuilder, corpusElements, examples, options, timer):
     # Visualize
     if options.visualization != None:
         visualize(sentences, pooledResult.classifications, options, exampleBuilder)
+    
+    # Save interactionXML
+    if options.resultsToXML != None:
+        Example.writeToInteractionXML(pooledResult.classifications, corpusElements, options.resultsToXML)
 
 if __name__=="__main__":
     defaultAnalysisFilename = "/usr/share/biotext/ComplexPPI/BioInferForComplexPPI.xml"
@@ -175,6 +179,7 @@ if __name__=="__main__":
     optparser.add_option("-v", "--visualization", default=None, dest="visualization", help="Visualization output directory. NOTE: If the directory exists, it will be deleted!")
     optparser.add_option("-f", "--folds", default="10", dest="folds", help="X-fold cross validation")
     optparser.add_option("-d", "--paramOptData", default=None, dest="paramOptData", help="The fraction of the corpus to be always used for parameter optimization")
+    optparser.add_option("-m", "--resultsToXML", default=None, dest="resultsToXML", help="Output interaction xml-file")
     (options, args) = optparser.parse_args()
     
     timer = Timer()
