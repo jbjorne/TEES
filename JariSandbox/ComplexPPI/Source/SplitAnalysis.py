@@ -74,7 +74,7 @@ def compareToBinary(complexSentencesById, classifications, exampleBuilder, optio
 
 def buildExamples(exampleBuilder, sentences, options):
     examples = []
-    if "graphKernel" in exampleBuilder.styles:
+    if "graph_kernel" in exampleBuilder.styles:
         counter = ProgressCounter(len(sentences), "Build examples", 0)
     else:
         counter = ProgressCounter(len(sentences), "Build examples")
