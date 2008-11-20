@@ -79,10 +79,12 @@ class MultiEdgeFeatureBuilder(FeatureBuilder):
                     if self.entity1 == None and self.entity2 == None:
                         annTypes.append(entity.attrib["type"])
                     else:
+                        annTypes.append(entity.attrib["type"])
                         if self.entity1 == entity:
-                            annTypes.append(entity.attrib["type"])
+                            return [entity.attrib["type"]]
                             annTypes.append("e1_"+entity.attrib["type"])
                         if self.entity2 == entity:
+                            return [entity.attrib["type"]]
                             annTypes.append("e2_"+entity.attrib["type"])
             annTypes.sort()
             return annTypes[0:2]
