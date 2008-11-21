@@ -15,34 +15,58 @@ def getKeys(dicts):
         keyDict[key] = key
     return (keys, keyDict)
 
-def addToCSV(dict, filename):
+def addToCSV(dict, filename, fieldnames=None):
     rows = []
+    writeTitles = True
     if os.path.exists(filename):
-        rows = readCSV(filename)
+        rows = readCSV(filename, fieldnames)
+        if len(rows) > 0:
+            writeTitles = False
     if not isinstance(dict, list):
-        dict = [dict]
-    writeCSV(rows+dict, filename)
+        dict = [dict] 
+    writeCSV(rows+dict, filename, fieldnames, writeTitles)
+
+def selectRowsCSV(rows, conditions):
+    selected = []
+    for row in rows:
+        for key in conditions.keys():
+            if row.has_key(key) and row[key] == conditions[key]:
+                selected.append(row)
+    return selected
+
+def getValueSet(rows, column):
+    values = set()
+    for row in rows:
+        if row.has_key(column):
+            values.add(row[column])
+    return values
   
-def writeCSV(dict, filename):
+def writeCSV(dict, filename, fieldnames=None, writeTitles=True):
     if not isinstance(dict, list):
         dict = [dict]
-    keys, keyDict = getKeys(dict)
+    if fieldnames == None:
+        keys, keyDict = getKeys(dict)
+    else:
+        keys = fieldnames
+        keyDict = {}
+        for key in fieldnames:
+            keyDict[key] = key
     csvFile = open(filename, "wb")
     writer = csv.DictWriter(csvFile, fieldnames=keys)
-    writer.writerow(keyDict)
+    if writeTitles:
+        writer.writerow(keyDict)
     for row in dict:
         writer.writerow(row)
     csvFile.close()
 
-def readCSV(filename):
+def readCSV(filename, fieldnames=None):
     csvFile = open(filename, "rb")
-    reader = csv.DictReader(csvFile)
+    reader = csv.DictReader(csvFile, fieldnames=fieldnames)
     rows = []
-    row = reader.next()
     while True:
-        try:    
-            rows.append(row)
+        try:
             row = reader.next()
+            rows.append(row)
         except StopIteration:
             break
     csvFile.close()
