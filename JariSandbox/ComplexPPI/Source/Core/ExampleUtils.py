@@ -125,7 +125,7 @@ def divideExampleFile(exampleFileName, division, outputDir):
     for v in divisionFiles.values():
         v.close()
 
-def writeToInteractionXML(classifications, corpusElements, outputFile):
+def writeToInteractionXML(classifications, corpusElements, outputFile, classSet=None):
     import sys
     print >> sys.stderr, "Writing output to Interaction XML"
     try:
@@ -169,14 +169,17 @@ def writeToInteractionXML(classifications, corpusElements, outputFile):
                 pairElement = ET.Element("pair")
                 #pairElement.attrib["origId"] = origId
                 pairElement.attrib["type"] = example[3]["categoryName"]
-                pairElement.attrib["directed"] = "True"
+                pairElement.attrib["directed"] = "Unknown"
                 pairElement.attrib["e1"] = example[3]["e1"].attrib["id"]
                 pairElement.attrib["e2"] = example[3]["e2"].attrib["id"]
                 pairElement.attrib["id"] = sentenceId + ".p" + str(pairCount)
-                if classification[1] == "tp" or classification[1] == "fp":
-                    pairElement.attrib["interaction"] = str(True)
+                if classSet == None: # binary classification
+                    if classification[1] == "tp" or classification[1] == "fp":
+                        pairElement.attrib["prediction"] = str(True)
+                    else:
+                        pairElement.attrib["prediction"] = str(False)
                 else:
-                    pairElement.attrib["interaction"] = str(False)
+                    pairElement.attrib["prediction"] = classSet.getName(classification[3])
                 sentenceElement.append(pairElement)
                 pairCount += 1
         # re-attach the analyses-element
