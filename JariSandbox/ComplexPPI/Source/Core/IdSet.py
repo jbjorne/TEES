@@ -4,10 +4,17 @@ class IdSet:
         self.firstNumber = firstNumber
         self._namesById = {}
     
+    def defineId(self, name, id):
+        assert(not id in self.Ids.values())
+        assert(not name in self.Ids.keys())
+        self.Ids[name] = id
+        self._namesById[id] = name
+    
     def getId(self, name, makeIfNotExist=True):
         if not self.Ids.has_key(name):
             if makeIfNotExist:
                 id = len(self.Ids) + self.firstNumber
+                assert(not id in self.Ids.values())
                 self.Ids[name] = id
                 self._namesById[id] = name
             else:
