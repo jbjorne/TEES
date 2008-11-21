@@ -121,6 +121,15 @@ def crossValidate(exampleBuilder, corpusElements, examples, options, timer):
         print >> sys.stderr, "Testing",
         startTime = time.time()
         predictions = classifier.classify(testSet)
+        if options.output != None:
+            pdict = []
+            fieldnames = ["class","prediction","id","fold"]
+            for p in predictions:
+                if "typed" in exampleBuilder.styles:
+                    pdict.append( {"class":exampleBuilder.classSet.getName(p[0][1]), "prediction":exampleBuilder.classSet.getName(p[1]), "id":p[0][0], "fold":key} )
+                else:
+                    pdict.append( {"class":p[0][1], "prediction":p[1], "id":p[0][0], "fold":key} )
+            TableUtils.addToCSV(pdict, options.output +"/predictions.csv", fieldnames)
         print >> sys.stderr, "(Time spent:", time.time() - startTime, "s)"
         
         # Calculate statistics
@@ -154,6 +163,10 @@ def crossValidate(exampleBuilder, corpusElements, examples, options, timer):
     pooledResult = Evaluation.pool(evaluations)
     print >> sys.stderr, pooledResult.toStringConcise("  Pool: ")
     if options.output != None:
+        for i in range(len(evaluations)):
+            evaluations[i].saveCSV(options.output+"/results.csv", i)
+        averageResult.saveCSV(options.output+"/results.csv", "Avg")
+        pooledResult.saveCSV(options.output+"/results.csv", "Pool")
         averageResult.saveCSV(options.output+"/resultsAverage.csv")
         pooledResult.saveCSV(options.output+"/resultsPooled.csv")
     # Visualize
@@ -162,7 +175,10 @@ def crossValidate(exampleBuilder, corpusElements, examples, options, timer):
     
     # Save interactionXML
     if options.resultsToXML != None:
-        Example.writeToInteractionXML(pooledResult.classifications, corpusElements, options.resultsToXML)
+        classSet = None
+        if "typed" in exampleBuilder.styles:
+            classSet = exampleBuilder.classSet
+        Example.writeToInteractionXML(pooledResult.classifications, corpusElements, options.resultsToXML, classSet)
 
 if __name__=="__main__":
     defaultAnalysisFilename = "/usr/share/biotext/ComplexPPI/BioInferForComplexPPI.xml"
