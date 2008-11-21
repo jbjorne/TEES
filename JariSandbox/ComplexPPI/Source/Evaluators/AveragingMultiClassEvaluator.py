@@ -274,22 +274,60 @@ class AveragingMultiClassEvaluator(Evaluator):
         else:
             values.extend(["N/A","N/A","N/A"])
         csvWriter.writerow(values)       
+
+    def __getClassDict(self, cls):
+        values = {}        
+        values["class"] = self.classSet.getName(cls)
+        values["positives"] = self.truePositivesByClass[cls]+self.falseNegativesByClass[cls]
+        values["negatives"] = self.trueNegativesByClass[cls]+self.falsePositivesByClass[cls]
+        values["true positives"] = self.truePositivesByClass[cls]
+        values["false positives"] = self.falsePositivesByClass[cls]
+        values["true negatives"] = self.trueNegativesByClass[cls]
+        values["false negatives"] = self.falseNegativesByClass[cls]
+        if self.instancesByClass[cls] > 0 or self.falsePositivesByClass[cls] > 0:
+            values["precision"] = self.precisionByClass[cls]
+            values["recall"] = self.recallByClass[cls]
+            values["f-score"] = self.fScoreByClass[cls]
+        else:
+            values["precision"] = "N/A"
+            values["recall"] = "N/A"
+            values["f-score"] = "N/A"
+        values["AUC"] = "N/A"
+        return values
     
-    def saveCSV(self, filename):
-        import csv
-        csvFile = open(filename, "wb")        
-        writer = csv.writer(csvFile)
-        writer.writerow(["class","positives","negatives","true positives","false positives","true negatives","false negatives","precision","recall","f-score"])
+#    def saveCSV(self, filename):
+#        import csv
+#        csvFile = open(filename, "wb")        
+#        writer = csv.writer(csvFile)
+#        writer.writerow(["class","positives","negatives","true positives","false positives","true negatives","false negatives","precision","recall","f-score"])
+#        negativeClassId = None
+#        for cls in self.classes:
+#            if cls != self.classSet.getId("neg", False):
+#                self.__addClassToCSV(writer, cls)
+#            else:
+#                negativeClassId = cls
+#        if negativeClassId != None:
+#            self.__addClassToCSV(writer, negativeClassId)
+#        # add averages
+#        writer.writerow(["micro",self.microTP+self.microFN,self.microTN+self.microFP,self.microTP,self.microFP,self.microTN,self.microFN,self.microPrecision,self.microRecall,self.microFScore])
+#        writer.writerow(["macro","N/A","N/A","N/A","N/A","N/A","N/A",self.macroPrecision,self.macroRecall,self.macroFScore])
+#        writer.writerow(["binary",self.binaryTP+self.binaryFN,self.binaryTN+self.binaryFP,self.binaryTP,self.binaryFP,self.binaryTN,self.binaryFN,self.binaryPrecision,self.binaryRecall,self.binaryFScore])
+#        csvFile.close()
+    
+    def toDict(self):
+        dicts = []
+        if len(self.classes) > 0:
+            assert(not ("1" in self.classSet.getNames() and "neg" in self.classSet.getNames()))
         negativeClassId = None
         for cls in self.classes:
-            if cls != self.classSet.getId("neg", False):
-                self.__addClassToCSV(writer, cls)
+            if cls != self.classSet.getId("neg", False) and cls != self.classSet.getId("1", False):
+                dicts.append(self.__getClassDict(cls))
             else:
+                assert(negativeClassId == None)
                 negativeClassId = cls
         if negativeClassId != None:
-            self.__addClassToCSV(writer, negativeClassId)
-        # add averages
-        writer.writerow(["micro",self.microTP+self.microFN,self.microTN+self.microFP,self.microTP,self.microFP,self.microTN,self.microFN,self.microPrecision,self.microRecall,self.microFScore])
-        writer.writerow(["macro","N/A","N/A","N/A","N/A","N/A","N/A",self.macroPrecision,self.macroRecall,self.macroFScore])
-        writer.writerow(["binary",self.binaryTP+self.binaryFN,self.binaryTN+self.binaryFP,self.binaryTP,self.binaryFP,self.binaryTN,self.binaryFN,self.binaryPrecision,self.binaryRecall,self.binaryFScore])
-        csvFile.close()
+            dicts.append(self.__getClassDict(negativeClassId))
+        dicts.append({"class":"micro","positives":self.microTP+self.microFN,"negatives":self.microTN+self.microFP,"true positives":self.microTP,"false positives":self.microFP,"true negatives":self.microTN,"false negatives":self.microFN,"precision":self.microPrecision,"recall":self.microRecall,"f-score":self.microFScore,"AUC":"N/A"})
+        dicts.append({"class":"macro","positives":"N/A","negatives":"N/A","true positives":"N/A","false positives":"N/A","true negatives":"N/A","false negatives":"N/A","precision":self.macroPrecision,"recall":self.macroRecall,"f-score":self.macroFScore,"AUC":"N/A"})
+        dicts.append({"class":"binary","positives":self.binaryTP+self.binaryFN,"negatives":self.binaryTN+self.binaryFP,"true positives":self.binaryTP,"false positives":self.binaryFP,"true negatives":self.binaryTN,"false negatives":self.binaryFN,"precision":self.binaryPrecision,"recall":self.binaryRecall,"f-score":self.binaryFScore,"AUC":"N/A"})
+        return dicts

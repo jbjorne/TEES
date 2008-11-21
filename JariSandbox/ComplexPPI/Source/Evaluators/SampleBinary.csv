@@ -1,0 +1,19 @@
+1, -1,Example.x1,0
+-1,-1,Example.x2,0
+1,1,Example.x3,1
+-1,1,Example.x4,1
+1,1,Example.x5,1
+1,-1,Example.x6,1
+-1,1,Example.x7,2
+-1,-1,Example.x8,2
+-1,1,Example.x9,0
+-1,-1,Example.x10,0
+1,1,Example.x11,0
+-1,-1,Example.x12,2
+1,1,Example.x13,2
+-1,1,Example.x14,2
+1,1,Example.x15,2
+-1,-1,Example.x16,1
+1,1,Example.x17,1
+-1,-1,Example.x18,0
+1,1,Example.x19,0

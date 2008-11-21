@@ -1,6 +1,6 @@
-from Evaluator import Evaluator
+import Evaluator
 
-class BinaryEvaluator(Evaluator):
+class BinaryEvaluator(Evaluator.Evaluator):
     def __init__(self, predictions, classSet=None):
         self.predictions = predictions
         self.truePositives = 0
@@ -147,18 +147,25 @@ class BinaryEvaluator(Evaluator):
             string += " a:N/A"
         return string
     
-    def saveCSV(self, filename):
-        import csv
-        csvFile = open(filename, "wb")        
-        writer = csv.writer(csvFile)
-        writer.writerow(["positives","negatives","true positives","false positives","true negatives","false negatives","precision","recall","f-score","AUC"])
-        values = [self.truePositives+self.falseNegatives,self.trueNegatives+self.falsePositives,self.truePositives,self.falsePositives,self.trueNegatives,self.falseNegatives,self.precision,self.recall,self.fScore]
-        if self.AUC != None:
-            values.append(self.AUC)
-        else:
-            values.append("N/A")
-        writer.writerow(values)
-        csvFile.close()
+#    def saveCSV(self, filename, fold=None):
+##        import csv
+##        csvFile = open(filename, "wb")        
+##        writer = csv.writer(csvFile)
+##        writer.writerow(["positives","negatives","true positives","false positives","true negatives","false negatives","precision","recall","f-score","AUC"])
+##        values = [self.truePositives+self.falseNegatives,self.trueNegatives+self.falsePositives,self.truePositives,self.falsePositives,self.trueNegatives,self.falseNegatives,self.precision,self.recall,self.fScore]
+##        if self.AUC != None:
+##            values.append(self.AUC)
+##        else:
+##            values.append("N/A")
+##        writer.writerow(values)
+##        csvFile.close()
+#        import sys
+#        sys.path.append("..")
+#        import Utils.TableUtils as TableUtils
+#        dicts = self.toDict()
+#        if fold != None:
+#            dicts[0]["fold"] = fold
+#        TableUtils.addToCSV(dicts, filename, Evaluator.g_evaluatorFieldnames)
     
     def toDict(self):
         dict = {}
@@ -175,4 +182,5 @@ class BinaryEvaluator(Evaluator):
             dict["AUC"] = self.AUC
         else:
             dict["AUC"] = "N/A"
-        return dict
+        return [dict]
+    
