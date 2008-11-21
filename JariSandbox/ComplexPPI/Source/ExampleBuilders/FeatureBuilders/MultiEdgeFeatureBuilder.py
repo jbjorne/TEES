@@ -73,19 +73,20 @@ class MultiEdgeFeatureBuilder(FeatureBuilder):
     
     def getTokenAnnotatedType(self, token, sentenceGraph):
         if len(sentenceGraph.tokenIsEntityHead[token]) > 0 and not self.noAnnType:
-            annTypes = []
+            annTypes = set()
             for entity in sentenceGraph.tokenIsEntityHead[token]:
                 if entity.attrib.has_key("type") and not entity.attrib["type"] in annTypes:
                     if self.entity1 == None and self.entity2 == None:
-                        annTypes.append(entity.attrib["type"])
+                        annTypes.add(entity.attrib["type"])
                     else:
-                        annTypes.append(entity.attrib["type"])
+                        annTypes.add(entity.attrib["type"])
                         if self.entity1 == entity:
-                            return [entity.attrib["type"]]
-                            annTypes.append("e1_"+entity.attrib["type"])
+                            #return [entity.attrib["type"]]
+                            annTypes.add("e1_"+entity.attrib["type"])
                         if self.entity2 == entity:
-                            return [entity.attrib["type"]]
-                            annTypes.append("e2_"+entity.attrib["type"])
+                            #return [entity.attrib["type"]]
+                            annTypes.add("e2_"+entity.attrib["type"])
+            annTypes = list(annTypes)
             annTypes.sort()
             return annTypes[0:2]
         else:
