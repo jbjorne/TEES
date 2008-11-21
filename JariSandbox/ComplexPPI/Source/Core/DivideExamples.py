@@ -26,6 +26,8 @@ if __name__=="__main__":
     inputFile = open(options.input, "rt")
     try:
         for line in inputFile:
+            if len(line) == 0 or line[0] == "#":
+                continue
             docId = getDocumentId(getIdFromLine(line))
             if not docId in documentIds:
                 documentIds.append(docId)
@@ -42,6 +44,8 @@ if __name__=="__main__":
     inputFile = open(options.input, "rt")
     try:
         for line in inputFile:
+            if len(line) == 0 or line[0] == "#":
+                continue
             docId = getDocumentId(getIdFromLine(line))
             outputFiles[division[docId]].write(line)
     finally:
