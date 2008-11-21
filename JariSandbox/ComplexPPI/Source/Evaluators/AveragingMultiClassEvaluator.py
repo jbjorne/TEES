@@ -1,4 +1,5 @@
 from Evaluator import Evaluator
+from BinaryEvaluator import BinaryEvaluator
 
 class AveragingMultiClassEvaluator(Evaluator):
     def __init__(self, predictions=None, classSet=None):
@@ -52,6 +53,8 @@ class AveragingMultiClassEvaluator(Evaluator):
         self.binaryPrecision = 0
         self.binaryRecall = 0
         self.binaryFScore = 0
+        
+        self.untypedUndirected = None
 
         #self.AUC = None
         self.type = "multiclass"
@@ -105,8 +108,36 @@ class AveragingMultiClassEvaluator(Evaluator):
         averageEvaluator.microFScore /= sumWeight
         return averageEvaluator
     average = staticmethod(average)
-            
+    
+    def _calculateUntypedUndirected(self, predictions):
+        untypedUndirectedPredictions = []
+        predictionsById = {}
+        for prediction in predictions:
+            id = prediction[0][0]
+            if id != None:
+                majorId, minorId = id.rsplit(".x", 1)
+                if not predictionsById.has_key(majorId):
+                    predictionsById[majorId] = {}
+                predictionsById[majorId][int(minorId)] = prediction
+        for majorId in sorted(predictionsById.keys()):
+            prevPrediction = None
+            for minorId in sorted(predictionsById[majorId]):
+                prediction = predictionsById[majorId][minorId]
+                if prevPrediction != None and minorId % 2 != 0:
+                    if prediction[0][1] != 1 or prevPrediction[0][1] != 1:
+                        trueClass = 1
+                    else:
+                        trueClass = -1
+                    if prediction[1] != 1 or prevPrediction[1] != 1:
+                        predictedClass = 1
+                    else:
+                        predictedClass = -1
+                    untypedUndirectedPredictions.append( ((None,trueClass),predictedClass) )
+                prevPrediction = prediction
+        self.untypedUndirected = BinaryEvaluator(untypedUndirectedPredictions)
+        
     def _calculate(self, predictions):
+        self._calculateUntypedUndirected(predictions)
         # First count instances
         self.microTP = 0
         self.microFP = 0
@@ -252,10 +283,12 @@ class AveragingMultiClassEvaluator(Evaluator):
         string += "macro p/r/f:" + str(self.macroPrecision)[0:6] + "/" + str(self.macroRecall)[0:6] + "/" + str(self.macroFScore)[0:6]
         string += "\n" + indent
         # Binary results
-        string += "binary p/n:" + str(self.binaryTP+self.binaryFN) + "/" + str(self.binaryTN+self.binaryFP)
+        string += "untyped p/n:" + str(self.binaryTP+self.binaryFN) + "/" + str(self.binaryTN+self.binaryFP)
         string += " tp/fp|tn/fn:" + str(self.binaryTP) + "/" + str(self.binaryFP) + "|" + str(self.binaryTN) + "/" + str(self.binaryFN)
         string += " p/r/f:" + str(self.binaryPrecision)[0:6] + "/" + str(self.binaryRecall)[0:6] + "/" + str(self.binaryFScore)[0:6]
         string += "\n" + indent
+        if self.untypedUndirected != None:
+            string += self.untypedUndirected.toStringConcise("untyped undirected ") + "\n"
         return string
     
     def __addClassToCSV(self, csvWriter, cls):
@@ -329,5 +362,8 @@ class AveragingMultiClassEvaluator(Evaluator):
             dicts.append(self.__getClassDict(negativeClassId))
         dicts.append({"class":"micro","positives":self.microTP+self.microFN,"negatives":self.microTN+self.microFP,"true positives":self.microTP,"false positives":self.microFP,"true negatives":self.microTN,"false negatives":self.microFN,"precision":self.microPrecision,"recall":self.microRecall,"f-score":self.microFScore,"AUC":"N/A"})
         dicts.append({"class":"macro","positives":"N/A","negatives":"N/A","true positives":"N/A","false positives":"N/A","true negatives":"N/A","false negatives":"N/A","precision":self.macroPrecision,"recall":self.macroRecall,"f-score":self.macroFScore,"AUC":"N/A"})
-        dicts.append({"class":"binary","positives":self.binaryTP+self.binaryFN,"negatives":self.binaryTN+self.binaryFP,"true positives":self.binaryTP,"false positives":self.binaryFP,"true negatives":self.binaryTN,"false negatives":self.binaryFN,"precision":self.binaryPrecision,"recall":self.binaryRecall,"f-score":self.binaryFScore,"AUC":"N/A"})
+        dicts.append({"class":"untyped","positives":self.binaryTP+self.binaryFN,"negatives":self.binaryTN+self.binaryFP,"true positives":self.binaryTP,"false positives":self.binaryFP,"true negatives":self.binaryTN,"false negatives":self.binaryFN,"precision":self.binaryPrecision,"recall":self.binaryRecall,"f-score":self.binaryFScore,"AUC":"N/A"})
+        if self.untypedUndirected != None:
+            dicts.extend(self.untypedUndirected.toDict())
+            dicts[-1]["class"] = "untyped undirected"
         return dicts
