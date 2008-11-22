@@ -141,22 +141,23 @@ class Classifier:
                     combinationsThatTimedOut.append(combination)
                     print >> sys.stderr, "  Timed out"
                 fold += 1
-            averageResult = evaluationClass.average(foldResults)
-            poolResult = evaluationClass.pool(foldResults)
-            if hasattr(self, "tempDir"):
-                TableUtils.writeCSV(combination, mainTempDir + "/parameters"+str(combinationCount)+".csv")
-                averageResult.saveCSV( mainTempDir+"/parameters"+str(combinationCount)+"/resultsAverage.csv" )
-                poolResult.saveCSV( mainTempDir+"/parameters"+str(combinationCount)+"/resultsPooled.csv" )
-            if len(classifySets) > 1:
-                print >> sys.stderr, averageResult.toStringConcise("  Avg: ")
-                print >> sys.stderr, poolResult.toStringConcise("  Pool: ")
-            if bestResult == None or poolResult.compare(bestResult[1]) > 0: #: averageResult.fScore > bestResult[1].fScore:
-                #bestResult = (predictions, averageResult, combination)
-                bestResult = (None, poolResult, combination)
-                # Make sure memory is released, especially important since some of the previous steps
-                # copy examples
-                bestResult[1].classifications = None
-                bestResult[1].predictions = None
+            if len(foldResults) > 0:
+                averageResult = evaluationClass.average(foldResults)
+                poolResult = evaluationClass.pool(foldResults)
+                if hasattr(self, "tempDir"):
+                    TableUtils.writeCSV(combination, mainTempDir + "/parameters"+str(combinationCount)+".csv")
+                    averageResult.saveCSV( mainTempDir+"/parameters"+str(combinationCount)+"/resultsAverage.csv" )
+                    poolResult.saveCSV( mainTempDir+"/parameters"+str(combinationCount)+"/resultsPooled.csv" )
+                if len(classifySets) > 1:
+                    print >> sys.stderr, averageResult.toStringConcise("  Avg: ")
+                    print >> sys.stderr, poolResult.toStringConcise("  Pool: ")
+                if bestResult == None or poolResult.compare(bestResult[1]) > 0: #: averageResult.fScore > bestResult[1].fScore:
+                    #bestResult = (predictions, averageResult, combination)
+                    bestResult = (None, poolResult, combination)
+                    # Make sure memory is released, especially important since some of the previous steps
+                    # copy examples
+                    bestResult[1].classifications = None
+                    bestResult[1].predictions = None
             combinationCount += 1
             if hasattr(self, "tempDir"):
                 self.debugFile.close()
