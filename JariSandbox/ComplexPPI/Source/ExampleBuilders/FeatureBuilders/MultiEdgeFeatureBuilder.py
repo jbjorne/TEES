@@ -48,49 +48,6 @@ class MultiEdgeFeatureBuilder(FeatureBuilder):
             
             if sentenceGraph.entityHeadTokenByEntity[self.entity1] == sentenceGraph.entityHeadTokenByEntity[self.entity2]:
                 self.features[self.featureSet.getId("selfLoop")] = 1
-            
-    def getTokenFeatures(self, token, sentenceGraph, text=True, POS=True, annotatedType=True, stem=False, ontology=True):
-        featureList = []
-        if text:
-            featureList.append("txt_"+sentenceGraph.getTokenText(token))
-        if POS:
-            pos = token.attrib["POS"]
-            if pos.find("_") != None:
-                for split in pos.split("_"):
-                    featureList.append("POS_"+split)
-            featureList.append("POS_"+pos)
-        if annotatedType and not self.noAnnType:
-            annTypes = self.getTokenAnnotatedType(token, sentenceGraph)
-            for annType in annTypes:
-                featureList.append("annType_"+annType)
-            if ontology and (self.ontologyFeatureBuilder != None):
-                for annType in annTypes:
-                    featureList.extend(self.ontologyFeatureBuilder.getParents(annType))
-        if stem:
-            featureList.append("stem_"+PorterStemmer.stem(sentenceGraph.getTokenText(token)))
-                    
-        return featureList
-    
-    def getTokenAnnotatedType(self, token, sentenceGraph):
-        if len(sentenceGraph.tokenIsEntityHead[token]) > 0 and not self.noAnnType:
-            annTypes = set()
-            for entity in sentenceGraph.tokenIsEntityHead[token]:
-                if entity.attrib.has_key("type") and not entity.attrib["type"] in annTypes:
-                    if self.entity1 == None and self.entity2 == None:
-                        annTypes.add(entity.attrib["type"])
-                    else:
-                        annTypes.add(entity.attrib["type"])
-                        if self.entity1 == entity:
-                            #return [entity.attrib["type"]]
-                            annTypes.add("e1_"+entity.attrib["type"])
-                        if self.entity2 == entity:
-                            #return [entity.attrib["type"]]
-                            annTypes.add("e2_"+entity.attrib["type"])
-            annTypes = list(annTypes)
-            annTypes.sort()
-            return annTypes[0:2]
-        else:
-            return ["noAnnType"]
                 
     def getEdges(self, graph, path):
         """
