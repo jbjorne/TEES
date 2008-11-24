@@ -1,7 +1,7 @@
 import Evaluator
 
 class BinaryEvaluator(Evaluator.Evaluator):
-    def __init__(self, predictions, classSet=None):
+    def __init__(self, predictions=None, classSet=None):
         self.predictions = predictions
         self.truePositives = 0
         self.falsePositives = 0
