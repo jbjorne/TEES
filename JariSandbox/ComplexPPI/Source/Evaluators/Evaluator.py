@@ -79,7 +79,7 @@ if __name__=="__main__":
     for row in rows:
         classNames.add(row["class"])
         classNames.add(row["prediction"])
-        if row["fold"] != None:
+        if row["fold"] != None and row["fold"] != "":
             if not foldDict.has_key(row["fold"]):
                 foldDict[row["fold"]] = []
             foldDict[row["fold"]].append(row)
