@@ -40,7 +40,32 @@ def getValueSet(rows, column):
         if row.has_key(column):
             values.add(row[column])
     return values
-  
+
+def remapKeys(rows, dict):
+    newRows = []
+    for row in rows:
+        newRow = {}
+        for k in row.keys():
+            value = row[k]
+            key = k
+            if key in dict.keys():
+                key = dict[key]
+            newRow[key] = value
+        newRows.append(newRow)
+    return newRows
+
+def removeKeys(rows, keys):
+    newRows = []
+    for row in rows:
+        newRow = {}
+        for k in row.keys():
+            value = row[k]
+            key = k
+            if key not in keys:
+                newRow[key] = value
+        newRows.append(newRow)
+    return newRows
+
 def writeCSV(dict, filename, fieldnames=None, writeTitles=True):
     if not isinstance(dict, list):
         dict = [dict]
