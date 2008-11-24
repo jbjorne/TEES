@@ -74,3 +74,5 @@ if __name__=="__main__":
     # Build examples
     exampleBuilder = ExampleBuilderClass(**splitParameters(options.exampleBuilderParameters))
     buildExamples(exampleBuilder, sentences, options)
+    print >> sys.stderr, "Saving class names to", options.output + ".class_names"
+    exampleBuilder.classSet.write(options.output + ".class_names")
