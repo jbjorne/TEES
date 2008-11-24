@@ -114,7 +114,7 @@ class AveragingMultiClassEvaluator(Evaluator):
         predictionsById = {}
         for prediction in predictions:
             id = prediction[0][0]
-            if id != None:
+            if id != None and id != "":
                 majorId, minorId = id.rsplit(".x", 1)
                 if not predictionsById.has_key(majorId):
                     predictionsById[majorId] = {}
@@ -134,7 +134,8 @@ class AveragingMultiClassEvaluator(Evaluator):
                         predictedClass = -1
                     untypedUndirectedPredictions.append( ((None,trueClass),predictedClass) )
                 prevPrediction = prediction
-        self.untypedUndirected = BinaryEvaluator(untypedUndirectedPredictions)
+        if len(untypedUndirectedPredictions) > 0:
+            self.untypedUndirected = BinaryEvaluator(untypedUndirectedPredictions)
         
     def _calculate(self, predictions):
         self._calculateUntypedUndirected(predictions)
