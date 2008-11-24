@@ -55,7 +55,7 @@ class MultiEdgeExampleBuilder(ExampleBuilder):
         categoryName = ""
         for name in types:
             if categoryName != "":
-                categoryName += "-"
+                categoryName += "---"
             categoryName += name
         if categoryName != "":
             return categoryName
@@ -75,7 +75,7 @@ class MultiEdgeExampleBuilder(ExampleBuilder):
         categoryName = ""
         for name in types:
             if categoryName != "":
-                categoryName += "-"
+                categoryName += "---"
             categoryName += name
         if categoryName != "":
             return categoryName
@@ -91,7 +91,7 @@ class MultiEdgeExampleBuilder(ExampleBuilder):
         categoryName = ""
         for name in categoryNames:
             if categoryName != "":
-                categoryName += "-"
+                categoryName += "---"
             categoryName += name
         if categoryName != "":
             return categoryName
