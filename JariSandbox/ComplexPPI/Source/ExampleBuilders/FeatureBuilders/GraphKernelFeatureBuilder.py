@@ -205,20 +205,39 @@ class GraphKernelFeatureBuilder(FeatureBuilder):
         preTagByToken = self._addPositionTags(sentenceGraph, [path[0]], [path[-1]])
         for node in sentenceGraph.tokens:
             index = self._getTokenId(node) - 1
+            # use the same approach as in MultiEdgeFeatureBuilder
+            features = self.getTokenFeatures(node, sentenceGraph)
+            if "txt_NAMED_ENT" in features:
+                if self.entity1 in sentenceGraph.tokenIsEntityHead[node]:
+                    features.remove("txt_NAMED_ENT")
+                    features.append("txt_NAMED_ENT_1")
+                elif self.entity2 in sentenceGraph.tokenIsEntityHead[node]:
+                    features.remove("txt_NAMED_ENT")
+                    features.append("txt_NAMED_ENT_2")
+            if "noAnnType" in features:
+                features.remove("noAnnType")
+            
+            # apply labels
             if node in path: # shortest path
-                labels[index].add("sp_"+self._getTokenText(path, sentenceGraph, node))
-                labels[index].add("sp_"+node.attrib["POS"])
+                for feature in features:
+                    labels[index].add("sp_"+feature)
+                #labels[index].add("sp_"+self._getTokenText(path, sentenceGraph, node))
+                #labels[index].add("sp_"+node.attrib["POS"])
             else:
-                labels[index].add(self._getTokenText(path, sentenceGraph, node))
-                labels[index].add(node.attrib["POS"])
+                for feature in features:
+                    labels[index].add(feature)
+                #labels[index].add(self._getTokenText(path, sentenceGraph, node))
+                #labels[index].add(node.attrib["POS"])
 #            for code in node.metamapCodes:
 #                labels[index].add(code)
 #            if node.isPPIInteraction:
 #                labels[index].add("1Nt3R4Ct")
             if preTagByToken.has_key(node):
                 preTag = preTagByToken[node]
-                labels[len(sentenceGraph.tokens)+index].add(preTag+self._getTokenText(path, sentenceGraph, node))
-                labels[len(sentenceGraph.tokens)+index].add(preTag+node.attrib["POS"])
+                for feature in features:
+                    labels[index].add(preTag+feature)
+                #labels[len(sentenceGraph.tokens)+index].add(preTag+self._getTokenText(path, sentenceGraph, node))
+                #labels[len(sentenceGraph.tokens)+index].add(preTag+node.attrib["POS"])
 #                for code in node.metamapCodes:
 #                    labels[len(tokensById)+index].add(preTag+code)
 #                if node.isPPIInteraction:
