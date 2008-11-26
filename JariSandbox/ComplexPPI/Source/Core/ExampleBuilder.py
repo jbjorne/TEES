@@ -46,6 +46,14 @@ def buildExamples(exampleBuilder, sentences, options):
     print >> sys.stderr, "Features:", len(exampleBuilder.featureSet.getNames())
 
 if __name__=="__main__":
+    # Import Psyco if available
+    try:
+        import psyco
+        psyco.full()
+        print >> sys.stderr, "Found Psyco, using"
+    except ImportError:
+        print >> sys.stderr, "Psyco not installed"
+
     import SentenceGraph
     sys.path.append("..")
     from Utils.ProgressCounter import ProgressCounter
