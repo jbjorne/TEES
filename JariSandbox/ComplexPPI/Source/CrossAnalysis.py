@@ -181,6 +181,14 @@ def crossValidate(exampleBuilder, corpusElements, examples, options, timer):
         Example.writeToInteractionXML(pooledResult.classifications, corpusElements, options.resultsToXML, classSet)
 
 if __name__=="__main__":
+    # Import Psyco if available
+    try:
+        import psyco
+        psyco.full()
+        print >> sys.stderr, "Found Psyco, using"
+    except ImportError:
+        print >> sys.stderr, "Psyco not installed"
+
     defaultAnalysisFilename = "/usr/share/biotext/ComplexPPI/BioInferForComplexPPI.xml"
     optparser = OptionParser(usage="%prog [options]\nCreate an html visualization for a corpus.")
     optparser.add_option("-i", "--input", default=defaultAnalysisFilename, dest="input", help="Corpus in analysis format", metavar="FILE")
