@@ -57,13 +57,16 @@ class GeniaEntity:
         entityElement.attrib["id"] = sentenceId + ".e" + str(len(entitiesById))
         entitiesById[self.id] = entityElement
         entityElement.attrib["type"] = self.sem
-        entityElement.attrib["isName"] = "True"
+        if self.sem == "gene-or-gene-product":
+            entityElement.attrib["isName"] = "True"
+        else:
+            entityElement.attrib["isName"] = "False"
         entityElement.attrib["charOffset"] = Range.tuplesToCharOffset(self.charOffset)
         #entityElement.attrib["headOffset"] = entityElement.attrib["charOffset"]
-        if self.headToken != None:
-            entityElement.attrib["headOffset"] = Range.tuplesToCharOffset(self.headToken.charOffset)
-        else:
-            entityElement.attrib["headOffset"] = interactionWordElement.attrib["charOffset"]
+#        if self.headToken != None:
+#            entityElement.attrib["headOffset"] = Range.tuplesToCharOffset(self.headToken.charOffset)
+#        else:
+#            entityElement.attrib["headOffset"] = interactionWordElement.attrib["charOffset"]
         entityElement.attrib["text"] = self.text
         self.InteractionXMLelement = entityElement
         
@@ -107,10 +110,10 @@ class GeniaEvent:
             interactionWordElement.attrib["charOffset"] = Range.tuplesToCharOffset(self.clueTypeCharOffsets)
             if interactionWordElement.attrib["charOffset"] == "":
                 return
-            if self.headToken != None:
-                interactionWordElement.attrib["headOffset"] = Range.tuplesToCharOffset(self.headToken.charOffset)
-            else:
-                interactionWordElement.attrib["headOffset"] = interactionWordElement.attrib["charOffset"]
+#            if self.headToken != None:
+#                interactionWordElement.attrib["headOffset"] = Range.tuplesToCharOffset(self.headToken.charOffset)
+#            else:
+#                interactionWordElement.attrib["headOffset"] = interactionWordElement.attrib["charOffset"]
             interactionWordElement.attrib["text"] = str(self.clueTypeTexts)
             interactionWordElement.attrib["id"] = sentenceId + ".e" + str(len(entitiesById))
             entitiesById[self.id] = interactionWordElement
@@ -286,6 +289,8 @@ class GeniaParseGraph(InteractionParseGraph):
             entity.elementType = child.tag
             if child.attrib.has_key("sem"):
                 entity.sem = child.attrib["sem"]
+            elif child.tag == "gene-or-gene-product":
+                entity.sem = "gene-or-gene-product"
             entity.id = child.attrib["id"]
             text = text.replace("\n"," ")
             charOffsetBegin = len(text)

@@ -136,7 +136,7 @@ if __name__=="__main__":
                             prevParseGraph.addEvent(articleElement)
                     else:
                         print >> sys.stderr, "Unknown element:", articleElement.tag
-                        sys.exit(1)
+                        #sys.exit(1)
             docCount += 1
         articleCount += 1
     print >> sys.stderr
