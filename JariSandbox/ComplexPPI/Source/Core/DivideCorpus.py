@@ -1,29 +1,23 @@
 import Split
-import sys
+import sys, os
 sys.path.append("..")
 try:
     import xml.etree.cElementTree as ET
 except ImportError:
     import cElementTree as ET
 import cElementTreeUtils as ETUtils
-
-def getDocumentId(idString):
-    return idString.rsplit(".",2)[0]
-
-def getIdFromLine(line):
-    assert(line.find("#") != -1)
-    return line.split("#")[-1].strip()
+import InteractionXML.CorpusElements as CorpusElements
 
 if __name__=="__main__":
     from optparse import OptionParser
     optparser = OptionParser(usage="%prog [options]\n")
     optparser.add_option("-i", "--input", default=None, dest="input", help="Corpus in analysis format", metavar="FILE")
-    optparser.add_option("-o", "--output", default="", dest="output", help="Output directory")
+    optparser.add_option("-o", "--output", default=None, dest="output", help="Output directory")
     optparser.add_option("-f", "--folds", type="int", default=10, dest="folds", help="X-fold cross validation")
     (options, args) = optparser.parse_args()
 
     # Load corpus and make sentence graphs
-    corpusElements = SentenceGraph.loadCorpus(options.input, options.parse, options.tokenization)   
+    corpusElements = CorpusElements.loadCorpus(options.input)   
     
     outputTrees = []
     for i in range(options.folds):
@@ -39,18 +33,21 @@ if __name__=="__main__":
         assert( not docId in documentIds )
         documentIds.append(docId)
 
-    print >> sys.stderr, "Dividing documents into folds"
+    print >> sys.stderr, "Calculating document division"
     sample = Split.getFolds(len(documentIds),options.folds)
     division = {}
     for i in range(len(documentIds)): 
         division[documentIds[i]] = sample[i]
 
-    print >> sys.stderr, "Dividing examples"
+    print >> sys.stderr, "Dividing documents"
     for document in corpusElements.documents:
-        sentences = document.findall("sentence")
-        for sentence in sentences:
-            docId = sentence.attrib["id"].rsplit(".",1)[0]
-            outputTrees[division[docId]].append(sentence)
+        docId = document.attrib["id"]
+        outputTrees[division[docId]].append(document)
     
-    for outputTree in outputTree:
-        ETUtils.write
+    for i in range(options.folds):
+        if options.output == None:
+            filename = options.input + ".fold" + str(i)
+        else:
+            filename = os.path.join(options.output, os.path.basename(options.input) + ".fold" + str(i))
+        print >> sys.stderr, "Writing file", filename
+        ETUtils.write(outputTrees[i], filename)
