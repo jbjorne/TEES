@@ -19,22 +19,38 @@ python ../../../../../CommonUtils/InteractionXML/RecalculateIds.py -i GENIA.xml 
 # Create union parse
 python ../../../../../CommonUtils/InteractionXML/MergeParse.py -i GENIA.xml -p gold_collapsed -q gold_uncollapsed -n gold_union -o GENIA.xml
 
-# Split parses
-python ../../../../../PPI_Learning/Analysers/ProteinNameSplitter.py -f GENIA.xml -t gold -p gold_collapsed -s split_gold_collapsed -n split_gold_collapsed -o GENIA.xml
-python ../../../../../PPI_Learning/Analysers/ProteinNameSplitter.py -f GENIA.xml -t gold -p gold_uncollapsed -s split_gold_uncollapsed -n split_gold_uncollapsed -o GENIA.xml
-python ../../../../../PPI_Learning/Analysers/ProteinNameSplitter.py -f GENIA.xml -t gold -p gold_union -s split_gold_union -n split_gold_union -o GENIA.xml
-python ../../../../../PPI_Learning/Analysers/ProteinNameSplitter.py -f GENIA.xml -t Charniak-Lease -p Charniak-Lease -s split_Charniak-Lease -n split_Charniak-Lease -o GENIA.xml
-
-# Detect heads
-cd ..
-python FindHeads.py -i GENIA/GENIA.xml -t split_gold_collapsed -p split_gold_collapsed -o GENIA/GENIA.xml
-
-# Make hidden and visible subset
-cd GENIA
-python ../../../../../CommonUtils/InteractionXML/Subset.py -i GENIA.xml -o GENIAVisible.xml -f 0.5
-python ../../../../../CommonUtils/InteractionXML/Subset.py -i GENIA.xml -o GENIAHidden.xml -f 0.5 -v
-
-# Visualize
-cd ../..
-python VisualizeCorpus.py -i Utils/GENIA/GENIA.xml -t split_gold_collapsed -p split_gold_collapsed -o Utils/GENIA/Visualization
-cd Utils/GENIA
+if [ "$1" == "no_split" ]; then
+	# Detect heads
+	cd ..
+	python FindHeads.py -i GENIA/GENIA.xml -t gold -p gold_collapsed -o GENIA/GENIA.xml
+	
+	# Make hidden and visible subset
+	cd GENIA
+	python ../../../../../CommonUtils/InteractionXML/Subset.py -i GENIA.xml -o GENIAVisible.xml -f 0.5
+	python ../../../../../CommonUtils/InteractionXML/Subset.py -i GENIA.xml -o GENIAHidden.xml -f 0.5 -v
+	
+	# Visualize
+	cd ../..
+	python VisualizeCorpus.py -i Utils/GENIA/GENIA.xml -t gold -p gold_collapsed -o Utils/GENIA/Visualization
+	cd Utils/GENIA
+else
+	# Split parses
+	python ../../../../../PPI_Learning/Analysers/ProteinNameSplitter.py -f GENIA.xml -t gold -p gold_collapsed -s split_gold_collapsed -n split_gold_collapsed -o GENIA.xml
+	python ../../../../../PPI_Learning/Analysers/ProteinNameSplitter.py -f GENIA.xml -t gold -p gold_uncollapsed -s split_gold_uncollapsed -n split_gold_uncollapsed -o GENIA.xml
+	python ../../../../../PPI_Learning/Analysers/ProteinNameSplitter.py -f GENIA.xml -t gold -p gold_union -s split_gold_union -n split_gold_union -o GENIA.xml
+	python ../../../../../PPI_Learning/Analysers/ProteinNameSplitter.py -f GENIA.xml -t Charniak-Lease -p Charniak-Lease -s split_Charniak-Lease -n split_Charniak-Lease -o GENIA.xml
+	
+	# Detect heads
+	cd ..
+	python FindHeads.py -i GENIA/GENIA.xml -t split_gold_collapsed -p split_gold_collapsed -o GENIA/GENIA.xml
+	
+	# Make hidden and visible subset
+	cd GENIA
+	python ../../../../../CommonUtils/InteractionXML/Subset.py -i GENIA.xml -o GENIAVisible.xml -f 0.5
+	python ../../../../../CommonUtils/InteractionXML/Subset.py -i GENIA.xml -o GENIAHidden.xml -f 0.5 -v
+	
+	# Visualize
+	cd ../..
+	python VisualizeCorpus.py -i Utils/GENIA/GENIA.xml -t split_gold_collapsed -p split_gold_collapsed -o Utils/GENIA/Visualization
+	cd Utils/GENIA
+fi
