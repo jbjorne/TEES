@@ -3,6 +3,7 @@ try:
 except ImportError:
     import cElementTree as ET
 import cElementTreeUtils as ETUtils
+import random
 
 # From Split.py, which should be moved to CommonUtils
 def getSample(popSize, sampleFraction, seed=0):
