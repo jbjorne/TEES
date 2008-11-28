@@ -85,7 +85,4 @@ if __name__=="__main__":
     print >> sys.stderr, "Saving class names to", options.output + ".class_names"
     exampleBuilder.classSet.write(options.output + ".class_names")
     print >> sys.stderr, "Saving feature names to", options.output + ".feature_names"
-    featurefile = open(options.output + ".feature_names", "wt")
-    for s in exampleBuilder.featureSet.toStrings():
-        featurefile.write(s)
-    featurefile.close()
+    exampleBuilder.featureSet.write(options.output + ".feature_names")
