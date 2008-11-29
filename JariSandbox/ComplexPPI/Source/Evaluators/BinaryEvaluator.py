@@ -97,22 +97,23 @@ class BinaryEvaluator(Evaluator.Evaluator):
     
     def _calculate(self, predictions):
         # First count instances
+        #print predictions
         self.classifications = []
         for prediction in predictions:
             trueClass = prediction[0][1]
             predictedClass = prediction[1]
             if trueClass > 0:
-                if predictedClass > 0:
+                if predictedClass > 0: # 1,1
                     self.truePositives += 1
                     self.classifications.append((prediction[0],"tp",self.type))
-                else:
+                else: # 1,-1
                     self.falseNegatives += 1
                     self.classifications.append((prediction[0],"fn",self.type))
             else:
-                if predictedClass > 0:
+                if predictedClass > 0: # -1,1
                     self.falsePositives += 1
                     self.classifications.append((prediction[0],"fp",self.type))
-                else:
+                else: # -1,-1
                     self.trueNegatives += 1
                     self.classifications.append((prediction[0],"tn",self.type))
         # Then calculate statistics

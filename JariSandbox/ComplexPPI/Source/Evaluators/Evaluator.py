@@ -38,9 +38,9 @@ def calculateFromCSV(rows, EvaluatorClass, classSet=None):
     predictions = []
     for row in rows:
         if classSet != None:
-            predictions.append( ((row["id"],classSet.getId(row["prediction"])),classSet.getId(row["class"])) )
+            predictions.append( ((row["id"],classSet.getId(row["class"])),classSet.getId(row["prediction"])) )
         else:
-            predictions.append( ((row["id"],float(row["prediction"])),int(row["class"])) )
+            predictions.append( ((row["id"],int(row["class"])),float(row["prediction"])) )
     # Calculate statistics
     return EvaluatorClass(predictions, classSet)
 
