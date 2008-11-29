@@ -35,6 +35,9 @@ class Evaluator:
         TableUtils.addToCSV(dicts, filename, g_evaluatorFieldnames)
 
 def calculateFromCSV(rows, EvaluatorClass, classSet=None):
+    if EvaluatorClass().type == "multiclass" and classSet == None:
+        classSet = getClassSet(rows)
+        
     predictions = []
     for row in rows:
         if classSet != None:
@@ -44,6 +47,27 @@ def calculateFromCSV(rows, EvaluatorClass, classSet=None):
     # Calculate statistics
     return EvaluatorClass(predictions, classSet)
 
+def getClassSet(rows, classSet=None):
+    from Core.IdSet import IdSet
+    classNames = set()
+    for row in rows:
+        classNames.add(row["class"])
+        classNames.add(row["prediction"])
+    
+    # In the case of multiclass, give integer id:s for the classes
+    if classSet == None:
+        classSet = IdSet()
+        assert(not ("1" in classNames and "neg" in classNames))
+        assert("1" in classNames or "neg" in classNames)
+        if "1" in classNames:
+            classSet.defineId("1",1)
+        else:
+            classSet.defineId("neg",1)
+    for i in sorted(list(classNames)):
+        if i != "1" and i != "neg":
+            classSet.getId(i)
+    return classSet
+                
 def evaluateCSV(rows, options, EvaluatorClass = None):
     import sys, os
     sys.path.append("..")
@@ -53,30 +77,17 @@ def evaluateCSV(rows, options, EvaluatorClass = None):
     if EvaluatorClass == None:
         print >> sys.stderr, "Importing modules"
         exec "from Evaluators." + options.evaluator + " import " + options.evaluator + " as EvaluatorClass"
-
+    
     foldDict = {}
-    classNames = set()
     for row in rows:
-        classNames.add(row["class"])
-        classNames.add(row["prediction"])
         if row["fold"] != None and row["fold"] != "":
             if not foldDict.has_key(row["fold"]):
                 foldDict[row["fold"]] = []
             foldDict[row["fold"]].append(row)
     
-    # In the case of multiclass, give integer id:s for the classes
     classSet = None
     if EvaluatorClass().type == "multiclass":
-        classSet = IdSet()
-        assert(not ("1" in classNames and "neg" in classNames))
-        assert("1" in classNames or "neg" in classNames)
-        if "1" in classNames:
-            classSet.defineId("1",1)
-        else:
-            classSet.defineId("neg",1)
-        for i in sorted(list(classNames)):
-            if i != "1" and i != "neg":
-                classSet.getId(i)
+        classSet = getClassSet(rows)
     
     # Calculate performance per fold and the averages
     if len(foldDict) == 0:
@@ -107,6 +118,13 @@ def evaluateCSV(rows, options, EvaluatorClass = None):
 
 if __name__=="__main__":
     import sys, os
+    # Import Psyco if available
+    try:
+        import psyco
+        psyco.full()
+        print >> sys.stderr, "Found Psyco, using"
+    except ImportError:
+        print >> sys.stderr, "Psyco not installed"
     sys.path.append("..")
     from Utils.ProgressCounter import ProgressCounter
     from Utils.Parameters import splitParameters

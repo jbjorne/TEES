@@ -9,6 +9,14 @@ import Utils.TableUtils as TableUtils
 import Evaluator
 
 if __name__=="__main__":
+    # Import Psyco if available
+    try:
+        import psyco
+        psyco.full()
+        print >> sys.stderr, "Found Psyco, using"
+    except ImportError:
+        print >> sys.stderr, "Psyco not installed"
+
     optparser = OptionParser(usage="%prog [options]\nCalculate f-score and other statistics.")
     optparser.add_option("-i", "--input", default=None, dest="input", help="Input file in csv-format", metavar="FILE")
     optparser.add_option("-p", "--parameters", default=None, dest="parameters", help="Input file in csv-format", metavar="FILE")
