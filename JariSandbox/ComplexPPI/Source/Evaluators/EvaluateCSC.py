@@ -82,5 +82,7 @@ if __name__=="__main__":
         for row in selectedRows:
             if classNameDict.has_key(row["class"]):
                 row["class"] = classNameDict[row["class"]]
+            if classNameDict.has_key(row["prediction"]):
+                row["prediction"] = classNameDict[row["prediction"]]
 
     Evaluator.evaluateCSV(selectedRows, options, EvaluatorClass)
