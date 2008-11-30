@@ -22,7 +22,20 @@ if __name__=="__main__":
     optparser.add_option("-p", "--parameters", default=None, dest="parameters", help="Input file in csv-format", metavar="FILE")
     optparser.add_option("-o", "--output", default=None, dest="output", help="Output file for the statistics")
     optparser.add_option("-e", "--evaluator", default="BinaryEvaluator", dest="evaluator", help="Prediction evaluator class")
+    optparser.add_option("-c", "--classnames", default=None, dest="classNames", help="class names in Filip's format")
     (options, args) = optparser.parse_args()
+
+    classNameDict = None
+    if options.classNames != None:
+        classNameDict = {}
+        classNameFile = open(options.classNames, "rt")
+        lines = classNameFile.readlines()
+        for line in lines:
+            className, classId = line.rsplit(":",1)
+            className = className.strip()
+            classId = classId.strip()
+            classNameDict[classId] = className
+        classNameFile.close()
 
     if options.output != None:
         print >> sys.stderr, "Outputfile exists, removing", options.output
@@ -65,4 +78,9 @@ if __name__=="__main__":
         foldRows = TableUtils.selectRowsCSV(rows, {"fold":fold})
         selectedRows.extend( TableUtils.selectRowsCSV(foldRows, {"c":cParameterByFold[fold]}) )
     
+    if classNameDict != None:
+        for row in selectedRows:
+            if classNameDict.has_key(row["class"]):
+                row["class"] = classNameDict[row["class"]]
+
     Evaluator.evaluateCSV(selectedRows, options, EvaluatorClass)
