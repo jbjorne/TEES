@@ -46,14 +46,14 @@ if __name__=="__main__":
         cParameterByEvaluator = {}
         for cParameter in cParameters:
             print >> sys.stderr, "    Processing c-parameter", cParameter, 
-            paramRows = TableUtils.selectRowsCSV(rows, {"c":cParameter})
+            paramRows = TableUtils.selectRowsCSV(foldRows, {"c":cParameter})
             evaluator = Evaluator.calculateFromCSV(paramRows, EvaluatorClass)
             cParameterByEvaluator[evaluator] = cParameter
             evaluators.append(evaluator)
             if evaluator.type == "multiclass":
-                print "F-score:", evaluator.microFScore
+                print " F-score:", evaluator.microFScore
             else:
-                print "F-score:", evaluator.fScore
+                print " F-score:", evaluator.fScore
         evaluators.sort(Evaluator.compare)
         print >> sys.stderr, "  Optimal C-parameter:", cParameterByEvaluator[evaluators[-1]]
         cParameterByFold[fold] = cParameterByEvaluator[evaluators[-1]]
