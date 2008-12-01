@@ -124,7 +124,13 @@ def getLatexString(data):
     string = string.replace("_","\\_")
     return string
 
-def writeLatex(dict, filename, keys = None, empty=" "):
+def layoutLatex(row, key):
+    return getLatexString(row[key])
+
+def writeLatex(dict, filename, keys = None, empty=" ", layout=None):
+    if layout == None:
+        layout = layoutLatex
+    
     if not isinstance(dict, list):
         dict = [dict]
     if keys == None:
@@ -156,7 +162,7 @@ def writeLatex(dict, filename, keys = None, empty=" "):
             else:
                 isFirst = False
             if row.has_key(key):
-                file.write(getLatexString(row[key]))
+                file.write(layout(row, key))
             else:
                 file.write(empty)
         file.write(" \\\\\n")
