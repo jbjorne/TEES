@@ -173,7 +173,7 @@ class MultiEdgeFeatureBuilder(FeatureBuilder):
                     edgeGram = "depGram_" + styleGram
                     # Label tokens by their role in the xgram
                     for token in pathTokens[i-(length-1)+1:i+1]:
-                        for feature in self.getTokenFeatures(token, sentenceGraph):
+                        for feature in self.getTokenFeatures(token, sentenceGraph, annotatedType=False):
                             self.features[self.featureSet.getId("tok_"+styleGram+feature)] = 1
                     # Label edges by their role in the xgram
                     position = 0

@@ -27,12 +27,14 @@ class FeatureBuilder:
             featureList.append("txt_"+sentenceGraph.getTokenText(token))
         if POS:
             pos = token.attrib["POS"]
-            if pos.find("_") != None:
-                for split in pos.split("_"):
-                    featureList.append("POS_"+split)
+#            if pos.find("_") != None:
+#                for split in pos.split("_"):
+#                    featureList.append("POS_"+split)
             featureList.append("POS_"+pos)
         if annotatedType and not self.noAnnType:
             annTypes = self.getTokenAnnotatedType(token, sentenceGraph)
+            if "noAnnType" in annTypes:
+                annTypes.remove("noAnnType")
             for annType in annTypes:
                 featureList.append("annType_"+annType)
             if ontology and (self.ontologyFeatureBuilder != None):
@@ -51,15 +53,17 @@ class FeatureBuilder:
                     if self.entity1 == None and self.entity2 == None:
                         annTypes.add(entity.attrib["type"])
                     else:
-                        annTypes.add(entity.attrib["type"])
+                        #annTypes.add(entity.attrib["type"])
                         if self.entity1 == entity:
-                            #return [entity.attrib["type"]]
-                            annTypes.add("e1_"+entity.attrib["type"])
-                        if self.entity2 == entity:
-                            #return [entity.attrib["type"]]
-                            annTypes.add("e2_"+entity.attrib["type"])
+                            return [entity.attrib["type"]]
+                            #annTypes.add("e1_"+entity.attrib["type"])
+                        elif self.entity2 == entity:
+                            return [entity.attrib["type"]]
+                            #annTypes.add("e2_"+entity.attrib["type"])
+                        else:
+                            annTypes.add(entity.attrib["type"])
             annTypes = list(annTypes)
             annTypes.sort()
-            return annTypes[0:2]
+            return annTypes[0:1] #annTypes[0:2]
         else:
             return ["noAnnType"]
