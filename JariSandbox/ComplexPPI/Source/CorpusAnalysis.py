@@ -32,15 +32,20 @@ def analyzeLengths(corpusElements):
     pathsBetweenAllEntitiesByLength = {}
     for sentence in corpusElements.sentences:
         sentenceGraph = sentence.sentenceGraph
-        interactionEdges += len(sentenceGraph.interactionGraph.edges())
+        #interactionEdges += len(sentenceGraph.interactionGraph.edges())
+        interactionEdges += len(sentence.interactions)
         dependencyEdges += len(sentenceGraph.dependencyGraph.edges())
         
         undirected = sentenceGraph.dependencyGraph.to_undirected()
         paths = NX.all_pairs_shortest_path(undirected, cutoff=999)
         # Shortest path for interaction edge
-        for intEdge in sentenceGraph.interactionGraph.edges():
-            if paths.has_key(intEdge[0]) and paths[intEdge[0]].has_key(intEdge[1]):
-                path = paths[intEdge[0]][intEdge[1]]
+        for interaction in sentence.interactions:
+            e1 = sentence.entitiesById[interaction.attrib["e1"]]
+            e2 = sentence.entitiesById[interaction.attrib["e2"]]
+            t1 = sentenceGraph.entityHeadTokenByEntity[e1]
+            t2 = sentenceGraph.entityHeadTokenByEntity[e2]
+            if paths.has_key(t1) and paths[t1].has_key(t2):
+                path = paths[t1][t2]
                 if not pathsByLength.has_key(len(path)-1):
                     pathsByLength[len(path)-1] = 0
                 pathsByLength[len(path)-1] += 1
@@ -48,22 +53,51 @@ def analyzeLengths(corpusElements):
                 if not pathsByLength.has_key("none"):
                     pathsByLength["none"] = 0
                 pathsByLength["none"] += 1
+
+#        for intEdge in sentenceGraph.interactionGraph.edges():
+#            if paths.has_key(intEdge[0]) and paths[intEdge[0]].has_key(intEdge[1]):
+#                path = paths[intEdge[0]][intEdge[1]]
+#                if not pathsByLength.has_key(len(path)-1):
+#                    pathsByLength[len(path)-1] = 0
+#                pathsByLength[len(path)-1] += 1
+#            else:
+#                if not pathsByLength.has_key("none"):
+#                    pathsByLength["none"] = 0
+#                pathsByLength["none"] += 1
         # Shortest paths between all entities
-        for i in range(len(sentenceGraph.tokens)-1):
-            for j in range(i+1,len(sentenceGraph.tokens)):
-                tI = sentenceGraph.tokens[i]
-                tJ = sentenceGraph.tokens[j]
-                if sentenceGraph.tokenIsEntityHead[tI] == None or sentenceGraph.tokenIsEntityHead[tJ] == None:
-                    continue
+        for i in range(len(sentence.entities)-1):
+            for j in range(i+1,len(sentence.entities)):
+                tI = sentenceGraph.entityHeadTokenByEntity[sentence.entities[i]]
+                tJ = sentenceGraph.entityHeadTokenByEntity[sentence.entities[j]]
                 if paths.has_key(tI) and paths[tI].has_key(tJ):
                     path = paths[tI][tJ]
                     if not pathsBetweenAllEntitiesByLength.has_key(len(path)-1):
                         pathsBetweenAllEntitiesByLength[len(path)-1] = 0
                     pathsBetweenAllEntitiesByLength[len(path)-1] += 1
+                elif tI == tJ:
+                    if not pathsBetweenAllEntitiesByLength.has_key(0):
+                        pathsBetweenAllEntitiesByLength[0] = 0
+                    pathsBetweenAllEntitiesByLength[0] += 1
                 else:
                     if not pathsBetweenAllEntitiesByLength.has_key("none"):
                         pathsBetweenAllEntitiesByLength["none"] = 0
                     pathsBetweenAllEntitiesByLength["none"] += 1
+
+#        for i in range(len(sentenceGraph.tokens)-1):
+#            for j in range(i+1,len(sentenceGraph.tokens)):
+#                tI = sentenceGraph.tokens[i]
+#                tJ = sentenceGraph.tokens[j]
+#                if sentenceGraph.tokenIsEntityHead[tI] == None or sentenceGraph.tokenIsEntityHead[tJ] == None:
+#                    continue
+#                if paths.has_key(tI) and paths[tI].has_key(tJ):
+#                    path = paths[tI][tJ]
+#                    if not pathsBetweenAllEntitiesByLength.has_key(len(path)-1):
+#                        pathsBetweenAllEntitiesByLength[len(path)-1] = 0
+#                    pathsBetweenAllEntitiesByLength[len(path)-1] += 1
+#                else:
+#                    if not pathsBetweenAllEntitiesByLength.has_key("none"):
+#                        pathsBetweenAllEntitiesByLength["none"] = 0
+#                    pathsBetweenAllEntitiesByLength["none"] += 1
     
     print >> sys.stderr, "Interaction edges:", interactionEdges
     print >> sys.stderr, "Dependency edges:", dependencyEdges
