@@ -6,6 +6,7 @@ except ImportError:
 import cElementTreeUtils as ETUtils
 
 if __name__=="__main__":
+    print >> sys.stderr, "##### Merge named entity types #####"
     from optparse import OptionParser
     optparser = OptionParser(usage="%prog [options]\n")
     optparser.add_option("-i", "--input", default=None, dest="input", help="", metavar="FILE")
