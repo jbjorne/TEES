@@ -191,7 +191,7 @@ class SentenceGraph:
 #        return None
 
     def findHeadToken(self, candidateTokens):        
-        tokenHeadScores = self._getTokenHeadScores()
+        tokenHeadScores = self.getTokenHeadScores()
         
         #if debug:
         #    print "Tokens:", candidateTokenIds
@@ -225,7 +225,7 @@ class SentenceGraph:
 #                if dep.attrib["t1"] not in visited:
 #                    setTokenHeadScore(self, self.tokensById[dep.attrib["t1"]], visited, dependencies)
 
-    def _getTokenHeadScores(self):
+    def getTokenHeadScores(self):
         if self.tokenHeadScores != None:
             return self.tokenHeadScores
         else:
