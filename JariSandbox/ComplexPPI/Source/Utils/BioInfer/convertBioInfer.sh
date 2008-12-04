@@ -19,6 +19,9 @@ python ../../../../../PPI_Learning/Analysers/ProteinNameSplitter.py -f BioInfer.
 python ../../../../../PPI_Learning/Analysers/ProteinNameSplitter.py -f BioInfer.xml -t bioinfer_gs -p bioinfer_union -s split_bioinfer_union -n split_bioinfer_union -o BioInfer.xml
 python ../../../../../PPI_Learning/Analysers/ProteinNameSplitter.py -f BioInfer.xml -t Charniak-Lease -p Charniak-Lease -s split_Charniak-Lease -n split_Charniak-Lease -o BioInfer.xml
 
+# Merge named entity types
+python ../../../../../CommonUtils/InteractionXML/MergeNamedEntityTypes.py -i BioInfer.xml -o BioInfer.xml
+
 # Detect heads
 cd ..
 python FindHeads.py -i BioInfer/BioInfer.xml -t split_bioinfer_gs -p split_bioinfer_gs -o BioInfer/BioInfer.xml
