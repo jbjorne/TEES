@@ -22,7 +22,7 @@ class MultiEdgeExampleBuilder(ExampleBuilder):
             self.multiEdgeFeatureBuilder.noAnnType = True
         if "maxFeatures" in self.styles:
 			self.multiEdgeFeatureBuilder.maximum = True
-		self.tokenFeatureBuilder = TokenFeatureBuilder(self.featureSet)
+        self.tokenFeatureBuilder = TokenFeatureBuilder(self.featureSet)
         if "ontology" in self.styles:
             self.multiEdgeFeatureBuilder.ontologyFeatureBuilder = BioInferOntologyFeatureBuilder(self.featureSet)
         self.pathLengths = length

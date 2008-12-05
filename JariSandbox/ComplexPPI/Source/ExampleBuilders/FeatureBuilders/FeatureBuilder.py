@@ -54,15 +54,15 @@ class FeatureBuilder:
                     if self.entity1 == None and self.entity2 == None:
                         annTypes.add(entity.attrib["type"])
                     else:
-						if self.maximum:
-                        	annTypes.add(entity.attrib["type"])
+                        if self.maximum:
+                            annTypes.add(entity.attrib["type"])
                         if self.entity1 == entity:
-							if not self.maximum:
+                            if not self.maximum:
                             	return [entity.attrib["type"]]
-							else:
+                            else:
                             	annTypes.add("e1_"+entity.attrib["type"])
                         elif self.entity2 == entity:
-							if not self.maximum:
+                            if not self.maximum:
                             	return [entity.attrib["type"]]
                             else:
 								annTypes.add("e2_"+entity.attrib["type"])
@@ -70,9 +70,9 @@ class FeatureBuilder:
                             annTypes.add(entity.attrib["type"])
             annTypes = list(annTypes)
             annTypes.sort()
-			if self.maximum:
+            if self.maximum:
 				return annTypes[0:2]
-			else:
+            else:
             	return annTypes[0:1] #annTypes[0:2]
         else:
             return ["noAnnType"]
