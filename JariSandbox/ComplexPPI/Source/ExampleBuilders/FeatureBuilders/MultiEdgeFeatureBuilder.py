@@ -8,6 +8,25 @@ class MultiEdgeFeatureBuilder(FeatureBuilder):
         self.edgeFeatureBuilder = EdgeFeatureBuilder(featureSet)
         self.ontologyFeatureBuilder = None
         self.noAnnType = False
+    
+    def buildStructureFeatures(self, sentenceGraph, paths):
+        t1 = sentenceGraph.entityHeadTokenByEntity[self.entity1]
+        t2 = sentenceGraph.entityHeadTokenByEntity[self.entity2]
+        if paths.has_key(t1) and paths[t1].has_key(t2):
+            path = paths[t1][t2]
+            prevToken = None
+            structure = ""
+            for pathToken in path:
+                if prevToken != None:
+                    if sentenceGraph.dependencyGraph.has_edge(prevToken,pathToken):
+                        structure += ">" + sentenceGraph.dependencyGraph.get_edge(prevToken,pathToken)[0].attrib["type"] + ">"
+                    elif sentenceGraph.dependencyGraph.has_edge(pathToken,prevToken):
+                        structure += "<" + sentenceGraph.dependencyGraph.get_edge(pathToken,prevToken)[0].attrib["type"] + "<"
+                    else:
+                        assert(False)
+                structure += pathToken.attrib["POS"][0:1]
+                prevToken = pathToken
+            self.features[self.featureSet.getId(structure)] = 1
         
     def setFeatureVector(self, features=None, entity1=None, entity2=None):
         self.entity1 = entity1

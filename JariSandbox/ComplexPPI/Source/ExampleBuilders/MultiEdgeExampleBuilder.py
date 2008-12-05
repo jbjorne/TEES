@@ -247,18 +247,23 @@ class MultiEdgeExampleBuilder(ExampleBuilder):
                     self.graphKernelFeatureBuilder.setFeatureVector(features, entity1, entity2)
                     self.graphKernelFeatureBuilder.buildGraphKernelFeatures(sentenceGraph, path, edges)
                     self.graphKernelFeatureBuilder.setFeatureVector(None)
+                if "entity_type" in self.styles:
+                    features[self.featureSet.getId("e1_"+entity1.attrib["type"])] = 1
+                    features[self.featureSet.getId("e2_"+entity2.attrib["type"])] = 1
+                    features[self.featureSet.getId("distance_"+str(len(path)))] = 1
                 if not "no_dependency" in self.styles:
                     self.multiEdgeFeatureBuilder.setFeatureVector(features, entity1, entity2)
+                    #self.multiEdgeFeatureBuilder.buildStructureFeatures(sentenceGraph, paths) # remove for fast
                     self.multiEdgeFeatureBuilder.buildEntityFeatures(sentenceGraph)
                     self.multiEdgeFeatureBuilder.buildPathLengthFeatures(path)
-                  #  #self.multiEdgeFeatureBuilder.buildTerminusTokenFeatures(path, sentenceGraph)
+                    self.multiEdgeFeatureBuilder.buildTerminusTokenFeatures(path, sentenceGraph) # remove for fast
                     self.multiEdgeFeatureBuilder.buildSingleElementFeatures(path, edges, sentenceGraph)
-                  #  self.multiEdgeFeatureBuilder.buildPathGrams(2, path, edges, sentenceGraph)
-                  #  #self.multiEdgeFeatureBuilder.buildPathGrams(3, path, edges, sentenceGraph)
-                    #self.multiEdgeFeatureBuilder.buildPathGrams(4, path, edges, sentenceGraph)
-                    #self.buildEdgeCombinations(path, edges, sentenceGraph, features)
-                    #self.multiEdgeFeatureBuilder.buildTerminusFeatures(path[0], edges[0][1]+edges[1][0], "t1", sentenceGraph)
-                    #self.multiEdgeFeatureBuilder.buildTerminusFeatures(path[-1], edges[len(path)-1][len(path)-2]+edges[len(path)-2][len(path)-1], "t2", sentenceGraph)
+                    self.multiEdgeFeatureBuilder.buildPathGrams(2, path, edges, sentenceGraph) # remove for fast
+                    self.multiEdgeFeatureBuilder.buildPathGrams(3, path, edges, sentenceGraph) # remove for fast
+                    self.multiEdgeFeatureBuilder.buildPathGrams(4, path, edges, sentenceGraph) # remove for fast
+                    #self.buildEdgeCombinations(path, edges, sentenceGraph, features) # remove for fast
+                    #self.multiEdgeFeatureBuilder.buildTerminusFeatures(path[0], edges[0][1]+edges[1][0], "t1", sentenceGraph) # remove for fast
+                    #self.multiEdgeFeatureBuilder.buildTerminusFeatures(path[-1], edges[len(path)-1][len(path)-2]+edges[len(path)-2][len(path)-1], "t2", sentenceGraph) # remove for fast
                     self.multiEdgeFeatureBuilder.buildPathEdgeFeatures(path, edges, sentenceGraph)
                     self.multiEdgeFeatureBuilder.buildSentenceFeatures(sentenceGraph)
                     self.multiEdgeFeatureBuilder.setFeatureVector(None)
