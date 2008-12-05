@@ -20,7 +20,9 @@ class MultiEdgeExampleBuilder(ExampleBuilder):
             self.graphKernelFeatureBuilder = GraphKernelFeatureBuilder(self.featureSet)
         if "noAnnType" in self.styles:
             self.multiEdgeFeatureBuilder.noAnnType = True
-        self.tokenFeatureBuilder = TokenFeatureBuilder(self.featureSet)
+        if "maxFeatures" in self.styles:
+			self.multiEdgeFeatureBuilder.maximum = True
+		self.tokenFeatureBuilder = TokenFeatureBuilder(self.featureSet)
         if "ontology" in self.styles:
             self.multiEdgeFeatureBuilder.ontologyFeatureBuilder = BioInferOntologyFeatureBuilder(self.featureSet)
         self.pathLengths = length
