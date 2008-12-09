@@ -19,6 +19,9 @@ python ../../../../../CommonUtils/InteractionXML/RecalculateIds.py -i GENIA.xml 
 # Create union parse
 python ../../../../../CommonUtils/InteractionXML/MergeParse.py -i GENIA.xml -p gold_collapsed -q gold_uncollapsed -n gold_union -o GENIA.xml
 
+# Remove duplicate dependencies
+python ../../../../../CommonUtils/InteractionXML/RemoveDuplicateDependencies.py -i GENIA.xml -o GENIA.xml
+
 if [ "$1" == "no_split" ]; then
 	# Detect heads
 	cd ..
@@ -51,6 +54,6 @@ else
 	
 	# Visualize
 	cd ../..
-	python VisualizeCorpus.py -i Utils/GENIA/GENIA.xml -t split_gold_collapsed -p split_gold_collapsed -o Utils/GENIA/Visualization
+	python VisualizeCorpus.py -i Utils/GENIA/GENIA.xml -t split_gold_union -p split_gold_union -o Utils/GENIA/Visualization
 	cd Utils/GENIA
 fi
