@@ -256,17 +256,22 @@ class MultiEdgeExampleBuilder(ExampleBuilder):
                 if not "no_dependency" in self.styles:
                     self.multiEdgeFeatureBuilder.setFeatureVector(features, entity1, entity2)
                     #self.multiEdgeFeatureBuilder.buildStructureFeatures(sentenceGraph, paths) # remove for fast
-                    self.multiEdgeFeatureBuilder.buildEntityFeatures(sentenceGraph)
+                    if not "disable_entity_features" in self.styles:
+                        self.multiEdgeFeatureBuilder.buildEntityFeatures(sentenceGraph)
                     self.multiEdgeFeatureBuilder.buildPathLengthFeatures(path)
-                    self.multiEdgeFeatureBuilder.buildTerminusTokenFeatures(path, sentenceGraph) # remove for fast
-                    self.multiEdgeFeatureBuilder.buildSingleElementFeatures(path, edges, sentenceGraph)
-                    self.multiEdgeFeatureBuilder.buildPathGrams(2, path, edges, sentenceGraph) # remove for fast
-                    self.multiEdgeFeatureBuilder.buildPathGrams(3, path, edges, sentenceGraph) # remove for fast
-                    self.multiEdgeFeatureBuilder.buildPathGrams(4, path, edges, sentenceGraph) # remove for fast
+                    if not "disable_terminus_features" in self.styles:
+                        self.multiEdgeFeatureBuilder.buildTerminusTokenFeatures(path, sentenceGraph) # remove for fast
+                    if not "disable_single_element_features" in self.styles:
+                        self.multiEdgeFeatureBuilder.buildSingleElementFeatures(path, edges, sentenceGraph)
+                    if not "disable_ngram_features" in self.styles:
+                        self.multiEdgeFeatureBuilder.buildPathGrams(2, path, edges, sentenceGraph) # remove for fast
+                        self.multiEdgeFeatureBuilder.buildPathGrams(3, path, edges, sentenceGraph) # remove for fast
+                        self.multiEdgeFeatureBuilder.buildPathGrams(4, path, edges, sentenceGraph) # remove for fast
                     #self.buildEdgeCombinations(path, edges, sentenceGraph, features) # remove for fast
                     #self.multiEdgeFeatureBuilder.buildTerminusFeatures(path[0], edges[0][1]+edges[1][0], "t1", sentenceGraph) # remove for fast
                     #self.multiEdgeFeatureBuilder.buildTerminusFeatures(path[-1], edges[len(path)-1][len(path)-2]+edges[len(path)-2][len(path)-1], "t2", sentenceGraph) # remove for fast
-                    self.multiEdgeFeatureBuilder.buildPathEdgeFeatures(path, edges, sentenceGraph)
+                    if not "disable_path_edge_features" in self.styles:
+                        self.multiEdgeFeatureBuilder.buildPathEdgeFeatures(path, edges, sentenceGraph)
                     self.multiEdgeFeatureBuilder.buildSentenceFeatures(sentenceGraph)
                     self.multiEdgeFeatureBuilder.setFeatureVector(None)
                 # Build token ngrams
