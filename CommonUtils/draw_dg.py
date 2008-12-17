@@ -6,6 +6,7 @@ except ImportError:
 import cElementTreeUtils as ETUtils
 import sys
 import re
+import codecs
 
 class SVGOptions:
 
@@ -338,7 +339,8 @@ def styleStr2Dict(s):
 depRe=re.compile(r"^(\S+) +(\S+) +(\S+) *(#ARC *(.*?))? *(#LAB *(.*))?$")
 tokRe=re.compile(r"^(\S+) *#TXT *(.*)")
 
-def readInput(lines):
+def readInput(fName):
+    lines=codecs.open(fName,"rt","utf-8")
     tokens=None
     deps=[]
     for line in lines:
@@ -434,7 +436,7 @@ the script svg2pdf for details if needed.
     
     
     
-    tokens,deps=readInput(sys.stdin)
+    tokens,deps=readInput("/dev/stdin")
     t=generateSVG(tokens,deps)
-    ETUtils.write(t,sys.stdout)
+    ETUtils.writeUTF8(t,sys.stdout)
     print
