@@ -1,7 +1,8 @@
 import csv
 import os
+import types
 
-decimals = 3
+decimals = 1
 
 def getKeys(dicts):
     for dict in dicts:
@@ -26,11 +27,13 @@ def addToCSV(dict, filename, fieldnames=None):
         dict = [dict] 
     writeCSV(rows+dict, filename, fieldnames, writeTitles)
 
-def selectRowsCSV(rows, conditions):
+def selectRowsCSV(rows, conditions, invert=False):
     selected = []
     for row in rows:
         for key in conditions.keys():
-            if row.has_key(key) and row[key] == conditions[key]:
+            exists = row.has_key(key) and row[key] == conditions[key]
+            if invert: exists = not exists
+            if exists:
                 selected.append(row)
     return selected
 
@@ -127,7 +130,7 @@ def getLatexString(data):
 def layoutLatex(row, key):
     return getLatexString(row[key])
 
-def writeLatex(dict, filename, keys = None, empty=" ", layout=None):
+def writeLatex(dict, filename, keys = None, empty=" ", layout=None, extraHeaderLines=None):
     if layout == None:
         layout = layoutLatex
     
@@ -144,28 +147,41 @@ def writeLatex(dict, filename, keys = None, empty=" ", layout=None):
     for key in keys:
         file.write(" c |")
     file.write( "}\n")
-    file.write("\\hline\n")                       
+    file.write("\\hline\n")
+    
+    # extra header
+    if extraHeaderLines != None:
+        for line in extraHeaderLines:
+            file.write(line+"\n")
+    
+    # Header                      
     isFirst = True
+    keyDict = {}
+    for key in keys:
+        keyDict[key] = key
     for key in keys:
         if isFirst:
-            file.write(getLatexString(key))
+            file.write(layout(keyDict, key))
             isFirst = False
         else:
-            file.write(" & " + getLatexString(key))
+            file.write(" & " + layout(keyDict, key))
     file.write(" \\\\\n")
     file.write("\\hline\n")                     
     for row in dict:
         isFirst = True
-        for key in keys:
-            if not isFirst:
-                file.write(" & ")
-            else:
-                isFirst = False
-            if row.has_key(key):
-                file.write(layout(row, key))
-            else:
-                file.write(empty)
-        file.write(" \\\\\n")
+        if type(row) == types.StringType:
+            file.write(row)
+        else:
+            for key in keys:
+                if not isFirst:
+                    file.write(" & ")
+                else:
+                    isFirst = False
+                if row.has_key(key):
+                    file.write(layout(row, key))
+                else:
+                    file.write(empty)
+            file.write(" \\\\\n")
     #file.write("1 & 2 & 3 \\\\\n")
     #file.write("4 & 5 & 6 \\\\\n")
     #file.write("7 & 8 & 9 \\\\\n")
