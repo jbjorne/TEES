@@ -98,6 +98,7 @@ class SentenceParser:
                 sys.stderr.write("Unmatched line: '%s'"%line.strip())
                 sys.exit(1)
             if uid[0]=="T":
+                uid = self.uid+'.'+uid # prepend document id
                 t,b,e = content.split(" ")
                 if not self.entities.has_key(uid):
                     self.entities[uid] = {}
@@ -110,7 +111,10 @@ class SentenceParser:
                                            'isName':str(isName)})
                 self.mapping[uid] = 'rb.'+self.uid+'.'+self.counter.get()
             elif uid[0]=="*":
+                uid = self.uid+'.'+uid # prepend document id
                 t,e1,e2 = content.split(" ")
+                e1 = self.uid+'.'+e1 # prepend document id
+                e2 = self.uid+'.'+e2 # prepend document id
                 if not self.events.has_key(uid):
                     self.events[uid] = []
                 self.events[uid].append({'id':uid,
@@ -119,20 +123,25 @@ class SentenceParser:
                                         'e2':e2,
                                         'type':t})
             elif uid[0]=="M":
+                uid = self.uid+'.'+uid # prepend document id
                 t,e = content.split(" ")
+                e = self.uid+'.'+e # prepend document id
                 if not self.modifiers.has_key(uid):
                     self.modifiers[uid] = {}
                 self.modifiers[uid].update({'id':uid,
                                             'e1':e,
                                             'type':t})
             elif uid[0]=="E":
+                uid = self.uid+'.'+uid # prepend document id
                 t = content.split(" ")[0]
                 args = content.split(" ")[1:]
                 if not self.events.has_key(uid):
                     self.events[uid] = []
                 bgnt,bgne = t.split(":")
+                bgne = self.uid+'.'+bgne # prepend document id
                 for arg in args:
                     endt,ende = arg.split(":")
+                    ende = self.uid+'.'+ende # prepend document id
                     self.events[uid].append({'id':uid,
                                             'directed':'True',
                                             'e1':bgne,
@@ -210,7 +219,7 @@ class Parser:
 def interface(optionArgs=sys.argv[1:]):
     from optparse import OptionParser
 
-    op = OptionParser(usage="%prog [options]\nConvert genia shared task files into the generic interaction format.\nUse positional arguments to specify the sentence ids.\n\nNeeded files:\n\t<filestem>.txt == original text\n\t<filestem>.a1 == protein annotation\n\t<filestem>.a2 == event annotation")
+    op = OptionParser(usage="%prog [options]\nConvert genia shared task files into the generic interaction format.\nUse positional arguments to specify the document ids.\n\nNeeded files:\n\t<filestem>.txt == original text\n\t<filestem>.a1 == protein annotation\n\t<filestem>.a2 == event annotation")
     op.add_option("-i", "--indir",
                   dest="indir",
                   help="Input file directory",
@@ -218,7 +227,7 @@ def interface(optionArgs=sys.argv[1:]):
     op.add_option("-o", "--outfile",
                   dest="outfile",
                   help="Output file",
-                  metavar="DIR")
+                  metavar="FILE")
     (options, args) = op.parse_args(optionArgs)
 
     quit = False
@@ -229,7 +238,7 @@ def interface(optionArgs=sys.argv[1:]):
         print "Please specify the output filename."
         quit = True
     if not args:
-        print "Please specify at least one sentence id."
+        print "Please specify at least one document id."
         quit = True
     if quit:
         op.print_help()
