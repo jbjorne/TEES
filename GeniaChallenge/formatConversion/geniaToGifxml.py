@@ -4,6 +4,8 @@ try:
 except ImportError:
     import cElementTree as ET
 
+
+
 def indent(elem, level=0):
     """
     In-place indentation of XML (in cElementTree.Element object).
@@ -24,6 +26,8 @@ def indent(elem, level=0):
         if level and (not elem.tail or not elem.tail.strip()):
             elem.tail = i
 
+
+
 class Increment:
     """
     Increment instance gives all non-negative integers starting from
@@ -41,6 +45,8 @@ class Increment:
         """
         self.cur += 1
         return(str(self.cur))
+
+
 
 class SentenceParser:
     def __init__(self):
@@ -74,9 +80,9 @@ class SentenceParser:
         self.parseAnnotation(tmp.read().split("\n"),isName=False)
         tmp.close()
 
-    def parseText(self,input):
-        self.text = input
-        lines = input.split("\n")
+    def parseText(self,rawinput):
+        self.text = rawinput
+        lines = rawinput.split("\n")
         self.title = lines[0]
         self.abstract = lines[1]
 
@@ -84,7 +90,10 @@ class SentenceParser:
         for line in lines:
             if not line:
                 continue
-            uid,content = line.split("\t")
+            if line.startswith("T"):
+                uid,content,text = line.split("\t")
+            else:
+                uid,content = line.split("\t")
             if not content:
                 sys.stderr.write("Unmatched line: '%s'"%line.strip())
                 sys.exit(1)
@@ -92,6 +101,7 @@ class SentenceParser:
                 t,b,e = content.split(" ")
                 if not self.entities.has_key(uid):
                     self.entities[uid] = {}
+                assert(text==self.text[int(b):int(e)])
                 self.entities[uid].update({'id':uid,
                                            'origId':uid,
                                            'charOffset':"%s-%s"%(b,int(e)-1),
@@ -167,14 +177,19 @@ class SentenceParser:
                 newSentence.append(newEvent)
         return(newDocument)
 
+
+
 class Parser:
     def __init__(self):
         self.parsers = []
 
-    def parse(self,filestems):
+    def parse(self,indir,filestems):
+        if not indir.endswith('/'):
+            indir = indir+'/'
         for stem in filestems:
+            filename = indir+stem
             tmp = SentenceParser()
-            tmp.parse(stem)
+            tmp.parse(filename)
             self.parsers.append(tmp)
 
     def getNode(self):
@@ -183,18 +198,47 @@ class Parser:
             newCorpus.append(x.getNode())
         return(newCorpus)
 
-    def printNode(self):
+    def printNode(self,outfile):
         node = self.getNode()
         indent(node)
-        print ET.tostring(node)
+        outfile = open(outfile,'w')
+        outfile.write(ET.tostring(node))
+        outfile.close()
+
+
+
+def interface(optionArgs=sys.argv[1:]):
+    from optparse import OptionParser
+
+    op = OptionParser(usage="%prog [options]\nConvert genia shared task files into the generic interaction format.\nUse positional arguments to specify the sentence ids.\n\nNeeded files:\n\t<filestem>.txt == original text\n\t<filestem>.a1 == protein annotation\n\t<filestem>.a2 == event annotation")
+    op.add_option("-i", "--indir",
+                  dest="indir",
+                  help="Input file directory",
+                  metavar="DIR")
+    op.add_option("-o", "--outfile",
+                  dest="outfile",
+                  help="Output file",
+                  metavar="DIR")
+    (options, args) = op.parse_args(optionArgs)
+
+    quit = False
+    if not options.indir:
+        print "Please specify the directory for input files."
+        quit = True
+    if not options.outfile:
+        print "Please specify the output filename."
+        quit = True
+    if not args:
+        print "Please specify at least one sentence id."
+        quit = True
+    if quit:
+        op.print_help()
+        return(False)
+
+    parser = Parser()
+    parser.parse(options.indir,args)
+    parser.printNode(options.outfile)
+    return(True)
 
 if __name__=="__main__":
-    if len(sys.argv)<2:
-        print "Please specify the stem as the first argument."
-        print "\t<stem>.txt == original text"
-        print "\t<stem>.a1 == protein annotation"
-        print "\t<stem>.a2 == event annotation"
-    else:
-        parser = Parser()
-        parser.parse(sys.argv[1:])
-        parser.printNode()
+    interface()
