@@ -14,8 +14,8 @@ if __name__=="__main__":
     optparser = OptionParser(usage="%prog [options]\nCreate an html visualization for a corpus.")
     optparser.add_option("-i", "--input", default=defaultAnalysisFilename, dest="input", help="Corpus in analysis format", metavar="FILE")
     optparser.add_option("-o", "--output", default=None, dest="output", help="Output directory, useful for debugging")
-    optparser.add_option("-t", "--tokenization", default="split_gs", dest="tokenization", help="tokenization")
-    optparser.add_option("-p", "--parse", default="split_gs", dest="parse", help="parse")
+    optparser.add_option("-t", "--tokenization", default=None, dest="tokenization", help="tokenization")
+    optparser.add_option("-p", "--parse", default=None, dest="parse", help="parse")
     (options, args) = optparser.parse_args()
     
     corpusElements = loadCorpus(options.input, options.parse, options.tokenization)
