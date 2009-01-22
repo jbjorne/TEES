@@ -15,9 +15,20 @@ class SentenceElements:
         pairElements = sentenceElement.findall("pair")
         if pairElements != None:
             self.pairs = pairElements
+        pairsToKeep = []
+        for pair in pairElements:
+            if pair.attrib["e1"] != "UNKNOWN" and pair.attrib["e2"] != "UNKNOWN":
+                pairsToKeep.append(pair)
+        self.pairs = pairsToKeep
+        
         interactionElements = sentenceElement.findall("interaction")
         if interactionElements != None:
             self.interactions = interactionElements
+        interactionsToKeep = []
+        for interaction in interactionElements:
+            if interaction.attrib["e1"] != "UNKNOWN" and interaction.attrib["e2"] != "UNKNOWN":
+                interactionsToKeep.append(interaction)
+        self.interactions = interactionsToKeep
         
         entityElements = sentenceElement.findall("entity")
         if entityElements != None:
