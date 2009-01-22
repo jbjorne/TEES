@@ -116,12 +116,14 @@ class SentenceParser:
                     self.events[uid] = []
                 while args:
                     e1 = args.pop(0)
+                    count = 0
                     for e2 in args:
-                        self.events[uid].append({'id':uid,
+                        self.events[uid].append({'id':uid+'.'+str(count),
                                                  'directed':'False',
                                                  'e1':e1,
                                                  'e2':e2,
                                                  'type':t})
+                        count += 1
             elif uid[0]=="M":
                 t,e = content.split()
                 if not self.modifiers.has_key(uid):
@@ -135,17 +137,19 @@ class SentenceParser:
                 if not self.events.has_key(uid):
                     self.events[uid] = []
                 bgnt,bgne = t.split(":")
+                count = 0
                 for arg in args:
                     endt,ende = arg.split(":")
                     # hack to counter a bug in generate-task-specific-a2-file.py
                     # REMEMBER TO DELETE THIS IF YOU WANT TASK 2 !!!!!
                     if endt=='AtLoc':
                         continue
-                    self.events[uid].append({'id':uid,
+                    self.events[uid].append({'id':uid+'.'+str(count),
                                             'directed':'True',
                                             'e1':bgne,
                                             'e2':ende,
                                             'type':endt})
+                    count += 1
                 self.mapping[uid] = bgne
 
     def printSimple(self):
