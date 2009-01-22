@@ -196,6 +196,7 @@ class Parser:
         if not indir.endswith('/'):
             indir = indir+'/'
         for stem in filestems:
+            print >> sys.stderr, "Working on:", stem
             filename = indir+stem
             tmp = SentenceParser()
             tmp.parse(filename)
