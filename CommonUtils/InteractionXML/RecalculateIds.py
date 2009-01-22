@@ -68,8 +68,14 @@ if __name__=="__main__":
             pairIndex = 0
             for pair in pairs:
                 pair.attrib["id"] = corpusName + ".d" + str(docIndex) + ".s" + str(sentIndex) + ".p" + str(pairIndex)
-                pair.attrib["e1"] = entDictionary[pair.attrib["e1"]]
-                pair.attrib["e2"] = entDictionary[pair.attrib["e2"]]
+                if entDictionary.has_key(pair.attrib["e1"]):
+                    pair.attrib["e1"] = entDictionary[pair.attrib["e1"]]
+                else:
+                    pair.attrib["e1"] = "UNKNOWN"
+                if entDictionary.has_key(pair.attrib["e2"]):
+                    pair.attrib["e2"] = entDictionary[pair.attrib["e2"]]
+                else:
+                    pair.attrib["e2"] = "UNKNOWN"
                 pairIndex += 1
             sentIndex += 1
         docIndex += 1
