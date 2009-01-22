@@ -98,8 +98,7 @@ class SentenceParser:
                 sys.stderr.write("Unmatched line: '%s'"%line.strip())
                 sys.exit(1)
             if uid[0]=="T":
-                uid = self.uid+'.'+uid # prepend document id
-                t,b,e = content.split(" ")
+                t,b,e = content.split()
                 if not self.entities.has_key(uid):
                     self.entities[uid] = {}
                 assert(text==self.text[int(b):int(e)])
@@ -111,37 +110,33 @@ class SentenceParser:
                                            'isName':str(isName)})
                 self.mapping[uid] = 'rb.'+self.uid+'.'+self.counter.get()
             elif uid[0]=="*":
-                uid = self.uid+'.'+uid # prepend document id
-                t,e1,e2 = content.split(" ")
-                e1 = self.uid+'.'+e1 # prepend document id
-                e2 = self.uid+'.'+e2 # prepend document id
+                t,args = content.split(None,1)
+                args = args.split()
                 if not self.events.has_key(uid):
                     self.events[uid] = []
-                self.events[uid].append({'id':uid,
-                                        'directed':'False',
-                                        'e1':e1,
-                                        'e2':e2,
-                                        'type':t})
+                while args:
+                    e1 = args.pop(0)
+                    for e2 in args:
+                        self.events[uid].append({'id':uid,
+                                                 'directed':'False',
+                                                 'e1':e1,
+                                                 'e2':e2,
+                                                 'type':t})
             elif uid[0]=="M":
-                uid = self.uid+'.'+uid # prepend document id
-                t,e = content.split(" ")
-                e = self.uid+'.'+e # prepend document id
+                t,e = content.split()
                 if not self.modifiers.has_key(uid):
                     self.modifiers[uid] = {}
                 self.modifiers[uid].update({'id':uid,
                                             'e1':e,
                                             'type':t})
             elif uid[0]=="E":
-                uid = self.uid+'.'+uid # prepend document id
-                t = content.split(" ")[0]
-                args = content.split(" ")[1:]
+                t = content.split()[0]
+                args = content.split()[1:]
                 if not self.events.has_key(uid):
                     self.events[uid] = []
                 bgnt,bgne = t.split(":")
-                bgne = self.uid+'.'+bgne # prepend document id
                 for arg in args:
                     endt,ende = arg.split(":")
-                    ende = self.uid+'.'+ende # prepend document id
                     self.events[uid].append({'id':uid,
                                             'directed':'True',
                                             'e1':bgne,
@@ -170,10 +165,13 @@ class SentenceParser:
                                              'text':self.text})
         newDocument.append(newSentence)
         for k,v in self.entities.items():
+            v['origId'] = self.mapping[v['id']]
+            v['id'] = self.uid+'.'+v['id'] # prepend document id
             newEntity = ET.Element("entity",v)
-            newEntity.attrib['origId'] = self.mapping[v['id']]
             newSentence.append(newEntity)
         for k,v in self.modifiers.items():
+            v['id'] = self.uid+'.'+v['id'] # prepend document id
+            v['e1'] = self.uid+'.'+v['e1'] # prepend document id
             newModifier = ET.Element("modifier",v)
             newSentence.append(newModifier)
         for k,v in self.events.items():
@@ -182,6 +180,9 @@ class SentenceParser:
                     x['e1'] = self.mapping[x['e1']]
                 if x['e2'][0]==('E'):
                     x['e2'] = self.mapping[x['e2']]
+                x['id'] = self.uid+'.'+x['id'] # prepend document id
+                x['e1'] = self.uid+'.'+x['e1'] # prepend document id
+                x['e2'] = self.uid+'.'+x['e2'] # prepend document id
                 newEvent = ET.Element("pair",x)
                 newSentence.append(newEvent)
         return(newDocument)
