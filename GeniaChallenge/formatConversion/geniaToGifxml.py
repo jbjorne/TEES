@@ -146,7 +146,7 @@ class SentenceParser:
                         continue
                     self.events[uid].append({'id':uid+'.'+str(count),
                                             'directed':'True',
-                                            'e1':bgne,
+                                            'e1':uid,
                                             'e2':ende,
                                             'type':endt})
                     count += 1
@@ -161,38 +161,86 @@ class SentenceParser:
             for x in v:
                 print "%s\t%s"%(k,x)
 
-    def printNode(self):
-        node = self.getNode()
+    def printNode(self,removeDuplicates):
+        node = self.getNode(removeDuplicates)
         indent(node)
         print ET.tostring(node)
 
-    def getNode(self):
+    def getNode(self,removeDuplicates):
         newDocument = ET.Element('document',{'id':self.uid})
         newSentence = ET.Element('sentence',{'id':self.uid,
                                              'origId':self.uid,
                                              'text':self.text})
         newDocument.append(newSentence)
-        for k,v in self.entities.items():
-            v['origId'] = self.mapping[v['id']]
-            v['id'] = self.uid+'.'+v['id'] # prepend document id
-            newEntity = ET.Element("entity",v)
-            newSentence.append(newEntity)
+
+        if removeDuplicates:
+            for k,v in self.entities.items():
+                v['origId'] = self.mapping[v['id']]
+                v['id'] = self.uid+'.'+v['id'] # prepend document id
+                newEntity = ET.Element("entity",v)
+                newSentence.append(newEntity)
+            edges = []
+            for k,v in self.events.items():
+                for x in v:
+                    if x['e1'][0]==('E'):
+                        x['e1'] = self.mapping[x['e1']]
+                    if x['e2'][0]==('E'):
+                        x['e2'] = self.mapping[x['e2']]
+                    tmp = x.copy()
+                    del tmp['id']
+                    if not tmp in edges:
+                        edges.append(tmp)
+                        x['id'] = self.uid+'.'+x['id'] # prepend document id
+                        x['e1'] = self.uid+'.'+x['e1'] # prepend document id
+                        x['e2'] = self.uid+'.'+x['e2'] # prepend document id
+                        newEvent = ET.Element("interaction",x)
+                        newSentence.append(newEvent)
+
+        else:
+            entities = {}
+            events = []
+            for k,v in self.events.items():
+                for x in v:
+                    for y in ['e1','e2']:
+                        if x[y][0]==('T'):
+                            if not entities.has_key(x[y]):
+                                e = self.entities[x[y]]
+                                e['origId'] = self.mapping[e['id']]
+                                # prepend document id
+                                e['id'] = self.uid+'.'+e['id']
+                                newEntity = ET.Element("entity",e)
+                                entities[x[y]] = newEntity
+                            x[y] = self.uid+'.'+x[y]
+                        elif x[y][0]==('E'):
+                            if not entities.has_key(x[y]):
+                                e = self.entities[self.mapping[x[y]]]
+                                # create a new id for a copy of event trigger
+                                # (the one reserved for 'T' item is not used)
+                                e['origId'] = 'rb.'+self.uid+'.'+self.counter.get()
+                                newEntity = ET.Element("entity",e)
+                                # prepend document id and append event id
+                                newEntity.attrib['id'] = self.uid+'.'+e['id']+'.'+x[y]
+                                entities[x[y]] = newEntity
+                            x[y] = self.uid+'.'+self.mapping[x[y]]+'.'+x[y]
+                        else:
+                            print x[y]
+                            print "Something went wrong, quiting"
+                            sys.exit(1)
+                    # prepend document id
+                    x['id'] = self.uid+'.'+x['id']
+                    newEvent = ET.Element("interaction",x)
+                    events.append(newEvent)
+            for x in entities.values():
+                newSentence.append(x)
+            for x in events:
+                newSentence.append(x)
+                
         for k,v in self.modifiers.items():
             v['id'] = self.uid+'.'+v['id'] # prepend document id
             v['e1'] = self.uid+'.'+v['e1'] # prepend document id
             newModifier = ET.Element("modifier",v)
             newSentence.append(newModifier)
-        for k,v in self.events.items():
-            for x in v:
-                if x['e1'][0]==('E'):
-                    x['e1'] = self.mapping[x['e1']]
-                if x['e2'][0]==('E'):
-                    x['e2'] = self.mapping[x['e2']]
-                x['id'] = self.uid+'.'+x['id'] # prepend document id
-                x['e1'] = self.uid+'.'+x['e1'] # prepend document id
-                x['e2'] = self.uid+'.'+x['e2'] # prepend document id
-                newEvent = ET.Element("interaction",x)
-                newSentence.append(newEvent)
+            
         return(newDocument)
 
 
@@ -211,14 +259,14 @@ class Parser:
             tmp.parse(filename)
             self.parsers.append(tmp)
 
-    def getNode(self):
+    def getNode(self,removeDuplicates):
         newCorpus = ET.Element('corpus',{'source':'GENIA'})
         for x in self.parsers:
-            newCorpus.append(x.getNode())
+            newCorpus.append(x.getNode(removeDuplicates))
         return(newCorpus)
 
-    def printNode(self,outfile):
-        node = self.getNode()
+    def printNode(self,outfile,removeDuplicates):
+        node = self.getNode(removeDuplicates)
         indent(node)
         outfile = open(outfile,'w')
         outfile.write(ET.tostring(node))
@@ -238,6 +286,11 @@ def interface(optionArgs=sys.argv[1:]):
                   dest="outfile",
                   help="Output file",
                   metavar="FILE")
+    op.add_option("-p", "--preserve",
+                  dest="remove_duplicates",
+                  help="Preserve duplicate nodes and edges",
+                  default=True,
+                  action="store_false")
     (options, args) = op.parse_args(optionArgs)
 
     quit = False
@@ -256,7 +309,7 @@ def interface(optionArgs=sys.argv[1:]):
 
     parser = Parser()
     parser.parse(options.indir,args)
-    parser.printNode(options.outfile)
+    parser.printNode(options.outfile,options.remove_duplicates)
     return(True)
 
 if __name__=="__main__":
