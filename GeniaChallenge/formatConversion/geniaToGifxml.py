@@ -137,6 +137,10 @@ class SentenceParser:
                 bgnt,bgne = t.split(":")
                 for arg in args:
                     endt,ende = arg.split(":")
+                    # hack to counter a bug in generate-task-specific-a2-file.py
+                    # REMEMBER TO DELETE THIS IF YOU WANT TASK 2 !!!!!
+                    if endt=='AtLoc':
+                        continue
                     self.events[uid].append({'id':uid,
                                             'directed':'True',
                                             'e1':bgne,
