@@ -66,7 +66,7 @@ class SentenceParser:
 
         textFile = filestem+".txt"
         proteinFile = filestem+".a1"
-        eventFile = filestem+".a2"
+        eventFile = filestem+".a2.t1"
 
         tmp = open(textFile)
         self.parseText(tmp.read())
