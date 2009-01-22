@@ -187,7 +187,7 @@ class SentenceParser:
                 x['id'] = self.uid+'.'+x['id'] # prepend document id
                 x['e1'] = self.uid+'.'+x['e1'] # prepend document id
                 x['e2'] = self.uid+'.'+x['e2'] # prepend document id
-                newEvent = ET.Element("pair",x)
+                newEvent = ET.Element("interaction",x)
                 newSentence.append(newEvent)
         return(newDocument)
 
