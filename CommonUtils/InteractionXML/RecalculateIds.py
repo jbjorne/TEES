@@ -61,8 +61,14 @@ if __name__=="__main__":
             intIndex = 0
             for interaction in interactions:
                 interaction.attrib["id"] = corpusName + ".d" + str(docIndex) + ".s" + str(sentIndex) + ".i" + str(intIndex)
-                interaction.attrib["e1"] = entDictionary[interaction.attrib["e1"]]
-                interaction.attrib["e2"] = entDictionary[interaction.attrib["e2"]]
+                if entDictionary.has_key(interaction.attrib["e1"]):
+                    interaction.attrib["e1"] = entDictionary[interaction.attrib["e1"]]
+                else:
+                    interaction.attrib["e1"] = "UNKNOWN"
+                if entDictionary.has_key(interaction.attrib["e2"]):
+                    interaction.attrib["e2"] = entDictionary[interaction.attrib["e2"]]
+                else:
+                    interaction.attrib["e2"] = "UNKNOWN"
                 intIndex += 1
             pairs = sentence.findall("pair")
             pairIndex = 0
