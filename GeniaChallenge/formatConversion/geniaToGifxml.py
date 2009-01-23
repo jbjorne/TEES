@@ -101,6 +101,8 @@ class SentenceParser:
                 t,b,e = content.split()
                 if not self.entities.has_key(uid):
                     self.entities[uid] = {}
+                else:
+                    sys.stderr.write("Id %s already exists in document %s!"%(uid,self.uid))
                 assert(text==self.text[int(b):int(e)])
                 self.entities[uid].update({'id':uid,
                                            'origId':uid,
@@ -199,6 +201,13 @@ class SentenceParser:
         else:
             entities = {}
             events = []
+            for k,v in self.entities.items():
+                if v['isName']=='True':
+                    newEntity = ET.Element("entity",v)
+                    newEntity.attrib['origId'] = self.mapping[v['id']]
+                    # prepend document id
+                    newEntity.attrib['id'] = self.uid+'.'+v['id']
+                    entities[v['id']] = newEntity
             for k,v in self.events.items():
                 for x in v:
                     for y in ['e1','e2']:
