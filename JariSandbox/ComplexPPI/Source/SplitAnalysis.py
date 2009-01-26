@@ -74,7 +74,7 @@ def compareToBinary(complexSentencesById, classifications, exampleBuilder, optio
 
 def buildExamples(exampleBuilder, sentences, options):
     examples = []
-    if "graph_kernel" in exampleBuilder.styles:
+    if hasattr(exampleBuilder, "styles") and "graph_kernel" in exampleBuilder.styles:
         counter = ProgressCounter(len(sentences), "Build examples", 0)
     else:
         counter = ProgressCounter(len(sentences), "Build examples")
@@ -138,6 +138,7 @@ if __name__=="__main__":
     defaultAnalysisFilename = "/usr/share/biotext/ComplexPPI/BioInferForComplexPPIVisible.xml"
     optparser = OptionParser(usage="%prog [options]\nCreate an html visualization for a corpus.")
     optparser.add_option("-i", "--input", default=defaultAnalysisFilename, dest="input", help="Corpus in analysis format", metavar="FILE")
+    optparser.add_option("-s", "--test", default=None, dest="input_test", help="Corpus in analysis format", metavar="FILE")
     optparser.add_option("-o", "--output", default=None, dest="output", help="Output directory, useful for debugging")
     optparser.add_option("-c", "--classifier", default="SVMLightClassifier", dest="classifier", help="Classifier Class")
     optparser.add_option("-t", "--tokenization", default="split_gs", dest="tokenization", help="tokenization")
@@ -172,11 +173,25 @@ if __name__=="__main__":
     # Build examples
     exampleBuilder = ExampleBuilder(**splitParameters(options.exampleBuilderParameters))
     examples = buildExamples(exampleBuilder, sentences, options)
-       
-    # Make test and training sets
-    print >> sys.stderr, "Dividing data into test and training sets"
-    corpusDivision = Example.makeCorpusDivision(corpusElements)
-    exampleSets = Example.divideExamples(examples, corpusDivision)
+
+    if options.input_test == None:               
+        # Make test and training sets
+        print >> sys.stderr, "Dividing data into test and training sets"
+        corpusDivision = Example.makeCorpusDivision(corpusElements)
+        exampleSets = Example.divideExamples(examples, corpusDivision)
+    else: # pre-defined test-set
+        # Load corpus and make sentence graphs
+        print >> sys.stderr, "Loading test set corpus"
+        corpusElements = loadCorpus(options.input, options.parse, options.tokenization)
+        testSentences = []
+        for sentence in corpusElements.sentences:
+            testSentences.append( [sentence.sentenceGraph,None] )
+        
+        # Build examples
+        testExamples = buildExamples(exampleBuilder, sentences, options)
+        
+        # Define test and training sets
+        exampleSets = [examples, testExamples]        
     
     # Create classifier object
     if options.output != None:
@@ -234,4 +249,4 @@ if __name__=="__main__":
         example[3]["visualizationSet"] = "test"
         #corpusElements.sentencesById[example[0].rsplit(".",1)[0]].sentenceGraph.visualizationSet = "test"
     if options.visualization != None:
-        visualize(sentences, evaluation.classifications, options, exampleBuilder)
+        visualize(sentences+testSentences, evaluation.classifications, options, exampleBuilder)
