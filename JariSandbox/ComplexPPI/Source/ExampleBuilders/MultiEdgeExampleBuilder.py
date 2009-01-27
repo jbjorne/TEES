@@ -87,22 +87,6 @@ class MultiEdgeExampleBuilder(ExampleBuilder):
         else:
             return "neg"           
     
-    def getType(self, intEdges):
-        intEdges = self.filterEdgesByType(intEdges, self.types)
-        categoryNames = []
-        for intEdge in intEdges:
-            categoryNames.append(intEdge.attrib["type"])
-        categoryNames.sort()
-        categoryName = ""
-        for name in categoryNames:
-            if categoryName != "":
-                categoryName += "---"
-            categoryName += name
-        if categoryName != "":
-            return categoryName
-        else:
-            return None 
-    
     def preProcessExamples(self, allExamples):
         # Duplicates cannot be removed here, as they should only be removed from the training set. This is done
         # in the classifier.
@@ -121,7 +105,6 @@ class MultiEdgeExampleBuilder(ExampleBuilder):
         exampleIndex = 0
         
         undirected = sentenceGraph.dependencyGraph.to_undirected()
-        #undirected = self.makeUndirected(sentenceGraph.dependencyGraph)
         paths = NX.all_pairs_shortest_path(undirected, cutoff=999)
         
         # Generate examples based on interactions between entities or interactions between tokens
@@ -129,11 +112,8 @@ class MultiEdgeExampleBuilder(ExampleBuilder):
             loopRange = len(sentenceGraph.entities)
         else:
             loopRange = len(sentenceGraph.tokens)
-#        for i in range(len(sentenceGraph.tokens)-1):
-#            for j in range(i+1,len(sentenceGraph.tokens)):
         for i in range(loopRange-1):
             for j in range(i+1,loopRange):
-#                examples = []
                 eI = None
                 eJ = None
                 if "entities" in self.styles:
@@ -157,17 +137,6 @@ class MultiEdgeExampleBuilder(ExampleBuilder):
                         categoryName = self.getCategoryNameFromTokens(sentenceGraph, tI, tJ, True)
                     examples.append( self.buildExample(tI, tJ, paths, sentenceGraph, categoryName, exampleIndex, eI, eJ) )
                     exampleIndex += 1
-#                    forwardExample = None
-#                    if sentenceGraph.interactionGraph.has_edge(tI, tJ):
-#                        intEdges = sentenceGraph.interactionGraph.get_edge(tI, tJ)
-#                        categoryName = self.getType(intEdges)
-#                        if categoryName != None:
-#                            forwardExample = self.buildExample(tI, tJ, paths, sentenceGraph, categoryName, exampleIndex)
-#                            examples.append(forwardExample)
-#                            exampleIndex += 1
-#                    if forwardExample == None:
-#                        examples.append( self.buildExample(tI, tJ, paths, sentenceGraph, "neg", exampleIndex) )
-#                        exampleIndex += 1
                     # define reverse
                     if "entities" in self.styles:
                         categoryName = self.getCategoryName(sentenceGraph, eJ, eI, True)
@@ -175,17 +144,6 @@ class MultiEdgeExampleBuilder(ExampleBuilder):
                         categoryName = self.getCategoryNameFromTokens(sentenceGraph, tJ, tI, True)
                     examples.append( self.buildExample(tJ, tI, paths, sentenceGraph, categoryName, exampleIndex, eJ, eI) )
                     exampleIndex += 1
-#                    reverseExample = None
-#                    if sentenceGraph.interactionGraph.has_edge(tJ, tI):
-#                        intEdges = sentenceGraph.interactionGraph.get_edge(tJ, tI)
-#                        categoryName = self.getType(intEdges)
-#                        if categoryName != None:
-#                            reverseExample = self.buildExample(tJ, tI, paths, sentenceGraph, categoryName, exampleIndex)
-#                            examples.append(reverseExample)
-#                            exampleIndex += 1
-#                    if reverseExample == None:
-#                        examples.append( self.buildExample(tJ, tI, paths, sentenceGraph, "neg", exampleIndex) )
-#                        exampleIndex += 1
                 else:
                     if "entities" in self.styles:
                         categoryName = self.getCategoryName(sentenceGraph, eI, eJ, False)
@@ -197,33 +155,7 @@ class MultiEdgeExampleBuilder(ExampleBuilder):
                         forwardExample[2].update(reverseExample[2])
                     examples.append(forwardExample)
                     exampleIndex += 1
-                    
-#                    forwardExample = None
-#                    intEdges = []
-#                    if sentenceGraph.interactionGraph.has_edge(tI, tJ):
-#                        intEdges.extend( sentenceGraph.interactionGraph.get_edge(tI, tJ) )
-#                    if sentenceGraph.interactionGraph.has_edge(tJ, tI):
-#                        intEdges.extend( sentenceGraph.interactionGraph.get_edge(tJ, tI) )
-#                    undirectedExample = None
-#                    if len(intEdges) > 0:
-#                        categoryName = self.getType(intEdges)
-#                        if categoryName != None:
-#                            undirectedExample = self.buildExample(tI, tJ, paths, sentenceGraph, categoryName, exampleIndex)
-#                            tempReverseExample = self.buildExample(tJ, tI, paths, sentenceGraph, "temp", "temp")
-#                            undirectedExample[2].update(tempReverseExample[2])
-#                            examples.append(undirectedExample)
-#                            exampleIndex += 1
-#                    if undirectedExample == None:
-#                        undirectedExample = self.buildExample(tI, tJ, paths, sentenceGraph, "neg", exampleIndex)
-#                        tempReverseExample = self.buildExample(tJ, tI, paths, sentenceGraph, "temp", "temp")
-#                        undirectedExample[2].update(tempReverseExample[2])
-#                        examples.append(undirectedExample)
-#                        exampleIndex += 1
         
-#        if "no_duplicates" in self.styles:
-#            examples = ExampleUtils.removeDuplicates(examples)
-#        if "normalize" in self.styles:
-#            ExampleUtils.normalizeFeatureVectors(examples)
         return examples
     
     def buildExample(self, token1, token2, paths, sentenceGraph, categoryName, exampleIndex, entity1=None, entity2=None):
@@ -234,10 +166,6 @@ class MultiEdgeExampleBuilder(ExampleBuilder):
                 path = paths[token1][token2]
             else:
                 path = [token1, token2]
-            
-#            if entity1 != None and entity2 != None:
-#                if entity1.attrib["isName"] == "True" and entity2.attrib["isName"] == "True":
-#                    features[self.featureSet.getId("always_negative")] = 1
             if self.pathLengths == None or len(path)-1 in self.pathLengths:
 #                if not "no_ontology" in self.styles:
 #                    self.ontologyFeatureBuilder.setFeatureVector(features)
@@ -340,17 +268,5 @@ class MultiEdgeExampleBuilder(ExampleBuilder):
             categoryName = "i"
         else:
             category = self.classSet.getId(categoryName)
-
-#        ExampleUtils.writeExamples([(sentenceGraph.getSentenceId()+".x"+str(exampleIndex),category,features,extra)],"temp.txt",self.featureSet.toStrings())
-#        sys.exit(0)
-        
-#        exampleLine = str(category)
-#        fkeys = features.keys()
-#        fkeys.sort()
-#        for k in fkeys:
-#            exampleLine += " " + str(k) + ":" + str(features[k])
-#        exampleLine +=  "\n"
-#        self.outFile.write(exampleLine)
         
         return (sentenceGraph.getSentenceId()+".x"+str(exampleIndex),category,features,extra)
-        #examples.append(  )

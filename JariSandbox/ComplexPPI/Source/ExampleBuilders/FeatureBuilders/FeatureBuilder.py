@@ -13,6 +13,9 @@ class FeatureBuilder:
         self.entity1 = entity1
         self.entity2 = entity2
         
+    def setFeature(self, name, value):
+        self.features[self.featureSet.getId(name)] = value
+        
     def normalizeFeatureVector(self):
         # Normalize features
         total = 0.0

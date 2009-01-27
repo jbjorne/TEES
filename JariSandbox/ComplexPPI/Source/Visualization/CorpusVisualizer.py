@@ -54,25 +54,26 @@ class CorpusVisualizer:
         labelStyles = {}
         extraByToken = {}
         edgeTypes = {}
-        for example in examples:
-            if classificationsByExample.has_key(example[0]):
-                classification = classificationsByExample[example[0]]
-                if example[3]["xtype"] == "edge" and classification[1] != "tn": #and a[1] != "fn":
-                    if classification[2] != "multiclass":
-                        exampleGraph.add_edge(example[3]["t1"], example[3]["t2"], example[0])
-                    else:
-                        exampleGraph.add_edge(example[3]["t1"], example[3]["t2"], example[0]) # self.classSet.getName(classification[3]))
-                elif example[3]["xtype"] == "token" and classification[1] != "tn":
-                    if classification[1] == "tp":
-                        style = {"fill":"green"}
-                    if classification[1] == "fp":
-                        style = {"fill":"red"}
-                    if classification[1] == "fn":
-                        style = {"fill":"#79BAEC"}
-                    if classification[2] != "multiclass":
-                        extraByToken[example[3]["t"]] = (classification[1],style)
-                    else:
-                        extraByToken[example[3]["t"]] = (self.classSet.getName(classification[3]),style)
+        if examples != None:
+            for example in examples:
+                if classificationsByExample.has_key(example[0]):
+                    classification = classificationsByExample[example[0]]
+                    if example[3]["xtype"] == "edge" and classification[1] != "tn": #and a[1] != "fn":
+                        if classification[2] != "multiclass":
+                            exampleGraph.add_edge(example[3]["t1"], example[3]["t2"], example[0])
+                        else:
+                            exampleGraph.add_edge(example[3]["t1"], example[3]["t2"], example[0]) # self.classSet.getName(classification[3]))
+                    elif example[3]["xtype"] == "token" and classification[1] != "tn":
+                        if classification[1] == "tp":
+                            style = {"fill":"green"}
+                        if classification[1] == "fp":
+                            style = {"fill":"red"}
+                        if classification[1] == "fn":
+                            style = {"fill":"#79BAEC"}
+                        if classification[2] != "multiclass":
+                            extraByToken[example[3]["t"]] = (classification[1],style)
+                        else:
+                            extraByToken[example[3]["t"]] = (self.classSet.getName(classification[3]),style)
         for edge in exampleGraph.edges():
             addType = False
             classification = classificationsByExample[edge[2]][1]

@@ -173,7 +173,8 @@ if __name__=="__main__":
     # Build examples
     exampleBuilder = ExampleBuilder(**splitParameters(options.exampleBuilderParameters))
     examples = buildExamples(exampleBuilder, sentences, options)
-
+    
+    testSentences = []
     if options.input_test == None:               
         # Make test and training sets
         print >> sys.stderr, "Dividing data into test and training sets"
@@ -218,6 +219,10 @@ if __name__=="__main__":
         Example.writeExamples(exampleSets[1], options.output + "/examplesTrain.txt")
         Example.writeExamples(optimizationSets[0], options.output + "/examplesOptimizationTest.txt")
         Example.writeExamples(optimizationSets[1], options.output + "/examplesOptimizationTrain.txt")
+        print >> sys.stderr, "Saving class names to", options.output + ".class_names"
+        exampleBuilder.classSet.write(options.output + "/class_names.txt")
+        print >> sys.stderr, "Saving feature names to", options.output + "/feature_names.txt"
+        exampleBuilder.featureSet.write(options.output + "/feature_names.txt")
     
     # Classify
     print >> sys.stderr, "Classifying test data"    

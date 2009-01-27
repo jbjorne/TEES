@@ -188,6 +188,53 @@ def listEntities(corpusElements):
         for text in texts:
             print >> sys.stderr, "    " + text
 
+def listStructures(corpusElements):
+    interactionEdges = 0
+    dependencyEdges = 0
+    
+    structures = {}
+    for sentence in corpusElements.sentences:
+        sentenceGraph = sentence.sentenceGraph
+        #interactionEdges += len(sentenceGraph.interactionGraph.edges())
+        interactionEdges += len(sentence.interactions)
+        dependencyEdges += len(sentenceGraph.dependencyGraph.edges())
+        
+        undirected = sentenceGraph.dependencyGraph.to_undirected()
+        paths = NX.all_pairs_shortest_path(undirected, cutoff=999)
+        # Shortest path for interaction edge
+        for interaction in sentence.interactions:
+            e1 = sentence.entitiesById[interaction.attrib["e1"]]
+            e2 = sentence.entitiesById[interaction.attrib["e2"]]
+            t1 = sentenceGraph.entityHeadTokenByEntity[e1]
+            t2 = sentenceGraph.entityHeadTokenByEntity[e2]
+            if paths.has_key(t1) and paths[t1].has_key(t2):
+                path = paths[t1][t2]
+                prevToken = None
+                structure = ""
+                for pathToken in path:
+                    if prevToken != None:
+                        if sentenceGraph.dependencyGraph.has_edge(prevToken,pathToken):
+                            structure += ">" + sentenceGraph.dependencyGraph.get_edge(prevToken,pathToken)[0].attrib["type"] + ">"
+                        elif sentenceGraph.dependencyGraph.has_edge(pathToken,prevToken):
+                            structure += "<" + sentenceGraph.dependencyGraph.get_edge(pathToken,prevToken)[0].attrib["type"] + "<"
+                        else:
+                            assert(False)
+                    structure += pathToken.attrib["POS"][0:1]
+                    prevToken = pathToken
+                
+                if not structures.has_key(structure):
+                    structures[structure] = {}
+                if not structures[structure].has_key(interaction.attrib["type"]):
+                    structures[structure][interaction.attrib["type"]] = 0
+                structures[structure][interaction.attrib["type"]] += 1
+    
+    print >> sys.stderr, "Structures"
+    #keys = sorted(structures.keys())
+    for s in sorted(structures.keys()):
+        print >> sys.stderr, s + ":"
+        for i in sorted(structures[s].keys()):
+            print >> sys.stderr, "  " + i + ": " + str(structures[s][i])
+
 if __name__=="__main__":
     defaultAnalysisFilename = "/usr/share/biotext/ComplexPPI/BioInferForComplexPPIVisible_noCL.xml"
     optparser = OptionParser(usage="%prog [options]\nCreate an html visualization for a corpus.")
@@ -211,3 +258,5 @@ if __name__=="__main__":
     countMultipleEdges(corpusElements)
     if options.analyses.find("entities") != -1:
         listEntities(corpusElements)
+    if options.analyses.find("structures") != -1:
+        listStructures(corpusElements)
