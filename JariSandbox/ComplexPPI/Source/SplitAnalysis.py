@@ -183,13 +183,13 @@ if __name__=="__main__":
     else: # pre-defined test-set
         # Load corpus and make sentence graphs
         print >> sys.stderr, "Loading test set corpus"
-        corpusElements = loadCorpus(options.input, options.parse, options.tokenization)
+        corpusElements = loadCorpus(options.input_test, options.parse, options.tokenization)
         testSentences = []
         for sentence in corpusElements.sentences:
             testSentences.append( [sentence.sentenceGraph,None] )
         
         # Build examples
-        testExamples = buildExamples(exampleBuilder, sentences, options)
+        testExamples = buildExamples(exampleBuilder, testSentences, options)
         
         # Define test and training sets
         exampleSets = [examples, testExamples]        
