@@ -6,6 +6,7 @@ import Core.ExampleUtils as ExampleUtils
 from FeatureBuilders.MultiEdgeFeatureBuilder import MultiEdgeFeatureBuilder
 from FeatureBuilders.TokenFeatureBuilder import TokenFeatureBuilder
 from FeatureBuilders.BioInferOntologyFeatureBuilder import BioInferOntologyFeatureBuilder
+from FeatureBuilders.NodalidaFeatureBuilder import NodalidaFeatureBuilder
 import networkx as NX
 
 class MultiEdgeExampleBuilder(ExampleBuilder):
@@ -25,6 +26,8 @@ class MultiEdgeExampleBuilder(ExampleBuilder):
         self.tokenFeatureBuilder = TokenFeatureBuilder(self.featureSet)
         if "ontology" in self.styles:
             self.multiEdgeFeatureBuilder.ontologyFeatureBuilder = BioInferOntologyFeatureBuilder(self.featureSet)
+        if "nodalida" in self.styles:
+            self.nodalidaFeatureBuilder = NodalidaFeatureBuilder(self.featureSet)
         self.pathLengths = length
         self.types = types
         if "random" in self.styles:
@@ -274,7 +277,13 @@ class MultiEdgeExampleBuilder(ExampleBuilder):
                         self.multiEdgeFeatureBuilder.buildPathEdgeFeatures(path, edges, sentenceGraph)
                     self.multiEdgeFeatureBuilder.buildSentenceFeatures(sentenceGraph)
                     self.multiEdgeFeatureBuilder.setFeatureVector(None)
-                # Build token ngrams
+                if "nodalida" in self.styles:
+                    self.nodalidaFeatureBuilder.setFeatureVector(features, entity1, entity2)
+                    shortestPaths = self.nodalidaFeatureBuilder.buildShortestPaths(sentenceGraph.dependencyGraph, path)
+                    print shortestPaths
+                    if len(shortestPaths) > 0:
+                        self.nodalidaFeatureBuilder.buildNGrams(shortestPaths, sentenceGraph)
+                    self.nodalidaFeatureBuilder.setFeatureVector(None)
                 if not "no_linear" in self.styles:
                     self.tokenFeatureBuilder.setFeatureVector(features)
                     for i in range(len(sentenceGraph.tokens)):
