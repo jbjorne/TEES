@@ -139,6 +139,7 @@ if __name__=="__main__":
     optparser = OptionParser(usage="%prog [options]\nCreate an html visualization for a corpus.")
     optparser.add_option("-i", "--input", default=defaultAnalysisFilename, dest="input", help="Corpus in analysis format", metavar="FILE")
     optparser.add_option("-s", "--test", default=None, dest="input_test", help="Corpus in analysis format", metavar="FILE")
+    optparser.add_option("-g", "--testGold", default=None, dest="input_test_gold", help="Corpus in analysis format", metavar="FILE")
     optparser.add_option("-o", "--output", default=None, dest="output", help="Output directory, useful for debugging")
     optparser.add_option("-c", "--classifier", default="SVMLightClassifier", dest="classifier", help="Classifier Class")
     optparser.add_option("-t", "--tokenization", default="split_gs", dest="tokenization", help="tokenization")
@@ -225,7 +226,9 @@ if __name__=="__main__":
         exampleBuilder.featureSet.write(options.output + "/feature_names.txt")
     
     # Classify
-    print >> sys.stderr, "Classifying test data"    
+    print >> sys.stderr, "Classifying test data"
+    if bestResults[2].has_key("timeout"):
+        del bestResults[2]["timeout"]
     print >> sys.stderr, "Parameters:", bestResults[2]
     print >> sys.stderr, "Training",
     startTime = time.time()
