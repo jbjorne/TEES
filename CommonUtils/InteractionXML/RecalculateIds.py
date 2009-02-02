@@ -42,46 +42,44 @@ if __name__=="__main__":
     print >> sys.stderr, "Recalculating interaction xml ids"
     corpusName = corpusRoot.attrib["source"]
     documents = corpusRoot.findall("document")
+    # Recalculate ids for documents, sentences and entities
+    entDictionary = {}
     docIndex = 0
     for document in documents:
         document.attrib["id"] = corpusName + ".d" + str(docIndex)
         sentences = document.findall("sentence")
         sentIndex = 0
+        entDictionary = {}
         for sentence in sentences:
             sentence.attrib["id"] = corpusName + ".d" + str(docIndex) + ".s" + str(sentIndex)
             entities = sentence.findall("entity")
             entIndex = 0
-            entDictionary = {}
             for entity in entities:
                 entNewId = corpusName + ".d" + str(docIndex) + ".s" + str(sentIndex) + ".e" + str(entIndex)
+                assert(not entDictionary.has_key(entity.attrib["id"]))
                 entDictionary[entity.attrib["id"]] = entNewId
                 entity.attrib["id"] = entNewId
                 entIndex += 1
+            sentIndex += 1
+        docIndex += 1
+    # Recalculate ids for pairs and interactions
+    for document in documents:
+        sentences = document.findall("sentence")
+        sentIndex = 0
+        for sentence in sentences:
             interactions = sentence.findall("interaction")
             intIndex = 0
             for interaction in interactions:
                 interaction.attrib["id"] = corpusName + ".d" + str(docIndex) + ".s" + str(sentIndex) + ".i" + str(intIndex)
-                if entDictionary.has_key(interaction.attrib["e1"]):
-                    interaction.attrib["e1"] = entDictionary[interaction.attrib["e1"]]
-                else:
-                    interaction.attrib["e1"] = "UNKNOWN"
-                if entDictionary.has_key(interaction.attrib["e2"]):
-                    interaction.attrib["e2"] = entDictionary[interaction.attrib["e2"]]
-                else:
-                    interaction.attrib["e2"] = "UNKNOWN"
+                interaction.attrib["e1"] = entDictionary[interaction.attrib["e1"]]
+                interaction.attrib["e2"] = entDictionary[interaction.attrib["e2"]]
                 intIndex += 1
             pairs = sentence.findall("pair")
             pairIndex = 0
             for pair in pairs:
                 pair.attrib["id"] = corpusName + ".d" + str(docIndex) + ".s" + str(sentIndex) + ".p" + str(pairIndex)
-                if entDictionary.has_key(pair.attrib["e1"]):
-                    pair.attrib["e1"] = entDictionary[pair.attrib["e1"]]
-                else:
-                    pair.attrib["e1"] = "UNKNOWN"
-                if entDictionary.has_key(pair.attrib["e2"]):
-                    pair.attrib["e2"] = entDictionary[pair.attrib["e2"]]
-                else:
-                    pair.attrib["e2"] = "UNKNOWN"
+                pair.attrib["e1"] = entDictionary[pair.attrib["e1"]]
+                pair.attrib["e2"] = entDictionary[pair.attrib["e2"]]
                 pairIndex += 1
             sentIndex += 1
         docIndex += 1
