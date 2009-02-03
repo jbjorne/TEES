@@ -27,6 +27,16 @@ function convert {
     cd ../xml
     cat $TMP1 | python $THIS/readTokenization.py -d $DDIR > $TMP2
     python $HOME/cvs_checkout/CommonUtils/InteractionXML/RecalculateIds.py -i $TMP2 -o $DST
+    
+    # Split tokenization
+    echo "Running protein name splitter"
+    python $HOME/cvs_checkout/PPI_Learning/Analysers/ProteinNameSplitter.py -f $DST -o $DST -p Charniak-Lease -t Charniak-Lease -s split-Charniak-Lease -n split-Charniak-Lease
+    
+    # Remove unneeded Theme2 and Cause2
+    echo "Removing Theme2 and Cause2"
+    perl -pi -e 's/Theme2/Theme/g' $DST
+    perl -pi -e 's/Cause2/Cause/g' $DST
+    
     rm -f $TMP1 $TMP2
 }
 
