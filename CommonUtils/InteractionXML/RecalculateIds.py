@@ -49,7 +49,6 @@ if __name__=="__main__":
         document.attrib["id"] = corpusName + ".d" + str(docIndex)
         sentences = document.findall("sentence")
         sentIndex = 0
-        entDictionary = {}
         for sentence in sentences:
             sentence.attrib["id"] = corpusName + ".d" + str(docIndex) + ".s" + str(sentIndex)
             entities = sentence.findall("entity")
@@ -63,6 +62,7 @@ if __name__=="__main__":
             sentIndex += 1
         docIndex += 1
     # Recalculate ids for pairs and interactions
+    docIndex = 0
     for document in documents:
         sentences = document.findall("sentence")
         sentIndex = 0
