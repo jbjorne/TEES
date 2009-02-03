@@ -32,9 +32,11 @@ function convert {
     echo "Running protein name splitter"
     python $HOME/cvs_checkout/PPI_Learning/Analysers/ProteinNameSplitter.py -f $DST -o $DST -p Charniak-Lease -t Charniak-Lease -s split-Charniak-Lease -n split-Charniak-Lease
     
-    # Remove unneeded Theme2 and Cause2
-    echo "Removing Theme2 and Cause2"
+    # Remove unneeded ThemeX and CauseX
+    echo "Removing ThemeX and CauseX"
     perl -pi -e 's/Theme2/Theme/g' $DST
+    perl -pi -e 's/Theme3/Theme/g' $DST
+    perl -pi -e 's/Theme4/Theme/g' $DST
     perl -pi -e 's/Cause2/Cause/g' $DST
     
     rm -f $TMP1 $TMP2
@@ -44,3 +46,7 @@ convert IDsTRAIN train.xml ""
 convert IDsDEVEL devel.xml ""
 convert IDsTRAIN train-with-duplicates.xml -p
 convert IDsDEVEL devel-with-duplicates.xml -p
+
+# Update the mini-sets
+cd $THIS
+./make-mini-sets.sh
