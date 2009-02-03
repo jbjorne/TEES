@@ -3,7 +3,7 @@
 DDIR=/usr/share/biotext/GeniaChallenge/orig-data
 THIS=`pwd`
 
-echo "Total number of documents `ls *.a1 | wc -l`"
+echo "Total number of documents `ls $DDIR/*.a1 | wc -l`"
 echo "Training: 600"
 echo "Devel: 200"
 
