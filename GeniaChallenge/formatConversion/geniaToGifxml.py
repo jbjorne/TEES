@@ -110,7 +110,6 @@ class SentenceParser:
                                            'text':self.text[int(b):int(e)],
                                            'type':t,
                                            'isName':str(isName)})
-                self.mapping[uid] = 'rb.'+self.uid+'.'+self.counter.get()
             elif uid[0]=="*":
                 t,args = content.split(None,1)
                 args = args.split()
@@ -169,7 +168,8 @@ class SentenceParser:
         print ET.tostring(node)
 
     def getNode(self,removeDuplicates):
-        newDocument = ET.Element('document',{'id':self.uid})
+        newDocument = ET.Element('document',{'id':self.uid,
+                                             'origId':self.uid})
         newSentence = ET.Element('sentence',{'id':self.uid,
                                              'origId':self.uid,
                                              'text':self.text})
@@ -177,8 +177,8 @@ class SentenceParser:
 
         if removeDuplicates:
             for k,v in self.entities.items():
-                v['origId'] = self.mapping[v['id']]
                 v['id'] = self.uid+'.'+v['id'] # prepend document id
+                v['origId'] = v['id']
                 newEntity = ET.Element("entity",v)
                 newSentence.append(newEntity)
             edges = []
@@ -195,6 +195,7 @@ class SentenceParser:
                         x['id'] = self.uid+'.'+x['id'] # prepend document id
                         x['e1'] = self.uid+'.'+x['e1'] # prepend document id
                         x['e2'] = self.uid+'.'+x['e2'] # prepend document id
+                        x['origId'] = x['id']
                         newEvent = ET.Element("interaction",x)
                         newSentence.append(newEvent)
 
@@ -204,9 +205,9 @@ class SentenceParser:
             for k,v in self.entities.items():
                 if v['isName']=='True':
                     newEntity = ET.Element("entity",v)
-                    newEntity.attrib['origId'] = self.mapping[v['id']]
                     # prepend document id
                     newEntity.attrib['id'] = self.uid+'.'+v['id']
+                    newEntity.attrib['origId'] = newEntity.attrib['id']
                     entities[v['id']] = newEntity
             for k,v in self.events.items():
                 for x in v:
@@ -214,9 +215,9 @@ class SentenceParser:
                         if x[y][0]==('T'):
                             if not entities.has_key(x[y]):
                                 e = self.entities[x[y]]
-                                e['origId'] = self.mapping[e['id']]
                                 # prepend document id
                                 e['id'] = self.uid+'.'+e['id']
+                                e['origId'] = e['id']
                                 newEntity = ET.Element("entity",e)
                                 entities[x[y]] = newEntity
                             x[y] = self.uid+'.'+x[y]
@@ -225,10 +226,10 @@ class SentenceParser:
                                 e = self.entities[self.mapping[x[y]]]
                                 # create a new id for a copy of event trigger
                                 # (the one reserved for 'T' item is not used)
-                                e['origId'] = 'rb.'+self.uid+'.'+self.counter.get()
                                 newEntity = ET.Element("entity",e)
                                 # prepend document id and append event id
                                 newEntity.attrib['id'] = self.uid+'.'+e['id']+'.'+x[y]
+                                newEntity.attrib['origId'] = newEntity.attrib['id']
                                 entities[x[y]] = newEntity
                             x[y] = self.uid+'.'+self.mapping[x[y]]+'.'+x[y]
                         else:
@@ -237,6 +238,7 @@ class SentenceParser:
                             sys.exit(1)
                     # prepend document id
                     x['id'] = self.uid+'.'+x['id']
+                    x['origId'] = x['id']
                     newEvent = ET.Element("interaction",x)
                     events.append(newEvent)
             for x in entities.values():
@@ -247,6 +249,7 @@ class SentenceParser:
         for k,v in self.modifiers.items():
             v['id'] = self.uid+'.'+v['id'] # prepend document id
             v['e1'] = self.uid+'.'+v['e1'] # prepend document id
+            v['origId'] = v['id']
             newModifier = ET.Element("modifier",v)
             newSentence.append(newModifier)
             
