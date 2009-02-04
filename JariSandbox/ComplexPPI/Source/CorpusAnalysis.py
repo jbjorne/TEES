@@ -173,9 +173,11 @@ def listEntities(corpusElements):
         for entity in sentenceGraph.entities:
             type = entity.attrib["type"]
             if not entitiesByType.has_key(type):
-                entitiesByType[type] = [0,0,set()]
+                entitiesByType[type] = [0,0,{}]
             entitiesByType[type][0] += 1
-            entitiesByType[type][2].add(entity.attrib["text"])
+            if not entitiesByType[type][2].has_key(entity.get("text")):
+                entitiesByType[type][2][entity.get("text")] = 0
+            entitiesByType[type][2][entity.get("text")] += 1
             if entity.attrib["isName"] == "True":
                 entitiesByType[type][1] += 1
     keys = entitiesByType.keys()
@@ -183,10 +185,10 @@ def listEntities(corpusElements):
     print >> sys.stderr, "Entities (all, named):"
     for k in keys:
         print >> sys.stderr, "  " + k + ": " + str(entitiesByType[k][0]) + ", " + str(entitiesByType[k][1])
-        texts = list(entitiesByType[k][2])
+        texts = entitiesByType[k][2].keys()
         texts.sort()
         for text in texts:
-            print >> sys.stderr, "    " + text
+            print >> sys.stderr, "    " + text + "    (" + str(entitiesByType[k][2][text]) + ")"
 
 def listStructures(corpusElements):
     interactionEdges = 0
