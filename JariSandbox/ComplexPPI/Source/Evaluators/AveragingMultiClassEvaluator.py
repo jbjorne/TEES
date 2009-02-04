@@ -155,11 +155,11 @@ class AveragingMultiClassEvaluator(Evaluator):
             if predictedClass == trueClass:
                 self.truePositivesByClass[trueClass] += 1
                 if trueClass != 1:
-                    self.classifications.append((prediction[0],"tp",self.type,prediction[1]))
+                    self.classifications.append((prediction[0],"tp",self.type,prediction[1],prediction[3]))
                     self.microTP += 1
                     self.binaryTP += 1
                 else:
-                    self.classifications.append((prediction[0],"tn",self.type,prediction[1]))
+                    self.classifications.append((prediction[0],"tn",self.type,prediction[1],prediction[3]))
                     self.microTN += 1
                     self.binaryTN += 1
                 for cls in self.classes:
@@ -168,11 +168,11 @@ class AveragingMultiClassEvaluator(Evaluator):
             elif predictedClass != trueClass:
                 self.falsePositivesByClass[predictedClass] += 1
                 if predictedClass == 1:
-                    self.classifications.append((prediction[0],"fn",self.type,prediction[1]))
+                    self.classifications.append((prediction[0],"fn",self.type,prediction[1],prediction[3]))
                     self.microFN += 1
                     self.binaryFN += 1
                 else:
-                    self.classifications.append((prediction[0],"fp",self.type,prediction[1]))
+                    self.classifications.append((prediction[0],"fp",self.type,prediction[1],prediction[3]))
                     self.microFP += 1
                     if trueClass == 1:
                         self.binaryFP += 1
