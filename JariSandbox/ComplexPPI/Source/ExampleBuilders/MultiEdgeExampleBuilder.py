@@ -121,6 +121,8 @@ class MultiEdgeExampleBuilder(ExampleBuilder):
                     eJ = sentenceGraph.entities[j]
                     tI = sentenceGraph.entityHeadTokenByEntity[eI]
                     tJ = sentenceGraph.entityHeadTokenByEntity[eJ]
+                    if "no_ne_interactions" in self.styles and eI.get("isName") == "True" and eJ.get("isName") == "True":
+                        continue
                 else:
                     tI = sentenceGraph.tokens[i]
                     tJ = sentenceGraph.tokens[j]
