@@ -149,7 +149,7 @@ if __name__=="__main__":
     optparser.add_option("-b", "--exampleBuilder", default="SimpleDependencyExampleBuilder", dest="exampleBuilder", help="Example Builder Class")
     optparser.add_option("-e", "--evaluator", default="BinaryEvaluator", dest="evaluator", help="Prediction evaluator class")
     optparser.add_option("-v", "--visualization", default=None, dest="visualization", help="Visualization output directory. NOTE: If the directory exists, it will be deleted!")
-    optparser.add_option("-n", "--binaryCorpus", default=None, dest="binaryCorpus", help="Binary corpus in analysis xml. NOTE: pairs, not interactions")
+    optparser.add_option("-m", "--resultsToXML", default=None, dest="resultsToXML", help="Results in analysis xml. NOTE: for edges, pairs, not interactions")
     (options, args) = optparser.parse_args()
     
     if options.output != None:
@@ -245,9 +245,16 @@ if __name__=="__main__":
     if options.output != None:
         evaluation.saveCSV(options.output + "/results.csv")
     
-    # Compare to binary
-    if options.binaryCorpus != None:
-        compareToBinary(corpusElements.sentencesById, predictions, exampleBuilder, options)
+    # Save interactionXML
+    if options.resultsToXML != None:
+        classSet = None
+        if "typed" in exampleBuilder.styles:
+            classSet = exampleBuilder.classSet
+        Example.writeToInteractionXML(evaluation.classifications, corpusElements, options.resultsToXML, classSet)
+
+#    # Compare to binary
+#    if options.binaryCorpus != None:
+#        compareToBinary(corpusElements.sentencesById, predictions, exampleBuilder, options)
         
     # Visualize
     for example in exampleSets[0]:
@@ -257,4 +264,7 @@ if __name__=="__main__":
         example[3]["visualizationSet"] = "test"
         #corpusElements.sentencesById[example[0].rsplit(".",1)[0]].sentenceGraph.visualizationSet = "test"
     if options.visualization != None:
-        visualize(sentences+testSentences, evaluation.classifications, options, exampleBuilder)
+        if len(testSentences) > 0:
+            visualize(testSentences, evaluation.classifications, options, exampleBuilder)
+        else:
+            visualize(sentences, evaluation.classifications, options, exampleBuilder)
