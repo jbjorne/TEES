@@ -61,7 +61,7 @@ class SVMMultiClassClassifier(Classifier):
         predictionsFile.close()
         #predictions = []
         for i in range(len(lines)):
-            predictions.append( (examples[i],int(lines[i].split()[0]),"multiclass") )
+            predictions.append( (examples[i],int(lines[i].split()[0]),"multiclass",lines[i].split()[1:]) )
         return predictions
     
     def __addParametersToSubprocessCall(self, args, parameters):
