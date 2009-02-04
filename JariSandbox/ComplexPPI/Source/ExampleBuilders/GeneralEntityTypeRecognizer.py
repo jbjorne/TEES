@@ -8,6 +8,7 @@ class GeneralEntityTypeRecognizer(ExampleBuilder):
     def __init__(self, style=None):
         ExampleBuilder.__init__(self)
         self.classSet = IdSet(1)
+        self.styles = style
         assert( self.classSet.getId("neg") == 1 )
     
     def getMergedEntityType(self, entities):
