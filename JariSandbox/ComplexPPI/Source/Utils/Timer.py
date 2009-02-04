@@ -8,6 +8,9 @@ class Timer:
     def stop(self):
         self.endTime = time.time()
     
+    def reset(self):
+        self.startTime = time.time()
+    
     def startTimeToString(self):
         return time.ctime(self.startTime)
     
