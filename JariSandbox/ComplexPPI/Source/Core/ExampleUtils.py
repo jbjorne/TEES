@@ -59,6 +59,34 @@ def writeExamples(examples, filename, commentLines=None):
     appendExamples(examples, f)
     f.close()
 
+def writePredictions(predictions, exampleFileName):
+    f = open(exampleFileName, "wt")
+    exampleLines = f.readlines()
+    f.close()
+    for line in exampleLines:
+        if line[0] != "#":
+            break
+        if line.find("#commentColumns:") != -1:
+            pass
+            
+
+def readExamples(filename):
+    f = open(filename,"rt")
+    examples = []
+    for line in f.readlines():
+        if line[0] == "#":
+            continue
+        splits = line.split("#")
+        id = splits[-1].strip()
+        splits2 = splits[0].split()
+        classId = int(splits2[0])
+        features = {}
+        for item in splits2[1:]:
+            featureId, featureValue = item.split(":")
+            features[int(featureId)] = float(featureValue)
+        examples.append([id,classId,features,{}])
+    return examples
+
 def makeCorpusDivision(corpusElements, fraction=0.5, seed=0):
     documentIds = corpusElements.documentsById.keys()
     return makeDivision(documentIds, fraction, seed)
@@ -136,12 +164,21 @@ def writeToInteractionXML(classifications, corpusElements, outputFile, classSet=
     
     print >> sys.stderr, "Grouping examples"
     classificationsBySentence = {}
+    xType = None
     for classification in classifications:
+        if xType == None:
+            if classification[0][3].has_key("xtype"):
+                xType = classification[0][3]["xtype"]
+        else:
+            assert(classification[0][3]["xtype"] == xType)
         exampleId = classification[0][0]
         sentenceId = exampleId.rsplit(".",1)[0]
         if not classificationsBySentence.has_key(sentenceId):
             classificationsBySentence[sentenceId] = []
         classificationsBySentence[sentenceId].append(classification)
+    
+    if classSet != None:
+        classIds = classSet.getIds()
     
     print >> sys.stderr, "Processing sentence elements"
     sentenceElements = corpusElements.sentences
@@ -149,6 +186,7 @@ def writeToInteractionXML(classifications, corpusElements, outputFile, classSet=
         sentenceElement = sentenceObject.sentence
         sentenceId = sentenceElement.attrib["id"]
         # detach analyses
+        sentenceAnalysesElement = None
         sentenceAnalysesElement = sentenceElement.find("sentenceanalyses")
         if sentenceAnalysesElement != None:
             sentenceElement.remove(sentenceAnalysesElement)
@@ -161,30 +199,79 @@ def writeToInteractionXML(classifications, corpusElements, outputFile, classSet=
         if interactionElements != None:
             for interactionElement in interactionElements:
                 sentenceElement.remove(interactionElement)
+        # remove entities
+        if xType == "token":
+            entityElements = sentenceElement.findall("entity")
+            if entityElements != None:
+                for entityElement in entityElements:
+                    if entityElement.get("isName") == "False": # interaction word
+                        sentenceElement.remove(entityElement)
         # add new pairs
-        pairCount = 0
-        if classificationsBySentence.has_key(sentenceId):
-            for classification in classificationsBySentence[sentenceId]:
-                example = classification[0]
-                pairElement = ET.Element("pair")
-                #pairElement.attrib["origId"] = origId
-                pairElement.attrib["type"] = example[3]["categoryName"]
-                pairElement.attrib["directed"] = "Unknown"
-                pairElement.attrib["e1"] = example[3]["e1"].attrib["id"]
-                pairElement.attrib["e2"] = example[3]["e2"].attrib["id"]
-                pairElement.attrib["id"] = sentenceId + ".p" + str(pairCount)
-                if classSet == None: # binary classification
-                    if classification[1] == "tp" or classification[1] == "fp":
-                        pairElement.attrib["prediction"] = str(True)
+        if xType == "token":
+            entityElements = sentenceElement.findall("entity")
+            entityCount = 0
+            if entityElements != None:
+                entityCount = len(entityElements)
+            if classificationsBySentence.has_key(sentenceId):
+                for classification in classificationsBySentence[sentenceId]:
+                    example = classification[0]
+                    entityElement = ET.Element("entity")
+                    entityElement.attrib["isName"] = "False"
+                    headToken = example[3]["t"]
+                    entityElement.attrib["charOffset"] = headToken.get("charOffset") 
+                    entityElement.attrib["headOffset"] = headToken.get("charOffset")
+                    entityElement.attrib["text"] = headToken.get("text")
+                    entityElement.attrib["id"] = sentenceId + ".e" + str(entityCount)
+                    if classSet == None: # binary classification
+                        if classification[1] == "tp" or classification[1] == "fp":
+                            entityElement.attrib["type"] = str(True)
+                        else:
+                            entityElement.attrib["type"] = str(False)
                     else:
-                        pairElement.attrib["prediction"] = str(False)
-                else:
-                    pairElement.attrib["prediction"] = classSet.getName(classification[3])
-                sentenceElement.append(pairElement)
-                pairCount += 1
+                        entityElement.attrib["type"] = classSet.getName(classification[3])
+                        classWeights = classification[4]
+                        predictionString = ""
+                        for i in range(len(classWeights)):
+                            if predictionString != "":
+                                predictionString += ","
+                            predictionString += classSet.getName(classIds[i]) + ":" + str(classWeights[i])
+                        entityElement.attrib["predictions"] = predictionString
+                    if entityElement.attrib["type"] != "neg":
+                        sentenceElement.append(entityElement)
+                    entityCount += 1
+        elif xType == "edge":
+            pairCount = 0
+            if classificationsBySentence.has_key(sentenceId):
+                for classification in classificationsBySentence[sentenceId]:
+                    example = classification[0]
+                    pairElement = ET.Element("pair")
+                    #pairElement.attrib["origId"] = origId
+                    #pairElement.attrib["type"] = example[3]["categoryName"]
+                    pairElement.attrib["directed"] = "Unknown"
+                    pairElement.attrib["e1"] = example[3]["e1"].attrib["id"]
+                    pairElement.attrib["e2"] = example[3]["e2"].attrib["id"]
+                    pairElement.attrib["id"] = sentenceId + ".p" + str(pairCount)
+                    if classSet == None: # binary classification
+                        if classification[1] == "tp" or classification[1] == "fp":
+                            pairElement.attrib["type"] = str(True)
+                        else:
+                            pairElement.attrib["type"] = str(False)
+                    else:
+                        pairElement.attrib["type"] = classSet.getName(classification[3])
+                        classWeights = classification[4]
+                        predictionString = ""
+                        for i in range(len(classWeights)):
+                            if predictionString != "":
+                                predictionString += ","
+                            predictionString += classSet.getName(classIds[i]) + ":" + str(classWeights[i])
+                        pairElement.attrib["predictions"] = predictionString
+                    sentenceElement.append(pairElement)
+                    pairCount += 1
+        else:
+            sys.exit("Error, unknown xtype")
         # re-attach the analyses-element
-#        if sentenceAnalysesElement != None:
-#            sentenceElement.append(sentenceAnalysesElement)
+        if sentenceAnalysesElement != None:
+            sentenceElement.append(sentenceAnalysesElement)
     # Write corpus
     print >> sys.stderr, "Writing corpus to", outputFile
     ETUtils.write(corpusElements.rootElement, outputFile)
