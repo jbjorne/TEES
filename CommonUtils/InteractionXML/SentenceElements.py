@@ -12,12 +12,13 @@ class SentenceElements:
         self.parseElement = None
         self.tokenizationElement = None
         
+        sentenceId = sentenceElement.get("id")
         pairElements = sentenceElement.findall("pair")
         if pairElements != None:
             self.pairs = pairElements
         pairsToKeep = []
         for pair in pairElements:
-            if pair.attrib["e1"] != "UNKNOWN" and pair.attrib["e2"] != "UNKNOWN":
+            if pair.get("e1").rsplit(".",1)[0] == sentenceId and pair.get("e2").rsplit(".",1)[0] == sentenceId:
                 pairsToKeep.append(pair)
         self.pairs = pairsToKeep
         
@@ -26,7 +27,7 @@ class SentenceElements:
             self.interactions = interactionElements
         interactionsToKeep = []
         for interaction in interactionElements:
-            if interaction.attrib["e1"] != "UNKNOWN" and interaction.attrib["e2"] != "UNKNOWN":
+            if interaction.get("e1").rsplit(".",1)[0] == sentenceId and interaction.get("e2").rsplit(".",1)[0] == sentenceId:
                 interactionsToKeep.append(interaction)
         self.interactions = interactionsToKeep
         
