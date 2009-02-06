@@ -11,6 +11,26 @@ except ImportError:
 #                         'Regulation','Positive_regulation',
 #                         'Negative_regulation','Protein']
 
+def indent(elem, level=0):
+    """
+    In-place indentation of XML (in cElementTree.Element object).
+    This function was provided by Filip Salomonsson. See
+    http://infix.se/2007/02/06/gentlemen-indent-your-xml.
+    """
+    i = "\n" + level*"  "
+    if len(elem):
+        if not elem.text or not elem.text.strip():
+            elem.text = i + "  "
+        for e in elem:
+            indent(e, level+1)
+            if not e.tail or not e.tail.strip():
+                e.tail = i + "  "
+        if not e.tail or not e.tail.strip():
+            e.tail = i
+    else:
+        if level and (not elem.tail or not elem.tail.strip()):
+            elem.tail = i
+
 class Increment:
     """
     Increment instance gives all non-negative integers starting from
@@ -32,22 +52,20 @@ class Increment:
 class Unflattener:
     def __init__(self,document):
         self.document = document
-        self.graph = self.makeGraph()
+        self.entities = dict( [(x.attrib['id'],x) for x in
+                               self.document.getiterator('entity')] )
+        self.graphs = dict( [(x,self.makeGraph(x))
+                             for x in self.document.findall('sentence')] )
 
-    def makeGraph(self):
+    def makeGraph(self,sentence):
         G = NX.XDiGraph()
-        entities = dict( [(x.attrib['id'],x) for x in
-                          self.document.getiterator('entity')] )
-        for event in self.document.getiterator('interaction'):
-            e1 = entities[event.attrib['e1']]
-            e2 = entities[event.attrib['e2']]
+        for event in sentence.getiterator('interaction'):
+            e1 = self.entities[event.attrib['e1']]
+            e2 = self.entities[event.attrib['e2']]
             G.add_edge(e1,e2,event)
         return(G)
 
     def analyse(self):
-        counter = Increment()
-        G = self.graph
-
         def getGrouping(node):
             # NOTE: this function does not yet consider task 2
             uid = node.attrib['id']
@@ -92,42 +110,50 @@ class Unflattener:
                     sys.stderr.write("Entities %s and %s start at the same offset\n"%(node.attrib['id'],e[1].attrib['id']))
             return(result)
 
-        unprocessed_nodes = set([x for x in G.nodes() if not G.out_edges(n)])
-        while unprocessed_nodes:
-            next_nodes = set()
-            for current in unprocessed_nodes:
-                if G.out_edges(current):
-                    groups = self.getGrouping(current)
-                    for edges in groups:
-                        newN = ET.Element('entity',current.attrib)
-                        newId = newN.attrib['id']+'.E'+counter.get()
-                        newN.attrib['id'] = newId
-                        G.add_node(newN)
-                        for e in edges:
-                            newE = ET.Element('interaction',e[2].attrib)
-                            newE.attrib['e1'] = newId
-                            G.add_edge(newN,e[1],newE)
-                        for e in G.in_edges(current):
-                            newE = ET.Element('interaction',e[2].attrib)
-                            newE.attrib['e2'] = newId
-                            G.add_edge(e[0],newN,newE)
-                    G.remove_node(current)
-                next_nodes.update(set(G.in_neighbors(current)))
-            # ensure that nodes-to-be-processed have only out-neighbors
-            # that have already been processed
-            for x in next_nodes:
-                for y in next_nodes:
-                    if NX.shortest_path(G,x,y) and not x==y:
-                        next_nodes.remove(x)
-            unprocessed_nodes = next_nodes
+        counter = Increment()
+        for G in self.graphs.values():
+            unprocessed_nodes = set([x for x in G.nodes()
+                                     if not G.out_edges(x)])
+            while unprocessed_nodes:
+                next_nodes = set()
+                for current in unprocessed_nodes:
+                    next_nodes.update(set(G.in_neighbors(current)))
+                    if G.out_edges(current):
+                        groups = getGrouping(current)
+                        for edges in groups:
+                            newN = ET.Element('entity',current.attrib)
+                            newId = newN.attrib['id']+'.E'+counter.get()
+                            newN.attrib['id'] = newId
+                            G.add_node(newN)
+                            for e in edges:
+                                newE = ET.Element('interaction',e[2].attrib)
+                                newE.attrib['e1'] = newId
+                                G.add_edge(newN,e[1],newE)
+                            for e in G.in_edges(current):
+                                newE = ET.Element('interaction',e[2].attrib)
+                                newE.attrib['e2'] = newId
+                                G.add_edge(e[0],newN,newE)
+                        G.delete_node(current)
+                # ensure that nodes-to-be-processed have only out-neighbors
+                # that have already been processed
+                removable = set()
+                for x in next_nodes:
+                    for y in next_nodes:
+                        if NX.shortest_path(G,x,y) and not x==y:
+                            removable.add(x)
+                unprocessed_nodes = next_nodes - removable
 
     def unflatten(self):
-        for elem in self.document:
-            self.document.remove(elem)
-        for node in self.graph.nodes():
-            self.document.add(node)
-        for edge in self.graph.edges():
-            self.document.add(edge[2])
+        for sentence in self.document.findall('sentence'):
+            G = self.graphs[sentence]
+            for elem in sentence.findall('entity'):
+                sentence.remove(elem)
+            for elem in sentence.findall('interaction'):
+                sentence.remove(elem)
+            for edge in G.edges():
+                sentence.insert(0,edge[2])
+            for node in G.nodes():
+                sentence.insert(0,node)
 
 
 
@@ -161,6 +187,7 @@ def interface(optionArgs=sys.argv[1:]):
         unflattener = Unflattener(document)
         unflattener.analyse()
         unflattener.unflatten()
+    indent(corpus.getroot())
     corpus.write(options.outfile)
 
 if __name__=="__main__":
