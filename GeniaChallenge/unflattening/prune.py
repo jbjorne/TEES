@@ -7,26 +7,14 @@ except ImportError:
 class Pruner:
     def __init__(self,document):
         self.document = document
-        self.entities = {}
-        self.events = {}
+        self.entities = set()
+        self.events = set()
 
-        self.entityTypes = dict( [(x.attrib['id'],x.attrib['type']) for x in
-                                  self.document.getiterator('entity')] )
+        self.origEntities = dict( [(x.attrib['id'],x) for x in
+                                   self.document.getiterator('entity')] )
+        self.origEvents = dict( [(x.attrib['id'],x) for x in
+                                 self.document.getiterator('interaction')] )
 
-    def findNames(self):
-        result = dict( [(x.attrib['id'],x) for x in
-                        self.document.getiterator('entity')
-                        if x.attrib['isName'].lower() == 'true'] )
-        return(result)
-
-    def findEntities(self,events):
-        uids = [x.attrib['e1'] for x in events]
-        result = dict( [(x.attrib['id'],x) for x in
-                        self.document.getiterator('entity')
-                        if (x.attrib['id'] in uids and
-                            not self.entities.has_key(x.attrib['id']))] )
-        return(result)
-    
     def validEvent(self,event):
         all_entities = ['Gene_expression','Transcription',
                         'Translation','Protein_catabolism',
@@ -34,8 +22,8 @@ class Pruner:
                         'Regulation','Positive_regulation',
                         'Negative_regulation','Protein']
         t = event.attrib['type']
-        e1t = self.entityTypes[event.attrib['e1']]
-        e2t = self.entityTypes[event.attrib['e2']]
+        e1t = self.origEntities[event.attrib['e1']].attrib['type']
+        e2t = self.origEntities[event.attrib['e2']].attrib['type']
         if e1t in ['Gene_expression','Transcription',
                    'Translation','Protein_catabolism']:
             return(t=='Theme' and e2t=='Protein')
@@ -60,28 +48,45 @@ class Pruner:
         return(False)
     
     def analyse(self):
-        tmp_entities = self.findNames()
-        tmp_events = {}
+        tmp_entities = set( [x.attrib['id'] for x in
+                             self.document.getiterator('entity')
+                             if x.attrib['isName'].lower() == 'true'] )
+        tmp_events = set()
         while tmp_entities or tmp_events:
             self.entities.update(tmp_entities)
             self.events.update(tmp_events)
-            tmp_events = dict( [(x.attrib['id'],x) for x in
-                                self.document.getiterator('interaction')
-                                if (tmp_entities.has_key(x.attrib['e2']) and
-                                    not self.events.has_key(x.attrib['id']) and
-                                    self.validEvent(event))] )
-            tmp_entities = self.findEntities(tmp_events)
+            tmp_events = set( [x.attrib['id'] for x in
+                               self.document.getiterator('interaction')
+                               if (x.attrib['e2'] in tmp_entities and
+                                   not x.attrib['id'] in self.events and
+                                   self.validEvent(x))] )
+            tmp_entities = set( [self.origEvents[x].attrib['e1']
+                                 for x in tmp_events
+                                 if not self.origEvents[x].attrib['e1']
+                                 in self.entities] )
+        self.entities.update(tmp_entities)
+        self.events.update(tmp_events)
 
     def prune(self):
         for sentence in self.document.findall('sentence'):
             for entity in sentence.findall('entity'):
                 uid = entity.attrib['id']
-                if not self.entities.has_key(uid):
-                    sentence.remove(self.entities[uid])
+                if not uid in self.entities:
+                    sentence.remove(entity)
+                    sys.stderr.write("Removed %s (%s)\n"%(entity.attrib['type'],uid))
+                else:
+                    sys.stderr.write("Preserved %s (%s)\n"%(entity.attrib['type'],uid))
             for event in sentence.findall('interaction'):
                 uid = event.attrib['id']
-                if not self.event.has_key(uid):
-                    sentence.remove(self.events[uid])
+                fromId = event.attrib['e1']
+                fromType = self.origEntities[fromId].attrib['type']
+                toId = event.attrib['e2']
+                toType = self.origEntities[toId].attrib['type']
+                if not uid in self.events:
+                    sentence.remove(event)
+                    sys.stderr.write("Removed %s (%s) from %s (%s) to %s (%s)\n"%(event.attrib['type'],uid,fromType,fromId,toType,toId))
+                else:
+                    sys.stderr.write("Preserved %s (%s) from %s (%s) to %s (%s)\n"%(event.attrib['type'],uid,fromType,fromId,toType,toId))
 
 
 
