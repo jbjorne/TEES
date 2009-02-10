@@ -76,9 +76,13 @@ class SentenceParser:
         self.parseAnnotation(tmp.read().split("\n"),isName=True)
         tmp.close()
 
-        tmp = open(eventFile)
-        self.parseAnnotation(tmp.read().split("\n"),isName=False)
-        tmp.close()
+        try:
+            tmp = open(eventFile)
+        except IOError, e:
+            sys.stderr.write("Cannot open %s\n"%eventFile)
+        else:
+            self.parseAnnotation(tmp.read().split("\n"),isName=False)
+            tmp.close()
 
     def parseText(self,rawinput):
         self.text = rawinput
@@ -96,7 +100,7 @@ class SentenceParser:
                 uid,content = line.split("\t")
             if not content:
                 sys.stderr.write("Unmatched line: '%s'"%line.strip())
-                sys.exit(1)
+                continue
             if uid[0]=="T":
                 t,b,e = content.split()
                 if not self.entities.has_key(uid):
@@ -233,9 +237,7 @@ class SentenceParser:
                                 entities[x[y]] = newEntity
                             x[y] = self.uid+'.'+self.mapping[x[y]]+'.'+x[y]
                         else:
-                            print x[y]
-                            print "Something went wrong, quiting"
-                            sys.exit(1)
+                            sys.stderr.write("Skipping %s\n"%x['id'])
                     # prepend document id
                     x['id'] = self.uid+'.'+x['id']
                     x['origId'] = x['id']
