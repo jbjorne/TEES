@@ -5,6 +5,12 @@ try:
 except ImportError:
     import cElementTree as ET
 
+all_event_types = ['Gene_expression','Transcription',
+                   'Translation','Protein_catabolism',
+                   'Localization','Binding','Phosphorylation',
+                   'Regulation','Positive_regulation',
+                   'Negative_regulation']
+
 class Analyser:
     def __init__(self,filename):
         self.corpus = ET.parse(filename).getroot()
@@ -46,16 +52,8 @@ class Analyser:
             tmp = G.copy()
             tmp.delete_edge(source,target)
             return(NX.shortest_path(tmp,source,target))
-        
-        results = {'sem': {'direct': [],
-                           'indirect': [],
-                           'both': [],
-                           'neither': []},
-                   'nosem': {'direct': [],
-                             'indirect': [],
-                             'both': [],
-                             'neither': []}
-                   }
+
+        results = []
         for document in self.corpus.findall('document'):
             for sentence in document.findall('sentence'):
                 tmp = sentence.find('sentenceanalyses')
@@ -97,48 +95,70 @@ class Analyser:
                     adjEntities.add_node(x.attrib['id'])
                 # check if sem.edge goes or is forced to go
                 # through third-party entity
-                sems = [(x.attrib['e1'],x.attrib['e2'])
-                        for x in sentence.findall('interaction')]
+                sems = dict( [((x.attrib['e1'],x.attrib['e2']),x)
+                              for x in sentence.findall('interaction')] )
                 ents = [x for x in sentence.findall('entity')]
                 while ents:
                     current = ents.pop()
                     e1 = current.attrib['id']
                     for x in ents:
                         e2 = x.attrib['id']
-                        if (((e1,e2) in sems) or
-                            ((e2,e1) in sems)):
-                            s1 = 'sem'
-                        else:
-                            s1 = 'nosem'
                         d = (e2 in adjEntities.neighbors(e1))
                         i = findIndirectPath(adjEntities,e1,e2)
                         if d and i:
-                            results[s1]['both'].append( (e1,e2) )
+                            di = 'direct+indirect'
                         elif d:
-                            results[s1]['direct'].append( (e1,e2) )
+                            di = 'direct'
                         elif i:
-                            results[s1]['indirect'].append( (e1,e2) )
+                            di = 'indirect'
                         else:
-                            results[s1]['neither'].append( (e1,e2) )
+                            di = 'neither'
+                        if (e1,e2) in sems.keys():
+                            results.append( ('sem',di,current,x,
+                                             sems[(e1,e2)]) )
+                        elif (e2,e1) in sems.keys():
+                            results.append( ('sem',di,current,x,
+                                             sems[(e2,e1)]) )
+                        else:
+                            results.append( ('nosem',di,current,x,None) )
 
-        edge_total = reduce(lambda a,b:a+b,
-                            [len(x) for x in results['sem'].values()])
-        nonedge_total = reduce(lambda a,b:a+b,
-                               [len(x) for x in results['nosem'].values()])
+        edge_total = len([x for x in results if x[0]=='sem'])
+        edge_adj = len([x for x in results
+                        if (x[0]=='sem' and
+                            (x[1]=='direct' or x[1]=='both'))])
+        nonedge_total = len([x for x in results if x[0]=='nosem'])
+        nonedge_adj = len([x for x in results
+                           if (x[0]=='nosem' and
+                               (x[1]=='direct' or x[1]=='both'))])
         sys.stderr.write("---- Entity/trigger adjacency in syntax  ----\n")
-        sys.stderr.write("Pair total: %s\n"%(edge_total+nonedge_total))
+        sys.stderr.write("All pairs total: %s\n"%(edge_total+nonedge_total))
         sys.stderr.write("Edge total: %s\n"%(edge_total))
+        sys.stderr.write("Edge adjacent pairs: %s\n"%(edge_adj))
         sys.stderr.write("Non-edge total: %s\n"%(nonedge_total))
-        for k,v in results['sem'].items():
-            sys.stderr.write("Sem.edge present, %s dep.edges: %s\n"%(k,len(v)))
-            if len(v)<10:
-                for x in v:
-                    sys.stderr.write("\t%s - %s\n"%(x[0],x[1]))
-        for k,v in results['nosem'].items():
-            sys.stderr.write("No sem.edge present, %s dep.edges: %s\n"%(k,len(v)))
-            if len(v)<10:
-                for x in v:
-                    sys.stderr.write("\t%s - %s\n"%(x[0],x[1]))
+        sys.stderr.write("Non-edge adjacent pairs: %s\n"%(nonedge_adj))
+        summary = {}
+        for t in set([x[2].attrib['type']
+                      for x in results if x[0]=='sem']):
+            summary[t] = {}
+            for e in set([x[4].attrib['type']
+                          for x in results if x[0]=='sem']):
+                summary[t][e] = {}
+                for di in set([x[1]
+                               for x in results if x[0]=='sem']):
+                    summary[t][e][di] = []
+        for x in results:
+            if x[0]=='sem':
+                summary[x[2].attrib['type']][x[4].attrib['type']][x[1]].append( (x[2].attrib['id'],x[3].attrib['id']) )
+        for t in summary.keys():
+            sys.stderr.write("%s\n"%t)
+            for e in summary[t].keys():
+                sys.stderr.write("\t%s\n"%e)
+                for di in summary[t][e].keys():
+                    l = len(summary[t][e][di])
+                    sys.stderr.write("\t\t%s: %s\n"%(di,l))
+                    if l<10:
+                        for x in summary[t][e][di]:
+                            sys.stderr.write("\t\t\t%s\n"%(str(x)))
 
     def analyseInterSentenceEdges(self):
         edges = {}
