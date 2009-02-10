@@ -9,6 +9,24 @@ class Analyser:
     def __init__(self,filename):
         self.corpus = ET.parse(filename).getroot()
 
+    def analyseMultiEdges(self):
+        results = []
+        for document in self.corpus.findall('document'):
+            for sentence in document.findall('sentence'):
+                for i1 in sentence.findall('interaction'):
+                    for i2 in sentence.findall('interaction'):
+                        if (not i1==i2 and
+                            i1.attrib['e1']==i2.attrib['e1'] and
+                            i1.attrib['e2']==i2.attrib['e2']):
+                            results.append( (i1,i2) )
+        sys.stderr.write("---- Multi-edges  ----\n")
+        sys.stderr.write("Total: %s\n"%(len(results)))
+        for r in results:
+            sys.stderr.write("%s - from %s to %s\n"%(str([x.attrib['type']
+                                                          for x in r]),
+                                                     r[0].attrib['e1'],
+                                                     r[0].attrib['e2']))
+    
     def analyseDependencyAdjacency(self):
         def transformOffset(string):
             return(string.split('-'))
@@ -312,6 +330,11 @@ def interface(optionArgs=sys.argv[1:]):
                   help="Adjacency of entities/triggers in dependency graph",
                   default=False,
                   action="store_true")
+    op.add_option("-m", "--multi",
+                  dest="multi",
+                  help="Multi-edges between pairs of entities/triggers",
+                  default=False,
+                  action="store_true")
     (options, args) = op.parse_args(optionArgs)
 
     quit = False
@@ -333,6 +356,8 @@ def interface(optionArgs=sys.argv[1:]):
         tmp.analyseEdgeCombinations()
     if options.dep:
         tmp.analyseDependencyAdjacency()
+    if options.multi:
+        tmp.analyseMultiEdges()
 
 
 
