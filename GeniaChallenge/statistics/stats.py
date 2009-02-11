@@ -82,12 +82,12 @@ class Analyser:
             return(result)
         def coordPath(this,target):
             if G.has_node(this) and G.has_node(target):
-                for fromT,toT,e in G.edges(this):
-                    if (e.startswith('conj') and
-                        NX.shortest_path(G,toT,target) and
-                        not any([x[2].startswith('conj')
-                                 for x in G.edges(target)])):
-                        return(True)
+                for fromT,toT,e in G.out_edges(this):
+                    if e.startswith('conj'):
+                        path = NX.shortest_path(G,toT,target)
+                        if path:
+                            if this not in path:
+                                return(True)
             return(False)
         def connected(s1,s2):
             for e1 in s1:
@@ -103,14 +103,13 @@ class Analyser:
             return(False)
         
         results = {}
-        remains = {}
         for document in self.corpus.findall('document'):
             entities = dict( [(x.attrib['id'],x)
                               for x in document.getiterator('entity')] )
             for sentence in document.findall('sentence'):
                 sid = sentence.attrib['id']
                 egroups = {}
-                processed = []
+                processed = {}
                 tokens = Analyser.collectTokens(sentence)
                 t2e,e2t = Analyser.mapEntitiesToTokens(sentence,tokens)
                 G = Analyser.collectDependencies(sentence)
@@ -127,22 +126,34 @@ class Analyser:
                         egroups[t][e][uid] = set()
                     egroups[t][e][uid].add(i.attrib['e2'])
                 # groups in syntax
-                unprocessed = [set([x.attrib['e2']])
-                               for x in sentence.findall('interaction')]
-                while unprocessed:
-                    used = []
-                    current = unprocessed.pop()
-                    while unprocessed:
-                        next = unprocessed.pop()
-                        if connected(current,next):
-                            current.update(next)
-                            unprocessed.extend(used)
+                tmp = {}
+                for x in sentence.findall('interaction'):
+                    e1 = x.attrib['e1']
+                    e2 = x.attrib['e2']
+                    e = x.attrib['type']
+                    if not tmp.has_key(e1):
+                        tmp[e1] = {}
+                    if not tmp[e1].has_key(e):
+                        tmp[e1][e] = []
+                    tmp[e1][e].append(set([e2]))
+                for i,types in tmp.items():
+                    processed[i] = {}
+                    for t,unprocessed in types.items():
+                        processed[i][t] = []
+                        while unprocessed:
                             used = []
-                        else:
-                            used.append(next)
-                    processed.append(current)
-                    unprocessed = used
-                print processed
+                            current = unprocessed.pop()
+                            while unprocessed:
+                                next = unprocessed.pop()
+                                if (connected(current,next) or
+                                    connected(next,current)):
+                                    current.update(next)
+                                    unprocessed.extend(used)
+                                    used = []
+                                else:
+                                    used.append(next)
+                            processed[i][t].append(current)
+                            unprocessed = used
                 for k1,v1 in egroups.items():
                     if not results.has_key(k1):
                         results[k1] = {}
@@ -152,13 +163,15 @@ class Analyser:
                         results[k1][k2][sid] = {}
                         results[k1][k2][sid]['match'] = {}
                         results[k1][k2][sid]['nomatch'] = {}
+                        results[k1][k2][sid]['remains'] = {}
                         for k3,v3 in v2.items():
-                            if v3 in processed:
-                                processed.remove(v3)
+                            if v3 in processed[k3][k2]:
+                                processed[k3][k2].remove(v3)
                                 results[k1][k2][sid]['match'][k3] = v3
                             else:
                                 results[k1][k2][sid]['nomatch'][k3] = v3
-                remains[sid] = processed
+                            if processed[k3][k2]:
+                                results[k1][k2][sid]['remains'][k3] = processed[k3][k2]
         # analyse
         matched = reduce(lambda a,b: a+b,
                          [len(a)
@@ -190,13 +203,13 @@ class Analyser:
                 sys.stderr.write("\t\tunmatched: %s\n"%len(unmatched))
                 if details:
                     for k3,v3 in v2.items():
-                        sys.stderr.write("\t\t\tsentence: %s\n"%k3)
+                        sys.stderr.write("\t\tsentence: %s\n"%k3)
                         for x in v3['match'].items():
-                            sys.stderr.write("\t\t\t\tmatch: %s - %s\n"%(x[0],str(x[1])))
+                            sys.stderr.write("\t\t\tmatch: %s - %s\n"%(x[0],str(x[1])))
                         for x in v3['nomatch'].items():
-                            sys.stderr.write("\t\t\t\tunmatch: %s - %s\n"%(x[0],str(x[1])))
-                        for x in remains[k3]:
-                            sys.stderr.write("\t\t\t\tremains: %s\n"%(x))
+                            sys.stderr.write("\t\t\tunmatch: %s - %s\n"%(x[0],str(x[1])))
+                        for x in v3['remains'].items():
+                            sys.stderr.write("\t\t\tremains: %s - %s\n"%(x[0],str(x[1])))
 
     def analyseMultiEdges(self,details=False):
         results = []
