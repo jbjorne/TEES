@@ -15,6 +15,172 @@ class Analyser:
     def __init__(self,filename):
         self.corpus = ET.parse(filename).getroot()
 
+    @classmethod
+    def collectTokens(cls,sentence):
+        tmp = sentence.find('sentenceanalyses')
+        # collect tokens
+        tmp2 = [x for x in tmp.getiterator('tokenization')
+                if x.attrib['tokenizer']=='Charniak-Lease'][0]
+        tokens = dict( [(x.attrib['id'],
+                         Analyser.transformOffset(x.attrib['charOffset']))
+                        for x in tmp2.findall('token')] )
+        return(tokens)
+
+    @classmethod
+    def transformOffset(cls,string):
+        return(string.split('-'))
+
+    @classmethod
+    def findTokens(cls,tokens,offset):
+        return( [k for k,v in tokens.items()
+                 if ((offset[0]>=v[0] and offset[0]<=v[1]) or
+                     (offset[1]>=v[0] and offset[1]<=v[1]) or
+                     (offset[0]<=v[0] and offset[1]>=v[1]))] )
+    
+    @classmethod
+    def mapEntitiesToTokens(cls,sentence,tokens):
+        # map entities to tokens
+        t2e = {}
+        e2t = {}
+        for x in sentence.findall('entity'):
+            uid = x.attrib['id']
+            offset = Analyser.transformOffset(x.attrib['charOffset'])
+            for y in Analyser.findTokens(tokens,offset):
+                if not t2e.has_key(y):
+                    t2e[y] = []
+                if not e2t.has_key(uid):
+                    e2t[uid] = []
+                t2e[y].append(uid)
+                e2t[uid].append(y)
+        return((t2e,e2t))
+
+    @classmethod
+    def collectDependencies(cls,sentence):
+        tmp = sentence.find('sentenceanalyses')
+        # collect dep.edges
+        tmp2 = [x for x in tmp.getiterator('parse')
+                if x.attrib['tokenizer']=='Charniak-Lease'][0]
+        G = NX.XGraph()
+        for x in tmp2.findall('dependency'):
+            G.add_edge(x.attrib['t1'],x.attrib['t2'],x.attrib['type'])
+        return(G)
+    
+    def analyseCoordGroups(self,details=False):
+        def any(l):
+            tmp = l[:]
+            while tmp:
+                if tmp.pop(0):
+                    return(True)
+            return(False)
+        def findEdges(traversed):
+            tmp = traversed[:]
+            result = []
+            prev = tmp.pop(0)
+            while tmp:
+                result.append(G.get_edge(prev,tmp[0]))
+                prev = tmp.pop(0)
+            return(result)
+        def coordPath(this,target):
+            if G.has_edge(this,target):
+                return(G.get_edge(this,target).startswith('conj'))
+            return(False)
+#         def coordPath(this,target,tmp=[]):
+#             traversed = tmp[:]
+#             # special case: same token returns true
+#             if this==target:
+#                 return(True)
+#             traversed += [this]
+#             if G.has_edge(this,target):
+#                 # check that 'conj_*' is in path
+#                 traversed += [target]
+#                 if any([x.startswith('conj')
+#                         for x in findEdges(traversed)]):
+#                     return(True)
+#                 return(False)
+#             for fromT,toT,edge in G.edges(this):
+#                 # continue if neighbor is not an entity token
+#                 if (not toT in traversed and
+#                     not t2e.has_key(toT)):
+#                     if coordPath(toT,target,traversed):
+#                         return(True)
+#             return(False)
+        def connected(s1,s2):
+            for e1 in s1:
+                for e2 in s2:
+                    # do not continue if not within sentence
+                    if e2t.has_key(e1):
+                        for t1 in e2t[e1]:
+                            # do not continue if not within sentence
+                            if e2t.has_key(e2):
+                                for t2 in e2t[e2]:
+                                    if coordPath(t1,t2):
+                                        return(True)
+            return(False)
+        
+        egroups = {}
+        processed = []
+        for document in self.corpus.findall('document'):
+            entities = dict( [(x.attrib['id'],x)
+                              for x in document.getiterator('entity')] )
+            for sentence in document.findall('sentence'):
+                tokens = Analyser.collectTokens(sentence)
+                t2e,e2t = Analyser.mapEntitiesToTokens(sentence,tokens)
+                G = Analyser.collectDependencies(sentence)
+                # groups in events
+                for i in sentence.findall('interaction'):
+                    uid = i.attrib['e1']
+                    t = entities[i.attrib['e1']].attrib['type']
+                    e = i.attrib['type']
+                    if not egroups.has_key(t):
+                        egroups[t] = {}
+                    if not egroups[t].has_key(e):
+                        egroups[t][e] = {}
+                    if not egroups[t][e].has_key(uid):
+                        egroups[t][e][uid] = set()
+                    egroups[t][e][uid].add(i.attrib['e2'])
+                # groups in syntax
+                unprocessed = [set([x.attrib['id']])
+                               for x in sentence.findall('entity')]
+                while unprocessed:
+                    used = []
+                    current = unprocessed.pop()
+                    while unprocessed:
+                        next = unprocessed.pop()
+                        if connected(current,next):
+                            current.update(next)
+                            unprocessed.extend(used)
+                            used = []
+                        else:
+                            used.append(next)
+                    processed.append(current)
+                    unprocessed = used
+        # analyse
+        tmp = [z
+               for x in egroups.values()
+               for y in x.values()
+               for z in y.values()]
+        matched = len([x for x in tmp if x in processed])
+        unmatched = len([x for x in tmp if x not in processed])
+        sys.stderr.write("---- Coordination groups  ----\n")
+        sys.stderr.write("Total: %s\n"%(matched+unmatched))
+        sys.stderr.write("Fully matched total: %s\n"%(matched))
+        sys.stderr.write("Non-matched total: %s\n"%(unmatched))
+        for k1,v1 in egroups.items():
+            sys.stderr.write("%s\n"%k1)
+            for k2,v2 in v1.items():
+                sys.stderr.write("\t%s\n"%k2)
+                matched = [x for x in v2.values() if x in processed]
+                sys.stderr.write("\t\tmatched: %s\n"%len(matched))
+                if details:
+                    for x in matched:
+                        sys.stderr.write("\t\t\t%s\n"%str(x))
+                unmatched = [x for x in v2.values() if x not in processed]
+                sys.stderr.write("\t\tunmatched: %s\n"%len(unmatched))
+                if details:
+                    for x in unmatched:
+                        sys.stderr.write("\t\t\t%s\n"%str(x))
+                    
+    
     def analyseMultiEdges(self,details=False):
         results = []
         for document in self.corpus.findall('document'):
@@ -368,6 +534,11 @@ def interface(optionArgs=sys.argv[1:]):
                   help="Multi-edges between pairs of entities/triggers",
                   default=False,
                   action="store_true")
+    op.add_option("-c", "--coord",
+                  dest="coord",
+                  help="Coordination groups",
+                  default=False,
+                  action="store_true")
     (options, args) = op.parse_args(optionArgs)
 
     quit = False
@@ -391,6 +562,8 @@ def interface(optionArgs=sys.argv[1:]):
         tmp.analyseDependencyAdjacency(options.details)
     if options.multi:
         tmp.analyseMultiEdges(options.details)
+    if options.coord:
+        tmp.analyseCoordGroups(options.details)
 
 
 
