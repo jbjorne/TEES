@@ -60,7 +60,7 @@ class Analyser:
         # collect dep.edges
         tmp2 = [x for x in tmp.getiterator('parse')
                 if x.attrib['tokenizer']=='Charniak-Lease'][0]
-        G = NX.XGraph()
+        G = NX.XDiGraph()
         for x in tmp2.findall('dependency'):
             G.add_edge(x.attrib['t1'],x.attrib['t2'],x.attrib['type'])
         return(G)
@@ -81,29 +81,14 @@ class Analyser:
                 prev = tmp.pop(0)
             return(result)
         def coordPath(this,target):
-            if G.has_edge(this,target):
-                return(G.get_edge(this,target).startswith('conj'))
+            if G.has_node(this) and G.has_node(target):
+                for fromT,toT,e in G.edges(this):
+                    if (e.startswith('conj') and
+                        NX.shortest_path(G,toT,target) and
+                        not any([x[2].startswith('conj')
+                                 for x in G.edges(target)])):
+                        return(True)
             return(False)
-#         def coordPath(this,target,tmp=[]):
-#             traversed = tmp[:]
-#             # special case: same token returns true
-#             if this==target:
-#                 return(True)
-#             traversed += [this]
-#             if G.has_edge(this,target):
-#                 # check that 'conj_*' is in path
-#                 traversed += [target]
-#                 if any([x.startswith('conj')
-#                         for x in findEdges(traversed)]):
-#                     return(True)
-#                 return(False)
-#             for fromT,toT,edge in G.edges(this):
-#                 # continue if neighbor is not an entity token
-#                 if (not toT in traversed and
-#                     not t2e.has_key(toT)):
-#                     if coordPath(toT,target,traversed):
-#                         return(True)
-#             return(False)
         def connected(s1,s2):
             for e1 in s1:
                 for e2 in s2:
@@ -117,12 +102,15 @@ class Analyser:
                                         return(True)
             return(False)
         
-        egroups = {}
-        processed = []
+        results = {}
+        remains = {}
         for document in self.corpus.findall('document'):
             entities = dict( [(x.attrib['id'],x)
                               for x in document.getiterator('entity')] )
             for sentence in document.findall('sentence'):
+                sid = sentence.attrib['id']
+                egroups = {}
+                processed = []
                 tokens = Analyser.collectTokens(sentence)
                 t2e,e2t = Analyser.mapEntitiesToTokens(sentence,tokens)
                 G = Analyser.collectDependencies(sentence)
@@ -139,8 +127,8 @@ class Analyser:
                         egroups[t][e][uid] = set()
                     egroups[t][e][uid].add(i.attrib['e2'])
                 # groups in syntax
-                unprocessed = [set([x.attrib['id']])
-                               for x in sentence.findall('entity')]
+                unprocessed = [set([x.attrib['e2']])
+                               for x in sentence.findall('interaction')]
                 while unprocessed:
                     used = []
                     current = unprocessed.pop()
@@ -154,33 +142,62 @@ class Analyser:
                             used.append(next)
                     processed.append(current)
                     unprocessed = used
+                print processed
+                for k1,v1 in egroups.items():
+                    if not results.has_key(k1):
+                        results[k1] = {}
+                    for k2,v2 in v1.items():
+                        if not results[k1].has_key(k2):
+                            results[k1][k2] = {}
+                        results[k1][k2][sid] = {}
+                        results[k1][k2][sid]['match'] = {}
+                        results[k1][k2][sid]['nomatch'] = {}
+                        for k3,v3 in v2.items():
+                            if v3 in processed:
+                                processed.remove(v3)
+                                results[k1][k2][sid]['match'][k3] = v3
+                            else:
+                                results[k1][k2][sid]['nomatch'][k3] = v3
+                remains[sid] = processed
         # analyse
-        tmp = [z
-               for x in egroups.values()
-               for y in x.values()
-               for z in y.values()]
-        matched = len([x for x in tmp if x in processed])
-        unmatched = len([x for x in tmp if x not in processed])
+        matched = reduce(lambda a,b: a+b,
+                         [len(a)
+                          for x in results.values()
+                          for y in x.values()
+                          for z in y.values()
+                          for a in z['match'].values()],0)
+        unmatched = reduce(lambda a,b: a+b,
+                           [len(a)
+                            for x in results.values()
+                            for y in x.values()
+                            for z in y.values()
+                            for a in z['nomatch'].values()],0)
         sys.stderr.write("---- Coordination groups  ----\n")
         sys.stderr.write("Total: %s\n"%(matched+unmatched))
         sys.stderr.write("Fully matched total: %s\n"%(matched))
         sys.stderr.write("Non-matched total: %s\n"%(unmatched))
-        for k1,v1 in egroups.items():
+        for k1,v1 in results.items():
             sys.stderr.write("%s\n"%k1)
             for k2,v2 in v1.items():
                 sys.stderr.write("\t%s\n"%k2)
-                matched = [x for x in v2.values() if x in processed]
+                matched = [x
+                           for x in v2.values()
+                           for y in x['match'].values()]
                 sys.stderr.write("\t\tmatched: %s\n"%len(matched))
-                if details:
-                    for x in matched:
-                        sys.stderr.write("\t\t\t%s\n"%str(x))
-                unmatched = [x for x in v2.values() if x not in processed]
+                unmatched = [x
+                             for x in v2.values()
+                             for y in x['nomatch'].values()]
                 sys.stderr.write("\t\tunmatched: %s\n"%len(unmatched))
                 if details:
-                    for x in unmatched:
-                        sys.stderr.write("\t\t\t%s\n"%str(x))
-                    
-    
+                    for k3,v3 in v2.items():
+                        sys.stderr.write("\t\t\tsentence: %s\n"%k3)
+                        for x in v3['match'].items():
+                            sys.stderr.write("\t\t\t\tmatch: %s - %s\n"%(x[0],str(x[1])))
+                        for x in v3['nomatch'].items():
+                            sys.stderr.write("\t\t\t\tunmatch: %s - %s\n"%(x[0],str(x[1])))
+                        for x in remains[k3]:
+                            sys.stderr.write("\t\t\t\tremains: %s\n"%(x))
+
     def analyseMultiEdges(self,details=False):
         results = []
         for document in self.corpus.findall('document'):
