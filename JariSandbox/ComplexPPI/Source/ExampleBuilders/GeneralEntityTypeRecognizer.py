@@ -38,6 +38,24 @@ class GeneralEntityTypeRecognizer(ExampleBuilder):
         examples = []
         exampleIndex = 0
         
+        namedEntityCount = 0
+        for entity in sentenceGraph.entities:
+            if entity.get("isName"): # known data which can be used for features
+                namedEntityCount += 1
+        namedEntityCountFeature = "nameCount_" + str(namedEntityCount)
+        
+        bagOfWords = {}
+        for token in sentenceGraph.tokens:
+            text = "bow_" + token.get("text")
+            if not bagOfWords.has_key(text):
+                bagOfWords[text] = 0
+            bagOfWords[text] += 1
+            if sentenceGraph.tokenIsName[token]:
+                text = "ne_" + text
+                if not bagOfWords.has_key(text):
+                    bagOfWords[text] = 0
+                bagOfWords[text] += 1
+        
         for i in range(len(sentenceGraph.tokens)):
             token = sentenceGraph.tokens[i]
             # Recognize only non-named entities (i.e. interaction words)
@@ -52,6 +70,10 @@ class GeneralEntityTypeRecognizer(ExampleBuilder):
             
             # FEATURES
             features = {}
+            
+            features[self.featureSet.getId(namedEntityCountFeature)] = 1
+            for k,v in bagOfWords.iteritems():
+                features[self.featureSet.getId(k)] = v
         
             # Main features
             text = token.attrib["text"]
