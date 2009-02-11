@@ -258,7 +258,7 @@ class MultiEdgeExampleBuilder(ExampleBuilder):
                         features[self.featureSet.getId("GENIA_target_protein")] = 1
                     else:
                         features[self.featureSet.getId("GENIA_nested_event")] = 1
-                    if e1Type.find("regulation") != -1:
+                    if e1Type.find("egulation") != -1: # leave r out to avoid problems with capitalization
                         if entity2.get("isName") == "True":
                             features[self.featureSet.getId("GENIA_regulation_of_protein")] = 1
                         else:
