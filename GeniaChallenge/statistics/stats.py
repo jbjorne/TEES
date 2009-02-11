@@ -15,7 +15,7 @@ class Analyser:
     def __init__(self,filename):
         self.corpus = ET.parse(filename).getroot()
 
-    def analyseMultiEdges(self):
+    def analyseMultiEdges(self,details=False):
         results = []
         for document in self.corpus.findall('document'):
             for sentence in document.findall('sentence'):
@@ -27,13 +27,14 @@ class Analyser:
                             results.append( (i1,i2) )
         sys.stderr.write("---- Multi-edges  ----\n")
         sys.stderr.write("Total: %s\n"%(len(results)))
-        for r in results:
-            sys.stderr.write("%s - from %s to %s\n"%(str([x.attrib['type']
-                                                          for x in r]),
-                                                     r[0].attrib['e1'],
-                                                     r[0].attrib['e2']))
+        if details:
+            for r in results:
+                sys.stderr.write("%s - from %s to %s\n"%(str([x.attrib['type']
+                                                              for x in r]),
+                                                         r[0].attrib['e1'],
+                                                         r[0].attrib['e2']))
     
-    def analyseDependencyAdjacency(self):
+    def analyseDependencyAdjacency(self,details=False):
         def transformOffset(string):
             return(string.split('-'))
         def findTokens(offset):
@@ -117,7 +118,7 @@ class Analyser:
                             results.append( ('sem',di,current,x,
                                              sems[(e1,e2)]) )
                         elif (e2,e1) in sems.keys():
-                            results.append( ('sem',di,current,x,
+                            results.append( ('sem',di,x,current,
                                              sems[(e2,e1)]) )
                         else:
                             results.append( ('nosem',di,current,x,None) )
@@ -125,17 +126,17 @@ class Analyser:
         edge_total = len([x for x in results if x[0]=='sem'])
         edge_adj = len([x for x in results
                         if (x[0]=='sem' and
-                            (x[1]=='direct' or x[1]=='both'))])
+                            (x[1]=='direct' or x[1]=='direct+indirect'))])
         nonedge_total = len([x for x in results if x[0]=='nosem'])
         nonedge_adj = len([x for x in results
                            if (x[0]=='nosem' and
-                               (x[1]=='direct' or x[1]=='both'))])
+                               (x[1]=='direct' or x[1]=='direct+indirect'))])
         sys.stderr.write("---- Entity/trigger adjacency in syntax  ----\n")
         sys.stderr.write("All pairs total: %s\n"%(edge_total+nonedge_total))
         sys.stderr.write("Edge total: %s\n"%(edge_total))
-        sys.stderr.write("Edge adjacent pairs: %s\n"%(edge_adj))
+        sys.stderr.write("Edge adjacent total: %s\n"%(edge_adj))
         sys.stderr.write("Non-edge total: %s\n"%(nonedge_total))
-        sys.stderr.write("Non-edge adjacent pairs: %s\n"%(nonedge_adj))
+        sys.stderr.write("Non-edge adjacent total: %s\n"%(nonedge_adj))
         summary = {}
         for t in set([x[2].attrib['type']
                       for x in results if x[0]=='sem']):
@@ -152,15 +153,17 @@ class Analyser:
         for t in summary.keys():
             sys.stderr.write("%s\n"%t)
             for e in summary[t].keys():
-                sys.stderr.write("\t%s\n"%e)
-                for di in summary[t][e].keys():
-                    l = len(summary[t][e][di])
-                    sys.stderr.write("\t\t%s: %s\n"%(di,l))
-                    if l<10:
-                        for x in summary[t][e][di]:
-                            sys.stderr.write("\t\t\t%s\n"%(str(x)))
+                s = reduce(lambda a,b: a+len(b), summary[t][e].values(),0)
+                if s:
+                    sys.stderr.write("\t%s - %s\n"%(e,s))
+                    for di in summary[t][e].keys():
+                        l = len(summary[t][e][di])
+                        sys.stderr.write("\t\t%s: %s\n"%(di,l))
+                        if details:
+                            for x in summary[t][e][di]:
+                                sys.stderr.write("\t\t\t%s\n"%(str(x)))
 
-    def analyseInterSentenceEdges(self):
+    def analyseInterSentenceEdges(self,details=False):
         edges = {}
         inter_edges = {}
         for document in self.corpus.findall('document'):
@@ -186,12 +189,13 @@ class Analyser:
                              inter_edges.values(), 0)
         sys.stderr.write("---- Edges across sentence boundaries ----\n")
         sys.stderr.write("Total: %s out of %s\n"%(inter_total,total))
-        for k,v in inter_edges.items():
-            if v==[]:
-                continue
-            sys.stderr.write("%s - %s\n"%(k,v))
+        if details:
+            for k,v in inter_edges.items():
+                if v==[]:
+                    continue
+                sys.stderr.write("%s - %s\n"%(k,v))
 
-    def analyseEdgeCombinations(self):
+    def analyseEdgeCombinations(self,details=False):
         edges = {}
         nodes = {}
         for document in self.corpus.findall('document'):
@@ -223,12 +227,12 @@ class Analyser:
             sys.stderr.write("%s - %s\n"%(v,k))
             for k2,v2 in sorted(summary[k].items(),lambda a,b:b[1]-a[1]):
                 sys.stderr.write("\t%s - %s\n"%(v2,k2))
-                if v2<10:
+                if details:
                     sys.stderr.write("\t\t%s\n"%str([x for x,y in edges.items()
                                                      if str(sorted(y))==k and
                                                      nodes[x]==k2]))
 
-    def analyseTokens(self):
+    def analyseTokens(self,details=False):
         t_result = {}
         e_result = {}
         mapping = {}
@@ -269,24 +273,27 @@ class Analyser:
                            if len(v)>1 and mapping2[k]!='Protein'] )
         sys.stderr.write("---- Tokens --> multiple entities  ----\n")
         sys.stderr.write("Total: %s\n"%(len(t_summary.keys())))
-        for k,v in t_summary.items():
-            ids = "%20s - %40s"%(k,[x[0] for x in v])
-            texts = "%20s - %40s"%(mapping[k],[x[1] for x in v])
-            sys.stderr.write("\t%s == %s\n"%(ids,texts))
+        if details:
+            for k,v in t_summary.items():
+                ids = "%20s - %40s"%(k,[x[0] for x in v])
+                texts = "%20s - %40s"%(mapping[k],[x[1] for x in v])
+                sys.stderr.write("\t%s == %s\n"%(ids,texts))
         sys.stderr.write("---- Proteins --> multiple tokens  ----\n")
         sys.stderr.write("Total: %s\n"%(len(e_summary2.keys())))
-        for k,v in e_summary2.items():
-            ids = "%20s - %50s"%(k,[x[0].split('.')[-1] for x in v])
-            texts = "%s"%mapping[k]
-            sys.stderr.write("\t%s == %s\n"%(ids,texts))
+        if details:
+            for k,v in e_summary2.items():
+                ids = "%20s - %50s"%(k,[x[0].split('.')[-1] for x in v])
+                texts = "%s"%mapping[k]
+                sys.stderr.write("\t%s == %s\n"%(ids,texts))
         sys.stderr.write("---- Triggers --> multiple tokens  ----\n")
         sys.stderr.write("Total: %s\n"%(len(e_summary.keys())))
-        for k,v in e_summary.items():
-            ids = "%20s - %50s"%(k,[x[0].split('.')[-1] for x in v])
-            texts = "%s"%mapping[k]
-            sys.stderr.write("\t%s == %s\n"%(ids,texts))
+        if details:
+            for k,v in e_summary.items():
+                ids = "%20s - %50s"%(k,[x[0].split('.')[-1] for x in v])
+                texts = "%s"%mapping[k]
+                sys.stderr.write("\t%s == %s\n"%(ids,texts))
 
-    def analyseProteinOverlaps(self):
+    def analyseProteinOverlaps(self,details=False):
         result = []
         for document in self.corpus.findall('document'):
             for sentence in document.findall('sentence'):
@@ -307,10 +314,11 @@ class Analyser:
                             result.append( (ea[0],eb[0]) )
         sys.stderr.write("---- Overlapping entities  ----\n")
         sys.stderr.write("Total: %s\n"%(len(result)))
-        for a in result:
-            sys.stderr.write("\t%s - %s\n"%(a[0],a[1]))
+        if details:
+            for a in result:
+                sys.stderr.write("\t%s - %s\n"%(a[0],a[1]))
 
-    def analyseProteins(self):
+    def analyseProteins(self,details=False):
         for document in self.corpus.findall('document'):
             for sentence in document.findall('sentence'):
                 pass
@@ -325,6 +333,11 @@ def interface(optionArgs=sys.argv[1:]):
                   dest="infile",
                   help="Input file (gifxml)",
                   metavar="FILE")
+    op.add_option("--details",
+                  dest="details",
+                  help="Print detailed information",
+                  default=False,
+                  action="store_true")
     op.add_option("-o", "--overlap",
                   dest="overlap",
                   help="Overlaps in entities",
@@ -367,17 +380,17 @@ def interface(optionArgs=sys.argv[1:]):
 
     tmp = Analyser(options.infile)
     if options.overlap:
-        tmp.analyseProteinOverlaps()
+        tmp.analyseProteinOverlaps(options.details)
     if options.token:
-        tmp.analyseTokens()
+        tmp.analyseTokens(options.details)
     if options.sentence:
-        tmp.analyseInterSentenceEdges()
+        tmp.analyseInterSentenceEdges(options.details)
     if options.edge:
-        tmp.analyseEdgeCombinations()
+        tmp.analyseEdgeCombinations(options.details)
     if options.dep:
-        tmp.analyseDependencyAdjacency()
+        tmp.analyseDependencyAdjacency(options.details)
     if options.multi:
-        tmp.analyseMultiEdges()
+        tmp.analyseMultiEdges(options.details)
 
 
 
