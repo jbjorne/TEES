@@ -1,10 +1,17 @@
 class IdSet:    
-    def __init__(self, firstNumber=1):
+    def __init__(self, firstNumber=1, idDict=None, locked=False):
         self.Ids = {}
         self.firstNumber = firstNumber
         self._namesById = {}
+        
+        if idDict != None:
+            self.locked = False
+            for name,id in idDict.iteritems():
+                self.defineId(name, id)
+        self.locked = locked
     
     def defineId(self, name, id):
+        assert(not self.locked)
         assert(not id in self.Ids.values())
         assert(not name in self.Ids.keys())
         self.Ids[name] = id
@@ -13,6 +20,7 @@ class IdSet:
     def getId(self, name, makeIfNotExist=True):
         if not self.Ids.has_key(name):
             if makeIfNotExist:
+                assert(not self.locked)
                 id = len(self.Ids) + self.firstNumber
                 assert(not id in self.Ids.values())
                 self.Ids[name] = id
