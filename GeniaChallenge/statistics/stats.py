@@ -128,15 +128,24 @@ class Analyser:
                 # groups in syntax
                 tmp = {}
                 for x in sentence.findall('interaction'):
-                    e1 = x.attrib['e1']
+                    e1 = entities[x.attrib['e1']].attrib['charOffset']
                     e2 = x.attrib['e2']
                     e = x.attrib['type']
                     if not tmp.has_key(e1):
                         tmp[e1] = {}
                     if not tmp[e1].has_key(e):
                         tmp[e1][e] = []
-                    tmp[e1][e].append(set([e2]))
-                for i,types in tmp.items():
+                    if not set([e2]) in tmp[e1][e]:
+                        tmp[e1][e].append(set([e2]))
+                tmp2 = {}
+                for x in sentence.findall('interaction'):
+                    e1 = x.attrib['e1']
+                    off = entities[x.attrib['e1']].attrib['charOffset']
+                    if not tmp2.has_key(e1):
+                        tmp2[e1] = {}
+                    for y in tmp[off].keys():
+                        tmp2[e1][y] = tmp[off][y][:]
+                for i,types in tmp2.items():
                     processed[i] = {}
                     for t,unprocessed in types.items():
                         processed[i][t] = []
