@@ -99,6 +99,14 @@ class MultiEdgeExampleBuilder(ExampleBuilder):
             print >> sys.stderr, " Normalizing feature vectors"
             ExampleUtils.normalizeFeatureVectors(allExamples)
         return allExamples   
+    
+    def isPotentialGeniaInteraction(self, e1, e2):
+        if e1.get("isName") == "True" and e2.get("isName") == "True":
+            return False
+        elif e1.get("isName") == "True" and e2.get("isName") == "False":
+            return False
+        else:
+            return True
                         
     def buildExamples(self, sentenceGraph):
         examples = []
@@ -121,8 +129,8 @@ class MultiEdgeExampleBuilder(ExampleBuilder):
                     eJ = sentenceGraph.entities[j]
                     tI = sentenceGraph.entityHeadTokenByEntity[eI]
                     tJ = sentenceGraph.entityHeadTokenByEntity[eJ]
-                    if "no_ne_interactions" in self.styles and eI.get("isName") == "True" and eJ.get("isName") == "True":
-                        continue
+                    #if "no_ne_interactions" in self.styles and eI.get("isName") == "True" and eJ.get("isName") == "True":
+                    #    continue
                 else:
                     tI = sentenceGraph.tokens[i]
                     tJ = sentenceGraph.tokens[j]
@@ -137,15 +145,17 @@ class MultiEdgeExampleBuilder(ExampleBuilder):
                         categoryName = self.getCategoryName(sentenceGraph, eI, eJ, True)
                     else:
                         categoryName = self.getCategoryNameFromTokens(sentenceGraph, tI, tJ, True)
-                    examples.append( self.buildExample(tI, tJ, paths, sentenceGraph, categoryName, exampleIndex, eI, eJ) )
-                    exampleIndex += 1
+                    if (not "genia_limits" in self.styles) or self.isPotentialGeniaInteraction(eI, eJ):
+                        examples.append( self.buildExample(tI, tJ, paths, sentenceGraph, categoryName, exampleIndex, eI, eJ) )
+                        exampleIndex += 1
                     # define reverse
                     if "entities" in self.styles:
                         categoryName = self.getCategoryName(sentenceGraph, eJ, eI, True)
                     else:
                         categoryName = self.getCategoryNameFromTokens(sentenceGraph, tJ, tI, True)
-                    examples.append( self.buildExample(tJ, tI, paths, sentenceGraph, categoryName, exampleIndex, eJ, eI) )
-                    exampleIndex += 1
+                    if (not "genia_limits" in self.styles) or self.isPotentialGeniaInteraction(eJ, eI):
+                        examples.append( self.buildExample(tJ, tI, paths, sentenceGraph, categoryName, exampleIndex, eJ, eI) )
+                        exampleIndex += 1
                 else:
                     if "entities" in self.styles:
                         categoryName = self.getCategoryName(sentenceGraph, eI, eJ, False)
@@ -240,6 +250,19 @@ class MultiEdgeExampleBuilder(ExampleBuilder):
                     self.randomFeatureBuilder.setFeatureVector(features)
                     self.randomFeatureBuilder.buildRandomFeatures(100, 0.01)
                     self.randomFeatureBuilder.setFeatureVector(None)
+                if "genia_limits" in self.styles:
+                    e1Type = entity1.get("type")
+                    e2Type = entity2.get("type")
+                    assert(entity1.get("isName") == "False")
+                    if entity2.get("isName") == "True":
+                        features[self.featureSet.getId("GENIA_target_protein")] = 1
+                    else:
+                        features[self.featureSet.getId("GENIA_nested_event")] = 1
+                    if e1Type.find("regulation") != -1:
+                        if entity2.get("isName") == "True":
+                            features[self.featureSet.getId("GENIA_regulation_of_protein")] = 1
+                        else:
+                            features[self.featureSet.getId("GENIA_regulation_of_event")] = 1
             else:
                 features[self.featureSet.getId("always_negative")] = 1
                 if "subset" in self.styles:
