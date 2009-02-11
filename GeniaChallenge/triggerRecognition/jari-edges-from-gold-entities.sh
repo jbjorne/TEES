@@ -9,5 +9,5 @@ if [ "$1" == "mini" ]; then
 fi
 
 pushd ~/cvs_checkout/JariSandbox/ComplexPPI/Source
-python SplitAnalysis.py -b MultiEdgeExampleBuilder -x "style:typed,directed,no_linear,entities,no_ne_interactions,maxFeatures" -c SVMMultiClassClassifier -e AveragingMultiClassEvaluator -y $CLASSIFIER_PARAMS -i $TRAIN_FILE -s $TEST_FILE -o /usr/share/biotext/GeniaChallenge/xml/jari-edges-from-gold-entities -m /usr/share/biotext/GeniaChallenge/xml/jari-edges-from-gold-entities/jari-edges-from-gold-entities.xml -p split-Charniak-Lease
+python SplitAnalysis.py -b MultiEdgeExampleBuilder -x "style:typed,directed,no_linear,entities,genia_limits,maxFeatures" -c SVMMultiClassClassifier -e AveragingMultiClassEvaluator -y $CLASSIFIER_PARAMS -i $TRAIN_FILE -s $TEST_FILE -o /usr/share/biotext/GeniaChallenge/xml/jari-edges-from-gold-entities -m /usr/share/biotext/GeniaChallenge/xml/jari-edges-from-gold-entities/jari-edges-from-gold-entities.xml -p split-Charniak-Lease
 popd
