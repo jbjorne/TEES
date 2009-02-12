@@ -10,12 +10,14 @@ import Utils.TableUtils as TableUtils
 import InteractionXML.CorpusElements as CorpusElements
 import copy
 
+# for entities to match, they have to have the same head offsets and same type
 def compareEntitiesSimple(e1,e2,tokens=None):
     if e1.get("headOffset") == e2.get("headOffset") and e1.get("type") == e2.get("type"):
         return True
     else:
         return False
 
+# not used
 def compareEntitiesByGENIARelaxedOffsetMethod(e1, e2, tokens):
     e1Offset = Range.charOffsetToSingleTuple(e1.get("charOffset"))
     e2Offset = Range.charOffsetToSingleTuple(e2.get("charOffset"))
@@ -43,6 +45,8 @@ def compareEntitiesByGENIARelaxedOffsetMethod(e1, e2, tokens):
     else:
         return False        
 
+# Produces a mapping that connects matching entities from prediction (from)
+# to gold standard (to).
 def mapEntities(entitiesFrom, entitiesTo, tokens, compareFunction=compareEntitiesSimple):
     entityMap = {}
     for entityFrom in entitiesFrom:
@@ -52,6 +56,7 @@ def mapEntities(entitiesFrom, entitiesTo, tokens, compareFunction=compareEntitie
                 entityMap[entityFrom].append(entityTo)
     return entityMap
 
+# Splits merged types generated from overlapping entities/edges into their components
 def getElementTypes(element):
     typeName = element.get("type")
     if typeName.find("---") != -1:
@@ -59,6 +64,7 @@ def getElementTypes(element):
     else:
         return [typeName]
 
+# Uses the mapped entities to give predictions for a single sentence
 def getEntityPredictions(entityMap, targetEntities, classSet, negativeClassId):
     predictions = []
     id = "Unknown.x0"
@@ -82,6 +88,8 @@ def getEntityPredictions(entityMap, targetEntities, classSet, negativeClassId):
             predictions.append( ((id, classSet.getId(e.get("type"))), negativeClassId, None, None) )
     return predictions
 
+# Uses mapped entities and predicted and gold interactions to provide
+# predictions for the interactions
 def getInteractionPredictions(interactionsFrom, interactionsTo, entityMap, classSet, negativeClassId):
     predictions = []
     id = "Unknown.x0"
@@ -112,14 +120,17 @@ def getInteractionPredictions(interactionsFrom, interactionsTo, entityMap, class
         if interactionTo not in toInteractionsWithPredictions: # false negative gold
             predictions.append( ((id, classSet.getId(interactionTo.get("type"))), negativeClassId, None, None) )
     return predictions
-    
+
+# Compares a prediction (from) to a gold (to) sentence
 def processSentence(fromSentence, toSentence, options, classSets, negativeClassId):
-    splitMerged(fromSentence)
+    splitMerged(fromSentence) # modify element tree to split merged elements into multiple elements
     entitiesFrom = fromSentence.entities
     entitiesTo = toSentence.entities
     tokens = fromSentence.tokens
+    # map predicted entities to gold entities
     entityMap = mapEntities(entitiesFrom, entitiesTo, tokens, compareFunction=compareEntitiesSimple)
     
+    # get predictions for predicted edges/entities vs. gold edges/entities
     entityPredictions = []
     interactionPredictions = []
     if options.target == "entities" or options.target == "both":
@@ -129,16 +140,19 @@ def processSentence(fromSentence, toSentence, options, classSets, negativeClassI
     
     return entityPredictions, interactionPredictions
 
+# Compares a prediction (from) to a gold (to) corpus
 def processCorpora(fromCorpus, toCorpus, options, classSets, negativeClassId):
     entityPredictions = []
     interactionPredictions = []
     counter = ProgressCounter(len(fromCorpus.sentences), "Corpus Processing")
+    # Loop through the sentences and collect all predictions
     for i in range(len(fromCorpus.sentences)):
         counter.update(1)
         newEntityPredictions, newInteractionPredictions = processSentence(fromCorpus.sentences[i], toCorpus.sentences[i], options, classSets, negativeClassId)
         entityPredictions.extend(newEntityPredictions)
         interactionPredictions.extend(newInteractionPredictions)
     
+    # Process the predictions with an evaluator and print the results
     if len(entityPredictions) > 0:
         evaluator = Evaluator(entityPredictions, classSet=classSets["entity"])
         print evaluator.toStringConcise(title="Entities")    
@@ -146,6 +160,7 @@ def processCorpora(fromCorpus, toCorpus, options, classSets, negativeClassId):
         evaluator = Evaluator(interactionPredictions, classSet=classSets["interaction"])
         print evaluator.toStringConcise(title="Interactions")    
 
+# Splits entities/edges with merged types into separate elements
 def splitMerged(sentence):
     for sourceList in [sentence.entities, sentence.interactions, sentence.pairs]:
         for element in sourceList[:]:
@@ -166,18 +181,20 @@ if __name__=="__main__":
     except ImportError:
         print >> sys.stderr, "Psyco not installed"
     optparser = OptionParser(usage="%prog [options]\nCalculate f-score and other statistics.")
-    optparser.add_option("-i", "--input", default=None, dest="input", help="Input file in csv-format", metavar="FILE")
-    optparser.add_option("-g", "--gold", default=None, dest="gold", help="Input file in csv-format", metavar="FILE")
-    optparser.add_option("-o", "--output", default=None, dest="output", help="Output file for the statistics")
-    optparser.add_option("-r", "--target", default="edges", dest="target", help="edges/entities/both")
+    optparser.add_option("-i", "--input", default=None, dest="input", help="Predictions in interaction XML", metavar="FILE")
+    optparser.add_option("-g", "--gold", default=None, dest="gold", help="Gold standard in interaction XML", metavar="FILE")
+    #optparser.add_option("-o", "--output", default=None, dest="output", help="Output file for the statistics")
+    optparser.add_option("-r", "--target", default="edges", dest="target", help="edges/entities/both (default: both)")
     optparser.add_option("-e", "--evaluator", default="AveragingMultiClassEvaluator", dest="evaluator", help="Prediction evaluator class")
     optparser.add_option("-t", "--tokenization", default="split-Charniak-Lease", dest="tokenization", help="tokenization")
     optparser.add_option("-p", "--parse", default="split-Charniak-Lease", dest="parse", help="parse")
     (options, args) = optparser.parse_args()
 
+    # Load the selected evaluator class
     print >> sys.stderr, "Importing modules"
     exec "from Evaluators." + options.evaluator + " import " + options.evaluator + " as Evaluator"
     
+    # Class sets are used to convert the types to ids that the evaluator can use
     classSets = {}
     evaluator = Evaluator()
     if evaluator.type == "binary":
@@ -193,4 +210,5 @@ if __name__=="__main__":
     goldCorpusElements = CorpusElements.loadCorpus(options.gold, options.parse, options.tokenization)
     predictedCorpusElements = CorpusElements.loadCorpus(options.input, options.parse, options.tokenization)    
     
+    # Compare the corpora and print results on screen
     processCorpora(predictedCorpusElements, goldCorpusElements, options, classSets, negativeClassId)
