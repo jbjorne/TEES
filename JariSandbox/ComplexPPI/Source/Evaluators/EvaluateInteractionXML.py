@@ -184,7 +184,7 @@ if __name__=="__main__":
     optparser.add_option("-i", "--input", default=None, dest="input", help="Predictions in interaction XML", metavar="FILE")
     optparser.add_option("-g", "--gold", default=None, dest="gold", help="Gold standard in interaction XML", metavar="FILE")
     #optparser.add_option("-o", "--output", default=None, dest="output", help="Output file for the statistics")
-    optparser.add_option("-r", "--target", default="edges", dest="target", help="edges/entities/both (default: both)")
+    optparser.add_option("-r", "--target", default="both", dest="target", help="edges/entities/both (default: both)")
     optparser.add_option("-e", "--evaluator", default="AveragingMultiClassEvaluator", dest="evaluator", help="Prediction evaluator class")
     optparser.add_option("-t", "--tokenization", default="split-Charniak-Lease", dest="tokenization", help="tokenization")
     optparser.add_option("-p", "--parse", default="split-Charniak-Lease", dest="parse", help="parse")
