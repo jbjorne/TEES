@@ -239,6 +239,14 @@ if __name__=="__main__":
     predictions = classifier.classify(exampleSets[1])
     print >> sys.stderr, "(Time spent:", time.time() - startTime, "s)"
     
+    ## Map to gold, if using predicted entities
+    #if options.input_test_gold != None:
+    #    print >> sys.stderr, "Loading test set corpus gold standard version"
+    #    goldCorpusElements = loadCorpus(options.input_test_gold, options.parse, options.tokenization)
+    #    goldSentences = []
+    #    for sentence in goldCorpusElements.sentences:
+    #        goldSentences.append( [sentence.sentenceGraph,None] )
+    
     # Calculate statistics
     evaluation = Evaluation(predictions, classSet=exampleBuilder.classSet)
     print >> sys.stderr, evaluation.toStringConcise()
