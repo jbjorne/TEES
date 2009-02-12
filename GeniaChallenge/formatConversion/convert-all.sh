@@ -32,6 +32,9 @@ function convert {
     echo "Running protein name splitter"
     python $HOME/cvs_checkout/PPI_Learning/Analysers/ProteinNameSplitter.py -f $DST -o $DST -p Charniak-Lease -t Charniak-Lease -s split-Charniak-Lease -n split-Charniak-Lease
     
+    # Find head token offsets
+    python $HOME/cvs_checkout/JariSandbox/ComplexPPI/Source/Utils/FindHeads.py -i $DST -o $DST -p split-Charniak-Lease -t split-Charniak-Lease
+    
     # Remove unneeded ThemeX and CauseX
     echo "Removing ThemeX and CauseX"
     perl -pi -e 's/Theme2/Theme/g' $DST
