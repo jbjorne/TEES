@@ -165,9 +165,10 @@ def splitMerged(sentence):
     for sourceList in [sentence.entities, sentence.interactions, sentence.pairs]:
         for element in sourceList[:]:
             types = getElementTypes(element)
-            if len(types) > 0:
+            if len(types) > 1:
                 for type in types:
                     newElement = copy.copy(element)
+                    newElement.set("type", type)
                     sourceList.append(newElement)
                 sourceList.remove(element)
     
