@@ -293,4 +293,4 @@ class SentenceGraph:
         if self.tokenIsName[token]:
             return "NAMED_ENT"
         else:
-            return token.attrib["text"]
+            return token.get("text") #.lower()
