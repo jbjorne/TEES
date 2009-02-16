@@ -4,6 +4,17 @@ from Core.ExampleBuilder import ExampleBuilder
 import Stemming.PorterStemmer as PorterStemmer
 from Core.IdSet import IdSet
 
+def compareDependencyEdgesById(dep1, dep2):
+    id1 = dep1[2].get("id")
+    id2 = dep2[2].get("id")
+    if id1 > id2:
+       return 1
+    elif id1 == id2:
+       return 0
+    else: # x<y
+       return -1
+
+
 class GeneralEntityTypeRecognizer(ExampleBuilder):
     def __init__(self, style=None):
         ExampleBuilder.__init__(self)
@@ -40,7 +51,7 @@ class GeneralEntityTypeRecognizer(ExampleBuilder):
         
         namedEntityCount = 0
         for entity in sentenceGraph.entities:
-            if entity.get("isName"): # known data which can be used for features
+            if entity.get("isName") == "True": # known data which can be used for features
                 namedEntityCount += 1
         namedEntityCountFeature = "nameCount_" + str(namedEntityCount)
         
@@ -114,6 +125,7 @@ class GeneralEntityTypeRecognizer(ExampleBuilder):
             
             # Attached edges
             t1InEdges = sentenceGraph.dependencyGraph.in_edges(token)
+            t1InEdges.sort(compareDependencyEdgesById)
             for edge in t1InEdges:
                 edgeType = edge[2].attrib["type"]
                 features[self.featureSet.getId("t1HangingIn_"+edgeType)] = 1
@@ -123,6 +135,7 @@ class GeneralEntityTypeRecognizer(ExampleBuilder):
                 features[self.featureSet.getId("t1HangingIn_"+tokenText)] = 1
                 features[self.featureSet.getId("t1HangingIn_"+edgeType+"_"+tokenText)] = 1
             t1OutEdges = sentenceGraph.dependencyGraph.out_edges(token)
+            t1OutEdges.sort(compareDependencyEdgesById)
             for edge in t1OutEdges:
                 edgeType = edge[2].attrib["type"]
                 features[self.featureSet.getId("t1HangingOut_"+edgeType)] = 1
@@ -148,7 +161,9 @@ class GeneralEntityTypeRecognizer(ExampleBuilder):
             visited = []
 
         inEdges = sentenceGraph.dependencyGraph.in_edges(token)
+        inEdges.sort(compareDependencyEdgesById)
         outEdges = sentenceGraph.dependencyGraph.out_edges(token)
+        outEdges.sort(compareDependencyEdgesById)
         for edge in inEdges:
             if not edge in visited:
                 edgeType = edge[2].attrib["type"]
