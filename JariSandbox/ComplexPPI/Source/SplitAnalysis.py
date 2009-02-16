@@ -12,6 +12,7 @@ from Core.SentenceGraph import *
 from Visualization.CorpusVisualizer import CorpusVisualizer
 from Utils.ProgressCounter import ProgressCounter
 from Utils.Parameters import splitParameters
+import Utils.TableUtils as TableUtils
 from optparse import OptionParser
 import networkx as NX
 
@@ -224,6 +225,7 @@ if __name__=="__main__":
         exampleBuilder.classSet.write(options.output + "/class_names.txt")
         print >> sys.stderr, "Saving feature names to", options.output + "/feature_names.txt"
         exampleBuilder.featureSet.write(options.output + "/feature_names.txt")
+        TableUtils.writeCSV(bestResults[2], options.output +"/best_parameters.csv")
     
     # Classify
     print >> sys.stderr, "Classifying test data"
