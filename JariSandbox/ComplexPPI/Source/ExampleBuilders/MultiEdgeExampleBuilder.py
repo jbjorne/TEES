@@ -21,6 +21,8 @@ class MultiEdgeExampleBuilder(ExampleBuilder):
             self.graphKernelFeatureBuilder = GraphKernelFeatureBuilder(self.featureSet)
         if "noAnnType" in self.styles:
             self.multiEdgeFeatureBuilder.noAnnType = True
+        if "noMasking" in self.styles:
+            self.multiEdgeFeatureBuilder.maskNamedEntities = False
         if "maxFeatures" in self.styles:
 			self.multiEdgeFeatureBuilder.maximum = True
         self.tokenFeatureBuilder = TokenFeatureBuilder(self.featureSet)

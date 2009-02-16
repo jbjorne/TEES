@@ -7,6 +7,8 @@ class FeatureBuilder:
         self.noAnnType = False
         self.ontologyFeatureBuilder = None
         self.maximum = False # produce maximum number of features
+        
+        self.maskNamedEntities = True
     
     def setFeatureVector(self, features, entity1=None, entity2=None):
         self.features = features
@@ -29,8 +31,10 @@ class FeatureBuilder:
         featureList = []
         if text:
             featureList.append("txt_"+sentenceGraph.getTokenText(token))
+            if (not self.maskNamedEntities) and sentenceGraph.tokenIsName[token]:
+                featureList.append("txt_"+token.get("text"))
         if POS:
-            pos = token.attrib["POS"]
+            pos = token.get("POS")
             if pos.find("_") != None and self.maximum:
                 for split in pos.split("_"):
                     featureList.append("POS_"+split)
@@ -53,24 +57,24 @@ class FeatureBuilder:
         if len(sentenceGraph.tokenIsEntityHead[token]) > 0 and not self.noAnnType:
             annTypes = set()
             for entity in sentenceGraph.tokenIsEntityHead[token]:
-                if entity.attrib.has_key("type") and not entity.attrib["type"] in annTypes:
+                if entity.get("type") != None and not entity.get("type") in annTypes:
                     if self.entity1 == None and self.entity2 == None:
-                        annTypes.add(entity.attrib["type"])
+                        annTypes.add(entity.get("type"))
                     else:
                         if self.maximum:
-                            annTypes.add(entity.attrib["type"])
+                            annTypes.add(entity.get("type"))
                         if self.entity1 == entity:
                             if not self.maximum:
-                            	return [entity.attrib["type"]]
+                            	return [entity.get("type")]
                             else:
-                            	annTypes.add("e1_"+entity.attrib["type"])
+                            	annTypes.add("e1_"+entity.get("type"))
                         elif self.entity2 == entity:
                             if not self.maximum:
-                            	return [entity.attrib["type"]]
+                            	return [entity.get("type")]
                             else:
-								annTypes.add("e2_"+entity.attrib["type"])
+								annTypes.add("e2_"+entity.get("type"))
                         else:
-                            annTypes.add(entity.attrib["type"])
+                            annTypes.add(entity.get("type"))
             annTypes = list(annTypes)
             annTypes.sort()
             if self.maximum:
