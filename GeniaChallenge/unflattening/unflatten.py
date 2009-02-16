@@ -72,20 +72,17 @@ class Analyser:
                      (offset[0]<=v[0] and offset[1]>=v[1]))] )
 
     @classmethod
-    def mapEntitiesToTokens(cls,sentence,tokens):
-        t2e = {}
+    def mapEntitiesToTokens(cls,document,tokens):
         e2t = {}
-        for x in sentence.findall('entity'):
-            uid = x.attrib['id']
-            offset = Analyser.transformOffset(x.attrib['charOffset'])
-            for y in Analyser.findTokens(tokens,offset):
-                if not t2e.has_key(y):
-                    t2e[y] = []
-                if not e2t.has_key(uid):
-                    e2t[uid] = []
-                t2e[y].append(uid)
-                e2t[uid].append(y)
-        return( {'t2e': t2e, 'e2t': e2t} )
+        for sentence in document.findall('sentence'):
+            for x in sentence.findall('entity'):
+                uid = x.attrib['id']
+                offset = Analyser.transformOffset(x.attrib['charOffset'])
+                for y in Analyser.findTokens(tokens[sentence],offset):
+                    if not e2t.has_key(uid):
+                        e2t[uid] = []
+                    e2t[uid].append(y)
+        return(e2t)
 
     @classmethod
     def makeDepG(cls,sentence):
@@ -98,29 +95,37 @@ class Analyser:
         return(G)
 
     @classmethod
-    def makeSemG(cls,sentence,entities):
+    def makeSemG(cls,document):
+        entities = dict( [(x.attrib['id'],x) for x in
+                          document.getiterator('entity')] )
         G = NX.XDiGraph()
-        for event in sentence.getiterator('interaction'):
+        for event in document.getiterator('interaction'):
             e1 = entities[event.attrib['e1']]
             e2 = entities[event.attrib['e2']]
             G.add_edge(e1,e2,event)
         return(G)
+
+    @classmethod
+    def findSentenceId(cls,element):
+        # THIS IS DATA SPECIFIC SOLUTION!
+        return('.'.join(element.attrib['id'].split('.')[:3]))
 
 
 
 class Unflattener:
     def __init__(self,document):
         self.document = document
-        self.entities = dict( [(x.attrib['id'],x) for x in
-                               self.document.getiterator('entity')] )
+        self.sentences = dict( [(x.attrib['id'],x)
+                                for x in self.document.findall('sentence')] )
         # contains entity and interaction elements
-        self.semGs = dict( [(x,Analyser.makeSemG(x,self.entities))
-                            for x in self.document.findall('sentence')] )
+        self.semG = Analyser.makeSemG(self.document)
+        self.loners = [x for x in self.document.getiterator('entity')
+                       if not self.semG.has_node(x)]
+        # tokens and dep.graphs are sentence-specific because
+        # TOKEN IDS ARE NOT HIERARCHICAL
         self.tokens = dict( [(x,Analyser.collectTokens(x))
                              for x in self.document.findall('sentence')] )
-        self.mappings = dict( [(x,Analyser.mapEntitiesToTokens(x,
-                                                               self.tokens[x]))
-                               for x in self.document.findall('sentence')] )
+        self.mapping = Analyser.mapEntitiesToTokens(self.document,self.tokens)
         self.depGs = dict( [(x,Analyser.makeDepG(x))
                             for x in self.document.findall('sentence')] )
 
@@ -137,19 +142,22 @@ class Unflattener:
                 return(False)
             def connected(e1,e2):
                 # do not continue if not within sentence
-                if e2t.has_key(e1):
-                    for t1 in e2t[e1]:
+                if self.mapping.has_key(e1):
+                    for t1 in self.mapping[e1]:
                         # do not continue if not within sentence
-                        if e2t.has_key(e2):
-                            for t2 in e2t[e2]:
+                        if self.mapping.has_key(e2):
+                            for t2 in self.mapping[e2]:
                                 if coordPath(t1,t2):
                                     return(True)
                 return(False)
 
+            # where does the parent node belong to?
+            sentence = self.sentences[Analyser.findSentenceId(edges[0][0])]
             depG = self.depGs[sentence]
-            e2t = self.mappings[sentence]['e2t']
             edgemap = dict( [(x[2].attrib['e2'],x) for x in edges] )
             connG = NX.Graph()
+            for x in edgemap.values():
+                connG.add_node(x)
             for e1 in edgemap.keys():
                 for e2 in edgemap.keys():
                     if not e1==e2:
@@ -161,7 +169,7 @@ class Unflattener:
             # NOTE: this function does not yet consider task 2
             uid = node.attrib['id']
             t = node.attrib['type']
-            edges = G.out_edges(node)
+            edges = self.semG.out_edges(node)
             if t in ['Gene_expression','Transcription',
                      'Translation','Protein_catabolism']:
                 return([[e] for e in edges])
@@ -206,7 +214,10 @@ class Unflattener:
                          x[2].attrib['type'].startswith('Cause')]
                 theme = [x for x in edges if
                          x[2].attrib['type'].startswith('Theme')]
-                return([(ca,th) for ca in cause for th in theme])
+                if cause and theme:
+                    return([(ca,th) for ca in cause for th in theme])
+                else:
+                    return([[e] for e in edges])
             else:
                 sys.stderr.write("Invalid event type: %s"%t)
             return([edges])
@@ -226,49 +237,57 @@ class Unflattener:
             return(result)
 
         counter = Increment()
-        for sentence,G in self.semGs.items():
-            unprocessed_nodes = set([x for x in G.nodes()
-                                     if not G.out_edges(x)])
-            while unprocessed_nodes:
-                next_nodes = set()
-                for current in unprocessed_nodes:
-                    next_nodes.update(set(G.in_neighbors(current)))
-                    if G.out_edges(current):
-                        groups = getGrouping(current)
-                        for edges in groups:
-                            newN = ET.Element('entity',current.attrib)
-                            newId = newN.attrib['id']+'.E'+counter.get()
-                            newN.attrib['id'] = newId
-                            G.add_node(newN)
-                            for e in edges:
-                                newE = ET.Element('interaction',e[2].attrib)
-                                newE.attrib['e1'] = newId
-                                G.add_edge(newN,e[1],newE)
-                            for e in G.in_edges(current):
-                                newE = ET.Element('interaction',e[2].attrib)
-                                newE.attrib['e2'] = newId
-                                G.add_edge(e[0],newN,newE)
-                        G.delete_node(current)
-                # ensure that nodes-to-be-processed have only out-neighbors
-                # that have already been processed
-                removable = set()
-                for x in next_nodes:
-                    for y in next_nodes:
-                        if NX.shortest_path(G,x,y) and not x==y:
-                            removable.add(x)
-                unprocessed_nodes = next_nodes - removable
+        unprocessed_nodes = set([x for x in self.semG.nodes()
+                                 if not self.semG.out_edges(x)])
+        while unprocessed_nodes:
+            next_nodes = set()
+            for current in unprocessed_nodes:
+                next_nodes.update(set(self.semG.in_neighbors(current)))
+                if self.semG.out_edges(current):
+                    groups = getGrouping(current)
+                    for edges in groups:
+                        evid = counter.get()
+                        newN = ET.Element('entity',current.attrib)
+                        newId = newN.attrib['id']+'.E'+evid
+                        newN.attrib['id'] = newId
+                        self.semG.add_node(newN)
+                        for e in edges:
+                            newE = ET.Element('interaction',e[2].attrib)
+                            newEid = newE.attrib['id']+'.E'+evid
+                            newE.attrib['id'] = newEid
+                            newE.attrib['e1'] = newId
+                            self.semG.add_edge(newN,e[1],newE)
+                        for e in self.semG.in_edges(current):
+                            newE = ET.Element('interaction',e[2].attrib)
+                            newEid = newE.attrib['id']+'.E'+evid
+                            newE.attrib['id'] = newEid
+                            newE.attrib['e2'] = newId
+                            self.semG.add_edge(e[0],newN,newE)
+                    self.semG.delete_node(current)
+            # ensure that nodes-to-be-processed have only out-neighbors
+            # that have already been processed
+            removable = set()
+            for x in next_nodes:
+                for y in next_nodes:
+                    if NX.shortest_path(self.semG,x,y) and not x==y:
+                        removable.add(x)
+            unprocessed_nodes = next_nodes - removable
 
     def unflatten(self):
         for sentence in self.document.findall('sentence'):
-            G = self.semGs[sentence]
             for elem in sentence.findall('entity'):
                 sentence.remove(elem)
             for elem in sentence.findall('interaction'):
                 sentence.remove(elem)
-            for edge in G.edges():
-                sentence.insert(0,edge[2])
-            for node in G.nodes():
-                sentence.insert(0,node)
+        for edge in self.semG.edges():
+            sentence = self.sentences[Analyser.findSentenceId(edge[2])]
+            sentence.insert(0,edge[2])
+        for node in self.loners:
+            sentence = self.sentences[Analyser.findSentenceId(node)]
+            sentence.insert(0,node)
+        for node in self.semG.nodes():
+            sentence = self.sentences[Analyser.findSentenceId(node)]
+            sentence.insert(0,node)
 
 
 
@@ -299,6 +318,7 @@ def interface(optionArgs=sys.argv[1:]):
 
     corpus = ET.parse(options.infile)
     for document in corpus.getroot().findall('document'):
+        sys.stderr.write("Unflattening document %s\n"%document.attrib['id'])
         unflattener = Unflattener(document)
         unflattener.analyse()
         unflattener.unflatten()
