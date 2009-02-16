@@ -49,23 +49,114 @@ class Increment:
         self.cur += 1
         return(str(self.cur))
 
+class Analyser:
+    @classmethod
+    def transformOffset(cls,string):
+        return(string.split('-'))
+
+    @classmethod
+    def collectTokens(cls,sentence):
+        tmp = sentence.find('sentenceanalyses')
+        tmp2 = [x for x in tmp.getiterator('tokenization')
+                if x.attrib['tokenizer']=='Charniak-Lease'][0]
+        tokens = dict( [(x.attrib['id'],
+                         Analyser.transformOffset(x.attrib['charOffset']))
+                        for x in tmp2.findall('token')] )
+        return(tokens)
+
+    @classmethod
+    def findTokens(cls,tokens,offset):
+        return( [k for k,v in tokens.items()
+                 if ((offset[0]>=v[0] and offset[0]<=v[1]) or
+                     (offset[1]>=v[0] and offset[1]<=v[1]) or
+                     (offset[0]<=v[0] and offset[1]>=v[1]))] )
+
+    @classmethod
+    def mapEntitiesToTokens(cls,sentence,tokens):
+        t2e = {}
+        e2t = {}
+        for x in sentence.findall('entity'):
+            uid = x.attrib['id']
+            offset = Analyser.transformOffset(x.attrib['charOffset'])
+            for y in Analyser.findTokens(tokens,offset):
+                if not t2e.has_key(y):
+                    t2e[y] = []
+                if not e2t.has_key(uid):
+                    e2t[uid] = []
+                t2e[y].append(uid)
+                e2t[uid].append(y)
+        return( {'t2e': t2e, 'e2t': e2t} )
+
+    @classmethod
+    def makeDepG(cls,sentence):
+        tmp = sentence.find('sentenceanalyses')
+        tmp2 = [x for x in tmp.getiterator('parse')
+                if x.attrib['tokenizer']=='Charniak-Lease'][0]
+        G = NX.XDiGraph()
+        for x in tmp2.findall('dependency'):
+            G.add_edge(x.attrib['t1'],x.attrib['t2'],x.attrib['type'])
+        return(G)
+
+    @classmethod
+    def makeSemG(cls,sentence,entities):
+        G = NX.XDiGraph()
+        for event in sentence.getiterator('interaction'):
+            e1 = entities[event.attrib['e1']]
+            e2 = entities[event.attrib['e2']]
+            G.add_edge(e1,e2,event)
+        return(G)
+
+
+
 class Unflattener:
     def __init__(self,document):
         self.document = document
         self.entities = dict( [(x.attrib['id'],x) for x in
                                self.document.getiterator('entity')] )
-        self.graphs = dict( [(x,self.makeGraph(x))
+        # contains entity and interaction elements
+        self.semGs = dict( [(x,Analyser.makeSemG(x,self.entities))
+                            for x in self.document.findall('sentence')] )
+        self.tokens = dict( [(x,Analyser.collectTokens(x))
                              for x in self.document.findall('sentence')] )
-
-    def makeGraph(self,sentence):
-        G = NX.XDiGraph()
-        for event in sentence.getiterator('interaction'):
-            e1 = self.entities[event.attrib['e1']]
-            e2 = self.entities[event.attrib['e2']]
-            G.add_edge(e1,e2,event)
-        return(G)
+        self.mappings = dict( [(x,Analyser.mapEntitiesToTokens(x,
+                                                               self.tokens[x]))
+                               for x in self.document.findall('sentence')] )
+        self.depGs = dict( [(x,Analyser.makeDepG(x))
+                            for x in self.document.findall('sentence')] )
 
     def analyse(self):
+        def getCoordGrouping(edges):
+            def coordPath(this,target):
+                if depG.has_node(this) and depG.has_node(target):
+                    for fromT,toT,e in depG.out_edges(this):
+                        if e.startswith('conj'):
+                            path = NX.shortest_path(depG,toT,target)
+                            if path:
+                                if this not in path:
+                                    return(True)
+                return(False)
+            def connected(e1,e2):
+                # do not continue if not within sentence
+                if e2t.has_key(e1):
+                    for t1 in e2t[e1]:
+                        # do not continue if not within sentence
+                        if e2t.has_key(e2):
+                            for t2 in e2t[e2]:
+                                if coordPath(t1,t2):
+                                    return(True)
+                return(False)
+
+            depG = self.depGs[sentence]
+            e2t = self.mappings[sentence]['e2t']
+            edgemap = dict( [(x[2].attrib['e2'],x) for x in edges] )
+            connG = NX.Graph()
+            for e1 in edgemap.keys():
+                for e2 in edgemap.keys():
+                    if not e1==e2:
+                        if connected(e1,e2):
+                            connG.add_edge(edgemap[e1],edgemap[e2])
+            return(NX.connected_components(connG))
+
         def getGrouping(node):
             # NOTE: this function does not yet consider task 2
             uid = node.attrib['id']
@@ -77,20 +168,44 @@ class Unflattener:
             elif t=='Localization':
                 return([[e] for e in edges])
             elif t=='Binding':
-                left,right = getLinearGrouping(node,edges)
                 # simple approach that uses only linear order
                 # (probably makes many mistakes)
-                return([(le,ri) for le in left for ri in right])
+                # left,right = getLinearGrouping(node,edges)
+                # return([(le,ri) for le in left for ri in right])
+                groups = getCoordGrouping(edges)
+                if len(groups)==1:
+                    g = groups[0]
+                    if len(g)==2:
+                        # two protein in the same group
+                        # are probably binding each other
+                        return([(g[0],g[1])])
+                    else:
+                        # other numbers of proteins
+                        # might also bind colletively
+                        # but given the data this is rare
+                        # so split to separate events should yield
+                        # better results
+                        return([[e] for e in g])
+                else:
+                    # two groups should be split to pairwise combinations
+                    # (can respectively be ignored?)
+                    # events with more than two proteins are rare
+                    # so three or more groups should be treated in a
+                    # pairwise manner
+                    return( [(e1,e2)
+                             for g1 in groups
+                             for g2 in groups if not g1==g2
+                             for e1 in g1
+                             for e2 in g2] )
             elif t=='Phosphorylation':
                 return([[e] for e in edges])
             elif t in ['Regulation','Positive_regulation',
                        'Negative_regulation']:
+                # (can respectively be ignored?)
                 cause = [x for x in edges if
                          x[2].attrib['type'].startswith('Cause')]
                 theme = [x for x in edges if
                          x[2].attrib['type'].startswith('Theme')]
-                left,right = getLinearGrouping(node,edges)
-                # simple approach that does not use linear order or syntax
                 return([(ca,th) for ca in cause for th in theme])
             else:
                 sys.stderr.write("Invalid event type: %s"%t)
@@ -111,7 +226,7 @@ class Unflattener:
             return(result)
 
         counter = Increment()
-        for G in self.graphs.values():
+        for sentence,G in self.semGs.items():
             unprocessed_nodes = set([x for x in G.nodes()
                                      if not G.out_edges(x)])
             while unprocessed_nodes:
@@ -145,7 +260,7 @@ class Unflattener:
 
     def unflatten(self):
         for sentence in self.document.findall('sentence'):
-            G = self.graphs[sentence]
+            G = self.semGs[sentence]
             for elem in sentence.findall('entity'):
                 sentence.remove(elem)
             for elem in sentence.findall('interaction'):
