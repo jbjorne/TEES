@@ -8,6 +8,7 @@ if [ "$1" == "mini" ]; then
 fi
 
 pushd ~/cvs_checkout/JariSandbox/ComplexPPI/Source
-python SplitAnalysis.py -b GeneralEntityTypeRecognizer -x "style:typed" -c SVMMultiClassClassifier -e AveragingMultiClassEvaluator -y $CLASSIFIER_PARAMS -i $TRAIN_FILE -s $TEST_FILE -o /usr/share/biotext/GeniaChallenge/xml/jari-devel-triggers -m /usr/share/biotext/GeniaChallenge/xml/jari-devel-triggers/jari-devel-triggers.xml -p split-Charniak-Lease
+python SplitAnalysis.py -b GeneralEntityTypeRecognizer -x "style:typed" -c SVMMultiClassClassifier -e AveragingMultiClassEvaluator -y $CLASSIFIER_PARAMS -i $TRAIN_FILE -s $TEST_FILE -o /usr/share/biotext/GeniaChallenge/xml/jari-devel-triggers -m /usr/share/biotext/GeniaChallenge/xml/jari-devel-triggers/jari-devel-triggers-with-merged.xml -p split-Charniak-Lease
+python ../../../CommonUtils/InteractionXML/SplitMergedElements.py -i /usr/share/biotext/GeniaChallenge/xml/jari-devel-triggers/jari-devel-triggers-with-merged.xml -o /usr/share/biotext/GeniaChallenge/xml/jari-devel-triggers/jari-devel-triggers.xml
 popd
 cp nohup.out /usr/share/biotext/GeniaChallenge/xml/jari-devel-triggers/nohup.out
