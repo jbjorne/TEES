@@ -28,8 +28,7 @@ def processCorpus(inputCorpus, outputFolder):
         counter.update()
         
         writeEventTriggers(document, inputCorpus, outputFile)
-        findThemeCausePairs(document, inputCorpus)
-        makeEvents(document, inputCorpus, outputFile)
+        writeEvents(document, inputCorpus, outputFile)
         
         outputFile.close()
 
@@ -66,9 +65,9 @@ def writeEvents(document, inputCorpus, outputFile):
     Writes events defined as trigger words that have one or more interactions
     leaving from them. When the Theme or Cause of such an event refers to a
     trigger that is also an event, the Theme or Cause will point to that event (E).
-    Note that even if the Theme or Cause is an event-trigger, if that trigger
-    has no defined interactions, it will be annotated as trigger (T), not as 
-    a nested event (E).
+    Note that if the Theme or Cause is an event-trigger, and even if that trigger
+    has no defined interactions, and empty event will be generated to mark the 
+    nested event.
     """
     events = {} # event trigger entity : list of interactions pairs
     eventIndex = 1
@@ -87,6 +86,12 @@ def writeEvents(document, inputCorpus, outputFile):
             if not events.has_key(e1):
                 events[e1] = [] # mark entity as an event trigger
             events[e1].append(interaction)
+            # If a nested trigger has no interactions, it must still be an 
+            # event because it is nested
+            e2 = sentence.entitiesById[interaction.get("e2")]
+            if e2.get("isName") == "False":
+                if not events.has_key(e1):
+                    events[e2] = [] # mark entity as an event trigger
         
         # Predefine event ids because all ids must be defined so that
         # we can refer to nested events
@@ -100,6 +105,8 @@ def writeEvents(document, inputCorpus, outputFile):
             if events.has_key(entity):
                 eventType = entity.get("type")
                 outputLine = eventIds[entity] + "\t" + eventType + ":" + entity.get("temp_newId")
+                if len(events[entity]) == 0:
+                    print >> sys.stderr, "Warning: Empty nested event", eventIds[entity], "at sentence", sentence.sentence.get("origId")
                 for interaction in events[entity]:
                     e1 = sentence.entitiesById[interaction.get("e1")]
                     e2 = sentence.entitiesById[interaction.get("e2")]
