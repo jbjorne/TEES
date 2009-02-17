@@ -53,6 +53,12 @@ class MultiEdgeFeatureBuilder(FeatureBuilder):
                     entityCombination += "e1_Entity_"
                 else:
                     entityCombination += "e1_InteractionWord_"
+#                    predictions = self.entity1.get("predictions")
+#                    if predictions != None:
+#                        predictions = predictions.split(",")
+#                        for p in predictions:
+#                            splits = p.split(":")
+#                            self.features[self.featureSet.getId("e1_strength_"+splits[0])] = float(splits[1])
             else:
                 entityCombination += "e1_Entity_"
             if self.entity2.get("isName") != None:
@@ -60,6 +66,12 @@ class MultiEdgeFeatureBuilder(FeatureBuilder):
                     entityCombination += "e2_Entity"
                 else:
                     entityCombination += "e2_InteractionWord"
+#                    predictions = self.entity2.get("predictions")
+#                    if predictions != None:
+#                        predictions = predictions.split(",")
+#                        for p in predictions:
+#                            splits = p.split(":")
+#                            self.features[self.featureSet.getId("e2_strength_"+splits[0])] = float(splits[1])
             else:
                 entityCombination += "e2_Entity"
             self.features[self.featureSet.getId(entityCombination)] = 1
