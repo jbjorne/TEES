@@ -46,11 +46,11 @@ function convert {
 }
 
 convert IDsTRAIN train.xml ""
-#convert IDsDEVEL devel.xml ""
-#convert IDsEVERYTHING everything.xml ""
-#convert IDsTRAIN train-with-duplicates.xml -p
-#convert IDsDEVEL devel-with-duplicates.xml -p
-#convert IDsEVERYTHING everything-with-duplicates.xml -p
+convert IDsDEVEL devel.xml ""
+convert IDsEVERYTHING everything.xml ""
+convert IDsTRAIN train-with-duplicates.xml -p
+convert IDsDEVEL devel-with-duplicates.xml -p
+convert IDsEVERYTHING everything-with-duplicates.xml -p
 
 # Update the mini-sets
 cd $THIS
