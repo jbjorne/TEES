@@ -14,9 +14,9 @@ class ProgressCounter:
         # If this counter didn't finish, show the info about the last update
         if not self.progress >= 100.0:
             import sys
-            print >> sys.stderr, "Counter \"" + self.id + "\" did not finish, count: " + str(self.current) + "/" + str(int(self.total))
-            print >> sys.stderr, "Last update: " + self.prevUpdateString 
-    
+            print >> sys.stderr, "Counter \"" + self.id + "\" did not finish"
+            self.showLastUpdate()
+            
     def update(self, amount=1, string="Processing: "):
         self.current += amount
         self.progress = self.current / self.total * 100.0
@@ -26,3 +26,8 @@ class ProgressCounter:
             self.prevProgress = self.progress
         if self.progress >= 100.0:
             print >> sys.stderr
+    
+    def showLastUpdate(self):
+        print >> sys.stderr, "Last count: " + str(self.current) + "/" + str(int(self.total))
+        print >> sys.stderr, "Last update: " + self.prevUpdateString 
+        
