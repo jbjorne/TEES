@@ -1,3 +1,5 @@
+import types
+
 def merge(range1, range2):
     mergedRange = [0,0]
     assert(overlap(range1, range2))
@@ -59,7 +61,7 @@ def overlap(range1, range2):
     return not (range1[1] < range2[0] or range2[1] < range1[0])
 
 def tuplesToCharOffset(tuples):
-    if not isinstance(tuples,list):
+    if len(tuples) == 2 and type(tuples[0]) == types.IntType and type(tuples[1]) == types.IntType:
         tuples = [tuples]
     charOffset = ""
     isFirst = True
