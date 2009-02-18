@@ -186,7 +186,7 @@ class Unflattener:
                     if len(g)==2:
                         # two protein in the same group
                         # are probably binding each other
-                        return([(g[0],g[1])])
+                        return([g])
                     else:
                         # other numbers of proteins
                         # might also bind colletively
@@ -200,11 +200,14 @@ class Unflattener:
                     # events with more than two proteins are rare
                     # so three or more groups should be treated in a
                     # pairwise manner
-                    return( [(e1,e2)
-                             for g1 in groups
-                             for g2 in groups if not g1==g2
-                             for e1 in g1
-                             for e2 in g2] )
+                    result = []
+                    while groups:
+                        g1 = groups.pop()
+                        result.extend( [(e1,e2)
+                                        for g2 in groups
+                                        for e1 in g1
+                                        for e2 in g2] )
+                    return(result)
             elif t=='Phosphorylation':
                 return([[e] for e in edges])
             elif t in ['Regulation','Positive_regulation',
