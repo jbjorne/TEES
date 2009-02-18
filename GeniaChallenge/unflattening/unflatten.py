@@ -52,7 +52,7 @@ class Increment:
 class Analyser:
     @classmethod
     def transformOffset(cls,string):
-        return(string.split('-'))
+        return([int(x) for x in string.split('-')])
 
     @classmethod
     def collectTokens(cls,sentence):
@@ -133,12 +133,21 @@ class Unflattener:
         def getCoordGrouping(edges):
             def coordPath(this,target):
                 if depG.has_node(this) and depG.has_node(target):
-                    for fromT,toT,e in depG.out_edges(this):
-                        if e.startswith('conj'):
-                            path = NX.shortest_path(depG,toT,target)
-                            if path:
-                                if this not in path:
-                                    return(True)
+                    paths1 = [NX.shortest_path(depG,x,this)
+                              for x in parentTokens
+                              if depG.has_node(x)]
+                    paths2 = [NX.shortest_path(depG,x,target)
+                              for x in parentTokens
+                              if depG.has_node(x)]
+                    start1 = set()
+                    start2 = set()
+                    for p in paths1:
+                        if p and len(p)>=2:
+                            start1.add(depG.get_edge(p[0],p[1]))
+                    for p in paths2:
+                        if p and len(p)>=2:
+                            start2.add(depG.get_edge(p[0],p[1]))
+                    return(start1.intersection(start2))
                 return(False)
             def connected(e1,e2):
                 # do not continue if not within sentence
@@ -151,6 +160,8 @@ class Unflattener:
                                     return(True)
                 return(False)
 
+            if not edges:
+                return([])
             # where does the parent node belong to?
             sentence = self.sentences[Analyser.findSentenceId(edges[0][0])]
             depG = self.depGs[sentence]
@@ -158,6 +169,10 @@ class Unflattener:
             connG = NX.Graph()
             for x in edgemap.values():
                 connG.add_node(x)
+            pid = edges[0][2].attrib['e1']
+            parentTokens = []
+            if self.mapping.has_key(pid):
+                parentTokens = self.mapping[pid]
             for e1 in edgemap.keys():
                 for e2 in edgemap.keys():
                     if not e1==e2:
