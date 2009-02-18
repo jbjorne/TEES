@@ -89,7 +89,7 @@ class Analyser:
         tmp = sentence.find('sentenceanalyses')
         tmp2 = [x for x in tmp.getiterator('parse')
                 if x.attrib['tokenizer']=='Charniak-Lease'][0]
-        G = NX.XDiGraph()
+        G = NX.XGraph()
         for x in tmp2.findall('dependency'):
             G.add_edge(x.attrib['t1'],x.attrib['t2'],x.attrib['type'])
         return(G)
