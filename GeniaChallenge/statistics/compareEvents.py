@@ -50,11 +50,11 @@ def compareDocuments(documentMap, targetFiles, options):
     stats = {}
     eventStats = {"Start Events":0, 
                   "End Events":0,
-                  "False Positive Trigger":0,
-                  "Cause FN":0,
-                  "Cause FP":0,
-                  "Theme FN":0,
-                  "Theme FP":0}
+                  "False Positive Trigger":0}#,
+                  #"Cause FN":0,
+                  #"Cause FP":0,
+                  #"Theme FN":0,
+                  #"Theme FP":0}
     for docId in documentIds:
         counter.update(1, "Processing: ")# document " + str(docId) + ": " )
         for fileName in sorted(documentMap[docId]):
@@ -170,11 +170,11 @@ def compareEvents(sourceLines, targetLines, triggerMap, eventStats, options):
     eventsFound = 1
     while eventsFound > 0:
         localEventStats = None
-        localEventStats = {"False Positive Trigger":0,
-                  "Cause FN":0,
-                  "Cause FP":0,
-                  "Theme FN":0,
-                  "Theme FP":0}
+        localEventStats = {"False Positive Trigger":0}#,
+                  #"Cause FN":0,
+                  #"Cause FP":0,
+                  #"Theme FN":0,
+                  #"Theme FP":0}
         eventsFound = 0
         for targetEvent in targetEvents:
             if triggerMap[targetEvent["trigger"][1]] == None:
@@ -195,32 +195,32 @@ def compareEvents(sourceLines, targetLines, triggerMap, eventStats, options):
                         if cause[0] == "E":
                             if ((not eventMap.has_key(cause)) or not eventMap[cause] in sourceEvent["Cause"]):
                                 errorCount += 1
-                                localEventStats["Theme FP"] += 1
+                                #localEventStats["Theme FP"] += 1
                             else:
                                 count += 1
                         elif not triggerMap[cause] in sourceEvent["Cause"]:
                             errorCount += 1
-                            localEventStats["Cause FP"] += 1
+                            #localEventStats["Cause FP"] += 1
                         else:
                             count += 1
                     errorCount += len(sourceEvent["Cause"]) - count
-                    localEventStats["Cause FN"] += len(sourceEvent["Cause"]) - count
+                    #localEventStats["Cause FN"] += len(sourceEvent["Cause"]) - count
                     
                     count = 0
                     for theme in targetEvent["Theme"]:
                         if theme[0] == "E":
                             if ((not eventMap.has_key(theme)) or not eventMap[theme] in sourceEvent["Theme"]):
                                 errorCount += 1
-                                localEventStats["Theme FP"] += 1
+                                #localEventStats["Theme FP"] += 1
                             else:
                                 count += 1
                         elif not triggerMap[theme] in sourceEvent["Theme"]:
                             errorCount += 1
-                            localEventStats["Theme FP"] += 1
+                            #localEventStats["Theme FP"] += 1
                         else:
                             count += 1
                     errorCount += len(sourceEvent["Theme"]) - count
-                    localEventStats["Theme FN"] += len(sourceEvent["Theme"]) - count
+                    #localEventStats["Theme FN"] += len(sourceEvent["Theme"]) - count
                     
                     if bestMatchErrorCount > errorCount:
                         bestMatch = sourceEvent
@@ -295,8 +295,8 @@ if __name__=="__main__":
         print >> sys.stderr, "Psyco not installed"
 
     optparser = OptionParser(usage="%prog [options]\nConvert interaction XML to GENIA shared task format.")
-    optparser.add_option("-i", "--input", default=None, dest="input", help="interaction xml input file", metavar="FILE")
-    optparser.add_option("-o", "--output", default=None, dest="output", help="output directory")
+    optparser.add_option("-g", "--gold", default=None, dest="input", help="interaction xml input file", metavar="FILE")
+    optparser.add_option("-p", "--predicted", default=None, dest="output", help="output directory")
     optparser.add_option("-v", "--verbose", dest="verbose", default=False, help="Verbose output.", action="store_true")
     (options, args) = optparser.parse_args()
     
