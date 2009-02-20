@@ -56,7 +56,7 @@ def compareDocuments(documentMap, targetFiles, options):
                   "Theme FN":0,
                   "Theme FP":0}
     for docId in documentIds:
-        counter.update(1, "Processing document " + str(docId) + ": " )
+        counter.update(1, "Processing: ")# document " + str(docId) + ": " )
         for fileName in sorted(documentMap[docId]):
             extension = fileName.split(".",1)[-1]
             addStat(stats, extension, "source")
@@ -80,9 +80,15 @@ def compareDocuments(documentMap, targetFiles, options):
         for value in stats[key]:
             print >> sys.stderr, "\t" + str(value),
         print >> sys.stderr
-    print >> sys.stderr, "Events:"
+    print >> sys.stderr, "Event stats:"
     for key in sorted(eventStats.keys()):
         print >> sys.stderr, " " + key + ": " + str(eventStats[key])
+    print >> sys.stderr, "Event extraction:"
+    eventsSource = eventStats["Start Events"]
+    events0 = 0
+    if eventStats.has_key("Error Level 0"):
+        events0 = eventStats["Error Level 0"]
+    print >> sys.stderr, " Exact:", events0, "/", eventsSource, "(%.2f" % (100.0 * events0 / eventsSource) + " %)"
 
 def getFiles(filename, options):
     sourceFile = open(os.path.join(options.input, filename),"rt")
@@ -254,6 +260,8 @@ def mapTriggers(sourceLines, targetLines, options):
                 triggerMap["T"+str(i)] = "T"+str(i)
             firstTriggerLine = False
         sourceSplits.append(sourceSplit)
+    
+    matchTypes = {}
     for targetLine in targetLines:
         if targetLine[0] != "T":
             continue
@@ -264,7 +272,14 @@ def mapTriggers(sourceLines, targetLines, options):
             if splits[1] == sourceSplits[i][1]:
                 sourceOffset = (int(sourceSplits[i][2]), int(sourceSplits[i][3]))
                 if Range.overlap(sourceOffset, targetOffset):
-                    triggerMap[splits[0]] = sourceSplits[i][0]
+                    matchType = "overlap"
+                    if sourceOffset == targetOffset:
+                        matchType = "exact"
+
+                    if triggerMap[splits[0]] == None or (matchTypes[splits[0]] == "overlap" and matchType == "exact"):
+                        triggerMap[splits[0]] = sourceSplits[i][0]
+                        matchTypes[splits[0]] = matchType
+                        
         if triggerMap[splits[0]] == None:
             if options.verbose:
                 print >> sys.stderr, "  Trigger not found:", splits[0]
