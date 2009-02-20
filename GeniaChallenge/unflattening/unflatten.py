@@ -139,14 +139,17 @@ class Unflattener:
                     paths2 = [NX.shortest_path(depG,x,target)
                               for x in parentTokens
                               if depG.has_node(x)]
-                    start1 = set()
-                    start2 = set()
-                    for p in paths1:
-                        if p and len(p)>=2:
-                            start1.add(depG.get_edge(p[0],p[1]))
-                    for p in paths2:
-                        if p and len(p)>=2:
-                            start2.add(depG.get_edge(p[0],p[1]))
+                    # same coordination group if there is a pair of
+                    # shortest paths from event that start with the same edge
+                    # and this edge is not between the tokens of the event
+                    start1 = set( [depG.get_edge(p[0],p[1]) for p in paths1
+                                   if (p and
+                                       len(p)>=2 and
+                                       not p[1] in parentTokens)] )
+                    start2 = set( [depG.get_edge(p[0],p[1]) for p in paths2
+                                   if (p and
+                                       len(p)>=2 and
+                                       not p[1] in parentTokens)] )
                     return(start1.intersection(start2))
                 return(False)
             def connected(e1,e2):
