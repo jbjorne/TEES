@@ -23,14 +23,56 @@ def processCorpus(inputCorpus, outputFolder):
     counter = ProgressCounter(len(inputCorpus.documents), "Document")
     # Each document is written to an output file
     for document in inputCorpus.documents:
-        documentId = document.find("sentence").get("origId").split(".")[0]
-        outputFile = open(os.path.join(outputFolder,documentId + ".a2"), "wt")
         counter.update()
+        documentId = document.find("sentence").get("origId").split(".")[0]
         
+        # Write a2.t1 file
+        outputFile = open(os.path.join(outputFolder,documentId + ".a2.t1"), "wt")        
         writeEventTriggers(document, inputCorpus, outputFile)
         writeEvents(document, inputCorpus, outputFile)
-        
         outputFile.close()
+        
+        # Write a1 file
+        outputFile = open(os.path.join(outputFolder,documentId + ".a1"), "wt")
+        writeProteins(document, inputCorpus, outputFile)
+        outputFile.close()
+        
+        # Write txt file
+        outputFile = open(os.path.join(outputFolder,documentId + ".txt"), "wt")
+        writeDocumentText(document, outputFile)
+        outputFile.close()
+
+def writeDocumentText(document, outputFile):
+    isFirstSentence = True
+    for sentenceElement in document.findall("sentence"):
+        text = sentenceElement.get("text")
+        outputFile.write(text + " ")
+        if isFirstSentence:
+            outputFile.write("\n")
+            isFirstSentence = False
+
+def getGeniaOffset(sentenceOffset, entityOffset):
+    return [entityOffset[0] + sentenceOffset[0], entityOffset[1] + sentenceOffset[0] + 1] 
+
+def writeProteins(document, inputCorpus, outputFile):
+    entityMap = {}
+    for sentenceElement in document.findall("sentence"):
+        sentence = inputCorpus.sentencesById[sentenceElement.get("id")]
+        sentenceOffset = Range.charOffsetToSingleTuple(sentenceElement.get("charOffset"))
+        for entity in sentence.entities:
+            if entity.get("isName") == "True":
+                origId = entity.get("origId").split(".")[-1]
+                entity.set("temp_geniaId",origId)
+                origIdNumber = int(origId[1:])
+                assert(origIdNumber not in entityMap.keys())
+                entityMap[origIdNumber] = entity
+                
+                entityOffset = Range.charOffsetToSingleTuple(entity.get("charOffset"))
+                entity.set("temp_geniaOffset", getGeniaOffset(sentenceOffset, entityOffset) )
+    for key in sorted(entityMap.keys()):
+        entity = entityMap[key]
+        offset = entity.get("temp_geniaOffset")
+        outputFile.write(entity.get("temp_geniaId") + "\tProtein " + str(offset[0]) + " " + str(offset[1]) + "\t" + entity.get("text") + "\n")
 
 def writeEventTriggers(document, inputCorpus, outputFile):
     entityIndex = 0
@@ -47,7 +89,7 @@ def writeEventTriggers(document, inputCorpus, outputFile):
         for entity in sentence.entities:
             if entity.get("isName") == "False":
                 entityOffset = Range.charOffsetToSingleTuple(entity.get("charOffset"))
-                newOffset = [entityOffset[0] + sentenceOffset[0], entityOffset[1] + sentenceOffset[1]]
+                newOffset = getGeniaOffset(sentenceOffset, entityOffset)
                 match = Range.tuplesToCharOffset(newOffset) + "_" + entity.get("type")
                 if match in offsetMap.keys():
                     entity.set("temp_newId", offsetMap[match].get("temp_newId"))
@@ -74,7 +116,6 @@ def writeEvents(document, inputCorpus, outputFile):
     eventIds = {}
     for sentenceElement in document.findall("sentence"):
         sentence = inputCorpus.sentencesById[sentenceElement.get("id")]
-        sentenceOffset = Range.charOffsetToSingleTuple(sentenceElement.get("charOffset"))
         
         # Group interactions by their interaction word, i.e. the event trigger
         for interaction in sentence.interactions + sentence.pairs:
