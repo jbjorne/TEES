@@ -202,16 +202,14 @@ def writeToInteractionXML(classifications, corpusElements, outputFile, classSet=
         # remove entities
         if xType == "token":
             entityElements = sentenceElement.findall("entity")
+            entityCount = 0
             if entityElements != None:
+                entityCount = len(entityElements) # get the count _before_ removing entities
                 for entityElement in entityElements:
                     if entityElement.get("isName") == "False": # interaction word
                         sentenceElement.remove(entityElement)
-        # add new pairs
-        if xType == "token":
+            # add new pairs
             entityElements = sentenceElement.findall("entity")
-            entityCount = 0
-            if entityElements != None:
-                entityCount = len(entityElements)
             if classificationsBySentence.has_key(sentenceId):
                 for classification in classificationsBySentence[sentenceId]:
                     example = classification[0]
