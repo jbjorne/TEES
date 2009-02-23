@@ -24,7 +24,7 @@ def processCorpus(inputCorpus, outputFolder):
     # Each document is written to an output file
     for document in inputCorpus.documents:
         documentId = document.find("sentence").get("origId").split(".")[0]
-        counter.update(1, "Processing document " + str(documentId) + ": ")
+        counter.update(1, "Processing document " + document.get("id") + " (origId " + documentId + "): ")
         
         # Write a2.t1 file
         outputFile = open(os.path.join(outputFolder,documentId + ".a2.t1"), "wt")        
