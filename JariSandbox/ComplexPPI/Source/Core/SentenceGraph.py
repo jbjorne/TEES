@@ -32,7 +32,8 @@ def loadCorpus(corpusFilename, parse, tokenization=None):
             corpusElements.sentences.remove(sentence)
             continue
         for pair in sentence.pairs:
-            if pair.attrib["interaction"] == "True":
+            isInteraction = pair.get("interaction")
+            if isInteraction == "True" or isInteraction == None:
                 sentence.interactions.append(pair)
                 if not pair.attrib.has_key("type"):
                     pair.attrib["type"] = "undefined"
