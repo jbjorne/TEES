@@ -23,8 +23,8 @@ def processCorpus(inputCorpus, outputFolder):
     counter = ProgressCounter(len(inputCorpus.documents), "Document")
     # Each document is written to an output file
     for document in inputCorpus.documents:
-        counter.update()
         documentId = document.find("sentence").get("origId").split(".")[0]
+        counter.update(1, "Processing document " + str(documentId) + ": ")
         
         # Write a2.t1 file
         outputFile = open(os.path.join(outputFolder,documentId + ".a2.t1"), "wt")        
