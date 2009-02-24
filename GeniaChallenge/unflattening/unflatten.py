@@ -59,8 +59,7 @@ class Analyser:
         tmp = sentence.find('sentenceanalyses')
         tmp2 = [x for x in tmp.getiterator('tokenization')
                 if x.attrib['tokenizer']=='Charniak-Lease'][0]
-        tokens = dict( [(x.attrib['id'],
-                         Analyser.transformOffset(x.attrib['charOffset']))
+        tokens = dict( [(x.attrib['id'],x)
                         for x in tmp2.findall('token')] )
         return(tokens)
 
@@ -75,10 +74,12 @@ class Analyser:
     def mapEntitiesToTokens(cls,document,tokens):
         e2t = {}
         for sentence in document.findall('sentence'):
+            toks = dict( [(k,Analyser.transformOffset(v.attrib['charOffset']))
+                          for k,v in tokens[sentence].items()] )
             for x in sentence.findall('entity'):
                 uid = x.attrib['id']
                 offset = Analyser.transformOffset(x.attrib['charOffset'])
-                for y in Analyser.findTokens(tokens[sentence],offset):
+                for y in Analyser.findTokens(toks,offset):
                     if not e2t.has_key(uid):
                         e2t[uid] = []
                     e2t[uid].append(y)
@@ -183,6 +184,33 @@ class Unflattener:
                             connG.add_edge(edgemap[e1],edgemap[e2])
             return(NX.connected_components(connG))
 
+        def respectively(node):
+            sentence = self.sentences[Analyser.findSentenceId(node)]
+            depG = self.depGs[sentence]
+            for t in self.mapping[node.attrib['id']]:
+                if depG.has_node(t):
+                    for x in depG.neighbors(t):
+                        # this assumes that 'respectively'
+                        # is directly attached to trigger
+                        txt = self.tokens[sentence][x].attrib['text']
+                        if txt.startswith('respectiv'):
+                            return(True)
+            return(False)
+                                
+        def sortOffset(a,b):
+            # offset of children counts
+            return( int(a[1].attrib['charOffset'].split('-')[0])-
+                    int(b[1].attrib['charOffset'].split('-')[0]) )
+
+        def respectiveGroups(groups):
+            result = []
+            # sort by start offset
+            r1 = sorted(groups[0],sortOffset)
+            r2 = sorted(groups[1],sortOffset)
+            while r1:
+                result.append([r1.pop(),r2.pop()])
+            return(result)
+
         def getGrouping(node):
             # NOTE: this function does not yet consider task 2
             uid = node.attrib['id']
@@ -218,6 +246,13 @@ class Unflattener:
                     # events with more than two proteins are rare
                     # so three or more groups should be treated in a
                     # pairwise manner
+                    if (len(groups)==2 and
+                        len(groups[0])==len(groups[1]) and
+                        respectively(node)):
+                        # if 'respectively' ...
+                        print "resp. %s"%node.attrib['id']
+                        return(respectiveGroups(groups))
+                    # else do pairwise combinations
                     result = []
                     while groups:
                         g1 = groups.pop()
@@ -236,6 +271,11 @@ class Unflattener:
                 theme = [x for x in edges if
                          x[2].attrib['type'].startswith('Theme')]
                 if cause and theme:
+                    if respectively(node):
+                        # if 'respectively' ...
+                        print "resp. %s"%node.attrib['id']
+                        return(respectiveGroups([cause,theme]))
+                    # else pairwise
                     return([(ca,th) for ca in cause for th in theme])
                 else:
                     return([[e] for e in edges])
