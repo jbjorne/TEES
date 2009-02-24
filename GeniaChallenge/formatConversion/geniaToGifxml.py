@@ -61,12 +61,12 @@ class SentenceParser:
         self.modifiers = {}
         self.mapping = {}
 
-    def parse(self,filestem):
+    def parse(self,filestem,taskpostfix):
         self.uid = filestem.split("/")[-1]
 
         textFile = filestem+".txt"
         proteinFile = filestem+".a1"
-        eventFile = filestem+".a2.t1"
+        eventFile = filestem+taskpostfix
 
         tmp = open(textFile)
         self.parseText(tmp.read())
@@ -131,11 +131,9 @@ class SentenceParser:
                         count += 1
             elif uid[0]=="M":
                 t,e = content.split()
-                if not self.modifiers.has_key(uid):
-                    self.modifiers[uid] = {}
-                self.modifiers[uid].update({'id':uid,
-                                            'e1':e,
-                                            'type':t})
+                if not self.modifiers.has_key(e):
+                    self.modifiers[e] = {}
+                self.modifiers[e][t] = uid
             elif uid[0]=="E":
                 t = content.split()[0]
                 args = content.split()[1:]
@@ -145,10 +143,6 @@ class SentenceParser:
                 count = 0
                 for arg in args:
                     endt,ende = arg.split(":")
-                    # hack to counter a bug in generate-task-specific-a2-file.py
-                    # REMEMBER TO DELETE THIS IF YOU WANT TASK 2 !!!!!
-                    if endt=='AtLoc':
-                        continue
                     self.events[uid].append({'id':uid+'.'+str(count),
                                             'directed':'True',
                                             'e1':uid,
@@ -161,7 +155,8 @@ class SentenceParser:
         for k,v in self.entities.items():
             print "%s\t%s"%(k,v)
         for k,v in self.modifiers.items():
-            print "%s\t%s"%(k,v)
+            for k2,v2 in self.modifiers[k].items():
+                print "%s\t%s\t%s"%(k,k2,v2)
         for k,v in self.events.items():
             for x in v:
                 print "%s\t%s"%(k,x)
@@ -179,15 +174,33 @@ class SentenceParser:
                                              'text':self.text})
         newDocument.append(newSentence)
 
+        entnodes = {}
         if removeDuplicates:
             for k,v in self.entities.items():
+                oid = v['id']
                 v['id'] = self.uid+'.'+v['id'] # prepend document id
                 v['origId'] = v['id']
                 newEntity = ET.Element("entity",v)
+                # add negation and speculation attributes by default (as False)
+                newEntity.attrib['negation'] = "False"
+                newEntity.attrib['speculation'] = "False"
                 newSentence.append(newEntity)
+                entnodes[oid] = newEntity
             edges = []
             for k,v in self.events.items():
                 for x in v:
+                    # add task 3 information from self.modifiers to
+                    # corresponding entity
+                    origUid = x['e1']
+                    if self.modifiers.has_key(origUid):
+                        mappedUid = self.mapping[origUid]
+                        # origUid is original E
+                        # mappedUid is E mapped to T
+                        if self.modifiers[origUid].has_key('Negation'):
+                            entnodes[mappedUid].attrib['negation'] = "True"
+                        if self.modifiers[origUid].has_key('Speculation'):
+                            entnodes[mappedUid].attrib['speculation'] = "True"
+                    # and the interaction itself
                     if x['e1'][0]==('E'):
                         x['e1'] = self.mapping[x['e1']]
                     if x['e2'][0]==('E'):
@@ -208,6 +221,10 @@ class SentenceParser:
             events = []
             for k,v in self.entities.items():
                 if v['isName']=='True':
+                    # add negation and speculation attributes
+                    # by default (as False) even though it is irrelevant here
+                    v['negation'] = "False"
+                    v['speculation'] = "False"
                     newEntity = ET.Element("entity",v)
                     # prepend document id
                     newEntity.attrib['id'] = self.uid+'.'+v['id']
@@ -222,12 +239,26 @@ class SentenceParser:
                                 # prepend document id
                                 e['id'] = self.uid+'.'+e['id']
                                 e['origId'] = e['id']
+                                # add negation and speculation attributes
+                                # by default (as False) even though
+                                # it is irrelevant here
+                                e['negation'] = "False"
+                                e['speculation'] = "False"
                                 newEntity = ET.Element("entity",e)
                                 entities[x[y]] = newEntity
                             x[y] = self.uid+'.'+x[y]
                         elif x[y][0]==('E'):
                             if not entities.has_key(x[y]):
                                 e = self.entities[self.mapping[x[y]]]
+                                # add negation and speculation attributes
+                                e['negation'] = "False"
+                                e['speculation'] = "False"
+                                origUid = x[y]
+                                if self.modifiers.has_key(origUid):
+                                    if self.modifiers[origUid].has_key('Negation'):
+                                        e['negation'] = "True"
+                                    if self.modifiers[origUid].has_key('Speculation'):
+                                        e['speculation'] = "True"
                                 # create a new id for a copy of event trigger
                                 # (the one reserved for 'T' item is not used)
                                 newEntity = ET.Element("entity",e)
@@ -248,13 +279,6 @@ class SentenceParser:
             for x in events:
                 newSentence.append(x)
                 
-        for k,v in self.modifiers.items():
-            v['id'] = self.uid+'.'+v['id'] # prepend document id
-            v['e1'] = self.uid+'.'+v['e1'] # prepend document id
-            v['origId'] = v['id']
-            newModifier = ET.Element("modifier",v)
-            newSentence.append(newModifier)
-            
         return(newDocument)
 
 
@@ -263,14 +287,14 @@ class Parser:
     def __init__(self):
         self.parsers = []
 
-    def parse(self,indir,filestems):
+    def parse(self,indir,filestems,taskpostfix):
         if not indir.endswith('/'):
             indir = indir+'/'
         for stem in filestems:
             print >> sys.stderr, "Working on:", stem
             filename = indir+stem
             tmp = SentenceParser()
-            tmp.parse(filename)
+            tmp.parse(filename,taskpostfix)
             self.parsers.append(tmp)
 
     def getNode(self,removeDuplicates):
@@ -305,6 +329,11 @@ def interface(optionArgs=sys.argv[1:]):
                   help="Preserve duplicate nodes and edges",
                   default=True,
                   action="store_false")
+    op.add_option("-t", "--task",
+                  dest="task",
+                  help="Which tasks to process (a2.tXXX file must be present except for 123 which uses the original files)",
+                  default="1",
+                  metavar="[1|12|13|123]")
     (options, args) = op.parse_args(optionArgs)
 
     quit = False
@@ -317,12 +346,19 @@ def interface(optionArgs=sys.argv[1:]):
     if not args:
         print "Please specify at least one document id."
         quit = True
+    if not options.task in ['1','12','13','123']:
+        print "Invalid choice of tasks."
+        quit = True
     if quit:
         op.print_help()
         return(False)
 
+    # use original files for the whole challenge
+    taskpostfix = ".a2.t"+options.task
+    if options.task=='123':
+        taskpostfix = ".a2"
     parser = Parser()
-    parser.parse(options.indir,args)
+    parser.parse(options.indir,args,taskpostfix)
     parser.printNode(options.outfile,options.remove_duplicates)
     return(True)
 
