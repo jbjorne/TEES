@@ -68,11 +68,11 @@ class Pruner:
                 i2.remove(x)
             return(True)
         def remove(n):
-            print "Removing %s"%n.attrib['id']
+            sys.stderr.write("Removing %s\n"%n.attrib['id'])
             sentence.remove(n)
             for x in edges:
                 if x.attrib['e1']==n.attrib['id']:
-                    print "Removing %s"%x.attrib['id']
+                    sys.stderr.write("Removing %s\n"%x.attrib['id'])
                     sentence.remove(x)
         
         for sentence,nodes,edges in self.data:
@@ -82,15 +82,15 @@ class Pruner:
                     # if previous is sub
                     # remove it and take the next into consideration
                     if subsuper(prev,curr):
-                        print "Match: %s is sub of %s"%(prev.attrib['id'],
-                                                        curr.attrib['id'])
+                        sys.stderr.write("Match: %s is sub of %s\n"%(prev.attrib['id'],
+                                                                     curr.attrib['id']))
                         remove(prev)
                         break
                     # if previous is super
                     # remove the other and continue with the previous
                     if subsuper(curr,prev):
-                        print "Match: %s is super of %s"%(prev.attrib['id'],
-                                                          curr.attrib['id'])
+                        sys.stderr.write("Match: %s is super of %s\n"%(prev.attrib['id'],
+                                                                       curr.attrib['id']))
                         remove(curr)
                         nodes.remove(curr)
 
