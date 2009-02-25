@@ -10,4 +10,5 @@ fi
 
 pushd ~/cvs_checkout/JariSandbox/ComplexPPI/Source
 python SplitAnalysis.py -b MultiEdgeExampleBuilder -x "style:typed,directed,no_linear,entities,genia_limits,noMasking,maxFeatures" -c SVMMultiClassClassifier -e AveragingMultiClassEvaluator -y $CLASSIFIER_PARAMS -i $TRAIN_FILE -s $TEST_FILE -o /usr/share/biotext/GeniaChallenge/xml/jari-edges-from-gold-entities -m /usr/share/biotext/GeniaChallenge/xml/jari-edges-from-gold-entities/jari-edges-from-gold-entities.xml -p split-Charniak-Lease
+python Evaluators/EvaluateInteractionXML.py -i /usr/share/biotext/GeniaChallenge/xml/jari-edges-from-gold-entities/jari-edges-from-gold-entities.xml -g $TEST_FILE
 popd
