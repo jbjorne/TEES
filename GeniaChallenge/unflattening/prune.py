@@ -110,7 +110,7 @@ class Pruner:
             for x in edges:
                 if x[1]<weakest[1]:
                     weakest = x
-            sys.stderr.write("Breaking cycle by removing %s (%s)\n"%weakest[0])
+            sys.stderr.write("Breaking cycle by removing %s\n"%weakest[0])
             self.events.remove(weakest[0])
         
         cycle = findCycle()
