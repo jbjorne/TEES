@@ -50,6 +50,26 @@ def readDepTrees(reportNumber,options):
     f.close()
     return sents
 
+posRe=re.compile(r"\(([^\(\) ]+) ([^\(\) ]+)\)")
+
+def readPOSTags(reportNumber,options):
+    """Returns a list of lists of postags"""
+    f=open(options.dir+"/%s.pstree"%reportNumber,"rt")
+    sents=[]
+    currSent=[]
+    for line in f:
+        line=line.strip()
+        for match in posRe.finditer(line):
+            POS=match.group(1)
+            POS=unescapeDict.get(POS,POS)
+            WRD=match.group(2)
+            WRD=unescapeDict.get(WRD,WRD)
+            currSent.append((POS,WRD))
+        else:
+            sents.append(currSent)
+            currSent=[]
+    f.close()
+    return sents
 
 def computeTokens(reportNumber,options):
     """Returns the raw text string plus a list of (beg,end) character offsets of tokens + a set of indices of last tokens in a sentence."""
@@ -89,7 +109,7 @@ def getOffsetV(offsetStr):
 def getOffsetS(b,e):
     return "%d-%d"%(b,e)
 
-def reorderDocNode(dNode,rawTxt,charOffsets,sFinal,depTree):
+def reorderDocNode(dNode,rawTxt,charOffsets,sFinal,depTree,posTags):
     """receives an interaction XML document node and creates a new node with sentences/parses/tokens, etc"""
     #Build a list of character offsets of the sentences
     sentEnds=list(sFinal)
@@ -106,6 +126,7 @@ def reorderDocNode(dNode,rawTxt,charOffsets,sFinal,depTree):
     #now sentOffsets lists (b,e) offsets of the sentences in the raw text
     #len(sentOffsets) tells how many sentences we have
     assert len(sentOffsets)==len(depTree), dNode.get("id")
+    assert len(sentOffsets)==len(posTags), dNode.get("id")
 
     newDocNode=ET.Element("document")
     #create sentence nodes
@@ -140,15 +161,23 @@ def reorderDocNode(dNode,rawTxt,charOffsets,sFinal,depTree):
         tokenization=ET.SubElement(toks,"tokenization")
         tokenization.set("tokenizer","Charniak-Lease")
         #again, a stupid N^2 alg, but I don't care :)
+
+        
+        
         counter=1
-        for tb,te in charOffsets:
+        for tokenIdx,(tb,te) in enumerate(charOffsets):
             if tb>=b and te<=e: #the token is mine!
                 tokNode=ET.SubElement(tokenization,"token")
-                tokNode.set("POS","XXX")
                 tokNode.set("charOffset",getOffsetS(tb-b,te-b)) #correct the character offset to match the sentence
                 tokNode.set("id","clt_%d"%counter)
-                counter+=1
                 tokNode.set("text",rawTxt[tb:te+1])
+                if len(posTags[idx])==1 and posTags[idx][0][1]=="PARSE-FAILED":
+                    print >> sys.stderr, "Parse failed in %s, no POS transferred for %s"%(dNode.get("id"),rawTxt[tb:te+1])
+                    tokNode.set("POS","XXX")
+                else:
+                    assert rawTxt[tb:te+1]==posTags[idx][counter-1][1],"%s: %s   vs.   %s"%(dNode.get("id"),rawTxt[tb:te+1],posTags[idx][counter-1][1]) #check that POS of the correct word is being transferred
+                    tokNode.set("POS",posTags[idx][counter-1][0])
+                counter+=1
         #idx is the index of the sentence
         parses=ET.SubElement(sa,"parses")
         parse=ET.SubElement(parses,"parse")
@@ -185,7 +214,8 @@ def reorderCorpus(cNode,options):
         reportID=dNode.get("id")
         rawTxt,charOffsets,sFinal=computeTokens(reportID,options)
         depTree=readDepTrees(reportID,options)
-        newD=reorderDocNode(dNode,rawTxt,charOffsets,sFinal,depTree)
+        posTags=readPOSTags(reportID,options)
+        newD=reorderDocNode(dNode,rawTxt,charOffsets,sFinal,depTree,posTags)
         newCorpus.append(newD)
     return newCorpus
         
