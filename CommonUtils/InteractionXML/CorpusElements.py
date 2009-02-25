@@ -1,6 +1,6 @@
 from SentenceElements import *
 
-def loadCorpus(filename, parse=None, tokenization=None):
+def loadCorpus(filename, parse=None, tokenization=None, removeIntersentenceInteractions=True):
     try:
         import xml.etree.cElementTree as ET
     except ImportError:
@@ -14,10 +14,10 @@ def loadCorpus(filename, parse=None, tokenization=None):
     else:
         corpusTree = ET.parse(filename)
     corpusRoot = corpusTree.getroot()
-    return CorpusElements(corpusRoot, parse, tokenization)
+    return CorpusElements(corpusRoot, parse, tokenization, removeIntersentenceInteractions)
 
 class CorpusElements:
-    def __init__(self, rootElement, parse, tokenization=None):
+    def __init__(self, rootElement, parse, tokenization=None, removeIntersentenceInteractions=True):
         self.rootElement = rootElement
         self.documents = rootElement.findall("document")
         self.documentsById = {}
@@ -28,7 +28,7 @@ class CorpusElements:
             self.documentsById[documentElement.attrib["id"]] = documentElement
             sentenceElements = documentElement.findall("sentence")
             for sentenceElement in sentenceElements:
-                sentenceObj = SentenceElements(sentenceElement, parse, tokenization)
+                sentenceObj = SentenceElements(sentenceElement, parse, tokenization, removeIntersentenceInteractions)
                 self.sentencesById[sentenceElement.attrib["id"]] = sentenceObj
                 if sentenceElement.attrib.has_key("origId"):
                     self.sentencesByOrigId[sentenceElement.attrib["origId"]] = sentenceObj

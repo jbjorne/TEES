@@ -1,6 +1,6 @@
 
 class SentenceElements:
-    def __init__(self, sentenceElement, parse=None, tokenization=None):
+    def __init__(self, sentenceElement, parse=None, tokenization=None, removeIntersentenceInteractions=True):
         self.sentence = sentenceElement
         self.entities = []
         self.entitiesById = {}
@@ -16,20 +16,22 @@ class SentenceElements:
         pairElements = sentenceElement.findall("pair")
         if pairElements != None:
             self.pairs = pairElements
-        pairsToKeep = []
-        for pair in pairElements:
-            if pair.get("e1").rsplit(".",1)[0] == sentenceId and pair.get("e2").rsplit(".",1)[0] == sentenceId:
-                pairsToKeep.append(pair)
-        self.pairs = pairsToKeep
+        if removeIntersentenceInteractions:
+            pairsToKeep = []
+            for pair in pairElements:
+                if pair.get("e1").rsplit(".",1)[0] == sentenceId and pair.get("e2").rsplit(".",1)[0] == sentenceId:
+                    pairsToKeep.append(pair)
+            self.pairs = pairsToKeep
         
         interactionElements = sentenceElement.findall("interaction")
         if interactionElements != None:
             self.interactions = interactionElements
-        interactionsToKeep = []
-        for interaction in interactionElements:
-            if interaction.get("e1").rsplit(".",1)[0] == sentenceId and interaction.get("e2").rsplit(".",1)[0] == sentenceId:
-                interactionsToKeep.append(interaction)
-        self.interactions = interactionsToKeep
+        if removeIntersentenceInteractions:
+            interactionsToKeep = []
+            for interaction in interactionElements:
+                if interaction.get("e1").rsplit(".",1)[0] == sentenceId and interaction.get("e2").rsplit(".",1)[0] == sentenceId:
+                    interactionsToKeep.append(interaction)
+            self.interactions = interactionsToKeep
         
         entityElements = sentenceElement.findall("entity")
         if entityElements != None:
