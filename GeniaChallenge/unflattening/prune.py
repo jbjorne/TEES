@@ -67,6 +67,57 @@ class Pruner:
         self.entities.update(tmp_entities)
         self.events.update(tmp_events)
 
+    def analyseCycles(self):
+        # adapted from http://neopythonic.blogspot.com/2009/01/detecting-cycles-in-directed-graph.html
+        def findCycle():
+            # cycles can form between regulation events
+            regs = [x.attrib['id'] for x in self.document.getiterator('entity')
+                    if (x.attrib['id'] in self.entities and
+                        x.attrib['type'] in ['Regulation',
+                                             'Positive_regulation',
+                                             'Negative_regulation'])]
+            outs = dict( [(x,[y.attrib['e2']
+                              for y in self.document.getiterator('interaction')
+                              if (y.attrib['id'] in self.events and
+                                  y.attrib['e1']==x)]) for x in regs] )
+            todo = set(regs)
+            while todo:
+                node = todo.pop()
+                stack = [node]
+                while stack:
+                    top = stack[-1]
+                    for node in outs[top]:
+                        if node in stack:
+                            return stack[stack.index(node):]
+                        if node in todo:
+                            stack.append(node)
+                            todo.remove(node)
+                            break
+                    else:
+                        node = stack.pop()
+            return None
+
+        def pickWeakest(cycle):
+            edges = [(x.attrib['id'],
+                      [float(y[1]) for y in [z.split(':') for z in
+                                             x.attrib['predictions'].split(',')]
+                       if y[0]==x.attrib['type']][0])
+                     for x in self.document.getiterator('interaction')
+                     if (x.attrib['id'] in self.events and
+                         x.attrib['e1'] in cycle and
+                         x.attrib['e2'] in cycle)]
+            weakest = edges[0]
+            for x in edges:
+                if x[1]<weakest[1]:
+                    weakest = x
+            sys.stderr.write("Breaking cycle by removing %s (%s)\n"%weakest[0])
+            self.events.remove(weakest[0])
+        
+        cycle = findCycle()
+        while cycle:
+            pickWeakest(cycle)
+            cycle = findCycle()
+
     def prune(self):
         for sentence in self.document.findall('sentence'):
             for entity in sentence.findall('entity'):
@@ -102,6 +153,11 @@ def interface(optionArgs=sys.argv[1:]):
                   dest="outfile",
                   help="Output file (gifxml)",
                   metavar="FILE")
+    op.add_option("-c", "--cycles",
+                  dest="cycles",
+                  help="Remove cycles (requires the presence of 'predictions' attribute in 'interaction' elements)",
+                  default=False,
+                  action="store_true")
     (options, args) = op.parse_args(optionArgs)
 
     quit = False
@@ -117,8 +173,11 @@ def interface(optionArgs=sys.argv[1:]):
 
     corpus = ET.parse(options.infile)
     for document in corpus.getroot().findall('document'):
+        sys.stderr.write("Pruning document %s\n"%document.attrib['id'])
         pruner = Pruner(document)
         pruner.analyse()
+        if options.cycles:
+            pruner.analyseCycles()
         pruner.prune()
     corpus.write(options.outfile)
 
