@@ -3,6 +3,7 @@ import sys, os, shutil
 sys.path.append(os.path.dirname(os.path.abspath(__file__))+"/../../JariSandbox/ComplexPPI/Source")
 from Utils.ProgressCounter import ProgressCounter
 import Range
+import tarfile
 from optparse import OptionParser
 
 def getEntityIndex(entities, index=0):
@@ -12,7 +13,9 @@ def getEntityIndex(entities, index=0):
         if origId != None:
             origIds.append(origId)
     for origId in origIds:
-        idPart = origId.split(".")[-1]
+        splits = origId.split(".")
+        idPart = splits[1]
+        #print origId
         assert(idPart[0] == "T")
         newIndex = int(idPart[1:])
         if newIndex > index:
@@ -26,15 +29,16 @@ def processCorpus(inputCorpus, outputFolder):
         documentId = document.find("sentence").get("origId").split(".")[0]
         counter.update(1, "Processing document " + document.get("id") + " (origId " + documentId + "): ")
         
-        # Write a2.t1 file
-        outputFile = open(os.path.join(outputFolder,documentId + ".a2.t1"), "wt")        
-        writeEventTriggers(document, inputCorpus, outputFile)
-        writeEvents(document, inputCorpus, outputFile)
-        outputFile.close()
-        
         # Write a1 file
         outputFile = open(os.path.join(outputFolder,documentId + ".a1"), "wt")
-        writeProteins(document, inputCorpus, outputFile)
+        triggerIds = writeProteins(document, inputCorpus, outputFile)
+        outputFile.close()
+
+        # Write a2.t1 file
+        outputFile = open(os.path.join(outputFolder,documentId + ".a2.t1"), "wt")
+        events, entityMap = getEvents(document, inputCorpus, outputFile)
+        writeEventTriggers(document, inputCorpus, outputFile, events, triggerIds)
+        writeEvents(document, inputCorpus, outputFile, events, entityMap, triggerIds)
         outputFile.close()
         
         # Write txt file
@@ -56,25 +60,27 @@ def getGeniaOffset(sentenceOffset, entityOffset):
 
 def writeProteins(document, inputCorpus, outputFile):
     entityMap = {}
+    offsetMap = {}
+    triggerMap = {}
     for sentenceElement in document.findall("sentence"):
         sentence = inputCorpus.sentencesById[sentenceElement.get("id")]
         sentenceOffset = Range.charOffsetToSingleTuple(sentenceElement.get("charOffset"))
         for entity in sentence.entities:
             if entity.get("isName") == "True":
                 origId = entity.get("origId").split(".")[-1]
-                entity.set("temp_geniaId",origId)
                 origIdNumber = int(origId[1:])
                 assert(origIdNumber not in entityMap.keys())
                 entityMap[origIdNumber] = entity
                 
                 entityOffset = Range.charOffsetToSingleTuple(entity.get("charOffset"))
-                entity.set("temp_geniaOffset", getGeniaOffset(sentenceOffset, entityOffset) )
+                offsetMap[origIdNumber] = getGeniaOffset(sentenceOffset, entityOffset)
+                triggerMap[entity.get("id")] = origId
     for key in sorted(entityMap.keys()):
         entity = entityMap[key]
-        offset = entity.get("temp_geniaOffset")
-        outputFile.write(entity.get("temp_geniaId") + "\tProtein " + str(offset[0]) + " " + str(offset[1]) + "\t" + entity.get("text") + "\n")
+        outputFile.write(triggerMap[entity.get("id")] + "\tProtein " + str(offsetMap[key][0]) + " " + str(offsetMap[key][1]) + "\t" + entity.get("text") + "\n")
+    return triggerMap
 
-def writeEventTriggers(document, inputCorpus, outputFile):
+def writeEventTriggers(document, inputCorpus, outputFile, events, triggerIds):
     entityIndex = 0
     # Find new entity index
     for sentenceElement in document.findall("sentence"):
@@ -88,21 +94,76 @@ def writeEventTriggers(document, inputCorpus, outputFile):
         sentenceOffset = Range.charOffsetToSingleTuple(sentenceElement.get("charOffset"))
         for entity in sentence.entities:
             if entity.get("isName") == "False":
-                entityOffset = Range.charOffsetToSingleTuple(entity.get("charOffset"))
-                newOffset = getGeniaOffset(sentenceOffset, entityOffset)
-                match = Range.tuplesToCharOffset(newOffset) + "_" + entity.get("type")
-                if match in offsetMap.keys():
-                    entity.set("temp_newId", offsetMap[match].get("temp_newId"))
-                else:
-                    newId = "T" + str(entityIndex)
-                    entity.set("temp_newId", newId)
-                    outputFile.write( newId + "\t" + entity.get("type") + " " + str(newOffset[0]) + " " + str(newOffset[1]) + "\t" + entity.get("text") + "\n" )
-                    offsetMap[match] = entity
-                    entityIndex += 1
-            else:
-                entity.set("temp_newId", entity.get("origId").split(".")[-1])
+                if entity.get("id") in events:
+                    entityOffset = Range.charOffsetToSingleTuple(entity.get("charOffset"))
+                    newOffset = getGeniaOffset(sentenceOffset, entityOffset)
+                    match = Range.tuplesToCharOffset(newOffset) + "_" + entity.get("type")
+                    if match in offsetMap.keys():
+                        assert(not triggerIds.has_key(entity.get("id")))
+                        triggerIds[entity.get("id")] = offsetMap[match]
+                    else:
+                        triggerId = "T" + str(entityIndex)
+                        outputFile.write( triggerId + "\t" + entity.get("type") + " " + str(newOffset[0]) + " " + str(newOffset[1]) + "\t" + entity.get("text") + "\n" )
+                        offsetMap[match] = triggerId
+                        assert(not triggerIds.has_key(entity.get("id")))
+                        triggerIds[entity.get("id")] = triggerId
+                        entityIndex += 1
+    return triggerIds
 
-def writeEvents(document, inputCorpus, outputFile):
+def getEvents(document, inputCorpus, outputFile):
+    events = {} # event trigger entity : list of interactions pairs
+    entityMap = {}
+    for sentenceElement in document.findall("sentence"):
+        sentence = inputCorpus.sentencesById[sentenceElement.get("id")]
+        
+        for entity in sentence.entities:
+            assert(not entityMap.has_key(entity.get("id")))
+            entityMap[entity.get("id")] = entity
+        # Group interactions by their interaction word, i.e. the event trigger
+        for interaction in sentence.interactions + sentence.pairs:
+            if interaction.get("type") == "neg": # negative prediction
+                continue
+            # All interactions are directed (e1->e2), so e1 is always the trigger
+            e1 = sentence.entitiesById[interaction.get("e1")]
+            assert(e1.get("isName") == "False")
+            if not events.has_key(interaction.get("e1")):
+                events[interaction.get("e1")] = [] # mark entity as an event trigger
+            events[interaction.get("e1")].append(interaction)
+            #if interaction.get("e1") == "GENIA.d10.s5.e2":
+            #    print events[interaction.get("e1")]
+    
+    # remove empty events
+    removeCount = 1
+    while removeCount > 0:
+        removeCount = 0
+        for key in sorted(events.keys()):
+            if events.has_key(key):
+                themeCount = 0
+                causeCount = 0
+                for interaction in events[key][:]:
+                    type = interaction.get("type")
+                    assert(type=="Theme" or type=="Cause")
+                    e2 = entityMap[interaction.get("e2")]
+                    if e2.get("isName") == "False":
+                        if not events.has_key(e2.get("id")):
+                            print "Jep"
+                            events[key].remove(interaction)
+                            continue
+                    if type == "Theme":
+                        themeCount += 1
+                    else:
+                        causeCount += 1
+                if causeCount == 0 and themeCount == 0:
+                    print >> sys.stderr, "Removing: Event with no Causes or Themes", key
+                    del events[key]
+                    removeCount += 1
+                elif causeCount > 0 and themeCount == 0:
+                    print >> sys.stderr, "Removing: Event with Cause and no Themes", key
+                    del events[key]
+                    removeCount += 1
+    return events, entityMap                  
+
+def writeEvents(document, inputCorpus, outputFile, events, entityMap, triggerIds):
     """
     Writes events defined as trigger words that have one or more interactions
     leaving from them. When the Theme or Cause of such an event refers to a
@@ -111,54 +172,49 @@ def writeEvents(document, inputCorpus, outputFile):
     has no defined interactions, and empty event will be generated to mark the 
     nested event.
     """
-    events = {} # event trigger entity : list of interactions pairs
-    eventIndex = 1
+    # Predefine event ids because all ids must be defined so that
+    # we can refer to nested events
     eventIds = {}
-    for sentenceElement in document.findall("sentence"):
-        sentence = inputCorpus.sentencesById[sentenceElement.get("id")]
-        
-        # Group interactions by their interaction word, i.e. the event trigger
-        for interaction in sentence.interactions + sentence.pairs:
-            if interaction.get("type") == "neg": # negative prediction
-                continue
-            # All interaction are directed (e1->e2), so e1 is always the trigger
-            e1 = sentence.entitiesById[interaction.get("e1")]
-            assert(e1.get("isName") == "False")
-            if not events.has_key(e1):
-                events[e1] = [] # mark entity as an event trigger
-            events[e1].append(interaction)
-            # If a nested trigger has no interactions, it must still be an 
-            # event because it is nested
-            e2 = sentence.entitiesById[interaction.get("e2")]
-            if e2.get("isName") == "False":
-                if not events.has_key(e1):
-                    events[e2] = [] # mark entity as an event trigger
-        
-        # Predefine event ids because all ids must be defined so that
-        # we can refer to nested events
-        for entity in sentence.entities:
-            if events.has_key(entity): # entity is an event trigger
-                eventIds[entity] = "E" + str(eventIndex)
-                eventIndex += 1
-        
-        # Write the events
-        for entity in sentence.entities:
-            if events.has_key(entity):
-                eventType = entity.get("type")
-                outputLine = eventIds[entity] + "\t" + eventType + ":" + entity.get("temp_newId")
-                if len(events[entity]) == 0:
-                    print >> sys.stderr, "Warning: Empty nested event", eventIds[entity], "at sentence", sentence.sentence.get("origId")
-                for interaction in events[entity]:
-                    e1 = sentence.entitiesById[interaction.get("e1")]
-                    e2 = sentence.entitiesById[interaction.get("e2")]
-                    assert(e1 == entity)
-                    if eventIds.has_key(e2): # e2 is a nested event
-                        e2Id = eventIds[e2]
-                    else: # e2 is a named entity, i.e. protein
-                        e2Id = e2.get("temp_newId")
-                        #assert(e2.get("isName") == "True")
-                    outputLine += " " + interaction.get("type") + ":" + e2Id
-                outputFile.write( outputLine + "\n" )           
+    eventIndex = 1
+    for entityId in sorted(events.keys()):
+        eventIds[entityId] = "E" + str(eventIndex)
+        eventIndex += 1
+    
+    # Write the events
+    for key in sorted(events.keys()):
+        entity = entityMap[key]
+        eventType = entity.get("type")
+        assert(key == entity.get("id"))
+        outputLine = eventIds[key] + "\t" + eventType + ":" + triggerIds[key]
+        assert( len(events[key]) > 0 )
+        themeCount = 0
+        causeCount = 0
+        interactionStrings = set()
+        for interaction in events[key]:
+            type = interaction.get("type")
+            assert(type=="Theme" or type=="Cause")
+            e1 = entityMap[interaction.get("e1")]
+            e2 = entityMap[interaction.get("e2")]
+            assert(e1 == entity)
+            if eventIds.has_key(e2.get("id")): # e2 is a nested event
+                e2Id = eventIds[e2.get("id")]
+            else: # e2 should be a named entity, i.e. protein
+                assert( e2.get("isName") != "False") # a trigger with no interactions
+                e2Id = triggerIds[e2.get("id")]
+            
+            # Look out for duplicates
+            interactionString = interaction.get("type") + ":" + e2Id
+            if interactionString not in interactionStrings:
+                outputLine += " " + interactionString
+            interactionStrings.add(interactionString) 
+            
+            if type == "Theme":
+                themeCount += 1
+            else:
+                causeCount += 1
+        assert( not(causeCount == 0 and themeCount == 0) )
+        assert( not(causeCount > 0 and themeCount == 0) )
+        outputFile.write( outputLine + "\n" )           
 
 if __name__=="__main__":
     # Import Psyco if available
@@ -181,7 +237,27 @@ if __name__=="__main__":
         shutil.rmtree(options.output)
     os.mkdir(options.output)
         
-    inputCorpus = CorpusElements.loadCorpus(options.input)
+    inputCorpus = CorpusElements.loadCorpus(options.input, removeIntersentenceInteractions=False)
     processCorpus(inputCorpus, options.output)
+
+    submissionFileName = options.output.split("/")[-1] + ".tar.gz"    
+    print >> sys.stderr, "Making submission file", submissionFileName
+    allFiles = os.listdir(options.output)
+    tarFiles = []
+    for file in allFiles:
+        if file.find("a2.t1") != -1:
+            tarFiles.append(file)
+    submissionFile = tarfile.open(os.path.join(options.output,submissionFileName), "w:gz")
+    tempCwd = os.getcwd()
+    os.chdir(options.output)
+    for file in tarFiles:
+        submissionFile.add(file)#, exclude = lambda x: x == submissionFileName)
+    os.chdir(tempCwd)
+    submissionFile.close()
+#    #tar -cvzf 090224-results.tar.gz *.a2.t1
+#    #print os.getcwd()
+#    tarCall = ["tar", "-cvzf", submissionFileName, "\"*.a2.t1\""]
+#    #print zipCall
+#    subprocess.call(tarCall)
     
     
