@@ -88,7 +88,11 @@ def compareDocuments(documentMap, targetFiles, options):
     events0 = 0
     if eventStats.has_key("Error Level 0"):
         events0 = eventStats["Error Level 0"]
-    print >> sys.stderr, " Exact:", events0, "/", eventsSource, "(%.2f" % (100.0 * events0 / eventsSource) + " %)"
+    if eventsSource == 0:
+        percent = 0
+    else:
+        percent = (100.0 * events0 / eventsSource)
+    print >> sys.stderr, " Exact:", events0, "/", eventsSource, "(%.2f" % percent + " %)"
 
 def getFiles(filename, options):
     sourceFile = open(os.path.join(options.input, filename),"rt")
