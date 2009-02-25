@@ -6,6 +6,9 @@ if [ "$1" == "mini" ]; then
 	TEST_FILE="/usr/share/biotext/GeniaChallenge/xml/devel-mini.xml"
 	CLASSIFIER_PARAMS="c:1000,10000,100000,1000000;timeout:600"
 fi
+if [ -n "$2" ]; then
+	CLASSIFIER_PARAMS="c:$2"
+fi
 
 pushd ~/cvs_checkout/JariSandbox/ComplexPPI/Source
 python SplitAnalysis.py -b GeneralEntityTypeRecognizer -x "style:typed" -c SVMMultiClassClassifier -e AveragingMultiClassEvaluator -y $CLASSIFIER_PARAMS -i $TRAIN_FILE -s $TEST_FILE -o /usr/share/biotext/GeniaChallenge/xml/jari-devel-triggers -m /usr/share/biotext/GeniaChallenge/xml/jari-devel-triggers/jari-devel-triggers-with-merged.xml -p split-Charniak-Lease
