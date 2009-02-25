@@ -103,12 +103,12 @@ class GeneralEntityTypeRecognizer(ExampleBuilder):
             for k,v in bagOfWords.iteritems():
                 features[self.featureSet.getId(k)] = v
             
-            for j in range(len(sentenceGraph.tokens)):
-                text = "bow_" + sentenceGraph.tokens[j].get("text")
-                if j < i:
-                    features[self.featureSet.getId("bf_" + text)] = 1
-                elif j > i:
-                    features[self.featureSet.getId("af_" + text)] = 1
+#            for j in range(len(sentenceGraph.tokens)):
+#                text = "bow_" + sentenceGraph.tokens[j].get("text")
+#                if j < i:
+#                    features[self.featureSet.getId("bf_" + text)] = 1
+#                elif j > i:
+#                    features[self.featureSet.getId("af_" + text)] = 1
         
             # Main features
             text = token.attrib["text"]
