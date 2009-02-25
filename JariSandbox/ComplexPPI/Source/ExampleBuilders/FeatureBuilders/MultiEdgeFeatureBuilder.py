@@ -8,6 +8,23 @@ class MultiEdgeFeatureBuilder(FeatureBuilder):
         self.edgeFeatureBuilder = EdgeFeatureBuilder(featureSet)
         self.ontologyFeatureBuilder = None
         self.noAnnType = False
+        self.predictedRange = None
+    
+    def definePredictedValueRange(self, sentences, elementName):
+        self.predictedRange = [None,None]
+        for sentence in sentences:
+            targetElements = sentence.findall(elementName)
+            for element in targetElements:
+                predictions = element.get("predictions")
+                if predictions != None:
+                    predictions = predictions.split(",")
+                    for p in predictions:
+                        splits = p.split(":")
+                        value = float(splits[1])
+                        if self.predictedRange[0] == None or self.predictedRange[0] > value:
+                            self.predictedRange[0] = value
+                        if self.predictedRange[1] == None or self.predictedRange[1] < value:
+                            self.predictedRange[1] = value
     
     def buildStructureFeatures(self, sentenceGraph, paths):
         t1 = sentenceGraph.entityHeadTokenByEntity[self.entity1]
@@ -36,6 +53,22 @@ class MultiEdgeFeatureBuilder(FeatureBuilder):
         if self.ontologyFeatureBuilder != None:
             self.ontologyFeatureBuilder.setFeatureVector(features)
     
+    def buildPredictedValueFeatures(self, element, tag):
+        predictions = element.get("predictions")
+        if predictions != None:
+            predictions = predictions.split(",")
+            for p in predictions:
+                splits = p.split(":")
+                value = float(splits[1])
+                value -= self.predictedRange[0]
+                value /= (self.predictedRange[1] - self.predictedRange[0])
+                assert(value >= 0 and value <= 1)
+                #print tag + "_strength_"+splits[0], value
+                self.features[self.featureSet.getId(tag + "_strength_"+splits[0])] = value
+        else:
+            #print tag + "_strength_"+str(element.get("type")), 1.0
+            self.features[self.featureSet.getId(tag + "_strength_" + str(element.get("type")))] = 1.0
+    
     def buildEntityFeatures(self, sentenceGraph):
         for token, entities in sentenceGraph.entitiesByToken.iteritems():
             if self.entity1 in entities:
@@ -53,25 +86,17 @@ class MultiEdgeFeatureBuilder(FeatureBuilder):
                     entityCombination += "e1_Entity_"
                 else:
                     entityCombination += "e1_InteractionWord_"
-#                    predictions = self.entity1.get("predictions")
-#                    if predictions != None:
-#                        predictions = predictions.split(",")
-#                        for p in predictions:
-#                            splits = p.split(":")
-#                            self.features[self.featureSet.getId("e1_strength_"+splits[0])] = float(splits[1])
+                    if self.predictedRange != None:
+                        self.buildPredictedValueFeatures(self.entity1, "e1")
             else:
                 entityCombination += "e1_Entity_"
             if self.entity2.get("isName") != None:
-                if self.entity1.get("isName") == "True":
+                if self.entity2.get("isName") == "True":
                     entityCombination += "e2_Entity"
                 else:
                     entityCombination += "e2_InteractionWord"
-#                    predictions = self.entity2.get("predictions")
-#                    if predictions != None:
-#                        predictions = predictions.split(",")
-#                        for p in predictions:
-#                            splits = p.split(":")
-#                            self.features[self.featureSet.getId("e2_strength_"+splits[0])] = float(splits[1])
+                    if self.predictedRange != None:
+                        self.buildPredictedValueFeatures(self.entity2, "e2")
             else:
                 entityCombination += "e2_Entity"
             self.features[self.featureSet.getId(entityCombination)] = 1

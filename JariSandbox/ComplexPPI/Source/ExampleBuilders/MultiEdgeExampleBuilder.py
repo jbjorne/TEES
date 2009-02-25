@@ -38,6 +38,12 @@ class MultiEdgeExampleBuilder(ExampleBuilder):
         
         #self.outFile = open("exampleTempFile.txt","wt")
     
+    def definePredictedValueRange(self, sentences, elementName):
+        self.multiEdgeFeatureBuilder.definePredictedValueRange(sentences, elementName)                        
+    
+    def getPredictedValueRange(self):
+        return self.multiEdgeFeatureBuilder.predictedRange
+    
     def filterEdgesByType(self, edges, typesToInclude):
         if len(typesToInclude) == 0:
             return edges

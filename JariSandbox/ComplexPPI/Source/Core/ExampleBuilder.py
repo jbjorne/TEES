@@ -25,6 +25,12 @@ class ExampleBuilder:
     def buildExamples(self, sentenceGraph):
         pass
     
+    def definePredictedValueRange(self, sentences, elementName):
+        pass
+    
+    def getPredictedValueRange(self):
+        return None
+    
 def buildExamples(exampleBuilder, sentences, options):
     examples = []
     if "graph_kernel" in exampleBuilder.styles:

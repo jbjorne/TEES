@@ -74,6 +74,13 @@ def compareToBinary(complexSentencesById, classifications, exampleBuilder, optio
         evaluation.saveCSV(options.output + "/binary_comparison_results.csv")                    
 
 def buildExamples(exampleBuilder, sentences, options):
+    print >> sys.stderr, "Defining predicted value range:",
+    sentenceElements = []
+    for sentence in sentences:
+        sentenceElements.append(sentence[0].sentenceElement)
+    exampleBuilder.definePredictedValueRange(sentenceElements, "entity")
+    print >> sys.stderr, exampleBuilder.getPredictedValueRange()
+    
     examples = []
     if hasattr(exampleBuilder, "styles") and "graph_kernel" in exampleBuilder.styles:
         counter = ProgressCounter(len(sentences), "Build examples", 0)
