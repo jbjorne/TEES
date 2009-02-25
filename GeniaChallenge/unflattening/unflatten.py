@@ -186,33 +186,6 @@ class Unflattener:
                             connG.add_edge(edgemap[e1],edgemap[e2])
             return(NX.connected_components(connG))
 
-        def leaf(node,edges):
-            sentence = self.sentences[Analyser.findSentenceId(node)]
-            depG = self.depDiGs[sentence]
-            uid = node.attrib['id']
-            # do not continue if not within sentence
-            if self.mapping.has_key(uid):
-                # these are all out-neighbors of event trigger
-                others = set([x
-                              for y in self.mapping[uid] if depG.has_node(y)
-                              for x in depG.out_neighbors(y)])
-                for x in edges:
-                    uid2 = x[1].attrib['id']
-                    # do not continue if not within sentence
-                    if self.mapping.has_key(uid2):
-                        for t1 in self.mapping[uid]:
-                            for t2 in self.mapping[uid2]:
-                                # remove any tokens from 'others'
-                                # that lead to event arguments
-                                if depG.has_node(t1) and depG.has_node(t2):
-                                    path = NX.shortest_path(depG,t1,t2)
-                                    if path:
-                                        others -= set(path)
-                if len(others)==0:
-                    # nothing else resides under event trigger
-                    return(True)
-            return(False)
-        
         def getGrouping(node):
             # NOTE: this function does not yet consider task 2
             uid = node.attrib['id']
@@ -232,11 +205,8 @@ class Unflattener:
                 if len(groups)==1:
                     g = groups[0]
                     if len(g)==2:
-                        if leaf(node,g):
-                            # two proteins in the same group
-                            # such that no other edges leave trigger
-                            # are probably binding each other
-                            return([g])
+                        # data suggests that even in this case
+                        # event should be split
                         return([[e] for e in g])
                     else:
                         # other numbers of proteins
