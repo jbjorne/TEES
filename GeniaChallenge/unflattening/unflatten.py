@@ -101,6 +101,10 @@ class Analyser:
                           document.getiterator('entity')] )
         G = NX.XDiGraph()
         for event in document.getiterator('interaction'):
+            # ignore negative pairs
+            # WHICH SHOULD BE THERE IN THE FIRST PLACE!
+            if event.attrib['type']=='neg':
+                continue
             e1 = entities[event.attrib['e1']]
             e2 = entities[event.attrib['e2']]
             G.add_edge(e1,e2,event)
@@ -190,12 +194,27 @@ class Unflattener:
             # NOTE: this function does not yet consider task 2
             uid = node.attrib['id']
             t = node.attrib['type']
-            edges = self.semG.out_edges(node)
+            # 'neg' edges are not considered and will be
+            # removed from the final xml
+            edges = [x for x in self.semG.out_edges(node)
+                     if not x[2].attrib['type']=='neg']
             if t in ['Gene_expression','Transcription',
                      'Translation','Protein_catabolism']:
-                return([[e] for e in edges])
+                result = [[e] for e in edges]
+                print "Splitting %s (%s) into %s - %s"%(uid,t,
+                                                        len(result),
+                                                        [[y[2].attrib['id']
+                                                          for y in x]
+                                                         for x in result])
+                return(result)
             elif t=='Localization':
-                return([[e] for e in edges])
+                result = [[e] for e in edges]
+                print "Splitting %s (%s) into %s - %s"%(uid,t,
+                                                        len(result),
+                                                        [[y[2].attrib['id']
+                                                          for y in x]
+                                                         for x in result])
+                return(result)
             elif t=='Binding':
                 # simple approach that uses only linear order
                 # (probably makes many mistakes)
@@ -203,18 +222,18 @@ class Unflattener:
                 # return([(le,ri) for le in left for ri in right])
                 groups = getCoordGrouping(edges)
                 if len(groups)==1:
-                    g = groups[0]
-                    if len(g)==2:
-                        # data suggests that even in this case
-                        # event should be split
-                        return([[e] for e in g])
-                    else:
-                        # other numbers of proteins
-                        # might also bind colletively
-                        # but given the data this is rare
-                        # so split to separate events should yield
-                        # better results
-                        return([[e] for e in g])
+                    # data suggests that regardless of number of members
+                    # in the group, the binding should be split
+                    # (cases of >2 are very rare)
+                    # (the decision to split events with 2 members is about
+                    #  1:1 but splitting is still slightly favoured)
+                    result = [[e] for e in edges]
+                    print "Splitting %s (%s) into %s - %s"%(uid,t,
+                                                        len(result),
+                                                        [[y[2].attrib['id']
+                                                          for y in x]
+                                                         for x in result])
+                    return(result)
                 else:
                     # two groups should be split to pairwise combinations
                     # (can respectively be ignored?)
@@ -228,9 +247,16 @@ class Unflattener:
                                         for g2 in groups
                                         for e1 in g1
                                         for e2 in g2] )
+                    print "Generating inter-group pairs for %s (%s) - %s"%(uid,t,[[y[2].attrib['id'] for y in x] for x in result])
                     return(result)
             elif t=='Phosphorylation':
-                return([[e] for e in edges])
+                result = [[e] for e in edges]
+                print "Splitting %s (%s) into %s - %s"%(uid,t,
+                                                        len(result),
+                                                        [[y[2].attrib['id']
+                                                          for y in x]
+                                                         for x in result])
+                return(result)
             elif t in ['Regulation','Positive_regulation',
                        'Negative_regulation']:
                 # (can respectively be ignored?)
@@ -239,9 +265,17 @@ class Unflattener:
                 theme = [x for x in edges if
                          x[2].attrib['type'].startswith('Theme')]
                 if cause and theme:
-                    return([(ca,th) for ca in cause for th in theme])
+                    result = [(ca,th) for ca in cause for th in theme]
+                    print "Generating Cause-Theme combinations for %s (%s) - %s"%(uid,t,[[y[2].attrib['id'] for y in x] for x in result])
+                    return(result)
                 else:
-                    return([[e] for e in edges])
+                    result = [[e] for e in edges]
+                    print "Splitting %s (%s) into %s - %s"%(uid,t,
+                                                        len(result),
+                                                        [[y[2].attrib['id']
+                                                          for y in x]
+                                                         for x in result])
+                    return(result)
             else:
                 sys.stderr.write("Invalid event type: %s"%t)
             return([edges])
