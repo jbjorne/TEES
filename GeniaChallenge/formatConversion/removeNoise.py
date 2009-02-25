@@ -34,6 +34,7 @@ class Pruner:
 
     def prune(self):
         def subsuper(n1,n2):
+            # mask ids
             n1Data = n1.attrib.copy()
             del n1Data['id']
             del n1Data['origId']
@@ -78,11 +79,20 @@ class Pruner:
             while nodes:
                 prev = nodes.pop()
                 for curr in nodes:
+                    # if previous is sub
+                    # remove it and take the next into consideration
                     if subsuper(prev,curr):
-                        print "Matched %s and %s"%(prev.attrib['id'],
-                                                   curr.attrib['id'])
+                        print "Match: %s is sub of %s"%(prev.attrib['id'],
+                                                        curr.attrib['id'])
                         remove(prev)
                         break
+                    # if previous is super
+                    # remove the other and continue with the previous
+                    if subsuper(curr,prev):
+                        print "Match: %s is super of %s"%(prev.attrib['id'],
+                                                          curr.attrib['id'])
+                        remove(curr)
+                        nodes.remove(curr)
 
 
 
