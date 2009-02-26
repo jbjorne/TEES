@@ -205,7 +205,10 @@ def writeEvents(document, inputCorpus, outputFile, events, entityMap, triggerIds
             # Look out for duplicates
             interactionString = interaction.get("type") + ":" + e2Id
             if interactionString not in interactionStrings:
-                outputLine += " " + interactionString
+                if type == "Theme" and themeCount > 0:
+                    outputLine += " " + interaction.get("type") + str(themeCount+1) + ":" + e2Id
+                else:
+                    outputLine += " " + interactionString
             interactionStrings.add(interactionString) 
             
             if type == "Theme":
