@@ -99,7 +99,9 @@ def writeEventTriggers(document, inputCorpus, outputFile, events, triggerIds):
                     newOffset = getGeniaOffset(sentenceOffset, entityOffset)
                     match = Range.tuplesToCharOffset(newOffset) + "_" + entity.get("type")
                     if match in offsetMap.keys():
-                        assert(not triggerIds.has_key(entity.get("id")))
+                        #assert(not triggerIds.has_key(entity.get("id")))
+                        if triggerIds.has_key(entity.get("id")):
+                            print >> sys.stderr, "Warning: Duplicate entity (trigger)", entity.get("id")
                         triggerIds[entity.get("id")] = offsetMap[match]
                     else:
                         triggerId = "T" + str(entityIndex)
@@ -117,7 +119,8 @@ def getEvents(document, inputCorpus, outputFile):
         sentence = inputCorpus.sentencesById[sentenceElement.get("id")]
         
         for entity in sentence.entities:
-            assert(not entityMap.has_key(entity.get("id")))
+            if entityMap.has_key(entity.get("id")):
+                print >> sys.stderr, "Warning: Duplicate entity", entity.get("id")
             entityMap[entity.get("id")] = entity
         # Group interactions by their interaction word, i.e. the event trigger
         for interaction in sentence.interactions + sentence.pairs:
@@ -146,7 +149,7 @@ def getEvents(document, inputCorpus, outputFile):
                     e2 = entityMap[interaction.get("e2")]
                     if e2.get("isName") == "False":
                         if not events.has_key(e2.get("id")):
-                            print "Jep"
+                            #print "Jep"
                             events[key].remove(interaction)
                             continue
                     if type == "Theme":
@@ -154,7 +157,7 @@ def getEvents(document, inputCorpus, outputFile):
                     else:
                         causeCount += 1
                 if causeCount == 0 and themeCount == 0:
-                    print >> sys.stderr, "Removing: Event with no Causes or Themes", key
+                    print >> sys.stderr, "Removing: Event with no arguments", key
                     del events[key]
                     removeCount += 1
                 elif causeCount > 0 and themeCount == 0:
