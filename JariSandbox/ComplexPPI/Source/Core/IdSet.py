@@ -71,7 +71,7 @@ class IdSet:
     
     def load(self, filename):
         self.Ids = {}
-        self.firstNumber = 0
+        self.firstNumber = 999999999999999999
         
         f = open(filename, "rt")
         lines = f.readlines()
@@ -80,7 +80,7 @@ class IdSet:
             key, value = line.rsplit(":",1)
             key = key.strip()
             value = int(value.strip())
-            if self.firstNumber > value:
+            if value < self.firstNumber:
                 self.firstNumber = value
             self.Ids[key] = value
             self._namesById[value] = key
