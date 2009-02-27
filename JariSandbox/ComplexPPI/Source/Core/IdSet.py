@@ -77,7 +77,7 @@ class IdSet:
         lines = f.readlines()
         f.close()
         for line in lines:
-            key, value = line.split(":")
+            key, value = line.rsplit(":",1)
             key = key.strip()
             value = int(value.strip())
             if self.firstNumber > value:
