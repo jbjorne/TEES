@@ -17,6 +17,7 @@ def getElementTypes(element, separator="---"):
     
 def splitMerged(sentence, elementName, countsByType):
     elements = sentence.findall(elementName)
+    elementCount = len(elements)
     newElements = []
     # split old elements and remove them
     removeCount = 0
@@ -24,9 +25,15 @@ def splitMerged(sentence, elementName, countsByType):
         types = getElementTypes(element)
         if len(types) > 1:
             for type in types:
-                newElement = copy.copy(element)
+                #newElement = copy.deepcopy(element)
+                newElement = ET.Element(elementName)
+                for k,v in element.attrib.iteritems():
+                    newElement.set(k, v)
                 newElement.set("type", type)
+                idSplits = element.get("id").rsplit(".",1)
+                newElement.set("id", idSplits[0] + idSplits[1][0] + str(elementCount) )
                 newElements.append(newElement)
+                elementCount += 1
             sentence.remove(element)
             removeCount += 1
     # insert the new elements
