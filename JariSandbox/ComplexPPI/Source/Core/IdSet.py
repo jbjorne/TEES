@@ -83,3 +83,4 @@ class IdSet:
             if self.firstNumber > value:
                 self.firstNumber = value
             self.Ids[key] = value
+            self._namesById[value] = key
