@@ -10,7 +10,7 @@ if [ "$1" == "mini" ]; then
 	CLASSIFIER_PARAMS="c:10,100,1000,10000;timeout:600"
 fi
 if [ -n "$2" ]; then
-	CLASSIFIER_PARAMS="c:$2"
+	CLASSIFIER_PARAMS="$2"
 fi
 pushd ~/cvs_checkout/JariSandbox/ComplexPPI/Source
 python SplitAnalysis.py -b MultiEdgeExampleBuilder -x "style:typed,directed,no_linear,entities,genia_limits,noMasking,maxFeatures" -c SVMMultiClassClassifier -e AveragingMultiClassEvaluator -y $CLASSIFIER_PARAMS -i $TRAIN_FILE -s $TEST_FILE -o /usr/share/biotext/GeniaChallenge/xml/jari-edges-from-predicted-entities -m /usr/share/biotext/GeniaChallenge/xml/jari-edges-from-predicted-entities/jari-edges-from-predicted-entities.xml -p split-Charniak-Lease
