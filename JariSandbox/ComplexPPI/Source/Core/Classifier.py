@@ -73,7 +73,11 @@ class Classifier:
         return True
     
     def optimize(self, trainSets, classifySets, parameters=defaultOptimizationParameters, evaluationClass=None, evaluationArgs={}, combinationsThatTimedOut=None):
-        print >> sys.stderr, "Optimizing parameters"              
+        if parameters.has_key("predefined"):
+            print >> sys.stderr, "Predefined model, skipping parameter estimation"
+            return {"predefined":parameters["predefined"]}
+        
+        print >> sys.stderr, "Optimizing parameters"
         parameterNames = parameters.keys()
         parameterNames.sort()
 #        for p in self.notOptimizedParameters:
