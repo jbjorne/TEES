@@ -208,8 +208,8 @@ if __name__=="__main__":
         negativeClassId = 1
     
     # Load corpus and make sentence graphs
-    goldCorpusElements = CorpusElements.loadCorpus(options.gold, options.parse, options.tokenization)
-    predictedCorpusElements = CorpusElements.loadCorpus(options.input, options.parse, options.tokenization)    
+    goldCorpusElements = CorpusElements.loadCorpus(options.gold, options.parse, options.tokenization, False)
+    predictedCorpusElements = CorpusElements.loadCorpus(options.input, options.parse, options.tokenization, False)    
     
     # Compare the corpora and print results on screen
     processCorpora(predictedCorpusElements, goldCorpusElements, options, classSets, negativeClassId)
