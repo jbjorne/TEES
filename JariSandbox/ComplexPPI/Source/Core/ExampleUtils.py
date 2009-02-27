@@ -242,13 +242,13 @@ def writeToInteractionXML(classifications, corpusElements, outputFile, classSet=
             if classificationsBySentence.has_key(sentenceId):
                 for classification in classificationsBySentence[sentenceId]:
                     example = classification[0]
-                    pairElement = ET.Element("pair")
+                    pairElement = ET.Element("interaction")
                     #pairElement.attrib["origId"] = origId
                     #pairElement.attrib["type"] = example[3]["categoryName"]
                     pairElement.attrib["directed"] = "Unknown"
                     pairElement.attrib["e1"] = example[3]["e1"].attrib["id"]
                     pairElement.attrib["e2"] = example[3]["e2"].attrib["id"]
-                    pairElement.attrib["id"] = sentenceId + ".p" + str(pairCount)
+                    pairElement.attrib["id"] = sentenceId + ".i" + str(pairCount)
                     if classSet == None: # binary classification
                         if classification[1] == "tp" or classification[1] == "fp":
                             pairElement.attrib["type"] = str(True)
