@@ -28,6 +28,8 @@ class SVMMultiClassClassifier(Classifier):
             shutil.rmtree(self.tempDir)
     
     def train(self, examples, parameters=None):
+        if parameters.has_key("predefined"):
+            return 0
         examples = self.filterTrainingSet(examples)
         if self.negRatio != None:
             examples = self.downSampleNegatives(examples, self.negRatio)
@@ -51,11 +53,19 @@ class SVMMultiClassClassifier(Classifier):
         examples, predictions = self.filterClassificationSet(examples, False)
         Example.writeExamples(examples, self.tempDir+"/test.dat")
         args = [binDir+"/svm_multiclass_classify"]
+        modelPath = self.tempDir+"/model"
         if parameters != None:
+            parameters = copy.copy(parameters)
+            if parameters.has_key("c"):
+                del parameters["c"]
+            if parameters.has_key("predefined"):
+                parameters = copy.copy(parameters)
+                modelPath = os.path.join(parameters["predefined"][0],"classifier/model")
+                del parameters["predefined"]
             self.__addParametersToSubprocessCall(args, parameters)
-        args += [self.tempDir+"/test.dat", self.tempDir+"/model", self.tempDir+"/predictions"]
+        args += [self.tempDir+"/test.dat", modelPath, self.tempDir+"/predictions"]
         subprocess.call(args, stdout = self.debugFile)
-        os.remove(self.tempDir+"/model")
+        #os.remove(self.tempDir+"/model")
         predictionsFile = open(self.tempDir+"/predictions", "rt")
         lines = predictionsFile.readlines()
         predictionsFile.close()
