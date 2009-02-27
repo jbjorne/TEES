@@ -177,7 +177,7 @@ if __name__=="__main__":
     exec "from Evaluators." + options.evaluator + " import " + options.evaluator + " as Evaluation"
     
     trainExamples = []
-    exampleSets = [None,None]
+    exampleSets = [[],[]]
     if not classifierParamDict.has_key("predefined"):
         print >> sys.stderr, "No-predefined model"
         exampleBuilder = ExampleBuilder(**splitParameters(options.exampleBuilderParameters))
@@ -221,43 +221,16 @@ if __name__=="__main__":
             classSet = IdSet()
             classSet.load(os.path.join(classifierParamDict["predefined"][0], "class_names.txt"))
         exampleBuilder = ExampleBuilder(featureSet=featureSet, classSet=classSet, **splitParameters(options.exampleBuilderParameters))
-    
-    testSentences = []
-    if options.input_test == None:               
-        # Make test and training sets
-        print >> sys.stderr, "Dividing data into test and training sets"
-        corpusDivision = Example.makeCorpusDivision(corpusElements)
-        exampleSets = Example.divideExamples(examples, corpusDivision)
-    else: # pre-defined test-set
-        # Load corpus and make sentence graphs
-        print >> sys.stderr, "Loading test set corpus"
-        testCorpusElements = loadCorpus(options.input_test, options.parse, options.tokenization)
-        testSentences = []
-        for sentence in testCorpusElements.sentences:
-            testSentences.append( [sentence.sentenceGraph,None] )
-        
-        # Build examples
-        testExamples = buildExamples(exampleBuilder, testSentences, options)
-        
-        # Define test and training sets
-        exampleSets[0] = trainExamples
-        exampleSets[1] = testExamples
-
-    # Save example sets
+    # Save training sets
     if options.output != None:
         print >> sys.stderr, "Saving example sets to", options.output
         Example.writeExamples(exampleSets[0], options.output + "/examplesTrain.txt")
-        Example.writeExamples(exampleSets[1], options.output + "/examplesTest.txt")
         if not classifierParamDict.has_key("predefined"):
             Example.writeExamples(optimizationSets[0], options.output + "/examplesOptimizationTest.txt")
             Example.writeExamples(optimizationSets[1], options.output + "/examplesOptimizationTrain.txt")
-        print >> sys.stderr, "Saving class names to", options.output + ".class_names"
-        exampleBuilder.classSet.write(options.output + "/class_names.txt")
-        print >> sys.stderr, "Saving feature names to", options.output + "/feature_names.txt"
-        exampleBuilder.featureSet.write(options.output + "/feature_names.txt")
         TableUtils.writeCSV(bestResults[2], options.output +"/best_parameters.csv")
     
-    # Classify
+    # Optimize and train
     if options.output != None:
         classifier = Classifier(workDir = options.output + "/classifier")
     else:
@@ -273,6 +246,38 @@ if __name__=="__main__":
     startTime = time.time()
     classifier.train(exampleSets[0], bestResults[2])
     print >> sys.stderr, "(Time spent:", time.time() - startTime, "s)"
+    
+    # Get test data
+    testSentences = []
+    if options.input_test == None:               
+        # Make test and training sets
+        print >> sys.stderr, "Dividing data into test and training sets"
+        corpusDivision = Example.makeCorpusDivision(corpusElements)
+        exampleSets = Example.divideExamples(examples, corpusDivision)
+    else: # pre-defined test-set
+        # Free memory
+        sentences = None
+        trainCorpusElements = None
+        trainExamples = None
+        optimizationSets = None
+        # Load corpus and make sentence graphs
+        print >> sys.stderr, "Loading test set corpus"
+        testCorpusElements = loadCorpus(options.input_test, options.parse, options.tokenization)
+        testSentences = []
+        for sentence in testCorpusElements.sentences:
+            testSentences.append( [sentence.sentenceGraph,None] )
+        
+        # Build examples
+        testExamples = buildExamples(exampleBuilder, testSentences, options)
+        
+        # Define test and training sets
+        exampleSets[0] = trainExamples
+        exampleSets[1] = testExamples
+    # Save test sets
+    if options.output != None:
+        print >> sys.stderr, "Saving example sets to", options.output
+        Example.writeExamples(exampleSets[1], options.output + "/examplesTest.txt")
+    
     print >> sys.stderr, "Testing",
     startTime = time.time()
     predictions = classifier.classify(exampleSets[1], bestResults[2])
@@ -304,13 +309,13 @@ if __name__=="__main__":
 #        compareToBinary(corpusElements.sentencesById, predictions, exampleBuilder, options)
         
     # Visualize
-    for example in exampleSets[0]:
-        example[3]["visualizationSet"] = "train"
-        #corpusElements.sentencesById[example[0].rsplit(".",1)[0]].sentenceGraph.visualizationSet = "train"
-    for example in exampleSets[1]:
-        example[3]["visualizationSet"] = "test"
-        #corpusElements.sentencesById[example[0].rsplit(".",1)[0]].sentenceGraph.visualizationSet = "test"
     if options.visualization != None:
+        for example in exampleSets[0]:
+            example[3]["visualizationSet"] = "train"
+            #corpusElements.sentencesById[example[0].rsplit(".",1)[0]].sentenceGraph.visualizationSet = "train"
+        for example in exampleSets[1]:
+            example[3]["visualizationSet"] = "test"
+            #corpusElements.sentencesById[example[0].rsplit(".",1)[0]].sentenceGraph.visualizationSet = "test"
         if len(testSentences) > 0:
             visualize(testSentences, evaluation.classifications, options, exampleBuilder)
         else:
