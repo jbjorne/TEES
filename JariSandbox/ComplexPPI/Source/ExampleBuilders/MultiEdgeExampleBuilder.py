@@ -10,11 +10,18 @@ from FeatureBuilders.NodalidaFeatureBuilder import NodalidaFeatureBuilder
 import networkx as NX
 
 class MultiEdgeExampleBuilder(ExampleBuilder):
-    def __init__(self, style=["typed","directed","headsOnly"], length=None, types=[]):
+    def __init__(self, style=["typed","directed","headsOnly"], length=None, types=[], featureSet=None, classSet=None):
         ExampleBuilder.__init__(self)
         self.styles = style
-        self.classSet = IdSet(1)
+        
+        if classSet == None:
+            self.classSet = IdSet(1)
+        else:
+            self.classSet = classSet
         assert( self.classSet.getId("neg") == 1 )
+        if featureSet != None:
+            self.featureSet = featureSet
+        
         self.multiEdgeFeatureBuilder = MultiEdgeFeatureBuilder(self.featureSet)
         if "graph_kernel" in self.styles:
             from FeatureBuilders.GraphKernelFeatureBuilder import GraphKernelFeatureBuilder
