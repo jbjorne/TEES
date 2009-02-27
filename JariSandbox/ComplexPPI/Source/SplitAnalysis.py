@@ -1,4 +1,5 @@
 import Core.ExampleUtils as Example
+from Core.IdSet import IdSet
 import sys, os, shutil, time
 try:
     import xml.etree.cElementTree as ET
@@ -95,14 +96,14 @@ def buildExamples(exampleBuilder, sentences, options):
     print >> sys.stderr, "Preprocessing examples:"
     examples = exampleBuilder.preProcessExamples(examples)
     # Save examples
-    if options.output != None:
-        print >> sys.stderr, "Saving examples to", options.output + "/examples.txt"
-        commentLines = []
-        commentLines.append("Input file: " + options.input)
-        commentLines.append("Example builder: " + options.exampleBuilder)
-        commentLines.append("Features:")
-        commentLines.extend(exampleBuilder.featureSet.toStrings())
-        Example.writeExamples(examples, options.output + "/examples.txt", commentLines)
+#    if options.output != None:
+#        print >> sys.stderr, "Saving examples to", options.output + "/examples.txt"
+#        commentLines = []
+#        commentLines.append("Input file: " + options.input)
+#        commentLines.append("Example builder: " + options.exampleBuilder)
+#        commentLines.append("Features:")
+#        commentLines.extend(exampleBuilder.featureSet.toStrings())
+#        Example.writeExamples(examples, options.output + "/examples.txt", commentLines)
     #examples = filterFeatures(exampleBuilder.featureSet, examples)
     #Example.normalizeFeatureVectors(examples)
     return examples
@@ -167,21 +168,59 @@ if __name__=="__main__":
         os.mkdir(options.output)
         if not os.path.exists(options.output+"/classifier"):
             os.mkdir(options.output+"/classifier")
+    
+    classifierParamDict = splitParameters(options.parameters)
 
     print >> sys.stderr, "Importing modules"
     exec "from ExampleBuilders." + options.exampleBuilder + " import " + options.exampleBuilder + " as ExampleBuilder"
     exec "from Classifiers." + options.classifier + " import " + options.classifier + " as Classifier"
     exec "from Evaluators." + options.evaluator + " import " + options.evaluator + " as Evaluation"
     
-    # Load corpus and make sentence graphs
-    corpusElements = loadCorpus(options.input, options.parse, options.tokenization)
-    sentences = []
-    for sentence in corpusElements.sentences:
-        sentences.append( [sentence.sentenceGraph,None] )
-    
-    # Build examples
-    exampleBuilder = ExampleBuilder(**splitParameters(options.exampleBuilderParameters))
-    examples = buildExamples(exampleBuilder, sentences, options)
+    trainExamples = []
+    exampleSets = [None,None]
+    if not classifierParamDict.has_key("predefined"):
+        print >> sys.stderr, "No-predefined model"
+        exampleBuilder = ExampleBuilder(**splitParameters(options.exampleBuilderParameters))
+        # Load corpus and make sentence graphs
+        trainCorpusElements = loadCorpus(options.input, options.parse, options.tokenization)
+        sentences = []
+        for sentence in trainCorpusElements.sentences:
+            sentences.append( [sentence.sentenceGraph,None] )
+        
+        # Build examples
+        trainExamples = buildExamples(exampleBuilder, sentences, options)
+        exampleSets[0] = trainExamples
+        
+        # Create classifier object
+        classifier = Classifier()
+        #if options.output != None:
+        #    classifier = Classifier(workDir = options.output + "/classifier")
+        #else:
+        #    classifier = Classifier()
+        classifier.featureSet = exampleBuilder.featureSet
+        if hasattr(exampleBuilder,"classSet"):
+            classifier.classSet = None
+        
+        # Optimize
+        optimizationSets = Example.divideExamples(exampleSets[0])
+        evaluationArgs = {"classSet":exampleBuilder.classSet}
+        if options.parameters != None:
+            paramDict = splitParameters(options.parameters)
+            bestResults = classifier.optimize([optimizationSets[0]], [optimizationSets[1]], paramDict, Evaluation, evaluationArgs)
+        else:
+            bestResults = classifier.optimize([optimizationSets[0]], [optimizationSets[1]], evaluationClass=Evaluation, evaluationArgs=evaluationArgs)
+    else:
+        print >> sys.stderr, "Using predefined model"
+        bestResults = [None,None,{}]
+        for k,v in classifierParamDict.iteritems():
+            bestResults[2][k] = v
+        featureSet = IdSet()
+        featureSet.load(os.path.join(classifierParamDict["predefined"][0], "feature_names.txt"))
+        classSet = None
+        if os.path.exists(os.path.join(classifierParamDict["predefined"][0], "class_names.txt")):
+            classSet = IdSet()
+            classSet.load(os.path.join(classifierParamDict["predefined"][0], "class_names.txt"))
+        exampleBuilder = ExampleBuilder(featureSet=featureSet, classSet=classSet, **splitParameters(options.exampleBuilderParameters))
     
     testSentences = []
     if options.input_test == None:               
@@ -192,42 +231,26 @@ if __name__=="__main__":
     else: # pre-defined test-set
         # Load corpus and make sentence graphs
         print >> sys.stderr, "Loading test set corpus"
-        corpusElements = loadCorpus(options.input_test, options.parse, options.tokenization)
+        testCorpusElements = loadCorpus(options.input_test, options.parse, options.tokenization)
         testSentences = []
-        for sentence in corpusElements.sentences:
+        for sentence in testCorpusElements.sentences:
             testSentences.append( [sentence.sentenceGraph,None] )
         
         # Build examples
         testExamples = buildExamples(exampleBuilder, testSentences, options)
         
         # Define test and training sets
-        exampleSets = [examples, testExamples]        
-    
-    # Create classifier object
-    if options.output != None:
-        classifier = Classifier(workDir = options.output + "/classifier")
-    else:
-        classifier = Classifier()
-    classifier.featureSet = exampleBuilder.featureSet
-    if hasattr(exampleBuilder,"classSet"):
-        classifier.classSet = None
-    
-    # Optimize
-    optimizationSets = Example.divideExamples(exampleSets[0])
-    evaluationArgs = {"classSet":exampleBuilder.classSet}
-    if options.parameters != None:
-        paramDict = splitParameters(options.parameters)
-        bestResults = classifier.optimize([optimizationSets[0]], [optimizationSets[1]], paramDict, Evaluation, evaluationArgs)
-    else:
-        bestResults = classifier.optimize([optimizationSets[0]], [optimizationSets[1]], evaluationClass=Evaluation, evaluationArgs=evaluationArgs)
+        exampleSets[0] = trainExamples
+        exampleSets[1] = testExamples
 
     # Save example sets
     if options.output != None:
         print >> sys.stderr, "Saving example sets to", options.output
-        Example.writeExamples(exampleSets[0], options.output + "/examplesTest.txt")
-        Example.writeExamples(exampleSets[1], options.output + "/examplesTrain.txt")
-        Example.writeExamples(optimizationSets[0], options.output + "/examplesOptimizationTest.txt")
-        Example.writeExamples(optimizationSets[1], options.output + "/examplesOptimizationTrain.txt")
+        Example.writeExamples(exampleSets[0], options.output + "/examplesTrain.txt")
+        Example.writeExamples(exampleSets[1], options.output + "/examplesTest.txt")
+        if not classifierParamDict.has_key("predefined"):
+            Example.writeExamples(optimizationSets[0], options.output + "/examplesOptimizationTest.txt")
+            Example.writeExamples(optimizationSets[1], options.output + "/examplesOptimizationTrain.txt")
         print >> sys.stderr, "Saving class names to", options.output + ".class_names"
         exampleBuilder.classSet.write(options.output + "/class_names.txt")
         print >> sys.stderr, "Saving feature names to", options.output + "/feature_names.txt"
@@ -235,6 +258,13 @@ if __name__=="__main__":
         TableUtils.writeCSV(bestResults[2], options.output +"/best_parameters.csv")
     
     # Classify
+    if options.output != None:
+        classifier = Classifier(workDir = options.output + "/classifier")
+    else:
+        classifier = Classifier()
+    classifier.featureSet = exampleBuilder.featureSet
+    if hasattr(exampleBuilder,"classSet"):
+        classifier.classSet = exampleBuilder.classSet
     print >> sys.stderr, "Classifying test data"
     if bestResults[2].has_key("timeout"):
         del bestResults[2]["timeout"]
@@ -245,7 +275,7 @@ if __name__=="__main__":
     print >> sys.stderr, "(Time spent:", time.time() - startTime, "s)"
     print >> sys.stderr, "Testing",
     startTime = time.time()
-    predictions = classifier.classify(exampleSets[1])
+    predictions = classifier.classify(exampleSets[1], bestResults[2])
     print >> sys.stderr, "(Time spent:", time.time() - startTime, "s)"
     
     ## Map to gold, if using predicted entities
@@ -267,7 +297,7 @@ if __name__=="__main__":
         classSet = None
         if "typed" in exampleBuilder.styles:
             classSet = exampleBuilder.classSet
-        Example.writeToInteractionXML(evaluation.classifications, corpusElements, options.resultsToXML, classSet)
+        Example.writeToInteractionXML(evaluation.classifications, testCorpusElements, options.resultsToXML, classSet)
 
 #    # Compare to binary
 #    if options.binaryCorpus != None:
