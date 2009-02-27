@@ -14,6 +14,7 @@ class FeatureBuilder:
         self.features = features
         self.entity1 = entity1
         self.entity2 = entity2
+        self.tokenFeatures = {}
         
     def setFeature(self, name, value):
         self.features[self.featureSet.getId(name)] = value
@@ -28,6 +29,10 @@ class FeatureBuilder:
             self.features[k] = float(v) / total
 
     def getTokenFeatures(self, token, sentenceGraph, text=True, POS=True, annotatedType=True, stem=False, ontology=True):
+        callId = token.get("id") + str(text) + str(POS) + str(annotatedType) + str(stem) + str(ontology)
+        if self.tokenFeatures.has_key(callId):
+            return self.tokenFeatures[callId]
+        
         featureList = []
         if text:
             featureList.append("txt_"+sentenceGraph.getTokenText(token))
@@ -50,7 +55,8 @@ class FeatureBuilder:
                     featureList.extend(self.ontologyFeatureBuilder.getParents(annType))
         if stem:
             featureList.append("stem_"+PorterStemmer.stem(sentenceGraph.getTokenText(token)))
-                    
+        
+        self.tokenFeatures[callId] = featureList            
         return featureList
     
     def getTokenAnnotatedType(self, token, sentenceGraph):

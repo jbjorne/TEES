@@ -52,6 +52,7 @@ class MultiEdgeFeatureBuilder(FeatureBuilder):
         self.edgeFeatureBuilder.setFeatureVector(features)
         if self.ontologyFeatureBuilder != None:
             self.ontologyFeatureBuilder.setFeatureVector(features)
+        self.tokenFeatures = {}
     
     def buildPredictedValueFeatures(self, element, tag):
         predictions = element.get("predictions")
