@@ -38,6 +38,7 @@ class MultiEdgeExampleBuilder(ExampleBuilder):
         if "nodalida" in self.styles:
             self.nodalidaFeatureBuilder = NodalidaFeatureBuilder(self.featureSet)
         self.pathLengths = length
+        assert(self.pathLengths == None)
         self.types = types
         if "random" in self.styles:
             from FeatureBuilders.RandomFeatureBuilder import RandomFeatureBuilder
@@ -193,6 +194,7 @@ class MultiEdgeExampleBuilder(ExampleBuilder):
                 path = paths[token1][token2]
             else:
                 path = [token1, token2]
+            assert(self.pathLengths == None)
             if self.pathLengths == None or len(path)-1 in self.pathLengths:
 #                if not "no_ontology" in self.styles:
 #                    self.ontologyFeatureBuilder.setFeatureVector(features)
@@ -289,15 +291,19 @@ class MultiEdgeExampleBuilder(ExampleBuilder):
             path = [token1, token2]
         # define extra attributes              
         if int(path[0].attrib["id"].split("_")[-1]) < int(path[-1].attrib["id"].split("_")[-1]):
-            extra = {"xtype":"edge","type":"i","t1":path[0],"t2":path[-1]}
+            #extra = {"xtype":"edge","type":"i","t1":path[0],"t2":path[-1]}
+            extra = {"xtype":"edge","type":"i","t1":path[0].get("id"),"t2":path[-1].get("id")}
             extra["deprev"] = False
         else:
-            extra = {"xtype":"edge","type":"i","t1":path[-1],"t2":path[0]}
+            #extra = {"xtype":"edge","type":"i","t1":path[-1],"t2":path[0]}
+            extra = {"xtype":"edge","type":"i","t1":path[-1].get("id"),"t2":path[0].get("id")}
             extra["deprev"] = True
         if entity1 != None:
-            extra["e1"] = entity1
+            #extra["e1"] = entity1
+            extra["e1"] = entity1.get("id")
         if entity2 != None:
-            extra["e2"] = entity2
+            #extra["e2"] = entity2
+            extra["e2"] = entity2.get("id")
         extra["categoryName"] = categoryName
         # make example
         if "binary" in self.styles:
