@@ -144,6 +144,14 @@ def visualize(sentences, classifications, options, exampleBuilder):
     print >> sys.stderr
 
 if __name__=="__main__":
+    # Import Psyco if available
+    try:
+        import psyco
+        psyco.full()
+        print >> sys.stderr, "Found Psyco, using"
+    except ImportError:
+        print >> sys.stderr, "Psyco not installed"
+    
     defaultAnalysisFilename = "/usr/share/biotext/ComplexPPI/BioInferForComplexPPIVisible.xml"
     optparser = OptionParser(usage="%prog [options]\nCreate an html visualization for a corpus.")
     optparser.add_option("-i", "--input", default=defaultAnalysisFilename, dest="input", help="Corpus in analysis format", metavar="FILE")
@@ -277,7 +285,12 @@ if __name__=="__main__":
     if options.output != None:
         print >> sys.stderr, "Saving example sets to", options.output
         Example.writeExamples(exampleSets[1], options.output + "/examplesTest.txt")
-    
+        print >> sys.stderr, "Saving class names to", options.output + ".class_names"
+        exampleBuilder.classSet.write(options.output + "/class_names.txt")
+        print >> sys.stderr, "Saving feature names to", options.output + "/feature_names.txt"
+        exampleBuilder.featureSet.write(options.output + "/feature_names.txt")
+        TableUtils.writeCSV(bestResults[2], options.output +"/best_parameters.csv")
+
     print >> sys.stderr, "Testing",
     startTime = time.time()
     predictions = classifier.classify(exampleSets[1], bestResults[2])
