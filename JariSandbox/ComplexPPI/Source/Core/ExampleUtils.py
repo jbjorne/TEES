@@ -3,6 +3,7 @@
 # the int is the feature id and the float is the feature value
 
 import Split
+import types
 
 def isDuplicate(example1, example2):
     if example1[1] != example2[1]:
@@ -49,7 +50,12 @@ def appendExamples(examples, file):
         keys.sort()
         for key in keys:
             file.write(" " + str(key)+":"+str(example[2][key]))
-        file.write(" # " + example[0] + "\n")
+        file.write(" # id:" + example[0])
+        for extraKey, extraValue in example[3].iteritems():
+            assert(extraKey != "id")
+            if type(extraValue) == types.StringType:
+                file.write( " " + str(extraKey) + ":" + extraValue)
+        file.write("\n")
 
 def writeExamples(examples, filename, commentLines=None):
     f = open(filename,"wt")
@@ -68,23 +74,41 @@ def writePredictions(predictions, exampleFileName):
             break
         if line.find("#commentColumns:") != -1:
             pass
-            
 
-def readExamples(filename):
+def getIdsFromFile(filename):
+    f = open(filename,"rt")
+    ids = []
+    for line in f.readlines():
+        if line[0] == "#":
+            continue
+        splits = line.rsplit("#", 1)
+        ids.append( splits[-1].strip() )
+    return ids
+
+def readExamples(filename, readFeatures=True):
     f = open(filename,"rt")
     examples = []
     for line in f.readlines():
         if line[0] == "#":
             continue
         splits = line.split("#")
-        id = splits[-1].strip()
+        commentSplits = splits[-1].split()
+        id = None
+        extra = {}
+        for commentSplit in commentSplits:
+            key, value = commentSplit.split(":")
+            if key == "id":
+                id = value
+            else:
+                extra[key] = value
         splits2 = splits[0].split()
         classId = int(splits2[0])
         features = {}
-        for item in splits2[1:]:
-            featureId, featureValue = item.split(":")
-            features[int(featureId)] = float(featureValue)
-        examples.append([id,classId,features,{}])
+        if readFeatures:
+            for item in splits2[1:]:
+                featureId, featureValue = item.split(":")
+                features[int(featureId)] = float(featureValue)
+        examples.append([id,classId,features,extra])
     return examples
 
 def makeCorpusDivision(corpusElements, fraction=0.5, seed=0):
@@ -184,7 +208,7 @@ def writeToInteractionXML(classifications, corpusElements, outputFile, classSet=
     sentenceElements = corpusElements.sentences
     for sentenceObject in sentenceElements:
         sentenceElement = sentenceObject.sentence
-        sentenceId = sentenceElement.attrib["id"]
+        sentenceId = sentenceElement.get("id")
         # detach analyses
         sentenceAnalysesElement = None
         sentenceAnalysesElement = sentenceElement.find("sentenceanalyses")
@@ -216,6 +240,10 @@ def writeToInteractionXML(classifications, corpusElements, outputFile, classSet=
                     entityElement = ET.Element("entity")
                     entityElement.attrib["isName"] = "False"
                     headToken = example[3]["t"]
+                    for token in sentenceObject.tokens:
+                        if token.get("id") == headToken:
+                            headToken = token
+                            break
                     entityElement.attrib["charOffset"] = headToken.get("charOffset") 
                     entityElement.attrib["headOffset"] = headToken.get("charOffset")
                     entityElement.attrib["text"] = headToken.get("text")
@@ -246,8 +274,8 @@ def writeToInteractionXML(classifications, corpusElements, outputFile, classSet=
                     #pairElement.attrib["origId"] = origId
                     #pairElement.attrib["type"] = example[3]["categoryName"]
                     pairElement.attrib["directed"] = "Unknown"
-                    pairElement.attrib["e1"] = example[3]["e1"].attrib["id"]
-                    pairElement.attrib["e2"] = example[3]["e2"].attrib["id"]
+                    pairElement.attrib["e1"] = example[3]["e1"] #.attrib["id"]
+                    pairElement.attrib["e2"] = example[3]["e2"] #.attrib["id"]
                     pairElement.attrib["id"] = sentenceId + ".i" + str(pairCount)
                     if classSet == None: # binary classification
                         if classification[1] == "tp" or classification[1] == "fp":
