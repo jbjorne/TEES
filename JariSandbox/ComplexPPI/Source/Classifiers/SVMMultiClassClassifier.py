@@ -6,6 +6,7 @@ import killableprocess
 import Core.ExampleUtils as Example
 import combine
 import copy
+import types
 #from Core.Evaluation import Evaluation
 from Core.Classifier import Classifier
 import Core.Split as Split
@@ -30,28 +31,37 @@ class SVMMultiClassClassifier(Classifier):
     def train(self, examples, parameters=None):
         if parameters.has_key("predefined"):
             return 0
-        examples = self.filterTrainingSet(examples)
-        if self.negRatio != None:
-            examples = self.downSampleNegatives(examples, self.negRatio)
+        if type(examples) == types.ListType:
+            trainPath = self.tempDir+"/train.dat"
+            examples = self.filterTrainingSet(examples)
+            if self.negRatio != None:
+                examples = self.downSampleNegatives(examples, self.negRatio)
+            Example.writeExamples(examples, trainPath)
+        else:
+            trainPath = examples
         timeout = -1
         parameters = copy.copy(parameters)
         if parameters.has_key("style"):
-            if "no_duplicates" in parameters["style"]:
+            if "no_duplicates" in parameters["style"] and type(examples) == types.ListType:
                 examples = Example.removeDuplicates(examples)
             del parameters["style"]
         if parameters.has_key("timeout"):
             timeout = parameters["timeout"]
             del parameters["timeout"]
-        Example.writeExamples(examples, self.tempDir+"/train.dat")
         args = [binDir+"/svm_multiclass_learn"]
         if parameters != None:
             self.__addParametersToSubprocessCall(args, parameters)
-        args += [self.tempDir+"/train.dat", self.tempDir+"/model"]
+        args += [trainPath, self.tempDir+"/model"]
         return killableprocess.call(args, stdout = self.debugFile, timeout = timeout)
         
     def classify(self, examples, parameters=None):
-        examples, predictions = self.filterClassificationSet(examples, False)
-        Example.writeExamples(examples, self.tempDir+"/test.dat")
+        if type(examples) == types.ListType:
+            examples, predictions = self.filterClassificationSet(examples, False)
+            testPath = self.tempDir+"/test.dat"
+            Example.writeExamples(examples, testPath)
+        else:
+            testPath = examples
+            examples = Example.readExamples(examples,False)
         args = [binDir+"/svm_multiclass_classify"]
         modelPath = self.tempDir+"/model"
         if parameters != None:
@@ -63,13 +73,13 @@ class SVMMultiClassClassifier(Classifier):
                 modelPath = os.path.join(parameters["predefined"][0],"classifier/model")
                 del parameters["predefined"]
             self.__addParametersToSubprocessCall(args, parameters)
-        args += [self.tempDir+"/test.dat", modelPath, self.tempDir+"/predictions"]
+        args += [testPath, modelPath, self.tempDir+"/predictions"]
         subprocess.call(args, stdout = self.debugFile)
         #os.remove(self.tempDir+"/model")
         predictionsFile = open(self.tempDir+"/predictions", "rt")
         lines = predictionsFile.readlines()
         predictionsFile.close()
-        #predictions = []
+        predictions = []
         for i in range(len(lines)):
             predictions.append( (examples[i],int(lines[i].split()[0]),"multiclass",lines[i].split()[1:]) )
         return predictions
