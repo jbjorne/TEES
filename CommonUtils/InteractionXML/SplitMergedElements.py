@@ -31,7 +31,7 @@ def splitMerged(sentence, elementName, countsByType):
                     newElement.set(k, v)
                 newElement.set("type", type)
                 idSplits = element.get("id").rsplit(".",1)
-                newElement.set("id", idSplits[0] + idSplits[1][0] + str(elementCount) )
+                newElement.set("id", idSplits[0] + "." + idSplits[1][0] + str(elementCount) )
                 newElements.append(newElement)
                 elementCount += 1
             sentence.remove(element)
