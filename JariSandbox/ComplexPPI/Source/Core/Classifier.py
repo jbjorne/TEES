@@ -43,7 +43,7 @@ class Classifier:
             return examples
         trainingSet = []
         for example in examples:
-            if not example[2].has_key(self.featureSet.getId("always_negative")):
+            if not example[2].has_key(self.featureSet.getId("always_negative", makeIfNotExist=False)):
                 trainingSet.append(example)
         return trainingSet
     
@@ -53,7 +53,7 @@ class Classifier:
         if self.featureSet == None:
             return examples, predictions
         for example in examples:
-            if not example[2].has_key(self.featureSet.getId("always_negative")):
+            if not example[2].has_key(self.featureSet.getId("always_negative", makeIfNotExist=False)):
                 classificationSet.append(example)
             else:
                 if not example[2].has_key(self.featureSet.getId("out_of_scope")):
