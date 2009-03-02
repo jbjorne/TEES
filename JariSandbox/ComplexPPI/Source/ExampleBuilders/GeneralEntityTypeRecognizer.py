@@ -41,20 +41,41 @@ class GeneralEntityTypeRecognizer(ExampleBuilder):
                 typeString += "---"
             typeString += type
         return typeString
-
-    def buildLinearOrderFeatures(self,sentenceGraph,index,tag,features):
-        t = sentenceGraph.tokens[index]
-        features[self.featureSet.getId("linear_"+tag+"_txt_"+sentenceGraph.getTokenText(t))] = 1
-        features[self.featureSet.getId("linear_"+tag+"_POS_"+t.get("POS"))] = 1
-        if sentenceGraph.tokenIsName[t]:
-            features[self.featureSet.getId("linear_"+tag+"_isName")] = 1
-            for entity in sentenceGraph.tokenIsEntityHead[t]:
+    
+    def getTokenFeatures(self, token, sentenceGraph):
+        if self.tokenFeatures.has_key(token):
+            return self.tokenFeatures[token]
+        
+        features = []
+        features.append("_txt_"+sentenceGraph.getTokenText(token))
+        features.append("_POS_"+token.get("POS"))
+        if sentenceGraph.tokenIsName[token]:
+            features.append("_isName")
+            for entity in sentenceGraph.tokenIsEntityHead[token]:
                 if entity.get("isName") == "True":
-                    features[self.featureSet.getId("linear_"+tag+"_annType_"+entity.get("type"))] = 1
+                    features.append("_annType_"+entity.get("type"))
+        
+        self.tokenFeatures[token] = features
+        return features
+    
+    def buildLinearOrderFeatures(self,sentenceGraph,index,tag,features):
+        tag = "linear_"+tag
+        for tokenFeature in self.getTokenFeatures(sentenceGraph.tokens[index], sentenceGraph):
+            features[self.featureSet.getId(tag+tokenFeature)] = 1
+#        t = sentenceGraph.tokens[index]
+#        features[self.featureSet.getId("linear_"+tag+"_txt_"+sentenceGraph.getTokenText(t))] = 1
+#        features[self.featureSet.getId("linear_"+tag+"_POS_"+t.get("POS"))] = 1
+#        if sentenceGraph.tokenIsName[t]:
+#            features[self.featureSet.getId("linear_"+tag+"_isName")] = 1
+#            for entity in sentenceGraph.tokenIsEntityHead[t]:
+#                if entity.get("isName") == "True":
+#                    features[self.featureSet.getId("linear_"+tag+"_annType_"+entity.get("type"))] = 1
     
     def buildExamples(self, sentenceGraph):
         examples = []
         exampleIndex = 0
+        
+        self.tokenFeatures = {}
         
         namedEntityCount = 0
         for entity in sentenceGraph.entities:
@@ -73,9 +94,13 @@ class GeneralEntityTypeRecognizer(ExampleBuilder):
                 if not bagOfWords.has_key(text):
                     bagOfWords[text] = 0
                 bagOfWords[text] += 1
+        bowFeatures = {}
+        for k,v in bagOfWords.iteritems():
+            bowFeatures[self.featureSet.getId(k)] = v
         
         self.inEdgesByToken = {}
         self.outEdgesByToken = {}
+        self.edgeSetByToken = {}
         for token in sentenceGraph.tokens:
             inEdges = sentenceGraph.dependencyGraph.in_edges(token)
             inEdges.sort(compareDependencyEdgesById)
@@ -83,6 +108,7 @@ class GeneralEntityTypeRecognizer(ExampleBuilder):
             outEdges = sentenceGraph.dependencyGraph.out_edges(token)
             outEdges.sort(compareDependencyEdgesById)
             self.outEdgesByToken[token] = outEdges
+            self.edgeSetByToken[token] = set(inEdges + outEdges)
         
         for i in range(len(sentenceGraph.tokens)):
             token = sentenceGraph.tokens[i]
@@ -100,8 +126,10 @@ class GeneralEntityTypeRecognizer(ExampleBuilder):
             features = {}
             
             features[self.featureSet.getId(namedEntityCountFeature)] = 1
-            for k,v in bagOfWords.iteritems():
-                features[self.featureSet.getId(k)] = v
+            #for k,v in bagOfWords.iteritems():
+            #    features[self.featureSet.getId(k)] = v
+            # pre-calculate bow _features_
+            features.update(bowFeatures)
             
 #            for j in range(len(sentenceGraph.tokens)):
 #                text = "bow_" + sentenceGraph.tokens[j].get("text")
@@ -111,9 +139,9 @@ class GeneralEntityTypeRecognizer(ExampleBuilder):
 #                    features[self.featureSet.getId("af_" + text)] = 1
         
             # Main features
-            text = token.attrib["text"]
+            text = token.get("text")
             features[self.featureSet.getId("txt_"+text)] = 1
-            features[self.featureSet.getId("POS_"+token.attrib["POS"])] = 1
+            features[self.featureSet.getId("POS_"+token.get("POS"))] = 1
             stem = PorterStemmer.stem(text)
             features[self.featureSet.getId("stem_"+stem)] = 1
             features[self.featureSet.getId("nonstem_"+text[len(stem):])] = 1
@@ -147,29 +175,27 @@ class GeneralEntityTypeRecognizer(ExampleBuilder):
                 if j > 1:
                     features[self.featureSet.getId("tt_"+text[j-2:j+1].lower())] = 1
             
-            # Attached edges
-            t1InEdges = sentenceGraph.dependencyGraph.in_edges(token)
-            t1InEdges.sort(compareDependencyEdgesById)
+            # Attached edges (Hanging in and out edges)
+            t1InEdges = self.inEdgesByToken[token]
             for edge in t1InEdges:
-                edgeType = edge[2].attrib["type"]
-                features[self.featureSet.getId("t1HangingIn_"+edgeType)] = 1
-                features[self.featureSet.getId("t1HangingIn_"+edge[0].attrib["POS"])] = 1
-                features[self.featureSet.getId("t1HangingIn_"+edgeType+"_"+edge[0].attrib["POS"])] = 1
+                edgeType = edge[2].get("type")
+                features[self.featureSet.getId("t1HIn_"+edgeType)] = 1
+                features[self.featureSet.getId("t1HIn_"+edge[0].get("POS"))] = 1
+                features[self.featureSet.getId("t1HIn_"+edgeType+"_"+edge[0].get("POS"))] = 1
                 tokenText = sentenceGraph.getTokenText(edge[0])
-                features[self.featureSet.getId("t1HangingIn_"+tokenText)] = 1
-                features[self.featureSet.getId("t1HangingIn_"+edgeType+"_"+tokenText)] = 1
-            t1OutEdges = sentenceGraph.dependencyGraph.out_edges(token)
-            t1OutEdges.sort(compareDependencyEdgesById)
+                features[self.featureSet.getId("t1HIn_"+tokenText)] = 1
+                features[self.featureSet.getId("t1HIn_"+edgeType+"_"+tokenText)] = 1
+            t1OutEdges = self.outEdgesByToken[token]
             for edge in t1OutEdges:
-                edgeType = edge[2].attrib["type"]
-                features[self.featureSet.getId("t1HangingOut_"+edgeType)] = 1
-                features[self.featureSet.getId("t1HangingOut_"+edge[1].attrib["POS"])] = 1
-                features[self.featureSet.getId("t1HangingOut_"+edgeType+"_"+edge[1].attrib["POS"])] = 1
+                edgeType = edge[2].get("type")
+                features[self.featureSet.getId("t1HOut_"+edgeType)] = 1
+                features[self.featureSet.getId("t1HOut_"+edge[1].get("POS"))] = 1
+                features[self.featureSet.getId("t1HOut_"+edgeType+"_"+edge[1].get("POS"))] = 1
                 tokenText = sentenceGraph.getTokenText(edge[1])
-                features[self.featureSet.getId("t1HangingOut_"+tokenText)] = 1
-                features[self.featureSet.getId("t1HangingOut_"+edgeType+"_"+tokenText)] = 1
+                features[self.featureSet.getId("t1HOut_"+tokenText)] = 1
+                features[self.featureSet.getId("t1HOut_"+edgeType+"_"+tokenText)] = 1
              
-            extra = {"xtype":"token","t":token}
+            extra = {"xtype":"token","t":token.get("id")}
             examples.append( (sentenceGraph.getSentenceId()+".x"+str(exampleIndex),category,features,extra) )
             exampleIndex += 1
             
@@ -180,38 +206,48 @@ class GeneralEntityTypeRecognizer(ExampleBuilder):
     def buildChains(self,token,sentenceGraph,features,depthLeft=3,chain="",visited=None):
         if depthLeft == 0:
             return
+        strDepthLeft = "dist_" + str(depthLeft)
         
         if visited == None:
-            visited = []
+            visited = set()
 
         inEdges = self.inEdgesByToken[token]
         outEdges = self.outEdgesByToken[token]
+        edgeSet = visited.union(self.edgeSetByToken[token])
         for edge in inEdges:
             if not edge in visited:
                 edgeType = edge[2].get("type")
+                features[self.featureSet.getId("dep_"+strDepthLeft+edgeType)] = 1
+
                 nextToken = edge[0]
-                for entity in sentenceGraph.tokenIsEntityHead[nextToken]:
-                    if entity.get("isName") == "True":
-                        features[self.featureSet.getId("name_dist_"+str(depthLeft))] = 1
-                        features[self.featureSet.getId("name_dist_"+str(depthLeft)+entity.get("type"))] = 1
-                features[self.featureSet.getId("dep_dist_"+str(depthLeft)+edgeType)] = 1
-                features[self.featureSet.getId("POS_dist_"+str(depthLeft)+nextToken.get("POS"))] = 1
-                tokenText = sentenceGraph.getTokenText(nextToken)
-                features[self.featureSet.getId("text_dist_"+str(depthLeft)+tokenText)] = 1
-                features[self.featureSet.getId("chain_dist_"+str(depthLeft)+chain+"-frw_"+edgeType)] = 1
-                self.buildChains(nextToken,sentenceGraph,features,depthLeft-1,chain+"-frw_"+edgeType,visited+inEdges+outEdges)
+                for tokenFeature in self.getTokenFeatures(nextToken, sentenceGraph):
+                    features[self.featureSet.getId(strDepthLeft + tokenFeature)] = 1
+#                for entity in sentenceGraph.tokenIsEntityHead[nextToken]:
+#                    if entity.get("isName") == "True":
+#                        features[self.featureSet.getId("name_dist_"+strDepthLeft)] = 1
+#                        features[self.featureSet.getId("name_dist_"+strDepthLeft+entity.get("type"))] = 1
+#                features[self.featureSet.getId("POS_dist_"+strDepthLeft+nextToken.get("POS"))] = 1
+#                tokenText = sentenceGraph.getTokenText(nextToken)
+#                features[self.featureSet.getId("text_dist_"+strDepthLeft+tokenText)] = 1
+                
+                features[self.featureSet.getId("chain_dist_"+strDepthLeft+chain+"-frw_"+edgeType)] = 1
+                self.buildChains(nextToken,sentenceGraph,features,depthLeft-1,chain+"-frw_"+edgeType,edgeSet)
 
         for edge in outEdges:
             if not edge in visited:
                 edgeType = edge[2].get("type")
+                features[self.featureSet.getId("dep_dist_"+strDepthLeft+edgeType)] = 1
+
                 nextToken = edge[1]
-                for entity in sentenceGraph.tokenIsEntityHead[nextToken]:
-                    if entity.get("isName") == "True":
-                        features[self.featureSet.getId("name_dist_"+str(depthLeft))] = 1
-                        features[self.featureSet.getId("name_dist_"+str(depthLeft)+entity.get("type"))] = 1
-                features[self.featureSet.getId("dep_dist_"+str(depthLeft)+edgeType)] = 1
-                features[self.featureSet.getId("POS_dist_"+str(depthLeft)+nextToken.get("POS"))] = 1
-                tokenText = sentenceGraph.getTokenText(nextToken)
-                features[self.featureSet.getId("text_dist_"+str(depthLeft)+tokenText)] = 1
-                features[self.featureSet.getId("chain_dist_"+str(depthLeft)+chain+"-rev_"+edgeType)] = 1
-                self.buildChains(nextToken,sentenceGraph,features,depthLeft-1,chain+"-rev_"+edgeType,visited+inEdges+outEdges)
+                for tokenFeature in self.getTokenFeatures(nextToken, sentenceGraph):
+                    features[self.featureSet.getId(strDepthLeft + tokenFeature)] = 1
+#                for entity in sentenceGraph.tokenIsEntityHead[nextToken]:
+#                    if entity.get("isName") == "True":
+#                        features[self.featureSet.getId("name_dist_"+strDepthLeft)] = 1
+#                        features[self.featureSet.getId("name_dist_"+strDepthLeft+entity.get("type"))] = 1
+#                features[self.featureSet.getId("POS_dist_"+strDepthLeft+nextToken.get("POS"))] = 1
+#                tokenText = sentenceGraph.getTokenText(nextToken)
+#                features[self.featureSet.getId("text_dist_"+strDepthLeft+tokenText)] = 1
+                
+                features[self.featureSet.getId("chain_dist_"+strDepthLeft+chain+"-rev_"+edgeType)] = 1
+                self.buildChains(nextToken,sentenceGraph,features,depthLeft-1,chain+"-rev_"+edgeType,edgeSet)
