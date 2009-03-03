@@ -143,6 +143,21 @@ def visualize(sentences, classifications, options, exampleBuilder):
     visualizer.makeSentenceListPage()
     print >> sys.stderr
 
+def loadSet(inputFilename, outputFilename, exampleBuilder):
+    # Get test data
+    tempSentences = []
+    assert(inputFilename != None)
+    # Load corpus and make sentence graphs
+    print >> sys.stderr, "Loading test set corpus"
+    tempCorpusElements = loadCorpus(inputFilename, options.parse, options.tokenization)
+    tempSentences = []
+    for sentence in tempCorpusElements.sentences:
+        tempSentences.append( [sentence.sentenceGraph,None] )
+    
+    # Build examples
+    buildExamples(exampleBuilder, tempSentences, outputFilename)
+    return tempCorpusElements
+
 if __name__=="__main__":
     # Import Psyco if available
     try:
@@ -187,7 +202,7 @@ if __name__=="__main__":
     exec "from Classifiers." + options.classifier + " import " + options.classifier + " as Classifier"
     exec "from Evaluators." + options.evaluator + " import " + options.evaluator + " as Evaluation"
     
-    trainExamples = []
+    testCorpusElements = None
     exampleSets = [[],[]]
     if not classifierParamDict.has_key("predefined"):
         print >> sys.stderr, "No-predefined model"
@@ -202,6 +217,9 @@ if __name__=="__main__":
         #calculatePredictedRange(exampleBuilder, trainSentences, options)
         exampleSets[0] = os.path.join(options.output,"examplesTrain.txt")
         buildExamples(exampleBuilder, trainSentences, exampleSets[0])
+        # Free memory
+        trainSentences = None
+        trainCorpusElements = None
         
         # Create classifier object
         classifier = Classifier()
@@ -215,10 +233,16 @@ if __name__=="__main__":
         
         # Optimize
         optimizationSets = []
-        optimizationSets += [os.path.join(options.output,"examplesOptimizationTest.txt")]
-        optimizationSets += [os.path.join(options.output,"examplesOptimizationTrain.txt")]
+        optimizationSets.append(exampleSets[0]) #[os.path.join(options.output,"examplesOptimizationTest.txt")]
+        if options.input_test_gold != None:
+            loadSet(options.input_test_gold, os.path.join(options.output,"examplesTestGold.txt"), exampleBuilder)
+            optimizationSets.append(os.path.join(options.output,"examplesTestGold.txt"))
+        else:
+            exampleSets[1] = os.path.join(options.output,"examplesTest.txt")
+            testCorpusElements = loadSet(options.input_test, exampleSets[1], exampleBuilder)
+            optimizationSets.append(exampleSets[1]) #[os.path.join(options.output,"examplesOptimizationTrain.txt")]
         
-        DivideExamples.divideExamples(exampleSets[0], optimizationSets)
+        #DivideExamples.divideExamples(exampleSets[0], optimizationSets)
         evaluationArgs = {"classSet":exampleBuilder.classSet}
         if options.parameters != None:
             paramDict = splitParameters(options.parameters)
@@ -258,25 +282,9 @@ if __name__=="__main__":
     classifier.train(exampleSets[0], bestResults[2])
     print >> sys.stderr, "(Time spent:", time.time() - startTime, "s)"
     
-    # Get test data
-    testSentences = []
-    assert(options.input_test != None)
-    # Free memory
-    trainSentences = None
-    trainCorpusElements = None
-    trainExamples = None
-    optimizationSets = None
-    # Load corpus and make sentence graphs
-    print >> sys.stderr, "Loading test set corpus"
-    testCorpusElements = loadCorpus(options.input_test, options.parse, options.tokenization)
-    testSentences = []
-    for sentence in testCorpusElements.sentences:
-        testSentences.append( [sentence.sentenceGraph,None] )
-    
-    # Build examples
-    #calculatePredictedRange(exampleBuilder, testSentences, options)
-    exampleSets[1] = os.path.join(options.output,"examplesTest.txt")
-    buildExamples(exampleBuilder, testSentences, exampleSets[1])
+    if testCorpusElements == None:
+        exampleSets[1] = os.path.join(options.output,"examplesTest.txt")
+        testCorpusElements = loadSet(options.input_test, exampleSets[1], exampleBuilder)
     
     print >> sys.stderr, "Testing",
     startTime = time.time()
