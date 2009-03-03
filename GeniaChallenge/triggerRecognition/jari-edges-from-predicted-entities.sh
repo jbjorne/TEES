@@ -23,6 +23,6 @@ if [ "$2" == "twofile" ]; then
 fi
 
 pushd ~/cvs_checkout/JariSandbox/ComplexPPI/Source
-python $PIPELINE -b MultiEdgeExampleBuilder -x "style:typed,directed,no_linear,entities,genia_limits,noMasking,maxFeatures" -c SVMMultiClassClassifier -e AveragingMultiClassEvaluator -y $CLASSIFIER_PARAMS -i $TRAIN_FILE -s $TEST_FILE -o /usr/share/biotext/GeniaChallenge/xml/jari-edges-from-predicted-entities -m /usr/share/biotext/GeniaChallenge/xml/jari-edges-from-predicted-entities/jari-edges-from-predicted-entities.xml -p split-Charniak-Lease
+python $PIPELINE -b MultiEdgeExampleBuilder -x "style:typed,directed,no_linear,entities,genia_limits,noMasking,maxFeatures" -c SVMMultiClassClassifier -e AveragingMultiClassEvaluator -y $CLASSIFIER_PARAMS -i $TRAIN_FILE -g $GOLD_TEST_FILE -s $TEST_FILE -o /usr/share/biotext/GeniaChallenge/xml/jari-edges-from-predicted-entities -m /usr/share/biotext/GeniaChallenge/xml/jari-edges-from-predicted-entities/jari-edges-from-predicted-entities.xml -p split-Charniak-Lease
 python Evaluators/EvaluateInteractionXML.py -i /usr/share/biotext/GeniaChallenge/xml/jari-edges-from-predicted-entities/jari-edges-from-predicted-entities.xml -g $GOLD_TEST_FILE
 popd
