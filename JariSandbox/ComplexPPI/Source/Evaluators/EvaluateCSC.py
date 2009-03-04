@@ -64,6 +64,7 @@ if __name__=="__main__":
             print >> sys.stderr, "    Processing c-parameter", cParameter, 
             paramRows = TableUtils.selectRowsCSV(foldRows, {"c":cParameter})
             evaluator = Evaluator.calculateFromCSV(paramRows, EvaluatorClass, classSet)
+            print evaluator.toStringConcise()
             cParameterByEvaluator[evaluator] = cParameter
             evaluators.append(evaluator)
             if evaluator.type == "multiclass":
