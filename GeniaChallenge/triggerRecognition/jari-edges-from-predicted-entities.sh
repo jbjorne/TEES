@@ -12,6 +12,11 @@ fi
 if [[ "$1" =~ "empty" ]]; then
 	TEST_FILE="/usr/share/biotext/GeniaChallenge/xml/devel-mini-empty.xml"
 fi
+if [[ "$1" =~ "final" ]]; then
+	TRAIN_FILE="/usr/share/biotext/GeniaChallenge/xml/everything.xml"
+	TEST_FILE="/usr/share/biotext/GeniaChallenge/xml/jari-devel-triggers.xml"
+	GOLD_TEST_FILE="/usr/share/biotext/GeniaChallenge/xml/devel.xml"
+fi
 
 if [ -n "$3" ]; then
 	CLASSIFIER_PARAMS="$3"
