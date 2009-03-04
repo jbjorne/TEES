@@ -1,5 +1,6 @@
 import sys, os
-sys.path.append("..")
+sys.path.append(os.path.dirname(os.path.abspath(__file__))+"/..")
+#sys.path.append("..")
 from Utils.ProgressCounter import ProgressCounter
 from Utils.Parameters import splitParameters
 from optparse import OptionParser
@@ -26,6 +27,7 @@ if __name__=="__main__":
     (options, args) = optparser.parse_args()
 
     classNameDict = None
+    classSet = None
     if options.classNames != None:
         classNameDict = {}
         classNameFile = open(options.classNames, "rt")
@@ -36,6 +38,7 @@ if __name__=="__main__":
             classId = classId.strip()
             classNameDict[classId] = className
         classNameFile.close()
+        classSet = IdSet(idDict=classNameDict, locked=True)
 
     if options.output != None:
         print >> sys.stderr, "Outputfile exists, removing", options.output
@@ -60,7 +63,7 @@ if __name__=="__main__":
         for cParameter in cParameters:
             print >> sys.stderr, "    Processing c-parameter", cParameter, 
             paramRows = TableUtils.selectRowsCSV(foldRows, {"c":cParameter})
-            evaluator = Evaluator.calculateFromCSV(paramRows, EvaluatorClass)
+            evaluator = Evaluator.calculateFromCSV(paramRows, EvaluatorClass, classSet)
             cParameterByEvaluator[evaluator] = cParameter
             evaluators.append(evaluator)
             if evaluator.type == "multiclass":
