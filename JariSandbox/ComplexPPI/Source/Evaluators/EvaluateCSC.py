@@ -38,7 +38,7 @@ if __name__=="__main__":
             classId = classId.strip()
             classNameDict[classId] = className
         classNameFile.close()
-        classSet = IdSet(idDict=classNameDict, locked=True)
+        #classSet = IdSet(idDict=classNameDict, locked=True)
 
     if options.output != None:
         print >> sys.stderr, "Outputfile exists, removing", options.output
@@ -63,7 +63,7 @@ if __name__=="__main__":
         for cParameter in cParameters:
             print >> sys.stderr, "    Processing c-parameter", cParameter, 
             paramRows = TableUtils.selectRowsCSV(foldRows, {"c":cParameter})
-            evaluator = Evaluator.calculateFromCSV(paramRows, EvaluatorClass, classSet)
+            evaluator = Evaluator.calculateFromCSV(paramRows, EvaluatorClass)
             print evaluator.toStringConcise()
             cParameterByEvaluator[evaluator] = cParameter
             evaluators.append(evaluator)
