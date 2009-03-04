@@ -1,6 +1,7 @@
 #!/bin/bash
 
-DDIR=/usr/share/biotext/GeniaChallenge/orig-data
+DIRTRAIN=/usr/share/biotext/GeniaChallenge/orig-data
+DIRTEST=/usr/share/biotext/GeniaChallenge/test-data
 THIS=`pwd`
 
 echo "Total number of documents `ls $DDIR/*.a1 | wc -l`"
@@ -19,6 +20,7 @@ function convert {
     SRC=$1 #source ids
     DST=$2 #destination XML
     OPTS=$3 #options given to geniaTpGifxml.py
+    DDIR=$4 
     cd $DDIR
 
     TMP1=`tempfile`
@@ -37,21 +39,32 @@ function convert {
     
     # Remove unneeded ThemeX and CauseX
     echo "Removing ThemeX and CauseX"
-    perl -pi -e 's/Theme2/Theme/g' $DST
-    perl -pi -e 's/Theme3/Theme/g' $DST
-    perl -pi -e 's/Theme4/Theme/g' $DST
-    perl -pi -e 's/Cause2/Cause/g' $DST
+    perl -pi -e 's/\"(Theme|Cause|Site|CSite|AtLoc|ToLoc)[0-9]+\"/\"$1\"/g' $DST
     
     rm -f $TMP1 $TMP2
 }
 
-convert IDsTRAIN train.xml ""
-convert IDsDEVEL devel.xml ""
-convert IDsEVERYTHING everything.xml ""
-convert IDsTRAIN train-with-duplicates.xml -p
-convert IDsDEVEL devel-with-duplicates.xml -p
-convert IDsEVERYTHING everything-with-duplicates.xml -p
+### Converts the TRAIN/DEVEL data for task 1
+# convert IDsTRAIN train.xml "" $DIRTRAIN
+# convert IDsDEVEL devel.xml "" $DIRTRAIN
+# convert IDsEVERYTHING everything.xml "" $DIRTRAIN
+# convert IDsTRAIN train-with-duplicates.xml -p $DIRTRAIN
+# convert IDsDEVEL devel-with-duplicates.xml -p $DIRTRAIN
+# convert IDsEVERYTHING everything-with-duplicates.xml -p $DIRTRAIN
 
-# Update the mini-sets
-cd $THIS
-./make-mini-sets.sh
+### Converts the TEST data
+#convert IDsTEST test.xml "" $DIRTEST
+
+
+### Converts the TRAIN/DEVEL data for task 2
+convert IDsTRAIN train12.xml "-t 12" $DIRTRAIN
+convert IDsDEVEL devel12.xml "-t 12" $DIRTRAIN
+convert IDsEVERYTHING everything12.xml "-t 12" $DIRTRAIN
+convert IDsTRAIN train-with-duplicates12.xml "-t 12 -p" $DIRTRAIN
+convert IDsDEVEL devel-with-duplicates12.xml "-p -t 12" $DIRTRAIN
+convert IDsEVERYTHING everything-with-duplicates12.xml "-t 12 -p" $DIRTRAIN
+
+#### I don't know what this is:
+# # Update the mini-sets
+# cd $THIS
+# ./make-mini-sets.sh
