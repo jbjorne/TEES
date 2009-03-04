@@ -286,14 +286,6 @@ if __name__=="__main__":
         exampleSets[1] = os.path.join(options.output,"examplesTest.txt")
         testCorpusElements = loadSet(options.input_test, exampleSets[1], exampleBuilder)
     
-    print >> sys.stderr, "Testing",
-    startTime = time.time()
-    predictions = classifier.classify(exampleSets[1], bestResults[2])
-    print >> sys.stderr, "(Time spent:", time.time() - startTime, "s)"
-    
-    # Calculate statistics
-    evaluation = Evaluation(predictions, classSet=exampleBuilder.classSet)
-    print >> sys.stderr, evaluation.toStringConcise()
     if options.output != None:
         evaluation.saveCSV(options.output + "/results.csv")
         print >> sys.stderr, "Saving class names to", options.output + ".class_names"
@@ -301,6 +293,14 @@ if __name__=="__main__":
         print >> sys.stderr, "Saving feature names to", options.output + "/feature_names.txt"
         exampleBuilder.featureSet.write(options.output + "/feature_names.txt")
         TableUtils.writeCSV(bestResults[2], options.output +"/best_parameters.csv")
+    
+    print >> sys.stderr, "Testing",
+    startTime = time.time()
+    predictions = classifier.classify(exampleSets[1], bestResults[2])
+    print >> sys.stderr, "(Time spent:", time.time() - startTime, "s)"
+    # Calculate statistics
+    evaluation = Evaluation(predictions, classSet=exampleBuilder.classSet)
+    print >> sys.stderr, evaluation.toStringConcise()
     
     # Save interactionXML
     if options.resultsToXML != None:
