@@ -14,26 +14,29 @@ def tokensToSVG(tokenElements, showPOS=False, entitiesByToken=None, extraByToken
     for token in tokenElements:
         svgToken = draw_dg.Token(token.attrib["text"], int(token.attrib["id"].split("_")[-1])-1)
         if isNameByToken != None and isNameByToken[token]:
-            svgToken.styleDict["fill"] = "red"
+            svgToken.styleDict["fill"] = "brown"
         if showPOS:
             svgToken.otherLines.append(token.attrib["POS"])
         if entitiesByToken != None and entitiesByToken.has_key(token):
             count = maxOtherLines
             for entity in entitiesByToken[token]:
                 if entity.attrib["isName"] == "True":
-                    svgToken.otherLines.append("["+entity.attrib["type"]+"]")
+                    svgToken.otherLines.append("["+entity.get("type")+"]")
                 else:
-                    svgToken.otherLines.append(entity.attrib["type"])
+                    svgToken.otherLines.append(entity.get("type"))
                 count -= 1
             for i in range(0,count):
                 svgToken.otherLines.append("")
         else:
             for i in range(0,maxOtherLines):
                 svgToken.otherLines.append("")
-        if extraByToken != None and extraByToken.has_key(token):
-            svgToken.otherLines.append(extraByToken[token][0])
-            for k,v in extraByToken[token][1].items():
-                svgToken.styleDict[k]=v
+        if extraByToken != None:
+            if extraByToken.has_key(token):
+                svgToken.otherLines.append(extraByToken[token][0])
+                for k,v in extraByToken[token][1].items():
+                    svgToken.styleDict[k]=v
+            else:
+                svgToken.otherLines.append("")
         #svgTokensById[token.attrib["id"]] = svgToken
         svgToken.id = token.attrib["id"]
         svgTokens.append(svgToken)
@@ -49,10 +52,10 @@ def edgesToSVG(svgTokens, graph, arcStyles={}, labelStyles={}, edgeTypeAttrib="t
     edges = graph.edges()
     svgEdges = []    
     for edge in edges:
-        token1 = edge[0].attrib["id"]
-        token2 = edge[1].attrib["id"]
+        token1 = edge[0].get("id")
+        token2 = edge[1].get("id")
         if edgeTypeAttrib != None:
-            type = edge[2].attrib[edgeTypeAttrib]
+            type = edge[2].get(edgeTypeAttrib)
             if int(token1.split("_")[-1]) < int(token2.split("_")[-1]):
                 type += ">"
                 svgEdge = draw_dg.Dep(svgTokensById[token1], svgTokensById[token2], type)

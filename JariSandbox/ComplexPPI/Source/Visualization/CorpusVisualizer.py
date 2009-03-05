@@ -1,4 +1,6 @@
 import sys, os, shutil
+sys.path.append(os.path.dirname(os.path.abspath(__file__))+"/..")
+import Evaluators.EvaluateInteractionXML as EvaluateInteractionXML
 import GraphToSVG
 from HtmlBuilder import *
 import networkx as NX
@@ -45,6 +47,137 @@ class CorpusVisualizer:
                 arcStyles[annEdge] = {"stroke":negColor}
                 labelStyles[annEdge] = {"fill":negColor}
         return arcStyles, labelStyles
+    
+    def getTokenMap(self, sentenceGraph, goldGraph):
+        tokenMap = {}
+        for i in range(len(sentenceGraph.tokens)):
+            tokenMap[sentenceGraph.tokens[i]] = goldGraph.tokens[i]
+        return tokenMap
+    
+    def getNXEdge(self, graph, t1, t2, label):
+        for edge in graph.edges():
+            if edge[0] == t1 and edge[1] == t2 and edge[2] == label:
+                return edge
+        return None
+    
+    def makeExampleGraphWithGold(self, builder, sentenceGraph, goldGraph):
+        exampleGraph = NX.XDiGraph(multiedges = True)
+        for token in goldGraph.tokens:
+            exampleGraph.add_node(token)
+        arcStyles = {}
+        labelStyles = {}
+        extraByToken = {}
+        edgeTypes = {}
+        stats = {"entities":0,"edges":0,"tp":0,"fp":0,"tn":0,"fn":0}
+        
+        entityMap = EvaluateInteractionXML.mapEntities(sentenceGraph.entities, goldGraph.entities, goldGraph.tokens)
+        tokenMap = self.getTokenMap(sentenceGraph, goldGraph)
+        toEntitiesWithPredictions = set()
+        for entityFrom, entitiesTo in entityMap.iteritems():
+            stats["entities"] += 1
+            entityFromHeadToken = sentenceGraph.entityHeadTokenByEntity[entityFrom]
+            for entityTo in entitiesTo:
+                toEntitiesWithPredictions.add(entityTo)
+                entityToHeadToken = goldGraph.entityHeadTokenByEntity[entityTo]
+                style = None
+                eFromType = entityFrom.get("type")
+                eToType = entityTo.get("type")
+                if extraByToken.has_key(entityToHeadToken):
+                    style = extraByToken[entityToHeadToken]
+                if eFromType == eToType:
+                    if eToType != "neg":
+                        if style == None:
+                            style = [entityTo.get("type"),{"fill":"green"}]
+                        elif style[1]["fill"] == "#79BAEC":
+                            style = [entityTo.get("type"),{"fill":"green"}]
+                        if entityTo.get("isName") == "True":
+                            style = [entityTo.get("type"),{"fill":"brown"}]
+                        else:
+                            stats["tp"] += 1
+                else:
+                    if eToType == "neg":
+                        pass
+                extraByToken[entityToHeadToken] = style
+            if len(entitiesTo) == 0:
+                stats["fp"] += 1
+                if extraByToken.has_key(tokenMap[entityFromHeadToken]):
+                    style = extraByToken[tokenMap[entityFromHeadToken]]
+                    if style[1]["fill"] != "green":
+                        style = [entityFrom.get("type"),{"fill":"red"}]
+                    extraByToken[tokenMap[entityFromHeadToken]] = style
+                else:
+                    extraByToken[tokenMap[entityFromHeadToken]] = [entityFrom.get("type"),{"fill":"red"}]
+        for entity in goldGraph.entities:
+            if entity not in toEntitiesWithPredictions:
+                stats["fn"] += 1
+                extraByToken[goldGraph.entityHeadTokenByEntity[entity]] = [entity.get("type"),{"fill":"#79BAEC"}]
+        
+        toInteractionsWithPredictions = set()            
+        for interactionFrom in sentenceGraph.interactions:
+            if interactionFrom.get("type") == "neg":
+                continue
+            stats["edges"] += 1
+            
+            e1s = entityMap[sentenceGraph.entitiesById[interactionFrom.get("e1")]]
+            e1Ids = []
+            for e1 in e1s:
+                e1Ids.append(e1.get("id"))
+            e2s = entityMap[sentenceGraph.entitiesById[interactionFrom.get("e2")]]
+            e2Ids = []
+            for e2 in e2s:
+                e2Ids.append(e2.get("id"))
+                
+            t1 = tokenMap[sentenceGraph.entityHeadTokenByEntity[sentenceGraph.entitiesById[interactionFrom.get("e1")]]]
+            t2 = tokenMap[sentenceGraph.entityHeadTokenByEntity[sentenceGraph.entitiesById[interactionFrom.get("e2")]]]
+            iFromType = interactionFrom.get("type")
+            
+            found = False
+            for interactionTo in goldGraph.interactions:
+                if interactionTo.get("e1") in e1Ids and interactionTo.get("e2") in e2Ids:
+                    toInteractionsWithPredictions.add(interactionTo)
+                    
+                    iToType = interactionTo.get("type")
+                    exampleGraph.add_edge(t1, t2, interactionFrom)
+                    #edge = exampleGraph.get_edge(t1, t2)
+                    edge = self.getNXEdge(exampleGraph, t1, t2, interactionFrom)
+                    
+                    if t1 != t2:
+                        if iToType == iFromType:
+                            arcStyles[edge] = {"stroke":"green"}
+                            labelStyles[edge] = {"fill":"green"}
+                            stats["tp"] += 1
+                        else:
+                            arcStyles[edge] = {"stroke":"red"}
+                            labelStyles[edge] = {"fill":"red"}
+                            stats["fp"] += 1
+                    found = True
+            if not found: # false positive prediction
+                if t1 != t2:
+                    exampleGraph.add_edge(t1, t2, interactionFrom)
+                    edge = self.getNXEdge(exampleGraph, t1, t2, interactionFrom)
+                    arcStyles[edge] = {"stroke":"red"}
+                    labelStyles[edge] = {"fill":"red"}
+                    stats["fp"] += 1
+        for interactionTo in goldGraph.interactions:
+            if interactionTo not in toInteractionsWithPredictions: # false negative gold
+                t1 = goldGraph.entityHeadTokenByEntity[goldGraph.entitiesById[interactionTo.get("e1")]]
+                t2 = goldGraph.entityHeadTokenByEntity[goldGraph.entitiesById[interactionTo.get("e2")]]                
+                if t1 != t2:
+                    exampleGraph.add_edge(t1, t2, interactionTo)
+                    edge = self.getNXEdge(exampleGraph, t1, t2, interactionTo)
+                    arcStyles[edge] = {"stroke":"#79BAEC"}
+                    labelStyles[edge] = {"fill":"#79BAEC"}
+                    stats["fn"] += 1
+        
+        builder.header("Classification",4)
+        svgTokens = GraphToSVG.tokensToSVG(goldGraph.tokens,False,None,extraByToken)
+        #arcStyles, labelStyles = self.getMatchingEdgeStyles(exampleGraph, sentenceGraph.interactionGraph, "green", "red" )
+        svgEdges = GraphToSVG.edgesToSVG(svgTokens, exampleGraph, arcStyles, labelStyles, "type", None)
+        sentenceId = sentenceGraph.getSentenceId()
+        svgElement = GraphToSVG.writeSVG(svgTokens, svgEdges, self.outDir+"/svg/"+sentenceId+"_learned.svg")
+        builder.svg("../svg/" + sentenceId + "_learned.svg",svgElement.attrib["width"],svgElement.attrib["height"],id="learned_graph")
+        builder.lineBreak()
+        return stats
     
     def makeExampleGraph(self, builder, sentenceGraph, examples, classificationsByExample):
         exampleGraph = NX.XDiGraph()#multiedges = True)
@@ -115,10 +248,11 @@ class CorpusVisualizer:
         builder.svg("../svg/" + sentenceId + "_learned.svg",svgElement.attrib["width"],svgElement.attrib["height"],id="learned_graph")
         builder.lineBreak()
     
-    def makeSentencePage(self, sentenceGraph, examples, classificationsByExample, prevAndNextId=None):
+    def makeSentencePage(self, sentenceGraph, examples, classificationsByExample, prevAndNextId=None, goldGraph=None):
         # Store info for sentence list
         sentenceId = sentenceGraph.getSentenceId()
         self.sentences.append([sentenceGraph,0,0,0,0])
+        sentenceGraph.stats = {"entities":0,"edges":0,"tp":0,"fp":0,"tn":0,"fn":0}
         visualizationSet = None
         if examples != None:
             for example in examples:
@@ -174,27 +308,41 @@ class CorpusVisualizer:
         builder.svg("../svg/" + sentenceId + ".svg",svgElement.attrib["width"],svgElement.attrib["height"],id="dep_graph")
         builder.lineBreak()
         
-        # Check for named entities
-        isNameByToken = {}
-        for token in sentenceGraph.tokens:
-            if sentenceGraph.getTokenText(token) == "NAMED_ENT":
-                isNameByToken[token] = True
-            else:
-                isNameByToken[token] = False
         
         # Annotation SVG
-        if sentenceGraph.interactionGraph != None:
-            builder.header("Annotation",4)
+        builder.header("Annotation",4)
+        if goldGraph != None:
+            # Check for named entities
+            isNameByToken = {}
+            for token in goldGraph.tokens:
+                if goldGraph.getTokenText(token) == "NAMED_ENT":
+                    isNameByToken[token] = True
+                else:
+                    isNameByToken[token] = False
+            arcStyles, labelStyles = self.getMatchingEdgeStyles(goldGraph.interactionGraph, goldGraph.dependencyGraph, "orange", "#F660AB" )
+            svgTokens = GraphToSVG.tokensToSVG(goldGraph.tokens, False, goldGraph.entitiesByToken, None, isNameByToken)
+            svgInteractionEdges = GraphToSVG.edgesToSVG(svgTokens, goldGraph.interactionGraph, arcStyles, labelStyles)
+            svgElement = GraphToSVG.writeSVG(svgTokens, svgInteractionEdges,self.outDir+"/svg/"+sentenceId+"_ann.svg")
+        elif sentenceGraph.interactionGraph != None:
+            # Check for named entities
+            isNameByToken = {}
+            for token in sentenceGraph.tokens:
+                if sentenceGraph.getTokenText(token) == "NAMED_ENT":
+                    isNameByToken[token] = True
+                else:
+                    isNameByToken[token] = False
             arcStyles, labelStyles = self.getMatchingEdgeStyles(sentenceGraph.interactionGraph, sentenceGraph.dependencyGraph, "orange", "#F660AB" )
             svgTokens = GraphToSVG.tokensToSVG(sentenceGraph.tokens, False, sentenceGraph.entitiesByToken, None, isNameByToken)
             svgInteractionEdges = GraphToSVG.edgesToSVG(svgTokens, sentenceGraph.interactionGraph, arcStyles, labelStyles)
             svgElement = GraphToSVG.writeSVG(svgTokens, svgInteractionEdges,self.outDir+"/svg/"+sentenceId+"_ann.svg")
-            builder.svg("../svg/" + sentenceId + "_ann.svg",svgElement.attrib["width"],svgElement.attrib["height"],id="ann_graph")
-            builder.lineBreak()
+        builder.svg("../svg/" + sentenceId + "_ann.svg",svgElement.attrib["width"],svgElement.attrib["height"],id="ann_graph")
+        builder.lineBreak()
         
         # Classification svg
         if classificationsByExample != None:
             self.makeExampleGraph(builder, sentenceGraph, examples, classificationsByExample)      
+        elif goldGraph != None:
+            sentenceGraph.stats = self.makeExampleGraphWithGold(builder, sentenceGraph, goldGraph)
         
         builder.table(0,align="center",width="100%")
         builder.tableRow()
@@ -206,6 +354,7 @@ class CorpusVisualizer:
         builder.tableHead()
         builder.tableRow()
         builder.tableHeader("id", True)
+        builder.tableHeader("type", True)
         builder.tableHeader("e1", True)
         builder.tableHeader("e2", True)
         builder.tableHeader("e1 word", True)
@@ -221,6 +370,7 @@ class CorpusVisualizer:
             #tr.set( "onmouseover", getPairHighlightCommand("main_parse",pairElement.get("e1"),pairElement.get("e2"),entityTokens,"highlightPair") )
             #tr.set( "onmouseout", getPairHighlightCommand("main_parse",pairElement.get("e1"),pairElement.get("e2"),entityTokens,"deHighlightPair") )
             builder.tableData(pairElement.get("id").split(".")[-1][1:], True)
+            builder.tableData(pairElement.get("type"), True)
             builder.tableData(pairElement.get("e1").split(".")[-1][1:], True)
             builder.tableData(pairElement.get("e2").split(".")[-1][1:], True)
             builder.tableData(entityTextById[pairElement.get("e1")], True)
@@ -325,13 +475,16 @@ class CorpusVisualizer:
         builder.tableHeader("id",True)
         builder.tableHeader("text",True)
         builder.tableHeader("origId",True)
-        builder.tableHeader("set",True)
-        builder.tableHeader("examples",True)
-        builder.tableHeader("classifications",True)
-        #builder.tableHeader("pairs",True)
-        #builder.tableHeader("int",True)
-        builder.tableHeader("tp",True)
-        builder.tableHeader("fp",True)
+        #builder.tableHeader("set",True)
+        builder.tableHeader("entities",True)
+        builder.tableHeader("edges",True)
+        #builder.tableHeader("examples",True)
+        #builder.tableHeader("classifications",True)
+        ##builder.tableHeader("pairs",True)
+        ##builder.tableHeader("int",True)
+        builder.tableHeader("tp     ",True)
+        builder.tableHeader("fp     ",True)
+        builder.tableHeader("fn     ",True)
         builder.closeElement() # close tableRow
         builder.closeElement() # close tableHead
         
@@ -349,12 +502,17 @@ class CorpusVisualizer:
                 text = text[:80] + "..."
             builder.tableData(text,True)
             builder.tableData(self.__getOrigId(sentence[0].sentenceElement),True)
-            if hasattr(sentence[0], "visualizationSet"):
-                builder.tableData(str(sentence[0].visualizationSet),True)
-            else:
-                builder.tableData("N/A",True)
-            builder.tableData(str(sentence[1]),True)
-            builder.tableData(str(sentence[2]),True)
+            #if hasattr(sentence[0], "visualizationSet"):
+            #    builder.tableData(str(sentence[0].visualizationSet),True)
+            #else:
+            #    builder.tableData("N/A",True)
+            #builder.tableData(str(sentence[1]),True)
+            #builder.tableData(str(sentence[2]),True)
+            builder.tableData(str(sentence[0].stats["entities"]),True)
+            builder.tableData(str(sentence[0].stats["edges"]),True)
+            builder.tableData(str(sentence[0].stats["tp"]),True)
+            builder.tableData(str(sentence[0].stats["fp"]),True)
+            builder.tableData(str(sentence[0].stats["fn"]),True)
             #builder.tableData(str(len(sentence.annotationDependencies)),True)
             #builder.tableData(str(len(sentence.entities)),True)
             #pairs = sentence.pairs
@@ -364,10 +522,10 @@ class CorpusVisualizer:
             #    if pair.get("interaction") == "True":
             #        numInteractions += 1
             #builder.tableData(str(numInteractions),True)
-            tp = sentence[3]
-            fp = sentence[4]
-            builder.tableData(str(tp),True)
-            builder.tableData(str(fp),True)
+            #tp = sentence[3]
+            #fp = sentence[4]
+            #builder.tableData(str(tp),True)
+            #builder.tableData(str(fp),True)
             builder.closeElement() # close tableRow
         builder.closeElement() # close tableBody
         builder.closeElement() # close table
