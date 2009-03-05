@@ -1,6 +1,6 @@
 import sys, os, shutil
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
-import Core.ExampleUtils as Example
+import Core.ExampleUtils as ExampleUtils
 import Core.IdSet as IdSet
 from optparse import OptionParser
 
