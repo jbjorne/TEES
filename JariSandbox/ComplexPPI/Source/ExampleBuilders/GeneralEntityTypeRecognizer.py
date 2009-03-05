@@ -17,11 +17,18 @@ def compareDependencyEdgesById(dep1, dep2):
 
 
 class GeneralEntityTypeRecognizer(ExampleBuilder):
-    def __init__(self, style=None):
+    def __init__(self, style=None, classSet=None, featureSet=None):
         ExampleBuilder.__init__(self)
         self.classSet = IdSet(1)
         self.styles = style
+        
+        if classSet == None:
+            self.classSet = IdSet(1)
+        else:
+            self.classSet = classSet
         assert( self.classSet.getId("neg") == 1 )
+        if featureSet != None:
+            self.featureSet = featureSet
 
     def preProcessExamples(self, allExamples):
         if "normalize" in self.styles:
