@@ -2,6 +2,7 @@ import sys, os, shutil
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 import Core.ExampleUtils as ExampleUtils
 from Core.IdSet import IdSet
+from Utils.ProgressCounter import ProgressCounter
 from optparse import OptionParser
 
 if __name__=="__main__":
@@ -32,11 +33,13 @@ if __name__=="__main__":
     variantClassSet = IdSet()
     variantClassSet.load(os.path.join(options.variant, "test-triggers.examples.class_names"))
     
+    counter = ProgressCounter(len(variantExamples))
     for example in variantExamples:
+        counter.update()
         example[1] = invariantClassSet.getId(variantClassSet.getName(example[1]))
         newFeatures = {}
-        for k,v in example[2]:
+        for k,v in example[2].iteritems():
             newFeatures[ invariantFeatureSet.getId(variantFeatureSet.getName(k)) ] = v
         example[2] = newFeatures
         
-    ExampleUtils.writeExamples(os.path.join(options.variant, "realignedExamples.txt"))
+    ExampleUtils.writeExamples(variantExamples, os.path.join(options.variant, "realignedExamples.txt"))
