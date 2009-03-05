@@ -283,8 +283,14 @@ if __name__=="__main__":
     print >> sys.stderr, "(Time spent:", time.time() - startTime, "s)"
     
     if testCorpusElements == None:
-        exampleSets[1] = os.path.join(options.output,"examplesTest.txt")
-        testCorpusElements = loadSet(options.input_test, exampleSets[1], exampleBuilder)
+        if options.input_test.find(":") != -1:
+            testCorpusFilename, testExamplesFilename = options.input_test.split(":")
+            print >> sys.stderr, "Using predefined example file for test set:", testExamplesFilename
+            exampleSets[1] = testExamplesFilename
+            testCorpusElements = loadCorpus(testCorpusFilename, options.parse, options.tokenization)
+        else:
+            exampleSets[1] = os.path.join(options.output,"examplesTest.txt")
+            testCorpusElements = loadSet(options.input_test, exampleSets[1], exampleBuilder)
     
     if options.output != None:
         print >> sys.stderr, "Saving class names to", options.output + ".class_names"
