@@ -32,11 +32,13 @@ def splitMerged(sentence, elementName, countsByType):
                 newElement.set("type", type)
                 idSplits = element.get("id").rsplit(".",1)
                 newElement.set("id", idSplits[0] + "." + idSplits[1][0] + str(elementCount) )
+                print "new id", idSplits[0] + "." + idSplits[1][0] + str(elementCount)
                 newElements.append(newElement)
                 elementCount += 1
             sentence.remove(element)
             removeCount += 1
     # insert the new elements
+    elements = sentence.findall(elementName)
     if len(newElements) > 0:
         insertPos = 0
         for element in sentence:
