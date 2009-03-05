@@ -287,7 +287,6 @@ if __name__=="__main__":
         testCorpusElements = loadSet(options.input_test, exampleSets[1], exampleBuilder)
     
     if options.output != None:
-        evaluation.saveCSV(options.output + "/results.csv")
         print >> sys.stderr, "Saving class names to", options.output + ".class_names"
         exampleBuilder.classSet.write(options.output + "/class_names.txt")
         print >> sys.stderr, "Saving feature names to", options.output + "/feature_names.txt"
@@ -301,6 +300,8 @@ if __name__=="__main__":
     # Calculate statistics
     evaluation = Evaluation(predictions, classSet=exampleBuilder.classSet)
     print >> sys.stderr, evaluation.toStringConcise()
+    if options.output != None:
+        evaluation.saveCSV(options.output + "/results.csv")
     
     # Save interactionXML
     if options.resultsToXML != None:
