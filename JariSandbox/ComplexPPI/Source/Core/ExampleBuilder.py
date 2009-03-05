@@ -85,6 +85,7 @@ if __name__=="__main__":
     optparser.add_option("-p", "--parse", default="split-Charniak-Lease", dest="parse", help="parse")
     optparser.add_option("-x", "--exampleBuilderParameters", default=None, dest="exampleBuilderParameters", help="Parameters for the example builder")
     optparser.add_option("-b", "--exampleBuilder", default="SimpleDependencyExampleBuilder", dest="exampleBuilder", help="Example Builder Class")
+    optparser.add_option("-d", "--predefined", default=None, dest="predefined", help="Directory with predefined class_names.txt and feature_names.txt files")
     (options, args) = optparser.parse_args()
     
     print >> sys.stderr, "Importing modules"
@@ -97,7 +98,18 @@ if __name__=="__main__":
         sentences.append( [sentence.sentenceGraph,None] )
 
     # Build examples
-    exampleBuilder = ExampleBuilderClass(**splitParameters(options.exampleBuilderParameters))
+    if options.predefined != None:
+        print >> sys.stderr, "Using predefined class and feature names"
+        featureSet = IdSet()
+        featureSet.load(os.path.join(options.predefined, "feature_names.txt"))
+        classSet = None
+        if os.path.exists(os.path.join(options.predefined, "class_names.txt")):
+            classSet = IdSet()
+            classSet.load(os.path.join(options.predefined, "class_names.txt"))
+        exampleBuilder = ExampleBuilder(featureSet=featureSet, classSet=classSet, **splitParameters(options.exampleBuilderParameters))
+    else:
+        exampleBuilder = ExampleBuilderClass(**splitParameters(options.exampleBuilderParameters))
+    
     buildExamples(exampleBuilder, sentences, options)
     print >> sys.stderr, "Saving class names to", options.output + ".class_names"
     exampleBuilder.classSet.write(options.output + ".class_names")
