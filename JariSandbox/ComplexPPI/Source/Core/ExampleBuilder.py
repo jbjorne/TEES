@@ -30,6 +30,14 @@ class ExampleBuilder:
     
     def getPredictedValueRange(self):
         return None
+
+def calculatePredictedRange(exampleBuilder, sentences):
+    print >> sys.stderr, "Defining predicted value range:",
+    sentenceElements = []
+    for sentence in sentences:
+        sentenceElements.append(sentence[0].sentenceElement)
+    exampleBuilder.definePredictedValueRange(sentenceElements, "entity")
+    print >> sys.stderr, exampleBuilder.getPredictedValueRange()
     
 def buildExamples(exampleBuilder, sentences, options):
     examples = []
@@ -37,6 +45,8 @@ def buildExamples(exampleBuilder, sentences, options):
         counter = ProgressCounter(len(sentences), "Build examples", 0)
     else:
         counter = ProgressCounter(len(sentences), "Build examples")
+    
+    calculatePredictedRange(exampleBuilder, sentences)
     
     outfile = open(options.output, "wt")
     exampleCount = 0
