@@ -30,7 +30,7 @@ def sentStats(sNode):
     iTypeCounts={} #key: type  val: count of interactions
     for iNode in sNode.getiterator("interaction"):
         iType=iNode.get("type")
-        iTypeCounts[iType]=iTypeCounts.get(iType)+1
+        iTypeCounts[iType]=iTypeCounts.get(iType,0)+1
     return tokenCount,nameEntCount,otherEntCount,eTypeCounts,iTypeCounts
 
 def countDictUpdate(masterDict,smallDict):
