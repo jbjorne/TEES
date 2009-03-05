@@ -1,7 +1,7 @@
 import sys, os, shutil
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 import Core.ExampleUtils as ExampleUtils
-import Core.IdSet as IdSet
+from Core.IdSet import IdSet
 from optparse import OptionParser
 
 if __name__=="__main__":
@@ -34,8 +34,9 @@ if __name__=="__main__":
     
     for example in variantExamples:
         example[1] = invariantClassSet.getId(variantClassSet.getName(example[1]))
+        newFeatures = {}
         for k,v in example[2]:
-            del example[2][k]
-            example[2][ invariantFeatureSet.getId(variantFeatureSet.getName(k)) ] = v
-    
+            newFeatures[ invariantFeatureSet.getId(variantFeatureSet.getName(k)) ] = v
+        example[2] = newFeatures
+        
     ExampleUtils.writeExamples(os.path.join(options.variant, "realignedExamples.txt"))
