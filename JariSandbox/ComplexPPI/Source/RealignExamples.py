@@ -17,6 +17,7 @@ if __name__=="__main__":
     optparser = OptionParser(usage="%prog [options]\nCreate an html visualization for a corpus.")
     optparser.add_option("-i", "--invariant", default=None, dest="invariant", help="Corpus in analysis format", metavar="FILE")
     optparser.add_option("-v", "--variant", default=None, dest="variant", help="Corpus in analysis format", metavar="FILE")
+    (options, args) = optparser.parse_args()
     
     #invariantExamples = ExampleUtils.readExamples(os.path.join(options.invariant, "examples.txt"))
     variantExamples = ExampleUtils.readExamples(os.path.join(options.variant, "test-triggers.examples"))
