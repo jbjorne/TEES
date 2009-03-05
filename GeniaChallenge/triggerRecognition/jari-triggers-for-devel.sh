@@ -1,4 +1,4 @@
-TRAIN_FILE="/usr/share/biotext/GeniaChallenge/xml/train.xml"
+TRAIN_FILE="/usr/share/biotext/GeniaChallenge/xml/everything.xml"
 TEST_FILE="/usr/share/biotext/GeniaChallenge/xml/devel.xml"
 GOLD_TEST_FILE="/usr/share/biotext/GeniaChallenge/xml/devel.xml"
 CLASSIFIER_PARAMS="c:10,20,30,40,50,60,70,80,90,100,500,1000,5000,10000,20000,50000,80000,100000,150000,200000,500000,1000000,5000000,10000000;timeout:6000"
