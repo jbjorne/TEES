@@ -27,9 +27,9 @@ if __name__=="__main__":
     invariantClassSet.load(os.path.join(options.invariant, "class_names.txt"))
 
     variantFeatureSet = IdSet()
-    variantFeatureSet.load(os.path.join(options.variant, "feature_names.txt"))
+    variantFeatureSet.load(os.path.join(options.variant, "test-triggers.examples.feature_names"))
     variantClassSet = IdSet()
-    variantClassSet.load(os.path.join(options.variant, "class_names.txt"))
+    variantClassSet.load(os.path.join(options.variant, "test-triggers.examples.class_names"))
     
     for example in variantExamples:
         example[1] = invariantClassSet.getId(variantClassSet.getName(example[1]))
