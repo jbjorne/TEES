@@ -118,8 +118,9 @@ class Analyser:
 
 
 class Unflattener:
-    def __init__(self,document):
+    def __init__(self,document,perfect):
         self.document = document
+        self.perfect = perfect
         self.sentences = dict( [(x.attrib['id'],x)
                                 for x in self.document.findall('sentence')] )
         # contains entity and interaction elements
@@ -216,6 +217,10 @@ class Unflattener:
                                                                       for x in result]))
                 return(result)
             elif t=='Binding':
+                # Binding is not perfectly solvable
+                if self.perfect:
+                    sys.stderr.write("Skipping %s (%s)\n"%(uid,t))
+                    return([edges])
                 # simple approach that uses only linear order
                 # (probably makes many mistakes)
                 # left,right = getLinearGrouping(node,edges)
@@ -259,6 +264,8 @@ class Unflattener:
                 return(result)
             elif t in ['Regulation','Positive_regulation',
                        'Negative_regulation']:
+                # Regulation is not perfectly solvable
+                # but for now there no better way than the baseline
                 # (can respectively be ignored?)
                 cause = [x for x in edges if
                          x[2].attrib['type'].startswith('Cause')]
@@ -270,14 +277,14 @@ class Unflattener:
                     return(result)
                 else:
                     result = [[e] for e in edges]
-                    sys.stderr.write("Splitting %s (%s) into %s - %s"%(uid,t,
+                    sys.stderr.write("Splitting %s (%s) into %s - %s\n"%(uid,t,
                                                                        len(result),
                                                                        [[y[2].attrib['id']
                                                                          for y in x]
                                                                         for x in result]))
                     return(result)
             else:
-                sys.stderr.write("Invalid event type: %s"%t)
+                sys.stderr.write("Invalid event type: %s\n"%t)
             return([edges])
 
         def getLinearGrouping(node,edges):
@@ -361,6 +368,11 @@ def interface(optionArgs=sys.argv[1:]):
                   dest="outfile",
                   help="Output file (gifxml)",
                   metavar="FILE")
+    op.add_option("-p", "--perfect",
+                  dest="perfect",
+                  help="Process only those event which can be perfectly solved",
+                  action="store_true",
+                  default=False)
     (options, args) = op.parse_args(optionArgs)
 
     quit = False
@@ -377,7 +389,7 @@ def interface(optionArgs=sys.argv[1:]):
     corpus = ET.parse(options.infile)
     for document in corpus.getroot().findall('document'):
         sys.stderr.write("Unflattening document %s\n"%document.attrib['id'])
-        unflattener = Unflattener(document)
+        unflattener = Unflattener(document,options.perfect)
         unflattener.analyse()
         unflattener.unflatten()
     indent(corpus.getroot())
