@@ -35,9 +35,14 @@ class SentenceElements:
         
         entityElements = sentenceElement.findall("entity")
         if entityElements != None:
+            entitiesToKeep = []
+            for entityElement in entityElements:
+                if entityElement.get("type") != "neg":
+                    entitiesToKeep.append(entityElement)
+            entityElements = entitiesToKeep
             self.entities = entityElements
-        for entityElement in entityElements:
-            self.entitiesById[entityElement.attrib["id"]] = entityElement
+            for entityElement in entityElements:
+                self.entitiesById[entityElement.attrib["id"]] = entityElement
         
         sentenceAnalysesElement = sentenceElement.find("sentenceanalyses")
         if sentenceAnalysesElement != None:
