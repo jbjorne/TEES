@@ -262,8 +262,8 @@ def writeToInteractionXML(classifications, corpusElements, outputFile, classSet=
                                 predictionString += ","
                             predictionString += classSet.getName(classIds[i]) + ":" + str(classWeights[i])
                         entityElement.attrib["predictions"] = predictionString
-                    if entityElement.attrib["type"] != "neg":
-                        sentenceElement.append(entityElement)
+                    #if entityElement.attrib["type"] != "neg":
+                    sentenceElement.append(entityElement)
                     entityCount += 1
         elif xType == "edge":
             pairCount = 0
