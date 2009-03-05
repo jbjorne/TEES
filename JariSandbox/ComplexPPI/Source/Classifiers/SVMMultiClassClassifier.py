@@ -12,7 +12,7 @@ from Core.Classifier import Classifier
 import Core.Split as Split
 from Evaluators.MultiClassEvaluator import MultiClassEvaluator
 
-binDir = "~/svm-multiclass"
+binDir = "/home/jari/svm-multiclass"
 
 defaultOptimizationParameters = {"c":[0.0001,0.001,0.01,0.1,1,10,100]}
 
