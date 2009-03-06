@@ -102,11 +102,9 @@ if __name__=="__main__":
         print >> sys.stderr, "Using predefined class and feature names"
         featureSet = IdSet()
         featureSet.load(os.path.join(options.predefined, "feature_names.txt"))
-        classSet = None
-        if os.path.exists(os.path.join(options.predefined, "class_names.txt")):
-            classSet = IdSet()
-            classSet.load(os.path.join(options.predefined, "class_names.txt"))
-        exampleBuilder = ExampleBuilder(featureSet=featureSet, classSet=classSet, **splitParameters(options.exampleBuilderParameters))
+        classSet = IdSet()
+        classSet.load(os.path.join(options.predefined, "class_names.txt"))
+        exampleBuilder = ExampleBuilderClass(featureSet=featureSet, classSet=classSet, **splitParameters(options.exampleBuilderParameters))
     else:
         exampleBuilder = ExampleBuilderClass(**splitParameters(options.exampleBuilderParameters))
     
