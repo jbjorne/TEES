@@ -28,10 +28,12 @@ def sentStats(sNode):
             eTypeCounts[eType]=eTypeCounts.get(eType,0)+1
 
     iTypeCounts={} #key: type  val: count of interactions
+    iCount=0
     for iNode in sNode.getiterator("interaction"):
+        iCount+=1
         iType=iNode.get("type")
         iTypeCounts[iType]=iTypeCounts.get(iType,0)+1
-    return tokenCount,nameEntCount,otherEntCount,eTypeCounts,iTypeCounts
+    return tokenCount,nameEntCount,otherEntCount,eTypeCounts,iTypeCounts,iCount
 
 def countDictUpdate(masterDict,smallDict):
     for k,v in smallDict.items():
@@ -46,20 +48,24 @@ def prettyPrintDict(d):
 def allSentStats(treeNode):
     mastereTypeCounts={}
     masteriTypeCounts={}
+    masteriCount=0
     masterTokCount=0
     masterNameEntCount=0
     masterTrigEntCount=0
     sCount=0
     for sNode in treeNode.getiterator("sentence"):
         sCount+=1
-        tokCount,nameEntCount,trigEntCount,eTypeCounts,iTypeCounts=sentStats(sNode)
+        tokCount,nameEntCount,trigEntCount,eTypeCounts,iTypeCounts,iCount=sentStats(sNode)
         masterTokCount+=tokCount
         masterNameEntCount+=nameEntCount
         masterTrigEntCount+=trigEntCount
+        masteriCount+=iCount
         countDictUpdate(mastereTypeCounts,eTypeCounts)
         countDictUpdate(masteriTypeCounts,iTypeCounts)
     print "Tokens/sentence","%.0f"%(masterTokCount/sCount)
     print "Entities/tokens:","%.3f"%((masterNameEntCount+masterTrigEntCount)/masterTokCount)
+    print "Interactions/tokens:","%.3f"%(masteriCount/masterTokCount)
+    print "Interactions/entities:","%.3f"%(masteriCount/(masterNameEntCount+masterTrigEntCount))
     print "Entity distribution: %.0f%% name %.0f%% trigger"%(masterNameEntCount/(masterNameEntCount+masterTrigEntCount)*100,masterTrigEntCount/(masterNameEntCount+masterTrigEntCount)*100)
     print
     print "ETypes",prettyPrintDict(mastereTypeCounts)
