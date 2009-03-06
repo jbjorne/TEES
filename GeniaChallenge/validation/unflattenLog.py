@@ -3,7 +3,7 @@ import re
 
 def process(infile):
     log = re.compile(r'^(.*?) (.*)')
-    spl = re.compile(r'^.*? \((.*?)\) into [0-9]+ - .*$')
+    spl = re.compile(r'^.*? \((.*?)\) into ([0-9]+) - .*$')
     gen = re.compile(r'^Cause-Theme combinations for .*? \((.*?)\).*$')
     gen2 = re.compile(r'^inter-group pairs for .*? \((.*?)\).*$')
     docs = 0
@@ -22,7 +22,8 @@ def process(infile):
             skips += 1
         elif m.group(1) == 'Splitting':
             if spl.match(m.group(2)):
-                split.append(spl.match(m.group(2)).group(1))
+                if int(spl.match(m.group(2)).group(2))>1:
+                    split.append(spl.match(m.group(2)).group(1))
             else:
                 sys.stderr.write("Invalid 'Splitting' line\n")
         elif m.group(1) == 'Generating':
@@ -42,6 +43,7 @@ def process(infile):
         sys.stderr.write("(regulations) Cause-Theme splitting per document: %.3f\n"%(len(causetheme)/d))
         sys.stderr.write("(binding) Inter-group splitting per document: %.3f\n"%(len(intergroup)/d))
         sys.stderr.write("(binding) Splitting-to-1:inter-group-pairs ratio: %.3f\n"%(len([x for x in split if x=='Binding'])/float(len(intergroup))))
+        sys.stderr.write("(regulations) Splitting-to-1:cause-theme ratio: %.3f\n"%(len([x for x in split if x.endswith('egulation')])/float(len(causetheme))))
 
 if __name__=="__main__":
     process(sys.stdin)
