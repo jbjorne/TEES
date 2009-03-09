@@ -24,14 +24,14 @@ def process(infile):
             elif node.match(m.group(2)):
                 removed.append(('n',node.match(m.group(2)).group(1)))
             else:
-                sys.stderr.write("Invalid 'Removed' line\n")
+                sys.stderr.write("Invalid 'Removed' line - %s\n"%line.strip())
         elif m.group(1) == 'Preserved':
             if edge.match(m.group(2)):
                 preserved.append(('e',edge.match(m.group(2)).group(1)))
             elif node.match(m.group(2)):
                 preserved.append(('n',node.match(m.group(2)).group(1)))
             else:
-                sys.stderr.write("Invalid 'Preserved' line\n")
+                sys.stderr.write("Invalid 'Preserved' line - %s\n"%line.strip())
     if docs==0:
         sys.stderr.write("No documents\n")
     else:

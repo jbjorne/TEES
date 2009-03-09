@@ -25,14 +25,14 @@ def process(infile):
                 if int(spl.match(m.group(2)).group(2))>1:
                     split.append(spl.match(m.group(2)).group(1))
             else:
-                sys.stderr.write("Invalid 'Splitting' line\n")
+                sys.stderr.write("Invalid 'Splitting' line - %s\n"%line.strip())
         elif m.group(1) == 'Generating':
             if gen.match(m.group(2)):
                 causetheme.append(gen.match(m.group(2)).group(1))
             elif gen2.match(m.group(2)):
                 intergroup.append(gen2.match(m.group(2)).group(1))
             else:
-                sys.stderr.write("Invalid 'Generating' line\n")
+                sys.stderr.write("Invalid 'Generating' line - %s\n"%line.strip())
     if docs==0:
         sys.stderr.write("No documents\n")
     else:
