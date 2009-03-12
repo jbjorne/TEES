@@ -3,8 +3,6 @@ import parseGifxml
 import sys
 import nbest
 from optparse import OptionParser
-import Reranker
-import random
 
 #TODO: sentence level f-score
 #Corpus level f-score
@@ -12,8 +10,8 @@ import random
 #oracle
 
 def instantiateOptionParser():
-    optparser = OptionParser(usage="python %prog [options] TRAINFILE PREDICTION_FILE GSTANDARD_FILE")
-    optparser.add_option("-n", "--nbest", default = 10, dest = "nbest", help = "the maximum number of candidates to be generated per sentence", type = "int")
+    optparser = OptionParser(usage="python %prog [options] PREDICTION_FILE GSTANDARD_FILE")
+    optparser.add_option("-n", "--nbest", default = 50, dest = "nbest", help = "the maximum number of candidates to be generated per sentence", type = "int")
     (options, args) = optparser.parse_args()
     return optparser
     
@@ -78,85 +76,7 @@ def getPredictedEdges(predictions, keys, entities, choices):
             head2, type2 = entity_info[e2]
             p_edges.add(etype+head1+type1+head2+type2)
     return p_edges
-
-def getGSOutputRepresentation(entities, pairs):
-    entity_types = {}
-    output_edges = {}
-    for entity in entities:
-        typ_e = entity.attrib["type"]
-        entity_types[entity.attrib["id"]] = typ_e
-    for pair in pairs:
-        e1 = pair.attrib["e1"]
-        e2 = pair.attrib["e2"]
-        if e1 in entity_types and e2 in entity_types:
-            type2 = entity_types[e2]
-            etype = pair.attrib["type"]
-            if not e1 in output_edges:
-                output_edges[e1] = {}
-            if not etype+type2 in output_edges[e1]:
-                output_edges[e1][etype+type2] = 1
-            else:
-                output_edges[e1][etype+type2] += 1
-        else:
-            pass
-    featureset = {}
-    for key in entity_types.keys():
-        etype = entity_types[key]
-        edges = []
-        if key in output_edges:
-            for key2 in output_edges[key].keys():
-                edges.append(key2+"_"+str(output_edges[key][key2]))
-            edges.sort()
-            fname = etype+"_"+"".join(e for e in edges)
         
-            if not fname in featureset:
-                featureset[fname] = 1
-            else:
-                featureset[fname] += 1
-    for fset in featureset:
-        if len(fset) == 0:
-            fset["none"] = 10
-    return featureset
-
-def getOutputRepresentation(predictions, keys, entities, choices):
-    #A bit more complicated version of the previous routine
-    choices = choices[1]
-    assert len(predictions) == len(choices)
-    entity_types = {}
-    output_edges = {}
-    for entity in entities:
-        head, typ_e = entity.attrib["headOffset"], entity.attrib["type"]
-        entity_types[entity.attrib["id"]] = typ_e
-    for key, index in zip(keys, choices):
-        values = predictions[key]
-        etype = values[index][1]
-        if not etype == "neg":
-            e1, e2 = key.split("_")
-            type2 = entity_types[e2]
-            if not e1 in output_edges:
-                output_edges[e1] = {}
-            if not etype+type2 in output_edges[e1]:
-                output_edges[e1][etype+type2] = 1
-            else:
-                output_edges[e1][etype+type2] += 1
-    featureset = {}
-    for key in entity_types.keys():
-        etype = entity_types[key]
-        edges = []
-        if key in output_edges:
-            for key2 in output_edges[key].keys():
-                edges.append(key2+"_"+str(output_edges[key][key2]))
-            edges.sort()
-            fname = etype+"_"+"".join(e for e in edges)
-            if not fname in featureset:
-                featureset[fname] = 1
-            else:
-                featureset[fname] += 1
-    for fset in featureset:
-        if len(fset) == 0:
-            fset["none"] = 10
-    return featureset
-            
 
 def getEntitiesAndPairs(sentence):
     entities = []
@@ -276,110 +196,41 @@ def getTP_FP_FN(g_edges, p_edges):
     FN = len(g_edges)-TP
     return TP, FP, FN
 
-def getTrainingOutputs(t_iterator):
-    fsets = []
-    for document in t_iterator:
-        for child in document:
-            if child.tag == "sentence":
-                 entities, pairs = getEntitiesAndPairs(child)
-                 if len(pairs) == 0:
-                     fsets.append({})
-                 else:
-                     fsets.append(getGSOutputRepresentation(entities, pairs))
-    return fsets
-
 if __name__=="__main__":
-    TP = 0
-    FP = 0
-    FN = 0
-    TP_oracle = 0
-    FP_oracle = 0
-    FN_oracle = 0
     optparser = instantiateOptionParser()
     (options, args) = optparser.parse_args()
-    if len(args) != 3:
+    if len(args) != 2:
         sys.stdout.write(optparser.get_usage())
         print "python CandidateGenerator.py -h for options\n"
         sys.exit(0)
-    t_file = open(args[0])
-    p_file = open(args[1])
-    g_file = open(args[2])
-    t_parser = parseGifxml.gifxmlParser(t_file)
-    t_iterator = t_parser.documentIterator()
+    p_file = open(args[0])
+    g_file = open(args[1])
     p_parser = parseGifxml.gifxmlParser(p_file)
     p_iterator = p_parser.documentIterator()
     g_parser = parseGifxml.gifxmlParser(g_file)
     g_iterator = g_parser.documentIterator()
-    n = options.nbest
-    print "Building representation for training outputs"
-    train_outputs = getTrainingOutputs(t_iterator)
-    reranker = Reranker.KDLearner("train_inputs", "devel_inputs", "bvectors", train_outputs)
-    reranker.solve(1)
-    counter = 0
-    c_decisions = 0
-    w_decisions = 0
-    ties = 0
+    counter = 1
+    oracleStatistics(p_iterator, g_iterator, options.nbest)
+    sys.exit(0)
     for p_document, g_document in zip(p_iterator, g_iterator):
         for p_child, g_child in zip(p_document, g_document):
-            if g_child.tag == "sentence":
-                assert p_child.attrib["origId"]==g_child.attrib["origId"]
+            if p_child.tag == "sentence":
+                assert p_child.attrib["id"]==g_child.attrib["id"]
                 p_entities, p_pairs = getEntitiesAndPairs(p_child)
                 g_entities, g_pairs = getEntitiesAndPairs(g_child)
-                if len(p_pairs) == 0:
-                    FN += len(g_pairs)
-                    FN_oracle += len(g_pairs)
-                else:
-                    g_edges, outside_count = getGSEdges(g_pairs, g_entities)
-                    predictions = getSimplePredictions(p_entities, p_pairs)
-                    table, table_transpose, keys = toTable(predictions)
-                    best = nbest.decode(table_transpose, n)
-                    p_edges = getPredictedEdges(predictions, keys, p_entities, best[0])
-                    Y = []
-                    for b in best:
-                        Y.append(getOutputRepresentation(predictions, keys, p_entities, b))
-                    correct = getGSOutputRepresentation(g_entities, g_pairs)
-                    correct_score = reranker.score([correct], counter)[0]
-                    predicted_scores = reranker.score(Y, counter)
-                    minimum = predicted_scores[0]
-                    min_index = 0
-                    #min_index = random.randint(0,len(predicted_scores)-1)
-                    for i in range(len(predicted_scores)):
-                        if predicted_scores[i] < minimum:
-                            minimum = predicted_scores[i]
-                            min_index = i
-                    tp_b, fp_b, fn_b = getTP_FP_FN(g_edges, p_edges)
-                    #ADDITION:
-                    #if min_index != len(predicted_scores):
-                    r_edges = getPredictedEdges(predictions, keys, p_entities, best[min_index])
-                    tp_r, fp_r, fn_r = getTP_FP_FN(g_edges, r_edges)
-                    #else:
-                    #    tp_r, fp_r, fn_r = getTP_FP_FN(g_edges, g_edges)
-                    TP += tp_b
-                    FP += fp_b
-                    FN += fn_b
-                    TP_oracle += tp_r
-                    FP_oracle += fp_r
-                    FN_oracle += fn_r
-                    
-                    #print "c_score", correct_score
-                    #print "p_score", predicted_score
-                    #if correct_score < predicted_score:
-                    #    c_decisions += 1
-                    #elif correct_score == predicted_score:
-                    #    ties += 1
-                    #else:
-                    #    w_decisions += 1
-                counter += 1
-    PR = float(TP)/float(TP+FP)
-    R = float(TP)/float(TP+FN)
-    PR_oracle = float(TP_oracle)/float(TP_oracle+FP_oracle)
-    R_oracle = float(TP_oracle)/float(TP_oracle+FN_oracle)
-    assert TP_oracle+FN_oracle == TP+FN
-    print "TP", TP
-    print "FP", FP
-    print "FN", FN
-    print "F-score", (2*PR*R)/(PR+R)
-    print "TP (reranker)", TP_oracle
-    print "FP (reranker)", FP_oracle
-    print "FN (reranker)", FN_oracle
-    print "F-score (reranker)", (2*PR_oracle*R_oracle)/(PR_oracle+R_oracle)
+                predictions = getSimplePredictions(p_entities, p_pairs)
+                table, table_transpose, keys = toTable(predictions)
+                best = nbest.decode(table_transpose,options.nbest)
+                getTP_FP_FN(g_entities, g_pairs, p_entities, predictions, best)
+                if counter > 30:
+                    sys.exit(0)
+                #if predictions:
+                #    sys.exit(0)
+                #if len(predictions) > 0:
+                #    table, table_transpose, keys = toTable(predictions)
+                #    five = nbest.decode(table_transpose, 100)
+                #    print table
+                #    print five
+                #    counter += 1
+                #    if counter > 100:
+                #        assert False
