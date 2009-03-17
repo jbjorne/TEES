@@ -33,7 +33,7 @@ class CorpusVisualizer:
         os.mkdir(self.outDir)
         os.mkdir(self.outDir+"/sentences")
         os.mkdir(self.outDir+"/svg")
-        shutil.copytree("../../PPIDependencies/Visualization/js",self.outDir+"/js")
+        shutil.copytree(os.path.dirname(os.path.abspath(__file__))+"/../../../PPIDependencies/Visualization/js",self.outDir+"/js")
     
     def getMatchingEdgeStyles(self, graph1, graph2, posColor, negColor):
         arcStyles = {}
