@@ -25,6 +25,54 @@ def calculateMainStatistics(corpusElements):
     print >> sys.stderr, "Head Tokens:", totalHeadTokens
     print >> sys.stderr, "Head Token Pairs:", headTokenPairs
 
+def analyzeLinearDistance(corpusElements):
+    interactionEdges = 0
+    interactionLinearDistanceCounts = {}
+    allEntitiesLinearDistanceCounts = {}
+    for sentence in corpusElements.sentences:
+        sentenceGraph = sentence.sentenceGraph
+        interactionEdges += len(sentence.interactions)
+        
+        # Linear distance between end tokens of interaction edges
+        for interaction in sentence.interactions:
+            e1 = sentence.entitiesById[interaction.get("e1")]
+            e2 = sentence.entitiesById[interaction.get("e2")]
+            t1 = sentenceGraph.entityHeadTokenByEntity[e1]
+            t2 = sentenceGraph.entityHeadTokenByEntity[e2]
+            linDistance = int(t1.get("id").split("_")[-1]) - int(t2.get("id").split("_")[-1])
+            if linDistance < 0:
+                linDistance *= -1
+            if not interactionLinearDistanceCounts.has_key(linDistance):
+                interactionLinearDistanceCounts[linDistance] = 0
+            interactionLinearDistanceCounts[linDistance] += 1
+
+        # Linear distance between all entities
+        for i in range(len(sentence.entities)-1):
+            for j in range(i+1,len(sentence.entities)):
+                tI = sentenceGraph.entityHeadTokenByEntity[sentence.entities[i]]
+                tJ = sentenceGraph.entityHeadTokenByEntity[sentence.entities[j]]
+                linDistance = int(t1.get("id").split("_")[-1]) - int(t2.get("id").split("_")[-1])
+                if linDistance < 0:
+                    linDistance *= -1
+                if not allEntitiesLinearDistanceCounts.has_key(linDistance):
+                    allEntitiesLinearDistanceCounts[linDistance] = 0
+                allEntitiesLinearDistanceCounts[linDistance] += 1
+    
+    print >> sys.stderr, "=== Linear Distance ==="
+    print >> sys.stderr, "Interaction edges:", interactionEdges
+    print >> sys.stderr, "Entity head token linear distance for interaction edges:"
+    printPathDistribution(interactionLinearDistanceCounts)
+    if options.output != None:
+        interactionLinearDistanceCounts["corpus"] = options.input
+        interactionLinearDistanceCounts["parse"] = options.parse
+        TableUtils.addToCSV(interactionLinearDistanceCounts, options.output+"/interactionEdgeLinearDistance.csv")
+    print >> sys.stderr, "Linear distance between head tokens of all entities:"
+    printPathDistribution(allEntitiesLinearDistanceCounts)
+    if options.output != None:
+        allEntitiesLinearDistanceCounts["corpus"] = options.input
+        allEntitiesLinearDistanceCounts["parse"] = options.parse
+        TableUtils.addToCSV(allEntitiesLinearDistanceCounts, options.output+"/allEntitiesLinearDistance.csv")
+
 def analyzeLengths(corpusElements):
     interactionEdges = 0
     dependencyEdges = 0
@@ -248,8 +296,10 @@ if __name__=="__main__":
     (options, args) = optparser.parse_args()
 
     if options.output != None:
-        if not os.path.exists(options.output):
-            os.makedirs(options.output)
+        if os.path.exists(options.output):
+            print >> sys.stderr, "Output directory exists, removing", options.output
+            shutil.rmtree(options.output)
+        os.makedirs(options.output)
     
     corpusElements = SentenceGraph.loadCorpus(options.input, options.parse, options.tokenization)
     print >> sys.stderr, "tokenization:", options.tokenization
@@ -262,3 +312,5 @@ if __name__=="__main__":
         listEntities(corpusElements)
     if options.analyses.find("structures") != -1:
         listStructures(corpusElements)
+    if options.analyses.find("linear_distance") != -1:
+        analyzeLinearDistance(corpusElements)
