@@ -41,7 +41,7 @@ class Token:
         self.x=0#layout() fills this
         self.y=0#layout() fills this
         self.styleDict={"text-anchor":"middle",
-                    "fill":"black"}
+                    "fill":"black","font-size":str(SVGOptions.fontSize)+"px","font-family":"Monospace"}
         #override the defaults
         for k,v in styleDict.items():
             self.styleDict[k]=v
@@ -67,8 +67,8 @@ class Token:
             node.set("systemLanguage","en")
             node.set("x",strint(self.x))
             node.set("y",strint(runningY))
-            node.set("font-size",strint(SVGOptions.fontSize))
-            node.set("font-family","monospace")
+#            node.set("font-size",strint(SVGOptions.fontSize))
+#            node.set("font-family","monospace")
             styleStr=";".join("%s:%s"%(var,val) for var,val in self.style().items())
             node.set("style",styleStr)
             node.text=txt
@@ -95,7 +95,7 @@ class Dep:
                        "stroke":"black",
                        "stroke-width":"1"}
         self.labelStyleDict={"text-anchor":"middle",
-                            "fill":"black"}
+                            "fill":"black","font-size":str(SVGOptions.labelFontSize)+"px","font-family":"Monospace"}
         #override the defaults
         for k,v in arcStyleDict.items():
             self.arcStyleDict[k]=v
@@ -189,8 +189,8 @@ class Dep:
             labNode.set("x",strint(self.param['txtX']))
             labNode.set("y",strint(self.param['txtY']))
             labNode.set("txt",self.type)
-            labNode.set("font-size",strint(SVGOptions.labelFontSize))
-            labNode.set("font-family","monospace")
+            #labNode.set("font-size",strint(SVGOptions.labelFontSize))
+            #labNode.set("font-family","monospace")
             labNode.text=self.type
             styleStr=";".join("%s:%s"%(var,val) for var,val in self.labelStyle().items())
             labNode.set("style",styleStr)
