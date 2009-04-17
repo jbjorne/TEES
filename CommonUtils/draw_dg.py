@@ -96,6 +96,10 @@ class Dep:
                        "stroke-width":"1"}
         self.labelStyleDict={"text-anchor":"middle",
                             "fill":"black","font-size":str(SVGOptions.labelFontSize)+"px","font-family":"Monospace"}
+        if self.type.startswith("*") and self.type.endswith("*"):
+            self.type=self.type[1:-1]
+            self.arcStyleDict["stroke-width"]="3"
+            self.labelStyleDict["font-weight"]="bold"
         #override the defaults
         for k,v in arcStyleDict.items():
             self.arcStyleDict[k]=v
