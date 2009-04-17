@@ -21,7 +21,7 @@ tokens: I have a dog       and a cat with no xxtailxx .
 
 I <nsubj have #ARC stroke-width:3;stroke:red;stroke-dasharray:5,2 #LAB font-weight:bold;fill:red
 have dobj> dog #LAB fill:green
-a <det dog 
+a *<det* dog 
 dog conj> cat
 dog cc> and
 a_2 <det cat
