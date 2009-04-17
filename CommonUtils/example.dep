@@ -25,7 +25,7 @@ a *<det* dog
 dog conj> cat
 dog cc> and
 a_2 <det cat
-dog prep> with h
+dog prep> with 
 with pobj> tail
 no <det tail
 have punct> . #ARC stroke-dasharray:10,3,5,3
