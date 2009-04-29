@@ -1,33 +1,40 @@
 class IdSet:    
-    def __init__(self, firstNumber=1, idDict=None, locked=False):
+    def __init__(self, firstNumber=1, idDict=None, locked=False, filename=None):
         self.Ids = {}
-        self.firstNumber = firstNumber
+        self.nextFreeId = firstNumber
         self._namesById = {}
         
         if idDict != None:
             self.locked = False
             for name,id in idDict.iteritems():
                 self.defineId(name, id)
+            self.nextFreeId = max(self.Ids.keys())+1
         self.locked = locked
+        
+        if filename != None:
+            self.load(filename)
+    
+    def getId(self, key):
+        return self[key]
+    
+    def __getitem__( self, name ):
+        if not self.Ids.has_key(name):
+            if self.locked:
+                return None
+            id = self.nextFreeId
+            self.nextFreeId += 1
+            assert(not id in self.Ids.values())
+            self.Ids[name] = id
+            self._namesById[id] = name
+        return self.Ids[name]
     
     def defineId(self, name, id):
         assert(not self.locked)
         assert(not id in self.Ids.values())
         assert(not name in self.Ids.keys())
+        assert(id < self.nextFreeId)
         self.Ids[name] = id
         self._namesById[id] = name
-    
-    def getId(self, name, makeIfNotExist=True):
-        if not self.Ids.has_key(name):
-            if makeIfNotExist:
-                assert(not self.locked)
-                id = len(self.Ids) + self.firstNumber
-                assert(not id in self.Ids.values())
-                self.Ids[name] = id
-                self._namesById[id] = name
-            else:
-                return None
-        return self.Ids[name]
     
     def getName(self, id):
         if self._namesById.has_key(id):
@@ -53,25 +60,10 @@ class IdSet:
             f.write(str(key)+": "+str(self.Ids[key])+"\n")
         f.close()
     
-    def toStrings(self, rowLength=80):
-        strings = [""]
-        keys = self.Ids.keys()
-        keys.sort()
-        currLen = 0
-        for key in keys:
-            pair = str(key)+":"+str(self.Ids[key])
-            currLen += len(pair) + 1
-            if currLen > rowLength:
-                currLen = 0
-                strings.append("")
-            if strings[-1] != "":
-                strings[-1] += ";"
-            strings[-1] += pair
-        return strings
-    
     def load(self, filename):
         self.Ids = {}
-        self.firstNumber = 999999999999999999
+        self._namesById = {}
+        self.nextFreeId = -999999999999999999
         
         f = open(filename, "rt")
         lines = f.readlines()
@@ -80,7 +72,7 @@ class IdSet:
             key, value = line.rsplit(":",1)
             key = key.strip()
             value = int(value.strip())
-            if value < self.firstNumber:
-                self.firstNumber = value
+            if value >= self.nextFreeId:
+                self.nextFreeId = value + 1
             self.Ids[key] = value
             self._namesById[value] = key

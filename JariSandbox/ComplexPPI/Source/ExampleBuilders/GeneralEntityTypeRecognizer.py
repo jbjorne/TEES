@@ -6,6 +6,10 @@ from Core.IdSet import IdSet
 import Core.ExampleUtils as ExampleUtils
 
 def compareDependencyEdgesById(dep1, dep2):
+    """
+    Dependency edges are sorted, so that the program behaves consistently
+    on the sama data between different runs.
+    """
     id1 = dep1[2].get("id")
     id2 = dep2[2].get("id")
     if id1 > id2:
@@ -18,17 +22,14 @@ def compareDependencyEdgesById(dep1, dep2):
 
 class GeneralEntityTypeRecognizer(ExampleBuilder):
     def __init__(self, style=None, classSet=None, featureSet=None):
-        ExampleBuilder.__init__(self)
-        self.classSet = IdSet(1)
-        self.styles = style
-        
         if classSet == None:
-            self.classSet = IdSet(1)
-        else:
-            self.classSet = classSet
-        assert( self.classSet.getId("neg") == 1 )
-        if featureSet != None:
-            self.featureSet = featureSet
+            classSet = IdSet(1)
+        assert( classSet.getId("neg") == 1 )
+        if featureSet == None:
+            featureSet = IdSet()
+        
+        ExampleBuilder.__init__(self, classSet, featureSet)
+        self.styles = style
 
     def preProcessExamples(self, allExamples):
         if "normalize" in self.styles:
@@ -69,14 +70,6 @@ class GeneralEntityTypeRecognizer(ExampleBuilder):
         tag = "linear_"+tag
         for tokenFeature in self.getTokenFeatures(sentenceGraph.tokens[index], sentenceGraph):
             features[self.featureSet.getId(tag+tokenFeature)] = 1
-#        t = sentenceGraph.tokens[index]
-#        features[self.featureSet.getId("linear_"+tag+"_txt_"+sentenceGraph.getTokenText(t))] = 1
-#        features[self.featureSet.getId("linear_"+tag+"_POS_"+t.get("POS"))] = 1
-#        if sentenceGraph.tokenIsName[t]:
-#            features[self.featureSet.getId("linear_"+tag+"_isName")] = 1
-#            for entity in sentenceGraph.tokenIsEntityHead[t]:
-#                if entity.get("isName") == "True":
-#                    features[self.featureSet.getId("linear_"+tag+"_annType_"+entity.get("type"))] = 1
     
     def buildExamples(self, sentenceGraph):
         examples = []

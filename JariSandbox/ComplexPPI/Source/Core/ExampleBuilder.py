@@ -1,30 +1,47 @@
+""" 
+ExampleBuilder is the abstract base class for specialized example builders.
+Example builders take some data and convert it to examples usable by e.g. SVMs.
+An example builder writes three files, an example-file (in extended Joachim's
+SVM format) and .class_names and .feature_names files, which contain the names
+for the class and feature id-numbers. An example builder can also be given
+pre-existing sets of class and feature ids (optionally in files) so that the
+generated examples are consistent with other, previously generated examples.
+"""
+
 from SentenceGraph import SentenceGraph
 from IdSet import IdSet
-import sys, os
+import sys, os, types
 sys.path.append(os.path.dirname(os.path.abspath(__file__))+"/..")
 
 class ExampleBuilder:
-    def __init__(self):
-        self.featureSet = IdSet()
-        self.classSet = None
+    def __init__(self, classSet=None, featureSet=None):
+        if(type(classSet) == types.StringType):
+            self.classSet = IdSet(filename=classSet)
+        else:
+            self.classSet = classSet
+        
+        if(type(featureSet) == types.StringType):
+            self.featureSet = IdSet(filename=featureSet)
+        else:
+            self.featureSet = featureSet
     
     def preProcessExamples(self, allExamples):
         return allExamples
     
-    def buildExamplesForCorpus(self, corpusElements, visualizer=None):
-        print >> sys.stderr, "Building examples"
-        examples = []
-        for sentence in corpusElements.sentences:
-            print >> sys.stderr, "\rProcessing sentence", sentence.sentence.attrib["id"], "          ",
-            graph = SentenceGraph(sentence.sentence, sentence.tokens, sentence.dependencies)
-            graph.mapInteractions(sentence.entities, sentence.interactions)
-            sentenceExamples = self.buildExamples(graph)
-            examples.extend(sentenceExamples)
-        print >> sys.stderr
-        return examples
+#    def buildExamplesForCorpus(self, corpusElements, visualizer=None):
+#        print >> sys.stderr, "Building examples"
+#        examples = []
+#        for sentence in corpusElements.sentences:
+#            print >> sys.stderr, "\rProcessing sentence", sentence.sentence.attrib["id"], "          ",
+#            graph = SentenceGraph(sentence.sentence, sentence.tokens, sentence.dependencies)
+#            graph.mapInteractions(sentence.entities, sentence.interactions)
+#            sentenceExamples = self.buildExamples(graph)
+#            examples.extend(sentenceExamples)
+#        print >> sys.stderr
+#        return examples
     
     def buildExamples(self, sentenceGraph):
-        pass
+        raise NotImplementedError
     
     def definePredictedValueRange(self, sentences, elementName):
         pass
