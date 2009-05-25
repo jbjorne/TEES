@@ -2,7 +2,7 @@
 An implementation of VF2 algorithm for graph ismorphism testing.
 """
 
-__date__ = "$Date: 2009/05/22 13:21:06 $"
+__date__ = "$Date: 2009/05/25 11:49:25 $"
 
 #    Copyright (C) 2007 by
 #    Christopher Ellison <cellison@cse.ucdavis.edu>
