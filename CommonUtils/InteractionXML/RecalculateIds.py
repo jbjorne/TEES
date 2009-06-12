@@ -1,40 +1,14 @@
+import sys
 try:
     import xml.etree.cElementTree as ET
 except ImportError:
     import cElementTree as ET
 import cElementTreeUtils as ETUtils
 
-if __name__=="__main__":
-    import sys
+def run(input, output):
     print >> sys.stderr, "##### Recalculate hierarchical interaction XML ids #####"
-    
-    from optparse import OptionParser
-    # Import Psyco if available
-    try:
-        import psyco
-        psyco.full()
-        print >> sys.stderr, "Found Psyco, using"
-    except ImportError:
-        print >> sys.stderr, "Psyco not installed"
-
-    defaultCorpusFilename = "BioInfer.xml"
-    defaultOutputName = "BioInfer.xml"
-    optparser = OptionParser(usage="%prog [options]\nPath generator.")
-    optparser.add_option("-i", "--input", default=defaultCorpusFilename, dest="input", help="Corpus in interaction xml format", metavar="FILE")
-    optparser.add_option("-o", "--output", default=defaultOutputName, dest="output", help="Output file in interaction xml format.")
-    (options, args) = optparser.parse_args()
-    
-    if options.input == None:
-        print >> sys.stderr, "Error, input file not defined."
-        optparser.print_help()
-        sys.exit(1)
-    if options.output == None:
-        print >> sys.stderr, "Error, output file not defined."
-        optparser.print_help()
-        sys.exit(1)
-    
-    print >> sys.stderr, "Loading corpus file", options.input
-    corpusTree = ET.parse(options.input)
+    print >> sys.stderr, "Loading corpus file", input
+    corpusTree = ET.parse(input)
     print >> sys.stderr, "Corpus file loaded"
     corpusRoot = corpusTree.getroot()
 
@@ -84,5 +58,36 @@ if __name__=="__main__":
             sentIndex += 1
         docIndex += 1
     
-    print >> sys.stderr, "Writing output to", options.output
-    ETUtils.write(corpusRoot, options.output)
+    print >> sys.stderr, "Writing output to", output
+    ETUtils.write(corpusRoot, output)
+
+if __name__=="__main__":
+    import sys
+    
+    from optparse import OptionParser
+    # Import Psyco if available
+    try:
+        import psyco
+        psyco.full()
+        print >> sys.stderr, "Found Psyco, using"
+    except ImportError:
+        print >> sys.stderr, "Psyco not installed"
+
+    defaultCorpusFilename = "BioInfer.xml"
+    defaultOutputName = "BioInfer.xml"
+    optparser = OptionParser(usage="%prog [options]\nPath generator.")
+    optparser.add_option("-i", "--input", default=defaultCorpusFilename, dest="input", help="Corpus in interaction xml format", metavar="FILE")
+    optparser.add_option("-o", "--output", default=defaultOutputName, dest="output", help="Output file in interaction xml format.")
+    optparser.add_option("-l", "--level", default="root", dest="level", help="Level on whose nested elements recalculation is started.")
+    (options, args) = optparser.parse_args()
+    
+    if options.input == None:
+        print >> sys.stderr, "Error, input file not defined."
+        optparser.print_help()
+        sys.exit(1)
+    if options.output == None:
+        print >> sys.stderr, "Error, output file not defined."
+        optparser.print_help()
+        sys.exit(1)
+    
+    run(options.input, options.output)
