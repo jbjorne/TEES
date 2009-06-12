@@ -58,7 +58,8 @@ def processSentence(sentence, countsByType):
     splitMerged(sentence, "interaction", countsByType)
     splitMerged(sentence, "pair", countsByType)
 
-def processCorpus(inputFilename, outputFilename):
+def run(inputFilename, outputFilename):
+    print >> sys.stderr, "##### Split elements with merged types #####"
     print >> sys.stderr, "Loading corpus file", inputFilename
     if inputFilename.rsplit(".",1)[-1] == "gz":
         import gzip
@@ -78,12 +79,11 @@ def processCorpus(inputFilename, outputFilename):
     for k in sorted(countsByType.keys()):
         print >> sys.stderr, "  " + k + ": removed", countsByType[k][0], "created", countsByType[k][1]
     
-    print >> sys.stderr, "Writing output to", options.output
-    ETUtils.write(corpusRoot, options.output)
+    print >> sys.stderr, "Writing output to", outputFilename
+    ETUtils.write(corpusRoot, outputFilename)
 
 if __name__=="__main__":
     import sys
-    print >> sys.stderr, "##### Split elements with merged types #####"
     
     from optparse import OptionParser
     # Import Psyco if available
@@ -108,4 +108,4 @@ if __name__=="__main__":
         optparser.print_help()
         sys.exit(1)
     
-    processCorpus(options.input, options.output)
+    run(options.input, options.output)
