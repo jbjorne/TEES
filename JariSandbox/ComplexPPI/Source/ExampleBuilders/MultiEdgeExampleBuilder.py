@@ -1,6 +1,7 @@
 import sys
 sys.path.append("..")
 from Core.ExampleBuilder import ExampleBuilder
+import Core.ExampleBuilder
 from Core.IdSet import IdSet
 import Core.ExampleUtils as ExampleUtils
 from FeatureBuilders.MultiEdgeFeatureBuilder import MultiEdgeFeatureBuilder
@@ -9,18 +10,22 @@ from FeatureBuilders.BioInferOntologyFeatureBuilder import BioInferOntologyFeatu
 from FeatureBuilders.NodalidaFeatureBuilder import NodalidaFeatureBuilder
 import networkx as NX
 
+def run(input, output, parse, tokenization, parameters, idFileTag=None):
+    print >> sys.stderr, "##### MultiEdgeExampleBuilder #####"
+    Core.ExampleBuilder.run(MultiEdgeExampleBuilder, input, output, parse, tokenization, parameters, idFileTag)
+
 class MultiEdgeExampleBuilder(ExampleBuilder):
     def __init__(self, style=["typed","directed","headsOnly"], length=None, types=[], featureSet=None, classSet=None):
-        ExampleBuilder.__init__(self)
-        self.styles = style
-        
+        if featureSet == None:
+            featureSet = IdSet()
         if classSet == None:
-            self.classSet = IdSet(1)
+            classSet = IdSet(1)
         else:
-            self.classSet = classSet
-        assert( self.classSet.getId("neg") == 1 )
-        if featureSet != None:
-            self.featureSet = featureSet
+            classSet = classSet
+        assert( classSet.getId("neg") == 1 )
+        
+        ExampleBuilder.__init__(self, classSet=classSet, featureSet=featureSet)
+        self.styles = style
         
         self.multiEdgeFeatureBuilder = MultiEdgeFeatureBuilder(self.featureSet)
         if "graph_kernel" in self.styles:

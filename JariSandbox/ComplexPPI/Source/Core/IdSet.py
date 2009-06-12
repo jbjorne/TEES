@@ -6,27 +6,28 @@ class IdSet:
         
         if idDict != None:
             self.locked = False
+            self.nextFreeId = 999999999
             for name,id in idDict.iteritems():
                 self.defineId(name, id)
-            self.nextFreeId = max(self.Ids.keys())+1
+            self.nextFreeId = max(self.Ids.values())+1
         self.locked = locked
         
         if filename != None:
             self.load(filename)
     
-    def getId(self, key):
-        return self[key]
-    
-    def __getitem__( self, name ):
-        if not self.Ids.has_key(name):
-            if self.locked:
+    def getId(self, key, createIfNotExist=True):
+        if not self.Ids.has_key(key):
+            if self.locked or createIfNotExist == False:
                 return None
             id = self.nextFreeId
             self.nextFreeId += 1
             assert(not id in self.Ids.values())
-            self.Ids[name] = id
-            self._namesById[id] = name
-        return self.Ids[name]
+            self.Ids[key] = id
+            self._namesById[id] = key
+        return self.Ids[key]
+    
+    def __getitem__( self, name ):
+        return getId(name)
     
     def defineId(self, name, id):
         assert(not self.locked)

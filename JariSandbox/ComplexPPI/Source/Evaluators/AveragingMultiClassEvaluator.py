@@ -1,5 +1,20 @@
 from Evaluator import Evaluator
 from BinaryEvaluator import BinaryEvaluator
+import sys, os, types
+sys.path.append(os.path.dirname(os.path.abspath(__file__))+"/..")
+from Core.IdSet import IdSet
+import Core.ExampleUtils as ExampleUtils
+
+def run(examples, predictions, classSet=None, outputFile=None):
+    if type(classSet) == types.StringType: # class names are in file
+        classSet = IdSet(filename=classSet)
+    if type(predictions) == types.StringType: # predictions are in file
+        predictions = ExampleUtils.loadPredictions(predictions, examples)
+    evaluator = AveragingMultiClassEvaluator(predictions, classSet)
+    print >> sys.stderr, evaluator.toStringConcise()
+    if outputFile != None:
+        evaluator.saveCSV(outputFile)
+    return evaluator
 
 class AveragingMultiClassEvaluator(Evaluator):
     def __init__(self, predictions=None, classSet=None):

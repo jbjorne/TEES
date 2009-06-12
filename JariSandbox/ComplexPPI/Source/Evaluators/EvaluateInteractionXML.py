@@ -122,7 +122,7 @@ def getInteractionPredictions(interactionsFrom, interactionsTo, entityMap, class
     return predictions
 
 # Compares a prediction (from) to a gold (to) sentence
-def processSentence(fromSentence, toSentence, options, classSets, negativeClassId):
+def processSentence(fromSentence, toSentence, target, classSets, negativeClassId):
     splitMerged(fromSentence) # modify element tree to split merged elements into multiple elements
     entitiesFrom = fromSentence.entities
     entitiesTo = toSentence.entities
@@ -133,22 +133,22 @@ def processSentence(fromSentence, toSentence, options, classSets, negativeClassI
     # get predictions for predicted edges/entities vs. gold edges/entities
     entityPredictions = []
     interactionPredictions = []
-    if options.target == "entities" or options.target == "both":
+    if target == "entities" or target == "both":
         entityPredictions = getEntityPredictions(entityMap, entitiesTo, classSets["entity"], negativeClassId)
-    if options.target == "interactions" or options.target == "both":
+    if target == "interactions" or target == "both":
         interactionPredictions = getInteractionPredictions(fromSentence.interactions + fromSentence.pairs, toSentence.interactions + toSentence.pairs, entityMap, classSets["interaction"], negativeClassId)
     
     return entityPredictions, interactionPredictions
 
 # Compares a prediction (from) to a gold (to) corpus
-def processCorpora(fromCorpus, toCorpus, options, classSets, negativeClassId):
+def processCorpora(fromCorpus, toCorpus, target, classSets, negativeClassId):
     entityPredictions = []
     interactionPredictions = []
     counter = ProgressCounter(len(fromCorpus.sentences), "Corpus Processing")
     # Loop through the sentences and collect all predictions
     for i in range(len(fromCorpus.sentences)):
         counter.update(1)
-        newEntityPredictions, newInteractionPredictions = processSentence(fromCorpus.sentences[i], toCorpus.sentences[i], options, classSets, negativeClassId)
+        newEntityPredictions, newInteractionPredictions = processSentence(fromCorpus.sentences[i], toCorpus.sentences[i], target, classSets, negativeClassId)
         entityPredictions.extend(newEntityPredictions)
         interactionPredictions.extend(newInteractionPredictions)
     
@@ -171,6 +171,27 @@ def splitMerged(sentence):
                     newElement.set("type", type)
                     sourceList.append(newElement)
                 sourceList.remove(element)
+
+def run(EvaluatorClass, inputCorpusFile, goldCorpusFile, parse, tokenization, target="both"):
+    print >> sys.stderr, "##### EvaluateInteractionXML #####"
+    # Class sets are used to convert the types to ids that the evaluator can use
+    classSets = {}
+    evaluator = EvaluatorClass()
+    if evaluator.type == "binary":
+        classSets["entity"] = IdSet(idDict={"True":1,"False":-1}, locked=True)
+        classSets["interaction"] = IdSet(idDict={"True":1,"False":-1}, locked=True)
+        negativeClassId = -1
+    elif evaluator.type == "multiclass":
+        classSets["entity"] = IdSet(idDict={"neg":1}, locked=False)
+        classSets["interaction"] = IdSet(idDict={"neg":1}, locked=False)
+        negativeClassId = 1
+    
+    # Load corpus and make sentence graphs
+    goldCorpusElements = CorpusElements.loadCorpus(goldCorpusFile, parse, tokenization, False)
+    predictedCorpusElements = CorpusElements.loadCorpus(inputCorpusFile, parse, tokenization, False)    
+    
+    # Compare the corpora and print results on screen
+    processCorpora(predictedCorpusElements, goldCorpusElements, target, classSets, negativeClassId)
     
 if __name__=="__main__":
     import sys, os
@@ -195,21 +216,4 @@ if __name__=="__main__":
     print >> sys.stderr, "Importing modules"
     exec "from Evaluators." + options.evaluator + " import " + options.evaluator + " as Evaluator"
     
-    # Class sets are used to convert the types to ids that the evaluator can use
-    classSets = {}
-    evaluator = Evaluator()
-    if evaluator.type == "binary":
-        classSets["entity"] = IdSet(idDict={"True":1,"False":-1}, locked=True)
-        classSets["interaction"] = IdSet(idDict={"True":1,"False":-1}, locked=True)
-        negativeClassId = -1
-    elif evaluator.type == "multiclass":
-        classSets["entity"] = IdSet(idDict={"neg":1}, locked=False)
-        classSets["interaction"] = IdSet(idDict={"neg":1}, locked=False)
-        negativeClassId = 1
-    
-    # Load corpus and make sentence graphs
-    goldCorpusElements = CorpusElements.loadCorpus(options.gold, options.parse, options.tokenization, False)
-    predictedCorpusElements = CorpusElements.loadCorpus(options.input, options.parse, options.tokenization, False)    
-    
-    # Compare the corpora and print results on screen
-    processCorpora(predictedCorpusElements, goldCorpusElements, options, classSets, negativeClassId)
+    run(Evaluator, options.input, options.gold, options.parse, options.tokenization, options.target)

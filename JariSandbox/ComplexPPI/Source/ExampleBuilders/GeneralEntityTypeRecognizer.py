@@ -1,10 +1,15 @@
 import sys
 sys.path.append("..")
+import Core.ExampleBuilder
 from Core.ExampleBuilder import ExampleBuilder
 import Stemming.PorterStemmer as PorterStemmer
 from Core.IdSet import IdSet
 import Core.ExampleUtils as ExampleUtils
 
+def run(input, output, parse, tokenization, parameters, idFileTag=None):
+    print >> sys.stderr, "##### GeneralEntityTypeRecognizer #####"
+    Core.ExampleBuilder.run(GeneralEntityTypeRecognizer, input, output, parse, tokenization, parameters, idFileTag)
+    
 def compareDependencyEdgesById(dep1, dep2):
     """
     Dependency edges are sorted, so that the program behaves consistently
@@ -38,6 +43,11 @@ class GeneralEntityTypeRecognizer(ExampleBuilder):
         return allExamples   
     
     def getMergedEntityType(self, entities):
+        """
+        If a single token belongs to multiple entities of different types,
+        a new, composite type is defined. This type is the alphabetically
+        ordered types of these entities joined with '---'.
+        """
         types = set()
         for entity in entities:
             types.add(entity.get("type"))
@@ -51,6 +61,12 @@ class GeneralEntityTypeRecognizer(ExampleBuilder):
         return typeString
     
     def getTokenFeatures(self, token, sentenceGraph):
+        """
+        Returns a list of features based on the attributes of a token.
+        These can be used to define more complex features.
+        """
+        # These features are cached when this method is first called
+        # for a token.
         if self.tokenFeatures.has_key(token):
             return self.tokenFeatures[token]
         
@@ -67,11 +83,18 @@ class GeneralEntityTypeRecognizer(ExampleBuilder):
         return features
     
     def buildLinearOrderFeatures(self,sentenceGraph,index,tag,features):
+        """
+        Linear features are built by marking token features with a tag
+        that defines their relative position in the linear order.
+        """
         tag = "linear_"+tag
         for tokenFeature in self.getTokenFeatures(sentenceGraph.tokens[index], sentenceGraph):
             features[self.featureSet.getId(tag+tokenFeature)] = 1
     
     def buildExamples(self, sentenceGraph):
+        """
+        Build one example for each token of the sentence
+        """
         examples = []
         exampleIndex = 0
         

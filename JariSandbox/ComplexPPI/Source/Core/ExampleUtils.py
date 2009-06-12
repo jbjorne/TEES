@@ -4,6 +4,7 @@
 
 import Split
 import types
+from IdSet import IdSet
 
 def isDuplicate(example1, example2):
     if example1[1] != example2[1]:
@@ -176,6 +177,17 @@ def divideExampleFile(exampleFileName, division, outputDir):
         divisionFiles[division[documentId]].write(line)
     for v in divisionFiles.values():
         v.close()
+        
+def loadPredictions(predictionsFile, examples):
+    if type(examples) == types.StringType: # examples are in file
+        examples = readExamples(examples,False)
+    predictionsFile = open(predictionsFile, "rt")
+    lines = predictionsFile.readlines()
+    predictionsFile.close()
+    predictions = []
+    for i in range(len(lines)):
+        predictions.append( (examples[i],int(lines[i].split()[0]),"multiclass",lines[i].split()[1:]) )
+    return predictions
 
 def writeToInteractionXML(classifications, corpusElements, outputFile, classSet=None):
     import sys
@@ -185,6 +197,9 @@ def writeToInteractionXML(classifications, corpusElements, outputFile, classSet=
     except ImportError:
         import cElementTree as ET
     import cElementTreeUtils as ETUtils
+    
+    if type(classSet) == types.StringType: # class names are in file
+        classSet = IdSet(filename=classSet)
     
     print >> sys.stderr, "Grouping examples"
     classificationsBySentence = {}

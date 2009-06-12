@@ -11,10 +11,25 @@ import types
 from Core.Classifier import Classifier
 import Core.Split as Split
 from Evaluators.MultiClassEvaluator import MultiClassEvaluator
+from Utils.Timer import Timer
 
-binDir = "/home/jari/svm-multiclass"
+binDir = "/usr/share/biotext/ComplexPPI/SVMMultiClass"
 
 defaultOptimizationParameters = {"c":[0.0001,0.001,0.01,0.1,1,10,100]}
+
+def train(examples, parameters, model, workDir=None):
+    print >> sys.stderr, "Training SVM-MultiClass on", examples
+    timer = Timer()
+    classifier = SVMMultiClassClassifier(workDir=workDir)
+    classifier.train(examples, parameters, model)
+    print >> sys.stderr, timer.toString()
+        
+def test(examples, parameters, model, classifications, workDir=None):
+    print >> sys.stderr, "Classifying", examples, "with SVM-MultiClass model", model
+    timer = Timer()
+    classifier = SVMMultiClassClassifier(workDir=workDir)
+    classifier.classify(examples, model, parameters, classifications)
+    print >> sys.stderr, timer.toString()
 
 class SVMMultiClassClassifier(Classifier):
     def __init__(self, workDir=None, negRatio=None):
@@ -28,9 +43,9 @@ class SVMMultiClassClassifier(Classifier):
             print >> sys.stderr, "Removing temporary SVM-multi-class work directory", self.tempDir
             shutil.rmtree(self.tempDir)
     
-    def train(self, examples, parameters=None):
-        if parameters.has_key("predefined"):
-            return 0
+    def train(self, examples, classifierArgs, outputFile=None, style=None, timeout=None):
+#        if parameters.has_key("predefined"):
+#            return 0
         if type(examples) == types.ListType:
             trainPath = self.tempDir+"/train.dat"
             examples = self.filterTrainingSet(examples)
@@ -39,22 +54,22 @@ class SVMMultiClassClassifier(Classifier):
             Example.writeExamples(examples, trainPath)
         else:
             trainPath = examples
-        timeout = -1
-        parameters = copy.copy(parameters)
-        if parameters.has_key("style"):
-            if "no_duplicates" in parameters["style"] and type(examples) == types.ListType:
+        if style != None and "no_duplicates" in style:
+            if type(examples) == types.ListType:
                 examples = Example.removeDuplicates(examples)
-            del parameters["style"]
-        if parameters.has_key("timeout"):
-            timeout = parameters["timeout"]
-            del parameters["timeout"]
+            else:
+                print >> sys.stderr, "Warning, duplicates not removed from example file", examples
+        if timeout == None:
+            timeout = -1
         args = [binDir+"/svm_multiclass_learn"]
-        if parameters != None:
-            self.__addParametersToSubprocessCall(args, parameters)
-        args += [trainPath, self.tempDir+"/model"]
+        self.__addParametersToSubprocessCall(args, classifierArgs)
+        if outputFile == None:
+            args += [trainPath, self.tempDir+"/model"]
+        else:
+            args += [trainPath, outputFile]
         return killableprocess.call(args, stdout = self.debugFile, timeout = timeout)
         
-    def classify(self, examples, parameters=None):
+    def classify(self, examples, modelPath, parameters=None, output=None):
         if type(examples) == types.ListType:
             examples, predictions = self.filterClassificationSet(examples, False)
             testPath = self.tempDir+"/test.dat"
@@ -63,7 +78,8 @@ class SVMMultiClassClassifier(Classifier):
             testPath = examples
             examples = Example.readExamples(examples,False)
         args = [binDir+"/svm_multiclass_classify"]
-        modelPath = self.tempDir+"/model"
+        if modelPath == None:
+            modelPath = self.tempDir+"/model"
         if parameters != None:
             parameters = copy.copy(parameters)
             if parameters.has_key("c"):
@@ -73,10 +89,12 @@ class SVMMultiClassClassifier(Classifier):
                 modelPath = os.path.join(parameters["predefined"][0],"classifier/model")
                 del parameters["predefined"]
             self.__addParametersToSubprocessCall(args, parameters)
-        args += [testPath, modelPath, self.tempDir+"/predictions"]
+        if output == None:
+            output = self.tempDir+"/predictions"
+        args += [testPath, modelPath, output]
         subprocess.call(args, stdout = self.debugFile)
         #os.remove(self.tempDir+"/model")
-        predictionsFile = open(self.tempDir+"/predictions", "rt")
+        predictionsFile = open(output, "rt")
         lines = predictionsFile.readlines()
         predictionsFile.close()
         predictions = []
@@ -108,7 +126,47 @@ class SVMMultiClassClassifier(Classifier):
                 examples.append(negatives[i])
         return examples
 
+if __name__=="__main__":
+    # Import Psyco if available
+    try:
+        import psyco
+        psyco.full()
+        print >> sys.stderr, "Found Psyco, using"
+    except ImportError:
+        print >> sys.stderr, "Psyco not installed"
+
+    from optparse import OptionParser
+    import os
+    from Utils.Parameters import *
+    optparser = OptionParser(usage="%prog [options]\nCreate an html visualization for a corpus.")
+    optparser.add_option("-e", "--examples", default=None, dest="examples", help="Example File", metavar="FILE")
+    optparser.add_option("-t", "--train", default=None, dest="train", action="store_true", help="train (default = classify)")
+    optparser.add_option("-w", "--work", default=None, dest="work", help="Working directory for intermediate and debug files")
+    optparser.add_option("-o", "--output", default=None, dest="output", help="Output directory or file")
+    optparser.add_option("-c", "--classifier", default="SVMMultiClassClassifier", dest="classifier", help="Classifier Class")
+    optparser.add_option("-p", "--parameters", default=None, dest="parameters", help="Parameters for the classifier")
+    (options, args) = optparser.parse_args()
+
+    # import classifier
+    print >> sys.stderr, "Importing classifier module"
+    exec "from Classifiers." + options.classifier + " import " + options.classifier + " as Classifier"
+
+    # Create classifier object
+    if options.work != None:
+        classifier = Classifier(workDir = options.output)
+    else:
+        classifier = Classifier()
     
-#    def optimize(self, trainExamples, classifyExamples, parameters=defaultOptimizationParameters, evaluationClass=Evaluation, evaluationArgs=None):
-#        return Classifier.optimize(self, trainExamples, classifyExamples, parameters, MultiClassEvaluator, None)
+    if options.train:
+        parameters = getArgs(Classifier.train, options.parameters)
+        print >> sys.stderr, "Training on", options.examples, "Parameters:", parameters
+        startTime = time.time()
+        predictions = classifier.train(options.examples, options.output, **parameters)
+        print >> sys.stderr, "(Time spent:", time.time() - startTime, "s)"
+    else: # Classify
+        parameters = getArgs(Classifier.classify, options.parameters)
+        print >> sys.stderr, "Classifying", options.examples, "Parameters:", parameters
+        startTime = time.time()
+        predictions = classifier.classify(options.examples, options.output, **parameters)
+        print >> sys.stderr, "(Time spent:", time.time() - startTime, "s)"
 

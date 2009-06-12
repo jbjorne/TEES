@@ -28,7 +28,7 @@ class JoachimsSVMBase(Classifier):
             print >> sys.stderr, "Removing temporary SVM work directory", self.tempDir
             shutil.rmtree(self.tempDir)
     
-    def train(self, examples, parameters=None):
+    def train(self, examples, parameters=None, outputDir=None):
         timeout = -1
         if type(examples) == types.StringType:
             trainFilePath = examples
