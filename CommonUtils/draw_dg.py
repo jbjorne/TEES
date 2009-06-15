@@ -1,9 +1,14 @@
+# (c) Filip Ginter
+#
+# Copyleft: Do whatever you want with this code. :)
+#
+
+#Python 2.4 vs 2.5+
 try:
     import cElementTree as ET
 except ImportError:
     import xml.etree.cElementTree as ET
     
-import cElementTreeUtils as ETUtils
 import sys
 import re
 import codecs
@@ -67,8 +72,6 @@ class Token:
             node.set("systemLanguage","en")
             node.set("x",strint(self.x))
             node.set("y",strint(runningY))
-#            node.set("font-size",strint(SVGOptions.fontSize))
-#            node.set("font-family","monospace")
             styleStr=";".join("%s:%s"%(var,val) for var,val in self.style().items())
             node.set("style",styleStr)
             node.text=txt
@@ -82,21 +85,21 @@ class Token:
 
 class Dep:
 
-    #Makes dependency from tok1 to tok2
+    #Makes a dependency from tok1 to tok2
     def __init__(self,tok1,tok2,dType,arcStyleDict={},labelStyleDict={}):
         self.tok1=tok1
         self.tok2=tok2
         if tok1.pos>tok2.pos:
             raise ValueError("Dep should always have tokens in linear order and no self dependencies: %d-%d %s %s %s"%(tok1.pos,tok2.pos,tok1.txt,tok2.txt,dType))
         self.type=dType
-        self.height=0#layout() fills this
+        self.height=0#layout() fills this later on
         #default style
         self.arcStyleDict={"fill":"none",
                        "stroke":"black",
                        "stroke-width":"1"}
         self.labelStyleDict={"text-anchor":"middle",
                             "fill":"black","font-size":str(SVGOptions.labelFontSize)+"px","font-family":"Monospace"}
-        if self.type.startswith("*") and self.type.endswith("*"):
+        if self.type.startswith("*") and self.type.endswith("*"): #handle the *-marked bold-font
             self.type=self.type[1:-1]
             self.arcStyleDict["stroke-width"]="3"
             self.labelStyleDict["font-weight"]="bold"
@@ -106,7 +109,6 @@ class Dep:
         #override the defaults
         for k,v in labelStyleDict.items():
             self.labelStyleDict[k]=v
-
 
     def minWidth(self):
         return textWidth(self.type,SVGOptions.labelFontSize)+2*SVGOptions.minDepPadding
@@ -161,8 +163,6 @@ class Dep:
                     'rech':SVGOptions.labelFontSize+8}
 
     def arcSVG(self):
-        
-        #spec="M%(frox)d,%(y)d L%(linebx)d,%(lineby)d C%(c1bx)d,%(c1by)d %(c1ex)d,%(c1ey)d %(midx)d,%(midy)d C%(c2bx)d,%(c2by)d %(c2ex)d,%(c2ey)d %(lineex)d,%(lineey)d L%(tox)d,%(y)d"%self.param
         spec1="M%(frox)d,%(y)d L%(linebx)d,%(lineby)d C%(c1bx)d,%(c1by)d %(c1ex)d,%(c1ey)d %(recx)d,%(midy)d"%self.param
         spec2="M%(recxe)d,%(midy)d C%(c2bx)d,%(c2by)d %(c2ex)d,%(c2ey)d %(lineex)d,%(lineey)d L%(tox)d,%(y)d"%self.param
         arcN1=ET.Element("path")
@@ -175,7 +175,6 @@ class Dep:
         styleStr=";".join("%s:%s"%(var,val) for var,val in self.arcStyle().items())
         arcN2.set("style",styleStr)
 
-        #pathStr='<path d=%(spec)s style="fill:none;%(style)s"/>'%{'spec':spec,'style':highlightToStyle('depLine',highlight)}
         return [arcN1,arcN2]
 
     def labelSVG(self):
@@ -193,8 +192,6 @@ class Dep:
             labNode.set("x",strint(self.param['txtX']))
             labNode.set("y",strint(self.param['txtY']))
             labNode.set("txt",self.type)
-            #labNode.set("font-size",strint(SVGOptions.labelFontSize))
-            #labNode.set("font-family","monospace")
             labNode.text=self.type
             styleStr=";".join("%s:%s"%(var,val) for var,val in self.labelStyle().items())
             labNode.set("style",styleStr)
@@ -394,7 +391,9 @@ def readInput(fName):
                 tok2=matching2[0]
                 arcStyleDict=styleStr2Dict(match.group(5))
                 labStyleDict=styleStr2Dict(match.group(7))
-
+                if tok1==tok2:
+                    print >> sys.stderr, "Warning: Ignoring a self-dependency!"
+                    continue
                 deps.append(Dep(tok1,tok2,dType,arcStyleDict,labStyleDict))
                 continue
             raise ValueError("Do not understand this line: %s"%line)
@@ -404,6 +403,40 @@ def readInput(fName):
     return tokens,deps
                                  
         
+def indent(elem, level=0):
+    #shamelessly stolen from ET documentation
+    """ indent-function as defined in cElementTree-documentation
+    
+    This function will become part of cElementTree in some future
+    release. Until then, it can be used from here. This function
+    indents the xml-tree, so that it is more readable when written
+    out. 
+    
+    Keyword arguments:
+    elem -- (Element) root of the tree to indent 
+    level -- (int) starting level of indentation
+    """
+    i = "\n" + level*"  "
+    if len(elem):
+        if not elem.text or not elem.text.strip():
+            elem.text = i + "  "
+        for e in elem:
+            indent(e, level+1)
+        if not e.tail or not e.tail.strip():
+            e.tail = i
+    if level and (not elem.tail or not elem.tail.strip()):
+        elem.tail = i
+
+def writeUTF8(rootElement,out):
+    indent(rootElement)
+    if isinstance(out,str):
+        f=open(out,"wt")
+        print >> f, '<?xml version="1.0" encoding="UTF-8"?>'
+        ET.ElementTree(rootElement).write(f,"utf-8")
+        f.close()
+    else:
+        print >> out, '<?xml version="1.0" encoding="UTF-8"?>'
+        ET.ElementTree(rootElement).write(out,"utf-8")
     
 
 if __name__=="__main__":
@@ -414,12 +447,10 @@ if __name__=="__main__":
 cat example.dep | python draw_dg.py > example.svg
 
 The format of the dependency file is specified in example.dep
-To get a PDF version of the plot, use the script svg2pdf.sh as follows:
 
-cat example.svg | ./svg2pdf.sh > example.pdf
+To convert a .svg to .pdf, you can use for example inkscape
 
-For this to work, you need inkscape and epstopdf. See
-the script svg2pdf for details if needed.
+inkscape -A file.pdf file.svg
 """
     parser=optparse.OptionParser(usage=desc)
     parser.add_option("--tokenSize", dest="fontSize",action="store",default=24,help="Token font size.", metavar="INTEGER")
@@ -442,5 +473,5 @@ the script svg2pdf for details if needed.
     
     tokens,deps=readInput("/dev/stdin")
     t=generateSVG(tokens,deps)
-    ETUtils.writeUTF8(t,sys.stdout)
+    writeUTF8(t,sys.stdout)
     print
