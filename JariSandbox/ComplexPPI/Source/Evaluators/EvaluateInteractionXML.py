@@ -74,9 +74,12 @@ def getEntityPredictions(entityMap, targetEntities, classSet, negativeClassId):
         found = False
         for entityTo in entitiesTo:
             predictions.append( ((id, classSet.getId(entityTo.get("type"))), classSet.getId(entityFrom.get("type")), None, None) )
-            found = True
+            found = True # entitiesTo has at least one item
         if not found: # false positive prediction
             predictions.append( ((id, negativeClassId), classSet.getId(entityFrom.get("type")), None, None) )
+    # mappedTargetEntities will contain all gold entities for which is mapped at least
+    # one predicted entity. Those gold entities not in mappedTargetEntities are then
+    # undetected ones, i.e. false negatives.
     mappedTargetEntities = set()
     for eList in entityMap.values():
         for e in eList:
@@ -95,7 +98,9 @@ def getInteractionPredictions(interactionsFrom, interactionsTo, entityMap, class
     id = "Unknown.x0"
     fromEntityIdToElement = {}
     for key in entityMap.keys():
-        fromEntityIdToElement[key.get("id")] = key
+        entityId = key.get("id")
+        assert(not fromEntityIdToElement.has_key(entityId) )
+        fromEntityIdToElement[entityId] = key
     
     toInteractionsWithPredictions = set()
     for interactionFrom in interactionsFrom:
@@ -141,7 +146,7 @@ def processSentence(fromSentence, toSentence, target, classSets, negativeClassId
     return entityPredictions, interactionPredictions
 
 # Compares a prediction (from) to a gold (to) corpus
-def processCorpora(fromCorpus, toCorpus, target, classSets, negativeClassId):
+def processCorpora(EvaluatorClass, fromCorpus, toCorpus, target, classSets, negativeClassId):
     entityPredictions = []
     interactionPredictions = []
     counter = ProgressCounter(len(fromCorpus.sentences), "Corpus Processing")
@@ -154,10 +159,10 @@ def processCorpora(fromCorpus, toCorpus, target, classSets, negativeClassId):
     
     # Process the predictions with an evaluator and print the results
     if len(entityPredictions) > 0:
-        evaluator = Evaluator(entityPredictions, classSet=classSets["entity"])
+        evaluator = EvaluatorClass(entityPredictions, classSet=classSets["entity"])
         print evaluator.toStringConcise(title="Entities")    
     if len(interactionPredictions) > 0:
-        evaluator = Evaluator(interactionPredictions, classSet=classSets["interaction"])
+        evaluator = EvaluatorClass(interactionPredictions, classSet=classSets["interaction"])
         print evaluator.toStringConcise(title="Interactions")    
 
 # Splits entities/edges with merged types into separate elements
@@ -185,13 +190,15 @@ def run(EvaluatorClass, inputCorpusFile, goldCorpusFile, parse, tokenization, ta
         classSets["entity"] = IdSet(idDict={"neg":1}, locked=False)
         classSets["interaction"] = IdSet(idDict={"neg":1}, locked=False)
         negativeClassId = 1
+    else:
+        sys.exit("Unknown evaluator type")
     
     # Load corpus and make sentence graphs
     goldCorpusElements = CorpusElements.loadCorpus(goldCorpusFile, parse, tokenization, False)
     predictedCorpusElements = CorpusElements.loadCorpus(inputCorpusFile, parse, tokenization, False)    
     
     # Compare the corpora and print results on screen
-    processCorpora(predictedCorpusElements, goldCorpusElements, target, classSets, negativeClassId)
+    processCorpora(EvaluatorClass, predictedCorpusElements, goldCorpusElements, target, classSets, negativeClassId)
     
 if __name__=="__main__":
     import sys, os
