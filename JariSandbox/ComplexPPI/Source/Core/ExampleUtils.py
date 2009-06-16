@@ -189,7 +189,7 @@ def loadPredictions(predictionsFile, examples):
         predictions.append( (examples[i],int(lines[i].split()[0]),"multiclass",lines[i].split()[1:]) )
     return predictions
 
-def writeToInteractionXML(classifications, corpusElements, outputFile, classSet=None):
+def writeToInteractionXML(classifications, corpusElements, outputFile, classSet=None, parse=None, tokenization=None):
     import sys
     print >> sys.stderr, "Writing output to Interaction XML"
     try:
@@ -197,6 +197,10 @@ def writeToInteractionXML(classifications, corpusElements, outputFile, classSet=
     except ImportError:
         import cElementTree as ET
     import cElementTreeUtils as ETUtils
+    
+    if type(corpusElements) == types.StringType: # corpus is in file
+        import SentenceGraph
+        corpusElements = SentenceGraph.loadCorpus(corpusElements, parse, tokenization)
     
     if type(classSet) == types.StringType: # class names are in file
         classSet = IdSet(filename=classSet)
