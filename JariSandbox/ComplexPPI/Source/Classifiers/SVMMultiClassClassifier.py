@@ -1,5 +1,5 @@
 import sys,os
-sys.path.append("..")
+sys.path.append(os.path.dirname(os.path.abspath(__file__))+"/..")
 import shutil
 import subprocess
 import killableprocess
@@ -12,74 +12,74 @@ from Core.Classifier import Classifier
 import Core.Split as Split
 from Evaluators.MultiClassEvaluator import MultiClassEvaluator
 from Utils.Timer import Timer
-
-binDir = "/usr/share/biotext/ComplexPPI/SVMMultiClass"
-
-defaultOptimizationParameters = {"c":[0.0001,0.001,0.01,0.1,1,10,100]}
-
-def train(examples, parameters, model, workDir=None):
-    print >> sys.stderr, "Training SVM-MultiClass on", examples
-    timer = Timer()
-    classifier = SVMMultiClassClassifier(workDir=workDir)
-    classifier.train(examples, parameters, model)
-    print >> sys.stderr, timer.toString()
-        
-def test(examples, parameters, model, classifications, workDir=None):
-    print >> sys.stderr, "Classifying", examples, "with SVM-MultiClass model", model
-    timer = Timer()
-    classifier = SVMMultiClassClassifier(workDir=workDir)
-    classifier.classify(examples, model, parameters, classifications)
-    print >> sys.stderr, timer.toString()
+from Utils.Parameters import *
 
 class SVMMultiClassClassifier(Classifier):
-    def __init__(self, workDir=None, negRatio=None):
-        #global tempDir
-        self.negRatio = None
-        self._makeTempDir(workDir)        
+    binDir = "/usr/share/biotext/ComplexPPI/SVMMultiClass"
+    indent = ""
     
-    def __del__(self):
-        self.debugFile.close()
-        if self._workDir == None and os.path.exists(self.tempDir):
-            print >> sys.stderr, "Removing temporary SVM-multi-class work directory", self.tempDir
-            shutil.rmtree(self.tempDir)
+#    def __init__(self, workDir=None, negRatio=None):
+#        sys.exit("Just use the class methods")
+#        #global tempDir
+#        #self.negRatio = None
+#        self._makeTempDir(workDir)        
+#    
+#    def __del__(self):
+#        self.debugFile.close()
+#        if self._workDir == None and os.path.exists(self.tempDir):
+#            print >> sys.stderr, "Removing temporary SVM-multi-class work directory", self.tempDir
+#            shutil.rmtree(self.tempDir)
     
-    def train(self, examples, classifierArgs, outputFile=None, style=None, timeout=None):
-#        if parameters.has_key("predefined"):
-#            return 0
+    @classmethod
+    def train(cls, examples, parameters, outputFile=None, timeout=None):
+        timer = Timer()
+        if type(parameters) == types.StringType: 
+            parameters = splitParameters(parameters)
         if type(examples) == types.ListType:
+            print >> sys.stderr, "Training SVM-MultiClass on", len(examples), "examples"
             trainPath = self.tempDir+"/train.dat"
             examples = self.filterTrainingSet(examples)
-            if self.negRatio != None:
-                examples = self.downSampleNegatives(examples, self.negRatio)
+            #if self.negRatio != None:
+            #    examples = self.downSampleNegatives(examples, self.negRatio)
             Example.writeExamples(examples, trainPath)
         else:
+            print >> sys.stderr, "Training SVM-MultiClass on file", examples
             trainPath = examples
-        if style != None and "no_duplicates" in style:
-            if type(examples) == types.ListType:
-                examples = Example.removeDuplicates(examples)
-            else:
-                print >> sys.stderr, "Warning, duplicates not removed from example file", examples
-        if timeout == None:
-            timeout = -1
-        args = [binDir+"/svm_multiclass_learn"]
-        self.__addParametersToSubprocessCall(args, classifierArgs)
+#        if style != None and "no_duplicates" in style:
+#            if type(examples) == types.ListType:
+#                examples = Example.removeDuplicates(examples)
+#            else:
+#                print >> sys.stderr, "Warning, duplicates not removed from example file", examples
+        args = [cls.binDir+"/svm_multiclass_learn"]
+        cls.__addParametersToSubprocessCall(args, parameters)
         if outputFile == None:
-            args += [trainPath, self.tempDir+"/model"]
+            args += [trainPath, "model"]
+            logFile = open("svmmulticlass.log","at")
         else:
             args += [trainPath, outputFile]
-        return killableprocess.call(args, stdout = self.debugFile, timeout = timeout)
-        
-    def classify(self, examples, modelPath, parameters=None, output=None):
+            logFile = open(outputFile+".log","wt")
+        if timeout == None:
+            timeout = -1
+        rv = killableprocess.call(args, stdout = logFile, timeout = timeout)
+        logFile.close()
+        print >> sys.stderr, timer.toString()
+        return rv
+    
+    @classmethod
+    def test(cls, examples, modelPath, output=None, parameters=None, timeout=None):
+        timer = Timer()
         if type(examples) == types.ListType:
+            print >> sys.stderr, "Classifying", len(examples), "with SVM-MultiClass model", modelPath
             examples, predictions = self.filterClassificationSet(examples, False)
             testPath = self.tempDir+"/test.dat"
             Example.writeExamples(examples, testPath)
         else:
+            print >> sys.stderr, "Classifying file", examples, "with SVM-MultiClass model", modelPath
             testPath = examples
             examples = Example.readExamples(examples,False)
-        args = [binDir+"/svm_multiclass_classify"]
+        args = [cls.binDir+"/svm_multiclass_classify"]
         if modelPath == None:
-            modelPath = self.tempDir+"/model"
+            modelPath = "model"
         if parameters != None:
             parameters = copy.copy(parameters)
             if parameters.has_key("c"):
@@ -90,19 +90,25 @@ class SVMMultiClassClassifier(Classifier):
                 del parameters["predefined"]
             self.__addParametersToSubprocessCall(args, parameters)
         if output == None:
-            output = self.tempDir+"/predictions"
+            output = "predictions"
+            logFile = open("svmmulticlass.log","at")
+        else:
+            logFile = open(output+".log","wt")
         args += [testPath, modelPath, output]
-        subprocess.call(args, stdout = self.debugFile)
-        #os.remove(self.tempDir+"/model")
+        if timeout == None:
+            timeout = -1
+        killableprocess.call(args, stdout = logFile, timeout=timeout)
         predictionsFile = open(output, "rt")
         lines = predictionsFile.readlines()
         predictionsFile.close()
         predictions = []
         for i in range(len(lines)):
             predictions.append( (examples[i],int(lines[i].split()[0]),"multiclass",lines[i].split()[1:]) )
+        print >> sys.stderr, timer.toString()
         return predictions
     
-    def __addParametersToSubprocessCall(self, args, parameters):
+    @classmethod
+    def __addParametersToSubprocessCall(cls, args, parameters):
         for k,v in parameters.iteritems():
             args.append("-"+k)
             args.append(str(v))
