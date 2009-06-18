@@ -3,6 +3,7 @@ import combine
 sys.path.append(os.path.dirname(os.path.abspath(__file__))+"/..")
 from Utils.Parameters import *
 from Utils.Timer import Timer
+import Utils.Stream as Stream
 
 def getCombinationString(combination):
     string = ""
@@ -28,8 +29,13 @@ def getParameterCombinations(parameters):
             combinations[-1][value[0]] = value[1]
     return combinations
 
-def optimize(ClassifierClass, EvaluatorModule, trainExamples, testExamples, classIds, parameters, workDir=None, timeout=None):
+def optimize(Classifier, Evaluator, trainExamples, testExamples, classIds, parameters, workDir=None, timeout=None):
     print >> sys.stderr, "Optimizing parameters"
+    if workDir != None:
+        if not os.path.exists(workDir):
+            print >> sys.stderr, "Creating optimization output directory", workDir
+            os.mkdir(workDir)
+            
     if type(parameters) == types.StringType:
         parameters = splitParameters(parameters)
     combinations = getParameterCombinations(parameters)
@@ -37,29 +43,37 @@ def optimize(ClassifierClass, EvaluatorModule, trainExamples, testExamples, clas
     bestResult = None
     combinationCount = 1
     for combination in combinations:
-        print >> sys.stderr, " Parameters "+str(combinationCount)+"/"+str(len(combinations))+":", str(combination),
-        
+        Stream.setIndent(" ")
+        print >> sys.stderr, "Parameters "+str(combinationCount)+"/"+str(len(combinations))+":", str(combination)
+        Stream.setIndent("  ")
         combinationId = getCombinationString(combination)
-        classifier = ClassifierClass(workDir=workDir)
         # Train
         trainOutput = "model-" + combinationId
-        print >> sys.stderr, "  Training..."
+        if workDir != None:
+            trainOutput = os.path.join(workDir, trainOutput)
+        print >> sys.stderr, "Training..."
         timer = Timer()
-        classifier.train(trainExamples, combination, trainOutput)
-        print >> sys.stderr, "  Training Complete, time:", timer.toString()
+        Classifier.train(trainExamples, combination, trainOutput)
+        print >> sys.stderr, "Training Complete, time:", timer.toString()
         # Test
         testOutput = "classifications-" + combinationId
-        print >> sys.stderr, "  Testing..."
+        if workDir != None:
+            testOutput = os.path.join(workDir, testOutput)
+        print >> sys.stderr, "Testing..."
         timer = Timer()
-        classifier.classify(testExamples, trainOutput, combination, testOutput)
-        print >> sys.stderr, "  Testing Complete, time:", timer.toString()
+        Classifier.test(testExamples, trainOutput, testOutput)
+        print >> sys.stderr, "Testing Complete, time:", timer.toString()
         # Evaluate
         evaluationOutput = "evaluation-" + combinationId + ".csv"
-        evaluator = EvaluatorModule.run(testExamples, testOutput, classIds, evaluationOutput)
+        if workDir != None:
+            evaluationOutput = os.path.join(workDir, evaluationOutput)
+        Stream.setIndent("   ")
+        evaluator = Evaluator.evaluate(testExamples, testOutput, classIds, evaluationOutput)
         #print >> sys.stderr, evaluator.toStringConcise("  ")
 
         if bestResult == None or evaluator.compare(bestResult[0]) > 0: #: averageResult.fScore > bestResult[1].fScore:
             bestResult = [evaluator, trainOutput, testOutput, evaluationOutput, combination]
         combinationCount += 1
+    Stream.setIndent()
     print >> sys.stderr, "Selected parameters", bestResult[-1]
     return bestResult
