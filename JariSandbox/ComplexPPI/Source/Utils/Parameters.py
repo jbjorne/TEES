@@ -1,5 +1,13 @@
 import types
 
+def getParameterString(combination):
+    string = ""
+    for key in sorted(combination.keys()):
+        if string != "":
+            string += "-"
+        string += str(key) + "_" + str(combination[key])
+    return string
+
 def getArgs(func, args):
     '''Return dictionary without invalid function arguments.'''
     if type(args) == types.DictType:
