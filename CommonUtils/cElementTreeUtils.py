@@ -15,6 +15,7 @@ try:
 except ImportError:
     import xml.etree.cElementTree as ElementTree
 
+import gzip
 
 def iterparse(file, elementName, callback, limit = -1):
     """ Parse iteratively xml-files
@@ -69,6 +70,29 @@ def indent(elem, level=0):
             e.tail = i
     if level and (not elem.tail or not elem.tail.strip()):
         elem.tail = i
+
+def ETFromObj(obj):
+    """obj can be
+    1) a string that ends with .xml -> the file is parsed and the resulting ElementTree returned
+    2) a string that ends with .xml.gz -> the file is unzipped, parsed, and the resulting ElementTree is returned
+    3) an open input stream -> the input is parsed and the resulting ElementTree is returned
+    4) an ElementTree or an Element -> obj is returned as-is, nothing is done"""
+    if isinstance(obj,str):
+        if obj.endswith(".xml.gz"):
+            fStream=GzipFile(obj,"rt")
+        elif obj.endswith(".xml"):
+            fStream=open(obj,"rt")
+        else:
+            raise ValueError("%s: File format not recognized (expected .xml or .xml.gz)"%obj)
+        return ElementTree.parse(fStream)
+    elif isinstance(obj,ElementTree.ElementTree) or ElementTree.iselement(obj):
+        return obj
+    else:
+        #not a string, not a tree, not an element, should be a stream
+        #let's parse it
+        return ElementTree.parse(obj)
+            
+        
 
 def write(rootElement, filename):        
     indent(rootElement)
