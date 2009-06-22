@@ -33,8 +33,11 @@ class SVMMultiClassClassifier(Classifier):
     @classmethod
     def train(cls, examples, parameters, outputFile=None, timeout=None):
         timer = Timer()
-        if type(parameters) == types.StringType: 
+        if type(parameters) == types.StringType:
             parameters = splitParameters(parameters)
+            for k, v in parameters.iteritems():
+                assert(len(v)) == 1
+                parameters[k] = v[0]
         if type(examples) == types.ListType:
             print >> sys.stderr, "Training SVM-MultiClass on", len(examples), "examples"
             trainPath = self.tempDir+"/train.dat"
