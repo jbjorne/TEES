@@ -7,7 +7,7 @@ CLASSIFIER_PARAMS="c:100000"
 WORKDIR="/usr/share/biotext/GeniaChallenge/SharedTaskTriggerTest"
 PARSE_TOK="split-Charniak-Lease"
 
-workdir(WORKDIR)
+workdir(WORKDIR, False)
 log()
 
 # Trigger detection
