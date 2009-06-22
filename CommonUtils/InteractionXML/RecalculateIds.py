@@ -5,7 +5,7 @@ except ImportError:
     import cElementTree as ET
 import cElementTreeUtils as ETUtils
 
-def run(input, output):
+def recalculateIds(input, output, onlyWithinSentence=False):
     print >> sys.stderr, "##### Recalculate hierarchical interaction XML ids #####"
     print >> sys.stderr, "Loading corpus file", input
     corpusTree = ET.parse(input)
@@ -20,15 +20,20 @@ def run(input, output):
     entDictionary = {}
     docIndex = 0
     for document in documents:
-        document.attrib["id"] = corpusName + ".d" + str(docIndex)
-        sentences = document.findall("sentence")
+        if not onlyWithinSentence:
+            document.attrib["id"] = corpusName + ".d" + str(docIndex)
         sentIndex = 0
+        sentences = document.findall("sentence")
         for sentence in sentences:
-            sentence.attrib["id"] = corpusName + ".d" + str(docIndex) + ".s" + str(sentIndex)
-            entities = sentence.findall("entity")
+            if not onlyWithinSentence:
+                sentence.attrib["id"] = corpusName + ".d" + str(docIndex) + ".s" + str(sentIndex)
             entIndex = 0
+            entities = sentence.findall("entity")
             for entity in entities:
-                entNewId = corpusName + ".d" + str(docIndex) + ".s" + str(sentIndex) + ".e" + str(entIndex)
+                if not onlyWithinSentence:
+                    entNewId = corpusName + ".d" + str(docIndex) + ".s" + str(sentIndex) + ".e" + str(entIndex)
+                else:
+                    entNewId = sentence.attrib["id"] + ".e" + str(entIndex)
                 assert(not entDictionary.has_key(entity.attrib["id"]))
                 entDictionary[entity.attrib["id"]] = entNewId
                 entity.attrib["id"] = entNewId
@@ -44,14 +49,20 @@ def run(input, output):
             interactions = sentence.findall("interaction")
             intIndex = 0
             for interaction in interactions:
-                interaction.attrib["id"] = corpusName + ".d" + str(docIndex) + ".s" + str(sentIndex) + ".i" + str(intIndex)
+                if onlyWithinSentence:
+                    interaction.attrib["id"] = sentence.attrib["id"] + ".i" + str(intIndex)
+                else:
+                    interaction.attrib["id"] = corpusName + ".d" + str(docIndex) + ".s" + str(sentIndex) + ".i" + str(intIndex)
                 interaction.attrib["e1"] = entDictionary[interaction.attrib["e1"]]
                 interaction.attrib["e2"] = entDictionary[interaction.attrib["e2"]]
                 intIndex += 1
             pairs = sentence.findall("pair")
             pairIndex = 0
             for pair in pairs:
-                pair.attrib["id"] = corpusName + ".d" + str(docIndex) + ".s" + str(sentIndex) + ".p" + str(pairIndex)
+                if onlyWithinSentence:
+                    pair.attrib["id"] = sentence.attrib["id"] + ".p" + str(pairIndex)
+                else:
+                    pair.attrib["id"] = corpusName + ".d" + str(docIndex) + ".s" + str(sentIndex) + ".p" + str(pairIndex)
                 pair.attrib["e1"] = entDictionary[pair.attrib["e1"]]
                 pair.attrib["e2"] = entDictionary[pair.attrib["e2"]]
                 pairIndex += 1
@@ -78,7 +89,7 @@ if __name__=="__main__":
     optparser = OptionParser(usage="%prog [options]\nPath generator.")
     optparser.add_option("-i", "--input", default=defaultCorpusFilename, dest="input", help="Corpus in interaction xml format", metavar="FILE")
     optparser.add_option("-o", "--output", default=defaultOutputName, dest="output", help="Output file in interaction xml format.")
-    optparser.add_option("-l", "--level", default="root", dest="level", help="Level on whose nested elements recalculation is started.")
+    optparser.add_option("-s", "--sentence", action="store_true", default=False, dest="sentence", help="Only recalculate within a sentence element.")
     (options, args) = optparser.parse_args()
     
     if options.input == None:
@@ -90,4 +101,4 @@ if __name__=="__main__":
         optparser.print_help()
         sys.exit(1)
     
-    run(options.input, options.output)
+    recalculateIds(options.input, options.output, options.sentence)
