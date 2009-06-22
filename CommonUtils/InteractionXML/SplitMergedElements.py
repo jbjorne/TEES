@@ -58,7 +58,7 @@ def processSentence(sentence, countsByType):
     splitMerged(sentence, "interaction", countsByType)
     splitMerged(sentence, "pair", countsByType)
 
-def run(inputFilename, outputFilename):
+def splitMergedElements(inputFilename, outputFilename):
     print >> sys.stderr, "##### Split elements with merged types #####"
     print >> sys.stderr, "Loading corpus file", inputFilename
     if inputFilename.rsplit(".",1)[-1] == "gz":
