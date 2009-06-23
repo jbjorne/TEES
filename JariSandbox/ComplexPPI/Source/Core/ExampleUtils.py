@@ -5,6 +5,7 @@
 import Split
 import types
 from IdSet import IdSet
+import InteractionXML.IDUtils as IDUtils
 
 def isDuplicate(example1, example2):
     if example1[1] != example2[1]:
@@ -253,6 +254,7 @@ def writeToInteractionXML(classifications, corpusElements, outputFile, classSet=
                         sentenceElement.remove(entityElement)
             # add new pairs
             entityElements = sentenceElement.findall("entity")
+            newEntityIdCount = IDUtils.getNextFreeId(entityElements)
             if classificationsBySentence.has_key(sentenceId):
                 for classification in classificationsBySentence[sentenceId]:
                     example = classification[0]
@@ -266,7 +268,8 @@ def writeToInteractionXML(classifications, corpusElements, outputFile, classSet=
                     entityElement.attrib["charOffset"] = headToken.get("charOffset") 
                     entityElement.attrib["headOffset"] = headToken.get("charOffset")
                     entityElement.attrib["text"] = headToken.get("text")
-                    entityElement.attrib["id"] = sentenceId + ".e" + str(entityCount)
+                    entityElement.attrib["id"] = sentenceId + ".e" + str(newEntityIdCount)
+                    newEntityIdCount += 1
                     if classSet == None: # binary classification
                         if classification[1] == "tp" or classification[1] == "fp":
                             entityElement.attrib["type"] = str(True)

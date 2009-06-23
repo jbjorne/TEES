@@ -6,6 +6,7 @@ try:
 except ImportError:
     import cElementTree as ET
 import cElementTreeUtils as ETUtils
+import IDUtils
 
 # Splits merged types generated from overlapping entities/edges into their components
 def getElementTypes(element, separator="---"):
@@ -21,6 +22,7 @@ def splitMerged(sentence, elementName, countsByType):
     newElements = []
     # split old elements and remove them
     removeCount = 0
+    newIdCount = IDUtils.getNextFreeId(elements)
     for element in elements:
         types = getElementTypes(element)
         if len(types) > 1:
@@ -31,7 +33,8 @@ def splitMerged(sentence, elementName, countsByType):
                     newElement.set(k, v)
                 newElement.set("type", type)
                 idSplits = element.get("id").rsplit(".",1)
-                newElement.set("id", idSplits[0] + "." + idSplits[1][0] + str(elementCount) )
+                newElement.set("id", idSplits[0] + "." + idSplits[1][0] + str(newIdCount) )
+                newIdCount += 1
                 print "new id", idSplits[0] + "." + idSplits[1][0] + str(elementCount)
                 newElements.append(newElement)
                 elementCount += 1
