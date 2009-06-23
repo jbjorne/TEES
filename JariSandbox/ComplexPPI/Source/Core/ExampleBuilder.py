@@ -54,6 +54,58 @@ class ExampleBuilder:
     def getPredictedValueRange(self):
         return None
 
+    def buildExamplesForSentences(self, sentences, output, idFileTag=None):            
+        examples = []
+        counter = ProgressCounter(len(sentences), "Build examples")
+        
+        calculatePredictedRange(self, sentences)
+        
+        outfile = open(output, "wt")
+        exampleCount = 0
+        for sentence in sentences:
+            counter.update(1, "Building examples ("+sentence[0].getSentenceId()+"): ")
+            examples = self.buildExamples(sentence[0])
+            exampleCount += len(examples)
+            examples = self.preProcessExamples(examples)
+            ExampleUtils.appendExamples(examples, outfile)
+        outfile.close()
+    
+        print >> sys.stderr, "Examples built:", len(examples)
+        print >> sys.stderr, "Features:", len(self.featureSet.getNames())
+        # Save Ids
+        if idFileTag != None: 
+            print >> sys.stderr, "Saving class names to", idFileTag + ".class_names"
+            self.classSet.write(idFileTag + ".class_names")
+            print >> sys.stderr, "Saving feature names to", idFileTag + ".feature_names"
+            self.featureSet.write(idFileTag + ".feature_names")
+    
+    @classmethod
+    def getIdSets(self, idFileTag=None):
+        if idFileTag != None and os.path.exists(idFileTag + ".feature_names") and os.path.exists(idFileTag + ".class_names"):
+            print >> sys.stderr, "Using predefined class and feature names"
+            featureSet = IdSet()
+            featureSet.load(idFileTag + ".feature_names")
+            classSet = IdSet()
+            classSet.load(idFileTag + ".class_names")
+            return classSet, featureSet
+        else:
+            print >> sys.stderr, "No predefined class or feature-names"
+            assert(not os.path.exists(idFileTag + ".feature_names"))
+            assert(not os.path.exists(idFileTag + ".class_names"))
+            return None, None
+            
+    @classmethod
+    def getSentences(cls, input, parse, tokenization):    
+        if type(input) != types.ListType:
+            # Load corpus and make sentence graphs
+            corpusElements = SentenceGraph.loadCorpus(input, parse, tokenization)
+            sentences = []
+            for sentence in corpusElements.sentences:
+                sentences.append( [sentence.sentenceGraph,None] )
+            return sentences
+        else: # assume input is already a list of sentences
+            return input
+
 def calculatePredictedRange(exampleBuilder, sentences):
     print >> sys.stderr, "Defining predicted value range:",
     sentenceElements = []
@@ -61,57 +113,6 @@ def calculatePredictedRange(exampleBuilder, sentences):
         sentenceElements.append(sentence[0].sentenceElement)
     exampleBuilder.definePredictedValueRange(sentenceElements, "entity")
     print >> sys.stderr, exampleBuilder.getPredictedValueRange()
-    
-def buildExamples(exampleBuilder, sentences, output):
-    examples = []
-    if "graph_kernel" in exampleBuilder.styles:
-        counter = ProgressCounter(len(sentences), "Build examples", 0)
-    else:
-        counter = ProgressCounter(len(sentences), "Build examples")
-    
-    calculatePredictedRange(exampleBuilder, sentences)
-    
-    outfile = open(output, "wt")
-    exampleCount = 0
-    for sentence in sentences:
-        counter.update(1, "Building examples ("+sentence[0].getSentenceId()+"): ")
-        examples = exampleBuilder.buildExamples(sentence[0])
-        exampleCount += len(examples)
-        examples = exampleBuilder.preProcessExamples(examples)
-        ExampleUtils.appendExamples(examples, outfile)
-    outfile.close()
-
-    print >> sys.stderr, "Examples built:", len(examples)
-    print >> sys.stderr, "Features:", len(exampleBuilder.featureSet.getNames())
-
-def run(ExampleBuilderClass, input, output, parse, tokenization, parameters, idFileTag=None):    
-    # Load corpus and make sentence graphs
-    corpusElements = SentenceGraph.loadCorpus(input, parse, tokenization)
-    sentences = []
-    for sentence in corpusElements.sentences:
-        sentences.append( [sentence.sentenceGraph,None] )
-
-    # Build examples
-    if idFileTag != None and os.path.exists(idFileTag + ".feature_names") and os.path.exists(idFileTag + ".class_names"):
-        print >> sys.stderr, "Using predefined class and feature names"
-        featureSet = IdSet()
-        featureSet.load(idFileTag + ".feature_names")
-        classSet = IdSet()
-        classSet.load(idFileTag + ".class_names")
-        exampleBuilder = ExampleBuilderClass(featureSet=featureSet, classSet=classSet, **getArgs(ExampleBuilderClass.__init__, splitParameters(parameters)))
-    else:
-        print >> sys.stderr, "No predefined features"
-        assert(not os.path.exists(idFileTag + ".feature_names"))
-        assert(not os.path.exists(idFileTag + ".class_names"))
-        if idFileTag == None:
-            idFileTag = output
-        exampleBuilder = ExampleBuilderClass(**getArgs(ExampleBuilderClass.__init__, splitParameters(parameters)))
-    
-    buildExamples(exampleBuilder, sentences, output)
-    print >> sys.stderr, "Saving class names to", idFileTag + ".class_names"
-    exampleBuilder.classSet.write(idFileTag + ".class_names")
-    print >> sys.stderr, "Saving feature names to", idFileTag + ".feature_names"
-    exampleBuilder.featureSet.write(idFileTag + ".feature_names")
 
 def addBasicOptions(optparser):
     optparser.add_option("-i", "--input", default=defaultAnalysisFilename, dest="input", help="Corpus in analysis format", metavar="FILE")

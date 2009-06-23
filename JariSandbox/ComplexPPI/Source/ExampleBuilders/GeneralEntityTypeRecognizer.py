@@ -35,6 +35,13 @@ class GeneralEntityTypeRecognizer(ExampleBuilder):
         
         ExampleBuilder.__init__(self, classSet, featureSet)
         self.styles = style
+    
+    @classmethod
+    def run(cls, input, output, parse, tokenization, style, idFileTag=None):
+        classSet, featureSet = cls.getIdSets(idFileTag)
+        e = GeneralEntityTypeRecognizer(style, classSet, featureSet)
+        sentences = cls.getSentences(input, parse, tokenization)
+        e.buildExamplesForSentences(sentences, output, idFileTag)
 
     def preProcessExamples(self, allExamples):
         if "normalize" in self.styles:
