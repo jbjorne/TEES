@@ -1,6 +1,6 @@
 import sys,os
 sys.path.append("..")
-import ExampleBuilders.GeneralEntityTypeRecognizer as GeneralEntityTypeRecognizer
+from ExampleBuilders.GeneralEntityTypeRecognizer import GeneralEntityTypeRecognizer
 import ExampleBuilders.MultiEdgeExampleBuilder as MultiEdgeExampleBuilder
 from Classifiers.SVMMultiClassClassifier import SVMMultiClassClassifier as Cls
 from Evaluators.AveragingMultiClassEvaluator import AveragingMultiClassEvaluator as Ev
