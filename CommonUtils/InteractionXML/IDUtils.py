@@ -1,3 +1,13 @@
+def getNextFreeId(elements):
+    highest = -1
+    for element in elements:
+        number = int(element.get("id").rsplit(".",1)[-1][1:])
+        if number > highest:
+            highest = number
+    if len(elements) - 1 > highest:
+        highest = len(elements) - 1
+    return highest + 1
+
 def getIdNumberType(idNumber):
     if idNumber[0] == "d":
         return "document"
