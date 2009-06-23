@@ -1,29 +1,24 @@
 import networkx as NX
 import Range
+import types
 
 multiedges = True
 
-def loadCorpus(corpusFilename, parse, tokenization=None):
+def loadCorpus(corpus, parse, tokenization=None):
     """
     Load an entire corpus through CorpusElements and add SentenceGraph-objects
     to its SentenceElements-objects.
     """
-    try:
-        import xml.etree.cElementTree as ET
-    except ImportError:
-        import cElementTree as ET
+    import cElementTreeUtils as ETUtils
     import sys
     sys.path.append("..")
     from Utils.ProgressCounter import ProgressCounter
     from InteractionXML.CorpusElements import CorpusElements
     
-    # Corpus may be in a tar.gz-file
-    print >> sys.stderr, "Loading corpus file", corpusFilename
-    if corpusFilename.rsplit(".",1)[-1] == "gz":
-        import gzip
-        corpusTree = ET.parse(gzip.open(corpusFilename))
-    else:
-        corpusTree = ET.parse(corpusFilename)
+    # Corpus may be in file or not
+    if type(corpus) == types.StringType:
+        print >> sys.stderr, "Loading corpus file", corpus
+    corpusTree = ETUtils.ETFromObj(corpus)
     corpusRoot = corpusTree.getroot()
     # Use CorpusElements-class to access xml-tree
     corpusElements = CorpusElements(corpusRoot, parse, tokenization)
