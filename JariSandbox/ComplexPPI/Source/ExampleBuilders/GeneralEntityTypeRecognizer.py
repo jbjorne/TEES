@@ -5,6 +5,8 @@ from Core.ExampleBuilder import ExampleBuilder
 import Stemming.PorterStemmer as PorterStemmer
 from Core.IdSet import IdSet
 import Core.ExampleUtils as ExampleUtils
+import copy
+from Utils.Timer import Timer
 
 def run(input, output, parse, tokenization, parameters, idFileTag=None):
     print >> sys.stderr, "##### GeneralEntityTypeRecognizer #####"
@@ -35,6 +37,11 @@ class GeneralEntityTypeRecognizer(ExampleBuilder):
         
         ExampleBuilder.__init__(self, classSet, featureSet)
         self.styles = style
+        self.timerBuildExamples = Timer(False)
+        self.timerCrawl = Timer(False)
+        self.timerCrawlPrecalc = Timer(False)
+        self.timerMatrix = Timer(False)
+        self.timerMatrixPrecalc = Timer(False)
     
     @classmethod
     def run(cls, input, output, parse, tokenization, style, idFileTag=None):
@@ -42,6 +49,11 @@ class GeneralEntityTypeRecognizer(ExampleBuilder):
         e = GeneralEntityTypeRecognizer(style, classSet, featureSet)
         sentences = cls.getSentences(input, parse, tokenization)
         e.buildExamplesForSentences(sentences, output, idFileTag)
+        print >> sys.stderr, "Time for buildExamples:", e.timerBuildExamples.elapsedTimeToString()
+        print >> sys.stderr, "Time for Crawl:", e.timerCrawl.elapsedTimeToString()
+        print >> sys.stderr, "Time for Crawl(Precalc):", e.timerCrawlPrecalc.elapsedTimeToString()
+        print >> sys.stderr, "Time for Matrix:", e.timerMatrix.elapsedTimeToString()
+        print >> sys.stderr, "Time for Matrix(Precalc):", e.timerMatrixPrecalc.elapsedTimeToString()
 
     def preProcessExamples(self, allExamples):
         if "normalize" in self.styles:
@@ -102,6 +114,7 @@ class GeneralEntityTypeRecognizer(ExampleBuilder):
         """
         Build one example for each token of the sentence
         """
+        self.timerBuildExamples.start()
         examples = []
         exampleIndex = 0
         
@@ -128,6 +141,8 @@ class GeneralEntityTypeRecognizer(ExampleBuilder):
         for k,v in bagOfWords.iteritems():
             bowFeatures[self.featureSet.getId(k)] = v
         
+        self.timerCrawl.start()
+        self.timerCrawlPrecalc.start()
         self.inEdgesByToken = {}
         self.outEdgesByToken = {}
         self.edgeSetByToken = {}
@@ -139,6 +154,14 @@ class GeneralEntityTypeRecognizer(ExampleBuilder):
             outEdges.sort(compareDependencyEdgesById)
             self.outEdgesByToken[token] = outEdges
             self.edgeSetByToken[token] = set(inEdges + outEdges)
+        self.timerCrawl.stop()
+        self.timerCrawlPrecalc.stop()
+        
+        self.timerMatrix.start()
+        self.timerMatrixPrecalc.start()
+        self._initMatrices(sentenceGraph)
+        self.timerMatrix.stop()
+        self.timerMatrixPrecalc.stop()
         
         for i in range(len(sentenceGraph.tokens)):
             token = sentenceGraph.tokens[i]
@@ -230,8 +253,137 @@ class GeneralEntityTypeRecognizer(ExampleBuilder):
             exampleIndex += 1
             
             # chains
+            copyFeatures = copy.copy(features)
+            self.timerCrawl.start()
             self.buildChains(token, sentenceGraph, features)
+            self.timerCrawl.stop()
+            self.timerMatrix.start()
+            self.buildChainsAlternative(token, copyFeatures, sentenceGraph)
+            self.timerMatrix.stop()
+            diff1 = set(features.keys()) - set(copyFeatures.keys())
+            diff2 = set(copyFeatures.keys()) - set(features.keys())
+            if len(diff1) != 0 or len(diff2) != 0:
+                print "Error for token", token.get("id"), token.get("text")
+                intersection = set(features.keys()) & set(copyFeatures.keys())
+                print "d1:",
+                for key in sorted(diff1):
+                    print self.featureSet.getName(key) + ",",
+                print
+                print "d2:",
+                for key in sorted(diff2):
+                    print self.featureSet.getName(key) + ",",
+                print
+                print "int:",
+                intNames = []
+                for key in sorted(intersection):
+                    intNames.append(self.featureSet.getName(key))
+                for name in sorted(intNames):
+                    print name + ",",
+                print
+                #assert(len(diff1) == 0)
+        self.timerBuildExamples.stop()
         return examples
+    
+    def _initMatrices(self, sentenceGraph):
+        nodes = sentenceGraph.dependencyGraph.nodes()
+        self.dod1 = self._dodFromGraph(sentenceGraph, nodes)
+        self.dod2 = self.multDictOfDicts(self.dod1, self.dod1, nodes)
+        self.dod3 = self.multDictOfDicts(self.dod2, self.dod1, nodes)
+        #self.toStringMatrix(self.dod1)
+        #self.toStringMatrix(self.dod2)
+        #self.toStringMatrix(self.dod3)
+            
+    def _dodFromGraph(self, sentenceGraph, nodes):
+        graph = sentenceGraph.dependencyGraph
+        dod = {}
+        for i in nodes:
+            dod[i] = {}
+        for i in nodes:
+            for j in nodes:
+                edge = graph.get_edge(i, j)
+                if len(edge) > 0:
+                    if not dod[i].has_key(j):
+                        dod[i][j] = []
+                    if not dod[j].has_key(i):
+                        dod[j][i] = []
+                    for e in edge:
+                        t1 = sentenceGraph.tokensById[e.get("t1")]
+                        t2 = sentenceGraph.tokensById[e.get("t2")]
+                        # list of visited tokens, last edge of chain, chain string
+                        dod[i][j].append( ([t1, t2], e, "frw_"+e.get("type")) ) # frw
+                        dod[j][i].append( ([t2, t1], e, "rev_"+e.get("type")) ) # rev
+        return dod
+
+    def overlap(self, list1, list2):
+        for i in list1:
+            for j in list2:
+                if i == j: # duplicate dependency
+                    return True
+        return False
+    
+    def extendPaths(self, edges1, edges2):
+        newEdges = []
+        for e1 in edges1:
+            for e2 in edges2:
+                if not self.overlap(e1[0], e2[0][1:]):
+                    newEdges.append( (e1[0] + e2[0][1:], e2[1], e1[2] + "-" + e2[2]) )
+        return newEdges
+
+    def multDictOfDicts(self, dod1, dod2, nodes):
+        result = {}
+        for i in nodes:
+            result[i] = {}
+        for i in nodes:
+            for j in nodes:
+                for k in nodes:
+                    if dod1[i].has_key(k):
+                        edges1 = dod1[i][k]
+                    else:
+                        edges1 = []
+                    if dod2[k].has_key(j):
+                        edges2 = dod2[k][j]
+                    else:
+                        edges2 = []
+                    newPaths = self.extendPaths(edges1, edges2)
+                    if len(newPaths) > 0:
+                        if result[i].has_key(j):
+                            result[i][j].extend(newPaths)
+                        else:
+                            result[i][j] = newPaths
+        return result
+
+#    def toStringMatrix(self, matrix):
+#        for i in matrix.keys():
+#            for j in matrix[i].keys():
+#                newList = []
+#                for l in matrix[i][j]:
+#                    string = ""
+#                    for obj in l:
+#                        if string != "":
+#                            string += "-"
+#                        if obj[1]:
+#                            string += "frw_"+str(obj[0].get("type"))
+#                        else:
+#                            string += "rev_"+str(obj[0].get("type"))
+#                    newList.append( (l, string) )
+#                matrix[i][j] = newList
+    
+    def buildChainsAlternative(self, token, features, sentenceGraph):
+        self._buildChainsMatrix(self.dod1, token, features, 3, sentenceGraph)
+        self._buildChainsMatrix(self.dod2, token, features, 2, sentenceGraph)
+        self._buildChainsMatrix(self.dod3, token, features, 1, sentenceGraph)
+    
+    def _buildChainsMatrix(self, matrix, token, features, depth, sentenceGraph):
+        strDepthLeft = "dist_" + str(depth)
+        for node in matrix[token].keys():
+            if node == token: # don't allow self-loops
+                continue
+            for tokenFeature in self.getTokenFeatures(node, sentenceGraph):
+                features[self.featureSet.getId(strDepthLeft + tokenFeature)] = 1
+            for chain in matrix[token][node]:
+                features[self.featureSet.getId("chain_"+strDepthLeft+"-"+chain[2])] = 1
+                features[self.featureSet.getId("dep_"+strDepthLeft+chain[1].get("type"))] = 1
+            
     
     def buildChains(self,token,sentenceGraph,features,depthLeft=3,chain="",visited=None):
         if depthLeft == 0:
@@ -260,13 +412,13 @@ class GeneralEntityTypeRecognizer(ExampleBuilder):
 #                tokenText = sentenceGraph.getTokenText(nextToken)
 #                features[self.featureSet.getId("text_dist_"+strDepthLeft+tokenText)] = 1
                 
-                features[self.featureSet.getId("chain_dist_"+strDepthLeft+chain+"-frw_"+edgeType)] = 1
-                self.buildChains(nextToken,sentenceGraph,features,depthLeft-1,chain+"-frw_"+edgeType,edgeSet)
+                features[self.featureSet.getId("chain_"+strDepthLeft+chain+"-rev_"+edgeType)] = 1
+                self.buildChains(nextToken,sentenceGraph,features,depthLeft-1,chain+"-rev_"+edgeType,edgeSet)
 
         for edge in outEdges:
             if not edge in visited:
                 edgeType = edge[2].get("type")
-                features[self.featureSet.getId("dep_dist_"+strDepthLeft+edgeType)] = 1
+                features[self.featureSet.getId("dep_"+strDepthLeft+edgeType)] = 1
 
                 nextToken = edge[1]
                 for tokenFeature in self.getTokenFeatures(nextToken, sentenceGraph):
@@ -279,5 +431,5 @@ class GeneralEntityTypeRecognizer(ExampleBuilder):
 #                tokenText = sentenceGraph.getTokenText(nextToken)
 #                features[self.featureSet.getId("text_dist_"+strDepthLeft+tokenText)] = 1
                 
-                features[self.featureSet.getId("chain_dist_"+strDepthLeft+chain+"-rev_"+edgeType)] = 1
-                self.buildChains(nextToken,sentenceGraph,features,depthLeft-1,chain+"-rev_"+edgeType,edgeSet)
+                features[self.featureSet.getId("chain_"+strDepthLeft+chain+"-frw_"+edgeType)] = 1
+                self.buildChains(nextToken,sentenceGraph,features,depthLeft-1,chain+"-frw_"+edgeType,edgeSet)
