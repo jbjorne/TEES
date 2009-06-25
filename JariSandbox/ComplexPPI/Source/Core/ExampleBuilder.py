@@ -70,7 +70,7 @@ class ExampleBuilder:
             ExampleUtils.appendExamples(examples, outfile)
         outfile.close()
     
-        print >> sys.stderr, "Examples built:", len(examples)
+        print >> sys.stderr, "Examples built:", exampleCount
         print >> sys.stderr, "Features:", len(self.featureSet.getNames())
         # Save Ids
         if idFileTag != None: 
