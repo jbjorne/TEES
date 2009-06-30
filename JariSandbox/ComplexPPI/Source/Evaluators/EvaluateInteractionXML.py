@@ -99,7 +99,7 @@ def getInteractionPredictions(interactionsFrom, interactionsTo, entityMap, class
     fromEntityIdToElement = {}
     for key in entityMap.keys():
         entityId = key.get("id")
-        assert(not fromEntityIdToElement.has_key(entityId) )
+        assert not fromEntityIdToElement.has_key(entityId), entityId
         fromEntityIdToElement[entityId] = key
     
     toInteractionsWithPredictions = set()
@@ -152,7 +152,7 @@ def processCorpora(EvaluatorClass, fromCorpus, toCorpus, target, classSets, nega
     counter = ProgressCounter(len(fromCorpus.sentences), "Corpus Processing")
     # Loop through the sentences and collect all predictions
     for i in range(len(fromCorpus.sentences)):
-        counter.update(1)
+        counter.update(1,fromCorpus.sentences[i].sentence.get("id"))
         newEntityPredictions, newInteractionPredictions = processSentence(fromCorpus.sentences[i], toCorpus.sentences[i], target, classSets, negativeClassId)
         entityPredictions.extend(newEntityPredictions)
         interactionPredictions.extend(newInteractionPredictions)
