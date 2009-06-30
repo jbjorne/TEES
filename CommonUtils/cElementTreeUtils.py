@@ -77,7 +77,7 @@ def ETFromObj(obj):
     2) a string that ends with .xml.gz -> the file is unzipped, parsed, and the resulting ElementTree is returned
     3) an open input stream -> the input is parsed and the resulting ElementTree is returned
     4) an ElementTree or an Element -> obj is returned as-is, nothing is done"""
-    if isinstance(obj,str):
+    if isinstance(obj,str) or isinstance(obj,unicode):
         if obj.endswith(".xml.gz"):
             fStream=GzipFile(obj,"rt")
         elif obj.endswith(".xml"):
