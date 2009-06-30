@@ -21,34 +21,42 @@ def adjustEntity(entityNode,targetLabel,multiplier):
     predictions=entityNode.get("predictions")
     if not predictions: #nothing to do
         return
+    maxConfidence=None
+    maxLabel=None
     labMod=[] #list with modified "label:confidence"
     for labelConfidence in predictions.split(","):
         label,confidence=labelConfidence.split(":")
+        confidence=float(confidence)
         if label!=targetLabel: #nothing to do
             labMod.append(labelConfidence)
-            continue
         else:
             confidence=scaleVal(float(confidence),multiplier) #modify...
             labMod.append(label+":"+str(confidence))
+        if maxConfidence==None or maxConfidence<confidence:
+            maxConfidence=confidence
+            maxLabel=label
+
     #Done
     entityNode.set("predictions",",".join(labMod))
+    entityNode.set("type",maxLabel)
 
-    
+class RecallAdjust:    
 
-def recallAdjust(inFile,multiplier=1.0,outFile=None,targetLabel="neg"):
-    """inFile can be a string with file name (.xml or .xml.gz) or an ElementTree or an Element or an open input stream
-    multiplier adjusts the level of boosting the non-negative predictions, it is a real number (0,inf)
-    multiplier 1.0 does nothing, <1.0 decreases negative class confidence, >1.0 increases negative class confidence
-    the root of the modified tree is returned and, if outFile is a string, written out to outFile as well"""
-    root=ETUtils.ETFromObj(inFile)
-    if not ET.iselement(root):
-        assert isinstance(root,ET.ElementTree)
-        root=root.getroot()
-    for entityNode in root.getiterator("entity"):
-        adjustEntity(entityNode,targetLabel,multiplier)
-    if outFile:
-        ETUtils.write(root,outFile)
-    return root
+    @classmethod
+    def run(cls,inFile,multiplier=1.0,outFile=None,targetLabel="neg"):
+        """inFile can be a string with file name (.xml or .xml.gz) or an ElementTree or an Element or an open input stream
+        multiplier adjusts the level of boosting the non-negative predictions, it is a real number (0,inf)
+        multiplier 1.0 does nothing, <1.0 decreases negative class confidence, >1.0 increases negative class confidence
+        the root of the modified tree is returned and, if outFile is a string, written out to outFile as well"""
+        root=ETUtils.ETFromObj(inFile)
+        if not ET.iselement(root):
+            assert isinstance(root,ET.ElementTree)
+            root=root.getroot()
+        for entityNode in root.getiterator("entity"):
+            adjustEntity(entityNode,targetLabel,multiplier)
+        if outFile:
+            ETUtils.write(root,outFile)
+        return root
 
 if __name__=="__main__":
     desc="Negative class adjustment in entity predictions. Reads from stdin, writes to stdout."
@@ -62,4 +70,4 @@ if __name__=="__main__":
         print >> sys.stderr, "You need to give a lambda"
         sys.exit(1)
 
-    recallAdjust(sys.stdin,options.l,sys.stdout,options.targetLabel)
+    RecallAdjust.run(sys.stdin,options.l,sys.stdout,options.targetLabel)

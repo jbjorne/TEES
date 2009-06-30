@@ -66,77 +66,82 @@ def tokClasses(tokenizationNode,sNode,ibo=False):
                     tokClassesIBO.append(tType)
     return tokClassesIBO
 
-def gazetteer(fileIn,fileOut=None,tokenization="split-Charniak-Lease"):
-    """Builds the master gazzeteer.
-    fileIn: a string (ending with .xml or .xml.gz), an open input stream, an ElementTree or an Element
-    fileOut: a string or None. If given, the resulting gazzetteer will be written out
-    tokenization: name of the tokenization to be used
+class Gazetteer:
 
-    Produces a dictionary with...
-    """
+    @classmethod
+    def run(cls,fileIn,fileOut=None,tokenization="split-Charniak-Lease"):
+        """Builds the master gazzeteer.
+        fileIn: a string (ending with .xml or .xml.gz), an open input stream, an ElementTree or an Element
+        fileOut: a string or None. If given, the resulting gazzetteer will be written out
+        tokenization: name of the tokenization to be used
 
-    
-    gztr={} #key: token value: dictionary (key: className, value count)
-    root=ETUtils.ETFromObj(fileIn)
-    if not ET.iselement(root):
-        assert isinstance(root,ET.ElementTree)
-        root=root.getroot()
-    for sNode in root.getiterator("sentence"):
-        for tokenizationNode in sNode.getiterator("tokenization"):
-            if tokenizationNode.get("tokenizer")==tokenization:
-                break
+        Produces a dictionary with...
+        """
+
+
+        gztr={} #key: token value: dictionary (key: className, value count)
+        root=ETUtils.ETFromObj(fileIn)
+        if not ET.iselement(root):
+            assert isinstance(root,ET.ElementTree)
+            root=root.getroot()
+        for sNode in root.getiterator("sentence"):
+            for tokenizationNode in sNode.getiterator("tokenization"):
+                if tokenizationNode.get("tokenizer")==tokenization:
+                    break
+            else:
+                assert False, "Did not find %s tokenization"%tokenization
+            tClasses=tokClasses(tokenizationNode,sNode)
+            assert len(tClasses)==len(tokenizationNode)
+            for tokIdx,tokNode in enumerate(tokenizationNode):
+                gsClass=tClasses[tokIdx]
+                b,e=charOffStr2tuple(tokNode.get("charOffset"))
+                tokNodeTxt=tokTxt(b,e,sNode).lower()
+                tokDict=gztr.setdefault(tokNodeTxt,{})
+                tokDict[gsClass]=tokDict.get(gsClass,0)+1
+        if fileOut:
+            Gazetteer.saveGztr(gztr,fileOut)
+        return gztr
+
+    @classmethod
+    def saveGztr(cls,gztr,fileName):
+        """Saves the gztr produced by buildgztr"""
+        if isinstance(fileName,str):
+            f=open(fileName,"wt")
         else:
-            assert False, "Did not find %s tokenization"%tokenization
-        tClasses=tokClasses(tokenizationNode,sNode)
-        assert len(tClasses)==len(tokenizationNode)
-        for tokIdx,tokNode in enumerate(tokenizationNode):
-            gsClass=tClasses[tokIdx]
-            b,e=charOffStr2tuple(tokNode.get("charOffset"))
-            tokNodeTxt=tokTxt(b,e,sNode).lower()
-            tokDict=gztr.setdefault(tokNodeTxt,{})
-            tokDict[gsClass]=tokDict.get(gsClass,0)+1
-    if fileOut:
-        saveGztr(gztr,fileOut)
-    return gztr
+            f=fileName #assume it is an open write stream since it's not a string
+        for txt,clsDct in gztr.items():
+            total=sum(v for v in clsDct.values())
+            if clsDct.get("neg",-1)==total:
+                #tokens that are only negative are not saved
+                continue
+            print >> f, txt+"\t",
+            for cls,count in clsDct.items():
+                print >> f, cls+":"+str(float(count)/total),
+            print >> f
+        f.close()
 
-def saveGztr(gztr,fileName):
-    """Saves the gztr produced by buildgztr"""
-    if isinstance(fileName,str):
-        f=open(fileName,"wt")
-    else:
-        f=fileName #assume it is an open write stream since it's not a string
-    for txt,clsDct in gztr.items():
-        total=sum(v for v in clsDct.values())
-        if clsDct.get("neg",-1)==total:
-            #tokens that are only negative are not saved
-            continue
-        print >> f, txt+"\t",
-        for cls,count in clsDct.items():
-            print >> f, cls+":"+str(float(count)/total),
-        print >> f
-    f.close()
-
-def loadGztr(fileName):
-    """Loads the gztr produced by saveGztr"""
-    gztr={}
-    f=open(fileName,"rt")
-    for line in f:
-        line=line.strip()
-        if not line:
-            continue
-        txt,clsVals=line.split("\t")
-        clsDct=gztr.setdefault(txt,{})
-        for clsVal in clsVals.split():
-            cls,v=clsVal.split(":")
-            v=float(v)
-            assert cls not in clsDct
-            clsDct[cls]=v
-    f.close()
-    return gztr
+    @classmethod
+    def loadGztr(cls,fileName):
+        """Loads the gztr produced by saveGztr"""
+        gztr={}
+        f=open(fileName,"rt")
+        for line in f:
+            line=line.strip()
+            if not line:
+                continue
+            txt,clsVals=line.split("\t")
+            clsDct=gztr.setdefault(txt,{})
+            for clsVal in clsVals.split():
+                cls,v=clsVal.split(":")
+                v=float(v)
+                assert cls not in clsDct
+                clsDct[cls]=v
+        f.close()
+        return gztr
 
 if __name__=="__main__":
     desc="Given a GS XML, builds a gazetteer with all tokens seen in a positive label context, and the label/count information. Reads stdin, writes stdout"""
     parser = OptionParser(description=desc)
     parser.add_option("-t","--tokenization",default="split-Charniak-Lease",dest="tokenization",help="Tokenization to be used. Defaults to split-Charniak-Lease")
     (options, args) = parser.parse_args()
-    gazetteer(sys.stdin,sys.stdout,options.tokenization)
+    Gazetteer.run(sys.stdin,sys.stdout,options.tokenization)
