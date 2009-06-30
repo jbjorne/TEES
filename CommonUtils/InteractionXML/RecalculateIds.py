@@ -34,7 +34,7 @@ def recalculateIds(input, output, onlyWithinSentence=False):
                     entNewId = corpusName + ".d" + str(docIndex) + ".s" + str(sentIndex) + ".e" + str(entIndex)
                 else:
                     entNewId = sentence.attrib["id"] + ".e" + str(entIndex)
-                assert(not entDictionary.has_key(entity.attrib["id"]))
+                assert not entDictionary.has_key(entity.attrib["id"]),entity.get("id")
                 entDictionary[entity.attrib["id"]] = entNewId
                 entity.attrib["id"] = entNewId
                 entIndex += 1
