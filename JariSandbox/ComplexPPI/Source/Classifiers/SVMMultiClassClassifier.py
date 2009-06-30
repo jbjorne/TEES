@@ -2,7 +2,7 @@ import sys,os
 sys.path.append(os.path.dirname(os.path.abspath(__file__))+"/..")
 import shutil
 import subprocess
-import killableprocess
+#import killableprocess
 import Core.ExampleUtils as Example
 import combine
 import copy
@@ -63,7 +63,7 @@ class SVMMultiClassClassifier(Classifier):
             logFile = open(outputFile+".log","wt")
         if timeout == None:
             timeout = -1
-        rv = killableprocess.call(args, stdout = logFile, timeout = timeout)
+        rv = subprocess.call(args, stdout = logFile)
         logFile.close()
         print >> sys.stderr, timer.toString()
         return rv
@@ -100,7 +100,7 @@ class SVMMultiClassClassifier(Classifier):
         args += [testPath, modelPath, output]
         if timeout == None:
             timeout = -1
-        killableprocess.call(args, stdout = logFile, timeout=timeout)
+        subprocess.call(args, stdout = logFile)
         predictionsFile = open(output, "rt")
         lines = predictionsFile.readlines()
         predictionsFile.close()
