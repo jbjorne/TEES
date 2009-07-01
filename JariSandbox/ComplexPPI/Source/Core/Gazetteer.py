@@ -3,8 +3,10 @@ try:
 except:
     import cElementTree as ET
 import cElementTreeUtils as ETUtils
-import sys
+import sys,os
 from optparse import OptionParser
+sys.path.append(os.path.dirname(os.path.abspath(__file__))+"/..")
+from Utils.ProgressCounter import ProgressCounter
 
 def charOffStr2tuple(cStr):
     b,e=cStr.split("-")
@@ -77,14 +79,20 @@ class Gazetteer:
 
         Produces a dictionary with...
         """
-
+        
+        print >> sys.stderr, "Building gazetteer"
 
         gztr={} #key: token value: dictionary (key: className, value count)
         root=ETUtils.ETFromObj(fileIn)
         if not ET.iselement(root):
             assert isinstance(root,ET.ElementTree)
             root=root.getroot()
+        sentences = []
         for sNode in root.getiterator("sentence"):
+            sentences.append(sNode) 
+        counter = ProgressCounter(len(sentences), "Build gazetteer")
+        for sNode in sentences:
+            counter.update(1, "Adding to gazetteer sentence "+sNode.get("id")+", ")
             for tokenizationNode in sNode.getiterator("tokenization"):
                 if tokenizationNode.get("tokenizer")==tokenization:
                     break
