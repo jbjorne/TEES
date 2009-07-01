@@ -21,7 +21,7 @@ def compareDependencyEdgesById(dep1, dep2):
     else: # x<y
        return -1
 
-class GeneralEntityTypeRecognizer(ExampleBuilder):
+class GeneralEntityTypeRecognizerGztr(ExampleBuilder):
     def __init__(self, style=None, classSet=None, featureSet=None, gazetteerFileName=None):
         if classSet == None:
             classSet = IdSet(1)
@@ -30,7 +30,7 @@ class GeneralEntityTypeRecognizer(ExampleBuilder):
             featureSet = IdSet()
         
         ExampleBuilder.__init__(self, classSet, featureSet)
-        gazetteerFileName="/usr/share/biotext/GeniaChallenge/SharedTaskTriggerTest/gazetteer-train"
+        #gazetteerFileName="/usr/share/biotext/GeniaChallenge/SharedTaskTriggerTest/gazetteer-train"
         if gazetteerFileName!=None:
             self.gazetteer=Gazetteer.loadGztr(gazetteerFileName)
             print >> sys.stderr, "Loaded gazetteer from",gazetteerFileName
@@ -39,9 +39,9 @@ class GeneralEntityTypeRecognizer(ExampleBuilder):
         self.styles = style
 
     @classmethod
-    def run(cls, input, output, parse, tokenization, style, idFileTag=None):
+    def run(cls, input, output, parse, tokenization, style, idFileTag=None, gazetteerFileName=None):
         classSet, featureSet = cls.getIdSets(idFileTag)
-        e = GeneralEntityTypeRecognizer(style, classSet, featureSet)
+        e = GeneralEntityTypeRecognizerGztr(style, classSet, featureSet, gazetteerFileName=None)
         sentences = cls.getSentences(input, parse, tokenization)
         e.buildExamplesForSentences(sentences, output, idFileTag)
 

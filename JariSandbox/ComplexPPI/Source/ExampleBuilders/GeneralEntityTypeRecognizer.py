@@ -7,10 +7,6 @@ from Core.IdSet import IdSet
 import Core.ExampleUtils as ExampleUtils
 import copy
 from Utils.Timer import Timer
-
-def run(input, output, parse, tokenization, parameters, idFileTag=None):
-    print >> sys.stderr, "##### GeneralEntityTypeRecognizer #####"
-    Core.ExampleBuilder.run(GeneralEntityTypeRecognizer, input, output, parse, tokenization, parameters, idFileTag)
     
 def compareDependencyEdgesById(dep1, dep2):
     """

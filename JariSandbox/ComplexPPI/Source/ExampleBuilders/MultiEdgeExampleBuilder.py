@@ -10,10 +10,6 @@ from FeatureBuilders.BioInferOntologyFeatureBuilder import BioInferOntologyFeatu
 from FeatureBuilders.NodalidaFeatureBuilder import NodalidaFeatureBuilder
 import networkx as NX
 
-def run(input, output, parse, tokenization, parameters, idFileTag=None):
-    print >> sys.stderr, "##### MultiEdgeExampleBuilder #####"
-    Core.ExampleBuilder.run(MultiEdgeExampleBuilder, input, output, parse, tokenization, parameters, idFileTag)
-
 class MultiEdgeExampleBuilder(ExampleBuilder):
     def __init__(self, style=["typed","directed","headsOnly"], length=None, types=[], featureSet=None, classSet=None):
         if featureSet == None:
@@ -50,6 +46,13 @@ class MultiEdgeExampleBuilder(ExampleBuilder):
             self.randomFeatureBuilder = RandomFeatureBuilder(self.featureSet)
         
         #self.outFile = open("exampleTempFile.txt","wt")
+
+    @classmethod
+    def run(cls, input, output, parse, tokenization, style, idFileTag=None):
+        classSet, featureSet = cls.getIdSets(idFileTag)
+        e = MultiEdgeExampleBuilder(style=style, classSet=classSet, featureSet=featureSet)
+        sentences = cls.getSentences(input, parse, tokenization)
+        e.buildExamplesForSentences(sentences, output, idFileTag)
     
     def definePredictedValueRange(self, sentences, elementName):
         self.multiEdgeFeatureBuilder.definePredictedValueRange(sentences, elementName)                        
