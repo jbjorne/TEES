@@ -222,6 +222,35 @@ def writeEvents(document, inputCorpus, outputFile, events, entityMap, triggerIds
         assert( not(causeCount > 0 and themeCount == 0) )
         outputFile.write( outputLine + "\n" )           
 
+def gifxmlToGenia(input, output):
+    if os.path.exists(output):
+        print >> sys.stderr, "Output directory exists, removing", output
+        shutil.rmtree(output)
+    os.mkdir(output)
+        
+    inputCorpus = CorpusElements.loadCorpus(input, removeIntersentenceInteractions=False)
+    processCorpus(inputCorpus, output)
+
+    submissionFileName = output.split("/")[-1] + ".tar.gz"    
+    print >> sys.stderr, "Making submission file", submissionFileName
+    allFiles = os.listdir(output)
+    tarFiles = []
+    for file in allFiles:
+        if file.find("a2.t1") != -1:
+            tarFiles.append(file)
+    submissionFile = tarfile.open(os.path.join(output,submissionFileName), "w:gz")
+    tempCwd = os.getcwd()
+    os.chdir(output)
+    for file in tarFiles:
+        submissionFile.add(file)#, exclude = lambda x: x == submissionFileName)
+    os.chdir(tempCwd)
+    submissionFile.close()
+#    #tar -cvzf 090224-results.tar.gz *.a2.t1
+#    #print os.getcwd()
+#    tarCall = ["tar", "-cvzf", submissionFileName, "\"*.a2.t1\""]
+#    #print zipCall
+#    subprocess.call(tarCall)
+
 if __name__=="__main__":
     # Import Psyco if available
     try:
@@ -237,33 +266,5 @@ if __name__=="__main__":
     (options, args) = optparser.parse_args()
     
     assert(options.input != None)
-    assert(options.output != None)
-    if os.path.exists(options.output):
-        print >> sys.stderr, "Output directory exists, removing", options.output
-        shutil.rmtree(options.output)
-    os.mkdir(options.output)
-        
-    inputCorpus = CorpusElements.loadCorpus(options.input, removeIntersentenceInteractions=False)
-    processCorpus(inputCorpus, options.output)
-
-    submissionFileName = options.output.split("/")[-1] + ".tar.gz"    
-    print >> sys.stderr, "Making submission file", submissionFileName
-    allFiles = os.listdir(options.output)
-    tarFiles = []
-    for file in allFiles:
-        if file.find("a2.t1") != -1:
-            tarFiles.append(file)
-    submissionFile = tarfile.open(os.path.join(options.output,submissionFileName), "w:gz")
-    tempCwd = os.getcwd()
-    os.chdir(options.output)
-    for file in tarFiles:
-        submissionFile.add(file)#, exclude = lambda x: x == submissionFileName)
-    os.chdir(tempCwd)
-    submissionFile.close()
-#    #tar -cvzf 090224-results.tar.gz *.a2.t1
-#    #print os.getcwd()
-#    tarCall = ["tar", "-cvzf", submissionFileName, "\"*.a2.t1\""]
-#    #print zipCall
-#    subprocess.call(tarCall)
-    
-    
+    assert(options.output != None)    
+    gifxmlToGenia(input, output)
