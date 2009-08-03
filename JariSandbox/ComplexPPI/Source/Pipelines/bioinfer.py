@@ -16,23 +16,25 @@ log()
 # Trigger detection
 ###############################################################################
 
-Gazetteer.run(TRAIN_FILE,
-              "%s.gazetteer.dict"%TRAIN_STEM,
-              PARSE)
+#Gazetteer.run(TRAIN_FILE,
+#              "%s.gazetteer.dict"%TRAIN_STEM,
+#              PARSE)
 GeneralEntityTypeRecognizerGztr.run(TRAIN_FILE,
                                     "%s.trigger.examples"%TRAIN_STEM,
                                     PARSE,
                                     PARSE,
                                     "style:typed",
                                     "%s.trigger.ids"%TRAIN_STEM,
-                                    "%s.gazetteer.dict"%TRAIN_STEM)
+                                    None)
+                                    #"%s.gazetteer.dict"%TRAIN_STEM)
 GeneralEntityTypeRecognizerGztr.run(TEST_FILE,
                                     "%s.trigger.examples"%TEST_STEM,
                                     PARSE,
                                     PARSE,
                                     "style:typed",
                                     "%s.trigger.ids"%TRAIN_STEM,
-                                    "%s.gazetteer.dict"%TRAIN_STEM)
+                                    None)
+                                    #"%s.gazetteer.dict"%TRAIN_STEM)
 result = optimize(Cls,
                   Ev,
                   "%s.trigger.examples"%TRAIN_STEM,
