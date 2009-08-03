@@ -315,7 +315,7 @@ class Parser:
 def interface(optionArgs=sys.argv[1:]):
     from optparse import OptionParser
 
-    op = OptionParser(usage="%prog [options]\nConvert genia shared task files into the generic interaction format.\nUse positional arguments to specify the document ids.\n\nNeeded files:\n\t<filestem>.txt == original text\n\t<filestem>.a1 == protein annotation\n\t<filestem>.a2 == event annotation")
+    op = OptionParser(usage="%prog [options]\nConvert genia shared task files into the generic interaction format.\nUse positional arguments to specify the document ids.\n\nNeeded files:\n\t<filestem>.txt == original text\n\t<filestem>.a1 == protein annotation\n\t<filestem>.a2.tXXX == event annotation")
     op.add_option("-i", "--indir",
                   dest="indir",
                   help="Input file directory",
@@ -331,7 +331,8 @@ def interface(optionArgs=sys.argv[1:]):
                   action="store_false")
     op.add_option("-t", "--task",
                   dest="task",
-                  help="Which tasks to process (a2.tXXX file must be present except for 123 which uses the original files)",
+                  help="Which tasks to process (a2.tXXX file must be present)",
+                  choices=["1","12","13","123"],
                   default="1",
                   metavar="[1|12|13|123]")
     (options, args) = op.parse_args(optionArgs)
@@ -346,17 +347,12 @@ def interface(optionArgs=sys.argv[1:]):
     if not args:
         print "Please specify at least one document id."
         quit = True
-    if not options.task in ['1','12','13','123']:
-        print "Invalid choice of tasks."
-        quit = True
     if quit:
         op.print_help()
         return(False)
 
     # use original files for the whole challenge
     taskpostfix = ".a2.t"+options.task
-    if options.task=='123':
-        taskpostfix = ".a2"
     parser = Parser()
     parser.parse(options.indir,args,taskpostfix)
     parser.printNode(options.outfile,options.remove_duplicates)
