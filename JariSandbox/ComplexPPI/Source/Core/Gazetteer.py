@@ -9,7 +9,7 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__))+"/..")
 from Utils.ProgressCounter import ProgressCounter
 
 def charOffStr2tuple(cStr):
-    b,e=cStr.split("-")
+    b,e=(cStr.split(",")[0]).split("-")
     b,e=int(b),int(e)
     return b,e
 
