@@ -187,7 +187,7 @@ class SentenceParser:
                 newSentence.append(newEntity)
                 entnodes[oid] = newEntity
             edges = []
-            for k,v in self.events.items():
+            for k,v in sorted(self.events.items(),key=lambda a:a[0]):
                 for x in v:
                     # add task 3 information from self.modifiers to
                     # corresponding entity
@@ -278,7 +278,19 @@ class SentenceParser:
                 newSentence.append(x)
             for x in events:
                 newSentence.append(x)
-                
+
+        # re-sort elements
+        entities = sorted(newSentence.findall('entity'),
+                          key=lambda a: a.attrib['id'])
+        interactions = sorted(newSentence.findall('interaction'),
+                              key=lambda a: a.attrib['id'])
+        while len(newSentence):
+            newSentence.remove(newSentence[0])
+        for x in entities:
+            newSentence.append(x)
+        for x in interactions:
+            newSentence.append(x)
+
         return(newDocument)
 
 
