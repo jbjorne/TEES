@@ -1,4 +1,4 @@
-import sys,os
+import sys,os,time
 sys.path.append("..")
 from ExampleBuilders.GeneralEntityTypeRecognizer import GeneralEntityTypeRecognizer
 from ExampleBuilders.GeneralEntityTypeRecognizerGztr import GeneralEntityTypeRecognizerGztr
@@ -36,3 +36,4 @@ def workdir(path, deleteIfExists=True):
 def log():
     Stream.setLog("log.txt", True)
     Stream.setTimeStamp("[%H:%M:%S]", True)
+    print >> sys.stderr, "####### Log opened at ", time.ctime(time.time()), "#######"
