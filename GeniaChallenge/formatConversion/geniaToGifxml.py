@@ -283,13 +283,28 @@ class SentenceParser:
             if not predMap.has_key(node.attrib['id']):
                 continue
             edges = predMap[node.attrib['id']]
-            if node.attrib['type']=='Binding':
+            if node.attrib['type']=='Localization':
+                assert not ('ToLoc' in edges.keys() and 'AtLoc' in edges.keys()), "Both ToLoc and AtLoc encountered in event %s"%nid
+                if edges.has_key('ToLoc'):
+                    assert edges.has_key('Theme'), "ToLoc present without Theme in event %s"%nid
+                    relocate.append((edges['Theme'][0].attrib['e2'],
+                                     edges['ToLoc'][0]))
+                if edges.has_key('AtLoc'):
+                    assert edges.has_key('Theme'), "AtLoc present without Theme in event %s"%nid
+                    relocate.append((edges['Theme'][0].attrib['e2'],
+                                     edges['AtLoc'][0]))
+            elif node.attrib['type']=='Binding':
                 for t in edges.keys():
                     if SentenceParser.siteCount.match(t):
                         c = SentenceParser.siteCount.match(t).groups()[0]
                         assert edges["Theme%s"%c], "Site%s present without Theme%s in event %s"%(c,c,nid)
                         relocate.append((edges["Theme%s"%c][0].attrib['e2'],
                                          edges["Site%s"%c][0]))
+            elif node.attrib['type']=='Phosphorylation':
+                if edges.has_key('Site'):
+                    assert edges.has_key('Theme'), "Site present without Theme in event %s"%nid
+                    relocate.append((edges['Theme'][0].attrib['e2'],
+                                     edges['Site'][0]))
             elif (node.attrib['type']=='Regulation' or
                   node.attrib['type']=='Negative_regulation' or
                   node.attrib['type']=='Positive_regulation'):
@@ -301,8 +316,7 @@ class SentenceParser:
                     assert edges.has_key('Cause'), "CSite present without Cause in event %s"%nid
                     relocate.append((edges['Cause'][0].attrib['e2'],
                                      edges['CSite'][0]))
-            elif node.attrib['type']=='Localization':
-                assert not ('ToLoc' in edges.keys() and 'AtLoc' in edges.keys()), "Both ToLoc and AtLoc encountered in event %s"%nid
+
         for protein,edge in relocate:
             # event-->site becomes site-->protein
             edge.attrib['e1'] = edge.attrib['e2']
