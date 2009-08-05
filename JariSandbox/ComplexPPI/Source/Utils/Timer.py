@@ -3,30 +3,34 @@ import time
 class Timer:
     def __init__(self, startCount=True):
         if startCount:
-            self.startTime = time.clock()
+            self.startTime = time.time()
         else:
             self.startTime = None
         self.totalTime = 0
     
     def stop(self):
         assert(self.startTime != None)
-        self.totalTime += time.clock() - self.startTime
+        self.totalTime += time.time() - self.startTime
         self.startTime = None
     
     def start(self):
         assert(self.startTime == None)
-        self.startTime = time.clock()
+        self.startTime = time.time()
         self.endTime = None
     
+    def getElapsedTime(self):
+        if self.startTime != None:
+            now = time.time()
+            elapsedTime = now-self.startTime + self.totalTime
+        else:
+            elapsedTime = self.totalTime
+        return elapsedTime
+            
     def startTimeToString(self):
         return time.ctime(self.startTime)
     
     def elapsedTimeToString(self):
-        if self.startTime != None:
-            now = time.clock()
-            elapsedTime = now-self.startTime + self.totalTime
-        else:
-            elapsedTime = self.totalTime
+        elapsedTime = self.getElapsedTime()
         msecs = int(elapsedTime*1000)
         hours = msecs / (3600*1000)
         msecs = msecs % (3600*1000)
@@ -43,5 +47,8 @@ if __name__=="__main__":
     import sys
     timer = Timer()
     print >> sys.stderr, timer.toString()
+    time.sleep(1)
+    print >> sys.stderr, timer.toString()
     time.sleep(10)
     print >> sys.stderr, timer.toString()
+    
