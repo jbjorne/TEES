@@ -14,6 +14,7 @@ import Utils.Stream as Stream
 import atexit, shutil
 from Core.RecallAdjust import RecallAdjust
 from Core.Gazetteer import Gazetteer
+from Murska.CSCConnection import CSCConnection
 sys.path.append("../../../../GeniaChallenge/unflattening")
 import prune
 import unflatten

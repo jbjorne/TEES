@@ -11,7 +11,7 @@ TRAIN_FILE="/usr/share/biotext/GeniaChallenge/xml/train.xml"
 DEVEL_FILE="/usr/share/biotext/GeniaChallenge/xml/devel.xml"
 TEST_FILE="/usr/share/biotext/GeniaChallenge/xml/test.xml"
 EVERYTHING_FILE="/usr/share/biotext/GeniaChallenge/xml/everything.xml"
-WORKDIR="/usr/share/biotext/GeniaChallenge/extension-data/genia/examples"
+WORKDIR="/usr/share/biotext/GeniaChallenge/extension-data/genia/trigger-examples"
 PARSE_TOK="split-Charniak-Lease"
 
 # These commands will be in the beginning of most pipelines
