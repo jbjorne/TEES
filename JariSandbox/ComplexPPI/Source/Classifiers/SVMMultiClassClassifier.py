@@ -18,6 +18,8 @@ class SVMMultiClassClassifier(Classifier):
     binDir = "/usr/share/biotext/ComplexPPI/SVMMultiClass"
     indent = ""
     
+    louhiBinDir = "/v/users/jakrbj/svm-multiclass"
+    
 #    def __init__(self, workDir=None, negRatio=None):
 #        sys.exit("Just use the class methods")
 #        #global tempDir
@@ -134,7 +136,70 @@ class SVMMultiClassClassifier(Classifier):
             if sample[i] == 0:
                 examples.append(negatives[i])
         return examples
+    
+    @classmethod
+    def initTrainAndTestOnLouhi(cls, trainExamples, testExamples, trainParameters, cscConnection):
+        assert( type(trainExamples)==types.StringType )
+        assert( type(testExamples)==types.StringType )
+        trainExampleFileName = os.path.split(trainExamples)[-1]
+        testExampleFileName = os.path.split(testExamples)[-1]
+        assert(trainExampleFileName != testExampleFileName)
+        cscConnection.upload(trainExamples, trainExampleFileName, False)
+        cscConnection.upload(testExamples, testExampleFileName, False)
+        
+        idStr = ""
+        paramStr = ""
+        for key in sorted(trainParameters.keys()):
+            idStr += "-" + str(key) + "_" + str(trainParameters[key])
+            paramStr += " -" + str(key) + " " + str(trainParameters[key])
+        scriptName = "script"+idStr+".sh"
+        if cscConnection.exists(scriptName):
+            print >> sys.stderr, "Script already on Louhi, process not queued for", scriptName
+            return idStr
+        
+        # Build script
+        scriptFile = open(scriptName, "wt")
+        scriptFile.write("#!/bin/bash\ncd " + cscConnection.workDir + "\n")
+        scriptFile.write("aprun -n 1 " + cls.louhiBinDir + "/svm_multiclass_learn" + paramStr + " " + cscConnection.workDir + "/" + trainExampleFileName + " " + cscConnection.workDir + "/model" + idStr + "\n")
+        scriptFile.write("aprun -n 1 " + cls.louhiBinDir + "/svm_multiclass_classify " + cscConnection.workDir + "/" + testExampleFileName + " " + cscConnection.workDir + "/model" + idStr + " " + cscConnection.workDir + "/predictions" + idStr + "\n")
+        scriptFile.close()
+        
+        cscConnection.upload(scriptName, scriptName)
+        cscConnection.run("chmod a+x " + cscConnection.workDir + "/" + scriptName)
+        cscConnection.run("qsub -o " + cscConnection.workDir + "/" + scriptName + "-stdout -e " + cscConnection.workDir + "/" + scriptName + "-stderr " + cscConnection.workDir + "/" + scriptName)
+        return idStr
+    
+    @classmethod
+    def getLouhiStatus(cls, idStr, cscConnection):
+        return cscConnection.exists("predictions"+idStr)
 
+    @classmethod
+    def downloadModel(cls, idStr, cscConnection, localWorkDir=None):
+        if not cls.getLouhiStatus(idStr, cscConnection):
+            return False
+        modelFileName = "model"+idStr
+        if localWorkDir != None:
+            modelFileName = os.path.join(localWorkDir, modelFileName)
+        cscConnection.download("model"+idStr, modelFileName)
+        return True
+    
+    @classmethod
+    def getLouhiPredictions(cls, idStr, examples, cscConnection, localWorkDir=None):
+        assert(type(examples)==types.ListType)
+        if not cls.getLouhiStatus(idStr, cscConnection):
+            return None
+        predFileName = "predictions"+idStr
+        if localWorkDir != None:
+            predFileName = os.path.join(localWorkDir, predFileName)
+        cscConnection.download("predictions"+idStr, predFileName)
+        predictionsFile = open(predFileName, "rt")
+        lines = predictionsFile.readlines()
+        predictionsFile.close()
+        predictions = []
+        for i in range(len(lines)):
+            predictions.append( (examples[i],int(lines[i].split()[0]),"multiclass",lines[i].split()[1:]) )
+        return predictions
+    
 if __name__=="__main__":
     # Import Psyco if available
     try:
