@@ -49,6 +49,8 @@ class Increment:
 
 
 class SentenceParser:
+    siteCount = re.compile(r'^Site([0-9]*)$')
+
     def __init__(self):
         self.uid = ''
         self.text = ''
@@ -166,7 +168,35 @@ class SentenceParser:
         indent(node)
         print ET.tostring(node)
 
-    def getNode(self,removeDuplicates):
+    def getNode(self,removeDuplicates,modifyExtra):
+        def createPhysical(v):
+            # add negation and speculation attributes
+            # by default (as False) even though it is irrelevant here
+            v['negation'] = "False"
+            v['speculation'] = "False"
+            newEntity = ET.Element("entity",v)
+            # prepend document id
+            newEntity.attrib['id'] = self.uid+'.'+v['id']
+            newEntity.attrib['origId'] = newEntity.attrib['id']
+            return(newEntity)
+
+        def createEvent(v,origUid):
+            # add default negation and speculation attributes
+            v['negation'] = "False"
+            v['speculation'] = "False"
+            if self.modifiers.has_key(origUid):
+                if self.modifiers[origUid].has_key('Negation'):
+                    v['negation'] = "True"
+                if self.modifiers[origUid].has_key('Speculation'):
+                    v['speculation'] = "True"
+            # create a new id for a copy of event trigger
+            # (the one reserved for 'T' item is not used)
+            newEntity = ET.Element("entity",v)
+            # prepend document id and append event id
+            newEntity.attrib['id'] = self.uid+'.'+v['id']+'.'+origUid
+            newEntity.attrib['origId'] = newEntity.attrib['id']
+            return(newEntity)
+
         newDocument = ET.Element('document',{'id':self.uid,
                                              'origId':self.uid})
         newSentence = ET.Element('sentence',{'id':self.uid,
@@ -174,110 +204,51 @@ class SentenceParser:
                                              'text':self.text})
         newDocument.append(newSentence)
 
-        entnodes = {}
+        # create unmerged graph
+        entityNodes = {}
+        eventNodes = []
+        t2e = {}
+        # create all names only once
+        for k,v in self.entities.items():
+            if v['isName']=='True':
+                entityNodes[v['id']] = createPhysical(v)
+        # create interactions and event entities (as necessary)
+        for edges in self.events.values():
+            for edge in edges:
+                for end in ['e1','e2']:
+                    e = edge[end]
+                    # create non-name physical (only task 2)
+                    if e[0]==('T'):
+                        if not entityNodes.has_key(e):
+                            entityNodes[e] = createPhysical(self.entities[e])
+                        edge[end] = self.uid+'.'+edge[end]
+                    # create event node
+                    elif e[0]==('E'):
+                        te = self.mapping[e]
+                        if not entityNodes.has_key(e):
+                            entityNodes[e] = createEvent(self.entities[te],e)
+                        edge[end] = self.uid+'.'+te+'.'+e
+                        # map event to its text (for duplicate removal)
+                        if not t2e.has_key(te):
+                            t2e[te] = []
+                        if not edge[end] in t2e[te]:
+                            t2e[te].append(edge[end])
+                    else:
+                        sys.stderr.write("Skipping %s\n"%edge['id'])
+                # prepend document id
+                edge['id'] = self.uid+'.'+edge['id']
+                edge['origId'] = edge['id']
+                newEvent = ET.Element("interaction",edge)
+                eventNodes.append(newEvent)
+        for x in sorted(entityNodes.values(),key=lambda a: a.attrib['id']):
+            newSentence.append(x)
+        for x in sorted(eventNodes,key=lambda a: a.attrib['id']):
+            newSentence.append(x)
+                
+        if modifyExtra:
+            self.modifyExtra(newSentence)
         if removeDuplicates:
-            for k,v in self.entities.items():
-                oid = v['id']
-                v['id'] = self.uid+'.'+v['id'] # prepend document id
-                v['origId'] = v['id']
-                newEntity = ET.Element("entity",v)
-                # add negation and speculation attributes by default (as False)
-                newEntity.attrib['negation'] = "False"
-                newEntity.attrib['speculation'] = "False"
-                newSentence.append(newEntity)
-                entnodes[oid] = newEntity
-            edges = []
-            for k,v in sorted(self.events.items(),key=lambda a:a[0]):
-                for x in v:
-                    # add task 3 information from self.modifiers to
-                    # corresponding entity
-                    origUid = x['e1']
-                    if self.modifiers.has_key(origUid):
-                        mappedUid = self.mapping[origUid]
-                        # origUid is original E
-                        # mappedUid is E mapped to T
-                        if self.modifiers[origUid].has_key('Negation'):
-                            entnodes[mappedUid].attrib['negation'] = "True"
-                        if self.modifiers[origUid].has_key('Speculation'):
-                            entnodes[mappedUid].attrib['speculation'] = "True"
-                    # and the interaction itself
-                    if x['e1'][0]==('E'):
-                        x['e1'] = self.mapping[x['e1']]
-                    if x['e2'][0]==('E'):
-                        x['e2'] = self.mapping[x['e2']]
-                    tmp = x.copy()
-                    del tmp['id']
-                    if not tmp in edges:
-                        edges.append(tmp)
-                        x['id'] = self.uid+'.'+x['id'] # prepend document id
-                        x['e1'] = self.uid+'.'+x['e1'] # prepend document id
-                        x['e2'] = self.uid+'.'+x['e2'] # prepend document id
-                        x['origId'] = x['id']
-                        newEvent = ET.Element("interaction",x)
-                        newSentence.append(newEvent)
-
-        else:
-            entities = {}
-            events = []
-            for k,v in self.entities.items():
-                if v['isName']=='True':
-                    # add negation and speculation attributes
-                    # by default (as False) even though it is irrelevant here
-                    v['negation'] = "False"
-                    v['speculation'] = "False"
-                    newEntity = ET.Element("entity",v)
-                    # prepend document id
-                    newEntity.attrib['id'] = self.uid+'.'+v['id']
-                    newEntity.attrib['origId'] = newEntity.attrib['id']
-                    entities[v['id']] = newEntity
-            for k,v in self.events.items():
-                for x in v:
-                    for y in ['e1','e2']:
-                        if x[y][0]==('T'):
-                            if not entities.has_key(x[y]):
-                                e = self.entities[x[y]]
-                                # prepend document id
-                                e['id'] = self.uid+'.'+e['id']
-                                e['origId'] = e['id']
-                                # add negation and speculation attributes
-                                # by default (as False) even though
-                                # it is irrelevant here
-                                e['negation'] = "False"
-                                e['speculation'] = "False"
-                                newEntity = ET.Element("entity",e)
-                                entities[x[y]] = newEntity
-                            x[y] = self.uid+'.'+x[y]
-                        elif x[y][0]==('E'):
-                            if not entities.has_key(x[y]):
-                                e = self.entities[self.mapping[x[y]]]
-                                # add negation and speculation attributes
-                                e['negation'] = "False"
-                                e['speculation'] = "False"
-                                origUid = x[y]
-                                if self.modifiers.has_key(origUid):
-                                    if self.modifiers[origUid].has_key('Negation'):
-                                        e['negation'] = "True"
-                                    if self.modifiers[origUid].has_key('Speculation'):
-                                        e['speculation'] = "True"
-                                # create a new id for a copy of event trigger
-                                # (the one reserved for 'T' item is not used)
-                                newEntity = ET.Element("entity",e)
-                                # prepend document id and append event id
-                                newEntity.attrib['id'] = self.uid+'.'+e['id']+'.'+x[y]
-                                newEntity.attrib['origId'] = newEntity.attrib['id']
-                                entities[x[y]] = newEntity
-                            x[y] = self.uid+'.'+self.mapping[x[y]]+'.'+x[y]
-                        else:
-                            sys.stderr.write("Skipping %s\n"%x['id'])
-                    # prepend document id
-                    x['id'] = self.uid+'.'+x['id']
-                    x['origId'] = x['id']
-                    newEvent = ET.Element("interaction",x)
-                    events.append(newEvent)
-            for x in entities.values():
-                newSentence.append(x)
-            for x in events:
-                newSentence.append(x)
+            self.removeDuplicates(newSentence,t2e)
 
         # re-sort elements
         entities = sorted(newSentence.findall('entity'),
@@ -292,6 +263,86 @@ class SentenceParser:
             newSentence.append(x)
 
         return(newDocument)
+
+    def modifyExtra(self,sentence):
+        nodeMap = dict([(x.attrib['id'],x)
+                        for x in sentence.findall('entity')])
+        predMap = {}
+        for edge in sentence.findall('interaction'):
+            if not predMap.has_key(edge.attrib['e1']):
+                predMap[edge.attrib['e1']] = {}
+            if not predMap[edge.attrib['e1']].has_key(edge.attrib['type']):
+                predMap[edge.attrib['e1']][edge.attrib['type']] = []
+            predMap[edge.attrib['e1']][edge.attrib['type']].append(edge)
+        # all lists should have only one member
+        for k1 in predMap.keys():
+            for k2 in predMap[k1].keys():
+                assert len(predMap[k1][k2])==1, "Predecessor--edgetype pair not unique in event %s"%k1
+        relocate = [] # targetProtein--extraEdge pairs
+        for nid,node in nodeMap.items():
+            if not predMap.has_key(node.attrib['id']):
+                continue
+            edges = predMap[node.attrib['id']]
+            if node.attrib['type']=='Binding':
+                for t in edges.keys():
+                    if SentenceParser.siteCount.match(t):
+                        c = SentenceParser.siteCount.match(t).groups()[0]
+                        assert edges["Theme%s"%c], "Site%s present without Theme%s in event %s"%(c,c,nid)
+                        relocate.append((edges["Theme%s"%c][0].attrib['e2'],
+                                         edges["Site%s"%c][0]))
+            elif (node.attrib['type']=='Regulation' or
+                  node.attrib['type']=='Negative_regulation' or
+                  node.attrib['type']=='Positive_regulation'):
+                if edges.has_key('Site'):
+                    assert edges.has_key('Theme'), "Site present without Theme in event %s"%nid
+                    relocate.append((edges['Theme'][0].attrib['e2'],
+                                     edges['Site'][0]))
+                if edges.has_key('CSite'):
+                    assert edges.has_key('Cause'), "CSite present without Cause in event %s"%nid
+                    relocate.append((edges['Cause'][0].attrib['e2'],
+                                     edges['CSite'][0]))
+            elif node.attrib['type']=='Localization':
+                assert not ('ToLoc' in edges.keys() and 'AtLoc' in edges.keys()), "Both ToLoc and AtLoc encountered in event %s"%nid
+        for protein,edge in relocate:
+            # event-->site becomes site-->protein
+            edge.attrib['e1'] = edge.attrib['e2']
+            edge.attrib['e2'] = protein
+
+    def removeDuplicates(self,sentence,t2e):
+        mapping = {}
+        nodeDict = dict([(x.attrib['id'],x)
+                          for x in sentence.findall('entity')])
+        edgeDict = dict([(x.attrib['id'],x)
+                          for x in sentence.findall('interaction')])
+        for events in t2e.values():
+            # each event node has the same text binding -> merge nodes
+            oldId = events.pop(0)
+            # remove event id since events will be merged
+            newId = oldId.rsplit('.',1)[0]
+            mapping[oldId] = newId
+            # create mapping for changes
+            for e in events:
+                assert not mapping.has_key(e), "Id %s already in mapping"%e
+                mapping[e] = newId
+                sentence.remove(nodeDict[e])
+        # change all event references to corresponding newId
+        for e in sentence.findall('entity'):
+            if mapping.has_key(e.attrib['id']):
+                e.attrib['id'] = mapping[e.attrib['id']]
+                e.attrib['origId'] = mapping[e.attrib['origId']]
+        for e in sentence.findall('interaction'):
+            if mapping.has_key(e.attrib['e1']):
+                e.attrib['e1'] = mapping[e.attrib['e1']]
+            if mapping.has_key(e.attrib['e2']):
+                e.attrib['e2'] = mapping[e.attrib['e2']]
+        # remove duplicate edges
+        encountered = {}
+        for e in sentence.findall('interaction'):
+            tri = (e.attrib['e1'],e.attrib['e2'],e.attrib['type'])
+            if not encountered.has_key(tri):
+                encountered[tri] = True
+            else:
+                sentence.remove(edgeDict[e.attrib['id']])
 
 
 
@@ -309,14 +360,14 @@ class Parser:
             tmp.parse(filename,taskpostfix)
             self.parsers.append(tmp)
 
-    def getNode(self,removeDuplicates):
+    def getNode(self,removeDuplicates,modifyExtra):
         newCorpus = ET.Element('corpus',{'source':'GENIA'})
         for x in self.parsers:
-            newCorpus.append(x.getNode(removeDuplicates))
+            newCorpus.append(x.getNode(removeDuplicates,modifyExtra))
         return(newCorpus)
 
-    def printNode(self,outfile,removeDuplicates):
-        node = self.getNode(removeDuplicates)
+    def printNode(self,outfile,removeDuplicates,modifyExtra):
+        node = self.getNode(removeDuplicates,modifyExtra)
         indent(node)
         outfile = open(outfile,'w')
         outfile.write(ET.tostring(node))
@@ -341,6 +392,11 @@ def interface(optionArgs=sys.argv[1:]):
                   help="Preserve duplicate nodes and edges",
                   default=True,
                   action="store_false")
+    op.add_option("-e", "--extra",
+                  dest="modify_extra",
+                  help="Modify extra arguments (do not use if you do not know what it does)",
+                  default=False,
+                  action="store_true")
     op.add_option("-t", "--task",
                   dest="task",
                   help="Which tasks to process (a2.tXXX file must be present)",
@@ -367,7 +423,9 @@ def interface(optionArgs=sys.argv[1:]):
     taskpostfix = ".a2.t"+options.task
     parser = Parser()
     parser.parse(options.indir,args,taskpostfix)
-    parser.printNode(options.outfile,options.remove_duplicates)
+    parser.printNode(options.outfile,
+                     options.remove_duplicates,
+                     options.modify_extra)
     return(True)
 
 if __name__=="__main__":
