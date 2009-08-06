@@ -102,7 +102,8 @@ class SVMMultiClassClassifier(Classifier):
         args += [testPath, modelPath, output]
         if timeout == None:
             timeout = -1
-        subprocess.call(args, stdout = logFile)
+        print args
+        subprocess.call(args, stdout = logFile, stderr = logFile)
         predictionsFile = open(output, "rt")
         lines = predictionsFile.readlines()
         predictionsFile.close()
