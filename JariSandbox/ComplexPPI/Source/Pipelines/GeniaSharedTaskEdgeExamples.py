@@ -8,7 +8,7 @@ import os
 XMLDIR="/usr/share/biotext/GeniaChallenge/xml"
 TRAIN_FILE=XMLDIR+"/train.xml"
 DEVEL_FILE=XMLDIR+"/devel.xml"
-TEST_FILE=XMLDIR+"/test.xml"
+TEST_FILE="/usr/share/biotext/GeniaChallenge/extension-data/genia/trigger-model/devel-predicted-triggers.xml"
 EVERYTHING_FILE=XMLDIR+"/everything.xml"
 WORKDIR="/usr/share/biotext/GeniaChallenge/extension-data/genia/edge-examples"
 PARSE_TOK="split-Charniak-Lease"
@@ -31,6 +31,6 @@ if not os.path.exists("edge-devel-examples-"+PARSE_TOK):
 if not os.path.exists("edge-everything-examples-"+PARSE_TOK):
     MultiEdgeExampleBuilder.run(EVERYTHING_FILE, "edge-everything-examples-"+PARSE_TOK, PARSE_TOK, PARSE_TOK, EDGE_FEATURE_PARAMS, "genia-edge-ids")
 
-# This one will need predicted triggers
-#if not os.path.exists("edge-test-examples-"+PARSE_TOK):
-#    MultiEdgeExampleBuilder.run(TEST_FILE, "edge-test-examples-"+PARSE_TOK, PARSE_TOK, PARSE_TOK, EDGE_FEATURE_PARAMS, "genia-edge-ids")
+# This one needs predicted triggers
+if not os.path.exists("edge-test-examples-"+PARSE_TOK):
+    MultiEdgeExampleBuilder.run(TEST_FILE, "edge-test-examples-"+PARSE_TOK, PARSE_TOK, PARSE_TOK, EDGE_FEATURE_PARAMS, "genia-edge-ids")
