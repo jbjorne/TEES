@@ -1,0 +1,68 @@
+Evaluation software for BioNLP'09 Shared Task on Event Extraction
+
+- version: 1.0
+- release: 3 Jun, 2009
+
+
+This package includes the following files:
+
+readme.txt	This file.
+a2-normalize.pl	A perl script for format checking and normalization.
+a2-decompose.pl A perl script for event decomposition.
+a2-evaluate.pl	A perl script for evaluation.
+prepare-gold.pl	A perl script for the preparation of gold data
+prepare-eval.pl A perl script for the preparation of evaluation.
+
+
+[INSTALLATION]
+
+Uncompress all the files in a directory and set $PATH to include it.
+
+
+[USAGE]
+
+Use 'prepare-gold.pl' to prepare the 'gold' directory for evaluation, e.g.
+
+> prepare-gold.pl bionlp09_shared_task_development_data.tar.gz gold-devel/
+
+
+Use 'prepare-eval.pl' to prepare evaluation of your predicted files, e.g.
+
+> prepare-eval.pl my_prediction/ my_prediction_eval/
+
+
+Use 'a2-evalute.pl' to get the evaluation results, e.g.
+
+> a2-evaluate.pl -g gold-devel my_prediction_eval/*.t1
+(for evaluation of task 1 in the strict evaluation mode)
+
+> a2-evaluate.pl -g gold-devel -sp my_prediction_eval/*.t12
+(for evaluation of task 1 and 2 in the approximate span and recursive mode)
+
+> a2-evaluate.pl -g gold-devel -s my_prediction_eval/*.t1d
+(for evaluation of task 1 with event decomposition in the approximate span mode)
+
+
+For more details, please refer to the following paper:
+
+@InProceedings{kim-EtAl:2009:BioNLP-ST,
+ author    = {Kim, Jin-Dong  and  Ohta, Tomoko  and  Pyysalo, Sampo  and  Kano, Yoshinobu  and  Tsujii, Jun'ichi},
+ title     = {Overview of BioNLP'09 Shared Task on Event Extraction},
+ booktitle = {Proceedings of the BioNLP 2009 Workshop Companion Volume for Shared Task},
+ month     = {June},
+ year      = {2009},
+ address   = {Boulder, Colorado},
+ publisher = {Association for Computational Linguistics},
+ pages     = {1--9},
+ url       = {http://www.aclweb.org/anthology/W/W09/W09-1401}
+}
+
+and the shared task homepage:
+
+http://www-tsujii.is.s.u-tokyo.ac.jp/GENIA/SharedTask/
+
+
+Authors:
+
+BioNLP'09 Shared Task organizers,
+bionlpsharedtask@gmail.com
