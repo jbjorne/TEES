@@ -57,12 +57,12 @@ function convert {
 
 
 ### Converts the TRAIN/DEVEL data for task 2
-convert IDsTRAIN train12.xml "-t 12" $DIRTRAIN
-convert IDsDEVEL devel12.xml "-t 12" $DIRTRAIN
-convert IDsEVERYTHING everything12.xml "-t 12" $DIRTRAIN
-convert IDsTRAIN train-with-duplicates12.xml "-t 12 -p" $DIRTRAIN
-convert IDsDEVEL devel-with-duplicates12.xml "-p -t 12" $DIRTRAIN
-convert IDsEVERYTHING everything-with-duplicates12.xml "-t 12 -p" $DIRTRAIN
+convert IDsTRAIN train12.xml "-e -t 12" $DIRTRAIN
+convert IDsDEVEL devel12.xml "-e -t 12" $DIRTRAIN
+convert IDsEVERYTHING everything12.xml "-e -t 12" $DIRTRAIN
+convert IDsTRAIN train-with-duplicates12.xml "-e -t 12 -p" $DIRTRAIN
+convert IDsDEVEL devel-with-duplicates12.xml "-e -p -t 12" $DIRTRAIN
+convert IDsEVERYTHING everything-with-duplicates12.xml "-e -t 12 -p" $DIRTRAIN
 
 #### I don't know what this is:
 # # Update the mini-sets
