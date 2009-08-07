@@ -20,6 +20,9 @@ import prune
 import unflatten
 sys.path.append("../../../../GeniaChallenge/formatConversion")
 from gifxmlToGenia import gifxmlToGenia
+sys.path.append("../../../../GeniaChallenge")
+import evaluation.EvaluateSharedTask
+evaluateSharedTask = evaluation.EvaluateSharedTask.evaluate
 
 def workdir(path, deleteIfExists=True):
     if os.path.exists(path):
@@ -37,3 +40,11 @@ def log():
     Stream.setLog("log.txt", True)
     Stream.setTimeStamp("[%H:%M:%S]", True)
     print >> sys.stderr, "####### Log opened at ", time.ctime(time.time()), "#######"
+
+# Import Psyco if available
+try:
+    import psyco
+    psyco.full()
+    print >> sys.stderr, "Found Psyco, using"
+except ImportError:
+    print >> sys.stderr, "Psyco not installed"
