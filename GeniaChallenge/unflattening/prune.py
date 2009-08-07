@@ -119,7 +119,8 @@ class Pruner:
         while cycle:
             count += pickWeakest(cycle)
             cycle = findCycle()
-        sys.stderr.write("Broke %s cycle(s)\n"%count)
+        #sys.stderr.write("Broke %s cycle(s)\n"%count)
+        return count
 
     def prune(self):
         for sentence in self.document.findall('sentence'):
@@ -129,6 +130,7 @@ class Pruner:
                     sentence.remove(entity)
                     #sys.stderr.write("Removed %s (%s)\n"%(entity.attrib['type'],uid))
                 else:
+                    pass
                     #sys.stderr.write("Preserved %s (%s)\n"%(entity.attrib['type'],uid))
             for event in sentence.findall('interaction'):
                 uid = event.attrib['id']
@@ -140,6 +142,7 @@ class Pruner:
                     sentence.remove(event)
                     #sys.stderr.write("Removed %s (%s) from %s (%s) to %s (%s)\n"%(event.attrib['type'],uid,fromType,fromId,toType,toId))
                 else:
+                    pass
                     #sys.stderr.write("Preserved %s (%s) from %s (%s) to %s (%s)\n"%(event.attrib['type'],uid,fromType,fromId,toType,toId))
 
 
@@ -175,14 +178,16 @@ def interface(optionArgs=sys.argv[1:]):
         return(False)
 
     corpus = ET.parse(options.infile)
+    cycleBrokenCount = 0
     for document in corpus.getroot().findall('document'):
         #sys.stderr.write("Pruning document %s\n"%document.attrib['id'])
         pruner = Pruner(document)
         pruner.analyse()
         if options.cycles:
-            pruner.analyseCycles()
+            cycleBrokenCount += pruner.analyseCycles()
         pruner.prune()
     corpus.write(options.outfile)
+    sys.stderr.write("File pruned, broke " + str(cycleBrokenCount) + " cycles\n" )
 
 if __name__=="__main__":
     interface()

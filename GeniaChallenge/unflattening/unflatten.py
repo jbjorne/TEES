@@ -202,19 +202,19 @@ class Unflattener:
             if t in ['Gene_expression','Transcription',
                      'Translation','Protein_catabolism']:
                 result = [[e] for e in edges]
-                #sys.stderr.write("Splitting %s (%s) into %s - %s\n"%(uid,t,
-                                                                     len(result),
-                                                                     [[y[2].attrib['id']
-                                                                       for y in x]
-                                                                      for x in result]))
+#                #sys.stderr.write("Splitting %s (%s) into %s - %s\n"%(uid,t,
+#                                                                     len(result),
+#                                                                     [[y[2].attrib['id']
+#                                                                       for y in x]
+#                                                                      for x in result]))
                 return(result)
             elif t=='Localization':
                 result = [[e] for e in edges]
-                #sys.stderr.write("Splitting %s (%s) into %s - %s\n"%(uid,t,
-                                                                     len(result),
-                                                                     [[y[2].attrib['id']
-                                                                       for y in x]
-                                                                      for x in result]))
+#                #sys.stderr.write("Splitting %s (%s) into %s - %s\n"%(uid,t,
+#                                                                     len(result),
+#                                                                     [[y[2].attrib['id']
+#                                                                       for y in x]
+#                                                                      for x in result]))
                 return(result)
             elif t=='Binding':
                 # Binding is not perfectly solvable
@@ -233,11 +233,11 @@ class Unflattener:
                     # (the decision to split events with 2 members is about
                     #  1:1 but splitting is still slightly favoured)
                     result = [[e] for e in edges]
-                    #sys.stderr.write("Splitting %s (%s) into %s - %s\n"%(uid,t,
-                                                                         len(result),
-                                                                         [[y[2].attrib['id']
-                                                                           for y in x]
-                                                                          for x in result]))
+#                    #sys.stderr.write("Splitting %s (%s) into %s - %s\n"%(uid,t,
+#                                                                         len(result),
+#                                                                         [[y[2].attrib['id']
+#                                                                           for y in x]
+#                                                                          for x in result]))
                     return(result)
                 else:
                     # two groups should be split to pairwise combinations
@@ -256,11 +256,11 @@ class Unflattener:
                     return(result)
             elif t=='Phosphorylation':
                 result = [[e] for e in edges]
-                #sys.stderr.write("Splitting %s (%s) into %s - %s\n"%(uid,t,
-                                                                     len(result),
-                                                                     [[y[2].attrib['id']
-                                                                       for y in x]
-                                                                      for x in result]))
+#                #sys.stderr.write("Splitting %s (%s) into %s - %s\n"%(uid,t,
+#                                                                     len(result),
+#                                                                     [[y[2].attrib['id']
+#                                                                       for y in x]
+#                                                                      for x in result]))
                 return(result)
             elif t in ['Regulation','Positive_regulation',
                        'Negative_regulation']:
@@ -277,11 +277,11 @@ class Unflattener:
                     return(result)
                 else:
                     result = [[e] for e in edges]
-                    #sys.stderr.write("Splitting %s (%s) into %s - %s\n"%(uid,t,
-                                                                       len(result),
-                                                                       [[y[2].attrib['id']
-                                                                         for y in x]
-                                                                        for x in result]))
+#                    #sys.stderr.write("Splitting %s (%s) into %s - %s\n"%(uid,t,
+#                                                                       len(result),
+#                                                                       [[y[2].attrib['id']
+#                                                                         for y in x]
+#                                                                        for x in result]))
                     return(result)
             else:
                 sys.stderr.write("Invalid event type: %s\n"%t)
