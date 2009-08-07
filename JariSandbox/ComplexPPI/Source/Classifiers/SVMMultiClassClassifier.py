@@ -139,7 +139,7 @@ class SVMMultiClassClassifier(Classifier):
         return examples
     
     @classmethod
-    def initTrainAndTestOnLouhi(cls, trainExamples, testExamples, trainParameters, cscConnection):
+    def initTrainAndTestOnLouhi(cls, trainExamples, testExamples, trainParameters, cscConnection, localWorkDir=None):
         assert( type(trainExamples)==types.StringType )
         assert( type(testExamples)==types.StringType )
         trainExampleFileName = os.path.split(trainExamples)[-1]
@@ -159,13 +159,16 @@ class SVMMultiClassClassifier(Classifier):
             return idStr
         
         # Build script
-        scriptFile = open(scriptName, "wt")
+        scriptFilePath = scriptName
+        if localWorkDir != None:
+            scriptFilePath = os.path.join(localWorkDir, scriptName)
+        scriptFile = open(scriptFilePath, "wt")
         scriptFile.write("#!/bin/bash\ncd " + cscConnection.workDir + "\n")
         scriptFile.write("aprun -n 1 " + cls.louhiBinDir + "/svm_multiclass_learn" + paramStr + " " + cscConnection.workDir + "/" + trainExampleFileName + " " + cscConnection.workDir + "/model" + idStr + "\n")
         scriptFile.write("aprun -n 1 " + cls.louhiBinDir + "/svm_multiclass_classify " + cscConnection.workDir + "/" + testExampleFileName + " " + cscConnection.workDir + "/model" + idStr + " " + cscConnection.workDir + "/predictions" + idStr + "\n")
         scriptFile.close()
         
-        cscConnection.upload(scriptName, scriptName)
+        cscConnection.upload(scriptFilePath, scriptName)
         cscConnection.run("chmod a+x " + cscConnection.workDir + "/" + scriptName)
         cscConnection.run("qsub -o " + cscConnection.workDir + "/" + scriptName + "-stdout -e " + cscConnection.workDir + "/" + scriptName + "-stderr " + cscConnection.workDir + "/" + scriptName)
         return idStr
