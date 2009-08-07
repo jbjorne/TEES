@@ -202,7 +202,7 @@ class Unflattener:
             if t in ['Gene_expression','Transcription',
                      'Translation','Protein_catabolism']:
                 result = [[e] for e in edges]
-                sys.stderr.write("Splitting %s (%s) into %s - %s\n"%(uid,t,
+                #sys.stderr.write("Splitting %s (%s) into %s - %s\n"%(uid,t,
                                                                      len(result),
                                                                      [[y[2].attrib['id']
                                                                        for y in x]
@@ -210,7 +210,7 @@ class Unflattener:
                 return(result)
             elif t=='Localization':
                 result = [[e] for e in edges]
-                sys.stderr.write("Splitting %s (%s) into %s - %s\n"%(uid,t,
+                #sys.stderr.write("Splitting %s (%s) into %s - %s\n"%(uid,t,
                                                                      len(result),
                                                                      [[y[2].attrib['id']
                                                                        for y in x]
@@ -219,7 +219,7 @@ class Unflattener:
             elif t=='Binding':
                 # Binding is not perfectly solvable
                 if self.perfect:
-                    sys.stderr.write("Skipping %s (%s)\n"%(uid,t))
+                    #sys.stderr.write("Skipping %s (%s)\n"%(uid,t))
                     return([edges])
                 # simple approach that uses only linear order
                 # (probably makes many mistakes)
@@ -233,7 +233,7 @@ class Unflattener:
                     # (the decision to split events with 2 members is about
                     #  1:1 but splitting is still slightly favoured)
                     result = [[e] for e in edges]
-                    sys.stderr.write("Splitting %s (%s) into %s - %s\n"%(uid,t,
+                    #sys.stderr.write("Splitting %s (%s) into %s - %s\n"%(uid,t,
                                                                          len(result),
                                                                          [[y[2].attrib['id']
                                                                            for y in x]
@@ -252,11 +252,11 @@ class Unflattener:
                                         for g2 in groups
                                         for e1 in g1
                                         for e2 in g2] )
-                    sys.stderr.write("Generating inter-group pairs for %s (%s) - %s\n"%(uid,t,[[y[2].attrib['id'] for y in x] for x in result]))
+                    #sys.stderr.write("Generating inter-group pairs for %s (%s) - %s\n"%(uid,t,[[y[2].attrib['id'] for y in x] for x in result]))
                     return(result)
             elif t=='Phosphorylation':
                 result = [[e] for e in edges]
-                sys.stderr.write("Splitting %s (%s) into %s - %s\n"%(uid,t,
+                #sys.stderr.write("Splitting %s (%s) into %s - %s\n"%(uid,t,
                                                                      len(result),
                                                                      [[y[2].attrib['id']
                                                                        for y in x]
@@ -273,11 +273,11 @@ class Unflattener:
                          x[2].attrib['type'].startswith('Theme')]
                 if cause and theme:
                     result = [(ca,th) for ca in cause for th in theme]
-                    sys.stderr.write("Generating Cause-Theme combinations for %s (%s) - %s\n"%(uid,t,[[y[2].attrib['id'] for y in x] for x in result]))
+                    #sys.stderr.write("Generating Cause-Theme combinations for %s (%s) - %s\n"%(uid,t,[[y[2].attrib['id'] for y in x] for x in result]))
                     return(result)
                 else:
                     result = [[e] for e in edges]
-                    sys.stderr.write("Splitting %s (%s) into %s - %s\n"%(uid,t,
+                    #sys.stderr.write("Splitting %s (%s) into %s - %s\n"%(uid,t,
                                                                        len(result),
                                                                        [[y[2].attrib['id']
                                                                          for y in x]
@@ -388,7 +388,7 @@ def interface(optionArgs=sys.argv[1:]):
 
     corpus = ET.parse(options.infile)
     for document in corpus.getroot().findall('document'):
-        sys.stderr.write("Unflattening document %s\n"%document.attrib['id'])
+        #sys.stderr.write("Unflattening document %s\n"%document.attrib['id'])
         unflattener = Unflattener(document,options.perfect)
         unflattener.analyse()
         unflattener.unflatten()

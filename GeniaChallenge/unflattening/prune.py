@@ -110,13 +110,16 @@ class Pruner:
             for x in edges:
                 if x[1]<weakest[1]:
                     weakest = x
-            sys.stderr.write("Breaking cycle by removing %s\n"%weakest[0])
+            #sys.stderr.write("Breaking cycle by removing %s\n"%weakest[0])
             self.events.remove(weakest[0])
+            return(1)
         
         cycle = findCycle()
+        count = 0
         while cycle:
-            pickWeakest(cycle)
+            count += pickWeakest(cycle)
             cycle = findCycle()
+        sys.stderr.write("Broke %s cycle(s)\n"%count)
 
     def prune(self):
         for sentence in self.document.findall('sentence'):
@@ -124,9 +127,9 @@ class Pruner:
                 uid = entity.attrib['id']
                 if not uid in self.entities:
                     sentence.remove(entity)
-                    sys.stderr.write("Removed %s (%s)\n"%(entity.attrib['type'],uid))
+                    #sys.stderr.write("Removed %s (%s)\n"%(entity.attrib['type'],uid))
                 else:
-                    sys.stderr.write("Preserved %s (%s)\n"%(entity.attrib['type'],uid))
+                    #sys.stderr.write("Preserved %s (%s)\n"%(entity.attrib['type'],uid))
             for event in sentence.findall('interaction'):
                 uid = event.attrib['id']
                 fromId = event.attrib['e1']
@@ -135,9 +138,9 @@ class Pruner:
                 toType = self.origEntities[toId].attrib['type']
                 if not uid in self.events:
                     sentence.remove(event)
-                    sys.stderr.write("Removed %s (%s) from %s (%s) to %s (%s)\n"%(event.attrib['type'],uid,fromType,fromId,toType,toId))
+                    #sys.stderr.write("Removed %s (%s) from %s (%s) to %s (%s)\n"%(event.attrib['type'],uid,fromType,fromId,toType,toId))
                 else:
-                    sys.stderr.write("Preserved %s (%s) from %s (%s) to %s (%s)\n"%(event.attrib['type'],uid,fromType,fromId,toType,toId))
+                    #sys.stderr.write("Preserved %s (%s) from %s (%s) to %s (%s)\n"%(event.attrib['type'],uid,fromType,fromId,toType,toId))
 
 
 
@@ -173,7 +176,7 @@ def interface(optionArgs=sys.argv[1:]):
 
     corpus = ET.parse(options.infile)
     for document in corpus.getroot().findall('document'):
-        sys.stderr.write("Pruning document %s\n"%document.attrib['id'])
+        #sys.stderr.write("Pruning document %s\n"%document.attrib['id'])
         pruner = Pruner(document)
         pruner.analyse()
         if options.cycles:
