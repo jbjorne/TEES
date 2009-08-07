@@ -1,6 +1,8 @@
 import sys, os, shutil
 import subprocess
 
+perlDir = os.path.dirname(os.path.abspath(__file__))+"/bionlp09_shared_task_evaluation_tools_v1"
+
 def parseResults(lines):
     lines = lines[3:]
     for line in lines:
@@ -29,13 +31,16 @@ def printLines(lines):
         print >> sys.stderr, line[:-1]
 
 def evaluate(sourceDir, task=1):
+    global perlDir
+    sourceDir = os.path.abspath(sourceDir)
+    print sourceDir
+    
     # Go to evaluation scripts
-    perlDir = os.path.dirname(os.path.abspath(__file__))+"/bionlp09_shared_task_evaluation_tools_v1"
     origDir = os.getcwd()
     os.chdir(perlDir)
     
-    goldDir = "/usr/share/biotext/GeniaChallenge/orig-devel-test/evaluation-tools-devel-gold"
-    tempDir = "/usr/share/biotext/GeniaChallenge/orig-devel-test/evaluation-temp"
+    goldDir = "/usr/share/biotext/GeniaChallenge/extension-data/genia/evaluation-data/evaluation-tools-devel-gold"
+    tempDir = "/usr/share/biotext/GeniaChallenge/extension-data/genia/evaluation-data/evaluation-temp"
     if os.path.exists(tempDir):
         shutil.rmtree(tempDir)
     os.mkdir(tempDir)
