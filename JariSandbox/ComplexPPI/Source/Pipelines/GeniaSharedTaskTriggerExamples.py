@@ -7,11 +7,11 @@ from Pipeline import *
 import os
 
 # define shortcuts for commonly used files
-PARSE_TOK="McClosky" #"split-Charniak-Lease"
+PARSE_TOK="split-McClosky" #"split-Charniak-Lease"
 CORPUS_DIR=None
 if PARSE_TOK == "split-Charniak-Lease":
     CORPUS_DIR="/usr/share/biotext/GeniaChallenge/xml/old-interaction-xml-files"
-elif PARSE_TOK == "McClosky":
+elif PARSE_TOK == "split-McClosky":
     CORPUS_DIR="/usr/share/biotext/GeniaChallenge/xml"
 assert(CORPUS_DIR != None)
 
