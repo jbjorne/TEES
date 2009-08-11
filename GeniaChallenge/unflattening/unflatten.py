@@ -55,10 +55,10 @@ class Analyser:
         return([int(x) for x in string.split('-')])
 
     @classmethod
-    def collectTokens(cls,sentence):
+    def collectTokens(cls,sentence,tokenName):
         tmp = sentence.find('sentenceanalyses')
         tmp2 = [x for x in tmp.getiterator('tokenization')
-                if x.attrib['tokenizer']=='Charniak-Lease'][0]
+                if x.attrib['tokenizer']==tokenName][0]
         tokens = dict( [(x.attrib['id'],x)
                         for x in tmp2.findall('token')] )
         return(tokens)
@@ -86,10 +86,11 @@ class Analyser:
         return(e2t)
 
     @classmethod
-    def makeDepG(cls,sentence):
+    def makeDepG(cls,sentence,tokenName,parseName):
         tmp = sentence.find('sentenceanalyses')
         tmp2 = [x for x in tmp.getiterator('parse')
-                if x.attrib['tokenizer']=='Charniak-Lease'][0]
+                if (x.attrib['parser']==parseName and
+                    x.attrib['tokenizer']==tokenName)][0]
         G = NX.XDiGraph()
         for x in tmp2.findall('dependency'):
             G.add_edge(x.attrib['t1'],x.attrib['t2'],x.attrib['type'])
@@ -118,9 +119,11 @@ class Analyser:
 
 
 class Unflattener:
-    def __init__(self,document,perfect):
+    def __init__(self,document,perfect,tokenName,parseName):
         self.document = document
         self.perfect = perfect
+        self.tokenName = tokenName
+        self.parseName = parseName
         self.sentences = dict( [(x.attrib['id'],x)
                                 for x in self.document.findall('sentence')] )
         # contains entity and interaction elements
@@ -129,10 +132,10 @@ class Unflattener:
                        if not self.semG.has_node(x)]
         # tokens and dep.graphs are sentence-specific because
         # TOKEN IDS ARE NOT HIERARCHICAL
-        self.tokens = dict( [(x,Analyser.collectTokens(x))
+        self.tokens = dict( [(x,Analyser.collectTokens(x,self.tokenName))
                              for x in self.document.findall('sentence')] )
         self.mapping = Analyser.mapEntitiesToTokens(self.document,self.tokens)
-        self.depDiGs = dict( [(x,Analyser.makeDepG(x))
+        self.depDiGs = dict( [(x,Analyser.makeDepG(x,self.tokenName,self.parseName))
                               for x in self.document.findall('sentence')] )
         self.depGs = dict( [(x,y.to_undirected())
                             for x,y in self.depDiGs.items()] )
@@ -373,6 +376,14 @@ def interface(optionArgs=sys.argv[1:]):
                   help="Process only those event which can be perfectly solved",
                   action="store_true",
                   default=False)
+    op.add_option("-a", "--parse",
+                  dest="parse",
+                  help="Parse to be used",
+                  metavar="PARSE")
+    op.add_option("-t", "--tokens",
+                  dest="tokens",
+                  help="Tokens to be used",
+                  metavar="TOKENS")
     (options, args) = op.parse_args(optionArgs)
 
     quit = False
@@ -382,6 +393,12 @@ def interface(optionArgs=sys.argv[1:]):
     if not options.outfile:
         print "Please specify the output file."
         quit = True
+    if not options.parse:
+        print "Please specify the parse."
+        quit = True
+    if not options.tokens:
+        print "Please specify the tokenisation."
+        quit = True
     if quit:
         op.print_help()
         return(False)
@@ -389,7 +406,8 @@ def interface(optionArgs=sys.argv[1:]):
     corpus = ET.parse(options.infile)
     for document in corpus.getroot().findall('document'):
         #sys.stderr.write("Unflattening document %s\n"%document.attrib['id'])
-        unflattener = Unflattener(document,options.perfect)
+        unflattener = Unflattener(document,options.perfect,
+                                  options.tokens,options.parse)
         unflattener.analyse()
         unflattener.unflatten()
     indent(corpus.getroot())
