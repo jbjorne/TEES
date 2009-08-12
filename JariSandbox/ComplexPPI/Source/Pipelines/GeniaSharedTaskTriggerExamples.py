@@ -25,7 +25,7 @@ if task == 1:
 else:
     TRAIN_FILE=CORPUS_DIR+"/train12.xml"
     DEVEL_FILE=CORPUS_DIR+"/devel12.xml"
-    TEST_FILE=CORPUS_DIR+"/test12.xml"
+    TEST_FILE=CORPUS_DIR+"/test.xml"
     EVERYTHING_FILE=CORPUS_DIR+"/everything12.xml"
     TASK_TAG="-t12"
 WORKDIR="/usr/share/biotext/GeniaChallenge/extension-data/genia/trigger-examples"
