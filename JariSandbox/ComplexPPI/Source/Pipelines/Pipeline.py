@@ -10,6 +10,8 @@ import Core.ExampleUtils as ExampleUtils
 import InteractionXML as ix
 import Evaluators.EvaluateInteractionXML as EvaluateInteractionXML
 from Core.OptimizeParameters import optimize
+from Core.OptimizeParameters import getParameterCombinations
+from Core.OptimizeParameters import getCombinationString
 import Utils.Stream as Stream
 import atexit, shutil
 from Core.RecallAdjust import RecallAdjust
@@ -36,10 +38,14 @@ def workdir(path, deleteIfExists=True):
     os.chdir(path)
     atexit.register(os.chdir, origDir)
 
-def log():
-    Stream.setLog("log.txt", True)
+def log(clear=False):
+    Stream.setLog("log.txt", clear)
     Stream.setTimeStamp("[%H:%M:%S]", True)
     print >> sys.stderr, "####### Log opened at ", time.ctime(time.time()), "#######"
+
+def copyIdSetsToWorkdir(source):
+    shutil.copy(src+".feature_names", os.getcwd())
+    shutil.copy(src+".class_names", os.getcwd())
 
 # Import Psyco if available
 try:

@@ -6,36 +6,58 @@
 from Pipeline import *
 
 # define shortcuts for commonly used files
-XMLDIR="/usr/share/biotext/GeniaChallenge/xml"
+PARSE_TOK="split-McClosky" #"split-Charniak-Lease"
+CORPUS_DIR=None
+if PARSE_TOK == "split-Charniak-Lease":
+    CORPUS_DIR="/usr/share/biotext/GeniaChallenge/xml/old-interaction-xml-files"
+elif PARSE_TOK == "McClosky":
+    CORPUS_DIR="/usr/share/biotext/GeniaChallenge/xml"
+elif PARSE_TOK == "split-McClosky":
+    CORPUS_DIR="/usr/share/biotext/GeniaChallenge/xml"
+assert(CORPUS_DIR != None)
 EXTDIR="/usr/share/biotext/GeniaChallenge/extension-data"
-WORKDIR=EXTDIR+"/genia/recall-boost"
+WORKDIR=EXTDIR+"/genia/recall-boost-"+PARSE_TOK
 
-TRAIN_FILE=XMLDIR+"/train.xml"
-DEVEL_FILE=XMLDIR+"/devel.xml"
-DEVEL_PREDICTED_TRIGGERS_FILE=EXTDIR+"/genia/trigger-model/devel-predicted-triggers.xml"
-EDGE_MODEL=EXTDIR+"/genia/edge-model/devel-edge-param-opt/model-c_50000"
-RECALL_ADJUSTER_PARAMS=[0.5,0.6,0.7,0.8,0.9,1.0,1.1,1.2,1.5]
+TRAIN_FILE=CORPUS_DIR+"/train.xml"
+DEVEL_FILE=CORPUS_DIR+"/devel.xml"
+DEVEL_PREDICTED_TRIGGERS_FILE=EXTDIR+"/genia/trigger-model-"+PARSE_TOK+"/devel-predicted-triggers-"+PARSE_TOK+"-"
+#TRIGGER_CLASSIFIER_PARAMS=[150000,200000,300000]
+EDGE_MODEL=EXTDIR+"/genia/edge-model-"+PARSE_TOK+"/devel-edge-param-opt/model-c_" #50000"
+#RECALL_ADJUSTER_PARAMS=[0.6,0.7,0.8,0.9]#[0.5,0.6,0.7,0.8,0.9,1.0,1.1,1.2,1.5]
 EDGE_FEATURE_PARAMS="style:typed,directed,no_linear,entities,genia_limits,noMasking,maxFeatures"
-PARSE_TOK="split-Charniak-Lease"
+#EDGE_CLASSIFIER_PARAMS=[50000]
+
+if PARSE_TOK == "split-McClosky":
+    ALL_PARAMS={"trigger":[350000], "booster":["0.6","0.7","0.8","0.9"], "edge":[28000]}
+elif PARSE_TOK == "McClosky":
+    ALL_PARAMS={"trigger":[80000,200000,350000], "booster":["0.6","0.7","0.8","0.9"], "edge":[10000,25000,50000]}
+else:
+    ALL_PARAMS={"trigger":[150000,200000,300000], "booster":["0.6","0.7","0.8","0.9"], "edge":[10000,25000,50000]}
+paramCombinations = getParameterCombinations(ALL_PARAMS)
 
 # These commands will be in the beginning of most pipelines
 workdir(WORKDIR, False) # Select a working directory, don't remove existing files
+copyIdSetsToWorkdir(EXTDIR+"/genia/trigger-examples/genia-trigger-ids")
+copyIdSetsToWorkdir(EXTDIR+"/genia/edge-examples/genia-edge-ids")
 log() # Start logging into a file in working directory
 
-for param in RECALL_ADJUSTER_PARAMS:
-    print >> sys.stderr, "Processing recall booster param", param
-    pId = "-boost_"+str(param)[0:3] # param id
-    boostedTriggerFile = "devel-predicted-triggers"+pId+".xml"
-    RecallAdjust.run(DEVEL_PREDICTED_TRIGGERS_FILE, param, boostedTriggerFile)
+count = 0
+for params in paramCombinations:
+    print >> sys.stderr, "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
+    print >> sys.stderr, "Processing params", str(count) + "/" + str(len(paramCombinations)), params
+    print >> sys.stderr, "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
+    pId = getCombinationString(params) #"-boost_"+str(param)[0:3] # param id
+    boostedTriggerFile = "devel-predicted-triggers.xml"
+    RecallAdjust.run(DEVEL_PREDICTED_TRIGGERS_FILE + str(params["trigger"]) + ".xml", float(params["booster"]), boostedTriggerFile)
     ix.splitMergedElements(boostedTriggerFile, boostedTriggerFile)
     ix.recalculateIds(boostedTriggerFile, boostedTriggerFile, True)
     # Build edge examples
-    MultiEdgeExampleBuilder.run(boostedTriggerFile, "devel-edge-examples"+pId, PARSE_TOK, PARSE_TOK, EDGE_FEATURE_PARAMS, "genia-edge-ids")
+    MultiEdgeExampleBuilder.run(boostedTriggerFile, "devel-edge-examples", PARSE_TOK, PARSE_TOK, EDGE_FEATURE_PARAMS, "genia-edge-ids")
     # Classify with pre-defined model
-    Cls.test("devel-edge-examples"+pId, EDGE_MODEL, "devel-edge-classifications"+pId)
+    Cls.test("devel-edge-examples", EDGE_MODEL + str(params["edge"]), "devel-edge-classifications")
     # Write to interaction xml
-    evaluator = Ev.evaluate("devel-edge-examples"+pId, "devel-edge-classifications"+pId, "genia-edge-ids.class_names")
-    xmlFilename = "devel-predicted-edges" + pId + ".xml"
+    evaluator = Ev.evaluate("devel-edge-examples", "devel-edge-classifications", "genia-edge-ids.class_names")
+    xmlFilename = "devel-predicted-edges.xml"# + pId + ".xml"
     ExampleUtils.writeToInteractionXML(evaluator.classifications, boostedTriggerFile, xmlFilename, "genia-edge-ids.class_names", PARSE_TOK, PARSE_TOK)
     ix.splitMergedElements(xmlFilename, xmlFilename)
     ix.recalculateIds(xmlFilename, xmlFilename, True)
@@ -46,10 +68,11 @@ for param in RECALL_ADJUSTER_PARAMS:
     # which evaluate on the level of examples.
     EvaluateInteractionXML.run(Ev, xmlFilename, DEVEL_FILE, PARSE_TOK, PARSE_TOK)
     # Post-processing
-    prune.interface(["-i",xmlFilename,"-o","pruned"+pId+".xml","-c"])
-    unflatten.interface(["-i","pruned"+pId+".xml","-o","unflattened"+pId+".xml"])
+    prune.interface(["-i",xmlFilename,"-o","pruned.xml","-c"])
+    unflatten.interface(["-i","pruned.xml","-o","unflattened.xml","-a",PARSE_TOK,"-t",PARSE_TOK])
     # Output will be stored to the geniaformat-subdirectory, where will also be a
     # tar.gz-file which can be sent to the Shared Task evaluation server.
-    gifxmlToGenia("unflattened"+pId+".xml", "geniaformat"+pId)
-    evaluateSharedTask("geniaformat"+pId, 1) # "UTurku-devel-results-090320"
+    gifxmlToGenia("unflattened.xml", "geniaformat")
+    evaluateSharedTask("geniaformat", 1) # "UTurku-devel-results-090320"
+    count += 1
     

@@ -2,17 +2,25 @@ from Pipeline import *
 import os
 
 # define shortcuts for commonly used files
-EXAMPLEDIR="/usr/share/biotext/GeniaChallenge/extension-data/genia/edge-examples"
-TRAIN_EXAMPLE_FILE=EXAMPLEDIR+"/edge-train-examples-split-Charniak-Lease"
-DEVEL_EXAMPLE_FILE=EXAMPLEDIR+"/edge-devel-examples-split-Charniak-Lease"
-TEST_EXAMPLE_FILE=EXAMPLEDIR+"/edge-test-examples-split-Charniak-Lease"
-EVERYTHING_FILE=EXAMPLEDIR+"/edge-everything-examples-split-Charniak-Lease"
-CLASS_NAMES=EXAMPLEDIR+"/genia-edge-ids.class_names"
-WORKDIR="/usr/share/biotext/GeniaChallenge/extension-data/genia/edge-model"
+PARSE_TOK="split-McClosky" #"split-Charniak-Lease"
+CORPUS_DIR=None
+if PARSE_TOK == "split-Charniak-Lease":
+    CORPUS_DIR="/usr/share/biotext/GeniaChallenge/xml/old-interaction-xml-files"
+elif PARSE_TOK == "split-McClosky":
+    CORPUS_DIR="/usr/share/biotext/GeniaChallenge/xml"
+assert(CORPUS_DIR != None)
+DEVEL_FILE=CORPUS_DIR+"/devel.xml"
 
-CLASSIFIER_PARAMS="c:10,20,30,40,50,60,70,80,90,100,500,1000,5000,10000,20000,50000,80000,100000,150000,180000,200000, 250000, 300000, 350000, 500000"#,1000000"
+EXAMPLEDIR="/usr/share/biotext/GeniaChallenge/extension-data/genia/edge-examples"
+TRAIN_EXAMPLE_FILE=EXAMPLEDIR+"/edge-train-examples-"+PARSE_TOK
+DEVEL_EXAMPLE_FILE=EXAMPLEDIR+"/edge-devel-examples-"+PARSE_TOK
+TEST_EXAMPLE_FILE=EXAMPLEDIR+"/edge-test-examples-"+PARSE_TOK
+EVERYTHING_FILE=EXAMPLEDIR+"/edge-everything-examples-"+PARSE_TOK
+CLASS_NAMES=EXAMPLEDIR+"/genia-edge-ids.class_names"
+WORKDIR="/usr/share/biotext/GeniaChallenge/extension-data/genia/edge-model-"+PARSE_TOK
+
+CLASSIFIER_PARAMS="c:5000,10000,20000,25000,28000,50000,60000,65000,80000,100000,150000"#,1000000"
 optimizeLoop = True # search for a parameter, or use a predefined one
-PARSE_TOK="split-Charniak-Lease"
 
 # These commands will be in the beginning of most pipelines
 workdir(WORKDIR, False) # Select a working directory, don't remove existing files
@@ -24,11 +32,13 @@ log() # Start logging into a file in working directory
 if optimizeLoop: # search for the best c-parameter
     # The optimize-function takes as parameters a Classifier-class, an Evaluator-class
     # and input and output files
-    c = CSCConnection("GeniaSharedTaskDevelEdgeModel")
+    c = CSCConnection("extension-data/genia/devel-edge-model-"+PARSE_TOK, "jakrbj@murska.csc.fi")
     best = optimize(Cls, Ev, TRAIN_EXAMPLE_FILE, DEVEL_EXAMPLE_FILE,\
         CLASS_NAMES, CLASSIFIER_PARAMS, "devel-edge-param-opt", None, c)
     # The evaluator is needed to access the classifications (will be fixed later)
     evaluator = best[0]
-ExampleUtils.writeToInteractionXML(evaluator.classifications, DEVEL_EXAMPLE_FILE, "devel-predicted-triggers.xml", CLASS_NAMES, PARSE_TOK, PARSE_TOK)
-ix.splitMergedElements("devel-predicted-triggers.xml", "devel-predicted-triggers.xml")
-ix.recalculateIds("devel-predicted-triggers.xml", "devel-predicted-triggers.xml", True)
+ExampleUtils.writeToInteractionXML(evaluator.classifications, DEVEL_FILE, "devel-predicted-edges.xml", CLASS_NAMES, PARSE_TOK, PARSE_TOK)
+ix.splitMergedElements("devel-predicted-edges.xml", "devel-predicted-edges.xml")
+ix.recalculateIds("devel-predicted-edges.xml", "devel-predicted-edges.xml", True)
+EvaluateInteractionXML.run(Ev, "devel-predicted-edges.xml", DEVEL_FILE, PARSE_TOK, PARSE_TOK)
+
