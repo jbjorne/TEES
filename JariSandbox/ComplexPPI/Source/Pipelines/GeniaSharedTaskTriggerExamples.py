@@ -45,11 +45,11 @@ if not os.path.exists("gazetteer-everything-"+PARSE_TOK+TASK_TAG):
     Gazetteer.run(EVERYTHING_FILE, "gazetteer-everything-"+PARSE_TOK+TASK_TAG, PARSE_TOK)
 # generate the files for the old charniak
 if not os.path.exists("trigger-train-examples-"+PARSE_TOK+TASK_TAG):
-    GeneralEntityTypeRecognizerGztr.run(TRAIN_FILE, "trigger-train-examples-"+PARSE_TOK+TASK_TAG, PARSE_TOK, PARSE_TOK, "style:typed", "genia-trigger-ids", "gazetteer-train")
+    GeneralEntityTypeRecognizerGztr.run(TRAIN_FILE, "trigger-train-examples-"+PARSE_TOK+TASK_TAG, PARSE_TOK, PARSE_TOK, "style:typed", "genia-trigger-ids", "gazetteer-train-"+PARSE_TOK+TASK_TAG)
 if not os.path.exists("trigger-devel-examples-"+PARSE_TOK+TASK_TAG):
-    GeneralEntityTypeRecognizerGztr.run(DEVEL_FILE, "trigger-devel-examples-"+PARSE_TOK+TASK_TAG, PARSE_TOK, PARSE_TOK, "style:typed", "genia-trigger-ids", "gazetteer-train")
+    GeneralEntityTypeRecognizerGztr.run(DEVEL_FILE, "trigger-devel-examples-"+PARSE_TOK+TASK_TAG, PARSE_TOK, PARSE_TOK, "style:typed", "genia-trigger-ids", "gazetteer-train-"+PARSE_TOK+TASK_TAG)
 
 if not os.path.exists("trigger-everything-examples-"+PARSE_TOK+TASK_TAG):
-    GeneralEntityTypeRecognizerGztr.run(EVERYTHING_FILE, "trigger-everything-examples-"+PARSE_TOK+TASK_TAG, PARSE_TOK, PARSE_TOK, "style:typed", "genia-trigger-ids", "gazetteer-everything")
+    GeneralEntityTypeRecognizerGztr.run(EVERYTHING_FILE, "trigger-everything-examples-"+PARSE_TOK+TASK_TAG, PARSE_TOK, PARSE_TOK, "style:typed", "genia-trigger-ids", "gazetteer-everything-"+PARSE_TOK+TASK_TAG)
 if not os.path.exists("trigger-test-examples-"+PARSE_TOK+TASK_TAG):
-    GeneralEntityTypeRecognizerGztr.run(TEST_FILE, "trigger-test-examples-"+PARSE_TOK+TASK_TAG, PARSE_TOK, PARSE_TOK, "style:typed", "genia-trigger-ids", "gazetteer-everything")
+    GeneralEntityTypeRecognizerGztr.run(TEST_FILE, "trigger-test-examples-"+PARSE_TOK+TASK_TAG, PARSE_TOK, PARSE_TOK, "style:typed", "genia-trigger-ids", "gazetteer-everything-"+PARSE_TOK+TASK_TAG)
