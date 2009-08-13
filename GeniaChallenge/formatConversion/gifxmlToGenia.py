@@ -47,6 +47,9 @@ def processCorpus(inputCorpus, outputFolder):
         outputFile.close()
 
 def writeDocumentText(document, outputFile):
+    """
+    Write the sentences that came from the same document into the same genia-file
+    """
     isFirstSentence = True
     for sentenceElement in document.findall("sentence"):
         text = sentenceElement.get("text")
@@ -118,6 +121,7 @@ def getEvents(document, inputCorpus, outputFile):
     for sentenceElement in document.findall("sentence"):
         sentence = inputCorpus.sentencesById[sentenceElement.get("id")]
         
+        # Put entities into a dictionary where they are accessible by their id
         for entity in sentence.entities:
             if entityMap.has_key(entity.get("id")):
                 print >> sys.stderr, "Warning: Duplicate entity", entity.get("id")
@@ -267,4 +271,4 @@ if __name__=="__main__":
     
     assert(options.input != None)
     assert(options.output != None)    
-    gifxmlToGenia(input, output)
+    gifxmlToGenia(options.input, options.output)
