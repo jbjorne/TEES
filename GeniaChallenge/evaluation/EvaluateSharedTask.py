@@ -99,7 +99,8 @@ if __name__=="__main__":
         print >> sys.stderr, "Found Psyco, using"
     except ImportError:
         print >> sys.stderr, "Psyco not installed"
-
+    
+    from optparse import OptionParser
     optparser = OptionParser(usage="%prog [options]\n")
     optparser.add_option("-i", "--input", default=None, dest="input", help="input directory with predicted shared task files", metavar="FILE")
     optparser.add_option("-t", "--task", default=1, type="int", dest="task", help="task number")
