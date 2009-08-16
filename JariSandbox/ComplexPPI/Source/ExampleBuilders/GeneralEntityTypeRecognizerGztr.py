@@ -151,7 +151,7 @@ class GeneralEntityTypeRecognizerGztr(ExampleBuilder):
             # Recognize only non-named entities (i.e. interaction words)
             if sentenceGraph.tokenIsName[token]:
                 continue
-            elif self.gazetteer and token.get("text").lower() not in self.gazetteer:
+            elif ("exclude_gazetteer" in self.styles) and self.gazetteer and token.get("text").lower() not in self.gazetteer:
                 continue
             # CLASS
             if len(sentenceGraph.tokenIsEntityHead[token]) > 0:
