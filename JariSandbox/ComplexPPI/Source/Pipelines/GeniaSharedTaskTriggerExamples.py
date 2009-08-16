@@ -15,13 +15,13 @@ elif PARSE_TOK == "split-McClosky":
     CORPUS_DIR="/usr/share/biotext/GeniaChallenge/xml"
 assert(CORPUS_DIR != None)
 
-task = 2
+task = 1
 if task == 1:
     TRAIN_FILE=CORPUS_DIR+"/train.xml"
     DEVEL_FILE=CORPUS_DIR+"/devel.xml"
     TEST_FILE=CORPUS_DIR+"/test.xml"
     EVERYTHING_FILE=CORPUS_DIR+"/everything.xml"
-    TASK_TAG=""
+    TASK_TAG="-alltokens"
 else:
     TRAIN_FILE=CORPUS_DIR+"/train12.xml"
     DEVEL_FILE=CORPUS_DIR+"/devel12.xml"
