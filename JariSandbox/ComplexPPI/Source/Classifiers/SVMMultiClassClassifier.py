@@ -140,6 +140,10 @@ class SVMMultiClassClassifier(Classifier):
     
     @classmethod
     def initTrainAndTestOnLouhi(cls, trainExamples, testExamples, trainParameters, cscConnection, localWorkDir=None):
+        if cscConnection.account.find("murska") != -1:
+            isMurska = True
+        else:
+            isMurska = False
         assert( type(trainExamples)==types.StringType )
         assert( type(testExamples)==types.StringType )
         trainExampleFileName = os.path.split(trainExamples)[-1]
@@ -164,13 +168,21 @@ class SVMMultiClassClassifier(Classifier):
             scriptFilePath = os.path.join(localWorkDir, scriptName)
         scriptFile = open(scriptFilePath, "wt")
         scriptFile.write("#!/bin/bash\ncd " + cscConnection.workDir + "\n")
-        scriptFile.write("aprun -n 1 " + cls.louhiBinDir + "/svm_multiclass_learn" + paramStr + " " + cscConnection.workDir + "/" + trainExampleFileName + " " + cscConnection.workDir + "/model" + idStr + "\n")
-        scriptFile.write("aprun -n 1 " + cls.louhiBinDir + "/svm_multiclass_classify " + cscConnection.workDir + "/" + testExampleFileName + " " + cscConnection.workDir + "/model" + idStr + " " + cscConnection.workDir + "/predictions" + idStr + "\n")
+        if not isMurska: # louhi
+            scriptFile.write("aprun -n 1 ")
+        scriptFile.write(cls.louhiBinDir + "/svm_multiclass_learn" + paramStr + " " + cscConnection.workDir + "/" + trainExampleFileName + " " + cscConnection.workDir + "/model" + idStr + "\n")
+        if not isMurska: # louhi
+            scriptFile.write("aprun -n 1 ")
+        scriptFile.write(cls.louhiBinDir + "/svm_multiclass_classify " + cscConnection.workDir + "/" + testExampleFileName + " " + cscConnection.workDir + "/model" + idStr + " " + cscConnection.workDir + "/predictions" + idStr + "\n")
         scriptFile.close()
         
         cscConnection.upload(scriptFilePath, scriptName)
         cscConnection.run("chmod a+x " + cscConnection.workDir + "/" + scriptName)
-        cscConnection.run("qsub -o " + cscConnection.workDir + "/" + scriptName + "-stdout -e " + cscConnection.workDir + "/" + scriptName + "-stderr " + cscConnection.workDir + "/" + scriptName)
+        cscScriptPath = cscConnection.workDir + "/" + scriptName
+        if isMurska:
+            cscConnection.run("bsub -o " + cscScriptPath + "-stdout -e " + cscScriptPath + "-stderr -W 10:0 -M 4194304 < " + cscScriptPath)
+        else:
+            cscConnection.run("qsub -o " + cscConnection.workDir + "/" + scriptName + "-stdout -e " + cscConnection.workDir + "/" + scriptName + "-stderr " + cscConnection.workDir + "/" + scriptName)
         return idStr
     
     @classmethod
