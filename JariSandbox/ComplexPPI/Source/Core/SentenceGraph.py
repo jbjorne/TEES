@@ -159,6 +159,7 @@ class SentenceGraph:
         # charOffset-range. One of these must be chosen as the head token.
         headTokens = [] # potential head tokens
         for token in self.tokens:
+            #print token.attrib["id"], token.attrib["charOffset"]
             tokenOffset = Range.charOffsetToSingleTuple(token.attrib["charOffset"])
             if headOffset != None:
                 # A head token can already be defined in the headOffset-attribute.
@@ -177,6 +178,7 @@ class SentenceGraph:
             token = self.findHeadToken(headTokens)
             if verbose:
                 print >> sys.stderr, "Selected head:", token.attrib["id"], token.attrib["text"]
+        assert token != None, entityElement.get("id")
         if token != None:
             # The ElementTree entity-element is modified by setting the headOffset attribute
             if not entityElement.attrib.has_key("headOffset"):
