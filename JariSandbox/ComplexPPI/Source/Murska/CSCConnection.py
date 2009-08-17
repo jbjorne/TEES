@@ -4,9 +4,10 @@ sys.path.append(os.path.dirname(__file__)+"/..")
 from Classifiers.SVMMultiClassClassifier import SVMMultiClassClassifier as classifier
 
 class CSCConnection:
-    def __init__(self, workSubDir):
-        self.account = "jakrbj@louhi.csc.fi"
+    def __init__(self, workSubDir, account="jakrbj@louhi.csc.fi"):
+        self.account = account
         self.workDir = "/wrk/jakrbj/" + workSubDir
+        self.run("mkdir -p " + self.workDir)
     
     def exists(self, filename):
         p = subprocess.Popen("ssh " + self.account + " 'ls " + self.workDir + "/" + filename + "'", shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
