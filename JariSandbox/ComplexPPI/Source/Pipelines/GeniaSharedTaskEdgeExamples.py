@@ -19,7 +19,6 @@ if task == 1:
     DEVEL_FILE=CORPUS_DIR+"/devel.xml"
     TEST_FILE=CORPUS_DIR+"/test.xml"
     EVERYTHING_FILE=CORPUS_DIR+"/everything.xml"
-    TASK_TAG=""
 else:
     TRAIN_FILE=CORPUS_DIR+"/train12.xml"
     DEVEL_FILE=CORPUS_DIR+"/devel12.xml"

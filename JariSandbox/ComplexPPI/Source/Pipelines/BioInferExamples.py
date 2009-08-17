@@ -16,15 +16,16 @@ BI_TEST_FILE=CORPUS_DIR+"/bioinfer.test.metaRes-anonRes.gold.gif.xml"
 BI_VISIBLE_FILE=CORPUS_DIR+"/bioinfer.visible.metaRes-anonRes.gold.gif.xml"
 BI_VISIBLE_AND_BLIND_FILE=CORPUS_DIR+"/bioinfer.visible+blind.metaRes-anonRes.gold.gif.xml"
 
-TEST_FILE=CORPUS_DIR+"/bioinfer-test-"+PARSE_TOK
-DEVEL_FILE=CORPUS_DIR+"/bioinfer-devel-"+PARSE_TOK
-TRAIN_FILE=CORPUS_DIR+"/bioinfer-train-"+PARSE_TOK
-EVERYTHING_FILE=CORPUS_DIR+"/bioinfer-everything-"+PARSE_TOK
+TEST_FILE=CORPUS_DIR+"/bioinfer-test-"+PARSE_TOK+".xml"
+DEVEL_FILE=CORPUS_DIR+"/bioinfer-devel-"+PARSE_TOK+".xml"
+TRAIN_FILE=CORPUS_DIR+"/bioinfer-train-"+PARSE_TOK+".xml"
+EVERYTHING_FILE=CORPUS_DIR+"/bioinfer-everything-"+PARSE_TOK+".xml"
 WORKDIR=CORPUS_DIR+"/trigger-examples"
 
 # Find heads
 sys.path.append("..")
 import Core.SentenceGraph as SentenceGraph
+import cElementTreeUtils as ETUtils
 if not os.path.exists(TEST_FILE):
     c = SentenceGraph.loadCorpus(BI_BLIND_FILE, PARSE_TOK, PARSE_TOK)
     ETUtils.write(c.rootElement, TEST_FILE)

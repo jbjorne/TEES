@@ -11,22 +11,36 @@ elif PARSE_TOK == "split-McClosky":
 assert(CORPUS_DIR != None)
 DEVEL_FILE=CORPUS_DIR+"/devel.xml"
 
-EXAMPLEDIR="/usr/share/biotext/GeniaChallenge/extension-data/genia/trigger-examples"
-TRAIN_EXAMPLE_FILE=EXAMPLEDIR+"/trigger-train-examples-"+PARSE_TOK
-DEVEL_EXAMPLE_FILE=EXAMPLEDIR+"/trigger-devel-examples-"+PARSE_TOK
-TEST_EXAMPLE_FILE=EXAMPLEDIR+"/trigger-test-examples-"+PARSE_TOK
-EVERYTHING_FILE=EXAMPLEDIR+"/trigger-everything-examples-"+PARSE_TOK
-CLASS_NAMES=EXAMPLEDIR+"/genia-trigger-ids.class_names"
-WORKDIR="/usr/share/biotext/GeniaChallenge/extension-data/genia/trigger-model-"+PARSE_TOK
+task = 1
+if task == 1:
+    TRAIN_FILE=CORPUS_DIR+"/train.xml"
+    DEVEL_FILE=CORPUS_DIR+"/devel.xml"
+    TEST_FILE=CORPUS_DIR+"/test.xml"
+    EVERYTHING_FILE=CORPUS_DIR+"/everything.xml"
+    TASK_TAG=""
+else:
+    TRAIN_FILE=CORPUS_DIR+"/train12.xml"
+    DEVEL_FILE=CORPUS_DIR+"/devel12.xml"
+    TEST_FILE=CORPUS_DIR+"/test.xml"
+    EVERYTHING_FILE=CORPUS_DIR+"/everything12.xml"
+    TASK_TAG="-t12"
 
-CLASSIFIER_PARAMS="c:10,20,30,40,50,60,70,80,90,100,500,1000,5000,10000,20000,50000,80000,100000,150000,180000,200000, 250000, 300000, 350000, 500000,1000000,5000000,10000000"
-#CLASSIFIER_PARAMS="c:350000"
+EXAMPLEDIR="/usr/share/biotext/GeniaChallenge/extension-data/genia/trigger-examples"
+TRAIN_EXAMPLE_FILE=EXAMPLEDIR+"/trigger-train-examples-"+PARSE_TOK+TASK_TAG
+DEVEL_EXAMPLE_FILE=EXAMPLEDIR+"/trigger-devel-examples-"+PARSE_TOK+TASK_TAG
+TEST_EXAMPLE_FILE=EXAMPLEDIR+"/trigger-test-examples-"+PARSE_TOK+TASK_TAG
+EVERYTHING_FILE=EXAMPLEDIR+"/trigger-everything-examples-"+PARSE_TOK+TASK_TAG
+CLASS_NAMES=EXAMPLEDIR+"/genia-trigger-ids.class_names"
+WORKDIR="/usr/share/biotext/GeniaChallenge/extension-data/genia/trigger-model-"+PARSE_TOK+TASK_TAG
+
+#CLASSIFIER_PARAMS="c:10,20,30,40,50,60,70,80,90,100,500,1000,5000,10000,20000,50000,80000,100000,150000,180000,200000, 250000, 300000, 350000, 500000,1000000,5000000,10000000"
+CLASSIFIER_PARAMS="c:80000"
 optimizeLoop = True # search for a parameter, or use a predefined one
 
 # These commands will be in the beginning of most pipelines
 workdir(WORKDIR, False) # Select a working directory, don't remove existing files
 log() # Start logging into a file in working directory
-print >> sys.stderr, "Trigger model pipeline for parse", PARSE_TOK
+print >> sys.stderr, "Trigger model pipeline for parse", PARSE_TOK, "task", task
 
 ###############################################################################
 # Trigger example generation
@@ -34,12 +48,12 @@ print >> sys.stderr, "Trigger model pipeline for parse", PARSE_TOK
 if optimizeLoop: # search for the best c-parameter
     # The optimize-function takes as parameters a Classifier-class, an Evaluator-class
     # and input and output files
-    c = CSCConnection("extension-data/genia/devel-trigger-model-"+PARSE_TOK, "jakrbj@murska.csc.fi")
+    c = CSCConnection("extension-data/genia/devel-trigger-model-"+PARSE_TOK+TASK_TAG, "jakrbj@murska.csc.fi")
     best = optimize(Cls, Ev, TRAIN_EXAMPLE_FILE, DEVEL_EXAMPLE_FILE,\
         CLASS_NAMES, CLASSIFIER_PARAMS, "devel-trigger-param-opt", None, c)
     # The evaluator is needed to access the classifications (will be fixed later)
     evaluator = best[0]
-xmlFilename = "devel-predicted-triggers-"+PARSE_TOK+".xml"
+xmlFilename = "devel-predicted-triggers-"+PARSE_TOK+TASK_TAG+"-80000.xml"
 ExampleUtils.writeToInteractionXML(evaluator.classifications, DEVEL_FILE, xmlFilename, CLASS_NAMES, PARSE_TOK, PARSE_TOK)
 # NOTE: Merged elements must not be split, as recall booster may change their class
 #ix.splitMergedElements("devel-predicted-triggers.xml", "devel-predicted-triggers.xml")

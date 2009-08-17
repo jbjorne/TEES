@@ -43,9 +43,9 @@ def log(clear=False):
     Stream.setTimeStamp("[%H:%M:%S]", True)
     print >> sys.stderr, "####### Log opened at ", time.ctime(time.time()), "#######"
 
-def copyIdSetsToWorkdir(source):
-    shutil.copy(src+".feature_names", os.getcwd())
-    shutil.copy(src+".class_names", os.getcwd())
+def copyIdSetsToWorkdir(srcStem):
+    shutil.copy(srcStem+".feature_names", os.getcwd())
+    shutil.copy(srcStem+".class_names", os.getcwd())
 
 # Import Psyco if available
 try:
