@@ -48,6 +48,7 @@ class RecallAdjust:
         multiplier adjusts the level of boosting the non-negative predictions, it is a real number (0,inf)
         multiplier 1.0 does nothing, <1.0 decreases negative class confidence, >1.0 increases negative class confidence
         the root of the modified tree is returned and, if outFile is a string, written out to outFile as well"""
+        print >> sys.stderr, "##### Recall adjust with multiplier " + str(multiplier)[:5] + " #####"
         root=ETUtils.ETFromObj(inFile)
         if not ET.iselement(root):
             assert isinstance(root,ET.ElementTree)
