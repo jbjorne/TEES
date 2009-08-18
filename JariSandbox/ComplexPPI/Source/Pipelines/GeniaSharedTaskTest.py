@@ -32,8 +32,10 @@ EDGE_EVERYTHING_EXAMPLE_FILE=EDGE_EXAMPLEDIR+"/edge-everything-examples-"+PARSE_
 #EDGE_EVERYTHING_EXAMPLE_FILE=EDGE_EXAMPLEDIR+"/edge-train-examples-"+PARSE_TOK
 EDGE_IDS="genia-edge-ids"
 
-EXPERIMENT_NAME = "extension-data/genia/test-set-"+PARSE_TOK+"-boost07"
+EXPERIMENT_NAME = "extension-data/genia/test-set-"+PARSE_TOK+"-cube-params"
 WORKDIR="/usr/share/biotext/GeniaChallenge/"+EXPERIMENT_NAME
+
+# {'trigger': 200000, 'edge': 28000, 'booster': '0.65'}
 
 EDGE_FEATURE_PARAMS="style:typed,directed,no_linear,entities,genia_limits,noMasking,maxFeatures"
 if PARSE_TOK == "split-Charniak-Lease":
@@ -41,9 +43,9 @@ if PARSE_TOK == "split-Charniak-Lease":
     EDGE_CLASSIFIER_PARAMS="c:25000" #"c:50000"
     RECALL_BOOST_PARAM=0.7 #0.8
 elif PARSE_TOK == "split-McClosky":
-    TRIGGER_CLASSIFIER_PARAMS="c:350000"
-    EDGE_CLASSIFIER_PARAMS="c:28000"
-    RECALL_BOOST_PARAM=0.7#0.9
+    TRIGGER_CLASSIFIER_PARAMS="c:200000" #"c:350000"
+    EDGE_CLASSIFIER_PARAMS="c:28000" #"c:28000"
+    RECALL_BOOST_PARAM=0.65 #0.7#0.9
 else: # McClosky
     TRIGGER_CLASSIFIER_PARAMS="c:200000"
     EDGE_CLASSIFIER_PARAMS="c:50000"
