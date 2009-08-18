@@ -29,7 +29,8 @@ EDGE_FEATURE_PARAMS="style:typed,directed,no_linear,entities,genia_limits,noMask
 
 if PARSE_TOK == "split-McClosky":
     #ALL_PARAMS={"trigger":[350000], "booster":["0.9","1.0","1.1"], "edge":[28000]}
-    ALL_PARAMS={"trigger":[80000,200000,350000], "booster":["0.65","0.7","0.8","0.9"], "edge":[10000,28000,50000]}
+    #ALL_PARAMS={"trigger":[80000,200000,350000], "booster":["0.65","0.7","0.8","0.9"], "edge":[10000,28000,50000]}
+    ALL_PARAMS={"trigger":[200000], "booster":["0.5","0.6"], "edge":[28000]}
 elif PARSE_TOK == "McClosky":
     ALL_PARAMS={"trigger":[80000,200000,350000], "booster":["0.6","0.7","0.8","0.9"], "edge":[10000,25000,50000]}
 else:
