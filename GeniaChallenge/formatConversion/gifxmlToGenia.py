@@ -14,9 +14,10 @@ def getEntityIndex(entities, index=0, task=1):
 #            continue
         if task == 1 and entity.get("type") == "Entity":
             continue
-        origId = entity.get("origId")
-        if origId != None:
-            origIds.append(origId)
+        if entity.get("isName")=="True":
+            origId = entity.get("origId")
+            if origId != None:
+                origIds.append(origId)
     for origId in origIds:
         splits = origId.split(".")
         idPart = splits[1]
@@ -54,6 +55,15 @@ def processCorpus(inputCorpus, outputFolder, task=1):
             triggerIds = copy.copy(namedEntityTriggerIds)
             writeEventTriggers(document, inputCorpus, outputFile, events, triggerIds, 2)
             writeEvents(document, inputCorpus, outputFile, events, entityMap, triggerIds)
+            outputFile.close()
+
+        # Write a2.t123 file
+        if task == 3:
+            outputFile = open(os.path.join(outputFolder,documentId + ".a2.t123"), "wt")
+            events, entityMap = getEvents(document, inputCorpus, outputFile, 2)
+            triggerIds = copy.copy(namedEntityTriggerIds)
+            writeEventTriggers(document, inputCorpus, outputFile, events, triggerIds, 2)
+            writeEvents(document, inputCorpus, outputFile, events, entityMap, triggerIds, True)
             outputFile.close()
         
         # Write txt file
@@ -264,7 +274,7 @@ def getEvents(document, inputCorpus, outputFile, task=1):
                         
     return events, entityMap                  
 
-def writeEvents(document, inputCorpus, outputFile, events, entityMap, triggerIds):
+def writeEvents(document, inputCorpus, outputFile, events, entityMap, triggerIds, writeTask3=False):
     """
     Writes events defined as trigger words that have one or more interactions
     leaving from them. When the Theme or Cause of such an event refers to a
@@ -289,11 +299,20 @@ def writeEvents(document, inputCorpus, outputFile, events, entityMap, triggerIds
             eventIdsByStem[entityId] = ["E" + str(eventIndex)]
         eventIndex += 1
     
+    speculations = []
+    negations = []
+    
 #    seenOutputLines = []
     # Write the events
     sites = []
     for key in sorted(events.keys()):
         entity = entityMap[key]
+        if writeTask3:
+            if entity.get("speculation") == "True":
+                speculations.append(eventIds[key])
+            if entity.get("negation") == "True":
+                negations.append(eventIds[key])
+                
         eventType = entity.get("type")
         assert(key == entity.get("id") or key.rsplit(".",1)[0] == entity.get("id"))
         outputLine = eventIds[key] + "\t" + eventType + ":" + triggerIds[entity.get("id")]
@@ -349,10 +368,18 @@ def writeEvents(document, inputCorpus, outputFile, events, entityMap, triggerIds
 #        else:
 #            seenOutputLines.append(outputLineWithoutId)
         outputLine += siteLine
-        outputFile.write( outputLine + "\n" )           
+        outputFile.write( outputLine + "\n" )
+    
+    mCount = 1
+    for speculation in speculations:
+        outputFile.write("M" + str(mCount) + "\tSpeculation " + speculation + "\n" )       
+        mCount += 1
+    for negation in negations:
+        outputFile.write("M" + str(mCount) + "\tNegation " + negation + "\n" )
+        mCount += 1
 
 def gifxmlToGenia(input, output, task=1):
-    assert(task == 1 or task == 2)
+    assert(task == 1 or task == 2 or task == 3)
     
     # Make or clear output directory
     if os.path.exists(output):
@@ -370,7 +397,7 @@ def gifxmlToGenia(input, output, task=1):
     allFiles = os.listdir(output)
     tarFiles = []
     for file in allFiles:
-        if file.find("a2.t1") != -1:
+        if file.find(".a2.") != -1:
             tarFiles.append(file)
     submissionFile = tarfile.open(os.path.join(output,submissionFileName), "w:gz")
     tempCwd = os.getcwd()
