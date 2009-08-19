@@ -190,6 +190,46 @@ def loadPredictions(predictionsFile, examples):
         predictions.append( (examples[i],int(lines[i].split()[0]),"multiclass",lines[i].split()[1:]) )
     return predictions
 
+def writeTask3ToInteractionXML(classifications, corpusElements, outputFileName, task3Type):
+    import sys
+    print >> sys.stderr, "Adding task 3 to Interaction XML"
+    try:
+        import xml.etree.cElementTree as ET
+    except ImportError:
+        import cElementTree as ET
+    import cElementTreeUtils as ETUtils
+    
+    assert task3Type == "speculation" or task3Type == "negation"
+    
+    corpusTree = ETUtils.ETFromObj(corpusElements)
+    corpusRoot = corpusTree.getroot()
+    
+    specMap = {}
+    negMap = {}
+    for classification in classifications:
+        assert classification[0][3]["xtype"] == "task3"
+        if classification[0][3]["t3type"] == "speculation":
+            map = specMap
+        else:
+            map = negMap
+        if classification[3] != 1:
+            assert not map.has_key(classification[0][3]["entity"])
+            map[classification[0][3]["entity"]] = True
+    
+    for entity in corpusRoot.getiterator("entity"):
+        if task3Type == "speculation":
+            if specMap.has_key(entity.get("id")):
+                entity.set("speculation", "True")
+            else:
+                entity.set("speculation", "False")
+        elif task3Type == "negation":
+            if negMap.has_key(entity.get("id")):
+                entity.set("negation", "True")
+            else:
+                entity.set("negation", "False")
+    
+    ETUtils.write(corpusRoot, outputFileName)
+
 def writeToInteractionXML(classifications, corpusElements, outputFile, classSet=None, parse=None, tokenization=None):
     import sys
     print >> sys.stderr, "Writing output to Interaction XML"
