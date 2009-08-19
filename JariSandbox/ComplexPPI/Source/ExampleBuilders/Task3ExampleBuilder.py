@@ -7,6 +7,16 @@ from Core.IdSet import IdSet
 import Core.ExampleUtils as ExampleUtils
 from Core.Gazetteer import Gazetteer
 
+def readWords(filename):
+    f = open(filename)
+    words = set()
+    for line in f.readlines():
+        words.add(line.strip())
+    stems = set()
+    for word in words:
+        stems.add(PorterStemmer.stem(word))
+    return words, stems
+
 def compareDependencyEdgesById(dep1, dep2):
     """
     Dependency edges are sorted, so that the program behaves consistently
@@ -28,6 +38,11 @@ class Task3ExampleBuilder(ExampleBuilder):
         assert( classSet.getId("neg") == 1 )
         if featureSet == None:
             featureSet = IdSet()
+            
+        self.specWords, self.specWordStems = readWords("/usr/share/biotext/GeniaChallenge/extension-data/genia/task3/speculation-words.txt") 
+        #print self.specWords
+        #print self.specWordStems
+        #sys.exit()
         
         ExampleBuilder.__init__(self, classSet, featureSet)
         #gazetteerFileName="/usr/share/biotext/GeniaChallenge/SharedTaskTriggerTest/gazetteer-train"
@@ -83,6 +98,14 @@ class Task3ExampleBuilder(ExampleBuilder):
         features = {}
         features["_txt_"+tokTxt]=1
         features["_POS_"+token.get("POS")]=1
+        if "speculation" in self.styles: 
+            if tokTxt in self.specWords:
+                features["_spec"]=1
+                features["_spec_"+tokTxt]=1
+            tokStem = PorterStemmer.stem(tokTxt)
+            if tokStem in self.specWordStems:
+                features["_spec_stem"]=1
+                features["_spec_stem_"+tokStem]=1
         if sentenceGraph.tokenIsName[token]:
             features["_isName"]=1
             for entity in sentenceGraph.tokenIsEntityHead[token]:
@@ -139,7 +162,14 @@ class Task3ExampleBuilder(ExampleBuilder):
                 if not bagOfWords.has_key(text):
                     bagOfWords[text] = 0
                 bagOfWords[text] += 1
-                
+            
+            text = token.get("text")
+            if "speculation" in self.styles and text in self.specWords:
+                if not bagOfWords.has_key("spec_bow_"+text):
+                    bagOfWords["spec_bow_"+text] = 0
+                bagOfWords["spec_bow_"+text] += 1
+                bagOfWords["spec_sentence"] = 1
+        
         bowFeatures = {}
         for k,v in bagOfWords.iteritems():
             bowFeatures[self.featureSet.getId(k)] = v
@@ -206,6 +236,12 @@ class Task3ExampleBuilder(ExampleBuilder):
             stem = PorterStemmer.stem(text)
             features[self.featureSet.getId("stem_"+stem)] = 1
             features[self.featureSet.getId("nonstem_"+text[len(stem):])] = 1
+            
+            if "speculation" in self.styles:
+                if text in self.specWords:
+                    features[self.featureSet.getId("ent_spec")] = 1
+                if stem in self.specWordStems:
+                    features[self.featureSet.getId("ent_spec_stem")] = 1
             
             # Linear order features
             for i in range(len(sentenceGraph.tokens)):
