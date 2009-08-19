@@ -23,7 +23,7 @@ else: # 123
     #TEST_FILE=CORPUS_DIR+"/test.xml"
     EVERYTHING_FILE=CORPUS_DIR+"/everything123.xml"
     TASK_TAG="-t123"
-task3type = "speculation" #"negation"
+task3type = "negation"
 
 EXAMPLEDIR="/usr/share/biotext/GeniaChallenge/extension-data/genia/task3-examples"
 TRAIN_EXAMPLE_FILE=EXAMPLEDIR+"/"+task3type+"-train-examples-"+PARSE_TOK+TASK_TAG
@@ -33,7 +33,7 @@ EVERYTHING_FILE=EXAMPLEDIR+"/"+task3type+"-everything-examples-"+PARSE_TOK+TASK_
 CLASS_NAMES=EXAMPLEDIR+"/genia-task3-ids.class_names"
 WORKDIR="/usr/share/biotext/GeniaChallenge/extension-data/genia/"+task3type+"-model-"+PARSE_TOK+TASK_TAG
 
-CLASSIFIER_PARAMS="c:0.1,1,10,100,1000,5000,10000,20000,25000,28000,50000,60000,65000,80000,100000,150000"#,1000000"
+CLASSIFIER_PARAMS="c:1000,2000,3000,4000,5000,6000,7000,8000,10000"#,1000000"
 optimizeLoop = True # search for a parameter, or use a predefined one
 
 # These commands will be in the beginning of most pipelines
