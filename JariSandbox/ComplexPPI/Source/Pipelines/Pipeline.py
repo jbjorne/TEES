@@ -21,6 +21,7 @@ from Murska.CSCConnection import CSCConnection
 sys.path.append("../../../../GeniaChallenge/unflattening")
 import prune
 import unflatten
+import preserveTask2
 sys.path.append("../../../../GeniaChallenge/formatConversion")
 from gifxmlToGenia import gifxmlToGenia
 sys.path.append("../../../../GeniaChallenge")

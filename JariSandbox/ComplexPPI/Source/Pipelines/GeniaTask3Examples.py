@@ -15,7 +15,7 @@ elif PARSE_TOK == "split-McClosky":
     CORPUS_DIR="/usr/share/biotext/GeniaChallenge/xml"
 assert(CORPUS_DIR != None)
 
-task = 13#123
+task = 123
 if task == 13:
     TRAIN_FILE=CORPUS_DIR+"/train13.xml"
     DEVEL_FILE=CORPUS_DIR+"/devel13.xml"
@@ -23,15 +23,15 @@ if task == 13:
     EVERYTHING_FILE=CORPUS_DIR+"/everything13.xml"
     TASK_TAG="-t13"
 else: # 123
-    TRAIN_FILE=CORPUS_DIR+"/train123.xml"
-    DEVEL_FILE=CORPUS_DIR+"/devel123.xml"
+    TRAIN_FILE=CORPUS_DIR+"/train-with-duplicates123.xml"
+    DEVEL_FILE=CORPUS_DIR+"/devel-with-duplicates123.xml"
     #TEST_FILE=CORPUS_DIR+"/test.xml"
-    EVERYTHING_FILE=CORPUS_DIR+"/everything123.xml"
+    EVERYTHING_FILE=CORPUS_DIR+"/everything-with-duplicates123.xml"
     TASK_TAG="-t123"
 WORKDIR="/usr/share/biotext/GeniaChallenge/extension-data/genia/task3-examples"
 
 # These commands will be in the beginning of most pipelines
-workdir(WORKDIR, False) # Select a working directory, don't remove existing files
+workdir(WORKDIR, True) # Select a working directory, don't remove existing files
 log() # Start logging into a file in working directory
 print >> sys.stderr, "Task3 example pipeline for parse", PARSE_TOK, "task", task
 

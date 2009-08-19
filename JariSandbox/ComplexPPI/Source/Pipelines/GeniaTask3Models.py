@@ -18,12 +18,12 @@ if task == 13:
     EVERYTHING_FILE=CORPUS_DIR+"/everything13.xml"
     TASK_TAG="-t13"
 else: # 123
-    TRAIN_FILE=CORPUS_DIR+"/train123.xml"
-    DEVEL_FILE=CORPUS_DIR+"/devel123.xml"
+    TRAIN_FILE=CORPUS_DIR+"/train-with-duplicates123.xml"
+    DEVEL_FILE=CORPUS_DIR+"/devel-with-duplicates123.xml"
     #TEST_FILE=CORPUS_DIR+"/test.xml"
-    EVERYTHING_FILE=CORPUS_DIR+"/everything123.xml"
+    EVERYTHING_FILE=CORPUS_DIR+"/everything-with-duplicates123.xml"
     TASK_TAG="-t123"
-task3type = "negation"
+task3type = "speculation"
 
 EXAMPLEDIR="/usr/share/biotext/GeniaChallenge/extension-data/genia/task3-examples"
 TRAIN_EXAMPLE_FILE=EXAMPLEDIR+"/"+task3type+"-train-examples-"+PARSE_TOK+TASK_TAG
@@ -33,7 +33,7 @@ EVERYTHING_FILE=EXAMPLEDIR+"/"+task3type+"-everything-examples-"+PARSE_TOK+TASK_
 CLASS_NAMES=EXAMPLEDIR+"/genia-task3-ids.class_names"
 WORKDIR="/usr/share/biotext/GeniaChallenge/extension-data/genia/"+task3type+"-model-"+PARSE_TOK+TASK_TAG
 
-CLASSIFIER_PARAMS="c:1000,2000,3000,4000,5000,6000,7000,8000,10000"#,1000000"
+CLASSIFIER_PARAMS="c:1000,2000,3000,3500,4000,4500,5000,6000,6500,7000,7500,8000,10000, 12000, 13000, 13500, 14000"#,1000000"
 optimizeLoop = True # search for a parameter, or use a predefined one
 
 # These commands will be in the beginning of most pipelines
