@@ -40,7 +40,7 @@ def extractTask2(inputfile, outputfile, inverse):
                 if entity.get("type") in ["Entity", "neg"]:
                     sentence.remove(entity)
             for interaction in sentence.findall("interaction"):
-                if interaction.get("type") in ["Site","CSite","AtLoc","ToLoc"]:
+                if interaction.get("type") in ["Site","CSite","AtLoc","ToLoc","neg"]:
                     sentence.remove(interaction)
         else:
             for entity in sentence.findall("entity"):
