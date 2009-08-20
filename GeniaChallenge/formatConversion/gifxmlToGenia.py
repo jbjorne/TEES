@@ -239,15 +239,23 @@ def getEvents(document, inputCorpus, outputFile, task=1):
             for site in siteList[:]:
                 siteType = site.get("type")
                 locType = siteType.find("Loc") != -1
-                if locType and (eventType == "Regulation" or eventType == "Gene_expression"):
+#                if locType and (eventType == "Regulation" or eventType == "Gene_expression" or eventType == "Binding"):
+#                    siteList.remove(site)
+#                if siteType == "Site" and eventType == "Transcription":
+#                    siteList.remove(site)
+#                if siteType == "Site" and eventType == "Gene_expression":
+#                    siteList.remove(site)
+#                if siteType == "Site" and eventType == "Cause":
+#                    siteList.remove(site)
+#                if siteType == "CSite" and eventType == "Theme":
+#                    siteList.remove(site)
+#                if siteType == "CSite" and eventType == "Gene_expression":
+#                    siteList.remove(site)
+                if locType and eventType != "Localization":
+                    siteList.remove(site)                
+                if (siteType == "Site" or siteType == "CSite") and eventType not in ["Binding", "Phosphorylation", "Regulation", "Positive_regulation", "Negative_regulation"]:
                     siteList.remove(site)
-                if siteType == "Site" and eventType == "Transcription":
-                    siteList.remove(site)
-                if siteType == "Site" and eventType == "Cause":
-                    siteList.remove(site)
-                if siteType == "CSite" and eventType == "Theme":
-                    siteList.remove(site)
-        
+
         # Replace emtpy site lists with "None", because combine.combine does not work well
         # with empty lists. With None, you get None in the correct places at the combinations    
         for i in range(len(sites)):
@@ -321,6 +329,16 @@ def writeEvents(document, inputCorpus, outputFile, events, entityMap, triggerIds
         themeCount = 0
         causeCount = 0
         interactionStrings = set()
+        
+        # detect multiple themes
+        precalculatedThemeCount = 0
+        for interactionTuple in events[key]:
+            interaction = interactionTuple[0]
+            type = interaction.get("type")
+            assert(type=="Theme" or type=="Cause")
+            if type == "Theme":
+                precalculatedThemeCount += 1
+        
         for interactionTuple in events[key]:
             interaction = interactionTuple[0]
             site = interactionTuple[1]
@@ -345,10 +363,10 @@ def writeEvents(document, inputCorpus, outputFile, events, entityMap, triggerIds
             # Look out for duplicates, and add numbering as needed
             interactionString = interaction.get("type") + ":" + e2Id
             if interactionString not in interactionStrings:
-                if type == "Theme" and themeCount > 0:
+                if type == "Theme" and precalculatedThemeCount > 1:
                     outputLine += " " + interaction.get("type") + str(themeCount+1) + ":" + e2Id
                     if site != None:
-                        siteLine += " " + siteType + str(themeCount) + ":" + triggerIds[site.get("e1")]
+                        siteLine += " " + siteType + str(themeCount+1) + ":" + triggerIds[site.get("e1")]
                 else:
                     outputLine += " " + interactionString
                     if site != None:
@@ -357,7 +375,7 @@ def writeEvents(document, inputCorpus, outputFile, events, entityMap, triggerIds
             
             if type == "Theme":
                 themeCount += 1
-            else:
+            elif type == "Cause":
                 causeCount += 1
         assert( not(causeCount == 0 and themeCount == 0) )
         assert( not(causeCount > 0 and themeCount == 0) )
