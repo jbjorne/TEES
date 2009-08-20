@@ -96,10 +96,7 @@ def evaluate(sourceDir, task=1, folds=-1, foldToRemove=-1):
     commands = "export PATH=$PATH:./ ; "
     commands += "perl prepare-eval.pl " + sourceSubsetDir + " " + tempDir + " ; "
     commands += "a2-evaluate.pl -g " + goldDir + " " + tempDir
-    if task == 1:
-        commands += "/*.t1"
-    else:
-        commands += "/*.t12"
+    commands += "/*.t" + str(task)
     p = subprocess.Popen(commands, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     printLines(p.stderr.readlines())
     print >> sys.stderr, "##### strict evaluation mode #####"
@@ -110,10 +107,7 @@ def evaluate(sourceDir, task=1, folds=-1, foldToRemove=-1):
     print >> sys.stderr, "##### approximate span and recursive mode #####"
     commands = "export PATH=$PATH:./ ; "
     commands += "a2-evaluate.pl -g " + goldDir + " -sp " + tempDir
-    if task == 1:
-        commands += "/*.t1"
-    else:
-        commands += "/*.t12"
+    commands += "/*.t" + str(task)
     p = subprocess.Popen(commands, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     printLines(p.stderr.readlines())
     stdoutLines = p.stdout.readlines()
@@ -123,10 +117,7 @@ def evaluate(sourceDir, task=1, folds=-1, foldToRemove=-1):
     print >> sys.stderr, "##### event decomposition in the approximate span mode #####"
     commands = "export PATH=$PATH:./ ; "
     commands += "a2-evaluate.pl -g " + goldDir + " -sp " + tempDir
-    if task == 1:
-        commands += "/*.t1d"
-    else:
-        commands += "/*.t12d"
+    commands += "/*.t" + str(task) + "d"
     p = subprocess.Popen(commands, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     printLines(p.stderr.readlines())
     stdoutLines = p.stdout.readlines()
@@ -153,7 +144,7 @@ if __name__=="__main__":
     optparser.add_option("-v", "--variance", default=0, type="int", dest="variance", help="variance folds")
     (options, args) = optparser.parse_args()
     assert(options.input != None)
-    assert(options.task == 1 or options.task == 2)
+    assert(options.task in [1,12,13,123])
     
     if options.variance == 0:
         evaluate(options.input, options.task)
