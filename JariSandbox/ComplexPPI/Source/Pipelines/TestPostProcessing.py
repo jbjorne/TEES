@@ -49,3 +49,12 @@ evaluateSharedTask("new-post-process-geniaformat", 1)
 
 # Compare outputs and make sure approx span & approx recursive f-score
 # is higher for the new post-processing!!!
+
+
+# evaluation
+
+# BEG.scripts.pipeline.interface(['-c', '/usr/share/biotext/GeniaChallenge/BEG/cmds/bionlp09.evaluate.cmds',
+#                                 '--predicted=XXX',
+#                                 '--correct=YYY',
+#                                 '--root=Event]) # for shared task!
+#                                 '--root=universal]) # for bioinfer!
