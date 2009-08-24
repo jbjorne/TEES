@@ -23,19 +23,18 @@ else: # 123
     #TEST_FILE=CORPUS_DIR+"/test.xml"
     EVERYTHING_FILE=CORPUS_DIR+"/everything-with-duplicates123.xml"
     TASK_TAG="-t123"
-task3type = "speculation"
 
 EXAMPLEDIR="/usr/share/biotext/GeniaChallenge/extension-data/genia/task3-examples"
 SPEC_TRAIN_EXAMPLE_FILE=EXAMPLEDIR+"/speculation-train-examples-"+PARSE_TOK+TASK_TAG
 SPEC_DEVEL_EXAMPLE_FILE=EXAMPLEDIR+"/speculation-devel-examples-"+PARSE_TOK+TASK_TAG
 SPEC_TEST_EXAMPLE_FILE=EXAMPLEDIR+"/speculation-test-examples-"+PARSE_TOK+TASK_TAG
-SPEC_EVERYTHING_FILE=EXAMPLEDIR+"/speculation-everything-examples-"+PARSE_TOK+TASK_TAG
+SPEC_EVERYTHING_EXAMPLE_FILE=EXAMPLEDIR+"/speculation-everything-examples-"+PARSE_TOK+TASK_TAG
 NEG_TRAIN_EXAMPLE_FILE=EXAMPLEDIR+"/negation-train-examples-"+PARSE_TOK+TASK_TAG
 NEG_DEVEL_EXAMPLE_FILE=EXAMPLEDIR+"/negation-devel-examples-"+PARSE_TOK+TASK_TAG
 NEG_TEST_EXAMPLE_FILE=EXAMPLEDIR+"/negation-test-examples-"+PARSE_TOK+TASK_TAG
-NEG_EVERYTHING_FILE=EXAMPLEDIR+"/negation-everything-examples-"+PARSE_TOK+TASK_TAG
+NEG_EVERYTHING_EXAMPLE_FILE=EXAMPLEDIR+"/negation-everything-examples-"+PARSE_TOK+TASK_TAG
 CLASS_NAMES=EXAMPLEDIR+"/genia-task3-ids.class_names"
-WORKDIR="/usr/share/biotext/GeniaChallenge/extension-data/genia/task3-devel-"+PARSE_TOK+TASK_TAG
+WORKDIR="/usr/share/biotext/GeniaChallenge/extension-data/genia/final-task3-test-"+PARSE_TOK+TASK_TAG
 
 optimizeLoop = True # search for a parameter, or use a predefined one
 
@@ -44,8 +43,7 @@ workdir(WORKDIR, False) # Select a working directory, don't remove existing file
 log() # Start logging into a file in working directory
 #copyIdSetsToWorkdir(EXAMPLEDIR+"/genia-task3-ids")
 #
-##SOURCE_XML_FILE="/usr/share/biotext/GeniaChallenge/extension-data/genia/test-set-split-McClosky-develDebug/test-predicted-edges.xml"
-SOURCE_XML_FILE="/usr/share/biotext/GeniaChallenge/extension-data/genia/devel-set-split-McClosky-task2/final.xml"
+#SOURCE_XML_FILE="/usr/share/biotext/GeniaChallenge/extension-data/genia/final-test-set-split-McClosky-task2/final.xml"
 ##SOURCE_GOLD_XML_FILE=CORPUS_DIR+"/devel12.xml"
 #
 ################################################################################
@@ -54,25 +52,24 @@ SOURCE_XML_FILE="/usr/share/biotext/GeniaChallenge/extension-data/genia/devel-se
 ## Speculation
 #Task3ExampleBuilder.run(SOURCE_XML_FILE, "speculation-examples", PARSE_TOK, PARSE_TOK, "style:typed,speculation", "genia-task3-ids")
 #if optimizeLoop: # search for the best c-parameter
-#    c = CSCConnection("extension-data/genia/devel-speculation-model2-"+PARSE_TOK+TASK_TAG, "jakrbj@murska.csc.fi")
-#    best = optimize(Cls, Ev, SPEC_TRAIN_EXAMPLE_FILE, "speculation-examples",\
+#    c = CSCConnection("extension-data/genia/final-test-speculation-model-"+PARSE_TOK+TASK_TAG, "jakrbj@murska.csc.fi")
+#    best = optimize(Cls, Ev, SPEC_EVERYTHING_EXAMPLE_FILE, "speculation-examples",\
 #        CLASS_NAMES, "c:13000", "speculation-param-opt", None, c)
 #    evaluator = best[0]
 #ExampleUtils.writeTask3ToInteractionXML(evaluator.classifications, SOURCE_XML_FILE, "task3-only-speculation.xml", "speculation")
 #
 ## Negation
-##Task3ExampleBuilder.run(SOURCE_XML_FILE, "negation-examples", PARSE_TOK, PARSE_TOK, "style:typed,negation", "genia-task3-ids")
+#Task3ExampleBuilder.run(SOURCE_XML_FILE, "negation-examples", PARSE_TOK, PARSE_TOK, "style:typed,negation", "genia-task3-ids")
 #if optimizeLoop: # search for the best c-parameter
-#    c = CSCConnection("extension-data/genia/devel-negation-model2-"+PARSE_TOK+TASK_TAG, "jakrbj@murska.csc.fi")
-#    best = optimize(Cls, Ev, NEG_TRAIN_EXAMPLE_FILE, "negation-examples",\
+#    c = CSCConnection("extension-data/genia/final-test-negation-model-"+PARSE_TOK+TASK_TAG, "jakrbj@murska.csc.fi")
+#    best = optimize(Cls, Ev, NEG_EVERYTHING_EXAMPLE_FILE, "negation-examples",\
 #        CLASS_NAMES, "c:10000", "negation-param-opt", None, c)
 #    evaluator = best[0]
 #ExampleUtils.writeTask3ToInteractionXML(evaluator.classifications, "task3-only-speculation.xml", "task3.xml", "negation")
 ##
 ###EvaluateInteractionXML.run(Ev, "task3.xml", SOURCE_GOLD_XML_FILE, PARSE_TOK, PARSE_TOK)
-print "Old:"
-evaluateSharedTask("geniaformat", 123)
-print "New:"
+#gifxmlToGenia("task3.xml", "geniaformat", 3)
+#evaluateSharedTask("geniaformat", 3)
+
 gifxmlToGenia("task3.xml", "geniaformat-new", 3)
-evaluateSharedTask("geniaformat-new", 123)
 

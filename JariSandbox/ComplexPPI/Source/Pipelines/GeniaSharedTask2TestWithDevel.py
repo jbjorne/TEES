@@ -117,5 +117,8 @@ print >> sys.stderr, "Edge params", EDGE_CLASSIFIER_PARAMS
 #preserveTask2.run("unflattened.xml", "final.xml", "t2.xml", "insert")
 # Output will be stored to the geniaformat-subdirectory, where will also be a
 # tar.gz-file which can be sent to the Shared Task evaluation server.
-gifxmlToGenia("final.xml", "geniaformat-base", 2)
-evaluateSharedTask("geniaformat-base", 2)
+print "Old:"
+evaluateSharedTask("geniaformat-base", 12)
+print "New:"
+gifxmlToGenia("final.xml", "geniaformat-new", 2)
+evaluateSharedTask("geniaformat-new", 12)

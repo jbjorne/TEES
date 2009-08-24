@@ -88,28 +88,28 @@ log() # Start logging into a file in working directory
 ################################################################################
 ## Edges
 ################################################################################
-#boostedTriggerFile = "test-predicted-triggers-boost.xml"
+boostedTriggerFile = "test-predicted-triggers-boost.xml"
 #RecallAdjust.run("test-predicted-triggers.xml", RECALL_BOOST_PARAM, boostedTriggerFile)
 #ix.splitMergedElements(boostedTriggerFile, boostedTriggerFile)
 #ix.recalculateIds(boostedTriggerFile, boostedTriggerFile, True)
 ## Build edge examples
 #MultiEdgeExampleBuilder.run(boostedTriggerFile, "devel-edge-examples", PARSE_TOK, PARSE_TOK, EDGE_FEATURE_PARAMS, EDGE_IDS)
 # Classify with pre-defined model
-c = CSCConnection(EXPERIMENT_NAME+"/edge-model", "jakrbj@louhi.csc.fi")
-best = optimize(Cls, Ev, EDGE_EVERYTHING_EXAMPLE_FILE, "devel-edge-examples",\
-    EDGE_IDS+".class_names", EDGE_CLASSIFIER_PARAMS, "test-edge-param-opt", None, c)
-# The evaluator is needed to access the classifications (will be fixed later)
-evaluator = best[0]
-# Write to interaction xml
+#c = CSCConnection(EXPERIMENT_NAME+"/edge-model", "jakrbj@louhi.csc.fi")
+#best = optimize(Cls, Ev, EDGE_EVERYTHING_EXAMPLE_FILE, "devel-edge-examples",\
+#    EDGE_IDS+".class_names", EDGE_CLASSIFIER_PARAMS, "test-edge-param-opt", None, c)
+## The evaluator is needed to access the classifications (will be fixed later)
+#evaluator = best[0]
+## Write to interaction xml
 xmlFilename = "test-predicted-edges.xml"
-ExampleUtils.writeToInteractionXML(evaluator.classifications, boostedTriggerFile, xmlFilename, "genia-edge-ids.class_names", PARSE_TOK, PARSE_TOK)
-ix.splitMergedElements(xmlFilename, xmlFilename)
-ix.recalculateIds(xmlFilename, xmlFilename, True)
-# EvaluateInteractionXML differs from the previous evaluations in that it can
-# be used to compare two separate GifXML-files. One of these is the gold file,
-# against which the other is evaluated by heuristically matching triggers and
-# edges. Note that this evaluation will differ somewhat from the previous ones,
-# which evaluate on the level of examples.
+#ExampleUtils.writeToInteractionXML(evaluator.classifications, boostedTriggerFile, xmlFilename, "genia-edge-ids.class_names", PARSE_TOK, PARSE_TOK)
+#ix.splitMergedElements(xmlFilename, xmlFilename)
+#ix.recalculateIds(xmlFilename, xmlFilename, True)
+## EvaluateInteractionXML differs from the previous evaluations in that it can
+## be used to compare two separate GifXML-files. One of these is the gold file,
+## against which the other is evaluated by heuristically matching triggers and
+## edges. Note that this evaluation will differ somewhat from the previous ones,
+## which evaluate on the level of examples.
 EvaluateInteractionXML.run(Ev, xmlFilename, TEST_FILE, PARSE_TOK, PARSE_TOK)
 # Post-processing
 preserveTask2.run(xmlFilename, "t2.xml", "no-t2.xml", "extract")
