@@ -9,6 +9,7 @@ from FeatureBuilders.TokenFeatureBuilder import TokenFeatureBuilder
 from FeatureBuilders.BioInferOntologyFeatureBuilder import BioInferOntologyFeatureBuilder
 from FeatureBuilders.NodalidaFeatureBuilder import NodalidaFeatureBuilder
 import networkx as NX
+import Utils.BioInfer.OntologyUtils as OntologyUtils
 
 class MultiEdgeExampleBuilder(ExampleBuilder):
     def __init__(self, style=["typed","directed","headsOnly"], length=None, types=[], featureSet=None, classSet=None):
@@ -38,6 +39,9 @@ class MultiEdgeExampleBuilder(ExampleBuilder):
             self.multiEdgeFeatureBuilder.ontologyFeatureBuilder = BioInferOntologyFeatureBuilder(self.featureSet)
         if "nodalida" in self.styles:
             self.nodalidaFeatureBuilder = NodalidaFeatureBuilder(self.featureSet)
+        if "bioinfer_limits" in self.styles:
+            self.bioinferOntologies = OntologyUtils.getBioInferTempOntology()
+            #self.bioinferOntologies = OntologyUtils.loadOntologies(OntologyUtils.g_bioInferFileName)
         self.pathLengths = length
         assert(self.pathLengths == None)
         self.types = types
@@ -131,6 +135,40 @@ class MultiEdgeExampleBuilder(ExampleBuilder):
             return False
         else:
             return True
+    
+    def getBioInferParentType(self, eType):
+        if eType == "Physical_entity" or OntologyUtils.hasParent(eType, "Physical_entity", self.bioinferOntologies):
+            return "Physical"
+        elif eType == "Property_entity" or OntologyUtils.hasParent(eType, "Property_entity", self.bioinferOntologies):
+            return "Property"
+        elif OntologyUtils.hasParent(eType, "Relationship", self.bioinferOntologies):
+            return "Process"
+        else:
+            assert False, eType
+        
+#        if self.bioinferOntologies["Entity"].has_key(eType):
+#            if OntologyUtils.hasParent(eType, "Physical_entity", self.bioinferOntologies):
+#                assert not OntologyUtils.hasParent(eType, "Property_entity", self.bioinferOntologies), eType
+#                return "Physical"
+#            else:
+#                assert OntologyUtils.hasParent(eType, "Property_entity", self.bioinferOntologies), eType
+#                return "Property"
+#                
+#        else:
+#            assert self.bioinferOntologies.has_key(eType), eType
+#            #assert OntologyUtils.hasParent(eType, "Process_entity", self.bioinferOntologies["Relationship"]), eType
+#            return "Process"
+    
+    def isPotentialBioInferInteraction(self, e1, e2, categoryName):
+        e1Type = self.getBioInferParentType(e1.get("type"))
+        e2Type = self.getBioInferParentType(e2.get("type"))
+        if e1Type == "Process" or e1Type == "Property":
+            return True
+        elif e1Type == "Physical" and e2Type == "Physical":
+            return True
+        else:
+            assert(categoryName == "neg"), categoryName + " category for " + e1Type + " and " + e2Type
+            return False
                         
     def buildExamples(self, sentenceGraph):
         examples = []
@@ -179,7 +217,13 @@ class MultiEdgeExampleBuilder(ExampleBuilder):
                         categoryName = self.getCategoryName(sentenceGraph, eJ, eI, True)
                     else:
                         categoryName = self.getCategoryNameFromTokens(sentenceGraph, tJ, tI, True)
-                    if (not "genia_limits" in self.styles) or self.isPotentialGeniaInteraction(eJ, eI):
+                    
+                    makeExample = True
+                    if ("genia_limits" in self.styles) and not self.isPotentialGeniaInteraction(eJ, eI):
+                        makeExample = False
+                    if ("bioinfer_limits" in self.styles) and not self.isPotentialBioInferInteraction(eJ, eI, categoryName):
+                        makeExample = False
+                    if makeExample:
                         examples.append( self.buildExample(tJ, tI, paths, sentenceGraph, categoryName, exampleIndex, eJ, eI) )
                         exampleIndex += 1
                 else:
