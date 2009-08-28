@@ -33,9 +33,9 @@ def workdir(path, deleteIfExists=True):
         if deleteIfExists:
             print >> sys.stderr, "Output directory exists, removing", path
             shutil.rmtree(path)
-            os.mkdir(path)
+            os.makedirs(path)
     else:
-        os.mkdir(path)
+        os.makedirs(path)
     origDir = os.getcwd()
     os.chdir(path)
     atexit.register(os.chdir, origDir)
