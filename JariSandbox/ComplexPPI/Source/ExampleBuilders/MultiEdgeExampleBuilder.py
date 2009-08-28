@@ -166,6 +166,8 @@ class MultiEdgeExampleBuilder(ExampleBuilder):
             return True
         elif e1Type == "Physical" and e2Type == "Physical":
             return True
+        elif e1Type == "Physical" and e2Type == "Process": # hack
+            return True
         else:
             assert(categoryName == "neg"), categoryName + " category for " + e1Type + " and " + e2Type
             return False
