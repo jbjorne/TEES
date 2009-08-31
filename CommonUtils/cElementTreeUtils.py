@@ -15,7 +15,7 @@ try:
 except ImportError:
     import xml.etree.cElementTree as ElementTree
 
-import gzip
+from gzip import GzipFile
 
 def iterparse(file, elementName, callback, limit = -1):
     """ Parse iteratively xml-files
@@ -91,12 +91,16 @@ def ETFromObj(obj):
         #not a string, not a tree, not an element, should be a stream
         #let's parse it
         return ElementTree.parse(obj)
-            
-        
 
-def write(rootElement, filename):        
+def write(rootElement, filename):
     indent(rootElement)
-    ElementTree.ElementTree(rootElement).write(filename)
+    if filename.endswith(".gz"):
+        out=GzipFile(filename,"wt")
+    else:
+        out=open(filename,"wt")
+    print >> out, '<?xml version="1.0" encoding="UTF-8"?>'
+    ElementTree.ElementTree(rootElement).write(out,"utf-8")
+    out.close()
 
 def writeUTF8(rootElement,out):
     indent(rootElement)
@@ -108,3 +112,9 @@ def writeUTF8(rootElement,out):
     else:
         print >> out, '<?xml version="1.0" encoding="UTF-8"?>'
         ElementTree.ElementTree(rootElement).write(out,"utf-8")
+
+if __name__=="__main__":
+    r=ElementTree.parse("delme.xml").getroot()
+    write(r,"delme1.xml.gz")
+    r2=ETFromObj("delme1.xml.gz").getroot()
+    write(r2,"delme2.xml.gz")
