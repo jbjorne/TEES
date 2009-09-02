@@ -183,5 +183,5 @@ class BinaryEvaluator(Evaluator.Evaluator):
             dict["AUC"] = self.AUC
         else:
             dict["AUC"] = "N/A"
-        return [dict]
+        return dict
     
