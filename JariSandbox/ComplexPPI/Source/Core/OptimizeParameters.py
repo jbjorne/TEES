@@ -136,7 +136,7 @@ def optimizeCSC(Classifier, Evaluator, trainExamples, testExamples, classIds, co
                 evaluationOutput = os.path.join(workDir, evaluationOutput)
             evaluator = Evaluator.evaluate(testExamples, predictions, classIds, evaluationOutput)
             if bestResult == None or evaluator.compare(bestResult[0]) > 0: #: averageResult.fScore > bestResult[1].fScore:
-                bestResult = [evaluator, None, None, evaluationOutput, id]
+                bestResult = [evaluator, None, predictions, evaluationOutput, id]
     Stream.setIndent()
     print >> sys.stderr, "Selected parameters", bestResult[-1]
     Classifier.downloadModel(bestResult[-1], cscConnection, workDir)
