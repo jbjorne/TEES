@@ -1,4 +1,6 @@
 from SentenceElements import *
+import types
+import cElementTreeUtils as ETUtils
 
 def loadCorpus(filename, parse=None, tokenization=None, removeIntersentenceInteractions=True):
     try:
@@ -7,17 +9,15 @@ def loadCorpus(filename, parse=None, tokenization=None, removeIntersentenceInter
         import cElementTree as ET
     import sys, gzip
     
-    print >> sys.stderr, "Loading corpus file", filename
-    if filename.rsplit(".",1)[-1] == "gz":
-        import gzip
-        corpusTree = ET.parse(gzip.open(filename))
-    else:
-        corpusTree = ET.parse(filename)
+    if type(filename) == types.StringType:
+        print >> sys.stderr, "Loading corpus file", filename
+    corpusTree = ETUtils.ETFromObj(filename)
     corpusRoot = corpusTree.getroot()
-    return CorpusElements(corpusRoot, parse, tokenization, removeIntersentenceInteractions)
+    return CorpusElements(corpusRoot, parse, tokenization, removeIntersentenceInteractions, corpusTree)
 
 class CorpusElements:
-    def __init__(self, rootElement, parse, tokenization=None, removeIntersentenceInteractions=True):
+    def __init__(self, rootElement, parse, tokenization=None, removeIntersentenceInteractions=True, tree=None):
+        self.tree = tree
         self.rootElement = rootElement
         self.documents = rootElement.findall("document")
         self.documentsById = {}
