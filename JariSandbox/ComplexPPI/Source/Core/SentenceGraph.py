@@ -21,7 +21,7 @@ def loadCorpus(corpus, parse, tokenization=None):
     corpusTree = ETUtils.ETFromObj(corpus)
     corpusRoot = corpusTree.getroot()
     # Use CorpusElements-class to access xml-tree
-    corpusElements = CorpusElements(corpusRoot, parse, tokenization)
+    corpusElements = CorpusElements(corpusRoot, parse, tokenization, tree=corpusTree)
     print >> sys.stderr, str(len(corpusElements.documentsById)) + " documents, " + str(len(corpusElements.sentencesById)) + " sentences"
     # Make sentence graphs
     duplicateInteractionEdgesRemoved = 0
