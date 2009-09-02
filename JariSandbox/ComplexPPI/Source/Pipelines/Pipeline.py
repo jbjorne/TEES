@@ -27,6 +27,7 @@ from gifxmlToGenia import gifxmlToGenia
 sys.path.append("../../../../GeniaChallenge")
 import evaluation.EvaluateSharedTask
 evaluateSharedTask = evaluation.EvaluateSharedTask.evaluate
+from cElementTreeUtils import write as writeXML
 
 def workdir(path, deleteIfExists=True):
     if os.path.exists(path):
