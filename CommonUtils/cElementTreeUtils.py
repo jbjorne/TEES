@@ -93,6 +93,8 @@ def ETFromObj(obj):
         return ElementTree.parse(obj)
 
 def write(rootElement, filename):
+    if isinstance(rootElement,ElementTree.ElementTree):
+        rootElement = rootElement.getroot()
     indent(rootElement)
     if filename.endswith(".gz"):
         out=GzipFile(filename,"wt")
