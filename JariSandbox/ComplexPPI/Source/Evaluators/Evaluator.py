@@ -34,6 +34,86 @@ class Evaluator:
                 d["fold"] = fold
         TableUtils.addToCSV(dicts, filename, g_evaluatorFieldnames)
 
+class EvaluationData:
+    def __init__(self):
+        self._tp = 0
+        self._fp = 0
+        self._tn = 0
+        self._fn = 0
+        self.resetStats()
+    
+    def resetStats(self):
+        self.fscore = None
+        self.precision = None
+        self.recall = None
+        
+    def addTP(self):
+        self.resetStats()
+        self._tp += 1
+
+    def addFP(self):
+        self.resetStats()
+        self._fp += 1
+    
+    def addTN(self):
+        self.resetStats()
+        self._tn += 1
+    
+    def addFN(self):
+        self.resetStats()
+        self._fn += 1
+    
+    def getTP(self): return self._tp
+    def getFP(self): return self._fp
+    def getTN(self): return self._tn
+    def getFN(self): return self._fn
+    
+    def getNumInstances(self):
+        return self._tp + self._fp + self._tn + self._fn
+    
+    def calculateFScore(self):
+        if self._tp + self._fp > 0:
+            self.precision = float(self._tp) / float(self._tp + self._fp)
+        else:
+            self.precision = 0.0
+        if self._tp + self._fn > 0:
+            self.recall = float(self._tp) / float(self._tp + self._fn)
+        else:
+            self.recall = 0.0
+        if self.precision + self.recall > 0.0:
+            self.fscore = (2*self.precision*self.recall) / (self.precision + self.recall)
+        else:
+            self.fscore = "N/A"
+    
+    def prfToString(self):
+        if self.fscore != "N/A":
+            return "p/r/f:" + str(self.precision)[0:6] + "/" + str(self.recall)[0:6] + "/" + str(self.fscore)[0:6]
+        else:
+            return "p/r/f:N/A"
+    
+    def pnToString(self):
+        return "p/n:" + str(self._tp+self._fn) + "/" + str(self._tn+self._fp)
+    
+    def instanceCountsToString(self):
+        return "tp/fp|tn/fn:" + str(self._tp) + "/" + str(self._fp) + "|" + str(self._tn) + "/" + str(self._fn)
+    
+    def toStringConcise(self):
+        return self.pnToString() + " " + self.instanceCountsToString() + " " + self.prfToString()
+
+    def toDict(self):
+        values = {}        
+        values["positives"] = self._tp+self._fn
+        values["negatives"] = self._tn+self._fp
+        values["true positives"] = self._tp
+        values["false positives"] = self._fp
+        values["true negatives"] = self._tn
+        values["false negatives"] = self._fn
+        values["precision"] = self.precision
+        values["recall"] = self.recall
+        values["f-score"] = self.fscore
+        values["AUC"] = "N/A"
+        return values
+
 def calculateFromCSV(rows, EvaluatorClass, classSet=None):
     if EvaluatorClass().type == "multiclass" and classSet == None:
         classSet = getClassSet(rows)
