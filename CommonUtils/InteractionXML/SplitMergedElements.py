@@ -61,14 +61,10 @@ def processSentence(sentence, countsByType):
     splitMerged(sentence, "interaction", countsByType)
     splitMerged(sentence, "pair", countsByType)
 
-def splitMergedElements(inputFilename, outputFilename):
+def splitMergedElements(inputFilename, outputFilename=None):
     print >> sys.stderr, "##### Split elements with merged types #####"
-    print >> sys.stderr, "Loading corpus file", inputFilename
-    if inputFilename.rsplit(".",1)[-1] == "gz":
-        import gzip
-        corpusTree = ET.parse(gzip.open(inputFilename))
-    else:
-        corpusTree = ET.parse(inputFilename)
+    print >> sys.stderr, "Loading corpus", inputFilename
+    corpusTree = ETUtils.ETFromObj(inputFilename)
     corpusRoot = corpusTree.getroot()
     
     documents = corpusRoot.findall("document")
@@ -82,8 +78,10 @@ def splitMergedElements(inputFilename, outputFilename):
     for k in sorted(countsByType.keys()):
         print >> sys.stderr, "  " + k + ": removed", countsByType[k][0], "created", countsByType[k][1]
     
-    print >> sys.stderr, "Writing output to", outputFilename
-    ETUtils.write(corpusRoot, outputFilename)
+    if outputFilename != None:
+        print >> sys.stderr, "Writing output to", outputFilename
+        ETUtils.write(corpusRoot, outputFilename)
+    return corpusTree
 
 if __name__=="__main__":
     import sys

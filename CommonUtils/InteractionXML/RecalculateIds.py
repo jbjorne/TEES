@@ -5,10 +5,10 @@ except ImportError:
     import cElementTree as ET
 import cElementTreeUtils as ETUtils
 
-def recalculateIds(input, output, onlyWithinSentence=False):
+def recalculateIds(input, output=None, onlyWithinSentence=False):
     print >> sys.stderr, "##### Recalculate hierarchical interaction XML ids #####"
-    print >> sys.stderr, "Loading corpus file", input
-    corpusTree = ET.parse(input)
+    print >> sys.stderr, "Loading corpus", input
+    corpusTree = ETUtils.ETFromObj(input)
     print >> sys.stderr, "Corpus file loaded"
     corpusRoot = corpusTree.getroot()
 
@@ -69,8 +69,10 @@ def recalculateIds(input, output, onlyWithinSentence=False):
             sentIndex += 1
         docIndex += 1
     
-    print >> sys.stderr, "Writing output to", output
-    ETUtils.write(corpusRoot, output)
+    if output != None:
+        print >> sys.stderr, "Writing output to", output
+        ETUtils.write(corpusRoot, output)
+    return corpusTree
 
 if __name__=="__main__":
     import sys
