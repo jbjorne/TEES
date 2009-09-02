@@ -10,14 +10,15 @@ FULL_TRAIN_FILE="/usr/share/biotext/GeniaChallenge/xml/train.xml"
 TRAIN_FILE="/usr/share/biotext/GeniaChallenge/xml/train-mini.xml"
 TEST_FILE="/usr/share/biotext/GeniaChallenge/xml/devel-mini.xml"
 GOLD_TEST_FILE="/usr/share/biotext/GeniaChallenge/xml/devel-mini.xml"
-CLASSIFIER_PARAMS="c:1000,10000,100000"
+TRIGGER_CLASSIFIER_PARAMS="c:300000"
+EDGE_CLASSIFIER_PARAMS="c:28000"
 optimizeLoop = True # search for a parameter, or use a predefined one
 WORKDIR="/usr/share/biotext/GeniaChallenge/MiniSharedTask"
-PARSE_TOK="split-Charniak-Lease"
+PARSE_TOK="split-McClosky"
 
 # These commands will be in the beginning of most pipelines
 workdir(WORKDIR, False) # Select a working directory, don't remove existing files
-log() # Start logging into a file in working directory
+#log() # Start logging into a file in working directory
 
 ###############################################################################
 # Trigger detection
@@ -26,7 +27,7 @@ log() # Start logging into a file in working directory
 # reduce performance. The gazetteer is built from the full training file,
 # even though the mini-sets are used in the slower parts of this demonstration
 # pipeline.
-Gazetteer.run(FULL_TRAIN_FILE, "gazetteer-train")
+#Gazetteer.run(FULL_TRAIN_FILE, "gazetteer-train", PARSE_TOK)
 # Build an SVM example file for the training corpus.
 # GeneralEntityTypeRecognizerGztr is a version of GeneralEntityTypeRecognizer
 # that can use the gazetteer. The file was split for parallel development, and
@@ -41,25 +42,23 @@ if optimizeLoop: # search for the best c-parameter
     # The optimize-function takes as parameters a Classifier-class, an Evaluator-class
     # and input and output files
     best = optimize(Cls, Ev, "trigger-train-examples", "trigger-test-examples",\
-        "ids.class_names", CLASSIFIER_PARAMS, "trigger-param-opt")
-    # The evaluator is needed to access the classifications (will be fixed later)
-    evaluator = best[0]
+        "ids.class_names", TRIGGER_CLASSIFIER_PARAMS, "trigger-param-opt")
 else: # alternatively, use a single parameter (must have only one c-parameter)
     # Train the classifier, and store output into a model file
-    Cls.train("trigger-train-examples", CLASSIFIER_PARAMS, "trigger-model")
+    Cls.train("trigger-train-examples", TRIGGER_CLASSIFIER_PARAMS, "trigger-model")
     # Use the generated model to classify examples
     Cls.test("trigger-test-examples", "trigger-model", "trigger-test-classifications")
     # The evaluator is needed to access the classifications (will be fixed later)
-    evaluator = Ev.evaluate("trigger-test-examples", "trigger-test-classifications", "trigger-ids.class_names")
+    Ev.evaluate("trigger-test-examples", "trigger-test-classifications", "trigger-ids.class_names")
 # The classifications are combined with the TEST_FILE xml, to produce
 # an interaction-XML file with predicted triggers
-ExampleUtils.writeToInteractionXML(evaluator.classifications, TEST_FILE, "test-predicted-triggers.xml", "ids.class_names", PARSE_TOK, PARSE_TOK)
+triggerXml = ExampleUtils.writeToInteractionXML("trigger-test-examples", best[2], TEST_FILE, "test-predicted-triggers-output1.xml", "ids.class_names", PARSE_TOK, PARSE_TOK)
 # Overlapping types (could be e.g. "protein---gene") are split into multiple
 # entities
-ix.splitMergedElements("test-predicted-triggers.xml", "test-predicted-triggers.xml")
+ix.splitMergedElements(triggerXml)
 # The hierarchical ids are recalculated, since they might be invalid after
 # the generation and modification steps
-ix.recalculateIds("test-predicted-triggers.xml", "test-predicted-triggers.xml", True)
+ix.recalculateIds(triggerXml, "test-predicted-triggers.xml", True)
 
 ###############################################################################
 # Edge detection
@@ -72,14 +71,14 @@ TEST_FILE = "test-predicted-triggers.xml"
 CLASSIFIER_PARAMS="c:100,500,1000"
 # Build examples, see trigger detection
 MultiEdgeExampleBuilder.run(TRAIN_FILE, "edge-train-examples", PARSE_TOK, PARSE_TOK, EDGE_FEATURE_PARAMS, "ids.edge")
-MultiEdgeExampleBuilder.run(TEST_FILE, "edge-test-examples", PARSE_TOK, PARSE_TOK, EDGE_FEATURE_PARAMS, "ids.edge")
+MultiEdgeExampleBuilder.run(triggerXml, "edge-test-examples", PARSE_TOK, PARSE_TOK, EDGE_FEATURE_PARAMS, "ids.edge")
 # Build an additional set of examples for the gold-standard edge file
 MultiEdgeExampleBuilder.run(GOLD_TEST_FILE, "edge-gold-test-examples", PARSE_TOK, PARSE_TOK, EDGE_FEATURE_PARAMS, "ids.edge")
 # Run the optimization loop. Note that here we must optimize against the gold
 # standard examples, because we do not know real classes of edge examples built between
 # predicted triggers
 best = optimize(Cls, Ev, "edge-train-examples", "edge-gold-test-examples",\
-    "ids.edge.class_names", CLASSIFIER_PARAMS, "edge-param-opt")
+    "ids.edge.class_names", EDGE_CLASSIFIER_PARAMS, "edge-param-opt")
 # Once we have determined the optimal c-parameter (best[1]), we can
 # use it to classify our real examples, i.e. the ones that define potential edges
 # between predicted entities
@@ -87,26 +86,27 @@ Cls.test("edge-test-examples", best[1], "edge-test-classifications")
 # Evaluator is again needed to access classifications, but note that it can't
 # actually evaluate the results, since we don't know the real classes of the edge
 # examples.
-evaluator = Ev.evaluate("edge-test-examples", "edge-test-classifications", "ids.edge.class_names")
+Ev.evaluate("edge-test-examples", "edge-test-classifications", "ids.edge.class_names")
 # Write the predicted edges to an interaction xml which has predicted triggers.
 # This function handles both trigger and edge example classifications
-ExampleUtils.writeToInteractionXML(evaluator.classifications, TEST_FILE, "test-predicted-edges.xml", "ids.edge.class_names", PARSE_TOK, PARSE_TOK)
+edgeXml = ExampleUtils.writeToInteractionXML("edge-test-examples", "edge-test-classifications", triggerXml, None, "ids.edge.class_names", PARSE_TOK, PARSE_TOK)
 # Split overlapping, merged elements (e.g. "Upregulate---Phosphorylate")
-ix.splitMergedElements("test-predicted-edges.xml", "test-predicted-edges.xml")
-# Always remember to fix ids
-ix.recalculateIds("test-predicted-edges.xml", "test-predicted-edges.xml", True)
+ix.splitMergedElements(edgeXml)
+## Always remember to fix ids
+ix.recalculateIds(edgeXml, None, True)
+writeXML(edgeXml, "test-predicted-edges.xml")
 # EvaluateInteractionXML differs from the previous evaluations in that it can
 # be used to compare two separate GifXML-files. One of these is the gold file,
 # against which the other is evaluated by heuristically matching triggers and
 # edges. Note that this evaluation will differ somewhat from the previous ones,
 # which evaluate on the level of examples.
-EvaluateInteractionXML.run(Ev, "test-predicted-edges.xml", GOLD_TEST_FILE, PARSE_TOK, PARSE_TOK)
+EvaluateInteractionXML.run(Ev, edgeXml, GOLD_TEST_FILE, PARSE_TOK, PARSE_TOK)
 
 ###############################################################################
 # Post-processing
 ###############################################################################
 prune.interface(["-i","test-predicted-edges.xml","-o","pruned.xml","-c"])
-unflatten.interface(["-i","pruned.xml","-o","unflattened.xml"])
+unflatten.interface(["-i","pruned.xml","-o","unflattened.xml","-a",PARSE_TOK,"-t",PARSE_TOK])
 # Output will be stored to the geniaformat-subdirectory, where will also be a
 # tar.gz-file which can be sent to the Shared Task evaluation server.
 gifxmlToGenia("unflattened.xml", "geniaformat")

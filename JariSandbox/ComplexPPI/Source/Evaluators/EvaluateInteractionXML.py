@@ -66,6 +66,7 @@ def getElementTypes(element):
 
 # Uses the mapped entities to give predictions for a single sentence
 def getEntityPredictions(entityMap, targetEntities, classSet, negativeClassId):
+    examples = []
     predictions = []
     id = "Unknown.x0"
     for entityFrom, entitiesTo in entityMap.iteritems():
@@ -73,10 +74,14 @@ def getEntityPredictions(entityMap, targetEntities, classSet, negativeClassId):
             continue
         found = False
         for entityTo in entitiesTo:
-            predictions.append( ((id, classSet.getId(entityTo.get("type"))), classSet.getId(entityFrom.get("type")), None, None) )
+            examples.append( [id, classSet.getId(entityTo.get("type")), None, None] )
+            predictions.append( [classSet.getId(entityFrom.get("type"))] )
+            #predictions.append( ((id, classSet.getId(entityTo.get("type"))), classSet.getId(entityFrom.get("type")), None, None) )
             found = True # entitiesTo has at least one item
         if not found: # false positive prediction
-            predictions.append( ((id, negativeClassId), classSet.getId(entityFrom.get("type")), None, None) )
+            examples.append( [id, negativeClassId, None, None] )
+            predictions.append( [classSet.getId(entityFrom.get("type"))] )
+            #predictions.append( ((id, negativeClassId), classSet.getId(entityFrom.get("type")), None, None) )
     # mappedTargetEntities will contain all gold entities for which is mapped at least
     # one predicted entity. Those gold entities not in mappedTargetEntities are then
     # undetected ones, i.e. false negatives.
@@ -88,12 +93,16 @@ def getEntityPredictions(entityMap, targetEntities, classSet, negativeClassId):
         if e.get("isName") == "True":
             continue
         if not e in mappedTargetEntities: # false negative gold
-            predictions.append( ((id, classSet.getId(e.get("type"))), negativeClassId, None, None) )
-    return predictions
+            examples.append( [id, classSet.getId(e.get("type")), None, None] )
+            predictions.append( [negativeClassId] )
+            #predictions.append( ((id, classSet.getId(e.get("type"))), negativeClassId, None, None) )
+    assert len(examples) == len(predictions)
+    return examples, predictions
 
 # Uses mapped entities and predicted and gold interactions to provide
 # predictions for the interactions
 def getInteractionPredictions(interactionsFrom, interactionsTo, entityMap, classSet, negativeClassId):
+    examples = []
     predictions = []
     id = "Unknown.x0"
     fromEntityIdToElement = {}
@@ -117,14 +126,21 @@ def getInteractionPredictions(interactionsFrom, interactionsTo, entityMap, class
         for interactionTo in interactionsTo:
             if interactionTo.get("e1") in e1Ids and interactionTo.get("e2") in e2Ids:
                 toInteractionsWithPredictions.add(interactionTo)
-                predictions.append( ((id, classSet.getId(interactionTo.get("type"))), classSet.getId(interactionFrom.get("type")), None, None) )
+                examples.append( [id, classSet.getId(interactionTo.get("type")),None,None] )
+                predictions.append( [classSet.getId(interactionFrom.get("type"))] )
+                #predictions.append( ((id, classSet.getId(interactionTo.get("type"))), classSet.getId(interactionFrom.get("type")), None, None) )
                 found = True
         if not found: # false positive prediction
-            predictions.append( ((id, negativeClassId), classSet.getId(interactionFrom.get("type")), None, None) )
+            examples.append( [id,negativeClassId,None,None] )
+            predictions.append( [classSet.getId(interactionFrom.get("type"))] )
+            #predictions.append( ((id, negativeClassId), classSet.getId(interactionFrom.get("type")), None, None) )
     for interactionTo in interactionsTo:
         if interactionTo not in toInteractionsWithPredictions: # false negative gold
-            predictions.append( ((id, classSet.getId(interactionTo.get("type"))), negativeClassId, None, None) )
-    return predictions
+            examples.append( [id, classSet.getId(interactionTo.get("type")), None, None] )
+            predictions.append( [negativeClassId] )
+            #predictions.append( ((id, classSet.getId(interactionTo.get("type"))), negativeClassId, None, None) )
+    assert len(examples) == len(predictions)
+    return examples, predictions
 
 # Compares a prediction (from) to a gold (to) sentence
 def processSentence(fromSentence, toSentence, target, classSets, negativeClassId):
@@ -139,30 +155,34 @@ def processSentence(fromSentence, toSentence, target, classSets, negativeClassId
     entityPredictions = []
     interactionPredictions = []
     if target == "entities" or target == "both":
-        entityPredictions = getEntityPredictions(entityMap, entitiesTo, classSets["entity"], negativeClassId)
+        entityExamples, entityPredictions = getEntityPredictions(entityMap, entitiesTo, classSets["entity"], negativeClassId)
     if target == "interactions" or target == "both":
-        interactionPredictions = getInteractionPredictions(fromSentence.interactions + fromSentence.pairs, toSentence.interactions + toSentence.pairs, entityMap, classSets["interaction"], negativeClassId)
+        interactionExamples, interactionPredictions = getInteractionPredictions(fromSentence.interactions + fromSentence.pairs, toSentence.interactions + toSentence.pairs, entityMap, classSets["interaction"], negativeClassId)
     
-    return entityPredictions, interactionPredictions
+    return (entityExamples, entityPredictions), (interactionExamples, interactionPredictions)
 
 # Compares a prediction (from) to a gold (to) corpus
 def processCorpora(EvaluatorClass, fromCorpus, toCorpus, target, classSets, negativeClassId):
+    entityExamples = []
     entityPredictions = []
+    interactionExamples = []
     interactionPredictions = []
     counter = ProgressCounter(len(fromCorpus.sentences), "Corpus Processing")
     # Loop through the sentences and collect all predictions
     for i in range(len(fromCorpus.sentences)):
         counter.update(1,fromCorpus.sentences[i].sentence.get("id"))
-        newEntityPredictions, newInteractionPredictions = processSentence(fromCorpus.sentences[i], toCorpus.sentences[i], target, classSets, negativeClassId)
-        entityPredictions.extend(newEntityPredictions)
-        interactionPredictions.extend(newInteractionPredictions)
+        newEntityExPred, newInteractionExPred = processSentence(fromCorpus.sentences[i], toCorpus.sentences[i], target, classSets, negativeClassId)
+        entityExamples.extend(newEntityExPred[0])
+        entityPredictions.extend(newEntityExPred[1])
+        interactionExamples.extend(newInteractionExPred[0])
+        interactionPredictions.extend(newInteractionExPred[1])
     
     # Process the predictions with an evaluator and print the results
     if len(entityPredictions) > 0:
-        evaluator = EvaluatorClass(entityPredictions, classSet=classSets["entity"])
+        evaluator = EvaluatorClass(entityExamples, entityPredictions, classSet=classSets["entity"])
         print evaluator.toStringConcise(title="Entities")    
     if len(interactionPredictions) > 0:
-        evaluator = EvaluatorClass(interactionPredictions, classSet=classSets["interaction"])
+        evaluator = EvaluatorClass(interactionExamples, interactionPredictions, classSet=classSets["interaction"])
         print evaluator.toStringConcise(title="Interactions")    
 
 # Splits entities/edges with merged types into separate elements
@@ -181,12 +201,11 @@ def run(EvaluatorClass, inputCorpusFile, goldCorpusFile, parse, tokenization, ta
     print >> sys.stderr, "##### EvaluateInteractionXML #####"
     # Class sets are used to convert the types to ids that the evaluator can use
     classSets = {}
-    evaluator = EvaluatorClass()
-    if evaluator.type == "binary":
+    if EvaluatorClass.type == "binary":
         classSets["entity"] = IdSet(idDict={"True":1,"False":-1}, locked=True)
         classSets["interaction"] = IdSet(idDict={"True":1,"False":-1}, locked=True)
         negativeClassId = -1
-    elif evaluator.type == "multiclass":
+    elif EvaluatorClass.type == "multiclass":
         classSets["entity"] = IdSet(idDict={"neg":1}, locked=False)
         classSets["interaction"] = IdSet(idDict={"neg":1}, locked=False)
         negativeClassId = 1

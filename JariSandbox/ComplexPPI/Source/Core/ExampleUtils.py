@@ -1,6 +1,8 @@
-# example is a 3-tuple (or list) of the format: (id, class, features, extra). id is a string,
-# class is an int (-1 or +1) and features is a dictionary of int:float -pairs, where
-# the int is the feature id and the float is the feature value
+# example is a 4-tuple (or list) of the format: (id, class, features, extra). id is a string,
+# class is an int (-1 or +1 for binary) and features is a dictionary of int:float -pairs, where
+# the int is the feature id and the float is the feature value.
+# Extra is a dictionary of String:String pairs, for additional information about the 
+# examples.
 
 import Split
 import types
@@ -179,15 +181,18 @@ def divideExampleFile(exampleFileName, division, outputDir):
     for v in divisionFiles.values():
         v.close()
         
-def loadPredictions(predictionsFile, examples):
-    if type(examples) == types.StringType: # examples are in file
-        examples = readExamples(examples,False)
+def loadPredictions(predictionsFile):
     predictionsFile = open(predictionsFile, "rt")
     lines = predictionsFile.readlines()
     predictionsFile.close()
     predictions = []
     for i in range(len(lines)):
-        predictions.append( (examples[i],int(lines[i].split()[0]),"multiclass",lines[i].split()[1:]) )
+        splits = lines[i].split()
+        if len(splits) == 1:
+            predictions.append( [float(splits[0])] )
+        else: # multiclass
+            predictions.append( [int(splits[0])] + splits[1:] ) 
+            #predictions.append( (examples[i],int(lines[i].split()[0]),"multiclass",lines[i].split()[1:]) )
     return predictions
 
 def writeTask3ToInteractionXML(classifications, corpusElements, outputFileName, task3Type):
@@ -230,7 +235,7 @@ def writeTask3ToInteractionXML(classifications, corpusElements, outputFileName, 
     
     ETUtils.write(corpusRoot, outputFileName)
 
-def writeToInteractionXML(classifications, corpusElements, outputFile, classSet=None, parse=None, tokenization=None):
+def writeToInteractionXML(examples, predictions, corpusElements, outputFile, classSet=None, parse=None, tokenization=None):
     import sys
     print >> sys.stderr, "Writing output to Interaction XML"
     try:
@@ -239,27 +244,37 @@ def writeToInteractionXML(classifications, corpusElements, outputFile, classSet=
         import cElementTree as ET
     import cElementTreeUtils as ETUtils
     
-    if type(corpusElements) == types.StringType: # corpus is in file
+    if type(corpusElements) == types.StringType or isinstance(corpusElements,ET.ElementTree): # corpus is in file
         import SentenceGraph
         corpusElements = SentenceGraph.loadCorpus(corpusElements, parse, tokenization)
     
     if type(classSet) == types.StringType: # class names are in file
         classSet = IdSet(filename=classSet)
     
+    if type(predictions) == types.StringType:
+        predictions = loadPredictions(predictions)
+    if type(examples) == types.StringType:
+        examples = readExamples(examples, False)
+    
     print >> sys.stderr, "Grouping examples"
-    classificationsBySentence = {}
+    examplesBySentence = {}
+    predictionsByExample = {}
     xType = None
-    for classification in classifications:
+    assert len(examples) == len(predictions)
+    for i in range(len(examples)):
+        example = examples[i]
         if xType == None:
-            if classification[0][3].has_key("xtype"):
-                xType = classification[0][3]["xtype"]
+            if example[3].has_key("xtype"):
+                xType = example[3]["xtype"]
         else:
-            assert(classification[0][3]["xtype"] == xType)
-        exampleId = classification[0][0]
+            assert(example[3]["xtype"] == xType)
+        exampleId = example[0]
         sentenceId = exampleId.rsplit(".",1)[0]
-        if not classificationsBySentence.has_key(sentenceId):
-            classificationsBySentence[sentenceId] = []
-        classificationsBySentence[sentenceId].append(classification)
+        if not examplesBySentence.has_key(sentenceId):
+            examplesBySentence[sentenceId] = []
+        examplesBySentence[sentenceId].append(example)
+        assert not predictionsByExample.has_key(exampleId)
+        predictionsByExample[exampleId] = predictions[i]
     
     if classSet != None:
         classIds = classSet.getIds()
@@ -295,9 +310,9 @@ def writeToInteractionXML(classifications, corpusElements, outputFile, classSet=
             # add new pairs
             entityElements = sentenceElement.findall("entity")
             newEntityIdCount = IDUtils.getNextFreeId(entityElements)
-            if classificationsBySentence.has_key(sentenceId):
-                for classification in classificationsBySentence[sentenceId]:
-                    example = classification[0]
+            if examplesBySentence.has_key(sentenceId):
+                for example in examplesBySentence[sentenceId]:
+                    prediction = predictionsByExample[example[0]]
                     entityElement = ET.Element("entity")
                     entityElement.attrib["isName"] = "False"
                     headToken = example[3]["t"]
@@ -311,13 +326,13 @@ def writeToInteractionXML(classifications, corpusElements, outputFile, classSet=
                     entityElement.attrib["id"] = sentenceId + ".e" + str(newEntityIdCount)
                     newEntityIdCount += 1
                     if classSet == None: # binary classification
-                        if classification[1] == "tp" or classification[1] == "fp":
+                        if prediction[0] > 0:
                             entityElement.attrib["type"] = str(True)
                         else:
                             entityElement.attrib["type"] = str(False)
                     else:
-                        entityElement.attrib["type"] = classSet.getName(classification[3])
-                        classWeights = classification[4]
+                        entityElement.attrib["type"] = classSet.getName(prediction[0])
+                        classWeights = prediction[1:]
                         predictionString = ""
                         for i in range(len(classWeights)):
                             if predictionString != "":
@@ -329,9 +344,9 @@ def writeToInteractionXML(classifications, corpusElements, outputFile, classSet=
                     entityCount += 1
         elif xType == "edge":
             pairCount = 0
-            if classificationsBySentence.has_key(sentenceId):
-                for classification in classificationsBySentence[sentenceId]:
-                    example = classification[0]
+            if examplesBySentence.has_key(sentenceId):
+                for example in examplesBySentence[sentenceId]:
+                    prediction = predictionsByExample[example[0]]
                     pairElement = ET.Element("interaction")
                     #pairElement.attrib["origId"] = origId
                     #pairElement.attrib["type"] = example[3]["categoryName"]
@@ -340,13 +355,13 @@ def writeToInteractionXML(classifications, corpusElements, outputFile, classSet=
                     pairElement.attrib["e2"] = example[3]["e2"] #.attrib["id"]
                     pairElement.attrib["id"] = sentenceId + ".i" + str(pairCount)
                     if classSet == None: # binary classification
-                        if classification[1] == "tp" or classification[1] == "fp":
+                        if prediction[0] > 0:
                             pairElement.attrib["type"] = str(True)
                         else:
                             pairElement.attrib["type"] = str(False)
                     else:
-                        pairElement.attrib["type"] = classSet.getName(classification[3])
-                        classWeights = classification[4]
+                        pairElement.attrib["type"] = classSet.getName(prediction[0])
+                        classWeights = prediction[1:]
                         predictionString = ""
                         for i in range(len(classWeights)):
                             if predictionString != "":
@@ -361,6 +376,8 @@ def writeToInteractionXML(classifications, corpusElements, outputFile, classSet=
         if sentenceAnalysesElement != None:
             sentenceElement.append(sentenceAnalysesElement)
     # Write corpus
-    print >> sys.stderr, "Writing corpus to", outputFile
-    ETUtils.write(corpusElements.rootElement, outputFile)
+    if outputFile != None:
+        print >> sys.stderr, "Writing corpus to", outputFile
+        ETUtils.write(corpusElements.rootElement, outputFile)
+    return corpusElements.tree
     

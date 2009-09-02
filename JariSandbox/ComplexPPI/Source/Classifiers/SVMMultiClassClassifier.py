@@ -109,7 +109,8 @@ class SVMMultiClassClassifier(Classifier):
         predictionsFile.close()
         predictions = []
         for i in range(len(lines)):
-            predictions.append( (examples[i],int(lines[i].split()[0]),"multiclass",lines[i].split()[1:]) )
+            predictions.append( [int(lines[i].split()[0])] + lines[i].split()[1:] )
+            #predictions.append( (examples[i],int(lines[i].split()[0]),"multiclass",lines[i].split()[1:]) )
         print >> sys.stderr, timer.toString()
         return predictions
     
