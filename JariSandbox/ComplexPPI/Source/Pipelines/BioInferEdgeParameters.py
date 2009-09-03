@@ -28,7 +28,7 @@ print >> sys.stderr, "edge model pipeline for parse", PARSE
 c = CSCConnection("UnmergingProject/results/parameters/edges-"+PARSE, "jakrbj@murska.csc.fi")
 best = optimize(Cls, Ev, TRAIN_EXAMPLE_FILE, DEVEL_EXAMPLE_FILE, CLASS_NAMES, CLASSIFIER_PARAMS, "edge-param-opt", None, c)
 xmlFilename = "predicted-edges-"+PARSE+".xml"
-ExampleUtils.writeToInteractionXML(DEVEL_EXAMPLE_FILE, best[2], DEVEL_FILE, xmlFilename, CLASS_NAMES, PARSE_TOK, PARSE_TOK)
+ExampleUtils.writeToInteractionXML(DEVEL_EXAMPLE_FILE, best[2], DEVEL_FILE, xmlFilename, CLASS_NAMES, PARSE, TOK)
 # NOTE: Merged elements must not be split, as recall booster may change their class
 #ix.splitMergedElements("devel-predicted-edges.xml", "devel-predicted-edges.xml")
 ix.recalculateIds(xmlFilename, xmlFilename, True)
