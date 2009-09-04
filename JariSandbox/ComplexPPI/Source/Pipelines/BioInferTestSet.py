@@ -48,7 +48,7 @@ print >> sys.stderr, "Edge params", EDGE_CLASSIFIER_PARAMS
 best = optimize(Cls, Ev, TRIGGER_TRAIN_AND_DEVEL_EXAMPLE_FILE, TRIGGER_TEST_EXAMPLE_FILE,\
     TRIGGER_IDS+".class_names", TRIGGER_CLASSIFIER_PARAMS, "test-trigger-param-opt", None)#, c)
 # The evaluator is needed to access the classifications (will be fixed later)
-ExampleUtils.writeToInteractionXML(TEST_EXAMPLE_FILE, best[2], TEST_FILE, "test-predicted-triggers.xml", TRIGGER_IDS+".class_names", PARSE, TOK)
+ExampleUtils.writeToInteractionXML(TRIGGER_TEST_EXAMPLE_FILE, best[2], TEST_FILE, "test-predicted-triggers.xml", TRIGGER_IDS+".class_names", PARSE, TOK)
 # NOTE: Merged elements must not be split, as recall booster may change their class
 #ix.splitMergedElements("devel-predicted-triggers.xml", "devel-predicted-triggers.xml")
 ix.recalculateIds("test-predicted-triggers.xml", "test-predicted-triggers.xml", True)
