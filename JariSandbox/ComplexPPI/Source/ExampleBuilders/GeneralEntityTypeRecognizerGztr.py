@@ -114,11 +114,12 @@ class GeneralEntityTypeRecognizerGztr(ExampleBuilder):
         
         self.tokenFeatures = {}
         
-        namedEntityCount = 0
-        for entity in sentenceGraph.entities:
-            if entity.get("isName") == "True": # known data which can be used for features
-                namedEntityCount += 1
-        namedEntityCountFeature = "nameCount_" + str(namedEntityCount)
+        if not "names" in self.styles:
+            namedEntityCount = 0
+            for entity in sentenceGraph.entities:
+                if entity.get("isName") == "True": # known data which can be used for features
+                    namedEntityCount += 1
+            namedEntityCountFeature = "nameCount_" + str(namedEntityCount)
         
         bagOfWords = {}
         for token in sentenceGraph.tokens:
@@ -150,7 +151,7 @@ class GeneralEntityTypeRecognizerGztr(ExampleBuilder):
         for i in range(len(sentenceGraph.tokens)):
             token = sentenceGraph.tokens[i]
             # Recognize only non-named entities (i.e. interaction words)
-            if sentenceGraph.tokenIsName[token]:
+            if sentenceGraph.tokenIsName[token] and not "names" in self.styles:
                 continue
 
             # CLASS
@@ -170,7 +171,8 @@ class GeneralEntityTypeRecognizerGztr(ExampleBuilder):
             # FEATURES
             features = {}
             
-            features[self.featureSet.getId(namedEntityCountFeature)] = 1
+            if not "names" in self.styles:
+                features[self.featureSet.getId(namedEntityCountFeature)] = 1
             #for k,v in bagOfWords.iteritems():
             #    features[self.featureSet.getId(k)] = v
             # pre-calculate bow _features_
