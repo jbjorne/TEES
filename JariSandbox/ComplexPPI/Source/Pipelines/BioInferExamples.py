@@ -66,8 +66,8 @@ if not os.path.exists("trigger-test-examples-"+PARSE):
 print >> sys.stderr, "Edge examples for parse", PARSE
 EDGE_FEATURE_PARAMS="style:typed,directed,no_linear,entities,noMasking,maxFeatures,bioinfer_limits"
 
-#if not os.path.exists("edge-train-examples-"+PARSE):
-MultiEdgeExampleBuilder.run(TRAIN_FILE, "edge-train-examples-"+PARSE, PARSE, TOK, EDGE_FEATURE_PARAMS, "bioinfer-edge-ids")
+if not os.path.exists("edge-train-examples-"+PARSE):
+    MultiEdgeExampleBuilder.run(TRAIN_FILE, "edge-train-examples-"+PARSE, PARSE, TOK, EDGE_FEATURE_PARAMS, "bioinfer-edge-ids")
 if not os.path.exists("edge-devel-examples-"+PARSE):
     MultiEdgeExampleBuilder.run(DEVEL_FILE, "edge-devel-examples-"+PARSE, PARSE, TOK, EDGE_FEATURE_PARAMS, "bioinfer-edge-ids")
 if not os.path.exists("edge-train-and-devel-examples-"+PARSE):
