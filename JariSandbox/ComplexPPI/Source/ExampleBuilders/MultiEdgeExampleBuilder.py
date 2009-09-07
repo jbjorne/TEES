@@ -284,8 +284,9 @@ class MultiEdgeExampleBuilder(ExampleBuilder):
                         self.multiEdgeFeatureBuilder.buildPathGrams(3, path, edges, sentenceGraph) # remove for fast
                         self.multiEdgeFeatureBuilder.buildPathGrams(4, path, edges, sentenceGraph) # remove for fast
                     #self.buildEdgeCombinations(path, edges, sentenceGraph, features) # remove for fast
-                    #self.multiEdgeFeatureBuilder.buildTerminusFeatures(path[0], edges[0][1]+edges[1][0], "t1", sentenceGraph) # remove for fast
-                    #self.multiEdgeFeatureBuilder.buildTerminusFeatures(path[-1], edges[len(path)-1][len(path)-2]+edges[len(path)-2][len(path)-1], "t2", sentenceGraph) # remove for fast
+                    #if edges != None:
+                    #    self.multiEdgeFeatureBuilder.buildTerminusFeatures(path[0], edges[0][1]+edges[1][0], "t1", sentenceGraph) # remove for fast
+                    #    self.multiEdgeFeatureBuilder.buildTerminusFeatures(path[-1], edges[len(path)-1][len(path)-2]+edges[len(path)-2][len(path)-1], "t2", sentenceGraph) # remove for fast
                     if not "disable_path_edge_features" in self.styles:
                         self.multiEdgeFeatureBuilder.buildPathEdgeFeatures(path, edges, sentenceGraph)
                     self.multiEdgeFeatureBuilder.buildSentenceFeatures(sentenceGraph)
@@ -345,7 +346,7 @@ class MultiEdgeExampleBuilder(ExampleBuilder):
             if "subset" in self.styles:
                 features[self.featureSet.getId("out_of_scope")] = 1
             path = [token1, token2]
-        # define extra attributes              
+        # define extra attributes
         if int(path[0].attrib["id"].split("_")[-1]) < int(path[-1].attrib["id"].split("_")[-1]):
             #extra = {"xtype":"edge","type":"i","t1":path[0],"t2":path[-1]}
             extra = {"xtype":"edge","type":"i","t1":path[0].get("id"),"t2":path[-1].get("id")}
@@ -361,6 +362,9 @@ class MultiEdgeExampleBuilder(ExampleBuilder):
             #extra["e2"] = entity2
             extra["e2"] = entity2.get("id")
         extra["categoryName"] = categoryName
+        sentenceOrigId = sentenceGraph.sentenceElement.get("origId")
+        if sentenceOrigId != None:
+            extra["SOID"] = sentenceOrigId       
         # make example
         if "binary" in self.styles:
             if categoryName != "neg":
