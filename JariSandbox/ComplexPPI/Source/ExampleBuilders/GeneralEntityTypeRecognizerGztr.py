@@ -35,13 +35,14 @@ class GeneralEntityTypeRecognizerGztr(ExampleBuilder):
             self.gazetteer=Gazetteer.loadGztr(gazetteerFileName)
             print >> sys.stderr, "Loaded gazetteer from",gazetteerFileName
         else:
+            print >> sys.stderr, "No gazetteer loaded"
             self.gazetteer=None
         self.styles = style
 
     @classmethod
     def run(cls, input, output, parse, tokenization, style, idFileTag=None, gazetteerFileName=None):
         classSet, featureSet = cls.getIdSets(idFileTag)
-        e = GeneralEntityTypeRecognizerGztr(style, classSet, featureSet, gazetteerFileName=None)
+        e = GeneralEntityTypeRecognizerGztr(style, classSet, featureSet, gazetteerFileName)
         sentences = cls.getSentences(input, parse, tokenization)
         e.buildExamplesForSentences(sentences, output, idFileTag)
 
@@ -151,13 +152,20 @@ class GeneralEntityTypeRecognizerGztr(ExampleBuilder):
             # Recognize only non-named entities (i.e. interaction words)
             if sentenceGraph.tokenIsName[token]:
                 continue
-            elif ("exclude_gazetteer" in self.styles) and self.gazetteer and token.get("text").lower() not in self.gazetteer:
-                continue
+
             # CLASS
             if len(sentenceGraph.tokenIsEntityHead[token]) > 0:
                 category = self.classSet.getId(self.getMergedEntityType(sentenceGraph.tokenIsEntityHead[token]))
             else:
-                category = 1
+                category = 1            
+            
+            if ("exclude_gazetteer" in self.styles) and self.gazetteer and token.get("text").lower() not in self.gazetteer:
+                features = {}
+                features[self.featureSet.getId("exclude_gazetteer")] = 1
+                extra = {"xtype":"token","t":token.get("id"),"excluded":"True"}
+                examples.append( (sentenceGraph.getSentenceId()+".x"+str(exampleIndex),category,features,extra) )
+                exampleIndex += 1
+                continue
             
             # FEATURES
             features = {}
