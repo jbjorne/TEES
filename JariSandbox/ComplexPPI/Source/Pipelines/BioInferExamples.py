@@ -75,3 +75,11 @@ if not os.path.exists("edge-train-and-devel-examples-"+PARSE):
 # NOTE! These TEST examples will be based on gold standard triggers!
 if not os.path.exists("edge-test-examples-"+PARSE):
     MultiEdgeExampleBuilder.run(TEST_FILE, "edge-test-examples-"+PARSE, PARSE, TOK, EDGE_FEATURE_PARAMS, "bioinfer-edge-ids")
+
+# older xml-file examples
+PARSE="split_Charniak-Lease"
+TOK="split_Charniak-Lease"
+OLD_IXML_BIOINFER="usr/share/biotext/ComplexPPI/BioInfer.xml"
+if not os.path.exists("edge-examples-old-"+PARSE):
+    print >> sys.stderr, "Building examples for old BioInfer"
+    MultiEdgeExampleBuilder.run(OLD_IXML_BIOINFER, "edge-examples-old-"+PARSE, PARSE, TOK, EDGE_FEATURE_PARAMS, "bioinfer-edge-ids")
