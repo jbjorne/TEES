@@ -43,7 +43,10 @@ class GeneralEntityTypeRecognizerGztr(ExampleBuilder):
     def run(cls, input, output, parse, tokenization, style, idFileTag=None, gazetteerFileName=None):
         classSet, featureSet = cls.getIdSets(idFileTag)
         e = GeneralEntityTypeRecognizerGztr(style, classSet, featureSet, gazetteerFileName)
-        sentences = cls.getSentences(input, parse, tokenization)
+        if "names" in style:
+            sentences = cls.getSentences(input, parse, tokenization, removeNameInfo=True)
+        else:
+            sentences = cls.getSentences(input, parse, tokenization, removeNameInfo=False)
         e.buildExamplesForSentences(sentences, output, idFileTag)
 
 

@@ -4,7 +4,7 @@ import types
 
 multiedges = True
 
-def loadCorpus(corpus, parse, tokenization=None):
+def loadCorpus(corpus, parse, tokenization=None, removeNameInfo=False):
     """
     Load an entire corpus through CorpusElements and add SentenceGraph-objects
     to its SentenceElements-objects.
@@ -21,7 +21,7 @@ def loadCorpus(corpus, parse, tokenization=None):
     corpusTree = ETUtils.ETFromObj(corpus)
     corpusRoot = corpusTree.getroot()
     # Use CorpusElements-class to access xml-tree
-    corpusElements = CorpusElements(corpusRoot, parse, tokenization, tree=corpusTree)
+    corpusElements = CorpusElements(corpusRoot, parse, tokenization, tree=corpusTree, removeNameInfo=removeNameInfo)
     print >> sys.stderr, str(len(corpusElements.documentsById)) + " documents, " + str(len(corpusElements.sentencesById)) + " sentences"
     # Make sentence graphs
     duplicateInteractionEdgesRemoved = 0

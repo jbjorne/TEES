@@ -2,7 +2,7 @@ from SentenceElements import *
 import types
 import cElementTreeUtils as ETUtils
 
-def loadCorpus(filename, parse=None, tokenization=None, removeIntersentenceInteractions=True):
+def loadCorpus(filename, parse=None, tokenization=None, removeIntersentenceInteractions=True, removeNameInfo=False):
     try:
         import xml.etree.cElementTree as ET
     except ImportError:
@@ -13,10 +13,10 @@ def loadCorpus(filename, parse=None, tokenization=None, removeIntersentenceInter
         print >> sys.stderr, "Loading corpus file", filename
     corpusTree = ETUtils.ETFromObj(filename)
     corpusRoot = corpusTree.getroot()
-    return CorpusElements(corpusRoot, parse, tokenization, removeIntersentenceInteractions, corpusTree)
+    return CorpusElements(corpusRoot, parse, tokenization, removeIntersentenceInteractions, corpusTree, removeNameInfo)
 
 class CorpusElements:
-    def __init__(self, rootElement, parse, tokenization=None, removeIntersentenceInteractions=True, tree=None):
+    def __init__(self, rootElement, parse, tokenization=None, removeIntersentenceInteractions=True, tree=None, removeNameInfo=False):
         self.tree = tree
         self.rootElement = rootElement
         self.documents = rootElement.findall("document")

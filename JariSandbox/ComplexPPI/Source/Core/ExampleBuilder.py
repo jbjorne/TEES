@@ -95,15 +95,16 @@ class ExampleBuilder:
             return None, None
             
     @classmethod
-    def getSentences(cls, input, parse, tokenization):    
+    def getSentences(cls, input, parse, tokenization, removeNameInfo=False):    
         if type(input) != types.ListType:
             # Load corpus and make sentence graphs
-            corpusElements = SentenceGraph.loadCorpus(input, parse, tokenization)
+            corpusElements = SentenceGraph.loadCorpus(input, parse, tokenization, removeNameInfo=removeNameInfo)
             sentences = []
             for sentence in corpusElements.sentences:
                 sentences.append( [sentence.sentenceGraph,None] )
             return sentences
         else: # assume input is already a list of sentences
+            assert(removeNameInfo == False)
             return input
 
 def calculatePredictedRange(exampleBuilder, sentences):

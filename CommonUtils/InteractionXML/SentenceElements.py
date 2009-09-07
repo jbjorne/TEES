@@ -1,6 +1,6 @@
 
 class SentenceElements:
-    def __init__(self, sentenceElement, parse=None, tokenization=None, removeIntersentenceInteractions=True):
+    def __init__(self, sentenceElement, parse=None, tokenization=None, removeIntersentenceInteractions=True, removeNameInfo=False):
         self.sentence = sentenceElement
         self.entities = []
         self.entitiesById = {}
@@ -42,6 +42,8 @@ class SentenceElements:
             entityElements = entitiesToKeep
             self.entities = entityElements
             for entityElement in entityElements:
+                if removeNameInfo:
+                    entityElement.set("isName","False")
                 self.entitiesById[entityElement.attrib["id"]] = entityElement
         
         sentenceAnalysesElement = sentenceElement.find("sentenceanalyses")
