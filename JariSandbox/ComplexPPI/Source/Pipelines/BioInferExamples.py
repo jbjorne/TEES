@@ -79,7 +79,7 @@ if not os.path.exists("edge-test-examples-"+PARSE):
 # older xml-file examples
 PARSE="split_Charniak-Lease"
 TOK="split_Charniak-Lease"
-OLD_IXML_BIOINFER="usr/share/biotext/ComplexPPI/BioInfer.xml"
+OLD_IXML_BIOINFER="/usr/share/biotext/ComplexPPI/BioInfer.xml"
 if not os.path.exists("edge-examples-old-"+PARSE):
     print >> sys.stderr, "Building examples for old BioInfer"
     MultiEdgeExampleBuilder.run(OLD_IXML_BIOINFER, "edge-examples-old-"+PARSE, PARSE, TOK, EDGE_FEATURE_PARAMS, "bioinfer-edge-ids")
