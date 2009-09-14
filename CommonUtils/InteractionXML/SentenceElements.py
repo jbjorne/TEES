@@ -29,7 +29,9 @@ class SentenceElements:
         if removeIntersentenceInteractions:
             interactionsToKeep = []
             for interaction in interactionElements:
-                if interaction.get("e1").rsplit(".",1)[0] == sentenceId and interaction.get("e2").rsplit(".",1)[0] == sentenceId:
+                e1rsplits = interaction.get("e1").count(".") - 2
+                e2rsplits = interaction.get("e2").count(".") - 2
+                if interaction.get("e1").rsplit(".",e1rsplits)[0] == sentenceId and interaction.get("e2").rsplit(".",e2rsplits)[0] == sentenceId:
                     interactionsToKeep.append(interaction)
             self.interactions = interactionsToKeep
         
