@@ -9,10 +9,10 @@ TOK="split-McClosky"
 CORPUS_DIR="/usr/share/biotext/UnmergingProject/source"
 
 # xml files without heads
-BI_DEVEL_FILE=CORPUS_DIR+"/bioinfer.devel.refRem-eqRem-negRem-metaRes-anonRes.gold.gif.xml"
-BI_TEST_FILE=CORPUS_DIR+"/bioinfer.test.refRem-eqRem-negRem-metaRes-anonRes.gold.gif.xml"
-BI_TRAIN_FILE=CORPUS_DIR+"/bioinfer.train.refRem-eqRem-negRem-metaRes-anonRes.gold.gif.xml"
-BI_TRAIN_AND_DEVEL_FILE=CORPUS_DIR+"/bioinfer.train+devel.refRem-eqRem-negRem-metaRes-anonRes.gold.gif.xml"
+BI_DEVEL_FILE=CORPUS_DIR+"/bioinfer.devel.refRem-eqRem-negRem-metaRes-anonRes.merged.gold.gif.xml"
+BI_TEST_FILE=CORPUS_DIR+"/bioinfer.test.refRem-eqRem-negRem-metaRes-anonRes.merged.gold.gif.xml"
+BI_TRAIN_FILE=CORPUS_DIR+"/bioinfer.train.refRem-eqRem-negRem-metaRes-anonRes.merged.gold.gif.xml"
+BI_TRAIN_AND_DEVEL_FILE=CORPUS_DIR+"/bioinfer.train+devel.refRem-eqRem-negRem-metaRes-anonRes.merged.gold.gif.xml"
 
 # xml files with head tokens
 TEST_FILE=CORPUS_DIR+"/with-heads/bioinfer-test-"+PARSE+".xml"
