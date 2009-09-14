@@ -52,13 +52,13 @@ if not os.path.exists("gazetteer-train-and-devel-"+TOK):
     Gazetteer.run(TRAIN_AND_DEVEL_FILE, "gazetteer-train-and-devel-"+TOK, TOK)
 # generate the files for the old charniak
 if not os.path.exists("trigger-train-examples-"+PARSE):
-    GeneralEntityTypeRecognizerGztr.run(TRAIN_FILE, "trigger-train-examples-"+PARSE, PARSE, TOK, "style:typed", "bioinfer-trigger-ids", "gazetteer-train-"+PARSE)
+    GeneralEntityTypeRecognizerGztr.run(TRAIN_FILE, "trigger-train-examples-"+PARSE, PARSE, TOK, "style:typed", "bioinfer-trigger-ids", "gazetteer-train-"+TOK)
 if not os.path.exists("trigger-devel-examples-"+PARSE):
-    GeneralEntityTypeRecognizerGztr.run(DEVEL_FILE, "trigger-devel-examples-"+PARSE, PARSE, TOK, "style:typed", "bioinfer-trigger-ids", "gazetteer-train-"+PARSE)
+    GeneralEntityTypeRecognizerGztr.run(DEVEL_FILE, "trigger-devel-examples-"+PARSE, PARSE, TOK, "style:typed", "bioinfer-trigger-ids", "gazetteer-train-"+TOK)
 if not os.path.exists("trigger-train-and-devel-examples-"+PARSE):
-    GeneralEntityTypeRecognizerGztr.run(TRAIN_AND_DEVEL_FILE, "trigger-train-and-devel-examples-"+PARSE, PARSE, TOK, "style:typed", "bioinfer-trigger-ids", "gazetteer-train-and-devel-"+PARSE)
+    GeneralEntityTypeRecognizerGztr.run(TRAIN_AND_DEVEL_FILE, "trigger-train-and-devel-examples-"+PARSE, PARSE, TOK, "style:typed", "bioinfer-trigger-ids", "gazetteer-train-and-devel-"+TOK)
 if not os.path.exists("trigger-test-examples-"+PARSE):
-    GeneralEntityTypeRecognizerGztr.run(TEST_FILE, "trigger-test-examples-"+PARSE, PARSE, TOK, "style:typed", "bioinfer-trigger-ids", "gazetteer-train-and-devel-"+PARSE)
+    GeneralEntityTypeRecognizerGztr.run(TEST_FILE, "trigger-test-examples-"+PARSE, PARSE, TOK, "style:typed", "bioinfer-trigger-ids", "gazetteer-train-and-devel-"+TOK)
 
 ###############################################################################
 # Edge example generation
