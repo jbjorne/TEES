@@ -9,6 +9,7 @@ class FeatureBuilder:
         self.maximum = False # produce maximum number of features
         
         self.maskNamedEntities = True
+        self.tag = ""
     
     def setFeatureVector(self, features, entity1=None, entity2=None):
         self.features = features
@@ -17,7 +18,7 @@ class FeatureBuilder:
         self.tokenFeatures = {}
         
     def setFeature(self, name, value):
-        self.features[self.featureSet.getId(name)] = value
+        self.features[self.featureSet.getId(self.tag+name)] = value
         
     def normalizeFeatureVector(self):
         # Normalize features
