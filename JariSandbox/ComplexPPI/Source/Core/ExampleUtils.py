@@ -370,6 +370,61 @@ def writeToInteractionXML(examples, predictions, corpusElements, outputFile, cla
                         pairElement.attrib["predictions"] = predictionString
                     sentenceElement.append(pairElement)
                     pairCount += 1
+        if xType == "event":
+            entityElements = sentenceElement.findall("entity")
+            entityCount = 0
+            pairCount = 0
+            if entityElements != None:
+                entityCount = len(entityElements) # get the count _before_ removing entities
+                for entityElement in entityElements:
+                    if entityElement.get("isName") == "False": # interaction word
+                        sentenceElement.remove(entityElement)
+            # add new pairs
+            entityElements = sentenceElement.findall("entity")
+            newEntityIdCount = IDUtils.getNextFreeId(entityElements)
+            if examplesBySentence.has_key(sentenceId):
+                for example in examplesBySentence[sentenceId]:
+                    prediction = predictionsByExample[example[0]]
+                    entityElement = ET.Element("entity")
+                    entityElement.attrib["isName"] = "False"
+                    headToken = example[3]["et"]
+                    for token in sentenceObject.tokens:
+                        if token.get("id") == headToken:
+                            headToken = token
+                            break
+                    entityElement.attrib["charOffset"] = headToken.get("charOffset") 
+                    entityElement.attrib["headOffset"] = headToken.get("charOffset")
+                    entityElement.attrib["text"] = headToken.get("text")
+                    entityElement.attrib["id"] = sentenceId + ".e" + str(newEntityIdCount)
+                    newEntityIdCount += 1
+                    entityElement.attrib["type"] = example[3]["type"]
+                    classWeights = prediction[1:]
+                    predictionString = ""
+                    for i in range(len(classWeights)):
+                        if predictionString != "":
+                            predictionString += ","
+                        predictionString += classSet.getName(classIds[i]) + ":" + str(classWeights[i])
+                    entityElement.attrib["predictions"] = predictionString
+                    #if entityElement.attrib["type"] != "neg":
+                    sentenceElement.append(entityElement)
+                    entityCount += 1
+                    
+                    # add theme edge
+                    pairElement = ET.Element("interaction")
+                    pairElement.attrib["directed"] = "Unknown"
+                    pairElement.attrib["e1"] = entityElement.get("id")
+                    pairElement.attrib["e2"] = example[3]["t"] #.attrib["id"]
+                    pairElement.attrib["id"] = sentenceId + ".i" + str(pairCount)
+                    pairElement.attrib["type"] = "Theme"
+#                    classWeights = prediction[1:]
+#                    predictionString = ""
+#                    for i in range(len(classWeights)):
+#                        if predictionString != "":
+#                            predictionString += ","
+#                        predictionString += classSet.getName(classIds[i]) + ":" + str(classWeights[i])
+#                    pairElement.attrib["predictions"] = predictionString
+                    sentenceElement.append(pairElement)
+                    pairCount += 1
         else:
             sys.exit("Error, unknown xtype")
         # re-attach the analyses-element
