@@ -43,7 +43,7 @@ class MultiEdgeFeatureBuilder(FeatureBuilder):
                         assert(False)
                 structure += pathToken.get("POS")[0:1]
                 prevToken = pathToken
-            self.features[self.featureSet.getId(structure)] = 1
+            self.setFeature(structure, 1)
         
     def setFeatureVector(self, features=None, entity1=None, entity2=None):
         self.entity1 = entity1
@@ -65,21 +65,21 @@ class MultiEdgeFeatureBuilder(FeatureBuilder):
                 value /= (self.predictedRange[1] - self.predictedRange[0])
                 assert(value >= 0 and value <= 1)
                 #print tag + "_strength_"+splits[0], value
-                self.features[self.featureSet.getId(tag + "_strength_"+splits[0])] = value
+                self.setFeature(tag + "_strength_"+splits[0], value)
         else:
             #print tag + "_strength_"+str(element.get("type")), 1.0
-            self.features[self.featureSet.getId(tag + "_strength_" + str(element.get("type")))] = 1.0
+            self.setFeature(tag + "_strength_" + str(element.get("type")), 1.0)
     
     def buildEntityFeatures(self, sentenceGraph):
         for token, entities in sentenceGraph.entitiesByToken.iteritems():
             if self.entity1 in entities:
                 tokenFeatures = self.getTokenFeatures(token, sentenceGraph)
                 for feature in tokenFeatures:
-                    self.features[self.featureSet.getId("e1_"+feature)] = 1
+                    self.setFeature("e1_"+feature, 1)
             if self.entity2 in entities:
                 tokenFeatures = self.getTokenFeatures(token, sentenceGraph)
                 for feature in tokenFeatures:
-                    self.features[self.featureSet.getId("e2_"+feature)] = 1
+                    self.setFeature("e2_"+feature, 1)
         if self.entity1 != None and self.entity2 != None:
             entityCombination = ""
             if self.entity1.get("isName") != None:
@@ -100,11 +100,11 @@ class MultiEdgeFeatureBuilder(FeatureBuilder):
                         self.buildPredictedValueFeatures(self.entity2, "e2")
             else:
                 entityCombination += "e2_Entity"
-            self.features[self.featureSet.getId(entityCombination)] = 1
-            self.features[self.featureSet.getId("eTypes_"+self.entity1.get("type")+"_"+self.entity2.get("type"))] = 1                
+            self.setFeature(entityCombination, 1)
+            self.setFeature("eTypes_"+self.entity1.get("type")+"_"+self.entity2.get("type"), 1)
             
             if sentenceGraph.entityHeadTokenByEntity[self.entity1] == sentenceGraph.entityHeadTokenByEntity[self.entity2]:
-                self.features[self.featureSet.getId("selfLoop")] = 1
+                self.setFeature("selfLoop", 1)
                 
     def getEdges(self, graph, path):
         """
@@ -157,8 +157,8 @@ class MultiEdgeFeatureBuilder(FeatureBuilder):
         """
         Simple numeric features about the length of the path
         """
-        self.features[self.featureSet.getId("len_tokens_"+str(len(pathTokens)))] = 1
-        self.features[self.featureSet.getId("len")] = len(pathTokens)
+        self.setFeature("len_tokens_"+str(len(pathTokens)), 1)
+        self.setFeature("len", len(pathTokens))
     
     def buildSentenceFeatures(self, sentenceGraph):
         textCounts = {}
@@ -170,16 +170,16 @@ class MultiEdgeFeatureBuilder(FeatureBuilder):
                     textCounts[text] = 0
                 textCounts[text] += 1
         for k, v in textCounts.iteritems():
-            self.features[self.featureSet.getId("count_"+k)] = v
+            self.setFeature("count_"+k, v)
 
     def buildTerminusTokenFeatures(self, pathTokens, sentenceGraph):
         """
         Token features for the first and last tokens of the path
         """
         for feature in self.getTokenFeatures(pathTokens[0], sentenceGraph):
-            self.features[self.featureSet.getId("tokTerm1_"+feature)] = 1
+            self.setFeature("tokTerm1_"+feature, 1)
         for feature in self.getTokenFeatures(pathTokens[-1], sentenceGraph):
-            self.features[self.featureSet.getId("tokTerm2_"+feature)] = 1
+            self.setFeature("tokTerm2_"+feature, 1)
         
         #self.features[self.featureSet.getId("tokTerm1POS_"+pathTokens[0].attrib["POS"])] = 1
         #self.features[self.featureSet.getId("tokTerm1txt_"+sentenceGraph.getTokenText(pathTokens[0]))] = 1
@@ -195,7 +195,7 @@ class MultiEdgeFeatureBuilder(FeatureBuilder):
             for annType in annTypes:
                 internalTypes += "_" + annType
             internalTypes += "__"
-        self.features[self.featureSet.getId("tokenPath"+internalTypes)] = 1
+        self.setFeature("tokenPath"+internalTypes, 1)
         
 #        for walk in walks:
 #            edgeString = ""
@@ -231,25 +231,25 @@ class MultiEdgeFeatureBuilder(FeatureBuilder):
                     # Label tokens by their role in the xgram
                     for token in pathTokens[i-(length-1)+1:i+1]:
                         for feature in self.getTokenFeatures(token, sentenceGraph, annotatedType=(self.maximum == True)):
-                            self.features[self.featureSet.getId("tok_"+styleGram+feature)] = 1
+                            self.setFeature("tok_"+styleGram+feature, 1)
                     # Label edges by their role in the xgram
                     position = 0
                     tokenTypeGram = ""
                     for edge in walks[j][i-(length-1):i+1]:
-                        self.features[self.featureSet.getId("dep_"+styleGram+str(position)+"_"+edge[2].get("type"))] = 1
+                        self.setFeature("dep_"+styleGram+str(position)+"_"+edge[2].get("type"), 1)
                         position += 1
                         edgeGram += "_" + edge[2].get("type")
-                    self.features[self.featureSet.getId(edgeGram)] = 1
+                    self.setFeature(edgeGram, 1)
                     for type1 in t1:
                         for type2 in t2:
-                            self.features[self.featureSet.getId(type1+"_"+edgeGram+"_"+type2)] = 1
+                            self.setFeature(type1+"_"+edgeGram+"_"+type2, 1)
         for dirGram in dirGrams:
-            self.features[self.featureSet.getId("edge_directions_"+dirGram)] = 1
+            self.setFeature("edge_directions_"+dirGram, 1)
     
     def addType(self, token, sentenceGraph, prefix="annType_"):
         types = self.getTokenAnnotatedType(token, sentenceGraph)
         for type in types:
-            self.features[self.featureSet.getId(prefix+type)] = 1
+            self.setFeature(prefix+type, 1)
     
     def buildPathEdgeFeatures(self, pathTokens, pathEdges, sentenceGraph):
         if pathEdges == None:
@@ -261,14 +261,14 @@ class MultiEdgeFeatureBuilder(FeatureBuilder):
             edgeList.extend(pathEdges[i-1][i])
         for edge in edgeList:
             depType = edge[2].get("type")
-            self.features[self.featureSet.getId("dep_"+depType)] = 1
+            self.setFeature("dep_"+depType, 1)
             # Token 1
-            self.features[self.featureSet.getId("txt_"+sentenceGraph.getTokenText(edge[0]))] = 1
-            self.features[self.featureSet.getId("POS_"+edge[0].get("POS"))] = 1
+            self.setFeature("txt_"+sentenceGraph.getTokenText(edge[0]), 1)
+            self.setFeature("POS_"+edge[0].get("POS"), 1)
             self.addType(edge[0], sentenceGraph, prefix="annType_")
             # Token 2
-            self.features[self.featureSet.getId("txt_"+sentenceGraph.getTokenText(edge[1]))] = 1
-            self.features[self.featureSet.getId("POS_"+edge[1].get("POS"))] = 1
+            self.setFeature("txt_"+sentenceGraph.getTokenText(edge[1]), 1)
+            self.setFeature("POS_"+edge[1].get("POS"), 1)
             self.addType(edge[1], sentenceGraph, prefix="annType_")
             
             # g-d features
@@ -282,14 +282,14 @@ class MultiEdgeFeatureBuilder(FeatureBuilder):
                 gATs = self.getTokenAnnotatedType(edge[0], sentenceGraph)
             if sentenceGraph.tokenIsEntityHead[edge[1]] != None:
                 dATs = self.getTokenAnnotatedType(edge[1], sentenceGraph)
-            self.features[self.featureSet.getId("gov_"+gText+"_"+dText)] = 1
-            self.features[self.featureSet.getId("gov_"+gPOS+"_"+dPOS)] = 1
+            self.setFeature("gov_"+gText+"_"+dText, 1)
+            self.setFeature("gov_"+gPOS+"_"+dPOS, 1)
             for gAT in gATs:
                 for dAT in dATs:
-                    self.features[self.featureSet.getId("gov_"+gAT+"_"+dAT)] = 1
+                    self.setFeature("gov_"+gAT+"_"+dAT, 1)
             
             for gAT in gATs:
-                self.features[self.featureSet.getId("triple_"+gAT+"_"+depType+"_"+dAT)] = 1
+                self.setFeature("triple_"+gAT+"_"+depType+"_"+dAT, 1)
             #self.features[self.featureSet.getId("triple_"+gPOS+"_"+depType+"_"+dPOS)] = 1
             #self.features[self.featureSet.getId("triple_"+gText+"_"+depType+"_"+dText)] = 1
 
@@ -307,22 +307,22 @@ class MultiEdgeFeatureBuilder(FeatureBuilder):
             if pathEdges != None:
                 for edge in pathEdges[i][i-1]:
                     depType = edge[2].get("type")
-                    self.features[self.featureSet.getId("dep_"+depType+"Forward_")] = 1
+                    self.setFeature("dep_"+depType+"Forward_", 1)
                 for edge in pathEdges[i-1][i]:
                     depType = edge[2].get("type")
-                    self.features[self.featureSet.getId("dep_Reverse_"+depType)] = 1
+                    self.setFeature("dep_Reverse_"+depType, 1)
 
         # Internal tokens
         for i in range(1,len(pathTokens)-1):
-            self.features[self.featureSet.getId("internalPOS_"+pathTokens[i].get("POS"))]=1
-            self.features[self.featureSet.getId("internalTxt_"+sentenceGraph.getTokenText(pathTokens[i]))]=1
+            self.setFeature("internalPOS_"+pathTokens[i].get("POS"), 1)
+            self.setFeature("internalTxt_"+sentenceGraph.getTokenText(pathTokens[i]), 1)
         # Internal dependencies
         for i in range(2,len(pathTokens)-1):
             if pathEdges != None:
                 for edge in pathEdges[i][i-1]:
-                    self.features[self.featureSet.getId("internalDep_"+edge[2].get("type"))] = 1
+                    self.setFeature("internalDep_"+edge[2].get("type"), 1)
                 for edge in pathEdges[i-1][i]:
-                    self.features[self.featureSet.getId("internalDep_"+edge[2].get("type"))] = 1
+                    self.setFeature("internalDep_"+edge[2].get("type"), 1)
 
     def buildEdgeCombinations(self, pathTokens, pathEdges, sentenceGraph):
             
@@ -354,16 +354,16 @@ class MultiEdgeFeatureBuilder(FeatureBuilder):
             edgesReverse2 = pathEdges[i+1][i]
             for e1 in edgesForward1:
                 for e2 in edgesForward2:
-                    features[self.featureSet.getId("dep_"+e1[2].get("type")+">"+e2[2].get("type")+">")] = 1
+                    self.setFeature("dep_"+e1[2].get("type")+">"+e2[2].get("type")+">", 1)
             for e1 in edgesReverse1:
                 for e2 in edgesReverse2:
-                    features[self.featureSet.getId("dep_"+e1[2].get("type")+"<"+e2[2].get("type")+"<")] = 1
+                    self.setFeature("dep_"+e1[2].get("type")+"<"+e2[2].get("type")+"<", 1)
             for e1 in edgesForward1:
                 for e2 in edgesReverse2:
-                    features[self.featureSet.getId("dep_"+e1[2].get("type")+">"+e2[2].get("type")+"<")] = 1
+                    self.setFeature("dep_"+e1[2].get("type")+">"+e2[2].get("type")+"<", 1)
             for e1 in edgesReverse1:
                 for e2 in edgesForward2:
-                    features[self.featureSet.getId("dep_"+e1[2].get("type")+"<"+e2[2].get("type")+">")] = 1
+                    self.setFeature("dep_"+e1[2].get("type")+"<"+e2[2].get("type")+">", 1)
                 
 #        for i in range(1,len(edges)):
 #            type1 = edges[i-1][0][2].attrib["type"]
@@ -383,13 +383,13 @@ class MultiEdgeFeatureBuilder(FeatureBuilder):
         for edge in inEdges:
             if edge in ignoreEdges:
                 continue
-            self.features[self.featureSet.getId(prefix+"HangingIn_"+edge[2].get("type"))] = 1
+            self.setFeature(prefix+"HangingIn_"+edge[2].get("type"), 1)
             for feature in self.getTokenFeatures(edge[0], sentenceGraph):
-                self.features[self.featureSet.getId(prefix+"HangingIn_"+feature)] = 1
+                self.setFeature(prefix+"HangingIn_"+feature, 1)
         outEdges = sentenceGraph.dependencyGraph.out_edges(token)
         for edge in outEdges:
             if edge in ignoreEdges:
                 continue
-            self.features[self.featureSet.getId(prefix+"HangingOut_"+edge[2].get("type"))] = 1
+            self.setFeature(prefix+"HangingOut_"+edge[2].get("type"), 1)
             for feature in self.getTokenFeatures(edge[1], sentenceGraph):
-                self.features[self.featureSet.getId(prefix+"HangingOut_"+feature)] = 1
+                self.setFeature(prefix+"HangingOut_"+feature, 1)
