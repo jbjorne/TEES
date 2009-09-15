@@ -41,7 +41,7 @@ else:
 paramCombinations = getParameterCombinations(ALL_PARAMS)
 
 # These commands will be in the beginning of most pipelines
-workdir(WORKDIR, False) # Select a working directory, don't remove existing files
+workdir(WORKDIR, True) # Select a working directory, don't remove existing files
 copyIdSetsToWorkdir(EXTDIR+"/genia/trigger-examples/genia-trigger-ids")
 copyIdSetsToWorkdir(EXTDIR+"/genia/edge-examples/genia-edge-ids")
 log() # Start logging into a file in working directory
@@ -63,7 +63,7 @@ for params in paramCombinations:
     # Write to interaction xml
     evaluator = Ev.evaluate("devel-edge-examples", "devel-edge-classifications", "genia-edge-ids.class_names")
     xmlFilename = "devel-predicted-edges.xml"# + pId + ".xml"
-    ExampleUtils.writeToInteractionXML(evaluator.classifications, boostedTriggerFile, xmlFilename, "genia-edge-ids.class_names", PARSE_TOK, PARSE_TOK)
+    ExampleUtils.writeToInteractionXML("devel-edge-examples", "devel-edge-classifications", boostedTriggerFile, xmlFilename, "genia-edge-ids.class_names", PARSE_TOK, PARSE_TOK)
     ix.splitMergedElements(xmlFilename, xmlFilename)
     ix.recalculateIds(xmlFilename, xmlFilename, True)
     # EvaluateInteractionXML differs from the previous evaluations in that it can
