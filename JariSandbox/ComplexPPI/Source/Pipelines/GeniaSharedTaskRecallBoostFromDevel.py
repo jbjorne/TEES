@@ -16,13 +16,14 @@ elif PARSE_TOK == "split-McClosky":
     CORPUS_DIR="/usr/share/biotext/GeniaChallenge/xml"
 assert(CORPUS_DIR != None)
 EXTDIR="/usr/share/biotext/GeniaChallenge/extension-data"
-WORKDIR=EXTDIR+"/genia/recall-boost-"+PARSE_TOK
+WORKDIR=EXTDIR+"/genia/recall-boost-"+PARSE_TOK+"-t12-"
 
-TRAIN_FILE=CORPUS_DIR+"/train.xml"
-DEVEL_FILE=CORPUS_DIR+"/devel.xml"
-DEVEL_PREDICTED_TRIGGERS_FILE=EXTDIR+"/genia/trigger-model-"+PARSE_TOK+"/devel-predicted-triggers-"+PARSE_TOK+"-"
+TRAIN_FILE=CORPUS_DIR+"/train12.xml"
+DEVEL_FILE=CORPUS_DIR+"/devel12.xml"
+DEVEL_PREDICTED_TRIGGERS_FILE=EXTDIR+"/genia/trigger-model-gazetteer-split-McClosky-gazetteer-t12/devel-predicted-triggers-split-McClosky-gazetteer-t12-"
+#DEVEL_PREDICTED_TRIGGERS_FILE=EXTDIR+"/genia/trigger-model-"+PARSE_TOK+"/devel-predicted-triggers-"+PARSE_TOK+"-"
 #TRIGGER_CLASSIFIER_PARAMS=[150000,200000,300000]
-EDGE_MODEL=EXTDIR+"/genia/edge-model-"+PARSE_TOK+"/devel-edge-param-opt/model-c_" #50000"
+EDGE_MODEL=EXTDIR+"/genia/edge-model-"+PARSE_TOK+"-t12/devel-edge-param-opt/model-c_" #50000"
 #RECALL_ADJUSTER_PARAMS=[0.6,0.7,0.8,0.9]#[0.5,0.6,0.7,0.8,0.9,1.0,1.1,1.2,1.5]
 EDGE_FEATURE_PARAMS="style:typed,directed,no_linear,entities,genia_limits,noMasking,maxFeatures"
 #EDGE_CLASSIFIER_PARAMS=[50000]
@@ -30,9 +31,11 @@ EDGE_FEATURE_PARAMS="style:typed,directed,no_linear,entities,genia_limits,noMask
 if PARSE_TOK == "split-McClosky":
     #ALL_PARAMS={"trigger":[350000], "booster":["0.9","1.0","1.1"], "edge":[28000]}
     #ALL_PARAMS={"trigger":[80000,200000,350000], "booster":["0.65","0.7","0.8","0.9"], "edge":[10000,28000,50000]}
-    ALL_PARAMS={"trigger":[200000], "booster":["0.5","0.6"], "edge":[28000]}
+    #ALL_PARAMS={"trigger":[200000], "booster":["0.5","0.6"], "edge":[28000]}
+    ALL_PARAMS={"trigger":[100000,150000,200000], "booster":["0.65","0.7","0.8","0.9"], "edge":[10000,28000,50000]}
 elif PARSE_TOK == "McClosky":
     ALL_PARAMS={"trigger":[80000,200000,350000], "booster":["0.6","0.7","0.8","0.9"], "edge":[10000,25000,50000]}
+    #ALL_PARAMS={"trigger":[100000,150000,200000], "booster":["0.6","0.7","0.8","0.9"], "edge":[10000,25000,50000]}
 else:
     ALL_PARAMS={"trigger":[150000,200000,300000], "booster":["0.6","0.7","0.8","0.9"], "edge":[10000,25000,50000]}
 paramCombinations = getParameterCombinations(ALL_PARAMS)
@@ -75,6 +78,6 @@ for params in paramCombinations:
     # Output will be stored to the geniaformat-subdirectory, where will also be a
     # tar.gz-file which can be sent to the Shared Task evaluation server.
     gifxmlToGenia("unflattened.xml", "geniaformat")
-    evaluateSharedTask("geniaformat", 1) # "UTurku-devel-results-090320"
+    evaluateSharedTask("geniaformat", 12) # "UTurku-devel-results-090320"
     count += 1
     
