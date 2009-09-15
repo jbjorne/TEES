@@ -370,7 +370,7 @@ def writeToInteractionXML(examples, predictions, corpusElements, outputFile, cla
                         pairElement.attrib["predictions"] = predictionString
                     sentenceElement.append(pairElement)
                     pairCount += 1
-        if xType == "event":
+        elif xType == "event":
             entityElements = sentenceElement.findall("entity")
             entityCount = 0
             pairCount = 0
