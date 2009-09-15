@@ -27,9 +27,9 @@ else:
     DEVEL_FILE=CORPUS_DIR+"/devel12.xml"
     TEST_FILE=CORPUS_DIR+"/test.xml"
     EVERYTHING_FILE=CORPUS_DIR+"/everything12.xml"
-    TASK_TAG="-NE-t12"
+    TASK_TAG="-gazetteer-t12"
 WORKDIR="/usr/share/biotext/GeniaChallenge/extension-data/genia/trigger-examples"
-TRIGGER_FEATURE_PARAMS="style:typed,names"
+TRIGGER_FEATURE_PARAMS="style:typed"
 
 # These commands will be in the beginning of most pipelines
 workdir(WORKDIR, False) # Select a working directory, don't remove existing files
