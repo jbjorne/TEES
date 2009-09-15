@@ -18,6 +18,7 @@ PARSE_TOK="split-McClosky"
 
 # These commands will be in the beginning of most pipelines
 workdir(WORKDIR, False) # Select a working directory, don't remove existing files
+copyIdSetsToWorkdir("/usr/share/biotext/GeniaChallenge/extension-data/genia/trigger-examples/genia-trigger-ids")
 log() # Start logging into a file in working directory
 
 ###############################################################################
@@ -37,24 +38,24 @@ if True:
 # class and feature ids are reused, models can be reused between experiments.
 # Existing id-files, if present, are automatically reused.
 if True:
-    GeneralEntityTypeRecognizerGztr.run(TRAIN_FILE, "trigger-train-examples", PARSE_TOK, PARSE_TOK, "style:typed", "ids", "gazetteer-train")
+    GeneralEntityTypeRecognizerGztr.run(TRAIN_FILE, "trigger-train-examples", PARSE_TOK, PARSE_TOK, "style:typed", "genia-trigger-ids", "gazetteer-train")
     # Build an SVM example file for the test corpus
-    GeneralEntityTypeRecognizerGztr.run(TEST_FILE, "trigger-test-examples", PARSE_TOK, PARSE_TOK, "style:typed", "ids", "gazetteer-train")
+    GeneralEntityTypeRecognizerGztr.run(TEST_FILE, "trigger-test-examples", PARSE_TOK, PARSE_TOK, "style:typed", "genia-trigger-ids", "gazetteer-train")
     if optimizeLoop: # search for the best c-parameter
         # The optimize-function takes as parameters a Classifier-class, an Evaluator-class
         # and input and output files
         best = optimize(Cls, Ev, "trigger-train-examples", "trigger-test-examples",\
-            "ids.class_names", TRIGGER_CLASSIFIER_PARAMS, "trigger-param-opt")
+            "genia-trigger-ids.class_names", TRIGGER_CLASSIFIER_PARAMS, "trigger-param-opt")
     else: # alternatively, use a single parameter (must have only one c-parameter)
         # Train the classifier, and store output into a model file
         Cls.train("trigger-train-examples", TRIGGER_CLASSIFIER_PARAMS, "trigger-model")
         # Use the generated model to classify examples
         Cls.test("trigger-test-examples", "trigger-model", "trigger-test-classifications")
         # The evaluator is needed to access the classifications (will be fixed later)
-        Ev.evaluate("trigger-test-examples", "trigger-test-classifications", "trigger-ids.class_names")
+        Ev.evaluate("trigger-test-examples", "trigger-test-classifications", "genia-trigger-ids.class_names")
     # The classifications are combined with the TEST_FILE xml, to produce
     # an interaction-XML file with predicted triggers
-    triggerXml = ExampleUtils.writeToInteractionXML("trigger-test-examples", best[2], TEST_FILE, "test-predicted-triggers.xml", "ids.class_names", PARSE_TOK, PARSE_TOK)
+    triggerXml = ExampleUtils.writeToInteractionXML("trigger-test-examples", best[2], TEST_FILE, "test-predicted-triggers.xml", "genia-trigger-ids.class_names", PARSE_TOK, PARSE_TOK)
     # Overlapping types (could be e.g. "protein---gene") are split into multiple
     # entities
     ix.splitMergedElements(triggerXml)
