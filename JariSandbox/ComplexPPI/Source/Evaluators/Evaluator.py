@@ -83,7 +83,7 @@ class EvaluationData:
         if self.precision + self.recall > 0.0:
             self.fscore = (2*self.precision*self.recall) / (self.precision + self.recall)
         else:
-            self.fscore = "N/A"
+            self.fscore = 0
     
     def prfToString(self):
         if self.fscore != "N/A":
