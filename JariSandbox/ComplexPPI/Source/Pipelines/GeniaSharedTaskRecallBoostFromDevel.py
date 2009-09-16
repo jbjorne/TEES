@@ -73,11 +73,13 @@ for params in paramCombinations:
     # which evaluate on the level of examples.
     EvaluateInteractionXML.run(Ev, xmlFilename, DEVEL_FILE, PARSE_TOK, PARSE_TOK)
     # Post-processing
-    prune.interface(["-i",xmlFilename,"-o","pruned.xml","-c"])
+    preserveTask2.run(xmlFilename, "t2.xml", "no-t2.xml", "extract")
+    prune.interface(["-i","no-t2.xml","-o","pruned.xml","-c"])
     unflatten.interface(["-i","pruned.xml","-o","unflattened.xml","-a",PARSE_TOK,"-t",PARSE_TOK])
+    preserveTask2.run("unflattened.xml", "final.xml", "t2.xml", "insert")
     # Output will be stored to the geniaformat-subdirectory, where will also be a
     # tar.gz-file which can be sent to the Shared Task evaluation server.
-    gifxmlToGenia("unflattened.xml", "geniaformat")
+    gifxmlToGenia("final.xml", "geniaformat")
     evaluateSharedTask("geniaformat", 12) # "UTurku-devel-results-090320"
     count += 1
     
