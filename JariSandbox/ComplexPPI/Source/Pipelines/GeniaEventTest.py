@@ -53,9 +53,10 @@ if False:
         Cls.test("trigger-test-examples", "trigger-model", "trigger-test-classifications")
         # The evaluator is needed to access the classifications (will be fixed later)
         Ev.evaluate("trigger-test-examples", "trigger-test-classifications", "genia-trigger-ids.class_names")
+if True: #temp
     # The classifications are combined with the TEST_FILE xml, to produce
     # an interaction-XML file with predicted triggers
-    triggerXml = ExampleUtils.writeToInteractionXML("trigger-test-examples", best[2], TEST_FILE, "test-predicted-triggers.xml", "genia-trigger-ids.class_names", PARSE_TOK, PARSE_TOK)
+    triggerXml = ExampleUtils.writeToInteractionXML("trigger-test-examples", "trigger-param-opt/classifications-c_300000", TEST_FILE, "test-predicted-triggers.xml", "genia-trigger-ids.class_names", PARSE_TOK, PARSE_TOK)
     # Overlapping types (could be e.g. "protein---gene") are split into multiple
     # entities
     ix.splitMergedElements(triggerXml)
