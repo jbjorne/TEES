@@ -11,7 +11,7 @@ TRAIN_FILE="/usr/share/biotext/GeniaChallenge/xml/train.xml"#-mini.xml"
 TEST_FILE="/usr/share/biotext/GeniaChallenge/xml/devel.xml"#-mini.xml"
 GOLD_TEST_FILE="/usr/share/biotext/GeniaChallenge/xml/devel.xml"#-mini.xml"
 TRIGGER_CLASSIFIER_PARAMS="c:300000"
-EDGE_CLASSIFIER_PARAMS="c:1,5,10,15,100"#"c:10000,28000,50000"
+EDGE_CLASSIFIER_PARAMS="c:100,1000,10000,20000,50000"#"c:10000,28000,50000"
 optimizeLoop = True # search for a parameter, or use a predefined one
 WORKDIR="/usr/share/biotext/GeniaChallenge/GeniaEventTest"
 PARSE_TOK="split-McClosky"
@@ -53,7 +53,6 @@ if False:
         Cls.test("trigger-test-examples", "trigger-model", "trigger-test-classifications")
         # The evaluator is needed to access the classifications (will be fixed later)
         Ev.evaluate("trigger-test-examples", "trigger-test-classifications", "genia-trigger-ids.class_names")
-if True: #temp
     # The classifications are combined with the TEST_FILE xml, to produce
     # an interaction-XML file with predicted triggers
     triggerXml = ExampleUtils.writeToInteractionXML("trigger-test-examples", "trigger-param-opt/classifications-c_300000", TEST_FILE, "test-predicted-triggers.xml", "genia-trigger-ids.class_names", PARSE_TOK, PARSE_TOK)
