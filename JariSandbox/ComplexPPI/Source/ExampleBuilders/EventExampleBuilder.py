@@ -6,6 +6,7 @@ from Core.IdSet import IdSet
 import Core.ExampleUtils as ExampleUtils
 from FeatureBuilders.MultiEdgeFeatureBuilder import MultiEdgeFeatureBuilder
 import networkx as NX
+import combine
 
 class EventExampleBuilder(ExampleBuilder):
     def __init__(self, style=["typed","directed","headsOnly"], length=None, types=[], featureSet=None, classSet=None):
@@ -78,17 +79,57 @@ class EventExampleBuilder(ExampleBuilder):
                     causeNodes.append( sentenceGraph.entitiesById[edge.get("e2")] )
         return themeNodes, causeNodes
     
-    def isEvent(self, sentenceGraph, eventNode, themeNodes, causeNodes):
-        goldThemeNodes, goldCauseNodes = self.getArgumentEntities(sentenceGraph, eventNode)
-        for node in themeNodes:
-            if node != None and node not in goldThemeNodes:
-                return False
-        for node in causeNodes:
-            if node != None and node not in goldCauseNodes:
-                return False
-        return True
+    def makeGSEvents(self, sentenceGraph):
+        self.gsEvents = {} # [token]->[event-type]->[1-n argument sets]
+        for token in sentenceGraph.tokens:
+            self.gsEvents[token] = {}
+        
+        for entity in sentenceGraph.entities:
+            if entity.get("type") == "neg":
+                continue
+            
+            eId = entity.get("id")
+            eType = entity.get("type")
+            arguments = set()
+            for interaction in sentenceGraph.interactions:
+                if interaction.get("e1") == eId:
+                    arguments.add( (interaction.get("type"), interaction.get("e2") ) )
+            eHeadToken = sentenceGraph.entityHeadTokenByEntity[entity]
+            if not self.gsEvents[eHeadToken].has_key(eType):
+                self.gsEvents[eHeadToken][eType] = []
+            self.gsEvents[eHeadToken][eType].append(arguments)
+    
+    def isGSEvent(self, sentenceGraph, entity, themeNodes, causeNodes):
+        eHeadToken = sentenceGraph.entityHeadTokenByEntity[entity]
+        eType = entity.get("type")
+        if not self.gsEvents[eHeadToken].has_key(eType):
+            return False
+            
+        argumentSet = set()
+        for themeNode in themeNodes:
+            if themeNode != None:
+                argumentSet.add( ("Theme", themeNode.get("id")) )
+        for causeNode in causeNodes:
+            if causeNode != None:
+                argumentSet.add( ("Cause", causeNode.get("id")) )
+        if argumentSet in self.gsEvents[eHeadToken][eType]:
+            return True
+        else:
+            return False    
+    
+#    def isEvent(self, sentenceGraph, eventNode, themeNodes, causeNodes):
+#        goldThemeNodes, goldCauseNodes = self.getArgumentEntities(sentenceGraph, eventNode)
+#        for node in themeNodes:
+#            if node != None and node not in goldThemeNodes:
+#                return False
+#        for node in causeNodes:
+#            if node != None and node not in goldCauseNodes:
+#                return False
+#        return True
                         
     def buildExamples(self, sentenceGraph):
+        self.makeGSEvents(sentenceGraph)
+        
         eventNodes = []
         nameNodes = []
         for entity in sentenceGraph.entities:
@@ -114,21 +155,30 @@ class EventExampleBuilder(ExampleBuilder):
                         examples.append( self.buildExample(exampleIndex, sentenceGraph, paths, eventNode, nameNode) )
                         exampleIndex += 1
             elif eventType in ["Regulation","Positive_regulation","Negative_regulation"]:
-                continue
-                #combinations = combine.combine(allNodes, allNodes)
-                #for combination in combinations:
-                #    buildExample(eventNode, combination[0], combination[1])
+                combinations = combine.combine(allNodes, allNodes)
+                for combination in combinations:
+                    if combination[0] == combination[1]:
+                        continue
+                    if combination[0] == eventNode or combination[1] == eventNode:
+                        continue
+                    if not self.isPotentialGeniaInteraction(eventNode, combination[0]):
+                        continue
+                    if not self.isPotentialGeniaInteraction(eventNode, combination[1]):
+                        continue
+                    examples.append( self.buildExample(exampleIndex, sentenceGraph, paths, eventNode, combination[0], combination[1]) )
+                    exampleIndex += 1 
             elif eventType in ["Binding"]:
                 continue
             else:
                 assert False, eventType
         
+        self.gsEvents = None
         return examples
     
     def buildExample(self, exampleIndex, sentenceGraph, paths, eventNode, themeNode, causeNode=None):
         features = {}
         
-        if self.isEvent(sentenceGraph, eventNode, [themeNode], [causeNode]):
+        if self.isGSEvent(sentenceGraph, eventNode, [themeNode], [causeNode]):
             category = self.classSet.getId("pos")
         else:
             category = self.classSet.getId("neg")
@@ -152,7 +202,7 @@ class EventExampleBuilder(ExampleBuilder):
 #                features[self.featureSet.getId("GENIA_regulation_of_event")] = 1
 
         # define extra attributes
-        extra = {"xtype":"event","type":eventNode.get("type")}
+        extra = {"xtype":"trigger-event","type":eventNode.get("type")}
         extra["e"] = eventNode.get("id")
         eventToken = sentenceGraph.entityHeadTokenByEntity[eventNode]
         extra["et"] = eventToken.get("id")
@@ -161,7 +211,8 @@ class EventExampleBuilder(ExampleBuilder):
         extra["tt"] = themeToken.get("id")
         if causeNode != None:
             extra["c"] = causeNode.get("id")
-            extra["c"] = causeToken.get("id")
+            causeToken = sentenceGraph.entityHeadTokenByEntity[causeNode]
+            extra["ct"] = causeToken.get("id")
         sentenceOrigId = sentenceGraph.sentenceElement.get("origId")
         if sentenceOrigId != None:
             extra["SOID"] = sentenceOrigId       
