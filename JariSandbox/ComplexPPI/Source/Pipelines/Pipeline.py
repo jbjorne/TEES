@@ -3,6 +3,7 @@ sys.path.append("..")
 from ExampleBuilders.GeneralEntityTypeRecognizer import GeneralEntityTypeRecognizer
 from ExampleBuilders.GeneralEntityTypeRecognizerGztr import GeneralEntityTypeRecognizerGztr
 from ExampleBuilders.MultiEdgeExampleBuilder import MultiEdgeExampleBuilder
+from ExampleBuilders.EventExampleBuilder import EventExampleBuilder
 from ExampleBuilders.Task3ExampleBuilder import Task3ExampleBuilder
 from Classifiers.SVMMultiClassClassifier import SVMMultiClassClassifier as Cls
 from Evaluators.AveragingMultiClassEvaluator import AveragingMultiClassEvaluator as Ev
