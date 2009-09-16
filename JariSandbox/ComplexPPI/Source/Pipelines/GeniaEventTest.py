@@ -28,7 +28,7 @@ log() # Start logging into a file in working directory
 # reduce performance. The gazetteer is built from the full training file,
 # even though the mini-sets are used in the slower parts of this demonstration
 # pipeline.
-if True:
+if False:
     Gazetteer.run(FULL_TRAIN_FILE, "gazetteer-train", PARSE_TOK)
 # Build an SVM example file for the training corpus.
 # GeneralEntityTypeRecognizerGztr is a version of GeneralEntityTypeRecognizer
@@ -37,7 +37,7 @@ if True:
 # "ids" is the identifier of the class- and feature-id-files. When
 # class and feature ids are reused, models can be reused between experiments.
 # Existing id-files, if present, are automatically reused.
-if True:
+if False:
     GeneralEntityTypeRecognizerGztr.run(TRAIN_FILE, "trigger-train-examples", PARSE_TOK, PARSE_TOK, "style:typed", "genia-trigger-ids", "gazetteer-train")
     # Build an SVM example file for the test corpus
     GeneralEntityTypeRecognizerGztr.run(TEST_FILE, "trigger-test-examples", PARSE_TOK, PARSE_TOK, "style:typed", "genia-trigger-ids", "gazetteer-train")
