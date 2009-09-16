@@ -79,7 +79,7 @@ for params in paramCombinations:
     preserveTask2.run("unflattened.xml", "final.xml", "t2.xml", "insert")
     # Output will be stored to the geniaformat-subdirectory, where will also be a
     # tar.gz-file which can be sent to the Shared Task evaluation server.
-    gifxmlToGenia("final.xml", "geniaformat")
+    gifxmlToGenia("final.xml", "geniaformat", 2)
     evaluateSharedTask("geniaformat", 12) # "UTurku-devel-results-090320"
     count += 1
     
