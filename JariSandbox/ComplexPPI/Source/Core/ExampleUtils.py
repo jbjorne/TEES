@@ -370,7 +370,7 @@ def writeToInteractionXML(examples, predictions, corpusElements, outputFile, cla
                         pairElement.attrib["predictions"] = predictionString
                     sentenceElement.append(pairElement)
                     pairCount += 1
-        elif xType == "event":
+        elif xType == "trigger-event":
             entityElements = sentenceElement.findall("entity")
             entityCount = 0
             pairCount = 0
@@ -383,9 +383,14 @@ def writeToInteractionXML(examples, predictions, corpusElements, outputFile, cla
             entityElements = sentenceElement.findall("entity")
             newEntityIdCount = IDUtils.getNextFreeId(entityElements)
             if examplesBySentence.has_key(sentenceId):
+                eventByOrigId = {}
+                newEntities = []
                 for example in examplesBySentence[sentenceId]:
                     prediction = predictionsByExample[example[0]]
+                    if prediction[0] == 1:
+                        continue
                     entityElement = ET.Element("entity")
+                    newEntities.append(entityElement)
                     entityElement.attrib["isName"] = "False"
                     headToken = example[3]["et"]
                     for token in sentenceObject.tokens:
@@ -397,6 +402,10 @@ def writeToInteractionXML(examples, predictions, corpusElements, outputFile, cla
                     entityElement.attrib["text"] = headToken.get("text")
                     entityElement.attrib["id"] = sentenceId + ".e" + str(newEntityIdCount)
                     newEntityIdCount += 1
+                    if not eventByOrigId.has_key(example[3]["e"]):
+                        eventByOrigId[example[3]["e"]] = []
+                    eventByOrigId[example[3]["e"]].append(entityElement.attrib["id"])
+                    example[3]["e"] = entityElement.attrib["id"]
                     entityElement.attrib["type"] = example[3]["type"]
                     classWeights = prediction[1:]
                     predictionString = ""
@@ -409,13 +418,36 @@ def writeToInteractionXML(examples, predictions, corpusElements, outputFile, cla
                     sentenceElement.append(entityElement)
                     entityCount += 1
                     
+                for example in examplesBySentence[sentenceId]:
+                    prediction = predictionsByExample[example[0]]
+                    if prediction[0] == 1:
+                        continue
                     # add theme edge
                     pairElement = ET.Element("interaction")
                     pairElement.attrib["directed"] = "Unknown"
-                    pairElement.attrib["e1"] = entityElement.get("id")
-                    pairElement.attrib["e2"] = example[3]["t"] #.attrib["id"]
+                    pairElement.attrib["e1"] = example[3]["e"]
+                    if eventByOrigId.has_key(example[3]["t"]):
+                        pairElement.attrib["e2"] = eventByOrigId[example[3]["t"]][0]
+                    else:
+                        pairElement.attrib["e2"] = example[3]["t"] #.attrib["id"]
                     pairElement.attrib["id"] = sentenceId + ".i" + str(pairCount)
                     pairElement.attrib["type"] = "Theme"
+                    sentenceElement.append(pairElement)
+                    pairCount += 1
+                    
+                    # add cause edge
+                    if example[3].has_key("c"):
+                        pairElement = ET.Element("interaction")
+                        pairElement.attrib["directed"] = "Unknown"
+                        pairElement.attrib["e1"] = example[3]["e"]
+                        if eventByOrigId.has_key(example[3]["c"]):
+                            pairElement.attrib["e2"] = eventByOrigId[example[3]["c"]][0]
+                        else:
+                            pairElement.attrib["e2"] = example[3]["c"] #.attrib["id"]
+                        pairElement.attrib["id"] = sentenceId + ".i" + str(pairCount)
+                        pairElement.attrib["type"] = "Cause"
+                        sentenceElement.append(pairElement)
+                        pairCount += 1
 #                    classWeights = prediction[1:]
 #                    predictionString = ""
 #                    for i in range(len(classWeights)):
@@ -423,8 +455,6 @@ def writeToInteractionXML(examples, predictions, corpusElements, outputFile, cla
 #                            predictionString += ","
 #                        predictionString += classSet.getName(classIds[i]) + ":" + str(classWeights[i])
 #                    pairElement.attrib["predictions"] = predictionString
-                    sentenceElement.append(pairElement)
-                    pairCount += 1
         else:
             sys.exit("Error, unknown xtype")
         # re-attach the analyses-element
