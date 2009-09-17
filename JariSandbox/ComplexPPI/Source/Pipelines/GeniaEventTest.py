@@ -7,9 +7,14 @@ from Pipeline import *
 
 # define shortcuts for commonly used files
 FULL_TRAIN_FILE="/usr/share/biotext/GeniaChallenge/xml/train.xml"
-TRAIN_FILE="/usr/share/biotext/GeniaChallenge/xml/train.xml"#-mini.xml"
-TEST_FILE="/usr/share/biotext/GeniaChallenge/xml/devel.xml"#-mini.xml"
-GOLD_TEST_FILE="/usr/share/biotext/GeniaChallenge/xml/devel.xml"#-mini.xml"
+if False: # mini
+    TRAIN_FILE="/usr/share/biotext/GeniaChallenge/xml/train-with-duplicates-mini.xml"
+    TEST_FILE="/usr/share/biotext/GeniaChallenge/xml/devel-with-duplicates-mini.xml"
+    GOLD_TEST_FILE="/usr/share/biotext/GeniaChallenge/xml/devel-with-duplicates-mini.xml"
+else:
+    TRAIN_FILE="/usr/share/biotext/GeniaChallenge/xml/train-with-duplicates.xml"
+    TEST_FILE="/usr/share/biotext/GeniaChallenge/xml/devel-with-duplicates.xml"
+    GOLD_TEST_FILE="/usr/share/biotext/GeniaChallenge/xml/devel-with-duplicates.xml"
 TRIGGER_CLASSIFIER_PARAMS="c:300000"
 EDGE_CLASSIFIER_PARAMS="c:100,1000,10000,20000,50000"#"c:10000,28000,50000"
 optimizeLoop = True # search for a parameter, or use a predefined one
