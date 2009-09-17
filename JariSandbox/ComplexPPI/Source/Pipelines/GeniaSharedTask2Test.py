@@ -29,8 +29,8 @@ else: # 2
     TASK_TAG="-t12"
 
 TRIGGER_EXAMPLEDIR="/usr/share/biotext/GeniaChallenge/extension-data/genia/trigger-examples"
-TRIGGER_TEST_EXAMPLE_FILE=TRIGGER_EXAMPLEDIR+"/trigger-test-examples-"+PARSE_TOK+TASK_TAG
-TRIGGER_EVERYTHING_EXAMPLE_FILE=TRIGGER_EXAMPLEDIR+"/trigger-everything-examples-"+PARSE_TOK+TASK_TAG
+TRIGGER_TEST_EXAMPLE_FILE=TRIGGER_EXAMPLEDIR+"/trigger-test-examples-"+PARSE_TOK+"-gazetteer"+TASK_TAG
+TRIGGER_EVERYTHING_EXAMPLE_FILE=TRIGGER_EXAMPLEDIR+"/trigger-everything-examples-"+PARSE_TOK+"-gazetteer"+TASK_TAG
 #TRIGGER_TEST_EXAMPLE_FILE=TRIGGER_EXAMPLEDIR+"/trigger-devel-examples-"+PARSE_TOK+TASK_TAG
 #TRIGGER_EVERYTHING_EXAMPLE_FILE=TRIGGER_EXAMPLEDIR+"/trigger-train-examples-"+PARSE_TOK+TASK_TAG
 TRIGGER_IDS="genia-trigger-ids"
@@ -42,7 +42,7 @@ EDGE_EVERYTHING_EXAMPLE_FILE=EDGE_EXAMPLEDIR+"/edge-everything-examples-"+PARSE_
 #EDGE_EVERYTHING_EXAMPLE_FILE=EDGE_EXAMPLEDIR+"/edge-train-examples-"+PARSE_TOK+TASK_TAG
 EDGE_IDS="genia-edge-ids"
 
-EXPERIMENT_NAME = "extension-data/genia/final-test-set-"+PARSE_TOK+"-task2"
+EXPERIMENT_NAME = "extension-data/genia/gazetteer-test-set-"+PARSE_TOK+"-task2"
 WORKDIR="/usr/share/biotext/GeniaChallenge/"+EXPERIMENT_NAME
 
 # {'trigger': 200000, 'edge': 28000, 'booster': '0.65'}
@@ -53,9 +53,9 @@ if PARSE_TOK == "split-Charniak-Lease":
     EDGE_CLASSIFIER_PARAMS="c:25000" #"c:50000"
     RECALL_BOOST_PARAM=0.7 #0.8
 elif PARSE_TOK == "split-McClosky":
-    TRIGGER_CLASSIFIER_PARAMS="c:200000" #"c:350000"
-    EDGE_CLASSIFIER_PARAMS="c:28000" #"c:28000"
-    RECALL_BOOST_PARAM=0.65 #0.7#0.9
+    TRIGGER_CLASSIFIER_PARAMS="c:100000"#"c:200000" #"c:350000"
+    EDGE_CLASSIFIER_PARAMS="c:50000"#"c:28000" #"c:28000"
+    RECALL_BOOST_PARAM=0.7#0.65 #0.7#0.9
 else: # McClosky
     TRIGGER_CLASSIFIER_PARAMS="c:200000"
     EDGE_CLASSIFIER_PARAMS="c:50000"
@@ -65,51 +65,47 @@ else: # McClosky
 workdir(WORKDIR, False) # Select a working directory, don't remove existing files
 log() # Start logging into a file in working directory
 
-#copyIdSetsToWorkdir(TRIGGER_EXAMPLEDIR+"/genia-trigger-ids")
-#copyIdSetsToWorkdir(EDGE_EXAMPLEDIR+"/genia-edge-ids")
-#
-#print >> sys.stderr, "Genia Shared Task for the Test Set"
-#print >> sys.stderr, "Trigger params", TRIGGER_CLASSIFIER_PARAMS
-#print >> sys.stderr, "Recall Booster params", str(RECALL_BOOST_PARAM)
-#print >> sys.stderr, "Edge params", EDGE_CLASSIFIER_PARAMS
-################################################################################
-## Triggers
-################################################################################
-#c = CSCConnection(EXPERIMENT_NAME+"/trigger-model", "jakrbj@murska.csc.fi")
-#best = optimize(Cls, Ev, TRIGGER_EVERYTHING_EXAMPLE_FILE, TRIGGER_TEST_EXAMPLE_FILE,\
-#    TRIGGER_IDS+".class_names", TRIGGER_CLASSIFIER_PARAMS, "test-trigger-param-opt", None, c)
-## The evaluator is needed to access the classifications (will be fixed later)
-#evaluator = best[0]
-#ExampleUtils.writeToInteractionXML(evaluator.classifications, TEST_FILE, "test-predicted-triggers.xml", TRIGGER_IDS+".class_names", PARSE_TOK, PARSE_TOK)
-## NOTE: Merged elements must not be split, as recall booster may change their class
-##ix.splitMergedElements("devel-predicted-triggers.xml", "devel-predicted-triggers.xml")
-#ix.recalculateIds("test-predicted-triggers.xml", "test-predicted-triggers.xml", True)
-#
-################################################################################
-## Edges
-################################################################################
+copyIdSetsToWorkdir(TRIGGER_EXAMPLEDIR+"/genia-trigger-ids")
+copyIdSetsToWorkdir(EDGE_EXAMPLEDIR+"/genia-edge-ids")
+
+print >> sys.stderr, "Genia Shared Task for the Test Set"
+print >> sys.stderr, "Trigger params", TRIGGER_CLASSIFIER_PARAMS
+print >> sys.stderr, "Recall Booster params", str(RECALL_BOOST_PARAM)
+print >> sys.stderr, "Edge params", EDGE_CLASSIFIER_PARAMS
+###############################################################################
+# Triggers
+###############################################################################
+c = CSCConnection(EXPERIMENT_NAME+"/trigger-model", "jakrbj@murska.csc.fi")
+best = optimize(Cls, Ev, TRIGGER_EVERYTHING_EXAMPLE_FILE, TRIGGER_TEST_EXAMPLE_FILE,\
+    TRIGGER_IDS+".class_names", TRIGGER_CLASSIFIER_PARAMS, "test-trigger-param-opt", None, c)
+ExampleUtils.writeToInteractionXML(TRIGGER_TEST_EXAMPLE_FILE, best[1], TEST_FILE, "test-predicted-triggers.xml", TRIGGER_IDS+".class_names", PARSE_TOK, PARSE_TOK)
+# NOTE: Merged elements must not be split, as recall booster may change their class
+#ix.splitMergedElements("devel-predicted-triggers.xml", "devel-predicted-triggers.xml")
+ix.recalculateIds("test-predicted-triggers.xml", "test-predicted-triggers.xml", True)
+
+###############################################################################
+# Edges
+###############################################################################
 boostedTriggerFile = "test-predicted-triggers-boost.xml"
-#RecallAdjust.run("test-predicted-triggers.xml", RECALL_BOOST_PARAM, boostedTriggerFile)
-#ix.splitMergedElements(boostedTriggerFile, boostedTriggerFile)
-#ix.recalculateIds(boostedTriggerFile, boostedTriggerFile, True)
-## Build edge examples
-#MultiEdgeExampleBuilder.run(boostedTriggerFile, "devel-edge-examples", PARSE_TOK, PARSE_TOK, EDGE_FEATURE_PARAMS, EDGE_IDS)
+RecallAdjust.run("test-predicted-triggers.xml", RECALL_BOOST_PARAM, boostedTriggerFile)
+ix.splitMergedElements(boostedTriggerFile, boostedTriggerFile)
+ix.recalculateIds(boostedTriggerFile, boostedTriggerFile, True)
+# Build edge examples
+MultiEdgeExampleBuilder.run(boostedTriggerFile, "devel-edge-examples", PARSE_TOK, PARSE_TOK, EDGE_FEATURE_PARAMS, EDGE_IDS)
 # Classify with pre-defined model
-#c = CSCConnection(EXPERIMENT_NAME+"/edge-model", "jakrbj@louhi.csc.fi")
-#best = optimize(Cls, Ev, EDGE_EVERYTHING_EXAMPLE_FILE, "devel-edge-examples",\
-#    EDGE_IDS+".class_names", EDGE_CLASSIFIER_PARAMS, "test-edge-param-opt", None, c)
-## The evaluator is needed to access the classifications (will be fixed later)
-#evaluator = best[0]
-## Write to interaction xml
+c = CSCConnection(EXPERIMENT_NAME+"/edge-model", "jakrbj@louhi.csc.fi")
+best = optimize(Cls, Ev, EDGE_EVERYTHING_EXAMPLE_FILE, "devel-edge-examples",\
+    EDGE_IDS+".class_names", EDGE_CLASSIFIER_PARAMS, "test-edge-param-opt", None, c)
+# Write to interaction xml
 xmlFilename = "test-predicted-edges.xml"
-#ExampleUtils.writeToInteractionXML(evaluator.classifications, boostedTriggerFile, xmlFilename, "genia-edge-ids.class_names", PARSE_TOK, PARSE_TOK)
-#ix.splitMergedElements(xmlFilename, xmlFilename)
-#ix.recalculateIds(xmlFilename, xmlFilename, True)
-## EvaluateInteractionXML differs from the previous evaluations in that it can
-## be used to compare two separate GifXML-files. One of these is the gold file,
-## against which the other is evaluated by heuristically matching triggers and
-## edges. Note that this evaluation will differ somewhat from the previous ones,
-## which evaluate on the level of examples.
+ExampleUtils.writeToInteractionXML("devel-edge-examples", best[1], boostedTriggerFile, xmlFilename, "genia-edge-ids.class_names", PARSE_TOK, PARSE_TOK)
+ix.splitMergedElements(xmlFilename, xmlFilename)
+ix.recalculateIds(xmlFilename, xmlFilename, True)
+# EvaluateInteractionXML differs from the previous evaluations in that it can
+# be used to compare two separate GifXML-files. One of these is the gold file,
+# against which the other is evaluated by heuristically matching triggers and
+# edges. Note that this evaluation will differ somewhat from the previous ones,
+# which evaluate on the level of examples.
 EvaluateInteractionXML.run(Ev, xmlFilename, TEST_FILE, PARSE_TOK, PARSE_TOK)
 # Post-processing
 preserveTask2.run(xmlFilename, "t2.xml", "no-t2.xml", "extract")
