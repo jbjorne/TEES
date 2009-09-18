@@ -16,7 +16,7 @@ class MultiEdgeFeatureBuilder(FeatureBuilder):
             targetElements = sentence.findall(elementName)
             for element in targetElements:
                 predictions = element.get("predictions")
-                if predictions != None:
+                if predictions != None and predictions != "":
                     predictions = predictions.split(",")
                     for p in predictions:
                         splits = p.split(":")
@@ -56,7 +56,7 @@ class MultiEdgeFeatureBuilder(FeatureBuilder):
     
     def buildPredictedValueFeatures(self, element, tag):
         predictions = element.get("predictions")
-        if predictions != None:
+        if predictions != None and predictions != "":
             predictions = predictions.split(",")
             for p in predictions:
                 splits = p.split(":")
