@@ -6,6 +6,7 @@ from ExampleBuilders.MultiEdgeExampleBuilder import MultiEdgeExampleBuilder
 from ExampleBuilders.EventExampleBuilder import EventExampleBuilder
 from ExampleBuilders.Task3ExampleBuilder import Task3ExampleBuilder
 from Classifiers.SVMMultiClassClassifier import SVMMultiClassClassifier as Cls
+from Classifiers.AllCorrectClassifier import AllCorrectClassifier as ACCls
 from Evaluators.AveragingMultiClassEvaluator import AveragingMultiClassEvaluator as Ev
 import Core.SentenceGraph as SentenceGraph
 import Core.ExampleUtils as ExampleUtils

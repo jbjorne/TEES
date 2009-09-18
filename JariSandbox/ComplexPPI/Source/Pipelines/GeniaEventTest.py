@@ -26,6 +26,12 @@ workdir(WORKDIR, False) # Select a working directory, don't remove existing file
 copyIdSetsToWorkdir("/usr/share/biotext/GeniaChallenge/extension-data/genia/trigger-examples/genia-trigger-ids")
 log() # Start logging into a file in working directory
 
+goldPassThrough = False
+if goldPassThrough: # gold pass-through test
+    MyCls = ACCls
+else:
+    MyCls = Cls
+
 ###############################################################################
 # Trigger detection
 ###############################################################################
@@ -49,7 +55,7 @@ if False:
     if optimizeLoop: # search for the best c-parameter
         # The optimize-function takes as parameters a Classifier-class, an Evaluator-class
         # and input and output files
-        best = optimize(Cls, Ev, "trigger-train-examples", "trigger-test-examples",\
+        best = optimize(MyCls, Ev, "trigger-train-examples", "trigger-test-examples",\
             "genia-trigger-ids.class_names", TRIGGER_CLASSIFIER_PARAMS, "trigger-param-opt")
     else: # alternatively, use a single parameter (must have only one c-parameter)
         # Train the classifier, and store output into a model file
@@ -76,7 +82,11 @@ if True:
     EDGE_FEATURE_PARAMS="style:typed,directed,no_linear,entities,genia_limits,noMasking,maxFeatures"
     # The TEST_FILE for the edge generation step is now the GifXML-file that was built
     # in the previous step, i.e. the one that has predicted triggers
-    TEST_WITH_PRED_TRIGGERS_FILE = "test-predicted-triggers.xml"
+    if goldPassThrough:
+        TEST_WITH_PRED_TRIGGERS_FILE = GOLD_TEST_FILE
+    else:
+        TEST_WITH_PRED_TRIGGERS_FILE = "test-predicted-triggers.xml"
+        
     # Build examples, see trigger detection
     EventExampleBuilder.run(TRAIN_FILE, "edge-train-examples", PARSE_TOK, PARSE_TOK, EDGE_FEATURE_PARAMS, "ids.edge")
     EventExampleBuilder.run(TEST_WITH_PRED_TRIGGERS_FILE, "edge-test-examples", PARSE_TOK, PARSE_TOK, EDGE_FEATURE_PARAMS, "ids.edge")
@@ -85,12 +95,12 @@ if True:
     # Run the optimization loop. Note that here we must optimize against the gold
     # standard examples, because we do not know real classes of edge examples built between
     # predicted triggers
-    best = optimize(Cls, Ev, "edge-train-examples", "edge-gold-test-examples",\
+    best = optimize(MyCls, Ev, "edge-train-examples", "edge-gold-test-examples",\
         "ids.edge.class_names", EDGE_CLASSIFIER_PARAMS, "edge-param-opt")
     # Once we have determined the optimal c-parameter (best[1]), we can
     # use it to classify our real examples, i.e. the ones that define potential edges
     # between predicted entities
-    Cls.test("edge-test-examples", best[1], "edge-test-classifications")
+    MyCls.test("edge-test-examples", best[1], "edge-test-classifications")
     # Evaluator is again needed to access classifications, but note that it can't
     # actually evaluate the results, since we don't know the real classes of the edge
     # examples.
