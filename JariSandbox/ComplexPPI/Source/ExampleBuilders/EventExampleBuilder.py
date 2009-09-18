@@ -155,15 +155,15 @@ class EventExampleBuilder(ExampleBuilder):
                         examples.append( self.buildExample(exampleIndex, sentenceGraph, paths, eventNode, nameNode) )
                         exampleIndex += 1
             elif eventType in ["Regulation","Positive_regulation","Negative_regulation"]:
-                combinations = combine.combine(allNodes, allNodes)
+                combinations = combine.combine(allNodes+[None], allNodes+[None])
                 for combination in combinations:
                     if combination[0] == combination[1]:
                         continue
                     if combination[0] == eventNode or combination[1] == eventNode:
                         continue
-                    if not self.isPotentialGeniaInteraction(eventNode, combination[0]):
+                    if combination[0] != None and not self.isPotentialGeniaInteraction(eventNode, combination[0]):
                         continue
-                    if not self.isPotentialGeniaInteraction(eventNode, combination[1]):
+                    if combination[1] != None and not self.isPotentialGeniaInteraction(eventNode, combination[1]):
                         continue
                     examples.append( self.buildExample(exampleIndex, sentenceGraph, paths, eventNode, combination[0], combination[1]) )
                     exampleIndex += 1 
@@ -183,9 +183,10 @@ class EventExampleBuilder(ExampleBuilder):
         else:
             category = self.classSet.getId("neg")
         
-        self.buildArgumentFeatures(sentenceGraph, paths, features, eventNode, themeNode, "theme_")
+        if themeNode != None:
+            self.buildArgumentFeatures(sentenceGraph, paths, features, eventNode, themeNode, "theme_")
         if causeNode != None:
-            self.buildArgumentFeatures(sentenceGraph, paths, features, eventNode, themeNode, "cause_")
+            self.buildArgumentFeatures(sentenceGraph, paths, features, eventNode, causeNode, "cause_")
         
         # Common features
 #        eventType = eventNode.get("type")
@@ -206,9 +207,10 @@ class EventExampleBuilder(ExampleBuilder):
         extra["e"] = eventNode.get("id")
         eventToken = sentenceGraph.entityHeadTokenByEntity[eventNode]
         extra["et"] = eventToken.get("id")
-        extra["t"] = themeNode.get("id")
-        themeToken = sentenceGraph.entityHeadTokenByEntity[themeNode]
-        extra["tt"] = themeToken.get("id")
+        if themeNode != None:
+            extra["t"] = themeNode.get("id")
+            themeToken = sentenceGraph.entityHeadTokenByEntity[themeNode]
+            extra["tt"] = themeToken.get("id")
         if causeNode != None:
             extra["c"] = causeNode.get("id")
             causeToken = sentenceGraph.entityHeadTokenByEntity[causeNode]
