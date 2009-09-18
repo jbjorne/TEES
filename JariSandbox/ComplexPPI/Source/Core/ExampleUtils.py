@@ -371,6 +371,8 @@ def writeToInteractionXML(examples, predictions, corpusElements, outputFile, cla
                     sentenceElement.append(pairElement)
                     pairCount += 1
         elif xType == "trigger-event":
+            eventsByToken = {}
+            existingEntities = set()
             entityElements = sentenceElement.findall("entity")
             entityCount = 0
             pairCount = 0
@@ -379,11 +381,13 @@ def writeToInteractionXML(examples, predictions, corpusElements, outputFile, cla
                 for entityElement in entityElements:
                     if entityElement.get("isName") == "False": # interaction word
                         sentenceElement.remove(entityElement)
+                    else:
+                        existingEntities.add(entityElement.get("id"))
             # add new pairs
             entityElements = sentenceElement.findall("entity")
             newEntityIdCount = IDUtils.getNextFreeId(entityElements)
             if examplesBySentence.has_key(sentenceId):
-                eventByOrigId = {}
+                eventIdByExample = {}
                 newEntities = []
                 for example in examplesBySentence[sentenceId]:
                     prediction = predictionsByExample[example[0]]
@@ -402,10 +406,18 @@ def writeToInteractionXML(examples, predictions, corpusElements, outputFile, cla
                     entityElement.attrib["text"] = headToken.get("text")
                     entityElement.attrib["id"] = sentenceId + ".e" + str(newEntityIdCount)
                     newEntityIdCount += 1
-                    if not eventByOrigId.has_key(example[3]["e"]):
-                        eventByOrigId[example[3]["e"]] = []
-                    eventByOrigId[example[3]["e"]].append(entityElement.attrib["id"])
-                    example[3]["e"] = entityElement.attrib["id"]
+                    eventIdByExample[example[0]] = entityElement.get("id")
+                    
+                    #if not eventByOrigId.has_key(example[3]["e"]):
+                    #    eventByOrigId[example[3]["e"]] = []
+                    #eventByOrigId[example[3]["e"]].append(entityElement.attrib["id"])
+                    #example[3]["e"] = entityElement.attrib["id"]
+                    
+                    
+                    if not eventsByToken.has_key(example[3]["et"]):
+                        eventsByToken[example[3]["et"]] = []
+                    eventsByToken[example[3]["et"]].append(entityElement.get("id"))
+
                     entityElement.attrib["type"] = example[3]["type"]
                     classWeights = prediction[1:]
                     predictionString = ""
@@ -423,31 +435,36 @@ def writeToInteractionXML(examples, predictions, corpusElements, outputFile, cla
                     if prediction[0] == 1:
                         continue
                     # add theme edge
-                    pairElement = ET.Element("interaction")
-                    pairElement.attrib["directed"] = "Unknown"
-                    pairElement.attrib["e1"] = example[3]["e"]
-                    if eventByOrigId.has_key(example[3]["t"]):
-                        pairElement.attrib["e2"] = eventByOrigId[example[3]["t"]][0]
-                    else:
-                        pairElement.attrib["e2"] = example[3]["t"] #.attrib["id"]
-                    pairElement.attrib["id"] = sentenceId + ".i" + str(pairCount)
-                    pairElement.attrib["type"] = "Theme"
-                    sentenceElement.append(pairElement)
-                    pairCount += 1
+                    if example[3].has_key("t"):
+                        pairElement = ET.Element("interaction")
+                        pairElement.attrib["directed"] = "Unknown"
+                        pairElement.attrib["e1"] = eventIdByExample[example[0]]
+                        if eventsByToken.has_key(example[3]["tt"]):
+                            pairElement.attrib["e2"] = eventsByToken[example[3]["tt"]][0]
+                        else:
+                            if example[3]["t"] in existingEntities:
+                                pairElement.attrib["e2"] = example[3]["t"] #.attrib["id"]
+                        pairElement.attrib["id"] = sentenceId + ".i" + str(pairCount)
+                        pairElement.attrib["type"] = "Theme"
+                        if pairElement.get("e2") != None:
+                            sentenceElement.append(pairElement)
+                            pairCount += 1
                     
                     # add cause edge
                     if example[3].has_key("c"):
                         pairElement = ET.Element("interaction")
                         pairElement.attrib["directed"] = "Unknown"
-                        pairElement.attrib["e1"] = example[3]["e"]
-                        if eventByOrigId.has_key(example[3]["c"]):
-                            pairElement.attrib["e2"] = eventByOrigId[example[3]["c"]][0]
+                        pairElement.attrib["e1"] = eventIdByExample[example[0]]
+                        if eventsByToken.has_key(example[3]["ct"]):
+                            pairElement.attrib["e2"] = eventsByToken[example[3]["ct"]][0]
                         else:
-                            pairElement.attrib["e2"] = example[3]["c"] #.attrib["id"]
+                            if example[3]["c"] in existingEntities:
+                                pairElement.attrib["e2"] = example[3]["c"] #.attrib["id"]
                         pairElement.attrib["id"] = sentenceId + ".i" + str(pairCount)
                         pairElement.attrib["type"] = "Cause"
-                        sentenceElement.append(pairElement)
-                        pairCount += 1
+                        if pairElement.get("e2") != None:
+                            sentenceElement.append(pairElement)
+                            pairCount += 1
 #                    classWeights = prediction[1:]
 #                    predictionString = ""
 #                    for i in range(len(classWeights)):
