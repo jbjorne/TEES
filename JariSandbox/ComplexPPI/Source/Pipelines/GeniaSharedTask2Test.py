@@ -78,7 +78,7 @@ print >> sys.stderr, "Edge params", EDGE_CLASSIFIER_PARAMS
 c = CSCConnection(EXPERIMENT_NAME+"/trigger-model", "jakrbj@murska.csc.fi")
 best = optimize(Cls, Ev, TRIGGER_EVERYTHING_EXAMPLE_FILE, TRIGGER_TEST_EXAMPLE_FILE,\
     TRIGGER_IDS+".class_names", TRIGGER_CLASSIFIER_PARAMS, "test-trigger-param-opt", None, c)
-ExampleUtils.writeToInteractionXML(TRIGGER_TEST_EXAMPLE_FILE, best[1], TEST_FILE, "test-predicted-triggers.xml", TRIGGER_IDS+".class_names", PARSE_TOK, PARSE_TOK)
+ExampleUtils.writeToInteractionXML(TRIGGER_TEST_EXAMPLE_FILE, best[2], TEST_FILE, "test-predicted-triggers.xml", TRIGGER_IDS+".class_names", PARSE_TOK, PARSE_TOK)
 # NOTE: Merged elements must not be split, as recall booster may change their class
 #ix.splitMergedElements("devel-predicted-triggers.xml", "devel-predicted-triggers.xml")
 ix.recalculateIds("test-predicted-triggers.xml", "test-predicted-triggers.xml", True)
@@ -98,7 +98,7 @@ best = optimize(Cls, Ev, EDGE_EVERYTHING_EXAMPLE_FILE, "devel-edge-examples",\
     EDGE_IDS+".class_names", EDGE_CLASSIFIER_PARAMS, "test-edge-param-opt", None, c)
 # Write to interaction xml
 xmlFilename = "test-predicted-edges.xml"
-ExampleUtils.writeToInteractionXML("devel-edge-examples", best[1], boostedTriggerFile, xmlFilename, "genia-edge-ids.class_names", PARSE_TOK, PARSE_TOK)
+ExampleUtils.writeToInteractionXML("devel-edge-examples", best[2], boostedTriggerFile, xmlFilename, "genia-edge-ids.class_names", PARSE_TOK, PARSE_TOK)
 ix.splitMergedElements(xmlFilename, xmlFilename)
 ix.recalculateIds(xmlFilename, xmlFilename, True)
 # EvaluateInteractionXML differs from the previous evaluations in that it can
