@@ -17,7 +17,7 @@ else:
     GOLD_TEST_FILE="/usr/share/biotext/GeniaChallenge/xml/devel-with-duplicates.xml"
 TRIGGER_CLASSIFIER_PARAMS="c:200000"#"c:300000"
 RECALL_BOOST_PARAM=0.65
-EDGE_CLASSIFIER_PARAMS="c:50000"#"c:100,1000,10000,20000,50000,100000, 500000"#"c:10000,28000,50000"
+EDGE_CLASSIFIER_PARAMS="c:100,1000,10000,20000,50000,100000, 500000"#"c:10000,28000,50000"
 optimizeLoop = True # search for a parameter, or use a predefined one
 WORKDIR="/usr/share/biotext/GeniaChallenge/GeniaEventTest"
 PARSE_TOK="split-McClosky"
