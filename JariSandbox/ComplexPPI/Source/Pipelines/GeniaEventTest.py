@@ -27,7 +27,7 @@ workdir(WORKDIR, False) # Select a working directory, don't remove existing file
 copyIdSetsToWorkdir("/usr/share/biotext/GeniaChallenge/extension-data/genia/trigger-examples/genia-trigger-ids")
 log() # Start logging into a file in working directory
 
-goldPassThrough = True
+goldPassThrough = False
 if goldPassThrough: # gold pass-through test
     MyCls = ACCls
 else:
