@@ -35,15 +35,22 @@ def extractTask2(inputfile, outputfile, inverse):
         print >> sys.stderr, "Removing task2 information from", inputfile, "and saving to", outputfile
     corpusRoot = getCorpus(inputfile)
     for sentence in corpusRoot.getiterator("sentence"):
+        task2EntityIds = set()
         if not inverse:
             for entity in sentence.findall("entity"):
+                if entity.get("type") == "Entity":
+                    task2EntityIds.add(entity.get("id"))
                 if entity.get("type") in ["Entity", "neg"]:
                     sentence.remove(entity)
             for interaction in sentence.findall("interaction"):
                 if interaction.get("type") in ["Site","CSite","AtLoc","ToLoc","neg"]:
                     sentence.remove(interaction)
+                elif interaction.get("e1") in task2EntityIds or interaction.get("e2") in task2EntityIds:
+                    sentence.remove(interaction) # remove Theme/Cause interactions referring to t2 entities
         else:
             for entity in sentence.findall("entity"):
+                if entity.get("type") == "Entity":
+                    task2EntityIds.add(entity.get("id"))
                 if entity.get("type") != "Entity":
                     sentence.remove(entity)
             for interaction in sentence.findall("interaction"):
