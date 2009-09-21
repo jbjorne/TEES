@@ -139,5 +139,5 @@ def optimizeCSC(Classifier, Evaluator, trainExamples, testExamples, classIds, co
                 bestResult = [evaluator, None, predictions, evaluationOutput, id]
     Stream.setIndent()
     print >> sys.stderr, "Selected parameters", bestResult[-1]
-    Classifier.downloadModel(bestResult[-1], cscConnection, workDir)
+    bestResult[1] = Classifier.downloadModel(bestResult[-1], cscConnection, workDir)
     return bestResult
