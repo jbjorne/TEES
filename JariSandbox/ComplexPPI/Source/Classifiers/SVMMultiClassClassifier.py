@@ -193,12 +193,12 @@ class SVMMultiClassClassifier(Classifier):
     @classmethod
     def downloadModel(cls, idStr, cscConnection, localWorkDir=None):
         if not cls.getLouhiStatus(idStr, cscConnection):
-            return False
+            return None
         modelFileName = "model"+idStr
         if localWorkDir != None:
             modelFileName = os.path.join(localWorkDir, modelFileName)
         cscConnection.download("model"+idStr, modelFileName)
-        return True
+        return "model"+idStr
     
     @classmethod
     def getLouhiPredictions(cls, idStr, examples, cscConnection, localWorkDir=None):
