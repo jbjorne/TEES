@@ -4,9 +4,12 @@ sys.path.append(os.path.dirname(__file__)+"/..")
 from Classifiers.SVMMultiClassClassifier import SVMMultiClassClassifier as classifier
 
 class CSCConnection:
-    def __init__(self, workSubDir, account="jakrbj@louhi.csc.fi"):
+    def __init__(self, workSubDir, account="jakrbj@louhi.csc.fi", deleteWorkDir=False):
         self.account = account
         self.workDir = "/wrk/jakrbj/" + workSubDir
+        if deleteWorkDir:
+            print "Removing CSC work directory (if it exists)"
+            self.run("rm -fr " + self.workDir)
         self.run("mkdir -p " + self.workDir)
     
     def exists(self, filename):
