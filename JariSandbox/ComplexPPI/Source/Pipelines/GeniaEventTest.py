@@ -15,8 +15,9 @@ else:
     TRAIN_FILE="/usr/share/biotext/GeniaChallenge/xml/train-with-duplicates.xml"
     TEST_FILE="/usr/share/biotext/GeniaChallenge/xml/devel-with-duplicates.xml"
     GOLD_TEST_FILE="/usr/share/biotext/GeniaChallenge/xml/devel-with-duplicates.xml"
-TRIGGER_CLASSIFIER_PARAMS="c:300000"
-EDGE_CLASSIFIER_PARAMS="c:100,1000,10000,20000,50000"#"c:10000,28000,50000"
+TRIGGER_CLASSIFIER_PARAMS="c:200000"#"c:300000"
+RECALL_BOOST_PARAM=0.65
+EDGE_CLASSIFIER_PARAMS="c:50000"#"c:100,1000,10000,20000,50000,100000, 500000"#"c:10000,28000,50000"
 optimizeLoop = True # search for a parameter, or use a predefined one
 WORKDIR="/usr/share/biotext/GeniaChallenge/GeniaEventTest"
 PARSE_TOK="split-McClosky"
@@ -39,7 +40,7 @@ else:
 # reduce performance. The gazetteer is built from the full training file,
 # even though the mini-sets are used in the slower parts of this demonstration
 # pipeline.
-if False:
+if True:
     Gazetteer.run(FULL_TRAIN_FILE, "gazetteer-train", PARSE_TOK)
 # Build an SVM example file for the training corpus.
 # GeneralEntityTypeRecognizerGztr is a version of GeneralEntityTypeRecognizer
@@ -48,15 +49,16 @@ if False:
 # "ids" is the identifier of the class- and feature-id-files. When
 # class and feature ids are reused, models can be reused between experiments.
 # Existing id-files, if present, are automatically reused.
-if False:
+if True:
     GeneralEntityTypeRecognizerGztr.run(TRAIN_FILE, "trigger-train-examples", PARSE_TOK, PARSE_TOK, "style:typed", "genia-trigger-ids", "gazetteer-train")
     # Build an SVM example file for the test corpus
     GeneralEntityTypeRecognizerGztr.run(TEST_FILE, "trigger-test-examples", PARSE_TOK, PARSE_TOK, "style:typed", "genia-trigger-ids", "gazetteer-train")
     if optimizeLoop: # search for the best c-parameter
         # The optimize-function takes as parameters a Classifier-class, an Evaluator-class
         # and input and output files
+        c = CSCConnection("GeniaEventTest-trigger-model", "jakrbj@louhi.csc.fi", True)
         best = optimize(MyCls, Ev, "trigger-train-examples", "trigger-test-examples",\
-            "genia-trigger-ids.class_names", TRIGGER_CLASSIFIER_PARAMS, "trigger-param-opt")
+            "genia-trigger-ids.class_names", TRIGGER_CLASSIFIER_PARAMS, "trigger-param-opt", None, c)
     else: # alternatively, use a single parameter (must have only one c-parameter)
         # Train the classifier, and store output into a model file
         Cls.train("trigger-train-examples", TRIGGER_CLASSIFIER_PARAMS, "trigger-model")
@@ -66,13 +68,16 @@ if False:
         Ev.evaluate("trigger-test-examples", "trigger-test-classifications", "genia-trigger-ids.class_names")
     # The classifications are combined with the TEST_FILE xml, to produce
     # an interaction-XML file with predicted triggers
-    triggerXml = ExampleUtils.writeToInteractionXML("trigger-test-examples", "trigger-param-opt/classifications-c_300000", TEST_FILE, "test-predicted-triggers.xml", "genia-trigger-ids.class_names", PARSE_TOK, PARSE_TOK)
+    #triggerXml = ExampleUtils.writeToInteractionXML("trigger-test-examples", "trigger-param-opt/classifications-c_300000", TEST_FILE, "test-predicted-triggers.xml", "genia-trigger-ids.class_names", PARSE_TOK, PARSE_TOK)
+    ExampleUtils.writeToInteractionXML("trigger-test-examples", "trigger-param-opt/classifications-c_300000", TEST_FILE, "test-predicted-triggers.xml", "genia-trigger-ids.class_names", PARSE_TOK, PARSE_TOK)
+    if True: # boost
+        RecallAdjust.run("test-predicted-triggers.xml", RECALL_BOOST_PARAM, "test-predicted-triggers.xml")
     # Overlapping types (could be e.g. "protein---gene") are split into multiple
     # entities
-    ix.splitMergedElements(triggerXml)
+    ix.splitMergedElements("test-predicted-triggers.xml")
     # The hierarchical ids are recalculated, since they might be invalid after
     # the generation and modification steps
-    ix.recalculateIds(triggerXml, "test-predicted-triggers.xml", True)
+    ix.recalculateIds("test-predicted-triggers.xml", "test-predicted-triggers.xml", True)
 
 ###############################################################################
 # Edge detection
@@ -95,8 +100,9 @@ if True:
     # Run the optimization loop. Note that here we must optimize against the gold
     # standard examples, because we do not know real classes of edge examples built between
     # predicted triggers
+    c = CSCConnection("GeniaEventTest-event-model", "jakrbj@louhi.csc.fi", True)
     best = optimize(MyCls, Ev, "edge-train-examples", "edge-gold-test-examples",\
-        "ids.edge.class_names", EDGE_CLASSIFIER_PARAMS, "edge-param-opt")
+        "ids.edge.class_names", EDGE_CLASSIFIER_PARAMS, "edge-param-opt", None, c)
     # Once we have determined the optimal c-parameter (best[1]), we can
     # use it to classify our real examples, i.e. the ones that define potential edges
     # between predicted entities
