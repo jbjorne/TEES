@@ -59,7 +59,7 @@ if True:
         if goldPassThrough:
             c = None
         else:
-            c = CSCConnection("GeniaEventTest-trigger-model", "jakrbj@louhi.csc.fi", True)
+            c = CSCConnection("GeniaEventTest-trigger-model", "jakrbj@murska.csc.fi", True)
         best = optimize(MyCls, Ev, "trigger-train-examples", "trigger-test-examples",\
             "genia-trigger-ids.class_names", TRIGGER_CLASSIFIER_PARAMS, "trigger-param-opt", None, c)
     else: # alternatively, use a single parameter (must have only one c-parameter)
@@ -106,7 +106,7 @@ if True:
     if goldPassThrough:
         c = None
     else:
-        c = CSCConnection("GeniaEventTest-event-model", "jakrbj@louhi.csc.fi", True)
+        c = CSCConnection("GeniaEventTest-event-model", "jakrbj@murska.csc.fi", True)
     best = optimize(MyCls, Ev, "edge-train-examples", "edge-gold-test-examples",\
         "ids.edge.class_names", EDGE_CLASSIFIER_PARAMS, "edge-param-opt", None, c)
     # Once we have determined the optimal c-parameter (best[1]), we can
