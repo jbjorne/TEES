@@ -17,7 +17,7 @@ else:
     GOLD_TEST_FILE="/usr/share/biotext/GeniaChallenge/xml/devel-with-duplicates.xml"
 TRIGGER_CLASSIFIER_PARAMS="c:200000"#"c:300000"
 RECALL_BOOST_PARAM=0.65
-EDGE_CLASSIFIER_PARAMS="c:100,1000,10000,20000,50000,100000, 500000"#"c:10000,28000,50000"
+EDGE_CLASSIFIER_PARAMS="c:100,1000,10000,20000,50000,100000,250000,500000,750000,1000000"#"c:10000,28000,50000"
 optimizeLoop = True # search for a parameter, or use a predefined one
 WORKDIR="/usr/share/biotext/GeniaChallenge/GeniaEventTest"
 PARSE_TOK="split-McClosky"
@@ -49,7 +49,7 @@ if False:
 # "ids" is the identifier of the class- and feature-id-files. When
 # class and feature ids are reused, models can be reused between experiments.
 # Existing id-files, if present, are automatically reused.
-if True:
+if False:
     GeneralEntityTypeRecognizerGztr.run(TRAIN_FILE, "trigger-train-examples", PARSE_TOK, PARSE_TOK, "style:typed", "genia-trigger-ids", "gazetteer-train")
     # Build an SVM example file for the test corpus
     GeneralEntityTypeRecognizerGztr.run(TEST_FILE, "trigger-test-examples", PARSE_TOK, PARSE_TOK, "style:typed", "genia-trigger-ids", "gazetteer-train")
@@ -106,7 +106,7 @@ if True:
     if goldPassThrough:
         c = None
     else:
-        c = CSCConnection("GeniaEventTest-event-model", "jakrbj@murska.csc.fi", True)
+        c = CSCConnection("GeniaEventTest-event-model", "jakrbj@murska.csc.fi", False)
     best = optimize(MyCls, Ev, "edge-train-examples", "edge-gold-test-examples",\
         "ids.edge.class_names", EDGE_CLASSIFIER_PARAMS, "edge-param-opt", None, c)
     # Once we have determined the optimal c-parameter (best[1]), we can
