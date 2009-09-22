@@ -32,7 +32,8 @@ if PARSE_TOK == "split-McClosky":
     #ALL_PARAMS={"trigger":[350000], "booster":["0.9","1.0","1.1"], "edge":[28000]}
     #ALL_PARAMS={"trigger":[80000,200000,350000], "booster":["0.65","0.7","0.8","0.9"], "edge":[10000,28000,50000]}
     #ALL_PARAMS={"trigger":[200000], "booster":["0.5","0.6"], "edge":[28000]}
-    ALL_PARAMS={"trigger":[100000,150000,200000], "booster":["0.65","0.7","0.8","0.9"], "edge":[10000,28000,50000]}
+    #first cube for gazetteer_exclude ALL_PARAMS={"trigger":[100000,150000,200000], "booster":["0.65","0.7","0.8","0.9"], "edge":[10000,28000,50000]}
+    ALL_PARAMS={"trigger":[50000,80000,100000], "booster":["0.7","0.9"], "edge":[50000,75000,100000]}
 elif PARSE_TOK == "McClosky":
     ALL_PARAMS={"trigger":[80000,200000,350000], "booster":["0.6","0.7","0.8","0.9"], "edge":[10000,25000,50000]}
     #ALL_PARAMS={"trigger":[100000,150000,200000], "booster":["0.6","0.7","0.8","0.9"], "edge":[10000,25000,50000]}
@@ -41,7 +42,7 @@ else:
 paramCombinations = getParameterCombinations(ALL_PARAMS)
 
 # These commands will be in the beginning of most pipelines
-workdir(WORKDIR, True) # Select a working directory, don't remove existing files
+workdir(WORKDIR, False) # Select a working directory, don't remove existing files
 copyIdSetsToWorkdir(EXTDIR+"/genia/trigger-examples/genia-trigger-ids")
 copyIdSetsToWorkdir(EXTDIR+"/genia/edge-examples/genia-edge-ids")
 log() # Start logging into a file in working directory
