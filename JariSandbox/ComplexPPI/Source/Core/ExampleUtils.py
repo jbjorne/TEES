@@ -472,6 +472,99 @@ def writeToInteractionXML(examples, predictions, corpusElements, outputFile, cla
 #                            predictionString += ","
 #                        predictionString += classSet.getName(classIds[i]) + ":" + str(classWeights[i])
 #                    pairElement.attrib["predictions"] = predictionString
+        elif xType == "event":
+            eventsByToken = {}
+            existingEntities = set()
+            entityElements = sentenceElement.findall("entity")
+            entityCount = 0
+            pairCount = 0
+            if entityElements != None:
+                entityCount = len(entityElements) # get the count _before_ removing entities
+                for entityElement in entityElements:
+                    if entityElement.get("isName") == "False": # interaction word
+                        sentenceElement.remove(entityElement)
+                    else:
+                        existingEntities.add(entityElement.get("id"))
+            # add new pairs
+            entityElements = sentenceElement.findall("entity")
+            newEntityIdCount = IDUtils.getNextFreeId(entityElements)
+            if examplesBySentence.has_key(sentenceId):
+                eventIdByExample = {}
+                newEntities = []
+                for example in examplesBySentence[sentenceId]:
+                    prediction = predictionsByExample[example[0]]
+                    if prediction[0] == 1:
+                        continue
+                    entityElement = ET.Element("entity")
+                    newEntities.append(entityElement)
+                    entityElement.attrib["isName"] = "False"
+                    headToken = example[3]["et"]
+                    for token in sentenceObject.tokens:
+                        if token.get("id") == headToken:
+                            headToken = token
+                            break
+                    entityElement.attrib["charOffset"] = headToken.get("charOffset") 
+                    entityElement.attrib["headOffset"] = headToken.get("charOffset")
+                    entityElement.attrib["text"] = headToken.get("text")
+                    entityElement.attrib["id"] = sentenceId + ".e" + str(newEntityIdCount)
+                    newEntityIdCount += 1
+                    eventIdByExample[example[0]] = entityElement.get("id")
+                    
+                    #if not eventByOrigId.has_key(example[3]["e"]):
+                    #    eventByOrigId[example[3]["e"]] = []
+                    #eventByOrigId[example[3]["e"]].append(entityElement.attrib["id"])
+                    #example[3]["e"] = entityElement.attrib["id"]
+                    
+                    
+                    if not eventsByToken.has_key(example[3]["et"]):
+                        eventsByToken[example[3]["et"]] = []
+                    eventsByToken[example[3]["et"]].append(entityElement.get("id"))
+
+                    entityElement.attrib["type"] = classSet.getName(prediction[0]) #example[3]["type"]
+                    classWeights = prediction[1:]
+                    predictionString = ""
+                    for i in range(len(classWeights)):
+                        if predictionString != "":
+                            predictionString += ","
+                        predictionString += classSet.getName(classIds[i]) + ":" + str(classWeights[i])
+                    entityElement.attrib["predictions"] = predictionString
+                    #if entityElement.attrib["type"] != "neg":
+                    sentenceElement.append(entityElement)
+                    entityCount += 1
+                    
+                for example in examplesBySentence[sentenceId]:
+                    prediction = predictionsByExample[example[0]]
+                    if prediction[0] == 1:
+                        continue
+                    # add theme edge
+                    if example[3].has_key("tt"):
+                        pairElement = ET.Element("interaction")
+                        pairElement.attrib["directed"] = "Unknown"
+                        pairElement.attrib["e1"] = eventIdByExample[example[0]]
+                        if eventsByToken.has_key(example[3]["tt"]):
+                            pairElement.attrib["e2"] = eventsByToken[example[3]["tt"]][0]
+                        elif example[3].has_key("t") and example[3]["t"] in existingEntities:
+                            pairElement.attrib["e2"] = example[3]["t"] #.attrib["id"]
+                        pairElement.attrib["id"] = sentenceId + ".i" + str(pairCount)
+                        pairElement.attrib["type"] = "Theme"
+                        if pairElement.get("e2") != None:
+                            sentenceElement.append(pairElement)
+                            pairCount += 1
+                    
+                    # add cause edge
+                    if example[3].has_key("ct"):
+                        pairElement = ET.Element("interaction")
+                        pairElement.attrib["directed"] = "Unknown"
+                        pairElement.attrib["e1"] = eventIdByExample[example[0]]
+                        if eventsByToken.has_key(example[3]["ct"]):
+                            pairElement.attrib["e2"] = eventsByToken[example[3]["ct"]][0]
+                        elif example[3].has_key("c") and example[3]["c"] in existingEntities:
+                            pairElement.attrib["e2"] = example[3]["c"] #.attrib["id"]
+                        pairElement.attrib["id"] = sentenceId + ".i" + str(pairCount)
+                        pairElement.attrib["type"] = "Cause"
+                        if pairElement.get("e2") != None:
+                            sentenceElement.append(pairElement)
+                            pairCount += 1
         else:
             sys.exit("Error, unknown xtype")
         # re-attach the analyses-element
@@ -482,4 +575,8 @@ def writeToInteractionXML(examples, predictions, corpusElements, outputFile, cla
         print >> sys.stderr, "Writing corpus to", outputFile
         ETUtils.write(corpusElements.rootElement, outputFile)
     return corpusElements.tree
-    
+
+def getTokenById(id, sentenceObject):
+    for token in sentenceObject.tokens:
+        if token.get("id") == id:
+            return token
