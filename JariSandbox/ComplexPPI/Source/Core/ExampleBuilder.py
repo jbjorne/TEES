@@ -29,6 +29,11 @@ class ExampleBuilder:
             self.featureSet = IdSet(filename=featureSet)
         else:
             self.featureSet = featureSet
+        
+        self.featureTag = ""
+    
+    def setFeature(self, name, value):
+        self.features[self.featureSet.getId(self.featureTag+name)] = value
     
     def preProcessExamples(self, allExamples):
         return allExamples
