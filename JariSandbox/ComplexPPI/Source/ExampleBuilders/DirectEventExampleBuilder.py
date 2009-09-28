@@ -30,7 +30,7 @@ class DirectEventExampleBuilder(ExampleBuilder):
         self.styles = style
         
         self.multiEdgeFeatureBuilder = MultiEdgeFeatureBuilder(self.featureSet)
-        if "noAnnType" in self.styles:
+        if True:#"noAnnType" in self.styles:
             self.multiEdgeFeatureBuilder.noAnnType = True
         if "noMasking" in self.styles:
             self.multiEdgeFeatureBuilder.maskNamedEntities = False
