@@ -158,16 +158,33 @@ class DirectEventExampleBuilder(ExampleBuilder):
         for token in sentenceGraph.tokens:
             if token.get("id") in self.namedEntityHeadTokenIds:
                 nameTokens.append(token)
-            elif self.gazetteer and token.get("text").lower() in self.gazetteer:
+            elif token.get("text").lower() in self.gazetteer:
                 eventTokens.append(token)
         allTokens = eventTokens + nameTokens
         
         for token in eventTokens:
-            combinations = combine.combine(allTokens+[None], allTokens+[None])
+            gazCategories = self.gazetteer[token.get("text").lower()]
+            #print token.get("text").lower(), gazCategories
+            
+            multiargument = False
+            for key in gazCategories.keys():
+                if key in ["Regulation","Positive_regulation","Negative_regulation"]:
+                    multiargument = True
+                    break
+            
+            if multiargument:
+                combinations = combine.combine(allTokens+[None], allTokens+[None])
+            else:
+                combinations = []
+                for t2 in allTokens:
+                    combinations.append( (t2, None) )
+                
             for combination in combinations:
                 if combination[0] == combination[1]:
                     continue
                 if combination[0] == token or combination[1] == token:
+                    continue
+                if combination[0] == None and combination[1] == None:
                     continue
                 examples.append( self.buildExample(exampleIndex, sentenceGraph, paths, token, combination[0], combination[1]) )
                 exampleIndex += 1 
@@ -177,23 +194,51 @@ class DirectEventExampleBuilder(ExampleBuilder):
     
     def buildExample(self, exampleIndex, sentenceGraph, paths, eventToken, themeToken, causeToken=None):
         features = {}
+        self.features = features
         
         categoryName = self.getGSEventType(sentenceGraph, eventToken, [themeToken], [causeToken])
         category = self.classSet.getId(categoryName)
         
+        potentialRegulation = False
+        gazCategories = self.gazetteer[eventToken.get("text").lower()]
+        for k,v in gazCategories.iteritems():
+            self.setFeature("gaz_event_value_"+k, v)
+            self.setFeature("gaz_event_"+k, 1)
+            if k.find("egulation") != -1:
+                potentialRegulation = True
+        
         if themeToken != None:
             self.buildArgumentFeatures(sentenceGraph, paths, features, eventToken, themeToken, "theme_")
+            themeEntity = None
+            if sentenceGraph.entitiesByToken.has_key(themeToken):
+                for themeEntity in sentenceGraph.entitiesByToken[themeToken]:
+                    if themeEntity.get("isName") == "True":
+                        self.setFeature("themeProtein", 1)
+                        if potentialRegulation:
+                            self.setFeature("regulationThemeProtein", 1)
+                        break
+            if not features.has_key("themeProtein"):
+                self.setFeature("themeEvent", 1)
+                self.setFeature("nestingEvent", 1)
+                if potentialRegulation:
+                    self.setFeature("regulationThemeEvent", 1)
         if causeToken != None:
             self.buildArgumentFeatures(sentenceGraph, paths, features, eventToken, causeToken, "cause_")
+            causeEntity = None
+            if sentenceGraph.entitiesByToken.has_key(causeToken):
+                for causeEntity in sentenceGraph.entitiesByToken[causeToken]:
+                    if causeEntity.get("isName") == "True":
+                        self.setFeature("causeProtein", 1)
+                        if potentialRegulation:
+                            self.setFeature("regulationCauseProtein", 1)
+                        break
+            if not features.has_key("causeProtein"):
+                self.setFeature("causeEvent", 1)
+                self.setFeature("nestingEvent", 1)
+                if potentialRegulation:
+                    self.setFeature("regulationCauseEvent", 1)
         
         # Common features
-#        eventType = eventNode.get("type")
-#        e2Type = entity2.get("type")
-#        assert(entity1.get("isName") == "False")
-#        if entity2.get("isName") == "True":
-#            features[self.featureSet.getId("GENIA_target_protein")] = 1
-#        else:
-#            features[self.featureSet.getId("GENIA_nested_event")] = 1
 #        if e1Type.find("egulation") != -1: # leave r out to avoid problems with capitalization
 #            if entity2.get("isName") == "True":
 #                features[self.featureSet.getId("GENIA_regulation_of_protein")] = 1
@@ -205,13 +250,18 @@ class DirectEventExampleBuilder(ExampleBuilder):
         extra["et"] = eventToken.get("id")
         if themeToken != None:
             extra["tt"] = themeToken.get("id")
+            if themeEntity != None:
+                extra["t"] = themeEntity.get("id")
         if causeToken != None:
             extra["ct"] = causeToken.get("id")
+            if causeEntity != None:
+                extra["c"] = causeEntity.get("id")
         sentenceOrigId = sentenceGraph.sentenceElement.get("origId")
         if sentenceOrigId != None:
             extra["SOID"] = sentenceOrigId       
         # make example
-        #assert (category == 1 or category == -1)        
+        #assert (category == 1 or category == -1)
+        self.features = None      
         return (sentenceGraph.getSentenceId()+".x"+str(exampleIndex),category,features,extra)
     
     def buildArgumentFeatures(self, sentenceGraph, paths, features, eventToken, argToken, tag):
