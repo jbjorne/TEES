@@ -29,7 +29,7 @@ def toknodeTxt(tokNode,sNode):
     return tokTxt(b,e,sNode)
 
 
-def tokClasses(tokenizationNode,sNode,ibo=False):
+def tokClasses(tokenizationNode,sNode,entityOffsetKey,ibo=False):
     """Returns a list of the correct classes for each token in tokenizationNode
     if ibo is given, classes are BEGIN-INSIDE-OUTSIDE, otherwise they are just INSIDE-OUTSIDE"""
     #1) get a list of entities, their char offsets, and classes
@@ -38,7 +38,9 @@ def tokClasses(tokenizationNode,sNode,ibo=False):
         if eNode.get("isName")=="True":
             continue
         #we have a trigger word
-        b,e=charOffStr2tuple(eNode.get("charOffset"))
+        eOffset = eNode.get(entityOffsetKey) # optional key, could be charOffset, headOffset etc.
+        assert eOffset != None
+        b,e=charOffStr2tuple(eOffset)
         eOffs.append((b,e,eNode.get("type")))
     tokClasses=[]
     for tNode in tokenizationNode:
@@ -71,7 +73,7 @@ def tokClasses(tokenizationNode,sNode,ibo=False):
 class Gazetteer:
 
     @classmethod
-    def run(cls,fileIn,fileOut=None,tokenization="split-Charniak-Lease"):
+    def run(cls,fileIn,fileOut=None,tokenization="split-Charniak-Lease", entityOffsetKey="charOffset"):
         """Builds the master gazzeteer.
         fileIn: a string (ending with .xml or .xml.gz), an open input stream, an ElementTree or an Element
         fileOut: a string or None. If given, the resulting gazzetteer will be written out
@@ -98,7 +100,7 @@ class Gazetteer:
                     break
             else:
                 assert False, "Did not find %s tokenization"%tokenization
-            tClasses=tokClasses(tokenizationNode,sNode)
+            tClasses=tokClasses(tokenizationNode,sNode,entityOffsetKey)
             assert len(tClasses)==len(tokenizationNode)
             for tokIdx,tokNode in enumerate(tokenizationNode):
                 gsClass=tClasses[tokIdx]
@@ -117,7 +119,10 @@ class Gazetteer:
             f=open(fileName,"wt")
         else:
             f=fileName #assume it is an open write stream since it's not a string
-        for txt,clsDct in gztr.items():
+        keys = sorted(gztr.keys()) # order the file alphabetically, easier to read
+        #for txt,clsDct in gztr.items():
+        for txt in keys:
+            clsDct = gztr[txt]
             total=sum(v for v in clsDct.values())
             if clsDct.get("neg",-1)==total:
                 #tokens that are only negative are not saved
