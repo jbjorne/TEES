@@ -5,12 +5,13 @@ import Core.ExampleBuilder
 from Core.IdSet import IdSet
 import Core.ExampleUtils as ExampleUtils
 from FeatureBuilders.MultiEdgeFeatureBuilder import MultiEdgeFeatureBuilder
+from PathGazetteer import PathGazetteer
 from Core.Gazetteer import Gazetteer
 import networkx as NX
 import combine
 
 class DirectEventExampleBuilder(ExampleBuilder):
-    def __init__(self, style=["typed","directed","headsOnly"], length=None, types=[], featureSet=None, classSet=None, gazetteer=None):
+    def __init__(self, style=["typed","directed","headsOnly"], length=None, types=[], featureSet=None, classSet=None, gazetteer=None, pathGazetteer=None):
         if featureSet == None:
             featureSet = IdSet()
         if classSet == None:
@@ -25,6 +26,13 @@ class DirectEventExampleBuilder(ExampleBuilder):
         else:
             print >> sys.stderr, "No gazetteer loaded"
             self.gazetteer=None
+        
+        if pathGazetteer != None:
+            print >> sys.stderr, "Loading path gazetteer from", pathGazetteer
+            self.pathGazetteer=PathGazetteer.load(pathGazetteer)
+        else:
+            print >> sys.stderr, "No path gazetteer loaded"
+            self.pathGazetteer=None
         
         ExampleBuilder.__init__(self, classSet=classSet, featureSet=featureSet)
         self.styles = style
@@ -43,14 +51,23 @@ class DirectEventExampleBuilder(ExampleBuilder):
         assert(self.pathLengths == None)
         self.types = types
         
+        self.skippedByType = {}
+        self.builtByType = {}
+        
         #self.outFile = open("exampleTempFile.txt","wt")
 
     @classmethod
-    def run(cls, input, output, parse, tokenization, style, idFileTag=None, gazetteer=None):
+    def run(cls, input, output, parse, tokenization, style, idFileTag=None, gazetteer=None, pathGazetteer=None):
         classSet, featureSet = cls.getIdSets(idFileTag)
-        e = DirectEventExampleBuilder(style=style, classSet=classSet, featureSet=featureSet, gazetteer=gazetteer)
+        e = DirectEventExampleBuilder(style=style, classSet=classSet, featureSet=featureSet, gazetteer=gazetteer, pathGazetteer=pathGazetteer)
         sentences = cls.getSentences(input, parse, tokenization)
         e.buildExamplesForSentences(sentences, output, idFileTag)
+        e.printStats()
+    
+    def printStats(self):
+        print >> sys.stderr, "Example generation (built, skipped)"
+        for key in sorted(list(set(self.skippedByType.keys() + self.builtByType.keys()))):
+            print >> sys.stderr, " " + key + ": (" + str(self.builtByType.get(key,0)) + ", " + str(self.skippedByType.get(key,0)) + ")"
     
     def definePredictedValueRange(self, sentences, elementName):
         self.multiEdgeFeatureBuilder.definePredictedValueRange(sentences, elementName)                        
@@ -112,7 +129,8 @@ class DirectEventExampleBuilder(ExampleBuilder):
             eHeadToken = sentenceGraph.entityHeadTokenByEntity[entity]
             if not self.gsEvents[eHeadToken].has_key(eType):
                 self.gsEvents[eHeadToken][eType] = []
-            self.gsEvents[eHeadToken][eType].append(arguments)
+            if len(arguments) > 0:
+                self.gsEvents[eHeadToken][eType].append(arguments)
     
     def getGSEventType(self, sentenceGraph, eHeadToken, themeTokens, causeTokens):
         #eHeadToken = sentenceGraph.entityHeadTokenByEntity[entity]
@@ -146,6 +164,7 @@ class DirectEventExampleBuilder(ExampleBuilder):
                         
     def buildExamples(self, sentenceGraph):
         self.makeGSEvents(sentenceGraph)
+        self.multiEdgeFeatureBuilder.setFeatureVector(resetCache=True)
         
         examples = []
         exampleIndex = 0
@@ -155,7 +174,12 @@ class DirectEventExampleBuilder(ExampleBuilder):
         
         eventTokens = []
         nameTokens = []
+        gazCategories = {None:{"neg":-1}}
         for token in sentenceGraph.tokens:
+            if self.gazetteer.has_key(token.get("text").lower()):
+                gazCategories[token] = self.gazetteer[token.get("text").lower()]
+            else:
+                gazCategories[token] = {"neg":-1}
             if token.get("id") in self.namedEntityHeadTokenIds:
                 nameTokens.append(token)
             elif token.get("text").lower() in self.gazetteer:
@@ -163,11 +187,11 @@ class DirectEventExampleBuilder(ExampleBuilder):
         allTokens = eventTokens + nameTokens
         
         for token in eventTokens:
-            gazCategories = self.gazetteer[token.get("text").lower()]
+            #gazCategories = self.gazetteer[token.get("text").lower()]
             #print token.get("text").lower(), gazCategories
             
             multiargument = False
-            for key in gazCategories.keys():
+            for key in gazCategories[token].keys():
                 if key in ["Regulation","Positive_regulation","Negative_regulation"]:
                     multiargument = True
                     break
@@ -176,21 +200,58 @@ class DirectEventExampleBuilder(ExampleBuilder):
                 combinations = combine.combine(allTokens+[None], allTokens+[None])
             else:
                 combinations = []
-                for t2 in allTokens:
+                for t2 in nameTokens: #allTokens:
                     combinations.append( (t2, None) )
                 
             for combination in combinations:
+                categoryName = self.getGSEventType(sentenceGraph, token, [combination[0]], [combination[1]])
+                
+                skip = False
+                if gazCategories[token].get("neg",-1) > 0.99:
+                    pass
                 if combination[0] == combination[1]:
-                    continue
+                    pass #skip = True
                 if combination[0] == token or combination[1] == token:
-                    continue
+                    skip = True
                 if combination[0] == None and combination[1] == None:
-                    continue
-                examples.append( self.buildExample(exampleIndex, sentenceGraph, paths, token, combination[0], combination[1]) )
-                exampleIndex += 1 
+                    skip = True
+                if not self.isValidEvent(paths, sentenceGraph, token, combination):
+                    skip = True
+                if gazCategories[combination[0]].get("neg",-1) > 0.99 or gazCategories[combination[1]].get("neg",-1) > 0.99:
+                    skip = True
+                
+                if skip:
+                    self.skippedByType[categoryName] = self.skippedByType.get(categoryName, 0) + 1
+                else:
+                    self.builtByType[categoryName] = self.builtByType.get(categoryName, 0) + 1
+                    examples.append( self.buildExample(exampleIndex, sentenceGraph, paths, token, combination[0], combination[1]) )
+                    exampleIndex += 1 
         
         self.gsEvents = None
         return examples
+    
+    def isValidEvent(self, paths, sentenceGraph, eventToken, argTokens):
+        if not paths.has_key(eventToken):
+            return False
+        
+        for argToken in argTokens:
+            if argToken == None:
+                continue
+            if paths[eventToken].has_key(argToken):
+                path = paths[eventToken][argToken]
+            else:
+                #print argToken, argToken.get("text")
+                #return False
+                continue
+            depPaths = self.multiEdgeFeatureBuilder.getEdgeCombinations(sentenceGraph.dependencyGraph, path)
+            validArg = False
+            for p in depPaths:
+                if p in self.pathGazetteer:
+                    validArg = True
+                    break
+            if not validArg:
+                return False
+        return True
     
     def buildExample(self, exampleIndex, sentenceGraph, paths, eventToken, themeToken, causeToken=None):
         features = {}
@@ -267,6 +328,9 @@ class DirectEventExampleBuilder(ExampleBuilder):
     def buildArgumentFeatures(self, sentenceGraph, paths, features, eventToken, argToken, tag):
         #eventToken = sentenceGraph.entityHeadTokenByEntity[eventNode]
         #argToken = sentenceGraph.entityHeadTokenByEntity[argNode]
+        self.multiEdgeFeatureBuilder.tag = tag
+        self.multiEdgeFeatureBuilder.setFeatureVector(features, None, None, False)
+        
         if eventToken != argToken and paths.has_key(eventToken) and paths[eventToken].has_key(argToken):
             path = paths[eventToken][argToken]
             edges = self.multiEdgeFeatureBuilder.getEdges(sentenceGraph.dependencyGraph, path)
@@ -274,8 +338,6 @@ class DirectEventExampleBuilder(ExampleBuilder):
             path = [eventToken, argToken]
             edges = None
         
-        self.multiEdgeFeatureBuilder.tag = tag
-        self.multiEdgeFeatureBuilder.setFeatureVector(features, None, None)
         if not "disable_entity_features" in self.styles:
             self.multiEdgeFeatureBuilder.buildEntityFeatures(sentenceGraph)
         self.multiEdgeFeatureBuilder.buildPathLengthFeatures(path)
@@ -290,5 +352,5 @@ class DirectEventExampleBuilder(ExampleBuilder):
         if not "disable_path_edge_features" in self.styles:
             self.multiEdgeFeatureBuilder.buildPathEdgeFeatures(path, edges, sentenceGraph)
         self.multiEdgeFeatureBuilder.buildSentenceFeatures(sentenceGraph)
-        self.multiEdgeFeatureBuilder.setFeatureVector(None)
+        self.multiEdgeFeatureBuilder.setFeatureVector(None, None, None, False)
         self.multiEdgeFeatureBuilder.tag = ""

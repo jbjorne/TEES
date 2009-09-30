@@ -1,6 +1,7 @@
 from FeatureBuilder import FeatureBuilder
 import Stemming.PorterStemmer as PorterStemmer
 from EdgeFeatureBuilder import EdgeFeatureBuilder
+import combine
 
 class MultiEdgeFeatureBuilder(FeatureBuilder):
     def __init__(self, featureSet):
@@ -45,14 +46,17 @@ class MultiEdgeFeatureBuilder(FeatureBuilder):
                 prevToken = pathToken
             self.setFeature(structure, 1)
         
-    def setFeatureVector(self, features=None, entity1=None, entity2=None):
+    def setFeatureVector(self, features=None, entity1=None, entity2=None, resetCache=True):
         self.entity1 = entity1
         self.entity2 = entity2
         self.features = features
         self.edgeFeatureBuilder.setFeatureVector(features)
         if self.ontologyFeatureBuilder != None:
             self.ontologyFeatureBuilder.setFeatureVector(features)
-        self.tokenFeatures = {}
+        if resetCache:
+            self.tokenFeatures = {}
+            self.edgeCache = {}
+            self.depPathCache = {}
     
     def buildPredictedValueFeatures(self, element, tag):
         predictions = element.get("predictions")
@@ -105,6 +109,9 @@ class MultiEdgeFeatureBuilder(FeatureBuilder):
             
             if sentenceGraph.entityHeadTokenByEntity[self.entity1] == sentenceGraph.entityHeadTokenByEntity[self.entity2]:
                 self.setFeature("selfLoop", 1)
+    
+    def getPathIds(self, path):
+        ids = path[0].get("id") + path[1].get("id") 
                 
     def getEdges(self, graph, path):
         """
@@ -115,6 +122,11 @@ class MultiEdgeFeatureBuilder(FeatureBuilder):
         start and end tokens in the path. F.e. to get the edges from path[1]
         to path[2] call return_value[1][2].
         """
+        self.edgeCache = {}
+        ids = self.getPathIds(path)
+        if self.edgeCache.has_key(ids):
+            return self.edgeCache[ids]
+        
         pathEdges = {}
         for i in range(0, len(path)):
             pathEdges[i] = {}
@@ -132,7 +144,31 @@ class MultiEdgeFeatureBuilder(FeatureBuilder):
                     pathEdges[i][i-1].append(edge)
                     found = True
             assert(found==True)
+        self.edgeCache[ids] = pathEdges
         return pathEdges
+    
+    def getEdgeCombinations(self, graph, path):
+        if len(path) == 1:
+            return set()
+        
+        pathEdges = self.getEdges(graph, path)
+        ids = self.getPathIds(path)
+        self.depPathCache[ids] = set()
+        #if self.depPathCache.has_key(ids):
+        #    return self.depPathCache[ids]
+        
+        self.depPathCache[ids] = set()
+        pathEdgeStrings = []
+        for i in range(1, len(path)):
+            pathEdgeStrings.append([])
+            for e in pathEdges[i][i-1]:
+                pathEdgeStrings[-1].append(e[2].get("type")+">")
+            for e in pathEdges[i-1][i]:
+                pathEdgeStrings[-1].append("<"+e[2].get("type"))
+        combinations = combine.combine(*pathEdgeStrings)
+        for combination in combinations:
+            self.depPathCache[ids].add( ".".join(combination) )
+        return self.depPathCache[ids]
     
     def getWalks(self, pathTokens, pathEdges, position=1, walk=None):
         """
