@@ -32,7 +32,7 @@ EDGE_FEATURE_PARAMS="style:typed,directed,no_linear,entities,noMasking,maxFeatur
 #RECALL_BOOST_PARAM=0.7
 
 # start the experiment
-workdir(WORKDIR, False) # Select a working directory, don't remove existing files
+workdir(WORKDIR, True) # Select a working directory, remove existing files
 log() # Start logging into a file in working directory
 copyIdSetsToWorkdir(TRIGGER_EXAMPLEDIR+"/bioinfer-trigger-ids")
 copyIdSetsToWorkdir(EDGE_EXAMPLEDIR+"/bioinfer-edge-ids")
@@ -45,9 +45,9 @@ print >> sys.stderr, "Edge params", EDGE_CLASSIFIER_PARAMS
 # Triggers
 ###############################################################################
 if True:
-    #c = CSCConnection(EXPERIMENT_NAME+"/trigger-model", "jakrbj@murska.csc.fi")
+    c = CSCConnection(EXPERIMENT_NAME+"/trigger-model", "jakrbj@murska.csc.fi")
     best = optimize(Cls, Ev, TRIGGER_TRAIN_AND_DEVEL_EXAMPLE_FILE, TRIGGER_TEST_EXAMPLE_FILE,\
-        TRIGGER_IDS+".class_names", TRIGGER_CLASSIFIER_PARAMS, "test-trigger-param-opt", None)#, c)
+        TRIGGER_IDS+".class_names", TRIGGER_CLASSIFIER_PARAMS, "test-trigger-param-opt", c)
     ExampleUtils.writeToInteractionXML(TRIGGER_TEST_EXAMPLE_FILE, best[2], TEST_FILE, "test-predicted-triggers.xml", TRIGGER_IDS+".class_names", PARSE, TOK)
     # NOTE: Merged elements must not be split, as recall booster may change their class
     ix.splitMergedElements("test-predicted-triggers.xml", "test-predicted-triggers.xml")
