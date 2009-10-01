@@ -17,7 +17,8 @@ else:
     TEST_FILE="/usr/share/biotext/GeniaChallenge/xml/devel-with-duplicates.xml"
     EMPTY_TEST_FILE="/usr/share/biotext/GeniaChallenge/xml/devel-with-duplicates-empty.xml"
     EXPERIMENT_NAME="GeniaDirectEventTestFull-local"
-EDGE_CLASSIFIER_PARAMS="c:1,10,100,1000,10000,100000,500000,1000000,5000000,10000000"#"c:10000,28000,50000"
+EDGE_CLASSIFIER_PARAMS="c:10000000,50000000,100000000,1000000000"#"c:10000,28000,50000"
+#EDGE_CLASSIFIER_PARAMS="c:1,10,100,1000,10000,100000,500000,1000000,5000000,10000000"#"c:10000,28000,50000"
 #EDGE_CLASSIFIER_PARAMS="c:0.00001,0.0001,0.001,0.01,0.1,1,10,100"#"c:10000,28000,50000"
 optimizeLoop = True # search for a parameter, or use a predefined one
 WORKDIR="/usr/share/biotext/GeniaChallenge/" + EXPERIMENT_NAME
@@ -64,7 +65,7 @@ if True:
         c = None
     else:
         #c = None
-        c = CSCConnection(EXPERIMENT_NAME+"-event-model", "jakrbj@murska.csc.fi", False)
+        c = CSCConnection(EXPERIMENT_NAME+"-event-model", "jakrbj@louhi.csc.fi", False)
     best = optimize(MyCls, Ev, "event-train-examples", "event-test-examples",\
         "genia-direct-event-ids.class_names", EDGE_CLASSIFIER_PARAMS, "event-param-opt", None, c)
     MyCls.test("event-test-empty-examples", best[1], "event-test-empty-classifications")
