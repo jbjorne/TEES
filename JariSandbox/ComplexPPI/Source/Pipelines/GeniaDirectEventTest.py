@@ -65,7 +65,7 @@ if True:
         c = None
     else:
         #c = None
-        c = CSCConnection(EXPERIMENT_NAME+"-event-model", "jakrbj@louhi.csc.fi", False)
+        c = CSCConnection(EXPERIMENT_NAME+"-event-model", "jakrbj@murska.csc.fi", False)
     best = optimize(MyCls, Ev, "event-train-examples", "event-test-examples",\
         "genia-direct-event-ids.class_names", EDGE_CLASSIFIER_PARAMS, "event-param-opt", None, c)
     MyCls.test("event-test-empty-examples", best[1], "event-test-empty-classifications")
