@@ -47,7 +47,7 @@ print >> sys.stderr, "Edge params", EDGE_CLASSIFIER_PARAMS
 if True:
     c = CSCConnection(EXPERIMENT_NAME+"/trigger-model", "jakrbj@murska.csc.fi", True)
     best = optimize(Cls, Ev, TRIGGER_TRAIN_EXAMPLE_FILE, TRIGGER_DEVEL_EXAMPLE_FILE,\
-        TRIGGER_IDS+".class_names", TRIGGER_CLASSIFIER_PARAMS, "devel-trigger-param-opt", c)
+        TRIGGER_IDS+".class_names", TRIGGER_CLASSIFIER_PARAMS, "devel-trigger-param-opt", None, c)
     ExampleUtils.writeToInteractionXML(TRIGGER_DEVEL_EXAMPLE_FILE, best[2], DEVEL_FILE, "devel-predicted-triggers.xml", TRIGGER_IDS+".class_names", PARSE, TOK)
     # NOTE: Merged elements must not be split, as recall booster may change their class
     ix.splitMergedElements("devel-predicted-triggers.xml", "devel-predicted-triggers.xml")
@@ -67,7 +67,7 @@ if True:
     # Classify with pre-defined model
     c = CSCConnection(EXPERIMENT_NAME+"/edge-model", "jakrbj@murska.csc.fi", True)
     best = optimize(Cls, Ev, EDGE_TRAIN_EXAMPLE_FILE, "devel-edge-examples",\
-        EDGE_IDS+".class_names", EDGE_CLASSIFIER_PARAMS, "devel-edge-param-opt", c)
+        EDGE_IDS+".class_names", EDGE_CLASSIFIER_PARAMS, "devel-edge-param-opt", None, c)
 # Write to interaction xml
 xmlFilename = "devel-predicted-edges.xml"
 ExampleUtils.writeToInteractionXML("devel-edge-examples", "devel-edge-param-opt/classifications-c_250000", "devel-predicted-triggers.xml", xmlFilename, "bioinfer-edge-ids.class_names", PARSE, TOK)
