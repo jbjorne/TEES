@@ -65,9 +65,9 @@ if True:
     #MultiEdgeExampleBuilder.run(boostedTriggerFile, "devel-edge-examples", PARSE_TOK, PARSE_TOK, EDGE_FEATURE_PARAMS, EDGE_IDS)
     MultiEdgeExampleBuilder.run("devel-predicted-triggers.xml", "devel-edge-examples", PARSE, TOK, EDGE_FEATURE_PARAMS, EDGE_IDS)
     # Classify with pre-defined model
-    #c = CSCConnection(EXPERIMENT_NAME+"/edge-model", "jakrbj@murska.csc.fi")
+    c = CSCConnection(EXPERIMENT_NAME+"/edge-model", "jakrbj@murska.csc.fi", True)
     best = optimize(Cls, Ev, EDGE_TRAIN_EXAMPLE_FILE, "devel-edge-examples",\
-        EDGE_IDS+".class_names", EDGE_CLASSIFIER_PARAMS, "devel-edge-param-opt", None)#, c)
+        EDGE_IDS+".class_names", EDGE_CLASSIFIER_PARAMS, "devel-edge-param-opt", c)
 # Write to interaction xml
 xmlFilename = "devel-predicted-edges.xml"
 ExampleUtils.writeToInteractionXML("devel-edge-examples", "devel-edge-param-opt/classifications-c_250000", "devel-predicted-triggers.xml", xmlFilename, "bioinfer-edge-ids.class_names", PARSE, TOK)
