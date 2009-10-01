@@ -24,10 +24,10 @@ EDGE_IDS="bioinfer-edge-ids"
 
 # choose a name for the experiment
 EXPERIMENT_NAME="UnmergingProject/results/test-set-"+PARSE
-WORKDIR="/usr/share/biotext/GeniaChallenge/"+EXPERIMENT_NAME
+WORKDIR="/usr/share/biotext/"+EXPERIMENT_NAME
 
 TRIGGER_CLASSIFIER_PARAMS="c:50000"
-EDGE_CLASSIFIER_PARAMS="c:250000"
+EDGE_CLASSIFIER_PARAMS="c:150000"
 EDGE_FEATURE_PARAMS="style:typed,directed,no_linear,entities,noMasking,maxFeatures,bioinfer_limits"
 #RECALL_BOOST_PARAM=0.7
 
