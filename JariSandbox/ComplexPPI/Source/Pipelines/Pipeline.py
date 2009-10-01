@@ -6,6 +6,7 @@ from ExampleBuilders.MultiEdgeExampleBuilder import MultiEdgeExampleBuilder
 from ExampleBuilders.EventExampleBuilder import EventExampleBuilder
 from ExampleBuilders.DirectEventExampleBuilder import DirectEventExampleBuilder
 from ExampleBuilders.Task3ExampleBuilder import Task3ExampleBuilder
+from ExampleBuilders.PathGazetteer import PathGazetteer
 from Classifiers.SVMMultiClassClassifier import SVMMultiClassClassifier as Cls
 from Classifiers.AllCorrectClassifier import AllCorrectClassifier as ACCls
 from Evaluators.AveragingMultiClassEvaluator import AveragingMultiClassEvaluator as Ev
