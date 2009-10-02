@@ -51,7 +51,13 @@ class DirectEventExampleBuilder(ExampleBuilder):
         assert(self.pathLengths == None)
         self.types = types
         
+        self.eventsByOrigId = {}
+        self.headTokensByOrigId = {}
+        self.interSentenceEvents = set()
+        
+        self.examplesByEventOrigId = {}
         self.skippedByType = {}
+        self.skippedByTypeAndReason = {}
         self.builtByType = {}
         
         #self.outFile = open("exampleTempFile.txt","wt")
@@ -65,9 +71,45 @@ class DirectEventExampleBuilder(ExampleBuilder):
         e.printStats()
     
     def printStats(self):
+        f = open("missed-events", "wt")
+        missedEvents = {}
+        for key in self.examplesByEventOrigId.keys():
+            if self.examplesByEventOrigId[key] == 0:
+                if not missedEvents.has_key(self.eventsByOrigId[key].get("type")):
+                    missedEvents[self.eventsByOrigId[key].get("type")] = []
+                missedEvents[self.eventsByOrigId[key].get("type")].append(key)
+
+        for key in sorted(missedEvents.keys()):
+            f.write(key + "\n")
+            for id in sorted(missedEvents[key]):
+                f.write(" " + id + " ")
+                if id in self.interSentenceEvents:
+                    f.write("intersentence ")
+                if self.headTokensByOrigId[id].get("text").lower() not in self.gazetteer:
+                    f.write("not-in-gazetteer")
+                f.write("\n")
+        f.close()
+
+        print >> sys.stderr, "Example selection missed events (other, intersentence, non-gazetteer)"
+        for key in sorted(missedEvents.keys()):
+            inter = 0
+            other = 0
+            nongaz = 0
+            for id in missedEvents[key]:
+                if id in self.interSentenceEvents:
+                    inter += 1
+                elif self.headTokensByOrigId[id].get("text").lower() not in self.gazetteer:
+                    nongaz += 1
+                else:
+                    other += 1
+            print >> sys.stderr, " " + key + ": " + str(other) + ", " + str(inter) + ", " + str(nongaz)
         print >> sys.stderr, "Example generation (built, skipped)"
         for key in sorted(list(set(self.skippedByType.keys() + self.builtByType.keys()))):
-            print >> sys.stderr, " " + key + ": (" + str(self.builtByType.get(key,0)) + ", " + str(self.skippedByType.get(key,0)) + ")"
+            string = " " + key + ": (" + str(self.builtByType.get(key,0)+self.skippedByType.get(key,0)) + ", " + str(self.builtByType.get(key,0)) + "/" + str(self.skippedByType.get(key,0)) + ") ["
+            for key2 in sorted(self.skippedByTypeAndReason[key].keys()):
+                string += key2 + ":" + str(self.skippedByTypeAndReason[key][key2]) + " "
+            string += "]"
+            print >> sys.stderr, string
     
     def definePredictedValueRange(self, sentences, elementName):
         self.multiEdgeFeatureBuilder.definePredictedValueRange(sentences, elementName)                        
@@ -118,6 +160,15 @@ class DirectEventExampleBuilder(ExampleBuilder):
                 continue
             
             eId = entity.get("id")
+            eOrigId = entity.get("origId")
+            assert not self.eventsByOrigId.has_key(eOrigId)
+            self.eventsByOrigId[eOrigId] = entity
+            if not self.examplesByEventOrigId.has_key(eOrigId):
+                self.examplesByEventOrigId[eOrigId] = 0
+            if len(sentenceGraph.interSentenceInteractions) > 0:
+                for interaction in sentenceGraph.interSentenceInteractions:
+                    if interaction.get("e1") == eId:
+                        self.interSentenceEvents.add(eOrigId)
             eType = entity.get("type")
             arguments = set()
             for interaction in sentenceGraph.interactions:
@@ -126,17 +177,21 @@ class DirectEventExampleBuilder(ExampleBuilder):
                     e2TokenId = sentenceGraph.entityHeadTokenByEntity[e2].get("id")
                     arguments.add( (interaction.get("type"), e2TokenId ) )
                     #arguments.add( (interaction.get("type"), interaction.get("e2") ) )
+            arguments = tuple(sorted(list(arguments)))
             eHeadToken = sentenceGraph.entityHeadTokenByEntity[entity]
+            self.headTokensByOrigId[eOrigId] = eHeadToken
             if not self.gsEvents[eHeadToken].has_key(eType):
-                self.gsEvents[eHeadToken][eType] = []
+                self.gsEvents[eHeadToken][eType] = {}
             if len(arguments) > 0:
-                self.gsEvents[eHeadToken][eType].append(arguments)
+                if not self.gsEvents[eHeadToken][eType].has_key(arguments):
+                    self.gsEvents[eHeadToken][eType][arguments] = []
+                self.gsEvents[eHeadToken][eType][arguments].append(eOrigId)
     
     def getGSEventType(self, sentenceGraph, eHeadToken, themeTokens, causeTokens):
         #eHeadToken = sentenceGraph.entityHeadTokenByEntity[entity]
         #eType = entity.get("type")
         if len(self.gsEvents[eHeadToken]) == 0:
-            return "neg"
+            return "neg", []
             
         argumentSet = set()
         for themeNode in themeTokens:
@@ -145,22 +200,25 @@ class DirectEventExampleBuilder(ExampleBuilder):
         for causeNode in causeTokens:
             if causeNode != None:
                 argumentSet.add( ("Cause", causeNode.get("id")) )
+        argumentSet = tuple(sorted(list(argumentSet)))
         
         gsTypes = set()
+        eventIds = []
         for eventType in sorted(self.gsEvents[eHeadToken].keys()):
-            if argumentSet in self.gsEvents[eHeadToken][eventType]:
+            if argumentSet in self.gsEvents[eHeadToken][eventType].keys():
                 gsTypes.add(eventType)
+                eventIds.extend(self.gsEvents[eHeadToken][eventType][argumentSet])
         
         if len(gsTypes) == 0:
-            return "neg"
+            return "neg", eventIds
         elif len(gsTypes) == 1:
-            return list(gsTypes)[0]
+            return list(gsTypes)[0], eventIds
         else:
             gsTypes = sorted(list(gsTypes))
             string = gsTypes[0]
             for gsType in gsTypes[1:]:
                 string += "---" + gsType
-            return string
+            return string, eventIds
                         
     def buildExamples(self, sentenceGraph):
         self.makeGSEvents(sentenceGraph)
@@ -197,28 +255,37 @@ class DirectEventExampleBuilder(ExampleBuilder):
                     break
             
             if multiargument:
-                combinations = combine.combine(allTokens+[None], allTokens+[None])
+                combinations = combine.combine(allTokens, allTokens+[None])
             else:
                 combinations = []
                 for t2 in nameTokens: #allTokens:
                     combinations.append( (t2, None) )
                 
             for combination in combinations:
-                categoryName = self.getGSEventType(sentenceGraph, token, [combination[0]], [combination[1]])
-                
+                categoryName, eventIds = self.getGSEventType(sentenceGraph, token, [combination[0]], [combination[1]])
+                for id in eventIds:
+                    self.examplesByEventOrigId[id] += 1
+
                 skip = False
+                s = self.skippedByTypeAndReason
+                if not s.has_key(categoryName):
+                    s[categoryName] = {}
                 if gazCategories[token].get("neg",-1) > 0.99:
                     pass
                 if combination[0] == combination[1]:
                     pass #skip = True
                 if combination[0] == token or combination[1] == token:
                     skip = True
+                    s[categoryName]["duparg"] = s[categoryName].get("duparg", 0) + 1
                 if combination[0] == None and combination[1] == None:
                     skip = True
+                    s[categoryName]["noncmb"] = s[categoryName].get("noncmb", 0) + 1
                 if not self.isValidEvent(paths, sentenceGraph, token, combination):
                     skip = True
+                    s[categoryName]["valid"] = s[categoryName].get("valid", 0) + 1
                 if gazCategories[combination[0]].get("neg",-1) > 0.99 or gazCategories[combination[1]].get("neg",-1) > 0.99:
                     skip = True
+                    s[categoryName]["gazarg"] = s[categoryName].get("gazarg", 0) + 1
                 
                 if skip:
                     self.skippedByType[categoryName] = self.skippedByType.get(categoryName, 0) + 1
@@ -257,7 +324,7 @@ class DirectEventExampleBuilder(ExampleBuilder):
         features = {}
         self.features = features
         
-        categoryName = self.getGSEventType(sentenceGraph, eventToken, [themeToken], [causeToken])
+        categoryName, eventIds = self.getGSEventType(sentenceGraph, eventToken, [themeToken], [causeToken])
         category = self.classSet.getId(categoryName)
         
         potentialRegulation = False
@@ -283,6 +350,8 @@ class DirectEventExampleBuilder(ExampleBuilder):
                 self.setFeature("nestingEvent", 1)
                 if potentialRegulation:
                     self.setFeature("regulationThemeEvent", 1)
+        else:
+            self.setFeature("noTheme", 1)
         if causeToken != None:
             self.buildArgumentFeatures(sentenceGraph, paths, features, eventToken, causeToken, "cause_")
             causeEntity = None
@@ -298,6 +367,8 @@ class DirectEventExampleBuilder(ExampleBuilder):
                 self.setFeature("nestingEvent", 1)
                 if potentialRegulation:
                     self.setFeature("regulationCauseEvent", 1)
+        else:
+            self.setFeature("noCause", 1)
         
         # Common features
 #        if e1Type.find("egulation") != -1: # leave r out to avoid problems with capitalization
@@ -309,6 +380,12 @@ class DirectEventExampleBuilder(ExampleBuilder):
         # define extra attributes
         extra = {"xtype":"event","type":categoryName}
         extra["et"] = eventToken.get("id")
+        if len(eventIds) > 0:
+            eventIds.sort()
+            extra["eids"] = ""
+            for eventId in eventIds:
+                extra["eids"] += str(eventId) + ","
+            extra["eids"] = extra["eids"][:-1]
         if themeToken != None:
             extra["tt"] = themeToken.get("id")
             if themeEntity != None:

@@ -26,6 +26,7 @@ class SentenceElements:
         interactionElements = sentenceElement.findall("interaction")
         if interactionElements != None:
             self.interactions = interactionElements
+            self.interSentenceInteractions = []
         if removeIntersentenceInteractions:
             interactionsToKeep = []
             for interaction in interactionElements:
@@ -33,6 +34,8 @@ class SentenceElements:
                 e2rsplits = interaction.get("e2").count(".") - 2
                 if interaction.get("e1").rsplit(".",e1rsplits)[0] == sentenceId and interaction.get("e2").rsplit(".",e2rsplits)[0] == sentenceId:
                     interactionsToKeep.append(interaction)
+                else:
+                    self.interSentenceInteractions.append(interaction)
             self.interactions = interactionsToKeep
         
         entityElements = sentenceElement.findall("entity")

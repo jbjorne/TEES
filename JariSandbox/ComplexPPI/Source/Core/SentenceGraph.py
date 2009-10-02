@@ -48,6 +48,7 @@ def loadCorpus(corpus, parse, tokenization=None, removeNameInfo=False):
         graph = SentenceGraph(sentence.sentence, sentence.tokens, sentence.dependencies)
         # Add semantic information, i.e. the interactions
         graph.mapInteractions(sentence.entities, sentence.interactions)
+        graph.interSentenceInteractions = sentence.interSentenceInteractions
         duplicateInteractionEdgesRemoved += graph.duplicateInteractionEdgesRemoved
         sentence.sentenceGraph = graph
     print >> sys.stderr, "Removed", duplicateInteractionEdgesRemoved, "duplicate interaction edges"
