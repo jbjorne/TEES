@@ -32,7 +32,7 @@ EDGE_FEATURE_PARAMS="style:typed,directed,no_linear,entities,noMasking,maxFeatur
 #RECALL_BOOST_PARAM=0.7
 
 # start the experiment
-workdir(WORKDIR, True) # Select a working directory, remove existing files
+workdir(WORKDIR, False) # Select a working directory, remove existing files
 log() # Start logging into a file in working directory
 copyIdSetsToWorkdir(TRIGGER_EXAMPLEDIR+"/bioinfer-trigger-ids")
 copyIdSetsToWorkdir(EDGE_EXAMPLEDIR+"/bioinfer-edge-ids")
