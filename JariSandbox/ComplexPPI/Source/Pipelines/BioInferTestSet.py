@@ -71,7 +71,7 @@ if True:
         EDGE_IDS+".class_names", EDGE_CLASSIFIER_PARAMS, "test-edge-param-opt", None, c)
 # Write to interaction xml
 xmlFilename = "test-predicted-edges.xml"
-ExampleUtils.writeToInteractionXML("test-edge-examples", best[1], "test-predicted-triggers.xml", xmlFilename, "bioinfer-edge-ids.class_names", PARSE, TOK)
+ExampleUtils.writeToInteractionXML("test-edge-examples", best[2], "test-predicted-triggers.xml", xmlFilename, "bioinfer-edge-ids.class_names", PARSE, TOK)
 ix.splitMergedElements(xmlFilename, xmlFilename)
 ix.recalculateIds(xmlFilename, xmlFilename, True)
 # EvaluateInteractionXML differs from the previous evaluations in that it can
