@@ -41,11 +41,11 @@ print >> sys.stderr, "BioInfer Devel Set"
 print >> sys.stderr, "Trigger params", TRIGGER_CLASSIFIER_PARAMS
 #print >> sys.stderr, "Recall Booster params", str(RECALL_BOOST_PARAM)
 print >> sys.stderr, "Edge params", EDGE_CLASSIFIER_PARAMS
-resetCSC=False
+resetCSC=True
 ###############################################################################
 # Triggers
 ###############################################################################
-if False:
+if True:
     c = CSCConnection(EXPERIMENT_NAME+"/trigger-model", "jakrbj@murska.csc.fi", resetCSC)
     best = optimize(Cls, Ev, TRIGGER_TRAIN_EXAMPLE_FILE, TRIGGER_DEVEL_EXAMPLE_FILE,\
         TRIGGER_IDS+".class_names", TRIGGER_CLASSIFIER_PARAMS, "devel-trigger-param-opt", None, c)
@@ -64,7 +64,7 @@ if True:
     #ix.recalculateIds(boostedTriggerFile, boostedTriggerFile, True)
     # Build edge examples
     #MultiEdgeExampleBuilder.run(boostedTriggerFile, "devel-edge-examples", PARSE_TOK, PARSE_TOK, EDGE_FEATURE_PARAMS, EDGE_IDS)
-    #MultiEdgeExampleBuilder.run("devel-predicted-triggers.xml", "devel-edge-examples", PARSE, TOK, EDGE_FEATURE_PARAMS, EDGE_IDS)
+    MultiEdgeExampleBuilder.run("devel-predicted-triggers.xml", "devel-edge-examples", PARSE, TOK, EDGE_FEATURE_PARAMS, EDGE_IDS)
     # Classify with pre-defined model
     c = CSCConnection(EXPERIMENT_NAME+"/edge-model", "jakrbj@murska.csc.fi", resetCSC)
     best = optimize(Cls, Ev, EDGE_TRAIN_EXAMPLE_FILE, "devel-edge-examples",\

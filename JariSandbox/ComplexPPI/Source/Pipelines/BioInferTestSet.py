@@ -64,7 +64,7 @@ if True:
     #ix.recalculateIds(boostedTriggerFile, boostedTriggerFile, True)
     # Build edge examples
     #MultiEdgeExampleBuilder.run(boostedTriggerFile, "test-edge-examples", PARSE_TOK, PARSE_TOK, EDGE_FEATURE_PARAMS, EDGE_IDS)
-    MultiEdgeExampleBuilder.run("test-predicted-triggers.xml", "test-edge-examples", PARSE, TOK, EDGE_FEATURE_PARAMS, EDGE_IDS)
+    #MultiEdgeExampleBuilder.run("test-predicted-triggers.xml", "test-edge-examples", PARSE, TOK, EDGE_FEATURE_PARAMS, EDGE_IDS)
     # Classify with pre-defined model
     c = CSCConnection(EXPERIMENT_NAME+"/edge-model", "jakrbj@murska.csc.fi", resetCSC)
     best = optimize(Cls, Ev, EDGE_TRAIN_AND_DEVEL_EXAMPLE_FILE, "test-edge-examples",\
