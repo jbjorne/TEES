@@ -6,6 +6,7 @@ from Classifiers.SVMMultiClassClassifier import SVMMultiClassClassifier as class
 class CSCConnection:
     def __init__(self, workSubDir, account="jakrbj@louhi.csc.fi", deleteWorkDir=False):
         self.account = account
+        self.machineName = account.split("@")[-1]
         self.workDir = "/wrk/jakrbj/" + workSubDir
         if deleteWorkDir:
             print "Removing CSC work directory (if it exists)"
