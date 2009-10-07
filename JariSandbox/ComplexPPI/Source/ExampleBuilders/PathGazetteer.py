@@ -16,7 +16,7 @@ class PathGazetteer(ExampleBuilder):
         self.gazetteer = set()
     
     @classmethod
-    def build(cls, input, output, parse, tokenization=None):
+    def build(cls, input, output, parse, tokenization=None, includeNeg=False):
         p = PathGazetteer()
         sentences = cls.getSentences(input, parse, tokenization)
         
