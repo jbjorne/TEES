@@ -7,7 +7,7 @@ from Pipeline import *
 
 # define shortcuts for commonly used files
 FULL_TRAIN_FILE="/usr/share/biotext/GeniaChallenge/xml/train.xml"
-if False: # mini
+if True: # mini
     TRAIN_FILE="/usr/share/biotext/GeniaChallenge/xml/train-with-duplicates-mini.xml"
     TEST_FILE="/usr/share/biotext/GeniaChallenge/xml/devel-with-duplicates-mini.xml"
     EMPTY_TEST_FILE="/usr/share/biotext/GeniaChallenge/xml/devel-with-duplicates-mini-empty.xml"
@@ -16,8 +16,10 @@ else:
     TRAIN_FILE="/usr/share/biotext/GeniaChallenge/xml/train-with-duplicates.xml"
     TEST_FILE="/usr/share/biotext/GeniaChallenge/xml/devel-with-duplicates.xml"
     EMPTY_TEST_FILE="/usr/share/biotext/GeniaChallenge/xml/devel-with-duplicates-empty.xml"
-    EXPERIMENT_NAME="GeniaDirectEventTestFull-local"
-EDGE_CLASSIFIER_PARAMS="c:10000000,50000000,100000000,1000000000"#"c:10000,28000,50000"
+    EXPERIMENT_NAME="GeniaDirectEventTestFull"
+
+EDGE_CLASSIFIER_PARAMS="c:1,10,100,1000,10000,100000,500000,1000000,5000000,10000000,50000000,100000000,1000000000"
+#EDGE_CLASSIFIER_PARAMS="c:10000000,50000000,100000000,1000000000"#"c:10000,28000,50000"
 #EDGE_CLASSIFIER_PARAMS="c:1,10,100,1000,10000,100000,500000,1000000,5000000,10000000"#"c:10000,28000,50000"
 #EDGE_CLASSIFIER_PARAMS="c:0.00001,0.0001,0.001,0.01,0.1,1,10,100"#"c:10000,28000,50000"
 optimizeLoop = True # search for a parameter, or use a predefined one
@@ -41,16 +43,16 @@ else:
 # reduce performance. The gazetteer is built from the full training file,
 # even though the mini-sets are used in the slower parts of this demonstration
 # pipeline.
-if False:
-    PathGazetteer.build(FULL_TRAIN_FILE, "path-gazetteer-train", PARSE_TOK)
-    Gazetteer.run(FULL_TRAIN_FILE, "gazetteer-train", PARSE_TOK, "headOffset")
+if True:
+    PathGazetteer.build(FULL_TRAIN_FILE, "path-gazetteer-train", PARSE_TOK, includeNeg=False)
+    Gazetteer.run(FULL_TRAIN_FILE, "gazetteer-train", PARSE_TOK, "headOffset", includeNeg=False, stem=True)
 
 ###############################################################################
 # Edge detection
 ###############################################################################
-if False:
+if True:
     #EDGE_FEATURE_PARAMS="style:typed,directed,entities,genia_limits,noMasking,maxFeatures"
-    EDGE_FEATURE_PARAMS="style:typed,directed,no_linear,entities,genia_limits,noMasking,maxFeatures"
+    EDGE_FEATURE_PARAMS="style:typed,directed,no_linear,entities,genia_limits,noMasking,maxFeatures,stem_gazetteer"
         
     # Build examples, see trigger detection
     DirectEventExampleBuilder.run(TRAIN_FILE, "event-train-examples", PARSE_TOK, PARSE_TOK, EDGE_FEATURE_PARAMS, "genia-direct-event-ids", "gazetteer-train", "path-gazetteer-train")
@@ -65,7 +67,7 @@ if True:
         c = None
     else:
         #c = None
-        c = CSCConnection(EXPERIMENT_NAME+"-event-model", "jakrbj@murska.csc.fi", False)
+        c = CSCConnection(EXPERIMENT_NAME+"-event-model", "jakrbj@murska.csc.fi", True)
     best = optimize(MyCls, Ev, "event-train-examples", "event-test-examples",\
         "genia-direct-event-ids.class_names", EDGE_CLASSIFIER_PARAMS, "event-param-opt", None, c)
     MyCls.test("event-test-empty-examples", best[1], "event-test-empty-classifications")
