@@ -9,6 +9,7 @@ from PathGazetteer import PathGazetteer
 from Core.Gazetteer import Gazetteer
 import networkx as NX
 import combine
+import Stemming.PorterStemmer as PorterStemmer
 
 class DirectEventExampleBuilder(ExampleBuilder):
     def __init__(self, style=["typed","directed","headsOnly"], length=None, types=[], featureSet=None, classSet=None, gazetteer=None, pathGazetteer=None):
@@ -71,6 +72,10 @@ class DirectEventExampleBuilder(ExampleBuilder):
         e.printStats()
     
     def printStats(self):
+        eventsByType = {}
+        for event in self.eventsByOrigId.values():
+            eventsByType[event.get("type")] = eventsByType.get(event.get("type"),0) + 1
+        
         f = open("missed-events", "wt")
         missedEvents = {}
         for key in self.examplesByEventOrigId.keys():
@@ -91,19 +96,27 @@ class DirectEventExampleBuilder(ExampleBuilder):
         f.close()
 
         print >> sys.stderr, "Example selection missed events (other, intersentence, non-gazetteer)"
-        for key in sorted(missedEvents.keys()):
+        for key in sorted(eventsByType.keys()):
             inter = 0
             other = 0
             nongaz = 0
-            for id in missedEvents[key]:
-                if id in self.interSentenceEvents:
-                    inter += 1
-                elif self.headTokensByOrigId[id].get("text").lower() not in self.gazetteer:
-                    nongaz += 1
-                else:
-                    other += 1
-            print >> sys.stderr, " " + key + ": " + str(other) + ", " + str(inter) + ", " + str(nongaz)
-        print >> sys.stderr, "Example generation (built, skipped)"
+            if missedEvents.has_key(key):
+                for id in missedEvents[key]:
+                    tokText = self.headTokensByOrigId[id].get("text").lower()
+                    if "stem_gazetteer" in self.styles:
+                        tokText = PorterStemmer.stem(tokText)
+                    
+                    if id in self.interSentenceEvents:
+                        inter += 1
+                    elif tokText not in self.gazetteer:
+                        nongaz += 1
+                    else:
+                        other += 1
+            if inter == other == nongaz == 0:
+                print >> sys.stderr, " " + key + " (" + str(eventsByType[key]) + "): missed none"
+            else:
+                print >> sys.stderr, " " + key + " (" + str(eventsByType[key]) + "): " + str(other) + ", " + str(inter) + ", " + str(nongaz)
+        print >> sys.stderr, "Example generation (total, built/skipped)"
         for key in sorted(list(set(self.skippedByType.keys() + self.builtByType.keys()))):
             string = " " + key + ": (" + str(self.builtByType.get(key,0)+self.skippedByType.get(key,0)) + ", " + str(self.builtByType.get(key,0)) + "/" + str(self.skippedByType.get(key,0)) + ") ["
             for key2 in sorted(self.skippedByTypeAndReason[key].keys()):
@@ -233,14 +246,20 @@ class DirectEventExampleBuilder(ExampleBuilder):
         eventTokens = []
         nameTokens = []
         gazCategories = {None:{"neg":-1}}
+        #stems = {}
         for token in sentenceGraph.tokens:
-            if self.gazetteer.has_key(token.get("text").lower()):
-                gazCategories[token] = self.gazetteer[token.get("text").lower()]
+            tokenText = token.get("text").lower()
+            if "stem_gazetteer" in self.styles:
+                #stems[tokenText] = PorterStemmer.stem(tokenText)
+                #tokenText = stems[tokenText]
+                tokenText = PorterStemmer.stem(tokenText)
+            if self.gazetteer.has_key(tokenText):
+                gazCategories[token] = self.gazetteer[tokenText]
             else:
                 gazCategories[token] = {"neg":-1}
             if token.get("id") in self.namedEntityHeadTokenIds:
                 nameTokens.append(token)
-            elif token.get("text").lower() in self.gazetteer:
+            elif tokenText in self.gazetteer:
                 eventTokens.append(token)
         allTokens = eventTokens + nameTokens
         
@@ -275,8 +294,9 @@ class DirectEventExampleBuilder(ExampleBuilder):
                 if combination[0] == combination[1]:
                     pass #skip = True
                 if combination[0] == token or combination[1] == token:
-                    skip = True
-                    s[categoryName]["duparg"] = s[categoryName].get("duparg", 0) + 1
+                    if gazCategories[combination[0]].get("Positive_regulation",-1) < 0:
+                        skip = True
+                        s[categoryName]["duparg"] = s[categoryName].get("duparg", 0) + 1
                 if combination[0] == None and combination[1] == None:
                     skip = True
                     s[categoryName]["noncmb"] = s[categoryName].get("noncmb", 0) + 1
@@ -291,13 +311,26 @@ class DirectEventExampleBuilder(ExampleBuilder):
                     self.skippedByType[categoryName] = self.skippedByType.get(categoryName, 0) + 1
                 else:
                     self.builtByType[categoryName] = self.builtByType.get(categoryName, 0) + 1
-                    examples.append( self.buildExample(exampleIndex, sentenceGraph, paths, token, combination[0], combination[1]) )
+                    newExample = self.buildExample(exampleIndex, sentenceGraph, paths, token, combination[0], combination[1])
+                    if len(eventIds) > 0: 
+                        newExample[3]["numEv"] = str(len(eventIds))
+                    examples.append( newExample )
                     exampleIndex += 1 
         
         self.gsEvents = None
         return examples
     
     def isValidEvent(self, paths, sentenceGraph, eventToken, argTokens):
+        # This one lets through Positive_regulations that are
+        # excluded from the duparg-rule
+        oneTokenEvent = True
+        for argToken in argTokens:
+            if argToken != None and eventToken != argToken:
+                oneTokenEvent = False
+                break
+        if oneTokenEvent:
+            return True
+            
         if not paths.has_key(eventToken):
             return False
         
@@ -328,7 +361,10 @@ class DirectEventExampleBuilder(ExampleBuilder):
         category = self.classSet.getId(categoryName)
         
         potentialRegulation = False
-        gazCategories = self.gazetteer[eventToken.get("text").lower()]
+        eventTokenText = eventToken.get("text").lower()
+        if "stem_gazetteer" in self.styles:
+            eventTokenText = PorterStemmer.stem(eventTokenText)
+        gazCategories = self.gazetteer[eventTokenText]
         for k,v in gazCategories.iteritems():
             self.setFeature("gaz_event_value_"+k, v)
             self.setFeature("gaz_event_"+k, 1)
