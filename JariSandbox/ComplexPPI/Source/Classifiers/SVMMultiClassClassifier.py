@@ -160,7 +160,7 @@ class SVMMultiClassClassifier(Classifier):
             paramStr += " -" + str(key) + " " + str(trainParameters[key])
         scriptName = "script"+idStr+".sh"
         if cscConnection.exists(scriptName):
-            print >> sys.stderr, "Script already on Louhi, process not queued for", scriptName
+            print >> sys.stderr, "Script already on " + cscConnection.machineName + ", process not queued for", scriptName
             return idStr
         
         # Build script
