@@ -7,7 +7,7 @@ from Pipeline import *
 
 # define shortcuts for commonly used files
 FULL_TRAIN_FILE="/usr/share/biotext/GeniaChallenge/xml/train.xml"
-if True: # mini
+if False: # mini
     TRAIN_FILE="/usr/share/biotext/GeniaChallenge/xml/train-with-duplicates-mini.xml"
     TEST_FILE="/usr/share/biotext/GeniaChallenge/xml/devel-with-duplicates-mini.xml"
     EMPTY_TEST_FILE="/usr/share/biotext/GeniaChallenge/xml/devel-with-duplicates-mini-empty.xml"
