@@ -7,6 +7,7 @@ import sys,os
 from optparse import OptionParser
 sys.path.append(os.path.dirname(os.path.abspath(__file__))+"/..")
 from Utils.ProgressCounter import ProgressCounter
+import Stemming.PorterStemmer as PorterStemmer
 
 def charOffStr2tuple(cStr):
     b,e=(cStr.split(",")[0]).split("-")
@@ -21,8 +22,11 @@ def tokenType(b,e,eOffs):
     else:
         return None
 
-def tokTxt(b,e,sNode):
-    return sNode.get("text")[b:e+1]
+def tokTxt(b,e,sNode, stem=False):
+    if stem:
+        return PorterStemmer.stem(sNode.get("text")[b:e+1])
+    else:
+        return sNode.get("text")[b:e+1]
 
 def toknodeTxt(tokNode,sNode):
     b,e=charOffStr2tuple(tokNode.get("charOffset"))
@@ -73,7 +77,7 @@ def tokClasses(tokenizationNode,sNode,entityOffsetKey,ibo=False):
 class Gazetteer:
 
     @classmethod
-    def run(cls,fileIn,fileOut=None,tokenization="split-Charniak-Lease", entityOffsetKey="charOffset"):
+    def run(cls,fileIn,fileOut=None,tokenization="split-Charniak-Lease", entityOffsetKey="charOffset", includeNeg=False, stem=False):
         """Builds the master gazzeteer.
         fileIn: a string (ending with .xml or .xml.gz), an open input stream, an ElementTree or an Element
         fileOut: a string or None. If given, the resulting gazzetteer will be written out
@@ -105,15 +109,15 @@ class Gazetteer:
             for tokIdx,tokNode in enumerate(tokenizationNode):
                 gsClass=tClasses[tokIdx]
                 b,e=charOffStr2tuple(tokNode.get("charOffset"))
-                tokNodeTxt=tokTxt(b,e,sNode).lower()
+                tokNodeTxt=tokTxt(b,e,sNode,stem).lower()
                 tokDict=gztr.setdefault(tokNodeTxt,{})
                 tokDict[gsClass]=tokDict.get(gsClass,0)+1
         if fileOut:
-            Gazetteer.saveGztr(gztr,fileOut)
+            Gazetteer.saveGztr(gztr,fileOut,includeNeg)
         return gztr
 
     @classmethod
-    def saveGztr(cls,gztr,fileName):
+    def saveGztr(cls,gztr,fileName, includeNeg=False):
         """Saves the gztr produced by buildgztr"""
         if isinstance(fileName,str):
             f=open(fileName,"wt")
@@ -126,7 +130,8 @@ class Gazetteer:
             total=sum(v for v in clsDct.values())
             if clsDct.get("neg",-1)==total:
                 #tokens that are only negative are not saved
-                continue
+                if not includeNeg:
+                    continue
             print >> f, txt+"\t",
             for cls,count in clsDct.items():
                 print >> f, cls+":"+str(float(count)/total),
