@@ -4,6 +4,7 @@
 # Extra is a dictionary of String:String pairs, for additional information about the 
 # examples.
 
+import sys, os
 import Split
 import types
 from IdSet import IdSet
