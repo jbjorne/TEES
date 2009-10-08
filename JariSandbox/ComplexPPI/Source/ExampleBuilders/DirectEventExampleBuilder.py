@@ -5,6 +5,7 @@ import Core.ExampleBuilder
 from Core.IdSet import IdSet
 import Core.ExampleUtils as ExampleUtils
 from FeatureBuilders.MultiEdgeFeatureBuilder import MultiEdgeFeatureBuilder
+from FeatureBuilders.TriggerFeatureBuilder import TriggerFeatureBuilder
 from PathGazetteer import PathGazetteer
 from Core.Gazetteer import Gazetteer
 import networkx as NX
@@ -45,6 +46,8 @@ class DirectEventExampleBuilder(ExampleBuilder):
             self.multiEdgeFeatureBuilder.maskNamedEntities = False
         if "maxFeatures" in self.styles:
             self.multiEdgeFeatureBuilder.maximum = True
+        
+        self.triggerFeatureBuilder = TriggerFeatureBuilder(self.featureSet)
         #self.tokenFeatureBuilder = TokenFeatureBuilder(self.featureSet)
         #if "ontology" in self.styles:
         #    self.multiEdgeFeatureBuilder.ontologyFeatureBuilder = BioInferOntologyFeatureBuilder(self.featureSet)
@@ -236,6 +239,7 @@ class DirectEventExampleBuilder(ExampleBuilder):
     def buildExamples(self, sentenceGraph):
         self.makeGSEvents(sentenceGraph)
         self.multiEdgeFeatureBuilder.setFeatureVector(resetCache=True)
+        self.triggerFeatureBuilder.initSentence(sentenceGraph)
         
         examples = []
         exampleIndex = 0
@@ -370,6 +374,12 @@ class DirectEventExampleBuilder(ExampleBuilder):
             self.setFeature("gaz_event_"+k, 1)
             if k.find("egulation") != -1:
                 potentialRegulation = True
+        
+        self.triggerFeatureBuilder.setFeatureVector(self.features)
+        self.triggerFeatureBuilder.tag = "trg_"
+        self.triggerFeatureBuilder.buildFeatures(eventToken)
+        self.triggerFeatureBuilder.tag = ""
+        self.triggerFeatureBuilder.setFeatureVector(None)
         
         if themeToken != None:
             self.buildArgumentFeatures(sentenceGraph, paths, features, eventToken, themeToken, "theme_")
