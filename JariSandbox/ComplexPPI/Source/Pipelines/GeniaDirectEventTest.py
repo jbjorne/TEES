@@ -50,7 +50,7 @@ if False:
 ###############################################################################
 # Edge detection
 ###############################################################################
-if False:
+if True:
     #EDGE_FEATURE_PARAMS="style:typed,directed,entities,genia_limits,noMasking,maxFeatures"
     EDGE_FEATURE_PARAMS="style:typed,directed,no_linear,entities,genia_limits,noMasking,maxFeatures,stem_gazetteer"
         
@@ -62,12 +62,12 @@ if False:
     # standard examples, because we do not know real classes of edge examples built between
     # predicted triggers
 
-if False:
+if True:
     if goldPassThrough:
         c = None
     else:
         #c = None
-        c = CSCConnection(EXPERIMENT_NAME+"-event-model", "jakrbj@murska.csc.fi", False)
+        c = CSCConnection(EXPERIMENT_NAME+"-event-model", "jakrbj@murska.csc.fi", True)
     best = optimize(MyCls, Ev, "event-train-examples", "event-test-examples",\
         "genia-direct-event-ids.class_names", EDGE_CLASSIFIER_PARAMS, "event-param-opt", None, c)
     MyCls.test("event-test-empty-examples", best[1], "event-test-empty-classifications")
