@@ -375,14 +375,17 @@ class DirectEventExampleBuilder(ExampleBuilder):
             if k.find("egulation") != -1:
                 potentialRegulation = True
         
-        self.triggerFeatureBuilder.setFeatureVector(self.features)
-        self.triggerFeatureBuilder.tag = "trg_"
-        self.triggerFeatureBuilder.buildFeatures(eventToken)
-        self.triggerFeatureBuilder.tag = ""
-        self.triggerFeatureBuilder.setFeatureVector(None)
+        #self.triggerFeatureBuilder.setFeatureVector(self.features)
+        #self.triggerFeatureBuilder.tag = "trg_"
+        #self.triggerFeatureBuilder.buildFeatures(eventToken)
+        #self.triggerFeatureBuilder.tag = ""
+        #self.triggerFeatureBuilder.setFeatureVector(None)
         
         if themeToken != None:
-            self.buildArgumentFeatures(sentenceGraph, paths, features, eventToken, themeToken, "theme_")
+            if causeToken != None:
+                self.buildArgumentFeatures(sentenceGraph, paths, features, eventToken, themeToken, "ctheme_")
+            else:
+                self.buildArgumentFeatures(sentenceGraph, paths, features, eventToken, themeToken, "theme_")
             themeEntity = None
             if sentenceGraph.entitiesByToken.has_key(themeToken):
                 for themeEntity in sentenceGraph.entitiesByToken[themeToken]:
