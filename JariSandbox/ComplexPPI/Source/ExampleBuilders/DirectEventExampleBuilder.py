@@ -383,7 +383,7 @@ class DirectEventExampleBuilder(ExampleBuilder):
         
         if themeToken != None:
             if causeToken != None:
-                self.buildArgumentFeatures(sentenceGraph, paths, features, eventToken, themeToken, "ctheme_")
+                self.buildArgumentFeatures(sentenceGraph, paths, features, eventToken, themeToken, "theme_")
             else:
                 self.buildArgumentFeatures(sentenceGraph, paths, features, eventToken, themeToken, "theme_")
             themeEntity = None
@@ -402,7 +402,7 @@ class DirectEventExampleBuilder(ExampleBuilder):
         else:
             self.setFeature("noTheme", 1)
         if causeToken != None:
-            self.buildArgumentFeatures(sentenceGraph, paths, features, eventToken, causeToken, "cause_")
+            self.buildArgumentFeatures(sentenceGraph, paths, features, eventToken, causeToken, "theme_")
             causeEntity = None
             if sentenceGraph.entitiesByToken.has_key(causeToken):
                 for causeEntity in sentenceGraph.entitiesByToken[causeToken]:
