@@ -482,19 +482,26 @@ class DirectEventExampleBuilder(ExampleBuilder):
             path = [eventToken, argToken]
             edges = None
         
-        if not "disable_entity_features" in self.styles:
-            self.multiEdgeFeatureBuilder.buildEntityFeatures(sentenceGraph)
-        self.multiEdgeFeatureBuilder.buildPathLengthFeatures(path)
-        if not "disable_terminus_features" in self.styles:
-            self.multiEdgeFeatureBuilder.buildTerminusTokenFeatures(path, sentenceGraph) # remove for fast
+#        if not "disable_entity_features" in self.styles:
+#            # doesn't improve beyond 52.32
+#            self.multiEdgeFeatureBuilder.buildEntityFeatures(sentenceGraph)
+#        # buildPathLengthFeatures 52.32 -> 51-51
+#        self.multiEdgeFeatureBuilder.buildPathLengthFeatures(path)
+#        if not "disable_terminus_features" in self.styles:
+#            # didn't improve from 52.32
+#            self.multiEdgeFeatureBuilder.buildTerminusTokenFeatures(path, sentenceGraph) # remove for fast
         if not "disable_single_element_features" in self.styles:
+            # 50.74 -> 52.32
             self.multiEdgeFeatureBuilder.buildSingleElementFeatures(path, edges, sentenceGraph)
         if not "disable_ngram_features" in self.styles:
+            # ngrams alone - 50.74
             self.multiEdgeFeatureBuilder.buildPathGrams(2, path, edges, sentenceGraph) # remove for fast
             self.multiEdgeFeatureBuilder.buildPathGrams(3, path, edges, sentenceGraph) # remove for fast
             self.multiEdgeFeatureBuilder.buildPathGrams(4, path, edges, sentenceGraph) # remove for fast
-        if not "disable_path_edge_features" in self.styles:
-            self.multiEdgeFeatureBuilder.buildPathEdgeFeatures(path, edges, sentenceGraph)
-        self.multiEdgeFeatureBuilder.buildSentenceFeatures(sentenceGraph)
+            # disabling length 4 drops performance
+#        if not "disable_path_edge_features" in self.styles:
+#            self.multiEdgeFeatureBuilder.buildPathEdgeFeatures(path, edges, sentenceGraph)
+#        self.multiEdgeFeatureBuilder.buildSentenceFeatures(sentenceGraph)
+# buildSentenceFeatures seems to decrease performance by 8 %-points
         self.multiEdgeFeatureBuilder.setFeatureVector(None, None, None, False)
         self.multiEdgeFeatureBuilder.tag = ""
