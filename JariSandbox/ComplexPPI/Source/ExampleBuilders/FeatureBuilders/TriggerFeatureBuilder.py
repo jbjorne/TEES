@@ -151,9 +151,9 @@ class TriggerFeatureBuilder(FeatureBuilder):
         self.setFeature("nonstem_"+text[len(stem):], 1)
         
         # Linear order features
-        #for index in [-3,-2,-1,1,2,3]:
-        #    if i + index > 0 and i + index < len(sentenceGraph.tokens):
-        #        self.buildLinearOrderFeatures(sentenceGraph, i + index, str(index))
+#        for index in [-3,-2,-1,1,2,3]:
+#            if i + index > 0 and i + index < len(sentenceGraph.tokens):
+#                self.buildLinearOrderFeatures(sentenceGraph, i + index, str(index))
         
         # Content
 #        if i > 0 and text[0].isalpha() and text[0].isupper():
