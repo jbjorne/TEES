@@ -11,7 +11,7 @@ class ProgressCounter:
         self.step = step
         
         self.prevPrintTime = 0
-        self.timeStep = 3000
+        self.timeStep = 120
     
     def __del__(self):
         # If this counter didn't finish, show the info about the last update
