@@ -16,7 +16,7 @@ else:
     TRAIN_FILE="/usr/share/biotext/GeniaChallenge/xml/train-with-duplicates.xml"
     TEST_FILE="/usr/share/biotext/GeniaChallenge/xml/devel-with-duplicates.xml"
     EMPTY_TEST_FILE="/usr/share/biotext/GeniaChallenge/xml/devel-with-duplicates-empty.xml"
-    EXPERIMENT_NAME="GeniaDirectEventTestFull"
+    EXPERIMENT_NAME="GeniaDirectEventTestFull-local"
 
 EDGE_CLASSIFIER_PARAMS="c:1,10,100,1000,10000,100000,500000,1000000,5000000,10000000,50000000,100000000,1000000000"
 #EDGE_CLASSIFIER_PARAMS="c:10000000,50000000,100000000,1000000000"#"c:10000,28000,50000"
