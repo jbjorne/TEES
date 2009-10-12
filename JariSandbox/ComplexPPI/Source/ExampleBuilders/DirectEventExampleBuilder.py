@@ -357,6 +357,20 @@ class DirectEventExampleBuilder(ExampleBuilder):
                 return False
         return True
     
+    def setGazetteerFeatures(self, token, tag):
+        text = token.get("text").lower()
+        if "stem_gazetteer" in self.styles:
+            text = PorterStemmer.stem(text)
+        if self.gazetteer.has_key(text):
+            gazCategories = self.gazetteer[text]
+            for k,v in gazCategories.iteritems():
+                self.setFeature(tag+"gaz_event_value_"+k, v)
+                self.setFeature(tag+"gaz_event_"+k, 1)
+                if k.find("egulation") != -1:
+                    self.setFeature(tag+"potReg", 1)
+        else:
+            self.setFeature(tag+"notInGaz", 1)
+    
     def buildExample(self, exampleIndex, sentenceGraph, paths, eventToken, themeToken, causeToken=None):
         features = {}
         self.features = features
@@ -370,22 +384,20 @@ class DirectEventExampleBuilder(ExampleBuilder):
             eventTokenText = PorterStemmer.stem(eventTokenText)
         gazCategories = self.gazetteer[eventTokenText]
         for k,v in gazCategories.iteritems():
-            self.setFeature("gaz_event_value_"+k, v)
-            self.setFeature("gaz_event_"+k, 1)
             if k.find("egulation") != -1:
                 potentialRegulation = True
+        self.setGazetteerFeatures(eventToken,"")
         
-        #self.triggerFeatureBuilder.setFeatureVector(self.features)
-        #self.triggerFeatureBuilder.tag = "trg_"
-        #self.triggerFeatureBuilder.buildFeatures(eventToken)
-        #self.triggerFeatureBuilder.tag = ""
-        #self.triggerFeatureBuilder.setFeatureVector(None)
+        self.triggerFeatureBuilder.setFeatureVector(self.features)
+        self.triggerFeatureBuilder.tag = "trg_"
+        self.triggerFeatureBuilder.buildFeatures(eventToken)
+        
         
         if themeToken != None:
-            if causeToken != None:
-                self.buildArgumentFeatures(sentenceGraph, paths, features, eventToken, themeToken, "theme_")
-            else:
-                self.buildArgumentFeatures(sentenceGraph, paths, features, eventToken, themeToken, "theme_")
+            self.setGazetteerFeatures(themeToken,"theme_")
+            self.buildArgumentFeatures(sentenceGraph, paths, features, eventToken, themeToken, "theme_")
+            self.triggerFeatureBuilder.tag = "ttrg_"
+            self.triggerFeatureBuilder.buildFeatures(themeToken)
             themeEntity = None
             if sentenceGraph.entitiesByToken.has_key(themeToken):
                 for themeEntity in sentenceGraph.entitiesByToken[themeToken]:
@@ -402,7 +414,10 @@ class DirectEventExampleBuilder(ExampleBuilder):
         else:
             self.setFeature("noTheme", 1)
         if causeToken != None:
-            self.buildArgumentFeatures(sentenceGraph, paths, features, eventToken, causeToken, "theme_")
+            self.setGazetteerFeatures(causeToken,"cause_")
+            self.buildArgumentFeatures(sentenceGraph, paths, features, eventToken, causeToken, "cause_")
+            self.triggerFeatureBuilder.tag = "ctrg_"
+            self.triggerFeatureBuilder.buildFeatures(causeToken)
             causeEntity = None
             if sentenceGraph.entitiesByToken.has_key(causeToken):
                 for causeEntity in sentenceGraph.entitiesByToken[causeToken]:
@@ -418,6 +433,9 @@ class DirectEventExampleBuilder(ExampleBuilder):
                     self.setFeature("regulationCauseEvent", 1)
         else:
             self.setFeature("noCause", 1)
+        
+        self.triggerFeatureBuilder.tag = ""
+        self.triggerFeatureBuilder.setFeatureVector(None)
         
         # Common features
 #        if e1Type.find("egulation") != -1: # leave r out to avoid problems with capitalization
