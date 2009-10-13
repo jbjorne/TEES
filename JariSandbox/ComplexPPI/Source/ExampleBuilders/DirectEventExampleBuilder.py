@@ -1,4 +1,4 @@
-import sys
+import sys, types
 sys.path.append("..")
 from Core.ExampleBuilder import ExampleBuilder
 import Core.ExampleBuilder
@@ -271,23 +271,43 @@ class DirectEventExampleBuilder(ExampleBuilder):
             #gazCategories = self.gazetteer[token.get("text").lower()]
             #print token.get("text").lower(), gazCategories
             
-            multiargument = False
+            #multiargument = False
+            potentialRegulation = False
+            potentialBinding = False
             for key in gazCategories[token].keys():
                 if key in ["Regulation","Positive_regulation","Negative_regulation"]:
-                    multiargument = True
+                    #multiargument = True
+                    potentialRegulation = True
+                    break
+            for key in gazCategories[token].keys():
+                if key in ["Binding"]:
+                    #multiargument = True
+                    potentialBinding = True
                     break
             
-            if multiargument:
+            if potentialRegulation:
                 combinations = combine.combine(allTokens, allTokens+[None])
             else:
                 combinations = []
                 for t2 in nameTokens: #allTokens:
                     combinations.append( (t2, None) )
+            
+            if potentialBinding:
+                for i in range(len(nameTokens) - 1):
+                    for j in range(i+1, len(nameTokens)):
+                        combinations.append( ((nameTokens[i],nameTokens[j]), None) )
                 
             for combination in combinations:
-                categoryName, eventIds = self.getGSEventType(sentenceGraph, token, [combination[0]], [combination[1]])
+                theme2Binding = False
+                if type(combination[0]) == types.ListType or type(combination[0]) == types.TupleType:
+                    theme2Binding = True
+                    categoryName, eventIds = self.getGSEventType(sentenceGraph, token, combination[0], [combination[1]])
+                else:
+                    categoryName, eventIds = self.getGSEventType(sentenceGraph, token, [combination[0]], [combination[1]])
+                
                 for id in eventIds:
                     self.examplesByEventOrigId[id] += 1
+                
 
                 skip = False
                 s = self.skippedByTypeAndReason
@@ -298,7 +318,7 @@ class DirectEventExampleBuilder(ExampleBuilder):
                 if combination[0] == combination[1]:
                     pass #skip = True
                 if combination[0] == token or combination[1] == token:
-                    if gazCategories[combination[0]].get("Positive_regulation",-1) < 0:
+                    if theme2Binding or gazCategories[combination[0]].get("Positive_regulation",-1) < 0:
                         skip = True
                         s[categoryName]["duparg"] = s[categoryName].get("duparg", 0) + 1
                 if combination[0] == None and combination[1] == None:
@@ -307,19 +327,28 @@ class DirectEventExampleBuilder(ExampleBuilder):
                 if not self.isValidEvent(paths, sentenceGraph, token, combination):
                     skip = True
                     s[categoryName]["valid"] = s[categoryName].get("valid", 0) + 1
-                if gazCategories[combination[0]].get("neg",-1) > 0.99 or gazCategories[combination[1]].get("neg",-1) > 0.99:
-                    skip = True
-                    s[categoryName]["gazarg"] = s[categoryName].get("gazarg", 0) + 1
+                
+                if theme2Binding:
+                    if gazCategories[combination[0][0]].get("neg",-1) > 0.99 or gazCategories[combination[0][1]].get("neg",-1) > 0.99:
+                        skip = True
+                        s[categoryName]["gazarg"] = s[categoryName].get("gazarg", 0) + 1
+                else:
+                    if gazCategories[combination[0]].get("neg",-1) > 0.99 or gazCategories[combination[1]].get("neg",-1) > 0.99:
+                        skip = True
+                        s[categoryName]["gazarg"] = s[categoryName].get("gazarg", 0) + 1
                 
                 if skip:
                     self.skippedByType[categoryName] = self.skippedByType.get(categoryName, 0) + 1
                 else:
                     self.builtByType[categoryName] = self.builtByType.get(categoryName, 0) + 1
-                    newExample = self.buildExample(exampleIndex, sentenceGraph, paths, token, combination[0], combination[1])
+                    if theme2Binding:
+                        newExample = self.buildExample(exampleIndex, sentenceGraph, paths, token, combination[0], [combination[1]])
+                    else:
+                        newExample = self.buildExample(exampleIndex, sentenceGraph, paths, token, [combination[0]], [combination[1]])
                     if len(eventIds) > 0: 
                         newExample[3]["numEv"] = str(len(eventIds))
                     examples.append( newExample )
-                    exampleIndex += 1 
+                    exampleIndex += 1
         
         self.gsEvents = None
         return examples
@@ -338,6 +367,14 @@ class DirectEventExampleBuilder(ExampleBuilder):
         if not paths.has_key(eventToken):
             return False
         
+        newArgTokens = []
+        for argToken in argTokens:
+            if type(argToken) == types.ListType or type(argToken) == types.TupleType:
+                newArgTokens.extend(argToken)
+            else:
+                newArgTokens.append(argToken)
+        argTokens = newArgTokens
+            
         for argToken in argTokens:
             if argToken == None:
                 continue
@@ -371,11 +408,11 @@ class DirectEventExampleBuilder(ExampleBuilder):
         else:
             self.setFeature(tag+"notInGaz", 1)
     
-    def buildExample(self, exampleIndex, sentenceGraph, paths, eventToken, themeToken, causeToken=None):
+    def buildExample(self, exampleIndex, sentenceGraph, paths, eventToken, themeTokens, causeTokens=None):
         features = {}
         self.features = features
         
-        categoryName, eventIds = self.getGSEventType(sentenceGraph, eventToken, [themeToken], [causeToken])
+        categoryName, eventIds = self.getGSEventType(sentenceGraph, eventToken, themeTokens, causeTokens)
         category = self.classSet.getId(categoryName)
         
         potentialRegulation = False
@@ -392,46 +429,59 @@ class DirectEventExampleBuilder(ExampleBuilder):
         self.triggerFeatureBuilder.tag = "trg_"
         self.triggerFeatureBuilder.buildFeatures(eventToken)
         
-        
-        if themeToken != None:
-            self.setGazetteerFeatures(themeToken,"theme_")
-            self.buildArgumentFeatures(sentenceGraph, paths, features, eventToken, themeToken, "theme_")
-            self.triggerFeatureBuilder.tag = "ttrg_"
-            self.triggerFeatureBuilder.buildFeatures(themeToken)
-            themeEntity = None
-            if sentenceGraph.entitiesByToken.has_key(themeToken):
-                for themeEntity in sentenceGraph.entitiesByToken[themeToken]:
-                    if themeEntity.get("isName") == "True":
-                        self.setFeature("themeProtein", 1)
-                        if potentialRegulation:
-                            self.setFeature("regulationThemeProtein", 1)
-                        break
-            if not features.has_key("themeProtein"):
-                self.setFeature("themeEvent", 1)
-                self.setFeature("nestingEvent", 1)
-                if potentialRegulation:
-                    self.setFeature("regulationThemeEvent", 1)
-        else:
+        themeEntities = []
+        hasTheme = False
+        if len(themeTokens) > 1:
+            self.setFeature("multiTheme", 1)
+            potentialRegulation = False
+        for themeToken in themeTokens:
+            if themeToken != None:
+                hasTheme = True
+                self.setGazetteerFeatures(themeToken,"theme_")
+                self.buildArgumentFeatures(sentenceGraph, paths, features, eventToken, themeToken, "theme_")
+                self.triggerFeatureBuilder.tag = "ttrg_"
+                self.triggerFeatureBuilder.buildFeatures(themeToken)
+                themeEntity = None
+                if sentenceGraph.entitiesByToken.has_key(themeToken):
+                    for themeEntity in sentenceGraph.entitiesByToken[themeToken]:
+                        if themeEntity.get("isName") == "True":
+                            self.setFeature("themeProtein", 1)
+                            if potentialRegulation:
+                                self.setFeature("regulationThemeProtein", 1)
+                            themeEntities.append(themeEntity)
+                            break
+                if not features.has_key("themeProtein"):
+                    self.setFeature("themeEvent", 1)
+                    self.setFeature("nestingEvent", 1)
+                    if potentialRegulation:
+                        self.setFeature("regulationThemeEvent", 1)
+        if hasTheme:
             self.setFeature("noTheme", 1)
-        if causeToken != None:
-            self.setGazetteerFeatures(causeToken,"cause_")
-            self.buildArgumentFeatures(sentenceGraph, paths, features, eventToken, causeToken, "cause_")
-            self.triggerFeatureBuilder.tag = "ctrg_"
-            self.triggerFeatureBuilder.buildFeatures(causeToken)
-            causeEntity = None
-            if sentenceGraph.entitiesByToken.has_key(causeToken):
-                for causeEntity in sentenceGraph.entitiesByToken[causeToken]:
-                    if causeEntity.get("isName") == "True":
-                        self.setFeature("causeProtein", 1)
-                        if potentialRegulation:
-                            self.setFeature("regulationCauseProtein", 1)
-                        break
-            if not features.has_key("causeProtein"):
-                self.setFeature("causeEvent", 1)
-                self.setFeature("nestingEvent", 1)
-                if potentialRegulation:
-                    self.setFeature("regulationCauseEvent", 1)
-        else:
+        
+        causeEntities = []
+        hasCause = False
+        for causeToken in causeTokens:
+            if causeToken != None:
+                hasCause = True
+                self.setGazetteerFeatures(causeToken,"cause_")
+                self.buildArgumentFeatures(sentenceGraph, paths, features, eventToken, causeToken, "cause_")
+                self.triggerFeatureBuilder.tag = "ctrg_"
+                self.triggerFeatureBuilder.buildFeatures(causeToken)
+                causeEntity = None
+                if sentenceGraph.entitiesByToken.has_key(causeToken):
+                    for causeEntity in sentenceGraph.entitiesByToken[causeToken]:
+                        if causeEntity.get("isName") == "True":
+                            self.setFeature("causeProtein", 1)
+                            if potentialRegulation:
+                                self.setFeature("regulationCauseProtein", 1)
+                            causeEntities.append(causeEntity)
+                            break
+                if not features.has_key("causeProtein"):
+                    self.setFeature("causeEvent", 1)
+                    self.setFeature("nestingEvent", 1)
+                    if potentialRegulation:
+                        self.setFeature("regulationCauseEvent", 1)
+        if not hasCause:
             self.setFeature("noCause", 1)
         
         self.triggerFeatureBuilder.tag = ""
@@ -453,14 +503,22 @@ class DirectEventExampleBuilder(ExampleBuilder):
             for eventId in eventIds:
                 extra["eids"] += str(eventId) + ","
             extra["eids"] = extra["eids"][:-1]
-        if themeToken != None:
-            extra["tt"] = themeToken.get("id")
-            if themeEntity != None:
+        for themeToken in themeTokens:
+            if themeToken != None:
+                if extra.has_key("tt"):
+                    extra["tt"] = extra["tt"] + "," + themeToken.get("id")
+                else:
+                    extra["tt"] = themeToken.get("id")
+        for themeEntity in themeEntities:
+            if extra.has_key("t"):
+                extra["t"] = extra["t"] + "," + themeEntity.get("id")
+            else:
                 extra["t"] = themeEntity.get("id")
-        if causeToken != None:
-            extra["ct"] = causeToken.get("id")
-            if causeEntity != None:
-                extra["c"] = causeEntity.get("id")
+        for causeToken in causeTokens:
+            if causeToken != None:
+                extra["ct"] = causeTokens[0].get("id")
+        if len(causeEntities) > 0:
+            extra["c"] = causeEntities[0].get("id")
         sentenceOrigId = sentenceGraph.sentenceElement.get("origId")
         if sentenceOrigId != None:
             extra["SOID"] = sentenceOrigId       
