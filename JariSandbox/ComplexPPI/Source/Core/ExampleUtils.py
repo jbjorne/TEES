@@ -619,9 +619,17 @@ def addExamples(map, examples):
         exId = example[0]
         map[eTokId][exId] = [1, False, example, []] # [number of duplicates, marked final, example, entity elements]
         if example[3].has_key("tt"):
-            assert example[3]["tt"] in map.keys(), (example[0], example[3], sorted(map.keys()))
+            ids = example[3]["tt"]
+            if ids.find(","): ids = ids.split(",")
+            else: ids = [ids]
+            for id in ids:
+                assert id in map.keys(), (id, example[0], example[3], sorted(map.keys()))
         if example[3].has_key("ct"):
-            assert example[3]["ct"] in map.keys(), (example[0], example[3], sorted(map.keys()))
+            ids = example[3]["ct"]
+            if ids.find(","): ids = ids.split(",")
+            else: ids = [ids]
+            for id in ids:
+                assert id in map.keys(), (id, example[0], example[3], sorted(map.keys()))
         
 def addExistingEntities(map, entities, sentenceObject):
     count = 0
@@ -671,8 +679,13 @@ def markFinal(map):
                 final = True
                 counts = []
                 if example[3].has_key("tt"):
-                    final = final and isFinal(example[3]["tt"], map)
-                    counts.append( getCount(example[3]["tt"], map) )
+                    if example[3]["tt"].find(",") != -1:
+                        for id in example[3]["tt"].split(","):
+                            final = final and isFinal(id, map)
+                            counts.append( getCount(id, map) )
+                    else:
+                        final = final and isFinal(example[3]["tt"], map)
+                        counts.append( getCount(example[3]["tt"], map) )
                 if example[3].has_key("ct"):
                     final = final and isFinal(example[3]["ct"], map)
                     counts.append( getCount(example[3]["ct"], map) )
@@ -738,8 +751,16 @@ def buildInteractions(map, sentenceElement, predictionsByExample):
             if example == None: # named entity
                 continue
             prediction = predictionsByExample[example[0]]
+            themeNodes = []
+            theme2Nodes = None
             if example[3].has_key("tt"):
-                themeNodes = getEntityNodes(example[3]["tt"], map)
+                if example[3]["tt"].find(",") != -1:
+                    splits = example[3]["tt"].split(",")
+                    assert len(splits) == 2
+                    themeNodes = getEntityNodes(splits[0], map)
+                    theme2Nodes = getEntityNodes(splits[1], map)
+                else:
+                    themeNodes = getEntityNodes(example[3]["tt"], map)
             else:
                 themeNodes = [None]
             if example[3].has_key("ct"):
@@ -747,37 +768,70 @@ def buildInteractions(map, sentenceElement, predictionsByExample):
             else:
                 causeNodes = [None]
             
-            argCombinations = combine.combine(themeNodes, causeNodes)
-            rootIndex = 0
-            #assert len(argCombinations) == len(map[token][exId][3]), (len(argCombinations), len(map[token][exId][3]), example[0], argCombinations)
-            for combination in argCombinations:
-                if rootIndex >= len(map[token][exId][3]):
-                    print >> sys.stderr, "Warning, all event duplicates not generated (possible cycle) for example", example[0]
-                    break
-                rootElement = map[token][exId][3][rootIndex]
-                # add theme edge
-                if combination[0] != None:
-                    pairElement = ET.Element("interaction")
-                    pairElement.attrib["directed"] = "Unknown"
-                    pairElement.attrib["e1"] = rootElement.get("id")
-                    pairElement.attrib["e2"] = combination[0].get("id")
-                    pairElement.attrib["id"] = sentenceId + ".i" + str(len(interactions))
-                    pairElement.attrib["type"] = "Theme"
-                    interactions.append(pairElement)
-                    #pairCount += 1
-                
-                # add cause edge
-                if combination[1] != None:
-                    pairElement = ET.Element("interaction")
-                    pairElement.attrib["directed"] = "Unknown"
-                    pairElement.attrib["e1"] = rootElement.get("id")
-                    pairElement.attrib["e2"] = combination[1].get("id")
-                    pairElement.attrib["id"] = sentenceId + ".i" + str(len(interactions))
-                    pairElement.attrib["type"] = "Cause"
-                    interactions.append(pairElement)
-                    #pairCount += 1
-                
-                rootIndex += 1
+            if theme2Nodes == None:
+                argCombinations = combine.combine(themeNodes, causeNodes)
+                rootIndex = 0
+                #assert len(argCombinations) == len(map[token][exId][3]), (len(argCombinations), len(map[token][exId][3]), example[0], argCombinations)
+                for combination in argCombinations:
+                    if rootIndex >= len(map[token][exId][3]):
+                        print >> sys.stderr, "Warning, all event duplicates not generated (possible cycle) for example", example[0]
+                        break
+                    rootElement = map[token][exId][3][rootIndex]
+                    # add theme edge
+                    if combination[0] != None:
+                        pairElement = ET.Element("interaction")
+                        pairElement.attrib["directed"] = "Unknown"
+                        pairElement.attrib["e1"] = rootElement.get("id")
+                        pairElement.attrib["e2"] = combination[0].get("id")
+                        pairElement.attrib["id"] = sentenceId + ".i" + str(len(interactions))
+                        pairElement.attrib["type"] = "Theme"
+                        interactions.append(pairElement)
+                        #pairCount += 1
+                    
+                    # add cause edge
+                    if combination[1] != None:
+                        pairElement = ET.Element("interaction")
+                        pairElement.attrib["directed"] = "Unknown"
+                        pairElement.attrib["e1"] = rootElement.get("id")
+                        pairElement.attrib["e2"] = combination[1].get("id")
+                        pairElement.attrib["id"] = sentenceId + ".i" + str(len(interactions))
+                        pairElement.attrib["type"] = "Cause"
+                        interactions.append(pairElement)
+                        #pairCount += 1
+                    
+                    rootIndex += 1
+            else:
+                argCombinations = combine.combine(themeNodes, theme2Nodes)
+                rootIndex = 0
+                #assert len(argCombinations) == len(map[token][exId][3]), (len(argCombinations), len(map[token][exId][3]), example[0], argCombinations)
+                for combination in argCombinations:
+                    if rootIndex >= len(map[token][exId][3]):
+                        print >> sys.stderr, "Warning, all Binding duplicates not generated (possible cycle) for example", example[0]
+                        break
+                    rootElement = map[token][exId][3][rootIndex]
+                    # add theme edge
+                    if combination[0] != None:
+                        pairElement = ET.Element("interaction")
+                        pairElement.attrib["directed"] = "Unknown"
+                        pairElement.attrib["e1"] = rootElement.get("id")
+                        pairElement.attrib["e2"] = combination[0].get("id")
+                        pairElement.attrib["id"] = sentenceId + ".i" + str(len(interactions))
+                        pairElement.attrib["type"] = "Theme"
+                        interactions.append(pairElement)
+                        #pairCount += 1
+                    
+                    # add second theme edge
+                    if combination[1] != None:
+                        pairElement = ET.Element("interaction")
+                        pairElement.attrib["directed"] = "Unknown"
+                        pairElement.attrib["e1"] = rootElement.get("id")
+                        pairElement.attrib["e2"] = combination[1].get("id")
+                        pairElement.attrib["id"] = sentenceId + ".i" + str(len(interactions))
+                        pairElement.attrib["type"] = "Theme"
+                        interactions.append(pairElement)
+                        #pairCount += 1
+                    
+                    rootIndex += 1
     return interactions
 
 def process(sentenceObject, examplesBySentence, classSet, classIds, predictionsByExample):
