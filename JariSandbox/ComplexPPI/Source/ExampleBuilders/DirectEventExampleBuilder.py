@@ -374,7 +374,8 @@ class DirectEventExampleBuilder(ExampleBuilder):
             else:
                 newArgTokens.append(argToken)
         argTokens = newArgTokens
-            
+        
+        oneArgValid = False    
         for argToken in argTokens:
             if argToken == None:
                 continue
@@ -387,11 +388,22 @@ class DirectEventExampleBuilder(ExampleBuilder):
             depPaths = self.multiEdgeFeatureBuilder.getEdgeCombinations(sentenceGraph.dependencyGraph, path)
             validArg = False
             for p in depPaths:
-                if p in self.pathGazetteer:
+                if p in self.pathGazetteer and self.pathGazetteer[p][0] > 0:
                     validArg = True
                     break
-            if not validArg:
-                return False
+            if validArg:
+                oneArgValid = True
+            
+#            validArg = True
+#            for p in depPaths:
+#                if p in self.pathGazetteer and self.pathGazetteer[p][0] == 0:
+#                    validArg = False
+#                    break
+            
+#            if not validArg:
+#                return False
+        if not oneArgValid:
+            return False
         return True
     
     def setGazetteerFeatures(self, token, tag):
