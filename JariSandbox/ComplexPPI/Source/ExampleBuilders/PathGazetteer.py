@@ -13,7 +13,7 @@ import combine
 class PathGazetteer(ExampleBuilder):
     def __init__(self):
         self.multiEdgeFeatureBuilder = MultiEdgeFeatureBuilder(None)
-        self.gazetteer = set()
+        self.gazetteer = {}
     
     @classmethod
     def build(cls, input, output, parse, tokenization=None, includeNeg=False):
@@ -24,26 +24,51 @@ class PathGazetteer(ExampleBuilder):
         for sentence in sentences:
             counter.update(1, "Building path gazetteer ("+sentence[0].getSentenceId()+"): ")
             p.processSentence(sentence[0])
+        p.calculateFractions()
         
         f = open(output, "wt")
-        for string in sorted(list(p.gazetteer)):
-            f.write(string + "\n")
+        for key in sorted(p.gazetteer.keys()):
+            v = p.gazetteer[key]
+            f.write(key + " " + str(v[0]) + " " + str(v[1]) + " " + str(v[2]) + " " + str(v[3]) + "\n")
         f.close()
     
     @classmethod
     def load(cls, filename):
-        gazetteer = set()
+        gazetteer = {}
         f = open(filename, "rt")
         for line in f.readlines():
-            gazetteer.add(line.strip())
+            splits = line.split()
+            gazetteer[splits[0]] = (splits[1], splits[2], splits[3], splits[4])
         f.close()
         return gazetteer
+    
+    def calculateFractions(self):
+        numInstances = 0
+        numPos = 0
+        numNeg = 0
+        for v in self.gazetteer.values():
+            numInstances += v[2] + v[3]
+            numPos += v[2]
+            numNeg += v[3]
+        print >> sys.stderr, "Total paths:", numInstances
+        print >> sys.stderr, "Positives:", numPos
+        print >> sys.stderr, "Negatives:", numNeg
+        
+        for v in self.gazetteer.values():
+            assert v[0] == None and v[1] == None
+            if v[3] == None:
+                assert v[2] != None
+                v[0] = 1
+            else:
+                v[0] = float(v[2]) / float(v[2] + v[3])
+            v[1] = float(v[2] + v[3]) / float(numInstances)
                         
     def processSentence(self, sentenceGraph):        
         undirected = sentenceGraph.dependencyGraph.to_undirected()
         paths = NX.all_pairs_shortest_path(undirected, cutoff=999)
         self.multiEdgeFeatureBuilder.setFeatureVector()
         
+        positivePaths = {} # per sentence, a path may still be negative in another sentence
         for interaction in sentenceGraph.interactions:
             e1 = sentenceGraph.entitiesById[interaction.get("e1")]
             e1Token = sentenceGraph.entityHeadTokenByEntity[e1]
@@ -51,6 +76,25 @@ class PathGazetteer(ExampleBuilder):
             e2Token = sentenceGraph.entityHeadTokenByEntity[e2]
             
             if paths.has_key(e1Token) and paths[e1Token].has_key(e2Token):
+                if not positivePaths.has_key(e1Token): 
+                    positivePaths[e1Token] = {}
+                positivePaths[e1Token][e2Token] = True
+                
                 path = paths[e1Token][e2Token]
                 for comb in self.multiEdgeFeatureBuilder.getEdgeCombinations(sentenceGraph.dependencyGraph, path):
-                    self.gazetteer.add(comb)
+                    if not self.gazetteer.has_key(comb):
+                        self.gazetteer[comb] = [None,None,0,0]
+                    self.gazetteer[comb][2] += 1
+        for t1 in sentenceGraph.tokens:
+            for t2 in sentenceGraph.tokens:
+                if t1 == t2:
+                    continue
+                if positivePaths.has_key(t1) and positivePaths[t1].has_key(t2):
+                    continue
+                
+                if paths.has_key(t1) and paths[t1].has_key(t2):
+                    path = paths[t1][t2]
+                    for comb in self.multiEdgeFeatureBuilder.getEdgeCombinations(sentenceGraph.dependencyGraph, path):
+                        if not self.gazetteer.has_key(comb):
+                            self.gazetteer[comb] = [None,None,0,0]
+                        self.gazetteer[comb][3] += 1
