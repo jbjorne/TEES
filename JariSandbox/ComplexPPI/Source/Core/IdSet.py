@@ -21,7 +21,7 @@ class IdSet:
                 return None
             id = self.nextFreeId
             self.nextFreeId += 1
-            assert(not id in self.Ids.values())
+            #assert(not id in self.Ids.values())
             self.Ids[key] = id
             self._namesById[id] = key
         return self.Ids[key]
