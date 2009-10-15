@@ -1,4 +1,4 @@
-import sys, types
+import sys, types, random
 sys.path.append("..")
 from Core.ExampleBuilder import ExampleBuilder
 import Core.ExampleBuilder
@@ -13,7 +13,7 @@ import combine
 import Stemming.PorterStemmer as PorterStemmer
 
 class DirectEventExampleBuilder(ExampleBuilder):
-    def __init__(self, style=["typed","directed","headsOnly"], length=None, types=[], featureSet=None, classSet=None, gazetteer=None, pathGazetteer=None):
+    def __init__(self, style=["typed","directed","headsOnly"], length=None, types=[], featureSet=None, classSet=None, gazetteer=None, pathGazetteer=None, negFrac=None):
         if featureSet == None:
             featureSet = IdSet()
         if classSet == None:
@@ -38,6 +38,8 @@ class DirectEventExampleBuilder(ExampleBuilder):
         
         ExampleBuilder.__init__(self, classSet=classSet, featureSet=featureSet)
         self.styles = style
+        self.negFrac = negFrac
+        self.negRand = random.Random()
         
         self.multiEdgeFeatureBuilder = MultiEdgeFeatureBuilder(self.featureSet)
         if True:#"noAnnType" in self.styles:
@@ -67,9 +69,9 @@ class DirectEventExampleBuilder(ExampleBuilder):
         #self.outFile = open("exampleTempFile.txt","wt")
 
     @classmethod
-    def run(cls, input, output, parse, tokenization, style, idFileTag=None, gazetteer=None, pathGazetteer=None):
+    def run(cls, input, output, parse, tokenization, style, idFileTag=None, gazetteer=None, pathGazetteer=None, negFrac=None):
         classSet, featureSet = cls.getIdSets(idFileTag)
-        e = DirectEventExampleBuilder(style=style, classSet=classSet, featureSet=featureSet, gazetteer=gazetteer, pathGazetteer=pathGazetteer)
+        e = DirectEventExampleBuilder(style=style, classSet=classSet, featureSet=featureSet, gazetteer=gazetteer, pathGazetteer=pathGazetteer, negFrac=negFrac)
         sentences = cls.getSentences(input, parse, tokenization)
         e.buildExamplesForSentences(sentences, output, idFileTag)
         e.printStats()
@@ -337,18 +339,19 @@ class DirectEventExampleBuilder(ExampleBuilder):
                         skip = True
                         s[categoryName]["gazarg"] = s[categoryName].get("gazarg", 0) + 1
                 
-                if skip:
+                if (skip and self.negFrac == None) or (skip and self.negFrac != None and categoryName == "neg"):
                     self.skippedByType[categoryName] = self.skippedByType.get(categoryName, 0) + 1
                 else:
-                    self.builtByType[categoryName] = self.builtByType.get(categoryName, 0) + 1
-                    if theme2Binding:
-                        newExample = self.buildExample(exampleIndex, sentenceGraph, paths, token, combination[0], [combination[1]])
-                    else:
-                        newExample = self.buildExample(exampleIndex, sentenceGraph, paths, token, [combination[0]], [combination[1]])
-                    if len(eventIds) > 0: 
-                        newExample[3]["numEv"] = str(len(eventIds))
-                    examples.append( newExample )
-                    exampleIndex += 1
+                    if self.negFrac == None or categoryName != "neg" or (categoryName == "neg" and self.negRand.random() < self.negFrac):
+                        self.builtByType[categoryName] = self.builtByType.get(categoryName, 0) + 1
+                        if theme2Binding:
+                            newExample = self.buildExample(exampleIndex, sentenceGraph, paths, token, combination[0], [combination[1]])
+                        else:
+                            newExample = self.buildExample(exampleIndex, sentenceGraph, paths, token, [combination[0]], [combination[1]])
+                        if len(eventIds) > 0: 
+                            newExample[3]["numEv"] = str(len(eventIds))
+                        examples.append( newExample )
+                        exampleIndex += 1
         
         self.gsEvents = None
         return examples
