@@ -112,6 +112,18 @@ class Gazetteer:
                 tokNodeTxt=tokTxt(b,e,sNode,stem).lower()
                 tokDict=gztr.setdefault(tokNodeTxt,{})
                 tokDict[gsClass]=tokDict.get(gsClass,0)+1
+                # for multi-part texts, add collapsed and last token versions
+                if tokNodeTxt.find("-") != -1:
+                    # collapsed
+                    text = tokNodeTxt.replace("-","")
+                    if text != "":
+                        tokDict=gztr.setdefault(text,{})
+                        tokDict[gsClass]=tokDict.get(gsClass,0)+1
+                    # last part
+                    text = tokNodeTxt.rsplit("-",1)[-1]
+                    if text != "":
+                        tokDict=gztr.setdefault(text,{})
+                        tokDict[gsClass]=tokDict.get(gsClass,0)+1
         if fileOut:
             Gazetteer.saveGztr(gztr,fileOut,includeNeg)
         return gztr

@@ -66,6 +66,8 @@ class DirectEventExampleBuilder(ExampleBuilder):
         self.skippedByTypeAndReason = {}
         self.builtByType = {}
         
+        self.gazMatchCache = {}
+        
         #self.outFile = open("exampleTempFile.txt","wt")
 
     @classmethod
@@ -75,6 +77,39 @@ class DirectEventExampleBuilder(ExampleBuilder):
         sentences = cls.getSentences(input, parse, tokenization)
         e.buildExamplesForSentences(sentences, output, idFileTag)
         e.printStats()
+    
+    def getGazetteerMatch(self, string):
+        if string in self.gazMatchCache:
+            return self.gazMatchCache[string]
+        
+        origString = string
+        if "stem_gazetteer" in self.styles:
+            string = PorterStemmer.stem(string)
+        
+        if string in self.gazetteer:
+            self.gazMatchCache[origString] = string
+            return string
+        elif string.find("-") != -1:
+            replaced = string.replace("-","")
+        else:
+            self.gazMatchCache[origString] = None
+            return None
+        
+        if replaced in self.gazetteer:
+            self.gazMatchCache[origString] = replaced
+            return replaced
+        else:
+            splitted = string.rsplit("-",1)[-1]
+        
+        if splitted  in self.gazetteer:
+            self.gazMatchCache[origString] = splitted
+            return splitted
+        else:
+            self.gazMatchCache[origString] = None
+            return None
+    
+    def isInGazetteer(self, string):
+        return self.getGazetteerMatch(string) != None
     
     def printStats(self):
         eventsByType = {}
@@ -95,8 +130,12 @@ class DirectEventExampleBuilder(ExampleBuilder):
                 f.write(" " + id + " ")
                 if id in self.interSentenceEvents:
                     f.write("intersentence ")
-                if self.headTokensByOrigId[id].get("text").lower() not in self.gazetteer:
-                    f.write("not-in-gazetteer")
+                text = self.headTokensByOrigId[id].get("text").lower()
+                if not self.isInGazetteer(text):
+                    text = self.headTokensByOrigId[id].get("text").lower()
+                    if "stem_gazetteer" in self.styles:
+                        stemmed = PorterStemmer.stem(text)
+                    f.write("not-in-gazetteer (" + text + " / " + stemmed +")" )
                 f.write("\n")
         f.close()
 
@@ -108,12 +147,9 @@ class DirectEventExampleBuilder(ExampleBuilder):
             if missedEvents.has_key(key):
                 for id in missedEvents[key]:
                     tokText = self.headTokensByOrigId[id].get("text").lower()
-                    if "stem_gazetteer" in self.styles:
-                        tokText = PorterStemmer.stem(tokText)
-                    
                     if id in self.interSentenceEvents:
                         inter += 1
-                    elif tokText not in self.gazetteer:
+                    elif not self.isInGazetteer(tokText):
                         nongaz += 1
                     else:
                         other += 1
@@ -254,20 +290,21 @@ class DirectEventExampleBuilder(ExampleBuilder):
         gazCategories = {None:{"neg":-1}}
         #stems = {}
         for token in sentenceGraph.tokens:
-            tokenText = token.get("text").lower()
-            if "stem_gazetteer" in self.styles:
-                #stems[tokenText] = PorterStemmer.stem(tokenText)
-                #tokenText = stems[tokenText]
-                tokenText = PorterStemmer.stem(tokenText)
-            if self.gazetteer.has_key(tokenText):
-                gazCategories[token] = self.gazetteer[tokenText]
+            gazText = self.getGazetteerMatch(token.get("text").lower())
+            if gazText != None:
+                gazCategories[token] = self.gazetteer[gazText]
             else:
                 gazCategories[token] = {"neg":-1}
+            
             if token.get("id") in self.namedEntityHeadTokenIds:
                 nameTokens.append(token)
-            elif tokenText in self.gazetteer:
+            elif gazText != None:
                 eventTokens.append(token)
         allTokens = eventTokens + nameTokens
+        
+        #if len(nameTokens) == 0: # there can be no events in this sentence
+        #    self.gsEvents = None
+        #    return []
         
         for token in eventTokens:
             #gazCategories = self.gazetteer[token.get("text").lower()]
@@ -329,6 +366,9 @@ class DirectEventExampleBuilder(ExampleBuilder):
                 if not self.isValidEvent(paths, sentenceGraph, token, combination):
                     skip = True
                     s[categoryName]["valid"] = s[categoryName].get("valid", 0) + 1
+                if len(nameTokens) == 0:
+                    skip = True
+                    s[categoryName]["non"] = s[categoryName].get("non", 0) + 1
                 
                 if theme2Binding:
                     if gazCategories[combination[0][0]].get("neg",-1) > 0.99 or gazCategories[combination[0][1]].get("neg",-1) > 0.99:
@@ -410,11 +450,9 @@ class DirectEventExampleBuilder(ExampleBuilder):
         return True
     
     def setGazetteerFeatures(self, token, tag):
-        text = token.get("text").lower()
-        if "stem_gazetteer" in self.styles:
-            text = PorterStemmer.stem(text)
-        if self.gazetteer.has_key(text):
-            gazCategories = self.gazetteer[text]
+        gazText = self.getGazetteerMatch(token.get("text").lower())
+        if gazText != None:
+            gazCategories = self.gazetteer[gazText]
             for k,v in gazCategories.iteritems():
                 self.setFeature(tag+"gaz_event_value_"+k, v)
                 self.setFeature(tag+"gaz_event_"+k, 1)
@@ -432,9 +470,8 @@ class DirectEventExampleBuilder(ExampleBuilder):
         
         potentialRegulation = False
         eventTokenText = eventToken.get("text").lower()
-        if "stem_gazetteer" in self.styles:
-            eventTokenText = PorterStemmer.stem(eventTokenText)
-        gazCategories = self.gazetteer[eventTokenText]
+        gazText = self.getGazetteerMatch(eventTokenText)
+        gazCategories = self.gazetteer[gazText]
         for k,v in gazCategories.iteritems():
             if k.find("egulation") != -1:
                 potentialRegulation = True
