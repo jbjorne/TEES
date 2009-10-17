@@ -181,7 +181,11 @@ class SVMMultiClassClassifier(Classifier):
         cscConnection.run("chmod a+x " + cscConnection.workDir + "/" + scriptName)
         cscScriptPath = cscConnection.workDir + "/" + scriptName
         if isMurska:
-            cscConnection.run("bsub -o " + cscScriptPath + "-stdout -e " + cscScriptPath + "-stderr -W 10:0 -M " + str(cscConnection.memory) + " < " + cscScriptPath)
+            runCmd = "bsub -o " + cscScriptPath + "-stdout -e " + cscScriptPath + "-stderr -W 10:0 -M " + str(cscConnection.memory) 
+            if cscConnection.cores != 1:
+                runCmd += " -n " + str(cscConnection.cores)
+            runCmd += " < " + cscScriptPath
+            cscConnection.run(runCmd)
         else:
             cscConnection.run("qsub -o " + cscConnection.workDir + "/" + scriptName + "-stdout -e " + cscConnection.workDir + "/" + scriptName + "-stderr " + cscConnection.workDir + "/" + scriptName)
         return idStr

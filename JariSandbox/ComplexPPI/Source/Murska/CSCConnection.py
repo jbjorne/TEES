@@ -4,9 +4,10 @@ sys.path.append(os.path.dirname(__file__)+"/..")
 from Classifiers.SVMMultiClassClassifier import SVMMultiClassClassifier as classifier
 
 class CSCConnection:
-    def __init__(self, workSubDir, account="jakrbj@louhi.csc.fi", deleteWorkDir=False, memory=4194304):
+    def __init__(self, workSubDir, account="jakrbj@louhi.csc.fi", deleteWorkDir=False, memory=4194304, cores=1):
         self.account = account
         self.memory = memory
+        self.cores = cores
         self.machineName = account.split("@")[-1]
         self.workDir = "/wrk/jakrbj/" + workSubDir
         if deleteWorkDir:
