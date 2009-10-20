@@ -286,6 +286,10 @@ class Unflattener:
 #                                                                         for y in x]
 #                                                                        for x in result]))
                     return(result)
+            elif t in ['Protein']:
+                # Proteins have sites (etc.) as successors
+                # these edges will be processed later --> do nothing at this point
+                result = [edges]
             else:
                 sys.stderr.write("Invalid event type: %s\n"%t)
             return([edges])

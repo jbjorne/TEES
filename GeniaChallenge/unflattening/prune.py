@@ -30,6 +30,7 @@ class Pruner:
         elif e1t=='Localization':
             # NOTE: check that all task 2 entities are of the type 'entity'
             return( ((t=='Theme' and e2t=='Protein') or
+                     (t=='AtLoc' and e2t=='Entity') or
                      (t=='ToLoc' and e2t=='Entity')) )
         elif e1t=='Binding':
             # they say that e2t could also be DNA
@@ -43,8 +44,11 @@ class Pruner:
             return( ((t=='Theme' and e2t in all_entities) or
                      (t=='Cause' and e2t in all_entities) or
                      (t in ['Site','Csite'] and e2t=='Entity')) )
+        elif e1t=='Protein':
+            # Sites (etc.) are successors for proteins at this point of processing
+            return(t in ['ToLoc','AtLoc','Site','Csite'] and e2t=='Entity')
         else:
-            sys.stderr.write("Invalid event type: %s"%e1t)
+            sys.stderr.write("Invalid event type: %s (%s)\n"%(e1t,event.attrib['id']))
         return(False)
     
     def analyse(self):
