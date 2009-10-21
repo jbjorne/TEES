@@ -7,7 +7,8 @@ import Core.ExampleUtils as ExampleUtils
 from FeatureBuilders.MultiEdgeFeatureBuilder import MultiEdgeFeatureBuilder
 from Core.Gazetteer import Gazetteer
 from Utils.ProgressCounter import ProgressCounter
-import networkx as NX
+#import networkx as NX
+import Graph.networkx_v10rc1 as NX10
 import combine
 
 class PathGazetteer(ExampleBuilder):
@@ -65,7 +66,7 @@ class PathGazetteer(ExampleBuilder):
                         
     def processSentence(self, sentenceGraph):        
         undirected = sentenceGraph.dependencyGraph.to_undirected()
-        paths = NX.all_pairs_shortest_path(undirected, cutoff=999)
+        paths = NX10.all_pairs_shortest_path(undirected, cutoff=999)
         self.multiEdgeFeatureBuilder.setFeatureVector()
         
         positivePaths = {} # per sentence, a path may still be negative in another sentence

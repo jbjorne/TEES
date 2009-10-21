@@ -8,7 +8,7 @@ from FeatureBuilders.MultiEdgeFeatureBuilder import MultiEdgeFeatureBuilder
 from FeatureBuilders.TokenFeatureBuilder import TokenFeatureBuilder
 from FeatureBuilders.BioInferOntologyFeatureBuilder import BioInferOntologyFeatureBuilder
 from FeatureBuilders.NodalidaFeatureBuilder import NodalidaFeatureBuilder
-import networkx as NX
+import Graph.networkx_v10rc1 as NX10
 import Utils.BioInfer.OntologyUtils as OntologyUtils
 
 class MultiEdgeExampleBuilder(ExampleBuilder):
@@ -69,20 +69,20 @@ class MultiEdgeExampleBuilder(ExampleBuilder):
             return edges
         edgesToKeep = []
         for edge in edges:
-            if edge.attrib["type"] in typesToInclude:
+            if edge.get("type") in typesToInclude:
                 edgesToKeep.append(edge)
         return edgesToKeep
     
     def getCategoryNameFromTokens(self, sentenceGraph, t1, t2, directed=True):
         types = set()
         if sentenceGraph.interactionGraph.has_edge(t1, t2):
-            intEdges = sentenceGraph.interactionGraph.get_edge(t1, t2)
-            for intEdge in intEdges:
-                types.add(intEdge.attrib["type"])
+            intEdges = sentenceGraph.interactionGraph.get_edge_data(t1, t2, default={})
+            for i in range(len(intEdges)):
+                types.add(intEdges[i]["element"].get("type"))
         if (not directed) and sentenceGraph.interactionGraph.has_edge(t2, t1):
-            intEdges = sentenceGraph.interactionGraph.get_edge(t2, t1)
-            for intEdge in intEdges:
-                types.add(intEdge.attrib["type"])
+            intEdges = sentenceGraph.interactionGraph.get_edge(t2, t1, default={})
+            for i in range(len(intEdges)):
+                types.add(intEdges[i]["element"].get("type"))
         types = list(types)
         types.sort()
         categoryName = ""
@@ -177,7 +177,7 @@ class MultiEdgeExampleBuilder(ExampleBuilder):
         exampleIndex = 0
         
         undirected = sentenceGraph.dependencyGraph.to_undirected()
-        paths = NX.all_pairs_shortest_path(undirected, cutoff=999)
+        paths = NX10.all_pairs_shortest_path(undirected, cutoff=999)
         
         # Generate examples based on interactions between entities or interactions between tokens
         if "entities" in self.styles:

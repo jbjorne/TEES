@@ -143,10 +143,18 @@ class GeneralEntityTypeRecognizerGztr(ExampleBuilder):
         self.outEdgesByToken = {}
         self.edgeSetByToken = {}
         for token in sentenceGraph.tokens:
-            inEdges = sentenceGraph.dependencyGraph.in_edges(token)
+            inEdges = sentenceGraph.dependencyGraph.in_edges(token, data=True)
+            fixedInEdges = []
+            for edge in inEdges:
+                fixedInEdges.append( (edge[0], edge[1], edge[2]["element"]) )
+            inEdges = fixedInEdges
             inEdges.sort(compareDependencyEdgesById)
             self.inEdgesByToken[token] = inEdges
-            outEdges = sentenceGraph.dependencyGraph.out_edges(token)
+            outEdges = sentenceGraph.dependencyGraph.out_edges(token, data=True)
+            fixedOutEdges = []
+            for edge in outEdges:
+                fixedOutEdges.append( (edge[0], edge[1], edge[2]["element"]) )
+            outEdges = fixedOutEdges
             outEdges.sort(compareDependencyEdgesById)
             self.outEdgesByToken[token] = outEdges
             self.edgeSetByToken[token] = set(inEdges + outEdges)

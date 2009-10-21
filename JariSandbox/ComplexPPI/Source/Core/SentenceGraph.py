@@ -1,4 +1,4 @@
-import networkx as NX
+import Graph.networkx_v10rc1 as NX10 # import networkx as NX
 import Range
 import types
 
@@ -66,7 +66,11 @@ class SentenceGraph:
         self.sentenceElement = sentenceElement
         self.tokens = tokenElements
         self.dependencies = dependencyElements
-        self.dependencyGraph = NX.XDiGraph(multiedges = multiedges)
+        #self.dependencyGraph = NX.XDiGraph(multiedges = multiedges)
+        if multiedges:
+            self.dependencyGraph = NX10.MultiDiGraph()
+        else:
+            self.dependencyGraph = NX10.DiGraph()
         self.interactions = None
         self.entities = None
         self.interactionGraph = None
@@ -82,7 +86,7 @@ class SentenceGraph:
         for dependency in self.dependencies:
             self.dependencyGraph.add_edge(self.tokensById[dependency.attrib["t1"]],\
                                           self.tokensById[dependency.attrib["t2"]],\
-                                          dependency)
+                                          element=dependency)
     
     def getSentenceId(self):
         return self.sentenceElement.get("id")
@@ -114,7 +118,11 @@ class SentenceGraph:
         for entity in self.entities[:]:
             if entity.attrib["charOffset"] == "":
                 self.entities.remove(entity)
-        self.interactionGraph = NX.XDiGraph(multiedges = multiedges)
+        #self.interactionGraph = NX.XDiGraph(multiedges = multiedges)
+        if multiedges:
+            self.interactionGraph = NX10.MultiDiGraph()
+        else:
+            self.interactionGraph = NX10.DiGraph()
         for token in self.tokens:
             self.interactionGraph.add_node(token)
         
@@ -136,13 +144,14 @@ class SentenceGraph:
             
             found = False
             if multiedges:
-                edges = self.interactionGraph.get_edge(token1, token2)
-                for edge in edges:
+                edges = self.interactionGraph.get_edge_data(token1, token2, default={})
+                for i in range(len(edges)):
+                    edge = edges[i]["element"]
                     if edge.attrib["type"] == interaction.attrib["type"]:
                         found = True
                         break
             if not found:
-                self.interactionGraph.add_edge(token1, token2, interaction)
+                self.interactionGraph.add_edge(token1, token2, element=interaction)
             else:
                 self.duplicateInteractionEdgesRemoved += 1
     

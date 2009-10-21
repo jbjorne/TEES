@@ -133,15 +133,16 @@ class MultiEdgeFeatureBuilder(FeatureBuilder):
         for i in range(1, len(path)):
             pathEdges[i][i-1] = []
             pathEdges[i-1][i] = []
-        edges = graph.edges()
+        edges = graph.edges(data=True)
         for i in range(1, len(path)):
             found = False
             for edge in edges:
+                edgeTuple = (edge[0], edge[1], edge[2]["element"])
                 if edge[0] == path[i-1] and edge[1] == path[i]:
-                    pathEdges[i-1][i].append(edge)
+                    pathEdges[i-1][i].append(edgeTuple)
                     found = True
                 elif edge[1] == path[i-1] and edge[0] == path[i]:
-                    pathEdges[i][i-1].append(edge)
+                    pathEdges[i][i-1].append(edgeTuple)
                     found = True
             assert(found==True)
         self.edgeCache[ids] = pathEdges
