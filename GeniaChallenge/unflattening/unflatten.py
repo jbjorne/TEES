@@ -1,5 +1,5 @@
 import sys
-import networkx as NX
+import Graph.networkx_v10rc1 as NX
 try:
     import xml.etree.cElementTree as ET
 except ImportError:
@@ -91,16 +91,16 @@ class Analyser:
         tmp2 = [x for x in tmp.getiterator('parse')
                 if (x.attrib['parser']==parseName and
                     x.attrib['tokenizer']==tokenName)][0]
-        G = NX.XDiGraph()
+        G = NX.DiGraph()
         for x in tmp2.findall('dependency'):
-            G.add_edge(x.attrib['t1'],x.attrib['t2'],x.attrib['type'])
+            G.add_edge(x.attrib['t1'],x.attrib['t2'],type=x.attrib['type'])
         return(G)
 
     @classmethod
     def makeSemG(cls,document):
         entities = dict( [(x.attrib['id'],x) for x in
                           document.getiterator('entity')] )
-        G = NX.XDiGraph()
+        G = NX.DiGraph()
         for event in document.getiterator('interaction'):
             # ignore negative pairs
             # WHICH SHOULD BE THERE IN THE FIRST PLACE!
@@ -108,7 +108,7 @@ class Analyser:
                 continue
             e1 = entities[event.attrib['e1']]
             e2 = entities[event.attrib['e2']]
-            G.add_edge(e1,e2,event)
+            G.add_edge(e1,e2,xmlnode=event)
         return(G)
 
     @classmethod
@@ -153,11 +153,11 @@ class Unflattener:
                     # same coordination group if there is a pair of
                     # shortest paths from event that start with the same edge
                     # and this edge is not between the tokens of the event
-                    start1 = set( [depG.get_edge(p[0],p[1]) for p in paths1
+                    start1 = set( [depG[p[0]][p[1]]['type'] for p in paths1
                                    if (p and
                                        len(p)>=2 and
                                        not p[1] in parentTokens)] )
-                    start2 = set( [depG.get_edge(p[0],p[1]) for p in paths2
+                    start2 = set( [depG[p[0]][p[1]]['type'] for p in paths2
                                    if (p and
                                        len(p)>=2 and
                                        not p[1] in parentTokens)] )
@@ -200,8 +200,9 @@ class Unflattener:
             t = node.attrib['type']
             # 'neg' edges are not considered and will be
             # removed from the final xml
-            edges = [x for x in self.semG.out_edges(node)
-                     if not x[2].attrib['type']=='neg']
+            edges = [(x[0],x[1],x[2]['xmlnode'])
+                      for x in self.semG.out_edges(node,True)
+                     if not x[2]['xmlnode'].attrib['type']=='neg']
             if t in ['Gene_expression','Transcription',
                      'Translation','Protein_catabolism']:
                 result = [[e] for e in edges]
@@ -314,7 +315,7 @@ class Unflattener:
         while unprocessed_nodes:
             next_nodes = set()
             for current in unprocessed_nodes:
-                next_nodes.update(set(self.semG.in_neighbors(current)))
+                next_nodes.update(set(self.semG.predecessors(current)))
                 if self.semG.out_edges(current):
                     groups = getGrouping(current)
                     for edges in groups:
@@ -328,14 +329,14 @@ class Unflattener:
                             newEid = newE.attrib['id']+'.E'+evid
                             newE.attrib['id'] = newEid
                             newE.attrib['e1'] = newId
-                            self.semG.add_edge(newN,e[1],newE)
-                        for e in self.semG.in_edges(current):
-                            newE = ET.Element('interaction',e[2].attrib)
+                            self.semG.add_edge(newN,e[1],xmlnode=newE)
+                        for e in self.semG.in_edges(current,True):
+                            newE = ET.Element('interaction',e[2]['xmlnode'].attrib)
                             newEid = newE.attrib['id']+'.E'+evid
                             newE.attrib['id'] = newEid
                             newE.attrib['e2'] = newId
-                            self.semG.add_edge(e[0],newN,newE)
-                    self.semG.delete_node(current)
+                            self.semG.add_edge(e[0],newN,xmlnode=newE)
+                    self.semG.remove_node(current)
             # ensure that nodes-to-be-processed have only out-neighbors
             # that have already been processed
             removable = set()
@@ -351,9 +352,9 @@ class Unflattener:
                 sentence.remove(elem)
             for elem in sentence.findall('interaction'):
                 sentence.remove(elem)
-        for edge in self.semG.edges():
-            sentence = self.sentences[Analyser.findSentenceId(edge[2])]
-            sentence.insert(0,edge[2])
+        for edge in self.semG.edges(data=True):
+            sentence = self.sentences[Analyser.findSentenceId(edge[2]['xmlnode'])]
+            sentence.insert(0,edge[2]['xmlnode'])
         for node in self.loners:
             sentence = self.sentences[Analyser.findSentenceId(node)]
             sentence.insert(0,node)
