@@ -13,9 +13,10 @@ import Core.Split as Split
 from Evaluators.MultiClassEvaluator import MultiClassEvaluator
 from Utils.Timer import Timer
 from Utils.Parameters import *
+import Settings
 
 class SVMMultiClassClassifier(Classifier):
-    binDir = "/usr/share/biotext/ComplexPPI/SVMMultiClass"
+    binDir = Settings.SVMMultiClassDir #"/usr/share/biotext/ComplexPPI/SVMMultiClass"
     indent = ""
     
     louhiBinDir = "/v/users/jakrbj/svm-multiclass"
