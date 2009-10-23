@@ -1,5 +1,6 @@
 import sys,os,time
 sys.path.append("..")
+import Settings
 from ExampleBuilders.GeneralEntityTypeRecognizer import GeneralEntityTypeRecognizer
 from ExampleBuilders.GeneralEntityTypeRecognizerGztr import GeneralEntityTypeRecognizerGztr
 from ExampleBuilders.MultiEdgeExampleBuilder import MultiEdgeExampleBuilder
@@ -53,6 +54,7 @@ def log(clear=False):
 def copyIdSetsToWorkdir(srcStem):
     shutil.copy(srcStem+".feature_names", os.getcwd())
     shutil.copy(srcStem+".class_names", os.getcwd())
+    return os.path.split(srcStem)[-1]
 
 # Import Psyco if available
 try:
