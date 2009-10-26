@@ -26,17 +26,17 @@ TRAIN_FILE=WORKDIR+"/bioinfer-train-"+PARSE+".xml"
 TRAIN_AND_DEVEL_FILE=WORKDIR+"/bioinfer-train-and-devel-"+PARSE+".xml"
 
 # example files
-TRIGGER_TRAIN_EXAMPLE_FILE=EXAMPLEDIR+"/trigger-train-examples-"+PARSE
-TRIGGER_DEVEL_EXAMPLE_FILE=EXAMPLEDIR+"/trigger-devel-examples-"+PARSE
-TRIGGER_TRAIN_AND_DEVEL_EXAMPLE_FILE=EXAMPLEDIR+"/trigger-train-and-devel-examples-"+PARSE
-TRIGGER_TEST_EXAMPLE_FILE=EXAMPLEDIR+"/trigger-test-examples-"+PARSE
-TRIGGER_CLASS_NAMES=EXAMPLEDIR+"/bioinfer-trigger-ids.class_names"
+TRIGGER_TRAIN_EXAMPLE_FILE="trigger-train-examples-"+PARSE
+TRIGGER_DEVEL_EXAMPLE_FILE="trigger-devel-examples-"+PARSE
+TRIGGER_TRAIN_AND_DEVEL_EXAMPLE_FILE="trigger-train-and-devel-examples-"+PARSE
+TRIGGER_TEST_EXAMPLE_FILE="trigger-test-examples-"+PARSE
+TRIGGER_CLASS_NAMES="bioinfer-trigger-ids.class_names"
 
-EDGE_TRAIN_EXAMPLE_FILE=EXAMPLEDIR+"/edge-train-examples-"+PARSE
-EDGE_DEVEL_EXAMPLE_FILE=EXAMPLEDIR+"/edge-devel-examples-"+PARSE
-EDGE_TRAIN_AND_DEVEL_EXAMPLE_FILE=EXAMPLEDIR+"/edge-train-and-devel-examples-"+PARSE
-EDGE_TEST_EXAMPLE_FILE=EXAMPLEDIR+"/edge-test-examples-"+PARSE
-EDGE_CLASS_NAMES=EXAMPLEDIR+"/bioinfer-edge-ids.class_names"
+EDGE_TRAIN_EXAMPLE_FILE="edge-train-examples-"+PARSE
+EDGE_DEVEL_EXAMPLE_FILE="edge-devel-examples-"+PARSE
+EDGE_TRAIN_AND_DEVEL_EXAMPLE_FILE="edge-train-and-devel-examples-"+PARSE
+EDGE_TEST_EXAMPLE_FILE="edge-test-examples-"+PARSE
+EDGE_CLASS_NAMES="bioinfer-edge-ids.class_names"
 
 ###############################################################################
 # Head token detection
