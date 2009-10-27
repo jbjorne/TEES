@@ -16,11 +16,12 @@ elif PARSE_TOK == "split-McClosky":
     CORPUS_DIR="/usr/share/biotext/GeniaChallenge/xml"
 assert(CORPUS_DIR != None)
 EXTDIR="/usr/share/biotext/GeniaChallenge/extension-data"
-WORKDIR=EXTDIR+"/genia/recall-boost-"+PARSE_TOK+"-t12-"
+WORKDIR=EXTDIR+"/genia/recall-boost-"+PARSE_TOK+"-t12-stemgazetteer"
 
 TRAIN_FILE=CORPUS_DIR+"/train12.xml"
 DEVEL_FILE=CORPUS_DIR+"/devel12.xml"
-DEVEL_PREDICTED_TRIGGERS_FILE=EXTDIR+"/genia/trigger-model-gazetteer-split-McClosky-gazetteer-t12/devel-predicted-triggers-split-McClosky-gazetteer-t12-"
+DEVEL_PREDICTED_TRIGGERS_FILE=EXTDIR+"genia/trigger-model-gazetteer-split-McClosky-stemgazetteer-t12/devel-predicted-triggers-split-McClosky-stemgazetteer-t12-"
+#DEVEL_PREDICTED_TRIGGERS_FILE=EXTDIR+"/genia/trigger-model-gazetteer-split-McClosky-gazetteer-t12/devel-predicted-triggers-split-McClosky-gazetteer-t12-"
 #DEVEL_PREDICTED_TRIGGERS_FILE=EXTDIR+"/genia/trigger-model-"+PARSE_TOK+"/devel-predicted-triggers-"+PARSE_TOK+"-"
 #TRIGGER_CLASSIFIER_PARAMS=[150000,200000,300000]
 EDGE_MODEL=EXTDIR+"/genia/edge-model-"+PARSE_TOK+"-t12/devel-edge-param-opt/model-c_" #50000"
@@ -33,7 +34,9 @@ if PARSE_TOK == "split-McClosky":
     #ALL_PARAMS={"trigger":[80000,200000,350000], "booster":["0.65","0.7","0.8","0.9"], "edge":[10000,28000,50000]}
     #ALL_PARAMS={"trigger":[200000], "booster":["0.5","0.6"], "edge":[28000]}
     #first cube for gazetteer_exclude ALL_PARAMS={"trigger":[100000,150000,200000], "booster":["0.65","0.7","0.8","0.9"], "edge":[10000,28000,50000]}
-    ALL_PARAMS={"trigger":[50000,80000,100000], "booster":["0.7","0.9"], "edge":[50000,75000,100000]}
+    #ALL_PARAMS={"trigger":[50000,80000,100000], "booster":["0.7","0.9"], "edge":[50000,75000,100000]}
+    
+    ALL_PARAMS={"trigger":[300000], "booster":["0.7","0.85","1.0"], "edge":[10000,28000,50000,80000,100000]}
 elif PARSE_TOK == "McClosky":
     ALL_PARAMS={"trigger":[80000,200000,350000], "booster":["0.6","0.7","0.8","0.9"], "edge":[10000,25000,50000]}
     #ALL_PARAMS={"trigger":[100000,150000,200000], "booster":["0.6","0.7","0.8","0.9"], "edge":[10000,25000,50000]}
@@ -74,13 +77,13 @@ for params in paramCombinations:
     # which evaluate on the level of examples.
     EvaluateInteractionXML.run(Ev, xmlFilename, DEVEL_FILE, PARSE_TOK, PARSE_TOK)
     # Post-processing
-    preserveTask2.run(xmlFilename, "t2.xml", "no-t2.xml", "extract")
-    prune.interface(["-i","no-t2.xml","-o","pruned.xml","-c"])
+    #preserveTask2.run(xmlFilename, "t2.xml", "no-t2.xml", "extract")
+    prune.interface(["-i",xmlFilename,"-o","pruned.xml","-c"])
     unflatten.interface(["-i","pruned.xml","-o","unflattened.xml","-a",PARSE_TOK,"-t",PARSE_TOK])
-    preserveTask2.run("unflattened.xml", "final.xml", "t2.xml", "insert")
+    #preserveTask2.run("unflattened.xml", "final.xml", "t2.xml", "insert")
     # Output will be stored to the geniaformat-subdirectory, where will also be a
     # tar.gz-file which can be sent to the Shared Task evaluation server.
-    gifxmlToGenia("final.xml", "geniaformat", 2)
-    evaluateSharedTask("geniaformat", 12) # "UTurku-devel-results-090320"
+    gifxmlToGenia("unflattened.xml", "geniaformat", 1)
+    evaluateSharedTask("geniaformat", 1) # "UTurku-devel-results-090320"
     count += 1
     
