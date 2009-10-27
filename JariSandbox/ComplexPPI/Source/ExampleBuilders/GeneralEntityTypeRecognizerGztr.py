@@ -92,10 +92,10 @@ class GeneralEntityTypeRecognizerGztr(ExampleBuilder):
             for entity in sentenceGraph.tokenIsEntityHead[token]:
                 if entity.get("isName") == "True":
                     features["_annType_"+entity.get("type")]=1
-        if self.gazetteer and tokTxt.lower() in self.gazetteer:
-            for label,weight in self.gazetteer[tokTxt.lower()].items():
-                pass
-                #features["_knownLabel_"+label]=weight
+#        if self.gazetteer and tokTxt.lower() in self.gazetteer:
+#            for label,weight in self.gazetteer[tokTxt.lower()].items():
+#                pass
+#                #features["_knownLabel_"+label]=weight
         self.tokenFeatures[token] = features
         return features
     
@@ -171,7 +171,10 @@ class GeneralEntityTypeRecognizerGztr(ExampleBuilder):
             else:
                 category = 1            
             
-            if ("exclude_gazetteer" in self.styles) and self.gazetteer and token.get("text").lower() not in self.gazetteer:
+            tokenText = token.get("text").lower()
+            if "stem_gazetteer" in self.styles:
+                tokenText = PorterStemmer.stem(tokenText)
+            if ("exclude_gazetteer" in self.styles) and self.gazetteer and tokenText not in self.gazetteer:
                 features = {}
                 features[self.featureSet.getId("exclude_gazetteer")] = 1
                 extra = {"xtype":"token","t":token.get("id"),"excluded":"True"}
