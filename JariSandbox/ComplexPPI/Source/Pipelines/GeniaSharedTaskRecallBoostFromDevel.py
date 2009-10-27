@@ -20,7 +20,7 @@ WORKDIR=EXTDIR+"/genia/recall-boost-"+PARSE_TOK+"-t12-stemgazetteer"
 
 TRAIN_FILE=CORPUS_DIR+"/train12.xml"
 DEVEL_FILE=CORPUS_DIR+"/devel12.xml"
-DEVEL_PREDICTED_TRIGGERS_FILE=EXTDIR+"genia/trigger-model-gazetteer-split-McClosky-stemgazetteer-t12/devel-predicted-triggers-split-McClosky-stemgazetteer-t12-"
+DEVEL_PREDICTED_TRIGGERS_FILE=EXTDIR+"/genia/trigger-model-gazetteer-split-McClosky-stemgazetteer-t12/devel-predicted-triggers-split-McClosky-stemgazetteer-t12-"
 #DEVEL_PREDICTED_TRIGGERS_FILE=EXTDIR+"/genia/trigger-model-gazetteer-split-McClosky-gazetteer-t12/devel-predicted-triggers-split-McClosky-gazetteer-t12-"
 #DEVEL_PREDICTED_TRIGGERS_FILE=EXTDIR+"/genia/trigger-model-"+PARSE_TOK+"/devel-predicted-triggers-"+PARSE_TOK+"-"
 #TRIGGER_CLASSIFIER_PARAMS=[150000,200000,300000]
