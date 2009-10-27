@@ -27,7 +27,7 @@ else:
     DEVEL_FILE=CORPUS_DIR+"/devel12.xml"
     TEST_FILE=CORPUS_DIR+"/test.xml"
     EVERYTHING_FILE=CORPUS_DIR+"/everything12.xml"
-    TASK_TAG="-gazetteer-t12"
+    TASK_TAG="-stemgazetteer-t12"
 WORKDIR="/usr/share/biotext/GeniaChallenge/extension-data/genia/trigger-examples"
 TRIGGER_FEATURE_PARAMS="style:typed,exclude_gazetteer"
 
@@ -41,9 +41,9 @@ print >> sys.stderr, "Trigger example pipeline for parse", PARSE_TOK, "task", ta
 ###############################################################################
 # Old McClosky-Charniak parses
 if not os.path.exists("gazetteer-train-"+PARSE_TOK+TASK_TAG):
-    Gazetteer.run(TRAIN_FILE, "gazetteer-train-"+PARSE_TOK+TASK_TAG, PARSE_TOK)
+    Gazetteer.run(TRAIN_FILE, "gazetteer-train-"+PARSE_TOK+TASK_TAG, PARSE_TOK, entityOffsetKey="headOffset", stem=True)
 if not os.path.exists("gazetteer-everything-"+PARSE_TOK+TASK_TAG):
-    Gazetteer.run(EVERYTHING_FILE, "gazetteer-everything-"+PARSE_TOK+TASK_TAG, PARSE_TOK)
+    Gazetteer.run(EVERYTHING_FILE, "gazetteer-everything-"+PARSE_TOK+TASK_TAG, PARSE_TOK, entityOffsetKey="headOffset", stem=True)
 # generate the files for the old charniak
 if not os.path.exists("trigger-train-examples-"+PARSE_TOK+TASK_TAG):
     GeneralEntityTypeRecognizerGztr.run(TRAIN_FILE, "trigger-train-examples-"+PARSE_TOK+TASK_TAG, PARSE_TOK, PARSE_TOK, TRIGGER_FEATURE_PARAMS, "genia-trigger-ids", "gazetteer-train-"+PARSE_TOK+TASK_TAG)
