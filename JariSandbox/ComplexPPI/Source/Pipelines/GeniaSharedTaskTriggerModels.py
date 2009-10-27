@@ -23,7 +23,7 @@ else:
     DEVEL_FILE=CORPUS_DIR+"/devel12.xml"
     TEST_FILE=CORPUS_DIR+"/test.xml"
     EVERYTHING_FILE=CORPUS_DIR+"/everything12.xml"
-    TASK_TAG="-gazetteer-t12"
+    TASK_TAG="-stemgazetteer-t12"
 
 EXAMPLEDIR="/usr/share/biotext/GeniaChallenge/extension-data/genia/trigger-examples"
 TRAIN_EXAMPLE_FILE=EXAMPLEDIR+"/trigger-train-examples-"+PARSE_TOK+TASK_TAG
@@ -34,7 +34,7 @@ CLASS_NAMES=EXAMPLEDIR+"/genia-trigger-ids.class_names"
 WORKDIR="/usr/share/biotext/GeniaChallenge/extension-data/genia/trigger-model-gazetteer-"+PARSE_TOK+TASK_TAG
 
 CLASSIFIER_PARAMS="c:1000,5000,10000,20000,50000,80000,100000,150000,180000,200000, 250000, 300000, 350000, 500000,1000000"#,5000000,10000000"
-#CLASSIFIER_PARAMS="c:80000"
+#CLASSIFIER_PARAMS="c:50000"
 optimizeLoop = True # search for a parameter, or use a predefined one
 
 # These commands will be in the beginning of most pipelines
