@@ -26,6 +26,6 @@ sys.path = sys.path[1:] # back to original path
 
 # NetworkX imports itself. This may interfere with using another version
 # of the library, so remove all of these imports
-for key in sorted(sys.modules.keys()):
-    if key[0:8] == "networkx":
-        del sys.modules[key]
+#for key in sorted(sys.modules.keys()):
+#    if key[0:8] == "networkx":
+#        del sys.modules[key]
