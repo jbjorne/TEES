@@ -176,7 +176,8 @@ class MultiEdgeExampleBuilder(ExampleBuilder):
         examples = []
         exampleIndex = 0
         
-        undirected = sentenceGraph.dependencyGraph.to_undirected()
+        #undirected = sentenceGraph.dependencyGraph.to_undirected()
+        undirected = NX10.MultiGraph(sentenceGraph.dependencyGraph)
         paths = NX10.all_pairs_shortest_path(undirected, cutoff=999)
         
         # Generate examples based on interactions between entities or interactions between tokens
