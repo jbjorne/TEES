@@ -49,15 +49,17 @@ class RecallAdjust:
         multiplier 1.0 does nothing, <1.0 decreases negative class confidence, >1.0 increases negative class confidence
         the root of the modified tree is returned and, if outFile is a string, written out to outFile as well"""
         print >> sys.stderr, "##### Recall adjust with multiplier " + str(multiplier)[:5] + " #####"
-        root=ETUtils.ETFromObj(inFile)
-        if not ET.iselement(root):
-            assert isinstance(root,ET.ElementTree)
-            root=root.getroot()
+        tree=ETUtils.ETFromObj(inFile)
+        if not ET.iselement(tree):
+            assert isinstance(tree,ET.ElementTree)
+            root=tree.getroot()
+        else:
+            root = tree
         for entityNode in root.getiterator("entity"):
             adjustEntity(entityNode,targetLabel,multiplier)
         if outFile:
             ETUtils.write(root,outFile)
-        return root
+        return tree
 
 if __name__=="__main__":
     desc="Negative class adjustment in entity predictions. Reads from stdin, writes to stdout."
