@@ -292,7 +292,8 @@ class Unflattener:
                 # these edges will be processed later --> do nothing at this point
                 result = [edges]
             else:
-                sys.stderr.write("Invalid event type: %s\n"%t)
+                if t != "Entity":
+                    sys.stderr.write("Invalid event type: %s\n"%t)
             return([edges])
 
         def getLinearGrouping(node,edges):
