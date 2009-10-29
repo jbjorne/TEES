@@ -36,7 +36,8 @@ if PARSE_TOK == "split-McClosky":
     #first cube for gazetteer_exclude ALL_PARAMS={"trigger":[100000,150000,200000], "booster":["0.65","0.7","0.8","0.9"], "edge":[10000,28000,50000]}
     #ALL_PARAMS={"trigger":[50000,80000,100000], "booster":["0.7","0.9"], "edge":[50000,75000,100000]}
     
-    ALL_PARAMS={"trigger":[300000], "booster":["0.7","0.85","1.0"], "edge":[10000,28000,50000,80000,100000]}
+    #ALL_PARAMS={"trigger":[300000], "booster":["0.7","0.85","1.0"], "edge":[10000,28000,50000,80000,100000]}
+    ALL_PARAMS={"trigger":[180000], "booster":["0.7","0.85","1.0"], "edge":[10000,28000,50000,80000,100000]}
 elif PARSE_TOK == "McClosky":
     ALL_PARAMS={"trigger":[80000,200000,350000], "booster":["0.6","0.7","0.8","0.9"], "edge":[10000,25000,50000]}
     #ALL_PARAMS={"trigger":[100000,150000,200000], "booster":["0.6","0.7","0.8","0.9"], "edge":[10000,25000,50000]}
