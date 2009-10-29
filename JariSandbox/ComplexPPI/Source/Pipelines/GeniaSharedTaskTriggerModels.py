@@ -48,7 +48,7 @@ print >> sys.stderr, "Trigger model pipeline for parse", PARSE_TOK, "task", task
 if optimizeLoop: # search for the best c-parameter
     # The optimize-function takes as parameters a Classifier-class, an Evaluator-class
     # and input and output files
-    c = CSCConnection("extension-data/genia/devel-trigger-model-gazetteer-"+PARSE_TOK+TASK_TAG, "jakrbj@murska.csc.fi")
+    c = CSCConnection("extension-data/genia/devel-trigger-model-gazetteer-"+PARSE_TOK+TASK_TAG, "jakrbj@murska.csc.fi", True)
     best = optimize(Cls, Ev, TRAIN_EXAMPLE_FILE, DEVEL_EXAMPLE_FILE,\
         CLASS_NAMES, CLASSIFIER_PARAMS, "devel-trigger-param-opt", None, c)
 xmlFilename = "devel-predicted-triggers-"+PARSE_TOK+TASK_TAG+".xml"
