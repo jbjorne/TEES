@@ -41,9 +41,9 @@ print >> sys.stderr, "Trigger example pipeline for parse", PARSE_TOK, "task", ta
 ###############################################################################
 # Old McClosky-Charniak parses
 if not os.path.exists("gazetteer-train-"+PARSE_TOK+TASK_TAG):
-    Gazetteer.run(TRAIN_FILE, "gazetteer-train-"+PARSE_TOK+TASK_TAG, PARSE_TOK, entityOffsetKey="headOffset", stem=True)
+    Gazetteer.run(TRAIN_FILE, "gazetteer-train-"+PARSE_TOK+TASK_TAG, PARSE_TOK, entityOffsetKey="charOffset", stem=True)
 if not os.path.exists("gazetteer-everything-"+PARSE_TOK+TASK_TAG):
-    Gazetteer.run(EVERYTHING_FILE, "gazetteer-everything-"+PARSE_TOK+TASK_TAG, PARSE_TOK, entityOffsetKey="headOffset", stem=True)
+    Gazetteer.run(EVERYTHING_FILE, "gazetteer-everything-"+PARSE_TOK+TASK_TAG, PARSE_TOK, entityOffsetKey="charOffset", stem=True)
 # generate the files for the old charniak
 if not os.path.exists("trigger-train-examples-"+PARSE_TOK+TASK_TAG):
     GeneralEntityTypeRecognizerGztr.run(TRAIN_FILE, "trigger-train-examples-"+PARSE_TOK+TASK_TAG, PARSE_TOK, PARSE_TOK, TRIGGER_FEATURE_PARAMS, "genia-trigger-ids", "gazetteer-train-"+PARSE_TOK+TASK_TAG)
