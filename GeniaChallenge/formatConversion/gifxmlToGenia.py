@@ -28,7 +28,13 @@ def getEntityIndex(entities, index=0, task=1):
             index = newIndex
     return index
 
-def processCorpus(inputCorpus, outputFolder, task=1):
+def processCorpus(inputCorpus, outputPath, task=1, outputIsA2File=False):
+    if outputIsA2File:
+        a2File = open(outputPath, "wt")
+        if len(inputCorpus.documents) > 1:
+            print >> sys.stderr, "Warning: Input file has more than one document, a2-file events will have overlapping ids"
+            
+    
     counter = ProgressCounter(len(inputCorpus.documents), "Document")
     # Each document is written to an output file
     for document in inputCorpus.documents:
@@ -36,40 +42,57 @@ def processCorpus(inputCorpus, outputFolder, task=1):
         counter.update(1, "Processing document " + document.get("id") + " (origId " + documentId + "): ")
         
         # Write a1 file
-        outputFile = open(os.path.join(outputFolder,documentId + ".a1"), "wt")
+        if outputIsA2File: 
+            outputFile = None
+        else: 
+            outputFile = open(os.path.join(outputPath,documentId + ".a1"), "wt")
         namedEntityTriggerIds = writeProteins(document, inputCorpus, outputFile)
-        outputFile.close()
+        if not outputIsA2File:
+            outputFile.close()
 
         # Write a2.t1 file
-        outputFile = open(os.path.join(outputFolder,documentId + ".a2.t1"), "wt")
-        events, entityMap = getEvents(document, inputCorpus, outputFile, 1)
-        triggerIds = copy.copy(namedEntityTriggerIds)
-        writeEventTriggers(document, inputCorpus, outputFile, events, triggerIds, 1)
-        writeEvents(document, inputCorpus, outputFile, events, entityMap, triggerIds)
-        outputFile.close()
-        
+        if task == 1:
+            if outputIsA2File: 
+                outputFile = a2File
+            else:
+                outputFile = open(os.path.join(outputPath,documentId + ".a2.t1"), "wt")
+            events, entityMap = getEvents(document, inputCorpus, outputFile, 1)
+            triggerIds = copy.copy(namedEntityTriggerIds)
+            writeEventTriggers(document, inputCorpus, outputFile, events, triggerIds, 1)
+            writeEvents(document, inputCorpus, outputFile, events, entityMap, triggerIds)
+            #outputFile.close()
         # Write a2.t12 file
-        if task == 2:
-            outputFile = open(os.path.join(outputFolder,documentId + ".a2.t12"), "wt")
+        elif task == 2:
+            if outputIsA2File: 
+                outputFile = a2File
+            else: 
+                outputFile = open(os.path.join(outputPath,documentId + ".a2.t12"), "wt")
             events, entityMap = getEvents(document, inputCorpus, outputFile, 2)
             triggerIds = copy.copy(namedEntityTriggerIds)
             writeEventTriggers(document, inputCorpus, outputFile, events, triggerIds, 2)
             writeEvents(document, inputCorpus, outputFile, events, entityMap, triggerIds)
-            outputFile.close()
-
+            #outputFile.close()
         # Write a2.t123 file
-        if task == 3:
-            outputFile = open(os.path.join(outputFolder,documentId + ".a2.t123"), "wt")
+        elif task == 3:
+            if outputIsA2File: 
+                outputFile = a2File
+            else: 
+                outputFile = open(os.path.join(outputPath,documentId + ".a2.t123"), "wt")
             events, entityMap = getEvents(document, inputCorpus, outputFile, 2)
             triggerIds = copy.copy(namedEntityTriggerIds)
             writeEventTriggers(document, inputCorpus, outputFile, events, triggerIds, 2)
             writeEvents(document, inputCorpus, outputFile, events, entityMap, triggerIds, True)
+            #outputFile.close()
+        if not outputIsA2File: 
             outputFile.close()
         
-        # Write txt file
-        outputFile = open(os.path.join(outputFolder,documentId + ".txt"), "wt")
-        writeDocumentText(document, outputFile)
-        outputFile.close()
+            # Write txt file
+            outputFile = open(os.path.join(outputPath,documentId + ".txt"), "wt")
+            writeDocumentText(document, outputFile)
+            outputFile.close()
+    
+    if outputIsA2File:
+        a2File.close()
 
 def writeDocumentText(document, outputFile):
     """
@@ -86,7 +109,7 @@ def writeDocumentText(document, outputFile):
 def getGeniaOffset(sentenceOffset, entityOffset):
     return [entityOffset[0] + sentenceOffset[0], entityOffset[1] + sentenceOffset[0] + 1] 
 
-def writeProteins(document, inputCorpus, outputFile):
+def writeProteins(document, inputCorpus, outputFile=None):
     entityMap = {}
     offsetMap = {}
     triggerMap = {}
@@ -105,7 +128,8 @@ def writeProteins(document, inputCorpus, outputFile):
                 triggerMap[entity.get("id")] = origId
     for key in sorted(entityMap.keys()):
         entity = entityMap[key]
-        outputFile.write(triggerMap[entity.get("id")] + "\tProtein " + str(offsetMap[key][0]) + " " + str(offsetMap[key][1]) + "\t" + entity.get("text") + "\n")
+        if outputFile != None:
+            outputFile.write(triggerMap[entity.get("id")] + "\tProtein " + str(offsetMap[key][0]) + " " + str(offsetMap[key][1]) + "\t" + entity.get("text") + "\n")
     return triggerMap
 
 def writeEventTriggers(document, inputCorpus, outputFile, events, triggerIds, task=1):
@@ -396,21 +420,29 @@ def writeEvents(document, inputCorpus, outputFile, events, entityMap, triggerIds
         outputFile.write("M" + str(mCount) + "\tNegation " + negation + "\n" )
         mCount += 1
 
-def gifxmlToGenia(input, output, task=1):
+def gifxmlToGenia(input, output, task=1, outputIsA2File=False, submission=False):
     assert(task == 1 or task == 2 or task == 3)
     
     # Make or clear output directory
-    if os.path.exists(output):
-        print >> sys.stderr, "Output directory exists, removing", output
-        shutil.rmtree(output)
-    os.mkdir(output)
+    if not outputIsA2File:
+        if os.path.exists(output):
+            print >> sys.stderr, "Output directory exists, removing", output
+            shutil.rmtree(output)
+        os.mkdir(output)
     
     # Convert the gifxml to the genia format files
     inputCorpus = CorpusElements.loadCorpus(input, removeIntersentenceInteractions=False)
-    processCorpus(inputCorpus, output, task)
+    processCorpus(inputCorpus, output, task, outputIsA2File)
     
+    if submission:
+        if not outputIsA2File:
+            makeSubmissionFile(options.output, output.split("/")[-1] + ".tar.gz")
+        else:
+            print >> sys.stderr, "Warning: Single a2-file output, no submission package created"
+
+def makeSubmissionFile(geniaDir, submissionFileName):    
     # Make the tar.gz-fiel for submission
-    submissionFileName = output.split("/")[-1] + ".tar.gz"    
+    #submissionFileName = output.split("/")[-1] + ".tar.gz"    
     print >> sys.stderr, "Making submission file", submissionFileName
     allFiles = os.listdir(output)
     tarFiles = []
@@ -441,10 +473,13 @@ if __name__=="__main__":
 
     optparser = OptionParser(usage="%prog [options]\nConvert interaction XML to GENIA shared task format.")
     optparser.add_option("-i", "--input", default=None, dest="input", help="interaction xml input file", metavar="FILE")
-    optparser.add_option("-o", "--output", default=None, dest="output", help="output directory")
+    optparser.add_option("-o", "--output", default=None, dest="output", help="output directory (or if -f switch is used, output file)")
     optparser.add_option("-t", "--task", default=1, type="int", dest="task", help="task number")
+    optparser.add_option("-s", "--submission", default=false, action="store_true", dest="submission", help="Make a submission tar.gz-file")
+    optparser.add_option("-f", "--file", default=false, action="store_true", dest="file", help="Output (-o) is a file")
     (options, args) = optparser.parse_args()
     
     assert(options.input != None)
-    assert(options.output != None)    
-    gifxmlToGenia(options.input, options.output, options.task)
+    assert(options.output != None)
+    gifxmlToGenia(options.input, options.output, options.task, options.file, options.submission)
+        
