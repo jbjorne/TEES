@@ -124,6 +124,7 @@ def reorderDocNode(dNode,rawTxt,charOffsets,sFinal,depTree,posTags):
     assert len(sentOffsets)==len(posTags), dNode.get("id")
 
     newDocNode=ET.Element("document")
+    newDocNode.set("id",dNode.get("id"))
     #create sentence nodes
     for idx,(b,e) in enumerate(sentOffsets):
         newSNode=ET.SubElement(newDocNode,"sentence")

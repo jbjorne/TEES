@@ -64,6 +64,7 @@ class SentenceParser:
         self.mapping = {}
     
     def parseDocument(self, txtFile, a1File, taskPostFix):
+        self.uid="uima"
         tmp = open(txtFile)
         self.parseText(tmp.read())
         tmp.close()

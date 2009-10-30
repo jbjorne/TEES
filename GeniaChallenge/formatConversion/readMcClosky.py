@@ -150,6 +150,7 @@ def computeTokens(txtFName,cNode,options,postags=None):
 
     #tokenLists now has a list of lists of tokens
     #what we really need are the character offsets, though
+    print tokenLists
     assert len(tokenLists)==sum(1 for x in cNode.getiterator("sentence"))
 
     tokenOffsets=[]
@@ -356,6 +357,7 @@ if __name__=="__main__":
     parser.add_option("-x", "--xml", dest="xml", action="store", default=None, help="The XML file to which the parse is injected", metavar="XML")
     parser.add_option("-t", "--txt", dest="txt", action="store", default=None, help="The TXT file with tokenization", metavar="TXT")
     parser.add_option("--ignoretokenization", dest="ignoretokenization", action="store_true", default=False, help="The TXT file is not tokenized, so the tokens are taken from the penn file")
+    parser.add_option("--nosentences", dest="nosentences", action="store_true", default=False, help="The XML file does not contain sentences; must create them.")
     parser.add_option("--tokenization", dest="tokenization", action="store", default=None, help="Tokenization name to be used.", metavar="name")
     parser.add_option("--parse", dest="parse", action="store", default=None, help="The name under which the parse is injected. No default.", metavar="name")
 
