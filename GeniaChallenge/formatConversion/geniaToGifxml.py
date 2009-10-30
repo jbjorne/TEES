@@ -62,6 +62,15 @@ class SentenceParser:
         self.events = {}
         self.modifiers = {}
         self.mapping = {}
+    
+    def parseDocument(self, txtFile, a1File, taskPostFix):
+        tmp = open(txtFile)
+        self.parseText(tmp.read())
+        tmp.close()
+        
+        tmp = open(a1File)
+        self.parseAnnotation(tmp.read().split("\n"),isName=True)
+        tmp.close()
 
     def parse(self,filestem,taskpostfix):
         self.uid = filestem.split("/")[-1]
@@ -373,6 +382,11 @@ class Parser:
             tmp = SentenceParser()
             tmp.parse(filename,taskpostfix)
             self.parsers.append(tmp)
+    
+    def parseDocument(self, txtFile, a1File, taskPostFix):
+        tmp = SentenceParser()
+        tmp.parseDocument(txtFile, a1File, taskPostFix)
+        self.parsers.append(tmp)
 
     def getNode(self,removeDuplicates,modifyExtra):
         newCorpus = ET.Element('corpus',{'source':'GENIA'})
@@ -397,6 +411,14 @@ def interface(optionArgs=sys.argv[1:]):
                   dest="indir",
                   help="Input file directory",
                   metavar="DIR")
+    op.add_option("-a", "--a1file",
+                  dest="a1file",
+                  help="A1 File (-a & -x are an alternative for -i)",
+                  metavar="FILE")
+    op.add_option("-x", "--txtfile",
+                  dest="txtfile",
+                  help="Text file (-a & -x are an alternative for -i)",
+                  metavar="FILE")
     op.add_option("-o", "--outfile",
                   dest="outfile",
                   help="Output file",
@@ -421,12 +443,23 @@ def interface(optionArgs=sys.argv[1:]):
 
     quit = False
     if not options.indir:
-        print "Please specify the directory for input files."
-        quit = True
+        if not options.a1file and options.txtfile:
+            print "Please specify the directory for input files."
+            quit = True
+    if options.a1file or options.txtfile:
+        if not options.a1file:
+            print "Please specify the a1 file."
+            quit = True
+        elif not options.txtfile:
+            print "Please specify the text file."
+            quit = True
+        if options.indir:
+            print "-i and -a & -x are mutually exclusive options"
+            quit = True
     if not options.outfile:
         print "Please specify the output filename."
         quit = True
-    if not args:
+    if options.indir and not args:
         print "Please specify at least one document id."
         quit = True
     if quit:
@@ -436,7 +469,10 @@ def interface(optionArgs=sys.argv[1:]):
     # use original files for the whole challenge
     taskpostfix = ".a2.t"+options.task
     parser = Parser()
-    parser.parse(options.indir,args,taskpostfix)
+    if options.indir:
+        parser.parse(options.indir,args,taskpostfix)
+    else:
+        parser.parseDocument(options.txtfile, options.a1file, taskpostfix)
     parser.printNode(options.outfile,
                      options.remove_duplicates,
                      options.modify_extra)
