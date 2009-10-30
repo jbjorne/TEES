@@ -154,7 +154,7 @@ def reorderDocNode(dNode,rawTxt,charOffsets,sFinal,depTree,posTags):
         sa=ET.SubElement(newSNode,"sentenceanalyses")
         toks=ET.SubElement(sa,"tokenizations")
         tokenization=ET.SubElement(toks,"tokenization")
-        tokenization.set("tokenizer","Charniak-Lease")
+        tokenization.set("tokenizer","McClosky")
         #again, a stupid N^2 alg, but I don't care :)
 
         
@@ -176,8 +176,8 @@ def reorderDocNode(dNode,rawTxt,charOffsets,sFinal,depTree,posTags):
         #idx is the index of the sentence
         parses=ET.SubElement(sa,"parses")
         parse=ET.SubElement(parses,"parse")
-        parse.set("parser","Charniak-Lease")
-        parse.set("tokenizer","Charniak-Lease")
+        parse.set("parser","McClosky")
+        parse.set("tokenizer","McClosky")
         for depCounter,(depType,t1,t1idx,t2,t2idx) in enumerate(depTree[idx]):
             depNode=ET.SubElement(parse,"dependency")
             depNode.set("id","clp_%d"%(depCounter+1))
