@@ -38,6 +38,8 @@ EDGE_TRAIN_AND_DEVEL_EXAMPLE_FILE="edge-train-and-devel-examples-"+PARSE
 EDGE_TEST_EXAMPLE_FILE="edge-test-examples-"+PARSE
 EDGE_CLASS_NAMES="bioinfer-edge-ids.class_names"
 
+EDGE_FEATURE_PARAMS="style:typed,directed,no_linear,entities,noMasking,maxFeatures,bioinfer_limits"
+
 if False:
     ###############################################################################
     # Head token detection
@@ -69,7 +71,6 @@ if False:
     # Edge example generation
     ###############################################################################
     print >> sys.stderr, "Edge examples for parse", PARSE
-    EDGE_FEATURE_PARAMS="style:typed,directed,no_linear,entities,noMasking,maxFeatures,bioinfer_limits"
     
     MultiEdgeExampleBuilder.run(TRAIN_FILE, "edge-train-examples-"+PARSE, PARSE, TOK, EDGE_FEATURE_PARAMS, "bioinfer-edge-ids")
     MultiEdgeExampleBuilder.run(DEVEL_FILE, "edge-devel-examples-"+PARSE, PARSE, TOK, EDGE_FEATURE_PARAMS, "bioinfer-edge-ids")
@@ -93,7 +94,7 @@ if False:
     ix.splitMergedElements(xmlFilename, xmlFilename)
     ix.recalculateIds(xmlFilename, xmlFilename, True)
 
-if True:
+if False:
     ###############################################################################
     # Edge parameter optimization
     ###############################################################################
