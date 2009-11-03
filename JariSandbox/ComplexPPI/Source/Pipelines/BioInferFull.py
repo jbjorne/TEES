@@ -97,11 +97,11 @@ if True:
     ###############################################################################
     # Edge parameter optimization
     ###############################################################################
-    EDGE_CLASSIFIER_PARAMS="c:10,20,30,40,50,60,70,80,90,100,500,1000,5000,10000,20000,50000,80000,100000,150000,180000,200000, 250000, 300000, 350000, 500000,1000000,5000000,10000000"
+    EDGE_CLASSIFIER_PARAMS="c:10,20,30,40,50,60,70,80,90,100,500,1000,5000,10000,20000,50000,80000,100000,150000,180000,200000, 250000, 300000, 350000, 500000,1000000"
     print >> sys.stderr, "Determining edge parameter", PARSE
     # The optimize-function takes as parameters a Classifier-class, an Evaluator-class
     # and input and output files
-    c = CSCConnection("UnmergingProject/results/parameters/edges-"+PARSE, "jakrbj@louhi.csc.fi", True)
+    c = CSCConnection("UnmergingProject/results/parameters/edges-"+PARSE, "jakrbj@louhi.csc.fi", False)
     best = optimize(Cls, Ev, EDGE_TRAIN_EXAMPLE_FILE, EDGE_DEVEL_EXAMPLE_FILE, EDGE_CLASS_NAMES, EDGE_CLASSIFIER_PARAMS, "edge-param-opt", None, c)
     bestEdgeParameters = best[4]
     xmlFilename = "devel-predicted-edges.xml"
