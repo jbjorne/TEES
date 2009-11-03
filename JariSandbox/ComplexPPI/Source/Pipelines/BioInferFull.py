@@ -78,6 +78,7 @@ if False:
     # NOTE! These TEST examples will be based on gold standard triggers!
     MultiEdgeExampleBuilder.run(TEST_FILE, "edge-test-examples-"+PARSE, PARSE, TOK, EDGE_FEATURE_PARAMS, "bioinfer-edge-ids")
 
+bestTriggerParameters = None
 if True:
     ###############################################################################
     # Trigger parameter optimization
@@ -94,6 +95,7 @@ if True:
     ix.splitMergedElements(xmlFilename, xmlFilename)
     ix.recalculateIds(xmlFilename, xmlFilename, True)
 
+bestEdgeParameters = None
 if True:
     ###############################################################################
     # Edge parameter optimization
