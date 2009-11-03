@@ -123,7 +123,8 @@ def optimizeCSC(Classifier, Evaluator, trainExamples, testExamples, classIds, co
     if type(testExamples) != types.ListType:
         print >> sys.stderr, "Loading examples from file", testExamples
         testExamples = ExampleUtils.readExamples(testExamples,False)
-    for id in combinationIds:
+    for i in range(len(combinationIds)):
+        id = combinationIds[i]
         Stream.setIndent(" ")
         # Evaluate
         predictions = Classifier.getLouhiPredictions(id, testExamples, cscConnection, workDir)
@@ -136,7 +137,7 @@ def optimizeCSC(Classifier, Evaluator, trainExamples, testExamples, classIds, co
                 evaluationOutput = os.path.join(workDir, evaluationOutput)
             evaluator = Evaluator.evaluate(testExamples, predictions, classIds, evaluationOutput)
             if bestResult == None or evaluator.compare(bestResult[0]) > 0: #: averageResult.fScore > bestResult[1].fScore:
-                bestResult = [evaluator, None, predictions, evaluationOutput, id]
+                bestResult = [evaluator, None, predictions, evaluationOutput, combinations[i]]
     Stream.setIndent()
     print >> sys.stderr, "Selected parameters", bestResult[-1]
 
