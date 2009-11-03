@@ -78,14 +78,14 @@ if False:
     # NOTE! These TEST examples will be based on gold standard triggers!
     MultiEdgeExampleBuilder.run(TEST_FILE, "edge-test-examples-"+PARSE, PARSE, TOK, EDGE_FEATURE_PARAMS, "bioinfer-edge-ids")
 
-if False:
+if True:
     ###############################################################################
     # Trigger parameter optimization
     ###############################################################################
     TRIGGER_CLASSIFIER_PARAMS="c:10,20,30,40,50,60,70,80,90,100,500,1000,5000,10000,20000,50000,80000,100000,150000,180000,200000, 250000, 300000, 350000, 500000,1000000,5000000,10000000"
     # The optimize-function takes as parameters a Classifier-class, an Evaluator-class
     # and input and output files
-    c = CSCConnection("UnmergingProject/results/parameters/triggers-"+PARSE, "jakrbj@louhi.csc.fi", True)
+    c = CSCConnection("UnmergingProject/results/parameters/triggers-"+PARSE, "jakrbj@louhi.csc.fi", False)
     best = optimize(Cls, Ev, TRIGGER_TRAIN_EXAMPLE_FILE, TRIGGER_DEVEL_EXAMPLE_FILE, TRIGGER_CLASS_NAMES, TRIGGER_CLASSIFIER_PARAMS, "trigger-param-opt", None, c)
     bestTriggerParameters = best[4]
     xmlFilename = "devel-predicted-triggers.xml"
