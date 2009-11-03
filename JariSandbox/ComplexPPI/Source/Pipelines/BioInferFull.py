@@ -94,7 +94,7 @@ if False:
     ix.splitMergedElements(xmlFilename, xmlFilename)
     ix.recalculateIds(xmlFilename, xmlFilename, True)
 
-if False:
+if True:
     ###############################################################################
     # Edge parameter optimization
     ###############################################################################
