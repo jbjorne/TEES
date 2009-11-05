@@ -141,7 +141,7 @@ if True:
     Cls.train(TRIGGER_TRAIN_AND_DEVEL_EXAMPLE_FILE, bestTriggerParameters, "train-and-devel-trigger-test-model")
     # Use the generated model to classify examples
     Cls.test(TRIGGER_TEST_EXAMPLE_FILE, "train-and-devel-trigger-test-model", "trigger-test-classifications")
-    ExampleUtils.writeToInteractionXML("trigger-test-examples", "trigger-test-classifications", TEST_FILE, "test-predicted-triggers.xml", TRIGGER_IDS+".class_names", PARSE, TOK)
+    ExampleUtils.writeToInteractionXML("trigger-test-examples", "trigger-test-classifications", TEST_FILE, "test-predicted-triggers.xml", TRIGGER_CLASS_NAMES, PARSE, TOK)
     # NOTE: Merged elements must not be split, as recall booster may change their class
     ix.splitMergedElements("test-predicted-triggers.xml", "test-predicted-triggers.xml")
     ix.recalculateIds("test-predicted-triggers.xml", "test-predicted-triggers.xml", True)
@@ -156,7 +156,7 @@ if True:
     # Use the generated model to classify examples
     Cls.test("edge-test-examples-with-pred-triggers", "train-and-devel-edge-test-model", "edge-test-classifications")
     xmlFilename = "test-predicted-edges.xml"
-    ExampleUtils.writeToInteractionXML("edge-test-examples-with-pred-triggers", "edge-test-classifications", "test-predicted-triggers.xml", xmlFilename, "bioinfer-edge-ids.class_names", PARSE, TOK)
+    ExampleUtils.writeToInteractionXML("edge-test-examples-with-pred-triggers", "edge-test-classifications", "test-predicted-triggers.xml", xmlFilename, EDGE_CLASS_NAMES, PARSE, TOK)
     ix.splitMergedElements(xmlFilename, xmlFilename)
     ix.recalculateIds(xmlFilename, xmlFilename, True)
     
