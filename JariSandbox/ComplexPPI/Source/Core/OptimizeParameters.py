@@ -123,6 +123,7 @@ def optimizeCSC(Classifier, Evaluator, trainExamples, testExamples, classIds, co
     if type(testExamples) != types.ListType:
         print >> sys.stderr, "Loading examples from file", testExamples
         testExamples = ExampleUtils.readExamples(testExamples,False)
+    bestCombinationId = None
     for i in range(len(combinationIds)):
         id = combinationIds[i]
         Stream.setIndent(" ")
@@ -138,10 +139,11 @@ def optimizeCSC(Classifier, Evaluator, trainExamples, testExamples, classIds, co
             evaluator = Evaluator.evaluate(testExamples, predictions, classIds, evaluationOutput)
             if bestResult == None or evaluator.compare(bestResult[0]) > 0: #: averageResult.fScore > bestResult[1].fScore:
                 bestResult = [evaluator, None, predictions, evaluationOutput, combinations[i]]
+                bestCombinationId = id
     Stream.setIndent()
     print >> sys.stderr, "Selected parameters", bestResult[-1]
 
-    modelFileName = Classifier.downloadModel(bestResult[-1], cscConnection, workDir)
+    modelFileName = Classifier.downloadModel(bestCombinationId, cscConnection, workDir)
     if workDir != None:
         modelFileName = os.path.join(workDir, modelFileName)
     bestResult[1] = modelFileName
