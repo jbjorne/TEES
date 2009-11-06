@@ -83,7 +83,7 @@ if True:
     ###############################################################################
     # Trigger parameter optimization
     ###############################################################################
-    TRIGGER_CLASSIFIER_PARAMS="c:10,20,30,40,50,60,70,80,90,100,500,1000,5000,10000,20000,50000,80000,100000,150000,180000,200000, 250000, 300000, 350000, 500000,1000000,5000000,10000000"
+    TRIGGER_CLASSIFIER_PARAMS="c:1000,5000,10000,20000,50000,80000,100000,150000,180000,200000, 250000, 300000, 350000, 500000,1000000,5000000,10000000"
     # The optimize-function takes as parameters a Classifier-class, an Evaluator-class
     # and input and output files
     c = CSCConnection("UnmergingProject/results/parameters/triggers-"+PARSE, "jakrbj@louhi.csc.fi", False)
