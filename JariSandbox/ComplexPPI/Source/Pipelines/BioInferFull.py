@@ -3,14 +3,25 @@
 from Pipeline import *
 import sys,os
 
-WORKDIR = "/usr/share/biotext/UnmergingProject/results/BioInferFull"
+from optparse import OptionParser
+
+optparser = OptionParser()
+optparser.add_option("-p", "--parse", default="stanford-newMC-intra", dest="parse", help="")
+optparser.add_option("-t", "--tokenization", default="split-McClosky", dest="tokenization", help="")
+optparser.add_option("-n", "--name", default="BioInferFull", dest="name", help="experiment name")
+(options, args) = optparser.parse_args()
+assert options.input != None
+assert options.output != None
+
+
+WORKDIR = "/usr/share/biotext/UnmergingProject/results/" + options.name
 # These commands will be in the beginning of most pipelines
 workdir(WORKDIR, False) # Select a working directory, don't remove existing files
 log() # Start logging into a file in working directory
 
 # define shortcuts for commonly used files
-PARSE="stanford-newMC-intra" #"split-Charniak-Lease"
-TOK="split-McClosky"
+PARSE=options.parse #"split-Charniak-Lease"
+TOK=options.tokenization
 CORPUS_DIR="/usr/share/biotext/UnmergingProject/source"
 
 # xml files without heads
@@ -40,7 +51,7 @@ EDGE_CLASS_NAMES="bioinfer-edge-ids.class_names"
 
 EDGE_FEATURE_PARAMS="style:typed,directed,no_linear,entities,noMasking,maxFeatures,bioinfer_limits"
 
-if False:
+if True:
     ###############################################################################
     # Head token detection
     ###############################################################################
@@ -86,7 +97,7 @@ if True:
     TRIGGER_CLASSIFIER_PARAMS="c:1000,5000,10000,20000,50000,80000,100000,150000,180000,200000, 250000, 300000, 350000, 500000,1000000,5000000,10000000"
     # The optimize-function takes as parameters a Classifier-class, an Evaluator-class
     # and input and output files
-    c = CSCConnection("UnmergingProject/results/parameters/triggers-"+PARSE, "jakrbj@louhi.csc.fi", False)
+    c = CSCConnection("UnmergingProject/results/" + options.name + "/parameters/triggers-"+PARSE, "jakrbj@louhi.csc.fi", False)
     best = optimize(Cls, Ev, TRIGGER_TRAIN_EXAMPLE_FILE, TRIGGER_DEVEL_EXAMPLE_FILE, TRIGGER_CLASS_NAMES, TRIGGER_CLASSIFIER_PARAMS, "trigger-param-opt", None, c)
     bestTriggerParameters = best[4]
     xmlFilename = "devel-predicted-triggers.xml"
@@ -104,7 +115,7 @@ if True:
     print >> sys.stderr, "Determining edge parameter", PARSE
     # The optimize-function takes as parameters a Classifier-class, an Evaluator-class
     # and input and output files
-    c = CSCConnection("UnmergingProject/results/parameters/edges-"+PARSE, "jakrbj@louhi.csc.fi", False)
+    c = CSCConnection("UnmergingProject/results/" + options.name + "/parameters/edges-"+PARSE, "jakrbj@louhi.csc.fi", False)
     best = optimize(Cls, Ev, EDGE_TRAIN_EXAMPLE_FILE, EDGE_DEVEL_EXAMPLE_FILE, EDGE_CLASS_NAMES, EDGE_CLASSIFIER_PARAMS, "edge-param-opt", None, c)
     bestEdgeParameters = best[4]
     xmlFilename = "devel-predicted-edges.xml"
