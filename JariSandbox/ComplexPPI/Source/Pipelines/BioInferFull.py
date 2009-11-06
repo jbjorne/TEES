@@ -100,7 +100,7 @@ if True:
     ###############################################################################
     # Edge parameter optimization
     ###############################################################################
-    EDGE_CLASSIFIER_PARAMS="c:10,20,30,40,50,60,70,80,90,100,500,1000,5000,10000,20000,50000,80000,100000,150000,180000,200000, 250000, 300000, 350000, 500000,1000000"
+    EDGE_CLASSIFIER_PARAMS="c:1000,5000,10000,20000,50000,80000,100000,150000,180000,200000, 250000, 300000, 350000, 500000,1000000"
     print >> sys.stderr, "Determining edge parameter", PARSE
     # The optimize-function takes as parameters a Classifier-class, an Evaluator-class
     # and input and output files
@@ -125,7 +125,10 @@ if True:
     ExampleUtils.writeToInteractionXML("edge-devel-examples-ptrig", "edge-devel-classifications-ptrig", "devel-predicted-triggers.xml", xmlFilename, "bioinfer-edge-ids.class_names", PARSE, TOK)
     ix.splitMergedElements(xmlFilename, xmlFilename)
     ix.recalculateIds(xmlFilename, xmlFilename, True)
-    EvaluateInteractionXML.run(Ev, xmlFilename, TEST_FILE, PARSE, TOK)
+    print >> sys.stderr, "############################################"
+    print >> sys.stderr, "# Devel Set Results"
+    print >> sys.stderr, "############################################"
+    EvaluateInteractionXML.run(Ev, xmlFilename, DEVEL_FILE, PARSE, TOK)
 
 if True:
     ###############################################################################
@@ -165,4 +168,7 @@ if True:
     # against which the other is evaluated by heuristically matching triggers and
     # edges. Note that this evaluation will differ somewhat from the previous ones,
     # which evaluate on the level of examples.
+    print >> sys.stderr, "############################################"
+    print >> sys.stderr, "# Test Set Results"
+    print >> sys.stderr, "############################################"
     EvaluateInteractionXML.run(Ev, xmlFilename, TEST_FILE, PARSE, TOK)
