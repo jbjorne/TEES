@@ -10,9 +10,6 @@ optparser.add_option("-p", "--parse", default="stanford-newMC-intra", dest="pars
 optparser.add_option("-t", "--tokenization", default="split-McClosky", dest="tokenization", help="")
 optparser.add_option("-n", "--name", default="BioInferFull", dest="name", help="experiment name")
 (options, args) = optparser.parse_args()
-assert options.input != None
-assert options.output != None
-
 
 WORKDIR = "/usr/share/biotext/UnmergingProject/results/" + options.name
 # These commands will be in the beginning of most pipelines
