@@ -1,5 +1,9 @@
+import sys, os
+thisPath = os.path.dirname(os.path.abspath(__file__))
+
 # External binaries
 SVMMultiClassDir = "/usr/share/biotext/ComplexPPI/SVMMultiClass"
+CPPTriggerExampleBuilder = os.path.abspath(thisPath + "/../../../GraphIE/exampleTest")
 
 # BioNLP'09 dataset in XML-format
 TrainFile="/usr/share/biotext/GeniaChallenge/xml/train12.xml"
