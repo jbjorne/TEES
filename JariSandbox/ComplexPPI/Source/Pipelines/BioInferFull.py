@@ -108,7 +108,7 @@ if True:
     ###############################################################################
     # Edge parameter optimization
     ###############################################################################
-    EDGE_CLASSIFIER_PARAMS="c:1000,5000,10000,20000,50000,80000,100000,150000,180000,200000, 250000, 300000, 350000, 500000,1000000,5000000,10000000"
+    EDGE_CLASSIFIER_PARAMS="c:1000,5000,10000,20000,50000,80000,100000,150000,180000,200000, 250000, 300000, 350000, 500000,1000000,5000000"#,10000000"
     print >> sys.stderr, "Determining edge parameter", PARSE
     # The optimize-function takes as parameters a Classifier-class, an Evaluator-class
     # and input and output files
