@@ -55,8 +55,7 @@ EDGE_TRAIN_AND_DEVEL_EXAMPLE_FILE="edge-train-and-devel-examples-"+PARSE
 EDGE_TEST_EXAMPLE_FILE="edge-test-examples-"+PARSE
 EDGE_CLASS_NAMES="%s-edge-ids.class_names"%CONSTANT_CORPUS
 
-#### ?????
-EDGE_FEATURE_PARAMS="style:typed,directed,no_linear,entities,noMasking,maxFeatures,bioinfer_limits"
+EDGE_FEATURE_PARAMS="style:typed,directed,no_linear,entities,noMasking,maxFeatures,genia_limits"
 
 if True:
     ###############################################################################
