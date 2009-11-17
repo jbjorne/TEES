@@ -15,6 +15,7 @@ WORKDIR = "/usr/share/biotext/UnmergingProject/results/" + options.name
 # These commands will be in the beginning of most pipelines
 workdir(WORKDIR, False) # Select a working directory, don't remove existing files
 log() # Start logging into a file in working directory
+clearCSC=False # delete existing files on CSC
 
 # define shortcuts for commonly used files
 PARSE=options.parse #"split-Charniak-Lease"
@@ -57,7 +58,7 @@ EDGE_CLASS_NAMES="%s-edge-ids.class_names"%CONSTANT_CORPUS
 
 EDGE_FEATURE_PARAMS="style:typed,directed,no_linear,entities,noMasking,maxFeatures,genia_limits"
 
-if True:
+if False:
     ###############################################################################
     # Head token detection
     ###############################################################################
@@ -103,7 +104,7 @@ if True:
     TRIGGER_CLASSIFIER_PARAMS="c:1000,5000,10000,20000,50000,80000,100000,150000,180000,200000, 250000, 300000, 350000, 500000,1000000,5000000,10000000"
     # The optimize-function takes as parameters a Classifier-class, an Evaluator-class
     # and input and output files
-    c = CSCConnection("UnmergingProject/results/" + options.name + "/parameters/triggers-"+PARSE, "jakrbj@murska.csc.fi", True, memory=8388608)
+    c = CSCConnection("UnmergingProject/results/" + options.name + "/parameters/triggers-"+PARSE, "jakrbj@murska.csc.fi", clearCSC, memory=8388608)
     best = optimize(Cls, Ev, TRIGGER_TRAIN_EXAMPLE_FILE, TRIGGER_DEVEL_EXAMPLE_FILE, TRIGGER_CLASS_NAMES, TRIGGER_CLASSIFIER_PARAMS, "trigger-param-opt", None, c)
     bestTriggerParameters = best[4]
     xmlFilename = "devel-predicted-triggers.xml"
@@ -117,11 +118,12 @@ if True:
     ###############################################################################
     # Edge parameter optimization
     ###############################################################################
-    EDGE_CLASSIFIER_PARAMS="c:1000,5000,10000,20000,50000,80000,100000,150000,180000,200000, 250000, 300000, 350000, 500000,1000000,5000000"#,10000000"
+    #EDGE_CLASSIFIER_PARAMS="c:1000,5000,10000,20000,50000,80000,100000,150000,180000,200000, 250000, 300000, 350000, 500000,1000000,5000000"#,10000000"
+    EDGE_CLASSIFIER_PARAMS="c:1000,5000,10000,20000,50000,80000,100000,150000,180000,200000, 250000, 300000" #, 350000, 500000,1000000,5000000"#,10000000"
     print >> sys.stderr, "Determining edge parameter", PARSE
     # The optimize-function takes as parameters a Classifier-class, an Evaluator-class
     # and input and output files
-    c = CSCConnection("UnmergingProject/results/" + options.name + "/parameters/edges-"+PARSE, "jakrbj@murska.csc.fi", True, memory=8388608)
+    c = CSCConnection("UnmergingProject/results/" + options.name + "/parameters/edges-"+PARSE, "jakrbj@murska.csc.fi", clearCSC, memory=8388608)
     best = optimize(Cls, Ev, EDGE_TRAIN_EXAMPLE_FILE, EDGE_DEVEL_EXAMPLE_FILE, EDGE_CLASS_NAMES, EDGE_CLASSIFIER_PARAMS, "edge-param-opt", None, c)
     bestEdgeParameters = best[4]
     xmlFilename = "devel-predicted-edges.xml"
