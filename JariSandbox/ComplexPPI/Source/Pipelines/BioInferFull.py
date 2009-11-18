@@ -21,11 +21,15 @@ PARSE=options.parse #"split-Charniak-Lease"
 TOK=options.tokenization
 CORPUS_DIR="/usr/share/biotext/UnmergingProject/source"
 
+PRETAG=""
+if True:
+    PRETAG="090915."
+
 # xml files without heads
-BI_DEVEL_FILE=CORPUS_DIR+"/bioinfer.devel.refRem-eqRem-negRem-metaRes-anonRes.merged.gold.gif.xml"
-BI_TEST_FILE=CORPUS_DIR+"/bioinfer.test.refRem-eqRem-negRem-metaRes-anonRes.merged.gold.gif.xml"
-BI_TRAIN_FILE=CORPUS_DIR+"/bioinfer.train.refRem-eqRem-negRem-metaRes-anonRes.merged.gold.gif.xml"
-BI_TRAIN_AND_DEVEL_FILE=CORPUS_DIR+"/bioinfer.train+devel.refRem-eqRem-negRem-metaRes-anonRes.merged.gold.gif.xml"
+BI_DEVEL_FILE=CORPUS_DIR+"/"+PRETAG+"bioinfer.devel.refRem-eqRem-negRem-metaRes-anonRes.merged.gold.gif.xml"
+BI_TEST_FILE=CORPUS_DIR+"/"+PRETAG+"bioinfer.test.refRem-eqRem-negRem-metaRes-anonRes.merged.gold.gif.xml"
+BI_TRAIN_FILE=CORPUS_DIR+"/"+PRETAG+"bioinfer.train.refRem-eqRem-negRem-metaRes-anonRes.merged.gold.gif.xml"
+BI_TRAIN_AND_DEVEL_FILE=CORPUS_DIR+"/"+PRETAG+"bioinfer.train+devel.refRem-eqRem-negRem-metaRes-anonRes.merged.gold.gif.xml"
 
 # xml files with head tokens
 TEST_FILE=WORKDIR+"/bioinfer-test-"+PARSE+".xml"
