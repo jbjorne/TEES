@@ -32,7 +32,7 @@ def getParameterCombinations(parameters):
             combinations[-1][value[0]] = value[1]
     return combinations
 
-def optimize(Classifier, Evaluator, trainExamples, testExamples, classIds, parameters, workDir=None, timeout=None, cscConnection=None):
+def optimize(Classifier, Evaluator, trainExamples, testExamples, classIds, parameters, workDir=None, timeout=None, cscConnection=None, downloadAllModels=False):
     print >> sys.stderr, "Optimizing parameters"
     if workDir != None:
         if not os.path.exists(workDir):
@@ -46,7 +46,7 @@ def optimize(Classifier, Evaluator, trainExamples, testExamples, classIds, param
     if cscConnection == None:
         return optimizeLocal(Classifier, Evaluator, trainExamples, testExamples, classIds, combinations, workDir, timeout)
     else:
-        return optimizeCSC(Classifier, Evaluator, trainExamples, testExamples, classIds, combinations, workDir, timeout, cscConnection)
+        return optimizeCSC(Classifier, Evaluator, trainExamples, testExamples, classIds, combinations, workDir, timeout, cscConnection, downloadAllModels)
 
 def optimizeLocal(Classifier, Evaluator, trainExamples, testExamples, classIds, combinations, workDir=None, timeout=None):
     bestResult = None
@@ -87,7 +87,7 @@ def optimizeLocal(Classifier, Evaluator, trainExamples, testExamples, classIds, 
     print >> sys.stderr, "Selected parameters", bestResult[-1]
     return bestResult
 
-def optimizeCSC(Classifier, Evaluator, trainExamples, testExamples, classIds, combinations, workDir=None, timeout=None, cscConnection=None):
+def optimizeCSC(Classifier, Evaluator, trainExamples, testExamples, classIds, combinations, workDir=None, timeout=None, cscConnection=None, downloadAllModels=False):
     bestResult = None
     combinationCount = 1
     combinationIds = []
@@ -113,7 +113,7 @@ def optimizeCSC(Classifier, Evaluator, trainExamples, testExamples, classIds, co
             break
         # decide what to do
         if timeout == None or louhiTimer.getElapsedTime() < timeout:
-            print >> sys.stderr, "Waiting for Louhi,", louhiTimer.elapsedTimeToString()
+            print >> sys.stderr, "Waiting for " + cscConnection.machineName + ",", louhiTimer.elapsedTimeToString()
             time.sleep(60)
         else:
             print >> sys.stderr, "Timed out, ", louhiTimer.elapsedTimeToString()
@@ -132,6 +132,8 @@ def optimizeCSC(Classifier, Evaluator, trainExamples, testExamples, classIds, co
         if predictions == None:
             print >> sys.stderr, "No results for combination" + id
         else:
+            if downloadAllModels:
+                Classifier.downloadModel(id, cscConnection, workDir)
             print >> sys.stderr, "Evaluating results for combination" + id
             evaluationOutput = "evaluation" + id + ".csv"
             if workDir != None:
