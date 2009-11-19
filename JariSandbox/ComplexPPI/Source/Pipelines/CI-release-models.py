@@ -36,7 +36,7 @@ EDGE_CLASS_NAMES=EXAMPLEDIR+"/genia-edge-ids.class_names"
 WORKDIR="/usr/share/biotext/GeniaChallenge/CI-release/models/models-"+PARSE_TOK+TASK_TAG
 
 TRIGGER_CLASSIFIER_PARAMS="c:1000,5000,10000,20000,50000,80000,100000,150000,180000,200000, 250000, 300000, 350000, 500000,1000000"
-EDGE_CLASSIFIER_PARAMS="c:5000,10000,20000,25000,28000,50000,60000,65000,80000,100000,150000"
+EDGE_CLASSIFIER_PARAMS="c:5000,10000,20000,25000,28000,50000,60000,65000,80000,100000,150000, 200000, 250000, 300000, 350000, 500000,1000000"
 
 # These commands will be in the beginning of most pipelines
 workdir(WORKDIR, False) # Select a working directory, don't remove existing files
@@ -46,13 +46,13 @@ print >> sys.stderr, "Model pipeline for parse", PARSE_TOK, "task", task
 ###############################################################################
 # Trigger models
 ###############################################################################
-c = CSCConnection("CI-release/models/models-"+PARSE_TOK+TASK_TAG+"/trigger-models", "jakrbj@murska.csc.fi", True)
+c = CSCConnection("CI-release/models/models-"+PARSE_TOK+TASK_TAG+"/trigger-models", "jakrbj@murska.csc.fi", False)
 optimize(Cls, Ev, TRIGGER_TRAIN_EXAMPLE_FILE, TRIGGER_DEVEL_EXAMPLE_FILE,\
     TRIGGER_CLASS_NAMES, TRIGGER_CLASSIFIER_PARAMS, "devel-trigger-models", None, c, downloadAllModels=True)
 
 ###############################################################################
 # Edge models
 ###############################################################################
-c = CSCConnection("CI-release/models/models-"+PARSE_TOK+TASK_TAG+"/edge-models", "jakrbj@murska.csc.fi", True)
+c = CSCConnection("CI-release/models/models-"+PARSE_TOK+TASK_TAG+"/edge-models", "jakrbj@murska.csc.fi", False)
 optimize(Cls, Ev, EDGE_TRAIN_EXAMPLE_FILE, EDGE_DEVEL_EXAMPLE_FILE,\
     EDGE_CLASS_NAMES, EDGE_CLASSIFIER_PARAMS, "devel-edge-models", None, c, downloadAllModels=True)
