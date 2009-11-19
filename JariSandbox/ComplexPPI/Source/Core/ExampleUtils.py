@@ -834,6 +834,22 @@ def buildInteractions(map, sentenceElement, predictionsByExample):
                     rootIndex += 1
     return interactions
 
+def unmergeExamples(examples, predictionsByExample, classSet):
+    for example in examples[:]:
+        prediction = predictionsByExample[example[0]]
+        if classSet.getName(prediction[0]).find("---") != -1:
+            nameSplits = classSet.getName(prediction[0]).split("---")
+            prediction[0] = classSet.getId(nameSplits[0], False)
+            count = 1
+            for nameSplit in nameSplits[1:]:
+                newExample = example[:]
+                newExample[0] += ".dupl" + str(count)
+                examples.append(newExample)
+                newPrediction = prediction[:]
+                newPrediction[0] = classSet.getId(nameSplit, False)
+                predictionsByExample[newExample[0]] = newPrediction
+                count += 1
+                    
 def process(sentenceObject, examplesBySentence, classSet, classIds, predictionsByExample):
     sentenceElement = sentenceObject.sentence
     sentenceId = sentenceElement.get("id")
