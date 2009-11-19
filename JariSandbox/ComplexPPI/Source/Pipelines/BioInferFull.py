@@ -22,7 +22,7 @@ TOK=options.tokenization
 CORPUS_DIR="/usr/share/biotext/UnmergingProject/source"
 
 PRETAG=""
-if False:
+if True:
     PRETAG="090915."
 
 # xml files without heads
