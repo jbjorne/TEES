@@ -475,8 +475,8 @@ if __name__=="__main__":
     optparser.add_option("-i", "--input", default=None, dest="input", help="interaction xml input file", metavar="FILE")
     optparser.add_option("-o", "--output", default=None, dest="output", help="output directory (or if -f switch is used, output file)")
     optparser.add_option("-t", "--task", default=1, type="int", dest="task", help="task number")
-    optparser.add_option("-s", "--submission", default=false, action="store_true", dest="submission", help="Make a submission tar.gz-file")
-    optparser.add_option("-f", "--file", default=false, action="store_true", dest="file", help="Output (-o) is a file")
+    optparser.add_option("-s", "--submission", default=False, action="store_true", dest="submission", help="Make a submission tar.gz-file")
+    optparser.add_option("-f", "--file", default=False, action="store_true", dest="file", help="Output (-o) is a file")
     (options, args) = optparser.parse_args()
     
     assert(options.input != None)
