@@ -38,7 +38,11 @@ def processCorpus(inputCorpus, outputPath, task=1, outputIsA2File=False):
     counter = ProgressCounter(len(inputCorpus.documents), "Document")
     # Each document is written to an output file
     for document in inputCorpus.documents:
-        documentId = document.find("sentence").get("origId").split(".")[0]
+        documentId = document.find("sentence").get("origId")
+        if documentId == None:
+            documentId = document.get("origId")
+        else:
+            documentId = documentId.split(".")[0]
         counter.update(1, "Processing document " + document.get("id") + " (origId " + documentId + "): ")
         
         # Write a1 file
