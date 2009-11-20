@@ -31,17 +31,19 @@ print >> sys.stderr, "Trigger example pipeline for parse", PARSE_TOK, "task", ta
 ###############################################################################
 # Trigger example generation
 ###############################################################################
-#Gazetteer.run(TRAIN_FILE, "gazetteer-train-"+PARSE_TOK+TASK_TAG, PARSE_TOK, entityOffsetKey="charOffset", stem=False)
-#Gazetteer.run(EVERYTHING_FILE, "gazetteer-everything-"+PARSE_TOK+TASK_TAG, PARSE_TOK, entityOffsetKey="charOffset", stem=False)
-
-GeneralEntityTypeRecognizerGztr.run(TRAIN_FILE, "trigger-train-examples-"+PARSE_TOK+TASK_TAG, PARSE_TOK, PARSE_TOK, TRIGGER_FEATURE_PARAMS, "genia-trigger-ids", None)#"gazetteer-train-"+PARSE_TOK+TASK_TAG)
-GeneralEntityTypeRecognizerGztr.run(DEVEL_FILE, "trigger-devel-examples-"+PARSE_TOK+TASK_TAG, PARSE_TOK, PARSE_TOK, TRIGGER_FEATURE_PARAMS, "genia-trigger-ids", None)#"gazetteer-train-"+PARSE_TOK+TASK_TAG)
-GeneralEntityTypeRecognizerGztr.run(EVERYTHING_FILE, "trigger-everything-examples-"+PARSE_TOK+TASK_TAG, PARSE_TOK, PARSE_TOK, TRIGGER_FEATURE_PARAMS, "genia-trigger-ids", None)#"gazetteer-everything-"+PARSE_TOK+TASK_TAG)
-GeneralEntityTypeRecognizerGztr.run(TEST_FILE, "trigger-test-examples-"+PARSE_TOK+TASK_TAG, PARSE_TOK, PARSE_TOK, TRIGGER_FEATURE_PARAMS, "genia-trigger-ids", None)#"gazetteer-everything-"+PARSE_TOK+TASK_TAG)
+if False:
+    #Gazetteer.run(TRAIN_FILE, "gazetteer-train-"+PARSE_TOK+TASK_TAG, PARSE_TOK, entityOffsetKey="charOffset", stem=False)
+    #Gazetteer.run(EVERYTHING_FILE, "gazetteer-everything-"+PARSE_TOK+TASK_TAG, PARSE_TOK, entityOffsetKey="charOffset", stem=False)
+    
+    GeneralEntityTypeRecognizerGztr.run(TRAIN_FILE, "trigger-train-examples-"+PARSE_TOK+TASK_TAG, PARSE_TOK, PARSE_TOK, TRIGGER_FEATURE_PARAMS, "genia-trigger-ids", None)#"gazetteer-train-"+PARSE_TOK+TASK_TAG)
+    GeneralEntityTypeRecognizerGztr.run(DEVEL_FILE, "trigger-devel-examples-"+PARSE_TOK+TASK_TAG, PARSE_TOK, PARSE_TOK, TRIGGER_FEATURE_PARAMS, "genia-trigger-ids", None)#"gazetteer-train-"+PARSE_TOK+TASK_TAG)
+    GeneralEntityTypeRecognizerGztr.run(EVERYTHING_FILE, "trigger-everything-examples-"+PARSE_TOK+TASK_TAG, PARSE_TOK, PARSE_TOK, TRIGGER_FEATURE_PARAMS, "genia-trigger-ids", None)#"gazetteer-everything-"+PARSE_TOK+TASK_TAG)
+    GeneralEntityTypeRecognizerGztr.run(TEST_FILE, "trigger-test-examples-"+PARSE_TOK+TASK_TAG, PARSE_TOK, PARSE_TOK, TRIGGER_FEATURE_PARAMS, "genia-trigger-ids", None)#"gazetteer-everything-"+PARSE_TOK+TASK_TAG)
 
 ###############################################################################
 # Edge example generation
 ###############################################################################
-MultiEdgeExampleBuilder.run(TRAIN_FILE, "edge-train-examples-"+PARSE_TOK+TASK_TAG, PARSE_TOK, PARSE_TOK, EDGE_FEATURE_PARAMS, "genia-edge-ids")
-MultiEdgeExampleBuilder.run(DEVEL_FILE, "edge-devel-examples-"+PARSE_TOK+TASK_TAG, PARSE_TOK, PARSE_TOK, EDGE_FEATURE_PARAMS, "genia-edge-ids")
-MultiEdgeExampleBuilder.run(EVERYTHING_FILE, "edge-everything-examples-"+PARSE_TOK+TASK_TAG, PARSE_TOK, PARSE_TOK, EDGE_FEATURE_PARAMS, "genia-edge-ids")
+if True:
+    MultiEdgeExampleBuilder.run(TRAIN_FILE, "edge-train-examples-"+PARSE_TOK+TASK_TAG, PARSE_TOK, PARSE_TOK, EDGE_FEATURE_PARAMS, "genia-edge-ids")
+    MultiEdgeExampleBuilder.run(DEVEL_FILE, "edge-devel-examples-"+PARSE_TOK+TASK_TAG, PARSE_TOK, PARSE_TOK, EDGE_FEATURE_PARAMS, "genia-edge-ids")
+    MultiEdgeExampleBuilder.run(EVERYTHING_FILE, "edge-everything-examples-"+PARSE_TOK+TASK_TAG, PARSE_TOK, PARSE_TOK, EDGE_FEATURE_PARAMS, "genia-edge-ids")
