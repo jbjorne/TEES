@@ -77,10 +77,12 @@ class MultiEdgeExampleBuilder(ExampleBuilder):
         types = set()
         if sentenceGraph.interactionGraph.has_edge(t1, t2):
             intEdges = sentenceGraph.interactionGraph.get_edge_data(t1, t2, default={})
+            # NOTE: Only works if keys are ordered integers
             for i in range(len(intEdges)):
                 types.add(intEdges[i]["element"].get("type"))
         if (not directed) and sentenceGraph.interactionGraph.has_edge(t2, t1):
             intEdges = sentenceGraph.interactionGraph.get_edge(t2, t1, default={})
+            # NOTE: Only works if keys are ordered integers
             for i in range(len(intEdges)):
                 types.add(intEdges[i]["element"].get("type"))
         types = list(types)
