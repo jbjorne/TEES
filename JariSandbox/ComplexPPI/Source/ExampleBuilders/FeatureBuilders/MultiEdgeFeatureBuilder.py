@@ -110,8 +110,8 @@ class MultiEdgeFeatureBuilder(FeatureBuilder):
             if sentenceGraph.entityHeadTokenByEntity[self.entity1] == sentenceGraph.entityHeadTokenByEntity[self.entity2]:
                 self.setFeature("selfLoop", 1)
     
-    def getPathIds(self, path):
-        ids = path[0].get("id") + path[1].get("id") 
+#    def getPathIds(self, path):
+#        ids = path[0].get("id") + path[1].get("id") 
                 
     def getEdges(self, graph, path):
         """
@@ -122,10 +122,10 @@ class MultiEdgeFeatureBuilder(FeatureBuilder):
         start and end tokens in the path. F.e. to get the edges from path[1]
         to path[2] call return_value[1][2].
         """
-        self.edgeCache = {}
-        ids = self.getPathIds(path)
-        if self.edgeCache.has_key(ids):
-            return self.edgeCache[ids]
+#        self.edgeCache = {}
+#        ids = self.getPathIds(path)
+#        if self.edgeCache.has_key(ids):
+#            return self.edgeCache[ids]
         
         pathEdges = {}
         for i in range(0, len(path)):
@@ -145,7 +145,7 @@ class MultiEdgeFeatureBuilder(FeatureBuilder):
                     pathEdges[i][i-1].append(edgeTuple)
                     found = True
             assert(found==True)
-        self.edgeCache[ids] = pathEdges
+#        self.edgeCache[ids] = pathEdges
         return pathEdges
     
     def getEdgeCombinations(self, graph, path):
