@@ -47,8 +47,8 @@ log() # Start logging into a file in working directory
 ###############################################################################
 # Trigger models
 ###############################################################################
-if False:
-    c = CSCConnection("CI-release/models/models-"+PARSE_TOK+TASK_TAG+"/trigger-models", "jakrbj@murska.csc.fi", False)
+if True:
+    c = CSCConnection("CI-release/models/models-"+PARSE_TOK+TASK_TAG+"/trigger-models", "jakrbj@murska.csc.fi", True)
     optimize(Cls, Ev, TRIGGER_TRAIN_EXAMPLE_FILE, TRIGGER_DEVEL_EXAMPLE_FILE,\
         TRIGGER_CLASS_NAMES, TRIGGER_CLASSIFIER_PARAMS, "devel-trigger-models", None, c, downloadAllModels=True)
 
@@ -56,6 +56,6 @@ if False:
 # Edge models
 ###############################################################################
 if True:
-    c = CSCConnection("CI-release/models/models-"+PARSE_TOK+TASK_TAG+"/edge-models", "jakrbj@murska.csc.fi", False)
+    c = CSCConnection("CI-release/models/models-"+PARSE_TOK+TASK_TAG+"/edge-models", "jakrbj@murska.csc.fi", True)
     optimize(Cls, Ev, EDGE_TRAIN_EXAMPLE_FILE, EDGE_DEVEL_EXAMPLE_FILE,\
         EDGE_CLASS_NAMES, EDGE_CLASSIFIER_PARAMS, "devel-edge-models", None, c, downloadAllModels=True)

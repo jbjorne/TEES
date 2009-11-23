@@ -31,7 +31,7 @@ print >> sys.stderr, "Trigger example pipeline for parse", PARSE_TOK, "task", ta
 ###############################################################################
 # Trigger example generation
 ###############################################################################
-if False:
+if True:
     #Gazetteer.run(TRAIN_FILE, "gazetteer-train-"+PARSE_TOK+TASK_TAG, PARSE_TOK, entityOffsetKey="charOffset", stem=False)
     #Gazetteer.run(EVERYTHING_FILE, "gazetteer-everything-"+PARSE_TOK+TASK_TAG, PARSE_TOK, entityOffsetKey="charOffset", stem=False)
     
