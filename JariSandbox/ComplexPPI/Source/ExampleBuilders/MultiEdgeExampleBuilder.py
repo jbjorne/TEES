@@ -173,13 +173,21 @@ class MultiEdgeExampleBuilder(ExampleBuilder):
         else:
             assert(categoryName == "neg"), categoryName + " category for " + e1Type + " and " + e2Type
             return False
-                        
+    
+    def nxMultiDiGraphToUndirected(self, graph):
+        undirected = NX10.MultiGraph(name=graph.name)
+        undirected.add_nodes_from(graph)
+        undirected.add_edges_from(graph.edges_iter())
+        return undirected
+            
     def buildExamples(self, sentenceGraph):
         examples = []
         exampleIndex = 0
         
-        undirected = sentenceGraph.dependencyGraph.to_undirected()
-        #undirected = NX10.MultiGraph(sentenceGraph.dependencyGraph) This didn't work
+        #undirected = sentenceGraph.getUndirectedDependencyGraph()
+        undirected = self.nxMultiDiGraphToUndirected(sentenceGraph.dependencyGraph)
+        ##undirected = sentenceGraph.dependencyGraph.to_undirected()
+        ###undirected = NX10.MultiGraph(sentenceGraph.dependencyGraph) This didn't work
         paths = NX10.all_pairs_shortest_path(undirected, cutoff=999)
         
         # Generate examples based on interactions between entities or interactions between tokens
