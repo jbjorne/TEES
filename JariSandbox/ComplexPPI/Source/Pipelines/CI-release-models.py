@@ -1,6 +1,12 @@
 from Pipeline import *
 import os
 
+from optparse import OptionParser
+optparser = OptionParser()
+optparser.add_option("-t", "--target", default=None, dest="target", help="edge/trigger")
+(options, args) = optparser.parse_args()
+
+
 # define shortcuts for commonly used files
 PARSE_TOK="split-McClosky"
 CORPUS_DIR="/usr/share/biotext/GeniaChallenge/xml"
@@ -47,7 +53,7 @@ log() # Start logging into a file in working directory
 ###############################################################################
 # Trigger models
 ###############################################################################
-if True:
+if options.target == "trigger":
     c = CSCConnection("CI-release/models/models-"+PARSE_TOK+TASK_TAG+"/trigger-models", "jakrbj@murska.csc.fi", True)
     optimize(Cls, Ev, TRIGGER_TRAIN_EXAMPLE_FILE, TRIGGER_DEVEL_EXAMPLE_FILE,\
         TRIGGER_CLASS_NAMES, TRIGGER_CLASSIFIER_PARAMS, "devel-trigger-models", None, c, downloadAllModels=True)
@@ -55,7 +61,7 @@ if True:
 ###############################################################################
 # Edge models
 ###############################################################################
-if True:
+if options.target == "edge":
     c = CSCConnection("CI-release/models/models-"+PARSE_TOK+TASK_TAG+"/edge-models", "jakrbj@murska.csc.fi", True)
     optimize(Cls, Ev, EDGE_TRAIN_EXAMPLE_FILE, EDGE_DEVEL_EXAMPLE_FILE,\
         EDGE_CLASS_NAMES, EDGE_CLASSIFIER_PARAMS, "devel-edge-models", None, c, downloadAllModels=True)
