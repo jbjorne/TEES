@@ -88,6 +88,17 @@ class SentenceGraph:
                                           self.tokensById[dependency.attrib["t2"]],\
                                           element=dependency)
     
+    def getUndirectedDependencyGraph(self):
+        u = NX10.MultiGraph()
+        for token in self.tokens:
+            u.add_node(token)
+        for dependency in self.dependencies:
+            u.add_edge(self.tokensById[dependency.attrib["t1"]],\
+              self.tokensById[dependency.attrib["t2"]], element=dependency)
+            u.add_edge(self.tokensById[dependency.attrib["t2"]],\
+              self.tokensById[dependency.attrib["t1"]], element=dependency)
+        return u
+    
     def getSentenceId(self):
         return self.sentenceElement.get("id")
     
