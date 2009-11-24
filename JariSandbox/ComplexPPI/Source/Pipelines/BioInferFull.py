@@ -21,8 +21,11 @@ PARSE=options.parse #"split-Charniak-Lease"
 TOK=options.tokenization
 CORPUS_DIR="/usr/share/biotext/UnmergingProject/source"
 
+print >> sys.stderr, "Selected parse", PARSE
+print >> sys.stderr, "Selected tokenization", TOK
+
 PRETAG=""
-if True:
+if False:
     PRETAG="090915."
 
 # xml files without heads
@@ -70,7 +73,7 @@ if True:
     ###############################################################################
     # Trigger example generation
     ###############################################################################
-    print >> sys.stderr, "Trigger examples for parse", TOK
+    print >> sys.stderr, "Trigger examples for parse", PARSE
     Gazetteer.run(TRAIN_FILE, "gazetteer-train-"+TOK, TOK)
     Gazetteer.run(TRAIN_AND_DEVEL_FILE, "gazetteer-train-and-devel-"+TOK, TOK)
     # Generate example files
