@@ -15,7 +15,7 @@ WORKDIR = "/usr/share/biotext/UnmergingProject/results/" + options.name
 # These commands will be in the beginning of most pipelines
 workdir(WORKDIR, False) # Select a working directory, don't remove existing files
 log() # Start logging into a file in working directory
-clearCSC=False # delete existing files on CSC
+clearCSC=True # delete existing files on CSC
 
 # define shortcuts for commonly used files
 PARSE=options.parse #"split-Charniak-Lease"
@@ -58,7 +58,7 @@ EDGE_CLASS_NAMES="%s-edge-ids.class_names"%CONSTANT_CORPUS
 
 EDGE_FEATURE_PARAMS="style:typed,directed,no_linear,entities,noMasking,maxFeatures,genia_limits"
 
-if False:
+if True:
     ###############################################################################
     # Head token detection
     ###############################################################################
