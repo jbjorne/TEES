@@ -41,7 +41,7 @@ log() # Start logging into a file in working directory
 EDGE_TRAIN_EXAMPLE_FILE = "edge-train-examples-"+PARSE_TOK+TASK_TAG
 EDGE_DEVEL_EXAMPLE_FILE = "edge-devel-examples-"+PARSE_TOK+TASK_TAG
 if True:
-    print >> sys.stderr, "Edge examples for parse", PARSE_TOK, "task", task
+    print >> sys.stderr, "Edge examples for parse", PARSE_TOK, "task", options.task
     
     MultiEdgeExampleBuilder.run(TRAIN_FILE, EDGE_TRAIN_EXAMPLE_FILE, PARSE_TOK, PARSE_TOK, EDGE_FEATURE_PARAMS, "genia-edge-ids")
     MultiEdgeExampleBuilder.run(DEVEL_FILE, EDGE_DEVEL_EXAMPLE_FILE, PARSE_TOK, PARSE_TOK, EDGE_FEATURE_PARAMS, "genia-edge-ids")
