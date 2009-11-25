@@ -15,7 +15,7 @@ assert(options.gazetteer in ["none", "full", "stem"])
 PARSE_TOK="split-McClosky"
 CORPUS_DIR="/usr/share/biotext/GeniaChallenge/xml"
 
-if task == 1:
+if options.task == 1:
     TRAIN_FILE=CORPUS_DIR+"/train.xml"
     DEVEL_FILE=CORPUS_DIR+"/devel.xml"
     TEST_FILE=CORPUS_DIR+"/test.xml"
@@ -52,7 +52,7 @@ log() # Start logging into a file in working directory
 TRIGGER_TRAIN_EXAMPLE_FILE = "trigger-train-examples-"+PARSE_TOK+TASK_TAG
 TRIGGER_DEVEL_EXAMPLE_FILE = "trigger-devel-examples-"+PARSE_TOK+TASK_TAG
 if True:
-    print >> sys.stderr, "Trigger examples for parse", PARSE_TOK, "task", task
+    print >> sys.stderr, "Trigger examples for parse", PARSE_TOK, "task", options.task
     GAZETTEER_TRAIN = None
     GAZETTEER_EVERYTHING = None
     if options.gazetteer != "none":
