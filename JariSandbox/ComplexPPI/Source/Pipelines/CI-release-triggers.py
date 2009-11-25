@@ -7,9 +7,11 @@ optparser = OptionParser()
 optparser.add_option("-n", "--name", default="triggers", dest="name", help="experiment name")
 optparser.add_option("-t", "--task", default=1, type="int", dest="task", help="task number")
 optparser.add_option("-g", "--gazetteer", default="none", dest="gazetteer", help="gazetteer options: none, stem, full")
+optparser.add_option("-e", "--entities", default="nonname", dest="entities", help="tokens to include: nonname, alltokens")
 (options, args) = optparser.parse_args()
 assert(options.task in [1,2])
 assert(options.gazetteer in ["none", "full", "stem"])
+assert(options.entities in ["nonname", "alltokens"])
 
 # define shortcuts for commonly used files
 PARSE_TOK="split-McClosky"
@@ -38,6 +40,10 @@ elif options.gazetteer == "stem":
     TRIGGER_FEATURE_PARAMS="style:typed,exclude_gazetteer,stem_gazetteer"
     stemGazetteer = True
     TASK_TAG += "-gazstem"
+
+if options.entities == "alltokens":
+    TRIGGER_FEATURE_PARAMS += ",all_tokens"
+    TASK_TAG += "-alltokens"
 
 EXPERIMENT_NAME = options.name + TASK_TAG    
 WORKDIR="/usr/share/biotext/GeniaChallenge/CI-release/triggers/" + EXPERIMENT_NAME

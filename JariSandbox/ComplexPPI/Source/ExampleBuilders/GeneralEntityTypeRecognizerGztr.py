@@ -69,9 +69,14 @@ class GeneralEntityTypeRecognizerGztr(ExampleBuilder):
         types.sort()
         typeString = ""
         for type in types:
+            if type == "Protein" and "all_tokens" in self.styles:
+                continue
             if typeString != "":
                 typeString += "---"
             typeString += type
+        
+        if typeString == "":
+            return "neg"
         return typeString
     
     def getTokenFeatures(self, token, sentenceGraph):
@@ -162,7 +167,7 @@ class GeneralEntityTypeRecognizerGztr(ExampleBuilder):
         for i in range(len(sentenceGraph.tokens)):
             token = sentenceGraph.tokens[i]
             # Recognize only non-named entities (i.e. interaction words)
-            if sentenceGraph.tokenIsName[token] and not "names" in self.styles:
+            if sentenceGraph.tokenIsName[token] and not "names" in self.styles and not "all_tokens" in self.styles:
                 continue
 
             # CLASS
