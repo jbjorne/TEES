@@ -47,6 +47,8 @@ class Pruner:
         elif e1t=='Protein':
             # Sites (etc.) are successors for proteins at this point of processing
             return(t in ['ToLoc','AtLoc','Site','Csite'] and e2t=='Entity')
+        elif e1t=='Entity':
+            pass # these are valid now
         else:
             sys.stderr.write("Invalid event type: %s (%s)\n"%(e1t,event.attrib['id']))
         return(False)
