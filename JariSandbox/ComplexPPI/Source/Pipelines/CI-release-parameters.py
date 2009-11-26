@@ -90,7 +90,7 @@ for params in paramCombinations:
     pId = getCombinationString(params) #"-boost_"+str(param)[0:3] # param id
     
     # Build trigger examples
-    GeneralEntityTypeRecognizerGztr.run(DEVEL_FILE, "devel-trigger-examples", PARSE_TOK, PARSE_TOK, TRIGGER_FEATURE_PARAMS, "genia-trigger-ids.class_names", GAZETTEER)#"gazetteer-train-"+PARSE_TOK+TASK_TAG)
+    GeneralEntityTypeRecognizerGztr.run(DEVEL_FILE, "devel-trigger-examples", PARSE_TOK, PARSE_TOK, TRIGGER_FEATURE_PARAMS, "genia-trigger-ids", GAZETTEER)#"gazetteer-train-"+PARSE_TOK+TASK_TAG)
     Cls.test("devel-trigger-examples", TRIGGER_MODEL_STEM + str(params["trigger"]), "devel-trigger-classifications")
     evaluator = Ev.evaluate("devel-trigger-examples", "devel-trigger-classifications", "genia-trigger-ids.class_names")
     #boostedTriggerFile = "devel-predicted-triggers.xml"
