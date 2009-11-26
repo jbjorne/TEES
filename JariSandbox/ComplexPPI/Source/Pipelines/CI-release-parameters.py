@@ -54,15 +54,15 @@ if options.entities == "alltokens":
 
 # Pre-made models etc
 PROJECT_DIR = "/usr/share/biotext/GeniaChallenge/CI-release"
-TRIGGER_DIR = PROJECT_DIR + "/triggers" + TRIGGER_TASK_TAG
-EDGE_DIR = PROJECT_DIR + "/edges" + EDGE_TASK_TAG
-EDGE_MODEL_STEM = EDGE_DIR + "/devel-edge-param-opt/model-c_"
-TRIGGER_MODEL_STEM = TRIGGER_DIR + "/devel-trigger-param-opt/model-c_"
+TRIGGER_DIR = PROJECT_DIR + "/triggers/triggers" + TRIGGER_TASK_TAG
+EDGE_DIR = PROJECT_DIR + "/edges/edges" + EDGE_TASK_TAG
+EDGE_MODEL_STEM = EDGE_DIR + "/devel-edge-models/model-c_"
+TRIGGER_MODEL_STEM = TRIGGER_DIR + "/devel-trigger-models/model-c_"
 
 if options.gazetteer == "none":
     GAZETTEER = None
 else:
-    GAZETTEER = PROJECT_DIR + "/triggers" + TRIGGER_TASK_TAG + "/gazetteer-train-" + PARSE_TOK + TRIGGER_TASK_TAG
+    GAZETTEER = TRIGGER_DIR + "/gazetteer-train-" + PARSE_TOK + TRIGGER_TASK_TAG
 
 # Parameters
 EDGE_FEATURE_PARAMS="style:typed,directed,no_linear,entities,genia_limits,noMasking,maxFeatures"
