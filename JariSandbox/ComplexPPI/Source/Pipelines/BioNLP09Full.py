@@ -197,13 +197,13 @@ if True:
     # Devel post-processing
     ###############################################################################
     prune.interface(["-i","devel-predicted-edges-ptrig.xml","-o","devel-pruned.xml","-c"])
-    unflatten.interface(["-i","devel-pruned.xml","-o","devel-unflattened.xml","-a",PARSE_TOK,"-t",PARSE_TOK])
+    unflatten.interface(["-i","devel-pruned.xml","-o","devel-unflattened.xml","-a",PARSE,"-t",TOK])
     gifxmlToGenia("devel-unflattened.xml", "devel-geniaformat", 1)
     evaluateSharedTask("devel-geniaformat", 1)
     ###############################################################################
     # Test post-processing
     ###############################################################################
     prune.interface(["-i","test-predicted-edges.xml","-o","test-pruned.xml","-c"])
-    unflatten.interface(["-i","test-pruned.xml","-o","test-unflattened.xml","-a",PARSE_TOK,"-t",PARSE_TOK])
+    unflatten.interface(["-i","test-pruned.xml","-o","test-unflattened.xml","-a",PARSE,"-t",TOK])
     gifxmlToGenia("test-unflattened.xml", "test-geniaformat", 1)
     evaluateSharedTask("test-geniaformat", 1)
