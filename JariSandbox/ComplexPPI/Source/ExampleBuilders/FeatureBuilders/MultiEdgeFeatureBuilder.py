@@ -153,12 +153,15 @@ class MultiEdgeFeatureBuilder(FeatureBuilder):
             return set()
         
         pathEdges = self.getEdges(graph, path)
-        ids = self.getPathIds(path)
-        self.depPathCache[ids] = set()
+        
+        #ids = self.getPathIds(path)
+        #self.depPathCache[ids] = set()
+        
         #if self.depPathCache.has_key(ids):
         #    return self.depPathCache[ids]
         
-        self.depPathCache[ids] = set()
+        #self.depPathCache[ids] = set()
+        depPaths = set()
         pathEdgeStrings = []
         for i in range(1, len(path)):
             pathEdgeStrings.append([])
@@ -168,8 +171,10 @@ class MultiEdgeFeatureBuilder(FeatureBuilder):
                 pathEdgeStrings[-1].append("<"+e[2].get("type"))
         combinations = combine.combine(*pathEdgeStrings)
         for combination in combinations:
-            self.depPathCache[ids].add( ".".join(combination) )
-        return self.depPathCache[ids]
+            #self.depPathCache[ids].add( ".".join(combination) )
+            depPaths.add( ".".join(combination) )
+        #return self.depPathCache[ids]
+        return depPaths
     
     def getWalks(self, pathTokens, pathEdges, position=1, walk=None):
         """
