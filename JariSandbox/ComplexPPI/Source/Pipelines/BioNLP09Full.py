@@ -58,7 +58,7 @@ EDGE_CLASS_NAMES="%s-edge-ids.class_names"%CONSTANT_CORPUS
 
 EDGE_FEATURE_PARAMS="style:typed,directed,no_linear,entities,noMasking,maxFeatures,genia_limits"
 
-if True:
+if False:
     ###############################################################################
     # Head token detection
     ###############################################################################
@@ -97,7 +97,7 @@ if True:
     MultiEdgeExampleBuilder.run(TEST_FILE, "edge-test-examples-"+PARSE, PARSE, TOK, EDGE_FEATURE_PARAMS, STRING_IDS%'edge')
 
 bestTriggerParameters = None
-if True:
+if False:
     ###############################################################################
     # Trigger parameter optimization
     ###############################################################################
@@ -114,7 +114,7 @@ if True:
     ix.recalculateIds(xmlFilename, xmlFilename, True)
 
 bestEdgeParameters = None
-if True:
+if False:
     ###############################################################################
     # Edge parameter optimization
     ###############################################################################
@@ -132,7 +132,7 @@ if True:
     ix.splitMergedElements(xmlFilename, xmlFilename)
     ix.recalculateIds(xmlFilename, xmlFilename, True)
 
-if True:
+if False:
     ###############################################################################
     # Devel set predictions with predicted edges
     ###############################################################################
@@ -149,7 +149,7 @@ if True:
     print >> sys.stderr, "############################################"
     EvaluateInteractionXML.run(Ev, xmlFilename, DEVEL_FILE, PARSE, TOK)
 
-if True:
+if False:
     ###############################################################################
     ###############################################################################
     # Test Set
@@ -191,3 +191,19 @@ if True:
     print >> sys.stderr, "# Test Set Results"
     print >> sys.stderr, "############################################"
     EvaluateInteractionXML.run(Ev, xmlFilename, TEST_FILE, PARSE, TOK)
+
+if True:
+    ###############################################################################
+    # Devel post-processing
+    ###############################################################################
+    prune.interface(["-i","devel-predicted-edges-ptrig.xml","-o","devel-pruned.xml","-c"])
+    unflatten.interface(["-i","devel-pruned.xml","-o","devel-unflattened.xml","-a",PARSE_TOK,"-t",PARSE_TOK])
+    gifxmlToGenia("devel-unflattened.xml", "devel-geniaformat", 1)
+    evaluateSharedTask("devel-geniaformat", 1)
+    ###############################################################################
+    # Test post-processing
+    ###############################################################################
+    prune.interface(["-i","test-predicted-edges.xml","-o","test-pruned.xml","-c"])
+    unflatten.interface(["-i","test-pruned.xml","-o","test-unflattened.xml","-a",PARSE_TOK,"-t",PARSE_TOK])
+    gifxmlToGenia("test-unflattened.xml", "test-geniaformat", 1)
+    evaluateSharedTask("test-geniaformat", 1)
