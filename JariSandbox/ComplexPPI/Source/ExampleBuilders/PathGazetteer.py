@@ -64,9 +64,16 @@ class PathGazetteer(ExampleBuilder):
             else:
                 v[0] = float(v[2]) / float(v[2] + v[3])
             v[1] = float(v[2] + v[3]) / float(numInstances)
+
+    def nxMultiDiGraphToUndirected(self, graph):
+        undirected = NX10.MultiGraph(name=graph.name)
+        undirected.add_nodes_from(graph)
+        undirected.add_edges_from(graph.edges_iter())
+        return undirected
                         
     def processSentence(self, sentenceGraph):        
-        undirected = sentenceGraph.dependencyGraph.to_undirected()
+        #undirected = sentenceGraph.dependencyGraph.to_undirected()
+        undirected = self.nxMultiDiGraphToUndirected(sentenceGraph.dependencyGraph)
         paths = NX10.all_pairs_shortest_path(undirected, cutoff=999)
         self.multiEdgeFeatureBuilder.setFeatureVector()
         
