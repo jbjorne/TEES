@@ -8,7 +8,8 @@ from FeatureBuilders.MultiEdgeFeatureBuilder import MultiEdgeFeatureBuilder
 from FeatureBuilders.TriggerFeatureBuilder import TriggerFeatureBuilder
 from PathGazetteer import PathGazetteer
 from Core.Gazetteer import Gazetteer
-import networkx as NX
+#import networkx as NX
+import Graph.networkx_v10rc1 as NX10
 import combine
 import Stemming.PorterStemmer as PorterStemmer
 
@@ -273,6 +274,12 @@ class DirectEventExampleBuilder(ExampleBuilder):
             for gsType in gsTypes[1:]:
                 string += "---" + gsType
             return string, eventIds
+
+    def nxMultiDiGraphToUndirected(self, graph):
+        undirected = NX10.MultiGraph(name=graph.name)
+        undirected.add_nodes_from(graph)
+        undirected.add_edges_from(graph.edges_iter())
+        return undirected
                         
     def buildExamples(self, sentenceGraph):
         self.makeGSEvents(sentenceGraph)
@@ -282,8 +289,9 @@ class DirectEventExampleBuilder(ExampleBuilder):
         examples = []
         exampleIndex = 0
         
-        undirected = sentenceGraph.dependencyGraph.to_undirected()
-        paths = NX.all_pairs_shortest_path(undirected, cutoff=999)
+        #undirected = sentenceGraph.dependencyGraph.to_undirected()
+        undirected = self.nxMultiDiGraphToUndirected(sentenceGraph.dependencyGraph)
+        paths = NX10.all_pairs_shortest_path(undirected, cutoff=999)
         
         eventTokens = []
         nameTokens = []
