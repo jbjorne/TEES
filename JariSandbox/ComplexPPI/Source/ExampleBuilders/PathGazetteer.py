@@ -12,13 +12,14 @@ import Graph.networkx_v10rc1 as NX10
 import combine
 
 class PathGazetteer(ExampleBuilder):
-    def __init__(self):
+    def __init__(self, includeNeg=False):
         self.multiEdgeFeatureBuilder = MultiEdgeFeatureBuilder(None)
         self.gazetteer = {}
+        self.includeNeg = includeNeg
     
     @classmethod
     def build(cls, input, output, parse, tokenization=None, includeNeg=False):
-        p = PathGazetteer()
+        p = PathGazetteer(includeNeg)
         sentences = cls.getSentences(input, parse, tokenization)
         
         counter = ProgressCounter(len(sentences), "Build path gazetteer")
@@ -86,16 +87,18 @@ class PathGazetteer(ExampleBuilder):
                     if not self.gazetteer.has_key(comb):
                         self.gazetteer[comb] = [None,None,0,0]
                     self.gazetteer[comb][2] += 1
-        for t1 in sentenceGraph.tokens:
-            for t2 in sentenceGraph.tokens:
-                if t1 == t2:
-                    continue
-                if positivePaths.has_key(t1) and positivePaths[t1].has_key(t2):
-                    continue
-                
-                if paths.has_key(t1) and paths[t1].has_key(t2):
-                    path = paths[t1][t2]
-                    for comb in self.multiEdgeFeatureBuilder.getEdgeCombinations(sentenceGraph.dependencyGraph, path):
-                        if not self.gazetteer.has_key(comb):
-                            self.gazetteer[comb] = [None,None,0,0]
-                        self.gazetteer[comb][3] += 1
+        
+        if self.includeNeg:
+            for t1 in sentenceGraph.tokens:
+                for t2 in sentenceGraph.tokens:
+                    if t1 == t2:
+                        continue
+                    if positivePaths.has_key(t1) and positivePaths[t1].has_key(t2):
+                        continue
+                    
+                    if paths.has_key(t1) and paths[t1].has_key(t2):
+                        path = paths[t1][t2]
+                        for comb in self.multiEdgeFeatureBuilder.getEdgeCombinations(sentenceGraph.dependencyGraph, path):
+                            if not self.gazetteer.has_key(comb):
+                                self.gazetteer[comb] = [None,None,0,0]
+                            self.gazetteer[comb][3] += 1
