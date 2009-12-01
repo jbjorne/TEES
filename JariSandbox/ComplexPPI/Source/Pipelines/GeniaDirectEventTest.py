@@ -45,7 +45,7 @@ else:
 # reduce performance. The gazetteer is built from the full training file,
 # even though the mini-sets are used in the slower parts of this demonstration
 # pipeline.
-if True:
+if False:
     PathGazetteer.build(FULL_TRAIN_FILE, "path-gazetteer-train", PARSE_TOK, includeNeg=False)
     Gazetteer.run(FULL_TRAIN_FILE, "gazetteer-train", PARSE_TOK, "headOffset", includeNeg=False, stem=True)
 
@@ -57,7 +57,7 @@ if True:
     EDGE_FEATURE_PARAMS="style:typed,directed,no_linear,entities,genia_limits,noMasking,maxFeatures,stem_gazetteer"
         
     # Build examples, see trigger detection
-    DirectEventExampleBuilder.run(TRAIN_FILE, "event-train-examples", PARSE_TOK, PARSE_TOK, EDGE_FEATURE_PARAMS, "genia-direct-event-ids", "gazetteer-train", "path-gazetteer-train", 1.0)
+    DirectEventExampleBuilder.run(TRAIN_FILE, "event-train-examples", PARSE_TOK, PARSE_TOK, EDGE_FEATURE_PARAMS, "genia-direct-event-ids", "gazetteer-train", "path-gazetteer-train", 0.4) #1.0)
     DirectEventExampleBuilder.run(TEST_FILE, "event-test-examples", PARSE_TOK, PARSE_TOK, EDGE_FEATURE_PARAMS, "genia-direct-event-ids", "gazetteer-train", "path-gazetteer-train")
     DirectEventExampleBuilder.run(EMPTY_TEST_FILE, "event-test-empty-examples", PARSE_TOK, PARSE_TOK, EDGE_FEATURE_PARAMS, "genia-direct-event-ids", "gazetteer-train", "path-gazetteer-train")
     # Run the optimization loop. Note that here we must optimize against the gold
