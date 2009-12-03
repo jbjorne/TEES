@@ -7,6 +7,9 @@ class Evaluator:
     def compare(self, evaluator):
         raise NotImplementedError
     
+    def getData(self):
+        raise NotImplementedError
+    
     def average(evaluators):
         raise NotImplementedError
     average = staticmethod(average)

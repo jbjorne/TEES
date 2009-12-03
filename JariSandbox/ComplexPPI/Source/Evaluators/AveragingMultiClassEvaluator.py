@@ -57,6 +57,9 @@ class AveragingMultiClassEvaluator(Evaluator):
         else:
             return -1
     
+    def getData(self):
+        return self.microF
+    
 #    def pool(evaluators):
 #        predictions = []
 #        for evaluator in evaluators:
