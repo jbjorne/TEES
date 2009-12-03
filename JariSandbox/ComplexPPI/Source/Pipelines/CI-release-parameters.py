@@ -10,6 +10,7 @@ optparser.add_option("-n", "--name", default="parameters", dest="name", help="ex
 optparser.add_option("-t", "--task", default=1, type="int", dest="task", help="task number")
 optparser.add_option("-g", "--gazetteer", default="none", dest="gazetteer", help="gazetteer options: none, stem, full")
 optparser.add_option("-e", "--entities", default="nonname", dest="entities", help="tokens to include: nonname, alltokens")
+optparser.add_option("-s", "--startFrom", default=0, type="int", dest="startFrom", help="The combination index to start from")
 (options, args) = optparser.parse_args()
 assert(options.task in [1,2])
 assert(options.gazetteer in ["none", "full", "stem"])
@@ -84,6 +85,10 @@ log() # Start logging into a file in working directory
 
 count = 0
 for params in paramCombinations:
+    if count < options.startFrom:
+        count += 1
+        continue
+
     print >> sys.stderr, "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
     print >> sys.stderr, "Processing params", str(count) + "/" + str(len(paramCombinations)), params
     print >> sys.stderr, "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
@@ -106,25 +111,28 @@ for params in paramCombinations:
     Cls.test("devel-edge-examples", EDGE_MODEL_STEM + str(params["edge"]), "devel-edge-classifications")
     # Write to interaction xml
     evaluator = Ev.evaluate("devel-edge-examples", "devel-edge-classifications", "genia-edge-ids.class_names")
-    #xmlFilename = "devel-predicted-edges.xml"# + pId + ".xml"
-    xml = ExampleUtils.writeToInteractionXML("devel-edge-examples", "devel-edge-classifications", xml, None, "genia-edge-ids.class_names", PARSE_TOK, PARSE_TOK)
-    xml = ix.splitMergedElements(xml, None)
-    xml = ix.recalculateIds(xml, "final.xml", True)
-    
-    # EvaluateInteractionXML differs from the previous evaluations in that it can
-    # be used to compare two separate GifXML-files. One of these is the gold file,
-    # against which the other is evaluated by heuristically matching triggers and
-    # edges. Note that this evaluation will differ somewhat from the previous ones,
-    # which evaluate on the level of examples.
-    EvaluateInteractionXML.run(Ev, xml, DEVEL_FILE, PARSE_TOK, PARSE_TOK)
-    # Post-processing
-    #preserveTask2.run(xmlFilename, "t2.xml", "no-t2.xml", "extract")
-    prune.interface(["-i","final.xml","-o","pruned.xml","-c"])
-    unflatten.interface(["-i","pruned.xml","-o","unflattened.xml","-a",PARSE_TOK,"-t",PARSE_TOK])
-    #preserveTask2.run("unflattened.xml", "final.xml", "t2.xml", "insert")
-    # Output will be stored to the geniaformat-subdirectory, where will also be a
-    # tar.gz-file which can be sent to the Shared Task evaluation server.
-    gifxmlToGenia("unflattened.xml", "geniaformat", 1)
-    evaluateSharedTask("geniaformat", 1) # "UTurku-devel-results-090320"
+    if evaluator.getData().fscore > 0:
+        #xmlFilename = "devel-predicted-edges.xml"# + pId + ".xml"
+        xml = ExampleUtils.writeToInteractionXML("devel-edge-examples", "devel-edge-classifications", xml, None, "genia-edge-ids.class_names", PARSE_TOK, PARSE_TOK)
+        xml = ix.splitMergedElements(xml, None)
+        xml = ix.recalculateIds(xml, "final.xml", True)
+        
+        # EvaluateInteractionXML differs from the previous evaluations in that it can
+        # be used to compare two separate GifXML-files. One of these is the gold file,
+        # against which the other is evaluated by heuristically matching triggers and
+        # edges. Note that this evaluation will differ somewhat from the previous ones,
+        # which evaluate on the level of examples.
+        EvaluateInteractionXML.run(Ev, xml, DEVEL_FILE, PARSE_TOK, PARSE_TOK)
+        # Post-processing
+        #preserveTask2.run(xmlFilename, "t2.xml", "no-t2.xml", "extract")
+        prune.interface(["-i","final.xml","-o","pruned.xml","-c"])
+        unflatten.interface(["-i","pruned.xml","-o","unflattened.xml","-a",PARSE_TOK,"-t",PARSE_TOK])
+        #preserveTask2.run("unflattened.xml", "final.xml", "t2.xml", "insert")
+        # Output will be stored to the geniaformat-subdirectory, where will also be a
+        # tar.gz-file which can be sent to the Shared Task evaluation server.
+        gifxmlToGenia("unflattened.xml", "geniaformat", 1)
+        evaluateSharedTask("geniaformat", 1) # "UTurku-devel-results-090320"
+    else:
+        print >> sys.stderr, "No predicted edges"
     count += 1
     
