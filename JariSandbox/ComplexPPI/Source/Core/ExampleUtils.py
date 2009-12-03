@@ -270,6 +270,8 @@ def writeToInteractionXML(examples, predictions, corpusElements, outputFile, cla
     predictionsByExample = {}
     xType = None
     assert len(examples) == len(predictions)
+    if len(examples) == 0:
+        xType = "noExamples"
     for i in range(len(examples)):
         example = examples[i]
         if xType == None:
@@ -594,6 +596,8 @@ def writeToInteractionXML(examples, predictions, corpusElements, outputFile, cla
                             if pairElement.get("e2") != None:
                                 sentenceElement.append(pairElement)
                                 pairCount += 1
+        elif xType == "noExamples":
+            pass
         else:
             sys.exit("Error, unknown xtype")
         # re-attach the analyses-element
