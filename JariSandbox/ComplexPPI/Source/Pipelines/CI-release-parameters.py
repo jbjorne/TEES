@@ -84,6 +84,7 @@ copyIdSetsToWorkdir(EDGE_DIR + "/genia-edge-ids")
 log() # Start logging into a file in working directory
 
 count = 0
+GeneralEntityTypeRecognizerGztr.run(DEVEL_FILE, "devel-trigger-examples", PARSE_TOK, PARSE_TOK, TRIGGER_FEATURE_PARAMS, "genia-trigger-ids", GAZETTEER)#"gazetteer-train-"+PARSE_TOK+TASK_TAG)
 for params in paramCombinations:
     if count < options.startFrom:
         count += 1
@@ -95,7 +96,6 @@ for params in paramCombinations:
     pId = getCombinationString(params) #"-boost_"+str(param)[0:3] # param id
     
     # Build trigger examples
-    GeneralEntityTypeRecognizerGztr.run(DEVEL_FILE, "devel-trigger-examples", PARSE_TOK, PARSE_TOK, TRIGGER_FEATURE_PARAMS, "genia-trigger-ids", GAZETTEER)#"gazetteer-train-"+PARSE_TOK+TASK_TAG)
     Cls.test("devel-trigger-examples", TRIGGER_MODEL_STEM + str(params["trigger"]), "devel-trigger-classifications")
     evaluator = Ev.evaluate("devel-trigger-examples", "devel-trigger-classifications", "genia-trigger-ids.class_names")
     #boostedTriggerFile = "devel-predicted-triggers.xml"
@@ -111,7 +111,7 @@ for params in paramCombinations:
     Cls.test("devel-edge-examples", EDGE_MODEL_STEM + str(params["edge"]), "devel-edge-classifications")
     # Write to interaction xml
     evaluator = Ev.evaluate("devel-edge-examples", "devel-edge-classifications", "genia-edge-ids.class_names")
-    if evaluator.getData().fscore > 0:
+    if evaluator.getData().getTP() + evaluator.getData().getFP() > 0:
         #xmlFilename = "devel-predicted-edges.xml"# + pId + ".xml"
         xml = ExampleUtils.writeToInteractionXML("devel-edge-examples", "devel-edge-classifications", xml, None, "genia-edge-ids.class_names", PARSE_TOK, PARSE_TOK)
         xml = ix.splitMergedElements(xml, None)
