@@ -1,26 +1,28 @@
-from Pipeline import *
-from optparse import OptionParser
-import sys
-
-parser = OptionParser(description=desc)
-optparser.add_option("-i", "--input", default=None, dest="input", help="interaction xml input file", metavar="FILE")
-optparser.add_option("-o", "--output", default=None, dest="output", help="a2 output file")
-(options, args) = parser.parse_args()
-assert options.input != None
-assert options.output != None
-
+import sys, os
+sys.path.append(os.path.dirname(os.path.abspath(__file__))+"/..")
+import Settings
 Settings.SVMMultiClassDir = "/usr/share/biotext/bionlp_event_server/classification"
 Settings.DevelTriggerModel = "/usr/share/biotext/bionlp_event_server/classification/devel-trigger-model-c_200000"
 Settings.DevelEdgeModel = "/usr/share/biotext/bionlp_event_server/classification/devel-edge-model-c_28000"
 Settings.TriggerIds="/usr/share/biotext/bionlp_event_server/classification/genia-trigger-ids"
 Settings.EdgeIds="/usr/share/biotext/bionlp_event_server/classification/genia-edge-ids"
 
+from Pipeline import *
+from optparse import OptionParser
+
+optparser = OptionParser()
+optparser.add_option("-i", "--input", default=None, dest="input", help="interaction xml input file", metavar="FILE")
+optparser.add_option("-o", "--output", default=None, dest="output", help="a2 output file")
+(options, args) = optparser.parse_args()
+assert options.input != None
+assert options.output != None
 
 # define shortcuts for commonly used files
 #FULL_TRAIN_FILE=Settings.TrainFile
 #TRAIN_FILE=Settings.TrainFile
 #TEST_FILE=Settings.DevelFile
 #GOLD_TEST_FILE=Settings.DevelFile
+TEST_FILE = options.input
 
 TRIGGER_MODEL=Settings.DevelTriggerModel
 EDGE_MODEL=Settings.DevelEdgeModel
@@ -39,6 +41,8 @@ EDGE_IDS=copyIdSetsToWorkdir(Settings.EdgeIds)
 ###############################################################################
 # Trigger detection
 ###############################################################################
+ix.recalculateIds(options.input, "fixed-gifxml.xml", True)
+TEST_FILE = "fixed-gifxml.xml"
 if True:
     # Build an SVM example file for the training corpus.
     # GeneralEntityTypeRecognizerGztr is a version of GeneralEntityTypeRecognizer
