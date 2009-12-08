@@ -371,9 +371,13 @@ class DirectEventExampleBuilder(ExampleBuilder):
                 if combination[0] == None and combination[1] == None:
                     skip = True
                     s[categoryName]["noncmb"] = s[categoryName].get("noncmb", 0) + 1
-                if not self.isValidEvent(paths, sentenceGraph, token, combination):
+                
+                validCat = self.isValidEvent(paths, sentenceGraph, token, combination)
+                if validCat != "OK": #not self.isValidEvent(paths, sentenceGraph, token, combination):
                     skip = True
-                    s[categoryName]["valid"] = s[categoryName].get("valid", 0) + 1
+                    #s[categoryName]["valid"] = s[categoryName].get("valid", 0) + 1
+                    s[categoryName][validCat] = s[categoryName].get(validCat, 0) + 1
+                
                 if len(nameTokens) == 0:
                     skip = True
                     s[categoryName]["non"] = s[categoryName].get("non", 0) + 1
@@ -413,10 +417,10 @@ class DirectEventExampleBuilder(ExampleBuilder):
                 oneTokenEvent = False
                 break
         if oneTokenEvent:
-            return True
+            return "OK" #True
             
         if not paths.has_key(eventToken):
-            return False
+            return "nopaths" #False
         
         newArgTokens = []
         for argToken in argTokens:
@@ -454,8 +458,8 @@ class DirectEventExampleBuilder(ExampleBuilder):
 #            if not validArg:
 #                return False
         if not oneArgValid:
-            return False
-        return True
+            return "OK" #"novalidarg" #False
+        return "OK" #True
     
     def setGazetteerFeatures(self, token, tag):
         gazText = self.getGazetteerMatch(token.get("text").lower())

@@ -13,14 +13,21 @@ if False: # mini
     EMPTY_TEST_FILE="/usr/share/biotext/GeniaChallenge/xml/devel-with-duplicates-mini-empty.xml"
     EXPERIMENT_NAME="GeniaDirectEventTest"
     CSC_ACCOUNT="jakrbj@louhi.csc.fi"
+    MEMORY=4194304
+    CORES=1
 else:
     TRAIN_FILE="/usr/share/biotext/GeniaChallenge/xml/train-with-duplicates.xml"
     TEST_FILE="/usr/share/biotext/GeniaChallenge/xml/devel-with-duplicates.xml"
     EMPTY_TEST_FILE="/usr/share/biotext/GeniaChallenge/xml/devel-with-duplicates-empty.xml"
     EXPERIMENT_NAME="GeniaDirectEventTestFull"
     CSC_ACCOUNT="jakrbj@murska.csc.fi"
+    MEMORY=8000000
+    CORES=4
 
+
+#EDGE_CLASSIFIER_PARAMS="c:1,1000,100000,500000"
 EDGE_CLASSIFIER_PARAMS="c:1,10,100,1000,10000,100000,500000,1000000,5000000,10000000,50000000,100000000,1000000000"
+
 #EDGE_CLASSIFIER_PARAMS="c:10000000,50000000,100000000,1000000000"#"c:10000,28000,50000"
 #EDGE_CLASSIFIER_PARAMS="c:1,10,100,1000,10000,100000,500000,1000000,5000000,10000000"#"c:10000,28000,50000"
 #EDGE_CLASSIFIER_PARAMS="c:0.00001,0.0001,0.001,0.01,0.1,1,10,100"#"c:10000,28000,50000"
@@ -57,24 +64,27 @@ if True:
     EDGE_FEATURE_PARAMS="style:typed,directed,no_linear,entities,genia_limits,noMasking,maxFeatures,stem_gazetteer"
         
     # Build examples, see trigger detection
-    DirectEventExampleBuilder.run(TRAIN_FILE, "event-train-examples", PARSE_TOK, PARSE_TOK, EDGE_FEATURE_PARAMS, "genia-direct-event-ids", "gazetteer-train", "path-gazetteer-train", 0.4) #1.0)
     DirectEventExampleBuilder.run(TEST_FILE, "event-test-examples", PARSE_TOK, PARSE_TOK, EDGE_FEATURE_PARAMS, "genia-direct-event-ids", "gazetteer-train", "path-gazetteer-train")
-    DirectEventExampleBuilder.run(EMPTY_TEST_FILE, "event-test-empty-examples", PARSE_TOK, PARSE_TOK, EDGE_FEATURE_PARAMS, "genia-direct-event-ids", "gazetteer-train", "path-gazetteer-train")
+    if True:
+        DirectEventExampleBuilder.run(TRAIN_FILE, "event-train-examples", PARSE_TOK, PARSE_TOK, EDGE_FEATURE_PARAMS, "genia-direct-event-ids", "gazetteer-train", "path-gazetteer-train", 0.4) #1.0)
+        DirectEventExampleBuilder.run(EMPTY_TEST_FILE, "event-test-empty-examples", PARSE_TOK, PARSE_TOK, EDGE_FEATURE_PARAMS, "genia-direct-event-ids", "gazetteer-train", "path-gazetteer-train")
     # Run the optimization loop. Note that here we must optimize against the gold
     # standard examples, because we do not know real classes of edge examples built between
     # predicted triggers
 
 if True:
+    STEv.setOptions("delme", 1, TEST_FILE, PARSE_TOK, PARSE_TOK)
     if goldPassThrough:
         c = None
     else:
-        #c = None
-        c = CSCConnection(EXPERIMENT_NAME+"-event-model", CSC_ACCOUNT, True, memory=8000000, cores=4)
-    best = optimize(MyCls, Ev, "event-train-examples", "event-test-examples",\
+        c = CSCConnection(EXPERIMENT_NAME+"-event-model", CSC_ACCOUNT, True, memory=MEMORY, cores=CORES)
+    best = optimize(MyCls, STEv, "event-train-examples", "event-test-examples",\
         "genia-direct-event-ids.class_names", EDGE_CLASSIFIER_PARAMS, "event-param-opt", None, c)
+    print "Evaluating examples built on empty test file"
     MyCls.test("event-test-empty-examples", best[1], "event-test-empty-classifications")
+    STEv.evaluate("event-test-empty-examples", "event-test-empty-classifications", "genia-direct-event-ids.class_names")
     
-if True:
+if False:
     best = [None,None,"event-test-empty-classifications"]
     #best = [None,None,"event-param-opt/predictions-c_1000000"]
     # Write the predicted edges to an interaction xml which has predicted triggers.
@@ -93,3 +103,7 @@ if True:
     EvaluateInteractionXML.run(Ev, "test-predicted-events.xml", TEST_FILE, PARSE_TOK, PARSE_TOK)
     gifxmlToGenia("test-predicted-events.xml", "geniaformat", 1)
     evaluateSharedTask("geniaformat", 1)
+
+if False:
+    STEv.setOptions("delme", 1, TEST_FILE, PARSE_TOK, PARSE_TOK)
+    STEv.evaluate("event-test-empty-examples", "event-test-empty-classifications", "genia-direct-event-ids.class_names")
