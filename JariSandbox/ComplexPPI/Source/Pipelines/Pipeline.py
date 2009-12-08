@@ -12,6 +12,7 @@ from ExampleBuilders.CPPTriggerExampleBuilder import CPPTriggerExampleBuilder
 from Classifiers.SVMMultiClassClassifier import SVMMultiClassClassifier as Cls
 from Classifiers.AllCorrectClassifier import AllCorrectClassifier as ACCls
 from Evaluators.AveragingMultiClassEvaluator import AveragingMultiClassEvaluator as Ev
+from Evaluators.SharedTaskEvaluator import SharedTaskEvaluator as STEv
 import Core.SentenceGraph as SentenceGraph
 import Core.ExampleUtils as ExampleUtils
 import InteractionXML as ix
