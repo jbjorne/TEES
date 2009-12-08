@@ -241,7 +241,7 @@ class AveragingMultiClassEvaluator(Evaluator):
         # Binary results
         string += "untyped " + self.binaryF.toStringConcise() + "\n" + indent
         if self.untypedUndirected != None:
-            string += self.untypedUndirected.toStringConcise("untyped undirected ") + "\n"
+            string += self.untypedUndirected.toStringConcise("untyped undirected ")
         return string
     
 #    def __addClassToCSV(self, csvWriter, cls):
