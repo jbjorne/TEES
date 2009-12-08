@@ -249,7 +249,7 @@ def writeTask3ToInteractionXML(classifications, corpusElements, outputFileName, 
 
 def writeToInteractionXML(examples, predictions, corpusElements, outputFile, classSet=None, parse=None, tokenization=None):
     import sys
-    print >> sys.stderr, "Writing output to Interaction XML"
+    #print >> sys.stderr, "Writing output to Interaction XML"
     
     if type(corpusElements) == types.StringType or isinstance(corpusElements,ET.ElementTree): # corpus is in file
         import SentenceGraph
@@ -265,7 +265,7 @@ def writeToInteractionXML(examples, predictions, corpusElements, outputFile, cla
         print >> sys.stderr, "Loading examples from", examples
         examples = readExamples(examples, False)
     
-    print >> sys.stderr, "Grouping examples"
+    #print >> sys.stderr, "Grouping examples"
     examplesBySentence = {}
     predictionsByExample = {}
     xType = None
@@ -290,7 +290,7 @@ def writeToInteractionXML(examples, predictions, corpusElements, outputFile, cla
     if classSet != None:
         classIds = classSet.getIds()
     
-    print >> sys.stderr, "Processing sentence elements"
+    #print >> sys.stderr, "Processing sentence elements"
     sentenceElements = corpusElements.sentences
     for sentenceObject in sentenceElements:
         sentenceElement = sentenceObject.sentence
