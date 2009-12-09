@@ -28,14 +28,14 @@ def getEntityIndex(entities, index=0, task=1):
             index = newIndex
     return index
 
-def processCorpus(inputCorpus, outputPath, task=1, outputIsA2File=False):
+def processCorpus(inputCorpus, outputPath, task=1, outputIsA2File=False, verbose=True):
     if outputIsA2File:
         a2File = open(outputPath, "wt")
         if len(inputCorpus.documents) > 1:
             print >> sys.stderr, "Warning: Input file has more than one document, a2-file events will have overlapping ids"
             
     
-    counter = ProgressCounter(len(inputCorpus.documents), "Document")
+    if verbose: counter = ProgressCounter(len(inputCorpus.documents), "Document")
     # Each document is written to an output file
     for document in inputCorpus.documents:
         documentId = document.find("sentence").get("origId")
@@ -43,7 +43,7 @@ def processCorpus(inputCorpus, outputPath, task=1, outputIsA2File=False):
             documentId = document.get("origId")
         else:
             documentId = documentId.split(".")[0]
-        counter.update(1, "Processing document " + document.get("id") + " (origId " + documentId + "): ")
+        if verbose: counter.update(1, "Processing document " + document.get("id") + " (origId " + documentId + "): ")
         
         # Write a1 file
         if outputIsA2File: 
@@ -424,19 +424,22 @@ def writeEvents(document, inputCorpus, outputFile, events, entityMap, triggerIds
         outputFile.write("M" + str(mCount) + "\tNegation " + negation + "\n" )
         mCount += 1
 
-def gifxmlToGenia(input, output, task=1, outputIsA2File=False, submission=False):
+def gifxmlToGenia(input, output, task=1, outputIsA2File=False, submission=False, verbose=True):
     assert(task == 1 or task == 2 or task == 3)
     
     # Make or clear output directory
+    if verbose: print >> sys.stderr, "Writing shared task files",
     if not outputIsA2File:
         if os.path.exists(output):
-            print >> sys.stderr, "Output directory exists, removing", output
+            if verbose: print >> sys.stderr, "over existing directory", output
             shutil.rmtree(output)
+        else:
+            if verbose: print >> sys.stderr, "to directory", output
         os.mkdir(output)
     
     # Convert the gifxml to the genia format files
     inputCorpus = CorpusElements.loadCorpus(input, removeIntersentenceInteractions=False)
-    processCorpus(inputCorpus, output, task, outputIsA2File)
+    processCorpus(inputCorpus, output, task, outputIsA2File, verbose=verbose)
     
     if submission:
         if not outputIsA2File:
