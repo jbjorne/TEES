@@ -66,10 +66,10 @@ def evaluateVariance(sourceDir, task, folds):
         print >> sys.stderr, r["approximate"]["ALL-TOTAL"]
     
 
-def evaluate(sourceDir, task=1, folds=-1, foldToRemove=-1):
+def evaluate(sourceDir, task=1, folds=-1, foldToRemove=-1, evaluations=["strict", "approximate", "decomposition"], verbose=True):
     global perlDir
     sourceDir = os.path.abspath(sourceDir)
-    print sourceDir
+    #print sourceDir
     
     # Go to evaluation scripts
     origDir = os.getcwd()
@@ -94,35 +94,47 @@ def evaluate(sourceDir, task=1, folds=-1, foldToRemove=-1):
     results = {}
     
     commands = "export PATH=$PATH:./ ; "
-    commands += "perl prepare-eval.pl " + sourceSubsetDir + " " + tempDir + " ; "
-    commands += "a2-evaluate.pl -g " + goldDir + " " + tempDir
-    commands += "/*.t" + str(task)
+    commands += "perl prepare-eval.pl " + sourceSubsetDir + " " + tempDir
     p = subprocess.Popen(commands, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    printLines(p.stderr.readlines())
-    print >> sys.stderr, "##### strict evaluation mode #####"
-    stdoutLines = p.stdout.readlines()
-    printLines(stdoutLines)
-    results["strict"] = parseResults(stdoutLines)
+    if verbose:
+        printLines(p.stderr.readlines())
+        printLines(p.stdout.readlines())
+    else: # Not reading the lines causes some error in the perl script!
+        p.stderr.readlines()
+        p.stdout.readlines()
     
-    print >> sys.stderr, "##### approximate span and recursive mode #####"
-    commands = "export PATH=$PATH:./ ; "
-    commands += "a2-evaluate.pl -g " + goldDir + " -sp " + tempDir
-    commands += "/*.t" + str(task)
-    p = subprocess.Popen(commands, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    printLines(p.stderr.readlines())
-    stdoutLines = p.stdout.readlines()
-    printLines(stdoutLines)
-    results["approximate"] = parseResults(stdoutLines)
+    if "strict" in evaluations:
+        commands = "export PATH=$PATH:./ ; "
+        commands += "a2-evaluate.pl -g " + goldDir + " " + tempDir
+        commands += "/*.t" + str(task)
+        p = subprocess.Popen(commands, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        printLines(p.stderr.readlines())
+        print >> sys.stderr, "##### strict evaluation mode #####"
+        stdoutLines = p.stdout.readlines()
+        printLines(stdoutLines)
+        results["strict"] = parseResults(stdoutLines)
+    
+    if "approximate" in evaluations:
+        print >> sys.stderr, "##### approximate span and recursive mode #####"
+        commands = "export PATH=$PATH:./ ; "
+        commands += "a2-evaluate.pl -g " + goldDir + " -sp " + tempDir
+        commands += "/*.t" + str(task)
+        p = subprocess.Popen(commands, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        printLines(p.stderr.readlines())
+        stdoutLines = p.stdout.readlines()
+        printLines(stdoutLines)
+        results["approximate"] = parseResults(stdoutLines)
 
-    print >> sys.stderr, "##### event decomposition in the approximate span mode #####"
-    commands = "export PATH=$PATH:./ ; "
-    commands += "a2-evaluate.pl -g " + goldDir + " -sp " + tempDir
-    commands += "/*.t" + str(task) + "d"
-    p = subprocess.Popen(commands, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    printLines(p.stderr.readlines())
-    stdoutLines = p.stdout.readlines()
-    printLines(stdoutLines)
-    results["decomposition"] = parseResults(stdoutLines)
+    if "decomposition" in evaluations:
+        print >> sys.stderr, "##### event decomposition in the approximate span mode #####"
+        commands = "export PATH=$PATH:./ ; "
+        commands += "a2-evaluate.pl -g " + goldDir + " -sp " + tempDir
+        commands += "/*.t" + str(task) + "d"
+        p = subprocess.Popen(commands, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        printLines(p.stderr.readlines())
+        stdoutLines = p.stdout.readlines()
+        printLines(stdoutLines)
+        results["decomposition"] = parseResults(stdoutLines)
     
     # return to current dir
     os.chdir(origDir)
