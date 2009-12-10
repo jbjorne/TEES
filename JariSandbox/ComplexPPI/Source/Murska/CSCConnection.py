@@ -3,7 +3,7 @@ import subprocess
 sys.path.append(os.path.dirname(__file__)+"/..")
 from Classifiers.SVMMultiClassClassifier import SVMMultiClassClassifier as classifier
 
-class CSCConnection:
+class CSCConnection:    
     def __init__(self, workSubDir, account="jakrbj@louhi.csc.fi", deleteWorkDir=False, memory=4194304, cores=1):
         self.account = account
         self.memory = memory
@@ -14,6 +14,11 @@ class CSCConnection:
             print "Removing CSC work directory (if it exists)"
             self.run("rm -fr " + self.workDir)
         self.run("mkdir -p " + self.workDir)
+        
+        # State constants
+        self.NOT_EXIST = "NOT_EXIST"
+        self.NONZERO = "NONZERO"
+        self.ZERO = "ZERO"
     
     def exists(self, filename):
         p = subprocess.Popen("ssh " + self.account + " 'ls " + self.workDir + "/" + filename + "'", shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
@@ -22,6 +27,18 @@ class CSCConnection:
         else:
             return False
     
+    def getFileStatus(self, filename):
+        filePath = self.workDir + "/" + filename
+        p = subprocess.Popen("ssh " + self.account + " 'filetest -e " + filePath + "; filetest -z " + filePath + "'", shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        lines = p.stdout.readlines()
+        assert len(lines) == 2
+        if int(lines[0]) == 0:
+            return self.NOT_EXIST
+        if int(lines[1]) == 1:
+            return self.ZERO
+        else:
+            return self.NONZERO
+        
     def upload(self, src, dst=None, replace=True):
         if dst == None:
             dst = os.path.split(src)[-1]
