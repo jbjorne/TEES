@@ -102,33 +102,47 @@ def optimizeCSC(Classifier, Evaluator, trainExamples, testExamples, classIds, co
     print >> sys.stderr, "Waiting for results"
     finished = 0
     louhiTimer = Timer()
-    while(finished < len(combinations)):
+    combinationStatus = {}
+    while(True):
         # count finished
         finished = 0
+        processStatus = {"FINISHED":0, "QUEUED":0, "FAILED":0, "RUNNING":0}
         for id in combinationIds:
-            if Classifier.getLouhiStatus(id, cscConnection):
-                finished += 1
-        if finished == len(combinations):
-            print >> sys.stderr, "All runs have finished"
+            status = Classifier.getLouhiStatus(id, cscConnection)
+            combinationStatus[id] = status
+            processStatus[status] += 1
+        p = processStatus
+        processStatusString = str(p["QUEUED"]) + " queued, " + str(p["RUNNING"]) + " running, " + str(p["FINISHED"]) + " finished, " + str(p["FAILED"]) + " failed"
+        if processStatus["QUEUED"] + processStatus["RUNNING"] == 0:
+            print >> sys.stderr
+            print >> sys.stderr, "All runs done (" + processStatusString + ")"
             break
         # decide what to do
         if timeout == None or louhiTimer.getElapsedTime() < timeout:
-            print >> sys.stderr, "Waiting for " + cscConnection.machineName + ",", louhiTimer.elapsedTimeToString()
-            time.sleep(60)
+            sleepString = " [          ]     "
+            print >> sys.stderr, "\rWaiting for " + str(len(combinations)) + " on " + cscConnection.machineName + "(" + processStatusString + "),", louhiTimer.elapsedTimeToString() + sleepString,
+            #time.sleep(60)
+            sleepTimer = Timer()
+            while sleepTimer.getElapsedTime() < 60:
+                steps = int(10 * sleepTimer.getElapsedTime() / 60) + 1
+                sleepString = " [" + steps * "." + (10-steps) * " " + "]     "
+                print >> sys.stderr, "\rWaiting for " + str(len(combinations)) + " on " + cscConnection.machineName + "(" + processStatusString + "),", louhiTimer.elapsedTimeToString() + sleepString,
+                time.sleep(5)                
         else:
+            print >> sys.stderr
             print >> sys.stderr, "Timed out, ", louhiTimer.elapsedTimeToString()
             break
     
     print >> sys.stderr, "Evaluating results"
-    if type(testExamples) != types.ListType:
-        print >> sys.stderr, "Loading examples from file", testExamples
-        testExamples = ExampleUtils.readExamples(testExamples,False)
+    #if type(testExamples) != types.ListType:
+    #    print >> sys.stderr, "Loading examples from file", testExamples
+    #    testExamples = ExampleUtils.readExamples(testExamples,False)
     bestCombinationId = None
     for i in range(len(combinationIds)):
         id = combinationIds[i]
         Stream.setIndent(" ")
         # Evaluate
-        predictions = Classifier.getLouhiPredictions(id, testExamples, cscConnection, workDir)
+        predictions = Classifier.getLouhiPredictions(id, cscConnection, workDir)
         if predictions == None:
             print >> sys.stderr, "No results for combination" + id
         else:
