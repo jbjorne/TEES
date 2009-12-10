@@ -4,7 +4,7 @@
 # Extra is a dictionary of String:String pairs, for additional information about the 
 # examples.
 
-import sys, os
+import sys, os, itertools
 import Split
 import types
 from IdSet import IdSet
@@ -16,6 +16,14 @@ try:
 except ImportError:
     import cElementTree as ET
 import cElementTreeUtils as ETUtils
+
+def gen2iterable(genfunc):
+    def wrapper(*args, **kwargs):
+        class _iterable(object):
+            def __iter__(self):
+                return genfunc(*args, **kwargs)
+        return _iterable()
+    return wrapper
 
 def isDuplicate(example1, example2):
     if example1[1] != example2[1]:
@@ -97,6 +105,7 @@ def getIdsFromFile(filename):
         ids.append( splits[-1].strip() )
     return ids
 
+@gen2iterable
 def readExamples(filename, readFeatures=True):
     f = open(filename,"rt")
     strMap = {}
@@ -191,7 +200,8 @@ def divideExampleFile(exampleFileName, division, outputDir):
         divisionFiles[division[documentId]].write(line)
     for v in divisionFiles.values():
         v.close()
-        
+
+@gen2iterable        
 def loadPredictions(predictionsFile):
     f = open(predictionsFile, "rt")
     try:
@@ -258,131 +268,277 @@ def writeToInteractionXML(examples, predictions, corpusElements, outputFile, cla
     
     if type(classSet) == types.StringType: # class names are in file
         classSet = IdSet(filename=classSet)
-    
-    if type(predictions) == types.StringType:
-        print >> sys.stderr, "Loading predictions from", predictions
-        predictions = loadPredictions(predictions)
-    if type(examples) == types.StringType:
-        print >> sys.stderr, "Loading examples from", examples
-        examples = readExamples(examples, False)
-    
-    #print >> sys.stderr, "Grouping examples"
-    examplesBySentence = {}
-    predictionsByExample = {}
-    xType = None
-    assert len(examples) == len(predictions)
-    if len(examples) == 0:
-        xType = "noExamples"
-    for i in range(len(examples)):
-        example = examples[i]
-        if xType == None:
-            if example[3].has_key("xtype"):
-                xType = example[3]["xtype"]
-        else:
-            assert(example[3]["xtype"] == xType)
-        exampleId = example[0]
-        sentenceId = exampleId.rsplit(".",1)[0]
-        if not examplesBySentence.has_key(sentenceId):
-            examplesBySentence[sentenceId] = []
-        examplesBySentence[sentenceId].append(example)
-        assert not predictionsByExample.has_key(exampleId)
-        predictionsByExample[exampleId] = predictions[i]
-    
+    classIds = None
     if classSet != None:
         classIds = classSet.getIds()
     
-    #print >> sys.stderr, "Processing sentence elements"
-    sentenceElements = corpusElements.sentences
-    for sentenceObject in sentenceElements:
-        sentenceElement = sentenceObject.sentence
-        sentenceId = sentenceElement.get("id")
-        # detach analyses
-        sentenceAnalysesElement = None
-        sentenceAnalysesElement = sentenceElement.find("sentenceanalyses")
-        if sentenceAnalysesElement != None:
-            sentenceElement.remove(sentenceAnalysesElement)
-        # remove pairs and interactions
-        pairElements = sentenceElement.findall("pair")
-        if pairElements != None:
-            for pairElement in pairElements:
-                sentenceElement.remove(pairElement)
-        interactionElements = sentenceElement.findall("interaction")
-        if interactionElements != None:
-            for interactionElement in interactionElements:
-                sentenceElement.remove(interactionElement)
-        # remove entities
-        if xType == "token":
-            entityElements = sentenceElement.findall("entity")
-            entityCount = 0
-            if entityElements != None:
-                entityCount = len(entityElements) # get the count _before_ removing entities
-                for entityElement in entityElements:
-                    if entityElement.get("isName") == "False": # interaction word
-                        sentenceElement.remove(entityElement)
-            # add new pairs
-            entityElements = sentenceElement.findall("entity")
-            newEntityIdCount = IDUtils.getNextFreeId(entityElements)
-            if examplesBySentence.has_key(sentenceId):
-                for example in examplesBySentence[sentenceId]:
-                    prediction = predictionsByExample[example[0]]
-                    entityElement = ET.Element("entity")
-                    entityElement.attrib["isName"] = "False"
-                    headToken = example[3]["t"]
-                    for token in sentenceObject.tokens:
-                        if token.get("id") == headToken:
-                            headToken = token
-                            break
-                    entityElement.attrib["charOffset"] = headToken.get("charOffset") 
-                    entityElement.attrib["headOffset"] = headToken.get("charOffset")
-                    entityElement.attrib["text"] = headToken.get("text")
-                    entityElement.attrib["id"] = sentenceId + ".e" + str(newEntityIdCount)
-                    newEntityIdCount += 1
-                    if classSet == None: # binary classification
-                        if prediction[0] > 0:
-                            entityElement.attrib["type"] = str(True)
-                        else:
-                            entityElement.attrib["type"] = str(False)
+    if type(predictions) == types.StringType:
+        print >> sys.stderr, "Reading predictions from", predictions
+        predictions = loadPredictions(predictions)
+    if type(examples) == types.StringType:
+        print >> sys.stderr, "Reading examples from", examples
+        examples = readExamples(examples, False)
+    
+    #print >> sys.stderr, "Grouping examples"
+    #examplesBySentence = {}
+    #predictionsByExample = {}
+    #xType = None
+    #assert len(examples) == len(predictions)
+    #if len(examples) == 0:
+    #    xType = "noExamples"
+    #for i in range(len(examples)):
+    
+    exampleQueue = []
+    predictionsByExample = {}
+    currentMajorId = None
+    prevMajorIds = set()
+    processedSentenceIds = set()
+    xType = None
+    for example, prediction in itertools.izip(examples, predictions):
+        majorId, minorId = example[0].rsplit(".x", 1)
+        if majorId != currentMajorId: # new sentence
+            if currentMajorId != None:
+                processedSentenceIds.add(currentMajorId)
+                sentenceObject = corpusElements.sentencesById[currentMajorId]
+                _writeExamplesToInteractionXML(exampleQueue, predictionsByExample, sentenceObject, classSet, classIds, xType) # process queue
+            exampleQueue = []
+            predictionsByExample = {}
+            prevMajorIds.add(currentMajorId)
+            assert majorId not in prevMajorIds
+            currentMajorId = majorId 
+        exampleQueue.append(example) # queue example
+        predictionsByExample[example[0]] = prediction
+        if xType == None:
+            xType = example[3]["xtype"]
+        else:
+            assert example[3]["xtype"] == xType, str(example[3]["xtype"]) + "/" + str(xType)
+    
+    # Process what is still in queue
+    processedSentenceIds.add(currentMajorId)
+    sentenceObject = corpusElements.sentencesById[currentMajorId]
+    _writeExamplesToInteractionXML(exampleQueue, predictionsByExample, sentenceObject, classSet, classIds, xType) # process queue
+    exampleQueue = []
+    predictionsByExample = {}
+    
+    # Process sentences with no examples (e.g. to clear interactions)
+    for sentenceId in sorted(corpusElements.sentencesById.keys()):
+        if sentenceId not in processedSentenceIds:
+            sentenceObject = corpusElements.sentencesById[sentenceId]
+            _writeExamplesToInteractionXML([], {}, sentenceObject, classSet, classIds, xType)
+
+    # Write corpus
+    if outputFile != None:
+        print >> sys.stderr, "Writing corpus to", outputFile
+        ETUtils.write(corpusElements.rootElement, outputFile)
+    return corpusElements.tree
+
+def _writeExamplesToInteractionXML(examples, predictionsByExample, sentenceObject, classSet, classIds, xType):
+    currentSetMajorId = None
+    for example in examples:
+        majorId, minorId = example[0].rsplit(".x", 1)
+        if currentSetMajorId == None: 
+            currentSetMajorId = majorId
+        else: 
+            assert currentSetMajorId == majorId, str(currentSetMajorId) + "/" + str(majorId)
+    
+    sentenceElement = sentenceObject.sentence
+    sentenceId = sentenceElement.get("id")
+    # Dummy structure for backwards compatibility
+    examplesBySentence = {}
+    if len(examples) > 0:
+        examplesBySentence[sentenceId] = examples
+    # detach analyses
+    sentenceAnalysesElement = None
+    sentenceAnalysesElement = sentenceElement.find("sentenceanalyses")
+    if sentenceAnalysesElement != None:
+        sentenceElement.remove(sentenceAnalysesElement)
+    # remove pairs and interactions
+    pairElements = sentenceElement.findall("pair")
+    if pairElements != None:
+        for pairElement in pairElements:
+            sentenceElement.remove(pairElement)
+    interactionElements = sentenceElement.findall("interaction")
+    if interactionElements != None:
+        for interactionElement in interactionElements:
+            sentenceElement.remove(interactionElement)
+    # remove entities
+    if xType == "token":
+        entityElements = sentenceElement.findall("entity")
+        entityCount = 0
+        if entityElements != None:
+            entityCount = len(entityElements) # get the count _before_ removing entities
+            for entityElement in entityElements:
+                if entityElement.get("isName") == "False": # interaction word
+                    sentenceElement.remove(entityElement)
+        # add new pairs
+        entityElements = sentenceElement.findall("entity")
+        newEntityIdCount = IDUtils.getNextFreeId(entityElements)
+        if examplesBySentence.has_key(sentenceId):
+            for example in examplesBySentence[sentenceId]:
+                prediction = predictionsByExample[example[0]]
+                entityElement = ET.Element("entity")
+                entityElement.attrib["isName"] = "False"
+                headToken = example[3]["t"]
+                for token in sentenceObject.tokens:
+                    if token.get("id") == headToken:
+                        headToken = token
+                        break
+                entityElement.attrib["charOffset"] = headToken.get("charOffset") 
+                entityElement.attrib["headOffset"] = headToken.get("charOffset")
+                entityElement.attrib["text"] = headToken.get("text")
+                entityElement.attrib["id"] = sentenceId + ".e" + str(newEntityIdCount)
+                newEntityIdCount += 1
+                if classSet == None: # binary classification
+                    if prediction[0] > 0:
+                        entityElement.attrib["type"] = str(True)
                     else:
-                        entityElement.attrib["type"] = classSet.getName(prediction[0])
-                        classWeights = prediction[1:]
-                        predictionString = ""
-                        for i in range(len(classWeights)):
-                            if predictionString != "":
-                                predictionString += ","
-                            predictionString += classSet.getName(classIds[i]) + ":" + str(classWeights[i])
-                        entityElement.attrib["predictions"] = predictionString
-                    #if entityElement.attrib["type"] != "neg":
-                    sentenceElement.append(entityElement)
-                    entityCount += 1
-        elif xType == "edge":
-            pairCount = 0
-            if examplesBySentence.has_key(sentenceId):
-                for example in examplesBySentence[sentenceId]:
-                    prediction = predictionsByExample[example[0]]
+                        entityElement.attrib["type"] = str(False)
+                else:
+                    entityElement.attrib["type"] = classSet.getName(prediction[0])
+                    classWeights = prediction[1:]
+                    predictionString = ""
+                    for i in range(len(classWeights)):
+                        if predictionString != "":
+                            predictionString += ","
+                        predictionString += classSet.getName(classIds[i]) + ":" + str(classWeights[i])
+                    entityElement.attrib["predictions"] = predictionString
+                #if entityElement.attrib["type"] != "neg":
+                sentenceElement.append(entityElement)
+                entityCount += 1
+    elif xType == "edge":
+        pairCount = 0
+        if examplesBySentence.has_key(sentenceId):
+            for example in examplesBySentence[sentenceId]:
+                prediction = predictionsByExample[example[0]]
+                pairElement = ET.Element("interaction")
+                #pairElement.attrib["origId"] = origId
+                #pairElement.attrib["type"] = example[3]["categoryName"]
+                pairElement.attrib["directed"] = "Unknown"
+                pairElement.attrib["e1"] = example[3]["e1"] #.attrib["id"]
+                pairElement.attrib["e2"] = example[3]["e2"] #.attrib["id"]
+                pairElement.attrib["id"] = sentenceId + ".i" + str(pairCount)
+                if classSet == None: # binary classification
+                    if prediction[0] > 0:
+                        pairElement.attrib["type"] = str(True)
+                    else:
+                        pairElement.attrib["type"] = str(False)
+                else:
+                    pairElement.attrib["type"] = classSet.getName(prediction[0])
+                    classWeights = prediction[1:]
+                    predictionString = ""
+                    for i in range(len(classWeights)):
+                        if predictionString != "":
+                            predictionString += ","
+                        predictionString += classSet.getName(classIds[i]) + ":" + str(classWeights[i])
+                    pairElement.attrib["predictions"] = predictionString
+                sentenceElement.append(pairElement)
+                pairCount += 1
+    elif xType == "trigger-event":
+        eventsByToken = {}
+        existingEntities = set()
+        entityElements = sentenceElement.findall("entity")
+        entityCount = 0
+        pairCount = 0
+        if entityElements != None:
+            entityCount = len(entityElements) # get the count _before_ removing entities
+            for entityElement in entityElements:
+                if entityElement.get("isName") == "False": # interaction word
+                    sentenceElement.remove(entityElement)
+                else:
+                    existingEntities.add(entityElement.get("id"))
+        # add new pairs
+        entityElements = sentenceElement.findall("entity")
+        newEntityIdCount = IDUtils.getNextFreeId(entityElements)
+        if examplesBySentence.has_key(sentenceId):
+            eventIdByExample = {}
+            newEntities = []
+            for example in examplesBySentence[sentenceId]:
+                prediction = predictionsByExample[example[0]]
+                if prediction[0] == 1:
+                    continue
+                entityElement = ET.Element("entity")
+                newEntities.append(entityElement)
+                entityElement.attrib["isName"] = "False"
+                headToken = example[3]["et"]
+                for token in sentenceObject.tokens:
+                    if token.get("id") == headToken:
+                        headToken = token
+                        break
+                entityElement.attrib["charOffset"] = headToken.get("charOffset") 
+                entityElement.attrib["headOffset"] = headToken.get("charOffset")
+                entityElement.attrib["text"] = headToken.get("text")
+                entityElement.attrib["id"] = sentenceId + ".e" + str(newEntityIdCount)
+                newEntityIdCount += 1
+                eventIdByExample[example[0]] = entityElement.get("id")
+                
+                #if not eventByOrigId.has_key(example[3]["e"]):
+                #    eventByOrigId[example[3]["e"]] = []
+                #eventByOrigId[example[3]["e"]].append(entityElement.attrib["id"])
+                #example[3]["e"] = entityElement.attrib["id"]
+                
+                
+                if not eventsByToken.has_key(example[3]["et"]):
+                    eventsByToken[example[3]["et"]] = []
+                eventsByToken[example[3]["et"]].append(entityElement.get("id"))
+
+                entityElement.attrib["type"] = example[3]["type"]
+                classWeights = prediction[1:]
+                predictionString = ""
+                for i in range(len(classWeights)):
+                    if predictionString != "":
+                        predictionString += ","
+                    predictionString += classSet.getName(classIds[i]) + ":" + str(classWeights[i])
+                entityElement.attrib["predictions"] = predictionString
+                #if entityElement.attrib["type"] != "neg":
+                sentenceElement.append(entityElement)
+                entityCount += 1
+                
+            for example in examplesBySentence[sentenceId]:
+                prediction = predictionsByExample[example[0]]
+                if prediction[0] == 1:
+                    continue
+                # add theme edge
+                if example[3].has_key("t"):
                     pairElement = ET.Element("interaction")
-                    #pairElement.attrib["origId"] = origId
-                    #pairElement.attrib["type"] = example[3]["categoryName"]
                     pairElement.attrib["directed"] = "Unknown"
-                    pairElement.attrib["e1"] = example[3]["e1"] #.attrib["id"]
-                    pairElement.attrib["e2"] = example[3]["e2"] #.attrib["id"]
-                    pairElement.attrib["id"] = sentenceId + ".i" + str(pairCount)
-                    if classSet == None: # binary classification
-                        if prediction[0] > 0:
-                            pairElement.attrib["type"] = str(True)
-                        else:
-                            pairElement.attrib["type"] = str(False)
+                    pairElement.attrib["e1"] = eventIdByExample[example[0]]
+                    if eventsByToken.has_key(example[3]["tt"]):
+                        pairElement.attrib["e2"] = eventsByToken[example[3]["tt"]][0]
                     else:
-                        pairElement.attrib["type"] = classSet.getName(prediction[0])
-                        classWeights = prediction[1:]
-                        predictionString = ""
-                        for i in range(len(classWeights)):
-                            if predictionString != "":
-                                predictionString += ","
-                            predictionString += classSet.getName(classIds[i]) + ":" + str(classWeights[i])
-                        pairElement.attrib["predictions"] = predictionString
-                    sentenceElement.append(pairElement)
-                    pairCount += 1
-        elif xType == "trigger-event":
+                        if example[3]["t"] in existingEntities:
+                            pairElement.attrib["e2"] = example[3]["t"] #.attrib["id"]
+                    pairElement.attrib["id"] = sentenceId + ".i" + str(pairCount)
+                    pairElement.attrib["type"] = "Theme"
+                    if pairElement.get("e2") != None:
+                        sentenceElement.append(pairElement)
+                        pairCount += 1
+                
+                # add cause edge
+                if example[3].has_key("c"):
+                    pairElement = ET.Element("interaction")
+                    pairElement.attrib["directed"] = "Unknown"
+                    pairElement.attrib["e1"] = eventIdByExample[example[0]]
+                    if eventsByToken.has_key(example[3]["ct"]):
+                        pairElement.attrib["e2"] = eventsByToken[example[3]["ct"]][0]
+                    else:
+                        if example[3]["c"] in existingEntities:
+                            pairElement.attrib["e2"] = example[3]["c"] #.attrib["id"]
+                    pairElement.attrib["id"] = sentenceId + ".i" + str(pairCount)
+                    pairElement.attrib["type"] = "Cause"
+                    if pairElement.get("e2") != None:
+                        sentenceElement.append(pairElement)
+                        pairCount += 1
+#                    classWeights = prediction[1:]
+#                    predictionString = ""
+#                    for i in range(len(classWeights)):
+#                        if predictionString != "":
+#                            predictionString += ","
+#                        predictionString += classSet.getName(classIds[i]) + ":" + str(classWeights[i])
+#                    pairElement.attrib["predictions"] = predictionString
+    elif xType == "event":
+        if True:
+            process(sentenceObject, examplesBySentence, classSet, classIds, predictionsByExample)
+        else:
             eventsByToken = {}
             existingEntities = set()
             entityElements = sentenceElement.findall("entity")
@@ -399,6 +555,23 @@ def writeToInteractionXML(examples, predictions, corpusElements, outputFile, cla
             entityElements = sentenceElement.findall("entity")
             newEntityIdCount = IDUtils.getNextFreeId(entityElements)
             if examplesBySentence.has_key(sentenceId):
+                # split merged examples
+                for example in examplesBySentence[sentenceId][:]:
+                    prediction = predictionsByExample[example[0]]
+                    if classSet.getName(prediction[0]).find("---") != -1:
+                        nameSplits = classSet.getName(prediction[0]).split("---")
+                        prediction[0] = classSet.getId(nameSplits[0], False)
+                        count = 1
+                        for nameSplit in nameSplits[1:]:
+                            newExample = example[:]
+                            newExample[0] += ".dupl" + str(count)
+                            examplesBySentence[sentenceId].append(newExample)
+                            newPrediction = prediction[:]
+                            newPrediction[0] = classSet.getId(nameSplit, False)
+                            predictionsByExample[newExample[0]] = newPrediction
+                            count += 1
+                
+                # the rest of the stuff
                 eventIdByExample = {}
                 newEntities = []
                 for example in examplesBySentence[sentenceId]:
@@ -430,7 +603,7 @@ def writeToInteractionXML(examples, predictions, corpusElements, outputFile, cla
                         eventsByToken[example[3]["et"]] = []
                     eventsByToken[example[3]["et"]].append(entityElement.get("id"))
 
-                    entityElement.attrib["type"] = example[3]["type"]
+                    entityElement.attrib["type"] = classSet.getName(prediction[0]) #example[3]["type"]
                     classWeights = prediction[1:]
                     predictionString = ""
                     for i in range(len(classWeights)):
@@ -447,15 +620,14 @@ def writeToInteractionXML(examples, predictions, corpusElements, outputFile, cla
                     if prediction[0] == 1:
                         continue
                     # add theme edge
-                    if example[3].has_key("t"):
+                    if example[3].has_key("tt"):
                         pairElement = ET.Element("interaction")
                         pairElement.attrib["directed"] = "Unknown"
                         pairElement.attrib["e1"] = eventIdByExample[example[0]]
                         if eventsByToken.has_key(example[3]["tt"]):
                             pairElement.attrib["e2"] = eventsByToken[example[3]["tt"]][0]
-                        else:
-                            if example[3]["t"] in existingEntities:
-                                pairElement.attrib["e2"] = example[3]["t"] #.attrib["id"]
+                        elif example[3].has_key("t") and example[3]["t"] in existingEntities:
+                            pairElement.attrib["e2"] = example[3]["t"] #.attrib["id"]
                         pairElement.attrib["id"] = sentenceId + ".i" + str(pairCount)
                         pairElement.attrib["type"] = "Theme"
                         if pairElement.get("e2") != None:
@@ -463,152 +635,26 @@ def writeToInteractionXML(examples, predictions, corpusElements, outputFile, cla
                             pairCount += 1
                     
                     # add cause edge
-                    if example[3].has_key("c"):
+                    if example[3].has_key("ct"):
                         pairElement = ET.Element("interaction")
                         pairElement.attrib["directed"] = "Unknown"
                         pairElement.attrib["e1"] = eventIdByExample[example[0]]
                         if eventsByToken.has_key(example[3]["ct"]):
                             pairElement.attrib["e2"] = eventsByToken[example[3]["ct"]][0]
-                        else:
-                            if example[3]["c"] in existingEntities:
-                                pairElement.attrib["e2"] = example[3]["c"] #.attrib["id"]
+                        elif example[3].has_key("c") and example[3]["c"] in existingEntities:
+                            pairElement.attrib["e2"] = example[3]["c"] #.attrib["id"]
                         pairElement.attrib["id"] = sentenceId + ".i" + str(pairCount)
                         pairElement.attrib["type"] = "Cause"
                         if pairElement.get("e2") != None:
                             sentenceElement.append(pairElement)
                             pairCount += 1
-#                    classWeights = prediction[1:]
-#                    predictionString = ""
-#                    for i in range(len(classWeights)):
-#                        if predictionString != "":
-#                            predictionString += ","
-#                        predictionString += classSet.getName(classIds[i]) + ":" + str(classWeights[i])
-#                    pairElement.attrib["predictions"] = predictionString
-        elif xType == "event":
-            if True:
-                process(sentenceObject, examplesBySentence, classSet, classIds, predictionsByExample)
-            else:
-                eventsByToken = {}
-                existingEntities = set()
-                entityElements = sentenceElement.findall("entity")
-                entityCount = 0
-                pairCount = 0
-                if entityElements != None:
-                    entityCount = len(entityElements) # get the count _before_ removing entities
-                    for entityElement in entityElements:
-                        if entityElement.get("isName") == "False": # interaction word
-                            sentenceElement.remove(entityElement)
-                        else:
-                            existingEntities.add(entityElement.get("id"))
-                # add new pairs
-                entityElements = sentenceElement.findall("entity")
-                newEntityIdCount = IDUtils.getNextFreeId(entityElements)
-                if examplesBySentence.has_key(sentenceId):
-                    # split merged examples
-                    for example in examplesBySentence[sentenceId][:]:
-                        prediction = predictionsByExample[example[0]]
-                        if classSet.getName(prediction[0]).find("---") != -1:
-                            nameSplits = classSet.getName(prediction[0]).split("---")
-                            prediction[0] = classSet.getId(nameSplits[0], False)
-                            count = 1
-                            for nameSplit in nameSplits[1:]:
-                                newExample = example[:]
-                                newExample[0] += ".dupl" + str(count)
-                                examplesBySentence[sentenceId].append(newExample)
-                                newPrediction = prediction[:]
-                                newPrediction[0] = classSet.getId(nameSplit, False)
-                                predictionsByExample[newExample[0]] = newPrediction
-                                count += 1
-                    
-                    # the rest of the stuff
-                    eventIdByExample = {}
-                    newEntities = []
-                    for example in examplesBySentence[sentenceId]:
-                        prediction = predictionsByExample[example[0]]
-                        if prediction[0] == 1:
-                            continue
-                        entityElement = ET.Element("entity")
-                        newEntities.append(entityElement)
-                        entityElement.attrib["isName"] = "False"
-                        headToken = example[3]["et"]
-                        for token in sentenceObject.tokens:
-                            if token.get("id") == headToken:
-                                headToken = token
-                                break
-                        entityElement.attrib["charOffset"] = headToken.get("charOffset") 
-                        entityElement.attrib["headOffset"] = headToken.get("charOffset")
-                        entityElement.attrib["text"] = headToken.get("text")
-                        entityElement.attrib["id"] = sentenceId + ".e" + str(newEntityIdCount)
-                        newEntityIdCount += 1
-                        eventIdByExample[example[0]] = entityElement.get("id")
-                        
-                        #if not eventByOrigId.has_key(example[3]["e"]):
-                        #    eventByOrigId[example[3]["e"]] = []
-                        #eventByOrigId[example[3]["e"]].append(entityElement.attrib["id"])
-                        #example[3]["e"] = entityElement.attrib["id"]
-                        
-                        
-                        if not eventsByToken.has_key(example[3]["et"]):
-                            eventsByToken[example[3]["et"]] = []
-                        eventsByToken[example[3]["et"]].append(entityElement.get("id"))
-    
-                        entityElement.attrib["type"] = classSet.getName(prediction[0]) #example[3]["type"]
-                        classWeights = prediction[1:]
-                        predictionString = ""
-                        for i in range(len(classWeights)):
-                            if predictionString != "":
-                                predictionString += ","
-                            predictionString += classSet.getName(classIds[i]) + ":" + str(classWeights[i])
-                        entityElement.attrib["predictions"] = predictionString
-                        #if entityElement.attrib["type"] != "neg":
-                        sentenceElement.append(entityElement)
-                        entityCount += 1
-                        
-                    for example in examplesBySentence[sentenceId]:
-                        prediction = predictionsByExample[example[0]]
-                        if prediction[0] == 1:
-                            continue
-                        # add theme edge
-                        if example[3].has_key("tt"):
-                            pairElement = ET.Element("interaction")
-                            pairElement.attrib["directed"] = "Unknown"
-                            pairElement.attrib["e1"] = eventIdByExample[example[0]]
-                            if eventsByToken.has_key(example[3]["tt"]):
-                                pairElement.attrib["e2"] = eventsByToken[example[3]["tt"]][0]
-                            elif example[3].has_key("t") and example[3]["t"] in existingEntities:
-                                pairElement.attrib["e2"] = example[3]["t"] #.attrib["id"]
-                            pairElement.attrib["id"] = sentenceId + ".i" + str(pairCount)
-                            pairElement.attrib["type"] = "Theme"
-                            if pairElement.get("e2") != None:
-                                sentenceElement.append(pairElement)
-                                pairCount += 1
-                        
-                        # add cause edge
-                        if example[3].has_key("ct"):
-                            pairElement = ET.Element("interaction")
-                            pairElement.attrib["directed"] = "Unknown"
-                            pairElement.attrib["e1"] = eventIdByExample[example[0]]
-                            if eventsByToken.has_key(example[3]["ct"]):
-                                pairElement.attrib["e2"] = eventsByToken[example[3]["ct"]][0]
-                            elif example[3].has_key("c") and example[3]["c"] in existingEntities:
-                                pairElement.attrib["e2"] = example[3]["c"] #.attrib["id"]
-                            pairElement.attrib["id"] = sentenceId + ".i" + str(pairCount)
-                            pairElement.attrib["type"] = "Cause"
-                            if pairElement.get("e2") != None:
-                                sentenceElement.append(pairElement)
-                                pairCount += 1
-        elif xType == "noExamples":
-            pass
-        else:
-            sys.exit("Error, unknown xtype")
-        # re-attach the analyses-element
-        if sentenceAnalysesElement != None:
-            sentenceElement.append(sentenceAnalysesElement)
-    # Write corpus
-    if outputFile != None:
-        print >> sys.stderr, "Writing corpus to", outputFile
-        ETUtils.write(corpusElements.rootElement, outputFile)
-    return corpusElements.tree
+    elif xType == None:
+        pass
+    else:
+        sys.exit("Error, unknown xtype")
+    # re-attach the analyses-element
+    if sentenceAnalysesElement != None:
+        sentenceElement.append(sentenceAnalysesElement)
 
 def getTokenById(id, sentenceObject):
     for token in sentenceObject.tokens:
