@@ -99,32 +99,33 @@ def getIdsFromFile(filename):
 
 def readExamples(filename, readFeatures=True):
     f = open(filename,"rt")
-    examples = []
     strMap = {}
-    for line in f.readlines():
-        if line[0] == "#":
-            continue
-        splits = line.split("#")
-        commentSplits = splits[-1].split()
-        id = None
-        extra = {}
-        for commentSplit in commentSplits:
-            key, value = commentSplit.split(":")
-            if key == "id":
-                id = value
-            else:
-                value = strMap.setdefault(value, value)
-                extra[key] = value
-        splits2 = splits[0].split()
-        classId = int(splits2[0])
-        features = {}
-        if readFeatures:
-            for item in splits2[1:]:
-                featureId, featureValue = item.split(":")
-                features[int(featureId)] = float(featureValue)
-        examples.append([id,classId,features,extra])
-    return examples
-
+    try:
+        for line in f:
+            if line[0] == "#":
+                continue
+            splits = line.split("#")
+            commentSplits = splits[-1].split()
+            id = None
+            extra = {}
+            for commentSplit in commentSplits:
+                key, value = commentSplit.split(":")
+                if key == "id":
+                    id = value
+                else:
+                    value = strMap.setdefault(value, value)
+                    extra[key] = value
+            splits2 = splits[0].split()
+            classId = int(splits2[0])
+            features = {}
+            if readFeatures:
+                for item in splits2[1:]:
+                    featureId, featureValue = item.split(":")
+                    features[int(featureId)] = float(featureValue)
+            yield [id,classId,features,extra]
+    finally:
+        f.close()
+    
 def makeCorpusDivision(corpusElements, fraction=0.5, seed=0):
     documentIds = corpusElements.documentsById.keys()
     return makeDivision(documentIds, fraction, seed)
@@ -192,20 +193,20 @@ def divideExampleFile(exampleFileName, division, outputDir):
         v.close()
         
 def loadPredictions(predictionsFile):
-    predictionsFile = open(predictionsFile, "rt")
-    lines = predictionsFile.readlines()
-    predictionsFile.close()
-    predictions = []
-    for i in range(len(lines)):
-        splits = lines[i].split()
-        if len(splits) == 1:
-            predictions.append( [float(splits[0])] )
-        else: # multiclass
-            predictions.append( [int(splits[0])] )# + splits[1:] )
-            for split in splits[1:]:
-                predictions[-1].append(float(split))
-            #predictions.append( (examples[i],int(lines[i].split()[0]),"multiclass",lines[i].split()[1:]) )
-    return predictions
+    f = open(predictionsFile, "rt")
+    try:
+        for line in f:
+            splits = line.split()
+            if len(splits) == 1:
+                yield [float(splits[0])]
+            else: # multiclass
+                pred = [int(splits[0])]
+                for split in splits[1:]:
+                    pred.append(float(split))
+                yield pred
+                #predictions.append( (examples[i],int(lines[i].split()[0]),"multiclass",lines[i].split()[1:]) )
+    finally:
+        f.close()
 
 def writeTask3ToInteractionXML(classifications, corpusElements, outputFileName, task3Type):
     import sys
