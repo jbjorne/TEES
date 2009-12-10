@@ -1,10 +1,10 @@
 from Evaluator import Evaluator
 from Evaluator import EvaluationData
-from BinaryEvaluator import BinaryEvaluator
 import sys, os, types
 sys.path.append(os.path.dirname(os.path.abspath(__file__))+"/..")
 from Core.IdSet import IdSet
 import Core.ExampleUtils as ExampleUtils
+import itertools
 
 class AveragingMultiClassEvaluator(Evaluator):
     type = "multiclass"
@@ -33,7 +33,10 @@ class AveragingMultiClassEvaluator(Evaluator):
         for cls in self.classes:
             self.dataByClass[cls] = EvaluationData()
         
-        self.untypedUndirected = None
+        #self.untypedUndirected = None
+        self.untypedCurrentMajorId = None
+        self.untypedPredictionQueue = []
+        self.untypedUndirected = EvaluationData()
         #self.AUC = None
         if predictions != None:
             self._calculate(examples, predictions)
@@ -99,48 +102,89 @@ class AveragingMultiClassEvaluator(Evaluator):
 #        averageEvaluator.microFScore /= sumWeight
 #        return averageEvaluator
 #    average = staticmethod(average)
+
+    def _queueUntypedUndirected(self, example, prediction):
+        """
+        All examples within the same majorId (same sentence) are
+        put in queue. Once major id (sentence) changes, these
+        examples are processed.
+        """
+        majorId, minorId = example[0].rsplit(".x", 1)
+        if majorId != self.untypedCurrentMajorId: # new sentence
+            self._processUntypedUndirectedQueue() # process queue
+            self.untypedCurrentMajorId = majorId 
+        self.untypedPredictionQueue.append( (example, prediction) ) # queue example
     
-    def _calculateUntypedUndirected(self, examples, predictions):
-        untypedUndirectedPredictions = []
-        predictionsById = {}
-        for i in range(len(examples)):
-            id = examples[i][0]
-            if id != None and id != "":
-                majorId, minorId = id.rsplit(".x", 1)
-                if not predictionsById.has_key(majorId):
-                    predictionsById[majorId] = {}
-                predictionsById[majorId][int(minorId)] = (examples[i], predictions[i])
-        for majorId in sorted(predictionsById.keys()):
-            prevPrediction = None
-            for minorId in sorted(predictionsById[majorId]):
-                prediction = predictionsById[majorId][minorId]
-                if prevPrediction != None and minorId % 2 != 0:
-                    if prediction[0][1] != 1 or prevPrediction[0][1] != 1:
-                        trueClass = 1
-                    else:
-                        trueClass = -1
-                    if prediction[1][0] != 1 or prevPrediction[1][0] != 1:
-                        predictedClass = 1
-                    else:
-                        predictedClass = -1
-                    untypedUndirectedPredictions.append( ((None,trueClass),predictedClass) )
-                prevPrediction = prediction
-        if len(untypedUndirectedPredictions) > 0:
-            self.untypedUndirected = BinaryEvaluator(untypedUndirectedPredictions)
+    def _processUntypedUndirectedQueue(self):
+        """
+        Determines the untyped undirected performance by merging example
+        pairs. This statistic is only meaningful for examples representing
+        directed edges where two consecutive examples are the two directed
+        edges between a pair of nodes.
+        """
+        prevExample = None
+        prevPrediction = None
+        for example, prediction in self.untypedPredictionQueue:
+            majorId, minorId = example[0].rsplit(".x", 1)
+            if prevExample != None and prevPrediction != None and int(minorId) % 2 != 0:
+                # A positive example in either direction counts as a positive
+                if example[1] != 1 or prevExample[1] != 1: # 1 is the multiclass "neg" class id
+                    trueClass = 1 # binary positive class
+                else:
+                    trueClass = -1 # binary negative class
+                # A positive prediction in either direction counts as a positive
+                if prediction[0] != 1 or prevPrediction[0] != 1:
+                    predictedClass = 1
+                else:
+                    predictedClass = -1
+                self.untypedUndirected.addInstance(trueClass == 1, predictedClass == 1)
+            prevExample = example
+            prevPrediction = prediction
+        self.untypedPredictionQueue = [] # clear the queue   
+    
+#    def _calculateUntypedUndirected(self, examples, predictions):
+#        untypedUndirectedPredictions = []
+#        predictionsById = {}
+#        for i in range(len(examples)):
+#            id = examples[i][0]
+#            if id != None and id != "":
+#                majorId, minorId = id.rsplit(".x", 1)
+#                if not predictionsById.has_key(majorId):
+#                    predictionsById[majorId] = {}
+#                predictionsById[majorId][int(minorId)] = (examples[i], predictions[i])
+#        for majorId in sorted(predictionsById.keys()):
+#            prevPrediction = None
+#            for minorId in sorted(predictionsById[majorId]):
+#                prediction = predictionsById[majorId][minorId]
+#                if prevPrediction != None and minorId % 2 != 0:
+#                    if prediction[0][1] != 1 or prevPrediction[0][1] != 1:
+#                        trueClass = 1
+#                    else:
+#                        trueClass = -1
+#                    if prediction[1][0] != 1 or prevPrediction[1][0] != 1:
+#                        predictedClass = 1
+#                    else:
+#                        predictedClass = -1
+#                    untypedUndirectedPredictions.append( ((None,trueClass),predictedClass) )
+#                prevPrediction = prediction
+#        if len(untypedUndirectedPredictions) > 0:
+#            self.untypedUndirected = BinaryEvaluator(untypedUndirectedPredictions)
 
     def _calculate(self, examples, predictions):
         """
         The actual evaluation
         """
-        self._calculateUntypedUndirected(examples, predictions)
+        #self._calculateUntypedUndirected(examples, predictions)
         # First count instances
         self.microF = EvaluationData()
         self.binaryF = EvaluationData()
         self.classifications = []
-        assert(len(examples) == len(predictions))
-        for i in range(len(examples)):
-            example = examples[i] # examples and predictions are in matching lists
-            prediction = predictions[i] # examples and predictions are in matching lists
+        #assert(len(examples) == len(predictions))
+        #for i in range(len(examples)):
+        for example, prediction in itertools.izip(examples, predictions):
+            self._queueUntypedUndirected(example, prediction)
+            #example = examples[i] # examples and predictions are in matching lists
+            #prediction = predictions[i] # examples and predictions are in matching lists
             trueClass = example[1]
             assert(trueClass > 0) # multiclass classification uses non-negative integers
             predictedClass = prediction[0]
@@ -186,6 +230,10 @@ class AveragingMultiClassEvaluator(Evaluator):
                         self.dataByClass[cls].addFN()
                     elif cls != predictedClass:
                         self.dataByClass[cls].addTN()
+        
+        # Process remaining untyped undirected examples and calculate untyped undirected f-score
+        self._processUntypedUndirectedQueue()
+        self.untypedUndirected.calculateFScore()
                 
         # Then calculate statistics
         for cls in self.classes:
@@ -239,9 +287,11 @@ class AveragingMultiClassEvaluator(Evaluator):
         # Macro results
         string += "macro " + self.macroF.prfToString() + "\n" + indent
         # Binary results
-        string += "untyped " + self.binaryF.toStringConcise() + "\n" + indent
+        string += "untyped " + self.binaryF.toStringConcise()
+        # Untyped undirected results
         if self.untypedUndirected != None:
-            string += self.untypedUndirected.toStringConcise("untyped undirected ")
+            string += "\n" + indent
+            string += "untyped undirected " + self.untypedUndirected.toStringConcise()
         return string
     
 #    def __addClassToCSV(self, csvWriter, cls):
