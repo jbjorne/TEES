@@ -193,7 +193,15 @@ class SVMMultiClassClassifier(Classifier):
     
     @classmethod
     def getLouhiStatus(cls, idStr, cscConnection):
-        return cscConnection.exists("predictions"+idStr)
+        stderrStatus = cscConnection.getFileStatus("script" + idStr + ".sh" + "-stderr")
+        if stderrStatus == cscConnection.NOT_EXIST:
+            return "QUEUED"
+        elif stderrStatus == cscConnection.NONZERO:
+            return "FAILED"
+        elif cscConnection.exists("predictions"+idStr):
+            return "FINISHED"
+        else:
+            return "RUNNING"
 
     @classmethod
     def downloadModel(cls, idStr, cscConnection, localWorkDir=None):
@@ -206,8 +214,7 @@ class SVMMultiClassClassifier(Classifier):
         return "model"+idStr
     
     @classmethod
-    def getLouhiPredictions(cls, idStr, examples, cscConnection, localWorkDir=None):
-        assert(type(examples)==types.ListType)
+    def getLouhiPredictions(cls, idStr, cscConnection, localWorkDir=None):
         if not cls.getLouhiStatus(idStr, cscConnection):
             return None
         predFileName = "predictions"+idStr
