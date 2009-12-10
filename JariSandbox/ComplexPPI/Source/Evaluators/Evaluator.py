@@ -49,6 +49,16 @@ class EvaluationData:
         self.fscore = None
         self.precision = None
         self.recall = None
+    
+    def addInstance(self, trueClassIsPositive, predictedClassIsPositive):
+        if trueClassIsPositive and predictedClassIsPositive:
+            self.addTP()
+        elif trueClassIsPositive and not predictedClassIsPositive:
+            self.addFN()
+        elif (not trueClassIsPositive) and predictedClassIsPositive:
+            self.addFP()
+        else: # (not trueClassIsPositive) and (not predictedClassIsPositive)
+            self.addTN()
         
     def addTP(self):
         self.resetStats()
