@@ -108,7 +108,6 @@ def getIdsFromFile(filename):
 @gen2iterable
 def readExamples(filename, readFeatures=True):
     f = open(filename,"rt")
-    strMap = {}
     #try:
     for line in f:
         if line[0] == "#":
@@ -122,7 +121,6 @@ def readExamples(filename, readFeatures=True):
             if key == "id":
                 id = value
             else:
-                value = strMap.setdefault(value, value)
                 extra[key] = value
         splits2 = splits[0].split()
         classId = int(splits2[0])
