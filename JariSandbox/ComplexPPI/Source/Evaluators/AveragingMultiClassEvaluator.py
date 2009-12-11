@@ -178,7 +178,7 @@ class AveragingMultiClassEvaluator(Evaluator):
         # First count instances
         self.microF = EvaluationData()
         self.binaryF = EvaluationData()
-        self.classifications = []
+        #self.classifications = []
         #assert(len(examples) == len(predictions))
         #for i in range(len(examples)):
         for example, prediction in itertools.izip(examples, predictions):
@@ -194,13 +194,13 @@ class AveragingMultiClassEvaluator(Evaluator):
                 # correctly classified for its class -> true positive for that class
                 self.dataByClass[trueClass].addTP()
                 if trueClass != 1: # a non-negative example -> correct = true positive
-                    self.classifications.append("tp")
+                    #self.classifications.append("tp")
                     #self.classifications.append((prediction[0],"tp",self.type,prediction[1],prediction[3]))
                     self.microF.addTP()
                     self.binaryF.addTP()
                 else: # a negative example -> correct = true negative
                     #self.classifications.append((prediction[0],"tn",self.type,prediction[1],prediction[3]))
-                    self.classifications.append("tn")
+                    #self.classifications.append("tn")
                     self.microF.addTN()
                     self.binaryF.addTN()
                 for cls in self.classes:
@@ -213,12 +213,12 @@ class AveragingMultiClassEvaluator(Evaluator):
                 # prediction was incorrect -> false positive for the predicted class
                 self.dataByClass[predictedClass].addFP()
                 if predictedClass == 1: # non-negative example, negative prediction -> incorrect = false negative
-                    self.classifications.append("fn")
+                    #self.classifications.append("fn")
                     #self.classifications.append((prediction[0],"fn",self.type,prediction[1],prediction[3]))
                     self.microF.addFN()
                     self.binaryF.addFN()
                 else: # non-negative incorrect prediction -> false positive
-                    self.classifications.append("fp")
+                    #self.classifications.append("fp")
                     #self.classifications.append((prediction[0],"fp",self.type,prediction[1],prediction[3]))
                     self.microF.addFP()
                     if trueClass == 1:
