@@ -221,14 +221,16 @@ class SVMMultiClassClassifier(Classifier):
         if localWorkDir != None:
             predFileName = os.path.join(localWorkDir, predFileName)
         cscConnection.download("predictions"+idStr, predFileName)
-        predictionsFile = open(predFileName, "rt")
-        lines = predictionsFile.readlines()
-        predictionsFile.close()
-        predictions = []
-        for i in range(len(lines)):
-            predictions.append( [int(lines[i].split()[0])] + lines[i].split()[1:] )
-            #predictions.append( (examples[i],int(lines[i].split()[0]),"multiclass",lines[i].split()[1:]) )
-        return predictions
+        return predFileName
+        
+#        predictionsFile = open(predFileName, "rt")
+#        lines = predictionsFile.readlines()
+#        predictionsFile.close()
+#        predictions = []
+#        for i in range(len(lines)):
+#            predictions.append( [int(lines[i].split()[0])] + lines[i].split()[1:] )
+#            #predictions.append( (examples[i],int(lines[i].split()[0]),"multiclass",lines[i].split()[1:]) )
+#        return predictions
     
 if __name__=="__main__":
     # Import Psyco if available
