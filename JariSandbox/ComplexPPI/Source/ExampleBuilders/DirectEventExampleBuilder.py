@@ -455,31 +455,33 @@ class DirectEventExampleBuilder(ExampleBuilder):
                 if validArg:
                     oneArgValid = True
         
-        oneEdgeValid = False
-        for argToken in argTokens:
-            if argToken == None:
-                continue
-            if paths[eventToken].has_key(argToken):
-                path = paths[eventToken][argToken]
-            else:
-                #print argToken, argToken.get("text")
-                #return False
-                continue
-            depPaths = self.multiEdgeFeatureBuilder.getEdgeCombinations(sentenceGraph.dependencyGraph, path)
-            validArg = False
-            for p in depPaths:
-                p = p.replace("<","")
-                p = p.replace(">","")
-                p = p.split(".")
-                pair = (p[0], p[-1])
-                if pair in self.pathGazetteerPairs:
-                    validArg = True
+        # The first and last dependency of a path
+        if False:
+            oneEdgeValid = False
+            for argToken in argTokens:
+                if argToken == None:
+                    continue
+                if paths[eventToken].has_key(argToken):
+                    path = paths[eventToken][argToken]
+                else:
+                    #print argToken, argToken.get("text")
+                    #return False
+                    continue
+                depPaths = self.multiEdgeFeatureBuilder.getEdgeCombinations(sentenceGraph.dependencyGraph, path)
+                validArg = False
+                for p in depPaths:
+                    p = p.replace("<","")
+                    p = p.replace(">","")
+                    p = p.split(".")
+                    pair = (p[0], p[-1])
+                    if pair in self.pathGazetteerPairs:
+                        validArg = True
+                        break
+                if validArg:
+                    oneEdgeValid = True
                     break
-            if validArg:
-                oneEdgeValid = True
-                break
-        if not oneEdgeValid:
-            return "pair"
+            if not oneEdgeValid:
+                return "pair"
 
         # Event must not have unseen dependencies in any of its paths
         if False:
