@@ -44,6 +44,28 @@ class PathGazetteer(ExampleBuilder):
         f.close()
         return gazetteer
     
+    @classmethod
+    def getDependencies(cls, gazetteer):
+        dependencies = set()
+        for k in gazetteer.keys():
+            k = k.strip()
+            k = k.replace("<","")
+            k = k.replace(">","")
+            for dep in k.split("."):
+                dependencies.add(dep)
+        return dependencies
+    
+    @classmethod
+    def getPairs(self, gazetteer):
+        pairs = []
+        for k in gazetteer.keys():
+            k = k.strip()
+            k = k.replace("<","")
+            k = k.replace(">","")
+            splits = k.split(".")
+            pairs.append( (splits[0], splits[-1]) )
+        return pairs
+    
     def calculateFractions(self):
         numInstances = 0
         numPos = 0

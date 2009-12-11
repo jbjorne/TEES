@@ -30,12 +30,16 @@ class DirectEventExampleBuilder(ExampleBuilder):
             print >> sys.stderr, "No gazetteer loaded"
             self.gazetteer=None
         
+        self.pathGazetteer=None
+        self.pathGazetteerDependencies = None
+        self.pathGazetteerPairs = None
         if pathGazetteer != None:
             print >> sys.stderr, "Loading path gazetteer from", pathGazetteer
             self.pathGazetteer=PathGazetteer.load(pathGazetteer)
+            self.pathGazetteerDependencies = PathGazetteer.getDependencies(self.pathGazetteer)
+            self.pathGazetteerPairs = PathGazetteer.getPairs(self.pathGazetteer)
         else:
             print >> sys.stderr, "No path gazetteer loaded"
-            self.pathGazetteer=None
         
         ExampleBuilder.__init__(self, classSet=classSet, featureSet=featureSet)
         self.styles = style
@@ -430,7 +434,28 @@ class DirectEventExampleBuilder(ExampleBuilder):
                 newArgTokens.append(argToken)
         argTokens = newArgTokens
         
-        oneArgValid = False    
+        oneArgValid = True
+        if False:
+            oneArgValid = False    
+            for argToken in argTokens:
+                if argToken == None:
+                    continue
+                if paths[eventToken].has_key(argToken):
+                    path = paths[eventToken][argToken]
+                else:
+                    #print argToken, argToken.get("text")
+                    #return False
+                    continue
+                depPaths = self.multiEdgeFeatureBuilder.getEdgeCombinations(sentenceGraph.dependencyGraph, path)
+                validArg = False
+                for p in depPaths:
+                    if p in self.pathGazetteer and self.pathGazetteer[p][0] > 0:
+                        validArg = True
+                        break
+                if validArg:
+                    oneArgValid = True
+        
+        oneEdgeValid = False
         for argToken in argTokens:
             if argToken == None:
                 continue
@@ -443,12 +468,34 @@ class DirectEventExampleBuilder(ExampleBuilder):
             depPaths = self.multiEdgeFeatureBuilder.getEdgeCombinations(sentenceGraph.dependencyGraph, path)
             validArg = False
             for p in depPaths:
-                if p in self.pathGazetteer and self.pathGazetteer[p][0] > 0:
+                p = p.replace("<","")
+                p = p.replace(">","")
+                p = p.split(".")
+                pair = (p[0], p[-1])
+                if pair in self.pathGazetteerPairs:
                     validArg = True
                     break
             if validArg:
-                oneArgValid = True
-            
+                oneEdgeValid = True
+                break
+        if not oneEdgeValid:
+            return "pair"
+
+        # Event must not have unseen dependencies in any of its paths
+        if False:
+            for argToken in argTokens:
+                if argToken == None:
+                    continue
+                if paths[eventToken].has_key(argToken):
+                    path = paths[eventToken][argToken]
+                else:
+                    continue
+                deps = self.multiEdgeFeatureBuilder.getEdgeSet(sentenceGraph.dependencyGraph, path)
+                for d in deps:
+                    if d[2].get("type") not in self.pathGazetteerDependencies:
+                        #print "Unk", d[2].get("type")
+                        return "unkdep"
+                
 #            validArg = True
 #            for p in depPaths:
 #                if p in self.pathGazetteer and self.pathGazetteer[p][0] == 0:

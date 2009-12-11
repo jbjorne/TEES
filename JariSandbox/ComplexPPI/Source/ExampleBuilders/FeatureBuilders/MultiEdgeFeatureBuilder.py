@@ -148,6 +148,18 @@ class MultiEdgeFeatureBuilder(FeatureBuilder):
 #        self.edgeCache[ids] = pathEdges
         return pathEdges
     
+    def getEdgeSet(self, graph, path):
+        pathEdges = set()
+        edges = graph.edges(data=True)
+        for i in range(1, len(path)):
+            for edge in edges:
+                edgeTuple = (edge[0], edge[1], edge[2]["element"])
+                if edge[0] == path[i-1] and edge[1] == path[i]:
+                    pathEdges.add(edgeTuple)
+                elif edge[1] == path[i-1] and edge[0] == path[i]:
+                    pathEdges.add(edgeTuple)
+        return pathEdges
+    
     def getEdgeCombinations(self, graph, path):
         if len(path) == 1:
             return set()
