@@ -44,6 +44,7 @@ class DirectEventExampleBuilder(ExampleBuilder):
         ExampleBuilder.__init__(self, classSet=classSet, featureSet=featureSet)
         self.styles = style
         self.negFrac = negFrac
+        print >> sys.stderr, "Downsampling negatives to", negFrac
         self.negRand = random.Random()
         
         self.multiEdgeFeatureBuilder = MultiEdgeFeatureBuilder(self.featureSet)
