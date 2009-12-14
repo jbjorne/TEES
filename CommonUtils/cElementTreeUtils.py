@@ -107,13 +107,35 @@ def write(rootElement, filename):
 def writeUTF8(rootElement,out):
     indent(rootElement)
     if isinstance(out,str):
-        f=open(out,"wt")
+        if out.endswith(".gz"):
+            f=GzipFile(out,"wt")
+        else:
+            f=open(out,"wt")
         print >> f, '<?xml version="1.0" encoding="UTF-8"?>'
         ElementTree.ElementTree(rootElement).write(f,"utf-8")
         f.close()
     else:
         print >> out, '<?xml version="1.0" encoding="UTF-8"?>'
         ElementTree.ElementTree(rootElement).write(out,"utf-8")
+
+
+def makePath(element,tagList):
+    #taglist is a list of tag names
+    #a list of corresponding elements is returned
+    #if these did not exist, they are created!
+    #
+    result=[]
+    currElem=element
+    for tag in tagList:
+        for subElem in currElem:
+            if subElem.tag==tag:
+                break
+        else:
+            subElem=ElementTree.SubElement(currElem,tag)
+        result.append(subElem)
+        currElem=subElem
+    return result
+    
 
 if __name__=="__main__":
     r=ElementTree.parse("delme.xml").getroot()
