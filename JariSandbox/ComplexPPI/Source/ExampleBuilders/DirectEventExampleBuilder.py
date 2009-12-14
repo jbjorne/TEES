@@ -508,7 +508,7 @@ class DirectEventExampleBuilder(ExampleBuilder):
 #            if not validArg:
 #                return False
         if not oneArgValid:
-            return "OK" #"novalidarg" #False
+            return "novalidarg" #False
         return "OK" #True
     
     def setGazetteerFeatures(self, token, tag):
