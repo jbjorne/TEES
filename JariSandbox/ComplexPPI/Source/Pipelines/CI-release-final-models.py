@@ -55,8 +55,8 @@ if options.entities == "alltokens":
 
 # Pre-made models etc
 PROJECT_DIR = "/usr/share/biotext/GeniaChallenge/CI-release"
-TRIGGER_DIR = PROJECT_DIR + "/triggers/triggers" + TRIGGER_TASK_TAG
-EDGE_DIR = PROJECT_DIR + "/edges/edges" + EDGE_TASK_TAG
+TRIGGER_DIR = PROJECT_DIR + "/triggers" + TRIGGER_TASK_TAG
+EDGE_DIR = PROJECT_DIR + "/edges" + EDGE_TASK_TAG
 EDGE_MODEL_STEM = EDGE_DIR + "/devel-edge-models/model-c_"
 TRIGGER_MODEL_STEM = TRIGGER_DIR + "/devel-trigger-models/model-c_"
 
@@ -71,9 +71,9 @@ else:
 EDGE_FEATURE_PARAMS="style:typed,directed,no_linear,entities,genia_limits,noMasking,maxFeatures"
 
 BEST_PARAMS={
-    "trigger":[100000], 
-    "booster":[0.6], 
-    "edge":[60000]
+    "trigger":100000, 
+    "booster":0.6, 
+    "edge":60000
 }
 
 # These commands will be in the beginning of most pipelines
