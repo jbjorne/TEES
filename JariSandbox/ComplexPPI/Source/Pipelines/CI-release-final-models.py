@@ -93,8 +93,11 @@ GeneralEntityTypeRecognizerGztr.run(DEVEL_FILE, "devel-trigger-examples", PARSE_
 GeneralEntityTypeRecognizerGztr.run(TRAIN_FILE, "train-trigger-examples", PARSE_TOK, PARSE_TOK, TRIGGER_FEATURE_PARAMS, "genia-trigger-ids", GAZETTEER)
 MultiEdgeExampleBuilder.run(TRAIN_FILE, "train-edge-examples", PARSE_TOK, PARSE_TOK, EDGE_FEATURE_PARAMS, "genia-edge-ids")
 
-Cls.train("train-trigger-examples", "c:"+str(BEST_PARAMS["trigger"]), "train-trigger-model")
-Cls.test("devel-trigger-examples", "train-trigger-model", "devel-trigger-classifications")
+#Cls.train("train-trigger-examples", "c:"+str(BEST_PARAMS["trigger"]), "train-trigger-model")
+c = CSCConnection("CI-release/models/"+EXPERIMENT_NAME+"/devel-trigger", "jakrbj@murska.csc.fi", True)
+best = optimize(Cls, Ev, "train-trigger-examples", "devel-trigger-examples",\
+    "genia-trigger-ids.class_names", "c:"+str(BEST_PARAMS["trigger"]), "devel-trigger-models", None, c)
+Cls.test("devel-trigger-examples", best[1], "devel-trigger-classifications")
 evaluator = Ev.evaluate("devel-trigger-examples", "devel-trigger-classifications", "genia-trigger-ids.class_names")
 #boostedTriggerFile = "devel-predicted-triggers.xml"
 xml = ExampleUtils.writeToInteractionXML("devel-trigger-examples", "devel-trigger-classifications", DEVEL_FILE, None, "genia-trigger-ids.class_names", PARSE_TOK, PARSE_TOK)    
@@ -105,8 +108,11 @@ xml = ix.recalculateIds(xml, None, True)
 
 # Build edge examples
 MultiEdgeExampleBuilder.run(xml, "devel-edge-examples", PARSE_TOK, PARSE_TOK, EDGE_FEATURE_PARAMS, "genia-edge-ids")
-Cls.train("train-edge-examples", "c:"+str(BEST_PARAMS["edge"]), "train-edge-model")
-Cls.test("devel-edge-examples", "train-edge-model", "devel-edge-classifications")
+#Cls.train("train-edge-examples", "c:"+str(BEST_PARAMS["edge"]), "train-edge-model")
+c = CSCConnection("CI-release/models/"+EXPERIMENT_NAME+"/devel-edge", "jakrbj@murska.csc.fi", True)
+best = optimize(Cls, Ev, "train-edge-examples", "devel-edge-examples",\
+    "genia-edge-ids.class_names", "c:"+str(BEST_PARAMS["edge"]), "devel-edge-models", None, c)
+Cls.test("devel-edge-examples", best[1], "devel-edge-classifications")
 # Write to interaction xml
 evaluator = Ev.evaluate("devel-edge-examples", "devel-edge-classifications", "genia-edge-ids.class_names")
     
@@ -134,8 +140,11 @@ GeneralEntityTypeRecognizerGztr.run(TEST_FILE, "test-trigger-examples", PARSE_TO
 GeneralEntityTypeRecognizerGztr.run(EVERYTHING_FILE, "everything-trigger-examples", PARSE_TOK, PARSE_TOK, TRIGGER_FEATURE_PARAMS, "genia-trigger-ids", GAZETTEER_EVERYTHING)
 MultiEdgeExampleBuilder.run(EVERYTHING_FILE, "everything-edge-examples", PARSE_TOK, PARSE_TOK, EDGE_FEATURE_PARAMS, "genia-edge-ids")
 
-Cls.train("everything-trigger-examples", "c:"+str(BEST_PARAMS["trigger"]), "everything-trigger-model")
-Cls.test("test-trigger-examples", "everything-trigger-model", "test-trigger-classifications")
+#Cls.train("everything-trigger-examples", "c:"+str(BEST_PARAMS["trigger"]), "everything-trigger-model")
+c = CSCConnection("CI-release/models/"+EXPERIMENT_NAME+"/everything-trigger", "jakrbj@murska.csc.fi", True)
+best = optimize(Cls, Ev, "everything-trigger-examples", "test-trigger-examples",\
+    "genia-trigger-ids.class_names", "c:"+str(BEST_PARAMS["trigger"]), "test-trigger-models", None, c)
+Cls.test("test-trigger-examples", best[1], "test-trigger-classifications")
 evaluator = Ev.evaluate("test-trigger-examples", "test-trigger-classifications", "genia-trigger-ids.class_names")
 #boostedTriggerFile = "test-predicted-triggers.xml"
 xml = ExampleUtils.writeToInteractionXML("test-trigger-examples", "test-trigger-classifications", TEST_FILE, None, "genia-trigger-ids.class_names", PARSE_TOK, PARSE_TOK)    
@@ -146,8 +155,11 @@ xml = ix.recalculateIds(xml, None, True)
 
 # Build edge examples
 MultiEdgeExampleBuilder.run(xml, "test-edge-examples", PARSE_TOK, PARSE_TOK, EDGE_FEATURE_PARAMS, "genia-edge-ids")
-Cls.train("everything-edge-examples", "c:"+str(BEST_PARAMS["edge"]), "everything-edge-model")
-Cls.test("test-edge-examples", "everything-edge-model", "test-edge-classifications")
+#Cls.train("everything-edge-examples", "c:"+str(BEST_PARAMS["edge"]), "everything-edge-model")
+c = CSCConnection("CI-release/models/"+EXPERIMENT_NAME+"/everything-edge", "jakrbj@murska.csc.fi", True)
+best = optimize(Cls, Ev, "everything-edge-examples", "test-edge-examples",\
+    "genia-edge-ids.class_names", "c:"+str(BEST_PARAMS["edge"]), "test-edge-models", None, c)
+Cls.test("test-edge-examples", best[1], "test-edge-classifications")
 # Write to interaction xml
 evaluator = Ev.evaluate("test-edge-examples", "test-edge-classifications", "genia-edge-ids.class_names")
     
