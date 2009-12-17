@@ -1,13 +1,19 @@
+"""
+A wrapper for the Joachims SVM multiclass.
+"""
+
+__version__ = "$Revision: 1.35 $"
+# $Source: /home/jari/temp_exec/GitTest/babelfish-cvs-111114/JariSandbox/ComplexPPI/Source/Classifiers/SVMMultiClassClassifier.py,v $
+
+
 import sys,os
 sys.path.append(os.path.dirname(os.path.abspath(__file__))+"/..")
 import shutil
 import subprocess
-#import killableprocess
 import Core.ExampleUtils as Example
 import combine
 import copy
 import types
-#from Core.Evaluation import Evaluation
 from Core.Classifier import Classifier
 import Core.Split as Split
 from Evaluators.MultiClassEvaluator import MultiClassEvaluator
@@ -19,7 +25,9 @@ class SVMMultiClassClassifier(Classifier):
     binDir = Settings.SVMMultiClassDir #"/usr/share/biotext/ComplexPPI/SVMMultiClass"
     indent = ""
     
+    #IF LOCAL
     louhiBinDir = "/v/users/jakrbj/svm-multiclass"
+    #ENDIF
     
 #    def __init__(self, workDir=None, negRatio=None):
 #        sys.exit("Just use the class methods")
@@ -140,6 +148,7 @@ class SVMMultiClassClassifier(Classifier):
                 examples.append(negatives[i])
         return examples
     
+    #IF LOCAL
     @classmethod
     def initTrainAndTestOnLouhi(cls, trainExamples, testExamples, trainParameters, cscConnection, localWorkDir=None):
         if cscConnection.account.find("murska") != -1:
@@ -231,6 +240,7 @@ class SVMMultiClassClassifier(Classifier):
 #            predictions.append( [int(lines[i].split()[0])] + lines[i].split()[1:] )
 #            #predictions.append( (examples[i],int(lines[i].split()[0]),"multiclass",lines[i].split()[1:]) )
 #        return predictions
+    #ENDIF
     
 if __name__=="__main__":
     # Import Psyco if available
