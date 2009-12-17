@@ -1,10 +1,8 @@
 """
-A wrapper for the Joachims SVM multiclass.
+A wrapper for the Joachims SVM Multiclass.
 """
 
-__version__ = "$Revision: 1.35 $"
-# $Source: /home/jari/temp_exec/GitTest/babelfish-cvs-111114/JariSandbox/ComplexPPI/Source/Classifiers/SVMMultiClassClassifier.py,v $
-
+__version__ = "$Revision: 1.36 $"
 
 import sys,os
 sys.path.append(os.path.dirname(os.path.abspath(__file__))+"/..")
@@ -19,36 +17,33 @@ import Core.Split as Split
 from Evaluators.MultiClassEvaluator import MultiClassEvaluator
 from Utils.Timer import Timer
 from Utils.Parameters import *
+from Utils.ProgressCounter import ProgressCounter
 import Settings
+import SVMMultiClassModelUtils
 
 class SVMMultiClassClassifier(Classifier):
-    binDir = Settings.SVMMultiClassDir #"/usr/share/biotext/ComplexPPI/SVMMultiClass"
     indent = ""
-    
     #IF LOCAL
     louhiBinDir = "/v/users/jakrbj/svm-multiclass"
     #ENDIF
     
-#    def __init__(self, workDir=None, negRatio=None):
-#        sys.exit("Just use the class methods")
-#        #global tempDir
-#        #self.negRatio = None
-#        self._makeTempDir(workDir)        
-#    
-#    def __del__(self):
-#        self.debugFile.close()
-#        if self._workDir == None and os.path.exists(self.tempDir):
-#            print >> sys.stderr, "Removing temporary SVM-multi-class work directory", self.tempDir
-#            shutil.rmtree(self.tempDir)
-    
     @classmethod
-    def train(cls, examples, parameters, outputFile=None, timeout=None):
+    def train(cls, examples, parameters, outputFile=None): #, timeout=None):
+        """
+        Train the SVM-multiclass classifier on a set of examples.
+        
+        examples -- a list or file containing examples in SVM-format
+        parameters -- a dictionary or string of parameters for the classifier
+        outputFile -- the name of the model file to be written
+        """
         timer = Timer()
+        # If parameters are defined as a string, extract them
         if type(parameters) == types.StringType:
             parameters = splitParameters(parameters)
             for k, v in parameters.iteritems():
                 assert(len(v)) == 1
                 parameters[k] = v[0]
+        # If examples are in a list, they will be written to a file for SVM-multiclass
         if type(examples) == types.ListType:
             print >> sys.stderr, "Training SVM-MultiClass on", len(examples), "examples"
             trainPath = self.tempDir+"/train.dat"
@@ -64,7 +59,7 @@ class SVMMultiClassClassifier(Classifier):
 #                examples = Example.removeDuplicates(examples)
 #            else:
 #                print >> sys.stderr, "Warning, duplicates not removed from example file", examples
-        args = [cls.binDir+"/svm_multiclass_learn"]
+        args = [Settings.SVMMultiClassDir+"/svm_multiclass_learn"]
         cls.__addParametersToSubprocessCall(args, parameters)
         if outputFile == None:
             args += [trainPath, "model"]
@@ -72,15 +67,25 @@ class SVMMultiClassClassifier(Classifier):
         else:
             args += [trainPath, outputFile]
             logFile = open(outputFile+".log","wt")
-        if timeout == None:
-            timeout = -1
+        #if timeout == None:
+        #    timeout = -1
         rv = subprocess.call(args, stdout = logFile)
         logFile.close()
         print >> sys.stderr, timer.toString()
         return rv
     
     @classmethod
-    def test(cls, examples, modelPath, output=None, parameters=None, timeout=None):
+    def test(cls, examples, modelPath, output=None, parameters=None, forceInternal=False): # , timeout=None):
+        """
+        Classify examples with a pre-trained model.
+        
+        examples -- a list or file containing examples in SVM-format
+        modelPath -- filename of the pre-trained model file
+        parameters -- a dictionary or string of parameters for the classifier
+        output -- the name of the predictions file to be written
+        """
+        if forceInternal or Settings.SVMMultiClassDir == None:
+            return cls.testInternal(examples, modelPath, output)
         timer = Timer()
         if type(examples) == types.ListType:
             print >> sys.stderr, "Classifying", len(examples), "with SVM-MultiClass model", modelPath
@@ -91,7 +96,7 @@ class SVMMultiClassClassifier(Classifier):
             print >> sys.stderr, "Classifying file", examples, "with SVM-MultiClass model", modelPath
             testPath = examples
             examples = Example.readExamples(examples,False)
-        args = [cls.binDir+"/svm_multiclass_classify"]
+        args = [Settings.SVMMultiClassDir+"/svm_multiclass_classify"]
         if modelPath == None:
             modelPath = "model"
         if parameters != None:
@@ -109,8 +114,8 @@ class SVMMultiClassClassifier(Classifier):
         else:
             logFile = open(output+".log","wt")
         args += [testPath, modelPath, output]
-        if timeout == None:
-            timeout = -1
+        #if timeout == None:
+        #    timeout = -1
         #print args
         subprocess.call(args, stdout = logFile, stderr = logFile)
         predictionsFile = open(output, "rt")
@@ -128,7 +133,64 @@ class SVMMultiClassClassifier(Classifier):
         for k,v in parameters.iteritems():
             args.append("-"+k)
             args.append(str(v))
+    
+    @classmethod
+    def testInternal(cls, examples, modelPath, output=None):
+        #try:
+        #    import numpy
+        #except ImportError:
+        numpy = None
 
+        if output == None:
+            output = "predictions"
+            
+        assert os.path.exists(modelPath)
+        svs = SVMMultiClassModelUtils.getSupportVectors(modelPath)
+        print len(svs)
+        if type(examples) == types.StringType: # examples are in a file
+            print >> sys.stderr, "Classifying file", examples, "with SVM-MultiClass model (internal classifier)", modelPath        
+            examples = Example.readExamples(examples)
+        else:
+            print >> sys.stderr, "Classifying examples with SVM-MultiClass model (internal classifier)", modelPath        
+        
+        numExamples = 0
+        for example in examples:
+            numExamples += 1
+        
+        counter = ProgressCounter(numExamples, "Classify examples")
+        predFile = open(output, "wt")
+        predictions = []
+        for example in examples:
+            counter.update(1, "Classifying: ")
+            highestPrediction = -sys.maxint
+            predictedClass = None
+            predictionStrings = []
+            mergedPredictionString = ""
+            features = example[2]
+            featureIds = sorted(features.keys())
+            if numpy != None:
+                numpyFeatures = numpy.zeros(len(svs[0]))
+                for k, v in features.iteritems:
+                    numpyFeatures[k] = v
+            for svIndex in range(len(svs)):
+                sv = svs[svIndex]
+                if numpy != None:
+                    prediction = numpy.sum(sv * numpyFeatures)
+                else:
+                    prediction = 0
+                    for i in range(len(sv)):
+                        if features.has_key(i):
+                            prediction += features[i] * sv[i]
+                if prediction > highestPrediction:
+                    predictedClass = svIndex + 1
+                predictionString = "%.6f" % prediction # use same precision as SVM-multiclass does
+                predictionStrings.append(predictionString)
+                mergedPredictionString += " " + predictionString
+            predictions.append([predictedClass, predictionStrings])
+            predFile.write(str(predictedClass) + mergedPredictionString)
+        predFile.close()
+
+    #IF LOCAL
     def downSampleNegatives(self, examples, ratio):
         positives = []
         negatives = []
@@ -148,7 +210,6 @@ class SVMMultiClassClassifier(Classifier):
                 examples.append(negatives[i])
         return examples
     
-    #IF LOCAL
     @classmethod
     def initTrainAndTestOnLouhi(cls, trainExamples, testExamples, trainParameters, cscConnection, localWorkDir=None):
         if cscConnection.account.find("murska") != -1:
@@ -257,6 +318,7 @@ if __name__=="__main__":
     optparser = OptionParser(usage="%prog [options]\nCreate an html visualization for a corpus.")
     optparser.add_option("-e", "--examples", default=None, dest="examples", help="Example File", metavar="FILE")
     optparser.add_option("-t", "--train", default=None, dest="train", action="store_true", help="train (default = classify)")
+    optparser.add_option("-m", "--model", default=None, dest="model", help="path to model file")
     optparser.add_option("-w", "--work", default=None, dest="work", help="Working directory for intermediate and debug files")
     optparser.add_option("-o", "--output", default=None, dest="output", help="Output directory or file")
     optparser.add_option("-c", "--classifier", default="SVMMultiClassClassifier", dest="classifier", help="Classifier Class")
@@ -268,10 +330,10 @@ if __name__=="__main__":
     exec "from Classifiers." + options.classifier + " import " + options.classifier + " as Classifier"
 
     # Create classifier object
-    if options.work != None:
-        classifier = Classifier(workDir = options.output)
-    else:
-        classifier = Classifier()
+#    if options.work != None:
+#        classifier = Classifier(workDir = options.output)
+#    else:
+#        classifier = Classifier()
     
     if options.train:
         parameters = getArgs(Classifier.train, options.parameters)
@@ -280,9 +342,14 @@ if __name__=="__main__":
         predictions = classifier.train(options.examples, options.output, **parameters)
         print >> sys.stderr, "(Time spent:", time.time() - startTime, "s)"
     else: # Classify
-        parameters = getArgs(Classifier.classify, options.parameters)
-        print >> sys.stderr, "Classifying", options.examples, "Parameters:", parameters
-        startTime = time.time()
-        predictions = classifier.classify(options.examples, options.output, **parameters)
-        print >> sys.stderr, "(Time spent:", time.time() - startTime, "s)"
+        #parameters = getArgs(Classifier.classify, options.parameters)
+        #print >> sys.stderr, "Classifying", options.examples, "Parameters:", parameters
+        #startTime = time.time()
+        predictions = Classifier.test(options.examples, options.model, options.output, forceInternal=True)
+#        print >> sys.stderr, "(Time spent:", time.time() - startTime, "s)"
+#        parameters = getArgs(Classifier.classify, options.parameters)
+#        print >> sys.stderr, "Classifying", options.examples, "Parameters:", parameters
+#        startTime = time.time()
+#        predictions = classifier.classify(options.examples, options.output, **parameters)
+#        print >> sys.stderr, "(Time spent:", time.time() - startTime, "s)"
 
