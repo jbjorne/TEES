@@ -1,3 +1,5 @@
+import codecs
+
 class IdSet:    
     def __init__(self, firstNumber=1, idDict=None, locked=False, filename=None):
         self.Ids = {}
@@ -54,11 +56,11 @@ class IdSet:
         return values
     
     def write(self, filename):
-        f = open(filename, "wt")
+        f = codecs.open(filename, "wt", "utf-8")
         keys = self.Ids.keys()
         keys.sort()
         for key in keys:
-            f.write(str(key)+": "+str(self.Ids[key])+"\n")
+            f.write( (str(key)+": "+str(self.Ids[key])+"\n").encode("utf-8") )
         f.close()
     
     def load(self, filename):
@@ -66,7 +68,7 @@ class IdSet:
         self._namesById = {}
         self.nextFreeId = -999999999999999999
         
-        f = open(filename, "rt")
+        f = codecs.open(filename, "rt", "utf-8")
         lines = f.readlines()
         f.close()
         for line in lines:
