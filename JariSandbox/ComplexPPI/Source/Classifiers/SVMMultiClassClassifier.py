@@ -2,7 +2,7 @@
 A wrapper for the Joachims SVM Multiclass.
 """
 
-__version__ = "$Revision: 1.36 $"
+__version__ = "$Revision: 1.37 $"
 
 import sys,os
 sys.path.append(os.path.dirname(os.path.abspath(__file__))+"/..")
@@ -136,10 +136,10 @@ class SVMMultiClassClassifier(Classifier):
     
     @classmethod
     def testInternal(cls, examples, modelPath, output=None):
-        #try:
-        #    import numpy
-        #except ImportError:
-        numpy = None
+        try:
+            import numpy
+        except ImportError:
+            numpy = None
 
         if output == None:
             output = "predictions"
@@ -157,9 +157,10 @@ class SVMMultiClassClassifier(Classifier):
         for example in examples:
             numExamples += 1
         
-        counter = ProgressCounter(numExamples, "Classify examples")
+        counter = ProgressCounter(numExamples, "Classify examples", step=0.1)
         predFile = open(output, "wt")
         predictions = []
+        isFirst = True
         for example in examples:
             counter.update(1, "Classifying: ")
             highestPrediction = -sys.maxint
@@ -170,8 +171,11 @@ class SVMMultiClassClassifier(Classifier):
             featureIds = sorted(features.keys())
             if numpy != None:
                 numpyFeatures = numpy.zeros(len(svs[0]))
-                for k, v in features.iteritems:
-                    numpyFeatures[k] = v
+                for k, v in features.iteritems():
+                    try:
+                        numpyFeatures[k] = v
+                    except:
+                        pass
             for svIndex in range(len(svs)):
                 sv = svs[svIndex]
                 if numpy != None:
@@ -187,6 +191,10 @@ class SVMMultiClassClassifier(Classifier):
                 predictionStrings.append(predictionString)
                 mergedPredictionString += " " + predictionString
             predictions.append([predictedClass, predictionStrings])
+            if isFirst:
+                isFirst = False
+            else:
+                predFile.write("\n")
             predFile.write(str(predictedClass) + mergedPredictionString)
         predFile.close()
 

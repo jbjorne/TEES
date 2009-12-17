@@ -73,7 +73,7 @@ def getSupportVectors(modelfile, valueToFloat=True):
     tokens = line.split()
     assert tokens[1].find("qid") != -1
     tokens = tokens[2:]
-    numFeaturesPerClass = numFeatures #numFeatures / numClasses
+    numFeaturesPerClass = highestIndex / numClasses
     
     svs = [[]]
     svIndex = 0
@@ -88,7 +88,6 @@ def getSupportVectors(modelfile, valueToFloat=True):
             svs[-1].append(0)
             if len(svs[-1]) == numFeaturesPerClass:
                 svs.append([])
-            #svs.append([])
             num += 1
         svs[-1].append(value)
         if len(svs[-1]) == numFeaturesPerClass:
@@ -98,7 +97,10 @@ def getSupportVectors(modelfile, valueToFloat=True):
         svs[-1].append(0)
         num += 1
     print len(svs)
-    for i in range(10):
+    if numpy:
+        for i in range(len(svs)):
+            svs[i] = numpy.array(svs[i])
+    for i in range(len(svs)):
         print len(svs[i])
     return svs
 
