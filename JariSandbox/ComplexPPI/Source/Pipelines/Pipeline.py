@@ -1,5 +1,6 @@
 import sys,os,time
-sys.path.append("..")
+thisPath = os.path.dirname(os.path.abspath(__file__))
+sys.path.append(os.path.abspath(os.path.join(thisPath,"..")))
 import Settings
 from ExampleBuilders.GeneralEntityTypeRecognizer import GeneralEntityTypeRecognizer
 from ExampleBuilders.GeneralEntityTypeRecognizerGztr import GeneralEntityTypeRecognizerGztr
@@ -25,13 +26,13 @@ import atexit, shutil
 from Core.RecallAdjust import RecallAdjust
 from Core.Gazetteer import Gazetteer
 from Murska.CSCConnection import CSCConnection
-sys.path.append("../../../../GeniaChallenge/unflattening")
-import prune
-import unflatten
+sys.path.append(os.path.abspath(os.path.join(thisPath, "../../../../GeniaChallenge/unflattening")))
+#from prune import prune
+from unflatten import unflatten
 import preserveTask2
-sys.path.append("../../../../GeniaChallenge/formatConversion")
+sys.path.append(os.path.abspath(os.path.join(thisPath, "../../../../GeniaChallenge/formatConversion")))
 from gifxmlToGenia import gifxmlToGenia
-sys.path.append("../../../../GeniaChallenge")
+sys.path.append(os.path.abspath(os.path.join(thisPath, "../../../../GeniaChallenge")))
 import evaluation.EvaluateSharedTask
 evaluateSharedTask = evaluation.EvaluateSharedTask.evaluate
 from cElementTreeUtils import write as writeXML
@@ -54,6 +55,7 @@ def log(clear=False):
     print >> sys.stderr, "####### Log opened at ", time.ctime(time.time()), "#######"
 
 def copyIdSetsToWorkdir(srcStem):
+    print >> sys.stderr, "Copying id-sets from", srcStem 
     shutil.copy(srcStem+".feature_names", os.getcwd())
     shutil.copy(srcStem+".class_names", os.getcwd())
     return os.path.split(srcStem)[-1]

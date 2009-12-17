@@ -4,6 +4,8 @@ try:
     import xml.etree.cElementTree as ET
 except ImportError:
     import cElementTree as ET
+import cElementTreeUtils as ETUtils
+import prune
 
 #         all_entities = ['Gene_expression','Transcription',
 #                         'Translation','Protein_catabolism',
@@ -365,6 +367,24 @@ class Unflattener:
 
 
 
+def unflatten(input, parse, tokenization=None, output=None, perfect=False):
+    """
+    Both prunes and unflattens
+    """
+    xml = prune.prune(input)
+    return unflattenPruned(xml, parse, tokenization, output, perfect)
+
+def unflattenPruned(input, parse, tokenization=None, output=None, perfect=False):
+    """
+    Unflattens a pruned file
+    """
+    if tokenization == None:
+        tokenization = parse
+    options = ["-i",input,"-o",output,"-a",parse,"-t",tokenization]
+    if perfect:
+        options.append("-p")
+    return interface(options)
+
 def interface(optionArgs=sys.argv[1:]):
     from optparse import OptionParser
 
@@ -396,9 +416,9 @@ def interface(optionArgs=sys.argv[1:]):
     if not options.infile:
         print "Please specify the input file."
         quit = True
-    if not options.outfile:
-        print "Please specify the output file."
-        quit = True
+#    if not options.outfile:
+#        print "Please specify the output file."
+#        quit = True
     if not options.parse:
         print "Please specify the parse."
         quit = True
@@ -409,15 +429,17 @@ def interface(optionArgs=sys.argv[1:]):
         op.print_help()
         return(False)
 
-    corpus = ET.parse(options.infile)
+    corpus = ETUtils.ETFromObj(options.infile)
     for document in corpus.getroot().findall('document'):
         #sys.stderr.write("Unflattening document %s\n"%document.attrib['id'])
         unflattener = Unflattener(document,options.perfect,
                                   options.tokens,options.parse)
         unflattener.analyse()
         unflattener.unflatten()
-    indent(corpus.getroot())
-    corpus.write(options.outfile)
+    #indent(corpus.getroot())
+    if options.outfile:
+        ETUtils.write(corpus, options.outfile)
+    return corpus
 
 if __name__=="__main__":
     interface()

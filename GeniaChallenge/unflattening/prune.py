@@ -3,6 +3,7 @@ try:
     import xml.etree.cElementTree as ET
 except ImportError:
     import cElementTree as ET
+import cElementTreeUtils as ETUtils
 
 class Pruner:
     def __init__(self,document):
@@ -153,6 +154,12 @@ class Pruner:
 
 
 
+def prune(input, cycles=True, output=None):
+    options = ["-i",input,"-o",output]
+    if cycles:
+        options.append("-c")
+    return interface(options)
+
 def interface(optionArgs=sys.argv[1:]):
     from optparse import OptionParser
 
@@ -176,14 +183,14 @@ def interface(optionArgs=sys.argv[1:]):
     if not options.infile:
         print "Please specify the input file."
         quit = True
-    if not options.outfile:
-        print "Please specify the output file."
-        quit = True
+#    if not options.outfile:
+#        print "Please specify the output file."
+#        quit = True
     if quit:
         op.print_help()
         return(False)
 
-    corpus = ET.parse(options.infile)
+    corpus = ETUtils.ETFromObj(options.infile)
     cycleBrokenCount = 0
     for document in corpus.getroot().findall('document'):
         #sys.stderr.write("Pruning document %s\n"%document.attrib['id'])
@@ -192,8 +199,10 @@ def interface(optionArgs=sys.argv[1:]):
         if options.cycles:
             cycleBrokenCount += pruner.analyseCycles()
         pruner.prune()
-    corpus.write(options.outfile)
     sys.stderr.write("File pruned, broke " + str(cycleBrokenCount) + " cycles\n" )
+    if options.outfile:
+        ETUtils.write(corpus, options.outfile)
+    return corpus
 
 if __name__=="__main__":
     interface()
