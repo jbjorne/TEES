@@ -311,11 +311,12 @@ def writeToInteractionXML(examples, predictions, corpusElements, outputFile, cla
             assert example[3]["xtype"] == xType, str(example[3]["xtype"]) + "/" + str(xType)
     
     # Process what is still in queue
-    processedSentenceIds.add(currentMajorId)
-    sentenceObject = corpusElements.sentencesById[currentMajorId]
-    _writeExamplesToInteractionXML(exampleQueue, predictionsByExample, sentenceObject, classSet, classIds, xType) # process queue
-    exampleQueue = []
-    predictionsByExample = {}
+    if currentMajorId != None:
+        processedSentenceIds.add(currentMajorId)
+        sentenceObject = corpusElements.sentencesById[currentMajorId]
+        _writeExamplesToInteractionXML(exampleQueue, predictionsByExample, sentenceObject, classSet, classIds, xType) # process queue
+        exampleQueue = []
+        predictionsByExample = {}
     
     # Process sentences with no examples (e.g. to clear interactions)
     for sentenceId in sorted(corpusElements.sentencesById.keys()):
