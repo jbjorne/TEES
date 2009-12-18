@@ -2,7 +2,7 @@
 A wrapper for the Joachims SVM Multiclass.
 """
 
-__version__ = "$Revision: 1.37 $"
+__version__ = "$Revision: 1.38 $"
 
 import sys,os
 sys.path.append(os.path.dirname(os.path.abspath(__file__))+"/..")
@@ -146,7 +146,7 @@ class SVMMultiClassClassifier(Classifier):
             
         assert os.path.exists(modelPath)
         svs = SVMMultiClassModelUtils.getSupportVectors(modelPath)
-        print len(svs)
+        SVMMultiClassModelUtils.writeModel(svs, modelPath, output+"-test-model")
         if type(examples) == types.StringType: # examples are in a file
             print >> sys.stderr, "Classifying file", examples, "with SVM-MultiClass model (internal classifier)", modelPath        
             examples = Example.readExamples(examples)
@@ -173,7 +173,10 @@ class SVMMultiClassClassifier(Classifier):
                 numpyFeatures = numpy.zeros(len(svs[0]))
                 for k, v in features.iteritems():
                     try:
-                        numpyFeatures[k] = v
+                        # SVM-multiclass feature indices start from 1. However, 
+                        # support vectors in variable svs are of course zero based
+                        # lists. Adding -1 to ids aligns features.
+                        numpyFeatures[k-1] = v
                     except:
                         pass
             for svIndex in range(len(svs)):
@@ -184,8 +187,9 @@ class SVMMultiClassClassifier(Classifier):
                     prediction = 0
                     for i in range(len(sv)):
                         if features.has_key(i):
-                            prediction += features[i] * sv[i]
+                            prediction += features[i-1] * sv[i]
                 if prediction > highestPrediction:
+                    highestPrediction = prediction
                     predictedClass = svIndex + 1
                 predictionString = "%.6f" % prediction # use same precision as SVM-multiclass does
                 predictionStrings.append(predictionString)
