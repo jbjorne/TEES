@@ -1,5 +1,6 @@
 from Pipeline import * # All pipelines import this
 from optparse import OptionParser # For using command line options
+import traceback
 
 # Read command line options
 optparser = OptionParser()
@@ -11,6 +12,7 @@ optparser.add_option("-a", "--task", default=1, type="int", dest="task", help="t
 optparser.add_option("-m", "--triggerModel", default=Settings.TrainTriggerModel, dest="triggerModel", help="SVM-multiclass trigger model")
 optparser.add_option("-n", "--edgeModel", default=Settings.TrainEdgeModel, dest="edgeModel", help="SVM-multiclass edge (event argument) model")
 optparser.add_option("-r", "--recallBoost", default=0.6, type="float", dest="recallBoost", help="Recall boosting of trigger predictions (1.0 = none)")
+optparser.add_option("-x", "--exceptions", default=False, action="store_true", dest="exceptions", help="Stop on exception. (for debugging)")
 (options, args) = optparser.parse_args()
 
 # Check options
@@ -123,6 +125,9 @@ if os.path.isdir(options.input):
         except Exception, e:
             print >> sys.stderr, "Exception caught for file", filename
             print >> sys.stderr, "Exception:", e
+            traceback.print_exc(file=sys.stderr)
+            if options.exceptions:
+                break
         count += 1
 else: # single file
     processFile(options.input, options.output, options.parse, options.tokenization, options.triggerModel, options.edgeModel, options.recallBoost)
