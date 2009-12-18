@@ -426,10 +426,14 @@ def writeEvents(document, inputCorpus, outputFile, events, entityMap, triggerIds
 
 def gifxmlToGenia(input, output, task=1, outputIsA2File=False, submission=False, verbose=True):
     assert(task == 1 or task == 2 or task == 3)
+    outputTarFilename = None
     
     # Make or clear output directory
     if verbose: print >> sys.stderr, "Writing shared task files",
     if not outputIsA2File:
+        if output.find("tar.gz") != -1:
+            outputTarFilename = output
+            output = "temp-genia-format"
         if os.path.exists(output):
             if verbose: print >> sys.stderr, "over existing directory", output
             shutil.rmtree(output)
@@ -446,6 +450,17 @@ def gifxmlToGenia(input, output, task=1, outputIsA2File=False, submission=False,
             makeSubmissionFile(options.output, output.split("/")[-1] + ".tar.gz")
         else:
             print >> sys.stderr, "Warning: Single a2-file output, no submission package created"
+    
+    if outputTarFilename != None:
+        print >> sys.stderr, "Compressing output to", outputTarFilename
+        outputTarFile = tarfile.open(outputTarFilename, "w:gz")
+        allFiles = os.listdir(output)
+        tempCwd = os.getcwd()
+        os.chdir(output)
+        for file in allFiles:
+            outputTarFile.add(file)
+        os.chdir(tempCwd)
+        outputTarFile.close
 
 def makeSubmissionFile(geniaDir, submissionFileName):    
     # Make the tar.gz-fiel for submission
