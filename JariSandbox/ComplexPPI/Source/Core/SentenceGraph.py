@@ -29,8 +29,11 @@ def loadCorpus(corpus, parse, tokenization=None, removeNameInfo=False):
     counter = ProgressCounter(len(corpusElements.sentences), "Make sentence graphs")
     for sentence in corpusElements.sentences[:]:
         counter.update(1, "Making sentence graphs ("+sentence.sentence.attrib["id"]+"): ")
-        if len(sentence.tokens) == 0: # No tokens, no sentence
-            corpusElements.sentences.remove(sentence)
+        # No tokens, no sentence. No also no dependencies = no sentence.
+        # Let's not remove them though, so that we don't lose sentences from input.
+        if len(sentence.tokens) == 0 or len(sentence.dependencies) == 0: 
+            #corpusElements.sentences.remove(sentence)
+            sentence.sentenceGraph = None
             continue
         for pair in sentence.pairs:
             # gif-xml defines to closely related element types, interactions and
