@@ -10,10 +10,11 @@ from optparse import OptionParser
 
 def encode(string, codec="utf-8", error="xmlcharrefreplace"):
     try:
-        return string.encode(codec, error)
-    except UnicodeDecodeError:
+        rv = string.encode(codec, error)
+        return rv
+    except:
         print >> sys.stderr, "Warning, unicode decode error when encoding"
-        return "UNICODE_DECODE_ERROR"
+        return "UNICODE_ERROR"
 
 def getEntityIndex(entities, index=0, task=1):
     origIds = []
