@@ -113,7 +113,7 @@ workdir(options.output, False) # Select a working directory, don't remove existi
 log() # Start logging into a file in the working directory
 
 if os.path.isdir(options.input):
-    inputFiles = os.listdir(options.input)
+    inputFiles = sorted(os.listdir(options.input))
     for filename in inputFiles[:]:
         if filename.find("xml.gz") == -1:
             inputFiles.remove(filename)
