@@ -5,6 +5,7 @@ from Utils.ProgressCounter import ProgressCounter
 import Range
 import tarfile
 import combine
+import codecs
 from optparse import OptionParser
 
 def getEntityIndex(entities, index=0, task=1):
@@ -48,8 +49,9 @@ def processCorpus(inputCorpus, outputPath, task=1, outputIsA2File=False, verbose
         # Write a1 file
         if outputIsA2File: 
             outputFile = None
-        else: 
-            outputFile = open(os.path.join(outputPath,documentId + ".a1"), "wt")
+        else:
+            outputFile = codecs.open(os.path.join(outputPath,documentId + ".a1"), "wt", "utf-8")
+            #outputFile = open(os.path.join(outputPath,documentId + ".a1"), "wt")
         namedEntityTriggerIds = writeProteins(document, inputCorpus, outputFile)
         if not outputIsA2File:
             outputFile.close()
@@ -59,7 +61,8 @@ def processCorpus(inputCorpus, outputPath, task=1, outputIsA2File=False, verbose
             if outputIsA2File: 
                 outputFile = a2File
             else:
-                outputFile = open(os.path.join(outputPath,documentId + ".a2.t1"), "wt")
+                outputFile = codecs.open(os.path.join(outputPath,documentId + ".a2.t1"), "wt", "utf-8")
+                #outputFile = open(os.path.join(outputPath,documentId + ".a2.t1"), "wt")
             events, entityMap = getEvents(document, inputCorpus, outputFile, 1)
             triggerIds = copy.copy(namedEntityTriggerIds)
             writeEventTriggers(document, inputCorpus, outputFile, events, triggerIds, 1)
@@ -69,8 +72,9 @@ def processCorpus(inputCorpus, outputPath, task=1, outputIsA2File=False, verbose
         elif task == 2:
             if outputIsA2File: 
                 outputFile = a2File
-            else: 
-                outputFile = open(os.path.join(outputPath,documentId + ".a2.t12"), "wt")
+            else:
+                outputFile = codecs.open(os.path.join(outputPath,documentId + ".a2.t12"), "wt", "utf-8")
+                #outputFile = open(os.path.join(outputPath,documentId + ".a2.t12"), "wt")
             events, entityMap = getEvents(document, inputCorpus, outputFile, 2)
             triggerIds = copy.copy(namedEntityTriggerIds)
             writeEventTriggers(document, inputCorpus, outputFile, events, triggerIds, 2)
@@ -80,8 +84,9 @@ def processCorpus(inputCorpus, outputPath, task=1, outputIsA2File=False, verbose
         elif task == 3:
             if outputIsA2File: 
                 outputFile = a2File
-            else: 
-                outputFile = open(os.path.join(outputPath,documentId + ".a2.t123"), "wt")
+            else:
+                outputFile = codecs.open(os.path.join(outputPath,documentId + ".a2.t123"), "wt", "utf-8")
+                #outputFile = open(os.path.join(outputPath,documentId + ".a2.t123"), "wt")
             events, entityMap = getEvents(document, inputCorpus, outputFile, 2)
             triggerIds = copy.copy(namedEntityTriggerIds)
             writeEventTriggers(document, inputCorpus, outputFile, events, triggerIds, 2)
@@ -91,7 +96,8 @@ def processCorpus(inputCorpus, outputPath, task=1, outputIsA2File=False, verbose
             outputFile.close()
         
             # Write txt file
-            outputFile = open(os.path.join(outputPath,documentId + ".txt"), "wt")
+            outputFile = codecs.open(os.path.join(outputPath,documentId + ".txt"), "wt", "utf-8")
+            #outputFile = open(os.path.join(outputPath,documentId + ".txt"), "wt")
             writeDocumentText(document, outputFile)
             outputFile.close()
     
@@ -105,9 +111,9 @@ def writeDocumentText(document, outputFile):
     isFirstSentence = True
     for sentenceElement in document.findall("sentence"):
         text = sentenceElement.get("text")
-        outputFile.write(text + " ")
+        outputFile.write( (text + " ").encode("utf-8") )
         if isFirstSentence:
-            outputFile.write("\n")
+            outputFile.write( ("\n").encode("utf-8") )
             isFirstSentence = False
 
 def getGeniaOffset(sentenceOffset, entityOffset):
@@ -133,7 +139,7 @@ def writeProteins(document, inputCorpus, outputFile=None):
     for key in sorted(entityMap.keys()):
         entity = entityMap[key]
         if outputFile != None:
-            outputFile.write(triggerMap[entity.get("id")] + "\tProtein " + str(offsetMap[key][0]) + " " + str(offsetMap[key][1]) + "\t" + entity.get("text") + "\n")
+            outputFile.write( (triggerMap[entity.get("id")] + "\tProtein " + str(offsetMap[key][0]) + " " + str(offsetMap[key][1]) + "\t" + entity.get("text") + "\n").encode("utf-8") )
     return triggerMap
 
 def writeEventTriggers(document, inputCorpus, outputFile, events, triggerIds, task=1):
@@ -172,7 +178,7 @@ def writeEventTriggers(document, inputCorpus, outputFile, events, triggerIds, ta
                         triggerIds[entity.get("id")] = offsetMap[match]
                     else:
                         triggerId = "T" + str(entityIndex)
-                        outputFile.write( triggerId + "\t" + entity.get("type") + " " + str(newOffset[0]) + " " + str(newOffset[1]) + "\t" + entity.get("text") + "\n" )
+                        outputFile.write( (triggerId + "\t" + entity.get("type") + " " + str(newOffset[0]) + " " + str(newOffset[1]) + "\t" + entity.get("text") + "\n").encode("utf-8") )
                         offsetMap[match] = triggerId
                         assert(not triggerIds.has_key(entity.get("id")))
                         triggerIds[entity.get("id")] = triggerId
@@ -414,14 +420,14 @@ def writeEvents(document, inputCorpus, outputFile, events, entityMap, triggerIds
 #        else:
 #            seenOutputLines.append(outputLineWithoutId)
         outputLine += siteLine
-        outputFile.write( outputLine + "\n" )
+        outputFile.write( (outputLine + "\n").encode("utf-8") )
     
     mCount = 1
     for speculation in speculations:
-        outputFile.write("M" + str(mCount) + "\tSpeculation " + speculation + "\n" )       
+        outputFile.write( ("M" + str(mCount) + "\tSpeculation " + speculation + "\n").encode("utf-8") )       
         mCount += 1
     for negation in negations:
-        outputFile.write("M" + str(mCount) + "\tNegation " + negation + "\n" )
+        outputFile.write( ("M" + str(mCount) + "\tNegation " + negation + "\n").encode("utf-8") )
         mCount += 1
 
 def gifxmlToGenia(input, output, task=1, outputIsA2File=False, submission=False, verbose=True):
