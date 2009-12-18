@@ -8,6 +8,13 @@ import combine
 import codecs
 from optparse import OptionParser
 
+def encode(string, codec="utf-8", error="xmlcharrefreplace"):
+    try:
+        return string.encode(codec, error)
+    except UnicodeDecodeError:
+        print >> sys.stderr, "Warning, unicode decode error when encoding"
+        return "UNICODE_DECODE_ERROR"
+
 def getEntityIndex(entities, index=0, task=1):
     origIds = []
     for entity in entities:
@@ -111,9 +118,9 @@ def writeDocumentText(document, outputFile):
     isFirstSentence = True
     for sentenceElement in document.findall("sentence"):
         text = sentenceElement.get("text")
-        outputFile.write( (text + " ").encode("utf-8", "xmlcharrefreplace") )
+        outputFile.write( encode(text + " ") )
         if isFirstSentence:
-            outputFile.write( ("\n").encode("utf-8", "xmlcharrefreplace") )
+            outputFile.write( encode("\n") )
             isFirstSentence = False
 
 def getGeniaOffset(sentenceOffset, entityOffset):
@@ -139,7 +146,7 @@ def writeProteins(document, inputCorpus, outputFile=None):
     for key in sorted(entityMap.keys()):
         entity = entityMap[key]
         if outputFile != None:
-            outputFile.write( (triggerMap[entity.get("id")] + "\tProtein " + str(offsetMap[key][0]) + " " + str(offsetMap[key][1]) + "\t" + entity.get("text") + "\n").encode("utf-8", "xmlcharrefreplace") )
+            outputFile.write( encode(triggerMap[entity.get("id")] + "\tProtein " + str(offsetMap[key][0]) + " " + str(offsetMap[key][1]) + "\t" + entity.get("text") + "\n") )
     return triggerMap
 
 def writeEventTriggers(document, inputCorpus, outputFile, events, triggerIds, task=1):
@@ -178,7 +185,7 @@ def writeEventTriggers(document, inputCorpus, outputFile, events, triggerIds, ta
                         triggerIds[entity.get("id")] = offsetMap[match]
                     else:
                         triggerId = "T" + str(entityIndex)
-                        outputFile.write( (triggerId + "\t" + entity.get("type") + " " + str(newOffset[0]) + " " + str(newOffset[1]) + "\t" + entity.get("text") + "\n").encode("utf-8", "xmlcharrefreplace") )
+                        outputFile.write( encode(triggerId + "\t" + entity.get("type") + " " + str(newOffset[0]) + " " + str(newOffset[1]) + "\t" + entity.get("text") + "\n") )
                         offsetMap[match] = triggerId
                         assert(not triggerIds.has_key(entity.get("id")))
                         triggerIds[entity.get("id")] = triggerId
@@ -420,14 +427,14 @@ def writeEvents(document, inputCorpus, outputFile, events, entityMap, triggerIds
 #        else:
 #            seenOutputLines.append(outputLineWithoutId)
         outputLine += siteLine
-        outputFile.write( (outputLine + "\n").encode("utf-8", "xmlcharrefreplace") )
+        outputFile.write( encode(outputLine + "\n") )
     
     mCount = 1
     for speculation in speculations:
-        outputFile.write( ("M" + str(mCount) + "\tSpeculation " + speculation + "\n").encode("utf-8", "xmlcharrefreplace") )       
+        outputFile.write( encode("M" + str(mCount) + "\tSpeculation " + speculation + "\n") )       
         mCount += 1
     for negation in negations:
-        outputFile.write( ("M" + str(mCount) + "\tNegation " + negation + "\n").encode("utf-8", "xmlcharrefreplace") )
+        outputFile.write( encode("M" + str(mCount) + "\tNegation " + negation + "\n") )
         mCount += 1
 
 def gifxmlToGenia(input, output, task=1, outputIsA2File=False, submission=False, verbose=True):
