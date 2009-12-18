@@ -106,7 +106,8 @@ class ExampleBuilder:
             corpusElements = SentenceGraph.loadCorpus(input, parse, tokenization, removeNameInfo=removeNameInfo)
             sentences = []
             for sentence in corpusElements.sentences:
-                sentences.append( [sentence.sentenceGraph,None] )
+                if sentence.sentenceGraph != None: # required for event detection
+                    sentences.append( [sentence.sentenceGraph,None] )
             return sentences
         else: # assume input is already a list of sentences
             assert(removeNameInfo == False)
