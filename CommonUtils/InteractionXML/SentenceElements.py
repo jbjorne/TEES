@@ -64,26 +64,31 @@ class SentenceElements:
                         if element.attrib["parser"] == parse:
                             self.parseElement = element
                             break
-                    tokenization = self.parseElement.attrib["tokenizer"]
-                    tokenizationsElement = sentenceAnalysesElement.find("tokenizations")
-                    tokenizationElements = tokenizationsElement.findall("tokenization")
-                    for element in tokenizationElements:
-                        if element.attrib["tokenizer"] == tokenization:
-                            self.tokenizationElement = element
-                            break                
+                    if self.parseElement != None:
+                        tokenization = self.parseElement.attrib["tokenizer"]
+                        tokenizationsElement = sentenceAnalysesElement.find("tokenizations")
+                        tokenizationElements = tokenizationsElement.findall("tokenization")
+                        for element in tokenizationElements:
+                            if element.attrib["tokenizer"] == tokenization:
+                                self.tokenizationElement = element
+                                break                
                 else: # old format
                     if parse != None:
                         self.parseElement = parsesElement.find(parse)
                     if tokenization != None:
                         tokenizationsElement = sentenceAnalysesElement.find("tokenizations")
-                        self.tokenizationElement = tokenizationsElement.find(tokenization)
+                        if tokenizationsElement != None:
+                            self.tokenizationElement = tokenizationsElement.find(tokenization)
                 
-                dependencyElements = self.parseElement.findall("dependency")
-                if dependencyElements != None:
-                    self.dependencies = dependencyElements
-                tokenElements = self.tokenizationElement.findall("token")
-                if tokenElements != None:
-                    self.tokens = tokenElements
+                dependencyElements = None
+                if self.parseElement != None:
+                    dependencyElements = self.parseElement.findall("dependency")
+                    if dependencyElements != None:
+                        self.dependencies = dependencyElements
+                if self.tokenizationElement != None:
+                    tokenElements = self.tokenizationElement.findall("token")
+                    if tokenElements != None:
+                        self.tokens = tokenElements
 
     def getEntity(self, offset, offsetList, entityIds):
         index = 0

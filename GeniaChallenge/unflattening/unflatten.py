@@ -59,8 +59,12 @@ class Analyser:
     @classmethod
     def collectTokens(cls,sentence,tokenName):
         tmp = sentence.find('sentenceanalyses')
+        if tmp == None:
+            return []
         tmp2 = [x for x in tmp.getiterator('tokenization')
                 if x.attrib['tokenizer']==tokenName][0]
+        if tmp2 == None:
+            return []
         tokens = dict( [(x.attrib['id'],x)
                         for x in tmp2.findall('token')] )
         return(tokens)
@@ -134,7 +138,11 @@ class Unflattener:
                        if not self.semG.has_node(x)]
         # tokens and dep.graphs are sentence-specific because
         # TOKEN IDS ARE NOT HIERARCHICAL
-        self.tokens = dict( [(x,Analyser.collectTokens(x,self.tokenName))
+        self.tokens = []
+        toks = Analyser.collectTokens(x,self.tokenName)
+        if len(toks) == 0:
+            return
+        self.tokens = dict( [(x,toks)
                              for x in self.document.findall('sentence')] )
         self.mapping = Analyser.mapEntitiesToTokens(self.document,self.tokens)
         self.depDiGs = dict( [(x,Analyser.makeDepG(x,self.tokenName,self.parseName))
@@ -434,6 +442,8 @@ def interface(optionArgs=sys.argv[1:]):
         #sys.stderr.write("Unflattening document %s\n"%document.attrib['id'])
         unflattener = Unflattener(document,options.perfect,
                                   options.tokens,options.parse)
+        if len(unflattener.tokens) == 0:
+            continue
         unflattener.analyse()
         unflattener.unflatten()
     #indent(corpus.getroot())
