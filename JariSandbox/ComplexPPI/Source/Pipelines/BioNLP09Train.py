@@ -139,7 +139,7 @@ for params in paramCombinations:
         # which evaluate on the level of examples.
         EvaluateInteractionXML.run(Ev, xml, DEVEL_FILE, PARSE, TOK)
         # Post-processing
-        xml = unflatten.interface(xml, PARSE, TOK)
+        xml = unflatten(xml, PARSE, TOK)
         # Output will be stored to the geniaformat-subdirectory, where will also be a
         # tar.gz-file which can be sent to the Shared Task evaluation server.
         gifxmlToGenia(xml, "geniaformat", options.task)
