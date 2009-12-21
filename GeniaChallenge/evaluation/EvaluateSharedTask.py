@@ -1,5 +1,8 @@
 import sys, os, shutil
 import subprocess
+thisPath = os.path.dirname(os.path.abspath(__file__))
+def relPath(path):
+    return os.path.abspath(os.path.join(thisPath, path))
 
 RELEASE = True
 #IF LOCAL
@@ -85,8 +88,12 @@ def evaluate(sourceDir, task=1, folds=-1, foldToRemove=-1, evaluations=["strict"
     origDir = os.getcwd()
     os.chdir(perlDir)
     
+    goldDir = relPath("../../data/evaluation-data/evaluation-tools-devel-gold")
+    tempDir = relPath("../../data/evaluation-data/evaluation-temp")
+    #IF LOCAL
     goldDir = "/usr/share/biotext/GeniaChallenge/extension-data/genia/evaluation-data/evaluation-tools-devel-gold"
     tempDir = "/usr/share/biotext/GeniaChallenge/extension-data/genia/evaluation-data/evaluation-temp"
+    #ENDIF
     if os.path.exists(tempDir):
         shutil.rmtree(tempDir)
     os.mkdir(tempDir)
