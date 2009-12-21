@@ -47,7 +47,7 @@ paramCombinations = getParameterCombinations(ALL_PARAMS)
 
 # These commands will be in the beginning of most pipelines
 WORKDIR=options.output
-workdir(WORKDIR, True) # Select a working directory, don't remove existing files
+workdir(WORKDIR, False) # Select a working directory, don't remove existing files
 log() # Start logging into a file in working directory
 
 PARSE_TAG = PARSE + "_" + TOK
