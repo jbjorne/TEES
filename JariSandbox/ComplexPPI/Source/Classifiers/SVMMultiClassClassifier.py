@@ -2,7 +2,7 @@
 A wrapper for the Joachims SVM Multiclass.
 """
 
-__version__ = "$Revision: 1.38 $"
+__version__ = "$Revision: 1.39 $"
 
 import sys,os
 sys.path.append(os.path.dirname(os.path.abspath(__file__))+"/..")
@@ -14,7 +14,6 @@ import copy
 import types
 from Core.Classifier import Classifier
 import Core.Split as Split
-from Evaluators.MultiClassEvaluator import MultiClassEvaluator
 from Utils.Timer import Timer
 from Utils.Parameters import *
 from Utils.ProgressCounter import ProgressCounter
