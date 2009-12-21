@@ -27,8 +27,8 @@ assert options.task in [1, 2]
 # Main settings
 PARSE=options.parse
 TOK=options.tokenization
-TRAIN_FILE = options.testFile
-DEVEL_FILE = options.trainFile
+TRAIN_FILE = options.trainFile
+DEVEL_FILE = options.testFile
 
 # Example generation parameters
 EDGE_FEATURE_PARAMS="style:typed,directed,no_linear,entities,genia_limits,noMasking,maxFeatures"
