@@ -88,8 +88,8 @@ def evaluate(sourceDir, task=1, folds=-1, foldToRemove=-1, evaluations=["strict"
     origDir = os.getcwd()
     os.chdir(perlDir)
     
-    goldDir = relPath("../../data/evaluation-data/evaluation-tools-devel-gold")
-    tempDir = relPath("../../data/evaluation-data/evaluation-temp")
+    goldDir = relPath("../../../data/evaluation-data/evaluation-tools-devel-gold")
+    tempDir = relPath("../../../data/evaluation-data/evaluation-temp")
     #IF LOCAL
     goldDir = "/usr/share/biotext/GeniaChallenge/extension-data/genia/evaluation-data/evaluation-tools-devel-gold"
     tempDir = "/usr/share/biotext/GeniaChallenge/extension-data/genia/evaluation-data/evaluation-temp"
