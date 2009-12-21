@@ -1,7 +1,17 @@
 import sys, os, shutil
 import subprocess
-sys.path.append( os.path.split(os.path.abspath(__file__))[0] + "/../../JariSandbox/ComplexPPI/Source/Core" )
+
+RELEASE = True
+#IF LOCAL
+RELEASE = False
+#ENDIF
+if RELEASE:
+    sys.path.append( os.path.split(os.path.abspath(__file__))[0] + "/../../Core" )
+#IF LOCAL
+else:
+    sys.path.append( os.path.split(os.path.abspath(__file__))[0] + "/../../JariSandbox/ComplexPPI/Source/Core" )
 #sys.path.append(os.path.join(os.path.abspath(__file__),"/../../JariSandbox/ComplexPPI/Source/Core"))
+#ENDIF
 import Split
 
 perlDir = os.path.dirname(os.path.abspath(__file__))+"/bionlp09_shared_task_evaluation_tools_v1"

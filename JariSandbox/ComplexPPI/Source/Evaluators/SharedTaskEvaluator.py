@@ -2,13 +2,25 @@ from Evaluator import Evaluator
 from Evaluator import EvaluationData
 from AveragingMultiClassEvaluator import AveragingMultiClassEvaluator
 import sys, os, types
-sys.path.append(os.path.dirname(os.path.abspath(__file__))+"/..")
+thisPath = os.path.dirname(os.path.abspath(__file__))
+sys.path.append(os.path.join(thisPath,".."))
 from Core.IdSet import IdSet
 import Core.ExampleUtils as ExampleUtils
 
-sys.path.append("../../../../GeniaChallenge/formatConversion")
-from gifxmlToGenia import gifxmlToGenia
-sys.path.append("../../../../GeniaChallenge")
+RELEASE = True
+#IF LOCAL
+RELEASE = False
+#ENDIF
+if RELEASE:
+    sys.path.append(os.path.abspath(os.path.join(thisPath, "../SharedTask/formatConversion")))
+    from gifxmlToGenia import gifxmlToGenia
+    sys.path.append(os.path.abspath(os.path.join(thisPath, "../SharedTask")))
+#IF LOCAL
+else:
+    sys.path.append(os.path.abspath(os.path.join(thisPath, "../../../../GeniaChallenge/formatConversion")))
+    from gifxmlToGenia import gifxmlToGenia
+    sys.path.append(os.path.abspath(os.path.join(thisPath, "../../../../GeniaChallenge")))
+#ENDIF
 import evaluation.EvaluateSharedTask
 evaluateSharedTask = evaluation.EvaluateSharedTask.evaluate
 
