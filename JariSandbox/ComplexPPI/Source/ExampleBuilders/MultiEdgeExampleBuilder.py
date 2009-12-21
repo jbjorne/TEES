@@ -9,7 +9,9 @@ from FeatureBuilders.TokenFeatureBuilder import TokenFeatureBuilder
 from FeatureBuilders.BioInferOntologyFeatureBuilder import BioInferOntologyFeatureBuilder
 from FeatureBuilders.NodalidaFeatureBuilder import NodalidaFeatureBuilder
 import Graph.networkx_v10rc1 as NX10
+#IF LOCAL
 import Utils.BioInfer.OntologyUtils as OntologyUtils
+#ENDIF
 
 class MultiEdgeExampleBuilder(ExampleBuilder):
     def __init__(self, style=["typed","directed","headsOnly"], length=None, types=[], featureSet=None, classSet=None):
@@ -39,9 +41,11 @@ class MultiEdgeExampleBuilder(ExampleBuilder):
             self.multiEdgeFeatureBuilder.ontologyFeatureBuilder = BioInferOntologyFeatureBuilder(self.featureSet)
         if "nodalida" in self.styles:
             self.nodalidaFeatureBuilder = NodalidaFeatureBuilder(self.featureSet)
+        #IF LOCAL
         if "bioinfer_limits" in self.styles:
             self.bioinferOntologies = OntologyUtils.getBioInferTempOntology()
             #self.bioinferOntologies = OntologyUtils.loadOntologies(OntologyUtils.g_bioInferFileName)
+        #ENDIF
         self.pathLengths = length
         assert(self.pathLengths == None)
         self.types = types
@@ -138,6 +142,7 @@ class MultiEdgeExampleBuilder(ExampleBuilder):
         else:
             return True
     
+    #IF LOCAL
     def getBioInferParentType(self, eType):
         if eType == "Physical_entity" or OntologyUtils.hasParent(eType, "Physical_entity", self.bioinferOntologies):
             return "Physical"
@@ -173,6 +178,7 @@ class MultiEdgeExampleBuilder(ExampleBuilder):
         else:
             assert(categoryName == "neg"), categoryName + " category for " + e1Type + " and " + e2Type
             return False
+    #ENDIF
     
     def nxMultiDiGraphToUndirected(self, graph):
         undirected = NX10.MultiGraph(name=graph.name)
