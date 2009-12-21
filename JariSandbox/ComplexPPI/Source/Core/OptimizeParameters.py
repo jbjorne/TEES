@@ -5,7 +5,9 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__))+"/..")
 from Utils.Parameters import *
 from Utils.Timer import Timer
 import Utils.Stream as Stream
+#IF LOCAL
 from Murska.CSCConnection import CSCConnection
+#ENDIF
 import ExampleUtils
 
 def getCombinationString(combination):
@@ -87,6 +89,7 @@ def optimizeLocal(Classifier, Evaluator, trainExamples, testExamples, classIds, 
     print >> sys.stderr, "Selected parameters", bestResult[-1]
     return bestResult
 
+#IF LOCAL
 def optimizeCSC(Classifier, Evaluator, trainExamples, testExamples, classIds, combinations, workDir=None, timeout=None, cscConnection=None, downloadAllModels=False):
     bestResult = None
     combinationCount = 1
@@ -164,3 +167,4 @@ def optimizeCSC(Classifier, Evaluator, trainExamples, testExamples, classIds, co
         modelFileName = os.path.join(workDir, modelFileName)
     bestResult[1] = modelFileName
     return bestResult
+#ENDIF
