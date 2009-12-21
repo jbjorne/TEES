@@ -2,14 +2,17 @@ import sys,os,time
 thisPath = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.abspath(os.path.join(thisPath,"..")))
 import Settings
-from ExampleBuilders.GeneralEntityTypeRecognizer import GeneralEntityTypeRecognizer
 from ExampleBuilders.GeneralEntityTypeRecognizerGztr import GeneralEntityTypeRecognizerGztr
 from ExampleBuilders.MultiEdgeExampleBuilder import MultiEdgeExampleBuilder
+#IF LOCAL
+from ExampleBuilders.GeneralEntityTypeRecognizer import GeneralEntityTypeRecognizer
 from ExampleBuilders.EventExampleBuilder import EventExampleBuilder
 from ExampleBuilders.DirectEventExampleBuilder import DirectEventExampleBuilder
 from ExampleBuilders.Task3ExampleBuilder import Task3ExampleBuilder
 from ExampleBuilders.PathGazetteer import PathGazetteer
 from ExampleBuilders.CPPTriggerExampleBuilder import CPPTriggerExampleBuilder
+from Murska.CSCConnection import CSCConnection
+#ENDIF
 from Classifiers.SVMMultiClassClassifier import SVMMultiClassClassifier as Cls
 from Classifiers.AllCorrectClassifier import AllCorrectClassifier as ACCls
 from Evaluators.AveragingMultiClassEvaluator import AveragingMultiClassEvaluator as Ev
@@ -25,14 +28,28 @@ import Utils.Stream as Stream
 import atexit, shutil
 from Core.RecallAdjust import RecallAdjust
 from Core.Gazetteer import Gazetteer
-from Murska.CSCConnection import CSCConnection
-sys.path.append(os.path.abspath(os.path.join(thisPath, "../../../../GeniaChallenge/unflattening")))
-#from prune import prune
+
+RELEASE = True
+#IF LOCAL
+RELEASE = False
+#ENDIF
+
+if RELEASE:
+    sys.path.append(os.path.abspath(os.path.join(thisPath, "../SharedTask/unflattening")))
+    sys.path.append(os.path.abspath(os.path.join(thisPath, "../SharedTask/formatConversion")))
+    sys.path.append(os.path.abspath(os.path.join(thisPath, "../SharedTask")))
+#IF LOCAL
+else:
+    sys.path.append(os.path.abspath(os.path.join(thisPath, "../../../../GeniaChallenge/unflattening")))
+    sys.path.append(os.path.abspath(os.path.join(thisPath, "../../../../GeniaChallenge/formatConversion")))
+    sys.path.append(os.path.abspath(os.path.join(thisPath, "../../../../GeniaChallenge")))
+#ENDIF
 from unflatten import unflatten
+
+#IF LOCAL
 import preserveTask2
-sys.path.append(os.path.abspath(os.path.join(thisPath, "../../../../GeniaChallenge/formatConversion")))
+#ENDIF
 from gifxmlToGenia import gifxmlToGenia
-sys.path.append(os.path.abspath(os.path.join(thisPath, "../../../../GeniaChallenge")))
 import evaluation.EvaluateSharedTask
 evaluateSharedTask = evaluation.EvaluateSharedTask.evaluate
 from cElementTreeUtils import write as writeXML
