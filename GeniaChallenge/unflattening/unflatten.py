@@ -77,9 +77,10 @@ class Analyser:
                      (offset[0]<=v[0] and offset[1]>=v[1]))] )
 
     @classmethod
-    def mapEntitiesToTokens(cls,document,tokens):
+    #def mapEntitiesToTokens(cls,document,tokens):
+    def mapEntitiesToTokens(cls,sentences,tokens):
         e2t = {}
-        for sentence in self.getSentencesWithParse(document.findall('sentence')):
+        for sentence in sentences: #self.getSentencesWithParse(document.findall('sentence')):
             toks = dict( [(k,Analyser.transformOffset(v.attrib['charOffset']))
                           for k,v in tokens[sentence].items()] )
             for x in sentence.findall('entity'):
@@ -140,7 +141,7 @@ class Unflattener:
         # TOKEN IDS ARE NOT HIERARCHICAL
         self.tokens = dict( [(x,Analyser.collectTokens(x,self.tokenName))
                              for x in self.getSentencesWithParse(self.document.findall('sentence'))] )
-        self.mapping = Analyser.mapEntitiesToTokens(self.document,self.tokens)
+        self.mapping = Analyser.mapEntitiesToTokens(self.getSentencesWithParse(self.document.findall('sentence')),self.tokens)
         self.depDiGs = dict( [(x,Analyser.makeDepG(x,self.tokenName,self.parseName))
                               for x in self.getSentencesWithParse(self.document.findall('sentence'))] )
         self.depGs = dict( [(x,y.to_undirected())
