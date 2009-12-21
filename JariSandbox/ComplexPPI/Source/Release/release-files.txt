@@ -202,7 +202,7 @@ GeniaChallenge/evaluation/bionlp09_shared_task_evaluation_tools_v1/a2-evaluate.p
 GeniaChallenge/evaluation/bionlp09_shared_task_evaluation_tools_v1/a2-normalize.pl
 GeniaChallenge/evaluation/bionlp09_shared_task_evaluation_tools_v1/generate-task-specific-a2-file.pl
 GeniaChallenge/evaluation/bionlp09_shared_task_evaluation_tools_v1/prepare-eval.pl
-GeniaChallenge/evaluation/bionlp09_shared_task_evaluation_tools_v1/prepare-eval.pl~
+#GeniaChallenge/evaluation/bionlp09_shared_task_evaluation_tools_v1/prepare-eval.pl~
 GeniaChallenge/evaluation/bionlp09_shared_task_evaluation_tools_v1/prepare-gold.pl
 JariSandbox/ComplexPPI/Source/__init__.py
 #JariSandbox/ComplexPPI/Source/CorpusAnalysis.py
