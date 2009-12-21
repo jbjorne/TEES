@@ -376,8 +376,11 @@ class Unflattener:
             analyses = sentence.find("sentenceanalyses")
             if analyses == None:
                 continue
+            parses = analyses.find("parses")
+            if parses == None:
+                continue
             parseFound = False
-            for p in analyses.findall("parse"):
+            for p in parses.findall("parse"):
                 if p.get("parser") == self.parseName:
                     parseFound = True
                     break
