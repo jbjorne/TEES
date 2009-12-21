@@ -60,11 +60,11 @@ class Analyser:
     def collectTokens(cls,sentence,tokenName):
         tmp = sentence.find('sentenceanalyses')
         if tmp == None:
-            return []
+            return {}
         tmp2 = [x for x in tmp.getiterator('tokenization')
                 if x.attrib['tokenizer']==tokenName][0]
         if tmp2 == None:
-            return []
+            return {}
         tokens = dict( [(x.attrib['id'],x)
                         for x in tmp2.findall('token')] )
         return(tokens)
@@ -79,7 +79,7 @@ class Analyser:
     @classmethod
     def mapEntitiesToTokens(cls,document,tokens):
         e2t = {}
-        for sentence in document.findall('sentence'):
+        for sentence in self.getSentencesWithParse(document.findall('sentence')):
             toks = dict( [(k,Analyser.transformOffset(v.attrib['charOffset']))
                           for k,v in tokens[sentence].items()] )
             for x in sentence.findall('entity'):
@@ -131,7 +131,7 @@ class Unflattener:
         self.tokenName = tokenName
         self.parseName = parseName
         self.sentences = dict( [(x.attrib['id'],x)
-                                for x in self.document.findall('sentence')] )
+                                for x in self.getSentencesWithParse(self.document.findall('sentence'))] )
         # contains entity and interaction elements
         self.semG = Analyser.makeSemG(self.document)
         self.loners = [x for x in self.document.getiterator('entity')
@@ -139,10 +139,10 @@ class Unflattener:
         # tokens and dep.graphs are sentence-specific because
         # TOKEN IDS ARE NOT HIERARCHICAL
         self.tokens = dict( [(x,Analyser.collectTokens(x,self.tokenName))
-                             for x in self.document.findall('sentence')] )
+                             for x in self.getSentencesWithParse(self.document.findall('sentence'))] )
         self.mapping = Analyser.mapEntitiesToTokens(self.document,self.tokens)
         self.depDiGs = dict( [(x,Analyser.makeDepG(x,self.tokenName,self.parseName))
-                              for x in self.document.findall('sentence')] )
+                              for x in self.getSentencesWithParse(self.document.findall('sentence'))] )
         self.depGs = dict( [(x,y.to_undirected())
                             for x,y in self.depDiGs.items()] )
 
@@ -354,7 +354,7 @@ class Unflattener:
             unprocessed_nodes = next_nodes - removable
 
     def unflatten(self):
-        for sentence in self.document.findall('sentence'):
+        for sentence in self.getSentencesWithParse(self.document.findall('sentence')):
             for elem in sentence.findall('entity'):
                 sentence.remove(elem)
             for elem in sentence.findall('interaction'):
@@ -369,7 +369,20 @@ class Unflattener:
             sentence = self.sentences[Analyser.findSentenceId(node)]
             sentence.insert(0,node)
 
-
+    def getSentencesWithParse(self, sentences):
+        sentencesWithParse = []
+        for sentence in sentences:
+            analyses = sentence.find("sentenceanalyses")
+            if analyses == None:
+                continue
+            parseFound = False
+            for p in analyses.findall("parse"):
+                if p.get("parser") == self.parseName:
+                    parseFound = True
+                    break
+            if parseFound:
+                sentencesWithParse.append(sentence)
+        return sentencesWithParse
 
 def unflatten(input, parse, tokenization=None, output=None, perfect=False):
     """
@@ -438,8 +451,8 @@ def interface(optionArgs=sys.argv[1:]):
         #sys.stderr.write("Unflattening document %s\n"%document.attrib['id'])
         unflattener = Unflattener(document,options.perfect,
                                   options.tokens,options.parse)
-        if len(unflattener.tokens) == 0:
-            continue
+        #if len(unflattener.tokens) == 0:
+        #    continue
         unflattener.analyse()
         unflattener.unflatten()
     #indent(corpus.getroot())
