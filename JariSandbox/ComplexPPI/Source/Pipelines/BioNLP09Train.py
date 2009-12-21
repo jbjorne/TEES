@@ -48,14 +48,15 @@ paramCombinations = getParameterCombinations(ALL_PARAMS)
 # These commands will be in the beginning of most pipelines
 WORKDIR=options.output
 workdir(WORKDIR, True) # Select a working directory, don't remove existing files
-TRIGGER_IDS = copyIdSetsToWorkdir(Settings.TriggerIds)
-EDGE_IDS = copyIdSetsToWorkdir(Settings.EdgeIds)
 log() # Start logging into a file in working directory
 
 PARSE_TAG = PARSE + "_" + TOK
 
 # Pre-calculate all the required SVM models
 if options.models:
+    TRIGGER_IDS = copyIdSetsToWorkdir(Settings.TriggerIds)
+    EDGE_IDS = copyIdSetsToWorkdir(Settings.EdgeIds)
+    
     ###############################################################################
     # Trigger example generation
     ###############################################################################
@@ -89,6 +90,12 @@ if options.models:
     EDGE_CLASSIFIER_PARAMS="c:" + ','.join(map(str, ALL_PARAMS["edge"]))
     optimize(Cls, Ev, EDGE_TRAIN_EXAMPLE_FILE, EDGE_DEVEL_EXAMPLE_FILE,\
         EDGE_IDS+".class_names", EDGE_CLASSIFIER_PARAMS, "devel-edge-models")
+else:
+    # New feature ids may have been defined during example generation, 
+    # so use the id sets from current WORKDIR for the grid search. The set
+    # files will have the same names as the files they are copied from
+    TRIGGER_IDS = os.path.basename(Settings.TriggerIds)
+    EDGE_IDS = os.path.basename(Settings.EdgeIds)
 
 
 ###############################################################################
