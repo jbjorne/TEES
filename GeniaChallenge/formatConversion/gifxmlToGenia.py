@@ -104,13 +104,11 @@ def processCorpus(inputCorpus, outputPath, task=1, outputIsA2File=False, verbose
         if not outputIsA2File: 
             outputFile.close()
             
-            # Disabled because Babelfish Python 2.4 can't handle any unicode writing
-            if False:
-                # Write txt file
-                outputFile = codecs.open(os.path.join(outputPath,documentId + ".txt"), "wt", "utf-8")
-                #outputFile = open(os.path.join(outputPath,documentId + ".txt"), "wt")
-                writeDocumentText(document, outputFile)
-                outputFile.close()
+            # Write txt file
+            outputFile = codecs.open(os.path.join(outputPath,documentId + ".txt"), "wt", "utf-8")
+            #outputFile = open(os.path.join(outputPath,documentId + ".txt"), "wt")
+            writeDocumentText(document, outputFile)
+            outputFile.close()
     
     if outputIsA2File:
         a2File.close()
