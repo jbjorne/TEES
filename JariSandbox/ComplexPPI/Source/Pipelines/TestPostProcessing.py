@@ -1,8 +1,8 @@
 from Pipeline import *
-import os
+import os, sys
 
 # Define working directory
-WORKDIR="/usr/share/biotext/GeniaChallenge/Post-processing-test"
+WORKDIR="/usr/share/biotext/GeniaChallenge/Post-processing-test-newest"
 workdir(WORKDIR, False) # Select a working directory, remove existing files
 log() # Start logging into a file in working directory
 
@@ -16,13 +16,17 @@ PREDICTED_DEVEL_FILE="/usr/share/biotext/GeniaChallenge/extension-data/genia/tes
 ###########################################################
 # Old post-processing
 ###########################################################
-prune.interface(["-i",PREDICTED_DEVEL_FILE,"-o","pruned.xml","-c"])
-unflatten.interface(["-i","pruned.xml","-o","unflattened.xml","-a",PARSE_TOK,"-t",PARSE_TOK])
+xml = unflatten(PREDICTED_DEVEL_FILE, PARSE_TOK)
+#prune.interface(["-i",PREDICTED_DEVEL_FILE,"-o","pruned.xml","-c"])
+#unflatten.interface(["-i","pruned.xml","-o","unflattened.xml","-a",PARSE_TOK,"-t",PARSE_TOK])
 # Output will be stored to the geniaformat-subdirectory, where will also be a
 # tar.gz-file which can be sent to the Shared Task evaluation server.
-gifxmlToGenia("unflattened.xml", "geniaformat")
+gifxmlToGenia(xml, "geniaformat")
+#gifxmlToGenia("unflattened.xml", "geniaformat")
 # Evaluate the output
 evaluateSharedTask("geniaformat", 1)
+
+sys.exit()
 
 ###########################################################
 # New post-processing
