@@ -42,7 +42,7 @@ def copySourceFiles(input, output):
         shutil.copy(srcPath, outPath)
 
 def copyDataFiles(input, output):
-    pass
+    shutil.copy(srcPath, outPath)
 
 ###############################################
 # Imports
@@ -57,6 +57,9 @@ def fixVisit(outPath, dirname, names):
             Preprocess.preprocess(os.path.join(dirname, name), [Preprocess.conditional])
     
 def fixImports(outPath, dirname, pythonFile):
+    if dirname.find("networkx") != -1:
+        return
+
     f = open(os.path.join(dirname, pythonFile), "rt")
     lines = f.readlines()
     f.close()
@@ -95,3 +98,16 @@ if __name__=="__main__":
     copySourceFiles(options.input, options.output + "/src")
     print >> sys.stderr, "Fixing imports"
     fixAllImports(options.output)
+    
+    print >> sys.stderr, "Copying data files"
+    dataPath = os.path.join(options.output, "data")
+    shutil.copytree("/usr/share/biotext/GeniaChallenge/release-files", dataPath)
+    corpusPath = "/usr/share/biotext/GeniaChallenge/xml/"
+    shutil.copy(corpusPath + "devel123.xml", dataPath)
+    shutil.copy(corpusPath + "train123.xml", dataPath)
+    shutil.copy(corpusPath + "everything123.xml", dataPath)
+    shutil.copy(corpusPath + "test.xml", dataPath)
+    
+    print >> sys.stderr, "Copying additional files"
+    shutil.copy("readme.txt", os.path.join(options.output + "/readme.txt"))
+    shutil.copy("Settings.py", os.path.join(options.output + "/src/Settings.py"))

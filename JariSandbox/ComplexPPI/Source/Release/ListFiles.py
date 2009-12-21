@@ -15,7 +15,17 @@ ignoreStrings = ["CVS",
 "JariSandbox/Tokenization",
 "paperBioNLP09",
 ".metadata",
-".pyc"]
+".pyc",
+".project",
+".pydevproject",
+"/reranking",
+"presentationBioNLP09",
+"BEG",
+"GeniaChallenge/statistics",
+"GeniaChallenge/triggerRecognition",
+"JariSandbox/MLProto",
+"temp",
+"Temp"]
 
 def listFiles(path, subPath):
     os.path.walk(path, printVisit, subPath)
@@ -42,3 +52,5 @@ def printVisit(subPath, dirname, names):
 #listFiles(os.path.join(input, "cvs_checkout"))
 #listFiles(os.path.join(input, "cvs_release/GeniaChallenge"))
 listFiles(input + "/CommonUtils", "/home/jari/cvs_checkout/")
+listFiles(input + "/GeniaChallenge", "/home/jari/cvs_checkout/")
+listFiles(input + "/JariSandbox", "/home/jari/cvs_checkout/")

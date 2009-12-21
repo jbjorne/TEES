@@ -23,6 +23,15 @@ def conditional(lines):
             if keepLines:
                 linesToKeep.append(line)
     return linesToKeep
+
+def geniaChallengeName(lines):
+    outLines = []
+    for line in lines:
+        if line.find("GeniaChallenge") == -1:
+            outLines.append( line )
+        else:
+            outLines.append( line.replace("GeniaChallenge", "SharedTask") )
+    return outLines
         
             
     
