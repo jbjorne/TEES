@@ -115,7 +115,7 @@ log() # Start logging into a file in the working directory
 if os.path.isdir(options.input):
     inputFiles = sorted(os.listdir(options.input))
     for filename in inputFiles[:]:
-        if filename.find("xml.gz") == -1:
+        if filename.find("xml") == -1:
             inputFiles.remove(filename)
     count = 1
     for filename in inputFiles:
