@@ -124,7 +124,7 @@ If you have re-trained the system (see 4.4), you can use "-m" and "-n" to point 
 
 If you have modifier the provided training files, or are using some other data for training, the examples generated from it may contain new features. The support vector machine has no knowledge of the feature and class names, and instead uses integer ids to represent them. When given something to classify, it will match classes and features based on these ids. Therefore it is extremely important that the ids are consistent between training and classification.
 
-When re-training the system, new id files are created in the output directory. These are of the format STEM.class_names and STEM.feature_names. When using your new models (with the "-m" and "-n" switches), remember to also use the matching id sets with the "-i" and "-j" parameters.
+When re-training the system, new id files are created in the output directory. These are of the format STEM.class_names and STEM.feature_names. When using your new models (with the "-m" and "-n" switches), remember to also use the matching id sets with the "-v" and "-w" parameters.
 
 4.4 Re-training the system
 
@@ -132,7 +132,7 @@ If you modify the training data (such as using a new parse) or use a new dataset
 
 The program has several options. Options "-e" and "-r" are used to to define your training and testing files. The SVM uses training data to learn its classification principles, and testing data for determining the optimal regularization parameter c. Both files are in Interaction XML format, more information on which can be found in section 5.
 
-Output directory "-o" will be created if it doesn't exist. If you have created new parse and tokenization elements in the interaction xml files, they can be used with the "-p" and "-t" options. Id sets ("-i" and "-j") should use the default values, so most features will be consistent with the pre-defined models.
+Output directory "-o" will be created if it doesn't exist. If you have created new parse and tokenization elements in the interaction xml files, they can be used with the "-p" and "-t" options. Id sets ("-v" and "-w") should use the default values, so most features will be consistent with the pre-defined models.
 
 The three parameters to optimize can be defined with options "-x" (trigger detector c-parameter), "-y (recall booster parameter)" and "-z" (edge detector c-parameter). All of these take as input a comma separated list of numbers, integers in the case of "-x" and "-z" and floats for "-y". Determining good parameter ranges for optimization is somewhat a case of trial and error, but the provided default values should be good for most situations. The SVM regularization parameters, or c-parameters, can be almost anything, but for this system usually exist in the range of 10000 - 1000000. 
 

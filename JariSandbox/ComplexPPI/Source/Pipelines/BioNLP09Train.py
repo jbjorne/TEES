@@ -15,8 +15,8 @@ optparser.add_option("-t", "--tokenization", default="split-McClosky", dest="tok
 optparser.add_option("-m", "--models", default=True, action="store_false", dest="models", help="Don't recalculate models")
 optparser.add_option("-s", "--startFrom", default=0, type="int", dest="startFrom", help="The parameter combination index to start grid search from")
 # Id sets
-optparser.add_option("-i", "--triggerIds", default=Settings.TriggerIds, dest="triggerIds", help="Trigger detector SVM example class and feature id file stem (files = STEM.class_names and STEM.feature_names)")
-optparser.add_option("-j", "--edgeIds", default=Settings.EdgeIds, dest="edgeIds", help="Edge detector SVM example class and feature id file stem (files = STEM.class_names and STEM.feature_names)")
+optparser.add_option("-v", "--triggerIds", default=Settings.TriggerIds, dest="triggerIds", help="Trigger detector SVM example class and feature id file stem (files = STEM.class_names and STEM.feature_names)")
+optparser.add_option("-w", "--edgeIds", default=Settings.EdgeIds, dest="edgeIds", help="Edge detector SVM example class and feature id file stem (files = STEM.class_names and STEM.feature_names)")
 # Parameters to optimize
 optparser.add_option("-x", "--triggerParams", default="1000,5000,10000,20000,50000,80000,100000,150000,180000,200000,250000,300000,350000,500000,1000000", dest="triggerParams", help="Trigger detector c-parameter values")
 optparser.add_option("-y", "--recallAdjustParams", default="0.5,0.6,0.7,0.85,1.0", dest="recallAdjustParams", help="Recall adjuster parameter values")

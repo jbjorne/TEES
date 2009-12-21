@@ -10,8 +10,8 @@ optparser.add_option("-t", "--tokenization", default="split-McClosky", dest="tok
 optparser.add_option("-a", "--task", default=1, type="int", dest="task", help="task number")
 optparser.add_option("-m", "--triggerModel", default=Settings.TrainTriggerModel, dest="triggerModel", help="SVM-multiclass trigger model")
 optparser.add_option("-n", "--edgeModel", default=Settings.TrainEdgeModel, dest="edgeModel", help="SVM-multiclass edge (event argument) model")
-optparser.add_option("-i", "--triggerIds", default=Settings.TriggerIds, dest="triggerIds", help="Trigger detector SVM example class and feature id file stem (files = STEM.class_names and STEM.feature_names)")
-optparser.add_option("-j", "--edgeIds", default=Settings.EdgeIds, dest="edgeIds", help="Edge detector SVM example class and feature id file stem (files = STEM.class_names and STEM.feature_names)")
+optparser.add_option("-v", "--triggerIds", default=Settings.TriggerIds, dest="triggerIds", help="Trigger detector SVM example class and feature id file stem (files = STEM.class_names and STEM.feature_names)")
+optparser.add_option("-w", "--edgeIds", default=Settings.EdgeIds, dest="edgeIds", help="Edge detector SVM example class and feature id file stem (files = STEM.class_names and STEM.feature_names)")
 optparser.add_option("-r", "--recallBoost", default=0.6, type="float", dest="recallBoost", help="Recall boosting of trigger predictions (1.0 = none)")
 (options, args) = optparser.parse_args()
 

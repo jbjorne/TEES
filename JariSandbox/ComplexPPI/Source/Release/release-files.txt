@@ -264,6 +264,7 @@ JariSandbox/ComplexPPI/Source/Core/__init__.py
 #JariSandbox/ComplexPPI/Source/Pipelines/BioInferTestSet.py
 #JariSandbox/ComplexPPI/Source/Pipelines/BioInferTriggerParameters.py
 JariSandbox/ComplexPPI/Source/Pipelines/BioNLP09Classify.py
+JariSandbox/ComplexPPI/Source/Pipelines/BioNLP09Train.py
 #JariSandbox/ComplexPPI/Source/Pipelines/BioNLP09Full.py
 #JariSandbox/ComplexPPI/Source/Pipelines/BioNLP09SharedTaskClassify.py
 #JariSandbox/ComplexPPI/Source/Pipelines/BioNLP09SharedTaskFiles.py
