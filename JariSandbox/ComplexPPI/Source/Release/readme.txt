@@ -14,7 +14,7 @@ Index
 
 # 1. Introduction #############################################################
 
-This software package contains the system designed to detect biomedical events as defined in the BioNLP'09 Shared Task. It combines machine learning and rule based systems, using Joachmis SVM-Multiclass for the machine learning components.
+This software package contains the system designed to detect biomedical events as defined in the BioNLP'09 Shared Task. It combines machine learning and rule based systems, using Joachims SVM-Multiclass for the machine learning components.
 
 This preliminary release contains software required for detecting events as defined in the tasks 1 & 2 of the shared task, starting from textual data in the interaction XML (see section 5) format. Software for task 3 will be included in the final release.
 
@@ -128,7 +128,7 @@ When re-training the system, new id files are created in the output directory. T
 
 4.4 Re-training the system
 
-If you modify the training data (such as using a new parse) or use a new dataset, you must retrain the system. For retraining, use src/Pipelines/BioNLP09Train.py. The re-training proceeds in two steps. First, one SVM model is created for each trigger and edge c-parameter to be tested. Then, using these models, triplets of trigger c-parameter, edge c-parameter and recall booster parameter are tested in the three-dimensional search space to determine the optimal parameter combination. The program will print evaluation results for all combinations on screen. Output is also stored for later use in a file called log.txt in the output directory.
+If you modify the training data (such as using a new parse) or use a new dataset, you must retrain the system. For retraining, use src/Pipelines/BioNLP09Train.py. The re-training proceeds in two steps. First, one SVM model is created for each trigger and edge c-parameter to be tested. Then, using these models, triplets of trigger c-parameter, edge c-parameter and recall booster parameter are tested in the three-dimensional search space to determine the optimal parameter combination. The program will print evaluation results for all combinations on screen. This output is also stored for later use in a file called log.txt in the output directory.
 
 The program has several options. Options "-e" and "-r" are used to to define your training and testing files. The SVM uses training data to learn its classification principles, and testing data for determining the optimal regularization parameter c. Both files are in Interaction XML format, more information on which can be found in section 5.
 

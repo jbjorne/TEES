@@ -96,12 +96,12 @@ def getSupportVectors(modelfile, valueToFloat=True):
     while num < highestIndex - 1:
         svs[-1].append(0)
         num += 1
-    print len(svs)
+    #print len(svs)
     if numpy:
         for i in range(len(svs)):
             svs[i] = numpy.array(svs[i])
-    for i in range(len(svs)):
-        print len(svs[i])
+    #for i in range(len(svs)):
+    #    print len(svs[i])
     return svs
 
 def getSupportVectorsTest(line, numClasses, numFeatures=-1):

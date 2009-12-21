@@ -2,7 +2,7 @@
 A wrapper for the Joachims SVM Multiclass.
 """
 
-__version__ = "$Revision: 1.39 $"
+__version__ = "$Revision: 1.40 $"
 
 import sys,os
 sys.path.append(os.path.dirname(os.path.abspath(__file__))+"/..")
@@ -145,7 +145,7 @@ class SVMMultiClassClassifier(Classifier):
             
         assert os.path.exists(modelPath)
         svs = SVMMultiClassModelUtils.getSupportVectors(modelPath)
-        SVMMultiClassModelUtils.writeModel(svs, modelPath, output+"-test-model")
+        #SVMMultiClassModelUtils.writeModel(svs, modelPath, output+"-test-model")
         if type(examples) == types.StringType: # examples are in a file
             print >> sys.stderr, "Classifying file", examples, "with SVM-MultiClass model (internal classifier)", modelPath        
             examples = Example.readExamples(examples)

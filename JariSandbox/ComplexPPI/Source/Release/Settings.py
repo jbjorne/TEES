@@ -4,7 +4,7 @@ def relPath(path):
     return os.path.abspath(os.path.join(thisPath, path))
 
 # External binaries
-SVMMultiClassDir = "/usr/share/biotext/ComplexPPI/SVMMultiClass"
+SVMMultiClassDir = None
 
 # BioNLP'09 dataset in XML-format
 TrainFile = relPath("../data/train123.xml")
