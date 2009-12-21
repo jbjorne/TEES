@@ -14,6 +14,9 @@ optparser.add_option("-p", "--parse", default="split-McClosky", dest="parse", he
 optparser.add_option("-t", "--tokenization", default="split-McClosky", dest="tokenization", help="Tokenization XML element name")
 optparser.add_option("-m", "--models", default=True, action="store_false", dest="models", help="Don't recalculate models")
 optparser.add_option("-s", "--startFrom", default=0, type="int", dest="startFrom", help="The parameter combination index to start grid search from")
+# Id sets
+optparser.add_option("-i", "--triggerIds", default=Settings.TriggerIds, dest="triggerIds", help="Trigger detector SVM example class and feature id file stem (files = STEM.class_names and STEM.feature_names)")
+optparser.add_option("-j", "--edgeIds", default=Settings.EdgeIds, dest="edgeIds", help="Edge detector SVM example class and feature id file stem (files = STEM.class_names and STEM.feature_names)")
 # Parameters to optimize
 optparser.add_option("-x", "--triggerParams", default="1000,5000,10000,20000,50000,80000,100000,150000,180000,200000,250000,300000,350000,500000,1000000", dest="triggerParams", help="Trigger detector c-parameter values")
 optparser.add_option("-y", "--recallAdjustParams", default="0.5,0.6,0.7,0.85,1.0", dest="recallAdjustParams", help="Recall adjuster parameter values")
@@ -54,8 +57,8 @@ PARSE_TAG = PARSE + "_" + TOK
 
 # Pre-calculate all the required SVM models
 if options.models:
-    TRIGGER_IDS = copyIdSetsToWorkdir(Settings.TriggerIds)
-    EDGE_IDS = copyIdSetsToWorkdir(Settings.EdgeIds)
+    TRIGGER_IDS = copyIdSetsToWorkdir(options.triggerIds)
+    EDGE_IDS = copyIdSetsToWorkdir(options.edgeIds)
     
     ###############################################################################
     # Trigger example generation
@@ -92,10 +95,11 @@ if options.models:
         EDGE_IDS+".class_names", EDGE_CLASSIFIER_PARAMS, "devel-edge-models")
 else:
     # New feature ids may have been defined during example generation, 
-    # so use the id sets from current WORKDIR for the grid search. The set
-    # files will have the same names as the files they are copied from
-    TRIGGER_IDS = os.path.basename(Settings.TriggerIds)
-    EDGE_IDS = os.path.basename(Settings.EdgeIds)
+    # so use for the grid search the id sets copied to WORKDIR during 
+    # model generation. The set files will have the same names as the files 
+    # they are copied from
+    TRIGGER_IDS = os.path.basename(options.triggerIds)
+    EDGE_IDS = os.path.basename(options.edgeIds)
 
 
 ###############################################################################
