@@ -107,7 +107,7 @@ if __name__=="__main__":
     shutil.copy(corpusPath + "train123.xml", dataPath)
     shutil.copy(corpusPath + "everything123.xml", dataPath)
     shutil.copy(corpusPath + "test.xml", dataPath)
-    shutil.copy("/usr/share/biotext/GeniaChallenge/extension-data/genia/evaluation-data/evaluation-tools-devel-gold", os.path.join(options.output + "/data/evaluation-data/evaluation-tools-devel-gold"))
+    shutil.copytree("/usr/share/biotext/GeniaChallenge/extension-data/genia/evaluation-data/evaluation-tools-devel-gold", os.path.join(options.output + "/data/evaluation-data/evaluation-tools-devel-gold"))
     os.makedirs(os.path.join(options.output + "/data/evaluation-data/evaluation-temp"))
     
     print >> sys.stderr, "Copying additional files"
