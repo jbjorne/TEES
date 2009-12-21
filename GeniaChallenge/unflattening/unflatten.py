@@ -138,11 +138,7 @@ class Unflattener:
                        if not self.semG.has_node(x)]
         # tokens and dep.graphs are sentence-specific because
         # TOKEN IDS ARE NOT HIERARCHICAL
-        self.tokens = []
-        toks = Analyser.collectTokens(x,self.tokenName)
-        if len(toks) == 0:
-            return
-        self.tokens = dict( [(x,toks)
+        self.tokens = dict( [(x,Analyser.collectTokens(x,self.tokenName))
                              for x in self.document.findall('sentence')] )
         self.mapping = Analyser.mapEntitiesToTokens(self.document,self.tokens)
         self.depDiGs = dict( [(x,Analyser.makeDepG(x,self.tokenName,self.parseName))
