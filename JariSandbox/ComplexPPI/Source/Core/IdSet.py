@@ -60,7 +60,8 @@ class IdSet:
         keys = self.Ids.keys()
         keys.sort()
         for key in keys:
-            f.write( (str(key)+": "+str(self.Ids[key])+"\n").encode("utf-8") )
+            f.write( (str(key)+": "+str(self.Ids[key])+"\n") )
+            #f.write( (str(key)+": "+str(self.Ids[key])+"\n").encode("utf-8") )
         f.close()
     
     def load(self, filename):
