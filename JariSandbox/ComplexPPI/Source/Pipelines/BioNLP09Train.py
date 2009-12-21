@@ -1,4 +1,4 @@
-# Uses task 2 data, but optimizes for task 1
+# Optimize parameters for event detection and produce event and trigger model files
 
 # most imports are defined in Pipeline
 from Pipeline import *
@@ -37,14 +37,11 @@ DEVEL_FILE = options.testFile
 EDGE_FEATURE_PARAMS="style:typed,directed,no_linear,entities,genia_limits,noMasking,maxFeatures"
 TRIGGER_FEATURE_PARAMS="style:typed"
 
-# Optimized parameters
+# Parameters to optimize
 ALL_PARAMS={
-    "trigger":[50000,80000], 
-    "booster":[0.85, 1.0], 
-    "edge":[20000,4000]    
-#    "trigger":[1000,5000,10000,20000,50000,80000,100000,150000,180000,200000, 250000, 300000, 350000, 500000,1000000], 
-#    "booster":[0.5, 0.6, 0.7, 0.85, 1.0], 
-#    "edge":[5000,10000,20000,25000,28000,50000,60000,65000,80000,100000,150000]
+    "trigger":[int(i) for i in options.triggerParams.split(",")], 
+    "booster":[float(i) for i in options.recallAdjustParams.split(",")], 
+    "edge":[int(i) for i in options.edgeParams.split(",")]    
 }
 paramCombinations = getParameterCombinations(ALL_PARAMS)
 
