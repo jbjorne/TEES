@@ -14,6 +14,10 @@ optparser.add_option("-p", "--parse", default="split-McClosky", dest="parse", he
 optparser.add_option("-t", "--tokenization", default="split-McClosky", dest="tokenization", help="Tokenization XML element name")
 optparser.add_option("-m", "--models", default=True, action="store_false", dest="models", help="Don't recalculate models")
 optparser.add_option("-s", "--startFrom", default=0, type="int", dest="startFrom", help="The parameter combination index to start grid search from")
+# Parameters to optimize
+optparser.add_option("-x", "--triggerParams", default="1000,5000,10000,20000,50000,80000,100000,150000,180000,200000,250000,300000,350000,500000,1000000", dest="triggerParams", help="Trigger detector c-parameter values")
+optparser.add_option("-y", "--recallAdjustParams", default="0.5,0.6,0.7,0.85,1.0", dest="recallAdjustParams", help="Recall adjuster parameter values")
+optparser.add_option("-z", "--edgeParams", default="5000,10000,20000,25000,28000,50000,60000,65000,80000,100000,150000", dest="edgeParams", help="Edge detector c-parameter values")
 (options, args) = optparser.parse_args()
 
 # Check options
@@ -135,13 +139,10 @@ for params in paramCombinations:
         # which evaluate on the level of examples.
         EvaluateInteractionXML.run(Ev, xml, DEVEL_FILE, PARSE, TOK)
         # Post-processing
-        #preserveTask2.run(xmlFilename, "t2.xml", "no-t2.xml", "extract")
-        prune.interface(["-i","final.xml","-o","pruned.xml","-c"])
-        unflatten.interface(["-i","pruned.xml","-o","unflattened.xml","-a",PARSE_TOK,"-t",PARSE_TOK])
-        #preserveTask2.run("unflattened.xml", "final.xml", "t2.xml", "insert")
+        xml = unflatten.interface(xml, PARSE, TOK)
         # Output will be stored to the geniaformat-subdirectory, where will also be a
         # tar.gz-file which can be sent to the Shared Task evaluation server.
-        gifxmlToGenia("unflattened.xml", "geniaformat", options.task)
+        gifxmlToGenia(xml, "geniaformat", options.task)
         evaluateSharedTask("geniaformat", options.task)
     else:
         print >> sys.stderr, "No predicted edges"
