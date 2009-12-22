@@ -11,6 +11,8 @@ Index
 2. Related Publications
 3. Overview of the Software
 4. How to Use It
+5. Interaction XML
+6. License
 
 # 1. Introduction #############################################################
 
@@ -202,3 +204,7 @@ Remember to keep the hierarchical ids valid, and use src/CommonUtils/Interaction
 For event detection, all entities are mapped to the parse through a single head token (see BioNLP'09 article). This is defined as the "headOffset" attribute of the entity. When you want to use a different parse, these offsets must be recalculated. For this, use the program src/Utils/FindHeads.py. The program takes as input (-i) an interaction xml file, gives all entities in it a headOffset based on parse (-p) and tokenization (-t), and writes the resulting xml into output (-o).
 
 Having parse specific head offsets in the otherwise parse-independent entity-elements is a bit clumsy, so in future versions entity head offsets will probably be defined as part of the tokenization. But for now, ALWAYS remember to recalculated head offsets before using the system with a different parse and tokenization.
+
+# 5. License ##########################################################
+
+The program will be distributed under an open source license. Final license terms will be determined in time for the official release. This package contains also several external libraries and data, their licenses are as defined by their respective owners. Generally, everything here is free for non-commercial scientific use.
