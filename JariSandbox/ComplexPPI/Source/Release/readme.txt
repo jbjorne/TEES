@@ -88,13 +88,15 @@ This is quite an involved process, so to make things easier we have provided the
 
 # 4. How to Use It ############################################################
 
-4.1 Required Software
+4.1 Required Software & Hardware
 
 The main requirement of the software is Python, at least versions 2.4 and 2.5 are known to work. Additionally, if you want to use the BioNLP'09 official evaluation tools, you will need to have perl installed, and have it in the PATH and callable with the command "perl".
 
 For additional settings, there is a settings file located in src/Settings.py. You probably only need to modify it if you want to retrain the system, in which case you need Joachims SVM-multiclass. Download it from http://svmlight.joachims.org/svm_multiclass.html and compile with a C compiler. You will now have two binaries, "svm_multiclass_learn" and "svm_multiclass_classify". In src/Settings.py set the variable SVMMultiClassDir to point to the directory containing the binaries.
 
 All the included xml-files contain information for all three subtasks of the BioNLP'09 Shared Task. All the model files are trained for joint prediction of tasks 1 & 2. Results for the primary task 1 can be obtained by giving the correct task parameter for the relevant pipeline.
+
+Classification of the Shared Task dataset can take more than 1 Gb of memory, but the system should run fine on a machine with at least 2 Gb.
 
 4.2 Running the System
 
