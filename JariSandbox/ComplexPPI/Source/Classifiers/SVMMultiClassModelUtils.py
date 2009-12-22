@@ -66,7 +66,7 @@ def parseModel(modelfile):
 
 def getSupportVectors(modelfile, valueToFloat=True):
     numClasses, numFeatures, highestIndex = parseModel(modelfile)
-    print numClasses, numFeatures, highestIndex
+    #print numClasses, numFeatures, highestIndex
     
     f = open(modelfile,"rt")
     line = f.readlines()[-1]
