@@ -65,7 +65,8 @@ def fixImports(outPath, dirname, pythonFile):
     f.close()
     
     steps = dirname[len(outPath)+1:].count("/")
-    lines = ["import sys\nsys.path.append(\"" + (steps * "../") + "CommonUtils\")\n"] + lines
+    #lines = ["import sys\nsys.path.append(\"" + (steps * "../") + "CommonUtils\")\n"] + lines
+    lines = ["import sys\nsys.path.insert(0,\"" + (steps * "../") + "CommonUtils\")\n"] + lines
     f = open(os.path.join(dirname, pythonFile), "wt")
     f.writelines(lines)
     f.close()
