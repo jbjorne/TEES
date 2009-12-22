@@ -60,7 +60,9 @@ class IdSet:
         keys = self.Ids.keys()
         keys.sort()
         for key in keys:
-            f.write( (str(key)+": "+str(self.Ids[key])+"\n") )
+            # key is assumed to be a string
+            f.write( (key+": "+str(self.Ids[key])+"\n") )
+            #f.write( (str(key)+": "+str(self.Ids[key])+"\n") )
             #f.write( (str(key)+": "+str(self.Ids[key])+"\n").encode("utf-8") )
         f.close()
     
