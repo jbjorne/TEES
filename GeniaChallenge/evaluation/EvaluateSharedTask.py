@@ -111,7 +111,8 @@ def evaluate(sourceDir, task=1, folds=-1, foldToRemove=-1, evaluations=["strict"
     results = {}
     
     commands = "export PATH=$PATH:./ ; "
-    commands += "perl prepare-eval.pl " + sourceSubsetDir + " " + tempDir
+    commands += "perl prepare-eval.pl -g " + goldDir
+    commands += " " + sourceSubsetDir + " " + tempDir
     p = subprocess.Popen(commands, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     if verbose:
         printLines(p.stderr.readlines())
