@@ -4,10 +4,7 @@ use strict;
 use warnings;
 use File::Copy;
 
-# This shouldn't even be needed by this program, according to the "readme"
-#my $gdir       = 'gold';
-# fixing...
-my $gdir       = '/usr/share/biotext/GeniaChallenge/orig-devel-test/evaluation-tools-devel-gold';
+my $gdir       = 'gold';
 my $dos2unix   = 'dos2unix';
 my $normalizer = 'a2-normalize.pl';
 my $decomposer = 'a2-decompose.pl';
