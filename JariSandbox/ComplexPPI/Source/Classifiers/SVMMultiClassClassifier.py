@@ -2,7 +2,7 @@
 A wrapper for the Joachims SVM Multiclass.
 """
 
-__version__ = "$Revision: 1.40 $"
+__version__ = "$Revision: 1.41 $"
 
 import sys,os
 sys.path.append(os.path.dirname(os.path.abspath(__file__))+"/..")
@@ -137,8 +137,10 @@ class SVMMultiClassClassifier(Classifier):
     def testInternal(cls, examples, modelPath, output=None):
         try:
             import numpy
-        except ImportError:
-            numpy = None
+            numpy.array([]) # dummy call to survive networkx
+            numpyAvailable = True
+        except:
+            numpyAvailable = False
 
         if output == None:
             output = "predictions"
@@ -168,7 +170,7 @@ class SVMMultiClassClassifier(Classifier):
             mergedPredictionString = ""
             features = example[2]
             featureIds = sorted(features.keys())
-            if numpy != None:
+            if numpyAvailable:
                 numpyFeatures = numpy.zeros(len(svs[0]))
                 for k, v in features.iteritems():
                     try:
@@ -180,13 +182,13 @@ class SVMMultiClassClassifier(Classifier):
                         pass
             for svIndex in range(len(svs)):
                 sv = svs[svIndex]
-                if numpy != None:
+                if numpyAvailable:
                     prediction = numpy.sum(sv * numpyFeatures)
                 else:
                     prediction = 0
                     for i in range(len(sv)):
-                        if features.has_key(i):
-                            prediction += features[i-1] * sv[i]
+                        if features.has_key(i+1):
+                            prediction += features[i+1] * sv[i]
                 if prediction > highestPrediction:
                     highestPrediction = prediction
                     predictedClass = svIndex + 1

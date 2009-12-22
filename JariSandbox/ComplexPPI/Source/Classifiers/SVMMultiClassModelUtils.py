@@ -4,8 +4,10 @@ from Core.IdSet import IdSet
 from operator import itemgetter
 try:
     import numpy
-except ImportError:
-    numpy = None
+    numpy.array([])
+    numpyAvailable = True
+except:
+    numpyAvailable = False
 
 def writeModel(svs, modelfile, newfile, tokenized=False):
     f = open(modelfile,"rt")
@@ -97,7 +99,7 @@ def getSupportVectors(modelfile, valueToFloat=True):
         svs[-1].append(0)
         num += 1
     #print len(svs)
-    if numpy:
+    if numpyAvailable:
         for i in range(len(svs)):
             svs[i] = numpy.array(svs[i])
     #for i in range(len(svs)):
