@@ -30,7 +30,7 @@ Björne, Jari and Ginter, Filip and Heimonen, Juho and Pyysalo, Sampo and Salako
 
 Björne, Jari and Heimonen, Juho and Ginter, Filip and Airola, Antti and Pahikkala, Tapio and Salakoski, Tapio: Extracting Complex Biological Events with Rich Graph-Based Feature Sets. Proceedings of the BioNLP'09 Shared Task on Event Extraction. 2009, pp. 10-18
 
-Björne, Jari and Heimonen, Juho and Ginter, Filip and Airola, Antti and Pahikkala, Tapio and Salakoski, Tapio: Extracting Contextualized Complex Biological Events with Rich Graph-Based Feature Sets. Journal of Computational Intelligence. (To appear)
+Björne, Jari and Heimonen, Juho and Ginter, Filip and Airola, Antti and Pahikkala, Tapio and Salakoski, Tapio: Extracting Contextualized Complex Biological Events with Rich Graph-Based Feature Sets. Journal of Computational Intelligence. (Under review)
 
 # 3. Overview of the Software #################################################
 
