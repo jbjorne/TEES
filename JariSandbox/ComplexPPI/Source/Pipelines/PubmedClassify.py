@@ -19,11 +19,23 @@ optparser.add_option("-x", "--exceptions", default=False, action="store_true", d
 assert options.output != None
 assert options.task in [1, 2]
 
-def processFile(TEST_FILE, output, PARSE, TOK, TRIGGER_MODEL, EDGE_MODEL, RECALL_BOOST_PARAM):    
-    inputFilename = os.path.basename(TEST_FILE)
-    assert inputFilename[-7:] == ".xml.gz"
-    inputFilename = inputFilename.rsplit(".", 2)[0]
-    
+def getFileNameStem(filename):
+    filename = os.path.basename(filename)
+    if filename[-7:] == ".xml.gz":
+        filename = filename.rsplit(".", 2)[0]
+    elif filename[-4:] == ".xml":
+        filename = filename.rsplit(".", 1)[0]
+    return filename
+
+def processFile(TEST_FILE, output, PARSE, TOK, TRIGGER_MODEL, EDGE_MODEL, RECALL_BOOST_PARAM):
+    if TEST_FILE[-4:] == ".xml":
+        print "event detection for", TEST_FILE
+        #predictEvents(TEST_FILE, output, PARSE, TOK, TRIGGER_MODEL, EDGE_MODEL, RECALL_BOOST_PARAM)
+    postProcess(getFileNameStem(TEST_FILE), output, PARSE, TOK, TRIGGER_MODEL, EDGE_MODEL, RECALL_BOOST_PARAM)
+
+def predictEvents(TEST_FILE, output, PARSE, TOK, TRIGGER_MODEL, EDGE_MODEL, RECALL_BOOST_PARAM):
+    inputFilename = getFileNameStem(TEST_FILE)
+      
     # The id-sets will be modified, so create local copies of them.
     # Using always the same id numbers for machine learning classes
     # and examples ensures that the model-files will be compatible
@@ -95,18 +107,32 @@ def processFile(TEST_FILE, output, PARSE, TOK, TRIGGER_MODEL, EDGE_MODEL, RECALL
         # which evaluate on the level of examples.
         #print >> sys.stderr, "Evaluating trigger and edge xml elements agains input xml"
         #EvaluateInteractionXML.run(Ev, edgeXML, TEST_FILE, PARSE, TOK)
-        
-        ###############################################################################
-        # Post-processing
-        ###############################################################################
-        print >> sys.stderr, "====== Post-processing ======"
-        # Post-processing
-        edgeXML = unflatten(edgeXML, PARSE, TOK, inputFilename + "-events-unflattened.xml.gz")
-        # Shared Task formatted (a2-files) output will be stored to the geniaformat-subdirectory
-        gifxmlToGenia(edgeXML, inputFilename + "-events-geniaformat.tar.gz", options.task)
-        #evaluateSharedTask("geniaformat", options.task)
     else:
         print >> sys.stderr, "No positive predicted triggers"
+
+def postProcess(inputFilename, output, PARSE, TOK, TRIGGER_MODEL, EDGE_MODEL, RECALL_BOOST_PARAM):
+    if os.path.exists(inputFilename + "-events.xml.gz") and not os.path.exists(inputFilename + "-events-unflattened.xml.gz"):  
+        print "Unflatten", inputFilename
+        ###############################################################################
+        # Post-processing
+        ###############################################################################
+        #print >> sys.stderr, "====== Post-processing ======"
+        # Post-processing
+        #edgeXML = unflatten(inputFilename + "-events.xml.gz", PARSE, TOK, inputFilename + "-events-unflattened.xml.gz")
+    
+    if os.path.exists(inputFilename + "-events-unflattened.xml.gz") and not os.path.exists(inputFilename + "-events-geniaformat.tar.gz"):  
+        # Shared Task formatted (a2-files) output will be stored to the geniaformat-subdirectory
+        pass
+        #gifxmlToGenia(edgeXML, inputFilename + "-events-geniaformat.tar.gz", options.task)
+        #evaluateSharedTask("geniaformat", options.task)
+
+def postProcess(inputFilename):
+    print >> sys.stderr, "====== Post-processing ======"
+    # Post-processing
+    edgeXML = unflatten(edgeXML, PARSE, TOK, inputFilename + "-events-unflattened.xml.gz")
+    # Shared Task formatted (a2-files) output will be stored to the geniaformat-subdirectory
+    gifxmlToGenia(edgeXML, inputFilename + "-events-geniaformat.tar.gz", options.task)
+    #evaluateSharedTask("geniaformat", options.task)
 
 # These commands will be in the beginning of most pipelines
 workdir(options.output, False) # Select a working directory, don't remove existing files
