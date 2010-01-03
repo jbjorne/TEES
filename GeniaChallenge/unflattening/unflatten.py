@@ -131,19 +131,35 @@ class Unflattener:
         self.perfect = perfect
         self.tokenName = tokenName
         self.parseName = parseName
+        
+        validSentences = self.getSentencesWithParse(self.document.findall('sentence'))
+        
         self.sentences = dict( [(x.attrib['id'],x)
-                                for x in self.getSentencesWithParse(self.document.findall('sentence'))] )
+                                for x in validSentences] )
+        
         # contains entity and interaction elements
         self.semG = Analyser.makeSemG(self.document)
-        self.loners = [x for x in self.document.getiterator('entity')
-                       if not self.semG.has_node(x)]
+        
+        ###############################################################
+        # NOTE! CRASH FIX FOR THE 1% PROJECT LAST 50 DOCUMENTS
+        # This crashes for sentences with no parse
+        #self.loners = [x for x in self.document.getiterator('entity')
+        #               if not self.semG.has_node(x)]
+        self.loners = []
+        for sentence in validSentences:
+            for entity in sentence.getiterator('entity'):
+                if not self.semG.has_node(entity):
+                    self.loners.append(entity)
+        ###############################################################
+        
+        
         # tokens and dep.graphs are sentence-specific because
         # TOKEN IDS ARE NOT HIERARCHICAL
         self.tokens = dict( [(x,Analyser.collectTokens(x,self.tokenName))
-                             for x in self.getSentencesWithParse(self.document.findall('sentence'))] )
-        self.mapping = Analyser.mapEntitiesToTokens(self.getSentencesWithParse(self.document.findall('sentence')),self.tokens)
+                             for x in validSentences] )
+        self.mapping = Analyser.mapEntitiesToTokens(validSentences,self.tokens)
         self.depDiGs = dict( [(x,Analyser.makeDepG(x,self.tokenName,self.parseName))
-                              for x in self.getSentencesWithParse(self.document.findall('sentence'))] )
+                              for x in validSentences] )
         self.depGs = dict( [(x,y.to_undirected())
                             for x,y in self.depDiGs.items()] )
 
