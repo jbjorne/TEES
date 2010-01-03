@@ -126,14 +126,6 @@ def postProcess(inputFilename, output, PARSE, TOK, TRIGGER_MODEL, EDGE_MODEL, RE
         #gifxmlToGenia(edgeXML, inputFilename + "-events-geniaformat.tar.gz", options.task)
         #evaluateSharedTask("geniaformat", options.task)
 
-def postProcess(inputFilename):
-    print >> sys.stderr, "====== Post-processing ======"
-    # Post-processing
-    edgeXML = unflatten(edgeXML, PARSE, TOK, inputFilename + "-events-unflattened.xml.gz")
-    # Shared Task formatted (a2-files) output will be stored to the geniaformat-subdirectory
-    gifxmlToGenia(edgeXML, inputFilename + "-events-geniaformat.tar.gz", options.task)
-    #evaluateSharedTask("geniaformat", options.task)
-
 # These commands will be in the beginning of most pipelines
 workdir(options.output, False) # Select a working directory, don't remove existing files
 log() # Start logging into a file in the working directory
