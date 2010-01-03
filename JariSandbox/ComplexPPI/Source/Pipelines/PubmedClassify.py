@@ -29,8 +29,7 @@ def getFileNameStem(filename):
 
 def processFile(TEST_FILE, output, PARSE, TOK, TRIGGER_MODEL, EDGE_MODEL, RECALL_BOOST_PARAM):
     if TEST_FILE[-4:] == ".xml":
-        print "event detection for", TEST_FILE
-        #predictEvents(TEST_FILE, output, PARSE, TOK, TRIGGER_MODEL, EDGE_MODEL, RECALL_BOOST_PARAM)
+        predictEvents(TEST_FILE, output, PARSE, TOK, TRIGGER_MODEL, EDGE_MODEL, RECALL_BOOST_PARAM)
     postProcess(getFileNameStem(TEST_FILE), output, PARSE, TOK, TRIGGER_MODEL, EDGE_MODEL, RECALL_BOOST_PARAM)
 
 def predictEvents(TEST_FILE, output, PARSE, TOK, TRIGGER_MODEL, EDGE_MODEL, RECALL_BOOST_PARAM):
@@ -112,18 +111,14 @@ def predictEvents(TEST_FILE, output, PARSE, TOK, TRIGGER_MODEL, EDGE_MODEL, RECA
 
 def postProcess(inputFilename, output, PARSE, TOK, TRIGGER_MODEL, EDGE_MODEL, RECALL_BOOST_PARAM):
     if os.path.exists(inputFilename + "-events.xml.gz") and not os.path.exists(inputFilename + "-events-unflattened.xml.gz"):  
-        print "Unflatten", inputFilename
-        ###############################################################################
+        print "Unflatten", inputFilename + "-events.xml.gz"
         # Post-processing
-        ###############################################################################
-        #print >> sys.stderr, "====== Post-processing ======"
-        # Post-processing
-        #edgeXML = unflatten(inputFilename + "-events.xml.gz", PARSE, TOK, inputFilename + "-events-unflattened.xml.gz")
+        edgeXML = unflatten(inputFilename + "-events.xml.gz", PARSE, TOK, inputFilename + "-events-unflattened.xml.gz")
     
     if os.path.exists(inputFilename + "-events-unflattened.xml.gz") and not os.path.exists(inputFilename + "-events-geniaformat.tar.gz"):  
         # Shared Task formatted (a2-files) output will be stored to the geniaformat-subdirectory
-        pass
-        #gifxmlToGenia(edgeXML, inputFilename + "-events-geniaformat.tar.gz", options.task)
+        print "Converting", inputFilename + "-events-unflattened.xml.gz", "to genia format"
+        gifxmlToGenia(inputFilename + "-events-unflattened.xml.gz", inputFilename + "-events-geniaformat.tar.gz", options.task)
         #evaluateSharedTask("geniaformat", options.task)
 
 # These commands will be in the beginning of most pipelines
