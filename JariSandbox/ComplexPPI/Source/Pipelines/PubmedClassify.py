@@ -29,8 +29,8 @@ def getFileNameStem(filename):
 
 def processFile(TEST_FILE, output, PARSE, TOK, TRIGGER_MODEL, EDGE_MODEL, RECALL_BOOST_PARAM):
     if TEST_FILE[-4:] == ".xml":
-        predictEvents(TEST_FILE, output, PARSE, TOK, TRIGGER_MODEL, EDGE_MODEL, RECALL_BOOST_PARAM)
-    postProcess(getFileNameStem(TEST_FILE), output, PARSE, TOK, TRIGGER_MODEL, EDGE_MODEL, RECALL_BOOST_PARAM)
+        predictEvents(TEST_FILE, output, "split-McClosky", "split-McClosky", TRIGGER_MODEL, EDGE_MODEL, RECALL_BOOST_PARAM)
+        postProcess(getFileNameStem(TEST_FILE), output, "split-McClosky", "split-McClosky", TRIGGER_MODEL, EDGE_MODEL, RECALL_BOOST_PARAM)
 
 def predictEvents(TEST_FILE, output, PARSE, TOK, TRIGGER_MODEL, EDGE_MODEL, RECALL_BOOST_PARAM):
     inputFilename = getFileNameStem(TEST_FILE)
@@ -132,7 +132,7 @@ if os.path.isdir(options.input):
             inputFiles.remove(filename)
     count = 1
     for filename in inputFiles:
-        print >> sys.stderr, "Processing file", filename, "number", str(count) + "/" + str(len(inputFiles))
+        #print >> sys.stderr, "Processing file", filename, "number", str(count) + "/" + str(len(inputFiles))
         try:
             processFile(os.path.join(options.input, filename), options.output, options.parse, options.tokenization, options.triggerModel, options.edgeModel, options.recallBoost)
         except Exception, e:
