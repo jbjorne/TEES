@@ -52,12 +52,35 @@ class Increment:
         return(str(self.cur))
 
 class Analyser:
+    """
+    Class for generating the analyses required by teh Unflattener.
+    This is simply a collection of class methods.
+    """
     @classmethod
     def transformOffset(cls,string):
+        """
+        Transforms an offset string 'XX-YY' into list [XX,YY].
+
+        @type string: string
+        @param string: offset
+        @rtype: list of integers
+        @return: [begin,end]
+        """
         return([int(x) for x in string.split('-')])
 
     @classmethod
     def collectTokens(cls,sentence,tokenName):
+        """
+        Collect the tokens of the given tokenisation and
+        map them by their ids.
+        
+        @type sentence: cElementTree.Element
+        @param sentence: sentence node
+        @type tokenName: string
+        @param tokenName: tokeniser
+        @rtype: (id,cElementTree.Element) dictionary
+        @return: tokens mapped by their ids
+        """
         tmp = sentence.find('sentenceanalyses')
         if tmp == None:
             return {}
@@ -71,6 +94,17 @@ class Analyser:
 
     @classmethod
     def findTokens(cls,tokens,offset):
+        """
+        Finds the tokens that are at least partially
+        within the given offset range.
+
+        @type tokens: (id, cElementTree.Element) dictionary
+        @param tokens: tokens mapped by their ids
+        @type offset: list of integers
+        @param offset: [begin,end]
+        @rtype: list of strings
+        @return: ids of tokens
+        """
         return( [k for k,v in tokens.items()
                  if ((offset[0]>=v[0] and offset[0]<=v[1]) or
                      (offset[1]>=v[0] and offset[1]<=v[1]) or
@@ -79,6 +113,17 @@ class Analyser:
     @classmethod
     #def mapEntitiesToTokens(cls,document,tokens):
     def mapEntitiesToTokens(cls,sentences,tokens):
+        """
+        Maps semantic entities to the corresponding syntactic tokens.
+
+        @type sentences: list of cElementTree.Element
+        @param sentences: sentence nodes to be processed
+        @type tokens: (sentence id, (token id, cElementTree.Element) dictionary) dictionary
+        @param tokens: tokens mapped by sentence and token ids
+
+        @rtype: (token id, list of cElementTree.Element) dictionary
+        @return: entities mapped by overlapping tokens
+        """
         e2t = {}
         for sentence in sentences: #self.getSentencesWithParse(document.findall('sentence')):
             toks = dict( [(k,Analyser.transformOffset(v.attrib['charOffset']))
@@ -94,6 +139,20 @@ class Analyser:
 
     @classmethod
     def makeDepG(cls,sentence,tokenName,parseName):
+        """
+        Processes the given parse into a directed acyclic graph.
+        Nodes are token ids and edges contain types as strings.
+
+        @type sentence: cElementTree.Element
+        @param sentence: sentence node to be processed
+        @type tokenName: string
+        @param tokenName: tokeniser
+        @type parseName: string
+        @param parseName: parser
+
+        @rtype: networkx.DiGraph()
+        @return: parse graph
+        """
         tmp = sentence.find('sentenceanalyses')
         tmp2 = [x for x in tmp.getiterator('parse')
                 if (x.attrib['parser']==parseName and
@@ -105,12 +164,25 @@ class Analyser:
 
     @classmethod
     def makeSemG(cls,document):
+        """
+        Processes the semantic annotation of the given document
+        into a directed acyclic graph. Unconnected nodes are excluded.
+
+        Nodes are cElementTree.Element objects and edges contain
+        the corresponding cElementTree.Element objects as attributes.
+
+        @type document: cElementTree.Element
+        @param document: document node to be processed
+
+        @rtype: networkx.DiGraph()
+        @return: semantic graph
+        """
         entities = dict( [(x.attrib['id'],x) for x in
                           document.getiterator('entity')] )
         G = NX.DiGraph()
         for event in document.getiterator('interaction'):
             # ignore negative pairs
-            # WHICH SHOULD BE THERE IN THE FIRST PLACE!
+            # WHICH SHOULD NOT BE THERE IN THE FIRST PLACE!
             if event.attrib['type']=='neg':
                 continue
             e1 = entities[event.attrib['e1']]
@@ -120,13 +192,37 @@ class Analyser:
 
     @classmethod
     def findSentenceId(cls,element):
+        """
+        Finds the sentence id of the given element. This method relies
+        on the hierarchy present in ids.
+
+        @type element: cElementTree.Element
+        @param element: node to be processed
+        @rtype: string
+        @return: id of sentence to which the element belongs
+        """
         # THIS IS DATA SPECIFIC SOLUTION!
         return('.'.join(element.attrib['id'].split('.')[:3]))
 
 
 
 class Unflattener:
+    """
+    Workhorse class for unflattening.
+    """
     def __init__(self,document,perfect,tokenName,parseName):
+        """
+        Initial analyses are performed here.
+
+        @type document: cElementTree.Element
+        @param document: input document node
+        @type perfect: boolean
+        @param perfect: modify only perfectly-resolvable events?
+        @type tokenName: string
+        @param tokenName: tokeniser
+        @type parseName: string
+        @param parseName: parser
+        """
         self.document = document
         self.perfect = perfect
         self.tokenName = tokenName
@@ -164,7 +260,19 @@ class Unflattener:
                             for x,y in self.depDiGs.items()] )
 
     def analyse(self):
+        """
+        Analyses the parse, determines the unflattening strategy
+        for each event, and modifies the cache accordingly.
+        """
         def getCoordGrouping(edges):
+            """
+            Workhorse function for determining the grouping of arguments.
+
+            @type edges: list of 3-tuples
+            @param edges: out-going edges of an event to be grouped
+            @rtype: list of lists of 3-tuples
+            @return: grouped edges
+            """
             def coordPath(this,target):
                 if depG.has_node(this) and depG.has_node(target):
                     paths1 = [NX.shortest_path(depG,x,this)
@@ -218,7 +326,14 @@ class Unflattener:
             return(NX.connected_components(connG))
 
         def getGrouping(node):
-            # NOTE: this function does not yet consider task 2
+            """
+            Generates the edge groups describing the unflattened event.
+
+            @type node: cElementTree.Element
+            @param node: event to be unflattened
+            @rtype: list of lists of 3-tuples
+            @return: grouped edges
+            """
             uid = node.attrib['id']
             t = node.attrib['type']
             # 'neg' edges are not considered and will be
@@ -248,10 +363,6 @@ class Unflattener:
                 if self.perfect:
                     #sys.stderr.write("Skipping %s (%s)\n"%(uid,t))
                     return([edges])
-                # simple approach that uses only linear order
-                # (probably makes many mistakes)
-                # left,right = getLinearGrouping(node,edges)
-                # return([(le,ri) for le in left for ri in right])
                 groups = getCoordGrouping(edges)
                 if len(groups)==1:
                     # data suggests that regardless of number of members
@@ -268,7 +379,7 @@ class Unflattener:
                     return(result)
                 else:
                     # two groups should be split to pairwise combinations
-                    # (can respectively be ignored?)
+                    # (can 'respectively' be ignored?)
                     # events with more than two proteins are rare
                     # so three or more groups should be treated in a
                     # pairwise manner
@@ -293,7 +404,7 @@ class Unflattener:
                        'Negative_regulation']:
                 # Regulation is not perfectly solvable
                 # but for now there no better way than the baseline
-                # (can respectively be ignored?)
+                # (can 'respectively' be ignored?)
                 cause = [x for x in edges if
                          x[2].attrib['type'].startswith('Cause')]
                 theme = [x for x in edges if
@@ -319,20 +430,7 @@ class Unflattener:
                     sys.stderr.write("Invalid event type: %s\n"%t)
             return([edges])
 
-        def getLinearGrouping(node,edges):
-            trigger_start = int(node.attrib['charOffset'].split('-')[0])
-            result = ([],[])
-            for e in edges:
-                e_tmp = int(e[1].attrib['charOffset'].split('-')[0])
-                # THIS SHOULD BE CHANGED TO SOMETHING BETTER!
-                if e_tmp<trigger_start:
-                    result[0].append(e)
-                elif e_tmp>trigger_start:
-                    result[1].append(e)
-                else:
-                    sys.stderr.write("Entities %s and %s start at the same offset\n"%(node.attrib['id'],e[1].attrib['id']))
-            return(result)
-
+        # unflatten the graph in the cache
         counter = Increment()
         unprocessed_nodes = set([x for x in self.semG.nodes()
                                  if not self.semG.out_edges(x)])
@@ -371,6 +469,10 @@ class Unflattener:
             unprocessed_nodes = next_nodes - removable
 
     def unflatten(self):
+        """
+        Modify the original document node to match the cache.
+        See also 'analyse'.
+        """
         for sentence in self.getSentencesWithParse(self.document.findall('sentence')):
             for elem in sentence.findall('entity'):
                 sentence.remove(elem)
@@ -387,6 +489,14 @@ class Unflattener:
             sentence.insert(0,node)
 
     def getSentencesWithParse(self, sentences):
+        """
+        Returns a list of sentences for which a parse is available.
+
+        @type sentences: list of cElementTree.Element
+        @param sentences: sentences to be filtered
+        @rtype: list of cElementTree.Element
+        @return: sentences with parse
+        """
         sentencesWithParse = []
         for sentence in sentences:
             analyses = sentence.find("sentenceanalyses")
@@ -406,14 +516,41 @@ class Unflattener:
 
 def unflatten(input, parse, tokenization=None, output=None, perfect=False):
     """
-    Both prunes and unflattens
+    Convenience wrapper that first prunes the graph and then unflattens.
+    This function processes the whole corpus.
+
+    @type input: string
+    @param input: input file
+    @type parse: string
+    @param parse: parse to be used
+    @type tokenization: string
+    @param tokenization: tokenization to be used
+    @type output: string
+    @param output: output file
+    @type perfect: boolean
+    @param perfect: modify only perfectly-resolvable events?
+    @rtype: cElementTree.Element
+    @return: corpus node
     """
     xml = prune.prune(input)
     return unflattenPruned(xml, parse, tokenization, output, perfect)
 
 def unflattenPruned(input, parse, tokenization=None, output=None, perfect=False):
     """
-    Unflattens a pruned file
+    Convenience wrapper for unflattening a pruned corpus.
+
+    @type input: string
+    @param input: input file
+    @type parse: string
+    @param parse: parse to be used
+    @type tokenization: string
+    @param tokenization: tokenization to be used
+    @type output: string
+    @param output: output file
+    @type perfect: boolean
+    @param perfect: modify only perfectly-resolvable events?
+    @rtype: cElementTree.Element
+    @return: corpus node
     """
     if tokenization == None:
         tokenization = parse
@@ -423,6 +560,9 @@ def unflattenPruned(input, parse, tokenization=None, output=None, perfect=False)
     return interface(options)
 
 def interface(optionArgs=sys.argv[1:]):
+    """
+    The function to handle the command-line interface.
+    """
     from optparse import OptionParser
 
     op = OptionParser(usage="%prog [options]\nGenia shared task specific unflattening.")

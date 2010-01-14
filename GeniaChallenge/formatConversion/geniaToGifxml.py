@@ -49,6 +49,9 @@ class Increment:
 
 
 class SentenceParser:
+    """
+    Sentence parser generates a cElementTree node for a single document.
+    """
     siteCount = re.compile(r'^Site([0-9]*)$')
 
     def __init__(self):
@@ -63,7 +66,17 @@ class SentenceParser:
         self.modifiers = {}
         self.mapping = {}
     
-    def parseDocument(self, txtFile, a1File, taskPostFix):
+    def parseDocument(self, txtFile, a1File, taskSuffix):
+        """
+        Parses a single document from the given files.
+
+        @type txtFile: string
+        @param txtFile: .txt file
+        @type a1File: string
+        @param a1File: .a1 file
+        @type taskSuffix: string
+        @param taskSuffix: suffix of a2-file (without 't')
+        """
         self.uid="uima"
         tmp = open(txtFile)
         self.parseText(tmp.read())
@@ -73,12 +86,20 @@ class SentenceParser:
         self.parseAnnotation(tmp.read().split("\n"),isName=True)
         tmp.close()
 
-    def parse(self,filestem,taskpostfix):
+    def parse(self,filestem,tasksuffix):
+        """
+        Parses a document based on its id.
+
+        @type filestem: string
+        @param filestem: document id
+        @type tasksuffix: string
+        @param tasksuffix: suffix of .a2-file (without 't')
+        """
         self.uid = filestem.split("/")[-1]
 
         textFile = filestem+".txt"
         proteinFile = filestem+".a1"
-        eventFile = filestem+taskpostfix
+        eventFile = filestem+tasksuffix
 
         tmp = open(textFile)
         self.parseText(tmp.read())
@@ -97,12 +118,26 @@ class SentenceParser:
             tmp.close()
 
     def parseText(self,rawinput):
+        """
+        Parses the document text and splits it into title and abstract.
+
+        @type rawinput: string
+        @param rawinput: document text
+        """
         self.text = rawinput
         lines = rawinput.split("\n")
         self.title = lines[0]
         self.abstract = lines[1]
 
     def parseAnnotation(self,lines,isName=True):
+        """
+        Parses the annotation lines (either from .a1 or .a2 files).
+
+        @type lines: list of strings
+        @param lines: annotation lines
+        @type isName: boolean
+        @param isName: encountered T-entities are named entities?
+        """
         for line in lines:
             if not line:
                 continue
@@ -164,6 +199,9 @@ class SentenceParser:
                 self.mapping[uid] = bgne
 
     def printSimple(self):
+        """
+        Prints parsed annotations. For debugging only.
+        """
         for k,v in self.entities.items():
             print "%s\t%s"%(k,v)
         for k,v in self.modifiers.items():
@@ -174,11 +212,27 @@ class SentenceParser:
                 print "%s\t%s"%(k,x)
 
     def printNode(self,removeDuplicates):
+        """
+        Prints the cElementTree node of the document. For debugging only.
+
+        @type removeDuplicates: boolean
+        @param removeDuplicates: merge duplicates?
+        """
         node = self.getNode(removeDuplicates)
         indent(node)
         print ET.tostring(node)
 
     def getNode(self,removeDuplicates,modifyExtra):
+        """
+        Generates a cElementTree node of the document.
+
+        @type removeDuplicates: boolean
+        @param removeDuplicates: merge duplicates?
+        @type modifyExtra: boolean
+        @param modifyExtra: modify extra arguments?
+        @rtype: cElementTree.Element
+        @return: document as a cElementTree node
+        """
         def createPhysical(v):
             # add negation and speculation attributes
             # by default (as False) even though it is irrelevant here
@@ -275,6 +329,12 @@ class SentenceParser:
         return(newDocument)
 
     def modifyExtra(self,sentence):
+        """
+        Modify extra arguments. (Do not use if you do not know what it does.)
+
+        @type sentence: cElementTree.Element
+        @param sentence: document node
+        """
         nodeMap = dict([(x.attrib['id'],x)
                         for x in sentence.findall('entity')])
         predMap = {}
@@ -333,6 +393,14 @@ class SentenceParser:
             edge.attrib['e2'] = protein
 
     def removeDuplicates(self,sentence,t2e):
+        """
+        Merge duplicate nodes and edges (i.e. flatten the graph).
+
+        @type sentence: cElementTree.Element
+        @param sentence: document node
+        @type t2e: (string, list of cElementTree.Element objects) dictionary
+        @param t2e: entities mapped by their text binding
+        """
         mapping = {}
         nodeDict = dict([(x.attrib['id'],x)
                           for x in sentence.findall('entity')])
@@ -371,31 +439,72 @@ class SentenceParser:
 
 
 class Parser:
+    """
+    Parser is a wrapper for the workhorse class SentenceParser.
+    """
     def __init__(self):
         self.parsers = []
 
-    def parse(self,indir,filestems,taskpostfix):
+    def parse(self,indir,filestems,tasksuffix):
+        """
+        Parses the corpus from an input directory.
+
+        @type indir: string
+        @param indir: input directory
+        @type filestems: list of strings
+        @param filestems: ids of documents to be included
+        @type tasksuffix: string
+        @param tasksuffix: suffix of .a2-files (without 't')
+        """
         if not indir.endswith('/'):
             indir = indir+'/'
         for stem in filestems:
             print >> sys.stderr, "Working on:", stem
             filename = indir+stem
             tmp = SentenceParser()
-            tmp.parse(filename,taskpostfix)
+            tmp.parse(filename,tasksuffix)
             self.parsers.append(tmp)
     
-    def parseDocument(self, txtFile, a1File, taskPostFix):
+    def parseDocument(self, txtFile, a1File, taskSuffix):
+        """
+        Parses a single document from a file.
+
+        @type txtFile: string
+        @param txtFile: .txt file
+        @type a1File: string
+        @param a1File: .a1 file
+        @type taskSuffix: string
+        @param taskSuffix: suffix of a2-file (without 't')
+        """
         tmp = SentenceParser()
-        tmp.parseDocument(txtFile, a1File, taskPostFix)
+        tmp.parseDocument(txtFile, a1File, taskSuffix)
         self.parsers.append(tmp)
 
     def getNode(self,removeDuplicates,modifyExtra):
+        """
+        Generates a cElementTree node of the corpus.
+
+        @type removeDuplicates: boolean
+        @param removeDuplicates: merge duplicates?
+        @type modifyExtra: boolean
+        @param modifyExtra: modify extra arguments?
+        @rtype: cElementTree.Element
+        @return: corpus as a cElementTree node
+        """
         newCorpus = ET.Element('corpus',{'source':'GENIA'})
         for x in self.parsers:
             newCorpus.append(x.getNode(removeDuplicates,modifyExtra))
         return(newCorpus)
 
     def printNode(self,outfile,removeDuplicates,modifyExtra):
+        """
+        Outputs the corpus node into a file.
+
+        @type outfile: string
+        @param outfile: output filename
+        @param removeDuplicates: see 'getNode'
+        @param modifyExtra: see 'getNode'
+        """
         node = self.getNode(removeDuplicates,modifyExtra)
         indent(node)
         outfile = open(outfile,'w')
@@ -405,6 +514,9 @@ class Parser:
 
 
 def interface(optionArgs=sys.argv[1:]):
+    """
+    The function to handle the command-line interface.
+    """
     from optparse import OptionParser
 
     op = OptionParser(usage="%prog [options]\nConvert genia shared task files into the generic interaction format.\nUse positional arguments to specify the document ids.\n\nNeeded files:\n\t<filestem>.txt == original text\n\t<filestem>.a1 == protein annotation\n\t<filestem>.a2.tXXX == event annotation")
@@ -468,12 +580,12 @@ def interface(optionArgs=sys.argv[1:]):
         return(False)
 
     # use original files for the whole challenge
-    taskpostfix = ".a2.t"+options.task
+    tasksuffix = ".a2.t"+options.task
     parser = Parser()
     if options.indir:
-        parser.parse(options.indir,args,taskpostfix)
+        parser.parse(options.indir,args,tasksuffix)
     else:
-        parser.parseDocument(options.txtfile, options.a1file, taskpostfix)
+        parser.parseDocument(options.txtfile, options.a1file, tasksuffix)
     parser.printNode(options.outfile,
                      options.remove_duplicates,
                      options.modify_extra)

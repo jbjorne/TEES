@@ -6,6 +6,9 @@ except ImportError:
 import cElementTreeUtils as ETUtils
 
 class Pruner:
+    """
+    Class for removing invalid nodes and edges.
+    """
     def __init__(self,document):
         self.document = document
         self.entities = set()
@@ -17,6 +20,14 @@ class Pruner:
                                  self.document.getiterator('interaction')] )
 
     def validEvent(self,event):
+        """
+        Tests for the validity of the given event.
+
+        @type event: cElementTree.Element
+        @param event: event node
+        @rtype: boolean
+        @return: is valid?
+        """
         all_entities = ['Gene_expression','Transcription',
                         'Translation','Protein_catabolism',
                         'Localization','Binding','Phosphorylation',
@@ -49,12 +60,17 @@ class Pruner:
             # Sites (etc.) are successors for proteins at this point of processing
             return(t in ['ToLoc','AtLoc','Site','Csite'] and e2t=='Entity')
         elif e1t=='Entity':
-            pass # these are valid now
+            pass # these are valid leaves
         else:
             sys.stderr.write("Invalid event type: %s (%s)\n"%(e1t,event.attrib['id']))
         return(False)
     
     def analyse(self):
+        """
+        Prepares the Pruner object for pruning by refreshing
+        the cache of valid entities and events.
+        """
+        # from leaves to root
         tmp_entities = set( [x.attrib['id'] for x in
                              self.document.getiterator('entity')
                              if x.attrib['isName'].lower() == 'true'] )
@@ -62,11 +78,13 @@ class Pruner:
         while tmp_entities or tmp_events:
             self.entities.update(tmp_entities)
             self.events.update(tmp_events)
+            # pick valid events
             tmp_events = set( [x.attrib['id'] for x in
                                self.document.getiterator('interaction')
                                if (x.attrib['e2'] in tmp_entities and
                                    not x.attrib['id'] in self.events and
                                    self.validEvent(x))] )
+            # pick valid entities
             tmp_entities = set( [self.origEvents[x].attrib['e1']
                                  for x in tmp_events
                                  if not self.origEvents[x].attrib['e1']
@@ -75,7 +93,17 @@ class Pruner:
         self.events.update(tmp_events)
 
     def analyseCycles(self):
-        # adapted from http://neopythonic.blogspot.com/2009/01/detecting-cycles-in-directed-graph.html
+        """
+        Breaks cycles in the graph. This method requires the presence of
+        prediction strengths for each edge. The weakest edge is always
+        removed.
+
+        Detection algorithm adapted from
+        http://neopythonic.blogspot.com/2009/01/detecting-cycles-in-directed-graph.html
+
+        @rtype: integer
+        @return: number of cycles broken
+        """
         def findCycle():
             # cycles can form between regulation events
             regs = [x.attrib['id'] for x in self.document.getiterator('entity')
@@ -130,6 +158,10 @@ class Pruner:
         return count
 
     def prune(self):
+        """
+        Prunes the graph. More specifically, removes all events and entities
+        that are not present in the cache. See analyse().
+        """
         for sentence in self.document.findall('sentence'):
             for entity in sentence.findall('entity'):
                 uid = entity.attrib['id']
@@ -155,12 +187,27 @@ class Pruner:
 
 
 def prune(input, cycles=True, output=None):
+    """
+    Convenience wrapper for interface.
+
+    @type input: string
+    @param input: input file
+    @type cycles: boolean
+    @param cycles: break cycles?
+    @type output: string
+    @param output: output file
+    @rtype: cElementTree.Element
+    @return: corpus node
+    """
     options = ["-i",input,"-o",output]
     if cycles:
         options.append("-c")
     return interface(options)
 
 def interface(optionArgs=sys.argv[1:]):
+    """
+    The function to handle the command-line interface.
+    """
     from optparse import OptionParser
 
     op = OptionParser(usage="%prog [options]\nGenia shared task specific pruning of invalid nodes and edges.")
