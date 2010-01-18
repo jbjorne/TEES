@@ -125,13 +125,14 @@ for params in paramCombinations:
         EvaluateInteractionXML.run(Ev, xml, DEVEL_FILE, PARSE_TOK, PARSE_TOK)
         # Post-processing
         #preserveTask2.run(xmlFilename, "t2.xml", "no-t2.xml", "extract")
-        prune.interface(["-i","final.xml","-o","pruned.xml","-c"])
-        unflatten.interface(["-i","pruned.xml","-o","unflattened.xml","-a",PARSE_TOK,"-t",PARSE_TOK])
+        unflatten(xml, PARSE_TOK, PARSE_TOK, "unflattened.xml")
+        #prune.interface(["-i","final.xml","-o","pruned.xml","-c"])
+        #unflatten.interface(["-i","pruned.xml","-o","unflattened.xml","-a",PARSE_TOK,"-t",PARSE_TOK])
         #preserveTask2.run("unflattened.xml", "final.xml", "t2.xml", "insert")
         # Output will be stored to the geniaformat-subdirectory, where will also be a
         # tar.gz-file which can be sent to the Shared Task evaluation server.
-        gifxmlToGenia("unflattened.xml", "geniaformat", 1)
-        evaluateSharedTask("geniaformat", 1) # "UTurku-devel-results-090320"
+        gifxmlToGenia("unflattened.xml", "geniaformat", options.task)
+        evaluateSharedTask("geniaformat", options.task) # "UTurku-devel-results-090320"
     else:
         print >> sys.stderr, "No predicted edges"
     count += 1
