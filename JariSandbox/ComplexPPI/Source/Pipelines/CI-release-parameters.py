@@ -76,7 +76,7 @@ ALL_PARAMS={
 paramCombinations = getParameterCombinations(ALL_PARAMS)
 
 # These commands will be in the beginning of most pipelines
-EXPERIMENT_NAME = "parameters-triggers" + TRIGGER_TASK_TAG + "-edges" + EDGE_TASK_TAG
+EXPERIMENT_NAME = "parameters-triggers" + TRIGGER_TASK_TAG + "-edges" + EDGE_TASK_TAG + "-evaltask2"
 WORKDIR="/usr/share/biotext/GeniaChallenge/CI-release/parameters/" + EXPERIMENT_NAME
 workdir(WORKDIR, False) # Select a working directory, don't remove existing files
 copyIdSetsToWorkdir(TRIGGER_DIR + "/genia-trigger-ids")
