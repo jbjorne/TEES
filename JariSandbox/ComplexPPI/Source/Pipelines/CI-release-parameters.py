@@ -132,7 +132,10 @@ for params in paramCombinations:
         # Output will be stored to the geniaformat-subdirectory, where will also be a
         # tar.gz-file which can be sent to the Shared Task evaluation server.
         gifxmlToGenia("unflattened.xml", "geniaformat", options.task)
-        evaluateSharedTask("geniaformat", options.task) # "UTurku-devel-results-090320"
+        if options.task == 2:
+            evaluateSharedTask("geniaformat", 12)
+        else:
+            evaluateSharedTask("geniaformat", 1) # "UTurku-devel-results-090320"
     else:
         print >> sys.stderr, "No predicted edges"
     count += 1

@@ -84,6 +84,8 @@ def evaluate(sourceDir, task=1, folds=-1, foldToRemove=-1, evaluations=["strict"
     sourceDir = os.path.abspath(sourceDir)
     #print sourceDir
     
+    assert task in [1,12,13,123]
+    
     # Go to evaluation scripts
     origDir = os.getcwd()
     os.chdir(perlDir)
