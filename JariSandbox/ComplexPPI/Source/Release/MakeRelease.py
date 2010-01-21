@@ -1,3 +1,6 @@
+# After running, go to output/src and run:
+# mv __init__.py ../temp ; epydoc -v --exclude networkx --parse-only --debug -o ../doc ./* ; mv ../temp __init__.py
+
 import sys, os, shutil
 import Preprocess
 
@@ -55,6 +58,10 @@ def fixVisit(outPath, dirname, names):
         if name.find(".py") != -1:
             fixImports(outPath, dirname, name)
             Preprocess.preprocess(os.path.join(dirname, name), [Preprocess.conditional])
+    if not "__init__.py" in names and not dirname.find("networkx") != -1:
+        if dirname.find("CommonUtils") != -1 or dirname.find("SharedTask") != -1:
+            initFile = open(os.path.join(outPath, dirname, "__init__.py"), "wt")
+            initFile.close()
     
 def fixImports(outPath, dirname, pythonFile):
     if dirname.find("networkx") != -1:
