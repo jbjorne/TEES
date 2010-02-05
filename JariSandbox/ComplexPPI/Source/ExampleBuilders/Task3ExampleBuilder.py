@@ -1,3 +1,5 @@
+__version__ = "$Revision: 1.3 $"
+
 import sys
 sys.path.append("..")
 import Core.ExampleBuilder

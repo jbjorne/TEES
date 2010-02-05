@@ -1,10 +1,21 @@
+__version__ = "$Revision: 1.26 $"
+
 from FeatureBuilder import FeatureBuilder
 import Stemming.PorterStemmer as PorterStemmer
 from EdgeFeatureBuilder import EdgeFeatureBuilder
 import combine
 
 class MultiEdgeFeatureBuilder(FeatureBuilder):
+    """
+    This feature builder generates features describing a pair of word tokens connected by one or more
+    dependencies. Most of the features it produces are built on the shortest undirected path of
+    dependencies between the two tokens.
+    """
     def __init__(self, featureSet):
+        """
+        @type featureSet: IdSet
+        @param featureSet: feature ids
+        """
         FeatureBuilder.__init__(self, featureSet)
         self.edgeFeatureBuilder = EdgeFeatureBuilder(featureSet)
         self.ontologyFeatureBuilder = None
@@ -47,6 +58,19 @@ class MultiEdgeFeatureBuilder(FeatureBuilder):
             self.setFeature(structure, 1)
         
     def setFeatureVector(self, features=None, entity1=None, entity2=None, resetCache=True):
+        """
+        When the feature builder builds features, they are put to this feature vector.
+        
+        @type features: dictionary
+        @param features: a reference to the feature vector
+        @type entity1: cElementTree.Element
+        @param entity1: an entity used by trigger or edge feature builders   
+        @type entity2: cElementTree.Element
+        @param entity2: an entity used by trigger or edge feature builders
+        @type resetCache: boolean
+        @param resetCache: Some intermediate features are cached to speed up example generation. This
+        cache should be cleared when moving to another example.   
+        """
         self.entity1 = entity1
         self.entity2 = entity2
         self.features = features
@@ -59,6 +83,11 @@ class MultiEdgeFeatureBuilder(FeatureBuilder):
             self.depPathCache = {}
     
     def buildPredictedValueFeatures(self, element, tag):
+        """
+        Edge examples are usually predicted on top of predicted entities. The entities' confidence scores
+        can be used as features for edge detection. For these features to be used, the model must also have
+        been trained on data that contains prediction confidence scores.
+        """
         predictions = element.get("predictions")
         if predictions != None and predictions != "":
             predictions = predictions.split(",")
@@ -75,6 +104,10 @@ class MultiEdgeFeatureBuilder(FeatureBuilder):
             self.setFeature(tag + "_strength_" + str(element.get("type")), 1.0)
     
     def buildEntityFeatures(self, sentenceGraph):
+        """
+        Build features for the two entities of the current example. These features are labeled as "e1" or "e2",
+        so entity order is meaningful.
+        """
         for token, entities in sentenceGraph.entitiesByToken.iteritems():
             if self.entity1 in entities:
                 tokenFeatures = self.getTokenFeatures(token, sentenceGraph)
@@ -115,12 +148,13 @@ class MultiEdgeFeatureBuilder(FeatureBuilder):
                 
     def getEdges(self, graph, path):
         """
-        graph = Directed NetworkX graph
-        path = list of token elements
-        
         Builds a dictionary where edges are indexed by the indices of their
         start and end tokens in the path. F.e. to get the edges from path[1]
         to path[2] call return_value[1][2].
+        
+        @type graph: Directed NetworkX graph
+        @type path: list
+        @param path: list of token elements
         """
 #        self.edgeCache = {}
 #        ids = self.getPathIds(path)

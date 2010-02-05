@@ -1,12 +1,4 @@
-""" 
-ExampleBuilder is the abstract base class for specialized example builders.
-Example builders take some data and convert it to examples usable by e.g. SVMs.
-An example builder writes three files, an example-file (in extended Joachim's
-SVM format) and .class_names and .feature_names files, which contain the names
-for the class and feature id-numbers. An example builder can also be given
-pre-existing sets of class and feature ids (optionally in files) so that the
-generated examples are consistent with other, previously generated examples.
-"""
+__version__ = "$Revision: 1.25 $"
 
 from SentenceGraph import SentenceGraph
 from IdSet import IdSet
@@ -19,6 +11,15 @@ import Core.ExampleUtils as ExampleUtils
 import SentenceGraph
 
 class ExampleBuilder:
+    """ 
+    ExampleBuilder is the abstract base class for specialized example builders.
+    Example builders take some data and convert it to examples usable by e.g. SVMs.
+    An example builder writes three files, an example-file (in extended Joachim's
+    SVM format) and .class_names and .feature_names files, which contain the names
+    for the class and feature id-numbers. An example builder can also be given
+    pre-existing sets of class and feature ids (optionally in files) so that the
+    generated examples are consistent with other, previously generated examples.
+    """
     def __init__(self, classSet=None, featureSet=None):
         if(type(classSet) == types.StringType):
             self.classSet = IdSet(filename=classSet)

@@ -1,3 +1,5 @@
+__version__ = "$Revision: 1.30 $"
+
 import Graph.networkx_v10rc1 as NX10 # import networkx as NX
 import Range
 import types
@@ -66,6 +68,17 @@ class SentenceGraph:
     dictionaries that e.g. map element ids to their corresponding elements.
     """
     def __init__(self, sentenceElement, tokenElements, dependencyElements):
+        """
+        Creates the syntactic graph part of the SentenceGraph. The semantic graph
+        can be added with mapInteractions.
+        
+        @param sentenceElement: interaction-XML sentence-element
+        @type sentenceElement: cElementTree.Element
+        @param tokenElements: interaction-XML syntactic token elements
+        @type tokenElements: list of cElementTree.Element objects
+        @param dependencyElements: interacton-XML syntactic dependency elements
+        @type dependencyElements: list of cElementTree.Element objects   
+        """
         self.sentenceElement = sentenceElement
         self.tokens = tokenElements
         self.dependencies = dependencyElements
@@ -92,6 +105,9 @@ class SentenceGraph:
                                           element=dependency)
     
     def getUndirectedDependencyGraph(self):
+        """
+        Create an undirected version of the syntactic dependency graph.
+        """
         u = NX10.MultiGraph()
         for token in self.tokens:
             u.add_node(token)
@@ -109,6 +125,11 @@ class SentenceGraph:
         """
         Return a list of interaction-elements which represent directed
         interactions from entity1 to entity2.
+        
+        @param entity1: a semantic node (trigger or named entity)
+        @type entity1: cElementTree.Element 
+        @param entity2: a semantic node (trigger or named entity)
+        @type entity2: cElementTree.Element 
         """
         rv = []
         for interaction in self.interactions:
@@ -125,6 +146,13 @@ class SentenceGraph:
         parse with the semantic interactions, the graphs must be aligned by mapping the
         interaction graph's nodes (entities) to the syntactic graph's nodes (tokens). This
         is done by determining the head tokens of the entities.
+        
+        @param entityElements: the semantic nodes (triggers and named entities)
+        @type entityElements: list of cElementTree.Element objects
+        @param interactionElements: the semantic edges (e.g. Cause and Theme for GENIA)
+        @type interactionElements: list of cElementTree.Element objects
+        @param verbose: Print selected head tokens on screen
+        @param verbose: boolean
         """
         self.interactions = interactionElements
         self.entities = entityElements
@@ -171,6 +199,13 @@ class SentenceGraph:
     
     def mapEntity(self, entityElement, verbose=False):
         """
+        Determine the head token for a named entity or trigger. The head token is the token closest
+        to the root for the subtree of the dependency parse spanned by the text of the element.
+        
+        @param entityElement: a semantic node (trigger or named entity)
+        @type entityElement: cElementTree.Element
+        @param verbose: Print selected head tokens on screen
+        @param verbose: boolean
         """
         headOffset = None
         if entityElement.attrib.has_key("headOffset"):
@@ -212,7 +247,14 @@ class SentenceGraph:
             self.entitiesByToken[token].append(entityElement)
         return token
 
-    def findHeadToken(self, candidateTokens):    
+    def findHeadToken(self, candidateTokens):
+        """
+        Select the candidate token that is closest to the root of the subtree of the depencdeny parse
+        to which the candidate tokens belong to. See getTokenHeadScores method for the algorithm.
+        
+        @param candidateTokens: the list of syntactic tokens from which the head token is selected
+        @type candidateTokens: list of cElementTree.Element objects
+        """
         tokenHeadScores = self.getTokenHeadScores()
         
         #if debug:
@@ -323,6 +365,9 @@ class SentenceGraph:
         """
         Returns the text of a token, and masks it if the token is the head token
         of a named entity.
+        
+        @param token: interaction-XML syntactic token.
+        @type token: cElementTree.Element
         """
         if self.tokenIsName[token]:
             return "NAMED_ENT"

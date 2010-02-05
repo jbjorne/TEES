@@ -1,3 +1,5 @@
+__version__ = "$Revision: 1.20 $"
+
 import sys, os
 import combine
 #from Evaluation import Evaluation
@@ -38,6 +40,7 @@ class Classifier:
     def classify(self, examples, parameters=None):
         raise NotImplementedError
     
+#IF LOCAL
     def filterTrainingSet(self, examples):
         if self.featureSet == None:
             return examples
@@ -262,3 +265,5 @@ if __name__=="__main__":
     print >> sys.stderr, evaluator.toStringConcise()
     if options.output != None:
         evaluator.saveCSV(options.output + "/results.csv")
+
+#ENDIF

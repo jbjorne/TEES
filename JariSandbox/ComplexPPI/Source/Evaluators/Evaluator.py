@@ -1,20 +1,38 @@
+__version__ = "$Revision: 1.14 $"
+
 g_evaluatorFieldnames = ["fold","class","positives","negatives","true positives","false positives","true negatives","false negatives","precision","recall","f-score","AUC"]
 
 def compare(e1, e2):
     return e1.compare(e2)
 
 class Evaluator:
+    """
+    An abstract base class for classes used to evaluate the performance of different classifiers.
+    """
     def compare(self, evaluator):
+        """
+        Compare overall performance between two sets of classified examples.
+        """
         raise NotImplementedError
     
     def getData(self):
+        """
+        Return the EvaluationData corresponding to the main evaluation criterion for this Evaluator.
+        """
         raise NotImplementedError
     
     def average(evaluators):
+        """
+        Return the average of the main evaluation criteria for this Evaluator type.
+        """
         raise NotImplementedError
     average = staticmethod(average)
     
     def pool(evaluators):
+        """
+        Return the average of the main evaluation criteria for this Evaluator type calculated
+        by pooling all individual classifications.
+        """
         raise NotImplementedError
     pool = staticmethod(pool)
     
@@ -38,6 +56,10 @@ class Evaluator:
         TableUtils.addToCSV(dicts, filename, g_evaluatorFieldnames)
 
 class EvaluationData:
+    """
+    Calculates F-score for data that can be divided into true/false positives and
+    true/false negatives.
+    """
     def __init__(self):
         self._tp = 0
         self._fp = 0

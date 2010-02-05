@@ -1,3 +1,5 @@
+__version__ = "$Revision: 1.19 $"
+
 from Evaluator import Evaluator
 from Evaluator import EvaluationData
 import sys, os, types
@@ -7,6 +9,12 @@ import Core.ExampleUtils as ExampleUtils
 import itertools
 
 class AveragingMultiClassEvaluator(Evaluator):
+    """
+    An evaluator for multiclass classification results, where an example can belong to one
+    of several classes. For calculating averages over multiple classes, one of the classes, 
+    "neg"/1 is considered to be negative while the others are considered to be different 
+    types of positive instances.
+    """
     type = "multiclass"
     
     def __init__(self, examples, predictions=None, classSet=None):

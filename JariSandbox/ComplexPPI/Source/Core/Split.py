@@ -1,6 +1,23 @@
+"""
+Functions for dividing data into random sets.
+"""
+
+__version__ = "$Revision: 1.3 $"
+
 import random
 
 def getSample(popSize, sampleFraction, seed=0):
+    """
+    Generates a list of 1/0 values for defining a random sample for a list of length popSize.
+    List elements with value 0 belong to the sample.
+    
+    @param popSize: The length of the list from which the sample is drawn.
+    @type popSize: int
+    @param sampleFraction: The fraction [0,1] of the population to be included in the sample
+    @type sampleFraction: float 
+    @param seed: int
+    @type seed: a seed value for the Python random number generator
+    """
     random.seed(seed)
     sample = random.sample( xrange(popSize), int(sampleFraction*float(popSize)) )
     vector = []
@@ -12,6 +29,16 @@ def getSample(popSize, sampleFraction, seed=0):
     return vector
 
 def getFolds(popSize, folds, seed=0):
+    """
+    Divides the population into n folds of roughly equal size.
+    
+    @param popSize: The length of the list from which the sample is drawn.
+    @type popSize: int
+    @param folds: the number of folds to divide the population into
+    @type folds: int >= 1
+    @param seed: int
+    @type seed: a seed value for the Python random number generator
+    """
     sampleSize = int(float(popSize) / float(folds))
     random.seed(seed)
     
@@ -34,6 +61,7 @@ def getFolds(popSize, folds, seed=0):
             currentFold += 1
     return vector
 
+# test program for demonstrating sampling and folds
 if __name__=="__main__":
     print "Testing 20, 0.0:"
     print getSample(20,0.0)
