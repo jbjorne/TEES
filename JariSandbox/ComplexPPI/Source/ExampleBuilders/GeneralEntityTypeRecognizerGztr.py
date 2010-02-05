@@ -1,5 +1,6 @@
-import sys
-sys.path.append("..")
+import sys, os
+thisPath = os.path.dirname(os.path.abspath(__file__))
+sys.path.append(os.path.abspath(os.path.join(thisPath,"..")))
 import Core.ExampleBuilder
 from Core.ExampleBuilder import ExampleBuilder
 import Stemming.PorterStemmer as PorterStemmer
