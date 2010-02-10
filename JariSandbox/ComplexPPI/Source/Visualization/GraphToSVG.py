@@ -49,7 +49,12 @@ def edgesToSVG(svgTokens, graph, arcStyles={}, labelStyles={}, edgeTypeAttrib="t
     for token in svgTokens:
         svgTokensById[token.id] = token
     
-    edges = graph.edges()
+    nxEdges = graph.edges(data=True)
+    edges = []
+    for nxEdge in nxEdges:
+        if nxEdge[0] != nxEdge[1]: # Within-token edges cannot be displayed
+            edges.append( (nxEdge[0], nxEdge[1], nxEdge[2]["element"]) )
+    
     svgEdges = []    
     for edge in edges:
         token1 = edge[0].get("id")
@@ -84,7 +89,7 @@ def makeSVG(svgTokens, svgEdges):
     draw_dg.SVGOptions.labelFontSize = 10
     draw_dg.SVGOptions.tokenSpace = 5
     draw_dg.SVGOptions.depVertSpace = 10#15
-    draw_dg.SVGOptions.minDepPadding = 3    
+    draw_dg.SVGOptions.minDepPadding = 3
     return draw_dg.generateSVG(svgTokens, svgEdges)
 
 def writeSVG(svgTokens, svgEdges, fileName):

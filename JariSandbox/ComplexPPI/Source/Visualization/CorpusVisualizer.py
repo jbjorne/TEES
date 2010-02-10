@@ -3,7 +3,7 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__))+"/..")
 import Evaluators.EvaluateInteractionXML as EvaluateInteractionXML
 import GraphToSVG
 from HtmlBuilder import *
-import networkx as NX
+import Graph.networkx_v10rc1 as NX10
 
 class CorpusVisualizer:
     def __init__(self, outputDirectory, deleteDirectoryIfItExists=False):
@@ -30,9 +30,9 @@ class CorpusVisualizer:
             else:
                 sys.exit("Error, output directory exists.")
         print >> sys.stderr, "Creating output directory", self.outDir
-        os.mkdir(self.outDir)
-        os.mkdir(self.outDir+"/sentences")
-        os.mkdir(self.outDir+"/svg")
+        os.makedirs(self.outDir)
+        os.makedirs(self.outDir+"/sentences")
+        os.makedirs(self.outDir+"/svg")
         shutil.copytree(os.path.dirname(os.path.abspath(__file__))+"/../../../PPIDependencies/Visualization/js",self.outDir+"/js")
     
     def getMatchingEdgeStyles(self, graph1, graph2, posColor, negColor):
