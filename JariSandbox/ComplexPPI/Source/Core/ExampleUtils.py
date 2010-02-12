@@ -215,7 +215,7 @@ def loadPredictions(predictionsFile):
     #finally:
     f.close()
 
-def writeTask3ToInteractionXML(classifications, corpusElements, outputFileName, task3Type):
+def writeTask3ToInteractionXML(examples, predictions, corpusElements, outputFileName, task3Type):
     import sys
     print >> sys.stderr, "Adding task 3 to Interaction XML"
     try:
@@ -226,20 +226,34 @@ def writeTask3ToInteractionXML(classifications, corpusElements, outputFileName, 
     
     assert task3Type == "speculation" or task3Type == "negation"
     
+    if type(predictions) == types.StringType:
+        print >> sys.stderr, "Reading predictions from", predictions
+        predictions = loadPredictions(predictions)
+    if type(examples) == types.StringType:
+        print >> sys.stderr, "Reading examples from", examples
+        examples = readExamples(examples, False)
+    
     corpusTree = ETUtils.ETFromObj(corpusElements)
     corpusRoot = corpusTree.getroot()
     
+    # Remove the task 3 subtask information if it already exists
+    for entity in corpusRoot.getiterator("entity"):
+        if task3Type == "speculation":
+            entity.set("speculation", "False")
+        else: # task3Type == "negation"
+            entity.set("negation", "False")
+    
     specMap = {}
     negMap = {}
-    for classification in classifications:
-        assert classification[0][3]["xtype"] == "task3"
-        if classification[0][3]["t3type"] == "speculation":
+    for example, prediction in itertools.izip(examples, predictions):
+        assert example[3]["xtype"] == "task3"
+        if example[3]["t3type"] == "speculation":
             map = specMap
         else:
             map = negMap
-        if classification[3] != 1:
-            assert not map.has_key(classification[0][3]["entity"])
-            map[classification[0][3]["entity"]] = True
+        if prediction[0] != 1:
+            assert not map.has_key(example[3]["entity"])
+            map[example[3]["entity"]] = True
     
     for entity in corpusRoot.getiterator("entity"):
         if task3Type == "speculation":
@@ -253,7 +267,11 @@ def writeTask3ToInteractionXML(classifications, corpusElements, outputFileName, 
             else:
                 entity.set("negation", "False")
     
-    ETUtils.write(corpusRoot, outputFileName)
+    # Write corpus
+    if outputFileName != None:
+        print >> sys.stderr, "Writing corpus to", outputFileName
+        ETUtils.write(corpusRoot, outputFileName)
+    return corpusTree
 
 def writeToInteractionXML(examples, predictions, corpusElements, outputFile, classSet=None, parse=None, tokenization=None):
     import sys
