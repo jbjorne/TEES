@@ -1,7 +1,8 @@
-__version__ = "$Revision: 1.4 $"
+__version__ = "$Revision: 1.5 $"
 
-import sys
-sys.path.append("..")
+import sys, os
+thisPath = os.path.dirname(os.path.abspath(__file__))
+sys.path.append(os.path.abspath(os.path.join(thisPath,"..")))
 import Core.ExampleBuilder
 from Core.ExampleBuilder import ExampleBuilder
 import Stemming.PorterStemmer as PorterStemmer
@@ -40,8 +41,12 @@ class Task3ExampleBuilder(ExampleBuilder):
         assert( classSet.getId("neg") == 1 )
         if featureSet == None:
             featureSet = IdSet()
-            
-        self.specWords, self.specWordStems = readWords("/usr/share/biotext/GeniaChallenge/extension-data/genia/task3/speculation-words.txt") 
+        
+        wordFilePath = os.path.abspath(os.path.join(thisPath,"../../data/speculation-words.txt"))
+#IF LOCAL
+        wordFilePath = "/usr/share/biotext/GeniaChallenge/extension-data/genia/task3/speculation-words.txt"    
+#ENDIF        
+        self.specWords, self.specWordStems = readWords(wordFilePath) 
         #print self.specWords
         #print self.specWordStems
         #sys.exit()
