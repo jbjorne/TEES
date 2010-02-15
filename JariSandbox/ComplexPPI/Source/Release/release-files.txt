@@ -264,7 +264,9 @@ JariSandbox/ComplexPPI/Source/Core/__init__.py
 #JariSandbox/ComplexPPI/Source/Pipelines/BioInferTestSet.py
 #JariSandbox/ComplexPPI/Source/Pipelines/BioInferTriggerParameters.py
 JariSandbox/ComplexPPI/Source/Pipelines/BioNLP09Classify.py
+JariSandbox/ComplexPPI/Source/Pipelines/BioNLP09ClassifyTask3.py
 JariSandbox/ComplexPPI/Source/Pipelines/BioNLP09Train.py
+JariSandbox/ComplexPPI/Source/Pipelines/BioNLP09TrainTask3.py
 #JariSandbox/ComplexPPI/Source/Pipelines/BioNLP09Full.py
 #JariSandbox/ComplexPPI/Source/Pipelines/BioNLP09SharedTaskClassify.py
 #JariSandbox/ComplexPPI/Source/Pipelines/BioNLP09SharedTaskFiles.py
@@ -349,7 +351,7 @@ JariSandbox/ComplexPPI/Source/ExampleBuilders/MultiEdgeExampleBuilder.py
 #JariSandbox/ComplexPPI/Source/ExampleBuilders/SimpleMultiEdgeExampleBuilder.py
 #JariSandbox/ComplexPPI/Source/ExampleBuilders/SingleDependencyTypeExampleBuilder.py
 #JariSandbox/ComplexPPI/Source/ExampleBuilders/SingleEdgeExampleBuilder.py
-#JariSandbox/ComplexPPI/Source/ExampleBuilders/Task3ExampleBuilder.py
+JariSandbox/ComplexPPI/Source/ExampleBuilders/Task3ExampleBuilder.py
 #JariSandbox/ComplexPPI/Source/ExampleBuilders/TokenRoleMultiEdgeExampleBuilder.py
 #JariSandbox/ComplexPPI/Source/ExampleBuilders/TokenRoleMultiEdgeTypeExampleBuilder.py
 #JariSandbox/ComplexPPI/Source/ExampleBuilders/UnaryEventExampleBuilder.py
