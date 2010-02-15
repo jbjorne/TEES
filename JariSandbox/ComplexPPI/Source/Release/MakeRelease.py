@@ -3,6 +3,7 @@
 
 import sys, os, shutil
 import Preprocess
+import subprocess
 
 def getOutPath(filename, outpath):
     filename = filename.replace("GeniaChallenge", "SharedTask")
@@ -72,11 +73,21 @@ def fixImports(outPath, dirname, pythonFile):
     f.close()
     
     steps = dirname[len(outPath)+1:].count("/")
-    #lines = ["import sys\nsys.path.append(\"" + (steps * "../") + "CommonUtils\")\n"] + lines
-    lines = ["import sys\nsys.path.insert(0,\"" + (steps * "../") + "CommonUtils\")\n"] + lines
+    if len(lines) > 0 and lines[0][0:3] == "\"\"\"":
+        count = 1
+        while lines[count][0:3] != "\"\"\"":
+            count += 1
+        lines = lines[:count+1] + ["\nimport sys\nsys.path.insert(0,\"" + (steps * "../") + "CommonUtils\")\n"] + lines[count+1:]
+    else:
+        #lines = ["import sys\nsys.path.append(\"" + (steps * "../") + "CommonUtils\")\n"] + lines
+        lines = ["import sys\nsys.path.insert(0,\"" + (steps * "../") + "CommonUtils\")\n"] + lines        
     f = open(os.path.join(dirname, pythonFile), "wt")
     f.writelines(lines)
     f.close()
+    
+def copy(filename, targetPath):
+    print "copying", filename
+    shutil.copy(filename, targetPath)
 
 if __name__=="__main__":
     import sys, os
@@ -109,16 +120,28 @@ if __name__=="__main__":
     
     print >> sys.stderr, "Copying data files"
     dataPath = os.path.join(options.output, "data")
-    shutil.copytree("/usr/share/biotext/GeniaChallenge/release-files", dataPath)
+    shutil.copytree("/usr/share/biotext/GeniaChallenge/CI-release/release-files/release-files-review-version-models", dataPath)
     corpusPath = "/usr/share/biotext/GeniaChallenge/xml/"
-    shutil.copy(corpusPath + "devel123.xml", dataPath)
-    shutil.copy(corpusPath + "train123.xml", dataPath)
-    shutil.copy(corpusPath + "everything123.xml", dataPath)
-    shutil.copy(corpusPath + "test.xml", dataPath)
+    copy(corpusPath + "devel123.xml", dataPath)
+    copy(corpusPath + "devel-with-duplicates123.xml", dataPath)
+    copy(corpusPath + "train123.xml", dataPath)
+    copy(corpusPath + "train-with-duplicates123.xml", dataPath)
+    copy(corpusPath + "everything123.xml", dataPath)
+    copy(corpusPath + "everything-with-duplicates123.xml", dataPath)
+    copy(corpusPath + "test.xml", dataPath)
+    copy("/usr/share/biotext/GeniaChallenge/extension-data/genia/task3/speculation-words.txt", dataPath)
     os.makedirs(os.path.join(options.output + "/data/evaluation-data"))
     shutil.copytree("/usr/share/biotext/GeniaChallenge/extension-data/genia/evaluation-data/evaluation-tools-devel-gold", os.path.join(options.output + "/data/evaluation-data/evaluation-tools-devel-gold"))
     os.makedirs(os.path.join(options.output + "/data/evaluation-data/evaluation-temp"))
     
     print >> sys.stderr, "Copying additional files"
-    shutil.copy("readme.txt", os.path.join(options.output + "/readme.txt"))
-    shutil.copy("Settings.py", os.path.join(options.output + "/src/Settings.py"))
+    copy("readme.txt", os.path.join(options.output + "/readme.txt"))
+    copy("Settings.py", os.path.join(options.output + "/src/Settings.py"))
+    
+    print >> sys.stderr, "Building documentation"
+    origDir = os.getcwd()
+    os.chdir(os.path.join(options.output, "src"))
+    subprocess.Popen("mv __init__.py ../temp ; epydoc -v --exclude networkx --parse-only --debug -o ../doc ./* ; mv ../temp __init__.py", shell=True)
+    os.chdir(origDir)
+    
+    print >> sys.stderr, "Release done"
