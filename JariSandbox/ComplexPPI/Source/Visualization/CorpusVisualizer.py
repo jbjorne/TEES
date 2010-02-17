@@ -296,7 +296,7 @@ class CorpusVisualizer:
             else:
                 builder.span("next","color:#0000FF;")
     
-        builder.span("BioInfer-ID: " + self.__getOrigId(sentenceGraph.sentenceElement))
+        builder.span("Original ID: " + self.__getOrigId(sentenceGraph.sentenceElement))
         builder.closeElement() # div      
         builder.lineBreak()
         
