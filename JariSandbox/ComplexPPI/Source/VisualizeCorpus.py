@@ -23,6 +23,8 @@ if __name__=="__main__":
     corpusElements = loadCorpus(options.input, options.parse, options.tokenization)
     sentences = []
     for sentence in corpusElements.sentences:
+        #print "ent", len(sentence.entities)
+        #print "int", len(sentence.interactions)
         sentences.append( [sentence.sentenceGraph,None] )
     
     goldElements = None
