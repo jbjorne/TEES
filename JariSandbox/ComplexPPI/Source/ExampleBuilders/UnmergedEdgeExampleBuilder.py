@@ -1,7 +1,7 @@
 """
 Edge Examples
 """
-__version__ = "$Revision: 1.1 $"
+__version__ = "$Revision: 1.2 $"
 
 import sys, os
 import types
@@ -203,6 +203,10 @@ class UnmergedEdgeExampleBuilder(ExampleBuilder):
         for token in sentenceGraph.tokens: # per token
             entitiesByType = {}
             for entity in sentenceGraph.tokenIsEntityHead[token]: # per type
+                if entity.get("isName") == "True": # Names can never have duplicates
+                    assert not levelByEntity.has_key(entity)
+                    levelByEntity[entity] = 0
+                    continue
                 eType = entity.get("type")
                 if eType == "neg":
                     continue
@@ -245,6 +249,9 @@ class UnmergedEdgeExampleBuilder(ExampleBuilder):
         for token in sentenceGraph.tokens: # per token
             entitiesByType = {}
             for entity in sentenceGraph.tokenIsEntityHead[token]: # per type
+                if entity.get("isName") == "True": # Names can never have duplicates
+                    entities.append( (entity, 0, False) )
+                    continue
                 eType = entity.get("type")
                 if eType == "neg":
                     continue
@@ -266,11 +273,11 @@ class UnmergedEdgeExampleBuilder(ExampleBuilder):
                     if levelByEntity.has_key(entity):
                         level = levelByEntity[entity]
                         if level < len(entityGroup):
-                            entityGroup[level] = (entity, level, True)
+                            entityGroup[level] = (entity, level, False)
                 # Create dummies for potential entities
                 for i in range(len(entityGroup)):
                     if entityGroup[i] == None:
-                        entityGroup[i] = (dummyEntity, i, False)
+                        entityGroup[i] = (dummyEntity, i, True)
                 # Put all slots into one potential entity list
                 #print entityGroup
                 for e in entityGroup:
@@ -396,18 +403,20 @@ class UnmergedEdgeExampleBuilder(ExampleBuilder):
         # define extra attributes
         if int(path[0].attrib["id"].split("_")[-1]) < int(path[-1].attrib["id"].split("_")[-1]):
             #extra = {"xtype":"edge","type":"i","t1":path[0],"t2":path[-1]}
-            extra = {"xtype":"edge","type":"i","t1":path[0].get("id"),"t2":path[-1].get("id")}
+            extra = {"xtype":"ue","type":"i","t1":path[0].get("id"),"t2":path[-1].get("id")}
             extra["deprev"] = False
         else:
             #extra = {"xtype":"edge","type":"i","t1":path[-1],"t2":path[0]}
-            extra = {"xtype":"edge","type":"i","t1":path[-1].get("id"),"t2":path[0].get("id")}
+            extra = {"xtype":"ue","type":"i","t1":path[-1].get("id"),"t2":path[0].get("id")}
             extra["deprev"] = True
         if entity1 != None:
             extra["e1"] = entity1.get("id")
             extra["l1"] = str(e1[1])
+            extra["d1"] = str(e1[2])[0] # is a dummy node (an entity not in existing triggers)
         if entity2 != None:
             extra["e2"] = entity2.get("id")
             extra["l2"] = str(e2[1])
+            extra["d2"] = str(e2[2])[0] # is a dummy node (an entity not in existing triggers)
         extra["categoryName"] = categoryName
         sentenceOrigId = sentenceGraph.sentenceElement.get("origId")
         if sentenceOrigId != None:
