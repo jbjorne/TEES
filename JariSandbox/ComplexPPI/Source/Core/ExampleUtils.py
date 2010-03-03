@@ -1,8 +1,16 @@
-# example is a 4-tuple (or list) of the format: (id, class, features, extra). id is a string,
-# class is an int (-1 or +1 for binary) and features is a dictionary of int:float -pairs, where
-# the int is the feature id and the float is the feature value.
-# Extra is a dictionary of String:String pairs, for additional information about the 
-# examples.
+"""
+Tools for writing and reading classifier example files
+
+These functions read and write machine learning example files and convert
+examples into final data forms. The memory representation for each
+example is a 4-tuple (or list) of the format: (id, class, features, extra). id is a string,
+class is an int (-1 or +1 for binary) and features is a dictionary of int:float -pairs, where
+the int is the feature id and the float is the feature value.
+Extra is a dictionary of String:String pairs, for additional information about the 
+examples.
+"""
+__version__ = "$Revision: 1.39 $"
+
 
 import sys, os, itertools
 import Split
@@ -16,6 +24,7 @@ try:
 except ImportError:
     import cElementTree as ET
 import cElementTreeUtils as ETUtils
+import RecallAdjust
 
 def gen2iterable(genfunc):
     def wrapper(*args, **kwargs):
@@ -214,6 +223,68 @@ def loadPredictions(predictionsFile):
             yield pred
     #finally:
     f.close()
+
+@gen2iterable        
+def loadPredictionsBoost(predictionsFile, recallBoost):
+    ran = [999999999999999,-999999999999999]
+    for prediction in loadPredictions(predictionsFile):
+        if len(prediction) > 1:
+            for value in prediction[1:]:
+                if value > ran[1]:
+                    ran[1] = value
+                if value < ran[0]:
+                    ran[0] = value
+    rangeValue = ran[1] - ran[0]
+    rangeValue *= 1.001 # Make sure boost=1.0 exceeds max value
+    print "Range value:", rangeValue
+     
+    f = open(predictionsFile, "rt")
+    #try:
+    for line in f:
+        splits = line.split()
+        if len(splits) == 1:
+            yield [float(splits[0])]
+        else: # multiclass
+            pred = [int(splits[0])]
+            for split in splits[1:]:
+                pred.append(float(split))
+            #pred[1] = RecallAdjust.scaleVal(pred[1])
+            pred[1] -= rangeValue * recallBoost
+            if pred[0] == 1:
+                maxStrength = pred[1]
+                for i in range(len(pred)):
+                    if i == 0: 
+                        continue
+                    clsPred = pred[i]
+                    if clsPred > maxStrength:
+                        maxStrength = clsPred
+                        pred[0] = i
+                        #print "MDSFSDFSDFFDE"
+            yield pred
+    #finally:
+    f.close()
+
+def getPositivesPerSentence(examples, predictions):
+    if type(predictions) == types.StringType:
+        print >> sys.stderr, "Reading predictions from", predictions
+        predictions = loadPredictions(predictions)
+    if type(examples) == types.StringType:
+        print >> sys.stderr, "Reading examples from", examples
+        examples = readExamples(examples, False)
+    
+    examplesPerSentence = {}
+    for example, prediction in itertools.izip(examples, predictions):
+        sId = example[0].rsplit(".",1)[0]
+        if not examplesPerSentence.has_key(sId):
+            examplesPerSentence[sId] = 0
+        if prediction[0] != 1:
+            examplesPerSentence[sId] += 1
+    counts = {}
+    for value in examplesPerSentence.values():
+        if not counts.has_key(value):
+            counts[value] = 0
+        counts[value] += 1
+    return counts
 
 def writeTask3ToInteractionXML(examples, predictions, corpusElements, outputFileName, task3Type):
     import sys
