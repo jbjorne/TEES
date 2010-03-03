@@ -1,12 +1,16 @@
-__version__ = "$Revision: 1.30 $"
+"""
+Main class for representing a sentence
+"""
+__version__ = "$Revision: 1.31 $"
 
 import Graph.networkx_v10rc1 as NX10 # import networkx as NX
 import Range
 import types
+import copy
 
 multiedges = True
 
-def loadCorpus(corpus, parse, tokenization=None, removeNameInfo=False):
+def loadCorpus(corpus, parse, tokenization=None, removeNameInfo=False, removeIntersentenceInteractionsFromCorpusElements=True):
     """
     Load an entire corpus through CorpusElements and add SentenceGraph-objects
     to its SentenceElements-objects.
@@ -23,7 +27,7 @@ def loadCorpus(corpus, parse, tokenization=None, removeNameInfo=False):
     corpusTree = ETUtils.ETFromObj(corpus)
     corpusRoot = corpusTree.getroot()
     # Use CorpusElements-class to access xml-tree
-    corpusElements = CorpusElements(corpusRoot, parse, tokenization, tree=corpusTree, removeNameInfo=removeNameInfo)
+    corpusElements = CorpusElements(corpusRoot, parse, tokenization, tree=corpusTree, removeNameInfo=removeNameInfo, removeIntersentenceInteractions=removeIntersentenceInteractionsFromCorpusElements)
     print >> sys.stderr, str(len(corpusElements.documentsById)) + " documents, " + str(len(corpusElements.sentencesById)) + " sentences"
     # Make sentence graphs
     duplicateInteractionEdgesRemoved = 0
@@ -353,7 +357,7 @@ class SentenceGraph:
                     if Range.overlap(entityOffset, tokenOffset):
                         self.tokenIsEntity[token] = True
                         if entity.attrib.has_key("isName"):
-                            if entity.attrib["isName"] == "True":
+                            if entity.get("isName") == "True":
                                 self.tokenIsName[token] = True
                         else:
                             entity.attrib["isName"] = "True"
@@ -373,3 +377,14 @@ class SentenceGraph:
             return "NAMED_ENT"
         else:
             return token.get("text")
+    
+    def getCleared(self):
+        c = SentenceGraph(self.sentenceElement, self.tokens, self.dependencies)
+        namedEntities = []
+        for entity in self.entities:
+            if entity.get("isName") == "True":
+                namedEntities.append(entity)
+        c.mapInteractions(namedEntities, [])
+        return c
+        
+        
