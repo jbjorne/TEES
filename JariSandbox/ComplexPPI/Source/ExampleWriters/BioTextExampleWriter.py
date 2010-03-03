@@ -1,12 +1,13 @@
 import sys, os, types
 thisPath = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.abspath(os.path.join(thisPath,"..")))
-import ExampleUtils
+import Core.ExampleUtils as ExampleUtils
 
 from EntityExampleWriter import EntityExampleWriter
 from EdgeExampleWriter import EdgeExampleWriter
 from Task3ExampleWriter import Task3ExampleWriter
 from UnmergedEdgeExampleWriter import UnmergedEdgeExampleWriter
+from AsymmetricEventExampleWriter import AsymmetricEventExampleWriter
 
 class BioTextExampleWriter:
     @classmethod
@@ -30,7 +31,37 @@ class BioTextExampleWriter:
             w = Task3ExampleWriter()
         elif xType == "ue":
             w = UnmergedEdgeExampleWriter()
+        elif xType == "asym":
+            w = AsymmetricEventExampleWriter()
         else:
             assert False, ("Unknown entity type", xType)
         return w.writeXML(examples, predictions, corpus, outputFile, classSet, parse, tokenization)
+
+if __name__=="__main__":
+    # Import Psyco if available
+    try:
+        import psyco
+        psyco.full()
+        print >> sys.stderr, "Found Psyco, using"
+    except ImportError:
+        print >> sys.stderr, "Psyco not installed"
+
+    optparser = OptionParser(usage="%prog [options]\nWrite predicted examples to interaction XML")
+    optparser.add_option("-e", "--examples", default=None, dest="examples", help="Machine learning example file", metavar="FILE")
+    optparser.add_option("-p", "--predictions", default=None, dest="predictions", help="Classifier predictions for the example file", metavar="FILE")
+    optparser.add_option("-i", "--classIds", default=None, dest="classIds", help="Multiclass class Ids")
+    optparser.add_option("-c", "--corpus", default=None, dest="corpus", help="Interaction XML file for adding examples to", metavar="FILE")
+    optparser.add_option("-a", "--parse", default="split-McClosky", dest="parse", help="Parse XML element name")
+    optparser.add_option("-t", "--tokenization", default="split-McClosky", dest="tokenization", help="Tokenization XML element name")
+    optparser.add_option("-o", "--output", default=None, dest="output", help="Output file")
+    #optparser.add_option("-t", "--task", default=1, type="int", dest="task", help="task number")
+    (options, args) = optparser.parse_args()
+    
+    assert(options.examples != None)
+    assert(options.predictions != None)
+    assert(options.classIds != None)
+    assert(options.corpus != None)
+    assert(options.output != None)
+    
+    BioTextExampleWriter.write(options.examples, options.predictions, options.corpus, options.output, options.classIds, options.parse, options.tokenization)
    
