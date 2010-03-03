@@ -1,7 +1,7 @@
 """
 Edge Examples
 """
-__version__ = "$Revision: 1.2 $"
+__version__ = "$Revision: 1.3 $"
 
 import sys, os
 import types
@@ -98,7 +98,10 @@ class UnmergedEdgeExampleBuilder(ExampleBuilder):
         return edgesToKeep
         
     def getCategoryName(self, sentenceGraph, e1, e2, directed=True):
-        if not e1[2] or not e2[2]:
+        # Dummies are potential entities that do not exist in the 
+        # training data. If both entities of an interaction are dummies
+        # it can't exist in the training data and is therefore a negative
+        if e1[2] or e2[2]:
             return "neg"
         
         e1 = e1[0]
@@ -198,7 +201,7 @@ class UnmergedEdgeExampleBuilder(ExampleBuilder):
         
         # Determine level of entity from precedence counts
         levelByEntity = {} # slot number
-        levelByInteraction = {} # slot number of parent node
+        #levelByInteraction = {} # slot number of parent node
         # There is one slot group per token, per type
         for token in sentenceGraph.tokens: # per token
             entitiesByType = {}
@@ -225,11 +228,11 @@ class UnmergedEdgeExampleBuilder(ExampleBuilder):
                     assert not levelByEntity.has_key(entity)
                     levelByEntity[entity] = level
                     # Interactions have the same slot as their parent entity
-                    for interaction in interactionsByEntity[entity]:
-                        assert not levelByInteraction.has_key(interaction)
-                        levelByInteraction[interaction] = level
+                    #for interaction in interactionsByEntity[entity]:
+                    #    assert not levelByInteraction.has_key(interaction)
+                    #    levelByInteraction[interaction] = level
                     level += 1
-        return levelByEntity, levelByInteraction      
+        return levelByEntity#, levelByInteraction      
             
     def buildExamples(self, sentenceGraph):
         examples = []
@@ -242,7 +245,8 @@ class UnmergedEdgeExampleBuilder(ExampleBuilder):
         paths = NX10.all_pairs_shortest_path(undirected, cutoff=999)
         
         # Determine overlapping entity precedence
-        levelByEntity, levelByInteraction = self.getPrecedenceLevels(sentenceGraph, paths)
+        #levelByEntity, levelByInteraction = self.getPrecedenceLevels(sentenceGraph, paths)
+        levelByEntity = self.getPrecedenceLevels(sentenceGraph, paths)
         
         entities = []
         # There is one entity group for each token, for each type of entity
@@ -268,6 +272,7 @@ class UnmergedEdgeExampleBuilder(ExampleBuilder):
                 dummyEntity = entitiesByType[eType][0]
                 # Define entity slots
                 entityGroup = [None, None, None, None]
+                #entityGroup = [None, None]
                 # Insert existing entities into slots
                 for entity in entitiesByType[eType]:
                     if levelByEntity.has_key(entity):
@@ -314,6 +319,7 @@ class UnmergedEdgeExampleBuilder(ExampleBuilder):
         features[self.featureSet.getId("gov_level_"+str(e1[1]))] = 1
         features[self.featureSet.getId("dep_level")] = e2[1]
         features[self.featureSet.getId("dep_level_"+str(e2[1]))] = 1
+        features[self.featureSet.getId("level_pair_"+str(e1[1])+"_"+str(e2[1]))] = 1
         if True: #token1 != token2 and paths.has_key(token1) and paths[token1].has_key(token2):
             if token1 != token2 and paths.has_key(token1) and paths[token1].has_key(token2):
                 path = paths[token1][token2]
