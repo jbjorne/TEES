@@ -11,7 +11,7 @@ class ProgressCounter:
         self.step = step
         
         self.prevPrintTime = 0
-        self.timeStep = 120
+        self.timeStep = 30
     
     def __del__(self):
         # If this counter didn't finish, show the info about the last update
@@ -29,11 +29,11 @@ class ProgressCounter:
         timeStepExceeded = False
         if currentTime - self.prevPrintTime > self.timeStep:
             timeStepExceeded = True
-            self.prevPrintTime = currentTime
         
         if self.progress >= 100.0 or self.progress - self.prevProgress >= self.step or timeStepExceeded:
             print >> sys.stderr, "\r" + self.prevUpdateString,
             self.prevProgress = self.progress
+            self.prevPrintTime = currentTime
         if self.progress >= 100.0:
             print >> sys.stderr
     
