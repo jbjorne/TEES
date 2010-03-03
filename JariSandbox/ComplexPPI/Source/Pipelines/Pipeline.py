@@ -1,3 +1,6 @@
+"""
+Main API
+"""
 import sys,os,time
 thisPath = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.abspath(os.path.join(thisPath,"..")))
@@ -11,6 +14,9 @@ from ExampleBuilders.DirectEventExampleBuilder import DirectEventExampleBuilder
 from ExampleBuilders.Task3ExampleBuilder import Task3ExampleBuilder
 from ExampleBuilders.PathGazetteer import PathGazetteer
 from ExampleBuilders.CPPTriggerExampleBuilder import CPPTriggerExampleBuilder
+from ExampleBuilders.BinaryEntityExampleBuilder import BinaryEntityExampleBuilder
+from ExampleBuilders.UnmergedEdgeExampleBuilder import UnmergedEdgeExampleBuilder
+from ExampleBuilders.AsymmetricEventExampleBuilder import AsymmetricEventExampleBuilder
 from Murska.CSCConnection import CSCConnection
 #ENDIF
 from Classifiers.SVMMultiClassClassifier import SVMMultiClassClassifier as Cls
@@ -28,6 +34,7 @@ import Utils.Stream as Stream
 import atexit, shutil
 from Core.RecallAdjust import RecallAdjust
 from Core.Gazetteer import Gazetteer
+from ExampleWriters.BioTextExampleWriter import BioTextExampleWriter
 
 RELEASE = True
 #IF LOCAL
@@ -54,7 +61,11 @@ import evaluation.EvaluateSharedTask
 evaluateSharedTask = evaluation.EvaluateSharedTask.evaluate
 from cElementTreeUtils import write as writeXML
 
+mainProgramDir = None
+
 def workdir(path, deleteIfExists=True):
+    global mainProgramDir
+    
     if os.path.exists(path):
         if deleteIfExists:
             print >> sys.stderr, "Output directory exists, removing", path
@@ -66,10 +77,12 @@ def workdir(path, deleteIfExists=True):
     os.chdir(path)
     atexit.register(os.chdir, origDir)
 
-def log(clear=False):
+def log(clear=False, logCmd=True):
     Stream.setLog("log.txt", clear)
     Stream.setTimeStamp("[%H:%M:%S]", True)
     print >> sys.stderr, "####### Log opened at ", time.ctime(time.time()), "#######"
+    if logCmd:
+        sys.stdout.writeToLog("Command line: " + " ".join(sys.argv) + "\n")
 
 def copyIdSetsToWorkdir(srcStem):
     print >> sys.stderr, "Copying id-sets from", srcStem 
