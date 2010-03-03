@@ -1,3 +1,8 @@
+"""
+Edge Examples
+"""
+__version__ = "$Revision: 1.44 $"
+
 import sys, os
 thisPath = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.abspath(os.path.join(thisPath,"..")))
@@ -59,7 +64,10 @@ class MultiEdgeExampleBuilder(ExampleBuilder):
     @classmethod
     def run(cls, input, output, parse, tokenization, style, idFileTag=None):
         classSet, featureSet = cls.getIdSets(idFileTag)
-        e = MultiEdgeExampleBuilder(style=style, classSet=classSet, featureSet=featureSet)
+        if style != None:
+            e = MultiEdgeExampleBuilder(style=style, classSet=classSet, featureSet=featureSet)
+        else:
+            e = MultiEdgeExampleBuilder(classSet=classSet, featureSet=featureSet)
         sentences = cls.getSentences(input, parse, tokenization)
         e.buildExamplesForSentences(sentences, output, idFileTag)
     

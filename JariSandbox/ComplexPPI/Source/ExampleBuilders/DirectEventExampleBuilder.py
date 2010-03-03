@@ -79,7 +79,10 @@ class DirectEventExampleBuilder(ExampleBuilder):
     @classmethod
     def run(cls, input, output, parse, tokenization, style, idFileTag=None, gazetteer=None, pathGazetteer=None, negFrac=None):
         classSet, featureSet = cls.getIdSets(idFileTag)
-        e = DirectEventExampleBuilder(style=style, classSet=classSet, featureSet=featureSet, gazetteer=gazetteer, pathGazetteer=pathGazetteer, negFrac=negFrac)
+        if style != None:
+            e = DirectEventExampleBuilder(style=style, classSet=classSet, featureSet=featureSet, gazetteer=gazetteer, pathGazetteer=pathGazetteer, negFrac=negFrac)
+        else:
+            e = DirectEventExampleBuilder(classSet=classSet, featureSet=featureSet, gazetteer=gazetteer, pathGazetteer=pathGazetteer, negFrac=negFrac)
         sentences = cls.getSentences(input, parse, tokenization)
         e.buildExamplesForSentences(sentences, output, idFileTag)
         e.printStats()
