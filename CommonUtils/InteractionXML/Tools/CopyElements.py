@@ -1,4 +1,6 @@
 """
+Copy elements from one InteractionXML structure to another.
+
   Program:    CopyElements
   Date:       Sep. 25, 2008
   Author:     Jari Bjorne
@@ -29,6 +31,7 @@
   -e (--element) "sentenceanalyses/parses/parse" 
   -i (--identifiers) "{'parser':'Charniak-Lease'}"
 """
+__version__ = "$Revision: 1.4 $"
 
 import sys, os
 try:

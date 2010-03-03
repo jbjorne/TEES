@@ -1,8 +1,8 @@
 """
+Tools for working with interaction (and analysis) XML.
+
   Module:     InteractionXML
   Added by:   Jari Bjoerne
-
-  Description: Tools for working with interaction (and analysis) XML.
 """
 
 from RecalculateIds import recalculateIds

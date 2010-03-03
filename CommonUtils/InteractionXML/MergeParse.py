@@ -1,3 +1,5 @@
+__version__ = "$Revision: 1.2 $"
+
 try:
     import xml.etree.cElementTree as ET
 except ImportError:

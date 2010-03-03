@@ -1,4 +1,6 @@
 """
+Combinations from multiple sequences
+
 Source: ASPN: Python Cookbook
 Title: Generating combinations of objects from multiple sequences
 Submitter: David Klaffenbach (other recipes)

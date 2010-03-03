@@ -1,3 +1,8 @@
+"""
+Character offset tools.
+"""
+__version__ = "$Revision: 1.8 $"
+
 import types
 
 def merge(range1, range2):

@@ -1,4 +1,6 @@
 """
+Stemming tools
+
   Module:     Stemming tools
   Authors:    Various
   Added by:   Jari Bjoerne
