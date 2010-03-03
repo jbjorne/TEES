@@ -26,7 +26,7 @@ class AsymmetricEventExampleWriter(SentenceExampleWriter):
         self.removeNonNameEntities(sentenceElement)
         
         entityByTokenByType = {}
-        # First add existing entities (names) (sentenceObject still has all entities)
+        # First add existing entities (names) (use sentenceElement, as sentenceObject still has all entities)
         for entity in sentenceElement.findall("entity"):
             headOffset = entity.get("headOffset")
             headToken = None
@@ -93,13 +93,14 @@ class AsymmetricEventExampleWriter(SentenceExampleWriter):
                         pairElement.attrib["e1"] = e1Id
                         pairElement.attrib["e2"] = entityByTokenByType[t2Id][e2Type].get("id")
                         pairElement.attrib["id"] = sentenceId + ".i" + str(pairCount)
+                        pairElement.attrib["predictions"] = self.getEdgePredictionString(example, prediction, classSet, classIds)
                         pairElement.set("type", "Theme")
                         sentenceElement.append(pairElement)
                         pairCount += 1
             else:
                 if entityByTokenByType.has_key(t1Id) and entityByTokenByType.has_key(t2Id): 
                     for e1Type in sorted(entityByTokenByType[t1Id].keys()):
-                        if exampleType.find("egulation") == -1:
+                        if e1Type.find("egulation") == -1:
                             continue
                         for e2Type in sorted(entityByTokenByType[t2Id].keys()):
                             pairElement = ET.Element("interaction")
@@ -107,6 +108,7 @@ class AsymmetricEventExampleWriter(SentenceExampleWriter):
                             pairElement.attrib["e1"] = entityByTokenByType[t1Id][e1Type].get("id")
                             pairElement.attrib["e2"] = entityByTokenByType[t2Id][e2Type].get("id")
                             pairElement.attrib["id"] = sentenceId + ".i" + str(pairCount)
+                            pairElement.attrib["predictions"] = self.getEdgePredictionString(example, prediction, classSet, classIds)
                             pairElement.set("type", "Cause")
                             sentenceElement.append(pairElement)
                             pairCount += 1
@@ -114,3 +116,18 @@ class AsymmetricEventExampleWriter(SentenceExampleWriter):
         # re-attach the analyses-element
         if sentenceAnalysesElement != None:
             sentenceElement.append(sentenceAnalysesElement)
+    
+    def getEdgePredictionString(self, example, prediction, classSet, classIds):
+        classWeights = prediction[1:]
+        predictionString = ""
+        for i in range(len(classWeights)):
+            className = classSet.getName(classIds[i])
+            if className != "neg" and className != "Cause" and i != prediction[0]:
+                continue
+            if predictionString != "":
+                predictionString += ","
+            if className != "neg" or className != "Cause":
+                predictionString += "Theme" + ":" + str(classWeights[i])
+            else: 
+                predictionString += className + ":" + str(classWeights[i])
+        return predictionString
