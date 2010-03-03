@@ -33,7 +33,11 @@ class CorpusVisualizer:
         os.makedirs(self.outDir)
         os.makedirs(self.outDir+"/sentences")
         os.makedirs(self.outDir+"/svg")
-        shutil.copytree(os.path.dirname(os.path.abspath(__file__))+"/../../../PPIDependencies/Visualization/js",self.outDir+"/js")
+        jsPath = os.path.dirname(os.path.abspath(__file__))+"/../../data/visualization-js"
+#IF LOCAL
+        jsPath = os.path.dirname(os.path.abspath(__file__))+"/../../../PPIDependencies/Visualization/js"
+#ENDIF
+        shutil.copytree(jsPath,self.outDir+"/js")
     
     def getMatchingEdgeStyles(self, graph1, graph2, posColor, negColor):
         arcStyles = {}
@@ -556,3 +560,54 @@ def repairApostrophes(filename):
     f = open(filename,"wt")
     f.writelines(lines)
     f.close()
+
+if __name__=="__main__":
+    import sys, os, shutil
+    sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+    import Core.ExampleUtils as Example
+    try:
+        import xml.etree.cElementTree as ET
+    except ImportError:
+        import cElementTree as ET
+    from InteractionXML.CorpusElements import CorpusElements
+    from Core.SentenceGraph import *
+    from Visualization.CorpusVisualizer import CorpusVisualizer
+    from optparse import OptionParser
+    import Settings
+
+    optparser = OptionParser(usage="%prog [options]\nCreate an html visualization for a corpus.")
+    optparser.add_option("-i", "--input", default=Settings.DevelFile, dest="input", help="Corpus in analysis format", metavar="FILE")
+    optparser.add_option("-g", "--gold", default=None, dest="gold", help="Gold standard in interaction XML", metavar="FILE")
+    optparser.add_option("-o", "--output", default=None, dest="output", help="Output directory, useful for debugging")
+    optparser.add_option("-t", "--tokenization", default="split-McClosky", dest="tokenization", help="tokenization")
+    optparser.add_option("-p", "--parse", default="split-McClosky", dest="parse", help="parse")
+    (options, args) = optparser.parse_args()
+    
+    corpusElements = loadCorpus(options.input, options.parse, options.tokenization)
+    sentences = []
+    for sentence in corpusElements.sentences:
+        #print "ent", len(sentence.entities)
+        #print "int", len(sentence.interactions)
+        sentences.append( [sentence.sentenceGraph,None] )
+    
+    goldElements = None
+    if options.gold != None:
+        print >> sys.stderr, "Loading Gold Standard Corpus"
+        goldElements = loadCorpus(options.gold, options.parse, options.tokenization)
+    
+    print >> sys.stderr, "Visualizing"
+    visualizer = CorpusVisualizer(options.output, True)
+    for i in range(len(sentences)):
+        sentence = sentences[i]
+        print >> sys.stderr, "\rProcessing sentence", sentence[0].getSentenceId(), "          ",
+        prevAndNextId = [None,None]
+        if i > 0:
+            prevAndNextId[0] = sentences[i-1][0].getSentenceId()
+        if i < len(sentences)-1:
+            prevAndNextId[1] = sentences[i+1][0].getSentenceId()
+        if goldElements != None:
+            visualizer.makeSentencePage(sentence[0],sentence[1],None,prevAndNextId,goldElements.sentencesById[sentence[0].getSentenceId()].sentenceGraph)
+        else:
+            visualizer.makeSentencePage(sentence[0],sentence[1],None,prevAndNextId)
+    visualizer.makeSentenceListPage()
+    print >> sys.stderr
