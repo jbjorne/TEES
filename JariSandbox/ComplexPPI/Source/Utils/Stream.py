@@ -29,6 +29,11 @@ class StreamModifier:
         self.timeStamp = format
         self.timeStampDuplicates = duplicates
     
+    def writeToLog(self, text):
+        if self.logfile != None:
+            self.logfile.write(text)
+            self.logfile.flush()
+    
     def write(self, text):
         if self.indent != None:
             if self.newLine:
