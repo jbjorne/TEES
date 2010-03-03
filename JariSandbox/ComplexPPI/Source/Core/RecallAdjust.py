@@ -1,4 +1,7 @@
-__version__ = "$Revision: 1.5 $"
+"""
+Trade precision for recall
+"""
+__version__ = "$Revision: 1.6 $"
 
 try:
     import xml.etree.cElementTree as ET

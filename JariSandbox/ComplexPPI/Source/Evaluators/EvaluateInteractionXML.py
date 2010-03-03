@@ -1,3 +1,6 @@
+"""
+For comparing a predicted interaction XML against a gold standard
+"""
 import sys, os
 sys.path.append(os.path.dirname(os.path.abspath(__file__))+"/..")
 #print os.path.dirname(os.path.abspath(__file__))+"/.."

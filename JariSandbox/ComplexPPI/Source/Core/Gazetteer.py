@@ -1,4 +1,7 @@
-__version__ = "$Revision: 1.8 $"
+"""
+A gazetteer of training data words associated with specific example classes
+"""
+__version__ = "$Revision: 1.9 $"
 
 try:
     import xml.etree.cElementTree as ET

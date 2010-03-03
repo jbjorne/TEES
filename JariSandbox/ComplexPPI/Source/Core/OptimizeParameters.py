@@ -1,3 +1,6 @@
+"""
+Determine optimal classifier parameter combinations.
+"""
 import sys, os, types
 import combine
 import time

@@ -1,4 +1,7 @@
-__version__ = "$Revision: 1.11 $"
+"""
+Base class for FeatureBuilders
+"""
+__version__ = "$Revision: 1.12 $"
 
 class FeatureBuilder:
     """

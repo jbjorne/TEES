@@ -1,4 +1,7 @@
-__version__ = "$Revision: 1.26 $"
+"""
+Shortest path features
+"""
+__version__ = "$Revision: 1.27 $"
 
 from FeatureBuilder import FeatureBuilder
 import Stemming.PorterStemmer as PorterStemmer

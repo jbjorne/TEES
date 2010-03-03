@@ -1,3 +1,8 @@
+"""
+Trigger examples
+"""
+__version__ = "$Revision: 1.11 $"
+
 import sys, os
 thisPath = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.abspath(os.path.join(thisPath,"..")))

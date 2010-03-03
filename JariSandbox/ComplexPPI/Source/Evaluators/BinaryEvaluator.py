@@ -1,3 +1,6 @@
+"""
+For two-class classification
+"""
 import Evaluator
 
 class BinaryEvaluator(Evaluator.Evaluator):

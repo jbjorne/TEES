@@ -1,4 +1,7 @@
-__version__ = "$Revision: 1.14 $"
+"""
+Base class for Evaluators
+"""
+__version__ = "$Revision: 1.15 $"
 
 g_evaluatorFieldnames = ["fold","class","positives","negatives","true positives","false positives","true negatives","false negatives","precision","recall","f-score","AUC"]
 

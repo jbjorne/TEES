@@ -1,3 +1,8 @@
+"""
+Dependency edge features
+"""
+__version__ = "$Revision: 1.3 $"
+
 from FeatureBuilder import FeatureBuilder
 #import Stemming.PorterStemmer as PorterStemmer
 

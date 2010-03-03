@@ -1,4 +1,7 @@
-__version__ = "$Revision: 1.20 $"
+"""
+Base class for classifiers
+"""
+__version__ = "$Revision: 1.21 $"
 
 import sys, os
 import combine

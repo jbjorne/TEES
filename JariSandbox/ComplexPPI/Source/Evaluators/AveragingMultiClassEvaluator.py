@@ -1,4 +1,7 @@
-__version__ = "$Revision: 1.19 $"
+"""
+For multi-class classifications
+"""
+__version__ = "$Revision: 1.20 $"
 
 from Evaluator import Evaluator
 from Evaluator import EvaluationData

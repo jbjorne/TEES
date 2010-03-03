@@ -1,3 +1,8 @@
+"""
+Pseudorandomly distributed subsets
+"""
+__version__ = "$Revision: 1.4 $"
+
 import Split
 import sys
 

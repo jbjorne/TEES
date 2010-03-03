@@ -1,8 +1,4 @@
-"""
-A wrapper for the Joachims SVM Multiclass.
-"""
-
-__version__ = "$Revision: 1.42 $"
+__version__ = "$Revision: 1.43 $"
 
 import sys,os
 sys.path.append(os.path.dirname(os.path.abspath(__file__))+"/..")
@@ -11,6 +7,10 @@ import subprocess
 import Core.ExampleUtils as Example
 import combine
 import copy
+"""
+A wrapper for the Joachims SVM Multiclass classifier.
+"""
+    
 import types
 from Core.Classifier import Classifier
 import Core.Split as Split
@@ -21,6 +21,10 @@ import Settings
 import SVMMultiClassModelUtils
 
 class SVMMultiClassClassifier(Classifier):
+    """
+    A wrapper for the Joachims SVM Multiclass classifier.
+    """
+
     indent = ""
     #IF LOCAL
     louhiBinDir = "/v/users/jakrbj/svm-multiclass"
@@ -31,9 +35,12 @@ class SVMMultiClassClassifier(Classifier):
         """
         Train the SVM-multiclass classifier on a set of examples.
         
-        examples -- a list or file containing examples in SVM-format
-        parameters -- a dictionary or string of parameters for the classifier
-        outputFile -- the name of the model file to be written
+        @type examples: string (filename) or list (or iterator) of examples
+        @param examples: a list or file containing examples in SVM-format
+        @type parameters: a dictionary or string
+        @param parameters: parameters for the classifier
+        @type outputFile: string
+        @param outputFile: the name of the model file to be written
         """
         timer = Timer()
         # If parameters are defined as a string, extract them
@@ -78,10 +85,16 @@ class SVMMultiClassClassifier(Classifier):
         """
         Classify examples with a pre-trained model.
         
-        examples -- a list or file containing examples in SVM-format
-        modelPath -- filename of the pre-trained model file
-        parameters -- a dictionary or string of parameters for the classifier
-        output -- the name of the predictions file to be written
+        @type examples: string (filename) or list (or iterator) of examples
+        @param examples: a list or file containing examples in SVM-format
+        @type modelPath: string
+        @param modelPath: filename of the pre-trained model file
+        @type parameters: a dictionary or string
+        @param parameters: parameters for the classifier
+        @type output: string
+        @param output: the name of the predictions file to be written
+        @type forceInternal: Boolean
+        @param forceInternal: Use python classifier even if SVM Multiclass binary is defined in Settings.py
         """
         if forceInternal or Settings.SVMMultiClassDir == None:
             return cls.testInternal(examples, modelPath, output)

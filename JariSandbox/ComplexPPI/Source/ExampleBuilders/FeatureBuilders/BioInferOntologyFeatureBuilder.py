@@ -1,3 +1,8 @@
+"""
+BioInfer ontology based features
+"""
+__version__ = "$Revision: 1.2 $"
+
 import sys, os
 try:
     import xml.etree.cElementTree as ET

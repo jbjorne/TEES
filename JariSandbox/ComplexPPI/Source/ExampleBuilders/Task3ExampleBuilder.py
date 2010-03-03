@@ -1,4 +1,7 @@
-__version__ = "$Revision: 1.5 $"
+"""
+Speculation and negation examples
+"""
+__version__ = "$Revision: 1.6 $"
 
 import sys, os
 thisPath = os.path.dirname(os.path.abspath(__file__))

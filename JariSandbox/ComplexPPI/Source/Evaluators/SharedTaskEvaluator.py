@@ -1,3 +1,6 @@
+"""
+For BioNLP'09 Shared Task format data (.a2)
+"""
 from Evaluator import Evaluator
 from Evaluator import EvaluationData
 from AveragingMultiClassEvaluator import AveragingMultiClassEvaluator
