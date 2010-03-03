@@ -1,12 +1,13 @@
 """
-  Program:    cElemenrTree Utilities
+Functions for easier use of cElementTree.
+
+  Program:    cElementTree Utilities
   Date:       Oct. 16, 2007
   Author:     Jari Bjoerne
 
   Description: Convenience functions for easier use of cElementTree.
-                
-  Status: UNDER CONSTRUCTION, doesn't work yet!
 """
+__version__ = "$Revision: 1.12 $"
 
 import sys
 
@@ -135,6 +136,17 @@ def makePath(element,tagList):
         result.append(subElem)
         currElem=subElem
     return result
+
+def toStr(element):
+    s = "<" + element.tag
+    for key in sorted(element.attrib.keys()):
+        s += " " + key + "=\"" + element.get(key) + "\""
+    text = element.text
+    if text == None or len(text) == 0:
+        s += " />"
+    else:
+        s += ">" + text + " <" + element.tag + "/>"
+    return s
     
 
 if __name__=="__main__":
