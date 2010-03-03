@@ -1,7 +1,7 @@
 """
 Edge Examples
 """
-__version__ = "$Revision: 1.1 $"
+__version__ = "$Revision: 1.2 $"
 
 import sys, os
 import random
@@ -15,6 +15,8 @@ from FeatureBuilders.MultiEdgeFeatureBuilder import MultiEdgeFeatureBuilder
 from FeatureBuilders.TokenFeatureBuilder import TokenFeatureBuilder
 from FeatureBuilders.BioInferOntologyFeatureBuilder import BioInferOntologyFeatureBuilder
 from FeatureBuilders.NodalidaFeatureBuilder import NodalidaFeatureBuilder
+from ExampleStats import ExampleStats
+from Filters.POSPairGazetteer import POSPairGazetteer
 import Graph.networkx_v10rc1 as NX10
 #IF LOCAL
 import Utils.BioInfer.OntologyUtils as OntologyUtils
@@ -36,11 +38,14 @@ class AsymmetricEventExampleBuilder(ExampleBuilder):
         self.styles = style
         
         self.negFrac = None
+        self.posPairGaz = POSPairGazetteer()
         for s in style:
             if s.find("negFrac") != -1:      
                 self.negFrac = float(s.split("_")[-1])
                 print >> sys.stderr, "Downsampling negatives to", self.negFrac
-                self.negRand = random.Random()
+                self.negRand = random.Random(15)
+            elif s.find("posPairGaz") != -1:
+                self.posPairGaz = POSPairGazetteer(loadFrom=s.split("_", 1)[-1])
         
         self.multiEdgeFeatureBuilder = MultiEdgeFeatureBuilder(self.featureSet)
         if "graph_kernel" in self.styles:
@@ -68,7 +73,7 @@ class AsymmetricEventExampleBuilder(ExampleBuilder):
         if "random" in self.styles:
             from FeatureBuilders.RandomFeatureBuilder import RandomFeatureBuilder
             self.randomFeatureBuilder = RandomFeatureBuilder(self.featureSet)
-        
+
         #self.outFile = open("exampleTempFile.txt","wt")
 
     @classmethod
@@ -107,14 +112,15 @@ class AsymmetricEventExampleBuilder(ExampleBuilder):
             # NOTE: Only works if keys are ordered integers
             for i in range(len(intEdges)):
                 types.add(intEdges[i]["element"].get("type"))
-        if (not directed) and sentenceGraph.interactionGraph.has_edge(t2, t1):
-            intEdgesReverse = sentenceGraph.interactionGraph.get_edge(t2, t1, default={})
-            # NOTE: Only works if keys are ordered integers
-            for i in range(len(intEdgesReverse)):
-                intElement = intEdgesReverse[i]["element"]
-                intType = intElement.get("type")
-                types.add(intType)
-            intEdges.extend(intEdgesReverse)
+
+#        if (not directed) and sentenceGraph.interactionGraph.has_edge(t2, t1):
+#            intEdgesReverse = sentenceGraph.interactionGraph.get_edge(t2, t1, default={})
+#            # NOTE: Only works if keys are ordered integers
+#            for i in range(len(intEdgesReverse)):
+#                intElement = intEdgesReverse[i]["element"]
+#                intType = intElement.get("type")
+#                types.add(intType)
+#            intEdges.extend(intEdgesReverse)
 
         for i in range(len(intEdges)):
             intElement = intEdges[i]["element"]
@@ -122,7 +128,7 @@ class AsymmetricEventExampleBuilder(ExampleBuilder):
             if intType == "Theme":
                 e1Entity = sentenceGraph.entitiesById[intElement.get("e1")]
                 themeE1Types.add(e1Entity.get("type"))
-            types.add(intType)
+            #types.add(intType)
         
         if len(themeE1Types) != 0:
             themeE1Types = list(themeE1Types)
@@ -233,6 +239,8 @@ class AsymmetricEventExampleBuilder(ExampleBuilder):
         examples = []
         exampleIndex = 0
         
+        clearGraph = sentenceGraph.getCleared()
+        
         #undirected = sentenceGraph.getUndirectedDependencyGraph()
         undirected = self.nxMultiDiGraphToUndirected(sentenceGraph.dependencyGraph)
         ##undirected = sentenceGraph.dependencyGraph.to_undirected()
@@ -244,8 +252,10 @@ class AsymmetricEventExampleBuilder(ExampleBuilder):
             loopRange = len(sentenceGraph.entities)
         else:
             loopRange = len(sentenceGraph.tokens)
-        for i in range(loopRange-1):
-            for j in range(i+1,loopRange):
+        #for i in range(loopRange-1):
+        for i in range(loopRange): # allow self-interactions
+            #for j in range(i+1,loopRange):
+            for j in range(i,loopRange): # allow self-interactions
                 eI = None
                 eJ = None
                 if "entities" in self.styles:
@@ -260,10 +270,10 @@ class AsymmetricEventExampleBuilder(ExampleBuilder):
                 else:
                     tI = sentenceGraph.tokens[i]
                     tJ = sentenceGraph.tokens[j]
-                # only consider paths between entities (NOTE! entities, not only named entities)
-                if "headsOnly" in self.styles:
-                    if (len(sentenceGraph.tokenIsEntityHead[tI]) == 0) or (len(sentenceGraph.tokenIsEntityHead[tJ]) == 0):
-                        continue
+#                # only consider paths between entities (NOTE! entities, not only named entities)
+#                if "headsOnly" in self.styles:
+#                    if (len(sentenceGraph.tokenIsEntityHead[tI]) == 0) or (len(sentenceGraph.tokenIsEntityHead[tJ]) == 0):
+#                        continue
                 
                 if "directed" in self.styles:
                     # define forward
@@ -271,35 +281,62 @@ class AsymmetricEventExampleBuilder(ExampleBuilder):
                         categoryName = self.getCategoryName(sentenceGraph, eI, eJ, True)
                     else:
                         categoryName = self.getCategoryNameFromTokens(sentenceGraph, tI, tJ, True)
+                    self.exampleStats.beginExample(categoryName)
                     if self.negFrac == None or categoryName != "neg" or (categoryName == "neg" and self.negRand.random() < self.negFrac):
-                        if (not "genia_limits" in self.styles) or self.isPotentialGeniaInteraction(eI, eJ):
-                            examples.append( self.buildExample(tI, tJ, paths, sentenceGraph, categoryName, exampleIndex, eI, eJ) )
-                            exampleIndex += 1
+                        makeExample = True
+                        if ("genia_limits" in self.styles) and not self.isPotentialGeniaInteraction(eI, eJ):
+                            makeExample = False
+                            self.exampleStats.filter("genia_limits")
+                        if self.posPairGaz.getNegFrac((tI.get("POS"), tJ.get("POS"))) == 1.0:
+                            makeExample = False
+                            self.exampleStats.filter("pos_pair")
+                        if makeExample:
+                            if not sentenceGraph.tokenIsName[tI]:
+                                examples.append( self.buildExample(tI, tJ, paths, clearGraph, categoryName, exampleIndex, eI, eJ) )
+                                exampleIndex += 1
+                            else:
+                                self.exampleStats.filter("genia_token_limits")
+                    else:
+                        self.exampleStats.filter("neg_frac")
+                    self.exampleStats.endExample()
+                    
                     # define reverse
                     if "entities" in self.styles:
                         categoryName = self.getCategoryName(sentenceGraph, eJ, eI, True)
                     else:
-                        categoryName = self.getCategoryNameFromTokens(sentenceGraph, tJ, tI, True)  
-                    makeExample = True
-                    if ("genia_limits" in self.styles) and not self.isPotentialGeniaInteraction(eJ, eI):
-                        makeExample = False
-                    if ("bioinfer_limits" in self.styles) and not self.isPotentialBioInferInteraction(eJ, eI, categoryName):
-                        makeExample = False
+                        categoryName = self.getCategoryNameFromTokens(sentenceGraph, tJ, tI, True)
+                    self.exampleStats.beginExample(categoryName)
                     if self.negFrac == None or categoryName != "neg" or (categoryName == "neg" and self.negRand.random() < self.negFrac):
+                        makeExample = True
+                        if ("genia_limits" in self.styles) and not self.isPotentialGeniaInteraction(eJ, eI):
+                            makeExample = False
+                            self.exampleStats.filter("genia_limits")
+                        if ("bioinfer_limits" in self.styles) and not self.isPotentialBioInferInteraction(eJ, eI, categoryName):
+                            makeExample = False
+                            self.exampleStats.filter("bioinfer_limits")
+                        if self.posPairGaz.getNegFrac((tJ.get("POS"), tI.get("POS"))) == 1.0:
+                            makeExample = False
+                            self.exampleStats.filter("pos_pair")
                         if makeExample:
-                            examples.append( self.buildExample(tJ, tI, paths, sentenceGraph, categoryName, exampleIndex, eJ, eI) )
-                            exampleIndex += 1
-                else:
-                    if "entities" in self.styles:
-                        categoryName = self.getCategoryName(sentenceGraph, eI, eJ, False)
+                            if not sentenceGraph.tokenIsName[tJ]:
+                                examples.append( self.buildExample(tJ, tI, paths, clearGraph, categoryName, exampleIndex, eJ, eI) )
+                                exampleIndex += 1
+                            else:
+                                self.exampleStats.filter("genia_token_limits")
                     else:
-                        categoryName = self.getCategoryNameFromTokens(sentenceGraph, tI, tJ, False)
-                    forwardExample = self.buildExample(tI, tJ, paths, sentenceGraph, categoryName, exampleIndex, eI, eJ)
-                    if not "graph_kernel" in self.styles:
-                        reverseExample = self.buildExample(tJ, tI, paths, sentenceGraph, categoryName, exampleIndex, eJ, eI)
-                        forwardExample[2].update(reverseExample[2])
-                    examples.append(forwardExample)
-                    exampleIndex += 1
+                        self.exampleStats.filter("neg_frac")
+                    self.exampleStats.endExample()
+#                else:
+#                    if "entities" in self.styles:
+#                        categoryName = self.getCategoryName(sentenceGraph, eI, eJ, False)
+#                    else:
+#                        categoryName = self.getCategoryNameFromTokens(sentenceGraph, tI, tJ, False)
+#                    forwardExample = self.buildExample(tI, tJ, paths, clearGraph, categoryName, exampleIndex, eI, eJ)
+#                    if not "graph_kernel" in self.styles:
+#                        reverseExample = self.buildExample(tJ, tI, paths, clearGraph, categoryName, exampleIndex, eJ, eI)
+#                        forwardExample[2].update(reverseExample[2])
+#                    examples.append(forwardExample)
+#                    exampleIndex += 1
         
         return examples
     
@@ -331,6 +368,9 @@ class AsymmetricEventExampleBuilder(ExampleBuilder):
                     features[self.featureSet.getId("e2_"+entity2.attrib["type"])] = 1
                     features[self.featureSet.getId("distance_"+str(len(path)))] = 1
                 if not "no_dependency" in self.styles:
+                    if token1 == token2:
+                        features[self.featureSet.getId("tokenSelfLoop")] = 1
+                    
                     self.multiEdgeFeatureBuilder.setFeatureVector(features, entity1, entity2)
                     #self.multiEdgeFeatureBuilder.buildStructureFeatures(sentenceGraph, paths) # remove for fast
                     if not "disable_entity_features" in self.styles:
@@ -408,14 +448,16 @@ class AsymmetricEventExampleBuilder(ExampleBuilder):
                 features[self.featureSet.getId("out_of_scope")] = 1
             path = [token1, token2]
         # define extra attributes
-        if int(path[0].attrib["id"].split("_")[-1]) < int(path[-1].attrib["id"].split("_")[-1]):
-            #extra = {"xtype":"edge","type":"i","t1":path[0],"t2":path[-1]}
-            extra = {"xtype":"edge","type":"i","t1":path[0].get("id"),"t2":path[-1].get("id")}
-            extra["deprev"] = False
-        else:
-            #extra = {"xtype":"edge","type":"i","t1":path[-1],"t2":path[0]}
-            extra = {"xtype":"edge","type":"i","t1":path[-1].get("id"),"t2":path[0].get("id")}
-            extra["deprev"] = True
+#        if int(path[0].attrib["id"].split("_")[-1]) < int(path[-1].attrib["id"].split("_")[-1]):
+#            #extra = {"xtype":"edge","type":"i","t1":path[0],"t2":path[-1]}
+#            extra = {"xtype":"asym","type":"i","t1":path[0].get("id"),"t2":path[-1].get("id")}
+#            extra["deprev"] = False
+#        else:
+#            #extra = {"xtype":"edge","type":"i","t1":path[-1],"t2":path[0]}
+#            extra = {"xtype":"asym","type":"i","t1":path[-1].get("id"),"t2":path[0].get("id")}
+#            extra["deprev"] = True
+
+        extra = {"xtype":"asym","type":"i","t1":token1.get("id"),"t2":token2.get("id")}
         if entity1 != None:
             #extra["e1"] = entity1
             extra["e1"] = entity1.get("id")
