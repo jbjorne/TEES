@@ -1,4 +1,7 @@
-__version__ = "$Revision: 1.25 $"
+"""
+Base class for ExampleBuilders
+"""
+__version__ = "$Revision: 1.26 $"
 
 from SentenceGraph import SentenceGraph
 from IdSet import IdSet
@@ -9,6 +12,7 @@ from Utils.Parameters import getArgs
 from Utils.Parameters import splitParameters
 import Core.ExampleUtils as ExampleUtils
 import SentenceGraph
+from ExampleBuilders.ExampleStats import ExampleStats
 
 class ExampleBuilder:
     """ 
@@ -32,6 +36,8 @@ class ExampleBuilder:
             self.featureSet = featureSet
         
         self.featureTag = ""
+        
+        self.exampleStats = ExampleStats()
     
     def setFeature(self, name, value):
         self.features[self.featureSet.getId(self.featureTag+name)] = value
@@ -50,6 +56,17 @@ class ExampleBuilder:
 #            examples.extend(sentenceExamples)
 #        print >> sys.stderr
 #        return examples
+
+    @classmethod
+    def run(cls, input, output, parse, tokenization, style, idFileTag=None):
+        classSet, featureSet = cls.getIdSets(idFileTag)
+        if style != None:
+            e = cls(style=style, classSet=classSet, featureSet=featureSet)
+        else:
+            e = cls(classSet=classSet, featureSet=featureSet)
+        sentences = cls.getSentences(input, parse, tokenization)
+        e.buildExamplesForSentences(sentences, output, idFileTag)
+        return e
     
     def buildExamples(self, sentenceGraph):
         raise NotImplementedError
@@ -78,6 +95,8 @@ class ExampleBuilder:
     
         print >> sys.stderr, "Examples built:", exampleCount
         print >> sys.stderr, "Features:", len(self.featureSet.getNames())
+        if self.exampleStats.getExampleCount() > 0:
+            self.exampleStats.printStats()
         # Save Ids
         if idFileTag != None: 
             print >> sys.stderr, "Saving class names to", idFileTag + ".class_names"
@@ -96,12 +115,13 @@ class ExampleBuilder:
             return classSet, featureSet
         else:
             print >> sys.stderr, "No predefined class or feature-names"
-            assert(not os.path.exists(idFileTag + ".feature_names"))
-            assert(not os.path.exists(idFileTag + ".class_names"))
+            if idFileTag != None:
+                assert(not os.path.exists(idFileTag + ".feature_names"))
+                assert(not os.path.exists(idFileTag + ".class_names"))
             return None, None
             
     @classmethod
-    def getSentences(cls, input, parse, tokenization, removeNameInfo=False):    
+    def getSentences(cls, input, parse, tokenization, removeNameInfo=False):
         if type(input) != types.ListType:
             # Load corpus and make sentence graphs
             corpusElements = SentenceGraph.loadCorpus(input, parse, tokenization, removeNameInfo=removeNameInfo)
@@ -125,9 +145,9 @@ def calculatePredictedRange(exampleBuilder, sentences):
 def addBasicOptions(optparser):
     optparser.add_option("-i", "--input", default=defaultAnalysisFilename, dest="input", help="Corpus in analysis format", metavar="FILE")
     optparser.add_option("-o", "--output", default=None, dest="output", help="Output file for the examples")
-    optparser.add_option("-t", "--tokenization", default="split-Charniak-Lease", dest="tokenization", help="tokenization")
-    optparser.add_option("-p", "--parse", default="split-Charniak-Lease", dest="parse", help="parse")
-    optparser.add_option("-x", "--exampleBuilderParameters", default=None, dest="exampleBuilderParameters", help="Parameters for the example builder")
+    optparser.add_option("-t", "--tokenization", default="split-McClosky", dest="tokenization", help="tokenization")
+    optparser.add_option("-p", "--parse", default="split-McClosky", dest="parse", help="parse")
+    optparser.add_option("-x", "--exampleBuilderParameters", default=None, dest="parameters", help="Parameters for the example builder")
     optparser.add_option("-b", "--exampleBuilder", default="SimpleDependencyExampleBuilder", dest="exampleBuilder", help="Example Builder Class")
     optparser.add_option("-d", "--predefined", default=None, dest="predefined", help="Directory with predefined class_names.txt and feature_names.txt files")
 
@@ -149,7 +169,7 @@ if __name__=="__main__":
     print >> sys.stderr, "Importing modules"
     exec "from ExampleBuilders." + options.exampleBuilder + " import " + options.exampleBuilder + " as ExampleBuilderClass"
     
-    run(ExampleBuilderClass, options.input, options.output, options.parse, options.tokenization, options.parameters, options.predefined)
+    ExampleBuilderClass.run(options.input, options.output, options.parse, options.tokenization, options.parameters, options.predefined)
     
 #    # Load corpus and make sentence graphs
 #    corpusElements = SentenceGraph.loadCorpus(options.input, options.parse, options.tokenization)
