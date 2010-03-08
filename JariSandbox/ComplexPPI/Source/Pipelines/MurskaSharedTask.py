@@ -34,7 +34,7 @@ TRIGGER_MODEL=Settings.DevelTriggerModel
 EDGE_MODEL=Settings.DevelEdgeModel
 
 WORKDIR=options.workdir
-PARSE_TOK="split-McClosky"
+PARSE_TOK="split_McClosky"
 
 RECALL_BOOST_PARAM=0.65
 
