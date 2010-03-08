@@ -12,10 +12,14 @@ from optparse import OptionParser
 
 optparser = OptionParser()
 optparser.add_option("-i", "--input", default=None, dest="input", help="interaction xml input file", metavar="FILE")
-optparser.add_option("-o", "--output", default=None, dest="output", help="a2 output file")
+optparser.add_option("-o", "--output", default=None, dest="output", help="output directory (for final files)")
+optparser.add_option("-w", "--workdir", default="/wrk/jakrbj/shared-task-test", dest="workdir", help="working directory")
 (options, args) = optparser.parse_args()
 assert options.input != None
+options.input = os.path.abspath(options.input)
 assert options.output != None
+options.output = os.path.abspath(options.output)
+options.workdir = os.path.abspath(options.workdir)
 
 # define shortcuts for commonly used files
 #FULL_TRAIN_FILE=Settings.TrainFile
@@ -23,11 +27,12 @@ assert options.output != None
 #TEST_FILE=Settings.DevelFile
 #GOLD_TEST_FILE=Settings.DevelFile
 TEST_FILE = options.input
+OUTFILE_STEM = os.path.join(options.output, os.path.basename(options.input))
 
 TRIGGER_MODEL=Settings.DevelTriggerModel
 EDGE_MODEL=Settings.DevelEdgeModel
 
-WORKDIR="/wrk/jakrbj/shared-task-test"
+WORKDIR=options.workdir
 PARSE_TOK="split-McClosky"
 
 RECALL_BOOST_PARAM=0.65
@@ -88,7 +93,7 @@ if True:
     edgeXML = ix.splitMergedElements(edgeXML)
     # Always remember to fix ids
     #ix.recalculateIds("test-predicted-edges.xml", "test-predicted-edges.xml", True)
-    xml = ix.recalculateIds(edgeXML, "test-predicted-edges.xml", True)
+    xml = ix.recalculateIds(edgeXML, OUTFILE_STEM + "-events.xml.gz", True)
     # EvaluateInteractionXML differs from the previous evaluations in that it can
     # be used to compare two separate GifXML-files. One of these is the gold file,
     # against which the other is evaluated by heuristically matching triggers and
@@ -101,10 +106,10 @@ if True:
 # Post-processing
 ###############################################################################
 # Post-processing
-xml = unflatten(xml, PARSE_TOK, PARSE_TOK, "unflattened.xml")
+xml = unflatten(xml, PARSE_TOK, PARSE_TOK, OUTFILE_STEM + "-events_unflattened.xml.gz")
 #prune.interface(["-i","test-predicted-edges.xml","-o","pruned.xml","-c"])
 #unflatten.interface(["-i","pruned.xml","-o","unflattened.xml","-a",PARSE_TOK,"-t",PARSE_TOK])
 # Output will be stored to the geniaformat-subdirectory, where will also be a
 # tar.gz-file which can be sent to the Shared Task evaluation server.
-gifxmlToGenia(xml, options.output, 1)
+gifxmlToGenia(xml, OUTFILE_STEM + "-events_geniaformat.tar.gz", 1)
 #evaluateSharedTask("geniaformat", 1)
