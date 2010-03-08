@@ -14,13 +14,14 @@ from ExampleBuilders.DirectEventExampleBuilder import DirectEventExampleBuilder
 from ExampleBuilders.Task3ExampleBuilder import Task3ExampleBuilder
 from ExampleBuilders.PathGazetteer import PathGazetteer
 from ExampleBuilders.CPPTriggerExampleBuilder import CPPTriggerExampleBuilder
-from ExampleBuilders.BinaryEntityExampleBuilder import BinaryEntityExampleBuilder
+#from ExampleBuilders.BinaryEntityExampleBuilder import BinaryEntityExampleBuilder
 from ExampleBuilders.UnmergedEdgeExampleBuilder import UnmergedEdgeExampleBuilder
 from ExampleBuilders.AsymmetricEventExampleBuilder import AsymmetricEventExampleBuilder
 from Murska.CSCConnection import CSCConnection
 #ENDIF
 from Classifiers.SVMMultiClassClassifier import SVMMultiClassClassifier as Cls
 from Classifiers.AllCorrectClassifier import AllCorrectClassifier as ACCls
+#from Classifiers.LibLinearClassifier import LibLinearClassifier
 from Evaluators.AveragingMultiClassEvaluator import AveragingMultiClassEvaluator as Ev
 from Evaluators.SharedTaskEvaluator import SharedTaskEvaluator as STEv
 import Core.SentenceGraph as SentenceGraph
