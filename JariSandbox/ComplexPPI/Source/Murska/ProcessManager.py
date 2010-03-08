@@ -55,6 +55,7 @@ def update(inDir, outDir, workDir, jobLimit):
     Main method
     """
     if numJobs() >= jobLimit:
+        print >> sys.stderr, "Queue full, no jobs processed"
         return
     
     inFiles = os.listdir(inDir)
@@ -62,6 +63,7 @@ def update(inDir, outDir, workDir, jobLimit):
     
     outFilesByStem = {}
     for outFile in outFiles:
+        print outFiles
         fileStem = outFile.rsplit("-", 1)
         if not outFilesByStem.has_key(fileStem):
             outFilesByStem[fileStem] = set()
@@ -69,6 +71,7 @@ def update(inDir, outDir, workDir, jobLimit):
     
     submitCount = 0
     for inFile in inFiles:
+        print inFiles
         if inFile.find("~"): # temporary backup file
             continue
         elif not outFilesByStem.has_key(inFile): # input file not yet processed
