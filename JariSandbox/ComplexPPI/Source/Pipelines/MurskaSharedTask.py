@@ -101,7 +101,7 @@ if True:
 # Post-processing
 ###############################################################################
 # Post-processing
-xml = unflatten(xml, PARSE, TOK, "unflattened.xml")
+xml = unflatten(xml, PARSE_TOK, PARSE_TOK, "unflattened.xml")
 #prune.interface(["-i","test-predicted-edges.xml","-o","pruned.xml","-c"])
 #unflatten.interface(["-i","pruned.xml","-o","unflattened.xml","-a",PARSE_TOK,"-t",PARSE_TOK])
 # Output will be stored to the geniaformat-subdirectory, where will also be a
