@@ -2,6 +2,8 @@ import sys, os
 import subprocess
 from optparse import OptionParser
 
+logFile = None
+
 def makeJobScript(jobName, inputFile, outDir, workDir):
     """
     Make a Murska job submission script
@@ -53,7 +55,7 @@ def queue(inFile, outDir, workDir, jobLimit):
     jobFile.close()
     
     #subprocess.call("bsub < " + jobScript, shell=True)
-    print >> sys.stderr, "Queued job", jobScript
+    log( "Queued job " + str(jobScript) )
     return True
     
 def removeFiles(files, path):
@@ -61,7 +63,7 @@ def removeFiles(files, path):
     Removes the selected files, used when reprocessing an input file
     """
     for file in files:
-        print >> sys.stderr, "Removing output file", file
+        log( "Removing output file " + str(file) )
         os.remove(os.path.join(path, file))
 
 def update(inDir, outDir, workDir, jobLimit):
@@ -95,6 +97,12 @@ def update(inDir, outDir, workDir, jobLimit):
             submitCount += int( queue(os.path.join(inDir, inFile), outDir, workDir, jobLimit) )
     print >> sys.stderr, "Queued", submitCount, "jobs"
 
+def log(string):
+    global logFile
+    print >> sys.stderr, string
+    if logFile != None:
+        logFile.write( time.strftime("[%d.%m.%y-%H:%M:%S] ") + string + "\n")
+
 if __name__=="__main__":
     optparser = OptionParser()
     optparser.add_option("-i", "--input", default=None, dest="input", help="input directory")
@@ -107,4 +115,9 @@ if __name__=="__main__":
     assert options.output != None
     assert os.path.exists(options.output)
     
-    update(options.input, options.output, options.workdir, 1)
+    if options.log != None:
+        logFile = open(options.log, "at")
+    update(options.input, options.output, options.workdir, 10, logFile)
+    if options.log != None:
+        logFile.close()
+    

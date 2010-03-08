@@ -3,8 +3,8 @@ import shutil
 sys.path.append(os.path.dirname(os.path.abspath(__file__))+"/..")
 import Settings
 Settings.SVMMultiClassDir = "/v/users/jakrbj/svm-multiclass"
-Settings.DevelTriggerModel = "/v/users/jakrbj/release-files-review-version-models/train-trigger-model-c_200000"
-Settings.DevelEdgeModel = "/v/users/jakrbj/release-files-review-version-models/train-edge-model-c_28000"
+Settings.DevelTriggerModel = "/v/users/jakrbj/release-files-review-version-models/everything-trigger-model-c_200000"
+Settings.DevelEdgeModel = "/v/users/jakrbj/release-files-review-version-models/everything-edge-model-c_28000"
 Settings.TriggerIds="/v/users/jakrbj/release-files-review-version-models/genia-trigger-ids"
 Settings.EdgeIds="/v/users/jakrbj/release-files-review-version-models/genia-edge-ids"
 
