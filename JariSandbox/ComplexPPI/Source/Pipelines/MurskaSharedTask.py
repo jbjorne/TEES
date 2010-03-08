@@ -1,4 +1,5 @@
 import sys, os
+import shutil
 sys.path.append(os.path.dirname(os.path.abspath(__file__))+"/..")
 import Settings
 Settings.SVMMultiClassDir = "/v/users/jakrbj/svm-multiclass"
@@ -120,3 +121,6 @@ if edgeExampleFileSize != 0:
     # tar.gz-file which can be sent to the Shared Task evaluation server.
     gifxmlToGenia(xml, OUTFILE_STEM + "-events_geniaformat.tar.gz", 1)
     #evaluateSharedTask("geniaformat", 1)
+    
+# Remove workdir
+shutil.rmtree(options.workdir)

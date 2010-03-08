@@ -3,6 +3,9 @@ import subprocess
 from optparse import OptionParser
 
 def makeJobScript(jobName, inputFile, outDir, workDir):
+    """
+    Make a Murska job submission script
+    """
     s = "#!/bin/sh \n"
     s += "##execution shell environment \n\n"
 
@@ -26,18 +29,26 @@ def makeJobScript(jobName, inputFile, outDir, workDir):
     return s
 
 def numJobs(username="jakrbj"):
+    """
+    Get number of queued (pending or running) jobs
+    """
     p = subprocess.Popen("bjobs | grep " + username + " | wc -l", shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     lines = p.stdout.readlines()
     assert len(lines) == 1
     return int(lines[0])
 
 def queue(inFile, outDir, workDir, jobLimit):
+    """
+    Inserts a job into the queue if there is room
+    """
     if numJobs() >= jobLimit:
         print >> sys.stderr, "Queue full, job not queued for", inFile
         return False
     
     jobScript = os.path.join(outDir, os.path.basename(inFile) + "-job")
     jobFile = open(jobScript, "wt" )
+    # a unique workdir is needed, because the processes execute in parallel
+    workDir = os.path.join(workDir, jobScript)
     jobFile.write(makeJobScript(jobScript, inFile, outDir, workDir))
     jobFile.close()
     
@@ -46,13 +57,16 @@ def queue(inFile, outDir, workDir, jobLimit):
     return True
     
 def removeFiles(files, path):
+    """
+    Removes the selected files, used when reprocessing an input file
+    """
     for file in files:
         print >> sys.stderr, "Removing output file", file
         os.remove(os.path.join(path, file))
 
 def update(inDir, outDir, workDir, jobLimit):
     """
-    Main method
+    Main method, checks if new input files need to be processed
     """
     if numJobs() >= jobLimit:
         print >> sys.stderr, "Queue full, no jobs processed"
@@ -64,7 +78,7 @@ def update(inDir, outDir, workDir, jobLimit):
     outFilesByStem = {}
     for outFile in outFiles:
         print outFiles
-        fileStem = outFile.rsplit("-", 1)
+        fileStem = outFile.rsplit("-", 1)[0]
         if not outFilesByStem.has_key(fileStem):
             outFilesByStem[fileStem] = set()
         outFilesByStem[fileStem].add(outFile)
