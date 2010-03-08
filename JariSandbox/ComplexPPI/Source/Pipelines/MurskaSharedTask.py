@@ -2,10 +2,10 @@ import sys, os
 sys.path.append(os.path.dirname(os.path.abspath(__file__))+"/..")
 import Settings
 Settings.SVMMultiClassDir = "/v/users/jakrbj/svm-multiclass"
-Settings.DevelTriggerModel = "/v/users/jakrbj/shared-task-files/devel-trigger-model-c_200000"
-Settings.DevelEdgeModel = "/v/users/jakrbj/shared-task-files/devel-edge-model-c_28000"
-Settings.TriggerIds="/v/users/jakrbj/shared-task-files/genia-trigger-ids"
-Settings.EdgeIds="/v/users/jakrbj/shared-task-files/genia-edge-ids"
+Settings.DevelTriggerModel = "/v/users/jakrbj/release-files-review-version-models/train-trigger-model-c_200000"
+Settings.DevelEdgeModel = "/v/users/jakrbj/release-files-review-version-models/train-edge-model-c_28000"
+Settings.TriggerIds="/v/users/jakrbj/release-files-review-version-models/genia-trigger-ids"
+Settings.EdgeIds="/v/users/jakrbj/release-files-review-version-models/genia-edge-ids"
 
 from Pipeline import *
 from optparse import OptionParser
@@ -88,7 +88,7 @@ if True:
     edgeXML = ix.splitMergedElements(edgeXML)
     # Always remember to fix ids
     #ix.recalculateIds("test-predicted-edges.xml", "test-predicted-edges.xml", True)
-    ix.recalculateIds(edgeXML, "test-predicted-edges.xml", True)
+    xml = ix.recalculateIds(edgeXML, "test-predicted-edges.xml", True)
     # EvaluateInteractionXML differs from the previous evaluations in that it can
     # be used to compare two separate GifXML-files. One of these is the gold file,
     # against which the other is evaluated by heuristically matching triggers and
@@ -101,9 +101,10 @@ if True:
 # Post-processing
 ###############################################################################
 # Post-processing
-prune.interface(["-i","test-predicted-edges.xml","-o","pruned.xml","-c"])
-unflatten.interface(["-i","pruned.xml","-o","unflattened.xml","-a",PARSE_TOK,"-t",PARSE_TOK])
+xml = unflatten(xml, PARSE, TOK, "unflattened.xml")
+#prune.interface(["-i","test-predicted-edges.xml","-o","pruned.xml","-c"])
+#unflatten.interface(["-i","pruned.xml","-o","unflattened.xml","-a",PARSE_TOK,"-t",PARSE_TOK])
 # Output will be stored to the geniaformat-subdirectory, where will also be a
 # tar.gz-file which can be sent to the Shared Task evaluation server.
-gifxmlToGenia("unflattened.xml", options.output, 1)
+gifxmlToGenia(xml, options.output, 1)
 #evaluateSharedTask("geniaformat", 1)
