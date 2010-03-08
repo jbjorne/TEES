@@ -1,5 +1,6 @@
 import sys, os
 import subprocess
+import time
 from optparse import OptionParser
 
 logFile = None
@@ -50,11 +51,11 @@ def queue(inFile, outDir, workDir, jobLimit):
     jobScript = os.path.join(outDir, os.path.basename(inFile) + "-job")
     jobFile = open(jobScript, "wt" )
     # a unique workdir is needed, because the processes execute in parallel
-    workDir = os.path.join(workDir, jobScript)
+    workDir = os.path.join(workDir, os.path.basename(inFile) + "-job")
     jobFile.write(makeJobScript(jobScript, inFile, outDir, workDir))
     jobFile.close()
     
-    #subprocess.call("bsub < " + jobScript, shell=True)
+    subprocess.call("bsub < " + jobScript, shell=True)
     log( "Queued job " + str(jobScript) )
     return True
     
@@ -78,16 +79,16 @@ def update(inDir, outDir, workDir, jobLimit):
     outFiles = os.listdir(outDir)
     
     outFilesByStem = {}
+    print outFiles
     for outFile in outFiles:
-        print outFiles
         fileStem = outFile.rsplit("-", 1)[0]
         if not outFilesByStem.has_key(fileStem):
             outFilesByStem[fileStem] = set()
         outFilesByStem[fileStem].add(outFile)
     
     submitCount = 0
+    print inFiles
     for inFile in inFiles:
-        print inFiles
         if inFile.find("~") != -1: # temporary backup file
             continue
         elif not outFilesByStem.has_key(inFile): # input file not yet processed
@@ -95,7 +96,10 @@ def update(inDir, outDir, workDir, jobLimit):
         elif inFile + "-job" not in outFilesByStem[inFile]: # input file needs to be reprocessed
             removeFiles(outFilesByStem[inFile], outDir)
             submitCount += int( queue(os.path.join(inDir, inFile), outDir, workDir, jobLimit) )
-    print >> sys.stderr, "Queued", submitCount, "jobs"
+    if submitCount == 0:
+        print >> sys.stderr, "Queued", submitCount, "jobs"
+    else:
+        log("Queued " + str(submitCount) + " jobs for this update")
 
 def log(string):
     global logFile
@@ -117,7 +121,6 @@ if __name__=="__main__":
     
     if options.log != None:
         logFile = open(options.log, "at")
-    update(options.input, options.output, options.workdir, 10, logFile)
+    update(options.input, options.output, options.workdir, 10)
     if options.log != None:
         logFile.close()
-    
