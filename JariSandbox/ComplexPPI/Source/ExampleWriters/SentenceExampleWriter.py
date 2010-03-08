@@ -5,10 +5,12 @@ sys.path.append(os.path.abspath(os.path.join(thisPath,"..")))
 import ExampleUtils
 import Core.SentenceGraph as SentenceGraph
 from Core.IdSet import IdSet
+from Utils.ProgressCounter import ProgressCounter
 try:
     import xml.etree.cElementTree as ET
 except ImportError:
     import cElementTree as ET
+import cElementTreeUtils as ETUtils
 
 class SentenceExampleWriter:
     def loadCorpus(self, corpus, parse, tokenization):
@@ -36,6 +38,8 @@ class SentenceExampleWriter:
         classIds = None
         if classSet != None:
             classIds = classSet.getIds()
+            
+        #counter = ProgressCounter(len(corpus.sentences), "Write Examples")
                 
         exampleQueue = [] # One sentence's examples
         predictionsByExample = {}
