@@ -1,4 +1,4 @@
-import sys, os
+import sys, os, shutil
 import subprocess
 import time
 from optparse import OptionParser
@@ -52,6 +52,8 @@ def queue(inFile, outDir, workDir, jobLimit):
     jobFile = open(jobScript, "wt" )
     # a unique workdir is needed, because the processes execute in parallel
     workDir = os.path.join(workDir, os.path.basename(inFile) + "-job")
+    if os.path.exists(workDir):
+        shutil.rmtree(workDir)
     jobFile.write(makeJobScript(jobScript, inFile, outDir, workDir))
     jobFile.close()
     
