@@ -34,7 +34,7 @@ def numJobs(username="jakrbj"):
 def queue(inFile, outDir, workDir):
     if numJobs() >= jobLimit:
         print >> sys.stderr, "Queue full, job not queued for", inFile
-        return
+        return False
     
     jobScript = os.path.join(outDir, + os.path.basename(inFile) + "-job")
     jobFile = open(jobScript, "wt" )
@@ -43,6 +43,7 @@ def queue(inFile, outDir, workDir):
     
     #subprocess.call("bsub < " + jobScript, shell=True)
     print >> sys.stderr, "Queued job", jobScript
+    return True
     
 def removeFiles(files, path):
     for file in files:
@@ -66,14 +67,16 @@ def update(inDir, outDir, workDir, jobLimit):
             outFilesByStem[fileStem] = set()
         outFilesByStem[fileStem].add(outFile)
     
+    submitCount = 0
     for inFile in inFiles:
         if inFile.find("~"): # temporary backup file
             continue
         elif not outFilesByStem.has_key(inFile): # input file not yet processed
-            queue(os.path.join(inDir, inFile))
+            submitCount += int( queue(os.path.join(inDir, inFile)) )
         elif inFile + "-job" not in outFilesByStem[inFile]: # input file needs to be reprocessed
             removeFiles(outFilesByStem[inFile], outDir)
-            queue(os.path.join(inDir, inFile))
+            submitCount += int( queue(os.path.join(inDir, inFile)) )
+    print >> sys.stderr, "Queued", submitCount, "jobs"
 
 if __name__=="__main__":
     optparser = OptionParser()
