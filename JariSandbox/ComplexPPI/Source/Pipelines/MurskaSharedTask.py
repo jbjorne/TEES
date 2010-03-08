@@ -61,11 +61,12 @@ if True:
     #Ev.evaluate("trigger-test-examples", "trigger-test-classifications", TRIGGER_IDS+".class_names")
     # The classifications are combined with the TEST_FILE xml, to produce
     # an interaction-XML file with predicted triggers
-    triggerXML = ExampleUtils.writeToInteractionXML("trigger-test-examples", "trigger-test-classifications", TEST_FILE, "test-predicted-triggers.xml", TRIGGER_IDS+".class_names", PARSE_TOK, PARSE_TOK)
+    #triggerXML = ExampleUtils.writeToInteractionXML("trigger-test-examples", "trigger-test-classifications", TEST_FILE, "test-predicted-triggers.xml", TRIGGER_IDS+".class_names", PARSE_TOK, PARSE_TOK)
+    triggerXML = BioTextExampleWriter.write("trigger-test-examples", "trigger-test-classifications", TEST_FILE, None, TRIGGER_IDS+".class_names", PARSE_TOK, PARSE_TOK)
     
     # Run the recall booster
     #boostedTriggerFile = "test-predicted-triggers-boost.xml"
-    boostedTriggerFile = RecallAdjust.run("test-predicted-triggers.xml", RECALL_BOOST_PARAM, None)
+    boostedTriggerFile = RecallAdjust.run(triggerXML, RECALL_BOOST_PARAM, None)
     # Overlapping types (could be e.g. "protein---gene") are split into multiple
     # entities
     boostedTriggerFile = ix.splitMergedElements(boostedTriggerFile)
@@ -84,32 +85,38 @@ if True:
     # Once we have determined the optimal c-parameter (best[1]), we can
     # use it to classify our real examples, i.e. the ones that define potential edges
     # between predicted entities
-    Cls.test("edge-test-examples", EDGE_MODEL, "edge-test-classifications")
-    # Write the predicted edges to an interaction xml which has predicted triggers.
-    # This function handles both trigger and edge example classifications
-    edgeXML = ExampleUtils.writeToInteractionXML("edge-test-examples", "edge-test-classifications", boostedTriggerFile, "test-predicted-edges.xml", EDGE_IDS+".class_names", PARSE_TOK, PARSE_TOK)
-    # Split overlapping, merged elements (e.g. "Upregulate---Phosphorylate")
-    #ix.splitMergedElements("test-predicted-edges.xml", "test-predicted-edges.xml")
-    edgeXML = ix.splitMergedElements(edgeXML)
-    # Always remember to fix ids
-    #ix.recalculateIds("test-predicted-edges.xml", "test-predicted-edges.xml", True)
-    xml = ix.recalculateIds(edgeXML, OUTFILE_STEM + "-events.xml.gz", True)
-    # EvaluateInteractionXML differs from the previous evaluations in that it can
-    # be used to compare two separate GifXML-files. One of these is the gold file,
-    # against which the other is evaluated by heuristically matching triggers and
-    # edges. Note that this evaluation will differ somewhat from the previous ones,
-    # which evaluate on the level of examples.
-    #EvaluateInteractionXML.run(Ev, "test-predicted-edges.xml", GOLD_TEST_FILE, PARSE_TOK, PARSE_TOK)
-    #EvaluateInteractionXML.run(Ev, edgeXML, GOLD_TEST_FILE, PARSE_TOK, PARSE_TOK)
-
+    edgeExampleFileSize = os.path.getsize("edge-test-examples") 
+    if edgeExampleFileSize != 0: 
+        Cls.test("edge-test-examples", EDGE_MODEL, "edge-test-classifications")
+        # Write the predicted edges to an interaction xml which has predicted triggers.
+        # This function handles both trigger and edge example classifications
+        #edgeXML = ExampleUtils.writeToInteractionXML("edge-test-examples", "edge-test-classifications", boostedTriggerFile, "test-predicted-edges.xml", EDGE_IDS+".class_names", PARSE_TOK, PARSE_TOK)
+        edgeXML = BioTextExampleWriter.write("edge-test-examples", "edge-test-classifications", boostedTriggerFile, None, EDGE_IDS+".class_names", PARSE_TOK, PARSE_TOK)
+        # Split overlapping, merged elements (e.g. "Upregulate---Phosphorylate")
+        #ix.splitMergedElements("test-predicted-edges.xml", "test-predicted-edges.xml")
+        edgeXML = ix.splitMergedElements(edgeXML)
+        # Always remember to fix ids
+        #ix.recalculateIds("test-predicted-edges.xml", "test-predicted-edges.xml", True)
+        xml = ix.recalculateIds(edgeXML, OUTFILE_STEM + "-events.xml.gz", True)
+        # EvaluateInteractionXML differs from the previous evaluations in that it can
+        # be used to compare two separate GifXML-files. One of these is the gold file,
+        # against which the other is evaluated by heuristically matching triggers and
+        # edges. Note that this evaluation will differ somewhat from the previous ones,
+        # which evaluate on the level of examples.
+        #EvaluateInteractionXML.run(Ev, "test-predicted-edges.xml", GOLD_TEST_FILE, PARSE_TOK, PARSE_TOK)
+        #EvaluateInteractionXML.run(Ev, edgeXML, GOLD_TEST_FILE, PARSE_TOK, PARSE_TOK)
+    else:
+        print >> sys.stderr, "No edge examples generated"
+    
 ###############################################################################
 # Post-processing
 ###############################################################################
-# Post-processing
-xml = unflatten(xml, PARSE_TOK, PARSE_TOK, OUTFILE_STEM + "-events_unflattened.xml.gz")
-#prune.interface(["-i","test-predicted-edges.xml","-o","pruned.xml","-c"])
-#unflatten.interface(["-i","pruned.xml","-o","unflattened.xml","-a",PARSE_TOK,"-t",PARSE_TOK])
-# Output will be stored to the geniaformat-subdirectory, where will also be a
-# tar.gz-file which can be sent to the Shared Task evaluation server.
-gifxmlToGenia(xml, OUTFILE_STEM + "-events_geniaformat.tar.gz", 1)
-#evaluateSharedTask("geniaformat", 1)
+if edgeExampleFileSize != 0:
+    # Post-processing
+    xml = unflatten(xml, PARSE_TOK, PARSE_TOK, OUTFILE_STEM + "-events_unflattened.xml.gz")
+    #prune.interface(["-i","test-predicted-edges.xml","-o","pruned.xml","-c"])
+    #unflatten.interface(["-i","pruned.xml","-o","unflattened.xml","-a",PARSE_TOK,"-t",PARSE_TOK])
+    # Output will be stored to the geniaformat-subdirectory, where will also be a
+    # tar.gz-file which can be sent to the Shared Task evaluation server.
+    gifxmlToGenia(xml, OUTFILE_STEM + "-events_geniaformat.tar.gz", 1)
+    #evaluateSharedTask("geniaformat", 1)
