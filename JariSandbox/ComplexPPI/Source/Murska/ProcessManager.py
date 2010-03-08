@@ -31,12 +31,12 @@ def numJobs(username="jakrbj"):
     assert len(lines) == 1
     return int(lines[0])
 
-def queue(inFile, outDir, workDir):
+def queue(inFile, outDir, workDir, jobLimit):
     if numJobs() >= jobLimit:
         print >> sys.stderr, "Queue full, job not queued for", inFile
         return False
     
-    jobScript = os.path.join(outDir, + os.path.basename(inFile) + "-job")
+    jobScript = os.path.join(outDir, os.path.basename(inFile) + "-job")
     jobFile = open(jobScript, "wt" )
     jobFile.write(makeJobScript(jobScript, inFile, outDir, workDir))
     jobFile.close()
@@ -72,13 +72,13 @@ def update(inDir, outDir, workDir, jobLimit):
     submitCount = 0
     for inFile in inFiles:
         print inFiles
-        if inFile.find("~"): # temporary backup file
+        if inFile.find("~") != -1: # temporary backup file
             continue
         elif not outFilesByStem.has_key(inFile): # input file not yet processed
-            submitCount += int( queue(os.path.join(inDir, inFile)) )
+            submitCount += int( queue(os.path.join(inDir, inFile), outDir, workDir, jobLimit) )
         elif inFile + "-job" not in outFilesByStem[inFile]: # input file needs to be reprocessed
             removeFiles(outFilesByStem[inFile], outDir)
-            submitCount += int( queue(os.path.join(inDir, inFile)) )
+            submitCount += int( queue(os.path.join(inDir, inFile), outDir, workDir, jobLimit) )
     print >> sys.stderr, "Queued", submitCount, "jobs"
 
 if __name__=="__main__":
