@@ -32,10 +32,10 @@ function convert {
     
     # Split tokenization
     echo "Running protein name splitter"
-    python $HOME/cvs_checkout/PPI_Learning/Analysers/ProteinNameSplitter.py -f $DST -o $DST -p Charniak-Lease -t Charniak-Lease -s split-Charniak-Lease -n split-Charniak-Lease
+    python $HOME/cvs_checkout/PPI_Learning/Analysers/ProteinNameSplitter.py -f $DST -o $DST -p McClosky -t McClosky -s split-McClosky -n split-McClosky
     
     # Find head token offsets
-    python $HOME/cvs_checkout/JariSandbox/ComplexPPI/Source/Utils/FindHeads.py -i $DST -o $DST -p split-Charniak-Lease -t split-Charniak-Lease
+    python $HOME/cvs_checkout/JariSandbox/ComplexPPI/Source/Utils/FindHeads.py -i $DST -o $DST -p split-McClosky -t split-McClosky
     
     # Remove unneeded ThemeX and CauseX
     echo "Removing ThemeX and CauseX"
@@ -45,24 +45,40 @@ function convert {
 }
 
 ### Converts the TRAIN/DEVEL data for task 1
-# convert IDsTRAIN train.xml "" $DIRTRAIN
-# convert IDsDEVEL devel.xml "" $DIRTRAIN
-# convert IDsEVERYTHING everything.xml "" $DIRTRAIN
-# convert IDsTRAIN train-with-duplicates.xml -p $DIRTRAIN
-# convert IDsDEVEL devel-with-duplicates.xml -p $DIRTRAIN
-# convert IDsEVERYTHING everything-with-duplicates.xml -p $DIRTRAIN
+#convert IDsTRAIN train.xml "" $DIRTRAIN
+#convert IDsDEVEL devel.xml "" $DIRTRAIN
+#convert IDsEVERYTHING everything.xml "" $DIRTRAIN
+#convert IDsTRAIN train-with-duplicates.xml -p $DIRTRAIN
+#convert IDsDEVEL devel-with-duplicates.xml -p $DIRTRAIN
+#convert IDsEVERYTHING everything-with-duplicates.xml -p $DIRTRAIN
 
 ### Converts the TEST data
 #convert IDsTEST test.xml "" $DIRTEST
 
 
 ### Converts the TRAIN/DEVEL data for task 2
-convert IDsTRAIN train12.xml "-e -t 12" $DIRTRAIN
-convert IDsDEVEL devel12.xml "-e -t 12" $DIRTRAIN
-convert IDsEVERYTHING everything12.xml "-e -t 12" $DIRTRAIN
-convert IDsTRAIN train-with-duplicates12.xml "-e -t 12 -p" $DIRTRAIN
-convert IDsDEVEL devel-with-duplicates12.xml "-e -p -t 12" $DIRTRAIN
-convert IDsEVERYTHING everything-with-duplicates12.xml "-e -t 12 -p" $DIRTRAIN
+# convert IDsTRAIN train12.xml "-e -t 12" $DIRTRAIN
+# convert IDsDEVEL devel12.xml "-e -t 12" $DIRTRAIN
+# convert IDsEVERYTHING everything12.xml "-e -t 12" $DIRTRAIN
+# convert IDsTRAIN train-with-duplicates12.xml "-e -t 12 -p" $DIRTRAIN
+# convert IDsDEVEL devel-with-duplicates12.xml "-e -p -t 12" $DIRTRAIN
+# convert IDsEVERYTHING everything-with-duplicates12.xml "-e -t 12 -p" $DIRTRAIN
+
+### Converts the TRAIN/DEVEL data for task 3
+# convert IDsTRAIN train123.xml "-e -t 123" $DIRTRAIN
+convert IDsDEVEL devel123.xml "-e -t 123" $DIRTRAIN
+convert IDsEVERYTHING everything123.xml "-e -t 123" $DIRTRAIN
+convert IDsTRAIN train-with-duplicates123.xml "-e -t 123 -p" $DIRTRAIN
+convert IDsDEVEL devel-with-duplicates123.xml "-e -p -t 123" $DIRTRAIN
+convert IDsEVERYTHING everything-with-duplicates123.xml "-e -t 123 -p" $DIRTRAIN
+
+convert IDsTRAIN train13.xml "-e -t 13" $DIRTRAIN
+convert IDsDEVEL devel13.xml "-e -t 13" $DIRTRAIN
+convert IDsEVERYTHING everything13.xml "-e -t 13" $DIRTRAIN
+convert IDsTRAIN train-with-duplicates13.xml "-e -t 13 -p" $DIRTRAIN
+convert IDsDEVEL devel-with-duplicates13.xml "-e -p -t 13" $DIRTRAIN
+convert IDsEVERYTHING everything-with-duplicates13.xml "-e -t 13 -p" $DIRTRAIN
+
 
 #### I don't know what this is:
 # # Update the mini-sets
