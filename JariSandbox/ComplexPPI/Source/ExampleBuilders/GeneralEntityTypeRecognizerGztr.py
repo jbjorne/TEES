@@ -1,7 +1,7 @@
 """
 Trigger examples
 """
-__version__ = "$Revision: 1.13 $"
+__version__ = "$Revision: 1.14 $"
 
 import sys, os
 thisPath = os.path.dirname(os.path.abspath(__file__))
@@ -83,6 +83,15 @@ class GeneralEntityTypeRecognizerGztr(ExampleBuilder):
         
         if typeString == "":
             return "neg"
+        
+        if "limit_merged_types" in self.styles:
+            if typeString.find("---") != -1:
+                if typeString == "Gene_expression---Positive_regulation":
+                    return typeString
+                else:
+                    return typeString.split("---")[0]
+            else:
+                return typeString
         return typeString
     
     def getTokenFeatures(self, token, sentenceGraph):
