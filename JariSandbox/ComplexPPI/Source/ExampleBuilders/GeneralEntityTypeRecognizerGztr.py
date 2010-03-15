@@ -1,7 +1,7 @@
 """
 Trigger examples
 """
-__version__ = "$Revision: 1.12 $"
+__version__ = "$Revision: 1.13 $"
 
 import sys, os
 thisPath = os.path.dirname(os.path.abspath(__file__))
@@ -110,8 +110,8 @@ class GeneralEntityTypeRecognizerGztr(ExampleBuilder):
                 tokTxtLower = PorterStemmer.stem(tokTxtLower)
             if self.gazetteer and tokTxtLower in self.gazetteer:
                 for label,weight in self.gazetteer[tokTxtLower].items():
-                    features["_knownLabel_"+label]=weight
-            self.tokenFeatures[token] = features
+                    features["_knownLabel_"+label]=weight # 1 performs slightly worse
+        self.tokenFeatures[token] = features
         return features
     
     def buildLinearOrderFeatures(self,sentenceGraph,index,tag,features):
@@ -132,12 +132,16 @@ class GeneralEntityTypeRecognizerGztr(ExampleBuilder):
         
         self.tokenFeatures = {}
         
+        namedEntityHeadTokens = []
         if not "names" in self.styles:
             namedEntityCount = 0
             for entity in sentenceGraph.entities:
                 if entity.get("isName") == "True": # known data which can be used for features
                     namedEntityCount += 1
             namedEntityCountFeature = "nameCount_" + str(namedEntityCount)
+            
+            if "pos_pairs" in self.styles:
+                namedEntityHeadTokens = self.getNamedEntityHeadTokens(sentenceGraph)
         
         bagOfWords = {}
         for token in sentenceGraph.tokens:
@@ -277,6 +281,9 @@ class GeneralEntityTypeRecognizerGztr(ExampleBuilder):
             
             # chains
             self.buildChains(token, sentenceGraph, features)
+            
+            if "pos_pairs" in self.styles:
+                self.buildPOSPairs(token, namedEntityHeadTokens, features)
         return examples
     
     def buildChains(self,token,sentenceGraph,features,depthLeft=3,chain="",visited=None):
@@ -327,3 +334,17 @@ class GeneralEntityTypeRecognizerGztr(ExampleBuilder):
                 
                 features[self.featureSet.getId("chain_dist_"+strDepthLeft+chain+"-rev_"+edgeType)] = 1
                 self.buildChains(nextToken,sentenceGraph,features,depthLeft-1,chain+"-rev_"+edgeType,edgeSet)
+    
+    def getNamedEntityHeadTokens(self, sentenceGraph):
+        headTokens = []
+        for entity in sentenceGraph.entities:
+            if entity.get("isName") == "True": # known data which can be used for features
+                headTokens.append(sentenceGraph.entityHeadTokenByEntity[entity])
+        return headTokens
+                
+    def buildPOSPairs(self, token, namedEntityHeadTokens, features):
+        tokenPOS = token.get("POS")
+        assert tokenPOS != None
+        for headToken in namedEntityHeadTokens:
+            headPOS = headToken.get("POS")
+            features[self.featureSet.getId("POS_pair_NE_"+tokenPOS+"-"+headPOS)] = 1
