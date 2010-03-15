@@ -1,7 +1,7 @@
 """
 Trigger examples
 """
-__version__ = "$Revision: 1.11 $"
+__version__ = "$Revision: 1.12 $"
 
 import sys, os
 thisPath = os.path.dirname(os.path.abspath(__file__))
@@ -103,11 +103,15 @@ class GeneralEntityTypeRecognizerGztr(ExampleBuilder):
             for entity in sentenceGraph.tokenIsEntityHead[token]:
                 if entity.get("isName") == "True":
                     features["_annType_"+entity.get("type")]=1
-#        if self.gazetteer and tokTxt.lower() in self.gazetteer:
-#            for label,weight in self.gazetteer[tokTxt.lower()].items():
-#                pass
-#                #features["_knownLabel_"+label]=weight
-        self.tokenFeatures[token] = features
+        # Filip's gazetteer based features (can be used separately from exclude_gazetteer)
+        if "gazetteer_features" in self.styles:
+            tokTxtLower = tokTxt.lower()
+            if "stem_gazetteer" in self.styles:
+                tokTxtLower = PorterStemmer.stem(tokTxtLower)
+            if self.gazetteer and tokTxtLower in self.gazetteer:
+                for label,weight in self.gazetteer[tokTxtLower].items():
+                    features["_knownLabel_"+label]=weight
+            self.tokenFeatures[token] = features
         return features
     
     def buildLinearOrderFeatures(self,sentenceGraph,index,tag,features):
