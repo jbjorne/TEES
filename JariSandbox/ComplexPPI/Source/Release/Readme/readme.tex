@@ -29,7 +29,7 @@
 
 \vspace{-2cm}\begin{description}
 %\item[Software:] University of Turku BioNLP'09 Event Detection Software
-\item[Release Date:] xx.xx.2010
+\item[Release Date:] 25.03.2010
 \item[Version:] 1.0
 \item[Authors:] Jari Bj{\"{o}}rne, Juho Heimonen, Filip Ginter, Antti Airola,
 Tapio Pahikkala and Tapio Salakoski
@@ -113,7 +113,8 @@ entity detection, other software must be used (Figure~\ref{fig-overview}).
 \includegraphics[scale=0.5]{Figures/overview.pdf}
 \end{center}
 \caption{The Turku Event Extraction System (TEES) detects events
-in parsed sentences which have annotated named entities.}
+in parsed sentences which have annotated named entities, or where named
+entities have been detected with a named entity recognizer (NER).}
 \label{fig-overview}
 \end{figure}
 
@@ -167,7 +168,22 @@ the package, and these should cover the most common use cases of the software.
 These are located in src/Classifiers/. To run a pipeline, simply call it with
 python "python name.py". For the provided pipelines, you can also pass command
 line parameters. To see a list of available options, call the program with the
-option "--help".
+option "$--$help".
+
+The BioNLP'09 Data used for training and testing the system is divided into
+four sets. \emph{Train} and \emph{devel} sets are both known data, and are used
+to e.g. optimize parameters. The \emph{everything} set is a union of train and
+devel sets and is used to maximize the amount of training data when classifying
+the hidden \emph{test} set (Figure~\ref{fig-sets}).
+
+\begin{figure}[h]
+\begin{center}
+\includegraphics[trim = 0mm 150mm 0mm 50mm,
+clip,scale=0.5]{Figures/DataSets.pdf}
+\end{center}
+\caption{The BioNLP'09 data sets.}
+\label{fig-sets}
+\end{figure}
 
 \subsection{Quick Start (test basic classification)}
 
@@ -216,25 +232,36 @@ recall adjuster parameter.
 
 \subsubsection{Important note on feature and class ids}
 
-If you have modifier the provided training files, or are using some other data
+If you have modified the provided training files, or are using some other data
 for training, the examples generated from it may contain new features. The
 support vector machine has no knowledge of the feature and class names, and
 instead uses integer ids to represent them. When given something to classify, it
 will match classes and features based on these ids. Therefore it is extremely
 important that the ids are consistent between training and classification.
 
-When re-training the system, new id files are created in the output directory.
+When retraining the system, new id files are created in the output directory.
 These are of the format STEM.class\_names and STEM.feature\_names. When using
-your new models (with the "-m" and "-n" switches), remember to also use the
+your new models (with the "-m" and "-n" parameters), remember to also use the
 matching id sets with the "-v" and "-w" parameters.
 
 \subsection{Retraining the system}
 \label{sec-retraining}
 
+\begin{figure}[h]
+\begin{center}
+\includegraphics[scale=0.5]{Figures/programs12.pdf}
+\end{center}
+\caption{BioNLP09Train.py is used to build SVM models from the training data
+(train or everything) and to search for the optimal parameters using known data
+(devel). With pre-generated models, BioNLP09Classify.py can be used to directly
+classify test data. }
+\label{fig-programs12}
+\end{figure}
+
 If you modify the training data (such as using a new parse) or use a new dataset,
-you must retrain the system. For retraining, use src/Pipelines/BioNLP09Train.py.
-The retraining proceeds in two steps. First, one SVM model is created for each
-trigger and edge c-parameter to be tested. Then, using these models, triplets of
+you must retrain the system. For retraining, use src/Pipelines/BioNLP09Train.py
+(Figure~\ref{fig-programs12}). The retraining proceeds in two steps. First, one
+SVM model is created for each trigger and edge c-parameter to be tested. Then, using these models, triplets of
 trigger c-parameter, edge c-parameter and recall booster parameter are tested in
 the three-dimensional search space to determine the optimal parameter
 combination. The program will print evaluation results for all combinations on
@@ -276,11 +303,37 @@ is recommended.
 
 \subsection{Task 3}
 
+Task 3 is about detecting whether events are stated in a speculative or
+negative manner. Therefore task 3 requires predicting these attributes for
+already existing events, and so happens outside the main event detection
+sequence. A predicted event file (with task 1 or 2 events) can be used as input
+for task 3 classification with src/Pipelines/BioNLP09ClassifyTask3.py
+(Figure~\ref{fig-programs3}). 
+
+For retraining the task 3 system, use src/Pipelines/BioNLP09TrainTask3.py, in a
+similar approach as for tasks 1 \& 2. It is important to use the
+duplicate-containing versions of the interaction XML files for task 3
+experiments, as these are the files where the events are fully represented in the
+graph. When predicting task 3 over task 1 or 2 predictions, the
+"test-predicted-edges-unflattened.xml" output file from BioNLP09Classify.py is in
+the correct, duplicate-containing format.
+
+\begin{figure}[h]
+\begin{center}
+\includegraphics[scale=0.5]{Figures/programs3.pdf}
+\end{center}
+\caption{BioNLP09Train.py is used to build SVM models from the training data
+(train or everything) and to search for the optimal parameters using known data
+(devel). With pre-generated models, BioNLP09Classify.py can be used to directly
+classify test data.}
+\label{fig-programs3}
+\end{figure}
+
 \subsection{Writing Your Own Pipelines}
 
 The file src/Pipelines/Pipeline.py defines the public interface of the event
-detector. Following the example of the two pipelines introduced above, you can
-also write your own to make more complicated, new experiments.
+detector. Following the example of the pipelines introduced above, you can
+also write your own to make different experiments.
 
 \section{Interaction XML}
 

@@ -1,0 +1,34 @@
+digraph Programs12
+{
+node [shape=polygon, skew=0.25, label="devel-with-duplicates123.xml", style=filled, fillcolor="#FFFFB3"]; develset; 
+node [shape=polygon, skew=0.25, label="train-with-duplicates123.xml", style=filled, fillcolor="#FFFFB3"]; trainset; 
+node [shape=polygon, skew=1, label="Task 1 & 2", style=filled, fillcolor="#FFFFB3"]; task12;
+node [shape=polygon, skew=0.25, label="everything-with-duplicates123.xml", style=filled, fillcolor="#FFFFB3"]; everythingset; 
+
+node [shape=polygon, skew=1, label="Parameters", style=filled, fillcolor="#D9FFB3"]; parameters12;
+node [shape=polygon, skew=1, label="SVM Model", style=filled, fillcolor="#D9FFB3"]; model12; 
+node [shape=polygon, skew=1, label="Task 3", style=filled, fillcolor="#38FF9C"]; task3;
+
+node [shape=box, label="BioNLP09TrainTask3.py", style=filled, fillcolor="#FFB3D9"]; train12devel; 
+node [shape=box, label="BioNLP09TrainTask3.py", style=filled, fillcolor="#FFB3D9"]; train12test; 
+node [shape=box, label="BioNLP09ClassifyTask3.py", style=filled, fillcolor="#FFB3D9"]; classify12;
+
+//edge [len=3, color=gray, arrowtail="none"];
+
+develset->train12devel;
+trainset->train12devel;
+train12devel->parameters12;
+parameters12->train12test;
+everythingset->train12test;
+task12->train12test;
+//train12devel->model12;
+train12test->model12;
+train12test->task3;
+model12->classify12;
+task12->classify12;
+classify12->task3;
+
+//overlap=scale
+//label="Label"
+//fontsize=12;
+}

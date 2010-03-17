@@ -1,0 +1,22 @@
+digraph Overview 
+{
+node [shape=polygon, skew=1, label="Text"]; corpus; 
+node [shape=box, label="NER"]; ner; 
+node [shape=box, label="Parser"]; parser;
+node [shape=polygon, skew=0.3, label="Interaction XML"]; gifxml; 
+node [shape=polygon, skew=0.6, label="Events"]; events; 
+node [shape=box, style=filled, label="TEES", fillcolor="#FFB3D9"]; tees;
+
+//edge [len=3, color=gray, arrowtail="none"];
+
+corpus->ner;
+corpus->parser;
+ner->gifxml;
+parser->gifxml;
+gifxml->tees;
+tees->events;
+
+//overlap=scale
+//label="Label"
+//fontsize=12;
+}
