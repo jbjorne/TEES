@@ -1,3 +1,6 @@
+"""
+Wrapper for all interaction XML example writers
+"""
 import sys, os, types
 thisPath = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.abspath(os.path.join(thisPath,"..")))
@@ -10,6 +13,10 @@ from UnmergedEdgeExampleWriter import UnmergedEdgeExampleWriter
 from AsymmetricEventExampleWriter import AsymmetricEventExampleWriter
 
 class BioTextExampleWriter:
+    """
+    A generic example writer that automatically calls the correct Example Writer
+    based on the type of the examples.
+    """
     @classmethod
     def write(cls, examples, predictions, corpus, outputFile, classSet=None, parse=None, tokenization=None):
         if type(examples) == types.StringType:
@@ -18,6 +25,7 @@ class BioTextExampleWriter:
         
         # This looks a bit strange, but should work with the re-iterable
         # generators that readExamples returns
+        xType == None
         for example in examples:
             assert example[3].has_key("xtype")
             xType = example[3]["xtype"]

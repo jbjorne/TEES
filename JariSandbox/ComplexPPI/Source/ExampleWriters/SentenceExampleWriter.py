@@ -1,3 +1,7 @@
+"""
+Base class for ExampleWriters working with interaction XML.
+"""
+    
 import sys, os, types
 import itertools
 thisPath = os.path.dirname(os.path.abspath(__file__))
@@ -13,6 +17,10 @@ except ImportError:
 import cElementTreeUtils as ETUtils
 
 class SentenceExampleWriter:
+    """
+    Base class for ExampleWriters working with interaction XML.
+    """
+    
     def loadCorpus(self, corpus, parse, tokenization):
         if type(corpus) == types.StringType or isinstance(corpus,ET.ElementTree): # corpus is in file
             return SentenceGraph.loadCorpus(corpus, parse, tokenization)
