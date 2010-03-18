@@ -64,8 +64,8 @@ if options.mode in ["BOTH", "MODELS"]:
     TRIGGER_TRAIN_EXAMPLE_FILE = "trigger-train-examples-"+PARSE_TAG
     TRIGGER_DEVEL_EXAMPLE_FILE = "trigger-devel-examples-"+PARSE_TAG
     print >> sys.stderr, "Trigger examples for parse", PARSE_TAG   
-    GeneralEntityTypeRecognizerGztr.run(TRAIN_FILE, TRIGGER_TRAIN_EXAMPLE_FILE, PARSE, TOK, TRIGGER_FEATURE_PARAMS, TRIGGER_IDS)
-    GeneralEntityTypeRecognizerGztr.run(DEVEL_FILE, TRIGGER_DEVEL_EXAMPLE_FILE, PARSE, TOK, TRIGGER_FEATURE_PARAMS, TRIGGER_IDS)
+    TriggerExampleBuilder.run(TRAIN_FILE, TRIGGER_TRAIN_EXAMPLE_FILE, PARSE, TOK, TRIGGER_FEATURE_PARAMS, TRIGGER_IDS)
+    TriggerExampleBuilder.run(DEVEL_FILE, TRIGGER_DEVEL_EXAMPLE_FILE, PARSE, TOK, TRIGGER_FEATURE_PARAMS, TRIGGER_IDS)
     
     ###############################################################################
     # Trigger models
@@ -109,7 +109,7 @@ if options.mode in ["BOTH", "GRID"]:
     TRIGGER_MODEL_STEM = "devel-trigger-models/model-c_"
     
     count = 0
-    GeneralEntityTypeRecognizerGztr.run(DEVEL_FILE, "devel-trigger-examples", PARSE, TOK, TRIGGER_FEATURE_PARAMS, TRIGGER_IDS)
+    TriggerExampleBuilder.run(DEVEL_FILE, "devel-trigger-examples", PARSE, TOK, TRIGGER_FEATURE_PARAMS, TRIGGER_IDS)
     bestResults = None
     for params in paramCombinations:
         if count < options.startFrom:
@@ -125,7 +125,7 @@ if options.mode in ["BOTH", "GRID"]:
         Cls.test("devel-trigger-examples", TRIGGER_MODEL_STEM + str(params["trigger"]), "devel-trigger-classifications")
         evaluator = Ev.evaluate("devel-trigger-examples", "devel-trigger-classifications", TRIGGER_IDS+".class_names")
         #boostedTriggerFile = "devel-predicted-triggers.xml"
-        xml = ExampleUtils.writeToInteractionXML("devel-trigger-examples", "devel-trigger-classifications", DEVEL_FILE, None, TRIGGER_IDS+".class_names", PARSE, TOK)    
+        xml = BioTextExampleWriter.write("devel-trigger-examples", "devel-trigger-classifications", DEVEL_FILE, None, TRIGGER_IDS+".class_names", PARSE, TOK)    
         # Boost
         xml = RecallAdjust.run(xml, params["booster"], None)
         xml = ix.splitMergedElements(xml, None)
@@ -138,7 +138,7 @@ if options.mode in ["BOTH", "GRID"]:
         # Write to interaction xml
         evaluator = Ev.evaluate("devel-edge-examples", "devel-edge-classifications", EDGE_IDS+".class_names")
         if evaluator.getData().getTP() + evaluator.getData().getFP() > 0:
-            xml = ExampleUtils.writeToInteractionXML("devel-edge-examples", "devel-edge-classifications", xml, None, EDGE_IDS+".class_names", PARSE, TOK)
+            xml = BioTextExampleWriter.write("devel-edge-examples", "devel-edge-classifications", xml, None, EDGE_IDS+".class_names", PARSE, TOK)
             xml = ix.splitMergedElements(xml, None)
             xml = ix.recalculateIds(xml, "final.xml", True)
             

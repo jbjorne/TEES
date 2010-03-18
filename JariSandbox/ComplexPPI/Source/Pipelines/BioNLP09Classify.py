@@ -49,14 +49,14 @@ print >> sys.stderr, "====== Trigger Detection ======"
 # "ids" is the identifier of the class- and feature-id-files. When
 # class and feature ids are reused, models can be reused between experiments.
 # Existing id-files, if present, are automatically reused.
-GeneralEntityTypeRecognizerGztr.run(TEST_FILE, "trigger-test-examples", PARSE, TOK, "style:typed", TRIGGER_IDS, None)
+TriggerExampleBuilder.run(TEST_FILE, "trigger-test-examples", PARSE, TOK, "style:typed", TRIGGER_IDS, None)
 Cls.test("trigger-test-examples", TRIGGER_MODEL, "trigger-test-classifications")
 # Evaluate the predictions
 print >> sys.stderr, "Evaluating trigger example classifications:"
 Ev.evaluate("trigger-test-examples", "trigger-test-classifications", TRIGGER_IDS+".class_names")
 # The classifications are combined with the TEST_FILE xml, to produce
 # an interaction-XML file with predicted triggers
-triggerXML = ExampleUtils.writeToInteractionXML("trigger-test-examples", "trigger-test-classifications", TEST_FILE, "test-predicted-triggers.xml", TRIGGER_IDS+".class_names", PARSE, TOK)
+triggerXML = BioTextExampleWriter.write("trigger-test-examples", "trigger-test-classifications", TEST_FILE, "test-predicted-triggers.xml", TRIGGER_IDS+".class_names", PARSE, TOK)
 
 # Run the recall booster
 #boostedTriggerFile = "test-predicted-triggers-boost.xml"
@@ -88,7 +88,7 @@ print >> sys.stderr, "Evaluating edge example classifications (all positives wil
 Ev.evaluate("edge-test-examples", "edge-test-classifications", EDGE_IDS+".class_names")
 # Write the predicted edges to an interaction xml which has predicted triggers.
 # This function handles both trigger and edge example classifications
-edgeXML = ExampleUtils.writeToInteractionXML("edge-test-examples", "edge-test-classifications", boostedTriggerFile, "test-predicted-edges.xml", EDGE_IDS+".class_names", PARSE, TOK)
+edgeXML = BioTextExampleWriter.write("edge-test-examples", "edge-test-classifications", boostedTriggerFile, "test-predicted-edges.xml", EDGE_IDS+".class_names", PARSE, TOK)
 # Split overlapping, merged elements (e.g. "Upregulate---Phosphorylate")
 #ix.splitMergedElements("test-predicted-edges.xml", "test-predicted-edges.xml")
 edgeXML = ix.splitMergedElements(edgeXML)
