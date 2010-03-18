@@ -121,6 +121,9 @@ if __name__=="__main__":
     print >> sys.stderr, "Copying data files"
     dataPath = os.path.join(options.output, "data")
     shutil.copytree("/usr/share/biotext/GeniaChallenge/CI-release/release-files/release-files-review-version-models", dataPath)
+    #os.makedirs(dataPath + "/js")
+    #print os.listdir("../../../")
+    shutil.copytree("../../../PPIDependencies/Visualization/js", dataPath + "/visualization-js")
     corpusPath = "/usr/share/biotext/GeniaChallenge/xml/"
     copy(corpusPath + "devel123.xml", dataPath)
     copy(corpusPath + "devel-with-duplicates123.xml", dataPath)
@@ -135,13 +138,20 @@ if __name__=="__main__":
     os.makedirs(os.path.join(options.output + "/data/evaluation-data/evaluation-temp"))
     
     print >> sys.stderr, "Copying additional files"
-    copy("readme.txt", os.path.join(options.output + "/readme.txt"))
+    copy("Readme/readme.pdf", os.path.join(options.output + "/readme.pdf"))
+    copy("API-doc.html", os.path.join(options.output + "/API-doc.html"))
     copy("Settings.py", os.path.join(options.output + "/src/Settings.py"))
+    # ID sets
+    copy("/usr/share/biotext/GeniaChallenge/orig-data/IDsDEVEL", os.path.join(options.output + "/data/devel-set-genia-document-ids.txt"))
+    copy("/usr/share/biotext/GeniaChallenge/orig-data/IDsTRAIN", os.path.join(options.output + "/data/train-set-genia-document-ids.txt"))
+    copy("/usr/share/biotext/GeniaChallenge/orig-data/IDsEVERYTHING", os.path.join(options.output + "/data/everything-set-genia-document-ids.txt"))
+    copy("/usr/share/biotext/GeniaChallenge/orig-data/IDsTEST", os.path.join(options.output + "/data/test-set-genia-document-ids.txt"))
+    copy("/home/jari/cvs_checkout/PPI_Learning/Analysers/ProteinNameSplitter.py", os.path.join(options.output + "/src/SharedTask/formatConversion/ProteinNameSplitter.py"))
     
     print >> sys.stderr, "Building documentation"
     origDir = os.getcwd()
     os.chdir(os.path.join(options.output, "src"))
-    subprocess.Popen("mv __init__.py ../temp ; epydoc -v --exclude networkx --parse-only --debug -o ../doc ./* ; mv ../temp __init__.py", shell=True)
+    subprocess.call("mv __init__.py ../temp ; epydoc -n \"Turku Event Extraction System\" -v --exclude networkx --parse-only --debug -o ../doc ./* ; mv ../temp __init__.py", shell=True)
     os.chdir(origDir)
     
     print >> sys.stderr, "Release done"

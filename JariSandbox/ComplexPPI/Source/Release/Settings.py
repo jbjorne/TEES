@@ -1,3 +1,7 @@
+"""
+File paths
+"""
+
 import sys, os
 thisPath = os.path.dirname(os.path.abspath(__file__))
 def relPath(path):
@@ -6,18 +10,28 @@ def relPath(path):
 # External binaries
 SVMMultiClassDir = None
 
-# BioNLP'09 dataset in XML-format
+# BioNLP'09 dataset in XML-format (merged for task 1&2)
 TrainFile = relPath("../data/train123.xml")
 DevelFile = relPath("../data/devel123.xml")
 EverythingFile = relPath("../data/everything123.xml")
-TestFile = relPath("../data/test.xml")
+TestFile = relPath("../data/test.xml") # doesn't have any annotation
+
+# BioNLP'09 dataset in XML-format (Unmerged for task 1&2)
+TrainFile = relPath("../data/train-with-duplicates123.xml")
+DevelFile = relPath("../data/devel-with-duplicates123.xml")
+EverythingFile = relPath("../data/everything-with-duplicates123.xml")
 
 # Precalculated SVM-multiclass models
 TrainTriggerModel = relPath("../data/train-trigger-model-c_100000")
 TrainEdgeModel = relPath("../data/train-edge-model-c_60000")
+TrainSpeculationModel = relPath("../data/train-speculation-model-c_13000")
+TrainNegationModel = relPath("../data/train-negation-model-c_10000")
 EverythingTriggerModel = relPath("../data/everything-trigger-model-c_100000")
 EverythingEdgeModel = relPath("../data/everything-edge-model-c_60000")
+EverythingSpeculationModel = relPath("../data/everything-speculation-model-c_13000")
+EverythingNegationModel = relPath("../data/everything-negation-model-c_10000")
 
 # Id sets that the precalculated models use
 TriggerIds = relPath("../data/genia-trigger-ids")
 EdgeIds = relPath("../data/genia-edge-ids")
+Task3Ids = relPath("../data/genia-task3-ids")
