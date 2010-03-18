@@ -19,9 +19,9 @@ unescapeDict={'-LRB-':'(',
 
 depRe=re.compile("^(.*?)\((.*)-([0-9]+)'?, (.*)-([0-9]+)'?\)$")
 
-def readDepTrees(reportNumber,options):
+def readDepTrees(reportNumber,dir):
     """Returns a list of lists of dependencies."""
-    f=open(options.dir+"/%s.dep"%reportNumber,"rt")
+    f=open(dir+"/%s.dep"%reportNumber,"rt")
     sents=[]
     currSent=[]
     emptyLineCounter=0
@@ -52,9 +52,9 @@ def readDepTrees(reportNumber,options):
 
 posRe=re.compile(r"\(([^\(\) ]+) ([^\(\) ]+)\)")
 
-def readPOSTags(reportNumber,options):
+def readPOSTags(reportNumber,dir):
     """Returns a list of lists of postags"""
-    f=open(options.dir+"/%s.pstree"%reportNumber,"rt")
+    f=open(dir+"/%s.pstree"%reportNumber,"rt")
     sents=[]
     currSent=[]
     for line in f:
@@ -71,13 +71,13 @@ def readPOSTags(reportNumber,options):
     f.close()
     return sents
 
-def computeTokens(reportNumber,options):
+def computeTokens(reportNumber,dir):
     """Returns the raw text string plus a list of (beg,end) character offsets of tokens + a set of indices of last tokens in a sentence."""
-    f=open(options.dir+"/%s.txt"%reportNumber,"rt")
+    f=open(dir+"/%s.txt"%reportNumber,"rt")
     rawTxt=f.read()
     f.close()
 
-    f=open(options.dir+"/%s.tokenized"%reportNumber,"rt")
+    f=open(dir+"/%s.tokenized"%reportNumber,"rt")
     tokTxt=[unescapeDict.get(token,token) for token in f.read().split()] #read & unescape tokens
     f.close()
 
@@ -91,7 +91,7 @@ def computeTokens(reportNumber,options):
         assert txt[0]!=" " and txt[-1]!=" ", "Token with a whitespace in it???"
 
     #now we should yet gather the set of sentence-final token indices
-    f=open(options.dir+"/%s.tokenized"%reportNumber,"rt")
+    f=open(dir+"/%s.tokenized"%reportNumber,"rt")
     tokCounter=0
     sFinal=set()
     for line in f:
@@ -205,30 +205,26 @@ def reorderDocNode(dNode,rawTxt,charOffsets,sFinal,depTree,posTags):
     #Done
     return newDocNode
         
-def reorderCorpus(cNode,options):
+def reorderCorpus(cNode,dir):
     newCorpus=ET.Element("corpus")
     newCorpus.set("source",cNode.get("source"))
     for dNode in cNode:
         assert dNode.tag=="document"
         assert len(dNode)==1 #exactly one sentence there
         reportID=dNode.get("id")
-        rawTxt,charOffsets,sFinal=computeTokens(reportID,options)
-        depTree=readDepTrees(reportID,options)
-        posTags=readPOSTags(reportID,options)
+        rawTxt,charOffsets,sFinal=computeTokens(reportID,dir)
+        depTree=readDepTrees(reportID,dir)
+        posTags=readPOSTags(reportID,dir)
         newD=reorderDocNode(dNode,rawTxt,charOffsets,sFinal,depTree,posTags)
         newCorpus.append(newD)
-    return newCorpus
-        
-            
-    
+    return ET.ElementTree(newCorpus)
 
-
-def printSeqClassData(reportNumber,charOffsets,rawTxt,sFinal,options):
+def printSeqClassData(reportNumber,charOffsets,rawTxt,sFinal,dir):
     """Prints out the sequence-alignment data in a sort of reasonable form. charOffsets should be calculated using computeTokens"""
 
     triggers=[] #list of (beg,end,triggerType)
     
-    f=open(options.dir+"/%s.a2"%reportNumber,"rt")
+    f=open(dir+"/%s.a2"%reportNumber,"rt")
     for line in f:
         line=line.strip()
         if not line:
@@ -283,7 +279,7 @@ if __name__=="__main__":
     (options, args) = parser.parse_args()
 
     corpus=ET.parse(sys.stdin).getroot()
-    newCorpus=reorderCorpus(corpus,options)
+    newCorpus=reorderCorpus(corpus,options.dir)
     ETUtils.writeUTF8(newCorpus,sys.stdout)
     
                         
