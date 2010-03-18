@@ -1,4 +1,4 @@
-import re,sys
+import re,sys,os
 try:
     import xml.etree.cElementTree as ET
 except ImportError:
@@ -511,6 +511,18 @@ class Parser:
         outfile.write(ET.tostring(node))
         outfile.close()
 
+
+def process(indir, task, outfile, remove_duplicates, modify_extra):
+    tasksuffix = ".a2.t"+task
+    parser = Parser()
+    filestems = set()
+    for filename in os.listdir(indir):
+        filestems.add(filename.split(".",1)[0])
+    filestems = list(filestems)
+    filestems.sort()
+    parser.parse(indir,filestems,tasksuffix)
+    parser.printNode(outfile, remove_duplicates, modify_extra)
+    return(True)
 
 
 def interface(optionArgs=sys.argv[1:]):
