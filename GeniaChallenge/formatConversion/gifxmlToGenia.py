@@ -72,7 +72,8 @@ def processCorpus(inputCorpus, outputPath, task=1, outputIsA2File=False, verbose
             else:
                 outputFile = codecs.open(os.path.join(outputPath,documentId + ".a2.t1"), "wt", "utf-8")
                 #outputFile = open(os.path.join(outputPath,documentId + ".a2.t1"), "wt")
-            events, entityMap = getEvents(document, inputCorpus, outputFile, 1)
+            events, entityMap = getEvents(document, inputCorpus, 1)
+            #print "EVENTS-FINAL", events, "\nENTITY_MAP", entityMap
             triggerIds = copy.copy(namedEntityTriggerIds)
             writeEventTriggers(document, inputCorpus, outputFile, events, triggerIds, 1)
             writeEvents(document, inputCorpus, outputFile, events, entityMap, triggerIds)
@@ -84,7 +85,7 @@ def processCorpus(inputCorpus, outputPath, task=1, outputIsA2File=False, verbose
             else:
                 outputFile = codecs.open(os.path.join(outputPath,documentId + ".a2.t12"), "wt", "utf-8")
                 #outputFile = open(os.path.join(outputPath,documentId + ".a2.t12"), "wt")
-            events, entityMap = getEvents(document, inputCorpus, outputFile, 2)
+            events, entityMap = getEvents(document, inputCorpus, 2)
             triggerIds = copy.copy(namedEntityTriggerIds)
             writeEventTriggers(document, inputCorpus, outputFile, events, triggerIds, 2)
             writeEvents(document, inputCorpus, outputFile, events, entityMap, triggerIds)
@@ -96,7 +97,7 @@ def processCorpus(inputCorpus, outputPath, task=1, outputIsA2File=False, verbose
             else:
                 outputFile = codecs.open(os.path.join(outputPath,documentId + ".a2.t123"), "wt", "utf-8")
                 #outputFile = open(os.path.join(outputPath,documentId + ".a2.t123"), "wt")
-            events, entityMap = getEvents(document, inputCorpus, outputFile, 2)
+            events, entityMap = getEvents(document, inputCorpus, 2)
             triggerIds = copy.copy(namedEntityTriggerIds)
             writeEventTriggers(document, inputCorpus, outputFile, events, triggerIds, 2)
             writeEvents(document, inputCorpus, outputFile, events, entityMap, triggerIds, True)
@@ -194,7 +195,7 @@ def writeEventTriggers(document, inputCorpus, outputFile, events, triggerIds, ta
                         entityIndex += 1
     return triggerIds
 
-def getEvents(document, inputCorpus, outputFile, task=1):
+def getEvents(document, inputCorpus, task=1):
     events = {} # event trigger entity : list of interactions pairs
     entityMap = {}
     siteMap = {}
@@ -232,6 +233,8 @@ def getEvents(document, inputCorpus, outputFile, task=1):
             #if interaction.get("e1") == "GENIA.d10.s5.e2":
             #    print events[interaction.get("e1")]
     
+    #print "EVENTS1", events 
+    
     # remove empty events
     removeCount = 1
     while removeCount > 0:
@@ -262,6 +265,8 @@ def getEvents(document, inputCorpus, outputFile, task=1):
                     del events[key]
                     removeCount += 1
     
+    #print "EVENTS2", events
+    
     # Create duplicate events for events with multiple sites
     newEvents = {} # Create new events here, old events will be completely replaced
     for key in sorted(events.keys()): # process all events
@@ -269,7 +274,7 @@ def getEvents(document, inputCorpus, outputFile, task=1):
         interactions = events[key]
         sites = [[]] * len(interactions) # initialize an empty list of sites for each interaction
         
-        # Pick corretc sites for each interaction from siteMap
+        # Pick correct sites for each interaction from siteMap
         intCount = 0
         for interaction in interactions:
             sites[intCount] = siteMap[interaction.get("e2")][:]
@@ -299,7 +304,7 @@ def getEvents(document, inputCorpus, outputFile, task=1):
                 if (siteType == "Site" or siteType == "CSite") and eventType not in ["Binding", "Phosphorylation", "Regulation", "Positive_regulation", "Negative_regulation"]:
                     siteList.remove(site)
 
-        # Replace emtpy site lists with "None", because combine.combine does not work well
+        # Replace empty site lists with "None", because combine.combine does not work well
         # with empty lists. With None, you get None in the correct places at the combinations    
         for i in range(len(sites)):
             if len(sites[i]) == 0:
