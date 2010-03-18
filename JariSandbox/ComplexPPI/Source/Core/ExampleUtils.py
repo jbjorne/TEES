@@ -9,7 +9,7 @@ the int is the feature id and the float is the feature value.
 Extra is a dictionary of String:String pairs, for additional information about the 
 examples.
 """
-__version__ = "$Revision: 1.39 $"
+__version__ = "$Revision: 1.40 $"
 
 
 import sys, os, itertools
@@ -285,6 +285,8 @@ def getPositivesPerSentence(examples, predictions):
             counts[value] = 0
         counts[value] += 1
     return counts
+
+#IF LOCAL
 
 def writeTask3ToInteractionXML(examples, predictions, corpusElements, outputFileName, task3Type):
     import sys
@@ -1039,3 +1041,5 @@ def process(sentenceObject, examplesBySentence, classSet, classIds, predictionsB
             sentenceElement.append(entity)
         for interaction in interactions:
             sentenceElement.append(interaction)
+
+#ENDIF
