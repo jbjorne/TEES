@@ -284,6 +284,6 @@ if __name__=="__main__":
 
     corpus=ET.parse(sys.stdin).getroot()
     newCorpus=reorderCorpus(corpus,options)
-    ETUtils.write(newCorpus,sys.stdout)
+    ETUtils.writeUTF8(newCorpus,sys.stdout)
     
                         
