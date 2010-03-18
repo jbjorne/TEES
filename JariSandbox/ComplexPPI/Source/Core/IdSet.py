@@ -1,4 +1,7 @@
-__version__ = "$Revision: 1.17 $"
+"""
+Manages classification class and feature ids.
+"""
+__version__ = "$Revision: 1.18 $"
 
 import codecs
 
@@ -11,9 +14,9 @@ class IdSet:
         """
         Creates a new IdSet or loads one from a dictionary or a file.
         
-        To create a new, empty set: idset = IdSet(firstNumber = x)
-        To create a set from a str->int dictionary: idset = IdSet(idDict = x)
-        To load a dictionary from a file: idset = IdSet(filename = x)
+        To create a new, empty set: idset = IdSet(firstNumber = x). 
+        To create a set from a str->int dictionary: idset = IdSet(idDict = x). 
+        To load a dictionary from a file: idset = IdSet(filename = x).
         
         @param firstNumber: The number given to the first name defined. Subsequent names will
         have higher numbers.
@@ -121,7 +124,7 @@ class IdSet:
         keys.sort()
         for key in keys:
             # key is assumed to be a string
-            f.write( (key+": "+str(self.Ids[key])+"\n") )
+            f.write( (str(key)+": "+str(self.Ids[key])+"\n") )
             #f.write( (str(key)+": "+str(self.Ids[key])+"\n") )
             #f.write( (str(key)+": "+str(self.Ids[key])+"\n").encode("utf-8") )
         f.close()
