@@ -1,7 +1,13 @@
+import sys
+
 def getNextFreeId(elements):
     highest = -1
     for element in elements:
-        number = int(element.get("id").rsplit(".",1)[-1][1:])
+        id = element.get("id")
+        assert id.find(".") != -1, id
+        lastPart = id.rsplit(".",1)[-1]
+        assert len(lastPart) > 1, id
+        number = int(lastPart[1:])
         if number > highest:
             highest = number
     if len(elements) - 1 > highest:
