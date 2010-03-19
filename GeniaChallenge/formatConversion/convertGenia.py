@@ -16,8 +16,15 @@ from InteractionXML.RecalculateIds import recalculateIds
 import geniaToGifxml
 from Utils.FindHeads import findHeads
 
-def convert(inputDir, outputFilename, parse, tokenization, task=1, removeDuplicates=True, extra=True):
-    geniaToGifxml.process(inputDir, task, outputFilename, removeDuplicates, extra)
+def convert(inputDir, outputFilename, parse, tokenization, task=1, removeDuplicates=True, extra=True, docIds=None):
+    docIdSet = None
+    if docIds != None:
+        docIdSet = set()
+        f = open(docIds, "rt")
+        for line in f.readlines():
+            docIdSet.add(line.strip())
+    
+    geniaToGifxml.process(inputDir, task, outputFilename, removeDuplicates, extra, docIdSet)
     # Make sure geniaToGifxml worked
     assert os.path.exists(outputFilename)
     
@@ -32,8 +39,8 @@ def convert(inputDir, outputFilename, parse, tokenization, task=1, removeDuplica
     printLines(p.stderr.readlines())
     printLines(p.stdout.readlines())
     # Head detection
-    corpus= ET.parse(outputFilename).getroot()
-    findHeads(corpus, parse, tokenization, outputFilename)
+    corpus= ET.parse(outputFilename)
+    findHeads(corpus, "split-"+parse, "split-"+tokenization, outputFilename)
     # Remove unneeded ThemeX and CauseX
     print >> sys.stderr, "Removing ThemeX and CauseX"
     perlCommand = "perl -pi -e \'s/\\\"(Theme|Cause|Site|CSite|AtLoc|ToLoc)[0-9]+\\\"/\\\"$1\\\"/g' " + outputFilename
@@ -78,8 +85,9 @@ if __name__=="__main__":
                   choices=["1","12","13","123"],
                   default="1",
                   metavar="[1|12|13|123]")
+    optparser.add_option("-d", "--ids", default=None, dest="ids", help="A file with list of the GENIA document ids to include from input directory. Use e.g. the \"*-document-ids.txt\" files in the data-directory.")
     (options, args) = optparser.parse_args()
     
-    convert(options.input, options.output, options.parse, options.tokenization, options.task, options.remove_duplicates, options.modify_extra)
+    convert(options.input, options.output, options.parse, options.tokenization, options.task, options.remove_duplicates, options.modify_extra, options.ids)
     
     

@@ -512,12 +512,16 @@ class Parser:
         outfile.close()
 
 
-def process(indir, task, outfile, remove_duplicates, modify_extra):
+def process(indir, task, outfile, remove_duplicates, modify_extra, docIds=None):
     tasksuffix = ".a2.t"+task
     parser = Parser()
     filestems = set()
     for filename in os.listdir(indir):
-        filestems.add(filename.split(".",1)[0])
+        filestem = filename.split(".",1)[0]
+        if docIds == None:
+            filestems.add(filestem)
+        elif filestem in docIds:
+            filestems.add(filestem)
     filestems = list(filestems)
     filestems.sort()
     parser.parse(indir,filestems,tasksuffix)
