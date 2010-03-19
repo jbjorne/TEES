@@ -5,9 +5,10 @@ import sys,os,time
 thisPath = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.abspath(os.path.join(thisPath,"..")))
 import Settings
-from ExampleBuilders.GeneralEntityTypeRecognizerGztr import GeneralEntityTypeRecognizerGztr
+from ExampleBuilders.TriggerExampleBuilder import TriggerExampleBuilder
 from ExampleBuilders.MultiEdgeExampleBuilder import MultiEdgeExampleBuilder
 #IF LOCAL
+from ExampleBuilders.GeneralEntityTypeRecognizerGztr import GeneralEntityTypeRecognizerGztr
 from ExampleBuilders.GeneralEntityTypeRecognizer import GeneralEntityTypeRecognizer
 from ExampleBuilders.EventExampleBuilder import EventExampleBuilder
 from ExampleBuilders.DirectEventExampleBuilder import DirectEventExampleBuilder
@@ -21,7 +22,10 @@ from Murska.CSCConnection import CSCConnection
 #ENDIF
 from Classifiers.SVMMultiClassClassifier import SVMMultiClassClassifier as Cls
 from Classifiers.AllCorrectClassifier import AllCorrectClassifier as ACCls
-#from Classifiers.LibLinearClassifier import LibLinearClassifier
+#IF LOCAL
+from Classifiers.LibLinearClassifier import LibLinearClassifier
+from Classifiers.LibLinearPoly2Classifier import LibLinearPoly2Classifier
+#ENDIF
 from Evaluators.AveragingMultiClassEvaluator import AveragingMultiClassEvaluator as Ev
 from Evaluators.SharedTaskEvaluator import SharedTaskEvaluator as STEv
 import Core.SentenceGraph as SentenceGraph
