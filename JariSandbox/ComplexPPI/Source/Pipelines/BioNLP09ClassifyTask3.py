@@ -46,7 +46,7 @@ print >> sys.stderr, "Evaluating speculation example classifications:"
 Ev.evaluate("speculation-test-examples", "speculation-test-classifications", TASK3_IDS+".class_names")
 # The classifications are combined with the TEST_FILE xml, to produce
 # an interaction-XML file with speculation predictions
-speculationXML = ExampleUtils.writeTask3ToInteractionXML("speculation-test-examples", "speculation-test-classifications", TEST_FILE, None, "speculation")
+speculationXML = BioTextExampleWriter.write("speculation-test-examples", "speculation-test-classifications", TEST_FILE, None)
 
 ###############################################################################
 # Negation detection
@@ -60,7 +60,7 @@ print >> sys.stderr, "Evaluating negation example classifications:"
 Ev.evaluate("negation-test-examples", "negation-test-classifications", TASK3_IDS+".class_names")
 # The classifications are combined with the speculation xml, to produce
 # an interaction-XML file with both speculation and negation predictions
-task3XML = ExampleUtils.writeTask3ToInteractionXML("negation-test-examples", "negation-test-classifications", speculationXML, "task3.xml", "negation")
+task3XML = BioTextExampleWriter.write("negation-test-examples", "negation-test-classifications", speculationXML, "task3.xml")
 
 ###############################################################################
 # Shared Task Evaluation
