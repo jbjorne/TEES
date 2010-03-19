@@ -25,7 +25,7 @@ class BioTextExampleWriter:
         
         # This looks a bit strange, but should work with the re-iterable
         # generators that readExamples returns
-        xType == None
+        xType = None
         for example in examples:
             assert example[3].has_key("xtype")
             xType = example[3]["xtype"]
