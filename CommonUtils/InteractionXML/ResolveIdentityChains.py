@@ -4,7 +4,11 @@ try:
 except ImportError:
     import cElementTree as ET
 import cElementTreeUtils as ETUtils
-sys.path.append("../../JariSandbox/ComplexPPI/Source")
+extraPath = os.path.dirname(os.path.abspath(__file__))+"/../.."
+#IF LOCAL
+extraPath = os.path.dirname(os.path.abspath(__file__))+"/../../JariSandbox/ComplexPPI/Source"
+#ENDIF
+sys.path.append(extraPath)
 from Utils.ProgressCounter import ProgressCounter
 import Core.SentenceGraph as SentenceGraph
 

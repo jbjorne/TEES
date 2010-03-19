@@ -1,5 +1,9 @@
 import sys, os, copy
-sys.path.append(os.path.dirname(os.path.abspath(__file__))+"/../../JariSandbox/ComplexPPI/Source")
+extraPath = os.path.dirname(os.path.abspath(__file__))+"/../.."
+#IF LOCAL
+extraPath = os.path.dirname(os.path.abspath(__file__))+"/../../JariSandbox/ComplexPPI/Source"
+#ENDIF
+sys.path.append(extraPath)
 from Utils.ProgressCounter import ProgressCounter
 try:
     import xml.etree.cElementTree as ET
