@@ -1,7 +1,7 @@
 """
 Trigger examples
 """
-__version__ = "$Revision: 1.1 $"
+__version__ = "$Revision: 1.2 $"
 
 #IF LOCAL
 # This is copy-pasted version of GeneralEntityTypeRecognizerGztr, for use in the
@@ -34,6 +34,10 @@ def compareDependencyEdgesById(dep1, dep2):
        return -1
 
 class TriggerExampleBuilder(ExampleBuilder):
+    """
+    This example builder makes trigger examples, i.e. examples describing
+    event triggers. One example is generated for each non-name token.
+    """
     def __init__(self, style=None, classSet=None, featureSet=None, gazetteerFileName=None):
         if classSet == None:
             classSet = IdSet(1)
