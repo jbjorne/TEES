@@ -9,7 +9,7 @@ the int is the feature id and the float is the feature value.
 Extra is a dictionary of String:String pairs, for additional information about the 
 examples.
 """
-__version__ = "$Revision: 1.40 $"
+__version__ = "$Revision: 1.41 $"
 
 
 import sys, os, itertools
@@ -27,6 +27,10 @@ import cElementTreeUtils as ETUtils
 import RecallAdjust
 
 def gen2iterable(genfunc):
+    """
+    Makes a multi-use iterator generator. See http://bugs.python.org/issue5973
+    for details.
+    """
     def wrapper(*args, **kwargs):
         class _iterable(object):
             def __iter__(self):
