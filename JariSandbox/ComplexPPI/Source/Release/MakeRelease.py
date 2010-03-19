@@ -148,6 +148,7 @@ if __name__=="__main__":
     copy("/usr/share/biotext/GeniaChallenge/orig-data/IDsTEST", os.path.join(options.output + "/data/test-set-genia-document-ids.txt"))
     copy("/home/jari/cvs_checkout/PPI_Learning/Analysers/ProteinNameSplitter.py", os.path.join(options.output + "/src/SharedTask/formatConversion/ProteinNameSplitter.py"))
     copy("install-svm-multiclass.sh", os.path.join(options.output + "/install-svm-multiclass.sh"))
+    copy("gpl.txt", os.path.join(options.output + "/gpl.txt"))
     
     # Remove accidentally generated __init__.py
     os.remove(os.path.join(options.output + "/__init__.py"))
