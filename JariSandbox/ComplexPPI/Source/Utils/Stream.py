@@ -1,4 +1,6 @@
 """
+Capture stdout or stderr messages to a log file
+
 Based on code by Greg Pinero (Primary Searcher)
 
 Capture print statments and write them to a log file
