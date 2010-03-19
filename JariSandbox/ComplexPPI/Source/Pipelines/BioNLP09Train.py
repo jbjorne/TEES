@@ -105,8 +105,8 @@ else:
 ###############################################################################
 if options.mode in ["BOTH", "GRID"]:
     # Pre-made models
-    EDGE_MODEL_STEM = "devel-edge-models/model-c_"
-    TRIGGER_MODEL_STEM = "devel-trigger-models/model-c_"
+    EDGE_MODEL_STEM = "edge-models/model-c_"
+    TRIGGER_MODEL_STEM = "trigger-models/model-c_"
     
     count = 0
     TriggerExampleBuilder.run(DEVEL_FILE, "devel-trigger-examples", PARSE, TOK, TRIGGER_FEATURE_PARAMS, TRIGGER_IDS)
