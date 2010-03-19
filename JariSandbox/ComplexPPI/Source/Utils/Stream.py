@@ -5,12 +5,16 @@ Based on code by Greg Pinero (Primary Searcher)
 
 Capture print statments and write them to a log file
 but still allow them to be printed on the screen.
-Usage:  see if __name__=='__main__': section below.
 """
 import sys
 import time
 
 class StreamModifier:
+    """
+    This class implements a write-method and can therefore replace a stream
+    such as sys.stderr or sys.stdout. The write method first writes the text
+    to a log file, then passes it on to the original stream.
+    """
     def __init__(self, stream):
         self.stream = stream
         self.logfile = None
@@ -32,11 +36,17 @@ class StreamModifier:
         self.timeStampDuplicates = duplicates
     
     def writeToLog(self, text):
+        """
+        Write directly to the log file without sending the input to the stream
+        """
         if self.logfile != None:
             self.logfile.write(text)
             self.logfile.flush()
     
     def write(self, text):
+        """
+        Send the text to the stream after optionally writing it to the log file.
+        """
         if self.indent != None:
             if self.newLine:
                 text = self.indent + text 
@@ -69,6 +79,11 @@ class StreamModifier:
             self.logfile.flush()
 
 def setLog(filename=None, clear=False):
+    """
+    Replace sys.stderr and sys.stdout with a StreamModifier, capturing
+    all output for these streams to a log file while still passing it
+    to the original stream.
+    """
     if not isinstance(sys.stdout, StreamModifier):
         sys.stdout = StreamModifier(sys.stdout)
     if not isinstance(sys.stderr, StreamModifier):
