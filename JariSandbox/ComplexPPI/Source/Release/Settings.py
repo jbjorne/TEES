@@ -14,12 +14,12 @@ SVMMultiClassDir = None
 TrainFile = relPath("../data/train123.xml")
 DevelFile = relPath("../data/devel123.xml")
 EverythingFile = relPath("../data/everything123.xml")
-TestFile = relPath("../data/test.xml") # doesn't have any annotation
+TestFile = relPath("../data/test.xml") # doesn't have any annotation that could be merged/unmerged
 
-# BioNLP'09 dataset in XML-format (Unmerged for task 1&2)
-TrainFile = relPath("../data/train-with-duplicates123.xml")
-DevelFile = relPath("../data/devel-with-duplicates123.xml")
-EverythingFile = relPath("../data/everything-with-duplicates123.xml")
+# BioNLP'09 dataset in XML-format (unmerged for task 3)
+TrainFileWithDuplicates = relPath("../data/train-with-duplicates123.xml")
+DevelFileWithDuplicates = relPath("../data/devel-with-duplicates123.xml")
+EverythingFileWithDuplicates = relPath("../data/everything-with-duplicates123.xml")
 
 # Precalculated SVM-multiclass models
 TrainTriggerModel = relPath("../data/train-trigger-model-c_200000")
