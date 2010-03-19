@@ -1,7 +1,7 @@
 """
 Base class for ExampleBuilders
 """
-__version__ = "$Revision: 1.26 $"
+__version__ = "$Revision: 1.27 $"
 
 from SentenceGraph import SentenceGraph
 from IdSet import IdSet
@@ -12,7 +12,9 @@ from Utils.Parameters import getArgs
 from Utils.Parameters import splitParameters
 import Core.ExampleUtils as ExampleUtils
 import SentenceGraph
+#IF LOCAL
 from ExampleBuilders.ExampleStats import ExampleStats
+#ENDIF
 
 class ExampleBuilder:
     """ 
@@ -37,7 +39,9 @@ class ExampleBuilder:
         
         self.featureTag = ""
         
+        #IF LOCAL
         self.exampleStats = ExampleStats()
+        #ENDIF
     
     def setFeature(self, name, value):
         self.features[self.featureSet.getId(self.featureTag+name)] = value
@@ -95,8 +99,10 @@ class ExampleBuilder:
     
         print >> sys.stderr, "Examples built:", exampleCount
         print >> sys.stderr, "Features:", len(self.featureSet.getNames())
+        #IF LOCAL
         if self.exampleStats.getExampleCount() > 0:
             self.exampleStats.printStats()
+        #ENDIF
         # Save Ids
         if idFileTag != None: 
             print >> sys.stderr, "Saving class names to", idFileTag + ".class_names"
