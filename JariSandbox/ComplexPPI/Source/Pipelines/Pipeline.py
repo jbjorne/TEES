@@ -7,12 +7,12 @@ sys.path.append(os.path.abspath(os.path.join(thisPath,"..")))
 import Settings
 from ExampleBuilders.TriggerExampleBuilder import TriggerExampleBuilder
 from ExampleBuilders.MultiEdgeExampleBuilder import MultiEdgeExampleBuilder
+from ExampleBuilders.Task3ExampleBuilder import Task3ExampleBuilder
 #IF LOCAL
 from ExampleBuilders.GeneralEntityTypeRecognizerGztr import GeneralEntityTypeRecognizerGztr
 from ExampleBuilders.GeneralEntityTypeRecognizer import GeneralEntityTypeRecognizer
 from ExampleBuilders.EventExampleBuilder import EventExampleBuilder
 from ExampleBuilders.DirectEventExampleBuilder import DirectEventExampleBuilder
-from ExampleBuilders.Task3ExampleBuilder import Task3ExampleBuilder
 from ExampleBuilders.PathGazetteer import PathGazetteer
 from ExampleBuilders.CPPTriggerExampleBuilder import CPPTriggerExampleBuilder
 #from ExampleBuilders.BinaryEntityExampleBuilder import BinaryEntityExampleBuilder
