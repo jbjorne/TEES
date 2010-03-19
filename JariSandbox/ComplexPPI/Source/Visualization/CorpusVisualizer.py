@@ -58,14 +58,14 @@ class CorpusVisualizer:
             tokenMap[sentenceGraph.tokens[i]] = goldGraph.tokens[i]
         return tokenMap
     
-    def getNXEdge(self, graph, t1, t2, label):
-        for edge in graph.edges():
-            if edge[0] == t1 and edge[1] == t2 and edge[2] == label:
+    def getNXEdge(self, graph, t1, t2, element):
+        for edge in graph.edges(data=True):
+            if edge[0] == t1 and edge[1] == t2 and edge[2]["element"] == element:
                 return edge
         return None
     
     def makeExampleGraphWithGold(self, builder, sentenceGraph, goldGraph):
-        exampleGraph = NX.XDiGraph(multiedges = True)
+        exampleGraph = NX10.MultiDiGraph()
         for token in goldGraph.tokens:
             exampleGraph.add_node(token)
         arcStyles = {}
@@ -141,42 +141,42 @@ class CorpusVisualizer:
                     toInteractionsWithPredictions.add(interactionTo)
                     
                     iToType = interactionTo.get("type")
-                    exampleGraph.add_edge(t1, t2, interactionFrom)
-                    #edge = exampleGraph.get_edge(t1, t2)
+                    exampleGraph.add_edge(t1, t2, element=interactionFrom)
+                    #edge = exampleGraph.get_edge(t1, t2, data=True)
                     edge = self.getNXEdge(exampleGraph, t1, t2, interactionFrom)
                     
                     if t1 != t2:
                         if iToType == iFromType:
-                            arcStyles[edge] = {"stroke":"green"}
-                            labelStyles[edge] = {"fill":"green"}
+                            edge[2]["arcStyles"] = {"stroke":"green"}
+                            edge[2]["labelStyles"] = {"fill":"green"}
                             stats["tp"] += 1
                         else:
-                            arcStyles[edge] = {"stroke":"red"}
-                            labelStyles[edge] = {"fill":"red"}
+                            edge[2]["arcStyles"] = {"stroke":"red"}
+                            edge[2]["labelStyles"] = {"fill":"red"}
                             stats["fp"] += 1
                     found = True
             if not found: # false positive prediction
                 if t1 != t2:
-                    exampleGraph.add_edge(t1, t2, interactionFrom)
+                    exampleGraph.add_edge(t1, t2, element=interactionFrom)
                     edge = self.getNXEdge(exampleGraph, t1, t2, interactionFrom)
-                    arcStyles[edge] = {"stroke":"red"}
-                    labelStyles[edge] = {"fill":"red"}
+                    edge[2]["arcStyles"] = {"stroke":"red"}
+                    edge[2]["labelStyles"] = {"fill":"red"}
                     stats["fp"] += 1
         for interactionTo in goldGraph.interactions:
             if interactionTo not in toInteractionsWithPredictions: # false negative gold
                 t1 = goldGraph.entityHeadTokenByEntity[goldGraph.entitiesById[interactionTo.get("e1")]]
                 t2 = goldGraph.entityHeadTokenByEntity[goldGraph.entitiesById[interactionTo.get("e2")]]                
                 if t1 != t2:
-                    exampleGraph.add_edge(t1, t2, interactionTo)
+                    exampleGraph.add_edge(t1, t2, element=interactionTo)
                     edge = self.getNXEdge(exampleGraph, t1, t2, interactionTo)
-                    arcStyles[edge] = {"stroke":"#79BAEC"}
-                    labelStyles[edge] = {"fill":"#79BAEC"}
+                    edge[2]["arcStyles"] = {"stroke":"#79BAEC"}
+                    edge[2]["labelStyles"] = {"fill":"#79BAEC"}
                     stats["fn"] += 1
         
         builder.header("Classification",4)
         svgTokens = GraphToSVG.tokensToSVG(goldGraph.tokens,False,None,extraByToken)
         #arcStyles, labelStyles = self.getMatchingEdgeStyles(exampleGraph, sentenceGraph.interactionGraph, "green", "red" )
-        svgEdges = GraphToSVG.edgesToSVG(svgTokens, exampleGraph, arcStyles, labelStyles, "type", None)
+        svgEdges = GraphToSVG.edgesToSVG(svgTokens, exampleGraph, "type", None)
         sentenceId = sentenceGraph.getSentenceId()
         svgElement = GraphToSVG.writeSVG(svgTokens, svgEdges, self.outDir+"/svg/"+sentenceId+"_learned.svg")
         builder.svg("../svg/" + sentenceId + "_learned.svg",svgElement.attrib["width"],svgElement.attrib["height"],id="learned_graph")
@@ -325,7 +325,7 @@ class CorpusVisualizer:
                     isNameByToken[token] = False
             arcStyles, labelStyles = self.getMatchingEdgeStyles(goldGraph.interactionGraph, goldGraph.dependencyGraph, "orange", "#F660AB" )
             svgTokens = GraphToSVG.tokensToSVG(goldGraph.tokens, False, goldGraph.entitiesByToken, None, isNameByToken)
-            svgInteractionEdges = GraphToSVG.edgesToSVG(svgTokens, goldGraph.interactionGraph, arcStyles, labelStyles)
+            svgInteractionEdges = GraphToSVG.edgesToSVG(svgTokens, goldGraph.interactionGraph)
             svgElement = GraphToSVG.writeSVG(svgTokens, svgInteractionEdges,self.outDir+"/svg/"+sentenceId+"_ann.svg")
         elif sentenceGraph.interactionGraph != None:
             # Check for named entities
@@ -337,7 +337,7 @@ class CorpusVisualizer:
                     isNameByToken[token] = False
             arcStyles, labelStyles = self.getMatchingEdgeStyles(sentenceGraph.interactionGraph, sentenceGraph.dependencyGraph, "orange", "#F660AB" )
             svgTokens = GraphToSVG.tokensToSVG(sentenceGraph.tokens, False, sentenceGraph.entitiesByToken, None, isNameByToken)
-            svgInteractionEdges = GraphToSVG.edgesToSVG(svgTokens, sentenceGraph.interactionGraph, arcStyles, labelStyles)
+            svgInteractionEdges = GraphToSVG.edgesToSVG(svgTokens, sentenceGraph.interactionGraph)
             svgElement = GraphToSVG.writeSVG(svgTokens, svgInteractionEdges,self.outDir+"/svg/"+sentenceId+"_ann.svg")
         builder.svg("../svg/" + sentenceId + "_ann.svg",svgElement.attrib["width"],svgElement.attrib["height"],id="ann_graph")
         builder.lineBreak()

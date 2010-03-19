@@ -44,23 +44,26 @@ def tokensToSVG(tokenElements, showPOS=False, entitiesByToken=None, extraByToken
     #return svgTokensById, svgTokens
     return svgTokens
 
-def edgesToSVG(svgTokens, graph, arcStyles={}, labelStyles={}, edgeTypeAttrib="type", edgeTypes={}):
+def edgesToSVG(svgTokens, graph, edgeTypeAttrib="type", edgeTypes={}):
     svgTokensById = {}
     for token in svgTokens:
         svgTokensById[token.id] = token
     
-    nxEdges = graph.edges(data=True)
-    edges = []
-    for nxEdge in nxEdges:
-        if nxEdge[0] != nxEdge[1]: # Within-token edges cannot be displayed
-            edges.append( (nxEdge[0], nxEdge[1], nxEdge[2]["element"]) )
+    edges = graph.edges(data=True)
+    #edges = []
+    #for nxEdge in nxEdges:
+    #    if nxEdge[0] != nxEdge[1]: # Within-token edges cannot be displayed
+    #        edges.append( (nxEdge[0], nxEdge[1], nxEdge[2]["element"]) )
     
     svgEdges = []    
     for edge in edges:
         token1 = edge[0].get("id")
         token2 = edge[1].get("id")
+        if token1 == token2:
+            continue
+        
         if edgeTypeAttrib != None:
-            type = edge[2].get(edgeTypeAttrib)
+            type = edge[2]["element"].get(edgeTypeAttrib)
             if int(token1.split("_")[-1]) < int(token2.split("_")[-1]):
                 type += ">"
                 svgEdge = draw_dg.Dep(svgTokensById[token1], svgTokensById[token2], type)
@@ -74,12 +77,12 @@ def edgesToSVG(svgTokens, graph, arcStyles={}, labelStyles={}, edgeTypeAttrib="t
                 svgEdge = draw_dg.Dep(svgTokensById[token1], svgTokensById[token2], "i")
                
         # Set styles
-        if arcStyles.has_key(edge):
-            for key in arcStyles[edge]:
-                svgEdge.arcStyleDict[key] = arcStyles[edge][key]
-        if labelStyles.has_key(edge):
-            for key in labelStyles[edge]:
-                svgEdge.labelStyleDict[key] = labelStyles[edge][key]
+        if edge[2].has_key("arcStyles"):
+            for key in sorted(edge[2]["arcStyles"].keys()):
+                svgEdge.arcStyleDict[key] = edge[2]["arcStyles"][key]
+        if edge[2].has_key("labelStyles"):
+            for key in sorted(edge[2]["labelStyles"].keys()):
+                svgEdge.labelStyleDict[key] = edge[2]["labelStyles"][key]
         # Add to list
         svgEdges.append(svgEdge)
     return svgEdges
