@@ -22,12 +22,12 @@ DevelFile = relPath("../data/devel-with-duplicates123.xml")
 EverythingFile = relPath("../data/everything-with-duplicates123.xml")
 
 # Precalculated SVM-multiclass models
-TrainTriggerModel = relPath("../data/train-trigger-model-c_100000")
-TrainEdgeModel = relPath("../data/train-edge-model-c_60000")
+TrainTriggerModel = relPath("../data/train-trigger-model-c_200000")
+TrainEdgeModel = relPath("../data/train-edge-model-c_28000")
 TrainSpeculationModel = relPath("../data/train-speculation-model-c_13000")
 TrainNegationModel = relPath("../data/train-negation-model-c_10000")
-EverythingTriggerModel = relPath("../data/everything-trigger-model-c_100000")
-EverythingEdgeModel = relPath("../data/everything-edge-model-c_60000")
+EverythingTriggerModel = relPath("../data/everything-trigger-model-c_200000")
+EverythingEdgeModel = relPath("../data/everything-edge-model-c_28000")
 EverythingSpeculationModel = relPath("../data/everything-speculation-model-c_13000")
 EverythingNegationModel = relPath("../data/everything-negation-model-c_10000")
 
