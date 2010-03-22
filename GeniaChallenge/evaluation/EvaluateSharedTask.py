@@ -9,23 +9,38 @@ RELEASE = True
 RELEASE = False
 #ENDIF
 if RELEASE:
-    sys.path.append( os.path.split(os.path.abspath(__file__))[0] + "/../../Core" )
+    sys.path.append( os.path.split(os.path.abspath(__file__))[0] + "/../.." )
 #IF LOCAL
 else:
-    sys.path.append( os.path.split(os.path.abspath(__file__))[0] + "/../../JariSandbox/ComplexPPI/Source/Core" )
+    sys.path.append( os.path.split(os.path.abspath(__file__))[0] + "/../../JariSandbox/ComplexPPI/Source" )
 #sys.path.append(os.path.join(os.path.abspath(__file__),"/../../JariSandbox/ComplexPPI/Source/Core"))
 #ENDIF
-import Split
+import Core.Split as Split
+import Utils.TableUtils as TableUtils
 
 perlDir = os.path.dirname(os.path.abspath(__file__))+"/bionlp09_shared_task_evaluation_tools_v1"
 
+def resultsToCSV(results, filename=None):
+    rows = []
+    for k1 in sorted(results.keys()):
+        for k2 in sorted(results[k1].keys()):
+            rows.append({})
+            rows[-1]["eval"] = k1
+            rows[-1]["event_class"] = k2
+            for k3 in sorted(results[k1][k2].keys()):                
+                rows[-1][k3] = results[k1][k2][k3]
+    if filename != None:
+        fieldnames = ["eval", "event_class", "gold", "gold_match", "answer", "answer_match", "recall", "precision", "fscore"]
+        TableUtils.writeCSV(rows, filename, fieldnames)
+    return rows
+
 def parseResults(lines):
     lines = lines[3:]
+    results = {}
     for line in lines:
         if line[0] == "-":
             continue
         splits = line.strip().split()
-        results = {}
         # define row name
         name = splits[0]
         name = name.replace("=","")
