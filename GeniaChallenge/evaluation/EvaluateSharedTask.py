@@ -116,7 +116,7 @@ def evaluate(sourceDir, task=1, folds=-1, foldToRemove=-1, evaluations=["strict"
     tempDir = "/usr/share/biotext/GeniaChallenge/extension-data/genia/evaluation-data/evaluation-temp"
     if os.environ.has_key("METAWRK"): # CSC
         goldDir = "/v/users/jakrbj/shared-task-evaluation/evaluation-tools-devel-gold"
-        tempDir = "evaluation-temp"
+        tempDir = origDir + "/evaluation-temp"
     #ENDIF
     
     if os.path.exists(tempDir):
