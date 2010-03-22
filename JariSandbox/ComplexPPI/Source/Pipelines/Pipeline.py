@@ -23,8 +23,8 @@ from Murska.CSCConnection import CSCConnection
 from Classifiers.SVMMultiClassClassifier import SVMMultiClassClassifier as Cls
 from Classifiers.AllCorrectClassifier import AllCorrectClassifier as ACCls
 #IF LOCAL
-from Classifiers.LibLinearClassifier import LibLinearClassifier
-from Classifiers.LibLinearPoly2Classifier import LibLinearPoly2Classifier
+#from Classifiers.LibLinearClassifier import LibLinearClassifier
+#from Classifiers.LibLinearPoly2Classifier import LibLinearPoly2Classifier
 #ENDIF
 from Evaluators.AveragingMultiClassEvaluator import AveragingMultiClassEvaluator as Ev
 from Evaluators.SharedTaskEvaluator import SharedTaskEvaluator as STEv
