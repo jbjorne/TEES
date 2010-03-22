@@ -6,7 +6,7 @@ import sys, os, types
 import itertools
 thisPath = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.abspath(os.path.join(thisPath,"..")))
-import ExampleUtils
+import Core.ExampleUtils as ExampleUtils
 import Core.SentenceGraph as SentenceGraph
 from Core.IdSet import IdSet
 from Utils.ProgressCounter import ProgressCounter

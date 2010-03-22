@@ -9,8 +9,10 @@ import Core.ExampleUtils as ExampleUtils
 from EntityExampleWriter import EntityExampleWriter
 from EdgeExampleWriter import EdgeExampleWriter
 from Task3ExampleWriter import Task3ExampleWriter
+#IF LOCAL
 from UnmergedEdgeExampleWriter import UnmergedEdgeExampleWriter
 from AsymmetricEventExampleWriter import AsymmetricEventExampleWriter
+#ENDIF
 
 class BioTextExampleWriter:
     """
@@ -37,10 +39,12 @@ class BioTextExampleWriter:
             w = EdgeExampleWriter()
         elif xType == "task3":
             w = Task3ExampleWriter()
+#IF LOCAL
         elif xType == "ue":
             w = UnmergedEdgeExampleWriter()
         elif xType == "asym":
             w = AsymmetricEventExampleWriter()
+#ENDIF
         else:
             assert False, ("Unknown entity type", xType)
         return w.writeXML(examples, predictions, corpus, outputFile, classSet, parse, tokenization)
