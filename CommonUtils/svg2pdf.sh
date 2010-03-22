@@ -1,3 +1,4 @@
+#!/bin/bash
 TMP=`tempfile`
 cat > $TMP.svg
 inkscape -E $TMP.eps $TMP.svg
