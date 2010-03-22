@@ -4,6 +4,9 @@
 from Pipeline import *
 import sys, os
 
+import Settings
+Settings.SVMMultiClassDir = "/v/users/jakrbj/svm-multiclass"
+
 from optparse import OptionParser
 optparser = OptionParser()
 optparser.add_option("-e", "--test", default=Settings.DevelFile, dest="testFile", help="Test file in interaction xml")
