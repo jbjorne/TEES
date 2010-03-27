@@ -30,7 +30,7 @@ optparser.add_option("-z", "--edgeParams", default="5000,10000,20000,25000,28000
 (options, args) = optparser.parse_args()
 
 # Check options
-assert options.mode in ["MODELS", "GRID", "BOTH", "DOWNLOAD_MODELS", "GRID_DOWNLOAD", "GRID_EVALUATE"]
+assert options.mode in ["MODELS", "GRID", "ALL", "DOWNLOAD_MODELS", "GRID_DOWNLOAD", "GRID_EVALUATE"]
 assert options.output != None
 assert options.task in [1, 2]
 
@@ -79,7 +79,7 @@ TRIGGER_CLASSIFIER_PARAMS="c:" + options.triggerParams
 EDGE_TRAIN_EXAMPLE_FILE = "edge-train-examples-"+PARSE_TAG
 EDGE_TEST_EXAMPLE_FILE = "edge-test-examples-"+PARSE_TAG
 EDGE_CLASSIFIER_PARAMS="c:" + options.edgeParams
-if options.mode in ["BOTH", "MODELS", "DOWNLOAD_MODELS"]:
+if options.mode in ["ALL", "MODELS", "DOWNLOAD_MODELS"]:
     triggerCSC = None
     edgeCSC = None
     if "local" not in options.csc:
@@ -145,7 +145,12 @@ else:
 ###############################################################################
 # Classification with recall boosting
 ###############################################################################
-if options.mode in ["BOTH", "GRID_SUBMIT"]:
+if options.mode in ["ALL", "GRID_SUBMIT"]:
+    if not os.path.exists("grid"):
+        os.makedirs("grid")
+    if not os.path.exists("gridjobs"):
+        os.makedirs("gridjobs")
+    
     # Pre-made models
     CSC_TRIGGER_TEST_EXAMPLE_FILE = "trigger-models/" + TRIGGER_TEST_EXAMPLE_FILE
     EDGE_MODEL_STEM = "edge-models/model-c_"
@@ -159,6 +164,8 @@ if options.mode in ["BOTH", "GRID_SUBMIT"]:
         gridCSC.upload(TRIGGER_IDS+".feature_names")
         gridCSC.upload(EDGE_IDS+".class_names")
         gridCSC.upload(EDGE_IDS+".feature_names")
+        gridCSC.mkdir("grid")
+        gridCSC.mkdir("gridjobs")
     
     batchCount = 0
     count = 0
@@ -203,7 +210,7 @@ if options.mode in ["BOTH", "GRID_SUBMIT"]:
             gridCSC.submitJob(WORKDIR, jobScriptPath)
             batchCount = 0
 
-if options.mode in ["GRID_DOWNLOAD"]:
+if options.mode in ["ALL", "GRID_DOWNLOAD"]:
     gridCSC = CSCConnection(CSC_WORKDIR, "jakrbj@murska.csc.fi", False)
     finished = False
     count = 0
@@ -223,7 +230,7 @@ if options.mode in ["GRID_DOWNLOAD"]:
                 finished = False
         time.sleep(60)
 
-if options.mode in ["GRID_EVALUATE"]:
+if options.mode in ["ALL", "GRID_EVALUATE"]:
     bestResult = (-1, None, None)
     for filename in os.listdir(WORKDIR):
         if filename[-4:] == ".csv" and os.path.getsize(filename) != 0:

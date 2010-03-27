@@ -38,7 +38,7 @@ def getEntityIndex(entities, index=0, task=1):
             index = newIndex
     return index
 
-def processCorpus(inputCorpus, outputPath, task=1, outputIsA2File=False, verbose=True):
+def processCorpus(inputCorpus, outputPath, task=1, outputIsA2File=False, verbose=True, strengths=False):
     if outputIsA2File:
         a2File = open(outputPath, "wt")
         if len(inputCorpus.documents) > 1:
@@ -75,8 +75,8 @@ def processCorpus(inputCorpus, outputPath, task=1, outputIsA2File=False, verbose
             events, entityMap = getEvents(document, inputCorpus, 1)
             #print "EVENTS-FINAL", events, "\nENTITY_MAP", entityMap
             triggerIds = copy.copy(namedEntityTriggerIds)
-            writeEventTriggers(document, inputCorpus, outputFile, events, triggerIds, 1)
-            writeEvents(document, inputCorpus, outputFile, events, entityMap, triggerIds)
+            writeEventTriggers(document, inputCorpus, outputFile, events, triggerIds, 1, strengths=strengths)
+            writeEvents(document, inputCorpus, outputFile, events, entityMap, triggerIds, strengths=strengths)
             #outputFile.close()
         # Write a2.t12 file
         elif task == 2:
@@ -87,8 +87,8 @@ def processCorpus(inputCorpus, outputPath, task=1, outputIsA2File=False, verbose
                 #outputFile = open(os.path.join(outputPath,documentId + ".a2.t12"), "wt")
             events, entityMap = getEvents(document, inputCorpus, 2)
             triggerIds = copy.copy(namedEntityTriggerIds)
-            writeEventTriggers(document, inputCorpus, outputFile, events, triggerIds, 2)
-            writeEvents(document, inputCorpus, outputFile, events, entityMap, triggerIds)
+            writeEventTriggers(document, inputCorpus, outputFile, events, triggerIds, 2, strengths=strengths)
+            writeEvents(document, inputCorpus, outputFile, events, entityMap, triggerIds, strengths=strengths)
             #outputFile.close()
         # Write a2.t123 file
         elif task == 3:
@@ -99,8 +99,8 @@ def processCorpus(inputCorpus, outputPath, task=1, outputIsA2File=False, verbose
                 #outputFile = open(os.path.join(outputPath,documentId + ".a2.t123"), "wt")
             events, entityMap = getEvents(document, inputCorpus, 2)
             triggerIds = copy.copy(namedEntityTriggerIds)
-            writeEventTriggers(document, inputCorpus, outputFile, events, triggerIds, 2)
-            writeEvents(document, inputCorpus, outputFile, events, entityMap, triggerIds, True)
+            writeEventTriggers(document, inputCorpus, outputFile, events, triggerIds, 2, strengths=strengths)
+            writeEvents(document, inputCorpus, outputFile, events, entityMap, triggerIds, True, strengths=strengths)
             #outputFile.close()
         if not outputIsA2File: 
             outputFile.close()
@@ -152,7 +152,7 @@ def writeProteins(document, inputCorpus, outputFile=None):
             outputFile.write( encode(triggerMap[entity.get("id")] + "\tProtein " + str(offsetMap[key][0]) + " " + str(offsetMap[key][1]) + "\t" + entity.get("text") + "\n") )
     return triggerMap
 
-def writeEventTriggers(document, inputCorpus, outputFile, events, triggerIds, task=1):
+def writeEventTriggers(document, inputCorpus, outputFile, events, triggerIds, task=1, strengths=False):
     entityIndex = 0
     # Find new entity index
     for sentenceElement in document.findall("sentence"):
@@ -188,7 +188,10 @@ def writeEventTriggers(document, inputCorpus, outputFile, events, triggerIds, ta
                         triggerIds[entity.get("id")] = offsetMap[match]
                     else:
                         triggerId = "T" + str(entityIndex)
-                        outputFile.write( encode(triggerId + "\t" + entity.get("type") + " " + str(newOffset[0]) + " " + str(newOffset[1]) + "\t" + entity.get("text") + "\n") )
+                        strengthLine = ""
+                        if strengths and entity.get("predictions") != None:
+                            strengthLine = " # " + entity.get("predictions")
+                        outputFile.write( encode(triggerId + "\t" + entity.get("type") + " " + str(newOffset[0]) + " " + str(newOffset[1]) + "\t" + entity.get("text") + strengthLine + "\n") )
                         offsetMap[match] = triggerId
                         assert(not triggerIds.has_key(entity.get("id")))
                         triggerIds[entity.get("id")] = triggerId
@@ -330,7 +333,7 @@ def getEvents(document, inputCorpus, task=1):
                         
     return events, entityMap                  
 
-def writeEvents(document, inputCorpus, outputFile, events, entityMap, triggerIds, writeTask3=False):
+def writeEvents(document, inputCorpus, outputFile, events, entityMap, triggerIds, writeTask3=False, strengths=False):
     """
     Writes events defined as trigger words that have one or more interactions
     leaving from them. When the Theme or Cause of such an event refers to a
@@ -373,6 +376,7 @@ def writeEvents(document, inputCorpus, outputFile, events, entityMap, triggerIds
         assert(key == entity.get("id") or key.rsplit(".",1)[0] == entity.get("id"))
         outputLine = eventIds[key] + "\t" + eventType + ":" + triggerIds[entity.get("id")]
         siteLine = ""
+        strengthLine = " #"
         assert( len(events[key]) > 0 )
         themeCount = 0
         causeCount = 0
@@ -413,12 +417,16 @@ def writeEvents(document, inputCorpus, outputFile, events, entityMap, triggerIds
             if interactionString not in interactionStrings:
                 if type == "Theme" and precalculatedThemeCount > 1:
                     outputLine += " " + interaction.get("type") + str(themeCount+1) + ":" + e2Id
+                    strengthLine += " " + interaction.get("type") + str(themeCount+1) + ":" + interaction.get("predictions")
                     if site != None:
                         siteLine += " " + siteType + str(themeCount+1) + ":" + triggerIds[site.get("e1")]
+                        strengthLine += " " + siteType + str(themeCount+1) + ":" + site.get("predictions")
                 else:
                     outputLine += " " + interactionString
+                    strengthLine += " " + interaction.get("type") + ":" + interaction.get("predictions")
                     if site != None:
                         siteLine += " " + siteType + ":" + triggerIds[site.get("e1")]
+                        strengthLine += " " + siteType + ":" + site.get("predictions")
             interactionStrings.add(interactionString) 
             
             if type == "Theme":
@@ -434,6 +442,8 @@ def writeEvents(document, inputCorpus, outputFile, events, entityMap, triggerIds
 #        else:
 #            seenOutputLines.append(outputLineWithoutId)
         outputLine += siteLine
+        if strengths:
+            outputLine += strengthLine
         outputFile.write( encode(outputLine + "\n") )
     
     mCount = 1
@@ -444,7 +454,7 @@ def writeEvents(document, inputCorpus, outputFile, events, entityMap, triggerIds
         outputFile.write( encode("M" + str(mCount) + "\tNegation " + negation + "\n") )
         mCount += 1
 
-def gifxmlToGenia(input, output, task=1, outputIsA2File=False, submission=False, verbose=True):
+def gifxmlToGenia(input, output, task=1, outputIsA2File=False, submission=False, verbose=True, strengths=False):
     assert(task == 1 or task == 2 or task == 3)
     outputTarFilename = None
     
@@ -463,7 +473,7 @@ def gifxmlToGenia(input, output, task=1, outputIsA2File=False, submission=False,
     
     # Convert the gifxml to the genia format files
     inputCorpus = CorpusElements.loadCorpus(input, removeIntersentenceInteractions=False)
-    processCorpus(inputCorpus, output, task, outputIsA2File, verbose=verbose)
+    processCorpus(inputCorpus, output, task, outputIsA2File, verbose=verbose, strengths=strengths)
     
     if submission:
         if not outputIsA2File:
@@ -519,9 +529,10 @@ if __name__=="__main__":
     optparser.add_option("-t", "--task", default=1, type="int", dest="task", help="task number")
     optparser.add_option("-s", "--submission", default=False, action="store_true", dest="submission", help="Make a submission tar.gz-file")
     optparser.add_option("-f", "--file", default=False, action="store_true", dest="file", help="Output (-o) is a file")
+    optparser.add_option("-r", "--strengths", default=False, action="store_true", dest="strengths", help="Prediction strengths")
     (options, args) = optparser.parse_args()
     
     assert(options.input != None)
     assert(options.output != None)
-    gifxmlToGenia(options.input, options.output, options.task, options.file, options.submission)
+    gifxmlToGenia(options.input, options.output, options.task, options.file, options.submission, strengths=options.strengths)
         

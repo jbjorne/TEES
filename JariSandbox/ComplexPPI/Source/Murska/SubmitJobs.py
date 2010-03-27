@@ -39,14 +39,14 @@ def update(queueDir, jobLimit):
         # Check number of submitted jobs
         currNumJobs = numJobs()
         if currNumJobs >= jobLimit:
-            print >> sys.stderr, "Queue full, waiting"
-            sleep(60*20) # wait twenty minutes
+            print >> sys.stderr, time.strftime("[%d.%m.%y-%H:%M:%S] ") + "Queue full, waiting at"
+            time.sleep(60*20) # wait twenty minutes
         
         # Look for waiting jobs
         inFiles = os.listdir(queueDir)
         if len(inFiles) == 0:
-            print >> sys.stderr, "No jobs to be submitted, waiting"
-            sleep(60*60) # wait an hour            
+            print >> sys.stderr, time.strftime("[%d.%m.%y-%H:%M:%S] ") + "No jobs to be submitted, waiting"
+            time.sleep(60*60) # wait an hour            
         
         # Submit jobs
         submitCount = 0
@@ -54,8 +54,10 @@ def update(queueDir, jobLimit):
             if inFile.find("~") != -1: # temporary backup file
                 continue
             
+            submit(os.path.join(queueDir, inFile))
             submitCount += 1
             if submitCount + currNumJobs >= jobLimit:
+                print >> sys.stderr, time.strftime("[%d.%m.%y-%H:%M:%S] ") + "Submitted", submitCount, "jobs"
                 break
             
 if __name__=="__main__":
@@ -66,4 +68,4 @@ if __name__=="__main__":
     assert options.queue != None
     assert os.path.exists(options.queue)
     
-    update(options.workdir, options.limit)
+    update(options.queue, options.limit)
