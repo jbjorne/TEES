@@ -525,7 +525,7 @@ def process(indir, task, outfile, remove_duplicates, modify_extra, docIds=None):
     filestems = list(filestems)
     filestems.sort()
     parser.parse(indir,filestems,tasksuffix)
-    parser.printNode(outfile, remove_duplicates, modify_extra)
+    parser.printNode(outfile, (not remove_duplicates), modify_extra)
     return(True)
 
 
