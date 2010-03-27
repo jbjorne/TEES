@@ -15,8 +15,11 @@ import readTokenization
 from InteractionXML.RecalculateIds import recalculateIds
 import geniaToGifxml
 from Utils.FindHeads import findHeads
+#IF LOCAL
+import processEquivs
+#ENDIF
 
-def convert(inputDir, outputFilename, parse, tokenization, task=1, removeDuplicates=True, extra=True, docIds=None):
+def convert(inputDir, outputFilename, parse, tokenization, task=1, removeDuplicates=True, extra=True, docIds=None, useEquivs=False):
     docIdSet = None
     if docIds != None:
         docIdSet = set()
@@ -47,6 +50,12 @@ def convert(inputDir, outputFilename, parse, tokenization, task=1, removeDuplica
     p = subprocess.Popen(perlCommand, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     printLines(p.stderr.readlines())
     printLines(p.stdout.readlines())
+    # Process equivs and duplicate events
+    #IF LOCAL
+    if useEquivs:
+        print >> sys.stderr, "Resolving equivalences"
+        processEquivs.processEquivs(outputFilename, outputFilename)
+    #ENDIF
 
 def printLines(lines):
     for line in lines:
@@ -86,8 +95,11 @@ if __name__=="__main__":
                   default="1",
                   metavar="[1|12|13|123]")
     optparser.add_option("-d", "--ids", default=None, dest="ids", help="A file with list of the GENIA document ids to include from input directory. Use e.g. the \"*-document-ids.txt\" files in the data-directory.")
+    #IF LOCAL
+    optparser.add_option("-q", "--equivs", default=False, dest="equivs", action="store_true", help="Resolve equiv-edges by duplicating events. Equivs must be in GENIA format input data. Only works for flat (no duplicates) output.")
+    #ENDIF
     (options, args) = optparser.parse_args()
     
-    convert(options.input, options.output, options.parse, options.tokenization, options.task, options.remove_duplicates, options.modify_extra, options.ids)
+    convert(options.input, options.output, options.parse, options.tokenization, options.task, options.remove_duplicates, options.modify_extra, options.ids, options.equivs)
     
     
