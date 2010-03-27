@@ -24,7 +24,7 @@ class CSCConnection:
         self.commands = []
     
     def exists(self, filename):
-        p = subprocess.Popen("ssh " + self.account + " 'ls " + self.workDir + "/" + filename + "'", shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        p = subprocess.Popen("ssh " + self.account + " 'ls -lh " + self.workDir + "/" + filename + "'", shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         if len(p.stdout.readlines()) > 0:
             return True
         else:
@@ -90,7 +90,7 @@ class CSCConnection:
         else:
             isMurska = False
         scriptName = name
-        if cscConnection.exists(scriptName):
+        if self.exists(scriptName):
             print >> sys.stderr, "Script already on " + cscConnection.machineName + ", process not queued for", scriptName
             return False
         
@@ -99,30 +99,27 @@ class CSCConnection:
         if localWorkDir != None:
             scriptFilePath = os.path.join(localWorkDir, scriptName)
         scriptFile = open(scriptFilePath, "wt")
-        scriptFile.write("#!/bin/bash\ncd " + cscConnection.workDir + "\n")
+        scriptFile.write("#!/bin/bash\ncd " + self.workDir + "\n")
         # write commands to script
-        for command in commands:
+        for command in self.commands:
             if not isMurska: # louhi
                 scriptFile.write("aprun -n 1 ")
             scriptFile.write(command + "\n")
         scriptFile.close()
-        
-        return
-        
-        cscConnection.upload(scriptFilePath, scriptName)
-        cscConnection.run("chmod a+x " + cscConnection.workDir + "/" + scriptName)
+                
+        self.upload(scriptFilePath, scriptName)
+        self.run("chmod a+x " + self.workDir + "/" + scriptName)
         cscScriptPath = self.workDir + "/" + scriptName
         if isMurska:
             runCmd = "bsub -o " + cscScriptPath + "-stdout -e " + cscScriptPath + "-stderr -W 10:0 -M " + str(self.memory) 
-            if cscConnection.cores != 1:
+            if self.cores != 1:
                 runCmd += " -n " + str(self.cores)
             runCmd += " < " + cscScriptPath
-            cscConnection.run(runCmd)
+            self.run(runCmd)
         else:
-            cscConnection.run("qsub -o " + cscConnection.workDir + "/" + scriptName + "-stdout -e " + cscConnection.workDir + "/" + scriptName + "-stderr " + cscConnection.workDir + "/" + scriptName)
+            self.run("qsub -o " + self.workDir + "/" + scriptName + "-stdout -e " + self.workDir + "/" + scriptName + "-stderr " + self.workDir + "/" + scriptName)
         
         self.commands = []
-        return idStr
 
 if __name__=="__main__":
     c = CSCConnection("remoteTest")
