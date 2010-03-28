@@ -28,7 +28,7 @@ def submit(jobFile):
     jobName = os.path.basename(jobFile)
     shutil.move(jobFile, outDir + "/" + jobName)
     
-    #subprocess.call("bsub < " + outDir + "/" + jobName, shell=True)
+    subprocess.call("bsub < " + outDir + "/" + jobName, shell=True)
     print "Queued job", outDir + "/" + jobName
 
 def update(queueDir, jobLimit):
