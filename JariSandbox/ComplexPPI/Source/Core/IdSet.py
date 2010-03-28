@@ -1,7 +1,7 @@
 """
 Manages classification class and feature ids.
 """
-__version__ = "$Revision: 1.18 $"
+__version__ = "$Revision: 1.19 $"
 
 import codecs
 
@@ -124,7 +124,8 @@ class IdSet:
         keys.sort()
         for key in keys:
             # key is assumed to be a string
-            f.write( (str(key)+": "+str(self.Ids[key])+"\n") )
+            f.write( key + ": " + str(self.Ids[key]) + "\n" )
+            #f.write( (str(key)+": "+str(self.Ids[key])+"\n") ) # this causes unicode problems
             #f.write( (str(key)+": "+str(self.Ids[key])+"\n") )
             #f.write( (str(key)+": "+str(self.Ids[key])+"\n").encode("utf-8") )
         f.close()
