@@ -48,7 +48,10 @@ def processCorpus(inputCorpus, outputPath, task=1, outputIsA2File=False, verbose
     if verbose: counter = ProgressCounter(len(inputCorpus.documents), "Document")
     # Each document is written to an output file
     for document in inputCorpus.documents:
-        documentId = document.find("sentence").get("origId")
+        docSentence = document.find("sentence")
+        if docSentence == None:
+            continue
+        documentId = docSentence.get("origId")
         if documentId == None:
             documentId = document.get("origId")
         else:
