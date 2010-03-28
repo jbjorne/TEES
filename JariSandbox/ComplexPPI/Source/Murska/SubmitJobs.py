@@ -44,6 +44,7 @@ def update(queueDir, jobLimit):
         
         # Look for waiting jobs
         inFiles = os.listdir(queueDir)
+        inFiles.sort() # submit in alphabetical order
         if len(inFiles) == 0:
             print >> sys.stderr, time.strftime("[%d.%m.%y-%H:%M:%S] ") + "No jobs to be submitted, waiting"
             time.sleep(60*60) # wait an hour            
