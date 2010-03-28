@@ -3,8 +3,10 @@ import subprocess
 import time
 from optparse import OptionParser
 
-def getScriptName(scriptDir):
-    name = "job-" + time.strftime("%Y_%m_%d-%H_%M_%S-")
+def getScriptName(scriptDir, nameBase=""):
+    if nameBase != "":
+        nameBase += "-"
+    name = "job-" + nameBase + time.strftime("%Y_%m_%d-%H_%M_%S-")
     jobScriptCount = 0
     while os.path.exists(scriptDir + "/" + name + str(jobScriptCount) + ".sh"):
         jobScriptCount += 1
@@ -52,7 +54,8 @@ def update(inDir, outDir, workDir, queueDir):
                 inputFiles.append(os.path.abspath(os.path.join(os.path.join(triple[0], filename))))
         if len(inputFiles) == 0:
             continue
-        jobName = getScriptName(queueDir)
+        nameBase = triple[0].replace("/", "_")
+        jobName = getScriptName(queueDir, nameBase)
         print "Making job", jobName, "with", len(inputFiles), "input files."
         s = makeJobScript(jobName, inputFiles, os.path.abspath(os.path.join(outDir, triple[0])), os.path.abspath(workDir + "/" + jobName))
         f = open(os.path.abspath(queueDir + "/" + jobName), "wt")
