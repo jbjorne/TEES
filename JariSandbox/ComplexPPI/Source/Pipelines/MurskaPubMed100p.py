@@ -151,7 +151,7 @@ if edgeExampleFileSize != 0:
 
     # Output will be stored to the geniaformat-subdirectory, where will also be a
     # tar.gz-file which can be sent to the Shared Task evaluation server.
-    gifxmlToGenia(xml, OUTFILE_STEM + "-events_geniaformat.tar.gz", 3)
+    gifxmlToGenia(xml, OUTFILE_STEM + "-events_geniaformat.tar.gz", 3, strengths=True)
     #evaluateSharedTask("geniaformat", 1)
     
 # Remove workdir
