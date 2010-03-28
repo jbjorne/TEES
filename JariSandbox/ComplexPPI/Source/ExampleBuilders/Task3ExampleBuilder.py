@@ -1,7 +1,7 @@
 """
 Speculation and negation examples
 """
-__version__ = "$Revision: 1.8 $"
+__version__ = "$Revision: 1.9 $"
 
 import sys, os
 thisPath = os.path.dirname(os.path.abspath(__file__))
@@ -233,8 +233,8 @@ class Task3ExampleBuilder(ExampleBuilder):
             features = {}
 
             # ENTITY TYPE
-            entityType = self.classSet.getId(self.getMergedEntityType(entity))
-            del self.classSet.Ids[self.getMergedEntityType(entity)]
+            #entityType = self.classSet.getId(self.getMergedEntityType(entity))
+            #del self.classSet.Ids[self.getMergedEntityType(entity)]
 #IF LOCAL
             # There's a mistake here. The entityType should be the string, not
             # the id of the type. But there's also another issue. getMergedEntityType
@@ -249,7 +249,7 @@ class Task3ExampleBuilder(ExampleBuilder):
             # this can't be fixed so it breaks feature id consistency. Therefore I'll
             # now just remove the redundant class id from the classSet.
 #ENDIF            
-            features[self.featureSet.getId(entityType)] = 1
+            #features[self.featureSet.getId(entityType)] = 1
             
             features[self.featureSet.getId(namedEntityCountFeature)] = 1
             features[self.featureSet.getId(entityCountFeature)] = 1
