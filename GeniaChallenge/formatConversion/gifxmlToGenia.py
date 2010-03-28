@@ -50,6 +50,7 @@ def processCorpus(inputCorpus, outputPath, task=1, outputIsA2File=False, verbose
     for document in inputCorpus.documents:
         docSentence = document.find("sentence")
         if docSentence == None:
+            counter.update(1, "Processing empty document")
             continue
         documentId = docSentence.get("origId")
         if documentId == None:
