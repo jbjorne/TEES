@@ -1,7 +1,7 @@
 """
 Speculation and negation examples
 """
-__version__ = "$Revision: 1.7 $"
+__version__ = "$Revision: 1.8 $"
 
 import sys, os
 thisPath = os.path.dirname(os.path.abspath(__file__))
@@ -48,7 +48,10 @@ class Task3ExampleBuilder(ExampleBuilder):
         wordFilePath = os.path.abspath(os.path.join(thisPath,"../../data/speculation-words.txt"))
 #IF LOCAL
         wordFilePath = "/usr/share/biotext/GeniaChallenge/extension-data/genia/task3/speculation-words.txt"    
-#ENDIF        
+        if os.environ.has_key("METAWRK"): # CSC
+            wordFilePath = "/v/users/jakrbj/cvs_checkout/GeniaChallenge/task3/speculation-words.txt"
+#ENDIF
+        
         self.specWords, self.specWordStems = readWords(wordFilePath) 
         #print self.specWords
         #print self.specWordStems
