@@ -26,7 +26,7 @@ def makeJobScript(jobName, inputFiles, outDir, workDir):
     s += "#BSUB -M 4200000 \n"
     s += "##Max runtime \n"
     s += "#BSUB -W 48:00 \n"
-    s += "#BSUB -J " + jobName + "\n"
+    s += "#BSUB -J " + jobName[4:14] + "\n"
     s += "#BSUB -o " + outDir + "/" + jobName + ".stdout \n"
     s += "#BSUB -e " + outDir + "/" + jobName + ".stderr \n"
     s += "#BSUB -n 1 \n\n"
