@@ -27,6 +27,8 @@ def makeJobScript(jobName, inputFiles, outDir, workDir):
     s += "##Max runtime \n"
     s += "#BSUB -W 48:00 \n"
     s += "#BSUB -J " + jobName[4:14] + "\n"
+    if not os.path.exists(outDir):
+        os.makedirs(outDir)
     s += "#BSUB -o " + outDir + "/" + jobName + ".stdout \n"
     s += "#BSUB -e " + outDir + "/" + jobName + ".stderr \n"
     s += "#BSUB -n 1 \n\n"
