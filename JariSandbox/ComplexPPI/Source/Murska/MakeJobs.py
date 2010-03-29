@@ -26,6 +26,7 @@ def makeJobScript(jobName, inputFiles, outDir, workDir):
     s += "#BSUB -M 4200000 \n"
     s += "##Max runtime \n"
     s += "#BSUB -W 48:00 \n"
+    s += "#BSUB -J " + jobName + "\n"
     s += "#BSUB -o " + outDir + "/" + jobName + ".stdout \n"
     s += "#BSUB -e " + outDir + "/" + jobName + ".stderr \n"
     s += "#BSUB -n 1 \n\n"
@@ -43,10 +44,13 @@ def makeJobScript(jobName, inputFiles, outDir, workDir):
     
     return s
 
-def update(inDir, outDir, workDir, queueDir):
+def update(inDir, outDir, workDir, queueDir, submitFilename=None):
     """
     Main method, adds files to job scripts
     """
+    if submitFilename != None:
+        submitFile = open(submitFilename, "wt")
+    
     for triple in os.walk(inDir):
         inputFiles = []
         for filename in triple[2]:
@@ -61,6 +65,12 @@ def update(inDir, outDir, workDir, queueDir):
         f = open(os.path.abspath(queueDir + "/" + jobName), "wt")
         f.write(s)
         f.close()
+        
+        if submitFilename != None:
+            submitFile.write("bsub " + os.path.abspath(queueDir + "/" + jobName) + "\n")
+    
+    if submitFilename != None:
+        submitFile.close()
 
 if __name__=="__main__":
     optparser = OptionParser()
@@ -68,6 +78,7 @@ if __name__=="__main__":
     optparser.add_option("-o", "--output", default=None, dest="output", help="output directory")
     optparser.add_option("-w", "--workdir", default="/wrk/jakrbj/shared-task-test", dest="workdir", help="working directory")
     optparser.add_option("-q", "--queue", default="/wrk/jakrbj/jobqueue", dest="queue", help="job queue directory")
+    optparser.add_option("-s", "--submitFile", default=None, dest="submitFile", help="A file with bsub commands")
     (options, args) = optparser.parse_args()
     assert options.input != None
     assert os.path.exists(options.input)
