@@ -53,7 +53,7 @@ RECALL_BOOST_PARAM=0.65
 
 # These commands will be in the beginning of most pipelines
 workdir(WORKDIR, True) # Select a working directory, don't remove existing files
-#log() # Start logging into a file in working directory
+log(logFile=OUTFILE_STEM+"-log.txt") # Start logging into a file in output (not work) directory
 TRIGGER_IDS=copyIdSetsToWorkdir(Settings.TriggerIds)
 EDGE_IDS=copyIdSetsToWorkdir(Settings.EdgeIds)
 

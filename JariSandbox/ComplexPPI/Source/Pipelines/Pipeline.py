@@ -82,8 +82,8 @@ def workdir(path, deleteIfExists=True):
     os.chdir(path)
     atexit.register(os.chdir, origDir)
 
-def log(clear=False, logCmd=True):
-    Stream.setLog("log.txt", clear)
+def log(clear=False, logCmd=True, logFile="log.txt"):
+    Stream.setLog(logFile, clear)
     Stream.setTimeStamp("[%H:%M:%S]", True)
     print >> sys.stderr, "####### Log opened at ", time.ctime(time.time()), "#######"
     if logCmd:
