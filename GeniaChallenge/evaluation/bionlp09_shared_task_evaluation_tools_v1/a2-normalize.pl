@@ -253,6 +253,7 @@ sub read_a2_file {
 
     while (<FILE>) {
 	chomp;
+	s/#.*//g; # remove comments
 
 	my ($id, $anno, $extra) = split /\t/;
 	if ($id !~ /^([TEM][0-9-]+|\*)$/) {
