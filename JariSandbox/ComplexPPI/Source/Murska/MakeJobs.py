@@ -49,7 +49,7 @@ def update(inDir, outDir, workDir, queueDir, submitFilename=None):
     Main method, adds files to job scripts
     """
     if submitFilename != None:
-        submitFile = open(submitFilename, "wt")
+        submitFile = open(submitFilename, "at")
     
     for triple in os.walk(inDir):
         inputFiles = []
@@ -67,7 +67,7 @@ def update(inDir, outDir, workDir, queueDir, submitFilename=None):
         f.close()
         
         if submitFilename != None:
-            submitFile.write("bsub " + os.path.abspath(queueDir + "/" + jobName) + "\n")
+            submitFile.write("cat " + os.path.abspath(queueDir + "/" + jobName) + " | bsub\n")
     
     if submitFilename != None:
         submitFile.close()
@@ -87,4 +87,4 @@ if __name__=="__main__":
     assert options.queue != None
     assert os.path.exists(options.queue)
     
-    update(options.input, options.output, options.workdir, options.queue)
+    update(options.input, options.output, options.workdir, options.queue, options.submitFile)
