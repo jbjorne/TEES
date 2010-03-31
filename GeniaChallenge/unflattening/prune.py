@@ -4,6 +4,7 @@ try:
 except ImportError:
     import cElementTree as ET
 import cElementTreeUtils as ETUtils
+import time
 
 class Pruner:
     """
@@ -18,6 +19,8 @@ class Pruner:
                                    self.document.getiterator('entity')] )
         self.origEvents = dict( [(x.attrib['id'],x) for x in
                                  self.document.getiterator('interaction')] )
+        
+        self.maxCycles = 10
 
     def validEvent(self,event):
         """
@@ -151,9 +154,17 @@ class Pruner:
         
         cycle = findCycle()
         count = 0
+        self.brokenCycles = 0
+        #self.sentenceIds = set()
         while cycle:
+            #for id in cycle:
+            #    sId = id.rsplit(".", 1)
+            #    self.sentenceIds.add(sId)
             count += pickWeakest(cycle)
+            self.brokenCycles = count
             cycle = findCycle()
+            if count > self.maxCycles:
+                break
         #sys.stderr.write("Broke %s cycle(s)\n"%count)
         return count
 
@@ -162,7 +173,21 @@ class Pruner:
         Prunes the graph. More specifically, removes all events and entities
         that are not present in the cache. See analyse().
         """
-        for sentence in self.document.findall('sentence'):
+        self.nestingRemoveCount = 0
+        if self.brokenCycles > self.maxCycles:
+            # Potential error, remove all nesting events that can cause cycles
+            sentence = self.document
+            for event in sentence.findall('interaction'):
+                toId = event.attrib['e2']
+                # Remove all nesting events
+                if self.origEntities[toId].attrib['isName'] == "False":
+                    sentence.remove(event)
+                    self.nestingRemoveCount += 1
+            print >> sys.stderr, "Too many cycles error in sentence", sentence.get("id")
+            print >> sys.stderr, "Removed", self.nestingRemoveCount, "nesting events"
+            return  
+            
+        for sentence in [self.document]: #self.document.findall('sentence'):
             for entity in sentence.findall('entity'):
                 uid = entity.attrib['id']
                 if not uid in self.entities:
@@ -199,6 +224,7 @@ def prune(input, cycles=True, output=None):
     @rtype: cElementTree.Element
     @return: corpus node
     """
+    print >> sys.stderr, "Pruning"
     options = ["-i",input,"-o",output]
     if cycles:
         options.append("-c")
@@ -239,14 +265,18 @@ def interface(optionArgs=sys.argv[1:]):
 
     corpus = ETUtils.ETFromObj(options.infile)
     cycleBrokenCount = 0
+    skipCount = 0
     for document in corpus.getroot().findall('document'):
-        #sys.stderr.write("Pruning document %s\n"%document.attrib['id'])
-        pruner = Pruner(document)
-        pruner.analyse()
-        if options.cycles:
-            cycleBrokenCount += pruner.analyseCycles()
-        pruner.prune()
+        for sentence in document.findall("sentence"):
+            #sys.stderr.write("Pruning document %s\n"%document.attrib['id'])
+            pruner = Pruner(sentence)
+            pruner.analyse()
+            if options.cycles:
+                cycleBrokenCount += pruner.analyseCycles()
+            pruner.prune()
     sys.stderr.write("File pruned, broke " + str(cycleBrokenCount) + " cycles\n" )
+    if skipCount > 0:
+        sys.stderr.write("Pruning skipped " + str(skipCount) + " sentences\n" )
     if options.outfile:
         ETUtils.write(corpus, options.outfile)
     return corpus
