@@ -3,7 +3,7 @@ import subprocess
 import time
 from optparse import OptionParser
 
-def runWithTimeout(s, command, timeoutSeconds=60*60):
+def runWithTimeout(s, command, inputFile, timeoutSeconds=60*60):
     s += command + " &\n" # run in background
     s += "PID=$!"
     s += "TIMEOUT=$(" + str(timeoutSeconds) + ")" + "\n"
@@ -13,6 +13,7 @@ def runWithTimeout(s, command, timeoutSeconds=60*60):
     s += "    kill $PID" + "\n"
     s += "    sleep 5" + "\n"
     s += "    kill -9 $PID" + "\n"
+    s += "    echo Process $PID for file " + inputFile + " killed \n"
     s += "    break" + "\n" 
     s += "  fi" + "\n"
     s += "  sleep 10" + "\n"
@@ -59,7 +60,7 @@ def makeJobScript(jobName, inputFiles, outDir, workDir, timeOut=False):
     for inputFile in inputFiles:
         command = "/v/users/jakrbj/Python-2.5/bin/python MurskaPubMed100p.py -i " + inputFile + " -o " + outDir + " -w " + workDir
         if timeOut:
-            runWithTimeout(s, command)
+            runWithTimeout(s, command, inputFile)
         else:
             s += command + "\n"
     
@@ -82,7 +83,7 @@ def update(inDir, outDir, workDir, queueDir, submitFilename=None):
         nameBase = triple[0].replace("/", "_")
         jobName = getScriptName(queueDir, nameBase)
         print "Making job", jobName, "with", len(inputFiles), "input files."
-        s = makeJobScript(jobName, inputFiles, os.path.abspath(os.path.join(outDir, triple[0])), os.path.abspath(workDir + "/" + jobName))
+        s = makeJobScript(jobName, inputFiles, os.path.abspath(os.path.join(outDir, triple[0])), os.path.abspath(workDir + "/" + jobName), timeOut=True)
         f = open(os.path.abspath(queueDir + "/" + jobName), "wt")
         f.write(s)
         f.close()
