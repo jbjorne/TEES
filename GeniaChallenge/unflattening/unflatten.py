@@ -552,6 +552,7 @@ def unflattenPruned(input, parse, tokenization=None, output=None, perfect=False)
     @rtype: cElementTree.Element
     @return: corpus node
     """
+    print >> sys.stderr, "Unflattening"
     if tokenization == None:
         tokenization = parse
     options = ["-i",input,"-o",output,"-a",parse,"-t",tokenization]
