@@ -1,6 +1,7 @@
 import sys, os
+from optparse import OptionParser
 
-def main(inDir, outDir, failFilename):
+def main(inDir, outDir, failFileName):
     failFile = open(failFileName, "at")
     for triple in os.walk(inDir):
         print "Processing", triple[0] 

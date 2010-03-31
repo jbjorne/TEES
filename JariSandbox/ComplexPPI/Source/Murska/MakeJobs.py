@@ -74,14 +74,31 @@ def makeJobScript(jobName, inputFiles, outDir, workDir, timeOut=False):
     
     return s
 
-def update(inDir, outDir, workDir, queueDir, submitFilename=None):
+def update(inDir, outDir, workDir, queueDir, submitFilename=None, listFile=None):
     """
     Main method, adds files to job scripts
     """
     if submitFilename != None:
         submitFile = open(submitFilename, "at")
     
-    for triple in os.walk(inDir):
+    if listFile != None:
+        sourceList = []
+        maxJobs = 40
+        listFile = open(listFile, "rt")
+        d = {}        
+        for filename in listFile.readlines():
+            filename.strip()
+            dirname = os.path.dirname(filename) 
+            basename = os.path.basename(filename)
+            if not d.has_key(dirname):
+                d[dirname] = []
+            d[dirname].append(basename)
+        for k in sorted(d.keys()):
+            sourceList.append([k, None, d[k]])
+    else:
+        sourceList = os.walk(inDir)
+    
+    for triple in sourceList:
         inputFiles = []
         for filename in triple[2]:
             if filename[-7:] == ".xml.gz" or filename[-4:] == ".xml":
@@ -105,6 +122,7 @@ def update(inDir, outDir, workDir, queueDir, submitFilename=None):
 if __name__=="__main__":
     optparser = OptionParser()
     optparser.add_option("-i", "--input", default=None, dest="input", help="input directory")
+    optparser.add_option("-f", "--files", default=False, action="store_true", dest="files", help="-i switch defines a file with a list of individual files to process")
     optparser.add_option("-o", "--output", default=None, dest="output", help="output directory")
     optparser.add_option("-w", "--workdir", default="/wrk/jakrbj/shared-task-test", dest="workdir", help="working directory")
     optparser.add_option("-q", "--queue", default="/wrk/jakrbj/jobqueue", dest="queue", help="job queue directory")
