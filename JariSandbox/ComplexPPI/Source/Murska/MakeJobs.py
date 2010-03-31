@@ -74,20 +74,20 @@ def makeJobScript(jobName, inputFiles, outDir, workDir, timeOut=False):
     
     return s
 
-def update(inDir, outDir, workDir, queueDir, submitFilename=None, listFile=None):
+def update(inDir, outDir, workDir, queueDir, submitFilename=None, listFile=False):
     """
     Main method, adds files to job scripts
     """
     if submitFilename != None:
         submitFile = open(submitFilename, "at")
     
-    if listFile != None:
+    if listFile:
         sourceList = []
         maxJobs = 40
-        listFile = open(listFile, "rt")
+        listFile = open(options.input, "rt")
         d = {}        
         for filename in listFile.readlines():
-            filename =  filename.strip()
+            filename = filename.strip()
             dirname = os.path.dirname(filename) 
             basename = os.path.basename(filename)
             if not d.has_key(dirname):
@@ -135,4 +135,4 @@ if __name__=="__main__":
     assert options.queue != None
     assert os.path.exists(options.queue)
     
-    update(options.input, options.output, options.workdir, options.queue, options.submitFile)
+    update(options.input, options.output, options.workdir, options.queue, options.submitFile, options.files)
