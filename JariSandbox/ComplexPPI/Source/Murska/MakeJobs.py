@@ -10,7 +10,7 @@ def runWithTimeout(command, inputFile, timeoutSeconds=60*60):
     s += "TIMEOUT=" + str(timeoutSeconds) + "\n"
     s += "SLEEPTIME=0" + "\n"
     s += "while true; do" + "\n"
-    s += "  if [[ `ps x | grep $PID | grep -v grep` == "" ]] ; then" + "\n"
+    s += "  if [[ `ps x | grep $PID | grep -v grep` == \"\" ]] ; then" + "\n"
     s += "    echo \"Process\" $PID \"for file " + inputFile + " finished ok\"" + "\n" 
     s += "    break" + "\n"
     s += "  fi" + "\n"
@@ -87,7 +87,7 @@ def update(inDir, outDir, workDir, queueDir, submitFilename=None, listFile=None)
         listFile = open(listFile, "rt")
         d = {}        
         for filename in listFile.readlines():
-            filename.strip()
+            filename =  filename.strip()
             dirname = os.path.dirname(filename) 
             basename = os.path.basename(filename)
             if not d.has_key(dirname):
