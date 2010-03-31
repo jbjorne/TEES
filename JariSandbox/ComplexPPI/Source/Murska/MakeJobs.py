@@ -23,7 +23,7 @@ def runWithTimeout(command, inputFile, timeoutSeconds=60*60):
     s += "    echo \"Process\" $PID \"for file " + inputFile + " killed\"" + "\n" 
     s += "    break" + "\n"
     s += "  fi" + "\n"
-    s += "done" + "\n"
+    s += "done" + "\n\n"
 
     return s
 
