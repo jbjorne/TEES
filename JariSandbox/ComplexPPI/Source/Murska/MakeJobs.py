@@ -3,7 +3,8 @@ import subprocess
 import time
 from optparse import OptionParser
 
-def runWithTimeout(s, command, inputFile, timeoutSeconds=60*60):
+def runWithTimeout(command, inputFile, timeoutSeconds=60*60):
+    s = ""
     s += command + " &\n" # run in background
     s += "PID=$!"
     s += "TIMEOUT=$(" + str(timeoutSeconds) + ")" + "\n"
@@ -18,6 +19,7 @@ def runWithTimeout(s, command, inputFile, timeoutSeconds=60*60):
     s += "  fi" + "\n"
     s += "  sleep 10" + "\n"
     s += "done" + "\n\n"
+    return s
 
 def getScriptName(scriptDir, nameBase=""):
     if nameBase != "":
@@ -60,7 +62,7 @@ def makeJobScript(jobName, inputFiles, outDir, workDir, timeOut=False):
     for inputFile in inputFiles:
         command = "/v/users/jakrbj/Python-2.5/bin/python MurskaPubMed100p.py -i " + inputFile + " -o " + outDir + " -w " + workDir
         if timeOut:
-            runWithTimeout(s, command, inputFile)
+            s += runWithTimeout(s, command, inputFile)
         else:
             s += command + "\n"
     
