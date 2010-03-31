@@ -3,6 +3,21 @@ import subprocess
 import time
 from optparse import OptionParser
 
+def runWithTimeout(s, command, timeoutSeconds=60*60):
+    s += command + " &\n" # run in background
+    s += "PID=$!"
+    s += "TIMEOUT=$(" + str(timeoutSeconds) + ")" + "\n"
+    
+    s += "while true; do " + "\n"
+    s += "  if [[ `ps x | grep $PID | grep -v grep` == \"\" ]] ; then\n"
+    s += "    kill $PID" + "\n"
+    s += "    sleep 5" + "\n"
+    s += "    kill -9 $PID" + "\n"
+    s += "    break" + "\n" 
+    s += "  fi" + "\n"
+    s += "  sleep 10" + "\n"
+    s += "done" + "\n\n"
+
 def getScriptName(scriptDir, nameBase=""):
     if nameBase != "":
         nameBase += "-"
@@ -13,7 +28,7 @@ def getScriptName(scriptDir, nameBase=""):
     name += str(jobScriptCount) + ".sh"
     return name
 
-def makeJobScript(jobName, inputFiles, outDir, workDir):
+def makeJobScript(jobName, inputFiles, outDir, workDir, timeOut=False):
     """
     Make a Murska job submission script
     """
@@ -25,7 +40,7 @@ def makeJobScript(jobName, inputFiles, outDir, workDir):
     s += "##Memory limit \n"
     s += "#BSUB -M 4200000 \n"
     s += "##Max runtime \n"
-    s += "#BSUB -W 48:00 \n"
+    s += "#BSUB -W 10:00 \n"
     s += "#BSUB -J " + jobName[4:14] + "\n"
     if not os.path.exists(outDir):
         os.makedirs(outDir)
@@ -42,7 +57,11 @@ def makeJobScript(jobName, inputFiles, outDir, workDir):
     s += "cd /v/users/jakrbj/cvs_checkout/JariSandbox/ComplexPPI/Source/Pipelines \n\n"
     
     for inputFile in inputFiles:
-        s += "/v/users/jakrbj/Python-2.5/bin/python MurskaPubMed100p.py -i " + inputFile + " -o " + outDir + " -w " + workDir + "\n"
+        command = "/v/users/jakrbj/Python-2.5/bin/python MurskaPubMed100p.py -i " + inputFile + " -o " + outDir + " -w " + workDir
+        if timeOut:
+            runWithTimeout(s, command)
+        else:
+            s += command + "\n"
     
     return s
 
