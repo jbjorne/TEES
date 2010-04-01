@@ -54,7 +54,7 @@ def makeJobScript(jobName, inputFiles, outDir, workDir, timeOut=False, s=""):
         timeHours = timeMin / 60
         timeMin = timeMin % 60
         #s += "#BSUB -W 10:00 \n"
-        s += "#BSUB -W " + timeHours + ":" + timeMin + " \n"
+        s += "#BSUB -W " + str(timeHours) + ":" + str(timeMin) + " \n"
         s += "#BSUB -J " + jobName[4:14] + "\n"
         s += "#BSUB -o " + outDir + "/" + jobName + ".stdout \n"
         s += "#BSUB -e " + outDir + "/" + jobName + ".stderr \n"
