@@ -37,36 +37,47 @@ def getScriptName(scriptDir, nameBase=""):
     name += str(jobScriptCount) + ".sh"
     return name
 
-def makeJobScript(jobName, inputFiles, outDir, workDir, timeOut=False):
+def makeJobScript(jobName, inputFiles, outDir, workDir, timeOut=False, s=""):
     """
     Make a Murska job submission script
     """
-    s = "#!/bin/sh \n"
-    s += "##execution shell environment \n\n"
+    s += "#!/bin/sh \n"
+    if os.environ.has_key("METAWRK"): # CSC
+        s += "##execution shell environment \n\n"
+        
+        s += "##OUTDIR: " + outDir + " \n\n"
     
-    s += "##OUTDIR: " + outDir + " \n\n"
-
-    s += "##Memory limit \n"
-    s += "#BSUB -M 4200000 \n"
-    s += "##Max runtime \n"
-    s += "#BSUB -W 10:00 \n"
-    s += "#BSUB -J " + jobName[4:14] + "\n"
+        s += "##Memory limit \n"
+        s += "#BSUB -M 4200000 \n"
+        s += "##Max runtime \n"
+        timeMin = 20 * len(inputFiles)
+        timeHours = timeMin / 60
+        timeMin = timeMin % 60
+        #s += "#BSUB -W 10:00 \n"
+        s += "#BSUB -W " + timeHours + ":" + timeMin + " \n"
+        s += "#BSUB -J " + jobName[4:14] + "\n"
+        s += "#BSUB -o " + outDir + "/" + jobName + ".stdout \n"
+        s += "#BSUB -e " + outDir + "/" + jobName + ".stderr \n"
+        s += "#BSUB -n 1 \n\n"
+    
     if not os.path.exists(outDir):
         os.makedirs(outDir)
-    s += "#BSUB -o " + outDir + "/" + jobName + ".stdout \n"
-    s += "#BSUB -e " + outDir + "/" + jobName + ".stderr \n"
-    s += "#BSUB -n 1 \n\n"
-    
     s += "echo $PWD \n"
     s += "mkdir -p " + outDir + "\n" # ensure output directory exists
-    s += "#module load python/2.5.1-gcc \n\n"
     
-    s += "export PATH=$PATH:/v/users/jakrbj/cvs_checkout \n"
-    s += "export PYTHONPATH=$PYTHONPATH:/v/users/jakrbj/cvs_checkout/CommonUtils \n"
-    s += "cd /v/users/jakrbj/cvs_checkout/JariSandbox/ComplexPPI/Source/Pipelines \n\n"
+    if os.environ.has_key("METAWRK"): # CSC
+        s += "#module load python/2.5.1-gcc \n\n"
+        s += "export PATH=$PATH:/v/users/jakrbj/cvs_checkout \n"
+        s += "export PYTHONPATH=$PYTHONPATH:/v/users/jakrbj/cvs_checkout/CommonUtils \n"
+        s += "cd /v/users/jakrbj/cvs_checkout/JariSandbox/ComplexPPI/Source/Pipelines \n\n"
+    else:
+        s += "cd /home/jari/cvs_checkout/JariSandbox/ComplexPPI/Source/Pipelines \n\n"
     
     for inputFile in inputFiles:
-        command = "/v/users/jakrbj/Python-2.5/bin/python MurskaPubMed100p.py -i " + inputFile + " -o " + outDir + " -w " + workDir
+        if os.environ.has_key("METAWRK"): # CSC
+            command = "/v/users/jakrbj/Python-2.5/bin/python MurskaPubMed100p.py -i " + inputFile + " -o " + outDir + " -w " + workDir
+        else:
+            command = "python MurskaPubMed100p.py -i " + inputFile + " -o " + outDir + " -w " + workDir
         if timeOut:
             s += runWithTimeout(command, inputFile)
         else:
@@ -74,7 +85,7 @@ def makeJobScript(jobName, inputFiles, outDir, workDir, timeOut=False):
     
     return s
 
-def update(inDir, outDir, workDir, queueDir, submitFilename=None, listFile=False):
+def update(inDir, outDir, workDir, queueDir, submitFilename=None, listFile=False, oneJob=False):
     """
     Main method, adds files to job scripts
     """
@@ -98,6 +109,7 @@ def update(inDir, outDir, workDir, queueDir, submitFilename=None, listFile=False
     else:
         sourceList = os.walk(inDir)
     
+    s = ""
     for triple in sourceList:
         inputFiles = []
         for filename in triple[2]:
@@ -107,14 +119,22 @@ def update(inDir, outDir, workDir, queueDir, submitFilename=None, listFile=False
             continue
         nameBase = triple[0].replace("/", "_")
         jobName = getScriptName(queueDir, nameBase)
-        print "Making job", jobName, "with", len(inputFiles), "input files."
-        s = makeJobScript(jobName, inputFiles, os.path.abspath(os.path.join(outDir, triple[0])), os.path.abspath(workDir + "/" + jobName), timeOut=True)
-        f = open(os.path.abspath(queueDir + "/" + jobName), "wt")
-        f.write(s)
-        f.close()
+        if not oneJob:
+            print "Making job", jobName, "with", len(inputFiles), "input files."
+            s = makeJobScript(jobName, inputFiles, os.path.abspath(os.path.join(outDir, triple[0])), os.path.abspath(workDir + "/" + jobName), timeOut=True)
+            f = open(os.path.abspath(queueDir + "/" + jobName), "wt")
+            f.write(s)
+            f.close()
+        else:
+            s = makeJobScript(jobName, inputFiles, os.path.abspath(os.path.join(outDir, triple[0])), os.path.abspath(workDir + "/" + jobName), timeOut=True, s=s)
         
         if submitFilename != None:
             submitFile.write("cat " + os.path.abspath(queueDir + "/" + jobName) + " | bsub\n")
+    
+    if oneJob:
+        f = open(os.path.abspath(queueDir + "/" + jobName), "wt")
+        f.write(s)
+        f.close()
     
     if submitFilename != None:
         submitFile.close()
@@ -127,6 +147,7 @@ if __name__=="__main__":
     optparser.add_option("-w", "--workdir", default="/wrk/jakrbj/shared-task-test", dest="workdir", help="working directory")
     optparser.add_option("-q", "--queue", default="/wrk/jakrbj/jobqueue", dest="queue", help="job queue directory")
     optparser.add_option("-s", "--submitFile", default=None, dest="submitFile", help="A file with bsub commands")
+    optparser.add_option("-j", "--oneJob", default=False, action="store_true", dest="oneJob", help="Make one job script")
     (options, args) = optparser.parse_args()
     assert options.input != None
     assert os.path.exists(options.input)
@@ -135,4 +156,4 @@ if __name__=="__main__":
     assert options.queue != None
     assert os.path.exists(options.queue)
     
-    update(options.input, options.output, options.workdir, options.queue, options.submitFile, options.files)
+    update(options.input, options.output, options.workdir, options.queue, options.submitFile, options.files, oneJob=options.oneJob)
