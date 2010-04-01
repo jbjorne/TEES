@@ -17,9 +17,9 @@ def main(inDir, failFileName):
                     if line.find("Traceback") != -1:
                         failFile.write(medlineName)
                         print medlineName, "failed"
-                        errorLineCount = 20
+                        errorLineCount = 10
                     if errorLineCount > 0:
-                        print "    " + line
+                        print "    " + line[:-1]
                         errorLineCount -= 1
                 f.close()
     failFile.close()
