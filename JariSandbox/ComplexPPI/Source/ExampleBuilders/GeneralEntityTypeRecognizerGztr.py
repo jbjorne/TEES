@@ -1,7 +1,7 @@
 """
 Trigger examples
 """
-__version__ = "$Revision: 1.14 $"
+__version__ = "$Revision: 1.15 $"
 
 import sys, os
 thisPath = os.path.dirname(os.path.abspath(__file__))
@@ -28,7 +28,7 @@ def compareDependencyEdgesById(dep1, dep2):
        return -1
 
 class GeneralEntityTypeRecognizerGztr(ExampleBuilder):
-    def __init__(self, style=None, classSet=None, featureSet=None, gazetteerFileName=None):
+    def __init__(self, style=None, classSet=None, featureSet=None, gazetteerFileName=None, skiplist=None):
         if classSet == None:
             classSet = IdSet(1)
         assert( classSet.getId("neg") == 1 )
@@ -44,11 +44,21 @@ class GeneralEntityTypeRecognizerGztr(ExampleBuilder):
             print >> sys.stderr, "No gazetteer loaded"
             self.gazetteer=None
         self.styles = style
+        
+        self.skiplist = set()
+        if skiplist != None:
+            f = open(skiplist, "rt")
+            for line in f.readlines():
+                self.skiplist.add(line.strip())
+            f.close()
 
     @classmethod
-    def run(cls, input, output, parse, tokenization, style, idFileTag=None, gazetteerFileName=None):
+    def run(cls, input, output, parse, tokenization, style, idFileTag=None, gazetteerFileName=None, skiplist=None):
+        if skiplist == "PubMed100p":
+            skiplist = os.path.dirname(os.path.abspath(__file__))+"/Filters/PubMed100pSkipList.txt"
+        
         classSet, featureSet = cls.getIdSets(idFileTag)
-        e = GeneralEntityTypeRecognizerGztr(style, classSet, featureSet, gazetteerFileName)
+        e = GeneralEntityTypeRecognizerGztr(style, classSet, featureSet, gazetteerFileName, skiplist=skiplist)
         if "names" in style:
             sentences = cls.getSentences(input, parse, tokenization, removeNameInfo=True)
         else:
@@ -136,6 +146,10 @@ class GeneralEntityTypeRecognizerGztr(ExampleBuilder):
         """
         Build one example for each token of the sentence
         """
+        if sentenceGraph.sentenceElement.get("origId") in self.skiplist:
+            print >> sys.stderr, "Skipping sentence", sentenceGraph.sentenceElement.get("origId") 
+            return []
+        
         examples = []
         exampleIndex = 0
         
