@@ -8,7 +8,7 @@ class ProgressCounter:
         self.prevProgress = -99.0
         self.id = id
         self.prevUpdateString = "None"
-        self.step = step
+        self.step = 0#step
         
         self.prevPrintTime = 0
         self.timeStep = 30
