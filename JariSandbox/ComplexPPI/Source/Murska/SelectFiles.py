@@ -21,7 +21,7 @@ def main(inDir, outDir, failFileName):
             print "Copying", inputFile 
             if not os.path.exists(os.path.join(outDir,triple[0])):
                 os.makedirs(os.path.join(outDir,triple[0]))
-            shutil.copy( os.path.join(inDir,triple[0],inputFile), os.path.join(outDir,triple[0],inputFile) ) 
+            shutil.copy( os.path.join(triple[0],inputFile), os.path.join(outDir,triple[0],inputFile) ) 
 
 if __name__=="__main__":
     optparser = OptionParser()
