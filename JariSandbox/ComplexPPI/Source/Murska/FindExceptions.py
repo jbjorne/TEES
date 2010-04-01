@@ -15,7 +15,7 @@ def main(inDir, failFileName):
                     if medlinePos != -1:
                         medlineName = line[medlinePos:medlinePos+32]
                     if line.find("Traceback") != -1:
-                        failFile.write(medlineName)
+                        failFile.write(medlineName+"\n")
                         print medlineName, "failed"
                         errorLineCount = 10
                     if errorLineCount > 0:
