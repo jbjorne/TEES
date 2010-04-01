@@ -1,12 +1,13 @@
 """
 Main class for representing a sentence
 """
-__version__ = "$Revision: 1.31 $"
+__version__ = "$Revision: 1.32 $"
 
 import Graph.networkx_v10rc1 as NX10 # import networkx as NX
 import Range
 import types
 import copy
+import sys
 
 multiedges = True
 
@@ -316,7 +317,11 @@ class SentenceGraph:
         depTypesToInclude = ["prep", "nn", "det", "hyphen", "num", "amod", "nmod", "appos", "measure", "dep", "partmod"]
         #depTypesToRemoveReverse = ["A/AN"]
         modifiedScores = True
+        loopCount = 0 # loopcount for devel set approx. 2-4
         while modifiedScores == True: # loop until the scores no longer change
+            if loopCount > 20: # survive loops
+                print >> sys.stderr, "Warning, possible loop in parse for sentence", self.getSentenceId()
+                break
             modifiedScores = False
             for token1 in self.tokens:
                 for token2 in self.tokens: # for each combination of tokens...
@@ -332,6 +337,7 @@ class SentenceGraph:
 #                            if self.tokenHeadScores[tokenJ] <= self.tokenHeadScores[tokenI]:
 #                                self.tokenHeadScores[tokenJ] = self.tokenHeadScores[tokenI] + 1
 #                                modifiedScores = True
+            loopCount += 1
         return self.tokenHeadScores
 
     def _markNamedEntities(self):
