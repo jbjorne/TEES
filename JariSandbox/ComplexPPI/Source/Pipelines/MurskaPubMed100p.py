@@ -53,7 +53,7 @@ RECALL_BOOST_PARAM=0.65
 
 # These commands will be in the beginning of most pipelines
 workdir(WORKDIR, True) # Select a working directory, don't remove existing files
-log(logFile=OUTFILE_STEM+"-log.txt") # Start logging into a file in output (not work) directory
+log(clear=True, logFile=OUTFILE_STEM+"-log.txt") # Start logging into a file in output (not work) directory
 TRIGGER_IDS=copyIdSetsToWorkdir(Settings.TriggerIds)
 EDGE_IDS=copyIdSetsToWorkdir(Settings.EdgeIds)
 
@@ -68,7 +68,7 @@ TEST_FILE = options.input
 # "ids" is the identifier of the class- and feature-id-files. When
 # class and feature ids are reused, models can be reused between experiments.
 # Existing id-files, if present, are automatically reused.
-GeneralEntityTypeRecognizerGztr.run(TEST_FILE, "trigger-test-examples", PARSE_TOK, PARSE_TOK, "style:typed", TRIGGER_IDS, None)
+GeneralEntityTypeRecognizerGztr.run(TEST_FILE, "trigger-test-examples", PARSE_TOK, PARSE_TOK, "style:typed", TRIGGER_IDS, None)#, skiplist="PubMed100p")
 Cls.test("trigger-test-examples", TRIGGER_MODEL, "trigger-test-classifications")
 # Evaluate the predictions
 #Ev.evaluate("trigger-test-examples", "trigger-test-classifications", TRIGGER_IDS+".class_names")
@@ -155,4 +155,5 @@ if edgeExampleFileSize != 0:
     #evaluateSharedTask("geniaformat", 1)
     
 # Remove workdir
-shutil.rmtree(options.workdir)
+if os.environ.has_key("METAWRK"): # CSC
+    shutil.rmtree(options.workdir)
