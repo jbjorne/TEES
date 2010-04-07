@@ -20,6 +20,15 @@ def main(inDir, outDir, failFileName):
             if not os.path.exists(os.path.join(outDir,triple[0],fileStem+"-events.xml.gz")):
                 print "Input file", inputFile, "has failed"
                 failFile.write(os.path.join(triple[0],inputFile)+"\n")
+            missing = []
+            if not os.path.exists(os.path.join(outDir,triple[0],fileStem+"-events_unflattened.xml.gz")):
+                missing.append("unflattened")
+            if not os.path.exists(os.path.join(outDir,triple[0],fileStem+"-events_unflattened_task3.xml.gz")):
+                missing.append("unflattened_task3")
+            if not os.path.exists(os.path.join(outDir,triple[0],fileStem+"-events_geniaformat.tar.gz")):
+                missing.append("geniaformat")
+            print "Input file", inputFile, "is missing", sorted(missing)
+            
     failFile.close()
 
 if __name__=="__main__":
