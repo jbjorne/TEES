@@ -1,7 +1,7 @@
 """
 Trigger examples
 """
-__version__ = "$Revision: 1.15 $"
+__version__ = "$Revision: 1.16 $"
 
 import sys, os
 thisPath = os.path.dirname(os.path.abspath(__file__))
@@ -162,6 +162,8 @@ class GeneralEntityTypeRecognizerGztr(ExampleBuilder):
                 if entity.get("isName") == "True": # known data which can be used for features
                     namedEntityCount += 1
             namedEntityCountFeature = "nameCount_" + str(namedEntityCount)
+            if namedEntityCount == 0: # no names, no need for triggers
+                return []
             
             if "pos_pairs" in self.styles:
                 namedEntityHeadTokens = self.getNamedEntityHeadTokens(sentenceGraph)
