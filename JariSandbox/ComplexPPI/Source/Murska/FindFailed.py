@@ -27,7 +27,8 @@ def main(inDir, outDir, failFileName):
                 missing.append("unflattened_task3")
             if not os.path.exists(os.path.join(outDir,triple[0],fileStem+"-events_geniaformat.tar.gz")):
                 missing.append("geniaformat")
-            print "Input file", inputFile, "is missing", sorted(missing)
+            if len(missing) > 0:
+                print "Input file", inputFile, "is missing", sorted(missing)
             
     failFile.close()
 
