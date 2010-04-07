@@ -29,8 +29,6 @@ def main(inDirs, outDir, failFileName):
                         missing.append("unchanged")
                 if not os.path.exists(os.path.join(outDir,triple[0],fileStem+"-events_unflattened.xml.gz")):
                     missing.append("unflattened")
-                if not os.path.exists(os.path.join(outDir,triple[0],fileStem+"-events_unflattened.xml.gz")):
-                    missing.append("unflattened")
                 if not os.path.exists(os.path.join(outDir,triple[0],fileStem+"-events_unflattened_task3.xml.gz")):
                     missing.append("unflattened_task3")
                 if not os.path.exists(os.path.join(outDir,triple[0],fileStem+"-events_geniaformat.tar.gz")):
@@ -38,7 +36,7 @@ def main(inDirs, outDir, failFileName):
                 if len(missing) > 0:
                     missing = sorted(missing)
                     print "Input file", inputFile, "is missing", missing
-                    failFile.write(os.path.join(triple[0],inputFile)+ " ; " + missing + "\n")
+                    failFile.write(os.path.join(triple[0],inputFile)+ " ; " + str(missing) + "\n")
             
     failFile.close()
 
