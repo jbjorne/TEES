@@ -50,10 +50,11 @@ def makeJobScript(jobName, inputFiles, outDir, workDir, timeOut=False, s=""):
         s += "##Memory limit \n"
         s += "#BSUB -M 4200000 \n"
         s += "##Max runtime \n"
-        timeMin = 20 * len(inputFiles)
-        timeHours = timeMin / 60
-        timeMin = timeMin % 60
+        #timeMin = 20 * len(inputFiles)
+        #timeHours = timeMin / 60
+        #timeMin = timeMin % 60
         #s += "#BSUB -W 10:00 \n"
+        s += "#BSUB -W 48:00 \n"
         s += "#BSUB -W " + str(timeHours) + ":" + str(timeMin) + " \n"
         s += "#BSUB -J " + jobName[4:14] + "\n"
         s += "#BSUB -o " + outDir + "/" + jobName + ".stdout \n"
@@ -121,12 +122,12 @@ def update(inDir, outDir, workDir, queueDir, submitFilename=None, listFile=False
         jobName = getScriptName(queueDir, nameBase)
         if not oneJob:
             print "Making job", jobName, "with", len(inputFiles), "input files."
-            s = makeJobScript(jobName, inputFiles, os.path.abspath(os.path.join(outDir, triple[0])), os.path.abspath(workDir + "/" + jobName), timeOut=True)
+            s = makeJobScript(jobName, inputFiles, os.path.abspath(os.path.join(outDir, triple[0])), os.path.abspath(workDir + "/" + jobName), timeOut=False)
             f = open(os.path.abspath(queueDir + "/" + jobName), "wt")
             f.write(s)
             f.close()
         else:
-            s = makeJobScript(jobName, inputFiles, os.path.abspath(os.path.join(outDir, triple[0])), os.path.abspath(workDir + "/" + jobName), timeOut=True, s=s)
+            s = makeJobScript(jobName, inputFiles, os.path.abspath(os.path.join(outDir, triple[0])), os.path.abspath(workDir + "/" + jobName), timeOut=False, s=s)
         
         if submitFilename != None:
             submitFile.write("cat " + os.path.abspath(queueDir + "/" + jobName) + " | bsub\n")
