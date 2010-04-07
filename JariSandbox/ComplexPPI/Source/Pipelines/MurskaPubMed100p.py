@@ -51,6 +51,13 @@ PARSE_TOK="split-McClosky"
 
 RECALL_BOOST_PARAM=0.65
 
+logFileName = OUTFILE_STEM+"-log.txt"
+count = 2
+while os.path.exists(logFileName):
+    print >> sys.stderr, "Log file", logFileName, "exists, trying", OUTFILE_STEM + "-log-" + str(count) + ".txt"
+    logFileName = OUTFILE_STEM + "-log-" + str(count) + ".txt"
+    count += 1
+
 # These commands will be in the beginning of most pipelines
 workdir(WORKDIR, True) # Select a working directory, don't remove existing files
 log(clear=True, logFile=OUTFILE_STEM+"-log.txt") # Start logging into a file in output (not work) directory
@@ -119,6 +126,7 @@ if edgeExampleFileSize != 0:
     #EvaluateInteractionXML.run(Ev, edgeXML, GOLD_TEST_FILE, PARSE_TOK, PARSE_TOK)
 else:
     print >> sys.stderr, "No edge examples generated"
+    open(OUTFILE_STEM + "-no_events", "w").close() 
     
 ###############################################################################
 # Post-processing and task 3 
