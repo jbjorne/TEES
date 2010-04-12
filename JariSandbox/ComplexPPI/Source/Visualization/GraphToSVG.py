@@ -20,6 +20,9 @@ def tokensToSVG(tokenElements, showPOS=False, entitiesByToken=None, extraByToken
         if entitiesByToken != None and entitiesByToken.has_key(token):
             count = maxOtherLines
             for entity in entitiesByToken[token]:
+                if entity.get("highlight") == "True":
+                    svgToken.styleDict["fill"] = "green"
+
                 if entity.attrib["isName"] == "True":
                     svgToken.otherLines.append("["+entity.get("type")+"]")
                 else:
@@ -75,7 +78,11 @@ def edgesToSVG(svgTokens, graph, edgeTypeAttrib="type", edgeTypes={}):
                 svgEdge = draw_dg.Dep(svgTokensById[token1], svgTokensById[token2], edgeTypes[edge])
             else:
                 svgEdge = draw_dg.Dep(svgTokensById[token1], svgTokensById[token2], "i")
-               
+        
+        if edge[2]["element"].get("highlight") == "True":
+            svgEdge.arcStyleDict["stroke-width"] = "3"
+            svgEdge.arcStyleDict["stroke"] = "green"
+
         # Set styles
         if edge[2].has_key("arcStyles"):
             for key in sorted(edge[2]["arcStyles"].keys()):

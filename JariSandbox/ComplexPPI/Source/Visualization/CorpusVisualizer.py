@@ -183,7 +183,7 @@ class CorpusVisualizer:
         builder.lineBreak()
         return stats
     
-    def makeExampleGraph(self, builder, sentenceGraph, examples, classificationsByExample):
+    def makeExampleGraph(self, builder, sentenceGraph, examples, classificationsByExample, sentenceIndex):
         exampleGraph = NX.XDiGraph()#multiedges = True)
         for token in sentenceGraph.tokens:
             exampleGraph.add_node(token)
@@ -248,14 +248,15 @@ class CorpusVisualizer:
         #arcStyles, labelStyles = self.getMatchingEdgeStyles(exampleGraph, sentenceGraph.interactionGraph, "green", "red" )
         svgEdges = GraphToSVG.edgesToSVG(svgTokens, exampleGraph, arcStyles, labelStyles, None, edgeTypes)
         sentenceId = sentenceGraph.getSentenceId()
-        svgElement = GraphToSVG.writeSVG(svgTokens, svgEdges, self.outDir+"/svg/"+sentenceId+"_learned.svg")
-        builder.svg("../svg/" + sentenceId + "_learned.svg",svgElement.attrib["width"],svgElement.attrib["height"],id="learned_graph")
+        svgElement = GraphToSVG.writeSVG(svgTokens, svgEdges, self.outDir+"/svg/"+sentenceId+"-"+str(sentenceIndex)+"_learned.svg")
+        builder.svg("../svg/" + sentenceId + "-"+str(sentenceIndex)+"_learned.svg",svgElement.attrib["width"],svgElement.attrib["height"],id="learned_graph")
         builder.lineBreak()
     
     def makeSentencePage(self, sentenceGraph, examples, classificationsByExample, prevAndNextId=None, goldGraph=None):
         # Store info for sentence list
         sentenceId = sentenceGraph.getSentenceId()
         self.sentences.append([sentenceGraph,0,0,0,0])
+        sentenceIndex = len(self.sentences)
         sentenceGraph.stats = {"entities":0,"edges":0,"tp":0,"fp":0,"tn":0,"fn":0}
         visualizationSet = None
         if examples != None:
@@ -292,15 +293,16 @@ class CorpusVisualizer:
         
         if prevAndNextId != None:
             if prevAndNextId[0] != None:
-                builder.link(prevAndNextId[0]+".html","previous")
+                builder.link(prevAndNextId[0]+"-"+str(sentenceIndex-1)+".html","previous")
             else:
                 builder.span("previous","color:#0000FF;")
             if prevAndNextId[1] != None:
-                builder.link(prevAndNextId[1]+".html","next")
+                builder.link(prevAndNextId[1]+"-"+str(sentenceIndex+1)+".html","next")
             else:
                 builder.span("next","color:#0000FF;")
     
         builder.span("Original ID: " + self.__getOrigId(sentenceGraph.sentenceElement))
+        builder.span("Index: " + str(sentenceIndex))
         builder.closeElement() # div      
         builder.lineBreak()
         
@@ -308,8 +310,8 @@ class CorpusVisualizer:
         builder.header("Parse",4)
         svgTokens = GraphToSVG.tokensToSVG(sentenceGraph.tokens, True)
         svgDependencies = GraphToSVG.edgesToSVG(svgTokens, sentenceGraph.dependencyGraph)
-        svgElement = GraphToSVG.writeSVG(svgTokens, svgDependencies,self.outDir+"/svg/"+sentenceId+".svg")
-        builder.svg("../svg/" + sentenceId + ".svg",svgElement.attrib["width"],svgElement.attrib["height"],id="dep_graph")
+        svgElement = GraphToSVG.writeSVG(svgTokens, svgDependencies,self.outDir+"/svg/"+sentenceId+"-"+str(sentenceIndex)+".svg")
+        builder.svg("../svg/" + sentenceId + "-"+str(sentenceIndex)+".svg",svgElement.attrib["width"],svgElement.attrib["height"],id="dep_graph")
         builder.lineBreak()
         
         
@@ -326,7 +328,7 @@ class CorpusVisualizer:
             arcStyles, labelStyles = self.getMatchingEdgeStyles(goldGraph.interactionGraph, goldGraph.dependencyGraph, "orange", "#F660AB" )
             svgTokens = GraphToSVG.tokensToSVG(goldGraph.tokens, False, goldGraph.entitiesByToken, None, isNameByToken)
             svgInteractionEdges = GraphToSVG.edgesToSVG(svgTokens, goldGraph.interactionGraph)
-            svgElement = GraphToSVG.writeSVG(svgTokens, svgInteractionEdges,self.outDir+"/svg/"+sentenceId+"_ann.svg")
+            svgElement = GraphToSVG.writeSVG(svgTokens, svgInteractionEdges,self.outDir+"/svg/"+sentenceId+"-"+str(sentenceIndex)+"_ann.svg")
         elif sentenceGraph.interactionGraph != None:
             # Check for named entities
             isNameByToken = {}
@@ -338,15 +340,15 @@ class CorpusVisualizer:
             arcStyles, labelStyles = self.getMatchingEdgeStyles(sentenceGraph.interactionGraph, sentenceGraph.dependencyGraph, "orange", "#F660AB" )
             svgTokens = GraphToSVG.tokensToSVG(sentenceGraph.tokens, False, sentenceGraph.entitiesByToken, None, isNameByToken)
             svgInteractionEdges = GraphToSVG.edgesToSVG(svgTokens, sentenceGraph.interactionGraph)
-            svgElement = GraphToSVG.writeSVG(svgTokens, svgInteractionEdges,self.outDir+"/svg/"+sentenceId+"_ann.svg")
-        builder.svg("../svg/" + sentenceId + "_ann.svg",svgElement.attrib["width"],svgElement.attrib["height"],id="ann_graph")
+            svgElement = GraphToSVG.writeSVG(svgTokens, svgInteractionEdges,self.outDir+"/svg/"+sentenceId + "-"+str(sentenceIndex)+"_ann.svg")
+        builder.svg("../svg/" + sentenceId + "-"+str(sentenceIndex)+"_ann.svg",svgElement.attrib["width"],svgElement.attrib["height"],id="ann_graph")
         builder.lineBreak()
         
         # Classification svg
         if classificationsByExample != None:
-            self.makeExampleGraph(builder, sentenceGraph, examples, classificationsByExample)      
+            self.makeExampleGraph(builder, sentenceGraph, examples, classificationsByExample, sentenceIndex)      
         elif goldGraph != None:
-            sentenceGraph.stats = self.makeExampleGraphWithGold(builder, sentenceGraph, goldGraph)
+            sentenceGraph.stats = self.makeExampleGraphWithGold(builder, sentenceGraph, goldGraph, sentenceIndex)
         
         builder.table(0,align="center",width="100%")
         builder.tableRow()
@@ -465,8 +467,8 @@ class CorpusVisualizer:
                 builder.lineBreak()
                 builder.lineBreak()
             
-        builder.write(self.outDir + "/sentences/"+sentenceId+".html")
-        repairApostrophes(self.outDir + "/sentences/"+sentenceId+".html")
+        builder.write(self.outDir + "/sentences/"+sentenceId+"-"+str(sentenceIndex)+".html")
+        repairApostrophes(self.outDir + "/sentences/"+sentenceId+"-"+str(sentenceIndex)+".html")
     
     def makeSentenceListPage(self):
         #print >> sys.stderr, "Making sentence page"
@@ -493,12 +495,16 @@ class CorpusVisualizer:
         builder.closeElement() # close tableHead
         
         builder.tableBody()
+        count = 0
         for sentence in self.sentences:
+            count += 1
+            if sentence == None:
+                continue
             #sentence = sentencesById[key]
             sentenceId = sentence[0].getSentenceId()
             builder.tableRow()
             builder.tableData()
-            builder.link("sentences/" + sentenceId + ".html", sentenceId)
+            builder.link("sentences/" + sentenceId + "-" + str(count) + ".html", sentenceId)
             builder.closeElement()
             
             text = sentence[0].sentenceElement.attrib["text"]
@@ -599,11 +605,14 @@ if __name__=="__main__":
     visualizer = CorpusVisualizer(options.output, True)
     for i in range(len(sentences)):
         sentence = sentences[i]
-        print >> sys.stderr, "\rProcessing sentence", sentence[0].getSentenceId(), "          ",
+        if sentence[0] != None:
+            print >> sys.stderr, "\rProcessing sentence", sentence[0].getSentenceId(), "          ",
+        else:
+            continue
         prevAndNextId = [None,None]
-        if i > 0:
+        if i > 0 and sentences[i-1][0] != None:
             prevAndNextId[0] = sentences[i-1][0].getSentenceId()
-        if i < len(sentences)-1:
+        if i < len(sentences)-1 and sentences[i+1][0] != None:
             prevAndNextId[1] = sentences[i+1][0].getSentenceId()
         if goldElements != None:
             visualizer.makeSentencePage(sentence[0],sentence[1],None,prevAndNextId,goldElements.sentencesById[sentence[0].getSentenceId()].sentenceGraph)
