@@ -112,12 +112,12 @@ class HtmlBuilder:
     def svg(self,filename,width=None,height=None,id=None,onload=None):
         #if title == None:
         #    title = filename
-        #object = ET.SubElement(self.parents[-1], "object")
-        object = ET.SubElement(self.parents[-1], "embed")
-        #object.set("type","image/svg+xml")
+        object = ET.SubElement(self.parents[-1], "object")
+        #object = ET.SubElement(self.parents[-1], "embed")
+        object.set("type","image/svg+xml")
         #object.set("name",title)
-        #object.set("data",filename)
-        object.set("src",filename)
+        object.set("data",filename)
+        #object.set("src",filename)
         if width != None:
             object.set("width",str(width))
         if height != None:
