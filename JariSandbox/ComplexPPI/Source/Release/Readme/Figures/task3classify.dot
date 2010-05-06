@@ -1,0 +1,21 @@
+digraph task3classification 
+{
+node [shape=polygon, skew=0.6, label="Events (XML)"]; events; 
+node [shape=box, label="Task3ExampleBuilder"]; examplebuilder; 
+node [shape=polygon, skew=0.6, label="Speculation\nExamples"]; specex;
+node [shape=polygon, skew=0.6, label="Negation\nExamples"]; negex; 
+node [shape=box, label="SVMMultiClassClassifier"]; classifier; 
+node [shape=polygon, skew=0.6, label="Speculation\nClassifications"]; speccls;
+node [shape=polygon, skew=0.6, label="Negation\nClassifications"]; negcls; 
+node [shape=polygon, skew=0.6, label="Events (XML)"]; events2; 
+
+events->examplebuilder;
+examplebuilder->specex;
+examplebuilder->negex;
+specex->classifier;
+negex->classifier;
+classifier->speccls;
+classifier->negcls;
+speccls->events2;
+negcls->events2;
+}

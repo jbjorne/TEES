@@ -19,6 +19,14 @@
     urlcolor=cyan           % color of external links
 }
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%% Setting to control figure placement
+% These determine the rules used to place floating objects like figures 
+% They are only guides, but read the manual to see the effect of each.
+\renewcommand{\topfraction}{.9}
+\renewcommand{\bottomfraction}{.9}
+\renewcommand{\textfraction}{.1}
+
+
 \title{\vspace{-4cm}Turku Event Extraction System\\}
 \author{}
 \date{}
@@ -31,8 +39,7 @@
 %\item[Software:] University of Turku BioNLP'09 Event Detection Software
 \item[Release Date:] 25.03.2010
 \item[Version:] 1.0
-\item[Authors:] Jari Bj{\"{o}}rne, Juho Heimonen, Filip Ginter, Antti Airola,
-Tapio Pahikkala and Tapio Salakoski
+\item[Authors:] Jari Bj{\"{o}}rne, Juho Heimonen, Filip Ginter
 \item[Contact:] Jari Bj{\"{o}}rne (jari.bjorne@utu.fi)
 \end{description}
 
@@ -50,7 +57,7 @@ the interaction XML (see section 5) format. Software is also provided for
 generating the XML from the BioNLP'09 Shared Task data format.
 
 This file describes the overall design and use of the event extraction system.
-For the API documentation, see doc/index.html.
+For the API documentation, see API-doc.html.
 
 \section{Related Publications}
 
@@ -74,7 +81,7 @@ Morristown, NJ, USA, 2009. Association for Computational Linguistics. ISBN
 \vspace{5 mm}
    
 J. Bj{\"{o}}rne, J. Heimonen, F. Ginter, A. Airola, T. Pahikkala, and T.
-Salakoski. Extracting o contextualized complex biological events with rich
+Salakoski. Extracting contextualized complex biological events with rich
 graph-based feature sets. \emph{Computational Intelligence, Special issue on
 Extracting Bio-molecular Events from Literature}, 2010. To appear.
 
@@ -100,7 +107,7 @@ The event detection requires sentences to be parsed sentences and named
 entities (usually gene or protein names) to be marked. For parsing and named
 entity detection, other software must be used (Figure~\ref{fig-overview}).
 
-\begin{figure}[h]
+\begin{figure}[htb]
 \begin{center}
 \includegraphics[scale=0.75]{Figures/model-sentence-pubmed1p.pdf}
 \end{center}
@@ -108,20 +115,28 @@ entity detection, other software must be used (Figure~\ref{fig-overview}).
 \label{fig-sentence}
 \end{figure}
 
-\begin{figure}[h]
+\begin{figure}[htb]
 \begin{center}
-\includegraphics[scale=0.5]{Figures/overview.pdf}
+\includegraphics[scale=0.4]{Figures/overview.pdf}
 \end{center}
-\caption{The Turku Event Extraction System (TEES) detects events
+\caption{
+\emph{A.} The Turku Event Extraction System (TEES) detects events
 in parsed sentences which have annotated named entities, or where named
-entities have been detected with a named entity recognizer (NER).}
+entities have been detected with a named entity recognizer (NER).
+\emph{B.} The event detection system contains three main components, the
+trigger detector, the edge detector and the semantic post processing module
+(unflattener). 
+\emph{C.} The ExampleBuilder classes convert the Interaction XML representation
+of the text into machine learning examples. Training examples are used to
+produce an SVM model that is used to classify the unknown test examples. Classifications can be evaluated with an Evaluator class, or written back to interaction XML with an
+ExampleWriter class. }
 \label{fig-overview}
 \end{figure}
 
 The BioNLP'09 Shared Task data provides parses and named entities. We provide
 this data already in the interaction XML format. It should be quite simple to
 insert e.g. your own parses into this format. In case you need to rebuild your
-own interaction XML files, use XXX.
+own interaction XML files, use src.
 
 \section{How to Use It}
 
@@ -143,11 +158,12 @@ with the command "perl".
 
 For additional settings, there is a settings file located in src/Settings.py. You
 probably only need to modify it if you want to retrain the system, in which case
-you need Joachims SVM-multiclass. Download it from
-\url{http://svmlight.joachims.org/svm\_multiclass.html} and compile with a C
-compiler. You will now have two binaries, "svm\_multiclass\_learn" and
-"svm\_multiclass\_classify". In src/Settings.py set the variable SVMMultiClassDir
-to point to the directory containing the binaries.
+you need Joachims SVM-multiclass. If you are on a Linux machine, you can
+use the script \emph{install-svm-multiclass.sh} to setup and configure the
+classifier. Otherwise download it from \url{http://svmlight.joachims.org/svm\_multiclass.html} and
+compile with a C compiler. You will now have two binaries,
+"svm\_multiclass\_learn" and "svm\_multiclass\_classify". In src/Settings.py set
+the variable SVMMultiClassDir to point to the directory containing the binaries.
 
 All the included XML-files contain information for all three subtasks of the
 BioNLP'09 Shared Task. All the model files are trained for joint prediction of
@@ -165,10 +181,10 @@ scripts that call functions defined in the public interface of the event
 detection system. These functions usually pass the same data forward, each
 performing some step in the experiment. There are multiple pre-made pipelines in
 the package, and these should cover the most common use cases of the software.
-These are located in src/Classifiers/. To run a pipeline, simply call it with
+These are located in src/Pipelines/. To run a pipeline, simply call it with
 python "python name.py". For the provided pipelines, you can also pass command
 line parameters. To see a list of available options, call the program with the
-option "$--$help".
+option \emph{$--$help}.
 
 The BioNLP'09 Data used for training and testing the system is divided into
 four sets. \emph{Train} and \emph{devel} sets are both known data, and are used
@@ -220,11 +236,11 @@ Classification will work even without SVM-multiclass, but is extremely slow
 (slightly faster if you have numpy installed). See
 section~\ref{sec-requirements} for instructions on how to download and configure SVM-multiclass.
 
-If you have made your own input interaction xml file (such as a new corpus or
-something), and just want to classify it with our models, use the "-i" parameter
-to define that file. You can also use "-t" and "-p" to define a tokenization and
-parse, but remember that the system is using models trained on our parses, so if
-yours differ too much, performance will suffer.
+If you have made your own input interaction xml file (such as a new corpus), and
+just want to classify it with our models, use the "-i" parameter to define that
+file. You can also use "-t" and "-p" to define a tokenization and parse, but
+remember that the system is using models trained on our parses, so if yours
+differ too much, performance will suffer.
 
 If you have re-trained the system (see Section~\ref{sec-retraining}), you can
 use "-m" and "-n" to point to the model files, and "-r" to define your optimal 
@@ -247,9 +263,9 @@ matching id sets with the "-v" and "-w" parameters.
 \subsection{Retraining the system}
 \label{sec-retraining}
 
-\begin{figure}[h]
+\begin{figure}[htb]
 \begin{center}
-\includegraphics[scale=0.5]{Figures/programs12.pdf}
+\includegraphics[scale=0.4]{Figures/programs12.pdf}
 \end{center}
 \caption{BioNLP09Train.py is used to build SVM models from the training data
 (train or everything) and to search for the optimal parameters using known data
@@ -318,9 +334,9 @@ graph. When predicting task 3 over task 1 or 2 predictions, the
 "test-predicted-edges-unflattened.xml" output file from BioNLP09Classify.py is in
 the correct, duplicate-containing format.
 
-\begin{figure}[h]
+\begin{figure}[htb]
 \begin{center}
-\includegraphics[scale=0.5]{Figures/programs3.pdf}
+\includegraphics[scale=0.4]{Figures/programs3.pdf}
 \end{center}
 \caption{BioNLP09Train.py is used to build SVM models from the training data
 (train or everything) and to search for the optimal parameters using known data
@@ -342,8 +358,10 @@ also write your own to make different experiments.
 Interaction XML is the graph format used for representing the Shared Task data.
 It is semantically equal to the shared task format, but when training for event
 detection, it is compressed into a "flat/merged" format (See the BioNLP'09
-publication). The corpus files provided in this package are already in the flat
-format. The files are:
+publication). This package contains both the merged and unmerged versions of
+the corpus data files. The unmerged files are required for task 3, and they are
+named as the merged files, but with a \emph{-with-duplicates} tag. The merged
+files are:
 
 \begin{itemize}
 \item /data/devel123.xml: Shared Task devel set with information for all three tasks
@@ -360,7 +378,12 @@ Task organizers provide an online evaluation system
 
 \end{itemize}
 
-For converting XXX.
+For converting the Shared Task data you can use
+src/SharedTask/formatConversion/convertGenia.py. Run the program with the
+\emph{$--$help} switch for a list of options. The shared task data can be
+downloaded from the BioNLP'09 Shared Task
+site\footnote{\url{http://www-tsujii.is.s.u-tokyo.ac.jp/GENIA/SharedTask/}}.
+
 However, for most applications, the interaction xml files provide the best
 starting point. For example, if you want to use a new parse, just insert it into
 the interaction xml files, and it can be immediately used with the event
@@ -476,13 +499,11 @@ system with a different parse and tokenization.
 
 This software is copyright 2010 by the authors. It is distributed under GPL, see
 attached gpl.txt for details. This package contains also several external
-libraries and data, their licenses are as defined by their respective owners.
+libraries and data. All included resources are the property of their respective
+owners and their redistribution is governed by their specific licensing terms.
 Generally, everything here is free for non-commercial scientific use.
 
 \subsection{Included Resources}
-
-All included resources are the property of their respective owners and their
-redistribution is governed by their specific licensing terms.
 
 \begin{itemize}
 \item BioNLP'09 Shared Task data and evaluation software is copyright 2009 by
@@ -491,10 +512,13 @@ the GENIA team of University of Tokyo
 \item The provided parses were built using the improved self-trained biomedical
 parsing model of David McClosky
 (\url{http://www.cs.brown.edu/~dmcc/biomedical.html})
+\item The Protein Name Splitter parse pre-processing program is copyright
+2008 by Sampo Pyysalo.
+%(\url{http://www-tsujii.is.s.u-tokyo.ac.jp/members/wiki/wiki.cgi?page=Sampo+Pyysalo}).
 \item The NetworkX graph library is copyright 2010 by the NetworkX Developers
 (\url{http://networkx.lanl.gov/}).
 \item The Python implementation of the Porter stemming algorithm (Porter, 1980)
-was developed by Vivake Gupta.
+is made by Vivake Gupta.
 \item The Python statistics module is by Gary Strangman
 (\url{http://www.nmr.mgh.harvard.edu/Neural_Systems_Group/gary/python.html}).
 \end{itemize}
