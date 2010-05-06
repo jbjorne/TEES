@@ -145,14 +145,6 @@ def evaluate(sourceDir, task=1, folds=-1, foldToRemove=-1, evaluations=["strict"
     else: # Not reading the lines causes some error in the perl script!
         p.stderr.readlines()
         p.stdout.readlines()
-        
-    # Strip comments
-    #for filename in os.listdir(tempDir):
-    #    if filename.find(".a2") != -1:
-    #        sedCommand = "sed -e 's/#.*//;/^\\s*$/d' \"$@\" " + os.path.abspath(tempDir + "/" + filename)
-    #        p = subprocess.Popen(sedCommand, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    #        printLines(p.stderr.readlines())
-    #        printLines(p.stdout.readlines())
                 
     if "strict" in evaluations:
         commands = "export PATH=$PATH:./ ; "
