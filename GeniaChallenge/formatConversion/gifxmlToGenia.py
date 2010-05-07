@@ -421,16 +421,20 @@ def writeEvents(document, inputCorpus, outputFile, events, entityMap, triggerIds
             if interactionString not in interactionStrings:
                 if type == "Theme" and precalculatedThemeCount > 1:
                     outputLine += " " + interaction.get("type") + str(themeCount+1) + ":" + e2Id
-                    strengthLine += " " + interaction.get("type") + str(themeCount+1) + ":" + interaction.get("predictions")
+                    if strengths:
+                        strengthLine += " " + interaction.get("type") + str(themeCount+1) + ":" + interaction.get("predictions")
                     if site != None:
                         siteLine += " " + siteType + str(themeCount+1) + ":" + triggerIds[site.get("e1")]
-                        strengthLine += " " + siteType + str(themeCount+1) + ":" + site.get("predictions")
+                        if strengths:
+                            strengthLine += " " + siteType + str(themeCount+1) + ":" + site.get("predictions")
                 else:
                     outputLine += " " + interactionString
-                    strengthLine += " " + interaction.get("type") + ":" + interaction.get("predictions")
+                    if strengths:
+                        strengthLine += " " + interaction.get("type") + ":" + interaction.get("predictions")
                     if site != None:
                         siteLine += " " + siteType + ":" + triggerIds[site.get("e1")]
-                        strengthLine += " " + siteType + ":" + site.get("predictions")
+                        if strengths:
+                            strengthLine += " " + siteType + ":" + site.get("predictions")
             interactionStrings.add(interactionString) 
             
             if type == "Theme":
