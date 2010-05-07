@@ -2,12 +2,15 @@ import sys, os, shutil, tarfile
 from optparse import OptionParser
 
 def mapIds(eventFile, idDict):
-    f = tarfile.open(eventFile)
-    for name in f.getnames():
-        if name.find(".a2.t1") != -1:
-            id = name.rsplit(".",2)[0]
-            idDict[id] = eventFile
-    f.close()
+    try:
+        f = tarfile.open(eventFile)
+        for name in f.getnames():
+            if name.find(".a2.t1") != -1:
+                id = name.rsplit(".",2)[0]
+                idDict[id] = eventFile
+        f.close()
+    except:
+        print "Failed to open", eventFile
 
 def main(inDir, outDir):
     idDict = {}
