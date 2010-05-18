@@ -1,4 +1,4 @@
-import sys
+import sys, os
 import Graph.networkx_v10rc1 as NX
 try:
     import xml.etree.cElementTree as ET
@@ -6,6 +6,19 @@ except ImportError:
     import cElementTree as ET
 import cElementTreeUtils as ETUtils
 import prune
+
+thisPath = os.path.dirname(os.path.abspath(__file__))
+RELEASE = True
+#IF LOCAL
+RELEASE = False
+#ENDIF
+if RELEASE:
+    sys.path.append( os.path.split(os.path.abspath(__file__))[0] + "/../.." )
+#IF LOCAL
+else:
+    sys.path.append( os.path.split(os.path.abspath(__file__))[0] + "/../../JariSandbox/ComplexPPI/Source" )
+#ENDIF
+from Utils.ProgressCounter import ProgressCounter
 
 #         all_entities = ['Gene_expression','Transcription',
 #                         'Translation','Protein_catabolism',
@@ -608,7 +621,10 @@ def interface(optionArgs=sys.argv[1:]):
         return(False)
 
     corpus = ETUtils.ETFromObj(options.infile)
-    for document in corpus.getroot().findall('document'):
+    documents = corpus.getroot().findall('document')
+    counter = ProgressCounter(len(documents), "Unflatten")
+    for document in documents:
+        counter.update(1, "Unflattening ("+document.get("id")+"): ")
         #sys.stderr.write("Unflattening document %s\n"%document.attrib['id'])
         unflattener = Unflattener(document,options.perfect,
                                   options.tokens,options.parse)
