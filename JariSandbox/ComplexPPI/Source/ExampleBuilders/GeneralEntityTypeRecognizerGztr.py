@@ -1,7 +1,7 @@
 """
 Trigger examples
 """
-__version__ = "$Revision: 1.16 $"
+__version__ = "$Revision: 1.17 $"
 
 import sys, os
 thisPath = os.path.dirname(os.path.abspath(__file__))
@@ -338,6 +338,8 @@ class GeneralEntityTypeRecognizerGztr(ExampleBuilder):
 #                tokenText = sentenceGraph.getTokenText(nextToken)
 #                features[self.featureSet.getId("text_dist_"+strDepthLeft+tokenText)] = 1
                 
+                if sentenceGraph.tokenIsName[nextToken]:
+                    features[self.featureSet.getId("name_chain_dist_"+strDepthLeft+chain+"-frw_"+edgeType)] = 1
                 features[self.featureSet.getId("chain_dist_"+strDepthLeft+chain+"-frw_"+edgeType)] = 1
                 self.buildChains(nextToken,sentenceGraph,features,depthLeft-1,chain+"-frw_"+edgeType,edgeSet)
 
@@ -356,6 +358,8 @@ class GeneralEntityTypeRecognizerGztr(ExampleBuilder):
 #                features[self.featureSet.getId("POS_dist_"+strDepthLeft+nextToken.get("POS"))] = 1
 #                tokenText = sentenceGraph.getTokenText(nextToken)
 #                features[self.featureSet.getId("text_dist_"+strDepthLeft+tokenText)] = 1
+                if sentenceGraph.tokenIsName[nextToken]:
+                    features[self.featureSet.getId("name_chain_dist_"+strDepthLeft+chain+"-rev_"+edgeType)] = 1
                 
                 features[self.featureSet.getId("chain_dist_"+strDepthLeft+chain+"-rev_"+edgeType)] = 1
                 self.buildChains(nextToken,sentenceGraph,features,depthLeft-1,chain+"-rev_"+edgeType,edgeSet)
