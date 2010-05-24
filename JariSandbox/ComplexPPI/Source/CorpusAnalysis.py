@@ -409,6 +409,37 @@ def countDisconnectedHeads(corpusElements):
                 print "Disconnected entity", entity.get("id")
     print edgeCounts
 
+def countOverlappingHeads(corpusElements):
+    overlaps = {}
+    for sentence in corpusElements.sentences:
+        sentenceOverlaps = {}
+        for entity in sentence.entities:
+            head = entity.get("headOffset")
+            if not sentenceOverlaps.has_key(head):
+                sentenceOverlaps[head] = set()
+            sentenceOverlaps[head].add(entity.get("type"))
+        for value in sentenceOverlaps.values():
+            if len(value) > 1:
+                tag = str(sorted(list(value)))
+                if not overlaps.has_key(tag):
+                    overlaps[tag] = 0
+                overlaps[tag] += 1
+    print "Overlaps"
+    for key in sorted(overlaps.keys()):
+        print " ", key, overlaps[key]
+
+def countEntities(corpusElements):
+    counts = {}
+    for sentence in corpusElements.sentences:
+        for entity in sentence.entities:
+            eType = entity.get("type")
+            if not counts.has_key(eType):
+                counts[eType] = 0
+            counts[eType] += 1
+    print "Entity counts"
+    for key in sorted(counts.keys()):
+        print " ", key, counts[key]
+
 if __name__=="__main__":
     defaultAnalysisFilename = "/usr/share/biotext/ComplexPPI/BioInferForComplexPPIVisible_noCL.xml"
     optparser = OptionParser(usage="%prog [options]\nCreate an html visualization for a corpus.")
@@ -446,3 +477,7 @@ if __name__=="__main__":
         countEventComponents(corpusElements)
     if options.analyses.find("disconnected_heads") != -1:
         countDisconnectedHeads(corpusElements)
+    if options.analyses.find("overlapping_heads") != -1:
+        countOverlappingHeads(corpusElements)
+    if options.analyses.find("count_entities") != -1:
+        countEntities(corpusElements)
