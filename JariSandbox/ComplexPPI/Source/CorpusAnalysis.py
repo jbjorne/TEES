@@ -1,6 +1,7 @@
 import Core.SentenceGraph as SentenceGraph
 from optparse import OptionParser
-import networkx as NX
+#import networkx as NX
+import Graph.networkx_v10rc1 as NX10
 import sys, os
 import shutil
 import Utils.TableUtils as TableUtils
@@ -85,7 +86,7 @@ def analyzeLengths(corpusElements):
         dependencyEdges += len(sentenceGraph.dependencyGraph.edges())
         
         undirected = sentenceGraph.dependencyGraph.to_undirected()
-        paths = NX.all_pairs_shortest_path(undirected, cutoff=999)
+        paths = NX10.all_pairs_shortest_path(undirected, cutoff=999)
         # Shortest path for interaction edge
         for interaction in sentence.interactions:
             e1 = sentence.entitiesById[interaction.attrib["e1"]]
@@ -285,12 +286,135 @@ def listStructures(corpusElements):
         for i in sorted(structures[s].keys()):
             print >> sys.stderr, "  " + i + ": " + str(structures[s][i])
 
+def countEventComponents(corpusElements):
+    counts = {}
+    interSentenceCounts = {}
+    nonOverlappingCounts = {}
+    for sentence in corpusElements.sentences:
+        tokenPairsByType = {}
+        sentenceGraph = sentence.sentenceGraph
+        if sentenceGraph == None:
+            continue
+        for interaction in sentence.interactions:
+            #sId = sentenceGraph.getSentenceId()
+            e1Id = interaction.get("e1")
+            e2Id = interaction.get("e2")
+            if not sentenceGraph.entitiesById.has_key(e1Id):
+                continue
+            if not sentenceGraph.entitiesById.has_key(e2Id):
+                if not interSentenceCounts.has_key(tag):
+                    interSentenceCounts[tag] = 0
+                interSentenceCounts[tag] += 1
+                continue
+            
+            # Actual
+            e1 = sentenceGraph.entitiesById[e1Id]
+            tag = e1.get("type") + "_" + interaction.get("type")
+            if not counts.has_key(tag):
+                counts[tag] = 0
+            counts[tag] += 1
+            
+            e2 = sentenceGraph.entitiesById[e2Id]
+            # Non-overlapping
+            tokenPair = (sentenceGraph.entityHeadTokenByEntity[e1].get("id"), sentenceGraph.entityHeadTokenByEntity[e2].get("id")) 
+            #if interaction.get("id") in ["GENIA.d127.s6.i4", "GENIA.d127.s6.i5"]:
+            #    print "TP", tokenPair
+            if not tokenPair in tokenPairsByType.get(tag, []):
+                tokenPairsByType.setdefault(tag, set())
+                tokenPairsByType[tag].add(tokenPair)
+                nonOverlappingCounts.setdefault(tag, 0)
+                nonOverlappingCounts[tag] += 1
+            #else:
+            #    print tokenPair
+            
+            # Check for self-interactions
+            t1 = sentenceGraph.entityHeadTokenByEntity[e1]
+            t2 = sentenceGraph.entityHeadTokenByEntity[e2]
+            if t1 == t2:
+                print "Self-Int", tag
+            else:
+                if not sentenceGraph.interactionGraph.has_edge(t1, t2):
+                    print "ERROR! Missing-Int", tag
+    print "Event Components (Actual, Intersentence, Non-overlapping)"
+    for k in sorted(counts.keys()):
+        print k, counts[k], interSentenceCounts.get(k, 0), nonOverlappingCounts.get(k, 0)
+
+def countPOS(corpusElements):
+    posCounts = {}
+    for sentence in corpusElements.sentences:
+        sentenceGraph = sentence.sentenceGraph
+        if sentenceGraph == None:
+            continue
+        for token in sentenceGraph.tokens:
+            pos = token.get("POS")
+            if not posCounts.has_key(pos):
+                posCounts[pos] = [0,0]
+            if len(sentenceGraph.tokenIsEntityHead[token]) > 0:
+                posCounts[pos][0] += 1
+            else:
+                posCounts[pos][1] += 1
+    for key in sorted(posCounts.keys()):
+        print str(key) + ":", posCounts[key]
+
+def countPOSCombinations(corpusElements):
+    posCounts = {}
+    for sentence in corpusElements.sentences:
+        sentenceGraph = sentence.sentenceGraph
+        if sentenceGraph == None:
+            continue
+        for t1 in sentenceGraph.tokens:
+            for t2 in sentenceGraph.tokens:
+                if t1 == t2:
+                    continue
+                posTuple = ( t1.get("POS"), t2.get("POS") )
+                if not posCounts.has_key(posTuple):
+                    posCounts[posTuple] = {}
+                if sentenceGraph.interactionGraph.has_edge(t1, t2):
+                    intEdges = sentenceGraph.interactionGraph.get_edge_data(t1, t2, default={})
+                    for i in range(len(intEdges)):
+                        intElement = intEdges[i]["element"]
+                        intType = intElement.get("type")
+                        if not posCounts[posTuple].has_key(intType):
+                            posCounts[posTuple][intType] = 0
+                        posCounts[posTuple][intType] += 1
+                else:
+                    if not posCounts[posTuple].has_key("neg"):
+                        posCounts[posTuple]["neg"] = 0
+                    posCounts[posTuple]["neg"] += 1
+    for key in sorted(posCounts.keys()):
+        print str(key) + ":", posCounts[key]
+
+def countDisconnectedHeads(corpusElements):
+    edgeCounts = {}
+    for sentence in corpusElements.sentences:
+        sentenceGraph = sentence.sentenceGraph
+        if sentenceGraph == None:
+            continue
+        for entity in sentenceGraph.entities:
+            headToken = sentenceGraph.entityHeadTokenByEntity[entity]
+            headTokenId = headToken.get("id")
+            numEdges = 0
+            for dependency in sentenceGraph.dependencies:
+                if dependency.get("t1") == headTokenId or dependency.get("t2") == headTokenId:
+                    numEdges += 1 
+            #numEdges = len(sentenceGraph.dependencyGraph.edges([headToken]))
+            if not edgeCounts.has_key(numEdges):
+                edgeCounts[numEdges] = 0
+            edgeCounts[numEdges] += 1
+            if numEdges != 0:
+                if not edgeCounts.has_key("non-zero"):
+                    edgeCounts["non-zero"] = 0
+                edgeCounts["non-zero"] += 1
+            else:
+                print "Disconnected entity", entity.get("id")
+    print edgeCounts
+
 if __name__=="__main__":
     defaultAnalysisFilename = "/usr/share/biotext/ComplexPPI/BioInferForComplexPPIVisible_noCL.xml"
     optparser = OptionParser(usage="%prog [options]\nCreate an html visualization for a corpus.")
     optparser.add_option("-i", "--input", default=defaultAnalysisFilename, dest="input", help="Corpus in analysis format", metavar="FILE")
-    optparser.add_option("-t", "--tokenization", default="split_gs", dest="tokenization", help="tokenization")
-    optparser.add_option("-p", "--parse", default="split_gs", dest="parse", help="parse")
+    optparser.add_option("-t", "--tokenization", default="split-McClosky", dest="tokenization", help="tokenization")
+    optparser.add_option("-p", "--parse", default="split-McClosky", dest="parse", help="parse")
     optparser.add_option("-o", "--output", default=None, dest="output", help="output-folder")
     optparser.add_option("-a", "--analyses", default="", dest="analyses", help="selected optional analyses")
     (options, args) = optparser.parse_args()
@@ -301,16 +425,24 @@ if __name__=="__main__":
             shutil.rmtree(options.output)
         os.makedirs(options.output)
     
-    corpusElements = SentenceGraph.loadCorpus(options.input, options.parse, options.tokenization)
+    corpusElements = SentenceGraph.loadCorpus(options.input, options.parse, options.tokenization, removeIntersentenceInteractionsFromCorpusElements=False)
     print >> sys.stderr, "tokenization:", options.tokenization
     print >> sys.stderr, "parse:", options.parse
     
-    calculateMainStatistics(corpusElements)
-    analyzeLengths(corpusElements)
-    countMultipleEdges(corpusElements)
+    #calculateMainStatistics(corpusElements)
+    #analyzeLengths(corpusElements)
+    #countMultipleEdges(corpusElements)
     if options.analyses.find("entities") != -1:
         listEntities(corpusElements)
     if options.analyses.find("structures") != -1:
         listStructures(corpusElements)
     if options.analyses.find("linear_distance") != -1:
         analyzeLinearDistance(corpusElements)
+    if options.analyses.find("pos_counts") != -1:
+        countPOS(corpusElements)
+    if options.analyses.find("pos_pair_counts") != -1:
+        countPOSCombinations(corpusElements)
+    if options.analyses.find("event_components") != -1:
+        countEventComponents(corpusElements)
+    if options.analyses.find("disconnected_heads") != -1:
+        countDisconnectedHeads(corpusElements)
