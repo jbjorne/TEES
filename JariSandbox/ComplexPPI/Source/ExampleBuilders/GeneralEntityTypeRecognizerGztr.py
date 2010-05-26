@@ -1,7 +1,7 @@
 """
 Trigger examples
 """
-__version__ = "$Revision: 1.17 $"
+__version__ = "$Revision: 1.18 $"
 
 import sys, os
 thisPath = os.path.dirname(os.path.abspath(__file__))
@@ -116,6 +116,12 @@ class GeneralEntityTypeRecognizerGztr(ExampleBuilder):
         tokTxt=sentenceGraph.getTokenText(token)
         features = {}
         features["_txt_"+tokTxt]=1
+        
+        # F 69.35 -> 68.22
+        #normalizedText = tokTxt.replace("-","").replace("/","").replace(",","").replace("\\","").replace(" ","").lower()
+        #features["_norTxt_"+normalizedText]=1
+        #features["_norStem_" + PorterStemmer.stem(normalizedText)]=1
+        
         features["_POS_"+token.get("POS")]=1
         if sentenceGraph.tokenIsName[token]:
             features["_isName"]=1
@@ -143,6 +149,32 @@ class GeneralEntityTypeRecognizerGztr(ExampleBuilder):
             features[self.featureSet.getId(tag+tokenFeature)] = w
     
     def buildExamples(self, sentenceGraph):
+        examples = self.buildExamplesInner(sentenceGraph)
+        
+        entityCounts = {}
+        exampleCounts = {}
+        for entity in sentenceGraph.entities:
+            eType = entity.get("type")
+            if eType == "Protein":
+                continue
+            if not entityCounts.has_key(eType):
+                entityCounts[eType] = 0
+                exampleCounts[eType] = 0
+            entityCounts[eType] += 1
+        
+        for example in examples:
+            eTypes = self.classSet.getName(example[1]).split("---")
+            for eType in eTypes:
+                if not exampleCounts.has_key(eType):
+                    exampleCounts[eType] = 0
+                exampleCounts[eType] += 1
+        for key in sorted(entityCounts.keys()):
+            if entityCounts[key] != exampleCounts[key]:
+                print >> sys.stderr, "Warning, sentence", sentenceGraph.getSentenceId(), "example", key, "diff", entityCounts[key] - exampleCounts[key]  
+        
+        return examples
+    
+    def buildExamplesInner(self, sentenceGraph):
         """
         Build one example for each token of the sentence
         """
@@ -155,18 +187,24 @@ class GeneralEntityTypeRecognizerGztr(ExampleBuilder):
         
         self.tokenFeatures = {}
         
+        #namedEntityNorStrings = set()
         namedEntityHeadTokens = []
         if not "names" in self.styles:
             namedEntityCount = 0
             for entity in sentenceGraph.entities:
                 if entity.get("isName") == "True": # known data which can be used for features
                     namedEntityCount += 1
+                    #namedEntityNorStrings.add( entity.get("text").replace("-","").replace("/","").replace(",","").replace("\\","").replace(" ","").lower() )
             namedEntityCountFeature = "nameCount_" + str(namedEntityCount)
-            if namedEntityCount == 0: # no names, no need for triggers
-                return []
+            #if namedEntityCount == 0: # no names, no need for triggers
+            #    return []
             
             if "pos_pairs" in self.styles:
                 namedEntityHeadTokens = self.getNamedEntityHeadTokens(sentenceGraph)
+        
+        #neFeatures = {} # F: 69.35 -> 69.14
+        #for norString in namedEntityNorStrings:
+        #    neFeatures[self.featureSet.getId("norNE_" + norString)] = 1
         
         bagOfWords = {}
         for token in sentenceGraph.tokens:
@@ -235,6 +273,7 @@ class GeneralEntityTypeRecognizerGztr(ExampleBuilder):
             #    features[self.featureSet.getId(k)] = v
             # pre-calculate bow _features_
             features.update(bowFeatures)
+            #features.update(neFeatures)
             
 #            for j in range(len(sentenceGraph.tokens)):
 #                text = "bow_" + sentenceGraph.tokens[j].get("text")
@@ -251,7 +290,17 @@ class GeneralEntityTypeRecognizerGztr(ExampleBuilder):
             features[self.featureSet.getId("stem_"+stem)] = 1
             features[self.featureSet.getId("nonstem_"+text[len(stem):])] = 1
             
+            # Normalized versions of the string (if same as non-normalized, overlap without effect)
+            normalizedText = text.replace("-","").replace("/","").replace(",","").replace("\\","").replace(" ","").lower()
+            if normalizedText == "bound": # should be for all irregular verbs
+                normalizedText = "bind"
+            features[self.featureSet.getId("txt_"+normalizedText)] = 1
+            norStem = PorterStemmer.stem(normalizedText)
+            features[self.featureSet.getId("stem_"+norStem)] = 1
+            features[self.featureSet.getId("nonstem_"+normalizedText[len(norStem):])] = 1            
+            
             # Linear order features
+            #for index in [-3,-2,-1,1,2,3,4,5]: # 69.35 -> 68.97
             for index in [-3,-2,-1,1,2,3]:
                 if i + index > 0 and i + index < len(sentenceGraph.tokens):
                     self.buildLinearOrderFeatures(sentenceGraph, i + index, str(index), features)
@@ -308,7 +357,7 @@ class GeneralEntityTypeRecognizerGztr(ExampleBuilder):
             self.buildChains(token, sentenceGraph, features)
             
             if "pos_pairs" in self.styles:
-                self.buildPOSPairs(token, namedEntityHeadTokens, features)
+                self.buildPOSPairs(token, namedEntityHeadTokens, features)        
         return examples
     
     def buildChains(self,token,sentenceGraph,features,depthLeft=3,chain="",visited=None):
@@ -358,9 +407,9 @@ class GeneralEntityTypeRecognizerGztr(ExampleBuilder):
 #                features[self.featureSet.getId("POS_dist_"+strDepthLeft+nextToken.get("POS"))] = 1
 #                tokenText = sentenceGraph.getTokenText(nextToken)
 #                features[self.featureSet.getId("text_dist_"+strDepthLeft+tokenText)] = 1
+                
                 if sentenceGraph.tokenIsName[nextToken]:
                     features[self.featureSet.getId("name_chain_dist_"+strDepthLeft+chain+"-rev_"+edgeType)] = 1
-                
                 features[self.featureSet.getId("chain_dist_"+strDepthLeft+chain+"-rev_"+edgeType)] = 1
                 self.buildChains(nextToken,sentenceGraph,features,depthLeft-1,chain+"-rev_"+edgeType,edgeSet)
     
