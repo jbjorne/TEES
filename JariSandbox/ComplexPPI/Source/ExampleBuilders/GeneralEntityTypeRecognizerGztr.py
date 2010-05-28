@@ -1,7 +1,7 @@
 """
 Trigger examples
 """
-__version__ = "$Revision: 1.18 $"
+__version__ = "$Revision: 1.19 $"
 
 import sys, os
 thisPath = os.path.dirname(os.path.abspath(__file__))
@@ -297,7 +297,16 @@ class GeneralEntityTypeRecognizerGztr(ExampleBuilder):
             features[self.featureSet.getId("txt_"+normalizedText)] = 1
             norStem = PorterStemmer.stem(normalizedText)
             features[self.featureSet.getId("stem_"+norStem)] = 1
-            features[self.featureSet.getId("nonstem_"+normalizedText[len(norStem):])] = 1            
+            features[self.featureSet.getId("nonstem_"+normalizedText[len(norStem):])] = 1
+            
+            if "gazetteer_features_maintoken" in self.styles:
+                tokTxtLower = text.lower()
+                if "stem_gazetteer" in self.styles:
+                    tokTxtLower = PorterStemmer.stem(tokTxtLower)
+                if self.gazetteer and tokTxtLower in self.gazetteer:
+                    for label,weight in self.gazetteer[tokTxtLower].items():
+                        features[self.featureSet.getId("gaz_knownLabel_"+label)]=weight # 1 performs slightly worse
+                
             
             # Linear order features
             #for index in [-3,-2,-1,1,2,3,4,5]: # 69.35 -> 68.97
