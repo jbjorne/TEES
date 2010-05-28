@@ -185,19 +185,28 @@ if __name__=="__main__":
     #classIds = IdSet(filename="/usr/share/biotext/GeniaChallenge/extension-data/genia/edge-examples/genia-edge-ids.class_names")
     featureIds = IdSet(filename="/usr/share/biotext/GeniaChallenge/extension-data/genia/edge-examples/genia-edge-ids.feature_names")
     model = "/usr/share/biotext/GeniaChallenge/extension-data/genia/test-set-split-McClosky-boost07/test-edge-param-opt/model-c_28000"
+    
+    from optparse import OptionParser # For using command line options
+    optparser = OptionParser()
+    optparser.add_option("-i", "--ids", default=featureIds, dest="ids", help="SVM feature ids")
+    optparser.add_option("-m", "--model", default=model, dest="model", help="SVM model file")
+    optparser.add_option("-o", "--output", default=model, dest="output", help="Output file stem")
+    (options, args) = optparser.parse_args()
+
+    
     #mapIds("a",model)
-    s = getSupportVectors(model)
+    s = getSupportVectors(options.model)
     #writeModel(s, model, "temp.txt")
     #tokenizeModel(model, "tokenized.txt")
     w = getWeights(s)
-    w = assignNames(w, featureIds)
-    f = open("weights.txt", "wt")
+    w = assignNames(w, IdSet(filename=options.ids))
+    f = open(options.output + "weights.txt", "wt")
     for pair in w:
         f.write(str(pair[0]) + "\t" + pair[1] + "\n")
     f.close()
     
     d = getTokenWeights(w)
-    f = open("weights-tokens.txt", "wt")
+    f = open(options.output + "weights-tokens.txt", "wt")
     for pair in sorted(d.items(), key=itemgetter(1)):
         f.write(str(pair[1]) + "\t" + pair[0] + "\n")
     f.close()
