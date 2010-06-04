@@ -94,7 +94,7 @@ class SentenceExampleWriter:
     def writeXMLSentence(self, examples, predictionsByExample, sentenceObject, classSet, classIds):
         raise NotImplementedError
     
-    def assertSameSentence(self, examples):
+    def assertSameSentence(self, examples, sentenceId=None):
         currentSetMajorId = None
         for example in examples:
             majorId, minorId = example[0].rsplit(".x", 1)
@@ -102,13 +102,17 @@ class SentenceExampleWriter:
                 currentSetMajorId = majorId
             else: 
                 assert currentSetMajorId == majorId, str(currentSetMajorId) + "/" + str(majorId)
+        if sentenceId != None and len(examples) > 0:
+            assert sentenceId == currentSetMajorId, sentenceId + "/" + currentSetMajorId
     
     def removeChildren(self, element, childTags, childAttributes=None):
+        removed = []
         for tag in childTags:
             childElements = element.findall(tag)
             if childElements != None:
                 for childElement in childElements:
                     if childAttributes == None:
+                        removed.append(childElement)
                         element.remove(childElement)
                     else:
                         removeElement = True
@@ -117,7 +121,9 @@ class SentenceExampleWriter:
                                 removeElement = False
                                 break
                         if removeElement:
+                            removed.append(childElement)
                             element.remove(childElement)
+        return removed
     
     def removeNonNameEntities(self, sentenceElement):
         """
@@ -125,11 +131,14 @@ class SentenceExampleWriter:
         before removal.
         """
         entityElements = sentenceElement.findall("entity")
+        removed = []
         if entityElements != None:
             entityCount = len(entityElements) # get the count _before_ removing entities
             for entityElement in entityElements:
                 if entityElement.get("isName") == "False": # interaction word
+                    removed.append(entityElement)
                     sentenceElement.remove(entityElement)
+        return removed
 
     def isNegative(self, prediction, classSet=None):
         if classSet == None: # binary classification
