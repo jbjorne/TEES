@@ -10,6 +10,7 @@ from EntityExampleWriter import EntityExampleWriter
 from EdgeExampleWriter import EdgeExampleWriter
 from Task3ExampleWriter import Task3ExampleWriter
 #IF LOCAL
+from UnmergingExampleWriter import UnmergingExampleWriter
 from UnmergedEdgeExampleWriter import UnmergedEdgeExampleWriter
 from AsymmetricEventExampleWriter import AsymmetricEventExampleWriter
 #ENDIF
@@ -40,6 +41,8 @@ class BioTextExampleWriter:
         elif xType == "task3":
             w = Task3ExampleWriter()
 #IF LOCAL
+        elif xType == "um":
+            w = UnmergingExampleWriter()
         elif xType == "ue":
             w = UnmergedEdgeExampleWriter()
         elif xType == "asym":
