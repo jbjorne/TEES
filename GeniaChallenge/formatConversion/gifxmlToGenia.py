@@ -188,7 +188,7 @@ def writeEventTriggers(document, inputCorpus, outputFile, events, triggerIds, ta
                     if match in offsetMap.keys():
                         #assert(not triggerIds.has_key(entity.get("id")))
                         if triggerIds.has_key(entity.get("id")):
-                            print >> sys.stderr, "Warning: Duplicate entity (trigger)", entity.get("id")
+                            print >> sys.stderr, "Warning: Duplicate entity (trigger)", entity.get("id"), entity.get("type")
                         triggerIds[entity.get("id")] = offsetMap[match]
                     else:
                         triggerId = "T" + str(entityIndex)
@@ -214,7 +214,7 @@ def getEvents(document, inputCorpus, task=1):
             if task == 1 and entity.get("type") == "Entity":
                 continue
             if entityMap.has_key(entity.get("id")):
-                print >> sys.stderr, "Warning: Duplicate entity", entity.get("id")
+                print >> sys.stderr, "Warning: Duplicate entity", entity.get("id"), entity.get("type")
             entityMap[entity.get("id")] = entity
             
             if not siteMap.has_key(entity.get("id")):
@@ -268,9 +268,14 @@ def getEvents(document, inputCorpus, task=1):
                     del events[key]
                     removeCount += 1
                 elif causeCount > 0 and themeCount == 0:
-                    print >> sys.stderr, "Removing: Event with Cause and no Themes", key
-                    del events[key]
-                    removeCount += 1
+                    if True:
+                        print >> sys.stderr, "Removing: Event with Cause and no Themes", key
+                        del events[key]
+                        removeCount += 1
+                    else: # works worse, devel f-score 56.13 -> 55.62
+                        print >> sys.stderr, "Converting Event with Cause and no Themes", key
+                        for interaction in events[key][:]:
+                            interaction.set("type", "Theme")
     
     #print "EVENTS2", events
     
