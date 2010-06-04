@@ -55,8 +55,10 @@ class UnmergingExampleWriter(SentenceExampleWriter):
             if not exampleByEntityId.has_key(entity.get("id")):
                 for interaction in interactionsByEntity[entity.get("id")]:
                     if self.isIntersentence(interaction):
+                        print "Warning, intersentence interaction for", entity.get("id"), entity.get("type")
                         continue
-                    self.insertEvent([interaction], sentenceObject)
+                    rootEntity = self.insertEvent([interaction], sentenceObject)
+                    rootEntity.set("umType", "simple")
         
         # Add predicted, unmerged events
         for example in examples:
@@ -69,7 +71,9 @@ class UnmergingExampleWriter(SentenceExampleWriter):
                 if self.isIntersentence(arg):
                     continue
                 arguments.append(arg)
-            self.insertEvent(arguments, sentenceObject)
+            rootEntity = self.insertEvent(arguments, sentenceObject)
+            if rootEntity != None:
+                rootEntity.set("umType", "complex")
         
         # Attach the new elements
         for element in self.newEntities + self.newInteractions:
@@ -81,16 +85,25 @@ class UnmergingExampleWriter(SentenceExampleWriter):
     
     def insertEvent(self, arguments, sentenceObject):
         currentEntities = {} # Entities being part of the current event
+        rootEntity = None
         for arg in arguments:
             e1Id = arg.get("e1")
             e2Id = arg.get("e2")
             # E1
             if e1Id not in currentEntities.keys():
+                #if self.newEntitiesById.has_key(e1Id):
+                #    e1 = self.newEntitiesById[e1Id]
+                #else:
                 e1 = self.insertEntity(sentenceObject.entitiesById[e1Id])
-                currentEntities[e1Id] = e1
                 self.newEntitiesById[e1Id] = e1
+                currentEntities[e1Id] = e1
             else:
                 e1 = currentEntities[e1Id]
+            
+            if rootEntity == None:
+                rootEntity = e1
+            else:
+                assert rootEntity == e1
             # E2
             assert e2Id in sentenceObject.entitiesById.keys(), self.sentenceId + "/" + e2Id
             origE2 = sentenceObject.entitiesById[e2Id]
@@ -108,6 +121,7 @@ class UnmergingExampleWriter(SentenceExampleWriter):
             else:
                 e2 = currentEntities[e2Id]
             self.insertInteraction(e1, e2, arg)
+        return rootEntity
     
     def insertEntity(self, entity):
         entityElement = ET.Element("entity")
