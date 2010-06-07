@@ -1,7 +1,7 @@
 """
 Edge Examples
 """
-__version__ = "$Revision: 1.2 $"
+__version__ = "$Revision: 1.3 $"
 
 import sys, os
 thisPath = os.path.dirname(os.path.abspath(__file__))
@@ -237,7 +237,10 @@ class UnmergingExampleBuilder(ExampleBuilder):
         goldEntities = goldEntitiesByOffset[offset]
         
         for goldEntity in goldEntities:
+            isGold = True
+            
             if goldEntity.get("type") != eType:
+                isGold = False
                 continue
             goldEntityId = goldEntity.get("id")
             
@@ -248,7 +251,8 @@ class UnmergingExampleBuilder(ExampleBuilder):
             
             # Argument count rules
             if len(goldInteractions) != len(arguments):
-                return False
+                isGold = False
+                continue
             argTypeCounts = {}
             for argument in arguments:
                 argType = argument.get("type")
@@ -260,24 +264,34 @@ class UnmergingExampleBuilder(ExampleBuilder):
                 if not goldTypeCounts.has_key(argType): goldTypeCounts[argType] = 0
                 goldTypeCounts[argType] += 1
             if argTypeCounts != goldTypeCounts:
-                return False
+                isGold = False
+                continue
             
             # Exact argument matching
             for argument in arguments:
                 e1 = argument.get("e1")
                 e2 = argument.get("e2")
-                e2Offset = sentenceGraph.entitiesById[e2].get("headOffset")
+                e2Entity = sentenceGraph.entitiesById[e2]
+                e2Offset = e2Entity.get("headOffset")
+                e2Type = e2Entity.get("type")
                 argType = argument.get("type")
                 
                 found = False
                 for goldInteraction in goldInteractions:
-                    if goldInteraction.get("type") == argType and \
-                       goldGraph.entitiesById[goldInteraction.get("e2")].get("headOffset") == e2Offset:
-                        found = True
-                        break
+                    if goldInteraction.get("type") == argType:
+                        goldE2Entity = goldGraph.entitiesById[goldInteraction.get("e2")] 
+                        if goldE2Entity.get("headOffset") == e2Offset and goldE2Entity.get("type") == e2Type:
+                            found = True
+                            break
                 if found == False:
-                    return False
-        return True
+                    isGold = False
+                    break
+
+            # Event is in gold
+            if isGold:
+                break
+        
+        return isGold
     
     def getArgumentCombinations(self, eType, interactions):
         combs = []
