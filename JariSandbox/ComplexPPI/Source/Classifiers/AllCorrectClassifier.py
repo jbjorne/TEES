@@ -19,12 +19,12 @@ class AllCorrectClassifier(Classifier):
     @classmethod
     def test(cls, examples, modelPath, output=None, parameters=None, timeout=None):
         if type(examples) == types.ListType:
-            print >> sys.stderr, "Classifying", len(examples), "with SVM-MultiClass model", modelPath
+            print >> sys.stderr, "Classifying", len(examples), "with All-Correct Classifier"
             examples, predictions = self.filterClassificationSet(examples, False)
             testPath = self.tempDir+"/test.dat"
             Example.writeExamples(examples, testPath)
         else:
-            print >> sys.stderr, "Classifying file", examples, "with SVM-MultiClass model", modelPath
+            print >> sys.stderr, "Classifying file", examples, "with All-Correct Classifier"
             testPath = examples
             examples = Example.readExamples(examples,False)
         #examples, predictions = self.filterClassificationSet(examples, True)
