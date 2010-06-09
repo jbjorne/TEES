@@ -24,6 +24,8 @@ optparser.add_option("-v", "--triggerIds", default=None, dest="triggerIds", help
 # Parameters to optimize
 optparser.add_option("-m", "--model", default=None, dest="model", help="")
 #optparser.add_option("-x", "--triggerParams", default="0.01,0.1,1,10,100,1000,5000,10000,20000,50000,80000,100000,150000,180000,200000,250000,300000,350000,500000,1000000", dest="triggerParams", help="Trigger detector c-parameter values")
+optparser.add_option("-r", "--ruleBased", default=False, action="store_true", dest="ruleBased", help="")
+optparser.add_option("-l", "--disableLog", default=False, action="store_true", dest="disableLog", help="")
 (options, args) = optparser.parse_args()
 
 # Check options
@@ -49,22 +51,29 @@ UNMERGING_FEATURE_PARAMS="style:" + options.triggerStyles
 WORKDIR=options.output
 
 workdir(WORKDIR, False) # Select a working directory, don't remove existing files
-log() # Start logging into a file in working directory
+if not options.disableLog:
+    log() # Start logging into a file in working directory
 
 UNMERGING_TRAIN_EXAMPLE_FILE = "unmerging-train-examples-"+PARSE_TAG
 UNMERGING_TEST_EXAMPLE_FILE = "unmerging-test-examples-"+PARSE_TAG
 
+if options.ruleBased:
+    xml = unflatten(TEST_FILE, PARSE, TOK, pruneInput=False)
+    gifxmlToGenia(xml, "geniaformat-rulebased", options.task)
+    evaluateSharedTask("geniaformat-rulebased", options.task)
+    sys.exit()
+
 UNMERGING_IDS = "unmerging-ids"
-if False:
+if True:
     ###############################################################################
-    # Trigger example generation
+    # Unmerging example generation
     ###############################################################################
     print >> sys.stderr, "Unmerging examples for parse", PARSE_TAG   
     UNMERGING_IDS = copyIdSetsToWorkdir(options.triggerIds)
     UnmergingExampleBuilder.run(TEST_FILE, GOLD_TEST_FILE, UNMERGING_TEST_EXAMPLE_FILE, PARSE, TOK, UNMERGING_FEATURE_PARAMS, UNMERGING_IDS)
     #UnmergingExampleBuilder.run(TRAIN_FILE, GOLD_TRAIN_FILE, UNMERGING_TRAIN_EXAMPLE_FILE, PARSE, TOK, UNMERGING_FEATURE_PARAMS, UNMERGING_IDS)
-    Cls.test(UNMERGING_TEST_EXAMPLE_FILE, options.model, "unmerging-test-classifications")
 
+    CLASSIFIER.test(UNMERGING_TEST_EXAMPLE_FILE, options.model, "unmerging-test-classifications")
 xml = BioTextExampleWriter.write(UNMERGING_TEST_EXAMPLE_FILE, "unmerging-test-classifications", TEST_FILE, "test-predicted-unmerging.xml", UNMERGING_IDS+".class_names", PARSE, TOK)
 gifxmlToGenia(xml, "geniaformat", options.task)
 evaluateSharedTask("geniaformat", options.task)

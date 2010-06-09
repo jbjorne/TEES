@@ -22,7 +22,8 @@ optparser.add_option("-s", "--styles", default="typed", dest="triggerStyles", he
 # Id sets
 optparser.add_option("-v", "--triggerIds", default=None, dest="triggerIds", help="Trigger detector SVM example class and feature id file stem (files = STEM.class_names and STEM.feature_names)")
 # Parameters to optimize
-optparser.add_option("-x", "--triggerParams", default="0.01,0.1,1,10,100,1000,5000,10000,20000,50000,80000,100000,150000,180000,200000,250000,300000,350000,500000,1000000", dest="triggerParams", help="Trigger detector c-parameter values")
+#optparser.add_option("-x", "--triggerParams", default="0.01,0.1,1,10,100,1000,5000,10000,20000,50000,80000,100000,150000,180000,200000,250000,300000,350000,500000,1000000", dest="triggerParams", help="Trigger detector c-parameter values")
+optparser.add_option("-x", "--triggerParams", default="0.01,0.1,1,10,100,1000,5000,10000,20000,50000", dest="triggerParams", help="Trigger detector c-parameter values")
 (options, args) = optparser.parse_args()
 
 # Check options
@@ -59,16 +60,18 @@ log() # Start logging into a file in working directory
 UNMERGING_TRAIN_EXAMPLE_FILE = "unmerging-train-examples-"+PARSE_TAG
 UNMERGING_TEST_EXAMPLE_FILE = "unmerging-test-examples-"+PARSE_TAG
 UNMERGING_IDS = "unmerging-ids"
+UNMERGING_CLASSIFIER_PARAMS="c:" + options.triggerParams
 
 ###############################################################################
 # Trigger example generation
 ###############################################################################
-print >> sys.stderr, "Unmerging examples for parse", PARSE_TAG   
-UnmergingExampleBuilder.run(TEST_FILE, GOLD_TEST_FILE, UNMERGING_TEST_EXAMPLE_FILE, PARSE, TOK, UNMERGING_FEATURE_PARAMS, UNMERGING_IDS)
-UnmergingExampleBuilder.run(TRAIN_FILE, GOLD_TRAIN_FILE, UNMERGING_TRAIN_EXAMPLE_FILE, PARSE, TOK, UNMERGING_FEATURE_PARAMS, UNMERGING_IDS)
+if not "eval" in options.csc:
+    print >> sys.stderr, "Unmerging examples for parse", PARSE_TAG   
+    UnmergingExampleBuilder.run(TEST_FILE, GOLD_TEST_FILE, UNMERGING_TEST_EXAMPLE_FILE, PARSE, TOK, UNMERGING_FEATURE_PARAMS, UNMERGING_IDS)
+    UnmergingExampleBuilder.run(TRAIN_FILE, GOLD_TRAIN_FILE, UNMERGING_TRAIN_EXAMPLE_FILE, PARSE, TOK, UNMERGING_FEATURE_PARAMS, UNMERGING_IDS)
+    
+    print >> sys.stderr, "Unmerging models for parse", PARSE_TAG
 
-print >> sys.stderr, "Unmerging models for parse", PARSE_TAG
-UNMERGING_CLASSIFIER_PARAMS="c:" + options.triggerParams
 if "local" not in options.csc:
     clear = False
     if "clear" in options.csc: clear = True
@@ -78,8 +81,12 @@ if "local" not in options.csc:
         c = CSCConnection(CSC_WORKDIR+"/unmerging-models", "jakrbj@murska.csc.fi", clear)
 else:
     c = None
+
+steps = "BOTH"
+if "eval" in options.csc:
+    steps = "RESULTS"
 bestUnmergingModel = optimize(CLASSIFIER, Ev, UNMERGING_TRAIN_EXAMPLE_FILE, UNMERGING_TEST_EXAMPLE_FILE,\
-    UNMERGING_IDS+".class_names", UNMERGING_CLASSIFIER_PARAMS, "unmerging-models", None, c, False)[1]
+    UNMERGING_IDS+".class_names", UNMERGING_CLASSIFIER_PARAMS, "unmerging-models", None, c, False, steps=steps)[1]
 
 Cls.test(UNMERGING_TEST_EXAMPLE_FILE, bestUnmergingModel, "unmerging-test-classifications")
 #triggerXML = BioTextExampleWriter.write(TRIGGER_TEST_EXAMPLE_FILE, "trigger-test-classifications", TEST_FILE, "test-predicted-triggers.xml", TRIGGER_IDS+".class_names", PARSE, TOK)

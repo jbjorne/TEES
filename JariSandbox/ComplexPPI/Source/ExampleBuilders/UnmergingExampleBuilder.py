@@ -1,7 +1,7 @@
 """
 Edge Examples
 """
-__version__ = "$Revision: 1.3 $"
+__version__ = "$Revision: 1.4 $"
 
 import sys, os
 thisPath = os.path.dirname(os.path.abspath(__file__))
@@ -41,6 +41,28 @@ def combinations(iterable, r):
         for j in range(i+1, r):
             indices[j] = indices[j-1] + 1
         yield tuple(pool[i] for i in indices)
+
+def compareInteractionPrecedence(e1, e2):
+    """
+    e1/e2 = (interaction, pathdist, lindist, tok2pos)
+    """
+    if e1[1] > e2[1]:
+        return 1
+    elif e1[1] < e2[1]:
+        return -1
+    else: # same dependency distance
+        if e1[2] > e2[2]:
+            return 1
+        elif e1[2] < e2[2]:
+            return -1
+        else: # same linear distance
+            if e1[3] > e2[3]:
+                return 1
+            elif e1[3] < e2[3]:
+                return -1
+            else: # same head token for entity 2
+                return 0
+                #assert False, ("Precedence error",e1,e2)
 
 class UnmergingExampleBuilder(ExampleBuilder):
     """
@@ -101,8 +123,44 @@ class UnmergingExampleBuilder(ExampleBuilder):
         else:
             e = UnmergingExampleBuilder(classSet=classSet, featureSet=featureSet)
         sentences = cls.getSentences(input, parse, tokenization)
-        goldSentences = cls.getSentences(gold, parse, tokenization)
+        if gold != None:
+            goldSentences = cls.getSentences(gold, parse, tokenization)
+        else:
+            goldSentences = None
         e.buildExamplesForSentences(sentences, goldSentences, output, idFileTag)
+    
+    def getInteractionEdgeLengths(self, sentenceGraph, paths):
+        """
+        Return dependency and linear length of all interaction edges
+        (measured between the two tokens).
+        """
+        interactionLengths = {}
+        for interaction in sentenceGraph.interactions:
+            # Calculated interaction edge dep and lin length
+            e1 = sentenceGraph.entitiesById[interaction.get("e1")]
+            e2 = sentenceGraph.entitiesById[interaction.get("e2")]
+            t1 = sentenceGraph.entityHeadTokenByEntity[e1]
+            t2 = sentenceGraph.entityHeadTokenByEntity[e2]
+            # Get dep path length
+            if t1 != t2 and paths.has_key(t1) and paths[t1].has_key(t2):
+                pathLength = len(paths[t1][t2])
+            else: # no dependencyPath
+                pathLength = 999999 # more than any real path
+            # Linear distance
+            t1Pos = -1
+            t2Pos = -1
+            for i in range(len(sentenceGraph.tokens)):
+                if sentenceGraph.tokens[i] == t1:
+                    t1Pos = i
+                    if t2Pos != -1:
+                        break
+                if sentenceGraph.tokens[i] == t2:
+                    t2Pos = i
+                    if t1Pos != -1:
+                        break
+            linLength = abs(t1Pos - t2Pos)
+            interactionLengths[interaction] = (interaction, pathLength, linLength, t2Pos)
+        return interactionLengths
 
     def buildExamplesForSentences(self, sentences, goldSentences, output, idFileTag=None):            
         examples = []
@@ -112,7 +170,9 @@ class UnmergingExampleBuilder(ExampleBuilder):
         exampleCount = 0
         for i in range(len(sentences)):
             sentence = sentences[i]
-            goldSentence = goldSentences[i]
+            goldSentence = [None]
+            if goldSentences != None:
+                goldSentence = goldSentences[i]
             counter.update(1, "Building examples ("+sentence[0].getSentenceId()+"): ")
             examples = self.buildExamples(sentence[0], goldSentence[0])
             exampleCount += len(examples)
@@ -233,6 +293,8 @@ class UnmergingExampleBuilder(ExampleBuilder):
     
     def eventIsGold(self, entity, arguments, sentenceGraph, goldGraph, goldEntitiesByOffset):
         offset = entity.get("headOffset")
+        if not goldEntitiesByOffset.has_key(offset):
+            return False
         eType = entity.get("type")
         goldEntities = goldEntitiesByOffset[offset]
         
@@ -296,6 +358,14 @@ class UnmergingExampleBuilder(ExampleBuilder):
     def getArgumentCombinations(self, eType, interactions):
         combs = []
         if eType == "Binding":
+            # Making examples for only all-together/all-separate cases
+            # doesn't work, since even gold data has several cases of
+            # overlapping bindings with different numbers of arguments
+            #if len(interactions) > 0:
+            #    return [interactions]
+            #else:
+            #    return interactions
+                
             for i in range(len(interactions)):
                 for j in combinations(interactions, i+1):
                     combs.append(j)
@@ -330,21 +400,27 @@ class UnmergingExampleBuilder(ExampleBuilder):
         undirected = self.nxMultiDiGraphToUndirected(sentenceGraph.dependencyGraph)
         paths = NX10.all_pairs_shortest_path(undirected, cutoff=999)
         
+        # Get argument order
+        self.interactionLenghts = self.getInteractionEdgeLengths(sentenceGraph, paths)
+        
         # Map tokens to entities
         tokenByOffset = {}
         for i in range(len(sentenceGraph.tokens)):
             token = sentenceGraph.tokens[i]
-            goldToken = goldGraph.tokens[i]
-            assert token.get("id") == goldToken.get("id") and token.get("charOffset") == goldToken.get("charOffset")
+            if goldGraph != None:
+                goldToken = goldGraph.tokens[i]
+                assert token.get("id") == goldToken.get("id") and token.get("charOffset") == goldToken.get("charOffset")
             tokenByOffset[token.get("charOffset")] = token.get("id")
         
         # Map gold entities to their head offsets
         goldEntitiesByOffset = {}
-        for entity in goldGraph.entities:
-            offset = entity.get("headOffset")
-            if not goldEntitiesByOffset.has_key(offset):
-                goldEntitiesByOffset[offset] = []
-            goldEntitiesByOffset[offset].append(entity)
+        if goldGraph != None:
+            for entity in goldGraph.entities:
+                offset = entity.get("headOffset")
+                assert offset != None
+                if not goldEntitiesByOffset.has_key(offset):
+                    goldEntitiesByOffset[offset] = []
+                goldEntitiesByOffset[offset].append(entity)
         
         # Generate examples based on interactions between entities or interactions between tokens
         interactionsByEntityId = {}
@@ -362,23 +438,27 @@ class UnmergingExampleBuilder(ExampleBuilder):
             if eType not in ["Binding", "Positive_regulation", "Negative_regulation", "Regulation"]:
                 continue
             
-            if not goldEntitiesByOffset.has_key(entity.get("headOffset")):
-                continue
+            #if not goldEntitiesByOffset.has_key(entity.get("headOffset")):
+            #    continue
             
             interactions = interactionsByEntityId[entity.get("id")]
             argCombinations = self.getArgumentCombinations(eType, interactions)
-            if len(argCombinations) <= 1:
-                continue
+            #if len(argCombinations) <= 1:
+            #    continue
             for argCombination in argCombinations:
                 assert len(argCombination) > 0, eType + ": " + str(argCombinations)
                 # Originally binary classification
                 if goldGraph != None:
                     isGoldEvent = self.eventIsGold(entity, argCombination, sentenceGraph, goldGraph, goldEntitiesByOffset)
+                    #if eType == "Binding":
+                    #    print argCombination[0].get("e1"), len(argCombination), isGoldEvent
                 else:
                     isGoldEvent = False
                 # Named (multi-)class
                 if isGoldEvent:
                     category = eType
+                    if category.find("egulation") != -1:
+                        category = "All_regulation"
                 else:
                     category = "neg"
                     
@@ -387,10 +467,10 @@ class UnmergingExampleBuilder(ExampleBuilder):
                 argString = ""
                 for arg in argCombination:
                     argString += "," + arg.get("id")
-                extra = {"xtype":"um","e":entity.get("id"),"i":argString[1:]}
+                extra = {"xtype":"um","e":entity.get("id"),"i":argString[1:],"etype":entity.get("type"),"class":category}
                 
                 self.exampleStats.addExample(category)
-                example = self.buildExample(category, sentenceGraph, paths, entity, argCombination, interactions)
+                example = self.buildExample(sentenceGraph, paths, entity, argCombination, interactions)
                 example[0] = sentenceGraph.getSentenceId()+".x"+str(exampleIndex)
                 example[1] = self.classSet.getId(category)
                 example[3] = extra
@@ -399,12 +479,23 @@ class UnmergingExampleBuilder(ExampleBuilder):
             
         return examples
     
-    def buildExample(self, categoryName, sentenceGraph, paths, eventEntity, argCombination, allInteractions): #themeEntities, causeEntities=None):
+    def buildExample(self, sentenceGraph, paths, eventEntity, argCombination, allInteractions): #themeEntities, causeEntities=None):
         # NOTE!!!! TODO
         # add also features for arguments present, but not in this combination
         
         features = {}
         self.features = features
+        
+        eventEntityType = eventEntity.get("type")
+        if eventEntityType == "Binding":
+            interactionIndex = {}
+            groupInteractionLengths = []
+            for interaction in allInteractions:
+                groupInteractionLengths.append(self.interactionLenghts[interaction])
+            groupInteractionLengths.sort(compareInteractionPrecedence)
+            #print groupInteractionLengths
+            for i in range(len(groupInteractionLengths)):
+                interactionIndex[groupInteractionLengths[i][0]] = i
         
         eventToken = sentenceGraph.entityHeadTokenByEntity[eventEntity]
         self.triggerFeatureBuilder.setFeatureVector(self.features)
@@ -418,7 +509,11 @@ class UnmergingExampleBuilder(ExampleBuilder):
         for arg in argCombination:
             if arg.get("type") == "Theme":
                 argThemeCount += 1
-                self.buildArgumentFeatures(sentenceGraph, paths, features, eventToken, arg, "argTheme")
+                tag = "argTheme"
+                self.buildArgumentFeatures(sentenceGraph, paths, features, eventToken, arg, tag)
+                if eventEntityType == "Binding":
+                    tag += str(interactionIndex[arg])
+                    self.buildArgumentFeatures(sentenceGraph, paths, features, eventToken, arg, tag)
             else: # Cause
                 argCauseCount += 1
                 self.buildArgumentFeatures(sentenceGraph, paths, features, eventToken, arg, "argCause")
@@ -431,7 +526,11 @@ class UnmergingExampleBuilder(ExampleBuilder):
                 continue
             if interaction.get("type") == "Theme":
                 contextThemeCount += 1
-                self.buildArgumentFeatures(sentenceGraph, paths, features, eventToken, interaction, "conTheme")
+                tag = "conTheme"
+                self.buildArgumentFeatures(sentenceGraph, paths, features, eventToken, interaction, tag)
+                if eventEntityType == "Binding":
+                    tag += str(interactionIndex[interaction])
+                    self.buildArgumentFeatures(sentenceGraph, paths, features, eventToken, interaction, tag)
             else: # Cause
                 contextCauseCount += 1
                 self.buildArgumentFeatures(sentenceGraph, paths, features, eventToken, interaction, "conCause")
@@ -462,7 +561,7 @@ class UnmergingExampleBuilder(ExampleBuilder):
 #                features[self.featureSet.getId("GENIA_regulation_of_event")] = 1
 
         # define extra attributes
-        return [None,categoryName,features,None]
+        return [None,None,features,None]
 
     def buildArgumentFeatures(self, sentenceGraph, paths, features, eventToken, arg, tag):
         argEntity = sentenceGraph.entitiesById[arg.get("e2")]
@@ -495,8 +594,8 @@ class UnmergingExampleBuilder(ExampleBuilder):
         if not "disable_entity_features" in self.styles:
             self.multiEdgeFeatureBuilder.buildEntityFeatures(sentenceGraph)
         self.multiEdgeFeatureBuilder.buildPathLengthFeatures(path)
-        if not "disable_terminus_features" in self.styles:
-            self.multiEdgeFeatureBuilder.buildTerminusTokenFeatures(path, sentenceGraph) # remove for fast
+        #if not "disable_terminus_features" in self.styles:
+        #    self.multiEdgeFeatureBuilder.buildTerminusTokenFeatures(path, sentenceGraph) # remove for fast
         if not "disable_single_element_features" in self.styles:
             self.multiEdgeFeatureBuilder.buildSingleElementFeatures(path, edges, sentenceGraph)
         if not "disable_ngram_features" in self.styles:
@@ -505,6 +604,6 @@ class UnmergingExampleBuilder(ExampleBuilder):
             self.multiEdgeFeatureBuilder.buildPathGrams(4, path, edges, sentenceGraph) # remove for fast
         if not "disable_path_edge_features" in self.styles:
             self.multiEdgeFeatureBuilder.buildPathEdgeFeatures(path, edges, sentenceGraph)
-        self.multiEdgeFeatureBuilder.buildSentenceFeatures(sentenceGraph)
+        #self.multiEdgeFeatureBuilder.buildSentenceFeatures(sentenceGraph)
         self.multiEdgeFeatureBuilder.setFeatureVector(None, None, None, False)
         self.multiEdgeFeatureBuilder.tag = ""
