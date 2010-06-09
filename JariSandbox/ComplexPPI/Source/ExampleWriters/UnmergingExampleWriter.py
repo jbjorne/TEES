@@ -154,7 +154,11 @@ class UnmergingExampleWriter(SentenceExampleWriter):
                 arguments.append(arg)
             argumentsByExample[example[0]] = arguments
         
-        # Loop until all positive examples are added
+        # Loop until all positive examples are added. This process
+        # assumes that the events (mostly) form a directed acyclic
+        # graph, which can written by "growing" the structure from
+        # the "leaf" events, and consecutively adding levels of
+        # nesting events.
         examplesLeft = len(positiveExamples)
         exampleAdded = {}
         for example in positiveExamples:
@@ -162,16 +166,21 @@ class UnmergingExampleWriter(SentenceExampleWriter):
         forceAdd = False
         while examplesLeft > 0:
             examplesAddedThisRound = 0
+            # For each round, loop through the potentially remaining examples
             for example in positiveExamples:
-                if exampleAdded[example[0]]:
+                if exampleAdded[example[0]]: # This event has already been inserted
                     continue
                 arguments = argumentsByExample[example[0]]
+                # An event can be added if all of its argument events have already
+                # been added. Addition is forced if lack of argument events blocks
+                # the process.
                 if forceAdd or self.argumentEntitiesExist(arguments, sentenceObject):
-                    umType = "complex"
+                    umType = "complex" # mark the root entity in the output xml
                     predictionStrength = None
                     if example[0].find("simple") != -1:
                         umType = "simple"
                     else:
+                        # Prediction strength is only available for classified argument groups
                         predictionStrength = self.getPredictionStrength(example, predictionsByExample)
                     self.addEvent(arguments, sentenceObject, umType, forceAdd, predictionStrength)
                     exampleAdded[example[0]] = True
@@ -179,6 +188,13 @@ class UnmergingExampleWriter(SentenceExampleWriter):
                     examplesAddedThisRound += 1
                     forceAdd = False
             if examplesLeft > 0 and examplesAddedThisRound == 0:
+                # If there are examples left, but nothing was added, this
+                # means that some nested events are missing. Theoretically
+                # this could also be because two events are referring to
+                # each other, preventing each other's insertion. In any
+                # case this is solved by simply forcing the addition of 
+                # the first non-inserted event, by creating 0-argument
+                # entities for its argument events.
                 print "Warning, forcing event addition"
                 forceAdd = True                  
         
@@ -191,6 +207,11 @@ class UnmergingExampleWriter(SentenceExampleWriter):
             sentenceElement.append(sentenceAnalysesElement)
     
     def argumentEntitiesExist(self, arguments, sentenceObject):
+        """
+        Checks whether entity elements have already been created 
+        for the argument entities, i.e. whether the argumetn events
+        have been inserted.
+        """
         for arg in arguments:
             e2Id = arg.get("e2")
             origE2 = sentenceObject.entitiesById[e2Id]
