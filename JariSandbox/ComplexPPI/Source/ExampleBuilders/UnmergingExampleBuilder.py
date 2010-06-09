@@ -1,7 +1,7 @@
 """
 Edge Examples
 """
-__version__ = "$Revision: 1.4 $"
+__version__ = "$Revision: 1.5 $"
 
 import sys, os
 thisPath = os.path.dirname(os.path.abspath(__file__))
@@ -486,6 +486,8 @@ class UnmergingExampleBuilder(ExampleBuilder):
         features = {}
         self.features = features
         
+        self.buildInterArgumentBagOfWords(argCombination, sentenceGraph)
+        
         eventEntityType = eventEntity.get("type")
         if eventEntityType == "Binding":
             interactionIndex = {}
@@ -607,3 +609,36 @@ class UnmergingExampleBuilder(ExampleBuilder):
         #self.multiEdgeFeatureBuilder.buildSentenceFeatures(sentenceGraph)
         self.multiEdgeFeatureBuilder.setFeatureVector(None, None, None, False)
         self.multiEdgeFeatureBuilder.tag = ""
+    
+    def buildInterArgumentBagOfWords(self, arguments, sentenceGraph):
+        if len(arguments) < 2:
+            return
+
+        indexByToken = {}
+        for i in range(len(sentenceGraph.tokens)):
+            indexByToken[sentenceGraph.tokens[i]] = i
+        
+        argTokenIndices = set()
+        for arg in arguments:
+            argEntity = sentenceGraph.entitiesById[arg.get("e2")]
+            argToken = sentenceGraph.entityHeadTokenByEntity[argEntity]
+            argTokenIndices.add(indexByToken[argToken])
+        minIndex = min(argTokenIndices)
+        maxIndex = max(argTokenIndices)
+        self.setFeature("argBoWRange", (maxIndex-minIndex))
+        self.setFeature("argBoWRange_" + str(maxIndex-minIndex), 1)
+        bow = set()
+        for i in range(minIndex+1, maxIndex):
+            token = sentenceGraph.tokens[i]
+            if len(sentenceGraph.tokenIsEntityHead[token]) == 0 and not sentenceGraph.tokenIsName[token]:
+                bow.add(token.get("text"))
+        bow = sorted(list(bow))
+        for word in bow:
+            self.setFeature("argBoW_"+word, 1)
+            if word in ["/", "-"]:
+                self.setFeature("argBoW_slashOrHyphen", 1)
+        if len(bow) == 1:
+            self.setFeature("argBoWonly_"+bow[0], 1)
+            if bow[0] in ["/", "-"]:
+                self.setFeature("argBoWonly_slashOrHyphen", 1)
+            
