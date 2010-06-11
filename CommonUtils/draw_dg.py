@@ -21,6 +21,8 @@ class SVGOptions:
     depVertSpace=20
     minDepPadding=10 #How many points, at least, should be reserved horizontally for the dependency rounded corner
     lineSep=5 #How many points, vertically, should go between lines?
+    
+    whAttributes=True #Insert width&height attributes of the SVG element
 
 def strint(i):
     return str(int(i))
@@ -42,7 +44,7 @@ class Token:
         
         self.txt,self.spec=tokSpec(txt)
         self.otherLines=[] #text in all other lines
-        self.pos=pos
+        self.pos=pos #index in the sentence
         self.x=0#layout() fills this
         self.y=0#layout() fills this
         self.styleDict={"text-anchor":"middle",
@@ -252,6 +254,8 @@ def depCMP(a,b):
         return cmp(a.tok1.pos,b.tok1.pos)
 
 def depHeights(tokenCount,deps):
+    if tokenCount<2:
+        return 0
     heights=[0 for x in range(tokenCount-1)]
     deps.sort(cmp=depCMP)
     for dep in deps:
@@ -296,13 +300,15 @@ def generateSVG(tokens,dependencies):
     allNodes=[]
     totalWidth=0
     totalHeight=tokens[0].y+10
-    tree.set("height",strint(totalHeight))
+    if SVGOptions.whAttributes:
+        tree.set("height",strint(totalHeight))
     for t in tokens:
         allNodes.extend(t.toSVG())
         tokX=t.x+t.width()
         if tokX>totalWidth:
             totalWidth=tokX
-    tree.set("width",strint(totalWidth))
+    if SVGOptions.whAttributes:
+        tree.set("width",strint(totalWidth))
     for d in dependencies:
         allNodes.extend(d.arcSVG())
         allNodes.extend(d.labelSVG())
