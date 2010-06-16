@@ -1,7 +1,7 @@
 """
 Trigger examples
 """
-__version__ = "$Revision: 1.19 $"
+__version__ = "$Revision: 1.20 $"
 
 import sys, os
 thisPath = os.path.dirname(os.path.abspath(__file__))
@@ -208,6 +208,8 @@ class GeneralEntityTypeRecognizerGztr(ExampleBuilder):
         
         bagOfWords = {}
         for token in sentenceGraph.tokens:
+            #if token.get("text") == ".": # slight decrease
+            #    continue
             text = "bow_" + token.get("text")
             if not bagOfWords.has_key(text):
                 bagOfWords[text] = 0
@@ -348,6 +350,10 @@ class GeneralEntityTypeRecognizerGztr(ExampleBuilder):
                 tokenText = sentenceGraph.getTokenText(edge[0])
                 features[self.featureSet.getId("t1HIn_"+tokenText)] = 1
                 features[self.featureSet.getId("t1HIn_"+edgeType+"_"+tokenText)] = 1
+                tokenStem = PorterStemmer.stem(tokenText)
+                features[self.featureSet.getId("t1HIn_"+tokenStem)] = 1
+                features[self.featureSet.getId("t1HIn_"+edgeType+"_"+tokenStem)] = 1
+                features[self.featureSet.getId("t1HIn_"+norStem+"_"+edgeType+"_"+tokenStem)] = 1
             t1OutEdges = self.outEdgesByToken[token]
             for edge in t1OutEdges:
                 edgeType = edge[2].get("type")
@@ -357,6 +363,10 @@ class GeneralEntityTypeRecognizerGztr(ExampleBuilder):
                 tokenText = sentenceGraph.getTokenText(edge[1])
                 features[self.featureSet.getId("t1HOut_"+tokenText)] = 1
                 features[self.featureSet.getId("t1HOut_"+edgeType+"_"+tokenText)] = 1
+                tokenStem = PorterStemmer.stem(tokenText)
+                features[self.featureSet.getId("t1HOut_"+tokenStem)] = 1
+                features[self.featureSet.getId("t1HOut_"+edgeType+"_"+tokenStem)] = 1
+                features[self.featureSet.getId("t1HOut_"+norStem+"_"+edgeType+"_"+tokenStem)] = 1
              
             extra = {"xtype":"token","t":token.get("id")}
             examples.append( (sentenceGraph.getSentenceId()+".x"+str(exampleIndex),category,features,extra) )
