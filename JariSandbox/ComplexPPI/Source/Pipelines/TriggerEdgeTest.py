@@ -24,8 +24,8 @@ optparser.add_option("-v", "--triggerIds", default=None, dest="triggerIds", help
 optparser.add_option("-w", "--edgeIds", default=None, dest="edgeIds", help="Edge detector SVM example class and feature id file stem (files = STEM.class_names and STEM.feature_names)")
 # Parameters to optimize
 optparser.add_option("-x", "--triggerParams", default="1000,5000,10000,20000,50000,80000,100000,150000,180000,200000,250000,300000,350000,500000,1000000", dest="triggerParams", help="Trigger detector c-parameter values")
-optparser.add_option("-y", "--recallAdjustParams", default="0.5,0.6,0.65,0.7,0.85,1.0", dest="recallAdjustParams", help="Recall adjuster parameter values")
-optparser.add_option("-z", "--edgeParams", default="5000,10000,20000,25000,28000,50000,60000,65000,80000,100000,150000", dest="edgeParams", help="Edge detector c-parameter values")
+optparser.add_option("-y", "--recallAdjustParams", default="0.5,0.6,0.65,0.7,0.85,1.0,1.1,1.2", dest="recallAdjustParams", help="Recall adjuster parameter values")
+optparser.add_option("-z", "--edgeParams", default="5000,7500,10000,20000,25000,28000,50000,60000,65000", dest="edgeParams", help="Edge detector c-parameter values")
 (options, args) = optparser.parse_args()
 
 # Check options
@@ -48,7 +48,7 @@ TRAIN_FILE = options.trainFile
 TEST_FILE = options.testFile
 
 # Example generation parameters
-EDGE_FEATURE_PARAMS="style:typed,directed,no_linear,entities,genia_limits,noMasking,maxFeatures"
+EDGE_FEATURE_PARAMS="style:trigger_features,typed,directed,no_linear,entities,genia_limits,noMasking,maxFeatures"
 TRIGGER_FEATURE_PARAMS="style:typed"
 
 boosterParams = [float(i) for i in options.recallAdjustParams.split(",")] 
