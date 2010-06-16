@@ -1,7 +1,7 @@
 """
 Trigger examples
 """
-__version__ = "$Revision: 1.21 $"
+__version__ = "$Revision: 1.22 $"
 
 import sys, os
 thisPath = os.path.dirname(os.path.abspath(__file__))
@@ -250,6 +250,15 @@ class GeneralEntityTypeRecognizerGztr(ExampleBuilder):
             stem = PorterStemmer.stem(text)
             features[self.featureSet.getId("stem_"+stem)] = 1
             features[self.featureSet.getId("nonstem_"+text[len(stem):])] = 1
+
+            # Normalized versions of the string (if same as non-normalized, overlap without effect)
+            normalizedText = text.replace("-","").replace("/","").replace(",","").replace("\\","").replace(" ","").lower()
+            if normalizedText == "bound": # should be for all irregular verbs
+                normalizedText = "bind"
+            features[self.featureSet.getId("txt_"+normalizedText)] = 1
+            norStem = PorterStemmer.stem(normalizedText)
+            features[self.featureSet.getId("stem_"+norStem)] = 1
+            features[self.featureSet.getId("nonstem_"+normalizedText[len(norStem):])] = 1
             
             # Linear order features
             for index in [-3,-2,-1,1,2,3]:
@@ -290,6 +299,10 @@ class GeneralEntityTypeRecognizerGztr(ExampleBuilder):
                 tokenText = sentenceGraph.getTokenText(edge[0])
                 features[self.featureSet.getId("t1HIn_"+tokenText)] = 1
                 features[self.featureSet.getId("t1HIn_"+edgeType+"_"+tokenText)] = 1
+                tokenStem = PorterStemmer.stem(tokenText)
+                features[self.featureSet.getId("t1HIn_"+tokenStem)] = 1
+                features[self.featureSet.getId("t1HIn_"+edgeType+"_"+tokenStem)] = 1
+                features[self.featureSet.getId("t1HIn_"+norStem+"_"+edgeType+"_"+tokenStem)] = 1
             t1OutEdges = self.outEdgesByToken[token]
             for edge in t1OutEdges:
                 edgeType = edge[2].get("type")
@@ -299,6 +312,10 @@ class GeneralEntityTypeRecognizerGztr(ExampleBuilder):
                 tokenText = sentenceGraph.getTokenText(edge[1])
                 features[self.featureSet.getId("t1HOut_"+tokenText)] = 1
                 features[self.featureSet.getId("t1HOut_"+edgeType+"_"+tokenText)] = 1
+                tokenStem = PorterStemmer.stem(tokenText)
+                features[self.featureSet.getId("t1HOut_"+tokenStem)] = 1
+                features[self.featureSet.getId("t1HOut_"+edgeType+"_"+tokenStem)] = 1
+                features[self.featureSet.getId("t1HOut_"+norStem+"_"+edgeType+"_"+tokenStem)] = 1
              
             extra = {"xtype":"token","t":token.get("id")}
             examples.append( (sentenceGraph.getSentenceId()+".x"+str(exampleIndex),category,features,extra) )
