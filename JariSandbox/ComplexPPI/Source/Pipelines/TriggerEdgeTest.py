@@ -66,6 +66,12 @@ EDGE_EXAMPLE_BUILDER = eval(options.edgeExampleBuilder)
 # Pre-calculate all the required SVM models
 TRIGGER_IDS = "trigger-ids"
 EDGE_IDS = "edge-ids"
+TRIGGER_TRAIN_EXAMPLE_FILE = "trigger-train-examples-"+PARSE_TAG
+TRIGGER_TEST_EXAMPLE_FILE = "trigger-test-examples-"+PARSE_TAG
+TRIGGER_CLASSIFIER_PARAMS="c:" + options.triggerParams
+EDGE_TRAIN_EXAMPLE_FILE = "edge-train-examples-"+PARSE_TAG
+EDGE_TEST_EXAMPLE_FILE = "edge-test-examples-"+PARSE_TAG
+EDGE_CLASSIFIER_PARAMS="c:" + options.edgeParams
 if options.mode in ["BOTH", "MODELS"]:
     if options.triggerIds != None:
         TRIGGER_IDS = copyIdSetsToWorkdir(options.triggerIds)
@@ -75,8 +81,6 @@ if options.mode in ["BOTH", "MODELS"]:
     ###############################################################################
     # Trigger example generation
     ###############################################################################
-    TRIGGER_TRAIN_EXAMPLE_FILE = "trigger-train-examples-"+PARSE_TAG
-    TRIGGER_TEST_EXAMPLE_FILE = "trigger-test-examples-"+PARSE_TAG
     print >> sys.stderr, "Trigger examples for parse", PARSE_TAG   
     TRIGGER_EXAMPLE_BUILDER.run(TRAIN_FILE, TRIGGER_TRAIN_EXAMPLE_FILE, PARSE, TOK, TRIGGER_FEATURE_PARAMS, TRIGGER_IDS)
     TRIGGER_EXAMPLE_BUILDER.run(TEST_FILE, TRIGGER_TEST_EXAMPLE_FILE, PARSE, TOK, TRIGGER_FEATURE_PARAMS, TRIGGER_IDS)
@@ -85,7 +89,6 @@ if options.mode in ["BOTH", "MODELS"]:
     # Trigger models
     ###############################################################################
     print >> sys.stderr, "Trigger models for parse", PARSE_TAG
-    TRIGGER_CLASSIFIER_PARAMS="c:" + options.triggerParams
     if "local" not in options.csc:
         clear = False
         if "clear" in options.csc: clear = True
@@ -95,14 +98,12 @@ if options.mode in ["BOTH", "MODELS"]:
             c = CSCConnection(CSC_WORKDIR+"/trigger-models", "jakrbj@murska.csc.fi", clear)
     else:
         c = None
-    bestTriggerModel = optimize(CLASSIFIER, Ev, TRIGGER_TRAIN_EXAMPLE_FILE, TRIGGER_TEST_EXAMPLE_FILE,\
-        TRIGGER_IDS+".class_names", TRIGGER_CLASSIFIER_PARAMS, "trigger-models", None, c, True)[1]
+    optimize(CLASSIFIER, Ev, TRIGGER_TRAIN_EXAMPLE_FILE, TRIGGER_TEST_EXAMPLE_FILE,\
+        TRIGGER_IDS+".class_names", TRIGGER_CLASSIFIER_PARAMS, "trigger-models", None, c, True, steps="SUBMIT")
     
     ###############################################################################
     # Edge example generation
     ###############################################################################
-    EDGE_TRAIN_EXAMPLE_FILE = "edge-train-examples-"+PARSE_TAG
-    EDGE_TEST_EXAMPLE_FILE = "edge-test-examples-"+PARSE_TAG
     print >> sys.stderr, "Edge examples for parse", PARSE_TAG  
     EDGE_EXAMPLE_BUILDER.run(TRAIN_FILE, EDGE_TRAIN_EXAMPLE_FILE, PARSE, TOK, EDGE_FEATURE_PARAMS, EDGE_IDS)
     EDGE_EXAMPLE_BUILDER.run(TEST_FILE, EDGE_TEST_EXAMPLE_FILE, PARSE, TOK, EDGE_FEATURE_PARAMS, EDGE_IDS)
@@ -111,7 +112,6 @@ if options.mode in ["BOTH", "MODELS"]:
     # Edge models
     ###############################################################################
     print >> sys.stderr, "Edge models for parse", PARSE_TAG
-    EDGE_CLASSIFIER_PARAMS="c:" + options.edgeParams
     if "local" not in options.csc:
         clear = False
         if "clear" in options.csc: clear = True
@@ -121,8 +121,8 @@ if options.mode in ["BOTH", "MODELS"]:
             c = CSCConnection(CSC_WORKDIR+"/edge-models", "jakrbj@murska.csc.fi", clear)
     else:
         c = None
-    bestEdgeModel = optimize(CLASSIFIER, Ev, EDGE_TRAIN_EXAMPLE_FILE, EDGE_TEST_EXAMPLE_FILE,\
-        EDGE_IDS+".class_names", EDGE_CLASSIFIER_PARAMS, "edge-models", None, c, True)[1]
+    optimize(CLASSIFIER, Ev, EDGE_TRAIN_EXAMPLE_FILE, EDGE_TEST_EXAMPLE_FILE,\
+        EDGE_IDS+".class_names", EDGE_CLASSIFIER_PARAMS, "edge-models", None, c, True, steps="SUBMIT")
 else:
     # New feature ids may have been defined during example generation, 
     # so use for the grid search the id sets copied to WORKDIR during 
@@ -132,8 +132,6 @@ else:
         TRIGGER_IDS = os.path.basename(options.triggerIds)
     if options.edgeIds != None:
         EDGE_IDS = os.path.basename(options.edgeIds)
-    bestEdgeModel = "edge-models/model-c_28000"
-    bestTriggerModel = "trigger-models/model-c_180000"
 
 ###############################################################################
 # Classification with recall boosting
@@ -142,6 +140,26 @@ if options.mode in ["BOTH", "FINAL"]:
     # Pre-made models
     #EDGE_MODEL_STEM = "edge-models/model-c_"
     #TRIGGER_MODEL_STEM = "trigger-models/model-c_"
+    
+    clear = False
+    if "local" not in options.csc:
+        if "louhi" in options.csc:
+            c = CSCConnection(CSC_WORKDIR+"/trigger-models", "jakrbj@louhi.csc.fi", clear)
+        else:
+            c = CSCConnection(CSC_WORKDIR+"/trigger-models", "jakrbj@murska.csc.fi", clear)
+    else:
+        c = None
+    bestTriggerModel = optimize(CLASSIFIER, Ev, TRIGGER_TRAIN_EXAMPLE_FILE, TRIGGER_TEST_EXAMPLE_FILE,\
+        TRIGGER_IDS+".class_names", TRIGGER_CLASSIFIER_PARAMS, "trigger-models", None, c, True, steps="RESULTS")[1]
+    if "local" not in options.csc:
+        if "louhi" in options.csc:
+            c = CSCConnection(CSC_WORKDIR+"/edge-models", "jakrbj@louhi.csc.fi", clear)
+        else:
+            c = CSCConnection(CSC_WORKDIR+"/edge-models", "jakrbj@murska.csc.fi", clear)
+    else:
+        c = None
+    bestEdgeModel = optimize(CLASSIFIER, Ev, EDGE_TRAIN_EXAMPLE_FILE, EDGE_TEST_EXAMPLE_FILE,\
+        EDGE_IDS+".class_names", EDGE_CLASSIFIER_PARAMS, "edge-models", None, c, True, steps="RESULTS")[1]
     
     count = 0
     TRIGGER_EXAMPLE_BUILDER.run(TEST_FILE, "test-trigger-examples", PARSE, TOK, TRIGGER_FEATURE_PARAMS, TRIGGER_IDS)
@@ -173,7 +191,7 @@ if options.mode in ["BOTH", "FINAL"]:
             #xml = ExampleUtils.writeToInteractionXML("test-edge-examples", "test-edge-classifications", xml, None, EDGE_IDS+".class_names", PARSE, TOK)
             xml = BioTextExampleWriter.write("test-edge-examples", "test-edge-classifications", xml, None, EDGE_IDS+".class_names", PARSE, TOK)
             xml = ix.splitMergedElements(xml, None)
-            xml = ix.recalculateIds(xml, "final.xml", True)
+            xml = ix.recalculateIds(xml, "flat-" + str(boost) + ".xml", True)
             
             # EvaluateInteractionXML differs from the previous evaluations in that it can
             # be used to compare two separate GifXML-files. One of these is the gold file,
