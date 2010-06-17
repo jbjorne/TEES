@@ -17,13 +17,15 @@ optparser.add_option("-t", "--tokenization", default="split-McClosky", dest="tok
 # Classifier
 optparser.add_option("-c", "--classifier", default="Cls", dest="classifier", help="")
 optparser.add_option("--csc", default="murska", dest="csc", help="")
+optparser.add_option("-d", "--evaluator", default="Ev", dest="evaluator", help="")
 # Example builders
 optparser.add_option("-s", "--styles", default="typed", dest="triggerStyles", help="")
 # Id sets
 optparser.add_option("-v", "--triggerIds", default=None, dest="triggerIds", help="Trigger detector SVM example class and feature id file stem (files = STEM.class_names and STEM.feature_names)")
 # Parameters to optimize
 #optparser.add_option("-x", "--triggerParams", default="0.01,0.1,1,10,100,1000,5000,10000,20000,50000,80000,100000,150000,180000,200000,250000,300000,350000,500000,1000000", dest="triggerParams", help="Trigger detector c-parameter values")
-optparser.add_option("-x", "--triggerParams", default="0.01,0.1,1,10,100,1000,5000,10000,20000,50000", dest="triggerParams", help="Trigger detector c-parameter values")
+#optparser.add_option("-x", "--triggerParams", default="0.01,0.1,1,10,100,1000,5000,10000,20000,50000", dest="triggerParams", help="Trigger detector c-parameter values")
+optparser.add_option("-x", "--triggerParams", default="100,1000,2500,4000,5000,6000,7500,10000,20000", dest="triggerParams", help="Trigger detector c-parameter values")
 (options, args) = optparser.parse_args()
 
 # Check options
@@ -36,6 +38,7 @@ else:
     options.csc = [options.csc]
 
 exec "CLASSIFIER = " + options.classifier
+exec "EVALUATOR = " + options.evaluator
 
 # Main settings
 PARSE=options.parse
@@ -69,6 +72,7 @@ if not "eval" in options.csc:
     print >> sys.stderr, "Unmerging examples for parse", PARSE_TAG   
     UnmergingExampleBuilder.run(TEST_FILE, GOLD_TEST_FILE, UNMERGING_TEST_EXAMPLE_FILE, PARSE, TOK, UNMERGING_FEATURE_PARAMS, UNMERGING_IDS)
     UnmergingExampleBuilder.run(TRAIN_FILE, GOLD_TRAIN_FILE, UNMERGING_TRAIN_EXAMPLE_FILE, PARSE, TOK, UNMERGING_FEATURE_PARAMS, UNMERGING_IDS)
+    UnmergingExampleBuilder.run("/home/jari/biotext/EventExtension/TrainSelfClassify/test-predicted-edges.xml", GOLD_TRAIN_FILE, UNMERGING_TRAIN_EXAMPLE_FILE, PARSE, TOK, UNMERGING_FEATURE_PARAMS, UNMERGING_IDS, append=True)
     
     print >> sys.stderr, "Unmerging models for parse", PARSE_TAG
 
@@ -82,10 +86,13 @@ if "local" not in options.csc:
 else:
     c = None
 
+if options.evaluator == "STEv":
+    EVALUATOR.setOptions("temp", options.task, TEST_FILE, parse=PARSE, tokenization=TOK, ids=UNMERGING_IDS)
+
 steps = "BOTH"
 if "eval" in options.csc:
     steps = "RESULTS"
-bestUnmergingModel = optimize(CLASSIFIER, Ev, UNMERGING_TRAIN_EXAMPLE_FILE, UNMERGING_TEST_EXAMPLE_FILE,\
+bestUnmergingModel = optimize(CLASSIFIER, EVALUATOR, UNMERGING_TRAIN_EXAMPLE_FILE, UNMERGING_TEST_EXAMPLE_FILE,\
     UNMERGING_IDS+".class_names", UNMERGING_CLASSIFIER_PARAMS, "unmerging-models", None, c, False, steps=steps)[1]
 
 Cls.test(UNMERGING_TEST_EXAMPLE_FILE, bestUnmergingModel, "unmerging-test-classifications")
