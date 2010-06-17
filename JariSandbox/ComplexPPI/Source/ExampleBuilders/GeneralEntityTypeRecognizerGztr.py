@@ -1,7 +1,7 @@
 """
 Trigger examples
 """
-__version__ = "$Revision: 1.22 $"
+__version__ = "$Revision: 1.23 $"
 
 import sys, os
 thisPath = os.path.dirname(os.path.abspath(__file__))
@@ -162,6 +162,12 @@ class GeneralEntityTypeRecognizerGztr(ExampleBuilder):
                 if entity.get("isName") == "True": # known data which can be used for features
                     namedEntityCount += 1
             namedEntityCountFeature = "nameCount_" + str(namedEntityCount)
+            # NOTE!!! This will change the number of examples and omit
+            # all triggers (positive and negative) from sentences which
+            # have no NE:s, possibly giving a too-optimistic performance
+            # value. Such sentences can still have triggers from intersentence
+            # interactions, but as such events cannot be recovered anyway,
+            # looking for these triggers would be pointless.
             if namedEntityCount == 0: # no names, no need for triggers
                 return []
             
