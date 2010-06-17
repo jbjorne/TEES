@@ -1,7 +1,7 @@
 """
 Edge Examples
 """
-__version__ = "$Revision: 1.45 $"
+__version__ = "$Revision: 1.46 $"
 
 import sys, os
 thisPath = os.path.dirname(os.path.abspath(__file__))
@@ -15,6 +15,7 @@ from FeatureBuilders.TokenFeatureBuilder import TokenFeatureBuilder
 from FeatureBuilders.BioInferOntologyFeatureBuilder import BioInferOntologyFeatureBuilder
 from FeatureBuilders.NodalidaFeatureBuilder import NodalidaFeatureBuilder
 import Graph.networkx_v10rc1 as NX10
+from FeatureBuilders.TriggerFeatureBuilder import TriggerFeatureBuilder
 #IF LOCAL
 import Utils.BioInfer.OntologyUtils as OntologyUtils
 #ENDIF
@@ -54,6 +55,8 @@ class MultiEdgeExampleBuilder(ExampleBuilder):
         #IF LOCAL
         if "bioinfer_limits" in self.styles:
             self.bioinferOntologies = OntologyUtils.getBioInferTempOntology()
+        if "trigger_features" in self.styles:
+            self.triggerFeatureBuilder = TriggerFeatureBuilder(self.featureSet)
             #self.bioinferOntologies = OntologyUtils.loadOntologies(OntologyUtils.g_bioInferFileName)
         #ENDIF
         self.pathLengths = length
@@ -221,6 +224,9 @@ class MultiEdgeExampleBuilder(ExampleBuilder):
         examples = []
         exampleIndex = 0
         
+        if "trigger_features" in self.styles: 
+            self.triggerFeatureBuilder.initSentence(sentenceGraph)
+        
         #undirected = sentenceGraph.getUndirectedDependencyGraph()
         undirected = self.nxMultiDiGraphToUndirected(sentenceGraph.dependencyGraph)
         ##undirected = sentenceGraph.dependencyGraph.to_undirected()
@@ -307,6 +313,13 @@ class MultiEdgeExampleBuilder(ExampleBuilder):
 #                    self.ontologyFeatureBuilder.setFeatureVector(features)
 #                    self.ontologyFeatureBuilder.buildOntologyFeaturesForPath(sentenceGraph, path)
 #                    self.ontologyFeatureBuilder.setFeatureVector(None)
+                if "trigger_features" in self.styles: # F 85.52 -> 85.55
+                    self.triggerFeatureBuilder.setFeatureVector(features)
+                    self.triggerFeatureBuilder.tag = "trg1_"
+                    self.triggerFeatureBuilder.buildFeatures(token1)
+                    self.triggerFeatureBuilder.tag = "trg2_"
+                    self.triggerFeatureBuilder.buildFeatures(token2)
+                    self.triggerFeatureBuilder.setFeatureVector(None)
                 if "graph_kernel" in self.styles or not "no_dependency" in self.styles:
                     if token1 != token2 and paths.has_key(token1) and paths[token1].has_key(token2):
                         edges = self.multiEdgeFeatureBuilder.getEdges(sentenceGraph.dependencyGraph, path)
