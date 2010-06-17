@@ -1,7 +1,7 @@
 """
 Edge Examples
 """
-__version__ = "$Revision: 1.5 $"
+__version__ = "$Revision: 1.6 $"
 
 import sys, os
 thisPath = os.path.dirname(os.path.abspath(__file__))
@@ -21,6 +21,7 @@ from Utils.ProgressCounter import ProgressCounter
 import Utils.BioInfer.OntologyUtils as OntologyUtils
 #ENDIF
 import combine
+import cElementTreeUtils as ETUtils
 
 def combinations(iterable, r):
     # combinations('ABCD', 2) --> AB AC AD BC BD CD
@@ -81,6 +82,7 @@ class UnmergingExampleBuilder(ExampleBuilder):
         ExampleBuilder.__init__(self, classSet=classSet, featureSet=featureSet)
         self.styles = style
         
+        self.styles = ["trigger_features","typed","directed","no_linear","entities","genia_limits","noMasking","maxFeatures"]
         self.multiEdgeFeatureBuilder = MultiEdgeFeatureBuilder(self.featureSet)
         if "graph_kernel" in self.styles:
             from FeatureBuilders.GraphKernelFeatureBuilder import GraphKernelFeatureBuilder
@@ -113,7 +115,7 @@ class UnmergingExampleBuilder(ExampleBuilder):
         #self.outFile = open("exampleTempFile.txt","wt")
 
     @classmethod
-    def run(cls, input, gold, output, parse, tokenization, style, idFileTag=None):
+    def run(cls, input, gold, output, parse, tokenization, style, idFileTag=None, append=False):
         """
         An interface for running the example builder without needing to create a class
         """
@@ -127,7 +129,7 @@ class UnmergingExampleBuilder(ExampleBuilder):
             goldSentences = cls.getSentences(gold, parse, tokenization)
         else:
             goldSentences = None
-        e.buildExamplesForSentences(sentences, goldSentences, output, idFileTag)
+        e.buildExamplesForSentences(sentences, goldSentences, output, idFileTag, append=append)
     
     def getInteractionEdgeLengths(self, sentenceGraph, paths):
         """
@@ -162,11 +164,14 @@ class UnmergingExampleBuilder(ExampleBuilder):
             interactionLengths[interaction] = (interaction, pathLength, linLength, t2Pos)
         return interactionLengths
 
-    def buildExamplesForSentences(self, sentences, goldSentences, output, idFileTag=None):            
+    def buildExamplesForSentences(self, sentences, goldSentences, output, idFileTag=None, append=False):            
         examples = []
         counter = ProgressCounter(len(sentences), "Build examples")
         
-        outfile = open(output, "wt")
+        if append:
+            outfile = open(output, "at")
+        else:
+            outfile = open(output, "wt")
         exampleCount = 0
         for i in range(len(sentences)):
             sentence = sentences[i]
@@ -174,7 +179,7 @@ class UnmergingExampleBuilder(ExampleBuilder):
             if goldSentences != None:
                 goldSentence = goldSentences[i]
             counter.update(1, "Building examples ("+sentence[0].getSentenceId()+"): ")
-            examples = self.buildExamples(sentence[0], goldSentence[0])
+            examples = self.buildExamples(sentence[0], goldSentence[0], append=append)
             exampleCount += len(examples)
             examples = self.preProcessExamples(examples)
             ExampleUtils.appendExamples(examples, outfile)
@@ -375,7 +380,9 @@ class UnmergingExampleBuilder(ExampleBuilder):
             causes = []
             for interaction in interactions:
                 iType = interaction.get("type")
-                assert iType in ["Theme", "Cause"] 
+                #assert iType in ["Theme", "Cause"], (iType, ETUtils.toStr(interaction))
+                if iType not in ["Theme", "Cause"]:
+                    continue
                 if iType == "Theme":
                     themes.append(interaction)
                 else:
@@ -386,7 +393,7 @@ class UnmergingExampleBuilder(ExampleBuilder):
             #print "Combine", combine.combine(themes, causes), "TA", themeAloneCombinations
             return combine.combine(themes, causes) + themeAloneCombinations
             
-    def buildExamples(self, sentenceGraph, goldGraph):
+    def buildExamples(self, sentenceGraph, goldGraph, append=False):
         """
         Build examples for a single sentence. Returns a list of examples.
         See Core/ExampleUtils for example format.
@@ -396,6 +403,8 @@ class UnmergingExampleBuilder(ExampleBuilder):
         
         examples = []
         exampleIndex = 0
+        if append == True:
+            exampleIndex += 1000
         
         undirected = self.nxMultiDiGraphToUndirected(sentenceGraph.dependencyGraph)
         paths = NX10.all_pairs_shortest_path(undirected, cutoff=999)
@@ -435,8 +444,8 @@ class UnmergingExampleBuilder(ExampleBuilder):
         exampleIndex = 0
         for entity in sentenceGraph.entities:
             eType = entity.get("type")
-            if eType not in ["Binding", "Positive_regulation", "Negative_regulation", "Regulation"]:
-                continue
+            #if eType not in ["Binding", "Positive_regulation", "Negative_regulation", "Regulation"]:
+            #    continue
             
             #if not goldEntitiesByOffset.has_key(entity.get("headOffset")):
             #    continue
@@ -456,9 +465,12 @@ class UnmergingExampleBuilder(ExampleBuilder):
                     isGoldEvent = False
                 # Named (multi-)class
                 if isGoldEvent:
+                    #category = "event"
                     category = eType
                     if category.find("egulation") != -1:
                         category = "All_regulation"
+                    elif category != "Binding":
+                        category = "simple6"
                 else:
                     category = "neg"
                     
@@ -503,7 +515,9 @@ class UnmergingExampleBuilder(ExampleBuilder):
         self.triggerFeatureBuilder.setFeatureVector(self.features)
         self.triggerFeatureBuilder.tag = "trg_"
         self.triggerFeatureBuilder.buildFeatures(eventToken)
-        self.triggerFeatureBuilder.tag = None        
+        self.triggerFeatureBuilder.tag = None
+        
+        #self.setFeature("rootType_"+eventEntity.get("type"), 1)
         
         argThemeCount = 0
         argCauseCount = 0
