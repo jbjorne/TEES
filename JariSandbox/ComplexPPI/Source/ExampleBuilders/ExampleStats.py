@@ -5,6 +5,15 @@ class ExampleStats:
         self.filteredByClass = {}
         self.filteredByClassByFilter = {}
     
+    def addKnownPositives(self, className, number=1):
+        pass
+    
+    def addExample(self, className, filteredBy=[]):
+        self.beginExample(className)
+        for filter in filteredBy:
+            self.filter(filter)
+        self.endExample()
+    
     def beginExample(self, className):
         assert self.className == None
         
@@ -47,6 +56,7 @@ class ExampleStats:
             else:
                 filterStr = ""
             print " ", className + ": " + str(self.examplesByClass[className]) + "/" + str(self.filteredByClass[className]), filterStr 
-
+        print "Positives Coverage 100%"
+        
     #def add(self, className, filteredBy=[]):
     #    pass
