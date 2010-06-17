@@ -264,16 +264,16 @@ def getEvents(document, inputCorpus, task=1):
                     else:
                         causeCount += 1
                 if causeCount == 0 and themeCount == 0:
-                    print >> sys.stderr, "Removing: Event with no arguments", key
+                    print >> sys.stderr, "Removing: Event with no arguments", key, entityMap[key].get("type")
                     del events[key]
                     removeCount += 1
                 elif causeCount > 0 and themeCount == 0:
                     if True:
-                        print >> sys.stderr, "Removing: Event with Cause and no Themes", key
+                        print >> sys.stderr, "Removing: Event with Cause and no Themes", key, entityMap[key].get("type")
                         del events[key]
                         removeCount += 1
                     else: # works worse, devel f-score 56.13 -> 55.62
-                        print >> sys.stderr, "Converting Event with Cause and no Themes", key
+                        print >> sys.stderr, "Converting Event with Cause and no Themes", key, entityMap[key].get("type")
                         for interaction in events[key][:]:
                             interaction.set("type", "Theme")
     
