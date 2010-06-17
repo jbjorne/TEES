@@ -212,7 +212,7 @@ class TriggerFeatureBuilder(FeatureBuilder):
 #            self.setFeature("t1HOut_"+edgeType+"_"+tokenText, 1)
         
         # chains
-        #self.buildChains(token, sentenceGraph)
+        self.buildChains(token, sentenceGraph)
     
     def buildChains(self,token,sentenceGraph,depthLeft=3,chain="",visited=None):
         if depthLeft == 0:
