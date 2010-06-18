@@ -164,3 +164,15 @@ class SentenceExampleWriter:
                     predictionString += ","
                 predictionString += classSet.getName(classIds[i]) + ":" + str(classWeights[i])
             element.attrib["predictions"] = predictionString
+    
+    def getPredictionStrengthString(self, prediction, classSet, classIds, skipClasses=None):
+        classWeights = prediction[1:]
+        predictionString = ""
+        for i in range(len(classWeights)):
+            className = classSet.getName(classIds[i])
+            if skipClasses != None and className in skipClasses:
+                continue
+            if predictionString != "":
+                predictionString += ","
+            predictionString += classSet.getName(classIds[i]) + ":" + str(classWeights[i])
+        return predictionString
