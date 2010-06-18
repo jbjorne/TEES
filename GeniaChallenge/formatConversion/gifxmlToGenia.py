@@ -71,40 +71,46 @@ def processCorpus(inputCorpus, outputPath, task=1, outputIsA2File=False, verbose
 
         # Write a2.t1 file
         if task == 1:
+            strengthFile = None
             if outputIsA2File: 
                 outputFile = a2File
             else:
                 outputFile = codecs.open(os.path.join(outputPath,documentId + ".a2.t1"), "wt", "utf-8")
+                strengthFile = codecs.open(os.path.join(outputPath,documentId + ".a2.t1.scores"), "wt", "utf-8")
                 #outputFile = open(os.path.join(outputPath,documentId + ".a2.t1"), "wt")
             events, entityMap = getEvents(document, inputCorpus, 1)
             #print "EVENTS-FINAL", events, "\nENTITY_MAP", entityMap
             triggerIds = copy.copy(namedEntityTriggerIds)
-            writeEventTriggers(document, inputCorpus, outputFile, events, triggerIds, 1, strengths=strengths)
-            writeEvents(document, inputCorpus, outputFile, events, entityMap, triggerIds, strengths=strengths)
+            writeEventTriggers(document, inputCorpus, outputFile, events, triggerIds, 1, strengths=strengthFile)
+            writeEvents(document, inputCorpus, outputFile, events, entityMap, triggerIds, strengths=strengthFile)
             #outputFile.close()
         # Write a2.t12 file
         elif task == 2:
+            strengthFile = None
             if outputIsA2File: 
                 outputFile = a2File
             else:
                 outputFile = codecs.open(os.path.join(outputPath,documentId + ".a2.t12"), "wt", "utf-8")
+                strengthFile = codecs.open(os.path.join(outputPath,documentId + ".a2.t12.scores"), "wt", "utf-8")
                 #outputFile = open(os.path.join(outputPath,documentId + ".a2.t12"), "wt")
             events, entityMap = getEvents(document, inputCorpus, 2)
             triggerIds = copy.copy(namedEntityTriggerIds)
-            writeEventTriggers(document, inputCorpus, outputFile, events, triggerIds, 2, strengths=strengths)
-            writeEvents(document, inputCorpus, outputFile, events, entityMap, triggerIds, strengths=strengths)
+            writeEventTriggers(document, inputCorpus, outputFile, events, triggerIds, 2, strengths=strengthFile)
+            writeEvents(document, inputCorpus, outputFile, events, entityMap, triggerIds, strengths=strengthFile)
             #outputFile.close()
         # Write a2.t123 file
         elif task == 3:
+            strengthFile = None
             if outputIsA2File: 
                 outputFile = a2File
             else:
                 outputFile = codecs.open(os.path.join(outputPath,documentId + ".a2.t123"), "wt", "utf-8")
+                strengthFile = codecs.open(os.path.join(outputPath,documentId + ".a2.t123.scores"), "wt", "utf-8")
                 #outputFile = open(os.path.join(outputPath,documentId + ".a2.t123"), "wt")
             events, entityMap = getEvents(document, inputCorpus, 2)
             triggerIds = copy.copy(namedEntityTriggerIds)
-            writeEventTriggers(document, inputCorpus, outputFile, events, triggerIds, 2, strengths=strengths)
-            writeEvents(document, inputCorpus, outputFile, events, entityMap, triggerIds, True, strengths=strengths)
+            writeEventTriggers(document, inputCorpus, outputFile, events, triggerIds, 2, strengths=strengthFile)
+            writeEvents(document, inputCorpus, outputFile, events, entityMap, triggerIds, True, strengths=strengthFile)
             #outputFile.close()
         if not outputIsA2File: 
             outputFile.close()
@@ -193,8 +199,9 @@ def writeEventTriggers(document, inputCorpus, outputFile, events, triggerIds, ta
                     else:
                         triggerId = "T" + str(entityIndex)
                         strengthLine = ""
-                        if strengths and entity.get("predictions") != None:
-                            strengthLine = " # " + entity.get("predictions")
+                        if strengths != None and entity.get("predictions") != None:
+                            #strengthLine = " # " + entity.get("predictions")
+                            strengths.write ( encode(triggerId + "\t" + entity.get("predictions") + "\n") )
                         outputFile.write( encode(triggerId + "\t" + entity.get("type") + " " + str(newOffset[0]) + " " + str(newOffset[1]) + "\t" + entity.get("text") + strengthLine + "\n") )
                         offsetMap[match] = triggerId
                         assert(not triggerIds.has_key(entity.get("id")))
@@ -377,15 +384,16 @@ def writeEvents(document, inputCorpus, outputFile, events, entityMap, triggerIds
         entity = entityMap[key]
         if writeTask3:
             if entity.get("speculation") == "True":
-                speculations.append(eventIds[key])
+                speculations.append( (eventIds[key], entity) )
             if entity.get("negation") == "True":
-                negations.append(eventIds[key])
+                negations.append( (eventIds[key], entity) )
                 
         eventType = entity.get("type")
         assert(key == entity.get("id") or key.rsplit(".",1)[0] == entity.get("id"))
         outputLine = eventIds[key] + "\t" + eventType + ":" + triggerIds[entity.get("id")]
         siteLine = ""
-        strengthLine = " #"
+        #strengthLine = " #"
+        strengthLine = eventIds[key] + "\t"
         assert( len(events[key]) > 0 )
         themeCount = 0
         causeCount = 0
@@ -426,20 +434,20 @@ def writeEvents(document, inputCorpus, outputFile, events, entityMap, triggerIds
             if interactionString not in interactionStrings:
                 if type == "Theme" and precalculatedThemeCount > 1:
                     outputLine += " " + interaction.get("type") + str(themeCount+1) + ":" + e2Id
-                    if strengths:
-                        strengthLine += " " + interaction.get("type") + str(themeCount+1) + ":" + interaction.get("predictions")
+                    if strengths != None:
+                        strengthLine += interaction.get("type") + str(themeCount+1) + "=" + str(interaction.get("predictions")) + " "
                     if site != None:
                         siteLine += " " + siteType + str(themeCount+1) + ":" + triggerIds[site.get("e1")]
-                        if strengths:
-                            strengthLine += " " + siteType + str(themeCount+1) + ":" + site.get("predictions")
+                        if strengths != None:
+                            strengthLine += siteType + str(themeCount+1) + "=" + str(site.get("predictions")) + " "
                 else:
                     outputLine += " " + interactionString
-                    if strengths:
-                        strengthLine += " " + interaction.get("type") + ":" + interaction.get("predictions")
+                    if strengths != None:
+                        strengthLine += interaction.get("type") + "=" + str(interaction.get("predictions")) + " "
                     if site != None:
                         siteLine += " " + siteType + ":" + triggerIds[site.get("e1")]
-                        if strengths:
-                            strengthLine += " " + siteType + ":" + site.get("predictions")
+                        if strengths != None:
+                            strengthLine += siteType + "=" + str(site.get("predictions")) + " "
             interactionStrings.add(interactionString) 
             
             if type == "Theme":
@@ -455,16 +463,21 @@ def writeEvents(document, inputCorpus, outputFile, events, entityMap, triggerIds
 #        else:
 #            seenOutputLines.append(outputLineWithoutId)
         outputLine += siteLine
-        if strengths:
-            outputLine += strengthLine
+        if strengths != None:
+            #outputLine += strengthLine
+            strengths.write(encode(strengthLine[:-1] + "\n"))
         outputFile.write( encode(outputLine + "\n") )
     
     mCount = 1
     for speculation in speculations:
-        outputFile.write( encode("M" + str(mCount) + "\tSpeculation " + speculation + "\n") )       
+        outputFile.write( encode("M" + str(mCount) + "\tSpeculation " + speculation[0] + "\n") )
+        if strengths != None:
+            strengths.write( encode("M" + str(mCount) + "\t" + speculation[1].get("specPred") + "\n") )       
         mCount += 1
     for negation in negations:
-        outputFile.write( encode("M" + str(mCount) + "\tNegation " + negation + "\n") )
+        outputFile.write( encode("M" + str(mCount) + "\tNegation " + negation[0] + "\n") )
+        if strengths != None:
+            strengths.write( encode("M" + str(mCount) + "\t" + negation[1].get("negPred") + "\n") )       
         mCount += 1
 
 def gifxmlToGenia(input, output, task=1, outputIsA2File=False, submission=False, verbose=True, strengths=False):
