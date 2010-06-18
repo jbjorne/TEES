@@ -1,4 +1,4 @@
-import sys, os, shutil
+import sys, os, shutil, atexit
 import subprocess
 import time
 from optparse import OptionParser
@@ -90,18 +90,25 @@ def update(inDir, outDir, workDir, queueDir, submitFilename=None, listFile=False
     """
     Main method, adds files to job scripts
     """
-    remainingInputs = 0
+    origDir = os.getcwd()
+    os.chdir(inDir)
+    atexit.register(os.chdir, origDir)
+
+    remainingInputs = 1
     prevRemainingInputs = 0
     round = 1
-    while remainingInputs == None or remainingInputs != 0:
+    while remainingInputs > 0:
         remainingInputs = prepareJobs(inDir, outDir, workDir, queueDir, submitFilename+"-round"+str(round))
+        print "Input files to be processed", remainingInputs
         if remainingInputs > 0:
             submitJobs(submitFilename+"-round"+str(round))
         if prevRemainingInputs == remainingInputs:
             print "Exiting, remaining jobs", remainingInputs
         prevRemainingInputs = remainingInputs
+        round += 1
 
 def prepareJobs(inDir, outDir, workDir, queueDir, submitFilename=None, listFile=False, oneJob=False):
+    print "Preparing jobs"
     if submitFilename != None:
         submitFile = open(submitFilename, "at")
     
@@ -127,18 +134,10 @@ def prepareJobs(inDir, outDir, workDir, queueDir, submitFilename=None, listFile=
     for triple in sourceList:
         inputFiles = []
         for filename in triple[2]:
-            if filename[-7:] == ".xml.gz" or filename[-4:] == ".xml":
-                skip = False
-                if filename[-7:] == ".xml.gz":
-                    if not os.path.exists(os.path.join(triple[0], filename[:-7], "-finished")):
-                        skip = True
-                elif filename[-4:] == ".xml":
-                    if not os.path.exists(os.path.join(triple[0], filename[:-4], "-finished")):
-                        skip = True
-                if skip:
-                    continue
-                inputFiles.append(os.path.abspath(os.path.join(os.path.join(triple[0], filename))))
-                remainingInputs += 1
+            if filename.find("events_unflattened.xml.gz") != -1:
+		if not os.path.exists(os.path.join(triple[0], filename[:-7]+"-finished")):
+                    inputFiles.append(os.path.abspath(os.path.join(triple[0], filename)))
+                    remainingInputs += 1
         if len(inputFiles) == 0:
             continue
         nameBase = triple[0].replace("/", "_")
@@ -163,9 +162,10 @@ def prepareJobs(inDir, outDir, workDir, queueDir, submitFilename=None, listFile=
     if submitFilename != None:
         submitFile.close()
     
-    return remainingJobs
+    return remainingInputs
 
 def submitJobs(jobFilename):
+    print "Submitting jobs"
     jobs = readJobs([jobFilename])
     while True:        
         x=currentJobs()
@@ -210,11 +210,11 @@ def readJobs(jobFilenames):
     
 if __name__=="__main__":
     optparser = OptionParser()
-    optparser.add_option("-i", "--input", default=None, dest="input", help="input directory")
+    optparser.add_option("-i", "--input", default="/wrk/jakrbj/PubMedEvents/100p", dest="input", help="input directory")
     optparser.add_option("-f", "--files", default=False, action="store_true", dest="files", help="-i switch defines a file with a list of individual files to process")
-    optparser.add_option("-o", "--output", default=None, dest="output", help="output directory")
+    optparser.add_option("-o", "--output", default="/wrk/jakrbj/PubMedEvents/100p", dest="output", help="output directory")
     optparser.add_option("-w", "--workdir", default="/wrk/jakrbj/shared-task-test", dest="workdir", help="working directory")
-    optparser.add_option("-q", "--queue", default="/wrk/jakrbj/jobqueue", dest="queue", help="job queue directory")
+    optparser.add_option("-q", "--queue", default="/wrk/jakrbj/PubMedTask3Rerun", dest="queue", help="job queue directory")
     optparser.add_option("-s", "--submitFile", default=None, dest="submitFile", help="A file with bsub commands")
     optparser.add_option("-j", "--oneJob", default=False, action="store_true", dest="oneJob", help="Make one job script")
     (options, args) = optparser.parse_args()
@@ -225,4 +225,6 @@ if __name__=="__main__":
     assert options.queue != None
     assert os.path.exists(options.queue)
     
+    if options.submitFile == None:
+       options.submitFile = options.queue + "/submitfile"
     update(options.input, options.output, options.workdir, options.queue, options.submitFile, options.files, oneJob=options.oneJob)
