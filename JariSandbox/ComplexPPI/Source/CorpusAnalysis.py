@@ -440,6 +440,32 @@ def countEntities(corpusElements):
     for key in sorted(counts.keys()):
         print " ", key, counts[key]
 
+def countIntersentenceEvents(corpusElements):
+    counts = {}
+    for sentence in corpusElements.sentences:
+        interactionsByE1 = {}
+        for interaction in sentence.interactions:
+            e1 = interaction.get("e1")
+            if not interactionsByE1.has_key(e1):
+                interactionsByE1[e1] = []
+            interactionsByE1[e1].append(interaction)
+        for e1 in sorted(interactionsByE1.keys()):
+            isIntersentence = False
+            for interaction in interactionsByE1[e1]:
+                e1MajorId, e1MinorId = interaction.get("e1").rsplit(".e", 1)
+                e2MajorId, e2MinorId = interaction.get("e2").rsplit(".e", 1)
+                if e1MajorId != e2MajorId:
+                    isIntersentence = True
+                    break
+            if isIntersentence:
+                eType = sentence.entitiesById[e1].get("type")
+                if not counts.has_key(eType):
+                    counts[eType] = 0 
+                counts[eType] += 1
+    print "Intersentence Event counts"
+    for key in sorted(counts.keys()):
+        print " ", key, counts[key]
+
 if __name__=="__main__":
     defaultAnalysisFilename = "/usr/share/biotext/ComplexPPI/BioInferForComplexPPIVisible_noCL.xml"
     optparser = OptionParser(usage="%prog [options]\nCreate an html visualization for a corpus.")
@@ -481,3 +507,5 @@ if __name__=="__main__":
         countOverlappingHeads(corpusElements)
     if options.analyses.find("count_entities") != -1:
         countEntities(corpusElements)
+    if options.analyses.find("intersentence") != -1:
+        countIntersentenceEvents(corpusElements)
