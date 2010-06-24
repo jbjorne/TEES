@@ -92,7 +92,17 @@ def evaluateVariance(sourceDir, task, folds):
     print >> sys.stderr, "##### Variance estimation results #####"
     for r in results:
         print >> sys.stderr, r["approximate"]["ALL-TOTAL"]
-    
+
+def hasGoldDocuments(sourceDir, goldDir):
+    goldDocIds = set()
+    for filename in os.listdir(goldDir):
+        if filename[-4:] == ".txt":
+            goldDocIds.add(filename.split(".", 1)[0])
+    for filename in os.listdir(sourceDir):
+        if filename.find(".a2") != -1:
+            if filename.split(".", 1)[0] in goldDocIds:
+                return True
+    return False
 
 def evaluate(sourceDir, task=1, folds=-1, foldToRemove=-1, evaluations=["strict", "approximate", "decomposition"], verbose=True):
     global perlDir
@@ -118,6 +128,10 @@ def evaluate(sourceDir, task=1, folds=-1, foldToRemove=-1, evaluations=["strict"
         goldDir = "/v/users/jakrbj/shared-task-evaluation/evaluation-tools-devel-gold"
         tempDir = origDir + "/evaluation-temp"
     #ENDIF
+    
+    if not hasGoldDocuments(sourceDir, goldDir):
+        print >> sys.stderr, "Evaluation input has no gold documents"
+        return 
     
     if os.path.exists(tempDir):
         shutil.rmtree(tempDir)
