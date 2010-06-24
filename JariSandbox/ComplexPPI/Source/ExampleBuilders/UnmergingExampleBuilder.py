@@ -1,7 +1,7 @@
 """
 Edge Examples
 """
-__version__ = "$Revision: 1.6 $"
+__version__ = "$Revision: 1.7 $"
 
 import sys, os
 thisPath = os.path.dirname(os.path.abspath(__file__))
@@ -370,12 +370,18 @@ class UnmergingExampleBuilder(ExampleBuilder):
             #    return [interactions]
             #else:
             #    return interactions
+            
+            # Skip causes
+            themes = []
+            for interaction in interactions:
+                if interaction.get("type") == "Theme":
+                    themes.append(interaction)
                 
-            for i in range(len(interactions)):
-                for j in combinations(interactions, i+1):
+            for i in range(len(themes)):
+                for j in combinations(themes, i+1):
                     combs.append(j)
             return combs
-        else: # one of the regulation-types
+        else: # one of the regulation-types, or one of the simple types
             themes = []
             causes = []
             for interaction in interactions:
@@ -387,6 +393,8 @@ class UnmergingExampleBuilder(ExampleBuilder):
                     themes.append(interaction)
                 else:
                     causes.append(interaction)
+            if eType.find("egulation") == -1: # Only regulations can have causes
+                causes = []
             themeAloneCombinations = []
             for theme in themes:
                 themeAloneCombinations.append([theme])
