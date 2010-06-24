@@ -11,9 +11,9 @@ except ImportError:
     import cElementTree as ET
 import cElementTreeUtils as ETUtils
     
-def removeElements(sentence, elementName, attributes, countsByType):
+def removeElements(parent, elementName, attributes, countsByType):
     toRemove = []
-    for element in sentence:
+    for element in parent.getchildren():
         if element.tag == elementName:
             remove = True
             for k,v in attributes.iteritems():
@@ -21,8 +21,10 @@ def removeElements(sentence, elementName, attributes, countsByType):
                     remove = False
             if remove:
                 toRemove.append(element)
+        else:
+            removeElements(element, elementName, attributes, countsByType)
     for element in toRemove:
-        sentence.remove(element)
+        parent.remove(element)
         countsByType[elementName] += 1
             
 # Splits entities/edges with merged types into separate elements
