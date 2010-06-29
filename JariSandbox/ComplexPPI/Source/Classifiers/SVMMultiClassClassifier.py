@@ -1,4 +1,4 @@
-__version__ = "$Revision: 1.43 $"
+__version__ = "$Revision: 1.44 $"
 
 import sys,os
 sys.path.append(os.path.dirname(os.path.abspath(__file__))+"/..")
@@ -147,7 +147,7 @@ class SVMMultiClassClassifier(Classifier):
             args.append(str(v))
     
     @classmethod
-    def testInternal(cls, examples, modelPath, output=None):
+    def testInternal(cls, examples, modelPath, output=None, idStem=None):
         try:
             import numpy
             numpy.array([]) # dummy call to survive networkx
@@ -157,6 +157,13 @@ class SVMMultiClassClassifier(Classifier):
 
         if output == None:
             output = "predictions"
+        
+        outputDetails = False
+        if idStem != None: # Output detailed classification
+            outputDetails = True
+            from Core.IdSet import IdSet
+            featureSet = IdSet(filename=idStem+".feature_names")
+            classSet = IdSet(filename=idStem+".class_names")
             
         assert os.path.exists(modelPath)
         svs = SVMMultiClassModelUtils.getSupportVectors(modelPath)
@@ -178,9 +185,13 @@ class SVMMultiClassClassifier(Classifier):
         predictions = []
         isFirst = True
         for example in examples:
+            strengthVectors = {}
+            strengths = {}
             counter.update(1, "Classifying: ")
             highestPrediction = -sys.maxint
+            highestNonNegPrediction = -sys.maxint
             predictedClass = None
+            highestNonNegClass = None
             predictionStrings = []
             mergedPredictionString = ""
             features = example[2]
@@ -198,7 +209,11 @@ class SVMMultiClassClassifier(Classifier):
             for svIndex in range(len(svs)):
                 sv = svs[svIndex]
                 if numpyAvailable:
-                    prediction = numpy.sum(sv * numpyFeatures)
+                    strengthVector = sv * numpyFeatures
+                    prediction = numpy.sum(strengthVector)
+                    if outputDetails:
+                        strengthVectors[svIndex] = strengthVector
+                        strengths[svIndex] = prediction
                 else:
                     prediction = 0
                     for i in range(len(sv)):
@@ -207,6 +222,9 @@ class SVMMultiClassClassifier(Classifier):
                 if prediction > highestPrediction:
                     highestPrediction = prediction
                     predictedClass = svIndex + 1
+                if svIndex > 0 and prediction > highestNonNegPrediction:
+                    highestNonNegPrediction = prediction
+                    highestNonNegClass = svIndex + 1
                 predictionString = "%.6f" % prediction # use same precision as SVM-multiclass does
                 predictionStrings.append(predictionString)
                 mergedPredictionString += " " + predictionString
@@ -216,7 +234,34 @@ class SVMMultiClassClassifier(Classifier):
             else:
                 predFile.write("\n")
             predFile.write(str(predictedClass) + mergedPredictionString)
+            if outputDetails:
+                if example[1] != 1:
+                    predFile.write(example[0] + " " + str(example[3]) + "\n")
+                    cls.writeDetails(predFile, strengthVectors[0], classSet.getName(0+1) + " " + str(strengths[0]), featureSet)
+                    #if predictedClass != 1:
+                    #    cls.writeDetails(predFile, strengthVectors[predictedClass-1], classSet.getName(predictedClass) + " " + str(strengths[predictedClass]), featureSet)
+                    cls.writeDetails(predFile, strengthVectors[example[1]-1], classSet.getName(example[1]) + " " + str(strengths[example[1]-1]), featureSet)
+                else:
+                    predFile.write(example[0] + " " + str(example[3]) + "\n")
+                    cls.writeDetails(predFile, strengthVectors[0], classSet.getName(0+1) + " " + str(strengths[0]), featureSet)
+                    cls.writeDetails(predFile, strengthVectors[highestNonNegClass-1], classSet.getName(highestNonNegClass) + " " + str(strengths[highestNonNegClass-1]), featureSet)
         predFile.close()
+    
+    @classmethod
+    def writeDetails(cls, predFile, vec, className, featureSet):
+        predFile.write(className+"\n")
+        tuples = []
+        for i in range(len(vec)):
+            if float(vec[i]) != 0.0:
+                tuples.append( (featureSet.getName(i+1), vec[i], i+1) )
+        import operator
+        index1 = operator.itemgetter(1)
+        tuples.sort(key=index1, reverse=True)
+        for t in tuples:
+            predFile.write(" " + str(t[2]) + " " + t[0] + " " + str(t[1]) + "\n")
+        #for i in range(len(vec)):
+        #    if float(vec[i]) != 0.0:
+        #        predFile.write(" " + str(i+1) + " " + featureSet.getName(i+1) + " " + str(vec[i+1]) + "\n")
 
     #IF LOCAL
     def downSampleNegatives(self, examples, ratio):
@@ -351,6 +396,7 @@ if __name__=="__main__":
     optparser.add_option("-o", "--output", default=None, dest="output", help="Output directory or file")
     optparser.add_option("-c", "--classifier", default="SVMMultiClassClassifier", dest="classifier", help="Classifier Class")
     optparser.add_option("-p", "--parameters", default=None, dest="parameters", help="Parameters for the classifier")
+    optparser.add_option("-d", "--ids", default=None, dest="ids", help="")
     (options, args) = optparser.parse_args()
 
     # import classifier
@@ -373,7 +419,10 @@ if __name__=="__main__":
         #parameters = getArgs(Classifier.classify, options.parameters)
         #print >> sys.stderr, "Classifying", options.examples, "Parameters:", parameters
         #startTime = time.time()
-        predictions = Classifier.test(options.examples, options.model, options.output, forceInternal=True)
+        if options.ids != None:
+            predictions = Classifier.testInternal(options.examples, options.model, options.output, options.ids)
+        else:
+            predictions = Classifier.test(options.examples, options.model, options.output, forceInternal=True)
 #        print >> sys.stderr, "(Time spent:", time.time() - startTime, "s)"
 #        parameters = getArgs(Classifier.classify, options.parameters)
 #        print >> sys.stderr, "Classifying", options.examples, "Parameters:", parameters
