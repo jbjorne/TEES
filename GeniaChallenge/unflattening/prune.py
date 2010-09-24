@@ -199,8 +199,12 @@ class Pruner:
             for event in sentence.findall('interaction'):
                 uid = event.attrib['id']
                 fromId = event.attrib['e1']
+                if not self.origEntities.has_key(fromId): # intersentence interactions
+                    continue
                 fromType = self.origEntities[fromId].attrib['type']
                 toId = event.attrib['e2']
+                if not self.origEntities.has_key(toId): # intersentence interactions
+                    continue
                 toType = self.origEntities[toId].attrib['type']
                 if not uid in self.events:
                     sentence.remove(event)
