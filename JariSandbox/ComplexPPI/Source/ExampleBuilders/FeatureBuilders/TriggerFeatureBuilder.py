@@ -26,6 +26,8 @@ class TriggerFeatureBuilder(FeatureBuilder):
     def __init__(self, featureSet):
         FeatureBuilder.__init__(self, featureSet)
         self.noAnnType = False
+        self.edgeTypesForFeatures = []
+        self.useNonNameEntities = False
 
     def getMergedEntityType(self, entities):
         """
@@ -64,8 +66,9 @@ class TriggerFeatureBuilder(FeatureBuilder):
                 if entity.get("isName") == "True":
                     features["_annType_"+entity.get("type")]=1
         # Only for Unmerging!
-        for entity in sentenceGraph.tokenIsEntityHead[token]:
-            features["_annType_"+entity.get("type")]=1
+        if self.useNonNameEntities:
+            for entity in sentenceGraph.tokenIsEntityHead[token]:
+                features["_annType_"+entity.get("type")]=1
 #        if self.gazetteer and tokTxt.lower() in self.gazetteer:
 #            for label,weight in self.gazetteer[tokTxt.lower()].items():
 #                pass
