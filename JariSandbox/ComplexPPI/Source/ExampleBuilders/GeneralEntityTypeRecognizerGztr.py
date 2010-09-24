@@ -1,7 +1,7 @@
 """
 Trigger examples
 """
-__version__ = "$Revision: 1.23 $"
+__version__ = "$Revision: 1.24 $"
 
 import sys, os
 thisPath = os.path.dirname(os.path.abspath(__file__))
@@ -294,6 +294,9 @@ class GeneralEntityTypeRecognizerGztr(ExampleBuilder):
                 # triplets
                 if j > 1:
                     features[self.featureSet.getId("tt_"+text[j-2:j+1].lower())] = 1
+                # quadruplets (don't work, slight decrease (0.5 pp) on f-score
+                #if j > 2:
+                #    features[self.featureSet.getId("qt_"+text[j-3:j+1].lower())] = 1
             
             # Attached edges (Hanging in and out edges)
             t1InEdges = self.inEdgesByToken[token]
