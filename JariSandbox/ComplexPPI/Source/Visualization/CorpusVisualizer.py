@@ -64,7 +64,7 @@ class CorpusVisualizer:
                 return edge
         return None
     
-    def makeExampleGraphWithGold(self, builder, sentenceGraph, goldGraph):
+    def makeExampleGraphWithGold(self, builder, sentenceGraph, goldGraph, sentenceIndex):
         exampleGraph = NX10.MultiDiGraph()
         for token in goldGraph.tokens:
             exampleGraph.add_node(token)
@@ -178,8 +178,8 @@ class CorpusVisualizer:
         #arcStyles, labelStyles = self.getMatchingEdgeStyles(exampleGraph, sentenceGraph.interactionGraph, "green", "red" )
         svgEdges = GraphToSVG.edgesToSVG(svgTokens, exampleGraph, "type", None)
         sentenceId = sentenceGraph.getSentenceId()
-        svgElement = GraphToSVG.writeSVG(svgTokens, svgEdges, self.outDir+"/svg/"+sentenceId+"_learned.svg")
-        builder.svg("../svg/" + sentenceId + "_learned.svg",svgElement.attrib["width"],svgElement.attrib["height"],id="learned_graph")
+        svgElement = GraphToSVG.writeSVG(svgTokens, svgEdges, self.outDir+"/svg/"+sentenceId+"-"+str(sentenceIndex)+"_learned.svg")
+        builder.svg("../svg/" + sentenceId + "-"+str(sentenceIndex)+"_learned.svg",svgElement.attrib["width"],svgElement.attrib["height"],id="learned_graph")
         builder.lineBreak()
         return stats
     
