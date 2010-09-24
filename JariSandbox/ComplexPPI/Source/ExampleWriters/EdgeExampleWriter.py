@@ -20,10 +20,13 @@ class EdgeExampleWriter(SentenceExampleWriter):
         if sentenceAnalysesElement != None:
             sentenceElement.remove(sentenceAnalysesElement)
         # remove pairs and interactions
-        self.removeChildren(sentenceElement, ["pair", "interaction"])
-    
+        removed = self.removeChildren(sentenceElement, ["pair", "interaction"])
+        
+        causeAfterTheme = False
         pairCount = 0
         for example in examples:
+            if example[3].has_key("causeAfterTheme"):
+                causeAfterTheme = True
             prediction = predictionsByExample[example[0]]
             pairElement = ET.Element("interaction")
             pairElement.attrib["directed"] = "Unknown"
@@ -33,6 +36,14 @@ class EdgeExampleWriter(SentenceExampleWriter):
             self.setElementType(pairElement, prediction, classSet, classIds)
             sentenceElement.append(pairElement)
             pairCount += 1
+        
+        # Re-attach original themes, if needed
+        if causeAfterTheme:
+            for interaction in removed:
+                if interaction.get("type") == "Theme":
+                    interaction.set("id", sentenceId + ".i" + str(pairCount))
+                    sentenceElement.append(interaction)
+                    pairCount += 1
   
         # re-attach the analyses-element
         if sentenceAnalysesElement != None:
