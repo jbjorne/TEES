@@ -527,7 +527,7 @@ class Unflattener:
                 sentencesWithParse.append(sentence)
         return sentencesWithParse
 
-def unflatten(input, parse, tokenization=None, output=None, perfect=False):
+def unflatten(input, parse, tokenization=None, output=None, perfect=False, pruneInput=True):
     """
     Convenience wrapper that first prunes the graph and then unflattens.
     This function processes the whole corpus.
@@ -545,7 +545,10 @@ def unflatten(input, parse, tokenization=None, output=None, perfect=False):
     @rtype: cElementTree.Element
     @return: corpus node
     """
-    xml = prune.prune(input)
+    if pruneInput:
+        xml = prune.prune(input)
+    else:
+        xml = input
     return unflattenPruned(xml, parse, tokenization, output, perfect)
 
 def unflattenPruned(input, parse, tokenization=None, output=None, perfect=False):
