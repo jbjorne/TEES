@@ -1,7 +1,7 @@
 """
 Base class for ExampleBuilders
 """
-__version__ = "$Revision: 1.27 $"
+__version__ = "$Revision: 1.28 $"
 
 from SentenceGraph import SentenceGraph
 from IdSet import IdSet
@@ -92,6 +92,39 @@ class ExampleBuilder:
         for sentence in sentences:
             counter.update(1, "Building examples ("+sentence[0].getSentenceId()+"): ")
             examples = self.buildExamples(sentence[0])
+            exampleCount += len(examples)
+            examples = self.preProcessExamples(examples)
+            ExampleUtils.appendExamples(examples, outfile)
+        outfile.close()
+    
+        print >> sys.stderr, "Examples built:", exampleCount
+        print >> sys.stderr, "Features:", len(self.featureSet.getNames())
+        #IF LOCAL
+        if self.exampleStats.getExampleCount() > 0:
+            self.exampleStats.printStats()
+        #ENDIF
+        # Save Ids
+        if idFileTag != None: 
+            print >> sys.stderr, "Saving class names to", idFileTag + ".class_names"
+            self.classSet.write(idFileTag + ".class_names")
+            print >> sys.stderr, "Saving feature names to", idFileTag + ".feature_names"
+            self.featureSet.write(idFileTag + ".feature_names")
+
+    def buildExamplesForSentencesSeparateGold(self, sentences, goldSentences, output, idFileTag=None):            
+        examples = []
+        counter = ProgressCounter(len(sentences), "Build examples")
+        
+        calculatePredictedRange(self, sentences)
+        
+        outfile = open(output, "wt")
+        exampleCount = 0
+        for i in range(len(sentences)):
+            sentence = sentences[i]
+            goldSentence = [None]
+            if goldSentences != None:
+                goldSentence = goldSentences[i]
+            counter.update(1, "Building examples ("+sentence[0].getSentenceId()+"): ")
+            examples = self.buildExamples(sentence[0], goldSentence[0])
             exampleCount += len(examples)
             examples = self.preProcessExamples(examples)
             ExampleUtils.appendExamples(examples, outfile)
