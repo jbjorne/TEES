@@ -1,7 +1,7 @@
 """
 Edge Examples
 """
-__version__ = "$Revision: 1.2 $"
+__version__ = "$Revision: 1.3 $"
 
 import sys, os
 import random
@@ -15,6 +15,7 @@ from FeatureBuilders.MultiEdgeFeatureBuilder import MultiEdgeFeatureBuilder
 from FeatureBuilders.TokenFeatureBuilder import TokenFeatureBuilder
 from FeatureBuilders.BioInferOntologyFeatureBuilder import BioInferOntologyFeatureBuilder
 from FeatureBuilders.NodalidaFeatureBuilder import NodalidaFeatureBuilder
+from FeatureBuilders.TriggerFeatureBuilder import TriggerFeatureBuilder
 from ExampleStats import ExampleStats
 from Filters.POSPairGazetteer import POSPairGazetteer
 import Graph.networkx_v10rc1 as NX10
@@ -48,6 +49,7 @@ class AsymmetricEventExampleBuilder(ExampleBuilder):
                 self.posPairGaz = POSPairGazetteer(loadFrom=s.split("_", 1)[-1])
         
         self.multiEdgeFeatureBuilder = MultiEdgeFeatureBuilder(self.featureSet)
+        self.triggerFeatureBuilder = TriggerFeatureBuilder(self.featureSet)
         if "graph_kernel" in self.styles:
             from FeatureBuilders.GraphKernelFeatureBuilder import GraphKernelFeatureBuilder
             self.graphKernelFeatureBuilder = GraphKernelFeatureBuilder(self.featureSet)
@@ -247,6 +249,8 @@ class AsymmetricEventExampleBuilder(ExampleBuilder):
         ###undirected = NX10.MultiGraph(sentenceGraph.dependencyGraph) This didn't work
         paths = NX10.all_pairs_shortest_path(undirected, cutoff=999)
         
+        self.triggerFeatureBuilder.initSentence(clearGraph)
+        
         # Generate examples based on interactions between entities or interactions between tokens
         if "entities" in self.styles:
             loopRange = len(sentenceGraph.entities)
@@ -350,6 +354,12 @@ class AsymmetricEventExampleBuilder(ExampleBuilder):
                 path = [token1, token2]
             assert(self.pathLengths == None)
             if self.pathLengths == None or len(path)-1 in self.pathLengths:
+                if not "no_trigger":
+                    self.triggerFeatureBuilder.setFeatureVector(self.features)
+                    self.triggerFeatureBuilder.tag = "trg_t1_"
+                    self.triggerFeatureBuilder.buildFeatures(eventToken)
+                    self.triggerFeatureBuilder.tag = "trg_t2_"
+                    self.triggerFeatureBuilder.buildFeatures(eventToken)
 #                if not "no_ontology" in self.styles:
 #                    self.ontologyFeatureBuilder.setFeatureVector(features)
 #                    self.ontologyFeatureBuilder.buildOntologyFeaturesForPath(sentenceGraph, path)
@@ -447,6 +457,10 @@ class AsymmetricEventExampleBuilder(ExampleBuilder):
             if "subset" in self.styles:
                 features[self.featureSet.getId("out_of_scope")] = 1
             path = [token1, token2]
+        
+        self.triggerFeatureBuilder.tag = ""
+        self.triggerFeatureBuilder.setFeatureVector(None)
+        
         # define extra attributes
 #        if int(path[0].attrib["id"].split("_")[-1]) < int(path[-1].attrib["id"].split("_")[-1]):
 #            #extra = {"xtype":"edge","type":"i","t1":path[0],"t2":path[-1]}
