@@ -118,5 +118,5 @@ unflatten.interface(["-i","pruned.xml","-o","unflattened.xml","-a",PARSE_TOK,"-t
 preserveTask2.run("unflattened.xml", "final.xml", "t2.xml", "insert")
 # Output will be stored to the geniaformat-subdirectory, where will also be a
 # tar.gz-file which can be sent to the Shared Task evaluation server.
-gifxmlToGenia("final.xml", "geniaformat-base", 2)
-#evaluateSharedTask("geniaformat-base", 2)
+gifxmlToGenia("final.xml", "geniaformat", 2)
+#evaluateSharedTask("geniaformat", 2)

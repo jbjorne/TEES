@@ -30,7 +30,7 @@ log() # Start logging into a file in working directory
 ###############################################################################
 # Trigger example generation
 ###############################################################################
-if True:
+if False:
     print >> sys.stderr, "Trigger examples for parse", PARSE_TOK, "task", task
     #Gazetteer.run(TRAIN_FILE, "gazetteer-train-"+PARSE_TOK+TASK_TAG, PARSE_TOK, entityOffsetKey="charOffset", stem=False)
     #Gazetteer.run(EVERYTHING_FILE, "gazetteer-everything-"+PARSE_TOK+TASK_TAG, PARSE_TOK, entityOffsetKey="charOffset", stem=False)
@@ -46,6 +46,6 @@ if True:
 if True:
     print >> sys.stderr, "Edge examples for parse", PARSE_TOK, "task", task
     
-    MultiEdgeExampleBuilder.run(TRAIN_FILE, "edge-train-examples-"+PARSE_TOK+TASK_TAG, PARSE_TOK, PARSE_TOK, EDGE_FEATURE_PARAMS, "genia-edge-ids")
+    #MultiEdgeExampleBuilder.run(TRAIN_FILE, "edge-train-examples-"+PARSE_TOK+TASK_TAG, PARSE_TOK, PARSE_TOK, EDGE_FEATURE_PARAMS, "genia-edge-ids")
     MultiEdgeExampleBuilder.run(DEVEL_FILE, "edge-devel-examples-"+PARSE_TOK+TASK_TAG, PARSE_TOK, PARSE_TOK, EDGE_FEATURE_PARAMS, "genia-edge-ids")
-    MultiEdgeExampleBuilder.run(EVERYTHING_FILE, "edge-everything-examples-"+PARSE_TOK+TASK_TAG, PARSE_TOK, PARSE_TOK, EDGE_FEATURE_PARAMS, "genia-edge-ids")
+    #MultiEdgeExampleBuilder.run(EVERYTHING_FILE, "edge-everything-examples-"+PARSE_TOK+TASK_TAG, PARSE_TOK, PARSE_TOK, EDGE_FEATURE_PARAMS, "genia-edge-ids")

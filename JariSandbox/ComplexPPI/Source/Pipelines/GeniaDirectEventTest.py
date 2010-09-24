@@ -24,7 +24,6 @@ else:
     MEMORY=8000000
     CORES=4
 
-
 #EDGE_CLASSIFIER_PARAMS="c:1,1000,100000,500000"
 EDGE_CLASSIFIER_PARAMS="c:1,10,100,1000,10000,100000,500000,1000000,5000000,10000000,50000000,100000000,1000000000"
 
@@ -32,7 +31,8 @@ EDGE_CLASSIFIER_PARAMS="c:1,10,100,1000,10000,100000,500000,1000000,5000000,1000
 #EDGE_CLASSIFIER_PARAMS="c:1,10,100,1000,10000,100000,500000,1000000,5000000,10000000"#"c:10000,28000,50000"
 #EDGE_CLASSIFIER_PARAMS="c:0.00001,0.0001,0.001,0.01,0.1,1,10,100"#"c:10000,28000,50000"
 optimizeLoop = True # search for a parameter, or use a predefined one
-WORKDIR="/usr/share/biotext/GeniaChallenge/" + EXPERIMENT_NAME
+WORKDIR="/usr/share/biotext/EventExtension/DirectEvents/" + EXPERIMENT_NAME
+CSC_WORKDIR = os.path.join("CSCConnection",WORKDIR.lstrip("/"))
 PARSE_TOK="split-McClosky"
 
 # These commands will be in the beginning of most pipelines
@@ -59,7 +59,7 @@ if False:
 ###############################################################################
 # Edge detection
 ###############################################################################
-if True:
+if False:
     #EDGE_FEATURE_PARAMS="style:typed,directed,entities,genia_limits,noMasking,maxFeatures"
     EDGE_FEATURE_PARAMS="style:typed,directed,no_linear,entities,genia_limits,noMasking,maxFeatures,stem_gazetteer"
         
@@ -77,7 +77,7 @@ if True:
     if goldPassThrough:
         c = None
     else:
-        c = CSCConnection(EXPERIMENT_NAME+"-event-model", CSC_ACCOUNT, True, memory=MEMORY, cores=CORES)
+        c = CSCConnection(CSC_WORKDIR, CSC_ACCOUNT, False, memory=MEMORY, cores=CORES)
     best = optimize(MyCls, STEv, "event-train-examples", "event-test-examples",\
         "genia-direct-event-ids.class_names", EDGE_CLASSIFIER_PARAMS, "event-param-opt", None, c)
     print "Evaluating examples built on empty test file"

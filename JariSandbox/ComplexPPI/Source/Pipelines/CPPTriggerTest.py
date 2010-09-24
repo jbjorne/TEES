@@ -30,13 +30,14 @@ if False:
     Gazetteer.run(FULL_TRAIN_FILE, "gazetteer-train", PARSE_TOK, "headOffset", stem=True)
 
 if True:
-    if False:
+    if True:
         GeneralEntityTypeRecognizerGztr = CPPTriggerExampleBuilder;
     # Build an SVM example file for the training corpus.
     GeneralEntityTypeRecognizerGztr.run(TRAIN_FILE, "trigger-train-examples", PARSE_TOK, PARSE_TOK, "style:typed", "ids", None) #"gazetteer-train")
     # Build an SVM example file for the test corpus
     GeneralEntityTypeRecognizerGztr.run(TEST_FILE, "trigger-test-examples", PARSE_TOK, PARSE_TOK, "style:typed", "ids", None) #"gazetteer-train")
-
+    print "Examples built"
+    
 if False:
     if optimizeLoop: # search for the best c-parameter
         # The optimize-function takes as parameters a Classifier-class, an Evaluator-class
