@@ -1,7 +1,7 @@
 """
 Edge Examples
 """
-__version__ = "$Revision: 1.7 $"
+__version__ = "$Revision: 1.8 $"
 
 import sys, os
 thisPath = os.path.dirname(os.path.abspath(__file__))
@@ -111,6 +111,7 @@ class UnmergingExampleBuilder(ExampleBuilder):
             self.randomFeatureBuilder = RandomFeatureBuilder(self.featureSet)
 
         self.triggerFeatureBuilder = TriggerFeatureBuilder(self.featureSet)
+        self.triggerFeatureBuilder.useNonNameEntities = True
         
         #self.outFile = open("exampleTempFile.txt","wt")
 
