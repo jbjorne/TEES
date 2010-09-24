@@ -97,6 +97,7 @@ def optimizeCSC(Classifier, Evaluator, trainExamples, testExamples, classIds, co
     bestResult = None
     combinationCount = 1
     combinationIds = []
+    assert steps in ["BOTH", "SUBMIT", "RESULTS"], steps
     if steps in ["BOTH", "SUBMIT"]:
         print >> sys.stderr, "Initializing runs"
         for combination in combinations:
