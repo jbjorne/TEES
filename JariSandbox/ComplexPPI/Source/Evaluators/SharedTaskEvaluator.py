@@ -9,6 +9,8 @@ thisPath = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.join(thisPath,".."))
 from Core.IdSet import IdSet
 import Core.ExampleUtils as ExampleUtils
+import Core.SentenceGraph
+from ExampleWriters.BioTextExampleWriter import BioTextExampleWriter
 
 RELEASE = True
 #IF LOCAL
@@ -37,9 +39,11 @@ class SharedTaskEvaluator(Evaluator):
             predictions = ExampleUtils.loadPredictions(predictions)
         if type(examples) == types.StringType: # examples are in file
             examples = ExampleUtils.readExamples(examples, False)
-
+        
+        SharedTaskEvaluator.corpusElements = Core.SentenceGraph.loadCorpus(SharedTaskEvaluator.corpusFilename, SharedTaskEvaluator.parse, SharedTaskEvaluator.tokenization)
         # Build interaction xml
-        xml = ExampleUtils.writeToInteractionXML(examples, predictions, SharedTaskEvaluator.corpusElements, None, "genia-direct-event-ids.class_names", SharedTaskEvaluator.parse, SharedTaskEvaluator.tokenization)
+        xml = BioTextExampleWriter.write(examples, predictions, SharedTaskEvaluator.corpusElements, None, SharedTaskEvaluator.ids+".class_names", SharedTaskEvaluator.parse, SharedTaskEvaluator.tokenization)
+        #xml = ExampleUtils.writeToInteractionXML(examples, predictions, SharedTaskEvaluator.corpusElements, None, "genia-direct-event-ids.class_names", SharedTaskEvaluator.parse, SharedTaskEvaluator.tokenization)
         # Convert to GENIA format
         gifxmlToGenia(xml, SharedTaskEvaluator.geniaDir, task=SharedTaskEvaluator.task, verbose=False)
         # Use GENIA evaluation tool
@@ -71,7 +75,7 @@ class SharedTaskEvaluator(Evaluator):
             return -1
     
     @classmethod
-    def setOptions(cls, geniaDir, task, corpus, parse=None, tokenization=None):
+    def setOptions(cls, geniaDir, task, corpus, parse=None, tokenization=None, ids=None):
         """
         Set the options required for converting examples into interaction XML.
         Currently, this can't be done through a method parameter due to the
@@ -86,7 +90,9 @@ class SharedTaskEvaluator(Evaluator):
         SharedTaskEvaluator.geniaDir = geniaDir
         SharedTaskEvaluator.task = task
         SharedTaskEvaluator.parse = parse
+        SharedTaskEvaluator.ids = ids
         SharedTaskEvaluator.tokenization = tokenization
+        SharedTaskEvaluator.corpusFilename = corpus
         if type(corpus) == types.StringType or isinstance(corpus,ET.ElementTree): # corpus is in file
             import Core.SentenceGraph
             SharedTaskEvaluator.corpusElements = Core.SentenceGraph.loadCorpus(corpus, parse, tokenization)
