@@ -1,4 +1,4 @@
-__version__ = "$Revision: 1.1 $"
+__version__ = "$Revision: 1.2 $"
 
 import sys,os
 import sys
@@ -44,7 +44,7 @@ def tokenize(input, output=None, tokenizationName="GeniaTagger-3.0.1"):
         stdout=codecs.open(os.path.join(workdir, "tagger-output.txt"), "wt", "utf-8"))
     os.chdir(cwd)
     
-    # Read split sentences
+    # Read tokenization
     outfile = codecs.open(os.path.join(workdir, "tagger-output.txt"), "rt", "utf-8")
     # Add output to sentences
     for sentence in corpusRoot.getiterator("sentence"):
