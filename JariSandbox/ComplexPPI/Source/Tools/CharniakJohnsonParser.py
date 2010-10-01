@@ -1,4 +1,4 @@
-parse__version__ = "$Revision: 1.1 $"
+parse__version__ = "$Revision: 1.2 $"
 
 import sys,os
 import sys
@@ -13,9 +13,6 @@ import shutil
 import subprocess
 import tempfile
 import codecs
-"""
-A wrapper for the Joachims SVM Multiclass classifier.
-"""
 
 charniakJohnsonParserDir = "/home/jari/biotext/tools/reranking-parser"
 
