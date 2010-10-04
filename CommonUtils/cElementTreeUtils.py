@@ -7,7 +7,7 @@ Functions for easier use of cElementTree.
 
   Description: Convenience functions for easier use of cElementTree.
 """
-__version__ = "$Revision: 1.13 $"
+__version__ = "$Revision: 1.14 $"
 
 import sys
 
@@ -81,7 +81,7 @@ def ETFromObj(obj):
     if isinstance(obj,str) or isinstance(obj,unicode):
         if obj.endswith(".xml.gz"):
             fStream=GzipFile(obj,"rt")
-        elif obj.endswith(".xml") or obj.endswith(".svg"):
+        elif obj.endswith(".xml") or obj.endswith(".svg") or obj.endswith(".nxml"):
             fStream=open(obj,"rt")
         else:
             raise ValueError("%s: File format not recognized (expected .xml or .xml.gz)"%obj)
@@ -137,7 +137,7 @@ def makePath(element,tagList):
         currElem=subElem
     return result
 
-def toStr(element):
+def toStr(element, recursive=True):
     s = "<" + element.tag
     for key in sorted(element.attrib.keys()):
         s += " " + key + "=\"" + element.get(key) + "\""
