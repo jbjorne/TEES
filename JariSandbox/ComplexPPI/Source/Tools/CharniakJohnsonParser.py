@@ -1,4 +1,4 @@
-parse__version__ = "$Revision: 1.2 $"
+parse__version__ = "$Revision: 1.3 $"
 
 import sys,os
 import sys
@@ -16,7 +16,7 @@ import codecs
 
 charniakJohnsonParserDir = "/home/jari/biotext/tools/reranking-parser"
 
-def parse(input, output=None, tokenizationName="GeniaTagger-3.0.1", parseName="McClosky"):
+def parse(input, output=None, tokenizationName=None, parseName="McClosky", requireEntities=False):
     global charniakJohnsonParserDir
     
     print >> sys.stderr, "Loading corpus", input
@@ -29,9 +29,15 @@ def parse(input, output=None, tokenizationName="GeniaTagger-3.0.1", parseName="M
     infile = codecs.open(os.path.join(workdir, "parser-input.txt"), "wt", "utf-8")
     if tokenizationName == None: # Parser does tokenization
         for sentence in corpusRoot.getiterator("sentence"):
+            if requireEntities:
+                if sentence.find("entity") == None:
+                    continue
             infile.write("<s> " + sentence.get("text") + " </s>\n")
     else: # Use existing tokenization
         for sentence in corpusRoot.getiterator("sentence"):
+            if requireEntities:
+                if sentence.find("entity") == None:
+                    continue
             for tokenization in sentence.find("sentenceAnalyses").find("tokenizations"):
                 if tokenization.get("tokenizer") == tokenizationName:
                     break
@@ -54,8 +60,8 @@ def parse(input, output=None, tokenizationName="GeniaTagger-3.0.1", parseName="M
     
     # Read parse
     outfile = codecs.open(os.path.join(workdir, "parser-output.txt"), "rt", "utf-8")
-    for line in outfile:
-        print line
+    #for line in outfile:
+    #    print line
     
     # Convert
     print >> sys.stderr, "Running Stanford conversion"
@@ -63,9 +69,14 @@ def parse(input, output=None, tokenizationName="GeniaTagger-3.0.1", parseName="M
     
     # Read Stanford results
     outfile = codecs.open(os.path.join(workdir, "stanford-output.txt"), "rt", "utf-8")
+    treeFile = codecs.open(os.path.join(workdir, "parser-output.txt"), "rt", "utf-8")
     print >> sys.stderr, "Inserting dependencies"
     # Add output to sentences
     for sentence in corpusRoot.getiterator("sentence"):
+        if requireEntities:
+            if sentence.find("entity") == None:
+                continue
+        
         # Find or create container elements
         sentenceAnalyses = sentence.find("sentenceAnalyses")
         if sentenceAnalyses == None:
@@ -81,26 +92,91 @@ def parse(input, output=None, tokenizationName="GeniaTagger-3.0.1", parseName="M
             prevParseIndex += 1
         parse = ET.Element("parse")
         parse.set("parse", parseName)
+        if tokenizationName == None:
+            parse.set("tokenizer", parseName)
+        else:
+            parse.set("tokenizer", tokenizationName)
         parses.insert(prevParseIndex, parse)
+        
+        # Parser-generated tokens
+        if tokenizationName == None:
+            tokenizations = sentenceAnalyses.find("tokenizations")
+            if tokenizations == None:
+                tokenizations = ET.Element("tokenizations")
+                sentenceAnalyses.append(tokenizations)
+            prevTokenizationIndex = 0
+            for prevTokenization in tokenizations.findall("tokenization"):
+                assert prevTokenization.get("tokenizer") != tokenizationName
+                prevTokenizationIndex += 1
+            tokenization = ET.Element("tokenization")
+            tokenization.set("tokenizer", parseName)
+            tokenizations.insert(prevTokenizationIndex, tokenization)
+        
+            treeLine = treeFile.readline()
+            if treeLine.strip() != "":
+                # Add tokens
+                prevSplit = None
+                tokens = []
+                posTags = []
+                for split in treeLine.split():
+                    if split[0] != "(":
+                        tokenText = split
+                        while tokenText[-1] == ")":
+                            tokenText = tokenText[:-1]
+                        if tokenText == "-LRB-":
+                            tokenText = "("
+                        elif tokenText == "-RRB-":
+                            tokenText = ")"
+                        tokens.append(tokenText)
+                        
+                        posText = prevSplit
+                        while posText[0] == "(":
+                            posText = posText[1:]
+                        if posText == "-LRB-":
+                            posText = "("
+                        elif posText == "-RRB-":
+                            posText = ")"
+                        posTags.append(posText)
+                    prevSplit = split
+                
+                tokenCount = 0
+                start = 0
+                for tokenText in tokens:
+                    sText = sentence.get("text")
+                    # Determine offsets
+                    cStart = sText.find(tokenText, start)
+                    assert cStart != -1, (tokenText, tokens, posTags, treeLine, start, sText)
+                    cEnd = cStart + len(tokenText)
+                    start = cStart + len(tokenText)
+                    # Make element
+                    token = ET.Element("token")
+                    token.set("id", "cjt_" + str(tokenCount + 1))
+                    token.set("text", tokenText)
+                    token.set("POS", posTags[tokenCount])
+                    token.set("charOffset", str(cStart) + "-" + str(cEnd - 1)) # NOTE: check
+                    tokenization.append(token)
+                    tokenCount += 1
         
         depCount = 0
         line = outfile.readline()
-        while line.strip() != "":
-            # Add tokens
+        while line.strip() != "":            
+            # Add dependencies
             depType, rest = line.strip()[:-1].split("(")
             t1, t2 = rest.split(", ")
             t1Word, t1Index = t1.rsplit("-", 1)
+            while not t1Index[-1].isdigit(): t1Index = t1Index[:-1] # invalid literal for int() with base 10: "7'"
             t1Index = int(t1Index)
             t2Word, t2Index = t2.rsplit("-", 1)
+            while not t2Index[-1].isdigit(): t2Index = t2Index[:-1] # invalid literal for int() with base 10: "7'"
             t2Index = int(t2Index)
             # Make element
             dep = ET.Element("dependency")
             dep.set("id", "cjp_" + str(depCount))
-            dep.set("t1", "clt_" + str(t1Index))
-            dep.set("t2", "clt_" + str(t2Index))
+            dep.set("t1", "cjt_" + str(t1Index))
+            dep.set("t2", "cjt_" + str(t2Index))
             dep.set("type", depType)
             parse.append(dep)
-            depCount += 1
+            depCount += 1            
             line = outfile.readline()
     
     outfile.close()
