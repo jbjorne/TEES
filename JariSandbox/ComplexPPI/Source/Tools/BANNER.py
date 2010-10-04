@@ -1,4 +1,4 @@
-parse__version__ = "$Revision: 1.1 $"
+parse__version__ = "$Revision: 1.2 $"
 
 import sys,os
 import sys
@@ -105,10 +105,15 @@ def run(input, output=None):
     
     # Put sentences in dictionary
     sDict = {}
+    sentenceHasEntities = {}
     sCount = 0
     for sentence in corpusRoot.getiterator("sentence"):
         sDict["U" + str(sCount)] = sentence
+        sentenceHasEntities["U" + str(sCount)] = False
         sCount += 1
+    
+    sentencesWithEntities = 0
+    totalEntities = 0
     
     # Read BANNER results
     outfile = codecs.open(os.path.join(workdir, "output.txt"), "rt", "utf-8")
@@ -146,12 +151,18 @@ def run(input, output=None):
                     ent.set("isName", "True")
                     ent.set("text", sText[beginOffset:prevEnd+1])
                     sentence.append(ent)
+                    if not sentenceHasEntities[bannerId]:
+                        sentencesWithEntities += 1
+                        sentenceHasEntities[bannerId] = True
+                    totalEntities += 1
                     entityCount += 1
                     beginOffset = None
             else:
                 if beginOffset == None:
                     beginOffset = cStart
             prevEnd = cEnd
+    
+    print >> sys.stderr, "Found", totalEntities, "entities in", sentencesWithEntities, "sentences"
     
     outfile.close()
     idfile.close()
