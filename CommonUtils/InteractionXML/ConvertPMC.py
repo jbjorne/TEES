@@ -1,4 +1,4 @@
-__version__ = "$Revision: 1.1 $"
+__version__ = "$Revision: 1.2 $"
 
 import sys,os
 import sys
@@ -9,6 +9,8 @@ except ImportError:
 import cElementTreeUtils as ETUtils
 
 def convert(input, output=None, outputRoot=None):
+    print >> sys.stderr, "##### Convert PMC to Interaction XML #####"
+    
     print >> sys.stderr, "Loading corpus", input
     pmcTree = ETUtils.ETFromObj(input)
     print >> sys.stderr, "Corpus file loaded"
@@ -89,7 +91,7 @@ def getText(element):
     if text == None or text == "":
         return text
     for child in list(element):
-        assert child.tag in ("xref", "italic", "bold", "fig"), child.tag
+        assert child.tag in ("xref", "italic", "bold", "fig", "ext-link"), child.tag
         if child.text != None:
             text += child.text
         if child.tail != None:
