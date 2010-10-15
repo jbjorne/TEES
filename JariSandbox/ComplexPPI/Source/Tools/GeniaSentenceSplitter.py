@@ -1,4 +1,4 @@
-__version__ = "$Revision: 1.2 $"
+__version__ = "$Revision: 1.3 $"
 
 import sys,os
 import sys
@@ -7,6 +7,7 @@ try:
 except ImportError:
     import cElementTree as ET
 import cElementTreeUtils as ETUtils
+import Range
 
 import shutil
 import subprocess
@@ -18,6 +19,45 @@ A wrapper for the Joachims SVM Multiclass classifier.
 
 sentenceSplitterDir = "/home/jari/biotext/tools/geniass"
 
+def moveElements(document):
+    entMap = {}
+    entSentence = {}
+    entSentenceIndex = {}
+    sentences = document.findall("sentence")
+    sentenceCount = 0
+    for sentence in sentences:
+        sentenceOffset = Range.charOffsetToSingleTuple(sentence.get("charOffset"))
+        # Move entities
+        entCount = 0
+        for entity in document.findall("entity"):
+            entityOffset = Range.charOffsetToSingleTuple(entity.get("charOffset"))
+            if Range.contains(sentenceOffset, entityOffset):
+                document.remove(entity)
+                sentence.append(entity)
+                prevId = entity.get("id")
+                entity.set("id", sentence.get("id") + ".e" + str(entCount))
+                entMap[prevId] = sentence.get("id") + ".e" + str(entCount)
+                entSentence[prevId] = sentence
+                entSentenceIndex[prevId] = sentenceCount
+                newEntityOffset = (entityOffset[0] - sentenceOffset[0], entityOffset[1] - sentenceOffset[0])
+                entity.set("origOffset", entity.get("charOffset"))
+                entity.set("charOffset", str(newEntityOffset[0]) + "-" + str(newEntityOffset[1])) 
+                entCount += 1
+        sentenceCount += 1
+    # Move interactions
+    intCount = 0
+    for interaction in document.findall("interaction"):
+        if entSentenceIndex[interaction.get("e1")] < entSentenceIndex[interaction.get("e1")]:
+            targetSentence = entSentence[interaction.get("e1")]
+        else:
+            targetSentence = entSentence[interaction.get("e2")]
+        document.remove(interaction)
+        targetSentence.append(interaction)
+        interaction.set("id", targetSentence.get("id") + ".i" + str(intCount))
+        interaction.set("e1", entMap[interaction.get("e1")])
+        interaction.set("e2", entMap[interaction.get("e2")])
+        intCount += 1
+                
 def makeSentences(input, output=None, removeText=False):
     """
     Run GENIA Sentence Splitter
@@ -76,6 +116,8 @@ def makeSentences(input, output=None, removeText=False):
             del document["text"]
         # Remove work directory
         shutil.rmtree(workdir)
+        # Move elements from document element to sentences
+        moveElements(document)
         docCount += 1
     
     print >> sys.stderr, "Sentence splitting created", sentencesCreated, "sentences"
