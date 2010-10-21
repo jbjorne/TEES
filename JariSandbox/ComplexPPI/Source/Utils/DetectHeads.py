@@ -112,13 +112,15 @@ def findHeadsDictionary(corpus, parse, tokenization):
     allStrings = sorted(distDict.keys())
     print "Determining heads"
     corpusElements = InteractionXML.CorpusElements.loadCorpus(corpus, parse, tokenization, removeIntersentenceInteractions=False, removeNameInfo=False)
-    cases = set()
+    cases = {}
     for sentence in corpusElements.sentences:
         #print sentence.sentence.get("id")
-        tokenHeadScores = getTokenHeadScores(sentence.tokens, sentence.dependencies, sentenceId=sentence.sentence.get("id"))
+        tokenHeadScores = None
         for entity in sentence.entities:
             if entity.get("isName") == "True":
                 continue
+            if tokenHeadScores == None:
+                tokenHeadScores = getTokenHeadScores(sentence.tokens, sentence.dependencies, sentenceId=sentence.sentence.get("id"))
             eText = entity.get("text")
             eType = entity.get("type")
             eOffset = Range.charOffsetToSingleTuple(entity.get("charOffset"))
@@ -159,14 +161,18 @@ def findHeadsDictionary(corpus, parse, tokenization):
             for i in range(len(candidates)):
                 c = candidates[i]
                 candidates[i] = (tuple(c[0]), c[2], c[3])
-            cases.add( (eType, eText, tuple(candidates)) )
+            case = (eType, eText, tuple(candidates))
+            if not cases.has_key(case):
+                cases[case] = 0
+            cases[case] += 1
             print entity.get("id"), eType + ": '" + eText + "'", candidates    
             headToken = getEntityHeadToken(entity, sentence.tokens, tokenHeadScores)
             # The ElementTree entity-element is modified by setting the headOffset attribute
             entity.set("headOffset", headToken.get("charOffset"))
             entity.set("headMethod", "Syntax")
-    for case in sorted(list(cases)):
-        print case
+    print "Cases"
+    for case in sorted(cases.keys()):
+        print case, cases[case]
     return corpus
 
 def findHeadsSyntactic(corpus, parse, tokenization):
