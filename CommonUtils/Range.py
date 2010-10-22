@@ -1,7 +1,7 @@
 """
 Character offset tools.
 """
-__version__ = "$Revision: 1.8 $"
+__version__ = "$Revision: 1.9 $"
 
 import types
 
@@ -38,6 +38,12 @@ def charOffsetToTuples(charOffset):
         numbers = r.split("-")
         tuples.append( (int(numbers[0]),int(numbers[1])) )
     return tuples
+
+def contains(range1, range2):
+    if range1[0] <= range2[0] and range1[1] >= range2[1]:
+        return True
+    else:
+        return False
 
 def overlap(range1, range2):
     """ Checks whether two ranges (f.e. character offsets overlap)
