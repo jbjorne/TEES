@@ -21,7 +21,7 @@ class BioTextExampleWriter:
     based on the type of the examples.
     """
     @classmethod
-    def write(cls, examples, predictions, corpus, outputFile, classSet=None, parse=None, tokenization=None):
+    def write(cls, examples, predictions, corpus, outputFile, classSet=None, parse=None, tokenization=None, goldCorpus=None, insertWeights=False):
         if type(examples) == types.StringType:
             print >> sys.stderr, "Reading examples from", examples
             examples = ExampleUtils.readExamples(examples, False)
@@ -36,6 +36,8 @@ class BioTextExampleWriter:
         
         if xType == "token":
             w = EntityExampleWriter()
+            if insertWeights:
+                w.insertWeights = True
         elif xType == "edge":
             w = EdgeExampleWriter()
         elif xType == "task3":
@@ -50,7 +52,7 @@ class BioTextExampleWriter:
 #ENDIF
         else:
             assert False, ("Unknown entity type", xType)
-        return w.writeXML(examples, predictions, corpus, outputFile, classSet, parse, tokenization)
+        return w.writeXML(examples, predictions, corpus, outputFile, classSet, parse, tokenization, goldCorpus=goldCorpus)
 
 if __name__=="__main__":
     # Import Psyco if available
@@ -60,15 +62,18 @@ if __name__=="__main__":
         print >> sys.stderr, "Found Psyco, using"
     except ImportError:
         print >> sys.stderr, "Psyco not installed"
-
+    
+    from optparse import OptionParser
     optparser = OptionParser(usage="%prog [options]\nWrite predicted examples to interaction XML")
     optparser.add_option("-e", "--examples", default=None, dest="examples", help="Machine learning example file", metavar="FILE")
     optparser.add_option("-p", "--predictions", default=None, dest="predictions", help="Classifier predictions for the example file", metavar="FILE")
     optparser.add_option("-i", "--classIds", default=None, dest="classIds", help="Multiclass class Ids")
     optparser.add_option("-c", "--corpus", default=None, dest="corpus", help="Interaction XML file for adding examples to", metavar="FILE")
+    optparser.add_option("-g", "--goldCorpus", default=None, dest="goldCorpus", help="Interaction XML file with gold elements", metavar="FILE")
     optparser.add_option("-a", "--parse", default="split-McClosky", dest="parse", help="Parse XML element name")
     optparser.add_option("-t", "--tokenization", default="split-McClosky", dest="tokenization", help="Tokenization XML element name")
     optparser.add_option("-o", "--output", default=None, dest="output", help="Output file")
+    optparser.add_option("-w", "--insertWeights", default=False, action="store_true", dest="insertWeights", help="Write weights for gold elements")
     #optparser.add_option("-t", "--task", default=1, type="int", dest="task", help="task number")
     (options, args) = optparser.parse_args()
     
@@ -78,5 +83,5 @@ if __name__=="__main__":
     assert(options.corpus != None)
     assert(options.output != None)
     
-    BioTextExampleWriter.write(options.examples, options.predictions, options.corpus, options.output, options.classIds, options.parse, options.tokenization)
+    BioTextExampleWriter.write(options.examples, options.predictions, options.corpus, options.output, options.classIds, options.parse, options.tokenization, options.goldCorpus, insertWeights = options.insertWeights)
    
