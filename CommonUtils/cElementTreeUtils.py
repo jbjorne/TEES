@@ -7,7 +7,7 @@ Functions for easier use of cElementTree.
 
   Description: Convenience functions for easier use of cElementTree.
 """
-__version__ = "$Revision: 1.14 $"
+__version__ = "$Revision: 1.15 $"
 
 import sys
 
@@ -142,15 +142,18 @@ def toStr(element, recursive=True):
     for key in sorted(element.attrib.keys()):
         s += " " + key + "=\"" + element.get(key) + "\""
     text = element.text
+    s += "> "
+    if text != None:
+        s += text
     children = element.getchildren()
-    if len(children) != 0:
-        s += ">"
     for child in children:
         s += toStr(child)
     if text == None or len(text) == 0:
         s += "/>"
     else:
-        s += ">" + text + "<" + element.tag + "/>"
+        s += "<" + element.tag + "/>"
+        if element.tail != None:
+            s += element.tail
     return s
     
 
