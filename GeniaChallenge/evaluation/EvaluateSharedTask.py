@@ -104,7 +104,7 @@ def hasGoldDocuments(sourceDir, goldDir):
                 return True
     return False
 
-def evaluate(sourceDir, task=1, folds=-1, foldToRemove=-1, evaluations=["strict", "approximate", "decomposition"], verbose=True):
+def evaluate(sourceDir, task=1, folds=-1, foldToRemove=-1, evaluations=["strict", "approximate", "decomposition"], verbose=True, silent=False):
     global perlDir
     sourceDir = os.path.abspath(sourceDir)
     #print sourceDir
@@ -153,7 +153,7 @@ def evaluate(sourceDir, task=1, folds=-1, foldToRemove=-1, evaluations=["strict"
     commands += "perl prepare-eval.pl -g " + goldDir
     commands += " " + sourceSubsetDir + " " + tempDir
     p = subprocess.Popen(commands, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    if verbose:
+    if verbose and not silent:
         printLines(p.stderr.readlines())
         printLines(p.stdout.readlines())
     else: # Not reading the lines causes some error in the perl script!
@@ -165,32 +165,40 @@ def evaluate(sourceDir, task=1, folds=-1, foldToRemove=-1, evaluations=["strict"
         commands += "a2-evaluate.pl -g " + goldDir + " " + tempDir
         commands += "/*.t" + str(task)
         p = subprocess.Popen(commands, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        printLines(p.stderr.readlines())
-        print >> sys.stderr, "##### strict evaluation mode #####"
+        stderrLines = p.stderr.readlines()
         stdoutLines = p.stdout.readlines()
-        printLines(stdoutLines)
+        if not silent:
+            printLines(stderrLines)
+            print >> sys.stderr, "##### strict evaluation mode #####"
+            printLines(stdoutLines)
         results["strict"] = parseResults(stdoutLines)
     
     if "approximate" in evaluations:
-        print >> sys.stderr, "##### approximate span and recursive mode #####"
+        if not silent:
+            print >> sys.stderr, "##### approximate span and recursive mode #####"
         commands = "export PATH=$PATH:./ ; "
         commands += "a2-evaluate.pl -g " + goldDir + " -sp " + tempDir
         commands += "/*.t" + str(task)
         p = subprocess.Popen(commands, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        printLines(p.stderr.readlines())
+        stderrLines = p.stderr.readlines()
         stdoutLines = p.stdout.readlines()
-        printLines(stdoutLines)
+        if not silent:
+            printLines(stderrLines)
+            printLines(stdoutLines)
         results["approximate"] = parseResults(stdoutLines)
 
     if "decomposition" in evaluations:
-        print >> sys.stderr, "##### event decomposition in the approximate span mode #####"
+        if not silent:
+            print >> sys.stderr, "##### event decomposition in the approximate span mode #####"
         commands = "export PATH=$PATH:./ ; "
         commands += "a2-evaluate.pl -g " + goldDir + " -sp " + tempDir
         commands += "/*.t" + str(task) + "d"
         p = subprocess.Popen(commands, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        printLines(p.stderr.readlines())
+        stderrLines = p.stderr.readlines()
         stdoutLines = p.stdout.readlines()
-        printLines(stdoutLines)
+        if not silent:
+            printLines(stderrLines)
+            printLines(stdoutLines)
         results["decomposition"] = parseResults(stdoutLines)
     
     # return to current dir
