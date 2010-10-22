@@ -7,6 +7,7 @@ class Document():
         self.proteins = None
         self.triggers = None
         self.events = None
+        self.relations = None
 
 class Annotation():
     def __init__(self, id = None, type = None, text=None, trigger=None, arguments=None):
@@ -17,7 +18,7 @@ class Annotation():
         self.charEnd = -1 # protein/trigger
         self.equiv = [] # group of elements that are equivalent
         self.trigger = trigger # event
-        self.arguments = [] # event
+        self.arguments = [] # event/relation
         if arguments != None:
             self.arguments = arguments
         self.sites = []
@@ -46,35 +47,22 @@ def readStarAnnotation(string, proteins):
     star, rest = string.split("\t")
     equivs = []
     if rest.find("Equiv") == 0:
-        type, t1, t2 = rest.split(" ")
-        equivs.append( (t1, t2) )
+        splits = rest.split(" ")
+        type = splits[0]
+        assert type == "Equiv"
+        entities = splits[1:] 
+        equivs.append( entities )
     if len(equivs) > 0:
         protMap = {}
         for protein in proteins:
             protMap[protein.id] = protein
         for equiv in equivs:
-            p1 = protMap[equiv[0]]
-            p2 = protMap[equiv[0]]
-            equivGroup = None
-            if p1.equiv != None and p1.equiv == p2.equiv: # equivalence exists already
-                continue
-            if p1.equiv != None:
-                equivGroup = p1.equiv
-            if p2.equiv != None:
-                if equivGroup != None: # if two proteins are already equal
-                    assert p2.equiv != p1.equiv
-                    equivGroup = p1.equiv + p2.equiv
-                else:
-                    equivGroup = p2.equiv
-            if equivGroup == None:
-                equivGroup = []
-            if not p1 in equivGroup:
-                equivGroup.append(p1)
-            if not p2 in equivGroup:
-                equivGroup.append(p2)
-            # set the equiv group
-            p1.equiv = equivGroup
-            p2.equiv = equivGroup
+            for member in equiv:
+                for other in equiv:
+                    if member == other:
+                        continue
+                    if not protMap[other] in protMap[member].equiv:
+                        protMap[member].equiv.append(protMap[other])
 
 def readEvent(string):
     string = string.strip()
@@ -106,17 +94,67 @@ def readEvent(string):
                     argMap[ "Theme" + argTuple[0][4:] ][2] = argTuple[1] 
     return ann
 
+def readRAnnotation(string):
+    string = string.strip()
+    ann = Annotation()
+    ann.id, rest = string.split("\t")
+    args = rest.split()
+    ann.type = args[0]
+    args = args[1:]
+    argMap = {}
+    #print string
+    for arg in args:
+        argTuple = arg.split(":") + [None]
+        assert argTuple[0].find("Arg") != -1, (string, argTuple)
+        ann.arguments.append( (argTuple[0], argTuple[1], None) )
+    return ann
+
+def loadRel(filename, proteins):
+    triggerMap = {}
+    for protein in proteins:
+        triggerMap[protein.id] = protein
+        
+    f = open(filename)
+    triggers = []
+    relations = []
+    lines = f.readlines()
+    for line in lines:
+        if line[0] == "T":
+            triggers.append(readTAnnotation(line))
+            triggerMap[triggers[-1].id] = triggers[-1]
+    for line in lines:
+        if line[0] == "*":
+            readStarAnnotation(line, proteins+triggers)
+    for line in lines:
+        if line[0] == "R":
+            relations.append(readRAnnotation(line))
+    f.close()
+    
+    # Build links
+    for relation in relations:
+        for i in range(len(relation.arguments)):
+            arg = relation.arguments[i]
+            if arg[1][0] == "T":
+                if arg[2] != None:
+                    relation.arguments[i] = (arg[0], triggerMap[arg[1]], triggerMap[arg[2]])
+                else:
+                    relation.arguments[i] = (arg[0], triggerMap[arg[1]], None)
+                
+    return triggers, relations
+
 def loadA1(filename):
     f = open(filename)
     proteins = []
-    starSection = False
-    for line in f:
-        if starSection: # assume all proteins are defined before equivalences
-            assert line[0] == "*"
+    #starSection = False
+    lines = f.readlines()
+    for line in lines:
+        #if starSection: # assume all proteins are defined before equivalences
+        #    assert line[0] == "*"
         if line[0] == "T":
             proteins.append(readTAnnotation(line))
-        elif line[0] == "*":
-            starSection = True
+    for line in lines:
+        if line[0] == "*":
+            #starSection = True
             readStarAnnotation(line, proteins)
     f.close()
     return proteins
@@ -169,27 +207,36 @@ def loadText(filename):
 def load(id, dir):
     id = str(id)
     proteins = loadA1(os.path.join(dir, id + ".a1"))
-    triggers, events = loadA2(os.path.join(dir, id + ".a2"), proteins)
-    return proteins, triggers, events
+    a2Path = os.path.join(dir, id + ".a2")
+    relPath = os.path.join(dir, id + ".rel")
+    triggers = None
+    events = []
+    relations = []
+    if os.path.exists(a2Path):
+        triggers, events = loadA2(a2Path, proteins)
+    elif os.path.exists(relPath):
+        triggers, relations = loadRel(relPath, proteins)
+    return proteins, triggers, events, relations
 
 def loadSet(dir):
     ids = set()
     documents = []
     for filename in os.listdir(dir):
         if filename.find(".") != -1:
-            ids.add(int(filename.split(".")[0]))
+            splits = filename.split(".")
+            ids.add(splits[0])
     for id in sorted(list(ids)):
         #print "Loading", id
         doc = Document()
         doc.id = id
-        doc.proteins, doc.triggers, doc.events = load(str(id), dir)
+        doc.proteins, doc.triggers, doc.events, doc.relations = load(str(id), dir)
         doc.text = loadText( os.path.join(dir, str(id) + ".txt") )
         documents.append(doc)
     return documents
 
 def writeSet(documents, dir):
     for doc in documents:
-        write(doc.id, dir, doc.proteins, doc.triggers, doc.events)
+        write(doc.id, dir, doc.proteins, doc.triggers, doc.events, doc.relations)
         # Write text file
         out = open(os.path.join(dir, str(doc.id) + ".txt"), "wt")
         out.write(doc.text)
@@ -213,8 +260,10 @@ def updateIds(annotations, minId=0):
         for ann in annotations:
             if len(ann.arguments) == 0:
                 ann.id = "T" + str(idCount)
-            else:
+            elif ann.trigger != None:
                 ann.id = "E" + str(idCount)
+            else:
+                ann.id = "R" + str(idCount)
             idCount += 1
 
 def writeTAnnotation(proteins, out, idStart=0):
@@ -234,7 +283,10 @@ def writeEvents(events, out):
     for event in events:
         out.write(event.id + "\t")
         trigger = event.trigger
-        out.write(trigger.type + ":" + trigger.id)
+        if trigger == None:
+            out.write(event.type)
+        else:
+            out.write(trigger.type + ":" + trigger.id)
         typeCounts = {}
         # Count arguments
         for arg in event.arguments:
@@ -292,17 +344,22 @@ def writeEvents(events, out):
     #for event in events:
     #    if event.negation != None:
 
-def write(id, dir, proteins, triggers, events):
+def write(id, dir, proteins, triggers, events, relations):
     id = str(id)
     if not os.path.exists(dir):
         os.makedirs(dir)
     if proteins != None:
         out = open(os.path.join(dir, id + ".a1"), "wt")
         writeTAnnotation(proteins, out)
-    if triggers != None:
+    if events != None:
         out = open(os.path.join(dir, id + ".a2"), "wt")
         writeTAnnotation(triggers, out, getMaxId(proteins) + 1)
         writeEvents(events, out)
+        out.close()
+    if relations != None:
+        out = open(os.path.join(dir, id + ".rel"), "wt")
+        writeTAnnotation(triggers, out, getMaxId(proteins) + 1)
+        writeEvents(relations, out)
         out.close()
         
 if __name__=="__main__":
