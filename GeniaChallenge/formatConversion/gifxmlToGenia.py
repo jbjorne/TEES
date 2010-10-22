@@ -30,9 +30,9 @@ def getEntityIndex(entities, index=0, task=1):
                 origIds.append(origId)
     for origId in origIds:
         splits = origId.split(".")
-        idPart = splits[1]
+        idPart = splits[-1]
         #print origId
-        assert(idPart[0] == "T")
+        assert(idPart[0] == "T"), origId
         newIndex = int(idPart[1:])
         if newIndex > index:
             index = newIndex
@@ -56,7 +56,7 @@ def processCorpus(inputCorpus, outputPath, task=1, outputIsA2File=False, verbose
         if documentId == None:
             documentId = document.get("origId")
         else:
-            documentId = documentId.split(".")[0]
+            documentId = documentId.rsplit(".", 1)[0]
         if verbose: counter.update(1, "Processing document " + document.get("id") + " (origId " + documentId + "): ")
         
         # Write a1 file
@@ -522,14 +522,14 @@ def makeSubmissionFile(geniaDir, submissionFileName):
     # Make the tar.gz-fiel for submission
     #submissionFileName = output.split("/")[-1] + ".tar.gz"    
     print >> sys.stderr, "Making submission file", submissionFileName
-    allFiles = os.listdir(output)
+    allFiles = os.listdir(geniaDir)
     tarFiles = []
     for file in allFiles:
         if file.find(".a2.") != -1:
             tarFiles.append(file)
-    submissionFile = tarfile.open(os.path.join(output,submissionFileName), "w:gz")
+    submissionFile = tarfile.open(os.path.join(geniaDir,submissionFileName), "w:gz")
     tempCwd = os.getcwd()
-    os.chdir(output)
+    os.chdir(geniaDir)
     for file in tarFiles:
         submissionFile.add(file)#, exclude = lambda x: x == submissionFileName)
     os.chdir(tempCwd)
