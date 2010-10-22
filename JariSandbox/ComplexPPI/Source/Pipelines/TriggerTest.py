@@ -85,6 +85,7 @@ if not "eval" in options.csc:
     # Trigger example generation
     ###############################################################################
     print >> sys.stderr, "Trigger examples for parse", PARSE_TAG   
+    print >> sys.stderr, "Trigger style:", options.triggerStyles
     TRIGGER_EXAMPLE_BUILDER.run(TEST_FILE, TRIGGER_TEST_EXAMPLE_FILE, PARSE, TOK, TRIGGER_FEATURE_PARAMS, TRIGGER_IDS, GAZETTEER_TRAIN)
     TRIGGER_EXAMPLE_BUILDER.run(TRAIN_FILE, TRIGGER_TRAIN_EXAMPLE_FILE, PARSE, TOK, TRIGGER_FEATURE_PARAMS, TRIGGER_IDS, GAZETTEER_TRAIN)
 
