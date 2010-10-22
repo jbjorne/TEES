@@ -1,7 +1,7 @@
 """
 Trigger examples
 """
-__version__ = "$Revision: 1.24 $"
+__version__ = "$Revision: 1.25 $"
 
 import sys, os
 thisPath = os.path.dirname(os.path.abspath(__file__))
@@ -130,6 +130,9 @@ class GeneralEntityTypeRecognizerGztr(ExampleBuilder):
             if self.gazetteer and tokTxtLower in self.gazetteer:
                 for label,weight in self.gazetteer[tokTxtLower].items():
                     features["_knownLabel_"+label]=weight # 1 performs slightly worse
+        ## BANNER features
+        #if sentenceGraph.entityHintsByToken.has_key(token):
+        #    features["BANNER-entity"] = 1
         self.tokenFeatures[token] = features
         return features
     
@@ -141,6 +144,12 @@ class GeneralEntityTypeRecognizerGztr(ExampleBuilder):
         tag = "linear_"+tag
         for tokenFeature,w in self.getTokenFeatures(sentenceGraph.tokens[index], sentenceGraph).iteritems():
             features[self.featureSet.getId(tag+tokenFeature)] = w
+    
+    def buildLinearNGram(self, i, j, sentenceGraph, features):
+        ngram = "ngram"
+        for index in range(i, j+1):
+            ngram += "_" + sentenceGraph.getTokenText(sentenceGraph.tokens[index]).lower()
+        features[self.featureSet.getId(ngram)] = 1
     
     def buildExamples(self, sentenceGraph):
         """
@@ -266,10 +275,27 @@ class GeneralEntityTypeRecognizerGztr(ExampleBuilder):
             features[self.featureSet.getId("stem_"+norStem)] = 1
             features[self.featureSet.getId("nonstem_"+normalizedText[len(norStem):])] = 1
             
+            # Substring features
+            for string in text.split("-"):
+                stringLower = string.lower()
+                features[self.featureSet.getId("substring_"+stringLower)] = 1
+                features[self.featureSet.getId("substringstem_"+PorterStemmer.stem(stringLower))] = 1
+            
             # Linear order features
             for index in [-3,-2,-1,1,2,3]:
                 if i + index > 0 and i + index < len(sentenceGraph.tokens):
                     self.buildLinearOrderFeatures(sentenceGraph, i + index, str(index), features)
+
+            # Linear n-grams
+            if "linear_ngrams" in self.styles:
+                self.buildLinearNGram(max(0, i-1), i, sentenceGraph, features)
+                self.buildLinearNGram(max(0, i-2), i, sentenceGraph, features)
+            
+            if "phospho" in self.styles:
+                if text.find("hospho") != -1:
+                    features[self.featureSet.getId("phospho_found")] = 1
+                features[self.featureSet.getId("begin_"+text[0:2].lower())] = 1
+                features[self.featureSet.getId("begin_"+text[0:3].lower())] = 1
             
             # Content
             if i > 0 and text[0].isalpha() and text[0].isupper():
