@@ -8,8 +8,9 @@ except ImportError:
 class EdgeExampleWriter(SentenceExampleWriter):
     def __init__(self):
         self.xType = "edge"
+        self.removeEdges = True
     
-    def writeXMLSentence(self, examples, predictionsByExample, sentenceObject, classSet, classIds):        
+    def writeXMLSentence(self, examples, predictionsByExample, sentenceObject, classSet, classIds, goldSentence=None):        
         self.assertSameSentence(examples)
         
         sentenceElement = sentenceObject.sentence
@@ -20,7 +21,8 @@ class EdgeExampleWriter(SentenceExampleWriter):
         if sentenceAnalysesElement != None:
             sentenceElement.remove(sentenceAnalysesElement)
         # remove pairs and interactions
-        removed = self.removeChildren(sentenceElement, ["pair", "interaction"])
+        if self.removeEdges:
+            removed = self.removeChildren(sentenceElement, ["pair", "interaction"])
         
         causeAfterTheme = False
         pairCount = 0
