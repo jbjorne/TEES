@@ -1,7 +1,7 @@
 """
 A gazetteer of training data words associated with specific example classes
 """
-__version__ = "$Revision: 1.9 $"
+__version__ = "$Revision: 1.10 $"
 
 try:
     import xml.etree.cElementTree as ET
@@ -152,6 +152,8 @@ class Gazetteer:
             print >> f, txt+"\t",
             for cls,count in clsDct.items():
                 print >> f, cls+":"+str(float(count)/total),
+            # print counts
+            print >> f, "\t", total
             print >> f
         f.close()
 
@@ -164,7 +166,8 @@ class Gazetteer:
             line=line.strip()
             if not line:
                 continue
-            txt,clsVals=line.split("\t")
+            splits = line.split("\t")
+            txt,clsVals=splits[0], splits[1]
             clsDct=gztr.setdefault(txt,{})
             for clsVal in clsVals.split():
                 cls,v=clsVal.split(":")
@@ -177,6 +180,7 @@ class Gazetteer:
 if __name__=="__main__":
     desc="Given a GS XML, builds a gazetteer with all tokens seen in a positive label context, and the label/count information. Reads stdin, writes stdout"""
     parser = OptionParser(description=desc)
-    parser.add_option("-t","--tokenization",default="split-Charniak-Lease",dest="tokenization",help="Tokenization to be used. Defaults to split-Charniak-Lease")
+    parser.add_option("-t","--tokenization",default="split-McClosky",dest="tokenization",help="Tokenization to be used. Defaults to split-Charniak-Lease")
+    parser.add_option("-n","--negatives",dest="negatives",action="store_true",default=False,help="")
     (options, args) = parser.parse_args()
-    Gazetteer.run(sys.stdin,sys.stdout,options.tokenization)
+    Gazetteer.run(sys.stdin,sys.stdout,options.tokenization, includeNeg=options.negatives)
