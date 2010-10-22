@@ -5,7 +5,7 @@ except ImportError:
     import cElementTree as ET
 import cElementTreeUtils as ETUtils
 
-def recalculateIds(input, output=None, onlyWithinSentence=False):
+def recalculateIds(input, output=None, onlyWithinSentence=False, docIndexStart=0):
     print >> sys.stderr, "##### Recalculate hierarchical interaction XML ids #####"
     print >> sys.stderr, "Loading corpus", input
     corpusTree = ETUtils.ETFromObj(input)
@@ -18,7 +18,7 @@ def recalculateIds(input, output=None, onlyWithinSentence=False):
     documents = corpusRoot.findall("document")
     # Recalculate ids for documents, sentences and entities
     entDictionary = {}
-    docIndex = 0
+    docIndex = docIndexStart
     for document in documents:
         if not onlyWithinSentence:
             document.attrib["id"] = corpusName + ".d" + str(docIndex)
@@ -41,7 +41,7 @@ def recalculateIds(input, output=None, onlyWithinSentence=False):
             sentIndex += 1
         docIndex += 1
     # Recalculate ids for pairs and interactions
-    docIndex = 0
+    docIndex = docIndexStart
     for document in documents:
         sentences = document.findall("sentence")
         sentIndex = 0
@@ -92,6 +92,7 @@ if __name__=="__main__":
     optparser.add_option("-i", "--input", default=defaultCorpusFilename, dest="input", help="Corpus in interaction xml format", metavar="FILE")
     optparser.add_option("-o", "--output", default=defaultOutputName, dest="output", help="Output file in interaction xml format.")
     optparser.add_option("-s", "--sentence", action="store_true", default=False, dest="sentence", help="Only recalculate within a sentence element.")
+    optparser.add_option("-d", "--docIndexStart", type="int", default=0, dest="docIndexStart", help="Start document indexing from.")
     (options, args) = optparser.parse_args()
     
     if options.input == None:
@@ -103,4 +104,4 @@ if __name__=="__main__":
         optparser.print_help()
         sys.exit(1)
     
-    recalculateIds(options.input, options.output, options.sentence)
+    recalculateIds(options.input, options.output, options.sentence, options.docIndexStart)
