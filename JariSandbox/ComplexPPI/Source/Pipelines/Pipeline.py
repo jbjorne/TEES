@@ -11,12 +11,12 @@ from ExampleBuilders.Task3ExampleBuilder import Task3ExampleBuilder
 #IF LOCAL
 from ExampleBuilders.GeneralEntityTypeRecognizerGztr import GeneralEntityTypeRecognizerGztr
 from ExampleBuilders.GeneralEntityTypeRecognizer import GeneralEntityTypeRecognizer
-from ExampleBuilders.EventExampleBuilder import EventExampleBuilder
+#from ExampleBuilders.EventExampleBuilder import EventExampleBuilder
 from ExampleBuilders.DirectEventExampleBuilder import DirectEventExampleBuilder
 from ExampleBuilders.PathGazetteer import PathGazetteer
 from ExampleBuilders.CPPTriggerExampleBuilder import CPPTriggerExampleBuilder
 from ExampleBuilders.UnmergingExampleBuilder import UnmergingExampleBuilder
-from ExampleBuilders.Round2TriggerExampleBuilder import Round2TriggerExampleBuilder
+#from ExampleBuilders.Round2TriggerExampleBuilder import Round2TriggerExampleBuilder
 #from ExampleBuilders.BinaryEntityExampleBuilder import BinaryEntityExampleBuilder
 from ExampleBuilders.UnmergedEdgeExampleBuilder import UnmergedEdgeExampleBuilder
 from ExampleBuilders.AsymmetricEventExampleBuilder import AsymmetricEventExampleBuilder
@@ -42,6 +42,7 @@ import atexit, shutil
 from Core.RecallAdjust import RecallAdjust
 from Core.Gazetteer import Gazetteer
 from ExampleWriters.BioTextExampleWriter import BioTextExampleWriter
+from ExampleWriters.EdgeExampleWriter import EdgeExampleWriter
 
 RELEASE = True
 #IF LOCAL
