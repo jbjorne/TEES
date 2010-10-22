@@ -36,9 +36,11 @@ class SentenceExampleWriter:
             examples = ExampleUtils.readExamples(examples, False)
         return examples, predictions
     
-    def writeXML(self, examples, predictions, corpus, outputFile, classSet=None, parse=None, tokenization=None):
+    def writeXML(self, examples, predictions, corpus, outputFile, classSet=None, parse=None, tokenization=None, goldCorpus=None):
         #print >> sys.stderr, "Writing output to Interaction XML"
         corpus = self.loadCorpus(corpus, parse, tokenization)
+        if goldCorpus != None:
+            goldCorpus = self.loadCorpus(corpus, parse, tokenization)
         examples, predictions = self.loadExamples(examples, predictions)
         
         if type(classSet) == types.StringType: # class names are in file
@@ -61,7 +63,10 @@ class SentenceExampleWriter:
                 if currentMajorId != None:
                     processedSentenceIds.add(currentMajorId)
                     sentenceObject = corpus.sentencesById[currentMajorId]
-                    self.writeXMLSentence(exampleQueue, predictionsByExample, sentenceObject, classSet, classIds) # process queue
+                    goldSentence = None
+                    if goldCorpus != None:
+                        goldSentence = goldCorpus.sentencesById[currentMajorId]
+                    self.writeXMLSentence(exampleQueue, predictionsByExample, sentenceObject, classSet, classIds, goldSentence=goldSentence) # process queue
                 exampleQueue = []
                 predictionsByExample = {}
                 prevMajorIds.add(currentMajorId)
@@ -75,7 +80,10 @@ class SentenceExampleWriter:
         if currentMajorId != None:
             processedSentenceIds.add(currentMajorId)
             sentenceObject = corpus.sentencesById[currentMajorId]
-            self.writeXMLSentence(exampleQueue, predictionsByExample, sentenceObject, classSet, classIds) # process queue
+            goldSentence = None
+            if goldCorpus != None:
+                goldSentence = goldCorpus.sentencesById[currentMajorId]
+            self.writeXMLSentence(exampleQueue, predictionsByExample, sentenceObject, classSet, classIds, goldSentence=goldSentence) # process queue
             exampleQueue = []
             predictionsByExample = {}
         
@@ -83,7 +91,10 @@ class SentenceExampleWriter:
         for sentenceId in sorted(corpus.sentencesById.keys()):
             if sentenceId not in processedSentenceIds:
                 sentenceObject = corpus.sentencesById[sentenceId]
-                self.writeXMLSentence([], {}, sentenceObject, classSet, classIds)
+                goldSentence = None
+                if goldCorpus != None:
+                    goldSentence = goldCorpus.sentencesById[currentMajorId]
+                self.writeXMLSentence([], {}, sentenceObject, classSet, classIds, goldSentence=goldSentence)
     
         # Write corpus
         if outputFile != None:
@@ -91,7 +102,7 @@ class SentenceExampleWriter:
             ETUtils.write(corpus.rootElement, outputFile)
         return corpus.tree
 
-    def writeXMLSentence(self, examples, predictionsByExample, sentenceObject, classSet, classIds):
+    def writeXMLSentence(self, examples, predictionsByExample, sentenceObject, classSet, classIds, goldSentence=None):
         raise NotImplementedError
     
     def assertSameSentence(self, examples, sentenceId=None):
