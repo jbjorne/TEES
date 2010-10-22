@@ -154,7 +154,7 @@ class SentenceParser:
                     self.entities[uid] = {}
                 else:
                     sys.stderr.write("Id %s already exists in document %s!"%(uid,self.uid))
-                assert(text==self.text[int(b):int(e)])
+                assert(text==self.text[int(b):int(e)]), (self.uid, text, self.text)
                 self.entities[uid].update({'id':uid,
                                            'origId':uid,
                                            'charOffset':"%s-%s"%(b,int(e)-1),
@@ -517,7 +517,7 @@ def process(indir, task, outfile, remove_duplicates, modify_extra, docIds=None):
     parser = Parser()
     filestems = set()
     for filename in os.listdir(indir):
-        filestem = filename.split(".",1)[0]
+        filestem = filename.rsplit(".",1)[0]
         if docIds == None:
             filestems.add(filestem)
         elif filestem in docIds:
