@@ -17,6 +17,11 @@ unescapeDict={'-LRB-':'(',
               '-RCB-':'}'
               }
 
+def unescape(s, unescapeDict):
+    for k, v in unescapeDict.iteritems():
+        s = s.replace(k, v)
+    return s
+
 depRe=re.compile("^(.*?)\((.*)-([0-9]+)'?, (.*)-([0-9]+)'?\)$")
 
 def readDepTrees(reportNumber,dir):
@@ -41,8 +46,8 @@ def readDepTrees(reportNumber,dir):
             print >> sys.stderr, "WARNING:",line
             continue
         depType,t1,t1idx,t2,t2idx=match.group(1),match.group(2),match.group(3),match.group(4),match.group(5)
-        t1=unescapeDict.get(t1,t1)
-        t2=unescapeDict.get(t2,t2)        
+        t1=unescape(t1,unescapeDict)
+        t2=unescape(t2,unescapeDict)        
         if t1idx!=t2idx:
             currSent.append((depType,t1,int(t1idx),t2,int(t2idx)))
     else:
@@ -61,9 +66,9 @@ def readPOSTags(reportNumber,dir):
         line=line.strip()
         for match in posRe.finditer(line):
             POS=match.group(1)
-            POS=unescapeDict.get(POS,POS)
+            POS=unescape(POS, unescapeDict)
             WRD=match.group(2)
-            WRD=unescapeDict.get(WRD,WRD)
+            WRD=unescape(WRD, unescapeDict)
             currSent.append((POS,WRD))
         else:
             sents.append(currSent)
@@ -72,13 +77,16 @@ def readPOSTags(reportNumber,dir):
     return sents
 
 def computeTokens(reportNumber,dir):
+    print "Processing", reportNumber
     """Returns the raw text string plus a list of (beg,end) character offsets of tokens + a set of indices of last tokens in a sentence."""
     f=open(dir+"/%s.txt"%reportNumber,"rt")
     rawTxt=f.read()
     f.close()
 
     f=open(dir+"/%s.tokenized"%reportNumber,"rt")
-    tokTxt=[unescapeDict.get(token,token) for token in f.read().split()] #read & unescape tokens
+    inputText = unescape(f.read(), unescapeDict)
+    tokTxt=inputText.split()
+    #tokTxt=[unescapeDict.get(token,token) for token in inputText.split()] #read & unescape tokens
     f.close()
 
     aligned=TA.align(list(rawTxt),tokTxt) #returns a list of len(tokTxt). Each item is a list of character offsets
