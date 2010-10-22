@@ -183,15 +183,18 @@ if __name__=="__main__":
         print >> sys.stderr, "Psyco not installed"
     
     #classIds = IdSet(filename="/usr/share/biotext/GeniaChallenge/extension-data/genia/edge-examples/genia-edge-ids.class_names")
-    featureIds = IdSet(filename="/usr/share/biotext/GeniaChallenge/extension-data/genia/edge-examples/genia-edge-ids.feature_names")
-    model = "/usr/share/biotext/GeniaChallenge/extension-data/genia/test-set-split-McClosky-boost07/test-edge-param-opt/model-c_28000"
     
     from optparse import OptionParser # For using command line options
     optparser = OptionParser()
-    optparser.add_option("-i", "--ids", default=featureIds, dest="ids", help="SVM feature ids")
-    optparser.add_option("-m", "--model", default=model, dest="model", help="SVM model file")
-    optparser.add_option("-o", "--output", default=model, dest="output", help="Output file stem")
+    optparser.add_option("-i", "--ids", default=None, dest="ids", help="SVM feature ids")
+    optparser.add_option("-m", "--model", default=None, dest="model", help="SVM model file")
+    optparser.add_option("-o", "--output", default=None, dest="output", help="Output file stem")
     (options, args) = optparser.parse_args()
+
+    #featureIds = IdSet(filename="/usr/share/biotext/GeniaChallenge/extension-data/genia/edge-examples/genia-edge-ids.feature_names")
+    #model = "/usr/share/biotext/GeniaChallenge/extension-data/genia/test-set-split-McClosky-boost07/test-edge-param-opt/model-c_28000"
+    #featureIds = IdSet(filename="/usr/share/biotext/GeniaChallenge/extension-data/genia/edge-examples/genia-edge-ids.feature_names")
+    #model = "/usr/share/biotext/GeniaChallenge/extension-data/genia/test-set-split-McClosky-boost07/test-edge-param-opt/model-c_28000"
 
     
     #mapIds("a",model)
