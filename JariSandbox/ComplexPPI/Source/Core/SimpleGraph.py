@@ -1,6 +1,7 @@
 """
 For representing the event argument and dependency graphs. Should be deterministic.
 """
+import sys    
 
 class Graph():
     """
@@ -23,9 +24,7 @@ class Graph():
     def toUndirected(self):
         g = Graph(False)
         g.addNodes(self.nodes)
-        for edge in self.edges:
-            g.addEdge(edge[0], edge[1], edge[2])
-            g.addEdge(edge[1], edge[0], edge[2])
+        g.addEdges(self.edges)
         return g
     
     def addNode(self, node):
@@ -76,6 +75,10 @@ class Graph():
                 self.__insertEdge(node2, node1, data)
         return forward or reverse
     
+    def addEdges(self, edges):
+        for edge in edges:
+            self.addEdge(edge[0], edge[1], edge[2])
+    
     def __insertEdge(self, node1, node2, data):
         """
         Assumes edge doesn't exist already
@@ -84,7 +87,7 @@ class Graph():
         self.edges.append(edge)
         self.__matrix[node1][node2].append(edge)
     
-    def hasEdge(self, node1, node2):
+    def hasEdges(self, node1, node2):
         if len(self.__matrix[node1][node2]) > 0:
             return True
         else:
@@ -98,6 +101,22 @@ class Graph():
     
     def getEdges(self, node1, node2):
         return self.__matrix[node1][node2]
+    
+    def getInEdges(self, node):
+        assert self.__directed
+        inEdges = []
+        for edge in self.edges:
+            if edge[1] == node:
+                inEdges.append(edge)
+        return inEdges
+
+    def getOutEdges(self, node):
+        assert self.__directed
+        outEdges = []
+        for edge in self.edges:
+            if edge[0] == node:
+                outEdges.append(edge)
+        return outEdges
     
     def FloydWarshall(self):
         """
@@ -126,21 +145,41 @@ class Graph():
         d = self.__distances    
         for k in self.nodes:
             for i in self.nodes:
+                if d[i][k] == infinity:
+                    continue
                 for j in self.nodes:
-                    if d[i][k] + d[k][j] <= d[i][j] and k != i and k != j:
+                    if d[k][j] == infinity:
+                        continue
+                    # equal
+                    if d[i][k] + d[k][j] < d[i][j]:
                         d[i][j] = d[i][k] + d[k][j]
-                        if self.__nextInPath[i][j] == None:
-                            self.__nextInPath[i][j] = []
-                        self.__nextInPath[i][j].append(k)
+        for k in self.nodes:
+            for i in self.nodes:
+                if d[i][k] == infinity:
+                    continue
+                for j in self.nodes:
+                    if d[k][j] == infinity:
+                        continue
+                    # shorter or equal
+                    if d[i][k] + d[k][j] <= d[i][j]:
+                        if d[i][k] == 1 and k != j:
+                            if self.__nextInPath[i][j] == None or d[i][k] + d[k][j] < d[i][j]:
+                                self.__nextInPath[i][j] = []
+                            self.__nextInPath[i][j].append(k)
+        #self.showAnalyses()
     
     def showAnalyses(self):
-        print "distances", self.__distances
-        print "next", self.__nextInPath
+        print "distances"
+        for k in sorted(self.__distances.keys()):
+            print ">", k, self.__distances[k]
+        print "next"
+        for k in sorted(self.__nextInPath.keys()):
+            print ">", k, self.__nextInPath[k]
 
     def getPaths(self, i, j):
         if self.__nextInPath == None:
             self.FloydWarshall()
-        if self.__distances[i][j] == sys.maxint:
+        if self.__distances[i][j] == sys.maxint: # no path
             return []
         intermediates = self.__nextInPath[i][j]
         if intermediates == None:
@@ -193,10 +232,21 @@ class Graph():
             else:
                 allWalks.append(walk + [edge])
         return allWalks
+    
+    def toGraphviz(self, filename=None):
+        s = "digraph PhiloDilemma {\nnode [shape=box];\n"
+        for node in self.nodes:
+            s += str(node) + ";\n"
+        for edge in self.edges:
+            s += str(edge[0]) + "->" + str(edge[1]) + ";\n"
+        s += "overlap=false;\nfontsize=12;\n}"
+        if filename != None:
+            f = open(filename, "wt")
+            f.write(s)
+            f.close()
+        return s
 
 if __name__=="__main__":
-    import sys
-    
     from optparse import OptionParser
     # Import Psyco if available
     try:
@@ -232,3 +282,12 @@ if __name__=="__main__":
     print "Walks 1->6->3", g.getWalks([1,6,3], True)
     print "Walks 1->6->3 (undirected walks from directed graph)", g.getWalks([1,6,3])
     print "Walks 1->6->3 from undirected", u.getWalks([1,6,3])
+    print "Hard case"
+    g = Graph()
+    g.addEdges([('st_4', 'st_3', 'split_1'), ('st_1', 'st_4', 'split_2'), ('st_11', 'st_6', 'split_3'), ('st_6', 'st_8', 'split_4'), ('st_11', 'st_10', 'split_5'), ('st_1', 'st_11', 'split_6'), ('st_4', 'st_11', 'split_7'), ('st_14', 'st_13', 'split_8'), ('st_1', 'st_14', 'split_9'), ('st_17', 'st_16', 'split_10'), ('st_14', 'st_17', 'split_11'), ('st_21', 'st_19', 'split_12'), ('st_21', 'st_20', 'split_13'), ('st_14', 'st_21', 'split_14'), ('st_26', 'st_23', 'split_15'), ('st_26', 'st_24', 'split_16'), ('st_26', 'st_25', 'split_17'), ('st_21', 'st_26', 'split_18'), ('st_26', 'st_27', 'split_19')])
+    print "Paths 'st_14'->'st_6'", g.getPaths('st_14','st_6')
+    u = g.toUndirected()
+    print "Undirected Paths 'st_14'->'st_6'", u.getPaths('st_14','st_6')
+    print u.showAnalyses()
+    u.toGraphviz("vis.gv")
+    
