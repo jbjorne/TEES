@@ -97,6 +97,9 @@ class Graph():
         return self.__matrix[node1][node2]
     
     def FloydWarshall(self):
+        """
+        From Wikipedia, modified to return all paths
+        """
         n = len(self.nodes)
         self.__distances = {}
         infinity = sys.maxint # at least it's a really large number
@@ -121,12 +124,34 @@ class Graph():
         for k in self.nodes:
             for i in self.nodes:
                 for j in self.nodes:
-                    if d[i][k] + d[k][j] < d[i][j]:
+                    if d[i][k] + d[k][j] <= d[i][j] and k != i and k != j:
                         d[i][j] = d[i][k] + d[k][j]
-                        self.__nextInPath[i][j] = k
-        print d
+                        if self.__nextInPath[i][j] == None:
+                            self.__nextInPath[i][j] = []
+                        self.__nextInPath[i][j].append(k)
+    
+    def showAnalyses(self):
+        print "distances", self.__distances
+        print "next", self.__nextInPath
+
+    def getPaths(self, i, j):
+        if self.__nextInPath == None:
+            self.FloydWarshall()
+        if self.__distances[i][j] == sys.maxint:
+            return None
+        intermediates = self.__nextInPath[i][j]
+        if intermediates == None:
+            return [[i, j]] # there is an edge from i to j, with no vertices between
+        else:
+            segments = []
+            for intermediate in intermediates:
+                segments.extend( self.getPaths(intermediate,j) )
+            rvs = []
+            for segment in segments:
+                rvs.append( [i] + segment )
+            return rvs
         
-    def getPath(self, i, j):
+    def getPathOldSinglePath(self, i, j):
         if self.__nextInPath == None:
             self.FloydWarshall()
         if self.__distances[i][j] == sys.maxint:
@@ -137,27 +162,8 @@ class Graph():
         else:
             segment = self.getPath(intermediate,j)
             return [i] + segment
-
-    def getPathOld(self, i, j):
-        if self.__nextInPath == None:
-            self.FloydWarshall()
-        if self.__distances[i][j] == sys.maxint:
-            return None
-        intermediate = self.__nextInPath[i][j]
-        if intermediate == None:
-            return [i, j] #;   /* there is an edge from i to j, with no vertices between */
-        else:
-            segment1 = self.getPath(i,intermediate)
-            if segment1 == None:
-                return None
-            segment2 = self.getPath(intermediate,j)
-            if segment2 == None:
-                return None
-            #return segment1 + [intermediate] + segment2
-            return segment1 + segment2
     
-    def getWalks(self, node1, node2, directed=False):
-        path = self.getPath(node1, node2)
+    def getWalks(self, path, directed=False):
         return self.__getWalks(path, directed=directed)
     
     def __getWalks(self, path, position=1, walk=None, directed=False):
@@ -178,7 +184,7 @@ class Graph():
             edges += pathEdges[node2][node1]
         for edge in edges:
             if position < len(path)-1:
-                allWalks.extend(self.getWalks(path, position+1, walk + [edge], directed))
+                allWalks.extend(self.__getWalks(path, position+1, walk + [edge], directed))
             else:
                 allWalks.append(walk + [edge])
         return allWalks
@@ -202,7 +208,13 @@ if __name__=="__main__":
     g.addEdge(2,3)
     g.addEdge(1,4)
     g.addEdge(4,3)
+    g.addEdge(4,3,"Test")
     print "nodes", g.nodes
     print "edges", g.edges
-    print g.getPath(1,3)
-    print g.getPath(4,3)
+    paths = g.getPaths(1,3)
+    print g.showAnalyses()
+    print "Paths 1->3", paths
+    print "Paths 4->3", g.getPaths(4,3)
+    print "Walks 1->3"
+    for p in paths:
+        print "Walks for path", p, ":", g.getWalks(p) 
