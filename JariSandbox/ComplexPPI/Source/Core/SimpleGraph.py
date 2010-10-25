@@ -22,14 +22,11 @@ class Graph():
     
     def toUndirected(self):
         g = Graph(False)
-        g.nodes = self.nodes[:]
-        for n1 in g.nodes:
-            self.__matrix[n1] = {}
-            for n2 in g.nodes:
-                self.__matrix[n1][n2] = []
+        g.addNodes(self.nodes)
         for edge in self.edges:
             g.addEdge(edge[0], edge[1], edge[2])
-            g.addEdge(edge[1], edge[2], edge[2])
+            g.addEdge(edge[1], edge[0], edge[2])
+        return g
     
     def addNode(self, node):
         if node in self.nodes:
@@ -86,8 +83,14 @@ class Graph():
         edge = (node1, node2, data)
         self.edges.append(edge)
         self.__matrix[node1][node2].append(edge)
-        
-    def hasEdge(self, node1, node2, data=None):
+    
+    def hasEdge(self, node1, node2):
+        if len(self.__matrix[node1][node2]) > 0:
+            return True
+        else:
+            return False
+    
+    def hasEdge(self, node1, node2, data):
         for edge in self.__matrix[node1][node2]:
             if edge[2] == data:
                 return True
@@ -138,7 +141,7 @@ class Graph():
         if self.__nextInPath == None:
             self.FloydWarshall()
         if self.__distances[i][j] == sys.maxint:
-            return None
+            return []
         intermediates = self.__nextInPath[i][j]
         if intermediates == None:
             return [[i, j]] # there is an edge from i to j, with no vertices between
@@ -164,6 +167,8 @@ class Graph():
             return [i] + segment
     
     def getWalks(self, path, directed=False):
+        if directed:
+            assert self.__directed
         return self.__getWalks(path, directed=directed)
     
     def __getWalks(self, path, position=1, walk=None, directed=False):
@@ -180,8 +185,8 @@ class Graph():
         node1 = path[position-1]
         node2 = path[position]
         edges = self.__matrix[node1][node2]
-        if not directed and not self.__directed: # an undirected graph already has the reverse edges
-            edges += pathEdges[node2][node1]
+        if (not directed) and self.__directed: # an undirected graph already has the reverse edges
+            edges += self.__matrix[node2][node1]
         for edge in edges:
             if position < len(path)-1:
                 allWalks.extend(self.__getWalks(path, position+1, walk + [edge], directed))
@@ -203,18 +208,27 @@ if __name__=="__main__":
 
     g = Graph()
     print g
-    g.addNodes([1, 2, 3, 4, 5])
+    g.addNodes([1, 2, 3, 4, 5, 6])
     g.addEdge(1,2)
     g.addEdge(2,3)
     g.addEdge(1,4)
     g.addEdge(4,3)
     g.addEdge(4,3,"Test")
+    g.addEdge(3,6)
+    g.addEdge(6,1)
     print "nodes", g.nodes
     print "edges", g.edges
+    u = g.toUndirected()
     paths = g.getPaths(1,3)
     print g.showAnalyses()
     print "Paths 1->3", paths
+    print "Undirected Paths 1->3", u.getPaths(1,3)
     print "Paths 4->3", g.getPaths(4,3)
+    print "Paths 4->5", g.getPaths(4,5)
     print "Walks 1->3"
     for p in paths:
-        print "Walks for path", p, ":", g.getWalks(p) 
+        print "Walks for path", p, ":", g.getWalks(p)
+    print "Walks 4->5", g.getWalks([4,5])
+    print "Walks 1->6->3", g.getWalks([1,6,3], True)
+    print "Walks 1->6->3 (undirected walks from directed graph)", g.getWalks([1,6,3])
+    print "Walks 1->6->3 from undirected", u.getWalks([1,6,3])
