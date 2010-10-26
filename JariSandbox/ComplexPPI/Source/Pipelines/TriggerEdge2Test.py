@@ -26,13 +26,15 @@ optparser.add_option("-w", "--edgeIds", default=None, dest="edgeIds", help="Edge
 optparser.add_option("-x", "--triggerParams", default="1000,5000,10000,20000,50000,80000,100000,150000,180000,200000,250000,300000,350000,500000,1000000", dest="triggerParams", help="Trigger detector c-parameter values")
 optparser.add_option("-y", "--recallAdjustParams", default="0.5,0.6,0.65,0.7,0.85,1.0,1.1,1.2", dest="recallAdjustParams", help="Recall adjuster parameter values")
 optparser.add_option("-z", "--edgeParams", default="5000,7500,10000,20000,25000,28000,50000,60000,65000", dest="edgeParams", help="Edge detector c-parameter values")
-optparser.add_option("-q", "--causeParams", default="5000,7500,10000,20000,25000,28000,50000,60000,65000", dest="causeParams", help="Edge detector c-parameter values")
+optparser.add_option("-q", "--causeParams", default=None, dest="causeParams", help="Edge detector c-parameter values")
 (options, args) = optparser.parse_args()
 
 # Check options
 assert options.mode in ["MODELS", "FINAL", "BOTH"]
 assert options.output != None
 assert options.task in [1, 2]
+if options.causeParams == None:
+    options.causeParams = options.edgeParams
 
 if options.csc.find(",") != -1:
     options.csc = options.csc.split(",")
