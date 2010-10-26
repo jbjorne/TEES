@@ -1,7 +1,7 @@
 """
 Trigger examples
 """
-__version__ = "$Revision: 1.25 $"
+__version__ = "$Revision: 1.26 $"
 
 import sys, os
 thisPath = os.path.dirname(os.path.abspath(__file__))
@@ -202,18 +202,20 @@ class GeneralEntityTypeRecognizerGztr(ExampleBuilder):
         self.outEdgesByToken = {}
         self.edgeSetByToken = {}
         for token in sentenceGraph.tokens:
-            inEdges = sentenceGraph.dependencyGraph.in_edges(token, data=True)
-            fixedInEdges = []
-            for edge in inEdges:
-                fixedInEdges.append( (edge[0], edge[1], edge[2]["element"]) )
-            inEdges = fixedInEdges
+            #inEdges = sentenceGraph.dependencyGraph.in_edges(token, data=True)
+            #fixedInEdges = []
+            #for edge in inEdges:
+            #    fixedInEdges.append( (edge[0], edge[1], edge[2]["element"]) )
+            #inEdges = fixedInEdges
+            inEdges = sentenceGraph.dependencyGraph.getInEdges(token)
             inEdges.sort(compareDependencyEdgesById)
             self.inEdgesByToken[token] = inEdges
-            outEdges = sentenceGraph.dependencyGraph.out_edges(token, data=True)
-            fixedOutEdges = []
-            for edge in outEdges:
-                fixedOutEdges.append( (edge[0], edge[1], edge[2]["element"]) )
-            outEdges = fixedOutEdges
+            #outEdges = sentenceGraph.dependencyGraph.out_edges(token, data=True)
+            #fixedOutEdges = []
+            #for edge in outEdges:
+            #    fixedOutEdges.append( (edge[0], edge[1], edge[2]["element"]) )
+            #outEdges = fixedOutEdges
+            outEdges = sentenceGraph.dependencyGraph.getOutEdges(token)
             outEdges.sort(compareDependencyEdgesById)
             self.outEdgesByToken[token] = outEdges
             self.edgeSetByToken[token] = set(inEdges + outEdges)

@@ -1,15 +1,16 @@
 """
 Main class for representing a sentence
 """
-__version__ = "$Revision: 1.33 $"
+__version__ = "$Revision: 1.34 $"
 
-import Graph.networkx_v10rc1 as NX10 # import networkx as NX
+#import Graph.networkx_v10rc1 as NX10 # import networkx as NX
+from Core.SimpleGraph import Graph
 import Range
 import types
 import copy
 import sys
 
-multiedges = True
+#multiedges = True
 
 def loadCorpus(corpus, parse, tokenization=None, removeNameInfo=False, removeIntersentenceInteractionsFromCorpusElements=True):
     """
@@ -90,10 +91,11 @@ class SentenceGraph:
         self.tokens = tokenElements
         self.dependencies = dependencyElements
         #self.dependencyGraph = NX.XDiGraph(multiedges = multiedges)
-        if multiedges:
-            self.dependencyGraph = NX10.MultiDiGraph()
-        else:
-            self.dependencyGraph = NX10.DiGraph()
+        #if multiedges:
+        #    self.dependencyGraph = NX10.MultiDiGraph()
+        #else:
+        #    self.dependencyGraph = NX10.DiGraph()
+        self.dependencyGraph = Graph()
         self.interactions = None
         self.entities = None
         self.interactionGraph = None
@@ -103,27 +105,30 @@ class SentenceGraph:
         self.tokensById = {}
         for token in self.tokens:
             self.tokensById[token.get("id")] = token
-            self.dependencyGraph.add_node(token)
+            #self.dependencyGraph.add_node(token)
+        self.dependencyGraph.addNodes(self.tokens)
         # Build the dependency graph using token-elements as nodes and dependency-elements
         # as edge data
         for dependency in self.dependencies:
-            self.dependencyGraph.add_edge(self.tokensById[dependency.attrib["t1"]],\
+            #self.dependencyGraph.add_edge(self.tokensById[dependency.attrib["t1"]],\
+            self.dependencyGraph.addEdge(self.tokensById[dependency.attrib["t1"]],\
                                           self.tokensById[dependency.attrib["t2"]],\
-                                          element=dependency)
+                                          dependency)
+            #                              element=dependency)
     
-    def getUndirectedDependencyGraph(self):
-        """
-        Create an undirected version of the syntactic dependency graph.
-        """
-        u = NX10.MultiGraph()
-        for token in self.tokens:
-            u.add_node(token)
-        for dependency in self.dependencies:
-            u.add_edge(self.tokensById[dependency.attrib["t1"]],\
-              self.tokensById[dependency.attrib["t2"]], element=dependency)
-            u.add_edge(self.tokensById[dependency.attrib["t2"]],\
-              self.tokensById[dependency.attrib["t1"]], element=dependency)
-        return u
+#    def getUndirectedDependencyGraph(self):
+#        """
+#        Create an undirected version of the syntactic dependency graph.
+#        """
+#        u = NX10.MultiGraph()
+#        for token in self.tokens:
+#            u.add_node(token)
+#        for dependency in self.dependencies:
+#            u.add_edge(self.tokensById[dependency.attrib["t1"]],\
+#              self.tokensById[dependency.attrib["t2"]], element=dependency)
+#            u.add_edge(self.tokensById[dependency.attrib["t2"]],\
+#              self.tokensById[dependency.attrib["t1"]], element=dependency)
+#        return u
     
     def getSentenceId(self):
         return self.sentenceElement.get("id")
@@ -168,12 +173,14 @@ class SentenceGraph:
             if entity.attrib["charOffset"] == "":
                 self.entities.remove(entity)
         #self.interactionGraph = NX.XDiGraph(multiedges = multiedges)
-        if multiedges:
-            self.interactionGraph = NX10.MultiDiGraph()
-        else:
-            self.interactionGraph = NX10.DiGraph()
-        for token in self.tokens:
-            self.interactionGraph.add_node(token)
+        #if multiedges:
+        #    self.interactionGraph = NX10.MultiDiGraph()
+        #else:
+        #    self.interactionGraph = NX10.DiGraph()
+        self.interactionGraph = Graph()
+        self.interactionGraph.addNodes(self.tokens)
+        #for token in self.tokens:
+        #    self.interactionGraph.add_node(token)
         
         self.entitiesByToken = {} # a mapping for fast access
         self.entitiesById = {}
@@ -191,16 +198,26 @@ class SentenceGraph:
             token1 = self.entityHeadTokenByEntity[self.entitiesById[interaction.attrib["e1"]]]
             token2 = self.entityHeadTokenByEntity[self.entitiesById[interaction.attrib["e2"]]]
             
+#            found = False
+#            if multiedges:
+#                edges = self.interactionGraph.get_edge_data(token1, token2, default={})
+#                for i in range(len(edges)):
+#                    edge = edges[i]["element"]
+#                    if edge.attrib["type"] == interaction.attrib["type"]:
+#                        found = True
+#                        break
+#            if not found:
+#                self.interactionGraph.add_edge(token1, token2, element=interaction)
+#            else:
+#                self.duplicateInteractionEdgesRemoved += 1
             found = False
-            if multiedges:
-                edges = self.interactionGraph.get_edge_data(token1, token2, default={})
-                for i in range(len(edges)):
-                    edge = edges[i]["element"]
-                    if edge.attrib["type"] == interaction.attrib["type"]:
-                        found = True
-                        break
+            edges = self.interactionGraph.getEdges(token1, token2)
+            for edge in edges:
+                if edge[2].attrib["type"] == interaction.attrib["type"]:
+                    found = True
+                    break
             if not found:
-                self.interactionGraph.add_edge(token1, token2, element=interaction)
+                self.interactionGraph.addEdge(token1, token2, interaction)
             else:
                 self.duplicateInteractionEdgesRemoved += 1
     

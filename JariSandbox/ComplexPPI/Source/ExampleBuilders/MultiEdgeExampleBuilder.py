@@ -1,7 +1,7 @@
 """
 Edge Examples
 """
-__version__ = "$Revision: 1.48 $"
+__version__ = "$Revision: 1.49 $"
 
 import sys, os
 thisPath = os.path.dirname(os.path.abspath(__file__))
@@ -14,7 +14,8 @@ from FeatureBuilders.MultiEdgeFeatureBuilder import MultiEdgeFeatureBuilder
 from FeatureBuilders.TokenFeatureBuilder import TokenFeatureBuilder
 from FeatureBuilders.BioInferOntologyFeatureBuilder import BioInferOntologyFeatureBuilder
 from FeatureBuilders.NodalidaFeatureBuilder import NodalidaFeatureBuilder
-import Graph.networkx_v10rc1 as NX10
+#import Graph.networkx_v10rc1 as NX10
+from Core.SimpleGraph import Graph
 from FeatureBuilders.TriggerFeatureBuilder import TriggerFeatureBuilder
 #IF LOCAL
 import Utils.BioInfer.OntologyUtils as OntologyUtils
@@ -102,16 +103,21 @@ class MultiEdgeExampleBuilder(ExampleBuilder):
         Example class. Multiple overlapping edges create a merged type.
         """
         types = set()
-        if sentenceGraph.interactionGraph.has_edge(t1, t2):
-            intEdges = sentenceGraph.interactionGraph.get_edge_data(t1, t2, default={})
-            # NOTE: Only works if keys are ordered integers
-            for i in range(len(intEdges)):
-                types.add(intEdges[i]["element"].get("type"))
-        if (not directed) and sentenceGraph.interactionGraph.has_edge(t2, t1):
-            intEdges = sentenceGraph.interactionGraph.get_edge(t2, t1, default={})
-            # NOTE: Only works if keys are ordered integers
-            for i in range(len(intEdges)):
-                types.add(intEdges[i]["element"].get("type"))
+#        if sentenceGraph.interactionGraph.has_edge(t1, t2):
+#            intEdges = sentenceGraph.interactionGraph.get_edge_data(t1, t2, default={})
+#            # NOTE: Only works if keys are ordered integers
+#            for i in range(len(intEdges)):
+#                types.add(intEdges[i]["element"].get("type"))
+#        if (not directed) and sentenceGraph.interactionGraph.has_edge(t2, t1):
+#            intEdges = sentenceGraph.interactionGraph.get_edge(t2, t1, default={})
+#            # NOTE: Only works if keys are ordered integers
+#            for i in range(len(intEdges)):
+#                types.add(intEdges[i]["element"].get("type"))
+        intEdges = sentenceGraph.interactionGraph.getEdges(t1, t2)
+        if (not directed):
+            intEdges.extend(sentenceGraph.interactionGraph.getEdges(t2, t1))
+        for intEdge in intEdges:
+            types.add(intEdge[2].get("type"))
         types = list(types)
         types.sort()
         categoryName = ""
@@ -224,11 +230,11 @@ class MultiEdgeExampleBuilder(ExampleBuilder):
             return False
     #ENDIF
     
-    def nxMultiDiGraphToUndirected(self, graph):
-        undirected = NX10.MultiGraph(name=graph.name)
-        undirected.add_nodes_from(graph)
-        undirected.add_edges_from(graph.edges_iter())
-        return undirected
+#    def nxMultiDiGraphToUndirected(self, graph):
+#        undirected = NX10.MultiGraph(name=graph.name)
+#        undirected.add_nodes_from(graph)
+#        undirected.add_edges_from(graph.edges_iter())
+#        return undirected
             
     def buildExamples(self, sentenceGraph):
         """
@@ -241,11 +247,20 @@ class MultiEdgeExampleBuilder(ExampleBuilder):
         if "trigger_features" in self.styles: 
             self.triggerFeatureBuilder.initSentence(sentenceGraph)
         
-        #undirected = sentenceGraph.getUndirectedDependencyGraph()
-        undirected = self.nxMultiDiGraphToUndirected(sentenceGraph.dependencyGraph)
-        ##undirected = sentenceGraph.dependencyGraph.to_undirected()
-        ###undirected = NX10.MultiGraph(sentenceGraph.dependencyGraph) This didn't work
-        paths = NX10.all_pairs_shortest_path(undirected, cutoff=999)
+        ##undirected = sentenceGraph.getUndirectedDependencyGraph()
+        #undirected = self.nxMultiDiGraphToUndirected(sentenceGraph.dependencyGraph)
+        ###undirected = sentenceGraph.dependencyGraph.to_undirected()
+        ####undirected = NX10.MultiGraph(sentenceGraph.dependencyGraph) This didn't work
+        undirected = sentenceGraph.dependencyGraph.toUndirected()
+        #paths = NX10.all_pairs_shortest_path(undirected, cutoff=999)
+        paths = undirected
+        
+        for edge in sentenceGraph.dependencyGraph.edges:
+            assert edge[2] != None
+        for edge in undirected.edges:
+            assert edge[2] != None
+        if sentenceGraph.sentenceElement.get("id") == "GENIA.d70.s5":
+            print [(x[0].get("id"), x[1].get("id"), x[2].get("id")) for x in sentenceGraph.dependencyGraph.edges]
         
         # Generate examples based on interactions between entities or interactions between tokens
         if "entities" in self.styles:
@@ -317,10 +332,20 @@ class MultiEdgeExampleBuilder(ExampleBuilder):
         # define features
         features = {}
         if True: #token1 != token2 and paths.has_key(token1) and paths[token1].has_key(token2):
-            if token1 != token2 and paths.has_key(token1) and paths[token1].has_key(token2):
-                path = paths[token1][token2]
+            #if token1 != token2 and paths.has_key(token1) and paths[token1].has_key(token2):
+            #    path = paths[token1][token2]
+            #else:
+            #    path = [token1, token2]
+            path = paths.getPaths(token1, token2)
+            if len(path) > 0:
+                #if len(path) > 1:
+                #    print len(path)
+                path = path[0]
+                pathExists = True
             else:
                 path = [token1, token2]
+                pathExists = False
+            #print token1.get("id"), token2.get("id")
             assert(self.pathLengths == None)
             if self.pathLengths == None or len(path)-1 in self.pathLengths:
 #                if not "no_ontology" in self.styles:
@@ -335,8 +360,11 @@ class MultiEdgeExampleBuilder(ExampleBuilder):
                     self.triggerFeatureBuilder.buildFeatures(token2)
                     self.triggerFeatureBuilder.setFeatureVector(None)
                 if "graph_kernel" in self.styles or not "no_dependency" in self.styles:
-                    if token1 != token2 and paths.has_key(token1) and paths[token1].has_key(token2):
+                    #print "Getting edges"
+                    if token1 != token2 and pathExists:
+                        #print "g1"
                         edges = self.multiEdgeFeatureBuilder.getEdges(sentenceGraph.dependencyGraph, path)
+                        #print "g2"
                     else:
                         edges = None
                 if "graph_kernel" in self.styles:
@@ -348,6 +376,7 @@ class MultiEdgeExampleBuilder(ExampleBuilder):
                     features[self.featureSet.getId("e2_"+entity2.attrib["type"])] = 1
                     features[self.featureSet.getId("distance_"+str(len(path)))] = 1
                 if not "no_dependency" in self.styles:
+                    #print "Dep features"
                     self.multiEdgeFeatureBuilder.setFeatureVector(features, entity1, entity2)
                     #self.multiEdgeFeatureBuilder.buildStructureFeatures(sentenceGraph, paths) # remove for fast
                     if not "disable_entity_features" in self.styles:
@@ -358,6 +387,7 @@ class MultiEdgeExampleBuilder(ExampleBuilder):
                     if not "disable_single_element_features" in self.styles:
                         self.multiEdgeFeatureBuilder.buildSingleElementFeatures(path, edges, sentenceGraph)
                     if not "disable_ngram_features" in self.styles:
+                        #print "NGrams"
                         self.multiEdgeFeatureBuilder.buildPathGrams(2, path, edges, sentenceGraph) # remove for fast
                         self.multiEdgeFeatureBuilder.buildPathGrams(3, path, edges, sentenceGraph) # remove for fast
                         self.multiEdgeFeatureBuilder.buildPathGrams(4, path, edges, sentenceGraph) # remove for fast

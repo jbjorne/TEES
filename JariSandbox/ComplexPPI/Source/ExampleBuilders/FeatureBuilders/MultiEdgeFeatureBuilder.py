@@ -1,7 +1,7 @@
 """
 Shortest path features
 """
-__version__ = "$Revision: 1.27 $"
+__version__ = "$Revision: 1.28 $"
 
 from FeatureBuilder import FeatureBuilder
 import Stemming.PorterStemmer as PorterStemmer
@@ -147,7 +147,13 @@ class MultiEdgeFeatureBuilder(FeatureBuilder):
                 self.setFeature("selfLoop", 1)
     
 #    def getPathIds(self, path):
-#        ids = path[0].get("id") + path[1].get("id") 
+#        ids = path[0].get("id") + path[1].get("id")
+
+    def pathsToIds(self, paths):
+        for path in paths:
+            for i in range(len(path)):
+                path[i] = path[i].get("id")
+        return paths
                 
     def getEdges(self, graph, path):
         """
@@ -170,79 +176,99 @@ class MultiEdgeFeatureBuilder(FeatureBuilder):
         for i in range(1, len(path)):
             pathEdges[i][i-1] = []
             pathEdges[i-1][i] = []
-        edges = graph.edges(data=True)
+        #edges = graph.edges(data=True)
+        edges = graph.edges
+        #undirected = graph.toUndirected()
         for i in range(1, len(path)):
-            found = False
-            for edge in edges:
-                edgeTuple = (edge[0], edge[1], edge[2]["element"])
-                if edge[0] == path[i-1] and edge[1] == path[i]:
-                    pathEdges[i-1][i].append(edgeTuple)
-                    found = True
-                elif edge[1] == path[i-1] and edge[0] == path[i]:
-                    pathEdges[i][i-1].append(edgeTuple)
-                    found = True
-            assert(found==True)
+            pathEdges[i-1][i] = graph.getEdges(path[i-1], path[i])
+            pathEdges[i][i-1] = graph.getEdges(path[i], path[i-1])
+            #found = False
+            #for edge in edges:
+                ##edgeTuple = (edge[0], edge[1], edge[2]["element"])
+                #if edge[0] == path[i-1] and edge[1] == path[i]:
+                #    #pathEdges[i-1][i].append(edgeTuple)
+                #    pathEdges[i-1][i].append(edge)
+                #    found = True
+                #elif edge[1] == path[i-1] and edge[0] == path[i]:
+                #    #pathEdges[i][i-1].append(edgeTuple)
+                #    pathEdges[i][i-1].append(edge)
+                #    found = True
+#            assert(found==True), ("Path",
+#                                  [x.get("id") for x in path],
+#                                  "Nodes", 
+#                                  [x.get("id") for x in graph.nodes],
+#                                  "Edges", 
+#                                  [(x[0].get("id"), x[1].get("id"), x[2].get("id")) for x in graph.edges], 
+#                                  "Undirected Nodes",
+#                                  [x.get("id") for x in undirected.nodes],
+#                                  "Undirected Edges", 
+#                                  [(x[0].get("id"), x[1].get("id"), x[2].get("id")) for x in undirected.edges],
+#                                  "Paths",
+#                                  self.pathsToIds(graph.getPaths(path[0], path[-1])),
+#                                  "Undirected Paths",
+#                                  self.pathsToIds(undirected.getPaths(path[0], path[-1]))
+#                                  )
 #        self.edgeCache[ids] = pathEdges
         return pathEdges
     
-    def getEdgeSet(self, graph, path):
-        pathEdges = set()
-        edges = graph.edges(data=True)
-        for i in range(1, len(path)):
-            for edge in edges:
-                edgeTuple = (edge[0], edge[1], edge[2]["element"])
-                if edge[0] == path[i-1] and edge[1] == path[i]:
-                    pathEdges.add(edgeTuple)
-                elif edge[1] == path[i-1] and edge[0] == path[i]:
-                    pathEdges.add(edgeTuple)
-        return pathEdges
+#    def getEdgeSet(self, graph, path):
+#        pathEdges = set()
+#        edges = graph.edges(data=True)
+#        for i in range(1, len(path)):
+#            for edge in edges:
+#                edgeTuple = (edge[0], edge[1], edge[2]["element"])
+#                if edge[0] == path[i-1] and edge[1] == path[i]:
+#                    pathEdges.add(edgeTuple)
+#                elif edge[1] == path[i-1] and edge[0] == path[i]:
+#                    pathEdges.add(edgeTuple)
+#        return pathEdges
     
-    def getEdgeCombinations(self, graph, path):
-        if len(path) == 1:
-            return set()
-        
-        pathEdges = self.getEdges(graph, path)
-        
-        #ids = self.getPathIds(path)
-        #self.depPathCache[ids] = set()
-        
-        #if self.depPathCache.has_key(ids):
-        #    return self.depPathCache[ids]
-        
-        #self.depPathCache[ids] = set()
-        depPaths = set()
-        pathEdgeStrings = []
-        for i in range(1, len(path)):
-            pathEdgeStrings.append([])
-            for e in pathEdges[i][i-1]:
-                pathEdgeStrings[-1].append(e[2].get("type")+">")
-            for e in pathEdges[i-1][i]:
-                pathEdgeStrings[-1].append("<"+e[2].get("type"))
-        combinations = combine.combine(*pathEdgeStrings)
-        for combination in combinations:
-            #self.depPathCache[ids].add( ".".join(combination) )
-            depPaths.add( ".".join(combination) )
-        #return self.depPathCache[ids]
-        return depPaths
+#    def getEdgeCombinations(self, graph, path):
+#        if len(path) == 1:
+#            return set()
+#        
+#        pathEdges = self.getEdges(graph, path)
+#        
+#        #ids = self.getPathIds(path)
+#        #self.depPathCache[ids] = set()
+#        
+#        #if self.depPathCache.has_key(ids):
+#        #    return self.depPathCache[ids]
+#        
+#        #self.depPathCache[ids] = set()
+#        depPaths = set()
+#        pathEdgeStrings = []
+#        for i in range(1, len(path)):
+#            pathEdgeStrings.append([])
+#            for e in pathEdges[i][i-1]:
+#                pathEdgeStrings[-1].append(e[2].get("type")+">")
+#            for e in pathEdges[i-1][i]:
+#                pathEdgeStrings[-1].append("<"+e[2].get("type"))
+#        combinations = combine.combine(*pathEdgeStrings)
+#        for combination in combinations:
+#            #self.depPathCache[ids].add( ".".join(combination) )
+#            depPaths.add( ".".join(combination) )
+#        #return self.depPathCache[ids]
+#        return depPaths
     
-    def getWalks(self, pathTokens, pathEdges, position=1, walk=None):
-        """
-        A path is defined by a list of tokens. But since there can be more than one edge
-        between the same two tokens, there are multiple ways of getting from the first
-        token to the last token. This function returns all of these "walks", i.e. the combinations
-        of edges that can be travelled to get from the first to the last token of the path.
-        """
-        allWalks = []
-        if walk == None:
-            walk = []
-        
-        edges = pathEdges[position-1][position] + pathEdges[position][position-1]
-        for edge in edges:
-            if position < len(pathTokens)-1:
-                allWalks.extend(self.getWalks(pathTokens, pathEdges, position+1, walk + [edge]))
-            else:
-                allWalks.append(walk + [edge])
-        return allWalks
+#    def getWalks(self, pathTokens, pathEdges, position=1, walk=None):
+#        """
+#        A path is defined by a list of tokens. But since there can be more than one edge
+#        between the same two tokens, there are multiple ways of getting from the first
+#        token to the last token. This function returns all of these "walks", i.e. the combinations
+#        of edges that can be travelled to get from the first to the last token of the path.
+#        """
+#        allWalks = []
+#        if walk == None:
+#            walk = []
+#        
+#        edges = pathEdges[position-1][position] + pathEdges[position][position-1]
+#        for edge in edges:
+#            if position < len(pathTokens)-1:
+#                allWalks.extend(self.getWalks(pathTokens, pathEdges, position+1, walk + [edge]))
+#            else:
+#                allWalks.append(walk + [edge])
+#        return allWalks
     
     def buildPathLengthFeatures(self, pathTokens):
         """
@@ -305,7 +331,11 @@ class MultiEdgeFeatureBuilder(FeatureBuilder):
         t1 = self.getTokenAnnotatedType(pathTokens[0], sentenceGraph)
         t2 = self.getTokenAnnotatedType(pathTokens[-1], sentenceGraph)
 
-        walks = self.getWalks(pathTokens, pathEdges)
+        #walks = self.getWalks(pathTokens, pathEdges)
+        walks = sentenceGraph.dependencyGraph.getWalks(pathTokens)
+        #if len(walks) > 1:
+        #    print "Path tokens", [x.get("id") for x in pathTokens]
+        #    print "Walks", len(walks)
         self.buildWalkPaths(pathTokens, walks, sentenceGraph)
         dirGrams = []
         for walk in walks:
@@ -315,6 +345,7 @@ class MultiEdgeFeatureBuilder(FeatureBuilder):
                 if walks[j][i][0] == pathTokens[i]:
                     dirGrams[j] += "F"
                 else:
+                    assert walks[j][i][1] == pathTokens[i]
                     dirGrams[j] += "R"
                 if i >= length-1:
                     styleGram = dirGrams[j][i-(length-1):i+1]
