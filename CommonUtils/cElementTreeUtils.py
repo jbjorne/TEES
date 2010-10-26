@@ -7,7 +7,7 @@ Functions for easier use of cElementTree.
 
   Description: Convenience functions for easier use of cElementTree.
 """
-__version__ = "$Revision: 1.15 $"
+__version__ = "$Revision: 1.16 $"
 
 import sys
 
@@ -81,7 +81,7 @@ def ETFromObj(obj):
     if isinstance(obj,str) or isinstance(obj,unicode):
         if obj.endswith(".xml.gz"):
             fStream=GzipFile(obj,"rt")
-        elif obj.endswith(".xml") or obj.endswith(".svg") or obj.endswith(".nxml"):
+        elif obj.endswith(".xml") or obj.endswith(".svg") or obj.endswith(".nxml") or obj.endswith(".csml"):
             fStream=open(obj,"rt")
         else:
             raise ValueError("%s: File format not recognized (expected .xml or .xml.gz)"%obj)
