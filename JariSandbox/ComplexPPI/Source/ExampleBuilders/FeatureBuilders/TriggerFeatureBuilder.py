@@ -8,19 +8,19 @@ import Core.ExampleUtils as ExampleUtils
 from Core.Gazetteer import Gazetteer
 from FeatureBuilder import FeatureBuilder
 
-def compareDependencyEdgesById(dep1, dep2):
-    """
-    Dependency edges are sorted, so that the program behaves consistently
-    on the sama data between different runs.
-    """
-    id1 = dep1[2].get("id")
-    id2 = dep2[2].get("id")
-    if id1 > id2:
-       return 1
-    elif id1 == id2:
-       return 0
-    else: # x<y
-       return -1
+#def compareDependencyEdgesById(dep1, dep2):
+#    """
+#    Dependency edges are sorted, so that the program behaves consistently
+#    on the sama data between different runs.
+#    """
+#    id1 = dep1[2].get("id")
+#    id2 = dep2[2].get("id")
+#    if id1 > id2:
+#       return 1
+#    elif id1 == id2:
+#       return 0
+#    else: # x<y
+#       return -1
 
 class TriggerFeatureBuilder(FeatureBuilder):
     def __init__(self, featureSet):
@@ -55,7 +55,7 @@ class TriggerFeatureBuilder(FeatureBuilder):
         # These features are cached when this method is first called
         # for a token.
         if self.tokenFeatures.has_key(token):
-            return self.tokenFeatures[token]
+            return self.tokenFeatures[token], self.tokenFeatureWeights[token]
         tokTxt=sentenceGraph.getTokenText(token)
         features = {}
         features["_txt_"+tokTxt]=1
@@ -73,8 +73,9 @@ class TriggerFeatureBuilder(FeatureBuilder):
 #            for label,weight in self.gazetteer[tokTxt.lower()].items():
 #                pass
 #                #features["_knownLabel_"+label]=weight
-        self.tokenFeatures[token] = features
-        return features
+        self.tokenFeatures[token] = sorted(features.keys())
+        self.tokenFeatureWeights[token] = features
+        return self.tokenFeatures[token], self.tokenFeatureWeights[token]
     
     def buildLinearOrderFeatures(self,sentenceGraph,index,tag):
         """
@@ -82,8 +83,9 @@ class TriggerFeatureBuilder(FeatureBuilder):
         that defines their relative position in the linear order.
         """
         tag = "linear_"+tag
-        for tokenFeature,w in self.getTokenFeatures(sentenceGraph.tokens[index], sentenceGraph).iteritems():
-            self.setFeature(tag+tokenFeature, w)
+        tokenFeatures, tokenFeatureWeights = self.getTokenFeatures(sentenceGraph.tokens[index], sentenceGraph)
+        for tokenFeature in tokenFeatures:
+            self.setFeature(tag+tokenFeature, tokenFeatureWeights[tokenFeature])
     
     def initSentence(self, sentenceGraph):
         """
@@ -91,6 +93,7 @@ class TriggerFeatureBuilder(FeatureBuilder):
         """
         self.sentenceGraph = sentenceGraph
         self.tokenFeatures = {}
+        self.tokenFeatureWeights = {}
         
         #if not "names" in self.styles:
         namedEntityCount = 0
@@ -111,8 +114,8 @@ class TriggerFeatureBuilder(FeatureBuilder):
                     bagOfWords[text] = 0
                 bagOfWords[text] += 1
         self.bowFeatures = {}
-        for k,v in bagOfWords.iteritems():
-            self.bowFeatures[self.featureSet.getId(k)] = v
+        for k in sorted(bagOfWords.keys()):
+            self.bowFeatures[self.featureSet.getId(k)] = bagOfWords[k]
         
         self.inEdgesByToken = {}
         self.outEdgesByToken = {}
@@ -124,7 +127,7 @@ class TriggerFeatureBuilder(FeatureBuilder):
             #for edge in inEdges:
             #    fixedInEdges.append( (edge[0], edge[1], edge[2]["element"]) )
             #inEdges = fixedInEdges
-            inEdges.sort(compareDependencyEdgesById)
+            #inEdges.sort(compareDependencyEdgesById)
             self.inEdgesByToken[token] = inEdges
             
             outEdges = sentenceGraph.dependencyGraph.getOutEdges(token)
@@ -133,7 +136,7 @@ class TriggerFeatureBuilder(FeatureBuilder):
             #for edge in outEdges:
             #    fixedOutEdges.append( (edge[0], edge[1], edge[2]["element"]) )
             #outEdges = fixedOutEdges
-            outEdges.sort(compareDependencyEdgesById)
+            #outEdges.sort(compareDependencyEdgesById)
             self.outEdgesByToken[token] = outEdges
             self.edgeSetByToken[token] = set(inEdges + outEdges)
         
@@ -236,8 +239,9 @@ class TriggerFeatureBuilder(FeatureBuilder):
                 self.setFeature("dep_"+strDepthLeft+edgeType, 1)
 
                 nextToken = edge[0]
-                for tokenFeature,w in self.getTokenFeatures(nextToken, sentenceGraph).iteritems():
-                    self.setFeature(strDepthLeft + tokenFeature, w)
+                tokenFeatures, tokenWeights = self.getTokenFeatures(nextToken, sentenceGraph)
+                for tokenFeature in tokenFeatures:
+                    self.setFeature(strDepthLeft + tokenFeature, tokenWeights[tokenFeature])
 #                for entity in sentenceGraph.tokenIsEntityHead[nextToken]:
 #                    if entity.get("isName") == "True":
 #                        features[self.featureSet.getId("name_dist_"+strDepthLeft)] = 1
@@ -255,8 +259,9 @@ class TriggerFeatureBuilder(FeatureBuilder):
                 self.setFeature("dep_dist_"+strDepthLeft+edgeType, 1)
 
                 nextToken = edge[1]
-                for tokenFeature,w in self.getTokenFeatures(nextToken, sentenceGraph).iteritems():
-                    self.setFeature(strDepthLeft + tokenFeature, w)
+                tokenFeatures, tokenWeights = self.getTokenFeatures(nextToken, sentenceGraph)
+                for tokenFeature in tokenFeatures:
+                    self.setFeature(strDepthLeft + tokenFeature, tokenWeights[tokenFeature])
 #                for entity in sentenceGraph.tokenIsEntityHead[nextToken]:
 #                    if entity.get("isName") == "True":
 #                        features[self.featureSet.getId("name_dist_"+strDepthLeft)] = 1

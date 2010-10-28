@@ -1,7 +1,7 @@
 """
 Trigger examples
 """
-__version__ = "$Revision: 1.26 $"
+__version__ = "$Revision: 1.27 $"
 
 import sys, os
 thisPath = os.path.dirname(os.path.abspath(__file__))
@@ -13,19 +13,19 @@ from Core.IdSet import IdSet
 import Core.ExampleUtils as ExampleUtils
 from Core.Gazetteer import Gazetteer
 
-def compareDependencyEdgesById(dep1, dep2):
-    """
-    Dependency edges are sorted, so that the program behaves consistently
-    on the sama data between different runs.
-    """
-    id1 = dep1[2].get("id")
-    id2 = dep2[2].get("id")
-    if id1 > id2:
-       return 1
-    elif id1 == id2:
-       return 0
-    else: # x<y
-       return -1
+#def compareDependencyEdgesById(dep1, dep2):
+#    """
+#    Dependency edges are sorted, so that the program behaves consistently
+#    on the sama data between different runs.
+#    """
+#    id1 = dep1[2].get("id")
+#    id2 = dep2[2].get("id")
+#    if id1 > id2:
+#       return 1
+#    elif id1 == id2:
+#       return 0
+#    else: # x<y
+#       return -1
 
 class GeneralEntityTypeRecognizerGztr(ExampleBuilder):
     def __init__(self, style=None, classSet=None, featureSet=None, gazetteerFileName=None, skiplist=None):
@@ -112,7 +112,7 @@ class GeneralEntityTypeRecognizerGztr(ExampleBuilder):
         # These features are cached when this method is first called
         # for a token.
         if self.tokenFeatures.has_key(token):
-            return self.tokenFeatures[token]
+            return self.tokenFeatures[token], self.tokenFeatureWeights[token]
         tokTxt=sentenceGraph.getTokenText(token)
         features = {}
         features["_txt_"+tokTxt]=1
@@ -133,8 +133,9 @@ class GeneralEntityTypeRecognizerGztr(ExampleBuilder):
         ## BANNER features
         #if sentenceGraph.entityHintsByToken.has_key(token):
         #    features["BANNER-entity"] = 1
-        self.tokenFeatures[token] = features
-        return features
+        self.tokenFeatures[token] = sorted(features.keys())
+        self.tokenFeatureWeights[token] = features
+        return self.tokenFeatures[token], self.tokenFeatureWeights[token]
     
     def buildLinearOrderFeatures(self,sentenceGraph,index,tag,features):
         """
@@ -142,8 +143,9 @@ class GeneralEntityTypeRecognizerGztr(ExampleBuilder):
         that defines their relative position in the linear order.
         """
         tag = "linear_"+tag
-        for tokenFeature,w in self.getTokenFeatures(sentenceGraph.tokens[index], sentenceGraph).iteritems():
-            features[self.featureSet.getId(tag+tokenFeature)] = w
+        tokenFeatures, tokenFeatureWeights = self.getTokenFeatures(sentenceGraph.tokens[index], sentenceGraph)
+        for tokenFeature in tokenFeatures:
+            features[self.featureSet.getId(tag+tokenFeature)] = tokenFeatureWeights[tokenFeature]
     
     def buildLinearNGram(self, i, j, sentenceGraph, features):
         ngram = "ngram"
@@ -163,6 +165,7 @@ class GeneralEntityTypeRecognizerGztr(ExampleBuilder):
         exampleIndex = 0
         
         self.tokenFeatures = {}
+        self.tokenFeatureWeights = {}
         
         namedEntityHeadTokens = []
         if not "names" in self.styles:
@@ -195,8 +198,8 @@ class GeneralEntityTypeRecognizerGztr(ExampleBuilder):
                     bagOfWords[text] = 0
                 bagOfWords[text] += 1
         bowFeatures = {}
-        for k,v in bagOfWords.iteritems():
-            bowFeatures[self.featureSet.getId(k)] = v
+        for k in sorted(bagOfWords.keys()):
+            bowFeatures[self.featureSet.getId(k)] = bagOfWords[k]
         
         self.inEdgesByToken = {}
         self.outEdgesByToken = {}
@@ -208,7 +211,7 @@ class GeneralEntityTypeRecognizerGztr(ExampleBuilder):
             #    fixedInEdges.append( (edge[0], edge[1], edge[2]["element"]) )
             #inEdges = fixedInEdges
             inEdges = sentenceGraph.dependencyGraph.getInEdges(token)
-            inEdges.sort(compareDependencyEdgesById)
+            #inEdges.sort(compareDependencyEdgesById)
             self.inEdgesByToken[token] = inEdges
             #outEdges = sentenceGraph.dependencyGraph.out_edges(token, data=True)
             #fixedOutEdges = []
@@ -216,7 +219,7 @@ class GeneralEntityTypeRecognizerGztr(ExampleBuilder):
             #    fixedOutEdges.append( (edge[0], edge[1], edge[2]["element"]) )
             #outEdges = fixedOutEdges
             outEdges = sentenceGraph.dependencyGraph.getOutEdges(token)
-            outEdges.sort(compareDependencyEdgesById)
+            #outEdges.sort(compareDependencyEdgesById)
             self.outEdgesByToken[token] = outEdges
             self.edgeSetByToken[token] = set(inEdges + outEdges)
         
@@ -382,8 +385,9 @@ class GeneralEntityTypeRecognizerGztr(ExampleBuilder):
                 features[self.featureSet.getId("dep_"+strDepthLeft+edgeType)] = 1
 
                 nextToken = edge[0]
-                for tokenFeature,w in self.getTokenFeatures(nextToken, sentenceGraph).iteritems():
-                    features[self.featureSet.getId(strDepthLeft + tokenFeature)] = w
+                tokenFeatures, tokenWeights = self.getTokenFeatures(nextToken, sentenceGraph)
+                for tokenFeature in tokenFeatures:
+                    features[self.featureSet.getId(strDepthLeft + tokenFeature)] = tokenWeights[tokenFeature]
 #                for entity in sentenceGraph.tokenIsEntityHead[nextToken]:
 #                    if entity.get("isName") == "True":
 #                        features[self.featureSet.getId("name_dist_"+strDepthLeft)] = 1
@@ -403,8 +407,9 @@ class GeneralEntityTypeRecognizerGztr(ExampleBuilder):
                 features[self.featureSet.getId("dep_dist_"+strDepthLeft+edgeType)] = 1
 
                 nextToken = edge[1]
-                for tokenFeature,w in self.getTokenFeatures(nextToken, sentenceGraph).iteritems():
-                    features[self.featureSet.getId(strDepthLeft + tokenFeature)] = w
+                tokenFeatures, tokenWeights = self.getTokenFeatures(nextToken, sentenceGraph)
+                for tokenFeature in tokenFeatures:
+                    features[self.featureSet.getId(strDepthLeft + tokenFeature)] = tokenWeights[tokenFeature]
 #                for entity in sentenceGraph.tokenIsEntityHead[nextToken]:
 #                    if entity.get("isName") == "True":
 #                        features[self.featureSet.getId("name_dist_"+strDepthLeft)] = 1

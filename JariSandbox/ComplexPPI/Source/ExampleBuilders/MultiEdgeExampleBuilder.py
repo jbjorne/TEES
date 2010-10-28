@@ -1,7 +1,7 @@
 """
 Edge Examples
 """
-__version__ = "$Revision: 1.49 $"
+__version__ = "$Revision: 1.50 $"
 
 import sys, os
 thisPath = os.path.dirname(os.path.abspath(__file__))
@@ -115,7 +115,7 @@ class MultiEdgeExampleBuilder(ExampleBuilder):
 #                types.add(intEdges[i]["element"].get("type"))
         intEdges = sentenceGraph.interactionGraph.getEdges(t1, t2)
         if (not directed):
-            intEdges.extend(sentenceGraph.interactionGraph.getEdges(t2, t1))
+            intEdges = intEdges + sentenceGraph.interactionGraph.getEdges(t2, t1)
         for intEdge in intEdges:
             types.add(intEdge[2].get("type"))
         types = list(types)
@@ -136,7 +136,7 @@ class MultiEdgeExampleBuilder(ExampleBuilder):
         """
         interactions = sentenceGraph.getInteractions(e1, e2)
         if not directed:
-            interactions.extend(sentenceGraph.getInteractions(e2, e1))
+            interactions = interactions + sentenceGraph.getInteractions(e2, e1)
         
         types = set()
         for interaction in interactions:
@@ -255,12 +255,12 @@ class MultiEdgeExampleBuilder(ExampleBuilder):
         #paths = NX10.all_pairs_shortest_path(undirected, cutoff=999)
         paths = undirected
         
-        for edge in sentenceGraph.dependencyGraph.edges:
-            assert edge[2] != None
-        for edge in undirected.edges:
-            assert edge[2] != None
-        if sentenceGraph.sentenceElement.get("id") == "GENIA.d70.s5":
-            print [(x[0].get("id"), x[1].get("id"), x[2].get("id")) for x in sentenceGraph.dependencyGraph.edges]
+        #for edge in sentenceGraph.dependencyGraph.edges:
+        #    assert edge[2] != None
+        #for edge in undirected.edges:
+        #    assert edge[2] != None
+        #if sentenceGraph.sentenceElement.get("id") == "GENIA.d70.s5":
+        #    print [(x[0].get("id"), x[1].get("id"), x[2].get("id")) for x in sentenceGraph.dependencyGraph.edges]
         
         # Generate examples based on interactions between entities or interactions between tokens
         if "entities" in self.styles:
@@ -359,14 +359,14 @@ class MultiEdgeExampleBuilder(ExampleBuilder):
                     self.triggerFeatureBuilder.tag = "trg2_"
                     self.triggerFeatureBuilder.buildFeatures(token2)
                     self.triggerFeatureBuilder.setFeatureVector(None)
-                if "graph_kernel" in self.styles or not "no_dependency" in self.styles:
-                    #print "Getting edges"
-                    if token1 != token2 and pathExists:
-                        #print "g1"
-                        edges = self.multiEdgeFeatureBuilder.getEdges(sentenceGraph.dependencyGraph, path)
-                        #print "g2"
-                    else:
-                        edges = None
+                #if "graph_kernel" in self.styles or not "no_dependency" in self.styles:
+                #    #print "Getting edges"
+                #    if token1 != token2 and pathExists:
+                #        #print "g1"
+                #        edges = self.multiEdgeFeatureBuilder.getEdges(sentenceGraph.dependencyGraph, path)
+                #        #print "g2"
+                #    else:
+                #        edges = None
                 if "graph_kernel" in self.styles:
                     self.graphKernelFeatureBuilder.setFeatureVector(features, entity1, entity2)
                     self.graphKernelFeatureBuilder.buildGraphKernelFeatures(sentenceGraph, path, edges)
@@ -385,18 +385,18 @@ class MultiEdgeExampleBuilder(ExampleBuilder):
                     if not "disable_terminus_features" in self.styles:
                         self.multiEdgeFeatureBuilder.buildTerminusTokenFeatures(path, sentenceGraph) # remove for fast
                     if not "disable_single_element_features" in self.styles:
-                        self.multiEdgeFeatureBuilder.buildSingleElementFeatures(path, edges, sentenceGraph)
+                        self.multiEdgeFeatureBuilder.buildSingleElementFeatures(path, sentenceGraph)
                     if not "disable_ngram_features" in self.styles:
                         #print "NGrams"
-                        self.multiEdgeFeatureBuilder.buildPathGrams(2, path, edges, sentenceGraph) # remove for fast
-                        self.multiEdgeFeatureBuilder.buildPathGrams(3, path, edges, sentenceGraph) # remove for fast
-                        self.multiEdgeFeatureBuilder.buildPathGrams(4, path, edges, sentenceGraph) # remove for fast
+                        self.multiEdgeFeatureBuilder.buildPathGrams(2, path, sentenceGraph) # remove for fast
+                        self.multiEdgeFeatureBuilder.buildPathGrams(3, path, sentenceGraph) # remove for fast
+                        self.multiEdgeFeatureBuilder.buildPathGrams(4, path, sentenceGraph) # remove for fast
                     #self.buildEdgeCombinations(path, edges, sentenceGraph, features) # remove for fast
                     #if edges != None:
                     #    self.multiEdgeFeatureBuilder.buildTerminusFeatures(path[0], edges[0][1]+edges[1][0], "t1", sentenceGraph) # remove for fast
                     #    self.multiEdgeFeatureBuilder.buildTerminusFeatures(path[-1], edges[len(path)-1][len(path)-2]+edges[len(path)-2][len(path)-1], "t2", sentenceGraph) # remove for fast
                     if not "disable_path_edge_features" in self.styles:
-                        self.multiEdgeFeatureBuilder.buildPathEdgeFeatures(path, edges, sentenceGraph)
+                        self.multiEdgeFeatureBuilder.buildPathEdgeFeatures(path, sentenceGraph)
                     self.multiEdgeFeatureBuilder.buildSentenceFeatures(sentenceGraph)
                     self.multiEdgeFeatureBuilder.setFeatureVector(None)
                 if "nodalida" in self.styles:
