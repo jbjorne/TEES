@@ -53,10 +53,10 @@ class GeneralEntityRecognizer(ExampleBuilder):
             # FEATURES
             features = {}
             # Main features
-            textUpper = token.attrib["text"]
+            textUpper = token.get("text")
             text = textUpper.lower()
             features[self.featureSet.getId("txt_"+text)] = 1
-            features[self.featureSet.getId("POS_"+token.attrib["POS"])] = 1
+            features[self.featureSet.getId("POS_"+token.get("POS"))] = 1
             stem = PorterStemmer.stem(text)
             features[self.featureSet.getId("stem_"+stem)] = 1
             features[self.featureSet.getId("nonstem_"+text[len(stem):])] = 1

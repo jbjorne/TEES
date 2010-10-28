@@ -1,7 +1,7 @@
 """
 Edge Examples
 """
-__version__ = "$Revision: 1.50 $"
+__version__ = "$Revision: 1.51 $"
 
 import sys, os
 thisPath = os.path.dirname(os.path.abspath(__file__))
@@ -140,7 +140,7 @@ class MultiEdgeExampleBuilder(ExampleBuilder):
         
         types = set()
         for interaction in interactions:
-            types.add(interaction.attrib["type"])
+            types.add(interaction.get("type"))
         types = list(types)
         types.sort()
         categoryName = ""
@@ -372,8 +372,8 @@ class MultiEdgeExampleBuilder(ExampleBuilder):
                     self.graphKernelFeatureBuilder.buildGraphKernelFeatures(sentenceGraph, path, edges)
                     self.graphKernelFeatureBuilder.setFeatureVector(None)
                 if "entity_type" in self.styles:
-                    features[self.featureSet.getId("e1_"+entity1.attrib["type"])] = 1
-                    features[self.featureSet.getId("e2_"+entity2.attrib["type"])] = 1
+                    features[self.featureSet.getId("e1_"+entity1.get("type"))] = 1
+                    features[self.featureSet.getId("e2_"+entity2.get("type"))] = 1
                     features[self.featureSet.getId("distance_"+str(len(path)))] = 1
                 if not "no_dependency" in self.styles:
                     #print "Dep features"
@@ -455,7 +455,7 @@ class MultiEdgeExampleBuilder(ExampleBuilder):
                 features[self.featureSet.getId("out_of_scope")] = 1
             path = [token1, token2]
         # define extra attributes
-        if int(path[0].attrib["id"].split("_")[-1]) < int(path[-1].attrib["id"].split("_")[-1]):
+        if int(path[0].get("id").split("_")[-1]) < int(path[-1].get("id").split("_")[-1]):
             #extra = {"xtype":"edge","type":"i","t1":path[0],"t2":path[-1]}
             extra = {"xtype":"edge","type":"i","t1":path[0].get("id"),"t2":path[-1].get("id")}
             extra["deprev"] = False
