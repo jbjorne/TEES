@@ -1,4 +1,4 @@
-parse__version__ = "$Revision: 1.2 $"
+parse__version__ = "$Revision: 1.3 $"
 
 import sys,os
 import sys
@@ -63,7 +63,7 @@ def makeConfigXML(workdir, bannerDir):
     ETUtils.writeUTF8(conf, workdir + "/banner_config.xml")
     return workdir + "/banner_config.xml"
     
-def run(input, output=None):
+def run(input, output=None, elementName="entity"):
     global bannerDir
     
     print >> sys.stderr, "Loading corpus", input
@@ -144,7 +144,7 @@ def run(input, output=None):
             if tag == "O":
                 if beginOffset != None:
                     # Make element
-                    ent = ET.Element("entity")
+                    ent = ET.Element(elementName)
                     ent.set("id", sentenceId + ".e" + str(entityCount))
                     ent.set("charOffset", str(beginOffset) + "-" + str(prevEnd))
                     ent.set("type", "Protein")
@@ -189,7 +189,8 @@ if __name__=="__main__":
     optparser = OptionParser(usage="%prog [options]\n")
     optparser.add_option("-i", "--input", default=None, dest="input", help="Corpus in interaction xml format", metavar="FILE")
     optparser.add_option("-o", "--output", default=None, dest="output", help="Output file in interaction xml format.")
+    optparser.add_option("-e", "--elementName", default="entity", dest="elementName", help="Output file in interaction xml format.")
     (options, args) = optparser.parse_args()
     
-    run(input=options.input, output=options.output)
+    run(input=options.input, output=options.output, elementName=options.elementName)
     
