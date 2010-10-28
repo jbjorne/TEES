@@ -1,4 +1,4 @@
-__version__ = "$Revision: 1.2 $"
+__version__ = "$Revision: 1.3 $"
 
 import sys,os
 import sys
@@ -12,13 +12,16 @@ import shutil
 import subprocess
 import tempfile
 import codecs
+import time
+
+from ProcessUtils import *
 """
 A wrapper for the Joachims SVM Multiclass classifier.
 """
 
 geniaTaggerDir = "/home/jari/biotext/tools/geniatagger-3.0.1"
 
-def tokenize(input, output=None, tokenizationName="GeniaTagger-3.0.1"):
+def tokenize(input, output=None, tokenizationName="GeniaTagger-3.0.1", extraFields=["base", "chunk", "NE"]):
     global geniaTaggerDir
     
     print >> sys.stderr, "Loading corpus", input
@@ -29,8 +32,10 @@ def tokenize(input, output=None, tokenizationName="GeniaTagger-3.0.1"):
     # Write text to input file
     workdir = tempfile.mkdtemp()
     infile = codecs.open(os.path.join(workdir, "tagger-input.txt"), "wt", "utf-8")
+    numCorpusSentences = 0
     for sentence in corpusRoot.getiterator("sentence"):
         infile.write(sentence.get("text") + "\n")
+        numCorpusSentences += 1
     infile.close()
     
     # Run tagger
@@ -39,9 +44,11 @@ def tokenize(input, output=None, tokenizationName="GeniaTagger-3.0.1"):
     args = [geniaTaggerDir + "/geniatagger"]
     #args += [ "<", os.path.join(workdir, "tagger-input.txt")]
     #args += [ ">", os.path.join(workdir, "tagger-output.txt")]
-    subprocess.call(args, 
+    #subprocess.call(args,
+    process = subprocess.Popen(args, 
         stdin=codecs.open(os.path.join(workdir, "tagger-input.txt"), "rt", "utf-8"),
         stdout=codecs.open(os.path.join(workdir, "tagger-output.txt"), "wt", "utf-8"))
+    waitForProcess(process, numCorpusSentences, True, os.path.join(workdir, "tagger-output.txt"), "GeniaTagger", "Tokenizing Sentences")
     os.chdir(cwd)
     
     # Read tokenization
@@ -74,17 +81,26 @@ def tokenize(input, output=None, tokenizationName="GeniaTagger-3.0.1"):
             splits = line.strip().split("\t")
             # Determine offsets
             cStart = sText.find(splits[0], start)
-            assert cStart != -1
+            if cStart == -1:
+                if splits[0] == "``":
+                    splits[0] = "\""
+                if splits[0] == "''":
+                    splits[0] = "\""           
+                cStart = sText.find(splits[0], start)
+            assert cStart != -1, (sentence.get("id"), sText, line, tokenCount)
             cEnd = cStart + len(splits[0])
             start = cStart + len(splits[0])
             # Make element
             token = ET.Element("token")
-            token.set("id", "gt_" + str(tokenCount))
+            token.set("id", "gt_" + str(tokenCount+1))
             token.set("text", splits[0])
-            token.set("base", splits[1])
+            if "base" in extraFields:
+                token.set("base", splits[1])
             token.set("POS", splits[2])
-            token.set("chunk", splits[3])
-            token.set("NE", splits[4])
+            if "chunk" in extraFields:
+                token.set("chunk", splits[3])
+            if "NE" in extraFields:
+                token.set("NE", splits[4])
             token.set("charOffset", str(cStart) + "-" + str(cEnd - 1)) # NOTE: check
             tokenization.append(token)
             tokenCount += 1
