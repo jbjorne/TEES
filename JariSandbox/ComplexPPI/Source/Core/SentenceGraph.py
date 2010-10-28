@@ -1,7 +1,7 @@
 """
 Main class for representing a sentence
 """
-__version__ = "$Revision: 1.34 $"
+__version__ = "$Revision: 1.35 $"
 
 #import Graph.networkx_v10rc1 as NX10 # import networkx as NX
 from Core.SimpleGraph import Graph
@@ -44,7 +44,7 @@ def loadCorpus(corpus, parse, tokenization=None, removeNameInfo=False, removeInt
             sentence.sentenceGraph = None
             continue
         for pair in sentence.pairs:
-            # gif-xml defines to closely related element types, interactions and
+            # gif-xml defines two closely related element types, interactions and
             # pairs. Pairs are like interactions, but they can also be negative (if
             # interaction-attribute == False). Sometimes pair-elements have been
             # (incorrectly) used without this attribute. To work around these issues
@@ -133,6 +133,7 @@ class SentenceGraph:
     def getSentenceId(self):
         return self.sentenceElement.get("id")
     
+    # TODO: This method shouldn't be needed anymore
     def getInteractions(self, entity1, entity2):
         """
         Return a list of interaction-elements which represent directed
@@ -219,6 +220,7 @@ class SentenceGraph:
             if not found:
                 self.interactionGraph.addEdge(token1, token2, interaction)
             else:
+                # TODO: "skipped" would be better than "removed"
                 self.duplicateInteractionEdgesRemoved += 1
     
     def mapEntity(self, entityElement, verbose=False):
