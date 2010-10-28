@@ -95,9 +95,11 @@ class Graph():
         self.__matrix[node1][node2].append(edge)
     
     def hasEdges(self, node1, node2):
-        if not node1 in self.__matrix:
-            return False
-        elif not node2 in self.__matrix[node1]:
+        assert node1 in self.__matrix, "Missing node 1: " + str(node1)
+        assert node2 in self.__matrix, "Missing node 2: " + str(node2)
+        #if not node1 in self.__matrix:
+        #    return False
+        if not node2 in self.__matrix[node1]:
             return False
         elif len(self.__matrix[node1][node2]) > 0:
             return True
@@ -105,9 +107,11 @@ class Graph():
             return False
 
     def hasEdge(self, node1, node2, data):
-        if not node1 in self.__matrix:
-            return False
-        elif not node2 in self.__matrix[node1]:
+        assert node1 in self.__matrix, "Missing node 1: " + str(node1)
+        assert node2 in self.__matrix, "Missing node 2: " + str(node2)
+        #if not node1 in self.__matrix:
+        #    return False
+        if not node2 in self.__matrix[node1]:
             return False
         for edge in self.__matrix[node1][node2]:
             if edge[2] == data:
@@ -115,9 +119,11 @@ class Graph():
         return False
     
     def hasEdgeTuple(self, edge):
-        if not edge[0] in self.__matrix:
-            return False
-        elif not edge[1] in self.__matrix[edge[0]]:
+        assert edge[0] in self.__matrix, "Missing node 1: " + str(edge[0])
+        assert edge[1] in self.__matrix, "Missing node 2: " + str(edge[1])
+        #if not edge[0] in self.__matrix:
+        #    return False
+        if not edge[1] in self.__matrix[edge[0]]:
             return False
         elif edge in self.__matrix[edge[0]][edge[1]]:
             return True
@@ -125,14 +131,17 @@ class Graph():
             return False
     
     def getEdges(self, node1, node2):
-        if not node1 in self.__matrix:
-            return []
-        elif not node2 in self.__matrix[node1]:
+        assert node1 in self.__matrix, "Missing node 1: " + str(node1)
+        assert node2 in self.__matrix, "Missing node 2: " + str(node2)
+        #if not node1 in self.__matrix:
+        #    return []
+        if not node2 in self.__matrix[node1]:
             return []
         else:
             return self.__matrix[node1][node2]
     
     def getInEdges(self, node):
+        assert node in self.__matrix, "Missing node: " + str(node)
         assert self.__directed
         inEdges = []
         for edge in self.edges:
@@ -141,6 +150,7 @@ class Graph():
         return inEdges
 
     def getOutEdges(self, node):
+        assert node in self.__matrix, "Missing node: " + str(node)
         assert self.__directed
         outEdges = []
         for edge in self.edges:
