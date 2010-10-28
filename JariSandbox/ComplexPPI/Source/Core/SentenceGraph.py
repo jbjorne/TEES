@@ -1,7 +1,7 @@
 """
 Main class for representing a sentence
 """
-__version__ = "$Revision: 1.35 $"
+__version__ = "$Revision: 1.36 $"
 
 #import Graph.networkx_v10rc1 as NX10 # import networkx as NX
 from Core.SimpleGraph import Graph
@@ -36,7 +36,7 @@ def loadCorpus(corpus, parse, tokenization=None, removeNameInfo=False, removeInt
     sentences = []
     counter = ProgressCounter(len(corpusElements.sentences), "Make sentence graphs")
     for sentence in corpusElements.sentences[:]:
-        counter.update(1, "Making sentence graphs ("+sentence.sentence.attrib["id"]+"): ")
+        counter.update(1, "Making sentence graphs ("+sentence.sentence.get("id")+"): ")
         # No tokens, no sentence. No also no dependencies = no sentence.
         # Let's not remove them though, so that we don't lose sentences from input.
         if len(sentence.tokens) == 0 or len(sentence.dependencies) == 0: 
@@ -53,8 +53,8 @@ def loadCorpus(corpus, parse, tokenization=None, removeNameInfo=False, removeInt
             isInteraction = pair.get("interaction")
             if isInteraction == "True" or isInteraction == None:
                 sentence.interactions.append(pair) # add to interaction-elements
-                if not pair.attrib.has_key("type"): # type-attribute must be explicitly defined
-                    pair.attrib["type"] = "undefined"
+                if pair.get("type") == None: # type-attribute must be explicitly defined
+                    pair.set("type", "undefined")
         # Construct the basic SentenceGraph (only syntactic information)
         graph = SentenceGraph(sentence.sentence, sentence.tokens, sentence.dependencies)
         # Add semantic information, i.e. the interactions
@@ -63,7 +63,7 @@ def loadCorpus(corpus, parse, tokenization=None, removeNameInfo=False, removeInt
         duplicateInteractionEdgesRemoved += graph.duplicateInteractionEdgesRemoved
         sentence.sentenceGraph = graph
         
-        graph.mapEntityHints()
+        #graph.mapEntityHints()
     print >> sys.stderr, "Removed", duplicateInteractionEdgesRemoved, "duplicate interaction edges"
     return corpusElements
 
@@ -111,8 +111,8 @@ class SentenceGraph:
         # as edge data
         for dependency in self.dependencies:
             #self.dependencyGraph.add_edge(self.tokensById[dependency.attrib["t1"]],\
-            self.dependencyGraph.addEdge(self.tokensById[dependency.attrib["t1"]],\
-                                          self.tokensById[dependency.attrib["t2"]],\
+            self.dependencyGraph.addEdge(self.tokensById[dependency.get("t1")],\
+                                          self.tokensById[dependency.get("t2")],\
                                           dependency)
             #                              element=dependency)
     
@@ -146,7 +146,7 @@ class SentenceGraph:
         """
         rv = []
         for interaction in self.interactions:
-            if interaction.attrib["e1"] == entity1.attrib["id"] and interaction.attrib["e2"] == entity2.attrib["id"]:
+            if interaction.get("e1") == entity1.get("id") and interaction.get("e2") == entity2.get("id"):
                 rv.append(interaction)
         return rv
     
@@ -171,7 +171,7 @@ class SentenceGraph:
         self.entities = entityElements
         # Entities that have no text binding can not be mapped and are therefore removed
         for entity in self.entities[:]:
-            if entity.attrib["charOffset"] == "":
+            if entity.get("charOffset") == "":
                 self.entities.remove(entity)
         #self.interactionGraph = NX.XDiGraph(multiedges = multiedges)
         #if multiedges:
@@ -187,17 +187,17 @@ class SentenceGraph:
         self.entitiesById = {}
         self.entityHeadTokenByEntity = {}
         for entity in self.entities:
-            self.entitiesById[entity.attrib["id"]] = entity
+            self.entitiesById[entity.get("id")] = entity
             self.entityHeadTokenByEntity[entity] = self.mapEntity(entity, verbose)
         self._markNamedEntities()
         
         for interaction in self.interactions:
-            if not self.entitiesById.has_key(interaction.attrib["e1"]):
+            if not self.entitiesById.has_key(interaction.get("e1")):
                 continue # e1 is outside of this sentence
-            if not self.entitiesById.has_key(interaction.attrib["e2"]):
+            if not self.entitiesById.has_key(interaction.get("e2")):
                 continue # e2 is outside of this sentence
-            token1 = self.entityHeadTokenByEntity[self.entitiesById[interaction.attrib["e1"]]]
-            token2 = self.entityHeadTokenByEntity[self.entitiesById[interaction.attrib["e2"]]]
+            token1 = self.entityHeadTokenByEntity[self.entitiesById[interaction.get("e1")]]
+            token2 = self.entityHeadTokenByEntity[self.entitiesById[interaction.get("e2")]]
             
 #            found = False
 #            if multiedges:
@@ -214,7 +214,7 @@ class SentenceGraph:
             found = False
             edges = self.interactionGraph.getEdges(token1, token2)
             for edge in edges:
-                if edge[2].attrib["type"] == interaction.attrib["type"]:
+                if edge[2].get("type") == interaction.get("type"):
                     found = True
                     break
             if not found:
@@ -234,10 +234,10 @@ class SentenceGraph:
         @param verbose: boolean
         """
         headOffset = None
-        if entityElement.attrib.has_key("headOffset"):
-            headOffset = Range.charOffsetToSingleTuple(entityElement.attrib["headOffset"])
-        if entityElement.attrib["charOffset"] != "":
-            charOffsets = Range.charOffsetToTuples(entityElement.attrib["charOffset"])
+        if entityElement.get("headOffset") != None:
+            headOffset = Range.charOffsetToSingleTuple(entityElement.get("headOffset"))
+        if entityElement.get("charOffset") != "":
+            charOffsets = Range.charOffsetToTuples(entityElement.get("charOffset"))
         else:
             charOffsets = []
         # Each entity can consist of multiple syntactic tokens, covered by its
@@ -245,7 +245,7 @@ class SentenceGraph:
         headTokens = [] # potential head tokens
         for token in self.tokens:
             #print token.attrib["id"], token.attrib["charOffset"]
-            tokenOffset = Range.charOffsetToSingleTuple(token.attrib["charOffset"])
+            tokenOffset = Range.charOffsetToSingleTuple(token.get("charOffset"))
             if headOffset != None and entityElement.get("type") != "Binding":
                 # A head token can already be defined in the headOffset-attribute.
                 # However, depending on the tokenization, even this range may
@@ -274,68 +274,68 @@ class SentenceGraph:
             else:
                 token = selHead
             if verbose:
-                print >> sys.stderr, "Selected head:", token.attrib["id"], token.attrib["text"]
+                print >> sys.stderr, "Selected head:", token.get("id"), token.get("text")
         assert token != None, entityElement.get("id")
         if token != None:
             # The ElementTree entity-element is modified by setting the headOffset attribute
-            if not entityElement.attrib.has_key("headOffset"):
-                entityElement.attrib["headOffset"] = token.attrib["charOffset"]
+            if not entityElement.get("headOffset") == None:
+                entityElement.set("headOffset", token.get("charOffset"))
             if not self.entitiesByToken.has_key(token):
                 self.entitiesByToken[token] = []
             self.entitiesByToken[token].append(entityElement)
         return token
 
-    def mapEntityHints(self, verbose=False):
-        """
-        Determine the head token for a named entity or trigger. The head token is the token closest
-        to the root for the subtree of the dependency parse spanned by the text of the element.
-        
-        @param entityElement: a semantic node (trigger or named entity)
-        @type entityElement: cElementTree.Element
-        @param verbose: Print selected head tokens on screen
-        @param verbose: boolean
-        """
-        self.entityHints = self.sentenceElement.findall("entityHint")
-        self.entityHintsByToken = {}
-        for entityElement in self.entityHints:
-            headOffset = None
-            if entityElement.attrib.has_key("headOffset"):
-                headOffset = Range.charOffsetToSingleTuple(entityElement.attrib["headOffset"])
-            if entityElement.attrib["charOffset"] != "":
-                charOffsets = Range.charOffsetToTuples(entityElement.attrib["charOffset"])
-            else:
-                charOffsets = []
-            # Each entity can consist of multiple syntactic tokens, covered by its
-            # charOffset-range. One of these must be chosen as the head token.
-            headTokens = [] # potential head tokens
-            for token in self.tokens:
-                #print token.attrib["id"], token.attrib["charOffset"]
-                tokenOffset = Range.charOffsetToSingleTuple(token.attrib["charOffset"])
-                if headOffset != None:
-                    # A head token can already be defined in the headOffset-attribute.
-                    # However, depending on the tokenization, even this range may
-                    # contain multiple tokens. Still, it can always be assumed that
-                    # if headOffset is defined, the corret head token is in this range.
-                    if Range.overlap(headOffset,tokenOffset):
-                        headTokens.append(token)
-                else:
-                    for offset in charOffsets:
-                        if Range.overlap(offset,tokenOffset):
-                            headTokens.append(token)
-            if len(headTokens)==1: # An unambiguous head token was found
-                token = headTokens[0]
-            else: # One head token must be chosen from the candidates
-                token = self.findHeadToken(headTokens)
-                if verbose:
-                    print >> sys.stderr, "Selected head:", token.attrib["id"], token.attrib["text"]
-            assert token != None, entityElement.get("id")
-            if token != None:
-                # The ElementTree entity-element is modified by setting the headOffset attribute
-                if not entityElement.attrib.has_key("headOffset"):
-                    entityElement.attrib["headOffset"] = token.attrib["charOffset"]
-                if not self.entityHintsByToken.has_key(token):
-                    self.entityHintsByToken[token] = []
-                self.entityHintsByToken[token].append(entityElement)
+#    def mapEntityHints(self, verbose=False):
+#        """
+#        Determine the head token for a named entity or trigger. The head token is the token closest
+#        to the root for the subtree of the dependency parse spanned by the text of the element.
+#        
+#        @param entityElement: a semantic node (trigger or named entity)
+#        @type entityElement: cElementTree.Element
+#        @param verbose: Print selected head tokens on screen
+#        @param verbose: boolean
+#        """
+#        self.entityHints = self.sentenceElement.findall("entityHint")
+#        self.entityHintsByToken = {}
+#        for entityElement in self.entityHints:
+#            headOffset = None
+#            if entityElement.attrib.has_key("headOffset"):
+#                headOffset = Range.charOffsetToSingleTuple(entityElement.attrib["headOffset"])
+#            if entityElement.attrib["charOffset"] != "":
+#                charOffsets = Range.charOffsetToTuples(entityElement.attrib["charOffset"])
+#            else:
+#                charOffsets = []
+#            # Each entity can consist of multiple syntactic tokens, covered by its
+#            # charOffset-range. One of these must be chosen as the head token.
+#            headTokens = [] # potential head tokens
+#            for token in self.tokens:
+#                #print token.attrib["id"], token.attrib["charOffset"]
+#                tokenOffset = Range.charOffsetToSingleTuple(token.attrib["charOffset"])
+#                if headOffset != None:
+#                    # A head token can already be defined in the headOffset-attribute.
+#                    # However, depending on the tokenization, even this range may
+#                    # contain multiple tokens. Still, it can always be assumed that
+#                    # if headOffset is defined, the corret head token is in this range.
+#                    if Range.overlap(headOffset,tokenOffset):
+#                        headTokens.append(token)
+#                else:
+#                    for offset in charOffsets:
+#                        if Range.overlap(offset,tokenOffset):
+#                            headTokens.append(token)
+#            if len(headTokens)==1: # An unambiguous head token was found
+#                token = headTokens[0]
+#            else: # One head token must be chosen from the candidates
+#                token = self.findHeadToken(headTokens)
+#                if verbose:
+#                    print >> sys.stderr, "Selected head:", token.attrib["id"], token.attrib["text"]
+#            assert token != None, entityElement.get("id")
+#            if token != None:
+#                # The ElementTree entity-element is modified by setting the headOffset attribute
+#                if not entityElement.attrib.has_key("headOffset"):
+#                    entityElement.attrib["headOffset"] = token.attrib["charOffset"]
+#                if not self.entityHintsByToken.has_key(token):
+#                    self.entityHintsByToken[token] = []
+#                self.entityHintsByToken[token].append(entityElement)
 
     def findHeadToken(self, candidateTokens):
         """
@@ -385,13 +385,13 @@ class SentenceGraph:
         for token in self.tokens:
             self.tokenHeadScores[token] = 0 # initialize score as zero (unconnected token)
             for dependency in self.dependencies:
-                if dependency.attrib["t1"] == token.attrib["id"] or dependency.attrib["t2"] == token.attrib["id"]:
+                if dependency.get("t1") == token.get("id") or dependency.get("t2") == token.get("id"):
                     self.tokenHeadScores[token] = 1 # token is connected by a dependency
                     break               
         
         # Give a low score for tokens that clearly can't be head and are probably produced by hyphen-splitter
         for token in self.tokens:
-            tokenText = token.attrib["text"]
+            tokenText = token.get("text")
             if tokenText == "\\" or tokenText == "/" or tokenText == "-":
                 self.tokenHeadScores[token] = -1
         
@@ -411,7 +411,7 @@ class SentenceGraph:
             for token1 in self.tokens:
                 for token2 in self.tokens: # for each combination of tokens...
                     for dep in self.dependencies: # ... check each dependency
-                        if dep.attrib["t1"] == token1.attrib["id"] and dep.attrib["t2"] == token2.attrib["id"] and (dep.attrib["type"] in depTypesToInclude):
+                        if dep.get("t1") == token1.get("id") and dep.get("t2") == token2.get("id") and (dep.get("type") in depTypesToInclude):
                             # The governor token of the dependency must have a higher score
                             # than the dependent token.
                             if self.tokenHeadScores[token1] <= self.tokenHeadScores[token2]:
@@ -440,18 +440,18 @@ class SentenceGraph:
             self.tokenIsEntity[token] = False
             self.tokenIsEntityHead[token] = []
         for entity in self.entities:
-            entityOffsets = Range.charOffsetToTuples(entity.attrib["charOffset"])
-            entityHeadOffset = Range.charOffsetToSingleTuple(entity.attrib["headOffset"])
+            entityOffsets = Range.charOffsetToTuples(entity.get("charOffset"))
+            entityHeadOffset = Range.charOffsetToSingleTuple(entity.get("headOffset"))
             for token in self.tokens:
-                tokenOffset = Range.charOffsetToSingleTuple(token.attrib["charOffset"])
+                tokenOffset = Range.charOffsetToSingleTuple(token.get("charOffset"))
                 for entityOffset in entityOffsets:
                     if Range.overlap(entityOffset, tokenOffset):
                         self.tokenIsEntity[token] = True
-                        if entity.attrib.has_key("isName"):
+                        if entity.get("isName") != None:
                             if entity.get("isName") == "True":
                                 self.tokenIsName[token] = True
                         else:
-                            entity.attrib["isName"] = "True"
+                            entity.set("isName", "True")
                             self.tokenIsName[token] = True
                 if Range.overlap(entityHeadOffset, tokenOffset):
                     self.tokenIsEntityHead[token].append(entity)
