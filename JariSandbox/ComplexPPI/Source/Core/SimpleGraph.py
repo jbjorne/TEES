@@ -33,17 +33,6 @@ class Graph():
         self.__resetAnalyses()
         self.nodes.append(node)
         self.__matrix[node] = {}
-        for n in self.nodes:
-            self.__matrix[n][node] = []
-            self.__matrix[node][n] = []
-        return True
-    
-    def addNodeNew(self, node):
-        if node in self.__matrix:
-            return False
-        self.__resetAnalyses()
-        self.nodes.append(node)
-        self.__matrix[node] = {}
         return True
     
     def addNodes(self, nodes):
@@ -54,9 +43,6 @@ class Graph():
                 nodesAdded = True
                 self.nodes.append(node)
                 self.__matrix[node] = {}
-                for n in self.nodes:
-                    self.__matrix[n][node] = []
-                    self.__matrix[node][n] = []
         return nodesAdded
     
     def addEdge(self, node1, node2, data=None):
@@ -74,30 +60,13 @@ class Graph():
             if reverse:
                 self.__insertEdge(node2, node1, data)
         return forward or reverse
-    
+        
     def addEdgeTuple(self, edge):
         self.__resetAnalyses()
         self.addNode(edge[0])
         self.addNode(edge[1])
         # add forward edge
-        forward = not edge in self.edges
-        if forward:
-            self.edges.append(edge)
-            self.__matrix[edge[0]][edge[1]].append(edge)
-        # add reverse edge
-        reverse = False
-        if not self.isDirected():
-            reverse = not self.hasEdge(edge[1], edge[0], edge[2])
-            if reverse:
-                self.__insertEdge(edge[1], edge[0], edge[2])
-        return forward or reverse
-    
-    def addEdgeTupleNew(self, edge):
-        self.__resetAnalyses()
-        self.addNode(edge[0])
-        self.addNode(edge[1])
-        # add forward edge
-        forward = not edge in self.edges
+        forward = not self.hasEdgeTuple(edge) #not edge in self.edges
         if forward:
             self.edges.append(edge)
             if not edge[1] in self.__matrix[edge[0]]:
@@ -121,30 +90,47 @@ class Graph():
         """
         edge = (node1, node2, data)
         self.edges.append(edge)
+        if not node2 in self.__matrix[node1]:
+            self.__matrix[node1][node2] = []
         self.__matrix[node1][node2].append(edge)
     
     def hasEdges(self, node1, node2):
-        if len(self.__matrix[node1][node2]) > 0:
+        if not node1 in self.__matrix:
+            return False
+        elif not node2 in self.__matrix[node1]:
+            return False
+        elif len(self.__matrix[node1][node2]) > 0:
+            return True
+        else:
+            return False
+
+    def hasEdge(self, node1, node2, data):
+        if not node1 in self.__matrix:
+            return False
+        elif not node2 in self.__matrix[node1]:
+            return False
+        for edge in self.__matrix[node1][node2]:
+            if edge[2] == data:
+                return True
+        return False
+    
+    def hasEdgeTuple(self, edge):
+        if not edge[0] in self.__matrix:
+            return False
+        elif not edge[1] in self.__matrix[edge[0]]:
+            return False
+        elif edge in self.__matrix[edge[0]][edge[1]]:
             return True
         else:
             return False
     
-    def hasEdge(self, node1, node2, data):
-        for edge in self.__matrix[node1][node2]:
-            if edge[2] == data:
-                return True
-        return False
-
-    def hasEdgeNew(self, node1, node2, data):
-        if not node1 in self.__matrix:
-            return False
-        for edge in self.__matrix[node1][node2]:
-            if edge[2] == data:
-                return True
-        return False
-    
     def getEdges(self, node1, node2):
-        return self.__matrix[node1][node2]
+        if not node1 in self.__matrix:
+            return []
+        elif not node2 in self.__matrix[node1]:
+            return []
+        else:
+            return self.__matrix[node1][node2]
     
     def getInEdges(self, node):
         assert self.__directed
@@ -213,6 +199,8 @@ class Graph():
         #self.showAnalyses()
     
     def showAnalyses(self):
+        if self.__nextInPath == None:
+            self.FloydWarshall()
         print "distances"
         for k in sorted(self.__distances.keys()):
             print ">", k, self.__distances[k]
@@ -267,9 +255,13 @@ class Graph():
         
         node1 = path[position-1]
         node2 = path[position]
-        edges = self.__matrix[node1][node2][:] # copied so that joining with reverse won't change original
+        if node2 in self.__matrix[node1]:
+            edges = self.__matrix[node1][node2][:] # copied so that joining with reverse won't change original
+        else:
+            edges = []
         if (not directed) and self.__directed: # an undirected graph already has the reverse edges
-            edges += self.__matrix[node2][node1]
+            if node1 in self.__matrix[node2]:
+                edges += self.__matrix[node2][node1]
         for edge in edges:
             if position < len(path)-1:
                 allWalks.extend(self.__getWalks(path, position+1, walk + [edge], directed))
@@ -321,7 +313,7 @@ if __name__=="__main__":
     except ImportError:
         print >> sys.stderr, "Psyco not installed"
     
-    if False:
+    if True:
         g = Graph()
         print g
         g.addNodes([1, 2, 3, 4, 5, 6])
@@ -337,6 +329,9 @@ if __name__=="__main__":
         u = g.toUndirected()
         paths = g.getPaths(1,3)
         print g.showAnalyses()
+        print "undir nodes", u.nodes
+        print "undir edges", u.edges
+        print u.showAnalyses()
         print "Paths 1->3", paths
         print "Undirected Paths 1->3", u.getPaths(1,3)
         print "Paths 4->3", g.getPaths(4,3)
@@ -382,4 +377,12 @@ if __name__=="__main__":
         # Found Psyco, using
         # SimpleGraph: 0.0017
         # NXGraph: 0.0010        
+        #
+        # After replacing addEdgeTuple's "not edge in self.edges" with
+        # new method self.hasEdgeTuple(edge)
+        #
+        # jari@jari-laptop:~/cvs_checkout/JariSandbox/ComplexPPI/Source/Core$ python SimpleGraph.py
+        # Found Psyco, using
+        # SimpleGraph: 0.0005
+        # NXGraph: 0.0010
     
