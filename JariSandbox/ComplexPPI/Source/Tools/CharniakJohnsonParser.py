@@ -1,4 +1,4 @@
-parse__version__ = "$Revision: 1.3 $"
+parse__version__ = "$Revision: 1.4 $"
 
 import sys,os
 import sys
@@ -13,11 +13,108 @@ import shutil
 import subprocess
 import tempfile
 import codecs
+from ProcessUtils import *
 
 charniakJohnsonParserDir = "/home/jari/biotext/tools/reranking-parser"
 
-def parse(input, output=None, tokenizationName=None, parseName="McClosky", requireEntities=False):
-    global charniakJohnsonParserDir
+escDict={"-LRB-":"(",
+         "-RRB-":")",
+         "-LCB-":"{",
+         "-RCB-":"}",
+         "-LSB-":"[",
+         "-RSB-":"]"}
+
+#def makeInitScript():
+#    pass
+#
+#def launchProcesses():
+#    pass
+#
+#def runMurska(cscConnection):
+#    cscConnection.upload(textFileName, textFileName, False)
+#    cscConnection.run("split -l 50 " + textFileName + " " + textFileName + "-part", True)
+#    
+#    cscConnection.run("cat " + textFileName + "-part* > cj-output.txt", True)
+
+def setDefaultElement(parent, name):
+    element = parent.find(name)
+    if element == None:
+        element = ET.Element(name)
+        parent.append(element)
+    return element
+            
+def readPenn(treeLine):
+    global escDict
+    escSymbols = sorted(escDict.keys())
+    tokens = []
+    phrases = []
+    stack = []
+    if treeLine.strip() != "":
+        # Add tokens
+        prevSplit = None
+        tokenCount = 0
+        splitCount = 0
+        splits = treeLine.split()
+        for split in splits:
+            if split[0] != "(":
+                tokenText = split
+                while tokenText[-1] == ")":
+                    tokenText = tokenText[:-1]
+                    if tokenText[-1] == ")": # this isn't the closing parenthesis for the current token
+                        stackTop = stack.pop()
+                        phrases.append( (stackTop[0], tokenCount, stackTop[1]) )
+                for escSymbol in escSymbols:
+                    tokenText = tokenText.replace(escSymbol, escDict[escSymbol])
+                
+                posText = prevSplit
+                while posText[0] == "(":
+                    posText = posText[1:]
+                for escSymbol in escSymbols:
+                    posText = posText.replace(escSymbol, escDict[escSymbol])
+                tokens.append( (tokenText, posText) )
+                tokenCount += 1
+            elif splits[splitCount + 1][0] == "(":
+                stack.append( (tokenCount, split[1:]) )
+            prevSplit = split
+            splitCount += 1
+    return tokens, phrases
+
+def insertTokens(tokens, tokenization, idStem="cjt_"):
+    tokenCount = 0
+    start = 0
+    for tokenText, posTag in tokens:
+        sText = sentence.get("text")
+        # Determine offsets
+        cStart = sText.find(tokenText, start)
+        assert cStart != -1, (tokenText, tokens, posTags, treeLine, start, sText)
+        cEnd = cStart + len(tokenText)
+        start = cStart + len(tokenText)
+        # Make element
+        token = ET.Element("token")
+        token.set("id", idStem + str(tokenCount + 1))
+        token.set("text", tokenText)
+        token.set("POS", posTag)
+        token.set("charOffset", str(cStart) + "-" + str(cEnd - 1)) # NOTE: check
+        tokenization.append(token)
+        tokenCount += 1
+
+def insertPhrases(phrases, parse, tokenElements, idStem="cjp_"):
+    count = 0
+    phrases.sort()
+    for phrase in phrases:
+        phraseElement = ET.Element("phrase")
+        phraseElement.set("type", phrase[2])
+        phraseElement.set("id", idStem + str(count))
+        phraseElement.set("begin", str(phrase[0]))
+        phraseElement.set("end", str(phrase[1]))
+        t1 = tokenElements[phrase[0]]
+        t2 = tokenElements[phrase[1]]
+        phraseElement.set("charOffset", t1.get("charOffset").split("-")[0] + "-" + t2.get("charOffset").split("-")[-1])
+        parse.append(phraseElement)
+        count += 1
+
+def parse(input, output=None, tokenizationName=None, parseName="McClosky", requireEntities=False, skipIds=[]):
+    global charniakJohnsonParserDir, escDict
     
     print >> sys.stderr, "Loading corpus", input
     corpusTree = ETUtils.ETFromObj(input)
@@ -27,14 +124,24 @@ def parse(input, output=None, tokenizationName=None, parseName="McClosky", requi
     # Write text to input file
     workdir = tempfile.mkdtemp()
     infile = codecs.open(os.path.join(workdir, "parser-input.txt"), "wt", "utf-8")
+    numCorpusSentences = 0
     if tokenizationName == None: # Parser does tokenization
+        print >> sys.stderr, "Parser does the tokenization (Doesn't work ATM)"
         for sentence in corpusRoot.getiterator("sentence"):
+            if sentence.get("id") in skipIds:
+                print >> sys.stderr, "Skipping sentence", sentence.get("id")
+                continue
             if requireEntities:
                 if sentence.find("entity") == None:
                     continue
             infile.write("<s> " + sentence.get("text") + " </s>\n")
+            numCorpusSentences += 1
     else: # Use existing tokenization
+        print >> sys.stderr, "Using existing tokenization", tokenizationName 
         for sentence in corpusRoot.getiterator("sentence"):
+            if sentence.get("id") in skipIds:
+                print >> sys.stderr, "Skipping sentence", sentence.get("id")
+                continue
             if requireEntities:
                 if sentence.find("entity") == None:
                     continue
@@ -46,16 +153,25 @@ def parse(input, output=None, tokenizationName=None, parseName="McClosky", requi
             for token in tokenization.findall("token"):
                 s += token.get("text") + " "
             infile.write("<s> " + s + "</s>\n")
+            numCorpusSentences += 1
     infile.close()
+    
+    #PARSERROOT=/home/smp/tools/McClosky-Charniak/reranking-parser
+    #BIOPARSINGMODEL=/home/smp/tools/McClosky-Charniak/reranking-parser/biomodel
+    #${PARSERROOT}/first-stage/PARSE/parseIt -K -l399 -N50 ${BIOPARSINGMODEL}/parser/ $* | ${PARSERROOT}/second-stage/programs/features/best-parses -l ${BIOPARSINGMODEL}/reranker/features.gz ${BIOPARSINGMODEL}/reranker/weights.gz
     
     # Run parser
     print >> sys.stderr, "Running parser", charniakJohnsonParserDir + "/parse.sh"
     cwd = os.getcwd()
     os.chdir(charniakJohnsonParserDir)
-    args = [charniakJohnsonParserDir + "/parse.sh"]
-    subprocess.call(args, 
+    args = [charniakJohnsonParserDir + "/parse-50best-McClosky.sh"]
+    #bioParsingModel = charniakJohnsonParserDir + "/first-stage/DATA-McClosky"
+    #args = charniakJohnsonParserDir + "/first-stage/PARSE/parseIt -K -l399 -N50 " + bioParsingModel + "/parser | " + charniakJohnsonParserDir + "/second-stage/programs/features/best-parses -l " + bioParsingModel + "/reranker/features.gz " + bioParsingModel + "/reranker/weights.gz"
+    #subprocess.call(args,
+    process = subprocess.Popen(args, 
         stdin=codecs.open(os.path.join(workdir, "parser-input.txt"), "rt", "utf-8"),
         stdout=codecs.open(os.path.join(workdir, "parser-output.txt"), "wt", "utf-8"))
+    waitForProcess(process, numCorpusSentences, False, os.path.join(workdir, "parser-output.txt"), "CharniakJohnsonParser", "Parsing Sentences")
     os.chdir(cwd)
     
     # Read parse
@@ -70,40 +186,38 @@ def parse(input, output=None, tokenizationName=None, parseName="McClosky", requi
     # Read Stanford results
     outfile = codecs.open(os.path.join(workdir, "stanford-output.txt"), "rt", "utf-8")
     treeFile = codecs.open(os.path.join(workdir, "parser-output.txt"), "rt", "utf-8")
-    print >> sys.stderr, "Inserting dependencies"
+    print >> sys.stderr, "Inserting parses"
     # Add output to sentences
     for sentence in corpusRoot.getiterator("sentence"):
+        if sentence.get("id") in skipIds:
+            print >> sys.stderr, "Skipping sentence", sentence.get("id")
+            continue
         if requireEntities:
             if sentence.find("entity") == None:
                 continue
         
         # Find or create container elements
-        sentenceAnalyses = sentence.find("sentenceAnalyses")
-        if sentenceAnalyses == None:
-            sentenceAnalyses = ET.Element("sentenceAnalyses")
-            sentence.append(sentenceAnalyses)
-        parses = sentenceAnalyses.find("parses")
-        if parses == None:
-            parses = ET.Element("parses")
-            sentenceAnalyses.append(parses)
+        sentenceAnalyses = setDefaultElement(sentence, "sentenceAnalyses")
+        tokenizations = setDefaultElement(sentenceAnalyses, "tokenizations")
+        parses = setDefaultElement(sentenceAnalyses, "parses")
         prevParseIndex = 0
         for prevParse in parses.findall("parse"):
             assert prevParse.get("parser") != parseName
             prevParseIndex += 1
         parse = ET.Element("parse")
-        parse.set("parse", parseName)
+        parse.set("parser", parseName)
         if tokenizationName == None:
             parse.set("tokenizer", parseName)
         else:
             parse.set("tokenizer", tokenizationName)
         parses.insert(prevParseIndex, parse)
         
+        tokenByIndex = {}
+        treeLine = treeFile.readline()
+        parse.set("pennstring", treeLine.strip())
+        tokens, phrases = readPenn(treeLine)
         # Parser-generated tokens
         if tokenizationName == None:
-            tokenizations = sentenceAnalyses.find("tokenizations")
-            if tokenizations == None:
-                tokenizations = ET.Element("tokenizations")
-                sentenceAnalyses.append(tokenizations)
             prevTokenizationIndex = 0
             for prevTokenization in tokenizations.findall("tokenization"):
                 assert prevTokenization.get("tokenizer") != tokenizationName
@@ -111,53 +225,18 @@ def parse(input, output=None, tokenizationName=None, parseName="McClosky", requi
             tokenization = ET.Element("tokenization")
             tokenization.set("tokenizer", parseName)
             tokenizations.insert(prevTokenizationIndex, tokenization)
-        
-            treeLine = treeFile.readline()
-            if treeLine.strip() != "":
-                # Add tokens
-                prevSplit = None
-                tokens = []
-                posTags = []
-                for split in treeLine.split():
-                    if split[0] != "(":
-                        tokenText = split
-                        while tokenText[-1] == ")":
-                            tokenText = tokenText[:-1]
-                        if tokenText == "-LRB-":
-                            tokenText = "("
-                        elif tokenText == "-RRB-":
-                            tokenText = ")"
-                        tokens.append(tokenText)
-                        
-                        posText = prevSplit
-                        while posText[0] == "(":
-                            posText = posText[1:]
-                        if posText == "-LRB-":
-                            posText = "("
-                        elif posText == "-RRB-":
-                            posText = ")"
-                        posTags.append(posText)
-                    prevSplit = split
-                
-                tokenCount = 0
-                start = 0
-                for tokenText in tokens:
-                    sText = sentence.get("text")
-                    # Determine offsets
-                    cStart = sText.find(tokenText, start)
-                    assert cStart != -1, (tokenText, tokens, posTags, treeLine, start, sText)
-                    cEnd = cStart + len(tokenText)
-                    start = cStart + len(tokenText)
-                    # Make element
-                    token = ET.Element("token")
-                    token.set("id", "cjt_" + str(tokenCount + 1))
-                    token.set("text", tokenText)
-                    token.set("POS", posTags[tokenCount])
-                    token.set("charOffset", str(cStart) + "-" + str(cEnd - 1)) # NOTE: check
-                    tokenization.append(token)
-                    tokenCount += 1
-        
-        depCount = 0
+            insertTokens(tokens, tokenization)
+        else:
+            for tokenization in tokenizations:
+                if tokenization.get("tokenizer") == tokenizationName:
+                    break
+            assert tokenization.get("tokenizer") == tokenizationName
+            count = 0
+            for token in tokenization.findall("token"):
+                tokenByIndex[count] = token
+                count += 1
+            
+        depCount = 1
         line = outfile.readline()
         while line.strip() != "":            
             # Add dependencies
@@ -172,16 +251,22 @@ def parse(input, output=None, tokenizationName=None, parseName="McClosky", requi
             # Make element
             dep = ET.Element("dependency")
             dep.set("id", "cjp_" + str(depCount))
-            dep.set("t1", "cjt_" + str(t1Index))
-            dep.set("t2", "cjt_" + str(t2Index))
+            if tokenizationName != None:
+                dep.set("t1", tokenByIndex[t1Index-1].get("id"))
+                dep.set("t2", tokenByIndex[t2Index-1].get("id"))
+            else:
+                dep.set("t1", "cjt_" + str(t1Index))
+                dep.set("t2", "cjt_" + str(t2Index))
             dep.set("type", depType)
             parse.append(dep)
             depCount += 1            
             line = outfile.readline()
+
+        insertPhrases(phrases, parse, tokenization.findall("token"))
     
     outfile.close()
     # Remove work directory
-    shutil.rmtree(workdir)
+    #shutil.rmtree(workdir)
         
     if output != None:
         print >> sys.stderr, "Writing output to", output
@@ -203,7 +288,8 @@ if __name__=="__main__":
     optparser = OptionParser(usage="%prog [options]\n")
     optparser.add_option("-i", "--input", default=None, dest="input", help="Corpus in interaction xml format", metavar="FILE")
     optparser.add_option("-o", "--output", default=None, dest="output", help="Output file in interaction xml format.")
+    optparser.add_option("-t", "--tokenization", default=None, dest="tokenization", help="Output file in interaction xml format.")
     (options, args) = optparser.parse_args()
     
-    parse(input=options.input, output=options.output)
+    parse(input=options.input, output=options.output, tokenizationName=options.tokenization)
     
