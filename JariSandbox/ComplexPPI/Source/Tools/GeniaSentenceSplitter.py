@@ -1,4 +1,4 @@
-__version__ = "$Revision: 1.3 $"
+__version__ = "$Revision: 1.4 $"
 
 import sys,os
 import sys
@@ -13,6 +13,9 @@ import shutil
 import subprocess
 import tempfile
 import codecs
+
+sys.path.append(os.path.dirname(os.path.abspath(__file__))+"/..")
+from Utils.ProgressCounter import ProgressCounter
 """
 A wrapper for the Joachims SVM Multiclass classifier.
 """
@@ -31,7 +34,7 @@ def moveElements(document):
         entCount = 0
         for entity in document.findall("entity"):
             entityOffset = Range.charOffsetToSingleTuple(entity.get("charOffset"))
-            if Range.contains(sentenceOffset, entityOffset):
+            if Range.overlap(sentenceOffset, entityOffset):
                 document.remove(entity)
                 sentence.append(entity)
                 prevId = entity.get("id")
@@ -76,7 +79,9 @@ def makeSentences(input, output=None, removeText=False):
     docCount = 0
     sentencesCreated = 0
     sourceElements = [x for x in corpusRoot.getiterator("document")] + [x for x in corpusRoot.getiterator("section")]
+    counter = ProgressCounter(len(sourceElements), "GeniaSentenceSplitter")
     for document in sourceElements:
+        counter.update(1, "Splitting Documents ("+document.get("id")+"): ")
         docId = document.get("id")
         if docId == None:
             docId = "CORPUS.d" + str(docCount)
@@ -91,7 +96,15 @@ def makeSentences(input, output=None, removeText=False):
         workfile.close()
         # Run sentence splitter
         args = [sentenceSplitterDir + "/run_geniass.sh", os.path.join(workdir, "sentence-splitter-input.txt"), os.path.join(workdir, "sentence-splitter-output.txt")]
-        subprocess.call(args)
+        #p = subprocess.call(args)
+        p = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        stdout, stderr = p.communicate()
+        if stdout != "":
+            print >> sys.stderr, stdout
+        if stderr != 'Extracting events.roading model file.\nstart classification.\n':
+            print >> sys.stderr, stderr
+        #print "stdout<", p.stdout.readlines(), ">"
+        #print "stderr<", p.stderr.readlines(), ">"
         # Read split sentences
         workfile = codecs.open(os.path.join(workdir, "sentence-splitter-output.txt"), "rt", "utf-8")
         start = 0 # sentences are consecutively aligned to the text for charOffsets
@@ -101,6 +114,9 @@ def makeSentences(input, output=None, removeText=False):
             # Find the starting point of the sentence in the text. This
             # point must be after previous sentences
             cStart = text.find(sText, start) # find start position
+            tail = None
+            if cStart - start != 0:
+                prevSentence.set("tail", text[start:cStart])
             cEnd = cStart + len(sText) # end position is determined by length
             start = cStart + len(sText) # for next sentence, start search from end of this one
             # make sentence element
@@ -109,6 +125,7 @@ def makeSentences(input, output=None, removeText=False):
             e.set("charOffset", str(cStart) + "-" + str(cEnd - 1)) # NOTE: check
             e.set("id", docId + ".s" + str(sentenceCount))
             document.append(e) # add sentence to parent element
+            prevSentence = e
             sentencesCreated += 1
             sentenceCount += 1
         # Remove original text
