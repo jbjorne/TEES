@@ -1,4 +1,4 @@
-__version__ = "$Revision: 1.3 $"
+__version__ = "$Revision: 1.4 $"
 
 import sys,os
 import sys
@@ -21,7 +21,7 @@ A wrapper for the Joachims SVM Multiclass classifier.
 
 geniaTaggerDir = "/home/jari/biotext/tools/geniatagger-3.0.1"
 
-def tokenize(input, output=None, tokenizationName="GeniaTagger-3.0.1", extraFields=["base", "chunk", "NE"]):
+def tokenize(input, output=None, tokenizationName="GeniaTagger-3.0.1", extraFields=[]): #["base", "chunk", "NE"]):
     global geniaTaggerDir
     
     print >> sys.stderr, "Loading corpus", input
