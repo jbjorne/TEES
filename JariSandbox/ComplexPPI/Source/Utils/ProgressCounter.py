@@ -12,6 +12,10 @@ class ProgressCounter:
         
         self.prevPrintTime = 0
         self.timeStep = 30
+        self.startTime = time.time()
+    
+    def markFinished(self):
+        self.progress = 100.0
     
     def __del__(self):
         # If this counter didn't finish, show the info about the last update
@@ -30,12 +34,22 @@ class ProgressCounter:
         if currentTime - self.prevPrintTime > self.timeStep:
             timeStepExceeded = True
         
+        self.prevUpdateString += " (" + self.getElapsedTimeString(currentTime) + ")"
+        
         if self.progress >= 100.0 or self.progress - self.prevProgress >= self.step or timeStepExceeded:
             print >> sys.stderr, "\r" + self.prevUpdateString,
             self.prevProgress = self.progress
             self.prevPrintTime = currentTime
         if self.progress >= 100.0:
             print >> sys.stderr
+    
+    def getElapsedTimeString(self, currentTime):
+        elapsedTime = currentTime - self.startTime
+        hours = elapsedTime / 3600.0
+        elapsedTime = elapsedTime % 3600.0
+        minutes = elapsedTime / 60.0
+        seconds = elapsedTime % 60.0
+        return str(int(hours)) + ":" + str(int(minutes)) + ":" + str(int(seconds))
     
     def showLastUpdate(self):
         print >> sys.stderr, "Last count: " + str(self.current) + "/" + str(int(self.total))
