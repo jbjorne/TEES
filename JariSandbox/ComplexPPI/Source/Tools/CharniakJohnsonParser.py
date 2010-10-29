@@ -1,4 +1,4 @@
-parse__version__ = "$Revision: 1.4 $"
+parse__version__ = "$Revision: 1.5 $"
 
 import sys,os
 import sys
@@ -113,8 +113,39 @@ def insertPhrases(phrases, parse, tokenElements, idStem="cjp_"):
         parse.append(phraseElement)
         count += 1
 
+def runCharniakJohnsonParser(input, output):
+    return runCharniakJohnsonParser(input, output, True)
+
+def runCharniakJohnsonParserWithoutTokenizer(input, output):
+    return runCharniakJohnsonParser(input, output, False)
+        
+def runCharniakJohnsonParser(input, output, tokenizer=False):
+    if tokenizer:
+        print >> sys.stderr, "Running CJ-parser with tokenization"
+    else:
+        print >> sys.stderr, "Running CJ-parser without tokenization"
+    #args = ["./parse-50best-McClosky.sh"]
+    #return subprocess.Popen(args, 
+    #    stdin=codecs.open(input, "rt", "utf-8"),
+    #    stdout=codecs.open(output, "wt", "utf-8"), shell=True)
+    
+    if tokenizer:
+        firstStageArgs = ["first-stage/PARSE/parseIt", "-l999", "-N50" , "../McClosky-biomodel/parser/"]
+    else:
+        firstStageArgs = ["first-stage/PARSE/parseIt", "-l999", "-N50" , "-K", "../McClosky-biomodel/parser/"]
+    secondStageArgs = ["second-stage/programs/features/best-parses", "-l", "../McClosky-biomodel/reranker/features.gz", "../McClosky-biomodel/reranker/weights.gz"]
+    
+    firstStage = subprocess.Popen(firstStageArgs,
+                                  stdin=codecs.open(input, "rt", "utf-8"),
+                                  stdout=subprocess.PIPE)
+    secondStage = subprocess.Popen(secondStageArgs,
+                                   stdin=firstStage.stdout,
+                                   stdout=codecs.open(output, "wt", "utf-8"))
+    return ProcessWrapper([firstStage, secondStage])
+
 def parse(input, output=None, tokenizationName=None, parseName="McClosky", requireEntities=False, skipIds=[]):
     global charniakJohnsonParserDir, escDict
+    print >> sys.stderr, "Charniak-Johnson Parser"
     
     print >> sys.stderr, "Loading corpus", input
     corpusTree = ETUtils.ETFromObj(input)
@@ -123,10 +154,11 @@ def parse(input, output=None, tokenizationName=None, parseName="McClosky", requi
     
     # Write text to input file
     workdir = tempfile.mkdtemp()
-    infile = codecs.open(os.path.join(workdir, "parser-input.txt"), "wt", "utf-8")
+    infileName = os.path.join(workdir, "parser-input.txt")
+    infile = codecs.open(infileName, "wt", "utf-8")
     numCorpusSentences = 0
     if tokenizationName == None: # Parser does tokenization
-        print >> sys.stderr, "Parser does the tokenization (Doesn't work ATM)"
+        print >> sys.stderr, "Parser does the tokenization"
         for sentence in corpusRoot.getiterator("sentence"):
             if sentence.get("id") in skipIds:
                 print >> sys.stderr, "Skipping sentence", sentence.get("id")
@@ -161,33 +193,22 @@ def parse(input, output=None, tokenizationName=None, parseName="McClosky", requi
     #${PARSERROOT}/first-stage/PARSE/parseIt -K -l399 -N50 ${BIOPARSINGMODEL}/parser/ $* | ${PARSERROOT}/second-stage/programs/features/best-parses -l ${BIOPARSINGMODEL}/reranker/features.gz ${BIOPARSINGMODEL}/reranker/weights.gz
     
     # Run parser
-    print >> sys.stderr, "Running parser", charniakJohnsonParserDir + "/parse.sh"
+    #print >> sys.stderr, "Running parser", charniakJohnsonParserDir + "/parse.sh"
     cwd = os.getcwd()
     os.chdir(charniakJohnsonParserDir)
-    args = [charniakJohnsonParserDir + "/parse-50best-McClosky.sh"]
-    #bioParsingModel = charniakJohnsonParserDir + "/first-stage/DATA-McClosky"
-    #args = charniakJohnsonParserDir + "/first-stage/PARSE/parseIt -K -l399 -N50 " + bioParsingModel + "/parser | " + charniakJohnsonParserDir + "/second-stage/programs/features/best-parses -l " + bioParsingModel + "/reranker/features.gz " + bioParsingModel + "/reranker/weights.gz"
-    #subprocess.call(args,
-    process = subprocess.Popen(args, 
-        stdin=codecs.open(os.path.join(workdir, "parser-input.txt"), "rt", "utf-8"),
-        stdout=codecs.open(os.path.join(workdir, "parser-output.txt"), "wt", "utf-8"))
-    waitForProcess(process, numCorpusSentences, False, os.path.join(workdir, "parser-output.txt"), "CharniakJohnsonParser", "Parsing Sentences")
+    if tokenizationName == None:
+        charniakOutput = runSentenceProcess(runCharniakJohnsonParser, charniakJohnsonParserDir, infileName, workdir, False, "CharniakJohnsonParser", "Parsing", timeout=600)   
+    else:
+        charniakOutput = runSentenceProcess(runCharniakJohnsonParserWithoutTokenizer, charniakJohnsonParserDir, infileName, workdir, False, "CharniakJohnsonParser", "Parsing", timeout=600)   
+#    args = [charniakJohnsonParserDir + "/parse-50best-McClosky.sh"]
+#    #bioParsingModel = charniakJohnsonParserDir + "/first-stage/DATA-McClosky"
+#    #args = charniakJohnsonParserDir + "/first-stage/PARSE/parseIt -K -l399 -N50 " + bioParsingModel + "/parser | " + charniakJohnsonParserDir + "/second-stage/programs/features/best-parses -l " + bioParsingModel + "/reranker/features.gz " + bioParsingModel + "/reranker/weights.gz"
     os.chdir(cwd)
     
-    # Read parse
-    outfile = codecs.open(os.path.join(workdir, "parser-output.txt"), "rt", "utf-8")
-    #for line in outfile:
-    #    print line
-    
-    # Convert
-    print >> sys.stderr, "Running Stanford conversion"
-    StanfordParser.convert(os.path.join(workdir, "parser-output.txt"), os.path.join(workdir, "stanford-output.txt"))
-    
-    # Read Stanford results
-    outfile = codecs.open(os.path.join(workdir, "stanford-output.txt"), "rt", "utf-8")
-    treeFile = codecs.open(os.path.join(workdir, "parser-output.txt"), "rt", "utf-8")
+    treeFile = codecs.open(charniakOutput, "rt", "utf-8")
     print >> sys.stderr, "Inserting parses"
     # Add output to sentences
+    failCount = 0
     for sentence in corpusRoot.getiterator("sentence"):
         if sentence.get("id") in skipIds:
             print >> sys.stderr, "Skipping sentence", sentence.get("id")
@@ -215,9 +236,11 @@ def parse(input, output=None, tokenizationName=None, parseName="McClosky", requi
         tokenByIndex = {}
         treeLine = treeFile.readline()
         parse.set("pennstring", treeLine.strip())
+        if treeLine.strip() == "":
+            failCount += 1
         tokens, phrases = readPenn(treeLine)
-        # Parser-generated tokens
-        if tokenizationName == None:
+        # Get tokenization
+        if tokenizationName == None: # Parser-generated tokens
             prevTokenizationIndex = 0
             for prevTokenization in tokenizations.findall("tokenization"):
                 assert prevTokenization.get("tokenizer") != tokenizationName
@@ -225,49 +248,22 @@ def parse(input, output=None, tokenizationName=None, parseName="McClosky", requi
             tokenization = ET.Element("tokenization")
             tokenization.set("tokenizer", parseName)
             tokenizations.insert(prevTokenizationIndex, tokenization)
+            # Insert tokens to parse
             insertTokens(tokens, tokenization)
         else:
-            for tokenization in tokenizations:
-                if tokenization.get("tokenizer") == tokenizationName:
-                    break
-            assert tokenization.get("tokenizer") == tokenizationName
-            count = 0
-            for token in tokenization.findall("token"):
-                tokenByIndex[count] = token
-                count += 1
-            
-        depCount = 1
-        line = outfile.readline()
-        while line.strip() != "":            
-            # Add dependencies
-            depType, rest = line.strip()[:-1].split("(")
-            t1, t2 = rest.split(", ")
-            t1Word, t1Index = t1.rsplit("-", 1)
-            while not t1Index[-1].isdigit(): t1Index = t1Index[:-1] # invalid literal for int() with base 10: "7'"
-            t1Index = int(t1Index)
-            t2Word, t2Index = t2.rsplit("-", 1)
-            while not t2Index[-1].isdigit(): t2Index = t2Index[:-1] # invalid literal for int() with base 10: "7'"
-            t2Index = int(t2Index)
-            # Make element
-            dep = ET.Element("dependency")
-            dep.set("id", "cjp_" + str(depCount))
-            if tokenizationName != None:
-                dep.set("t1", tokenByIndex[t1Index-1].get("id"))
-                dep.set("t2", tokenByIndex[t2Index-1].get("id"))
-            else:
-                dep.set("t1", "cjt_" + str(t1Index))
-                dep.set("t2", "cjt_" + str(t2Index))
-            dep.set("type", depType)
-            parse.append(dep)
-            depCount += 1            
-            line = outfile.readline()
-
+            tokenization = getElementByAttrib(tokenizations, "tokenization", {"tokenizer":tokenizationName})
+        # Insert phrases to parse
         insertPhrases(phrases, parse, tokenization.findall("token"))
     
-    outfile.close()
+    treeFile.close()
     # Remove work directory
     #shutil.rmtree(workdir)
-        
+    
+    if failCount == 0:
+        print >> sys.stderr, "Parsed succesfully all sentences"
+    else:
+        print >> sys.stderr, "Warning, parsing failed for", failCount, "out of", numCorpusSentences, "sentences"
+        print >> sys.stderr, "The \"penntree\" attribute of these sentences has an empty string."
     if output != None:
         print >> sys.stderr, "Writing output to", output
         ETUtils.write(corpusRoot, output)
@@ -288,7 +284,8 @@ if __name__=="__main__":
     optparser = OptionParser(usage="%prog [options]\n")
     optparser.add_option("-i", "--input", default=None, dest="input", help="Corpus in interaction xml format", metavar="FILE")
     optparser.add_option("-o", "--output", default=None, dest="output", help="Output file in interaction xml format.")
-    optparser.add_option("-t", "--tokenization", default=None, dest="tokenization", help="Output file in interaction xml format.")
+    optparser.add_option("-t", "--tokenization", default=None, dest="tokenization", help="Name of tokenization element.")
+    optparser.add_option("-s", "--stanford", default=False, action="store_true", dest="stanford", help="Run stanford conversion.")
     (options, args) = optparser.parse_args()
     
     parse(input=options.input, output=options.output, tokenizationName=options.tokenization)
