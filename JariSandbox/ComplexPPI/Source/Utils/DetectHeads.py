@@ -8,6 +8,9 @@ import Range
 import Stemming.PorterStemmer as PorterStemmer
 
 def getTriggers(corpus):
+    """
+    Returns a dictionary of "entity type"->"entity text"->"count"
+    """
     corpus = ETUtils.ETFromObj(corpus)
     trigDict = {}
     for entity in corpus.getroot().getiterator("entity"):
@@ -24,6 +27,10 @@ def getTriggers(corpus):
     return trigDict
 
 def getDistribution(trigDict):
+    """
+    Converts a dictionary of "entity type"->"entity text"->"count"
+    to "entity text"->"entity type"->"(count, fraction)"
+    """
     distDict = {}
     eTypes = trigDict.keys()
     for eType in trigDict.keys():
@@ -88,10 +95,16 @@ def removeHeads(corpus):
     print >> sys.stderr, "Removed head offsets from", removeCount, "entities"
 
 def findHeads(corpus, methods, parse, tokenization):
+    for m in methods:
+        assert m in ["REMOVE", "SYNTAX", "DICT"]
     corpus = ETFromObj(corpus)
     removeHeads(corpus)
     for method in methods:
-        if method == "SYNTAX":
+        if method == "REMOVE":
+            removeHeads(corpus)
+        elif method == "DICT":
+            findHeadsDictionary(corpus, parse, tokenization)
+        elif method == "SYNTAX":
             findHeadsSyntactic(corpus, parse, tokenization)
 
 def mapSplits(splits, string, stringOffset):
