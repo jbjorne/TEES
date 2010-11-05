@@ -1,4 +1,4 @@
-parse__version__ = "$Revision: 1.5 $"
+parse__version__ = "$Revision: 1.6 $"
 
 import sys,os
 import sys
@@ -22,7 +22,9 @@ escDict={"-LRB-":"(",
          "-LCB-":"{",
          "-RCB-":"}",
          "-LSB-":"[",
-         "-RSB-":"]"}
+         "-RSB-":"]",
+         "``":"\"",
+         "''":"\""}
 
 #def makeInitScript():
 #    pass
@@ -35,13 +37,6 @@ escDict={"-LRB-":"(",
 #    cscConnection.run("split -l 50 " + textFileName + " " + textFileName + "-part", True)
 #    
 #    cscConnection.run("cat " + textFileName + "-part* > cj-output.txt", True)
-
-def setDefaultElement(parent, name):
-    element = parent.find(name)
-    if element == None:
-        element = ET.Element(name)
-        parent.append(element)
-    return element
             
 def readPenn(treeLine):
     global escDict
@@ -79,14 +74,17 @@ def readPenn(treeLine):
             splitCount += 1
     return tokens, phrases
 
-def insertTokens(tokens, tokenization, idStem="cjt_"):
+def insertTokens(tokens, sentence, tokenization, idStem="cjt_"):
     tokenCount = 0
     start = 0
     for tokenText, posTag in tokens:
         sText = sentence.get("text")
         # Determine offsets
         cStart = sText.find(tokenText, start)
-        assert cStart != -1, (tokenText, tokens, posTags, treeLine, start, sText)
+        #assert cStart != -1, (tokenText, tokens, posTag, start, sText)
+        if cStart == -1:
+            print >> sys.stderr, "Token alignment error", (tokenText, tokens, posTag, start, sText)
+            return
         cEnd = cStart + len(tokenText)
         start = cStart + len(tokenText)
         # Make element
@@ -107,13 +105,18 @@ def insertPhrases(phrases, parse, tokenElements, idStem="cjp_"):
         phraseElement.set("id", idStem + str(count))
         phraseElement.set("begin", str(phrase[0]))
         phraseElement.set("end", str(phrase[1]))
-        t1 = tokenElements[phrase[0]]
-        t2 = tokenElements[phrase[1]]
-        phraseElement.set("charOffset", t1.get("charOffset").split("-")[0] + "-" + t2.get("charOffset").split("-")[-1])
+        t1 = None
+        t2 = None
+        if phrase[0] < len(tokenElements):
+            t1 = tokenElements[phrase[0]]
+        if phrase[1] < len(tokenElements):
+            t2 = tokenElements[phrase[1]]
+        if t1 != None and t2 != None:
+            phraseElement.set("charOffset", t1.get("charOffset").split("-")[0] + "-" + t2.get("charOffset").split("-")[-1])
         parse.append(phraseElement)
         count += 1
 
-def runCharniakJohnsonParser(input, output):
+def runCharniakJohnsonParserWithTokenizer(input, output):
     return runCharniakJohnsonParser(input, output, True)
 
 def runCharniakJohnsonParserWithoutTokenizer(input, output):
@@ -177,7 +180,7 @@ def parse(input, output=None, tokenizationName=None, parseName="McClosky", requi
             if requireEntities:
                 if sentence.find("entity") == None:
                     continue
-            for tokenization in sentence.find("sentenceAnalyses").find("tokenizations"):
+            for tokenization in sentence.find("sentenceanalyses").find("tokenizations"):
                 if tokenization.get("tokenizer") == tokenizationName:
                     break
             assert tokenization.get("tokenizer") == tokenizationName
@@ -197,7 +200,7 @@ def parse(input, output=None, tokenizationName=None, parseName="McClosky", requi
     cwd = os.getcwd()
     os.chdir(charniakJohnsonParserDir)
     if tokenizationName == None:
-        charniakOutput = runSentenceProcess(runCharniakJohnsonParser, charniakJohnsonParserDir, infileName, workdir, False, "CharniakJohnsonParser", "Parsing", timeout=600)   
+        charniakOutput = runSentenceProcess(runCharniakJohnsonParserWithTokenizer, charniakJohnsonParserDir, infileName, workdir, False, "CharniakJohnsonParser", "Parsing", timeout=600)   
     else:
         charniakOutput = runSentenceProcess(runCharniakJohnsonParserWithoutTokenizer, charniakJohnsonParserDir, infileName, workdir, False, "CharniakJohnsonParser", "Parsing", timeout=600)   
 #    args = [charniakJohnsonParserDir + "/parse-50best-McClosky.sh"]
@@ -218,7 +221,7 @@ def parse(input, output=None, tokenizationName=None, parseName="McClosky", requi
                 continue
         
         # Find or create container elements
-        sentenceAnalyses = setDefaultElement(sentence, "sentenceAnalyses")
+        sentenceAnalyses = setDefaultElement(sentence, "sentenceanalyses")
         tokenizations = setDefaultElement(sentenceAnalyses, "tokenizations")
         parses = setDefaultElement(sentenceAnalyses, "parses")
         prevParseIndex = 0
@@ -238,22 +241,23 @@ def parse(input, output=None, tokenizationName=None, parseName="McClosky", requi
         parse.set("pennstring", treeLine.strip())
         if treeLine.strip() == "":
             failCount += 1
-        tokens, phrases = readPenn(treeLine)
-        # Get tokenization
-        if tokenizationName == None: # Parser-generated tokens
-            prevTokenizationIndex = 0
-            for prevTokenization in tokenizations.findall("tokenization"):
-                assert prevTokenization.get("tokenizer") != tokenizationName
-                prevTokenizationIndex += 1
-            tokenization = ET.Element("tokenization")
-            tokenization.set("tokenizer", parseName)
-            tokenizations.insert(prevTokenizationIndex, tokenization)
-            # Insert tokens to parse
-            insertTokens(tokens, tokenization)
         else:
-            tokenization = getElementByAttrib(tokenizations, "tokenization", {"tokenizer":tokenizationName})
-        # Insert phrases to parse
-        insertPhrases(phrases, parse, tokenization.findall("token"))
+            tokens, phrases = readPenn(treeLine)
+            # Get tokenization
+            if tokenizationName == None: # Parser-generated tokens
+                prevTokenizationIndex = 0
+                for prevTokenization in tokenizations.findall("tokenization"):
+                    assert prevTokenization.get("tokenizer") != tokenizationName
+                    prevTokenizationIndex += 1
+                tokenization = ET.Element("tokenization")
+                tokenization.set("tokenizer", parseName)
+                tokenizations.insert(prevTokenizationIndex, tokenization)
+                # Insert tokens to parse
+                insertTokens(tokens, sentence, tokenization)
+            else:
+                tokenization = getElementByAttrib(tokenizations, "tokenization", {"tokenizer":tokenizationName})
+            # Insert phrases to parse
+            insertPhrases(phrases, parse, tokenization.findall("token"))
     
     treeFile.close()
     # Remove work directory
@@ -288,5 +292,8 @@ if __name__=="__main__":
     optparser.add_option("-s", "--stanford", default=False, action="store_true", dest="stanford", help="Run stanford conversion.")
     (options, args) = optparser.parse_args()
     
-    parse(input=options.input, output=options.output, tokenizationName=options.tokenization)
+    xml = parse(input=options.input, output=options.output, tokenizationName=options.tokenization)
+    if options.stanford:
+        import StanfordParser
+        StanfordParser.convertXML(parser="McClosky", input=xml, output=options.output)
     
