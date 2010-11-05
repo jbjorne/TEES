@@ -1,7 +1,7 @@
 import sys
 import cElementTreeUtils as ETUtils
 
-def removeUnconnectedEntities(input, output):
+def removeUnconnectedEntities(input, output=None):
     input = ETUtils.ETFromObj(input)
     root = input.getroot()
     removed = 0
