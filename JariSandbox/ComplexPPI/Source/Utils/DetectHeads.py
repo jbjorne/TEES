@@ -2,6 +2,7 @@ import cElementTreeUtils as ETUtils
 import sys, os
 sys.path.append(os.path.dirname(os.path.abspath(__file__))+"/..")
 import Core.SentenceGraph as SentenceGraph
+from Utils.ProgressCounter import ProgressCounter
 from FindHeads import findHeads
 import InteractionXML.CorpusElements
 import Range
@@ -93,21 +94,31 @@ def removeHeads(corpus):
                     removeCount += 1
                     del e.attrib["headOffset"]
     print >> sys.stderr, "Removed head offsets from", removeCount, "entities"
+    return [0, removeCount]
 
-def findHeads(corpus, methods, parse, tokenization):
+def findHeads(corpus, stringsFrom, methods, parse, tokenization):
     for m in methods:
         assert m in ["REMOVE", "SYNTAX", "DICT"]
-    corpus = ETFromObj(corpus)
-    removeHeads(corpus)
+    corpus = ETUtils.ETFromObj(corpus)
+    counts = {}
     for method in methods:
+        print >> sys.stderr, method, "pass"
         if method == "REMOVE":
-            removeHeads(corpus)
+            counts[method] = removeHeads(corpus)
         elif method == "DICT":
-            findHeadsDictionary(corpus, parse, tokenization)
+            counts[method] = findHeadsDictionary(corpus, stringsFrom, parse, tokenization)
         elif method == "SYNTAX":
-            findHeadsSyntactic(corpus, parse, tokenization)
-
+            counts[method] = findHeadsSyntactic(corpus, parse, tokenization)
+        print >> sys.stderr, method, "pass added", counts[method][0], "and removed", counts[method][1], "heads"
+        
+    print >> sys.stderr, "Summary (pass/added/removed):"
+    for method in methods:
+        print >> sys.stderr, " ", method, "/", counts[method][0], "/", counts[method][1]
+    
 def mapSplits(splits, string, stringOffset):
+    """
+    Maps substrings to a string, and stems them
+    """
     begin = 0
     tuples = []
     for split in splits:
@@ -117,60 +128,81 @@ def mapSplits(splits, string, stringOffset):
         begin = offset + len(split)
     return tuples
 
-def findHeadsDictionary(corpus, parse, tokenization):
-    print "Extracting triggers"
-    trigDict = getTriggers(corpus)
+def findHeadsDictionary(corpus, stringsFrom, parse, tokenization):
+    print "Extracting triggers from", stringsFrom
+    trigDict = getTriggers(stringsFrom)
     print "Determining trigger distribution"
     distDict = getDistribution(trigDict)
     allStrings = sorted(distDict.keys())
-    print "Determining heads"
+    print "Determining heads for", corpus
     corpusElements = InteractionXML.CorpusElements.loadCorpus(corpus, parse, tokenization, removeIntersentenceInteractions=False, removeNameInfo=False)
     cases = {}
+    counts = [0,0]
     for sentence in corpusElements.sentences:
         #print sentence.sentence.get("id")
-        tokenHeadScores = None
+        sText = sentence.sentence.get("text")
+        #tokenHeadScores = None
         for entity in sentence.entities:
-            if entity.get("isName") == "True":
+            if entity.get("headOffset") != None:
                 continue
-            if tokenHeadScores == None:
-                tokenHeadScores = getTokenHeadScores(sentence.tokens, sentence.dependencies, sentenceId=sentence.sentence.get("id"))
+            if entity.get("isName") == "True": # Only for triggers
+                continue
+            #if tokenHeadScores == None:
+            #    tokenHeadScores = getTokenHeadScores(sentence.tokens, sentence.dependencies, sentenceId=sentence.sentence.get("id"))
             eText = entity.get("text")
             eType = entity.get("type")
             eOffset = Range.charOffsetToSingleTuple(entity.get("charOffset"))
-            wsSplits = eText.split()
+            wsSplits = eText.split() # Split by whitespace
             if len(wsSplits) == 1 and eText.find("-") == -1: # unambiguous head will be assigned by SYNTAX pass
                 continue
-            else:
+            else: # Entity text has multiple (whitespace or hyphen separated) parts
                 candidates = []
+                # Try to find entity substring in individual entity strings
                 for wsTuple in mapSplits(wsSplits, eText, eOffset):
-                    if not distDict.has_key(wsTuple[1]):
+                    if not distDict.has_key(wsTuple[1]): # string not found, low score
                         candidates.append( ((-1, -1), wsTuple[2], wsTuple[0], wsTuple[1]) )
-                    else:
+                    else: # String found, more common ones get higher score
                         assert distDict[wsTuple[1]].has_key(eType), (distDict[wsTuple[0]], wsTuple[0], eText)
                         candidates.append( (tuple(distDict[wsTuple[1]][eType]), wsTuple[2], wsTuple[0], wsTuple[1]) )
+                # Split each whitespace-separated string further into hyphen-separated substrings
                 for candidate in candidates[:]:
                     hyphenSplits = candidate[2].split("-")
-                    if len(hyphenSplits) > 1:
+                    if len(hyphenSplits) > 1: # Substring has a hyphen
+                        # Try to find entity substring in individual entity strings
                         for hyphenTuple in mapSplits(hyphenSplits, eText, candidate[1]):
                             if not distDict.has_key(hyphenTuple[1]):
                                 candidates.append( ((-1, -1), hyphenTuple[2], hyphenTuple[0], hyphenTuple[1]) )
                             else:
                                 candidates.append( (tuple(distDict[hyphenTuple[1]][eType]), hyphenTuple[2], hyphenTuple[0], hyphenTuple[1]) )
+            # Sort candidates, highes scores come first
             candidates.sort(reverse=True)
+            # If not matches, look for substrings inside words
             if candidates[0][0][0] in [-1, 0]: # no matches, look for substrings
-                print "Substring matching", candidates
+                print "Substring matching", candidates, "for entity", entity.get("id")
                 for i in range(len(candidates)):
                     candidate = candidates[i]
                     cText = candidate[2]
                     for string in allStrings:
-                        if cText.find(string) != -1:
-                            print "Substring match", string, cText
+                        subStringPos = cText.find(string)
+                        if subStringPos != -1:
+                            print "  Substring match", string, cText,
                             score = tuple(distDict[string][eType])
-                            print score, candidate[0], score > candidate[0], score < candidate[0] 
                             if score > candidate[0]:
-                                candidate = (score, candidate[1], candidate[2], ">"+string+"<")
+                                print score, candidate[0], "Substring selected" #, score > candidate[0], score < candidate[0]
+                                subStringCoords = [candidate[1][0] + subStringPos, len(string)]
+                                candidate = (score, subStringCoords, candidate[2], ">"+string+"<")
+                            else:
+                                print score, candidate[0]
                     candidates[i] = candidate
-                candidates.sort(reverse=True) 
+                # Resort after possibly replacing some candidates
+                candidates.sort(reverse=True)
+            if candidates[0][0][0] not in [-1, 0]: # if it is in [-1, 0], let SYNTAX pass take care of it
+                candidateOffset = (candidates[0][1][0] + eOffset[0], candidates[0][1][0] + candidates[0][1][1] + eOffset[0]) 
+                entity.set("headOffset", str(candidateOffset[0]) + "-" + str(candidateOffset[1]-1))
+                entity.set("headMethod", "Dict")
+                entity.set("headString", sText[candidateOffset[0]:candidateOffset[1]])
+                counts[0] += 1
+            # Prepare results for printing
             for i in range(len(candidates)):
                 c = candidates[i]
                 candidates[i] = (tuple(c[0]), c[2], c[3])
@@ -179,14 +211,15 @@ def findHeadsDictionary(corpus, parse, tokenization):
                 cases[case] = 0
             cases[case] += 1
             print entity.get("id"), eType + ": '" + eText + "'", candidates    
-            headToken = getEntityHeadToken(entity, sentence.tokens, tokenHeadScores)
+            #headToken = getEntityHeadToken(entity, sentence.tokens, tokenHeadScores)
             # The ElementTree entity-element is modified by setting the headOffset attribute
-            entity.set("headOffset", headToken.get("charOffset"))
-            entity.set("headMethod", "Syntax")
+            #entity.set("headOffset", headToken.get("charOffset"))
+            #entity.set("headMethod", "Syntax")
     print "Cases"
     for case in sorted(cases.keys()):
         print case, cases[case]
-    return corpus
+    #return corpus
+    return counts
 
 def findHeadsSyntactic(corpus, parse, tokenization):
     """
@@ -198,18 +231,31 @@ def findHeadsSyntactic(corpus, parse, tokenization):
     @param verbose: Print selected head tokens on screen
     @param verbose: boolean
     """
-    for sentence in corpus.getiterator("sentence"):
-        tokenHeadScores = getTokenHeadScores(tokens, dependencies, sentenceId=sentence.get("id"))
+    counts = [0,0]
+    sentences = [x for x in corpus.getiterator("sentence")]
+    counter = ProgressCounter(len(sentences), "SYNTAX")
+    for sentence in sentences:
+        counter.update()
+        tokElement = ETUtils.getElementByAttrib(sentence, "sentenceanalyses/tokenizations/tokenization", {"tokenizer":tokenization})
+        parseElement = ETUtils.getElementByAttrib(sentence, "sentenceanalyses/parses/parse", {"parser":parse})
+        if tokElement == None or parseElement == None:
+            print >> sys.stderr, "Warning, sentence", sentence.get("id"), "missing parse or tokenization" 
+        tokens = tokElement.findall("token")
+        tokenHeadScores = getTokenHeadScores(tokens, parseElement.findall("dependency"), sentenceId=sentence.get("id"))
         for entity in sentence.findall("entity"):
-            headToken = getEntityHeadToken(entity, tokenHeadScores)
-            # The ElementTree entity-element is modified by setting the headOffset attribute
-            entityElement.set("headOffset", headToken.get("charOffset"))
-            entityElement.set("headMethod", "Syntax")
+            if entity.get("headOffset") == None:
+                headToken = getEntityHeadToken(entity, tokens, tokenHeadScores)
+                # The ElementTree entity-element is modified by setting the headOffset attribute
+                entity.set("headOffset", headToken.get("charOffset"))
+                entity.set("headMethod", "Syntax")
+                entity.set("headString", headToken.get("text"))
+                counts[0] += 1
+    return counts
         
 def getEntityHeadToken(entity, tokens, tokenHeadScores):
     if entity.get("headOffset") != None:
         charOffsets = Range.charOffsetToTuples(entity.get("headOffset"))
-    elif entityElement.get("charOffset") != "":
+    elif entity.get("charOffset") != "":
         charOffsets = Range.charOffsetToTuples(entity.get("charOffset"))
     else:
         charOffsets = []
@@ -315,10 +361,17 @@ if __name__=="__main__":
     optparser = OptionParser(usage="%prog [options]\nRecalculate head token offsets.")
     optparser.add_option("-i", "--input", default=None, dest="input", help="Corpus in interaction xml format", metavar="FILE")
     optparser.add_option("-o", "--output", default=None, dest="output", help="Output file in interaction xml format.")
+    optparser.add_option("-d", "--dictionary", default=None, dest="dictionary", help="Corpus file to use as dictionary of entity strings.")
+    optparser.add_option("-m", "--methods", default=None, dest="methods", help="")
     optparser.add_option("-p", "--parse", default="split-McClosky", dest="parse", help="Parse element name for calculating head offsets")
     optparser.add_option("-t", "--tokenization", default="split-McClosky", dest="tokenization", help="Tokenization element name for calculating head offsets")
     (options, args) = optparser.parse_args()
     
+    print >> sys.stderr, "Loading corpus"
     corpus = ETUtils.ETFromObj(options.input)
-    findHeadsDictionary(corpus, options.parse, options.tokenization)
-    ETUtils.write(corpus, options.output)
+    print >> sys.stderr, "Finding heads"
+    findHeads(corpus, options.dictionary, ["REMOVE", "DICT", "SYNTAX"], options.parse, options.tokenization)
+    #findHeadsDictionary(corpus, options.parse, options.tokenization)
+    if options.output != None:
+        print >> sys.stderr, "Writing corpus"
+        ETUtils.write(corpus, options.output)
