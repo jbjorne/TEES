@@ -8,6 +8,7 @@ class Document():
         self.triggers = None
         self.events = None
         self.relations = None
+        self.dataSet = None
 
 class Annotation():
     def __init__(self, id = None, type = None, text=None, trigger=None, arguments=None):
@@ -97,50 +98,57 @@ def readEvent(string):
 def readRAnnotation(string):
     string = string.strip()
     ann = Annotation()
-    ann.id, rest = string.split("\t")
-    args = rest.split()
+    tabSplits = string.split("\t")
+    ann.id = tabSplits[0]
+    args = tabSplits[1].split()
     ann.type = args[0]
     args = args[1:]
     argMap = {}
     #print string
     for arg in args:
         argTuple = arg.split(":") + [None]
-        assert argTuple[0].find("Arg") != -1, (string, argTuple)
+        #assert argTuple[0].find("Arg") != -1, (string, argTuple)
         ann.arguments.append( (argTuple[0], argTuple[1], None) )
+    if len(tabSplits) == 3:
+        assert ann.type == "Coref"
+        assert tabSplits[2][0] == "[" and tabSplits[2][-1] == "]", (string, tabSplits)
+        protIds = tabSplits[2][1:-1].split(",")
+        for protId in protIds:
+            ann.arguments.append( ("Connected", protId.strip(), None) )
     return ann
 
-def loadRel(filename, proteins):
-    triggerMap = {}
-    for protein in proteins:
-        triggerMap[protein.id] = protein
-        
-    f = open(filename)
-    triggers = []
-    relations = []
-    lines = f.readlines()
-    for line in lines:
-        if line[0] == "T":
-            triggers.append(readTAnnotation(line))
-            triggerMap[triggers[-1].id] = triggers[-1]
-    for line in lines:
-        if line[0] == "*":
-            readStarAnnotation(line, proteins+triggers)
-    for line in lines:
-        if line[0] == "R":
-            relations.append(readRAnnotation(line))
-    f.close()
-    
-    # Build links
-    for relation in relations:
-        for i in range(len(relation.arguments)):
-            arg = relation.arguments[i]
-            if arg[1][0] == "T":
-                if arg[2] != None:
-                    relation.arguments[i] = (arg[0], triggerMap[arg[1]], triggerMap[arg[2]])
-                else:
-                    relation.arguments[i] = (arg[0], triggerMap[arg[1]], None)
-                
-    return triggers, relations
+#def loadRel(filename, proteins):
+#    triggerMap = {}
+#    for protein in proteins:
+#        triggerMap[protein.id] = protein
+#        
+#    f = open(filename)
+#    triggers = []
+#    relations = []
+#    lines = f.readlines()
+#    for line in lines:
+#        if line[0] == "T":
+#            triggers.append(readTAnnotation(line))
+#            triggerMap[triggers[-1].id] = triggers[-1]
+#    for line in lines:
+#        if line[0] == "*":
+#            readStarAnnotation(line, proteins+triggers)
+#    for line in lines:
+#        if line[0] == "R":
+#            relations.append(readRAnnotation(line))
+#    f.close()
+#    
+#    # Build links
+#    for relation in relations:
+#        for i in range(len(relation.arguments)):
+#            arg = relation.arguments[i]
+#            if arg[1][0] == "T":
+#                if arg[2] != None:
+#                    relation.arguments[i] = (arg[0], triggerMap[arg[1]], triggerMap[arg[2]])
+#                else:
+#                    relation.arguments[i] = (arg[0], triggerMap[arg[1]], None)
+#                
+#    return triggers, relations
 
 def loadA1(filename):
     f = open(filename)
@@ -159,7 +167,46 @@ def loadA1(filename):
     f.close()
     return proteins
 
-def loadA2(filename, proteins):
+#def loadA2(filename, proteins):
+#    f = open(filename)
+#    triggers = []
+#    triggerMap = {}
+#    for protein in proteins:
+#        triggerMap[protein.id] = protein
+#    events = []
+#    eventMap = {}
+#    for line in f:
+#        if line[0] == "T":
+#            triggers.append( readTAnnotation(line) )
+#            triggerMap[triggers[-1].id] = triggers[-1]
+#        elif line[0] == "E":
+#            events.append( readEvent(line) )
+#            eventMap[events[-1].id] = events[-1]
+#        elif line[0] == "M":
+#            mId, rest = line.split("\t")
+#            mType, eventId = rest.split()
+#            if mType == "Speculation":
+#                eventMap[eventId].speculation = mId
+#            elif mType == "Negation":
+#                eventMap[eventId].negation = mId
+#    # Build links
+#    for event in events:
+#        #print event.id
+#        event.trigger = triggerMap[event.trigger]
+#        for i in range(len(event.arguments)):
+#            arg = event.arguments[i]
+#            if arg[1][0] == "T":
+#                if arg[2] != None:
+#                    event.arguments[i] = (arg[0], triggerMap[arg[1]], triggerMap[arg[2]])
+#                else:
+#                    event.arguments[i] = (arg[0], triggerMap[arg[1]], None)
+#            elif arg[1][0] == "E":
+#                assert arg[2] == None # no sites on events
+#                event.arguments[i] = (arg[0], eventMap[arg[1]], None)
+#    f.close()
+#    return triggers, events
+
+def loadRelOrA2(filename, proteins):
     f = open(filename)
     triggers = []
     triggerMap = {}
@@ -167,14 +214,22 @@ def loadA2(filename, proteins):
         triggerMap[protein.id] = protein
     events = []
     eventMap = {}
-    for line in f:
+    relations = []
+    lines = f.readlines()
+    f.close()
+    for line in lines:
         if line[0] == "T":
             triggers.append( readTAnnotation(line) )
             triggerMap[triggers[-1].id] = triggers[-1]
-        elif line[0] == "E":
+    for line in lines:
+        if line[0] == "E":
             events.append( readEvent(line) )
             eventMap[events[-1].id] = events[-1]
-        elif line[0] == "M":
+    for line in lines:
+        if line[0] == "R":
+            relations.append(readRAnnotation(line))
+    for line in lines:
+        if line[0] == "M":
             mId, rest = line.split("\t")
             mType, eventId = rest.split()
             if mType == "Speculation":
@@ -195,8 +250,22 @@ def loadA2(filename, proteins):
             elif arg[1][0] == "E":
                 assert arg[2] == None # no sites on events
                 event.arguments[i] = (arg[0], eventMap[arg[1]], None)
-    f.close()
-    return triggers, events
+    # Build links
+    for relation in relations:
+        for i in range(len(relation.arguments)):
+            arg = relation.arguments[i]
+            if arg[1][0] == "T":
+                if arg[2] != None:
+                    relation.arguments[i] = (arg[0], triggerMap[arg[1]], triggerMap[arg[2]])
+                else:
+#                    if not triggerMap.has_key(arg[1]): # NOTE! hack for CO bugs
+#                        relation.arguments = relation.arguments[0:i]
+#                        if len(relation.arguments) == 1: # NOTE! hack
+#                            relations = []
+#                        break
+                    relation.arguments[i] = (arg[0], triggerMap[arg[1]], None)
+
+    return triggers, events, relations
 
 def loadText(filename):
     f = open(filename)
@@ -205,6 +274,7 @@ def loadText(filename):
     return text
 
 def load(id, dir):
+    #print id
     id = str(id)
     proteins = loadA1(os.path.join(dir, id + ".a1"))
     a2Path = os.path.join(dir, id + ".a2")
@@ -213,12 +283,12 @@ def load(id, dir):
     events = []
     relations = []
     if os.path.exists(a2Path):
-        triggers, events = loadA2(a2Path, proteins)
+        triggers, events, relations = loadRelOrA2(a2Path, proteins)
     elif os.path.exists(relPath):
-        triggers, relations = loadRel(relPath, proteins)
+        triggers, events, relations = loadRelOrA2(relPath, proteins)
     return proteins, triggers, events, relations
 
-def loadSet(dir):
+def loadSet(dir, setName=None):
     ids = set()
     documents = []
     for filename in os.listdir(dir):
@@ -231,6 +301,7 @@ def loadSet(dir):
         doc.id = id
         doc.proteins, doc.triggers, doc.events, doc.relations = load(str(id), dir)
         doc.text = loadText( os.path.join(dir, str(id) + ".txt") )
+        doc.dataSet = setName
         documents.append(doc)
     return documents
 

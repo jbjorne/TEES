@@ -17,6 +17,8 @@ def toInteractionXML(documents, corpusName="GENIA", output=None):
         docCounter += 1
         docEl.set("pmid", str(doc.id))
         docEl.set("text", doc.text)
+        if doc.dataSet != None:
+            docEl.set("set", doc.dataSet)
         corpusRoot.append(docEl)
         # Write triggers and entities
         elCounter = 0
@@ -27,10 +29,12 @@ def toInteractionXML(documents, corpusName="GENIA", output=None):
             entEl.set("id", protId)
             entEl.set("origId", str(doc.id) + "." + str(protein.id))
             entEl.set("text", protein.text)
-            entEl.set("charOffset", str(protein.charBegin) + "-" + str(protein.charEnd))
+            entEl.set("charOffset", str(protein.charBegin) + "-" + str(protein.charEnd-1))
             entEl.set("type", protein.type)
             if protein.type == "Protein":
                 entEl.set("isName", "True")
+            else:
+                entEl.set("isName", "False")
             elCounter += 1
             docEl.append(entEl)
             assert not tMap.has_key(protId)
@@ -56,15 +60,15 @@ def toInteractionXML(documents, corpusName="GENIA", output=None):
                 argCount += 1
         # Write relations
         for relation in doc.relations:
-            assert len(relation.arguments) == 2
+            assert len(relation.arguments) >= 2, (relation.id, relation.type, relation.arguments)
             a1 = relation.arguments[0]
             a2 = relation.arguments[1]
 #            if a1[0] == "Arg2":
 #                temp = a1
 #                a1 = a2
 #                a2 = temp
-            assert a1[0] == "Arg1", (a1, relation.arguments) 
-            assert a2[0] == "Arg2", (a2, relation.arguments)
+            assert a1[0] == "Arg1" or a1[0] == "Former" or a1[0] == "Anaphora", (a1, relation.arguments) 
+            assert a2[0] == "Arg2" or a2[0] == "New" or a2[0] == "Antecedent", (a2, relation.arguments)
             intEl = ET.Element("interaction")
             intEl.set("directed", "True")
             intEl.set("id", docId + ".i" + str(elCounter))
@@ -73,6 +77,17 @@ def toInteractionXML(documents, corpusName="GENIA", output=None):
             intEl.set("e1", tMap[a1[1].id])
             intEl.set("e2", tMap[a2[1].id])
             intEl.set("type", relation.type)
+            if len(relation.arguments) > 2:
+                assert relation.type == "Coref", (relation.id, docId, relation.type)
+                for connProt in relation.arguments[2:]:
+                    intEl = ET.Element("interaction")
+                    intEl.set("directed", "True")
+                    intEl.set("id", docId + ".i" + str(elCounter))
+                    elCounter += 1
+                    intEl.set("origId", str(doc.id) + "." + str(relation.id))
+                    intEl.set("e1", tMap[a2[1].id]) # link proteins to antecedent
+                    intEl.set("e2", tMap[connProt[1].id])
+                    intEl.set("type", "CorefProt")
             docEl.append(intEl)
     
     if output != None:
@@ -118,7 +133,7 @@ def toSTFormat(input, output=None):
             if sentenceOffsets.has_key(idStem):
                 sentenceOffset = sentenceOffsets[idStem]
                 ann.charBegin += sentenceOffset[0]
-                ann.charEnd += sentenceOffset[0]
+                ann.charEnd += sentenceOffset[0] - 1
             if entity.get("speculation") == "True":
                 ann.speculation = True
             if entity.get("negation") == "True":
