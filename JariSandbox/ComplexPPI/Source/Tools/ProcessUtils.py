@@ -2,11 +2,27 @@ import sys, os, codecs, time, signal
 sys.path.append(os.path.dirname(os.path.abspath(__file__))+"/..")
 from Utils.ProgressCounter import ProgressCounter
 
+try:
+    import xml.etree.cElementTree as ET
+except ImportError:
+    import cElementTree as ET
+
 class ProcessWrapper:
+    """
+    Killing a process spawned by a shell is not really possible (at least in Python).
+    This becomes a problem, if a tool requires multiple (e.g. piped) processes to be
+    ran. With ProcessWrapper, all processes can be called directly from Python so
+    that their ids are known and they can be killed if they hang. A ProcessWrapper can
+    be passed as a parameter to ProcessUtils functions in place of a subprocess.Popen
+    object. 
+    """
     def __init__(self, processes):
-        self.processes = processes
+        self.processes = processes # subprocesses
     
     def kill(self):
+        """
+        Kill all subprocesses
+        """
         for process in self.processes:
             try:
                 process.kill()
@@ -21,23 +37,33 @@ class ProcessWrapper:
             #print poll
     
     def poll(self):
+        """
+        If any subprocess is running, returns None (not finished).
+        """
         for process in self.processes:
             if process.poll() == None:
                 return None
         return "FINISHED"
 
 def waitForProcess(process, numCorpusSentences, measureByGap, outputFile, counterName, updateMessage, timeout=None):
-    maxStartupTime = 600
+    """
+    Waits for a process to finish, and tracks the number of entities it writes
+    to it's outputfile. If writing a sentence takes longer than the timeout, 
+    the process is considered stalled and is killed.
+    """
+    maxStartupTime = 600 # Give extra time for the process to start up (even if it creates immediately an empty output file)
     counter = ProgressCounter(numCorpusSentences, counterName)
-    prevNumSentences = 0
+    prevNumSentences = 0 # Number of output sentences on previous check
     finalCheckLeft = True # Make one final check to update counters
     processStatus = None # When None, process not finished
     prevTime = time.time()
     startTime = time.time()
+    # Wait until process is finished and periodically check it's progress.
     while processStatus == None or finalCheckLeft:
         if processStatus != None: # Extra loop to let counters finish
-            finalCheckLeft = False
-        if os.path.exists(outputFile):
+            finalCheckLeft = False # Done only once
+        if os.path.exists(outputFile): # Output file has already appeared on disk
+            # Measure number of sentences in output file
             numSentences = 0
             f = codecs.open(outputFile, "rt", "utf-8")
             for line in f:
@@ -47,13 +73,15 @@ def waitForProcess(process, numCorpusSentences, measureByGap, outputFile, counte
                 else:
                     numSentences += 1
             f.close()
-            if numSentences - prevNumSentences != 0:
+            # Update status
+            if numSentences - prevNumSentences != 0: # Process has progressed
                 counter.update(numSentences - prevNumSentences, updateMessage + ": ")
-            if finalCheckLeft:
+            if finalCheckLeft: # This is a normal loop, not the final check
+                # Startuptime hasn't yet passed or process has made progress
                 if time.time() - startTime < maxStartupTime or numSentences - prevNumSentences != 0:
                 #if prevNumSentences == 0 or numSentences - prevNumSentences != 0:
-                    prevTime = time.time()
-                else:
+                    prevTime = time.time() # reset timeout
+                else: # Nothing happened on this update, check whether process hung
                     elapsedTime = time.time() - prevTime
                     if timeout != None and elapsedTime > timeout:
                         print >> sys.stderr, "Process timed out (" + str(elapsedTime) + " vs. " + str(timeout) + ")"
@@ -61,14 +89,17 @@ def waitForProcess(process, numCorpusSentences, measureByGap, outputFile, counte
                         process.kill()
                 prevNumSentences = numSentences
                 time.sleep(1)
-        else:
+        else: # Output file doesn't exist yet
             prevTime = time.time() # reset counter if output file hasn't been created
-        processStatus = process.poll()
+        processStatus = process.poll() # Get process status, None == still running
     
-    counter.markFinished() # If we get this far, don't show the error message
+    counter.markFinished() # If we get this far, don't show the error message even if process didn't finish
     return (numSentences, numCorpusSentences)
 
 def makeSubset(input, workdir, fromLine):
+    """
+    Make a subset of the input data from "fromLine" to end of input file.
+    """
     newInput = os.path.join(workdir, "input-from-" + str(fromLine))
     newInputFile = codecs.open(newInput, "wt", "utf-8")
 
@@ -84,21 +115,25 @@ def makeSubset(input, workdir, fromLine):
     return newInput
 
 def mergeOutput(dir, numCorpusSentences, measureByGap):
+    """
+    Merge output files (multiple files may have been created if program failed on a sentence)
+    """
     filenames = os.listdir(dir)
     outputs = []
     for filename in filenames:
         if filename.find("output-from") != -1:
             outputs.append( (int(filename.rsplit("-", 1)[-1]), filename) )
-    outputs.sort()
+    outputs.sort() # Order output sets by their first sentence index
     print outputs
     
     mergedOutput = codecs.open(os.path.join(dir, "merged-output"), "wt", "utf-8")
     
     missingSentences = 0
     numSentences = 0
+    # Go through output subsets in order
     for i in range(len(outputs)):
         f = codecs.open(os.path.join(dir, outputs[i][1]), "rt", "utf-8")
-        for line in f:
+        for line in f: # Copy to merged file
             mergedOutput.write(line)
             if measureByGap:
                 if line.strip() == "":
@@ -106,13 +141,14 @@ def mergeOutput(dir, numCorpusSentences, measureByGap):
             else:
                 numSentences += 1
         f.close()
+        # If sentences are missing from output, write empty lines in merged output
         if i < len(outputs) - 1: # not last output
-            while numSentences < outputs[i+1][0]:
+            while numSentences < outputs[i+1][0]: # Start of next subset not reached yet
                 mergedOutput.write("\n")
                 numSentences += 1
                 missingSentences += 1
-        else:
-            while numSentences < numCorpusSentences:
+        else: # last of the output subsets
+            while numSentences < numCorpusSentences: # End of whole data not reached yet
                 mergedOutput.write("\n")
                 numSentences += 1
                 missingSentences += 1
@@ -120,6 +156,10 @@ def mergeOutput(dir, numCorpusSentences, measureByGap):
     return missingSentences
 
 def getSubsetEndPos(subsetFileName, measureByGap):
+    """
+    Return the sentence count to which this process reached by counting
+    the sentences in the output file.
+    """
     if subsetFileName.find("-from-") == -1:
         return 0
     numSentences = getLines(subsetFileName, measureByGap)
@@ -127,6 +167,9 @@ def getSubsetEndPos(subsetFileName, measureByGap):
     return subsetPos + numSentences
 
 def getLines(filename, measureByGap):
+    """
+    Number of sentences in the file, measured either in lines, or by empty "gap" lines
+    """
     numSentences = 0
     f = codecs.open(filename, "rt", "utf-8")
     for line in f:
@@ -139,6 +182,10 @@ def getLines(filename, measureByGap):
     return numSentences
 
 def runSentenceProcess(launchProcess, programDir, input, workdir, measureByGap, counterName, updateMessage, timeout=None):
+    """
+    Runs a process on input sentences, and in case of problems skips one sentence and 
+    reruns the process on the remaining ones.
+    """
     # Count input sentences
     input = os.path.abspath(input)
     origInput = input
@@ -153,6 +200,7 @@ def runSentenceProcess(launchProcess, programDir, input, workdir, measureByGap, 
     finished = False
     startLine = 0
     while not finished:
+        # Count lines in input file (input data must be in a one sentence per line -format)
         inputLines = 0
         inputFile = codecs.open(input, "rt", "utf-8")
         for line in inputFile:
@@ -191,3 +239,10 @@ def getElementByAttrib(parent, tag, attDict):
             if found:
                 return element
     return None
+
+def setDefaultElement(parent, name):
+    element = parent.find(name)
+    if element == None:
+        element = ET.Element(name)
+        parent.append(element)
+    return element
