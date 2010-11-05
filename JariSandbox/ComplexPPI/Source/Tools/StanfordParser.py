@@ -10,20 +10,22 @@ except ImportError:
     import cElementTree as ET
 import cElementTreeUtils as ETUtils
 
-stanfordParserDir = "/home/jari/biotext/tools/stanford-parser-2008-10-26"
+stanfordParserDir = "/home/jari/biotext/tools/stanford-parser-2010-08-20"
 
 escDict={"-LRB-":"(",
          "-RRB-":")",
          "-LCB-":"{",
          "-RCB-":"}",
          "-LSB-":"[",
-         "-RSB-":"]"}
+         "-RSB-":"]",
+         "``":"\"",
+         "''":"\""}
 
 def runStanford(input, output):
     args = ["java", "-mx150m", "-cp", "stanford-parser.jar", "edu.stanford.nlp.trees.EnglishGrammaticalStructure", "-CCprocessed", "-treeFile", input] 
     return subprocess.Popen(args, stdout=codecs.open(output, "wt", "utf-8"))
 
-def addDependencies(outfile, parse, tokenByIndex=None):
+def addDependencies(outfile, parse, tokenByIndex=None, sentenceId=None):
     global escDict
     escSymbols = sorted(escDict.keys())
     
@@ -48,8 +50,8 @@ def addDependencies(outfile, parse, tokenByIndex=None):
         dep = ET.Element("dependency")
         dep.set("id", "cjp_" + str(depCount))
         if tokenByIndex != None:
-            assert t1Word == tokenByIndex[t1Index-1].get("text"), (t1Word, tokenByIndex[t1Index-1].get("text"), t1Index-1, depCount)
-            assert t2Word == tokenByIndex[t2Index-1].get("text"), (t2Word, tokenByIndex[t2Index-1].get("text"), t2Index-1, depCount)
+            assert t1Word == tokenByIndex[t1Index-1].get("text"), (t1Word, tokenByIndex[t1Index-1].get("text"), t1Index-1, depCount, sentenceId)
+            assert t2Word == tokenByIndex[t2Index-1].get("text"), (t2Word, tokenByIndex[t2Index-1].get("text"), t2Index-1, depCount, sentenceId)
             dep.set("t1", tokenByIndex[t1Index-1].get("id"))
             dep.set("t2", tokenByIndex[t2Index-1].get("id"))
         else:
@@ -108,8 +110,11 @@ def convertXML(parser, input, output):
     
     # Put penn tree lines in input file
     for sentence in corpusRoot.getiterator("sentence"):
-        parse = getElementByAttrib(sentence.find("sentenceAnalyses").find("parses"), "parse", {"parser":parser})
-        assert parse != None
+        sentenceAnalyses = setDefaultElement(sentence, "sentenceanalyses")
+        parses = setDefaultElement(sentenceAnalyses, "parses")
+        parse = getElementByAttrib(parses, "parse", {"parser":parser})
+        if parse == None:
+            continue
         pennTree = parse.get("pennstring")
         if pennTree == None or pennTree == "":
             continue
@@ -123,14 +128,18 @@ def convertXML(parser, input, output):
     # Get output and insert dependencies
     for sentence in corpusRoot.getiterator("sentence"):
         # Get parse
-        parse = getElementByAttrib(sentence.find("sentenceAnalyses").find("parses"), "parse", {"parser":parser})
-        assert parse != None
+        sentenceAnalyses = setDefaultElement(sentence, "sentenceanalyses")
+        parses = setDefaultElement(sentenceAnalyses, "parses")
+        parse = getElementByAttrib(parses, "parse", {"parser":parser})
+        if parse == None:
+            parse = ET.SubElement(parses, "parse")
+            parse.set("parser", "None")
         pennTree = parse.get("pennstring")
         if pennTree == None or pennTree == "":
             parse.set("stanford", "no_penn")
             continue
         # Get tokens
-        tokenization = getElementByAttrib(sentence.find("sentenceAnalyses").find("tokenizations"), "tokenization", {"tokenizer":parse.get("tokenizer")})
+        tokenization = getElementByAttrib(sentence.find("sentenceanalyses").find("tokenizations"), "tokenization", {"tokenizer":parse.get("tokenizer")})
         assert tokenization != None
         count = 0
         tokenByIndex = {}
@@ -138,7 +147,7 @@ def convertXML(parser, input, output):
             tokenByIndex[count] = token
             count += 1
         # Insert dependencies
-        deps = addDependencies(stanfordOutputFile, parse, tokenByIndex)
+        deps = addDependencies(stanfordOutputFile, parse, tokenByIndex, sentence.get("id"))
         if len(deps) == 0:
             parse.set("stanford", "no_dependencies")
         else:
