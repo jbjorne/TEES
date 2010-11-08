@@ -1,7 +1,7 @@
 """
 Edge Examples
 """
-__version__ = "$Revision: 1.51 $"
+__version__ = "$Revision: 1.52 $"
 
 import sys, os
 thisPath = os.path.dirname(os.path.abspath(__file__))
@@ -14,6 +14,7 @@ from FeatureBuilders.MultiEdgeFeatureBuilder import MultiEdgeFeatureBuilder
 from FeatureBuilders.TokenFeatureBuilder import TokenFeatureBuilder
 from FeatureBuilders.BioInferOntologyFeatureBuilder import BioInferOntologyFeatureBuilder
 from FeatureBuilders.NodalidaFeatureBuilder import NodalidaFeatureBuilder
+from FeatureBuilders.BacteriaRenamingFeatureBuilder import BacteriaRenamingFeatureBuilder
 #import Graph.networkx_v10rc1 as NX10
 from Core.SimpleGraph import Graph
 from FeatureBuilders.TriggerFeatureBuilder import TriggerFeatureBuilder
@@ -53,6 +54,8 @@ class MultiEdgeExampleBuilder(ExampleBuilder):
             self.multiEdgeFeatureBuilder.ontologyFeatureBuilder = BioInferOntologyFeatureBuilder(self.featureSet)
         if "nodalida" in self.styles:
             self.nodalidaFeatureBuilder = NodalidaFeatureBuilder(self.featureSet)
+        if "bacteria_renaming" in self.styles:
+            self.bacteriaRenamingFeatureBuilder = BacteriaRenamingFeatureBuilder(self.featureSet)
         #IF LOCAL
         if "bioinfer_limits" in self.styles:
             self.bioinferOntologies = OntologyUtils.getBioInferTempOntology()
@@ -169,6 +172,12 @@ class MultiEdgeExampleBuilder(ExampleBuilder):
             print >> sys.stderr, " Normalizing feature vectors"
             ExampleUtils.normalizeFeatureVectors(allExamples)
         return allExamples   
+    
+    def isPotentialRELInteraction(self, e1, e2):
+        if e1.get("type") == "Protein" and e2.get("type") == "Entity":
+            return True
+        else:
+            return False
     
     def isPotentialGeniaInteraction(self, e1, e2):
         """
@@ -294,17 +303,26 @@ class MultiEdgeExampleBuilder(ExampleBuilder):
                         categoryName = self.getCategoryName(sentenceGraph, eI, eJ, True)
                     else:
                         categoryName = self.getCategoryNameFromTokens(sentenceGraph, tI, tJ, True)
-                    if (not "genia_limits" in self.styles) or self.isPotentialGeniaInteraction(eI, eJ):
+                    # make forward
+                    makeExample = True
+                    if ("genia_limits" in self.styles) and not self.isPotentialGeniaInteraction(eI, eJ):
+                        makeExample = False
+                    if ("rel_limits" in self.styles) and not self.isPotentialRELInteraction(eI, eJ):
+                        makeExample = False
+                    if makeExample:
                         examples.append( self.buildExample(tI, tJ, paths, sentenceGraph, categoryName, exampleIndex, eI, eJ) )
                         exampleIndex += 1
+                    
                     # define reverse
                     if "entities" in self.styles:
                         categoryName = self.getCategoryName(sentenceGraph, eJ, eI, True)
                     else:
                         categoryName = self.getCategoryNameFromTokens(sentenceGraph, tJ, tI, True)
-                    
+                    # make reverse
                     makeExample = True
                     if ("genia_limits" in self.styles) and not self.isPotentialGeniaInteraction(eJ, eI):
+                        makeExample = False
+                    if ("rel_limits" in self.styles) and not self.isPotentialRELInteraction(eJ, eI):
                         makeExample = False
                     if ("bioinfer_limits" in self.styles) and not self.isPotentialBioInferInteraction(eJ, eI, categoryName):
                         makeExample = False
@@ -359,6 +377,10 @@ class MultiEdgeExampleBuilder(ExampleBuilder):
                     self.triggerFeatureBuilder.tag = "trg2_"
                     self.triggerFeatureBuilder.buildFeatures(token2)
                     self.triggerFeatureBuilder.setFeatureVector(None)
+                if "bacteria_renaming" in self.styles:
+                    self.bacteriaRenamingFeatureBuilder.setFeatureVector(features)
+                    self.bacteriaRenamingFeatureBuilder.buildPairFeatures(entity1, entity2)
+                    self.bacteriaRenamingFeatureBuilder.setFeatureVector(None)
                 #if "graph_kernel" in self.styles or not "no_dependency" in self.styles:
                 #    #print "Getting edges"
                 #    if token1 != token2 and pathExists:
@@ -470,6 +492,11 @@ class MultiEdgeExampleBuilder(ExampleBuilder):
             #extra["e2"] = entity2
             extra["e2"] = entity2.get("id")
         extra["categoryName"] = categoryName
+        if "bacteria_renaming" in self.styles:
+            if entity1.get("text") != None and entity1.get("text") != "":
+                extra["e1t"] = entity1.get("text").replace("  ", "---")
+            if entity2.get("text") != None and entity2.get("text") != "":
+                extra["e2t"] = entity2.get("text").replace("  ", "---")
         sentenceOrigId = sentenceGraph.sentenceElement.get("origId")
         if sentenceOrigId != None:
             extra["SOID"] = sentenceOrigId       
