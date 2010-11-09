@@ -96,6 +96,8 @@ def processCorpus(input, parserName):
 
     counts = defaultdict(int)
     matchByType = defaultdict(lambda : [0,0])
+    filteredMatchByType = defaultdict(lambda : [0,0])
+    filter = set(["NP", "TOK-IN", "WHADVP", "WHNP", "TOK-WP$", "TOK-PRP$", "NP-IN"])
     
     # fix spans
     for document in documents:
@@ -128,6 +130,9 @@ def processCorpus(input, parserName):
                 counts["phrases"] += len(value)
                 for phrase in value:
                     matchByType[phrase.get("type")][0] += 1
+                    if phrase.get("type") in filter:
+                        filteredMatchByType[phrase.get("type")][0] += 1
+                        counts["phrases-filtered"] += 1
             counts["tokens"] += len(tokenization.findall("token"))
             
             for entity in sentence.findall("entity"):
@@ -143,19 +148,27 @@ def processCorpus(input, parserName):
                 else:
                     minOffset = maxOffset
                 count = 0
+                filteredCount = 0
                 for phraseOffset in phraseOffsets:
                     if Range.contains(maxOffset, phraseOffset) and Range.contains(phraseOffset, minOffset):
                         for phrase in phraseDict[phraseOffset]:
                             print "  match", count, ETUtils.toStr(phrase)
                             count += 1
                             matchByType[phrase.get("type")][1] += 1
+                            if phrase.get("type") in filter:
+                                filteredCount += 1
+                                filteredMatchByType[phrase.get("type")][1] += 1
                 if count == 0:
                     print "  NO MATCH", ETUtils.toStr(entity)
                     counts["no-match"] += 1
                 else:
                     counts["match"] += 1
-    print matchByType
-    print counts
+                
+                if filteredCount == 0: counts["no-match-filtered"] += 1
+                else: counts["match-filtered"] += 1
+    print "Match", matchByType
+    print "Filtered", filteredMatchByType
+    print "Counts", counts
 
 if __name__=="__main__":
     import sys
