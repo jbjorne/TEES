@@ -17,6 +17,7 @@ class Annotation():
         self.text = text # protein/trigger
         self.charBegin = -1 # protein/trigger
         self.charEnd = -1 # protein/trigger
+        self.alternativeOffsets = []
         self.equiv = [] # group of elements that are equivalent
         self.trigger = trigger # event
         self.arguments = [] # event/relation
@@ -32,14 +33,32 @@ class Annotation():
     def isSpeculated(self):
         return self.speculation != None
     
+    def isName(self):
+        return self.type == "Protein" or self.type == "Gene"
+    
 def readTAnnotation(string):
+    #print string
     assert string[0] == "T", string
     string = string.strip()
     ann = Annotation()
-    ann.id, middle, ann.text = string.split("\t")
+    splits = string.split("\t")
+    ann.id = splits[0]
+    middle = splits[1]
+    ann.text = splits[2]
+    #ann.id, middle, ann.text = string.split("\t")
     ann.type, ann.charBegin, ann.charEnd = middle.split()
     ann.charBegin = int(ann.charBegin)
     ann.charEnd = int(ann.charEnd)
+    if len(splits) > 3:
+        skip = False
+        for split in splits[3:]:
+            if not skip:
+                cSplits = split.split()
+                assert len(cSplits) == 2, (cSplits, string)
+                c1 = int(cSplits[0])
+                c2 = int(cSplits[1])
+                ann.alternativeOffsets.append( (c1, c2) )
+            skip = not skip
     return ann
 
 def readStarAnnotation(string, proteins):
