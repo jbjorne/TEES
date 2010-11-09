@@ -30,8 +30,13 @@ def toInteractionXML(documents, corpusName="GENIA", output=None):
             entEl.set("origId", str(doc.id) + "." + str(protein.id))
             entEl.set("text", protein.text)
             entEl.set("charOffset", str(protein.charBegin) + "-" + str(protein.charEnd-1))
+            if len(protein.alternativeOffsets) > 0:
+                altOffs = []
+                for ao in protein.alternativeOffsets:
+                    altOffs.append( str(ao[0]) + "-" + str(ao[1]-1) ) 
+                entEl.set("altOffset", ",".join(altOffs))
             entEl.set("type", protein.type)
-            if protein.type == "Protein":
+            if protein.isName():
                 entEl.set("isName", "True")
             else:
                 entEl.set("isName", "False")
@@ -87,7 +92,7 @@ def toInteractionXML(documents, corpusName="GENIA", output=None):
                     intEl.set("origId", str(doc.id) + "." + str(relation.id))
                     intEl.set("e1", tMap[a2[1].id]) # link proteins to antecedent
                     intEl.set("e2", tMap[connProt[1].id])
-                    intEl.set("type", "CorefProt")
+                    intEl.set("type", "Target")
             docEl.append(intEl)
     
     if output != None:
@@ -123,28 +128,33 @@ def toSTFormat(input, output=None):
             sentenceOffset = Range.charOffsetToSingleTuple(sentence.get("charOffset"))
             sentenceOffsets[sentence.get("id")] = sentenceOffset
         for entity in document.getiterator("entity"):
+            eType = entity.get("type")
+            if eType == "neg":
+                continue
             entityOffset = Range.charOffsetToSingleTuple(entity.get("charOffset"))
             ann = Annotation()
-            ann.type = entity.get("type")
+            ann.type = eType
             ann.text = entity.get("text")
             ann.charBegin = entityOffset[0]
-            ann.charEnd = entityOffset[1]
+            ann.charEnd = entityOffset[1] + 1
             idStem = entity.get("id").rsplit(".", 1)[0]
             if sentenceOffsets.has_key(idStem):
                 sentenceOffset = sentenceOffsets[idStem]
                 ann.charBegin += sentenceOffset[0]
-                ann.charEnd += sentenceOffset[0] - 1
+                ann.charEnd += sentenceOffset[0]
             if entity.get("speculation") == "True":
                 ann.speculation = True
             if entity.get("negation") == "True":
                 ann.negation = True
-            if entity.get("isName"):
+            if entity.get("isName") == "True":
                 stDoc.proteins.append(ann)
             else:
                 stDoc.triggers.append(ann)
             tMap[entity.get("id")] = ann
         for interaction in document.getiterator("interaction"):
             intType = interaction.get("type")
+            if intType == "neg":
+                continue
             if intType in ["Site", "Gene_expression", "Transcription", "Protein_catabolism", "Localization", "Binding", "Phosphorylation", "Positive_regulation", "Negative_regulation", "Regulation"]:
                 if intType == "Site":
                     sites.append(interaction)
@@ -164,8 +174,19 @@ def toSTFormat(input, output=None):
                 rel.type = interaction.get("type")
                 e1 = interaction.get("e1")
                 e2 = interaction.get("e2")
-                rel.arguments.append(["Arg1", tMap[e1], None])
-                rel.arguments.append(["Arg2", tMap[e2], None])
+                #assert rel.type == "Protein-Component" or rel.type == "Subunit-Complex" or rel.type == "Renaming", (rel.type, stDoc.id, interaction.get("id"))
+                if rel.type == "Protein-Component" or rel.type == "Subunit-Complex": 
+                    rel.arguments.append(["Arg1", tMap[e1], None])
+                    rel.arguments.append(["Arg2", tMap[e2], None])
+                elif rel.type == "Renaming":
+                    rel.arguments.append(["Former", tMap[e1], None])
+                    rel.arguments.append(["New", tMap[e2], None])
+                elif rel.type == "Coref":
+                    rel.arguments.append(["Anaphora", tMap[e1], None])
+                    rel.arguments.append(["Antecedent", tMap[e2], None])
+                    # NOTE! remember to connect the proteins
+                else:
+                    assert False, (rel.type, stDoc.id, interaction.get("id"))
                 stDoc.relations.append(rel)
         # Map argument targets
         for eKey in sorted(eMap.keys()):
@@ -185,8 +206,10 @@ def toSTFormat(input, output=None):
         print >> sys.stderr, "Writing output to", output
         writeSet(documents, output)
     return documents
-                
+
 if __name__=="__main__":
+    import sys
+    from optparse import OptionParser
     # Import Psyco if available
     try:
         import psyco
@@ -194,15 +217,36 @@ if __name__=="__main__":
         print >> sys.stderr, "Found Psyco, using"
     except ImportError:
         print >> sys.stderr, "Psyco not installed"
+
+    optparser = OptionParser(usage="%prog [options]\nRecalculate head token offsets.")
+    optparser.add_option("-i", "--input", default=None, dest="input", help="Corpus in interaction xml format", metavar="FILE")
+    optparser.add_option("-o", "--output", default=None, dest="output", help="Output file in interaction xml format.")
+    (options, args) = optparser.parse_args()
     
-    #proteins, triggers, events = load(1335418, "/home/jari/biotext/tools/TurkuEventExtractionSystem-1.0/data/evaluation-data/evaluation-tools-devel-gold")
-    #write(1335418, "/home/jari/data/temp", proteins, triggers, events )
-    
-    #p = "/home/jari/data/BioNLP09SharedTask/bionlp09_shared_task_development_data_rev1"
-    p = "/home/jari/data/BioNLP11SharedTask/BioNLP-ST_2011_Entity_Relations_development_data"
-    print "Loading documents"
-    documents = loadSet(p)
-    print "Writing XML"
-    xml = toInteractionXML(documents, "GENIA", "/home/jari/data/temp/new-devel.xml")
-    print "Converting back"
-    toSTFormat(xml, "/home/jari/data/temp/new-devel-stformat")
+    if options.input[-4:] == ".xml":
+        print >> sys.stderr, "Loading XML"
+        xml = ETUtils.ETFromObj(options.input)
+        print >> sys.stderr, "Converting to ST Format"
+        toSTFormat(xml, options.output)
+
+                
+#if __name__=="__main__":
+#    # Import Psyco if available
+#    try:
+#        import psyco
+#        psyco.full()
+#        print >> sys.stderr, "Found Psyco, using"
+#    except ImportError:
+#        print >> sys.stderr, "Psyco not installed"
+#    
+#    #proteins, triggers, events = load(1335418, "/home/jari/biotext/tools/TurkuEventExtractionSystem-1.0/data/evaluation-data/evaluation-tools-devel-gold")
+#    #write(1335418, "/home/jari/data/temp", proteins, triggers, events )
+#    
+#    #p = "/home/jari/data/BioNLP09SharedTask/bionlp09_shared_task_development_data_rev1"
+#    p = "/home/jari/data/BioNLP11SharedTask/BioNLP-ST_2011_Entity_Relations_development_data"
+#    print "Loading documents"
+#    documents = loadSet(p)
+#    print "Writing XML"
+#    xml = toInteractionXML(documents, "GENIA", "/home/jari/data/temp/new-devel.xml")
+#    print "Converting back"
+#    toSTFormat(xml, "/home/jari/data/temp/new-devel-stformat")
