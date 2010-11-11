@@ -1,7 +1,7 @@
 """
 Character offset tools.
 """
-__version__ = "$Revision: 1.9 $"
+__version__ = "$Revision: 1.10 $"
 
 import types
 
@@ -44,6 +44,24 @@ def contains(range1, range2):
         return True
     else:
         return False
+
+def length(range):
+    return range[1] - range[0] + 1
+
+def mismatch(range1, range2):
+    l1 = length(range1)
+    l2 = length(range2)
+    if contains(range1, range2):
+        return l1 - l2
+    elif contains(range2, range1):
+        return l2 - l1
+    elif overlap(range1, range2):
+        if range1[1] >= range2[0]:
+            return length( (range1[0], range2[1]) )
+        else: # range2[0] >= range1[1]
+            return length( (range2[0], range1[1]) )
+    else:
+        return l1 + l2
 
 def overlap(range1, range2):
     """ Checks whether two ranges (f.e. character offsets overlap)
