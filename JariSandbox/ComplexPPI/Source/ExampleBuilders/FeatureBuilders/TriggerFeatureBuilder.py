@@ -140,7 +140,7 @@ class TriggerFeatureBuilder(FeatureBuilder):
             self.outEdgesByToken[token] = outEdges
             self.edgeSetByToken[token] = set(inEdges + outEdges)
         
-    def buildFeatures(self, token):
+    def buildFeatures(self, token, linear=True):
         sentenceGraph = self.sentenceGraph
         tokenIndex = None
         for i in range(len(self.sentenceGraph.tokens)):
@@ -171,9 +171,10 @@ class TriggerFeatureBuilder(FeatureBuilder):
         self.setFeature("nonstem_"+text[len(stem):], 1)
         
         # Linear order features
-        for index in [-3,-2,-1,1,2,3]:
-            if i + index > 0 and i + index < len(sentenceGraph.tokens):
-                self.buildLinearOrderFeatures(sentenceGraph, i + index, str(index))
+        if linear:
+            for index in [-3,-2,-1,1,2,3]:
+                if i + index > 0 and i + index < len(sentenceGraph.tokens):
+                    self.buildLinearOrderFeatures(sentenceGraph, i + index, str(index))
         
         # Content
         if i > 0 and text[0].isalpha() and text[0].isupper():
@@ -199,28 +200,29 @@ class TriggerFeatureBuilder(FeatureBuilder):
             if j > 1:
                 self.setFeature("tt_"+text[j-2:j+1].lower(), 1)
         
-        # Attached edges (Hanging in and out edges)
-#        t1InEdges = self.inEdgesByToken[token]
-#        for edge in t1InEdges:
-#            edgeType = edge[2].get("type")
-#            self.setFeature("t1HIn_"+edgeType, 1)
-#            self.setFeature("t1HIn_"+edge[0].get("POS"), 1)
-#            self.setFeature("t1HIn_"+edgeType+"_"+edge[0].get("POS"), 1)
-#            tokenText = sentenceGraph.getTokenText(edge[0])
-#            self.setFeature("t1HIn_"+tokenText, 1)
-#            self.setFeature("t1HIn_"+edgeType+"_"+tokenText, 1)
-#        t1OutEdges = self.outEdgesByToken[token]
-#        for edge in t1OutEdges:
-#            edgeType = edge[2].get("type")
-#            self.setFeature("t1HOut_"+edgeType, 1)
-#            self.setFeature("t1HOut_"+edge[1].get("POS"), 1)
-#            self.setFeature("t1HOut_"+edgeType+"_"+edge[1].get("POS"), 1)
-#            tokenText = sentenceGraph.getTokenText(edge[1])
-#            self.setFeature("t1HOut_"+tokenText, 1)
-#            self.setFeature("t1HOut_"+edgeType+"_"+tokenText, 1)
-        
         # chains
         self.buildChains(token, sentenceGraph)
+
+    def buildAttachedEdgeFeatures(self, token, sentenceGraph):
+        # Attached edges (Hanging in and out edges)
+        t1InEdges = self.inEdgesByToken[token]
+        for edge in t1InEdges:
+            edgeType = edge[2].get("type")
+            self.setFeature("t1HIn_"+edgeType, 1)
+            self.setFeature("t1HIn_"+edge[0].get("POS"), 1)
+            self.setFeature("t1HIn_"+edgeType+"_"+edge[0].get("POS"), 1)
+            tokenText = sentenceGraph.getTokenText(edge[0])
+            self.setFeature("t1HIn_"+tokenText, 1)
+            self.setFeature("t1HIn_"+edgeType+"_"+tokenText, 1)
+        t1OutEdges = self.outEdgesByToken[token]
+        for edge in t1OutEdges:
+            edgeType = edge[2].get("type")
+            self.setFeature("t1HOut_"+edgeType, 1)
+            self.setFeature("t1HOut_"+edge[1].get("POS"), 1)
+            self.setFeature("t1HOut_"+edgeType+"_"+edge[1].get("POS"), 1)
+            tokenText = sentenceGraph.getTokenText(edge[1])
+            self.setFeature("t1HOut_"+tokenText, 1)
+            self.setFeature("t1HOut_"+edgeType+"_"+tokenText, 1)
     
     def buildChains(self,token,sentenceGraph,depthLeft=3,chain="",visited=None):
         if depthLeft == 0:
