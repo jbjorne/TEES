@@ -34,6 +34,15 @@ def getPhraseDict(phrases):
         phraseDict[phraseOffset].append(phrase)
     return phraseDict
 
+def getPhraseTypeCounts(phrases):
+    counts = {}
+    for phrase in phrases:
+        pType = phrase.get("type")
+        if pType not in counts:
+            counts[pType] = 0
+        counts[pType] += 1
+    return counts
+
 def makePhrase(type, offset, begin, end):
     e = ET.Element("phrase")
     e.set("type", type)
@@ -95,7 +104,7 @@ def makeTokenSubPhrases(tokens, phraseDict, includePOS=["PRP$", "IN", "WP$"]):
         if tokPOS in includePOS:
             tokOffset = Range.charOffsetToSingleTuple(token.get("charOffset"))
             if not phraseDict.has_key(tokOffset):
-                newPhrase = makePhrase("TOK-" + tokPOS, tokOffset, i, i)
+                newPhrase = makePhrase("TOK-t" + tokPOS, tokOffset, i, i)
                 newPhrases.append(newPhrase)
                 phraseDict[tokOffset] = [newPhrase]
     return newPhrases
@@ -148,11 +157,14 @@ def getPhraseEntityMapping(entities, phraseDict):
         matches = getMatchingPhrases(entity, phraseOffsets, phraseDict)
         if len(matches) == 1:
             bestMatch = matches[0]
+        elif len(matches) == 0:
+            bestMatch = None
         else:
             bestMatch = selectBestMatch(entity, matches)
-        if not phraseToEntity.has_key(bestMatch):
-            phraseToEntity[bestMatch] = []
-        phraseToEntity[bestMatch].append("entity")
+        if bestMatch != None:
+            if not phraseToEntity.has_key(bestMatch):
+                phraseToEntity[bestMatch] = []
+            phraseToEntity[bestMatch].append(entity)
     return phraseToEntity
 
 def processCorpus(input, parserName):
@@ -163,23 +175,23 @@ def processCorpus(input, parserName):
     counts = defaultdict(int)
     matchByType = defaultdict(lambda : [0,0])
     filteredMatchByType = defaultdict(lambda : [0,0])
-    filter = set(["NP", "TOK-IN", "WHADVP", "WHNP", "TOK-WP$", "TOK-PRP$", "NP-IN"])
+    filter = set(["NP", "TOK-tIN", "WHADVP", "WHNP", "TOK-tWP$", "TOK-tPRP$", "NP-IN"])
     
-    # fix spans
-    for document in documents:
-        for sentence in document.findall("sentence"):
-            sentOffset = Range.charOffsetToSingleTuple(sentence.get("charOffset"))
-            for entity in sentence.findall("entity"):
-                altOffsetString = entity.get("altOffset")
-                if altOffsetString == None:
-                    continue
-                #print altOffsetString
-                altOffsets = Range.charOffsetToTuples(altOffsetString)
-                assert len(altOffsets) == 1
-                for i in range(len(altOffsets)):
-                    altOffset = altOffsets[i] 
-                    altOffsets[i] = (altOffset[0] - sentOffset[0], altOffset[1] - sentOffset[0])
-                entity.set("altOffset", Range.tuplesToCharOffset(altOffsets))
+#    # fix spans
+#    for document in documents:
+#        for sentence in document.findall("sentence"):
+#            sentOffset = Range.charOffsetToSingleTuple(sentence.get("charOffset"))
+#            for entity in sentence.findall("entity"):
+#                altOffsetString = entity.get("altOffset")
+#                if altOffsetString == None:
+#                    continue
+#                #print altOffsetString
+#                altOffsets = Range.charOffsetToTuples(altOffsetString)
+#                assert len(altOffsets) == 1
+#                for i in range(len(altOffsets)):
+#                    altOffset = altOffsets[i] 
+#                    altOffsets[i] = (altOffset[0] - sentOffset[0], altOffset[1] - sentOffset[0])
+#                entity.set("altOffset", Range.tuplesToCharOffset(altOffsets))
     
     #counter = ProgressCounter(len(documents), "Documents")
     for document in documents:
