@@ -13,14 +13,26 @@ except ImportError:
 import cElementTreeUtils as ETUtils
 import Range
 
-def getPhrases(parse):
+def getPhrases(parse, filter=None):
     phrases = parse.findall("phrase")
     toKeep = []
     for phrase in phrases:
         if phrase.get("charOffset") == None:
             continue
+        if filter != None and phrase.get("type") not in filter:
+            continue
         toKeep.append(phrase)
     return toKeep
+
+def getPhraseDict(phrases):
+    phraseDict = {}   
+    # Define offsets
+    for phrase in phrases:
+        phraseOffset = Range.charOffsetToSingleTuple(phrase.get("charOffset"))
+        if not phraseDict.has_key(phraseOffset):
+            phraseDict[phraseOffset] = []
+        phraseDict[phraseOffset].append(phrase)
+    return phraseDict
 
 def makePhrase(type, offset, begin, end):
     e = ET.Element("phrase")
@@ -30,19 +42,11 @@ def makePhrase(type, offset, begin, end):
     e.set("charOffset", str(offset[0])+"-"+str(offset[1]))
     return e
 
-def makePhrases(parse, tokenization):
-    phrases = getPhrases(parse)
-    phraseDict = {}
-    
-    # Define offsets
+def makeINSubPhrases(phrases, tokens, phraseDict, filter=None):
+    newPhrases = []
     for phrase in phrases:
-        phraseOffset = Range.charOffsetToSingleTuple(phrase.get("charOffset"))
-        if not phraseDict.has_key(phraseOffset):
-            phraseDict[phraseOffset] = []
-        phraseDict[phraseOffset].append(phrase)
-    
-    tokens = tokenization.findall("token")
-    for phrase in phrases[:]:
+        if filter != None and phrase.get("type") not in filter:
+            continue
         phraseOffset = Range.charOffsetToSingleTuple(phrase.get("charOffset"))
         phraseBegin = int(phrase.get("begin"))
         phraseEnd = int(phrase.get("end"))
@@ -57,12 +61,17 @@ def makePhrases(parse, tokenization):
                           phraseBegin + tokCount-1)
                 if not phraseDict.has_key(newPhraseOffset):
                     #print "NEW PHRASE:", ETUtils.toStr(newPhrase)
-                    phrases.append(newPhrase)
+                    newPhrases.append(newPhrase)
                     phraseDict[newPhraseOffset] = [newPhrase]
             prevToken = token
             tokCount += 1
-    # DET-phrases
-    for phrase in phrases[:]:
+    return newPhrases
+
+def makeDETSubPhrases(phrases, tokens, phraseDict, filter=None):
+    newPhrases = []
+    for phrase in phrases:
+        if filter != None and phrase.get("type") not in filter:
+            continue
         phraseOffset = Range.charOffsetToSingleTuple(phrase.get("charOffset"))
         phraseBegin = int(phrase.get("begin"))
         phraseEnd = int(phrase.get("end"))
@@ -74,20 +83,77 @@ def makePhrases(parse, tokenization):
                       phraseEnd)
             if not phraseDict.has_key(newPhraseOffset):
                 #print "NEW PHRASE:", ETUtils.toStr(newPhrase)
-                phrases.append(newPhrase)
+                newPhrases.append(newPhrase)
                 phraseDict[newPhraseOffset] = [newPhrase]
-    # Token-phrases
+    return newPhrases
+
+def makeTokenSubPhrases(tokens, phraseDict, includePOS=["PRP$", "IN", "WP$"]):
+    newPhrases = []
     for i in range(len(tokens)):
         token = tokens[i]
         tokPOS = token.get("POS")
-        if tokPOS in ["PRP$", "IN", "WP$"]:
+        if tokPOS in includePOS:
             tokOffset = Range.charOffsetToSingleTuple(token.get("charOffset"))
             if not phraseDict.has_key(tokOffset):
                 newPhrase = makePhrase("TOK-" + tokPOS, tokOffset, i, i)
+                newPhrases.append(newPhrase)
                 phraseDict[tokOffset] = [newPhrase]
+    return newPhrases
 
-    return phraseDict
+def makePhrases(parse, tokenization):
+    phrases = getPhrases(parse)
+    phraseDict = getPhraseDict(phrases)    
+    tokens = tokenization.findall("token")
+    
+    # IN-phrases
+    phrases.extend(makeINSubPhrases(phrases, tokens, phraseDict))
+    # DET-phrases
+    phrases.extend(makeDETSubPhrases(phrases, tokens, phraseDict))
+    # Token-phrases
+    phrases.extend(makeTokenSubPhrases(tokens, phraseDict))
+
+    return phrases, phraseDict
     #phraseOffsets = phraseDict.keys()
+
+def getMatchingPhrases(entity, phraseOffsets, phraseDict):
+    matches = []
+    if entity.get("isName") == "True":
+        return []
+    maxOffset = Range.charOffsetToSingleTuple(entity.get("charOffset"))
+    minOffset = entity.get("altOffset")
+    if minOffset != None:
+        minOffset = Range.charOffsetToSingleTuple(minOffset)
+    else:
+        minOffset = maxOffset
+    for phraseOffset in phraseOffsets:
+        if Range.contains(maxOffset, phraseOffset) and Range.contains(phraseOffset, minOffset):
+            matches.extend(phraseDict[phraseOffset])
+    return matches
+
+def selectBestMatch(entity, phrases):
+    entOffset = Range.charOffsetToSingleTuple(entity.get("charOffset"))
+    best = (sys.maxint, None)
+    for phrase in phrases:
+        matchValue = Range.mismatch(entOffset, Range.charOffsetToSingleTuple(phrase.get("charOffset")))
+        if best[0] > matchValue:
+            best = (matchValue, phrase)
+    return best[1]
+
+def getPhraseEntityMapping(entities, phraseDict):
+    phraseOffsets = phraseDict.keys()
+    phraseToEntity = {}
+    for entity in entities:
+        if entity.get("isName") == "True":
+            continue
+        matches = getMatchingPhrases(entity, phraseOffsets, phraseDict)
+        if len(matches) == 1:
+            bestMatch = matches[0]
+        else:
+            bestMatch = selectBestMatch(entity, matches)
+        if not phraseToEntity.has_key(bestMatch):
+            phraseToEntity[bestMatch] = []
+        phraseToEntity[bestMatch].append("entity")
+    return phraseToEntity
 
 def processCorpus(input, parserName):
     print >> sys.stderr, "Loading corpus file", input
@@ -122,7 +188,7 @@ def processCorpus(input, parserName):
             if parse == None:
                 continue
             tokenization = ETUtils.getElementByAttrib(sentence.find("sentenceanalyses"), "tokenization", {"tokenizer":parse.get("tokenizer")})
-            phraseDict = makePhrases(parse, tokenization)
+            phrases, phraseDict = makePhrases(parse, tokenization)
             phraseOffsets = phraseDict.keys()
             #phraseOffsets.sort()
             
@@ -135,38 +201,48 @@ def processCorpus(input, parserName):
                         counts["phrases-filtered"] += 1
             counts["tokens"] += len(tokenization.findall("token"))
             
+            corefType = {}
+            for interaction in sentence.findall("interaction"):
+                if interaction.get("type") == "Coref":
+                    corefType[interaction.get("e1")] = "Anaphora"
+                    corefType[interaction.get("e2")] = "Antecedent"
+            
             for entity in sentence.findall("entity"):
                 if entity.get("isName") == "True":
                     continue
                 counts["entity"] += 1
                 print "entity", entity.get("id")
                 print ETUtils.toStr(entity)
-                maxOffset = Range.charOffsetToSingleTuple(entity.get("charOffset"))
-                minOffset = entity.get("altOffset")
-                if minOffset != None:
-                    minOffset = Range.charOffsetToSingleTuple(minOffset)
-                else:
-                    minOffset = maxOffset
+                matches = getMatchingPhrases(entity, phraseOffsets, phraseDict)
                 count = 0
                 filteredCount = 0
-                for phraseOffset in phraseOffsets:
-                    if Range.contains(maxOffset, phraseOffset) and Range.contains(phraseOffset, minOffset):
-                        for phrase in phraseDict[phraseOffset]:
-                            print "  match", count, ETUtils.toStr(phrase)
-                            count += 1
-                            matchByType[phrase.get("type")][1] += 1
-                            if phrase.get("type") in filter:
-                                filteredCount += 1
-                                filteredMatchByType[phrase.get("type")][1] += 1
+                for phrase in matches:
+                    print "  match", count, ETUtils.toStr(phrase)
+                    count += 1
+                    matchByType[phrase.get("type")][1] += 1
+                    cType = "UNKNOWN"
+                    if corefType.has_key(entity.get("id")):
+                        cType = corefType[entity.get("id")]
+                    matchByType[phrase.get("type")+"_"+cType][1] += 1
+                    if phrase.get("type") in filter:
+                        filteredCount += 1
+                        filteredMatchByType[phrase.get("type")][1] += 1
+                # Matching
                 if count == 0:
                     print "  NO MATCH", ETUtils.toStr(entity)
                     counts["no-match"] += 1
                 else:
                     counts["match"] += 1
-                
+                # Multimatching
+                if len(matches) > 1:
+                    bestMatch = selectBestMatch(entity, matches)
+                    print "  MULTIMATCH("+ entity.get("charOffset")+","+str(entity.get("altOffset")) + ")", ", ".join([x.get("type") + "_" + x.get("charOffset") for x in matches]), "SEL(" + bestMatch.get("type") + "_" + bestMatch.get("charOffset") + ")"
+                # Filtered matching
                 if filteredCount == 0: counts["no-match-filtered"] += 1
                 else: counts["match-filtered"] += 1
-    print "Match", matchByType
+    print "Match"
+    for key in sorted(matchByType.keys()):
+        print "  ", key, " ", matchByType[key]
     print "Filtered", filteredMatchByType
     print "Counts", counts
 
