@@ -1,7 +1,7 @@
 """
 Base class for FeatureBuilders
 """
-__version__ = "$Revision: 1.12 $"
+__version__ = "$Revision: 1.13 $"
 
 class FeatureBuilder:
     """
@@ -24,6 +24,9 @@ class FeatureBuilder:
         self.maskNamedEntities = True # named entity text strings are replaced with NAMED_ENT
         self.tag = "" # a prefix that is added to each feature name
     
+    def setTag(self, tag=""):
+        self.tag = tag
+    
     def setFeatureVector(self, features, entity1=None, entity2=None):
         """
         When the feature builder builds features, they are put to this feature vector.
@@ -40,7 +43,7 @@ class FeatureBuilder:
         self.entity2 = entity2
         self.tokenFeatures = {}
         
-    def setFeature(self, name, value):
+    def setFeature(self, name, value=1):
         """
         Add a feature to the feature vector. If the feature already exists, its current
         value is replaced with the new value. All features are prefixed with FeatureBuilder.tag.
