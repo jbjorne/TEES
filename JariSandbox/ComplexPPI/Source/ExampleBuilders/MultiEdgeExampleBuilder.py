@@ -1,7 +1,7 @@
 """
 Edge Examples
 """
-__version__ = "$Revision: 1.52 $"
+__version__ = "$Revision: 1.53 $"
 
 import sys, os
 thisPath = os.path.dirname(os.path.abspath(__file__))
@@ -380,6 +380,7 @@ class MultiEdgeExampleBuilder(ExampleBuilder):
                 if "bacteria_renaming" in self.styles:
                     self.bacteriaRenamingFeatureBuilder.setFeatureVector(features)
                     self.bacteriaRenamingFeatureBuilder.buildPairFeatures(entity1, entity2)
+                    #self.bacteriaRenamingFeatureBuilder.buildSubstringFeatures(entity1, entity2) # decreases perf. 74.76 -> 72.41
                     self.bacteriaRenamingFeatureBuilder.setFeatureVector(None)
                 #if "graph_kernel" in self.styles or not "no_dependency" in self.styles:
                 #    #print "Getting edges"
@@ -494,9 +495,9 @@ class MultiEdgeExampleBuilder(ExampleBuilder):
         extra["categoryName"] = categoryName
         if "bacteria_renaming" in self.styles:
             if entity1.get("text") != None and entity1.get("text") != "":
-                extra["e1t"] = entity1.get("text").replace("  ", "---")
+                extra["e1t"] = entity1.get("text").replace(" ", "---").replace(":","-COL-")
             if entity2.get("text") != None and entity2.get("text") != "":
-                extra["e2t"] = entity2.get("text").replace("  ", "---")
+                extra["e2t"] = entity2.get("text").replace(" ", "---").replace(":","-COL-")
         sentenceOrigId = sentenceGraph.sentenceElement.get("origId")
         if sentenceOrigId != None:
             extra["SOID"] = sentenceOrigId       
