@@ -7,7 +7,7 @@ Functions for easier use of cElementTree.
 
   Description: Convenience functions for easier use of cElementTree.
 """
-__version__ = "$Revision: 1.16 $"
+__version__ = "$Revision: 1.17 $"
 
 import sys
 
@@ -155,7 +155,24 @@ def toStr(element, recursive=True):
         if element.tail != None:
             s += element.tail
     return s
-    
+
+def getElementByAttrib(parent, tag, attDict):
+    for element in parent.getiterator():
+        if element.tag == tag:
+            found = True
+            for k, v in attDict.iteritems():
+                if element.get(k) != v:
+                    found = False
+            if found:
+                return element
+    return None
+
+def setDefaultElement(parent, name):
+    element = parent.find(name)
+    if element == None:
+        element = ET.Element(name)
+        parent.append(element)
+    return element
 
 if __name__=="__main__":
     r=ElementTree.parse("delme.xml").getroot()
