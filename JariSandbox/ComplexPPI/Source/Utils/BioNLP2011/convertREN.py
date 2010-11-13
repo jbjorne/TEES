@@ -4,6 +4,7 @@ import STFormat.STTools as ST
 import STFormat.ConvertXML as STConvert
 import InteractionXML.RemoveUnconnectedEntities
 import InteractionXML.DivideSets
+import InteractionXML.DeleteElements
 thisPath = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.abspath(os.path.join(thisPath,"../../")))
 import Utils.Stream as Stream
@@ -35,15 +36,19 @@ def convert(datasets, outdir, corpusName):
 #    xml = Tools.GeniaSentenceSplitter.makeSentences(xml, bigfileName+"-sentences.xml")
 #    print >> sys.stderr, "Parsing"
 #    Tools.CharniakJohnsonParser.parse(xml, bigfileName+"-parsed.xml", tokenizationName=None, parseName="McClosky", requireEntities=False)
-    print >> sys.stderr, "Stanford Conversion"
-    Tools.StanfordParser.convertXML("McClosky", bigfileName+"-parsed.xml", bigfileName+"-stanford.xml")
-    print >> sys.stderr, "Protein Name Splitting"
-    splitterCommand = "python /home/jari/cvs_checkout/PPI_Learning/Analysers/ProteinNameSplitter.py -f " + bigfileName+"-stanford.xml" + " -o " + bigfileName+"-split.xml" + " -p " + "McClosky" + " -t " + "McClosky" + " -s split-McClosky" + " -n split-McClosky"
-    subprocess.call(splitterCommand, shell=True)
-    print >> sys.stderr, "Head Detection"
-    xml = FindHeads.findHeads(bigfileName+"-split.xml", "split-McClosky", tokenization=None, output=bigfileName+".xml", removeExisting=True)
-    print >> sys.stderr, "Dividing into sets"
-    InteractionXML.DivideSets.processCorpus(xml, outDir, corpusName + "-", ".xml")
+#    print >> sys.stderr, "Stanford Conversion"
+#    Tools.StanfordParser.convertXML("McClosky", bigfileName+"-parsed.xml", bigfileName+"-stanford.xml")
+#    print >> sys.stderr, "Protein Name Splitting"
+#    splitterCommand = "python /home/jari/cvs_checkout/PPI_Learning/Analysers/ProteinNameSplitter.py -f " + bigfileName+"-stanford.xml" + " -o " + bigfileName+"-split.xml" + " -p " + "McClosky" + " -t " + "McClosky" + " -s split-McClosky" + " -n split-McClosky"
+#    subprocess.call(splitterCommand, shell=True)
+#    print >> sys.stderr, "Head Detection"
+#    xml = FindHeads.findHeads(bigfileName+"-split.xml", "split-McClosky", tokenization=None, output=bigfileName+".xml", removeExisting=True)
+#    print >> sys.stderr, "Dividing into sets"
+#    InteractionXML.DivideSets.processCorpus(bigfileName + ".xml", outDir, corpusName + "-", ".xml")
+    if "devel" in datasets.keys():
+        print >> sys.stderr, "Creating empty devel set"
+        deletionRules = {"interaction":{},"entity":{"isName":"False"}}
+        InteractionXML.DeleteElements.processCorpus(corpusName + "-devel.xml", corpusName + "-devel-empty.xml", deletionRules)
     return xml
 
 if __name__=="__main__":
