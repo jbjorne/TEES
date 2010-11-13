@@ -55,8 +55,10 @@ def processCorpus(inputFilename, outputFilename, rules):
     for k in sorted(countsByType.keys()):
         print >> sys.stderr, "  " + k + ":", countsByType[k]
     
-    print >> sys.stderr, "Writing output to", options.output
-    ETUtils.write(corpusRoot, options.output)
+    if outputFilename != None:
+        print >> sys.stderr, "Writing output to", outputFilename
+        ETUtils.write(corpusRoot, outputFilename)
+    return corpusTree
 
 if __name__=="__main__":
     import sys
