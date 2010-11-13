@@ -19,6 +19,9 @@ optparser.add_option("--csc", default="", dest="csc", help="")
 # Example builders
 optparser.add_option("-f", "--triggerExampleBuilder", default="GeneralEntityTypeRecognizerGztr", dest="triggerExampleBuilder", help="")
 optparser.add_option("-g", "--edgeExampleBuilder", default="MultiEdgeExampleBuilder", dest="edgeExampleBuilder", help="")
+# Feature params
+optparser.add_option("--triggerStyle", default="typed", dest="triggerStyle", help="")
+optparser.add_option("--edgeStyle", default=None, dest="edgeStyle", help="")
 # Id sets
 optparser.add_option("-v", "--triggerIds", default=None, dest="triggerIds", help="Trigger detector SVM example class and feature id file stem (files = STEM.class_names and STEM.feature_names)")
 optparser.add_option("-w", "--edgeIds", default=None, dest="edgeIds", help="Edge detector SVM example class and feature id file stem (files = STEM.class_names and STEM.feature_names)")
@@ -26,6 +29,8 @@ optparser.add_option("-w", "--edgeIds", default=None, dest="edgeIds", help="Edge
 optparser.add_option("-x", "--triggerParams", default="1000,5000,10000,20000,50000,80000,100000,150000,180000,200000,250000,300000,350000,500000,1000000", dest="triggerParams", help="Trigger detector c-parameter values")
 optparser.add_option("-y", "--recallAdjustParams", default="0.5,0.6,0.65,0.7,0.85,1.0,1.1,1.2", dest="recallAdjustParams", help="Recall adjuster parameter values")
 optparser.add_option("-z", "--edgeParams", default="5000,7500,10000,20000,25000,28000,50000,60000,65000", dest="edgeParams", help="Edge detector c-parameter values")
+# Shared task evaluation
+optparser.add_option("-s", "--sharedTask", default="True", action="store_false", dest="sharedTask", help="Do Shared Task evaluation")
 (options, args) = optparser.parse_args()
 
 # Check options
@@ -48,8 +53,13 @@ TRAIN_FILE = options.trainFile
 TEST_FILE = options.testFile
 
 # Example generation parameters
-EDGE_FEATURE_PARAMS="style:trigger_features,typed,directed,no_linear,entities,genia_limits,noMasking,maxFeatures"
-TRIGGER_FEATURE_PARAMS="style:typed"
+if options.sharedTask:
+    EDGE_FEATURE_PARAMS="style:trigger_features,typed,directed,no_linear,entities,genia_limits,noMasking,maxFeatures"
+else:
+    EDGE_FEATURE_PARAMS="style:trigger_features,typed,directed,no_linear,entities,noMasking,maxFeatures"
+if options.edgeStyle != None:
+    EDGE_FEATURE_PARAMS="style:"+options.edgeStyle
+TRIGGER_FEATURE_PARAMS="style:"+options.triggerStyle #"style:typed"
 
 boosterParams = [float(i) for i in options.recallAdjustParams.split(",")] 
 
@@ -60,6 +70,8 @@ CSC_WORKDIR = os.path.join("CSCConnection",WORKDIR.lstrip("/"))
 workdir(WORKDIR, False) # Select a working directory, don't remove existing files
 log() # Start logging into a file in working directory
 
+print >> sys.stderr, "Edge params:", EDGE_FEATURE_PARAMS
+print >> sys.stderr, "Trigger params:", TRIGGER_FEATURE_PARAMS
 TRIGGER_EXAMPLE_BUILDER = eval(options.triggerExampleBuilder)
 EDGE_EXAMPLE_BUILDER = eval(options.edgeExampleBuilder)
 
@@ -82,8 +94,8 @@ if options.mode in ["BOTH", "MODELS"]:
     # Trigger example generation
     ###############################################################################
     print >> sys.stderr, "Trigger examples for parse", PARSE_TAG   
-    TRIGGER_EXAMPLE_BUILDER.run(TRAIN_FILE, TRIGGER_TRAIN_EXAMPLE_FILE, PARSE, TOK, TRIGGER_FEATURE_PARAMS, TRIGGER_IDS)
     TRIGGER_EXAMPLE_BUILDER.run(TEST_FILE, TRIGGER_TEST_EXAMPLE_FILE, PARSE, TOK, TRIGGER_FEATURE_PARAMS, TRIGGER_IDS)
+    TRIGGER_EXAMPLE_BUILDER.run(TRAIN_FILE, TRIGGER_TRAIN_EXAMPLE_FILE, PARSE, TOK, TRIGGER_FEATURE_PARAMS, TRIGGER_IDS)
     
     ###############################################################################
     # Trigger models
@@ -201,23 +213,25 @@ if options.mode in ["BOTH", "FINAL"]:
             # edges. Note that this evaluation will differ somewhat from the previous ones,
             # which evaluate on the level of examples.
             EvaluateInteractionXML.run(Ev, xml, TEST_FILE, PARSE, TOK)
+            
+            if options.sharedTask:
+                # Post-processing
+                xml = unflatten(xml, PARSE, TOK)
                 
-            # Post-processing
-            xml = unflatten(xml, PARSE, TOK)
-            
-            # Output will be stored to the geniaformat-subdirectory, where will also be a
-            # tar.gz-file which can be sent to the Shared Task evaluation server.
-            gifxmlToGenia(xml, "geniaformat", options.task)
-            
-            # Evaluation of the Shared Task format
-            results = evaluateSharedTask("geniaformat", options.task)
-            if bestResults == None or bestResults[1]["approximate"]["ALL-TOTAL"]["fscore"] < results["approximate"]["ALL-TOTAL"]["fscore"]:
-                bestResults = (boost, results)
+                # Output will be stored to the geniaformat-subdirectory, where will also be a
+                # tar.gz-file which can be sent to the Shared Task evaluation server.
+                gifxmlToGenia(xml, "geniaformat", options.task)
+                
+                # Evaluation of the Shared Task format
+                results = evaluateSharedTask("geniaformat", options.task)
+                if bestResults == None or bestResults[1]["approximate"]["ALL-TOTAL"]["fscore"] < results["approximate"]["ALL-TOTAL"]["fscore"]:
+                    bestResults = (boost, results)
         else:
             print >> sys.stderr, "No predicted edges"
         count += 1
     print >> sys.stderr, "Booster search complete"
     print >> sys.stderr, "Tested", count, "out of", count, "combinations"
-    print >> sys.stderr, "Best booster parameter:", bestResults[0]
-    print >> sys.stderr, "Best result:", bestResults[1]
+    if options.sharedTask:
+        print >> sys.stderr, "Best booster parameter:", bestResults[0]
+        print >> sys.stderr, "Best result:", bestResults[1]
     

@@ -3,6 +3,7 @@
 # most imports are defined in Pipeline
 from Pipeline import *
 import sys, os
+import STFormat.ConvertXML
 
 from optparse import OptionParser
 optparser = OptionParser()
@@ -43,10 +44,6 @@ PARSE_TAG = PARSE + "_" + TOK
 TRAIN_FILE = options.trainFile
 TEST_FILE = options.testFile
 
-# Example generation parameters
-#EDGE_FEATURE_PARAMS="style:typed"
-EDGE_FEATURE_PARAMS="style:" + options.edgeStyles
-
 # These commands will be in the beginning of most pipelines
 WORKDIR=options.output
 CSC_WORKDIR = os.path.join("CSCConnection",WORKDIR.lstrip("/"))
@@ -54,12 +51,17 @@ CSC_WORKDIR = os.path.join("CSCConnection",WORKDIR.lstrip("/"))
 workdir(WORKDIR, False) # Select a working directory, don't remove existing files
 log() # Start logging into a file in working directory
 
+# Example generation parameters
+#EDGE_FEATURE_PARAMS="style:typed"
+EDGE_FEATURE_PARAMS="style:" + options.edgeStyles
+print >> sys.stderr, "Edge feature style:", EDGE_FEATURE_PARAMS
+
 EDGE_TRAIN_EXAMPLE_FILE = "edge-train-examples-"+PARSE_TAG
 EDGE_TEST_EXAMPLE_FILE = "edge-test-examples-"+PARSE_TAG
 EDGE_IDS = "edge-ids"
 #STEPS = [""]
 #STEPS = ["themeOnly", "causeAfterTheme"]
-STEPS = ["causeAfterTheme"]
+#STEPS = ["causeAfterTheme"]
 if not "eval" in options.csc:
     EDGE_EXAMPLE_BUILDER = eval(options.edgeExampleBuilder)
     
@@ -74,33 +76,35 @@ if not "eval" in options.csc:
 #        print >> sys.stderr, "Edge examples for", PARSE_TAG, tag
 #        EDGE_EXAMPLE_BUILDER.run(TEST_FILE, EDGE_TEST_EXAMPLE_FILE+tag, PARSE, TOK, EDGE_FEATURE_PARAMS+tag, EDGE_IDS)
 #        EDGE_EXAMPLE_BUILDER.run(TRAIN_FILE, EDGE_TRAIN_EXAMPLE_FILE+tag, PARSE, TOK, EDGE_FEATURE_PARAMS+tag, EDGE_IDS)
+    EDGE_EXAMPLE_BUILDER.run(TEST_FILE, EDGE_TEST_EXAMPLE_FILE, PARSE, TOK, EDGE_FEATURE_PARAMS, EDGE_IDS)
+    EDGE_EXAMPLE_BUILDER.run(TRAIN_FILE, EDGE_TRAIN_EXAMPLE_FILE, PARSE, TOK, EDGE_FEATURE_PARAMS, EDGE_IDS)
 
 ###############################################################################
 # Trigger models
 ###############################################################################
 #edgeXML = TEST_FILE
-edgeXML = "test-predicted-edgesthemeOnly.xml"
-for tag in STEPS:
-    print >> sys.stderr, "Edge examples for", PARSE_TAG, tag
-    EDGE_EXAMPLE_BUILDER.runNew(edgeXML, TEST_FILE, EDGE_TEST_EXAMPLE_FILE+tag, PARSE, TOK, EDGE_FEATURE_PARAMS+","+tag, EDGE_IDS)
-    EDGE_EXAMPLE_BUILDER.runNew(TRAIN_FILE, TRAIN_FILE, EDGE_TRAIN_EXAMPLE_FILE+tag, PARSE, TOK, EDGE_FEATURE_PARAMS+","+tag, EDGE_IDS)
+#edgeXML = "test-predicted-edgesthemeOnly.xml"
+    #print >> sys.stderr, "Edge examples for", PARSE_TAG, tag
+    #EDGE_EXAMPLE_BUILDER.runNew(TEST_FILE, TEST_FILE, EDGE_TEST_EXAMPLE_FILE+tag, PARSE, TOK, EDGE_FEATURE_PARAMS+","+tag, EDGE_IDS)
+    #EDGE_EXAMPLE_BUILDER.runNew(TRAIN_FILE, TRAIN_FILE, EDGE_TRAIN_EXAMPLE_FILE+tag, PARSE, TOK, EDGE_FEATURE_PARAMS+","+tag, EDGE_IDS)
 
-    print >> sys.stderr, "Edge models for", PARSE_TAG, tag
-    EDGE_CLASSIFIER_PARAMS="c:" + options.edgeParams
-    if "local" not in options.csc:
-        clear = False
-        if "clear" in options.csc: clear = True
-        if "louhi" in options.csc:
-            c = CSCConnection(CSC_WORKDIR+"/edge-models"+tag, "jakrbj@louhi.csc.fi", clear)
-        else:
-            c = CSCConnection(CSC_WORKDIR+"/edge-models"+tag, "jakrbj@murska.csc.fi", clear)
+print >> sys.stderr, "Edge models for", PARSE_TAG
+EDGE_CLASSIFIER_PARAMS="c:" + options.edgeParams
+if "local" not in options.csc:
+    clear = False
+    if "clear" in options.csc: clear = True
+    if "louhi" in options.csc:
+        c = CSCConnection(CSC_WORKDIR+"/edge-models", "jakrbj@louhi.csc.fi", clear)
     else:
-        c = None
-    bestEdgeModel = optimize(CLASSIFIER, Ev, EDGE_TRAIN_EXAMPLE_FILE+tag, EDGE_TEST_EXAMPLE_FILE+tag,\
-        EDGE_IDS+".class_names", EDGE_CLASSIFIER_PARAMS, "edge-models", None, c, False)[1]
-    
-    Cls.test(EDGE_TEST_EXAMPLE_FILE+tag, bestEdgeModel, "edge-test-classifications"+tag)
-    edgeXML = BioTextExampleWriter.write(EDGE_TEST_EXAMPLE_FILE+tag, "edge-test-classifications"+tag, edgeXML, "test-predicted-edges"+tag+".xml", EDGE_IDS+".class_names", PARSE, TOK)
+        c = CSCConnection(CSC_WORKDIR+"/edge-models", "jakrbj@murska.csc.fi", clear)
+else:
+    c = None
+bestEdgeModel = optimize(CLASSIFIER, Ev, EDGE_TRAIN_EXAMPLE_FILE, EDGE_TEST_EXAMPLE_FILE,\
+EDGE_IDS+".class_names", EDGE_CLASSIFIER_PARAMS, "edge-models", None, c, False)[1]
+
+Cls.test(EDGE_TEST_EXAMPLE_FILE, bestEdgeModel, "edge-test-classifications")
+edgeXML = BioTextExampleWriter.write(EDGE_TEST_EXAMPLE_FILE, "edge-test-classifications", TEST_FILE, "test-predicted-edges.xml", EDGE_IDS+".class_names", PARSE, TOK)
 EvaluateInteractionXML.run(Ev, edgeXML, TEST_FILE, PARSE, TOK)
+STFormat.ConvertXML.toSTFormat(edgeXML, "geniaformat", outputTag="a2")
 #gifxmlToGenia(edgeXML, "geniaformat", options.task)
 #evaluateSharedTask("geniaformat", options.task)

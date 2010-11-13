@@ -20,6 +20,7 @@ from ExampleBuilders.UnmergingExampleBuilder import UnmergingExampleBuilder
 #from ExampleBuilders.BinaryEntityExampleBuilder import BinaryEntityExampleBuilder
 from ExampleBuilders.UnmergedEdgeExampleBuilder import UnmergedEdgeExampleBuilder
 from ExampleBuilders.AsymmetricEventExampleBuilder import AsymmetricEventExampleBuilder
+from ExampleBuilders.PhraseTriggerExampleBuilder import PhraseTriggerExampleBuilder
 from Murska.CSCConnection import CSCConnection
 #ENDIF
 from Classifiers.SVMMultiClassClassifier import SVMMultiClassClassifier as Cls

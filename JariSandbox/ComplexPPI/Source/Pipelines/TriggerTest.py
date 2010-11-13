@@ -92,19 +92,20 @@ if not "eval" in options.csc:
 ###############################################################################
 # Trigger models
 ###############################################################################
-print >> sys.stderr, "Trigger models for parse", PARSE_TAG
-TRIGGER_CLASSIFIER_PARAMS="c:" + options.triggerParams
-if "local" not in options.csc:
-    clear = False
-    if "clear" in options.csc: clear = True
-    if "louhi" in options.csc:
-        c = CSCConnection(CSC_WORKDIR+"/trigger-models", "jakrbj@louhi.csc.fi", clear)
+if not "examples" in options.csc:
+    print >> sys.stderr, "Trigger models for parse", PARSE_TAG
+    TRIGGER_CLASSIFIER_PARAMS="c:" + options.triggerParams
+    if "local" not in options.csc:
+        clear = False
+        if "clear" in options.csc: clear = True
+        if "louhi" in options.csc:
+            c = CSCConnection(CSC_WORKDIR+"/trigger-models", "jakrbj@louhi.csc.fi", clear)
+        else:
+            c = CSCConnection(CSC_WORKDIR+"/trigger-models", "jakrbj@murska.csc.fi", clear)
     else:
-        c = CSCConnection(CSC_WORKDIR+"/trigger-models", "jakrbj@murska.csc.fi", clear)
-else:
-    c = None
-bestTriggerModel = optimize(CLASSIFIER, Ev, TRIGGER_TRAIN_EXAMPLE_FILE, TRIGGER_TEST_EXAMPLE_FILE,\
-    TRIGGER_IDS+".class_names", TRIGGER_CLASSIFIER_PARAMS, "trigger-models", None, c, False)[1]
-
-Cls.test(TRIGGER_TEST_EXAMPLE_FILE, bestTriggerModel, "trigger-test-classifications")
-triggerXML = BioTextExampleWriter.write(TRIGGER_TEST_EXAMPLE_FILE, "trigger-test-classifications", TEST_FILE, "test-predicted-triggers.xml", TRIGGER_IDS+".class_names", PARSE, TOK)
+        c = None
+    bestTriggerModel = optimize(CLASSIFIER, Ev, TRIGGER_TRAIN_EXAMPLE_FILE, TRIGGER_TEST_EXAMPLE_FILE,\
+        TRIGGER_IDS+".class_names", TRIGGER_CLASSIFIER_PARAMS, "trigger-models", None, c, False)[1]
+    
+    Cls.test(TRIGGER_TEST_EXAMPLE_FILE, bestTriggerModel, "trigger-test-classifications")
+    triggerXML = BioTextExampleWriter.write(TRIGGER_TEST_EXAMPLE_FILE, "trigger-test-classifications", TEST_FILE, "test-predicted-triggers.xml", TRIGGER_IDS+".class_names", PARSE, TOK)
