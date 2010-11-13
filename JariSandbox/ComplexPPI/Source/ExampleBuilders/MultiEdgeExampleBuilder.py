@@ -1,7 +1,7 @@
 """
 Edge Examples
 """
-__version__ = "$Revision: 1.53 $"
+__version__ = "$Revision: 1.54 $"
 
 import sys, os
 thisPath = os.path.dirname(os.path.abspath(__file__))
@@ -179,6 +179,25 @@ class MultiEdgeExampleBuilder(ExampleBuilder):
         else:
             return False
     
+    def isPotentialCOInteraction(self, e1, e2, sentenceGraph):
+        if e1.get("type") == "Exp" and e2.get("type") == "Exp":
+            anaphoraTok = sentenceGraph.entityHeadTokenByEntity[e1]
+            antecedentTok = sentenceGraph.entityHeadTokenByEntity[e2]
+            antecedentTokenFound = False
+            for token in sentenceGraph.tokens:
+                if token == antecedentTok:
+                    antecedentTokenFound = True
+                if token == anaphoraTok: # if, not elif, to take into accoutn cases where e1Tok == e2Tok
+                    if antecedentTokenFound:
+                        return True
+                    else:
+                        return False
+            assert False
+        elif e1.get("type") == "Exp" and e2.get("type") == "Protein":
+            return True
+        else:
+            return False
+    
     def isPotentialGeniaInteraction(self, e1, e2):
         """
         Genia named entities can never act as event triggers, so
@@ -304,14 +323,21 @@ class MultiEdgeExampleBuilder(ExampleBuilder):
                     else:
                         categoryName = self.getCategoryNameFromTokens(sentenceGraph, tI, tJ, True)
                     # make forward
+                    self.exampleStats.beginExample(categoryName)
                     makeExample = True
                     if ("genia_limits" in self.styles) and not self.isPotentialGeniaInteraction(eI, eJ):
                         makeExample = False
+                        self.exampleStats.filter("genia_limits")
                     if ("rel_limits" in self.styles) and not self.isPotentialRELInteraction(eI, eJ):
                         makeExample = False
+                        self.exampleStats.filter("rel_limits")
+                    if ("co_limits" in self.styles) and not self.isPotentialCOInteraction(eI, eJ, sentenceGraph):
+                        makeExample = False
+                        self.exampleStats.filter("co_limits")
                     if makeExample:
                         examples.append( self.buildExample(tI, tJ, paths, sentenceGraph, categoryName, exampleIndex, eI, eJ) )
                         exampleIndex += 1
+                    self.exampleStats.endExample()
                     
                     # define reverse
                     if "entities" in self.styles:
@@ -319,27 +345,37 @@ class MultiEdgeExampleBuilder(ExampleBuilder):
                     else:
                         categoryName = self.getCategoryNameFromTokens(sentenceGraph, tJ, tI, True)
                     # make reverse
+                    self.exampleStats.beginExample(categoryName)
                     makeExample = True
                     if ("genia_limits" in self.styles) and not self.isPotentialGeniaInteraction(eJ, eI):
                         makeExample = False
+                        self.exampleStats.filter("genia_limits")
                     if ("rel_limits" in self.styles) and not self.isPotentialRELInteraction(eJ, eI):
                         makeExample = False
+                        self.exampleStats.filter("rel_limits")
+                    if ("co_limits" in self.styles) and not self.isPotentialCOInteraction(eJ, eI, sentenceGraph):
+                        makeExample = False
+                        self.exampleStats.filter("co_limits")
                     if ("bioinfer_limits" in self.styles) and not self.isPotentialBioInferInteraction(eJ, eI, categoryName):
                         makeExample = False
+                        self.exampleStats.filter("bioinfer_limits")
                     if makeExample:
                         examples.append( self.buildExample(tJ, tI, paths, sentenceGraph, categoryName, exampleIndex, eJ, eI) )
                         exampleIndex += 1
+                    self.exampleStats.endExample()
                 else:
                     if "entities" in self.styles:
                         categoryName = self.getCategoryName(sentenceGraph, eI, eJ, False)
                     else:
                         categoryName = self.getCategoryNameFromTokens(sentenceGraph, tI, tJ, False)
+                    self.exampleStats.beginExample(categoryName)
                     forwardExample = self.buildExample(tI, tJ, paths, sentenceGraph, categoryName, exampleIndex, eI, eJ)
                     if not "graph_kernel" in self.styles:
                         reverseExample = self.buildExample(tJ, tI, paths, sentenceGraph, categoryName, exampleIndex, eJ, eI)
                         forwardExample[2].update(reverseExample[2])
                     examples.append(forwardExample)
                     exampleIndex += 1
+                    self.exampleStats.endExample()
         
         return examples
     
