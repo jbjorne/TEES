@@ -1,7 +1,7 @@
 """
 Trigger examples
 """
-__version__ = "$Revision: 1.27 $"
+__version__ = "$Revision: 1.28 $"
 
 import sys, os
 thisPath = os.path.dirname(os.path.abspath(__file__))
@@ -80,13 +80,15 @@ class GeneralEntityTypeRecognizerGztr(ExampleBuilder):
         """
         types = set()
         for entity in entities:
+            if entity.get("isName") == "True" and "all_tokens" in self.styles:
+                continue
             types.add(entity.get("type"))
         types = list(types)
         types.sort()
         typeString = ""
         for type in types:
-            if type == "Protein" and "all_tokens" in self.styles:
-                continue
+            #if type == "Protein" and "all_tokens" in self.styles:
+            #    continue
             if typeString != "":
                 typeString += "---"
             typeString += type
@@ -225,15 +227,19 @@ class GeneralEntityTypeRecognizerGztr(ExampleBuilder):
         
         for i in range(len(sentenceGraph.tokens)):
             token = sentenceGraph.tokens[i]
-            # Recognize only non-named entities (i.e. interaction words)
-            if sentenceGraph.tokenIsName[token] and not "names" in self.styles and not "all_tokens" in self.styles:
-                continue
 
             # CLASS
             if len(sentenceGraph.tokenIsEntityHead[token]) > 0:
-                category = self.classSet.getId(self.getMergedEntityType(sentenceGraph.tokenIsEntityHead[token]))
+                categoryName = self.getMergedEntityType(sentenceGraph.tokenIsEntityHead[token])
             else:
-                category = 1            
+                categoryName = "neg"
+            category = self.classSet.getId(categoryName)            
+            self.exampleStats.beginExample(categoryName)
+            
+            # Recognize only non-named entities (i.e. interaction words)
+            if sentenceGraph.tokenIsName[token] and not "names" in self.styles and not "all_tokens" in self.styles:
+                self.exampleStats.filter("name")
+                continue
             
             tokenText = token.get("text").lower()
             if "stem_gazetteer" in self.styles:
@@ -360,6 +366,7 @@ class GeneralEntityTypeRecognizerGztr(ExampleBuilder):
             extra = {"xtype":"token","t":token.get("id")}
             examples.append( (sentenceGraph.getSentenceId()+".x"+str(exampleIndex),category,features,extra) )
             exampleIndex += 1
+            self.exampleStats.endExample()
             
             # chains
             self.buildChains(token, sentenceGraph, features)
