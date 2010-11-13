@@ -1,7 +1,7 @@
 """
 Trigger examples
 """
-__version__ = "$Revision: 1.1 $"
+__version__ = "$Revision: 1.2 $"
 
 import sys, os
 thisPath = os.path.dirname(os.path.abspath(__file__))
@@ -66,7 +66,7 @@ class PhraseTriggerExampleBuilder(ExampleBuilder):
     
     def getPhraseTokens(self, phrase, sentenceGraph):
         phraseBegin = int(phrase.get("begin"))
-        phraseEnd = int(phrase.get("begin"))
+        phraseEnd = int(phrase.get("end"))
         return sentenceGraph.tokens[phraseBegin:phraseEnd+1]
     
     def getCategoryName(self, phrase, phraseToEntity):
@@ -127,12 +127,21 @@ class PhraseTriggerExampleBuilder(ExampleBuilder):
             
             # Features for all phrase tokens
             self.triggerFeatureBuilder.setTag("ptok_")
+            phraseTokenPos = 0
+            #print len(phraseTokens)
             for token in phraseTokens:
+                self.triggerFeatureBuilder.setTag("ptok_")
+                self.triggerFeatureBuilder.buildFeatures(phraseHeadToken, linear=False)
+                self.triggerFeatureBuilder.setTag("ptok_" + str(phraseTokenPos) + "_" )
+                self.triggerFeatureBuilder.buildFeatures(phraseHeadToken, linear=False)
+                self.triggerFeatureBuilder.setTag("ptok_" + str(len(phraseTokens)-phraseTokenPos-1) + "_" )
                 self.triggerFeatureBuilder.buildFeatures(phraseHeadToken, linear=False)            
                 #self.triggerFeatureBuilder.buildAttachedEdgeFeatures(phraseHeadToken)
+                phraseTokenPos += 1
             self.triggerFeatureBuilder.setTag()
              
             extra = {"xtype":"phrase","t":phraseHeadToken.get("id"), "p":phrase.get("id"), "ptype":phrase.get("type")}
+            extra["charOffset"] = phrase.get("charOffset")
             examples.append( (sentenceGraph.getSentenceId()+".x"+str(exampleIndex),category,features,extra) )
             self.exampleStats.beginExample(categoryName)
             self.exampleStats.endExample()
