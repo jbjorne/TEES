@@ -13,7 +13,32 @@ except ImportError:
 import cElementTreeUtils as ETUtils
 import Range
 
-def getPhrases(parse, filter=None):
+def fixIndices(phrases, tokens):
+    fixCount = 0
+    phraseCount = 0
+    for phrase in phrases:
+        fixed = False
+        phraseOffset = Range.charOffsetToSingleTuple(phrase.get("charOffset"))
+        phraseBegin = int(phrase.get("begin"))
+        phraseEnd = int(phrase.get("end"))
+        for i in range(len(tokens)):
+            token = tokens[i]
+            tokOffset = Range.charOffsetToSingleTuple(token.get("charOffset"))
+            if tokOffset[0] == phraseOffset[0]:
+                if phraseBegin != i:
+                    phrase.set("begin", str(i))
+                    fixed = True
+            if tokOffset[1] == phraseOffset[1]:
+                if phraseEnd != i:
+                    phrase.set("end", str(i))
+                    fixed = True
+                break
+        if fixed:
+            fixCount += 1
+        phraseCount += 1
+    #print fixCount, phraseCount
+
+def getPhrases(parse, tokens, filter=None):
     phrases = parse.findall("phrase")
     toKeep = []
     for phrase in phrases:
@@ -22,7 +47,26 @@ def getPhrases(parse, filter=None):
         if filter != None and phrase.get("type") not in filter:
             continue
         toKeep.append(phrase)
+    fixIndices(toKeep, tokens)
     return toKeep
+
+def removeNamedEntityPhrases(entities, phrases, phraseDict):
+    neOffsets = set()
+    for entity in entities:
+        if entity.get("isName") != "True":
+            continue
+        neOffsets.add(entity.get("charOffset"))
+    phrasesToKeep = []
+    for phrase in phrases:
+        phraseOffset = phrase.get("charOffset")
+        if phraseOffset in neOffsets:
+            phraseOffsetTuple = Range.charOffsetToSingleTuple(phraseOffset)
+            if phraseOffsetTuple in phraseDict:
+                del phraseDict[phraseOffsetTuple]
+        else:
+            phrasesToKeep.append(phrase)
+    #print >> sys.stderr, "Removed", len(phrases) - len(phrasesToKeep), "named entity phrases"
+    return phrasesToKeep
 
 def getPhraseDict(phrases):
     phraseDict = {}   
@@ -109,10 +153,10 @@ def makeTokenSubPhrases(tokens, phraseDict, includePOS=["PRP$", "IN", "WP$"]):
                 phraseDict[tokOffset] = [newPhrase]
     return newPhrases
 
-def makePhrases(parse, tokenization):
-    phrases = getPhrases(parse)
-    phraseDict = getPhraseDict(phrases)    
+def makePhrases(parse, tokenization, entities=None):
     tokens = tokenization.findall("token")
+    phrases = getPhrases(parse, tokens)
+    phraseDict = getPhraseDict(phrases)    
     
     # IN-phrases
     phrases.extend(makeINSubPhrases(phrases, tokens, phraseDict))
@@ -120,7 +164,11 @@ def makePhrases(parse, tokenization):
     phrases.extend(makeDETSubPhrases(phrases, tokens, phraseDict))
     # Token-phrases
     phrases.extend(makeTokenSubPhrases(tokens, phraseDict))
-
+    
+    # Remove phrases matching named entity offsets
+    #if entities != None:
+    #    phrases = removeNamedEntityPhrases(entities, phrases, phraseDict)
+    
     return phrases, phraseDict
     #phraseOffsets = phraseDict.keys()
 
@@ -141,6 +189,8 @@ def getMatchingPhrases(entity, phraseOffsets, phraseDict):
 
 def selectBestMatch(entity, phrases):
     entOffset = Range.charOffsetToSingleTuple(entity.get("charOffset"))
+    if entity.get("altOffset") != None:
+        entOffset = Range.charOffsetToSingleTuple(entity.get("altOffset"))
     best = (sys.maxint, None)
     for phrase in phrases:
         matchValue = Range.mismatch(entOffset, Range.charOffsetToSingleTuple(phrase.get("charOffset")))
@@ -196,11 +246,12 @@ def processCorpus(input, parserName):
     #counter = ProgressCounter(len(documents), "Documents")
     for document in documents:
         for sentence in document.findall("sentence"):
+            entities = sentence.findall("entity")
             parse = ETUtils.getElementByAttrib(sentence.find("sentenceanalyses"), "parse", {"parser":parserName})
             if parse == None:
                 continue
             tokenization = ETUtils.getElementByAttrib(sentence.find("sentenceanalyses"), "tokenization", {"tokenizer":parse.get("tokenizer")})
-            phrases, phraseDict = makePhrases(parse, tokenization)
+            phrases, phraseDict = makePhrases(parse, tokenization, entities)
             phraseOffsets = phraseDict.keys()
             #phraseOffsets.sort()
             
@@ -219,7 +270,7 @@ def processCorpus(input, parserName):
                     corefType[interaction.get("e1")] = "Anaphora"
                     corefType[interaction.get("e2")] = "Antecedent"
             
-            for entity in sentence.findall("entity"):
+            for entity in entities:
                 if entity.get("isName") == "True":
                     continue
                 counts["entity"] += 1
