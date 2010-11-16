@@ -1,4 +1,4 @@
-parse__version__ = "$Revision: 1.6 $"
+parse__version__ = "$Revision: 1.7 $"
 
 import sys,os
 import sys
@@ -267,7 +267,7 @@ def parse(input, output=None, tokenizationName=None, parseName="McClosky", requi
         print >> sys.stderr, "Parsed succesfully all sentences"
     else:
         print >> sys.stderr, "Warning, parsing failed for", failCount, "out of", numCorpusSentences, "sentences"
-        print >> sys.stderr, "The \"penntree\" attribute of these sentences has an empty string."
+        print >> sys.stderr, "The \"pennstring\" attribute of these sentences has an empty string."
     if output != None:
         print >> sys.stderr, "Writing output to", output
         ETUtils.write(corpusRoot, output)
