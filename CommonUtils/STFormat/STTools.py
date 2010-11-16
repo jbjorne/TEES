@@ -324,9 +324,9 @@ def loadSet(dir, setName=None):
         documents.append(doc)
     return documents
 
-def writeSet(documents, dir):
+def writeSet(documents, dir, resultFileTag="a2"):
     for doc in documents:
-        write(doc.id, dir, doc.proteins, doc.triggers, doc.events, doc.relations)
+        write(doc.id, dir, doc.proteins, doc.triggers, doc.events, doc.relations, resultFileTag)
         # Write text file
         out = open(os.path.join(dir, str(doc.id) + ".txt"), "wt")
         out.write(doc.text)
@@ -379,11 +379,15 @@ def writeEvents(events, out):
             out.write(trigger.type + ":" + trigger.id)
         typeCounts = {}
         # Count arguments
+        targetProteins = set()
         for arg in event.arguments:
             argType = arg[0]
-            if not typeCounts.has_key(argType):
-                typeCounts[argType] = 0
-            typeCounts[argType] += 1
+            if argType == "Target":
+                targetProteins.add(arg[1].id)
+            else:
+                if not typeCounts.has_key(argType):
+                    typeCounts[argType] = 0
+                typeCounts[argType] += 1
         # Determine which arguments need numbering
         for key in typeCounts.keys():
             if typeCounts[key] > 1:
@@ -393,6 +397,8 @@ def writeEvents(events, out):
         # Write arguments
         for arg in event.arguments:
             argType = arg[0]
+            if argType == "Target":
+                continue
             if typeCounts.has_key(argType):
                 if typeCounts[argType] > 1:
                     out.write(" " + argType + str(typeCounts[argType]) + ":" + arg[1].id)
@@ -408,6 +414,8 @@ def writeEvents(events, out):
         # Write sites
         for arg in event.arguments:
             argType = arg[0]
+            if argType == "Target":
+                continue
             if typeCounts.has_key(argType):
                 typeCounts[argType] += 1
             if arg[2] == None:
@@ -420,7 +428,13 @@ def writeEvents(events, out):
                 out.write(" " + sitePrefix + "Site" + str(typeCounts[argType]) + ":" + arg[2].id)
             else:
                 out.write(" " + sitePrefix + "Site" + ":" + arg[2].id)                
+        
+        # Write Coref targets
+        if len(targetProteins) > 0:
+            out.write("\t[" + ", ".join(sorted(list(targetProteins))) + "]" ) 
+        
         out.write("\n")
+        
 
         # Write task 3
         if event.speculation != None:
@@ -434,23 +448,21 @@ def writeEvents(events, out):
     #for event in events:
     #    if event.negation != None:
 
-def write(id, dir, proteins, triggers, events, relations):
+def write(id, dir, proteins, triggers, events, relations, resultFileTag="a2"):
     id = str(id)
     if not os.path.exists(dir):
         os.makedirs(dir)
     if proteins != None:
         out = open(os.path.join(dir, id + ".a1"), "wt")
         writeTAnnotation(proteins, out)
+        out.close()
+    resultFile = open(os.path.join(dir, id + "." + resultFileTag), "wt")
+    writeTAnnotation(triggers, resultFile, getMaxId(proteins) + 1)
     if events != None:
-        out = open(os.path.join(dir, id + ".a2"), "wt")
-        writeTAnnotation(triggers, out, getMaxId(proteins) + 1)
-        writeEvents(events, out)
-        out.close()
+        writeEvents(events, resultFile)
     if relations != None:
-        out = open(os.path.join(dir, id + ".rel"), "wt")
-        writeTAnnotation(triggers, out, getMaxId(proteins) + 1)
-        writeEvents(relations, out)
-        out.close()
+        writeEvents(relations, resultFile)
+    resultFile.close()
         
 if __name__=="__main__":
     # Import Psyco if available
