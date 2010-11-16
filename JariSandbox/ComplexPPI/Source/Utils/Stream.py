@@ -44,6 +44,8 @@ class StreamModifier:
             self.logfile.flush()
     
     def write(self, text):
+        if text == None or text == "":
+            return
         """
         Send the text to the stream after optionally writing it to the log file.
         """
