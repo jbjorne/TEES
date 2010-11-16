@@ -1,7 +1,7 @@
 """
 Trigger examples
 """
-__version__ = "$Revision: 1.2 $"
+__version__ = "$Revision: 1.3 $"
 
 import sys, os
 thisPath = os.path.dirname(os.path.abspath(__file__))
@@ -88,7 +88,7 @@ class PhraseTriggerExampleBuilder(ExampleBuilder):
         
         # Prepare phrases, create subphrases
         #filter = set(["NP", "TOK-IN", "WHADVP", "WHNP", "TOK-WP$", "TOK-PRP$", "NP-IN"])
-        phrases = MapPhrases.getPhrases(sentenceGraph.parseElement, set(["NP", "WHADVP", "WHNP"]))
+        phrases = MapPhrases.getPhrases(sentenceGraph.parseElement, sentenceGraph.tokens, set(["NP", "WHADVP", "WHNP"]))
         phraseDict = MapPhrases.getPhraseDict(phrases)
         phrases.extend( MapPhrases.makeINSubPhrases(phrases, sentenceGraph.tokens, phraseDict, ["NP"]) )
         phrases.extend( MapPhrases.makeTokenSubPhrases(sentenceGraph.tokens, phraseDict) )
@@ -134,7 +134,7 @@ class PhraseTriggerExampleBuilder(ExampleBuilder):
                 self.triggerFeatureBuilder.buildFeatures(phraseHeadToken, linear=False)
                 self.triggerFeatureBuilder.setTag("ptok_" + str(phraseTokenPos) + "_" )
                 self.triggerFeatureBuilder.buildFeatures(phraseHeadToken, linear=False)
-                self.triggerFeatureBuilder.setTag("ptok_" + str(len(phraseTokens)-phraseTokenPos-1) + "_" )
+                self.triggerFeatureBuilder.setTag("ptok_" + str(phraseTokenPos-len(phraseTokens)) + "_" )
                 self.triggerFeatureBuilder.buildFeatures(phraseHeadToken, linear=False)            
                 #self.triggerFeatureBuilder.buildAttachedEdgeFeatures(phraseHeadToken)
                 phraseTokenPos += 1
