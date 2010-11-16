@@ -82,6 +82,7 @@ def toInteractionXML(documents, corpusName="GENIA", output=None):
             intEl.set("e1", tMap[a1[1].id])
             intEl.set("e2", tMap[a2[1].id])
             intEl.set("type", relation.type)
+            docEl.append(intEl)
             if len(relation.arguments) > 2:
                 assert relation.type == "Coref", (relation.id, docId, relation.type)
                 for connProt in relation.arguments[2:]:
@@ -93,14 +94,15 @@ def toInteractionXML(documents, corpusName="GENIA", output=None):
                     intEl.set("e1", tMap[a2[1].id]) # link proteins to antecedent
                     intEl.set("e2", tMap[connProt[1].id])
                     intEl.set("type", "Target")
-            docEl.append(intEl)
+                    docEl.append(intEl)
+            #docEl.append(intEl) # adding original intEl after extra argument loop broke everything
     
     if output != None:
         print >> sys.stderr, "Writing output to", output
         ETUtils.write(corpusRoot, output)
     return ET.ElementTree(corpusRoot)
 
-def toSTFormat(input, output=None):
+def toSTFormat(input, output=None, outputTag="a2"):
     print >> sys.stderr, "Loading corpus", input
     corpusTree = ETUtils.ETFromObj(input)
     print >> sys.stderr, "Corpus file loaded"
@@ -151,11 +153,27 @@ def toSTFormat(input, output=None):
             else:
                 stDoc.triggers.append(ann)
             tMap[entity.get("id")] = ann
+        # First map Coref proteins
+        corefProtMap = {}
         for interaction in document.getiterator("interaction"):
             intType = interaction.get("type")
-            if intType == "neg":
-                continue
-            if intType in ["Site", "Gene_expression", "Transcription", "Protein_catabolism", "Localization", "Binding", "Phosphorylation", "Positive_regulation", "Negative_regulation", "Regulation"]:
+            if intType == "Target":
+                e1 = interaction.get("e1")
+                e2 = interaction.get("e2")
+                if not tMap.has_key(e2):
+                    print >> sys.stderr, "Warning, no trigger for Coref Protein Target"
+                    continue
+                e2 = tMap[e2]
+                if not corefProtMap.has_key(e1):
+                    corefProtMap[e1] = []
+                if not e2 in corefProtMap[e1]: 
+                    corefProtMap[e1].append(e2)
+        # Then process all interactions
+        for interaction in document.getiterator("interaction"):
+            intType = interaction.get("type")
+            if intType == "neg" or intType == "Target":
+                continue # Targets have already been put into a dictionary
+            elif intType in ["Site", "Gene_expression", "Transcription", "Protein_catabolism", "Localization", "Binding", "Phosphorylation", "Positive_regulation", "Negative_regulation", "Regulation"]:
                 if intType == "Site":
                     sites.append(interaction)
                 else:
@@ -184,7 +202,10 @@ def toSTFormat(input, output=None):
                 elif rel.type == "Coref":
                     rel.arguments.append(["Anaphora", tMap[e1], None])
                     rel.arguments.append(["Antecedent", tMap[e2], None])
-                    # NOTE! remember to connect the proteins
+                    # Add protein arguments'
+                    if corefProtMap.has_key(e2):
+                        for prot in corefProtMap[e2]:
+                            rel.arguments.append(["Target", prot, None])
                 else:
                     assert False, (rel.type, stDoc.id, interaction.get("id"))
                 stDoc.relations.append(rel)
@@ -204,7 +225,7 @@ def toSTFormat(input, output=None):
     
     if output != None:
         print >> sys.stderr, "Writing output to", output
-        writeSet(documents, output)
+        writeSet(documents, output, resultFileTag=outputTag)
     return documents
 
 if __name__=="__main__":
@@ -221,13 +242,14 @@ if __name__=="__main__":
     optparser = OptionParser(usage="%prog [options]\nRecalculate head token offsets.")
     optparser.add_option("-i", "--input", default=None, dest="input", help="Corpus in interaction xml format", metavar="FILE")
     optparser.add_option("-o", "--output", default=None, dest="output", help="Output file in interaction xml format.")
+    optparser.add_option("-t", "--outputTag", default="a2", dest="outputTag", help="a2 file extension.")
     (options, args) = optparser.parse_args()
     
     if options.input[-4:] == ".xml":
         print >> sys.stderr, "Loading XML"
         xml = ETUtils.ETFromObj(options.input)
         print >> sys.stderr, "Converting to ST Format"
-        toSTFormat(xml, options.output)
+        toSTFormat(xml, options.output, options.outputTag)
 
                 
 #if __name__=="__main__":
