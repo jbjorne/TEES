@@ -3,25 +3,35 @@ import sys, os
 sys.path.append(os.path.dirname(os.path.abspath(__file__))+"/..")
 import Core.SentenceGraph as SentenceGraph
 
-def findHeads(input, parse, tokenization=None, output=None):
-    print >> sys.stderr, "Removing existing head offsets"
-    removeCount = 0
+def findHeads(input, parse, tokenization=None, output=None, removeExisting=True):
     xml = ETUtils.ETFromObj(input)
-    for d in xml.getroot().findall("document"):
-        for s in d.findall("sentence"):
-            for e in s.findall("entity"):
-                if e.get("headOffset") != None:
-                    removeCount += 1
-                    del e.attrib["headOffset"]
-    print >> sys.stderr, "Removed head offsets from", removeCount, "entities"
+    if removeExisting:
+        print >> sys.stderr, "Removing existing head offsets"
+        removeCount = 0
+        xml = ETUtils.ETFromObj(input)
+        for d in xml.getroot().findall("document"):
+            for s in d.findall("sentence"):
+                for e in s.findall("entity"):
+                    if e.get("headOffset") != None:
+                        removeCount += 1
+                        del e.attrib["headOffset"]
+        print >> sys.stderr, "Removed head offsets from", removeCount, "entities"
     
     # SentenceGraph automatically calculates head offsets and adds them to entities if they are missing
     print >> sys.stderr, "Determining head offsets using parse", parse, "and tokenization", tokenization
-    corpusElements = SentenceGraph.loadCorpus(input, parse, tokenization)
+    corpusElements = SentenceGraph.loadCorpus(xml, parse, tokenization)
+    
+    # Make sure every parse gets head scores
+    for sentence in corpusElements.sentences:
+        if sentence.sentenceGraph == None:
+            continue
+        if sentence.sentenceGraph.tokenHeadScores == None:
+            sentence.sentenceGraph.getTokenHeadScores()
+    
     if output != None:
         print >> sys.stderr, "Writing output to", output
         ETUtils.write(corpusElements.rootElement, output)
-    return corpusElements.rootElement
+    return xml
     
 if __name__=="__main__":
     import sys
@@ -43,5 +53,5 @@ if __name__=="__main__":
     optparser.add_option("-t", "--tokenization", default=None, dest="tokenization", help="Tokenization element name for calculating head offsets")
     (options, args) = optparser.parse_args()
     
-    findHeads(options.input, options.output, options.parse, options.tokenization)
+    findHeads(input=options.input, output=options.output, parse=options.parse, tokenization=options.tokenization)
     
