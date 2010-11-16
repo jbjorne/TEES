@@ -4,10 +4,10 @@ class Document():
     def __init__(self):
         self.id = None
         self.text = None
-        self.proteins = None
-        self.triggers = None
-        self.events = None
-        self.relations = None
+        self.proteins = []
+        self.triggers = []
+        self.events = []
+        self.relations = []
         self.dataSet = None
 
 class Annotation():
@@ -298,7 +298,7 @@ def load(id, dir):
     proteins = loadA1(os.path.join(dir, id + ".a1"))
     a2Path = os.path.join(dir, id + ".a2")
     relPath = os.path.join(dir, id + ".rel")
-    triggers = None
+    triggers = []
     events = []
     relations = []
     if os.path.exists(a2Path):
