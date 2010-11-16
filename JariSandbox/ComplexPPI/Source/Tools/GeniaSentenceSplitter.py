@@ -1,4 +1,4 @@
-__version__ = "$Revision: 1.4 $"
+__version__ = "$Revision: 1.5 $"
 
 import sys,os
 import sys
@@ -61,7 +61,7 @@ def moveElements(document):
         interaction.set("e2", entMap[interaction.get("e2")])
         intCount += 1
                 
-def makeSentences(input, output=None, removeText=False):
+def makeSentences(input, output=None, removeText=False, postProcess=True):
     """
     Run GENIA Sentence Splitter
     
@@ -105,8 +105,16 @@ def makeSentences(input, output=None, removeText=False):
             print >> sys.stderr, stderr
         #print "stdout<", p.stdout.readlines(), ">"
         #print "stderr<", p.stderr.readlines(), ">"
-        # Read split sentences
-        workfile = codecs.open(os.path.join(workdir, "sentence-splitter-output.txt"), "rt", "utf-8")
+        if postProcess:
+            ppIn = codecs.open(os.path.join(workdir, "sentence-splitter-output.txt"), "rt", "utf-8")
+            ppOut = codecs.open(os.path.join(workdir, "sentence-splitter-output-postprocessed.txt"), "wt", "utf-8")
+            subprocess.call(os.path.join(sentenceSplitterDir, "geniass-postproc.pl"), stdin=ppIn, stdout=ppOut)
+            ppIn.close()
+            ppOut.close()
+            # Read split sentences
+            workfile = codecs.open(os.path.join(workdir, "sentence-splitter-output-postprocessed.txt"), "rt", "utf-8")
+        else:
+            workfile = codecs.open(os.path.join(workdir, "sentence-splitter-output.txt"), "rt", "utf-8")
         start = 0 # sentences are consecutively aligned to the text for charOffsets
         sentenceCount = 0
         for sText in workfile.readlines():
@@ -159,7 +167,8 @@ if __name__=="__main__":
     optparser = OptionParser(usage="%prog [options]\n")
     optparser.add_option("-i", "--input", default=None, dest="input", help="Corpus in interaction xml format", metavar="FILE")
     optparser.add_option("-o", "--output", default=None, dest="output", help="Output file in interaction xml format.")
+    optparser.add_option("-p", "--postprocess", default=False, action="store_true", dest="postprocess", help="Run postprocessor")
     (options, args) = optparser.parse_args()
     
-    makeSentences(input=options.input, output=options.output, removeText=False)
+    makeSentences(input=options.input, output=options.output, removeText=False, postProcess=options.postprocess)
     
