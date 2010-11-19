@@ -1,7 +1,7 @@
 """
 Trigger examples
 """
-__version__ = "$Revision: 1.28 $"
+__version__ = "$Revision: 1.29 $"
 
 import sys, os
 thisPath = os.path.dirname(os.path.abspath(__file__))
@@ -12,6 +12,7 @@ import Stemming.PorterStemmer as PorterStemmer
 from Core.IdSet import IdSet
 import Core.ExampleUtils as ExampleUtils
 from Core.Gazetteer import Gazetteer
+from FeatureBuilders.RELFeatureBuilder import RELFeatureBuilder
 
 #def compareDependencyEdgesById(dep1, dep2):
 #    """
@@ -51,6 +52,9 @@ class GeneralEntityTypeRecognizerGztr(ExampleBuilder):
             for line in f.readlines():
                 self.skiplist.add(line.strip())
             f.close()
+        
+        if "rel_features" in self.styles:
+            self.relFeatureBuilder = RELFeatureBuilder(featureSet)
 
     @classmethod
     def run(cls, input, output, parse, tokenization, style, idFileTag=None, gazetteerFileName=None, skiplist=None):
@@ -233,13 +237,15 @@ class GeneralEntityTypeRecognizerGztr(ExampleBuilder):
                 categoryName = self.getMergedEntityType(sentenceGraph.tokenIsEntityHead[token])
             else:
                 categoryName = "neg"
-            category = self.classSet.getId(categoryName)            
             self.exampleStats.beginExample(categoryName)
             
             # Recognize only non-named entities (i.e. interaction words)
             if sentenceGraph.tokenIsName[token] and not "names" in self.styles and not "all_tokens" in self.styles:
                 self.exampleStats.filter("name")
+                self.exampleStats.endExample()
                 continue
+
+            category = self.classSet.getId(categoryName)            
             
             tokenText = token.get("text").lower()
             if "stem_gazetteer" in self.styles:
@@ -362,6 +368,12 @@ class GeneralEntityTypeRecognizerGztr(ExampleBuilder):
                 features[self.featureSet.getId("t1HOut_"+tokenStem)] = 1
                 features[self.featureSet.getId("t1HOut_"+edgeType+"_"+tokenStem)] = 1
                 features[self.featureSet.getId("t1HOut_"+norStem+"_"+edgeType+"_"+tokenStem)] = 1
+            
+            # REL features
+            if "rel_features" in self.styles:
+                self.relFeatureBuilder.setFeatureVector(features)
+                self.relFeatureBuilder.buildAllFeatures(sentenceGraph.tokens, i)
+                self.relFeatureBuilder.setFeatureVector(None)
              
             extra = {"xtype":"token","t":token.get("id")}
             examples.append( (sentenceGraph.getSentenceId()+".x"+str(exampleIndex),category,features,extra) )
