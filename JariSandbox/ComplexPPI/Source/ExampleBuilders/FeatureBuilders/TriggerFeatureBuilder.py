@@ -140,7 +140,7 @@ class TriggerFeatureBuilder(FeatureBuilder):
             self.outEdgesByToken[token] = outEdges
             self.edgeSetByToken[token] = set(inEdges + outEdges)
         
-    def buildFeatures(self, token, linear=True):
+    def buildFeatures(self, token, linear=True, chains=True):
         sentenceGraph = self.sentenceGraph
         tokenIndex = None
         for i in range(len(self.sentenceGraph.tokens)):
@@ -201,7 +201,8 @@ class TriggerFeatureBuilder(FeatureBuilder):
                 self.setFeature("tt_"+text[j-2:j+1].lower(), 1)
         
         # chains
-        self.buildChains(token, sentenceGraph)
+        if chains:
+            self.buildChains(token, sentenceGraph)
 
     def buildAttachedEdgeFeatures(self, token, sentenceGraph):
         # Attached edges (Hanging in and out edges)
