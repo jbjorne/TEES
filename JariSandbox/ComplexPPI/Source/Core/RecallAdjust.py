@@ -1,7 +1,7 @@
 """
 Trade precision for recall
 """
-__version__ = "$Revision: 1.6 $"
+__version__ = "$Revision: 1.7 $"
 
 try:
     import xml.etree.cElementTree as ET
@@ -21,7 +21,16 @@ def scaleVal(val,boost=1.0):
         val+=diff
     return val
 
-def adjustEntity(entityNode,targetLabel,multiplier):
+def scaleRange(val, boost, classRange):
+    if boost < 1.0 and val > 0:
+        if val < (1.0-boost) * classRange[1]:
+            return -val - 1
+    #elif boost > 1.0 and val > 0:
+    #    if val < (boost-1) * classRange[1]:
+    #        return -val - 1
+    return val
+
+def adjustEntity(entityNode,targetLabel,multiplier,classRange=None):
     """Adjust the confidence of targetLabel in entityNode by multiplier"""
     predictions=entityNode.get("predictions")
     if not predictions: #nothing to do
@@ -35,7 +44,10 @@ def adjustEntity(entityNode,targetLabel,multiplier):
         if label!=targetLabel: #nothing to do
             labMod.append(labelConfidence)
         else:
-            confidence=scaleVal(float(confidence),multiplier) #modify...
+            if classRange == None: #multiclass
+                confidence=scaleVal(float(confidence),multiplier) #modify...
+            else: #binary
+                confidence=scaleRange(float(confidence),multiplier, classRange[label]) #modify...
             labMod.append(label+":"+str(confidence))
         if maxConfidence==None or maxConfidence<confidence:
             maxConfidence=confidence
@@ -44,11 +56,25 @@ def adjustEntity(entityNode,targetLabel,multiplier):
     #Done
     entityNode.set("predictions",",".join(labMod))
     entityNode.set("type",maxLabel)
+    
+def getClassRanges(entities):
+    classRanges = {}
+    for entity in entities:
+        if entity.get("isName") == "True":
+            continue
+        predictions=entity.get("predictions")
+        for labelConfidence in predictions.split(","):
+            label,confidence=labelConfidence.split(":")
+            confidence=float(confidence)
+            if not classRanges.has_key(label):
+                classRanges[label] = [sys.maxint,-sys.maxint]
+            classRanges[label] = [min(classRanges[label][0], confidence), max(classRanges[label][1], confidence)]
+    return classRanges
 
 class RecallAdjust:    
 
     @classmethod
-    def run(cls,inFile,multiplier=1.0,outFile=None,targetLabel="neg"):
+    def run(cls,inFile,multiplier=1.0,outFile=None,targetLabel="neg", binary=False):
         """inFile can be a string with file name (.xml or .xml.gz) or an ElementTree or an Element or an open input stream
         multiplier adjusts the level of boosting the non-negative predictions, it is a real number (0,inf)
         multiplier 1.0 does nothing, <1.0 decreases negative class confidence, >1.0 increases negative class confidence
@@ -60,8 +86,17 @@ class RecallAdjust:
             root=tree.getroot()
         else:
             root = tree
-        for entityNode in root.getiterator("entity"):
-            adjustEntity(entityNode,targetLabel,multiplier)
+        
+        if multiplier != -1:
+            if binary:
+                print >> sys.stderr, "Recall binary mode"
+                classRanges = getClassRanges(root.getiterator("entity"))
+                assert len(classRanges.keys()) == 2
+            else:
+                print >> sys.stderr, "Recall multiclass mode"
+                classRanges = None
+            for entityNode in root.getiterator("entity"):
+                adjustEntity(entityNode,targetLabel,multiplier,classRanges)
         if outFile:
             ETUtils.write(root,outFile)
         return tree
@@ -69,6 +104,8 @@ class RecallAdjust:
 if __name__=="__main__":
     desc="Negative class adjustment in entity predictions. Reads from stdin, writes to stdout."
     parser = OptionParser(description=desc)
+    parser.add_option("-i", "--input", default=None, dest="input", help="Predictions in interaction XML", metavar="FILE")
+    parser.add_option("-o", "--output", default=None, dest="output", help="Predictions in interaction XML", metavar="FILE")
     parser.add_option("-l","--lambda",dest="l",action="store",default=None,type="float",help="The adjustment weight for the negative class. 1.0 does nothing, <1.0 decreases the predictions, >1.0 increases the predictions. No default.")
     parser.add_option("-t","--targetLabel",dest="targetLabel",action="store",default="neg",help="The label of the class to be adjusted. Defaults to 'neg'.")
 
@@ -78,4 +115,5 @@ if __name__=="__main__":
         print >> sys.stderr, "You need to give a lambda"
         sys.exit(1)
 
-    RecallAdjust.run(sys.stdin,options.l,sys.stdout,options.targetLabel)
+    #RecallAdjust.run(sys.stdin,options.l,sys.stdout,options.targetLabel)
+    RecallAdjust.run(options.input,options.l,options.output,options.targetLabel)
