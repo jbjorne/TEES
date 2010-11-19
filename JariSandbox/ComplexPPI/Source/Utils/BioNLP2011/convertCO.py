@@ -21,11 +21,11 @@ def log(clear=False, logCmd=True, logFile="log.txt"):
         sys.stdout.writeToLog("Command line: " + " ".join(sys.argv) + "\n")
 
 def convert(datasets, outdir, corpusName):
-    bigfileName = corpusName + "-" + "-and-".join(sorted(datasets.keys()))
+    bigfileName = corpusName + "-" + "-and-".join([x[0] for x in datasets])
     documents = []
-    for key in sorted(datasets.keys()):
-        print >> sys.stderr, "Reading", key, "set,",
-        docs = ST.loadSet(datasets[key], key)
+    for pair in datasets:
+        print >> sys.stderr, "Reading", pair[0], "set,",
+        docs = ST.loadSet(pair[1], pair[0])
         print >> sys.stderr, len(docs), "documents"
         documents.extend(docs)
 
@@ -33,7 +33,6 @@ def convert(datasets, outdir, corpusName):
     xml = STConvert.toInteractionXML(documents, corpusName, bigfileName+"-documents.xml")
     print >> sys.stderr, "Making sentences"
     xml = Tools.GeniaSentenceSplitter.makeSentences(xml, bigfileName+"-sentences.xml")
-    sys.exit()
     print >> sys.stderr, "Parsing"
     Tools.CharniakJohnsonParser.parse(xml, bigfileName+"-parsed.xml", tokenizationName=None, parseName="McClosky", requireEntities=False)
     print >> sys.stderr, "Stanford Conversion"
@@ -41,8 +40,11 @@ def convert(datasets, outdir, corpusName):
     print >> sys.stderr, "Protein Name Splitting"
     splitterCommand = "python /home/jari/cvs_checkout/PPI_Learning/Analysers/ProteinNameSplitter.py -f " + bigfileName+"-stanford.xml" + " -o " + bigfileName+"-split.xml" + " -p " + "McClosky" + " -t " + "McClosky" + " -s split-McClosky" + " -n split-McClosky"
     subprocess.call(splitterCommand, shell=True)
+    print >> sys.stderr, "Fix AltOffsets"
+    import InteractionXML.FixAltOffsets
+    xml = InteractionXML.FixAltOffsets.fixAltOffsets(bigfileName+"-split.xml")
     print >> sys.stderr, "Head Detection"
-    xml = FindHeads.findHeads(bigfileName+"-split.xml", "split-McClosky", tokenization=None, output=bigfileName+".xml", removeExisting=True)
+    xml = FindHeads.findHeads(xml, "split-McClosky", tokenization=None, output=bigfileName+".xml", removeExisting=True)
     print >> sys.stderr, "Dividing into sets"
     InteractionXML.DivideSets.processCorpus(xml, outDir, corpusName + "-", ".xml")
     return xml
@@ -62,8 +64,9 @@ if __name__=="__main__":
     log(False, False, "co-conversion-log.txt")
     
     trainSet = "/home/jari/data/BioNLP11SharedTask/BioNLP-ST_2011_coreference_training_data"
-    #develSet = "/home/jari/data/BioNLP11SharedTask/BioNLP-ST_2011_bacteria_rename_dev_data"
-    datasets = {"train":trainSet}#, "devel":develSet}
+    develSet = "/home/jari/data/BioNLP11SharedTask/BioNLP-ST_2011_coreference_development_data"
+    testSet = "/home/jari/data/BioNLP11SharedTask/BioNLP-ST_2011_coreference_test_data"
+    datasets = [("devel", develSet), ("train", trainSet), ("test", testSet)]
     convert(datasets, outDir, "co")
     os.chdir(cwd)
     
