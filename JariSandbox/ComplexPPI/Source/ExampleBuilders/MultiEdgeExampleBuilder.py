@@ -1,7 +1,7 @@
 """
 Edge Examples
 """
-__version__ = "$Revision: 1.54 $"
+__version__ = "$Revision: 1.55 $"
 
 import sys, os
 thisPath = os.path.dirname(os.path.abspath(__file__))
@@ -15,12 +15,14 @@ from FeatureBuilders.TokenFeatureBuilder import TokenFeatureBuilder
 from FeatureBuilders.BioInferOntologyFeatureBuilder import BioInferOntologyFeatureBuilder
 from FeatureBuilders.NodalidaFeatureBuilder import NodalidaFeatureBuilder
 from FeatureBuilders.BacteriaRenamingFeatureBuilder import BacteriaRenamingFeatureBuilder
+from FeatureBuilders.RELFeatureBuilder import RELFeatureBuilder
 #import Graph.networkx_v10rc1 as NX10
 from Core.SimpleGraph import Graph
 from FeatureBuilders.TriggerFeatureBuilder import TriggerFeatureBuilder
 #IF LOCAL
 import Utils.BioInfer.OntologyUtils as OntologyUtils
 #ENDIF
+import Range
 
 class MultiEdgeExampleBuilder(ExampleBuilder):
     """
@@ -63,6 +65,8 @@ class MultiEdgeExampleBuilder(ExampleBuilder):
             self.triggerFeatureBuilder = TriggerFeatureBuilder(self.featureSet)
             self.triggerFeatureBuilder.useNonNameEntities = True
             #self.bioinferOntologies = OntologyUtils.loadOntologies(OntologyUtils.g_bioInferFileName)
+        if "rel_features" in self.styles:
+            self.relFeatureBuilder = RELFeatureBuilder(featureSet)
         #ENDIF
         self.pathLengths = length
         assert(self.pathLengths == None)
@@ -413,11 +417,30 @@ class MultiEdgeExampleBuilder(ExampleBuilder):
                     self.triggerFeatureBuilder.tag = "trg2_"
                     self.triggerFeatureBuilder.buildFeatures(token2)
                     self.triggerFeatureBuilder.setFeatureVector(None)
+                # REL features
+                if "rel_features" in self.styles:
+                    self.relFeatureBuilder.setFeatureVector(features)
+                    self.relFeatureBuilder.tag = "rel1_"
+                    self.relFeatureBuilder.buildAllFeatures(sentenceGraph.tokens, sentenceGraph.tokens.index(token1))
+                    self.relFeatureBuilder.tag = "rel2_"
+                    self.relFeatureBuilder.buildAllFeatures(sentenceGraph.tokens, sentenceGraph.tokens.index(token2))
+                    self.relFeatureBuilder.setFeatureVector(None)
                 if "bacteria_renaming" in self.styles:
                     self.bacteriaRenamingFeatureBuilder.setFeatureVector(features)
                     self.bacteriaRenamingFeatureBuilder.buildPairFeatures(entity1, entity2)
                     #self.bacteriaRenamingFeatureBuilder.buildSubstringFeatures(entity1, entity2) # decreases perf. 74.76 -> 72.41
                     self.bacteriaRenamingFeatureBuilder.setFeatureVector(None)
+                if "co_limits" in self.styles:
+                    e1Offset = Range.charOffsetToSingleTuple(entity1.get("charOffset"))
+                    e2Offset = Range.charOffsetToSingleTuple(entity2.get("charOffset"))
+                    if Range.contains(e1Offset, e2Offset):
+                        features[self.featureSet.getId("e1_contains_e2")] = 1
+                        if entity2.get("isName") == "True":
+                            features[self.featureSet.getId("e1_contains_e2name")] = 1
+                    if Range.contains(e2Offset, e1Offset):
+                        features[self.featureSet.getId("e2_contains_e1")] = 1
+                        if entity1.get("isName") == "True":
+                            features[self.featureSet.getId("e2_contains_e1name")] = 1
                 #if "graph_kernel" in self.styles or not "no_dependency" in self.styles:
                 #    #print "Getting edges"
                 #    if token1 != token2 and pathExists:
