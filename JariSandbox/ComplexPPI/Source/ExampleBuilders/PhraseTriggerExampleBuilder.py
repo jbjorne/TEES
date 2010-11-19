@@ -1,7 +1,7 @@
 """
 Trigger examples
 """
-__version__ = "$Revision: 1.3 $"
+__version__ = "$Revision: 1.4 $"
 
 import sys, os
 thisPath = os.path.dirname(os.path.abspath(__file__))
@@ -14,6 +14,10 @@ import Core.ExampleUtils as ExampleUtils
 from Core.Gazetteer import Gazetteer
 import InteractionXML.MapPhrases as MapPhrases
 from FeatureBuilders.TriggerFeatureBuilder import TriggerFeatureBuilder
+
+coNPPhraseFirstToken = set(["both", "each", "it", "its", "itself", "neither", "others",
+                            "that", "the", "their", "them", "themselves", "these", "they",
+                            "this", "those"])
 
 class PhraseTriggerExampleBuilder(ExampleBuilder):
     def __init__(self, style=None, classSet=None, featureSet=None, gazetteerFileName=None):
@@ -77,6 +81,22 @@ class PhraseTriggerExampleBuilder(ExampleBuilder):
             entityTypes.add(entity.get("type"))
         return "---".join(sorted(list(entityTypes)))
     
+    def isPotentialCOTrigger(self, phrase, phraseTokens, sentenceGraph):
+        global coNPPhraseFirstToken
+        
+        # Check type
+        if phrase.get("type") not in ["NP", "NP-IN"]: # only limit these types
+            return True
+        # Check named entities
+        for token in phraseTokens:
+            if sentenceGraph.tokenIsName[token]:
+                return True
+        # Check first word
+        if phraseTokens[0].get("text") in coNPPhraseFirstToken:
+            return True
+        else:
+            return False
+    
     def buildExamples(self, sentenceGraph):
         """
         Build one example for each phrase in the sentence
@@ -109,6 +129,12 @@ class PhraseTriggerExampleBuilder(ExampleBuilder):
             category = self.classSet.getId(categoryName)
             phraseTokens = self.getPhraseTokens(phrase, sentenceGraph)
             phraseHeadToken = self.getPhraseHeadToken(phrase, phraseTokens)
+            self.exampleStats.beginExample(categoryName)
+            
+            if "co_limits" in self.styles and not self.isPotentialCOTrigger(phrase, phraseTokens, sentenceGraph):
+                self.exampleStats.filter("co_limits")
+                self.exampleStats.endExample()
+                continue
             
             # Sentence level features
             features.update(self.triggerFeatureBuilder.bowFeatures)
@@ -118,6 +144,13 @@ class PhraseTriggerExampleBuilder(ExampleBuilder):
             features[self.featureSet.getId("pType_"+phrase.get("type"))] = 1
             for split in phrase.get("type").split("-"):
                 features[self.featureSet.getId("pSubType_"+split)] = 1
+            # Check named entities
+            nameCount = 0
+            for token in phraseTokens:
+                if sentenceGraph.tokenIsName[token]:
+                    nameCount += 1
+            features[self.featureSet.getId("phraseNames_"+str(nameCount))] = 1
+            features[self.featureSet.getId("phraseNameCount")] = nameCount
             
             # Head token features
             self.triggerFeatureBuilder.setTag("head_")
@@ -131,19 +164,22 @@ class PhraseTriggerExampleBuilder(ExampleBuilder):
             #print len(phraseTokens)
             for token in phraseTokens:
                 self.triggerFeatureBuilder.setTag("ptok_")
-                self.triggerFeatureBuilder.buildFeatures(phraseHeadToken, linear=False)
+                self.triggerFeatureBuilder.buildFeatures(phraseHeadToken, linear=False, chains=False)
                 self.triggerFeatureBuilder.setTag("ptok_" + str(phraseTokenPos) + "_" )
-                self.triggerFeatureBuilder.buildFeatures(phraseHeadToken, linear=False)
+                self.triggerFeatureBuilder.buildFeatures(phraseHeadToken, linear=False, chains=False)
                 self.triggerFeatureBuilder.setTag("ptok_" + str(phraseTokenPos-len(phraseTokens)) + "_" )
-                self.triggerFeatureBuilder.buildFeatures(phraseHeadToken, linear=False)            
+                self.triggerFeatureBuilder.buildFeatures(phraseHeadToken, linear=False, chains=False)            
                 #self.triggerFeatureBuilder.buildAttachedEdgeFeatures(phraseHeadToken)
                 phraseTokenPos += 1
             self.triggerFeatureBuilder.setTag()
              
             extra = {"xtype":"phrase","t":phraseHeadToken.get("id"), "p":phrase.get("id"), "ptype":phrase.get("type")}
             extra["charOffset"] = phrase.get("charOffset")
+            if phrase not in phraseToEntity:
+                extra["eids"] = "neg"
+            else:
+                extra["eids"] = ",".join([x.get("id") for x in phraseToEntity[phrase]])
             examples.append( (sentenceGraph.getSentenceId()+".x"+str(exampleIndex),category,features,extra) )
-            self.exampleStats.beginExample(categoryName)
             self.exampleStats.endExample()
             exampleIndex += 1
         
