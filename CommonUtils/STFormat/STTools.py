@@ -1,4 +1,5 @@
 import sys, os
+import codecs
 
 class Document():
     def __init__(self):
@@ -330,7 +331,8 @@ def writeSet(documents, dir, resultFileTag="a2"):
     for doc in documents:
         write(doc.id, dir, doc.proteins, doc.triggers, doc.events, doc.relations, resultFileTag)
         # Write text file
-        out = open(os.path.join(dir, str(doc.id) + ".txt"), "wt")
+        #out = open(os.path.join(dir, str(doc.id) + ".txt"), "wt")
+        out = codecs.open(os.path.join(dir, str(doc.id) + ".txt"), "wt", "utf-8")
         out.write(doc.text)
         out.close()
 
@@ -338,6 +340,7 @@ def getMaxId(annotations):
     nums = [0]
     for annotation in annotations:
         if annotation.id != None:
+            assert annotation.id[1:].isdigit(), annotation.id
             nums.append(int(annotation.id[1:]))
     return max(nums)
 
@@ -455,10 +458,10 @@ def write(id, dir, proteins, triggers, events, relations, resultFileTag="a2"):
     if not os.path.exists(dir):
         os.makedirs(dir)
     if proteins != None:
-        out = open(os.path.join(dir, id + ".a1"), "wt")
+        out = codecs.open(os.path.join(dir, id + ".a1"), "wt", "utf-8")
         writeTAnnotation(proteins, out)
         out.close()
-    resultFile = open(os.path.join(dir, id + "." + resultFileTag), "wt")
+    resultFile = codecs.open(os.path.join(dir, id + "." + resultFileTag), "wt", "utf-8")
     writeTAnnotation(triggers, resultFile, getMaxId(proteins) + 1)
     if events != None:
         writeEvents(events, resultFile)

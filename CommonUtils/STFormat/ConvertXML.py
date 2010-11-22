@@ -136,6 +136,13 @@ def toSTFormat(input, output=None, outputTag="a2"):
             entityOffset = Range.charOffsetToSingleTuple(entity.get("charOffset"))
             ann = Annotation()
             ann.type = eType
+            entityOrigId = entity.get("origId")
+            if entityOrigId != None:
+                if entityOrigId[0] == "E": # a special id denoting a numbered, but triggerless event
+                    ann.eventId = entityOrigId
+                    ann.id = None
+                else:
+                    ann.id = entityOrigId
             ann.text = entity.get("text")
             ann.charBegin = entityOffset[0]
             ann.charEnd = entityOffset[1] + 1
@@ -152,6 +159,7 @@ def toSTFormat(input, output=None, outputTag="a2"):
                 stDoc.proteins.append(ann)
             else:
                 stDoc.triggers.append(ann)
+            assert entity.get("id") != None
             tMap[entity.get("id")] = ann
         # First map Coref proteins
         corefProtMap = {}
@@ -173,7 +181,9 @@ def toSTFormat(input, output=None, outputTag="a2"):
             intType = interaction.get("type")
             if intType == "neg" or intType == "Target":
                 continue # Targets have already been put into a dictionary
-            elif intType in ["Site", "Gene_expression", "Transcription", "Protein_catabolism", "Localization", "Binding", "Phosphorylation", "Positive_regulation", "Negative_regulation", "Regulation"]:
+            #elif intType in ["Site", "Gene_expression", "Transcription", "Protein_catabolism", "Localization", "Binding", "Phosphorylation", "Positive_regulation", "Negative_regulation", "Regulation"]:
+            elif intType in ["Site", "Gene_expression", "Transcription", "Protein_catabolism", "Localization", "Binding", "Phosphorylation", "Positive_regulation", "Negative_regulation", "Regulation",
+                             "InputAssociation", "InputProcess", "InputInhibitor", "OutputProcess"]:
                 if intType == "Site":
                     sites.append(interaction)
                 else:
@@ -183,6 +193,8 @@ def toSTFormat(input, output=None, outputTag="a2"):
                     else:
                         event = Annotation()
                         event.trigger = tMap[interaction.get("e1")]
+                        if hasattr(event.trigger, "eventId"):
+                            event.id = event.trigger.eventId 
                         eMap[e1] = event
                         stDoc.events.append(event)
                     arg = [interaction.get("type"), interaction.get("e2"), None]
@@ -213,15 +225,150 @@ def toSTFormat(input, output=None, outputTag="a2"):
         for eKey in sorted(eMap.keys()):
             event = eMap[eKey]
             for arg in event.arguments:
-                if tMap.has_key(arg[2]):
-                    arg[2] = tMap[arg2]
+                if arg[1] == None:
+                    continue
+                if tMap.has_key(arg[1]):
+                    arg[1] = tMap[arg[1]]
                 else:
-                    arg[2] = eMap[arg2]
+                    arg[1] = eMap[arg[1]]
         # Create STFormat ids
         updateIds(stDoc.proteins)
         updateIds(stDoc.triggers, getMaxId(stDoc.proteins) + 1)
         updateIds(stDoc.events)
         updateIds(stDoc.relations)
+    
+    if output != None:
+        print >> sys.stderr, "Writing output to", output
+        writeSet(documents, output, resultFileTag=outputTag)
+    return documents
+
+def toSTFormatSentences(input, output=None, outputTag="a2"):
+    print >> sys.stderr, "Loading corpus", input
+    corpusTree = ETUtils.ETFromObj(input)
+    print >> sys.stderr, "Corpus file loaded"
+    corpusRoot = corpusTree.getroot()
+    
+    documents = []
+    for document in corpusRoot.findall("document"):
+        sentenceCount = 0
+        for sentence in document.findall("sentence"):
+            stDoc = Document()
+            stDoc.proteins = []
+            stDoc.triggers = []
+            stDoc.events = []
+            stDoc.relations = []
+            stDoc.id = document.get("origId") + ".s" + str(sentenceCount)
+            stDoc.text = sentence.get("text") #""
+            tail = sentence.get("tail")
+            if tail != None:
+                stDoc.text += tail
+            documents.append(stDoc)
+            eMap = {}
+            tMap = {}
+            sites = []
+            sentenceOffset = Range.charOffsetToSingleTuple(sentence.get("charOffset"))
+#            sentenceOffsets = {}
+#            for sentence in document.findall("sentence"):
+#                stDoc.text += sentence.get("text")
+#                tail = sentence.get("tail")
+#                if tail != None:
+#                    stDoc.text += tail
+#                sentenceOffset = Range.charOffsetToSingleTuple(sentence.get("charOffset"))
+#                sentenceOffsets[sentence.get("id")] = sentenceOffset
+            for entity in sentence.getiterator("entity"):
+                eType = entity.get("type")
+                if eType == "neg":
+                    continue
+                entityOffset = Range.charOffsetToSingleTuple(entity.get("charOffset"))
+                ann = Annotation()
+                ann.type = eType
+                ann.text = entity.get("text")
+                ann.charBegin = entityOffset[0]
+                ann.charEnd = entityOffset[1] + 1
+                idStem = entity.get("id").rsplit(".", 1)[0]
+                if sentenceOffsets.has_key(idStem):
+                    #sentenceOffset = sentenceOffsets[idStem]
+                    ann.charBegin += sentenceOffset[0]
+                    ann.charEnd += sentenceOffset[0]
+                if entity.get("speculation") == "True":
+                    ann.speculation = True
+                if entity.get("negation") == "True":
+                    ann.negation = True
+                if entity.get("isName") == "True":
+                    stDoc.proteins.append(ann)
+                else:
+                    stDoc.triggers.append(ann)
+                tMap[entity.get("id")] = ann
+            # First map Coref proteins
+            corefProtMap = {}
+            for interaction in sentence.getiterator("interaction"):
+                intType = interaction.get("type")
+                if intType == "Target":
+                    e1 = interaction.get("e1")
+                    e2 = interaction.get("e2")
+                    if not tMap.has_key(e2):
+                        print >> sys.stderr, "Warning, no trigger for Coref Protein Target"
+                        continue
+                    e2 = tMap[e2]
+                    if not corefProtMap.has_key(e1):
+                        corefProtMap[e1] = []
+                    if not e2 in corefProtMap[e1]: 
+                        corefProtMap[e1].append(e2)
+            # Then process all interactions
+            for interaction in sentence.getiterator("interaction"):
+                intType = interaction.get("type")
+                if intType == "neg" or intType == "Target":
+                    continue # Targets have already been put into a dictionary
+                elif intType in ["Site", "Gene_expression", "Transcription", "Protein_catabolism", "Localization", "Binding", "Phosphorylation", "Positive_regulation", "Negative_regulation", "Regulation"]:
+                    if intType == "Site":
+                        sites.append(interaction)
+                    else:
+                        e1 = interaction.get("e1")
+                        if eMap.has_key(e1):
+                            event = eMap[e1]
+                        else:
+                            event = Annotation()
+                            event.trigger = tMap[interaction.get("e1")]
+                            eMap[e1] = event
+                            stDoc.events.append(event)
+                        arg = [interaction.get("type"), interaction.get("e2"), None]
+                        event.arguments.append(arg)
+                else: # interaction is a relation
+                    rel = Annotation()
+                    rel.type = interaction.get("type")
+                    e1 = interaction.get("e1")
+                    e2 = interaction.get("e2")
+                    #assert rel.type == "Protein-Component" or rel.type == "Subunit-Complex" or rel.type == "Renaming", (rel.type, stDoc.id, interaction.get("id"))
+                    if rel.type == "Protein-Component" or rel.type == "Subunit-Complex": 
+                        rel.arguments.append(["Arg1", tMap[e1], None])
+                        rel.arguments.append(["Arg2", tMap[e2], None])
+                    elif rel.type == "Renaming":
+                        rel.arguments.append(["Former", tMap[e1], None])
+                        rel.arguments.append(["New", tMap[e2], None])
+                    elif rel.type == "Coref":
+                        rel.arguments.append(["Anaphora", tMap[e1], None])
+                        rel.arguments.append(["Antecedent", tMap[e2], None])
+                        # Add protein arguments'
+                        if corefProtMap.has_key(e2):
+                            for prot in corefProtMap[e2]:
+                                rel.arguments.append(["Target", prot, None])
+                    else:
+                        assert False, (rel.type, stDoc.id, interaction.get("id"))
+                    stDoc.relations.append(rel)
+            # Map argument targets
+            for eKey in sorted(eMap.keys()):
+                event = eMap[eKey]
+                for arg in event.arguments:
+                    if tMap.has_key(arg[2]):
+                        arg[2] = tMap[arg2]
+                    else:
+                        arg[2] = eMap[arg2]
+            # Create STFormat ids
+            updateIds(stDoc.proteins)
+            updateIds(stDoc.triggers, getMaxId(stDoc.proteins) + 1)
+            updateIds(stDoc.events)
+            updateIds(stDoc.relations)
+            sentenceCount += 1
     
     if output != None:
         print >> sys.stderr, "Writing output to", output
@@ -243,13 +390,18 @@ if __name__=="__main__":
     optparser.add_option("-i", "--input", default=None, dest="input", help="Corpus in interaction xml format", metavar="FILE")
     optparser.add_option("-o", "--output", default=None, dest="output", help="Output file in interaction xml format.")
     optparser.add_option("-t", "--outputTag", default="a2", dest="outputTag", help="a2 file extension.")
+    optparser.add_option("-s", "--sentences", default=False, action="store_true", dest="sentences", help="Write each sentence to its own document")
     (options, args) = optparser.parse_args()
     
     if options.input[-4:] == ".xml":
         print >> sys.stderr, "Loading XML"
         xml = ETUtils.ETFromObj(options.input)
-        print >> sys.stderr, "Converting to ST Format"
-        toSTFormat(xml, options.output, options.outputTag)
+        if options.sentences:
+            print >> sys.stderr, "Converting to ST Format (sentences)"
+            toSTFormatSentences(xml, options.output, options.outputTag)
+        else:
+            print >> sys.stderr, "Converting to ST Format"
+            toSTFormat(xml, options.output, options.outputTag)
 
                 
 #if __name__=="__main__":
