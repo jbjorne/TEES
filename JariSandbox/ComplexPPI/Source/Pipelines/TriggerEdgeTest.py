@@ -3,13 +3,14 @@
 # most imports are defined in Pipeline
 from Pipeline import *
 import sys, os
+import STFormat.ConvertXML
 
 from optparse import OptionParser
 optparser = OptionParser()
 optparser.add_option("-e", "--test", default=Settings.DevelFile, dest="testFile", help="Test file in interaction xml")
 optparser.add_option("-r", "--train", default=Settings.TrainFile, dest="trainFile", help="Train file in interaction xml")
 optparser.add_option("-o", "--output", default=None, dest="output", help="output directory")
-optparser.add_option("-a", "--task", default=1, type="int", dest="task", help="task number")
+optparser.add_option("-a", "--task", default="1", dest="task", help="task number")
 optparser.add_option("-p", "--parse", default="split-McClosky", dest="parse", help="Parse XML element name")
 optparser.add_option("-t", "--tokenization", default="split-McClosky", dest="tokenization", help="Tokenization XML element name")
 optparser.add_option("-m", "--mode", default="BOTH", dest="mode", help="MODELS (recalculate SVM models), GRID (parameter grid search) or BOTH")
@@ -30,18 +31,21 @@ optparser.add_option("-x", "--triggerParams", default="1000,5000,10000,20000,500
 optparser.add_option("-y", "--recallAdjustParams", default="0.5,0.6,0.65,0.7,0.85,1.0,1.1,1.2", dest="recallAdjustParams", help="Recall adjuster parameter values")
 optparser.add_option("-z", "--edgeParams", default="5000,7500,10000,20000,25000,28000,50000,60000,65000", dest="edgeParams", help="Edge detector c-parameter values")
 # Shared task evaluation
-optparser.add_option("-s", "--sharedTask", default="True", action="store_false", dest="sharedTask", help="Do Shared Task evaluation")
+optparser.add_option("-s", "--sharedTask", default=True, action="store_false", dest="sharedTask", help="Do Shared Task evaluation")
+optparser.add_option("--clearAll", default=False, action="store_true", dest="clearAll", help="Delete all files")
 (options, args) = optparser.parse_args()
 
 # Check options
-assert options.mode in ["MODELS", "FINAL", "BOTH"]
+assert options.mode in ["MODELS", "FINAL", "BOTH", "GRID"]
 assert options.output != None
-assert options.task in [1, 2]
+assert options.task in ["1", "2", "CO", "REL"]
 
 if options.csc.find(",") != -1:
     options.csc = options.csc.split(",")
 else:
     options.csc = [options.csc]
+if options.clearAll and "clear" not in options.csc:
+    options.csc.append("clear")
 
 exec "CLASSIFIER = " + options.classifier
 
@@ -67,7 +71,10 @@ boosterParams = [float(i) for i in options.recallAdjustParams.split(",")]
 WORKDIR=options.output
 CSC_WORKDIR = os.path.join("CSCConnection",WORKDIR.lstrip("/"))
 
-workdir(WORKDIR, False) # Select a working directory, don't remove existing files
+if options.clearAll:
+    workdir(WORKDIR, True) # Select a working directory, remove existing files
+else:
+    workdir(WORKDIR, False) # Select a working directory, don't remove existing files
 log() # Start logging into a file in working directory
 
 print >> sys.stderr, "Edge params:", EDGE_FEATURE_PARAMS
@@ -150,33 +157,58 @@ else:
 ###############################################################################
 # Classification with recall boosting
 ###############################################################################
-if options.mode in ["BOTH", "FINAL"]:
+if options.mode in ["BOTH", "FINAL", "GRID"]:
     # Pre-made models
     #EDGE_MODEL_STEM = "edge-models/model-c_"
     #TRIGGER_MODEL_STEM = "trigger-models/model-c_"
+    #bestTriggerModel = "trigger-models/model-c_50000"
+    #bestEdgeModel = "edge-models/model-c_7500"
+    #bestTriggerModel = "best-trigger-model"
+    #bestEdgeModel = "best-edge-model"
     
-    clear = False
-    if "local" not in options.csc:
-        if "louhi" in options.csc:
-            c = CSCConnection(CSC_WORKDIR+"/trigger-models", "jakrbj@louhi.csc.fi", clear)
+    if options.mode != "GRID":
+        clear = False
+        if "local" not in options.csc:
+            if "louhi" in options.csc:
+                c = CSCConnection(CSC_WORKDIR+"/trigger-models", "jakrbj@louhi.csc.fi", False)
+            else:
+                c = CSCConnection(CSC_WORKDIR+"/trigger-models", "jakrbj@murska.csc.fi", False)
         else:
-            c = CSCConnection(CSC_WORKDIR+"/trigger-models", "jakrbj@murska.csc.fi", clear)
-    else:
-        c = None
-    bestTriggerModel = optimize(CLASSIFIER, Ev, TRIGGER_TRAIN_EXAMPLE_FILE, TRIGGER_TEST_EXAMPLE_FILE,\
-        TRIGGER_IDS+".class_names", TRIGGER_CLASSIFIER_PARAMS, "trigger-models", None, c, True, steps="RESULTS")[1]
-    if "local" not in options.csc:
-        if "louhi" in options.csc:
-            c = CSCConnection(CSC_WORKDIR+"/edge-models", "jakrbj@louhi.csc.fi", clear)
+            c = None
+        bestTriggerModel = optimize(CLASSIFIER, Ev, TRIGGER_TRAIN_EXAMPLE_FILE, TRIGGER_TEST_EXAMPLE_FILE,\
+            TRIGGER_IDS+".class_names", TRIGGER_CLASSIFIER_PARAMS, "trigger-models", None, c, True, steps="RESULTS")[1]
+        if os.path.exists("best-trigger-model"):
+            os.remove("best-trigger-model")
+        if os.path.exists(bestTriggerModel):
+            print bestTriggerModel
+            os.symlink(bestTriggerModel, "best-trigger-model")
+            bestTriggerModel = "best-trigger-model"
         else:
-            c = CSCConnection(CSC_WORKDIR+"/edge-models", "jakrbj@murska.csc.fi", clear)
+            bestTriggerModel = None
+        if "local" not in options.csc:
+            if "louhi" in options.csc:
+                c = CSCConnection(CSC_WORKDIR+"/edge-models", "jakrbj@louhi.csc.fi", False)
+            else:
+                c = CSCConnection(CSC_WORKDIR+"/edge-models", "jakrbj@murska.csc.fi", False)
+        else:
+            c = None
+        bestEdgeModel = optimize(CLASSIFIER, Ev, EDGE_TRAIN_EXAMPLE_FILE, EDGE_TEST_EXAMPLE_FILE,\
+            EDGE_IDS+".class_names", EDGE_CLASSIFIER_PARAMS, "edge-models", None, c, True, steps="RESULTS")[1]
+        if os.path.exists("best-edge-model"):
+            os.remove("best-edge-model")
+        if os.path.exists(bestEdgeModel):
+            os.symlink(bestEdgeModel, "best-edge-model")
+            bestEdgeModel = "best-edge-model"
+        else:
+            bestEdgeModel = None
+
     else:
-        c = None
-    bestEdgeModel = optimize(CLASSIFIER, Ev, EDGE_TRAIN_EXAMPLE_FILE, EDGE_TEST_EXAMPLE_FILE,\
-        EDGE_IDS+".class_names", EDGE_CLASSIFIER_PARAMS, "edge-models", None, c, True, steps="RESULTS")[1]
+        bestTriggerModel = "best-trigger-model"
+        bestEdgeModel = "best-edge-model"
+
+    TRIGGER_EXAMPLE_BUILDER.run(TEST_FILE, "test-trigger-examples", PARSE, TOK, TRIGGER_FEATURE_PARAMS, TRIGGER_IDS)
     
     count = 0
-    TRIGGER_EXAMPLE_BUILDER.run(TEST_FILE, "test-trigger-examples", PARSE, TOK, TRIGGER_FEATURE_PARAMS, TRIGGER_IDS)
     bestResults = None
     for boost in boosterParams:
         print >> sys.stderr, "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
@@ -185,19 +217,27 @@ if options.mode in ["BOTH", "FINAL"]:
         
         # Build trigger examples
         CLASSIFIER.test("test-trigger-examples", bestTriggerModel, "test-trigger-classifications")
+        if bestTriggerModel != None:
+            print >> sys.stderr, "best-trigger-model=", os.path.realpath("best-trigger-model")
         evaluator = Ev.evaluate("test-trigger-examples", "test-trigger-classifications", TRIGGER_IDS+".class_names")
         #boostedTriggerFile = "TEST-predicted-triggers.xml"
         #xml = ExampleUtils.writeToInteractionXML("test-trigger-examples", ExampleUtils.loadPredictionsBoost("test-trigger-classifications", boost), TEST_FILE, None, TRIGGER_IDS+".class_names", PARSE, TOK)    
         #xml = ExampleUtils.writeToInteractionXML("test-trigger-examples", "test-trigger-classifications", TEST_FILE, None, TRIGGER_IDS+".class_names", PARSE, TOK)    
-        xml = BioTextExampleWriter.write("test-trigger-examples", "test-trigger-classifications", TEST_FILE, None, TRIGGER_IDS+".class_names", PARSE, TOK)
+        xml = BioTextExampleWriter.write("test-trigger-examples", "test-trigger-classifications", TEST_FILE, "trigger-pred-"+str(boost)+".xml", TRIGGER_IDS+".class_names", PARSE, TOK)
         # Boost
-        xml = RecallAdjust.run(xml, boost, None)
+        if options.task == "CO":
+            print >> sys.stderr, "Binary recall adjust for CO"
+            xml = RecallAdjust.run(xml, boost, None, binary=True)
+        else:
+            xml = RecallAdjust.run(xml, boost, None)
         xml = ix.splitMergedElements(xml, None)
         xml = ix.recalculateIds(xml, None, True)
         
         # Build edge examples
         EDGE_EXAMPLE_BUILDER.run(xml, "test-edge-examples", PARSE, TOK, EDGE_FEATURE_PARAMS, EDGE_IDS)
         # Classify with pre-defined model
+        if bestEdgeModel != None:
+            print >> sys.stderr, "best-edge-model=", os.path.realpath("best-edge-model")
         CLASSIFIER.test("test-edge-examples", bestEdgeModel, "test-edge-classifications")
         # Write to interaction xml
         evaluator = Ev.evaluate("test-edge-examples", "test-edge-classifications", EDGE_IDS+".class_names")
@@ -213,6 +253,12 @@ if options.mode in ["BOTH", "FINAL"]:
             # edges. Note that this evaluation will differ somewhat from the previous ones,
             # which evaluate on the level of examples.
             EvaluateInteractionXML.run(Ev, xml, TEST_FILE, PARSE, TOK)
+            
+            # Convert to ST-format
+            if options.task == "REL":
+                STFormat.ConvertXML.toSTFormat(xml, "flat-"+str(boost)+"-geniaformat", "rel")
+            else:
+                STFormat.ConvertXML.toSTFormat(xml, "flat-"+str(boost)+"-geniaformat", "a2")
             
             if options.sharedTask:
                 # Post-processing

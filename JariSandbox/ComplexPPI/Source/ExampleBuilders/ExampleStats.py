@@ -50,6 +50,7 @@ class ExampleStats:
     
     def printStats(self):
         print "Example Statistics"
+        print self.examplesByClass.keys()
         for className in sorted(self.examplesByClass.keys()):
             if self.filteredByClassByFilter.has_key(className):
                 filterStr = str( self.filteredByClassByFilter[className] )

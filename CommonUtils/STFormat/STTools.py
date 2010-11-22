@@ -311,6 +311,8 @@ def loadSet(dir, setName=None):
     ids = set()
     documents = []
     for filename in os.listdir(dir):
+        if filename.find("tar.gz") != -1:
+            continue
         if filename.find(".") != -1:
             splits = filename.split(".")
             ids.add(splits[0])

@@ -1,4 +1,4 @@
-__version__ = "$Revision: 1.5 $"
+__version__ = "$Revision: 1.6 $"
 
 import sys,os
 import sys
@@ -89,6 +89,7 @@ def makeSentences(input, output=None, removeText=False, postProcess=True):
         text = document.get("text")
         if text == None or text.strip() == "":
             continue
+        #print type(text)
         # Write text to workfile
         workdir = tempfile.mkdtemp()
         workfile = codecs.open(os.path.join(workdir, "sentence-splitter-input.txt"), "wt", "utf-8")
@@ -117,11 +118,17 @@ def makeSentences(input, output=None, removeText=False, postProcess=True):
             workfile = codecs.open(os.path.join(workdir, "sentence-splitter-output.txt"), "rt", "utf-8")
         start = 0 # sentences are consecutively aligned to the text for charOffsets
         sentenceCount = 0
+        #text = text.replace("\n", " ") # should stop sentence splitter from crashing.
+        #text = text.replace("  ", " ") # should stop sentence splitter from crashing.
         for sText in workfile.readlines():
             sText = sText.strip() # The text of the sentence
+            if sText == "":
+                print >> sys.stderr, "Warning, empty sentence in", document.get("id") 
+                continue
             # Find the starting point of the sentence in the text. This
             # point must be after previous sentences
             cStart = text.find(sText, start) # find start position
+            assert cStart != -1, (text, sText, start)
             tail = None
             if cStart - start != 0:
                 prevSentence.set("tail", text[start:cStart])

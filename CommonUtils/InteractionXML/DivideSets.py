@@ -11,7 +11,7 @@ except ImportError:
     import cElementTree as ET
 import cElementTreeUtils as ETUtils
 
-def processCorpus(input, outDir, stem, tail):
+def processCorpus(input, outDir, stem, tail, mergedSets=[]):
     newCorpora = {}
     print >> sys.stderr, "Loading corpus file", input
     corpusRoot = ETUtils.ETFromObj(input).getroot()
@@ -35,6 +35,20 @@ def processCorpus(input, outDir, stem, tail):
             countsByType[docSet] = 0
         newCorpora[docSet].append(document)
         countsByType[docSet] += 1
+        
+    # Make merged sets
+    for mergedSet in mergedSets:
+        tag = "-and-".join(sorted(mergedSet))
+        if not newCorpora.has_key(tag):
+            newCorpora[tag] = ET.Element("corpus")
+            for k, v in corpusRoot.attrib.iteritems():
+                newCorpora[tag].set(k, v)
+            countsByType[tag] = 0    
+        for componentSet in mergedSet:
+            for element in newCorpora[componentSet].findall("document"):
+                newCorpora[tag].append(element)
+                countsByType[tag] += 1
+        
     print >> sys.stderr, "New Sets"
     for k in sorted(countsByType.keys()):
         print >> sys.stderr, "  " + str(k) + ":", countsByType[k]
@@ -66,6 +80,7 @@ if __name__=="__main__":
     optparser.add_option("-o", "--output", default=None, dest="output", help="Output file in interaction xml format.")
     optparser.add_option("-s", "--stem", default=None, dest="stem", help="Output file stem.")
     optparser.add_option("-t", "--tail", default=None, dest="tail", help="Output file tail.")
+    optparser.add_option("-m", "--merged", default=None, dest="merged", help="Output file tail.")
     (options, args) = optparser.parse_args()
     
     if options.input == None:

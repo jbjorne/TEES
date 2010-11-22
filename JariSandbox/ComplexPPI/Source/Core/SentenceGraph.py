@@ -1,7 +1,7 @@
 """
 Main class for representing a sentence
 """
-__version__ = "$Revision: 1.36 $"
+__version__ = "$Revision: 1.37 $"
 
 #import Graph.networkx_v10rc1 as NX10 # import networkx as NX
 from Core.SimpleGraph import Graph
@@ -62,6 +62,8 @@ def loadCorpus(corpus, parse, tokenization=None, removeNameInfo=False, removeInt
         graph.interSentenceInteractions = sentence.interSentenceInteractions
         duplicateInteractionEdgesRemoved += graph.duplicateInteractionEdgesRemoved
         sentence.sentenceGraph = graph
+        
+        graph.parseElement = sentence.parseElement
         
         #graph.mapEntityHints()
     print >> sys.stderr, "Removed", duplicateInteractionEdgesRemoved, "duplicate interaction edges"
@@ -278,7 +280,7 @@ class SentenceGraph:
         assert token != None, entityElement.get("id")
         if token != None:
             # The ElementTree entity-element is modified by setting the headOffset attribute
-            if not entityElement.get("headOffset") == None:
+            if entityElement.get("headOffset") == None or entityElement.get("headOffset") != token.get("charOffset"):
                 entityElement.set("headOffset", token.get("charOffset"))
             if not self.entitiesByToken.has_key(token):
                 self.entitiesByToken[token] = []
@@ -423,6 +425,11 @@ class SentenceGraph:
 #                                self.tokenHeadScores[tokenJ] = self.tokenHeadScores[tokenI] + 1
 #                                modifiedScores = True
             loopCount += 1
+        
+        # Add scores to tokens
+        for token in self.tokens:
+            token.set("headScore", str(self.tokenHeadScores[token]))
+            
         return self.tokenHeadScores
 
     def _markNamedEntities(self):

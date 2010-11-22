@@ -1,4 +1,4 @@
-parse__version__ = "$Revision: 1.7 $"
+parse__version__ = "$Revision: 1.8 $"
 
 import sys,os
 import sys
@@ -146,7 +146,7 @@ def runCharniakJohnsonParser(input, output, tokenizer=False):
                                    stdout=codecs.open(output, "wt", "utf-8"))
     return ProcessWrapper([firstStage, secondStage])
 
-def parse(input, output=None, tokenizationName=None, parseName="McClosky", requireEntities=False, skipIds=[]):
+def parse(input, output=None, tokenizationName=None, parseName="McClosky", requireEntities=False, skipIds=[], skipParsed=True):
     global charniakJohnsonParserDir, escDict
     print >> sys.stderr, "Charniak-Johnson Parser"
     
@@ -168,6 +168,9 @@ def parse(input, output=None, tokenizationName=None, parseName="McClosky", requi
                 continue
             if requireEntities:
                 if sentence.find("entity") == None:
+                    continue
+            if skipParsed:
+                if ETUtils.getElementByAttrib(sentence, "parse", {"parser":"McClosky"}) != None:
                     continue
             infile.write("<s> " + sentence.get("text") + " </s>\n")
             numCorpusSentences += 1
@@ -218,6 +221,9 @@ def parse(input, output=None, tokenizationName=None, parseName="McClosky", requi
             continue
         if requireEntities:
             if sentence.find("entity") == None:
+                continue
+        if skipParsed:
+            if ETUtils.getElementByAttrib(sentence, "parse", {"parser":"McClosky"}) != None:
                 continue
         
         # Find or create container elements

@@ -24,12 +24,15 @@ class CorpusElements:
         self.sentencesById = {}
         self.sentencesByOrigId = {}
         self.sentences = []
+        self.documentSentences = []
         for documentElement in self.documents:
             self.documentsById[documentElement.attrib["id"]] = documentElement
             sentenceElements = documentElement.findall("sentence")
+            self.documentSentences.append([])
             for sentenceElement in sentenceElements:
                 sentenceObj = SentenceElements(sentenceElement, parse, tokenization, removeIntersentenceInteractions)
                 self.sentencesById[sentenceElement.attrib["id"]] = sentenceObj
                 if sentenceElement.attrib.has_key("origId"):
                     self.sentencesByOrigId[sentenceElement.attrib["origId"]] = sentenceObj
                 self.sentences.append(sentenceObj)
+                self.documentSentences[-1].append(sentenceObj)

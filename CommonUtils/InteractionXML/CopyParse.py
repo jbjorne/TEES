@@ -7,6 +7,76 @@ import sys
 import CorpusElements
 from optparse import OptionParser
 
+def copyParse(input, source, output, parse, tokenization):
+    print >> sys.stderr, "Loading input file", input
+    inputTree = ETUtils.ETFromObj(input)
+    inputRoot = inputTree.getroot()
+    print >> sys.stderr, "Loading source:",
+    sourceElements = CorpusElements.loadCorpus(source, parse, tokenization)
+    sourceSentencesByText = {}
+    for sentence in sourceElements.sentences:
+        sentenceText = sentence.sentence.get("text")
+        #assert not sourceSentencesByText.has_key(sentenceText)
+        if sourceSentencesByText.has_key(sentenceText):
+            print >> sys.stderr, "Duplicate text", sentence.sentence.get("id"), sourceSentencesByText[sentenceText].sentence.get("id") 
+        sourceSentencesByText[sentenceText] = sentence
+    parsesCopied = [0,0]
+    tokenizationsCopied = [0,0]
+    for sentence in inputRoot.getiterator("sentence"):
+        parsesCopied[1] += 1
+        tokenizationsCopied[1] += 1
+        #sourceSentence = sourceElements.sentencesByOrigId[sentence.attrib["origId"]]
+        if not sourceSentencesByText.has_key(sentence.get("text")):
+            print >> sys.stderr, "Warning, no text found for sentence", sentence.get("id")
+            continue
+        sourceSentence = sourceSentencesByText[sentence.get("text")]
+        # Create analyses element (if needed)
+        targetAnalysesElement = sentence.find("sentenceanalyses")
+        if targetAnalysesElement == None:
+            targetAnalysesElement = ET.Element("sentenceanalyses")
+            sentence.append(targetAnalysesElement)
+        # Create parses element (if needed)
+        targetParsesElement = targetAnalysesElement.find("parses")
+        if targetParsesElement == None:
+            targetParsesElement = ET.Element("parses")
+            targetAnalysesElement.append(targetParsesElement)
+        # Check whether parse already exists
+        targetParseElements = targetParsesElement.findall("parse")
+        newParse = None
+        for parseElement in targetParseElements:
+            if parseElement.get("parser") == parse:
+                newParse = parseElement
+                break
+        # Copy parse if it doesn't
+        if newParse == None and sourceSentence.parseElement != None:
+            targetParsesElement.append(sourceSentence.parseElement)
+            parsesCopied[0] += 1
+        
+        # Create tokenizations element (if needed)
+        targetTokenizationsElement = targetAnalysesElement.find("tokenizations")
+        if targetTokenizationsElement == None:
+            targetTokenizationsElement = ET.Element("tokenizations")
+            targetAnalysesElement.append(targetTokenizationsElement)
+        # Check whether tokenization already exists
+        targetTokenizationElements = targetTokenizationsElement.findall("tokenization")
+        newTokenization = None
+        for tokenizationElement in targetTokenizationElements:
+            if tokenizationElement.attrib["tokenizer"] == newParse.attrib["tokenizer"]:
+                newTokenization = tokenizationElement
+                break
+        # Copy parse if it doesn't
+        if newTokenization == None and sourceSentence.tokenizationElement != None:
+            targetTokenizationsElement.append(sourceSentence.tokenizationElement)
+            tokenizationsCopied[0] += 1
+    
+    print >> sys.stderr, "Copied parse elements", parsesCopied
+    print >> sys.stderr, "Copied tokenization elements", tokenizationsCopied
+    
+    if output != None:       
+        print >> sys.stderr, "Writing output to", output
+        ETUtils.write(inputTree, output)
+    return inputTree
+        
 if __name__=="__main__":
     print >> sys.stderr, "##### Copy Parse #####"
     # Import Psyco if available
@@ -27,83 +97,4 @@ if __name__=="__main__":
     assert(options.input != None)
     assert(options.source != None)
     assert(options.output != None)
-    
-    print >> sys.stderr, "Loading input file", options.input
-    inputRoot = ET.parse(options.input).getroot()
-    print >> sys.stderr, "Loading source:",
-    sourceElements = CorpusElements.loadCorpus(options.source, options.parse, options.tokenization)
-    parseCopied = None
-    tokenizationCopied = None
-    for sentence in inputRoot.getiterator("sentence"):
-        sourceSentence = sourceElements.sentencesByOrigId[sentence.attrib["origId"]]
-        # Create analyses element (if needed)
-        targetAnalysesElement = sentence.find("sentenceanalyses")
-        if targetAnalysesElement == None:
-            targetAnalysesElement = ET.Element("sentenceanalyses")
-            sentence.append(targetAnalysesElement)
-        # Create parses element (if needed)
-        targetParsesElement = targetAnalysesElement.find("parses")
-        if targetParsesElement == None:
-            targetParsesElement = ET.Element("parses")
-            targetAnalysesElement.append(targetParsesElement)
-        # Check whether parse already exists
-        targetParseElements = targetParsesElement.findall("parse")
-        newParse = None
-        for parseElement in targetParseElements:
-            if parseElement.attrib["parser"] == options.parse:
-                newParse = parseElement
-                #print >> sys.stderr, "Parse element", options.parse, "already exists, not copied."
-                assert(parseCopied == None or parseCopied == False)
-                parseCopied = False
-                break
-        # Copy parse if it doesn't
-        if newParse == None:
-            newParse = ET.Element("parse")
-            newParse.attrib["parser"] = options.parse
-            targetParsesElement.append(newParse)
-            if sourceSentence.parseElement.attrib.has_key("tokenizer"):
-                newParse.attrib["tokenizer"] = sourceSentence.parseElement.attrib["tokenizer"]
-            else:
-                newParse.attrib["tokenizer"] = options.tokenization
-            for dependency in sourceSentence.dependencies:
-                newParse.append(dependency)
-            assert(parseCopied == None or parseCopied == True)
-            parseCopied = True
-            #print >> sys.stderr, "Copied parse element", options.parse
-        
-        # Create tokenization element (if needed)
-        targetTokenizationsElement = targetAnalysesElement.find("tokenizations")
-        if targetTokenizationsElement == None:
-            targetTokenizationsElement = ET.Element("tokenizations")
-            targetAnalysesElement.append(targetTokenizationsElement)
-        # Check whether tokenization already exists
-        targetTokenizationElements = targetTokenizationsElement.findall("tokenization")
-        newTokenization = None
-        for tokenizationElement in targetTokenizationElements:
-            if tokenizationElement.attrib["tokenizer"] == newParse.attrib["tokenizer"]:
-                newTokenization = tokenizationElement
-                #print >> sys.stderr, "Tokenization element", newParse.attrib["tokenizer"], "already exists, not copied."
-                assert(tokenizationCopied == None or tokenizationCopied == False)
-                tokenizationCopied = False
-                break
-        # Copy parse if it doesn't
-        if newTokenization == None:
-            newTokenization = ET.Element("tokenization")
-            newTokenization.attrib["tokenizer"] = newParse.attrib["tokenizer"]
-            targetTokenizationsElement.append(newTokenization)
-            for token in sourceSentence.tokens:
-                newTokenization.append(token)
-            assert(tokenizationCopied == None or tokenizationCopied == True)
-            tokenizationCopied = True
-            #print >> sys.stderr, "Copied tokenization element", newParse.attrib["tokenizer"]
-    
-    if parseCopied:
-        print >> sys.stderr, "Copied parse elements", options.parse
-    else:
-        print >> sys.stderr, "Parse elements", options.parse, "already exist, not copied."
-    if tokenizationCopied:
-        print >> sys.stderr, "Copied tokenization elements", newParse.attrib["tokenizer"]
-    else:
-        print >> sys.stderr, "Tokenization elements", newParse.attrib["tokenizer"], "already exist, not copied."       
-    print >> sys.stderr, "Writing output to", options.output
-    ETUtils.write(inputRoot, options.output)
+    copyParse(options.input, options.source, options.output, options.parse, options.tokenization)

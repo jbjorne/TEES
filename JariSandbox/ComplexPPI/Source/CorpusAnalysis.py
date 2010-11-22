@@ -52,7 +52,7 @@ def analyzeLinearDistance(corpusElements):
             for j in range(i+1,len(sentence.entities)):
                 tI = sentenceGraph.entityHeadTokenByEntity[sentence.entities[i]]
                 tJ = sentenceGraph.entityHeadTokenByEntity[sentence.entities[j]]
-                linDistance = int(t1.get("id").split("_")[-1]) - int(t2.get("id").split("_")[-1])
+                linDistance = int(tI.get("id").split("_")[-1]) - int(tJ.get("id").split("_")[-1])
                 if linDistance < 0:
                     linDistance *= -1
                 if not allEntitiesLinearDistanceCounts.has_key(linDistance):
@@ -293,28 +293,28 @@ def countEventComponents(corpusElements):
     for sentence in corpusElements.sentences:
         tokenPairsByType = {}
         sentenceGraph = sentence.sentenceGraph
-        if sentenceGraph == None:
-            continue
         for interaction in sentence.interactions:
             #sId = sentenceGraph.getSentenceId()
             e1Id = interaction.get("e1")
             e2Id = interaction.get("e2")
-            if not sentenceGraph.entitiesById.has_key(e1Id):
+            if not sentence.entitiesById.has_key(e1Id):
                 continue
-            if not sentenceGraph.entitiesById.has_key(e2Id):
+            if not sentence.entitiesById.has_key(e2Id):
                 if not interSentenceCounts.has_key(tag):
                     interSentenceCounts[tag] = 0
                 interSentenceCounts[tag] += 1
                 continue
             
             # Actual
-            e1 = sentenceGraph.entitiesById[e1Id]
+            e1 = sentence.entitiesById[e1Id]
             tag = e1.get("type") + "_" + interaction.get("type")
             if not counts.has_key(tag):
                 counts[tag] = 0
             counts[tag] += 1
             
-            e2 = sentenceGraph.entitiesById[e2Id]
+            if sentenceGraph == None:
+                continue
+            e2 = sentence.entitiesById[e2Id]
             # Non-overlapping
             tokenPair = (sentenceGraph.entityHeadTokenByEntity[e1].get("id"), sentenceGraph.entityHeadTokenByEntity[e2].get("id")) 
             #if interaction.get("id") in ["GENIA.d127.s6.i4", "GENIA.d127.s6.i5"]:
@@ -442,6 +442,10 @@ def countEntities(corpusElements):
 
 def countIntersentenceEvents(corpusElements):
     counts = {}
+    #entityById = {}
+    #for sentence in corpusElements.sentences:
+    #    for entity in sentence.entities:
+            
     for sentence in corpusElements.sentences:
         interactionsByE1 = {}
         for interaction in sentence.interactions:
@@ -458,7 +462,7 @@ def countIntersentenceEvents(corpusElements):
                     isIntersentence = True
                     break
             if isIntersentence:
-                eType = sentence.entitiesById[e1].get("type")
+                eType = "Int"#sentence.entitiesById[e1].get("type")
                 if not counts.has_key(eType):
                     counts[eType] = 0 
                 counts[eType] += 1
@@ -466,11 +470,96 @@ def countIntersentenceEvents(corpusElements):
     for key in sorted(counts.keys()):
         print " ", key, counts[key]
 
+def analyzeHeadTokens(corpusElements):
+    from collections import defaultdict
+    posTagsByGroup = defaultdict(lambda : defaultdict(int)) # collections.defaultdict(collections.defaultdict(int)) # {"ALL_TOKENS":{}}
+    counts = defaultdict(int) #{"ALL_TOKENS":0}
+    for sentence in corpusElements.sentences:
+        sentenceGraph = sentence.sentenceGraph
+        if sentenceGraph == None:
+            print "Warning, no sentenceGraph for sentence", sentence.sentence.get("id")
+            continue
+        
+        for token in sentenceGraph.tokens:
+            posTagsByGroup["ALL_TOKENS"][token.get("POS")] += 1
+            counts["ALL_TOKENS"] += 1
+            if token not in sentenceGraph.tokenIsEntityHead or len(sentenceGraph.tokenIsEntityHead[token]) == 0:
+                continue
+            entityGroup = sentenceGraph.tokenIsEntityHead[token]
+            entityTypes = set()
+            for e in entityGroup:
+                entityTypes.add(e.get("type"))
+            entityTypes = "---".join(sorted(list(entityTypes)))
+            #if not entityTypes in posTagsByGroup:
+            #    posTagsByGroup[entityTypes] = {}
+            #    counts[entityTypes] = 0
+            posTagsByGroup[entityTypes][token.get("POS")] += 1
+            counts[entityTypes] += 1
+    print "Head token overlap and POS tags"
+    for key in sorted(posTagsByGroup.keys()):
+        print " ", key + " (" + str(counts[key]) +  "):",
+        for k2 in sorted(posTagsByGroup[key].keys()):
+            print k2 + "(" + str(posTagsByGroup[key][k2]) + ")",
+        print
+
+def analyzeHeadStrings(corpusElements):
+    from collections import defaultdict
+    dict = defaultdict(lambda : defaultdict(lambda : [0,0]))
+    eTypes = set()
+    eTypes.add("NON_ENTITY")
+    for sentence in corpusElements.sentences:
+        #sentenceText = sentence.get("text")
+        if sentence.sentenceGraph == None:
+            continue
+        for token in sentence.tokens:
+            tokenString = token.get("text")
+            if len(sentence.sentenceGraph.tokenIsEntityHead[token]) == 0:
+                dict[tokenString]["NON_ENTITY"][0] += 1
+            else:
+                for entity in sentence.sentenceGraph.tokenIsEntityHead[token]:
+                    eType = entity.get("type")
+                    eTypes.add(eType)
+                    #headOffset = Range.SingleTupleToOffset(entity.get("headOffset"))
+                    #headString = sentenceText[headOffset[0]:headOffset[1]+1]
+                    dict[tokenString][eType][0] += 1
+    for headString in dict:
+        stringSum = 0.0
+        for eType in dict[headString]:
+            stringSum += dict[headString][eType][0] 
+        for eType in dict[headString]:
+            dict[headString][eType][1] = dict[headString][eType][0] / stringSum
+    eTypes = list(eTypes)
+    eTypes.sort()
+    typeDistribution = defaultdict(lambda : defaultdict(lambda : [[],0]))
+    for eType in eTypes: # for each entity type
+        for headString in dict: # for each token string
+            if eType in dict[headString]: # if this token string has been part of said entity
+                for eType2 in dict[headString]: # add it to the distribution of that entity type's strings
+                    typeDistribution[eType][eType2][0] += dict[headString][eType2][0] * [dict[headString][eType2][1]]
+    for eType in typeDistribution:
+#        instanceSum = 0.0
+#        for eType2 in typeDistribution[eType]:
+#            instanceSum += typeDistribution[eType][eType2][0]
+#        for eType2 in typeDistribution[eType]:
+#            typeDistribution[eType][eType2][1] = typeDistribution[eType][eType2][0] / instanceSum
+        for eType2 in typeDistribution[eType]:
+            typeDistribution[eType][eType2][1] = sum(typeDistribution[eType][eType2][0]) / len(typeDistribution[eType][eType2][0])
+    line = "    "
+    for eType in eTypes:
+        line += eType[0:2] + "    "
+    print line
+    for eType in eTypes:
+        line = eType[0:2]
+        for eType2 in eTypes:
+            #line += "  (%d,%.1f)" % (typeDistribution[eType][eType2][0], typeDistribution[eType][eType2][1])
+            line += "  %.2f" % (typeDistribution[eType][eType2][1])
+        print line
+     
 if __name__=="__main__":
     defaultAnalysisFilename = "/usr/share/biotext/ComplexPPI/BioInferForComplexPPIVisible_noCL.xml"
     optparser = OptionParser(usage="%prog [options]\nCreate an html visualization for a corpus.")
     optparser.add_option("-i", "--input", default=defaultAnalysisFilename, dest="input", help="Corpus in analysis format", metavar="FILE")
-    optparser.add_option("-t", "--tokenization", default="split-McClosky", dest="tokenization", help="tokenization")
+    optparser.add_option("-t", "--tokenization", default=None, dest="tokenization", help="tokenization")
     optparser.add_option("-p", "--parse", default="split-McClosky", dest="parse", help="parse")
     optparser.add_option("-o", "--output", default=None, dest="output", help="output-folder")
     optparser.add_option("-a", "--analyses", default="", dest="analyses", help="selected optional analyses")
@@ -509,3 +598,7 @@ if __name__=="__main__":
         countEntities(corpusElements)
     if options.analyses.find("intersentence") != -1:
         countIntersentenceEvents(corpusElements)
+    if options.analyses.find("head_tokens") != -1:
+        analyzeHeadTokens(corpusElements)
+    if options.analyses.find("head_strings") != -1:
+        analyzeHeadStrings(corpusElements)

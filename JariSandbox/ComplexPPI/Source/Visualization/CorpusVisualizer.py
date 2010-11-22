@@ -3,7 +3,7 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__))+"/..")
 import Evaluators.EvaluateInteractionXML as EvaluateInteractionXML
 import GraphToSVG
 from HtmlBuilder import *
-import Graph.networkx_v10rc1 as NX10
+#import Graph.networkx_v10rc1 as NX10
 
 class CorpusVisualizer:
     def __init__(self, outputDirectory, deleteDirectoryIfItExists=False):
@@ -44,7 +44,7 @@ class CorpusVisualizer:
         labelStyles = {}
         annEdges = graph1.edges()
         for annEdge in annEdges:
-            if graph2.has_edge(annEdge[0], annEdge[1]) or graph2.has_edge(annEdge[1], annEdge[0]):
+            if graph2.hasEdges(annEdge[0], annEdge[1]) or graph2.hasEdges(annEdge[1], annEdge[0]):
                 arcStyles[annEdge] = {"stroke":posColor}
                 labelStyles[annEdge] = {"fill":posColor}
             else:

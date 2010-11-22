@@ -9,7 +9,7 @@ the int is the feature id and the float is the feature value.
 Extra is a dictionary of String:String pairs, for additional information about the 
 examples.
 """
-__version__ = "$Revision: 1.41 $"
+__version__ = "$Revision: 1.42 $"
 
 
 import sys, os, itertools
@@ -130,6 +130,8 @@ def readExamples(filename, readFeatures=True):
         id = None
         extra = {}
         for commentSplit in commentSplits:
+            #if commentSplit.find("id:") == -1:
+            #    continue
             key, value = commentSplit.split(":")
             if key == "id":
                 id = value

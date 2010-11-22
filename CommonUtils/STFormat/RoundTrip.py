@@ -17,7 +17,7 @@ def roundTrip(input, output, sentenceSplitter, workdir=None):
         xml = toInteractionXML(documents)
     print >> sys.stderr, "Splitting Sentences"
     if workdir != None:
-        sentenceSplitter.makeSentences(xml, os.path.join(workdir, "sentences.xml"))
+        sentenceSplitter.makeSentences(xml, os.path.join(workdir, "sentences.xml"), postProcess=True)
     else:
         sentenceSplitter.makeSentences(xml)
     print >> sys.stderr, "Converting back to STFormat"

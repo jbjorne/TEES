@@ -77,7 +77,7 @@ boostedTriggerFile = ix.recalculateIds(boostedTriggerFile, None, True)
 # Edge detection
 ###############################################################################
 print >> sys.stderr, "====== Edge Detection ======"
-EDGE_FEATURE_PARAMS="style:typed,directed,no_linear,entities,genia_limits,noMasking,maxFeatures"
+EDGE_FEATURE_PARAMS="style:trigger_features,typed,directed,no_linear,entities,genia_limits,noMasking,maxFeatures"
 # The test file for the edge generation step is now the GifXML-file that was built
 # in the previous step, i.e. the one that has predicted triggers
 MultiEdgeExampleBuilder.run(boostedTriggerFile, "edge-test-examples", PARSE, TOK, EDGE_FEATURE_PARAMS, EDGE_IDS)

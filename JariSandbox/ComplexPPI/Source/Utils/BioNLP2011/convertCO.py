@@ -12,6 +12,7 @@ import Tools.GeniaSentenceSplitter
 import Tools.GeniaTagger
 import Tools.CharniakJohnsonParser
 import Tools.StanfordParser
+import InteractionXML.DeleteElements
 
 def log(clear=False, logCmd=True, logFile="log.txt"):
     Stream.setLog(logFile, clear)
@@ -29,24 +30,28 @@ def convert(datasets, outdir, corpusName):
         print >> sys.stderr, len(docs), "documents"
         documents.extend(docs)
 
-    print >> sys.stderr, "Converting to", bigfileName+"-documents.xml"
-    xml = STConvert.toInteractionXML(documents, corpusName, bigfileName+"-documents.xml")
-    print >> sys.stderr, "Making sentences"
-    xml = Tools.GeniaSentenceSplitter.makeSentences(xml, bigfileName+"-sentences.xml")
-    print >> sys.stderr, "Parsing"
-    Tools.CharniakJohnsonParser.parse(xml, bigfileName+"-parsed.xml", tokenizationName=None, parseName="McClosky", requireEntities=False)
-    print >> sys.stderr, "Stanford Conversion"
-    Tools.StanfordParser.convertXML("McClosky", bigfileName+"-parsed.xml", bigfileName+"-stanford.xml")
-    print >> sys.stderr, "Protein Name Splitting"
-    splitterCommand = "python /home/jari/cvs_checkout/PPI_Learning/Analysers/ProteinNameSplitter.py -f " + bigfileName+"-stanford.xml" + " -o " + bigfileName+"-split.xml" + " -p " + "McClosky" + " -t " + "McClosky" + " -s split-McClosky" + " -n split-McClosky"
-    subprocess.call(splitterCommand, shell=True)
-    print >> sys.stderr, "Fix AltOffsets"
-    import InteractionXML.FixAltOffsets
-    xml = InteractionXML.FixAltOffsets.fixAltOffsets(bigfileName+"-split.xml")
-    print >> sys.stderr, "Head Detection"
-    xml = FindHeads.findHeads(xml, "split-McClosky", tokenization=None, output=bigfileName+".xml", removeExisting=True)
+#    print >> sys.stderr, "Converting to", bigfileName+"-documents.xml"
+#    xml = STConvert.toInteractionXML(documents, corpusName, bigfileName+"-documents.xml")
+#    print >> sys.stderr, "Making sentences"
+#    xml = Tools.GeniaSentenceSplitter.makeSentences(xml, bigfileName+"-sentences.xml")
+#    print >> sys.stderr, "Parsing"
+#    Tools.CharniakJohnsonParser.parse(xml, bigfileName+"-parsed.xml", tokenizationName=None, parseName="McClosky", requireEntities=False)
+#    print >> sys.stderr, "Stanford Conversion"
+#    Tools.StanfordParser.convertXML("McClosky", bigfileName+"-parsed.xml", bigfileName+"-stanford.xml")
+#    print >> sys.stderr, "Protein Name Splitting"
+#    splitterCommand = "python /home/jari/cvs_checkout/PPI_Learning/Analysers/ProteinNameSplitter.py -f " + bigfileName+"-stanford.xml" + " -o " + bigfileName+"-split.xml" + " -p " + "McClosky" + " -t " + "McClosky" + " -s split-McClosky" + " -n split-McClosky"
+#    subprocess.call(splitterCommand, shell=True)
+#    print >> sys.stderr, "Fix AltOffsets"
+#    import InteractionXML.FixAltOffsets
+#    xml = InteractionXML.FixAltOffsets.fixAltOffsets(bigfileName+"-split.xml")
+#    print >> sys.stderr, "Head Detection"
+#    xml = FindHeads.findHeads(xml, "split-McClosky", tokenization=None, output=bigfileName+".xml", removeExisting=True)
     print >> sys.stderr, "Dividing into sets"
-    InteractionXML.DivideSets.processCorpus(xml, outDir, corpusName + "-", ".xml")
+    #InteractionXML.DivideSets.processCorpus(bigfileName+".xml", outDir, corpusName + "-", ".xml", [("devel", "train")])
+    if "devel" in [x[0] for x in datasets]:
+        print >> sys.stderr, "Creating empty devel set"
+        deletionRules = {"interaction":{},"entity":{"isName":"False"}}
+        InteractionXML.DeleteElements.processCorpus(corpusName + "-devel.xml", corpusName + "-devel-empty.xml", deletionRules)
     return xml
 
 if __name__=="__main__":

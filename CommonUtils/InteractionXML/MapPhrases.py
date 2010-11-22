@@ -217,6 +217,18 @@ def getPhraseEntityMapping(entities, phraseDict):
             phraseToEntity[bestMatch].append(entity)
     return phraseToEntity
 
+def getNECounts(phrases, entities):
+    counts = {}
+    for phrase in phrases:
+        phraseOffset = Range.charOffsetToSingleTuple(phrase.get("charOffset"))
+        counts[phrase] = 0
+        for entity in entities:
+            if entity.get("isName") != "True": # only check names
+                continue
+            if Range.contains(phraseOffset, Range.charOffsetToSingleTuple(entity.get("charOffset"))):
+                counts[phrase] += 1
+    return counts
+
 def processCorpus(input, parserName):
     print >> sys.stderr, "Loading corpus file", input
     corpusRoot = ETUtils.ETFromObj(input).getroot()
@@ -254,6 +266,7 @@ def processCorpus(input, parserName):
             phrases, phraseDict = makePhrases(parse, tokenization, entities)
             phraseOffsets = phraseDict.keys()
             #phraseOffsets.sort()
+            phraseNECounts = getNECounts(phrases, entities)
             
             for value in phraseDict.values():
                 counts["phrases"] += len(value)
@@ -262,6 +275,8 @@ def processCorpus(input, parserName):
                     if phrase.get("type") in filter:
                         filteredMatchByType[phrase.get("type")][0] += 1
                         counts["phrases-filtered"] += 1
+                    if phrase.get("type").find("NP") != -1:
+                        matchByType[phrase.get("type")+"_NE"+str(phraseNECounts[phrase])][0] += 1
             counts["tokens"] += len(tokenization.findall("token"))
             
             corefType = {}
@@ -280,13 +295,14 @@ def processCorpus(input, parserName):
                 count = 0
                 filteredCount = 0
                 for phrase in matches:
-                    print "  match", count, ETUtils.toStr(phrase)
-                    count += 1
-                    matchByType[phrase.get("type")][1] += 1
                     cType = "UNKNOWN"
                     if corefType.has_key(entity.get("id")):
                         cType = corefType[entity.get("id")]
+                    print "  match", count, ETUtils.toStr(phrase), "NE" + str(phraseNECounts[phrase]), "ctype:" + cType, "ent:" + ETUtils.toStr(entity)
+                    count += 1
+                    matchByType[phrase.get("type")][1] += 1
                     matchByType[phrase.get("type")+"_"+cType][1] += 1
+                    matchByType[phrase.get("type")+"_"+cType+"_NE"+str(phraseNECounts[phrase])][1] += 1
                     if phrase.get("type") in filter:
                         filteredCount += 1
                         filteredMatchByType[phrase.get("type")][1] += 1

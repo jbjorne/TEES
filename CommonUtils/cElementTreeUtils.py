@@ -7,7 +7,7 @@ Functions for easier use of cElementTree.
 
   Description: Convenience functions for easier use of cElementTree.
 """
-__version__ = "$Revision: 1.17 $"
+__version__ = "$Revision: 1.18 $"
 
 import sys
 
@@ -17,6 +17,12 @@ except ImportError:
     import xml.etree.cElementTree as ElementTree
 
 from gzip import GzipFile
+
+def removeAll(element):
+    for child in list(element):
+        removeAll(child)
+    for child in list(element):
+        element.remove(child)
 
 def iterparse(file, elementName, callback, limit = -1):
     """ Parse iteratively xml-files

@@ -1,7 +1,7 @@
 """
 Character offset tools.
 """
-__version__ = "$Revision: 1.10 $"
+__version__ = "$Revision: 1.11 $"
 
 import types
 
@@ -76,8 +76,8 @@ def overlap(range1, range2):
     Returns:
     True (ranges overlap) or False (no overlap)
     """
-    assert(range1[0] <= range1[1])
-    assert(range2[0] <= range2[1])
+    assert(range1[0] <= range1[1]), (range1, range2)
+    assert(range2[0] <= range2[1]), (range1, range2)
     # Fully overlapping cases:
     # x1 <= y1 <= y2 <= x2
     # y1 <= x1 <= x2 <= y2

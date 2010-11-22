@@ -1,5 +1,9 @@
 import sys, os, shutil
 import Statistics.stats as stats
+thisPath = os.path.dirname(os.path.abspath(__file__))
+sys.path.append(os.path.abspath(os.path.join(thisPath, "../../../../GeniaChallenge")))
+import evaluation.EvaluateSharedTask
+evaluateSharedTask = evaluation.EvaluateSharedTask.evaluate
 
 def getTrigger(line):
     id, s = line.split("\t")
@@ -96,6 +100,20 @@ def medianArgs(event, triggerMap, ranges):
     scores = getScores(event, triggerMap, ranges)
     return stats.lmedianscore(scores[1:])
 
+def causeArgs(event, triggerMap, ranges):
+    scores = []
+    for arg in event[1]:
+        if arg[0] == "Cause":
+            argScore = normalize(arg[1][arg[0]], ranges[1])
+            assert argScore >= 0.0 and argScore <= 1.0, argScore
+            scores.append(argScore)
+    if len(scores) == 0:
+        scores = [1]
+    return sum(scores, 0.0) / len(scores)
+
+def nestedScores():
+    pass
+
 def dummy(event, triggerMap, ranges):
     return 1
 
@@ -125,7 +143,7 @@ def writeOut(allTriggers, allEvents, ranges, outDir, selectFunction, threshold):
                 f.write("\n")
         f.close()
 
-def process(sourceDir, outDir):
+def process(sourceDir, outDir, function):
     allTriggers = {}
     allEvents = {}
             
@@ -153,7 +171,60 @@ def process(sourceDir, outDir):
             allEvents[id] = events
     ranges = getRanges(allTriggers, allEvents)
     print ranges
-    writeOut(allTriggers, allEvents, ranges, outDir, averageArgs, 0.3)
+    
+    class Stuff:
+        def __init__(self, allTriggers, allEvents, ranges, outDir, function):
+            self.allTriggers = allTriggers
+            self.allEvents = allEvents
+            self.ranges = ranges
+            self.outDir = outDir
+            self.function = function
+    stuff = Stuff(allTriggers, allEvents, ranges, outDir, function)
+    writeOut(allTriggers, allEvents, ranges, outDir, function, 0)
+    baseline = evaluateSharedTask(outDir, evaluations=["approximate"], silent=True)["approximate"]["ALL-TOTAL"]["fscore"]
+    best = search(baseline, 1.0, 0.0, 0.5, 0.01, [0], stuff)
+    print "Baseline", baseline
+    print "Highest", best
+    print "Difference", best[1] - baseline
+    return
+    
+    best = (None, {"approximate":{"ALL-TOTAL":{"fscore":-1}}})
+    for i in range(100, -1, -1):
+        threshold = float(i/100.0)
+        writeOut(allTriggers, allEvents, ranges, outDir, function, threshold)
+        result = evaluateSharedTask(outDir, evaluations=["approximate"], silent=True)
+        r = result["approximate"]["ALL-TOTAL"]
+        print threshold, r["precision"], r["recall"], r["fscore"]
+        if r["fscore"] > best[1]["approximate"]["ALL-TOTAL"]["fscore"]:
+            best = (threshold, result)
+    print "Baseline", result["approximate"]["ALL-TOTAL"]["fscore"]
+    print "Highest", best[1]["approximate"]["ALL-TOTAL"]["fscore"]
+
+def search(baseline, top, bottom, middle, threshold, maxIt, stuff):
+    maxIt[0] += 1
+    p1 = (top - middle) * 0.5 + middle
+    p2 = (middle - bottom) * 0.5 + bottom
+    writeOut(stuff.allTriggers, stuff.allEvents, stuff.ranges, stuff.outDir, stuff.function, p1)
+    p1Value = evaluateSharedTask(outDir, evaluations=["approximate"], silent=True)["approximate"]["ALL-TOTAL"]["fscore"]
+    writeOut(stuff.allTriggers, stuff.allEvents, stuff.ranges, stuff.outDir, stuff.function, p2)
+    p2Value = evaluateSharedTask(outDir, evaluations=["approximate"], silent=True)["approximate"]["ALL-TOTAL"]["fscore"]
+    print "Testing", (p1, p1Value), (p2, p2Value)
+    if abs( (p1Value - baseline) - (p2Value - baseline) ) <= threshold:
+        print "Threshold reached"
+        if p1Value - baseline > p2Value - baseline:
+            return p1, p1Value
+        else:
+            return p2, p2Value
+    if p1Value - baseline > p2Value - baseline:
+        if maxIt[0] > 100:
+            print "Max Iterations"
+            return p1, p1Value
+        return search(baseline, top, middle, p1, threshold, maxIt, stuff)
+    else:
+        if maxIt[0] > 100:
+            print "Max Iterations"
+            return p2, p2Value
+        return search(baseline, middle, bottom, p2, threshold, maxIt, stuff)
 
 if __name__=="__main__":
     # Import Psyco if available
@@ -164,11 +235,23 @@ if __name__=="__main__":
     except ImportError:
         print >> sys.stderr, "Psyco not installed"
     
+    from optparse import OptionParser
+    optparser = OptionParser(usage="%prog [options]\n")
+    optparser.add_option("-f", "--function", default="averageArgs", dest="function", help="")
+    #optparser.add_option("-i", "--input", default=None, dest="input", help="input directory with predicted shared task files", metavar="FILE")
+    #optparser.add_option("-t", "--task", default=1, type="int", dest="task", help="task number")
+    #optparser.add_option("-v", "--variance", default=0, type="int", dest="variance", help="variance folds")
+    (options, args) = optparser.parse_args()
+    #assert(options.input != None)
+    #assert(options.task in [1,12,13,123])
+    print "Testing function", options.function
+    function = eval(options.function)
+    
     sourceDir = "/home/jari/data/temp/BioNLP09Classify/geniaformat"
     outDir = "/home/jari/data/temp/BioNLP09Classify/geniaformat-modified"
     if os.path.exists(outDir):
         shutil.rmtree(outDir)
     os.mkdir(outDir)
     
-    process(sourceDir, outDir)
+    process(sourceDir, outDir, function)
     

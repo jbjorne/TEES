@@ -22,7 +22,8 @@ escDict={"-LRB-":"(",
          "''":"\""}
 
 def runStanford(input, output):
-    args = ["java", "-mx150m", "-cp", "stanford-parser.jar", "edu.stanford.nlp.trees.EnglishGrammaticalStructure", "-CCprocessed", "-treeFile", input] 
+    #args = ["java", "-mx150m", "-cp", "stanford-parser.jar", "edu.stanford.nlp.trees.EnglishGrammaticalStructure", "-CCprocessed", "-treeFile", input]
+    args = ["java", "-mx500m", "-cp", "stanford-parser.jar", "edu.stanford.nlp.trees.EnglishGrammaticalStructure", "-CCprocessed", "-treeFile", input] 
     return subprocess.Popen(args, stdout=codecs.open(output, "wt", "utf-8"))
 
 def addDependencies(outfile, parse, tokenByIndex=None, sentenceId=None):
@@ -115,6 +116,8 @@ def convertXML(parser, input, output):
         parse = getElementByAttrib(parses, "parse", {"parser":parser})
         if parse == None:
             continue
+        if len(parse.findall("dependency")) > 0: # don't reparse
+            continue
         pennTree = parse.get("pennstring")
         if pennTree == None or pennTree == "":
             continue
@@ -134,6 +137,8 @@ def convertXML(parser, input, output):
         if parse == None:
             parse = ET.SubElement(parses, "parse")
             parse.set("parser", "None")
+        if len(parse.findall("dependency")) > 0: # don't reparse
+            continue
         pennTree = parse.get("pennstring")
         if pennTree == None or pennTree == "":
             parse.set("stanford", "no_penn")

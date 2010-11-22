@@ -12,10 +12,25 @@ from Core.IdSet import IdSet
 import Utils.TableUtils as TableUtils
 import InteractionXML.CorpusElements as CorpusElements
 import copy
+from collections import defaultdict
 
 # for entities to match, they have to have the same head offsets and same type
 def compareEntitiesSimple(e1,e2,tokens=None):
     if e1.get("headOffset") == e2.get("headOffset") and e1.get("type") == e2.get("type"):
+        return True
+    else:
+        return False
+    
+def compareEntitiesStrict(e1,e2,tokens=None):
+    # HORRIBLE HACK
+    if e1.get("charOffset")[:-1] == e1.get("headOffset")[:-1]:
+        e1.set("charOffset", e1.get("headOffset"))
+    if e2.get("charOffset")[:-1] == e2.get("headOffset")[:-1]:
+        e2.set("charOffset", e2.get("headOffset"))
+        
+        
+        
+    if e1.get("charOffset") == e2.get("charOffset") and e1.get("type") == e2.get("type"):
         return True
     else:
         return False
@@ -114,6 +129,9 @@ def getInteractionPredictions(interactionsFrom, interactionsTo, entityMap, class
         assert not fromEntityIdToElement.has_key(entityId), entityId
         fromEntityIdToElement[entityId] = key
     
+    # Keep track of false positives caused by false positive entities
+    falseEntity = defaultdict(lambda: defaultdict(int))
+    
     toInteractionsWithPredictions = set()
     for interactionFrom in interactionsFrom:
         e1s = entityMap[fromEntityIdToElement[interactionFrom.get("e1")]]
@@ -124,6 +142,9 @@ def getInteractionPredictions(interactionsFrom, interactionsTo, entityMap, class
         e2Ids = []
         for e2 in e2s:
             e2Ids.append(e2.get("id"))
+        
+        if len(e1s) == 0 or len(e2s) == 0:
+            falseEntity[interactionFrom.get("type")][0] += 1
         
         found = False
         for interactionTo in interactionsTo:
@@ -137,48 +158,62 @@ def getInteractionPredictions(interactionsFrom, interactionsTo, entityMap, class
             examples.append( [id,negativeClassId,None,None] )
             predictions.append( [classSet.getId(interactionFrom.get("type"))] )
             #predictions.append( ((id, negativeClassId), classSet.getId(interactionFrom.get("type")), None, None) )
+    mappedGoldEntities = entityMap.values()
+    temp = []
+    [temp.extend(x) for x in mappedGoldEntities]
+    mappedGoldEntities = [x.get("id") for x in temp]
     for interactionTo in interactionsTo:
         if interactionTo not in toInteractionsWithPredictions: # false negative gold
             examples.append( [id, classSet.getId(interactionTo.get("type")), None, None] )
             predictions.append( [negativeClassId] )
             #predictions.append( ((id, classSet.getId(interactionTo.get("type"))), negativeClassId, None, None) )
+            if interactionTo.get("e1") not in mappedGoldEntities or interactionTo.get("e2") not in mappedGoldEntities:
+                falseEntity[interactionTo.get("type")][1] += 1
     assert len(examples) == len(predictions)
-    return examples, predictions
+    return examples, predictions, falseEntity
 
 # Compares a prediction (from) to a gold (to) sentence
-def processSentence(fromSentence, toSentence, target, classSets, negativeClassId):
+def processSentence(fromSentence, toSentence, target, classSets, negativeClassId, entityMatchFunction):
     splitMerged(fromSentence) # modify element tree to split merged elements into multiple elements
     entitiesFrom = fromSentence.entities
     entitiesTo = toSentence.entities
     tokens = fromSentence.tokens
     # map predicted entities to gold entities
-    entityMap = mapEntities(entitiesFrom, entitiesTo, tokens, compareFunction=compareEntitiesSimple)
+    entityMap = mapEntities(entitiesFrom, entitiesTo, tokens, compareFunction=entityMatchFunction)
     
     # get predictions for predicted edges/entities vs. gold edges/entities
     entityPredictions = []
     interactionPredictions = []
+    falseEntity = defaultdict(lambda: defaultdict(int))
     if target == "entities" or target == "both":
         entityExamples, entityPredictions = getEntityPredictions(entityMap, entitiesTo, classSets["entity"], negativeClassId)
     if target == "interactions" or target == "both":
-        interactionExamples, interactionPredictions = getInteractionPredictions(fromSentence.interactions + fromSentence.pairs, toSentence.interactions + toSentence.pairs, entityMap, classSets["interaction"], negativeClassId)
-    
-    return (entityExamples, entityPredictions), (interactionExamples, interactionPredictions)
+        interactionExamples, interactionPredictions, sentFalseEntity = getInteractionPredictions(fromSentence.interactions + fromSentence.pairs, toSentence.interactions + toSentence.pairs, entityMap, classSets["interaction"], negativeClassId)
+        for k,v in sentFalseEntity.iteritems():
+            falseEntity[k][0] += v[0]
+            falseEntity[k][1] += v[1]
+        
+    return (entityExamples, entityPredictions), (interactionExamples, interactionPredictions), falseEntity
 
 # Compares a prediction (from) to a gold (to) corpus
-def processCorpora(EvaluatorClass, fromCorpus, toCorpus, target, classSets, negativeClassId):
+def processCorpora(EvaluatorClass, fromCorpus, toCorpus, target, classSets, negativeClassId, entityMatchFunction):
     entityExamples = []
     entityPredictions = []
     interactionExamples = []
     interactionPredictions = []
+    falseEntity = defaultdict(lambda: defaultdict(int))
     counter = ProgressCounter(len(fromCorpus.sentences), "Corpus Processing")
     # Loop through the sentences and collect all predictions
     for i in range(len(fromCorpus.sentences)):
         counter.update(1,fromCorpus.sentences[i].sentence.get("id"))
-        newEntityExPred, newInteractionExPred = processSentence(fromCorpus.sentences[i], toCorpus.sentences[i], target, classSets, negativeClassId)
+        newEntityExPred, newInteractionExPred, sentFalseEntity = processSentence(fromCorpus.sentences[i], toCorpus.sentences[i], target, classSets, negativeClassId, entityMatchFunction)
         entityExamples.extend(newEntityExPred[0])
         entityPredictions.extend(newEntityExPred[1])
         interactionExamples.extend(newInteractionExPred[0])
         interactionPredictions.extend(newInteractionExPred[1])
+        for k,v in sentFalseEntity.iteritems():
+            falseEntity[k][0] += v[0]
+            falseEntity[k][1] += v[1]
     
     # Process the predictions with an evaluator and print the results
     if len(entityPredictions) > 0:
@@ -186,7 +221,10 @@ def processCorpora(EvaluatorClass, fromCorpus, toCorpus, target, classSets, nega
         print evaluator.toStringConcise(title="Entities")    
     if len(interactionPredictions) > 0:
         evaluator = EvaluatorClass(interactionExamples, interactionPredictions, classSet=classSets["interaction"])
-        print evaluator.toStringConcise(title="Interactions")    
+        print evaluator.toStringConcise(title="Interactions")
+        print "Interactions (fp ent->fp int, fn-ent->fn-int )"
+        for key in sorted(falseEntity.keys()):
+            print "", key, falseEntity[key][0], "/", falseEntity[key][1]
 
 # Splits entities/edges with merged types into separate elements
 def splitMerged(sentence):
@@ -200,7 +238,7 @@ def splitMerged(sentence):
                     sourceList.append(newElement)
                 sourceList.remove(element)
 
-def run(EvaluatorClass, inputCorpusFile, goldCorpusFile, parse, tokenization, target="both"):
+def run(EvaluatorClass, inputCorpusFile, goldCorpusFile, parse, tokenization, target="both", entityMatchFunction=compareEntitiesSimple, removeIntersentenceInteractions=False):
     print >> sys.stderr, "##### EvaluateInteractionXML #####"
     # Class sets are used to convert the types to ids that the evaluator can use
     classSets = {}
@@ -216,11 +254,11 @@ def run(EvaluatorClass, inputCorpusFile, goldCorpusFile, parse, tokenization, ta
         sys.exit("Unknown evaluator type")
     
     # Load corpus and make sentence graphs
-    goldCorpusElements = CorpusElements.loadCorpus(goldCorpusFile, parse, tokenization, False)
-    predictedCorpusElements = CorpusElements.loadCorpus(inputCorpusFile, parse, tokenization, False)    
+    goldCorpusElements = CorpusElements.loadCorpus(goldCorpusFile, parse, tokenization, removeIntersentenceInteractions)
+    predictedCorpusElements = CorpusElements.loadCorpus(inputCorpusFile, parse, tokenization, removeIntersentenceInteractions)    
     
     # Compare the corpora and print results on screen
-    processCorpora(EvaluatorClass, predictedCorpusElements, goldCorpusElements, target, classSets, negativeClassId)
+    processCorpora(EvaluatorClass, predictedCorpusElements, goldCorpusElements, target, classSets, negativeClassId, entityMatchFunction)
     
 if __name__=="__main__":
     import sys, os
@@ -237,12 +275,20 @@ if __name__=="__main__":
     #optparser.add_option("-o", "--output", default=None, dest="output", help="Output file for the statistics")
     optparser.add_option("-r", "--target", default="both", dest="target", help="edges/entities/both (default: both)")
     optparser.add_option("-e", "--evaluator", default="AveragingMultiClassEvaluator", dest="evaluator", help="Prediction evaluator class")
-    optparser.add_option("-t", "--tokenization", default="split-Charniak-Lease", dest="tokenization", help="tokenization")
-    optparser.add_option("-p", "--parse", default="split-Charniak-Lease", dest="parse", help="parse")
+    optparser.add_option("-t", "--tokenization", default="split-McClosky", dest="tokenization", help="tokenization")
+    optparser.add_option("-p", "--parse", default="split-McClosky", dest="parse", help="parse")
+    optparser.add_option("-m", "--matching", default="SIMPLE", dest="matching", help="matching function")
+    optparser.add_option("--no_intersentence", default=False, action="store_true", dest="no_intersentence", help="Exclude intersentence interactions from evaluation")
     (options, args) = optparser.parse_args()
-
+    
+    assert options.matching in ["SIMPLE", "STRICT"]
+    if options.matching == "SIMPLE":
+        entityMatchFunction = compareEntitiesSimple
+    elif options.matching == "STRICT":
+        entityMatchFunction = compareEntitiesStrict
+    
     # Load the selected evaluator class
     print >> sys.stderr, "Importing modules"
     exec "from Evaluators." + options.evaluator + " import " + options.evaluator + " as Evaluator"
     
-    run(Evaluator, options.input, options.gold, options.parse, options.tokenization, options.target)
+    run(Evaluator, options.input, options.gold, options.parse, options.tokenization, options.target, entityMatchFunction=entityMatchFunction, removeIntersentenceInteractions=options.no_intersentence)
