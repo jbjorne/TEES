@@ -137,6 +137,8 @@ def toSTFormat(input, output=None, outputTag="a2"):
             ann = Annotation()
             ann.type = eType
             entityOrigId = entity.get("origId")
+            if entityOrigId != None and entityOrigId.find(".") != -1: # fix gluing of doc and ann id
+                entityOrigId = entityOrigId.rsplit(".",1)[-1]
             if entityOrigId != None:
                 if entityOrigId[0] == "E": # a special id denoting a numbered, but triggerless event
                     ann.eventId = entityOrigId
