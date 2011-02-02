@@ -1,7 +1,7 @@
 import sys, os
 import codecs
 
-class Document():
+class Document:
     def __init__(self):
         self.id = None
         self.text = None
@@ -11,7 +11,7 @@ class Document():
         self.relations = []
         self.dataSet = None
 
-class Annotation():
+class Annotation:
     def __init__(self, id = None, type = None, text=None, trigger=None, arguments=None):
         self.id = id # protein/trigger/event
         self.type = type # protein/trigger/event
@@ -293,10 +293,12 @@ def loadText(filename):
     f.close()
     return text
 
-def load(id, dir):
+def load(id, dir, loadA2=True):
     #print id
     id = str(id)
     proteins = loadA1(os.path.join(dir, id + ".a1"))
+    if not loadA2:
+        return proteins, [], [], []
     a2Path = os.path.join(dir, id + ".a2")
     relPath = os.path.join(dir, id + ".rel")
     triggers = []
@@ -308,7 +310,8 @@ def load(id, dir):
         triggers, events, relations = loadRelOrA2(relPath, proteins)
     return proteins, triggers, events, relations
 
-def loadSet(dir, setName=None):
+def loadSet(dir, setName=None, level="a2"):
+    assert level in ["txt", "a1", "a2"]
     ids = set()
     documents = []
     for filename in os.listdir(dir):
@@ -321,7 +324,8 @@ def loadSet(dir, setName=None):
         #print "Loading", id
         doc = Document()
         doc.id = id
-        doc.proteins, doc.triggers, doc.events, doc.relations = load(str(id), dir)
+        if not level == "txt":
+            doc.proteins, doc.triggers, doc.events, doc.relations = load(str(id), dir, level=="a2")
         doc.text = loadText( os.path.join(dir, str(id) + ".txt") )
         doc.dataSet = setName
         documents.append(doc)
