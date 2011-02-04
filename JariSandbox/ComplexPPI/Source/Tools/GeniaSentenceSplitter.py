@@ -1,4 +1,4 @@
-__version__ = "$Revision: 1.6 $"
+__version__ = "$Revision: 1.7 $"
 
 import sys,os
 import sys
@@ -37,11 +37,11 @@ def moveElements(document):
             if Range.overlap(sentenceOffset, entityOffset):
                 document.remove(entity)
                 sentence.append(entity)
-                prevId = entity.get("id")
+                entityId = entity.get("id")
                 entity.set("id", sentence.get("id") + ".e" + str(entCount))
-                entMap[prevId] = sentence.get("id") + ".e" + str(entCount)
-                entSentence[prevId] = sentence
-                entSentenceIndex[prevId] = sentenceCount
+                entMap[entityId] = sentence.get("id") + ".e" + str(entCount)
+                entSentence[entityId] = sentence
+                entSentenceIndex[entityId] = sentenceCount
                 newEntityOffset = (entityOffset[0] - sentenceOffset[0], entityOffset[1] - sentenceOffset[0])
                 entity.set("origOffset", entity.get("charOffset"))
                 entity.set("charOffset", str(newEntityOffset[0]) + "-" + str(newEntityOffset[1])) 
@@ -50,7 +50,7 @@ def moveElements(document):
     # Move interactions
     intCount = 0
     for interaction in document.findall("interaction"):
-        if entSentenceIndex[interaction.get("e1")] < entSentenceIndex[interaction.get("e1")]:
+        if entSentenceIndex[interaction.get("e1")] < entSentenceIndex[interaction.get("e2")]:
             targetSentence = entSentence[interaction.get("e1")]
         else:
             targetSentence = entSentence[interaction.get("e2")]

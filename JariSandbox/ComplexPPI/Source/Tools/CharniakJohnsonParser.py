@@ -1,4 +1,4 @@
-parse__version__ = "$Revision: 1.8 $"
+parse__version__ = "$Revision: 1.9 $"
 
 import sys,os
 import sys
@@ -58,6 +58,7 @@ def readPenn(treeLine):
                     if tokenText[-1] == ")": # this isn't the closing parenthesis for the current token
                         stackTop = stack.pop()
                         phrases.append( (stackTop[0], tokenCount, stackTop[1]) )
+                origTokenText = tokenText
                 for escSymbol in escSymbols:
                     tokenText = tokenText.replace(escSymbol, escDict[escSymbol])
                 
@@ -66,7 +67,7 @@ def readPenn(treeLine):
                     posText = posText[1:]
                 for escSymbol in escSymbols:
                     posText = posText.replace(escSymbol, escDict[escSymbol])
-                tokens.append( (tokenText, posText) )
+                tokens.append( (tokenText, posText, origTokenText) )
                 tokenCount += 1
             elif splits[splitCount + 1][0] == "(":
                 stack.append( (tokenCount, split[1:]) )
@@ -77,14 +78,18 @@ def readPenn(treeLine):
 def insertTokens(tokens, sentence, tokenization, idStem="cjt_"):
     tokenCount = 0
     start = 0
-    for tokenText, posTag in tokens:
+    for tokenText, posTag, origTokenText in tokens:
         sText = sentence.get("text")
         # Determine offsets
         cStart = sText.find(tokenText, start)
         #assert cStart != -1, (tokenText, tokens, posTag, start, sText)
+        if cStart == -1: # Try again with original text (sometimes escaping can remove correct text)
+            cStart = sText.find(origTokenText, start)
         if cStart == -1:
             print >> sys.stderr, "Token alignment error", (tokenText, tokens, posTag, start, sText)
-            return
+            for subElement in [x for x in tokenization]:
+                tokenization.remove(subElement)
+            return False
         cEnd = cStart + len(tokenText)
         start = cStart + len(tokenText)
         # Make element
@@ -95,6 +100,7 @@ def insertTokens(tokens, sentence, tokenization, idStem="cjt_"):
         token.set("charOffset", str(cStart) + "-" + str(cEnd - 1)) # NOTE: check
         tokenization.append(token)
         tokenCount += 1
+    return True
 
 def insertPhrases(phrases, parse, tokenElements, idStem="cjp_"):
     count = 0
@@ -115,6 +121,46 @@ def insertPhrases(phrases, parse, tokenElements, idStem="cjp_"):
             phraseElement.set("charOffset", t1.get("charOffset").split("-")[0] + "-" + t2.get("charOffset").split("-")[-1])
         parse.append(phraseElement)
         count += 1
+
+def insertParse(sentence, treeLine, parseName="mccc-preparsed", tokenizationName = None):
+    # Find or create container elements
+    sentenceAnalyses = setDefaultElement(sentence, "sentenceanalyses")
+    tokenizations = setDefaultElement(sentenceAnalyses, "tokenizations")
+    parses = setDefaultElement(sentenceAnalyses, "parses")
+    prevParseIndex = 0
+    for prevParse in parses.findall("parse"):
+        assert prevParse.get("parser") != parseName
+        prevParseIndex += 1
+    parse = ET.Element("parse")
+    parse.set("parser", parseName)
+    if tokenizationName == None:
+        parse.set("tokenizer", parseName)
+    else:
+        parse.set("tokenizer", tokenizationName)
+    parses.insert(prevParseIndex, parse)
+    
+    tokenByIndex = {}
+    parse.set("pennstring", treeLine.strip())
+    if treeLine.strip() == "":
+        return False
+    else:
+        tokens, phrases = readPenn(treeLine)
+        # Get tokenization
+        if tokenizationName == None: # Parser-generated tokens
+            prevTokenizationIndex = 0
+            for prevTokenization in tokenizations.findall("tokenization"):
+                assert prevTokenization.get("tokenizer") != tokenizationName
+                prevTokenizationIndex += 1
+            tokenization = ET.Element("tokenization")
+            tokenization.set("tokenizer", parseName)
+            tokenizations.insert(prevTokenizationIndex, tokenization)
+            # Insert tokens to parse
+            insertTokens(tokens, sentence, tokenization)
+        else:
+            tokenization = getElementByAttrib(tokenizations, "tokenization", {"tokenizer":tokenizationName})
+        # Insert phrases to parse
+        insertPhrases(phrases, parse, tokenization.findall("token"))
+    return True           
 
 def runCharniakJohnsonParserWithTokenizer(input, output):
     return runCharniakJohnsonParser(input, output, True)
@@ -226,44 +272,46 @@ def parse(input, output=None, tokenizationName=None, parseName="McClosky", requi
             if ETUtils.getElementByAttrib(sentence, "parse", {"parser":"McClosky"}) != None:
                 continue
         
-        # Find or create container elements
-        sentenceAnalyses = setDefaultElement(sentence, "sentenceanalyses")
-        tokenizations = setDefaultElement(sentenceAnalyses, "tokenizations")
-        parses = setDefaultElement(sentenceAnalyses, "parses")
-        prevParseIndex = 0
-        for prevParse in parses.findall("parse"):
-            assert prevParse.get("parser") != parseName
-            prevParseIndex += 1
-        parse = ET.Element("parse")
-        parse.set("parser", parseName)
-        if tokenizationName == None:
-            parse.set("tokenizer", parseName)
-        else:
-            parse.set("tokenizer", tokenizationName)
-        parses.insert(prevParseIndex, parse)
-        
-        tokenByIndex = {}
         treeLine = treeFile.readline()
-        parse.set("pennstring", treeLine.strip())
-        if treeLine.strip() == "":
+        if not insertParse(sentence, treeLine):
             failCount += 1
-        else:
-            tokens, phrases = readPenn(treeLine)
-            # Get tokenization
-            if tokenizationName == None: # Parser-generated tokens
-                prevTokenizationIndex = 0
-                for prevTokenization in tokenizations.findall("tokenization"):
-                    assert prevTokenization.get("tokenizer") != tokenizationName
-                    prevTokenizationIndex += 1
-                tokenization = ET.Element("tokenization")
-                tokenization.set("tokenizer", parseName)
-                tokenizations.insert(prevTokenizationIndex, tokenization)
-                # Insert tokens to parse
-                insertTokens(tokens, sentence, tokenization)
-            else:
-                tokenization = getElementByAttrib(tokenizations, "tokenization", {"tokenizer":tokenizationName})
-            # Insert phrases to parse
-            insertPhrases(phrases, parse, tokenization.findall("token"))
+#        # Find or create container elements
+#        sentenceAnalyses = setDefaultElement(sentence, "sentenceanalyses")
+#        tokenizations = setDefaultElement(sentenceAnalyses, "tokenizations")
+#        parses = setDefaultElement(sentenceAnalyses, "parses")
+#        prevParseIndex = 0
+#        for prevParse in parses.findall("parse"):
+#            assert prevParse.get("parser") != parseName
+#            prevParseIndex += 1
+#        parse = ET.Element("parse")
+#        parse.set("parser", parseName)
+#        if tokenizationName == None:
+#            parse.set("tokenizer", parseName)
+#        else:
+#            parse.set("tokenizer", tokenizationName)
+#        parses.insert(prevParseIndex, parse)
+#        
+#        tokenByIndex = {}
+#        parse.set("pennstring", treeLine.strip())
+#        if treeLine.strip() == "":
+#            failCount += 1
+#        else:
+#            tokens, phrases = readPenn(treeLine)
+#            # Get tokenization
+#            if tokenizationName == None: # Parser-generated tokens
+#                prevTokenizationIndex = 0
+#                for prevTokenization in tokenizations.findall("tokenization"):
+#                    assert prevTokenization.get("tokenizer") != tokenizationName
+#                    prevTokenizationIndex += 1
+#                tokenization = ET.Element("tokenization")
+#                tokenization.set("tokenizer", parseName)
+#                tokenizations.insert(prevTokenizationIndex, tokenization)
+#                # Insert tokens to parse
+#                insertTokens(tokens, sentence, tokenization)
+#            else:
+#                tokenization = getElementByAttrib(tokenizations, "tokenization", {"tokenizer":tokenizationName})
+#            # Insert phrases to parse
+#            insertPhrases(phrases, parse, tokenization.findall("token"))
     
     treeFile.close()
     # Remove work directory
@@ -274,6 +322,64 @@ def parse(input, output=None, tokenizationName=None, parseName="McClosky", requi
     else:
         print >> sys.stderr, "Warning, parsing failed for", failCount, "out of", numCorpusSentences, "sentences"
         print >> sys.stderr, "The \"pennstring\" attribute of these sentences has an empty string."
+    if output != None:
+        print >> sys.stderr, "Writing output to", output
+        ETUtils.write(corpusRoot, output)
+    return corpusTree
+
+def insertParses(input, parsePath, output=None, parseName="mccc-preparsed", tokenizationName = None):
+    import tarfile
+    from SentenceSplitter import openFile
+    """
+    Divide text in the "text" attributes of document and section 
+    elements into sentence elements. These sentence elements are
+    inserted into their respective parent elements.
+    """  
+    print >> sys.stderr, "Loading corpus", input
+    corpusTree = ETUtils.ETFromObj(input)
+    print >> sys.stderr, "Corpus file loaded"
+    corpusRoot = corpusTree.getroot()
+    
+    print >> sys.stderr, "Inserting parses from", parsePath
+    if parsePath.find(".tar.gz") != -1:
+        tarFilePath, parsePath = parsePath.split(".tar.gz")
+        tarFilePath += ".tar.gz"
+        tarFile = tarfile.open(tarFilePath)
+        if parsePath[0] == "/":
+            parsePath = parsePath[1:]
+    else:
+        tarFile = None
+    
+    docCount = 0
+    docsWithSentences = 0
+    sentencesCreated = 0
+    sourceElements = [x for x in corpusRoot.getiterator("document")] + [x for x in corpusRoot.getiterator("section")]
+    counter = ProgressCounter(len(sourceElements), "McCC Parse Insertion")
+    for document in sourceElements:
+        docCount += 1
+        counter.update(1, "Processing Documents ("+document.get("id")+"/" + document.get("pmid") + "): ")
+        docId = document.get("id")
+        if docId == None:
+            docId = "CORPUS.d" + str(docCount)
+        
+        f = openFile(os.path.join(parsePath, document.get("pmid") + ".ptb"), tarFile)
+        if f == None:
+            continue
+        parseStrings = f.readlines()
+        f.close()
+        sentences = document.findall("sentence")
+        assert len(sentences) == len(parseStrings)
+        # TODO: Following for-loop is the same as when used with a real parser, and should
+        # be moved to its own function.
+        for sentence, treeLine in zip(sentences, parseStrings):
+            if not insertParse(sentence, treeLine):
+                failCount += 1
+    
+    if tarFile != None:
+        tarFile.close()
+    #print >> sys.stderr, "Sentence splitting created", sentencesCreated, "sentences"
+    #print >> sys.stderr, docsWithSentences, "/", docCount, "documents have sentences"
+        
     if output != None:
         print >> sys.stderr, "Writing output to", output
         ETUtils.write(corpusRoot, output)

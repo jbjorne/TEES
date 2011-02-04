@@ -51,6 +51,16 @@ def addDependencies(outfile, parse, tokenByIndex=None, sentenceId=None):
         dep = ET.Element("dependency")
         dep.set("id", "cjp_" + str(depCount))
         if tokenByIndex != None:
+            if t1Index-1 not in tokenByIndex:
+                print >> sys.stderr, "Token not found", (t1Word, depCount, sentenceId)
+                deps = []
+                while line.strip() != "": line = outfile.readline()
+                break
+            if t2Index-1 not in tokenByIndex:
+                print >> sys.stderr, "Token not found", (t2Word, depCount, sentenceId)
+                deps = []
+                while line.strip() != "": line = outfile.readline()
+                break
             assert t1Word == tokenByIndex[t1Index-1].get("text"), (t1Word, tokenByIndex[t1Index-1].get("text"), t1Index-1, depCount, sentenceId)
             assert t2Word == tokenByIndex[t2Index-1].get("text"), (t2Word, tokenByIndex[t2Index-1].get("text"), t2Index-1, depCount, sentenceId)
             dep.set("t1", tokenByIndex[t1Index-1].get("id"))
@@ -165,6 +175,94 @@ def convertXML(parser, input, output):
         print >> sys.stderr, "Writing output to", output
         ETUtils.write(corpusRoot, output)
     return corpusTree
+
+def insertParse(sentence, stanfordOutputFile, parser):
+    # Get parse
+    sentenceAnalyses = setDefaultElement(sentence, "sentenceanalyses")
+    parses = setDefaultElement(sentenceAnalyses, "parses")
+    parse = getElementByAttrib(parses, "parse", {"parser":parser})
+    if parse == None:
+        parse = ET.SubElement(parses, "parse")
+        parse.set("parser", "None")
+    if len(parse.findall("dependency")) > 0: # don't reparse
+        return True
+    pennTree = parse.get("pennstring")
+    if pennTree == None or pennTree == "":
+        parse.set("stanford", "no_penn")
+        return False
+    # Get tokens
+    tokenization = getElementByAttrib(sentence.find("sentenceanalyses").find("tokenizations"), "tokenization", {"tokenizer":parse.get("tokenizer")})
+    assert tokenization != None
+    count = 0
+    tokenByIndex = {}
+    for token in tokenization.findall("token"):
+        tokenByIndex[count] = token
+        count += 1
+    # Insert dependencies
+    deps = addDependencies(stanfordOutputFile, parse, tokenByIndex, sentence.get("id"))
+    if len(deps) == 0:
+        parse.set("stanford", "no_dependencies")
+    else:
+        parse.set("stanford", "ok")
+    return True
+
+def insertParses(input, parsePath, output=None, parseName="mccc-preparsed"):
+    import tarfile
+    from SentenceSplitter import openFile
+    """
+    Divide text in the "text" attributes of document and section 
+    elements into sentence elements. These sentence elements are
+    inserted into their respective parent elements.
+    """  
+    print >> sys.stderr, "Loading corpus", input
+    corpusTree = ETUtils.ETFromObj(input)
+    print >> sys.stderr, "Corpus file loaded"
+    corpusRoot = corpusTree.getroot()
+    
+    print >> sys.stderr, "Inserting parses from", parsePath
+    if parsePath.find(".tar.gz") != -1:
+        tarFilePath, parsePath = parsePath.split(".tar.gz")
+        tarFilePath += ".tar.gz"
+        tarFile = tarfile.open(tarFilePath)
+        if parsePath[0] == "/":
+            parsePath = parsePath[1:]
+    else:
+        tarFile = None
+    
+    docCount = 0
+    docsWithStanford = 0
+    sentencesCreated = 0
+    sourceElements = [x for x in corpusRoot.getiterator("document")] + [x for x in corpusRoot.getiterator("section")]
+    counter = ProgressCounter(len(sourceElements), "McCC Parse Insertion")
+    for document in sourceElements:
+        docCount += 1
+        counter.update(1, "Processing Documents ("+document.get("id")+"/" + document.get("pmid") + "): ")
+        docId = document.get("id")
+        if docId == None:
+            docId = "CORPUS.d" + str(docCount)
+        
+        f = openFile(os.path.join(parsePath, document.get("pmid") + ".sd"), tarFile)
+        if f == None:
+            continue
+        sentences = document.findall("sentence")
+        # TODO: Following for-loop is the same as when used with a real parser, and should
+        # be moved to its own function.
+        for sentence in sentences:
+            counter.update(0, "Processing Documents ("+sentence.get("id")+"/" + document.get("pmid") + "): ")
+            if not insertParse(sentence, f, parseName):
+                failCount += 1
+        f.close()
+    
+    if tarFile != None:
+        tarFile.close()
+    #print >> sys.stderr, "Sentence splitting created", sentencesCreated, "sentences"
+    #print >> sys.stderr, docsWithSentences, "/", docCount, "documents have stanford parses"
+        
+    if output != None:
+        print >> sys.stderr, "Writing output to", output
+        ETUtils.write(corpusRoot, output)
+    return corpusTree
+
 
 if __name__=="__main__":
     import sys
