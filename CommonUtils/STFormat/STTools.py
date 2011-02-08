@@ -27,6 +27,7 @@ class Annotation:
         self.sites = []
         self.speculation = None # event 
         self.negation = None # event
+        self.fileType = None # "a1" or "a2"
     
     def isNegated(self):
         return self.negation != None
@@ -92,7 +93,12 @@ def readEvent(string):
     args = rest.split()
     trigger = args[0]
     args = args[1:]
-    ann.type, ann.trigger = trigger.split(":")
+    splits = trigger.split(":")
+    if len(splits) == 2: # (splits, trigger, string)
+        ann.type, ann.trigger = splits[0], splits[1]
+    else:
+        ann.type = splits[0]
+        ann.trigger = None
     argMap = {}
     #print string
     for arg in args:
@@ -175,16 +181,22 @@ def loadA1(filename):
     proteins = []
     #starSection = False
     lines = f.readlines()
+    count = 0
     for line in lines:
         #if starSection: # assume all proteins are defined before equivalences
         #    assert line[0] == "*"
         if line[0] == "T":
             proteins.append(readTAnnotation(line))
+            count += 1
     for line in lines:
         if line[0] == "*":
             #starSection = True
             readStarAnnotation(line, proteins)
+            count += 1
+    assert count == len(lines), lines # check that all lines were processed
     f.close()
+    for protein in proteins:
+        protein.fileType = "a1"
     return proteins
 
 #def loadA2(filename, proteins):
@@ -237,17 +249,21 @@ def loadRelOrA2(filename, proteins):
     relations = []
     lines = f.readlines()
     f.close()
+    count = 0
     for line in lines:
         if line[0] == "T":
             triggers.append( readTAnnotation(line) )
             triggerMap[triggers[-1].id] = triggers[-1]
+            count += 1
     for line in lines:
         if line[0] == "E":
             events.append( readEvent(line) )
             eventMap[events[-1].id] = events[-1]
+            count += 1
     for line in lines:
         if line[0] == "R":
             relations.append(readRAnnotation(line))
+            count += 1
     for line in lines:
         if line[0] == "M":
             mId, rest = line.split("\t")
@@ -256,10 +272,21 @@ def loadRelOrA2(filename, proteins):
                 eventMap[eventId].speculation = mId
             elif mType == "Negation":
                 eventMap[eventId].negation = mId
+            count += 1
+    for line in lines:
+        if line[0] == "*":
+            readStarAnnotation(line, proteins + triggers)
+            count += 1
+    assert count == len(lines), lines # check that all lines were processed
+    
+    # Mark source file type
+    for ann in triggers + events + relations:
+        ann.fileType = "a2"
     # Build links
     for event in events:
         #print event.id
-        event.trigger = triggerMap[event.trigger]
+        if event.trigger != None:
+            event.trigger = triggerMap[event.trigger]
         for i in range(len(event.arguments)):
             arg = event.arguments[i]
             if arg[1][0] == "T":
@@ -296,7 +323,11 @@ def loadText(filename):
 def load(id, dir, loadA2=True):
     #print id
     id = str(id)
-    proteins = loadA1(os.path.join(dir, id + ".a1"))
+    a1Path = os.path.join(dir, id + ".a1")
+    if os.path.exists(a1Path):
+        proteins = loadA1(a1Path)
+    else:
+        proteins = []
     if not loadA2:
         return proteins, [], [], []
     a2Path = os.path.join(dir, id + ".a2")
@@ -325,7 +356,11 @@ def loadSet(dir, setName=None, level="a2"):
         doc = Document()
         doc.id = id
         if not level == "txt":
-            doc.proteins, doc.triggers, doc.events, doc.relations = load(str(id), dir, level=="a2")
+            try:
+                doc.proteins, doc.triggers, doc.events, doc.relations = load(str(id), dir, level=="a2")
+            except:
+                print >> sys.stderr, "Exception reading document", dir, id 
+                raise
         doc.text = loadText( os.path.join(dir, str(id) + ".txt") )
         doc.dataSet = setName
         documents.append(doc)
