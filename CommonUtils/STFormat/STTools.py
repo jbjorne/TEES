@@ -13,15 +13,15 @@ class Document:
 
 class Annotation:
     def __init__(self, id = None, type = None, text=None, trigger=None, arguments=None):
-        self.id = id # protein/trigger/event
-        self.type = type # protein/trigger/event
-        self.text = text # protein/trigger
-        self.charBegin = -1 # protein/trigger
-        self.charEnd = -1 # protein/trigger
+        self.id = id # protein/word/dependency/trigger/event
+        self.type = type # protein/word/dependency/trigger/event
+        self.text = text # protein/word/trigger
+        self.charBegin = -1 # protein/word/trigger
+        self.charEnd = -1 # protein/word/trigger
         self.alternativeOffsets = []
         self.equiv = [] # group of elements that are equivalent
         self.trigger = trigger # event
-        self.arguments = [] # event/relation
+        self.arguments = [] # event/dependency/relation
         if arguments != None:
             self.arguments = arguments
         self.sites = []
@@ -40,7 +40,7 @@ class Annotation:
     
 def readTAnnotation(string):
     #print string
-    assert string[0] == "T", string
+    assert string[0] == "T" or string[0] == "W", string
     string = string.strip()
     ann = Annotation()
     splits = string.split("\t")
@@ -103,7 +103,11 @@ def readEvent(string):
     #print string
     for arg in args:
         argTuple = arg.split(":") + [None]
-        if argTuple[0].find("Site") == -1:
+        # In the Shared Task Annotation, the word Site can mean a site, or then again not, 
+        # because the same term Site is used also for a Site that is not a Site, but just
+        # a "Site"-type argument for a SiteOf event in the BI-task, which may, or may not 
+        # (didn't check), have also actual Sites.
+        if argTuple[0].find("Site") == -1 or ann.type == "SiteOf":
             origArgName = argTuple[0]
             if argTuple[0].find("Theme") != -1: # multiple themes are numbered
                 argTuple = ["Theme", argTuple[1], None]
@@ -143,6 +147,16 @@ def readRAnnotation(string):
             ann.arguments.append( ("Connected", protId.strip(), None) )
     return ann
 
+def readDependencyAnnotation(string):
+    string = string.strip()
+    id, depType, word1, word2 = string.split()
+    assert word1[0] == "W" and word2[0] == "W", string
+    ann = Annotation()
+    ann.id = id
+    ann.type = depType
+    ann.arguments = [("Word", word1), ("Word", word2)]
+    return ann
+
 #def loadRel(filename, proteins):
 #    triggerMap = {}
 #    for protein in proteins:
@@ -179,25 +193,41 @@ def readRAnnotation(string):
 def loadA1(filename):
     f = open(filename)
     proteins = []
-    #starSection = False
+    words = []
+    dependencies = []
     lines = f.readlines()
     count = 0
     for line in lines:
-        #if starSection: # assume all proteins are defined before equivalences
-        #    assert line[0] == "*"
         if line[0] == "T":
             proteins.append(readTAnnotation(line))
             count += 1
     for line in lines:
         if line[0] == "*":
-            #starSection = True
             readStarAnnotation(line, proteins)
+            count += 1
+    for line in lines:
+        if line[0] == "W":
+            words.append(readTAnnotation(line))
+            count += 1
+    for line in lines:
+        if line[0] == "R": # in a1-files, "R" refers to dependencies
+            dependencies.append(readDependencyAnnotation(line))
             count += 1
     assert count == len(lines), lines # check that all lines were processed
     f.close()
-    for protein in proteins:
-        protein.fileType = "a1"
-    return proteins
+    # Mark source file type
+    for ann in proteins + words + dependencies:
+        ann.fileType = "a1"
+    # Build syntactic links
+    if len(words) > 0:
+        wordMap = {}
+        for word in words:
+            wordMap[word.id] = word
+        for dep in dependencies:
+            for i in range(len(dep.arguments)):
+                arg = dep.arguments[i]
+                dep.arguments[i] = (arg[0], wordMap[arg[1]])
+    return proteins, words, dependencies
 
 #def loadA2(filename, proteins):
 #    f = open(filename)
@@ -237,6 +267,14 @@ def loadA1(filename):
 #                event.arguments[i] = (arg[0], eventMap[arg[1]], None)
 #    f.close()
 #    return triggers, events
+
+#def isRelation(line): # "R" lines may be either relations or dependencies
+#    splits = line.split()
+#    assert len(splits) >= 2, line
+#    if splits[-1][0] == "W" and splits[-2][0] == "W":
+#        return False 
+#    else:
+#        return True
 
 def loadRelOrA2(filename, proteins):
     f = open(filename)
@@ -325,11 +363,13 @@ def load(id, dir, loadA2=True):
     id = str(id)
     a1Path = os.path.join(dir, id + ".a1")
     if os.path.exists(a1Path):
-        proteins = loadA1(a1Path)
+        proteins, words, dependencies = loadA1(a1Path)
     else:
         proteins = []
+        words = []
+        dependencies = []
     if not loadA2:
-        return proteins, [], [], []
+        return proteins, [], [], [], [], []
     a2Path = os.path.join(dir, id + ".a2")
     relPath = os.path.join(dir, id + ".rel")
     triggers = []
@@ -339,7 +379,7 @@ def load(id, dir, loadA2=True):
         triggers, events, relations = loadRelOrA2(a2Path, proteins)
     elif os.path.exists(relPath):
         triggers, events, relations = loadRelOrA2(relPath, proteins)
-    return proteins, triggers, events, relations
+    return proteins, words, dependencies, triggers, events, relations
 
 def loadSet(dir, setName=None, level="a2"):
     assert level in ["txt", "a1", "a2"]
@@ -357,7 +397,7 @@ def loadSet(dir, setName=None, level="a2"):
         doc.id = id
         if not level == "txt":
             try:
-                doc.proteins, doc.triggers, doc.events, doc.relations = load(str(id), dir, level=="a2")
+                doc.proteins, doc.words, doc.dependencies, doc.triggers, doc.events, doc.relations = load(str(id), dir, level=="a2")
             except:
                 print >> sys.stderr, "Exception reading document", dir, id 
                 raise

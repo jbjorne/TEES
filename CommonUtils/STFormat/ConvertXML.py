@@ -1,4 +1,6 @@
-from STTools import *
+import sys, os
+from STTools import Document
+from STTools import Annotation
 try:
     import xml.etree.cElementTree as ET
 except ImportError:
@@ -20,6 +22,14 @@ def toInteractionXML(documents, corpusName="GENIA", output=None):
         if doc.dataSet != None:
             docEl.set("set", doc.dataSet)
         corpusRoot.append(docEl)
+        # If this is a sentence, make one
+        isSentence = len(doc.words) > 0
+        if isSentence:
+            sentEl = ET.SubElement(docEl, "sentence")
+            sentEl.set("id", docId + ".s0")
+            sentEl.set("text", doc.text)
+            docId = sentEl.get("id") # hack to get all subelements here
+            docEl = sentEl # hack to get all subelements here
         # Write triggers and entities
         elCounter = 0
         tMap = {}
@@ -113,6 +123,33 @@ def toInteractionXML(documents, corpusName="GENIA", output=None):
                     intEl.set("type", "Target")
                     docEl.append(intEl)
             #docEl.append(intEl) # adding original intEl after extra argument loop broke everything
+        if isSentence:
+            sentAnalysesEl = ET.SubElement(sentEl, "sentenceanalyses")
+            parsesEl = ET.SubElement(sentAnalysesEl, "parses")
+            parseEl = ET.SubElement(parsesEl, "parse")
+            tokenizationsEl = ET.SubElement(sentAnalysesEl, "tokenizations")
+            tokenizationEl = ET.SubElement(tokenizationsEl, "tokenization")
+            parseEl.set("parser", "gold")
+            parseEl.set("tokenizer", "gold")
+            tokenizationEl.set("tokenizer", "gold")
+            tokenMap = {}
+            for word in doc.words:
+                tokEl = ET.SubElement(tokenizationEl, "token")
+                tokEl.set("id", word.id)
+                tokEl.set("text", word.text)
+                tokEl.set("charOffset", str(word.charBegin) + "-" + str(word.charEnd))
+                tokenMap[word.id] = tokEl
+            for dep in doc.dependencies:
+                depEl = ET.SubElement(parseEl, "dependency")
+                depEl.set("id", dep.id)
+                depEl.set("type", dep.type)
+                assert len(dep.arguments) == 2
+                depEl.set("t1", dep.arguments[0][1].id)
+                depEl.set("t2", dep.arguments[1][1].id)
+                if dep.type.find(":") != -1:
+                    word1Type, word2Type = dep.type.split("(")[0].split(":")[-1].split("-")
+                    tokenMap[dep.arguments[0][1].id].set("POS", word1Type)
+                    tokenMap[dep.arguments[1][1].id].set("POS", word2Type)
     
     if output != None:
         print >> sys.stderr, "Writing output to", output

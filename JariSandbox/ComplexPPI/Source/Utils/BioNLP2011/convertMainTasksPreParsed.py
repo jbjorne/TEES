@@ -35,7 +35,8 @@ def convert(datasets, analysisTags, analysisPath, outdir, corpusName):
     print >> sys.stderr, "Converting to", bigfileName+"-documents.xml"
     xml = STConvert.toInteractionXML(documents, corpusName, bigfileName+"-documents.xml")
     for pair in datasets:
-        addAnalyses(xml, analysisTags[pair[0]], analysisPath, outdir, bigfileName)
+        if corpusName != "BI":
+            addAnalyses(xml, analysisTags[pair[0]], analysisPath, outdir, bigfileName)
         ETUtils.write(xml, bigfileName+"-sentences.xml")
 
 def addAnalyses(xml, analysisTag, analysisPath, outdir, bigfileName):
@@ -92,8 +93,8 @@ if __name__=="__main__":
                       ("train", dataPath+"BioNLP-ST_2011_Infectious_Diseases_training_data_rev1")]
     datasets["BB"] = [("devel", dataPath+"BioNLP-ST_2011_Bacteria_Biotopes_dev_data_rev1"), 
                       ("train", dataPath+"BioNLP-ST_2011_Bacteria_Biotopes_train_data_rev1")]
-    #datasets["BI"] = [("devel", dataPath+"BioNLP-ST_2011_bacteria_interactions_dev_data_rev1"), 
-    #                  ("train", dataPath+"BioNLP-ST_2011_bacteria_interactions_train_data_rev1")]
+    datasets["BI"] = [("devel", dataPath+"BioNLP-ST_2011_bacteria_interactions_dev_data_rev1"), 
+                      ("train", dataPath+"BioNLP-ST_2011_bacteria_interactions_train_data_rev1")]
     
     analysisTags = {}
     analysisPath = "/home/jari/data/BioNLP11SharedTask/analyses/"
@@ -105,8 +106,9 @@ if __name__=="__main__":
                            "train":"BioNLP-ST_2011_Infectious_Diseases_training_data"}
     analysisTags["BB"] =  {"devel":"BioNLP-ST_2011_Bacteria_Biotopes_dev_data",
                            "train":"BioNLP-ST_2011_Bacteria_Biotopes_train_data"}
+    analysisTags["BI"] = None
     
-    for dataset in ["GE", "EPI", "ID"]: #sorted(datasets.keys()):
+    for dataset in ["BI"]: #["GE", "EPI", "ID"]: #sorted(datasets.keys()):
         cwd = os.getcwd()
         currOutDir = outDir + dataset
         if not os.path.exists(currOutDir):
