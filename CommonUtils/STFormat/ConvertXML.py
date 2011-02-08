@@ -8,7 +8,7 @@ import Range
 
 def toInteractionXML(documents, corpusName="GENIA", output=None):
     corpusRoot = ET.Element("corpus")
-    corpusRoot.set("source", "GENIA")
+    corpusRoot.set("source", corpusName)
     docCounter = 0
     for doc in documents:
         docEl = ET.Element("document")
@@ -36,7 +36,8 @@ def toInteractionXML(documents, corpusName="GENIA", output=None):
                     altOffs.append( str(ao[0]) + "-" + str(ao[1]-1) ) 
                 entEl.set("altOffset", ",".join(altOffs))
             entEl.set("type", protein.type)
-            if protein.isName():
+            assert protein.fileType in ["a1", "a2"], protein.fileType
+            if protein.fileType == "a1": #protein.isName():
                 entEl.set("isName", "True")
             else:
                 entEl.set("isName", "False")
@@ -48,21 +49,37 @@ def toInteractionXML(documents, corpusName="GENIA", output=None):
         elCounter = 0
         # Write events
         for event in doc.events:
-            argCount = 0
-            for arg in event.arguments:
+            if event.trigger == None: # triggerless event (simple pairwise interaction)
+                assert len(event.arguments) >= 2, (event.id, event.type, event.arguments)
+                a1 = event.arguments[0]
+                a2 = event.arguments[1]
                 intEl = ET.Element("interaction")
                 intEl.set("directed", "True")
                 intEl.set("id", docId + ".i" + str(elCounter))
                 elCounter += 1
-                intEl.set("origId", str(doc.id) + "." + str(event.id) + "." + str(argCount))
-                intEl.set("e1", tMap[event.trigger.id])
-                if arg[1].trigger != None:
-                    intEl.set("e2", tMap[arg[1].trigger.id])
-                else:
-                    intEl.set("e2", tMap[arg[1].id])
-                intEl.set("type", arg[0])
+                intEl.set("origId", str(doc.id) + "." + str(event.id))
+                intEl.set("e1", tMap[a1[1].id])
+                intEl.set("e2", tMap[a2[1].id])
+                #intEl.set("type", event.type)
+                #intEl.set("argTypes", a1[0] + "/" + a2[0])
+                intEl.set("type", event.type + "(" + a1[0] + "/" + a2[0] + ")")
                 docEl.append(intEl)
-                argCount += 1
+            else:
+                argCount = 0
+                for arg in event.arguments:
+                    intEl = ET.Element("interaction")
+                    intEl.set("directed", "True")
+                    intEl.set("id", docId + ".i" + str(elCounter))
+                    elCounter += 1
+                    intEl.set("origId", str(doc.id) + "." + str(event.id) + "." + str(argCount))
+                    intEl.set("e1", tMap[event.trigger.id])
+                    if arg[1].trigger != None:
+                        intEl.set("e2", tMap[arg[1].trigger.id])
+                    else:
+                        intEl.set("e2", tMap[arg[1].id])
+                    intEl.set("type", arg[0])
+                    docEl.append(intEl)
+                    argCount += 1
         # Write relations
         for relation in doc.relations:
             assert len(relation.arguments) >= 2, (relation.id, relation.type, relation.arguments)
