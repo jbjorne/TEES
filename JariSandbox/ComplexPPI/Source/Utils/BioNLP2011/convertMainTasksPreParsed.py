@@ -23,7 +23,7 @@ def log(clear=False, logCmd=True, logFile="log.txt"):
     if logCmd:
         sys.stdout.writeToLog("Command line: " + " ".join(sys.argv) + "\n")
 
-def convert(datasets, analysisTags, analysisPath, outdir, corpusName):
+def convert(datasets, analysisTags, analysisPath, corpusName):
     bigfileName = corpusName + "-" + "-and-".join([x[0] for x in datasets])
     documents = []
     for pair in datasets:
@@ -36,10 +36,17 @@ def convert(datasets, analysisTags, analysisPath, outdir, corpusName):
     xml = STConvert.toInteractionXML(documents, corpusName, bigfileName+"-documents.xml")
     for pair in datasets:
         if corpusName != "BI":
-            addAnalyses(xml, analysisTags[pair[0]], analysisPath, outdir, bigfileName)
-        ETUtils.write(xml, bigfileName+"-sentences.xml")
+            addAnalyses(xml, analysisTags[pair[0]], analysisPath, bigfileName)
+    ETUtils.write(xml, bigfileName+"-sentences.xml")
+    processParses(corpusName, bigfileName)
+    print >> sys.stderr, "Dividing into sets"
+    InteractionXML.DivideSets.processCorpus(bigfileName+".xml", "./", corpusName + "-", ".xml", [("devel", "train")])
+    if "devel" in [x[0] for x in datasets]:
+        print >> sys.stderr, "Creating empty devel set"
+        deletionRules = {"interaction":{},"entity":{"isName":"False"}}
+        InteractionXML.DeleteElements.processCorpus(corpusName + "-devel.xml", corpusName + "-devel-empty.xml", deletionRules)
 
-def addAnalyses(xml, analysisTag, analysisPath, outdir, bigfileName):
+def addAnalyses(xml, analysisTag, analysisPath, bigfileName):
     print >> sys.stderr, "Inserting", analysisTag, "analyses"
     print >> sys.stderr, "Making sentences"
     Tools.SentenceSplitter.makeSentences(xml, analysisPath + "Tokenised/Tokenised-" + analysisTag + ".tar.gz/" + analysisTag + "/tokenised", None)
@@ -51,18 +58,17 @@ def addAnalyses(xml, analysisTag, analysisPath, outdir, bigfileName):
 #    Tools.CharniakJohnsonParser.parse(bigfileName+"-sentences.xml", bigfileName+"-parsed.xml", tokenizationName=None, parseName="McClosky", requireEntities=False)
 #    print >> sys.stderr, "Stanford Conversion"
 #    Tools.StanfordParser.convertXML("McClosky", bigfileName+"-parsed.xml", bigfileName+"-stanford.xml")
-#    print >> sys.stderr, "Protein Name Splitting"
-#    splitterCommand = "python /home/jari/cvs_checkout/PPI_Learning/Analysers/ProteinNameSplitter.py -f " + bigfileName+"-stanford.xml" + " -o " + bigfileName+"-split.xml" + " -p " + "McClosky" + " -t " + "McClosky" + " -s split-McClosky" + " -n split-McClosky"
-#    subprocess.call(splitterCommand, shell=True)
-#    print >> sys.stderr, "Head Detection"
-#    xml = FindHeads.findHeads(bigfileName+"-split.xml", "split-McClosky", tokenization=None, output=bigfileName+".xml", removeExisting=True)
-#    print >> sys.stderr, "Dividing into sets"
-#    InteractionXML.DivideSets.processCorpus(bigfileName+".xml", outDir, corpusName + "-", ".xml", [("devel", "train")])
-    #if "devel" in [x[0] for x in datasets]:
-    #    print >> sys.stderr, "Creating empty devel set"
-    #    deletionRules = {"interaction":{},"entity":{"isName":"False"}}
-    #    InteractionXML.DeleteElements.processCorpus(corpusName + "-devel.xml", corpusName + "-devel-empty.xml", deletionRules)
-    #return xml
+
+def processParses(corpusName, bigfileName, splitTarget="mccc"):
+    if corpusName != "BI":
+        print >> sys.stderr, "Protein Name Splitting"
+        splitterCommand = "python /home/jari/cvs_checkout/PPI_Learning/Analysers/ProteinNameSplitter.py -f " + bigfileName+"-sentences.xml" + " -o " + bigfileName+"-split.xml" + " -p " + splitTarget + " -t " + splitTarget + " -s split-"+splitTarget + " -n split-"+splitTarget
+        subprocess.call(splitterCommand, shell=True)
+        print >> sys.stderr, "Head Detection"
+        xml = FindHeads.findHeads(bigfileName+"-split.xml", "split-"+splitTarget, tokenization=None, output=bigfileName+".xml", removeExisting=True)
+    else:
+        print >> sys.stderr, "Head Detection"
+        xml = FindHeads.findHeads(bigfileName+".xml", "gold", tokenization=None, output=bigfileName+".xml", removeExisting=True)
 
 if __name__=="__main__":
     # Import Psyco if available
@@ -108,7 +114,7 @@ if __name__=="__main__":
                            "train":"BioNLP-ST_2011_Bacteria_Biotopes_train_data"}
     analysisTags["BI"] = None
     
-    for dataset in ["BI"]: #["GE", "EPI", "ID"]: #sorted(datasets.keys()):
+    for dataset in ["BB"]: #["GE", "EPI", "ID"]: #sorted(datasets.keys()):
         cwd = os.getcwd()
         currOutDir = outDir + dataset
         if not os.path.exists(currOutDir):
@@ -116,5 +122,5 @@ if __name__=="__main__":
         os.chdir(currOutDir)
         log(False, False, dataset + "-conversion-log.txt")
         print >> sys.stderr, "Processing dataset", dataset
-        convert(datasets[dataset], analysisTags[dataset], analysisPath, outDir, dataset)
+        convert(datasets[dataset], analysisTags[dataset], analysisPath, dataset)
         os.chdir(cwd)
