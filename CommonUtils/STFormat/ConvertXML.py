@@ -28,6 +28,7 @@ def toInteractionXML(documents, corpusName="GENIA", output=None):
             sentEl = ET.SubElement(docEl, "sentence")
             sentEl.set("id", docId + ".s0")
             sentEl.set("text", doc.text)
+            sentEl.set("charOffset", "0-" + str(len(doc.text)-1))
             docId = sentEl.get("id") # hack to get all subelements here
             docEl = sentEl # hack to get all subelements here
         # Write triggers and entities
@@ -137,6 +138,7 @@ def toInteractionXML(documents, corpusName="GENIA", output=None):
                 tokEl = ET.SubElement(tokenizationEl, "token")
                 tokEl.set("id", word.id)
                 tokEl.set("text", word.text)
+                tokEl.set("POS", "None")
                 tokEl.set("charOffset", str(word.charBegin) + "-" + str(word.charEnd))
                 tokenMap[word.id] = tokEl
             for dep in doc.dependencies:
