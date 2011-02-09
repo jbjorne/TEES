@@ -1,3 +1,4 @@
+import sys
 
 class SentenceElements:
     def __init__(self, sentenceElement, parse=None, tokenization=None, removeIntersentenceInteractions=True, removeNameInfo=False):
@@ -71,7 +72,7 @@ class SentenceElements:
                         for element in tokenizationElements:
                             if element.attrib["tokenizer"] == tokenization:
                                 self.tokenizationElement = element
-                                break                
+                                break             
                 else: # old format
                     if parse != None:
                         self.parseElement = parsesElement.find(parse)
@@ -85,10 +86,14 @@ class SentenceElements:
                     dependencyElements = self.parseElement.findall("dependency")
                     if dependencyElements != None:
                         self.dependencies = dependencyElements
+                else:
+                    print >> sys.stderr, "Warning, parse", parse, "not found"
                 if self.tokenizationElement != None:
                     tokenElements = self.tokenizationElement.findall("token")
                     if tokenElements != None:
                         self.tokens = tokenElements
+                else:
+                    print >> sys.stderr, "Warning, tokenization", tokenization, "not found"
 
     def getEntity(self, offset, offsetList, entityIds):
         index = 0
