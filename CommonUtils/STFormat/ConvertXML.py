@@ -33,8 +33,17 @@ def toInteractionXML(documents, corpusName="GENIA", output=None):
             docEl = sentEl # hack to get all subelements here
         # Write triggers and entities
         elCounter = 0
+        triggerToEvents = {}
+        for trigger in doc.triggers:
+            triggerId = trigger.id
+            triggerToEvents[triggerId] = []
+            for event in doc.events:
+                if event.trigger == trigger:
+                    triggerToEvents[triggerId].append(event.id)
+            if len(triggerToEvents[triggerId]) == 0:
+                triggerToEvents[triggerId].append(trigger.id)
         tMap = {}
-        for protein in doc.proteins + doc.triggers:
+        for protein in doc.proteins:
             entEl = ET.Element("entity")
             protId = docId + ".e" + str(elCounter)
             entEl.set("id", protId)
@@ -55,7 +64,30 @@ def toInteractionXML(documents, corpusName="GENIA", output=None):
             elCounter += 1
             docEl.append(entEl)
             assert not tMap.has_key(protId)
-            tMap[protein.id] = protId
+            tMap[protein.id] = protId        
+        for protein in doc.triggers:
+            for eventId in triggerToEvents[protein.id]: # Write duplicate triggers
+                entEl = ET.Element("entity")
+                protId = docId + ".e" + str(elCounter)
+                entEl.set("id", protId)
+                entEl.set("origId", str(doc.id) + "." + str(protein.id))
+                entEl.set("text", protein.text)
+                entEl.set("charOffset", str(protein.charBegin) + "-" + str(protein.charEnd-1))
+                if len(protein.alternativeOffsets) > 0:
+                    altOffs = []
+                    for ao in protein.alternativeOffsets:
+                        altOffs.append( str(ao[0]) + "-" + str(ao[1]-1) ) 
+                    entEl.set("altOffset", ",".join(altOffs))
+                entEl.set("type", protein.type)
+                assert protein.fileType in ["a1", "a2"], protein.fileType
+                if protein.fileType == "a1": #protein.isName():
+                    entEl.set("isName", "True")
+                else:
+                    entEl.set("isName", "False")
+                elCounter += 1
+                docEl.append(entEl)
+                assert not tMap.has_key(protId)
+                tMap[eventId] = protId
         # Pre-define XML interaction ids
         elCounter = 0
         # Write events
@@ -83,9 +115,11 @@ def toInteractionXML(documents, corpusName="GENIA", output=None):
                     intEl.set("id", docId + ".i" + str(elCounter))
                     elCounter += 1
                     intEl.set("origId", str(doc.id) + "." + str(event.id) + "." + str(argCount))
-                    intEl.set("e1", tMap[event.trigger.id])
+                    #intEl.set("e1", tMap[event.trigger.id])
+                    intEl.set("e1", tMap[event.id])
                     if arg[1].trigger != None:
-                        intEl.set("e2", tMap[arg[1].trigger.id])
+                        #intEl.set("e2", tMap[arg[1].trigger.id])
+                        intEl.set("e2", tMap[arg[1].id])
                     else:
                         intEl.set("e2", tMap[arg[1].id])
                     intEl.set("type", arg[0])
