@@ -7,7 +7,7 @@ Functions for easier use of cElementTree.
 
   Description: Convenience functions for easier use of cElementTree.
 """
-__version__ = "$Revision: 1.18 $"
+__version__ = "$Revision: 1.19 $"
 
 import sys
 
@@ -143,23 +143,31 @@ def makePath(element,tagList):
         currElem=subElem
     return result
 
-def toStr(element, recursive=True):
-    s = "<" + element.tag
+def toStr(element, recursive=True, removePreTag=True):
+    tag = element.tag
+    if removePreTag:
+        tag = tag.split("}")[-1]
+    s = "<" + tag
     for key in sorted(element.attrib.keys()):
         s += " " + key + "=\"" + element.get(key) + "\""
+    # get content
     text = element.text
-    s += "> "
+    children = element.getchildren()
+    if text != None or len(children) > 0: # if content, close opening
+        s += ">"
+    # write content
     if text != None:
         s += text
-    children = element.getchildren()
     for child in children:
         s += toStr(child)
-    if text == None or len(text) == 0:
-        s += "/>"
+    if text != None or len(children) > 0:
+        s += "</" + tag + ">"
     else:
-        s += "<" + element.tag + "/>"
-        if element.tail != None:
-            s += element.tail
+        s += "/>"
+    
+    if element.tail != None:
+        s += element.tail
+        
     return s
 
 def getElementByAttrib(parent, tag, attDict):
@@ -176,7 +184,7 @@ def getElementByAttrib(parent, tag, attDict):
 def setDefaultElement(parent, name):
     element = parent.find(name)
     if element == None:
-        element = ET.Element(name)
+        element = ElementTree.Element(name)
         parent.append(element)
     return element
 
