@@ -3,10 +3,14 @@ try:
     import xml.etree.cElementTree as ElementTree
 except ImportError:
     import cElementTree as ElementTree
+import cElementTreeUtils as ETUtils
 import gzip
 import sys
+import os
 import re
 import string
+sys.path.append(os.path.dirname(os.path.abspath(__file__))+"/../../JariSandbox/ComplexPPI/Source/")
+from Utils.ProgressCounter import ProgressCounter
 
 # the prefix to use for split token ids
 tokenIdPrefix = "st_"
@@ -27,29 +31,29 @@ splitDefaultDepName = "dep"
 # in the given sentence element.
 def addTokenization(tokenization, sentence, sentenceId):
     toks = sentence.find("sentenceanalyses/tokenizations")
-    assert toks, "Missing <tokenizations> in sentence %s" % sentenceId
+    assert toks != None, "Missing <tokenizations> in sentence %s" % sentenceId
 
-    # assume new-style if there's at least one <tokenization> with
-    # a "tokenizer" attribute. Also check duplicates.
-    isNew = False
+#    # assume new-style if there's at least one <tokenization> with
+#    # a "tokenizer" attribute. Also check duplicates.
+#    isNew = False
     for t in toks.getiterator("tokenization"):
         if t.get("tokenizer") is not None:
             assert t.get("tokenizer") is not None, "Split tokenization '%s' already exists in sentence %s!" % (tokenization, sentenceId)
-            isNew = True
+#            isNew = True
 
     # add the tokenization.
-    if isNew:
-        newTok = ElementTree.SubElement(toks, "tokenization")
-        newTok.attrib["tokenizer"] = tokenization
-    else:
-        assert toks.find(tokenization) is None, "Split tokenization '%s' already exists in sentence %s!" % (tokenization, sentenceId)
-        newTok = ElementTree.SubElement(toks, tokenization)
+#    if isNew:
+    newTok = ElementTree.SubElement(toks, "tokenization")
+    newTok.attrib["tokenizer"] = tokenization
+#    else:
+#        assert toks.find(tokenization) is None, "Split tokenization '%s' already exists in sentence %s!" % (tokenization, sentenceId)
+#        newTok = ElementTree.SubElement(toks, tokenization)
 
     return newTok
 
 # returns a cElementTree element corresponding to the given tokenization
 # in the given sentence element.
-def getTokenization(tokenization, sentence, sentenceId):
+def getTokenization(tokenization, sentence, sentenceId, remove=False):
     # first try the old-style format where there's an element with the
     # name of the tokenization
     tokPath = "sentenceanalyses/tokenizations/"+tokenization
@@ -62,7 +66,9 @@ def getTokenization(tokenization, sentence, sentenceId):
     assert tokenizations is not None, "ERROR: missing tokenizations for sentence %s" % sentenceId
 
     for t in tokenizations.getiterator("tokenization"):
-        if t.get("tokenizer") == options.tokenization:
+        if t.get("tokenizer") == tokenization:
+            if remove:
+                tokenizations.remove(t)
             return t
 
     return None
@@ -73,33 +79,33 @@ def getTokenization(tokenization, sentence, sentenceId):
 def addParse(parse, tokenization, sentence, sentenceId):
     # check whether the XML is new-style or old-style.
     parses = sentence.find("sentenceanalyses/parses")
-    assert parses, "Missing <parses> in sentence %s" % sentenceId
+    assert parses != None, "Missing <parses> in sentence %s" % sentenceId
 
     # assume new-style if we have at least one <parse> with a "parser"
     # attribute. Also check that a parse under the given name isn't there
     # already
-    isNew = False
+#    isNew = False
     for p in parses.getiterator("parse"):
         if p.get("parser") is not None:
             assert p.get("parser") != parse, "New parse '%s' already exists in sentence %s!" % (parse, sentenceId)
-            isNew = True
+#            isNew = True
 
     # add the parse.
-    if isNew:
-        newParse = ElementTree.SubElement(parses, "parse")
-        newParse.attrib["parser"] = parse
-        newParse.attrib["tokenizer"] = tokenization
-    else:
-        # check for overlap
-        assert parses.find(parse) is None, "New parse '%s' already exists in sentence %s!" % (options.newparse, sentenceId)
-        newParse = ElementTree.SubElement(parses, parse)
+#    if isNew:
+    newParse = ElementTree.SubElement(parses, "parse")
+    newParse.attrib["parser"] = parse
+    newParse.attrib["tokenizer"] = tokenization
+#    else:
+#        # check for overlap
+#        assert parses.find(parse) is None, "New parse '%s' already exists in sentence %s!" % (parse, sentenceId)
+#        newParse = ElementTree.SubElement(parses, parse)
 
     return newParse
         
 # returns a cElementTree element correspoding to the given parse
 # in the given sentence element. Also checks that the parse is created
 # for the given tokenization.
-def getParse(parse, tokenization, sentence, sentenceId):
+def getParse(parse, tokenization, sentence, sentenceId, remove=False):
     # first try old-style format, then new.
     parsePath = "sentenceanalyses/parses/"+parse
     found = sentence.find(parsePath)
@@ -114,6 +120,8 @@ def getParse(parse, tokenization, sentence, sentenceId):
     for p in parses.getiterator("parse"):
         if p.get("parser") == parse:
             assert p.get("tokenizer") == tokenization, "ERROR: tokenization/parse mismatch: parse %s has tokenizer %s, not %s" % (parse, p.get("tokenizer"), tokenization)
+            if remove:
+                parses.remove(p)
             return p
             
     return None
@@ -126,6 +134,7 @@ class Token:
         self.pos        = pos
         self.charOffset = charOffset
         self.text       = text
+        self.splitFromOffset = None
 
         # these oddities are used in re-connecting split tokens
         self.head = None
@@ -167,7 +176,7 @@ def cutPoints(tokStart, tokEnd, entityOffsets):
 # heuristically determines which of the given parts of what was originally
 # a single token should be considered the "head" of the split token parts.
 # Sets Token.head and Token.depType.
-def resolveHeads(splitParts):
+def resolveHeads(splitParts, logFile=None):
     # if there's only one part, there's nothing to resolve
     if len(splitParts) < 2:
         return
@@ -228,9 +237,11 @@ def resolveHeads(splitParts):
             headLess.append(tok)
     joinedText = " ".join([t.text for t in splitParts])
     if len(headLess) == 0:
-        print >> sys.stderr, "NOTE: no head candidates for", joinedText
+        if logFile != None:
+            logFile.write("NOTE: no head candidates for " + joinedText + "\n")
     if len(headLess) > 1:
-        print >> sys.stderr, "NOTE: failed to resolve unique \"head\" for", joinedText,":", " ".join([t.text for t in headLess])
+        if logFile != None:
+            logFile.write("NOTE: failed to resolve unique \"head\" for " + joinedText + ": " + " ".join([t.text for t in headLess]) + "\n")
         # assume the first candidate is the head, connect the other there.
         for h in headLess[1:]:
             h.head    = headLess[0]
@@ -240,9 +251,11 @@ def resolveHeads(splitParts):
 # splits the <token>s in the given tokenization, attempting to split them
 # so that each entity has its own token. Returns a list of Token objects
 # representing the new split ones.
-def splitTokens(tokenization, sentence):
+def splitTokens(tokenization, sentence, logFile=None):
     # store the tokens for the new split tokenization here
-    sentenceId = sentence.get("origId")
+    sentenceId = sentence.get("id")
+    if sentence.get("origId") != None:
+        sentenceId += "/" + sentence.get("origId")
     splitTokens = []
 
     # get the character offsets of entities, and turn them into a list
@@ -308,7 +321,9 @@ def splitTokens(tokenization, sentence):
 
         if len(parts) > 1:
             # debug
-            print >> sys.stderr, "Token %s in sentence %s: cut '%s' into %d parts:" % (origId, sentenceId, text, len(parts)), " ".join(["'%s'" % p for p in parts])
+            if logFile != None:
+                logFile.write("Token %s in sentence %s: cut '%s' into %d parts:" % (origId, sentenceId, text, len(parts)) + " ".join(["'%s'" % p for p in parts]) + "\n")
+                #print >> sys.stderr, "Token %s in sentence %s: cut '%s' into %d parts:" % (origId, sentenceId, text, len(parts)), " ".join(["'%s'" % p for p in parts])
             pass
 
         # sanity check
@@ -323,6 +338,7 @@ def splitTokens(tokenization, sentence):
             tOff = "%d-%d" % (currentOffset, currentOffset + len(part)-1)
 
             t = Token(nextId, origId, POS, tOff, part)
+            t.splitFromOffset = off
             splitParts.append(t)
             splitTokens.append(t)
 
@@ -331,7 +347,7 @@ def splitTokens(tokenization, sentence):
             nextId = "%s%d" % (tokenIdPrefix, seqId)
 
 
-        resolveHeads(splitParts)
+        resolveHeads(splitParts, logFile)
 
     return splitTokens
 
@@ -339,62 +355,63 @@ def splitTokens(tokenization, sentence):
 def addTokensToTree(tokens, element):
     for t in tokens:
         newToken = ElementTree.SubElement(element, "token")
-        newToken.attrib["id"]   = t.id
-        newToken.attrib["text"] = t.text
-        newToken.attrib["POS"]  = t.pos
-        newToken.attrib["charOffset"] = t.charOffset
+        newToken.set("id", t.id)
+        newToken.set("text", t.text)
+        newToken.set("POS", t.pos)
+        newToken.set("charOffset", t.charOffset)
+        if t.splitFromOffset != None and t.splitFromOffset != t.charOffset:
+            newToken.set("splitFrom", t.splitFromOffset)
 
-def indent(elem, level=0):
-    """Stolen from Antti's code stolen from Jari's code"""
-    i = "\n" + level*"  "
-    if len(elem):
-        if not elem.text or not elem.text.strip():
-            elem.text = i + "  "
-        for e in elem:
-            indent(e, level+1)
-        if not e.tail or not e.tail.strip():
-            e.tail = i
-    if level and (not elem.tail or not elem.tail.strip()):
-        elem.tail = i
+#def indent(elem, level=0):
+#    """Stolen from Antti's code stolen from Jari's code"""
+#    i = "\n" + level*"  "
+#    if len(elem):
+#        if not elem.text or not elem.text.strip():
+#            elem.text = i + "  "
+#        for e in elem:
+#            indent(e, level+1)
+#        if not e.tail or not e.tail.strip():
+#            e.tail = i
+#    if level and (not elem.tail or not elem.tail.strip()):
+#        elem.tail = i
 
-if __name__=="__main__":
-    optParser = OptionParser(usage="%prog [OPTIONS]\nModifies one parse and associated tokenization to split (some) hyphenated\nwords, e.g. \"actin-binding\".")
-    optParser.add_option("-f", "--analysisFile", dest="file", metavar="FILE", default=None, help = "Path to the xml-formatted analysis file")
-    optParser.add_option("-o", "--output", dest="output", metavar="FILE", default=None, help = "Path to the xml-formatted analysis file")
-    optParser.add_option("-p", "--parse", dest="parse", default = None, help = "Name of the parse to modify")
-    optParser.add_option("-t", "--tokenization", dest="tokenization", default=None, help="Name of the tokenization to modify")
-    optParser.add_option("-s", "--splittokenization", dest="splittokenization", default=splitTokenizationName, help="Name of the new split tokenization to create")
-    optParser.add_option("-n", "--newparse", dest="newparse", default=newParseName, help="Name of the new parse to create")
-    (options, args) = optParser.parse_args()
-
-    if (options.file is None or options.parse is None or
-        options.tokenization is None):
-        print >> sys.stderr, "The -f, -p and -t options are mandatory."
-        optParser.print_help()
-        sys.exit(1)
-
-    if options.file.endswith(".gz"):
-        inFile = gzip.GzipFile(options.file)
+def mainFunc(input, output, parseName, tokenizationName, newParseName, newTokenizationName, logFileName=None, removeOld=True):
+    print >> sys.stderr, "Protein Name Splitter"
+    if logFileName != None:
+        print >> sys.stderr, "Writing log to", logFileName
+        logFile = open(logFileName, "wt")
     else:
-        inFile = open(options.file)
+        logFile = None
+    #if input.endswith(".gz"):
+    #    inFile = gzip.GzipFile(input)
+    #else:
+    #    inFile = open(input)
+    tree = ETUtils.ETFromObj(input)
 
-    tree = ElementTree.parse(inFile)
+    #tree = ElementTree.parse(inFile)
     root = tree.getroot()
-
-    for sentence in root.getiterator("sentence"):
+    
+    sentences = [x for x in root.getiterator("sentence")]
+    counter = ProgressCounter(len(sentences), "Split Protein Names")
+    for sentence in sentences:
         sId = sentence.get("id")
+        counter.update(1, "Splitting names ("+sId+"): ")
 
-        tok   = getTokenization(options.tokenization, sentence, sId)
-        assert tok is not None, "Missing tokenization '%s' in sentence %s!" % (options.tokenization, sId)
+        tok   = getTokenization(tokenizationName, sentence, sId, remove=removeOld)
+        assert tok is not None, "Missing tokenization '%s' in sentence %s!" % (tokenizationName, sId)
 
-        parse = getParse(options.parse, options.tokenization, sentence, sId)
-        assert parse is not None, "Missing parse '%s' in sentence %s!" % (options.parse, sId)
+        parse = getParse(parseName, tokenizationName, sentence, sId, remove=removeOld)
+        assert parse is not None, "Missing parse '%s' in sentence %s!" % (parseName, sId)
 
-        split = splitTokens(tok, sentence)
+        split = splitTokens(tok, sentence, logFile)
 
         # add a new tokenization with the split tokens.
-        splittok = addTokenization(options.splittokenization, sentence, sId)
+        splittok = addTokenization(newTokenizationName, sentence, sId)
         addTokensToTree(split, splittok)
+        for a in tok.attrib:
+            if splittok.get(a) == None:
+                splittok.set(a, tok.get(a))
+        #splittok.set("split-")
 
         # make a mapping from original to split token ids. Store the
         # head token when given.
@@ -418,7 +435,10 @@ if __name__=="__main__":
 
         # make a copy of the specified parse that refers to the split tokens
         # instead of the originals.
-        newparse = addParse(options.newparse, options.splittokenization, sentence, sId)
+        newparse = addParse(newParseName, newTokenizationName, sentence, sId)
+        for a in parse.attrib:
+            if newparse.get(a) == None:
+                newparse.set(a, parse.get(a))
 
         depSeqId = 1
         for d in parse.getiterator("dependency"):
@@ -426,26 +446,50 @@ if __name__=="__main__":
             assert t1 in tokenIdMap and t2 in tokenIdMap, "INTERNAL ERROR"
 
             dep = ElementTree.SubElement(newparse, "dependency")
-            dep.attrib["t1"]   = tokenIdMap[t1]
-            dep.attrib["t2"]   = tokenIdMap[t2]
-            dep.attrib["type"] = dType
-            dep.attrib["id"]   = "split_%d" % depSeqId
+            dep.set("t1", tokenIdMap[t1])
+            dep.set("t2", tokenIdMap[t2])
+            dep.set("type", dType)
+            dep.set("id", "split_%d" % depSeqId)
             depSeqId += 1
 
         # Add in new dependencies between the split parts.
         for t in [tok for tok in split if tok.head is not None]:
             dep = ElementTree.SubElement(newparse, "dependency")
-            dep.attrib["t1"]   = t.head.id
-            dep.attrib["t2"]   = t.id
-            dep.attrib["type"] = t.depType
+            dep.set("t1", t.head.id)
+            dep.set("t2", t.id)
+            dep.set("type", t.depType)
+            dep.set("split", "PNS")
 
             # debugging
             #print >> sys.stderr, "NEW DEP IN", sId
 
-    indent(root)
+    #indent(root)
+    if logFile != None:
+        logFile.close()
 
     # debugging
-    if options.output == None:
-        tree.write(sys.stdout)
-    else:
-        tree.write(options.output)
+    if output != None:
+        print >> sys.stderr, "Writing output to", output
+        ETUtils.write(tree, output)
+    return tree
+    #else:
+    #    tree.write(options.output)
+
+if __name__=="__main__":
+    optParser = OptionParser(usage="%prog [OPTIONS]\nModifies one parse and associated tokenization to split (some) hyphenated\nwords, e.g. \"actin-binding\".")
+    optParser.add_option("-f", "--analysisFile", dest="file", metavar="FILE", default=None, help = "Path to the xml-formatted analysis file")
+    optParser.add_option("-o", "--output", dest="output", metavar="FILE", default=None, help = "Path to the xml-formatted analysis file")
+    optParser.add_option("-p", "--parse", dest="parse", default = None, help = "Name of the parse to modify")
+    optParser.add_option("-t", "--tokenization", dest="tokenization", default=None, help="Name of the tokenization to modify")
+    optParser.add_option("-s", "--splittokenization", dest="splittokenization", default=splitTokenizationName, help="Name of the new split tokenization to create")
+    optParser.add_option("-n", "--newparse", dest="newparse", default=newParseName, help="Name of the new parse to create")
+    optParser.add_option("-l", "--logFile", dest="logFileName", default=None, help="Log for the splitter messages")
+    (options, args) = optParser.parse_args()
+    
+    if (options.file is None or options.parse is None or
+        options.tokenization is None):
+        print >> sys.stderr, "The -f, -p and -t options are mandatory."
+        optParser.print_help()
+        sys.exit(1)
+
+    mainFunc(options.file, options.output, options.parse, options.tokenization, options.splittokenization, options.newparse, options.logFileName)
