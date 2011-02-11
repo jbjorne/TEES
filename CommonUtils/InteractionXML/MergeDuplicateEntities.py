@@ -102,6 +102,15 @@ def printStats(origItemsByType, duplicatesRemovedByType):
     print >> sys.stderr, "  ---------------------------------"
     print >> sys.stderr, "  Total: " + str(sum(duplicatesRemovedByType.values())) + " (" + str(sum(origItemsByType.values())) + ")"
 
+def mergeAll(input, output=None):
+    corpusElements = CorpusElements.loadCorpus(input)
+    mergeDuplicateEntities(corpusElements)
+    mergeDuplicateInteractions(corpusElements)
+    if output != None:
+        print >> sys.stderr, "Writing output to", output
+        ETUtils.write(corpusElements.rootElement, output)
+    return corpusElements
+
 if __name__=="__main__":
     print >> sys.stderr, "##### Merge duplicate entities and interactions #####"
     # Import Psyco if available
@@ -119,8 +128,4 @@ if __name__=="__main__":
     assert(options.input != None)
     assert(options.output != None)
     
-    corpusElements = CorpusElements.loadCorpus(options.input)
-    mergeDuplicateEntities(corpusElements)
-    mergeDuplicateInteractions(corpusElements)
-    print >> sys.stderr, "Writing output to", options.output
-    ETUtils.write(corpusElements.rootElement, options.output)
+    mergeAll(options.input, options.output)
