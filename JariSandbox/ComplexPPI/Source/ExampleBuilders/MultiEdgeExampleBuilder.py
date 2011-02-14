@@ -1,7 +1,7 @@
 """
 Edge Examples
 """
-__version__ = "$Revision: 1.55 $"
+__version__ = "$Revision: 1.56 $"
 
 import sys, os
 thisPath = os.path.dirname(os.path.abspath(__file__))
@@ -214,7 +214,13 @@ class MultiEdgeExampleBuilder(ExampleBuilder):
             else:
                 return True
         else:
-            if e1.get("isName") == "True" and e2.get("isName") == "True":
+            # task specific rules
+            if e1.get("type") == "Glycosylation": # EPI (some sidechains are still lost)
+                return True
+            elif e1.get("type") == "Catalysis": # EPI
+                return True
+            # bionlp'09 based rules
+            elif e1.get("isName") == "True" and e2.get("isName") == "True":
                 return False
             elif e1.get("isName") == "True" and e2.get("isName") == "False":
                 return False
@@ -537,7 +543,8 @@ class MultiEdgeExampleBuilder(ExampleBuilder):
                 features[self.featureSet.getId("out_of_scope")] = 1
             path = [token1, token2]
         # define extra attributes
-        if int(path[0].get("id").split("_")[-1]) < int(path[-1].get("id").split("_")[-1]):
+        #if int(path[0].get("id").split("_")[-1]) < int(path[-1].get("id").split("_")[-1]):
+        if int(path[0].get("charOffset").split("-")[0]) < int(path[-1].get("charOffset").split("-")[0]):
             #extra = {"xtype":"edge","type":"i","t1":path[0],"t2":path[-1]}
             extra = {"xtype":"edge","type":"i","t1":path[0].get("id"),"t2":path[-1].get("id")}
             extra["deprev"] = False
