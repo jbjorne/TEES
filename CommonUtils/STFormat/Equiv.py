@@ -9,7 +9,7 @@ def process(documents):
     numOldEvents = 0
     numNewEvents = 0
     for doc in documents:
-        print doc.id
+        #print doc.id
         numOldEvents += len(doc.events)
         # Get all top-level events
         rootEvents = getRoots(doc)
@@ -20,7 +20,7 @@ def process(documents):
         # Regenerate the flat event list in the document
         doc.events = rebuildEventList(newEvents)
         numNewEvents += len(doc.events)
-    print >> sys.stderr, "Duplication created", numNewEvents - numOldEvents, "new events"
+    print >> sys.stderr, "Duplication created", numNewEvents - numOldEvents, "new events (new total", numNewEvents, "events)"
 
 def getRoots(document):
     """
@@ -95,7 +95,7 @@ def duplicateEquiv(event):
     hasEquiv = getArgs(event, argList)
     if not hasEquiv:
         return [event]
-    print event.id
+    #print event.id
     #print "a", argList
     combinations = combine.combine(*argList) # make all combinations
     #print "b", combinations
