@@ -9,6 +9,8 @@ def process(documents):
     numOldEvents = 0
     numNewEvents = 0
     for doc in documents:
+        #if doc.id != "PMC-2806624-00-TIAB":
+        #    continue
         #print doc.id
         numOldEvents += len(doc.events)
         # Get all top-level events
@@ -71,16 +73,16 @@ def makeEvent(model, argCombination, count, newEvent = None):
         newEvent.speculation = model.speculation
         newEvent.negation = model.negation
     for arg in model.arguments:
-        #print model.id, [x[1].id for x in model.arguments], arg[1].id, argCombination, newEvent, newEvent.arguments
+        #print model.id, [x[1].id for x in model.arguments], "/", arg[1].id, argCombination, "/", newEvent, newEvent.arguments
         if arg[1].id[0] != "E": # not a nested event
             # Non-event arguments never need to be duplicated
             newEvent.arguments.append([arg[0], argCombination[0], arg[2]])
-            argCombination = argCombination[1:] # pop first (depth-first iteration)
+            argCombination.pop(0) # pop first (depth-first iteration)
         else: # is a nested event
             # For event arguments, create a new copy
             assert arg[2] == None, (model.id, arg)
             newArg = [arg[0], copy.copy(argCombination[0]), None]
-            argCombination = argCombination[1:] # pop first (depth-first iteration)
+            argCombination.pop(0) # pop first (depth-first iteration)
             newArg[1].arguments = [] # reset the argument list of the copy
             newArg[1].id += "_d" + str(count)
             newEvent.arguments.append(newArg) # add to parent copy
