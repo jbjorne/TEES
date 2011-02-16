@@ -1,6 +1,5 @@
 import sys, os
-from STTools import Document
-from STTools import Annotation
+from STTools import *
 try:
     import xml.etree.cElementTree as ET
 except ImportError:
@@ -274,8 +273,9 @@ def toSTFormat(input, output=None, outputTag="a2"):
             if intType == "neg" or intType == "Target":
                 continue # Targets have already been put into a dictionary
             #elif intType in ["Site", "Gene_expression", "Transcription", "Protein_catabolism", "Localization", "Binding", "Phosphorylation", "Positive_regulation", "Negative_regulation", "Regulation"]:
-            elif intType in ["Site", "Gene_expression", "Transcription", "Protein_catabolism", "Localization", "Binding", "Phosphorylation", "Positive_regulation", "Negative_regulation", "Regulation",
-                             "InputAssociation", "InputProcess", "InputInhibitor", "OutputProcess"]:
+            #elif intType in ["Site", "Gene_expression", "Transcription", "Protein_catabolism", "Localization", "Binding", "Phosphorylation", "Positive_regulation", "Negative_regulation", "Regulation",
+            #                 "InputAssociation", "InputProcess", "InputInhibitor", "OutputProcess"]:
+            elif intType not in ["Protein-Component", "Subunit-Complex", "Renaming", "Coref"]:
                 if intType == "Site":
                     sites.append(interaction)
                 else:
