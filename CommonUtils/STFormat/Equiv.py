@@ -52,6 +52,7 @@ def getArgs(event, argList):
         else:
             hasEquiv = True
             argList.append([arg[1]] + arg[1].equiv)
+            assert arg[1] not in arg[1].equiv
         if arg[1].id[0] == "E": # nested event
             rv = getArgs(arg[1], argList)
             hasEquiv = rv or hasEquiv
