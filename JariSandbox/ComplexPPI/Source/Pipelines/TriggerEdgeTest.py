@@ -205,8 +205,18 @@ if options.mode in ["BOTH", "FINAL", "GRID"]:
     else:
         bestTriggerModel = "best-trigger-model"
         bestEdgeModel = "best-edge-model"
-
+    
+    print >> sys.stderr, "Booster parameter search"
+    # Build trigger examples
     TRIGGER_EXAMPLE_BUILDER.run(TEST_FILE, "test-trigger-examples", PARSE, TOK, TRIGGER_FEATURE_PARAMS, TRIGGER_IDS)
+    CLASSIFIER.test("test-trigger-examples", bestTriggerModel, "test-trigger-classifications")
+    if bestTriggerModel != None:
+        print >> sys.stderr, "best-trigger-model=", os.path.realpath("best-trigger-model")
+    evaluator = Ev.evaluate("test-trigger-examples", "test-trigger-classifications", TRIGGER_IDS+".class_names")
+    #boostedTriggerFile = "TEST-predicted-triggers.xml"
+    #xml = ExampleUtils.writeToInteractionXML("test-trigger-examples", ExampleUtils.loadPredictionsBoost("test-trigger-classifications", boost), TEST_FILE, None, TRIGGER_IDS+".class_names", PARSE, TOK)    
+    #xml = ExampleUtils.writeToInteractionXML("test-trigger-examples", "test-trigger-classifications", TEST_FILE, None, TRIGGER_IDS+".class_names", PARSE, TOK)    
+    xml = BioTextExampleWriter.write("test-trigger-examples", "test-trigger-classifications", TEST_FILE, "trigger-pred-best.xml", TRIGGER_IDS+".class_names", PARSE, TOK)
     
     count = 0
     bestResults = None
@@ -215,21 +225,12 @@ if options.mode in ["BOTH", "FINAL", "GRID"]:
         print >> sys.stderr, "Processing params", str(count) + "/" + str(len(boosterParams)), boost
         print >> sys.stderr, "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
         
-        # Build trigger examples
-        CLASSIFIER.test("test-trigger-examples", bestTriggerModel, "test-trigger-classifications")
-        if bestTriggerModel != None:
-            print >> sys.stderr, "best-trigger-model=", os.path.realpath("best-trigger-model")
-        evaluator = Ev.evaluate("test-trigger-examples", "test-trigger-classifications", TRIGGER_IDS+".class_names")
-        #boostedTriggerFile = "TEST-predicted-triggers.xml"
-        #xml = ExampleUtils.writeToInteractionXML("test-trigger-examples", ExampleUtils.loadPredictionsBoost("test-trigger-classifications", boost), TEST_FILE, None, TRIGGER_IDS+".class_names", PARSE, TOK)    
-        #xml = ExampleUtils.writeToInteractionXML("test-trigger-examples", "test-trigger-classifications", TEST_FILE, None, TRIGGER_IDS+".class_names", PARSE, TOK)    
-        xml = BioTextExampleWriter.write("test-trigger-examples", "test-trigger-classifications", TEST_FILE, "trigger-pred-"+str(boost)+".xml", TRIGGER_IDS+".class_names", PARSE, TOK)
         # Boost
         if options.task == "CO":
             print >> sys.stderr, "Binary recall adjust for CO"
-            xml = RecallAdjust.run(xml, boost, None, binary=True)
+            xml = RecallAdjust.run("trigger-pred-best.xml", boost, None, binary=True)
         else:
-            xml = RecallAdjust.run(xml, boost, None)
+            xml = RecallAdjust.run("trigger-pred-best.xml", boost, None)
         xml = ix.splitMergedElements(xml, None)
         xml = ix.recalculateIds(xml, None, True)
         
