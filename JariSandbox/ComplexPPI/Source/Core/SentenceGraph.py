@@ -1,7 +1,7 @@
 """
 Main class for representing a sentence
 """
-__version__ = "$Revision: 1.37 $"
+__version__ = "$Revision: 1.38 $"
 
 #import Graph.networkx_v10rc1 as NX10 # import networkx as NX
 from Core.SimpleGraph import Graph
@@ -66,7 +66,7 @@ def loadCorpus(corpus, parse, tokenization=None, removeNameInfo=False, removeInt
         graph.parseElement = sentence.parseElement
         
         #graph.mapEntityHints()
-    print >> sys.stderr, "Removed", duplicateInteractionEdgesRemoved, "duplicate interaction edges"
+    print >> sys.stderr, "Skipped", duplicateInteractionEdgesRemoved, "duplicate interaction edges in SentenceGraphs"
     return corpusElements
 
 class SentenceGraph:
