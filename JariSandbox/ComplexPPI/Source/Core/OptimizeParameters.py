@@ -117,15 +117,16 @@ def optimizeCSC(Classifier, Evaluator, trainExamples, testExamples, classIds, co
         print >> sys.stderr, "Waiting for results"
         finished = 0
         louhiTimer = Timer()
-        combinationStatus = {}
+        #combinationStatus = {}
         while(True):
             # count finished
             finished = 0
             processStatus = {"FINISHED":0, "QUEUED":0, "FAILED":0, "RUNNING":0}
             for id in combinationIds:
-                status = Classifier.getLouhiStatus(id, cscConnection)
-                combinationStatus[id] = status
-                processStatus[status] += 1
+                #status = Classifier.getLouhiStatus(id, cscConnection)
+                #combinationStatus[id] = status
+                #processStatus[status] += 1
+                Classifier.getLouhiStatus(id, cscConnection, processStatus)
             p = processStatus
             processStatusString = str(p["QUEUED"]) + " queued, " + str(p["RUNNING"]) + " running, " + str(p["FINISHED"]) + " finished, " + str(p["FAILED"]) + " failed"
             if processStatus["QUEUED"] + processStatus["RUNNING"] == 0:
@@ -168,9 +169,20 @@ def optimizeCSC(Classifier, Evaluator, trainExamples, testExamples, classIds, co
                 if workDir != None:
                     evaluationOutput = os.path.join(workDir, evaluationOutput)
                 evaluator = Evaluator.evaluate(testExamples, predictions, classIds, evaluationOutput)
-                if bestResult == None or evaluator.compare(bestResult[0]) > 0: #: averageResult.fScore > bestResult[1].fScore:
-                    bestResult = [evaluator, None, predictions, evaluationOutput, combinations[i]]
-                    bestCombinationId = id
+                if Classifier.__name__ != "MultiLabelClassifier":
+                    if bestResult == None or evaluator.compare(bestResult[0]) > 0: #: averageResult.fScore > bestResult[1].fScore:
+                        bestResult = [evaluator, None, predictions, evaluationOutput, combinations[i]]
+                        bestCombinationId = id
+                else:
+                    assert evaluator.__name__ == "MultiLabelEvaluator", evaluator.__name__
+                    if bestResult == None:
+                        for classId in classIds.Ids:
+                            bestResult[classId] = (-1, None)
+                    for classId in classIds.Ids:
+                        fscore = evaluator.dataByClass[classId].fscore
+                        if fscore > bestResult[classId][0]:
+                            bestResult[classId] = (fscore, id)
+                    bestCombinationId = bestResult
         Stream.setIndent()
         print >> sys.stderr, "Selected parameters", bestResult[-1]
     
