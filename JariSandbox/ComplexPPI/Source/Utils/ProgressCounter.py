@@ -2,7 +2,9 @@ import sys, time
 
 class ProgressCounter:
     def __init__(self, total, id="UNKNOWN", step=5.0):
-        self.total = float(total)
+        self.total = total
+        if self.total != None:
+            self.total = float(self.total)
         self.current = 0
         self.progress = 0.0
         self.prevProgress = -99.0
@@ -13,21 +15,26 @@ class ProgressCounter:
         self.prevPrintTime = 0
         self.timeStep = 30
         self.startTime = time.time()
+        self.prevUpdateStringLen = 0
     
     def markFinished(self):
         self.progress = 100.0
     
     def __del__(self):
         # If this counter didn't finish, show the info about the last update
-        if not self.progress >= 100.0:
+        if self.total != None and not self.progress >= 100.0:
             import sys
             print >> sys.stderr, "Counter \"" + self.id + "\" did not finish"
             self.showLastUpdate()
             
     def update(self, amount=1, string="Processing: "):
         self.current += amount
-        self.progress = self.current / self.total * 100.0
-        self.prevUpdateString = string + "%.2f" % self.progress + " %"
+        if self.total != None:
+            self.progress = self.current / self.total * 100.0
+            self.prevUpdateString = string + "%.2f" % self.progress + " %"
+        else:
+            self.progress += amount
+            self.prevUpdateString = string + str(self.current)
         
         currentTime = time.time()
         timeStepExceeded = False
@@ -36,12 +43,21 @@ class ProgressCounter:
         
         self.prevUpdateString += " (" + self.getElapsedTimeString(currentTime) + ")"
         
-        if self.progress >= 100.0 or self.progress - self.prevProgress >= self.step or timeStepExceeded:
-            print >> sys.stderr, "\r" + self.prevUpdateString,
-            self.prevProgress = self.progress
-            self.prevPrintTime = currentTime
-        if self.progress >= 100.0:
-            print >> sys.stderr
+        if self.total != None:
+            if self.progress >= 100.0 or self.progress - self.prevProgress >= self.step or timeStepExceeded:
+                print >> sys.stderr, "\r" + self.prevUpdateString + max(0, self.prevUpdateStringLen-len(self.prevUpdateString)) * " ",
+                self.prevProgress = self.progress
+                self.prevPrintTime = currentTime
+                self.prevUpdateStringLen = len(self.prevUpdateString)
+            if self.progress >= 100.0:
+                print >> sys.stderr
+        else:
+            if self.progress >= self.step:
+                self.progress = 0
+                print >> sys.stderr, "\r" + self.prevUpdateString + max(0, self.prevUpdateStringLen-len(self.prevUpdateString)) * " ",
+                self.prevProgress = self.progress
+                self.prevPrintTime = currentTime
+                self.prevUpdateStringLen = len(self.prevUpdateString)
     
     def getElapsedTimeString(self, currentTime):
         elapsedTime = currentTime - self.startTime
@@ -52,6 +68,9 @@ class ProgressCounter:
         return str(int(hours)) + ":" + str(int(minutes)) + ":" + str(int(seconds))
     
     def showLastUpdate(self):
-        print >> sys.stderr, "Last count: " + str(self.current) + "/" + str(int(self.total))
+        if self.total != None:
+            print >> sys.stderr, "Last count: " + str(self.current) + "/" + str(int(self.total))
+        else:
+            print >> sys.stderr, "Last count: " + str(self.current)
         print >> sys.stderr, "Last update: " + self.prevUpdateString 
         
