@@ -1,4 +1,4 @@
-__version__ = "$Revision: 1.44 $"
+__version__ = "$Revision: 1.45 $"
 
 import sys,os
 sys.path.append(os.path.dirname(os.path.abspath(__file__))+"/..")
@@ -335,15 +335,19 @@ class SVMMultiClassClassifier(Classifier):
         return idStr
     
     @classmethod
-    def getLouhiStatus(cls, idStr, cscConnection):
+    def getLouhiStatus(cls, idStr, cscConnection, counts, classIds=None):
         stderrStatus = cscConnection.getFileStatus("script" + idStr + ".sh" + "-stderr")
         if stderrStatus == cscConnection.NOT_EXIST:
+            counts["QUEUED"] += 1
             return "QUEUED"
         elif stderrStatus == cscConnection.NONZERO:
+            counts["FAILED"] += 1
             return "FAILED"
         elif cscConnection.exists("predictions"+idStr):
+            counts["FINISHED"] += 1
             return "FINISHED"
         else:
+            counts["RUNNING"] += 1
             return "RUNNING"
 
     @classmethod
