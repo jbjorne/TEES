@@ -10,13 +10,7 @@ class CSCConnection:
         self.memory = memory
         self.cores = cores
         self.machineName = account.split("@")[-1]
-        self.workDir = "/wrk/jakrbj/" + workSubDir
-        if deleteWorkDir:
-            assert workSubDir != None and workSubDir != ""
-            print "Removing CSC work directory (if it exists)"
-            self.run("rm -fr " + self.workDir)
-        self.run("mkdir -p " + self.workDir)
-        
+        self.setWorkSubDir(workSubDir, deleteWorkDir)        
         # State constants
         self.NOT_EXIST = "NOT_EXIST"
         self.NONZERO = "NONZERO"
@@ -26,6 +20,14 @@ class CSCConnection:
         self.commands = []
         
         self.compression = True
+    
+    def setWorkSubDir(self, workSubDir, deleteWorkDir=False):
+        self.workDir = "/wrk/jakrbj/" + workSubDir
+        if deleteWorkDir:
+            assert workSubDir != None and workSubDir != ""
+            print "Removing CSC work directory (if it exists)"
+            self.run("rm -fr " + self.workDir)
+        self.run("mkdir -p " + self.workDir)
     
     def exists(self, filename):
         p = subprocess.Popen("ssh " + self.account + " 'ls -lh " + self.workDir + "/" + filename + "'", shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
@@ -81,6 +83,7 @@ class CSCConnection:
                 self.run("gzip < " + self.workDir + "/" + src + " > " + self.workDir + "/" + src + ".gz")
                 src = src + ".gz"
                 dst = dst + ".gz"
+            #print "SCP:", "scp " + self.account + ":" + self.workDir + "/" + src + " " + dst
             subprocess.call("scp " + self.account + ":" + self.workDir + "/" + src + " " + dst, shell=True)
             if self.compression:
                 subprocess.call("gunzip -f " + dst, shell=True)
@@ -89,6 +92,7 @@ class CSCConnection:
     def run(self, script, cdWrkDir=False):
         if cdWrkDir:
             script = "cd " + self.workDir + " ; " + script
+        #print "SCRIPT:", script
         subprocess.call("ssh " + self.account + " '" + script + "'", shell=True)
     
     def test(self):
