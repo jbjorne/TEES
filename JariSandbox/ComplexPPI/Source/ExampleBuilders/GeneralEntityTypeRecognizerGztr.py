@@ -1,7 +1,7 @@
 """
 Trigger examples
 """
-__version__ = "$Revision: 1.29 $"
+__version__ = "$Revision: 1.30 $"
 
 import sys, os
 thisPath = os.path.dirname(os.path.abspath(__file__))
@@ -13,6 +13,7 @@ from Core.IdSet import IdSet
 import Core.ExampleUtils as ExampleUtils
 from Core.Gazetteer import Gazetteer
 from FeatureBuilders.RELFeatureBuilder import RELFeatureBuilder
+from FeatureBuilders.WordNetFeatureBuilder import WordNetFeatureBuilder
 
 #def compareDependencyEdgesById(dep1, dep2):
 #    """
@@ -55,6 +56,8 @@ class GeneralEntityTypeRecognizerGztr(ExampleBuilder):
         
         if "rel_features" in self.styles:
             self.relFeatureBuilder = RELFeatureBuilder(featureSet)
+        if "wordnet" in self.styles:
+            self.wordNetFeatureBuilder = WordNetFeatureBuilder(featureSet)
 
     @classmethod
     def run(cls, input, output, parse, tokenization, style, idFileTag=None, gazetteerFileName=None, skiplist=None):
@@ -139,6 +142,10 @@ class GeneralEntityTypeRecognizerGztr(ExampleBuilder):
         ## BANNER features
         #if sentenceGraph.entityHintsByToken.has_key(token):
         #    features["BANNER-entity"] = 1
+        # Wordnet features
+        #if "wordnet" in self.styles:
+        #    for wordNetFeature in self.wordNetFeatureBuilder.getTokenFeatures(tokTxt, token.get("POS")):
+        #        features["_WN_"+wordNetFeature] = 1
         self.tokenFeatures[token] = sorted(features.keys())
         self.tokenFeatureWeights[token] = features
         return self.tokenFeatures[token], self.tokenFeatureWeights[token]
@@ -374,7 +381,22 @@ class GeneralEntityTypeRecognizerGztr(ExampleBuilder):
                 self.relFeatureBuilder.setFeatureVector(features)
                 self.relFeatureBuilder.buildAllFeatures(sentenceGraph.tokens, i)
                 self.relFeatureBuilder.setFeatureVector(None)
-             
+            
+            #self.wordNetFeatureBuilder.getTokenFeatures("show", "VBP")
+            #tokTxt = token.get("text")
+            #tokPOS = token.get("POS")
+            #wordNetFeatures = []
+            #wordNetFeatures = self.wordNetFeatureBuilder.getTokenFeatures(tokTxt, tokPOS)
+            #self.wordNetFeatureBuilder.getTokenFeatures(tokTxt, tokPOS)
+            if "wordnet" in self.styles:
+                tokTxt = token.get("text")
+                tokPOS = token.get("POS")
+                wordNetFeatures = self.wordNetFeatureBuilder.getTokenFeatures(tokTxt, tokPOS)
+                for wordNetFeature in wordNetFeatures:
+                    #print wordNetFeature,
+                    features[self.featureSet.getId("WN_"+wordNetFeature)] = 1
+                #print
+                             
             extra = {"xtype":"token","t":token.get("id")}
             examples.append( (sentenceGraph.getSentenceId()+".x"+str(exampleIndex),category,features,extra) )
             exampleIndex += 1
