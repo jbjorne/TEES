@@ -1,4 +1,4 @@
-__version__ = "$Revision: 1.45 $"
+__version__ = "$Revision: 1.46 $"
 
 import sys,os
 sys.path.append(os.path.dirname(os.path.abspath(__file__))+"/..")
@@ -81,7 +81,7 @@ class SVMMultiClassClassifier(Classifier):
         return rv
     
     @classmethod
-    def test(cls, examples, modelPath, output=None, parameters=None, forceInternal=False): # , timeout=None):
+    def test(cls, examples, modelPath, output=None, parameters=None, forceInternal=False, classIds=None): # , timeout=None):
         """
         Classify examples with a pre-trained model.
         
@@ -284,13 +284,13 @@ class SVMMultiClassClassifier(Classifier):
         return examples
     
     @classmethod
-    def initTrainAndTestOnLouhi(cls, trainExamples, testExamples, trainParameters, cscConnection, localWorkDir=None):
+    def initTrainAndTestOnLouhi(cls, trainExamples, testExamples, trainParameters, cscConnection, localWorkDir=None, classIds=None):
         if cscConnection.account.find("murska") != -1:
             isMurska = True
         else:
             isMurska = False
-        assert( type(trainExamples)==types.StringType )
-        assert( type(testExamples)==types.StringType )
+        assert( type(trainExamples)==types.StringType ), type(trainExamples)
+        assert( type(testExamples)==types.StringType ), type(testExamples)
         trainExampleFileName = os.path.split(trainExamples)[-1]
         testExampleFileName = os.path.split(testExamples)[-1]
         assert(trainExampleFileName != testExampleFileName)
@@ -352,8 +352,8 @@ class SVMMultiClassClassifier(Classifier):
 
     @classmethod
     def downloadModel(cls, idStr, cscConnection, localWorkDir=None):
-        if not cls.getLouhiStatus(idStr, cscConnection):
-            return None
+        #if not cls.getLouhiStatus(idStr, cscConnection):
+        #    return None
         modelFileName = "model"+idStr
         if localWorkDir != None:
             modelFileName = os.path.join(localWorkDir, modelFileName)
@@ -362,8 +362,8 @@ class SVMMultiClassClassifier(Classifier):
     
     @classmethod
     def getLouhiPredictions(cls, idStr, cscConnection, localWorkDir=None):
-        if not cls.getLouhiStatus(idStr, cscConnection):
-            return None
+        #if not cls.getLouhiStatus(idStr, cscConnection):
+        #    return None
         predFileName = "predictions"+idStr
         if localWorkDir != None:
             predFileName = os.path.join(localWorkDir, predFileName)

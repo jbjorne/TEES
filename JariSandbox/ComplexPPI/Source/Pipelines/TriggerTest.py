@@ -35,6 +35,8 @@ else:
     options.csc = [options.csc]
 
 exec "CLASSIFIER = " + options.classifier
+if options.classifier == "MultiLabelClassifier":
+    Ev = MultiLabelEvaluator
 
 # Main settings
 PARSE=options.parse
@@ -107,5 +109,6 @@ if not "examples" in options.csc:
     bestTriggerModel = optimize(CLASSIFIER, Ev, TRIGGER_TRAIN_EXAMPLE_FILE, TRIGGER_TEST_EXAMPLE_FILE,\
         TRIGGER_IDS+".class_names", TRIGGER_CLASSIFIER_PARAMS, "trigger-models", None, c, False)[1]
     
-    Cls.test(TRIGGER_TEST_EXAMPLE_FILE, bestTriggerModel, "trigger-test-classifications")
+    CLASSIFIER.test(TRIGGER_TEST_EXAMPLE_FILE, bestTriggerModel, "trigger-test-classifications", classIds=TRIGGER_IDS+".class_names")
+    Ev.evaluate(TRIGGER_TEST_EXAMPLE_FILE, "trigger-test-classifications", TRIGGER_IDS+".class_names")
     triggerXML = BioTextExampleWriter.write(TRIGGER_TEST_EXAMPLE_FILE, "trigger-test-classifications", TEST_FILE, "test-predicted-triggers.xml", TRIGGER_IDS+".class_names", PARSE, TOK)

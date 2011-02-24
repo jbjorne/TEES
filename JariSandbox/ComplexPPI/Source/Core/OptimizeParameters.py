@@ -12,6 +12,7 @@ import Utils.Stream as Stream
 from Murska.CSCConnection import CSCConnection
 #ENDIF
 import ExampleUtils
+from IdSet import IdSet
 
 def getCombinationString(combination):
     string = ""
@@ -98,13 +99,19 @@ def optimizeCSC(Classifier, Evaluator, trainExamples, testExamples, classIds, co
     combinationCount = 1
     combinationIds = []
     assert steps in ["BOTH", "SUBMIT", "RESULTS"], steps
+    
+    if type(classIds) == types.StringType:
+        classIds = IdSet(filename=classIds)
+    if Classifier.__name__ == "MultiLabelClassifier":
+        Classifier.makeClassFiles(trainExamples, testExamples, classIds)
+    
     if steps in ["BOTH", "SUBMIT"]:
         print >> sys.stderr, "Initializing runs"
         for combination in combinations:
             Stream.setIndent(" ")
             print >> sys.stderr, "Parameters "+str(combinationCount)+"/"+str(len(combinations))+":", str(combination)
             # Train
-            combinationIds.append(Classifier.initTrainAndTestOnLouhi(trainExamples, testExamples, combination, cscConnection) )
+            combinationIds.append(Classifier.initTrainAndTestOnLouhi(trainExamples, testExamples, combination, cscConnection, None, classIds) )
             combinationCount += 1
     else:
         for combination in combinations:
@@ -126,7 +133,7 @@ def optimizeCSC(Classifier, Evaluator, trainExamples, testExamples, classIds, co
                 #status = Classifier.getLouhiStatus(id, cscConnection)
                 #combinationStatus[id] = status
                 #processStatus[status] += 1
-                Classifier.getLouhiStatus(id, cscConnection, processStatus)
+                Classifier.getLouhiStatus(id, cscConnection, processStatus, classIds)
             p = processStatus
             processStatusString = str(p["QUEUED"]) + " queued, " + str(p["RUNNING"]) + " running, " + str(p["FINISHED"]) + " finished, " + str(p["FAILED"]) + " failed"
             if processStatus["QUEUED"] + processStatus["RUNNING"] == 0:
@@ -158,7 +165,7 @@ def optimizeCSC(Classifier, Evaluator, trainExamples, testExamples, classIds, co
             id = combinationIds[i]
             Stream.setIndent(" ")
             # Evaluate
-            predictions = Classifier.getLouhiPredictions(id, cscConnection, workDir)
+            predictions = Classifier.getLouhiPredictions(id, cscConnection, workDir, classIds)
             if predictions == None:
                 print >> sys.stderr, "No results for combination" + id
             else:
@@ -174,21 +181,28 @@ def optimizeCSC(Classifier, Evaluator, trainExamples, testExamples, classIds, co
                         bestResult = [evaluator, None, predictions, evaluationOutput, combinations[i]]
                         bestCombinationId = id
                 else:
-                    assert evaluator.__name__ == "MultiLabelEvaluator", evaluator.__name__
+                    assert Evaluator.__name__ == "MultiLabelEvaluator", Evaluator.__name__
                     if bestResult == None:
-                        for classId in classIds.Ids:
-                            bestResult[classId] = (-1, None)
-                    for classId in classIds.Ids:
-                        fscore = evaluator.dataByClass[classId].fscore
-                        if fscore > bestResult[classId][0]:
-                            bestResult[classId] = (fscore, id)
+                        bestResult = [{}, None]
+                        for className in classIds.Ids:
+                            if className != "neg" and "---" not in className:
+                                bestResult[0][className] = (-1, None, classIds.getId(className))
+                    for className in classIds.Ids:
+                        if className != "neg" and "---" not in className:
+                            fscore = evaluator.dataByClass[classIds.getId(className)].fscore
+                            if fscore > bestResult[0][className][0]:
+                                bestResult[0][className] = (fscore, id, bestResult[0][className][2])
                     bestCombinationId = bestResult
         Stream.setIndent()
         print >> sys.stderr, "Selected parameters", bestResult[-1]
+        #if Classifier.__name__ == "MultiLabelClassifier":
+        #    evaluator = Evaluator.evaluate(testExamples, predictions, classIds, evaluationOutput)
     
         modelFileName = Classifier.downloadModel(bestCombinationId, cscConnection, workDir)
         if workDir != None:
             modelFileName = os.path.join(workDir, modelFileName)
+        #if Classifier.__name__ != "MultiLabelClassifier":
+            #bestResult = [None, None]
         bestResult[1] = modelFileName
         return bestResult
 #ENDIF

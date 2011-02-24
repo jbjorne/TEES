@@ -1,11 +1,21 @@
+import sys, os
+import types
 from SVMMultiClassClassifier import SVMMultiClassClassifier
+sys.path.append(os.path.dirname(os.path.abspath(__file__))+"/..")
+import Core.ExampleUtils as Example
+from Utils.Timer import Timer
+import combine
+import copy
+from Core.IdSet import IdSet
+import Settings
+import subprocess
 
 class MultiLabelClassifier(SVMMultiClassClassifier):
     def __init__(self):
         pass
 
     @classmethod
-    def test(cls, examples, modelPath, output=None, parameters=None, forceInternal=False): # , timeout=None):
+    def test(cls, examples, modelPath, output=None, parameters=None, forceInternal=False, classIds=None): # , timeout=None):
         """
         Classify examples with a pre-trained model.
         
@@ -45,120 +55,175 @@ class MultiLabelClassifier(SVMMultiClassClassifier):
         f = open(modelPath, "rt")
         for line in f:
             key, value = line.split()
-            classModels[key] = os.path.join(modelPath, value)
+            classModels[key] = value
         f.close()
         mergedPredictions = []
-        for classId in classIds:
-            className = classIds.getName(classId)
-            args = [Settings.SVMMultiClassDir+"/svm_multiclass_classify"]
-            self.__addParametersToSubprocessCall(args, parameters)
-            if output == None:
-                output = "predictions" + cls + "-" + className
-                logFile = open("svmmulticlass" + cls + "-" + className + ".log","at")
-            else:
-                logFile = open(output+".log","wt")
-            args += [testPath, classModels[className], output]
-            subprocess.call(args, stdout = logFile, stderr = logFile)
-            addPredictions(output, mergedPredictions, classId, len(classIds.Ids))
+        if type(classIds) == types.StringType:
+            classIds = IdSet(filename=classIds)
+        #print classModels
+        for className in classIds.getNames():
+            if className != "neg" and not "---" in className:
+                classId = classIds.getId(className)
+                args = [Settings.SVMMultiClassDir+"/svm_multiclass_classify"]
+                #self.__addParametersToSubprocessCall(args, parameters)
+                classOutput = "predictions" + ".cls-" + className
+                logFile = open("svmmulticlass" + ".cls-" + className + ".log","at")
+                args += [testPath, classModels[str(className)], classOutput]
+                subprocess.call(args, stdout = logFile, stderr = logFile)
+                cls.addPredictions(classOutput, mergedPredictions, classId, len(classIds.Ids))
         print >> sys.stderr, timer.toString()
+        
+        predFileName = output
+        f = open(predFileName, "wt")
+        for mergedPred in mergedPredictions:
+            if len(mergedPred[0]) > 1 and "1" in mergedPred[0]:
+                mergedPred[0].remove("1")
+            mergedPred[1] = str(mergedPred[1])
+            mergedPred[0] = ",".join(sorted(list(mergedPred[0])))
+            f.write(" " + " ".join(mergedPred) + "\n")
+        f.close()
+        
         return mergedPredictions
     
     @classmethod
-    def makeClassFiles(cls, classIdSet, examples, outFiles):
-        for line in examples:
+    def divideExamples(cls, classIdSet, examples, outFiles):
+        exampleFile = open(examples, "rt")
+        for line in exampleFile:
             classId, rest = line.split(" ", 1)
-            className = classIdSet.getName(classId)
-            for outFile in outFiles:
-                if outFile[0] == className:
-                    outFile[1].write(classId + " " + rest)
+            className = classIdSet.getName(int(classId))
+            assert className != None, (classId, className, classIdSet.Ids)
+            if className == "neg":
+                classNames = []
+            elif "---" in className:
+                classNames = className.split("---")
+            else:
+                classNames = [className]
+            for outFileName in outFiles:
+                if outFileName in classNames:
+                    outFiles[outFileName].write("2 " + rest)
                 else:
-                    outFile[1].write("1 " + rest)
+                    outFiles[outFileName].write("1 " + rest)
+        exampleFile.close()
     
     @classmethod
-    def initTrainAndTestOnLouhi(cls, trainExamples, testExamples, trainParameters, cscConnection, localWorkDir=None):
+    def initTrainAndTestOnLouhi(cls, trainExamples, testExamples, trainParameters, cscConnection, localWorkDir=None, classIds = None):
         assert( type(trainExamples)==types.StringType )
         assert( type(testExamples)==types.StringType )
         trainExampleFileName = os.path.split(trainExamples)[-1]
         testExampleFileName = os.path.split(testExamples)[-1]
         assert(trainExampleFileName != testExampleFileName)
         
-        testClassFiles = []
+        testClassFiles = {}
         for name in classIds.getNames():
-            testClassFiles.append(name, open(testExamples + ".cls-" + name, "wt"))
-        trainClassFiles = []
+            testClassFiles[name] = str(testExamples + ".cls-" + name)
+        trainClassFiles = {}
         for name in classIds.getNames():
-            trainClassFiles.append(name, open(trainExamples + ".cls-" + name, "wt"))
-                
-        cls.makeClassFiles(classIds, testExamples, testClassFiles)
-        cls.makeClassFiles(classIds, trainExamples, trainClassFiles)
+            trainClassFiles[name] = str(trainExamples + ".cls-" + name)
+        
         origCSCWorkdir = cscConnection.workDir
         for name in classIds.getNames():
-            cscConnection.workDir = os.path.join(origCSCWorkdir, name)
-            idStr = SVMMultiClassClassifier.initTrainAndTestOnLouhi(trainClassFiles[name], testClassFiles[name], cscConnection, localWorkDir)
+            if name != "neg" and not "---" in name:
+                cscConnection.workDir = origCSCWorkdir
+                cscConnection.mkdir(name)
+                cscConnection.workDir = os.path.join(origCSCWorkdir, name)
+                idStr = SVMMultiClassClassifier.initTrainAndTestOnLouhi(trainClassFiles[name], testClassFiles[name], trainParameters, cscConnection, localWorkDir, None)
         cscConnection.workDir = origCSCWorkdir
+        return idStr
     
+    @classmethod
+    def makeClassFiles(cls, trainExamples, testExamples, classIds):
+        print >> sys.stderr, "Building class separated example files"
+        testClassFiles = {}
+        for name in classIds.getNames():
+            if name != "neg" and not "---" in name:
+                testClassFiles[name] = open(testExamples + ".cls-" + name, "wt")
+        trainClassFiles = {}
+        for name in classIds.getNames():
+            if name != "neg" and not "---" in name:
+                trainClassFiles[name] = open(trainExamples + ".cls-" + name, "wt")       
+        cls.divideExamples(classIds, testExamples, testClassFiles)
+        cls.divideExamples(classIds, trainExamples, trainClassFiles)
+        for x in testClassFiles:
+            testClassFiles[x].close()
+        for x in trainClassFiles:
+            trainClassFiles[x].close()
+   
     @classmethod
     def getLouhiStatus(cls, idStr, cscConnection, counts, classIds=None):
         origCSCWorkdir = cscConnection.workDir
         for name in classIds.getNames():
-            cscConnection.workDir = os.path.join(origCSCWorkdir, name)
-            currStatus = SVMMultiClassClassifier.getLouhiStatus(idStr, cscConnection, counts)
+            if name != "neg" and not "---" in name:
+                cscConnection.workDir = os.path.join(origCSCWorkdir, name)
+                currStatus = SVMMultiClassClassifier.getLouhiStatus(idStr, cscConnection, counts)
         cscConnection.workDir = origCSCWorkdir
     
     @classmethod
     def downloadModel(cls, bestParams, cscConnection, localWorkDir=None):
         #if not cls.getLouhiStatus(idStr, cscConnection):
         #    return None
+        bestParams = bestParams[0]
         classModels = {}
-        for classId in bestParams.Ids:
-            className = bestParams[classId][2],
-            modelFileName = os.path.join(className, "model"+bestParams[classId][1])
+        origCSCWorkdir = cscConnection.workDir
+        for className in bestParams:
+            print (localWorkDir, origCSCWorkdir)
+            modelFileName = os.path.join("model"+bestParams[className][1]+".cls-"+className)
             if localWorkDir != None:
                 modelFileName = os.path.join(localWorkDir, modelFileName)
-            cscConnection.download(modelFileName, modelFileName)
+            cscConnection.workDir = os.path.join(origCSCWorkdir, className)
+            cscConnection.download("model"+bestParams[className][1], modelFileName)
             classModels[className] = modelFileName
+        cscConnection.workDir = origCSCWorkdir
         # Create model link file
-        f = open("model-multilabel", "wt")
+        f = open(os.path.join(localWorkDir, "model-multilabel"), "wt")
         for key in sorted(classModels.keys()):
-            f.write(key + ": " + classModels[key] + "\n")
+            f.write(key + "\t" + classModels[key] + "\n")
         f.close()
-        return "model-multilabel"       
+        return "model-multilabel"
     
     @classmethod
-    def getLouhiPredictions(cls, idStr, cscConnection, localWorkDir=None):
+    def getLouhiPredictions(cls, idStr, cscConnection, localWorkDir=None, classIds=None):
         #if not cls.getLouhiStatus(idStr, cscConnection):
         #    return None
         origCSCWorkdir = cscConnection.workDir
         mergedPredictions = []
         for name in classIds.getNames():
             classId = classIds.getId(name)
-            if "---" in name: # skip merged classes
+            if name == "neg" or "---" in name: # skip merged classes
                 continue
             cscConnection.workDir = os.path.join(origCSCWorkdir, name)
-            predFileName = "predictions" + idStr + "cls-" + name
+            predFileName = "predictions" + idStr + ".cls-" + name
             if localWorkDir != None:
                 predFileName = os.path.join(localWorkDir, predFileName)            
             cscConnection.download("predictions"+idStr, predFileName)
-            addPredictions(predFileName, mergedPredictions, classId, len(classIds.Ids))
+            cls.addPredictions(predFileName, mergedPredictions, classId, len(classIds.Ids))
         cscConnection.workDir = origCSCWorkdir
         predFileName = "predictions"+idStr
-        f = open(predFileName)
+        f = open(predFileName, "wt")
         for mergedPred in mergedPredictions:
             if len(mergedPred[0]) > 1 and "1" in mergedPred[0]:
                 mergedPred[0].remove("1")
+            mergedPred[1] = str(mergedPred[1])
             mergedPred[0] = ",".join(sorted(list(mergedPred[0])))
-            f.write(" ".join(mergedPred) + "\n")
+            f.write(" " + " ".join(mergedPred) + "\n")
         f.close()
         return predFileName
     
-    def addPredictions(self, predFileName, mergedPredictions, classId, numClasses):
+    @classmethod
+    def addPredictions(cls, predFileName, mergedPredictions, classId, numClasses):
         f = open(predFileName)
+        count = 0
+        strClassId = str(classId)
         for line in f:
             if len(mergedPredictions) <= count:
-                mergedPredictions.append([set(["1"])] + ["N/A"] * numClasses)
+                mergedPredictions.append([set(["1"])] + [0.0] + ["N/A"] * (numClasses-1))
             predSplits = line.split()
-            mergedPredictions[count][0].add(predSplits[0])
-            mergedPredictions[count][classId] = predSplits[2]
+            if predSplits[0] != "1":
+                mergedPredictions[count][0].add(strClassId)
+                mergedPredictions[count][classId] = predSplits[2]
+            else:
+                negConfidence = float(predSplits[1])
+                if negConfidence > mergedPredictions[count][1]:
+                    mergedPredictions[count][1] = negConfidence
             count += 1
         f.close()
             

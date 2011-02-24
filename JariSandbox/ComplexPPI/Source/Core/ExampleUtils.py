@@ -9,7 +9,7 @@ the int is the feature id and the float is the feature value.
 Extra is a dictionary of String:String pairs, for additional information about the 
 examples.
 """
-__version__ = "$Revision: 1.43 $"
+__version__ = "$Revision: 1.44 $"
 
 
 import sys, os, itertools
@@ -230,7 +230,9 @@ def loadPredictions(predictionsFile):
             else:
                 pred = [int(splits[0])]
             for split in splits[1:]:
-                pred.append(float(split))
+                if split != "N/A":
+                    split = float(split)
+                pred.append(split)
             yield pred
     #finally:
     f.close()

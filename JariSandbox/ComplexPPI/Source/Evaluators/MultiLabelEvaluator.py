@@ -1,7 +1,7 @@
 """
 For multi-class classifications
 """
-__version__ = "$Revision: 1.1 $"
+__version__ = "$Revision: 1.2 $"
 
 from Evaluator import Evaluator
 from Evaluator import EvaluationData
@@ -33,7 +33,10 @@ class MultiLabelEvaluator(Evaluator):
         # define class ids in alphabetical order
         self.classSet = classSet
         if classSet != None:
-            classNames = sorted(classSet.Ids.keys())
+            classNames = []
+            for className in sorted(classSet.Ids.keys()):
+                if "---" not in className:
+                    classNames.append(className)
         else:
             classNames = []
         # make an orderes list of class ids
@@ -146,7 +149,7 @@ class MultiLabelEvaluator(Evaluator):
                 assert(predictedClass > 0) # multiclass classification uses non-negative integers
                 if predictedClass in trueClass: # correct classification
                     # correctly classified for its class -> true positive for that class
-                    self.dataByClass[trueClass].addTP()
+                    self.dataByClass[predictedClass].addTP()
                     if predictedClass != 1: # a non-negative example -> correct = true positive
                         #self.classifications.append("tp")
                         #self.classifications.append((prediction[0],"tp",self.type,prediction[1],prediction[3]))
