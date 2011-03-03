@@ -38,6 +38,10 @@ class Annotation:
     def isName(self):
         return self.type == "Protein" or self.type == "Gene"
     
+    # for debugging
+    def __repr__(self):
+        return self.id
+    
 def readTAnnotation(string):
     #print string
     assert string[0] == "T" or string[0] == "W", string
@@ -107,7 +111,7 @@ def readEvent(string):
         # because the same term Site is used also for a Site that is not a Site, but just
         # a "Site"-type argument for a SiteOf event in the BI-task, which may, or may not 
         # (didn't check), have also actual Sites.
-        if argTuple[0].find("Site") == -1 or ann.type == "SiteOf":
+        if argTuple[0].find("Site") == -1 or ann.type == "SiteOf": # not a site or SiteOf-type event
             origArgName = argTuple[0]
             if argTuple[0].find("Theme") != -1: # multiple themes are numbered
                 argTuple = ["Theme", argTuple[1], None]
