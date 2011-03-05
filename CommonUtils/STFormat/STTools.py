@@ -1,5 +1,6 @@
 import sys, os
 import codecs
+import Validate
 
 class Document:
     def __init__(self):
@@ -37,11 +38,11 @@ class Annotation:
     
     def isName(self):
         return self.type == "Protein" or self.type == "Gene"
-    
+
     # for debugging
     def __repr__(self):
         return self.id
-    
+
 def readTAnnotation(string):
     #print string
     assert string[0] == "T" or string[0] == "W", string
@@ -411,8 +412,10 @@ def loadSet(dir, setName=None, level="a2"):
     return documents
 
 def writeSet(documents, dir, resultFileTag="a2", makePackage=True):
+    from collections import defaultdict
+    counts = defaultdict(int)
     for doc in documents:
-        write(doc.id, dir, doc.proteins, doc.triggers, doc.events, doc.relations, resultFileTag)
+        write(doc.id, dir, doc.proteins, doc.triggers, doc.events, doc.relations, resultFileTag, counts)
         # Write text file
         #out = open(os.path.join(dir, str(doc.id) + ".txt"), "wt")
         out = codecs.open(os.path.join(dir, str(doc.id) + ".txt"), "wt", "utf-8")
@@ -422,6 +425,7 @@ def writeSet(documents, dir, resultFileTag="a2", makePackage=True):
         while dir.endswith("/"):
             dir = dir[:-1]
         package(dir, dir + ".tar.gz")
+    print counts
         
 
 def getMaxId(annotations):
@@ -483,8 +487,11 @@ def getDuplicatesMapping(eventLines):
 #            if e1.trigger == e2.trigger and len(e1.arguments) == len(e2.arguments):
 #                for arg1 in zip(e1.arguments, e2.arguments)
 
-def writeEvents(events, out):
+def writeEvents(events, out, counts):
     updateIds(events)
+    numEvents = len(events)
+    events = Validate.removeDuplicates(events)
+    counts["duplicates-removed"] += numEvents - len(events)
     mCounter = 1
     eventLines = []
     nestedEvents = set()
@@ -583,7 +590,7 @@ def writeEvents(events, out):
     #duplicateMap = getDuplicatesMapping(eventLines)
     seenLines = set()
     for eventLineTuple in eventLines:
-        out.write(eventLineTuple[0] + "\t" + eventLine)
+        out.write(eventLineTuple[0] + "\t" + eventLineTuple[1])
         
 #        if eventLineTuple[1] not in seenLines:
 #            eventLine = eventLineTuple[1] + " "
@@ -595,7 +602,7 @@ def writeEvents(events, out):
     #for event in events:
     #    if event.negation != None:
 
-def write(id, dir, proteins, triggers, events, relations, resultFileTag="a2"):
+def write(id, dir, proteins, triggers, events, relations, resultFileTag="a2", counts=None):
     id = str(id)
     print id
     if not os.path.exists(dir):
@@ -607,11 +614,10 @@ def write(id, dir, proteins, triggers, events, relations, resultFileTag="a2"):
     resultFile = codecs.open(os.path.join(dir, id + "." + resultFileTag), "wt", "utf-8")
     writeTAnnotation(triggers, resultFile, getMaxId(proteins) + 1)
     if events != None:
-        writeEvents(events, resultFile)
+        writeEvents(events, resultFile, counts)
     if relations != None:
-        writeEvents(relations, resultFile)
+        writeEvents(relations, resultFile, counts)
     resultFile.close()
-    
 
 def package(sourceDir, outputFile, includeTags=[".a2"]):
     import tarfile
