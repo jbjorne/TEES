@@ -6,6 +6,8 @@ import InteractionXML.RemoveUnconnectedEntities
 import InteractionXML.DivideSets
 thisPath = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.abspath(os.path.join(thisPath,"../../")))
+sys.path.append(os.path.abspath(os.path.join(thisPath,"../../../../../GeniaChallenge/formatConversion")))
+import ProteinNameSplitter
 import Utils.Stream as Stream
 import Utils.FindHeads as FindHeads
 import Tools.SentenceSplitter
@@ -14,6 +16,7 @@ import Tools.CharniakJohnsonParser
 import Tools.StanfordParser
 import InteractionXML.CopyParse
 import InteractionXML.DeleteElements
+import InteractionXML.MergeDuplicateEntities
 import cElementTreeUtils as ETUtils
 
 def log(clear=False, logCmd=True, logFile="log.txt"):
@@ -35,23 +38,34 @@ def convert(datasets, analysisTags, analysisPath, corpusName):
     print >> sys.stderr, "Converting to", bigfileName+"-documents.xml"
     xml = STConvert.toInteractionXML(documents, corpusName, bigfileName+"-documents.xml")
     for pair in datasets:
-        if corpusName != "BI":
+        if True: #corpusName != "BI":
+            print >> sys.stderr, "Adding analyses for set", pair[0]
             addAnalyses(xml, analysisTags[pair[0]], analysisPath, bigfileName)
     ETUtils.write(xml, bigfileName+"-sentences.xml")
-    processParses(corpusName, bigfileName)
-    print >> sys.stderr, "Dividing into sets"
-    InteractionXML.DivideSets.processCorpus(bigfileName+".xml", "./", corpusName + "-", ".xml", [("devel", "train")])
-    if "devel" in [x[0] for x in datasets]:
-        print >> sys.stderr, "Creating empty devel set"
-        deletionRules = {"interaction":{},"entity":{"isName":"False"}}
-        InteractionXML.DeleteElements.processCorpus(corpusName + "-devel.xml", corpusName + "-devel-empty.xml", deletionRules)
+    processParses(corpusName, xml)
+    
+    # Write out converted data
+    ETUtils.write(xml, bigfileName+".xml")
+    InteractionXML.MergeDuplicateEntities.mergeAll(xml, bigfileName+"-nodup.xml")
+    for sourceTag in ["", "-nodup"]:
+        print >> sys.stderr, "Dividing into sets"
+        InteractionXML.DivideSets.processCorpus(bigfileName+sourceTag+".xml", "./", corpusName + "-", sourceTag + ".xml", [("devel", "train")])
+        if "devel" in [x[0] for x in datasets]:
+            print >> sys.stderr, "Creating empty devel set"
+            deletionRules = {"interaction":{},"entity":{"isName":"False"}}
+            InteractionXML.DeleteElements.processCorpus(corpusName + "-devel" + sourceTag + ".xml", corpusName + "-devel" + sourceTag + "-empty.xml", deletionRules)
+        # Roundtrip
+        #if not os.path.exists("roundtrip"):
+        #    os.makedirs("roundtrip")
+        #for dataSet in [x[0] for x in datasets]:
+        #    STConvert.toSTFormat(corpusName + "-devel" + sourceTag + ".xml", "roundtrip/" + corpusName + "-devel" + sourceTag, outputTag="a2")
 
 def addAnalyses(xml, analysisTag, analysisPath, bigfileName):
     print >> sys.stderr, "Inserting", analysisTag, "analyses"
     print >> sys.stderr, "Making sentences"
     Tools.SentenceSplitter.makeSentences(xml, analysisPath + "Tokenised/Tokenised-" + analysisTag + ".tar.gz/" + analysisTag + "/tokenised", None)
     print >> sys.stderr, "Inserting McCC parses"
-    Tools.CharniakJohnsonParser.insertParses(xml, analysisPath + "McCC/McCC-parses-" + analysisTag + ".tar.gz/" + analysisTag + "/mccc/ptb", bigfileName+"-mccc.xml")
+    Tools.CharniakJohnsonParser.insertParses(xml, analysisPath + "McCC/McCC-parses-" + analysisTag + ".tar.gz/" + analysisTag + "/mccc/ptb", None)
     print >> sys.stderr, "Inserting Stanford conversions"
     Tools.StanfordParser.insertParses(xml, analysisPath + "McCC/McCC-parses-" + analysisTag + ".tar.gz/" + analysisTag + "/mccc/sd_ccproc", None)
 #    print >> sys.stderr, "Parsing"
@@ -59,16 +73,19 @@ def addAnalyses(xml, analysisTag, analysisPath, bigfileName):
 #    print >> sys.stderr, "Stanford Conversion"
 #    Tools.StanfordParser.convertXML("McClosky", bigfileName+"-parsed.xml", bigfileName+"-stanford.xml")
 
-def processParses(corpusName, bigfileName, splitTarget="mccc"):
+def processParses(corpusName, xml, splitTarget="mccc-preparsed"):
     if corpusName != "BI":
         print >> sys.stderr, "Protein Name Splitting"
-        splitterCommand = "python /home/jari/cvs_checkout/PPI_Learning/Analysers/ProteinNameSplitter.py -f " + bigfileName+"-sentences.xml" + " -o " + bigfileName+"-split.xml" + " -p " + splitTarget + " -t " + splitTarget + " -s split-"+splitTarget + " -n split-"+splitTarget
-        subprocess.call(splitterCommand, shell=True)
+        #splitterCommand = "python /home/jari/cvs_checkout/JariSandbox/GeniaChallenge/formatConversion/ProteinNameSplitter.py -f " + bigfileName+"-sentences.xml" + " -o " + bigfileName+"-split.xml" + " -p " + splitTarget + " -t " + splitTarget + " -s split-"+splitTarget + " -n split-"+splitTarget
+        #subprocess.call(splitterCommand, shell=True)
+        ProteinNameSplitter.mainFunc(xml, None, splitTarget, splitTarget, "split-"+splitTarget, "split-"+splitTarget)
         print >> sys.stderr, "Head Detection"
-        xml = FindHeads.findHeads(bigfileName+"-split.xml", "split-"+splitTarget, tokenization=None, output=bigfileName+".xml", removeExisting=True)
+        xml = FindHeads.findHeads(xml, "split-"+splitTarget, tokenization=None, output=None, removeExisting=True)
     else:
+        ProteinNameSplitter.mainFunc(xml, None, splitTarget, splitTarget, "split-"+splitTarget, "split-"+splitTarget)
         print >> sys.stderr, "Head Detection"
-        xml = FindHeads.findHeads(bigfileName+".xml", "gold", tokenization=None, output=bigfileName+".xml", removeExisting=True)
+        xml = FindHeads.findHeads(xml, "split-"+splitTarget, tokenization=None, output=None, removeExisting=True)
+        #xml = FindHeads.findHeads(xml, "gold", tokenization=None, output=None, removeExisting=True)
 
 if __name__=="__main__":
     # Import Psyco if available
@@ -92,29 +109,40 @@ if __name__=="__main__":
     #datasets["GE"] = [("devel", dataPath+"BioNLP-ST_2011_GENIA_devel_data"), 
     #                  ("train", dataPath+"BioNLP-ST_2011_GENIA_train_data")]
     datasets["GE"] = [("devel", dataPath+"BioNLP-ST_2011_genia_devel_data_rev1"), 
-                      ("train", dataPath+"BioNLP-ST_2011_genia_train_data_rev1")]
+                      ("train", dataPath+"BioNLP-ST_2011_genia_train_data_rev1"),
+                      ("test", dataPath+"BioNLP-ST_2011_genia_test_data")]
     datasets["EPI"] = [("devel", dataPath+"BioNLP-ST_2011_Epi_and_PTM_development_data_rev1"), 
-                      ("train", dataPath+"BioNLP-ST_2011_Epi_and_PTM_training_data_rev1")]
+                      ("train", dataPath+"BioNLP-ST_2011_Epi_and_PTM_training_data_rev1"),
+                      ("test", dataPath+"BioNLP-ST_2011_Epi_and_PTM_test_data")]
     datasets["ID"] = [("devel", dataPath+"BioNLP-ST_2011_Infectious_Diseases_development_data_rev1"), 
-                      ("train", dataPath+"BioNLP-ST_2011_Infectious_Diseases_training_data_rev1")]
+                      ("train", dataPath+"BioNLP-ST_2011_Infectious_Diseases_training_data_rev1"),
+                      ("test", dataPath+"BioNLP-ST_2011_Infectious_Diseases_test_data")]
     datasets["BB"] = [("devel", dataPath+"BioNLP-ST_2011_Bacteria_Biotopes_dev_data_rev1"), 
-                      ("train", dataPath+"BioNLP-ST_2011_Bacteria_Biotopes_train_data_rev1")]
+                      ("train", dataPath+"BioNLP-ST_2011_Bacteria_Biotopes_train_data_rev1"),
+                      ("test", dataPath+"BioNLP-ST_2011_Bacteria_Biotopes_test_data")]
     datasets["BI"] = [("devel", dataPath+"BioNLP-ST_2011_bacteria_interactions_dev_data_rev1"), 
-                      ("train", dataPath+"BioNLP-ST_2011_bacteria_interactions_train_data_rev1")]
+                      ("train", dataPath+"BioNLP-ST_2011_bacteria_interactions_train_data_rev1"),
+                      ("test", dataPath+"BioNLP-ST_2011_bacteria_interactions_test_data")]
     
     analysisTags = {}
     analysisPath = "/home/jari/data/BioNLP11SharedTask/analyses/"
     analysisTags["GE"] =  {"devel":"BioNLP-ST_2011_genia_devel_data_rev1",
-                           "train":"BioNLP-ST_2011_genia_train_data_rev1"}
+                           "train":"BioNLP-ST_2011_genia_train_data_rev1",
+                           "test":"BioNLP-ST_2011_genia_test_data"}
     analysisTags["EPI"] = {"devel":"BioNLP-ST_2011_Epi_and_PTM_development_data",
-                           "train":"BioNLP-ST_2011_Epi_and_PTM_training_data"}
+                           "train":"BioNLP-ST_2011_Epi_and_PTM_training_data",
+                           "test":"BioNLP-ST_2011_Epi_and_PTM_test_data"}
     analysisTags["ID"] =  {"devel":"BioNLP-ST_2011_Infectious_Diseases_development_data",
-                           "train":"BioNLP-ST_2011_Infectious_Diseases_training_data"}
-    analysisTags["BB"] =  {"devel":"BioNLP-ST_2011_Bacteria_Biotopes_dev_data",
-                           "train":"BioNLP-ST_2011_Bacteria_Biotopes_train_data"}
-    analysisTags["BI"] = None
+                           "train":"BioNLP-ST_2011_Infectious_Diseases_training_data",
+                           "test":"BioNLP-ST_2011_Infectious_Diseases_test_data"}
+    analysisTags["BB"] =  {"devel":"BioNLP-ST_2011_Bacteria_Biotopes_dev_data_rev1",
+                           "train":"BioNLP-ST_2011_Bacteria_Biotopes_train_data_rev1",
+                           "test":"BioNLP-ST_2011_Bacteria_Biotopes_test_data"}
+    analysisTags["BI"] = {"devel":"BioNLP-ST_2011_bacteria_interactions_dev_data",
+                           "train":"BioNLP-ST_2011_bacteria_interactions_train_data",
+                           "test":"BioNLP-ST_2011_bacteria_interactions_test_data"}
     
-    for dataset in ["BB"]: #["GE", "EPI", "ID"]: #sorted(datasets.keys()):
+    for dataset in ["GE"]: #["EPI", "GE", "ID"]: #sorted(datasets.keys()):
         cwd = os.getcwd()
         currOutDir = outDir + dataset
         if not os.path.exists(currOutDir):

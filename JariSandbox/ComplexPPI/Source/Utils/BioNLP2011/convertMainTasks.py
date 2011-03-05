@@ -45,7 +45,7 @@ def convert(datasets, outdir, corpusName):
     print >> sys.stderr, "Head Detection"
     xml = FindHeads.findHeads(bigfileName+"-split.xml", "split-McClosky", tokenization=None, output=bigfileName+".xml", removeExisting=True)
     print >> sys.stderr, "Dividing into sets"
-    InteractionXML.DivideSets.processCorpus(bigfileName+".xml", outDir, corpusName + "-", ".xml", [("devel", "train")])
+    InteractionXML.DivideSets.processCorpus(bigfileName+".xml", outdir, corpusName + "-", ".xml", [("devel", "train")])
     #if "devel" in [x[0] for x in datasets]:
     #    print >> sys.stderr, "Creating empty devel set"
     #    deletionRules = {"interaction":{},"entity":{"isName":"False"}}
@@ -61,8 +61,7 @@ if __name__=="__main__":
     except ImportError:
         print >> sys.stderr, "Psyco not installed"
     
-    outDir = "/usr/share/biotext/BioNLP2011/data/"
-    #everythingXML = outDir + "rel-everything-with-unconnected.xml"
+    outDir = "/usr/share/biotext/BioNLP2011/data/main-tasks-selfparsed/"
     #everythingXMLNoUnconnected = outDir + "rel-everything.xml"
     
     datasets = {}
@@ -74,22 +73,27 @@ if __name__=="__main__":
     #datasets["GE"] = [("devel", dataPath+"BioNLP-ST_2011_GENIA_devel_data"), 
     #                  ("train", dataPath+"BioNLP-ST_2011_GENIA_train_data")]
     datasets["GE"] = [("devel", dataPath+"BioNLP-ST_2011_genia_devel_data_rev1"), 
-                      ("train", dataPath+"BioNLP-ST_2011_genia_train_data_rev1")]
-    datasets["EPI"] = [("devel", dataPath+"BioNLP-ST_2011_Epi_and_PTM_development_data"), 
-                      ("train", dataPath+"BioNLP-ST_2011_Epi_and_PTM_training_data")]
-    datasets["ID"] = [("devel", dataPath+"BioNLP-ST_2011_Infectious_Diseases_development_data"), 
-                      ("train", dataPath+"BioNLP-ST_2011_Infectious_Diseases_training_data")]
-    datasets["BB"] = [("devel", dataPath+"BioNLP-ST_2011_Bacteria_Biotopes_dev_data"), 
-                      ("train", dataPath+"BioNLP-ST_2011_Bacteria_Biotopes_train_data")]
-    datasets["BI"] = [("devel", dataPath+"BioNLP-ST_2011_bacteria_interactions_dev_data"), 
-                      ("train", dataPath+"BioNLP-ST_2011_bacteria_interactions_train_data")]
+                      ("train", dataPath+"BioNLP-ST_2011_genia_train_data_rev1"),
+                      ("test", dataPath+"BioNLP-ST_2011_genia_test_data")]
+    datasets["EPI"] = [("devel", dataPath+"BioNLP-ST_2011_Epi_and_PTM_development_data_rev1"), 
+                      ("train", dataPath+"BioNLP-ST_2011_Epi_and_PTM_training_data_rev1"),
+                      ("test", dataPath+"BioNLP-ST_2011_Epi_and_PTM_test_data")]
+    datasets["ID"] = [("devel", dataPath+"BioNLP-ST_2011_Infectious_Diseases_development_data_rev1"), 
+                      ("train", dataPath+"BioNLP-ST_2011_Infectious_Diseases_training_data_rev1"),
+                      ("test", dataPath+"BioNLP-ST_2011_Infectious_Diseases_test_data")]
+    datasets["BB"] = [("devel", dataPath+"BioNLP-ST_2011_Bacteria_Biotopes_dev_data_rev1"), 
+                      ("train", dataPath+"BioNLP-ST_2011_Bacteria_Biotopes_train_data_rev1"),
+                      ("test", dataPath+"BioNLP-ST_2011_Bacteria_Biotopes_test_data")]
+    #datasets["BI"] = [("devel", dataPath+"BioNLP-ST_2011_bacteria_interactions_dev_data_rev1"), 
+    #                  ("train", dataPath+"BioNLP-ST_2011_bacteria_interactions_train_data_rev1")]
     
-    for dataset in ["BB"]: #["GE"]: #sorted(datasets.keys()):
+    for dataset in sorted(datasets.keys()):
         cwd = os.getcwd()
         currOutDir = outDir + dataset
         if not os.path.exists(currOutDir):
             os.makedirs(currOutDir)
         os.chdir(currOutDir)
         log(False, False, dataset + "-conversion-log.txt")
+        print >> sys.stderr, "Processing dataset", dataset
         convert(datasets[dataset], outDir, dataset)
         os.chdir(cwd)
