@@ -410,7 +410,7 @@ def loadSet(dir, setName=None, level="a2"):
         documents.append(doc)
     return documents
 
-def writeSet(documents, dir, resultFileTag="a2"):
+def writeSet(documents, dir, resultFileTag="a2", makePackage=True):
     for doc in documents:
         write(doc.id, dir, doc.proteins, doc.triggers, doc.events, doc.relations, resultFileTag)
         # Write text file
@@ -418,6 +418,11 @@ def writeSet(documents, dir, resultFileTag="a2"):
         out = codecs.open(os.path.join(dir, str(doc.id) + ".txt"), "wt", "utf-8")
         out.write(doc.text)
         out.close()
+    if makePackage:
+        while dir.endswith("/"):
+            dir = dir[:-1]
+        package(dir, dir + ".tar.gz")
+        
 
 def getMaxId(annotations):
     nums = [0]
@@ -455,16 +460,42 @@ def writeTAnnotation(proteins, out, idStart=0):
         else:
             out.write(protein.text + "\n")
 
+def getDuplicatesMapping(eventLines):
+    # Duplicates are BAAADD. However, removing nested duplicates is also BAAADDD. Evaluation system doesn't like
+    # either. So, if you don't remove duplicates, it refuses to evaluate because of duplicates. If you do remove
+    # duplicates, it refuses to evaluate because of missing events. That's why they ARE THERE, how can they
+    # be duplicates, IF THEY ARE PART OF DIFFERENT NESTING CHAINS??? The "solution" is to remap nesting events
+    # to removed duplicates.
+    duplicateMap = {}
+    seenLineMap = {}
+    for eventLineTuple in eventLines:
+        if eventLineTuple[1] not in seenLineMap:
+            seenLineMap[eventLineTuple[1]] = eventLineTuple[0]
+        else:
+            duplicateMap[eventLineTuple[0]] = seenLineMap[eventLineTuple[1]]
+    return duplicateMap
+
+#def removeDuplicates():
+#    for e1 in events[:]:
+#        for e2 in events[:]:
+#            if e1 == e2:
+#                continue
+#            if e1.trigger == e2.trigger and len(e1.arguments) == len(e2.arguments):
+#                for arg1 in zip(e1.arguments, e2.arguments)
+
 def writeEvents(events, out):
     updateIds(events)
     mCounter = 1
+    eventLines = []
+    nestedEvents = set()
     for event in events:
-        out.write(event.id + "\t")
+        eventLine = ""
+        #out.write(event.id + "\t")
         trigger = event.trigger
         if trigger == None:
-            out.write(event.type)
+            eventLine += event.type
         else:
-            out.write(trigger.type + ":" + trigger.id)
+            eventLine += trigger.type + ":" + trigger.id
         typeCounts = {}
         # Count arguments
         targetProteins = set()
@@ -489,55 +520,84 @@ def writeEvents(events, out):
                 continue
             if typeCounts.has_key(argType):
                 if typeCounts[argType] > 1:
-                    out.write(" " + argType + str(typeCounts[argType]) + ":" + arg[1].id)
+                    eventLine += " " + argType + str(typeCounts[argType]) + ":" + arg[1].id
                 else:
-                    out.write(" " + argType + ":" + arg[1].id)
+                    eventLine += " " + argType + ":" + arg[1].id
                 typeCounts[argType] += 1
             else:
-                out.write(" " + argType + ":" + arg[1].id)
+                eventLine += " " + argType + ":" + arg[1].id
+            
+            # keep track of nesting
+            if arg[1].id[0] == "E":
+                nestedEvents.add(arg[1].id)
         
         # Reset type counts for writing sites
         for key in typeCounts.keys():
             typeCounts[key] = 1
         # Write sites
         for arg in event.arguments:
+            if arg[2] == None:
+                continue
+            
+            #if arg[2].id in ["T18", "T19"]:
+            #    print arg
+            #    out.write("XXX")
+            #    print event.type
+            
+            # limit sites to accepted event types
+            if event.type not in ["Binding", "Phosphorylation", "Positive_regulation", "Negative_regulation", "Regulation"]:
+                continue
+            
             argType = arg[0]
             if argType == "Target":
                 continue
             if typeCounts.has_key(argType):
                 typeCounts[argType] += 1
-            if arg[2] == None:
-                continue
             
             sitePrefix = ""
             if argType.find("Cause") != -1:
                 sitePrefix = "C"
             if typeCounts.has_key(argType) and typeCounts[argType] > 1:
-                out.write(" " + sitePrefix + "Site" + str(typeCounts[argType]) + ":" + arg[2].id)
+                eventLine += " " + sitePrefix + "Site" + str(typeCounts[argType]) + ":" + arg[2].id
             else:
-                out.write(" " + sitePrefix + "Site" + ":" + arg[2].id)                
+                eventLine += " " + sitePrefix + "Site" + ":" + arg[2].id           
         
         # Write Coref targets
         if len(targetProteins) > 0:
-            out.write("\t[" + ", ".join(sorted(list(targetProteins))) + "]" ) 
+            eventLine += "\t[" + ", ".join(sorted(list(targetProteins))) + "]"
         
-        out.write("\n")
+        eventLine += "\n"
         
 
         # Write task 3
         if event.speculation != None:
-            out.write("M" + str(mCounter) + "\t" + "Speculation " + str(event.id) + "\n")
+            eventLine += "M" + str(mCounter) + "\t" + "Speculation " + str(event.id) + "\n"
             mCounter += 1
         if event.negation != None:
-            out.write("M" + str(mCounter) + "\t" + "Negation " + str(event.id) + "\n")
+            eventLine += "M" + str(mCounter) + "\t" + "Negation " + str(event.id) + "\n"
             mCounter += 1
-
+        
+        eventLines.append( [event.id, eventLine] )
+    
+    # Write ignoring duplicates
+    #duplicateMap = getDuplicatesMapping(eventLines)
+    seenLines = set()
+    for eventLineTuple in eventLines:
+        out.write(eventLineTuple[0] + "\t" + eventLine)
+        
+#        if eventLineTuple[1] not in seenLines:
+#            eventLine = eventLineTuple[1] + " "
+#            for key in sorted(duplicateMap.keys()):
+#                eventLine = eventLine.replace(key, duplicateMap[key])
+#            out.write(eventLineTuple[0] + "\t" + eventLine)
+#            seenLines.add(eventLineTuple[1])
     # Write task 3
     #for event in events:
     #    if event.negation != None:
 
 def write(id, dir, proteins, triggers, events, relations, resultFileTag="a2"):
     id = str(id)
+    print id
     if not os.path.exists(dir):
         os.makedirs(dir)
     if proteins != None:
@@ -551,6 +611,24 @@ def write(id, dir, proteins, triggers, events, relations, resultFileTag="a2"):
     if relations != None:
         writeEvents(relations, resultFile)
     resultFile.close()
+    
+
+def package(sourceDir, outputFile, includeTags=[".a2"]):
+    import tarfile
+    allFiles = os.listdir(sourceDir)
+    tarFiles = []
+    for file in allFiles:
+        for tag in includeTags:
+            if file.endswith(tag):
+                tarFiles.append(file)
+                break
+    packageFile = tarfile.open(outputFile, "w:gz")
+    tempCwd = os.getcwd()
+    os.chdir(sourceDir)
+    for file in tarFiles:
+        packageFile.add(file)#, exclude = lambda x: x == submissionFileName)
+    os.chdir(tempCwd)
+    packageFile.close()
         
 if __name__=="__main__":
     # Import Psyco if available
