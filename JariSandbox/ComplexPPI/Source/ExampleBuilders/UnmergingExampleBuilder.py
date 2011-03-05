@@ -1,7 +1,7 @@
 """
 Edge Examples
 """
-__version__ = "$Revision: 1.8 $"
+__version__ = "$Revision: 1.9 $"
 
 import sys, os
 thisPath = os.path.dirname(os.path.abspath(__file__))
@@ -15,7 +15,8 @@ from FeatureBuilders.TriggerFeatureBuilder import TriggerFeatureBuilder
 from FeatureBuilders.TokenFeatureBuilder import TokenFeatureBuilder
 from FeatureBuilders.BioInferOntologyFeatureBuilder import BioInferOntologyFeatureBuilder
 from FeatureBuilders.NodalidaFeatureBuilder import NodalidaFeatureBuilder
-import Graph.networkx_v10rc1 as NX10
+#import Graph.networkx_v10rc1 as NX10
+from Core.SimpleGraph import Graph
 from Utils.ProgressCounter import ProgressCounter
 #IF LOCAL
 import Utils.BioInfer.OntologyUtils as OntologyUtils
@@ -145,8 +146,10 @@ class UnmergingExampleBuilder(ExampleBuilder):
             t1 = sentenceGraph.entityHeadTokenByEntity[e1]
             t2 = sentenceGraph.entityHeadTokenByEntity[e2]
             # Get dep path length
-            if t1 != t2 and paths.has_key(t1) and paths[t1].has_key(t2):
-                pathLength = len(paths[t1][t2])
+            if t1 != t2:
+                path = paths.getPaths(t1, t2)
+            if t1 != t2 and len(path) > 0:
+                pathLength = min(len(x) for x in path) #len(paths[t1][t2])
             else: # no dependencyPath
                 pathLength = 999999 # more than any real path
             # Linear distance
@@ -291,11 +294,11 @@ class UnmergingExampleBuilder(ExampleBuilder):
         else:
             return True
     
-    def nxMultiDiGraphToUndirected(self, graph):
-        undirected = NX10.MultiGraph(name=graph.name)
-        undirected.add_nodes_from(graph)
-        undirected.add_edges_from(graph.edges_iter())
-        return undirected
+#    def nxMultiDiGraphToUndirected(self, graph):
+#        undirected = NX10.MultiGraph(name=graph.name)
+#        undirected.add_nodes_from(graph)
+#        undirected.add_edges_from(graph.edges_iter())
+#        return undirected
     
     def eventIsGold(self, entity, arguments, sentenceGraph, goldGraph, goldEntitiesByOffset):
         offset = entity.get("headOffset")
@@ -415,8 +418,10 @@ class UnmergingExampleBuilder(ExampleBuilder):
         if append == True:
             exampleIndex += 1000
         
-        undirected = self.nxMultiDiGraphToUndirected(sentenceGraph.dependencyGraph)
-        paths = NX10.all_pairs_shortest_path(undirected, cutoff=999)
+        #undirected = self.nxMultiDiGraphToUndirected(sentenceGraph.dependencyGraph)
+        #paths = NX10.all_pairs_shortest_path(undirected, cutoff=999)
+        undirected = sentenceGraph.dependencyGraph.toUndirected()
+        paths = undirected
         
         # Get argument order
         self.interactionLenghts = self.getInteractionEdgeLengths(sentenceGraph, paths)
@@ -609,12 +614,12 @@ class UnmergingExampleBuilder(ExampleBuilder):
         
         self.setFeature(tag+"_present", 1)
         
-        if eventToken != argToken and paths.has_key(eventToken) and paths[eventToken].has_key(argToken):
-            path = paths[eventToken][argToken]
-            edges = self.multiEdgeFeatureBuilder.getEdges(sentenceGraph.dependencyGraph, path)
+        path = paths.getPaths(eventToken, argToken)
+        if eventToken != argToken and len(path) > 0:
+            path = path[0]
         else:
             path = [eventToken, argToken]
-            edges = None
+            #edges = None
         
         if not "disable_entity_features" in self.styles:
             self.multiEdgeFeatureBuilder.buildEntityFeatures(sentenceGraph)
@@ -622,13 +627,13 @@ class UnmergingExampleBuilder(ExampleBuilder):
         #if not "disable_terminus_features" in self.styles:
         #    self.multiEdgeFeatureBuilder.buildTerminusTokenFeatures(path, sentenceGraph) # remove for fast
         if not "disable_single_element_features" in self.styles:
-            self.multiEdgeFeatureBuilder.buildSingleElementFeatures(path, edges, sentenceGraph)
+            self.multiEdgeFeatureBuilder.buildSingleElementFeatures(path, sentenceGraph)
         if not "disable_ngram_features" in self.styles:
-            self.multiEdgeFeatureBuilder.buildPathGrams(2, path, edges, sentenceGraph) # remove for fast
-            self.multiEdgeFeatureBuilder.buildPathGrams(3, path, edges, sentenceGraph) # remove for fast
-            self.multiEdgeFeatureBuilder.buildPathGrams(4, path, edges, sentenceGraph) # remove for fast
+            self.multiEdgeFeatureBuilder.buildPathGrams(2, path, sentenceGraph) # remove for fast
+            self.multiEdgeFeatureBuilder.buildPathGrams(3, path, sentenceGraph) # remove for fast
+            self.multiEdgeFeatureBuilder.buildPathGrams(4, path, sentenceGraph) # remove for fast
         if not "disable_path_edge_features" in self.styles:
-            self.multiEdgeFeatureBuilder.buildPathEdgeFeatures(path, edges, sentenceGraph)
+            self.multiEdgeFeatureBuilder.buildPathEdgeFeatures(path, sentenceGraph)
         #self.multiEdgeFeatureBuilder.buildSentenceFeatures(sentenceGraph)
         self.multiEdgeFeatureBuilder.setFeatureVector(None, None, None, False)
         self.multiEdgeFeatureBuilder.tag = ""
