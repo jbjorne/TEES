@@ -57,10 +57,20 @@ class SentenceExampleWriter:
         prevMajorIds = set()
         processedSentenceIds = set()
         xType = None
-        for example, prediction in itertools.izip(examples, predictions):
+        
+        count = 0
+        for example in examples:
+            count += 1
+        assert count > 0
+        
+        for example, prediction in itertools.izip_longest(examples, predictions):
+            assert example != None
+            assert prediction != None
             majorId, minorId = example[0].rsplit(".x", 1)
+            #if currentMajorId == "GENIA.d114.s9": print "Start"
             if majorId != currentMajorId: # new sentence
                 if currentMajorId != None:
+                    #if currentMajorId == "GENIA.d114.s9": print "JAA"
                     processedSentenceIds.add(currentMajorId)
                     sentenceObject = corpus.sentencesById[currentMajorId]
                     goldSentence = None
