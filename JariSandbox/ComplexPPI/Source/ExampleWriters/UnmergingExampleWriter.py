@@ -11,7 +11,7 @@ class UnmergingExampleWriter(SentenceExampleWriter):
     def __init__(self):
         self.xType = "um"
     
-    def writeXMLSentence(self, examples, predictionsByExample, sentenceObject, classSet, classIds):        
+    def writeXMLSentence(self, examples, predictionsByExample, sentenceObject, classSet, classIds, goldSentence=None):        
         sentenceElement = sentenceObject.sentence
         self.sentenceId = sentenceElement.get("id")
         self.assertSameSentence(examples, self.sentenceId)
@@ -112,7 +112,7 @@ class UnmergingExampleWriter(SentenceExampleWriter):
         exampleIdCount = 0
         for entity in entities:
             # If no example, case is unambiguous
-            if not exampleByEntityId.has_key(entity.get("id")):
+            if entity.get("id") not in exampleByEntityId:
                 simpleEventInteractions = interactionsByEntity[entity.get("id")]
                 numCauses = 0
                 numThemes = 0
@@ -130,7 +130,7 @@ class UnmergingExampleWriter(SentenceExampleWriter):
                     elif iType == "Theme":
                         numThemes += 1
                 eType = entity.get("type")
-                assert numThemes == 0 or (numThemes != 0 and numCauses == 0) or (numThemes > 1 and eType != "Binding"), (numThemes,numCauses,eType,entity.get("id"))
+                assert numThemes == 0 or (numThemes != 0 and numCauses == 0) or (numThemes > 1 and eType != "Binding"), (numThemes,numCauses,eType,entity.get("id"), [x[0] for x in examples], entityKeys)
                 #assert numThemes == 0 or (numThemes != 0 and numCauses == 0) or (numThemes > 1 and eType == "Binding"), (numThemes,numCauses,eType,entity.get("id"))
                 for interaction in simpleEventInteractions:
                     exampleId = "simple." + str(exampleIdCount)
@@ -164,6 +164,7 @@ class UnmergingExampleWriter(SentenceExampleWriter):
         for example in positiveExamples:
             exampleAdded[example[0]] = False
         forceAdd = False
+        forcedCount = 0
         while examplesLeft > 0:
             examplesAddedThisRound = 0
             # For each round, loop through the potentially remaining examples
@@ -195,7 +196,8 @@ class UnmergingExampleWriter(SentenceExampleWriter):
                 # case this is solved by simply forcing the addition of 
                 # the first non-inserted event, by creating 0-argument
                 # entities for its argument events.
-                print "Warning, forcing event addition"
+                forcedCount += 1
+                #print "Warning, forcing event addition"
                 forceAdd = True                  
         
         # Attach the new elements
@@ -205,6 +207,8 @@ class UnmergingExampleWriter(SentenceExampleWriter):
         # re-attach the analyses-element
         if sentenceAnalysesElement != None:
             sentenceElement.append(sentenceAnalysesElement)
+        
+        #print "Warning, forced addition of", forcedCount, "events"
     
     def argumentEntitiesExist(self, arguments, sentenceObject):
         """
