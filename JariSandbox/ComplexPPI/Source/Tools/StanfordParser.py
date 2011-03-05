@@ -236,22 +236,21 @@ def insertParses(input, parsePath, output=None, parseName="mccc-preparsed"):
     counter = ProgressCounter(len(sourceElements), "McCC Parse Insertion")
     for document in sourceElements:
         docCount += 1
-        counter.update(1, "Processing Documents ("+document.get("id")+"/" + document.get("pmid") + "): ")
         docId = document.get("id")
         if docId == None:
             docId = "CORPUS.d" + str(docCount)
         
         f = openFile(os.path.join(parsePath, document.get("pmid") + ".sd"), tarFile)
-        if f == None:
-            continue
-        sentences = document.findall("sentence")
-        # TODO: Following for-loop is the same as when used with a real parser, and should
-        # be moved to its own function.
-        for sentence in sentences:
-            counter.update(0, "Processing Documents ("+sentence.get("id")+"/" + document.get("pmid") + "): ")
-            if not insertParse(sentence, f, parseName):
-                failCount += 1
-        f.close()
+        if f != None:
+            sentences = document.findall("sentence")
+            # TODO: Following for-loop is the same as when used with a real parser, and should
+            # be moved to its own function.
+            for sentence in sentences:
+                counter.update(0, "Processing Documents ("+sentence.get("id")+"/" + document.get("pmid") + "): ")
+                if not insertParse(sentence, f, parseName):
+                    failCount += 1
+            f.close()
+        counter.update(1, "Processing Documents ("+document.get("id")+"/" + document.get("pmid") + "): ")
     
     if tarFile != None:
         tarFile.close()

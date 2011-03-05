@@ -1,4 +1,4 @@
-parse__version__ = "$Revision: 1.9 $"
+parse__version__ = "$Revision: 1.10 $"
 
 import sys,os
 import sys
@@ -273,7 +273,7 @@ def parse(input, output=None, tokenizationName=None, parseName="McClosky", requi
                 continue
         
         treeLine = treeFile.readline()
-        if not insertParse(sentence, treeLine):
+        if not insertParse(sentence, treeLine, parseName):
             failCount += 1
 #        # Find or create container elements
 #        sentenceAnalyses = setDefaultElement(sentence, "sentenceanalyses")
