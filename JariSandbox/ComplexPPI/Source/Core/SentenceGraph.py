@@ -1,7 +1,7 @@
 """
 Main class for representing a sentence
 """
-__version__ = "$Revision: 1.38 $"
+__version__ = "$Revision: 1.39 $"
 
 #import Graph.networkx_v10rc1 as NX10 # import networkx as NX
 from Core.SimpleGraph import Graph
@@ -268,7 +268,7 @@ class SentenceGraph:
                     compText = t.get("text").lower()
                     if compText.find("bind") != -1 or compText.find("complex") != -1:
                         selHead = t
-                        print "Head:", selHead.get("text"), "/", entityElement.get("text"), entityElement.get("headOffset"), selHead.get("charOffset")
+                        #print "Head:", selHead.get("text"), "/", entityElement.get("text"), entityElement.get("headOffset"), selHead.get("charOffset")
                         entityElement.set("headOffset", selHead.get("charOffset"))
                         break
             if selHead == None: 
