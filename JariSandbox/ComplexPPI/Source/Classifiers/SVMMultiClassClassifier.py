@@ -1,4 +1,4 @@
-__version__ = "$Revision: 1.46 $"
+__version__ = "$Revision: 1.47 $"
 
 import sys,os
 sys.path.append(os.path.dirname(os.path.abspath(__file__))+"/..")
@@ -361,7 +361,7 @@ class SVMMultiClassClassifier(Classifier):
         return "model"+idStr
     
     @classmethod
-    def getLouhiPredictions(cls, idStr, cscConnection, localWorkDir=None):
+    def getLouhiPredictions(cls, idStr, cscConnection, localWorkDir=None, dummy=None):
         #if not cls.getLouhiStatus(idStr, cscConnection):
         #    return None
         predFileName = "predictions"+idStr
