@@ -60,14 +60,14 @@ def removeDuplicates(events):
         events = kept
     return events
 
-def getEventValues(event, values, currentValue = 0):
-    """
-    Return the arguments of a nested event tree in a depth-first order.
-    Each argument is in a list, and has multiple items if that argument
-    is a protein with Equivs.
-    """
-    if event not in values or values[event] < currentValue:
-        values[event] = currentValue            
-    for arg in event.arguments:
-        if arg[1].id[0] == "E": # nested event
-            getEventValues(arg[1], values, currentValue + 1)
+#def getEventValues(event, values, currentValue = 0):
+#    """
+#    Return the arguments of a nested event tree in a depth-first order.
+#    Each argument is in a list, and has multiple items if that argument
+#    is a protein with Equivs.
+#    """
+#    if event not in values or values[event] < currentValue:
+#        values[event] = currentValue            
+#    for arg in event.arguments:
+#        if arg[1].id[0] == "E": # nested event
+#            getEventValues(arg[1], values, currentValue + 1)

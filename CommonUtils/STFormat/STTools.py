@@ -91,7 +91,7 @@ def readStarAnnotation(string, proteins):
                     if not protMap[other] in protMap[member].equiv:
                         protMap[member].equiv.append(protMap[other])
 
-def readEvent(string):
+def readEvent(string, sitesAreArguments=False):
     string = string.strip()
     ann = Annotation()
     ann.id, rest = string.split("\t")
@@ -112,13 +112,16 @@ def readEvent(string):
         # because the same term Site is used also for a Site that is not a Site, but just
         # a "Site"-type argument for a SiteOf event in the BI-task, which may, or may not 
         # (didn't check), have also actual Sites.
-        if argTuple[0].find("Site") == -1 or ann.type == "SiteOf": # not a site or SiteOf-type event
+        if sitesAreArguments or argTuple[0].find("Site") == -1 or ann.type == "SiteOf": # not a site or SiteOf-type event
             origArgName = argTuple[0]
             if argTuple[0].find("Theme") != -1: # multiple themes are numbered
                 argTuple = ["Theme", argTuple[1], None]
             assert origArgName != "" # extra whitespace caused errors with splitting, splitting fixed
             argMap[origArgName] = argTuple
             ann.arguments.append( argTuple )
+            if "Site" in argTuple[0]:
+                assert argTuple[0] == "Site"
+                argTuple[0] = "SiteArg"
     #print argMap
     if len(argMap.keys()) != len(args): # We have sites
         for arg in args:
@@ -162,39 +165,6 @@ def readDependencyAnnotation(string):
     ann.arguments = [("Word", word1), ("Word", word2)]
     return ann
 
-#def loadRel(filename, proteins):
-#    triggerMap = {}
-#    for protein in proteins:
-#        triggerMap[protein.id] = protein
-#        
-#    f = open(filename)
-#    triggers = []
-#    relations = []
-#    lines = f.readlines()
-#    for line in lines:
-#        if line[0] == "T":
-#            triggers.append(readTAnnotation(line))
-#            triggerMap[triggers[-1].id] = triggers[-1]
-#    for line in lines:
-#        if line[0] == "*":
-#            readStarAnnotation(line, proteins+triggers)
-#    for line in lines:
-#        if line[0] == "R":
-#            relations.append(readRAnnotation(line))
-#    f.close()
-#    
-#    # Build links
-#    for relation in relations:
-#        for i in range(len(relation.arguments)):
-#            arg = relation.arguments[i]
-#            if arg[1][0] == "T":
-#                if arg[2] != None:
-#                    relation.arguments[i] = (arg[0], triggerMap[arg[1]], triggerMap[arg[2]])
-#                else:
-#                    relation.arguments[i] = (arg[0], triggerMap[arg[1]], None)
-#                
-#    return triggers, relations
-
 def loadA1(filename):
     f = open(filename)
     proteins = []
@@ -234,54 +204,7 @@ def loadA1(filename):
                 dep.arguments[i] = (arg[0], wordMap[arg[1]])
     return proteins, words, dependencies
 
-#def loadA2(filename, proteins):
-#    f = open(filename)
-#    triggers = []
-#    triggerMap = {}
-#    for protein in proteins:
-#        triggerMap[protein.id] = protein
-#    events = []
-#    eventMap = {}
-#    for line in f:
-#        if line[0] == "T":
-#            triggers.append( readTAnnotation(line) )
-#            triggerMap[triggers[-1].id] = triggers[-1]
-#        elif line[0] == "E":
-#            events.append( readEvent(line) )
-#            eventMap[events[-1].id] = events[-1]
-#        elif line[0] == "M":
-#            mId, rest = line.split("\t")
-#            mType, eventId = rest.split()
-#            if mType == "Speculation":
-#                eventMap[eventId].speculation = mId
-#            elif mType == "Negation":
-#                eventMap[eventId].negation = mId
-#    # Build links
-#    for event in events:
-#        #print event.id
-#        event.trigger = triggerMap[event.trigger]
-#        for i in range(len(event.arguments)):
-#            arg = event.arguments[i]
-#            if arg[1][0] == "T":
-#                if arg[2] != None:
-#                    event.arguments[i] = (arg[0], triggerMap[arg[1]], triggerMap[arg[2]])
-#                else:
-#                    event.arguments[i] = (arg[0], triggerMap[arg[1]], None)
-#            elif arg[1][0] == "E":
-#                assert arg[2] == None # no sites on events
-#                event.arguments[i] = (arg[0], eventMap[arg[1]], None)
-#    f.close()
-#    return triggers, events
-
-#def isRelation(line): # "R" lines may be either relations or dependencies
-#    splits = line.split()
-#    assert len(splits) >= 2, line
-#    if splits[-1][0] == "W" and splits[-2][0] == "W":
-#        return False 
-#    else:
-#        return True
-
-def loadRelOrA2(filename, proteins):
+def loadRelOrA2(filename, proteins, sitesAreArguments=False):
     f = open(filename)
     triggers = []
     triggerMap = {}
@@ -300,7 +223,7 @@ def loadRelOrA2(filename, proteins):
             count += 1
     for line in lines:
         if line[0] == "E":
-            events.append( readEvent(line) )
+            events.append( readEvent(line, sitesAreArguments) )
             eventMap[events[-1].id] = events[-1]
             count += 1
     for line in lines:
@@ -311,6 +234,7 @@ def loadRelOrA2(filename, proteins):
         if line[0] == "M":
             mId, rest = line.split("\t")
             mType, eventId = rest.split()
+            assert mType in ["Speculation", "Negation"]
             if mType == "Speculation":
                 eventMap[eventId].speculation = mId
             elif mType == "Negation":
@@ -363,7 +287,7 @@ def loadText(filename):
     f.close()
     return text
 
-def load(id, dir, loadA2=True):
+def load(id, dir, loadA2=True, sitesAreArguments=False):
     #print id
     id = str(id)
     a1Path = os.path.join(dir, id + ".a1")
@@ -381,12 +305,12 @@ def load(id, dir, loadA2=True):
     events = []
     relations = []
     if os.path.exists(a2Path):
-        triggers, events, relations = loadRelOrA2(a2Path, proteins)
+        triggers, events, relations = loadRelOrA2(a2Path, proteins, sitesAreArguments)
     elif os.path.exists(relPath):
-        triggers, events, relations = loadRelOrA2(relPath, proteins)
+        triggers, events, relations = loadRelOrA2(relPath, proteins, sitesAreArguments)
     return proteins, words, dependencies, triggers, events, relations
 
-def loadSet(dir, setName=None, level="a2"):
+def loadSet(dir, setName=None, level="a2", sitesAreArguments=False):
     assert level in ["txt", "a1", "a2"]
     ids = set()
     documents = []
@@ -402,7 +326,7 @@ def loadSet(dir, setName=None, level="a2"):
         doc.id = id
         if not level == "txt":
             try:
-                doc.proteins, doc.words, doc.dependencies, doc.triggers, doc.events, doc.relations = load(str(id), dir, level=="a2")
+                doc.proteins, doc.words, doc.dependencies, doc.triggers, doc.events, doc.relations = load(str(id), dir, level=="a2", sitesAreArguments)
             except:
                 print >> sys.stderr, "Exception reading document", dir, id 
                 raise
@@ -411,7 +335,7 @@ def loadSet(dir, setName=None, level="a2"):
         documents.append(doc)
     return documents
 
-def writeSet(documents, dir, resultFileTag="a2", makePackage=True):
+def writeSet(documents, dir, resultFileTag="a2", makePackage=True, debug=False):
     from collections import defaultdict
     counts = defaultdict(int)
     for doc in documents:
@@ -445,12 +369,13 @@ def updateIds(annotations, minId=0):
     if newIds:
         idCount = max(getMaxId(annotations) + 1, minId)
         for ann in annotations:
-            if len(ann.arguments) == 0:
+            if len(ann.arguments) == 0 and ann.trigger == None:
                 ann.id = "T" + str(idCount)
-            elif ann.trigger != None:
-                ann.id = "E" + str(idCount)
-            else:
+            elif ann.type in ["Subunit-Complex", "Protein-Component"]:
                 ann.id = "R" + str(idCount)
+            #elif ann.trigger != None or ann.type in ["ActionTarget", "Interaction", "TranscriptionBy", ""]:
+            else:
+                ann.id = "E" + str(idCount)
             idCount += 1
 
 def writeTAnnotation(proteins, out, idStart=0):
@@ -508,7 +433,7 @@ def writeEvents(events, out, counts):
         targetProteins = set()
         for arg in event.arguments:
             argType = arg[0]
-            if argType == "Target":
+            if argType == "Target" and event.type == "Coref":
                 targetProteins.add(arg[1].id)
             else:
                 if not typeCounts.has_key(argType):
@@ -523,7 +448,7 @@ def writeEvents(events, out, counts):
         # Write arguments
         for arg in event.arguments:
             argType = arg[0]
-            if argType == "Target":
+            if argType == "Target" and event.type == "Coref":
                 continue
             if typeCounts.has_key(argType):
                 if typeCounts[argType] > 1:
@@ -556,7 +481,7 @@ def writeEvents(events, out, counts):
                 continue
             
             argType = arg[0]
-            if argType == "Target":
+            if argType == "Target" and event.type == "Coref":
                 continue
             if typeCounts.has_key(argType):
                 typeCounts[argType] += 1
@@ -602,9 +527,10 @@ def writeEvents(events, out, counts):
     #for event in events:
     #    if event.negation != None:
 
-def write(id, dir, proteins, triggers, events, relations, resultFileTag="a2", counts=None):
+def write(id, dir, proteins, triggers, events, relations, resultFileTag="a2", counts=None, debug=False):
     id = str(id)
-    print id
+    if debug:
+        print id
     if not os.path.exists(dir):
         os.makedirs(dir)
     if proteins != None:

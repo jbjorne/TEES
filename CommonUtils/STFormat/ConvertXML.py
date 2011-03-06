@@ -7,12 +7,12 @@ except ImportError:
 import cElementTreeUtils as ETUtils
 import Range
 
-def compareArguments(a, b):
-    if a[0] == "Cause":
-        return 1
-    elif b[0] == "Cause":
-        return -1
-    return 0
+#def compareArguments(a, b):
+#    if a[0] == "Cause":
+#        return 1
+#    elif b[0] == "Cause":
+#        return -1
+#    return 0
 
 def toInteractionXML(documents, corpusName="GENIA", output=None):
     corpusRoot = ET.Element("corpus")
@@ -49,6 +49,9 @@ def toInteractionXML(documents, corpusName="GENIA", output=None):
             if len(triggerToEvents[triggerId]) == 0:
                 triggerToEvents[triggerId].append(trigger.id)
         tMap = {}
+        eventMap = {}
+        for event in doc.events:
+            eventMap[event.id] = event
         for protein in doc.proteins:
             entEl = ET.Element("entity")
             protId = docId + ".e" + str(elCounter)
@@ -91,9 +94,9 @@ def toInteractionXML(documents, corpusName="GENIA", output=None):
                 else:
                     entEl.set("isName", "False")
                 # Add negation and speculation
-                if eventId == protein.negation:
+                if eventId in eventMap and eventMap[eventId].negation != None:
                     entEl.set("negation", "True")
-                if eventId == protein.speculation:
+                if eventId in eventMap and eventMap[eventId].speculation != None:
                     entEl.set("speculation", "True")
                 elCounter += 1
                 docEl.append(entEl)
@@ -146,7 +149,7 @@ def toInteractionXML(documents, corpusName="GENIA", output=None):
                         intEl.set("e1", tMap[arg[2].id]) # "Entity"-type entity is the source
                         assert arg[2].type == "Entity"
                         intEl.set("e2", tMap[arg[1].id]) # "Protein"-type entity is the target
-                        assert arg[1].type == "Protein" or arg[1].type == "Gene"
+                        assert arg[1].type in ["Protein", "Gene", "Chemical", "Organism", "Regulon-operon", "Two-component-system"]
                         intEl.set("type", "Site")
                         docEl.append(intEl)
                         argCount += 1
@@ -217,7 +220,7 @@ def toInteractionXML(documents, corpusName="GENIA", output=None):
         ETUtils.write(corpusRoot, output)
     return ET.ElementTree(corpusRoot)
 
-def toSTFormat(input, output=None, outputTag="a2", useOrigIds=False):
+def toSTFormat(input, output=None, outputTag="a2", useOrigIds=False, debug=False):
     print >> sys.stderr, "Loading corpus", input
     corpusTree = ETUtils.ETFromObj(input)
     print >> sys.stderr, "Corpus file loaded"
@@ -281,7 +284,7 @@ def toSTFormat(input, output=None, outputTag="a2", useOrigIds=False):
             if entity.get("isName") == "True":
                 stDoc.proteins.append(ann)
             else:
-                found = False # prevent duplicat triggers
+                found = False # prevent duplicate triggers
                 for trigger in stDoc.triggers:
                     if trigger.charBegin == ann.charBegin and trigger.charEnd == ann.charEnd and \
                        trigger.text == ann.text and trigger.type == ann.type:
@@ -292,6 +295,14 @@ def toSTFormat(input, output=None, outputTag="a2", useOrigIds=False):
                     stDoc.triggers.append(ann)
             assert entity.get("id") != None
             tMap[entity.get("id")] = ann
+            if entity.get("type") == "Process": # these can have 0 interactions
+                event = Annotation()
+                event.trigger = ann
+                event.type = event.trigger.type
+                eMap[entity.get("id")] = event
+                event.speculation = entityElementMap[entity.get("id")].get("speculation")
+                event.negation = entityElementMap[entity.get("id")].get("negation")
+                stDoc.events.append(event)
         # First map Coref proteins
         corefProtMap = {}
         for interaction in document.getiterator("interaction"):
@@ -315,8 +326,22 @@ def toSTFormat(input, output=None, outputTag="a2", useOrigIds=False):
             #elif intType in ["Site", "Gene_expression", "Transcription", "Protein_catabolism", "Localization", "Binding", "Phosphorylation", "Positive_regulation", "Negative_regulation", "Regulation"]:
             #elif intType in ["Site", "Gene_expression", "Transcription", "Protein_catabolism", "Localization", "Binding", "Phosphorylation", "Positive_regulation", "Negative_regulation", "Regulation",
             #                 "InputAssociation", "InputProcess", "InputInhibitor", "OutputProcess"]:
+            if "/" in intType and "(" in intType: # BI-task
+                eventType, argTypes = intType.split("(")
+                arg1Type, arg2Type = argTypes[:-1].split("/")
+                event = Annotation()
+                event.trigger = None # triggerless event (same as relation)
+                event.type = eventType
+                event.arguments.append([arg1Type, interaction.get("e1"), None])
+                event.arguments.append([arg2Type, interaction.get("e2"), None])
+                #event.speculation = entityElementMap[e1].get("speculation")
+                #event.negation = entityElementMap[e1].get("negation")
+                stDoc.events.append(event)
             elif intType not in ["Protein-Component", "Subunit-Complex", "Renaming", "Coref"]:
+                #if intType == "Site" and tMap[interaction.get("e1")].type == "Entity":
                 if intType == "Site":
+                    # These sites are real sites (i.e. task 2 sites).
+                    # Other sites are just arguments called "site"
                     #sites.append(interaction)
                     siteMap[interaction.get("e2")] = tMap[interaction.get("e1")]
                 else:
@@ -334,6 +359,8 @@ def toSTFormat(input, output=None, outputTag="a2", useOrigIds=False):
                         event.negation = entityElementMap[e1].get("negation")
                         stDoc.events.append(event)
                     arg = [interaction.get("type"), interaction.get("e2"), None]
+                    if arg[0] == "SiteArg": # convert back to actual sites
+                        arg[0] = "Site"
                     event.arguments.append(arg)
             else: # interaction is a relation
                 rel = Annotation()
@@ -358,8 +385,7 @@ def toSTFormat(input, output=None, outputTag="a2", useOrigIds=False):
                     assert False, (rel.type, stDoc.id, interaction.get("id"))
                 stDoc.relations.append(rel)
         # Map argument targets
-        for eKey in sorted(eMap.keys()):
-            event = eMap[eKey]
+        for event in stDoc.events:
             for arg in event.arguments:
                 if arg[1] == None:
                     continue
@@ -374,9 +400,9 @@ def toSTFormat(input, output=None, outputTag="a2", useOrigIds=False):
                     assert id in tMap
                     arg[2] = siteMap[id]
         # Sort arguments
-        for eKey in sorted(eMap.keys()):
-            event = eMap[eKey]
-            event.arguments.sort(cmp=compareArguments)
+        #for eKey in sorted(eMap.keys()):
+        #    event = eMap[eKey]
+        #    event.arguments.sort(cmp=compareArguments)
         # Create STFormat ids
         updateIds(stDoc.proteins)
         updateIds(stDoc.triggers, getMaxId(stDoc.proteins) + 1)
@@ -385,7 +411,7 @@ def toSTFormat(input, output=None, outputTag="a2", useOrigIds=False):
     
     if output != None:
         print >> sys.stderr, "Writing output to", output
-        writeSet(documents, output, resultFileTag=outputTag)
+        writeSet(documents, output, resultFileTag=outputTag, debug=debug)
     return documents
 
 #def toSTFormatSentences(input, output=None, outputTag="a2"):
@@ -548,7 +574,7 @@ if __name__=="__main__":
             toSTFormatSentences(xml, options.output, options.outputTag, options.origIds)
         else:
             print >> sys.stderr, "Converting to ST Format"
-            toSTFormat(xml, options.output, options.outputTag, options.origIds)
+            toSTFormat(xml, options.output, options.outputTag, options.origIds, debug=True)
 
                 
 #if __name__=="__main__":
