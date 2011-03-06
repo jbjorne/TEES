@@ -22,8 +22,8 @@ def getA2FileTag(task, subTask):
 
 from optparse import OptionParser
 optparser = OptionParser()
-optparser.add_option("-e", "--test", default=Settings.DevelFile, dest="testFile", help="Test file in interaction xml")
-optparser.add_option("-r", "--train", default=Settings.TrainFile, dest="trainFile", help="Train file in interaction xml")
+#optparser.add_option("-e", "--test", default=Settings.DevelFile, dest="testFile", help="Test file in interaction xml")
+#optparser.add_option("-r", "--train", default=Settings.TrainFile, dest="trainFile", help="Train file in interaction xml")
 optparser.add_option("-o", "--output", default=None, dest="output", help="output directory")
 optparser.add_option("-a", "--task", default="1", dest="task", help="task number")
 optparser.add_option("-p", "--parse", default="split-McClosky", dest="parse", help="Parse XML element name")
@@ -52,13 +52,17 @@ optparser.add_option("-u", "--unmerging", default=False, action="store_true", de
 (options, args) = optparser.parse_args()
 
 # Check options
-assert options.mode in ["MODELS", "FINAL", "BOTH", "GRID"]
+assert options.mode in ["MODELS", "FINAL", "BOTH", "GRID", "UNMERGING"]
 assert options.output != None
 assert options.task in ["OLD.1", "OLD.2", "CO", "REL", "GE", "EPI", "ID"]
 subTask = 2
 if "." in options.task:
     options.task, subTask = options.task.split(".")
     subTask = int(subTask)
+dataPath = "/home/jari/biotext/BioNLP2011/data/main-tasks/"
+TRAIN_FILE = dataPath + options.task + "/" + options.task + "-train-nodup.xml"
+TEST_FILE = dataPath + options.task + "/" + options.task + "-devel-nodup.xml"
+FINAL_TEST_FILE = dataPath + options.task + "/" + options.task + "-test.xml"
 
 exec "CLASSIFIER = " + options.classifier
 
@@ -66,8 +70,8 @@ exec "CLASSIFIER = " + options.classifier
 PARSE=options.parse
 TOK=options.tokenization
 PARSE_TAG = PARSE
-TRAIN_FILE = options.trainFile
-TEST_FILE = options.testFile
+#TRAIN_FILE = options.trainFile
+#TEST_FILE = options.testFile
 
 # Example generation parameters
 if options.edgeStyle != None:
@@ -133,45 +137,44 @@ EDGE_TRAIN_EXAMPLE_FILE = "edge-train-examples-"+PARSE_TAG
 EDGE_TEST_EXAMPLE_FILE = "edge-test-examples-"+PARSE_TAG
 EDGE_CLASSIFIER_PARAMS="c:" + options.edgeParams
 if options.mode in ["BOTH", "MODELS"]:
-    if False:
-        if options.triggerIds != None:
-            TRIGGER_IDS = copyIdSetsToWorkdir(options.triggerIds)
-        if options.edgeIds != None:
-            EDGE_IDS = copyIdSetsToWorkdir(options.edgeIds)
-        
-        ###############################################################################
-        # Trigger example generation
-        ###############################################################################
-        print >> sys.stderr, "Trigger examples for parse", PARSE_TAG   
-        TRIGGER_EXAMPLE_BUILDER.run(TEST_FILE, TRIGGER_TEST_EXAMPLE_FILE, PARSE, TOK, TRIGGER_FEATURE_PARAMS, TRIGGER_IDS)
-        TRIGGER_EXAMPLE_BUILDER.run(TRAIN_FILE, TRIGGER_TRAIN_EXAMPLE_FILE, PARSE, TOK, TRIGGER_FEATURE_PARAMS, TRIGGER_IDS)
-        
-        ###############################################################################
-        # Trigger models
-        ###############################################################################
-        print >> sys.stderr, "Trigger models for parse", PARSE_TAG
-        c = None
-        if "local" not in options.csc:
-            c = CSCConnection(CSC_WORKDIR+"/trigger-models", CSC_ACCOUNT, CSC_CLEAR)
-        optimize(CLASSIFIER, Ev, TRIGGER_TRAIN_EXAMPLE_FILE, TRIGGER_TEST_EXAMPLE_FILE,\
-            TRIGGER_IDS+".class_names", TRIGGER_CLASSIFIER_PARAMS, "trigger-models", None, c, False, steps="SUBMIT")
-        
-        ###############################################################################
-        # Edge example generation
-        ###############################################################################
-        print >> sys.stderr, "Edge examples for parse", PARSE_TAG  
-        EDGE_EXAMPLE_BUILDER.run(TEST_FILE, EDGE_TEST_EXAMPLE_FILE, PARSE, TOK, EDGE_FEATURE_PARAMS, EDGE_IDS)
-        EDGE_EXAMPLE_BUILDER.run(TRAIN_FILE, EDGE_TRAIN_EXAMPLE_FILE, PARSE, TOK, EDGE_FEATURE_PARAMS, EDGE_IDS)
-        
-        ###############################################################################
-        # Edge models
-        ###############################################################################
-        print >> sys.stderr, "Edge models for parse", PARSE_TAG
-        c = None
-        if "local" not in options.csc:
-            c = CSCConnection(CSC_WORKDIR+"/edge-models", CSC_ACCOUNT, CSC_CLEAR)
-        optimize(CLASSIFIER, Ev, EDGE_TRAIN_EXAMPLE_FILE, EDGE_TEST_EXAMPLE_FILE,\
-            EDGE_IDS+".class_names", EDGE_CLASSIFIER_PARAMS, "edge-models", None, c, False, steps="SUBMIT")
+    if options.triggerIds != None:
+        TRIGGER_IDS = copyIdSetsToWorkdir(options.triggerIds)
+    if options.edgeIds != None:
+        EDGE_IDS = copyIdSetsToWorkdir(options.edgeIds)
+    
+    ###############################################################################
+    # Trigger example generation
+    ###############################################################################
+    print >> sys.stderr, "Trigger examples for parse", PARSE_TAG   
+    TRIGGER_EXAMPLE_BUILDER.run(TEST_FILE, TRIGGER_TEST_EXAMPLE_FILE, PARSE, TOK, TRIGGER_FEATURE_PARAMS, TRIGGER_IDS)
+    TRIGGER_EXAMPLE_BUILDER.run(TRAIN_FILE, TRIGGER_TRAIN_EXAMPLE_FILE, PARSE, TOK, TRIGGER_FEATURE_PARAMS, TRIGGER_IDS)
+    
+    ###############################################################################
+    # Trigger models
+    ###############################################################################
+    print >> sys.stderr, "Trigger models for parse", PARSE_TAG
+    c = None
+    if "local" not in options.csc:
+        c = CSCConnection(CSC_WORKDIR+"/trigger-models", CSC_ACCOUNT, CSC_CLEAR)
+    optimize(CLASSIFIER, Ev, TRIGGER_TRAIN_EXAMPLE_FILE, TRIGGER_TEST_EXAMPLE_FILE,\
+        TRIGGER_IDS+".class_names", TRIGGER_CLASSIFIER_PARAMS, "trigger-models", None, c, False, steps="SUBMIT")
+    
+    ###############################################################################
+    # Edge example generation
+    ###############################################################################
+    print >> sys.stderr, "Edge examples for parse", PARSE_TAG  
+    EDGE_EXAMPLE_BUILDER.run(TEST_FILE, EDGE_TEST_EXAMPLE_FILE, PARSE, TOK, EDGE_FEATURE_PARAMS, EDGE_IDS)
+    EDGE_EXAMPLE_BUILDER.run(TRAIN_FILE, EDGE_TRAIN_EXAMPLE_FILE, PARSE, TOK, EDGE_FEATURE_PARAMS, EDGE_IDS)
+    
+    ###############################################################################
+    # Edge models
+    ###############################################################################
+    print >> sys.stderr, "Edge models for parse", PARSE_TAG
+    c = None
+    if "local" not in options.csc:
+        c = CSCConnection(CSC_WORKDIR+"/edge-models", CSC_ACCOUNT, CSC_CLEAR)
+    optimize(CLASSIFIER, Ev, EDGE_TRAIN_EXAMPLE_FILE, EDGE_TEST_EXAMPLE_FILE,\
+        EDGE_IDS+".class_names", EDGE_CLASSIFIER_PARAMS, "edge-models", None, c, False, steps="SUBMIT")
 else:
     # New feature ids may have been defined during example generation, 
     # so use for the grid search the id sets copied to WORKDIR during 
@@ -181,68 +184,80 @@ else:
         TRIGGER_IDS = os.path.basename(options.triggerIds)
     if options.edgeIds != None:
         EDGE_IDS = os.path.basename(options.edgeIds)
-    UNMERGING_IDS = "unmerging-ids"
 
 
 ###############################################################################
 # Classification with recall boosting
 ###############################################################################
-if options.mode in ["BOTH", "FINAL", "GRID"]:
+if options.mode in ["BOTH", "FINAL", "GRID", "UNMERGING"]:
     if options.mode != "GRID":
-        c = None
-        if "local" not in options.csc:
-            c = CSCConnection(CSC_WORKDIR+"/trigger-models", CSC_ACCOUNT, CSC_CLEAR)
-        bestTriggerModel = optimize(CLASSIFIER, Ev, TRIGGER_TRAIN_EXAMPLE_FILE, TRIGGER_TEST_EXAMPLE_FILE,\
-            TRIGGER_IDS+".class_names", TRIGGER_CLASSIFIER_PARAMS, "trigger-models", None, c, True, steps="RESULTS")[1]
-        bestTriggerModel = updateModel(bestTriggerModel, "best-trigger-model")
-        c = None
-        if "local" not in options.csc:
-            c = CSCConnection(CSC_WORKDIR+"/edge-models", CSC_ACCOUNT, CSC_CLEAR)
-        bestEdgeModel = optimize(CLASSIFIER, Ev, EDGE_TRAIN_EXAMPLE_FILE, EDGE_TEST_EXAMPLE_FILE,\
-            EDGE_IDS+".class_names", EDGE_CLASSIFIER_PARAMS, "edge-models", None, c, True, steps="RESULTS")[1]
-        bestEdgeModel = updateModel(bestEdgeModel, "best-edge-model")
+        # Get edge and trigger models from CSC
+        if options.mode != "UNMERGING":
+            c = None
+            if "local" not in options.csc:
+                c = CSCConnection(CSC_WORKDIR+"/trigger-models", CSC_ACCOUNT, CSC_CLEAR)
+            bestTriggerModel = optimize(CLASSIFIER, Ev, TRIGGER_TRAIN_EXAMPLE_FILE, TRIGGER_TEST_EXAMPLE_FILE,\
+                TRIGGER_IDS+".class_names", TRIGGER_CLASSIFIER_PARAMS, "trigger-models", None, c, True, steps="RESULTS")[1]
+            bestTriggerModel = updateModel(bestTriggerModel, "best-trigger-model")
+            c = None
+            if "local" not in options.csc:
+                c = CSCConnection(CSC_WORKDIR+"/edge-models", CSC_ACCOUNT, CSC_CLEAR)
+            bestEdgeModel = optimize(CLASSIFIER, Ev, EDGE_TRAIN_EXAMPLE_FILE, EDGE_TEST_EXAMPLE_FILE,\
+                EDGE_IDS+".class_names", EDGE_CLASSIFIER_PARAMS, "edge-models", None, c, True, steps="RESULTS")[1]
+            bestEdgeModel = updateModel(bestEdgeModel, "best-edge-model")
+        ###############################################################################
+        # Unmerging learning
+        ###############################################################################
+        if options.unmerging:
+            bestTriggerModel = "best-trigger-model"
+            bestEdgeModel = "best-edge-model"
+            bestUnmergingModel = "best-unmerging-model"
+            UNMERGING_IDS = "unmerging-ids"
+            print >> sys.stderr, "------------ Unmerging models ------------"
+            # Self-classified train data for unmerging
+            TRIGGER_EXAMPLE_BUILDER.run(TRAIN_FILE, "unmerging-extra-trigger-examples", PARSE, TOK, TRIGGER_FEATURE_PARAMS, TRIGGER_IDS)
+            if bestTriggerModel != None: print >> sys.stderr, "best-trigger-model=", os.path.realpath("best-trigger-model")
+            CLASSIFIER.test("unmerging-extra-trigger-examples", bestTriggerModel, "unmerging-extra-trigger-classifications")
+            Ev.evaluate("unmerging-extra-trigger-examples", "unmerging-extra-trigger-classifications", TRIGGER_IDS+".class_names")
+            xml = BioTextExampleWriter.write("unmerging-extra-trigger-examples", "unmerging-extra-trigger-classifications", TRAIN_FILE, "unmerging-extra-triggers.xml", TRIGGER_IDS+".class_names", PARSE, TOK)
+            xml = ix.splitMergedElements(xml, None)
+            xml = ix.recalculateIds(xml, None, True)
+            EDGE_EXAMPLE_BUILDER.run(xml, "unmerging-extra-edge-examples", PARSE, TOK, EDGE_FEATURE_PARAMS, EDGE_IDS)
+            if bestEdgeModel != None: print >> sys.stderr, "best-edge-model=", os.path.realpath("best-edge-model")
+            CLASSIFIER.test("unmerging-extra-edge-examples", bestEdgeModel, "unmerging-extra-edge-classifications")
+            Ev.evaluate("unmerging-extra-edge-examples", "unmerging-extra-edge-classifications", EDGE_IDS+".class_names")
+            xml = BioTextExampleWriter.write("unmerging-extra-edge-examples", "unmerging-extra-edge-classifications", xml, None, EDGE_IDS+".class_names", PARSE, TOK)
+            xml = ix.splitMergedElements(xml, None)
+            xml = ix.recalculateIds(xml, "unmerging-extra-edges.xml", True)
+            EvaluateInteractionXML.run(Ev, xml, TRAIN_FILE, PARSE, TOK)
+            ###############################################################################
+            # Unmerging example generation
+            ###############################################################################
+            UNMERGING_TRAIN_EXAMPLE_FILE = "unmerging-train-examples-"+PARSE_TAG
+            UNMERGING_TEST_EXAMPLE_FILE = "unmerging-test-examples-"+PARSE_TAG
+            print >> sys.stderr, "Unmerging examples for parse", PARSE_TAG
+            GOLD_TEST_FILE = TEST_FILE.replace("-nodup", "")
+            GOLD_TRAIN_FILE = TRAIN_FILE.replace("-nodup", "")
+            UnmergingExampleBuilder.run(TEST_FILE, GOLD_TEST_FILE, UNMERGING_TEST_EXAMPLE_FILE, PARSE, TOK, UNMERGING_FEATURE_PARAMS, UNMERGING_IDS)
+            UnmergingExampleBuilder.run(TRAIN_FILE, GOLD_TRAIN_FILE, UNMERGING_TRAIN_EXAMPLE_FILE, PARSE, TOK, UNMERGING_FEATURE_PARAMS, UNMERGING_IDS)
+            UnmergingExampleBuilder.run(xml, GOLD_TRAIN_FILE, UNMERGING_TRAIN_EXAMPLE_FILE, PARSE, TOK, UNMERGING_FEATURE_PARAMS, UNMERGING_IDS, append=True)
+            #UnmergingExampleBuilder.run("/home/jari/biotext/EventExtension/TrainSelfClassify/test-predicted-edges.xml", GOLD_TRAIN_FILE, UNMERGING_TRAIN_EXAMPLE_FILE, PARSE, TOK, UNMERGING_FEATURE_PARAMS, UNMERGING_IDS, append=True)
+            ###############################################################################
+            # Unmerging models
+            ###############################################################################
+            print >> sys.stderr, "Unmerging models for parse", PARSE_TAG
+            c = None
+            if "local" not in options.csc: c = CSCConnection(CSC_WORKDIR+"/unmerging-models", CSC_ACCOUNT, CSC_CLEAR)
+            bestUnmergingModel = optimize(CLASSIFIER, Ev, UNMERGING_TRAIN_EXAMPLE_FILE, UNMERGING_TEST_EXAMPLE_FILE,\
+                    UNMERGING_IDS+".class_names", UNMERGING_CLASSIFIER_PARAMS, "unmerging-models", None, c, False, steps="BOTH")
+            bestUnmergingModel = updateModel(bestUnmergingModel, "best-unmerging-model")
+            print >> sys.stderr, "------------ Unmerging models done ------------"
+            sys.exit()
     else:
         bestTriggerModel = "best-trigger-model"
         bestEdgeModel = "best-edge-model"
-        #bestUnmergingModel = "best-unmerging-model"
+        bestUnmergingModel = "best-unmerging-model"
 
-    ###############################################################################
-    # Unmerging learning
-    ###############################################################################
-    if options.unmerging:
-        print >> sys.stderr, "Unmerging models"
-        # Self-classified train data for unmerging
-        TRIGGER_EXAMPLE_BUILDER.run(TRAIN_FILE, "unmerging-extra-trigger-examples", PARSE, TOK, TRIGGER_FEATURE_PARAMS, TRIGGER_IDS)
-        if bestTriggerModel != None: print >> sys.stderr, "best-trigger-model=", os.path.realpath("best-trigger-model")
-        CLASSIFIER.test("unmerging-extra-trigger-examples", bestTriggerModel, "unmerging-extra-trigger-classifications")
-        xml = BioTextExampleWriter.write("unmerging-extra-trigger-examples", "unmerging-extra-trigger-classifications", TRAIN_FILE, "unmerging-extra-triggers.xml", TRIGGER_IDS+".class_names", PARSE, TOK)
-        EDGE_EXAMPLE_BUILDER.run(xml, "unmerging-extra-edge-examples", PARSE, TOK, EDGE_FEATURE_PARAMS, EDGE_IDS)
-        if bestEdgeModel != None: print >> sys.stderr, "best-edge-model=", os.path.realpath("best-edge-model")
-        CLASSIFIER.test("unmerging-extra-edge-examples", bestEdgeModel, "unmerging-extra-edge-classifications")
-        evaluator = Ev.evaluate("unmerging-extra-edge-examples", "unmerging-extra-edge-classifications", TRIGGER_IDS+".class_names")
-        xml = BioTextExampleWriter.write("unmerging-extra-edge-examples", "unmerging-extra-edge-trigger-classifications", xml, "unmerging-extra.xml", TRIGGER_IDS+".class_names", PARSE, TOK)
-        EvaluateInteractionXML.run(Ev, xml, TRAIN_FILE, PARSE, TOK)
-        ###############################################################################
-        # Unmerging example generation
-        ###############################################################################
-        UNMERGING_TRAIN_EXAMPLE_FILE = "unmerging-train-examples-"+PARSE_TAG
-        UNMERGING_TEST_EXAMPLE_FILE = "unmerging-test-examples-"+PARSE_TAG
-        print >> sys.stderr, "Unmerging examples for parse", PARSE_TAG
-        GOLD_TEST_FILE = TEST_FILE.replace("-nodup", "")
-        GOLD_TRAIN_FILE = TRAIN_FILE.replace("-nodup", "")
-        UnmergingExampleBuilder.run(TEST_FILE, GOLD_TEST_FILE, UNMERGING_TEST_EXAMPLE_FILE, PARSE, TOK, UNMERGING_FEATURE_PARAMS, UNMERGING_IDS)
-        UnmergingExampleBuilder.run(TRAIN_FILE, GOLD_TRAIN_FILE, UNMERGING_TRAIN_EXAMPLE_FILE, PARSE, TOK, UNMERGING_FEATURE_PARAMS, UNMERGING_IDS)
-        UnmergingExampleBuilder.run("unmerging-extra.xml", GOLD_TRAIN_FILE, UNMERGING_TRAIN_EXAMPLE_FILE, PARSE, TOK, UNMERGING_FEATURE_PARAMS, UNMERGING_IDS, append=True)
-        #UnmergingExampleBuilder.run("/home/jari/biotext/EventExtension/TrainSelfClassify/test-predicted-edges.xml", GOLD_TRAIN_FILE, UNMERGING_TRAIN_EXAMPLE_FILE, PARSE, TOK, UNMERGING_FEATURE_PARAMS, UNMERGING_IDS, append=True)
-        ###############################################################################
-        # Unmerging models
-        ###############################################################################
-        print >> sys.stderr, "Unmerging models for parse", PARSE_TAG
-        c = None
-        if "local" not in options.csc: c = CSCConnection(CSC_WORKDIR+"/unmerging-models", CSC_ACCOUNT, CSC_CLEAR)
-        bestUnmergingModel = optimize(CLASSIFIER, Ev, UNMERGING_TRAIN_EXAMPLE_FILE, UNMERGING_TEST_EXAMPLE_FILE,\
-                UNMERGING_IDS+".class_names", UNMERGING_CLASSIFIER_PARAMS, "unmerging-models", None, c, False, steps="BOTH")
-        bestUnmergingModel = updateModel(bestUnmergingModel, "best-unmerging-model")
     
     print >> sys.stderr, "Booster parameter search"
     # Build trigger examples
@@ -318,3 +333,34 @@ if options.mode in ["BOTH", "FINAL", "GRID"]:
         print >> sys.stderr, "Best booster parameter:", bestResults[0]
         print >> sys.stderr, "Best result:", bestResults[1]
     
+    ###############################################################################
+    # Classify test set
+    ###############################################################################
+    # Trigger Detection
+    TRIGGER_EXAMPLE_BUILDER.run(FINAL_TEST_FILE, "final-test-trigger-examples", PARSE, TOK, TRIGGER_FEATURE_PARAMS, TRIGGER_IDS)
+    CLASSIFIER.test("final-test-trigger-examples", bestTriggerModel, "final-test-trigger-classifications")
+    if bestTriggerModel != None: print >> sys.stderr, "best-trigger-model=", os.path.realpath("best-trigger-model")
+    Ev.evaluate("final-test-trigger-examples", "final-test-trigger-classifications", TRIGGER_IDS+".class_names")
+    xml = BioTextExampleWriter.write("final-test-trigger-examples", "final-test-trigger-classifications", TEST_FILE, "final-triggers.xml", TRIGGER_IDS+".class_names", PARSE, TOK)
+    # Boost
+    xml = RecallAdjust.run(xml, bestResults[0], None, binary=BINARY_RECALL_MODE)
+    xml = ix.splitMergedElements(xml, None)
+    xml = ix.recalculateIds(xml, None, True)
+    # Edge Detection
+    EDGE_EXAMPLE_BUILDER.run(xml, "final-test-edge-examples", PARSE, TOK, EDGE_FEATURE_PARAMS, EDGE_IDS)
+    if bestEdgeModel != None: print >> sys.stderr, "best-edge-model=", os.path.realpath("best-edge-model")
+    CLASSIFIER.test("final-test-edge-examples", bestEdgeModel, "final-test-edge-classifications")
+    Ev.evaluate("final-test-edge-examples", "final-test-edge-classifications", EDGE_IDS+".class_names")
+    xml = BioTextExampleWriter.write("final-test-edge-examples", "final-test-edge-classifications", xml, None, EDGE_IDS+".class_names", PARSE, TOK)
+    xml = ix.splitMergedElements(xml, None)
+    xml = ix.recalculateIds(xml, "final-edges.xml", True)
+    # Unmerging
+    GOLD_TEST_FILE = TEST_FILE.replace("-nodup", "")
+    UnmergingExampleBuilder.run(xml, GOLD_TEST_FILE, "unmerging-final-examples", PARSE, TOK, UNMERGING_FEATURE_PARAMS, UNMERGING_IDS)
+    Cls.test(UNMERGING_TEST_EXAMPLE_FILE, bestUnmergingModel, "unmerging-final-classifications")
+    unmergedXML = BioTextExampleWriter.write("unmerging-final-examples", "unmerging-final-classifications", xml, "final-unmerged.xml", UNMERGING_IDS+".class_names", PARSE, TOK)
+    STFormat.ConvertXML.toSTFormat(unmergedXML, "final-unmerged-geniaformat", getA2FileTag(options.task, subTask))
+    # Sanity Check
+    STFormat.Compare.compare("final-unmerged-geniaformat", "unmerged-"+str(bestResults[0])+"-geniaformat")
+    
+
