@@ -36,6 +36,7 @@ def analyzeNesting(documents):
         print " ", k, chainCounts[k]
 
 if __name__=="__main__":
+    from optparse import OptionParser
     # Import Psyco if available
     try:
         import psyco
@@ -46,10 +47,13 @@ if __name__=="__main__":
     
     #proteins, triggers, events = load(1335418, "/home/jari/biotext/tools/TurkuEventExtractionSystem-1.0/data/evaluation-data/evaluation-tools-devel-gold")
     #write(1335418, "/home/jari/data/temp", proteins, triggers, events )
+    optparser = OptionParser(usage="%prog [options]\n")
+    optparser.add_option("-i", "--input", default=None, dest="input", help="", metavar="FILE")
+    (options, args) = optparser.parse_args()
     
-    p = "/home/jari/data/BioNLP09SharedTask/bionlp09_shared_task_development_data_rev1"
+    #p = "/home/jari/data/BioNLP09SharedTask/bionlp09_shared_task_development_data_rev1"
     #p = "/home/jari/data/BioNLP11SharedTask/BioNLP-ST_2011_Entity_Relations_development_data"
     print "Loading documents"
-    documents = loadSet(p)
+    documents = loadSet(options.input)
     print "Analyzing"
     analyzeNesting(documents)
