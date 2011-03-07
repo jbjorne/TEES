@@ -149,7 +149,7 @@ def toInteractionXML(documents, corpusName="GENIA", output=None):
                         intEl.set("e1", tMap[arg[2].id]) # "Entity"-type entity is the source
                         assert arg[2].type == "Entity"
                         intEl.set("e2", tMap[arg[1].id]) # "Protein"-type entity is the target
-                        assert arg[1].type in ["Protein", "Gene", "Chemical", "Organism", "Regulon-operon", "Two-component-system"]
+                        assert arg[1].type in ["Protein", "Gene", "Chemical", "Organism", "Regulon-operon", "Two-component-system"], (arg[1].type, doc.id, doc.dataSet, event.id)
                         intEl.set("type", "Site")
                         docEl.append(intEl)
                         argCount += 1
@@ -336,6 +336,10 @@ def toSTFormat(input, output=None, outputTag="a2", useOrigIds=False, debug=False
                 event.type = eventType
                 event.arguments.append([arg1Type, interaction.get("e1"), None])
                 event.arguments.append([arg2Type, interaction.get("e2"), None])
+                if event.arguments[0][0] == "SiteArg": # convert back to actual sites
+                    event.arguments[0][0] = "Site"
+                if event.arguments[1][0] == "SiteArg": # convert back to actual sites
+                    event.arguments[1][0] = "Site"
                 #event.speculation = entityElementMap[e1].get("speculation")
                 #event.negation = entityElementMap[e1].get("negation")
                 stDoc.events.append(event)
