@@ -220,7 +220,7 @@ def toInteractionXML(documents, corpusName="GENIA", output=None):
         ETUtils.write(corpusRoot, output)
     return ET.ElementTree(corpusRoot)
 
-def toSTFormat(input, output=None, outputTag="a2", useOrigIds=False, debug=False):
+def toSTFormat(input, output=None, outputTag="a2", useOrigIds=False, debug=False, task=2):
     print >> sys.stderr, "Loading corpus", input
     corpusTree = ETUtils.ETFromObj(input)
     print >> sys.stderr, "Corpus file loaded"
@@ -272,7 +272,7 @@ def toSTFormat(input, output=None, outputTag="a2", useOrigIds=False, debug=False
             ann.text = entity.get("text")
             ann.charBegin = entityOffset[0]
             ann.charEnd = entityOffset[1] + 1
-            idStem = entity.get("id").rsplit(".", 1)[0]
+            idStem = entity.get("id").split(".e", 1)[0]
             if sentenceOffsets.has_key(idStem):
                 sentenceOffset = sentenceOffsets[idStem]
                 ann.charBegin += sentenceOffset[0]
@@ -282,6 +282,8 @@ def toSTFormat(input, output=None, outputTag="a2", useOrigIds=False, debug=False
             if entity.get("negation") == "True":
                 ann.negation = True
             if entity.get("isName") == "True":
+                # Remember to use original id for names!
+                ann.id = entity.get("origId").rsplit(".", 1)[-1]
                 stDoc.proteins.append(ann)
             else:
                 found = False # prevent duplicate triggers
@@ -423,14 +425,14 @@ def toSTFormat(input, output=None, outputTag="a2", useOrigIds=False, debug=False
         #    event = eMap[eKey]
         #    event.arguments.sort(cmp=compareArguments)
         # Create STFormat ids
-        updateIds(stDoc.proteins)
-        updateIds(stDoc.triggers, getMaxId(stDoc.proteins) + 1)
-        updateIds(stDoc.events)
-        updateIds(stDoc.relations)
+        #updateIds(stDoc.proteins)
+        #updateIds(stDoc.triggers, getMaxId(stDoc.proteins) + 1)
+        #updateIds(stDoc.events)
+        #updateIds(stDoc.relations)
     
     if output != None:
         print >> sys.stderr, "Writing output to", output
-        writeSet(documents, output, resultFileTag=outputTag, debug=debug)
+        writeSet(documents, output, resultFileTag=outputTag, debug=debug, task=task)
     return documents
 
 #def toSTFormatSentences(input, output=None, outputTag="a2"):
@@ -583,6 +585,7 @@ if __name__=="__main__":
     optparser.add_option("-t", "--outputTag", default="a2", dest="outputTag", help="a2 file extension.")
     optparser.add_option("-s", "--sentences", default=False, action="store_true", dest="sentences", help="Write each sentence to its own document")
     optparser.add_option("-r", "--origIds", default=False, action="store_true", dest="origIds", help="Use stored original ids (can cause problems with duplicates).")
+    optparser.add_option("-a", "--task", default=2, type="int", dest="task", help="1 or 2")
     (options, args) = optparser.parse_args()
     
     if options.input[-4:] == ".xml":
@@ -593,7 +596,7 @@ if __name__=="__main__":
             toSTFormatSentences(xml, options.output, options.outputTag, options.origIds)
         else:
             print >> sys.stderr, "Converting to ST Format"
-            toSTFormat(xml, options.output, options.outputTag, options.origIds, debug=True)
+            toSTFormat(xml, options.output, options.outputTag, options.origIds, debug=True, task=options.task)
 
                 
 #if __name__=="__main__":

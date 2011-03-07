@@ -2,6 +2,21 @@ import sys, os
 import codecs
 import Validate
 
+#def compareOffsets(a, b):
+#    if a.charBegin != b.charBegin:
+#        if a.charBegin < b.charBegin:
+#            return -1
+#        else:
+#            return 1
+#    else:
+#        if a.charEnd < b.charEnd:
+#            return -1
+#        elif a.charEnd == b.charEnd:
+#            return 0
+#        else:
+#            return 1
+#    return 0 
+
 class Document:
     def __init__(self):
         self.id = None
@@ -335,14 +350,17 @@ def loadSet(dir, setName=None, level="a2", sitesAreArguments=False):
         documents.append(doc)
     return documents
 
-def writeSet(documents, dir, resultFileTag="a2", makePackage=True, debug=False):
+def writeSet(documents, dir, resultFileTag="a2", makePackage=True, debug=False, task=2):
     from collections import defaultdict
     import shutil
     counts = defaultdict(int)
     if os.path.exists(dir):
         shutil.rmtree(dir)
     for doc in documents:
-        write(doc.id, dir, doc.proteins, doc.triggers, doc.events, doc.relations, resultFileTag, counts)
+        Validate.allValidate(doc, counts, task)
+        #doc.proteins.sort(cmp=compareOffsets)
+        #doc.triggers.sort(cmp=compareOffsets)
+        write(doc.id, dir, doc.proteins, doc.triggers, doc.events, doc.relations, resultFileTag, counts, task=task)
         # Write text file
         #out = open(os.path.join(dir, str(doc.id) + ".txt"), "wt")
         out = codecs.open(os.path.join(dir, str(doc.id) + ".txt"), "wt", "utf-8")
@@ -415,14 +433,8 @@ def getDuplicatesMapping(eventLines):
 #            if e1.trigger == e2.trigger and len(e1.arguments) == len(e2.arguments):
 #                for arg1 in zip(e1.arguments, e2.arguments)
 
-def writeEvents(events, out, counts):
+def writeEvents(events, out, counts, task):
     updateIds(events)
-    numEvents = len(events)
-    events = Validate.validate(events)
-    counts["validation-removed"] += numEvents - len(events)
-    numEvents = len(events)
-    events = Validate.removeDuplicates(events)
-    counts["duplicates-removed"] += numEvents - len(events)
     mCounter = 1
     eventLines = []
     nestedEvents = set()
@@ -473,6 +485,9 @@ def writeEvents(events, out, counts):
             currTypeCounts[key] = 0
         # Write sites
         for arg in event.arguments:
+            if task == 1:
+                continue
+            
             if arg[2] == None:
                 continue
             
@@ -531,12 +546,18 @@ def writeEvents(events, out, counts):
     #for event in events:
     #    if event.negation != None:
 
-def write(id, dir, proteins, triggers, events, relations, resultFileTag="a2", counts=None, debug=False):
+def write(id, dir, proteins, triggers, events, relations, resultFileTag="a2", counts=None, debug=False, task=2):
     id = str(id)
     if debug:
         print id
     if not os.path.exists(dir):
         os.makedirs(dir)
+    
+    #updateIds(proteins)
+    #updateIds(triggers, getMaxId(stDoc.proteins) + 1)
+    #updateIds(events)
+    #updateIds(relations)
+    
     if proteins != None:
         out = codecs.open(os.path.join(dir, id + ".a1"), "wt", "utf-8")
         writeTAnnotation(proteins, out)
@@ -544,9 +565,9 @@ def write(id, dir, proteins, triggers, events, relations, resultFileTag="a2", co
     resultFile = codecs.open(os.path.join(dir, id + "." + resultFileTag), "wt", "utf-8")
     writeTAnnotation(triggers, resultFile, getMaxId(proteins) + 1)
     if events != None:
-        writeEvents(events, resultFile, counts)
+        writeEvents(events, resultFile, counts, task)
     if relations != None:
-        writeEvents(relations, resultFile, counts)
+        writeEvents(relations, resultFile, counts, task)
     resultFile.close()
 
 def package(sourceDir, outputFile, includeTags=[".a2"]):

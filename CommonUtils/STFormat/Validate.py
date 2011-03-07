@@ -103,3 +103,46 @@ def validate(events):
         totalRemoved += numRemoved
         events = kept
     return events
+
+def removeUnusedTriggers(document):
+    # Remove triggers which are not used as triggers or arguments
+    triggersToKeep = []
+    for trigger in document.triggers:
+        kept = False
+        for event in document.events:
+            if event.trigger == trigger:
+                triggersToKeep.append(trigger)
+                kept = True
+                break
+            else:
+                for arg in event.arguments:
+                    if arg[1] == trigger or arg[2] == trigger:
+                        triggersToKeep.append(trigger)
+                        kept = True
+                        break
+            if kept:
+                break
+    document.triggers = triggersToKeep
+
+def allValidate(document, counts, task):
+    numEvents = len(document.events)
+    document.events = validate(document.events)
+    counts["validation-removed"] += numEvents - len(document.events)
+    numEvents = len(document.events)
+    document.events = removeDuplicates(document.events)
+    counts["duplicates-removed"] += numEvents - len(document.events)
+    # triggers
+    numTriggers = len(document.triggers)
+    removeUnusedTriggers(document)
+    counts["triggers-removed"] += numTriggers - len(document.triggers)
+    removeEntities(document, task, counts)
+
+def removeEntities(document, task, counts):
+    triggersToKeep = []
+    for trigger in document.triggers:
+        if trigger.type == "Entity" and task == 1:
+            counts["entities-removed"] += 1
+        else:
+            triggersToKeep.append(trigger)
+    document.triggers = triggersToKeep
+            
