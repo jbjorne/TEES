@@ -60,14 +60,46 @@ def removeDuplicates(events):
         events = kept
     return events
 
-#def getEventValues(event, values, currentValue = 0):
-#    """
-#    Return the arguments of a nested event tree in a depth-first order.
-#    Each argument is in a list, and has multiple items if that argument
-#    is a protein with Equivs.
-#    """
-#    if event not in values or values[event] < currentValue:
-#        values[event] = currentValue            
-#    for arg in event.arguments:
-#        if arg[1].id[0] == "E": # nested event
-#            getEventValues(arg[1], values, currentValue + 1)
+# Enfore type-specific limits
+def validate(events):
+    numRemoved = 1
+    totalRemoved = 0
+    # Since removed events cause nesting events' arguments to be remapped, 
+    # some of these nesting events may in turn become duplicates. Loop until
+    # all such duplicates are removed.
+    while(numRemoved > 0):
+        toRemove = set()
+        for event in events:
+            if "egulation" in event.type:
+                typeCounts = {"Cause":0, "Theme":0}
+                for arg in event.arguments[:]:
+                    if arg[0] not in typeCounts:
+                        event.arguments.remove(arg)
+                    else:
+                        typeCounts[arg[0]] += 1
+                if typeCounts["Theme"] == 0:
+                    toRemove.add(event)
+                if len(event.arguments) == 0:
+                    toRemove.add(event)
+            if event.type == "PartOf":
+                assert len(event.arguments) == 2
+                if event.arguments[0][1].type != "Host":
+                    toRemove.add(event)
+                if event.arguments[1][1].type != "HostPart":
+                    toRemove.add(event)
+            if event.type == "Localization":
+                for arg in event.arguments:
+                    if arg[0] == "Bacterium" and arg[1].type != "Bacterium":
+                        toRemove.add(event)
+        # Remove events and remap arguments
+        kept = []
+        for event in events:
+            if event not in toRemove:
+                for arg in event.arguments[:]:
+                    if arg[1] in toRemove:
+                        event.arguments.remove(arg)
+                kept.append(event)
+        numRemoved = len(events) - len(kept)
+        totalRemoved += numRemoved
+        events = kept
+    return events

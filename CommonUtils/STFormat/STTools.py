@@ -337,7 +337,10 @@ def loadSet(dir, setName=None, level="a2", sitesAreArguments=False):
 
 def writeSet(documents, dir, resultFileTag="a2", makePackage=True, debug=False):
     from collections import defaultdict
+    import shutil
     counts = defaultdict(int)
+    if os.path.exists(dir):
+        shutil.rmtree(dir)
     for doc in documents:
         write(doc.id, dir, doc.proteins, doc.triggers, doc.events, doc.relations, resultFileTag, counts)
         # Write text file
@@ -415,6 +418,7 @@ def getDuplicatesMapping(eventLines):
 def writeEvents(events, out, counts):
     updateIds(events)
     numEvents = len(events)
+    events = Validate.validate(events)
     events = Validate.removeDuplicates(events)
     counts["duplicates-removed"] += numEvents - len(events)
     mCounter = 1

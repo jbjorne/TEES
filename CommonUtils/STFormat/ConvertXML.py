@@ -349,19 +349,32 @@ def toSTFormat(input, output=None, outputTag="a2", useOrigIds=False, debug=False
                     if eMap.has_key(e1): # event has already been created
                         event = eMap[e1] # eMap lists events by their trigger ids
                     else:
-                        event = Annotation()
-                        event.trigger = tMap[interaction.get("e1")]
-                        event.type = event.trigger.type
-                        if hasattr(event.trigger, "eventId"):
-                            event.id = event.trigger.eventId 
-                        eMap[e1] = event
-                        event.speculation = entityElementMap[e1].get("speculation")
-                        event.negation = entityElementMap[e1].get("negation")
-                        stDoc.events.append(event)
-                    arg = [interaction.get("type"), interaction.get("e2"), None]
-                    if arg[0] == "SiteArg": # convert back to actual sites
-                        arg[0] = "Site"
-                    event.arguments.append(arg)
+                        eventType = tMap[interaction.get("e1")].type
+                        if eventType != "Entity":
+                            event = Annotation()
+                            event.trigger = tMap[interaction.get("e1")]
+                            event.type = event.trigger.type
+                            if hasattr(event.trigger, "eventId"):
+                                event.id = event.trigger.eventId 
+                            eMap[e1] = event
+                            event.speculation = entityElementMap[e1].get("speculation")
+                            event.negation = entityElementMap[e1].get("negation")
+                            stDoc.events.append(event)
+                        else:
+                            event = None
+                    if event != None:
+                        arg = [interaction.get("type"), interaction.get("e2"), None]
+                        if arg[0] == "SiteArg": # convert back to actual sites
+                            arg[0] = "Site"
+                        id = arg[1]
+                        addArg = True
+                        if eMap.has_key(id):
+                            pass
+                        elif tMap.has_key(id):
+                            if "egulation" in event.type and tMap[id].type != "Protein":
+                                addArg = False
+                        if addArg:
+                            event.arguments.append(arg)
             else: # interaction is a relation
                 rel = Annotation()
                 rel.type = interaction.get("type")
