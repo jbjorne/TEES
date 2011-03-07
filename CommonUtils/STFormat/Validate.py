@@ -60,6 +60,14 @@ def removeDuplicates(events):
         events = kept
     return events
 
+def getBISuperType(eType):
+    if eType in ["GeneProduct", "Protein", "ProteinFamily", "PolymeraseComplex"]:
+        return "ProteinEntity"
+    elif eType in ["Gene", "GeneFamily", "GeneComplex", "Regulon", "Site", "Promoter"]:
+        return "GeneEntity"
+    else:
+        return None
+        
 # Enfore type-specific limits
 def validate(events):
     numRemoved = 1
@@ -81,16 +89,87 @@ def validate(events):
                     toRemove.add(event)
                 if len(event.arguments) == 0:
                     toRemove.add(event)
-            if event.type == "PartOf":
+            # Remove illegal arguments (GE=Only a protein can be a Theme for a non-regulation event)
+            if event.type in ["Gene_expression", "Transcription"]:
+                for arg in event.arguments[:]:
+                    if arg[0] == "Theme" and arg[1].type not in ["Protein", "Regulon-operon"]:
+                        event.arguments.remove(arg)
+            if event.type in ["Protein_catabolism", "Phosphorylation"]:
+                for arg in event.arguments[:]:
+                    if arg[0] == "Theme" and arg[1].type not in ["Protein"]:
+                        event.arguments.remove(arg)
+            if event.type in ["Localization", "Binding"]:
+                for arg in event.arguments[:]:
+                    if arg[0] == "Theme" and arg[1].type not in ["Protein", "Regulon-operon", "Two-component-system", "Chemical", "Organism"]:
+                        event.arguments.remove(arg)          
+            # Check non-regulation events
+            if event.type in ["Gene_expression", "Transcription", "Protein_catabolism", "Phosphorylation", "Localization", "Binding"]:
+                themeCount = 0
+                for arg in event.arguments:
+                    if arg[0] == "Theme":
+                        themeCount += 1
+                if themeCount == 0:
+                    if event.type == "Localization" and len(event.arguments) > 0: # Also used in BB
+                        for arg in event.arguments:
+                            if arg[0] in ["ToLoc", "AtLoc"]: # GE-task Localization
+                                toRemove.add(event)
+                                break
+                    else:
+                        toRemove.add(event)
+            if event.type == "PartOf": # BB
                 assert len(event.arguments) == 2
+                # BB
                 if event.arguments[0][1].type != "Host":
                     toRemove.add(event)
                 if event.arguments[1][1].type != "HostPart":
                     toRemove.add(event)
-            if event.type == "Localization":
+            if event.type == "Localization": # BB and others
                 for arg in event.arguments:
                     if arg[0] == "Bacterium" and arg[1].type != "Bacterium":
                         toRemove.add(event)
+            
+            # BI-rules
+            if len(event.arguments) == 2:
+                arg1Type = event.arguments[0][1].type
+                arg1SuperType = getBISuperType(arg1Type)
+                arg2Type = event.arguments[1][1].type
+                arg2SuperType = getBISuperType(arg2Type)
+            if event.type == "RegulonDependence":
+                if arg1Type != "Regulon": toRemove.add(event)
+                if arg2SuperType not in ["GeneEntity", "ProteinEntity"]: toRemove.add(event)
+            elif event.type == "BindTo":
+                if arg1SuperType != "ProteinEntity": toRemove.add(event)
+                if arg2Type not in ["Site", "Promoter", "Gene", "GeneComplex"]: toRemove.add(event)
+            elif event.type == "TranscriptionFrom":
+                if arg1Type not in ["Transcription", "Expression"]: toRemove.add(event)
+                if arg2Type not in ["Site", "Promoter"]: toRemove.add(event)
+            elif event.type == "RegulonMember":
+                if arg1Type != "Regulon": toRemove.add(event)
+                if arg2SuperType not in ["GeneEntity", "ProteinEntity"]: toRemove.add(event)
+            elif event.type == "SiteOf":
+                if arg1Type != "Site": toRemove.add(event)
+                if not (arg2Type in ["Site", "Promoter"] or arg2SuperType == "GeneEntity"): toRemove.add(event)
+            elif event.type == "TranscriptionBy":
+                if arg1Type != "Transcription": toRemove.add(event)
+                if arg2SuperType != "ProteinEntity": toRemove.add(event)
+            elif event.type == "PromoterOf":
+                if arg1Type != "Promoter": toRemove.add(event)
+                if arg2SuperType not in ["ProteinEntity", "GeneEntity"]: toRemove.add(event)
+            elif event.type == "PromoterDependence":
+                if arg1Type != "Promoter": toRemove.add(event)
+                if arg2SuperType not in ["ProteinEntity", "GeneEntity"]: toRemove.add(event)
+            elif event.type == "ActionTarget":
+                if arg1Type not in ["Action", "Expression", "Transcription"]: toRemove.add(event)
+            elif event.type == "Interaction":
+                if arg1SuperType not in ["ProteinEntity", "GeneEntity"]: toRemove.add(event)
+                if arg2SuperType not in ["ProteinEntity", "GeneEntity"]: toRemove.add(event)
+            # Implicit rules
+            if len(event.arguments) == 2:
+                # SEVERE: role Target does not allow entity of type Site
+                if event.type not in ["BindTo", "SiteOf"]:
+                    if arg1Type == "Site" and event.arguments[0][0] == "Target": toRemove.add(event)
+                    if arg2Type == "Site" and event.arguments[1][0] == "Target": toRemove.add(event)
+                    
         # Remove events and remap arguments
         kept = []
         for event in events:
