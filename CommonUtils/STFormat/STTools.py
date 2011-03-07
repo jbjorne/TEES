@@ -419,6 +419,8 @@ def writeEvents(events, out, counts):
     updateIds(events)
     numEvents = len(events)
     events = Validate.validate(events)
+    counts["validation-removed"] += numEvents - len(events)
+    numEvents = len(events)
     events = Validate.removeDuplicates(events)
     counts["duplicates-removed"] += numEvents - len(events)
     mCounter = 1
@@ -444,22 +446,20 @@ def writeEvents(events, out, counts):
                     typeCounts[argType] = 0
                 typeCounts[argType] += 1
         # Determine which arguments need numbering
-        for key in typeCounts.keys():
-            if typeCounts[key] > 1:
-                typeCounts[key] = 1
-            else:
-                del typeCounts[key]
+        #for key in typeCounts.keys():
+        #    if typeCounts[key] <= 1:
+        #        del typeCounts[key]
         # Write arguments
+        currTypeCounts = {}
+        for key in typeCounts.keys():
+            currTypeCounts[key] = 0
         for arg in event.arguments:
             argType = arg[0]
             if argType == "Target" and event.type == "Coref":
                 continue
-            if typeCounts.has_key(argType):
-                if typeCounts[argType] > 1:
-                    eventLine += " " + argType + str(typeCounts[argType]) + ":" + arg[1].id
-                else:
-                    eventLine += " " + argType + ":" + arg[1].id
-                typeCounts[argType] += 1
+            currTypeCounts[argType] += 1
+            if typeCounts[argType] > 1:
+                eventLine += " " + argType + str(currTypeCounts[argType]) + ":" + arg[1].id
             else:
                 eventLine += " " + argType + ":" + arg[1].id
             
@@ -468,8 +468,9 @@ def writeEvents(events, out, counts):
                 nestedEvents.add(arg[1].id)
         
         # Reset type counts for writing sites
+        currTypeCounts = {}
         for key in typeCounts.keys():
-            typeCounts[key] = 1
+            currTypeCounts[key] = 0
         # Write sites
         for arg in event.arguments:
             if arg[2] == None:
@@ -487,14 +488,13 @@ def writeEvents(events, out, counts):
             argType = arg[0]
             if argType == "Target" and event.type == "Coref":
                 continue
-            if typeCounts.has_key(argType):
-                typeCounts[argType] += 1
+            currTypeCounts[argType] += 1
             
             sitePrefix = ""
             if argType.find("Cause") != -1:
                 sitePrefix = "C"
-            if typeCounts.has_key(argType) and typeCounts[argType] > 1:
-                eventLine += " " + sitePrefix + "Site" + str(typeCounts[argType]) + ":" + arg[2].id
+            if typeCounts[argType] > 1:
+                eventLine += " " + sitePrefix + "Site" + str(currTypeCounts[argType]) + ":" + arg[2].id
             else:
                 eventLine += " " + sitePrefix + "Site" + ":" + arg[2].id           
         

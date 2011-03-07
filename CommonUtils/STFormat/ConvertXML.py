@@ -350,7 +350,7 @@ def toSTFormat(input, output=None, outputTag="a2", useOrigIds=False, debug=False
                         event = eMap[e1] # eMap lists events by their trigger ids
                     else:
                         eventType = tMap[interaction.get("e1")].type
-                        if eventType != "Entity":
+                        if eventType != "Entity": # "Entity"-type entities are never event roots
                             event = Annotation()
                             event.trigger = tMap[interaction.get("e1")]
                             event.type = event.trigger.type
@@ -366,15 +366,7 @@ def toSTFormat(input, output=None, outputTag="a2", useOrigIds=False, debug=False
                         arg = [interaction.get("type"), interaction.get("e2"), None]
                         if arg[0] == "SiteArg": # convert back to actual sites
                             arg[0] = "Site"
-                        id = arg[1]
-                        addArg = True
-                        if eMap.has_key(id):
-                            pass
-                        elif tMap.has_key(id):
-                            if "egulation" in event.type and tMap[id].type != "Protein":
-                                addArg = False
-                        if addArg:
-                            event.arguments.append(arg)
+                        event.arguments.append(arg)
             else: # interaction is a relation
                 rel = Annotation()
                 rel.type = interaction.get("type")
@@ -399,7 +391,7 @@ def toSTFormat(input, output=None, outputTag="a2", useOrigIds=False, debug=False
                 stDoc.relations.append(rel)
         # Map argument targets
         for event in stDoc.events:
-            for arg in event.arguments:
+            for arg in event.arguments[:]:
                 if arg[1] == None:
                     continue
                 id = arg[1]
@@ -407,11 +399,25 @@ def toSTFormat(input, output=None, outputTag="a2", useOrigIds=False, debug=False
                     arg[1] = eMap[id]
                 elif tMap.has_key(id):
                     arg[1] = tMap[id]
+                    # Remove Entity-type triggers if they are Regulation-arguments
+                    if "egulation" in event.type and tMap[id].type != "Protein":
+                        event.arguments.remove(arg)
                 # add sites
                 if siteMap.has_key(id):
                     assert id not in eMap
                     assert id in tMap
                     arg[2] = siteMap[id]
+#        # Remove eventless triggers
+#        triggersToKeep = []
+#        for trigger in stDoc.triggers:
+#            if trigger.type == "Entity":
+#                triggersToKeep.append(trigger)
+#            else:
+#                for event in stDoc.events:
+#                    if event.trigger == trigger:
+#                        triggersToKeep.append(trigger)
+#                        break
+#        stDoc.triggers = triggersToKeep
         # Sort arguments
         #for eKey in sorted(eMap.keys()):
         #    event = eMap[eKey]
