@@ -18,12 +18,12 @@ optparser.add_option("-c", "--classifier", default="Cls", dest="classifier", hel
 optparser.add_option("--csc", default="murska", dest="csc", help="")
 # Example builders
 optparser.add_option("-f", "--edgeExampleBuilder", default="MultiEdgeExampleBuilder", dest="edgeExampleBuilder", help="")
-optparser.add_option("-s", "--styles", default="trigger_features,typed,directed,no_linear,entities,noMasking,maxFeatures", dest="edgeStyles", help="")
+optparser.add_option("-s", "--styles", default="trigger_features,typed,directed,no_linear,entities,noMasking,maxFeatures,bi_limits", dest="edgeStyles", help="")
 #optparser.add_option("-g", "--gazetteer", default="none", dest="gazetteer", help="gazetteer options: none, stem, full")
 # Id sets
 optparser.add_option("-v", "--edgeIds", default=None, dest="edgeIds", help="Trigger detector SVM example class and feature id file stem (files = STEM.class_names and STEM.feature_names)")
 # Parameters to optimize
-optparser.add_option("-x", "--edgeParams", default="5000,10000,20000,25000,28000,50000,60000,65000,80000,100000,150000", dest="edgeParams", help="Trigger detector c-parameter values")
+optparser.add_option("-x", "--edgeParams", default="10,100,1000,2500,5000,7500,10000,20000,25000,28000,50000,60000,65000,80000,100000,150000", dest="edgeParams", help="Trigger detector c-parameter values")
 optparser.add_option("--clearAll", default=False, action="store_true", dest="clearAll", help="Delete all files")
 (options, args) = optparser.parse_args()
 
@@ -79,7 +79,7 @@ if not "eval" in options.csc:
     EDGE_EXAMPLE_BUILDER.run(TEST_FILE, EDGE_TEST_EXAMPLE_FILE, PARSE, TOK, EDGE_FEATURE_PARAMS, EDGE_IDS)
     EDGE_EXAMPLE_BUILDER.run(TRAIN_FILE, EDGE_TRAIN_EXAMPLE_FILE, PARSE, TOK, EDGE_FEATURE_PARAMS, EDGE_IDS)
     EDGE_EXAMPLE_BUILDER.run(EVERYTHING_FILE, EDGE_EVERYTHING_EXAMPLE_FILE, PARSE, TOK, EDGE_FEATURE_PARAMS, EDGE_IDS)
-    EDGE_EXAMPLE_BUILDER.run(FINAL_TEST_FILE, EDGE_FINAL_EXAMPLE_FILE, PARSE, TOK, EDGE_FEATURE_PARAMS, EDGE_IDS)
+    EDGE_EXAMPLE_BUILDER.run(FINAL_TEST_FILE, EDGE_FINAL_TEST_EXAMPLE_FILE, PARSE, TOK, EDGE_FEATURE_PARAMS, EDGE_IDS)
 
 print >> sys.stderr, "Edge models for", PARSE_TAG
 EDGE_CLASSIFIER_PARAMS="c:" + options.edgeParams
