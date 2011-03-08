@@ -1,4 +1,5 @@
 from STTools import *
+import Validate
 import combine
 import copy
 
@@ -141,6 +142,7 @@ def duplicateEquiv(event, duplDict, debug):
     if not hasEquiv:
         return [event]
     if debug:
+        print "----------------------------------------------"
         print "Event:", event.id, event.type, event.arguments
         print " Orig. Duplicates:", argList
     combinations = combine.combine(*argList) # make all combinations
@@ -152,6 +154,7 @@ def duplicateEquiv(event, duplDict, debug):
         newEvent = makeEvent(event, combination, count, duplDict=duplDict, debug=debug)
         if debug:
             print " New Event:", newEvent.id, newEvent.type, newEvent.arguments
+            Validate.validate([newEvent], simulation=True)
         newEvents.append(newEvent)
         count += 1
     return newEvents
@@ -192,4 +195,4 @@ if __name__=="__main__":
     print >> sys.stderr, "Resolving equivalences"
     process(documents, debug=options.debug)
     print >> sys.stderr, "Writing documents to", options.output
-    writeSet(documents, options.output)
+    writeSet(documents, options.output, validate=False)
