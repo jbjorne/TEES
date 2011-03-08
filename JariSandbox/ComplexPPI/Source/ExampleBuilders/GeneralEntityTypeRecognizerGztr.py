@@ -1,7 +1,7 @@
 """
 Trigger examples
 """
-__version__ = "$Revision: 1.30 $"
+__version__ = "$Revision: 1.31 $"
 
 import sys, os
 thisPath = os.path.dirname(os.path.abspath(__file__))
@@ -14,6 +14,7 @@ import Core.ExampleUtils as ExampleUtils
 from Core.Gazetteer import Gazetteer
 from FeatureBuilders.RELFeatureBuilder import RELFeatureBuilder
 from FeatureBuilders.WordNetFeatureBuilder import WordNetFeatureBuilder
+import PhraseTriggerExampleBuilder
 
 #def compareDependencyEdgesById(dep1, dep2):
 #    """
@@ -58,6 +59,8 @@ class GeneralEntityTypeRecognizerGztr(ExampleBuilder):
             self.relFeatureBuilder = RELFeatureBuilder(featureSet)
         if "wordnet" in self.styles:
             self.wordNetFeatureBuilder = WordNetFeatureBuilder(featureSet)
+        if "bb_features" in style:
+            self.bacteriaTokens = PhraseTriggerExampleBuilder.getBacteriaTokens(PhraseTriggerExampleBuilder.getBacteriaNames())
 
     @classmethod
     def run(cls, input, output, parse, tokenization, style, idFileTag=None, gazetteerFileName=None, skiplist=None):
@@ -193,7 +196,7 @@ class GeneralEntityTypeRecognizerGztr(ExampleBuilder):
             # value. Such sentences can still have triggers from intersentence
             # interactions, but as such events cannot be recovered anyway,
             # looking for these triggers would be pointless.
-            if namedEntityCount == 0: # no names, no need for triggers
+            if namedEntityCount == 0 and "build_for_nameless" not in self.styles: # no names, no need for triggers
                 return []
             
             if "pos_pairs" in self.styles:
@@ -320,7 +323,11 @@ class GeneralEntityTypeRecognizerGztr(ExampleBuilder):
                     features[self.featureSet.getId("phospho_found")] = 1
                 features[self.featureSet.getId("begin_"+text[0:2].lower())] = 1
                 features[self.featureSet.getId("begin_"+text[0:3].lower())] = 1
-            
+                
+            if "bb_features" in self.styles:
+                if text.lower() in self.bacteriaTokens:
+                    features[self.featureSet.getId("lpsnBacToken")] = 1
+
             # Content
             if i > 0 and text[0].isalpha() and text[0].isupper():
                 features[self.featureSet.getId("upper_case_start")] = 1
