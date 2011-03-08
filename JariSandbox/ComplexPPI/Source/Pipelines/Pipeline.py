@@ -31,6 +31,8 @@ from Classifiers.AllCorrectClassifier import AllCorrectClassifier as ACCls
 #ENDIF
 from Evaluators.AveragingMultiClassEvaluator import AveragingMultiClassEvaluator as Ev
 from Evaluators.SharedTaskEvaluator import SharedTaskEvaluator as STEv
+import Evaluators.BioNLP11GeniaTools
+evaluateBioNLP11Genia = Evaluators.BioNLP11GeniaTools.evaluate
 import Core.SentenceGraph as SentenceGraph
 import Core.ExampleUtils as ExampleUtils
 import InteractionXML as ix
