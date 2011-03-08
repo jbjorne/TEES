@@ -37,7 +37,7 @@ def isExtraWord(token, toLower=True, relPos = None):
     if toLower:
         token = token.lower()
     
-    if token in ["heliothrix"]:
+    if token in ["heliothrix", "caldicellulosiruptor"]:
         return True
     
     if token == "genus":
@@ -64,13 +64,23 @@ def isExtraWord(token, toLower=True, relPos = None):
         return True
     elif token == "sp":
         return True
-    elif token == "species":
+    #elif token == "species":
+    #    return True
+    elif token == "serotope":
+        return True
+    elif token == "psjn":
         return True
     #elif token == "phylum":
     #    return True
     return False
 
 def isBacteriaToken(token, bacteriaTokens, relPos):
+    while len(token) > 0 and not token[0].isalnum():
+        token = token[1:]
+    if relPos > 0:
+        while len(token) > 0 and token[-1] == ")":
+            token = token[:-1]
+    
     # E., Y. etc.
     if len(token) == 2 and token[0].isupper() and token[1] == ".":
         return True
@@ -78,18 +88,17 @@ def isBacteriaToken(token, bacteriaTokens, relPos):
     if len(token) == 4 and token[0].isupper() and token[-1] == "." and token[1:3].islower():
         return True
     
+    if len(token) == 0: return False
     if token[-1] == ".":
         token = token[:-1]
-    if len(token) == 0:
-        return False
+    if len(token) == 0: return False
     if token[-1] == ",":
         return False
         if relPos < 0: # no commas before head
             return False
         else:
             token = token[:-1]
-    if len(token) == 0:
-        return False
+    if len(token) == 0: return False
     
     tokenLower = token.lower()
     if tokenLower in bacteriaTokens:
@@ -100,12 +109,15 @@ def isBacteriaToken(token, bacteriaTokens, relPos):
     for split in tokenLower.split("/"):
         if split in bacteriaTokens:
             return True
-
+    
+    if token == "JIP":
+        return True
+    
     if tokenLower.endswith("lla"):
         return True
     elif tokenLower.endswith("ica"):
         return True
-    elif tokenLower.endswith("us"):
+    elif tokenLower.endswith("us") and tokenLower != "thus":
         return True
     elif tokenLower.endswith("um") and tokenLower not in ["phylum"]:
         return True
@@ -125,6 +137,8 @@ def isBacteriaToken(token, bacteriaTokens, relPos):
         return True
     elif tokenLower.endswith("li"):
         return True
+    elif tokenLower.endswith("nii"):
+        return True
     elif tokenLower.endswith("plasma"):
         return True
     elif tokenLower.endswith("plasmas"):
@@ -142,7 +156,7 @@ def isBacteriaToken(token, bacteriaTokens, relPos):
     isTrue = True
     for c in token:
         if c.isdigit() or c == "-" or c.isupper():
-            pass
+            continue
         else:
             isTrue = False
             break
@@ -161,13 +175,13 @@ def extend(input, output=None, entityTypes=["Bacterium"], verbose=False):
     sentences = corpusRoot.getiterator("sentence")
     counts = defaultdict(int)
     for sentence in sentences:
+        incorrectCount = 0
         sentenceText = sentence.get("text")
         tokens = tokenize(sentenceText)
         for entity in sentence.findall("entity"):
             counts["all-entities"] += 1
             if entity.get("type") not in entityTypes:
                 continue
-            #print "TOKENS", tokens
             headOffset = entity.get("headOffset")
             if headOffset == None:
                 if verbose: print "WARNING, no head offset for entity", entity.get("id")
@@ -210,17 +224,19 @@ def extend(input, output=None, entityTypes=["Bacterium"], verbose=False):
                         break
                 # Extend after
                 endIndex = tokIndex
-                for i in range(tokIndex+1, len(tokens)):
-                    token = tokens[i]
-                    if token.isspace():
-                        continue
-                    if not isBacteriaToken(token, bacteriaTokens, i - tokIndex):
-                        endIndex = i - 1
-                        break
-                    if i == len(tokens) - 1:
-                        endIndex = i
-                while tokens[endIndex].isspace():
-                    endIndex -= 1
+                if tokens[tokIndex][-1] != ",":
+                    endIndex = tokIndex
+                    for i in range(tokIndex+1, len(tokens)):
+                        token = tokens[i]
+                        if token.isspace():
+                            continue
+                        if not isBacteriaToken(token, bacteriaTokens, i - tokIndex):
+                            endIndex = i - 1
+                            break
+                        if i == len(tokens) - 1:
+                            endIndex = i
+                    while tokens[endIndex].isspace():
+                        endIndex -= 1
                 # Modify range
                 if tokIndex > beginIndex:
                     for token in reversed(tokens[beginIndex:tokIndex]):
@@ -260,9 +276,12 @@ def extend(input, output=None, entityTypes=["Bacterium"], verbose=False):
                 if verbose: print "CORRECT"
             else:
                 counts["incorrect"] += 1
+                incorrectCount += 1
                 if verbose: print "INCORRECT"
             entity.set("charOffset", newOffsetString)
-    
+        if incorrectCount > 0:
+            print "TOKENS:", "|".join(tokens)
+            print "--------------------------------"
     print counts
     if output != None:
         print >> sys.stderr, "Writing output to", output
