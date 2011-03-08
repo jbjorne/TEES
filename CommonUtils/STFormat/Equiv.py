@@ -85,6 +85,7 @@ def makeEvent(model, argCombination, count, newEvent = None, finished=False, dup
     Given an argument list in depth-first order (argCombination), make
     a copy of "model" event tree.
     """
+    createdEvents = []
     if newEvent == None: # First call, make a new root
         if debug:
             print "Arg.Comb.:", argCombination
@@ -95,6 +96,7 @@ def makeEvent(model, argCombination, count, newEvent = None, finished=False, dup
         newEvent.id = model.id + ".d" + str(count)
         newEvent.speculation = model.speculation
         newEvent.negation = model.negation
+        createdEvents.append(newEvent)
     for arg in model.arguments:
         #if debug: print level * " ", model.id, [x[1].id for x in model.arguments], "/", arg[1].id, argCombination, "/", newEvent, newEvent.arguments
         if arg[1].id[0] != "E": # not a nested event
@@ -109,20 +111,25 @@ def makeEvent(model, argCombination, count, newEvent = None, finished=False, dup
                 if hasNestedEquivs(arg[1]):
                     # For event arguments that have children with equiv, create a new copy
                     duplId = arg[1].id + ".d" + str(count)
+                    #duplId = arg[1].id.split(".d")[0] + ".d" + str(count)
                     if duplId not in duplDict:
-                        newArg = [arg[0], copy.copy(argCombination[0]), None]
+                        newArg = [arg[0], copy.copy(argCombination[0]), None] # Make a new event
+                        createdEvents.append(newArg[1])
                         argCombination.pop(0) # pop first (depth-first iteration)
                         newArg[1].arguments = [] # reset the argument list of the copy
                         newArg[1].id = duplId
                         newEvent.arguments.append(newArg) # add to parent copy
-                        duplDict[duplId] = newArg
+                        duplDict[duplId] = newArg[1] # add the new event to duplDict #duplDict[duplId] = newArg
                         if debug: print level * " ", "NEST(new)", model.id, [x[1].id for x in model.arguments], "/", arg[1].id, argCombination, "/", newEvent, newEvent.arguments
-                        makeEvent(arg[1], argCombination, count, newArg[1], finished, duplDict, level=level+1, debug=debug) # Continue processing with next level of model and copy
+                        createdEvents += makeEvent(arg[1], argCombination, count, newArg[1], finished, duplDict, level=level+1, debug=debug) # Continue processing with next level of model and copy
                     else:
+                        newArg = [arg[0], duplDict[duplId], None]
                         argCombination.pop(0) # pop first (depth-first iteration)
-                        newEvent.arguments.append(duplDict[duplId]) # add to parent copy
+                        #newEvent.arguments.append(duplDict[duplId]) # add to parent copy
+                        newEvent.arguments.append(newArg) # add to parent copy
                         if debug: print level * " ", "NEST(old)", model.id, [x[1].id for x in model.arguments], "/", arg[1].id, argCombination, "/", newEvent, newEvent.arguments
-                        makeEvent(arg[1], argCombination, count, duplDict[duplId][1], True, duplDict, level=level+1, debug=debug) # Continue processing with next level of model and copy
+                        #makeEvent(arg[1], argCombination, count, duplDict[duplId][1], True, duplDict, level=level+1, debug=debug) # Continue processing with next level of model and copy
+                        createdEvents += makeEvent(arg[1], argCombination, count, duplDict[duplId], True, duplDict, level=level+1, debug=debug) # Continue processing with next level of model and copy
                 else:
                     newArg = [arg[0], argCombination[0], None]
                     argCombination.pop(0) # pop first (depth-first iteration)
@@ -130,7 +137,7 @@ def makeEvent(model, argCombination, count, newEvent = None, finished=False, dup
                     if debug: print level * " ", "STOP", model.id, [x[1].id for x in model.arguments], "/", arg[1].id, argCombination, "/", newEvent, newEvent.arguments
                     # stop recursion here, it has been likewise stopped in getArgs
                     #makeEvent(arg[1], argCombination, count, newArg[1], True, duplDict, level=level+1) # Continue processing with next level of model and copy
-    return newEvent
+    return createdEvents
 
 def duplicateEquiv(event, duplDict, debug):
     """
@@ -151,10 +158,15 @@ def duplicateEquiv(event, duplDict, debug):
     newEvents = []
     count = 0 # used only for marking duplicates' ids
     for combination in combinations:
-        newEvent = makeEvent(event, combination, count, duplDict=duplDict, debug=debug)
+        createdEvents = makeEvent(event, combination, count, duplDict=duplDict, debug=debug)
+        newEvent = createdEvents[0]
         if debug:
-            print " New Event:", newEvent.id, newEvent.type, newEvent.arguments
-            Validate.validate([newEvent], simulation=True)
+            for createdEvent in createdEvents:
+                if createdEvent == newEvent:
+                    print " New Event (root):", createdEvent.id, createdEvent.type, createdEvent.arguments
+                else:
+                    print " New Event:", createdEvent.id, createdEvent.type, createdEvent.arguments
+                Validate.validate([createdEvent], simulation=True)
         newEvents.append(newEvent)
         count += 1
     return newEvents
