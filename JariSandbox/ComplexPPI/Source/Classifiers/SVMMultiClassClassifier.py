@@ -1,4 +1,4 @@
-__version__ = "$Revision: 1.47 $"
+__version__ = "$Revision: 1.48 $"
 
 import sys,os
 sys.path.append(os.path.dirname(os.path.abspath(__file__))+"/..")
@@ -65,7 +65,10 @@ class SVMMultiClassClassifier(Classifier):
 #                examples = Example.removeDuplicates(examples)
 #            else:
 #                print >> sys.stderr, "Warning, duplicates not removed from example file", examples
-        args = [Settings.SVMMultiClassDir+"/svm_multiclass_learn"]
+        if os.environ.has_key("METAWRK"):
+            args = [SVMMultiClassClassifier.louhiBinDir+"/svm_multiclass_learn"]
+        else:
+            args = [Settings.SVMMultiClassDir+"/svm_multiclass_learn"]
         cls.__addParametersToSubprocessCall(args, parameters)
         if outputFile == None:
             args += [trainPath, "model"]
@@ -107,8 +110,11 @@ class SVMMultiClassClassifier(Classifier):
         else:
             print >> sys.stderr, "Classifying file", examples, "with SVM-MultiClass model", modelPath
             testPath = examples
-            examples = Example.readExamples(examples,False)
-        args = [Settings.SVMMultiClassDir+"/svm_multiclass_classify"]
+            #examples = Example.readExamples(examples,False)
+        if os.environ.has_key("METAWRK"):
+            args = [SVMMultiClassClassifier.louhiBinDir+"/svm_multiclass_classify"]
+        else:
+            args = [Settings.SVMMultiClassDir+"/svm_multiclass_classify"]
         if modelPath == None:
             modelPath = "model"
         if parameters != None:
