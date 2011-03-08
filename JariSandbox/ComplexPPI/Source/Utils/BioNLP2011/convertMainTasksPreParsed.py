@@ -2,8 +2,10 @@ import sys, os, time
 import subprocess
 import STFormat.STTools as ST
 import STFormat.ConvertXML as STConvert
+import STFormat.Equiv
 import InteractionXML.RemoveUnconnectedEntities
 import InteractionXML.DivideSets
+import InteractionXML.MixSets
 thisPath = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.abspath(os.path.join(thisPath,"../../")))
 sys.path.append(os.path.abspath(os.path.join(thisPath,"../../../../../GeniaChallenge/formatConversion")))
@@ -19,6 +21,22 @@ import InteractionXML.DeleteElements
 import InteractionXML.MergeDuplicateEntities
 import cElementTreeUtils as ETUtils
 
+#BindTo: 4 + 2
+#PromoterDependence
+#PromoterOf
+#SiteOf
+#RegulonMember
+#RegulonDependence
+
+moveBI = ["PMID-10333516-S3",
+          "PMID-10503549-S4",
+          "PMID-10788508-S10",
+          "PMID-1906867-S3",
+          "PMID-9555886-S6",
+          "PMID-10075739-S13",
+          "PMID-10400595-S1",
+          "PMID-10220166-S12"]
+
 def log(clear=False, logCmd=True, logFile="log.txt"):
     Stream.setLog(logFile, clear)
     Stream.setTimeStamp("[%H:%M:%S]", True)
@@ -27,16 +45,28 @@ def log(clear=False, logCmd=True, logFile="log.txt"):
         sys.stdout.writeToLog("Command line: " + " ".join(sys.argv) + "\n")
 
 def convert(datasets, analysisTags, analysisPath, corpusName):
+    global moveBI
+    
     bigfileName = corpusName + "-" + "-and-".join([x[0] for x in datasets])
     documents = []
     for pair in datasets:
         print >> sys.stderr, "Reading", pair[0], "set,",
-        docs = ST.loadSet(pair[1], pair[0], "a2")
+        sitesAreArguments = False
+        if corpusName == "EPI":
+            sitesAreArguments = True
+        docs = ST.loadSet(pair[1], pair[0], "a2", sitesAreArguments=sitesAreArguments)
         print >> sys.stderr, len(docs), "documents"
         documents.extend(docs)
+    
+    print >> sys.stderr, "Resolving equivalences"
+    STFormat.Equiv.process(documents)
 
     print >> sys.stderr, "Converting to", bigfileName+"-documents.xml"
     xml = STConvert.toInteractionXML(documents, corpusName, bigfileName+"-documents.xml")
+    
+    if corpusName == "BI":
+        InteractionXML.MixSets.mixSets(xml, None, set(moveBI), "train", "devel")
+    
     for pair in datasets:
         if True: #corpusName != "BI":
             print >> sys.stderr, "Adding analyses for set", pair[0]
@@ -142,7 +172,7 @@ if __name__=="__main__":
                            "train":"BioNLP-ST_2011_bacteria_interactions_train_data",
                            "test":"BioNLP-ST_2011_bacteria_interactions_test_data"}
     
-    for dataset in ["GE"]: #["EPI", "GE", "ID"]: #sorted(datasets.keys()):
+    for dataset in ["EPI"]: #["EPI", "GE", "ID"]: #sorted(datasets.keys()):
         cwd = os.getcwd()
         currOutDir = outDir + dataset
         if not os.path.exists(currOutDir):
