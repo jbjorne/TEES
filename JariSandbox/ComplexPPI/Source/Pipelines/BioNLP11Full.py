@@ -4,6 +4,7 @@
 from Pipeline import *
 import sys, os
 import STFormat.ConvertXML
+import STFormat.Compare
 
 def updateModel(modelPath, linkName):
     if os.path.exists(linkName):
@@ -357,6 +358,7 @@ if options.mode in ["BOTH", "FINAL", "GRID", "UNMERGING"]:
     ###############################################################################
     # Classify test set
     ###############################################################################
+    print >> sys.stderr, "--------- Classify test set ---------"
     # Trigger Detection
     TRIGGER_EXAMPLE_BUILDER.run(FINAL_TEST_FILE, "final-test-trigger-examples", PARSE, TOK, TRIGGER_FEATURE_PARAMS, TRIGGER_IDS)
     CLASSIFIER.test("final-test-trigger-examples", bestTriggerModel, "final-test-trigger-classifications")
