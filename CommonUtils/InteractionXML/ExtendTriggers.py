@@ -1,9 +1,14 @@
+import sys, os
 try:
     import xml.etree.cElementTree as ET
 except ImportError:
     import cElementTree as ET
 import cElementTreeUtils as ETUtils
 import Range
+from collections import defaultdict
+extraPath = os.path.dirname(os.path.abspath(__file__))+"/../../JariSandbox/ComplexPPI/Source"
+sys.path.append(extraPath)
+import ExampleBuilders.PhraseTriggerExampleBuilder 
 
 def tokenize(text):
     tokens = [""]
@@ -26,57 +31,112 @@ def tokenize(text):
     else:
         return tokens
 
-def isBacteriaToken(token):
+def isExtraWord(token, toLower=True, relPos = None):
+    if token[-1] == ".":
+        token = token[:-1]
+    if toLower:
+        token = token.lower()
+    
+    if token in ["heliothrix"]:
+        return True
+    
+    if token == "genus":
+        return True
+    if token == "bacterium":
+        return True
+    if token == "bacteria":
+        return True
+    elif token == "strain":
+        return True
+    elif token == "organisms":
+        return True
+    elif token == "fetus":
+        return True
+    elif token == "venerealis":
+        return True
+    elif token == "subsp":
+        return True
+    elif token == "subspecies":
+        return True
+    elif token == "ssp":
+        return True
+    elif token == "-like":
+        return True
+    elif token == "sp":
+        return True
+    elif token == "species":
+        return True
+    #elif token == "phylum":
+    #    return True
+    return False
+
+def isBacteriaToken(token, bacteriaTokens, relPos):
+    # E., Y. etc.
     if len(token) == 2 and token[0].isupper() and token[1] == ".":
         return True
-    elif token.endswith("lla"):
+    # Chl. ja Cfl.
+    if len(token) == 4 and token[0].isupper() and token[-1] == "." and token[1:3].islower():
         return True
-    elif token.endswith("us"):
+    
+    if token[-1] == ".":
+        token = token[:-1]
+    if len(token) == 0:
+        return False
+    if token[-1] == ",":
+        return False
+        if relPos < 0: # no commas before head
+            return False
+        else:
+            token = token[:-1]
+    if len(token) == 0:
+        return False
+    
+    tokenLower = token.lower()
+    if tokenLower in bacteriaTokens:
         return True
-    elif token.endswith("um"):
+    for split in tokenLower.split("-"):
+        if split in bacteriaTokens:
+            return True
+    for split in tokenLower.split("/"):
+        if split in bacteriaTokens:
+            return True
+
+    if tokenLower.endswith("lla"):
         return True
-    elif token.endswith("ans"):
+    elif tokenLower.endswith("ica"):
         return True
-    elif token.endswith("bacter"):
+    elif tokenLower.endswith("us"):
         return True
-    elif token.endswith("is"):
+    elif tokenLower.endswith("um") and tokenLower not in ["phylum"]:
         return True
-    elif token.endswith("es"):
+    elif tokenLower.endswith("ans") and tokenLower != "humans":
         return True
-    elif token.endswith("ma"):
+    elif tokenLower.endswith("bacter"):
         return True
-    elif token.endswith("ia"):
+    elif tokenLower.endswith("is") and tokenLower not in ["is", "this"]:
         return True
-    elif token.endswith("ii"):
+    #elif tokenLower.endswith("es"):
+    #    return True
+    elif tokenLower.endswith("ma"):
         return True
-    elif token.endswith("li"):
+    elif tokenLower.endswith("ia"):
         return True
-    elif token.endswith("plasma"):
+    elif tokenLower.endswith("ii"):
         return True
-    elif token.endswith("plasmas"):
+    elif tokenLower.endswith("li"):
         return True
-    elif token.endswith("ae"):
+    elif tokenLower.endswith("plasma"):
         return True
-    elif token.endswith("ri"):
+    elif tokenLower.endswith("plasmas"):
         return True
-    elif token.endswith("ni"):
+    elif tokenLower.endswith("ae"):
+        return True
+    elif tokenLower.endswith("ri"):
+        return True
+    elif tokenLower.endswith("ni"):
         return True
 
-    elif token.lower == "strain":
-        return True
-    elif token.lower == "organisms":
-        return True
-    elif token.lower == "fetus":
-        return True
-    elif token.lower == "subsp.":
-        return True
-    elif token.lower == "subspecies":
-        return True
-    elif token.lower == "-like":
-        return True
-    elif token.lower == "sp.":
-        return True
-    elif token.lower == "species":
+    if isExtraWord(token, toLower=True):
         return True
     
     isTrue = True
@@ -88,46 +148,144 @@ def isBacteriaToken(token):
             break
     if isTrue:
         return True
-    
+
     return False
 
-def extend(input, task="BB", simulation=True):
+def extend(input, output=None, entityTypes=["Bacterium"], verbose=False):
     print >> sys.stderr, "Loading corpus file", input
-    corpusRoot = ETUtils.ETFromObj(input).getroot()
+    corpusTree = ETUtils.ETFromObj(input)
+    corpusRoot = corpusTree.getroot()
     
-    sentences = corpusRoot.findall("sentence")
+    bacteriaTokens = ExampleBuilders.PhraseTriggerExampleBuilder.getBacteriaTokens(ExampleBuilders.PhraseTriggerExampleBuilder.getBacteriaNames())
+    
+    sentences = corpusRoot.getiterator("sentence")
+    counts = defaultdict(int)
     for sentence in sentences:
         sentenceText = sentence.get("text")
         tokens = tokenize(sentenceText)
         for entity in sentence.findall("entity"):
-            headOffset = Range.charOffsetToSingleTuple(entity.get("headOffset"))
-            charOffset = Range.charOffsetToSingleTuple(entity.get("charOffset"))
-            origCharOffset = None
-            if headOffset != charOffset:
-                origCharOffset = charOffset
+            counts["all-entities"] += 1
+            if entity.get("type") not in entityTypes:
+                continue
+            #print "TOKENS", tokens
+            headOffset = entity.get("headOffset")
+            if headOffset == None:
+                if verbose: print "WARNING, no head offset for entity", entity.get("id")
+                headOffset = entity.get("charOffset")
+            headOffset = Range.charOffsetToTuples(headOffset)[0]
+            charOffset = entity.get("charOffset")
+            assert charOffset != None, "WARNING, no head offset for entity " + str(entity.get("id"))
+            charOffset = Range.charOffsetToTuples(charOffset)[0]
             tokPos = [0,0]
             tokIndex = None
             # find main token
             for i in range(len(tokens)):
                 token = tokens[i]
                 tokPos[1] = tokPos[0] + len(token) - 1
-                if Range.overlap(headOffset):
+                if Range.overlap(headOffset, tokPos):
                     tokIndex = i
                     break
                 tokPos[0] += len(token)
             assert tokIndex != None, (entity.get("id"), entity.get("text"), tokens)
-            # Extend before
-            for i in range(tokIndex-1, 0, -1):
-                token = tokens[i]
-                if token.isspace():
-                    continue
-                if not isBacteriaToken(token):
-                    beginPos = i + 1
-            # Extend after
-            for i in range(tokIndex+1, len(tokens)):
-                token = tokens[i]
-                if token.isspace():
-                    continue
-                if not isBacteriaToken(token):
-                    endPos = i - 1
-                    
+            skip = False
+            if tokPos[0] < headOffset[0]:
+                tokPos = headOffset
+                skip = True
+            if not skip:
+                # Extend before
+                beginIndex = tokIndex
+                for i in range(tokIndex-1, -1, -1):
+                    token = tokens[i]
+                    if token.isspace():
+                        continue
+                    if not isBacteriaToken(token, bacteriaTokens, i - tokIndex):
+                        beginIndex = i + 1
+                        break
+                    if i == 0:
+                        beginIndex = i
+                while tokens[beginIndex].isspace() or isExtraWord(tokens[beginIndex], toLower=False):
+                    beginIndex += 1
+                    if beginIndex >= tokIndex:
+                        beginIndex = tokIndex
+                        break
+                # Extend after
+                endIndex = tokIndex
+                for i in range(tokIndex+1, len(tokens)):
+                    token = tokens[i]
+                    if token.isspace():
+                        continue
+                    if not isBacteriaToken(token, bacteriaTokens, i - tokIndex):
+                        endIndex = i - 1
+                        break
+                    if i == len(tokens) - 1:
+                        endIndex = i
+                while tokens[endIndex].isspace():
+                    endIndex -= 1
+                # Modify range
+                if tokIndex > beginIndex:
+                    for token in reversed(tokens[beginIndex:tokIndex]):
+                        tokPos[0] -= len(token)
+                if tokIndex < endIndex:
+                    for token in tokens[tokIndex+1:endIndex+1]:
+                        tokPos[1] += len(token)
+                # Attempt to remove trailing periods and commas
+                while not sentenceText[tokPos[1]].isalnum():
+                    tokPos[1] -= 1
+                    if tokPos[1] < tokPos[0]:
+                        tokPos[1] = tokPos[0]
+                        break
+                while not sentenceText[tokPos[0]].isalnum():
+                    tokPos[0] += 1
+                    if tokPos[0] > tokPos[1]:
+                        tokPos[1] = tokPos[0]
+                        break
+                # Split merged names
+                #newPos = [tokPos[0], tokPos[1]]
+                #for split in sentenceText[tokPos[0]:tokPos[1]+1].split("/"):
+                #    newPos[0] += len(split)
+                #    if                 
+            # Insert changed charOffset
+            counts["entities"] += 1
+            newOffset = tuple(tokPos)
+            newOffsetString = Range.tuplesToCharOffset([newOffset])
+            if verbose:
+                print "Entity", entity.get("id"), 
+                print [entity.get("text"), sentenceText[headOffset[0]:headOffset[1]+1], sentenceText[newOffset[0]:newOffset[1]+1]], 
+                print [entity.get("charOffset"), entity.get("headOffset"), newOffsetString], "Sent:", len(sentence.get("text")),
+            if newOffset != headOffset:
+                counts["extended"] += 1
+                if verbose: print "EXTENDED",
+            if newOffset == charOffset:
+                counts["correct"] += 1
+                if verbose: print "CORRECT"
+            else:
+                counts["incorrect"] += 1
+                if verbose: print "INCORRECT"
+            entity.set("charOffset", newOffsetString)
+    
+    print counts
+    if output != None:
+        print >> sys.stderr, "Writing output to", output
+        ETUtils.write(corpusRoot, output)
+    return corpusTree                    
+
+if __name__=="__main__":
+    print >> sys.stderr, "##### Extend Triggers #####"
+    # Import Psyco if available
+    try:
+        import psyco
+        psyco.full()
+        print >> sys.stderr, "Found Psyco, using"
+    except ImportError:
+        print >> sys.stderr, "Psyco not installed"
+    
+    from optparse import OptionParser
+    optparser = OptionParser(usage="%prog [options]\nCreate an html visualization for a corpus.")
+    optparser.add_option("-i", "--input", default=None, dest="input", help="Corpus in analysis format", metavar="FILE")
+    optparser.add_option("-o", "--output", default=None, dest="output", help="Corpus in analysis format", metavar="FILE")
+    optparser.add_option("-d", "--debug", default=False, action="store_true", dest="debug", help="")
+    (options, args) = optparser.parse_args()
+    assert(options.input != None)
+    #assert(options.output != None)
+    
+    extend(options.input, options.output, verbose=options.debug)
