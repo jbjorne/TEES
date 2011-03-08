@@ -439,6 +439,9 @@ def mainFunc(input, output, parseName, tokenizationName, newParseName, newTokeni
         for a in parse.attrib:
             if newparse.get(a) == None:
                 newparse.set(a, parse.get(a))
+        
+        for phrase in parse.getiterator("phrase"):
+            newparse.append(phrase)
 
         depSeqId = 1
         for d in parse.getiterator("dependency"):
