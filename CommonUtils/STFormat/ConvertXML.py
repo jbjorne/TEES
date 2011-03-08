@@ -284,6 +284,9 @@ def toSTFormat(input, output=None, outputTag="a2", useOrigIds=False, debug=False
             if entity.get("isName") == "True":
                 # Remember to use original id for names!
                 ann.id = entity.get("origId").rsplit(".", 1)[-1]
+                assert ann.id[0].isupper(), ann.id
+                for c in ann.id[1:]:
+                    assert c.isdigit(), ann.id
                 stDoc.proteins.append(ann)
             else:
                 found = False # prevent duplicate triggers
@@ -413,6 +416,7 @@ def toSTFormat(input, output=None, outputTag="a2", useOrigIds=False, debug=False
                     assert id not in eMap
                     assert id in tMap
                     arg[2] = siteMap[id]
+                    assert siteMap[id].type == "Entity", (stDoc.id, event.id, id, siteMap[id].id, siteMap[id].type)
 #        # Remove eventless triggers
 #        triggersToKeep = []
 #        for trigger in stDoc.triggers:
