@@ -56,7 +56,10 @@ class Annotation:
 
     # for debugging
     def __repr__(self):
-        return self.id
+        if self.id == None:
+            return "NO-ID"
+        else:
+            return self.id
 
 def readTAnnotation(string):
     #print string
@@ -350,14 +353,17 @@ def loadSet(dir, setName=None, level="a2", sitesAreArguments=False):
         documents.append(doc)
     return documents
 
-def writeSet(documents, dir, resultFileTag="a2", makePackage=True, debug=False, task=2):
+def writeSet(documents, dir, resultFileTag="a2", makePackage=True, debug=False, task=2, validate=True):
     from collections import defaultdict
     import shutil
     counts = defaultdict(int)
     if os.path.exists(dir):
         shutil.rmtree(dir)
+    if not validate:
+        print "Warning! No validation."
     for doc in documents:
-        Validate.allValidate(doc, counts, task)
+        if validate:
+            Validate.allValidate(doc, counts, task, verbose=debug)
         #doc.proteins.sort(cmp=compareOffsets)
         #doc.triggers.sort(cmp=compareOffsets)
         write(doc.id, dir, doc.proteins, doc.triggers, doc.events, doc.relations, resultFileTag, counts, task=task)
@@ -584,6 +590,8 @@ def package(sourceDir, outputFile, includeTags=[".a2"]):
     os.chdir(sourceDir)
     for file in tarFiles:
         packageFile.add(file)#, exclude = lambda x: x == submissionFileName)
+    if "final" in outputFile:
+        packageFile.add("/home/jari/data/BioNLP11SharedTask/resources/questionnaire.txt", "questionnaire.txt")
     os.chdir(tempCwd)
     packageFile.close()
         
