@@ -305,7 +305,7 @@ def loadText(filename):
     f.close()
     return text
 
-def load(id, dir, loadA2=True, sitesAreArguments=False):
+def load(id, dir, loadA2=True, sitesAreArguments=False, a2Tag="a2"):
     #print id
     id = str(id)
     a1Path = os.path.join(dir, id + ".a1")
@@ -317,7 +317,7 @@ def load(id, dir, loadA2=True, sitesAreArguments=False):
         dependencies = []
     if not loadA2:
         return proteins, [], [], [], [], []
-    a2Path = os.path.join(dir, id + ".a2")
+    a2Path = os.path.join(dir, id + "." + a2Tag)
     relPath = os.path.join(dir, id + ".rel")
     triggers = []
     events = []
@@ -328,7 +328,7 @@ def load(id, dir, loadA2=True, sitesAreArguments=False):
         triggers, events, relations = loadRelOrA2(relPath, proteins, sitesAreArguments)
     return proteins, words, dependencies, triggers, events, relations
 
-def loadSet(dir, setName=None, level="a2", sitesAreArguments=False):
+def loadSet(dir, setName=None, level="a2", sitesAreArguments=False, a2Tag="a2"):
     assert level in ["txt", "a1", "a2"]
     ids = set()
     documents = []
@@ -344,7 +344,7 @@ def loadSet(dir, setName=None, level="a2", sitesAreArguments=False):
         doc.id = id
         if not level == "txt":
             try:
-                doc.proteins, doc.words, doc.dependencies, doc.triggers, doc.events, doc.relations = load(str(id), dir, level=="a2", sitesAreArguments)
+                doc.proteins, doc.words, doc.dependencies, doc.triggers, doc.events, doc.relations = load(str(id), dir, level=="a2", sitesAreArguments, a2Tag=a2Tag)
             except:
                 print >> sys.stderr, "Exception reading document", dir, id 
                 raise
@@ -375,7 +375,7 @@ def writeSet(documents, dir, resultFileTag="a2", makePackage=True, debug=False, 
     if makePackage:
         while dir.endswith("/"):
             dir = dir[:-1]
-        package(dir, dir + ".tar.gz")
+        package(dir, dir + ".tar.gz", [resultFileTag])
     print counts
         
 
@@ -475,6 +475,7 @@ def writeEvents(events, out, counts, task):
             argType = arg[0]
             if argType == "Target" and event.type == "Coref":
                 continue
+            assert arg[1].id != None, (event.id, event.arguments, arg)
             currTypeCounts[argType] += 1
             if typeCounts[argType] > 1:
                 eventLine += " " + argType + str(currTypeCounts[argType]) + ":" + arg[1].id
@@ -576,7 +577,7 @@ def write(id, dir, proteins, triggers, events, relations, resultFileTag="a2", co
         writeEvents(relations, resultFile, counts, task)
     resultFile.close()
 
-def package(sourceDir, outputFile, includeTags=[".a2"]):
+def package(sourceDir, outputFile, includeTags=["a2"]):
     import tarfile
     allFiles = os.listdir(sourceDir)
     tarFiles = []
