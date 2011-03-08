@@ -1,7 +1,7 @@
 """
 Base class for Evaluators
 """
-__version__ = "$Revision: 1.15 $"
+__version__ = "$Revision: 1.16 $"
 
 g_evaluatorFieldnames = ["fold","class","positives","negatives","true positives","false positives","true negatives","false negatives","precision","recall","f-score","AUC"]
 
@@ -151,6 +151,18 @@ class EvaluationData:
         values["f-score"] = self.fscore
         values["AUC"] = "N/A"
         return values
+    
+    def saveCSV(self, filename, fold=None):
+        global g_evaluatorFieldnames
+        import sys
+        sys.path.append("..")
+        import Utils.TableUtils as TableUtils
+        dicts = self.toDict()
+        if fold != None:
+            for d in dicts:
+                d["fold"] = fold
+        #TableUtils.addToCSV(dicts, filename, g_evaluatorFieldnames)
+        TableUtils.writeCSV(dicts, filename, g_evaluatorFieldnames, writeTitles=True)
 
 def calculateFromCSV(rows, EvaluatorClass, classSet=None):
     if EvaluatorClass().type == "multiclass" and classSet == None:
