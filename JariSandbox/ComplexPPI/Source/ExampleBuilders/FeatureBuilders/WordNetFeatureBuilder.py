@@ -1,14 +1,15 @@
 import sys, os
-sys.path.append(os.path.join(os.path.abspath(__file__), ".."))
+sys.path.append(os.path.join(os.path.dirname(os.path.abspath(__file__)), "../.."))
+#print os.path.join(os.path.dirname(os.path.abspath(__file__)), "../..")
+from Core.IdSet import IdSet
 import Core.ExampleBuilder
 import Stemming.PorterStemmer as PorterStemmer
-from Core.IdSet import IdSet
 import Core.ExampleUtils as ExampleUtils
 from FeatureBuilder import FeatureBuilder
 from nltk.corpus import wordnet as wn 
 
 class WordNetFeatureBuilder(FeatureBuilder):
-    def __init__(self, featureSet):
+    def __init__(self, featureSet=None):
         FeatureBuilder.__init__(self, featureSet)
     
     def pennPOSToWordNet(self, pos):
@@ -56,3 +57,7 @@ class WordNetFeatureBuilder(FeatureBuilder):
             rv.append("LEX_" + synsets[0].lexname)
         #print "D"
         return rv
+
+if __name__=="__main__":
+    w = WordNetFeatureBuilder()
+    print w.getTokenFeatures("cat", "NN")
