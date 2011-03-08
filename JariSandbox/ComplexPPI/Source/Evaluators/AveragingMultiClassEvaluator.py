@@ -1,7 +1,7 @@
 """
 For multi-class classifications
 """
-__version__ = "$Revision: 1.20 $"
+__version__ = "$Revision: 1.21 $"
 
 from Evaluator import Evaluator
 from Evaluator import EvaluationData
@@ -35,7 +35,7 @@ class AveragingMultiClassEvaluator(Evaluator):
             classNames = sorted(classSet.Ids.keys())
         else:
             classNames = []
-        # make an orderes list of class ids
+        # make an ordered list of class ids
         self.classes = []
         for className in classNames:
             self.classes.append(classSet.getId(className))
@@ -43,6 +43,10 @@ class AveragingMultiClassEvaluator(Evaluator):
         self.dataByClass = {}
         for cls in self.classes:
             self.dataByClass[cls] = EvaluationData()
+        # hack for unnamed classes
+        if len(self.dataByClass) == 0:
+            self.dataByClass[1] = EvaluationData()
+            self.dataByClass[2] = EvaluationData()
         
         #self.untypedUndirected = None
         self.untypedCurrentMajorId = None
@@ -193,7 +197,7 @@ class AveragingMultiClassEvaluator(Evaluator):
         #assert(len(examples) == len(predictions))
         #for i in range(len(examples)):
         for example, prediction in itertools.izip(examples, predictions):
-            self._queueUntypedUndirected(example, prediction)
+#            self._queueUntypedUndirected(example, prediction)
             #example = examples[i] # examples and predictions are in matching lists
             #prediction = predictions[i] # examples and predictions are in matching lists
             trueClass = example[1]
@@ -243,8 +247,8 @@ class AveragingMultiClassEvaluator(Evaluator):
                         self.dataByClass[cls].addTN()
         
         # Process remaining untyped undirected examples and calculate untyped undirected f-score
-        self._processUntypedUndirectedQueue()
-        self.untypedUndirected.calculateFScore()
+#        self._processUntypedUndirectedQueue()
+#        self.untypedUndirected.calculateFScore()
                 
         # Then calculate statistics
         for cls in self.classes:
