@@ -641,4 +641,46 @@ def interface(optionArgs=sys.argv[1:]):
     return corpus
 
 if __name__=="__main__":
-    interface()
+    #interface()
+
+    from optparse import OptionParser
+
+    op = OptionParser(usage="%prog [options]\nGenia shared task specific unflattening.")
+    op.add_option("-i", "--infile",
+                  dest="infile",
+                  help="Input file (gifxml)",
+                  metavar="FILE")
+    op.add_option("-o", "--outfile",
+                  dest="outfile",
+                  help="Output file (gifxml)",
+                  metavar="FILE")
+    op.add_option("-p", "--perfect",
+                  dest="perfect",
+                  help="Process only those event which can be perfectly solved",
+                  action="store_true",
+                  default=False)
+    op.add_option("-a", "--parse",
+                  dest="parse",
+                  help="Parse to be used",
+                  metavar="PARSE")
+    op.add_option("-t", "--tokens",
+                  dest="tokens",
+                  help="Tokens to be used",
+                  metavar="TOKENS")
+    (options2, args2) = op.parse_args()
+
+    quit = False
+    if not options2.infile:
+        print "Please specify the input file."
+        quit = True
+    if not options2.parse:
+        print "Please specify the parse."
+        quit = True
+    if not options2.tokens:
+        print "Please specify the tokenisation."
+        quit = True
+    if quit:
+        op.print_help()
+        sys.exit()
+    
+    unflatten(input=options2.infile, parse=options2.parse, tokenization=options2.tokens, output=options2.outfile)
