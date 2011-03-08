@@ -68,7 +68,7 @@ def getBISuperType(eType):
     else:
         return None
         
-# Enfore type-specific limits
+# Enforce type-specific limits
 def validate(events):
     numRemoved = 1
     totalRemoved = 0
@@ -163,9 +163,13 @@ def validate(events):
             elif event.type == "Interaction":
                 if arg1SuperType not in ["ProteinEntity", "GeneEntity"]: toRemove.add(event)
                 if arg2SuperType not in ["ProteinEntity", "GeneEntity"]: toRemove.add(event)
-            # Implicit rules
+            # BI-task implicit rules (not defined in documentation, discovered by evaluator complaining)
             if len(event.arguments) == 2:
-                # SEVERE: role Target does not allow entity of type Site
+                # Evaluator says: "SEVERE: role Target does not allow entity of type Site".
+                # This is not actually true, because if you check this for all Target-arguments, and
+                # remove such events, performance decreases for the gold-data. But what can you do,
+                # the evaluator keeps complaining, and won't process the data. The "solution" is to 
+                # remove from Target/Site-checking those classes which reduce performance on gold data.
                 if event.type not in ["BindTo", "SiteOf"]:
                     if arg1Type == "Site" and event.arguments[0][0] == "Target": toRemove.add(event)
                     if arg2Type == "Site" and event.arguments[1][0] == "Target": toRemove.add(event)
@@ -217,6 +221,8 @@ def allValidate(document, counts, task):
     removeEntities(document, task, counts)
 
 def removeEntities(document, task, counts):
+    # "Entity"-entities are not used in task 1, so they
+    # can be removed then.
     triggersToKeep = []
     for trigger in document.triggers:
         if trigger.type == "Entity" and task == 1:
