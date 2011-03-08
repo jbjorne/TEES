@@ -69,15 +69,29 @@ def getBISuperType(eType):
         return None
         
 # Enforce type-specific limits
-def validate(events):
+def validate(events, simulation=False, verbose=False, docId=None):
     numRemoved = 1
     totalRemoved = 0
+    if simulation:
+        verbose = True
+    docId = str(docId)
     # Since removed events cause nesting events' arguments to be remapped, 
     # some of these nesting events may in turn become duplicates. Loop until
     # all such duplicates are removed.
     while(numRemoved > 0):
         toRemove = set()
         for event in events:
+            # Check arguments
+            for arg in event.arguments[:]:
+                #if arg[1].type == "Entity":
+                #    print "arg[1] == Entity"
+                #    if not verbose:
+                #        assert False, arg
+                if arg[2] != None and arg[2].type != "Entity":
+                    print "arg[2] != Entity:", arg[2].type
+                    if not verbose:
+                        assert False, arg
+            # GE-regulation rules
             if "egulation" in event.type:
                 typeCounts = {"Cause":0, "Theme":0}
                 for arg in event.arguments[:]:
@@ -87,21 +101,26 @@ def validate(events):
                         typeCounts[arg[0]] += 1
                 if typeCounts["Theme"] == 0:
                     toRemove.add(event)
+                    if verbose: print "VAL:", docId + "." + str(event.id), "(P/N/R)egulation with no themes"
                 if len(event.arguments) == 0:
                     toRemove.add(event)
+                    if verbose: print "VAL:", docId + "." + str(event.id), "(P/N/R)egulation with no arguments"
             # Remove illegal arguments (GE=Only a protein can be a Theme for a non-regulation event)
             if event.type in ["Gene_expression", "Transcription"]:
                 for arg in event.arguments[:]:
                     if arg[0] == "Theme" and arg[1].type not in ["Protein", "Regulon-operon"]:
                         event.arguments.remove(arg)
+                        if verbose: print "VAL:", docId + "." + str(event.id), event.type, "with", arg[0], "arg of type", arg[1].type
             if event.type in ["Protein_catabolism", "Phosphorylation"]:
                 for arg in event.arguments[:]:
                     if arg[0] == "Theme" and arg[1].type not in ["Protein"]:
                         event.arguments.remove(arg)
+                        if verbose: print "VAL:", docId + "." + str(event.id), event.type, "with", arg[0], "arg of type", arg[1].type
             if event.type in ["Localization", "Binding"]:
                 for arg in event.arguments[:]:
                     if arg[0] == "Theme" and arg[1].type not in ["Protein", "Regulon-operon", "Two-component-system", "Chemical", "Organism"]:
                         event.arguments.remove(arg)          
+                        if verbose: print "VAL:", docId + "." + str(event.id), event.type, "with", arg[0], "arg of type", arg[1].type
             # Check non-regulation events
             if event.type in ["Gene_expression", "Transcription", "Protein_catabolism", "Phosphorylation", "Localization", "Binding"]:
                 themeCount = 0
@@ -112,20 +131,34 @@ def validate(events):
                     if event.type == "Localization" and len(event.arguments) > 0: # Also used in BB
                         for arg in event.arguments:
                             if arg[0] in ["ToLoc", "AtLoc"]: # GE-task Localization
+                                if verbose: print "VAL:", docId + "." + str(event.id), event.type, "with no themes"
                                 toRemove.add(event)
                                 break
                     else:
                         toRemove.add(event)
+                        if verbose: print "VAL:", docId + "." + str(event.id), event.type, "with no themes"
+            # check non-binding events
+            if event.type != "Binding":
+                themeCount = 0
+                for arg in event.arguments:
+                    if arg[0] == "Theme":
+                        themeCount += 1
+                if themeCount > 1:
+                    toRemove.add(event)
+                    if verbose: print "VAL:", docId + "." + str(event.id), "Non-binding event", event.type, "with", themeCount, "themes"
             if event.type == "PartOf": # BB
                 assert len(event.arguments) == 2
                 # BB
                 if event.arguments[0][1].type != "Host":
                     toRemove.add(event)
+                    if verbose: print "VAL:", docId + "." + str(event.id), event.type, "with arg 1 of type", event.arguments[0][1].type
                 if event.arguments[1][1].type != "HostPart":
                     toRemove.add(event)
+                    if verbose: print "VAL:", docId + "." + str(event.id), event.type, "with arg 2 of type", event.arguments[1][1].type
             if event.type == "Localization": # BB and others
                 for arg in event.arguments:
                     if arg[0] == "Bacterium" and arg[1].type != "Bacterium":
+                        if verbose: print "VAL:", docId + "." + str(event.id), event.type, "with", arg[0], "arg of type", arg[1].type
                         toRemove.add(event)
             
             # BI-rules
@@ -175,16 +208,19 @@ def validate(events):
                     if arg2Type == "Site" and event.arguments[1][0] == "Target": toRemove.add(event)
                     
         # Remove events and remap arguments
-        kept = []
-        for event in events:
-            if event not in toRemove:
-                for arg in event.arguments[:]:
-                    if arg[1] in toRemove:
-                        event.arguments.remove(arg)
-                kept.append(event)
-        numRemoved = len(events) - len(kept)
-        totalRemoved += numRemoved
-        events = kept
+        if not simulation:
+            kept = []
+            for event in events:
+                if event not in toRemove:
+                    for arg in event.arguments[:]:
+                        if arg[1] in toRemove:
+                            event.arguments.remove(arg)
+                    kept.append(event)
+            numRemoved = len(events) - len(kept)
+            totalRemoved += numRemoved
+            events = kept
+        else:
+            numRemoved = 0
     return events
 
 def removeUnusedTriggers(document):
@@ -207,26 +243,38 @@ def removeUnusedTriggers(document):
                 break
     document.triggers = triggersToKeep
 
-def allValidate(document, counts, task):
+def allValidate(document, counts, task, verbose=False):
     numEvents = len(document.events)
-    document.events = validate(document.events)
+    document.events = validate(document.events, verbose=verbose, docId=document.id)
     counts["validation-removed"] += numEvents - len(document.events)
     numEvents = len(document.events)
     document.events = removeDuplicates(document.events)
     counts["duplicates-removed"] += numEvents - len(document.events)
+    removeArguments(document, task, counts)
+    removeEntities(document, task, counts)
     # triggers
     numTriggers = len(document.triggers)
     removeUnusedTriggers(document)
-    counts["triggers-removed"] += numTriggers - len(document.triggers)
-    removeEntities(document, task, counts)
+    counts["unused-triggers-removed"] += numTriggers - len(document.triggers)
 
+def removeArguments(document, task, counts):
+    if task != 1:
+        return
+    for event in document.events:
+        for arg in event.arguments[:]:
+            if arg[0] in ["Site", "AtLoc", "ToLoc"]:
+                event.arguments.remove(arg)
+                counts["t2-arguments-removed"] += 1
+    
 def removeEntities(document, task, counts):
+    if task != 1:
+        return
     # "Entity"-entities are not used in task 1, so they
     # can be removed then.
     triggersToKeep = []
     for trigger in document.triggers:
-        if trigger.type == "Entity" and task == 1:
-            counts["entities-removed"] += 1
+        if trigger.type == "Entity":
+            counts["t2-entities-removed"] += 1
         else:
             triggersToKeep.append(trigger)
     document.triggers = triggersToKeep
