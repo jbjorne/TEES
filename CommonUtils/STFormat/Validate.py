@@ -262,7 +262,7 @@ def removeArguments(document, task, counts):
         return
     for event in document.events:
         for arg in event.arguments[:]:
-            if arg[0] in ["Site", "AtLoc", "ToLoc"]:
+            if arg[0] in ["Site", "AtLoc", "ToLoc", "Sidechain", "Contextgene"]:
                 event.arguments.remove(arg)
                 counts["t2-arguments-removed"] += 1
     
