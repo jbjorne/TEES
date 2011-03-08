@@ -225,6 +225,7 @@ def processCorpora(EvaluatorClass, fromCorpus, toCorpus, target, classSets, nega
         print "Interactions (fp ent->fp int, fn-ent->fn-int )"
         for key in sorted(falseEntity.keys()):
             print "", key, falseEntity[key][0], "/", falseEntity[key][1]
+    return evaluator
 
 # Splits entities/edges with merged types into separate elements
 def splitMerged(sentence):
@@ -258,7 +259,7 @@ def run(EvaluatorClass, inputCorpusFile, goldCorpusFile, parse, tokenization, ta
     predictedCorpusElements = CorpusElements.loadCorpus(inputCorpusFile, parse, tokenization, removeIntersentenceInteractions)    
     
     # Compare the corpora and print results on screen
-    processCorpora(EvaluatorClass, predictedCorpusElements, goldCorpusElements, target, classSets, negativeClassId, entityMatchFunction)
+    return processCorpora(EvaluatorClass, predictedCorpusElements, goldCorpusElements, target, classSets, negativeClassId, entityMatchFunction)
     
 if __name__=="__main__":
     import sys, os
