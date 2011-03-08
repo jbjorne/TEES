@@ -18,6 +18,12 @@ def updateModel(modelPath, linkName):
 def getA2FileTag(task, subTask):
     if task == "REL":
         return "rel"
+    if task == "OLD":
+        if subTask == 1:
+            return "a2.t1"
+        else:
+            return "a2.t12"
+        assert False
     return "a2"
 
 from optparse import OptionParser
@@ -54,7 +60,7 @@ optparser.add_option("-u", "--unmerging", default=False, action="store_true", de
 # Check options
 assert options.mode in ["MODELS", "FINAL", "BOTH", "GRID", "UNMERGING"]
 assert options.output != None
-assert options.task in ["OLD.1", "OLD.2", "CO", "REL", "GE", "EPI", "ID"]
+assert options.task in ["OLD.1", "OLD.2", "CO", "REL", "GE", "EPI", "ID", "BB"]
 subTask = 2
 if "." in options.task:
     options.task, subTask = options.task.split(".")
@@ -79,12 +85,20 @@ if options.edgeStyle != None:
 else:
     if options.task in ["OLD", "GE"]:
         EDGE_FEATURE_PARAMS="style:trigger_features,typed,directed,no_linear,entities,genia_limits,noMasking,maxFeatures"
+    elif options.task in ["BB"]:
+        EDGE_FEATURE_PARAMS="style:trigger_features,typed,directed,no_linear,entities,bb_limits,noMasking,maxFeatures"
+    elif options.task == "EPI":
+        EDGE_FEATURE_PARAMS="style:trigger_features,typed,directed,no_linear,entities,epi_limits,noMasking,maxFeatures"
+    elif options.task == "ID":
+        EDGE_FEATURE_PARAMS="style:trigger_features,typed,directed,no_linear,entities,id_limits,noMasking,maxFeatures"
     else:
         EDGE_FEATURE_PARAMS="style:trigger_features,typed,directed,no_linear,entities,noMasking,maxFeatures"
 if options.triggerStyle != None:  
     TRIGGER_FEATURE_PARAMS="style:"+options.triggerStyle #"style:typed"
 else:
     TRIGGER_FEATURE_PARAMS="style:typed"
+    if options.task in ["BB"]:
+        TRIGGER_FEATURE_PARAMS += ",bb_features,build_for_nameless,wordnet"
 UNMERGING_IDS = "unmerging-ids"
 UNMERGING_CLASSIFIER_PARAMS="c:" + options.triggerParams
 UNMERGING_FEATURE_PARAMS="style:typed"
@@ -195,13 +209,13 @@ if options.mode in ["BOTH", "FINAL", "GRID", "UNMERGING"]:
         if options.mode != "UNMERGING":
             c = None
             if "local" not in options.csc:
-                c = CSCConnection(CSC_WORKDIR+"/trigger-models", CSC_ACCOUNT, CSC_CLEAR)
+                c = CSCConnection(CSC_WORKDIR+"/trigger-models", CSC_ACCOUNT, False)
             bestTriggerModel = optimize(CLASSIFIER, Ev, TRIGGER_TRAIN_EXAMPLE_FILE, TRIGGER_TEST_EXAMPLE_FILE,\
                 TRIGGER_IDS+".class_names", TRIGGER_CLASSIFIER_PARAMS, "trigger-models", None, c, True, steps="RESULTS")[1]
             bestTriggerModel = updateModel(bestTriggerModel, "best-trigger-model")
             c = None
             if "local" not in options.csc:
-                c = CSCConnection(CSC_WORKDIR+"/edge-models", CSC_ACCOUNT, CSC_CLEAR)
+                c = CSCConnection(CSC_WORKDIR+"/edge-models", CSC_ACCOUNT, False)
             bestEdgeModel = optimize(CLASSIFIER, Ev, EDGE_TRAIN_EXAMPLE_FILE, EDGE_TEST_EXAMPLE_FILE,\
                 EDGE_IDS+".class_names", EDGE_CLASSIFIER_PARAMS, "edge-models", None, c, True, steps="RESULTS")[1]
             bestEdgeModel = updateModel(bestEdgeModel, "best-edge-model")
@@ -249,17 +263,16 @@ if options.mode in ["BOTH", "FINAL", "GRID", "UNMERGING"]:
             c = None
             if "local" not in options.csc: c = CSCConnection(CSC_WORKDIR+"/unmerging-models", CSC_ACCOUNT, CSC_CLEAR)
             bestUnmergingModel = optimize(CLASSIFIER, Ev, UNMERGING_TRAIN_EXAMPLE_FILE, UNMERGING_TEST_EXAMPLE_FILE,\
-                    UNMERGING_IDS+".class_names", UNMERGING_CLASSIFIER_PARAMS, "unmerging-models", None, c, False, steps="BOTH")
+                    UNMERGING_IDS+".class_names", UNMERGING_CLASSIFIER_PARAMS, "unmerging-models", None, c, False, steps="BOTH")[1]
             bestUnmergingModel = updateModel(bestUnmergingModel, "best-unmerging-model")
             print >> sys.stderr, "------------ Unmerging models done ------------"
-            sys.exit()
     else:
         bestTriggerModel = "best-trigger-model"
         bestEdgeModel = "best-edge-model"
         bestUnmergingModel = "best-unmerging-model"
 
     
-    print >> sys.stderr, "Booster parameter search"
+    print >> sys.stderr, "--------- Booster parameter search ---------"
     # Build trigger examples
     TRIGGER_EXAMPLE_BUILDER.run(TEST_FILE, "test-trigger-examples", PARSE, TOK, TRIGGER_FEATURE_PARAMS, TRIGGER_IDS)
     CLASSIFIER.test("test-trigger-examples", bestTriggerModel, "test-trigger-classifications")
@@ -299,31 +312,39 @@ if options.mode in ["BOTH", "FINAL", "GRID", "UNMERGING"]:
             # against which the other is evaluated by heuristically matching triggers and
             # edges. Note that this evaluation will differ somewhat from the previous ones,
             # which evaluate on the level of examples.
-            EvaluateInteractionXML.run(Ev, xml, TEST_FILE, PARSE, TOK)
+            EIXMLResult = EvaluateInteractionXML.run(Ev, xml, TEST_FILE, PARSE, TOK)
             # Convert to ST-format
             STFormat.ConvertXML.toSTFormat(xml, "flat-"+str(boost)+"-geniaformat", getA2FileTag(options.task, subTask))
             
             if options.task in ["OLD", "GE"]:
                 if options.unmerging:
+                    print >> sys.stderr, "--------- ML Unmerging ---------"
                     GOLD_TEST_FILE = TEST_FILE.replace("-nodup", "")
                     UnmergingExampleBuilder.run("flat-"+str(boost)+".xml", GOLD_TEST_FILE, "unmerging-grid-examples", PARSE, TOK, UNMERGING_FEATURE_PARAMS, UNMERGING_IDS)
-                    Cls.test(UNMERGING_TEST_EXAMPLE_FILE, bestUnmergingModel, "unmerging-grid-classifications")
+                    Cls.test("unmerging-grid-examples", bestUnmergingModel, "unmerging-grid-classifications")
                     unmergedXML = BioTextExampleWriter.write("unmerging-grid-examples", "unmerging-grid-classifications", "flat-"+str(boost)+".xml", "unmerged-"+str(boost)+".xml", UNMERGING_IDS+".class_names", PARSE, TOK)
                     STFormat.ConvertXML.toSTFormat(unmergedXML, "unmerged-"+str(boost)+"-geniaformat", getA2FileTag(options.task, subTask))
-                    results = evaluateSharedTask("unmerged-"+str(boost)+"-geniaformat", subTask)
+                    if options.task == "OLD":
+                        results = evaluateSharedTask("unmerged-"+str(boost)+"-geniaformat", subTask)
+                    else: # GE
+                        results = evaluateBioNLP11Genia("unmerged-"+str(boost)+"-geniaformat", subTask)
                     if bestResults == None or bestResults[1]["approximate"]["ALL-TOTAL"]["fscore"] < results["approximate"]["ALL-TOTAL"]["fscore"]:
                         bestResults = (boost, results)
-                if options.task in ["OLD", "GE"]: # rule-based unmerging
-                    print >> sys.stderr, "Rule based unmerging"
+                if options.task in ["OLD"]: # rule-based unmerging
+                    print >> sys.stderr, "--------- Rule based unmerging ---------"
                     # Post-processing
                     unmergedXML = unflatten(xml, PARSE, TOK)
                     # Output will be stored to the geniaformat-subdirectory, where will also be a
                     # tar.gz-file which can be sent to the Shared Task evaluation server.
-                    gifxmlToGenia(unmergedXML, "geniaformat", subTask)
+                    #gifxmlToGenia(unmergedXML, "rulebased-unmerging-geniaformat", subTask)
+                    STFormat.ConvertXML.toSTFormat(unmergedXML, "rulebased-unmerging-geniaformat-"+str(boost), getA2FileTag(options.task, subTask))
                     # Evaluation of the Shared Task format
-                    results = evaluateSharedTask("geniaformat", subTask)
+                    results = evaluateSharedTask("rulebased-unmerging-geniaformat-"+str(boost), subTask)
                     #if bestResults == None or bestResults[1]["approximate"]["ALL-TOTAL"]["fscore"] < results["approximate"]["ALL-TOTAL"]["fscore"]:
                     #    bestResults = (boost, results)
+            else:
+                if bestResults == None or EIXMLResult.getData().fscore > bestResults[1].getData().fscore:
+                    bestResults = (boost, EIXMLResult)
         else:
             print >> sys.stderr, "No predicted edges"
         count += 1
@@ -341,7 +362,7 @@ if options.mode in ["BOTH", "FINAL", "GRID", "UNMERGING"]:
     CLASSIFIER.test("final-test-trigger-examples", bestTriggerModel, "final-test-trigger-classifications")
     if bestTriggerModel != None: print >> sys.stderr, "best-trigger-model=", os.path.realpath("best-trigger-model")
     Ev.evaluate("final-test-trigger-examples", "final-test-trigger-classifications", TRIGGER_IDS+".class_names")
-    xml = BioTextExampleWriter.write("final-test-trigger-examples", "final-test-trigger-classifications", TEST_FILE, "final-triggers.xml", TRIGGER_IDS+".class_names", PARSE, TOK)
+    xml = BioTextExampleWriter.write("final-test-trigger-examples", "final-test-trigger-classifications", FINAL_TEST_FILE, "final-triggers.xml", TRIGGER_IDS+".class_names", PARSE, TOK)
     # Boost
     xml = RecallAdjust.run(xml, bestResults[0], None, binary=BINARY_RECALL_MODE)
     xml = ix.splitMergedElements(xml, None)
@@ -355,9 +376,9 @@ if options.mode in ["BOTH", "FINAL", "GRID", "UNMERGING"]:
     xml = ix.splitMergedElements(xml, None)
     xml = ix.recalculateIds(xml, "final-edges.xml", True)
     # Unmerging
-    GOLD_TEST_FILE = TEST_FILE.replace("-nodup", "")
+    GOLD_TEST_FILE = FINAL_TEST_FILE.replace("-nodup", "")
     UnmergingExampleBuilder.run(xml, GOLD_TEST_FILE, "unmerging-final-examples", PARSE, TOK, UNMERGING_FEATURE_PARAMS, UNMERGING_IDS)
-    Cls.test(UNMERGING_TEST_EXAMPLE_FILE, bestUnmergingModel, "unmerging-final-classifications")
+    Cls.test("unmerging-final-examples", bestUnmergingModel, "unmerging-final-classifications")
     unmergedXML = BioTextExampleWriter.write("unmerging-final-examples", "unmerging-final-classifications", xml, "final-unmerged.xml", UNMERGING_IDS+".class_names", PARSE, TOK)
     STFormat.ConvertXML.toSTFormat(unmergedXML, "final-unmerged-geniaformat", getA2FileTag(options.task, subTask))
     # Sanity Check
