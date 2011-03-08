@@ -1,7 +1,7 @@
 """
 Edge Examples
 """
-__version__ = "$Revision: 1.56 $"
+__version__ = "$Revision: 1.57 $"
 
 import sys, os
 thisPath = os.path.dirname(os.path.abspath(__file__))
@@ -182,6 +182,61 @@ class MultiEdgeExampleBuilder(ExampleBuilder):
             return True
         else:
             return False
+
+    def isPotentialBBInteraction(self, e1, e2, sentenceGraph):
+        if e1.get("type") == "Bacterium" and e2.get("type") in ["Host", "HostPart", "Geographical", "Environmental", "Food", "Medical", "Soil", "Water"]:
+            return True
+        elif e1.get("type") == "Host" and e2.get("type") == "HostPart":
+            return True
+        else:
+            return False
+    
+    def getBISuperType(self, eType):
+        if eType in ["GeneProduct", "Protein", "ProteinFamily", "PolymeraseComplex"]:
+            return "ProteinEntity"
+        elif eType in ["Gene", "GeneFamily", "GeneComplex", "Regulon", "Site", "Promoter"]:
+            return "GeneEntity"
+        else:
+            return None
+    
+    def isPotentialBIInteraction(self, e1, e2, sentenceGraph, stats):
+        e1Type = e1.get("type")
+        e1SuperType = self.getBISuperType(e1Type)
+        e2Type = e2.get("type")
+        e2SuperType = self.getBISuperType(e2Type)
+        
+        tag = "(" + e1Type + "/" + e2Type + ")"
+        if e1Type == "Regulon":
+            if e2SuperType in ["GeneEntity", "ProteinEntity"]:
+                return True
+        if e1SuperType == "ProteinEntity":
+            if e2Type in ["Site", "Promoter", "Gene", "GeneComplex"]:
+                return True
+        if e1Type in ["Action", "Transcription", "Expression"]:
+            return True
+        if e1Type == "Site":
+            if e2SuperType == "GeneEntity":
+                return True
+        if e1Type == "Promoter":
+            if e2SuperType in ["GeneEntity", "ProteinEntity"]:
+                return True
+        if e1SuperType in ["GeneEntity", "ProteinEntity"]:
+            if e2SuperType in ["GeneEntity", "ProteinEntity"]:
+                return True
+        stats.filter("bi_limits") #+tag)
+        return False
+
+    def isPotentialEPIInteraction(self, e1, e2, sentenceGraph):
+        if e1.get("type") != "Catalysis":
+            if e2.get("type") in ["Protein", "Entity"]:
+                return True
+            else:
+                return False
+        else: # Catalysis
+            if e2.get("type") != "Entity":
+                return True
+            else:
+                return False
     
     def isPotentialCOInteraction(self, e1, e2, sentenceGraph):
         if e1.get("type") == "Exp" and e2.get("type") == "Exp":
@@ -224,11 +279,15 @@ class MultiEdgeExampleBuilder(ExampleBuilder):
                 return False
             elif e1.get("isName") == "True" and e2.get("isName") == "False":
                 return False
-            # Only a protein can be a Theme for a non-regulation event
-            elif e1.get("isName") == "False" and e1.get("type").find("egulation") == -1 and e2.get("isName") == "False":
-                return False
-            else:
-                return True
+            elif e1.get("isName") == "False":
+                # Only a protein can be a Theme for a non-regulation event
+                # However, for Localization this destroys AtLocs etc.
+                if e1.get("type") != "Localization" and e1.get("type").find("egulation") == -1 and e2.get("isName") == "False":
+                    return False
+                # Only an event or a protein can be an argument for a regulation
+                if "egulation" in e1.get("type") and e2.get("type") == "Entity":
+                    return False 
+            return True
     
     #IF LOCAL
     def getBioInferParentType(self, eType):
@@ -344,6 +403,15 @@ class MultiEdgeExampleBuilder(ExampleBuilder):
                     if ("co_limits" in self.styles) and not self.isPotentialCOInteraction(eI, eJ, sentenceGraph):
                         makeExample = False
                         self.exampleStats.filter("co_limits")
+                    if ("bb_limits" in self.styles) and not self.isPotentialBBInteraction(eI, eJ, sentenceGraph):
+                        makeExample = False
+                        self.exampleStats.filter("bb_limits")
+                    if ("bi_limits" in self.styles) and not self.isPotentialBIInteraction(eI, eJ, sentenceGraph, self.exampleStats):
+                        makeExample = False
+                        #self.exampleStats.filter("bi_limits")
+                    if ("epi_limits" in self.styles) and not self.isPotentialEPIInteraction(eI, eJ, sentenceGraph):
+                        makeExample = False
+                        self.exampleStats.filter("epi_limits")
                     if makeExample:
                         examples.append( self.buildExample(tI, tJ, paths, sentenceGraph, categoryName, exampleIndex, eI, eJ) )
                         exampleIndex += 1
@@ -366,6 +434,15 @@ class MultiEdgeExampleBuilder(ExampleBuilder):
                     if ("co_limits" in self.styles) and not self.isPotentialCOInteraction(eJ, eI, sentenceGraph):
                         makeExample = False
                         self.exampleStats.filter("co_limits")
+                    if ("bb_limits" in self.styles) and not self.isPotentialBBInteraction(eJ, eI, sentenceGraph):
+                        makeExample = False
+                        self.exampleStats.filter("bb_limits")
+                    if ("bi_limits" in self.styles) and not self.isPotentialBIInteraction(eJ, eI, sentenceGraph, self.exampleStats):
+                        makeExample = False
+                        #self.exampleStats.filter("bi_limits")
+                    if ("epi_limits" in self.styles) and not self.isPotentialEPIInteraction(eJ, eI, sentenceGraph):
+                        makeExample = False
+                        self.exampleStats.filter("epi_limits")
                     if ("bioinfer_limits" in self.styles) and not self.isPotentialBioInferInteraction(eJ, eI, categoryName):
                         makeExample = False
                         self.exampleStats.filter("bioinfer_limits")
