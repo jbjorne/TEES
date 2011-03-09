@@ -3,6 +3,7 @@ import subprocess
 import STFormat.STTools as ST
 import STFormat.ConvertXML as STConvert
 import STFormat.Equiv
+import STFormat.Validate
 import InteractionXML.RemoveUnconnectedEntities
 import InteractionXML.DivideSets
 import InteractionXML.MixSets
@@ -21,6 +22,8 @@ import InteractionXML.DeleteElements
 import InteractionXML.MergeDuplicateEntities
 import cElementTreeUtils as ETUtils
 
+import Evaluators.BioNLP11GeniaTools as BioNLP11GeniaTools
+
 #BindTo: 4 + 2
 #PromoterDependence
 #PromoterOf
@@ -36,6 +39,14 @@ moveBI = ["PMID-10333516-S3",
           "PMID-10075739-S13",
           "PMID-10400595-S1",
           "PMID-10220166-S12"]
+
+def evaluateB(sourceDir, corpusName):
+    if corpusName == "BI":
+        subprocess.call("java -jar /home/jari/data/BioNLP11SharedTask/evaluators/BioNLP-ST_2011_bacteria_interactions_evaluation_software/BioNLP-ST_2011_bacteria_interactions_evaluation_software.jar /home/jari/data/BioNLP11SharedTask/main-tasks/BioNLP-ST_2011_bacteria_interactions_dev_data_rev1-remixed/ " + sourceDir, shell=True)
+    elif corpusName == "BB":
+        subprocess.call("java -jar /home/jari/data/BioNLP11SharedTask/evaluators/BioNLP-ST_2011_Bacteria_Biotopes_evaluation_software/BioNLP-ST_2011_Bacteria_Biotopes_evaluation_software.jar /home/jari/data/BioNLP11SharedTask/main-tasks/BioNLP-ST_2011_Bacteria_Biotopes_dev_data_rev1 " + sourceDir, shell=True)
+    else:
+        assert False, corpusName
 
 def log(clear=False, logCmd=True, logFile="log.txt"):
     Stream.setLog(logFile, clear)
@@ -60,6 +71,12 @@ def convert(datasets, analysisTags, analysisPath, corpusName):
     
     print >> sys.stderr, "Resolving equivalences"
     STFormat.Equiv.process(documents)
+    
+    print >> sys.stderr, "Checking data validity"
+    for doc in documents:
+        STFormat.Validate.validate(doc.events, simulation=True, verbose=True, docId=doc.id)
+    print >> sys.stderr, "Writing all documents to geniaformat"
+    ST.writeSet(documents, "all-geniaformat", resultFileTag="a2", makePackage=False, debug=False, task=2, validate=False)
 
     print >> sys.stderr, "Converting to", bigfileName+"-documents.xml"
     xml = STConvert.toInteractionXML(documents, corpusName, bigfileName+"-documents.xml")
@@ -81,6 +98,19 @@ def convert(datasets, analysisTags, analysisPath, corpusName):
         print >> sys.stderr, "Dividing into sets"
         InteractionXML.DivideSets.processCorpus(bigfileName+sourceTag+".xml", "./", corpusName + "-", sourceTag + ".xml", [("devel", "train")])
         if "devel" in [x[0] for x in datasets]:
+            print >> sys.stderr, "Converting back"
+            STConvert.toSTFormat(corpusName + "-devel" + sourceTag + ".xml", "roundtrip/" + corpusName + "-devel" + sourceTag + "-task2", outputTag="a2", task=2)
+            STConvert.toSTFormat(corpusName + "-devel" + sourceTag + ".xml", "roundtrip/" + corpusName + "-devel" + sourceTag + "-task1", outputTag="a2", task=1)
+            if corpusName == "GE":
+                print >> sys.stderr, "Evaluating task 2 back-conversion"
+                BioNLP11GeniaTools.evaluate("roundtrip/" + corpusName + "-devel" + sourceTag + "-task2", task=2, verbose=True, debug=False)
+                print >> sys.stderr, "Evaluating task 1 back-conversion"
+                BioNLP11GeniaTools.evaluate("roundtrip/" + corpusName + "-devel" + sourceTag + "-task1", task=1, verbose=True, debug=False)
+            elif corpusName in ["BI", "BB"]:
+                print >> sys.stderr, "Evaluating task 2 back-conversion"
+                evaluateB("roundtrip/" + corpusName + "-devel" + sourceTag + "-task2", corpusName)
+                print >> sys.stderr, "Evaluating task 1 back-conversion"
+                evaluateB("roundtrip/" + corpusName + "-devel" + sourceTag + "-task1", corpusName)
             print >> sys.stderr, "Creating empty devel set"
             deletionRules = {"interaction":{},"entity":{"isName":"False"}}
             InteractionXML.DeleteElements.processCorpus(corpusName + "-devel" + sourceTag + ".xml", corpusName + "-devel" + sourceTag + "-empty.xml", deletionRules)
@@ -172,7 +202,7 @@ if __name__=="__main__":
                            "train":"BioNLP-ST_2011_bacteria_interactions_train_data",
                            "test":"BioNLP-ST_2011_bacteria_interactions_test_data"}
     
-    for dataset in ["EPI"]: #["EPI", "GE", "ID"]: #sorted(datasets.keys()):
+    for dataset in ["BB"]: #sorted(datasets.keys()):
         cwd = os.getcwd()
         currOutDir = outDir + dataset
         if not os.path.exists(currOutDir):
