@@ -166,13 +166,17 @@ def isBacteriaToken(token, bacteriaTokens, relPos):
     return False
 
 def extend(input, output=None, entityTypes=["Bacterium"], verbose=False):
-    print >> sys.stderr, "Loading corpus file", input
-    corpusTree = ETUtils.ETFromObj(input)
-    corpusRoot = corpusTree.getroot()
+    if not (ET.iselement(input) and input.tag == "sentence"):
+        print >> sys.stderr, "Loading corpus file", input
+        corpusTree = ETUtils.ETFromObj(input)
+        corpusRoot = corpusTree.getroot()
     
     bacteriaTokens = ExampleBuilders.PhraseTriggerExampleBuilder.getBacteriaTokens(ExampleBuilders.PhraseTriggerExampleBuilder.getBacteriaNames())
     
-    sentences = corpusRoot.getiterator("sentence")
+    if not (ET.iselement(input) and input.tag == "sentence"):
+        sentences = corpusRoot.getiterator("sentence")
+    else:
+        sentences = [input]
     counts = defaultdict(int)
     for sentence in sentences:
         incorrectCount = 0
@@ -279,14 +283,18 @@ def extend(input, output=None, entityTypes=["Bacterium"], verbose=False):
                 incorrectCount += 1
                 if verbose: print "INCORRECT"
             entity.set("charOffset", newOffsetString)
-        if incorrectCount > 0:
+            entity.set("text", sentenceText[newOffset[0]:newOffset[1]+1])
+        if incorrectCount > 0 and verbose:
             print "TOKENS:", "|".join(tokens)
             print "--------------------------------"
-    print counts
-    if output != None:
-        print >> sys.stderr, "Writing output to", output
-        ETUtils.write(corpusRoot, output)
-    return corpusTree                    
+    if verbose:
+        print counts
+    
+    if not (ET.iselement(input) and input.tag == "sentence"):
+        if output != None:
+            print >> sys.stderr, "Writing output to", output
+            ETUtils.write(corpusRoot, output)
+        return corpusTree                    
 
 if __name__=="__main__":
     print >> sys.stderr, "##### Extend Triggers #####"
