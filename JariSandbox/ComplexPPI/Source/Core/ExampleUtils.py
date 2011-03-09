@@ -9,7 +9,7 @@ the int is the feature id and the float is the feature value.
 Extra is a dictionary of String:String pairs, for additional information about the 
 examples.
 """
-__version__ = "$Revision: 1.45 $"
+__version__ = "$Revision: 1.46 $"
 
 
 import sys, os, itertools
@@ -89,6 +89,23 @@ def appendExamples(examples, file):
             if type(extraValue) == types.StringType:
                 file.write( " " + str(extraKey) + ":" + extraValue)
         file.write("\n")
+
+def appendExamplesBinary(examples, file):
+    import struct
+    for example in examples:
+        #file.write(str(example[1]))
+        keys = example[2].keys()
+        keys.sort()
+        file.write(struct.pack("1i", len(keys)))
+        file.write(struct.pack(str(len(keys))+"i", *keys))
+        #for key in keys:
+        #    file.write(" " + str(key)+":"+str(example[2][key]))
+        #file.write(" # id:" + example[0])
+        #for extraKey, extraValue in example[3].iteritems():
+        #    assert(extraKey != "id")
+        #    if type(extraValue) == types.StringType:
+        #        file.write( " " + str(extraKey) + ":" + extraValue)
+        #file.write("\n")
 
 def writeExamples(examples, filename, commentLines=None):
     f = open(filename,"wt")
