@@ -1,7 +1,7 @@
 """
 Edge Examples
 """
-__version__ = "$Revision: 1.58 $"
+__version__ = "$Revision: 1.59 $"
 
 import sys, os
 thisPath = os.path.dirname(os.path.abspath(__file__))
@@ -244,8 +244,11 @@ class MultiEdgeExampleBuilder(ExampleBuilder):
     def isPotentialIDInteraction(self, e1, e2, sentenceGraph):
         e1Type = e1.get("type")
         e2Type = e2.get("type")
+        e1IsCore = e1Type in ["Protein", "Regulon-operon", "Two-component-system", "Chemical", "Organism"]
         e2IsCore = e2Type in ["Protein", "Regulon-operon", "Two-component-system", "Chemical", "Organism"]
-        if e1Type in ["Gene_expression", "Transcription"]:
+        if e1IsCore:
+            return False
+        elif e1Type in ["Gene_expression", "Transcription"]:
             if e2Type in ["Protein", "Regulon-operon"]:
                 return True
             else:
@@ -256,7 +259,7 @@ class MultiEdgeExampleBuilder(ExampleBuilder):
             else:
                 return False
         elif e1Type == "Localization":
-            if e2Type in ["Protein", "AtLoc", "ToLoc"]:
+            if e2IsCore or e2Type == "Entity":
                 return True
             else:
                 return False
