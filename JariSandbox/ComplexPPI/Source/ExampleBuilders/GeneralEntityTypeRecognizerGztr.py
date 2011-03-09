@@ -1,7 +1,7 @@
 """
 Trigger examples
 """
-__version__ = "$Revision: 1.31 $"
+__version__ = "$Revision: 1.32 $"
 
 import sys, os
 thisPath = os.path.dirname(os.path.abspath(__file__))
@@ -405,6 +405,8 @@ class GeneralEntityTypeRecognizerGztr(ExampleBuilder):
                 #print
                              
             extra = {"xtype":"token","t":token.get("id")}
+            if "bb_features" in self.styles:
+                extra["trigex"] = "bb" # Request trigger extension in ExampleWriter
             examples.append( (sentenceGraph.getSentenceId()+".x"+str(exampleIndex),category,features,extra) )
             exampleIndex += 1
             self.exampleStats.endExample()
