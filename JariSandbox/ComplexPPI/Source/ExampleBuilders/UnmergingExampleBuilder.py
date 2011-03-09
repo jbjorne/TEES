@@ -1,7 +1,7 @@
 """
 Edge Examples
 """
-__version__ = "$Revision: 1.9 $"
+__version__ = "$Revision: 1.10 $"
 
 import sys, os
 thisPath = os.path.dirname(os.path.abspath(__file__))
@@ -385,25 +385,53 @@ class UnmergingExampleBuilder(ExampleBuilder):
                 for j in combinations(themes, i+1):
                     combs.append(j)
             return combs
+        elif eType == "Process": # For ID-task
+            argCombinations = []
+            for interaction in interactions:
+                if interaction.get("type") == "Participant":
+                    argCombinations.append([interaction])
+            return argCombinations
         else: # one of the regulation-types, or one of the simple types
             themes = []
             causes = []
+            siteArgs = []
+            contextGenes = []
+            sideChains = []
             for interaction in interactions:
                 iType = interaction.get("type")
                 #assert iType in ["Theme", "Cause"], (iType, ETUtils.toStr(interaction))
-                if iType not in ["Theme", "Cause"]:
+                if iType not in ["Theme", "Cause", "SiteArg", "Contextgene", "Sidechain"]:
                     continue
                 if iType == "Theme":
                     themes.append(interaction)
-                else:
+                elif iType == "Cause":
                     causes.append(interaction)
-            if eType.find("egulation") == -1: # Only regulations can have causes
+                elif iType == "SiteArg":
+                    siteArgs.append(interaction)
+                elif iType == "Contextgene":
+                    contextGenes.append(interaction)
+                elif iType == "Sidechain":
+                    sideChains.append(interaction)
+                else:
+                    assert False, (iType, interaction.get("id"))
+            # Limit arguments to event types that can have them
+            if eType.find("egulation") == -1 and eType != "Catalysis": 
                 causes = []
+            if eType != "Glycosylation": sideChains = []
+            if eType not in ["Acetylation", "Methylation"]: contextGenes = []
+            if eType == "Catalysis": siteArgs = []
+            # Themes can always appear alone
             themeAloneCombinations = []
             for theme in themes:
                 themeAloneCombinations.append([theme])
             #print "Combine", combine.combine(themes, causes), "TA", themeAloneCombinations
-            return combine.combine(themes, causes) + themeAloneCombinations
+            return combine.combine(themes, causes) \
+                   + combine.combine(themes, siteArgs) \
+                   + combine.combine(themes, sideChains) \
+                   + combine.combine(themes, contextGenes) \
+                   + combine.combine(themes, siteArgs, sideChains) \
+                   + combine.combine(themes, siteArgs, contextGenes) \
+                   + themeAloneCombinations
             
     def buildExamples(self, sentenceGraph, goldGraph, append=False):
         """
@@ -468,6 +496,7 @@ class UnmergingExampleBuilder(ExampleBuilder):
             argCombinations = self.getArgumentCombinations(eType, interactions)
             #if len(argCombinations) <= 1:
             #    continue
+            assert argCombinations != None, (entity.get("id"), entity.get("type"))
             for argCombination in argCombinations:
                 assert len(argCombination) > 0, eType + ": " + str(argCombinations)
                 # Originally binary classification
@@ -535,6 +564,7 @@ class UnmergingExampleBuilder(ExampleBuilder):
         
         argThemeCount = 0
         argCauseCount = 0
+        argCounts = {}
         # Current example's edge combination
         for arg in argCombination:
             if arg.get("type") == "Theme":
@@ -544,9 +574,14 @@ class UnmergingExampleBuilder(ExampleBuilder):
                 if eventEntityType == "Binding":
                     tag += str(interactionIndex[arg])
                     self.buildArgumentFeatures(sentenceGraph, paths, features, eventToken, arg, tag)
-            else: # Cause
+            elif arg.get("type") == "Cause": # Cause
                 argCauseCount += 1
                 self.buildArgumentFeatures(sentenceGraph, paths, features, eventToken, arg, "argCause")
+            else:
+                argType = arg.get("type")
+                if argType not in argCounts: argCounts[argType] = 0
+                self.buildArgumentFeatures(sentenceGraph, paths, features, eventToken, arg, "arg"+argType)
+                argCounts[argType] += 1
         
         # Edge group context
         contextThemeCount = 0
@@ -574,7 +609,10 @@ class UnmergingExampleBuilder(ExampleBuilder):
         self.setFeature("argThemeCount_" + str(argThemeCount), 1)
         self.setFeature("argCauseCount", argCauseCount)
         self.setFeature("argCauseCount_" + str(argCauseCount), 1)
-
+        for key in sorted(argCounts.keys()):
+            self.setFeature("arg" + key + "Count", argCounts[key])
+            self.setFeature("arg" + key + "Count_" + str(argCounts[key]), 1)
+            
         self.setFeature("interactionThemeCount", contextThemeCount)
         self.setFeature("interactionThemeCount_" + str(contextThemeCount), 1)
         self.setFeature("interactionCauseCount", contextCauseCount)
