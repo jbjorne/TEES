@@ -1,6 +1,7 @@
 import sys
 from SentenceExampleWriter import SentenceExampleWriter
 import InteractionXML.IDUtils as IDUtils
+import InteractionXML.ExtendTriggers
 try:
     import xml.etree.cElementTree as ET
 except ImportError:
@@ -13,6 +14,8 @@ class EntityExampleWriter(SentenceExampleWriter):
     
     def writeXMLSentence(self, examples, predictionsByExample, sentenceObject, classSet, classIds, goldSentence=None):        
         self.assertSameSentence(examples)
+        
+        extensionRequested = False
         
         sentenceElement = sentenceObject.sentence
         sentenceId = sentenceElement.get("id")
@@ -46,6 +49,8 @@ class EntityExampleWriter(SentenceExampleWriter):
             
         # add new pairs
         for example in examples:
+            if "trigex" in example[3] and example[3]["trigex"] == "bb":
+                extensionRequested = True
             prediction = predictionsByExample[example[0]]
             entityElement = ET.Element("entity")
             entityElement.attrib["isName"] = "False"
@@ -80,6 +85,10 @@ class EntityExampleWriter(SentenceExampleWriter):
         # re-attach the analyses-element
         if sentenceAnalysesElement != None:
             sentenceElement.append(sentenceAnalysesElement)
+        
+        # Extend bacteria triggers
+        if extensionRequested:
+            InteractionXML.ExtendTriggers.extend(sentenceElement, entityTypes=["Bacterium"])
     
     def getMergedEntityType(self, entities):
         """
