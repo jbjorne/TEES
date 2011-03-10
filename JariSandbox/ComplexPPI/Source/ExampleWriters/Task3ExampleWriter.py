@@ -9,7 +9,7 @@ class Task3ExampleWriter(SentenceExampleWriter):
     def __init__(self):
         self.xType = "task3"
         
-    def writeXML(self, examples, predictions, corpus, outputFile, classSet=None, parse=None, tokenization=None):
+    def writeXML(self, examples, predictions, corpus, outputFile, classSet=None, parse=None, tokenization=None, goldCorpus=None):
         """
         Writes task 3 examples to interaction XML. Assumes task 3 classification
         is done with SVMMulticlass Classifier, used for two classes.
