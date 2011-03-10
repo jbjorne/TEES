@@ -305,8 +305,10 @@ def toSTFormat(input, output=None, outputTag="a2", useOrigIds=False, debug=False
                 event.trigger = ann
                 event.type = event.trigger.type
                 eMap[entity.get("id")] = event
-                event.speculation = entityElementMap[entity.get("id")].get("speculation")
-                event.negation = entityElementMap[entity.get("id")].get("negation")
+                if entityElementMap[entity.get("id")].get("speculation") == "True":
+                    event.speculation = True
+                if entityElementMap[entity.get("id")].get("negation") == "True":
+                    event.negation = True
                 stDoc.events.append(event)
         # First map Coref proteins
         corefProtMap = {}
@@ -366,8 +368,10 @@ def toSTFormat(input, output=None, outputTag="a2", useOrigIds=False, debug=False
                             if hasattr(event.trigger, "eventId"):
                                 event.id = event.trigger.eventId 
                             eMap[e1] = event
-                            event.speculation = entityElementMap[e1].get("speculation")
-                            event.negation = entityElementMap[e1].get("negation")
+                            if entityElementMap[e1].get("speculation") == "True":
+                                event.speculation = True
+                            if  entityElementMap[e1].get("negation") == "True":
+                                event.negation = True 
                             stDoc.events.append(event)
                         else:
                             event = None
