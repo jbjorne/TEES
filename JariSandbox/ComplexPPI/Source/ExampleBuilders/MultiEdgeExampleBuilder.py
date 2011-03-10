@@ -1,7 +1,7 @@
 """
 Edge Examples
 """
-__version__ = "$Revision: 1.59 $"
+__version__ = "$Revision: 1.60 $"
 
 import sys, os
 thisPath = os.path.dirname(os.path.abspath(__file__))
@@ -184,7 +184,9 @@ class MultiEdgeExampleBuilder(ExampleBuilder):
             return False
 
     def isPotentialBBInteraction(self, e1, e2, sentenceGraph):
-        if e1.get("type") == "Bacterium" and e2.get("type") in ["Host", "HostPart", "Geographical", "Environmental", "Food", "Medical", "Soil", "Water"]:
+        #if e1.get("type") == "Bacterium" and e2.get("type") in ["Host", "HostPart", "Geographical", "Environmental", "Food", "Medical", "Soil", "Water"]:
+        # Note: "Environment" type is misspelled as "Environmental" in the BB-task documentation
+        if e1.get("type") == "Bacterium" and e2.get("type") in ["Host", "HostPart", "Geographical", "Environment", "Food", "Medical", "Soil", "Water"]:
             return True
         elif e1.get("type") == "Host" and e2.get("type") == "HostPart":
             return True
@@ -472,6 +474,8 @@ class MultiEdgeExampleBuilder(ExampleBuilder):
                     if ("bb_limits" in self.styles) and not self.isPotentialBBInteraction(eI, eJ, sentenceGraph):
                         makeExample = False
                         self.exampleStats.filter("bb_limits")
+                        if categoryName != "neg":
+                            self.exampleStats.filter("bb_limits(" + categoryName + ":" + eI.get("type") + "/" + eJ.get("type") + ")")
                     if ("bi_limits" in self.styles) and not self.isPotentialBIInteraction(eI, eJ, sentenceGraph, self.exampleStats):
                         makeExample = False
                         #self.exampleStats.filter("bi_limits")
@@ -506,6 +510,8 @@ class MultiEdgeExampleBuilder(ExampleBuilder):
                     if ("bb_limits" in self.styles) and not self.isPotentialBBInteraction(eJ, eI, sentenceGraph):
                         makeExample = False
                         self.exampleStats.filter("bb_limits")
+                        if categoryName != "neg":
+                            self.exampleStats.filter("bb_limits(" + categoryName + ":" + eJ.get("type") + "/" + eI.get("type") + ")")
                     if ("bi_limits" in self.styles) and not self.isPotentialBIInteraction(eJ, eI, sentenceGraph, self.exampleStats):
                         makeExample = False
                         #self.exampleStats.filter("bi_limits")
