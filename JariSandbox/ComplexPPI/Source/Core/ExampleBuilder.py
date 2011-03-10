@@ -1,7 +1,7 @@
 """
 Base class for ExampleBuilders
 """
-__version__ = "$Revision: 1.28 $"
+__version__ = "$Revision: 1.29 $"
 
 from SentenceGraph import SentenceGraph
 from IdSet import IdSet
@@ -81,17 +81,24 @@ class ExampleBuilder:
     def getPredictedValueRange(self):
         return None
 
-    def buildExamplesForSentences(self, sentences, output, idFileTag=None):            
+    def buildExamplesForSentences(self, sentences, output, idFileTag=None, appendIndex=None):            
         examples = []
         counter = ProgressCounter(len(sentences), "Build examples")
         
         calculatePredictedRange(self, sentences)
         
-        outfile = open(output, "wt")
+        if appendIndex != None and appendIndex != 0:
+            print "Appending examples"
+            outfile = open(output, "at")
+        else:
+            outfile = open(output, "wt")
         exampleCount = 0
         for sentence in sentences:
             counter.update(1, "Building examples ("+sentence[0].getSentenceId()+"): ")
-            examples = self.buildExamples(sentence[0])
+            if appendIndex != None:
+                examples = self.buildExamples(sentence[0], appendIndex=appendIndex)
+            else:
+                examples = self.buildExamples(sentence[0])
             exampleCount += len(examples)
             examples = self.preProcessExamples(examples)
             ExampleUtils.appendExamples(examples, outfile)
