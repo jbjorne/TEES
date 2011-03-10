@@ -177,8 +177,8 @@ if __name__=="__main__":
     datasets["ID"] = [("devel", dataPath+"BioNLP-ST_2011_Infectious_Diseases_development_data_rev1"), 
                       ("train", dataPath+"BioNLP-ST_2011_Infectious_Diseases_training_data_rev1"),
                       ("test", dataPath+"BioNLP-ST_2011_Infectious_Diseases_test_data")]
-    datasets["BB"] = [("devel", dataPath+"BioNLP-ST_2011_Bacteria_Biotopes_dev_data_rev1"), 
-                      ("train", dataPath+"BioNLP-ST_2011_Bacteria_Biotopes_train_data_rev1"),
+    datasets["BB"] = [("devel", dataPath+"BioNLP-ST_2011_Bacteria_Biotopes_dev_data_rev1-fixed"), 
+                      ("train", dataPath+"BioNLP-ST_2011_Bacteria_Biotopes_train_data_rev1-fixed"),
                       ("test", dataPath+"BioNLP-ST_2011_Bacteria_Biotopes_test_data")]
     datasets["BI"] = [("devel", dataPath+"BioNLP-ST_2011_bacteria_interactions_dev_data_rev1"), 
                       ("train", dataPath+"BioNLP-ST_2011_bacteria_interactions_train_data_rev1"),
