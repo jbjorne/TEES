@@ -1,4 +1,4 @@
-parse__version__ = "$Revision: 1.1 $"
+parse__version__ = "$Revision: 1.2 $"
 
 import sys,os
 import sys
@@ -9,6 +9,7 @@ except ImportError:
 import cElementTreeUtils as ETUtils
 import InteractionXML.IDUtils as IDUtils
 import types
+from collections import defaultdict
 
 import sys, os
 sys.path.append(os.path.dirname(os.path.abspath(__file__))+"/..")
@@ -44,7 +45,7 @@ def getClue(element):
         text += element.tail
     return text
 
-def loadEventXML(path):
+def loadEventXML(path, verbose=False):
     xml = ETUtils.ETFromObj(path)
     sentDict = {}
     for sentence in xml.getiterator("sentence"):
@@ -64,7 +65,7 @@ def loadEventXML(path):
         if eventType == "Protein_amino_acid_phosphorylation":
             eventType = "Phosphorylation"
         if type(clueTuple) == types.StringType:
-            print "Event", eventType, "clue with no clueType:", ETUtils.toStr(clue)
+            if verbose: print "Event", eventType, "clue with no clueType:", ETUtils.toStr(clue)
         else:
             assert sentenceText[clueTuple[1]:clueTuple[2]+1] == clueTuple[0], (sentenceText, sentenceText[clueTuple[1]:clueTuple[2]+1], clueTuple)
             event = (clueTuple[1], clueTuple[2], eventType, clueTuple[0])
@@ -116,22 +117,25 @@ def removeDuplicates(input):
     for k in sorted(counts.keys()):
         print " ", k, counts[k]
 
-def run(input, output, eventDir):
+def run(input, output, eventDir, parse="split-mccc-preparsed", verbose=False):
     print >> sys.stderr, "Loading corpus", input
     corpusTree = ETUtils.ETFromObj(input)
     print >> sys.stderr, "Corpus file loaded"
     corpusRoot = corpusTree.getroot()
     
+    counts = defaultdict(int)
     for document in corpusRoot.findall("document"):
         sentDict = None
         for sentence in document.findall("sentence"):
+            counts["sentences"] += 1
             sentenceId = sentence.get("origId")
-            print "Processing", sentenceId
+            if verbose: print "Processing", sentenceId
             if sentDict == None:
-                sentDict = loadEventXML( eventDir + "/" + sentence.get("origId").split(".")[0] + ".xml" )
+                sentDict = loadEventXML( eventDir + "/" + sentence.get("origId").split(".")[0] + ".xml" , verbose=verbose)
             interactionXMLText = sentence.get("text")
             if not sentDict.has_key(interactionXMLText):
-                print "Missing sentence:", (sentenceId, sentDict, sentence.get("text"))
+                counts["missing-sentences"] += 1
+                if verbose: print "Missing sentence:", (sentenceId, sentDict, sentence.get("text"))
             else:
                 sentenceAnalyses = sentence.find("sentenceanalyses")
                 if sentenceAnalyses != None:
@@ -141,6 +145,7 @@ def run(input, output, eventDir):
                 events.sort()
                 for event in events:
                     if not keepEvent(event[2]):
+                        counts["filtered-triggers"] += 1
                         continue
                     trigger = ET.Element("entity")
                     trigger.set("isName", "False")
@@ -150,12 +155,14 @@ def run(input, output, eventDir):
                     trigger.set("source", "GENIA_event_annotation_0.9")
                     trigger.set("id", sentence.get("id") + ".e" + str(entityIdCount))
                     entityIdCount += 1
+                    counts["added-triggers"] += 1
                     sentence.append(trigger)
                 if sentenceAnalyses != None:
                     sentence.append(sentenceAnalyses)
     
-    FindHeads.findHeads(corpusTree, "split-McClosky", removeExisting=False)
+    FindHeads.findHeads(corpusTree, parse, removeExisting=False)
     removeDuplicates(corpusRoot)
+    print counts
     
     if output != None:
         print >> sys.stderr, "Writing output to", output
@@ -178,7 +185,9 @@ if __name__=="__main__":
     optparser.add_option("-i", "--input", default=None, dest="input", help="Corpus in interaction xml format", metavar="FILE")
     optparser.add_option("-o", "--output", default=None, dest="output", help="Output file in interaction xml format.")
     optparser.add_option("-e", "--eventDir", default="/home/jari/data/GENIA_event_annotation_0.9/GENIAcorpus_event", dest="eventDir", help="Output file in interaction xml format.")
+    optparser.add_option("-p", "--parse", default="split-mccc-preparsed", dest="parse", help="Parse XML element name")
+    optparser.add_option("-v", "--verbose", default=False, action="store_true", dest="verbose", help="verbose mode")
     (options, args) = optparser.parse_args()
     
-    run(input=options.input, output=options.output, eventDir=options.eventDir)
+    run(input=options.input, output=options.output, eventDir=options.eventDir, parse=options.parse, verbose=options.verbose)
     
