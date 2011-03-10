@@ -1,7 +1,7 @@
 """
 Speculation and negation examples
 """
-__version__ = "$Revision: 1.9 $"
+__version__ = "$Revision: 1.10 $"
 
 import sys, os
 thisPath = os.path.dirname(os.path.abspath(__file__))
@@ -48,6 +48,7 @@ class Task3ExampleBuilder(ExampleBuilder):
         wordFilePath = os.path.abspath(os.path.join(thisPath,"../../data/speculation-words.txt"))
 #IF LOCAL
         wordFilePath = "/usr/share/biotext/GeniaChallenge/extension-data/genia/task3/speculation-words.txt"    
+        wordFilePath = "/home/jari/data/BioNLP11SharedTask/resources/speculation-words.txt"    
         if os.environ.has_key("METAWRK"): # CSC
             wordFilePath = "/v/users/jakrbj/cvs_checkout/GeniaChallenge/task3/speculation-words.txt"
 #ENDIF
@@ -67,11 +68,11 @@ class Task3ExampleBuilder(ExampleBuilder):
         self.styles = style
 
     @classmethod
-    def run(cls, input, output, parse, tokenization, style, idFileTag=None, gazetteerFileName=None):
+    def run(cls, input, output, parse, tokenization, style, idFileTag=None, gazetteerFileName=None, appendIndex=None):
         classSet, featureSet = cls.getIdSets(idFileTag)
         e = Task3ExampleBuilder(style, classSet, featureSet, gazetteerFileName=None)
         sentences = cls.getSentences(input, parse, tokenization)
-        e.buildExamplesForSentences(sentences, output, idFileTag)
+        e.buildExamplesForSentences(sentences, output, idFileTag, appendIndex=appendIndex)
 
 
     def preProcessExamples(self, allExamples):
@@ -140,12 +141,12 @@ class Task3ExampleBuilder(ExampleBuilder):
         for tokenFeature,w in self.getTokenFeatures(sentenceGraph.tokens[index], sentenceGraph).iteritems():
             features[self.featureSet.getId(tag+tokenFeature)] = w
     
-    def buildExamples(self, sentenceGraph):
+    def buildExamples(self, sentenceGraph, appendIndex=0):
         """
         Build one example for each token of the sentence
         """
         examples = []
-        exampleIndex = 0
+        exampleIndex = 0 + appendIndex
         
         self.tokenFeatures = {}
         
@@ -191,19 +192,9 @@ class Task3ExampleBuilder(ExampleBuilder):
         self.outEdgesByToken = {}
         self.edgeSetByToken = {}
         for token in sentenceGraph.tokens:
-            inEdges = sentenceGraph.dependencyGraph.in_edges(token, data=True)
-            fixedInEdges = []
-            for edge in inEdges:
-                fixedInEdges.append( (edge[0], edge[1], edge[2]["element"]) )
-            inEdges = fixedInEdges
-            inEdges.sort(compareDependencyEdgesById)
+            inEdges = sentenceGraph.dependencyGraph.getInEdges(token)
             self.inEdgesByToken[token] = inEdges
-            outEdges = sentenceGraph.dependencyGraph.out_edges(token, data=True)
-            fixedOutEdges = []
-            for edge in outEdges:
-                fixedOutEdges.append( (edge[0], edge[1], edge[2]["element"]) )
-            outEdges = fixedOutEdges
-            outEdges.sort(compareDependencyEdgesById)
+            outEdges = sentenceGraph.dependencyGraph.getOutEdges(token)
             self.outEdgesByToken[token] = outEdges
             self.edgeSetByToken[token] = set(inEdges + outEdges)
         
