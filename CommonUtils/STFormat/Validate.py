@@ -206,7 +206,53 @@ def validate(events, simulation=False, verbose=False, docId=None):
                 if event.type not in ["BindTo", "SiteOf"]:
                     if arg1Type == "Site" and event.arguments[0][0] == "Target": toRemove.add(event)
                     if arg2Type == "Site" and event.arguments[1][0] == "Target": toRemove.add(event)
-                    
+            # EPI-specific rules
+            if event.type in ["Dephosphorylation",
+                              "Hydroxylation",
+                              "Dehydroxylation",
+                              "Ubiquitination",
+                              "Deubiquitination",
+                              "DNA_methylation",
+                              "DNA_demethylation",
+                              "Glycosylation",
+                              "Deglycosylation",
+                              "Acetylation",
+                              "Decetylation",
+                              "Methylation",
+                              "Demethylation",
+                              "Catalysis"]:
+                eventType = event.type
+                # Filter arguments
+                for arg in event.arguments[:]:
+                    if arg[2] != None and eventType == "Catalysis": # No task 2 for Catalysis
+                        arg[2] = None
+                    if arg[0] in ["Theme", "Cause"] and (arg[1].trigger == None and arg[1].type not in ["Protein", "Entity"]): # Suspicious, trigger as argument
+                        event.arguments.remove(arg)
+                    elif arg[0] == "Cause" and (arg[1].type != "Protein" or eventType != "Catalysis"):
+                        event.arguments.remove(arg)
+                    elif arg[0] == "Theme":
+                        if eventType == "Catalysis":
+                            if arg[1].type in ["Entity", "Protein"]:
+                                event.arguments.remove(arg)
+                        elif arg[1].type != "Protein":
+                            event.arguments.remove(arg)
+                    elif arg[0] == "Sidechain" and eventType not in ["Glycosylation", "Deglycosylation"]:
+                        event.arguments.remove(arg)
+                    elif arg[0] == "Contextgene" and (eventType not in ["Acetylation", "Decetylation", "Methylation", "Demethylation"] or arg[1].type != "Protein"):
+                        event.arguments.remove(arg)
+                # Count remaining arguments
+                typeCounts = {"Cause":0, "Theme":0}
+                for arg in event.arguments:
+                    if arg[0] in typeCounts:
+                        typeCounts[arg[0]] += 1
+                # Make choices
+                if typeCounts["Theme"] == 0:
+                    toRemove.add(event)
+                    if verbose: print "VAL:", docId + "." + str(event.id), "EPI-event with no themes"
+                if len(event.arguments) == 0:
+                    toRemove.add(event)
+                    if verbose: print "VAL:", docId + "." + str(event.id), "EPI-event with no arguments"
+        
         # Remove events and remap arguments
         if not simulation:
             kept = []
