@@ -25,7 +25,7 @@ class CSCConnection:
         self.workDir = "/wrk/jakrbj/" + workSubDir
         if deleteWorkDir:
             assert workSubDir != None and workSubDir != ""
-            print "Removing CSC work directory (if it exists)"
+            print "Removing CSC work directory", self.workDir, "(if it exists)"
             self.run("rm -fr " + self.workDir)
         self.run("mkdir -p " + self.workDir)
     
