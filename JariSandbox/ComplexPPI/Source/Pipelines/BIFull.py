@@ -4,6 +4,7 @@
 from Pipeline import *
 import sys, os
 import STFormat.ConvertXML
+import STFormat.Compare
 
 from optparse import OptionParser
 optparser = OptionParser()
@@ -11,8 +12,8 @@ optparser.add_option("-e", "--test", default=Settings.DevelFile, dest="testFile"
 optparser.add_option("-r", "--train", default=Settings.TrainFile, dest="trainFile", help="Train file in interaction xml")
 optparser.add_option("-o", "--output", default=None, dest="output", help="output directory")
 optparser.add_option("-a", "--task", default="BI", dest="task", help="task number")
-optparser.add_option("-p", "--parse", default="split-mccc-preparsed", dest="parse", help="Parse XML element name")
-optparser.add_option("-t", "--tokenization", default="split-mccc-preparsed", dest="tokenization", help="Tokenization XML element name")
+optparser.add_option("-p", "--parse", default="gold", dest="parse", help="Parse XML element name")
+optparser.add_option("-t", "--tokenization", default="gold", dest="tokenization", help="Tokenization XML element name")
 # Classifier
 optparser.add_option("-c", "--classifier", default="Cls", dest="classifier", help="")
 optparser.add_option("--csc", default="murska", dest="csc", help="")
@@ -35,6 +36,8 @@ TRAIN_FILE = dataPath + options.task + "/" + options.task + "-train-nodup.xml"
 TEST_FILE = dataPath + options.task + "/" + options.task + "-devel-nodup.xml"
 EVERYTHING_FILE = dataPath + options.task + "/" + options.task + "-devel-and-train.xml"
 FINAL_TEST_FILE = dataPath + options.task + "/" + options.task + "-test.xml"
+
+BXEv.setOptions("genia-BXEv", "BI", TEST_FILE, options.parse, options.tokenization, "edge-ids")
 
 if options.csc.find(",") != -1:
     options.csc = options.csc.split(",")
@@ -70,8 +73,8 @@ EDGE_IDS = "edge-ids"
 #STEPS = [""]
 #STEPS = ["themeOnly", "causeAfterTheme"]
 #STEPS = ["causeAfterTheme"]
+EDGE_EXAMPLE_BUILDER = eval(options.edgeExampleBuilder)
 if not "eval" in options.csc:
-    EDGE_EXAMPLE_BUILDER = eval(options.edgeExampleBuilder)
     
     ###############################################################################
     # Edge example generation
@@ -92,18 +95,29 @@ if "local" not in options.csc:
         c = CSCConnection(CSC_WORKDIR+"/edge-models", "jakrbj@murska.csc.fi", clear)
 else:
     c = None
-bestEdgeModel = optimize(CLASSIFIER, Ev, EDGE_TRAIN_EXAMPLE_FILE, EDGE_TEST_EXAMPLE_FILE,\
+bestEdgeModel = optimize(CLASSIFIER, BXEv, EDGE_TRAIN_EXAMPLE_FILE, EDGE_TEST_EXAMPLE_FILE,\
 EDGE_IDS+".class_names", EDGE_CLASSIFIER_PARAMS, "edge-models", None, c, False)
 
-# Check devel classification
+print >> sys.stderr, "------------ Check devel classification ------------"
 Cls.test(EDGE_TEST_EXAMPLE_FILE, bestEdgeModel[1], "edge-test-classifications")
 xml = BioTextExampleWriter.write(EDGE_TEST_EXAMPLE_FILE, "edge-test-classifications", TEST_FILE, None, EDGE_IDS+".class_names", PARSE, TOK)
 xml = ix.splitMergedElements(xml, None)
 xml = ix.recalculateIds(xml, "devel-predicted-edges.xml", True)
 EvaluateInteractionXML.run(Ev, xml, TEST_FILE, PARSE, TOK)
 STFormat.ConvertXML.toSTFormat(xml, "devel-geniaformat", outputTag="a2")
+evaluateBX("devel-geniaformat", "BI")
 
-# Test set classification
+print >> sys.stderr, "------------ Empty devel classification ------------"
+EDGE_EXAMPLE_BUILDER.run(TEST_FILE.replace(".xml", "-empty.xml"), "empty-devel-examples", PARSE, TOK, EDGE_FEATURE_PARAMS, EDGE_IDS)
+Cls.test("empty-devel-examples", bestEdgeModel[1], "empty-edge-test-classifications")
+xml = BioTextExampleWriter.write("empty-devel-examples", "empty-edge-test-classifications", TEST_FILE.replace(".xml", "-empty.xml"), None, EDGE_IDS+".class_names", PARSE, TOK)
+xml = ix.splitMergedElements(xml, None)
+xml = ix.recalculateIds(xml, "empty-devel-predicted-edges.xml", True)
+EvaluateInteractionXML.run(Ev, xml, TEST_FILE, PARSE, TOK)
+STFormat.ConvertXML.toSTFormat(xml, "empty-devel-geniaformat", outputTag="a2")
+evaluateBX("empty-devel-geniaformat", "BI")
+
+print >> sys.stderr, "------------ Test set classification ------------"
 if "local" not in options.csc:
     clear = False
     if "clear" in options.csc: clear = True
@@ -121,3 +135,5 @@ xml = ix.splitMergedElements(xml, None)
 xml = ix.recalculateIds(xml, "final-predicted-edges.xml", True)
 EvaluateInteractionXML.run(Ev, xml, FINAL_TEST_FILE, PARSE, TOK)
 STFormat.ConvertXML.toSTFormat(xml, "final-geniaformat", outputTag="a2")
+# Sanity Check
+STFormat.Compare.compare("final-geniaformat", "empty-devel-geniaformat", "a2")
