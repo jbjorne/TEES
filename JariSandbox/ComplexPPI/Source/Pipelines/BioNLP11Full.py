@@ -5,8 +5,47 @@ from Pipeline import *
 import sys, os
 import STFormat.ConvertXML
 import STFormat.Compare
+import subprocess
 
-def updateModel(modelPath, linkName):
+def task3Classify(xml, specModel, negModel, task3Ids, task3Tag, parse):
+    # Task 3
+    SPECULATION_MODEL = specModel
+    assert os.path.exists(SPECULATION_MODEL)
+    NEGATION_MODEL = negModel
+    assert os.path.exists(NEGATION_MODEL)
+    
+    # The id-sets will be modified, so create local copies of them.
+    # Using always the same id numbers for machine learning classes
+    # and examples ensures that the model-files will be compatible
+    # with all of your experiments.
+    TASK3_IDS = copyIdSetsToWorkdir(task3Ids)
+    
+    # Speculation detection
+    print >> sys.stderr, "====== Speculation Detection ======"
+    Task3ExampleBuilder.run(xml, "speculation-"+task3Tag+"-examples", parse, None, "style:typed,speculation", TASK3_IDS, None)
+    Cls.test("speculation-"+task3Tag+"-examples", SPECULATION_MODEL, "speculation-"+task3Tag+"-classifications")
+    xml = BioTextExampleWriter.write("speculation-"+task3Tag+"-examples", "speculation-"+task3Tag+"-classifications", xml, None, TASK3_IDS+".class_names")
+    
+    # Negation detection
+    print >> sys.stderr, "====== Negation Detection ======"
+    Task3ExampleBuilder.run(xml, "negation-"+task3Tag+"-examples", parse, None, "style:typed,negation", TASK3_IDS, None)
+    Cls.test("negation-"+task3Tag+"-examples", NEGATION_MODEL, "negation-"+task3Tag+"-classifications")
+    xml = BioTextExampleWriter.write("negation-"+task3Tag+"-examples", "negation-"+task3Tag+"-classifications", xml, task3Tag + "-task3.xml", TASK3_IDS+".class_names")
+    return xml
+
+def evaluateB(sourceDir, corpusName):
+    if corpusName == "BI":
+        subprocess.call("java -jar /home/jari/data/BioNLP11SharedTask/evaluators/BioNLP-ST_2011_bacteria_interactions_evaluation_software/BioNLP-ST_2011_bacteria_interactions_evaluation_software.jar /home/jari/data/BioNLP11SharedTask/main-tasks/BioNLP-ST_2011_bacteria_interactions_dev_data_rev1-remixed/ " + sourceDir, shell=True)
+    elif corpusName == "BB":
+        subprocess.call("java -jar /home/jari/data/BioNLP11SharedTask/evaluators/BioNLP-ST_2011_Bacteria_Biotopes_evaluation_software/BioNLP-ST_2011_Bacteria_Biotopes_evaluation_software.jar /home/jari/data/BioNLP11SharedTask/main-tasks/BioNLP-ST_2011_Bacteria_Biotopes_dev_data_rev1 " + sourceDir, shell=True)
+    else:
+        assert False, corpusName
+
+def updateModel(model, linkName):
+    modelPath = model[1]
+    f = open(linkName + "-parameter", "wt")
+    f.write(model[2])
+    f.close()
     if os.path.exists(linkName):
         os.remove(linkName)
     if os.path.exists(modelPath):
@@ -15,6 +54,18 @@ def updateModel(modelPath, linkName):
         return linkName
     else:
         return None
+
+def saveBoostParam(boost):
+    f = open("best-boost-parameter", "wt")
+    f.write(str(boost))
+    f.close()
+
+def getParameter(linkName):
+    f = open(linkName + "-parameter", "rt")
+    lines = f.readlines()
+    f.close()
+    assert len(lines) == 1
+    return lines[0].strip()
 
 def getA2FileTag(task, subTask):
     if task == "REL":
@@ -29,6 +80,7 @@ def getA2FileTag(task, subTask):
 
 from optparse import OptionParser
 optparser = OptionParser()
+optparser.add_option("--extraTag", default="", dest="extraTag", help="extra tag for input files")
 #optparser.add_option("-e", "--test", default=Settings.DevelFile, dest="testFile", help="Test file in interaction xml")
 #optparser.add_option("-r", "--train", default=Settings.TrainFile, dest="trainFile", help="Train file in interaction xml")
 optparser.add_option("-o", "--output", default=None, dest="output", help="output directory")
@@ -52,14 +104,19 @@ optparser.add_option("-w", "--edgeIds", default=None, dest="edgeIds", help="Edge
 optparser.add_option("-x", "--triggerParams", default="1000,5000,10000,20000,50000,80000,100000,150000,180000,200000,250000,300000,350000,500000,1000000", dest="triggerParams", help="Trigger detector c-parameter values")
 optparser.add_option("-y", "--recallAdjustParams", default="0.5,0.6,0.65,0.7,0.85,1.0,1.1,1.2", dest="recallAdjustParams", help="Recall adjuster parameter values")
 optparser.add_option("-z", "--edgeParams", default="5000,7500,10000,20000,25000,28000,50000,60000,65000", dest="edgeParams", help="Edge detector c-parameter values")
+optparser.add_option("--uParams", default="1,10,100,500,1000,1500,2500,5000,10000,20000,50000,80000,100000", dest="uParams", help="Unmerging c-parameter values")
 # Shared task evaluation
 #optparser.add_option("-s", "--sharedTask", default=True, action="store_false", dest="sharedTask", help="Do Shared Task evaluation")
 optparser.add_option("--clearAll", default=False, action="store_true", dest="clearAll", help="Delete all files")
 optparser.add_option("-u", "--unmerging", default=False, action="store_true", dest="unmerging", help="SVM unmerging")
+# Task 3
+optparser.add_option("--speculationModel", default="/home/jari/biotext/BioNLP2011/tests/task3/task3TrainGE-EPI-ID/speculation-models/model-c_150000", dest="speculationModel", help="SVM-multiclass speculation model")
+optparser.add_option("--negationModel", default="/home/jari/biotext/BioNLP2011/tests/task3/task3TrainGE-EPI-ID/negation-models/model-c_16000", dest="negationModel", help="SVM-multiclass negation model")
+optparser.add_option("--task3Ids", default="/home/jari/biotext/BioNLP2011/tests/task3/task3TrainGE-EPI-ID/genia-task3-ids", dest="task3Ids", help="Speculation & negation SVM example class and feature id file stem (files = STEM.class_names and STEM.feature_names)")
 (options, args) = optparser.parse_args()
 
 # Check options
-assert options.mode in ["MODELS", "FINAL", "BOTH", "GRID", "UNMERGING"]
+assert options.mode in ["MODELS", "FINAL", "BOTH", "POST-DOWNLOAD", "UNMERGING", "GRID", "POST-GRID"]
 assert options.output != None
 assert options.task in ["OLD.1", "OLD.2", "CO", "REL", "GE", "EPI", "ID", "BB"]
 subTask = 2
@@ -67,9 +124,10 @@ if "." in options.task:
     options.task, subTask = options.task.split(".")
     subTask = int(subTask)
 dataPath = "/home/jari/biotext/BioNLP2011/data/main-tasks/"
-TRAIN_FILE = dataPath + options.task + "/" + options.task + "-train-nodup.xml"
-TEST_FILE = dataPath + options.task + "/" + options.task + "-devel-nodup.xml"
-FINAL_TEST_FILE = dataPath + options.task + "/" + options.task + "-test.xml"
+TRAIN_FILE = dataPath + options.task + "/" + options.task + "-train-nodup" + options.extraTag + ".xml"
+TEST_FILE = dataPath + options.task + "/" + options.task + "-devel-nodup" + options.extraTag + ".xml"
+EVERYTHING_FILE = dataPath + options.task + "/" + options.task + "-devel-and-train-nodup" + options.extraTag + ".xml"
+FINAL_TEST_FILE = dataPath + options.task + "/" + options.task + "-test.xml" # test set never uses extratag
 
 exec "CLASSIFIER = " + options.classifier
 
@@ -101,7 +159,7 @@ else:
     if options.task in ["BB"]:
         TRIGGER_FEATURE_PARAMS += ",bb_features,build_for_nameless,wordnet"
 UNMERGING_IDS = "unmerging-ids"
-UNMERGING_CLASSIFIER_PARAMS="c:" + options.triggerParams
+UNMERGING_CLASSIFIER_PARAMS="c:" + options.uParams
 UNMERGING_FEATURE_PARAMS="style:typed"
 
 boosterParams = [float(i) for i in options.recallAdjustParams.split(",")]
@@ -147,15 +205,25 @@ TRIGGER_IDS = "trigger-ids"
 EDGE_IDS = "edge-ids"
 TRIGGER_TRAIN_EXAMPLE_FILE = "trigger-train-examples-"+PARSE_TAG
 TRIGGER_TEST_EXAMPLE_FILE = "trigger-test-examples-"+PARSE_TAG
+TRIGGER_EVERYTHING_EXAMPLE_FILE = "trigger-everything-examples-"+PARSE_TAG
 TRIGGER_CLASSIFIER_PARAMS="c:" + options.triggerParams
 EDGE_TRAIN_EXAMPLE_FILE = "edge-train-examples-"+PARSE_TAG
 EDGE_TEST_EXAMPLE_FILE = "edge-test-examples-"+PARSE_TAG
+EDGE_EVERYTHING_EXAMPLE_FILE = "edge-everything-examples-"+PARSE_TAG
 EDGE_CLASSIFIER_PARAMS="c:" + options.edgeParams
 if options.mode in ["BOTH", "MODELS"]:
     if options.triggerIds != None:
         TRIGGER_IDS = copyIdSetsToWorkdir(options.triggerIds)
     if options.edgeIds != None:
         EDGE_IDS = copyIdSetsToWorkdir(options.edgeIds)
+
+    ###############################################################################
+    # Edge example generation
+    ###############################################################################
+    print >> sys.stderr, "Edge examples for parse", PARSE_TAG  
+    EDGE_EXAMPLE_BUILDER.run(TEST_FILE, EDGE_TEST_EXAMPLE_FILE, PARSE, TOK, EDGE_FEATURE_PARAMS, EDGE_IDS)
+    EDGE_EXAMPLE_BUILDER.run(TRAIN_FILE, EDGE_TRAIN_EXAMPLE_FILE, PARSE, TOK, EDGE_FEATURE_PARAMS, EDGE_IDS)
+    EDGE_EXAMPLE_BUILDER.run(EVERYTHING_FILE, EDGE_EVERYTHING_EXAMPLE_FILE, PARSE, TOK, EDGE_FEATURE_PARAMS, EDGE_IDS)
     
     ###############################################################################
     # Trigger example generation
@@ -163,6 +231,7 @@ if options.mode in ["BOTH", "MODELS"]:
     print >> sys.stderr, "Trigger examples for parse", PARSE_TAG   
     TRIGGER_EXAMPLE_BUILDER.run(TEST_FILE, TRIGGER_TEST_EXAMPLE_FILE, PARSE, TOK, TRIGGER_FEATURE_PARAMS, TRIGGER_IDS)
     TRIGGER_EXAMPLE_BUILDER.run(TRAIN_FILE, TRIGGER_TRAIN_EXAMPLE_FILE, PARSE, TOK, TRIGGER_FEATURE_PARAMS, TRIGGER_IDS)
+    TRIGGER_EXAMPLE_BUILDER.run(EVERYTHING_FILE, TRIGGER_EVERYTHING_EXAMPLE_FILE, PARSE, TOK, TRIGGER_FEATURE_PARAMS, TRIGGER_IDS)
     
     ###############################################################################
     # Trigger models
@@ -173,13 +242,6 @@ if options.mode in ["BOTH", "MODELS"]:
         c = CSCConnection(CSC_WORKDIR+"/trigger-models", CSC_ACCOUNT, CSC_CLEAR)
     optimize(CLASSIFIER, Ev, TRIGGER_TRAIN_EXAMPLE_FILE, TRIGGER_TEST_EXAMPLE_FILE,\
         TRIGGER_IDS+".class_names", TRIGGER_CLASSIFIER_PARAMS, "trigger-models", None, c, False, steps="SUBMIT")
-    
-    ###############################################################################
-    # Edge example generation
-    ###############################################################################
-    print >> sys.stderr, "Edge examples for parse", PARSE_TAG  
-    EDGE_EXAMPLE_BUILDER.run(TEST_FILE, EDGE_TEST_EXAMPLE_FILE, PARSE, TOK, EDGE_FEATURE_PARAMS, EDGE_IDS)
-    EDGE_EXAMPLE_BUILDER.run(TRAIN_FILE, EDGE_TRAIN_EXAMPLE_FILE, PARSE, TOK, EDGE_FEATURE_PARAMS, EDGE_IDS)
     
     ###############################################################################
     # Edge models
@@ -204,22 +266,43 @@ else:
 ###############################################################################
 # Classification with recall boosting
 ###############################################################################
-if options.mode in ["BOTH", "FINAL", "GRID", "UNMERGING"]:
-    if options.mode != "GRID":
+bestTriggerModel = "best-trigger-model"
+bestEdgeModel = "best-edge-model"
+bestUnmergingModel = "best-unmerging-model"
+if options.mode in ["BOTH", "FINAL", "POST-DOWNLOAD", "UNMERGING", "GRID", "POST-GRID"]:
+    if options.mode not in ["GRID", "POST-GRID"]:
         # Get edge and trigger models from CSC
         if options.mode != "UNMERGING":
+            if options.mode != "POST-DOWNLOAD":
+                print >> sys.stderr, "------------ Downloading best trigger/edge models ------------"
+                c = None
+                if "local" not in options.csc:
+                    c = CSCConnection(CSC_WORKDIR+"/trigger-models", CSC_ACCOUNT, False)
+                bestTriggerModelFull = optimize(CLASSIFIER, Ev, TRIGGER_TRAIN_EXAMPLE_FILE, TRIGGER_TEST_EXAMPLE_FILE,\
+                    TRIGGER_IDS+".class_names", TRIGGER_CLASSIFIER_PARAMS, "trigger-models", None, c, True, steps="RESULTS")
+                bestTriggerModel = updateModel(bestTriggerModelFull, "best-trigger-model")
+                c = None
+                if "local" not in options.csc:
+                    c = CSCConnection(CSC_WORKDIR+"/edge-models", CSC_ACCOUNT, False)
+                bestEdgeModelFull = optimize(CLASSIFIER, Ev, EDGE_TRAIN_EXAMPLE_FILE, EDGE_TEST_EXAMPLE_FILE,\
+                    EDGE_IDS+".class_names", EDGE_CLASSIFIER_PARAMS, "edge-models", None, c, True, steps="RESULTS")
+                bestEdgeModel = updateModel(bestEdgeModelFull, "best-edge-model")
+            
+            # POST-DOWNLOAD
+            ###############################################################################
+            # Submit final models
+            ###############################################################################
+            print >> sys.stderr, "------------ Submitting final models ------------"
+            print >> sys.stderr, "Everything models for parse", PARSE_TAG
             c = None
-            if "local" not in options.csc:
-                c = CSCConnection(CSC_WORKDIR+"/trigger-models", CSC_ACCOUNT, False)
-            bestTriggerModel = optimize(CLASSIFIER, Ev, TRIGGER_TRAIN_EXAMPLE_FILE, TRIGGER_TEST_EXAMPLE_FILE,\
-                TRIGGER_IDS+".class_names", TRIGGER_CLASSIFIER_PARAMS, "trigger-models", None, c, True, steps="RESULTS")[1]
-            bestTriggerModel = updateModel(bestTriggerModel, "best-trigger-model")
-            c = None
-            if "local" not in options.csc:
-                c = CSCConnection(CSC_WORKDIR+"/edge-models", CSC_ACCOUNT, False)
-            bestEdgeModel = optimize(CLASSIFIER, Ev, EDGE_TRAIN_EXAMPLE_FILE, EDGE_TEST_EXAMPLE_FILE,\
-                EDGE_IDS+".class_names", EDGE_CLASSIFIER_PARAMS, "edge-models", None, c, True, steps="RESULTS")[1]
-            bestEdgeModel = updateModel(bestEdgeModel, "best-edge-model")
+            if "local" not in options.csc: c = CSCConnection(CSC_WORKDIR+"/everything-trigger-models", CSC_ACCOUNT, True)
+            optimize(CLASSIFIER, Ev, TRIGGER_EVERYTHING_EXAMPLE_FILE, TRIGGER_TEST_EXAMPLE_FILE,\
+                TRIGGER_IDS+".class_names", "c:"+getParameter(bestTriggerModel).split("_")[-1], "everything-trigger-models", None, c, False, steps="SUBMIT")
+            if "local" not in options.csc: c = CSCConnection(CSC_WORKDIR+"/everything-edge-models", CSC_ACCOUNT, True)
+            optimize(CLASSIFIER, Ev, EDGE_EVERYTHING_EXAMPLE_FILE, EDGE_TEST_EXAMPLE_FILE,\
+                EDGE_IDS+".class_names", "c:"+getParameter(bestEdgeModel).split("_")[-1], "everything-edge-models", None, c, False, steps="SUBMIT")
+            print >> sys.stderr, "Everything models submitted"
+        # UNMERGING
         ###############################################################################
         # Unmerging learning
         ###############################################################################
@@ -263,102 +346,169 @@ if options.mode in ["BOTH", "FINAL", "GRID", "UNMERGING"]:
             print >> sys.stderr, "Unmerging models for parse", PARSE_TAG
             c = None
             if "local" not in options.csc: c = CSCConnection(CSC_WORKDIR+"/unmerging-models", CSC_ACCOUNT, CSC_CLEAR)
-            bestUnmergingModel = optimize(CLASSIFIER, Ev, UNMERGING_TRAIN_EXAMPLE_FILE, UNMERGING_TEST_EXAMPLE_FILE,\
-                    UNMERGING_IDS+".class_names", UNMERGING_CLASSIFIER_PARAMS, "unmerging-models", None, c, False, steps="BOTH")[1]
-            bestUnmergingModel = updateModel(bestUnmergingModel, "best-unmerging-model")
+            bestUnmergingModelFull = optimize(CLASSIFIER, Ev, UNMERGING_TRAIN_EXAMPLE_FILE, UNMERGING_TEST_EXAMPLE_FILE,\
+                    UNMERGING_IDS+".class_names", UNMERGING_CLASSIFIER_PARAMS, "unmerging-models", None, c, False, steps="BOTH")
+            bestUnmergingModel = updateModel(bestUnmergingModelFull, "best-unmerging-model")
             print >> sys.stderr, "------------ Unmerging models done ------------"
     else:
         bestTriggerModel = "best-trigger-model"
         bestEdgeModel = "best-edge-model"
         bestUnmergingModel = "best-unmerging-model"
 
-    
-    print >> sys.stderr, "--------- Booster parameter search ---------"
-    # Build trigger examples
-    TRIGGER_EXAMPLE_BUILDER.run(TEST_FILE, "test-trigger-examples", PARSE, TOK, TRIGGER_FEATURE_PARAMS, TRIGGER_IDS)
-    CLASSIFIER.test("test-trigger-examples", bestTriggerModel, "test-trigger-classifications")
-    if bestTriggerModel != None:
-        print >> sys.stderr, "best-trigger-model=", os.path.realpath("best-trigger-model")
-    evaluator = Ev.evaluate("test-trigger-examples", "test-trigger-classifications", TRIGGER_IDS+".class_names")
-    xml = BioTextExampleWriter.write("test-trigger-examples", "test-trigger-classifications", TEST_FILE, "trigger-pred-best.xml", TRIGGER_IDS+".class_names", PARSE, TOK)
-    
-    count = 0
-    bestResults = None
-    for boost in boosterParams:
-        print >> sys.stderr, "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
-        print >> sys.stderr, "Processing params", str(count) + "/" + str(len(boosterParams)), boost
-        print >> sys.stderr, "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
+    # GOTO: GRID
+    if options.mode != "POST-GRID":
+        print >> sys.stderr, "--------- Booster parameter search ---------"
+        # Build trigger examples
+        TRIGGER_EXAMPLE_BUILDER.run(TEST_FILE, "test-trigger-examples", PARSE, TOK, TRIGGER_FEATURE_PARAMS, TRIGGER_IDS)
+        CLASSIFIER.test("test-trigger-examples", bestTriggerModel, "test-trigger-classifications")
+        if bestTriggerModel != None:
+            print >> sys.stderr, "best-trigger-model=", os.path.realpath("best-trigger-model")
+        evaluator = Ev.evaluate("test-trigger-examples", "test-trigger-classifications", TRIGGER_IDS+".class_names")
+        xml = BioTextExampleWriter.write("test-trigger-examples", "test-trigger-classifications", TEST_FILE, "trigger-pred-best.xml", TRIGGER_IDS+".class_names", PARSE, TOK)
         
-        # Boost
-        xml = RecallAdjust.run("trigger-pred-best.xml", boost, None, binary=BINARY_RECALL_MODE)
-        xml = ix.splitMergedElements(xml, None)
-        xml = ix.recalculateIds(xml, None, True)
-        
-        # Build edge examples
-        EDGE_EXAMPLE_BUILDER.run(xml, "test-edge-examples", PARSE, TOK, EDGE_FEATURE_PARAMS, EDGE_IDS)
-        # Classify with pre-defined model
-        if bestEdgeModel != None:
-            print >> sys.stderr, "best-edge-model=", os.path.realpath("best-edge-model")
-        CLASSIFIER.test("test-edge-examples", bestEdgeModel, "test-edge-classifications")
-        # Write to interaction xml
-        evaluator = Ev.evaluate("test-edge-examples", "test-edge-classifications", EDGE_IDS+".class_names")
-        if evaluator.getData().getTP() + evaluator.getData().getFP() > 0:
-            #xml = ExampleUtils.writeToInteractionXML("test-edge-examples", "test-edge-classifications", xml, None, EDGE_IDS+".class_names", PARSE, TOK)
-            xml = BioTextExampleWriter.write("test-edge-examples", "test-edge-classifications", xml, None, EDGE_IDS+".class_names", PARSE, TOK)
+        count = 0
+        bestResults = None
+        for boost in boosterParams:
+            print >> sys.stderr, "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
+            print >> sys.stderr, "Processing params", str(count) + "/" + str(len(boosterParams)), boost
+            print >> sys.stderr, "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
+            
+            # Boost
+            xml = RecallAdjust.run("trigger-pred-best.xml", boost, None, binary=BINARY_RECALL_MODE)
             xml = ix.splitMergedElements(xml, None)
-            xml = ix.recalculateIds(xml, "flat-" + str(boost) + ".xml", True)
+            xml = ix.recalculateIds(xml, None, True)
             
-            # EvaluateInteractionXML differs from the previous evaluations in that it can
-            # be used to compare two separate GifXML-files. One of these is the gold file,
-            # against which the other is evaluated by heuristically matching triggers and
-            # edges. Note that this evaluation will differ somewhat from the previous ones,
-            # which evaluate on the level of examples.
-            EIXMLResult = EvaluateInteractionXML.run(Ev, xml, TEST_FILE, PARSE, TOK)
-            # Convert to ST-format
-            STFormat.ConvertXML.toSTFormat(xml, "flat-"+str(boost)+"-geniaformat", getA2FileTag(options.task, subTask))
-            
-            if options.task in ["OLD", "GE"]:
-                if options.unmerging:
-                    print >> sys.stderr, "--------- ML Unmerging ---------"
-                    GOLD_TEST_FILE = TEST_FILE.replace("-nodup", "")
-                    UnmergingExampleBuilder.run("flat-"+str(boost)+".xml", GOLD_TEST_FILE, "unmerging-grid-examples", PARSE, TOK, UNMERGING_FEATURE_PARAMS, UNMERGING_IDS)
-                    Cls.test("unmerging-grid-examples", bestUnmergingModel, "unmerging-grid-classifications")
-                    unmergedXML = BioTextExampleWriter.write("unmerging-grid-examples", "unmerging-grid-classifications", "flat-"+str(boost)+".xml", "unmerged-"+str(boost)+".xml", UNMERGING_IDS+".class_names", PARSE, TOK)
-                    STFormat.ConvertXML.toSTFormat(unmergedXML, "unmerged-"+str(boost)+"-geniaformat", getA2FileTag(options.task, subTask))
-                    if options.task == "OLD":
-                        results = evaluateSharedTask("unmerged-"+str(boost)+"-geniaformat", subTask)
-                    else: # GE
-                        results = evaluateBioNLP11Genia("unmerged-"+str(boost)+"-geniaformat", subTask)
-                    if bestResults == None or bestResults[1]["approximate"]["ALL-TOTAL"]["fscore"] < results["approximate"]["ALL-TOTAL"]["fscore"]:
+            # Build edge examples
+            EDGE_EXAMPLE_BUILDER.run(xml, "test-edge-examples", PARSE, TOK, EDGE_FEATURE_PARAMS, EDGE_IDS)
+            # Classify with pre-defined model
+            if bestEdgeModel != None:
+                print >> sys.stderr, "best-edge-model=", os.path.realpath("best-edge-model")
+            CLASSIFIER.test("test-edge-examples", bestEdgeModel, "test-edge-classifications")
+            # Write to interaction xml
+            evaluator = Ev.evaluate("test-edge-examples", "test-edge-classifications", EDGE_IDS+".class_names")
+            if evaluator.getData().getTP() + evaluator.getData().getFP() > 0:
+                #xml = ExampleUtils.writeToInteractionXML("test-edge-examples", "test-edge-classifications", xml, None, EDGE_IDS+".class_names", PARSE, TOK)
+                xml = BioTextExampleWriter.write("test-edge-examples", "test-edge-classifications", xml, None, EDGE_IDS+".class_names", PARSE, TOK)
+                xml = ix.splitMergedElements(xml, None)
+                xml = ix.recalculateIds(xml, "flat-" + str(boost) + ".xml", True)
+                
+                # EvaluateInteractionXML differs from the previous evaluations in that it can
+                # be used to compare two separate GifXML-files. One of these is the gold file,
+                # against which the other is evaluated by heuristically matching triggers and
+                # edges. Note that this evaluation will differ somewhat from the previous ones,
+                # which evaluate on the level of examples.
+                EIXMLResult = EvaluateInteractionXML.run(Ev, xml, TEST_FILE, PARSE, TOK)
+                # Convert to ST-format
+                STFormat.ConvertXML.toSTFormat(xml, "flat-"+str(boost)+"-geniaformat", getA2FileTag(options.task, subTask))
+                
+                if options.task in ["OLD", "GE"]:
+                    assert options.unmerging
+                    if options.unmerging:
+                        print >> sys.stderr, "--------- ML Unmerging ---------"
+                        GOLD_TEST_FILE = TEST_FILE.replace("-nodup", "")
+                        UnmergingExampleBuilder.run("flat-"+str(boost)+".xml", GOLD_TEST_FILE, "unmerging-grid-examples", PARSE, TOK, UNMERGING_FEATURE_PARAMS, UNMERGING_IDS)
+                        Cls.test("unmerging-grid-examples", bestUnmergingModel, "unmerging-grid-classifications")
+                        unmergedXML = BioTextExampleWriter.write("unmerging-grid-examples", "unmerging-grid-classifications", "flat-"+str(boost)+".xml", "unmerged-"+str(boost)+".xml", UNMERGING_IDS+".class_names", PARSE, TOK)
+                        STFormat.ConvertXML.toSTFormat(unmergedXML, "unmerged-"+str(boost)+"-geniaformat", getA2FileTag(options.task, subTask))
+                        if options.task == "OLD":
+                            results = evaluateSharedTask("unmerged-"+str(boost)+"-geniaformat", subTask)
+                        else: # GE
+                            results = evaluateBioNLP11Genia("unmerged-"+str(boost)+"-geniaformat", subTask)
+                        if bestResults == None or bestResults[1]["approximate"]["ALL-TOTAL"]["fscore"] < results["approximate"]["ALL-TOTAL"]["fscore"]:
+                            bestResults = (boost, results)
+                    if options.task in ["OLD"]: # rule-based unmerging
+                        print >> sys.stderr, "--------- Rule based unmerging ---------"
+                        # Post-processing
+                        unmergedXML = unflatten(xml, PARSE, TOK)
+                        # Output will be stored to the geniaformat-subdirectory, where will also be a
+                        # tar.gz-file which can be sent to the Shared Task evaluation server.
+                        #gifxmlToGenia(unmergedXML, "rulebased-unmerging-geniaformat", subTask)
+                        STFormat.ConvertXML.toSTFormat(unmergedXML, "rulebased-unmerging-geniaformat-"+str(boost), getA2FileTag(options.task, subTask))
+                        # Evaluation of the Shared Task format
+                        results = evaluateSharedTask("rulebased-unmerging-geniaformat-"+str(boost), subTask)
+                        #if bestResults == None or bestResults[1]["approximate"]["ALL-TOTAL"]["fscore"] < results["approximate"]["ALL-TOTAL"]["fscore"]:
+                        #    bestResults = (boost, results)
+                elif options.task == "BB":
+                    results = evaluateBX("flat-"+str(boost)+"-geniaformat", "BB")
+                    if bestResults == None or results["fscore"]  > bestResults[1]["fscore"]:
                         bestResults = (boost, results)
-                if options.task in ["OLD"]: # rule-based unmerging
-                    print >> sys.stderr, "--------- Rule based unmerging ---------"
-                    # Post-processing
-                    unmergedXML = unflatten(xml, PARSE, TOK)
-                    # Output will be stored to the geniaformat-subdirectory, where will also be a
-                    # tar.gz-file which can be sent to the Shared Task evaluation server.
-                    #gifxmlToGenia(unmergedXML, "rulebased-unmerging-geniaformat", subTask)
-                    STFormat.ConvertXML.toSTFormat(unmergedXML, "rulebased-unmerging-geniaformat-"+str(boost), getA2FileTag(options.task, subTask))
-                    # Evaluation of the Shared Task format
-                    results = evaluateSharedTask("rulebased-unmerging-geniaformat-"+str(boost), subTask)
-                    #if bestResults == None or bestResults[1]["approximate"]["ALL-TOTAL"]["fscore"] < results["approximate"]["ALL-TOTAL"]["fscore"]:
-                    #    bestResults = (boost, results)
+                else:
+                    if bestResults == None or EIXMLResult.getData().fscore > bestResults[1].getData().fscore:
+                        bestResults = (boost, EIXMLResult)
             else:
-                if bestResults == None or EIXMLResult.getData().fscore > bestResults[1].getData().fscore:
-                    bestResults = (boost, EIXMLResult)
-        else:
-            print >> sys.stderr, "No predicted edges"
-        count += 1
-    print >> sys.stderr, "Booster search complete"
-    print >> sys.stderr, "Tested", count, "out of", count, "combinations"
-    if options.task in ["OLD", "GE"]:
+                print >> sys.stderr, "No predicted edges"
+            count += 1
+        print >> sys.stderr, "Booster search complete"
+        print >> sys.stderr, "Tested", count, "out of", count, "combinations"
         print >> sys.stderr, "Best booster parameter:", bestResults[0]
-        print >> sys.stderr, "Best result:", bestResults[1]
+        saveBoostParam(bestResults[0])
+        if options.task in ["OLD", "GE"]:
+            print >> sys.stderr, "Best result:", bestResults[1]
+    
+    # GOTO: POST-GRID
+    bestBoost = float(getParameter("best-boost"))
+    ###############################################################################
+    # Classify empty devel set
+    ###############################################################################
+    print >> sys.stderr, "--------- Classify empty devel set ---------"
+    # Trigger Detection
+    TRIGGER_EXAMPLE_BUILDER.run(TEST_FILE.replace(".xml", "-empty.xml"), "empty-test-trigger-examples", PARSE, TOK, TRIGGER_FEATURE_PARAMS, TRIGGER_IDS)
+    CLASSIFIER.test("empty-test-trigger-examples", bestTriggerModel, "empty-test-trigger-classifications")
+    if bestTriggerModel != None: print >> sys.stderr, "best-trigger-model=", os.path.realpath("best-trigger-model")
+    Ev.evaluate("empty-test-trigger-examples", "empty-test-trigger-classifications", TRIGGER_IDS+".class_names")
+    xml = BioTextExampleWriter.write("empty-test-trigger-examples", "empty-test-trigger-classifications", TEST_FILE.replace(".xml", "-empty.xml"), "empty-triggers.xml", TRIGGER_IDS+".class_names", PARSE, TOK)
+    # Boost
+    xml = RecallAdjust.run(xml, bestBoost, None, binary=BINARY_RECALL_MODE)
+    xml = ix.splitMergedElements(xml, None)
+    xml = ix.recalculateIds(xml, None, True)
+    # Edge Detection
+    EDGE_EXAMPLE_BUILDER.run(xml, "empty-test-edge-examples", PARSE, TOK, EDGE_FEATURE_PARAMS, EDGE_IDS)
+    if bestEdgeModel != None: print >> sys.stderr, "best-edge-model=", os.path.realpath("best-edge-model")
+    CLASSIFIER.test("empty-test-edge-examples", bestEdgeModel, "empty-test-edge-classifications")
+    Ev.evaluate("empty-test-edge-examples", "empty-test-edge-classifications", EDGE_IDS+".class_names")
+    xml = BioTextExampleWriter.write("empty-test-edge-examples", "empty-test-edge-classifications", xml, None, EDGE_IDS+".class_names", PARSE, TOK)
+    xml = ix.splitMergedElements(xml, None)
+    xml = ix.recalculateIds(xml, "empty-edges.xml", True)
+    # Unmerging
+    if options.unmerging:
+        GOLD_TEST_FILE = None
+        UnmergingExampleBuilder.run(xml, GOLD_TEST_FILE, "unmerging-empty-examples", PARSE, TOK, UNMERGING_FEATURE_PARAMS, UNMERGING_IDS)
+        Cls.test("unmerging-empty-examples", bestUnmergingModel, "unmerging-empty-classifications")
+        unmergedXML = BioTextExampleWriter.write("unmerging-empty-examples", "unmerging-empty-classifications", xml, "empty-unmerged.xml", UNMERGING_IDS+".class_names", PARSE, TOK)
+        EMPTY_GENIAFORMAT_DIR = "empty-unmerged-geniaformat"
+        STFormat.ConvertXML.toSTFormat(unmergedXML, EMPTY_GENIAFORMAT_DIR, getA2FileTag(options.task, subTask))
+        xml = unmergedXML
+    else:
+        EMPTY_GENIAFORMAT_DIR = "empty-edges-geniaformat"
+        STFormat.ConvertXML.toSTFormat(xml, EMPTY_GENIAFORMAT_DIR, getA2FileTag(options.task, subTask))
+    print >> sys.stderr, "======== Evaluating empty devel set ========"
+    EvaluateInteractionXML.run(Ev, xml, TEST_FILE, PARSE, TOK)
+    if options.task == "OLD": evaluateSharedTask(EMPTY_GENIAFORMAT_DIR, subTask)
+    elif options.task == "GE": evaluateBioNLP11Genia(EMPTY_GENIAFORMAT_DIR, subTask)
+    elif options.task == "BB": evaluateBX(EMPTY_GENIAFORMAT_DIR, "BB")
+    if options.task in ["OLD", "GE", "EPI", "ID"]:
+        print >> sys.stderr, "======== Task 3 for empty devel set ========"
+        xml = task3Classify(xml, options.speculationModel, options.negationModel, options.task3Ids, "empty", PARSE)
+        STFormat.ConvertXML.toSTFormat(xml, EMPTY_GENIAFORMAT_DIR+"-task3", getA2FileTag(options.task, subTask))
+        print >> sys.stderr, "======== Evaluating empty devel set (task 3) ========"
+        EvaluateInteractionXML.run(Ev, xml, TEST_FILE, PARSE, TOK)
+        if options.task == "OLD": evaluateSharedTask(EMPTY_GENIAFORMAT_DIR+"-task3", subTask)
+        elif options.task == "GE": evaluateBioNLP11Genia(EMPTY_GENIAFORMAT_DIR+"-task3", subTask)
+        elif options.task == "BB": evaluateBX(EMPTY_GENIAFORMAT_DIR+"-task3", "BB")
     
     ###############################################################################
     # Classify test set
     ###############################################################################
     print >> sys.stderr, "--------- Classify test set ---------"
+    print >> sys.stderr, "Downloading everything models for parse", PARSE_TAG
+    c = None
+    if "local" not in options.csc: c = CSCConnection(CSC_WORKDIR+"/everything-trigger-models", CSC_ACCOUNT, False)
+    bestTriggerModel = optimize(CLASSIFIER, Ev, TRIGGER_EVERYTHING_EXAMPLE_FILE, TRIGGER_TEST_EXAMPLE_FILE,\
+        TRIGGER_IDS+".class_names", "c:"+getParameter(bestTriggerModel).split("_")[-1], "everything-trigger-models", None, c, False, steps="RESULTS")[1]
+    if "local" not in options.csc: c = CSCConnection(CSC_WORKDIR+"/everything-edge-models", CSC_ACCOUNT, False)
+    bestEdgeModel = optimize(CLASSIFIER, Ev, EDGE_EVERYTHING_EXAMPLE_FILE, EDGE_TEST_EXAMPLE_FILE,\
+        EDGE_IDS+".class_names", "c:"+getParameter(bestEdgeModel).split("_")[-1], "everything-edge-models", None, c, False, steps="RESULTS")[1]
+    print >> sys.stderr, "Building test-set examples"
     # Trigger Detection
     TRIGGER_EXAMPLE_BUILDER.run(FINAL_TEST_FILE, "final-test-trigger-examples", PARSE, TOK, TRIGGER_FEATURE_PARAMS, TRIGGER_IDS)
     CLASSIFIER.test("final-test-trigger-examples", bestTriggerModel, "final-test-trigger-classifications")
@@ -366,7 +516,7 @@ if options.mode in ["BOTH", "FINAL", "GRID", "UNMERGING"]:
     Ev.evaluate("final-test-trigger-examples", "final-test-trigger-classifications", TRIGGER_IDS+".class_names")
     xml = BioTextExampleWriter.write("final-test-trigger-examples", "final-test-trigger-classifications", FINAL_TEST_FILE, "final-triggers.xml", TRIGGER_IDS+".class_names", PARSE, TOK)
     # Boost
-    xml = RecallAdjust.run(xml, bestResults[0], None, binary=BINARY_RECALL_MODE)
+    xml = RecallAdjust.run(xml, bestBoost, None, binary=BINARY_RECALL_MODE)
     xml = ix.splitMergedElements(xml, None)
     xml = ix.recalculateIds(xml, None, True)
     # Edge Detection
@@ -378,12 +528,23 @@ if options.mode in ["BOTH", "FINAL", "GRID", "UNMERGING"]:
     xml = ix.splitMergedElements(xml, None)
     xml = ix.recalculateIds(xml, "final-edges.xml", True)
     # Unmerging
-    GOLD_TEST_FILE = FINAL_TEST_FILE.replace("-nodup", "")
-    UnmergingExampleBuilder.run(xml, GOLD_TEST_FILE, "unmerging-final-examples", PARSE, TOK, UNMERGING_FEATURE_PARAMS, UNMERGING_IDS)
-    Cls.test("unmerging-final-examples", bestUnmergingModel, "unmerging-final-classifications")
-    unmergedXML = BioTextExampleWriter.write("unmerging-final-examples", "unmerging-final-classifications", xml, "final-unmerged.xml", UNMERGING_IDS+".class_names", PARSE, TOK)
-    STFormat.ConvertXML.toSTFormat(unmergedXML, "final-unmerged-geniaformat", getA2FileTag(options.task, subTask))
-    # Sanity Check
-    STFormat.Compare.compare("final-unmerged-geniaformat", "unmerged-"+str(bestResults[0])+"-geniaformat")
-    
-
+    if options.unmerging:
+        GOLD_TEST_FILE = FINAL_TEST_FILE.replace("-nodup", "")
+        UnmergingExampleBuilder.run(xml, GOLD_TEST_FILE, "unmerging-final-examples", PARSE, TOK, UNMERGING_FEATURE_PARAMS, UNMERGING_IDS)
+        Cls.test("unmerging-final-examples", bestUnmergingModel, "unmerging-final-classifications")
+        unmergedXML = BioTextExampleWriter.write("unmerging-final-examples", "unmerging-final-classifications", xml, "final-unmerged.xml", UNMERGING_IDS+".class_names", PARSE, TOK)
+        STFormat.ConvertXML.toSTFormat(unmergedXML, "final-unmerged-geniaformat", getA2FileTag(options.task, subTask))
+        xml = unmergedXML
+        # Sanity Check
+        STFormat.Compare.compare("final-unmerged-geniaformat", EMPTY_GENIAFORMAT_DIR, getA2FileTag(options.task, subTask))
+    else:
+        STFormat.ConvertXML.toSTFormat(xml, "final-edges-geniaformat", getA2FileTag(options.task, subTask))
+        # Sanity Check
+        STFormat.Compare.compare("final-edges-geniaformat", EMPTY_GENIAFORMAT_DIR, getA2FileTag(options.task, subTask))
+    # Task 3
+    if options.task in ["OLD", "GE", "EPI", "ID"]:
+        print >> sys.stderr, "======== Task 3 for test set ========"
+        xml = task3Classify(xml, options.speculationModel, options.negationModel, options.task3Ids, "final", PARSE)
+        STFormat.ConvertXML.toSTFormat(xml, "final-edges-geniaformat-task3", getA2FileTag(options.task, subTask))
+        # Sanity Check
+        STFormat.Compare.compare("final-edges-geniaformat-task3", EMPTY_GENIAFORMAT_DIR+"-task3", getA2FileTag(options.task, subTask))
