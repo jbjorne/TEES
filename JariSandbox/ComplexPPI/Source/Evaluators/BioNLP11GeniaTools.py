@@ -188,6 +188,69 @@ def evaluate(sourceDir, task=1, folds=-1, foldToRemove=-1, evaluations=["strict"
     os.chdir(origDir)
     return results
 
+def printLinesBX(lines):
+    queue = []
+    category = None
+    for line in lines:
+        if ":" in line:
+            if len(queue) > 0:
+                print >> sys.stderr, str(category) + ":", ", ".join(queue)
+                queue = []
+            category = line.split(":")[0].strip()
+        elif line.startswith("    "):
+            queue.append(line.strip())
+        else:
+            print >> sys.stderr, line[:-1]
+    if len(queue) > 0:
+        print >> sys.stderr, str(category) + ":", ", ".join(queue)
+        queue = []
+
+def evaluateBX(sourceDir, corpusName, silent=False):
+    if corpusName == "BI":
+        commands = "java -jar /home/jari/data/BioNLP11SharedTask/evaluators/BioNLP-ST_2011_bacteria_interactions_evaluation_software/BioNLP-ST_2011_bacteria_interactions_evaluation_software.jar /home/jari/data/BioNLP11SharedTask/main-tasks/BioNLP-ST_2011_bacteria_interactions_dev_data_rev1-remixed/ " + sourceDir
+    elif corpusName == "BB":
+        commands = "java -jar /home/jari/data/BioNLP11SharedTask/evaluators/BioNLP-ST_2011_Bacteria_Biotopes_evaluation_software/BioNLP-ST_2011_Bacteria_Biotopes_evaluation_software.jar /home/jari/data/BioNLP11SharedTask/main-tasks/BioNLP-ST_2011_Bacteria_Biotopes_dev_data_rev1-fixed/ " + sourceDir
+    else:
+        assert False, corpusName
+
+    p = subprocess.Popen(commands, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    stderrLines = p.stderr.readlines()
+    stdoutLines = p.stdout.readlines()
+    if not silent:
+        printLinesBX(stderrLines)
+        printLinesBX(stdoutLines)
+    
+    results = {}
+    if corpusName == "BI":
+        category = None
+        for line in stdoutLines:
+            if ":" in line:
+                category = line.split(":")[0].strip()
+            if category == "Global scores" and line.startswith("    "):
+                key, value = line.strip().split("=")
+                key = key.strip()
+                value = value.strip()
+                assert key not in results
+                if key == "f-score":
+                    key = "fscore"
+                if value == "NaN":
+                    results[key] = 0.0
+                else:
+                    results[key] = float(value)
+    elif corpusName == "BB":
+        for line in stdoutLines:
+            key, value = line.strip().split("=")
+            key = key.strip()
+            value = value.strip()
+            assert key not in results
+            if key == "F-score":
+                key = "fscore"
+            if value == "NaN":
+                results[key] = 0.0
+            else:
+                results[key] = float(value)
+    return results
+
 if __name__=="__main__":
     # Import Psyco if available
     try:
@@ -200,6 +263,7 @@ if __name__=="__main__":
     from optparse import OptionParser
     optparser = OptionParser(usage="%prog [options]\n")
     optparser.add_option("-i", "--input", default=None, dest="input", help="input directory with predicted shared task files", metavar="FILE")
+    optparser.add_option("-c", "--corpus", default="GE", dest="corpus", help="")
     optparser.add_option("-t", "--task", default=1, type="int", dest="task", help="task number")
     optparser.add_option("-v", "--variance", default=0, type="int", dest="variance", help="variance folds")
     optparser.add_option("-d", "--debug", default=False, action="store_true", dest="debug", help="debug")
@@ -207,7 +271,10 @@ if __name__=="__main__":
     assert(options.input != None)
     assert(options.task in [1,2,3])
     
-    if options.variance == 0:
-        evaluate(options.input, options.task, debug = options.debug)
+    if options.corpus == "GE":
+        if options.variance == 0:
+            evaluate(options.input, options.task, debug = options.debug)
+        else:
+            evaluateVariance(options.input, options.task, options.variance)
     else:
-        evaluateVariance(options.input, options.task, options.variance)
+        print evaluateBX(options.input, options.corpus)
