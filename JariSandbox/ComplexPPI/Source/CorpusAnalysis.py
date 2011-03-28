@@ -1,3 +1,5 @@
+import sys, os
+sys.path.append(os.path.join(os.path.dirname(os.path.abspath(__file__)), "../.."))
 import Core.SentenceGraph as SentenceGraph
 from optparse import OptionParser
 #import networkx as NX
@@ -430,45 +432,70 @@ def countOverlappingHeads(corpusElements):
 
 def countEntities(corpusElements):
     counts = {}
+    counts["event"] = 0
+    counts["non-event"] = 0
+    counts["event-equiv"] = 0
     for sentence in corpusElements.sentences:
         for entity in sentence.entities:
             eType = entity.get("type")
             if not counts.has_key(eType):
                 counts[eType] = 0
             counts[eType] += 1
+            if entity.get("isName") == "False" and entity.get("type") not in ["Entity"]:
+                counts["event"] += 1
+            else:
+                counts["non-event"] += 1
+            # detect equivs
+            origId = entity.get("origId")
+            dPart = origId.split(".")[-1]
+            if dPart[0] == "d":
+                assert dPart[1:].isdigit(), origId
+                if dPart[1] != "0":
+                    counts["event-equiv"] += 1
     print "Entity counts"
     for key in sorted(counts.keys()):
         print " ", key, counts[key]
+    return counts
 
-def countIntersentenceEvents(corpusElements):
+def countIntersentenceEvents(corpusElements, totalEvents=None):
     counts = {}
     #entityById = {}
     #for sentence in corpusElements.sentences:
     #    for entity in sentence.entities:
-            
+    
+    interactionsByE1 = {}
+    entitiesById = {}
     for sentence in corpusElements.sentences:
-        interactionsByE1 = {}
         for interaction in sentence.interactions:
             e1 = interaction.get("e1")
             if not interactionsByE1.has_key(e1):
                 interactionsByE1[e1] = []
             interactionsByE1[e1].append(interaction)
-        for e1 in sorted(interactionsByE1.keys()):
-            isIntersentence = False
-            for interaction in interactionsByE1[e1]:
-                e1MajorId, e1MinorId = interaction.get("e1").rsplit(".e", 1)
-                e2MajorId, e2MinorId = interaction.get("e2").rsplit(".e", 1)
-                if e1MajorId != e2MajorId:
-                    isIntersentence = True
-                    break
-            if isIntersentence:
-                eType = "Int"#sentence.entitiesById[e1].get("type")
-                if not counts.has_key(eType):
-                    counts[eType] = 0 
-                counts[eType] += 1
+        for entity in sentence.entities:
+            entitiesById[entity.get("id")] = entity
+    for e1 in sorted(interactionsByE1.keys()):
+        isIntersentence = False
+        for interaction in interactionsByE1[e1]:
+            e1MajorId, e1MinorId = interaction.get("e1").rsplit(".e", 1)
+            e2MajorId, e2MinorId = interaction.get("e2").rsplit(".e", 1)
+            if e1MajorId != e2MajorId:
+                isIntersentence = True
+                break
+        if isIntersentence:
+            eType = entitiesById[e1].get("type")
+            if not counts.has_key(eType):
+                counts[eType] = 0 
+            counts[eType] += 1
+            eType = "ALL_EVENTS"#sentence.entitiesById[e1].get("type")
+            if not counts.has_key(eType):
+                counts[eType] = 0 
+            counts[eType] += 1
     print "Intersentence Event counts"
     for key in sorted(counts.keys()):
-        print " ", key, counts[key]
+        percentage = "N/A"
+        if totalEvents != None:
+            percentage = float(counts[key]) / float(totalEvents) * 100.0
+        print " ", key, counts[key], "percentage:", percentage
 
 def analyzeHeadTokens(corpusElements):
     from collections import defaultdict
@@ -571,9 +598,10 @@ if __name__=="__main__":
             shutil.rmtree(options.output)
         os.makedirs(options.output)
     
-    corpusElements = SentenceGraph.loadCorpus(options.input, options.parse, options.tokenization, removeIntersentenceInteractionsFromCorpusElements=False)
-    print >> sys.stderr, "tokenization:", options.tokenization
-    print >> sys.stderr, "parse:", options.parse
+    if options.analyses != "bionlp11":
+        corpusElements = SentenceGraph.loadCorpus(options.input, options.parse, options.tokenization, removeIntersentenceInteractionsFromCorpusElements=False)
+        print >> sys.stderr, "tokenization:", options.tokenization
+        print >> sys.stderr, "parse:", options.parse
     
     #calculateMainStatistics(corpusElements)
     #analyzeLengths(corpusElements)
@@ -602,3 +630,15 @@ if __name__=="__main__":
         analyzeHeadTokens(corpusElements)
     if options.analyses.find("head_strings") != -1:
         analyzeHeadStrings(corpusElements)
+    
+    if options.analyses == "bionlp11":
+        #corpora = ["OLD", "GE", "EPI", "ID", "BI", "BB", "CO", "REL", "REN"]
+        corpora = ["EPI"]
+        corpusDir = "/home/jari/biotext/BioNLP2011/data/main-tasks"
+        for corpus in corpora:
+            corpusPath = corpusDir + "/" + corpus + "/" + corpus + "-devel-and-train.xml"
+            parse = "split-mccc-preparsed"
+            print "Processing", corpus, "from", corpusPath
+            corpusElements = SentenceGraph.loadCorpus(corpusPath, parse, None, removeIntersentenceInteractionsFromCorpusElements=False)
+            entityCounts = countEntities(corpusElements)
+            countIntersentenceEvents(corpusElements, entityCounts["event"])
