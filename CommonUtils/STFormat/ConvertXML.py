@@ -412,9 +412,9 @@ def toSTFormat(input, output=None, outputTag="a2", useOrigIds=False, debug=False
                     arg[1] = eMap[id]
                 elif tMap.has_key(id):
                     arg[1] = tMap[id]
-                    # Remove Entity-type triggers if they are Regulation-arguments
-                    if "egulation" in event.type and tMap[id].type != "Protein":
-                        event.arguments.remove(arg)
+                    ## Remove Entity-type triggers if they are Regulation-arguments
+                    #if "egulation" in event.type and tMap[id].type != "Protein":
+                    #    event.arguments.remove(arg)
                 # add sites
                 if siteMap.has_key(id):
                     assert id not in eMap
