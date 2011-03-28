@@ -40,13 +40,13 @@ moveBI = ["PMID-10333516-S3",
           "PMID-10400595-S1",
           "PMID-10220166-S12"]
 
-def evaluateB(sourceDir, corpusName):
-    if corpusName == "BI":
-        subprocess.call("java -jar /home/jari/data/BioNLP11SharedTask/evaluators/BioNLP-ST_2011_bacteria_interactions_evaluation_software/BioNLP-ST_2011_bacteria_interactions_evaluation_software.jar /home/jari/data/BioNLP11SharedTask/main-tasks/BioNLP-ST_2011_bacteria_interactions_dev_data_rev1-remixed/ " + sourceDir, shell=True)
-    elif corpusName == "BB":
-        subprocess.call("java -jar /home/jari/data/BioNLP11SharedTask/evaluators/BioNLP-ST_2011_Bacteria_Biotopes_evaluation_software/BioNLP-ST_2011_Bacteria_Biotopes_evaluation_software.jar /home/jari/data/BioNLP11SharedTask/main-tasks/BioNLP-ST_2011_Bacteria_Biotopes_dev_data_rev1 " + sourceDir, shell=True)
-    else:
-        assert False, corpusName
+#def evaluateB(sourceDir, corpusName):
+#    if corpusName == "BI":
+#        subprocess.call("java -jar /home/jari/data/BioNLP11SharedTask/evaluators/BioNLP-ST_2011_bacteria_interactions_evaluation_software/BioNLP-ST_2011_bacteria_interactions_evaluation_software.jar /home/jari/data/BioNLP11SharedTask/main-tasks/BioNLP-ST_2011_bacteria_interactions_dev_data_rev1-remixed/ " + sourceDir, shell=True)
+#    elif corpusName == "BB":
+#        subprocess.call("java -jar /home/jari/data/BioNLP11SharedTask/evaluators/BioNLP-ST_2011_Bacteria_Biotopes_evaluation_software/BioNLP-ST_2011_Bacteria_Biotopes_evaluation_software.jar /home/jari/data/BioNLP11SharedTask/main-tasks/BioNLP-ST_2011_Bacteria_Biotopes_dev_data_rev1 " + sourceDir, shell=True)
+#    else:
+#        assert False, corpusName
 
 def log(clear=False, logCmd=True, logFile="log.txt"):
     Stream.setLog(logFile, clear)
@@ -108,9 +108,9 @@ def convert(datasets, analysisTags, analysisPath, corpusName):
                 BioNLP11GeniaTools.evaluate("roundtrip/" + corpusName + "-devel" + sourceTag + "-task1", task=1, verbose=True, debug=False)
             elif corpusName in ["BI", "BB"]:
                 print >> sys.stderr, "Evaluating task 2 back-conversion"
-                evaluateB("roundtrip/" + corpusName + "-devel" + sourceTag + "-task2", corpusName)
+                BioNLP11GeniaTools.evaluateBX("roundtrip/" + corpusName + "-devel" + sourceTag + "-task2", corpusName)
                 print >> sys.stderr, "Evaluating task 1 back-conversion"
-                evaluateB("roundtrip/" + corpusName + "-devel" + sourceTag + "-task1", corpusName)
+                BioNLP11GeniaTools.evaluateBX("roundtrip/" + corpusName + "-devel" + sourceTag + "-task1", corpusName)
             print >> sys.stderr, "Creating empty devel set"
             deletionRules = {"interaction":{},"entity":{"isName":"False"}}
             InteractionXML.DeleteElements.processCorpus(corpusName + "-devel" + sourceTag + ".xml", corpusName + "-devel" + sourceTag + "-empty.xml", deletionRules)
@@ -202,7 +202,7 @@ if __name__=="__main__":
                            "train":"BioNLP-ST_2011_bacteria_interactions_train_data",
                            "test":"BioNLP-ST_2011_bacteria_interactions_test_data"}
     
-    for dataset in ["BB"]: #sorted(datasets.keys()):
+    for dataset in ["BI", "GE", "ID"]: # sorted(datasets.keys()):
         cwd = os.getcwd()
         currOutDir = outDir + dataset
         if not os.path.exists(currOutDir):
