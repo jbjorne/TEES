@@ -103,7 +103,7 @@ optparser.add_option("-w", "--edgeIds", default=None, dest="edgeIds", help="Edge
 # Parameters to optimize
 optparser.add_option("-x", "--triggerParams", default="1000,5000,10000,20000,50000,80000,100000,150000,180000,200000,250000,300000,350000,500000,1000000", dest="triggerParams", help="Trigger detector c-parameter values")
 optparser.add_option("-y", "--recallAdjustParams", default="0.5,0.6,0.65,0.7,0.85,1.0,1.1,1.2", dest="recallAdjustParams", help="Recall adjuster parameter values")
-optparser.add_option("-z", "--edgeParams", default="5000,7500,10000,20000,25000,28000,50000,60000,65000", dest="edgeParams", help="Edge detector c-parameter values")
+optparser.add_option("-z", "--edgeParams", default="5000,7500,10000,20000,25000,27500,28000,29000,30000,35000,40000,50000,60000,65000", dest="edgeParams", help="Edge detector c-parameter values")
 optparser.add_option("--uParams", default="1,10,100,500,1000,1500,2500,5000,10000,20000,50000,80000,100000", dest="uParams", help="Unmerging c-parameter values")
 # Shared task evaluation
 #optparser.add_option("-s", "--sharedTask", default=True, action="store_false", dest="sharedTask", help="Do Shared Task evaluation")
@@ -527,6 +527,7 @@ if options.mode in ["BOTH", "FINAL", "POST-DOWNLOAD", "UNMERGING", "GRID", "POST
     xml = BioTextExampleWriter.write("final-test-edge-examples", "final-test-edge-classifications", xml, None, EDGE_IDS+".class_names", PARSE, TOK)
     xml = ix.splitMergedElements(xml, None)
     xml = ix.recalculateIds(xml, "final-edges.xml", True)
+    STFormat.ConvertXML.toSTFormat(xml, "final-edges-geniaformat", getA2FileTag(options.task, subTask))
     # Unmerging
     if options.unmerging:
         GOLD_TEST_FILE = FINAL_TEST_FILE.replace("-nodup", "")
@@ -538,13 +539,12 @@ if options.mode in ["BOTH", "FINAL", "POST-DOWNLOAD", "UNMERGING", "GRID", "POST
         # Sanity Check
         STFormat.Compare.compare("final-unmerged-geniaformat", EMPTY_GENIAFORMAT_DIR, getA2FileTag(options.task, subTask))
     else:
-        STFormat.ConvertXML.toSTFormat(xml, "final-edges-geniaformat", getA2FileTag(options.task, subTask))
         # Sanity Check
         STFormat.Compare.compare("final-edges-geniaformat", EMPTY_GENIAFORMAT_DIR, getA2FileTag(options.task, subTask))
     # Task 3
     if options.task in ["OLD", "GE", "EPI", "ID"]:
         print >> sys.stderr, "======== Task 3 for test set ========"
         xml = task3Classify(xml, options.speculationModel, options.negationModel, options.task3Ids, "final", PARSE)
-        STFormat.ConvertXML.toSTFormat(xml, "final-edges-geniaformat-task3", getA2FileTag(options.task, subTask))
+        STFormat.ConvertXML.toSTFormat(xml, "final-task3", getA2FileTag(options.task, subTask))
         # Sanity Check
-        STFormat.Compare.compare("final-edges-geniaformat-task3", EMPTY_GENIAFORMAT_DIR+"-task3", getA2FileTag(options.task, subTask))
+        STFormat.Compare.compare("final-task3", EMPTY_GENIAFORMAT_DIR+"-task3", getA2FileTag(options.task, subTask))
