@@ -51,6 +51,9 @@ class EntityExampleWriter(SentenceExampleWriter):
         for example in examples:
             if "trigex" in example[3] and example[3]["trigex"] == "bb":
                 extensionRequested = True
+            unmergeEPINeg = False
+            if "unmergeneg" in example[3] and example[3]["unmergeneg"] == "epi":
+                unmergeEPINeg = True
             prediction = predictionsByExample[example[0]]
             entityElement = ET.Element("entity")
             entityElement.attrib["isName"] = "False"
@@ -63,7 +66,7 @@ class EntityExampleWriter(SentenceExampleWriter):
             entityElement.attrib["headOffset"] = headToken.get("charOffset")
             entityElement.attrib["text"] = headToken.get("text")
             entityElement.attrib["id"] = sentenceId + ".e" + str(newEntityIdCount)
-            self.setElementType(entityElement, prediction, classSet, classIds)
+            self.setElementType(entityElement, prediction, classSet, classIds, unmergeEPINeg=unmergeEPINeg)
             if self.insertWeights: # in other words, use gold types
                 headOffset = headToken.get("charOffset")
                 if goldEntityByHeadOffset.has_key(headOffset):

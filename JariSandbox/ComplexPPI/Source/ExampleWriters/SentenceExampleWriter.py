@@ -15,6 +15,7 @@ try:
 except ImportError:
     import cElementTree as ET
 import cElementTreeUtils as ETUtils
+import InteractionXML.ResolveEPITriggerTypes
 
 class SentenceExampleWriter:
     """
@@ -170,20 +171,27 @@ class SentenceExampleWriter:
         else:
             return classSet.getName(prediction[0]) == "neg"
 
-    def setElementType(self, element, prediction, classSet=None, classIds=None):
+    def setElementType(self, element, prediction, classSet=None, classIds=None, unmergeEPINeg=False):
+        eText = element.get("text")
         if classSet == None: # binary classification
             if prediction[0] > 0:
                 element.attrib["type"] = str(True)
             else:
                 element.attrib["type"] = str(False)
         else:
-            element.attrib["type"] = classSet.getName(prediction[0])
+            if unmergeEPINeg:
+                element.set("type", InteractionXML.ResolveEPITriggerTypes.determineNewType(classSet.getName(prediction[0]), eText))
+            else:
+                element.attrib["type"] = classSet.getName(prediction[0])
             classWeights = prediction[1:]
             predictionString = ""
             for i in range(len(classWeights)):
                 if predictionString != "":
                     predictionString += ","
-                predictionString += classSet.getName(classIds[i]) + ":" + str(classWeights[i])
+                className = classSet.getName(classIds[i])
+                if unmergeEPINeg:
+                    className = InteractionXML.ResolveEPITriggerTypes.determineNewType(className, eText)
+                predictionString += className + ":" + str(classWeights[i])
             element.attrib["predictions"] = predictionString
     
     def getPredictionStrengthString(self, prediction, classSet, classIds, skipClasses=None):

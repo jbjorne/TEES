@@ -1,7 +1,7 @@
 """
 Trigger examples
 """
-__version__ = "$Revision: 1.32 $"
+__version__ = "$Revision: 1.33 $"
 
 import sys, os
 thisPath = os.path.dirname(os.path.abspath(__file__))
@@ -15,6 +15,7 @@ from Core.Gazetteer import Gazetteer
 from FeatureBuilders.RELFeatureBuilder import RELFeatureBuilder
 from FeatureBuilders.WordNetFeatureBuilder import WordNetFeatureBuilder
 import PhraseTriggerExampleBuilder
+import InteractionXML.ResolveEPITriggerTypes
 
 #def compareDependencyEdgesById(dep1, dep2):
 #    """
@@ -92,7 +93,10 @@ class GeneralEntityTypeRecognizerGztr(ExampleBuilder):
         for entity in entities:
             if entity.get("isName") == "True" and "all_tokens" in self.styles:
                 continue
-            types.add(entity.get("type"))
+            if "epi_merge_negated" in self.styles:
+                types.add(InteractionXML.ResolveEPITriggerTypes.getEPIBaseType(entity.get("type")))
+            else:
+                types.add(entity.get("type"))
         types = list(types)
         types.sort()
         typeString = ""
@@ -407,6 +411,8 @@ class GeneralEntityTypeRecognizerGztr(ExampleBuilder):
             extra = {"xtype":"token","t":token.get("id")}
             if "bb_features" in self.styles:
                 extra["trigex"] = "bb" # Request trigger extension in ExampleWriter
+            if "epi_merge_negated" in self.styles:
+                extra["unmergeneg"] = "epi" # Request trigger type unmerging
             examples.append( (sentenceGraph.getSentenceId()+".x"+str(exampleIndex),category,features,extra) )
             exampleIndex += 1
             self.exampleStats.endExample()
