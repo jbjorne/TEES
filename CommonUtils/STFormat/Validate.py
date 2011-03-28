@@ -67,9 +67,20 @@ def getBISuperType(eType):
         return "GeneEntity"
     else:
         return None
-        
+
+def isIDCore(eType):
+    return eType in ["Protein", "Regulon-operon", "Two-component-system", "Chemical", "Organism"]
+
+def isIDTask(proteins):
+    for protein in proteins:
+        if protein.type in ["Regulon-operon", "Two-component-system", "Chemical"]:
+            return True
+    return False
+
 # Enforce type-specific limits
-def validate(events, simulation=False, verbose=False, docId=None):
+def validate(events, simulation=False, verbose=False, docId=None): #, taskIsID=None):
+    #assert taskIsID != None
+    
     numRemoved = 1
     totalRemoved = 0
     if simulation:
@@ -95,11 +106,11 @@ def validate(events, simulation=False, verbose=False, docId=None):
             if "egulation" in event.type:
                 typeCounts = {"Cause":0, "Theme":0}
                 for arg in event.arguments[:]:
-                    if arg[0] not in typeCounts:
+                    if arg[0] not in typeCounts or not (isIDCore(arg[1].type) or arg[1].trigger != None):
                         event.arguments.remove(arg)
                     else:
                         typeCounts[arg[0]] += 1
-                if typeCounts["Theme"] == 0:
+                if typeCounts["Theme"] == 0:# and not taskIsID:
                     toRemove.add(event)
                     if verbose: print "VAL:", docId + "." + str(event.id), "(P/N/R)egulation with no themes"
                 if len(event.arguments) == 0:
@@ -146,6 +157,14 @@ def validate(events, simulation=False, verbose=False, docId=None):
                 if themeCount > 1:
                     toRemove.add(event)
                     if verbose: print "VAL:", docId + "." + str(event.id), "Non-binding event", event.type, "with", themeCount, "themes"
+            if event.type == "Process":
+                for arg in event.arguments[:]:
+                    if arg[0] != "Participant":
+                        event.arguments.remove(arg)
+                        if verbose: print "VAL:", docId + "." + str(event.id), "Non-participant argument", arg[0], "for", event.type
+                    elif not isIDCore(arg[1].type):
+                        event.arguments.remove(arg)
+                        if verbose: print "VAL:", docId + "." + str(event.id), arg[0], "argument with target", arg[1].type
             if event.type == "PartOf": # BB
                 assert len(event.arguments) == 2
                 # BB
@@ -217,7 +236,7 @@ def validate(events, simulation=False, verbose=False, docId=None):
                               "Glycosylation",
                               "Deglycosylation",
                               "Acetylation",
-                              "Decetylation",
+                              "Deacetylation",
                               "Methylation",
                               "Demethylation",
                               "Catalysis"]:
@@ -238,7 +257,7 @@ def validate(events, simulation=False, verbose=False, docId=None):
                             event.arguments.remove(arg)
                     elif arg[0] == "Sidechain" and eventType not in ["Glycosylation", "Deglycosylation"]:
                         event.arguments.remove(arg)
-                    elif arg[0] == "Contextgene" and (eventType not in ["Acetylation", "Decetylation", "Methylation", "Demethylation"] or arg[1].type != "Protein"):
+                    elif arg[0] == "Contextgene" and (eventType not in ["Acetylation", "Deacetylation", "Methylation", "Demethylation"] or arg[1].type != "Protein"):
                         event.arguments.remove(arg)
                 # Count remaining arguments
                 typeCounts = {"Cause":0, "Theme":0}
@@ -291,7 +310,7 @@ def removeUnusedTriggers(document):
 
 def allValidate(document, counts, task, verbose=False):
     numEvents = len(document.events)
-    document.events = validate(document.events, verbose=verbose, docId=document.id)
+    document.events = validate(document.events, verbose=verbose, docId=document.id) #, taskIsID=isIDTask(document.proteins))
     counts["validation-removed"] += numEvents - len(document.events)
     numEvents = len(document.events)
     document.events = removeDuplicates(document.events)
