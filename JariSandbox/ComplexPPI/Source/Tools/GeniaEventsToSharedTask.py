@@ -1,4 +1,4 @@
-parse__version__ = "$Revision: 1.2 $"
+parse__version__ = "$Revision: 1.3 $"
 
 import sys,os
 import sys
@@ -126,16 +126,30 @@ def run(input, output, eventDir, parse="split-mccc-preparsed", verbose=False):
     counts = defaultdict(int)
     for document in corpusRoot.findall("document"):
         sentDict = None
+        pmid = document.get("pmid")
+        isPMC = False
         for sentence in document.findall("sentence"):
             counts["sentences"] += 1
-            sentenceId = sentence.get("origId")
+            sentenceId = str(sentence.get("id")) + "/" + str(sentence.get("origId"))
             if verbose: print "Processing", sentenceId
             if sentDict == None:
-                sentDict = loadEventXML( eventDir + "/" + sentence.get("origId").split(".")[0] + ".xml" , verbose=verbose)
+                if sentence.get("origId") != None:
+                    assert pmid == None
+                    sentDict = loadEventXML( eventDir + "/" + sentence.get("origId").split(".")[0] + ".xml" , verbose=verbose)
+                else:
+                    #pmid = sentence.get("pmid")
+                    assert pmid != None
+                    if pmid.startswith("PMC"):
+                        isPMC = True
+                        sentDict = {}
+                    else:
+                        assert pmid.startswith("PMID")
+                        sentDict = loadEventXML( eventDir + "/" + pmid.split("-", 1)[-1] + ".xml" , verbose=verbose)
             interactionXMLText = sentence.get("text")
             if not sentDict.has_key(interactionXMLText):
                 counts["missing-sentences"] += 1
-                if verbose: print "Missing sentence:", (sentenceId, sentDict, sentence.get("text"))
+                if isPMC: counts["missing-sentences-PMC"] += 1
+                if verbose: print "Missing sentence:", pmid, (sentenceId, sentDict, sentence.get("text"))
             else:
                 sentenceAnalyses = sentence.find("sentenceanalyses")
                 if sentenceAnalyses != None:
@@ -188,6 +202,7 @@ if __name__=="__main__":
     optparser.add_option("-p", "--parse", default="split-mccc-preparsed", dest="parse", help="Parse XML element name")
     optparser.add_option("-v", "--verbose", default=False, action="store_true", dest="verbose", help="verbose mode")
     (options, args) = optparser.parse_args()
+    assert options.input != None
     
     run(input=options.input, output=options.output, eventDir=options.eventDir, parse=options.parse, verbose=options.verbose)
     
