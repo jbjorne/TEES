@@ -35,6 +35,7 @@ def log(clear=False, logCmd=True, logFile="log.txt"):
 
 def readEventsFromSR(eventType, srDir, events):
     for dataSet in ["train", "test"]:
+        print "Reading events from", os.path.join(srDir, dataSet + ".txt")
         f = open(os.path.join(srDir, dataSet + ".txt"))
         lines = f.readlines()
         i = 0
@@ -46,6 +47,8 @@ def readEventsFromSR(eventType, srDir, events):
             interaction = lines[i+4].strip()
             assert lines[i+5].strip() == ""
             i += 6
+            while i < len(lines) and lines[i].strip() == "":
+                i += 1
             norText = text.replace(" ", "")
             if norText not in events:
                 events[norText] = []
@@ -67,7 +70,7 @@ def eventsToXML(events, xmlEvents, dataSets, srTexts):
             else:
                 assert dataSet == event["dataSet"]
             # Add entity
-            offset, entityText = event["entity"].split("\t")
+            offset, entityText = event["entity"].replace("\t", " ").split(" ", 1)
             if offset not in usedOffsets:
                 entity = ET.Element("entity")
                 entity.set("charOffset", offset)
@@ -75,6 +78,7 @@ def eventsToXML(events, xmlEvents, dataSets, srTexts):
                 entity.set("type", "Entity")
                 entity.set("isName", "False")
                 entity.set("id", "e" + str(entityCount))
+                entity.set("srId", event["id"])
                 entityCount += 1
                 usedOffsets.add(offset)
                 entitiesByOffset[offset] = entity
@@ -82,14 +86,15 @@ def eventsToXML(events, xmlEvents, dataSets, srTexts):
             else:
                 entity = entitiesByOffset[offset]
             # Add named entity
-            offset, entityText = event["entity"].split("\t")
+            offset, entityText = event["namedEntity"].replace("\t", " ").split(" ", 1)
             if offset not in usedOffsets:
                 namedEntity = ET.Element("entity")
                 namedEntity.set("charOffset", offset)
                 namedEntity.set("text", entityText)
-                namedEntity.set("type", "Entity")
-                entity.set("isName", "True")
+                namedEntity.set("type", "Protein")
+                namedEntity.set("isName", "True")
                 namedEntity.set("id", "e" + str(entityCount))
+                namedEntity.set("srId", event["id"])
                 entityCount += 1
                 usedOffsets.add(offset)
                 entitiesByOffset[offset] = namedEntity
@@ -99,10 +104,12 @@ def eventsToXML(events, xmlEvents, dataSets, srTexts):
             # Add interactions
             if event["interaction"] == "Yes":
                 interaction = ET.Element("interaction")
+                interaction.set("type", "SR-" + event["eventType"])
                 interaction.set("directed", "False")
                 interaction.set("e1", entity.get("id"))
                 interaction.set("e2", namedEntity.get("id"))
                 interaction.set("id", "i" + str(interactionCount))
+                interaction.set("srId", event["id"])
                 xmlEvents[norText]["interactions"].append(interaction)
                 interactionCount += 1
             else:
@@ -113,16 +120,38 @@ def eventsToXML(events, xmlEvents, dataSets, srTexts):
 def insertEvents(xmlEvents, dataSets, srTexts, xml, corpusName):
     counts = collections.defaultdict(int)
     counts["SR-sentences"] = len(xmlEvents.keys())
+    foundSRSentences = set()
+    root = xml.getroot()
+    documentsToKeep = set()
     for document in xml.getiterator("document"):
+        namedEntityCount = 1
         document.set("id", corpusName + "." + document.get("id").split(".", 1)[-1])
         for sentence in document.findall("sentence"):
+            sentenceId = corpusName + "." + sentence.get("id").split(".", 1)[-1]
+            sentence.set("id", sentenceId)
             counts["sentences-total"] += 1
             sentNorText = sentence.get("text").replace(" ", "")
             sentText = sentence.get("text")
+            sentenceAnalysesElement = None
+            # Remove existing elements
+            for element in sentence.getchildren():
+                if element.tag in ["entity", "interaction"]:
+                    sentence.remove(element)
+                elif element.tag == "sentenceanalyses":
+                    sentence.remove(element)
+                    sentenceAnalysesElement = element
+            # Add new elements
             if sentNorText not in xmlEvents:
-                document.remove(sentence)
-                counts["sentences-removed"] += 1
+                #document.remove(sentence)
+                counts["sentences-nostatic"] += 1
+                sentenceAnalysesElement = None
+                sentence.text = None
+                #if sentenceAnalysesElement != None:
+                    #for element in sentenceAnalysesElement.getchildren():
+                    #    sentenceAnalysesElement.remove(element)
             else:
+                documentsToKeep.add(document)
+                foundSRSentences.add(sentNorText)
                 alignment = alignStrings(srTexts[sentNorText], sentence.get("text"))
                 if dataSets[sentNorText] == "test":
                     document.set("set", "devel")
@@ -130,15 +159,6 @@ def insertEvents(xmlEvents, dataSets, srTexts, xml, corpusName):
                     assert dataSets[sentNorText] != "devel"
                     document.set("set", dataSets[sentNorText])
                 counts["sentences-kept"] += 1
-                sentenceId = corpusName + "." + sentence.get("id").split(".", 1)[-1]
-                sentence.set("id", sentenceId)
-                sentenceAnalysesElement = None
-                for element in sentence.getchildren():
-                    if element.tag in ["entity", "interaction"]:
-                        sentence.remove(element)
-                    elif element.tag == "sentenceanalyses":
-                        sentence.remove(element)
-                        sentenceAnalysesElement = element
                 for entity in xmlEvents[sentNorText]["entities"]:
                     entity.set("id", sentenceId + "." + entity.get("id"))
                     entityOffset = entity.get("charOffset")
@@ -152,15 +172,26 @@ def insertEvents(xmlEvents, dataSets, srTexts, xml, corpusName):
                     assert sentText[entityOffset[0]:entityOffset[1]+1].replace(" ", "") == entity.get("text").replace(" ", ""), (sentText[entityOffset[0]:entityOffset[1]+1], entity.get("text"))
                     sentence.append(entity)
                     counts["entities-added"] += 1
+                    if entity.get("isName") == "True":
+                        entity.set("origId", "SR.T"+str(namedEntityCount))
+                        namedEntityCount += 1
                 for interaction in xmlEvents[sentNorText]["interactions"]:
                     interaction.set("id", sentenceId + "." + interaction.get("id"))
                     interaction.set("e1", sentenceId + "." + interaction.get("e1"))
                     interaction.set("e2", sentenceId + "." + interaction.get("e2"))
-                    sentence.append(entity)
+                    sentence.append(interaction)
                     counts["interactions-added"] += 1
-                if sentenceAnalysesElement != None:
-                    sentence.append(sentenceAnalysesElement)
+            # Reattach analyses
+            if sentenceAnalysesElement != None:
+                sentence.append(sentenceAnalysesElement)
+    for document in root.findall("document"):
+        if document not in documentsToKeep:
+            counts["documents-removed"] += 1
+            root.remove(document)
     print "Finished inserting SR", counts
+    for key in srTexts:
+        if key not in foundSRSentences:
+            print "Missing sentence", xmlEvents[key]["entities"][0].get("srId"), srTexts[key]
     
 def alignStrings(s1, s2):
     mapping = []
@@ -191,18 +222,20 @@ def convert(srFiles, xmlFileName, outdir, corpusName):
     insertEvents(xmlEvents, dataSets, srTexts, xml, corpusName)
     ETUtils.write(xml, outdir+corpusName+"-srevents.xml")
     
-    print >> sys.stderr, "Protein Name Splitting"
-    splitTarget = "McClosky"
-    ProteinNameSplitter.mainFunc(xml, None, splitTarget, splitTarget, "split-"+splitTarget, "split-"+splitTarget)
+    #print >> sys.stderr, "Protein Name Splitting"
+    #splitTarget = "McClosky"
+    #ProteinNameSplitter.mainFunc(xml, None, splitTarget, splitTarget, "split-"+splitTarget, "split-"+splitTarget)
     print >> sys.stderr, "Head Detection"
-    xml = FindHeads.findHeads(xml, "split-McClosky", tokenization=None, output=outdir+corpusName+"-split.xml", removeExisting=True)
+    xml = FindHeads.findHeads(xml, "split-mccc-preparsed", tokenization=None, output=outdir+corpusName+"-heads.xml", removeExisting=True)
     print >> sys.stderr, "Dividing into sets"
     InteractionXML.DivideSets.processCorpus(xml, outDir, corpusName + "-", ".xml", [("devel", "train")])
     #if "devel" in [x[0] for x in datasets]:
     #    print >> sys.stderr, "Creating empty devel set"
     #    deletionRules = {"interaction":{},"entity":{"isName":"False"}}
     #    InteractionXML.DeleteElements.processCorpus(corpusName + "-devel.xml", corpusName + "-devel-empty.xml", deletionRules)
-    return xml
+    print >> sys.stderr, "Converting back"
+    STConvert.toSTFormat(outdir+corpusName + "-devel.xml", outDir + corpusName + "-stformat-devel", outputTag="rel", task=2, debug=True, validate=False)
+    STConvert.toSTFormat(outdir+corpusName + "-train.xml", outDir + corpusName + "-stformat-train", outputTag="rel", task=2, debug=True, validate=False)
 
 if __name__=="__main__":
     # Import Psyco if available
@@ -213,25 +246,26 @@ if __name__=="__main__":
     except ImportError:
         print >> sys.stderr, "Psyco not installed"
     
-    relCorpusPath = "/home/jari/biotext/BioNLP2011/data/supporting-tasks/REL/rel-devel-and-train-and-test-stanford.xml"
+    relCorpusPath = "/home/jari/biotext/BioNLP2011/data/main-tasks/GE/GE-devel-and-train-and-test.xml"
 
-    # non-embed
-    outDir = "/usr/share/biotext/StaticRelations/data/nonembed/"
-    datasets = [("memberof", "/home/jari/data/StaticRelations/sr_data/nonembed/GGP_memberof_Term"), 
-                ("subunitof", "/home/jari/data/StaticRelations/sr_data/nonembed/GGP_subunitof_Term"), 
-                ("partof", "/home/jari/data/StaticRelations/sr_data/nonembed/Term_partof_GGP")]
-    
-    cwd = os.getcwd()
-    os.chdir(outDir)
-    log(False, False, "sr-nonembed-conversion-log.txt")
-    convert(datasets, relCorpusPath, outDir, "SRNE")
-    os.chdir(cwd)
+    if True:
+        # non-embed
+        outDir = "/usr/share/biotext/StaticRelations/data/nonembed/"
+        datasets = [("memberof", "/home/jari/data/StaticRelations/sr_data/nonembed/GGP_memberof_Term"), 
+                    ("subunitof", "/home/jari/data/StaticRelations/sr_data/nonembed/GGP_subunitof_Term"), 
+                    ("partof", "/home/jari/data/StaticRelations/sr_data/nonembed/Term_partof_GGP")]
+        
+        cwd = os.getcwd()
+        os.chdir(outDir)
+        log(False, False, "sr-nonembed-conversion-log.txt")
+        convert(datasets, relCorpusPath, outDir, "SRNE")
+        os.chdir(cwd)
     
     # embed
     outDir = "/usr/share/biotext/StaticRelations/data/embed/"
-    datasets = [("memberof", "/home/jari/data/StaticRelations/sr_data/embed/GGP_memberof_Term"), 
-                ("subunitof", "/home/jari/data/StaticRelations/sr_data/embed/GGP_subunitof_Term"), 
-                ("partof", "/home/jari/data/StaticRelations/sr_data/embed/Term_partof_GGP")]
+    datasets = [("subunitof", "/home/jari/data/StaticRelations/sr_data/embed/GGP_subunitof_EmbeddingTerm"), 
+                ("equivto", "/home/jari/data/StaticRelations/sr_data/embed/Term_equivto_EmbeddedGGP"), 
+                ("partof", "/home/jari/data/StaticRelations/sr_data/embed/Term_partof_EmbeddedGGP")]
     
     cwd = os.getcwd()
     os.chdir(outDir)
