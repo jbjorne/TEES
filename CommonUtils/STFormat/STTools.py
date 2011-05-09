@@ -398,7 +398,7 @@ def updateIds(annotations, minId=0):
         for ann in annotations:
             if len(ann.arguments) == 0 and ann.trigger == None:
                 ann.id = "T" + str(idCount)
-            elif ann.type in ["Subunit-Complex", "Protein-Component"]:
+            elif ann.type in ["Subunit-Complex", "Protein-Component", "SR-subunitof", "SR-equivto", "SR-partof", "SR-memberof"]:
                 ann.id = "R" + str(idCount)
             #elif ann.trigger != None or ann.type in ["ActionTarget", "Interaction", "TranscriptionBy", ""]:
             else:

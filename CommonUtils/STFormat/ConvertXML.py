@@ -220,7 +220,7 @@ def toInteractionXML(documents, corpusName="GENIA", output=None):
         ETUtils.write(corpusRoot, output)
     return ET.ElementTree(corpusRoot)
 
-def toSTFormat(input, output=None, outputTag="a2", useOrigIds=False, debug=False, task=2):
+def toSTFormat(input, output=None, outputTag="a2", useOrigIds=False, debug=False, task=2, validate=True):
     print >> sys.stderr, "Loading corpus", input
     corpusTree = ETUtils.ETFromObj(input)
     print >> sys.stderr, "Corpus file loaded"
@@ -348,7 +348,7 @@ def toSTFormat(input, output=None, outputTag="a2", useOrigIds=False, debug=False
                 #event.speculation = entityElementMap[e1].get("speculation")
                 #event.negation = entityElementMap[e1].get("negation")
                 stDoc.events.append(event)
-            elif intType not in ["Protein-Component", "Subunit-Complex", "Renaming", "Coref"]:
+            elif intType not in ["Protein-Component", "Subunit-Complex", "Renaming", "Coref", "SR-subunitof", "SR-equivto", "SR-partof", "SR-memberof"]:
                 #if intType == "Site" and tMap[interaction.get("e1")].type == "Entity":
                 if intType == "Site":
                     # These sites are real sites (i.e. task 2 sites).
@@ -399,6 +399,9 @@ def toSTFormat(input, output=None, outputTag="a2", useOrigIds=False, debug=False
                     if corefProtMap.has_key(e2):
                         for prot in corefProtMap[e2]:
                             rel.arguments.append(["Target", prot, None])
+                elif rel.type.startswith("SR-"):
+                    rel.arguments.append(["Arg1", tMap[e1], None])
+                    rel.arguments.append(["Arg2", tMap[e2], None])
                 else:
                     assert False, (rel.type, stDoc.id, interaction.get("id"))
                 stDoc.relations.append(rel)
@@ -444,7 +447,7 @@ def toSTFormat(input, output=None, outputTag="a2", useOrigIds=False, debug=False
     
     if output != None:
         print >> sys.stderr, "Writing output to", output
-        writeSet(documents, output, resultFileTag=outputTag, debug=debug, task=task)
+        writeSet(documents, output, resultFileTag=outputTag, debug=debug, task=task, validate=validate)
     return documents
 
 #def toSTFormatSentences(input, output=None, outputTag="a2"):

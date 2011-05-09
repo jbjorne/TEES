@@ -293,7 +293,7 @@ def removeUnusedTriggers(document):
     triggersToKeep = []
     for trigger in document.triggers:
         kept = False
-        for event in document.events:
+        for event in document.events + document.relations:
             if event.trigger == trigger:
                 triggersToKeep.append(trigger)
                 kept = True
