@@ -1,7 +1,7 @@
 """
 Edge Examples
 """
-__version__ = "$Revision: 1.60 $"
+__version__ = "$Revision: 1.61 $"
 
 import sys, os
 thisPath = os.path.dirname(os.path.abspath(__file__))
@@ -23,6 +23,9 @@ from FeatureBuilders.TriggerFeatureBuilder import TriggerFeatureBuilder
 import Utils.BioInfer.OntologyUtils as OntologyUtils
 #ENDIF
 import Range
+
+# For gold mapping
+import Evaluators.EvaluateInteractionXML as EvaluateInteractionXML
 
 class MultiEdgeExampleBuilder(ExampleBuilder):
     """
@@ -78,7 +81,7 @@ class MultiEdgeExampleBuilder(ExampleBuilder):
         #self.outFile = open("exampleTempFile.txt","wt")
 
     @classmethod
-    def run(cls, input, output, parse, tokenization, style, idFileTag=None):
+    def run(cls, input, output, parse, tokenization, style, idFileTag=None, gold=None):
         """
         An interface for running the example builder without needing to create a class
         """
@@ -88,7 +91,11 @@ class MultiEdgeExampleBuilder(ExampleBuilder):
         else:
             e = MultiEdgeExampleBuilder(classSet=classSet, featureSet=featureSet)
         sentences = cls.getSentences(input, parse, tokenization)
-        e.buildExamplesForSentences(sentences, output, idFileTag)
+        if gold != None:
+            goldSentences = cls.getSentences(gold, parse, tokenization)
+        else:
+            goldSentences = None
+        e.buildExamplesForSentences(sentences, output, idFileTag, goldSentences=goldSentences)
     
     def definePredictedValueRange(self, sentences, elementName):
         self.multiEdgeFeatureBuilder.definePredictedValueRange(sentences, elementName)                        
@@ -400,8 +407,14 @@ class MultiEdgeExampleBuilder(ExampleBuilder):
 #        undirected.add_nodes_from(graph)
 #        undirected.add_edges_from(graph.edges_iter())
 #        return undirected
+
+    def getGoldCategoryName(self, goldGraph, entityToGold, e1, e2, directed=True):
+        if len(entityToGold[e1]) > 0 and len(entityToGold[e2]) > 0:
+            return self.getCategoryName(goldGraph, entityToGold[e1][0], entityToGold[e2][0], directed=directed)
+        else:
+            return "neg"
             
-    def buildExamples(self, sentenceGraph):
+    def buildExamples(self, sentenceGraph, goldGraph=None):
         """
         Build examples for a single sentence. Returns a list of examples.
         See Core/ExampleUtils for example format.
@@ -411,6 +424,9 @@ class MultiEdgeExampleBuilder(ExampleBuilder):
         
         if "trigger_features" in self.styles: 
             self.triggerFeatureBuilder.initSentence(sentenceGraph)
+        
+        if goldGraph != None:
+            entityToGold = EvaluateInteractionXML.mapEntities(sentenceGraph.entities, goldGraph.entities)
         
         ##undirected = sentenceGraph.getUndirectedDependencyGraph()
         #undirected = self.nxMultiDiGraphToUndirected(sentenceGraph.dependencyGraph)
@@ -457,6 +473,8 @@ class MultiEdgeExampleBuilder(ExampleBuilder):
                     # define forward
                     if "entities" in self.styles:
                         categoryName = self.getCategoryName(sentenceGraph, eI, eJ, True)
+                        if goldGraph != None:
+                            categoryName = self.getGoldCategoryName(goldGraph, entityToGold, eI, eJ, True)
                     else:
                         categoryName = self.getCategoryNameFromTokens(sentenceGraph, tI, tJ, True)
                     # make forward
@@ -493,6 +511,8 @@ class MultiEdgeExampleBuilder(ExampleBuilder):
                     # define reverse
                     if "entities" in self.styles:
                         categoryName = self.getCategoryName(sentenceGraph, eJ, eI, True)
+                        if goldGraph != None:
+                            categoryName = self.getGoldCategoryName(goldGraph, entityToGold, eJ, eI, True)
                     else:
                         categoryName = self.getCategoryNameFromTokens(sentenceGraph, tJ, tI, True)
                     # make reverse
