@@ -1,7 +1,7 @@
 """
 Edge Examples
 """
-__version__ = "$Revision: 1.61 $"
+__version__ = "$Revision: 1.62 $"
 
 import sys, os
 thisPath = os.path.dirname(os.path.abspath(__file__))
@@ -26,6 +26,7 @@ import Range
 
 # For gold mapping
 import Evaluators.EvaluateInteractionXML as EvaluateInteractionXML
+
 
 class MultiEdgeExampleBuilder(ExampleBuilder):
     """
