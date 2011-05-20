@@ -1,7 +1,7 @@
 """
 Speculation and negation examples
 """
-__version__ = "$Revision: 1.10 $"
+__version__ = "$Revision: 1.11 $"
 
 import sys, os
 thisPath = os.path.dirname(os.path.abspath(__file__))
@@ -12,6 +12,8 @@ import Stemming.PorterStemmer as PorterStemmer
 from Core.IdSet import IdSet
 import Core.ExampleUtils as ExampleUtils
 from Core.Gazetteer import Gazetteer
+# For gold mapping
+import Evaluators.EvaluateInteractionXML as EvaluateInteractionXML
 
 def readWords(filename):
     f = open(filename)
@@ -68,12 +70,18 @@ class Task3ExampleBuilder(ExampleBuilder):
         self.styles = style
 
     @classmethod
-    def run(cls, input, output, parse, tokenization, style, idFileTag=None, gazetteerFileName=None, appendIndex=None):
+    def run(cls, input, output, parse, tokenization, style, idFileTag=None, gazetteerFileName=None, appendIndex=None, gold=None):
         classSet, featureSet = cls.getIdSets(idFileTag)
         e = Task3ExampleBuilder(style, classSet, featureSet, gazetteerFileName=None)
         sentences = cls.getSentences(input, parse, tokenization)
-        e.buildExamplesForSentences(sentences, output, idFileTag, appendIndex=appendIndex)
-
+        if gold != None:
+            goldSentences = cls.getSentences(gold, parse, tokenization)
+        else:
+            goldSentences = None
+        if gold != None:
+            e.buildExamplesForSentences(sentences, output, idFileTag, appendIndex=appendIndex, goldSentences=goldSentences)
+        else:
+            e.buildExamplesForSentences(sentences, output, idFileTag, appendIndex=appendIndex)
 
     def preProcessExamples(self, allExamples):
         if "normalize" in self.styles:
@@ -141,7 +149,7 @@ class Task3ExampleBuilder(ExampleBuilder):
         for tokenFeature,w in self.getTokenFeatures(sentenceGraph.tokens[index], sentenceGraph).iteritems():
             features[self.featureSet.getId(tag+tokenFeature)] = w
     
-    def buildExamples(self, sentenceGraph, appendIndex=0):
+    def buildExamples(self, sentenceGraph, appendIndex=0, goldGraph=None):
         """
         Build one example for each token of the sentence
         """
@@ -149,6 +157,9 @@ class Task3ExampleBuilder(ExampleBuilder):
         exampleIndex = 0 + appendIndex
         
         self.tokenFeatures = {}
+
+        if goldGraph != None:
+            entityToGold = EvaluateInteractionXML.mapEntities(sentenceGraph.entities, goldGraph.entities)
         
         namedEntityCount = 0
         entityCount = 0
@@ -212,12 +223,22 @@ class Task3ExampleBuilder(ExampleBuilder):
                     category = self.classSet.getId("speculation")
                 else:
                     category = 1
+                if goldGraph != None:
+                    if len(entityToGold[entity]) > 0 and entityToGold[entity][0].get("speculation") == "True":
+                        category = self.classSet.getId("speculation")
+                    else:
+                        category = 1
             else:
                 task3Type = "negation"
                 if entity.get("negation") == "True":
                     category = self.classSet.getId("negation")
                 else:
                     category = 1
+                if goldGraph != None:
+                    if len(entityToGold[entity]) > 0 and entityToGold[entity][0].get("negation") == "True":
+                        category = self.classSet.getId("negation")
+                    else:
+                        category = 1
                 
 
             # FEATURES

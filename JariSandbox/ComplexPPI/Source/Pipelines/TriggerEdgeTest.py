@@ -235,7 +235,10 @@ if options.mode in ["BOTH", "FINAL", "GRID"]:
         xml = ix.recalculateIds(xml, None, True)
         
         # Build edge examples
-        EDGE_EXAMPLE_BUILDER.run(xml, "test-edge-examples", PARSE, TOK, EDGE_FEATURE_PARAMS, EDGE_IDS)
+        if options.classifier == "ACCls":
+            EDGE_EXAMPLE_BUILDER.run(xml, "test-edge-examples", PARSE, TOK, EDGE_FEATURE_PARAMS, EDGE_IDS, gold=TEST_FILE)
+        else:
+            EDGE_EXAMPLE_BUILDER.run(xml, "test-edge-examples", PARSE, TOK, EDGE_FEATURE_PARAMS, EDGE_IDS)
         # Classify with pre-defined model
         if bestEdgeModel != None:
             print >> sys.stderr, "best-edge-model=", os.path.realpath("best-edge-model")
