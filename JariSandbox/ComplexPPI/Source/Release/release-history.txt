@@ -1,0 +1,14 @@
+------------------------------------------------------------------------------
+Turku Event Extraction System
+Release History
+------------------------------------------------------------------------------
+
+## 1.01 (1.2.2011) ###########################################################
+
+Fixed errors in convertGenia.py, which is used for converting the BioNLP'09
+Shared Task data. Thank you to Pontus Stenetorp and Martin Gerner for 
+notifying about the issue and helping fix it.
+
+## 1.0 (7.5.2010) ############################################################
+
+Original release.
