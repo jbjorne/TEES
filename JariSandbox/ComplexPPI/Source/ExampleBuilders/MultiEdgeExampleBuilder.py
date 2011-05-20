@@ -1,7 +1,7 @@
 """
 Edge Examples
 """
-__version__ = "$Revision: 1.62 $"
+__version__ = "$Revision: 1.63 $"
 
 import sys, os
 thisPath = os.path.dirname(os.path.abspath(__file__))
@@ -26,7 +26,6 @@ import Range
 
 # For gold mapping
 import Evaluators.EvaluateInteractionXML as EvaluateInteractionXML
-
 
 class MultiEdgeExampleBuilder(ExampleBuilder):
     """
@@ -462,6 +461,9 @@ class MultiEdgeExampleBuilder(ExampleBuilder):
                     #    continue
                     if eI.get("type") == "neg" or eJ.get("type") == "neg":
                         continue
+                    if "skip_extra_triggers" in self.styles:
+                        if eI.get("source") != None or eJ.get("source") != None:
+                            continue
                 else:
                     tI = sentenceGraph.tokens[i]
                     tJ = sentenceGraph.tokens[j]
