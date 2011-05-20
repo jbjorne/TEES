@@ -7,7 +7,7 @@ import STFormat.ConvertXML
 import STFormat.Compare
 import subprocess
 
-def task3Classify(xml, specModel, negModel, task3Ids, task3Tag, parse):
+def task3Classify(classifier, xml, specModel, negModel, task3Ids, task3Tag, parse, goldXML=None):
     # Task 3
     SPECULATION_MODEL = specModel
     assert os.path.exists(SPECULATION_MODEL)
@@ -22,14 +22,14 @@ def task3Classify(xml, specModel, negModel, task3Ids, task3Tag, parse):
     
     # Speculation detection
     print >> sys.stderr, "====== Speculation Detection ======"
-    Task3ExampleBuilder.run(xml, "speculation-"+task3Tag+"-examples", parse, None, "style:typed,speculation", TASK3_IDS, None)
-    Cls.test("speculation-"+task3Tag+"-examples", SPECULATION_MODEL, "speculation-"+task3Tag+"-classifications")
+    Task3ExampleBuilder.run(xml, "speculation-"+task3Tag+"-examples", parse, None, "style:typed,speculation", TASK3_IDS, None, gold=goldXML)
+    classifier.test("speculation-"+task3Tag+"-examples", SPECULATION_MODEL, "speculation-"+task3Tag+"-classifications")
     xml = BioTextExampleWriter.write("speculation-"+task3Tag+"-examples", "speculation-"+task3Tag+"-classifications", xml, None, TASK3_IDS+".class_names")
     
     # Negation detection
     print >> sys.stderr, "====== Negation Detection ======"
-    Task3ExampleBuilder.run(xml, "negation-"+task3Tag+"-examples", parse, None, "style:typed,negation", TASK3_IDS, None)
-    Cls.test("negation-"+task3Tag+"-examples", NEGATION_MODEL, "negation-"+task3Tag+"-classifications")
+    Task3ExampleBuilder.run(xml, "negation-"+task3Tag+"-examples", parse, None, "style:typed,negation", TASK3_IDS, None, gold=goldXML)
+    classifier.test("negation-"+task3Tag+"-examples", NEGATION_MODEL, "negation-"+task3Tag+"-classifications")
     xml = BioTextExampleWriter.write("negation-"+task3Tag+"-examples", "negation-"+task3Tag+"-classifications", xml, task3Tag + "-task3.xml", TASK3_IDS+".class_names")
     return xml
 
@@ -53,6 +53,7 @@ def updateModel(model, linkName):
         os.symlink(modelPath, linkName)
         return linkName
     else:
+        print "Warning, best model does not exist"
         return None
 
 def saveBoostParam(boost):
@@ -292,16 +293,17 @@ if options.mode in ["BOTH", "FINAL", "POST-DOWNLOAD", "UNMERGING", "GRID", "POST
             ###############################################################################
             # Submit final models
             ###############################################################################
-            print >> sys.stderr, "------------ Submitting final models ------------"
-            print >> sys.stderr, "Everything models for parse", PARSE_TAG
-            c = None
-            if "local" not in options.csc: c = CSCConnection(CSC_WORKDIR+"/everything-trigger-models", CSC_ACCOUNT, True)
-            optimize(CLASSIFIER, Ev, TRIGGER_EVERYTHING_EXAMPLE_FILE, TRIGGER_TEST_EXAMPLE_FILE,\
-                TRIGGER_IDS+".class_names", "c:"+getParameter(bestTriggerModel).split("_")[-1], "everything-trigger-models", None, c, False, steps="SUBMIT")
-            if "local" not in options.csc: c = CSCConnection(CSC_WORKDIR+"/everything-edge-models", CSC_ACCOUNT, True)
-            optimize(CLASSIFIER, Ev, EDGE_EVERYTHING_EXAMPLE_FILE, EDGE_TEST_EXAMPLE_FILE,\
-                EDGE_IDS+".class_names", "c:"+getParameter(bestEdgeModel).split("_")[-1], "everything-edge-models", None, c, False, steps="SUBMIT")
-            print >> sys.stderr, "Everything models submitted"
+            if options.classifier != "ACCls":
+                print >> sys.stderr, "------------ Submitting final models ------------"
+                print >> sys.stderr, "Everything models for parse", PARSE_TAG
+                c = None
+                if "local" not in options.csc: c = CSCConnection(CSC_WORKDIR+"/everything-trigger-models", CSC_ACCOUNT, True)
+                optimize(CLASSIFIER, Ev, TRIGGER_EVERYTHING_EXAMPLE_FILE, TRIGGER_TEST_EXAMPLE_FILE,\
+                    TRIGGER_IDS+".class_names", "c:"+getParameter(bestTriggerModel).split("_")[-1], "everything-trigger-models", None, c, False, steps="SUBMIT")
+                if "local" not in options.csc: c = CSCConnection(CSC_WORKDIR+"/everything-edge-models", CSC_ACCOUNT, True)
+                optimize(CLASSIFIER, Ev, EDGE_EVERYTHING_EXAMPLE_FILE, EDGE_TEST_EXAMPLE_FILE,\
+                    EDGE_IDS+".class_names", "c:"+getParameter(bestEdgeModel).split("_")[-1], "everything-edge-models", None, c, False, steps="SUBMIT")
+                print >> sys.stderr, "Everything models submitted"
         # UNMERGING
         ###############################################################################
         # Unmerging learning
@@ -370,7 +372,7 @@ if options.mode in ["BOTH", "FINAL", "POST-DOWNLOAD", "UNMERGING", "GRID", "POST
         bestResults = None
         for boost in boosterParams:
             print >> sys.stderr, "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
-            print >> sys.stderr, "Processing params", str(count) + "/" + str(len(boosterParams)), boost
+            print >> sys.stderr, "Processing params", str(count+1) + "/" + str(len(boosterParams)), boost
             print >> sys.stderr, "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
             
             # Boost
@@ -379,7 +381,10 @@ if options.mode in ["BOTH", "FINAL", "POST-DOWNLOAD", "UNMERGING", "GRID", "POST
             xml = ix.recalculateIds(xml, None, True)
             
             # Build edge examples
-            EDGE_EXAMPLE_BUILDER.run(xml, "test-edge-examples", PARSE, TOK, EDGE_FEATURE_PARAMS, EDGE_IDS)
+            if options.classifier == "ACCls":
+                EDGE_EXAMPLE_BUILDER.run(xml, "test-edge-examples", PARSE, TOK, EDGE_FEATURE_PARAMS, EDGE_IDS, gold=TEST_FILE)
+            else:
+                EDGE_EXAMPLE_BUILDER.run(xml, "test-edge-examples", PARSE, TOK, EDGE_FEATURE_PARAMS, EDGE_IDS)
             # Classify with pre-defined model
             if bestEdgeModel != None:
                 print >> sys.stderr, "best-edge-model=", os.path.realpath("best-edge-model")
@@ -407,7 +412,7 @@ if options.mode in ["BOTH", "FINAL", "POST-DOWNLOAD", "UNMERGING", "GRID", "POST
                         print >> sys.stderr, "--------- ML Unmerging ---------"
                         GOLD_TEST_FILE = TEST_FILE.replace("-nodup", "")
                         UnmergingExampleBuilder.run("flat-"+str(boost)+".xml", GOLD_TEST_FILE, "unmerging-grid-examples", PARSE, TOK, UNMERGING_FEATURE_PARAMS, UNMERGING_IDS)
-                        Cls.test("unmerging-grid-examples", bestUnmergingModel, "unmerging-grid-classifications")
+                        CLASSIFIER.test("unmerging-grid-examples", bestUnmergingModel, "unmerging-grid-classifications")
                         unmergedXML = BioTextExampleWriter.write("unmerging-grid-examples", "unmerging-grid-classifications", "flat-"+str(boost)+".xml", "unmerged-"+str(boost)+".xml", UNMERGING_IDS+".class_names", PARSE, TOK)
                         STFormat.ConvertXML.toSTFormat(unmergedXML, "unmerged-"+str(boost)+"-geniaformat", getA2FileTag(options.task, subTask))
                         if options.task == "OLD":
@@ -452,7 +457,10 @@ if options.mode in ["BOTH", "FINAL", "POST-DOWNLOAD", "UNMERGING", "GRID", "POST
     ###############################################################################
     print >> sys.stderr, "--------- Classify empty devel set ---------"
     # Trigger Detection
-    TRIGGER_EXAMPLE_BUILDER.run(TEST_FILE.replace(".xml", "-empty.xml"), "empty-test-trigger-examples", PARSE, TOK, TRIGGER_FEATURE_PARAMS, TRIGGER_IDS)
+    if options.classifier != "ACCls":
+        TRIGGER_EXAMPLE_BUILDER.run(TEST_FILE.replace(".xml", "-empty.xml"), "empty-test-trigger-examples", PARSE, TOK, TRIGGER_FEATURE_PARAMS, TRIGGER_IDS)
+    else: # use the normal, non-empty data
+        TRIGGER_EXAMPLE_BUILDER.run(TEST_FILE, "empty-test-trigger-examples", PARSE, TOK, TRIGGER_FEATURE_PARAMS, TRIGGER_IDS)
     CLASSIFIER.test("empty-test-trigger-examples", bestTriggerModel, "empty-test-trigger-classifications")
     if bestTriggerModel != None: print >> sys.stderr, "best-trigger-model=", os.path.realpath("best-trigger-model")
     Ev.evaluate("empty-test-trigger-examples", "empty-test-trigger-classifications", TRIGGER_IDS+".class_names")
@@ -462,7 +470,10 @@ if options.mode in ["BOTH", "FINAL", "POST-DOWNLOAD", "UNMERGING", "GRID", "POST
     xml = ix.splitMergedElements(xml, None)
     xml = ix.recalculateIds(xml, None, True)
     # Edge Detection
-    EDGE_EXAMPLE_BUILDER.run(xml, "empty-test-edge-examples", PARSE, TOK, EDGE_FEATURE_PARAMS, EDGE_IDS)
+    if options.classifier == "ACCls":
+        EDGE_EXAMPLE_BUILDER.run(xml, "empty-test-edge-examples", PARSE, TOK, EDGE_FEATURE_PARAMS, EDGE_IDS, gold=TEST_FILE)
+    else:
+        EDGE_EXAMPLE_BUILDER.run(xml, "empty-test-edge-examples", PARSE, TOK, EDGE_FEATURE_PARAMS, EDGE_IDS)
     if bestEdgeModel != None: print >> sys.stderr, "best-edge-model=", os.path.realpath("best-edge-model")
     CLASSIFIER.test("empty-test-edge-examples", bestEdgeModel, "empty-test-edge-classifications")
     Ev.evaluate("empty-test-edge-examples", "empty-test-edge-classifications", EDGE_IDS+".class_names")
@@ -471,9 +482,12 @@ if options.mode in ["BOTH", "FINAL", "POST-DOWNLOAD", "UNMERGING", "GRID", "POST
     xml = ix.recalculateIds(xml, "empty-edges.xml", True)
     # Unmerging
     if options.unmerging:
-        GOLD_TEST_FILE = None
+        if options.classifier != "ACCls":
+            GOLD_TEST_FILE = None
+        else:
+            GOLD_TEST_FILE = TEST_FILE.replace("-nodup", "")
         UnmergingExampleBuilder.run(xml, GOLD_TEST_FILE, "unmerging-empty-examples", PARSE, TOK, UNMERGING_FEATURE_PARAMS, UNMERGING_IDS)
-        Cls.test("unmerging-empty-examples", bestUnmergingModel, "unmerging-empty-classifications")
+        CLASSIFIER.test("unmerging-empty-examples", bestUnmergingModel, "unmerging-empty-classifications")
         unmergedXML = BioTextExampleWriter.write("unmerging-empty-examples", "unmerging-empty-classifications", xml, "empty-unmerged.xml", UNMERGING_IDS+".class_names", PARSE, TOK)
         EMPTY_GENIAFORMAT_DIR = "empty-unmerged-geniaformat"
         STFormat.ConvertXML.toSTFormat(unmergedXML, EMPTY_GENIAFORMAT_DIR, getA2FileTag(options.task, subTask))
@@ -488,7 +502,10 @@ if options.mode in ["BOTH", "FINAL", "POST-DOWNLOAD", "UNMERGING", "GRID", "POST
     elif options.task == "BB": evaluateBX(EMPTY_GENIAFORMAT_DIR, "BB")
     if options.task in ["OLD", "GE", "EPI", "ID"]:
         print >> sys.stderr, "======== Task 3 for empty devel set ========"
-        xml = task3Classify(xml, options.speculationModel, options.negationModel, options.task3Ids, "empty", PARSE)
+        if options.classifier == "ACCls":
+            xml = task3Classify(CLASSIFIER, xml, options.speculationModel, options.negationModel, options.task3Ids, "empty", PARSE, goldXML=TEST_FILE)
+        else:
+            xml = task3Classify(CLASSIFIER, xml, options.speculationModel, options.negationModel, options.task3Ids, "empty", PARSE)
         STFormat.ConvertXML.toSTFormat(xml, EMPTY_GENIAFORMAT_DIR+"-task3", getA2FileTag(options.task, subTask))
         print >> sys.stderr, "======== Evaluating empty devel set (task 3) ========"
         EvaluateInteractionXML.run(Ev, xml, TEST_FILE, PARSE, TOK)
@@ -496,6 +513,9 @@ if options.mode in ["BOTH", "FINAL", "POST-DOWNLOAD", "UNMERGING", "GRID", "POST
         elif options.task == "GE": evaluateBioNLP11Genia(EMPTY_GENIAFORMAT_DIR+"-task3", subTask)
         elif options.task == "BB": evaluateBX(EMPTY_GENIAFORMAT_DIR+"-task3", "BB")
     
+    if options.classifier == "ACCls":
+        print >> sys.stderr, "No test set classification with AllCorrectClassifier"
+        sys.exit()
     ###############################################################################
     # Classify test set
     ###############################################################################
@@ -532,7 +552,7 @@ if options.mode in ["BOTH", "FINAL", "POST-DOWNLOAD", "UNMERGING", "GRID", "POST
     if options.unmerging:
         GOLD_TEST_FILE = FINAL_TEST_FILE.replace("-nodup", "")
         UnmergingExampleBuilder.run(xml, GOLD_TEST_FILE, "unmerging-final-examples", PARSE, TOK, UNMERGING_FEATURE_PARAMS, UNMERGING_IDS)
-        Cls.test("unmerging-final-examples", bestUnmergingModel, "unmerging-final-classifications")
+        CLASSIFIER.test("unmerging-final-examples", bestUnmergingModel, "unmerging-final-classifications")
         unmergedXML = BioTextExampleWriter.write("unmerging-final-examples", "unmerging-final-classifications", xml, "final-unmerged.xml", UNMERGING_IDS+".class_names", PARSE, TOK)
         STFormat.ConvertXML.toSTFormat(unmergedXML, "final-unmerged-geniaformat", getA2FileTag(options.task, subTask))
         xml = unmergedXML
@@ -544,7 +564,7 @@ if options.mode in ["BOTH", "FINAL", "POST-DOWNLOAD", "UNMERGING", "GRID", "POST
     # Task 3
     if options.task in ["OLD", "GE", "EPI", "ID"]:
         print >> sys.stderr, "======== Task 3 for test set ========"
-        xml = task3Classify(xml, options.speculationModel, options.negationModel, options.task3Ids, "final", PARSE)
+        xml = task3Classify(CLASSIFIER, xml, options.speculationModel, options.negationModel, options.task3Ids, "final", PARSE)
         STFormat.ConvertXML.toSTFormat(xml, "final-task3", getA2FileTag(options.task, subTask))
         # Sanity Check
-        STFormat.Compare.compare("final-task3", EMPTY_GENIAFORMAT_DIR+"-task3", getA2FileTag(options.task, subTask))
+        STFormat.Compare.compare(CLASSIFIER, "final-task3", EMPTY_GENIAFORMAT_DIR+"-task3", getA2FileTag(options.task, subTask))
