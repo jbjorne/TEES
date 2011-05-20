@@ -6,7 +6,11 @@ import Core.ExampleBuilder
 import Stemming.PorterStemmer as PorterStemmer
 import Core.ExampleUtils as ExampleUtils
 from FeatureBuilder import FeatureBuilder
-from nltk.corpus import wordnet as wn 
+try:
+    from nltk.corpus import wordnet as wn 
+except ImportError:
+    print >> sys.stderr, "nltk not installed"
+    wn = None
 
 class WordNetFeatureBuilder(FeatureBuilder):
     def __init__(self, featureSet=None):
