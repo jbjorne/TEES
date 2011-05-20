@@ -148,6 +148,20 @@ def getWeights(svs):
     for i in range(numFeatures):
         for sv in svs:
             #print len(sv)
+            assert len(sv) == numFeatures, (len(sv), numFeatures)
+            absFeature = abs(sv[i])
+            if absFeature > weights[-1]:
+                weights[-1] = absFeature
+        weights.append(0)
+    return weights
+
+def getWeightsPosNeg(svs):
+    numFeatures = len(svs[0])
+    #print numFeatures
+    weights = [0]
+    for i in range(numFeatures):
+        for sv in svs:
+            #print len(sv)
             assert len(sv) == numFeatures
             absFeature = abs(sv[i])
             if absFeature > weights[-1]:
@@ -199,17 +213,19 @@ if __name__=="__main__":
     
     #mapIds("a",model)
     s = getSupportVectors(options.model)
+    print "vectors:", len(s)
+    s = s[0:-1]
     #writeModel(s, model, "temp.txt")
     #tokenizeModel(model, "tokenized.txt")
     w = getWeights(s)
     w = assignNames(w, IdSet(filename=options.ids))
     f = open(options.output + "weights.txt", "wt")
     for pair in w:
-        f.write(str(pair[0]) + "\t" + pair[1] + "\n")
+        f.write(str(pair[0]) + "\t" + str(pair[1]) + "\n")
     f.close()
     
     d = getTokenWeights(w)
     f = open(options.output + "weights-tokens.txt", "wt")
     for pair in sorted(d.items(), key=itemgetter(1)):
-        f.write(str(pair[1]) + "\t" + pair[0] + "\n")
+        f.write(str(pair[1]) + "\t" + str(pair[0]) + "\n")
     f.close()
