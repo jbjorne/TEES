@@ -65,7 +65,7 @@ def compareEntitiesByGENIARelaxedOffsetMethod(e1, e2, tokens):
 
 # Produces a mapping that connects matching entities from prediction (from)
 # to gold standard (to).
-def mapEntities(entitiesFrom, entitiesTo, tokens, compareFunction=compareEntitiesSimple):
+def mapEntities(entitiesFrom, entitiesTo, tokens=None, compareFunction=compareEntitiesSimple):
     entityMap = {}
     for entityFrom in entitiesFrom:
         entityMap[entityFrom] = []
@@ -175,7 +175,10 @@ def getInteractionPredictions(interactionsFrom, interactionsTo, entityMap, class
 # Compares a prediction (from) to a gold (to) sentence
 def processSentence(fromSentence, toSentence, target, classSets, negativeClassId, entityMatchFunction):
     splitMerged(fromSentence) # modify element tree to split merged elements into multiple elements
-    entitiesFrom = fromSentence.entities
+    entitiesFrom = []
+    for e in fromSentence.entities:
+        if e.get("type") != "neg":
+            entitiesFrom.append(e)
     entitiesTo = toSentence.entities
     tokens = fromSentence.tokens
     # map predicted entities to gold entities
@@ -188,7 +191,11 @@ def processSentence(fromSentence, toSentence, target, classSets, negativeClassId
     if target == "entities" or target == "both":
         entityExamples, entityPredictions = getEntityPredictions(entityMap, entitiesTo, classSets["entity"], negativeClassId)
     if target == "interactions" or target == "both":
-        interactionExamples, interactionPredictions, sentFalseEntity = getInteractionPredictions(fromSentence.interactions + fromSentence.pairs, toSentence.interactions + toSentence.pairs, entityMap, classSets["interaction"], negativeClassId)
+        fromInteractions = []
+        for interaction in fromSentence.interactions + fromSentence.pairs:
+            if interaction.get("type") != "neg":
+                fromInteractions.append(interaction)
+        interactionExamples, interactionPredictions, sentFalseEntity = getInteractionPredictions(fromInteractions, toSentence.interactions + toSentence.pairs, entityMap, classSets["interaction"], negativeClassId)
         for k,v in sentFalseEntity.iteritems():
             falseEntity[k][0] += v[0]
             falseEntity[k][1] += v[1]
