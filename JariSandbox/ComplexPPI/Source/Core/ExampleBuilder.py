@@ -1,7 +1,7 @@
 """
 Base class for ExampleBuilders
 """
-__version__ = "$Revision: 1.29 $"
+__version__ = "$Revision: 1.30 $"
 
 from SentenceGraph import SentenceGraph
 from IdSet import IdSet
@@ -72,7 +72,7 @@ class ExampleBuilder:
         e.buildExamplesForSentences(sentences, output, idFileTag)
         return e
     
-    def buildExamples(self, sentenceGraph):
+    def buildExamples(self, sentenceGraph, goldGraph=None):
         raise NotImplementedError
     
     def definePredictedValueRange(self, sentences, elementName):
@@ -81,7 +81,7 @@ class ExampleBuilder:
     def getPredictedValueRange(self):
         return None
 
-    def buildExamplesForSentences(self, sentences, output, idFileTag=None, appendIndex=None):            
+    def buildExamplesForSentences(self, sentences, output, idFileTag=None, appendIndex=None, goldSentences=None):            
         examples = []
         counter = ProgressCounter(len(sentences), "Build examples")
         
@@ -93,12 +93,18 @@ class ExampleBuilder:
         else:
             outfile = open(output, "wt")
         exampleCount = 0
-        for sentence in sentences:
+        for i in range(len(sentences)):
+            sentence = sentences[i]
+            if goldSentences != None:
+                goldSentence = goldSentences[i]
             counter.update(1, "Building examples ("+sentence[0].getSentenceId()+"): ")
             if appendIndex != None:
                 examples = self.buildExamples(sentence[0], appendIndex=appendIndex)
             else:
-                examples = self.buildExamples(sentence[0])
+                if goldSentences != None:
+                    examples = self.buildExamples(sentence[0], goldGraph=goldSentence[0])
+                else:
+                    examples = self.buildExamples(sentence[0])
             exampleCount += len(examples)
             examples = self.preProcessExamples(examples)
             ExampleUtils.appendExamples(examples, outfile)
