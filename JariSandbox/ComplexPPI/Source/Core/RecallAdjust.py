@@ -1,7 +1,7 @@
 """
 Trade precision for recall
 """
-__version__ = "$Revision: 1.7 $"
+__version__ = "$Revision: 1.8 $"
 
 try:
     import xml.etree.cElementTree as ET
@@ -63,12 +63,13 @@ def getClassRanges(entities):
         if entity.get("isName") == "True":
             continue
         predictions=entity.get("predictions")
-        for labelConfidence in predictions.split(","):
-            label,confidence=labelConfidence.split(":")
-            confidence=float(confidence)
-            if not classRanges.has_key(label):
-                classRanges[label] = [sys.maxint,-sys.maxint]
-            classRanges[label] = [min(classRanges[label][0], confidence), max(classRanges[label][1], confidence)]
+        if predictions:
+            for labelConfidence in predictions.split(","):
+                label,confidence=labelConfidence.split(":")
+                confidence=float(confidence)
+                if not classRanges.has_key(label):
+                    classRanges[label] = [sys.maxint,-sys.maxint]
+                classRanges[label] = [min(classRanges[label][0], confidence), max(classRanges[label][1], confidence)]
     return classRanges
 
 class RecallAdjust:    
@@ -91,7 +92,9 @@ class RecallAdjust:
             if binary:
                 print >> sys.stderr, "Recall binary mode"
                 classRanges = getClassRanges(root.getiterator("entity"))
-                assert len(classRanges.keys()) == 2
+                assert len(classRanges.keys()) in [0,2]
+                if len(classRanges.keys()) == 0:
+                    print >> sys.stderr, "Warning, recall adjustment skipped because no prediction weights found"
             else:
                 print >> sys.stderr, "Recall multiclass mode"
                 classRanges = None
