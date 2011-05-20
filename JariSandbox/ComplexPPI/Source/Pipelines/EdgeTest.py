@@ -102,7 +102,7 @@ else:
 bestEdgeModel = optimize(CLASSIFIER, Ev, EDGE_TRAIN_EXAMPLE_FILE, EDGE_TEST_EXAMPLE_FILE,\
 EDGE_IDS+".class_names", EDGE_CLASSIFIER_PARAMS, "edge-models", None, c, False)[1]
 
-Cls.test(EDGE_TEST_EXAMPLE_FILE, bestEdgeModel, "edge-test-classifications")
+CLASSIFIER.test(EDGE_TEST_EXAMPLE_FILE, bestEdgeModel, "edge-test-classifications")
 edgeXML = BioTextExampleWriter.write(EDGE_TEST_EXAMPLE_FILE, "edge-test-classifications", TEST_FILE, "test-predicted-edges.xml", EDGE_IDS+".class_names", PARSE, TOK)
 EvaluateInteractionXML.run(Ev, edgeXML, TEST_FILE, PARSE, TOK)
 STFormat.ConvertXML.toSTFormat(edgeXML, "geniaformat", outputTag="a2")
