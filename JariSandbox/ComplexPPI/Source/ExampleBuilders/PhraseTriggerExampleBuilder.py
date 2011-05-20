@@ -1,7 +1,7 @@
 """
 Trigger examples
 """
-__version__ = "$Revision: 1.5 $"
+__version__ = "$Revision: 1.6 $"
 
 import sys, os
 thisPath = os.path.dirname(os.path.abspath(__file__))
@@ -19,26 +19,6 @@ coNPPhraseFirstToken = set(["both", "each", "it", "its", "itself", "neither", "o
                             "that", "the", "their", "them", "themselves", "these", "they",
                             "this", "those"])
 
-def getBacteriaNames():
-    f = open("/home/jari/data/BioNLP11SharedTask/resources/lpsn-bacteria-names.txt", "rt")
-    names = []
-    for line in f:
-        if line.strip == "":
-            continue
-        if line.startswith("Note:"):
-            continue
-        namePart = line.split("18")[0].split("19")[0].split("(")[0]
-        names.append(namePart)
-    f.close()
-    return names
-
-def getBacteriaTokens(names):
-    tokens = set()
-    for name in names:
-        for split in name.split():
-            tokens.add(split.lower())
-    return tokens
-
 class PhraseTriggerExampleBuilder(ExampleBuilder):
     def __init__(self, style=None, classSet=None, featureSet=None, gazetteerFileName=None):
         if classSet == None:
@@ -51,9 +31,6 @@ class PhraseTriggerExampleBuilder(ExampleBuilder):
         self.styles = style
         self.triggerFeatureBuilder = TriggerFeatureBuilder(self.featureSet)
         self.triggerFeatureBuilder.useNonNameEntities = False
-        
-        if "bb_features" in style:
-            self.bacteriaTokens = getBacteriaTokens(getBacteriaNames())
 
     @classmethod
     def run(cls, input, output, parse, tokenization, style, idFileTag=None, gazetteerFileName=None):
@@ -131,26 +108,10 @@ class PhraseTriggerExampleBuilder(ExampleBuilder):
         
         # Prepare phrases, create subphrases
         #filter = set(["NP", "TOK-IN", "WHADVP", "WHNP", "TOK-WP$", "TOK-PRP$", "NP-IN"])
-        filter = set(["ADJP",
-                  "DT(-)-NP-IN",
-                  "DT(-)-NP",
-                  "NP",
-                  "NP-IN",
-                  "PP",
-                  "S",
-                  "S1",
-                  "TOK-tJJ",
-                  "TOK-tNN",
-                  "TOK-tNNP",
-                  "TOK-tNNS",
-                  "VP",
-                  "VP-IN"])
-        phrases = MapPhrases.getPhrases(sentenceGraph.parseElement, sentenceGraph.tokens)
+        phrases = MapPhrases.getPhrases(sentenceGraph.parseElement, sentenceGraph.tokens, set(["NP", "WHADVP", "WHNP"]))
         phraseDict = MapPhrases.getPhraseDict(phrases)
-        phrases.extend( MapPhrases.makeINSubPhrases(phrases, sentenceGraph.tokens, phraseDict) )
-        phrases.extend( MapPhrases.makeTokenSubPhrases(sentenceGraph.tokens, phraseDict, None) )
-        phrases, phraseDict = MapPhrases.filterPhrases(phrases, filter)
-        
+        phrases.extend( MapPhrases.makeINSubPhrases(phrases, sentenceGraph.tokens, phraseDict, ["NP"]) )
+        phrases.extend( MapPhrases.makeTokenSubPhrases(sentenceGraph.tokens, phraseDict) )
         phraseToEntity = MapPhrases.getPhraseEntityMapping(sentenceGraph.entities, phraseDict)
         # Make counts
         phraseTypeCounts = MapPhrases.getPhraseTypeCounts(phrases)
@@ -209,11 +170,6 @@ class PhraseTriggerExampleBuilder(ExampleBuilder):
                 self.triggerFeatureBuilder.setTag("ptok_" + str(phraseTokenPos-len(phraseTokens)) + "_" )
                 self.triggerFeatureBuilder.buildFeatures(phraseHeadToken, linear=False, chains=False)            
                 #self.triggerFeatureBuilder.buildAttachedEdgeFeatures(phraseHeadToken)
-                if "bb_features" in self.styles:
-                    if token.get("text").lower() in self.bacteriaTokens:
-                        features[self.featureSet.getId("lpsnBacToken")] = 1
-                        features[self.featureSet.getId("lpsnBacToken_" + str(phraseTokenPos))] = 1
-                        features[self.featureSet.getId("lpsnBacToken_" + str(phraseTokenPos-len(phraseTokens)))] = 1
                 phraseTokenPos += 1
             self.triggerFeatureBuilder.setTag()
              
