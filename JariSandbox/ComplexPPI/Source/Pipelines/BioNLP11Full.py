@@ -567,4 +567,4 @@ if options.mode in ["BOTH", "FINAL", "POST-DOWNLOAD", "UNMERGING", "GRID", "POST
         xml = task3Classify(CLASSIFIER, xml, options.speculationModel, options.negationModel, options.task3Ids, "final", PARSE)
         STFormat.ConvertXML.toSTFormat(xml, "final-task3", getA2FileTag(options.task, subTask))
         # Sanity Check
-        STFormat.Compare.compare(CLASSIFIER, "final-task3", EMPTY_GENIAFORMAT_DIR+"-task3", getA2FileTag(options.task, subTask))
+        STFormat.Compare.compare("final-task3", EMPTY_GENIAFORMAT_DIR+"-task3", getA2FileTag(options.task, subTask))
