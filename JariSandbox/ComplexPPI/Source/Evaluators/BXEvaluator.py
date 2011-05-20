@@ -12,6 +12,7 @@ import Core.ExampleUtils as ExampleUtils
 import Core.SentenceGraph
 from ExampleWriters.BioTextExampleWriter import BioTextExampleWriter
 import BioNLP11GeniaTools
+import InteractionXML as ix
 
 import STFormat.ConvertXML
 
@@ -29,6 +30,8 @@ class BXEvaluator(Evaluator):
         corpusElements = Core.SentenceGraph.loadCorpus(BXEvaluator.corpusFilename, BXEvaluator.parse, BXEvaluator.tokenization)
         # Build interaction xml
         xml = BioTextExampleWriter.write(examples, predictions, corpusElements, None, BXEvaluator.ids+".class_names", BXEvaluator.parse, BXEvaluator.tokenization)
+        xml = ix.splitMergedElements(xml, None)
+        xml = ix.recalculateIds(xml, None, True)
         #xml = ExampleUtils.writeToInteractionXML(examples, predictions, SharedTaskEvaluator.corpusElements, None, "genia-direct-event-ids.class_names", SharedTaskEvaluator.parse, SharedTaskEvaluator.tokenization)
         # Convert to GENIA format
         STFormat.ConvertXML.toSTFormat(xml, BXEvaluator.geniaDir, outputTag="a2")
