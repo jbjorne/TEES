@@ -430,72 +430,145 @@ def countOverlappingHeads(corpusElements):
     for key in sorted(overlaps.keys()):
         print " ", key, overlaps[key]
 
-def countEntities(corpusElements):
+#def isBIEventNode(entity):
+##    if entity.get("type") in ["RegulonDependence","BindTo","TranscriptionFrom",
+##                              "RegulonMember","SiteOf","TranscriptionBy","PromoterOf",
+##                              "PromoterDependence","ActionTarget","Interaction"]:
+##        return True
+#    eType = entity.get("type")
+#    if "(" in eType and ")" in eType and "/" in eType:
+#        return True
+#    else:
+#        return False
+
+def isEventNode(entity):
+    return (entity.get("isName") == "False" and entity.get("type") not in ["Entity"]) # or isBIEventNode(entity)
+
+def countEntities(corpusElements, relations=True):
+    entitiesById = {}
+    for sentence in corpusElements.sentences:
+        for entity in sentence.entities:
+            entitiesById[entity.get("id")] = entity
+            
     counts = {}
     counts["event"] = 0
     counts["non-event"] = 0
     counts["event-equiv"] = 0
+    counts["nesting-event"] = 0
+    counts["negspec-event"] = 0
+    counts["duplicate-event"] = 0
     for sentence in corpusElements.sentences:
-        for entity in sentence.entities:
-            eType = entity.get("type")
-            if not counts.has_key(eType):
-                counts[eType] = 0
-            counts[eType] += 1
-            if entity.get("isName") == "False" and entity.get("type") not in ["Entity"]:
-                counts["event"] += 1
+        if not relations:
+            for entity in sentence.entities:
+                eType = entity.get("type")
+                if not counts.has_key(eType):
+                    counts[eType] = 0
+                counts[eType] += 1
+                if isEventNode(entity):
+                    counts["event"] += 1
+                else:
+                    counts["non-event"] += 1
+                if entity.get("speculation") == "True" or entity.get("negation") == "True":
+                    counts["negspec-event"] += 1
+    #            # detect equivs
+    #            origId = entity.get("origId")
+    #            dPart = origId.split(".")[-1]
+    #            if dPart[0] == "d":
+    #                assert dPart[1:].isdigit(), origId
+    #                if dPart[1] != "0":
+    #                    counts["event-equiv"] += 1
+        else:
+            counts["event"] += len(sentence.interactions)
+            counts["nesting-event"] = "N/A"
+        # Count nesting events
+        if not relations:
+            detected = set()
+            for interaction in sentence.interactions:
+                if interaction.get("type") in ["Coref", "Target"]:
+                    counts["nesting-event"] = "N/A"
+                    continue
+                e1 = interaction.get("e1")
+                e2 = interaction.get("e2")
+                if isEventNode(entitiesById[e2]):
+                    if e1 not in detected:
+                        counts["nesting-event"] += 1
+                        detected.add(e1)
+        # Count duplicate events
+        detected = set()
+        for interaction in sentence.interactions:
+            e1 = interaction.get("e1")
+            splits = interaction.get("origId").rsplit(".", 1)
+            eventId = splits[0]
+            if len(splits) == 2 and splits[-1][0] == "d": # for REL
+                dupId = splits[-1]
             else:
-                counts["non-event"] += 1
-            # detect equivs
-            origId = entity.get("origId")
-            dPart = origId.split(".")[-1]
-            if dPart[0] == "d":
-                assert dPart[1:].isdigit(), origId
-                if dPart[1] != "0":
-                    counts["event-equiv"] += 1
+                dupId = eventId.rsplit(".", 1)[-1]
+            #print dupId,
+            if dupId[0] == "d":
+                assert dupId[1:].isdigit(), (dupId, eventId)
+                if dupId[1:] != "0":
+                    pass #print True
+                    if e1 not in detected:
+                        counts["duplicate-event"] += 1
+                        if not relations:
+                            detected.add(e1)
+                else:
+                    pass #print False
+            else:
+                pass #print False
     print "Entity counts"
     for key in sorted(counts.keys()):
         print " ", key, counts[key]
     return counts
 
-def countIntersentenceEvents(corpusElements, totalEvents=None):
+def countIntersentenceEvents(corpusElements, totalEvents=None, relations=False):
     counts = {}
+    counts["ALL_EVENTS"] = 0
     #entityById = {}
     #for sentence in corpusElements.sentences:
     #    for entity in sentence.entities:
     
-    interactionsByE1 = {}
-    entitiesById = {}
-    for sentence in corpusElements.sentences:
-        for interaction in sentence.interactions:
-            e1 = interaction.get("e1")
-            if not interactionsByE1.has_key(e1):
-                interactionsByE1[e1] = []
-            interactionsByE1[e1].append(interaction)
-        for entity in sentence.entities:
-            entitiesById[entity.get("id")] = entity
-    for e1 in sorted(interactionsByE1.keys()):
-        isIntersentence = False
-        for interaction in interactionsByE1[e1]:
-            e1MajorId, e1MinorId = interaction.get("e1").rsplit(".e", 1)
-            e2MajorId, e2MinorId = interaction.get("e2").rsplit(".e", 1)
-            if e1MajorId != e2MajorId:
-                isIntersentence = True
-                break
-        if isIntersentence:
-            eType = entitiesById[e1].get("type")
-            if not counts.has_key(eType):
-                counts[eType] = 0 
-            counts[eType] += 1
-            eType = "ALL_EVENTS"#sentence.entitiesById[e1].get("type")
-            if not counts.has_key(eType):
-                counts[eType] = 0 
-            counts[eType] += 1
+    if not relations: # match group of interactions by head node
+        interactionsByE1 = {}
+        entitiesById = {}
+        for sentence in corpusElements.sentences:
+            for interaction in sentence.interactions:
+                e1 = interaction.get("e1")
+                if not interactionsByE1.has_key(e1):
+                    interactionsByE1[e1] = []
+                interactionsByE1[e1].append(interaction)
+            for entity in sentence.entities:
+                entitiesById[entity.get("id")] = entity
+        intersentenceEvents = set()
+        for e1 in sorted(interactionsByE1.keys()):
+            isIntersentence = False
+            for interaction in interactionsByE1[e1]:
+                e1MajorId, e1MinorId = interaction.get("e1").rsplit(".e", 1)
+                e2MajorId, e2MinorId = interaction.get("e2").rsplit(".e", 1)
+                if e1MajorId != e2MajorId:
+                    isIntersentence = True
+                    break
+            if isIntersentence and interaction.get("e1") not in intersentenceEvents:
+                intersentenceEvents.add(interaction.get("e1"))
+                eType = entitiesById[e1].get("type")
+                if not counts.has_key(eType):
+                    counts[eType] = 0 
+                counts[eType] += 1
+                counts["ALL_EVENTS"] += 1
+    else:
+        for sentence in corpusElements.sentences:
+            for interaction in sentence.interactions:
+                e1MajorId, e1MinorId = interaction.get("e1").rsplit(".e", 1)
+                e2MajorId, e2MinorId = interaction.get("e2").rsplit(".e", 1)
+                if e1MajorId != e2MajorId:
+                    counts["ALL_EVENTS"] += 1
     print "Intersentence Event counts"
     for key in sorted(counts.keys()):
         percentage = "N/A"
         if totalEvents != None:
             percentage = float(counts[key]) / float(totalEvents) * 100.0
         print " ", key, counts[key], "percentage:", percentage
+    return counts
 
 def analyzeHeadTokens(corpusElements):
     from collections import defaultdict
@@ -632,13 +705,45 @@ if __name__=="__main__":
         analyzeHeadStrings(corpusElements)
     
     if options.analyses == "bionlp11":
-        #corpora = ["OLD", "GE", "EPI", "ID", "BI", "BB", "CO", "REL", "REN"]
-        corpora = ["EPI"]
-        corpusDir = "/home/jari/biotext/BioNLP2011/data/main-tasks"
+        corpora = ["OLD", "GE", "EPI", "ID", "BI", "BB", "CO", "REL", "REN"]
+        #corpora = ["EPI"]
+        #corpora = ["BB"]
         for corpus in corpora:
-            corpusPath = corpusDir + "/" + corpus + "/" + corpus + "-devel-and-train.xml"
-            parse = "split-mccc-preparsed"
+            # Relations or events
+            if corpus in ["BB", "BI", "REL", "REN"]:
+                relations = True
+            else:
+                relations = False
+            # Corpus source
+            if corpus in ["GE", "EPI", "ID", "BI", "BB"]:
+                parse = "split-mccc-preparsed"
+                corpusDir = "/home/jari/biotext/BioNLP2011/data/main-tasks"
+                corpusPath = corpusDir + "/" + corpus + "/" + corpus + "-devel-and-train.xml"
+            elif corpus == "OLD":
+                parse = None
+                corpusPath = "/home/jari/biotext/BioNLP2011/data/equiv-recalc/OLD/OLD-devel-and-train.xml"
+            elif corpus == "REL":
+                parse = None
+                corpusPath = "/home/jari/biotext/BioNLP2011/data/equiv-recalc/REL/REL-devel-and-train.xml"
+            elif corpus == "CO":
+                parse = "split-McClosky"
+                corpusPath = "/home/jari/biotext/BioNLP2011/data/CO/co-devel-and-train.xml"
+            elif corpus == "REN":
+                parse = "split-McClosky"
+                corpusPath = "/home/jari/biotext/BioNLP2011/data/REN/ren-devel-and-train.xml"
+            #corpusPath = corpusDir + "/" + corpus + "/" + corpus + "-devel.xml"
             print "Processing", corpus, "from", corpusPath
             corpusElements = SentenceGraph.loadCorpus(corpusPath, parse, None, removeIntersentenceInteractionsFromCorpusElements=False)
-            entityCounts = countEntities(corpusElements)
-            countIntersentenceEvents(corpusElements, entityCounts["event"])
+            entityCounts = countEntities(corpusElements, relations = relations)
+            intersentenceCounts = countIntersentenceEvents(corpusElements, entityCounts["event"], relations = relations)
+            print "Table for", corpus + ":"
+            print corpus, "&",
+            print len(corpusElements.sentences), "&",
+            print entityCounts["event"], "&",
+            print "%.1f" % (float(entityCounts["duplicate-event"]) / entityCounts["event"] * 100.0) + "\\%", "&",
+            if entityCounts["nesting-event"] != "N/A":
+                print "%.1f" % (float(entityCounts["nesting-event"]) / entityCounts["event"] * 100.0) + "\\%", "&",
+            else:
+                print entityCounts["nesting-event"], "&",
+            print "%.1f" % (float(intersentenceCounts["ALL_EVENTS"]) / entityCounts["event"] * 100.0) + "\\%", "&",
+            print "%.1f" % (float(entityCounts["negspec-event"]) / entityCounts["event"] * 100.0) + "\\%", "\\\\"
