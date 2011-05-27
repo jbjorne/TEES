@@ -143,3 +143,4 @@ if __name__=="__main__":
     print "2:", f.getInteraction("Refludan", "TreprostinilBlahBlah")
     print "3:", f.getInteraction("Refludan", "[4-({5-(AMINOCARBONYL)-4-[(3-METHYLPHENYL)AMINO]PYRIMIDIN-2-YL}AMINO)PHENYL]ACETIC ACID")
     
+    
