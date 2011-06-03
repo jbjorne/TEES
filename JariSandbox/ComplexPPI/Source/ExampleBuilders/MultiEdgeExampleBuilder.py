@@ -1,7 +1,7 @@
 """
 Edge Examples
 """
-__version__ = "$Revision: 1.63 $"
+__version__ = "$Revision: 1.64 $"
 
 import sys, os
 thisPath = os.path.dirname(os.path.abspath(__file__))
@@ -16,6 +16,7 @@ from FeatureBuilders.BioInferOntologyFeatureBuilder import BioInferOntologyFeatu
 from FeatureBuilders.NodalidaFeatureBuilder import NodalidaFeatureBuilder
 from FeatureBuilders.BacteriaRenamingFeatureBuilder import BacteriaRenamingFeatureBuilder
 from FeatureBuilders.RELFeatureBuilder import RELFeatureBuilder
+from FeatureBuilders.DrugFeatureBuilder import DrugFeatureBuilder
 #import Graph.networkx_v10rc1 as NX10
 from Core.SimpleGraph import Graph
 from FeatureBuilders.TriggerFeatureBuilder import TriggerFeatureBuilder
@@ -71,6 +72,8 @@ class MultiEdgeExampleBuilder(ExampleBuilder):
         if "rel_features" in self.styles:
             self.relFeatureBuilder = RELFeatureBuilder(featureSet)
         #ENDIF
+        if "ddi_features" in self.styles:
+            self.drugFeatureBuilder = DrugFeatureBuilder(featureSet)
         self.pathLengths = length
         assert(self.pathLengths == None)
         self.types = types
@@ -625,6 +628,11 @@ class MultiEdgeExampleBuilder(ExampleBuilder):
                         features[self.featureSet.getId("e2_contains_e1")] = 1
                         if entity1.get("isName") == "True":
                             features[self.featureSet.getId("e2_contains_e1name")] = 1
+                if "ddi_features" in self.styles:
+                    self.drugFeatureBuilder.setFeatureVector(features)
+                    self.drugFeatureBuilder.tag = "ddi_"
+                    self.drugFeatureBuilder.buildPairFeatures(entity1, entity2)
+                    self.drugFeatureBuilder.setFeatureVector(None)
                 #if "graph_kernel" in self.styles or not "no_dependency" in self.styles:
                 #    #print "Getting edges"
                 #    if token1 != token2 and pathExists:
