@@ -69,24 +69,44 @@ def fixEntities(xml):
         for interaction in sentence.findall("interaction"):
             interaction.set("type", "DDI")
     print "Fix counts:", counts
+    
+def convertToInteractions(xml):
+    print "Renaming pair-elements"
+    counts = defaultdict(int)
+    for sentence in xml.getiterator("sentence"):
+        sentence.set("charOffset", "0-" + str(len(sentence.get("text"))-1) )
+        for pair in sentence.findall("pair"):
+            if pair.get("interaction") == "true":
+                pair.tag = "interaction"
+                pair.set("type", "DDI")
+                counts["pos"] += 1
+            else:
+                sentence.remove(pair)
+                counts["neg"] += 1
+    print "Pair counts:", counts
 
 def convertDDI(inDir, outDir):
     bigfileName = os.path.join(outDir, "DrugDDI")
-    oldXML = ETUtils.ETFromObj(bigfileName+".xml")
-    if True:
+    #oldXML = ETUtils.ETFromObj(bigfileName+".xml")
+    if False:
         sentences = {"positive":[], "negative":[]}
         docCounts = {}
         docById = {}
         documents = []
         for filename in sorted(os.listdir(inDir)):
-            if filename.endswith(".indented.xml"):
+            if filename.endswith(".xml"):
                 print "Reading", filename,
                 xml = ETUtils.ETFromObj(os.path.join(inDir, filename))
                 for document in xml.getiterator("document"):
                     counts = [0,0]          
                     for sentence in document.findall("sentence"):
                         #sentence.set("document.get("origId") + "." + sentence.get("origId"))
-                        if sentence.find("interaction") != None:
+                        truePairs = False
+                        for pair in sentence.findall("pair"):
+                            if pair.get("interaction") == "true":
+                                truePairs = True
+                                break
+                        if truePairs:
                             counts[0] += 1
                             sentences["positive"].append(sentence)
                         else:
@@ -102,8 +122,8 @@ def convertDDI(inDir, outDir):
         print "Positive sentences:", len(sentences["positive"])
         print "Negative sentences:", len(sentences["negative"])
         
-        for doc in oldXML.getiterator("document"):
-            docById[doc.get("id")] = doc
+        #for doc in oldXML.getiterator("document"):
+        #    docById[doc.get("id")] = doc
         
         sortedDocCounts = sorted(docCounts.iteritems(), key=lambda (k,v): (v,k), reverse=True)
         datasetCounts = {"train":[0,0], "devel":[0,0], "test":[0,0]}
@@ -139,19 +159,23 @@ def convertDDI(inDir, outDir):
         xml = xmlTree
         
         print >> sys.stderr, "Parsing"
-        Tools.CharniakJohnsonParser.parse(xml, bigfileName+"-parsed.xml", tokenizationName=None, parseName="McClosky", requireEntities=False, timeout=10)
+        Tools.CharniakJohnsonParser.parse(xml, bigfileName+"-parsed.xml", tokenizationName=None, parseName="McClosky", requireEntities=True, timeout=10)
         print >> sys.stderr, "Stanford Conversion"
         Tools.StanfordParser.convertXML("McClosky", xml, bigfileName+"-stanford.xml")
     
         print >> sys.stderr, "Fixing DDI XML"
         fixEntities(xml)
+    if True:
+        xml = bigfileName + "-stanford.xml"        
         print >> sys.stderr, "Protein Name Splitting"
         splitTarget = "McClosky"
-        ProteinNameSplitter.mainFunc(xml, None, splitTarget, splitTarget, "split-"+splitTarget, "split-"+splitTarget)
+        xml = ProteinNameSplitter.mainFunc(xml, None, splitTarget, splitTarget, "split-"+splitTarget, "split-"+splitTarget)
         print >> sys.stderr, "Head Detection"
         xml = FindHeads.findHeads(xml, "split-McClosky", tokenization=None, output=bigfileName+".xml", removeExisting=True)
-    print >> sys.stderr, "Dividing into sets"
-    InteractionXML.DivideSets.processCorpus(oldXML, outDir, "DrugDDI-", ".xml", [("devel", "train", "test"), ("devel", "train")])
+        convertToInteractions(xml)
+        print >> sys.stderr, "Dividing into sets"
+        InteractionXML.DivideSets.processCorpus(xml, outDir, "DrugDDI-", ".xml", [("devel", "train", "test"), ("devel", "train")])
+        #InteractionXML.DivideSets.processCorpus(oldXML, outDir, "DrugDDI-", ".xml", [("devel", "train", "test"), ("devel", "train")])
     #InteractionXML.DivideSets.processCorpus(bigfileName+".xml", outDir, "DrugDDI-", ".xml", [("devel", "train", "test"), ("devel", "train")])
     #if "devel" in [x[0] for x in datasets]:
     #    print >> sys.stderr, "Creating empty devel set"
