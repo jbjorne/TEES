@@ -57,14 +57,51 @@ def getSets(popSize):
 def fixEntities(xml):
     counts = defaultdict(int)
     for sentence in xml.getiterator("sentence"):
+        sText = sentence.get("text")
         for entity in sentence.findall("entity"):
             charOffset = entity.get("charOffset")
             if charOffset == "-":
+                assert False, str(entity)
                 sentence.remove(entity)
                 counts["removed-invalid"] += 1
             else:
                 charOffset = Range.charOffsetToSingleTuple(charOffset)
-                entity.set("charOffset", Range.tuplesToCharOffset( (charOffset[0], charOffset[1]+1)))
+                # fix length
+                realLength = len(entity.get("text"))
+                lenDiff = (charOffset[1] - charOffset[0] + 1) - realLength
+                if lenDiff != realLength:
+                    counts["incorrect-ent-offset"] += 1
+                    counts["incorrect-ent-offset-diff"+str(lenDiff)] += 1
+                    if abs(lenDiff) > 2:
+                        print "Warning, lenDiff:", (lenDiff, charOffset, sText, entity.get("text"), entity.get("id"))
+                charOffset = (charOffset[0], charOffset[0] + realLength-1)
+                # find starting position
+                entIndex = sText.find(entity.get("text"), charOffset[0])
+                if entIndex == -1:
+                    for i in [-1,-2,-3]:
+                        entIndex = sText.find(entity.get("text"), charOffset[0]+i)
+                        if entIndex != -1:
+                            break
+                if entIndex != 0: # could be lowercase
+                    sTextLower = sText.lower()
+                    for i in [0,-1,-2,-3]:
+                        lowerEntIndex = sTextLower.find(entity.get("text"), charOffset[0]+i)
+                        if lowerEntIndex != -1:
+                            break
+                    if lowerEntIndex != -1 and abs(lowerEntIndex - charOffset[0]) < abs(entIndex - charOffset[0]):
+                        entIndex = lowerEntIndex
+                assert entIndex != -1, (charOffset, sText, entity.get("text"), entity.get("id"))
+                indexDiff = entIndex - charOffset[0]
+                if indexDiff != 0:
+                    counts["incorrect-ent-index"] += 1
+                    counts["incorrect-ent-index-diff"+str(indexDiff)] += 1
+                    print "Warning, indexDiff:", (indexDiff, charOffset, sText, entity.get("text"), entity.get("id"))
+                # move offset       
+                charOffset = (charOffset[0]+indexDiff, charOffset[1]+indexDiff)
+                # validate new offset
+                sEntity = sText[charOffset[0]:charOffset[1]+1]
+                assert sEntity == entity.get("text") or sEntity.lower() == entity.get("text"), (charOffset, sText, entity.get("text"), entity.get("id"))
+                entity.set("charOffset", Range.tuplesToCharOffset( (charOffset[0], charOffset[1])))
                 entity.set("isName", "True")
         for interaction in sentence.findall("interaction"):
             interaction.set("type", "DDI")
@@ -85,45 +122,47 @@ def convertToInteractions(xml):
                 counts["neg"] += 1
     print "Pair counts:", counts
 
+def loadDocs(inDir):
+    print "Loading documents from", inDir
+    sentences = {"positive":[], "negative":[]}
+    docCounts = {}
+    docById = {}
+    documents = []
+    for filename in sorted(os.listdir(inDir)):
+        if filename.endswith(".xml"):
+            print "Reading", filename,
+            xml = ETUtils.ETFromObj(os.path.join(inDir, filename))
+            for document in xml.getiterator("document"):
+                counts = [0,0]          
+                for sentence in document.findall("sentence"):
+                    #sentence.set("document.get("origId") + "." + sentence.get("origId"))
+                    truePairs = False
+                    for pair in sentence.findall("pair"):
+                        if pair.get("interaction") == "true":
+                            truePairs = True
+                            break
+                    if truePairs:
+                        counts[0] += 1
+                        sentences["positive"].append(sentence)
+                    else:
+                        counts[1] += 1
+                        sentences["negative"].append(sentence)
+                assert document.get("id") not in docCounts
+                docCounts[document.get("id")] = counts
+                docById[document.get("id")] = document
+                documents.append(document)
+                print counts,
+                #print ETUtils.toStr(document)
+            print
+    print "Positive sentences:", len(sentences["positive"])
+    print "Negative sentences:", len(sentences["negative"])
+    return documents, docById, docCounts
+
 def convertDDI(inDir, outDir):
     bigfileName = os.path.join(outDir, "DrugDDI")
     #oldXML = ETUtils.ETFromObj(bigfileName+".xml")
-    if False:
-        sentences = {"positive":[], "negative":[]}
-        docCounts = {}
-        docById = {}
-        documents = []
-        for filename in sorted(os.listdir(inDir)):
-            if filename.endswith(".xml"):
-                print "Reading", filename,
-                xml = ETUtils.ETFromObj(os.path.join(inDir, filename))
-                for document in xml.getiterator("document"):
-                    counts = [0,0]          
-                    for sentence in document.findall("sentence"):
-                        #sentence.set("document.get("origId") + "." + sentence.get("origId"))
-                        truePairs = False
-                        for pair in sentence.findall("pair"):
-                            if pair.get("interaction") == "true":
-                                truePairs = True
-                                break
-                        if truePairs:
-                            counts[0] += 1
-                            sentences["positive"].append(sentence)
-                        else:
-                            counts[1] += 1
-                            sentences["negative"].append(sentence)
-                    assert document.get("id") not in docCounts
-                    docCounts[document.get("id")] = counts
-                    docById[document.get("id")] = document
-                    documents.append(document)
-                    print counts,
-                    #print ETUtils.toStr(document)
-                print
-        print "Positive sentences:", len(sentences["positive"])
-        print "Negative sentences:", len(sentences["negative"])
-        
-        #for doc in oldXML.getiterator("document"):
-        #    docById[doc.get("id")] = doc
+    if True:
+        documents, docById, docCounts = loadDocs(inDir["ddi-train"])
         
         sortedDocCounts = sorted(docCounts.iteritems(), key=lambda (k,v): (v,k), reverse=True)
         datasetCounts = {"train":[0,0], "devel":[0,0], "test":[0,0]}
@@ -132,18 +171,29 @@ def convertDDI(inDir, outDir):
                 docById[sortedDocCounts[i+j][0]].set("set", "train")
                 datasetCounts["train"][0] += sortedDocCounts[i+j][1][0]
                 datasetCounts["train"][1] += sortedDocCounts[i+j][1][1]
-            docById[sortedDocCounts[i+2][0]].set("set", "devel")
-            docById[sortedDocCounts[i+3][0]].set("set", "test")
-            datasetCounts["devel"][0] += sortedDocCounts[i+2][1][0]
-            datasetCounts["devel"][1] += sortedDocCounts[i+2][1][1]
-            datasetCounts["test"][0] += sortedDocCounts[i+3][1][0]
-            datasetCounts["test"][1] += sortedDocCounts[i+3][1][1]
+            docById[sortedDocCounts[i+2][0]].set("set", "train") #docById[sortedDocCounts[i+2][0]].set("set", "devel")
+            docById[sortedDocCounts[i+3][0]].set("set", "devel") #docById[sortedDocCounts[i+3][0]].set("set", "test")
+            datasetCounts["train"][0] += sortedDocCounts[i+2][1][0] #datasetCounts["devel"][0] += sortedDocCounts[i+2][1][0]
+            datasetCounts["train"][1] += sortedDocCounts[i+2][1][1] #datasetCounts["devel"][1] += sortedDocCounts[i+2][1][1]
+            datasetCounts["devel"][0] += sortedDocCounts[i+3][1][0] #datasetCounts["test"][0] += sortedDocCounts[i+3][1][0]
+            datasetCounts["devel"][1] += sortedDocCounts[i+3][1][1] #datasetCounts["test"][1] += sortedDocCounts[i+3][1][1]
+        for document in documents: # epajaolliset jaa yli
+            if document.get("set") == None:
+                document.set("set", "train")
         
         print datasetCounts
         for key in datasetCounts.keys():
-            print key, datasetCounts[key][0] / float(datasetCounts[key][1]) 
+            if datasetCounts[key][1] != 0:
+                print key, datasetCounts[key][0] / float(datasetCounts[key][1])
+            else:
+                print key, datasetCounts[key][0], "/", float(datasetCounts[key][1])
         
-    if False:
+        testDocuments, testDocById, testDocCounts = loadDocs(inDir["ddi-test"])
+        for document in testDocuments:
+            document.set("set", "test")
+        documents = documents + testDocuments
+        
+    if True:
         xmlTree = ET.ElementTree(ET.Element("corpus"))
         root = xmlTree.getroot()
         root.set("source", "DrugDDI")
@@ -155,24 +205,26 @@ def convertDDI(inDir, outDir):
         #print ETUtils.toStr(documents[-2])
         #print ETUtils.toStr(documents[-1])
         #sys.exit()
-        ETUtils.write(root, bigfileName + "-documents.xml")
+        ETUtils.write(root, bigfileName + "-documents-notfixed.xml")
         xml = xmlTree
+        print >> sys.stderr, "Fixing DDI XML"
+        fixEntities(xml)
+        convertToInteractions(xml)
+        ETUtils.write(root, bigfileName + "-documents.xml")
+        #sys.exit()
         
         print >> sys.stderr, "Parsing"
         Tools.CharniakJohnsonParser.parse(xml, bigfileName+"-parsed.xml", tokenizationName=None, parseName="McClosky", requireEntities=True, timeout=10)
         print >> sys.stderr, "Stanford Conversion"
         Tools.StanfordParser.convertXML("McClosky", xml, bigfileName+"-stanford.xml")
     
-        print >> sys.stderr, "Fixing DDI XML"
-        fixEntities(xml)
-    if True:
-        xml = bigfileName + "-stanford.xml"        
+        #if True:
+        #xml = bigfileName + "-stanford.xml"        
         print >> sys.stderr, "Protein Name Splitting"
         splitTarget = "McClosky"
         xml = ProteinNameSplitter.mainFunc(xml, None, splitTarget, splitTarget, "split-"+splitTarget, "split-"+splitTarget)
         print >> sys.stderr, "Head Detection"
         xml = FindHeads.findHeads(xml, "split-McClosky", tokenization=None, output=bigfileName+".xml", removeExisting=True)
-        convertToInteractions(xml)
         print >> sys.stderr, "Dividing into sets"
         InteractionXML.DivideSets.processCorpus(xml, outDir, "DrugDDI-", ".xml", [("devel", "train", "test"), ("devel", "train")])
         #InteractionXML.DivideSets.processCorpus(oldXML, outDir, "DrugDDI-", ".xml", [("devel", "train", "test"), ("devel", "train")])
@@ -192,7 +244,9 @@ if __name__=="__main__":
     except ImportError:
         print >> sys.stderr, "Psyco not installed"
     
-    inDir = "/home/jari/data/DDIExtraction2011/DrugDDI_Unified"
+    inDir = {}
+    inDir["ddi-train"] = "/home/jari/data/DDIExtraction2011/DrugDDI_Unified"
+    inDir["ddi-test"] = "/home/jari/data/DDIExtraction2011/Test_Unified"
     outDir = "/usr/share/biotext/DDIExtraction2011/data/"
     
     cwd = os.getcwd()
