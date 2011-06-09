@@ -25,14 +25,23 @@ class CorpusElements:
         self.sentencesByOrigId = {}
         self.sentences = []
         self.documentSentences = []
+        counts = {"sentences":0, "missing-tok":0, "missing-parse":0}
         for documentElement in self.documents:
             self.documentsById[documentElement.attrib["id"]] = documentElement
             sentenceElements = documentElement.findall("sentence")
             self.documentSentences.append([])
             for sentenceElement in sentenceElements:
+                counts["sentences"] += 1
                 sentenceObj = SentenceElements(sentenceElement, parse, tokenization, removeIntersentenceInteractions)
                 self.sentencesById[sentenceElement.attrib["id"]] = sentenceObj
                 if sentenceElement.attrib.has_key("origId"):
                     self.sentencesByOrigId[sentenceElement.attrib["origId"]] = sentenceObj
                 self.sentences.append(sentenceObj)
                 self.documentSentences[-1].append(sentenceObj)
+                if parse != None and sentenceObj.tokenizationElement == None:
+                    counts["missing-tok"] += 1
+                if parse != None and sentenceObj.parseElement == None:
+                    counts["missing-parse"] += 1
+        if counts["missing-tok"] + counts["missing-parse"] > 0:
+            print >> sys.stderr, "Warning, parse missing from", counts["missing-parse"], "and tokenization from", counts["missing-tok"], "sentences out of a total of", counts["sentences"]
+            print >> sys.stderr, "Requested parse", parse, "and tokenization", tokenization
