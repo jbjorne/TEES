@@ -3,7 +3,7 @@ For representing the event argument and dependency graphs. Should be determinist
 """
 import sys    
 
-class Graph():
+class Graph:
     """
     One edge per-associated data per direction
     """
@@ -172,7 +172,17 @@ class Graph():
                 if n1 == n2:
                     self.__distances[n1][n2] = 0
                 elif len(self.getEdges(n1, n2)) > 0:
-                    self.__distances[n1][n2] = 1
+                    if True: # temporary hack for DDI
+                        edgeCount = 0
+                        for edge in self.getEdges(n1, n2):
+                            if edge[2].get("type") != "conj_and":
+                                edgeCount += 1
+                        if edgeCount == 0:
+                            self.__distances[n1][n2] = infinity
+                        else:
+                            self.__distances[n1][n2] = 1
+                    else:
+                        self.__distances[n1][n2] = 1
                 else:
                     self.__distances[n1][n2] = infinity
         # Init path traversal matrix    

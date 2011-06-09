@@ -116,6 +116,7 @@ def loadDrugBank(filename, preTag="{http://drugbank.ca}", verbose=False):
         assert id not in data
         data[id]["name"] = name
         # TODO: Enzymes & targets
+        # TODO: hydrophobicity
         getNestedItems(drug, "synonym", data[id], preTag)
         getNestedItems(drug, "brand", data[id], preTag)
         getNestedItems(drug, "group", data[id], preTag)
