@@ -32,6 +32,48 @@ class DrugFeatureBuilder(FeatureBuilder):
             else:
                 self.setFeature("DrugBankPairFalseInt")
     
+    def getMTMXAttrs(self, e1, e2, attr):
+        rv = [str(e1.get(attr)).lower().replace(" ", ""), str(e2.get(attr)).lower().replace(" ", "")]
+        if rv[0] == "": rv[0] = "none"
+        if rv[1] == "": rv[1] = "none"
+        rv.sort()
+        return rv
+        
+    def buildMTMXFeatures(self, e1, e2):
+        names = self.getMTMXAttrs(e1, e2, "mtmxName")
+        self.setFeature("mtmxNames-" + "-".join(names))
+        if names[0] == names[1]:
+            if names[0] in ["", "none"]:
+                self.setFeature("mtmxNames-both_unknown")
+            else:
+                self.setFeature("mtmxNames-both_identical")
+        self.setFeature("mtmxShortNames-" + "-".join(self.getMTMXAttrs(e1, e2, "mtmxNameShort")))
+        mtmxCuis = self.getMTMXAttrs(e1, e2, "mtmxCui")
+        for mtmxCui in mtmxCuis:
+            self.setFeature("mtmxCui_" + mtmxCui)
+        self.setFeature("mtmxCuis-" + "-".join(mtmxCuis))
+        # Probabilities
+        rv = self.getMTMXAttrs(e1, e2, "mtmxProb")
+        if rv[0] in ["", "none"]: rv[0] = "0"
+        if rv[1] in ["", "none"]: rv[1] = "0"
+        rv[0] = int(rv[0])
+        rv[1] = int(rv[1])
+        assert rv[0] <= 1000 and rv[1] <= 1000, (rv[0], rv[1])
+        rv.sort()
+        self.setFeature("mtmxProbMin", float(rv[0]) / 1000.0)
+        self.setFeature("mtmxProbMax", float(rv[1]) / 1000.0)
+        # Semtypes
+        sem = self.getMTMXAttrs(e1, e2, "mtmxSemTypes")
+        #print sem
+        for i in sem[0].split(","):
+            for j in sem[1].split(","):
+                semPair = [i, j]
+                semPair.sort()
+                #print "semPair", semPair
+                self.setFeature("semPair-" + "-".join(semPair))
+                self.setFeature("semType-" + i)
+                self.setFeature("semType-" + j)
+    
     def getInteraction(self, e1Name, e2Name):
         e1Name = normalizeDrugName(e1Name)
         e2Name = normalizeDrugName(e2Name)

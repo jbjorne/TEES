@@ -1,7 +1,7 @@
 """
 Edge Examples
 """
-__version__ = "$Revision: 1.64 $"
+__version__ = "$Revision: 1.65 $"
 
 import sys, os
 thisPath = os.path.dirname(os.path.abspath(__file__))
@@ -631,7 +631,9 @@ class MultiEdgeExampleBuilder(ExampleBuilder):
                 if "ddi_features" in self.styles:
                     self.drugFeatureBuilder.setFeatureVector(features)
                     self.drugFeatureBuilder.tag = "ddi_"
-                    self.drugFeatureBuilder.buildPairFeatures(entity1, entity2)
+                    self.drugFeatureBuilder.buildPairFeatures(entity1, entity2)  
+                    if "ddi_mtmx" in self.styles:
+                        self.drugFeatureBuilder.buildMTMXFeatures(entity1, entity2)
                     self.drugFeatureBuilder.setFeatureVector(None)
                 #if "graph_kernel" in self.styles or not "no_dependency" in self.styles:
                 #    #print "Getting edges"
