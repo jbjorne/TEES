@@ -27,13 +27,22 @@ optparser.add_option("-s", "--styles", default="trigger_features,typed,directed,
 # Id sets
 optparser.add_option("-v", "--edgeIds", default=None, dest="edgeIds", help="Trigger detector SVM example class and feature id file stem (files = STEM.class_names and STEM.feature_names)")
 # Parameters to optimize
-optparser.add_option("-x", "--edgeParams", default="5000,10000,20000,25000,28000,50000,60000,65000,80000,100000,150000", dest="edgeParams", help="Trigger detector c-parameter values")
+optparser.add_option("-x", "--edgeParams", default="5000,7500,10000,15000,20000,25000,28000,50000,60000,65000,80000,100000,150000", dest="edgeParams", help="Trigger detector c-parameter values")
 optparser.add_option("--clearAll", default=False, action="store_true", dest="clearAll", help="Delete all files")
+optparser.add_option("-m", "--mtmx", default=False, action="store_true", dest="mtmx", help="Use mtmx data")
 (options, args) = optparser.parse_args()
 
 # Check options
 assert options.output != None
 assert options.task in [1, 2]
+
+if options.mtmx:
+    assert "ddi_features" in options.edgeStyles, options.edgeStyles
+    options.edgeStyles += ",ddi_mtmx"
+    options.develFile = options.develFile.rsplit(".", 1)[0] + "-mtmx.xml"
+    options.testFile = options.testFile.rsplit(".", 1)[0] + "-mtmx.xml"
+    options.trainFile = options.trainFile.rsplit(".", 1)[0] + "-mtmx.xml"
+    options.develAndTrainFile = options.develAndTrainFile.rsplit(".", 1)[0] + "-mtmx.xml"
 
 if options.csc.find(",") != -1:
     options.csc = options.csc.split(",")
