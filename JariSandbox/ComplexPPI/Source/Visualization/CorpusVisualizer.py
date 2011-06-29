@@ -3,7 +3,7 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__))+"/..")
 import Evaluators.EvaluateInteractionXML as EvaluateInteractionXML
 import GraphToSVG
 from HtmlBuilder import *
-#import Graph.networkx_v10rc1 as NX10
+import Graph.networkx_v10rc1 as NX10
 
 class CorpusVisualizer:
     def __init__(self, outputDirectory, deleteDirectoryIfItExists=False):
@@ -309,7 +309,10 @@ class CorpusVisualizer:
         # Parse SVG
         builder.header("Parse",4)
         svgTokens = GraphToSVG.tokensToSVG(sentenceGraph.tokens, True)
-        svgDependencies = GraphToSVG.edgesToSVG(svgTokens, sentenceGraph.dependencyGraph)
+        nxDepGraph = NX10.MultiDiGraph()
+        for edge in sentenceGraph.dependencyGraph.edges:
+            nxDepGraph.add_edge(edge[0], edge[1], element=edge[2])
+        svgDependencies = GraphToSVG.edgesToSVG(svgTokens, nxDepGraph)
         svgElement = GraphToSVG.writeSVG(svgTokens, svgDependencies,self.outDir+"/svg/"+sentenceId+"-"+str(sentenceIndex)+".svg")
         builder.svg("../svg/" + sentenceId + "-"+str(sentenceIndex)+".svg",svgElement.attrib["width"],svgElement.attrib["height"],id="dep_graph")
         builder.lineBreak()
@@ -325,9 +328,12 @@ class CorpusVisualizer:
                     isNameByToken[token] = True
                 else:
                     isNameByToken[token] = False
-            arcStyles, labelStyles = self.getMatchingEdgeStyles(goldGraph.interactionGraph, goldGraph.dependencyGraph, "orange", "#F660AB" )
+            #arcStyles, labelStyles = self.getMatchingEdgeStyles(goldGraph.interactionGraph, goldGraph.dependencyGraph, "orange", "#F660AB" )
             svgTokens = GraphToSVG.tokensToSVG(goldGraph.tokens, False, goldGraph.entitiesByToken, None, isNameByToken)
-            svgInteractionEdges = GraphToSVG.edgesToSVG(svgTokens, goldGraph.interactionGraph)
+            nxGraph = NX10.MultiDiGraph()
+            for edge in goldGraph.interactionGraph.edges:
+                nxGraph.add_edge(edge[0], edge[1], element=edge[2])
+            svgInteractionEdges = GraphToSVG.edgesToSVG(svgTokens, nxGraph)
             svgElement = GraphToSVG.writeSVG(svgTokens, svgInteractionEdges,self.outDir+"/svg/"+sentenceId+"-"+str(sentenceIndex)+"_ann.svg")
         elif sentenceGraph.interactionGraph != None:
             # Check for named entities
@@ -337,9 +343,12 @@ class CorpusVisualizer:
                     isNameByToken[token] = True
                 else:
                     isNameByToken[token] = False
-            arcStyles, labelStyles = self.getMatchingEdgeStyles(sentenceGraph.interactionGraph, sentenceGraph.dependencyGraph, "orange", "#F660AB" )
+            #arcStyles, labelStyles = self.getMatchingEdgeStyles(sentenceGraph.interactionGraph, sentenceGraph.dependencyGraph, "orange", "#F660AB" )
             svgTokens = GraphToSVG.tokensToSVG(sentenceGraph.tokens, False, sentenceGraph.entitiesByToken, None, isNameByToken)
-            svgInteractionEdges = GraphToSVG.edgesToSVG(svgTokens, sentenceGraph.interactionGraph)
+            nxGraph = NX10.MultiDiGraph()
+            for edge in goldGraph.interactionGraph.edges:
+                nxGraph.add_edge(edge[0], edge[1], element=edge[2])
+            svgInteractionEdges = GraphToSVG.edgesToSVG(svgTokens, nxGraph)
             svgElement = GraphToSVG.writeSVG(svgTokens, svgInteractionEdges,self.outDir+"/svg/"+sentenceId + "-"+str(sentenceIndex)+"_ann.svg")
         builder.svg("../svg/" + sentenceId + "-"+str(sentenceIndex)+"_ann.svg",svgElement.attrib["width"],svgElement.attrib["height"],id="ann_graph")
         builder.lineBreak()
