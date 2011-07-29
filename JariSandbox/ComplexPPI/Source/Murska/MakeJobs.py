@@ -120,14 +120,16 @@ def update(inDir, outDir, workDir, queueDir, submitFilename=None, listFile=False
             continue
         nameBase = triple[0].replace("/", "_")
         jobName = getScriptName(queueDir, nameBase)
+        inputSubDir = triple[0][len(inDir):]
         if not oneJob:
             print "Making job", jobName, "with", len(inputFiles), "input files."
-            s = makeJobScript(jobName, inputFiles, os.path.abspath(os.path.join(outDir, triple[0])), os.path.abspath(workDir + "/" + jobName), timeOut=False)
+            #print "DEBUG", triple, outDir, os.path.abspath(os.path.join(outDir, inputSubDir)), os.path.join(outDir, inputSubDir)
+            s = makeJobScript(jobName, inputFiles, os.path.abspath(os.path.join(outDir, inputSubDir)), os.path.abspath(workDir + "/" + jobName), timeOut=False)
             f = open(os.path.abspath(queueDir + "/" + jobName), "wt")
             f.write(s)
             f.close()
         else:
-            s = makeJobScript(jobName, inputFiles, os.path.abspath(os.path.join(outDir, triple[0])), os.path.abspath(workDir + "/" + jobName), timeOut=False, s=s)
+            s = makeJobScript(jobName, inputFiles, os.path.abspath(os.path.join(outDir, inputSubDir)), os.path.abspath(workDir + "/" + jobName), timeOut=False, s=s)
         
         if submitFilename != None:
             submitFile.write("cat " + os.path.abspath(queueDir + "/" + jobName) + " | bsub\n")
