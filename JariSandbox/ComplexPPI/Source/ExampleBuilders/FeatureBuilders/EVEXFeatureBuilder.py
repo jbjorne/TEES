@@ -1,7 +1,7 @@
 """
 EVEX Feature Builder
 """
-__version__ = "$Revision: 1.2 $"
+__version__ = "$Revision: 1.3 $"
 
 from FeatureBuilder import FeatureBuilder
 
@@ -11,7 +11,7 @@ class EVEXFeatureBuilder(FeatureBuilder):
         This is called, when the ExampleBuilder object is created.
         
         @type featureSet: Core.IdSet
-        @param entity1: The feature ids
+        @param featureSet: The feature ids
         """
         FeatureBuilder.__init__(self, featureSet)
     
@@ -21,7 +21,7 @@ class EVEXFeatureBuilder(FeatureBuilder):
         should be used to initialize per-sentence data structures.
         
         @type sentenceGraph: Core.SentenceGraph
-        @param token2: a SentenceGraph object providing access to the aligned semantic and syntactic
+        @param sentenceGraph: a SentenceGraph object providing access to the aligned semantic and syntactic
                        information of the sentence. The underlying XML can also be accessed through
                        this class.
         """
@@ -45,9 +45,9 @@ class EVEXFeatureBuilder(FeatureBuilder):
         @type token2: cElementTree.Element
         @param token2: The head token of entity2, an Interaction XML "token"-element
         @type path: list of cElementTree.Elements (when "no_path" style is set, this is always [token1, token2])
-        @param token2: the shortest connecting path of tokens (Interaction XML "token"-elements)
+        @param path: the shortest connecting path of tokens (Interaction XML "token"-elements)
         @type sentenceGraph: Core.SentenceGraph
-        @param token2: a SentenceGraph object providing access to the aligned semantic and syntactic
+        @param sentenceGraph: a SentenceGraph object providing access to the aligned semantic and syntactic
                        information of the sentence. The underlying XML can also be accessed through
                        this class.
         """
@@ -57,7 +57,7 @@ class EVEXFeatureBuilder(FeatureBuilder):
 if __name__=="__main__":
     """
     The main-function is the test program for the EVEX feature builder. It takes as a parameter an
-    interaction XML corpus file, and builds edge-examples using MultiEdgeExampleBuilder. When the
+    Interaction XML corpus file, and builds edge-examples using MultiEdgeExampleBuilder. When the
     "evex" style parameter is set, MultiEdgeExampleBuilder will call EVEXFeatureBuilder for feature
     generation.
     """
