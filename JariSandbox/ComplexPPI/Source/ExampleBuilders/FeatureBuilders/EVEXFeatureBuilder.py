@@ -1,7 +1,7 @@
 """
 EVEX Feature Builder
 """
-__version__ = "$Revision: 1.1 $"
+__version__ = "$Revision: 1.2 $"
 
 from FeatureBuilder import FeatureBuilder
 
@@ -83,7 +83,7 @@ if __name__=="__main__":
     optparser.add_option("-d", "--edgeIds", default="evex-ids", dest="edgeIds", help="Example class and feature id file stem (files = STEM.class_names and STEM.feature_names)")
     optparser.add_option("-t", "--tokenization", default="split-mccc-preparsed", dest="tokenization", help="tokenization")
     optparser.add_option("-p", "--parse", default="split-mccc-preparsed", dest="parse", help="parse")
-    optparser.add_option("-s", "--styles", default="typed,directed,no_path,no_dependency,no_linear,entities,genia_limits,noMasking,maxFeatures,evex", dest="edgeStyles", help="")
+    optparser.add_option("-s", "--styles", default="typed,directed,no_path,no_task,no_dependency,no_linear,entities,genia_limits,noMasking,maxFeatures,evex", dest="edgeStyles", help="")
     (options, args) = optparser.parse_args()
     assert options.input != None
     assert options.output != None
