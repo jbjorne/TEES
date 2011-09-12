@@ -1,7 +1,7 @@
 """
 EVEX Feature Builder
 """
-__version__ = "$Revision: 1.3 $"
+__version__ = "$Revision: 1.4 $"
 
 from FeatureBuilder import FeatureBuilder
 
@@ -79,7 +79,7 @@ if __name__=="__main__":
     optparser = OptionParser(usage="%prog [options]\nCreate an html visualization for a corpus.")
     defaultInput = "/usr/share/biotext/BioNLP2011/data/main-tasks/GE/GE-devel-nodup.xml"
     optparser.add_option("-i", "--input", default=defaultInput, dest="input", help="Corpus in analysis format", metavar="FILE")
-    optparser.add_option("-o", "--output", default="evex-features.txt", dest="output", help="Output feature file")
+    optparser.add_option("-o", "--output", default="evex-examples.txt", dest="output", help="Output feature file")
     optparser.add_option("-d", "--edgeIds", default="evex-ids", dest="edgeIds", help="Example class and feature id file stem (files = STEM.class_names and STEM.feature_names)")
     optparser.add_option("-t", "--tokenization", default="split-mccc-preparsed", dest="tokenization", help="tokenization")
     optparser.add_option("-p", "--parse", default="split-mccc-preparsed", dest="parse", help="parse")
