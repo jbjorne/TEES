@@ -1,7 +1,7 @@
 """
 EVEX Feature Builder
 """
-__version__ = "$Revision: 1.4 $"
+__version__ = "$Revision: 1.5 $"
 
 from FeatureBuilder import FeatureBuilder
 
@@ -76,7 +76,7 @@ if __name__=="__main__":
         print >> sys.stderr, "Psyco not installed"
     
     from optparse import OptionParser
-    optparser = OptionParser(usage="%prog [options]\nCreate an html visualization for a corpus.")
+    optparser = OptionParser(usage="%prog [options]\nTest EVEX Feature Builder.")
     defaultInput = "/usr/share/biotext/BioNLP2011/data/main-tasks/GE/GE-devel-nodup.xml"
     optparser.add_option("-i", "--input", default=defaultInput, dest="input", help="Corpus in analysis format", metavar="FILE")
     optparser.add_option("-o", "--output", default="evex-examples.txt", dest="output", help="Output feature file")
