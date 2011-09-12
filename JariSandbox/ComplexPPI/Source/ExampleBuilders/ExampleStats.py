@@ -1,3 +1,5 @@
+import sys
+
 class ExampleStats:
     def __init__(self):
         self.className = None
@@ -49,21 +51,21 @@ class ExampleStats:
         return sum(self.examplesByClass.values())
     
     def printStats(self):
-        print "Example Statistics"
-        print self.examplesByClass.keys()
+        print >> sys.stderr, "Example Statistics (total/filtered)"
+        #print >> sys.stderr, self.examplesByClass.keys()
         counts = [0,0]
         for className in sorted(self.examplesByClass.keys()):
             if self.filteredByClassByFilter.has_key(className):
                 filterStr = str( self.filteredByClassByFilter[className] )
             else:
                 filterStr = ""
-            print " ", className + ": " + str(self.examplesByClass[className]) + "/" + str(self.filteredByClass[className]), filterStr
+            print >> sys.stderr, " ", className + ": " + str(self.examplesByClass[className]) + "/" + str(self.filteredByClass[className]), filterStr
             if className != "neg":
                 counts[0] += self.examplesByClass[className]
                 counts[1] += self.filteredByClass[className]
         if counts[0] != 0:
             posCoverage = float(counts[0] - counts[1]) / float(counts[0]) * 100.0
-            print "Positives Coverage %.2f" % posCoverage,  "%", counts
+            print >> sys.stderr, "Positives Coverage %.2f" % posCoverage,  "%", counts
         
     #def add(self, className, filteredBy=[]):
     #    pass
