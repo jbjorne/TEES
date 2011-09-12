@@ -1,7 +1,7 @@
 """
 Edge Examples
 """
-__version__ = "$Revision: 1.65 $"
+__version__ = "$Revision: 1.66 $"
 
 import sys, os
 thisPath = os.path.dirname(os.path.abspath(__file__))
@@ -17,6 +17,7 @@ from FeatureBuilders.NodalidaFeatureBuilder import NodalidaFeatureBuilder
 from FeatureBuilders.BacteriaRenamingFeatureBuilder import BacteriaRenamingFeatureBuilder
 from FeatureBuilders.RELFeatureBuilder import RELFeatureBuilder
 from FeatureBuilders.DrugFeatureBuilder import DrugFeatureBuilder
+from FeatureBuilders.EVEXFeatureBuilder import EVEXFeatureBuilder
 #import Graph.networkx_v10rc1 as NX10
 from Core.SimpleGraph import Graph
 from FeatureBuilders.TriggerFeatureBuilder import TriggerFeatureBuilder
@@ -74,6 +75,8 @@ class MultiEdgeExampleBuilder(ExampleBuilder):
         #ENDIF
         if "ddi_features" in self.styles:
             self.drugFeatureBuilder = DrugFeatureBuilder(featureSet)
+        if "evex" in self.styles:
+            self.evexFeatureBuilder = EVEXFeatureBuilder(featureSet)
         self.pathLengths = length
         assert(self.pathLengths == None)
         self.types = types
@@ -427,17 +430,21 @@ class MultiEdgeExampleBuilder(ExampleBuilder):
         
         if "trigger_features" in self.styles: 
             self.triggerFeatureBuilder.initSentence(sentenceGraph)
+        if "evex" in self.styles: 
+            self.evexFeatureBuilder.initSentence(sentenceGraph)
         
         if goldGraph != None:
             entityToGold = EvaluateInteractionXML.mapEntities(sentenceGraph.entities, goldGraph.entities)
         
-        ##undirected = sentenceGraph.getUndirectedDependencyGraph()
-        #undirected = self.nxMultiDiGraphToUndirected(sentenceGraph.dependencyGraph)
-        ###undirected = sentenceGraph.dependencyGraph.to_undirected()
-        ####undirected = NX10.MultiGraph(sentenceGraph.dependencyGraph) This didn't work
-        undirected = sentenceGraph.dependencyGraph.toUndirected()
-        #paths = NX10.all_pairs_shortest_path(undirected, cutoff=999)
-        paths = undirected
+        paths = None
+        if not "no_path" in self.styles:
+            ##undirected = sentenceGraph.getUndirectedDependencyGraph()
+            #undirected = self.nxMultiDiGraphToUndirected(sentenceGraph.dependencyGraph)
+            ###undirected = sentenceGraph.dependencyGraph.to_undirected()
+            ####undirected = NX10.MultiGraph(sentenceGraph.dependencyGraph) This didn't work
+            undirected = sentenceGraph.dependencyGraph.toUndirected()
+            #paths = NX10.all_pairs_shortest_path(undirected, cutoff=999)
+            paths = undirected
         
         #for edge in sentenceGraph.dependencyGraph.edges:
         #    assert edge[2] != None
@@ -574,6 +581,9 @@ class MultiEdgeExampleBuilder(ExampleBuilder):
         """
         Build a single directed example for the potential edge between token1 and token2
         """
+        # dummy return for speed testing
+        #return (sentenceGraph.getSentenceId()+".x"+str(exampleIndex),1,{},{})
+    
         # define features
         features = {}
         if True: #token1 != token2 and paths.has_key(token1) and paths[token1].has_key(token2):
@@ -581,12 +591,16 @@ class MultiEdgeExampleBuilder(ExampleBuilder):
             #    path = paths[token1][token2]
             #else:
             #    path = [token1, token2]
-            path = paths.getPaths(token1, token2)
-            if len(path) > 0:
-                #if len(path) > 1:
-                #    print len(path)
-                path = path[0]
-                pathExists = True
+            if not "no_path" in self.styles:
+                path = paths.getPaths(token1, token2)
+                if len(path) > 0:
+                    #if len(path) > 1:
+                    #    print len(path)
+                    path = path[0]
+                    pathExists = True
+                else:
+                    path = [token1, token2]
+                    pathExists = False
             else:
                 path = [token1, token2]
                 pathExists = False
@@ -733,6 +747,10 @@ class MultiEdgeExampleBuilder(ExampleBuilder):
                     features[self.featureSet.getId("BI_e2sup_"+e2SuperType)] = 1
                     features[self.featureSet.getId("BI_e1e2_"+e1Type+"_"+e2Type)] = 1
                     features[self.featureSet.getId("BI_e1e2sup_"+e1SuperType+"_"+e2SuperType)] = 1
+                if "evex" in self.styles:
+                    self.evexFeatureBuilder.setFeatureVector(features, entity1, entity2)
+                    self.evexFeatureBuilder.buildEdgeFeatures(entity1, entity2, token1, token2, path, sentenceGraph)
+                    self.evexFeatureBuilder.setFeatureVector(None)
             else:
                 features[self.featureSet.getId("always_negative")] = 1
                 if "subset" in self.styles:
