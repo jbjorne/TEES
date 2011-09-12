@@ -1,7 +1,7 @@
 """
 Edge Examples
 """
-__version__ = "$Revision: 1.66 $"
+__version__ = "$Revision: 1.67 $"
 
 import sys, os
 thisPath = os.path.dirname(os.path.abspath(__file__))
@@ -619,19 +619,19 @@ class MultiEdgeExampleBuilder(ExampleBuilder):
                     self.triggerFeatureBuilder.buildFeatures(token2)
                     self.triggerFeatureBuilder.setFeatureVector(None)
                 # REL features
-                if "rel_features" in self.styles:
+                if "rel_features" in self.styles and not "no_task" in self.styles:
                     self.relFeatureBuilder.setFeatureVector(features)
                     self.relFeatureBuilder.tag = "rel1_"
                     self.relFeatureBuilder.buildAllFeatures(sentenceGraph.tokens, sentenceGraph.tokens.index(token1))
                     self.relFeatureBuilder.tag = "rel2_"
                     self.relFeatureBuilder.buildAllFeatures(sentenceGraph.tokens, sentenceGraph.tokens.index(token2))
                     self.relFeatureBuilder.setFeatureVector(None)
-                if "bacteria_renaming" in self.styles:
+                if "bacteria_renaming" in self.styles and not "no_task" in self.styles:
                     self.bacteriaRenamingFeatureBuilder.setFeatureVector(features)
                     self.bacteriaRenamingFeatureBuilder.buildPairFeatures(entity1, entity2)
                     #self.bacteriaRenamingFeatureBuilder.buildSubstringFeatures(entity1, entity2) # decreases perf. 74.76 -> 72.41
                     self.bacteriaRenamingFeatureBuilder.setFeatureVector(None)
-                if "co_limits" in self.styles:
+                if "co_limits" in self.styles and not "no_task" in self.styles:
                     e1Offset = Range.charOffsetToSingleTuple(entity1.get("charOffset"))
                     e2Offset = Range.charOffsetToSingleTuple(entity2.get("charOffset"))
                     if Range.contains(e1Offset, e2Offset):
@@ -722,7 +722,7 @@ class MultiEdgeExampleBuilder(ExampleBuilder):
                     self.randomFeatureBuilder.setFeatureVector(features)
                     self.randomFeatureBuilder.buildRandomFeatures(100, 0.01)
                     self.randomFeatureBuilder.setFeatureVector(None)
-                if "genia_limits" in self.styles:
+                if "genia_limits" in self.styles and not "no_task" in self.styles:
                     e1Type = entity1.get("type")
                     e2Type = entity2.get("type")
                     assert(entity1.get("isName") == "False")
