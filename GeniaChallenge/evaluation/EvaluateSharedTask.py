@@ -1,5 +1,6 @@
 import sys, os, shutil
 import subprocess
+import time
 thisPath = os.path.dirname(os.path.abspath(__file__))
 def relPath(path):
     return os.path.abspath(os.path.join(thisPath, path))
@@ -159,10 +160,12 @@ def evaluate(sourceDir, task=1, folds=-1, foldToRemove=-1, evaluations=["strict"
     else: # Not reading the lines causes some error in the perl script!
         p.stderr.readlines()
         p.stdout.readlines()
-                
+    
+    time.sleep(2)
+    
     if "strict" in evaluations:
         commands = "export PATH=$PATH:./ ; "
-        commands += "a2-evaluate.pl -g " + goldDir + " " + tempDir
+        commands += "perl a2-evaluate.pl -g " + goldDir + " " + tempDir
         commands += "/*.t" + str(task)
         p = subprocess.Popen(commands, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         stderrLines = p.stderr.readlines()
@@ -177,7 +180,7 @@ def evaluate(sourceDir, task=1, folds=-1, foldToRemove=-1, evaluations=["strict"
         if not silent:
             print >> sys.stderr, "##### approximate span and recursive mode #####"
         commands = "export PATH=$PATH:./ ; "
-        commands += "a2-evaluate.pl -g " + goldDir + " -sp " + tempDir
+        commands += "perl a2-evaluate.pl -g " + goldDir + " -sp " + tempDir
         commands += "/*.t" + str(task)
         p = subprocess.Popen(commands, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         stderrLines = p.stderr.readlines()
@@ -191,7 +194,7 @@ def evaluate(sourceDir, task=1, folds=-1, foldToRemove=-1, evaluations=["strict"
         if not silent:
             print >> sys.stderr, "##### event decomposition in the approximate span mode #####"
         commands = "export PATH=$PATH:./ ; "
-        commands += "a2-evaluate.pl -g " + goldDir + " -sp " + tempDir
+        commands += "perl a2-evaluate.pl -g " + goldDir + " -sp " + tempDir
         commands += "/*.t" + str(task) + "d"
         p = subprocess.Popen(commands, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         stderrLines = p.stderr.readlines()

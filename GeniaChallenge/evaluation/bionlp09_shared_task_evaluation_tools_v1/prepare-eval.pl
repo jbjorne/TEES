@@ -6,9 +6,9 @@ use File::Copy;
 
 my $gdir       = 'gold';
 my $dos2unix   = 'dos2unix';
-my $normalizer = 'a2-normalize.pl';
-my $decomposer = 'a2-decompose.pl';
-my $generator  = 'generate-task-specific-a2-file.pl';
+my $normalizer = 'perl a2-normalize.pl';
+my $decomposer = 'perl a2-decompose.pl';
+my $generator  = 'perl generate-task-specific-a2-file.pl';
 
 
 use Getopt::Std;
