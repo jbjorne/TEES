@@ -48,10 +48,11 @@ def splitMerged(sentence, elementName, countsByType):
     elements = sentence.findall(elementName)
     if len(newElements) > 0:
         insertPos = 0
-        for element in sentence:
-            if element == elements[-1]:
-                break
-            insertPos += 1
+        if len(elements) > 0:
+            for element in sentence:
+                if element == elements[-1]:
+                    break
+                insertPos += 1
         for newElement in newElements:
             sentence.insert(insertPos, newElement)
     # increment counts
