@@ -4,6 +4,7 @@ Determine optimal classifier parameter combinations.
 import sys, os, types
 import combine
 import time
+import subprocess
 sys.path.append(os.path.dirname(os.path.abspath(__file__))+"/..")
 from Utils.Parameters import *
 from Utils.Timer import Timer
@@ -111,7 +112,7 @@ def optimizeCSC(Classifier, Evaluator, trainExamples, testExamples, classIds, co
             Stream.setIndent(" ")
             print >> sys.stderr, "Parameters "+str(combinationCount)+"/"+str(len(combinations))+":", str(combination)
             # Train
-            combinationIds.append(Classifier.initTrainAndTestOnLouhi(trainExamples, testExamples, combination, cscConnection, None, classIds) )
+            combinationIds.append(Classifier.initTrainAndTestOnLouhi(trainExamples, testExamples, combination, cscConnection, workDir, classIds) )
             combinationCount += 1
     else:
         for combination in combinations:
@@ -193,14 +194,18 @@ def optimizeCSC(Classifier, Evaluator, trainExamples, testExamples, classIds, co
                             if fscore > bestResult[0][className][0]:
                                 bestResult[0][className] = (fscore, id, bestResult[0][className][2])
                     bestCombinationId = bestResult
+                os.remove(predictions) # remove predictions to save space
         Stream.setIndent()
         print >> sys.stderr, "Selected parameters", bestResult[-1]
         #if Classifier.__name__ == "MultiLabelClassifier":
         #    evaluator = Evaluator.evaluate(testExamples, predictions, classIds, evaluationOutput)
     
+        # Download best model and predictions
         modelFileName = Classifier.downloadModel(bestCombinationId, cscConnection, workDir)
         if workDir != None:
             modelFileName = os.path.join(workDir, modelFileName)
+        subprocess.call("gzip -fv " + modelFileName, shell=True)
+        modelFileName = modelFileName + ".gz"
         #if Classifier.__name__ != "MultiLabelClassifier":
             #bestResult = [None, None]
         bestResult[1] = modelFileName
