@@ -30,7 +30,7 @@ optparser.add_option("-v", "--edgeIds", default=None, dest="edgeIds", help="Trig
 optparser.add_option("-x", "--edgeParams", default="5000,7500,10000,15000,20000,25000,28000,50000,60000,65000,80000,100000,150000", dest="edgeParams", help="Trigger detector c-parameter values")
 optparser.add_option("--clearAll", default=False, action="store_true", dest="clearAll", help="Delete all files")
 optparser.add_option("-m", "--mtmx", default=False, action="store_true", dest="mtmx", help="Use mtmx data")
-optparser.add_option("--mode", default=None, dest="mode", help="")
+optparser.add_option("--mode", default="FULL", dest="mode", help="")
 (options, args) = optparser.parse_args()
 
 print options.mode
@@ -79,10 +79,10 @@ log() # Start logging into a file in working directory
 
 EDGE_FEATURE_PARAMS="style:" + options.edgeStyles
 print >> sys.stderr, "Edge feature style:", EDGE_FEATURE_PARAMS
-EDGE_TRAIN_EXAMPLE_FILE = "edge-train-examples-"+PARSE_TAG
-EDGE_TEST_EXAMPLE_FILE = "edge-test-examples-"+PARSE_TAG
-EDGE_DEVEL_EXAMPLE_FILE = "edge-devel-examples-"+PARSE_TAG
-EDGE_DEVEL_AND_TRAIN_EXAMPLE_FILE = "edge-devel-and-train-examples-"+PARSE_TAG
+EDGE_TRAIN_EXAMPLE_FILE = "edge-train-examples-"+PARSE_TAG+".gz"
+EDGE_TEST_EXAMPLE_FILE = "edge-test-examples-"+PARSE_TAG+".gz"
+EDGE_DEVEL_EXAMPLE_FILE = "edge-devel-examples-"+PARSE_TAG+".gz"
+EDGE_DEVEL_AND_TRAIN_EXAMPLE_FILE = "edge-devel-and-train-examples-"+PARSE_TAG+".gz"
 EDGE_IDS = "edge-ids"
 
 if options.mode in ["FULL"]:
@@ -113,20 +113,24 @@ if options.mode in ["FULL", "EVAL"]:
         c = None
     
     bestResult = optimize(CLASSIFIER, Ev, EDGE_TRAIN_EXAMPLE_FILE, EDGE_DEVEL_EXAMPLE_FILE,\
-    EDGE_IDS+".class_names", EDGE_CLASSIFIER_PARAMS, "edge-models", None, c, False)
+                          EDGE_IDS+".class_names", EDGE_CLASSIFIER_PARAMS, "edge-models", None, c, False)
     assert "c" in bestResult[4], bestResult
     bestCParam = int(bestResult[4]["c"])
     bestEdgeModel = bestResult[1]
-    
+else:
+    bestCParam = 10000
+    bestEdgeModel = "edge-models/model-c_10000.gz"
+
+if options.mode in ["FULL", "EVAL", "FINAL"]:     
     print >> sys.stderr, "Classifying devel set with best edge model"
-    CLASSIFIER.test(EDGE_DEVEL_EXAMPLE_FILE, bestEdgeModel, "edge-devel-classifications")
-    develEdgeXML = BioTextExampleWriter.write(EDGE_DEVEL_EXAMPLE_FILE, "edge-devel-classifications", DEVEL_FILE, "devel-predicted-edges.xml", EDGE_IDS+".class_names", PARSE, TOK)
+    CLASSIFIER.test(EDGE_DEVEL_EXAMPLE_FILE, bestEdgeModel, "edge-devel-classifications.gz")
+    develEdgeXML = BioTextExampleWriter.write(EDGE_DEVEL_EXAMPLE_FILE, "edge-devel-classifications.gz", DEVEL_FILE, "devel-predicted-edges.xml.gz", EDGE_IDS+".class_names", PARSE, TOK)
     EvaluateInteractionXML.run(Ev, develEdgeXML, DEVEL_FILE, PARSE, TOK)
     #STFormat.ConvertXML.toSTFormat(edgeXML, "geniaformat", outputTag="a2")
     
     print >> sys.stderr, "Classifying test set with best devel edge model"
-    CLASSIFIER.test(EDGE_TEST_EXAMPLE_FILE, bestEdgeModel, "edge-test-classifications")
-    testEdgeXML = BioTextExampleWriter.write(EDGE_TEST_EXAMPLE_FILE, "edge-test-classifications", TEST_FILE, "test-predicted-edges.xml", EDGE_IDS+".class_names", PARSE, TOK)
+    CLASSIFIER.test(EDGE_TEST_EXAMPLE_FILE, bestEdgeModel, "edge-test-classifications.gz")
+    testEdgeXML = BioTextExampleWriter.write(EDGE_TEST_EXAMPLE_FILE, "edge-test-classifications.gz", TEST_FILE, "test-predicted-edges.xml.gz", EDGE_IDS+".class_names", PARSE, TOK)
     EvaluateInteractionXML.run(Ev, testEdgeXML, TEST_FILE, PARSE, TOK)
     print >> sys.stderr, "Writing submission file"
     DDITools.makeDDISubmissionFile(testEdgeXML, "ddi-submission.txt")
@@ -143,11 +147,11 @@ if options.mode in ["FULL", "EVAL"]:
     else:
         c = None
     finalEdgeModel = optimize(CLASSIFIER, Ev, EDGE_DEVEL_AND_TRAIN_EXAMPLE_FILE, EDGE_DEVEL_EXAMPLE_FILE,\
-    EDGE_IDS+".class_names", EDGE_CLASSIFIER_PARAMS, "devel-and-train-edge-model", None, c, False)[1]
+                              EDGE_IDS+".class_names", EDGE_CLASSIFIER_PARAMS, "devel-and-train-edge-model", None, c, False)[1]
     
     print >> sys.stderr, "Classifying test set with best devel+train edge model"
-    CLASSIFIER.test(EDGE_TEST_EXAMPLE_FILE, finalEdgeModel, "edge-final-test-classifications")
-    testEdgeXML = BioTextExampleWriter.write(EDGE_TEST_EXAMPLE_FILE, "edge-final-test-classifications", TEST_FILE, "final-test-predicted-edges.xml", EDGE_IDS+".class_names", PARSE, TOK)
+    CLASSIFIER.test(EDGE_TEST_EXAMPLE_FILE, finalEdgeModel, "edge-final-test-classifications.gz")
+    testEdgeXML = BioTextExampleWriter.write(EDGE_TEST_EXAMPLE_FILE, "edge-final-test-classifications.gz", TEST_FILE, "final-test-predicted-edges.xml.gz", EDGE_IDS+".class_names", PARSE, TOK)
     EvaluateInteractionXML.run(Ev, testEdgeXML, TEST_FILE, PARSE, TOK)
     print >> sys.stderr, "Writing final submission file"
     DDITools.makeDDISubmissionFile(testEdgeXML, "final-ddi-submission.txt")
