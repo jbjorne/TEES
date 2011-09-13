@@ -1,7 +1,7 @@
 """
 Edge Examples
 """
-__version__ = "$Revision: 1.67 $"
+__version__ = "$Revision: 1.68 $"
 
 import sys, os
 thisPath = os.path.dirname(os.path.abspath(__file__))
@@ -41,7 +41,7 @@ class MultiEdgeExampleBuilder(ExampleBuilder):
             classSet = IdSet(1)
         else:
             classSet = classSet
-        assert( classSet.getId("neg") == 1 )
+        assert( classSet.getId("neg") == 1 or (len(classSet.Ids)== 2 and classSet.getId("neg") == -1) )
         
         ExampleBuilder.__init__(self, classSet=classSet, featureSet=featureSet)
         self.styles = style
