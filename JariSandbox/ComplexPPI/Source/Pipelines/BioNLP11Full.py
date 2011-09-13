@@ -341,7 +341,8 @@ if options.mode in ["BOTH", "FINAL", "POST-DOWNLOAD", "UNMERGING", "GRID", "POST
             UnmergingExampleBuilder.run(TEST_FILE, GOLD_TEST_FILE, UNMERGING_TEST_EXAMPLE_FILE, PARSE, TOK, UNMERGING_FEATURE_PARAMS, UNMERGING_IDS)
             # Build extra test examples
             print >> sys.stderr, "Extra test examples"
-            PRED_TEST_FILE = "/home/jari/biotext/BioNLP2011/tests/main-tasks/OLD/full/fulltest110308/flat-0.85.xml"
+            #PRED_TEST_FILE = "/home/jari/biotext/BioNLP2011/tests/main-tasks/OLD/full/fulltest110308/flat-0.85.xml"
+            PRED_TEST_FILE = "/home/jari/biotext/BioNLP2011/tests/FINAL/GE-full-110310/flat-0.7.xml"
             UnmergingExampleBuilder.run(PRED_TEST_FILE, GOLD_TEST_FILE, UNMERGING_TEST_EXAMPLE_FILE, PARSE, TOK, UNMERGING_FEATURE_PARAMS, UNMERGING_IDS, append=True)
             UnmergingExampleBuilder.run(TRAIN_FILE, GOLD_TRAIN_FILE, UNMERGING_TRAIN_EXAMPLE_FILE, PARSE, TOK, UNMERGING_FEATURE_PARAMS, UNMERGING_IDS)
             UnmergingExampleBuilder.run(xml, GOLD_TRAIN_FILE, UNMERGING_TRAIN_EXAMPLE_FILE, PARSE, TOK, UNMERGING_FEATURE_PARAMS, UNMERGING_IDS, append=True)
