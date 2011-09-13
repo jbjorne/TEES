@@ -30,7 +30,11 @@ optparser.add_option("-v", "--edgeIds", default=None, dest="edgeIds", help="Trig
 optparser.add_option("-x", "--edgeParams", default="5000,7500,10000,15000,20000,25000,28000,50000,60000,65000,80000,100000,150000", dest="edgeParams", help="Trigger detector c-parameter values")
 optparser.add_option("--clearAll", default=False, action="store_true", dest="clearAll", help="Delete all files")
 optparser.add_option("-m", "--mtmx", default=False, action="store_true", dest="mtmx", help="Use mtmx data")
+optparser.add_option("--mode", default=None, dest="mode", help="")
 (options, args) = optparser.parse_args()
+
+print options.mode
+assert options.mode != None
 
 # Check options
 assert options.output != None
@@ -49,7 +53,11 @@ if options.csc.find(",") != -1:
 else:
     options.csc = [options.csc]
 
+from Evaluators.BinaryEvaluator import BinaryEvaluator
+from Classifiers.SVMLightClassifier import SVMLightClassifier
 exec "CLASSIFIER = " + options.classifier
+if options.classifier == "SVMLightClassifier":
+    Ev = BinaryEvaluator
 
 # Main settings
 PARSE=options.parse
@@ -69,74 +77,77 @@ if options.clearAll and "clear" not in options.csc:
 workdir(WORKDIR, options.clearAll) # Select a working directory, don't remove existing files
 log() # Start logging into a file in working directory
 
-# Example generation parameters
-#EDGE_FEATURE_PARAMS="style:typed"
 EDGE_FEATURE_PARAMS="style:" + options.edgeStyles
 print >> sys.stderr, "Edge feature style:", EDGE_FEATURE_PARAMS
-
 EDGE_TRAIN_EXAMPLE_FILE = "edge-train-examples-"+PARSE_TAG
 EDGE_TEST_EXAMPLE_FILE = "edge-test-examples-"+PARSE_TAG
 EDGE_DEVEL_EXAMPLE_FILE = "edge-devel-examples-"+PARSE_TAG
 EDGE_DEVEL_AND_TRAIN_EXAMPLE_FILE = "edge-devel-and-train-examples-"+PARSE_TAG
 EDGE_IDS = "edge-ids"
-if not "eval" in options.csc:
-    EDGE_EXAMPLE_BUILDER = eval(options.edgeExampleBuilder)
-    ###############################################################################
-    # Edge example generation
-    ###############################################################################
-    EDGE_EXAMPLE_BUILDER.run(DEVEL_FILE, EDGE_DEVEL_EXAMPLE_FILE, PARSE, TOK, EDGE_FEATURE_PARAMS, EDGE_IDS)
-    EDGE_EXAMPLE_BUILDER.run(TEST_FILE, EDGE_TEST_EXAMPLE_FILE, PARSE, TOK, EDGE_FEATURE_PARAMS, EDGE_IDS)
-    EDGE_EXAMPLE_BUILDER.run(TRAIN_FILE, EDGE_TRAIN_EXAMPLE_FILE, PARSE, TOK, EDGE_FEATURE_PARAMS, EDGE_IDS)
-    EDGE_EXAMPLE_BUILDER.run(DEVEL_AND_TRAIN_FILE, EDGE_DEVEL_AND_TRAIN_EXAMPLE_FILE, PARSE, TOK, EDGE_FEATURE_PARAMS, EDGE_IDS)
 
-print >> sys.stderr, "Edge models for", PARSE_TAG
-EDGE_CLASSIFIER_PARAMS="c:" + options.edgeParams
-if "local" not in options.csc:
-    clear = False
-    if "clear" in options.csc: clear = True
-    if "louhi" in options.csc:
-        c = CSCConnection(CSC_WORKDIR+"/edge-models", "jakrbj@louhi.csc.fi", clear)
-    else:
-        c = CSCConnection(CSC_WORKDIR+"/edge-models", "jakrbj@murska.csc.fi", clear)
-else:
-    c = None
+if options.mode in ["FULL"]:
+    # Example generation parameters
+    #EDGE_FEATURE_PARAMS="style:typed"
+    if not "eval" in options.csc:
+        EDGE_EXAMPLE_BUILDER = eval(options.edgeExampleBuilder)
+        ###############################################################################
+        # Edge example generation
+        ###############################################################################
+        EDGE_EXAMPLE_BUILDER.run(DEVEL_FILE, EDGE_DEVEL_EXAMPLE_FILE, PARSE, TOK, EDGE_FEATURE_PARAMS, EDGE_IDS)
+        EDGE_EXAMPLE_BUILDER.run(TEST_FILE, EDGE_TEST_EXAMPLE_FILE, PARSE, TOK, EDGE_FEATURE_PARAMS, EDGE_IDS)
+        EDGE_EXAMPLE_BUILDER.run(TRAIN_FILE, EDGE_TRAIN_EXAMPLE_FILE, PARSE, TOK, EDGE_FEATURE_PARAMS, EDGE_IDS)
+        EDGE_EXAMPLE_BUILDER.run(DEVEL_AND_TRAIN_FILE, EDGE_DEVEL_AND_TRAIN_EXAMPLE_FILE, PARSE, TOK, EDGE_FEATURE_PARAMS, EDGE_IDS)
     
-bestResult = optimize(CLASSIFIER, Ev, EDGE_TRAIN_EXAMPLE_FILE, EDGE_DEVEL_EXAMPLE_FILE,\
-EDGE_IDS+".class_names", EDGE_CLASSIFIER_PARAMS, "edge-models", None, c, False)
-assert "c" in bestResult[4], bestResult
-bestCParam = int(bestResult[4]["c"])
-bestEdgeModel = bestResult[1]
 
-print >> sys.stderr, "Classifying devel set with best edge model"
-Cls.test(EDGE_DEVEL_EXAMPLE_FILE, bestEdgeModel, "edge-devel-classifications")
-develEdgeXML = BioTextExampleWriter.write(EDGE_DEVEL_EXAMPLE_FILE, "edge-devel-classifications", DEVEL_FILE, "devel-predicted-edges.xml", EDGE_IDS+".class_names", PARSE, TOK)
-EvaluateInteractionXML.run(Ev, develEdgeXML, DEVEL_FILE, PARSE, TOK)
-#STFormat.ConvertXML.toSTFormat(edgeXML, "geniaformat", outputTag="a2")
-
-print >> sys.stderr, "Classifying test set with best devel edge model"
-Cls.test(EDGE_TEST_EXAMPLE_FILE, bestEdgeModel, "edge-test-classifications")
-testEdgeXML = BioTextExampleWriter.write(EDGE_TEST_EXAMPLE_FILE, "edge-test-classifications", TEST_FILE, "test-predicted-edges.xml", EDGE_IDS+".class_names", PARSE, TOK)
-EvaluateInteractionXML.run(Ev, testEdgeXML, TEST_FILE, PARSE, TOK)
-print >> sys.stderr, "Writing submission file"
-DDITools.makeDDISubmissionFile(testEdgeXML, "ddi-submission.txt")
-
-print >> sys.stderr, "Final model for test set"
-EDGE_CLASSIFIER_PARAMS="c:" + str(bestCParam)
-if "local" not in options.csc:
-    clear = False
-    if "clear" in options.csc: clear = True
-    if "louhi" in options.csc:
-        c = CSCConnection(CSC_WORKDIR+"/devel-and-train-edge-model", "jakrbj@louhi.csc.fi", clear)
+if options.mode in ["FULL", "EVAL"]:   
+    print >> sys.stderr, "Edge models for", PARSE_TAG
+    EDGE_CLASSIFIER_PARAMS="c:" + options.edgeParams
+    if "local" not in options.csc:
+        clear = False
+        if "clear" in options.csc: clear = True
+        if "louhi" in options.csc:
+            c = CSCConnection(CSC_WORKDIR+"/edge-models", "jakrbj@louhi.csc.fi", clear)
+        else:
+            c = CSCConnection(CSC_WORKDIR+"/edge-models", "jakrbj@murska.csc.fi", clear)
     else:
-        c = CSCConnection(CSC_WORKDIR+"/devel-and-train-edge-model", "jakrbj@murska.csc.fi", clear)
-else:
-    c = None
-finalEdgeModel = optimize(CLASSIFIER, Ev, EDGE_DEVEL_AND_TRAIN_EXAMPLE_FILE, EDGE_DEVEL_EXAMPLE_FILE,\
-EDGE_IDS+".class_names", EDGE_CLASSIFIER_PARAMS, "devel-and-train-edge-model", None, c, False)[1]
-
-print >> sys.stderr, "Classifying test set with best devel+train edge model"
-Cls.test(EDGE_TEST_EXAMPLE_FILE, finalEdgeModel, "edge-final-test-classifications")
-testEdgeXML = BioTextExampleWriter.write(EDGE_TEST_EXAMPLE_FILE, "edge-final-test-classifications", TEST_FILE, "final-test-predicted-edges.xml", EDGE_IDS+".class_names", PARSE, TOK)
-EvaluateInteractionXML.run(Ev, testEdgeXML, TEST_FILE, PARSE, TOK)
-print >> sys.stderr, "Writing final submission file"
-DDITools.makeDDISubmissionFile(testEdgeXML, "final-ddi-submission.txt")
+        c = None
+    
+    bestResult = optimize(CLASSIFIER, Ev, EDGE_TRAIN_EXAMPLE_FILE, EDGE_DEVEL_EXAMPLE_FILE,\
+    EDGE_IDS+".class_names", EDGE_CLASSIFIER_PARAMS, "edge-models", None, c, False)
+    assert "c" in bestResult[4], bestResult
+    bestCParam = int(bestResult[4]["c"])
+    bestEdgeModel = bestResult[1]
+    
+    print >> sys.stderr, "Classifying devel set with best edge model"
+    CLASSIFIER.test(EDGE_DEVEL_EXAMPLE_FILE, bestEdgeModel, "edge-devel-classifications")
+    develEdgeXML = BioTextExampleWriter.write(EDGE_DEVEL_EXAMPLE_FILE, "edge-devel-classifications", DEVEL_FILE, "devel-predicted-edges.xml", EDGE_IDS+".class_names", PARSE, TOK)
+    EvaluateInteractionXML.run(Ev, develEdgeXML, DEVEL_FILE, PARSE, TOK)
+    #STFormat.ConvertXML.toSTFormat(edgeXML, "geniaformat", outputTag="a2")
+    
+    print >> sys.stderr, "Classifying test set with best devel edge model"
+    CLASSIFIER.test(EDGE_TEST_EXAMPLE_FILE, bestEdgeModel, "edge-test-classifications")
+    testEdgeXML = BioTextExampleWriter.write(EDGE_TEST_EXAMPLE_FILE, "edge-test-classifications", TEST_FILE, "test-predicted-edges.xml", EDGE_IDS+".class_names", PARSE, TOK)
+    EvaluateInteractionXML.run(Ev, testEdgeXML, TEST_FILE, PARSE, TOK)
+    print >> sys.stderr, "Writing submission file"
+    DDITools.makeDDISubmissionFile(testEdgeXML, "ddi-submission.txt")
+    
+    print >> sys.stderr, "Final model for test set"
+    EDGE_CLASSIFIER_PARAMS="c:" + str(bestCParam)
+    if "local" not in options.csc:
+        clear = False
+        if "clear" in options.csc: clear = True
+        if "louhi" in options.csc:
+            c = CSCConnection(CSC_WORKDIR+"/devel-and-train-edge-model", "jakrbj@louhi.csc.fi", clear)
+        else:
+            c = CSCConnection(CSC_WORKDIR+"/devel-and-train-edge-model", "jakrbj@murska.csc.fi", clear)
+    else:
+        c = None
+    finalEdgeModel = optimize(CLASSIFIER, Ev, EDGE_DEVEL_AND_TRAIN_EXAMPLE_FILE, EDGE_DEVEL_EXAMPLE_FILE,\
+    EDGE_IDS+".class_names", EDGE_CLASSIFIER_PARAMS, "devel-and-train-edge-model", None, c, False)[1]
+    
+    print >> sys.stderr, "Classifying test set with best devel+train edge model"
+    CLASSIFIER.test(EDGE_TEST_EXAMPLE_FILE, finalEdgeModel, "edge-final-test-classifications")
+    testEdgeXML = BioTextExampleWriter.write(EDGE_TEST_EXAMPLE_FILE, "edge-final-test-classifications", TEST_FILE, "final-test-predicted-edges.xml", EDGE_IDS+".class_names", PARSE, TOK)
+    EvaluateInteractionXML.run(Ev, testEdgeXML, TEST_FILE, PARSE, TOK)
+    print >> sys.stderr, "Writing final submission file"
+    DDITools.makeDDISubmissionFile(testEdgeXML, "final-ddi-submission.txt")
