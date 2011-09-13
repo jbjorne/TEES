@@ -100,14 +100,16 @@ def validate(events, simulation=False, verbose=False, docId=None): #, taskIsID=N
                 #        assert False, arg
                 if arg[2] != None and arg[2].type != "Entity":
                     print "arg[2] != Entity:", arg[2].type
-                    if not verbose:
-                        assert False, arg
+                    #if not verbose:
+                    if verbose: print "VAL:", docId + "." + str(event.id), "Warning, non-entity type arg[2]"
+                    assert False, arg
             # GE-regulation rules
             if "egulation" in event.type:
                 typeCounts = {"Cause":0, "Theme":0}
                 for arg in event.arguments[:]:
                     if arg[0] not in typeCounts or not (isIDCore(arg[1].type) or arg[1].trigger != None):
                         event.arguments.remove(arg)
+                        if verbose: print "VAL:", docId + "." + str(event.id), "Removed", event.type, "event argument of type", arg[0]
                     else:
                         typeCounts[arg[0]] += 1
                 if typeCounts["Theme"] == 0:# and not taskIsID:
@@ -223,8 +225,12 @@ def validate(events, simulation=False, verbose=False, docId=None): #, taskIsID=N
                 # the evaluator keeps complaining, and won't process the data. The "solution" is to 
                 # remove from Target/Site-checking those classes which reduce performance on gold data.
                 if event.type not in ["BindTo", "SiteOf"]:
-                    if arg1Type == "Site" and event.arguments[0][0] == "Target": toRemove.add(event)
-                    if arg2Type == "Site" and event.arguments[1][0] == "Target": toRemove.add(event)
+                    if arg1Type == "Site" and event.arguments[0][0] == "Target": 
+                        if verbose: print "VAL:", docId + "." + str(event.id), "Removing illegal Target-argument from event", event.type
+                        toRemove.add(event)
+                    if arg2Type == "Site" and event.arguments[1][0] == "Target": 
+                        if verbose: print "VAL:", docId + "." + str(event.id), "Removing illegal Target-argument from event", event.type
+                        toRemove.add(event)
             # EPI-specific rules
             if event.type in ["Dephosphorylation",
                               "Hydroxylation",
