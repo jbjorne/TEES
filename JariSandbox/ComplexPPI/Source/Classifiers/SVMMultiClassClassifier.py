@@ -1,4 +1,4 @@
-__version__ = "$Revision: 1.48 $"
+__version__ = "$Revision: 1.49 $"
 
 import sys,os
 sys.path.append(os.path.dirname(os.path.abspath(__file__))+"/..")
@@ -300,8 +300,8 @@ class SVMMultiClassClassifier(Classifier):
         trainExampleFileName = os.path.split(trainExamples)[-1]
         testExampleFileName = os.path.split(testExamples)[-1]
         assert(trainExampleFileName != testExampleFileName)
-        cscConnection.upload(trainExamples, trainExampleFileName, False)
-        cscConnection.upload(testExamples, testExampleFileName, False)
+        cscConnection.upload(trainExamples, trainExampleFileName, False, compress=True)
+        cscConnection.upload(testExamples, testExampleFileName, False, compress=True)
         
         idStr = ""
         paramStr = ""
@@ -327,7 +327,7 @@ class SVMMultiClassClassifier(Classifier):
         scriptFile.write(cls.louhiBinDir + "/svm_multiclass_classify " + cscConnection.workDir + "/" + testExampleFileName + " " + cscConnection.workDir + "/model" + idStr + " " + cscConnection.workDir + "/predictions" + idStr + "\n")
         scriptFile.close()
         
-        cscConnection.upload(scriptFilePath, scriptName)
+        cscConnection.upload(scriptFilePath, scriptName, compress=False)
         cscConnection.run("chmod a+x " + cscConnection.workDir + "/" + scriptName)
         cscScriptPath = cscConnection.workDir + "/" + scriptName
         if isMurska:
@@ -373,7 +373,7 @@ class SVMMultiClassClassifier(Classifier):
         predFileName = "predictions"+idStr
         if localWorkDir != None:
             predFileName = os.path.join(localWorkDir, predFileName)
-        cscConnection.download("predictions"+idStr, predFileName)
+        cscConnection.download("predictions"+idStr, predFileName, compress=True)
         return predFileName
         
 #        predictionsFile = open(predFileName, "rt")
