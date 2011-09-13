@@ -1,4 +1,4 @@
-__version__ = "$Revision: 1.49 $"
+__version__ = "$Revision: 1.50 $"
 
 import sys,os
 sys.path.append(os.path.dirname(os.path.abspath(__file__))+"/..")
@@ -7,6 +7,10 @@ import subprocess
 import Core.ExampleUtils as Example
 import combine
 import copy
+import tempfile
+import subprocess
+import atexit
+import gzip
 """
 A wrapper for the Joachims SVM Multiclass classifier.
 """
@@ -19,6 +23,18 @@ from Utils.Parameters import *
 from Utils.ProgressCounter import ProgressCounter
 import Settings
 import SVMMultiClassModelUtils
+
+def tempUnzip(filename):
+    tempdir = tempfile.mkdtemp() # a place for the file
+    dst = os.path.join(tempdir, os.path.basename(filename))
+    shutil.copy(filename, dst)
+    #print "gunzip -fv " + dst
+    #subprocess.call("gunzip -fv " + dst, shell=True)
+    subprocess.call("gunzip -f " + dst, shell=True)
+    if dst.endswith(".gz"):
+        dst = dst[:-3]
+    atexit.register(shutil.rmtree, tempdir) # mark for deletion
+    return os.path.join(tempdir, dst)
 
 class SVMMultiClassClassifier(Classifier):
     """
@@ -117,6 +133,10 @@ class SVMMultiClassClassifier(Classifier):
             args = [Settings.SVMMultiClassDir+"/svm_multiclass_classify"]
         if modelPath == None:
             modelPath = "model"
+        if modelPath.endswith(".gz"):
+            modelPath = tempUnzip(modelPath)
+        if testPath.endswith(".gz"):
+            testPath = tempUnzip(testPath)
         if parameters != None:
             parameters = copy.copy(parameters)
             if parameters.has_key("c"):
@@ -131,14 +151,22 @@ class SVMMultiClassClassifier(Classifier):
             logFile = open("svmmulticlass.log","at")
         else:
             logFile = open(output+".log","wt")
+        compressOutput = False
+        if output.endswith(".gz"):
+            output = output[:-3]
+            compressOutput = True
         args += [testPath, modelPath, output]
         #if timeout == None:
         #    timeout = -1
         #print args
         subprocess.call(args, stdout = logFile, stderr = logFile)
+        
         predictionsFile = open(output, "rt")
         lines = predictionsFile.readlines()
         predictionsFile.close()
+        if compressOutput:
+            subprocess.call("gzip -f " + output, shell=True)
+        
         predictions = []
         for i in range(len(lines)):
             predictions.append( [int(lines[i].split()[0])] + lines[i].split()[1:] )
@@ -300,8 +328,11 @@ class SVMMultiClassClassifier(Classifier):
         trainExampleFileName = os.path.split(trainExamples)[-1]
         testExampleFileName = os.path.split(testExamples)[-1]
         assert(trainExampleFileName != testExampleFileName)
-        cscConnection.upload(trainExamples, trainExampleFileName, False, compress=True)
-        cscConnection.upload(testExamples, testExampleFileName, False, compress=True)
+        cscConnection.upload(trainExamples, trainExampleFileName, False, compress=True, uncompress=True)
+        cscConnection.upload(testExamples, testExampleFileName, False, compress=True, uncompress=True)
+        # use uncompressed file names on the CSC machine
+        if trainExampleFileName.endswith(".gz"): trainExampleFileName = trainExampleFileName[:-3]
+        if testExampleFileName.endswith(".gz"): testExampleFileName = testExampleFileName[:-3]
         
         idStr = ""
         paramStr = ""
@@ -373,7 +404,7 @@ class SVMMultiClassClassifier(Classifier):
         predFileName = "predictions"+idStr
         if localWorkDir != None:
             predFileName = os.path.join(localWorkDir, predFileName)
-        cscConnection.download("predictions"+idStr, predFileName, compress=True)
+        cscConnection.download("predictions"+idStr, predFileName, compress=True, uncompress=True)
         return predFileName
         
 #        predictionsFile = open(predFileName, "rt")

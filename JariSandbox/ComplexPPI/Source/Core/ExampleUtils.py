@@ -9,7 +9,7 @@ the int is the feature id and the float is the feature value.
 Extra is a dictionary of String:String pairs, for additional information about the 
 examples.
 """
-__version__ = "$Revision: 1.46 $"
+__version__ = "$Revision: 1.47 $"
 
 
 import sys, os, itertools
@@ -19,6 +19,7 @@ from IdSet import IdSet
 import InteractionXML.IDUtils as IDUtils
 import combine
 import types
+import gzip
 try:
     import xml.etree.cElementTree as ET
 except ImportError:
@@ -108,7 +109,10 @@ def appendExamplesBinary(examples, file):
         #file.write("\n")
 
 def writeExamples(examples, filename, commentLines=None):
-    f = open(filename,"wt")
+    if filename.endswith(".gz"):
+        f = gzip.open(filename,"wt")
+    else:
+        f = open(filename,"wt")
     if commentLines != None:
         for commentLine in commentLines:
             f.write("# "+commentLine+"\n")
@@ -116,7 +120,10 @@ def writeExamples(examples, filename, commentLines=None):
     f.close()
 
 def writePredictions(predictions, exampleFileName):
-    f = open(exampleFileName, "wt")
+    if exampleFileName.endswith(".gz"):
+        f = gzip.open(exampleFileName,"wt")
+    else:
+        f = open(exampleFileName,"wt")
     exampleLines = f.readlines()
     f.close()
     for line in exampleLines:
@@ -126,7 +133,10 @@ def writePredictions(predictions, exampleFileName):
             pass
 
 def getIdsFromFile(filename):
-    f = open(filename,"rt")
+    if filename.endswith(".gz"):
+        f = gzip.open(filename,"rt")
+    else:
+        f = open(filename,"rt")
     ids = []
     for line in f.readlines():
         if line[0] == "#":
@@ -137,7 +147,10 @@ def getIdsFromFile(filename):
 
 @gen2iterable
 def readExamples(filename, readFeatures=True):
-    f = open(filename,"rt")
+    if filename.endswith(".gz"):
+        f = gzip.open(filename,"rt")
+    else:
+        f = open(filename,"rt")
     #try:
     for line in f:
         if line[0] == "#":
@@ -215,7 +228,10 @@ def divideExamples(examples, division=None):
     return exampleSets
 
 def divideExampleFile(exampleFileName, division, outputDir):
-    f = open(exampleFileName, "rt")
+    if exampleFileName.endswith(".gz"):
+        f = gzip.open(exampleFileName,"rt")
+    else:
+        f = open(exampleFileName,"rt")
     lines = f.readlines()
     f.close()
     
@@ -233,7 +249,10 @@ def divideExampleFile(exampleFileName, division, outputDir):
 
 @gen2iterable        
 def loadPredictions(predictionsFile):
-    f = open(predictionsFile, "rt")
+    if predictionsFile.endswith(".gz"):
+        f = gzip.open(predictionsFile,"rt")
+    else:
+        f = open(predictionsFile,"rt")
     #try:
     for line in f:
         splits = line.split()
@@ -268,7 +287,10 @@ def loadPredictionsBoost(predictionsFile, recallBoost):
     rangeValue *= 1.001 # Make sure boost=1.0 exceeds max value
     print "Range value:", rangeValue
      
-    f = open(predictionsFile, "rt")
+    if predictionsFile.endswith(".gz"):
+        f = gzip.open(predictionsFile,"rt")
+    else:
+        f = open(predictionsFile,"rt")
     #try:
     for line in f:
         splits = line.split()

@@ -1,11 +1,12 @@
 """
 Base class for ExampleBuilders
 """
-__version__ = "$Revision: 1.30 $"
+__version__ = "$Revision: 1.31 $"
 
 from SentenceGraph import SentenceGraph
 from IdSet import IdSet
 import sys, os, types
+import gzip
 sys.path.append(os.path.dirname(os.path.abspath(__file__))+"/..")
 from Utils.ProgressCounter import ProgressCounter
 from Utils.Parameters import getArgs
@@ -87,11 +88,17 @@ class ExampleBuilder:
         
         calculatePredictedRange(self, sentences)
         
+        # Open output file
+        openStyle = "wt"
         if appendIndex != None and appendIndex != 0:
             print "Appending examples"
-            outfile = open(output, "at")
+            openStyle = "at"
+        if output.endswith(".gz"):
+            outfile = gzip.open(output, openStyle)
         else:
-            outfile = open(output, "wt")
+            outfile = open(output, openStyle)
+        
+        # Generate examples
         exampleCount = 0
         for i in range(len(sentences)):
             sentence = sentences[i]
@@ -117,11 +124,11 @@ class ExampleBuilder:
             self.exampleStats.printStats()
         #ENDIF
         # Save Ids
-        if idFileTag != None: 
+        if idFileTag != None:
             print >> sys.stderr, "Saving class names to", idFileTag + ".class_names"
             self.classSet.write(idFileTag + ".class_names")
-            print >> sys.stderr, "Saving feature names to", idFileTag + ".feature_names"
-            self.featureSet.write(idFileTag + ".feature_names")
+            print >> sys.stderr, "Saving feature names to", idFileTag + ".feature_names.gz"
+            self.featureSet.write(idFileTag + ".feature_names.gz")
 
     def buildExamplesForSentencesSeparateGold(self, sentences, goldSentences, output, idFileTag=None):            
         examples = []
@@ -153,23 +160,23 @@ class ExampleBuilder:
         if idFileTag != None: 
             print >> sys.stderr, "Saving class names to", idFileTag + ".class_names"
             self.classSet.write(idFileTag + ".class_names")
-            print >> sys.stderr, "Saving feature names to", idFileTag + ".feature_names"
-            self.featureSet.write(idFileTag + ".feature_names")
+            print >> sys.stderr, "Saving feature names to", idFileTag + ".feature_names.gz"
+            self.featureSet.write(idFileTag + ".feature_names.gz")
     
     @classmethod
     def getIdSets(self, idFileTag=None):
-        if idFileTag != None and os.path.exists(idFileTag + ".feature_names") and os.path.exists(idFileTag + ".class_names"):
+        if idFileTag != None and os.path.exists(idFileTag + ".feature_names.gz") and os.path.exists(idFileTag + ".class_names"):
             print >> sys.stderr, "Using predefined class and feature names"
             featureSet = IdSet()
-            featureSet.load(idFileTag + ".feature_names")
+            featureSet.load(idFileTag + ".feature_names.gz")
             classSet = IdSet()
             classSet.load(idFileTag + ".class_names")
             return classSet, featureSet
         else:
             print >> sys.stderr, "No predefined class or feature-names"
             if idFileTag != None:
-                assert(not os.path.exists(idFileTag + ".feature_names"))
-                assert(not os.path.exists(idFileTag + ".class_names"))
+                assert(not os.path.exists(idFileTag + ".feature_names.gz")), idFileTag
+                assert(not os.path.exists(idFileTag + ".class_names")), idFileTag
             return None, None
             
     @classmethod

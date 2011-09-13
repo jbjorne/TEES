@@ -1,9 +1,10 @@
 """
 Manages classification class and feature ids.
 """
-__version__ = "$Revision: 1.19 $"
+__version__ = "$Revision: 1.20 $"
 
 import codecs
+import gzip
 
 class IdSet:
     """
@@ -119,12 +120,19 @@ class IdSet:
         """
         Writes the name/id pairs to a file, one pair per line, in the format "name: id".
         """
-        f = codecs.open(filename, "wt", "utf-8")
+        #f = codecs.open(filename, "wt", "utf-8")
+        if filename.endswith(".gz"):
+            f = gzip.open(filename, 'wt')
+            writer = codecs.getwriter("utf-8")(f)
+        else:
+            writer = codecs.open(filename, "wt", "utf-8")
+            f = writer
+        
         keys = self.Ids.keys()
         keys.sort()
         for key in keys:
             # key is assumed to be a string
-            f.write( key + ": " + str(self.Ids[key]) + "\n" )
+            writer.write( key + ": " + str(self.Ids[key]) + "\n" )
             #f.write( (str(key)+": "+str(self.Ids[key])+"\n") ) # this causes unicode problems
             #f.write( (str(key)+": "+str(self.Ids[key])+"\n") )
             #f.write( (str(key)+": "+str(self.Ids[key])+"\n").encode("utf-8") )
@@ -139,9 +147,16 @@ class IdSet:
         self._namesById = {}
         self.nextFreeId = -999999999999999999
         
-        f = codecs.open(filename, "rt", "utf-8")
-        lines = f.readlines()
+        #f = codecs.open(filename, "rt", "utf-8")
+        if filename.endswith(".gz"):
+            f = gzip.open(filename, 'rt')
+            reader = codecs.getreader("utf-8")(f)
+        else:
+            reader = codecs.open(filename, "rt", "utf-8")
+            f = reader
+        lines = reader.readlines()
         f.close()
+
         for line in lines:
             key, value = line.rsplit(":",1)
             key = key.strip()
