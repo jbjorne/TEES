@@ -76,7 +76,7 @@ def processCorpus(inputCorpus, outputPath, task=1, outputIsA2File=False, verbose
                 outputFile = a2File
             else:
                 outputFile = codecs.open(os.path.join(outputPath,documentId + ".a2.t1"), "wt", "utf-8")
-                strengthFile = codecs.open(os.path.join(outputPath,documentId + ".a2.t1.scores"), "wt", "utf-8")
+                #strengthFile = codecs.open(os.path.join(outputPath,documentId + ".a2.t1.scores"), "wt", "utf-8")
                 #outputFile = open(os.path.join(outputPath,documentId + ".a2.t1"), "wt")
             events, entityMap = getEvents(document, inputCorpus, 1)
             #print "EVENTS-FINAL", events, "\nENTITY_MAP", entityMap
@@ -91,7 +91,7 @@ def processCorpus(inputCorpus, outputPath, task=1, outputIsA2File=False, verbose
                 outputFile = a2File
             else:
                 outputFile = codecs.open(os.path.join(outputPath,documentId + ".a2.t12"), "wt", "utf-8")
-                strengthFile = codecs.open(os.path.join(outputPath,documentId + ".a2.t12.scores"), "wt", "utf-8")
+                #strengthFile = codecs.open(os.path.join(outputPath,documentId + ".a2.t12.scores"), "wt", "utf-8")
                 #outputFile = open(os.path.join(outputPath,documentId + ".a2.t12"), "wt")
             events, entityMap = getEvents(document, inputCorpus, 2)
             triggerIds = copy.copy(namedEntityTriggerIds)
@@ -105,7 +105,7 @@ def processCorpus(inputCorpus, outputPath, task=1, outputIsA2File=False, verbose
                 outputFile = a2File
             else:
                 outputFile = codecs.open(os.path.join(outputPath,documentId + ".a2.t123"), "wt", "utf-8")
-                strengthFile = codecs.open(os.path.join(outputPath,documentId + ".a2.t123.scores"), "wt", "utf-8")
+                #strengthFile = codecs.open(os.path.join(outputPath,documentId + ".a2.t123.scores"), "wt", "utf-8")
                 #outputFile = open(os.path.join(outputPath,documentId + ".a2.t123"), "wt")
             events, entityMap = getEvents(document, inputCorpus, 2)
             triggerIds = copy.copy(namedEntityTriggerIds)
