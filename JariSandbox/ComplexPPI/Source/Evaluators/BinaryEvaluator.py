@@ -2,10 +2,23 @@
 For two-class classification
 """
 import Evaluator
+import itertools
+import sys, os
+import types
+sys.path.append(os.path.dirname(os.path.abspath(__file__))+"/..")
+from Core.IdSet import IdSet
+import Core.ExampleUtils as ExampleUtils
 
 class BinaryEvaluator(Evaluator.Evaluator):
-    def __init__(self, predictions=None, classSet=None):
-        self.predictions = predictions
+    def __init__(self, examples=None, predictions=None, classSet=None):
+        if type(classSet) == types.StringType: # class names are in file
+            classSet = IdSet(filename=classSet)
+        if type(predictions) == types.StringType: # predictions are in file
+            predictions = ExampleUtils.loadPredictions(predictions)
+        if type(examples) == types.StringType: # examples are in file
+            examples = ExampleUtils.readExamples(examples, False)
+        #self.examples = examples
+        #self.predictions = predictions
         self.truePositives = 0
         self.falsePositives = 0
         self.trueNegatives = 0
@@ -16,7 +29,18 @@ class BinaryEvaluator(Evaluator.Evaluator):
         self.AUC = None
         self.type = "binary"
         if predictions != None:
-            self._calculate(predictions)
+            self._calculate(examples, predictions)
+    
+    @classmethod
+    def evaluate(cls, examples, predictions, classSet=None, outputFile=None):
+        """
+        Enables using this class without having to manually instantiate it
+        """
+        evaluator = cls(examples, predictions, classSet)
+        print >> sys.stderr, evaluator.toStringConcise()
+        if outputFile != None:
+            evaluator.saveCSV(outputFile)
+        return evaluator
     
     def compare(self, evaluation):
         if self.fScore > evaluation.fScore:
@@ -65,14 +89,14 @@ class BinaryEvaluator(Evaluator.Evaluator):
         return BinaryEvaluator(predictions)
     pool = staticmethod(pool)      
     
-    def __calculateAUC(self, predictions):
+    def __calculateAUC(self, examples, predictions):
         numPositiveExamples = 0
         numNegativeExamples = 0
         predictionsForPositives = []
         predictionsForNegatives = []
-        for prediction in predictions:
-            trueClass = prediction[0][1]
-            predictedClass = prediction[1]
+        for example, prediction in itertools.izip(examples, predictions):
+            trueClass = example[1] #prediction[0][1]
+            predictedClass = prediction[0] #prediction[1]
             if trueClass > 0:
                 numPositiveExamples += 1
                 if predictedClass > 0:
@@ -98,13 +122,14 @@ class BinaryEvaluator(Evaluator.Evaluator):
             auc = 0
         return auc
     
-    def _calculate(self, predictions):
+    def _calculate(self, examples, predictions):
         # First count instances
         #print predictions
         self.classifications = []
-        for prediction in predictions:
-            trueClass = prediction[0][1]
-            predictedClass = prediction[1]
+        #assert len(examples) == len(predictions), (len(examples), len(predictions))
+        for example, prediction in itertools.izip(examples, predictions):
+            trueClass = example[1] #prediction[0][1]
+            predictedClass = prediction[0] #prediction[1]
             if trueClass > 0:
                 if predictedClass > 0: # 1,1
                     self.truePositives += 1
@@ -135,7 +160,7 @@ class BinaryEvaluator(Evaluator.Evaluator):
         else:
             self.fScore = 0.0
         
-        self.AUC = self.__calculateAUC(predictions)
+        self.AUC = self.__calculateAUC(examples, predictions)
     
     def toStringConcise(self, indent="", title=None):
         if title != None:
