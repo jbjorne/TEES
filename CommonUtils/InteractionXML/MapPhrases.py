@@ -13,21 +13,6 @@ except ImportError:
 import cElementTreeUtils as ETUtils
 import Range
 
-def phraseToStr(phrase, indent = ""):
-    s = indent
-    s += phrase.get("type") + ":"
-    s += phrase.get("begin") + "/"
-    s += phrase.get("end") + "("
-    s += phrase.get("charOffset") + ")"
-    return s
-
-def filterPhrases(phrases, filter):
-    phrasesToKeep = []
-    for phrase in phrases:
-        if phrase.get("type") in filter:
-            phrasesToKeep.append(phrase)
-    return phrasesToKeep, getPhraseDict(phrasesToKeep)
-    
 def fixIndices(phrases, tokens):
     fixCount = 0
     phraseCount = 0
@@ -143,21 +128,9 @@ def makeDETSubPhrases(phrases, tokens, phraseDict, filter=None):
         phraseOffset = Range.charOffsetToSingleTuple(phrase.get("charOffset"))
         phraseBegin = int(phrase.get("begin"))
         phraseEnd = int(phrase.get("end"))
-        # Drop DT
-        if phraseBegin > 0 and tokens[phraseBegin].get("POS") == "DT":
-            newPhraseOffset = (Range.charOffsetToSingleTuple(tokens[phraseBegin+1].get("charOffset"))[0], phraseOffset[1])
-            newPhrase = makePhrase("DT(-)-" + phrase.get("type"),
-                      newPhraseOffset, 
-                      phraseBegin + 1, 
-                      phraseEnd)
-            if not phraseDict.has_key(newPhraseOffset):
-                #print "NEW PHRASE:", ETUtils.toStr(newPhrase)
-                newPhrases.append(newPhrase)
-                phraseDict[newPhraseOffset] = [newPhrase]
-        # Add DT
         if phraseBegin > 0 and tokens[phraseBegin-1].get("POS") == "DT":
             newPhraseOffset = (Range.charOffsetToSingleTuple(tokens[phraseBegin-1].get("charOffset"))[0], phraseOffset[1])
-            newPhrase = makePhrase("DT(+)-" + phrase.get("type"),
+            newPhrase = makePhrase("DT-" + phrase.get("type"),
                       newPhraseOffset, 
                       phraseBegin - 1, 
                       phraseEnd)
@@ -167,23 +140,18 @@ def makeDETSubPhrases(phrases, tokens, phraseDict, filter=None):
                 phraseDict[newPhraseOffset] = [newPhrase]
     return newPhrases
 
-def makeTokenSubPhrases(tokens, phraseDict, includePOS=["NN", "PRP$", "IN", "WP$"]):
+def makeTokenSubPhrases(tokens, phraseDict, includePOS=["PRP$", "IN", "WP$"]):
     newPhrases = []
     for i in range(len(tokens)):
         token = tokens[i]
         tokPOS = token.get("POS")
-        if includePOS == None or tokPOS in includePOS:
+        if tokPOS in includePOS:
             tokOffset = Range.charOffsetToSingleTuple(token.get("charOffset"))
             if not phraseDict.has_key(tokOffset):
                 newPhrase = makePhrase("TOK-t" + tokPOS, tokOffset, i, i)
                 newPhrases.append(newPhrase)
                 phraseDict[tokOffset] = [newPhrase]
     return newPhrases
-
-def makeHyphenSubPhrases(phrases, token):
-    for phrase in phrases:
-        phraseBegin = int(phrase.get("begin"))
-        phraseEnd = int(phrase.get("end"))
 
 def makePhrases(parse, tokenization, entities=None):
     tokens = tokenization.findall("token")
@@ -195,7 +163,7 @@ def makePhrases(parse, tokenization, entities=None):
     # DET-phrases
     phrases.extend(makeDETSubPhrases(phrases, tokens, phraseDict))
     # Token-phrases
-    phrases.extend(makeTokenSubPhrases(tokens, phraseDict, None))
+    phrases.extend(makeTokenSubPhrases(tokens, phraseDict))
     
     # Remove phrases matching named entity offsets
     #if entities != None:
@@ -213,10 +181,7 @@ def getMatchingPhrases(entity, phraseOffsets, phraseDict):
     if minOffset != None:
         minOffset = Range.charOffsetToSingleTuple(minOffset)
     else:
-        if entity.get("type") in ["Host", "HostPart", "Geographical", "Environmental", "Food", "Medical", "Soil", "Water"]:
-            minOffset = Range.charOffsetToSingleTuple(entity.get("headOffset"))
-        else:
-            minOffset = maxOffset
+        minOffset = maxOffset
     for phraseOffset in phraseOffsets:
         if Range.contains(maxOffset, phraseOffset) and Range.contains(phraseOffset, minOffset):
             matches.extend(phraseDict[phraseOffset])
@@ -272,21 +237,7 @@ def processCorpus(input, parserName):
     counts = defaultdict(int)
     matchByType = defaultdict(lambda : [0,0])
     filteredMatchByType = defaultdict(lambda : [0,0])
-    #filter = set(["NP", "TOK-tIN", "WHADVP", "WHNP", "TOK-tWP$", "TOK-tPRP$", "NP-IN"])
-    filter = set(["ADJP",
-                  "DT(-)-NP-IN",
-                  "DT(-)-NP",
-                  "NP",
-                  "NP-IN",
-                  "PP",
-                  "S",
-                  "S1",
-                  "TOK-tJJ",
-                  "TOK-tNN",
-                  "TOK-tNNP",
-                  "TOK-tNNS",
-                  "VP",
-                  "VP-IN"])
+    filter = set(["NP", "TOK-tIN", "WHADVP", "WHNP", "TOK-tWP$", "TOK-tPRP$", "NP-IN"])
     
 #    # fix spans
 #    for document in documents:
@@ -358,8 +309,6 @@ def processCorpus(input, parserName):
                 # Matching
                 if count == 0:
                     print "  NO MATCH", ETUtils.toStr(entity)
-                    for phrase in phrases:
-                        print "     "  + phraseToStr(phrase)
                     counts["no-match"] += 1
                 else:
                     counts["match"] += 1
