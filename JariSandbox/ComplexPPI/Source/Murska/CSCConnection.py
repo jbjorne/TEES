@@ -19,7 +19,7 @@ class CSCConnection:
         # Batch job queue
         self.commands = []
         
-        self.compression = True
+        self.compression = False #True
     
     def setWorkSubDir(self, workSubDir, deleteWorkDir=False):
         self.workDir = "/wrk/jakrbj/" + workSubDir
@@ -55,37 +55,37 @@ class CSCConnection:
         else:
             return self.NONZERO
         
-    def upload(self, src, dst=None, replace=True):
+    def upload(self, src, dst=None, replace=True, compress=False):
         if dst == None:
             dst = os.path.split(src)[-1]
         if replace == False and self.exists(dst):
             return False
         else:
-            if self.compression:
+            if self.compression or compress:
                 print >> sys.stderr, "Compressing " + src + ": ",
                 subprocess.call("gzip -fv < " + src + " > " + src + ".gz", shell=True)
                 src += ".gz"
                 dst += ".gz"
             print "scp " + src + " " + self.account + ":" + self.workDir + "/" + dst
             subprocess.call("scp " + src + " " + self.account + ":" + self.workDir + "/" + dst, shell=True)
-            if self.compression:
+            if self.compression or compress:
                 self.run("gunzip -fv " + self.workDir + "/" + dst)
             return True
         
-    def download(self, src, dst=None, replace=True):
+    def download(self, src, dst=None, replace=True, compress=False):
         if dst == None:
             dst = os.path.split(src)[-1]
         if replace == False and os.path.exists(dst):
             return False
         else:
-            if self.compression:
+            if self.compression or compress:
                 print >> sys.stderr, "Compressing " + src + ": ",
                 self.run("gzip < " + self.workDir + "/" + src + " > " + self.workDir + "/" + src + ".gz")
                 src = src + ".gz"
                 dst = dst + ".gz"
             #print "SCP:", "scp " + self.account + ":" + self.workDir + "/" + src + " " + dst
             subprocess.call("scp " + self.account + ":" + self.workDir + "/" + src + " " + dst, shell=True)
-            if self.compression:
+            if self.compression or compress:
                 subprocess.call("gunzip -f " + dst, shell=True)
             return True
     
