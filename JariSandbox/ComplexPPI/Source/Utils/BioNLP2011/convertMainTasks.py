@@ -84,8 +84,9 @@ if __name__=="__main__":
     datasets["BB"] = [("devel", dataPath+"BioNLP-ST_2011_Bacteria_Biotopes_dev_data_rev1"), 
                       ("train", dataPath+"BioNLP-ST_2011_Bacteria_Biotopes_train_data_rev1"),
                       ("test", dataPath+"BioNLP-ST_2011_Bacteria_Biotopes_test_data")]
-    #datasets["BI"] = [("devel", dataPath+"BioNLP-ST_2011_bacteria_interactions_dev_data_rev1"), 
-    #                  ("train", dataPath+"BioNLP-ST_2011_bacteria_interactions_train_data_rev1")]
+    datasets["BI"] = [("devel", dataPath+"BioNLP-ST_2011_bacteria_interactions_dev_data_rev1"), 
+                      ("train", dataPath+"BioNLP-ST_2011_bacteria_interactions_train_data_rev1"),
+                      ("test", dataPath+"BioNLP-ST_2011_bacteria_interactions_test_data")]
     
     for dataset in sorted(datasets.keys()):
         cwd = os.getcwd()
