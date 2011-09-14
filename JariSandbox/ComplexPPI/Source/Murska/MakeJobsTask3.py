@@ -134,10 +134,18 @@ def prepareJobs(inDir, outDir, workDir, queueDir, submitFilename=None, listFile=
     for triple in sourceList:
         inputFiles = []
         for filename in triple[2]:
-            if filename.find("events_unflattened.xml.gz") != -1:
-		if not os.path.exists(os.path.join(triple[0], filename[:-7]+"-finished")):
-                    inputFiles.append(os.path.abspath(os.path.join(triple[0], filename)))
-                    remainingInputs += 1
+            if filename.find == "events_unflattened.xml.gz" or filename[-4:] == ".xml":
+                skip = False
+                if filename[-7:] == ".xml.gz":
+                    if not os.path.exists(os.path.join(triple[0], filename[:-7], "-finished")):
+                        skip = True
+                elif filename[-4:] == ".xml":
+                    if not os.path.exists(os.path.join(triple[0], filename[:-4], "-finished")):
+                        skip = True
+                if skip:
+                    continue
+                inputFiles.append(os.path.abspath(os.path.join(os.path.join(triple[0], filename))))
+                remainingInputs += 1
         if len(inputFiles) == 0:
             continue
         nameBase = triple[0].replace("/", "_")
