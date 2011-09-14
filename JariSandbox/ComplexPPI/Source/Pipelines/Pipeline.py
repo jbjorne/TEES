@@ -25,12 +25,15 @@ from Murska.CSCConnection import CSCConnection
 #ENDIF
 from Classifiers.SVMMultiClassClassifier import SVMMultiClassClassifier as Cls
 from Classifiers.AllCorrectClassifier import AllCorrectClassifier as ACCls
+from Classifiers.AllTrueClassifier import AllTrueClassifier as ATCls
+from Classifiers.MultiLabelClassifier import MultiLabelClassifier as MultiLabelClassifier
 #IF LOCAL
 #from Classifiers.LibLinearClassifier import LibLinearClassifier
 #from Classifiers.LibLinearPoly2Classifier import LibLinearPoly2Classifier
 #ENDIF
 from Evaluators.AveragingMultiClassEvaluator import AveragingMultiClassEvaluator as Ev
 from Evaluators.SharedTaskEvaluator import SharedTaskEvaluator as STEv
+from Evaluators.MultiLabelEvaluator import MultiLabelEvaluator as MultiLabelEvaluator
 from Evaluators.BXEvaluator import BXEvaluator as BXEv
 import Evaluators.BioNLP11GeniaTools
 evaluateBioNLP11Genia = Evaluators.BioNLP11GeniaTools.evaluate
