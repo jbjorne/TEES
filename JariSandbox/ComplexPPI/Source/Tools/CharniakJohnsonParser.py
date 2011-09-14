@@ -1,4 +1,4 @@
-parse__version__ = "$Revision: 1.10 $"
+parse__version__ = "$Revision: 1.11 $"
 
 import sys,os
 import sys
@@ -78,6 +78,7 @@ def readPenn(treeLine):
 def insertTokens(tokens, sentence, tokenization, idStem="cjt_"):
     tokenCount = 0
     start = 0
+    prevStart = None
     for tokenText, posTag, origTokenText in tokens:
         sText = sentence.get("text")
         # Determine offsets
@@ -85,12 +86,18 @@ def insertTokens(tokens, sentence, tokenization, idStem="cjt_"):
         #assert cStart != -1, (tokenText, tokens, posTag, start, sText)
         if cStart == -1: # Try again with original text (sometimes escaping can remove correct text)
             cStart = sText.find(origTokenText, start)
+        if cStart == -1 and prevStart != None: # Try again with the previous position, sometimes the parser duplicates tokens
+            cStart = sText.find(origTokenText, prevStart)
+            if cStart != -1:
+                start = prevStart
+                print >> sys.stderr, "Token duplication", (tokenText, tokens, posTag, start, sText)
         if cStart == -1:
             print >> sys.stderr, "Token alignment error", (tokenText, tokens, posTag, start, sText)
             for subElement in [x for x in tokenization]:
                 tokenization.remove(subElement)
             return False
         cEnd = cStart + len(tokenText)
+        prevStart = start
         start = cStart + len(tokenText)
         # Make element
         token = ET.Element("token")
@@ -192,7 +199,7 @@ def runCharniakJohnsonParser(input, output, tokenizer=False):
                                    stdout=codecs.open(output, "wt", "utf-8"))
     return ProcessWrapper([firstStage, secondStage])
 
-def parse(input, output=None, tokenizationName=None, parseName="McClosky", requireEntities=False, skipIds=[], skipParsed=True):
+def parse(input, output=None, tokenizationName=None, parseName="McClosky", requireEntities=False, skipIds=[], skipParsed=True, timeout=600):
     global charniakJohnsonParserDir, escDict
     print >> sys.stderr, "Charniak-Johnson Parser"
     
@@ -206,8 +213,11 @@ def parse(input, output=None, tokenizationName=None, parseName="McClosky", requi
     infileName = os.path.join(workdir, "parser-input.txt")
     infile = codecs.open(infileName, "wt", "utf-8")
     numCorpusSentences = 0
-    if tokenizationName == None: # Parser does tokenization
-        print >> sys.stderr, "Parser does the tokenization"
+    if tokenizationName == None or tokenizationName == "PARSED_TEXT": # Parser does tokenization
+        if tokenizationName == None:
+            print >> sys.stderr, "Parser does the tokenization"
+        else:
+            print >> sys.stderr, "Parsing tokenized text"
         for sentence in corpusRoot.getiterator("sentence"):
             if sentence.get("id") in skipIds:
                 print >> sys.stderr, "Skipping sentence", sentence.get("id")
@@ -249,9 +259,11 @@ def parse(input, output=None, tokenizationName=None, parseName="McClosky", requi
     cwd = os.getcwd()
     os.chdir(charniakJohnsonParserDir)
     if tokenizationName == None:
-        charniakOutput = runSentenceProcess(runCharniakJohnsonParserWithTokenizer, charniakJohnsonParserDir, infileName, workdir, False, "CharniakJohnsonParser", "Parsing", timeout=600)   
+        charniakOutput = runSentenceProcess(runCharniakJohnsonParserWithTokenizer, charniakJohnsonParserDir, infileName, workdir, False, "CharniakJohnsonParser", "Parsing", timeout=timeout)   
     else:
-        charniakOutput = runSentenceProcess(runCharniakJohnsonParserWithoutTokenizer, charniakJohnsonParserDir, infileName, workdir, False, "CharniakJohnsonParser", "Parsing", timeout=600)   
+        if tokenizationName == "PARSED_TEXT":
+            tokenizationName = None
+        charniakOutput = runSentenceProcess(runCharniakJohnsonParserWithoutTokenizer, charniakJohnsonParserDir, infileName, workdir, False, "CharniakJohnsonParser", "Parsing", timeout=timeout)   
 #    args = [charniakJohnsonParserDir + "/parse-50best-McClosky.sh"]
 #    #bioParsingModel = charniakJohnsonParserDir + "/first-stage/DATA-McClosky"
 #    #args = charniakJohnsonParserDir + "/first-stage/PARSE/parseIt -K -l399 -N50 " + bioParsingModel + "/parser | " + charniakJohnsonParserDir + "/second-stage/programs/features/best-parses -l " + bioParsingModel + "/reranker/features.gz " + bioParsingModel + "/reranker/weights.gz"
