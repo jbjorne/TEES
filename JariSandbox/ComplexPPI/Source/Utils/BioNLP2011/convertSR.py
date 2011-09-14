@@ -19,6 +19,7 @@ import Tools.StanfordParser
 import InteractionXML.CopyParse
 import InteractionXML.DeleteElements
 import collections
+from collections import defaultdict
 import Range
 try:
     import cElementTree as ET
@@ -33,7 +34,7 @@ def log(clear=False, logCmd=True, logFile="log.txt"):
     if logCmd:
         sys.stdout.writeToLog("Command line: " + " ".join(sys.argv) + "\n")
 
-def readEventsFromSR(eventType, srDir, events):
+def readEventsFromSR(eventType, srDir, events, idByNorText=True):
     for dataSet in ["train", "test"]:
         print "Reading events from", os.path.join(srDir, dataSet + ".txt")
         f = open(os.path.join(srDir, dataSet + ".txt"))
@@ -49,11 +50,91 @@ def readEventsFromSR(eventType, srDir, events):
             i += 6
             while i < len(lines) and lines[i].strip() == "":
                 i += 1
-            norText = text.replace(" ", "")
-            if norText not in events:
-                events[norText] = []
-            events[norText].append({"id":id, "text":text, "entity":entity, "namedEntity":namedEntity, "interaction":interaction, "dataSet":dataSet, "eventType":eventType})
+            if idByNorText:
+                norText = text.replace(" ", "")
+                groupId = norText
+            else:
+                groupId = id.rsplit("-", 1)[0] 
+            if groupId not in events:
+                events[groupId] = []
+            event = {"id":id, "text":text, "entity":entity, "namedEntity":namedEntity, "interaction":interaction, "dataSet":dataSet, "eventType":eventType}
+            events[groupId].append(event)
         f.close()
+
+def getOffset(string):
+    a, b = string.split("-")
+    a = int(a)
+    b = int(b)
+    return (a,b-1)
+
+def eventsToNewXML(events):
+    xml = ET.Element("corpus")
+    xml.set("source", "Static Relations")
+    docCount = 0
+    sentenceById = {}
+    for sentenceId in sorted(events.keys()):
+        entities = []
+        interactions = []
+        entityByOffset = {}
+        for event in events[sentenceId]:
+            #print event
+            if sentenceId not in sentenceById:
+                document = ET.SubElement(xml, "document")
+                document.set("id", "SR.d"+str(docCount))
+                document.set("origId", sentenceId)
+                document.set("set", event["dataSet"])
+                sentence = ET.SubElement(document, "sentence")
+                sentence.set("id", "SR.d"+str(docCount)+".s"+str(docCount))
+                sentence.set("origId", sentenceId)
+                sentence.set("text", event["text"])
+                sentence.set("charOffset", "0-"+str(len(event["text"])-1))
+                docCount += 1
+                sentenceById[sentenceId] = sentence
+            else:
+                sentence = sentenceById[sentenceId]
+                assert sentence.get("text") == event["text"], (sentence.get("text"), event["text"])
+            # Add entities
+            e1Offset = event["entity"].split("\t")[0]
+            e2Offset = event["namedEntity"].split("\t")[0]
+            if e1Offset not in entityByOffset:
+                e1 = ET.Element("entity")
+                e1.set("text", event["entity"].split("\t")[1].strip())
+                e1.set("id", sentence.get("id")+".e"+str(len(entities)))
+                offset = getOffset(event["entity"].split("\t")[0])
+                assert sentence.get("text")[offset[0]:offset[1]+1] == e1.get("text"), (event, sentence.get("text"), e1.get("text"))
+                e1.set("charOffset", str(offset[0]) + "-" + str(offset[1]))
+                e1.set("isName", "False")
+                e1.set("type", "Entity")
+                entities.append(e1)
+                entityByOffset[e1Offset] = e1
+            else:
+                e1 = entityByOffset[e1Offset]
+            if e2Offset not in entityByOffset:
+                e2 = ET.Element("entity")
+                e2.set("text", event["namedEntity"].split("\t")[1].strip())
+                e2.set("id", sentence.get("id")+".e"+str(len(entities)))
+                offset = getOffset(event["namedEntity"].split("\t")[0])
+                assert sentence.get("text")[offset[0]:offset[1]+1] == e2.get("text"), (event, sentence.get("text"), e2.get("text"))
+                e2.set("charOffset", str(offset[0]) + "-" + str(offset[1]))
+                e2.set("isName", "True")
+                e2.set("type", "Protein")
+                entities.append(e2)
+                entityByOffset[e2Offset] = e2
+            else:
+                e2 = entityByOffset[e2Offset]
+            # Add interactions
+            interaction = ET.Element("interaction")
+            interaction.set("id", sentence.get("id")+".i"+str(len(interactions)))
+            interaction.set("origId", event["id"])
+            interaction.set("type", event["eventType"])
+            interaction.set("e1", e1.get("id"))
+            interaction.set("e2", e2.get("id"))
+            interactions.append(interaction)
+        for entity in entities:
+            sentence.append(entity)
+        for interaction in interactions:
+            sentence.append(interaction)
+    return xml
 
 def eventsToXML(events, xmlEvents, dataSets, srTexts):
     for norText in events.keys():
@@ -206,36 +287,49 @@ def alignStrings(s1, s2):
         s2Pos += 1
     return mapping
 
-def convert(srFiles, xmlFileName, outdir, corpusName):
+def convert(srFiles, xmlFileName, outdir, corpusName, idByNorText=False):
     print >> sys.stderr, "Loading Static Relations"
     events = {}
     for srFile in srFiles:
-        readEventsFromSR(srFile[0], srFile[1], events)
-    xmlEvents = {}
-    dataSets = {}
-    srTexts = {} # original, unnormalized sentence texts from the SR corpus
-    eventsToXML(events, xmlEvents, dataSets, srTexts)
+        readEventsFromSR(srFile[0], srFile[1], events, idByNorText=idByNorText)
     
-    print >> sys.stderr, "Loading XML"
-    xml = ETUtils.ETFromObj(xmlFileName)
-    print >> sys.stderr, "Inserting XML events"
-    insertEvents(xmlEvents, dataSets, srTexts, xml, corpusName)
-    ETUtils.write(xml, outdir+corpusName+"-srevents.xml")
-    
-    #print >> sys.stderr, "Protein Name Splitting"
-    #splitTarget = "McClosky"
-    #ProteinNameSplitter.mainFunc(xml, None, splitTarget, splitTarget, "split-"+splitTarget, "split-"+splitTarget)
-    print >> sys.stderr, "Head Detection"
-    xml = FindHeads.findHeads(xml, "split-mccc-preparsed", tokenization=None, output=outdir+corpusName+"-heads.xml", removeExisting=True)
-    print >> sys.stderr, "Dividing into sets"
-    InteractionXML.DivideSets.processCorpus(xml, outDir, corpusName + "-", ".xml", [("devel", "train")])
-    #if "devel" in [x[0] for x in datasets]:
-    #    print >> sys.stderr, "Creating empty devel set"
-    #    deletionRules = {"interaction":{},"entity":{"isName":"False"}}
-    #    InteractionXML.DeleteElements.processCorpus(corpusName + "-devel.xml", corpusName + "-devel-empty.xml", deletionRules)
-    print >> sys.stderr, "Converting back"
-    STConvert.toSTFormat(outdir+corpusName + "-devel.xml", outDir + corpusName + "-stformat-devel", outputTag="rel", task=2, debug=True, validate=False)
-    STConvert.toSTFormat(outdir+corpusName + "-train.xml", outDir + corpusName + "-stformat-train", outputTag="rel", task=2, debug=True, validate=False)
+    if xmlFileName != None:
+        xmlEvents = {}
+        dataSets = {}
+        srTexts = {} # original, unnormalized sentence texts from the SR corpus
+        eventsToXML(events, xmlEvents, dataSets, srTexts)
+        
+        print >> sys.stderr, "Loading XML"
+        xml = ETUtils.ETFromObj(xmlFileName)
+        print >> sys.stderr, "Inserting XML events"
+        insertEvents(xmlEvents, dataSets, srTexts, xml, corpusName)
+        ETUtils.write(xml, outdir+corpusName+"-srevents.xml")
+        # update pre-existing parses
+        print >> sys.stderr, "Head Detection"
+        xml = FindHeads.findHeads(xml, "split-mccc-preparsed", tokenization=None, output=outdir+corpusName+"-heads.xml", removeExisting=True)
+        print >> sys.stderr, "Dividing into sets"
+        InteractionXML.DivideSets.processCorpus(xml, outDir, corpusName + "-", ".xml", [("devel", "train")])
+        print >> sys.stderr, "Converting back"
+        STConvert.toSTFormat(outdir+corpusName + "-devel.xml", outDir + corpusName + "-stformat-devel", outputTag="rel", task=2, debug=True, validate=False)
+        STConvert.toSTFormat(outdir+corpusName + "-train.xml", outDir + corpusName + "-stformat-train", outputTag="rel", task=2, debug=True, validate=False)
+    else:
+        xml = eventsToNewXML(events)
+        xmlTree = ET.ElementTree(xml)
+        ETUtils.write(xml, outdir+corpusName+"-srevents.xml")
+        xml = xmlTree
+        # Parse
+        bigfileName = outdir+corpusName
+        print >> sys.stderr, "Parsing"
+        Tools.CharniakJohnsonParser.parse(xml, bigfileName+"-parsed.xml", tokenizationName="PARSED_TEXT", parseName="McClosky", requireEntities=True, timeout=60)
+        print >> sys.stderr, "Stanford Conversion"
+        Tools.StanfordParser.convertXML("McClosky", xml, bigfileName+"-stanford.xml")
+        print >> sys.stderr, "Protein Name Splitting"
+        splitTarget = "McClosky"
+        xml = ProteinNameSplitter.mainFunc(xml, None, splitTarget, splitTarget, "split-"+splitTarget, "split-"+splitTarget)
+        print >> sys.stderr, "Head Detection"
+        xml = FindHeads.findHeads(xml, "split-McClosky", tokenization=None, output=bigfileName+".xml", removeExisting=True)
+        print >> sys.stderr, "Dividing into sets"
+        InteractionXML.DivideSets.processCorpus(xml, outDir, "SRNE-", ".xml")    
 
 if __name__=="__main__":
     # Import Psyco if available
@@ -246,7 +340,8 @@ if __name__=="__main__":
     except ImportError:
         print >> sys.stderr, "Psyco not installed"
     
-    relCorpusPath = "/home/jari/biotext/BioNLP2011/data/main-tasks/GE/GE-devel-and-train-and-test.xml"
+    #relCorpusPath = "/home/jari/biotext/BioNLP2011/data/main-tasks/GE/GE-devel-and-train-and-test.xml"
+    relCorpusPath = None
 
     if True:
         # non-embed
@@ -256,6 +351,7 @@ if __name__=="__main__":
                     ("partof", "/home/jari/data/StaticRelations/sr_data/nonembed/Term_partof_GGP")]
         
         cwd = os.getcwd()
+        if not os.path.exists(outDir): os.makedirs(outDir)
         os.chdir(outDir)
         log(False, False, "sr-nonembed-conversion-log.txt")
         convert(datasets, relCorpusPath, outDir, "SRNE")
@@ -268,7 +364,8 @@ if __name__=="__main__":
                 ("partof", "/home/jari/data/StaticRelations/sr_data/embed/Term_partof_EmbeddedGGP")]
     
     cwd = os.getcwd()
+    if not os.path.exists(outDir): os.makedirs(outDir)
     os.chdir(outDir)
     log(False, False, "sr-embed-conversion-log.txt")
-    convert(datasets, relCorpusPath, outDir, "SRE")
+    convert(datasets, relCorpusPath, outDir, "SRE", idByNorText=False)
     os.chdir(cwd)
