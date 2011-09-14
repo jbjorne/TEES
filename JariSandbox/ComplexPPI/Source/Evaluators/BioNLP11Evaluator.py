@@ -16,22 +16,6 @@ renEvaluatorPath = "/home/jari/data/BioNLP11SharedTask/BioNLP-ST_2011_bacteria_r
 relEvaluatorPath = ""
 coEvaluatorPath = "/home/jari/Downloads/CREvalPackage1.3.zip/CRScorer.jar"
 
-datasets = {}
-dataPath = "/home/jari/data/BioNLP11SharedTask/main-tasks/"
-datasets["GE"] = [("devel", dataPath+"BioNLP-ST_2011_genia_devel_data_rev1"), 
-                  ("train", dataPath+"BioNLP-ST_2011_genia_train_data_rev1")]
-datasets["EPI"] = [("devel", dataPath+"BioNLP-ST_2011_Epi_and_PTM_development_data_rev1"), 
-                  ("train", dataPath+"BioNLP-ST_2011_Epi_and_PTM_training_data_rev1")]
-datasets["ID"] = [("devel", dataPath+"BioNLP-ST_2011_Infectious_Diseases_development_data_rev1"), 
-                  ("train", dataPath+"BioNLP-ST_2011_Infectious_Diseases_training_data_rev1")]
-datasets["BB"] = [("devel", dataPath+"BioNLP-ST_2011_Bacteria_Biotopes_dev_data_rev1"), 
-                  ("train", dataPath+"BioNLP-ST_2011_Bacteria_Biotopes_train_data_rev1")]
-datasets["BI"] = [("devel", dataPath+"BioNLP-ST_2011_bacteria_interactions_dev_data_rev1"), 
-                  ("train", dataPath+"BioNLP-ST_2011_bacteria_interactions_train_data_rev1")]
-
-evaluatorJars["BB"] = dataPath + "evaluators/BioNLP-ST_2011_Bacteria_Biotopes_evaluation_software/BioNLP-ST_2011_Bacteria_Biotopes_evaluation_software.jar"
-evaluatorJars["BI"] = dataPath + "evaluators/BioNLP-ST_2011_bacteria_interactions_evaluation_software/BioNLP-ST_2011_bacteria_interactions_evaluation_software.jar"
-
 def evaluateREN(sourceDir):
     commands = renEvaluatorPath + " " + sourceDir
     p = subprocess.Popen(commands, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
@@ -78,19 +62,7 @@ class BioNLP11Evaluator(Evaluator):
         #if outputFile != None:
         #    evaluator.saveCSV(outputFile)
         return evaluator
-    
-    def evaluateJar(self, task, goldDir, predDir):
-        commands = evaluatorJars[task] + " " + goldDir + " " + predDir
-        p = subprocess.Popen(commands, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        stderrLines = p.stderr.readlines()
-        for line in stderrLines:
-            print >> sys.stderr, line,
-        print >> sys.stderr
-        stdoutLines = p.stdout.readlines()
-        for line in stdoutLines:
-            print >> sys.stderr, line,
-        print >> sys.stderr
-    
+
     def compare(self, evaluation):
         #print "Self", self.results
         #print "Evaluation", evaluation.results
@@ -125,11 +97,3 @@ class BioNLP11Evaluator(Evaluator):
             SharedTaskEvaluator.corpusElements = Core.SentenceGraph.loadCorpus(corpus, parse, tokenization)
         else:
             SharedTaskEvaluator.corpusElements = corpus
-    
-    def getTaskDir(self, task, dataSet):
-        dataDir = os.path.expanduser("~/data/BioNLP11SharedTask")
-        subTask = None
-        if "." in task:
-            task, subTask = task.split(".")
-        if task == "GE":
-            return dataDir
