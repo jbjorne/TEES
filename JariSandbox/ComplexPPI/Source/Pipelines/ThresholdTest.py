@@ -31,11 +31,62 @@ def updateF(data, trueClass, predictedClass, count):
         else: # non-negative incorrect prediction -> false positive
             data._fp += count
 
+def thresholdClass(examples, predictions, classId, baseLineF):
+    ex = []
+    for example, prediction in itertools.izip(examples, predictions):
+        maxClassValue = -999999
+        maxClass = None
+        for i in range (1, len(prediction)):
+            if i == classId:
+                continue
+            if prediction[i] > maxClassValue:
+                maxClassValue = prediction[i]
+                maxClass = i
+        distance = prediction[classId] - maxClassValue
+        ex.append((distance, (example[1], prediction[0], maxClass)))
+    #more.sort(compare, reverse=True)
+    ex.sort(compare)
+    # Start with all negative
+    ev = EvaluationData()
+    for example in ex:
+        if example[0] < 0.0:
+            updateF(ev, example[1][0], example[1][2], 1)
+        else:
+            updateF(ev, example[1][0], example[1][1], 1)
+    count = 0
+    bestF = [baseLineF, None, (0.0, None), None]
+    for example in ex:
+        if example[0] < 0.0:
+            # Remove original example
+            updateF(ev, example[1][0], example[1][2], -1)
+            # Add new example
+            updateF(ev, example[1][0], example[1][1], 1)
+            # Calculate F for this point
+        else:
+            # Remove original example
+            updateF(ev, example[1][0], example[1][1], -1)
+            # Add new example
+            updateF(ev, example[1][0], example[1][2], 1)
+            # Calculate F for this point
+        ev.calculateFScore()
+        count += 1
+        #print count, example, ev.toStringConcise()
+        if ev.fscore > bestF[0]:
+            bestF = (ev.fscore, count, example, ev.toStringConcise())
+    return bestF
+
 def threshold(examples, predictionsDir=None, classSet=None):
     if type(classSet) == types.StringType: # class names are in file
         classSet = IdSet(filename=classSet)
+    classIds = set()
     if type(examples) == types.StringType: # examples are in file
-        examples = ExampleUtils.readExamples(examples, False)
+        examplesTemp = ExampleUtils.readExamples(examples, False)
+        examples = []
+        for example in examplesTemp:
+            examples.append(example)
+            classIds.add(example[1])
+    classIds = list(classIds)
+    classIds.sort()
     
     #multilabel = MultiLabelMultiClassEvaluator(None, None, classSet)
     #multilabel._calculate(examples, predictions)
@@ -43,73 +94,62 @@ def threshold(examples, predictionsDir=None, classSet=None):
     
     bestThrF = [0]
     bestBaseF = [0]
+    predFileNames = []
     for filename in os.listdir(predictionsDir):
         if "predictions" in filename:
-            predictions = ExampleUtils.loadPredictions(os.path.join(predictionsDir, filename))
+            predFileNames.append( (int(filename.rsplit("_")[-1]), filename) )
+    predFileNames.sort()
+    for predFileName in predFileNames:
+        predictionsTemp = ExampleUtils.loadPredictions(os.path.join(predictionsDir, predFileName[1]))
+        predictions = []
+        for prediction in predictionsTemp:
+            predictions.append(prediction)
+    
+        baseEv = AveragingMultiClassEvaluator(None, None, classSet)
+        baseEv._calculate(examples, predictions)
+        print "============================"
+        print predFileName[1]
+        print "============================"
+        #print baseEv.toStringConcise(title="baseline")
         
-            baseEv = AveragingMultiClassEvaluator(None, None, classSet)
-            baseEv._calculate(examples, predictions)
-            print "============================"
-            print filename
-            print "============================"
-            #print baseEv.toStringConcise(title="baseline")
-            
-            ex = []
-            for example, prediction in itertools.izip(examples, predictions):
-                if prediction[0] == 1:
-                    maxNonNegative = -999999
+        baseLineF = baseEv.microF.fscore
+        for step in [0]:
+            for classId in classIds:
+                cls = None
+                if classSet != None:
+                    cls = classSet.getName(classId)
+                else:
+                    cls = str(classId)
+                bestF = thresholdClass(examples, predictions, classId, baseLineF)
+                for prediction in predictions:
+                    prediction[classId] += bestF[2][0] + 0.00000001
+                changed = 0
+                for prediction in predictions:
+                    maxVal = -999999
                     maxClass = None
-                    cls = 2
-                    for val in prediction[2:]:
-                        if val > maxNonNegative:
-                            maxNonNegative = val
-                            maxClass = cls
-                        cls += 1
-                    distance = prediction[1] - maxNonNegative
-                    ex.append((distance, (example[1], prediction[0], maxClass)))
-                else:
-                    distance = prediction[1] - prediction[prediction[0]] 
-                    ex.append((distance, (example[1], prediction[0], 1)))
-            #more.sort(compare, reverse=True)
-            ex.sort(compare)
-            # Start with all negative
-            ev = EvaluationData()
-            for example in ex:
-                if example[0] < 0.0:
-                    updateF(ev, example[1][0], example[1][2], 1)
-                else:
-                    updateF(ev, example[1][0], example[1][1], 1)
-            count = 0
-            bestF = [0]
-            for example in ex:
-                if example[0] < 0.0:
-                    # Remove original example
-                    updateF(ev, example[1][0], example[1][2], -1)
-                    # Add new example
-                    updateF(ev, example[1][0], example[1][1], 1)
-                    # Calculate F for this point
-                else:
-                    # Remove original example
-                    updateF(ev, example[1][0], example[1][1], -1)
-                    # Add new example
-                    updateF(ev, example[1][0], example[1][2], 1)
-                    # Calculate F for this point
-                ev.calculateFScore()
-                count += 1
-                #print count, example, ev.toStringConcise()
-                if ev.fscore > bestF[0]:
-                    bestF = (ev.fscore, count, example, ev.toStringConcise())
-            
-            if bestF[0] > bestThrF[0]:
-                bestThrF = (bestF[0], filename, bestF[1], bestF[2], bestF[3])
-            if baseEv.microF.fscore > bestBaseF[0]:
-                bestBaseF = (baseEv.microF.fscore, filename, baseEv.microF.toStringConcise())
+                    for i in range(1, len(prediction)):
+                        if prediction[i] > maxVal:
+                            maxVal = prediction[i]
+                            maxClass = i
+                    if maxClass != prediction[0]:
+                        prediction[0] = maxClass
+                        changed += 1
+                print step, cls, "changed", changed, bestF[0]
+                baseLineF = bestF[0]
         
-            print "-------- Baseline ------------"
-            print baseEv.toStringConcise()
-            print "-------- Best ------------"
-            print bestF[0], bestF[1], bestF[2]
-            print bestF[3]
+        if bestF[0] > bestThrF[0]:
+            bestThrF = (bestF[0], predFileName[1], bestF[1], bestF[2], bestF[3])
+        if baseEv.microF.fscore > bestBaseF[0]:
+            bestBaseF = (baseEv.microF.fscore, predFileName[1], baseEv.microF.toStringConcise())
+    
+        print "-------- Baseline ------------"
+        print baseEv.toStringConcise()
+        print "-------- Best ------------"
+        print bestF[0], bestF[1], bestF[2]
+        print bestF[3]
+        thEv = AveragingMultiClassEvaluator(None, None, classSet)
+        thEv._calculate(examples, predictions)
+        print thEv.toStringConcise()
     
     print "=============== All Best ==============="
     print "Threshold", bestThrF
@@ -167,7 +207,7 @@ if __name__=="__main__":
     optparser = OptionParser(usage="%prog [options]\n")
     optparser.add_option("-e", "--examples", default=exampleFilename, dest="examples", help="Input file in csv-format", metavar="FILE")
     optparser.add_option("-p", "--predictions", default=predFilename, dest="predictions", help="Input file in csv-format", metavar="FILE")
-    optparser.add_option("-c", "--classes", default=classSetFilename, dest="classes", help="Input file in csv-format", metavar="FILE")
+    optparser.add_option("-c", "--classes", default=None, dest="classes", help="Input file in csv-format", metavar="FILE")
     (options, args) = optparser.parse_args()
     
     threshold(options.examples, options.predictions, options.classes)
