@@ -1,7 +1,7 @@
 """
 Edge Examples
 """
-__version__ = "$Revision: 1.10 $"
+__version__ = "$Revision: 1.11 $"
 
 import sys, os
 thisPath = os.path.dirname(os.path.abspath(__file__))
@@ -23,6 +23,9 @@ import Utils.BioInfer.OntologyUtils as OntologyUtils
 #ENDIF
 import combine
 import cElementTreeUtils as ETUtils
+import gzip
+
+from multiprocessing import Process
 
 def combinations(iterable, r):
     # combinations('ABCD', 2) --> AB AC AD BC BD CD
@@ -121,6 +124,14 @@ class UnmergingExampleBuilder(ExampleBuilder):
         """
         An interface for running the example builder without needing to create a class
         """
+        p = Process(target=UnmergingExampleBuilder.runAsProcess, args=[input, gold, output,
+                                                                       parse, tokenization,
+                                                                       style, idFileTag, append])
+        p.start()
+        p.join()
+
+    @classmethod
+    def runAsProcess(cls, input, gold, output, parse, tokenization, style, idFileTag=None, append=False):
         classSet, featureSet = cls.getIdSets(idFileTag)
         if style != None:
             e = UnmergingExampleBuilder(style=style, classSet=classSet, featureSet=featureSet)
@@ -172,10 +183,16 @@ class UnmergingExampleBuilder(ExampleBuilder):
         examples = []
         counter = ProgressCounter(len(sentences), "Build examples")
         
+        # Open output file
+        openStyle = "wt"
         if append:
-            outfile = open(output, "at")
+            print "Appending examples"
+            openStyle = "at"
+        if output.endswith(".gz"):
+            outfile = gzip.open(output, openStyle)
         else:
-            outfile = open(output, "wt")
+            outfile = open(output, openStyle)
+            
         exampleCount = 0
         for i in range(len(sentences)):
             sentence = sentences[i]
@@ -199,8 +216,8 @@ class UnmergingExampleBuilder(ExampleBuilder):
         if idFileTag != None: 
             print >> sys.stderr, "Saving class names to", idFileTag + ".class_names"
             self.classSet.write(idFileTag + ".class_names")
-            print >> sys.stderr, "Saving feature names to", idFileTag + ".feature_names"
-            self.featureSet.write(idFileTag + ".feature_names")
+            print >> sys.stderr, "Saving feature names to", idFileTag + ".feature_names.gz"
+            self.featureSet.write(idFileTag + ".feature_names.gz")
 
     
     def definePredictedValueRange(self, sentences, elementName):
