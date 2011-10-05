@@ -1,7 +1,7 @@
 """
 For multi-class classifications
 """
-__version__ = "$Revision: 1.22 $"
+__version__ = "$Revision: 1.23 $"
 
 from Evaluator import Evaluator
 from Evaluator import EvaluationData
@@ -323,7 +323,7 @@ class AveragingMultiClassEvaluator(Evaluator):
 
         negativeClassId = self.getNegativeClassId()
         if self.classSet != None:
-            classNames = sorted(classSet.Ids.keys())
+            classNames = sorted(self.classSet.Ids.keys())
             for className in classNames:
                 if className != "neg":
                     string += className
@@ -374,21 +374,17 @@ class AveragingMultiClassEvaluator(Evaluator):
         Evaluation results in a computationally easy to process dictionary format
         """
         dicts = []
-        if len(self.classes) > 0:
+        classes = sorted(self.dataByClass.keys())
+        if len(classes) > 0 and self.classSet != None:
             assert(not ("1" in self.classSet.getNames() and "neg" in self.classSet.getNames()))
-        negativeClassId = None
-        for cls in self.classes:
-            if cls != self.classSet.getId("neg", False) and cls != self.classSet.getId("1", False):
-                values = self.dataByClass[cls].toDict()
-                values["class"] = self.classSet.getName(cls)
-                dicts.append(values)
-            else:
-                assert(negativeClassId == None)
-                negativeClassId = cls
-        if negativeClassId != None:
-            values = self.dataByClass[negativeClassId].toDict()
-            values["class"] = "neg"
+        negativeClassId = self.getNegativeClassId()
+        for cls in classes:
+            values = self.dataByClass[cls].toDict()
             dicts.append(values)
+            if cls != negativeClassId:
+                values["class"] = self.classSet.getName(cls)
+            else:
+                values["class"] = "neg"
         dicts.append( self.microF.toDict() )
         dicts[-1]["class"] = "micro"
         dicts.append( self.macroF.toDict() )
