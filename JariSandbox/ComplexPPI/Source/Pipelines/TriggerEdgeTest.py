@@ -9,6 +9,8 @@ from optparse import OptionParser
 optparser = OptionParser()
 optparser.add_option("-e", "--test", default=Settings.DevelFile, dest="testFile", help="Test file in interaction xml")
 optparser.add_option("-r", "--train", default=Settings.TrainFile, dest="trainFile", help="Train file in interaction xml")
+optparser.add_option("--extraTrain", default=None, dest="extraTrain", help="extra training examples")
+optparser.add_option("--extraTrainFor", default="trigger", dest="extraTrainFor", help="extra training examples")
 optparser.add_option("-o", "--output", default=None, dest="output", help="output directory")
 optparser.add_option("-a", "--task", default="1", dest="task", help="task number")
 optparser.add_option("-p", "--parse", default="split-McClosky", dest="parse", help="Parse XML element name")
@@ -103,6 +105,8 @@ if options.mode in ["BOTH", "MODELS"]:
     print >> sys.stderr, "Trigger examples for parse", PARSE_TAG   
     TRIGGER_EXAMPLE_BUILDER.run(TEST_FILE, TRIGGER_TEST_EXAMPLE_FILE, PARSE, TOK, TRIGGER_FEATURE_PARAMS, TRIGGER_IDS)
     TRIGGER_EXAMPLE_BUILDER.run(TRAIN_FILE, TRIGGER_TRAIN_EXAMPLE_FILE, PARSE, TOK, TRIGGER_FEATURE_PARAMS, TRIGGER_IDS)
+    if options.extraTrain != None and "trigger" in options.extraTrainFor:
+        TRIGGER_EXAMPLE_BUILDER.run(options.extraTrain, TRIGGER_TRAIN_EXAMPLE_FILE, "split-McClosky", "split-McClosky", TRIGGER_FEATURE_PARAMS, TRIGGER_IDS, appendIndex=1000)
     
     ###############################################################################
     # Trigger models
@@ -128,6 +132,8 @@ if options.mode in ["BOTH", "MODELS"]:
     EDGE_EXAMPLE_BUILDER.run(TEST_FILE, EDGE_TEST_EXAMPLE_FILE, PARSE, TOK, EDGE_FEATURE_PARAMS, EDGE_IDS)
     #EDGE_EXAMPLE_BUILDER.run(Settings.TrainFile, EDGE_TRAIN_EXAMPLE_FILE, PARSE, TOK, EDGE_FEATURE_PARAMS, EDGE_IDS)
     #EDGE_EXAMPLE_BUILDER.run(Settings.DevelFile, EDGE_TEST_EXAMPLE_FILE, PARSE, TOK, EDGE_FEATURE_PARAMS, EDGE_IDS)
+    if options.extraTrain != None and "edge" in options.extraTrainFor:
+        EDGE_EXAMPLE_BUILDER.run(options.extraTrain, EDGE_TRAIN_EXAMPLE_FILE, "split-McClosky", "split-McClosky", EDGE_FEATURE_PARAMS, EDGE_IDS, appendIndex=1000)
     
     ###############################################################################
     # Edge models
@@ -177,12 +183,12 @@ if options.mode in ["BOTH", "FINAL", "GRID"]:
             c = None
         bestTriggerModel = optimize(CLASSIFIER, Ev, TRIGGER_TRAIN_EXAMPLE_FILE, TRIGGER_TEST_EXAMPLE_FILE,\
             TRIGGER_IDS+".class_names", TRIGGER_CLASSIFIER_PARAMS, "trigger-models", None, c, True, steps="RESULTS")[1]
-        if os.path.exists("best-trigger-model"):
-            os.remove("best-trigger-model")
+        if os.path.exists("best-trigger-model.gz"):
+            os.remove("best-trigger-model.gz")
         if os.path.exists(bestTriggerModel):
             print bestTriggerModel
-            os.symlink(bestTriggerModel, "best-trigger-model")
-            bestTriggerModel = "best-trigger-model"
+            os.symlink(bestTriggerModel, "best-trigger-model.gz")
+            bestTriggerModel = "best-trigger-model.gz"
         else:
             bestTriggerModel = None
         if "local" not in options.csc:
@@ -194,24 +200,24 @@ if options.mode in ["BOTH", "FINAL", "GRID"]:
             c = None
         bestEdgeModel = optimize(CLASSIFIER, Ev, EDGE_TRAIN_EXAMPLE_FILE, EDGE_TEST_EXAMPLE_FILE,\
             EDGE_IDS+".class_names", EDGE_CLASSIFIER_PARAMS, "edge-models", None, c, True, steps="RESULTS")[1]
-        if os.path.exists("best-edge-model"):
-            os.remove("best-edge-model")
+        if os.path.exists("best-edge-model.gz"):
+            os.remove("best-edge-model.gz")
         if os.path.exists(bestEdgeModel):
-            os.symlink(bestEdgeModel, "best-edge-model")
-            bestEdgeModel = "best-edge-model"
+            os.symlink(bestEdgeModel, "best-edge-model.gz")
+            bestEdgeModel = "best-edge-model.gz"
         else:
             bestEdgeModel = None
 
     else:
-        bestTriggerModel = "best-trigger-model"
-        bestEdgeModel = "best-edge-model"
+        bestTriggerModel = "best-trigger-model.gz"
+        bestEdgeModel = "best-edge-model.gz"
     
     print >> sys.stderr, "Booster parameter search"
     # Build trigger examples
     TRIGGER_EXAMPLE_BUILDER.run(TEST_FILE, "test-trigger-examples", PARSE, TOK, TRIGGER_FEATURE_PARAMS, TRIGGER_IDS)
     CLASSIFIER.test("test-trigger-examples", bestTriggerModel, "test-trigger-classifications")
     if bestTriggerModel != None:
-        print >> sys.stderr, "best-trigger-model=", os.path.realpath("best-trigger-model")
+        print >> sys.stderr, "best-trigger-model=", os.path.realpath("best-trigger-model.gz")
     evaluator = Ev.evaluate("test-trigger-examples", "test-trigger-classifications", TRIGGER_IDS+".class_names")
     #boostedTriggerFile = "TEST-predicted-triggers.xml"
     #xml = ExampleUtils.writeToInteractionXML("test-trigger-examples", ExampleUtils.loadPredictionsBoost("test-trigger-classifications", boost), TEST_FILE, None, TRIGGER_IDS+".class_names", PARSE, TOK)    
@@ -241,7 +247,7 @@ if options.mode in ["BOTH", "FINAL", "GRID"]:
             EDGE_EXAMPLE_BUILDER.run(xml, "test-edge-examples", PARSE, TOK, EDGE_FEATURE_PARAMS, EDGE_IDS)
         # Classify with pre-defined model
         if bestEdgeModel != None:
-            print >> sys.stderr, "best-edge-model=", os.path.realpath("best-edge-model")
+            print >> sys.stderr, "best-edge-model=", os.path.realpath("best-edge-model.gz")
         CLASSIFIER.test("test-edge-examples", bestEdgeModel, "test-edge-classifications")
         # Write to interaction xml
         evaluator = Ev.evaluate("test-edge-examples", "test-edge-classifications", EDGE_IDS+".class_names")
