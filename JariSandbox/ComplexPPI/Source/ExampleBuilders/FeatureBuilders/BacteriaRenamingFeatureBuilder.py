@@ -1,3 +1,4 @@
+import os
 from FeatureBuilder import FeatureBuilder
 
 # 1) Lowercase bacsu names, there are differences
@@ -49,8 +50,9 @@ def readSubtiwiki(filename):
 class BacteriaRenamingFeatureBuilder(FeatureBuilder):
     def __init__(self, featureSet):
         FeatureBuilder.__init__(self, featureSet)
-        self.bacsu = readBacsu("/home/jari/data/BioNLP11SharedTask/supporting-tasks/bacsu-modified.txt")
-        self.subti = readSubtiwiki("/home/jari/cvs_checkout/JariSandbox/Wiki/subtiwiki/Subtiwiki-Synonyms.csv")
+        self.bacsu = readBacsu(os.path.expanduser("~/data/BioNLP11SharedTask/supporting-tasks/bacsu-modified.txt"))
+        self.subti = readSubtiwiki(os.path.expanduser("~/data/BioNLP11SharedTask/supporting-tasks/Subtiwiki-Synonyms.csv"))
+        #self.subti = readSubtiwiki(os.path.expanduser("~/cvs_checkout/JariSandbox/Wiki/subtiwiki/Subtiwiki-Synonyms.csv"))
         # OR the dictionaries
         self.any = {}
         for key in sorted(list(set(self.bacsu.keys() + self.subti.keys()))):
