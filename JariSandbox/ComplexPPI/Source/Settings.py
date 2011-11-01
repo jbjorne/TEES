@@ -2,7 +2,10 @@ import sys, os
 thisPath = os.path.dirname(os.path.abspath(__file__))
 
 # External binaries
-SVMMultiClassDir = "/usr/share/biotext/ComplexPPI/SVMMultiClass"
+#SVMMultiClassDir = "/usr/share/biotext/ComplexPPI/SVMMultiClass"
+SVMMultiClassDir = os.path.expanduser("~/temp_exec/SVMMultiClass")
+#SVMPerfDir = "/usr/share/biotext/ComplexPPI/SVMPerf"
+SVMPerfDir = "~/temp_exec/SVMPerf"
 #IF NOT RELEASE
 CPPTriggerExampleBuilder = os.path.abspath(thisPath + "/../../../GraphIE/exampleTest")
 #ENDIF
