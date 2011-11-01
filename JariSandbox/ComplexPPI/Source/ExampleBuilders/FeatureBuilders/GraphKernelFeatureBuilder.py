@@ -91,7 +91,14 @@ class GraphKernelFeatureBuilder(FeatureBuilder):
     def __init__(self, featureSet):
         FeatureBuilder.__init__(self, featureSet)
     
-    def buildGraphKernelFeatures(self, sentenceGraph, path, edges):
+    def buildGraphKernelFeatures(self, sentenceGraph, path):
+        edgeList = []
+        depGraph = sentenceGraph.dependencyGraph
+        pt = path
+        for i in range(1, len(path)):
+            edgeList.extend(depGraph.getEdges(pt[i], pt[i-1]))
+            edgeList.extend(depGraph.getEdges(pt[i-1], pt[i]))
+        edges = edgeList
         adjacencyMatrix, labels = self._buildAdjacencyMatrix(sentenceGraph, path, edges)
         node_count = 2*len(sentenceGraph.tokens) + len(sentenceGraph.dependencies)
         
@@ -163,11 +170,11 @@ class GraphKernelFeatureBuilder(FeatureBuilder):
         self._reduceWeightByDistance(sentenceGraph, weightByDependency)
         
         # Build dependency types
-        allEdges = self._getEdgeList(edges)
+        allEdges = edges #self._getEdgeList(edges)
         
         #For each dependency
         depEdgePairs = []
-        depGraphEdges = sentenceGraph.dependencyGraph.edges()
+        depGraphEdges = sentenceGraph.dependencyGraph.edges #()
         for dependency in sentenceGraph.dependencies:
             for edge in depGraphEdges:
                 if edge[2] == dependency:
@@ -267,7 +274,7 @@ class GraphKernelFeatureBuilder(FeatureBuilder):
         """ The weights of all dependencies in specified paths are set to the
         given value
         """
-        allEdges = self._getEdgeList(edges)
+        allEdges = edges #self._getEdgeList(edges)
         
         for edge in allEdges:
             assert(weights.has_key(edge[2]))
@@ -277,9 +284,12 @@ class GraphKernelFeatureBuilder(FeatureBuilder):
         """ Reduces the weight of dependencies based on their distance
         from the nearest dependency whose weight is >= the threshold.
         """
-        undirected = sentenceGraph.dependencyGraph.to_undirected()
-        edges = undirected.edges()
-        tokenDistanceDict = NX.all_pairs_shortest_path_length(undirected, cutoff=999)
+        undirected = sentenceGraph.dependencyGraph.toUndirected() #.to_undirected()
+        edges = undirected.edges
+        tempGraph = NX.Graph(directed=False)
+        for edge in edges:
+            tempGraph.add_edge(edge[0], edge[1])
+        tokenDistanceDict = NX.all_pairs_shortest_path_length(tempGraph, cutoff=999)
         dependencyDistances = {}
 
         zeroDistanceEdges = []
@@ -312,7 +322,7 @@ class GraphKernelFeatureBuilder(FeatureBuilder):
                     if tokenDistanceDict[edge[1]].has_key(zeroDistanceEdge[1]):
                         if tokenDistanceDict[ edge[1] ][ zeroDistanceEdge[1] ] < shortestDistance:
                             shortestDistance = tokenDistanceDict[ edge[1] ][ zeroDistanceEdge[1] ]
-            assert(not dependencyDistances.has_key(edge[2]))
+            #assert(not dependencyDistances.has_key(edge[2]))
             dependencyDistances[edge[2]] = shortestDistance + 1
 
         # Reduce weight
