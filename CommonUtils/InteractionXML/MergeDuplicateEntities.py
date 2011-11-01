@@ -1,7 +1,9 @@
 import CorpusElements
+import SentenceElements
 import cElementTreeUtils as ETUtils
 from optparse import OptionParser
 import sys
+from collections import defaultdict
 
 def compareEntities(entity1, entity2):
     if entity1.get("charOffset") == entity2.get("charOffset") and entity1.get("type") == entity2.get("type"):
@@ -19,12 +21,11 @@ def compareInteractions(interaction1, interaction2):
     else:
         return False
 
-def mergeDuplicateEntities(corpusElements, debug=False):
-    print >> sys.stderr, "Merging duplicate entities"
+def mergeDuplicateEntities(sentences, debug=False):
     entitiesByType = {}
     duplicatesRemovedByType = {}
     globalEntityIsDuplicateOf = {}
-    for sentence in corpusElements.sentences:
+    for sentence in sentences:
         entityIsDuplicateOf = {}
         for k in sentence.entitiesById.keys():
             assert k not in entityIsDuplicateOf
@@ -50,12 +51,15 @@ def mergeDuplicateEntities(corpusElements, debug=False):
                 sentence.sentence.remove(entityToRemove)
                 if debug: print "Removing Entity", k, "duplicate of", v
     # Remap pairs and interactions that used the removed entities
-    for sentence in corpusElements.sentences:
+    for sentence in sentences:
         for pair in sentence.pairs + sentence.interactions:
 #            if pair.get("id") == "GE.d1.s13.i56":
 #                print "BEFORE"
 #                print pair.get("e1"), globalEntityIsDuplicateOf[pair.get("e1")]
 #                print pair.get("e2"), globalEntityIsDuplicateOf[pair.get("e2")]
+            if pair.get("e1") not in globalEntityIsDuplicateOf or pair.get("e2") not in globalEntityIsDuplicateOf:
+                print >> sys.stderr, "Warning, interaction", pair.get("id"), [pair.get("e1"), pair.get("e2")], "links to a non-existing entity"
+                continue
             if globalEntityIsDuplicateOf[pair.attrib["e1"]] != None:
                 pair.attrib["e1"] = globalEntityIsDuplicateOf[pair.attrib["e1"]]
                 if debug: print "Remapping", pair.get("id"), "arg e1 from", pair.get("e1"), "to", globalEntityIsDuplicateOf[pair.get("e1")]
@@ -68,13 +72,12 @@ def mergeDuplicateEntities(corpusElements, debug=False):
 #                print pair.get("e2"), globalEntityIsDuplicateOf[pair.get("e2")]
 #                pair.set("Processed", "True")
     
-    printStats(entitiesByType, duplicatesRemovedByType)
+    return entitiesByType, duplicatesRemovedByType
 
-def mergeDuplicateInteractions(corpusElements, debug=False):
-    print >> sys.stderr, "Merging duplicate interactions"
+def mergeDuplicateInteractions(sentences, debug=False):
     interactionsByType = {}
     duplicatesRemovedByType = {}
-    for sentence in corpusElements.sentences:
+    for sentence in sentences:
         interactions = sentence.pairs + sentence.interactions
         interactionIsDuplicateOf = {}
         for interaction in interactions:
@@ -109,7 +112,7 @@ def mergeDuplicateInteractions(corpusElements, debug=False):
                 sentence.sentence.remove(elementToRemove)
                 if debug: print "Removing Interaction", k, "duplicate of", v
     
-    printStats(interactionsByType, duplicatesRemovedByType)
+    return interactionsByType, duplicatesRemovedByType
 
 def printStats(origItemsByType, duplicatesRemovedByType):    
     print >> sys.stderr, "Removed duplicates (original count in parenthesis):"
@@ -120,14 +123,31 @@ def printStats(origItemsByType, duplicatesRemovedByType):
     print >> sys.stderr, "  ---------------------------------"
     print >> sys.stderr, "  Total: " + str(sum(duplicatesRemovedByType.values())) + " (" + str(sum(origItemsByType.values())) + ")"
 
-def mergeAll(input, output=None, debug=False):
-    corpusElements = CorpusElements.loadCorpus(input, removeIntersentenceInteractions=False)
-    mergeDuplicateEntities(corpusElements, debug)
-    mergeDuplicateInteractions(corpusElements, debug)
-    if output != None:
-        print >> sys.stderr, "Writing output to", output
-        ETUtils.write(corpusElements.rootElement, output)
-    return corpusElements
+def mergeAll(input, output=None, debug=False, iterate=False):
+    if iterate:
+        origItems = defaultdict(int)
+        removedItems = defaultdict(int)
+        for docSentences in SentenceElements.getCorpusIterator(input, output):
+            entitiesByType, duplicatesRemovedByType = mergeDuplicateEntities(docSentences, debug)
+            for key in entitiesByType: origItems[key] += entitiesByType[key]
+            for key in duplicatesRemovedByType: removedItems[key] += duplicatesRemovedByType[key]
+            interactionsByType, duplicatesRemovedByType = mergeDuplicateInteractions(docSentences, debug)
+            for key in interactionsByType: origItems[key] += interactionsByType[key]
+            for key in duplicatesRemovedByType: removedItems[key] += duplicatesRemovedByType[key]
+        printStats(origItems, removedItems)
+        return None
+    else:
+        corpusElements = CorpusElements.loadCorpus(input, removeIntersentenceInteractions=False)
+        print >> sys.stderr, "Merging duplicate entities"
+        entitiesByType, duplicatesRemovedByType = mergeDuplicateEntities(corpusElements.sentences, debug)
+        printStats(entitiesByType, duplicatesRemovedByType)
+        print >> sys.stderr, "Merging duplicate interactions"
+        interactionsByType, duplicatesRemovedByType = mergeDuplicateInteractions(corpusElements.sentences, debug)
+        printStats(interactionsByType, duplicatesRemovedByType)
+        if output != None:
+            print >> sys.stderr, "Writing output to", output
+            ETUtils.write(corpusElements.rootElement, output)
+        return corpusElements
 
 if __name__=="__main__":
     print >> sys.stderr, "##### Merge duplicate entities and interactions #####"
@@ -143,8 +163,9 @@ if __name__=="__main__":
     optparser.add_option("-i", "--input", default=None, dest="input", help="Corpus in analysis format", metavar="FILE")
     optparser.add_option("-o", "--output", default=None, dest="output", help="Corpus in analysis format", metavar="FILE")
     optparser.add_option("-d", "--debug", default=False, action="store_true", dest="debug", help="")
+    optparser.add_option("-r", "--iterate", default=False, action="store_true", dest="iterate", help="")
     (options, args) = optparser.parse_args()
     assert(options.input != None)
     #assert(options.output != None)
     
-    mergeAll(options.input, options.output, options.debug)
+    mergeAll(options.input, options.output, options.debug, options.iterate)
