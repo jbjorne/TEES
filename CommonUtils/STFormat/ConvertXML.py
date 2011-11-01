@@ -409,6 +409,7 @@ def toSTFormat(input, output=None, outputTag="a2", useOrigIds=False, debug=False
         for event in stDoc.events:
             for arg in event.arguments[:]:
                 if arg[1] == None:
+                    assert False
                     continue
                 id = arg[1]
                 if eMap.has_key(id):
@@ -601,6 +602,7 @@ if __name__=="__main__":
     optparser.add_option("-s", "--sentences", default=False, action="store_true", dest="sentences", help="Write each sentence to its own document")
     optparser.add_option("-r", "--origIds", default=False, action="store_true", dest="origIds", help="Use stored original ids (can cause problems with duplicates).")
     optparser.add_option("-a", "--task", default=2, type="int", dest="task", help="1 or 2")
+    optparser.add_option("-d", "--debug", default=False, action="store_true", dest="debug", help="Verbose output.")
     (options, args) = optparser.parse_args()
     
     if options.input[-4:] == ".xml":
@@ -611,7 +613,7 @@ if __name__=="__main__":
             toSTFormatSentences(xml, options.output, options.outputTag, options.origIds)
         else:
             print >> sys.stderr, "Converting to ST Format"
-            toSTFormat(xml, options.output, options.outputTag, options.origIds, debug=True, task=options.task)
+            toSTFormat(xml, options.output, options.outputTag, options.origIds, debug=options.debug, task=options.task)
 
                 
 #if __name__=="__main__":
