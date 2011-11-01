@@ -1,9 +1,11 @@
 import sys, os
 import types
+import gzip
 from SVMMultiClassClassifier import SVMMultiClassClassifier
 sys.path.append(os.path.dirname(os.path.abspath(__file__))+"/..")
 import Core.ExampleUtils as Example
 from Utils.Timer import Timer
+from Utils.Parameters import *
 import combine
 import copy
 from Core.IdSet import IdSet
@@ -30,6 +32,8 @@ class MultiLabelClassifier(SVMMultiClassClassifier):
         @type forceInternal: Boolean
         @param forceInternal: Use python classifier even if SVM Multiclass binary is defined in Settings.py
         """
+        if type(parameters) == types.StringType:
+            parameters = splitParameters(parameters)
         timer = Timer()
         if type(examples) == types.ListType:
             print >> sys.stderr, "Classifying", len(examples), "with SVM-MultiClass model", modelPath
@@ -52,25 +56,45 @@ class MultiLabelClassifier(SVMMultiClassClassifier):
         if modelPath == None:
             modelPath = "model-multilabel"
         classModels = {}
-        f = open(modelPath, "rt")
+        if modelPath.endswith(".gz"):
+            f = gzip.open(modelPath, "rt")
+        else:
+            f = open(modelPath, "rt")
+        thresholds = {}
         for line in f:
-            key, value = line.split()
+            key, value, threshold = line.split()
             classModels[key] = value
+            if threshold != "None":
+                thresholds[key] = float(threshold)
+            else:
+                thresholds[key] = 0.0
         f.close()
         mergedPredictions = []
         if type(classIds) == types.StringType:
             classIds = IdSet(filename=classIds)
         #print classModels
+        print "Thresholds", thresholds
+        classifierBin = Settings.SVMMultiClassDir+"/svm_multiclass_classify"
+        print parameters
+        if "classifier" in parameters and "svmperf" in parameters["classifier"]:
+            classifierBin = Settings.SVMPerfDir+"/svm_perf_classify"
+            parameters = copy.copy(parameters)
+            del parameters["classifier"]
         for className in classIds.getNames():
             if className != "neg" and not "---" in className:
                 classId = classIds.getId(className)
-                args = [Settings.SVMMultiClassDir+"/svm_multiclass_classify"]
+                if thresholds[str(className)] != 0.0:
+                    print >> sys.stderr, "Classifying", className, "with threshold", thresholds[str(className)]
+                else:
+                    print >> sys.stderr, "Classifying", className
+                args = [classifierBin]
                 #self.__addParametersToSubprocessCall(args, parameters)
                 classOutput = "predictions" + ".cls-" + className
                 logFile = open("svmmulticlass" + ".cls-" + className + ".log","at")
                 args += [testPath, classModels[str(className)], classOutput]
+                print args
                 subprocess.call(args, stdout = logFile, stderr = logFile)
-                cls.addPredictions(classOutput, mergedPredictions, classId, len(classIds.Ids))
+                cls.addPredictions(classOutput, mergedPredictions, classId, len(classIds.Ids), threshold=thresholds[str(className)])
         print >> sys.stderr, timer.toString()
         
         predFileName = output
@@ -80,13 +104,17 @@ class MultiLabelClassifier(SVMMultiClassClassifier):
                 mergedPred[0].remove("1")
             mergedPred[1] = str(mergedPred[1])
             mergedPred[0] = ",".join(sorted(list(mergedPred[0])))
-            f.write(" " + " ".join(mergedPred) + "\n")
+            f.write(" ".join(mergedPred) + "\n")
         f.close()
         
         return mergedPredictions
     
     @classmethod
-    def divideExamples(cls, classIdSet, examples, outFiles):
+    def divideExamples(cls, classIdSet, examples, outFiles, negClass1=True):
+        if negClass1:
+            classes = ["1","2"]
+        else:
+            classes = ["-1","1"]
         exampleFile = open(examples, "rt")
         for line in exampleFile:
             classId, rest = line.split(" ", 1)
@@ -100,9 +128,9 @@ class MultiLabelClassifier(SVMMultiClassClassifier):
                 classNames = [className]
             for outFileName in outFiles:
                 if outFileName in classNames:
-                    outFiles[outFileName].write("2 " + rest)
+                    outFiles[outFileName].write(classes[1] + " " + rest)
                 else:
-                    outFiles[outFileName].write("1 " + rest)
+                    outFiles[outFileName].write(classes[0] + " " + rest)
         exampleFile.close()
     
     @classmethod
@@ -131,18 +159,26 @@ class MultiLabelClassifier(SVMMultiClassClassifier):
         return idStr
     
     @classmethod
-    def makeClassFiles(cls, trainExamples, testExamples, classIds):
+    def makeClassFiles(cls, trainExamples, testExamples, classIds, negClass1=True):
         print >> sys.stderr, "Building class separated example files"
         testClassFiles = {}
         for name in classIds.getNames():
             if name != "neg" and not "---" in name:
-                testClassFiles[name] = open(testExamples + ".cls-" + name, "wt")
+                filename = testExamples + ".cls-" + name
+                if os.path.exists(filename) and os.path.getmtime(filename) > os.path.getmtime(testExamples):
+                    print >> sys.stderr, filename, "exists and is newer than source"
+                else: 
+                    testClassFiles[name] = open(filename, "wt")
         trainClassFiles = {}
         for name in classIds.getNames():
             if name != "neg" and not "---" in name:
-                trainClassFiles[name] = open(trainExamples + ".cls-" + name, "wt")       
-        cls.divideExamples(classIds, testExamples, testClassFiles)
-        cls.divideExamples(classIds, trainExamples, trainClassFiles)
+                filename = trainExamples + ".cls-" + name
+                if os.path.exists(filename) and os.path.getmtime(filename) > os.path.getmtime(trainExamples):
+                    print >> sys.stderr, filename, "exists and is newer than source"
+                else: 
+                    trainClassFiles[name] = open(filename, "wt")     
+        cls.divideExamples(classIds, testExamples, testClassFiles, negClass1=negClass1)
+        cls.divideExamples(classIds, trainExamples, trainClassFiles, negClass1=negClass1)
         for x in testClassFiles:
             testClassFiles[x].close()
         for x in trainClassFiles:
@@ -163,6 +199,7 @@ class MultiLabelClassifier(SVMMultiClassClassifier):
         #    return None
         bestParams = bestParams[0]
         classModels = {}
+        thresholds = {}
         origCSCWorkdir = cscConnection.workDir
         for className in bestParams:
             print (localWorkDir, origCSCWorkdir)
@@ -172,11 +209,12 @@ class MultiLabelClassifier(SVMMultiClassClassifier):
             cscConnection.workDir = os.path.join(origCSCWorkdir, className)
             cscConnection.download("model"+bestParams[className][1], modelFileName)
             classModels[className] = modelFileName
+            thresholds[className] = str(bestParams[className][3])
         cscConnection.workDir = origCSCWorkdir
         # Create model link file
         f = open(os.path.join(localWorkDir, "model-multilabel"), "wt")
         for key in sorted(classModels.keys()):
-            f.write(key + "\t" + classModels[key] + "\n")
+            f.write(key + "\t" + classModels[key] + "\t" + thresholds[key] + "\n")
         f.close()
         return "model-multilabel"
     
@@ -195,35 +233,51 @@ class MultiLabelClassifier(SVMMultiClassClassifier):
             if localWorkDir != None:
                 predFileName = os.path.join(localWorkDir, predFileName)            
             cscConnection.download("predictions"+idStr, predFileName)
-            cls.addPredictions(predFileName, mergedPredictions, classId, len(classIds.Ids))
+            if os.path.exists(predFileName):
+                cls.addPredictions(predFileName, mergedPredictions, classId, len(classIds.Ids))
         cscConnection.workDir = origCSCWorkdir
-        predFileName = "predictions"+idStr
-        f = open(predFileName, "wt")
-        for mergedPred in mergedPredictions:
-            if len(mergedPred[0]) > 1 and "1" in mergedPred[0]:
-                mergedPred[0].remove("1")
-            mergedPred[1] = str(mergedPred[1])
-            mergedPred[0] = ",".join(sorted(list(mergedPred[0])))
-            f.write(" " + " ".join(mergedPred) + "\n")
-        f.close()
+        predFileName = None
+        if len(mergedPredictions) > 0:
+            predFileName = "predictions"+idStr
+            f = open(predFileName, "wt")
+            for mergedPred in mergedPredictions:
+                if len(mergedPred[0]) > 1 and "1" in mergedPred[0]:
+                    mergedPred[0].remove("1")
+                mergedPred[1] = str(mergedPred[1])
+                mergedPred[0] = ",".join(sorted(list(mergedPred[0])))
+                f.write(" ".join(mergedPred) + "\n")
+            f.close()
         return predFileName
     
     @classmethod
-    def addPredictions(cls, predFileName, mergedPredictions, classId, numClasses):
+    def addPredictions(cls, predFileName, mergedPredictions, classId, numClasses, threshold = 0.0):
         f = open(predFileName)
         count = 0
         strClassId = str(classId)
         for line in f:
             if len(mergedPredictions) <= count:
-                mergedPredictions.append([set(["1"])] + [0.0] + ["N/A"] * (numClasses-1))
+                mergedPredictions.append([set(["1"])] + ["N/A"] * (numClasses))
             predSplits = line.split()
-            if predSplits[0] != "1":
-                mergedPredictions[count][0].add(strClassId)
-                mergedPredictions[count][classId] = predSplits[2]
+            if len(predSplits) > 1:
+                if threshold != 0.0:
+                    predValue = float(predSplits[2])
+                    if predValue - threshold > 0.0:
+                        predSplits[0] = "2"
+                    else:
+                        predSplits[0] = "1"
+                if predSplits[0] != "1":
+                    mergedPredictions[count][0].add(strClassId)
+                mergedPredictions[count][classId] = predSplits[2] # the other class value is the negative of this
             else:
-                negConfidence = float(predSplits[1])
-                if negConfidence > mergedPredictions[count][1]:
-                    mergedPredictions[count][1] = negConfidence
+                assert len(predSplits) == 1
+                predValue = float(predSplits[0])
+                if predValue - threshold > 0.0:
+                    predClass = "2"
+                else:
+                    predClass = "1"
+                if predClass != "1":
+                    mergedPredictions[count][0].add(strClassId)
+                mergedPredictions[count][classId] = predSplits[0] # the other class value is the negative of this
             count += 1
         f.close()
             
