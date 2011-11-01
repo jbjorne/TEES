@@ -1,7 +1,7 @@
 """
 Speculation and negation examples
 """
-__version__ = "$Revision: 1.11 $"
+__version__ = "$Revision: 1.12 $"
 
 import sys, os
 thisPath = os.path.dirname(os.path.abspath(__file__))
@@ -50,7 +50,7 @@ class Task3ExampleBuilder(ExampleBuilder):
         wordFilePath = os.path.abspath(os.path.join(thisPath,"../../data/speculation-words.txt"))
 #IF LOCAL
         wordFilePath = "/usr/share/biotext/GeniaChallenge/extension-data/genia/task3/speculation-words.txt"    
-        wordFilePath = "/home/jari/data/BioNLP11SharedTask/resources/speculation-words.txt"    
+        wordFilePath = os.path.expanduser("~/data/BioNLP11SharedTask/resources/speculation-words.txt")    
         if os.environ.has_key("METAWRK"): # CSC
             wordFilePath = "/v/users/jakrbj/cvs_checkout/GeniaChallenge/task3/speculation-words.txt"
 #ENDIF
@@ -154,6 +154,8 @@ class Task3ExampleBuilder(ExampleBuilder):
         Build one example for each token of the sentence
         """
         examples = []
+        if appendIndex == None:
+            appendIndex = 0
         exampleIndex = 0 + appendIndex
         
         self.tokenFeatures = {}
