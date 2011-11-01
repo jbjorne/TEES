@@ -1,7 +1,7 @@
 """
 Base class for Evaluators
 """
-__version__ = "$Revision: 1.16 $"
+__version__ = "$Revision: 1.17 $"
 
 g_evaluatorFieldnames = ["fold","class","positives","negatives","true positives","false positives","true negatives","false negatives","precision","recall","f-score","AUC"]
 
@@ -84,6 +84,17 @@ class EvaluationData:
             self.addFP()
         else: # (not trueClassIsPositive) and (not predictedClassIsPositive)
             self.addTN()
+    
+    def removeInstance(self, trueClassIsPositive, predictedClassIsPositive):
+        self.resetStats()
+        if trueClassIsPositive and predictedClassIsPositive:
+            self._tp -= 1
+        elif trueClassIsPositive and not predictedClassIsPositive:
+            self._fn -= 1
+        elif (not trueClassIsPositive) and predictedClassIsPositive:
+            self._fp -= 1
+        else: # (not trueClassIsPositive) and (not predictedClassIsPositive)
+            self._tn -= 1
         
     def addTP(self):
         self.resetStats()
@@ -110,6 +121,7 @@ class EvaluationData:
         return self._tp + self._fp + self._tn + self._fn
     
     def calculateFScore(self):
+        assert self._tp >= 0 and self._fp >= 0 and self._tn >= 0 and self._fn >= 0, (self._tp, self._fp, self._tn, self._fn)
         if self._tp + self._fp > 0:
             self.precision = float(self._tp) / float(self._tp + self._fp)
         else:
