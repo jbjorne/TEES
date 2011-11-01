@@ -187,8 +187,8 @@ def eventsToXML(events, xmlEvents, dataSets, srTexts):
                 interaction = ET.Element("interaction")
                 interaction.set("type", "SR-" + event["eventType"])
                 interaction.set("directed", "False")
-                interaction.set("e1", entity.get("id"))
-                interaction.set("e2", namedEntity.get("id"))
+                interaction.set("e1", namedEntity.get("id"))
+                interaction.set("e2", entity.get("id"))
                 interaction.set("id", "i" + str(interactionCount))
                 interaction.set("srId", event["id"])
                 xmlEvents[norText]["interactions"].append(interaction)
@@ -340,8 +340,8 @@ if __name__=="__main__":
     except ImportError:
         print >> sys.stderr, "Psyco not installed"
     
-    #relCorpusPath = "/home/jari/biotext/BioNLP2011/data/main-tasks/GE/GE-devel-and-train-and-test.xml"
-    relCorpusPath = None
+    relCorpusPath = "/home/jari/biotext/BioNLP2011/data/main-tasks/GE/GE-devel-and-train-and-test.xml"
+    #relCorpusPath = None
 
     if True:
         # non-embed
@@ -354,7 +354,7 @@ if __name__=="__main__":
         if not os.path.exists(outDir): os.makedirs(outDir)
         os.chdir(outDir)
         log(False, False, "sr-nonembed-conversion-log.txt")
-        convert(datasets, relCorpusPath, outDir, "SRNE")
+        convert(datasets, relCorpusPath, outDir, "SRNE", idByNorText=True)
         os.chdir(cwd)
     
     # embed
@@ -367,5 +367,5 @@ if __name__=="__main__":
     if not os.path.exists(outDir): os.makedirs(outDir)
     os.chdir(outDir)
     log(False, False, "sr-embed-conversion-log.txt")
-    convert(datasets, relCorpusPath, outDir, "SRE", idByNorText=False)
+    convert(datasets, relCorpusPath, outDir, "SRE", idByNorText=True)
     os.chdir(cwd)
