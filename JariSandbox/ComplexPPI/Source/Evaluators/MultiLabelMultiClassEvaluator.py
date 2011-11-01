@@ -2,7 +2,7 @@
 Evaluates SVM-multiclass predictions so that all classes that
 are above neg are positives
 """
-__version__ = "$Revision: 1.1 $"
+__version__ = "$Revision: 1.2 $"
 
 from Evaluator import Evaluator
 from Evaluator import EvaluationData
@@ -220,7 +220,7 @@ class MultiLabelMultiClassEvaluator(Evaluator):
 
         negativeClassId = self.getNegativeClassId()
         if self.classSet != None:
-            classNames = sorted(classSet.Ids.keys())
+            classNames = sorted(self.classSet.Ids.keys())
             for className in classNames:
                 if className != "neg":
                     string += className
