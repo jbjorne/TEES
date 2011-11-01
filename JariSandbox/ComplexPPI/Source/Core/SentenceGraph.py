@@ -1,7 +1,7 @@
 """
 Main class for representing a sentence
 """
-__version__ = "$Revision: 1.39 $"
+__version__ = "$Revision: 1.40 $"
 
 #import Graph.networkx_v10rc1 as NX10 # import networkx as NX
 from Core.SimpleGraph import Graph
@@ -68,6 +68,45 @@ def loadCorpus(corpus, parse, tokenization=None, removeNameInfo=False, removeInt
         #graph.mapEntityHints()
     print >> sys.stderr, "Skipped", duplicateInteractionEdgesRemoved, "duplicate interaction edges in SentenceGraphs"
     return corpusElements
+
+def getCorpusIterator(input, output, parse, tokenization=None, removeNameInfo=False):
+    import cElementTreeUtils as ETUtils
+    from InteractionXML.SentenceElements import SentenceElements
+    #import xml.etree.cElementTree as ElementTree
+    
+    if output != None:
+        etWriter = ETUtils.ETWriter(output)
+    for eTuple in ETUtils.ETIteratorFromObj(input, ("start", "end")):
+        element = eTuple[1]
+        if eTuple[0] == "end" and element.tag == "document":
+            sentences = []
+            for sentenceElement in element.findall("sentence"):
+                #print ElementTree.tostring(sentenceElement)
+                sentence = SentenceElements(sentenceElement, parse, tokenization, removeIntersentenceInteractions=False)
+                if len(sentence.tokens) == 0 or len(sentence.dependencies) == 0: 
+                    sentence.sentenceGraph = None
+                else:
+                    # Construct the basic SentenceGraph (only syntactic information)
+                    graph = SentenceGraph(sentence.sentence, sentence.tokens, sentence.dependencies)
+                    # Add semantic information, i.e. the interactions
+                    graph.mapInteractions(sentence.entities, sentence.interactions)
+                    graph.interSentenceInteractions = sentence.interSentenceInteractions
+                    #duplicateInteractionEdgesRemoved += graph.duplicateInteractionEdgesRemoved
+                    sentence.sentenceGraph = graph
+                    graph.parseElement = sentence.parseElement
+                sentences.append(sentence)
+            yield sentences
+            if output != None:
+                etWriter.write(element)
+        elif element.tag == "corpus" and output != None:
+            if eTuple[0] == "start":
+                etWriter.begin(element)
+            else:
+                etWriter.end(element)
+        if eTuple[0] == "end" and element.tag in ["document", "corpus"]:
+            element.clear()
+    if output != None:
+        etWriter.close()
 
 class SentenceGraph:
     """
