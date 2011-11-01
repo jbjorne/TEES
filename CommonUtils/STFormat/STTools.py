@@ -594,8 +594,8 @@ def package(sourceDir, outputFile, includeTags=["a2"]):
     os.chdir(sourceDir)
     for file in tarFiles:
         packageFile.add(file)#, exclude = lambda x: x == submissionFileName)
-    if "final" in outputFile:
-        packageFile.add("/home/jari/data/BioNLP11SharedTask/resources/questionnaire.txt", "questionnaire.txt")
+    #if "final" in outputFile:
+    #    packageFile.add("/home/jari/data/BioNLP11SharedTask/resources/questionnaire.txt", "questionnaire.txt")
     os.chdir(tempCwd)
     packageFile.close()
         
