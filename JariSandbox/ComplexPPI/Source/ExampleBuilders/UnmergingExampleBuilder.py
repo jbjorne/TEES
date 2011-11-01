@@ -1,7 +1,7 @@
 """
 Edge Examples
 """
-__version__ = "$Revision: 1.11 $"
+__version__ = "$Revision: 1.12 $"
 
 import sys, os
 thisPath = os.path.dirname(os.path.abspath(__file__))
@@ -24,6 +24,7 @@ import Utils.BioInfer.OntologyUtils as OntologyUtils
 import combine
 import cElementTreeUtils as ETUtils
 import gzip
+import types
 
 from multiprocessing import Process
 
@@ -399,11 +400,15 @@ class UnmergingExampleBuilder(ExampleBuilder):
                     themes.append(interaction)
                 
             for i in range(len(themes)):
-                for j in combinations(themes, i+1):
-                    combs.append(j)
+                # Looking at a2-normalize.pl reveals that there can be max 6 themes
+                # Based on training+devel data, four is maximum
+                if i < 4: 
+                    for j in combinations(themes, i+1):
+                        combs.append(j)
             return combs
         elif eType == "Process": # For ID-task
             argCombinations = []
+            argCombinations.append([]) # process can have 0 interactions
             for interaction in interactions:
                 if interaction.get("type") == "Participant":
                     argCombinations.append([interaction])
@@ -502,7 +507,8 @@ class UnmergingExampleBuilder(ExampleBuilder):
         
         exampleIndex = 0
         for entity in sentenceGraph.entities:
-            eType = entity.get("type")
+            eType = str(entity.get("type"))
+            assert eType != None, entity.attrib
             #if eType not in ["Binding", "Positive_regulation", "Negative_regulation", "Regulation"]:
             #    continue
             
@@ -515,7 +521,8 @@ class UnmergingExampleBuilder(ExampleBuilder):
             #    continue
             assert argCombinations != None, (entity.get("id"), entity.get("type"))
             for argCombination in argCombinations:
-                assert len(argCombination) > 0, eType + ": " + str(argCombinations)
+                if eType != "Process":
+                    assert len(argCombination) > 0, eType + ": " + str(argCombinations)
                 # Originally binary classification
                 if goldGraph != None:
                     isGoldEvent = self.eventIsGold(entity, argCombination, sentenceGraph, goldGraph, goldEntitiesByOffset)
@@ -539,8 +546,8 @@ class UnmergingExampleBuilder(ExampleBuilder):
                 argString = ""
                 for arg in argCombination:
                     argString += "," + arg.get("id")
-                extra = {"xtype":"um","e":entity.get("id"),"i":argString[1:],"etype":entity.get("type"),"class":category}
-                
+                extra = {"xtype":"um","e":entity.get("id"),"i":argString[1:],"etype":eType,"class":category}
+                assert type(extra["etype"]) == types.StringType, extra
                 self.exampleStats.addExample(category)
                 example = self.buildExample(sentenceGraph, paths, entity, argCombination, interactions)
                 example[0] = sentenceGraph.getSentenceId()+".x"+str(exampleIndex)
