@@ -38,6 +38,8 @@ from Evaluators.BXEvaluator import BXEvaluator as BXEv
 import Evaluators.BioNLP11GeniaTools
 evaluateBioNLP11Genia = Evaluators.BioNLP11GeniaTools.evaluate
 evaluateBX = Evaluators.BioNLP11GeniaTools.evaluateBX
+evaluateEPIorID = Evaluators.BioNLP11GeniaTools.evaluateEPIorID
+evaluateREN = Evaluators.BioNLP11GeniaTools.evaluateREN
 import Core.SentenceGraph as SentenceGraph
 import Core.ExampleUtils as ExampleUtils
 import InteractionXML as ix
@@ -101,8 +103,12 @@ def log(clear=False, logCmd=True, logFile="log.txt"):
         sys.stdout.writeToLog("Command line: " + " ".join(sys.argv) + "\n")
 
 def copyIdSetsToWorkdir(srcStem):
-    print >> sys.stderr, "Copying id-sets from", srcStem 
-    shutil.copy(srcStem+".feature_names", os.getcwd())
+    import subprocess
+    print >> sys.stderr, "Copying id-sets from", srcStem
+    if os.path.exists(srcStem+".feature_names"):
+        subprocess.call("gzip < " + srcStem+".feature_names" + " > " + os.getcwd() + "/" + os.path.basename(srcStem)+".feature_names.gz", shell=True)
+    else: # zipped
+        shutil.copy(srcStem+".feature_names.gz", os.getcwd())
     shutil.copy(srcStem+".class_names", os.getcwd())
     return os.path.split(srcStem)[-1]
 
