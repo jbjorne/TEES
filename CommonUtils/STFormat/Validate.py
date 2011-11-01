@@ -1,3 +1,5 @@
+from collections import defaultdict
+
 def validateREL(documents):
     for document in documents:
         if len(document.events) > 0:
@@ -82,6 +84,7 @@ def validate(events, simulation=False, verbose=False, docId=None): #, taskIsID=N
     #assert taskIsID != None
     
     numRemoved = 1
+    removeCounts = defaultdict(int)
     totalRemoved = 0
     if simulation:
         verbose = True
@@ -108,8 +111,10 @@ def validate(events, simulation=False, verbose=False, docId=None): #, taskIsID=N
                 typeCounts = {"Cause":0, "Theme":0}
                 for arg in event.arguments[:]:
                     if arg[0] not in typeCounts or not (isIDCore(arg[1].type) or arg[1].trigger != None):
+                        # if arg[1] has no trigger, this means that arg[1] is a trigger for
+                        # which no event was predicted
                         event.arguments.remove(arg)
-                        if verbose: print "VAL:", docId + "." + str(event.id), "Removed", event.type, "event argument of type", arg[0]
+                        if verbose: print "VAL:", docId + "." + str(event.id), "Removed", event.type, "event argument of type", arg[0], arg
                     else:
                         typeCounts[arg[0]] += 1
                 if typeCounts["Theme"] == 0:# and not taskIsID:
@@ -287,12 +292,14 @@ def validate(events, simulation=False, verbose=False, docId=None): #, taskIsID=N
                         if arg[1] in toRemove:
                             event.arguments.remove(arg)
                     kept.append(event)
+                else:
+                    removeCounts[event.type] += 1
             numRemoved = len(events) - len(kept)
             totalRemoved += numRemoved
             events = kept
         else:
             numRemoved = 0
-    return events
+    return events, removeCounts
 
 def removeUnusedTriggers(document):
     # Remove triggers which are not used as triggers or arguments
@@ -316,7 +323,9 @@ def removeUnusedTriggers(document):
 
 def allValidate(document, counts, task, verbose=False):
     numEvents = len(document.events)
-    document.events = validate(document.events, verbose=verbose, docId=document.id) #, taskIsID=isIDTask(document.proteins))
+    document.events, removeCounts = validate(document.events, verbose=verbose, docId=document.id) #, taskIsID=isIDTask(document.proteins))
+    for key in removeCounts:
+        counts["invalid-" + key] += removeCounts[key]
     counts["validation-removed"] += numEvents - len(document.events)
     numEvents = len(document.events)
     document.events = removeDuplicates(document.events)
