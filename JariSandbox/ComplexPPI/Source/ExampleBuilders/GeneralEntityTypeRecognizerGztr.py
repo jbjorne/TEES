@@ -1,7 +1,7 @@
 """
 Trigger examples
 """
-__version__ = "$Revision: 1.33 $"
+__version__ = "$Revision: 1.34 $"
 
 import sys, os
 thisPath = os.path.dirname(os.path.abspath(__file__))
@@ -14,8 +14,10 @@ import Core.ExampleUtils as ExampleUtils
 from Core.Gazetteer import Gazetteer
 from FeatureBuilders.RELFeatureBuilder import RELFeatureBuilder
 from FeatureBuilders.WordNetFeatureBuilder import WordNetFeatureBuilder
+from FeatureBuilders.GiulianoFeatureBuilder import GiulianoFeatureBuilder
 import PhraseTriggerExampleBuilder
 import InteractionXML.ResolveEPITriggerTypes
+from multiprocessing import Process
 
 #def compareDependencyEdgesById(dep1, dep2):
 #    """
@@ -48,6 +50,19 @@ class GeneralEntityTypeRecognizerGztr(ExampleBuilder):
             print >> sys.stderr, "No gazetteer loaded"
             self.gazetteer=None
         self.styles = style
+        if "selftrain_group" in self.styles:
+            self.selfTrainGroups = set()
+            if "selftrain_group-1" in self.styles:
+                self.selfTrainGroups.add("-1")
+            if "selftrain_group0" in self.styles:
+                self.selfTrainGroups.add("0")
+            if "selftrain_group1" in self.styles:
+                self.selfTrainGroups.add("1")
+            if "selftrain_group2" in self.styles:
+                self.selfTrainGroups.add("2")
+            if "selftrain_group3" in self.styles:
+                self.selfTrainGroups.add("3")
+            print >> sys.stderr, "Self-train-groups:", self.selfTrainGroups
         
         self.skiplist = set()
         if skiplist != None:
@@ -62,19 +77,39 @@ class GeneralEntityTypeRecognizerGztr(ExampleBuilder):
             self.wordNetFeatureBuilder = WordNetFeatureBuilder(featureSet)
         if "bb_features" in style:
             self.bacteriaTokens = PhraseTriggerExampleBuilder.getBacteriaTokens(PhraseTriggerExampleBuilder.getBacteriaNames())
+        if "giuliano" in self.styles:
+            self.giulianoFeatureBuilder = GiulianoFeatureBuilder(featureSet)
 
     @classmethod
-    def run(cls, input, output, parse, tokenization, style, idFileTag=None, gazetteerFileName=None, skiplist=None):
+    def run(cls, input, output, parse, tokenization, style, idFileTag=None, gazetteerFileName=None, skiplist=None, appendIndex=0):
+        """
+        An interface for running the example builder without needing to create a class
+        """
+        p = Process(target=GeneralEntityTypeRecognizerGztr.runAsProcess, args=[
+                                                                       input, output, parse, tokenization,
+                                                                       style, idFileTag, gazetteerFileName,
+                                                                       skiplist, appendIndex])
+        p.start()
+        p.join()
+        assert p.exitcode == 0
+
+    @classmethod
+    def runAsProcess(cls, input, output, parse, tokenization, style, idFileTag=None, gazetteerFileName=None, skiplist=None, appendIndex=0):
         if skiplist == "PubMed100p":
             skiplist = os.path.dirname(os.path.abspath(__file__))+"/Filters/PubMed100pSkipList.txt"
         
         classSet, featureSet = cls.getIdSets(idFileTag)
         e = GeneralEntityTypeRecognizerGztr(style, classSet, featureSet, gazetteerFileName, skiplist=skiplist)
         if "names" in style:
-            sentences = cls.getSentences(input, parse, tokenization, removeNameInfo=True)
+            removeNameInfo=True
         else:
-            sentences = cls.getSentences(input, parse, tokenization, removeNameInfo=False)
-        e.buildExamplesForSentences(sentences, output, idFileTag)
+            removeNameInfo=False
+        if "iterate" in style:
+            print >> sys.stderr, "Iterative entity example generation for", input
+            sentences = cls.getSentenceIterator(input, parse, tokenization, removeNameInfo=removeNameInfo)
+        else:
+            sentences = cls.getSentences(input, parse, tokenization, removeNameInfo=removeNameInfo)
+        e.buildExamplesForSentences(sentences, output, idFileTag, appendIndex=appendIndex)
 
 
     def preProcessExamples(self, allExamples):
@@ -92,6 +127,8 @@ class GeneralEntityTypeRecognizerGztr(ExampleBuilder):
         types = set()
         for entity in entities:
             if entity.get("isName") == "True" and "all_tokens" in self.styles:
+                continue
+            if entity.get("type") == "Entity" and "genia_task1" in self.styles:
                 continue
             if "epi_merge_negated" in self.styles:
                 types.add(InteractionXML.ResolveEPITriggerTypes.getEPIBaseType(entity.get("type")))
@@ -173,7 +210,7 @@ class GeneralEntityTypeRecognizerGztr(ExampleBuilder):
             ngram += "_" + sentenceGraph.getTokenText(sentenceGraph.tokens[index]).lower()
         features[self.featureSet.getId(ngram)] = 1
     
-    def buildExamples(self, sentenceGraph):
+    def buildExamples(self, sentenceGraph, appendIndex=0):
         """
         Build one example for each token of the sentence
         """
@@ -182,7 +219,7 @@ class GeneralEntityTypeRecognizerGztr(ExampleBuilder):
             return []
         
         examples = []
-        exampleIndex = 0
+        exampleIndex = appendIndex
         
         self.tokenFeatures = {}
         self.tokenFeatureWeights = {}
@@ -258,6 +295,32 @@ class GeneralEntityTypeRecognizerGztr(ExampleBuilder):
                 self.exampleStats.filter("name")
                 self.exampleStats.endExample()
                 continue
+            if "selftrain_limits" in self.styles:
+                # any predicted entity not part of the self-training set causes example to be rejected
+                filtered = False
+                for entity in sentenceGraph.tokenIsEntityHead[token]:
+                    if entity.get("selftrain") == "False":
+                        self.exampleStats.filter("selftrain_limits")
+                        self.exampleStats.endExample()
+                        filtered = True
+                        break
+                if filtered:
+                    continue
+            if "selftrain_group" in self.styles:
+                # any predicted entity not part of the self-training set causes example to be rejected
+                filtered = False
+                for entity in sentenceGraph.tokenIsEntityHead[token]:
+                    if entity.get("selftraingroup") not in self.selfTrainGroups:
+                        self.exampleStats.filter("selftrain_group")
+                        self.exampleStats.endExample()
+                        filtered = True
+                        break
+                if filtered:
+                    continue
+            if ("pos_only" in self.styles) and categoryName == "neg":
+                self.exampleStats.filter("pos_only")
+                self.exampleStats.endExample()
+                continue
 
             category = self.classSet.getId(categoryName)            
             
@@ -305,6 +368,12 @@ class GeneralEntityTypeRecognizerGztr(ExampleBuilder):
             norStem = PorterStemmer.stem(normalizedText)
             features[self.featureSet.getId("stem_"+norStem)] = 1
             features[self.featureSet.getId("nonstem_"+normalizedText[len(norStem):])] = 1
+            
+            ## Subspan features
+            #textLower = text.lower()
+            #for i in range(1, len(textLower)):
+            #    features[self.featureSet.getId("subspanbegin"+str(i)+"_"+textLower[0:i])] = 1
+            #    features[self.featureSet.getId("subspanend"+str(i)+"_"+textLower[-i:])] = 1
             
             # Substring features
             for string in text.split("-"):
@@ -407,6 +476,11 @@ class GeneralEntityTypeRecognizerGztr(ExampleBuilder):
                     #print wordNetFeature,
                     features[self.featureSet.getId("WN_"+wordNetFeature)] = 1
                 #print
+            
+            if "giuliano" in self.styles:
+                self.giulianoFeatureBuilder.setFeatureVector(features)
+                self.giulianoFeatureBuilder.buildTriggerFeatures(token, sentenceGraph)
+                self.giulianoFeatureBuilder.setFeatureVector(None)
                              
             extra = {"xtype":"token","t":token.get("id")}
             if "bb_features" in self.styles:
