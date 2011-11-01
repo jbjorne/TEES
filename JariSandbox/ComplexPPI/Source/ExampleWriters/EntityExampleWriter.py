@@ -11,6 +11,7 @@ class EntityExampleWriter(SentenceExampleWriter):
     def __init__(self):
         self.xType = "token"
         self.insertWeights = False
+        SentenceExampleWriter.__init__(self)
     
     def writeXMLSentence(self, examples, predictionsByExample, sentenceObject, classSet, classIds, goldSentence=None):        
         self.assertSameSentence(examples)
@@ -75,6 +76,9 @@ class EntityExampleWriter(SentenceExampleWriter):
             if goldEntityTypeByHeadOffset.has_key(headToken.get("charOffset")):
                 entityElement.set("goldType", goldEntityTypeByHeadOffset[headToken.get("charOffset")])
             if (entityElement.get("type") != "neg" and not goldEntityByHeadOffset.has_key(entityElement.get("headOffset"))) or not self.insertWeights:
+                newEntityIdCount += 1
+                sentenceElement.append(entityElement)
+            elif entityElement.get("type") == "neg":
                 newEntityIdCount += 1
                 sentenceElement.append(entityElement)
         
