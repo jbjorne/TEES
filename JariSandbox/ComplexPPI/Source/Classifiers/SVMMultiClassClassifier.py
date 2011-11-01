@@ -1,4 +1,4 @@
-__version__ = "$Revision: 1.50 $"
+__version__ = "$Revision: 1.51 $"
 
 import sys,os
 sys.path.append(os.path.dirname(os.path.abspath(__file__))+"/..")
@@ -137,15 +137,15 @@ class SVMMultiClassClassifier(Classifier):
             modelPath = tempUnzip(modelPath)
         if testPath.endswith(".gz"):
             testPath = tempUnzip(testPath)
-        if parameters != None:
-            parameters = copy.copy(parameters)
-            if parameters.has_key("c"):
-                del parameters["c"]
-            if parameters.has_key("predefined"):
-                parameters = copy.copy(parameters)
-                modelPath = os.path.join(parameters["predefined"][0],"classifier/model")
-                del parameters["predefined"]
-            self.__addParametersToSubprocessCall(args, parameters)
+#        if parameters != None:
+#            parameters = copy.copy(parameters)
+#            if parameters.has_key("c"):
+#                del parameters["c"]
+#            if parameters.has_key("predefined"):
+#                parameters = copy.copy(parameters)
+#                modelPath = os.path.join(parameters["predefined"][0],"classifier/model")
+#                del parameters["predefined"]
+#            self.__addParametersToSubprocessCall(args, parameters)
         if output == None:
             output = "predictions"
             logFile = open("svmmulticlass.log","at")
@@ -174,6 +174,31 @@ class SVMMultiClassClassifier(Classifier):
         print >> sys.stderr, timer.toString()
         return predictions
     
+#    def selfClassify(self, examples, trainParameters, folds=10):
+#        # Divide examples to folds
+#        numExamples = 0
+#        for example in examples:
+#            numExamples += 1
+#        step = numExamples / folds
+#        foldFiles = []
+#        count = step + 1
+#        outFile = None
+#        for example in examples:
+#            if count > step and len(foldFiles) < folds:
+#                foldFiles.append("fold-" + str(1+len(foldFiles)) + ".txt")
+#                if outFile != None:
+#                    outFile.close()
+#                outFile = open(foldFiles[-1], "wt")
+#                count = 0
+#            ExampleUtils.appendExamples([example])
+#            count += 1
+#        if outFile != None:
+#            outFile.close()
+#        
+#        # Train and classify on CSC
+#        for 
+                
+        
     @classmethod
     def __addParametersToSubprocessCall(cls, args, parameters):
         for k,v in parameters.iteritems():
@@ -338,7 +363,8 @@ class SVMMultiClassClassifier(Classifier):
         paramStr = ""
         for key in sorted(trainParameters.keys()):
             idStr += "-" + str(key) + "_" + str(trainParameters[key])
-            paramStr += " -" + str(key) + " " + str(trainParameters[key])
+            if key != "classifier":
+                paramStr += " -" + str(key) + " " + str(trainParameters[key])
         scriptName = "script"+idStr+".sh"
         if cscConnection.exists(scriptName):
             print >> sys.stderr, "Script already on " + cscConnection.machineName + ", process not queued for", scriptName
@@ -352,10 +378,17 @@ class SVMMultiClassClassifier(Classifier):
         scriptFile.write("#!/bin/bash\ncd " + cscConnection.workDir + "\n")
         if not isMurska: # louhi
             scriptFile.write("aprun -n 1 ")
-        scriptFile.write(cls.louhiBinDir + "/svm_multiclass_learn" + paramStr + " " + cscConnection.workDir + "/" + trainExampleFileName + " " + cscConnection.workDir + "/model" + idStr + "\n")
+        #print trainParameters
+        if "classifier" in trainParameters and trainParameters["classifier"] == "svmperf":
+            scriptFile.write(cls.louhiBinDir + "/svm_perf_learn" + paramStr + " " + cscConnection.workDir + "/" + trainExampleFileName + " " + cscConnection.workDir + "/model" + idStr + "\n")
+        else:
+            scriptFile.write(cls.louhiBinDir + "/svm_multiclass_learn" + paramStr + " " + cscConnection.workDir + "/" + trainExampleFileName + " " + cscConnection.workDir + "/model" + idStr + "\n")
         if not isMurska: # louhi
             scriptFile.write("aprun -n 1 ")
-        scriptFile.write(cls.louhiBinDir + "/svm_multiclass_classify " + cscConnection.workDir + "/" + testExampleFileName + " " + cscConnection.workDir + "/model" + idStr + " " + cscConnection.workDir + "/predictions" + idStr + "\n")
+        if "classifier" in trainParameters and trainParameters["classifier"] == "svmperf":
+            scriptFile.write(cls.louhiBinDir + "/svm_perf_classify " + cscConnection.workDir + "/" + testExampleFileName + " " + cscConnection.workDir + "/model" + idStr + " " + cscConnection.workDir + "/predictions" + idStr + "\n")
+        else:
+            scriptFile.write(cls.louhiBinDir + "/svm_multiclass_classify " + cscConnection.workDir + "/" + testExampleFileName + " " + cscConnection.workDir + "/model" + idStr + " " + cscConnection.workDir + "/predictions" + idStr + "\n")
         scriptFile.close()
         
         cscConnection.upload(scriptFilePath, scriptName, compress=False)
@@ -405,7 +438,10 @@ class SVMMultiClassClassifier(Classifier):
         if localWorkDir != None:
             predFileName = os.path.join(localWorkDir, predFileName)
         cscConnection.download("predictions"+idStr, predFileName, compress=True, uncompress=True)
-        return predFileName
+        if os.path.exists(predFileName):
+            return predFileName
+        else:
+            return None
         
 #        predictionsFile = open(predFileName, "rt")
 #        lines = predictionsFile.readlines()
