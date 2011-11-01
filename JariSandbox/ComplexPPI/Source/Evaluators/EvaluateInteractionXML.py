@@ -134,14 +134,20 @@ def getInteractionPredictions(interactionsFrom, interactionsTo, entityMap, class
     
     toInteractionsWithPredictions = set()
     for interactionFrom in interactionsFrom:
-        e1s = entityMap[fromEntityIdToElement[interactionFrom.get("e1")]]
         e1Ids = []
-        for e1 in e1s:
-            e1Ids.append(e1.get("id"))
-        e2s = entityMap[fromEntityIdToElement[interactionFrom.get("e2")]]
         e2Ids = []
-        for e2 in e2s:
-            e2Ids.append(e2.get("id"))
+        e1s = []
+        e2s = []
+        if interactionFrom.get("e1") not in fromEntityIdToElement or interactionFrom.get("e2") not in fromEntityIdToElement:
+            pass
+            #print >> sys.stderr, "Warning, interaction", interactionFrom.get("id"), [interactionFrom.get("e1"), interactionFrom.get("e2")], "links to a non-existing entity"
+        else:
+            e1s = entityMap[fromEntityIdToElement[interactionFrom.get("e1")]]
+            for e1 in e1s:
+                e1Ids.append(e1.get("id"))
+            e2s = entityMap[fromEntityIdToElement[interactionFrom.get("e2")]]
+            for e2 in e2s:
+                e2Ids.append(e2.get("id"))
         
         if len(e1s) == 0 or len(e2s) == 0:
             falseEntity[interactionFrom.get("type")][0] += 1
