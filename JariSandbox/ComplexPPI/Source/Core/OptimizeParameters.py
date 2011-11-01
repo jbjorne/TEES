@@ -5,6 +5,7 @@ import sys, os, types
 import combine
 import time
 import subprocess
+import copy
 sys.path.append(os.path.dirname(os.path.abspath(__file__))+"/..")
 from Utils.Parameters import *
 from Utils.Timer import Timer
@@ -26,6 +27,7 @@ def getCombinationString(combination):
 def getParameterCombinations(parameters):
     parameterNames = parameters.keys()
     parameterNames.sort()
+    parameterNames.reverse() # to put trigger parameter first (allows optimized 3-parameter grid)
     parameterValues = []
     for parameterName in parameterNames:
         parameterValues.append([])
@@ -39,7 +41,7 @@ def getParameterCombinations(parameters):
             combinations[-1][value[0]] = value[1]
     return combinations
 
-def optimize(Classifier, Evaluator, trainExamples, testExamples, classIds, parameters, workDir=None, timeout=None, cscConnection=None, downloadAllModels=False, steps="BOTH"):
+def optimize(Classifier, Evaluator, trainExamples, testExamples, classIds, parameters, workDir=None, timeout=None, cscConnection=None, downloadAllModels=False, steps="BOTH", threshold=False):
     print >> sys.stderr, "Optimizing parameters"
     if workDir != None:
         if not os.path.exists(workDir):
@@ -53,7 +55,7 @@ def optimize(Classifier, Evaluator, trainExamples, testExamples, classIds, param
     if cscConnection == None:
         return optimizeLocal(Classifier, Evaluator, trainExamples, testExamples, classIds, combinations, workDir, timeout)
     else:
-        return optimizeCSC(Classifier, Evaluator, trainExamples, testExamples, classIds, combinations, workDir, timeout, cscConnection, downloadAllModels, steps)
+        return optimizeCSC(Classifier, Evaluator, trainExamples, testExamples, classIds, combinations, workDir, timeout, cscConnection, downloadAllModels, steps, threshold=threshold)
 
 def optimizeLocal(Classifier, Evaluator, trainExamples, testExamples, classIds, combinations, workDir=None, timeout=None):
     bestResult = None
@@ -95,7 +97,7 @@ def optimizeLocal(Classifier, Evaluator, trainExamples, testExamples, classIds, 
     return bestResult
 
 #IF LOCAL
-def optimizeCSC(Classifier, Evaluator, trainExamples, testExamples, classIds, combinations, workDir=None, timeout=None, cscConnection=None, downloadAllModels=False, steps="BOTH"):
+def optimizeCSC(Classifier, Evaluator, trainExamples, testExamples, classIds, combinations, workDir=None, timeout=None, cscConnection=None, downloadAllModels=False, steps="BOTH", threshold=False):
     bestResult = None
     combinationCount = 1
     combinationIds = []
@@ -104,7 +106,11 @@ def optimizeCSC(Classifier, Evaluator, trainExamples, testExamples, classIds, co
     if type(classIds) == types.StringType:
         classIds = IdSet(filename=classIds)
     if Classifier.__name__ == "MultiLabelClassifier":
-        Classifier.makeClassFiles(trainExamples, testExamples, classIds)
+        negClass1 = True
+        if "classifier" in combinations[0] and combinations[0]["classifier"] == "svmperf":
+            negClass1 = False
+        print "negclass1", negClass1
+        Classifier.makeClassFiles(trainExamples, testExamples, classIds, negClass1=negClass1)
     
     if steps in ["BOTH", "SUBMIT"]:
         print >> sys.stderr, "Initializing runs"
@@ -171,12 +177,18 @@ def optimizeCSC(Classifier, Evaluator, trainExamples, testExamples, classIds, co
                 print >> sys.stderr, "No results for combination" + id
             else:
                 if downloadAllModels:
-                    Classifier.downloadModel(id, cscConnection, workDir)
+                    modelFileName = Classifier.downloadModel(id, cscConnection, workDir)
+                    if workDir != None:
+                        modelFileName = os.path.join(workDir, modelFileName)
+                        subprocess.call("gzip -fv " + modelFileName, shell=True)
                 print >> sys.stderr, "Evaluating results for combination" + id
                 evaluationOutput = "evaluation" + id + ".csv"
                 if workDir != None:
                     evaluationOutput = os.path.join(workDir, evaluationOutput)
                 evaluator = Evaluator.evaluate(testExamples, predictions, classIds, evaluationOutput)
+                if threshold:
+                    print >> sys.stderr, "Thresholding"
+                    evaluator.determineThreshold(testExamples, predictions)
                 if Classifier.__name__ != "MultiLabelClassifier":
                     if bestResult == None or evaluator.compare(bestResult[0]) > 0: #: averageResult.fScore > bestResult[1].fScore:
                         bestResult = [evaluator, None, predictions, evaluationOutput, combinations[i]]
@@ -187,12 +199,20 @@ def optimizeCSC(Classifier, Evaluator, trainExamples, testExamples, classIds, co
                         bestResult = [{}, None]
                         for className in classIds.Ids:
                             if className != "neg" and "---" not in className:
-                                bestResult[0][className] = (-1, None, classIds.getId(className))
+                                bestResult[0][className] = [-1, None, classIds.getId(className), None]
                     for className in classIds.Ids:
                         if className != "neg" and "---" not in className:
                             fscore = evaluator.dataByClass[classIds.getId(className)].fscore
                             if fscore > bestResult[0][className][0]:
-                                bestResult[0][className] = (fscore, id, bestResult[0][className][2])
+                                bestResult[0][className] = [fscore, id, bestResult[0][className][2]]
+                                if threshold:
+                                    classId = classIds.getId(className, False)
+                                    if classId in evaluator.thresholds:
+                                        bestResult[0][className].append(evaluator.thresholds[classId])
+                                    else:
+                                        bestResult[0][className].append(0.0)
+                                else:
+                                    bestResult[0][className].append(None)
                     bestCombinationId = bestResult
                 os.remove(predictions) # remove predictions to save space
         Stream.setIndent()
