@@ -1,9 +1,10 @@
 """
 Base class for ExampleBuilders
 """
-__version__ = "$Revision: 1.31 $"
+__version__ = "$Revision: 1.32 $"
 
 from SentenceGraph import SentenceGraph
+from SentenceGraph import getCorpusIterator
 from IdSet import IdSet
 import sys, os, types
 import gzip
@@ -84,9 +85,11 @@ class ExampleBuilder:
 
     def buildExamplesForSentences(self, sentences, output, idFileTag=None, appendIndex=None, goldSentences=None):            
         examples = []
-        counter = ProgressCounter(len(sentences), "Build examples")
-        
-        calculatePredictedRange(self, sentences)
+        if type(sentences) == types.ListType:
+            counter = ProgressCounter(len(sentences), "Build examples")
+            calculatePredictedRange(self, sentences)
+        else:
+            counter = ProgressCounter(None, "Build examples")
         
         # Open output file
         openStyle = "wt"
@@ -100,21 +103,29 @@ class ExampleBuilder:
         
         # Generate examples
         exampleCount = 0
-        for i in range(len(sentences)):
-            sentence = sentences[i]
-            if goldSentences != None:
-                goldSentence = goldSentences[i]
-            counter.update(1, "Building examples ("+sentence[0].getSentenceId()+"): ")
-            if appendIndex != None:
-                examples = self.buildExamples(sentence[0], appendIndex=appendIndex)
+        i = 0
+        for sentences2 in sentences:
+            if len(sentences2) == 2 and sentences2[1] == None:
+                sentences2 = [sentences2]
             else:
+                sentences2 = [[x.sentenceGraph, None] for x in sentences2]
+            #print sentences2
+            for sentence in sentences2:
                 if goldSentences != None:
-                    examples = self.buildExamples(sentence[0], goldGraph=goldSentence[0])
-                else:
-                    examples = self.buildExamples(sentence[0])
-            exampleCount += len(examples)
-            examples = self.preProcessExamples(examples)
-            ExampleUtils.appendExamples(examples, outfile)
+                    goldSentence = goldSentences[i]
+                if sentence[0] != None:
+                    counter.update(1, "Building examples ("+sentence[0].getSentenceId()+"): ")
+                    if appendIndex != None:
+                        examples = self.buildExamples(sentence[0], appendIndex=appendIndex)
+                    else:
+                        if goldSentences != None:
+                            examples = self.buildExamples(sentence[0], goldGraph=goldSentence[0], appendIndex=appendIndex)
+                        else:
+                            examples = self.buildExamples(sentence[0], appendIndex=appendIndex)
+                    exampleCount += len(examples)
+                    examples = self.preProcessExamples(examples)
+                    ExampleUtils.appendExamples(examples, outfile)
+                i += 1
         outfile.close()
     
         print >> sys.stderr, "Examples built:", exampleCount
@@ -136,7 +147,16 @@ class ExampleBuilder:
         
         calculatePredictedRange(self, sentences)
         
-        outfile = open(output, "wt")
+        # Open output file
+        openStyle = "wt"
+        if appendIndex != None and appendIndex != 0:
+            print "Appending examples"
+            openStyle = "at"
+        if output.endswith(".gz"):
+            outfile = gzip.open(output, openStyle)
+        else:
+            outfile = open(output, openStyle)
+            
         exampleCount = 0
         for i in range(len(sentences)):
             sentence = sentences[i]
@@ -178,7 +198,11 @@ class ExampleBuilder:
                 assert(not os.path.exists(idFileTag + ".feature_names.gz")), idFileTag
                 assert(not os.path.exists(idFileTag + ".class_names")), idFileTag
             return None, None
-            
+    
+    @classmethod       
+    def getSentenceIterator(cls, input, parse, tokenization, removeNameInfo=False):
+        return getCorpusIterator(input, None, parse, tokenization, removeNameInfo)
+    
     @classmethod
     def getSentences(cls, input, parse, tokenization, removeNameInfo=False):
         if type(input) != types.ListType:
