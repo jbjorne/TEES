@@ -114,7 +114,7 @@ def threshold(examples, predictionsDir=None, classSet=None):
         
         baseLineF = baseEv.microF.fscore
         for step in [0]:
-            for classId in classIds:
+            for classId in [1]: #classIds:
                 cls = None
                 if classSet != None:
                     cls = classSet.getName(classId)
@@ -122,7 +122,7 @@ def threshold(examples, predictionsDir=None, classSet=None):
                     cls = str(classId)
                 bestF = thresholdClass(examples, predictions, classId, baseLineF)
                 for prediction in predictions:
-                    prediction[classId] += bestF[2][0] + 0.00000001
+                    prediction[classId] -= bestF[2][0] + 0.00000001
                 changed = 0
                 for prediction in predictions:
                     maxVal = -999999
