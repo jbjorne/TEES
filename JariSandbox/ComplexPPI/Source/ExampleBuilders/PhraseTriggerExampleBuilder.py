@@ -1,7 +1,7 @@
 """
 Trigger examples
 """
-__version__ = "$Revision: 1.6 $"
+__version__ = "$Revision: 1.7 $"
 
 import sys, os
 thisPath = os.path.dirname(os.path.abspath(__file__))
@@ -18,6 +18,26 @@ from FeatureBuilders.TriggerFeatureBuilder import TriggerFeatureBuilder
 coNPPhraseFirstToken = set(["both", "each", "it", "its", "itself", "neither", "others",
                             "that", "the", "their", "them", "themselves", "these", "they",
                             "this", "those"])
+
+def getBacteriaNames():
+    f = open(os.path.expanduser("~/data/BioNLP11SharedTask/resources/lpsn-bacteria-names.txt"), "rt")
+    names = []
+    for line in f:
+        if line.strip == "":
+            continue
+        if line.startswith("Note:"):
+            continue
+        namePart = line.split("18")[0].split("19")[0].split("(")[0]
+        names.append(namePart)
+    f.close()
+    return names
+
+def getBacteriaTokens(names):
+    tokens = set()
+    for name in names:
+        for split in name.split():
+            tokens.add(split.lower())
+    return tokens
 
 class PhraseTriggerExampleBuilder(ExampleBuilder):
     def __init__(self, style=None, classSet=None, featureSet=None, gazetteerFileName=None):
@@ -97,7 +117,7 @@ class PhraseTriggerExampleBuilder(ExampleBuilder):
         else:
             return False
     
-    def buildExamples(self, sentenceGraph):
+    def buildExamples(self, sentenceGraph, appendIndex=None):
         """
         Build one example for each phrase in the sentence
         """
