@@ -79,6 +79,9 @@ class StreamModifier:
                 else:
                     self.buffer += char
             self.logfile.flush()
+    
+    def flush(self):
+        self.stream.flush()
 
 def setLog(filename=None, clear=False):
     """
