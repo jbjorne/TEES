@@ -1,5 +1,30 @@
 import sys
 
+def getCorpusIterator(input, output, parse=None, tokenization=None):
+    import cElementTreeUtils as ETUtils
+    from InteractionXML.SentenceElements import SentenceElements
+    #import xml.etree.cElementTree as ElementTree
+    
+    etWriter = ETUtils.ETWriter(output)
+    for eTuple in ETUtils.ETIteratorFromObj(input, ("start", "end")):
+        element = eTuple[1]
+        if eTuple[0] == "end" and element.tag == "document":
+            sentences = []
+            for sentenceElement in element.findall("sentence"):
+                #print ElementTree.tostring(sentenceElement)
+                sentence = SentenceElements(sentenceElement, parse, tokenization, removeIntersentenceInteractions=False)
+                sentences.append(sentence)
+            yield sentences
+            etWriter.write(element)
+        elif element.tag == "corpus":
+            if eTuple[0] == "start":
+                etWriter.begin(element)
+            else:
+                etWriter.end(element)
+        if eTuple[0] == "end" and element.tag in ["document", "corpus"]:
+            element.clear()
+    etWriter.close()
+
 class SentenceElements:
     def __init__(self, sentenceElement, parse=None, tokenization=None, removeIntersentenceInteractions=True, removeNameInfo=False, verbose=False):
         self.sentence = sentenceElement
