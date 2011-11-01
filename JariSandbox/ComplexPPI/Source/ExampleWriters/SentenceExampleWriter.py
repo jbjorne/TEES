@@ -16,11 +16,15 @@ except ImportError:
     import cElementTree as ET
 import cElementTreeUtils as ETUtils
 import InteractionXML.ResolveEPITriggerTypes
+from collections import defaultdict
 
 class SentenceExampleWriter:
     """
     Base class for ExampleWriters working with interaction XML.
     """
+
+    def __init__(self):
+        SentenceExampleWriter.counts = defaultdict(int)
     
     def loadCorpus(self, corpus, parse, tokenization):
         if type(corpus) == types.StringType or isinstance(corpus,ET.ElementTree): # corpus is in file
@@ -106,6 +110,10 @@ class SentenceExampleWriter:
                 if goldCorpus != None:
                     goldSentence = goldCorpus.sentencesById[currentMajorId]
                 self.writeXMLSentence([], {}, sentenceObject, classSet, classIds, goldSentence=goldSentence)
+        
+        # Print statistics
+        if len(self.counts) > 0:
+            print >> sys.stderr, self.counts
     
         # Write corpus
         if outputFile != None:
