@@ -3,14 +3,17 @@ import subprocess
 sys.path.append(os.path.abspath(os.path.dirname(__file__))+"/..")
 #from Classifiers.SVMMultiClassClassifier import SVMMultiClassClassifier as classifier
 from Utils.Timer import Timer
+import pexpect.pxssh as pxssh
+import pexpect.pexpect as pexpect
 
 class CSCConnection:    
-    def __init__(self, workSubDir, account="jakrbj@louhi.csc.fi", deleteWorkDir=False, memory=4194304, cores=1):
+    def __init__(self, workSubDir, account="jakrbj@louhi.csc.fi", deleteWorkDir=False, memory=4194304, cores=1, password=None):
         self.account = account
+        self.password = password       
         self.memory = memory
         self.cores = cores
         self.machineName = account.split("@")[-1]
-        self.setWorkSubDir(workSubDir, deleteWorkDir)        
+        self.setWorkSubDir(workSubDir, deleteWorkDir)
         # State constants
         self.NOT_EXIST = "NOT_EXIST"
         self.NONZERO = "NONZERO"
@@ -30,30 +33,37 @@ class CSCConnection:
         self.run("mkdir -p " + self.workDir)
     
     def exists(self, filename):
-        p = subprocess.Popen("ssh " + self.account + " 'ls -lh " + self.workDir + "/" + filename + "'", shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        if len(p.stdout.readlines()) > 0:
+        stdout = self.run("ls -lh " + self.workDir + "/" + filename)
+        if len(stdout) > 0:
             return True
         else:
             return False
     
     def mkdir(self, dir):
-        p = subprocess.Popen("ssh " + self.account + " 'mkdir -p " + self.workDir + "/" + dir + "'", shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        if len(p.stdout.readlines()) > 0:
+        stdout = self.run("mkdir -p " + self.workDir + "/" + dir)
+        if len(stdout) > 0:
             return True
         else:
             return False
     
     def getFileStatus(self, filename):
         filePath = self.workDir + "/" + filename
-        p = subprocess.Popen("ssh " + self.account + " 'filetest -e " + filePath + "; filetest -z " + filePath + "'", shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        lines = p.stdout.readlines()
-        assert len(lines) == 2
-        if int(lines[0]) == 0:
-            return self.NOT_EXIST
-        if int(lines[1]) == 1:
-            return self.ZERO
+        if os.environ.has_key("METAWRK"):
+            if not os.path.exists(filePath):
+                return self.NOT_EXIST
+            elif os.path.getsize(filePath) == 0:
+                return self.ZERO
+            else:
+                return self.NONZERO
         else:
-            return self.NONZERO
+            lines = self.run("filetest -e " + filePath + "; filetest -z " + filePath)
+            #assert len(lines) == 2
+            if int(lines[0]) == 0:
+                return self.NOT_EXIST
+            if int(lines[1]) == 1:
+                return self.ZERO
+            else:
+                return self.NONZERO
         
     def upload(self, src, dst=None, replace=True, compress=False, uncompress=False):
         if dst == None:
@@ -67,10 +77,27 @@ class CSCConnection:
                 src += ".gz"
                 dst += ".gz"
             print "scp " + src + " " + self.account + ":" + self.workDir + "/" + dst
-            subprocess.call("scp " + src + " " + self.account + ":" + self.workDir + "/" + dst, shell=True)
+            self.scp(src, self.account + ":" + self.workDir + "/" + dst)
+            #subprocess.call("scp " + src + " " + self.account + ":" + self.workDir + "/" + dst, shell=True)
             if self.compression or uncompress:
                 self.run("gunzip -fv " + self.workDir + "/" + dst)
             return True
+        
+    def scp(self, par1, par2):
+        if os.environ.has_key("METAWRK"):
+            subprocess.call("cp -f " + par1.split(":")[-1] + " " + par2.split(":")[-1], shell=True)
+        elif self.password == None:
+            subprocess.call("scp " + par1 + " " + par2, shell=True)
+        else:
+            try:
+                child = pexpect.spawn("scp -o'RSAAuthentication=no' -o'PubkeyAuthentication=no' " + par1 + " " + par2)
+                child.expect("[pP]assword:")
+                child.sendline(self.password)
+                child.expect(pexpect.EOF)
+                #print >> sys.stderr, "\nKey uploaded successfully.\n"        
+            except pexpect.TIMEOUT:
+                print >> sys.stderr, "pexpect SCP Failed."
+                sys.exit()
         
     def download(self, src, dst=None, replace=True, compress=False, uncompress=False):
         if dst == None:
@@ -84,7 +111,8 @@ class CSCConnection:
                 src = src + ".gz"
                 dst = dst + ".gz"
             #print "SCP:", "scp " + self.account + ":" + self.workDir + "/" + src + " " + dst
-            subprocess.call("scp " + self.account + ":" + self.workDir + "/" + src + " " + dst, shell=True)
+            self.scp(self.account + ":" + self.workDir + "/" + src, dst)
+            #subprocess.call("scp " + self.account + ":" + self.workDir + "/" + src + " " + dst, shell=True)
             if self.compression or uncompress:
                 subprocess.call("gunzip -f " + dst, shell=True)
             return True
@@ -93,8 +121,28 @@ class CSCConnection:
         if cdWrkDir:
             script = "cd " + self.workDir + " ; " + script
         #print "SCRIPT:", script
-        subprocess.call("ssh " + self.account + " '" + script + "'", shell=True)
-    
+        if os.environ.has_key("METAWRK"): # already on CSC
+            p = subprocess.Popen(script, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            return p.stdout.readlines()
+        elif self.password == None: # normal ssh
+            p = subprocess.Popen("ssh " + self.account + " '" + script + "'", shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            return p.stdout.readlines()
+        else: # have to use pexpect
+            try:
+                s = pxssh.pxssh()
+                s.force_password = True
+                s.login(self.account.split("@")[1], self.account.split("@")[0], self.password)
+                s.sendline(script)
+                s.prompt()
+                lines = s.before
+                lines = lines.split("\n")
+                s.logout()
+                return lines[1:]
+            except pxssh.ExceptionPxssh, e:
+                print >> sys.stderr, "pxssh failed on login"
+                print >> sys.stderr, str(e)
+                sys.exit()
+            
     def test(self):
         print "testing"
         subprocess.call("ssh jakrbj@louhi.csc.fi 'ls; exit'", shell=True)
@@ -147,17 +195,18 @@ class CSCConnection:
 
     def getJobStatus(scriptName):
         filePath = self.workDir + "/" + scriptName + "-stdout"
-        stdoutStatus = self.getFileStatus(scriptName + "-stdout")
-        if stdoutStatus == self.NOT_EXIST:
-            return "QUEUED"
+        if os.environ.has_key("METAWRK"):
+            if not os.path.exists(filePath):
+                return "QUEUED"
+        else:
+            if self.getFileStatus(scriptName + "-stdout") == self.NOT_EXIST:
+                return "QUEUED"
 
-        p = subprocess.Popen("ssh " + self.account + " 'grep \"Resource usage summary:\" " + filePath + "'", shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        lines = p.stdout.readlines()
+        lines = self.run("grep \"Resource usage summary:\" " + filePath)
         if len(lines) == 0:
             return "RUNNING"
         else:
-            p = subprocess.Popen("ssh " + self.account + " 'grep \"Successfully completed.\" " + filePath + "'", shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-            lines = p.stdout.readlines()
+            lines = self.run("grep \"Successfully completed.\" " + filePath)
             if len(lines) == 1:
                 return "FINISHED"
             else:
