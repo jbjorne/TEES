@@ -1,7 +1,7 @@
 """
 Base class for FeatureBuilders
 """
-__version__ = "$Revision: 1.13 $"
+__version__ = "$Revision: 1.14 $"
 
 class FeatureBuilder:
     """
@@ -18,6 +18,7 @@ class FeatureBuilder:
         self.entity1 = None # an entity node for which features are built
         self.entity2 = None # another entity node for pairwise examples such as edges
         self.noAnnType = False # do not use annotated entity types for building features
+        self.filterAnnTypes = set() # ignore these entity types
         self.ontologyFeatureBuilder = None
         self.maximum = False # produce maximum number of features
         
@@ -99,6 +100,8 @@ class FeatureBuilder:
                 for split in pos.split("_"):
                     featureList.append("POS_"+split)
             featureList.append("POS_"+pos)
+            #if self.getPOSSuperType(pos) != "":
+            #    featureList.append("POSX_"+self.getPOSSuperType(pos))
         if annotatedType and not self.noAnnType:
             annTypes = self.getTokenAnnotatedType(token, sentenceGraph)
             if "noAnnType" in annTypes and not self.maximum:
@@ -125,7 +128,8 @@ class FeatureBuilder:
         if len(sentenceGraph.tokenIsEntityHead[token]) > 0 and not self.noAnnType:
             annTypes = set()
             for entity in sentenceGraph.tokenIsEntityHead[token]:
-                if entity.get("type") != None and not entity.get("type") in annTypes:
+                eType = entity.get("type")
+                if eType != None and not eType in annTypes and not eType in self.filterAnnTypes:
                     if self.entity1 == None and self.entity2 == None:
                         annTypes.add(entity.get("type"))
                     else:
@@ -151,3 +155,54 @@ class FeatureBuilder:
             	return annTypes[0:1] #annTypes[0:2]
         else:
             return ["noAnnType"]
+    
+    def getPOSSuperType(self, pos):
+        global posSuperTypes
+        return posSuperTypes[pos]
+
+posSuperTypes = {}
+posSuperTypes["CC"] = "" #     Coordinating conjunction
+posSuperTypes["CD"] = "" #     Cardinal number
+posSuperTypes["DT"] = "" #     Determiner
+posSuperTypes["EX"] = "" #     Existential there
+posSuperTypes["FW"] = "" #     Foreign word
+posSuperTypes["IN"] = "" #     Preposition or subordinating conjunction
+posSuperTypes["JJ"] = "JJX" #     Adjective
+posSuperTypes["JJR"] = "JJX" #     Adjective, comparative
+posSuperTypes["JJS"] = "JJX" #     Adjective, superlative
+posSuperTypes["LS"] = "" #     List item marker
+posSuperTypes["MD"] = "" #     Modal
+posSuperTypes["NN"] = "NNX" #     Noun, singular or mass
+posSuperTypes["NNS"] = "NNX" #     Noun, plural
+posSuperTypes["NNP"] = "NNX" #     Proper noun, singular
+posSuperTypes["NNPS"] = "NNX" #     Proper noun, plural
+posSuperTypes["PDT"] = "" #     Predeterminer
+posSuperTypes["POS"] = "" #     Possessive ending
+posSuperTypes["PRP"] = "PRPX" #     Personal pronoun
+posSuperTypes["PRP$"] = "PRPX" #     Possessive pronoun
+posSuperTypes["RB"] = "RBX" #     Adverb
+posSuperTypes["RBR"] = "RBX" #     Adverb, comparative
+posSuperTypes["RBS"] = "RBX" #     Adverb, superlative
+posSuperTypes["RP"] = "" #     Particle
+posSuperTypes["SYM"] = "" #     Symbol
+posSuperTypes["TO"] = "" #     to
+posSuperTypes["UH"] = "" #     Interjection
+posSuperTypes["VB"] = "VBX" #     Verb, base form
+posSuperTypes["VBD"] = "VBX" #     Verb, past tense
+posSuperTypes["VBG"] = "VBX" #     Verb, gerund or present participle
+posSuperTypes["VBN"] = "VBX" #     Verb, past participle
+posSuperTypes["VBP"] = "VBX" #     Verb, non-3rd person singular present
+posSuperTypes["VBZ"] = "VBX" #     Verb, 3rd person singular present
+posSuperTypes["WDT"] = "WX" #     Wh-determiner
+posSuperTypes["WP"] = "WX" #     Wh-pronoun
+posSuperTypes["WP$"] = "WX" #   Possessive wh-pronoun
+posSuperTypes["WRB"] = "WX" #    Wh-adverb
+
+posSuperTypes["."] = "PUNCT"
+posSuperTypes[","] = "PUNCT"
+posSuperTypes[":"] = "PUNCT"
+posSuperTypes[";"] = "PUNCT"
+posSuperTypes["("] = "PUNCT"
+posSuperTypes[")"] = "PUNCT"
+posSuperTypes["&quot;"] = "PUNCT"
+posSuperTypes["\""] = "PUNCT"
