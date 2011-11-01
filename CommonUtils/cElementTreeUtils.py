@@ -7,7 +7,7 @@ Functions for easier use of cElementTree.
 
   Description: Convenience functions for easier use of cElementTree.
 """
-__version__ = "$Revision: 1.19 $"
+__version__ = "$Revision: 1.20 $"
 
 import sys
 
@@ -98,6 +98,89 @@ def ETFromObj(obj):
         #not a string, not a tree, not an element, should be a stream
         #let's parse it
         return ElementTree.parse(obj)
+
+class ETWriter():
+    def __init__(self, out):
+        if isinstance(out,str):
+            if out.endswith(".gz"):
+                self.out = GzipFile(out,"wt")
+            else:
+                self.out = open(out,"wt")
+        else:
+            self.out = obj
+        print >> self.out, '<?xml version="1.0" encoding="UTF-8"?>'
+        self.indentLevel = 0
+        self.beginString = None
+        self.tags = []
+        self.lastElement = None
+    
+    def close(self):
+        while len(self.tags) > 0:
+            self.end()
+        self.out.close()
+        self.out = None
+    
+    # open element
+    def begin(self, element):
+        self.tags.append(element.tag)
+        self.beginString = self.indentLevel * "  " + "<" + element.tag
+        for key in sorted(element.attrib.keys()):
+            self.beginString += " " + key + "=\"" + element.get(key) + "\""
+        self.beginString += ">"
+        self.indentLevel += 1
+        self.lastElement = element
+    
+    def _flush(self):
+        if self.beginString != None:
+            self.out.write(self.beginString)
+            self.out.write("\n" + self.indentLevel * "  ")
+        self.beginString = None
+    
+    # close element
+    def end(self, element):
+        self.indentLevel -= 1
+        if element == self.lastElement:
+            self.beginString = None
+            self.write(element)
+        else:
+            self.out.write(self.indentLevel * "  " + "</" + element.tag + ">\n")
+        self.lastElement = None
+        return self.tags.pop()
+    
+    def write(self, element):
+        self._flush()
+        indent(element, self.indentLevel)
+        self.out.write(ElementTree.tostring(element, "utf-8"))
+        self.lastElement = None
+
+def ETIteratorFromObj(obj, events=None, parser=None):
+    """obj can be
+    1) a string that ends with .xml -> the file is parsed and the resulting ElementTree returned
+    2) a string that ends with .xml.gz -> the file is unzipped, parsed, and the resulting ElementTree is returned
+    3) an open input stream -> the input is parsed and the resulting ElementTree is returned
+    4) an ElementTree or an Element -> obj is returned as-is, nothing is done"""
+    if isinstance(obj,str) or isinstance(obj,unicode):
+        if obj.endswith(".gz"):
+            fStream=GzipFile(obj,"rt")
+        else:
+            fStream=open(obj,"rt")
+        for rv in ElementTree.iterparse(fStream, events):
+            yield rv
+    elif isinstance(obj,ElementTree.ElementTree) or ElementTree.iselement(obj):
+        if ElementTree.iselement(obj):
+            root = obj
+        else:
+            root = obj.getroot()
+        if events == None:
+            events = ["END"]
+        for element in root.iter():
+            for event in events:
+                yield (event, elem)
+    else:
+        #not a string, not a tree, not an element, should be a stream
+        #let's parse it
+        for rv in ElementTree.iterparse(obj, events):
+            yield rv
 
 def write(rootElement, filename):
     if isinstance(rootElement,ElementTree.ElementTree):
