@@ -1,10 +1,11 @@
 import sys, os, shutil
 import subprocess
+import tempfile
 thisPath = os.path.dirname(os.path.abspath(__file__))
 def relPath(path):
     return os.path.abspath(os.path.join(thisPath, path))
 
-perlDir = "/home/jari/data/BioNLP11SharedTask/evaluators/BioNLP-ST_2011_genia_tools"
+perlDir = os.path.expanduser("~/data/BioNLP11SharedTask/evaluators/BioNLP-ST_2011_genia_tools")
 
 def resultsToCSV(results, filename=None):
     import Utils.TableUtils as TableUtils
@@ -103,15 +104,16 @@ def evaluate(sourceDir, task=1, folds=-1, foldToRemove=-1, evaluations=["strict"
     origDir = os.getcwd()
     os.chdir(perlDir)
     
-    goldDir = "/home/jari/data/BioNLP11SharedTask/main-tasks/BioNLP-ST_2011_genia_devel_data_rev1"
+    goldDir = os.path.expanduser("~/data/BioNLP11SharedTask/main-tasks/BioNLP-ST_2011_genia_devel_data_rev1")
     if not hasGoldDocuments(sourceDir, goldDir):
         print >> sys.stderr, "Evaluation input has no gold documents"
         return 
     
-    tempDir = os.path.join(perlDir, "temp-work")
-    if os.path.exists(tempDir):
-        shutil.rmtree(tempDir)
-    os.mkdir(tempDir)
+    #tempDir = os.path.join(perlDir, "temp-work")
+    #if os.path.exists(tempDir):
+    #    shutil.rmtree(tempDir)
+    #os.mkdir(tempDir)
+    tempDir = tempfile.mkdtemp()
     
     if folds != -1:
         folds = getFolds(sourceDir, folds)
@@ -184,6 +186,8 @@ def evaluate(sourceDir, task=1, folds=-1, foldToRemove=-1, evaluations=["strict"
             printLines(stdoutLines)
         results["decomposition"] = parseResults(stdoutLines)
     
+    shutil.rmtree(tempDir)
+    
     # return to current dir
     os.chdir(origDir)
     return results
@@ -207,9 +211,9 @@ def printLinesBX(lines):
 
 def evaluateBX(sourceDir, corpusName, silent=False):
     if corpusName == "BI":
-        commands = "java -jar /home/jari/data/BioNLP11SharedTask/evaluators/BioNLP-ST_2011_bacteria_interactions_evaluation_software/BioNLP-ST_2011_bacteria_interactions_evaluation_software.jar /home/jari/data/BioNLP11SharedTask/main-tasks/BioNLP-ST_2011_bacteria_interactions_dev_data_rev1-remixed/ " + sourceDir
+        commands = os.path.expanduser("java -jar ~/data/BioNLP11SharedTask/evaluators/BioNLP-ST_2011_bacteria_interactions_evaluation_software/BioNLP-ST_2011_bacteria_interactions_evaluation_software.jar ~/data/BioNLP11SharedTask/main-tasks/BioNLP-ST_2011_bacteria_interactions_dev_data_rev1-remixed/ ") + sourceDir
     elif corpusName == "BB":
-        commands = "java -jar /home/jari/data/BioNLP11SharedTask/evaluators/BioNLP-ST_2011_Bacteria_Biotopes_evaluation_software/BioNLP-ST_2011_Bacteria_Biotopes_evaluation_software.jar /home/jari/data/BioNLP11SharedTask/main-tasks/BioNLP-ST_2011_Bacteria_Biotopes_dev_data_rev1-fixed/ " + sourceDir
+        commands = os.path.expanduser("java -jar ~/data/BioNLP11SharedTask/evaluators/BioNLP-ST_2011_Bacteria_Biotopes_evaluation_software/BioNLP-ST_2011_Bacteria_Biotopes_evaluation_software.jar ~/data/BioNLP11SharedTask/main-tasks/BioNLP-ST_2011_Bacteria_Biotopes_dev_data_rev1-fixed/ ") + sourceDir
     else:
         assert False, corpusName
 
@@ -250,6 +254,84 @@ def evaluateBX(sourceDir, corpusName, silent=False):
             else:
                 results[key] = float(value)
     return results
+     
+def evaluateEPIorID(sourceDir, corpus, silent=False):
+    assert corpus in ["EPI", "ID"], corpus
+    if corpus == "EPI":
+        goldDir = os.path.expanduser("~/data/BioNLP11SharedTask/main-tasks/BioNLP-ST_2011_Epi_and_PTM_development_data_rev1")
+        evaluatorPath = os.path.expanduser("~/data/BioNLP11SharedTask/evaluators/BioNLP-ST_2011_EPI-eval-tools")
+    else:
+        goldDir = os.path.expanduser("~/data/BioNLP11SharedTask/main-tasks/BioNLP-ST_2011_Infectious_Diseases_development_data_rev1")
+        evaluatorPath = os.path.expanduser("~/data/BioNLP11SharedTask/evaluators/BioNLP-ST_2011_ID-eval-tools")
+    sourceDir = os.path.abspath(sourceDir)
+    commands = "cd " + evaluatorPath
+    commands += " ; " + "python evaluation.py -s -p -r " + goldDir + " " + sourceDir + "/*.a2"
+    p = subprocess.Popen(commands, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    stderrLines = p.stderr.readlines()
+    stdoutLines = p.stdout.readlines()
+    if not silent:
+        for line in stderrLines:
+            print >> sys.stderr, line,
+        for line in stdoutLines:
+            print >> sys.stderr, line,
+        print >> sys.stderr
+    return parseResults(stdoutLines)
+
+def evaluateREN(sourceDir, silent=False):
+    goldDir = os.path.expanduser("~/data/BioNLP11SharedTask/supporting-tasks/BioNLP-ST_2011_bacteria_rename_dev_data")
+    evaluatorPath = os.path.expanduser("~/data/BioNLP11SharedTask/supporting-tasks/BioNLP-ST_2011_bacteria_rename_evaluation_sofware")
+    sourceDir = os.path.abspath(sourceDir)
+    commands = "cd " + evaluatorPath
+    commands += " ; " + "java -jar eval_rename.jar " + goldDir + " " + sourceDir
+    p = subprocess.Popen(commands, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    stderrLines = p.stderr.readlines()
+    stdoutLines = p.stdout.readlines()
+    if not silent:
+        for line in stderrLines:
+            print >> sys.stderr, line,
+        for line in stdoutLines:
+            print >> sys.stderr, line,
+        print >> sys.stderr
+    results = {}
+    for line in stdoutLines:
+        category, value = line.strip().split(":")
+        value = value.strip()
+        if value == "NaN":
+            value = 0.0
+        elif "." in value:
+            value = float(value)
+        else:
+            value = int(value)
+        results[category.strip()] = value
+    return results
+
+#def evaluateCO(sourceDir, silent=False):
+#    goldDir = os.path.expanduser("~/data/BioNLP11SharedTask/supporting-tasks/BioNLP-ST_2011_coreference_development_data")
+#    evaluatorPath = os.path.expanduser("~/data/BioNLP11SharedTask/supporting-tasks/CREvalPackage1.4")
+#    sourceDir = os.path.abspath(sourceDir)
+#    commands = "cd " + evaluatorPath
+#    commands += " ; " + "java -jar [-mention=strict|partial] [-link=atom|surface] [-recall=system|algorithm] [-details] " + goldDir + " " + sourceDir + " " + resultDir
+#    p = subprocess.Popen(commands, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+#    stderrLines = p.stderr.readlines()
+#    stdoutLines = p.stdout.readlines()
+#    if not silent:
+#        for line in stderrLines:
+#            print >> sys.stderr, line,
+#        for line in stdoutLines:
+#            print >> sys.stderr, line,
+#        print >> sys.stderr
+##    results = {}
+##    for line in stdoutLines:
+##        category, value = line.strip().split(":")
+##        value = value.strip()
+##        if value == "NaN":
+##            value = 0.0
+##        elif "." in value:
+##            value = float(value)
+##        else:
+##            value = int(value)
+##        results[category.strip()] = value
+##    return results
 
 if __name__=="__main__":
     # Import Psyco if available
@@ -276,5 +358,9 @@ if __name__=="__main__":
             evaluate(options.input, options.task, debug = options.debug)
         else:
             evaluateVariance(options.input, options.task, options.variance)
+    elif options.corpus in ["EPI", "ID"]:
+        print evaluateEPIorID(options.input, options.corpus)
+    elif options.corpus == "REN":
+        print evaluateREN(options.input)
     else:
         print evaluateBX(options.input, options.corpus)
