@@ -10,6 +10,7 @@ import combine
 class UnmergingExampleWriter(SentenceExampleWriter):
     def __init__(self):
         self.xType = "um"
+        SentenceExampleWriter.__init__(self)
     
     def writeXMLSentence(self, examples, predictionsByExample, sentenceObject, classSet, classIds, goldSentence=None):        
         sentenceElement = sentenceObject.sentence
@@ -133,6 +134,7 @@ class UnmergingExampleWriter(SentenceExampleWriter):
                 assert numThemes == 0 or (numThemes != 0 and numCauses == 0) or (numThemes > 1 and eType != "Binding"), (numThemes,numCauses,eType,entity.get("id"), [x[0] for x in examples], entityKeys)
                 #assert numThemes == 0 or (numThemes != 0 and numCauses == 0) or (numThemes > 1 and eType == "Binding"), (numThemes,numCauses,eType,entity.get("id"))
                 for interaction in simpleEventInteractions:
+                    self.counts["simple-" + eType + "-" + interaction.get("type")] += 1
                     exampleId = "simple." + str(exampleIdCount)
                     exampleIdCount += 1
                     positiveExamples.append([exampleId,None,None,None])
@@ -147,6 +149,10 @@ class UnmergingExampleWriter(SentenceExampleWriter):
             positiveExamples.append(example)
             arguments = []
             for iId in example[3]["i"].split(","):
+                if iId == "": # processes can have 0 arguments
+                    assert "etype" in example[3], example[3]
+                    assert example[3]["etype"] == "Process", example[3]
+                    break
                 arg = interactionsById[iId]
                 if self.isIntersentence(arg):
                     continue
@@ -183,7 +189,16 @@ class UnmergingExampleWriter(SentenceExampleWriter):
                     else:
                         # Prediction strength is only available for classified argument groups
                         predictionStrength = self.getPredictionStrength(example, predictionsByExample)
-                    self.addEvent(arguments, sentenceObject, umType, forceAdd, predictionStrength)
+                    #print example 
+                    if umType != "simple" and example[3]["etype"] == "Process" and len(arguments) == 0:
+                        origProcess = sentenceObject.entitiesById[example[3]["e"]]
+                        # Put back the original entity
+                        newProcess = self.addEntity(origProcess)
+                        newProcess.set("umType", umType)
+                        if predictionStrength != None:
+                            newProcess.set("umStrength", str(predictionStrength))
+                    else: # example has arguments
+                        self.addEvent(arguments, sentenceObject, umType, forceAdd, predictionStrength)
                     exampleAdded[example[0]] = True
                     examplesLeft -= 1
                     examplesAddedThisRound += 1
@@ -213,7 +228,7 @@ class UnmergingExampleWriter(SentenceExampleWriter):
     def argumentEntitiesExist(self, arguments, sentenceObject):
         """
         Checks whether entity elements have already been created 
-        for the argument entities, i.e. whether the argumetn events
+        for the argument entities, i.e. whether the argument events
         have been inserted.
         """
         for arg in arguments:
@@ -232,9 +247,10 @@ class UnmergingExampleWriter(SentenceExampleWriter):
         for i in range(len(arguments)):
             arg = arguments[i]
             argE1Id = arg.get("e1")
-            if e1Id != None:
+            # Take the entity trigger node from the e1 attribute of the argument
+            if e1Id != None: # trigger has already been found
                 assert e1Id == argE1Id
-            else:
+            else: # find the trigger
                 e1Id = argE1Id
                 origE1 = sentenceObject.entitiesById[argE1Id]
             
