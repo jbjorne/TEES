@@ -53,8 +53,10 @@ def recalculateIds(input, output=None, onlyWithinSentence=False, docIndexStart=0
                     interaction.attrib["id"] = sentence.attrib["id"] + ".i" + str(intIndex)
                 else:
                     interaction.attrib["id"] = corpusName + ".d" + str(docIndex) + ".s" + str(sentIndex) + ".i" + str(intIndex)
-                interaction.attrib["e1"] = entDictionary[interaction.attrib["e1"]]
-                interaction.attrib["e2"] = entDictionary[interaction.attrib["e2"]]
+                if interaction.attrib["e1"] in entDictionary:
+                    interaction.attrib["e1"] = entDictionary[interaction.attrib["e1"]]
+                if interaction.attrib["e2"] in entDictionary:
+                    interaction.attrib["e2"] = entDictionary[interaction.attrib["e2"]]
                 intIndex += 1
             pairs = sentence.findall("pair")
             pairIndex = 0
