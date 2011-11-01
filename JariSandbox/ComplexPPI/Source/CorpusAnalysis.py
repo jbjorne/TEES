@@ -250,7 +250,7 @@ def listStructures(corpusElements):
         sentenceGraph = sentence.sentenceGraph
         #interactionEdges += len(sentenceGraph.interactionGraph.edges())
         interactionEdges += len(sentence.interactions)
-        dependencyEdges += len(sentenceGraph.dependencyGraph.edges())
+        dependencyEdges += len(sentenceGraph.dependencyGraph.edges)
         
         undirected = sentenceGraph.dependencyGraph.to_undirected()
         paths = NX.all_pairs_shortest_path(undirected, cutoff=999)
@@ -309,7 +309,8 @@ def countEventComponents(corpusElements):
             
             # Actual
             e1 = sentence.entitiesById[e1Id]
-            tag = e1.get("type") + "_" + interaction.get("type")
+            e2 = sentence.entitiesById[e2Id]
+            tag = e1.get("type") + "-" + interaction.get("type") + "-" + e2.get("type")
             if not counts.has_key(tag):
                 counts[tag] = 0
             counts[tag] += 1
@@ -335,7 +336,7 @@ def countEventComponents(corpusElements):
             if t1 == t2:
                 print "Self-Int", tag
             else:
-                if not sentenceGraph.interactionGraph.has_edge(t1, t2):
+                if not sentenceGraph.interactionGraph.hasEdges(t1, t2):
                     print "ERROR! Missing-Int", tag
     print "Event Components (Actual, Intersentence, Non-overlapping)"
     for k in sorted(counts.keys()):
