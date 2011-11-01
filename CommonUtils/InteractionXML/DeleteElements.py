@@ -10,22 +10,30 @@ try:
 except ImportError:
     import cElementTree as ET
 import cElementTreeUtils as ETUtils
+from collections import defaultdict
     
 def removeElements(parent, elementName, attributes, countsByType):
     toRemove = []
     for element in parent.getchildren():
+        attrType = {}
         if element.tag == elementName:
             remove = True
-            for k,v in attributes.iteritems():
-                if element.get(k) != v:
+            for attrName,values in attributes.iteritems():
+                if element.get(attrName) not in values:
                     remove = False
+                    break
+                else:
+                    if attrName not in attrType:
+                        attrType[attrName] = set()
+                    attrType[attrName].add(element.get(attrName))
             if remove:
                 toRemove.append(element)
+                countsByType[elementName + " " + str(attrType)] += 1
         else:
             removeElements(element, elementName, attributes, countsByType)
     for element in toRemove:
         parent.remove(element)
-        countsByType[elementName] += 1
+        #countsByType[elementName] += 1
             
 # Splits entities/edges with merged types into separate elements
 def processSentence(sentence, rules, countsByType):
@@ -42,11 +50,13 @@ def processCorpus(inputFilename, outputFilename, rules):
         corpusTree = ET.parse(inputFilename)
     corpusRoot = corpusTree.getroot()
     
+    for eType in rules.keys():
+        for attrRule in rules[eType].keys():
+            rules[eType][attrRule] = rules[eType][attrRule].split("|")
+    
     documents = corpusRoot.findall("document")
     counter = ProgressCounter(len(documents), "Documents")
-    countsByType = {}
-    for k in sorted(rules.keys()):
-        countsByType[k] = 0
+    countsByType = defaultdict(int)
     for document in documents:
         counter.update()
         for sentence in document.findall("sentence"):
