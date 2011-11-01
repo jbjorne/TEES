@@ -12,9 +12,9 @@ import Core.ExampleUtils as ExampleUtils
 import Core.SentenceGraph
 from ExampleWriters.BioTextExampleWriter import BioTextExampleWriter
 
-renEvaluatorPath = "/home/jari/data/BioNLP11SharedTask/BioNLP-ST_2011_bacteria_rename_evaluation_sofware/eval_rename.jar"
+renEvaluatorPath = os.path.expanduser("~/data/BioNLP11SharedTask/BioNLP-ST_2011_bacteria_rename_evaluation_sofware/eval_rename.jar")
 relEvaluatorPath = ""
-coEvaluatorPath = "/home/jari/Downloads/CREvalPackage1.3.zip/CRScorer.jar"
+coEvaluatorPath = os.path.expanduser("~/Downloads/CREvalPackage1.3.zip/CRScorer.jar")
 
 def evaluateREN(sourceDir):
     commands = renEvaluatorPath + " " + sourceDir
