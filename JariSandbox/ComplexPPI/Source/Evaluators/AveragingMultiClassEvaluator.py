@@ -1,7 +1,7 @@
 """
 For multi-class classifications
 """
-__version__ = "$Revision: 1.23 $"
+__version__ = "$Revision: 1.24 $"
 
 from Evaluator import Evaluator
 from Evaluator import EvaluationData
@@ -10,7 +10,6 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__))+"/..")
 from Core.IdSet import IdSet
 import Core.ExampleUtils as ExampleUtils
 import itertools
-from collections import defaultdict
 
 class AveragingMultiClassEvaluator(Evaluator):
     """
@@ -31,26 +30,23 @@ class AveragingMultiClassEvaluator(Evaluator):
 
         self.classSet = classSet
         # define class ids in alphabetical order
-#        self.classSet = classSet
-#        if classSet != None:
-#            classNames = sorted(classSet.Ids.keys())
-#        else:
-#            classNames = []
-
-#        # make an ordered list of class ids
-#        self.classes = []
-#        for className in classNames:
-#            self.classes.append(classSet.getId(className))
-
-#        # create data structures for per-class evaluation
-#        self.dataByClass = {}
-#        for cls in self.classes:
-#            self.dataByClass[cls] = EvaluationData()
-#        # hack for unnamed classes
-#        if len(self.dataByClass) == 0:
-#            self.dataByClass[1] = EvaluationData()
-#            self.dataByClass[2] = EvaluationData()
-        self.dataByClass = defaultdict(EvaluationData)
+        self.classSet = classSet
+        if classSet != None:
+            classNames = sorted(classSet.Ids.keys())
+        else:
+            classNames = []
+        # make an ordered list of class ids
+        self.classes = []
+        for className in classNames:
+            self.classes.append(classSet.getId(className))
+        # create data structures for per-class evaluation
+        self.dataByClass = {}
+        for cls in self.classes:
+            self.dataByClass[cls] = EvaluationData()
+        # hack for unnamed classes
+        if len(self.dataByClass) == 0:
+            self.dataByClass[1] = EvaluationData()
+            self.dataByClass[2] = EvaluationData()
         
         #self.untypedUndirected = None
         self.untypedCurrentMajorId = None
@@ -200,16 +196,12 @@ class AveragingMultiClassEvaluator(Evaluator):
         #self.classifications = []
         #assert(len(examples) == len(predictions))
         #for i in range(len(examples)):
-        falsePredictions = []
-        truePredictions = []
-        classes = set()
         for example, prediction in itertools.izip(examples, predictions):
 #            self._queueUntypedUndirected(example, prediction)
             #example = examples[i] # examples and predictions are in matching lists
             #prediction = predictions[i] # examples and predictions are in matching lists
             trueClass = example[1]
             assert(trueClass > 0) # multiclass classification uses non-negative integers
-            classes.add(trueClass)
             predictedClass = prediction[0]
             #print predictedClass
             assert(predictedClass > 0) # multiclass classification uses non-negative integers
@@ -226,13 +218,12 @@ class AveragingMultiClassEvaluator(Evaluator):
                     #self.classifications.append("tn")
                     self.microF.addTN()
                     self.binaryF.addTN()
-                #for cls in self.classes:
+                for cls in self.classes:
                     # this example was correctly classified for its class, 
                     # so it is also correctly classified for each class, 
                     # i.e. true negative for them
-                    #if cls != trueClass:
-                    #    self.dataByClass[cls].addTN()
-                truePredictions.append(trueClass)
+                    if cls != trueClass:
+                        self.dataByClass[cls].addTN()
             else: # predictedClass != trueClass:
                 # prediction was incorrect -> false positive for the predicted class
                 self.dataByClass[predictedClass].addFP()
@@ -249,31 +240,18 @@ class AveragingMultiClassEvaluator(Evaluator):
                         self.binaryF.addFP()
                     else:
                         self.binaryF.addTP()
-                falsePredictions.append((trueClass, predictedClass))
-#                for cls in self.classes:
-#                    if cls == trueClass: # example not found -> false negative
-#                        self.dataByClass[cls].addFN()
-#                    elif cls != predictedClass:
-#                        self.dataByClass[cls].addTN()
-        # add negatives for other classes
-        classes = sorted(list(classes))
-        for falsePrediction in falsePredictions:
-            for cls in classes:
-                if cls == falsePrediction[0]: # example not found -> false negative
-                    self.dataByClass[cls].addFN()
-                elif cls != falsePrediction[1]:
-                    self.dataByClass[cls].addTN()
-        for truePrediction in truePredictions:
-            for cls in classes:
-                if cls != truePrediction:
-                    self.dataByClass[cls].addTN()
+                for cls in self.classes:
+                    if cls == trueClass: # example not found -> false negative
+                        self.dataByClass[cls].addFN()
+                    elif cls != predictedClass:
+                        self.dataByClass[cls].addTN()
         
         # Process remaining untyped undirected examples and calculate untyped undirected f-score
 #        self._processUntypedUndirectedQueue()
 #        self.untypedUndirected.calculateFScore()
                 
         # Then calculate statistics
-        for cls in self.dataByClass: #self.classes:
+        for cls in self.classes:
             self.dataByClass[cls].calculateFScore()
         self.microF.calculateFScore()
         self.binaryF.calculateFScore()
@@ -285,8 +263,8 @@ class AveragingMultiClassEvaluator(Evaluator):
         self.macroF.precision = 0.0
         self.macroF.recall = 0.0
         self.macroF.fscore = 0.0
-        for cls in classes:
-            if (self.dataByClass[cls].getNumInstances() > 0 or self.dataByClass[cls].getFP() > 0) and cls != self.getNegativeClassId():
+        for cls in self.classes:
+            if (self.dataByClass[cls].getNumInstances() > 0 or self.dataByClass[cls].getFP() > 0) and cls != self.classSet.getId("neg", False):
                 numClassesWithInstances += 1
                 self.macroF.precision += self.dataByClass[cls].precision
                 self.macroF.recall += self.dataByClass[cls].recall
@@ -296,19 +274,6 @@ class AveragingMultiClassEvaluator(Evaluator):
             if self.macroF.precision != 0: self.macroF.precision /= float(numClassesWithInstances)
             if self.macroF.recall != 0: self.macroF.recall /= float(numClassesWithInstances)
             if self.macroF.fscore != 0: self.macroF.fscore /= float(numClassesWithInstances)            
-    
-    def getNegativeClassId(self):
-        negativeClassId = None
-        if self.classSet != None:
-            return self.classSet.getId("neg", False)
-        else:
-            classIds = sorted(self.dataByClass.keys())
-            if -1 in classIds:
-                negativeClassId = -1
-            elif 1 in classIds:
-                assert negativeClassId != -1
-                negativeClassId = 1
-            return negativeClassId
     
     def toStringConcise(self, indent="", title=None):
         """
@@ -320,23 +285,16 @@ class AveragingMultiClassEvaluator(Evaluator):
             string += indent
         else:
             string = indent
-
-        negativeClassId = self.getNegativeClassId()
-        if self.classSet != None:
-            classNames = sorted(self.classSet.Ids.keys())
-            for className in classNames:
-                if className != "neg":
-                    string += className
-                    string += " " + self.dataByClass[self.classSet.getId(className, False)].toStringConcise() + "\n" + indent
-        else:
-            classIds = sorted(self.dataByClass.keys())
-            for classId in classIds:
-                if classId != negativeClassId:
-                    string += str(classId)
-                    string += " " + self.dataByClass[classId].toStringConcise() + "\n" + indent
-        
+        negativeClassId = None
+        for cls in self.classes:
+            if cls != self.classSet.getId("neg", False):
+                string += self.classSet.getName(cls)
+                string += " " + self.dataByClass[cls].toStringConcise() + "\n" + indent
+            else:
+                negativeClassId = cls
         if negativeClassId != None:
-            string += "(neg " + self.dataByClass[negativeClassId].toStringConcise() + ")\n" + indent
+            cls = negativeClassId
+            string += "(neg " + self.dataByClass[cls].toStringConcise() + ")\n" + indent
         
         string += "averages:\n" + indent
         # Micro results
@@ -374,17 +332,21 @@ class AveragingMultiClassEvaluator(Evaluator):
         Evaluation results in a computationally easy to process dictionary format
         """
         dicts = []
-        classes = sorted(self.dataByClass.keys())
-        if len(classes) > 0 and self.classSet != None:
+        if len(self.classes) > 0:
             assert(not ("1" in self.classSet.getNames() and "neg" in self.classSet.getNames()))
-        negativeClassId = self.getNegativeClassId()
-        for cls in classes:
-            values = self.dataByClass[cls].toDict()
-            dicts.append(values)
-            if cls != negativeClassId:
+        negativeClassId = None
+        for cls in self.classes:
+            if cls != self.classSet.getId("neg", False) and cls != self.classSet.getId("1", False):
+                values = self.dataByClass[cls].toDict()
                 values["class"] = self.classSet.getName(cls)
+                dicts.append(values)
             else:
-                values["class"] = "neg"
+                assert(negativeClassId == None)
+                negativeClassId = cls
+        if negativeClassId != None:
+            values = self.dataByClass[negativeClassId].toDict()
+            values["class"] = "neg"
+            dicts.append(values)
         dicts.append( self.microF.toDict() )
         dicts[-1]["class"] = "micro"
         dicts.append( self.macroF.toDict() )
