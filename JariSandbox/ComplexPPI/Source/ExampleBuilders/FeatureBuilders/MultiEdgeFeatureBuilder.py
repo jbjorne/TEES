@@ -1,7 +1,7 @@
 """
 Shortest path features
 """
-__version__ = "$Revision: 1.29 $"
+__version__ = "$Revision: 1.30 $"
 
 from FeatureBuilder import FeatureBuilder
 import Stemming.PorterStemmer as PorterStemmer
@@ -24,6 +24,22 @@ class MultiEdgeFeatureBuilder(FeatureBuilder):
         self.ontologyFeatureBuilder = None
         self.noAnnType = False
         self.predictedRange = None
+    
+    def getEdgeType(self, edge):
+        # simplification reduces performance by 0.2 pp
+        return edge.get("type")
+    
+        eType = edge.get("type")
+        if eType == "subj" or eType.startswith("nsubj") or eType.startswith("csubj"):
+            return "subj"
+        elif eType in ["obj", "dobj", "iobj", "pobj"]:
+            return "obj"
+        elif eType == "agent" or eType == "prepc" or eType.startswith("prep_"):
+            return "prep"
+        elif eType == "appos": # or nn
+            return "nn"
+        else:
+            return eType
     
     def definePredictedValueRange(self, sentences, elementName):
         self.predictedRange = [None,None]
@@ -363,9 +379,9 @@ class MultiEdgeFeatureBuilder(FeatureBuilder):
                     position = 0
                     tokenTypeGram = ""
                     for edge in walks[j][i-(length-1):i+1]:
-                        self.setFeature("dep_"+styleGram+str(position)+"_"+edge[2].get("type"), 1)
+                        self.setFeature("dep_"+styleGram+str(position)+"_"+self.getEdgeType(edge[2]), 1)
                         position += 1
-                        edgeGram += "_" + edge[2].get("type")
+                        edgeGram += "_" + self.getEdgeType(edge[2])
                     self.setFeature(edgeGram, 1)
                     for type1 in t1:
                         for type2 in t2:
@@ -391,7 +407,7 @@ class MultiEdgeFeatureBuilder(FeatureBuilder):
             #edgeList.extend(pathEdges[i][i-1])
             #edgeList.extend(pathEdges[i-1][i])
         for edge in edgeList:
-            depType = edge[2].get("type")
+            depType = self.getEdgeType(edge[2])
             self.setFeature("dep_"+depType, 1)
             # Token 1
             self.setFeature("txt_"+sentenceGraph.getTokenText(edge[0]), 1)
@@ -440,11 +456,11 @@ class MultiEdgeFeatureBuilder(FeatureBuilder):
             #if pathEdges != None:
                 #for edge in pathEdges[i][i-1]:
             for edge in depGraph.getEdges(pt[i], pt[i-1]):
-                depType = edge[2].get("type")
+                depType = self.getEdgeType(edge[2])
                 self.setFeature("dep_"+depType+"Forward_", 1)
                 #for edge in pathEdges[i-1][i]:
             for edge in depGraph.getEdges(pt[i-1], pt[i]):
-                depType = edge[2].get("type")
+                depType = self.getEdgeType(edge[2])
                 self.setFeature("dep_Reverse_"+depType, 1)
 
         # Internal tokens
@@ -456,10 +472,10 @@ class MultiEdgeFeatureBuilder(FeatureBuilder):
             #if pathEdges != None:
                 #for edge in pathEdges[i][i-1]:
             for edge in depGraph.getEdges(pt[i], pt[i-1]):
-                self.setFeature("internalDep_"+edge[2].get("type"), 1)
+                self.setFeature("internalDep_"+self.getEdgeType(edge[2]), 1)
                 #for edge in pathEdges[i-1][i]:
             for edge in depGraph.getEdges(pt[i-1], pt[i]):
-                self.setFeature("internalDep_"+edge[2].get("type"), 1)
+                self.setFeature("internalDep_"+self.getEdgeType(edge[2]), 1)
 
 #    def buildEdgeCombinations(self, pathTokens, sentenceGraph):
 #            
@@ -521,7 +537,7 @@ class MultiEdgeFeatureBuilder(FeatureBuilder):
         for edge in inEdges:
             if edge in ignoreEdges:
                 continue
-            self.setFeature(prefix+"HangingIn_"+edge[2].get("type"), 1)
+            self.setFeature(prefix+"HangingIn_"+self.getEdgeType(edge[2]), 1)
             for feature in self.getTokenFeatures(edge[0], sentenceGraph):
                 self.setFeature(prefix+"HangingIn_"+feature, 1)
         #outEdges = sentenceGraph.dependencyGraph.out_edges(token)
@@ -529,6 +545,6 @@ class MultiEdgeFeatureBuilder(FeatureBuilder):
         for edge in outEdges:
             if edge in ignoreEdges:
                 continue
-            self.setFeature(prefix+"HangingOut_"+edge[2].get("type"), 1)
+            self.setFeature(prefix+"HangingOut_"+self.getEdgeType(edge[2]), 1)
             for feature in self.getTokenFeatures(edge[1], sentenceGraph):
                 self.setFeature(prefix+"HangingOut_"+feature, 1)
