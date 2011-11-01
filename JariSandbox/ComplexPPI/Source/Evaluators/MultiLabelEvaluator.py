@@ -1,16 +1,30 @@
 """
 For multi-class classifications
 """
-__version__ = "$Revision: 1.2 $"
+__version__ = "$Revision: 1.3 $"
 
 from Evaluator import Evaluator
 from Evaluator import EvaluationData
 import sys, os, types
+import copy
 sys.path.append(os.path.dirname(os.path.abspath(__file__))+"/..")
 from Core.IdSet import IdSet
 import Core.ExampleUtils as ExampleUtils
 import itertools
 import types
+
+def updateF(data, trueClass, predictedClass, count):
+    if predictedClass == trueClass: # correct classification
+        # correctly classified for its class -> true positive for that class
+        if trueClass != 1: # a non-negative example -> correct = true positive
+            data._tp += count
+        else: # a negative example -> correct = true negative
+            data._tn += count
+    else: # predictedClass != trueClass:
+        if predictedClass == 1: # non-negative example, negative prediction -> incorrect = false negative
+            data._fn += count
+        else: # non-negative incorrect prediction -> false positive
+            data._fp += count
 
 class MultiLabelEvaluator(Evaluator):
     """
@@ -39,7 +53,7 @@ class MultiLabelEvaluator(Evaluator):
                     classNames.append(className)
         else:
             classNames = []
-        # make an orderes list of class ids
+        # make an ordered list of class ids
         self.classes = []
         for className in classNames:
             self.classes.append(classSet.getId(className))
@@ -55,6 +69,8 @@ class MultiLabelEvaluator(Evaluator):
         #self.AUC = None
         if predictions != None:
             self._calculate(examples, predictions)
+            
+        self.thresholds = None
     
     @classmethod
     def evaluate(cls, examples, predictions, classSet=None, outputFile=None):
@@ -115,12 +131,102 @@ class MultiLabelEvaluator(Evaluator):
                 self.untypedUndirected.addInstance(trueClass == 1, predictedClass == 1)
             prevExample = example
             prevPrediction = prediction
-        self.untypedPredictionQueue = [] # clear the queue   
+        self.untypedPredictionQueue = [] # clear the queue
+    
+    def determineThreshold(self, examples, predictions):
+        if type(predictions) == types.StringType: # predictions are in file
+            predictions = ExampleUtils.loadPredictions(predictions)
+        if type(examples) == types.StringType: # examples are in file
+            examples = ExampleUtils.readExamples(examples, False)
+            
+        examplesByClass = {}
+        for cls in self.classes:
+            examplesByClass[cls] = []
+        # prepare examples
+        for example, prediction in itertools.izip(examples, predictions):
+            # Check true class for multilabel
+            trueClass = example[1]
+            trueClassName = self.classSet.getName(trueClass)
+            assert(trueClass > 0) # multiclass classification uses non-negative integers
+            if "---" in trueClassName:
+                trueClass = set()
+                for name in trueClassName.split("---"):
+                    trueClass.add(self.classSet.getId(name))
+            else:
+                trueClass = [trueClass]
+            # Check prediction for multilabel
+            predictedClasses = prediction[0]
+            if type(predictedClasses) == types.IntType:
+                predictedClasses = [predictedClasses]
+            
+            for predType in predictedClasses:
+                if predType != 1:
+                    exTrueClass = 1
+                    if predType in trueClass:
+                        exTrueClass = 2
+                    examplesByClass[predType].append( (prediction[predType], exTrueClass, 2) )
+            # positives are negatives for other classes
+            for cls in self.classes:
+                if cls not in predictedClasses:
+                    exTrueClass = 1
+                    if cls in trueClass:
+                        exTrueClass = 2
+                    examplesByClass[cls].append( (prediction[cls], exTrueClass, 1) )
+        # do the thresholding
+        thresholdByClass = {}
+        for cls in self.classes:
+            if cls == 1:
+                continue
+            thresholdByClass[cls] = 0.0
+            examplesByClass[cls].sort()
+            # Start with all below zero being negative, and all above it being what is predicted
+            ev = EvaluationData()
+            for example in examplesByClass[cls]:
+                #print example
+                if example[0] < 0.0:
+                    updateF(ev, example[1], 2, 1) # always negative
+                else:
+                    updateF(ev, example[1], example[2], 1) # what is predicted
+            count = 0
+            bestF = [self.dataByClass[cls].fscore, None, (0.0, None), None]
+            for example in examplesByClass[cls]:
+                if example[0] < 0.0:
+                    # Remove original example
+                    updateF(ev, example[1], 2, -1)
+                    # Add new example
+                    updateF(ev, example[1], example[2], 1)
+                    # Calculate F for this point
+                else:
+                    # Remove original example
+                    updateF(ev, example[1], example[2], -1)
+                    # Add new example
+                    updateF(ev, example[1], 1, 1)
+                    # Calculate F for this point
+                ev.calculateFScore()
+                #print example, ev.toStringConcise()
+                count += 1
+                #if self.classSet.getName(cls) == "Binding":
+                #    print count, example, ev.toStringConcise()
+                if ev.fscore > bestF[0]:
+                    bestF = (ev.fscore, count, example, ev.toStringConcise())
+                    self.dataByClass[cls] = copy.copy(ev)
+            print >> sys.stderr, "Threshold", self.classSet.getName(cls), bestF
+            if bestF[2][0] != 0.0:
+                thresholdByClass[cls] = bestF[2][0] + 0.00000001
+            else:
+                thresholdByClass[cls] = 0.0
+        #print thresholdByClass
+        self.thresholds = thresholdByClass
+        #self._calculate(examples, predictions, thresholdByClass)
+        #print >> sys.stderr, "Optimal", self.toStringConcise()
+        return thresholdByClass
 
-    def _calculate(self, examples, predictions):
+    def _calculate(self, examples, predictions, thresholds=None):
         """
         The actual evaluation
         """
+        for cls in self.classes:
+            self.dataByClass[cls] = EvaluationData()
         #self._calculateUntypedUndirected(examples, predictions)
         # First count instances
         self.microF = EvaluationData()
@@ -128,6 +234,16 @@ class MultiLabelEvaluator(Evaluator):
         #self.classifications = []
         #assert(len(examples) == len(predictions))
         #for i in range(len(examples)):
+        
+        # Prepare offsets for thresholding
+        self.thresholds = thresholds
+        offsets = [None] + len(self.classSet.Ids) * [0.0]
+        for cls in self.classSet.Ids.keys():
+            if thresholds != None and cls in thresholds:
+                offsets[cls] = thresholds[cls]
+        #print self.classes, offsets
+        
+        # Calculate results
         for example, prediction in itertools.izip(examples, predictions):
             #self._queueUntypedUndirected(example, prediction)
             # Check true class for multilabel
@@ -144,6 +260,19 @@ class MultiLabelEvaluator(Evaluator):
             predictedClasses = prediction[0]
             if type(predictedClasses) == types.IntType:
                 predictedClasses = [predictedClasses]
+            # Thresholding
+            if thresholds != None:
+                for i in range(2, len(prediction)):
+                    if prediction[i] != "N/A":
+                        if prediction[i] < 0.0 and prediction[i] - offsets[i] > 0.0:
+                            if predictedClasses == [1]:
+                                predictedClasses = []
+                            predictedClasses.append(i)
+                        elif prediction[i] > 0.0 and prediction[i] - offsets[i] < 0.0:
+                            predictedClasses.remove(i)
+                            if len(predictedClasses) == 0:
+                                predictedClasses = [1]
+                          
             for predictedClass in predictedClasses:
                 #print predictedClass
                 assert(predictedClass > 0) # multiclass classification uses non-negative integers
@@ -232,8 +361,11 @@ class MultiLabelEvaluator(Evaluator):
         negativeClassId = None
         for cls in self.classes:
             if cls != self.classSet.getId("neg", False):
+                tString = ""
+                if self.thresholds != None and cls in self.thresholds:
+                    tString = " t:" + str(self.thresholds[cls])
                 string += self.classSet.getName(cls)
-                string += " " + self.dataByClass[cls].toStringConcise() + "\n" + indent
+                string += " " + self.dataByClass[cls].toStringConcise() + tString + "\n" + indent
             else:
                 negativeClassId = cls
         if negativeClassId != None:
@@ -301,3 +433,30 @@ class MultiLabelEvaluator(Evaluator):
             dicts.append(self.untypedUndirected.toDict())
             dicts[-1]["class"] = "untyped undirected"
         return dicts
+    
+if __name__=="__main__":
+    import sys, os
+    # Import Psyco if available
+    try:
+        import psyco
+        psyco.full()
+        print >> sys.stderr, "Found Psyco, using"
+    except ImportError:
+        print >> sys.stderr, "Psyco not installed"
+
+    exampleFilename = "/home/jari/biotext/BioNLP2011/tests/main-tasks/GE/full/fulltest110307/edge-test-examples-split-mccc-preparsed"
+    predFilename = "/home/jari/biotext/BioNLP2011/tests/main-tasks/GE/full/fulltest110307/edge-models/"
+    classSetFilename = "/home/jari/biotext/BioNLP2011/tests/main-tasks/GE/full/fulltest110307/edge-ids.class_names"
+
+    from optparse import OptionParser
+    optparser = OptionParser(usage="%prog [options]\n")
+    optparser.add_option("-e", "--examples", default=exampleFilename, dest="examples", help="Input file in csv-format", metavar="FILE")
+    optparser.add_option("-p", "--predictions", default=predFilename, dest="predictions", help="Input file in csv-format", metavar="FILE")
+    optparser.add_option("-c", "--classes", default=None, dest="classes", help="Input file in csv-format", metavar="FILE")
+    (options, args) = optparser.parse_args()
+    
+    ev = MultiLabelEvaluator(options.examples, options.predictions, classSet=options.classes)
+    #ev.determineThreshold(exampleFilename, predFilename)
+    #ev._calculate()
+    print ev.toStringConcise()
+    print ev.determineThreshold(options.examples, options.predictions)
