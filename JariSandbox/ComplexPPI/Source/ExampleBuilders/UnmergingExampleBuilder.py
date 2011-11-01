@@ -1,7 +1,7 @@
 """
 Edge Examples
 """
-__version__ = "$Revision: 1.12 $"
+__version__ = "$Revision: 1.13 $"
 
 import sys, os
 thisPath = os.path.dirname(os.path.abspath(__file__))
@@ -507,8 +507,9 @@ class UnmergingExampleBuilder(ExampleBuilder):
         
         exampleIndex = 0
         for entity in sentenceGraph.entities:
-            eType = str(entity.get("type"))
+            eType = entity.get("type")
             assert eType != None, entity.attrib
+            eType = str(eType)
             #if eType not in ["Binding", "Positive_regulation", "Negative_regulation", "Regulation"]:
             #    continue
             
