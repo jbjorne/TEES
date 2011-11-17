@@ -65,9 +65,9 @@ if RELEASE:
     sys.path.append(os.path.abspath(os.path.join(thisPath, "../SharedTask")))
 #IF LOCAL
 else:
-    sys.path.append(os.path.abspath(os.path.join(thisPath, "../../../../GeniaChallenge/unflattening")))
-    sys.path.append(os.path.abspath(os.path.join(thisPath, "../../../../GeniaChallenge/formatConversion")))
-    sys.path.append(os.path.abspath(os.path.join(thisPath, "../../../../GeniaChallenge")))
+    sys.path.append(os.path.abspath(os.path.join(thisPath, "../GeniaChallenge/unflattening")))
+    sys.path.append(os.path.abspath(os.path.join(thisPath, "../GeniaChallenge/formatConversion")))
+    sys.path.append(os.path.abspath(os.path.join(thisPath, "../GeniaChallenge")))
 #ENDIF
 from unflatten import unflatten
 

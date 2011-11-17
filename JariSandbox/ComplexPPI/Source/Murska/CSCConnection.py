@@ -3,8 +3,8 @@ import subprocess
 sys.path.append(os.path.abspath(os.path.dirname(__file__))+"/..")
 #from Classifiers.SVMMultiClassClassifier import SVMMultiClassClassifier as classifier
 from Utils.Timer import Timer
-import pexpect.pxssh as pxssh
-import pexpect.pexpect as pexpect
+#import pexpect.pxssh as pxssh
+#import pexpect.pexpect as pexpect
 
 class CSCConnection:    
     def __init__(self, workSubDir, account="jakrbj@louhi.csc.fi", deleteWorkDir=False, memory=4194304, cores=1, password=None):

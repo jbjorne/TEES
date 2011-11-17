@@ -1,9 +1,9 @@
 # Optimize parameters for event detection and produce event and trigger model files
 
 # most imports are defined in Pipeline
+import sys, os
 sys.path.append(os.path.dirname(os.path.abspath(__file__))+"/../CommonUtils") # new CommonUtils
 from Pipeline import *
-import sys, os
 import STFormat.ConvertXML
 import STFormat.Compare
 import subprocess
