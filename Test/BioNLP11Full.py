@@ -575,7 +575,7 @@ if options.mode in ["BOTH", "FINAL", "DOWNLOAD", "POST-DOWNLOAD", "UNMERGING", "
                         UnmergingExampleBuilder.run("flat-devel.xml.gz", "unmerging-grid-examples", PARSE, TOK, UNMERGING_FEATURE_PARAMS, UNMERGING_IDS, GOLD_TEST_FILE)
                         CLASSIFIER.test("unmerging-grid-examples", bestUnmergingModel, "unmerging-grid-classifications")
                         unmergedXML = BioTextExampleWriter.write("unmerging-grid-examples", "unmerging-grid-classifications", "flat-devel.xml.gz", "unmerged-devel.xml.gz", UNMERGING_IDS+".class_names", PARSE, TOK)
-                        STFormat.ConvertXML.toSTFormat(unmergedXML, "unmerged-devel-geniaformat.tar.gz", getA2FileTag(options.task, subTask))
+                        STFormat.ConvertXML.toSTFormat(unmergedXML, "unmerged-devel-geniaformat", getA2FileTag(options.task, subTask))
                         if options.task == "OLD":
                             results = evaluateSharedTask("unmerged-devel-geniaformat", subTask)
                         elif options.task == "GE":
