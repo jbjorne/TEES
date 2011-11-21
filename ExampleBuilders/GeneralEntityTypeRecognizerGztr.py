@@ -17,21 +17,6 @@ from FeatureBuilders.WordNetFeatureBuilder import WordNetFeatureBuilder
 from FeatureBuilders.GiulianoFeatureBuilder import GiulianoFeatureBuilder
 import PhraseTriggerExampleBuilder
 import InteractionXML.ResolveEPITriggerTypes
-from multiprocessing import Process
-
-#def compareDependencyEdgesById(dep1, dep2):
-#    """
-#    Dependency edges are sorted, so that the program behaves consistently
-#    on the sama data between different runs.
-#    """
-#    id1 = dep1[2].get("id")
-#    id2 = dep2[2].get("id")
-#    if id1 > id2:
-#       return 1
-#    elif id1 == id2:
-#       return 0
-#    else: # x<y
-#       return -1
 
 class GeneralEntityTypeRecognizerGztr(ExampleBuilder):
     def __init__(self, style=None, classSet=None, featureSet=None, gazetteerFileName=None, skiplist=None):
@@ -79,44 +64,6 @@ class GeneralEntityTypeRecognizerGztr(ExampleBuilder):
             self.bacteriaTokens = PhraseTriggerExampleBuilder.getBacteriaTokens(PhraseTriggerExampleBuilder.getBacteriaNames())
         if "giuliano" in self.styles:
             self.giulianoFeatureBuilder = GiulianoFeatureBuilder(featureSet)
-
-    @classmethod
-    def run(cls, input, output, parse, tokenization, style, idFileTag=None, gazetteerFileName=None, skiplist=None, appendIndex=0):
-        """
-        An interface for running the example builder without needing to create a class
-        """
-        p = Process(target=GeneralEntityTypeRecognizerGztr.runAsProcess, args=[
-                                                                       input, output, parse, tokenization,
-                                                                       style, idFileTag, gazetteerFileName,
-                                                                       skiplist, appendIndex])
-        p.start()
-        p.join()
-        assert p.exitcode == 0
-
-    @classmethod
-    def runAsProcess(cls, input, output, parse, tokenization, style, idFileTag=None, gazetteerFileName=None, skiplist=None, appendIndex=0):
-        if skiplist == "PubMed100p":
-            skiplist = os.path.dirname(os.path.abspath(__file__))+"/Filters/PubMed100pSkipList.txt"
-        
-        classSet, featureSet = cls.getIdSets(idFileTag)
-        e = GeneralEntityTypeRecognizerGztr(style, classSet, featureSet, gazetteerFileName, skiplist=skiplist)
-        if "names" in style:
-            removeNameInfo=True
-        else:
-            removeNameInfo=False
-        if "iterate" in style:
-            print >> sys.stderr, "Iterative entity example generation for", input
-            sentences = cls.getSentenceIterator(input, parse, tokenization, removeNameInfo=removeNameInfo)
-        else:
-            sentences = cls.getSentences(input, parse, tokenization, removeNameInfo=removeNameInfo)
-        e.buildExamplesForSentences(sentences, output, idFileTag, appendIndex=appendIndex)
-
-
-    def preProcessExamples(self, allExamples):
-        if "normalize" in self.styles:
-            print >> sys.stderr, " Normalizing feature vectors"
-            ExampleUtils.normalizeFeatureVectors(allExamples)
-        return allExamples   
     
     def getMergedEntityType(self, entities):
         """
@@ -210,16 +157,21 @@ class GeneralEntityTypeRecognizerGztr(ExampleBuilder):
             ngram += "_" + sentenceGraph.getTokenText(sentenceGraph.tokens[index]).lower()
         features[self.featureSet.getId(ngram)] = 1
     
-    def buildExamples(self, sentenceGraph, appendIndex=0):
+    def buildExamples(self, sentence, goldSentence=None):
         """
         Build one example for each token of the sentence
         """
+        if sentence.sentenceGraph == None:
+            return []
+        else:
+            sentenceGraph = sentence.sentenceGraph
+        
         if sentenceGraph.sentenceElement.get("origId") in self.skiplist:
             print >> sys.stderr, "Skipping sentence", sentenceGraph.sentenceElement.get("origId") 
             return []
         
         examples = []
-        exampleIndex = appendIndex
+        exampleIndex = 0
         
         self.tokenFeatures = {}
         self.tokenFeatureWeights = {}

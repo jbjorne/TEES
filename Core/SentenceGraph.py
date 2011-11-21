@@ -69,7 +69,7 @@ def loadCorpus(corpus, parse, tokenization=None, removeNameInfo=False, removeInt
     print >> sys.stderr, "Skipped", duplicateInteractionEdgesRemoved, "duplicate interaction edges in SentenceGraphs"
     return corpusElements
 
-def getCorpusIterator(input, output, parse, tokenization=None, removeNameInfo=False):
+def getCorpusIterator(input, output, parse, tokenization=None, removeNameInfo=False, removeIntersentenceInteractions=True):
     import cElementTreeUtils as ETUtils
     from InteractionXML.SentenceElements import SentenceElements
     #import xml.etree.cElementTree as ElementTree
@@ -78,11 +78,11 @@ def getCorpusIterator(input, output, parse, tokenization=None, removeNameInfo=Fa
         etWriter = ETUtils.ETWriter(output)
     for eTuple in ETUtils.ETIteratorFromObj(input, ("start", "end")):
         element = eTuple[1]
-        if eTuple[0] == "end" and element.tag == "document":
+        if eTuple[0] in ["end", "memory"] and element.tag == "document":
             sentences = []
             for sentenceElement in element.findall("sentence"):
                 #print ElementTree.tostring(sentenceElement)
-                sentence = SentenceElements(sentenceElement, parse, tokenization, removeIntersentenceInteractions=False)
+                sentence = SentenceElements(sentenceElement, parse, tokenization, removeIntersentenceInteractions=removeIntersentenceInteractions)
                 if len(sentence.tokens) == 0 or len(sentence.dependencies) == 0: 
                     sentence.sentenceGraph = None
                 else:

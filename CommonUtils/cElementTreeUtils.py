@@ -171,11 +171,10 @@ def ETIteratorFromObj(obj, events=None, parser=None):
             root = obj
         else:
             root = obj.getroot()
-        if events == None:
-            events = ["END"]
-        for element in root.iter():
-            for event in events:
-                yield (event, elem)
+        #if events == None:
+        #    events = ["END"]
+        for element in root.getiterator():
+            yield ("memory", element)
     else:
         #not a string, not a tree, not an element, should be a stream
         #let's parse it

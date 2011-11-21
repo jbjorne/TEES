@@ -85,7 +85,7 @@ class SentenceExampleWriter:
                 exampleQueue = []
                 predictionsByExample = {}
                 prevMajorIds.add(currentMajorId)
-                assert majorId not in prevMajorIds
+                assert majorId not in prevMajorIds, majorId
                 currentMajorId = majorId 
             exampleQueue.append(example) # queue example
             predictionsByExample[example[0]] = prediction

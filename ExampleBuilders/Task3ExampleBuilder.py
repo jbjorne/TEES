@@ -68,26 +68,6 @@ class Task3ExampleBuilder(ExampleBuilder):
         else:
             self.gazetteer=None
         self.styles = style
-
-    @classmethod
-    def run(cls, input, output, parse, tokenization, style, idFileTag=None, gazetteerFileName=None, appendIndex=None, gold=None):
-        classSet, featureSet = cls.getIdSets(idFileTag)
-        e = Task3ExampleBuilder(style, classSet, featureSet, gazetteerFileName=None)
-        sentences = cls.getSentences(input, parse, tokenization)
-        if gold != None:
-            goldSentences = cls.getSentences(gold, parse, tokenization)
-        else:
-            goldSentences = None
-        if gold != None:
-            e.buildExamplesForSentences(sentences, output, idFileTag, appendIndex=appendIndex, goldSentences=goldSentences)
-        else:
-            e.buildExamplesForSentences(sentences, output, idFileTag, appendIndex=appendIndex)
-
-    def preProcessExamples(self, allExamples):
-        if "normalize" in self.styles:
-            print >> sys.stderr, " Normalizing feature vectors"
-            ExampleUtils.normalizeFeatureVectors(allExamples)
-        return allExamples   
     
     def getMergedEntityType(self, entities):
         """
@@ -149,14 +129,20 @@ class Task3ExampleBuilder(ExampleBuilder):
         for tokenFeature,w in self.getTokenFeatures(sentenceGraph.tokens[index], sentenceGraph).iteritems():
             features[self.featureSet.getId(tag+tokenFeature)] = w
     
-    def buildExamples(self, sentenceGraph, appendIndex=0, goldGraph=None):
+    def buildExamples(self, sentence, goldSentence=None):
         """
         Build one example for each token of the sentence
         """
+        if sentence.sentenceGraph == None:
+            return []
+        else:
+            sentenceGraph = sentence.sentenceGraph
+        goldGraph = None
+        if goldSentence != None:
+            goldGraph = goldSentence.sentenceGraph
+
         examples = []
-        if appendIndex == None:
-            appendIndex = 0
-        exampleIndex = 0 + appendIndex
+        exampleIndex = 0
         
         self.tokenFeatures = {}
 

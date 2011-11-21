@@ -58,13 +58,13 @@ def task3Classify(classifier, xml, specModel, negModel, task3Ids, task3Tag, pars
     
     # Speculation detection
     print >> sys.stderr, "====== Speculation Detection ======"
-    Task3ExampleBuilder.run(xml, "speculation-"+task3Tag+"-examples", parse, None, "style:typed,speculation", TASK3_IDS, None, gold=goldXML)
+    Task3ExampleBuilder.run(xml, "speculation-"+task3Tag+"-examples", parse, None, "style:typed,speculation", TASK3_IDS, goldXML)
     classifier.test("speculation-"+task3Tag+"-examples", SPECULATION_MODEL, "speculation-"+task3Tag+"-classifications")
     xml = BioTextExampleWriter.write("speculation-"+task3Tag+"-examples", "speculation-"+task3Tag+"-classifications", xml, None, TASK3_IDS+".class_names")
     
     # Negation detection
     print >> sys.stderr, "====== Negation Detection ======"
-    Task3ExampleBuilder.run(xml, "negation-"+task3Tag+"-examples", parse, None, "style:typed,negation", TASK3_IDS, None, gold=goldXML)
+    Task3ExampleBuilder.run(xml, "negation-"+task3Tag+"-examples", parse, None, "style:typed,negation", TASK3_IDS, goldXML)
     classifier.test("negation-"+task3Tag+"-examples", NEGATION_MODEL, "negation-"+task3Tag+"-classifications")
     xml = BioTextExampleWriter.write("negation-"+task3Tag+"-examples", "negation-"+task3Tag+"-classifications", xml, task3Tag + "-task3.xml.gz", TASK3_IDS+".class_names")
     return xml
@@ -458,15 +458,15 @@ if options.mode in ["BOTH", "FINAL", "DOWNLOAD", "POST-DOWNLOAD", "UNMERGING", "
             print >> sys.stderr, "Unmerging examples for parse", PARSE_TAG
             GOLD_TEST_FILE = TEST_FILE.replace("-nodup", "")
             GOLD_TRAIN_FILE = TRAIN_FILE.replace("-nodup", "")
-            UnmergingExampleBuilder.run(TEST_FILE, GOLD_TEST_FILE, UNMERGING_TEST_EXAMPLE_FILE, PARSE, TOK, UNMERGING_FEATURE_PARAMS, UNMERGING_IDS)
+            UnmergingExampleBuilder.run(TEST_FILE, UNMERGING_TEST_EXAMPLE_FILE, PARSE, TOK, UNMERGING_FEATURE_PARAMS, UNMERGING_IDS, GOLD_TEST_FILE)
 #            # Build extra test examples
 #            print >> sys.stderr, "Extra test examples"
 #            # NOTE: Temporarily back to old data for replicating 110310 experiment
 #            PRED_TEST_FILE = "/home/jari/biotext/BioNLP2011/tests/main-tasks/OLD/full/fulltest110308/flat-0.85.xml"
 #            #PRED_TEST_FILE = "/home/jari/biotext/BioNLP2011/tests/FINAL/GE-full-110310/flat-0.7.xml"
 #            UnmergingExampleBuilder.run(PRED_TEST_FILE, GOLD_TEST_FILE, UNMERGING_TEST_EXAMPLE_FILE, PARSE, TOK, UNMERGING_FEATURE_PARAMS, UNMERGING_IDS, append=True)
-            UnmergingExampleBuilder.run(TRAIN_FILE, GOLD_TRAIN_FILE, UNMERGING_TRAIN_EXAMPLE_FILE, PARSE, TOK, UNMERGING_FEATURE_PARAMS, UNMERGING_IDS)
-            UnmergingExampleBuilder.run(xml, GOLD_TRAIN_FILE, UNMERGING_TRAIN_EXAMPLE_FILE, PARSE, TOK, UNMERGING_FEATURE_PARAMS, UNMERGING_IDS, append=True)
+            UnmergingExampleBuilder.run(TRAIN_FILE, UNMERGING_TRAIN_EXAMPLE_FILE, PARSE, TOK, UNMERGING_FEATURE_PARAMS, UNMERGING_IDS, GOLD_TRAIN_FILE)
+            UnmergingExampleBuilder.run(xml, UNMERGING_TRAIN_EXAMPLE_FILE, PARSE, TOK, UNMERGING_FEATURE_PARAMS, UNMERGING_IDS, GOLD_TRAIN_FILE, append=True)
             xml = None
             #UnmergingExampleBuilder.run("/home/jari/biotext/EventExtension/TrainSelfClassify/test-predicted-edges.xml", GOLD_TRAIN_FILE, UNMERGING_TRAIN_EXAMPLE_FILE, PARSE, TOK, UNMERGING_FEATURE_PARAMS, UNMERGING_IDS, append=True)
             ###############################################################################
@@ -572,7 +572,7 @@ if options.mode in ["BOTH", "FINAL", "DOWNLOAD", "POST-DOWNLOAD", "UNMERGING", "
                             shutil.rmtree("unmerged-devel-geniaformat")
                         print >> sys.stderr, "--------- ML Unmerging ---------"
                         GOLD_TEST_FILE = TEST_FILE.replace("-nodup", "")
-                        UnmergingExampleBuilder.run("flat-devel.xml.gz", GOLD_TEST_FILE, "unmerging-grid-examples", PARSE, TOK, UNMERGING_FEATURE_PARAMS, UNMERGING_IDS)
+                        UnmergingExampleBuilder.run("flat-devel.xml.gz", "unmerging-grid-examples", PARSE, TOK, UNMERGING_FEATURE_PARAMS, UNMERGING_IDS, GOLD_TEST_FILE)
                         CLASSIFIER.test("unmerging-grid-examples", bestUnmergingModel, "unmerging-grid-classifications")
                         unmergedXML = BioTextExampleWriter.write("unmerging-grid-examples", "unmerging-grid-classifications", "flat-devel.xml.gz", "unmerged-devel.xml.gz", UNMERGING_IDS+".class_names", PARSE, TOK)
                         STFormat.ConvertXML.toSTFormat(unmergedXML, "unmerged-devel-geniaformat", getA2FileTag(options.task, subTask))
@@ -682,7 +682,7 @@ if options.mode in ["BOTH", "FINAL", "DOWNLOAD", "POST-DOWNLOAD", "UNMERGING", "
             GOLD_TEST_FILE = None
         else:
             GOLD_TEST_FILE = TEST_FILE.replace("-nodup", "")
-        UnmergingExampleBuilder.run(xml, GOLD_TEST_FILE, "unmerging-empty-examples", PARSE, TOK, UNMERGING_FEATURE_PARAMS, UNMERGING_IDS)
+        UnmergingExampleBuilder.run(xml, "unmerging-empty-examples", PARSE, TOK, UNMERGING_FEATURE_PARAMS, UNMERGING_IDS, GOLD_TEST_FILE)
         CLASSIFIER.test("unmerging-empty-examples", bestUnmergingModel, "unmerging-empty-classifications")
         unmergedXML = BioTextExampleWriter.write("unmerging-empty-examples", "unmerging-empty-classifications", xml, "empty-unmerged.xml", UNMERGING_IDS+".class_names", PARSE, TOK)
         EMPTY_GENIAFORMAT_DIR = "empty-unmerged-geniaformat"
@@ -764,7 +764,7 @@ if options.mode in ["BOTH", "FINAL", "DOWNLOAD", "POST-DOWNLOAD", "UNMERGING", "
     # Unmerging
     if options.unmerging:
         GOLD_TEST_FILE = FINAL_TEST_FILE.replace("-nodup", "")
-        UnmergingExampleBuilder.run(xml, GOLD_TEST_FILE, "unmerging-final-examples", PARSE, TOK, UNMERGING_FEATURE_PARAMS, UNMERGING_IDS)
+        UnmergingExampleBuilder.run(xml, "unmerging-final-examples", PARSE, TOK, UNMERGING_FEATURE_PARAMS, UNMERGING_IDS, GOLD_TEST_FILE)
         CLASSIFIER.test("unmerging-final-examples", bestUnmergingModel, "unmerging-final-classifications")
         unmergedXML = BioTextExampleWriter.write("unmerging-final-examples", "unmerging-final-classifications", xml, "final-unmerged.xml.gz", UNMERGING_IDS+".class_names", PARSE, TOK)
         STFormat.ConvertXML.toSTFormat(unmergedXML, "final-unmerged-geniaformat", getA2FileTag(options.task, subTask))

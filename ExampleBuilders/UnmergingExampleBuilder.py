@@ -119,31 +119,6 @@ class UnmergingExampleBuilder(ExampleBuilder):
         self.triggerFeatureBuilder.useNonNameEntities = True
         
         #self.outFile = open("exampleTempFile.txt","wt")
-
-    @classmethod
-    def run(cls, input, gold, output, parse, tokenization, style, idFileTag=None, append=False):
-        """
-        An interface for running the example builder without needing to create a class
-        """
-        p = Process(target=UnmergingExampleBuilder.runAsProcess, args=[input, gold, output,
-                                                                       parse, tokenization,
-                                                                       style, idFileTag, append])
-        p.start()
-        p.join()
-
-    @classmethod
-    def runAsProcess(cls, input, gold, output, parse, tokenization, style, idFileTag=None, append=False):
-        classSet, featureSet = cls.getIdSets(idFileTag)
-        if style != None:
-            e = UnmergingExampleBuilder(style=style, classSet=classSet, featureSet=featureSet)
-        else:
-            e = UnmergingExampleBuilder(classSet=classSet, featureSet=featureSet)
-        sentences = cls.getSentences(input, parse, tokenization)
-        if gold != None:
-            goldSentences = cls.getSentences(gold, parse, tokenization)
-        else:
-            goldSentences = None
-        e.buildExamplesForSentences(sentences, goldSentences, output, idFileTag, append=append)
     
     def getInteractionEdgeLengths(self, sentenceGraph, paths):
         """
@@ -219,13 +194,6 @@ class UnmergingExampleBuilder(ExampleBuilder):
             self.classSet.write(idFileTag + ".class_names")
             print >> sys.stderr, "Saving feature names to", idFileTag + ".feature_names.gz"
             self.featureSet.write(idFileTag + ".feature_names.gz")
-
-    
-    def definePredictedValueRange(self, sentences, elementName):
-        self.multiEdgeFeatureBuilder.definePredictedValueRange(sentences, elementName)                        
-    
-    def getPredictedValueRange(self):
-        return self.multiEdgeFeatureBuilder.predictedRange
     
     def filterEdgesByType(self, edges, typesToInclude):
         if len(typesToInclude) == 0:
@@ -284,20 +252,7 @@ class UnmergingExampleBuilder(ExampleBuilder):
         if categoryName != "":
             return categoryName
         else:
-            return "neg"           
-    
-    def preProcessExamples(self, allExamples):
-        # Duplicates cannot be removed here, as they should only be removed from the training set. This is done
-        # in the classifier.
-#        if "no_duplicates" in self.styles:
-#            count = len(allExamples)
-#            print >> sys.stderr, " Removing duplicates,", 
-#            allExamples = ExampleUtils.removeDuplicates(allExamples)
-#            print >> sys.stderr, "removed", count - len(allExamples)
-        if "normalize" in self.styles:
-            print >> sys.stderr, " Normalizing feature vectors"
-            ExampleUtils.normalizeFeatureVectors(allExamples)
-        return allExamples   
+            return "neg"            
     
     def isPotentialGeniaInteraction(self, e1, e2):
         """
@@ -455,18 +410,24 @@ class UnmergingExampleBuilder(ExampleBuilder):
                    + combine.combine(themes, siteArgs, contextGenes) \
                    + themeAloneCombinations
             
-    def buildExamples(self, sentenceGraph, goldGraph, append=False):
+    def buildExamples(self, sentence, goldSentence):
         """
         Build examples for a single sentence. Returns a list of examples.
         See Core/ExampleUtils for example format.
         """
+        if sentence.sentenceGraph == None:
+            return []
+        else:
+            sentenceGraph = sentence.sentenceGraph
+        goldGraph = None
+        if goldSentence != None:
+            goldGraph = goldSentence.sentenceGraph
+
         self.multiEdgeFeatureBuilder.setFeatureVector(resetCache=True)
         self.triggerFeatureBuilder.initSentence(sentenceGraph)
         
         examples = []
         exampleIndex = 0
-        if append == True:
-            exampleIndex += 1000
         
         #undirected = self.nxMultiDiGraphToUndirected(sentenceGraph.dependencyGraph)
         #paths = NX10.all_pairs_shortest_path(undirected, cutoff=999)

@@ -36,7 +36,7 @@ class MultiEdgeExampleBuilder(ExampleBuilder):
     This example builder makes edge examples, i.e. examples describing
     the event arguments.
     """
-    def __init__(self, style=["typed","directed","headsOnly"], length=None, types=[], featureSet=None, classSet=None):
+    def __init__(self, style=None, length=None, types=[], featureSet=None, classSet=None):
         if featureSet == None:
             featureSet = IdSet()
         if classSet == None:
@@ -46,6 +46,8 @@ class MultiEdgeExampleBuilder(ExampleBuilder):
         assert( classSet.getId("neg") == 1 or (len(classSet.Ids)== 2 and classSet.getId("neg") == -1) )
         
         ExampleBuilder.__init__(self, classSet=classSet, featureSet=featureSet)
+        if style == None:
+            style = ["typed","directed","headsOnly"]
         self.styles = style
         if "selftrain_group" in self.styles:
             self.selfTrainGroups = set()
@@ -104,47 +106,12 @@ class MultiEdgeExampleBuilder(ExampleBuilder):
         if "random" in self.styles:
             from FeatureBuilders.RandomFeatureBuilder import RandomFeatureBuilder
             self.randomFeatureBuilder = RandomFeatureBuilder(self.featureSet)
-        
-        #self.outFile = open("exampleTempFile.txt","wt")
-
-    @classmethod
-    def run(cls, input, output, parse, tokenization, style, idFileTag=None, gold=None, appendIndex=0):
-        """
-        An interface for running the example builder without needing to create a class
-        """
-        p = Process(target=MultiEdgeExampleBuilder.runAsProcess, args=[input, output, parse, 
-                                                                       tokenization, style, idFileTag, 
-                                                                       gold, appendIndex])
-        p.start()
-        p.join()
-        assert p.exitcode == 0
-
-    @classmethod
-    def runAsProcess(cls, input, output, parse, tokenization, style, idFileTag=None, gold=None, appendIndex=0):
-        """
-        An interface for running the example builder without needing to create a class
-        """
-        classSet, featureSet = cls.getIdSets(idFileTag)
-        if style != None:
-            e = MultiEdgeExampleBuilder(style=style, classSet=classSet, featureSet=featureSet)
-        else:
-            e = MultiEdgeExampleBuilder(classSet=classSet, featureSet=featureSet)
-        if "iterate" in style:
-            print >> sys.stderr, "Iterative edge example generation for", input
-            sentences = cls.getSentenceIterator(input, parse, tokenization)
-        else:
-            sentences = cls.getSentences(input, parse, tokenization)
-        if gold != None:
-            goldSentences = cls.getSentences(gold, parse, tokenization)
-        else:
-            goldSentences = None
-        e.buildExamplesForSentences(sentences, output, idFileTag, goldSentences=goldSentences, appendIndex=appendIndex)
     
-    def definePredictedValueRange(self, sentences, elementName):
-        self.multiEdgeFeatureBuilder.definePredictedValueRange(sentences, elementName)                        
-    
-    def getPredictedValueRange(self):
-        return self.multiEdgeFeatureBuilder.predictedRange
+#    def definePredictedValueRange(self, sentences, elementName):
+#        self.multiEdgeFeatureBuilder.definePredictedValueRange(sentences, elementName)                        
+#    
+#    def getPredictedValueRange(self):
+#        return self.multiEdgeFeatureBuilder.predictedRange
     
     def filterEdgesByType(self, edges, typesToInclude):
         if len(typesToInclude) == 0:
@@ -214,18 +181,18 @@ class MultiEdgeExampleBuilder(ExampleBuilder):
         else:
             return "neg"      
     
-    def preProcessExamples(self, allExamples):
-        # Duplicates cannot be removed here, as they should only be removed from the training set. This is done
-        # in the classifier.
-#        if "no_duplicates" in self.styles:
-#            count = len(allExamples)
-#            print >> sys.stderr, " Removing duplicates,", 
-#            allExamples = ExampleUtils.removeDuplicates(allExamples)
-#            print >> sys.stderr, "removed", count - len(allExamples)
-        if "normalize" in self.styles:
-            print >> sys.stderr, " Normalizing feature vectors"
-            ExampleUtils.normalizeFeatureVectors(allExamples)
-        return allExamples   
+#    def preProcessExamples(self, allExamples):
+#        # Duplicates cannot be removed here, as they should only be removed from the training set. This is done
+#        # in the classifier.
+##        if "no_duplicates" in self.styles:
+##            count = len(allExamples)
+##            print >> sys.stderr, " Removing duplicates,", 
+##            allExamples = ExampleUtils.removeDuplicates(allExamples)
+##            print >> sys.stderr, "removed", count - len(allExamples)
+#        if "normalize" in self.styles:
+#            print >> sys.stderr, " Normalizing feature vectors"
+#            ExampleUtils.normalizeFeatureVectors(allExamples)
+#        return allExamples   
     
     def isPotentialRELInteraction(self, e1, e2):
         if e1.get("type") == "Protein" and e2.get("type") == "Entity":
@@ -407,16 +374,16 @@ class MultiEdgeExampleBuilder(ExampleBuilder):
 #                    return False 
 #            return True
     
-    #IF LOCAL
-    def getBioInferParentType(self, eType):
-        if eType == "Physical_entity" or OntologyUtils.hasParent(eType, "Physical_entity", self.bioinferOntologies):
-            return "Physical"
-        elif eType == "Property_entity" or OntologyUtils.hasParent(eType, "Property_entity", self.bioinferOntologies):
-            return "Property"
-        elif OntologyUtils.hasParent(eType, "Relationship", self.bioinferOntologies):
-            return "Process"
-        else:
-            assert False, eType
+#    #IF LOCAL
+#    def getBioInferParentType(self, eType):
+#        if eType == "Physical_entity" or OntologyUtils.hasParent(eType, "Physical_entity", self.bioinferOntologies):
+#            return "Physical"
+#        elif eType == "Property_entity" or OntologyUtils.hasParent(eType, "Property_entity", self.bioinferOntologies):
+#            return "Property"
+#        elif OntologyUtils.hasParent(eType, "Relationship", self.bioinferOntologies):
+#            return "Process"
+#        else:
+#            assert False, eType
         
 #        if self.bioinferOntologies["Entity"].has_key(eType):
 #            if OntologyUtils.hasParent(eType, "Physical_entity", self.bioinferOntologies):
@@ -431,19 +398,19 @@ class MultiEdgeExampleBuilder(ExampleBuilder):
 #            #assert OntologyUtils.hasParent(eType, "Process_entity", self.bioinferOntologies["Relationship"]), eType
 #            return "Process"
     
-    def isPotentialBioInferInteraction(self, e1, e2, categoryName):
-        e1Type = self.getBioInferParentType(e1.get("type"))
-        e2Type = self.getBioInferParentType(e2.get("type"))
-        if e1Type == "Process" or e1Type == "Property":
-            return True
-        elif e1Type == "Physical" and e2Type == "Physical":
-            return True
-        elif e1Type == "Physical" and e2Type == "Process": # hack
-            return True
-        else:
-            assert(categoryName == "neg"), categoryName + " category for " + e1Type + " and " + e2Type
-            return False
-    #ENDIF
+#    def isPotentialBioInferInteraction(self, e1, e2, categoryName):
+#        e1Type = self.getBioInferParentType(e1.get("type"))
+#        e2Type = self.getBioInferParentType(e2.get("type"))
+#        if e1Type == "Process" or e1Type == "Property":
+#            return True
+#        elif e1Type == "Physical" and e2Type == "Physical":
+#            return True
+#        elif e1Type == "Physical" and e2Type == "Process": # hack
+#            return True
+#        else:
+#            assert(categoryName == "neg"), categoryName + " category for " + e1Type + " and " + e2Type
+#            return False
+#    #ENDIF
     
 #    def nxMultiDiGraphToUndirected(self, graph):
 #        undirected = NX10.MultiGraph(name=graph.name)
@@ -457,13 +424,21 @@ class MultiEdgeExampleBuilder(ExampleBuilder):
         else:
             return "neg"
             
-    def buildExamples(self, sentenceGraph, goldGraph=None, appendIndex = 0):
+    def buildExamples(self, sentence, goldSentence = None):
         """
         Build examples for a single sentence. Returns a list of examples.
         See Core/ExampleUtils for example format.
         """
+        if sentence.sentenceGraph == None:
+            return []
+        else:
+            sentenceGraph = sentence.sentenceGraph
+        goldGraph = None
+        if goldSentence != None:
+            goldGraph = goldSentence.sentenceGraph
+        
         examples = []
-        exampleIndex = appendIndex
+        exampleIndex = 0
         
         if "trigger_features" in self.styles: 
             self.triggerFeatureBuilder.initSentence(sentenceGraph)
