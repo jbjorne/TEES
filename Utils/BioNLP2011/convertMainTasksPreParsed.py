@@ -76,7 +76,7 @@ def convert(datasets, analysisTags, analysisPath, corpusName):
     for doc in documents:
         STFormat.Validate.validate(doc.events, simulation=True, verbose=True, docId=doc.id)
     print >> sys.stderr, "Writing all documents to geniaformat"
-    ST.writeSet(documents, "all-geniaformat", resultFileTag="a2", makePackage=False, debug=False, task=2, validate=False)
+    ST.writeSet(documents, "all-geniaformat", resultFileTag="a2", debug=False, task=2, validate=False)
 
     print >> sys.stderr, "Converting to", bigfileName+"-documents.xml"
     xml = STConvert.toInteractionXML(documents, corpusName, bigfileName+"-documents.xml")

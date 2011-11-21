@@ -93,10 +93,21 @@ def hasGoldDocuments(sourceDir, goldDir):
                 return True
     return False
 
+def getSourceDir(input):
+    if input.endswith(".tar.gz"):
+        import tarfile
+        tempDir = tempfile.mkdtemp()
+        f = tarfile.open(input)
+        f.extractall(tempDir)
+        f.close()
+        return tempDir, True
+    else:
+        return input, False
+
 def evaluate(sourceDir, task=1, folds=-1, foldToRemove=-1, evaluations=["strict", "approximate", "decomposition"], verbose=True, silent=False, debug=False):
     global perlDir
     sourceDir = os.path.abspath(sourceDir)
-    #print sourceDir
+    sourceDir, removeSource = getSourceDir(sourceDir)
 
     assert task in [1,2,3]
     
@@ -187,6 +198,7 @@ def evaluate(sourceDir, task=1, folds=-1, foldToRemove=-1, evaluations=["strict"
         results["decomposition"] = parseResults(stdoutLines)
     
     shutil.rmtree(tempDir)
+    if removeSource: shutil.rmtree(sourceDir)
     
     # return to current dir
     os.chdir(origDir)
@@ -216,6 +228,8 @@ def evaluateBX(sourceDir, corpusName, silent=False):
         commands = os.path.expanduser("java -jar ~/data/BioNLP11SharedTask/evaluators/BioNLP-ST_2011_Bacteria_Biotopes_evaluation_software/BioNLP-ST_2011_Bacteria_Biotopes_evaluation_software.jar ~/data/BioNLP11SharedTask/main-tasks/BioNLP-ST_2011_Bacteria_Biotopes_dev_data_rev1-fixed/ ") + sourceDir
     else:
         assert False, corpusName
+    
+    sourceDir, removeSource = getSourceDir(sourceDir)
 
     p = subprocess.Popen(commands, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     stderrLines = p.stderr.readlines()
@@ -253,6 +267,7 @@ def evaluateBX(sourceDir, corpusName, silent=False):
                 results[key] = 0.0
             else:
                 results[key] = float(value)
+    if removeSource: shutil.rmtree(sourceDir)
     return results
      
 def evaluateEPIorID(sourceDir, corpus, silent=False):
@@ -264,6 +279,7 @@ def evaluateEPIorID(sourceDir, corpus, silent=False):
         goldDir = os.path.expanduser("~/data/BioNLP11SharedTask/main-tasks/BioNLP-ST_2011_Infectious_Diseases_development_data_rev1")
         evaluatorPath = os.path.expanduser("~/data/BioNLP11SharedTask/evaluators/BioNLP-ST_2011_ID-eval-tools")
     sourceDir = os.path.abspath(sourceDir)
+    sourceDir, removeSource = getSourceDir(sourceDir)
     commands = "cd " + evaluatorPath
     commands += " ; " + "python evaluation.py -s -p -r " + goldDir + " " + sourceDir + "/*.a2"
     p = subprocess.Popen(commands, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
@@ -275,12 +291,14 @@ def evaluateEPIorID(sourceDir, corpus, silent=False):
         for line in stdoutLines:
             print >> sys.stderr, line,
         print >> sys.stderr
+    if removeSource: shutil.rmtree(sourceDir)
     return parseResults(stdoutLines)
 
 def evaluateREN(sourceDir, silent=False):
     goldDir = os.path.expanduser("~/data/BioNLP11SharedTask/supporting-tasks/BioNLP-ST_2011_bacteria_rename_dev_data")
     evaluatorPath = os.path.expanduser("~/data/BioNLP11SharedTask/supporting-tasks/BioNLP-ST_2011_bacteria_rename_evaluation_sofware")
     sourceDir = os.path.abspath(sourceDir)
+    sourceDir, removeSource = getSourceDir(sourceDir)
     commands = "cd " + evaluatorPath
     commands += " ; " + "java -jar eval_rename.jar " + goldDir + " " + sourceDir
     p = subprocess.Popen(commands, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
@@ -303,6 +321,7 @@ def evaluateREN(sourceDir, silent=False):
         else:
             value = int(value)
         results[category.strip()] = value
+    if removeSource: shutil.rmtree(sourceDir)
     return results
 
 #def evaluateCO(sourceDir, silent=False):

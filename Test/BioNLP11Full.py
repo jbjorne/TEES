@@ -575,7 +575,7 @@ if options.mode in ["BOTH", "FINAL", "DOWNLOAD", "POST-DOWNLOAD", "UNMERGING", "
                         UnmergingExampleBuilder.run("flat-devel.xml.gz", "unmerging-grid-examples", PARSE, TOK, UNMERGING_FEATURE_PARAMS, UNMERGING_IDS, GOLD_TEST_FILE)
                         CLASSIFIER.test("unmerging-grid-examples", bestUnmergingModel, "unmerging-grid-classifications")
                         unmergedXML = BioTextExampleWriter.write("unmerging-grid-examples", "unmerging-grid-classifications", "flat-devel.xml.gz", "unmerged-devel.xml.gz", UNMERGING_IDS+".class_names", PARSE, TOK)
-                        STFormat.ConvertXML.toSTFormat(unmergedXML, "unmerged-devel-geniaformat", getA2FileTag(options.task, subTask))
+                        STFormat.ConvertXML.toSTFormat(unmergedXML, "unmerged-devel-geniaformat.tar.gz", getA2FileTag(options.task, subTask))
                         if options.task == "OLD":
                             results = evaluateSharedTask("unmerged-devel-geniaformat", subTask)
                         elif options.task == "GE":
@@ -584,6 +584,7 @@ if options.mode in ["BOTH", "FINAL", "DOWNLOAD", "POST-DOWNLOAD", "UNMERGING", "
                             results = evaluateEPIorID("unmerged-devel-geniaformat", options.task)
                         else:
                             assert False
+                        shutil.rmtree("unmerged-devel-geniaformat")
                         if options.task in ["OLD", "GE"]:
                             if bestResults == None or bestResults[1]["approximate"]["ALL-TOTAL"]["fscore"] < results["approximate"]["ALL-TOTAL"]["fscore"]:
                                 bestResults = (params, results)
@@ -611,6 +612,7 @@ if options.mode in ["BOTH", "FINAL", "DOWNLOAD", "POST-DOWNLOAD", "UNMERGING", "
                 else:
                     if bestResults == None or EIXMLResult.getData().fscore > bestResults[1].getData().fscore:
                         bestResults = (params, EIXMLResult)
+                shutil.rmtree("flat-devel-geniaformat")
             else:
                 print >> sys.stderr, "No predicted edges"
             count += 1
@@ -685,11 +687,11 @@ if options.mode in ["BOTH", "FINAL", "DOWNLOAD", "POST-DOWNLOAD", "UNMERGING", "
         UnmergingExampleBuilder.run(xml, "unmerging-empty-examples", PARSE, TOK, UNMERGING_FEATURE_PARAMS, UNMERGING_IDS, GOLD_TEST_FILE)
         CLASSIFIER.test("unmerging-empty-examples", bestUnmergingModel, "unmerging-empty-classifications")
         unmergedXML = BioTextExampleWriter.write("unmerging-empty-examples", "unmerging-empty-classifications", xml, "empty-unmerged.xml", UNMERGING_IDS+".class_names", PARSE, TOK)
-        EMPTY_GENIAFORMAT_DIR = "empty-unmerged-geniaformat"
+        EMPTY_GENIAFORMAT_DIR = "empty-unmerged-geniaformat.tar.gz"
         STFormat.ConvertXML.toSTFormat(unmergedXML, EMPTY_GENIAFORMAT_DIR, getA2FileTag(options.task, subTask))
         xml = unmergedXML
     else:
-        EMPTY_GENIAFORMAT_DIR = "empty-edges-geniaformat"
+        EMPTY_GENIAFORMAT_DIR = "empty-edges-geniaformat.tar.gz"
         STFormat.ConvertXML.toSTFormat(xml, EMPTY_GENIAFORMAT_DIR, getA2FileTag(options.task, subTask))
     print >> sys.stderr, "======== Evaluating empty devel set ========"
     EvaluateInteractionXML.run(Ev, xml, TEST_FILE, PARSE, TOK)
@@ -703,13 +705,13 @@ if options.mode in ["BOTH", "FINAL", "DOWNLOAD", "POST-DOWNLOAD", "UNMERGING", "
             xml = task3Classify(CLASSIFIER, xml, options.speculationModel, options.negationModel, options.task3Ids, "empty", PARSE, goldXML=TEST_FILE)
         else:
             xml = task3Classify(CLASSIFIER, xml, options.speculationModel, options.negationModel, options.task3Ids, "empty", PARSE)
-        STFormat.ConvertXML.toSTFormat(xml, EMPTY_GENIAFORMAT_DIR+"-task3", getA2FileTag(options.task, subTask))
+        STFormat.ConvertXML.toSTFormat(xml, EMPTY_GENIAFORMAT_DIR.replace(".tar.gz", "")+"-task3.tar.gz", getA2FileTag(options.task, subTask))
         print >> sys.stderr, "======== Evaluating empty devel set (task 3) ========"
         EvaluateInteractionXML.run(Ev, xml, TEST_FILE, PARSE, TOK)
-        if options.task == "OLD": evaluateSharedTask(EMPTY_GENIAFORMAT_DIR+"-task3", subTask)
-        elif options.task == "GE": evaluateBioNLP11Genia(EMPTY_GENIAFORMAT_DIR+"-task3", subTask)
-        elif options.task in ["EPI", "ID"]: evaluateEPIorID(EMPTY_GENIAFORMAT_DIR+"-task3", options.task)
-        elif options.task == "BB": evaluateBX(EMPTY_GENIAFORMAT_DIR+"-task3", "BB")
+        if options.task == "OLD": evaluateSharedTask(EMPTY_GENIAFORMAT_DIR.replace(".tar.gz", "")+"-task3.tar.gz", subTask)
+        elif options.task == "GE": evaluateBioNLP11Genia(EMPTY_GENIAFORMAT_DIR.replace(".tar.gz", "")+"-task3.tar.gz", subTask)
+        elif options.task in ["EPI", "ID"]: evaluateEPIorID(EMPTY_GENIAFORMAT_DIR.replace(".tar.gz", "")+"-task3.tar.gz", options.task)
+        elif options.task == "BB": evaluateBX(EMPTY_GENIAFORMAT_DIR.replace(".tar.gz", "")+"-task3.tar.gz", "BB")
     
     if options.classifier == "ACCls":
         print >> sys.stderr, "No test set classification with AllCorrectClassifier"

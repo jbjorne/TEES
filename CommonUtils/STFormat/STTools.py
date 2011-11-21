@@ -356,12 +356,20 @@ def loadSet(dir, setName=None, level="a2", sitesAreArguments=False, a2Tag="a2"):
         documents.append(doc)
     return documents
 
-def writeSet(documents, dir, resultFileTag="a2", makePackage=True, debug=False, task=2, validate=True):
+def writeSet(documents, output, resultFileTag="a2", debug=False, task=2, validate=True):
     from collections import defaultdict
     import shutil
     counts = defaultdict(int)
-    if os.path.exists(dir):
-        shutil.rmtree(dir)
+    
+    while output.endswith("/"):
+        output = output[:-1]
+    if output.endswith(".tar.gz"):
+        outdir = output + "-temp"
+    else:
+        outdir = output
+    if os.path.exists(outdir):
+        shutil.rmtree(outdir)
+
     if not validate:
         print "Warning! No validation."
     for doc in documents:
@@ -369,16 +377,15 @@ def writeSet(documents, dir, resultFileTag="a2", makePackage=True, debug=False, 
             Validate.allValidate(doc, counts, task, verbose=debug)
         #doc.proteins.sort(cmp=compareOffsets)
         #doc.triggers.sort(cmp=compareOffsets)
-        write(doc.id, dir, doc.proteins, doc.triggers, doc.events, doc.relations, resultFileTag, counts, task=task)
+        write(doc.id, outdir, doc.proteins, doc.triggers, doc.events, doc.relations, resultFileTag, counts, task=task)
         # Write text file
-        #out = open(os.path.join(dir, str(doc.id) + ".txt"), "wt")
-        out = codecs.open(os.path.join(dir, str(doc.id) + ".txt"), "wt", "utf-8")
+        #out = open(os.path.join(outdir, str(doc.id) + ".txt"), "wt")
+        out = codecs.open(os.path.join(outdir, str(doc.id) + ".txt"), "wt", "utf-8")
         out.write(doc.text)
         out.close()
-    if makePackage:
-        while dir.endswith("/"):
-            dir = dir[:-1]
-        package(dir, dir + ".tar.gz", [resultFileTag])
+    if output.endswith(".tar.gz"):
+        package(outdir, output, [resultFileTag])
+        shutil.rmtree(outdir)
     print counts
         
 
