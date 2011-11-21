@@ -118,7 +118,17 @@ class ExampleBuilder:
         builder.build(input, output, gold, append=append)
         return builder
     
-    def buildExamples(self, sentenceGraph, goldGraph=None):
+    def buildExamples(self, sentence, goldSentence=None):
+        if sentence.sentenceGraph == None:
+            return []
+        else:
+            sentenceGraph = sentence.sentenceGraph
+        goldGraph = None
+        if goldSentence != None:
+            goldGraph = goldSentence.sentenceGraph
+        return self.buildExamplesFromGraph(sentenceGraph, goldGraph)
+
+    def buildExamplesFromGraph(self, sentenceGraph, goldGraph=None):
         raise NotImplementedError
     
 #    def definePredictedValueRange(self, sentences, elementName):

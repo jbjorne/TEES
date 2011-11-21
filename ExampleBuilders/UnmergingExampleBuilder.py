@@ -410,19 +410,11 @@ class UnmergingExampleBuilder(ExampleBuilder):
                    + combine.combine(themes, siteArgs, contextGenes) \
                    + themeAloneCombinations
             
-    def buildExamples(self, sentence, goldSentence):
+    def buildExamplesFromGraph(self, sentenceGraph, goldGraph=None):
         """
         Build examples for a single sentence. Returns a list of examples.
         See Core/ExampleUtils for example format.
         """
-        if sentence.sentenceGraph == None:
-            return []
-        else:
-            sentenceGraph = sentence.sentenceGraph
-        goldGraph = None
-        if goldSentence != None:
-            goldGraph = goldSentence.sentenceGraph
-
         self.multiEdgeFeatureBuilder.setFeatureVector(resetCache=True)
         self.triggerFeatureBuilder.initSentence(sentenceGraph)
         

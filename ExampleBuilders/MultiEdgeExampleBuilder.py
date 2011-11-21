@@ -424,19 +424,11 @@ class MultiEdgeExampleBuilder(ExampleBuilder):
         else:
             return "neg"
             
-    def buildExamples(self, sentence, goldSentence = None):
+    def buildExamplesFromGraph(self, sentenceGraph, goldGraph = None):
         """
         Build examples for a single sentence. Returns a list of examples.
         See Core/ExampleUtils for example format.
         """
-        if sentence.sentenceGraph == None:
-            return []
-        else:
-            sentenceGraph = sentence.sentenceGraph
-        goldGraph = None
-        if goldSentence != None:
-            goldGraph = goldSentence.sentenceGraph
-        
         examples = []
         exampleIndex = 0
         

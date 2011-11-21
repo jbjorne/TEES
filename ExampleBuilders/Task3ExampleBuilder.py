@@ -129,18 +129,10 @@ class Task3ExampleBuilder(ExampleBuilder):
         for tokenFeature,w in self.getTokenFeatures(sentenceGraph.tokens[index], sentenceGraph).iteritems():
             features[self.featureSet.getId(tag+tokenFeature)] = w
     
-    def buildExamples(self, sentence, goldSentence=None):
+    def buildExamplesFromGraph(self, sentenceGraph, goldGraph=None):
         """
         Build one example for each token of the sentence
         """
-        if sentence.sentenceGraph == None:
-            return []
-        else:
-            sentenceGraph = sentence.sentenceGraph
-        goldGraph = None
-        if goldSentence != None:
-            goldGraph = goldSentence.sentenceGraph
-
         examples = []
         exampleIndex = 0
         

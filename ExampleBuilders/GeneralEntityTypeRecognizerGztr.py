@@ -157,15 +157,10 @@ class GeneralEntityTypeRecognizerGztr(ExampleBuilder):
             ngram += "_" + sentenceGraph.getTokenText(sentenceGraph.tokens[index]).lower()
         features[self.featureSet.getId(ngram)] = 1
     
-    def buildExamples(self, sentence, goldSentence=None):
+    def buildExamplesFromGraph(self, sentenceGraph, goldGraph=None):
         """
         Build one example for each token of the sentence
-        """
-        if sentence.sentenceGraph == None:
-            return []
-        else:
-            sentenceGraph = sentence.sentenceGraph
-        
+        """       
         if sentenceGraph.sentenceElement.get("origId") in self.skiplist:
             print >> sys.stderr, "Skipping sentence", sentenceGraph.sentenceElement.get("origId") 
             return []
