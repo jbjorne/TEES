@@ -105,13 +105,13 @@ class ExampleBuilder:
         ExampleUtils.appendExamples(examples, outfile)
 
     @classmethod
-    def run(cls, input, output, parse, tokenization, style, idFileTag=None, gold=None, append=False):
+    def run(cls, input, output, parse, tokenization, style, classIds=None, featureIds=None, gold=None, append=False):
         print >> sys.stderr, "Running", cls.__name__
         print >> sys.stderr, "  input:", input
         print >> sys.stderr, "  gold:", gold
         print >> sys.stderr, "  output:", output
         print >> sys.stderr, "  style:", style 
-        classSet, featureSet = cls.getIdSets(idFileTag)
+        classSet, featureSet = cls.getIdSets(classIds, featureIds) #cls.getIdSets(idFileTag)
         builder = cls(style=style, classSet=classSet, featureSet=featureSet)
         builder.idFileTag = idFileTag
         builder.parse = parse ; builder.tokenization = tokenization
@@ -138,20 +138,36 @@ class ExampleBuilder:
 #        return None
     
     @classmethod
-    def getIdSets(self, idFileTag=None):
-        if idFileTag != None and os.path.exists(idFileTag + ".feature_names.gz") and os.path.exists(idFileTag + ".class_names"):
-            print >> sys.stderr, "Using predefined class and feature names"
-            featureSet = IdSet()
-            featureSet.load(idFileTag + ".feature_names.gz")
+    def getIdSets(self, classIds=None, featureIds=None):
+        # Class ids
+        if classIds != None and os.path.exists(classIds):
+            print >> sys.stderr, "Using predefined class names"
             classSet = IdSet()
-            classSet.load(idFileTag + ".class_names")
-            return classSet, featureSet
+            classSet.load(classIds)
         else:
-            print >> sys.stderr, "No predefined class or feature-names"
-            if idFileTag != None:
-                assert(not os.path.exists(idFileTag + ".feature_names.gz")), idFileTag
-                assert(not os.path.exists(idFileTag + ".class_names")), idFileTag
-            return None, None
+            classSet = None
+        # Feature ids
+        if featureIds != None and os.path.exists(featureIds):
+            print >> sys.stderr, "Using predefined feature names"
+            featureSet = IdSet()
+            featureSet.load(classIds)
+        else:
+            featureSet = None
+        return classSet, featureSet
+        
+#        if idFileTag != None and os.path.exists(idFileTag + ".feature_names.gz") and os.path.exists(idFileTag + ".class_names"):
+#            print >> sys.stderr, "Using predefined class and feature names"
+#            featureSet = IdSet()
+#            featureSet.load(idFileTag + ".feature_names.gz")
+#            classSet = IdSet()
+#            classSet.load(idFileTag + ".class_names")
+#            return classSet, featureSet
+#        else:
+#            print >> sys.stderr, "No predefined class or feature-names"
+#            if idFileTag != None:
+#                assert(not os.path.exists(idFileTag + ".feature_names.gz")), idFileTag
+#                assert(not os.path.exists(idFileTag + ".class_names")), idFileTag
+#            return None, None
 
 #def calculatePredictedRange(exampleBuilder, sentences):
 #    print >> sys.stderr, "Defining predicted value range:",
