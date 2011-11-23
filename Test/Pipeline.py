@@ -4,6 +4,7 @@ Main API
 import sys,os,time
 thisPath = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.abspath(os.path.join(thisPath,"..")))
+sys.path.append(os.path.abspath(os.path.join(thisPath,"../CommonUtils")))
 import Settings
 from ExampleBuilders.TriggerExampleBuilder import TriggerExampleBuilder
 from ExampleBuilders.MultiEdgeExampleBuilder import MultiEdgeExampleBuilder

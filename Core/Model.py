@@ -2,11 +2,11 @@ import sys, os, shutil
 import filecmp
 import tempfile
 
-def Model():
+class Model():
     def __init__(self, path, mode="r"):
-        
         self.members = {} # path_inside_model:[abspath_to_model, cache_file, tar_info]
         self.workdir = None
+        self.mode = None
         self.open(path, mode)
     
     def close(self):
@@ -15,34 +15,37 @@ def Model():
         self.members = None
         self.workdir = None
     
-    def add(name):
+    def add(self, name):
         self.members[name] = [os.path.join(self.path, name), None, None]
     
-    def insert(path, name):
+    def insert(self, path, name):
         shutil.copy2(path, os.path.join(self.workdir, name))
         self.members[name] = [os.path.join(self.path, name), os.path.join(self.workdir, name), None]
     
-    def save():
+    def save(self):
         if self.mode == "r":
             return
         for name in sorted(self.members.keys()):
             member = self.members[name]
             if member[1] != None and (not os.path.exists(member[0]) or not filecmp.cmp(member[1], member[0])):
+                print "Updating model member", member[0]
                 shutil.copy2(member[1], member[0])
     
-    def get(name, addIfNotExist=True):
+    def get(self, name, addIfNotExist=True):
         if name not in self.members and addIfNotExist:
             self.add(name)
         member = self.members[name]
         if member[1] == None:
             cacheFile = os.path.join(self.workdir, name)
             if os.path.exists(member[0]):
+                print "Caching model member", member[0], "to", cacheFile
                 shutil.copy2(member[0], cacheFile)
             member[1] = cacheFile
         return member[1]
     
     def open(self, path, mode="r"):
         assert mode in ["r", "w", "a"]
+        self.mode = mode
         self.path = path
         if mode == "w" and os.path.exists(path):
             shutil.rmtree(path)

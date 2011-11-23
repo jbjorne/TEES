@@ -44,19 +44,45 @@ class ExampleBuilder:
         self.exampleStats = ExampleStats()
         self.parse = None
         self.tokenization = None
-        self.idFileTag = None
+        #self.idFileTag = None
+        self.classIdFilename = None
+        self.featureIdFilename = None
     
     def setFeature(self, name, value):
         self.features[self.featureSet.getId(self.featureTag+name)] = value
+    
+    def getElementCounts(self, filename):
+        print >> sys.stderr, "Counting elements:",
+        f = open(filename, "rt")
+        counts = {"documents":0, "sentences":0}
+        for line in f:
+            if "<document " in line:
+                counts["documents"] += 1
+            elif "<sentence " in line:
+                counts["sentences"] += 1
+        f.close()
+        print >> sys.stderr, counts
+        return counts
 
     def saveIds(self):
-        if self.idFileTag != None:
-            print >> sys.stderr, "Saving class names to", self.idFileTag + ".class_names"
-            self.classSet.write(self.idFileTag + ".class_names")
-            print >> sys.stderr, "Saving feature names to", self.idFileTag + ".feature_names.gz"
-            self.featureSet.write(self.idFileTag + ".feature_names.gz")
+        if self.classIdFilename != None:
+            print >> sys.stderr, "Saving class names to", self.classIdFilename
+            self.classSet.write(self.classIdFilename)
         else:
-            print >> sys.stderr, "Class and feature names not saved"
+            print >> sys.stderr, "Class names not saved"
+        if self.featureIdFilename != None:
+            print >> sys.stderr, "Saving feature names to", self.featureIdFilename
+            self.featureSet.write(self.featureIdFilename)
+        else:
+            print >> sys.stderr, "Feature names not saved"        
+#        self.featureIdFilename = featureIds
+#        if self.idFileTag != None:
+#            print >> sys.stderr, "Saving class names to", self.idFileTag + ".class_names"
+#            self.classSet.write(self.idFileTag + ".class_names")
+#            print >> sys.stderr, "Saving feature names to", self.idFileTag + ".feature_names.gz"
+#            self.featureSet.write(self.idFileTag + ".feature_names.gz")
+#        else:
+#            print >> sys.stderr, "Class and feature names not saved"
 
     def build(self, input, output, gold=None, append=False):
         # Open output file
@@ -71,7 +97,12 @@ class ExampleBuilder:
         
         # Build examples
         self.exampleCount = 0
-        self.progress = ProgressCounter(None, "Build examples")
+        if type(input) == types.StringType:
+            self.elementCounts = self.getElementCounts(input)
+            self.progress = ProgressCounter(self.elementCounts["sentences"], "Build examples")
+        else:
+            self.elementCounts = None
+            self.progress = ProgressCounter(None, "Build examples")
         inputIterator = getCorpusIterator(input, None, self.parse, self.tokenization)
         goldIterator = []
         if gold != None:
@@ -113,7 +144,9 @@ class ExampleBuilder:
         print >> sys.stderr, "  style:", style 
         classSet, featureSet = cls.getIdSets(classIds, featureIds) #cls.getIdSets(idFileTag)
         builder = cls(style=style, classSet=classSet, featureSet=featureSet)
-        builder.idFileTag = idFileTag
+        #builder.idFileTag = idFileTag
+        builder.classIdFilename = classIds
+        builder.featureIdFilename = featureIds
         builder.parse = parse ; builder.tokenization = tokenization
         builder.build(input, output, gold, append=append)
         return builder
@@ -140,11 +173,14 @@ class ExampleBuilder:
     @classmethod
     def getIdSets(self, classIds=None, featureIds=None):
         # Class ids
+        #print classIds
+        #print featureIds
         if classIds != None and os.path.exists(classIds):
             print >> sys.stderr, "Using predefined class names"
             classSet = IdSet()
             classSet.load(classIds)
         else:
+            print >> sys.stderr, "No predefined class names"
             classSet = None
         # Feature ids
         if featureIds != None and os.path.exists(featureIds):
@@ -152,6 +188,7 @@ class ExampleBuilder:
             featureSet = IdSet()
             featureSet.load(classIds)
         else:
+            print >> sys.stderr, "No predefined feature names"
             featureSet = None
         return classSet, featureSet
         

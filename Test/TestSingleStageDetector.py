@@ -76,22 +76,20 @@ if options.task == "BI":
     BXEv.setOptions("genia-BXEv", "BI", TEST_FILE, options.parse, options.tokenization, "edge-ids")
     EVALUATOR = BXEv
 else:
-    dataPath = os.path.expanduser("~/biotext/BioNLP2011/data/REN/")
+    dataPath = os.path.expanduser("~/biotext/BioNLP2011/data/supporting-tasks/REN/")
     TRAIN_FILE = dataPath + "ren-train.xml"
     TEST_FILE = dataPath + "ren-devel.xml"
     if not options.noTestSet:
         EVERYTHING_FILE = dataPath + "ren-devel-and-train.xml"
         FINAL_TEST_FILE = dataPath + "ren-test.xml"
     EVALUATOR = Ev
+exec "CLASSIFIER = " + options.classifier
 
 if options.clearAll and "clear" not in options.csc:
     options.csc.append("clear")
 
-exec "CLASSIFIER = " + options.classifier
-
-detector = SingleStageDetector()
-
 # Main settings
+detector = SingleStageDetector()
 detector.classifier = CLASSIFIER
 detector.parse = options.parse
 detector.tokenization = options.tokenization
@@ -119,9 +117,9 @@ elif options.task == "BI":
 elif options.task == "REN":
     detector.exampleStyle="style:trigger_features,typed,no_linear,entities,noMasking,maxFeatures,bacteria_renaming"
     detector.classifierParameters = "10,100,1000,2000,3000,4000,4500,5000,5500,6000,7500,10000,20000,25000,28000,50000,60000"
-print >> sys.stderr, "Edge feature style:", EDGE_FEATURE_PARAMS
+print >> sys.stderr, "Edge feature style:", detector.exampleStyle
 detector.classifierParameters="c:" + options.edgeParams
-detector.setCSCConnection(options.csc)
+detector.setCSCConnection(options.csc, CSC_WORKDIR)
 
 #if not options.noTestSet:
 #    EDGE_EVERYTHING_EXAMPLE_FILE = "edge-everything-examples-"+PARSE_TAG
@@ -133,9 +131,8 @@ detector.setCSCConnection(options.csc)
 # Edge example generation and model upload
 ###############################################################################
 detector.train(TRAIN_FILE, TEST_FILE, fromStep=options.step, toStep="TRAIN")
-
-print >> sys.stderr, "Edge models for", PARSE_TAG
-detector.train(fromStep="MODELS")
+# Model download
+detector.train(fromStep=options.step)
 
 print >> sys.stderr, "------------ Check devel classification ------------"
 detector.classify(TEST_FILE, "devel-predicted")
