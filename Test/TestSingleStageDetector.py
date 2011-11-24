@@ -6,36 +6,8 @@ import sys, os
 import STFormat.ConvertXML
 import STFormat.Compare
 from Detectors.SingleStageDetector import SingleStageDetector
-
-def makeSubset(filename, output, ratio, seed):
-    if ratio == 1.0:
-        return filename
-    totalFolds = 100
-    selectedFolds = int(ratio * 100.0)
-    print >> sys.stderr, "====== Making subset ======"
-    print >> sys.stderr, "Subset for file", filename, "ratio", ratio, "seed", seed
-    import cElementTreeUtils as ETUtils
-    import Core.Split
-    xml = ETUtils.ETFromObj(filename).getroot()
-    count = 0
-    sentCount = 0
-    for document in xml.findall("document"):
-        sentCount += len(document.findall("sentence"))
-        count += 1
-    division = Core.Split.getFolds(count, totalFolds, seed)
-    #print division, selectedFolds - 1
-    index = 0
-    removeCount = 0
-    sentRemoveCount = 0
-    for document in xml.findall("document"):
-        if division[index] > selectedFolds - 1:
-            xml.remove(document)
-            sentRemoveCount += len(document.findall("sentence"))
-            removeCount += 1
-        index += 1
-    print "Subset", "doc:", count, "removed:", removeCount, "sent:", sentCount, "sentremoved:", sentRemoveCount
-    ETUtils.write(xml, output)
-    return output
+from Detectors.StepSelector import StepSelector
+from InteractionXML.MakeSubset import makeSubset
 
 from optparse import OptionParser
 optparser = OptionParser()
@@ -55,13 +27,16 @@ optparser.add_option("--noTestSet", default=False, action="store_true", dest="no
 optparser.add_option("-f", "--edgeExampleBuilder", default="MultiEdgeExampleBuilder", dest="edgeExampleBuilder", help="")
 optparser.add_option("-s", "--styles", default=None, dest="edgeStyles", help="")
 optparser.add_option("--step", default=None, dest="step", help="")
+optparser.add_option("--detectorStep", default=None, dest="detectorStep", help="")
 #optparser.add_option("-g", "--gazetteer", default="none", dest="gazetteer", help="gazetteer options: none, stem, full")
 # Id sets
 optparser.add_option("-v", "--edgeIds", default=None, dest="edgeIds", help="Trigger detector SVM example class and feature id file stem (files = STEM.class_names and STEM.feature_names)")
 # Parameters to optimize
-optparser.add_option("-x", "--edgeParams", default="10,100,1000,2500,5000,7500,10000,20000,25000,28000,50000,60000,65000,80000,100000,150000", dest="edgeParams", help="Trigger detector c-parameter values")
+optparser.add_option("-x", "--edgeParams", default="2500,5000,7500", dest="edgeParams", help="Trigger detector c-parameter values")
 optparser.add_option("--clearAll", default=False, action="store_true", dest="clearAll", help="Delete all files")
 (options, args) = optparser.parse_args()
+
+selector = StepSelector(["TRAIN", "DEVEL", "EMPTY"], fromStep=options.step)
 
 # Check options
 assert options.output != None
@@ -86,15 +61,24 @@ else:
 exec "CLASSIFIER = " + options.classifier
 
 if options.clearAll and "clear" not in options.csc:
-    options.csc.append("clear")
+    options.csc += (",clear")
 
 # Main settings
-detector = SingleStageDetector()
-detector.classifier = CLASSIFIER
-detector.parse = options.parse
-detector.tokenization = options.tokenization
-detector.exampleBuilder = eval(options.edgeExampleBuilder)
-detector.modelPath = "model"
+develDetector = SingleStageDetector()
+develDetector.classifier = CLASSIFIER
+develDetector.evaluator = EVALUATOR
+develDetector.parse = options.parse
+develDetector.tokenization = options.tokenization
+develDetector.exampleBuilder = eval(options.edgeExampleBuilder)
+develDetector.modelPath = "devel-model"
+
+#testDetector = SingleStageDetector()
+#testDetector.classifier = CLASSIFIER
+#testDetector.evaluator = EVALUATOR
+#testDetector.parse = options.parse
+#testDetector.tokenization = options.tokenization
+#testDetector.exampleBuilder = eval(options.edgeExampleBuilder)
+#testDetector.modelPath = "test-model"
 
 # These commands will be in the beginning of most pipelines
 WORKDIR=options.output
@@ -104,22 +88,24 @@ workdir(WORKDIR, options.clearAll) # Select a working directory, don't remove ex
 log() # Start logging into a file in working directory
 
 # Make downsampling for learning curve
-downSampleTag = "-r" + str(options.downSampleTrain) + "_s" + str(options.downSampleSeed)
-newTrainFile = makeSubset(TRAIN_FILE, options.task + "-train-nodup" + downSampleTag + ".xml", options.downSampleTrain, options.downSampleSeed)
-makeSubset(TRAIN_FILE.replace("-nodup", ""), options.task + "-train" + downSampleTag + ".xml", options.downSampleTrain, options.downSampleSeed)
-TRAIN_FILE = newTrainFile
+if options.downSampleTrain != 1.0:
+    downSampleTag = "-r" + str(options.downSampleTrain) + "_s" + str(options.downSampleSeed)
+    if not os.path.exists(options.task + "-train-nodup" + downSampleTag + ".xml"):
+        newTrainFile = makeSubset(TRAIN_FILE, options.task + "-train-nodup" + downSampleTag + ".xml", options.downSampleTrain, options.downSampleSeed)
+    if not os.path.exists(options.task + "-train" + downSampleTag + ".xml"):
+        makeSubset(TRAIN_FILE.replace("-nodup", ""), options.task + "-train" + downSampleTag + ".xml", options.downSampleTrain, options.downSampleSeed)
+    TRAIN_FILE = options.task + "-train-nodup" + downSampleTag + ".xml"
 
 # Example generation parameters
 if options.edgeStyles != None:
-    detector.exampleStyle = "style:"+options.edgeStyles
+    develDetector.exampleStyle = "style:"+options.edgeStyles
 elif options.task == "BI":
-    detector.exampleStyle="style:trigger_features,typed,directed,no_linear,entities,noMasking,maxFeatures,bi_limits"
+    develDetector.exampleStyle="style:trigger_features,typed,directed,no_linear,entities,noMasking,maxFeatures,bi_limits"
 elif options.task == "REN":
-    detector.exampleStyle="style:trigger_features,typed,no_linear,entities,noMasking,maxFeatures,bacteria_renaming"
-    detector.classifierParameters = "10,100,1000,2000,3000,4000,4500,5000,5500,6000,7500,10000,20000,25000,28000,50000,60000"
-print >> sys.stderr, "Edge feature style:", detector.exampleStyle
-detector.classifierParameters="c:" + options.edgeParams
-detector.setCSCConnection(options.csc, CSC_WORKDIR)
+    develDetector.exampleStyle="style:trigger_features,typed,no_linear,entities,noMasking,maxFeatures,bacteria_renaming"
+    develDetector.classifierParameters = "10,100,1000,2000,3000,4000,4500,5000,5500,6000,7500,10000,20000,25000,28000,50000,60000"
+develDetector.classifierParameters="c:" + options.edgeParams
+develDetector.setCSCConnection(options.csc, CSC_WORKDIR)
 
 #if not options.noTestSet:
 #    EDGE_EVERYTHING_EXAMPLE_FILE = "edge-everything-examples-"+PARSE_TAG
@@ -130,15 +116,19 @@ detector.setCSCConnection(options.csc, CSC_WORKDIR)
 ###############################################################################
 # Edge example generation and model upload
 ###############################################################################
-detector.train(TRAIN_FILE, TEST_FILE, fromStep=options.step, toStep="TRAIN")
-# Model download
-detector.train(fromStep=options.step)
+if selector.check("TRAIN"):
+    develDetector.train(TRAIN_FILE, TEST_FILE, fromStep=options.detectorStep, toStep="EXAMPLES")
+    #testDetector.train(EVERYTHING_FILE, FINAL_TEST_FILE, fromStep=options.step, toStep="EXAMPLES")
+    develDetector.train(fromStep=options.detectorStep, toStep="TRAIN") # Upload models 
+    develDetector.train(fromStep=options.detectorStep) # Model download
+    #testDetector.train(fromStep=options.step) # Train final models
 
-print >> sys.stderr, "------------ Check devel classification ------------"
-detector.classify(TEST_FILE, "devel-predicted")
-
-print >> sys.stderr, "------------ Empty devel classification ------------"
-detector.classify(TEST_FILE.replace(".xml", "-empty.xml"), "devel-predicted")
+if selector.check("DEVEL"):
+    print >> sys.stderr, "------------ Check devel classification ------------"
+    develDetector.classify(TEST_FILE, "devel-predicted")
+if selector.check("EMPTY"):    
+    print >> sys.stderr, "------------ Empty devel classification ------------"
+    develDetector.classify(TEST_FILE.replace(".xml", "-empty.xml"), "devel-predicted")
 
 #if not options.noTestSet:
 #    print >> sys.stderr, "------------ Test set classification ------------"

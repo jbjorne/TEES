@@ -142,6 +142,7 @@ class ExampleBuilder:
         print >> sys.stderr, "  gold:", gold
         print >> sys.stderr, "  output:", output
         print >> sys.stderr, "  style:", style 
+        print >> sys.stderr, "  append:", str(append) 
         classSet, featureSet = cls.getIdSets(classIds, featureIds) #cls.getIdSets(idFileTag)
         builder = cls(style=style, classSet=classSet, featureSet=featureSet)
         #builder.idFileTag = idFileTag
@@ -176,7 +177,7 @@ class ExampleBuilder:
         #print classIds
         #print featureIds
         if classIds != None and os.path.exists(classIds):
-            print >> sys.stderr, "Using predefined class names"
+            print >> sys.stderr, "Using predefined class names from", classIds
             classSet = IdSet()
             classSet.load(classIds)
         else:
@@ -184,9 +185,9 @@ class ExampleBuilder:
             classSet = None
         # Feature ids
         if featureIds != None and os.path.exists(featureIds):
-            print >> sys.stderr, "Using predefined feature names"
+            print >> sys.stderr, "Using predefined feature names from", featureIds
             featureSet = IdSet()
-            featureSet.load(classIds)
+            featureSet.load(featureIds)
         else:
             print >> sys.stderr, "No predefined feature names"
             featureSet = None

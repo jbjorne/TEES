@@ -3,11 +3,12 @@ import filecmp
 import tempfile
 
 class Model():
-    def __init__(self, path, mode="r"):
+    def __init__(self, path, mode="r", verbose=True):
         self.members = {} # path_inside_model:[abspath_to_model, cache_file, tar_info]
         self.workdir = None
         self.mode = None
         self.open(path, mode)
+        self.verbose = verbose
     
     def close(self):
         shutil.rmtree(self.workdir)
@@ -24,11 +25,11 @@ class Model():
     
     def save(self):
         if self.mode == "r":
-            return
+            raise IOError("Model not open for writing")
         for name in sorted(self.members.keys()):
             member = self.members[name]
             if member[1] != None and (not os.path.exists(member[0]) or not filecmp.cmp(member[1], member[0])):
-                print "Updating model member", member[0]
+                if self.verbose: print >> sys.stderr, "Updating model", self.path, "member", member[0], "from", member[1]
                 shutil.copy2(member[1], member[0])
     
     def get(self, name, addIfNotExist=True):
@@ -38,7 +39,7 @@ class Model():
         if member[1] == None:
             cacheFile = os.path.join(self.workdir, name)
             if os.path.exists(member[0]):
-                print "Caching model member", member[0], "to", cacheFile
+                if self.verbose: print >> sys.stderr, "Caching model", self.path, "member", member[0], "to", cacheFile
                 shutil.copy2(member[0], cacheFile)
             member[1] = cacheFile
         return member[1]
