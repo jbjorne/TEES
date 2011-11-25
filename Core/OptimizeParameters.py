@@ -31,8 +31,12 @@ def getParameterCombinations(parameters):
     parameterValues = []
     for parameterName in parameterNames:
         parameterValues.append([])
-        for value in parameters[parameterName]:
-            parameterValues[-1].append( (parameterName,value) )
+        values = parameters[parameterName] 
+        if isinstance(values, (list, tuple)):
+            for value in values:
+                parameterValues[-1].append( (parameterName,value) )
+        else:
+            parameterValues[-1].append( (parameterName,values) )
     combinationLists = combine.combine(*parameterValues)
     combinations = []
     for combinationList in combinationLists:
@@ -126,8 +130,10 @@ def optimizeCSC(Classifier, Evaluator, trainExamples, testExamples, classIds, co
             for key in sorted(combination.keys()):
                 idStr += "-" + str(key) + "_" + str(combination[key])
             combinationIds.append(idStr)
+    Stream.setIndent()
     
     if steps in ["BOTH", "RESULTS"]:
+        Stream.setIndent(" ")
         print >> sys.stderr, "Waiting for results"
         finished = 0
         louhiTimer = Timer()

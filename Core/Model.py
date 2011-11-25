@@ -10,11 +10,15 @@ class Model():
         self.open(path, mode)
         self.verbose = verbose
     
+    def __del__(self):
+        self.close()
+    
     def close(self):
-        shutil.rmtree(self.workdir)
+        if self.workdir != None:
+            shutil.rmtree(self.workdir)
+        self.workdir = None
         self.path = None
         self.members = None
-        self.workdir = None
     
     def add(self, name):
         self.members[name] = [os.path.join(self.path, name), None, None]
@@ -23,23 +27,35 @@ class Model():
         shutil.copy2(path, os.path.join(self.workdir, name))
         self.members[name] = [os.path.join(self.path, name), os.path.join(self.workdir, name), None]
     
+    def importFrom(self, model, members):
+        for member in members:
+            self.insert(model.get(member), member)
+    
     def save(self):
         if self.mode == "r":
             raise IOError("Model not open for writing")
+        changed = []
         for name in sorted(self.members.keys()):
             member = self.members[name]
             if member[1] != None and (not os.path.exists(member[0]) or not filecmp.cmp(member[1], member[0])):
-                if self.verbose: print >> sys.stderr, "Updating model", self.path, "member", member[0], "from", member[1]
+                changed.append(name)
+        if len(changed > 0):
+            if verbose: print >> sys.stderr, "Saving model \"" + self.path + "\" (cache:" + self.workdir + ", changed:" + ",".join(changed) + ")"
+            for name in changedMembers:
+                member = self.members[name]
                 shutil.copy2(member[1], member[0])
     
     def get(self, name, addIfNotExist=True):
-        if name not in self.members and addIfNotExist:
-            self.add(name)
+        if name not in self.members:
+            if addIfNotExist:
+                self.add(name)
+            else:
+                raise IOError("Model has no member \"" + name + "\"")
         member = self.members[name]
         if member[1] == None:
             cacheFile = os.path.join(self.workdir, name)
             if os.path.exists(member[0]):
-                if self.verbose: print >> sys.stderr, "Caching model", self.path, "member", member[0], "to", cacheFile
+                if self.verbose: print >> sys.stderr, "Caching model \"" + self.path + "\" member \"" + member[0] + "\" to \"" + cacheFile + "\""
                 shutil.copy2(member[0], cacheFile)
             member[1] = cacheFile
         return member[1]

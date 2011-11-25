@@ -43,6 +43,8 @@ def splitParameters(string):
                        paramDict[paramName].append(intValue)
                 except:
                    paramDict[paramName].append(value)
+            if len(paramDict[paramName]) == 1:
+                paramDict[paramName] = paramDict[paramName][0] 
         else:
             paramDict[paramSet] = None 
     return paramDict

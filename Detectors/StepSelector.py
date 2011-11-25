@@ -25,6 +25,12 @@ class StepSelector:
     def check(self, step):
         #print "CHECK", step, self.currentStep, self.steps, self.fromStep, self.toStep
         assert step in self.steps
+        assert self.fromStep == None or self.fromStep in self.steps, self.fromStep
+        assert self.toStep == None or self.toStep in self.steps, self.toStep
+        if self.doSteps != None:
+            for s in self.doSteps:
+                assert s in self.steps, s
+        
         stepIndex = self.steps.index(step)
         # Get current index
         currentIndex = -1

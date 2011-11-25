@@ -70,7 +70,8 @@ develDetector.evaluator = EVALUATOR
 develDetector.parse = options.parse
 develDetector.tokenization = options.tokenization
 develDetector.exampleBuilder = eval(options.edgeExampleBuilder)
-develDetector.modelPath = "devel-model"
+develDetector.modelPath = "model-devel"
+develDetector.combinedModelPath = "model-test"
 
 #testDetector = SingleStageDetector()
 #testDetector.classifier = CLASSIFIER
