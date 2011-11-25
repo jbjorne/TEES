@@ -36,7 +36,7 @@ optparser.add_option("-x", "--edgeParams", default="2500,5000,7500", dest="edgeP
 optparser.add_option("--clearAll", default=False, action="store_true", dest="clearAll", help="Delete all files")
 (options, args) = optparser.parse_args()
 
-selector = StepSelector(["TRAIN", "DEVEL", "EMPTY"], fromStep=options.step)
+selector = StepSelector(["TRAIN", "DEVEL", "EMPTY", "TEST"], fromStep=options.step)
 
 # Check options
 assert options.output != None
@@ -71,15 +71,8 @@ develDetector.parse = options.parse
 develDetector.tokenization = options.tokenization
 develDetector.exampleBuilder = eval(options.edgeExampleBuilder)
 develDetector.modelPath = "model-devel"
-develDetector.combinedModelPath = "model-test"
-
-#testDetector = SingleStageDetector()
-#testDetector.classifier = CLASSIFIER
-#testDetector.evaluator = EVALUATOR
-#testDetector.parse = options.parse
-#testDetector.tokenization = options.tokenization
-#testDetector.exampleBuilder = eval(options.edgeExampleBuilder)
-#testDetector.modelPath = "test-model"
+if not options.noTestSet:
+    develDetector.combinedModelPath = "model-test"
 
 # These commands will be in the beginning of most pipelines
 WORKDIR=options.output
@@ -107,29 +100,23 @@ elif options.task == "REN":
     develDetector.classifierParameters = "10,100,1000,2000,3000,4000,4500,5000,5500,6000,7500,10000,20000,25000,28000,50000,60000"
 develDetector.classifierParameters="c:" + options.edgeParams
 develDetector.setCSCConnection(options.csc, CSC_WORKDIR)
-
-#if not options.noTestSet:
-#    EDGE_EVERYTHING_EXAMPLE_FILE = "edge-everything-examples-"+PARSE_TAG
-#    EDGE_FINAL_TEST_EXAMPLE_FILE = "edge-final-examples-"+PARSE_TAG
-#    EDGE_IDS = "edge-ids"
-#if not "eval" in options.csc:
     
 ###############################################################################
 # Edge example generation and model upload
 ###############################################################################
 if selector.check("TRAIN"):
-    develDetector.train(TRAIN_FILE, TEST_FILE, fromStep=options.detectorStep, toStep="EXAMPLES")
-    #testDetector.train(EVERYTHING_FILE, FINAL_TEST_FILE, fromStep=options.step, toStep="EXAMPLES")
-    develDetector.train(fromStep=options.detectorStep, toStep="TRAIN") # Upload models 
-    develDetector.train(fromStep=options.detectorStep) # Model download
-    #testDetector.train(fromStep=options.step) # Train final models
+    develDetector.train(TRAIN_FILE, TEST_FILE, fromStep=options.detectorStep)
 
 if selector.check("DEVEL"):
     print >> sys.stderr, "------------ Check devel classification ------------"
-    develDetector.classify(TEST_FILE, "devel-predicted")
+    develDetector.classify(TEST_FILE, develDetector.modelPath, "devel-predicted")
 if selector.check("EMPTY"):    
     print >> sys.stderr, "------------ Empty devel classification ------------"
-    develDetector.classify(TEST_FILE.replace(".xml", "-empty.xml"), "devel-predicted")
+    develDetector.classify(TEST_FILE.replace(".xml", "-empty.xml"), develDetector.modelPath, "devel-predicted")
+if not options.noTestSet:
+    if selector.check("TEST"):    
+        print >> sys.stderr, "------------ Test set classification ------------"
+        develDetector.classify(FINAL_TEST_FILE, develDetector.combinedModelPath, "test-predicted")
 
 #if not options.noTestSet:
 #    print >> sys.stderr, "------------ Test set classification ------------"

@@ -13,6 +13,7 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__))+"/..")
 from Utils.ProgressCounter import ProgressCounter
 from Utils.Parameters import getArgs
 from Utils.Parameters import splitParameters
+from Utils.Parameters import toString
 import Core.ExampleUtils as ExampleUtils
 import SentenceGraph
 #IF LOCAL
@@ -141,6 +142,8 @@ class ExampleBuilder:
         print >> sys.stderr, "  input:", input
         print >> sys.stderr, "  gold:", gold
         print >> sys.stderr, "  output:", output
+        if not isinstance(style, types.StringTypes):
+            style = toString(style)
         print >> sys.stderr, "  style:", style 
         print >> sys.stderr, "  append:", str(append) 
         classSet, featureSet = cls.getIdSets(classIds, featureIds) #cls.getIdSets(idFileTag)

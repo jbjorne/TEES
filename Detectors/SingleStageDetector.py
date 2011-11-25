@@ -57,22 +57,16 @@ class SingleStageDetector():
     
     def _openModel(self, path, readOnly=True):
         if readOnly:
-            print >> sys.stderr, "Opening model", path, "if it exists"
             assert self.state == self.STATE_CLASSIFY, self.state
             self._model = Model(self.modelPath, "r")
-        elif self.select == None or self.select.check("BEGIN"): # Begin training and clear model
-            print >> sys.stderr, self.__class__.__name__ + ":" + self.state + ":BEGIN"
-            assert self.state == self.STATE_TRAIN, self.state
-            print >> sys.stderr, "Clearing model", path, "if it exists"
-            self._model = Model(self.modelPath, "w")
         else:
-            print >> sys.stderr, "Using previous model", path, "if it exists"
             assert self.state == self.STATE_TRAIN, self.state
             self._model = Model(self.modelPath, "a")
     
     def _buildExamples(self, datas, outputs, golds=[]):
         if self.select == None or self.select.check("EXAMPLES"):
             print >> sys.stderr, self.__class__.__name__ + ":" + self.state + ":EXAMPLES"
+            exampleStyle = Parameters.splitParameters(self._model.get(self.tag+"example-style"))
             for data, output, gold in itertools.izip_longest(datas, outputs, golds, fillvalue=[]):
                 print >> sys.stderr, "Example generation for", output
                 if not isinstance(data, (list, tuple)): data = [data]
@@ -80,11 +74,8 @@ class SingleStageDetector():
                 append = False
                 for dataSet, goldSet in itertools.izip_longest(data, gold, fillvalue=None):
                     if dataSet != None:
-                        self.exampleBuilder.run(dataSet, output, self.parse, self.tokenization, self.exampleStyle, self._model.get(self.tag+"ids.classes"), self._model.get(self.tag+"ids.features"), goldSet, append)
+                        self.exampleBuilder.run(dataSet, output, self.parse, self.tokenization, exampleStyle, self._model.get(self.tag+"ids.classes"), self._model.get(self.tag+"ids.features"), goldSet, append)
                     append = True
-            if self._model.mode != "r":
-                Parameters.saveParameters(self.exampleStyle, self._model.get(self.tag+"example-style", True))
-                self._model.save()
     
     def _beginTrain(self):
         if self.select == None or self.select.check("TRAIN"):
@@ -107,7 +98,7 @@ class SingleStageDetector():
             Parameters.saveParameters(bestResult[4], self._model.get(self.tag+"classifier-parameters", True))
             self._model.save()
     
-    def _beginProcess(self, state, steps=None, fromStep=None, toStep=None):      
+    def _initProcess(self, state, steps=None, fromStep=None, toStep=None):      
         if self.state == None:
             assert self.select == None
             self.state = state
@@ -119,6 +110,17 @@ class SingleStageDetector():
             assert self.state == state, (state, self.state)
             assert self.select.steps == steps, (steps, self.select.steps)
             self.select.setLimits(fromStep, toStep)
+
+    def _beginProcess(self):
+        if self.select == None or self.select.check("BEGIN"):
+            print >> sys.stderr, self.__class__.__name__ + ":" + self.state + ":BEGIN"
+            if self.state == self.STATE_TRAIN:
+                print >> sys.stderr, "Clearing model", path, "if it exists"
+                self._model = Model(self.modelPath, "w")
+                Parameters.saveParameters(self.exampleStyle, self._model.get(self.tag+"example-style", True))
+                self._model.save()
+                self._model.close()
+                self._model = None
     
     def _endProcess(self):
         if self.select == None or self.select.check("END"):
@@ -169,7 +171,8 @@ class SingleStageDetector():
                 self._combinedModel = None
     
     def train(self, trainData=None, optData=None, fromStep=None, toStep=None):
-        self._beginProcess(self.STATE_TRAIN, ["BEGIN", "EXAMPLES", "TRAIN", "MODELS", "TRAIN-COMBINED", "MODEL-COMBINED", "END"], fromStep, toStep)
+        self._initProcess(self.STATE_TRAIN, ["BEGIN", "EXAMPLES", "TRAIN", "MODELS", "TRAIN-COMBINED", "MODEL-COMBINED", "END"], fromStep, toStep)
+        self._beginProcess()
         self._openModel(self.modelPath, False)
         self._buildExamples([optData, trainData], [self.tag+"opt-examples.gz", self.tag+"train-examples.gz"])
         self._beginTrain()
@@ -178,9 +181,10 @@ class SingleStageDetector():
         self._endTrainForCombinedModel()
         self._endProcess()
         
-    def classify(self, data, output):
-        self._beginProcess(self.STATE_CLASSIFY)
-        self._openModel(self.modelPath)
+    def classify(self, data, model, output):
+        self._initProcess(self.STATE_CLASSIFY)
+        self._beginProcess()
+        self._openModel(model)
         self._buildExamples([data], [output+".examples.gz"])
         self.classifier.test(output+".examples.gz", self._model.get(self.tag+"classifier-model.gz"), output + ".classifications")
         self.evaluator.evaluate(output+".examples.gz", output+".classifications", self._model.get(self.tag+"ids.classes"))

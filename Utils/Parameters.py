@@ -49,15 +49,18 @@ def splitParameters(string):
             paramDict[paramSet] = None 
     return paramDict
 
-def saveParameters(params, output):
+def toString(params):
     if type(params) == types.StringType:
         params = splitParameters(params)
-    f = open(output, "wt")
     paramStrings = []
     for key in sorted(params.keys()):
         paramValues = params[key]
         if type(paramValues) not in [types.TupleType, types.ListType]:
             paramValues = [paramValues]
         paramStrings.append( str(key) + ":" + ",".join([str(x) for x in paramValues]) )
-    f.write(";".join(paramStrings))
+    return ";".join(paramStrings)
+
+def saveParameters(params, output):
+    f = open(output, "wt")
+    f.write(toString(params))
     f.close()
