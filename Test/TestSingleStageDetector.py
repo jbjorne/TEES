@@ -45,18 +45,14 @@ if options.task == "BI":
     dataPath = os.path.expanduser("~/biotext/BioNLP2011/data/main-tasks/")
     TRAIN_FILE = dataPath + options.task + "/" + options.task + "-train-nodup.xml"
     TEST_FILE = dataPath + options.task + "/" + options.task + "-devel-nodup.xml"
-    if not options.noTestSet:
-        EVERYTHING_FILE = dataPath + options.task + "/" + options.task + "-devel-and-train.xml"
-        FINAL_TEST_FILE = dataPath + options.task + "/" + options.task + "-test.xml"
+    FINAL_TEST_FILE = dataPath + options.task + "/" + options.task + "-test.xml"
     BXEv.setOptions("genia-BXEv", "BI", TEST_FILE, options.parse, options.tokenization, "edge-ids")
     EVALUATOR = BXEv
 else:
     dataPath = os.path.expanduser("~/biotext/BioNLP2011/data/supporting-tasks/REN/")
     TRAIN_FILE = dataPath + "ren-train.xml"
     TEST_FILE = dataPath + "ren-devel.xml"
-    if not options.noTestSet:
-        EVERYTHING_FILE = dataPath + "ren-devel-and-train.xml"
-        FINAL_TEST_FILE = dataPath + "ren-test.xml"
+    FINAL_TEST_FILE = dataPath + "ren-test.xml"
     EVALUATOR = Ev
 exec "CLASSIFIER = " + options.classifier
 
@@ -105,8 +101,8 @@ develDetector.setCSCConnection(options.csc, CSC_WORKDIR)
 # Edge example generation and model upload
 ###############################################################################
 if selector.check("TRAIN"):
+    print >> sys.stderr, "------------ Train Edge Detector ------------"
     develDetector.train(TRAIN_FILE, TEST_FILE, fromStep=options.detectorStep)
-
 if selector.check("DEVEL"):
     print >> sys.stderr, "------------ Check devel classification ------------"
     develDetector.classify(TEST_FILE, develDetector.modelPath, "devel-predicted")
@@ -117,25 +113,4 @@ if not options.noTestSet:
     if selector.check("TEST"):    
         print >> sys.stderr, "------------ Test set classification ------------"
         develDetector.classify(FINAL_TEST_FILE, develDetector.combinedModelPath, "test-predicted")
-
-#if not options.noTestSet:
-#    print >> sys.stderr, "------------ Test set classification ------------"
-#    if "local" not in options.csc:
-#        clear = False
-#        if "clear" in options.csc: clear = True
-#        if "louhi" in options.csc:
-#            c = CSCConnection(CSC_WORKDIR+"/edge-everything-models", "jakrbj@louhi.csc.fi", clear)
-#        else:
-#            c = CSCConnection(CSC_WORKDIR+"/edge-everything-models", "jakrbj@murska.csc.fi", clear)
-#    else:
-#        c = None
-#    finalEdgeModel = optimize(CLASSIFIER, Ev, EDGE_EVERYTHING_EXAMPLE_FILE, EDGE_TEST_EXAMPLE_FILE,\
-#    EDGE_IDS+".class_names", "c:"+bestEdgeModel[2].split("_")[-1], "edge-everything-models", None, c, False)[1]
-#    Cls.test(EDGE_FINAL_TEST_EXAMPLE_FILE, finalEdgeModel, "final-edge-test-classifications")
-#    xml = BioTextExampleWriter.write(EDGE_FINAL_TEST_EXAMPLE_FILE, "final-edge-test-classifications", FINAL_TEST_FILE, None, EDGE_IDS+".class_names", PARSE, TOK)
-#    xml = ix.splitMergedElements(xml, None)
-#    xml = ix.recalculateIds(xml, "final-predicted-edges.xml", True)
-#    EvaluateInteractionXML.run(Ev, xml, FINAL_TEST_FILE, PARSE, TOK)
-#    STFormat.ConvertXML.toSTFormat(xml, "final-geniaformat", outputTag="a2")
-#    # Sanity Check
-#    STFormat.Compare.compare("final-geniaformat", "empty-devel-geniaformat", "a2")
+        STFormat.Compare.compare("test-predicted.tar.gz", "devel-predicted.tar.gz", "a2")

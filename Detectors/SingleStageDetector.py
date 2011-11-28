@@ -10,6 +10,7 @@ from Murska.CSCConnection import CSCConnection
 from Core.OptimizeParameters import optimize
 from StepSelector import StepSelector
 import Utils.Parameters as Parameters
+import types
 
 from ExampleWriters.BioTextExampleWriter import BioTextExampleWriter
 import Evaluators.EvaluateInteractionXML as EvaluateInteractionXML
@@ -40,9 +41,6 @@ class SingleStageDetector():
         
         self.cscConnection = None
     
-    def importIds(self, filename):
-        pass
-    
     def setCSCConnection(self, options, cscworkdir):
         if "local" not in options:
             clear = False
@@ -55,17 +53,15 @@ class SingleStageDetector():
         else:
             self.cscConnection = None
     
-    def _openModel(self, path, readOnly=True):
-        if readOnly:
-            assert self.state == self.STATE_CLASSIFY, self.state
-            self._model = Model(self.modelPath, "r")
+    def _openModel(self, model, mode="r"):
+        if type(model) == types.StringTypes:
+            return Model(self.modelPath, mode)
         else:
-            assert self.state == self.STATE_TRAIN, self.state
-            self._model = Model(self.modelPath, "a")
+            return model
     
     def _buildExamples(self, datas, outputs, golds=[]):
         if self.select == None or self.select.check("EXAMPLES"):
-            print >> sys.stderr, self.__class__.__name__ + ":" + self.state + ":EXAMPLES"
+            if self.select != None: print >> sys.stderr, self.__class__.__name__ + ":" + self.state + ":EXAMPLES"
             exampleStyle = Parameters.splitParameters(self._model.get(self.tag+"example-style"))
             for data, output, gold in itertools.izip_longest(datas, outputs, golds, fillvalue=[]):
                 print >> sys.stderr, "Example generation for", output
@@ -77,14 +73,14 @@ class SingleStageDetector():
                         self.exampleBuilder.run(dataSet, output, self.parse, self.tokenization, exampleStyle, self._model.get(self.tag+"ids.classes"), self._model.get(self.tag+"ids.features"), goldSet, append)
                     append = True
     
-    def _beginTrain(self):
-        if self.select == None or self.select.check("TRAIN"):
+    def _beginOptModel(self):
+        if self.select == None or self.select.check("OPTIMIZE"):
             print >> sys.stderr, self.__class__.__name__ + ":" + self.state + ":TRAIN"
             self.cscConnection.setWorkSubDir(self.tag+"models")
             optimize(self.classifier, self.evaluator, self.tag+"train-examples.gz", self.tag+"opt-examples.gz",\
                      self._model.get(self.tag+"ids.classes"), self.classifierParameters, self.tag+"models", None, self.cscConnection, False, "SUBMIT")
     
-    def _endTrain(self):
+    def _endOptModel(self):
         # Download models
         if self.select.check("MODELS"):
             print >> sys.stderr, self.__class__.__name__ + ":" + self.state + ":MODELS"
@@ -98,7 +94,7 @@ class SingleStageDetector():
             Parameters.saveParameters(bestResult[4], self._model.get(self.tag+"classifier-parameters", True))
             self._model.save()
     
-    def _initProcess(self, state, steps=None, fromStep=None, toStep=None):      
+    def _enterState(self, state, steps=None, fromStep=None, toStep=None):      
         if self.state == None:
             assert self.select == None
             self.state = state
@@ -111,19 +107,16 @@ class SingleStageDetector():
             assert self.select.steps == steps, (steps, self.select.steps)
             self.select.setLimits(fromStep, toStep)
 
-    def _beginProcess(self):
-        if self.select == None or self.select.check("BEGIN"):
-            print >> sys.stderr, self.__class__.__name__ + ":" + self.state + ":BEGIN"
-            if self.state == self.STATE_TRAIN:
-                print >> sys.stderr, "Clearing model", path, "if it exists"
-                self._model = Model(self.modelPath, "w")
-                Parameters.saveParameters(self.exampleStyle, self._model.get(self.tag+"example-style", True))
-                self._model.save()
-                self._model.close()
-                self._model = None
+    def _initTrainVariables(self, model, parse=None, tokenization=None):
+        if self.select == None or self.select.currentStep == None:
+            self._model = self._openModel(model, "w")
+            Parameters.saveParameters(self.exampleStyle, self._model.get(self.tag+"example-style", True))
+            self._model.save()
+        else:
+            self._model = Model(self.modelPath, "a")
     
-    def _endProcess(self):
-        if self.select == None or self.select.check("END"):
+    def _exitState(self):
+        if self.select == None or self.select.currentStep == self.select.steps[-1]:
             print >> sys.stderr, self.__class__.__name__ + ":" + self.state + ":END"
             if self._model != None:
                 self._model.close()
@@ -131,7 +124,7 @@ class SingleStageDetector():
             self.state = None
             self.select = None
     
-    def _beginTrainForCombinedModel(self):
+    def _beginCombinedModel(self):
         if self.select == None or self.select.check("TRAIN-COMBINED"):
             if self.combinedModelPath != None:
                 print >> sys.stderr, self.__class__.__name__ + ":" + self.state + ":TRAIN-COMBINED"
@@ -153,7 +146,7 @@ class SingleStageDetector():
                 self._combinedModel.close()
                 self._combinedModel = None
     
-    def _endTrainForCombinedModel(self):
+    def _endCombinedModel(self):
         if self.select == None or self.select.check("MODEL-COMBINED"):
             if self.combinedModelPath != None:
                 print >> sys.stderr, self.__class__.__name__ + ":" + self.state + ":MODEL-COMBINED"
@@ -170,29 +163,34 @@ class SingleStageDetector():
                 self._combinedModel.close()
                 self._combinedModel = None
     
-    def train(self, trainData=None, optData=None, fromStep=None, toStep=None):
-        self._initProcess(self.STATE_TRAIN, ["BEGIN", "EXAMPLES", "TRAIN", "MODELS", "TRAIN-COMBINED", "MODEL-COMBINED", "END"], fromStep, toStep)
-        self._beginProcess()
+    def train(self, trainData=None, optData=None, 
+              model=None, combinedModel=None,
+              exampleStyle=None, classifierParameters=None,
+              parse=None, tokenization=None,
+              fromStep=None, toStep=None):
+        self._enterState(self.STATE_TRAIN, ["EXAMPLES", "OPTIMIZE", "MODELS", "TRAIN-COMBINED", "MODEL-COMBINED"], fromStep, toStep)
+        self._initTrainVariables(trainData, optData, model, combinedModel, exampleStyle, classifierParameters, parse, tokenization)
         self._openModel(self.modelPath, False)
         self._buildExamples([optData, trainData], [self.tag+"opt-examples.gz", self.tag+"train-examples.gz"])
-        self._beginTrain()
-        self._endTrain()
-        self._beginTrainForCombinedModel()
-        self._endTrainForCombinedModel()
-        self._endProcess()
+        self._beginOptModel()
+        self._endOptModel()
+        self._beginCombinedModel()
+        self._endCombinedModel()
+        self._exitState()
         
     def classify(self, data, model, output):
-        self._initProcess(self.STATE_CLASSIFY)
-        self._beginProcess()
-        self._openModel(model)
+        self._enterState(self.STATE_CLASSIFY)
+        self._model = self._openModel(model, "r")
         self._buildExamples([data], [output+".examples.gz"])
         self.classifier.test(output+".examples.gz", self._model.get(self.tag+"classifier-model.gz"), output + ".classifications")
         self.evaluator.evaluate(output+".examples.gz", output+".classifications", self._model.get(self.tag+"ids.classes"))
         xml = BioTextExampleWriter.write(output+".examples.gz", output+".classifications", data, None, self._model.get(self.tag+"ids.classes"), self.parse, self.tokenization)
         xml = InteractionXML.splitMergedElements(xml, None)
-        xml = InteractionXML.recalculateIds(xml, output+".xml", True)
+        xml = InteractionXML.recalculateIds(xml, output+".xml.gz", True)
         EvaluateInteractionXML.run(self.evaluator, xml, data, self.parse, self.tokenization)
         STFormat.ConvertXML.toSTFormat(xml, output+".tar.gz", outputTag="a2")
         if self.stEvaluator != None:
             self.stEvaluator.evaluate(output+".tar.gz")
-        self._endProcess()
+        self._model.close()
+        self._model = None
+        self._exitState()
