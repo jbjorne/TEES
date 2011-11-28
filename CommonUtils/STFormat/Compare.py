@@ -33,7 +33,9 @@ def getCounts(documents):
     return counts
 
 def compare(a, b, a2Tag="a2"):
+    print "Loading set A:", a
     docsA = loadSet(a, a2Tag=a2Tag)
+    print "Loading set B:", b
     docsB = loadSet(b, a2Tag=a2Tag)
     countsA = getCounts(docsA)
     countsB = getCounts(docsB)

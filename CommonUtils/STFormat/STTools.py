@@ -331,8 +331,19 @@ def load(id, dir, loadA2=True, sitesAreArguments=False, a2Tag="a2"):
         triggers, events, relations = loadRelOrA2(relPath, proteins, sitesAreArguments)
     return proteins, words, dependencies, triggers, events, relations
 
-def loadSet(dir, setName=None, level="a2", sitesAreArguments=False, a2Tag="a2"):
+def loadSet(path, setName=None, level="a2", sitesAreArguments=False, a2Tag="a2"):
     assert level in ["txt", "a1", "a2"]
+    if path.endswith(".tar.gz"):
+        import tempfile
+        import tarfile
+        import shutil
+        dir = tempfile.mkdtemp()
+        f = tarfile.open(path, "r")
+        f.extractall(dir)
+        f.close()
+    else:
+        dir = path
+    
     ids = set()
     documents = []
     for filename in os.listdir(dir):
@@ -349,11 +360,14 @@ def loadSet(dir, setName=None, level="a2", sitesAreArguments=False, a2Tag="a2"):
             try:
                 doc.proteins, doc.words, doc.dependencies, doc.triggers, doc.events, doc.relations = load(str(id), dir, level=="a2", sitesAreArguments, a2Tag=a2Tag)
             except:
-                print >> sys.stderr, "Exception reading document", dir, id 
+                print >> sys.stderr, "Exception reading document", id, "from", dir 
                 raise
         doc.text = loadText( os.path.join(dir, str(id) + ".txt") )
         doc.dataSet = setName
         documents.append(doc)
+    
+    if dir != path:
+        shutil.rmtree(dir)
     return documents
 
 def writeSet(documents, output, resultFileTag="a2", debug=False, task=2, validate=True):
@@ -384,7 +398,7 @@ def writeSet(documents, output, resultFileTag="a2", debug=False, task=2, validat
         out.write(doc.text)
         out.close()
     if output.endswith(".tar.gz"):
-        package(outdir, output, [resultFileTag])
+        package(outdir, output, ["a1", "txt", resultFileTag])
         shutil.rmtree(outdir)
     print counts
         
