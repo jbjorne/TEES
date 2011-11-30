@@ -4,6 +4,7 @@ from EdgeDetector import EdgeDetector
 
 class EventDetector(Detector):
     def __init__(self):
+        Detector.__init__(self)
         self.triggerDetector = TriggerDetector()
         self.edgeDetector = EdgeDetector()
     
@@ -18,27 +19,42 @@ class EventDetector(Detector):
               recallAdjustParameters=None, fullGrid=False,
               parse=None, tokenization=None,
               fromStep=None, toStep=None):
-        self._enterState(self.STATE_TRAIN, ["EXAMPLES", "OPTIMIZE", "MODELS", "GRID", "TRAIN-COMBINED", "MODEL-COMBINED"], fromStep, toStep)
+        triggerFromStep = self.getSharedStep(triggerDetector, fromStep)
+        edgeFromStep = self.getSharedStep(edgeDetector, fromStep)
+        self._enterState(self.STATE_TRAIN, ["EXAMPLES", "BEGIN-MODEL", "END-MODEL", "BEGIN-COMBINED-MODEL", "GRID", "BEGIN-COMBINED-MODEL-FULLGRID", "END-COMBINED-MODEL"], fromStep, toStep)
         self._initVariables(trainData, optData, model, combinedModel, triggerExampleStyle, edgeExampleStyle,
               triggerClassifierParameters, edgeClassifierParameters, recallAdjustParameters, fullGrid, parse, tokenization)
-        self.checkStep("EXAMPLES") # mark step
+        if self.checkStep("EXAMPLES"): # mark step
+            self.model = self._initModel(self.model) # Initialize shared model
+            if self.combinedModel != None:
+                self.combinedModel = self._initModel(self.combinedModel) # Initialize shared model
         self.triggerDetector.train(self.trainData, self.optData, self.model, self.combinedModel, 
                                    self.triggerExampleStyle, self.triggerClassifierParameters,
-                                   self.parse, self.tokenization, fromStep=fromStep, toStep="EXAMPLES")
+                                   self.parse, self.tokenization, 
+                                   fromStep=triggerFromStep, toStep="EXAMPLES")
         self.edgeDetector.train(self.trainData, self.optData, self.model, self.combinedModel, 
                                 self.edgeExampleStyle, self.edgeClassifierParameters,
-                                self.parse, self.tokenization, fromStep=fromStep, toStep="EXAMPLES")
-        self.checkStep("OPTIMIZE") # mark step
-        self.triggerDetector.train(fromStep=fromStep, toStep="OPTIMIZE")
-        self.edgeDetector.train(fromStep=fromStep, toStep="OPTIMIZE")
-        self.checkStep("MODELS") # mark step
-        self.triggerDetector.train(fromStep=fromStep, toStep="MODELS")
-        self.edgeDetector.train(fromStep=fromStep, toStep="MODELS")
+                                self.parse, self.tokenization, 
+                                fromStep=edgeFromStep, toStep="EXAMPLES")
+        self.checkStep("BEGIN-MODEL") # mark step
+        self.triggerDetector.train(fromStep=triggerFromStep, toStep="BEGIN-MODEL")
+        self.edgeDetector.train(fromStep=edgeFromStep, toStep="BEGIN-MODEL")
+        self.checkStep("END-MODEL") # mark step
+        self.triggerDetector.train(fromStep=triggerFromStep, toStep="END-MODEL")
+        self.edgeDetector.train(fromStep=edgeFromStep, toStep="END-MODEL")
+        self.select.check("BEGIN-COMBINED-MODEL", False) # mark step
+        if not self.fullGrid:
+            self.triggerDetector.train(fromStep=triggerFromStep, toStep="BEGIN-COMBINED-MODEL")
+            self.edgeDetector.train(fromStep=edgeFromStep, toStep="BEGIN-COMBINED-MODEL")
         if self.checkStep("GRID"):
-            self.doGrid(self.edgeDetector, self.triggerDetector, self.recallAdjustParameters)
-        self.select.check("TRAIN-COMBINED", False) # mark step
-        self.triggerDetector.train(fromStep=fromStep, toStep="TRAIN-COMBINED")
-        self.edgeDetector.train(fromStep=fromStep, toStep="TRAIN-COMBINED")
+            self.doGrid()
+        self.select.check("BEGIN-COMBINED-MODEL-FULLGRID", False) # mark step
+        if self.fullGrid:
+            self.triggerDetector.train(fromStep=triggerFromStep, toStep="BEGIN-COMBINED-MODEL")
+            self.edgeDetector.train(fromStep=edgeFromStep, toStep="BEGIN-COMBINED-MODEL")
+        self.select.check("END-COMBINED-MODEL", False) # mark step
+        self.triggerDetector.train(fromStep=triggerFromStep, toStep="END-COMBINED-MODEL")
+        self.edgeDetector.train(fromStep=edgeFromStep, toStep="END-COMBINED-MODEL")
         
         self._exitState()
     
@@ -47,10 +63,6 @@ class EventDetector(Detector):
         print >> sys.stderr, "--------- Booster parameter search ---------"
         # Build trigger examples
         self.triggerDetector.buildExamples([self.optData], ["test-trigger-examples.gz"])
-        if not options.fullGrid:
-            self.classifier.test("test-trigger-examples.gz", self.model.get("trigger-classifier-model.gz"), "test-trigger-classifications")
-            evaluator = self.evaluator.evaluate("test-trigger-examples.gz", "test-trigger-classifications", self.model.get("trigger-ids.classes"))
-            BioTextExampleWriter.write("test-trigger-examples.gz", "test-trigger-classifications", self.optData, "trigger-pred-best.xml", self.model.get("trigger-ids.classes"), self.parse, self.tokenization)
         
         count = 0
         bestResults = None
@@ -76,45 +88,34 @@ class EventDetector(Detector):
             
             # Triggers
             if params["trigger"] != prevTriggerParam:
-                print >> sys.stderr, "Reclassifying trigger examples for parameter", params["trigger"]
-                self.triggerDetector.classifier.test("test-trigger-examples.gz", TRIGGER_MODEL_STEM+str(params["trigger"])+".gz", "test-trigger-classifications")
-                evaluator = self.evaluator.evaluate("test-trigger-examples.gz", "test-trigger-classifications", self.model.get("trigger-ids.classes"))
-                BioTextExampleWriter.write("test-trigger-examples.gz", "test-trigger-classifications", self.optData, "trigger-pred-best.xml", self.model.get("trigger-ids.classes"), options.parse, options.tokenization)
+                print >> sys.stderr, "Classifying trigger examples for parameter", params["trigger"]
+                self.triggerDetector.classifyToXML(self, self.optData, self.model, "test-trigger-examples.gz", "grid-", classifierModel=TRIGGER_MODEL_STEM+str(params["trigger"])+".gz", split=False)
             prevTriggerParam = params["trigger"]
             
             # Boost
-            xml = RecallAdjust.run("trigger-pred-best.xml", params["booster"], None, binary=BINARY_RECALL_MODE)
+            xml = RecallAdjust.run("grid-trigger-pred.xml", params["booster"], None, binary=BINARY_RECALL_MODE)
             xml = ix.splitMergedElements(xml, None)
             xml = ix.recalculateIds(xml, None, True)
             
             # Build edge examples
-            self.triggerDetector.buildExamples([xml], ["test-edge-examples.gz"])
+            self.edgeDetector.buildExamples([xml], ["test-edge-examples.gz"])
             if options.classifier == "ACCls":
-                self.triggerDetector.buildExamples([xml], ["test-edge-examples.gz"], [self.optData])
+                self.triggerDetector.edgeDetector([xml], ["test-edge-examples.gz"], [self.optData])
             else:
-                self.triggerDetector.buildExamples([xml], ["test-edge-examples.gz"])
+                self.triggerDetector.edgeDetector([xml], ["test-edge-examples.gz"])
             # Classify with pre-defined model
             if params["edge"] == "BEST":
-                if bestEdgeModel != None:
-                    print >> sys.stderr, "best-edge-model=", os.path.realpath("best-edge-model.gz")
-                self.edgeDetector.classifier.test("test-edge-examples.gz", bestEdgeModel, "test-edge-classifications")
+                edgeClassifierModel=None
             else:
-                self.edgeDetector.classifier.test("test-edge-examples.gz", EDGE_MODEL_STEM+str(params["edge"])+".gz", "test-edge-classifications")
-            # Write to interaction xml
-            evaluator = self.evaluator.evaluate("test-edge-examples.gz", "test-edge-classifications", self.model.get("edge-ids.classes"))
-            if evaluator.getData().getTP() + evaluator.getData().getFP() > 0:
-                #xml = ExampleUtils.writeToInteractionXML("test-edge-examples", "test-edge-classifications", xml, None, EDGE_IDS+".class_names", PARSE, TOK)
-                xml = BioTextExampleWriter.write("test-edge-examples", "test-edge-classifications", xml, None, self.model.get("edge-ids.classes"), options.parse, options.tokenization)
-                xml = ix.splitMergedElements(xml, None)
-                #xml = ix.recalculateIds(xml, "flat-" + str(boost) + ".xml.gz", True)
-                xml = ix.recalculateIds(xml, "flat-devel.xml.gz", True)
-                
+                edgeClassifierModel=EDGE_MODEL_STEM+str(params["trigger"])+".gz"
+            xml = self.edgeDetector.classifyToXML(self, self.optData, self.model, "test-edge-examples.gz", "grid-", classifierModel=edgeClassifierModel, split=True)
+            if xml != None:                
                 # EvaluateInteractionXML differs from the previous evaluations in that it can
                 # be used to compare two separate GifXML-files. One of these is the gold file,
                 # against which the other is evaluated by heuristically matching triggers and
                 # edges. Note that this evaluation will differ somewhat from the previous ones,
                 # which evaluate on the level of examples.
-                EIXMLResult = EvaluateInteractionXML.run(evaluator, xml, self.optData, options.parse, options.tokenization)
+                EIXMLResult = EvaluateInteractionXML.run(self.evaluator, xml, self.optData, options.parse, options.tokenization)
                 # Convert to ST-format
                 if os.path.exists("flat-devel-geniaformat"):
                     shutil.rmtree("flat-devel-geniaformat")
@@ -174,12 +175,14 @@ class EventDetector(Detector):
         print >> sys.stderr, "Booster search complete"
         print >> sys.stderr, "Tested", count, "out of", count, "combinations"
         print >> sys.stderr, "Best parameters:", bestResults[0]
+        # Save grid model
         self.saveStr("recallAdjustParameter", str(bestResults[0]["booster"]))
-        if options.fullGrid: # define best models
-            bestTriggerModel = updateModel((None, TRIGGER_MODEL_STEM+str(bestResults[0]["trigger"])+".gz", str(bestResults[0]["trigger"])), "best-trigger-model.gz")
-            bestEdgeModel = updateModel((None, EDGE_MODEL_STEM+str(bestResults[0]["edge"])+".gz", str(bestResults[0]["edge"])), "best-edge-model.gz")
+        if fullGrid: # define best models
+            self.triggerDetector.addClassifierModel(self.model, TRIGGER_MODEL_STEM+str(bestResults[0]["trigger"])+".gz", bestResults[0]["trigger"])
+            self.edgeDetector.addClassifierModel(self.model, EDGE_MODEL_STEM+str(bestResults[0]["edge"])+".gz", bestResults[0]["edge"])
         if options.task in ["OLD", "GE"]:
             print >> sys.stderr, "Best result:", bestResults[1]
+        
         # Final models with full grid
         if options.classifier != "ACCls" and (not options.noTestSet) and options.fullGrid:
             print >> sys.stderr, "------------ Submitting final models ------------"

@@ -20,8 +20,8 @@ def getArgs(func, args):
                 if key in validArgs)
 
 def splitParameters(string):
-    if type(string) != types.StringTypes:
-        return parameters
+    if type(string) not in types.StringTypes:
+        return string
     if string == None:
         return {}
     if os.path.exists(string): # Read parameters from a file
@@ -52,7 +52,7 @@ def splitParameters(string):
     return paramDict
 
 def toString(params):
-    if type(params) == types.StringType:
+    if type(params) in types.StringTypes:
         params = splitParameters(params)
     paramStrings = []
     for key in sorted(params.keys()):

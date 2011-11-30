@@ -141,11 +141,14 @@ class ExampleBuilder:
         print >> sys.stderr, "Running", cls.__name__
         print >> sys.stderr, "  input:", input
         print >> sys.stderr, "  gold:", gold
-        print >> sys.stderr, "  output:", output
+        print >> sys.stderr, "  output:", output, "(append:", str(append) + ")"
         if not isinstance(style, types.StringTypes):
             style = toString(style)
-        print >> sys.stderr, "  style:", style 
-        print >> sys.stderr, "  append:", str(append) 
+        print >> sys.stderr, "  style:", style
+        if tokenization == None: 
+            print >> sys.stderr, "  parse:", parse
+        else:
+            print >> sys.stderr, "  parse:", parse + ", tokenization:", tokenization
         classSet, featureSet = cls.getIdSets(classIds, featureIds) #cls.getIdSets(idFileTag)
         builder = cls(style=style, classSet=classSet, featureSet=featureSet)
         #builder.idFileTag = idFileTag

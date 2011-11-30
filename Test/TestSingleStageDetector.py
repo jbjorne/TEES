@@ -63,12 +63,8 @@ if options.clearAll and "clear" not in options.csc:
 develDetector = SingleStageDetector()
 develDetector.classifier = CLASSIFIER
 develDetector.evaluator = EVALUATOR
-develDetector.parse = options.parse
-develDetector.tokenization = options.tokenization
 develDetector.exampleBuilder = eval(options.edgeExampleBuilder)
-develDetector.modelPath = "model-devel"
-if not options.noTestSet:
-    develDetector.combinedModelPath = "model-test"
+develDetector.tag = "edge-"
 
 # These commands will be in the beginning of most pipelines
 WORKDIR=options.output
@@ -88,13 +84,13 @@ if options.downSampleTrain != 1.0:
 
 # Example generation parameters
 if options.edgeStyles != None:
-    develDetector.exampleStyle = "style:"+options.edgeStyles
+    options.styles = "style:"+options.edgeStyles
 elif options.task == "BI":
-    develDetector.exampleStyle="style:trigger_features,typed,directed,no_linear,entities,noMasking,maxFeatures,bi_limits"
+    options.styles="style:trigger_features,typed,directed,no_linear,entities,noMasking,maxFeatures,bi_limits"
 elif options.task == "REN":
-    develDetector.exampleStyle="style:trigger_features,typed,no_linear,entities,noMasking,maxFeatures,bacteria_renaming"
-    develDetector.classifierParameters = "10,100,1000,2000,3000,4000,4500,5000,5500,6000,7500,10000,20000,25000,28000,50000,60000"
-develDetector.classifierParameters="c:" + options.edgeParams
+    options.styles="style:trigger_features,typed,no_linear,entities,noMasking,maxFeatures,bacteria_renaming"
+    options.edgeParams = "10,100,1000,2000,3000,4000,4500,5000,5500,6000,7500,10000,20000,25000,28000,50000,60000"
+options.edgeParams="c:" + options.edgeParams
 develDetector.setCSCConnection(options.csc, CSC_WORKDIR)
     
 ###############################################################################
@@ -102,15 +98,17 @@ develDetector.setCSCConnection(options.csc, CSC_WORKDIR)
 ###############################################################################
 if selector.check("TRAIN"):
     print >> sys.stderr, "------------ Train Edge Detector ------------"
-    develDetector.train(TRAIN_FILE, TEST_FILE, fromStep=options.detectorStep)
+    develDetector.train(TRAIN_FILE, TEST_FILE, "model-devel", "model-test", 
+                        options.styles, options.edgeParams, options.parse, options.tokenization,
+                        fromStep=options.detectorStep)
 if selector.check("DEVEL"):
     print >> sys.stderr, "------------ Check devel classification ------------"
-    develDetector.classify(TEST_FILE, develDetector.modelPath, "devel-predicted")
+    develDetector.classify(TEST_FILE, "model-devel", "predicted-devel")
 if selector.check("EMPTY"):    
     print >> sys.stderr, "------------ Empty devel classification ------------"
-    develDetector.classify(TEST_FILE.replace(".xml", "-empty.xml"), develDetector.modelPath, "devel-predicted")
+    develDetector.classify(TEST_FILE.replace(".xml", "-empty.xml"), "model-devel", "predicted-devel-empty")
 if not options.noTestSet:
     if selector.check("TEST"):    
         print >> sys.stderr, "------------ Test set classification ------------"
-        develDetector.classify(FINAL_TEST_FILE, develDetector.combinedModelPath, "test-predicted")
-        STFormat.Compare.compare("test-predicted.tar.gz", "devel-predicted.tar.gz", "a2")
+        develDetector.classify(FINAL_TEST_FILE, "model-test", "predicted-test")
+        STFormat.Compare.compare("predicted-test.tar.gz", "predicted-devel.tar.gz", "a2")

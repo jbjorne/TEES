@@ -5,7 +5,7 @@ from Evaluators.AveragingMultiClassEvaluator import AveragingMultiClassEvaluator
 
 class TriggerDetector(SingleStageDetector):
     def __init__(self):
-        super(TriggerDetector, self).__init__()
+        SingleStageDetector.__init__(self)
         self.exampleBuilder = GeneralEntityTypeRecognizerGztr
         self.classifier = SVMMultiClassClassifier
         self.evaluator = AveragingMultiClassEvaluator

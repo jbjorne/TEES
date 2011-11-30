@@ -252,7 +252,7 @@ def splitMerged(sentence):
                     sourceList.append(newElement)
                 sourceList.remove(element)
 
-def run(EvaluatorClass, inputCorpusFile, goldCorpusFile, parse, tokenization, target="both", entityMatchFunction=compareEntitiesSimple, removeIntersentenceInteractions=False):
+def run(EvaluatorClass, inputCorpusFile, goldCorpusFile, parse, tokenization=None, target="both", entityMatchFunction=compareEntitiesSimple, removeIntersentenceInteractions=False):
     print >> sys.stderr, "##### EvaluateInteractionXML #####"
     # Class sets are used to convert the types to ids that the evaluator can use
     classSets = {}

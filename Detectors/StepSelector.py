@@ -22,14 +22,22 @@ class StepSelector:
             for step in self.doSteps:
                 assert step in self.steps, (step, self.steps)
     
+    def getSharedStep(self, step, allSteps, direction=1):
+        allStepsIndex = allSteps.inxed(step)
+        while allSteps[allStepsIndex] not in self.steps:
+            allStepsIndex += direction
+            assert allStepsIndex > 0 and allStepsIndex < len(allSteps), (allStepsIndex, allSteps, self.steps)
+        assert allSteps[allStepsIndex] in self.steps
+        return allSteps[allStepsIndex]
+    
     def check(self, step):
         #print "CHECK", step, self.currentStep, self.steps, self.fromStep, self.toStep
         assert step in self.steps
-        assert self.fromStep == None or self.fromStep in self.steps, self.fromStep
-        assert self.toStep == None or self.toStep in self.steps, self.toStep
+        assert self.fromStep == None or self.fromStep in self.steps, (self.fromStep, self.toStep, self.steps)
+        assert self.toStep == None or self.toStep in self.steps, (self.fromStep, self.toStep, self.steps)
         if self.doSteps != None:
             for s in self.doSteps:
-                assert s in self.steps, s
+                assert s in self.steps, (a, self.steps)
         
         stepIndex = self.steps.index(step)
         # Get current index
