@@ -31,6 +31,17 @@ class Model():
         for member in members:
             self.insert(model.get(member), member)
     
+    def addStr(self, name, value):
+        f = open(self.get(name, True), "wt")
+        f.write(value)
+        f.close()
+    
+    def getStr(self, name):
+        f = open(self.get(name), "rt")
+        value = f.readline().strip()
+        f.close()
+        return value
+    
     def save(self):
         if self.mode == "r":
             raise IOError("Model not open for writing")

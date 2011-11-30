@@ -20,6 +20,8 @@ def getArgs(func, args):
                 if key in validArgs)
 
 def splitParameters(string):
+    if type(string) != types.StringTypes:
+        return parameters
     if string == None:
         return {}
     if os.path.exists(string): # Read parameters from a file
