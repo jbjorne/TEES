@@ -22,13 +22,13 @@ class StepSelector:
             for step in self.doSteps:
                 assert step in self.steps, (step, self.steps)
     
-    def getSharedStep(self, step, allSteps, direction=1):
-        allStepsIndex = allSteps.inxed(step)
-        while allSteps[allStepsIndex] not in self.steps:
-            allStepsIndex += direction
-            assert allStepsIndex > 0 and allStepsIndex < len(allSteps), (allStepsIndex, allSteps, self.steps)
-        assert allSteps[allStepsIndex] in self.steps
-        return allSteps[allStepsIndex]
+#    def getSharedStep(self, step, allSteps, direction=1):
+#        allStepsIndex = allSteps.inxed(step)
+#        while allSteps[allStepsIndex] not in self.steps:
+#            allStepsIndex += direction
+#            assert allStepsIndex > 0 and allStepsIndex < len(allSteps), (allStepsIndex, allSteps, self.steps)
+#        assert allSteps[allStepsIndex] in self.steps
+#        return allSteps[allStepsIndex]
     
     def check(self, step):
         #print "CHECK", step, self.currentStep, self.steps, self.fromStep, self.toStep

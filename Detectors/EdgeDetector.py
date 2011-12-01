@@ -1,12 +1,12 @@
-import SingleStageDetector
+from SingleStageDetector import SingleStageDetector
 from ExampleBuilders.MultiEdgeExampleBuilder import MultiEdgeExampleBuilder
 from Classifiers.SVMMultiClassClassifier import SVMMultiClassClassifier
 from Evaluators.AveragingMultiClassEvaluator import AveragingMultiClassEvaluator
 
 class EdgeDetector(SingleStageDetector):
     def __init__(self):
-        super(EdgeDetector, self).__init__()
+        SingleStageDetector.__init__(self)
         self.exampleBuilder = MultiEdgeExampleBuilder
         self.classifier = SVMMultiClassClassifier
         self.evaluator = AveragingMultiClassEvaluator
-        self.tag = "edge_"
+        self.tag = "edge-"

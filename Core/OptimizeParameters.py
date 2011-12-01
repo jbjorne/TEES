@@ -50,7 +50,7 @@ def optimize(Classifier, Evaluator, trainExamples, testExamples, classIds, param
     if workDir != None:
         if not os.path.exists(workDir):
             print >> sys.stderr, "Creating optimization output directory", workDir
-            os.mkdir(workDir)
+            os.makedirs(workDir)
             
     if type(parameters) == types.StringType:
         parameters = splitParameters(parameters)

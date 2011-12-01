@@ -1,4 +1,4 @@
-import SingleStageDetector
+from SingleStageDetector import SingleStageDetector
 from ExampleBuilders.GeneralEntityTypeRecognizerGztr import GeneralEntityTypeRecognizerGztr
 from Classifiers.SVMMultiClassClassifier import SVMMultiClassClassifier
 from Evaluators.AveragingMultiClassEvaluator import AveragingMultiClassEvaluator
@@ -9,4 +9,4 @@ class TriggerDetector(SingleStageDetector):
         self.exampleBuilder = GeneralEntityTypeRecognizerGztr
         self.classifier = SVMMultiClassClassifier
         self.evaluator = AveragingMultiClassEvaluator
-        self.tag = "trigger_"
+        self.tag = "trigger-"

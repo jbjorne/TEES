@@ -8,6 +8,9 @@ import STFormat.ConvertXML
 import STFormat.Compare
 import subprocess
 import shutil
+from Detectors.EventDetector import EventDetector
+from Detectors.StepSelector import StepSelector
+from InteractionXML.MakeSubset import makeSubset
 
 def task3Classify(classifier, xml, specModel, negModel, task3Ids, task3Tag, parse, goldXML=None):
     # Task 3
@@ -65,7 +68,8 @@ optparser.add_option("-o", "--output", default=None, dest="output", help="output
 optparser.add_option("-a", "--task", default="1", dest="task", help="task number")
 optparser.add_option("-p", "--parse", default="split-McClosky", dest="parse", help="Parse XML element name")
 optparser.add_option("-t", "--tokenization", default=None, dest="tokenization", help="Tokenization XML element name")
-optparser.add_option("-m", "--mode", default="BOTH", dest="mode", help="MODELS (recalculate SVM models), GRID (parameter grid search) or BOTH")
+optparser.add_option("--step", default=None, dest="step", help="")
+optparser.add_option("--detectorStep", default=None, dest="detectorStep", help="")
 # Classifier
 optparser.add_option("-c", "--classifier", default="Cls", dest="classifier", help="")
 optparser.add_option("--csc", default="", dest="csc", help="")
@@ -97,8 +101,9 @@ optparser.add_option("--negationModel", default=os.path.expanduser("~/biotext/Bi
 optparser.add_option("--task3Ids", default=os.path.expanduser("~/biotext/BioNLP2011/tests/task3/task3TrainGE-EPI-ID/genia-task3-ids"), dest="task3Ids", help="Speculation & negation SVM example class and feature id file stem (files = STEM.class_names and STEM.feature_names)")
 (options, args) = optparser.parse_args()
 
+selector = StepSelector(["TRAIN", "DEVEL", "EMPTY", "TEST"], fromStep=options.step)
+
 # Check options
-assert options.mode in ["EXAMPLES", "MODELS", "FINAL", "BOTH", "DOWNLOAD", "POST-DOWNLOAD", "UNMERGING", "GRID", "POST-GRID"]
 if options.classify:
     print "Classifying with existing models"
     options.mode = "POST-GRID"
@@ -175,7 +180,7 @@ UNMERGING_IDS = "unmerging-ids"
 UNMERGING_CLASSIFIER_PARAMS="c:" + options.uParams
 UNMERGING_FEATURE_PARAMS="style:typed"
 
-boosterParams = [float(i) for i in options.recallAdjustParams.split(",")]
+#boosterParams = [float(i) for i in options.recallAdjustParams.split(",")]
 if options.task == "CO":
     BINARY_RECALL_MODE = True
 else:
@@ -189,11 +194,11 @@ workdir(WORKDIR, options.clearAll) # Select a working directory, optionally remo
 if not options.noLog:
     log() # Start logging into a file in working directory
 
-# Make downsampling for learning curve
-downSampleTag = "-r" + str(options.downSampleTrain) + "_s" + str(options.downSampleSeed)
-newTrainFile = makeSubset(TRAIN_FILE, options.task + "-train-nodup" + options.extraTag + downSampleTag + ".xml", options.downSampleTrain, options.downSampleSeed)
-makeSubset(TRAIN_FILE.replace("-nodup", ""), options.task + "-train" + options.extraTag + downSampleTag + ".xml", options.downSampleTrain, options.downSampleSeed)
-TRAIN_FILE = newTrainFile
+## Make downsampling for learning curve
+#downSampleTag = "-r" + str(options.downSampleTrain) + "_s" + str(options.downSampleSeed)
+#newTrainFile = makeSubset(TRAIN_FILE, options.task + "-train-nodup" + options.extraTag + downSampleTag + ".xml", options.downSampleTrain, options.downSampleSeed)
+#makeSubset(TRAIN_FILE.replace("-nodup", ""), options.task + "-train" + options.extraTag + downSampleTag + ".xml", options.downSampleTrain, options.downSampleSeed)
+#TRAIN_FILE = newTrainFile
 
 if subTask != None:
     print >> sys.stderr, "Task:", options.task + "." + str(subTask)
@@ -201,15 +206,15 @@ else:
     print >> sys.stderr, "Task:", options.task
 print >> sys.stderr, "Edge params:", EDGE_FEATURE_PARAMS
 print >> sys.stderr, "Trigger params:", TRIGGER_FEATURE_PARAMS
-TRIGGER_EXAMPLE_BUILDER = eval(options.triggerExampleBuilder)
-EDGE_EXAMPLE_BUILDER = eval(options.edgeExampleBuilder)
 
+eventDetector = EventDetector()
+eventDetector.setCSCConnection(options.csc, os.path.join("CSCConnection",WORKDIR.lstrip("/")))
 # Pre-calculate all the required SVM models
 if selector.check("TRAIN"):
     print >> sys.stderr, "------------ Train Event Detector ------------"
     eventDetector.train(TRAIN_FILE, TEST_FILE, "model-devel", "model-test",
                         TRIGGER_FEATURE_PARAMS, EDGE_FEATURE_PARAMS,
-                        options.triggerParams, options.edgeParams, options.recallAdjustParams, options.fullGrid,
+                        "c:"+options.triggerParams, "c:"+options.edgeParams, options.recallAdjustParams, options.fullGrid,
                         options.parse, options.tokenization,
                         fromStep=options.detectorStep)
 if selector.check("DEVEL"):

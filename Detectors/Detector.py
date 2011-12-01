@@ -41,7 +41,7 @@ class Detector():
         
         self.cscConnection = None
         self.modelsToClose = []
-        self.variablesToRemove = []
+        self.variablesToRemove = set()
     
     def __del__(self):
         self._closeModels()
@@ -57,8 +57,8 @@ class Detector():
         else:
             return False
     
-    def getSharedStep(self, childDetector, step, direction=1):
-        childDetector.select.getSharedStep(step, self.select.steps, direction)
+#    def getSharedStep(self, childDetector, step, direction=1):
+#        childDetector.select.getSharedStep(step, self.select.steps, direction)
     
     def setCSCConnection(self, options, cscworkdir):
         if "local" not in options:
@@ -73,11 +73,11 @@ class Detector():
             self.cscConnection = None
     
     def getModel(self):
-        return self._openModel(model)
+        return self.openModel(model)
     
     def saveStr(self, name, value, model=None):
         if type(model) in types.StringTypes:
-            modelObj = self._openModel(model, "a")
+            modelObj = self.openModel(model, "a")
         else:
             modelObj = model
         modelObj.addStr(name, value)
@@ -85,7 +85,7 @@ class Detector():
     
     def getStr(self, name, model=None):
         if model == None:
-            modelObj = self._openModel(model, "r")
+            modelObj = self.openModel(model, "r")
         else:
             modelObj = model
         value = modelObj.getStr(name)
@@ -97,7 +97,7 @@ class Detector():
         shutil.copy2(classifierModelPath, classifierModel)
         Parameters.saveParameters(classifierParameters, model.get(self.tag+"classifier-parameters", True))
     
-    def _openModel(self, model, mode="r"):
+    def openModel(self, model, mode="r"):
         if type(model) in types.StringTypes:
             model = Model(model, mode)
             self.modelsToClose.append(model)
@@ -113,33 +113,35 @@ class Detector():
             append = False
             for dataSet, goldSet in itertools.izip_longest(data, gold, fillvalue=None):
                 if dataSet != None:
-                    self.exampleBuilder.run(dataSet, output, self.parse, self.tokenization, exampleStyle, model.get(self.tag+"ids.classes"), model.get(self.tag+"ids.features"), goldSet, append)
+                    self.exampleBuilder.run(dataSet, output, self.getStr("parse", model), None, exampleStyle, model.get(self.tag+"ids.classes"), model.get(self.tag+"ids.features"), goldSet, append)
                 append = True
         if saveIdsToModel:
             model.save()
     
-    def _enterState(self, state, steps=None, fromStep=None, toStep=None):      
+    def enterState(self, state, steps=None, fromStep=None, toStep=None):      
         if self.state == None:
             assert self.select == None
             self.state = state
-            if steps != None:
-                self.select = StepSelector(steps, fromStep, toStep)
             if self.select == None or (self.select.currentStep == None and fromStep == steps[0]):
                 print >> sys.stderr, self.__class__.__name__ + ":" + state + "(ENTER)"
+            if steps != None:
+                self.select = StepSelector(steps, fromStep, toStep)
         else:
             assert self.state == state, (state, self.state)
             assert self.select.steps == steps, (steps, self.select.steps)
             self.select.setLimits(fromStep, toStep)
     
-    def _initVariables(self, **vars):
-        if self.select == None or self.select.currentStep == None:
+    def initVariables(self, **vars):
+        if self.state == None:
             for name in sorted(vars.keys()):
                 setattr(self, name, vars[name])
-                self.variablesToRemove.append(name)
+                self.variablesToRemove.add(name)
 
-    def _initModel(self, model, saveParams=[]):
-        if type(model) in types.StringTypes:
-            model = self._openModel(model, "w")
+    def initModel(self, model, saveParams=[]):
+        if model == None:
+            return model
+        elif type(model) in types.StringTypes:
+            model = self.openModel(model, "w")
         else:
             assert model.mode in ["a", "w"]
         for param in saveParams:
@@ -147,7 +149,7 @@ class Detector():
         model.save()
         return model
     
-    def _exitState(self):
+    def exitState(self):
         if self.select == None or self.select.currentStep == self.select.steps[-1]:
             print >> sys.stderr, self.__class__.__name__ + ":" + self.state + "(EXIT)"
             self.state = None
