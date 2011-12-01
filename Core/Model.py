@@ -48,7 +48,7 @@ class Model():
         changed = []
         for name in sorted(self.members.keys()):
             member = self.members[name]
-            if member[1] != None and (not os.path.exists(member[0]) or not filecmp.cmp(member[1], member[0])):
+            if member[1] != None and os.path.exists(member[1]) and (not os.path.exists(member[0]) or not filecmp.cmp(member[1], member[0])):
                 changed.append(name)
         if len(changed) > 0:
             if self.verbose: print >> sys.stderr, "Saving model \"" + self.path + "\" (cache:" + self.workdir + ", changed:" + ",".join(changed) + ")"
@@ -56,7 +56,7 @@ class Model():
                 member = self.members[name]
                 shutil.copy2(member[1], member[0])
     
-    def get(self, name, addIfNotExist=True):
+    def get(self, name, addIfNotExist=False):
         if name not in self.members:
             if addIfNotExist:
                 self.add(name)

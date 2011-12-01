@@ -204,8 +204,6 @@ if subTask != None:
     print >> sys.stderr, "Task:", options.task + "." + str(subTask)
 else:
     print >> sys.stderr, "Task:", options.task
-print >> sys.stderr, "Edge params:", EDGE_FEATURE_PARAMS
-print >> sys.stderr, "Trigger params:", TRIGGER_FEATURE_PARAMS
 
 eventDetector = EventDetector()
 eventDetector.setCSCConnection(options.csc, os.path.join("CSCConnection",WORKDIR.lstrip("/")))
@@ -215,7 +213,7 @@ if selector.check("TRAIN"):
     eventDetector.train(TRAIN_FILE, TEST_FILE, "model-devel", "model-test",
                         TRIGGER_FEATURE_PARAMS, EDGE_FEATURE_PARAMS, "",
                         "c:"+options.triggerParams, "c:"+options.edgeParams, "c:"+options.uParams,
-                        options.recallAdjustParams, options.unmerging, options.fullGrid,
+                        options.recallAdjustParams, options.unmerging, options.fullGrid, options.task,
                         options.parse, options.tokenization,
                         fromStep=options.detectorStep)
 if selector.check("DEVEL"):

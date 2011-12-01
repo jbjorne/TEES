@@ -12,7 +12,7 @@ import InteractionXML
 import Evaluators.EvaluateInteractionXML as EvaluateInteractionXML
 import STFormat.ConvertXML
 import STFormat.Compare
-import Evaluators.BioNLP11GeniaTools.evaluate
+import Evaluators.BioNLP11GeniaTools
 
 class EventDetector(Detector):
     def __init__(self):
@@ -32,7 +32,7 @@ class EventDetector(Detector):
               model=None, combinedModel=None,
               triggerExampleStyle=None, edgeExampleStyle=None, unmergingExampleStyle=None,
               triggerClassifierParameters=None, edgeClassifierParameters=None, unmergingClassifierParameters=None,
-              recallAdjustParameters=None, unmerging=False, fullGrid=False,
+              recallAdjustParameters=None, unmerging=False, fullGrid=False, task=None,
               parse=None, tokenization=None,
               fromStep=None, toStep=None):
         # Initialize the training process ##############################
@@ -42,7 +42,7 @@ class EventDetector(Detector):
                            edgeClassifierParameters=edgeClassifierParameters,
                            unmergingClassifierParameters=unmergingClassifierParameters, 
                            recallAdjustParameters=recallAdjustParameters, unmerging=unmerging, 
-                           fullGrid=fullGrid, parse=parse, tokenization=tokenization)
+                           fullGrid=fullGrid, task=task, parse=parse, tokenization=tokenization)
         # Begin the training process ####################################
         self.enterState(self.STATE_TRAIN, ["EXAMPLES", "BEGIN-MODEL", "END-MODEL", "BEGIN-COMBINED-MODEL", 
                                            "SELF-TRAIN-EXAMPLES-FOR-UNMERGING", "UNMERGING-EXAMPLES", "BEGIN-UNMERGING-MODEL", "END-UNMERGING-MODEL", 
@@ -142,44 +142,16 @@ class EventDetector(Detector):
             edgeClassifierModel=EDGE_MODEL_STEM+str(params["edge"])+".gz"
             xml = self.edgeDetector.classifyToXML(xml, self.model, "test-edge-examples.gz", "grid-", classifierModel=edgeClassifierModel, split=True)
             if xml != None:                
-                # EvaluateInteractionXML differs from the previous evaluations in that it can
-                # be used to compare two separate Interaction XML files. One of these is the gold file,
-                # against which the other is evaluated by heuristically matching triggers and
-                # edges. Note that this evaluation will differ somewhat from the previous ones,
-                # which evaluate on the level of examples.
                 # TODO: Where should the EvaluateInteractionXML evaluator come from?
                 EIXMLResult = EvaluateInteractionXML.run(self.edgeDetector.evaluator, xml, self.optData, self.parse)
                 # Convert to ST-format
                 STFormat.ConvertXML.toSTFormat(xml, "flat-devel-geniaformat", "a2") #getA2FileTag(options.task, subTask))
                 stFormatDir = "flat-devel-geniaformat"
                 
-#                if options.task in ["OLD", "GE", "EPI", "ID"]:
                 if self.unmerging:
-                    print >> sys.stderr, "--------- ML Unmerging ---------"
                     xml = self.unmergingDetector.classifyToXML(xml, self.model, None, "grid-unmerging-", split=False, goldData=self.optData.replace("-nodup", ""))
-                    STFormat.ConvertXML.toSTFormat(xml, "grid-unmerged-geniaformat", "a2")
+                    STFormat.ConvertXML.toSTFormat(xml, "grid-unmerging-geniaformat", "a2")
                     stFormatDir = "grid-unmerging-geniaformat"
-#                    if options.task == "OLD":
-#                        results = evaluateSharedTask("unmerged-devel-geniaformat", subTask)
-#                    elif options.task == "GE":
-#                        results = evaluateBioNLP11Genia("unmerged-devel-geniaformat", subTask)
-#                    elif options.task in ["EPI", "ID"]:
-#                        results = evaluateEPIorID("unmerged-devel-geniaformat", options.task)
-#                    else:
-#                        assert False
-#                    shutil.rmtree("unmerged-devel-geniaformat")
-#                    if options.task in ["OLD", "GE"]:
-#                        if bestResults == None or bestResults[1]["approximate"]["ALL-TOTAL"]["fscore"] < results["approximate"]["ALL-TOTAL"]["fscore"]:
-#                            bestResults = (params, results)
-#                    else:
-#                        if bestResults == None or bestResults[1]["TOTAL"]["fscore"] < results["TOTAL"]["fscore"]:
-#                            bestResults = (params, results)
-
-#                elif options.task == "BB":
-#                    results = evaluateBX("flat-devel-geniaformat", "BB")
-#                    if bestResults == None or results["fscore"]  > bestResults[1]["fscore"]:
-#                        bestResults = (params, results)
-#                else:
                 stEvaluation = Evaluators.BioNLP11GeniaTools.evaluate(stFormatDir, self.task)
                 if stEvaluation != None:
                     if bestResults == None or stEvaluation[0] > bestResults[1][0]:

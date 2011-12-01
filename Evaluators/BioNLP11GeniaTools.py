@@ -7,7 +7,7 @@ def relPath(path):
 
 # TODO: Move somewhere else
 sys.path.append(os.path.abspath(os.path.join(thisPath, "../GeniaChallenge/evaluation")))
-import EvaluateSharedTask.evaluate as evaluateOLD
+from EvaluateSharedTask import evaluate as evaluateOLD
 
 perlDir = os.path.expanduser("~/data/BioNLP11SharedTask/evaluators/BioNLP-ST_2011_genia_tools")
 
