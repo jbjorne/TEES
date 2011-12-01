@@ -76,13 +76,12 @@ class Detector():
         return self._openModel(model)
     
     def saveStr(self, name, value, model=None):
-        if model == None:
+        if type(model) in types.StringTypes:
             modelObj = self._openModel(model, "a")
         else:
             modelObj = model
         modelObj.addStr(name, value)
         modelObj.save()
-        if model == None: modelObj.close()
     
     def getStr(self, name, model=None):
         if model == None:

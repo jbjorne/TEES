@@ -24,10 +24,10 @@ class EventDetector(Detector):
         self._enterState(self.STATE_TRAIN, ["EXAMPLES", "BEGIN-MODEL", "END-MODEL", "BEGIN-COMBINED-MODEL", "GRID", "BEGIN-COMBINED-MODEL-FULLGRID", "END-COMBINED-MODEL"], fromStep, toStep)
         self._initVariables(trainData, optData, model, combinedModel, triggerExampleStyle, edgeExampleStyle,
               triggerClassifierParameters, edgeClassifierParameters, recallAdjustParameters, fullGrid, parse, tokenization)
-        if self.checkStep("EXAMPLES"): # mark step
-            self.model = self._initModel(self.model) # Initialize shared model
-            if self.combinedModel != None:
-                self.combinedModel = self._initModel(self.combinedModel) # Initialize shared model
+        self.checkStep("EXAMPLES") # mark step
+        self.model = self._openModel(model, "a")
+        if self.combinedModel != None: 
+            self.combinedModel = self._openModel(combinedModel, "a")
         self.triggerDetector.train(self.trainData, self.optData, self.model, self.combinedModel, 
                                    self.triggerExampleStyle, self.triggerClassifierParameters,
                                    self.parse, self.tokenization, 
@@ -79,8 +79,8 @@ class EventDetector(Detector):
         paramCombinations = getParameterCombinations(ALL_PARAMS)
         #for boost in boosterParams:
         prevTriggerParam = None
-        EDGE_MODEL_STEM = os.path.join(edgeDetector.workDir, "edge-models/model-c_")
-        TRIGGER_MODEL_STEM = os.path.join(triggerDetector.workDir, "trigger-models/model-c_")
+        EDGE_MODEL_STEM = os.path.join(edgeDetector.workDir, os.path.normpath(self.model.path)+"-edge-models/model-c_")
+        TRIGGER_MODEL_STEM = os.path.join(triggerDetector.workDir, os.path.normpath(self.model.path)+"-trigger-models/model-c_")
         for params in paramCombinations:
             print >> sys.stderr, "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
             print >> sys.stderr, "Processing params", str(count+1) + "/" + str(len(paramCombinations)), params
@@ -176,22 +176,24 @@ class EventDetector(Detector):
         print >> sys.stderr, "Tested", count, "out of", count, "combinations"
         print >> sys.stderr, "Best parameters:", bestResults[0]
         # Save grid model
-        self.saveStr("recallAdjustParameter", str(bestResults[0]["booster"]))
+        self.saveStr("recallAdjustParameter", str(bestResults[0]["booster"]), self.model)
+        if self.combinedModel != None:
+            self.saveStr("recallAdjustParameter", str(bestResults[0]["booster"]), self.combinedModel)
         if fullGrid: # define best models
             self.triggerDetector.addClassifierModel(self.model, TRIGGER_MODEL_STEM+str(bestResults[0]["trigger"])+".gz", bestResults[0]["trigger"])
             self.edgeDetector.addClassifierModel(self.model, EDGE_MODEL_STEM+str(bestResults[0]["edge"])+".gz", bestResults[0]["edge"])
         if options.task in ["OLD", "GE"]:
             print >> sys.stderr, "Best result:", bestResults[1]
         
-        # Final models with full grid
-        if options.classifier != "ACCls" and (not options.noTestSet) and options.fullGrid:
-            print >> sys.stderr, "------------ Submitting final models ------------"
-            print >> sys.stderr, "Everything models for parse", PARSE_TAG
-            c = None
-            if "local" not in options.csc: c = CSCConnection(CSC_WORKDIR+"/everything-trigger-models", CSC_ACCOUNT, True, password=options.password)
-            optimize(CLASSIFIER, Ev, TRIGGER_EVERYTHING_EXAMPLE_FILE, TRIGGER_TEST_EXAMPLE_FILE,\
-                TRIGGER_IDS+".class_names", "c:"+getParameter(bestTriggerModel).split("_")[-1], "everything-trigger-models", None, c, False, steps="SUBMIT")
-            if "local" not in options.csc: c = CSCConnection(CSC_WORKDIR+"/everything-edge-models", CSC_ACCOUNT, True, password=options.password)
-            optimize(CLASSIFIER, Ev, EDGE_EVERYTHING_EXAMPLE_FILE, EDGE_TEST_EXAMPLE_FILE,\
-                EDGE_IDS+".class_names", "c:"+getParameter(bestEdgeModel).split("_")[-1], "everything-edge-models", None, c, False, steps="SUBMIT")
-            print >> sys.stderr, "Everything models submitted"
+#        # Final models with full grid
+#        if options.classifier != "ACCls" and (not options.noTestSet) and options.fullGrid:
+#            print >> sys.stderr, "------------ Submitting final models ------------"
+#            print >> sys.stderr, "Everything models for parse", PARSE_TAG
+#            c = None
+#            if "local" not in options.csc: c = CSCConnection(CSC_WORKDIR+"/everything-trigger-models", CSC_ACCOUNT, True, password=options.password)
+#            optimize(CLASSIFIER, Ev, TRIGGER_EVERYTHING_EXAMPLE_FILE, TRIGGER_TEST_EXAMPLE_FILE,\
+#                TRIGGER_IDS+".class_names", "c:"+getParameter(bestTriggerModel).split("_")[-1], "everything-trigger-models", None, c, False, steps="SUBMIT")
+#            if "local" not in options.csc: c = CSCConnection(CSC_WORKDIR+"/everything-edge-models", CSC_ACCOUNT, True, password=options.password)
+#            optimize(CLASSIFIER, Ev, EDGE_EVERYTHING_EXAMPLE_FILE, EDGE_TEST_EXAMPLE_FILE,\
+#                EDGE_IDS+".class_names", "c:"+getParameter(bestEdgeModel).split("_")[-1], "everything-edge-models", None, c, False, steps="SUBMIT")
+#            print >> sys.stderr, "Everything models submitted"

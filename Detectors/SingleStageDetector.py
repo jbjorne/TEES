@@ -21,22 +21,6 @@ class SingleStageDetector(Detector):
     def __init__(self):
         Detector .__init__(self)
         
-#    def _beginOptModel(self):
-#        if self.select == None or self.select.check("OPTIMIZE"):
-#            print >> sys.stderr, self.__class__.__name__ + ":" + self.state + ":TRAIN"
-#            self.cscConnection.setWorkSubDir(self.tag+"models")
-#            optimize(self.classifier, self.evaluator, self.tag+"train-examples.gz", self.tag+"opt-examples.gz",\
-#                     self.model.get(self.tag+"ids.classes"), self.classifierParameters, self.tag+"models", None, self.cscConnection, False, "SUBMIT")
-#    
-#    def _endOptModel(self):
-#        # Download models
-#        if self.checkStep("MODELS"):
-#            self.cscConnection.setWorkSubDir(self.tag+"models")
-#            bestResult = optimize(self.classifier, self.evaluator, self.tag+"train-examples.gz", self.tag+"opt-examples.gz",\
-#                                  self.model.get(self.tag+"ids.classes"), self.classifierParameters, self.tag+"models", None, self.cscConnection, False, "RESULTS")
-#            self.addClassifierModel(self.model, bestResult[1], bestResult[4])
-#            self.model.save()
-        
     def beginModel(self, step, model, trainExampleFiles, testExampleFile, importIdsFromModel=None):
         if self.checkStep(step, False):
             if model != None:
@@ -87,7 +71,7 @@ class SingleStageDetector(Detector):
             self.model = self._initModel(self.model, [("exampleStyle", self.tag+"example-style"), ("classifierParameters", self.tag+"classifier-parameters")])
             self.saveStr("parse", parse, self.model)
             self.buildExamples(self.model, [optData, trainData], [self.tag+"opt-examples.gz", self.tag+"train-examples.gz"], saveIdsToModel=True)
-        self.model = self._openModel(model, "a")
+        self.model = self._openModel(model, "a") # Devel model already exists, with ids etc
         self.beginModel("BEGIN-MODEL", self.model, [self.tag+"train-examples.gz"], self.tag+"opt-examples.gz")
         self.endModel("END-MODEL", self.model, self.tag+"opt-examples.gz")
         self.beginModel("BEGIN-COMBINED-MODEL", self.combinedModel, [self.tag+"train-examples.gz", self.tag+"opt-examples.gz"], self.tag+"opt-examples.gz", self.model)
