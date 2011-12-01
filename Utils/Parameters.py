@@ -52,7 +52,9 @@ def splitParameters(string):
     return paramDict
 
 def toString(params):
-    if type(params) in types.StringTypes:
+    if params == None:
+        return ""
+    elif type(params) in types.StringTypes:
         params = splitParameters(params)
     paramStrings = []
     for key in sorted(params.keys()):

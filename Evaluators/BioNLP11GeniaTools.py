@@ -5,6 +5,10 @@ thisPath = os.path.dirname(os.path.abspath(__file__))
 def relPath(path):
     return os.path.abspath(os.path.join(thisPath, path))
 
+# TODO: Move somewhere else
+sys.path.append(os.path.abspath(os.path.join(thisPath, "../GeniaChallenge/evaluation")))
+import EvaluateSharedTask.evaluate as evaluateOLD
+
 perlDir = os.path.expanduser("~/data/BioNLP11SharedTask/evaluators/BioNLP-ST_2011_genia_tools")
 
 def resultsToCSV(results, filename=None):
@@ -104,12 +108,35 @@ def getSourceDir(input):
     else:
         return input, False
 
-def evaluate(sourceDir, task=1, folds=-1, foldToRemove=-1, evaluations=["strict", "approximate", "decomposition"], verbose=True, silent=False, debug=False):
+def evaluate(source, task):
+    subTask = "1"
+    if "." in task:
+        task, subTask = task.split(".")
+    if task == "GE":
+        results = evaluateGE(source, subTask)
+        return (results["approximate"]["ALL-TOTAL"]["fscore"], results)
+    elif task == "OLD":
+        results = evaluateOLD(source, subTask)
+        return (results["approximate"]["ALL-TOTAL"]["fscore"], results)
+    elif task in ["EPI", "ID"]:
+        results = evaluateEPIorID(source, task)
+        return (results["TOTAL"]["fscore"], results)
+    elif task in ["BB", "BI"]:
+        results = evaluateBX(source, task)
+        return (results["fscore"], results)
+    elif task == "REN":
+        results = evaluateREN(source)
+        return (results["TOTAL"]["fscore"], results)
+    else:
+        return None
+
+def evaluateGE(sourceDir, task=1, folds=-1, foldToRemove=-1, evaluations=["strict", "approximate", "decomposition"], verbose=True, silent=False, debug=False):
     global perlDir
     sourceDir = os.path.abspath(sourceDir)
     sourceDir, removeSource = getSourceDir(sourceDir)
 
-    assert task in [1,2,3]
+    task = str(task)
+    assert task in ["1","2","3"]
     
     # Go to evaluation scripts
     origDir = os.getcwd()

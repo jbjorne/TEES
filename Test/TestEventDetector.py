@@ -213,8 +213,9 @@ eventDetector.setCSCConnection(options.csc, os.path.join("CSCConnection",WORKDIR
 if selector.check("TRAIN"):
     print >> sys.stderr, "------------ Train Event Detector ------------"
     eventDetector.train(TRAIN_FILE, TEST_FILE, "model-devel", "model-test",
-                        TRIGGER_FEATURE_PARAMS, EDGE_FEATURE_PARAMS,
-                        "c:"+options.triggerParams, "c:"+options.edgeParams, options.recallAdjustParams, options.fullGrid,
+                        TRIGGER_FEATURE_PARAMS, EDGE_FEATURE_PARAMS, "",
+                        "c:"+options.triggerParams, "c:"+options.edgeParams, "c:"+options.uParams,
+                        options.recallAdjustParams, options.unmerging, options.fullGrid,
                         options.parse, options.tokenization,
                         fromStep=options.detectorStep)
 if selector.check("DEVEL"):

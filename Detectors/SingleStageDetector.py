@@ -34,7 +34,9 @@ class SingleStageDetector(Detector):
                     importModel = self.openModel(importIdsFromModel, "r")
                     model.importFrom(self.openModel(importModel, "r"), [self.tag+"ids.classes", self.tag+"ids.features", self.tag+"classifier-parameters", self.tag+"example-style", "parse"])
                 # Catenate example files
-                if len(trainExampleFiles) == 1:
+                if type(trainExampleFiles) in types.StringTypes:
+                    combinedTrainExamples = trainExampleFiles
+                elif len(trainExampleFiles) == 1: 
                     combinedTrainExamples = trainExampleFiles[0]
                 else:
                     combinedTrainExamples = os.path.normpath(model.path)+"-"+self.tag+"combined-examples.gz"
@@ -109,11 +111,11 @@ class SingleStageDetector(Detector):
             self.stEvaluator.evaluate(output+".tar.gz")
         self._exitState()
         
-    def classifyToXML(self, data, model, exampleFileName=None, tag="", classifierModel=None, split=False):
+    def classifyToXML(self, data, model, exampleFileName=None, tag="", classifierModel=None, split=False, goldData=None):
         model = self.openModel(model, "r")
         if exampleFileName == None:
             exampleFileName = tag+self.tag+"examples.gz"
-            self.buildExamples(model, [data], [exampleFileName])
+            self.buildExamples(model, [data], [exampleFileName], [goldData])
         if classifierModel == None:
             classifierModel = model.get(self.tag+"classifier-model.gz")
         else:

@@ -36,7 +36,7 @@ from Evaluators.SharedTaskEvaluator import SharedTaskEvaluator as STEv
 from Evaluators.MultiLabelEvaluator import MultiLabelEvaluator as MultiLabelEvaluator
 from Evaluators.BXEvaluator import BXEvaluator as BXEv
 import Evaluators.BioNLP11GeniaTools
-evaluateBioNLP11Genia = Evaluators.BioNLP11GeniaTools.evaluate
+evaluateBioNLP11Genia = Evaluators.BioNLP11GeniaTools.evaluateGE
 evaluateBX = Evaluators.BioNLP11GeniaTools.evaluateBX
 evaluateEPIorID = Evaluators.BioNLP11GeniaTools.evaluateEPIorID
 evaluateREN = Evaluators.BioNLP11GeniaTools.evaluateREN
