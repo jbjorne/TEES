@@ -20,7 +20,8 @@ from Utils.ProgressCounter import ProgressCounter
 A wrapper for the Joachims SVM Multiclass classifier.
 """
 
-sentenceSplitterDir = "/home/jari/biotext/tools/geniass"
+#sentenceSplitterDir = "/home/jari/biotext/tools/geniass"
+sentenceSplitterDir = "/home/jari/temp_exec/geniass"
 
 def moveElements(document):
     entMap = {}
@@ -38,8 +39,14 @@ def moveElements(document):
                 document.remove(entity)
                 sentence.append(entity)
                 entityId = entity.get("id")
-                entity.set("id", sentence.get("id") + ".e" + str(entCount))
-                entMap[entityId] = sentence.get("id") + ".e" + str(entCount)
+                entityIdLastPart = entityId.rsplit(".", 1)[-1]
+                if entityIdLastPart.startswith("e"):
+                    entity.set("id", sentence.get("id") + "." + entityIdLastPart)
+                    entMap[entityId] = sentence.get("id") + "." + entityIdLastPart
+                else:
+                    entity.set("docId", entityId)
+                    entity.set("id", sentence.get("id") + ".e" + str(entCount))
+                    entMap[entityId] = sentence.get("id") + ".e" + str(entCount)
                 entSentence[entityId] = sentence
                 entSentenceIndex[entityId] = sentenceCount
                 newEntityOffset = (entityOffset[0] - sentenceOffset[0], entityOffset[1] - sentenceOffset[0])
@@ -118,6 +125,7 @@ def makeSentences(input, output=None, removeText=False, postProcess=True):
             workfile = codecs.open(os.path.join(workdir, "sentence-splitter-output.txt"), "rt", "utf-8")
         start = 0 # sentences are consecutively aligned to the text for charOffsets
         sentenceCount = 0
+        prevSentence = None
         #text = text.replace("\n", " ") # should stop sentence splitter from crashing.
         #text = text.replace("  ", " ") # should stop sentence splitter from crashing.
         for sText in workfile.readlines():
@@ -129,17 +137,20 @@ def makeSentences(input, output=None, removeText=False, postProcess=True):
             # point must be after previous sentences
             cStart = text.find(sText, start) # find start position
             assert cStart != -1, (text, sText, start)
-            tail = None
-            if cStart - start != 0:
-                prevSentence.set("tail", text[start:cStart])
             cEnd = cStart + len(sText) # end position is determined by length
-            start = cStart + len(sText) # for next sentence, start search from end of this one
-            # make sentence element
+            # Make sentence element
             e = ET.Element("sentence")
             e.set("text", sText)
             e.set("charOffset", str(cStart) + "-" + str(cEnd - 1)) # NOTE: check
             e.set("id", docId + ".s" + str(sentenceCount))
             document.append(e) # add sentence to parent element
+            # Set sentence head and tail strings
+            if cStart - start != 0:
+                prevSentence.set("tail", text[start:cStart])
+            if cStart > 0 and prevSentence == None:
+                e.set()
+            # Update counters
+            start = cStart + len(sText) # for next sentence, start search from end of this one
             prevSentence = e
             sentencesCreated += 1
             sentenceCount += 1

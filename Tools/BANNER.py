@@ -63,7 +63,7 @@ def makeConfigXML(workdir, bannerDir):
     ETUtils.writeUTF8(conf, workdir + "/banner_config.xml")
     return workdir + "/banner_config.xml"
     
-def run(input, output=None, elementName="entity"):
+def run(input, output=None, elementName="entity", processElement="document", debug=False):
     global bannerDir
     
     print >> sys.stderr, "Loading corpus", input
@@ -75,7 +75,7 @@ def run(input, output=None, elementName="entity"):
     workdir = tempfile.mkdtemp()
     infile = codecs.open(os.path.join(workdir, "input.txt"), "wt", "utf-8")
     idCount = 0
-    for sentence in corpusRoot.getiterator("sentence"):
+    for sentence in corpusRoot.getiterator(processElement):
         infile.write("U" + str(idCount) + " " + sentence.get("text") + "\n")
         idCount += 1
     infile.close()
@@ -107,7 +107,7 @@ def run(input, output=None, elementName="entity"):
     sDict = {}
     sentenceHasEntities = {}
     sCount = 0
-    for sentence in corpusRoot.getiterator("sentence"):
+    for sentence in corpusRoot.getiterator(processElement):
         sDict["U" + str(sCount)] = sentence
         sentenceHasEntities["U" + str(sCount)] = False
         sCount += 1
@@ -149,6 +149,7 @@ def run(input, output=None, elementName="entity"):
                     ent.set("charOffset", str(beginOffset) + "-" + str(prevEnd))
                     ent.set("type", "Protein")
                     ent.set("isName", "True")
+                    ent.set("source", "BANNER")
                     ent.set("text", sText[beginOffset:prevEnd+1])
                     sentence.append(ent)
                     if not sentenceHasEntities[bannerId]:
@@ -167,7 +168,10 @@ def run(input, output=None, elementName="entity"):
     outfile.close()
     idfile.close()
     # Remove work directory
-    shutil.rmtree(workdir)
+    if not debug:
+        shutil.rmtree(workdir)
+    else:
+        print >> sys.stderr, "BANNER working directory for debugging at", workdir
         
     if output != None:
         print >> sys.stderr, "Writing output to", output

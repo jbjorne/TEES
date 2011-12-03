@@ -10,7 +10,8 @@ except ImportError:
     import cElementTree as ET
 import cElementTreeUtils as ETUtils
 
-stanfordParserDir = "/home/jari/biotext/tools/stanford-parser-2010-08-20"
+#stanfordParserDir = "/home/jari/biotext/tools/stanford-parser-2010-08-20"
+stanfordParserDir = "/home/jari/temp_exec/stanford-parser-2010-08-20"
 
 escDict={"-LRB-":"(",
          "-RRB-":")",
@@ -29,7 +30,7 @@ def runStanford(input, output):
 def addDependencies(outfile, parse, tokenByIndex=None, sentenceId=None):
     global escDict
     escSymbols = sorted(escDict.keys())
-    
+
     depCount = 1
     line = outfile.readline()
     deps = []
@@ -69,7 +70,7 @@ def addDependencies(outfile, parse, tokenByIndex=None, sentenceId=None):
             dep.set("t1", "cjt_" + str(t1Index))
             dep.set("t2", "cjt_" + str(t2Index))
         dep.set("type", depType)
-        parse.append(dep)
+        parse.insert(depCount-1, dep)
         depCount += 1
         deps.append(dep)
         line = outfile.readline()
@@ -121,9 +122,9 @@ def convertXML(parser, input, output):
     
     # Put penn tree lines in input file
     for sentence in corpusRoot.getiterator("sentence"):
-        sentenceAnalyses = setDefaultElement(sentence, "sentenceanalyses")
-        parses = setDefaultElement(sentenceAnalyses, "parses")
-        parse = getElementByAttrib(parses, "parse", {"parser":parser})
+        analyses = setDefaultElement(sentence, "analyses")
+        #parses = setDefaultElement(sentenceAnalyses, "parses")
+        parse = getElementByAttrib(analyses, "parse", {"parser":parser})
         if parse == None:
             continue
         if len(parse.findall("dependency")) > 0: # don't reparse
@@ -141,11 +142,11 @@ def convertXML(parser, input, output):
     # Get output and insert dependencies
     for sentence in corpusRoot.getiterator("sentence"):
         # Get parse
-        sentenceAnalyses = setDefaultElement(sentence, "sentenceanalyses")
-        parses = setDefaultElement(sentenceAnalyses, "parses")
-        parse = getElementByAttrib(parses, "parse", {"parser":parser})
+        analyses = setDefaultElement(sentence, "analyses")
+        #parses = setDefaultElement(sentenceAnalyses, "parses")
+        parse = getElementByAttrib(analyses, "parse", {"parser":parser})
         if parse == None:
-            parse = ET.SubElement(parses, "parse")
+            parse = ET.SubElement(analyses, "parse")
             parse.set("parser", "None")
         if len(parse.findall("dependency")) > 0: # don't reparse
             continue
@@ -154,7 +155,7 @@ def convertXML(parser, input, output):
             parse.set("stanford", "no_penn")
             continue
         # Get tokens
-        tokenization = getElementByAttrib(sentence.find("sentenceanalyses").find("tokenizations"), "tokenization", {"tokenizer":parse.get("tokenizer")})
+        tokenization = getElementByAttrib(sentence.find("analyses"), "tokenization", {"tokenizer":parse.get("tokenizer")})
         assert tokenization != None
         count = 0
         tokenByIndex = {}
@@ -178,11 +179,11 @@ def convertXML(parser, input, output):
 
 def insertParse(sentence, stanfordOutputFile, parser):
     # Get parse
-    sentenceAnalyses = setDefaultElement(sentence, "sentenceanalyses")
-    parses = setDefaultElement(sentenceAnalyses, "parses")
-    parse = getElementByAttrib(parses, "parse", {"parser":parser})
+    analyses = setDefaultElement(sentence, "analyses")
+    #parses = setDefaultElement(sentenceAnalyses, "parses")
+    parse = getElementByAttrib(analyses, "parse", {"parser":parser})
     if parse == None:
-        parse = ET.SubElement(parses, "parse")
+        parse = ET.SubElement(analyses, "parse")
         parse.set("parser", "None")
     if len(parse.findall("dependency")) > 0: # don't reparse
         return True
@@ -191,7 +192,7 @@ def insertParse(sentence, stanfordOutputFile, parser):
         parse.set("stanford", "no_penn")
         return False
     # Get tokens
-    tokenization = getElementByAttrib(sentence.find("sentenceanalyses").find("tokenizations"), "tokenization", {"tokenizer":parse.get("tokenizer")})
+    tokenization = getElementByAttrib(sentence.find("analyses"), "tokenization", {"tokenizer":parse.get("tokenizer")})
     assert tokenization != None
     count = 0
     tokenByIndex = {}

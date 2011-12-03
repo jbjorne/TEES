@@ -11,6 +11,7 @@ def findHeads(input, parse, tokenization=None, output=None, removeExisting=True,
         print >> sys.stderr, "Removing existing head offsets"
         removeCount = 0
         counter = ProgressCounter(None, "Find heads")
+        counter.showMilliseconds = True
         for sentences in SentenceElements.getCorpusIterator(input, output, parse, tokenization):
             for sentence in sentences:
                 if removeExisting:

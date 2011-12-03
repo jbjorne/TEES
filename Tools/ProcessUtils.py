@@ -53,6 +53,7 @@ def waitForProcess(process, numCorpusSentences, measureByGap, outputFile, counte
     """
     maxStartupTime = 600 # Give extra time for the process to start up (even if it creates immediately an empty output file)
     counter = ProgressCounter(numCorpusSentences, counterName)
+    counter.showMilliseconds = True
     prevNumSentences = 0 # Number of output sentences on previous check
     finalCheckLeft = True # Make one final check to update counters
     processStatus = None # When None, process not finished
@@ -124,7 +125,7 @@ def mergeOutput(dir, numCorpusSentences, measureByGap):
         if filename.find("output-from") != -1:
             outputs.append( (int(filename.rsplit("-", 1)[-1]), filename) )
     outputs.sort() # Order output sets by their first sentence index
-    print outputs
+    #print outputs
     
     mergedOutput = codecs.open(os.path.join(dir, "merged-output"), "wt", "utf-8")
     
@@ -228,6 +229,23 @@ def runSentenceProcess(launchProcess, programDir, input, workdir, measureByGap, 
     else:
         print >> sys.stderr, "Warning, processing failed for", numMissedSentences, "out of", numCorpusSentences, "sentences"
     return os.path.abspath(os.path.join(workdir, "merged-output"))
+
+def getElementIndex(parent, element):
+    index = 0
+    for e in parent:
+        if e == element:
+            return index
+        index += 1
+    return -1
+
+def getPrevElementIndex(parent, eTag):
+    index = 0
+    elemIndex = -1
+    for element in parent:
+        if element.tag == eTag:
+            elemIndex = index
+        index += 1
+    return elemIndex
 
 def getElementByAttrib(parent, tag, attDict):
     for element in parent.getiterator():

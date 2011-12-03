@@ -35,6 +35,7 @@ def loadCorpus(corpus, parse, tokenization=None, removeNameInfo=False, removeInt
     duplicateInteractionEdgesRemoved = 0
     sentences = []
     counter = ProgressCounter(len(corpusElements.sentences), "Make sentence graphs")
+    counter.showMilliseconds = True
     for sentence in corpusElements.sentences[:]:
         counter.update(1, "Making sentence graphs ("+sentence.sentence.get("id")+"): ")
         # No tokens, no sentence. No also no dependencies = no sentence.

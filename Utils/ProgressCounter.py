@@ -11,6 +11,7 @@ class ProgressCounter:
         self.id = id
         self.prevUpdateString = "None"
         self.step = step
+        self.showMilliseconds = False
         
         self.prevPrintTime = 0
         self.timeStep = 30
@@ -65,7 +66,11 @@ class ProgressCounter:
         elapsedTime = elapsedTime % 3600.0
         minutes = elapsedTime / 60.0
         seconds = elapsedTime % 60.0
-        return str(int(hours)) + ":" + str(int(minutes)) + ":" + str(int(seconds))
+        if self.showMilliseconds:
+            seconds = "%.3f" % seconds
+        else:
+            seconds = str(int(seconds))
+        return str(int(hours)) + ":" + str(int(minutes)) + ":" + seconds
     
     def showLastUpdate(self):
         if self.total != None:

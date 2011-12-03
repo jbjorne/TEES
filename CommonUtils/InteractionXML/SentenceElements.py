@@ -78,24 +78,30 @@ class SentenceElements:
                 self.entitiesById[entityElement.attrib["id"]] = entityElement
         
         sentenceAnalysesElement = sentenceElement.find("sentenceanalyses")
+        analysesElement = sentenceElement.find("analyses")
+        assert sentenceAnalysesElement == None or analysesElement == None, sentenceId
+        if sentenceAnalysesElement == None:
+            sentenceAnalysesElement = analysesElement
         if sentenceAnalysesElement != None:
             parsesElement = None
             if parse != None:
-                parsesElement = sentenceAnalysesElement.find("parses")
-            if parsesElement != None:
-                parseElements = parsesElement.findall("parse")
+            #    parsesElement = sentenceAnalysesElement.find("parses")
+            #if parsesElement != None:
+                parseElements = [x for x in sentenceAnalysesElement.getiterator("parse")]
+                #parseElements = parsesElement.findall("parse")
                 if len(parseElements) > 0: # new format
                     self.parseElement = None
                     for element in parseElements:
-                        if element.attrib["parser"] == parse:
+                        if element.get("parser") == parse:
                             self.parseElement = element
                             break
                     if self.parseElement != None:
-                        tokenization = self.parseElement.attrib["tokenizer"]
-                        tokenizationsElement = sentenceAnalysesElement.find("tokenizations")
-                        tokenizationElements = tokenizationsElement.findall("tokenization")
+                        tokenization = self.parseElement.get("tokenizer")
+                        tokenizationElements = [x for x in sentenceAnalysesElement.getiterator("tokenization")]
+                        #tokenizationsElement = sentenceAnalysesElement.find("tokenizations")
+                        #tokenizationElements = tokenizationsElement.findall("tokenization")
                         for element in tokenizationElements:
-                            if element.attrib["tokenizer"] == tokenization:
+                            if element.get("tokenizer") == tokenization:
                                 self.tokenizationElement = element
                                 break             
                 else: # old format

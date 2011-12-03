@@ -15,7 +15,8 @@ import tempfile
 import codecs
 from ProcessUtils import *
 
-charniakJohnsonParserDir = "/home/jari/biotext/tools/reranking-parser"
+#charniakJohnsonParserDir = "/home/jari/biotext/tools/reranking-parser"
+charniakJohnsonParserDir = "/home/jari/temp_exec/reranking-parser"
 
 escDict={"-LRB-":"(",
          "-RRB-":")",
@@ -129,22 +130,24 @@ def insertPhrases(phrases, parse, tokenElements, idStem="cjp_"):
         parse.append(phraseElement)
         count += 1
 
-def insertParse(sentence, treeLine, parseName="mccc-preparsed", tokenizationName = None):
+
+
+def insertParse(sentence, treeLine, parseName="mccc-preparsed", tokenizationName = None, makePhraseElements=True):
     # Find or create container elements
-    sentenceAnalyses = setDefaultElement(sentence, "sentenceanalyses")
-    tokenizations = setDefaultElement(sentenceAnalyses, "tokenizations")
-    parses = setDefaultElement(sentenceAnalyses, "parses")
-    prevParseIndex = 0
-    for prevParse in parses.findall("parse"):
+    analyses = setDefaultElement(sentence, "analyses")#"sentenceanalyses")
+    #tokenizations = setDefaultElement(sentenceAnalyses, "tokenizations")
+    #parses = setDefaultElement(sentenceAnalyses, "parses")
+    # Check that the parse does not exist
+    for prevParse in analyses.findall("parse"):
         assert prevParse.get("parser") != parseName
-        prevParseIndex += 1
+    # Create a new parse element
     parse = ET.Element("parse")
     parse.set("parser", parseName)
     if tokenizationName == None:
         parse.set("tokenizer", parseName)
     else:
         parse.set("tokenizer", tokenizationName)
-    parses.insert(prevParseIndex, parse)
+    analyses.insert(getPrevElementIndex(analyses, "parse"), parse)
     
     tokenByIndex = {}
     parse.set("pennstring", treeLine.strip())
@@ -154,19 +157,18 @@ def insertParse(sentence, treeLine, parseName="mccc-preparsed", tokenizationName
         tokens, phrases = readPenn(treeLine)
         # Get tokenization
         if tokenizationName == None: # Parser-generated tokens
-            prevTokenizationIndex = 0
-            for prevTokenization in tokenizations.findall("tokenization"):
+            for prevTokenization in analyses.findall("tokenization"):
                 assert prevTokenization.get("tokenizer") != tokenizationName
-                prevTokenizationIndex += 1
             tokenization = ET.Element("tokenization")
             tokenization.set("tokenizer", parseName)
-            tokenizations.insert(prevTokenizationIndex, tokenization)
+            analyses.insert(getElementIndex(analyses, parse), tokenization)
             # Insert tokens to parse
             insertTokens(tokens, sentence, tokenization)
         else:
-            tokenization = getElementByAttrib(tokenizations, "tokenization", {"tokenizer":tokenizationName})
+            tokenization = getElementByAttrib(analyses, "tokenization", {"tokenizer":tokenizationName})
         # Insert phrases to parse
-        insertPhrases(phrases, parse, tokenization.findall("token"))
+        if makePhraseElements:
+            insertPhrases(phrases, parse, tokenization.findall("token"))
     return True           
 
 def runCharniakJohnsonParserWithTokenizer(input, output):
@@ -199,7 +201,20 @@ def runCharniakJohnsonParser(input, output, tokenizer=False):
                                    stdout=codecs.open(output, "wt", "utf-8"))
     return ProcessWrapper([firstStage, secondStage])
 
-def parse(input, output=None, tokenizationName=None, parseName="McClosky", requireEntities=False, skipIds=[], skipParsed=True, timeout=600):
+def getSentences(corpusRoot, requireEntities=False, skipIds=[], skipParsed=True):
+    for sentence in corpusRoot.getiterator("sentence"):
+        if sentence.get("id") in skipIds:
+            print >> sys.stderr, "Skipping sentence", sentence.get("id")
+            continue
+        if requireEntities:
+            if sentence.find("entity") == None:
+                continue
+        if skipParsed:
+            if ETUtils.getElementByAttrib(sentence, "parse", {"parser":"McClosky"}) != None:
+                continue
+        yield sentence
+
+def parse(input, output=None, tokenizationName=None, parseName="McClosky", requireEntities=False, skipIds=[], skipParsed=True, timeout=600, makePhraseElements=True):
     global charniakJohnsonParserDir, escDict
     print >> sys.stderr, "Charniak-Johnson Parser"
     
@@ -218,30 +233,14 @@ def parse(input, output=None, tokenizationName=None, parseName="McClosky", requi
             print >> sys.stderr, "Parser does the tokenization"
         else:
             print >> sys.stderr, "Parsing tokenized text"
-        for sentence in corpusRoot.getiterator("sentence"):
-            if sentence.get("id") in skipIds:
-                print >> sys.stderr, "Skipping sentence", sentence.get("id")
-                continue
-            if requireEntities:
-                if sentence.find("entity") == None:
-                    continue
-            if skipParsed:
-                if ETUtils.getElementByAttrib(sentence, "parse", {"parser":"McClosky"}) != None:
-                    continue
+        #for sentence in corpusRoot.getiterator("sentence"):
+        for sentence in getSentences(corpusRoot, requireEntities, skipIds, skipParsed):
             infile.write("<s> " + sentence.get("text") + " </s>\n")
             numCorpusSentences += 1
     else: # Use existing tokenization
         print >> sys.stderr, "Using existing tokenization", tokenizationName 
-        for sentence in corpusRoot.getiterator("sentence"):
-            if sentence.get("id") in skipIds:
-                print >> sys.stderr, "Skipping sentence", sentence.get("id")
-                continue
-            if requireEntities:
-                if sentence.find("entity") == None:
-                    continue
-            for tokenization in sentence.find("sentenceanalyses").find("tokenizations"):
-                if tokenization.get("tokenizer") == tokenizationName:
-                    break
+        for sentence in getSentences(corpusRoot, requireEntities, skipIds, skipParsed):
+            tokenization = getElementByAttrib(sentence.find("analyses"), "tokenization", {"tokenizer":tokenizationName})
             assert tokenization.get("tokenizer") == tokenizationName
             s = ""
             for token in tokenization.findall("token"):
@@ -261,7 +260,7 @@ def parse(input, output=None, tokenizationName=None, parseName="McClosky", requi
     if tokenizationName == None:
         charniakOutput = runSentenceProcess(runCharniakJohnsonParserWithTokenizer, charniakJohnsonParserDir, infileName, workdir, False, "CharniakJohnsonParser", "Parsing", timeout=timeout)   
     else:
-        if tokenizationName == "PARSED_TEXT":
+        if tokenizationName == "PARSED_TEXT": # The sentence strings are already tokenized
             tokenizationName = None
         charniakOutput = runSentenceProcess(runCharniakJohnsonParserWithoutTokenizer, charniakJohnsonParserDir, infileName, workdir, False, "CharniakJohnsonParser", "Parsing", timeout=timeout)   
 #    args = [charniakJohnsonParserDir + "/parse-50best-McClosky.sh"]
@@ -273,64 +272,18 @@ def parse(input, output=None, tokenizationName=None, parseName="McClosky", requi
     print >> sys.stderr, "Inserting parses"
     # Add output to sentences
     failCount = 0
-    for sentence in corpusRoot.getiterator("sentence"):
-        if sentence.get("id") in skipIds:
-            print >> sys.stderr, "Skipping sentence", sentence.get("id")
-            continue
-        if requireEntities:
-            if sentence.find("entity") == None:
-                continue
-        if skipParsed:
-            if ETUtils.getElementByAttrib(sentence, "parse", {"parser":"McClosky"}) != None:
-                continue
-        
+    for sentence in getSentences(corpusRoot, requireEntities, skipIds, skipParsed):        
         treeLine = treeFile.readline()
-        if not insertParse(sentence, treeLine, parseName):
+        if not insertParse(sentence, treeLine, parseName, makePhraseElements=makePhraseElements):
             failCount += 1
-#        # Find or create container elements
-#        sentenceAnalyses = setDefaultElement(sentence, "sentenceanalyses")
-#        tokenizations = setDefaultElement(sentenceAnalyses, "tokenizations")
-#        parses = setDefaultElement(sentenceAnalyses, "parses")
-#        prevParseIndex = 0
-#        for prevParse in parses.findall("parse"):
-#            assert prevParse.get("parser") != parseName
-#            prevParseIndex += 1
-#        parse = ET.Element("parse")
-#        parse.set("parser", parseName)
-#        if tokenizationName == None:
-#            parse.set("tokenizer", parseName)
-#        else:
-#            parse.set("tokenizer", tokenizationName)
-#        parses.insert(prevParseIndex, parse)
-#        
-#        tokenByIndex = {}
-#        parse.set("pennstring", treeLine.strip())
-#        if treeLine.strip() == "":
-#            failCount += 1
-#        else:
-#            tokens, phrases = readPenn(treeLine)
-#            # Get tokenization
-#            if tokenizationName == None: # Parser-generated tokens
-#                prevTokenizationIndex = 0
-#                for prevTokenization in tokenizations.findall("tokenization"):
-#                    assert prevTokenization.get("tokenizer") != tokenizationName
-#                    prevTokenizationIndex += 1
-#                tokenization = ET.Element("tokenization")
-#                tokenization.set("tokenizer", parseName)
-#                tokenizations.insert(prevTokenizationIndex, tokenization)
-#                # Insert tokens to parse
-#                insertTokens(tokens, sentence, tokenization)
-#            else:
-#                tokenization = getElementByAttrib(tokenizations, "tokenization", {"tokenizer":tokenizationName})
-#            # Insert phrases to parse
-#            insertPhrases(phrases, parse, tokenization.findall("token"))
     
     treeFile.close()
     # Remove work directory
     #shutil.rmtree(workdir)
     
+    print >> sys.stderr, "Parsed", numCorpusSentences, "sentences (" + str(failCount) + " failed)"
     if failCount == 0:
-        print >> sys.stderr, "Parsed succesfully all sentences"
+        print >> sys.stderr, "All sentences were parsed succesfully"
     else:
         print >> sys.stderr, "Warning, parsing failed for", failCount, "out of", numCorpusSentences, "sentences"
         print >> sys.stderr, "The \"pennstring\" attribute of these sentences has an empty string."
@@ -339,7 +292,7 @@ def parse(input, output=None, tokenizationName=None, parseName="McClosky", requi
         ETUtils.write(corpusRoot, output)
     return corpusTree
 
-def insertParses(input, parsePath, output=None, parseName="mccc-preparsed", tokenizationName = None):
+def insertParses(input, parsePath, output=None, parseName="mccc-preparsed", tokenizationName = None, makePhraseElements=True):
     import tarfile
     from SentenceSplitter import openFile
     """
@@ -384,7 +337,7 @@ def insertParses(input, parsePath, output=None, parseName="mccc-preparsed", toke
         # TODO: Following for-loop is the same as when used with a real parser, and should
         # be moved to its own function.
         for sentence, treeLine in zip(sentences, parseStrings):
-            if not insertParse(sentence, treeLine):
+            if not insertParse(sentence, treeLine, makePhraseElements=makePhraseElements):
                 failCount += 1
     
     if tarFile != None:

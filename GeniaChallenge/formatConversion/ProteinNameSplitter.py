@@ -31,6 +31,8 @@ splitDefaultDepName = "dep"
 # in the given sentence element.
 def addTokenization(tokenization, sentence, sentenceId):
     toks = sentence.find("sentenceanalyses/tokenizations")
+    if toks == None:
+        toks = sentence.find("analyses")
     assert toks != None, "Missing <tokenizations> in sentence %s" % sentenceId
 
 #    # assume new-style if there's at least one <tokenization> with
@@ -63,6 +65,8 @@ def getTokenization(tokenization, sentence, sentenceId, remove=False):
         return found
                                                                                     # then try the new-style format
     tokenizations = sentence.find("sentenceanalyses/tokenizations")
+    if tokenizations == None:
+        tokenizations = sentence.find("analyses")
     assert tokenizations is not None, "ERROR: missing tokenizations for sentence %s" % sentenceId
 
     for t in tokenizations.getiterator("tokenization"):
@@ -79,6 +83,8 @@ def getTokenization(tokenization, sentence, sentenceId, remove=False):
 def addParse(parse, tokenization, sentence, sentenceId):
     # check whether the XML is new-style or old-style.
     parses = sentence.find("sentenceanalyses/parses")
+    if parses == None:
+        parses = sentence.find("analyses")
     assert parses != None, "Missing <parses> in sentence %s" % sentenceId
 
     # assume new-style if we have at least one <parse> with a "parser"
@@ -115,6 +121,8 @@ def getParse(parse, tokenization, sentence, sentenceId, remove=False):
 
     # then try new-style
     parses = sentence.find("sentenceanalyses/parses")
+    if parses == None:
+        parses = sentence.find("analyses")
     assert parses is not None, "ERROR: missing parses for sentence %s" % sentenceId
 
     for p in parses.getiterator("parse"):
@@ -393,6 +401,7 @@ def mainFunc(input, output, parseName, tokenizationName, newParseName, newTokeni
     
     sentences = [x for x in root.getiterator("sentence")]
     counter = ProgressCounter(len(sentences), "Split Protein Names")
+    counter.showMilliseconds = True
     for sentence in sentences:
         sId = sentence.get("id")
         counter.update(1, "Splitting names ("+sId+"): ")
@@ -439,9 +448,6 @@ def mainFunc(input, output, parseName, tokenizationName, newParseName, newTokeni
         for a in parse.attrib:
             if newparse.get(a) == None:
                 newparse.set(a, parse.get(a))
-        
-        for phrase in parse.getiterator("phrase"):
-            newparse.append(phrase)
 
         depSeqId = 1
         for d in parse.getiterator("dependency"):
@@ -462,6 +468,9 @@ def mainFunc(input, output, parseName, tokenizationName, newParseName, newTokeni
             dep.set("t2", t.id)
             dep.set("type", t.depType)
             dep.set("split", "PNS")
+
+        for phrase in parse.getiterator("phrase"):
+            newparse.append(phrase)
 
             # debugging
             #print >> sys.stderr, "NEW DEP IN", sId

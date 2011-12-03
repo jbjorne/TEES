@@ -2,8 +2,9 @@ import sys
 import types
 
 class StepSelector:
-    def __init__(self, steps, fromStep=None, toStep=None, verbose=True):
+    def __init__(self, steps, fromStep=None, toStep=None, verbose=True, omitSteps=None):
         self.steps = steps
+        self.omitSteps = omitSteps
         self.currentStep = None
         self.setLimits(fromStep, toStep)
         self.verbose = verbose
@@ -55,7 +56,10 @@ class StepSelector:
         if stepIndex >= fromIndex and stepIndex <= toIndex:
             if currentIndex < stepIndex:
                 self.currentStep = step
-                return True
+                if self.omitSteps != None and step in self.omitSteps:
+                    if self.verbose: print >> sys.stderr, "Omitting step", step
+                else:
+                    return True
             else:
                 if self.verbose: print >> sys.stderr, "Step", step, "already done, skipping."
                 return False

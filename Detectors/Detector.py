@@ -6,7 +6,7 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__))+"/..")
 from Core.Model import Model
 import STFormat.ConvertXML
 import STFormat.Compare
-from Murska.CSCConnection import CSCConnection
+from JariSandbox.ComplexPPI.Source.Murska.CSCConnection import CSCConnection
 from Core.OptimizeParameters import optimize
 from StepSelector import StepSelector
 import Utils.Parameters as Parameters
@@ -118,14 +118,14 @@ class Detector():
         if saveIdsToModel:
             model.save()
     
-    def enterState(self, state, steps=None, fromStep=None, toStep=None):      
+    def enterState(self, state, steps=None, fromStep=None, toStep=None, omitSteps=None):      
         if self.state == None:
             assert self.select == None
             self.state = state
             if self.select == None or (self.select.currentStep == None and fromStep == steps[0]):
                 print >> sys.stderr, self.__class__.__name__ + ":" + state + "(ENTER)"
             if steps != None:
-                self.select = StepSelector(steps, fromStep, toStep)
+                self.select = StepSelector(steps, fromStep, toStep, omitSteps=omitSteps)
         else:
             assert self.state == state, (state, self.state)
             assert self.select.steps == steps, (steps, self.select.steps)

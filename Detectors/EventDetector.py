@@ -62,7 +62,7 @@ class EventDetector(Detector):
             self.combinedModel = self.initModel(self.combinedModel)
             self.triggerDetector.buildExamples(self.model, [optData, trainData], [self.triggerDetector.tag+"opt-examples.gz", self.triggerDetector.tag+"train-examples.gz"], saveIdsToModel=True)
             self.edgeDetector.buildExamples(self.model, [optData, trainData], [self.edgeDetector.tag+"opt-examples.gz", self.edgeDetector.tag+"train-examples.gz"], saveIdsToModel=True)
-        # (Re-)open models in case we start after "EXAMPLES" step
+        # (Re-)open models in case we start after the "EXAMPLES" step
         self.model = self.openModel(model, "a")
         self.combinedModel = self.openModel(combinedModel, "a")
         if self.checkStep("BEGIN-MODEL"):

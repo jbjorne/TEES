@@ -46,6 +46,7 @@ class SingleStageDetector(Detector):
                         shutil.copyfileobj(gzip.open(trainExampleFile, 'rb'), combinedTrainExamplesFile)
                     combinedTrainExamplesFile.close()
                 # Upload training model
+                # TODO: Storing the parameter grid in the model is a bit odd
                 classifierParameters = Parameters.splitParameters(model.get(self.tag+"classifier-parameters"))
                 origCSCWorkDir = self.cscConnection.workSubDir
                 classifierWorkDir = os.path.normpath(model.path)+"-"+self.tag+"models"
