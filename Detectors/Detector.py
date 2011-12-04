@@ -83,8 +83,8 @@ class Detector():
         modelObj.addStr(name, value)
         modelObj.save()
     
-    def getStr(self, name, model=None):
-        if model == None:
+    def getStr(self, name, model):
+        if type(model) in types.StringTypes:
             modelObj = self.openModel(model, "r")
         else:
             modelObj = model
@@ -113,7 +113,7 @@ class Detector():
             append = False
             for dataSet, goldSet in itertools.izip_longest(data, gold, fillvalue=None):
                 if dataSet != None:
-                    self.exampleBuilder.run(dataSet, output, self.getStr("parse", model), None, exampleStyle, model.get(self.tag+"ids.classes"), model.get(self.tag+"ids.features"), goldSet, append)
+                    self.exampleBuilder.run(dataSet, output, self.getStr("parse", model), None, exampleStyle, model.get(self.tag+"ids.classes", True), model.get(self.tag+"ids.features", True), goldSet, append)
                 append = True
         if saveIdsToModel:
             model.save()

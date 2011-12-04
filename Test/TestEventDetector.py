@@ -218,13 +218,13 @@ if selector.check("TRAIN"):
                         fromStep=options.detectorStep)
 if selector.check("DEVEL"):
     print >> sys.stderr, "------------ Check devel classification ------------"
-    eventDetector.classify(TEST_FILE, "model-devel", "predicted-devel")
+    eventDetector.classify(TEST_FILE, "model-devel", "predicted-devel", fromStep=options.detectorStep)
 if selector.check("EMPTY"):    
     print >> sys.stderr, "------------ Empty devel classification ------------"
-    eventDetector.classify(TEST_FILE.replace(".xml", "-empty.xml"), "model-devel", "predicted-devel-empty")
+    eventDetector.classify(TEST_FILE.replace(".xml", "-empty.xml"), "model-devel", "predicted-devel-empty", fromStep=options.detectorStep)
 if not options.noTestSet:
     if selector.check("TEST"):    
         print >> sys.stderr, "------------ Test set classification ------------"
-        eventDetector.classify(FINAL_TEST_FILE, "model-test", "predicted-test")
+        eventDetector.classify(FINAL_TEST_FILE, "model-test", "predicted-test", fromStep=options.detectorStep)
         STFormat.Compare.compare("predicted-test.tar.gz", "predicted-devel.tar.gz", "a2")
 

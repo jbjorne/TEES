@@ -124,7 +124,7 @@ class SingleStageDetector(Detector):
         self.classifier.test(exampleFileName, classifierModel, tag+self.tag+"classifications")
         evaluator = self.evaluator.evaluate(exampleFileName, tag+self.tag+"classifications", model.get(self.tag+"ids.classes"))
         if evaluator.getData().getTP() + evaluator.getData().getFP() > 0:
-            outputFileName = tag+self.tag+"pred.xml"
+            outputFileName = tag+self.tag+"pred.xml.gz"
             if split:
                 xml = BioTextExampleWriter.write(exampleFileName, tag+self.tag+"classifications", data, None, model.get(self.tag+"ids.classes"), self.getStr("parse", model))
                 xml = InteractionXML.splitMergedElements(xml, None)

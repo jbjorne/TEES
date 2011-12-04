@@ -45,6 +45,7 @@ class StepSelector:
         currentIndex = -1
         if self.currentStep != None:
             currentIndex = self.steps.index(self.currentStep)
+        #assert stepIndex == currentIndex + 1, (step, self.currentStep, self.steps)
         # Get range
         fromIndex = 0
         if self.fromStep != None: 

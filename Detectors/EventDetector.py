@@ -204,3 +204,45 @@ class EventDetector(Detector):
             self.unmergingDetector.beginModel(None, self.model, "unmerging-train-examples.gz", "unmerging-opt-examples.gz")
         if self.checkStep("END-UNMERGING-MODEL", self.unmerging) and self.unmerging:
             self.unmergingDetector.endModel(None, self.model, "unmerging-opt-examples.gz")
+
+    def classify(self, data, model, output, parse=None, fromStep=None, toStep=None):
+        BINARY_RECALL_MODE = False # TODO: make a parameter
+        xml = None
+        self.initVariables(classifyData=data, model=model, xml=None)
+        self.enterState(self.STATE_CLASSIFY, ["TRIGGERS", "RECALL-ADJUST", "EDGES", "UNMERGING", "ST-CONVERT"], fromStep, toStep)
+        self.model = self.openModel(self.model, "r")
+        if parse == None:
+            parse = self.getStr("parse", self.model)
+        if self.checkStep("TRIGGERS"):
+            self.xml = self.triggerDetector.classifyToXML(self.classifyData, self.model, None, output + "-", split=False)
+        if self.checkStep("RECALL-ADJUST"):
+            xml = self.getWorkFile(xml, output + "-trigger-pred.xml.gz")
+            xml = RecallAdjust.run(xml, float(self.getStr("recallAdjustParameter", self.model)), None, binary=BINARY_RECALL_MODE)
+            xml = InteractionXML.splitMergedElements(xml, None)
+            xml = InteractionXML.recalculateIds(xml, output+"-recall-adjusted.xml.gz", True)
+        if self.checkStep("EDGES"):
+            xml = self.getWorkFile(xml, output + "-recall-adjusted.xml.gz")
+            xml = self.edgeDetector.classifyToXML(xml, self.model, None, output + "-", split=True)
+            assert xml != None
+            EvaluateInteractionXML.run(self.edgeDetector.evaluator, xml, self.classifyData, parse)
+        if self.checkStep("UNMERGING"):
+            if self.model.hasMember("unmerging-classifier-model.gz"):
+                xml = self.getWorkFile(xml, output + "-edge-pred.xml.gz")
+                goldData = self.classifyData.replace("-nodup", "")
+                if not os.path.exists(goldData):
+                    goldData = None
+                xml = self.unmergingDetector.classifyToXML(xml, self.model, None, output + "-", split=False, goldData=goldData)
+            else:
+                print >> sys.stderr, "No unmerging"
+        if self.checkStep("ST-CONVERT"):
+            xml = self.getWorkFile(xml, output + "-unmerging-pred.xml.gz")
+            STFormat.ConvertXML.toSTFormat(xml, output+"-events.tar.gz", outputTag="a2")
+            if self.stEvaluator != None:
+                self.stEvaluator.evaluate(output + "-events.tar.gz")
+        self.exitState()
+    
+    def getWorkFile(self, fileObject, serializedPath=None):
+        if fileObject != None:
+            return fileObject
+        else:
+            return serializedPath

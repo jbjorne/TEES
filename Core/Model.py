@@ -56,6 +56,9 @@ class Model():
                 member = self.members[name]
                 shutil.copy2(member[1], member[0])
     
+    def hasMember(self, name):
+        return name in self.members
+    
     def get(self, name, addIfNotExist=False):
         if name not in self.members:
             if addIfNotExist:
