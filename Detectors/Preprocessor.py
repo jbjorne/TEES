@@ -15,6 +15,7 @@ from Detector import Detector
 import InteractionXML.DivideSets
 import GeniaChallenge.formatConversion.ProteinNameSplitter as ProteinNameSplitter
 import Utils.FindHeads as FindHeads
+from Test.Pipeline import log
 
 class Preprocessor(Detector):
     def __init__(self):
@@ -25,7 +26,7 @@ class Preprocessor(Detector):
         self.namedEntityElementName = "entity"
         self.requireEntitiesForParsing = False
         self.parseName = "McClosky"
-        self._preprocessingSteps = ["CONVERT", "SPLIT-SENTENCES", "NER", "PARSE", "CONVERT-PARSE", "SPLIT-NAMES", "FIND-HEADS", "DIVIDE-SETS"]
+        self._preprocessingSteps = ["CONVERT", "NER", "SPLIT-SENTENCES", "PARSE", "CONVERT-PARSE", "SPLIT-NAMES", "FIND-HEADS", "DIVIDE-SETS"]
         self._intermediateFiles = {}
         for step in self._preprocessingSteps[:-1]:
             self._intermediateFiles[step] = None
@@ -145,7 +146,7 @@ if __name__=="__main__":
     optparser.add_option("-f", "--fromStep", default=None, dest="fromStep", help="")
     optparser.add_option("-t", "--toStep", default=None, dest="toStep", help="")
     optparser.add_option("--omitSteps", default=None, dest="omitSteps", help="")
-    optparser.add_option("--noLog", default=True, action="store_false", dest="noLog", help="")
+    optparser.add_option("--noLog", default=False, action="store_true", dest="noLog", help="")
     optparser.add_option("--debug", default=False, action="store_true", dest="debug", help="")
     (options, args) = optparser.parse_args()
     if options.omitSteps != None:
@@ -156,7 +157,7 @@ if __name__=="__main__":
     if not os.path.exists(options.output): os.makedirs(options.output)
     os.chdir(options.output)
     if not options.noLog:
-        log(False, False, os.path.join(options.output, options.corpus + "-log.txt"))
+        log(False, True, os.path.join(options.output, options.corpus + "-log.txt"))
     preprocessor = Preprocessor()
     preprocessor.debug = options.debug
     preprocessor.process(options.input, options.corpus, options.output, fromStep=options.fromStep, toStep=options.toStep, omitSteps=options.omitSteps)

@@ -87,6 +87,7 @@ def makeSentences(input, output=None, removeText=False, postProcess=True):
     sentencesCreated = 0
     sourceElements = [x for x in corpusRoot.getiterator("document")] + [x for x in corpusRoot.getiterator("section")]
     counter = ProgressCounter(len(sourceElements), "GeniaSentenceSplitter")
+    counter.showMilliseconds = True
     for document in sourceElements:
         counter.update(1, "Splitting Documents ("+document.get("id")+"): ")
         docId = document.get("id")

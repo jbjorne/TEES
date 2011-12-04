@@ -244,6 +244,9 @@ def toSTFormat(input, output=None, outputTag="a2", useOrigIds=False, debug=False
         sites = []
         sentenceOffsets = {}
         for sentence in document.findall("sentence"):
+            head = sentence.get("head")
+            if head != None:
+                stDoc.text += head
             stDoc.text += sentence.get("text")
             tail = sentence.get("tail")
             if tail != None:
