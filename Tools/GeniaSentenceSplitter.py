@@ -2,6 +2,9 @@ __version__ = "$Revision: 1.7 $"
 
 import sys,os
 import sys
+thisPath = os.path.dirname(os.path.abspath(__file__))
+sys.path.append(os.path.abspath(os.path.join(thisPath,"..")))
+sys.path.append(os.path.abspath(os.path.join(thisPath,"../CommonUtils")))
 try:
     import xml.etree.cElementTree as ET
 except ImportError:
@@ -14,7 +17,6 @@ import subprocess
 import tempfile
 import codecs
 
-sys.path.append(os.path.dirname(os.path.abspath(__file__))+"/..")
 import Utils.Settings as Settings
 from Utils.ProgressCounter import ProgressCounter
 """
@@ -84,6 +86,11 @@ def makeSentences(input, output=None, removeText=False, postProcess=True):
     print >> sys.stderr, "Corpus file loaded"
     corpusRoot = corpusTree.getroot()
     
+    print >> sys.stderr, "Running GENIA Sentence Splitter", Settings.GENIA_SENTENCE_SPLITTER_DIR,
+    if postProcess:
+        print >> sys.stderr, "(Using post-processing)"
+    else:
+        print >> sys.stderr, "(No post-processing)"
     docCount = 0
     sentencesCreated = 0
     sourceElements = [x for x in corpusRoot.getiterator("document")] + [x for x in corpusRoot.getiterator("section")]

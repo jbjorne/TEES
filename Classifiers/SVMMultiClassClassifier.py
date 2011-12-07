@@ -118,7 +118,7 @@ class SVMMultiClassClassifier(Classifier):
         @type forceInternal: Boolean
         @param forceInternal: Use python classifier even if SVM Multiclass binary is defined in Settings.py
         """
-        if forceInternal or Settings.SVMMultiClassDir == None:
+        if forceInternal or Settings.SVM_MULTICLASS_DIR == None:
             return cls.testInternal(examples, modelPath, output)
         timer = Timer()
         if type(examples) == types.ListType:
@@ -133,7 +133,7 @@ class SVMMultiClassClassifier(Classifier):
         if os.environ.has_key("METAWRK"):
             args = [SVMMultiClassClassifier.louhiBinDir+"/svm_multiclass_classify"]
         else:
-            args = [Settings.SVMMultiClassDir+"/svm_multiclass_classify"]
+            args = [Settings.SVM_MULTICLASS_DIR+"/svm_multiclass_classify"]
         if modelPath == None:
             modelPath = "model"
         if modelPath.endswith(".gz"):
