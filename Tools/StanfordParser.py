@@ -10,8 +10,11 @@ except ImportError:
     import cElementTree as ET
 import cElementTreeUtils as ETUtils
 
+sys.path.append(os.path.dirname(os.path.abspath(__file__))+"/..")
+import Utils.Settings as Settings
 #stanfordParserDir = "/home/jari/biotext/tools/stanford-parser-2010-08-20"
-stanfordParserDir = "/home/jari/temp_exec/stanford-parser-2010-08-20"
+#stanfordParserDir = "/home/jari/temp_exec/stanford-parser-2010-08-20"
+stanfordParserDir = Settings.STANFORD_PARSER_DIR
 
 escDict={"-LRB-":"(",
          "-RRB-":")",

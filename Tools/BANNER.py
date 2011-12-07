@@ -1,6 +1,7 @@
 parse__version__ = "$Revision: 1.3 $"
 
 import sys,os
+import time, datetime
 import sys
 try:
     import xml.etree.cElementTree as ET
@@ -14,7 +15,9 @@ import subprocess
 import tempfile
 import codecs
 
-bannerDir = "/home/jari/biotext/tools/BANNER-trunk-SMP-300910"
+sys.path.append(os.path.dirname(os.path.abspath(__file__))+"/..")
+import Utils.Settings as Settings
+#bannerDir = Settings.BANNER_DIR
 
 def makeConfigXML(workdir, bannerDir):
     conf = ET.Element("banner-configuration")
@@ -64,8 +67,6 @@ def makeConfigXML(workdir, bannerDir):
     return workdir + "/banner_config.xml"
     
 def run(input, output=None, elementName="entity", processElement="document", debug=False):
-    global bannerDir
-    
     print >> sys.stderr, "Loading corpus", input
     corpusTree = ETUtils.ETFromObj(input)
     print >> sys.stderr, "Corpus file loaded"
@@ -81,26 +82,31 @@ def run(input, output=None, elementName="entity", processElement="document", deb
     infile.close()
     
     # Define classpath for java
-    classPath = bannerDir + "/bin"
-    classPath += ":" + bannerDir + "/lib/banner.jar"
-    classPath += ":" + bannerDir + "/lib/dragontool.jar"
-    classPath += ":" + bannerDir + "/lib/heptag.jar"
-    classPath += ":" + bannerDir + "/lib/commons-collections-3.2.1.jar"
-    classPath += ":" + bannerDir + "/lib/commons-configuration-1.6.jar"
-    classPath += ":" + bannerDir + "/lib/commons-lang-2.4.jar"
-    classPath += ":" + bannerDir + "/lib/mallet.jar"
-    classPath += ":" + bannerDir + "/lib/commons-logging-1.1.1.jar"
-    classPath += ":/usr/share/java/trove.jar"
+    assert os.path.exists(Settings.BANNER_DIR + "/lib/banner.jar"), Settings.BANNER_DIR
+    assert os.path.exists(Settings.JAVA_TROVE_PATH), Settings.JAVA_TROVE_PATH
+    classPath = Settings.BANNER_DIR + "/bin"
+    classPath += ":" + Settings.BANNER_DIR + "/lib/banner.jar"
+    classPath += ":" + Settings.BANNER_DIR + "/lib/dragontool.jar"
+    classPath += ":" + Settings.BANNER_DIR + "/lib/heptag.jar"
+    classPath += ":" + Settings.BANNER_DIR + "/lib/commons-collections-3.2.1.jar"
+    classPath += ":" + Settings.BANNER_DIR + "/lib/commons-configuration-1.6.jar"
+    classPath += ":" + Settings.BANNER_DIR + "/lib/commons-lang-2.4.jar"
+    classPath += ":" + Settings.BANNER_DIR + "/lib/mallet.jar"
+    classPath += ":" + Settings.BANNER_DIR + "/lib/commons-logging-1.1.1.jar"
+    classPath += ":" + Settings.JAVA_TROVE_PATH # ":/usr/share/java/trove.jar"
     
-    config = makeConfigXML(workdir, bannerDir)
+    config = makeConfigXML(workdir, Settings.BANNER_DIR)
     
     # Run parser
-    print >> sys.stderr, "Running BANNER", bannerDir
+    print >> sys.stderr, "Running BANNER", Settings.BANNER_DIR
     cwd = os.getcwd()
-    os.chdir(bannerDir)
+    os.chdir(Settings.BANNER_DIR)
     args = ["java", "-cp", classPath, "banner.eval.TestModel", config]
     #print args
-    subprocess.call(args)
+    startTime = time.time()
+    exitCode = subprocess.call(args)
+    assert exitCode == 0, exitCode
+    print >> sys.stderr, "BANNER time:", str(datetime.timedelta(seconds=time.time()-startTime))
     os.chdir(cwd)
     
     # Put sentences in dictionary
@@ -114,6 +120,12 @@ def run(input, output=None, elementName="entity", processElement="document", deb
     
     sentencesWithEntities = 0
     totalEntities = 0
+    
+    # TODO: mention.txt appears to contain predicted entities directly
+    # To be able to feed BANNER documents (or poorly chopped sentences)
+    # one should probably remove newlines, as BANNER separates its input
+    # on newlines. Replacing all \r and \n characters should preserve the
+    # character offsets.
     
     # Read BANNER results
     outfile = codecs.open(os.path.join(workdir, "output.txt"), "rt", "utf-8")

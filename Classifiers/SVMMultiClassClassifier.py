@@ -21,7 +21,7 @@ import Core.Split as Split
 from Utils.Timer import Timer
 from Utils.Parameters import *
 from Utils.ProgressCounter import ProgressCounter
-import Settings
+import Utils.Settings as Settings
 import SVMMultiClassModelUtils
 
 def tempUnzip(filename):
@@ -81,10 +81,13 @@ class SVMMultiClassClassifier(Classifier):
 #                examples = Example.removeDuplicates(examples)
 #            else:
 #                print >> sys.stderr, "Warning, duplicates not removed from example file", examples
-        if os.environ.has_key("METAWRK"):
-            args = [SVMMultiClassClassifier.louhiBinDir+"/svm_multiclass_learn"]
-        else:
-            args = [Settings.SVMMultiClassDir+"/svm_multiclass_learn"]
+        
+#        if os.environ.has_key("METAWRK"):
+#            args = [SVMMultiClassClassifier.louhiBinDir+"/svm_multiclass_learn"]
+#        else:
+#            args = [Settings.SVMMultiClassDir+"/svm_multiclass_learn"]
+        args = [Settings.SVM_MULTICLASS_DIR+"/svm_multiclass_learn"]
+            
         cls.__addParametersToSubprocessCall(args, parameters)
         if outputFile == None:
             args += [trainPath, "model"]

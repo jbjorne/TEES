@@ -15,13 +15,14 @@ import tempfile
 import codecs
 
 sys.path.append(os.path.dirname(os.path.abspath(__file__))+"/..")
+import Utils.Settings as Settings
 from Utils.ProgressCounter import ProgressCounter
 """
 A wrapper for the Joachims SVM Multiclass classifier.
 """
 
 #sentenceSplitterDir = "/home/jari/biotext/tools/geniass"
-sentenceSplitterDir = "/home/jari/temp_exec/geniass"
+#sentenceSplitterDir = "/home/jari/temp_exec/geniass"
 
 def moveElements(document):
     entMap = {}
@@ -104,7 +105,8 @@ def makeSentences(input, output=None, removeText=False, postProcess=True):
         workfile.write(text)
         workfile.close()
         # Run sentence splitter
-        args = [sentenceSplitterDir + "/run_geniass.sh", os.path.join(workdir, "sentence-splitter-input.txt"), os.path.join(workdir, "sentence-splitter-output.txt")]
+        assert os.path.exists(Settings.GENIA_SENTENCE_SPLITTER_DIR + "/run_geniass.sh"), Settings.GENIA_SENTENCE_SPLITTER_DIR
+        args = [Settings.GENIA_SENTENCE_SPLITTER_DIR + "/run_geniass.sh", os.path.join(workdir, "sentence-splitter-input.txt"), os.path.join(workdir, "sentence-splitter-output.txt"), Settings.RUBY_PATH]
         #p = subprocess.call(args)
         p = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         stdout, stderr = p.communicate()
@@ -117,7 +119,7 @@ def makeSentences(input, output=None, removeText=False, postProcess=True):
         if postProcess:
             ppIn = codecs.open(os.path.join(workdir, "sentence-splitter-output.txt"), "rt", "utf-8")
             ppOut = codecs.open(os.path.join(workdir, "sentence-splitter-output-postprocessed.txt"), "wt", "utf-8")
-            subprocess.call(os.path.join(sentenceSplitterDir, "geniass-postproc.pl"), stdin=ppIn, stdout=ppOut)
+            subprocess.call(os.path.join(Settings.GENIA_SENTENCE_SPLITTER_DIR, "geniass-postproc.pl"), stdin=ppIn, stdout=ppOut)
             ppIn.close()
             ppOut.close()
             # Read split sentences

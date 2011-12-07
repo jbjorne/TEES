@@ -15,8 +15,11 @@ import tempfile
 import codecs
 from ProcessUtils import *
 
+sys.path.append(os.path.dirname(os.path.abspath(__file__))+"/..")
+import Utils.Settings as Settings
 #charniakJohnsonParserDir = "/home/jari/biotext/tools/reranking-parser"
-charniakJohnsonParserDir = "/home/jari/temp_exec/reranking-parser"
+#charniakJohnsonParserDir = "/home/jari/temp_exec/reranking-parser"
+charniakJohnsonParserDir = Settings.CHARNIAK_JOHNSON_PARSER_DIR
 
 escDict={"-LRB-":"(",
          "-RRB-":")",
@@ -187,11 +190,13 @@ def runCharniakJohnsonParser(input, output, tokenizer=False):
     #    stdin=codecs.open(input, "rt", "utf-8"),
     #    stdout=codecs.open(output, "wt", "utf-8"), shell=True)
     
+    biomodelDir = Settings.MCCLOSKY_BIOPARSINGMODEL_DIR
+    assert os.path.exists(Settings.MCCLOSKY_BIOPARSINGMODEL_DIR), Settings.MCCLOSKY_BIOPARSINGMODEL_DIR
     if tokenizer:
-        firstStageArgs = ["first-stage/PARSE/parseIt", "-l999", "-N50" , "../McClosky-biomodel/parser/"]
+        firstStageArgs = ["first-stage/PARSE/parseIt", "-l999", "-N50" , biomodelDir+"/parser/"]
     else:
-        firstStageArgs = ["first-stage/PARSE/parseIt", "-l999", "-N50" , "-K", "../McClosky-biomodel/parser/"]
-    secondStageArgs = ["second-stage/programs/features/best-parses", "-l", "../McClosky-biomodel/reranker/features.gz", "../McClosky-biomodel/reranker/weights.gz"]
+        firstStageArgs = ["first-stage/PARSE/parseIt", "-l999", "-N50" , "-K", biomodelDir+"/parser/"]
+    secondStageArgs = ["second-stage/programs/features/best-parses", "-l", biomodelDir+"/reranker/features.gz", biomodelDir+"/reranker/weights.gz"]
     
     firstStage = subprocess.Popen(firstStageArgs,
                                   stdin=codecs.open(input, "rt", "utf-8"),

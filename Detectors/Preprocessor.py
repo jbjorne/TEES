@@ -6,6 +6,7 @@ sys.path.append(os.path.abspath(os.path.join(thisPath,"..")))
 sys.path.append(os.path.abspath(os.path.join(thisPath,"../CommonUtils")))
 import STFormat.STTools
 import STFormat.ConvertXML
+import cElementTreeUtils as ETUtils
 import Tools.GeniaSentenceSplitter
 import Tools.GeniaTagger
 import Tools.CharniakJohnsonParser
@@ -65,8 +66,9 @@ class Preprocessor(Detector):
         if self.checkStep("CONVERT"):
             if os.path.isdir(source):
                 self.xml = self.convert(self.source, self.sourceDataSetNames, output=self.getCurrentOutput())
-            else:
-                print >> sys.stderr, "Processing source as interaction XML"
+        if type(self.xml) in types.StringTypes:
+            print >> sys.stderr, "Processing source as interaction XML"
+            self.xml = ETUtils.ETFromObj(self.xml)
         if self.checkStep("NER"):
             self.detectEntities(self.xml, self.namedEntityElementName, output=self.getCurrentOutput())
         if self.checkStep("SPLIT-SENTENCES"):
@@ -111,7 +113,7 @@ class Preprocessor(Detector):
         self.parser.parse(input, output, tokenizationName=None, parseName=parseName, requireEntities=requireEntities)
     
     def stanfordConvert(self, input, parseName="McClosky", output=None):
-        print >> sys.stderr, "Runnign Stanford Conversion on parse", parseName
+        print >> sys.stderr, "Running Stanford Conversion on parse", parseName
         self.parseConverter.convertXML(parseName, input, output)
     
     def splitNames(self, input, parseName, newParseName=None, output=None):
