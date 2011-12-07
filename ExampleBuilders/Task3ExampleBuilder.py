@@ -197,7 +197,19 @@ class Task3ExampleBuilder(ExampleBuilder):
                 continue
             
             # CLASS
-            if "speculation" in self.styles:
+            if "multiclass" in self.styles:
+                task3Type = "multiclass"
+                categoryName = ""
+                if entity.get("negation") == "True":
+                    categoryName += "negation"
+                if entity.get("speculation") == "True":
+                    if categoryName != "":
+                        categoryName += "---"
+                    categoryName += "speculation"
+                if categoryName == "":
+                    categoryName = "neg"
+                category = self.classSet.getId(categoryName)  
+            elif "speculation" in self.styles:
                 task3Type = "speculation"
                 if entity.get("speculation") == "True":
                     category = self.classSet.getId("speculation")
