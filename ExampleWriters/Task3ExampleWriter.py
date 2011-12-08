@@ -80,9 +80,10 @@ class Task3ExampleWriter(SentenceExampleWriter):
             if task3Type == "multiclass":
                 if specMap.has_key(eId):
                     entity.set("speculation", str(specMap[eId][0]))
+                    entity.set("modPred", self.getPredictionStrengthString(specMap[eId][1], classSet, classIds))
                 if negMap.has_key(eId):
                     entity.set("negation", str(negMap[eId][0]))
-                entity.set("modPred", self.getPredictionStrengthString(specMap[eId][1], classSet, classIds))
+                    entity.set("modPred", self.getPredictionStrengthString(negMap[eId][1], classSet, classIds))
             else:
                 if task3Type == "speculation":
                     if specMap.has_key(eId):

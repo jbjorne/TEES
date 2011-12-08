@@ -113,7 +113,7 @@ class Detector():
             append = False
             for dataSet, goldSet in itertools.izip_longest(data, gold, fillvalue=None):
                 if dataSet != None:
-                    self.exampleBuilder.run(dataSet, output, self.getStr("parse", model), None, exampleStyle, model.get(self.tag+"ids.classes", True), model.get(self.tag+"ids.features", True), goldSet, append)
+                    self.exampleBuilder.run(dataSet, output, self.getStr(self.tag+"parse", model), None, exampleStyle, model.get(self.tag+"ids.classes", True), model.get(self.tag+"ids.features", True), goldSet, append)
                 append = True
         if saveIdsToModel:
             model.save()

@@ -20,6 +20,7 @@ class EventDetector(Detector):
         self.triggerDetector = TriggerDetector()
         self.edgeDetector = EdgeDetector()
         self.unmergingDetector = UnmergingDetector()
+        self.stEvaluator = Evaluators.BioNLP11GeniaTools
         self.STATE_COMPONENT_TRAIN = "COMPONENT_TRAIN"
         self.tag = "event-"
     
@@ -205,10 +206,10 @@ class EventDetector(Detector):
         if self.checkStep("END-UNMERGING-MODEL", self.unmerging) and self.unmerging:
             self.unmergingDetector.endModel(None, self.model, "unmerging-opt-examples.gz")
 
-    def classify(self, data, model, output, parse=None, fromStep=None, toStep=None):
+    def classify(self, data, model, output, parse=None, task=None, fromStep=None, toStep=None):
         BINARY_RECALL_MODE = False # TODO: make a parameter
         xml = None
-        self.initVariables(classifyData=data, model=model, xml=None)
+        self.initVariables(classifyData=data, model=model, xml=None, task=task)
         self.enterState(self.STATE_CLASSIFY, ["TRIGGERS", "RECALL-ADJUST", "EDGES", "UNMERGING", "ST-CONVERT"], fromStep, toStep)
         self.model = self.openModel(self.model, "r")
         if parse == None:
@@ -238,7 +239,7 @@ class EventDetector(Detector):
             xml = self.getWorkFile(xml, output + "-unmerging-pred.xml.gz")
             STFormat.ConvertXML.toSTFormat(xml, output+"-events.tar.gz", outputTag="a2")
             if self.stEvaluator != None:
-                self.stEvaluator.evaluate(output + "-events.tar.gz")
+                self.stEvaluator.evaluate(output + "-events.tar.gz", self.task)
         self.exitState()
     
     def getWorkFile(self, fileObject, serializedPath=None):

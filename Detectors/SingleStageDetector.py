@@ -32,7 +32,7 @@ class SingleStageDetector(Detector):
                 assert model.mode in ["a", "w"], (model.path, model.mode)
                 if importIdsFromModel != None:
                     importModel = self.openModel(importIdsFromModel, "r")
-                    model.importFrom(self.openModel(importModel, "r"), [self.tag+"ids.classes", self.tag+"ids.features", self.tag+"classifier-parameters", self.tag+"example-style", "parse"])
+                    model.importFrom(self.openModel(importModel, "r"), [self.tag+"ids.classes", self.tag+"ids.features", self.tag+"classifier-parameters", self.tag+"example-style", self.tag+"parse"])
                 # Catenate example files
                 if type(trainExampleFiles) in types.StringTypes:
                     combinedTrainExamples = trainExampleFiles
@@ -81,12 +81,13 @@ class SingleStageDetector(Detector):
                         os.remove(combinedTrainExamples)
     
     def train(self, trainData=None, optData=None, model=None, combinedModel=None, exampleStyle=None, 
-              classifierParameters=None, parse=None, tokenization=None, fromStep=None, toStep=None):
+              classifierParameters=None, parse=None, tokenization=None, task=None, fromStep=None, toStep=None):
         self.initVariables(trainData=trainData, optData=optData, model=model, combinedModel=combinedModel, exampleStyle=exampleStyle, classifierParameters=classifierParameters, parse=parse, tokenization=tokenization)
         self.enterState(self.STATE_TRAIN, ["EXAMPLES", "BEGIN-MODEL", "END-MODEL", "BEGIN-COMBINED-MODEL", "END-COMBINED-MODEL"], fromStep, toStep)
         if self.checkStep("EXAMPLES"):
             self.model = self.initModel(self.model, [("exampleStyle", self.tag+"example-style"), ("classifierParameters", self.tag+"classifier-parameters")])
-            self.saveStr("parse", parse, self.model)
+            self.saveStr(self.tag+"parse", parse, self.model)
+            self.saveStr(self.tag+"task", task, self.model)
             self.buildExamples(self.model, [optData, trainData], [self.tag+"opt-examples.gz", self.tag+"train-examples.gz"], saveIdsToModel=True)
         self.model = self.openModel(model, "a") # Devel model already exists, with ids etc
         self.beginModel("BEGIN-MODEL", self.model, [self.tag+"train-examples.gz"], self.tag+"opt-examples.gz")
@@ -95,11 +96,13 @@ class SingleStageDetector(Detector):
         self.endModel("END-COMBINED-MODEL", self.combinedModel, self.tag+"opt-examples.gz")
         self.exitState()
         
-    def classify(self, data, model, output, parse=None):
-        self._enterState(self.STATE_CLASSIFY)
+    def classify(self, data, model, output, parse=None, task=None):
+        self.enterState(self.STATE_CLASSIFY)
         model = self.openModel(model, "r")
         if parse == None:
-            parse = self.getStr("parse", model)
+            parse = self.getStr(self.tag+"parse", model)
+        if task == None:
+            task = self.getStr(self.tag+"task", model)
         self.buildExamples(model, [data], [output+".examples.gz"])
         self.classifier.test(output+".examples.gz", model.get(self.tag+"classifier-model.gz"), output + ".classifications")
         self.evaluator.evaluate(output+".examples.gz", output+".classifications", model.get(self.tag+"ids.classes"))
@@ -109,8 +112,8 @@ class SingleStageDetector(Detector):
         EvaluateInteractionXML.run(self.evaluator, xml, data, parse)
         STFormat.ConvertXML.toSTFormat(xml, output+".tar.gz", outputTag="a2")
         if self.stEvaluator != None:
-            self.stEvaluator.evaluate(output+".tar.gz")
-        self._exitState()
+            self.stEvaluator.evaluate(output+".tar.gz", task)
+        self.exitState()
         
     def classifyToXML(self, data, model, exampleFileName=None, tag="", classifierModel=None, split=False, goldData=None):
         model = self.openModel(model, "r")

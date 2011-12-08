@@ -220,6 +220,7 @@ class Task3ExampleBuilder(ExampleBuilder):
                         category = self.classSet.getId("speculation")
                     else:
                         category = 1
+                categoryName = self.classSet.getName(category)
             else:
                 task3Type = "negation"
                 if entity.get("negation") == "True":
@@ -231,7 +232,8 @@ class Task3ExampleBuilder(ExampleBuilder):
                         category = self.classSet.getId("negation")
                     else:
                         category = 1
-                
+                categoryName = self.classSet.getName(category)
+            self.exampleStats.beginExample(categoryName)
 
             # FEATURES
             features = {}
@@ -339,8 +341,9 @@ class Task3ExampleBuilder(ExampleBuilder):
             examples.append( (sentenceGraph.getSentenceId()+".x"+str(exampleIndex),category,features,extra) )
             exampleIndex += 1
             
-            # chains
+            # chains TODO why here
             self.buildChains(token, sentenceGraph, features)
+            self.exampleStats.endExample()
         return examples
     
     def buildChains(self,token,sentenceGraph,features,depthLeft=3,chain="",visited=None):
