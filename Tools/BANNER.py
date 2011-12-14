@@ -15,7 +15,6 @@ import shutil
 import subprocess
 import tempfile
 import codecs
-from collections import defaultdict
 
 sys.path.append(os.path.dirname(os.path.abspath(__file__))+"/..")
 import Utils.Settings as Settings
@@ -130,85 +129,57 @@ def run(input, output=None, elementName="entity", processElement="document", deb
     # character offsets.
     
     # Read BANNER results
-    print >> sys.stderr, "Inserting entities from BANNER file mention.txt"
-    if False: # Use mention-file, which has incorrect offsets
-        entityCounts = defaultdict(int)
-        mentionfile = codecs.open(os.path.join(workdir, "mention.txt"), "rt", "utf-8")
-        for line in mentionfile:
-            bannerId, bannerOffset, bannerText = line.strip().split("|")
-            bannerOffset = bannerOffset.split()
-            bannerOffset = (int(bannerOffset[0]), int(bannerOffset[1]))
-            containerId = sDict[bannerId].get("id")
-            containerOffset = sDict[bannerId].get("charOffset")
-            assert containerOffset == None # Hack, but we only need documents for now
-            origText = sDict[bannerId].get("text")[bannerOffset[0]:bannerOffset[1]]
-            assert bannerText == origText.replace("\n", " ").replace("\n", " "), (containerId, bannerText, origText, sDict[bannerId].get("text"))
-            # Make element
-            ent = ET.Element(elementName)
-            ent.set("id", containerId + ".e" + str(entityCounts[bannerId]))
-            ent.set("charOffset", str(bannerOffset[0]) + "-" + str(bannerOffset[1]-1))
-            ent.set("type", "Protein")
-            ent.set("isName", "True")
-            ent.set("source", "BANNER")
-            ent.set("text", origText)
-            sDict[bannerId].append(ent)
-            if not sentenceHasEntities[bannerId]:
-                sentencesWithEntities += 1
-                sentenceHasEntities[bannerId] = True
-            totalEntities += 1
-            entityCounts[bannerId] += 1
-        mentionfile.close()
-    else: # Use output file
-        print >> sys.stderr, "Inserting entities from BANNER file output.txt"
-        outfile = codecs.open(os.path.join(workdir, "output.txt"), "rt", "utf-8")
-        idfile = codecs.open(os.path.join(workdir, "ids.txt"), "rt", "utf-8")
-        # Add output to sentences
-        for line in outfile:
-            bannerId = idfile.readline().strip()
-            sentence = sDict[bannerId]
+    outfile = codecs.open(os.path.join(workdir, "output.txt"), "rt", "utf-8")
+    idfile = codecs.open(os.path.join(workdir, "ids.txt"), "rt", "utf-8")
+    print >> sys.stderr, "Inserting entities"
+    # Add output to sentences
+    for line in outfile:
+        bannerId = idfile.readline().strip()
+        sentence = sDict[bannerId]
+        
+        # Find or create container elements
+        sentenceId = sentence.get("id")
+        
+        sText = sentence.get("text")
+        start = 0
+        entityCount = 0
+        beginOffset = None
+        # Add tokens
+        splits = line.strip().split()
+        for split in splits:
+            tokenText, tag = split.rsplit("|", 1)
+            # Determine offsets
+            cStart = sText.find(tokenText, start)
+            assert cStart != -1, (tokenText, tag, sText, line)
+            cEnd = cStart + len(tokenText) - 1
+            start = cStart + len(tokenText)
             
-            # Find or create container elements
-            sentenceId = sentence.get("id")
-            
-            sText = sentence.get("text")
-            start = 0
-            entityCount = 0
-            beginOffset = None
-            # Add tokens
-            splits = line.strip().split()
-            for split in splits:
-                tokenText, tag = split.rsplit("|", 1)
-                # Determine offsets
-                cStart = sText.find(tokenText, start)
-                assert cStart != -1, (tokenText, tag, sText, line)
-                cEnd = cStart + len(tokenText) - 1
-                start = cStart + len(tokenText)
-                
-                if tag == "O":
-                    if beginOffset != None:
-                        # Make element
-                        ent = ET.Element(elementName)
-                        ent.set("id", sentenceId + ".e" + str(entityCount))
-                        ent.set("charOffset", str(beginOffset) + "-" + str(prevEnd))
-                        ent.set("type", "Protein")
-                        ent.set("isName", "True")
-                        ent.set("source", "BANNER")
-                        ent.set("text", sText[beginOffset:prevEnd+1])
-                        sentence.append(ent)
-                        if not sentenceHasEntities[bannerId]:
-                            sentencesWithEntities += 1
-                            sentenceHasEntities[bannerId] = True
-                        totalEntities += 1
-                        entityCount += 1
-                        beginOffset = None
-                else:
-                    if beginOffset == None:
-                        beginOffset = cStart
-                prevEnd = cEnd
-        outfile.close()
-        idfile.close()
+            if tag == "O":
+                if beginOffset != None:
+                    # Make element
+                    ent = ET.Element(elementName)
+                    ent.set("id", sentenceId + ".e" + str(entityCount))
+                    ent.set("charOffset", str(beginOffset) + "-" + str(prevEnd))
+                    ent.set("type", "Protein")
+                    ent.set("isName", "True")
+                    ent.set("source", "BANNER")
+                    ent.set("text", sText[beginOffset:prevEnd+1])
+                    sentence.append(ent)
+                    if not sentenceHasEntities[bannerId]:
+                        sentencesWithEntities += 1
+                        sentenceHasEntities[bannerId] = True
+                    totalEntities += 1
+                    entityCount += 1
+                    beginOffset = None
+            else:
+                if beginOffset == None:
+                    beginOffset = cStart
+            prevEnd = cEnd
     
     print >> sys.stderr, "Found", totalEntities, "entities in", sentencesWithEntities, "sentences"
+    
+    outfile.close()
+    idfile.close()
     # Remove work directory
     if not debug:
         shutil.rmtree(workdir)
