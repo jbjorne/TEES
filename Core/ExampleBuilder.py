@@ -105,11 +105,16 @@ class ExampleBuilder:
             self.elementCounts = None
             self.progress = ProgressCounter(None, "Build examples")
         inputIterator = getCorpusIterator(input, None, self.parse, self.tokenization)
-        goldIterator = []
+        #goldIterator = []
         if gold != None:
-            goldIterator = getCorpusIterator(input, None, self.parse, self.tokenization)
-        for inputSentences, goldSentences in itertools.izip_longest(inputIterator, goldIterator, fillvalue=None):
-            self.processDocument(inputSentences, goldSentences, outfile)
+            goldIterator = getCorpusIterator(gold, None, self.parse, self.tokenization)
+            for inputSentences, goldSentences in itertools.izip_longest(inputIterator, goldIterator, fillvalue=None):
+                assert inputSentences != None
+                assert goldSentences != None
+                self.processDocument(inputSentences, goldSentences, outfile)
+        else:
+            for inputSentences in inputIterator:
+                self.processDocument(inputSentences, None, outfile)
         outfile.close()
         
         # Show statistics
