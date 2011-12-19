@@ -66,8 +66,38 @@ def makeConfigXML(workdir, bannerDir):
     filename = workdir + "/banner_config.xml"
     ETUtils.writeUTF8(conf, workdir + "/banner_config.xml")
     return workdir + "/banner_config.xml"
+
+def makeEntityElements(beginOffset, endOffset, text, splitNewlines=False, elementName="entity"):
+    # NOTE! Entity ids are not set by this function
+    # beginOffset and endOffset in interaction XML format
+    bannerOffset = str(beginOffset) + "-" + str(endOffset)
+    currentEndOffset = beginOffset
+    elements = []
+    if splitNewlines:
+        entityStrings = text[beginOffset:endOffset+1].split("\n") # TODO should support also other newlines
+    else:
+        entityStrings = [text[beginOffset:endOffset+1]]
+    # Make elements
+    currentBeginOffset = beginOffset
+    for entityString in entityStrings:
+        currentEndOffset += len(entityString)
+        if entityString.strip() != "":
+            ent = ET.Element(elementName)
+            ent.set("id", None) # this should crash the XML writing, if id isn't later redefined
+            ent.set("charOffset", str(currentBeginOffset) + "-" + str(currentEndOffset-1))
+            if ent.get("charOffset") != bannerOffset:
+                ent.set("origBANNEROffset", bannerOffset)
+            ent.set("type", "Protein")
+            ent.set("isName", "True")
+            ent.set("source", "BANNER")
+            ent.set("text", text[currentBeginOffset:currentEndOffset])
+            assert ent.get("text") in text, (ent.get("text"), text)
+            elements.append(ent)
+        currentBeginOffset += len(entityString) + 1 # +1 for the newline
+        currentEndOffset += 1 # +1 for the newline
+    return elements
     
-def run(input, output=None, elementName="entity", processElement="document", debug=False):
+def run(input, output=None, elementName="entity", processElement="document", splitNewlines=False, debug=False):
     print >> sys.stderr, "Loading corpus", input
     corpusTree = ETUtils.ETFromObj(input)
     print >> sys.stderr, "Corpus file loaded"
@@ -121,6 +151,8 @@ def run(input, output=None, elementName="entity", processElement="document", deb
     
     sentencesWithEntities = 0
     totalEntities = 0
+    nonSplitCount = 0
+    splitEventCount = 0
     
     # TODO: mention.txt appears to contain predicted entities directly
     # To be able to feed BANNER documents (or poorly chopped sentences)
@@ -148,7 +180,7 @@ def run(input, output=None, elementName="entity", processElement="document", deb
         splits = line.strip().split()
         for split in splits:
             tokenText, tag = split.rsplit("|", 1)
-            # Determine offsets
+            # Determine offsets by aligning BANNER-generated tokens to original text
             cStart = sText.find(tokenText, start)
             assert cStart != -1, (tokenText, tag, sText, line)
             cEnd = cStart + len(tokenText) - 1
@@ -156,27 +188,35 @@ def run(input, output=None, elementName="entity", processElement="document", deb
             
             if tag == "O":
                 if beginOffset != None:
-                    # Make element
-                    ent = ET.Element(elementName)
-                    ent.set("id", sentenceId + ".e" + str(entityCount))
-                    ent.set("charOffset", str(beginOffset) + "-" + str(prevEnd))
-                    ent.set("type", "Protein")
-                    ent.set("isName", "True")
-                    ent.set("source", "BANNER")
-                    ent.set("text", sText[beginOffset:prevEnd+1])
-                    sentence.append(ent)
-                    if not sentenceHasEntities[bannerId]:
-                        sentencesWithEntities += 1
-                        sentenceHasEntities[bannerId] = True
-                    totalEntities += 1
-                    entityCount += 1
+                    ## Make element
+                    #ent = ET.Element(elementName)
+                    #ent.set("id", sentenceId + ".e" + str(entityCount))
+                    #ent.set("charOffset", str(beginOffset) + "-" + str(prevEnd))
+                    #ent.set("type", "Protein")
+                    #ent.set("isName", "True")
+                    #ent.set("source", "BANNER")
+                    #ent.set("text", sText[beginOffset:prevEnd+1])
+                    entities = makeEntityElements(beginOffset, prevEnd, sText, splitNewlines, elementName)
+                    assert len(entities) > 0
+                    nonSplitCount += 1
+                    if len(entities) > 1:
+                        splitEventCount += 1
+                    for ent in entities:
+                        ent.set("id", sentenceId + ".e" + str(entityCount))
+                        sentence.append(ent)
+                        if not sentenceHasEntities[bannerId]:
+                            sentencesWithEntities += 1
+                            sentenceHasEntities[bannerId] = True
+                        totalEntities += 1
+                        entityCount += 1
                     beginOffset = None
             else:
                 if beginOffset == None:
                     beginOffset = cStart
             prevEnd = cEnd
     
-    print >> sys.stderr, "Found", totalEntities, "entities in", sentencesWithEntities, "sentences"
+    print >> sys.stderr, "BANNER found", nonSplitCount, "entities in", sentencesWithEntities, processElement + "-elements"
+    print >> sys.stderr, "New", elementName + "-elements:", totalEntities, "(Split", splitEventCount, "BANNER entities with newlines)"
     
     outfile.close()
     idfile.close()
@@ -205,11 +245,19 @@ if __name__=="__main__":
 
     optparser = OptionParser(usage="%prog [options]\n")
     optparser.add_option("-i", "--input", default=None, dest="input", help="Corpus in Interaction XML format", metavar="FILE")
+    optparser.add_option("--inputCorpusName", default="PMC11", dest="inputCorpusName", help="")
     optparser.add_option("-o", "--output", default=None, dest="output", help="Output file in Interaction XML format.")
     optparser.add_option("-e", "--elementName", default="entity", dest="elementName", help="BANNER created element tag in Interaction XML")
     optparser.add_option("-p", "--processElement", default="document", dest="processElement", help="input element tag (usually \"sentence\" or \"document\")")
+    optparser.add_option("-s", "--split", default=False, action="store_true", dest="splitNewlines", help="Split BANNER entities at newlines")
     optparser.add_option("--debug", default=False, action="store_true", dest="debug", help="Preserve temporary working directory")
     (options, args) = optparser.parse_args()
     
-    run(input=options.input, output=options.output, elementName=options.elementName, processElement=options.processElement, debug=options.debug)
+    if os.path.isdir(options.input) or options.input.endswith(".tar.gz"):
+        print >> sys.stderr, "Converting ST-format"
+        import STFormat.ConvertXML
+        import STFormat.STTools
+        options.input = STFormat.ConvertXML.toInteractionXML(STFormat.STTools.loadSet(options.input), options.inputCorpusName)
+    print >> sys.stderr, "Running BANNER"
+    run(input=options.input, output=options.output, elementName=options.elementName, processElement=options.processElement, splitNewlines=options.splitNewlines, debug=options.debug)
     
