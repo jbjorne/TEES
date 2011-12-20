@@ -70,7 +70,22 @@ def moveElements(document):
         interaction.set("e1", entMap[interaction.get("e1")])
         interaction.set("e2", entMap[interaction.get("e2")])
         intCount += 1
-                
+        
+def makeSentence(text, begin, end, prevSentence=None, prevEnd=None):
+    # Make sentence element
+    e = ET.Element("sentence")
+    e.set("text", text[begin:end+1])
+    e.set("charOffset", str(begin) + "-" + str(end)) # NOTE: check
+    # Set tail string for previous sentence
+    if prevSentence != None and begin - prevEnd > 1:
+        prevSentence.set("tail", text[prevEnd+1:begin])
+    # Set head string for first sentence in document
+    if begin > 0 and prevSentence == None:
+        e.set("head", text[0:begin])
+    assert "\n" not in e.get("text"), e.get("text")
+    assert "\r" not in e.get("text"), e.get("text")
+    return e
+                            
 def makeSentences(input, output=None, removeText=False, postProcess=True, debug=False):
     """
     Run GENIA Sentence Splitter
@@ -93,6 +108,7 @@ def makeSentences(input, output=None, removeText=False, postProcess=True, debug=
         print >> sys.stderr, "(No post-processing)"
     docCount = 0
     sentencesCreated = 0
+    redevideCount = 0
     sourceElements = [x for x in corpusRoot.getiterator("document")] + [x for x in corpusRoot.getiterator("section")]
     counter = ProgressCounter(len(sourceElements), "GeniaSentenceSplitter")
     counter.showMilliseconds = True
@@ -138,40 +154,56 @@ def makeSentences(input, output=None, removeText=False, postProcess=True, debug=
             workfile = codecs.open(os.path.join(workdir, "sentence-splitter-output.txt"+docTag), "rt", "utf-8")
         start = 0 # sentences are consecutively aligned to the text for charOffsets
         sentenceCount = 0
-        prevSentence = None
         #text = text.replace("\n", " ") # should stop sentence splitter from crashing.
         #text = text.replace("  ", " ") # should stop sentence splitter from crashing.
-        alignmentText = text.replace("\n", " ").replace("\r", " ")
+        #alignmentText = text.replace("\n", " ").replace("\r", " ")
+        #docTokens = reWhiteSpace.split(text)
+        docIndex = 0
+        sentenceBeginIndex = -1
+        prevSentence = None
+        prevEndIndex = None
         emptySentenceCount = 0
+        prevText = None
         for sText in workfile.readlines():
             sText = sText.strip() # The text of the sentence
             if sText == "":
                 emptySentenceCount += 1
                 continue
-            # Find the starting point of the sentence in the text. This
-            # point must be after previous sentences
-            cStart = alignmentText.find(sText, start) # find start position
-            assert cStart != -1, (alignmentText, text, sText, start)
-            cEnd = cStart + len(sText) # end position is determined by length
-            # Make sentence element
-            e = ET.Element("sentence")
-            e.set("text", text[cStart:cEnd])
-            e.set("charOffset", str(cStart) + "-" + str(cEnd - 1)) # NOTE: check
-            e.set("id", docId + ".s" + str(sentenceCount))
-            document.append(e) # add sentence to parent element
-            # Set sentence head and tail strings
-            if cStart - start != 0:
-                prevSentence.set("tail", text[start:cStart])
-            if cStart > 0 and prevSentence == None:
-                e.set("head", text[0:cStart])
-            # Update counters
-            start = cStart + len(sText) # for next sentence, start search from end of this one
-            prevSentence = e
-            sentencesCreated += 1
-            sentenceCount += 1
-        if cEnd < len(text) and prevSentence != None:
+
+            for i in range(len(sText)):
+                if sText[i].isspace():
+                    assert sText[i] not in ["\n", "\r"]
+                    continue
+                while text[docIndex].isspace():
+                    if text[docIndex] in ["\n", "\r"] and sentenceBeginIndex != -1:
+                        redevideCount += 1
+                        prevSentence = makeSentence(text, sentenceBeginIndex, docIndex-1, prevSentence, prevEndIndex)
+                        prevSentence.set("id", docId + ".s" + str(sentenceCount))
+                        prevSentence.set("redevided", "True")
+                        sentencesCreated += 1
+                        sentenceCount += 1
+                        prevEndIndex = docIndex-1
+                        sentenceBeginIndex = -1
+                        document.append(prevSentence)
+                    docIndex += 1
+                assert sText[i] == text[docIndex], (text, sText, prevText, sText[i:i+10], text[docIndex:docIndex+10], (i, docIndex), sentenceBeginIndex) # tokens[i].isspace() == False
+                if sentenceBeginIndex == -1:
+                    sentenceBeginIndex = docIndex
+                docIndex += 1
+                prevText = sText
+            if sentenceBeginIndex != -1:
+                prevSentence = makeSentence(text, sentenceBeginIndex, docIndex-1, prevSentence, prevEndIndex)
+                prevSentence.set("id", docId + ".s" + str(sentenceCount))
+                prevEndIndex = docIndex-1
+                sentenceBeginIndex = -1
+                sentencesCreated += 1
+                sentenceCount += 1
+                document.append(prevSentence)
+        # Add possible tail for last sentence
+        if prevEndIndex < len(text) - 1 and prevSentence != None:
             assert prevSentence.get("tail") == None, prevSentence.get("tail")
-            prevSentence.set("tail", text[cEnd:])
+            prevSentence.set("tail", text[prevEndIndex+1:])
+            
         if emptySentenceCount > 0:
             print >> sys.stderr, "Warning,", emptySentenceCount, "empty sentences in", document.get("id") 
         # Remove original text
@@ -182,6 +214,7 @@ def makeSentences(input, output=None, removeText=False, postProcess=True, debug=
         docCount += 1
     
     print >> sys.stderr, "Sentence splitting created", sentencesCreated, "sentences"
+    print >> sys.stderr, "Redevided", redevideCount, "sentences"
     
     if debug:
         print >> sys.stderr, "Work directory preserved for debugging at", workdir
