@@ -631,17 +631,27 @@ class MultiEdgeExampleBuilder(ExampleBuilder):
                 #else:
                 #    path = directedPath
                 
-                path = paths.getPaths(token1, token2)
-                if len(path) > 0:
+                allPaths = paths.getPaths(token1, token2)
+                processPaths = allPaths # support for multiple paths
+                if len(allPaths) > 0:
                     #if len(path) > 1:
                     #    print len(path)
-                    path = path[0]
+                    #path = allPaths[0]
                     pathExists = True
+                    if not "multipath" in self.styles:
+                        processPaths = [allPaths[0]]
+                        #sortingArray = []
+                        #for path in allPaths:
+                        #    sortingArray.append( ([(x.get("POS"), x.get("text"), x.get("charOffset")) for x in path], path) )
+                        #sortingArray.sort()
+                        #processPaths = [sortingArray[0][1]]
                 else:
-                    path = [token1, token2]
+                    #path = [token1, token2]
+                    processPaths = [[token1, token2]]
                     pathExists = False
             else:
-                path = [token1, token2]
+                #path = [token1, token2]
+                processPaths = [[token1, token2]]
                 pathExists = False
             #print token1.get("id"), token2.get("id")
             assert(self.pathLengths == None)
@@ -703,29 +713,40 @@ class MultiEdgeExampleBuilder(ExampleBuilder):
                 if "entity_type" in self.styles:
                     features[self.featureSet.getId("e1_"+entity1.get("type"))] = 1
                     features[self.featureSet.getId("e2_"+entity2.get("type"))] = 1
-                    features[self.featureSet.getId("distance_"+str(len(path)))] = 1
+                    for processPath in processPaths:
+                        #features[self.featureSet.getId("distance_"+str(len(path)))] = 1
+                        features[self.featureSet.getId("distance_"+str(len(processPath)))] = 1
                 if not "no_dependency" in self.styles:
                     #print "Dep features"
                     self.multiEdgeFeatureBuilder.setFeatureVector(features, entity1, entity2)
                     #self.multiEdgeFeatureBuilder.buildStructureFeatures(sentenceGraph, paths) # remove for fast
                     if not "disable_entity_features" in self.styles:
                         self.multiEdgeFeatureBuilder.buildEntityFeatures(sentenceGraph)
-                    self.multiEdgeFeatureBuilder.buildPathLengthFeatures(path)
+                    for processPath in processPaths:
+                        #self.multiEdgeFeatureBuilder.buildPathLengthFeatures(path)
+                        self.multiEdgeFeatureBuilder.buildPathLengthFeatures(processPath)
                     if not "disable_terminus_features" in self.styles:
-                        self.multiEdgeFeatureBuilder.buildTerminusTokenFeatures(path, sentenceGraph) # remove for fast
+                        for processPath in processPaths:
+                            #self.multiEdgeFeatureBuilder.buildTerminusTokenFeatures(path, sentenceGraph) # remove for fast
+                            self.multiEdgeFeatureBuilder.buildTerminusTokenFeatures(processPath, sentenceGraph) # remove for fast
                     if not "disable_single_element_features" in self.styles:
-                        self.multiEdgeFeatureBuilder.buildSingleElementFeatures(path, sentenceGraph)
+                        #self.multiEdgeFeatureBuilder.buildSingleElementFeatures(path, sentenceGraph)
+                        for processPath in processPaths:
+                            self.multiEdgeFeatureBuilder.buildSingleElementFeatures(processPath, sentenceGraph)
                     if not "disable_ngram_features" in self.styles:
                         #print "NGrams"
-                        self.multiEdgeFeatureBuilder.buildPathGrams(2, path, sentenceGraph) # remove for fast
-                        self.multiEdgeFeatureBuilder.buildPathGrams(3, path, sentenceGraph) # remove for fast
-                        self.multiEdgeFeatureBuilder.buildPathGrams(4, path, sentenceGraph) # remove for fast
+                        for processPath in processPaths:
+                            self.multiEdgeFeatureBuilder.buildPathGrams(2, processPath, sentenceGraph) # remove for fast
+                            self.multiEdgeFeatureBuilder.buildPathGrams(3, processPath, sentenceGraph) # remove for fast
+                            self.multiEdgeFeatureBuilder.buildPathGrams(4, processPath, sentenceGraph) # remove for fast
                     #self.buildEdgeCombinations(path, edges, sentenceGraph, features) # remove for fast
                     #if edges != None:
                     #    self.multiEdgeFeatureBuilder.buildTerminusFeatures(path[0], edges[0][1]+edges[1][0], "t1", sentenceGraph) # remove for fast
                     #    self.multiEdgeFeatureBuilder.buildTerminusFeatures(path[-1], edges[len(path)-1][len(path)-2]+edges[len(path)-2][len(path)-1], "t2", sentenceGraph) # remove for fast
                     if not "disable_path_edge_features" in self.styles:
-                        self.multiEdgeFeatureBuilder.buildPathEdgeFeatures(path, sentenceGraph)
+                        #self.multiEdgeFeatureBuilder.buildPathEdgeFeatures(path, sentenceGraph)
+                        for processPath in processPaths:
+                            self.multiEdgeFeatureBuilder.buildPathEdgeFeatures(processPath, sentenceGraph)
                     self.multiEdgeFeatureBuilder.buildSentenceFeatures(sentenceGraph)
                     self.multiEdgeFeatureBuilder.setFeatureVector(None)
                 if "nodalida" in self.styles:
