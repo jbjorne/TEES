@@ -71,7 +71,7 @@ def moveElements(document):
         interaction.set("e2", entMap[interaction.get("e2")])
         intCount += 1
                 
-def makeSentences(input, output=None, removeText=False, postProcess=True):
+def makeSentences(input, output=None, removeText=False, postProcess=True, debug=False):
     """
     Run GENIA Sentence Splitter
     
@@ -96,24 +96,27 @@ def makeSentences(input, output=None, removeText=False, postProcess=True):
     sourceElements = [x for x in corpusRoot.getiterator("document")] + [x for x in corpusRoot.getiterator("section")]
     counter = ProgressCounter(len(sourceElements), "GeniaSentenceSplitter")
     counter.showMilliseconds = True
+    # Create working directory
+    workdir = tempfile.mkdtemp()
     for document in sourceElements:
         counter.update(1, "Splitting Documents ("+document.get("id")+"): ")
         docId = document.get("id")
         if docId == None:
             docId = "CORPUS.d" + str(docCount)
+        docTag = "-" + str(docCount)
         assert document.find("sentence") == None
         text = document.get("text")
         if text == None or text.strip() == "":
             continue
         #print type(text)
         # Write text to workfile
-        workdir = tempfile.mkdtemp()
-        workfile = codecs.open(os.path.join(workdir, "sentence-splitter-input.txt"), "wt", "utf-8")
+        #workdir = tempfile.mkdtemp()
+        workfile = codecs.open(os.path.join(workdir, "sentence-splitter-input.txt"+docTag), "wt", "utf-8")
         workfile.write(text)
         workfile.close()
         # Run sentence splitter
         assert os.path.exists(Settings.GENIA_SENTENCE_SPLITTER_DIR + "/run_geniass.sh"), Settings.GENIA_SENTENCE_SPLITTER_DIR
-        args = [Settings.GENIA_SENTENCE_SPLITTER_DIR + "/run_geniass.sh", os.path.join(workdir, "sentence-splitter-input.txt"), os.path.join(workdir, "sentence-splitter-output.txt"), Settings.RUBY_PATH]
+        args = [Settings.GENIA_SENTENCE_SPLITTER_DIR + "/run_geniass.sh", os.path.join(workdir, "sentence-splitter-input.txt"+docTag), os.path.join(workdir, "sentence-splitter-output.txt"+docTag), Settings.RUBY_PATH]
         #p = subprocess.call(args)
         p = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         stdout, stderr = p.communicate()
@@ -124,33 +127,35 @@ def makeSentences(input, output=None, removeText=False, postProcess=True):
         #print "stdout<", p.stdout.readlines(), ">"
         #print "stderr<", p.stderr.readlines(), ">"
         if postProcess:
-            ppIn = codecs.open(os.path.join(workdir, "sentence-splitter-output.txt"), "rt", "utf-8")
-            ppOut = codecs.open(os.path.join(workdir, "sentence-splitter-output-postprocessed.txt"), "wt", "utf-8")
+            ppIn = codecs.open(os.path.join(workdir, "sentence-splitter-output.txt"+docTag), "rt", "utf-8")
+            ppOut = codecs.open(os.path.join(workdir, "sentence-splitter-output-postprocessed.txt"+docTag), "wt", "utf-8")
             subprocess.call(os.path.join(Settings.GENIA_SENTENCE_SPLITTER_DIR, "geniass-postproc.pl"), stdin=ppIn, stdout=ppOut)
             ppIn.close()
             ppOut.close()
             # Read split sentences
-            workfile = codecs.open(os.path.join(workdir, "sentence-splitter-output-postprocessed.txt"), "rt", "utf-8")
+            workfile = codecs.open(os.path.join(workdir, "sentence-splitter-output-postprocessed.txt"+docTag), "rt", "utf-8")
         else:
-            workfile = codecs.open(os.path.join(workdir, "sentence-splitter-output.txt"), "rt", "utf-8")
+            workfile = codecs.open(os.path.join(workdir, "sentence-splitter-output.txt"+docTag), "rt", "utf-8")
         start = 0 # sentences are consecutively aligned to the text for charOffsets
         sentenceCount = 0
         prevSentence = None
         #text = text.replace("\n", " ") # should stop sentence splitter from crashing.
         #text = text.replace("  ", " ") # should stop sentence splitter from crashing.
+        alignmentText = text.replace("\n", " ").replace("\r", " ")
+        emptySentenceCount = 0
         for sText in workfile.readlines():
             sText = sText.strip() # The text of the sentence
             if sText == "":
-                print >> sys.stderr, "Warning, empty sentence in", document.get("id") 
+                emptySentenceCount += 1
                 continue
             # Find the starting point of the sentence in the text. This
             # point must be after previous sentences
-            cStart = text.find(sText, start) # find start position
-            assert cStart != -1, (text, sText, start)
+            cStart = alignmentText.find(sText, start) # find start position
+            assert cStart != -1, (alignmentText, text, sText, start)
             cEnd = cStart + len(sText) # end position is determined by length
             # Make sentence element
             e = ET.Element("sentence")
-            e.set("text", sText)
+            e.set("text", text[cStart:cEnd])
             e.set("charOffset", str(cStart) + "-" + str(cEnd - 1)) # NOTE: check
             e.set("id", docId + ".s" + str(sentenceCount))
             document.append(e) # add sentence to parent element
@@ -158,22 +163,31 @@ def makeSentences(input, output=None, removeText=False, postProcess=True):
             if cStart - start != 0:
                 prevSentence.set("tail", text[start:cStart])
             if cStart > 0 and prevSentence == None:
-                e.set()
+                e.set("head", text[0:cStart])
             # Update counters
             start = cStart + len(sText) # for next sentence, start search from end of this one
             prevSentence = e
             sentencesCreated += 1
             sentenceCount += 1
+        if cEnd < len(text) and prevSentence != None:
+            assert prevSentence.get("tail") == None, prevSentence.get("tail")
+            prevSentence.set("tail", text[cEnd:])
+        if emptySentenceCount > 0:
+            print >> sys.stderr, "Warning,", emptySentenceCount, "empty sentences in", document.get("id") 
         # Remove original text
         if removeText:
             del document["text"]
-        # Remove work directory
-        shutil.rmtree(workdir)
         # Move elements from document element to sentences
         moveElements(document)
         docCount += 1
     
     print >> sys.stderr, "Sentence splitting created", sentencesCreated, "sentences"
+    
+    if debug:
+        print >> sys.stderr, "Work directory preserved for debugging at", workdir
+    else:
+        # Remove work directory
+        shutil.rmtree(workdir)
         
     if output != None:
         print >> sys.stderr, "Writing output to", output
