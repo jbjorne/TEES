@@ -8,6 +8,7 @@ try:
     import xml.etree.cElementTree as ET
 except ImportError:
     import cElementTree as ET
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)),"../CommonUtils")))
 import cElementTreeUtils as ETUtils
 
 sys.path.append(os.path.dirname(os.path.abspath(__file__))+"/..")
@@ -110,7 +111,7 @@ def convert(input, output=None):
     shutil.rmtree(workdir)
     return lines
 
-def convertXML(parser, input, output):
+def convertXML(parser, input, output, debug=False):
     global stanfordParserDir
     print >> sys.stderr, "Running Stanford conversion"
     
@@ -120,6 +121,8 @@ def convertXML(parser, input, output):
     corpusRoot = corpusTree.getroot()
     
     workdir = tempfile.mkdtemp()
+    if debug:
+        print >> sys.stderr, "Stanford parser workdir", workdir
     stanfordInput = os.path.join(workdir, "input")
     stanfordInputFile = codecs.open(stanfordInput, "wt", "utf-8")
     
@@ -173,7 +176,8 @@ def convertXML(parser, input, output):
             parse.set("stanford", "ok")
     stanfordOutputFile.close()
     # Remove work directory
-    #shutil.rmtree(workdir)
+    if not debug:
+        shutil.rmtree(workdir)
     
     if output != None:
         print >> sys.stderr, "Writing output to", output
@@ -283,7 +287,8 @@ if __name__=="__main__":
     optparser.add_option("-i", "--input", default=None, dest="input", help="Corpus in interaction xml format", metavar="FILE")
     optparser.add_option("-o", "--output", default=None, dest="output", help="Output file in interaction xml format.")
     optparser.add_option("-p", "--parse", default=None, dest="parse", help="Name of parse element.")
+    optparser.add_option("--debug", default=False, action="store_true", dest="debug", help="")
     (options, args) = optparser.parse_args()
     
-    convertXML(input=options.input, output=options.output, parser=options.parse)
+    convertXML(input=options.input, output=options.output, parser=options.parse, debug=options.debug)
         
