@@ -491,7 +491,7 @@ class UnmergingExampleBuilder(ExampleBuilder):
                     if category.find("egulation") != -1:
                         category = "All_regulation"
                     elif category != "Binding":
-                        category = "simple6"
+                        category = "Other" #"simple6"
                 else:
                     category = "neg"
                     
