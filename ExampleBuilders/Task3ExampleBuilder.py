@@ -52,7 +52,7 @@ class Task3ExampleBuilder(ExampleBuilder):
         wordFilePath = "/usr/share/biotext/GeniaChallenge/extension-data/genia/task3/speculation-words.txt"    
         wordFilePath = os.path.expanduser("~/data/BioNLP11SharedTask/resources/speculation-words.txt")    
         if os.environ.has_key("METAWRK"): # CSC
-            wordFilePath = "/v/users/jakrbj/cvs_checkout/GeniaChallenge/task3/speculation-words.txt"
+            wordFilePath = "/v/users/jakrbj/TEES_current/GeniaChallenge/task3/speculation-words.txt"
 #ENDIF
         
         self.specWords, self.specWordStems = readWords(wordFilePath) 
@@ -341,7 +341,7 @@ class Task3ExampleBuilder(ExampleBuilder):
             examples.append( (sentenceGraph.getSentenceId()+".x"+str(exampleIndex),category,features,extra) )
             exampleIndex += 1
             
-            # chains TODO why here
+            # chains TODO why here (doesn't matter, features still refers to the correct object)
             self.buildChains(token, sentenceGraph, features)
             self.exampleStats.endExample()
         return examples
