@@ -67,6 +67,7 @@ class SentenceExampleWriter:
         for example in examples:
             count += 1
         assert count > 0
+        progress = ProgressCounter(count, "Write Examples")
         
         for example, prediction in itertools.izip_longest(examples, predictions):
             assert example != None
@@ -82,6 +83,7 @@ class SentenceExampleWriter:
                     if goldCorpus != None:
                         goldSentence = goldCorpus.sentencesById[currentMajorId]
                     self.writeXMLSentence(exampleQueue, predictionsByExample, sentenceObject, classSet, classIds, goldSentence=goldSentence) # process queue
+                    progress.update(len(exampleQueue), "Writing examples ("+exampleQueue[-1][0]+"): ")
                 exampleQueue = []
                 predictionsByExample = {}
                 prevMajorIds.add(currentMajorId)
@@ -99,6 +101,7 @@ class SentenceExampleWriter:
             if goldCorpus != None:
                 goldSentence = goldCorpus.sentencesById[currentMajorId]
             self.writeXMLSentence(exampleQueue, predictionsByExample, sentenceObject, classSet, classIds, goldSentence=goldSentence) # process queue
+            progress.update(len(exampleQueue), "Writing examples ("+exampleQueue[-1][0]+"): ")
             exampleQueue = []
             predictionsByExample = {}
         
