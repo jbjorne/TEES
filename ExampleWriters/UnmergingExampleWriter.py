@@ -29,6 +29,23 @@ class UnmergingExampleWriter(SentenceExampleWriter):
         # remove entities
         entities = self.removeNonNameEntities(sentenceElement)
         
+        # filter interactions
+        interactionsToKeep = []
+        for interaction in interactions:
+            if interaction.get("type") != "neg":
+                interactionsToKeep.append(interaction)
+        interactions = interactionsToKeep
+        
+        # early out
+        cutoff = 100
+        if len(interactions) == 0 or len(interactions) > cutoff:
+            # re-attach the analyses-element
+            if sentenceAnalysesElement != None:
+                sentenceElement.append(sentenceAnalysesElement)
+            if len(interactions) > cutoff:
+                print >> sys.stderr, "Warning, sentence", sentenceObject.sentence.get("id"), "has more than", cutoff, "interactions, removing all."
+            return
+        
         interactionsByEntity = {}
         interactionsById = {}
         for entity in entities:
