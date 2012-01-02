@@ -19,6 +19,8 @@ class UnmergingExampleWriter(SentenceExampleWriter):
         # detach analyses-element
         sentenceAnalysesElement = None
         sentenceAnalysesElement = sentenceElement.find("sentenceanalyses")
+        if sentenceAnalysesElement == None:
+            sentenceAnalysesElement = sentenceElement.find("analyses")
         if sentenceAnalysesElement != None:
             sentenceElement.remove(sentenceAnalysesElement)
                 
@@ -188,7 +190,7 @@ class UnmergingExampleWriter(SentenceExampleWriter):
                         umType = "simple"
                     else:
                         # Prediction strength is only available for classified argument groups
-                        predictionStrength = self.getPredictionStrength(example, predictionsByExample)
+                        predictionStrength = self.getPredictionStrength(example, predictionsByExample, classSet, classIds)
                     #print example 
                     if umType != "simple" and example[3]["etype"] == "Process" and len(arguments) == 0:
                         origProcess = sentenceObject.entitiesById[example[3]["e"]]
@@ -313,10 +315,11 @@ class UnmergingExampleWriter(SentenceExampleWriter):
         e2MajorId, e2MinorId = interaction.get("e2").rsplit(".e", 1)
         return e1MajorId != e2MajorId
     
-    def getPredictionStrength(self, example, predictionsByExample):
+    def getPredictionStrength(self, example, predictionsByExample, classSet, classIds):
         prediction = predictionsByExample[example[0]]
         if len(prediction) == 1:
             return 0
         predClass = prediction[0]
-        predictionStrength = [predClass]
+        #predictionStrength = [predClass]
+        predictionStrength = self.getPredictionStrengthString(prediction, classSet, classIds)
         return predictionStrength
