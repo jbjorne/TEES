@@ -18,12 +18,14 @@ def compareEvents(e1, e2):
         return False
 
 def removeDuplicates(events):
-    numRemoved = 1
+    firstLoop = True
+    numRemoved = 0
     totalRemoved = 0
     # Since removed events cause nesting events' arguments to be remapped, 
     # some of these nesting events may in turn become duplicates. Loop until
     # all such duplicates are removed.
-    while(numRemoved > 0):
+    while(numRemoved > 0 or firstLoop):
+        firstLoop = False
         # Group duplicate events
         duplGroups = {}
         isDuplicate = {}
@@ -83,7 +85,7 @@ def isIDTask(proteins):
 def validate(events, simulation=False, verbose=False, docId=None): #, taskIsID=None):
     #assert taskIsID != None
     
-    numRemoved = 1
+    numRemoved = 0
     removeCounts = defaultdict(int)
     totalRemoved = 0
     if simulation:
@@ -92,7 +94,9 @@ def validate(events, simulation=False, verbose=False, docId=None): #, taskIsID=N
     # Since removed events cause nesting events' arguments to be remapped, 
     # some of these nesting events may in turn become duplicates. Loop until
     # all such duplicates are removed.
-    while(numRemoved > 0):
+    firstLoop = True
+    while(numRemoved > 0 or firstLoop):
+        firstLoop = False
         toRemove = set()
         for event in events:
             # Check arguments
@@ -123,6 +127,11 @@ def validate(events, simulation=False, verbose=False, docId=None): #, taskIsID=N
                 if len(event.arguments) == 0:
                     toRemove.add(event)
                     if verbose: print "VAL:", docId + "." + str(event.id), "(P/N/R)egulation with no arguments"
+            elif event.type != "Catalysis": # The three regulations and catalysis are the only events that can have a cause
+                for arg in event.arguments[:]:
+                    if arg[0] == "Cause":
+                        event.arguments.remove(arg)
+                        if verbose: print "VAL:", docId + "." + str(event.id), event.type, "with", arg[0], "arg of type", arg[1].type
             # Remove illegal arguments (GE=Only a protein can be a Theme for a non-regulation event)
             if event.type in ["Gene_expression", "Transcription"]:
                 for arg in event.arguments[:]:
@@ -358,4 +367,29 @@ def removeEntities(document, task, counts):
         else:
             triggersToKeep.append(trigger)
     document.triggers = triggersToKeep
-            
+
+if __name__=="__main__":
+    import sys
+    import STTools
+    from optparse import OptionParser
+    # Import Psyco if available
+    try:
+        import psyco
+        psyco.full()
+        print >> sys.stderr, "Found Psyco, using"
+    except ImportError:
+        print >> sys.stderr, "Psyco not installed"
+
+    optparser = OptionParser(usage="%prog [options]\n")
+    optparser.add_option("-i", "--input", default=None, dest="input", help="", metavar="FILE")
+    optparser.add_option("-o", "--output", default=None, dest="output", help="")
+    optparser.add_option("--debug", default=False, action="store_true", dest="debug", help="")
+    optparser.add_option("--noScores", default=False, action="store_true", dest="noScores", help="")
+    (options, args) = optparser.parse_args()
+    
+    if options.output == None:
+        options.output = options.input + "-validated.tar.gz"
+    print >> sys.stderr, "Reading documents"
+    documents = STTools.loadSet(options.input, readScores=(not options.noScores))
+    print >> sys.stderr, "Writing documents"
+    STTools.writeSet(documents, options.output, validate=True, writeScores=(not options.noScores), task=2, debug=options.debug)
