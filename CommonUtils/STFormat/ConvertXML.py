@@ -2,10 +2,7 @@ import sys, os
 thisPath = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.abspath(os.path.join(thisPath,"..")))
 from STTools import *
-try:
-    import xml.etree.cElementTree as ET
-except ImportError:
-    import cElementTree as ET
+import xml.etree.cElementTree as ET
 import cElementTreeUtils as ETUtils
 import Range
 
@@ -222,12 +219,13 @@ def toInteractionXML(documents, corpusName="GENIA", output=None):
         ETUtils.write(corpusRoot, output)
     return ET.ElementTree(corpusRoot)
 
-def toSTFormat(input, output=None, outputTag="a2", useOrigIds=False, debug=False, task=2, validate=True):
+def toSTFormat(input, output=None, outputTag="a2", useOrigIds=False, debug=False, task=2, validate=True, writeScores=False):
     print >> sys.stderr, "Loading corpus", input
     corpusTree = ETUtils.ETFromObj(input)
     print >> sys.stderr, "Corpus file loaded"
     corpusRoot = corpusTree.getroot()
     
+    nonEntitySiteCount = 0
     documents = []
     for document in corpusRoot.findall("document"):
         stDoc = Document()
@@ -241,6 +239,7 @@ def toSTFormat(input, output=None, outputTag="a2", useOrigIds=False, debug=False
         eMap = {}
         tMap = {}
         siteMap = {}
+        siteScores = {}
         sites = []
         sentenceOffsets = {}
         for sentence in document.findall("sentence"):
@@ -288,10 +287,11 @@ def toSTFormat(input, output=None, outputTag="a2", useOrigIds=False, debug=False
                 ann.negation = True
             if entity.get("isName") == "True":
                 # Remember to use original id for names!
-                ann.id = entity.get("origId").rsplit(".", 1)[-1]
-                assert ann.id[0].isupper(), ann.id
-                for c in ann.id[1:]:
-                    assert c.isdigit(), ann.id
+                if entity.get("origId") != None:
+                    ann.id = entity.get("origId").rsplit(".", 1)[-1]
+                    assert ann.id[0].isupper(), ann.id
+                    for c in ann.id[1:]:
+                        assert c.isdigit(), ann.id
                 stDoc.proteins.append(ann)
             else:
                 found = False # prevent duplicate triggers
@@ -315,6 +315,11 @@ def toSTFormat(input, output=None, outputTag="a2", useOrigIds=False, debug=False
                 if entityElementMap[entity.get("id")].get("negation") == "True":
                     event.negation = True
                 stDoc.events.append(event)
+            # Add confidence scores
+            ann.triggerScores = entity.get("predictions")
+            ann.unmergingScores = entity.get("umStrength")
+            ann.speculationScores = entity.get("modPred")
+            ann.negationScores = entity.get("modPred")
         # First map Coref proteins
         corefProtMap = {}
         for interaction in document.getiterator("interaction"):
@@ -360,6 +365,7 @@ def toSTFormat(input, output=None, outputTag="a2", useOrigIds=False, debug=False
                     # Other sites are just arguments called "site"
                     #sites.append(interaction)
                     siteMap[interaction.get("e2")] = tMap[interaction.get("e1")]
+                    siteScores[interaction.get("e2")] = interaction.get("predictions")
                 else:
                     e1 = interaction.get("e1")
                     if eMap.has_key(e1): # event has already been created
@@ -381,7 +387,7 @@ def toSTFormat(input, output=None, outputTag="a2", useOrigIds=False, debug=False
                         else:
                             event = None
                     if event != None:
-                        arg = [interaction.get("type"), interaction.get("e2"), None]
+                        arg = [interaction.get("type"), interaction.get("e2"), None, interaction.get("predictions")]
                         if arg[0] == "SiteArg": # convert back to actual sites
                             arg[0] = "Site"
                         event.arguments.append(arg)
@@ -426,10 +432,18 @@ def toSTFormat(input, output=None, outputTag="a2", useOrigIds=False, debug=False
                     #    event.arguments.remove(arg)
                 # add sites
                 if siteMap.has_key(id):
-                    assert id not in eMap
-                    assert id in tMap
-                    arg[2] = siteMap[id]
-                    assert siteMap[id].type == "Entity", (stDoc.id, event.id, id, siteMap[id].id, siteMap[id].type)
+                    if siteMap[id].type == "Entity":
+                        assert id not in eMap
+                        assert id in tMap
+                        arg[2] = siteMap[id]
+                        if id in siteScores and siteScores[id] != None:
+                            while len(arg) < 5:
+                                arg += [None]
+                            assert arg[4] == None
+                            arg[4] = siteScores[id]
+                    else:
+                        nonEntitySiteCount += 1
+                    #assert siteMap[id].type == "Entity", (stDoc.id, event.id, id, siteMap[id].id, siteMap[id].type)
 #        # Remove eventless triggers
 #        triggersToKeep = []
 #        for trigger in stDoc.triggers:
@@ -451,9 +465,12 @@ def toSTFormat(input, output=None, outputTag="a2", useOrigIds=False, debug=False
         #updateIds(stDoc.events)
         #updateIds(stDoc.relations)
     
+    if nonEntitySiteCount > 0:
+        print >> sys.stderr, "Warning, discarded", nonEntitySiteCount, "non-entity sites"
+    
     if output != None:
         print >> sys.stderr, "Writing output to", output
-        writeSet(documents, output, resultFileTag=outputTag, debug=debug, task=task, validate=validate)
+        writeSet(documents, output, resultFileTag=outputTag, debug=debug, task=task, validate=validate, writeScores=writeScores)
     return documents
 
 #def toSTFormatSentences(input, output=None, outputTag="a2"):
