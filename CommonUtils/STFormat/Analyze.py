@@ -57,3 +57,5 @@ if __name__=="__main__":
     documents = loadSet(options.input)
     print "Analyzing"
     analyzeNesting(documents)
+    print "Statistics"
+    getStatistics(documents)
