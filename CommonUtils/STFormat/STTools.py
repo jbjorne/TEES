@@ -44,6 +44,11 @@ class Annotation:
         self.speculation = None # event 
         self.negation = None # event
         self.fileType = None # "a1" or "a2"
+        # Optional confidence scores
+        self.triggerScores = None
+        self.unmergingScores = None
+        self.speculationScores = None
+        self.negationScores = None
     
     def isNegated(self):
         return self.negation != None
@@ -61,7 +66,45 @@ class Annotation:
         else:
             return self.id
 
-def readTAnnotation(string):
+def getStatistics(documents, printStats=True, statSeparator="\n"):
+    from collections import defaultdict
+    import types
+    if type(documents) in types.StringTypes:
+        documents = loadSet(documents)
+    
+    stats = defaultdict(int)
+    for document in documents:
+        stats["total-docs"] += 1
+        stats["total-events"] += len(document.events)
+        stats["total-relations"] += len(document.relations)
+        stats["total-proteins"] += len(document.proteins)
+        stats["doc-events-"+str(len(document.events))] += 1
+        stats["doc-relations-"+str(len(document.relations))] += 1
+        stats["doc-proteins-"+str(len(document.proteins))] += 1
+        for event in document.events:
+            stats["events-"+event.type] += 1
+            if event.speculation != None:
+                stats["events-"+event.type+"-spec"] += 1
+            if event.negation != None:
+                stats["events-"+event.type+"-neg"] += 1
+            argStats = defaultdict(int)
+            nesting = False
+            for arg in event.arguments:
+                argType = arg[0]
+                if arg[2] != None:
+                    argType += "(" + arg[2].type + ")"
+                if not arg[1].isName():
+                    nesting = True
+                argStats[argType] += 1
+            if nesting:
+                stats["events-"+event.type+"-parent"] += 1
+            stats["args-"+event.type+"-"+"-".join([str(key)+"_"+str(argStats[key]) for key in sorted(argStats.keys())]) ] += 1
+    if printStats:
+        print >> sys.stderr, "Event Statistics:"
+        print >> sys.stderr, statSeparator.join([str(key)+":"+str(stats[key]) for key in sorted(stats.keys())])
+    return stats
+
+def readTAnnotation(string, readScores=False):
     #print string
     assert string[0] == "T" or string[0] == "W", string
     string = string.strip()
@@ -70,20 +113,23 @@ def readTAnnotation(string):
     ann.id = splits[0]
     middle = splits[1]
     ann.text = splits[2]
+    if readScores:
+        ann.triggerScores = splits[3]
     #ann.id, middle, ann.text = string.split("\t")
     ann.type, ann.charBegin, ann.charEnd = middle.split()
     ann.charBegin = int(ann.charBegin)
     ann.charEnd = int(ann.charEnd)
-    if len(splits) > 3:
-        skip = False
-        for split in splits[3:]:
-            if not skip:
-                cSplits = split.split()
-                assert len(cSplits) == 2, (cSplits, string)
-                c1 = int(cSplits[0])
-                c2 = int(cSplits[1])
-                ann.alternativeOffsets.append( (c1, c2) )
-            skip = not skip
+    # TODO disabled temporarily
+#    if len(splits) > 3:
+#        skip = False
+#        for split in splits[3:]:
+#            if not skip:
+#                cSplits = split.split()
+#                assert len(cSplits) == 2, (cSplits, string)
+#                c1 = int(cSplits[0])
+#                c2 = int(cSplits[1])
+#                ann.alternativeOffsets.append( (c1, c2) )
+#            skip = not skip
     return ann
 
 def readStarAnnotation(string, proteins):
@@ -109,7 +155,7 @@ def readStarAnnotation(string, proteins):
                     if not protMap[other] in protMap[member].equiv:
                         protMap[member].equiv.append(protMap[other])
 
-def readEvent(string, sitesAreArguments=False):
+def readEvent(string, sitesAreArguments=False, readScores=False):
     string = string.strip()
     ann = Annotation()
     ann.id, rest = string.split("\t")
@@ -117,15 +163,31 @@ def readEvent(string, sitesAreArguments=False):
     trigger = args[0]
     args = args[1:]
     splits = trigger.split(":")
-    if len(splits) == 2: # (splits, trigger, string)
-        ann.type, ann.trigger = splits[0], splits[1]
-    else:
-        ann.type = splits[0]
-        ann.trigger = None
+    ann.type = splits[0]
+    ann.trigger = None
+    if len(splits) > 1:
+        if "=" not in splits[1]:
+            ann.trigger = splits[1]
+        elif readScores:
+            ann.unmergingScores = splits[1]
+        if len(splits) > 2 and readScores:
+            assert "=" in splits[2]
+            ann.unmergingScores = splits[2]
+#    if len(splits) == 2: # (splits, trigger, string)
+#        ann.type, ann.trigger = splits[0], splits[1]
+#    else:
+#        ann.type = splits[0]
+#        ann.trigger = None
     argMap = {}
     #print string
     for arg in args:
-        argTuple = arg.split(":") + [None]
+        argTuple = arg.split(":")
+        argScores = []
+        if len(argTuple) > 2:
+            if readScores:
+                argScores = argTuple[2:]
+            argTuple = argTuple[:2]
+        argTuple += [None] + argScores + [None] # room for the site
         # In the Shared Task Annotation, the word Site can mean a site, or then again not, 
         # because the same term Site is used also for a Site that is not a Site, but just
         # a "Site"-type argument for a SiteOf event in the BI-task, which may, or may not 
@@ -133,7 +195,7 @@ def readEvent(string, sitesAreArguments=False):
         if sitesAreArguments or argTuple[0].find("Site") == -1 or ann.type == "SiteOf": # not a site or SiteOf-type event
             origArgName = argTuple[0]
             if argTuple[0].find("Theme") != -1: # multiple themes are numbered
-                argTuple = ["Theme", argTuple[1], None]
+                argTuple[0] = "Theme" #["Theme", argTuple[1], None]
             assert origArgName != "" # extra whitespace caused errors with splitting, splitting fixed
             argMap[origArgName] = argTuple
             ann.arguments.append( argTuple )
@@ -143,12 +205,19 @@ def readEvent(string, sitesAreArguments=False):
     #print argMap
     if len(argMap.keys()) != len(args): # We have sites
         for arg in args:
-            argTuple = arg.split(":") + []
-            if argTuple[0].find("Site") != -1:
+            argTuple = arg.split(":")
+            if "Site" in argTuple[0]:
                 if argTuple[0] == "CSite":
-                    argMap["Cause"][2] = argTuple[1]
+                    target = "Cause"
                 else:
-                    argMap[ "Theme" + argTuple[0][4:] ][2] = argTuple[1] 
+                    target = "Theme" + argTuple[0][4:]
+                if target not in argMap: # a single theme is not numbered
+                    assert "Theme" in target
+                    assert "Theme" in argMap
+                    target = "Theme"
+                argMap[target][2] = argTuple[1]
+                if readScores and len(argTuple) > 2:
+                    argMap[target][4] = argTuple[2] 
     return ann
 
 def readRAnnotation(string):
@@ -222,8 +291,11 @@ def loadA1(filename):
                 dep.arguments[i] = (arg[0], wordMap[arg[1]])
     return proteins, words, dependencies
 
-def loadRelOrA2(filename, proteins, sitesAreArguments=False):
-    f = open(filename)
+def loadRelOrA2(filename, proteins, sitesAreArguments=False, readScores=False):
+    if readScores and os.path.exists(filename + ".scores"):
+        f = open(filename + ".scores", "rt")
+    else:
+        f = open(filename, "rt")
     triggers = []
     triggerMap = {}
     for protein in proteins:
@@ -236,12 +308,12 @@ def loadRelOrA2(filename, proteins, sitesAreArguments=False):
     count = 0
     for line in lines:
         if line[0] == "T":
-            triggers.append( readTAnnotation(line) )
+            triggers.append( readTAnnotation(line, readScores=readScores) )
             triggerMap[triggers[-1].id] = triggers[-1]
             count += 1
     for line in lines:
         if line[0] == "E":
-            events.append( readEvent(line, sitesAreArguments) )
+            events.append( readEvent(line, sitesAreArguments, readScores=readScores) )
             eventMap[events[-1].id] = events[-1]
             count += 1
     for line in lines:
@@ -253,13 +325,19 @@ def loadRelOrA2(filename, proteins, sitesAreArguments=False):
             count += 1
     for line in lines:
         if line[0] == "M":
-            mId, rest = line.split("\t")
+            if not readScores:
+                mId, rest = line.strip().split("\t")
+                mScore = None
+            else:
+                mId, rest, mScore = line.strip().split("\t")
             mType, eventId = rest.split()
             assert mType in ["Speculation", "Negation"]
             if mType == "Speculation":
                 eventMap[eventId].speculation = mId
+                eventMap[eventId].speculationScores = mScore
             elif mType == "Negation":
                 eventMap[eventId].negation = mId
+                eventMap[eventId].negationScores = mScore
             count += 1
     for line in lines:
         if line[0] == "*":
@@ -275,16 +353,28 @@ def loadRelOrA2(filename, proteins, sitesAreArguments=False):
         #print event.id
         if event.trigger != None:
             event.trigger = triggerMap[event.trigger]
+            # Move scores from event to trigger
+            event.trigger.unmergingScores = event.unmergingScores
+            event.trigger.negationScores = event.negationScores
+            event.trigger.speculationScores = event.speculationScores
+            event.unmergingScores = None
+            event.negationScores = None
+            event.speculationScores = None
+            
         for i in range(len(event.arguments)):
             arg = event.arguments[i]
             if arg[1][0] == "T":
                 if arg[2] != None:
-                    event.arguments[i] = (arg[0], triggerMap[arg[1]], triggerMap[arg[2]])
+                    #event.arguments[i] = (arg[0], triggerMap[arg[1]], triggerMap[arg[2]])
+                    event.arguments[i][1] = triggerMap[arg[1]]
+                    event.arguments[i][2] = triggerMap[arg[2]]
                 else:
-                    event.arguments[i] = (arg[0], triggerMap[arg[1]], None)
+                    #event.arguments[i] = (arg[0], triggerMap[arg[1]], None)
+                    event.arguments[i][1] = triggerMap[arg[1]]
             elif arg[1][0] == "E":
                 assert arg[2] == None # no sites on events
-                event.arguments[i] = (arg[0], eventMap[arg[1]], None)
+                #event.arguments[i] = (arg[0], eventMap[arg[1]], None)
+                event.arguments[i][1] = eventMap[arg[1]]
     # Build links
     for relation in relations:
         for i in range(len(relation.arguments)):
@@ -308,7 +398,7 @@ def loadText(filename):
     f.close()
     return text
 
-def load(id, dir, loadA2=True, sitesAreArguments=False, a2Tag="a2"):
+def load(id, dir, loadA2=True, sitesAreArguments=False, a2Tag="a2", readScores=False):
     #print id
     id = str(id)
     a1Path = os.path.join(dir, id + ".a1")
@@ -326,12 +416,12 @@ def load(id, dir, loadA2=True, sitesAreArguments=False, a2Tag="a2"):
     events = []
     relations = []
     if os.path.exists(a2Path):
-        triggers, events, relations = loadRelOrA2(a2Path, proteins, sitesAreArguments)
+        triggers, events, relations = loadRelOrA2(a2Path, proteins, sitesAreArguments, readScores=readScores)
     elif os.path.exists(relPath):
-        triggers, events, relations = loadRelOrA2(relPath, proteins, sitesAreArguments)
+        triggers, events, relations = loadRelOrA2(relPath, proteins, sitesAreArguments, readScores=readScores)
     return proteins, words, dependencies, triggers, events, relations
 
-def loadSet(path, setName=None, level="a2", sitesAreArguments=False, a2Tag="a2"):
+def loadSet(path, setName=None, level="a2", sitesAreArguments=False, a2Tag="a2", readScores=False):
     assert level in ["txt", "a1", "a2"]
     if path.endswith(".tar.gz"):
         import tempfile
@@ -347,18 +437,15 @@ def loadSet(path, setName=None, level="a2", sitesAreArguments=False, a2Tag="a2")
     ids = set()
     documents = []
     for filename in os.listdir(dir):
-        if filename.find("tar.gz") != -1:
-            continue
-        if filename.find(".") != -1:
-            splits = filename.split(".")
-            ids.add(splits[0])
+        if filename.endswith(".txt"):
+            ids.add(filename.split(".")[0])
     for id in sorted(list(ids)):
         #print "Loading", id
         doc = Document()
         doc.id = id
         if not level == "txt":
             try:
-                doc.proteins, doc.words, doc.dependencies, doc.triggers, doc.events, doc.relations = load(str(id), dir, level=="a2", sitesAreArguments, a2Tag=a2Tag)
+                doc.proteins, doc.words, doc.dependencies, doc.triggers, doc.events, doc.relations = load(str(id), dir, level=="a2", sitesAreArguments, a2Tag=a2Tag, readScores=readScores)
             except:
                 print >> sys.stderr, "Exception reading document", id, "from", dir 
                 raise
@@ -370,7 +457,7 @@ def loadSet(path, setName=None, level="a2", sitesAreArguments=False, a2Tag="a2")
         shutil.rmtree(dir)
     return documents
 
-def writeSet(documents, output, resultFileTag="a2", debug=False, task=2, validate=True):
+def writeSet(documents, output, resultFileTag="a2", debug=False, task=2, validate=True, writeScores=False):
     from collections import defaultdict
     import shutil
     counts = defaultdict(int)
@@ -387,18 +474,20 @@ def writeSet(documents, output, resultFileTag="a2", debug=False, task=2, validat
     if not validate:
         print "Warning! No validation."
     for doc in documents:
+        if debug: print >> sys.stderr, "Validating", doc.id
         if validate:
             Validate.allValidate(doc, counts, task, verbose=debug)
         #doc.proteins.sort(cmp=compareOffsets)
         #doc.triggers.sort(cmp=compareOffsets)
-        write(doc.id, outdir, doc.proteins, doc.triggers, doc.events, doc.relations, resultFileTag, counts, task=task)
+        if debug: print >> sys.stderr, "Writing", doc.id
+        write(doc.id, outdir, doc.proteins, doc.triggers, doc.events, doc.relations, resultFileTag, counts, task=task, writeScores=writeScores)
         # Write text file
         #out = open(os.path.join(outdir, str(doc.id) + ".txt"), "wt")
         out = codecs.open(os.path.join(outdir, str(doc.id) + ".txt"), "wt", "utf-8")
         out.write(doc.text)
         out.close()
     if output.endswith(".tar.gz"):
-        package(outdir, output, ["a1", "txt", resultFileTag])
+        package(outdir, output, ["a1", "txt", resultFileTag, resultFileTag+".scores"])
         shutil.rmtree(outdir)
     print counts
         
@@ -429,16 +518,19 @@ def updateIds(annotations, minId=0):
                 ann.id = "E" + str(idCount)
             idCount += 1
 
-def writeTAnnotation(proteins, out, idStart=0):
+def writeTAnnotation(proteins, out, writeScores, idStart=0):
     updateIds(proteins, idStart)
     for protein in proteins:
         assert protein.id[0] == "T", (protein.id, protein.text)
         out.write(protein.id + "\t")
         out.write(protein.type + " " + str(protein.charBegin) + " " + str(protein.charEnd) + "\t")
         if protein.text == None:
-            out.write(str(protein.text) + "\n")
+            out.write(str(protein.text))
         else:
-            out.write(protein.text + "\n")
+            out.write(protein.text.replace("\n", "&#10;").replace("\r", "&#10;"))
+        if writeScores and protein.triggerScores != None:
+            out.write("\t" + protein.triggerScores.replace(":", "="))
+        out.write("\n")
 
 def getDuplicatesMapping(eventLines):
     # Duplicates are BAAADD. However, removing nested duplicates is also BAAADDD. Evaluation system doesn't like
@@ -463,7 +555,7 @@ def getDuplicatesMapping(eventLines):
 #            if e1.trigger == e2.trigger and len(e1.arguments) == len(e2.arguments):
 #                for arg1 in zip(e1.arguments, e2.arguments)
 
-def writeEvents(events, out, counts, task):
+def writeEvents(events, out, counts, task, writeScores=False):
     updateIds(events)
     mCounter = 1
     eventLines = []
@@ -471,11 +563,15 @@ def writeEvents(events, out, counts, task):
     for event in events:
         eventLine = ""
         #out.write(event.id + "\t")
+        # Event id part ############################
         trigger = event.trigger
         if trigger == None:
             eventLine += event.type
         else:
             eventLine += trigger.type + ":" + trigger.id
+            if writeScores and event.trigger.unmergingScores != None:
+                eventLine += ":" + event.trigger.unmergingScores.replace(":", "=")
+        # Argument part #############################
         typeCounts = {}
         # Count arguments
         targetProteins = set()
@@ -505,6 +601,8 @@ def writeEvents(events, out, counts, task):
                 eventLine += " " + argType + str(currTypeCounts[argType]) + ":" + arg[1].id
             else:
                 eventLine += " " + argType + ":" + arg[1].id
+            if writeScores and len(arg) > 3 and arg[3] != None:
+                eventLine += ":" + arg[3].replace(":", "=")
             
             # keep track of nesting
             if arg[1].id[0] == "E":
@@ -542,7 +640,9 @@ def writeEvents(events, out, counts, task):
             if typeCounts[argType] > 1:
                 eventLine += " " + sitePrefix + "Site" + str(currTypeCounts[argType]) + ":" + arg[2].id
             else:
-                eventLine += " " + sitePrefix + "Site" + ":" + arg[2].id           
+                eventLine += " " + sitePrefix + "Site" + ":" + arg[2].id
+            if writeScores and len(arg) > 4 and arg[4] != None:
+                eventLine += ":" + arg[4].replace(":", "=")
         
         # Write Coref targets
         if len(targetProteins) > 0:
@@ -553,17 +653,23 @@ def writeEvents(events, out, counts, task):
 
         # Write task 3
         if event.speculation != None:
-            eventLine += "M" + str(mCounter) + "\t" + "Speculation " + str(event.id) + "\n"
+            eventLine += "M" + str(mCounter) + "\t" + "Speculation " + str(event.id)
+            if writeScores and event.trigger != None and event.trigger.speculationScores != None:
+                eventLine += "\t" + event.trigger.speculationScores.replace(":", "=")
+            eventLine += "\n"
             mCounter += 1
         if event.negation != None:
-            eventLine += "M" + str(mCounter) + "\t" + "Negation " + str(event.id) + "\n"
+            eventLine += "M" + str(mCounter) + "\t" + "Negation " + str(event.id)
+            if writeScores and event.trigger != None and event.trigger.negationScores != None:
+                eventLine += "\t" + event.trigger.negationScores.replace(":", "=")
+            eventLine += "\n"
             mCounter += 1
         
         eventLines.append( [event.id, eventLine] )
     
     # Write ignoring duplicates
     #duplicateMap = getDuplicatesMapping(eventLines)
-    seenLines = set()
+    #seenLines = set()
     for eventLineTuple in eventLines:
         out.write(eventLineTuple[0] + "\t" + eventLineTuple[1])
         
@@ -577,7 +683,7 @@ def writeEvents(events, out, counts, task):
     #for event in events:
     #    if event.negation != None:
 
-def write(id, dir, proteins, triggers, events, relations, resultFileTag="a2", counts=None, debug=False, task=2):
+def write(id, dir, proteins, triggers, events, relations, resultFileTag="a2", counts=None, debug=False, task=2, writeScores=False):
     id = str(id)
     if debug:
         print id
@@ -591,17 +697,26 @@ def write(id, dir, proteins, triggers, events, relations, resultFileTag="a2", co
     
     if proteins != None:
         out = codecs.open(os.path.join(dir, id + ".a1"), "wt", "utf-8")
-        writeTAnnotation(proteins, out)
+        writeTAnnotation(proteins, out, False)
         out.close()
     resultFile = codecs.open(os.path.join(dir, id + "." + resultFileTag), "wt", "utf-8")
-    writeTAnnotation(triggers, resultFile, getMaxId(proteins) + 1)
-    if events != None:
-        writeEvents(events, resultFile, counts, task)
-    if relations != None:
+    writeTAnnotation(triggers, resultFile, False, getMaxId(proteins) + 1)
+    if writeScores:
+        resultScoresFile = codecs.open(os.path.join(dir, id + "." + resultFileTag + ".scores"), "wt", "utf-8")
+        writeTAnnotation(triggers, resultScoresFile, True, getMaxId(proteins) + 1)
+    if len(events) > 0:
+        if debug: print >> sys.stderr, "Writing events"
+        writeEvents(events, resultFile, counts, task, writeScores=False)
+        if writeScores:
+            writeEvents(events, resultScoresFile, counts, task, writeScores=True)
+    if len(relations) > 0:
+        if debug: print >> sys.stderr, "Writing relations"
         writeEvents(relations, resultFile, counts, task)
     resultFile.close()
+    if writeScores:
+        resultScoresFile.close()
 
-def package(sourceDir, outputFile, includeTags=["a2"]):
+def package(sourceDir, outputFile, includeTags=["a2", "a2.scores"]):
     import tarfile
     allFiles = os.listdir(sourceDir)
     tarFiles = []
