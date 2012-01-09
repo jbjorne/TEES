@@ -3,6 +3,7 @@ from collections import defaultdict
 import time
 
 def getSeconds(timeString):
+    #print timeString
     hours, minutes, seconds = timeString.strip().split(":")
     seconds = float(seconds)
     seconds += 60 * int(minutes)
@@ -79,10 +80,10 @@ def getEventStats(lines, stats):
                 key, value = pair.split(":")
                 stats["EVENTS-"+key] += int(value)
         # Total time
-        if "Total processing time" in line:
+        if "Total event detection time" in line:
             stats["TOTAL-time"] += getSeconds(line.strip().split("\t")[1].split(":", 1)[1])
             stats["TOTAL-time-events"] += getSeconds(line.strip().split("\t")[1].split(":", 1)[1])
-    getTimeFromTimeStamps(lines, "events", stats)
+    #getTimeFromTimeStamps(lines, "events", stats)
 
 def assertUnique(string, line, lines, seenLines):
     if string in line:
@@ -100,40 +101,41 @@ def getParsingStats(lines, stats):
         # Sentence splitting
         stats["PREPROCESS-SENTENCE-SPLITTING-time"] += getCounterTime(line, "Splitting Documents")
         if "Sentence splitting created" in line:
-            stats["PREPROCESS-SENTENCE-SPLITTING-sentences"] += int(line.split()[4])
+            stats["PREPROCESS-SENTENCE-SPLITTING-sentences"] += int(line.split()[5])
         # BANNER
         if assertUnique("BANNER time:", line, lines, seenLines):
             stats["PREPROCESS-BANNER-time"] += getSeconds(line.split("BANNER time:")[-1])
         if "BANNER found" in line:
             splits = line.split()
-            stats["PREPROCESS-BANNER-entities"] += int(splits[3])
-            stats["PREPROCESS-BANNER-sentences"] += int(splits[6])
+            stats["PREPROCESS-BANNER-entities"] += int(splits[4])
+            stats["PREPROCESS-BANNER-sentences"] += int(splits[7])
         # McClosky parsing
         stats["PREPROCESS-CHARNIAK-time"] += getCounterTime(line, "Parsing:")
         if "Parsed" in line:
             splits = line.split()
-            stats["PREPROCESS-CHARNIAK-sentences"] += int(splits[2])
-            stats["PREPROCESS-CHARNIAK-failed"] += int(splits[4][1:])
+            stats["PREPROCESS-CHARNIAK-sentences"] += int(splits[3])
+            stats["PREPROCESS-CHARNIAK-failed"] += int(splits[5][1:])
         # Stanford conversion
         stats["PREPROCESS-STANFORD-time"] += getCounterTime(line, "Stanford Conversion:")
         if "Stanford conversion was done" in line:
             splits = line.split()
-            stats["PREPROCESS-STANFORD-sentences"] += int(splits[6])
-            stats["PREPROCESS-STANFORD-nodep"] += int(splits[8])
-            stats["PREPROCESS-STANFORD-failed"] += int(splits[12])
+            stats["PREPROCESS-STANFORD-sentences"] += int(splits[7])
+            stats["PREPROCESS-STANFORD-nodep"] += int(splits[9])
+            stats["PREPROCESS-STANFORD-failed"] += int(splits[13])
         # Protein name splitting
         stats["PREPROCESS-PROTEIN-NAME-SPLITTING-time"] += getCounterTime(line, "Splitting names")
         # Head detection
-        stats["PREPROCESS-HEADS-time"] += getCounterTime(line, "Making sentence graphs")
+        if "EXIT STEP FIND-HEADS time:" in line:
+            stats["PREPROCESS-FIND-HEADS-time"] += getSeconds(line.split("\t")[-1].split(":", 1)[-1])
         if assertUnique("documents,", line, lines, seenLines):
             splits = line.split()
-            stats["PREPROCESS-HEADS-documents"] += int(splits[1])
-            stats["PREPROCESS-HEADS-sentences"] += int(splits[3])
+            stats["PREPROCESS-HEADS-documents"] += int(splits[2])
+            stats["PREPROCESS-HEADS-sentences"] += int(splits[4])
         # Total time
-        if assertUnique("Total processing time", line, lines, seenLines):
+        if assertUnique("Total preprocessing time", line, lines, seenLines):
             stats["TOTAL-time-preprocess"] += getSeconds(line.strip().split("\t")[1].split(":", 1)[1])
             stats["TOTAL-time"] += getSeconds(line.strip().split("\t")[1].split(":", 1)[1])
-    getTimeFromTimeStamps(lines, "preprocess", stats)
+    #getTimeFromTimeStamps(lines, "preprocess", stats)
     return stats
 
 def getTimeFromTimeStamps(lines, tag, stats):
@@ -159,7 +161,7 @@ def processFile(filename, stats, filetags=[".log"], verbose=True):
         f.close()
         # Get parsing statistics
         parseSection = getLastSection(lines, "------------ Preprocessing ------------", 
-                                      "Preprocessor:PREPROCESS(EXIT)")
+                                      "Total preprocessing time:")
         if parseSection == None:
             if verbose:
                 print "Warning, no parse section for", filename
@@ -185,7 +187,7 @@ def processFile(filename, stats, filetags=[".log"], verbose=True):
                 print "Warning, time difference", (sumTime, totalTime)
         # Get event statistics
         eventSection = getLastSection(lines, "------------ Event Detection ------------", 
-                                      "Total processing time:",
+                                      "Total event detection time:",
                                       ["No model defined, skipping event detection"])
         if eventSection == None:
             if verbose:
