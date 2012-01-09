@@ -59,6 +59,7 @@ class StepSelector:
                 self.currentStep = step
                 if self.omitSteps != None and step in self.omitSteps:
                     if self.verbose: print >> sys.stderr, "Omitting step", step
+                    return False
                 else:
                     return True
             else:
