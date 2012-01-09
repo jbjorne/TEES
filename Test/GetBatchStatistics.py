@@ -27,12 +27,13 @@ def getLastRun(lines, match):
             return lines[i:]
 
 def getCounterTime(line, match):
-    if "100.00 %" in line and match in line:
-        return getSeconds(line.split("(")[-1].split(")")[0])
+    if ("100.00 %" in line or "Process timed out (" in line) and match in line:
+        timePart = line.split("\t", 1)[-1].split(":", 1)[-1].split(")")[0].split("(")[-1]
+        return getSeconds(timePart)
     else:
         return 0.0
 
-def getLastSection(lines, beginMatch, endMatch):
+def getLastSection(lines, beginMatch, endMatch, skipTriggers=[]):
     searchPos = len(lines)-1
     while True:
         # Search for start position
@@ -44,55 +45,107 @@ def getLastSection(lines, beginMatch, endMatch):
         if currBegin == None:
             return None
         searchPos = currBegin - 1 # update to before current block
+        #print "BEGIN", lines[currBegin]
         # Search for end position
         currEnd = None
         for i in range(currBegin+1, len(lines)):
+            #print lines[i],
+            # Check for block-breaking lines
+            skip = False
+            for skipTrigger in skipTriggers:
+                if skipTrigger in lines[i]:
+                    skip = True
+                    break
+            if skip:
+                break
+            
             if beginMatch in lines[i]: # block doesn't end before another begins
+                #print "BEGINMATCH"
                 break
             if endMatch in lines[i]:
+                #print "MATCH", currBegin
                 currEnd = i + 1
                 break
+            #print "NOT"
+        #print (currBegin, currEnd)
         if currBegin != None and currEnd != None:
+            assert currBegin < currEnd
             return (currBegin, currEnd)
 
-def getParsingStats(lines, stats):
+def getEventStats(lines, stats):
     for line in lines:
-        # Sentence splitting
-        stats["SPLITTING-time"] += getCounterTime(line, "Splitting Documents")
-        if "Sentence splitting created" in line:
-            stats["SPLITTING-sentences"] += int(line.split()[4])
-        # BANNER
-        if "BANNER time:" in line:
-            stats["BANNER-time"] += getSeconds(line.split("BANNER time:")[-1])
-        if "BANNER found" in line:
-            splits = line.split()
-            stats["BANNER-entities"] += int(splits[3])
-            stats["BANNER-sentences"] += int(splits[6])
-        # McClosky parsing
-        stats["PARSING-time"] += getCounterTime(line, "Parsing:")
-        if "Parsed" in line:
-            splits = line.split()
-            stats["PARSING-sentences"] += int(splits[2])
-            stats["PARSING-failed"] += int(splits[4][1:])
-        # Stanford conversion
-        stats["STANFORD-time"] += getCounterTime(line, "Stanford Conversion:")
-        if "Stanford conversion was done" in line:
-            splits = line.split()
-            stats["STANFORD-sentences"] += int(splits[6])
-            stats["STANFORD-nodep"] += int(splits[8])
-            stats["STANFORD-failed"] += int(splits[12])
-        # Protein name splitting
-        stats["PROTEIN-NAME-SPLITTING-time"] += getCounterTime(line, "Splitting names")
-        # Head detection
-        stats["HEADS-time"] += getCounterTime(line, "Making sentence graphs")
-        if "documents," in line:
-            splits = line.split()
-            stats["HEADS-documents"] += int(splits[1])
-            stats["HEADS-sentences"] += int(splits[3])
+        if "total-events:" in line:
+            for pair in line.strip().split("\t")[1].split(","):
+                key, value = pair.split(":")
+                stats["EVENTS-"+key] += int(value)
         # Total time
         if "Total processing time" in line:
             stats["TOTAL-time"] += getSeconds(line.strip().split("\t")[1].split(":", 1)[1])
+            stats["TOTAL-time-events"] += getSeconds(line.strip().split("\t")[1].split(":", 1)[1])
+    getTimeFromTimeStamps(lines, "events", stats)
+
+def assertUnique(string, line, lines, seenLines):
+    if string in line:
+        if string in seenLines:
+            print "Warning, seen line", string, "in", line.strip()
+        seenLines.add(string)
+        return True
+    else:
+        return False
+
+def getParsingStats(lines, stats):
+    seenLines = set()
+    for line in lines:
+        #print "XX:", line.strip()
+        # Sentence splitting
+        stats["PREPROCESS-SENTENCE-SPLITTING-time"] += getCounterTime(line, "Splitting Documents")
+        if "Sentence splitting created" in line:
+            stats["PREPROCESS-SENTENCE-SPLITTING-sentences"] += int(line.split()[4])
+        # BANNER
+        if assertUnique("BANNER time:", line, lines, seenLines):
+            stats["PREPROCESS-BANNER-time"] += getSeconds(line.split("BANNER time:")[-1])
+        if "BANNER found" in line:
+            splits = line.split()
+            stats["PREPROCESS-BANNER-entities"] += int(splits[3])
+            stats["PREPROCESS-BANNER-sentences"] += int(splits[6])
+        # McClosky parsing
+        stats["PREPROCESS-CHARNIAK-time"] += getCounterTime(line, "Parsing:")
+        if "Parsed" in line:
+            splits = line.split()
+            stats["PREPROCESS-CHARNIAK-sentences"] += int(splits[2])
+            stats["PREPROCESS-CHARNIAK-failed"] += int(splits[4][1:])
+        # Stanford conversion
+        stats["PREPROCESS-STANFORD-time"] += getCounterTime(line, "Stanford Conversion:")
+        if "Stanford conversion was done" in line:
+            splits = line.split()
+            stats["PREPROCESS-STANFORD-sentences"] += int(splits[6])
+            stats["PREPROCESS-STANFORD-nodep"] += int(splits[8])
+            stats["PREPROCESS-STANFORD-failed"] += int(splits[12])
+        # Protein name splitting
+        stats["PREPROCESS-PROTEIN-NAME-SPLITTING-time"] += getCounterTime(line, "Splitting names")
+        # Head detection
+        stats["PREPROCESS-HEADS-time"] += getCounterTime(line, "Making sentence graphs")
+        if assertUnique("documents,", line, lines, seenLines):
+            splits = line.split()
+            stats["PREPROCESS-HEADS-documents"] += int(splits[1])
+            stats["PREPROCESS-HEADS-sentences"] += int(splits[3])
+        # Total time
+        if assertUnique("Total processing time", line, lines, seenLines):
+            stats["TOTAL-time-preprocess"] += getSeconds(line.strip().split("\t")[1].split(":", 1)[1])
+            stats["TOTAL-time"] += getSeconds(line.strip().split("\t")[1].split(":", 1)[1])
+    getTimeFromTimeStamps(lines, "preprocess", stats)
     return stats
+
+def getTimeFromTimeStamps(lines, tag, stats):
+    beginTime = [int(x) for x in lines[0].split("\t")[0][1:-2].split(":")]
+    assert len(beginTime) == 3
+    endTime = [int(x) for x in lines[-1].split("\t")[0][1:-2].split(":")]
+    assert len(endTime) == 3
+    if beginTime[0] - endTime[0] > endTime[0] - beginTime[0]:
+        beginTime[0] = 24-beginTime[0]
+    stats["TOTAL-time-timestamps-"+tag] += abs(endTime[0] - beginTime[0]) * 3600
+    stats["TOTAL-time-timestamps-"+tag] += abs(endTime[1] - beginTime[1]) * 60
+    stats["TOTAL-time-timestamps-"+tag] += abs(endTime[2] - beginTime[2])
 
 def processFile(filename, stats, filetags=[".log"], verbose=True):
     match = False
@@ -100,10 +153,13 @@ def processFile(filename, stats, filetags=[".log"], verbose=True):
         if filename.endswith(filetag):
             match = True
     if match:
+        print "Processing", filename
         f = open(filename, "rt")
         lines = f.readlines()
         f.close()
-        parseSection = getLastSection(lines, "------------ Preprocessing ------------", "Total processing time:")
+        # Get parsing statistics
+        parseSection = getLastSection(lines, "------------ Preprocessing ------------", 
+                                      "Preprocessor:PREPROCESS(EXIT)")
         if parseSection == None:
             if verbose:
                 print "Warning, no parse section for", filename
@@ -115,6 +171,27 @@ def processFile(filename, stats, filetags=[".log"], verbose=True):
                 print "".join(lines[parseSection[0]:parseSection[1]])
                 print "=================== PARSE SECTION END ==================="
             getParsingStats(lines[parseSection[0]:parseSection[1]], stats)
+            # Check stats
+            tempStats = getParsingStats(lines[parseSection[0]:parseSection[1]], defaultdict(int))
+            totalTime = 0.000000000000001
+            sumTime = 0
+            for key in tempStats:
+                if "TOTAL" in key:
+                    if "preprocess" in key:
+                        totalTime = tempStats[key]
+                elif "time" in key:
+                    sumTime += tempStats[key]
+            if sumTime / totalTime > 0.9 or sumTime / totalTime < 1.1:
+                print "Warning, time difference", (sumTime, totalTime)
+        # Get event statistics
+        eventSection = getLastSection(lines, "------------ Event Detection ------------", 
+                                      "Total processing time:",
+                                      ["No model defined, skipping event detection"])
+        if eventSection == None:
+            if verbose:
+                print "Warning, no event section for", filename
+        else:
+            getEventStats(lines[eventSection[0]:eventSection[1]], stats)
                         
 def queue(input, filetags=[".log"], verbose=True):
     stats = defaultdict(int)
@@ -126,7 +203,7 @@ def queue(input, filetags=[".log"], verbose=True):
     else: # walk directory tree
         for triple in os.walk(input):
             print "Processing", triple[0]
-            for filename in triple[2]:
+            for filename in sorted(triple[2]):
                 processFile(os.path.join(triple[0], filename), stats, filetags, verbose=verbose)
     return stats
 
@@ -145,4 +222,5 @@ if __name__=="__main__":
     (options, args) = optparser.parse_args()
     
     options.tags = options.tags.split(",")
+    print "Tags", options.tags
     process(options.input, options.tags, options.verbose)
