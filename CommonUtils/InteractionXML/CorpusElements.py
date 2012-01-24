@@ -1,5 +1,8 @@
 from SentenceElements import *
 import types
+import sys, os
+thisPath = os.path.dirname(os.path.abspath(__file__))
+sys.path.append(os.path.abspath(os.path.join(thisPath,"..")))
 import cElementTreeUtils as ETUtils
 
 def loadCorpus(filename, parse=None, tokenization=None, removeIntersentenceInteractions=True, removeNameInfo=False):
