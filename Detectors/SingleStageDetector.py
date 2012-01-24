@@ -3,6 +3,8 @@ import shutil
 import itertools
 import gzip
 sys.path.append(os.path.dirname(os.path.abspath(__file__))+"/..")
+sys.path.append(os.path.dirname(os.path.abspath(__file__))+"/../CommonUtils")
+import cElementTreeUtils as ETUtils
 from Core.Model import Model
 import STFormat.ConvertXML
 import STFormat.Compare
@@ -115,26 +117,34 @@ class SingleStageDetector(Detector):
             self.stEvaluator.evaluate(output+".tar.gz", task)
         self.exitState()
         
-    def classifyToXML(self, data, model, exampleFileName=None, tag="", classifierModel=None, split=False, goldData=None):
+    def classifyToXML(self, data, model, exampleFileName=None, tag="", classifierModel=None, split=False, goldData=None, parse=None):
         model = self.openModel(model, "r")
+        if parse == None:
+            parse = self.getStr(self.tag+"parse", model)
         if exampleFileName == None:
             exampleFileName = tag+self.tag+"examples.gz"
-            self.buildExamples(model, [data], [exampleFileName], [goldData])
+            self.buildExamples(model, [data], [exampleFileName], [goldData], parse=parse)
         if classifierModel == None:
             classifierModel = model.get(self.tag+"classifier-model.gz")
         else:
             assert os.path.exists(classifierModel), classifierModel
         self.classifier.test(exampleFileName, classifierModel, tag+self.tag+"classifications")
         evaluator = self.evaluator.evaluate(exampleFileName, tag+self.tag+"classifications", model.get(self.tag+"ids.classes"))
+        outputFileName = tag+self.tag+"pred.xml.gz"
         if evaluator.getData().getTP() + evaluator.getData().getFP() > 0:
-            outputFileName = tag+self.tag+"pred.xml.gz"
             if split:
-                xml = BioTextExampleWriter.write(exampleFileName, tag+self.tag+"classifications", data, None, model.get(self.tag+"ids.classes"), self.getStr("parse", model))
+                xml = BioTextExampleWriter.write(exampleFileName, tag+self.tag+"classifications", data, None, model.get(self.tag+"ids.classes"), parse)
                 xml = InteractionXML.splitMergedElements(xml, None)
                 xml = InteractionXML.recalculateIds(xml, outputFileName, True)
             else:
-                xml = BioTextExampleWriter.write(exampleFileName, tag+self.tag+"classifications", data, outputFileName, model.get(self.tag+"ids.classes"), self.getStr("parse", model))
+                xml = BioTextExampleWriter.write(exampleFileName, tag+self.tag+"classifications", data, outputFileName, model.get(self.tag+"ids.classes"), parse)
             return xml
         else:
-            print >> sys.stderr, "No positive predictions, XML file", tag+self.tag+"pred.xml", "not written"
-            return None
+            # TODO: e.g. interactions must be removed if task does unmerging
+            print >> sys.stderr, "No positive", self.tag + "predictions, XML file", tag+self.tag+"pred.xml", "unchanged from input"
+            if type(data) in types.StringTypes: # assume its a file
+                shutil.copy(data, outputFileName)
+            else: # assume its an elementtree
+                ETUtils.write(data, outputFileName)
+            #print >> sys.stderr, "No positive predictions, XML file", tag+self.tag+"pred.xml", "not written"
+            return data #None
