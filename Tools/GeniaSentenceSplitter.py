@@ -108,7 +108,7 @@ def makeSentences(input, output=None, removeText=False, postProcess=True, debug=
         print >> sys.stderr, "(No post-processing)"
     docCount = 0
     sentencesCreated = 0
-    redevideCount = 0
+    redivideCount = 0
     sourceElements = [x for x in corpusRoot.getiterator("document")] + [x for x in corpusRoot.getiterator("section")]
     counter = ProgressCounter(len(sourceElements), "GeniaSentenceSplitter")
     counter.showMilliseconds = True
@@ -176,7 +176,7 @@ def makeSentences(input, output=None, removeText=False, postProcess=True, debug=
                     continue
                 while text[docIndex].isspace():
                     if text[docIndex] in ["\n", "\r"] and sentenceBeginIndex != -1:
-                        redevideCount += 1
+                        redivideCount += 1
                         prevSentence = makeSentence(text, sentenceBeginIndex, docIndex-1, prevSentence, prevEndIndex)
                         prevSentence.set("id", docId + ".s" + str(sentenceCount))
                         prevSentence.set("redevided", "True")
@@ -214,7 +214,7 @@ def makeSentences(input, output=None, removeText=False, postProcess=True, debug=
         docCount += 1
     
     print >> sys.stderr, "Sentence splitting created", sentencesCreated, "sentences"
-    print >> sys.stderr, "Redevided", redevideCount, "sentences"
+    print >> sys.stderr, "Redivided", redivideCount, "sentences"
     
     if debug:
         print >> sys.stderr, "Work directory preserved for debugging at", workdir
