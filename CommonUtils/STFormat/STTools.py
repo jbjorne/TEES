@@ -62,9 +62,9 @@ class Annotation:
     # for debugging
     def __repr__(self):
         if self.id == None:
-            return "NO-ID"
+            return "<Ann NO-ID>"
         else:
-            return self.id
+            return "<Ann " + self.id + ">"
 
 def getStatistics(documents, printStats=True, statSeparator="\n"):
     from collections import defaultdict
