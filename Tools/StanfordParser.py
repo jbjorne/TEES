@@ -16,6 +16,9 @@ import Utils.Settings as Settings
 #stanfordParserDir = "/home/jari/biotext/tools/stanford-parser-2010-08-20"
 #stanfordParserDir = "/home/jari/temp_exec/stanford-parser-2010-08-20"
 stanfordParserDir = Settings.STANFORD_PARSER_DIR
+stanfordParserArgs = ["java", "-mx150m", "-cp", 
+    "stanford-parser.jar", "edu.stanford.nlp.trees.EnglishGrammaticalStructure", 
+    "-CCprocessed", "-treeFile", "-keepPunct"]
 
 escDict={"-LRB-":"(",
          "-RRB-":")",
@@ -55,6 +58,7 @@ def addDependencies(outfile, parse, tokenByIndex=None, sentenceId=None):
         # Make element
         dep = ET.Element("dependency")
         dep.set("id", "cjp_" + str(depCount))
+        alignmentError = False
         if tokenByIndex != None:
             if t1Index-1 not in tokenByIndex:
                 print >> sys.stderr, "Token not found", (t1Word, depCount, sentenceId)
@@ -66,8 +70,16 @@ def addDependencies(outfile, parse, tokenByIndex=None, sentenceId=None):
                 deps = []
                 while line.strip() != "": line = outfile.readline()
                 break
-            assert t1Word == tokenByIndex[t1Index-1].get("text"), (t1Word, tokenByIndex[t1Index-1].get("text"), t1Index-1, depCount, sentenceId)
-            assert t2Word == tokenByIndex[t2Index-1].get("text"), (t2Word, tokenByIndex[t2Index-1].get("text"), t2Index-1, depCount, sentenceId)
+            if t1Word != tokenByIndex[t1Index-1].get("text"):
+                print >> sys.stderr, "Alignment error", (t1Word, tokenByIndex[t1Index-1].get("text"), t1Index-1, depCount, sentenceId)
+                alignmentError = True
+                if parse.get("stanfordAlignmentError") == None:
+                    parse.set("stanfordAlignmentError", t1Word)
+            if t2Word != tokenByIndex[t2Index-1].get("text"):
+                print >> sys.stderr, "Alignment error", (t2Word, tokenByIndex[t2Index-1].get("text"), t2Index-1, depCount, sentenceId)
+                alignmentError = True
+                if parse.get("stanfordAlignmentError") == None:
+                    parse.set("stanfordAlignmentError", t2Word)
             dep.set("t1", tokenByIndex[t1Index-1].get("id"))
             dep.set("t2", tokenByIndex[t2Index-1].get("id"))
         else:
@@ -76,12 +88,13 @@ def addDependencies(outfile, parse, tokenByIndex=None, sentenceId=None):
         dep.set("type", depType)
         parse.insert(depCount-1, dep)
         depCount += 1
-        deps.append(dep)
+        if not alignmentError:
+            deps.append(dep)
         line = outfile.readline()
     return deps
 
 def convert(input, output=None):
-    global stanfordParserDir
+    global stanfordParserDir, stanfordParserArgs
 
     workdir = tempfile.mkdtemp()
     if output == None:
@@ -95,7 +108,11 @@ def convert(input, output=None):
     inputFile.close()
     cwd = os.getcwd()
     os.chdir(stanfordParserDir)
-    args = ["java", "-mx150m", "-cp", "stanford-parser.jar", "edu.stanford.nlp.trees.EnglishGrammaticalStructure", "-CCprocessed", "-treeFile", input] 
+    #args = ["java", "-mx150m", "-cp", 
+    #        "stanford-parser.jar", "edu.stanford.nlp.trees.EnglishGrammaticalStructure", 
+    #        "-CCprocessed", "-treeFile", "-keepPunct",
+    #        input]
+    args = stanfordParserArgs + [input]
     #subprocess.call(args,
     process = subprocess.Popen(args, 
         stdout=codecs.open(output, "wt", "utf-8"))
@@ -111,9 +128,11 @@ def convert(input, output=None):
     shutil.rmtree(workdir)
     return lines
 
-def convertXML(parser, input, output, debug=False):
-    global stanfordParserDir
+def convertXML(parser, input, output, debug=False, reparse=False):
+    global stanfordParserDir, stanfordParserArgs
     print >> sys.stderr, "Running Stanford conversion"
+    print >> sys.stderr, "Stanford tools at:", stanfordParserDir
+    print >> sys.stderr, "Stanford tools arguments:", " ".join(stanfordParserArgs)
     
     print >> sys.stderr, "Loading corpus", input
     corpusTree = ETUtils.ETFromObj(input)
@@ -127,41 +146,66 @@ def convertXML(parser, input, output, debug=False):
     stanfordInputFile = codecs.open(stanfordInput, "wt", "utf-8")
     
     # Put penn tree lines in input file
+    existingCount = 0
     for sentence in corpusRoot.getiterator("sentence"):
-        analyses = setDefaultElement(sentence, "analyses")
-        #parses = setDefaultElement(sentenceAnalyses, "parses")
-        parse = getElementByAttrib(analyses, "parse", {"parser":parser})
+        if sentence.find("sentenceanalyses") != None: # old format
+            sentenceAnalyses = setDefaultElement(sentence, "sentenceanalyses")
+            parses = setDefaultElement(sentenceAnalyses, "parses")
+            parse = getElementByAttrib(parses, "parse", {"parser":parser})
+        else:
+            analyses = setDefaultElement(sentence, "analyses")
+            parse = getElementByAttrib(analyses, "parse", {"parser":parser})
         if parse == None:
             continue
-        if len(parse.findall("dependency")) > 0: # don't reparse
-            continue
+        if len(parse.findall("dependency")) > 0:
+            if reparse: # remove existing stanford conversion
+                for dep in parse.findall("dependency"):
+                    parse.remove(dep)
+                del parse.attrib["stanford"]
+            else: # don't reparse
+                existingCount += 1
+                continue
         pennTree = parse.get("pennstring")
         if pennTree == None or pennTree == "":
             continue
         stanfordInputFile.write(pennTree + "\n")
     stanfordInputFile.close()
+    if existingCount != 0:
+        print >> sys.stderr, "Skipping", existingCount, "already converted sentences."
     
     # Run Stanford parser
     stanfordOutput = runSentenceProcess(runStanford, stanfordParserDir, stanfordInput, workdir, True, "StanfordParser", "Stanford Conversion", timeout=600)   
     stanfordOutputFile = codecs.open(stanfordOutput, "rt", "utf-8")
     
     # Get output and insert dependencies
+    noDepCount = 0
+    failCount = 0
+    sentenceCount = 0
     for sentence in corpusRoot.getiterator("sentence"):
         # Get parse
-        analyses = setDefaultElement(sentence, "analyses")
-        #parses = setDefaultElement(sentenceAnalyses, "parses")
-        parse = getElementByAttrib(analyses, "parse", {"parser":parser})
+        if sentence.find("sentenceanalyses") != None: # old format
+            sentenceAnalyses = setDefaultElement(sentence, "sentenceanalyses")
+            parses = setDefaultElement(sentenceAnalyses, "parses")
+            parse = getElementByAttrib(parses, "parse", {"parser":parser})
+        else:
+            analyses = setDefaultElement(sentence, "analyses")
+            parse = getElementByAttrib(analyses, "parse", {"parser":parser})
         if parse == None:
             parse = ET.SubElement(analyses, "parse")
             parse.set("parser", "None")
-        if len(parse.findall("dependency")) > 0: # don't reparse
+        if reparse:
+            assert len(parse.findall("dependency")) == 0
+        elif len(parse.findall("dependency")) > 0: # don't reparse
             continue
         pennTree = parse.get("pennstring")
         if pennTree == None or pennTree == "":
             parse.set("stanford", "no_penn")
             continue
         # Get tokens
-        tokenization = getElementByAttrib(sentence.find("analyses"), "tokenization", {"tokenizer":parse.get("tokenizer")})
+        if sentence.find("analyses") != None:
+            tokenization = getElementByAttrib(sentence.find("analyses"), "tokenization", {"tokenizer":parse.get("tokenizer")})
+        else:
+            tokenization = getElementByAttrib(sentence.find("sentenceanalyses").find("tokenizations"), "tokenization", {"tokenizer":parse.get("tokenizer")})
         assert tokenization != None
         count = 0
         tokenByIndex = {}
@@ -172,12 +216,21 @@ def convertXML(parser, input, output, debug=False):
         deps = addDependencies(stanfordOutputFile, parse, tokenByIndex, sentence.get("id"))
         if len(deps) == 0:
             parse.set("stanford", "no_dependencies")
+            noDepCount += 1
+            if parse.get("stanfordAlignmentError") != None:
+                failCount += 1
         else:
             parse.set("stanford", "ok")
+            if parse.get("stanfordAlignmentError") != None:
+                failCount += 1
+                parse.set("stanford", "partial")
+        sentenceCount += 1
     stanfordOutputFile.close()
     # Remove work directory
     if not debug:
         shutil.rmtree(workdir)
+        
+    print >> sys.stderr, "Stanford conversion was done for", sentenceCount, "sentences,", noDepCount, "had no dependencies,", failCount, "failed"
     
     if output != None:
         print >> sys.stderr, "Writing output to", output
@@ -288,7 +341,8 @@ if __name__=="__main__":
     optparser.add_option("-o", "--output", default=None, dest="output", help="Output file in interaction xml format.")
     optparser.add_option("-p", "--parse", default=None, dest="parse", help="Name of parse element.")
     optparser.add_option("--debug", default=False, action="store_true", dest="debug", help="")
+    optparser.add_option("--reparse", default=False, action="store_true", dest="reparse", help="")
     (options, args) = optparser.parse_args()
     
-    convertXML(input=options.input, output=options.output, parser=options.parse, debug=options.debug)
+    convertXML(input=options.input, output=options.output, parser=options.parse, debug=options.debug, reparse=options.reparse)
         
