@@ -426,12 +426,12 @@ class MultiEdgeExampleBuilder(ExampleBuilder):
         else:
             return "neg"
             
-    def buildExamplesFromGraph(self, sentenceGraph, goldGraph = None):
+    def buildExamplesFromGraph(self, sentenceGraph, outfile, goldGraph = None):
         """
         Build examples for a single sentence. Returns a list of examples.
         See Core/ExampleUtils for example format.
         """
-        examples = []
+        #examples = []
         exampleIndex = 0
         
         if "trigger_features" in self.styles: 
@@ -535,7 +535,8 @@ class MultiEdgeExampleBuilder(ExampleBuilder):
                         makeExample = False
                         self.exampleStats.filter("pos_only")
                     if makeExample:
-                        examples.append( self.buildExample(tI, tJ, paths, sentenceGraph, categoryName, exampleIndex, eI, eJ) )
+                        #examples.append( self.buildExample(tI, tJ, paths, sentenceGraph, categoryName, exampleIndex, eI, eJ) )
+                        ExampleUtils.appendExamples([self.buildExample(tI, tJ, paths, sentenceGraph, categoryName, exampleIndex, eI, eJ)], outfile)
                         exampleIndex += 1
                     self.exampleStats.endExample()
                     
@@ -588,7 +589,8 @@ class MultiEdgeExampleBuilder(ExampleBuilder):
                         makeExample = False
                         self.exampleStats.filter("pos_only")
                     if makeExample:
-                        examples.append( self.buildExample(tJ, tI, paths, sentenceGraph, categoryName, exampleIndex, eJ, eI) )
+                        #examples.append( self.buildExample(tJ, tI, paths, sentenceGraph, categoryName, exampleIndex, eJ, eI) )
+                        ExampleUtils.appendExamples([self.buildExample(tJ, tI, paths, sentenceGraph, categoryName, exampleIndex, eJ, eI)], outfile)
                         exampleIndex += 1
                     self.exampleStats.endExample()
                 else:
@@ -601,11 +603,13 @@ class MultiEdgeExampleBuilder(ExampleBuilder):
                     if not "graph_kernel" in self.styles:
                         reverseExample = self.buildExample(tJ, tI, paths, sentenceGraph, categoryName, exampleIndex, eJ, eI)
                         forwardExample[2].update(reverseExample[2])
-                    examples.append(forwardExample)
+                    #examples.append(forwardExample)
+                    ExampleUtils.appendExamples([forwardExample], outfile)
                     exampleIndex += 1
                     self.exampleStats.endExample()
         
-        return examples
+        #return examples
+        return exampleIndex
     
     def buildExample(self, token1, token2, paths, sentenceGraph, categoryName, exampleIndex, entity1=None, entity2=None):
         """
