@@ -6,6 +6,7 @@ sys.path.append(os.path.abspath(os.path.join(thisPath,"..")))
 sys.path.append(os.path.abspath(os.path.join(thisPath,"../CommonUtils")))
 import STFormat.STTools
 import STFormat.ConvertXML
+import STFormat.Equiv
 import cElementTreeUtils as ETUtils
 import Tools.GeniaSentenceSplitter
 import Tools.GeniaTagger
@@ -25,15 +26,20 @@ class Preprocessor(Detector):
         self.debug = False
         self.STATE_PREPROCESS = "PREPROCESS"
         self.namedEntityElementName = "entity"
+        self.splitNamedEntitiesAtNewlines = True
+        self.nerAfterSplitting = True
         self.requireEntitiesForParsing = False
         self.parseName = "McClosky"
-        self._preprocessingSteps = ["CONVERT", "NER", "SPLIT-SENTENCES", "PARSE", "CONVERT-PARSE", "SPLIT-NAMES", "FIND-HEADS", "DIVIDE-SETS"]
+        self._preprocessingSteps = ["CONVERT", "NER-BEFORE-SPLIT", "SPLIT-SENTENCES", "NER-AFTER-SPLIT", "PARSE", "CONVERT-PARSE", "SPLIT-NAMES", "FIND-HEADS", "DIVIDE-SETS"]
         self._intermediateFiles = {}
+        self.intermediateFilesAtSource = False
+        self.compressIntermediateFiles = False
         for step in self._preprocessingSteps[:-1]:
             self._intermediateFiles[step] = None
         self.setIntermediateFile("CONVERT", "documents.xml")
-        self.setIntermediateFile("NER", "ner.xml")
+        self.setIntermediateFile("NER-BEFORE-SPLIT", "ner.xml")
         self.setIntermediateFile("SPLIT-SENTENCES", "sentences.xml")
+        self.setIntermediateFile("NER-AFTER-SPLIT", "ner.xml")
         self.setIntermediateFile("PARSE", "parse.xml")
         self.setIntermediateFile("CONVERT-PARSE", "converted-parse.xml")
         self.setIntermediateFile("SPLIT-NAMES", "split-names.xml")
@@ -55,8 +61,17 @@ class Preprocessor(Detector):
             self._intermediateFiles[key] = None
     
     def getCurrentOutput(self):
-        if self._intermediateFiles[self.select.currentStep] != None:
-            return os.path.join(self.outDir, self.corpusName + "-" + self._intermediateFiles[self.select.currentStep])
+        return self.getOutputPath(self.select.currentStep)
+    
+    def getOutputPath(self, step):
+        if self._intermediateFiles[step] != None:
+            if self.intermediateFilesAtSource:
+                rv = os.path.join(self.source + "-" + self._intermediateFiles[step])
+            else:
+                rv = os.path.join(self.outDir, self.corpusName + "-" + self._intermediateFiles[step])
+            if self.compressIntermediateFiles and not rv.endswith(".gz"):
+                rv += ".gz" 
+            return rv
         else:
             return None
     
@@ -64,15 +79,23 @@ class Preprocessor(Detector):
         self.initVariables(source=source, corpusName=corpusName, sourceDataSetNames=sourceDataSetNames, outDir=outDir, xml=source)
         self.enterState(self.STATE_PREPROCESS, self._preprocessingSteps, fromStep, toStep, omitSteps)
         if self.checkStep("CONVERT"):
-            if os.path.isdir(source):
+            if os.path.isdir(source) or source.endswith(".tar.gz") or "," in source:
                 self.xml = self.convert(self.source, self.sourceDataSetNames, output=self.getCurrentOutput())
         if type(self.xml) in types.StringTypes:
             print >> sys.stderr, "Processing source as interaction XML"
             self.xml = ETUtils.ETFromObj(self.xml)
-        if self.checkStep("NER"):
-            self.detectEntities(self.xml, self.namedEntityElementName, output=self.getCurrentOutput())
+        if self.checkStep("NER-BEFORE-SPLIT"):
+            if self.nerAfterSplitting:
+                print >> sys.stderr, "NER will be done after sentence splitting"
+            else:
+                self.detectEntities(self.xml, self.namedEntityElementName, processElement="document", output=self.getCurrentOutput(), splitNewlines=self.splitNamedEntitiesAtNewlines)
         if self.checkStep("SPLIT-SENTENCES"):
             self.splitSentences(self.xml, output=self.getCurrentOutput())
+        if self.checkStep("NER-AFTER-SPLIT"):
+            if not self.nerAfterSplitting:
+                print >> sys.stderr, "NER was done before sentence splitting"
+            else:
+                self.detectEntities(self.xml, self.namedEntityElementName, processElement="sentence", output=self.getCurrentOutput(), splitNewlines=self.splitNamedEntitiesAtNewlines)
         if self.checkStep("PARSE"):
             self.parseCJ(self.xml, output=self.getCurrentOutput(), requireEntities=self.requireEntitiesForParsing)
         if self.checkStep("CONVERT-PARSE"):
@@ -91,30 +114,36 @@ class Preprocessor(Detector):
     def convert(self, dataSetDirs, dataSetNames=None, output=None):
         print >> sys.stderr, "Converting ST-format to Interaction XML"
         documents = []
-        if type(dataSetDirs) in types.StringTypes: dataSetDirs = [dataSetDirs]
-        if dataSetNames == None: dataSetNames = []
+        if type(dataSetDirs) in types.StringTypes:
+            dataSetDirs = dataSetDirs.split(",")
+        if dataSetNames == None: 
+            dataSetNames = []
+        elif type(dataSetNames) in types.StringTypes:
+            dataSetNames = dataSetNames.split(",")
         for dataSetDir, dataSetName in itertools.izip_longest(dataSetDirs, dataSetNames, fillvalue=None):
             print >> sys.stderr, "Reading", dataSetDir, "set,",
             docs = STFormat.STTools.loadSet(dataSetDir, dataSetName)
             print >> sys.stderr, len(docs), "documents"
             documents.extend(docs)
+        print >> sys.stderr, "Resolving equivalences"
+        STFormat.Equiv.process(documents)
         return STFormat.ConvertXML.toInteractionXML(documents, self.corpusName, output)
     
     def splitSentences(self, input, output=None):
         print >> sys.stderr, "Splitting document-elements to sentence-elements"
-        self.sentenceSplitter.makeSentences(input, output)
+        self.sentenceSplitter.makeSentences(input, output, postProcess=True, debug=self.debug)
     
-    def detectEntities(self, input, elementName="entity", output=None):
+    def detectEntities(self, input, elementName="entity", processElement="sentence", output=None, splitNewlines=True):
         print >> sys.stderr, "Running named entity recognition"
-        self.namedEntityRecognizer.run(input, output=output, elementName=self.namedEntityElementName, debug=self.debug)
+        self.namedEntityRecognizer.run(input, output=output, elementName=self.namedEntityElementName, processElement=processElement, debug=self.debug, splitNewlines=splitNewlines)
     
     def parseCJ(self, input, parseName="McClosky", requireEntities=False, output=None):
         print >> sys.stderr, "Parsing sentence-elements"
-        self.parser.parse(input, output, tokenizationName=None, parseName=parseName, requireEntities=requireEntities)
+        self.parser.parse(input, output, tokenizationName=None, parseName=parseName, requireEntities=requireEntities, debug=self.debug)
     
     def stanfordConvert(self, input, parseName="McClosky", output=None):
         print >> sys.stderr, "Running Stanford Conversion on parse", parseName
-        self.parseConverter.convertXML(parseName, input, output)
+        self.parseConverter.convertXML(parseName, input, output, debug=self.debug)
     
     def splitNames(self, input, parseName, newParseName=None, output=None):
         print >> sys.stderr, "Splitting multiple-named-entity tokens"
@@ -142,7 +171,7 @@ if __name__=="__main__":
     from optparse import OptionParser
     optparser = OptionParser()
     optparser.add_option("-i", "--input", default=None, dest="input", help="")
-    optparser.add_option("-n", "--inputNames", default=None, dest="input", help="")
+    optparser.add_option("-n", "--inputNames", default=None, dest="inputNames", help="")
     optparser.add_option("-c", "--corpus", default=None, dest="corpus", help="corpus name")
     optparser.add_option("-o", "--output", default=None, dest="output", help="output directory")
     optparser.add_option("-f", "--fromStep", default=None, dest="fromStep", help="")
@@ -150,6 +179,7 @@ if __name__=="__main__":
     optparser.add_option("--omitSteps", default=None, dest="omitSteps", help="")
     optparser.add_option("--noLog", default=False, action="store_true", dest="noLog", help="")
     optparser.add_option("--debug", default=False, action="store_true", dest="debug", help="")
+    optparser.add_option("--requireEntities", default=False, action="store_true", dest="requireEntities", help="")
     (options, args) = optparser.parse_args()
     if options.omitSteps != None:
         options.omitSteps = options.omitSteps.split(",")
@@ -162,5 +192,6 @@ if __name__=="__main__":
         log(False, True, os.path.join(options.output, options.corpus + "-log.txt"))
     preprocessor = Preprocessor()
     preprocessor.debug = options.debug
-    preprocessor.process(options.input, options.corpus, options.output, fromStep=options.fromStep, toStep=options.toStep, omitSteps=options.omitSteps)
+    preprocessor.requireEntitiesForParsing = options.requireEntities
+    preprocessor.process(options.input, options.corpus, options.output, options.inputNames, fromStep=options.fromStep, toStep=options.toStep, omitSteps=options.omitSteps)
     os.chdir(cwd)
