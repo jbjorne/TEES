@@ -56,6 +56,13 @@ class Model():
                 member = self.members[name]
                 shutil.copy2(member[1], member[0])
     
+    def saveAs(self, outPath):
+        print >> sys.stderr, "Saving model \"" + self.path, "as", outPath
+        if os.path.exists(outPath):
+            print >> sys.stderr, outPath, "exists, removing"
+            shutil.rmtree(outPath)
+        shutil.copytree(self.workdir, outPath)
+    
     def hasMember(self, name):
         return name in self.members
     
