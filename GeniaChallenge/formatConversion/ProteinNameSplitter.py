@@ -402,11 +402,16 @@ def mainFunc(input, output, parseName, tokenizationName, newParseName, newTokeni
     sentences = [x for x in root.getiterator("sentence")]
     counter = ProgressCounter(len(sentences), "Split Protein Names")
     counter.showMilliseconds = True
+    missingTokCount = 0
     for sentence in sentences:
         sId = sentence.get("id")
         counter.update(1, "Splitting names ("+sId+"): ")
 
         tok   = getTokenization(tokenizationName, sentence, sId, remove=removeOld)
+        if tok == None:
+            missingTokCount += 1
+            continue
+        
         assert tok is not None, "Missing tokenization '%s' in sentence %s!" % (tokenizationName, sId)
 
         parse = getParse(parseName, tokenizationName, sentence, sId, remove=removeOld)
@@ -474,6 +479,8 @@ def mainFunc(input, output, parseName, tokenizationName, newParseName, newTokeni
 
             # debugging
             #print >> sys.stderr, "NEW DEP IN", sId
+    
+    print >> sys.stderr, "Tokenization missing from", missingTokCount, "sentences"
 
     #indent(root)
     if logFile != None:
