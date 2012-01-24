@@ -27,10 +27,17 @@ def getLastRun(lines, match):
         if match in lines[i]:
             return lines[i:]
 
-def getCounterTime(line, match):
+def getCounterTime(line, match, statistics):
     if ("100.00 %" in line or "Process timed out (" in line) and match in line:
         timePart = line.split("\t", 1)[-1].split(":", 1)[-1].split(")")[0].split("(")[-1]
-        return getSeconds(timePart)
+        timeOutPart = 0.0
+        if "Process timed out (" in line:
+            assert "Parsing:" in line
+            timeOutPart = float(line.rsplit("(", 1)[-1].split(")")[0].split("vs.")[0])
+            statistics["PREPROCESS-TIMEOUT-count"] += 1
+        timePart = getSeconds(timePart)
+        statistics["PREPROCESS-TIMEOUT-seconds"] += timeOutPart - timePart
+        return timePart
     else:
         return 0.0
 
@@ -99,7 +106,7 @@ def getParsingStats(lines, stats):
     for line in lines:
         #print "XX:", line.strip()
         # Sentence splitting
-        stats["PREPROCESS-SENTENCE-SPLITTING-time"] += getCounterTime(line, "Splitting Documents")
+        stats["PREPROCESS-SENTENCE-SPLITTING-time"] += getCounterTime(line, "Splitting Documents", stats)
         if "Sentence splitting created" in line:
             stats["PREPROCESS-SENTENCE-SPLITTING-sentences"] += int(line.split()[5])
         # BANNER
@@ -110,27 +117,30 @@ def getParsingStats(lines, stats):
             stats["PREPROCESS-BANNER-entities"] += int(splits[4])
             stats["PREPROCESS-BANNER-sentences"] += int(splits[7])
         # McClosky parsing
-        stats["PREPROCESS-CHARNIAK-time"] += getCounterTime(line, "Parsing:")
+        stats["PREPROCESS-CHARNIAK-seconds"] += getCounterTime(line, "Parsing:", stats)
+        if "EXIT STEP PARSE time:" in line:
+            stats["PREPROCESS-CHARNIAK-time"] += getSeconds(line.split("\t")[-1].split(":", 1)[-1])
         if "Parsed" in line:
             splits = line.split()
             stats["PREPROCESS-CHARNIAK-sentences"] += int(splits[3])
             stats["PREPROCESS-CHARNIAK-failed"] += int(splits[5][1:])
         # Stanford conversion
-        stats["PREPROCESS-STANFORD-time"] += getCounterTime(line, "Stanford Conversion:")
+        stats["PREPROCESS-STANFORD-time"] += getCounterTime(line, "Stanford Conversion:", stats)
         if "Stanford conversion was done" in line:
             splits = line.split()
             stats["PREPROCESS-STANFORD-sentences"] += int(splits[7])
             stats["PREPROCESS-STANFORD-nodep"] += int(splits[9])
             stats["PREPROCESS-STANFORD-failed"] += int(splits[13])
         # Protein name splitting
-        stats["PREPROCESS-PROTEIN-NAME-SPLITTING-time"] += getCounterTime(line, "Splitting names")
+        stats["PREPROCESS-PROTEIN-NAME-SPLITTING-time"] += getCounterTime(line, "Splitting names", stats)
         # Head detection
         if "EXIT STEP FIND-HEADS time:" in line:
-            stats["PREPROCESS-FIND-HEADS-time"] += getSeconds(line.split("\t")[-1].split(":", 1)[-1])
+            stats["PREPROCESS-HEADS-time"] += getSeconds(line.split("\t")[-1].split(":", 1)[-1])
         if assertUnique("documents,", line, lines, seenLines):
             splits = line.split()
             stats["PREPROCESS-HEADS-documents"] += int(splits[2])
             stats["PREPROCESS-HEADS-sentences"] += int(splits[4])
+            stats["PREPROCESS-PROTEIN-NAME-SPLITTING-sentences"] += int(splits[4]) # hack
         # Total time
         if assertUnique("Total preprocessing time", line, lines, seenLines):
             stats["TOTAL-time-preprocess"] += getSeconds(line.strip().split("\t")[1].split(":", 1)[1])
@@ -183,7 +193,7 @@ def processFile(filename, stats, filetags=[".log"], verbose=True):
                         totalTime = tempStats[key]
                 elif "time" in key:
                     sumTime += tempStats[key]
-            if sumTime / totalTime > 0.9 or sumTime / totalTime < 1.1:
+            if sumTime / totalTime < 0.9 or sumTime / totalTime > 1.1:
                 print "Warning, time difference", (sumTime, totalTime)
         # Get event statistics
         eventSection = getLastSection(lines, "------------ Event Detection ------------", 
@@ -209,8 +219,23 @@ def queue(input, filetags=[".log"], verbose=True):
                 processFile(os.path.join(triple[0], filename), stats, filetags, verbose=verbose)
     return stats
 
+def processFinalStats(stats):
+    for key in stats.keys():
+        if key.startswith("PREPROCESS") and key.endswith("time"):
+            stats["TOTAL-preprocess-sum-time"] += stats[key]
+    targets = ["PREPROCESS-SENTENCE-SPLITTING",
+               "PREPROCESS-BANNER",
+               "PREPROCESS-CHARNIAK",
+               "PREPROCESS-STANFORD",
+               "PREPROCESS-HEADS",
+               "PREPROCESS-PROTEIN-NAME-SPLITTING"]
+    for target in targets:
+        if stats[target+"-sentences"] != 0:
+            stats[target+"-time-per-sentence"] = stats[target+"-time"] / stats[target+"-sentences"]
+
 def process(input, filetags=[".log"], verbose=True):
     stats = queue(input, filetags, verbose=verbose)
+    processFinalStats(stats)
     for key in sorted(stats):
         print key + ":", 
         printValue(key, stats[key])
