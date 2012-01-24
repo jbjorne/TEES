@@ -219,7 +219,7 @@ def getSentences(corpusRoot, requireEntities=False, skipIds=[], skipParsed=True)
                 continue
         yield sentence
 
-def parse(input, output=None, tokenizationName=None, parseName="McClosky", requireEntities=False, skipIds=[], skipParsed=True, timeout=600, makePhraseElements=True):
+def parse(input, output=None, tokenizationName=None, parseName="McClosky", requireEntities=False, skipIds=[], skipParsed=True, timeout=600, makePhraseElements=True, debug=False):
     global charniakJohnsonParserDir, escDict
     print >> sys.stderr, "Charniak-Johnson Parser"
     
@@ -230,6 +230,8 @@ def parse(input, output=None, tokenizationName=None, parseName="McClosky", requi
     
     # Write text to input file
     workdir = tempfile.mkdtemp()
+    if debug:
+        print >> sys.stderr, "Charniak-Johnson parser workdir", workdir
     infileName = os.path.join(workdir, "parser-input.txt")
     infile = codecs.open(infileName, "wt", "utf-8")
     numCorpusSentences = 0
@@ -284,7 +286,8 @@ def parse(input, output=None, tokenizationName=None, parseName="McClosky", requi
     
     treeFile.close()
     # Remove work directory
-    #shutil.rmtree(workdir)
+    if not debug:
+        shutil.rmtree(workdir)
     
     print >> sys.stderr, "Parsed", numCorpusSentences, "sentences (" + str(failCount) + " failed)"
     if failCount == 0:
