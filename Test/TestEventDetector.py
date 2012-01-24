@@ -79,6 +79,7 @@ optparser.add_option("-g", "--edgeExampleBuilder", default="MultiEdgeExampleBuil
 # Feature params
 optparser.add_option("--triggerStyle", default=None, dest="triggerStyle", help="")
 optparser.add_option("--edgeStyle", default=None, dest="edgeStyle", help="")
+optparser.add_option("--modifierStyle", default="multiclass,speculation", dest="modifierStyle", help="")
 # Id sets
 optparser.add_option("-v", "--triggerIds", default=None, dest="triggerIds", help="Trigger detector SVM example class and feature id file stem (files = STEM.class_names and STEM.feature_names)")
 optparser.add_option("-w", "--edgeIds", default=None, dest="edgeIds", help="Edge detector SVM example class and feature id file stem (files = STEM.class_names and STEM.feature_names)")
@@ -87,6 +88,7 @@ optparser.add_option("-x", "--triggerParams", default="1000,5000,10000,20000,500
 optparser.add_option("-y", "--recallAdjustParams", default="0.5,0.6,0.65,0.7,0.85,1.0,1.1,1.2", dest="recallAdjustParams", help="Recall adjuster parameter values")
 optparser.add_option("-z", "--edgeParams", default="5000,7500,10000,20000,25000,27500,28000,29000,30000,35000,40000,50000,60000,65000", dest="edgeParams", help="Edge detector c-parameter values")
 optparser.add_option("--uParams", default="1,10,100,500,1000,1500,2500,5000,10000,20000,50000,80000,100000", dest="uParams", help="Unmerging c-parameter values")
+optparser.add_option("--modifierParams", default="5000,10000,20000,50000,100000", dest="modifierParams", help="Modifier c-parameter values")
 optparser.add_option("--downSampleTrain", default=1.0, type="float", dest="downSampleTrain", help="")
 optparser.add_option("--downSampleSeed", default=1, type="int", dest="downSampleSeed", help="")
 optparser.add_option("--fullGrid", default=False, action="store_true", dest="fullGrid", help="Full grid search for parameters")
@@ -95,6 +97,7 @@ optparser.add_option("--noLog", default=False, action="store_true", dest="noLog"
 optparser.add_option("--noTestSet", default=False, action="store_true", dest="noTestSet", help="")
 optparser.add_option("--clearAll", default=False, action="store_true", dest="clearAll", help="Delete all files")
 optparser.add_option("-u", "--unmerging", default=False, action="store_true", dest="unmerging", help="SVM unmerging")
+optparser.add_option("-m", "--modifiers", default=False, action="store_true", dest="modifiers", help="Train model for modifier detection")
 # Task 3
 optparser.add_option("--speculationModel", default=os.path.expanduser("~/biotext/BioNLP2011/tests/task3/task3TrainGE-EPI-ID/speculation-models/model-c_150000"), dest="speculationModel", help="SVM-multiclass speculation model")
 optparser.add_option("--negationModel", default=os.path.expanduser("~/biotext/BioNLP2011/tests/task3/task3TrainGE-EPI-ID/negation-models/model-c_16000"), dest="negationModel", help="SVM-multiclass negation model")
@@ -109,6 +112,7 @@ if options.classify:
     options.mode = "POST-GRID"
 assert options.output != None
 assert options.task in ["OLD.1", "OLD.2", "CO", "REL", "GE", "GE.1", "GE.2", "EPI", "ID", "BB"]
+fullTaskId = options.task
 subTask = 2
 if "." in options.task:
     options.task, subTask = options.task.split(".")
@@ -128,7 +132,8 @@ else:
     dataPath = os.path.expanduser("~/biotext/BioNLP2011/data/main-tasks/")
     TRAIN_FILE = dataPath + options.task + "/" + options.task + "-train-nodup" + options.extraTag + ".xml"
     TEST_FILE = dataPath + options.task + "/" + options.task + "-devel-nodup" + options.extraTag + ".xml"
-    FINAL_TEST_FILE = dataPath + options.task + "/" + options.task + "-test.xml" # test set never uses extratag
+    #FINAL_TEST_FILE = dataPath + options.task + "/" + options.task + "-test.xml" # test set never uses extratag
+    FINAL_TEST_FILE = dataPath + options.task + "/" + options.task + "-test" + options.extraTag + ".xml" # test set never uses extratag
 # Optional overrides for input files
 if options.trainFile != None: TRAIN_FILE = options.trainFile
 if options.develFile != None: TEST_FILE = options.develFile
@@ -146,7 +151,7 @@ if options.edgeStyle != None:
     EDGE_FEATURE_PARAMS="style:"+options.edgeStyle
 else:
     if options.task in ["OLD", "GE"]:
-        EDGE_FEATURE_PARAMS="style:trigger_features,typed,directed,no_linear,entities,genia_limits,noMasking,maxFeatures"
+        EDGE_FEATURE_PARAMS="style:trigger_features,typed,directed,no_linear,entities,genia_limits,noMasking,maxFeatures" #,multipath"
         if subTask == 1:
             EDGE_FEATURE_PARAMS += ",genia_task1"
     elif options.task in ["BB"]:
@@ -211,9 +216,11 @@ eventDetector.setCSCConnection(options.csc, os.path.join("CSCConnection",WORKDIR
 if selector.check("TRAIN"):
     print >> sys.stderr, "------------ Train Event Detector ------------"
     eventDetector.train(TRAIN_FILE, TEST_FILE, "model-devel", "model-test",
-                        TRIGGER_FEATURE_PARAMS, EDGE_FEATURE_PARAMS, "",
-                        "c:"+options.triggerParams, "c:"+options.edgeParams, "c:"+options.uParams,
-                        options.recallAdjustParams, options.unmerging, options.fullGrid, options.task,
+                        TRIGGER_FEATURE_PARAMS, EDGE_FEATURE_PARAMS, "", "style:"+options.modifierStyle,
+                        "c:"+options.triggerParams, "c:"+options.edgeParams, 
+                        "c:"+options.uParams, "c:"+options.modifierParams,
+                        options.recallAdjustParams, options.unmerging, options.modifiers, 
+                        options.fullGrid, fullTaskId,
                         options.parse, options.tokenization,
                         fromStep=options.detectorStep)
 if selector.check("DEVEL"):
@@ -225,6 +232,7 @@ if selector.check("EMPTY"):
 if not options.noTestSet:
     if selector.check("TEST"):    
         print >> sys.stderr, "------------ Test set classification ------------"
-        eventDetector.classify(FINAL_TEST_FILE, "model-test", "predicted-test", fromStep=options.detectorStep)
-        STFormat.Compare.compare("predicted-test.tar.gz", "predicted-devel.tar.gz", "a2")
+        eventDetector.classify(FINAL_TEST_FILE, "model-test", "predicted-test", fromStep=options.detectorStep, saveChangedModelPath="model-test-classify-ids")
+        #print os.listdir(os.getcwd())
+        STFormat.Compare.compare("predicted-test-events.tar.gz", "predicted-devel-events.tar.gz", "a2")
 
