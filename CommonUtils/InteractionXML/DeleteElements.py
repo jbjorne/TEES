@@ -4,6 +4,10 @@ extraPath = os.path.dirname(os.path.abspath(__file__))+"/../.."
 extraPath = os.path.dirname(os.path.abspath(__file__))+"/../../JariSandbox/ComplexPPI/Source"
 #ENDIF
 sys.path.append(extraPath)
+import sys, os
+thisPath = os.path.dirname(os.path.abspath(__file__))
+sys.path.append(os.path.abspath(os.path.join(thisPath,"..")))
+sys.path.append(os.path.abspath(os.path.join(thisPath,"../..")))
 from Utils.ProgressCounter import ProgressCounter
 try:
     import xml.etree.cElementTree as ET
