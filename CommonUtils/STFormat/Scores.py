@@ -7,6 +7,9 @@ thisPath = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.abspath(os.path.join(thisPath,"../../Evaluators")))
 import BioNLP11GeniaTools
 from pylab import *
+import time, datetime
+sys.path.append(os.path.abspath(os.path.join(thisPath,"../Statistics")))
+import stats
 
 def getScoreDict(scoreString):
     """
@@ -22,21 +25,65 @@ def getScoreDict(scoreString):
 
 def updateRange(rangeDict, sourceDict):
     for key in sourceDict:
+        # per key
         if rangeDict[key][0] == None or rangeDict[key][0] > sourceDict[key]:
             rangeDict[key][0] = sourceDict[key]
         if rangeDict[key][1] == None or rangeDict[key][1] < sourceDict[key]:
             rangeDict[key][1] = sourceDict[key]
+        # total
 
 def getRangeDicts(documents):
     rangeDicts = {}
     rangeDicts["unmerging"] = defaultdict(lambda:[None, None])
     rangeDicts["triggers"] = defaultdict(lambda:[None, None])
+    rangeDicts["arguments"] = defaultdict(lambda:[None, None])
     for doc in documents:
         for event in doc.events:
             updateRange(rangeDicts["triggers"], event.trigger.triggerScoreDict)
             updateRange(rangeDicts["unmerging"], event.trigger.unmergingScoreDict)
+            for argScoreDict in event.argScoreDicts:
+                updateRange(rangeDicts["arguments"], argScoreDict)
     print "Ranges", rangeDicts
     return rangeDicts
+
+def getStatValues(documents):
+    statValues = {}
+    triggerValues = []
+    unmergingValues = []
+    argValues = []
+    for doc in documents:
+        for event in doc.events:
+            for value in sorted(event.trigger.triggerScoreDict.values()):
+                triggerValues.append(value)
+            for value in sorted(event.trigger.unmergingScoreDict.values()):
+                unmergingValues.append(value)
+            for argScoreDict in event.argScoreDicts:
+                for value in sorted(argScoreDict.values()):
+                    argValues.append(value)
+    statValues["trigger-stdev"] = stats.lstdev(triggerValues)
+    statValues["trigger-mean"] = stats.lmean(triggerValues)
+    statValues["unmerging-stdev"] = stats.lstdev(unmergingValues)
+    statValues["unmerging-mean"] = stats.lmean(unmergingValues)
+    statValues["arg-stdev"] = stats.lstdev(argValues)
+    statValues["arg-mean"] = stats.lmean(argValues)
+    return statValues
+
+def standardize(score, statValues, scoreType):
+    return (score - statValues[scoreType+"-mean"]) / statValues[scoreType+"-stdev"]
+
+def getEventEVEXScore(event, statValues):
+    scores = []
+    if event.trigger != None:
+        scores.append( standardize(event.trigger.triggerScore, statValues, "trigger") )
+    if hasattr(event, "argScores"):
+        for argScore in event.argScores:
+            scores.append( standardize(argScore, statValues, "arg") )
+            #scores.append( (argScore - statValues["arg-mean"]) / statValues["arg-stdev"] )
+    score = min(scores)
+    for arg in event.arguments: # recursively pick the lowest score
+        if arg[1].id[0] == "E": # a nested event
+            score = min(score, getEventEVEXScore(arg[1], statValues))
+    return score
 
 def getScore(scoreDict, typeString=None):
     """
@@ -53,8 +100,8 @@ def getScore(scoreDict, typeString=None):
             if currentScore == None or currentScore < scoreDict[key]:
                 currentScore = scoreDict[key]
                 highestKey = key
-    assert highestKey != "neg"
-    assert currentScore != None
+    assert highestKey != "neg", (typeString, scoreDict)
+    assert currentScore != None, (typeString, scoreDict)
     return currentScore, highestKey
 
 def normalizeScore(value, key, rangeDict):
@@ -73,27 +120,41 @@ def processScores(documents, normalize=False):
             if event.trigger.unmergingScores != None:
                 # unmerging scores should actually be in the event, but triggers are never shared anyway
                 event.trigger.unmergingScoreDict = getScoreDict(event.trigger.unmergingScores)
+            event.argScoreDicts = []
+            for arg in event.arguments:
+                #print arg
+                event.argScoreDicts.append( getScoreDict(arg[3]) )
     
     counts = defaultdict(int)
     if normalize:
         print "Normalizing ranges"
         rangeDicts = getRangeDicts(documents)
+    statValues = getStatValues(documents)
     for document in documents:
         counts["documents"] += 1
         for event in document.events:
             counts["events"] += 1
             if event.trigger != None:
                 if event.trigger.triggerScores != None:
-                    event.trigger.triggerScore, scoreKey = getScore(event.trigger.triggerScoreDict, event.trigger.type)
+                    event.trigger.triggerScore, event.trigger.triggerScoreKey = getScore(event.trigger.triggerScoreDict, event.trigger.type)
                     if normalize:
-                        event.trigger.triggerScore = normalizeScore(event.trigger.triggerScore, scoreKey, rangeDicts["triggers"])
+                        event.trigger.triggerScore = normalizeScore(event.trigger.triggerScore, event.trigger.triggerScoreKey, rangeDicts["triggers"])
                     counts["event-trigger-scores"] += 1
             if event.trigger.unmergingScores != None:
                 # unmerging scores should actually be in the event, but triggers are never shared anyway
-                event.trigger.unmergingScore, scoreKey = getScore(event.trigger.unmergingScoreDict)
+                event.trigger.unmergingScore, event.trigger.unmergingScoreKey = getScore(event.trigger.unmergingScoreDict)
                 if normalize:
-                    event.trigger.unmergingScore = normalizeScore(event.trigger.unmergingScore, scoreKey, rangeDicts["unmerging"])
+                    event.trigger.unmergingScore = normalizeScore(event.trigger.unmergingScore, event.trigger.unmergingScoreKey, rangeDicts["unmerging"])
                 counts["event-unmerging-scores"] += 1
+            # argument scores
+            event.argScores = []
+            event.argScoreKeys = []
+            for i in range(len(event.arguments)):
+                argScore, argScoreKey = getScore(event.argScoreDicts[i], arg[1])
+                if normalize:
+                    argScore = normalizeScore(argScore, argScoreKey, rangeDicts["arguments"])
+                event.argScores.append(argScore)
+                event.argScoreKeys.append(argScoreKey)
     return counts
 
 #def sortByUnmergingScore():
@@ -104,12 +165,23 @@ def sortByScore(documents, sortMethod="unmerging"):
     Make an ordered list for all events in all documents
     """
     eventList = []
+    if "EVEX" in sortMethod or "standardize" in sortMethod:
+        statValues = getStatValues(documents)
+        print "Stat values:", statValues
     for document in documents:
         for event in document.events:
             if "unmerging" in sortMethod:
-                eventList.append( (event.trigger.unmergingScore, event, document) )
+                score = event.trigger.unmergingScore
+                if "standardize" in sortMethod:
+                    score = standardize(score, statValues, "unmerging")
+                eventList.append( (score, event.id, event, document) ) # event.id should keep things deterministic if two scores are the same
             elif "triggers" in sortMethod:
-                eventList.append( (event.trigger.triggerScore, event, document) )
+                score = event.trigger.triggerScore
+                if "standardize" in sortMethod:
+                    score = standardize(score, statValues, "trigger")
+                eventList.append( (score, event.id, event, document) )
+            elif "EVEX" in sortMethod:
+                eventList.append( (getEventEVEXScore(event, statValues), event.id, event, document) )
     eventList.sort()
     return eventList
 
@@ -122,7 +194,7 @@ def markForRemoval(eventList, cutoff=1.0):
     for i in range(len(eventList)):
         if i >= breakPoint:
             break
-        eventList[i][1].arguments = [] # validation will remove events with 0 arguments
+        eventList[i][2].arguments = [] # validation will remove events with 0 arguments
 
 def evaluate(documents, sortMethod, verbose, cutoffs=[]):
     workdir = tempfile.gettempdir()
@@ -130,40 +202,136 @@ def evaluate(documents, sortMethod, verbose, cutoffs=[]):
     cutoffs.sort()
     eventList = sortByScore(documents, sortMethod)
     results = {}
+    startTime = time.time()
     for cutoff in cutoffs:
-        print "Cutoff", cutoff
+        print "Cutoff", cutoff, str(datetime.timedelta(seconds=time.time()-startTime))
         markForRemoval(eventList, cutoff)
         STTools.writeSet(documents, outdir, validate=True) # validation will remove events with 0 arguments
         results[cutoff] = BioNLP11GeniaTools.evaluateGE(outdir, task=2, evaluations=["approximate"], verbose=False, silent=not verbose)
         print results[cutoff]["approximate"]["ALL-TOTAL"]
     #shutil.rmtree(workdir)
-    return results
+    maxEvents = results[0.0]["approximate"]["ALL-TOTAL"]["answer"]
+    print "Max events", maxEvents
+    return results, maxEvents
 
-def resultsToGraph(results, outputname):
+def resultsToGraph(results, outputname, maxEvents=None, manualEvaluationFile=None):
     fig = figure()
     
     ax = subplot(111)
     ax.yaxis.grid(True, linestyle='-', which='major', color='lightgrey', alpha=0.5)
     ax.yaxis.grid(True, linestyle='-', which='minor', color='lightgrey', alpha=0.5)
-    ylabel('precision/recall/F-score', size=12)
-    xlabel('events [%]', size=12)
+    ax.xaxis.grid(True, linestyle='-', which='major', color='lightgrey', alpha=0.5)
+    ax.xaxis.grid(True, linestyle='-', which='minor', color='lightgrey', alpha=0.5)
+    ylabel('precision / recall / F-score [%]', size=12)
+    if maxEvents != None:
+        xlabel('events [%]', size=12)
+    else:
+        xlabel('events', size=12)
     
     plots = {}
-    plotNames = ["precision", "recall", "fscore"]
+    plotNames = ["precision", "fscore", "recall"]
     plotColours = {"precision":"red", "recall":"green", "fscore":"blue"}
+    lineStyles = {"precision":"-", "recall":"-", "fscore":"-"}
+    markerStyles = {"precision":"v", "recall":"^", "fscore":"s"}
     for name in plotNames:
         plots[name] = []
     xValues = []
     for key in sorted(results):
         for name in plotNames:
             plots[name].append(results[key]["approximate"]["ALL-TOTAL"][name])
-        xValues.append(results[key]["approximate"]["ALL-TOTAL"]["answer"])
+        xValue = results[key]["approximate"]["ALL-TOTAL"]["answer"]
+        if maxEvents != None:
+            xValue = float(xValue) / maxEvents * 100.0
+        xValues.append(xValue)
+    
+    if manualEvaluationFile != None:
+        manualPrecisions = getManualEvaluationPrecisions(manualEvaluationFile)
+        plotManualEvaluationPrecisions(manualPrecisions, binSize=5, makeFig=False)
     
     for name in plotNames:
-        plot(xValues, plots[name], marker="o", color=plotColours[name], linestyle="-")
+        plot(xValues, plots[name], marker=markerStyles[name], color=plotColours[name], linestyle=lineStyles[name], markersize=4)
     
+    legendText = ["precision (BioNLP'11)", "F-score (BioNLP'11)", "recall (BioNLP'11)"]
+    if manualEvaluationFile != None:
+        legendText = ["precision (EVEX)"] + legendText
+    
+    leg = legend(legendText, 'lower right')
+    ltext  = leg.get_texts()
+    setp(ltext, fontsize='small')
     savefig(outputname, bbox_inches='tight')
     #show()
+
+def getManualEvaluationPrecisions(manualEvaluationFile):
+    f = open(manualEvaluationFile, "rt")
+    lines = f.readlines()
+    f.close()
+    
+    events = []
+    truePositives = 0
+    falsePositives = 0
+    for line in lines:
+        begin, middle = line.split("--->")
+        end = "\n"
+        if "#" in line:
+            middle, end = middle.split("#")
+        eventEvaluation = middle.split(",")[-1].strip()
+        if "F" in eventEvaluation:
+            eventIsTrue = False
+            falsePositives += 1
+        else:
+            eventIsTrue = True
+            truePositives += 1
+        # get predicted event info
+        beginSplits = begin.split()
+        eventWeight = float(beginSplits[3])
+        fromAbstract = beginSplits[4] == "ABSTRACT"
+        # add to list
+        events.append( (eventWeight, eventIsTrue) )
+    events.sort()
+    precisions = [float(truePositives) / (truePositives + falsePositives)]
+    count = 0
+    for event in events:
+        if event[1]:
+            truePositives -= 1
+        else:
+            falsePositives -= 1
+        if truePositives + falsePositives > 0:
+            precisions.append(float(truePositives) / (truePositives + falsePositives))
+            count += 1
+            #print "Count", count, event[0], (truePositives, falsePositives), precisions[-1]
+    return precisions
+
+def plotManualEvaluationPrecisions(precisions, binSize=1, makeFig=True):
+    if makeFig:
+        fig = figure()
+        
+        ax = subplot(111)
+        ax.yaxis.grid(True, linestyle='-', which='major', color='lightgrey', alpha=0.5)
+        ax.yaxis.grid(True, linestyle='-', which='minor', color='lightgrey', alpha=0.5)
+        ax.xaxis.grid(True, linestyle='-', which='major', color='lightgrey', alpha=0.5)
+        ax.xaxis.grid(True, linestyle='-', which='minor', color='lightgrey', alpha=0.5)
+        ylabel('precision', size=12)
+        xlabel('events [%]', size=12)
+    
+    binnedScores = []
+    currentBin = []
+    count = 0
+    for precision in precisions:
+        currentBin.append(precision)
+        count += 1
+        if count >= binSize:
+            binnedScores.append( float(sum(currentBin)) / len(currentBin) * 100.0 )
+            currentBin = []
+            count = 0 
+    
+    numEvents = len(binnedScores)
+    xValues = []
+    for i in range(numEvents):
+        xValues.append( float(numEvents-i)/numEvents*100 ) 
+    plot(xValues, binnedScores, marker="o", color="red", linestyle="-", markersize=4)
+    
+    if makeFig:
+        savefig("manual-scores-binned.pdf", bbox_inches='tight')
 
 if __name__=="__main__":
     from optparse import OptionParser
@@ -177,14 +345,27 @@ if __name__=="__main__":
     
     optparser = OptionParser(usage="%prog [options]\n")
     optparser.add_option("-i", "--input", default=None, dest="input", help="", metavar="FILE")
+    optparser.add_option("-o", "--output", default=None, dest="output", help="", metavar="FILE")
+    optparser.add_option("-m", "--manual", default=None, dest="manual", help="", metavar="FILE")
     optparser.add_option("-s", "--sortmethod", default="unmerging", dest="sortmethod", help="")
     optparser.add_option("-v", "--verbose", default=False, action="store_true", dest="verbose", help="")
+    optparser.add_option("--steps", default=10, type="int", dest="steps", help="", metavar="FILE")
+    optparser.add_option("--binSize", default=1, type="int", dest="binSize", help="", metavar="FILE")
     (options, args) = optparser.parse_args()
     
-    print "Loading documents"
-    documents = STTools.loadSet(options.input, readScores=True)
-    print "Processing scores"
-    print processScores(documents, normalize="normalize" in options.sortmethod)
-    print "Evaluating"
-    results = evaluate(documents, options.sortmethod, verbose=options.verbose, cutoffs=[0.0,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9])
-    resultsToGraph(results, "scorefig-" + options.sortmethod + ".pdf")
+    if options.manual != None and options.input == None:
+        precisions = getManualEvaluationPrecisions(options.manual)
+        plotManualEvaluationPrecisions(precisions, options.binSize)
+    else:
+        cutoffs = [float(x)/options.steps for x in range(options.steps)]
+        print "Loading documents"
+        documents = STTools.loadSet(options.input, readScores=True)
+        print "Processing scores"
+        print processScores(documents, normalize="normalize" in options.sortmethod)
+        print "Evaluating"
+        results, maxEvents = evaluate(documents, options.sortmethod, verbose=options.verbose, cutoffs=cutoffs)
+        if options.output == None:
+            output = "scorefig-" + options.sortmethod + ".pdf"
+        else:
+            output = options.output
+        resultsToGraph(results, options.output, maxEvents, manualEvaluationFile=options.manual)
