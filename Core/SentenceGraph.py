@@ -228,9 +228,13 @@ class SentenceGraph:
         self.entitiesByToken = {} # a mapping for fast access
         self.entitiesById = {}
         self.entityHeadTokenByEntity = {}
-        for entity in self.entities:
-            self.entitiesById[entity.get("id")] = entity
-            self.entityHeadTokenByEntity[entity] = self.mapEntity(entity, verbose)
+        for entity in self.entities[:]:
+            headToken = self.mapEntity(entity, verbose)
+            if headToken != None:
+                self.entityHeadTokenByEntity[entity] = headToken
+                self.entitiesById[entity.get("id")] = entity
+            else:
+                self.entities.remove(entity)
         self._markNamedEntities()
         
         for interaction in self.interactions:
@@ -317,7 +321,7 @@ class SentenceGraph:
                 token = selHead
             if verbose:
                 print >> sys.stderr, "Selected head:", token.get("id"), token.get("text")
-        assert token != None, entityElement.get("id")
+        #assert token != None, entityElement.get("id")
         if token != None:
             # The ElementTree entity-element is modified by setting the headOffset attribute
             if entityElement.get("headOffset") == None or entityElement.get("headOffset") != token.get("charOffset"):
@@ -325,6 +329,8 @@ class SentenceGraph:
             if not self.entitiesByToken.has_key(token):
                 self.entitiesByToken[token] = []
             self.entitiesByToken[token].append(entityElement)
+        else:
+            print >> sys.stderr, "Warning, no tokens for entity", entityElement.get("id")
         return token
 
 #    def mapEntityHints(self, verbose=False):
