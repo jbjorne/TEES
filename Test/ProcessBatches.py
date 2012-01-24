@@ -5,6 +5,7 @@ import JariSandbox.ComplexPPI.Source.Murska.MakeJobScript as MakeJobScript
 import subprocess
 from subprocess import Popen, PIPE, STDOUT
 import time
+import re
 
 def numJobs(username="jakrbj"):
     """
@@ -29,12 +30,18 @@ def getMaxJobsSetting(controlFilename):
         sys.exit() 
     return value
 
-def getSources(triple):
+def getSources(triple, regex=None):
     sources = []
     for filename in sorted(triple[2]):
+        if "files_" not in triple[0]:
+            continue
         if filename.endswith(".txt"): # process directories with txt-files
-            sources.append(triple[0])
-        if filename.endswith(".tar.gz"): # process compressed st-format directories
+            if regex == None or regex.match(triple[0]) != None:
+                sources.append(triple[0])
+        if regex == None:
+            if filename.endswith(".tar.gz") and not "events" in filename: # process compressed st-format directories
+                sources.append(os.path.join(triple[0], filename))
+        elif regex.match(filename) != None:
             sources.append(os.path.join(triple[0], filename))
     if triple[0] in sources:
         assert len(sources) == 0, sources
@@ -60,7 +67,7 @@ def getJobs(username="jakrbj"):
         jobNames.append(line.strip().split()[1])
     return jobNames
 
-def submitJob(input, model, dummy=False, saveWorkDirs=False, rerun=False, skipTags=[".QUEUED"], hideFinished=False):
+def submitJob(input, model, dummy=False, saveWorkDirs=False, rerun=False, skipTags=[".QUEUED"], hideFinished=False, eventTag=None, program=None):
     # Check for output files
     if not (rerun or getSkip(input, skipTags)): # this input has already been submitted
         if not hideFinished:
@@ -75,11 +82,16 @@ def submitJob(input, model, dummy=False, saveWorkDirs=False, rerun=False, skipTa
         print >> sys.stderr, "Job", finalDir, "is currently queued/running"
         return False
     # We can queue the job
-    args = ["python", "PredictTask.py", "-i", input]
-    if model != None:
-        args += ["-m", model]
-    if saveWorkDirs:
-        args += ["-w", input + ".workdir"]
+    if program != None:
+        args = ["python", program, "-i", input]
+    else:
+        args = ["python", "PredictTask.py", "-i", input]
+        if model != None:
+            args += ["-m", model]
+        if saveWorkDirs:
+            args += ["-w", input + ".workdir"]
+        if eventTag != None:
+            args += ["--eventTag", eventTag]
     script = MakeJobScript.makeJob(finalDir, "48:00", stemDir, args) # make job script
     if not dummy:
         print >> sys.stderr, "Submitting job"
@@ -101,17 +113,18 @@ def submitJob(input, model, dummy=False, saveWorkDirs=False, rerun=False, skipTa
     return True
 
 def queue(input, model, controlFilename=None, maxJobs=10, sleepTime=10, loop=False, dummy=False, 
-          saveWorkDirs=False, rerun=False, skipTags=[".QUEUED"], hideFinished=False, limit=None):
+          saveWorkDirs=False, rerun=False, skipTags=[".QUEUED"], hideFinished=False, limit=None,
+          eventTag=None, regex=None, program=None):
     firstLoop = True
     submitCount = 0
     if os.path.exists(input) and os.path.isfile(input): # single file
-        if submitJob(input, model, dummy, saveWorkDirs, rerun, skipTags=skipTags, hideFinished=hideFinished):
+        if submitJob(input, model, dummy, saveWorkDirs, rerun, skipTags=skipTags, hideFinished=hideFinished, eventTag=eventTag, program=program):
             submitCount += 1
     else: # walk directory tree
         while firstLoop or loop:
             for triple in os.walk(input):
                 print "Processing directory", triple[0]
-                for source in getSources(triple):
+                for source in getSources(triple, regex):
                     currentJobs = numJobs()
                     if maxJobs == None and controlFilename != None:
                         currentMaxJobs = getMaxJobsSetting(controlFilename)
@@ -126,7 +139,7 @@ def queue(input, model, controlFilename=None, maxJobs=10, sleepTime=10, loop=Fal
                         else:
                             currentMaxJobs = maxJobs
                         print >> sys.stderr, "Current jobs:", currentJobs, "max jobs", currentMaxJobs
-                    if submitJob(source, model, dummy, saveWorkDirs, rerun, skipTags=skipTags, hideFinished=hideFinished):
+                    if submitJob(source, model, dummy, saveWorkDirs, rerun, skipTags=skipTags, hideFinished=hideFinished, eventTag=eventTag, program=program):
                         submitCount += 1
                         print >> sys.stderr, "Current jobs:", currentJobs, "max jobs", currentMaxJobs, "submitted jobs", submitCount
                 firstLoop = False
@@ -137,6 +150,9 @@ optparser.add_option("-i", "--input", default=None, dest="input", help="input da
 optparser.add_option("-m", "--model", default=None, dest="model", help="")
 optparser.add_option("-c", "--control", default="/v/users/jakrbj/ProcessBatchesControl.txt", dest="control", help="")
 optparser.add_option("-l", "--limit", default=None, dest="limit", help="")
+optparser.add_option("-r", "--regex", default=None, dest="regex", help="")
+optparser.add_option("--eventTag", default=None, dest="eventTag", help="")
+optparser.add_option("--program", default=None, dest="program", help="")
 optparser.add_option("--noLog", default=False, action="store_true", dest="noLog", help="")
 optparser.add_option("--dummy", default=False, action="store_true", dest="dummy", help="Print jobs on screen, don't submit them")
 optparser.add_option("--saveWorkDirs", default=False, action="store_true", dest="saveWorkDirs", help="Create working directories at input file location")
@@ -147,10 +163,12 @@ optparser.add_option("--hideFinished", default=False, action="store_true", dest=
 (options, args) = optparser.parse_args()
 
 if options.limit != None: options.limit = int(options.limit)
+if options.regex != None: options.regex = re.compile(options.regex)
 options.skipTags = options.skipTags.split(",")
 print "Skip tags", options.skipTags
 queue(options.input, options.model, options.control, options.maxJobs, dummy=options.dummy, 
-      saveWorkDirs=options.saveWorkDirs, rerun=options.rerun, 
-      skipTags=options.skipTags, hideFinished=options.hideFinished, limit=options.limit)
+      saveWorkDirs=options.saveWorkDirs, rerun=options.rerun, eventTag=options.eventTag,
+      skipTags=options.skipTags, hideFinished=options.hideFinished, limit=options.limit,
+      regex = options.regex, program=options.program)
 
 
