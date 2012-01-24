@@ -191,9 +191,14 @@ class UnmergingExampleWriter(SentenceExampleWriter):
         forceAdd = False
         forcedCount = 0
         while examplesLeft > 0:
+            if len(self.newEntities) > 100:
+                print >> sys.stderr, "Warning, sentence", sentenceObject.sentence.get("id"), "has generated more than", cutoff, "events, skipping the rest."
+                break
             examplesAddedThisRound = 0
             # For each round, loop through the potentially remaining examples
             for example in positiveExamples:
+                if len(self.newEntities) > 100:
+                    break
                 if exampleAdded[example[0]]: # This event has already been inserted
                     continue
                 arguments = argumentsByExample[example[0]]
