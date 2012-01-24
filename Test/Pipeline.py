@@ -96,9 +96,10 @@ def workdir(path, deleteIfExists=True):
     os.chdir(path)
     atexit.register(os.chdir, origDir)
 
-def log(clear=False, logCmd=True, logFile="log.txt"):
+def log(clear=False, logCmd=True, logFile="log.txt", timeStamp="[%H:%M:%S %d/%m]"):
     Stream.setLog(logFile, clear)
-    Stream.setTimeStamp("[%H:%M:%S]", True)
+    if timeStamp != None:
+        Stream.setTimeStamp(timeStamp, True)
     print >> sys.stderr, "####### Log opened at ", time.ctime(time.time()), "#######"
     if logCmd:
         sys.stdout.writeToLog("Command line: " + " ".join(sys.argv) + "\n")
