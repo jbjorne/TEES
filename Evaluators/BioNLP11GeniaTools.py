@@ -108,19 +108,25 @@ def getSourceDir(input):
     else:
         return input, False
 
-def evaluate(source, task):
+def evaluate(source, task, debug=False):
     subTask = "1"
     if "." in task:
         task, subTask = task.split(".")
     if task == "GE":
-        results = evaluateGE(source, subTask)
-        return (results["approximate"]["ALL-TOTAL"]["fscore"], results)
+        results = evaluateGE(source, subTask, debug=debug)
+        if results == None:
+            return None
+        else:
+            return (results["approximate"]["ALL-TOTAL"]["fscore"], results)
     elif task == "OLD":
         results = evaluateOLD(source, subTask)
         return (results["approximate"]["ALL-TOTAL"]["fscore"], results)
     elif task in ["EPI", "ID"]:
         results = evaluateEPIorID(source, task)
-        return (results["TOTAL"]["fscore"], results)
+        if results == None:
+            return None
+        else:
+            return (results["TOTAL"]["fscore"], results)
     elif task in ["BB", "BI"]:
         results = evaluateBX(source, task)
         return (results["fscore"], results)
@@ -132,6 +138,7 @@ def evaluate(source, task):
 
 def evaluateGE(sourceDir, task=1, folds=-1, foldToRemove=-1, evaluations=["strict", "approximate", "decomposition"], verbose=True, silent=False, debug=False):
     global perlDir
+    origSourceDir = sourceDir
     sourceDir = os.path.abspath(sourceDir)
     sourceDir, removeSource = getSourceDir(sourceDir)
 
@@ -145,7 +152,8 @@ def evaluateGE(sourceDir, task=1, folds=-1, foldToRemove=-1, evaluations=["stric
     goldDir = os.path.expanduser("~/data/BioNLP11SharedTask/main-tasks/BioNLP-ST_2011_genia_devel_data_rev1")
     if not hasGoldDocuments(sourceDir, goldDir):
         print >> sys.stderr, "Evaluation input has no gold documents"
-        return 
+        os.chdir(origDir)
+        return None
     
     #tempDir = os.path.join(perlDir, "temp-work")
     #if os.path.exists(tempDir):
@@ -164,6 +172,9 @@ def evaluateGE(sourceDir, task=1, folds=-1, foldToRemove=-1, evaluations=["stric
         sourceSubsetDir = sourceDir
     
     results = {}
+    
+    if not silent:
+        print >> sys.stderr, "GE task", task, "evaluation of", origSourceDir, "against", goldDir
     
     #commands = "export PATH=$PATH:./ ; "
     commands = "perl a2-normalize.pl -g " + goldDir
@@ -319,6 +330,9 @@ def evaluateEPIorID(sourceDir, corpus, silent=False):
             print >> sys.stderr, line,
         print >> sys.stderr
     if removeSource: shutil.rmtree(sourceDir)
+    for line in stderrLines + stdoutLines:
+        if "No such file or directory" in line:
+            return None
     return parseResults(stdoutLines)
 
 def evaluateREN(sourceDir, silent=False):
@@ -391,22 +405,25 @@ if __name__=="__main__":
     from optparse import OptionParser
     optparser = OptionParser(usage="%prog [options]\n")
     optparser.add_option("-i", "--input", default=None, dest="input", help="input directory with predicted shared task files", metavar="FILE")
-    optparser.add_option("-c", "--corpus", default="GE", dest="corpus", help="")
-    optparser.add_option("-t", "--task", default=1, type="int", dest="task", help="task number")
+    #optparser.add_option("-c", "--corpus", default="GE", dest="corpus", help="")
+    optparser.add_option("-t", "--task", default="GE.2", dest="task", help="")
+    #optparser.add_option("-t", "--task", default=1, type="int", dest="task", help="task number")
     optparser.add_option("-v", "--variance", default=0, type="int", dest="variance", help="variance folds")
     optparser.add_option("-d", "--debug", default=False, action="store_true", dest="debug", help="debug")
     (options, args) = optparser.parse_args()
     assert(options.input != None)
-    assert(options.task in [1,2,3])
+    #assert(options.task in [1,2,3])
     
-    if options.corpus == "GE":
-        if options.variance == 0:
-            evaluate(options.input, options.task, debug = options.debug)
-        else:
-            evaluateVariance(options.input, options.task, options.variance)
-    elif options.corpus in ["EPI", "ID"]:
-        print evaluateEPIorID(options.input, options.corpus)
-    elif options.corpus == "REN":
-        print evaluateREN(options.input)
-    else:
-        print evaluateBX(options.input, options.corpus)
+    evaluate(options.input, options.task, options.debug)
+    
+#    if options.corpus == "GE":
+#        if options.variance == 0:
+#            evaluate(options.input, options.task, debug = options.debug)
+#        else:
+#            evaluateVariance(options.input, options.task, options.variance)
+#    elif options.corpus in ["EPI", "ID"]:
+#        print evaluateEPIorID(options.input, options.corpus)
+#    elif options.corpus == "REN":
+#        print evaluateREN(options.input)
+#    else:
+#        print evaluateBX(options.input, options.corpus)
