@@ -157,15 +157,15 @@ class GeneralEntityTypeRecognizerGztr(ExampleBuilder):
             ngram += "_" + sentenceGraph.getTokenText(sentenceGraph.tokens[index]).lower()
         features[self.featureSet.getId(ngram)] = 1
     
-    def buildExamplesFromGraph(self, sentenceGraph, goldGraph=None):
+    def buildExamplesFromGraph(self, sentenceGraph, outfile, goldGraph=None):
         """
         Build one example for each token of the sentence
         """       
         if sentenceGraph.sentenceElement.get("origId") in self.skiplist:
             print >> sys.stderr, "Skipping sentence", sentenceGraph.sentenceElement.get("origId") 
-            return []
+            return 0 #[]
         
-        examples = []
+        #examples = []
         exampleIndex = 0
         
         self.tokenFeatures = {}
@@ -185,7 +185,7 @@ class GeneralEntityTypeRecognizerGztr(ExampleBuilder):
             # interactions, but as such events cannot be recovered anyway,
             # looking for these triggers would be pointless.
             if namedEntityCount == 0 and "build_for_nameless" not in self.styles: # no names, no need for triggers
-                return []
+                return 0 #[]
             
             if "pos_pairs" in self.styles:
                 namedEntityHeadTokens = self.getNamedEntityHeadTokens(sentenceGraph)
@@ -278,7 +278,8 @@ class GeneralEntityTypeRecognizerGztr(ExampleBuilder):
                 features = {}
                 features[self.featureSet.getId("exclude_gazetteer")] = 1
                 extra = {"xtype":"token","t":token.get("id"),"excluded":"True"}
-                examples.append( (sentenceGraph.getSentenceId()+".x"+str(exampleIndex),category,features,extra) )
+                #examples.append( (sentenceGraph.getSentenceId()+".x"+str(exampleIndex),category,features,extra) )
+                ExampleUtils.appendExamples([(sentenceGraph.getSentenceId()+".x"+str(exampleIndex),category,features,extra)], outfile)
                 exampleIndex += 1
                 continue
             
@@ -434,16 +435,20 @@ class GeneralEntityTypeRecognizerGztr(ExampleBuilder):
                 extra["trigex"] = "bb" # Request trigger extension in ExampleWriter
             if "epi_merge_negated" in self.styles:
                 extra["unmergeneg"] = "epi" # Request trigger type unmerging
-            examples.append( (sentenceGraph.getSentenceId()+".x"+str(exampleIndex),category,features,extra) )
-            exampleIndex += 1
-            self.exampleStats.endExample()
+            #examples.append( (sentenceGraph.getSentenceId()+".x"+str(exampleIndex),category,features,extra) )
             
             # chains
             self.buildChains(token, sentenceGraph, features)
             
             if "pos_pairs" in self.styles:
                 self.buildPOSPairs(token, namedEntityHeadTokens, features)
-        return examples
+            
+            example = (sentenceGraph.getSentenceId()+".x"+str(exampleIndex),category,features,extra)
+            ExampleUtils.appendExamples([example], outfile)
+            exampleIndex += 1
+            self.exampleStats.endExample()
+        #return examples
+        return exampleIndex
     
     def buildChains(self,token,sentenceGraph,features,depthLeft=3,chain="",visited=None):
         if depthLeft == 0:
