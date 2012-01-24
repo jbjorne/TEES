@@ -16,6 +16,7 @@ else:
     sys.path.append( os.path.split(os.path.abspath(__file__))[0] + "/../../JariSandbox/ComplexPPI/Source" )
 #sys.path.append(os.path.join(os.path.abspath(__file__),"/../../JariSandbox/ComplexPPI/Source/Core"))
 #ENDIF
+sys.path.append(os.path.dirname(os.path.abspath(__file__))+"/../..")
 import Core.Split as Split
 import Utils.TableUtils as TableUtils
 
