@@ -6,6 +6,7 @@ __version__ = "$Revision: 1.13 $"
 import sys, os
 thisPath = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.abspath(os.path.join(thisPath,"..")))
+sys.path.append(os.path.abspath(os.path.join(thisPath,"../CommonUtils")))
 from Core.ExampleBuilder import ExampleBuilder
 import Core.ExampleBuilder
 from Core.IdSet import IdSet
@@ -337,7 +338,7 @@ class UnmergingExampleBuilder(ExampleBuilder):
         
         return isGold
     
-    def getArgumentCombinations(self, eType, interactions):
+    def getArgumentCombinations(self, eType, interactions, entityId=None):
         combs = []
         if eType == "Binding":
             # Making examples for only all-together/all-separate cases
@@ -360,6 +361,9 @@ class UnmergingExampleBuilder(ExampleBuilder):
                 if i < 4: 
                     for j in combinations(themes, i+1):
                         combs.append(j)
+                if len(combs) >= 100:
+                    print >> sys.stderr, "Warning, truncating unmerging examples at 100 for Binding entity", entityId
+                    break
             return combs
         elif eType == "Process": # For ID-task
             argCombinations = []
@@ -374,10 +378,11 @@ class UnmergingExampleBuilder(ExampleBuilder):
             siteArgs = []
             contextGenes = []
             sideChains = []
+            #locTargets = []
             for interaction in interactions:
                 iType = interaction.get("type")
                 #assert iType in ["Theme", "Cause"], (iType, ETUtils.toStr(interaction))
-                if iType not in ["Theme", "Cause", "SiteArg", "Contextgene", "Sidechain"]:
+                if iType not in ["Theme", "Cause", "SiteArg", "Contextgene", "Sidechain"]: # "AtLoc", "ToLoc"]:
                     continue
                 if iType == "Theme":
                     themes.append(interaction)
@@ -389,6 +394,8 @@ class UnmergingExampleBuilder(ExampleBuilder):
                     contextGenes.append(interaction)
                 elif iType == "Sidechain":
                     sideChains.append(interaction)
+                #elif iType in ["AtLoc", "ToLoc"]:
+                #    locTargets.append(iType)
                 else:
                     assert False, (iType, interaction.get("id"))
             # Limit arguments to event types that can have them
@@ -409,8 +416,9 @@ class UnmergingExampleBuilder(ExampleBuilder):
                    + combine.combine(themes, siteArgs, sideChains) \
                    + combine.combine(themes, siteArgs, contextGenes) \
                    + themeAloneCombinations
+                   #+ combine.combine(themes, locTargets)
             
-    def buildExamplesFromGraph(self, sentenceGraph, goldGraph=None):
+    def buildExamplesFromGraph(self, sentenceGraph, outfile, goldGraph=None):
         """
         Build examples for a single sentence. Returns a list of examples.
         See Core/ExampleUtils for example format.
@@ -418,7 +426,7 @@ class UnmergingExampleBuilder(ExampleBuilder):
         self.multiEdgeFeatureBuilder.setFeatureVector(resetCache=True)
         self.triggerFeatureBuilder.initSentence(sentenceGraph)
         
-        examples = []
+        #examples = []
         exampleIndex = 0
         
         #undirected = self.nxMultiDiGraphToUndirected(sentenceGraph.dependencyGraph)
@@ -470,7 +478,7 @@ class UnmergingExampleBuilder(ExampleBuilder):
             #    continue
             
             interactions = interactionsByEntityId[entity.get("id")]
-            argCombinations = self.getArgumentCombinations(eType, interactions)
+            argCombinations = self.getArgumentCombinations(eType, interactions, entity.get("id"))
             #if len(argCombinations) <= 1:
             #    continue
             assert argCombinations != None, (entity.get("id"), entity.get("type"))
@@ -507,10 +515,12 @@ class UnmergingExampleBuilder(ExampleBuilder):
                 example[0] = sentenceGraph.getSentenceId()+".x"+str(exampleIndex)
                 example[1] = self.classSet.getId(category)
                 example[3] = extra
-                examples.append( example )
+                #examples.append( example )
+                ExampleUtils.appendExamples([example], outfile)
                 exampleIndex += 1
             
-        return examples
+        #return examples
+        return exampleIndex
     
     def buildExample(self, sentenceGraph, paths, eventEntity, argCombination, allInteractions): #themeEntities, causeEntities=None):
         # NOTE!!!! TODO
