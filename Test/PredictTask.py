@@ -36,11 +36,16 @@ selector = StepSelector(["PREPROCESS", "EVENTS"], fromStep=options.step)
 
 # Get the input stem, which will be used for naming the output files
 options.input = options.input.rstrip("/")
-#INPUT_TAG = options.input.rsplit("/", 1)[-1]
+if options.output == None:
+    INPUT_TAG = options.input
+else:
+    if not os.path.exists(options.output):
+        os.makedirs(options.output)
+    INPUT_TAG = os.path.join(options.output, options.input.rsplit("/", 1)[-1])
 #if os.path.isfile(options.input):
 #    if INPUT_TAG.endswith(".tar.gz"):
 #        INPUT_TAG = INPUT_TAG[:-len(".tar.gz")]
-open(options.input+"-STARTED", "w").close() # Mark process status
+open(INPUT_TAG+"-STARTED", "w").close() # Mark process status
         
 # Start logging
 WORKDIR = options.workdir
@@ -48,7 +53,7 @@ if WORKDIR == None:
     WORKDIR = tempfile.mkdtemp()
 workdir(WORKDIR, options.clearAll) # Select a working directory, optionally remove existing files
 if not options.noLog:
-    log(options.clearAll, True, options.input + "-" + options.eventTag + ".log") # Start logging into a file in working directory
+    log(options.clearAll, True, INPUT_TAG + "-" + options.eventTag + ".log") # Start logging into a file in working directory
 
 eventDetectionInput = None
 preprocessor = Preprocessor()
@@ -72,6 +77,7 @@ if selector.check("PREPROCESS"):
         preprocessor.setIntermediateFile("SPLIT-NAMES", None)
         # Process input into interaction XML
         eventDetectionInput = preprocessor.process(options.input, options.corpus, options.output, [], fromStep=options.detectorStep, toStep=None, omitSteps=["DIVIDE-SETS"])
+        print >> sys.stderr, "Total preprocessing time:", str(datetime.timedelta(seconds=time.time()-startTime))
 
 eventDetector = EventDetector()
 eventDetector.stEvaluator = None # ST evaluation won't work for external data
@@ -89,14 +95,15 @@ if selector.check("EVENTS"):
         STFormat.STTools.getStatistics("events-events.tar.gz", True, ",")
         # Move final predicted files to output directory
         if os.path.exists("events-modifier-pred.xml.gz"):
-            shutil.copy("events-modifier-pred.xml.gz", options.input + "-events-"+options.eventTag+"-modifiers.xml.gz")
+            shutil.copy("events-modifier-pred.xml.gz", INPUT_TAG + "-events-"+options.eventTag+"-modifiers.xml.gz")
         else:
-            shutil.copy("events-unmerging-pred.xml.gz", options.input + "-events-"+options.eventTag+"-unmerged.xml.gz")
-        shutil.copy("events-events.tar.gz", options.input + "-events-"+options.eventTag+".tar.gz")
+            shutil.copy("events-unmerging-pred.xml.gz", INPUT_TAG + "-events-"+options.eventTag+"-unmerged.xml.gz")
+        shutil.copy("events-events.tar.gz", INPUT_TAG + "-events-"+options.eventTag+".tar.gz")
         #STFormat.Compare.compare("predicted.tar.gz", "predicted-devel.tar.gz", "a2")
-        open(options.input+options.eventTag+"-FINISHED", "w").close() # Mark process status
+        open(INPUT_TAG+options.eventTag+"-FINISHED", "w").close() # Mark process status
     else:
         print >> sys.stderr, "No model defined, skipping event detection"
+    print >> sys.stderr, "Total event detection time:", str(datetime.timedelta(seconds=time.time()-startTime))
 
 if options.workdir == None: # remove temporary working directory
     shutil.rmtree(WORKDIR)
