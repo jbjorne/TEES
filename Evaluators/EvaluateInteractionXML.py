@@ -229,6 +229,7 @@ def processCorpora(EvaluatorClass, fromCorpus, toCorpus, target, classSets, nega
             falseEntity[k][1] += v[1]
     
     # Process the predictions with an evaluator and print the results
+    evaluator = None
     if len(entityPredictions) > 0:
         evaluator = EvaluatorClass(entityExamples, entityPredictions, classSet=classSets["entity"])
         print evaluator.toStringConcise(title="Entities")    
