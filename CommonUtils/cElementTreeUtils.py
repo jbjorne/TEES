@@ -192,6 +192,30 @@ def write(rootElement, filename):
     print >> out, '<?xml version="1.0" encoding="UTF-8"?>'
     ElementTree.ElementTree(rootElement).write(out,"utf-8")
     out.close()
+    encodeNewlines(filename)
+
+def encodeNewlines(filename):    
+    # fix newlines
+    if filename.endswith(".gz"):
+        inFile=GzipFile(filename,"rt")
+    else:
+        inFile=open(filename,"rt")
+    content = inFile.read()
+    inFile.close()
+
+    content = content.replace(">\n", "TEMP_PROTECT_N")
+    content = content.replace(">\r", "TEMP_PROTECT_R")
+    content = content.replace("\n", "&#10;")
+    content = content.replace("\r", "&#10;")
+    content = content.replace("TEMP_PROTECT_N", ">\n")
+    content = content.replace("TEMP_PROTECT_R", ">\r")
+    
+    if filename.endswith(".gz"):
+        out=GzipFile(filename,"wt")
+    else:
+        out=open(filename,"wt")
+    out.write(content)
+    out.close()
 
 def writeUTF8(rootElement,out):
     indent(rootElement)
@@ -203,6 +227,7 @@ def writeUTF8(rootElement,out):
         print >> f, '<?xml version="1.0" encoding="UTF-8"?>'
         ElementTree.ElementTree(rootElement).write(f,"utf-8")
         f.close()
+        encodeNewlines(out)
     else:
         print >> out, '<?xml version="1.0" encoding="UTF-8"?>'
         ElementTree.ElementTree(rootElement).write(out,"utf-8")
