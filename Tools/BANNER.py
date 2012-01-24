@@ -84,13 +84,21 @@ def makeEntityElements(beginOffset, endOffset, text, splitNewlines=False, elemen
         if entityString.strip() != "":
             ent = ET.Element(elementName)
             ent.set("id", None) # this should crash the XML writing, if id isn't later redefined
-            ent.set("charOffset", str(currentBeginOffset) + "-" + str(currentEndOffset-1))
+            # Modify offsets to remove leading/trailing whitespace
+            entityBeginOffset = currentBeginOffset
+            entityEndOffset = currentEndOffset
+            if len(entityString.rstrip()) < len(entityString):
+                entityEndOffset -= len(entityString) - len(entityString.rstrip())
+            if len(entityString.lstrip()) < len(entityString):
+                entityBeginOffset += len(entityString) - len(entityString.lstrip())
+            # Make the element
+            ent.set("charOffset", str(entityBeginOffset) + "-" + str(entityEndOffset-1))
             if ent.get("charOffset") != bannerOffset:
                 ent.set("origBANNEROffset", bannerOffset)
             ent.set("type", "Protein")
             ent.set("isName", "True")
             ent.set("source", "BANNER")
-            ent.set("text", text[currentBeginOffset:currentEndOffset])
+            ent.set("text", text[entityBeginOffset:entityEndOffset])
             assert ent.get("text") in text, (ent.get("text"), text)
             elements.append(ent)
         currentBeginOffset += len(entityString) + 1 # +1 for the newline
@@ -105,6 +113,8 @@ def run(input, output=None, elementName="entity", processElement="document", spl
     
     # Write text to input file
     workdir = tempfile.mkdtemp()
+    if debug:
+        print >> sys.stderr, "BANNER work directory at", workdir
     infile = codecs.open(os.path.join(workdir, "input.txt"), "wt", "utf-8")
     idCount = 0
     for sentence in corpusRoot.getiterator(processElement):
