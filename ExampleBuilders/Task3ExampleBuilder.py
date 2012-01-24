@@ -129,7 +129,7 @@ class Task3ExampleBuilder(ExampleBuilder):
         for tokenFeature,w in self.getTokenFeatures(sentenceGraph.tokens[index], sentenceGraph).iteritems():
             features[self.featureSet.getId(tag+tokenFeature)] = w
     
-    def buildExamplesFromGraph(self, sentenceGraph, goldGraph=None):
+    def buildExamplesFromGraph(self, sentenceGraph, outfile, goldGraph=None):
         """
         Build one example for each token of the sentence
         """
@@ -336,15 +336,17 @@ class Task3ExampleBuilder(ExampleBuilder):
                 tokenText = sentenceGraph.getTokenText(edge[1])
                 features[self.featureSet.getId("t1HOut_"+tokenText)] = 1
                 features[self.featureSet.getId("t1HOut_"+edgeType+"_"+tokenText)] = 1
+
+            self.buildChains(token, sentenceGraph, features)
              
             extra = {"xtype":"task3","t3type":task3Type,"t":token.get("id"),"entity":entity.get("id")}
-            examples.append( (sentenceGraph.getSentenceId()+".x"+str(exampleIndex),category,features,extra) )
-            exampleIndex += 1
-            
-            # chains TODO why here (doesn't matter, features still refers to the correct object)
-            self.buildChains(token, sentenceGraph, features)
+            #examples.append( (sentenceGraph.getSentenceId()+".x"+str(exampleIndex),category,features,extra) )
+            example = (sentenceGraph.getSentenceId()+".x"+str(exampleIndex),category,features,extra)
+            ExampleUtils.appendExamples([example], outfile)
+            exampleIndex += 1            
             self.exampleStats.endExample()
-        return examples
+        #return examples
+        return exampleIndex
     
     def buildChains(self,token,sentenceGraph,features,depthLeft=3,chain="",visited=None):
         if depthLeft == 0:
