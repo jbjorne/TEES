@@ -23,6 +23,8 @@ class EntityExampleWriter(SentenceExampleWriter):
         # detach analyses-element
         sentenceAnalysesElement = None
         sentenceAnalysesElement = sentenceElement.find("sentenceanalyses")
+        if sentenceAnalysesElement == None:
+            sentenceAnalysesElement = sentenceElement.find("analyses")
         if sentenceAnalysesElement != None:
             sentenceElement.remove(sentenceAnalysesElement)
         # remove pairs and interactions
