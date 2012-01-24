@@ -1,11 +1,13 @@
 import sys
 import types
+import time, datetime
 
 class StepSelector:
     def __init__(self, steps, fromStep=None, toStep=None, verbose=True, omitSteps=None):
         self.steps = steps
         self.omitSteps = omitSteps
         self.currentStep = None
+        self.currentStepStartTime = None
         self.setLimits(fromStep, toStep)
         self.verbose = verbose
     
@@ -30,6 +32,10 @@ class StepSelector:
 #            assert allStepsIndex > 0 and allStepsIndex < len(allSteps), (allStepsIndex, allSteps, self.steps)
 #        assert allSteps[allStepsIndex] in self.steps
 #        return allSteps[allStepsIndex]
+    
+    def printStepTime(self):
+        if self.currentStep != None and self.currentStepStartTime != None:
+            print >> sys.stderr, "EXIT STEP", self.currentStep + ": " + str(datetime.timedelta(seconds=time.time()-self.currentStepStartTime))
     
     def check(self, step):
         #print "CHECK", step, self.currentStep, self.steps, self.fromStep, self.toStep
@@ -56,7 +62,10 @@ class StepSelector:
         # Determine if step is in range
         if stepIndex >= fromIndex and stepIndex <= toIndex:
             if currentIndex < stepIndex:
+                if self.currentStepStartTime != None:
+                    if self.verbose: print >> sys.stderr, "EXIT STEP", self.currentStep, "time:", str(datetime.timedelta(seconds=time.time()-self.currentStepStartTime))
                 self.currentStep = step
+                self.currentStepStartTime = time.time()
                 if self.omitSteps != None and step in self.omitSteps:
                     if self.verbose: print >> sys.stderr, "Omitting step", step
                     return False
