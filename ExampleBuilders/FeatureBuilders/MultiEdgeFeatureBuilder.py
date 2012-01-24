@@ -112,11 +112,14 @@ class MultiEdgeFeatureBuilder(FeatureBuilder):
             predictions = predictions.split(",")
             for p in predictions:
                 splits = p.split(":")
-                value = float(splits[1])
-                value -= self.predictedRange[0]
-                value /= (self.predictedRange[1] - self.predictedRange[0])
-                assert(value >= 0 and value <= 1)
-                #print tag + "_strength_"+splits[0], value
+                if self.predictedRange[0] == None or self.predictedRange[1] == None:
+                    value = 1.0
+                else: 
+                    value = float(splits[1])
+                    value -= self.predictedRange[0]
+                    value /= (self.predictedRange[1] - self.predictedRange[0])
+                    assert(value >= 0 and value <= 1)
+                    #print tag + "_strength_"+splits[0], value
                 self.setFeature(tag + "_strength_"+splits[0], value)
         else:
             #print tag + "_strength_"+str(element.get("type")), 1.0
