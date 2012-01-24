@@ -16,6 +16,8 @@ import sys, os, itertools
 import Split
 import types
 from IdSet import IdSet
+thisPath = os.path.dirname(os.path.abspath(__file__))
+sys.path.append(os.path.abspath(os.path.join(thisPath,"../CommonUtils")))
 import InteractionXML.IDUtils as IDUtils
 import combine
 import types
