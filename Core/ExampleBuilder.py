@@ -54,7 +54,10 @@ class ExampleBuilder:
     
     def getElementCounts(self, filename):
         print >> sys.stderr, "Counting elements:",
-        f = open(filename, "rt")
+        if filename.endswith(".gz"):
+            f = gzip.open(filename, "rt")
+        else:
+            f = open(filename, "rt")
         counts = {"documents":0, "sentences":0}
         for line in f:
             if "<document " in line:
@@ -100,11 +103,19 @@ class ExampleBuilder:
         self.exampleCount = 0
         if type(input) == types.StringType:
             self.elementCounts = self.getElementCounts(input)
-            self.progress = ProgressCounter(self.elementCounts["sentences"], "Build examples")
+            if self.elementCounts["sentences"] > 0:
+                self.progress = ProgressCounter(self.elementCounts["sentences"], "Build examples")
+            else:
+                self.elementCounts = None
+                self.progress = ProgressCounter(None, "Build examples")
         else:
             self.elementCounts = None
             self.progress = ProgressCounter(None, "Build examples")
-        inputIterator = getCorpusIterator(input, None, self.parse, self.tokenization)
+        
+        self.calculatePredictedRange(self.getSentences(input, self.parse, self.tokenization))
+        
+        inputIterator = getCorpusIterator(input, None, self.parse, self.tokenization)            
+        
         #goldIterator = []
         if gold != None:
             goldIterator = getCorpusIterator(gold, None, self.parse, self.tokenization)
@@ -137,9 +148,10 @@ class ExampleBuilder:
     
     def processSentence(self, sentence, goldSentence, outfile):
         self.progress.update(1, "Building examples ("+sentence.sentence.get("id")+"): ")
-        examples = self.buildExamples(sentence, goldSentence)
-        self.exampleCount += len(examples)
-        ExampleUtils.appendExamples(examples, outfile)
+        self.exampleCount += self.buildExamples(sentence, outfile, goldSentence)
+        #examples = self.buildExamples(sentence, goldSentence)
+        #self.exampleCount += len(examples)
+        #ExampleUtils.appendExamples(examples, outfile)
 
     @classmethod
     def run(cls, input, output, parse, tokenization, style, classIds=None, featureIds=None, gold=None, append=False):
@@ -163,24 +175,24 @@ class ExampleBuilder:
         builder.build(input, output, gold, append=append)
         return builder
     
-    def buildExamples(self, sentence, goldSentence=None):
+    def buildExamples(self, sentence, outfile, goldSentence=None):
         if sentence.sentenceGraph == None:
-            return []
+            return 0 #[]
         else:
             sentenceGraph = sentence.sentenceGraph
         goldGraph = None
         if goldSentence != None:
             goldGraph = goldSentence.sentenceGraph
-        return self.buildExamplesFromGraph(sentenceGraph, goldGraph)
+        return self.buildExamplesFromGraph(sentenceGraph, outfile, goldGraph)
 
-    def buildExamplesFromGraph(self, sentenceGraph, goldGraph=None):
+    def buildExamplesFromGraph(self, sentenceGraph, outfile, goldGraph=None):
         raise NotImplementedError
     
-#    def definePredictedValueRange(self, sentences, elementName):
-#        pass
-#    
-#    def getPredictedValueRange(self):
-#        return None
+    def definePredictedValueRange(self, sentences, elementName):
+        pass
+    
+    def getPredictedValueRange(self):
+        return None
     
     @classmethod
     def getIdSets(self, classIds=None, featureIds=None):
@@ -218,13 +230,27 @@ class ExampleBuilder:
 #                assert(not os.path.exists(idFileTag + ".class_names")), idFileTag
 #            return None, None
 
-#def calculatePredictedRange(exampleBuilder, sentences):
-#    print >> sys.stderr, "Defining predicted value range:",
-#    sentenceElements = []
-#    for sentence in sentences:
-#        sentenceElements.append(sentence[0].sentenceElement)
-#    exampleBuilder.definePredictedValueRange(sentenceElements, "entity")
-#    print >> sys.stderr, exampleBuilder.getPredictedValueRange()
+
+    def getSentences(self, input, parse, tokenization, removeNameInfo=False):
+        if type(input) != types.ListType:
+            # Load corpus and make sentence graphs
+            corpusElements = SentenceGraph.loadCorpus(input, parse, tokenization, removeNameInfo=removeNameInfo)
+            sentences = []
+            for sentence in corpusElements.sentences:
+                if sentence.sentenceGraph != None: # required for event detection
+                    sentences.append( [sentence.sentenceGraph,None] )
+            return sentences
+        else: # assume input is already a list of sentences
+            assert(removeNameInfo == False)
+            return input
+
+    def calculatePredictedRange(self, sentences):
+        print >> sys.stderr, "Defining predicted value range:",
+        sentenceElements = []
+        for sentence in sentences:
+            sentenceElements.append(sentence[0].sentenceElement)
+        self.definePredictedValueRange(sentenceElements, "entity")
+        print >> sys.stderr, self.getPredictedValueRange()
 
 def addBasicOptions(optparser):
     optparser.add_option("-i", "--input", default=defaultAnalysisFilename, dest="input", help="Corpus in analysis format", metavar="FILE")
