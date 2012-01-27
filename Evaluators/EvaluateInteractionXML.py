@@ -74,13 +74,13 @@ def mapEntities(entitiesFrom, entitiesTo, tokens=None, compareFunction=compareEn
                 entityMap[entityFrom].append(entityTo)
     return entityMap
 
-# Splits merged types generated from overlapping entities/edges into their components
-def getElementTypes(element):
-    typeName = element.get("type")
-    if typeName.find("---") != -1:
-        return typeName.split("---")
-    else:
-        return [typeName]
+## Splits merged types generated from overlapping entities/edges into their components
+#def getElementTypes(element):
+#    typeName = element.get("type")
+#    if typeName.find("---") != -1:
+#        return typeName.split("---")
+#    else:
+#        return [typeName]
 
 # Uses the mapped entities to give predictions for a single sentence
 def getEntityPredictions(entityMap, targetEntities, classSet, negativeClassId):
@@ -180,7 +180,7 @@ def getInteractionPredictions(interactionsFrom, interactionsTo, entityMap, class
 
 # Compares a prediction (from) to a gold (to) sentence
 def processSentence(fromSentence, toSentence, target, classSets, negativeClassId, entityMatchFunction):
-    splitMerged(fromSentence) # modify element tree to split merged elements into multiple elements
+    #splitMerged(fromSentence) # modify element tree to split merged elements into multiple elements
     entitiesFrom = []
     for e in fromSentence.entities:
         if e.get("type") != "neg":
@@ -241,17 +241,17 @@ def processCorpora(EvaluatorClass, fromCorpus, toCorpus, target, classSets, nega
             print "", key, falseEntity[key][0], "/", falseEntity[key][1]
     return evaluator
 
-# Splits entities/edges with merged types into separate elements
-def splitMerged(sentence):
-    for sourceList in [sentence.entities, sentence.interactions, sentence.pairs]:
-        for element in sourceList[:]:
-            types = getElementTypes(element)
-            if len(types) > 1:
-                for type in types:
-                    newElement = copy.copy(element)
-                    newElement.set("type", type)
-                    sourceList.append(newElement)
-                sourceList.remove(element)
+## Splits entities/edges with merged types into separate elements
+#def splitMerged(sentence):
+#    for sourceList in [sentence.entities, sentence.interactions, sentence.pairs]:
+#        for element in sourceList[:]:
+#            types = getElementTypes(element)
+#            if len(types) > 1:
+#                for type in types:
+#                    newElement = copy.copy(element)
+#                    newElement.set("type", type)
+#                    sourceList.append(newElement)
+#                sourceList.remove(element)
 
 def run(EvaluatorClass, inputCorpusFile, goldCorpusFile, parse, tokenization=None, target="both", entityMatchFunction=compareEntitiesSimple, removeIntersentenceInteractions=False):
     print >> sys.stderr, "##### EvaluateInteractionXML #####"
