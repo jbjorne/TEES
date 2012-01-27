@@ -82,6 +82,49 @@ def mapEntities(entitiesFrom, entitiesTo, tokens=None, compareFunction=compareEn
 #    else:
 #        return [typeName]
 
+def getEventPredictions(entityMap, allGoldEntities, interactionMap, classSet, negativeClassId):
+    examples = []
+    predictions = []
+    id = "Unknown.x0"
+    # analyze events
+    for predictedEntity, goldEntities in entityMap.iteritems():
+        if predictedEntity.get("isName") == "True":
+            continue
+        found = False
+        predictedEntityType = predictedEntity.get("type")
+        for goldEntity in goldEntities:
+            goldEntityType = goldEntity.get("type")
+            if predictedEntityType != goldEntityType: # whatever the arguments, this is a false positive
+                examples.append( [id, classSet.getId(goldEntity.get("type")), None, None] )
+                predictions.append( [classSet.getId(predictedEntity.get("type"))] )
+            else: # mapped entity types match, check the arguments
+                if interactionMap[predictedEntity.get("id")]: # arguments are correct, this is a true positive
+                    examples.append( [id, classSet.getId(goldEntity.get("type")), None, None] )
+                    predictions.append( [classSet.getId(predictedEntity.get("type"))] )
+                else: # an error in arguments, this is a false positive for the type of the entity
+                    examples.append( [id, negativeClassId, None, None] )
+                    predictions.append( [classSet.getId(predictedEntity.get("type"))] )
+            found = True # entitiesTo has at least one item
+        if not found: # false positive prediction due to entity span not being in gold
+            examples.append( [id, negativeClassId, None, None] )
+            predictions.append( [classSet.getId(predictedEntity.get("type"))] )
+    # mappedTargetEntities will contain all gold entities for which is mapped at least
+    # one predicted entity. Those gold entities not in mappedTargetEntities are then
+    # undetected ones, i.e. false negatives.
+    mappedTargetEntities = set()
+    for eList in entityMap.values():
+        for e in eList:
+            mappedTargetEntities.add(e)
+    for e in allGoldEntities:
+        if e.get("isName") == "True":
+            continue
+        if not e in mappedTargetEntities: # false negative gold
+            examples.append( [id, classSet.getId(e.get("type")), None, None] )
+            predictions.append( [negativeClassId] )
+            #predictions.append( ((id, classSet.getId(e.get("type"))), negativeClassId, None, None) )
+    assert len(examples) == len(predictions)
+    return examples, predictions
+
 # Uses the mapped entities to give predictions for a single sentence
 def getEntityPredictions(entityMap, targetEntities, classSet, negativeClassId):
     examples = []
@@ -133,41 +176,44 @@ def getInteractionPredictions(interactionsFrom, interactionsTo, entityMap, class
     falseEntity = defaultdict(lambda: defaultdict(int))
     
     toInteractionsWithPredictions = set()
+    events = {}
+    for predictedEntity in entityMap.keys():
+        events[predictedEntity.get("id")] = True # mark all events as positive (if no arguments, gold or predicted, remains positive)
     for interactionFrom in interactionsFrom:
-        e1Ids = []
-        e2Ids = []
-        e1s = []
-        e2s = []
+        goldE1Ids = []
+        goldE2Ids = []
         if interactionFrom.get("e1") not in fromEntityIdToElement or interactionFrom.get("e2") not in fromEntityIdToElement:
-            pass
-            #print >> sys.stderr, "Warning, interaction", interactionFrom.get("id"), [interactionFrom.get("e1"), interactionFrom.get("e2")], "links to a non-existing entity"
+            print >> sys.stderr, "Warning, interaction", interactionFrom.get("id"), [interactionFrom.get("e1"), interactionFrom.get("e2")], "links to a non-existing entity"
         else:
-            e1s = entityMap[fromEntityIdToElement[interactionFrom.get("e1")]]
-            for e1 in e1s:
-                e1Ids.append(e1.get("id"))
-            e2s = entityMap[fromEntityIdToElement[interactionFrom.get("e2")]]
-            for e2 in e2s:
-                e2Ids.append(e2.get("id"))
+            # Select gold entities for entity-ids referred to in the predicted interaction
+            for goldEntity in entityMap[fromEntityIdToElement[interactionFrom.get("e1")]]:
+                goldE1Ids.append(goldEntity.get("id"))
+            for goldEntity in entityMap[fromEntityIdToElement[interactionFrom.get("e2")]]:
+                goldE2Ids.append(goldEntity.get("id"))
         
-        if len(e1s) == 0 or len(e2s) == 0:
+        if len(goldE1Ids) == 0 or len(goldE2Ids) == 0:
             falseEntity[interactionFrom.get("type")][0] += 1
         
         found = False
+        # Go through all gold interactions
         for interactionTo in interactionsTo:
-            if interactionTo.get("e1") in e1Ids and interactionTo.get("e2") in e2Ids:
+            if interactionTo.get("e1") in goldE1Ids and interactionTo.get("e2") in goldE2Ids: # this gold interaction matches the predicted one
                 toInteractionsWithPredictions.add(interactionTo)
                 examples.append( [id, classSet.getId(interactionTo.get("type")),None,None] )
                 predictions.append( [classSet.getId(interactionFrom.get("type"))] )
-                #predictions.append( ((id, classSet.getId(interactionTo.get("type"))), classSet.getId(interactionFrom.get("type")), None, None) )
                 found = True
         if not found: # false positive prediction
             examples.append( [id,negativeClassId,None,None] )
             predictions.append( [classSet.getId(interactionFrom.get("type"))] )
-            #predictions.append( ((id, negativeClassId), classSet.getId(interactionFrom.get("type")), None, None) )
-    mappedGoldEntities = entityMap.values()
-    temp = []
-    [temp.extend(x) for x in mappedGoldEntities]
-    mappedGoldEntities = [x.get("id") for x in temp]
+            events[interactionFrom.get("e1")] = False # false positive argument -> incorrect event
+    # Get ids of gold entities that had a correct prediction
+    reverseEntityMap = {}
+    for predictedEntity, goldEntities in entityMap.iteritems():
+        for goldEntity in goldEntities:
+            assert goldEntity.get("id") not in reverseEntityMap
+            reverseEntityMap[goldEntity.get("id")] = predictedEntity.get("id")
+    mappedGoldEntities = reverseEntityMap.keys()
+    # Process gold interactions that did not have a prediction
     for interactionTo in interactionsTo:
         if interactionTo not in toInteractionsWithPredictions: # false negative gold
             examples.append( [id, classSet.getId(interactionTo.get("type")), None, None] )
@@ -175,38 +221,58 @@ def getInteractionPredictions(interactionsFrom, interactionsTo, entityMap, class
             #predictions.append( ((id, classSet.getId(interactionTo.get("type"))), negativeClassId, None, None) )
             if interactionTo.get("e1") not in mappedGoldEntities or interactionTo.get("e2") not in mappedGoldEntities:
                 falseEntity[interactionTo.get("type")][1] += 1
+            if interactionTo.get("e1") in reverseEntityMap: # mark an event false due to a missing gold interaction
+                events[reverseEntityMap[interactionTo.get("e1")]] = False # missing argument -> incorrect event
     assert len(examples) == len(predictions)
-    return examples, predictions, falseEntity
+    return examples, predictions, falseEntity, events
 
 # Compares a prediction (from) to a gold (to) sentence
-def processSentence(fromSentence, toSentence, target, classSets, negativeClassId, entityMatchFunction):
+def processDocument(fromDocumentSentences, toDocumentSentences, target, classSets, negativeClassId, entityMatchFunction):
     #splitMerged(fromSentence) # modify element tree to split merged elements into multiple elements
-    entitiesFrom = []
-    for e in fromSentence.entities:
-        if e.get("type") != "neg":
-            entitiesFrom.append(e)
-    entitiesTo = toSentence.entities
-    tokens = fromSentence.tokens
-    # map predicted entities to gold entities
-    entityMap = mapEntities(entitiesFrom, entitiesTo, tokens, compareFunction=entityMatchFunction)
+    assert len(fromDocumentSentences) == len(toDocumentSentences)
+    entityMap = {}
+    allToEntities = []
+    for fromSentence, toSentence in zip(fromDocumentSentences, toDocumentSentences):
+        assert fromSentence.sentence.get("id") == toSentence.sentence.get("id")
+        entitiesFrom = []
+        for e in fromSentence.entities:
+            if e.get("type") != "neg":
+                entitiesFrom.append(e)
+        entitiesTo = toSentence.entities
+        allToEntities.extend(entitiesTo)
+        tokens = fromSentence.tokens
+        # map predicted entities to gold entities
+        sentenceEntityMap = mapEntities(entitiesFrom, entitiesTo, tokens, compareFunction=entityMatchFunction)
+        for entity in sentenceEntityMap.keys():
+            assert entity not in entityMap
+            entityMap[entity] = sentenceEntityMap[entity]
     
+    # select interactions
+    fromInteractions = []
+    for fromSentence in fromDocumentSentences:
+        for interaction in fromSentence.interactions + fromSentence.pairs:
+            if interaction.get("type") != "neg":
+                fromInteractions.append(interaction)
+    toInteractions = []
+    for toSentence in toDocumentSentences:
+        toInteractions.extend(toSentence.interactions)
+        toInteractions.extend(toSentence.pairs)
+
     # get predictions for predicted edges/entities vs. gold edges/entities
     entityPredictions = []
     interactionPredictions = []
     falseEntity = defaultdict(lambda: defaultdict(int))
     if target == "entities" or target == "both":
-        entityExamples, entityPredictions = getEntityPredictions(entityMap, entitiesTo, classSets["entity"], negativeClassId)
+        entityExamples, entityPredictions = getEntityPredictions(entityMap, allToEntities, classSets["entity"], negativeClassId)
     if target == "interactions" or target == "both":
-        fromInteractions = []
-        for interaction in fromSentence.interactions + fromSentence.pairs:
-            if interaction.get("type") != "neg":
-                fromInteractions.append(interaction)
-        interactionExamples, interactionPredictions, sentFalseEntity = getInteractionPredictions(fromInteractions, toSentence.interactions + toSentence.pairs, entityMap, classSets["interaction"], negativeClassId)
+        interactionExamples, interactionPredictions, sentFalseEntity, interactionMap = getInteractionPredictions(fromInteractions, toInteractions, entityMap, classSets["interaction"], negativeClassId)
         for k,v in sentFalseEntity.iteritems():
             falseEntity[k][0] += v[0]
             falseEntity[k][1] += v[1]
+    if target == "events" or target == "both":
+        eventExamples, eventPredictions = getEventPredictions(entityMap, allToEntities, interactionMap, classSets["entity"], negativeClassId)
         
-    return (entityExamples, entityPredictions), (interactionExamples, interactionPredictions), falseEntity
+    return (entityExamples, entityPredictions), (interactionExamples, interactionPredictions), (eventExamples, eventPredictions), falseEntity
 
 # Compares a prediction (from) to a gold (to) corpus
 def processCorpora(EvaluatorClass, fromCorpus, toCorpus, target, classSets, negativeClassId, entityMatchFunction):
@@ -214,16 +280,21 @@ def processCorpora(EvaluatorClass, fromCorpus, toCorpus, target, classSets, nega
     entityPredictions = []
     interactionExamples = []
     interactionPredictions = []
+    eventExamples = []
+    eventPredictions = []
     falseEntity = defaultdict(lambda: defaultdict(int))
     counter = ProgressCounter(len(fromCorpus.sentences), "Corpus Processing")
     # Loop through the sentences and collect all predictions
-    for i in range(len(fromCorpus.sentences)):
-        counter.update(1,fromCorpus.sentences[i].sentence.get("id"))
-        newEntityExPred, newInteractionExPred, sentFalseEntity = processSentence(fromCorpus.sentences[i], toCorpus.sentences[i], target, classSets, negativeClassId, entityMatchFunction)
+    for i in range(len(fromCorpus.documentSentences)):
+        if len(fromCorpus.documentSentences[i]) > 0:
+            counter.update(len(fromCorpus.documentSentences[i]), fromCorpus.documentSentences[i][0].sentence.get("id").rsplit(".", 1)[0])
+        newEntityExPred, newInteractionExPred, newEventExPred, sentFalseEntity = processDocument(fromCorpus.documentSentences[i], toCorpus.documentSentences[i], target, classSets, negativeClassId, entityMatchFunction)
         entityExamples.extend(newEntityExPred[0])
         entityPredictions.extend(newEntityExPred[1])
         interactionExamples.extend(newInteractionExPred[0])
         interactionPredictions.extend(newInteractionExPred[1])
+        eventExamples.extend(newEventExPred[0])
+        eventPredictions.extend(newEventExPred[1])
         for k,v in sentFalseEntity.iteritems():
             falseEntity[k][0] += v[0]
             falseEntity[k][1] += v[1]
@@ -236,9 +307,12 @@ def processCorpora(EvaluatorClass, fromCorpus, toCorpus, target, classSets, nega
     if len(interactionPredictions) > 0:
         evaluator = EvaluatorClass(interactionExamples, interactionPredictions, classSet=classSets["interaction"])
         print evaluator.toStringConcise(title="Interactions")
-        print "Interactions (fp ent->fp int, fn-ent->fn-int )"
-        for key in sorted(falseEntity.keys()):
-            print "", key, falseEntity[key][0], "/", falseEntity[key][1]
+        #print "Interactions (fp ent->fp int, fn-ent->fn-int )"
+        #for key in sorted(falseEntity.keys()):
+        #    print "", key, falseEntity[key][0], "/", falseEntity[key][1]
+    if len(eventPredictions) > 0:
+        evaluator = EvaluatorClass(eventExamples, eventPredictions, classSet=classSets["entity"])
+        print evaluator.toStringConcise(title="Events")
     return evaluator
 
 ## Splits entities/edges with merged types into separate elements
