@@ -128,7 +128,14 @@ def makeSentences(input, output=None, removeText=False, postProcess=True, debug=
         # Write text to workfile
         #workdir = tempfile.mkdtemp()
         workfile = codecs.open(os.path.join(workdir, "sentence-splitter-input.txt"+docTag), "wt", "utf-8")
-        workfile.write(text)
+        # From http://themoritzfamily.com/python-encodings-and-unicode.html
+        # "You have to be careful with the codecs module. Whatever you pass to it must be a Unicode 
+        # object otherwise it will try to automatically decode the byte stream as ASCII"
+        # However, the unicode errors here were simply due to STTools reading unicode ST-format as ASCII,
+        # thus creating an ASCII interaction XML, which then triggered here the unicode error. So, at this
+        # point we should be able to safely write(text), as the output file is unicode, and reading with
+        # the correct coded is taken care of earlier in the pipeline.
+        workfile.write(text) #.encode("utf-8"))
         workfile.close()
         # Run sentence splitter
         assert os.path.exists(Settings.GENIA_SENTENCE_SPLITTER_DIR + "/run_geniass.sh"), Settings.GENIA_SENTENCE_SPLITTER_DIR
