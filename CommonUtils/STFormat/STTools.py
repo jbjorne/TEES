@@ -53,7 +53,7 @@ class Annotation:
     def isNegated(self):
         return self.negation != None
     
-    def isSpeculated(self):
+    def isSpeculative(self):
         return self.speculation != None
     
     def isName(self):
@@ -220,7 +220,7 @@ def readEvent(string, sitesAreArguments=False, readScores=False):
                     argMap[target][4] = argTuple[2] 
     return ann
 
-def readRAnnotation(string):
+def readRAnnotation(string, readScores=False):
     string = string.strip()
     ann = Annotation()
     tabSplits = string.split("\t")
@@ -231,15 +231,18 @@ def readRAnnotation(string):
     argMap = {}
     #print string
     for arg in args:
-        argTuple = arg.split(":") + [None]
+        argTuple = arg.split(":")
         #assert argTuple[0].find("Arg") != -1, (string, argTuple)
-        ann.arguments.append( (argTuple[0], argTuple[1], None) )
+        if readScores and len(argTuple) > 2:
+            ann.arguments.append( [argTuple[0], argTuple[1], None, argTuple[2], None] )
+        else:
+            ann.arguments.append( [argTuple[0], argTuple[1], None] )
     if len(tabSplits) == 3:
         assert ann.type == "Coref"
         assert tabSplits[2][0] == "[" and tabSplits[2][-1] == "]", (string, tabSplits)
         protIds = tabSplits[2][1:-1].split(",")
         for protId in protIds:
-            ann.arguments.append( ("Connected", protId.strip(), None) )
+            ann.arguments.append( ["Connected", protId.strip(), None] )
     return ann
 
 def readDependencyAnnotation(string):
@@ -253,7 +256,8 @@ def readDependencyAnnotation(string):
     return ann
 
 def loadA1(filename):
-    f = open(filename)
+    #f = open(filename)
+    f = codecs.open(filename, "rt", "utf-8")
     proteins = []
     words = []
     dependencies = []
@@ -293,9 +297,11 @@ def loadA1(filename):
 
 def loadRelOrA2(filename, proteins, sitesAreArguments=False, readScores=False):
     if readScores and os.path.exists(filename + ".scores"):
-        f = open(filename + ".scores", "rt")
+        #f = open(filename + ".scores", "rt")
+        f = codecs.open(filename + ".scores", "rt", "utf-8")
     else:
-        f = open(filename, "rt")
+        #f = open(filename, "rt")
+        f = codecs.open(filename, "rt", "utf-8")
     triggers = []
     triggerMap = {}
     for protein in proteins:
@@ -318,7 +324,7 @@ def loadRelOrA2(filename, proteins, sitesAreArguments=False, readScores=False):
             count += 1
     for line in lines:
         if line[0] == "R":
-            relations.append(readRAnnotation(line))
+            relations.append(readRAnnotation(line, readScores=readScores))
             # NOTE: Temporarily treating relations as events to get equiv-resolution
             # working
             #events.append(readRAnnotation(line))
@@ -381,19 +387,23 @@ def loadRelOrA2(filename, proteins, sitesAreArguments=False, readScores=False):
             arg = relation.arguments[i]
             if arg[1][0] == "T":
                 if arg[2] != None:
-                    relation.arguments[i] = (arg[0], triggerMap[arg[1]], triggerMap[arg[2]])
+                    #relation.arguments[i] = (arg[0], triggerMap[arg[1]], triggerMap[arg[2]])
+                    relation.arguments[i][1] = triggerMap[arg[1]]
+                    relation.arguments[i][2] = triggerMap[arg[2]]
                 else:
 #                    if not triggerMap.has_key(arg[1]): # NOTE! hack for CO bugs
 #                        relation.arguments = relation.arguments[0:i]
 #                        if len(relation.arguments) == 1: # NOTE! hack
 #                            relations = []
 #                        break
-                    relation.arguments[i] = (arg[0], triggerMap[arg[1]], None)
+                    #relation.arguments[i] = (arg[0], triggerMap[arg[1]], None)
+                    relation.arguments[i][1] = triggerMap[arg[1]]
 
     return triggers, events, relations
 
 def loadText(filename):
-    f = open(filename)
+    #f = open(filename)
+    f = codecs.open(filename, "rt", "utf-8")
     text = f.read()
     f.close()
     return text
@@ -712,6 +722,8 @@ def write(id, dir, proteins, triggers, events, relations, resultFileTag="a2", co
     if len(relations) > 0:
         if debug: print >> sys.stderr, "Writing relations"
         writeEvents(relations, resultFile, counts, task)
+        if writeScores:
+            writeEvents(relations, resultScoresFile, counts, task, writeScores=True)
     resultFile.close()
     if writeScores:
         resultScoresFile.close()
