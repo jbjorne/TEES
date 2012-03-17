@@ -16,9 +16,12 @@ import Utils.Settings as Settings
 #stanfordParserDir = "/home/jari/biotext/tools/stanford-parser-2010-08-20"
 #stanfordParserDir = "/home/jari/temp_exec/stanford-parser-2010-08-20"
 stanfordParserDir = Settings.STANFORD_PARSER_DIR
-stanfordParserArgs = ["java", "-mx150m", "-cp", 
+#stanfordParserArgs = ["java", "-mx150m", "-cp", 
+#    "stanford-parser.jar", "edu.stanford.nlp.trees.EnglishGrammaticalStructure", 
+#    "-CCprocessed", "-treeFile", "-keepPunct"]
+stanfordParserArgs = ["java", "-mx500m", "-cp", 
     "stanford-parser.jar", "edu.stanford.nlp.trees.EnglishGrammaticalStructure", 
-    "-CCprocessed", "-treeFile", "-keepPunct"]
+    "-CCprocessed", "-keepPunct", "-treeFile"]
 
 escDict={"-LRB-":"(",
          "-RRB-":")",
@@ -30,9 +33,19 @@ escDict={"-LRB-":"(",
          "''":"\""}
 
 def runStanford(input, output):
-    #args = ["java", "-mx150m", "-cp", "stanford-parser.jar", "edu.stanford.nlp.trees.EnglishGrammaticalStructure", "-CCprocessed", "-treeFile", input]
-    args = ["java", "-mx500m", "-cp", "stanford-parser.jar", "edu.stanford.nlp.trees.EnglishGrammaticalStructure", "-CCprocessed", "-treeFile", input] 
-    return subprocess.Popen(args, stdout=codecs.open(output, "wt", "utf-8"))
+    global stanfordParserArgs
+    ##args = ["java", "-mx150m", "-cp", "stanford-parser.jar", "edu.stanford.nlp.trees.EnglishGrammaticalStructure", "-CCprocessed", "-treeFile", input]
+    #args = ["java", "-mx500m", "-cp", "stanford-parser.jar", "edu.stanford.nlp.trees.EnglishGrammaticalStructure", "-CCprocessed", "-treeFile", input] 
+    #return subprocess.Popen(args, stdout=codecs.open(output, "wt", "utf-8"))
+    return subprocess.Popen(stanfordParserArgs + [input], stdout=codecs.open(output, "wt", "utf-8"))
+    #return subprocess.Popen(stanfordParserArgs + [input], stdout=codecs.open(output, "wt", "latin1", "replace"))
+
+def getUnicode(string):
+    try:
+        string = string.encode('raw_unicode_escape').decode('utf-8') # fix latin1?
+    except:
+        pass
+    return string
 
 def addDependencies(outfile, parse, tokenByIndex=None, sentenceId=None):
     global escDict
@@ -40,6 +53,8 @@ def addDependencies(outfile, parse, tokenByIndex=None, sentenceId=None):
 
     depCount = 1
     line = outfile.readline()
+    #line = line.encode('raw_unicode_escape').decode('utf-8') # fix latin1?
+    line = getUnicode(line)
     deps = []
     while line.strip() != "":            
         # Add dependencies
@@ -91,6 +106,14 @@ def addDependencies(outfile, parse, tokenByIndex=None, sentenceId=None):
         if not alignmentError:
             deps.append(dep)
         line = outfile.readline()
+        try:
+            line = getUnicode(line)
+            #line = line.encode('raw_unicode_escape').decode('utf-8') # fix latin1?
+        except:
+            print "Type", type(line)
+            print "Repr", repr(line)
+            print line
+            raise
     return deps
 
 def convert(input, output=None):
@@ -174,8 +197,12 @@ def convertXML(parser, input, output, debug=False, reparse=False):
         print >> sys.stderr, "Skipping", existingCount, "already converted sentences."
     
     # Run Stanford parser
-    stanfordOutput = runSentenceProcess(runStanford, stanfordParserDir, stanfordInput, workdir, True, "StanfordParser", "Stanford Conversion", timeout=600)   
-    stanfordOutputFile = codecs.open(stanfordOutput, "rt", "utf-8")
+    stanfordOutput = runSentenceProcess(runStanford, stanfordParserDir, stanfordInput, 
+                                        workdir, True, "StanfordParser", 
+                                        "Stanford Conversion", timeout=600,
+                                        outputArgs={"encoding":"latin1", "errors":"replace"})   
+    #stanfordOutputFile = codecs.open(stanfordOutput, "rt", "utf-8")
+    stanfordOutputFile = codecs.open(stanfordOutput, "rt", "latin1", "replace")
     
     # Get output and insert dependencies
     noDepCount = 0

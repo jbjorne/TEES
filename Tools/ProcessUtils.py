@@ -63,10 +63,10 @@ def waitForProcess(process, numCorpusSentences, measureByGap, outputFile, counte
     while processStatus == None or finalCheckLeft:
         if processStatus != None: # Extra loop to let counters finish
             finalCheckLeft = False # Done only once
-        if os.path.exists(outputFile): # Output file has already appeared on disk
+        if os.path.exists(outputFile[0]): # Output file has already appeared on disk
             # Measure number of sentences in output file
             numSentences = 0
-            f = codecs.open(outputFile, "rt", "utf-8")
+            f = codecs.open(outputFile[0], "rt", **outputFile[1])
             for line in f:
                 if measureByGap:
                     if line.strip() == "":
@@ -115,7 +115,7 @@ def makeSubset(input, workdir, fromLine):
     newInputFile.close()
     return newInput
 
-def mergeOutput(dir, numCorpusSentences, measureByGap):
+def mergeOutput(dir, numCorpusSentences, measureByGap, outputArgs={}):
     """
     Merge output files (multiple files may have been created if program failed on a sentence)
     """
@@ -127,13 +127,13 @@ def mergeOutput(dir, numCorpusSentences, measureByGap):
     outputs.sort() # Order output sets by their first sentence index
     #print outputs
     
-    mergedOutput = codecs.open(os.path.join(dir, "merged-output"), "wt", "utf-8")
+    mergedOutput = codecs.open(os.path.join(dir, "merged-output"), "wt", **outputArgs)
     
     missingSentences = 0
     numSentences = 0
     # Go through output subsets in order
     for i in range(len(outputs)):
-        f = codecs.open(os.path.join(dir, outputs[i][1]), "rt", "utf-8")
+        f = codecs.open(os.path.join(dir, outputs[i][1]), "rt", **outputArgs)
         for line in f: # Copy to merged file
             mergedOutput.write(line)
             if measureByGap:
@@ -182,7 +182,7 @@ def getLines(filename, measureByGap):
     f.close()
     return numSentences
 
-def runSentenceProcess(launchProcess, programDir, input, workdir, measureByGap, counterName, updateMessage, timeout=None):
+def runSentenceProcess(launchProcess, programDir, input, workdir, measureByGap, counterName, updateMessage, timeout=None, outputArgs={}):
     """
     Runs a process on input sentences, and in case of problems skips one sentence and 
     reruns the process on the remaining ones.
@@ -195,6 +195,9 @@ def runSentenceProcess(launchProcess, programDir, input, workdir, measureByGap, 
     for line in inputFile:
         numCorpusSentences += 1
     inputFile.close()
+    
+    if "encoding" not in outputArgs:
+        outputArgs["encoding"] = "utf-8"
     
     cwd = os.getcwd()
     os.chdir(programDir)
@@ -210,7 +213,7 @@ def runSentenceProcess(launchProcess, programDir, input, workdir, measureByGap, 
 
         output = os.path.join(workdir, "output-from-" + str(startLine))
         process = launchProcess(input, output)
-        result = waitForProcess(process, inputLines, measureByGap, output, counterName, updateMessage, timeout)
+        result = waitForProcess(process, inputLines, measureByGap, (output, outputArgs), counterName, updateMessage, timeout)
         if result[0] != result[1]:
             gap = 1
             startLine = getSubsetEndPos(output, measureByGap) + gap 
@@ -223,7 +226,7 @@ def runSentenceProcess(launchProcess, programDir, input, workdir, measureByGap, 
             finished = True
     os.chdir(cwd)
     
-    numMissedSentences = mergeOutput(workdir, numCorpusSentences, measureByGap)
+    numMissedSentences = mergeOutput(workdir, numCorpusSentences, measureByGap, outputArgs=outputArgs)
     if numMissedSentences == 0:
         print >> sys.stderr, "Processed succesfully all sentences"
     else:
