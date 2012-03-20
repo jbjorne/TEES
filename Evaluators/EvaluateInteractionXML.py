@@ -329,6 +329,7 @@ def processCorpora(EvaluatorClass, fromCorpus, toCorpus, target, classSets, nega
 
 def run(EvaluatorClass, inputCorpusFile, goldCorpusFile, parse, tokenization=None, target="both", entityMatchFunction=compareEntitiesSimple, removeIntersentenceInteractions=False):
     print >> sys.stderr, "##### EvaluateInteractionXML #####"
+    print >> sys.stderr, "Comparing input", inputCorpusFile, "to gold", goldCorpusFile
     # Class sets are used to convert the types to ids that the evaluator can use
     classSets = {}
     if EvaluatorClass.type == "binary":
