@@ -484,8 +484,8 @@ def writeSet(documents, output, resultFileTag="a2", debug=False, task=2, validat
     if not validate:
         print "Warning! No validation."
     for doc in documents:
-        if debug: print >> sys.stderr, "Validating", doc.id
         if validate:
+            if debug: print >> sys.stderr, "Validating", doc.id
             Validate.allValidate(doc, counts, task, verbose=debug)
         #doc.proteins.sort(cmp=compareOffsets)
         #doc.triggers.sort(cmp=compareOffsets)
@@ -636,8 +636,9 @@ def writeEvents(events, out, counts, task, writeScores=False):
             #    print event.type
             
             # limit sites to accepted event types
-            if event.type not in ["Binding", "Phosphorylation", "Positive_regulation", "Negative_regulation", "Regulation"]:
-                continue
+            # Todo! This should be done in validate
+            #if event.type not in ["Binding", "Phosphorylation", "Positive_regulation", "Negative_regulation", "Regulation"]:
+            #    continue
             
             argType = arg[0]
             if argType == "Target" and event.type == "Coref":
