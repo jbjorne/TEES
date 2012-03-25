@@ -390,29 +390,32 @@ def toSTFormat(input, output=None, outputTag="a2", useOrigIds=False, debug=False
                         arg = [interaction.get("type"), interaction.get("e2"), None, interaction.get("predictions")]
                         if arg[0] == "SiteArg": # convert back to actual sites
                             arg[0] = "Site"
+                            if arg[3] != None: # Convert also prediction strengths
+                                arg[3] = arg[3].replace("SiteArg", "Site")
                         event.arguments.append(arg)
             else: # interaction is a relation
                 rel = Annotation()
                 rel.type = interaction.get("type")
                 e1 = interaction.get("e1")
                 e2 = interaction.get("e2")
+                relScores = interaction.get("predictions")
                 #assert rel.type == "Protein-Component" or rel.type == "Subunit-Complex" or rel.type == "Renaming", (rel.type, stDoc.id, interaction.get("id"))
                 if rel.type == "Protein-Component" or rel.type == "Subunit-Complex": 
-                    rel.arguments.append(["Arg1", tMap[e1], None])
-                    rel.arguments.append(["Arg2", tMap[e2], None])
+                    rel.arguments.append(["Arg1", tMap[e1], None, relScores])
+                    rel.arguments.append(["Arg2", tMap[e2], None, relScores])
                 elif rel.type == "Renaming":
-                    rel.arguments.append(["Former", tMap[e1], None])
-                    rel.arguments.append(["New", tMap[e2], None])
+                    rel.arguments.append(["Former", tMap[e1], None, relScores])
+                    rel.arguments.append(["New", tMap[e2], None, relScores])
                 elif rel.type == "Coref":
-                    rel.arguments.append(["Anaphora", tMap[e1], None])
-                    rel.arguments.append(["Antecedent", tMap[e2], None])
+                    rel.arguments.append(["Anaphora", tMap[e1], None, relScores])
+                    rel.arguments.append(["Antecedent", tMap[e2], None, relScores])
                     # Add protein arguments'
                     if corefProtMap.has_key(e2):
                         for prot in corefProtMap[e2]:
                             rel.arguments.append(["Target", prot, None])
                 elif rel.type.startswith("SR-"):
-                    rel.arguments.append(["Arg1", tMap[e1], None])
-                    rel.arguments.append(["Arg2", tMap[e2], None])
+                    rel.arguments.append(["Arg1", tMap[e1], None, relScores])
+                    rel.arguments.append(["Arg2", tMap[e2], None, relScores])
                 else:
                     assert False, (rel.type, stDoc.id, interaction.get("id"))
                 stDoc.relations.append(rel)
