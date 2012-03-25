@@ -11,6 +11,12 @@ import time, datetime
 sys.path.append(os.path.abspath(os.path.join(thisPath,"../Statistics")))
 import stats
 
+def getResults(results):
+    if "approximate" in results and "ALL-TOTAL" in results["approximate"]:
+        return results["approximate"]["ALL-TOTAL"]
+    else:
+        return results["TOTAL"]
+
 def getScoreDict(scoreString):
     """
     Extract individual scores from a comma-separated list
@@ -55,15 +61,18 @@ def getStatValues(documents):
         for event in doc.events:
             for value in sorted(event.trigger.triggerScoreDict.values()):
                 triggerValues.append(value)
-            for value in sorted(event.trigger.unmergingScoreDict.values()):
-                unmergingValues.append(value)
+            if hasattr(event.trigger, "unmergingScoreDict"):
+                for value in sorted(event.trigger.unmergingScoreDict.values()):
+                    unmergingValues.append(value)
             for argScoreDict in event.argScoreDicts:
                 for value in sorted(argScoreDict.values()):
                     argValues.append(value)
+    #print triggerValues, unmergingValues, argValues
     statValues["trigger-stdev"] = stats.lstdev(triggerValues)
     statValues["trigger-mean"] = stats.lmean(triggerValues)
-    statValues["unmerging-stdev"] = stats.lstdev(unmergingValues)
-    statValues["unmerging-mean"] = stats.lmean(unmergingValues)
+    if len(unmergingValues) > 0:
+        statValues["unmerging-stdev"] = stats.lstdev(unmergingValues)
+        statValues["unmerging-mean"] = stats.lmean(unmergingValues)
     statValues["arg-stdev"] = stats.lstdev(argValues)
     statValues["arg-mean"] = stats.lmean(argValues)
     return statValues
@@ -75,6 +84,7 @@ def getEventEVEXScore(event, statValues):
     scores = []
     if event.trigger != None:
         scores.append( standardize(event.trigger.triggerScore, statValues, "trigger") )
+        scores.append( standardize(event.trigger.triggerScore, statValues, "unmerging") )
     if hasattr(event, "argScores"):
         for argScore in event.argScores:
             scores.append( standardize(argScore, statValues, "arg") )
@@ -90,6 +100,11 @@ def getScore(scoreDict, typeString=None):
     Get the highest score (optionally for a known type)
     """
     currentScore = None
+    # EPI sites
+    if typeString == "Site" and "SiteArg" in scoreDict:
+        assert "Site" not in scoreDict, scoreDict.keys()
+        typeString = "SiteArg"
+    # Find the values
     for key in scoreDict:
         if typeString != None: # match type
             for keySplit in key.split("---"): # check for merged classes
@@ -196,7 +211,7 @@ def markForRemoval(eventList, cutoff=1.0):
             break
         eventList[i][2].arguments = [] # validation will remove events with 0 arguments
 
-def evaluate(documents, sortMethod, verbose, cutoffs=[]):
+def evaluate(documents, sortMethod, verbose, cutoffs=[], task="GE.2"):
     workdir = tempfile.gettempdir()
     outdir = os.path.join(workdir, "events")
     cutoffs.sort()
@@ -207,14 +222,17 @@ def evaluate(documents, sortMethod, verbose, cutoffs=[]):
         print "Cutoff", cutoff, str(datetime.timedelta(seconds=time.time()-startTime))
         markForRemoval(eventList, cutoff)
         STTools.writeSet(documents, outdir, validate=True) # validation will remove events with 0 arguments
-        results[cutoff] = BioNLP11GeniaTools.evaluateGE(outdir, task=2, evaluations=["approximate"], verbose=False, silent=not verbose)
-        print results[cutoff]["approximate"]["ALL-TOTAL"]
+        #results[cutoff] = getResults(BioNLP11GeniaTools.evaluateGE(outdir, task=2, evaluations=["approximate"], verbose=False, silent=not verbose))
+        results[cutoff] = getResults(BioNLP11GeniaTools.evaluate(outdir, task=task)[1])
+        print results
+        #print results[cutoff]["approximate"]["ALL-TOTAL"]
     #shutil.rmtree(workdir)
-    maxEvents = results[0.0]["approximate"]["ALL-TOTAL"]["answer"]
+    #maxEvents = results[0.0]["approximate"]["ALL-TOTAL"]["answer"]
+    maxEvents = results[0.0]["answer"]
     print "Max events", maxEvents
     return results, maxEvents
 
-def resultsToGraph(results, outputname, maxEvents=None, manualEvaluationFile=None):
+def resultsToGraph(results, outputname, maxEvents=None, manualEvaluationFile=None, graphs="prf"):
     fig = figure()
     
     ax = subplot(111)
@@ -222,6 +240,7 @@ def resultsToGraph(results, outputname, maxEvents=None, manualEvaluationFile=Non
     ax.yaxis.grid(True, linestyle='-', which='minor', color='lightgrey', alpha=0.5)
     ax.xaxis.grid(True, linestyle='-', which='major', color='lightgrey', alpha=0.5)
     ax.xaxis.grid(True, linestyle='-', which='minor', color='lightgrey', alpha=0.5)
+    
     ylabel('precision / recall / F-score [%]', size=12)
     if maxEvents != None:
         xlabel('events [%]', size=12)
@@ -229,17 +248,37 @@ def resultsToGraph(results, outputname, maxEvents=None, manualEvaluationFile=Non
         xlabel('events', size=12)
     
     plots = {}
-    plotNames = ["precision", "fscore", "recall"]
-    plotColours = {"precision":"red", "recall":"green", "fscore":"blue"}
-    lineStyles = {"precision":"-", "recall":"-", "fscore":"-"}
-    markerStyles = {"precision":"v", "recall":"^", "fscore":"s"}
+    plotNames = [] #["precision", "fscore", "recall"]
+    legendText = []
+    plotColours = {}
+    lineStyles = {}
+    markerStyles = {}
+    graphs = graphs.lower()
+    if "p" in graphs:
+        plotNames.append("precision")
+        legendText.append("precision (BioNLP'11)")
+        plotColours["precision"] = "red"
+        lineStyles["precision"] = "-"
+        markerStyles["precision"] = "v"
+    if "r" in graphs:
+        plotNames.append("recall")
+        legendText.append("recall (BioNLP'11)")
+        plotColours["recall"] = "green"
+        lineStyles["recall"] = "-"
+        markerStyles["recall"] = "^"
+    if "f" in graphs:
+        plotNames.append("fscore")
+        legendText.append("fscore (BioNLP'11)")
+        plotColours["fscore"] = "blue"
+        lineStyles["fscore"] = "-"
+        markerStyles["fscore"] = "s"
     for name in plotNames:
         plots[name] = []
     xValues = []
     for key in sorted(results):
         for name in plotNames:
-            plots[name].append(results[key]["approximate"]["ALL-TOTAL"][name])
-        xValue = results[key]["approximate"]["ALL-TOTAL"]["answer"]
+            plots[name].append(results[key][name])
+        xValue = results[key]["answer"]
         if maxEvents != None:
             xValue = float(xValue) / maxEvents * 100.0
         xValues.append(xValue)
@@ -251,7 +290,8 @@ def resultsToGraph(results, outputname, maxEvents=None, manualEvaluationFile=Non
     for name in plotNames:
         plot(xValues, plots[name], marker=markerStyles[name], color=plotColours[name], linestyle=lineStyles[name], markersize=4)
     
-    legendText = ["precision (BioNLP'11)", "F-score (BioNLP'11)", "recall (BioNLP'11)"]
+    ylim([0, 80])
+    
     if manualEvaluationFile != None:
         legendText = ["precision (EVEX)"] + legendText
     
@@ -345,8 +385,10 @@ if __name__=="__main__":
     
     optparser = OptionParser(usage="%prog [options]\n")
     optparser.add_option("-i", "--input", default=None, dest="input", help="", metavar="FILE")
+    optparser.add_option("-t", "--task", default="GE.2", dest="task", help="", metavar="FILE")
     optparser.add_option("-o", "--output", default=None, dest="output", help="", metavar="FILE")
     optparser.add_option("-m", "--manual", default=None, dest="manual", help="", metavar="FILE")
+    optparser.add_option("-g", "--graphs", default="prf", dest="graphs", help="", metavar="FILE")
     optparser.add_option("-s", "--sortmethod", default="unmerging", dest="sortmethod", help="")
     optparser.add_option("-v", "--verbose", default=False, action="store_true", dest="verbose", help="")
     optparser.add_option("--steps", default=10, type="int", dest="steps", help="", metavar="FILE")
@@ -360,10 +402,16 @@ if __name__=="__main__":
         cutoffs = [float(x)/options.steps for x in range(options.steps)]
         print "Loading documents"
         documents = STTools.loadSet(options.input, readScores=True)
+#        print "Testing evaluator"
+#        tempdir = tempfile.mkdtemp()
+#        print tempdir
+#        STTools.writeSet(documents, tempdir, debug=True, validate=False) # validation will remove events with 0 arguments
+#        BioNLP11GeniaTools.evaluate(tempdir, task=options.task)
+        #shutil.rmtree(tempdir)
         print "Processing scores"
         print processScores(documents, normalize="normalize" in options.sortmethod)
         print "Evaluating"
-        results, maxEvents = evaluate(documents, options.sortmethod, verbose=options.verbose, cutoffs=cutoffs)
+        results, maxEvents = evaluate(documents, options.sortmethod, verbose=options.verbose, cutoffs=cutoffs, task=options.task)
         if options.output == None:
             output = "scorefig-" + options.sortmethod + ".pdf"
         else:
