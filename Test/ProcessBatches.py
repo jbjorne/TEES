@@ -30,11 +30,13 @@ def getMaxJobsSetting(controlFilename):
         sys.exit() 
     return value
 
-def getSources(triple, regex=None):
+def getSources(triple, regex=None, regexFullPath=None):
     sources = []
     for filename in sorted(triple[2]):
-        if "files_" not in triple[0]:
-            continue
+        # Moved directory check to upper level
+        #if "files_" not in triple[0]:
+        #if regexFullPath != None and not regex.match(os.path.join(triple[0], filename)):
+        #    continue
         if filename.endswith(".txt"): # process directories with txt-files
             if regex == None or regex.match(triple[0]) != None:
                 sources.append(triple[0])
@@ -83,16 +85,17 @@ def submitJob(input, model, dummy=False, saveWorkDirs=False, rerun=False, skipTa
         return False
     # We can queue the job
     if program != None:
-        args = ["python", program, "-i", input]
+        args = ["python"] + program.split() + ["-i", input]
     else:
         args = ["python", "PredictTask.py", "-i", input]
-        if model != None:
-            args += ["-m", model]
-        if saveWorkDirs:
-            args += ["-w", input + ".workdir"]
-        if eventTag != None:
-            args += ["--eventTag", eventTag]
+    if model != None:
+        args += ["-m", model]
+    if saveWorkDirs:
+        args += ["-w", input + ".workdir"]
+    if eventTag != None:
+        args += ["--eventTag", eventTag]
     script = MakeJobScript.makeJob(finalDir, "48:00", stemDir, args) # make job script
+    # script += "\nrm " + input + ".QUEUED" # remove submission marker at the end of the job
     if not dummy:
         print >> sys.stderr, "Submitting job"
         if MakeJobScript.isVuori():
@@ -104,7 +107,10 @@ def submitJob(input, model, dummy=False, saveWorkDirs=False, rerun=False, skipTa
             pstdout = p.communicate(input=script)[0]
             print(pstdout)
         else: # assume Murska
-            subprocess.call(script + " | bsub", shell=True) # submit job
+            #subprocess.call(script + " | bsub", shell=True) # submit job
+            p = Popen(['bsub'], stdout=PIPE, stdin=PIPE, stderr=STDOUT)
+            pstdout = p.communicate(input=script)[0]
+            print(pstdout)
         open(input + ".QUEUED", "w").close() # mark job as submitted
     else:
         print >> sys.stderr, "Dummy mode"
@@ -114,7 +120,7 @@ def submitJob(input, model, dummy=False, saveWorkDirs=False, rerun=False, skipTa
 
 def queue(input, model, controlFilename=None, maxJobs=10, sleepTime=10, loop=False, dummy=False, 
           saveWorkDirs=False, rerun=False, skipTags=[".QUEUED"], hideFinished=False, limit=None,
-          eventTag=None, regex=None, program=None):
+          eventTag=None, regex=None, regexFullPath=None, program=None):
     firstLoop = True
     submitCount = 0
     if os.path.exists(input) and os.path.isfile(input): # single file
@@ -123,8 +129,12 @@ def queue(input, model, controlFilename=None, maxJobs=10, sleepTime=10, loop=Fal
     else: # walk directory tree
         while firstLoop or loop:
             for triple in os.walk(input):
-                print "Processing directory", triple[0]
-                for source in getSources(triple, regex):
+                if regexFullPath != None and regex.match(os.path.join(triple[0])) != None:
+                    print "Skipping directory", triple[0]
+                    continue
+                else:
+                    print "Processing directory", triple[0]
+                for source in getSources(triple, regex, regexFullPath):
                     currentJobs = numJobs()
                     if maxJobs == None and controlFilename != None:
                         currentMaxJobs = getMaxJobsSetting(controlFilename)
@@ -151,6 +161,7 @@ optparser.add_option("-m", "--model", default=None, dest="model", help="")
 optparser.add_option("-c", "--control", default="/v/users/jakrbj/ProcessBatchesControl.txt", dest="control", help="")
 optparser.add_option("-l", "--limit", default=None, dest="limit", help="")
 optparser.add_option("-r", "--regex", default=None, dest="regex", help="")
+optparser.add_option("--regexFullPath", default=None, dest="regexFullPath", help="")
 optparser.add_option("--eventTag", default=None, dest="eventTag", help="")
 optparser.add_option("--program", default=None, dest="program", help="")
 optparser.add_option("--noLog", default=False, action="store_true", dest="noLog", help="")
@@ -164,11 +175,12 @@ optparser.add_option("--hideFinished", default=False, action="store_true", dest=
 
 if options.limit != None: options.limit = int(options.limit)
 if options.regex != None: options.regex = re.compile(options.regex)
+if options.regexFullPath != None: options.regexFullPath = re.compile(options.regexFullPath)
 options.skipTags = options.skipTags.split(",")
 print "Skip tags", options.skipTags
 queue(options.input, options.model, options.control, options.maxJobs, dummy=options.dummy, 
       saveWorkDirs=options.saveWorkDirs, rerun=options.rerun, eventTag=options.eventTag,
       skipTags=options.skipTags, hideFinished=options.hideFinished, limit=options.limit,
-      regex = options.regex, program=options.program)
+      regex = options.regex, regexFullPath=options.regexFullPath, program=options.program)
 
 
