@@ -119,7 +119,7 @@ if "." in options.task:
     subTask = int(subTask)
 #dataPath = "/home/jari/biotext/BioNLP2011/data/main-tasks/"
 if options.task == "REL":
-    dataPath = os.path.expanduser("~/biotext/BioNLP2011/data/REL/")
+    dataPath = os.path.expanduser("~/biotext/BioNLP2011/data/supporting-tasks/REL/")
     TRAIN_FILE = dataPath + "rel-train.xml"
     TEST_FILE = dataPath + "rel-devel.xml"
     FINAL_TEST_FILE = dataPath + "rel-test.xml"
@@ -211,6 +211,7 @@ else:
     print >> sys.stderr, "Task:", options.task
 
 eventDetector = EventDetector()
+eventDetector.stWriteScores = True # write confidence scores into additional st-format files
 eventDetector.setCSCConnection(options.csc, os.path.join("CSCConnection",WORKDIR.lstrip("/")))
 # Pre-calculate all the required SVM models
 if selector.check("TRAIN"):
@@ -232,6 +233,7 @@ if selector.check("EMPTY"):
 if not options.noTestSet:
     if selector.check("TEST"):    
         print >> sys.stderr, "------------ Test set classification ------------"
+        eventDetector.stWriteScores = False # the evaluation server doesn't like additional files
         eventDetector.classify(FINAL_TEST_FILE, "model-test", "predicted-test", fromStep=options.detectorStep, saveChangedModelPath="model-test-classify-ids")
         #print os.listdir(os.getcwd())
         STFormat.Compare.compare("predicted-test-events.tar.gz", "predicted-devel-events.tar.gz", "a2")
