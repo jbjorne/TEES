@@ -210,7 +210,7 @@ def getInteractionPredictions(interactionsFrom, interactionsTo, entityMap, class
     reverseEntityMap = {}
     for predictedEntity, goldEntities in entityMap.iteritems():
         for goldEntity in goldEntities:
-            assert goldEntity.get("id") not in reverseEntityMap
+            assert goldEntity.get("id") not in reverseEntityMap, ([x.get("id") for x in predictedEntity], [x.get("id") for x in goldEntities])
             reverseEntityMap[goldEntity.get("id")] = predictedEntity.get("id")
     mappedGoldEntities = reverseEntityMap.keys()
     # Process gold interactions that did not have a prediction
@@ -229,17 +229,23 @@ def getInteractionPredictions(interactionsFrom, interactionsTo, entityMap, class
 # Compares a prediction (from) to a gold (to) sentence
 def processDocument(fromDocumentSentences, toDocumentSentences, target, classSets, negativeClassId, entityMatchFunction):
     #splitMerged(fromSentence) # modify element tree to split merged elements into multiple elements
-    assert len(fromDocumentSentences) == len(toDocumentSentences)
+    if toDocumentSentences != None:
+        assert len(fromDocumentSentences) == len(toDocumentSentences)
+    else:
+        toDocumentSentences = [None] * len(fromDocumentSentences)
     entityMap = {}
     allToEntities = []
     for fromSentence, toSentence in zip(fromDocumentSentences, toDocumentSentences):
-        assert fromSentence.sentence.get("id") == toSentence.sentence.get("id")
+        if toSentence != None:
+            assert fromSentence.sentence.get("id") == toSentence.sentence.get("id")
         entitiesFrom = []
         for e in fromSentence.entities:
             if e.get("type") != "neg":
                 entitiesFrom.append(e)
-        entitiesTo = toSentence.entities
-        allToEntities.extend(entitiesTo)
+        entitiesTo = []
+        if toSentence != None:
+            entitiesTo = toSentence.entities
+            allToEntities.extend(entitiesTo)
         tokens = fromSentence.tokens
         # map predicted entities to gold entities
         sentenceEntityMap = mapEntities(entitiesFrom, entitiesTo, tokens, compareFunction=entityMatchFunction)
@@ -255,8 +261,9 @@ def processDocument(fromDocumentSentences, toDocumentSentences, target, classSet
                 fromInteractions.append(interaction)
     toInteractions = []
     for toSentence in toDocumentSentences:
-        toInteractions.extend(toSentence.interactions)
-        toInteractions.extend(toSentence.pairs)
+        if toSentence != None:
+            toInteractions.extend(toSentence.interactions)
+            toInteractions.extend(toSentence.pairs)
 
     # get predictions for predicted edges/entities vs. gold edges/entities
     entityPredictions = []
@@ -285,10 +292,16 @@ def processCorpora(EvaluatorClass, fromCorpus, toCorpus, target, classSets, nega
     falseEntity = defaultdict(lambda: defaultdict(int))
     counter = ProgressCounter(len(fromCorpus.sentences), "Corpus Processing")
     # Loop through the sentences and collect all predictions
+    toCorpusSentences = None
+    if toCorpus != None:
+        toCorpusSentences = toCorpus.documentSentences
     for i in range(len(fromCorpus.documentSentences)):
         if len(fromCorpus.documentSentences[i]) > 0:
             counter.update(len(fromCorpus.documentSentences[i]), fromCorpus.documentSentences[i][0].sentence.get("id").rsplit(".", 1)[0])
-        newEntityExPred, newInteractionExPred, newEventExPred, sentFalseEntity = processDocument(fromCorpus.documentSentences[i], toCorpus.documentSentences[i], target, classSets, negativeClassId, entityMatchFunction)
+        if toCorpusSentences != None:
+            newEntityExPred, newInteractionExPred, newEventExPred, sentFalseEntity = processDocument(fromCorpus.documentSentences[i], toCorpusSentences[i], target, classSets, negativeClassId, entityMatchFunction)
+        else:
+            newEntityExPred, newInteractionExPred, newEventExPred, sentFalseEntity = processDocument(fromCorpus.documentSentences[i], None, target, classSets, negativeClassId, entityMatchFunction)
         entityExamples.extend(newEntityExPred[0])
         entityPredictions.extend(newEntityExPred[1])
         interactionExamples.extend(newInteractionExPred[0])
@@ -344,7 +357,9 @@ def run(EvaluatorClass, inputCorpusFile, goldCorpusFile, parse, tokenization=Non
         sys.exit("Unknown evaluator type")
     
     # Load corpus and make sentence graphs
-    goldCorpusElements = CorpusElements.loadCorpus(goldCorpusFile, parse, tokenization, removeIntersentenceInteractions)
+    goldCorpusElements = None
+    if goldCorpusFile != None:
+        goldCorpusElements = CorpusElements.loadCorpus(goldCorpusFile, parse, tokenization, removeIntersentenceInteractions)
     predictedCorpusElements = CorpusElements.loadCorpus(inputCorpusFile, parse, tokenization, removeIntersentenceInteractions)    
     
     # Compare the corpora and print results on screen
