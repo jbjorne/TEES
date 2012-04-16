@@ -10,6 +10,7 @@ Functions for easier use of cElementTree.
 __version__ = "$Revision: 1.20 $"
 
 import sys
+import codecs
 
 try:
     import cElementTree as ElementTree
@@ -87,8 +88,10 @@ def ETFromObj(obj):
     if isinstance(obj,str) or isinstance(obj,unicode):
         if obj.endswith(".xml.gz"):
             fStream=GzipFile(obj,"rt")
+            #fStream = codecs.getreader("utf-8")(GzipFile(obj,"rt"))
         elif obj.endswith(".xml") or obj.endswith(".svg") or obj.endswith(".nxml") or obj.endswith(".csml"):
             fStream=open(obj,"rt")
+            #fStream=codecs.open(obj, "rt", "utf-8")
         else:
             raise ValueError("%s: File format not recognized (expected .xml or .xml.gz)"%obj)
         return ElementTree.parse(fStream)
@@ -162,8 +165,10 @@ def ETIteratorFromObj(obj, events=None, parser=None):
     if isinstance(obj,str) or isinstance(obj,unicode):
         if obj.endswith(".gz"):
             fStream=GzipFile(obj,"rt")
+            #fStream = codecs.getreader("utf-8")(GzipFile(obj,"rt"))
         else:
             fStream=open(obj,"rt")
+            #fStream=codecs.open(obj, "rt", "utf-8")
         for rv in ElementTree.iterparse(fStream, events):
             yield rv
     elif isinstance(obj,ElementTree.ElementTree) or ElementTree.iselement(obj):
@@ -197,9 +202,11 @@ def write(rootElement, filename):
 def encodeNewlines(filename):    
     # fix newlines
     if filename.endswith(".gz"):
-        inFile=GzipFile(filename,"rt")
+        #inFile=GzipFile(filename,"rt")
+        inFile = codecs.getreader("utf-8")(GzipFile(filename,"rt"))
     else:
-        inFile=open(filename,"rt")
+        #inFile=open(filename,"rt")
+        inFile=codecs.open(filename, "rt", "utf-8")
     content = inFile.read()
     inFile.close()
 
@@ -211,9 +218,11 @@ def encodeNewlines(filename):
     content = content.replace("TEMP_PROTECT_R", ">\r")
     
     if filename.endswith(".gz"):
-        out=GzipFile(filename,"wt")
+        #out=GzipFile(filename,"wt")
+        out = codecs.getwriter("utf-8")(GzipFile(filename,"wt"))
     else:
-        out=open(filename,"wt")
+        #out=open(filename,"wt")
+        out=codecs.open(filename, "wt", "utf-8")
     out.write(content)
     out.close()
 
