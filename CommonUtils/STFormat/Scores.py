@@ -67,9 +67,14 @@ def getStatValues(documents):
             for argScoreDict in event.argScoreDicts:
                 for value in sorted(argScoreDict.values()):
                     argValues.append(value)
+        for relation in doc.relations:
+            for argScoreDict in relation.argScoreDicts:
+                for value in sorted(argScoreDict.values()):
+                    argValues.append(value)
     #print triggerValues, unmergingValues, argValues
-    statValues["trigger-stdev"] = stats.lstdev(triggerValues)
-    statValues["trigger-mean"] = stats.lmean(triggerValues)
+    if len(triggerValues) > 0:
+        statValues["trigger-stdev"] = stats.lstdev(triggerValues)
+        statValues["trigger-mean"] = stats.lmean(triggerValues)
     if len(unmergingValues) > 0:
         statValues["unmerging-stdev"] = stats.lstdev(unmergingValues)
         statValues["unmerging-mean"] = stats.lmean(unmergingValues)
@@ -139,6 +144,10 @@ def processScores(documents, normalize=False):
             for arg in event.arguments:
                 #print arg
                 event.argScoreDicts.append( getScoreDict(arg[3]) )
+        for relation in document.relations:
+            # Use only the first value so you don't get the relation score twice
+            relation.argScoreDicts = []
+            relation.argScoreDicts.append( getScoreDict(relation.arguments[0][3]) )
     
     counts = defaultdict(int)
     if normalize:
@@ -147,7 +156,7 @@ def processScores(documents, normalize=False):
     statValues = getStatValues(documents)
     for document in documents:
         counts["documents"] += 1
-        for event in document.events:
+        for event in document.events + document.relations:
             counts["events"] += 1
             if event.trigger != None:
                 if event.trigger.triggerScores != None:
@@ -155,21 +164,22 @@ def processScores(documents, normalize=False):
                     if normalize:
                         event.trigger.triggerScore = normalizeScore(event.trigger.triggerScore, event.trigger.triggerScoreKey, rangeDicts["triggers"])
                     counts["event-trigger-scores"] += 1
-            if event.trigger.unmergingScores != None:
-                # unmerging scores should actually be in the event, but triggers are never shared anyway
-                event.trigger.unmergingScore, event.trigger.unmergingScoreKey = getScore(event.trigger.unmergingScoreDict)
-                if normalize:
-                    event.trigger.unmergingScore = normalizeScore(event.trigger.unmergingScore, event.trigger.unmergingScoreKey, rangeDicts["unmerging"])
-                counts["event-unmerging-scores"] += 1
+                if event.trigger.unmergingScores != None:
+                    # unmerging scores should actually be in the event, but triggers are never shared anyway
+                    event.trigger.unmergingScore, event.trigger.unmergingScoreKey = getScore(event.trigger.unmergingScoreDict)
+                    if normalize:
+                        event.trigger.unmergingScore = normalizeScore(event.trigger.unmergingScore, event.trigger.unmergingScoreKey, rangeDicts["unmerging"])
+                    counts["event-unmerging-scores"] += 1
             # argument scores
             event.argScores = []
             event.argScoreKeys = []
             for i in range(len(event.arguments)):
-                argScore, argScoreKey = getScore(event.argScoreDicts[i], arg[1])
-                if normalize:
-                    argScore = normalizeScore(argScore, argScoreKey, rangeDicts["arguments"])
-                event.argScores.append(argScore)
-                event.argScoreKeys.append(argScoreKey)
+                if i < len(event.argScoreDicts): # REL has only one score
+                    argScore, argScoreKey = getScore(event.argScoreDicts[i])#, arg[1])
+                    if normalize:
+                        argScore = normalizeScore(argScore, argScoreKey, rangeDicts["arguments"])
+                    event.argScores.append(argScore)
+                    event.argScoreKeys.append(argScoreKey)
     return counts
 
 #def sortByUnmergingScore():
@@ -184,7 +194,7 @@ def sortByScore(documents, sortMethod="unmerging"):
         statValues = getStatValues(documents)
         print "Stat values:", statValues
     for document in documents:
-        for event in document.events:
+        for event in document.events + document.relations:
             if "unmerging" in sortMethod:
                 score = event.trigger.unmergingScore
                 if "standardize" in sortMethod:
@@ -223,7 +233,10 @@ def evaluate(documents, sortMethod, verbose, cutoffs=[], task="GE.2"):
         markForRemoval(eventList, cutoff)
         STTools.writeSet(documents, outdir, validate=True) # validation will remove events with 0 arguments
         #results[cutoff] = getResults(BioNLP11GeniaTools.evaluateGE(outdir, task=2, evaluations=["approximate"], verbose=False, silent=not verbose))
-        results[cutoff] = getResults(BioNLP11GeniaTools.evaluate(outdir, task=task)[1])
+        if "REL" not in task:
+            results[cutoff] = getResults(BioNLP11GeniaTools.evaluate(outdir, task=task)[1])
+        else:
+            results[cutoff] = {}
         print results
         #print results[cutoff]["approximate"]["ALL-TOTAL"]
     #shutil.rmtree(workdir)
