@@ -91,6 +91,7 @@ class RELFeatureBuilder(FeatureBuilder):
     def buildSubstringFeatures(self, tokens, tokenIndex):
         string = ""
         for t in tokens[tokenIndex-6:tokenIndex]:
+            # TODO the actual token does not seem to be included
             string += t.get("text")
         string = string.lower().replace("-", "").replace(" ", "")
         # nfkb
