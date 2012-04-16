@@ -26,6 +26,7 @@ optparser.add_option("-p", "--parse", default="split-McClosky", dest="parse", he
 optparser.add_option("--eventTag", default="GE", dest="eventTag", help="")
 optparser.add_option("--step", default=None, dest="step", help="")
 optparser.add_option("--detectorStep", default=None, dest="detectorStep", help="")
+optparser.add_option("--omitPreprocessorSteps", default=None, dest="omitPreprocessorSteps", help="")
 optparser.add_option("--csc", default="", dest="csc", help="")
 optparser.add_option("--noLog", default=False, action="store_true", dest="noLog", help="")
 optparser.add_option("--clearAll", default=False, action="store_true", dest="clearAll", help="Delete all files")
@@ -54,6 +55,7 @@ if WORKDIR == None:
 workdir(WORKDIR, options.clearAll) # Select a working directory, optionally remove existing files
 if not options.noLog:
     log(options.clearAll, True, INPUT_TAG + "-" + options.eventTag + ".log") # Start logging into a file in working directory
+print >> sys.stderr, "Work directory at", WORKDIR
 
 eventDetectionInput = None
 preprocessor = Preprocessor()
@@ -76,7 +78,10 @@ if selector.check("PREPROCESS"):
         preprocessor.setIntermediateFile("CONVERT-PARSE", None)
         preprocessor.setIntermediateFile("SPLIT-NAMES", None)
         # Process input into interaction XML
-        eventDetectionInput = preprocessor.process(options.input, options.corpus, options.output, [], fromStep=options.detectorStep, toStep=None, omitSteps=["DIVIDE-SETS"])
+        omitPreprocessorSteps=["DIVIDE-SETS"]
+        if options.omitPreprocessorSteps != None:
+            omitPreprocessorSteps += [x.strip() for x in options.omitPreprocessorSteps.split(",")]
+        eventDetectionInput = preprocessor.process(options.input, options.corpus, options.output, [], fromStep=options.detectorStep, toStep=None, omitSteps=omitPreprocessorSteps)
         print >> sys.stderr, "Total preprocessing time:", str(datetime.timedelta(seconds=time.time()-startTime))
 
 eventDetector = EventDetector()
@@ -96,8 +101,10 @@ if selector.check("EVENTS"):
         # Move final predicted files to output directory
         if os.path.exists("events-modifier-pred.xml.gz"):
             shutil.copy("events-modifier-pred.xml.gz", INPUT_TAG + "-events-"+options.eventTag+"-modifiers.xml.gz")
-        else:
+        elif os.path.exists("events-unmerging-pred.xml.gz"):
             shutil.copy("events-unmerging-pred.xml.gz", INPUT_TAG + "-events-"+options.eventTag+"-unmerged.xml.gz")
+        elif os.path.exists("events-edge-pred.xml.gz"):
+            shutil.copy("events-edge-pred.xml.gz", INPUT_TAG + "-events-"+options.eventTag+"-edges.xml.gz")
         shutil.copy("events-events.tar.gz", INPUT_TAG + "-events-"+options.eventTag+".tar.gz")
         #STFormat.Compare.compare("predicted.tar.gz", "predicted-devel.tar.gz", "a2")
         open(INPUT_TAG+options.eventTag+"-FINISHED", "w").close() # Mark process status
