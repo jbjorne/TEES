@@ -22,6 +22,7 @@ class EventDetector(Detector):
         self.triggerDetector = TriggerDetector()
         self.edgeDetector = EdgeDetector()
         self.unmergingDetector = UnmergingDetector()
+        self.doUnmergingSelfTraining = False
         self.modifierDetector = ModifierDetector()
         self.stEvaluator = Evaluators.BioNLP11GeniaTools
         self.stWriteScores = False
@@ -218,21 +219,29 @@ class EventDetector(Detector):
             print >> sys.stderr, "No unmerging"
         if self.checkStep("SELF-TRAIN-EXAMPLES-FOR-UNMERGING", self.unmerging) and self.unmerging:
             # Self-classified train data for unmerging
-            xml = self.triggerDetector.classifyToXML(self.trainData, self.model, None, "unmerging-extra-", split=True)
-            xml = self.edgeDetector.classifyToXML(xml, self.model, None, "unmerging-extra-", split=True)
-            assert xml != None
-            EvaluateInteractionXML.run(self.edgeDetector.evaluator, xml, self.trainData, self.parse)
+            if self.doUnmergingSelfTraining:
+                xml = self.triggerDetector.classifyToXML(self.trainData, self.model, None, "unmerging-extra-", split=True)
+                xml = self.edgeDetector.classifyToXML(xml, self.model, None, "unmerging-extra-", split=True)
+                assert xml != None
+                EvaluateInteractionXML.run(self.edgeDetector.evaluator, xml, self.trainData, self.parse)
         if self.checkStep("UNMERGING-EXAMPLES", self.unmerging) and self.unmerging:
             # Unmerging example generation
             GOLD_TEST_FILE = self.optData.replace("-nodup", "")
             GOLD_TRAIN_FILE = self.trainData.replace("-nodup", "")
-            if xml == None: 
-                xml = "unmerging-extra-edge-pred.xml"
-            self.unmergingDetector.buildExamples(self.model, [self.optData, [self.trainData, xml]], 
-                                                 ["unmerging-opt-examples.gz", "unmerging-train-examples.gz"], 
-                                                 [GOLD_TEST_FILE, [GOLD_TRAIN_FILE, GOLD_TRAIN_FILE]], 
-                                                 exampleStyle=self.unmergingExampleStyle, saveIdsToModel=True)
-            xml = None
+            if self.doUnmergingSelfTraining:
+                if xml == None: 
+                    xml = "unmerging-extra-edge-pred.xml"
+                self.unmergingDetector.buildExamples(self.model, [self.optData, [self.trainData, xml]], 
+                                                     ["unmerging-opt-examples.gz", "unmerging-train-examples.gz"], 
+                                                     [GOLD_TEST_FILE, [GOLD_TRAIN_FILE, GOLD_TRAIN_FILE]], 
+                                                     exampleStyle=self.unmergingExampleStyle, saveIdsToModel=True)
+                xml = None
+            else:
+                self.unmergingDetector.buildExamples(self.model, [self.optData, self.trainData], 
+                                                     ["unmerging-opt-examples.gz", "unmerging-train-examples.gz"], 
+                                                     [GOLD_TEST_FILE, GOLD_TRAIN_FILE], 
+                                                     exampleStyle=self.unmergingExampleStyle, saveIdsToModel=True)
+                xml = None
             #UnmergingExampleBuilder.run("/home/jari/biotext/EventExtension/TrainSelfClassify/test-predicted-edges.xml", GOLD_TRAIN_FILE, UNMERGING_TRAIN_EXAMPLE_FILE, PARSE, TOK, UNMERGING_FEATURE_PARAMS, UNMERGING_IDS, append=True)
         if self.checkStep("BEGIN-UNMERGING-MODEL", self.unmerging) and self.unmerging:
             self.unmergingDetector.beginModel(None, self.model, "unmerging-train-examples.gz", "unmerging-opt-examples.gz")
@@ -268,7 +277,8 @@ class EventDetector(Detector):
                 edgeParse = self.getStr(self.edgeDetector.tag+"parse", self.model)
             else:
                 edgeParse = self.parse
-            EvaluateInteractionXML.run(self.edgeDetector.evaluator, xml, self.classifyData, edgeParse)
+            #EvaluateInteractionXML.run(self.edgeDetector.evaluator, xml, self.classifyData, edgeParse)
+            EvaluateInteractionXML.run(self.edgeDetector.evaluator, xml, None, edgeParse)
         if self.checkStep("UNMERGING"):
             if self.model.hasMember("unmerging-classifier-model.gz"):
                 #xml = self.getWorkFile(xml, output + "-edge-pred.xml.gz")
@@ -288,7 +298,7 @@ class EventDetector(Detector):
             else:
                 print >> sys.stderr, "No model for modifier detection"
         if self.checkStep("ST-CONVERT"):
-            xml = self.getWorkFile(xml, [output + "-modifier-pred.xml.gz", output + "-unmerging-pred.xml.gz"])
+            xml = self.getWorkFile(xml, [output + "-modifier-pred.xml.gz", output + "-unmerging-pred.xml.gz", output + "-edge-pred.xml.gz"])
             STFormat.ConvertXML.toSTFormat(xml, output+"-events.tar.gz", outputTag="a2", writeScores=self.stWriteScores)
             if self.stEvaluator != None:
                 task = self.task
