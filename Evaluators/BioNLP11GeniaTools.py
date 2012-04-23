@@ -116,8 +116,10 @@ def evaluate(source, task, debug=False):
         results = evaluateGE(source, subTask, debug=debug)
         if results == None:
             return None
-        else:
+        elif "ALL-TOTAL" in results["approximate"]:
             return (results["approximate"]["ALL-TOTAL"]["fscore"], results)
+        else:
+            return (0.0, None)
     elif task == "OLD":
         results = evaluateOLD(source, subTask)
         return (results["approximate"]["ALL-TOTAL"]["fscore"], results)
