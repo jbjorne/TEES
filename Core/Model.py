@@ -32,6 +32,8 @@ class Model():
             self.insert(model.get(member), member)
     
     def addStr(self, name, value):
+        assert "\n" not in name
+        assert "\n" not in value
         f = open(self.get(name, True), "wt")
         f.write(value)
         f.close()
@@ -96,3 +98,19 @@ class Model():
         members = os.listdir(path)
         for member in members:
             self.members[member] = [os.path.join(path, member), None, None]
+    
+    # Value file
+    def _getValues(self):
+        values = {}
+        f = open(self.get("settings.txt", True), "rt")
+        for line in f:
+            key, value = line.strip().lsplit("\t", 1)
+            values[key] = value
+        f.close()
+        return values
+    
+    def _setValues(self, values):
+        f = open(self.get("settings.txt", True), "wt")
+        for key in sorted(values):
+            f.write(key + "\t" + values[key] + "\n")
+        f.close()

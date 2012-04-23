@@ -9,7 +9,7 @@ Functions for easier use of cElementTree.
 """
 __version__ = "$Revision: 1.20 $"
 
-import sys
+import sys, os
 import codecs
 
 try:
@@ -190,6 +190,10 @@ def write(rootElement, filename):
     if isinstance(rootElement,ElementTree.ElementTree):
         rootElement = rootElement.getroot()
     indent(rootElement)
+    # Create intermediate paths if needed
+    if os.path.dirname(filename) != "" and not os.path.exists(os.path.dirname(filename)):
+        os.makedirs(os.path.dirname(filename))
+    # Open the output file
     if filename.endswith(".gz"):
         out=GzipFile(filename,"wt")
     else:
@@ -197,6 +201,7 @@ def write(rootElement, filename):
     print >> out, '<?xml version="1.0" encoding="UTF-8"?>'
     ElementTree.ElementTree(rootElement).write(out,"utf-8")
     out.close()
+    # Fix newlines inside attributes
     encodeNewlines(filename)
 
 def encodeNewlines(filename):    
@@ -226,20 +231,20 @@ def encodeNewlines(filename):
     out.write(content)
     out.close()
 
-def writeUTF8(rootElement,out):
-    indent(rootElement)
-    if isinstance(out,str):
-        if out.endswith(".gz"):
-            f=GzipFile(out,"wt")
-        else:
-            f=open(out,"wt")
-        print >> f, '<?xml version="1.0" encoding="UTF-8"?>'
-        ElementTree.ElementTree(rootElement).write(f,"utf-8")
-        f.close()
-        encodeNewlines(out)
-    else:
-        print >> out, '<?xml version="1.0" encoding="UTF-8"?>'
-        ElementTree.ElementTree(rootElement).write(out,"utf-8")
+#def writeUTF8(rootElement,out):
+#    indent(rootElement)
+#    if isinstance(out,str):
+#        if out.endswith(".gz"):
+#            f=GzipFile(out,"wt")
+#        else:
+#            f=open(out,"wt")
+#        print >> f, '<?xml version="1.0" encoding="UTF-8"?>'
+#        ElementTree.ElementTree(rootElement).write(f,"utf-8")
+#        f.close()
+#        encodeNewlines(out)
+#    else:
+#        print >> out, '<?xml version="1.0" encoding="UTF-8"?>'
+#        ElementTree.ElementTree(rootElement).write(out,"utf-8")
 
 
 def makePath(element,tagList):

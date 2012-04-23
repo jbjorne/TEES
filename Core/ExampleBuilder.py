@@ -89,6 +89,9 @@ class ExampleBuilder:
 #            print >> sys.stderr, "Class and feature names not saved"
 
     def build(self, input, output, gold=None, append=False):
+        # Create intermediate paths if needed
+        if os.path.dirname(output) != "" and not os.path.exists(os.path.dirname(output)):
+            os.makedirs(os.path.dirname(output))
         # Open output file
         openStyle = "wt"
         if append:

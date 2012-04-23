@@ -224,21 +224,22 @@ if selector.check("TRAIN"):
                         options.recallAdjustParams, options.unmerging, options.modifiers, 
                         options.fullGrid, fullTaskId,
                         options.parse, options.tokenization,
-                        fromStep=options.detectorStep)
+                        fromStep=options.detectorStep,
+                        workdir="training")
 if selector.check("DEVEL"):
     print >> sys.stderr, "------------ Check devel classification ------------"
-    eventDetector.classify(TEST_FILE, "model-devel", "predicted-devel", fromStep=options.detectorStep)
+    eventDetector.classify(TEST_FILE, "model-devel", "classification/devel", fromStep=options.detectorStep)
 if selector.check("EMPTY"):
     # By passing an emptied devel set through the prediction system, we can check that we get the same predictions
     # as in the DEVEL step, ensuring the model does not use leaked information.
     print >> sys.stderr, "------------ Empty devel classification ------------"
     #eventDetector.classify(TEST_FILE.replace(".xml", "-empty.xml"), "model-devel", "predicted-devel-empty", fromStep=options.detectorStep)
-    eventDetector.classify(getEmptyCorpus(TEST_FILE), "model-devel", "predicted-devel-empty", fromStep=options.detectorStep)
+    eventDetector.classify(getEmptyCorpus(TEST_FILE), "model-devel", "classification/devel-empty", fromStep=options.detectorStep)
 if not options.noTestSet:
     if selector.check("TEST"):    
         print >> sys.stderr, "------------ Test set classification ------------"
         eventDetector.stWriteScores = False # the evaluation server doesn't like additional files
-        eventDetector.classify(FINAL_TEST_FILE, "model-test", "predicted-test", fromStep=options.detectorStep, saveChangedModelPath="model-test-classify-ids")
+        eventDetector.classify(FINAL_TEST_FILE, "model-test", "classification/test", fromStep=options.detectorStep, saveChangedModelPath="model-test-classify-ids")
         #print os.listdir(os.getcwd())
-        STFormat.Compare.compare("predicted-test-events.tar.gz", "predicted-devel-events.tar.gz", "a2")
+        STFormat.Compare.compare("classification/test-events.tar.gz", "classification/devel-events.tar.gz", "a2")
 
