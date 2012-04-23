@@ -15,6 +15,26 @@ except ImportError:
     import cElementTree as ET
 import cElementTreeUtils as ETUtils
 from collections import defaultdict
+import types
+
+def getEmptyCorpus(xml, deletionRules=None):
+    """
+    A convenience function for getting an empty corpus, useful for testing for information leaks
+    in the event extraction process.
+    """
+    if type(xml) in types.StringTypes:
+        # XML is read from disk, so it's a new copy and can be safely modified
+        xml = ETUtils.ETFromObj(xml)
+    else:
+        # XML is already an object in memory. To prevent problems with other users of it, a copy
+        # is created before deleting elements.
+        xml = copy.deepcopy(xml)
+    if deletionRules == None: # use default rules for BioNLP Shared Task
+        # We remove all interactions, and all entities that are not named entities. This leaves only
+        # the gold standard protein/gene names
+        deletionRules = {"interaction":{},"entity":{"isName":"False"}}
+    # Remove elements and return the emptied XML
+    return processCorpus(xml, None, deletionRules)
     
 def removeElements(parent, elementName, attributes, countsByType):
     toRemove = []
@@ -47,11 +67,7 @@ def processSentence(sentence, rules, countsByType):
 
 def processCorpus(inputFilename, outputFilename, rules):
     print >> sys.stderr, "Loading corpus file", inputFilename
-    if inputFilename.rsplit(".",1)[-1] == "gz":
-        import gzip
-        corpusTree = ET.parse(gzip.open(inputFilename))
-    else:
-        corpusTree = ET.parse(inputFilename)
+    corpusTree = ETUtils.ETFromObj(inputFilename)
     corpusRoot = corpusTree.getroot()
     
     for eType in rules.keys():

@@ -3,6 +3,7 @@
 # most imports are defined in Pipeline
 import sys, os
 sys.path.append(os.path.dirname(os.path.abspath(__file__))+"/../CommonUtils") # new CommonUtils
+from InteractionXML.DeleteElements import getEmptyCorpus
 from Pipeline import *
 import STFormat.ConvertXML
 import STFormat.Compare
@@ -12,42 +13,42 @@ from Detectors.EventDetector import EventDetector
 from Detectors.StepSelector import StepSelector
 from InteractionXML.MakeSubset import makeSubset
 
-def task3Classify(classifier, xml, specModel, negModel, task3Ids, task3Tag, parse, goldXML=None):
-    # Task 3
-    SPECULATION_MODEL = specModel
-    assert os.path.exists(SPECULATION_MODEL)
-    NEGATION_MODEL = negModel
-    assert os.path.exists(NEGATION_MODEL)
-    
-    # The id-sets will be modified, so create local copies of them.
-    # Using always the same id numbers for machine learning classes
-    # and examples ensures that the model-files will be compatible
-    # with all of your experiments.
-    TASK3_IDS = copyIdSetsToWorkdir(task3Ids)
-    
-    # Speculation detection
-    print >> sys.stderr, "====== Speculation Detection ======"
-    Task3ExampleBuilder.run(xml, "speculation-"+task3Tag+"-examples", parse, None, "style:typed,speculation", TASK3_IDS, goldXML)
-    classifier.test("speculation-"+task3Tag+"-examples", SPECULATION_MODEL, "speculation-"+task3Tag+"-classifications")
-    xml = BioTextExampleWriter.write("speculation-"+task3Tag+"-examples", "speculation-"+task3Tag+"-classifications", xml, None, TASK3_IDS+".class_names")
-    
-    # Negation detection
-    print >> sys.stderr, "====== Negation Detection ======"
-    Task3ExampleBuilder.run(xml, "negation-"+task3Tag+"-examples", parse, None, "style:typed,negation", TASK3_IDS, goldXML)
-    classifier.test("negation-"+task3Tag+"-examples", NEGATION_MODEL, "negation-"+task3Tag+"-classifications")
-    xml = BioTextExampleWriter.write("negation-"+task3Tag+"-examples", "negation-"+task3Tag+"-classifications", xml, task3Tag + "-task3.xml.gz", TASK3_IDS+".class_names")
-    return xml
+#def task3Classify(classifier, xml, specModel, negModel, task3Ids, task3Tag, parse, goldXML=None):
+#    # Task 3
+#    SPECULATION_MODEL = specModel
+#    assert os.path.exists(SPECULATION_MODEL)
+#    NEGATION_MODEL = negModel
+#    assert os.path.exists(NEGATION_MODEL)
+#    
+#    # The id-sets will be modified, so create local copies of them.
+#    # Using always the same id numbers for machine learning classes
+#    # and examples ensures that the model-files will be compatible
+#    # with all of your experiments.
+#    TASK3_IDS = copyIdSetsToWorkdir(task3Ids)
+#    
+#    # Speculation detection
+#    print >> sys.stderr, "====== Speculation Detection ======"
+#    Task3ExampleBuilder.run(xml, "speculation-"+task3Tag+"-examples", parse, None, "style:typed,speculation", TASK3_IDS, goldXML)
+#    classifier.test("speculation-"+task3Tag+"-examples", SPECULATION_MODEL, "speculation-"+task3Tag+"-classifications")
+#    xml = BioTextExampleWriter.write("speculation-"+task3Tag+"-examples", "speculation-"+task3Tag+"-classifications", xml, None, TASK3_IDS+".class_names")
+#    
+#    # Negation detection
+#    print >> sys.stderr, "====== Negation Detection ======"
+#    Task3ExampleBuilder.run(xml, "negation-"+task3Tag+"-examples", parse, None, "style:typed,negation", TASK3_IDS, goldXML)
+#    classifier.test("negation-"+task3Tag+"-examples", NEGATION_MODEL, "negation-"+task3Tag+"-classifications")
+#    xml = BioTextExampleWriter.write("negation-"+task3Tag+"-examples", "negation-"+task3Tag+"-classifications", xml, task3Tag + "-task3.xml.gz", TASK3_IDS+".class_names")
+#    return xml
 
-def getA2FileTag(task, subTask):
-    if task == "REL":
-        return "rel"
-    if task == "OLD":
-        if subTask == 1:
-            return "a2.t1"
-        else:
-            return "a2.t12"
-        assert False
-    return "a2"
+#def getA2FileTag(task, subTask):
+#    if task == "REL":
+#        return "rel"
+#    if task == "OLD":
+#        if subTask == 1:
+#            return "a2.t1"
+#        else:
+#            return "a2.t12"
+#        assert False
+#    return "a2"
 
 from optparse import OptionParser
 optparser = OptionParser()
@@ -227,9 +228,12 @@ if selector.check("TRAIN"):
 if selector.check("DEVEL"):
     print >> sys.stderr, "------------ Check devel classification ------------"
     eventDetector.classify(TEST_FILE, "model-devel", "predicted-devel", fromStep=options.detectorStep)
-if selector.check("EMPTY"):    
+if selector.check("EMPTY"):
+    # By passing an emptied devel set through the prediction system, we can check that we get the same predictions
+    # as in the DEVEL step, ensuring the model does not use leaked information.
     print >> sys.stderr, "------------ Empty devel classification ------------"
-    eventDetector.classify(TEST_FILE.replace(".xml", "-empty.xml"), "model-devel", "predicted-devel-empty", fromStep=options.detectorStep)
+    #eventDetector.classify(TEST_FILE.replace(".xml", "-empty.xml"), "model-devel", "predicted-devel-empty", fromStep=options.detectorStep)
+    eventDetector.classify(getEmptyCorpus(TEST_FILE), "model-devel", "predicted-devel-empty", fromStep=options.detectorStep)
 if not options.noTestSet:
     if selector.check("TEST"):    
         print >> sys.stderr, "------------ Test set classification ------------"

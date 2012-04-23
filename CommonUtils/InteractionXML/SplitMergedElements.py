@@ -1,8 +1,5 @@
 import sys, os, copy
-extraPath = os.path.dirname(os.path.abspath(__file__))+"/../.."
-#IF LOCAL
-extraPath = os.path.dirname(os.path.abspath(__file__))+"/../../JariSandbox/ComplexPPI/Source"
-#ENDIF
+extraPath = os.path.dirname(os.path.abspath(__file__))+"/../../"
 sys.path.append(extraPath)
 from Utils.ProgressCounter import ProgressCounter
 try:

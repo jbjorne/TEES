@@ -1,5 +1,5 @@
 import sys, os
-sys.path.append(os.path.dirname(os.path.abspath(__file__))+"/..")
+sys.path.append(os.path.dirname(os.path.abspath(__file__))+"/../..")
 import CommonUtils.cElementTreeUtils as ETUtils
 import Core.Split
 import shutil
@@ -33,6 +33,8 @@ def makeSubset(input, output=None, ratio=1.0, seed=0):
             removeCount += 1
         index += 1
     print >> sys.stderr, "Subset", "doc:", count, "removed:", removeCount, "sent:", sentCount, "sentremoved:", sentRemoveCount
+    xml.set("subsetRatio", str(ratio))
+    xml.set("subsetSeed", str(seed))
     if output != None:
         ETUtils.write(xml, output)
     return output
