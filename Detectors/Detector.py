@@ -58,6 +58,14 @@ class Detector():
         else:
             return False
     
+    def setWorkDir(self, workDir=""):
+        if workDir == None: # bypass assignment and keep currently defined workdir
+            return
+        elif workDir.strip() == "": # current system path
+            self.workDir = ""
+        elif not workDir.endswith("/"): # make sure workdir can be combined with other paths using '+'
+            self.workDir = workDir + "/"
+    
 #    def getSharedStep(self, childDetector, step, direction=1):
 #        childDetector.select.getSharedStep(step, self.select.steps, direction)
     
@@ -76,12 +84,24 @@ class Detector():
     def getModel(self):
         return self.openModel(model)
     
-    def saveStr(self, name, value, model=None):
+    def saveStr(self, name, value, model=None, modelMustExist=True):
         if type(model) in types.StringTypes:
             modelObj = self.openModel(model, "a")
         else:
+            if modelMustExist:
+                assert model != None
             modelObj = model
         modelObj.addStr(name, value)
+        modelObj.save()
+    
+    def saveStrings(self, dict, model=None, modelMustExist=True):
+        if type(model) in types.StringTypes:
+            modelObj = self.openModel(model, "a")
+        else:
+            if modelMustExist:
+                assert model != None
+            modelObj = model
+        modelObj.addStrings(dict)
         modelObj.save()
     
     def getStr(self, name, model):
@@ -94,9 +114,13 @@ class Detector():
         return value
     
     def addClassifierModel(self, model, classifierModelPath, classifierParameters):
+        if type(classifierParameters) in types.StringTypes:
+            classifierParameters = Parameters.splitParameters(classifierParameters)
         classifierModel = model.get(self.tag+"classifier-model.gz", True)
         shutil.copy2(classifierModelPath, classifierModel)
-        Parameters.saveParameters(classifierParameters, model.get(self.tag+"classifier-parameters", True))
+        model.addStr(self.tag+"classifier-parameter", Parameters.toString(classifierParameters))
+        #model.addStr(self.tag+"classifier-parameters", classifierParameters)
+        #Parameters.saveParameters(classifierParameters, model.get(self.tag+"classifier-parameters", True))
     
     def openModel(self, model, mode="r"):
         if type(model) in types.StringTypes:
@@ -106,7 +130,7 @@ class Detector():
     
     def buildExamples(self, model, datas, outputs, golds=[], exampleStyle=None, saveIdsToModel=False, parse=None):
         if exampleStyle == None:
-            exampleStyle = Parameters.splitParameters(model.get(self.tag+"example-style"))
+            exampleStyle = Parameters.splitParameters(model.getStr(self.tag+"example-style"))
         if parse == None:
             parse = self.getStr(self.tag+"parse", model)
         for data, output, gold in itertools.izip_longest(datas, outputs, golds, fillvalue=[]):
@@ -149,7 +173,8 @@ class Detector():
         else:
             assert model.mode in ["a", "w"]
         for param in saveParams:
-            Parameters.saveParameters(getattr(self, param[0]), model.get(param[1], True))
+            #Parameters.saveParameters(getattr(self, param[0]), model.get(param[1], True))
+            model.addStr(param[1], Parameters.toString(getattr(self, param[0])))
         model.save()
         return model
     

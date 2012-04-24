@@ -276,19 +276,7 @@ def loadPredictions(predictionsFile):
     f.close()
 
 @gen2iterable        
-def loadPredictionsBoost(predictionsFile, recallBoost):
-    ran = [999999999999999,-999999999999999]
-    for prediction in loadPredictions(predictionsFile):
-        if len(prediction) > 1:
-            for value in prediction[1:]:
-                if value > ran[1]:
-                    ran[1] = value
-                if value < ran[0]:
-                    ran[0] = value
-    rangeValue = ran[1] - ran[0]
-    rangeValue *= 1.001 # Make sure boost=1.0 exceeds max value
-    print "Range value:", rangeValue
-     
+def loadPredictionsAdjust(predictionsFile, recallAdjust=1.0):
     if predictionsFile.endswith(".gz"):
         f = gzip.open(predictionsFile,"rt")
     else:
@@ -297,26 +285,76 @@ def loadPredictionsBoost(predictionsFile, recallBoost):
     for line in f:
         splits = line.split()
         if len(splits) == 1:
+            assert recallAdjust == 1.0 # not implemented for binary classification
             yield [float(splits[0])]
         else: # multiclass
-            pred = [int(splits[0])]
+            if "," in splits[0]: # multilabel
+                pred = [[]]
+                for value in splits[0].split(","):
+                    pred[0].append(int(value))
+            else:
+                pred = [int(splits[0])]
             for split in splits[1:]:
-                pred.append(float(split))
-            #pred[1] = RecallAdjust.scaleVal(pred[1])
-            pred[1] -= rangeValue * recallBoost
-            if pred[0] == 1:
-                maxStrength = pred[1]
-                for i in range(len(pred)):
-                    if i == 0: 
-                        continue
-                    clsPred = pred[i]
-                    if clsPred > maxStrength:
-                        maxStrength = clsPred
-                        pred[0] = i
-                        #print "MDSFSDFSDFFDE"
+                if split != "N/A":
+                    split = float(split)
+                pred.append(split)
+            # Recall adjust
+            if recallAdjust != 1.0:
+                pred[1] = RecallAdjust.scaleVal(pred[1])
+                if pred[0] == 1:
+                    maxStrength = pred[1]
+                    for i in range(2, len(pred)):
+                        if pred[i] > maxStrength:
+                            maxStrength = pred[i]
+                            pred[0] = i
+            # Return the prediction
             yield pred
     #finally:
     f.close()
+
+
+#@gen2iterable        
+#def loadPredictionsBoost(predictionsFile, recallBoost):
+#    ran = [999999999999999,-999999999999999]
+#    for prediction in loadPredictions(predictionsFile):
+#        if len(prediction) > 1:
+#            for value in prediction[1:]:
+#                if value > ran[1]:
+#                    ran[1] = value
+#                if value < ran[0]:
+#                    ran[0] = value
+#    rangeValue = ran[1] - ran[0]
+#    rangeValue *= 1.001 # Make sure boost=1.0 exceeds max value
+#    print "Range value:", rangeValue
+#     
+#    if predictionsFile.endswith(".gz"):
+#        f = gzip.open(predictionsFile,"rt")
+#    else:
+#        f = open(predictionsFile,"rt")
+#    #try:
+#    for line in f:
+#        splits = line.split()
+#        if len(splits) == 1:
+#            yield [float(splits[0])]
+#        else: # multiclass
+#            pred = [int(splits[0])]
+#            for split in splits[1:]:
+#                pred.append(float(split))
+#            #pred[1] = RecallAdjust.scaleVal(pred[1])
+#            pred[1] -= rangeValue * recallBoost
+#            if pred[0] == 1:
+#                maxStrength = pred[1]
+#                for i in range(len(pred)):
+#                    if i == 0: 
+#                        continue
+#                    clsPred = pred[i]
+#                    if clsPred > maxStrength:
+#                        maxStrength = clsPred
+#                        pred[0] = i
+#                        #print "MDSFSDFSDFFDE"
+#            yield pred
+#    #finally:
+#    f.close()
 
 def getPositivesPerSentence(examples, predictions):
     if type(predictions) == types.StringType:

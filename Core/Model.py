@@ -27,22 +27,37 @@ class Model():
         shutil.copy2(path, os.path.join(self.workdir, name))
         self.members[name] = [os.path.join(self.path, name), os.path.join(self.workdir, name), None]
     
-    def importFrom(self, model, members):
+    def importFrom(self, model, members, strings=None):
         for member in members:
             self.insert(model.get(member), member)
+        if strings != None:
+            for string in strings:
+                self.addStr(string, model.getStr(string))
+    
+    def addStrings(self, dict):
+        for key in sorted(dict.keys()):
+            self.addStr(key, dict[key])
     
     def addStr(self, name, value):
-        assert "\n" not in name
-        assert "\n" not in value
-        f = open(self.get(name, True), "wt")
-        f.write(value)
-        f.close()
+        for c in ["\n", "\t", "\r"]:
+            assert c not in name, (c, name, value)
+            assert c not in value, (c, name, value)
+        values = self._getValues()
+        if name != None:
+            values[name] = value
+        elif name in values: # remove the parameter
+            del values[name]
+        self._setValues(values)
+        #f = open(self.get(name, True), "wt")
+        #f.write(value)
+        #f.close()
     
     def getStr(self, name):
-        f = open(self.get(name), "rt")
-        value = f.readline().strip()
-        f.close()
-        return value
+        #f = open(self.get(name), "rt")
+        #value = f.readline().strip()
+        #f.close()
+        #return value
+        return self._getValues()[name]
     
     def save(self):
         if self.mode == "r":
@@ -102,15 +117,17 @@ class Model():
     # Value file
     def _getValues(self):
         values = {}
-        f = open(self.get("settings.txt", True), "rt")
-        for line in f:
-            key, value = line.strip().lsplit("\t", 1)
-            values[key] = value
-        f.close()
+        settingsFileName = self.get("settings.tsv", True)
+        if os.path.exists(settingsFileName):            
+            f = open(settingsFileName, "rt")
+            for line in f:
+                key, value = line.strip().split("\t", 1)
+                values[key] = value
+            f.close()
         return values
     
     def _setValues(self, values):
-        f = open(self.get("settings.txt", True), "wt")
-        for key in sorted(values):
+        f = open(self.get("settings.tsv", True), "wt")
+        for key in sorted(values.keys()):
             f.write(key + "\t" + values[key] + "\n")
         f.close()

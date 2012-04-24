@@ -225,7 +225,7 @@ if selector.check("TRAIN"):
                         options.fullGrid, fullTaskId,
                         options.parse, options.tokenization,
                         fromStep=options.detectorStep,
-                        workdir="training")
+                        workDir="training")
 if selector.check("DEVEL"):
     print >> sys.stderr, "------------ Check devel classification ------------"
     eventDetector.classify(TEST_FILE, "model-devel", "classification/devel", fromStep=options.detectorStep)

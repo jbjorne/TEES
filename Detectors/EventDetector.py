@@ -28,13 +28,19 @@ class EventDetector(Detector):
         self.stWriteScores = False
         self.STATE_COMPONENT_TRAIN = "COMPONENT_TRAIN"
         self.tag = "event-"
-        
     
-    def setCSCConnection(self, options, cscworkdir):
-        self.triggerDetector.setCSCConnection(options, os.path.join(cscworkdir, "trigger"))
-        self.edgeDetector.setCSCConnection(options, os.path.join(cscworkdir, "edge"))
-        self.unmergingDetector.setCSCConnection(options, os.path.join(cscworkdir, "unmerging"))
-        self.modifierDetector.setCSCConnection(options, os.path.join(cscworkdir, "modifier"))
+    def setCSCConnection(self, options, cscworkDir):
+        self.triggerDetector.setCSCConnection(options, os.path.join(cscworkDir, "trigger"))
+        self.edgeDetector.setCSCConnection(options, os.path.join(cscworkDir, "edge"))
+        self.unmergingDetector.setCSCConnection(options, os.path.join(cscworkDir, "unmerging"))
+        self.modifierDetector.setCSCConnection(options, os.path.join(cscworkDir, "modifier"))
+    
+    def setWorkDir(self, workDir):
+        Detector.setWorkDir(self, workDir) # for EventDetector
+        # setup components
+        for detector in [self.triggerDetector, self.edgeDetector, self.unmergingDetector, self.modifierDetector]:
+            if detector != None:
+                detector.setWorkDir(workDir)
     
     def train(self, trainData=None, optData=None, 
               model=None, combinedModel=None,
@@ -45,7 +51,7 @@ class EventDetector(Detector):
               fullGrid=False, task=None,
               parse=None, tokenization=None,
               fromStep=None, toStep=None,
-              workdir=None):
+              workDir=None):
         # Initialize the training process ##############################
         self.initVariables(trainData=trainData, optData=optData, model=model, combinedModel=combinedModel,
                            triggerExampleStyle=triggerExampleStyle, edgeExampleStyle=edgeExampleStyle, 
@@ -55,11 +61,8 @@ class EventDetector(Detector):
                            unmergingClassifierParameters=unmergingClassifierParameters,
                            modifierClassifierParameters=modifierClassifierParameters, 
                            recallAdjustParameters=recallAdjustParameters, unmerging=unmerging, trainModifiers=trainModifiers, 
-                           fullGrid=fullGrid, task=task, parse=parse, tokenization=tokenization, workdir=workdir)
-        if workdir == None:
-            workdir = ""
-        elif not workdir.endswith("/"):
-            workdir += "/"
+                           fullGrid=fullGrid, task=task, parse=parse, tokenization=tokenization)
+        self.setWorkDir(workDir)
         # Begin the training process ####################################
         self.enterState(self.STATE_TRAIN, ["EXAMPLES", "BEGIN-MODEL", "END-MODEL", "BEGIN-COMBINED-MODEL", 
                                            "SELF-TRAIN-EXAMPLES-FOR-UNMERGING", "UNMERGING-EXAMPLES", "BEGIN-UNMERGING-MODEL", "END-UNMERGING-MODEL", 
@@ -71,80 +74,85 @@ class EventDetector(Detector):
         if self.checkStep("EXAMPLES"):
             self.model = self.initModel(self.model, 
                                          [("triggerExampleStyle", self.triggerDetector.tag+"example-style"), 
-                                          ("triggerClassifierParameters", self.triggerDetector.tag+"classifier-parameters"),
+                                          ("triggerClassifierParameters", self.triggerDetector.tag+"classifier-parameters-train"),
                                           ("edgeExampleStyle", self.edgeDetector.tag+"example-style"), 
-                                          ("edgeClassifierParameters", self.edgeDetector.tag+"classifier-parameters"),
+                                          ("edgeClassifierParameters", self.edgeDetector.tag+"classifier-parameters-train"),
                                           ("unmergingExampleStyle", self.unmergingDetector.tag+"example-style"), 
-                                          ("unmergingClassifierParameters", self.unmergingDetector.tag+"classifier-parameters"),
+                                          ("unmergingClassifierParameters", self.unmergingDetector.tag+"classifier-parameters-train"),
                                           ("modifierExampleStyle", self.modifierDetector.tag+"example-style"), 
-                                          ("modifierClassifierParameters", self.modifierDetector.tag+"classifier-parameters")])
+                                          ("modifierClassifierParameters", self.modifierDetector.tag+"classifier-parameters-train")])
+            self.combinedModel = self.initModel(self.combinedModel)
             tags = [self.triggerDetector.tag, self.edgeDetector.tag, self.unmergingDetector.tag]
             if trainModifiers: tags += [self.modifierDetector.tag]
+            stringDict = {}
             for tag in tags:
-                self.saveStr(tag+"parse", parse, self.model)
-                self.saveStr(tag+"task", task, self.model)
-            self.combinedModel = self.initModel(self.combinedModel)
-            if self.combinedModel != None:
-                for tag in [self.triggerDetector.tag, self.edgeDetector.tag, self.unmergingDetector.tag]:
-                    self.saveStr(tag+"parse", parse, self.combinedModel)
-                    self.saveStr(tag+"task", task, self.combinedModel)
-            self.triggerDetector.buildExamples(self.model, [optData, trainData], [workdir+self.triggerDetector.tag+"opt-examples.gz", workdir+self.triggerDetector.tag+"train-examples.gz"], saveIdsToModel=True)
-            self.edgeDetector.buildExamples(self.model, [optData, trainData], [workdir+self.edgeDetector.tag+"opt-examples.gz", workdir+self.edgeDetector.tag+"train-examples.gz"], saveIdsToModel=True)
+                stringDict[tag+"parse"] = parse
+                stringDict[tag+"task"] = task
+                #self.saveStr(tag+"parse", parse, self.model)
+                #self.saveStr(tag+"task", task, self.model)
+                #self.saveStr(tag+"parse", parse, self.combinedModel, False)
+                #self.saveStr(tag+"task", task, self.combinedModel, False)
+            self.saveStrings(stringDict, self.model)
+            self.saveStrings(stringDict, self.combinedModel, False)
+            self.triggerDetector.buildExamples(self.model, [optData, trainData], [self.workDir+self.triggerDetector.tag+"opt-examples.gz", self.workDir+self.triggerDetector.tag+"train-examples.gz"], saveIdsToModel=True)
+            self.edgeDetector.buildExamples(self.model, [optData, trainData], [self.workDir+self.edgeDetector.tag+"opt-examples.gz", self.workDir+self.edgeDetector.tag+"train-examples.gz"], saveIdsToModel=True)
             if trainModifiers:
-                self.modifierDetector.buildExamples(self.model, [optData, trainData], [workdir+self.modifierDetector.tag+"opt-examples.gz", workdir+self.modifierDetector.tag+"train-examples.gz"], saveIdsToModel=True)             
+                self.modifierDetector.buildExamples(self.model, [optData, trainData], [self.workDir+self.modifierDetector.tag+"opt-examples.gz", self.workDir+self.modifierDetector.tag+"train-examples.gz"], saveIdsToModel=True)             
         # (Re-)open models in case we start after the "EXAMPLES" step
         self.model = self.openModel(model, "a")
         self.combinedModel = self.openModel(combinedModel, "a")
         if self.checkStep("BEGIN-MODEL"):
-            self.triggerDetector.beginModel(None, self.model, [workdir+self.triggerDetector.tag+"train-examples.gz"], workdir+self.triggerDetector.tag+"opt-examples.gz", workdir=workdir)
-            self.edgeDetector.beginModel(None, self.model, [workdir+self.edgeDetector.tag+"train-examples.gz"], workdir+self.edgeDetector.tag+"opt-examples.gz", workdir=workdir)
+            self.triggerDetector.beginModel(None, self.model, [self.workDir+self.triggerDetector.tag+"train-examples.gz"], self.workDir+self.triggerDetector.tag+"opt-examples.gz")
+            self.edgeDetector.beginModel(None, self.model, [self.workDir+self.edgeDetector.tag+"train-examples.gz"], self.workDir+self.edgeDetector.tag+"opt-examples.gz")
             if trainModifiers:
-                self.modifierDetector.beginModel(None, self.model, [workdir+self.modifierDetector.tag+"train-examples.gz"], workdir+self.modifierDetector.tag+"opt-examples.gz", workdir=workdir)
+                self.modifierDetector.beginModel(None, self.model, [self.workDir+self.modifierDetector.tag+"train-examples.gz"], self.workDir+self.modifierDetector.tag+"opt-examples.gz")
         if self.checkStep("END-MODEL"):
-            self.triggerDetector.endModel(None, self.model, workdir+self.triggerDetector.tag+"opt-examples.gz")
-            self.edgeDetector.endModel(None, self.model, workdir+self.edgeDetector.tag+"opt-examples.gz")
+            self.triggerDetector.endModel(None, self.model, self.workDir+self.triggerDetector.tag+"opt-examples.gz")
+            self.edgeDetector.endModel(None, self.model, self.workDir+self.edgeDetector.tag+"opt-examples.gz")
             if trainModifiers:
-                self.modifierDetector.endModel(None, self.model, workdir+self.modifierDetector.tag+"opt-examples.gz")
+                self.modifierDetector.endModel(None, self.model, self.workDir+self.modifierDetector.tag+"opt-examples.gz")
         if self.checkStep("BEGIN-COMBINED-MODEL"):
             if not self.fullGrid:
                 print >> sys.stderr, "Training combined model before grid search"
-                self.triggerDetector.beginModel(None, self.combinedModel, [workdir+self.triggerDetector.tag+"train-examples.gz", workdir+self.triggerDetector.tag+"opt-examples.gz"], workdir+self.triggerDetector.tag+"opt-examples.gz", self.model, workdir=workdir)
-                self.edgeDetector.beginModel(None, self.combinedModel, [workdir+self.edgeDetector.tag+"train-examples.gz", workdir+self.edgeDetector.tag+"opt-examples.gz"], workdir+self.edgeDetector.tag+"opt-examples.gz", self.model, workdir=workdir)
+                self.triggerDetector.beginModel(None, self.combinedModel, [self.workDir+self.triggerDetector.tag+"train-examples.gz", self.workDir+self.triggerDetector.tag+"opt-examples.gz"], self.workDir+self.triggerDetector.tag+"opt-examples.gz", self.model)
+                self.edgeDetector.beginModel(None, self.combinedModel, [self.workDir+self.edgeDetector.tag+"train-examples.gz", self.workDir+self.edgeDetector.tag+"opt-examples.gz"], self.workDir+self.edgeDetector.tag+"opt-examples.gz", self.model)
             else:
                 print >> sys.stderr, "Combined model will be trained after grid search"
             if trainModifiers:
                 print >> sys.stderr, "Training combined model for modifier detection"
-                self.modifierDetector.beginModel(None, self.combinedModel, [workdir+self.modifierDetector.tag+"train-examples.gz", workdir+self.modifierDetector.tag+"opt-examples.gz"], workdir+self.modifierDetector.tag+"opt-examples.gz", self.model, workdir=workdir)
-        self.trainUnmergingDetector(workdir)
+                self.modifierDetector.beginModel(None, self.combinedModel, [self.workDir+self.modifierDetector.tag+"train-examples.gz", self.workDir+self.modifierDetector.tag+"opt-examples.gz"], self.workDir+self.modifierDetector.tag+"opt-examples.gz", self.model)
+        self.trainUnmergingDetector()
         if self.checkStep("GRID"):
-            self.doGrid(workdir)
+            self.doGrid()
         if self.checkStep("BEGIN-COMBINED-MODEL-FULLGRID"):
             if self.fullGrid:
                 print >> sys.stderr, "Training combined model after grid search"
-                self.triggerDetector.beginModel(None, self.combinedModel, [workdir+self.triggerDetector.tag+"train-examples.gz", workdir+self.triggerDetector.tag+"opt-examples.gz"], workdir+self.triggerDetector.tag+"opt-examples.gz", self.model, workdir=workdir)
-                self.edgeDetector.beginModel(None, self.combinedModel, [workdir+self.edgeDetector.tag+"train-examples.gz", workdir+self.edgeDetector.tag+"opt-examples.gz"], workdir+self.edgeDetector.tag+"opt-examples.gz", self.model, workdir=workdir)
+                self.triggerDetector.beginModel(None, self.combinedModel, [self.workDir+self.triggerDetector.tag+"train-examples.gz", self.workDir+self.triggerDetector.tag+"opt-examples.gz"], self.workDir+self.triggerDetector.tag+"opt-examples.gz", self.model)
+                self.edgeDetector.beginModel(None, self.combinedModel, [self.workDir+self.edgeDetector.tag+"train-examples.gz", self.workDir+self.edgeDetector.tag+"opt-examples.gz"], self.workDir+self.edgeDetector.tag+"opt-examples.gz", self.model)
                 if trainModifiers:
                     print >> sys.stderr, "Training combined model for modifier detection"
-                    self.modifierDetector.beginModel(None, self.combinedModel, [workdir+self.modifierDetector.tag+"train-examples.gz", workdir+self.modifierDetector.tag+"opt-examples.gz"], workdir+self.modifierDetector.tag+"opt-examples.gz", self.model, workdir=workdir)
+                    self.modifierDetector.beginModel(None, self.combinedModel, [self.workDir+self.modifierDetector.tag+"train-examples.gz", self.workDir+self.modifierDetector.tag+"opt-examples.gz"], self.workDir+self.modifierDetector.tag+"opt-examples.gz", self.model)
             else:
                 print >> sys.stderr, "Combined model has been trained before grid search"
         if self.checkStep("END-COMBINED-MODEL"):
-            self.triggerDetector.endModel(None, self.combinedModel, workdir+self.triggerDetector.tag+"opt-examples.gz")
-            self.edgeDetector.endModel(None, self.combinedModel, workdir+self.edgeDetector.tag+"opt-examples.gz")
+            self.triggerDetector.endModel(None, self.combinedModel, self.workDir+self.triggerDetector.tag+"opt-examples.gz")
+            self.edgeDetector.endModel(None, self.combinedModel, self.workDir+self.edgeDetector.tag+"opt-examples.gz")
             if trainModifiers:
-                self.modifierDetector.endModel(None, self.combinedModel, workdir+self.modifierDetector.tag+"opt-examples.gz")
+                self.modifierDetector.endModel(None, self.combinedModel, self.workDir+self.modifierDetector.tag+"opt-examples.gz")
         # End the training process ####################################
+        if workDir != None:
+            self.setWorkDir("")
         self.exitState()
         self.triggerDetector.exitState()
         self.edgeDetector.exitState()
         self.unmergingDetector.exitState()
         self.modifierDetector.exitState()
     
-    def doGrid(self, workdir=""):
+    def doGrid(self):
         BINARY_RECALL_MODE = False # TODO: make a parameter
         print >> sys.stderr, "--------- Booster parameter search ---------"
         # Build trigger examples
-        self.triggerDetector.buildExamples(self.model, [self.optData], [workdir+"grid-trigger-examples.gz"])
+        self.triggerDetector.buildExamples(self.model, [self.optData], [self.workDir+"grid-trigger-examples.gz"])
         
         count = 0
         bestResults = None
@@ -155,14 +163,14 @@ class EventDetector(Detector):
                 "booster":[float(i) for i in self.recallAdjustParameters.split(",")], 
                 "edge":[int(i) for i in Parameters.splitParameters(self.edgeClassifierParameters)["c"]] }
         else:
-            ALL_PARAMS={"trigger":Parameters.splitParameters(self.model.get(self.triggerDetector.tag+"classifier-parameters"))["c"],
+            ALL_PARAMS={"trigger":Parameters.splitParameters(self.model.getStr(self.triggerDetector.tag+"classifier-parameter"))["c"],
                         "booster":[float(i) for i in self.recallAdjustParameters.split(",")],
-                        "edge":Parameters.splitParameters(self.model.get(self.edgeDetector.tag+"classifier-parameters"))["c"]}
+                        "edge":Parameters.splitParameters(self.model.getStr(self.edgeDetector.tag+"classifier-parameter"))["c"]}
         paramCombinations = getParameterCombinations(ALL_PARAMS)
         #for boost in boosterParams:
         prevTriggerParam = None
-        EDGE_MODEL_STEM = os.path.join(self.edgeDetector.workDir, workdir+os.path.normpath(self.model.path)+"-edge-models/model-c_")
-        TRIGGER_MODEL_STEM = os.path.join(self.triggerDetector.workDir, workdir+os.path.normpath(self.model.path)+"-trigger-models/model-c_")
+        EDGE_MODEL_STEM = os.path.join(self.edgeDetector.workDir, os.path.normpath(self.model.path)+"-edge-models/model-c_")
+        TRIGGER_MODEL_STEM = os.path.join(self.triggerDetector.workDir, os.path.normpath(self.model.path)+"-trigger-models/model-c_")
         for params in paramCombinations:
             print >> sys.stderr, "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
             print >> sys.stderr, "Processing params", str(count+1) + "/" + str(len(paramCombinations)), params
@@ -171,30 +179,30 @@ class EventDetector(Detector):
             # Triggers
             if params["trigger"] != prevTriggerParam:
                 print >> sys.stderr, "Classifying trigger examples for parameter", params["trigger"]
-                self.triggerDetector.classifyToXML(self.optData, self.model, workdir+"grid-trigger-examples.gz", workdir+"grid-", classifierModel=TRIGGER_MODEL_STEM+str(params["trigger"])+".gz", split=False)
+                self.triggerDetector.classifyToXML(self.optData, self.model, self.workDir+"grid-trigger-examples.gz", self.workDir+"grid-", classifierModel=TRIGGER_MODEL_STEM+str(params["trigger"])+".gz", split=False)
             prevTriggerParam = params["trigger"]
             
             # Boost
-            xml = RecallAdjust.run(workdir+"grid-trigger-pred.xml.gz", params["booster"], None, binary=BINARY_RECALL_MODE)
+            xml = RecallAdjust.run(self.workDir+"grid-trigger-pred.xml.gz", params["booster"], None, binary=BINARY_RECALL_MODE)
             xml = InteractionXML.splitMergedElements(xml, None)
             xml = InteractionXML.recalculateIds(xml, None, True)
             
             # Build edge examples
-            self.edgeDetector.buildExamples(self.model, [xml], [workdir+"grid-edge-examples.gz"], [self.optData])
+            self.edgeDetector.buildExamples(self.model, [xml], [self.workDir+"grid-edge-examples.gz"], [self.optData])
             # Classify with pre-defined model
             edgeClassifierModel=EDGE_MODEL_STEM+str(params["edge"])+".gz"
-            xml = self.edgeDetector.classifyToXML(xml, self.model, workdir+"grid-edge-examples.gz", workdir+"grid-", classifierModel=edgeClassifierModel, split=True)
+            xml = self.edgeDetector.classifyToXML(xml, self.model, self.workDir+"grid-edge-examples.gz", self.workDir+"grid-", classifierModel=edgeClassifierModel, split=True)
             if xml != None:                
                 # TODO: Where should the EvaluateInteractionXML evaluator come from?
                 EIXMLResult = EvaluateInteractionXML.run(self.edgeDetector.evaluator, xml, self.optData, self.parse)
                 # Convert to ST-format
-                STFormat.ConvertXML.toSTFormat(xml, workdir+"grid-flat-geniaformat", "a2") #getA2FileTag(options.task, subTask))
-                stFormatDir = workdir+"grid-flat-geniaformat"
+                STFormat.ConvertXML.toSTFormat(xml, self.workDir+"grid-flat-geniaformat", "a2") #getA2FileTag(options.task, subTask))
+                stFormatDir = self.workDir+"grid-flat-geniaformat"
                 
                 if self.unmerging:
-                    xml = self.unmergingDetector.classifyToXML(xml, self.model, None, workdir+"grid-", split=False, goldData=self.optData.replace("-nodup", ""))
-                    STFormat.ConvertXML.toSTFormat(xml, workdir+"grid-unmerging-geniaformat", "a2")
-                    stFormatDir = workdir+"grid-unmerging-geniaformat"
+                    xml = self.unmergingDetector.classifyToXML(xml, self.model, None, self.workDir+"grid-", split=False, goldData=self.optData.replace("-nodup", ""))
+                    STFormat.ConvertXML.toSTFormat(xml, self.workDir+"grid-unmerging-geniaformat", "a2")
+                    stFormatDir = self.workDir+"grid-unmerging-geniaformat"
                 stEvaluation = Evaluators.BioNLP11GeniaTools.evaluate(stFormatDir, self.task)
                 if stEvaluation != None:
                     if bestResults == None or stEvaluation[0] > bestResults[1][0]:
@@ -202,71 +210,71 @@ class EventDetector(Detector):
                 else:
                     if bestResults == None or EIXMLResult.getData().fscore > bestResults[1].getData().fscore:
                         bestResults = (params, EIXMLResult)
-                shutil.rmtree(workdir+"grid-flat-geniaformat")
-                if os.path.exists(workdir+"grid-unmerging-geniaformat"):
-                    shutil.rmtree(workdir+"grid-unmerging-geniaformat")
+                shutil.rmtree(self.workDir+"grid-flat-geniaformat")
+                if os.path.exists(self.workDir+"grid-unmerging-geniaformat"):
+                    shutil.rmtree(self.workDir+"grid-unmerging-geniaformat")
             else:
                 print >> sys.stderr, "No predicted edges"
             count += 1
         print >> sys.stderr, "Booster search complete"
         print >> sys.stderr, "Tested", count, "out of", count, "combinations"
         print >> sys.stderr, "Best parameters:", bestResults[0]
+        print >> sys.stderr, "Best result:", bestResults[1][0] # f-score
         # Save grid model
         self.saveStr("recallAdjustParameter", str(bestResults[0]["booster"]), self.model)
-        if self.combinedModel != None:
-            self.saveStr("recallAdjustParameter", str(bestResults[0]["booster"]), self.combinedModel)
+        self.saveStr("recallAdjustParameter", str(bestResults[0]["booster"]), self.combinedModel, False)
         if self.fullGrid: # define best models
             self.triggerDetector.addClassifierModel(self.model, TRIGGER_MODEL_STEM+str(bestResults[0]["trigger"])+".gz", bestResults[0]["trigger"])
             self.edgeDetector.addClassifierModel(self.model, EDGE_MODEL_STEM+str(bestResults[0]["edge"])+".gz", bestResults[0]["edge"])
-        #if options.task in ["OLD", "GE"]:
-        print >> sys.stderr, "Best result:", bestResults[1]
         # Remove work files
-        for stepTag in [workdir+"grid-trigger", workdir+"grid-edge", workdir+"grid-unmerging"]:
+        for stepTag in [self.workDir+"grid-trigger", self.workDir+"grid-edge", self.workDir+"grid-unmerging"]:
             for fileStem in ["-classifications", "-classifications.log", "examples.gz", "pred.xml.gz"]:
                 if os.path.exists(stepTag+fileStem):
                     os.remove(stepTag+fileStem)
 
-    def trainUnmergingDetector(self, workdir=""):
+    def trainUnmergingDetector(self):
         xml = None
         if not self.unmerging:
             print >> sys.stderr, "No unmerging"
         if self.checkStep("SELF-TRAIN-EXAMPLES-FOR-UNMERGING", self.unmerging) and self.unmerging:
             # Self-classified train data for unmerging
             if self.doUnmergingSelfTraining:
-                xml = self.triggerDetector.classifyToXML(self.trainData, self.model, None, workdir+"unmerging-extra-", split=True)
-                xml = self.edgeDetector.classifyToXML(xml, self.model, None, workdir+"unmerging-extra-", split=True)
+                xml = self.triggerDetector.classifyToXML(self.trainData, self.model, None, self.workDir+"unmerging-extra-", split=True)
+                xml = self.edgeDetector.classifyToXML(xml, self.model, None, self.workDir+"unmerging-extra-", split=True)
                 assert xml != None
                 EvaluateInteractionXML.run(self.edgeDetector.evaluator, xml, self.trainData, self.parse)
+            else:
+                print >> sys.stderr, "No self-training for unmerging"
         if self.checkStep("UNMERGING-EXAMPLES", self.unmerging) and self.unmerging:
             # Unmerging example generation
             GOLD_TEST_FILE = self.optData.replace("-nodup", "")
             GOLD_TRAIN_FILE = self.trainData.replace("-nodup", "")
             if self.doUnmergingSelfTraining:
                 if xml == None: 
-                    xml = workdir+"unmerging-extra-edge-pred.xml"
+                    xml = self.workDir+"unmerging-extra-edge-pred.xml"
                 self.unmergingDetector.buildExamples(self.model, [self.optData, [self.trainData, xml]], 
-                                                     [workdir+"unmerging-opt-examples.gz", workdir+"unmerging-train-examples.gz"], 
+                                                     [self.workDir+"unmerging-opt-examples.gz", self.workDir+"unmerging-train-examples.gz"], 
                                                      [GOLD_TEST_FILE, [GOLD_TRAIN_FILE, GOLD_TRAIN_FILE]], 
                                                      exampleStyle=self.unmergingExampleStyle, saveIdsToModel=True)
                 xml = None
             else:
                 self.unmergingDetector.buildExamples(self.model, [self.optData, self.trainData], 
-                                                     [workdir+"unmerging-opt-examples.gz", workdir+"unmerging-train-examples.gz"], 
+                                                     [self.workDir+"unmerging-opt-examples.gz", self.workDir+"unmerging-train-examples.gz"], 
                                                      [GOLD_TEST_FILE, GOLD_TRAIN_FILE], 
                                                      exampleStyle=self.unmergingExampleStyle, saveIdsToModel=True)
                 xml = None
             #UnmergingExampleBuilder.run("/home/jari/biotext/EventExtension/TrainSelfClassify/test-predicted-edges.xml", GOLD_TRAIN_FILE, UNMERGING_TRAIN_EXAMPLE_FILE, PARSE, TOK, UNMERGING_FEATURE_PARAMS, UNMERGING_IDS, append=True)
         if self.checkStep("BEGIN-UNMERGING-MODEL", self.unmerging) and self.unmerging:
-            self.unmergingDetector.beginModel(None, self.model, workdir+"unmerging-train-examples.gz", workdir+"unmerging-opt-examples.gz", workdir=workdir)
+            self.unmergingDetector.beginModel(None, self.model, self.workDir+"unmerging-train-examples.gz", self.workDir+"unmerging-opt-examples.gz")
         if self.checkStep("END-UNMERGING-MODEL", self.unmerging) and self.unmerging:
-            self.unmergingDetector.endModel(None, self.model, workdir+"unmerging-opt-examples.gz")
+            self.unmergingDetector.endModel(None, self.model, self.workDir+"unmerging-opt-examples.gz")
             print >> sys.stderr, "Adding unmerging classifier model to test-set event model"
             if self.combinedModel != None:
-                self.combinedModel.insert(self.model.get("unmerging-example-style"), "unmerging-example-style")
+                self.combinedModel.addStr("unmerging-example-style", self.model.getStr("unmerging-example-style"))
                 self.combinedModel.insert(self.model.get("unmerging-ids.classes"), "unmerging-ids.classes")
                 self.combinedModel.insert(self.model.get("unmerging-ids.features"), "unmerging-ids.features")
                 self.unmergingDetector.addClassifierModel(self.combinedModel, self.model.get("unmerging-classifier-model.gz"), 
-                                                          Parameters.splitParameters(self.model.get("unmerging-classifier-parameters")))
+                                                          self.model.getStr("unmerging-classifier-parameter"))
                 self.combinedModel.save()
 
     def classify(self, data, model, output, parse=None, task=None, fromStep=None, toStep=None, saveChangedModelPath=None):

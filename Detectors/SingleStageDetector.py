@@ -23,14 +23,8 @@ class SingleStageDetector(Detector):
     def __init__(self):
         Detector.__init__(self)
         self.deleteCombinedExamples = True
-        self.modelWorkdir = None
         
-    def beginModel(self, step, model, trainExampleFiles, testExampleFile, importIdsFromModel=None, workdir=None):
-        if workdir == None:
-            workdir = ""
-        elif not workdir.endswith("/"):
-            workdir += "/"
-        self.modelWorkdir = workdir
+    def beginModel(self, step, model, trainExampleFiles, testExampleFile, importIdsFromModel=None):
         if self.checkStep(step, False):
             if model != None:
                 if self.state != None and step != None:
@@ -38,26 +32,35 @@ class SingleStageDetector(Detector):
                 # Create combined model
                 model = self.openModel(model, "w")
                 assert model.mode in ["a", "w"], (model.path, model.mode)
+                # Information can be imported from an existing model. In this case, model is trained
+                # with the parameter already defined in the import source. This is used when training
+                # the combined model.
                 if importIdsFromModel != None:
-                    importModel = self.openModel(importIdsFromModel, "r")
-                    model.importFrom(self.openModel(importModel, "r"), [self.tag+"ids.classes", self.tag+"ids.features", self.tag+"classifier-parameters", self.tag+"example-style", self.tag+"parse"])
+                    #importModel = self.openModel(importIdsFromModel, "r")
+                    #model.importFrom(self.openModel(importModel, "r"), [self.tag+"ids.classes", self.tag+"ids.features", self.tag+"classifier-parameters", self.tag+"example-style", self.tag+"parse"])
+                    model.importFrom(self.openModel(importIdsFromModel, "r"), [self.tag+"ids.classes", self.tag+"ids.features"],
+                                     [self.tag+"classifier-parameter", self.tag+"example-style", self.tag+"parse"])
+                    # Train the model with the parameters defined in the import source
+                    model.addStr(self.tag+"classifier-parameters-train", model.getStr(self.tag+"classifier-parameter"))
                 # Catenate example files
                 if type(trainExampleFiles) in types.StringTypes:
                     combinedTrainExamples = trainExampleFiles
                 elif len(trainExampleFiles) == 1: 
                     combinedTrainExamples = trainExampleFiles[0]
                 else:
-                    combinedTrainExamples = self.modelWorkdir + os.path.normpath(model.path)+"-"+self.tag+"combined-examples.gz"
+                    combinedTrainExamples = self.workDir + os.path.normpath(model.path)+"-"+self.tag+"combined-examples.gz"
                     combinedTrainExamplesFile = gzip.open(combinedTrainExamples, 'wb')
                     for trainExampleFile in trainExampleFiles:
                         print >> sys.stderr, "Catenating", trainExampleFile, "to", combinedTrainExamples
                         shutil.copyfileobj(gzip.open(trainExampleFile, 'rb'), combinedTrainExamplesFile)
                     combinedTrainExamplesFile.close()
                 # Upload training model
-                # TODO: Storing the parameter grid in the model is a bit odd
-                classifierParameters = Parameters.splitParameters(model.get(self.tag+"classifier-parameters"))
+                # The parameter grid is stored in the model as "*classifier-parameters-train" so that endModel can 
+                # use it, and also as annotation for the trained model. The final selected parameter will
+                # be stored as "*classifier-parameter" 
+                classifierParameters = Parameters.splitParameters(model.getStr(self.tag+"classifier-parameters-train"))
                 origCSCWorkDir = self.cscConnection.workSubDir
-                classifierWorkDir = self.modelWorkdir + os.path.normpath(model.path) + "-" + self.tag + "models"
+                classifierWorkDir = self.workDir + os.path.normpath(model.path) + "-" + self.tag + "models"
                 self.cscConnection.setWorkSubDir(os.path.join(origCSCWorkDir,classifierWorkDir), deleteWorkDir=True)
                 optimize(self.classifier, self.evaluator, combinedTrainExamples, testExampleFile,\
                          model.get(self.tag+"ids.classes"), classifierParameters, classifierWorkDir, None, self.cscConnection, False, "SUBMIT")
@@ -72,9 +75,9 @@ class SingleStageDetector(Detector):
                 # Download combined model
                 model = self.openModel(model, "a")
                 assert model.mode in ["a", "w"]
-                classifierParameters = Parameters.splitParameters(model.get(self.tag+"classifier-parameters"))
+                classifierParameters = Parameters.splitParameters(model.getStr(self.tag+"classifier-parameters-train"))
                 origCSCWorkDir = self.cscConnection.workSubDir
-                classifierWorkDir = self.modelWorkdir + os.path.normpath(model.path) + "-" + self.tag+ "models"
+                classifierWorkDir = self.workDir + os.path.normpath(model.path) + "-" + self.tag+ "models"
                 self.cscConnection.setWorkSubDir(os.path.join(origCSCWorkDir,classifierWorkDir))
                 bestResult = optimize(self.classifier, self.evaluator, None, testExampleFile,\
                                       model.get(self.tag+"ids.classes"), classifierParameters, classifierWorkDir, None, self.cscConnection, False, "RESULTS")
@@ -87,7 +90,6 @@ class SingleStageDetector(Detector):
                     if os.path.exists(combinedTrainExamples):
                         print >> sys.stderr, "Deleting catenated training example file", combinedTrainExamples
                         os.remove(combinedTrainExamples)
-            self.modelWorkdir = None
     
     def train(self, trainData=None, optData=None, model=None, combinedModel=None, exampleStyle=None, 
               classifierParameters=None, parse=None, tokenization=None, task=None, fromStep=None, toStep=None):
