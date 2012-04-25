@@ -6,6 +6,7 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__))+"/..")
 sys.path.append(os.path.dirname(os.path.abspath(__file__))+"/../CommonUtils")
 import cElementTreeUtils as ETUtils
 from Core.Model import Model
+import Core.ExampleUtils as ExampleUtils
 import STFormat.ConvertXML
 import STFormat.Compare
 from Murska.CSCConnection import CSCConnection
@@ -76,12 +77,14 @@ class SingleStageDetector(Detector):
                 model = self.openModel(model, "a")
                 assert model.mode in ["a", "w"]
                 classifierParameters = Parameters.splitParameters(model.getStr(self.tag+"classifier-parameters-train"))
-                origCSCWorkDir = self.cscConnection.workSubDir
                 classifierWorkDir = self.workDir + os.path.normpath(model.path) + "-" + self.tag+ "models"
-                self.cscConnection.setWorkSubDir(os.path.join(origCSCWorkDir,classifierWorkDir))
+                if self.cscConnection != None:
+                    origCSCWorkDir = self.cscConnection.workSubDir
+                    self.cscConnection.setWorkSubDir(os.path.join(origCSCWorkDir, classifierWorkDir))
                 bestResult = optimize(self.classifier, self.evaluator, None, testExampleFile,\
                                       model.get(self.tag+"ids.classes"), classifierParameters, classifierWorkDir, None, self.cscConnection, False, "RESULTS")
-                self.cscConnection.setWorkSubDir(origCSCWorkDir)
+                if self.cscConnection != None:
+                    self.cscConnection.setWorkSubDir(origCSCWorkDir)
                 self.addClassifierModel(model, bestResult[1], bestResult[4])
                 model.save()
                 # Check for catenated example file
@@ -126,7 +129,7 @@ class SingleStageDetector(Detector):
             self.stEvaluator.evaluate(output+".tar.gz", task)
         self.exitState()
         
-    def classifyToXML(self, data, model, exampleFileName=None, tag="", classifierModel=None, split=False, goldData=None, parse=None):
+    def classifyToXML(self, data, model, exampleFileName=None, tag="", classifierModel=None, split=False, goldData=None, parse=None, recallAdjust=None):
         model = self.openModel(model, "r")
         if parse == None:
             parse = self.getStr(self.tag+"parse", model)
@@ -138,15 +141,19 @@ class SingleStageDetector(Detector):
         else:
             assert os.path.exists(classifierModel), classifierModel
         self.classifier.test(exampleFileName, classifierModel, tag+self.tag+"classifications")
-        evaluator = self.evaluator.evaluate(exampleFileName, tag+self.tag+"classifications", model.get(self.tag+"ids.classes"))
+        if recallAdjust == None:
+            predictions = tag+self.tag+"classifications"
+        else:
+            predictions = ExampleUtils.loadPredictionsAdjust(tag+self.tag+"classifications", recallAdjust)
+        evaluator = self.evaluator.evaluate(exampleFileName, predictions, model.get(self.tag+"ids.classes"))
         outputFileName = tag+self.tag+"pred.xml.gz"
         if evaluator.getData().getTP() + evaluator.getData().getFP() > 0:
             if split:
-                xml = BioTextExampleWriter.write(exampleFileName, tag+self.tag+"classifications", data, None, model.get(self.tag+"ids.classes"), parse)
+                xml = BioTextExampleWriter.write(exampleFileName, predictions, data, None, model.get(self.tag+"ids.classes"), parse)
                 xml = InteractionXML.splitMergedElements(xml, None)
                 xml = InteractionXML.recalculateIds(xml, outputFileName, True)
             else:
-                xml = BioTextExampleWriter.write(exampleFileName, tag+self.tag+"classifications", data, outputFileName, model.get(self.tag+"ids.classes"), parse)
+                xml = BioTextExampleWriter.write(exampleFileName, predictions, data, outputFileName, model.get(self.tag+"ids.classes"), parse)
             return xml
         else:
             # TODO: e.g. interactions must be removed if task does unmerging

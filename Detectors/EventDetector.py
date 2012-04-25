@@ -168,7 +168,8 @@ class EventDetector(Detector):
                         "edge":Parameters.splitParameters(self.model.getStr(self.edgeDetector.tag+"classifier-parameter"))["c"]}
         paramCombinations = getParameterCombinations(ALL_PARAMS)
         #for boost in boosterParams:
-        prevTriggerParam = None
+        #prevTriggerParam = None
+        prevParams = None
         EDGE_MODEL_STEM = os.path.join(self.edgeDetector.workDir, os.path.normpath(self.model.path)+"-edge-models/model-c_")
         TRIGGER_MODEL_STEM = os.path.join(self.triggerDetector.workDir, os.path.normpath(self.model.path)+"-trigger-models/model-c_")
         for params in paramCombinations:
@@ -176,16 +177,21 @@ class EventDetector(Detector):
             print >> sys.stderr, "Processing params", str(count+1) + "/" + str(len(paramCombinations)), params
             print >> sys.stderr, "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
             
-            # Triggers
-            if params["trigger"] != prevTriggerParam:
-                print >> sys.stderr, "Classifying trigger examples for parameter", params["trigger"]
-                self.triggerDetector.classifyToXML(self.optData, self.model, self.workDir+"grid-trigger-examples.gz", self.workDir+"grid-", classifierModel=TRIGGER_MODEL_STEM+str(params["trigger"])+".gz", split=False)
-            prevTriggerParam = params["trigger"]
-            
-            # Boost
-            xml = RecallAdjust.run(self.workDir+"grid-trigger-pred.xml.gz", params["booster"], None, binary=BINARY_RECALL_MODE)
-            xml = InteractionXML.splitMergedElements(xml, None)
-            xml = InteractionXML.recalculateIds(xml, None, True)
+#            # Triggers
+#            if params["trigger"] != prevTriggerParam:
+#                print >> sys.stderr, "Classifying trigger examples for parameter", params["trigger"]
+#                self.triggerDetector.classifyToXML(self.optData, self.model, self.workDir+"grid-trigger-examples.gz", self.workDir+"grid-", classifierModel=TRIGGER_MODEL_STEM+str(params["trigger"])+".gz", split=False)
+#            prevTriggerParam = params["trigger"]
+#            
+#            # Boost
+#            xml = RecallAdjust.run(self.workDir+"grid-trigger-pred.xml.gz", params["booster"], None, binary=BINARY_RECALL_MODE)
+#            xml = InteractionXML.splitMergedElements(xml, None)
+#            xml = InteractionXML.recalculateIds(xml, None, True)
+            # Triggers and Boost
+            if prevParams == None or prevParams["trigger"] != params["trigger"] or prevParams["booster"] != params["booster"]:
+                print >> sys.stderr, "Classifying trigger examples for parameters", "trigger:" + str(params["trigger"]), "booster:" + str(params["booster"])
+                xml = self.triggerDetector.classifyToXML(self.optData, self.model, self.workDir+"grid-trigger-examples.gz", self.workDir+"grid-", classifierModel=TRIGGER_MODEL_STEM+str(params["trigger"])+".gz", split=False, recallAdjust=params["booster"])
+            prevParams = params
             
             # Build edge examples
             self.edgeDetector.buildExamples(self.model, [xml], [self.workDir+"grid-edge-examples.gz"], [self.optData])
@@ -281,15 +287,16 @@ class EventDetector(Detector):
         BINARY_RECALL_MODE = False # TODO: make a parameter
         xml = None
         self.initVariables(classifyData=data, model=model, xml=None, task=task, parse=parse)
-        self.enterState(self.STATE_CLASSIFY, ["TRIGGERS", "RECALL-ADJUST", "EDGES", "UNMERGING", "MODIFIERS", "ST-CONVERT"], fromStep, toStep)
+        self.enterState(self.STATE_CLASSIFY, ["TRIGGERS", "EDGES", "UNMERGING", "MODIFIERS", "ST-CONVERT"], fromStep, toStep)
+        #self.enterState(self.STATE_CLASSIFY, ["TRIGGERS", "RECALL-ADJUST", "EDGES", "UNMERGING", "MODIFIERS", "ST-CONVERT"], fromStep, toStep)
         self.model = self.openModel(self.model, "r")
         if self.checkStep("TRIGGERS"):
-            xml = self.triggerDetector.classifyToXML(self.classifyData, self.model, None, output + "-", split=False, parse=self.parse)
-        if self.checkStep("RECALL-ADJUST"):
-            xml = self.getWorkFile(xml, output + "-trigger-pred.xml.gz")
-            xml = RecallAdjust.run(xml, float(self.getStr("recallAdjustParameter", self.model)), None, binary=BINARY_RECALL_MODE)
-            xml = InteractionXML.splitMergedElements(xml, None)
-            xml = InteractionXML.recalculateIds(xml, output+"-recall-adjusted.xml.gz", True)
+            xml = self.triggerDetector.classifyToXML(self.classifyData, self.model, None, output + "-", split=False, parse=self.parse, recallAdjust=float(self.getStr("recallAdjustParameter", self.model)))
+#        if self.checkStep("RECALL-ADJUST"):
+#            xml = self.getWorkFile(xml, output + "-trigger-pred.xml.gz")
+#            xml = RecallAdjust.run(xml, float(self.getStr("recallAdjustParameter", self.model)), None, binary=BINARY_RECALL_MODE)
+#            xml = InteractionXML.splitMergedElements(xml, None)
+#            xml = InteractionXML.recalculateIds(xml, output+"-recall-adjusted.xml.gz", True)
         if self.checkStep("EDGES"):
             xml = self.getWorkFile(xml, output + "-recall-adjusted.xml.gz")
             xml = self.edgeDetector.classifyToXML(xml, self.model, None, output + "-", split=True, parse=self.parse)
