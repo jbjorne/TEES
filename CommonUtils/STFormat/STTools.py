@@ -747,8 +747,10 @@ def package(sourceDir, outputFile, includeTags=["a2", "a2.scores"]):
     #    packageFile.add("/home/jari/data/BioNLP11SharedTask/resources/questionnaire.txt", "questionnaire.txt")
     os.chdir(tempCwd)
     packageFile.close()
-        
+
 if __name__=="__main__":
+    import sys
+    from optparse import OptionParser
     # Import Psyco if available
     try:
         import psyco
@@ -756,16 +758,33 @@ if __name__=="__main__":
         print >> sys.stderr, "Found Psyco, using"
     except ImportError:
         print >> sys.stderr, "Psyco not installed"
+        
+    optparser = OptionParser(usage="%prog [options]\nST format input and output.")
+    optparser.add_option("-i", "--input", default=None, dest="input", help="Corpus in interaction xml format", metavar="FILE")
+    optparser.add_option("-o", "--output", default=None, dest="output", help="Output file in interaction xml format.")
+    optparser.add_option("-t", "--outputTag", default="a2", dest="outputTag", help="a2 file extension.")
+    optparser.add_option("-s", "--sentences", default=False, action="store_true", dest="sentences", help="Write each sentence to its own document")
+    optparser.add_option("-r", "--origIds", default=False, action="store_true", dest="origIds", help="Use stored original ids (can cause problems with duplicates).")
+    optparser.add_option("-a", "--task", default=2, type="int", dest="task", help="1 or 2")
+    optparser.add_option("-d", "--debug", default=False, action="store_true", dest="debug", help="Verbose output.")
+    (options, args) = optparser.parse_args()
     
-    #proteins, triggers, events = load(1335418, "/home/jari/biotext/tools/TurkuEventExtractionSystem-1.0/data/evaluation-data/evaluation-tools-devel-gold")
-    #write(1335418, "/home/jari/data/temp", proteins, triggers, events )
-    
-    p = "/home/jari/data/BioNLP09SharedTask/bionlp09_shared_task_development_data_rev1"
-    documents = loadSet(p)
-    writeSet(documents, "/home/jari/data/temp/testSTTools")
-    
-
-
-
-
-
+    assert options.input != options.output
+    documents = loadSet(options.input, "GE", level="a2", sitesAreArguments=False, a2Tag="a2", readScores=False)
+    writeSet(documents, options.output, resultFileTag=options.outputTag, debug=options.debug, task=options.task, validate=True, writeScores=False)
+        
+#if __name__=="__main__":
+#    # Import Psyco if available
+#    try:
+#        import psyco
+#        psyco.full()
+#        print >> sys.stderr, "Found Psyco, using"
+#    except ImportError:
+#        print >> sys.stderr, "Psyco not installed"
+#    
+#    #proteins, triggers, events = load(1335418, "/home/jari/biotext/tools/TurkuEventExtractionSystem-1.0/data/evaluation-data/evaluation-tools-devel-gold")
+#    #write(1335418, "/home/jari/data/temp", proteins, triggers, events )
+#    
+#    p = "/home/jari/data/BioNLP09SharedTask/bionlp09_shared_task_development_data_rev1"
+#    documents = loadSet(p)
+#    writeSet(documents, "/home/jari/data/temp/testSTTools")
