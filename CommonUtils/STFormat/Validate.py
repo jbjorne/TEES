@@ -164,6 +164,15 @@ def validate(events, simulation=False, verbose=False, docId=None): #, taskIsID=N
                     else:
                         toRemove.add(event)
                         if verbose: print "VAL:", docId + "." + str(event.id), event.type, "with no themes"
+                # Filter sites from GE events that can't have them (moved from STTools.writeEvents
+                if event.type not in ["Binding", "Phosphorylation"]: # also ["Positive_regulation", "Negative_regulation", "Regulation"]
+                    for arg in event.arguments:
+                        if arg[2] != None:
+                            if verbose: print "VAL:", docId + "." + str(event.id), event.type, "with", arg[0], "arg of type", arg[1].type, "with a site."
+                            removeCounts["site-removed-from-" + event.type] += 1
+                            arg[2] = None
+                            if len(arg) > 4:
+                                arg[4] = None
             # check non-binding events
             if event.type != "Binding":
                 themeCount = 0
