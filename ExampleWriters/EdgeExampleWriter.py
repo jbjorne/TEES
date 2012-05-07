@@ -34,10 +34,14 @@ class EdgeExampleWriter(SentenceExampleWriter):
                 causeAfterTheme = True
             prediction = predictionsByExample[example[0]]
             pairElement = ET.Element("interaction")
-            pairElement.attrib["directed"] = "Unknown"
-            pairElement.attrib["e1"] = example[3]["e1"] #.attrib["id"]
-            pairElement.attrib["e2"] = example[3]["e2"] #.attrib["id"]
-            pairElement.attrib["id"] = sentenceId + ".i" + str(pairCount)
+            pairElement.set("directed", "Unknown")
+            pairElement.set("e1", example[3]["e1"]) #.attrib["id"]
+            if "e1GoldIds" in example[3]:
+                pairElement.set("e1GoldIds", example[3]["e1GoldIds"])
+            pairElement.set("e2", example[3]["e2"]) #.attrib["id"]
+            if "e2GoldIds" in example[3]:
+                pairElement.set("e2GoldIds", example[3]["e2GoldIds"])
+            pairElement.set("id", sentenceId + ".i" + str(pairCount))
             self.setElementType(pairElement, prediction, classSet, classIds)
             sentenceElement.append(pairElement)
             pairCount += 1
