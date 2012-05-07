@@ -73,8 +73,8 @@ def compareInteractionPrecedence(e1, e2):
 
 class UnmergingExampleBuilder(ExampleBuilder):
     """
-    This example builder makes edge examples, i.e. examples describing
-    the event arguments.
+    This example builder makes unmerging examples, i.e. examples describing
+    potential events.
     """
     def __init__(self, style=["typed","directed","headsOnly"], length=None, types=[], featureSet=None, classSet=None):
         if featureSet == None:
@@ -156,117 +156,117 @@ class UnmergingExampleBuilder(ExampleBuilder):
             interactionLengths[interaction] = (interaction, pathLength, linLength, t2Pos)
         return interactionLengths
 
-    def buildExamplesForSentences(self, sentences, goldSentences, output, idFileTag=None, append=False):            
-        examples = []
-        counter = ProgressCounter(len(sentences), "Build examples")
+#    def buildExamplesForSentences(self, sentences, goldSentences, output, idFileTag=None, append=False):            
+#        examples = []
+#        counter = ProgressCounter(len(sentences), "Build examples")
+#        
+#        # Open output file
+#        openStyle = "wt"
+#        if append:
+#            print "Appending examples"
+#            openStyle = "at"
+#        if output.endswith(".gz"):
+#            outfile = gzip.open(output, openStyle)
+#        else:
+#            outfile = open(output, openStyle)
+#            
+#        exampleCount = 0
+#        for i in range(len(sentences)):
+#            sentence = sentences[i]
+#            goldSentence = [None]
+#            if goldSentences != None:
+#                goldSentence = goldSentences[i]
+#            counter.update(1, "Building examples ("+sentence[0].getSentenceId()+"): ")
+#            examples = self.buildExamples(sentence[0], goldSentence[0], append=append)
+#            exampleCount += len(examples)
+#            examples = self.preProcessExamples(examples)
+#            ExampleUtils.appendExamples(examples, outfile)
+#        outfile.close()
+#    
+#        print >> sys.stderr, "Examples built:", exampleCount
+#        print >> sys.stderr, "Features:", len(self.featureSet.getNames())
+#        #IF LOCAL
+#        if self.exampleStats.getExampleCount() > 0:
+#            self.exampleStats.printStats()
+#        #ENDIF
+#        # Save Ids
+#        if idFileTag != None: 
+#            print >> sys.stderr, "Saving class names to", idFileTag + ".class_names"
+#            self.classSet.write(idFileTag + ".class_names")
+#            print >> sys.stderr, "Saving feature names to", idFileTag + ".feature_names.gz"
+#            self.featureSet.write(idFileTag + ".feature_names.gz")
+    
+#    def filterEdgesByType(self, edges, typesToInclude):
+#        if len(typesToInclude) == 0:
+#            return edges
+#        edgesToKeep = []
+#        for edge in edges:
+#            if edge.get("type") in typesToInclude:
+#                edgesToKeep.append(edge)
+#        return edgesToKeep
+    
+#    def getCategoryNameFromTokens(self, sentenceGraph, t1, t2, directed=True):
+#        """
+#        Example class. Multiple overlapping edges create a merged type.
+#        """
+#        types = set()
+#        if sentenceGraph.interactionGraph.has_edge(t1, t2):
+#            intEdges = sentenceGraph.interactionGraph.get_edge_data(t1, t2, default={})
+#            # NOTE: Only works if keys are ordered integers
+#            for i in range(len(intEdges)):
+#                types.add(intEdges[i]["element"].get("type"))
+#        if (not directed) and sentenceGraph.interactionGraph.has_edge(t2, t1):
+#            intEdges = sentenceGraph.interactionGraph.get_edge(t2, t1, default={})
+#            # NOTE: Only works if keys are ordered integers
+#            for i in range(len(intEdges)):
+#                types.add(intEdges[i]["element"].get("type"))
+#        types = list(types)
+#        types.sort()
+#        categoryName = ""
+#        for name in types:
+#            if categoryName != "":
+#                categoryName += "---"
+#            categoryName += name
+#        if categoryName != "":
+#            return categoryName
+#        else:
+#            return "neg"
         
-        # Open output file
-        openStyle = "wt"
-        if append:
-            print "Appending examples"
-            openStyle = "at"
-        if output.endswith(".gz"):
-            outfile = gzip.open(output, openStyle)
-        else:
-            outfile = open(output, openStyle)
-            
-        exampleCount = 0
-        for i in range(len(sentences)):
-            sentence = sentences[i]
-            goldSentence = [None]
-            if goldSentences != None:
-                goldSentence = goldSentences[i]
-            counter.update(1, "Building examples ("+sentence[0].getSentenceId()+"): ")
-            examples = self.buildExamples(sentence[0], goldSentence[0], append=append)
-            exampleCount += len(examples)
-            examples = self.preProcessExamples(examples)
-            ExampleUtils.appendExamples(examples, outfile)
-        outfile.close()
+#    def getCategoryName(self, sentenceGraph, e1, e2, directed=True):
+#        """
+#        Example class. Multiple overlapping edges create a merged type.
+#        """
+#        interactions = sentenceGraph.getInteractions(e1, e2)
+#        if not directed:
+#            interactions.extend(sentenceGraph.getInteractions(e2, e1))
+#        
+#        types = set()
+#        for interaction in interactions:
+#            types.add(interaction.attrib["type"])
+#        types = list(types)
+#        types.sort()
+#        categoryName = ""
+#        for name in types:
+#            if categoryName != "":
+#                categoryName += "---"
+#            categoryName += name
+#        if categoryName != "":
+#            return categoryName
+#        else:
+#            return "neg"            
     
-        print >> sys.stderr, "Examples built:", exampleCount
-        print >> sys.stderr, "Features:", len(self.featureSet.getNames())
-        #IF LOCAL
-        if self.exampleStats.getExampleCount() > 0:
-            self.exampleStats.printStats()
-        #ENDIF
-        # Save Ids
-        if idFileTag != None: 
-            print >> sys.stderr, "Saving class names to", idFileTag + ".class_names"
-            self.classSet.write(idFileTag + ".class_names")
-            print >> sys.stderr, "Saving feature names to", idFileTag + ".feature_names.gz"
-            self.featureSet.write(idFileTag + ".feature_names.gz")
-    
-    def filterEdgesByType(self, edges, typesToInclude):
-        if len(typesToInclude) == 0:
-            return edges
-        edgesToKeep = []
-        for edge in edges:
-            if edge.get("type") in typesToInclude:
-                edgesToKeep.append(edge)
-        return edgesToKeep
-    
-    def getCategoryNameFromTokens(self, sentenceGraph, t1, t2, directed=True):
-        """
-        Example class. Multiple overlapping edges create a merged type.
-        """
-        types = set()
-        if sentenceGraph.interactionGraph.has_edge(t1, t2):
-            intEdges = sentenceGraph.interactionGraph.get_edge_data(t1, t2, default={})
-            # NOTE: Only works if keys are ordered integers
-            for i in range(len(intEdges)):
-                types.add(intEdges[i]["element"].get("type"))
-        if (not directed) and sentenceGraph.interactionGraph.has_edge(t2, t1):
-            intEdges = sentenceGraph.interactionGraph.get_edge(t2, t1, default={})
-            # NOTE: Only works if keys are ordered integers
-            for i in range(len(intEdges)):
-                types.add(intEdges[i]["element"].get("type"))
-        types = list(types)
-        types.sort()
-        categoryName = ""
-        for name in types:
-            if categoryName != "":
-                categoryName += "---"
-            categoryName += name
-        if categoryName != "":
-            return categoryName
-        else:
-            return "neg"
-        
-    def getCategoryName(self, sentenceGraph, e1, e2, directed=True):
-        """
-        Example class. Multiple overlapping edges create a merged type.
-        """
-        interactions = sentenceGraph.getInteractions(e1, e2)
-        if not directed:
-            interactions.extend(sentenceGraph.getInteractions(e2, e1))
-        
-        types = set()
-        for interaction in interactions:
-            types.add(interaction.attrib["type"])
-        types = list(types)
-        types.sort()
-        categoryName = ""
-        for name in types:
-            if categoryName != "":
-                categoryName += "---"
-            categoryName += name
-        if categoryName != "":
-            return categoryName
-        else:
-            return "neg"            
-    
-    def isPotentialGeniaInteraction(self, e1, e2):
-        """
-        Genia named entities can never act as event triggers, so
-        edges can't leave from them. We can reduce the number of 
-        examples generated by removing these always negative cases.
-        """
-        if e1.get("isName") == "True" and e2.get("isName") == "True":
-            return False
-        elif e1.get("isName") == "True" and e2.get("isName") == "False":
-            return False
-        else:
-            return True
+#    def isPotentialGeniaInteraction(self, e1, e2):
+#        """
+#        Genia named entities can never act as event triggers, so
+#        edges can't leave from them. We can reduce the number of 
+#        examples generated by removing these always negative cases.
+#        """
+#        if e1.get("isName") == "True" and e2.get("isName") == "True":
+#            return False
+#        elif e1.get("isName") == "True" and e2.get("isName") == "False":
+#            return False
+#        else:
+#            return True
     
 #    def nxMultiDiGraphToUndirected(self, graph):
 #        undirected = NX10.MultiGraph(name=graph.name)
@@ -361,9 +361,9 @@ class UnmergingExampleBuilder(ExampleBuilder):
                 if i < 4: 
                     for j in combinations(themes, i+1):
                         combs.append(j)
-                if len(combs) >= 100:
-                    print >> sys.stderr, "Warning, truncating unmerging examples at 100 for Binding entity", entityId
-                    break
+#                if len(combs) >= 100:
+#                    print >> sys.stderr, "Warning, truncating unmerging examples at 100 for Binding entity", entityId
+#                    break
             return combs
         elif eType == "Process": # For ID-task
             argCombinations = []
@@ -437,11 +437,11 @@ class UnmergingExampleBuilder(ExampleBuilder):
         # Get argument order
         self.interactionLenghts = self.getInteractionEdgeLengths(sentenceGraph, paths)
         
-        # Map tokens to entities
+        # Map tokens to character offsets
         tokenByOffset = {}
         for i in range(len(sentenceGraph.tokens)):
             token = sentenceGraph.tokens[i]
-            if goldGraph != None:
+            if goldGraph != None: # check that the tokenizations match
                 goldToken = goldGraph.tokens[i]
                 assert token.get("id") == goldToken.get("id") and token.get("charOffset") == goldToken.get("charOffset")
             tokenByOffset[token.get("charOffset")] = token.get("id")
