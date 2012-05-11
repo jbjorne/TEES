@@ -204,32 +204,43 @@ def write(rootElement, filename):
     # Fix newlines inside attributes
     encodeNewlines(filename)
 
-def encodeNewlines(filename):    
+def encodeNewlines(filename):
+    import tempfile, shutil
     # fix newlines
+    tempdir = tempfile.mkdtemp()
+    tempfilepath = os.path.join(tempdir, "tempOutput")
     if filename.endswith(".gz"):
         #inFile=GzipFile(filename,"rt")
         inFile = codecs.getreader("utf-8")(GzipFile(filename,"rt"))
+        out = codecs.getwriter("utf-8")(GzipFile(tempfilepath,"wt"))
     else:
         #inFile=open(filename,"rt")
         inFile=codecs.open(filename, "rt", "utf-8")
-    content = inFile.read()
-    inFile.close()
-
-    content = content.replace(">\n", "TEMP_PROTECT_N")
-    content = content.replace(">\r", "TEMP_PROTECT_R")
-    content = content.replace("\n", "&#10;")
-    content = content.replace("\r", "&#10;")
-    content = content.replace("TEMP_PROTECT_N", ">\n")
-    content = content.replace("TEMP_PROTECT_R", ">\r")
+        out = codecs.open(tempfilepath, "wt", "utf-8")
     
-    if filename.endswith(".gz"):
-        #out=GzipFile(filename,"wt")
-        out = codecs.getwriter("utf-8")(GzipFile(filename,"wt"))
-    else:
-        #out=open(filename,"wt")
-        out=codecs.open(filename, "wt", "utf-8")
-    out.write(content)
+    for content in inFile:
+        #content = inFile.read()
+        #inFile.close()    
+        content = content.replace(">\n", "TEMP_PROTECT_N") # newlines between elements
+        content = content.replace(">\r", "TEMP_PROTECT_R") # newlines between elements
+        content = content.replace("\n", "&#10;") # newlines in attributes
+        content = content.replace("\r", "&#10;") # newlines in attributes
+        content = content.replace("TEMP_PROTECT_N", ">\n") # newlines between elements
+        content = content.replace("TEMP_PROTECT_R", ">\r") # newlines between elements
+        out.write(content)
+    inFile.close()
     out.close()
+    shutil.copy2(tempfilepath, filename)
+    shutil.rmtree(tempdir)
+    
+#    if filename.endswith(".gz"):
+#        #out=GzipFile(filename,"wt")
+#        out = codecs.getwriter("utf-8")(GzipFile(filename,"wt"))
+#    else:
+#        #out=open(filename,"wt")
+#        out=codecs.open(filename, "wt", "utf-8")
+#    out.write(content)
+#    out.close()
 
 #def writeUTF8(rootElement,out):
 #    indent(rootElement)

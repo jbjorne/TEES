@@ -39,7 +39,7 @@ class StepSelector:
     
     def printStepTime(self):
         if self.currentStep != None and self.currentStepStartTime != None:
-            print >> sys.stderr, "EXIT STEP", self.currentStep + ": " + str(datetime.timedelta(seconds=time.time()-self.currentStepStartTime))
+            print >> sys.stderr, "---------", "EXIT STEP", self.currentStep + ": " + str(datetime.timedelta(seconds=time.time()-self.currentStepStartTime)), "---------"
     
     def check(self, step):
         #print "CHECK", step, self.currentStep, self.steps, self.fromStep, self.toStep
@@ -67,7 +67,7 @@ class StepSelector:
         if stepIndex >= fromIndex and stepIndex <= toIndex:
             if currentIndex < stepIndex:
                 if self.currentStepStartTime != None:
-                    if self.verbose: print >> sys.stderr, "EXIT STEP", self.currentStep, "time:", str(datetime.timedelta(seconds=time.time()-self.currentStepStartTime))
+                    if self.verbose: print >> sys.stderr, "---------", "EXIT STEP", self.currentStep, "time:", str(datetime.timedelta(seconds=time.time()-self.currentStepStartTime)), "---------"
                 self.currentStep = step
                 self.currentStepStartTime = time.time()
                 if self.omitSteps != None and step in self.omitSteps:

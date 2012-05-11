@@ -300,7 +300,7 @@ def loadPredictionsAdjust(predictionsFile, recallAdjust=1.0):
                 pred.append(split)
             # Recall adjust
             if recallAdjust != 1.0:
-                pred[1] = RecallAdjust.scaleVal(pred[1])
+                pred[1] = RecallAdjust.scaleVal(pred[1], recallAdjust)
                 if pred[0] == 1:
                     maxStrength = pred[1]
                     for i in range(2, len(pred)):

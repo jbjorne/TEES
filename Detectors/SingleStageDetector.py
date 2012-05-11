@@ -129,12 +129,14 @@ class SingleStageDetector(Detector):
             self.stEvaluator.evaluate(output+".tar.gz", task)
         self.exitState()
         
-    def classifyToXML(self, data, model, exampleFileName=None, tag="", classifierModel=None, split=False, goldData=None, parse=None, recallAdjust=None):
+    def classifyToXML(self, data, model, exampleFileName=None, tag="", classifierModel=None, split=False, goldData=None, parse=None, recallAdjust=None, compressExamples=True):
         model = self.openModel(model, "r")
         if parse == None:
             parse = self.getStr(self.tag+"parse", model)
         if exampleFileName == None:
-            exampleFileName = tag+self.tag+"examples.gz"
+            exampleFileName = tag+self.tag+"examples"
+            if compressExamples:
+                exampleFileName += ".gz"
             self.buildExamples(model, [data], [exampleFileName], [goldData], parse=parse)
         if classifierModel == None:
             classifierModel = model.get(self.tag+"classifier-model.gz")

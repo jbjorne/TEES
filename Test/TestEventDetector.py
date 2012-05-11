@@ -216,7 +216,9 @@ eventDetector.stWriteScores = True # write confidence scores into additional st-
 eventDetector.setCSCConnection(options.csc, os.path.join("CSCConnection",WORKDIR.lstrip("/")))
 # Pre-calculate all the required SVM models
 if selector.check("TRAIN"):
-    print >> sys.stderr, "------------ Train Event Detector ------------"
+    print >> sys.stderr, "----------------------------------------------------"
+    print >> sys.stderr, "--------------- Train Event Detector ---------------"
+    print >> sys.stderr, "----------------------------------------------------"
     eventDetector.train(TRAIN_FILE, TEST_FILE, "model-devel", "model-test",
                         TRIGGER_FEATURE_PARAMS, EDGE_FEATURE_PARAMS, "", "style:"+options.modifierStyle,
                         "c:"+options.triggerParams, "c:"+options.edgeParams, 
@@ -227,17 +229,23 @@ if selector.check("TRAIN"):
                         fromStep=options.detectorStep,
                         workDir="training")
 if selector.check("DEVEL"):
+    print >> sys.stderr, "----------------------------------------------------"
     print >> sys.stderr, "------------ Check devel classification ------------"
+    print >> sys.stderr, "----------------------------------------------------"
     eventDetector.classify(TEST_FILE, "model-devel", "classification/devel", fromStep=options.detectorStep)
 if selector.check("EMPTY"):
     # By passing an emptied devel set through the prediction system, we can check that we get the same predictions
     # as in the DEVEL step, ensuring the model does not use leaked information.
+    print >> sys.stderr, "----------------------------------------------------"
     print >> sys.stderr, "------------ Empty devel classification ------------"
+    print >> sys.stderr, "----------------------------------------------------"
     #eventDetector.classify(TEST_FILE.replace(".xml", "-empty.xml"), "model-devel", "predicted-devel-empty", fromStep=options.detectorStep)
     eventDetector.classify(getEmptyCorpus(TEST_FILE), "model-devel", "classification/devel-empty", fromStep=options.detectorStep)
 if not options.noTestSet:
-    if selector.check("TEST"):    
-        print >> sys.stderr, "------------ Test set classification ------------"
+    if selector.check("TEST"):
+        print >> sys.stderr, "----------------------------------------------------"
+        print >> sys.stderr, "------------- Test set classification --------------"
+        print >> sys.stderr, "----------------------------------------------------"
         eventDetector.stWriteScores = False # the evaluation server doesn't like additional files
         eventDetector.classify(FINAL_TEST_FILE, "model-test", "classification/test", fromStep=options.detectorStep, saveChangedModelPath="model-test-classify-ids")
         #print os.listdir(os.getcwd())

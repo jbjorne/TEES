@@ -126,7 +126,9 @@ class CSCConnection:
             p = subprocess.Popen(script, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             return p.stdout.readlines()
         elif self.password == None: # normal ssh
+            #print script
             p = subprocess.Popen("ssh " + self.account + " '" + script + "'", shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            #print "done"
             return p.stdout.readlines()
         else: # have to use pexpect
             try:

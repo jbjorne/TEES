@@ -72,6 +72,7 @@ class GeneralEntityTypeRecognizerGztr(ExampleBuilder):
         ordered types of these entities joined with '---'.
         """
         types = set()
+        entityIds = set()
         for entity in entities:
             if entity.get("isName") == "True" and "all_tokens" in self.styles:
                 continue
@@ -79,8 +80,10 @@ class GeneralEntityTypeRecognizerGztr(ExampleBuilder):
                 continue
             if "epi_merge_negated" in self.styles:
                 types.add(InteractionXML.ResolveEPITriggerTypes.getEPIBaseType(entity.get("type")))
+                entityIds.add(entity.get("id"))
             else:
                 types.add(entity.get("type"))
+                entityIds.add(entity.get("id"))
         types = list(types)
         types.sort()
         typeString = ""
@@ -92,17 +95,19 @@ class GeneralEntityTypeRecognizerGztr(ExampleBuilder):
             typeString += type
         
         if typeString == "":
-            return "neg"
+            return "neg", None
+        
+        idString = "/".join(sorted(list(entityIds)))
         
         if "limit_merged_types" in self.styles:
             if typeString.find("---") != -1:
                 if typeString == "Gene_expression---Positive_regulation":
-                    return typeString
+                    return typeString, idString
                 else:
-                    return typeString.split("---")[0]
+                    return typeString.split("---")[0], idString # ids partially incorrect
             else:
-                return typeString
-        return typeString
+                return typeString, idString
+        return typeString, idString
     
     def getTokenFeatures(self, token, sentenceGraph):
         """
@@ -232,9 +237,9 @@ class GeneralEntityTypeRecognizerGztr(ExampleBuilder):
 
             # CLASS
             if len(sentenceGraph.tokenIsEntityHead[token]) > 0:
-                categoryName = self.getMergedEntityType(sentenceGraph.tokenIsEntityHead[token])
+                categoryName, entityIds = self.getMergedEntityType(sentenceGraph.tokenIsEntityHead[token])
             else:
-                categoryName = "neg"
+                categoryName, entityIds = "neg", None
             self.exampleStats.beginExample(categoryName)
             
             # Recognize only non-named entities (i.e. interaction words)
@@ -278,6 +283,8 @@ class GeneralEntityTypeRecognizerGztr(ExampleBuilder):
                 features = {}
                 features[self.featureSet.getId("exclude_gazetteer")] = 1
                 extra = {"xtype":"token","t":token.get("id"),"excluded":"True"}
+                if entityIds != None:
+                    extra["goldIds"] = entityIds
                 #examples.append( (sentenceGraph.getSentenceId()+".x"+str(exampleIndex),category,features,extra) )
                 ExampleUtils.appendExamples([(sentenceGraph.getSentenceId()+".x"+str(exampleIndex),category,features,extra)], outfile)
                 exampleIndex += 1
@@ -435,6 +442,8 @@ class GeneralEntityTypeRecognizerGztr(ExampleBuilder):
                 extra["trigex"] = "bb" # Request trigger extension in ExampleWriter
             if "epi_merge_negated" in self.styles:
                 extra["unmergeneg"] = "epi" # Request trigger type unmerging
+            if entityIds != None:
+                extra["goldIds"] = entityIds # The entities to which this example corresponds
             #examples.append( (sentenceGraph.getSentenceId()+".x"+str(exampleIndex),category,features,extra) )
             
             # chains

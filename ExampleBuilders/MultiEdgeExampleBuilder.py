@@ -156,13 +156,22 @@ class MultiEdgeExampleBuilder(ExampleBuilder):
         else:
             return "neg"
         
-    def getCategoryName(self, sentenceGraph, e1, e2, directed=True):
+    def getCategoryName(self, sentenceGraph, e1, e2, directed=True, duplicateEntities=None):
         """
         Example class. Multiple overlapping edges create a merged type.
         """
-        interactions = sentenceGraph.getInteractions(e1, e2)
-        if not directed:
-            interactions = interactions + sentenceGraph.getInteractions(e2, e1)
+        interactions = []
+        e1s = [e1]
+        if duplicateEntities != None and e1 in duplicateEntities:
+            e1s += duplicateEntities[e1]
+        e2s = [e2]
+        if duplicateEntities != None and e2 in duplicateEntities:
+            e2s += duplicateEntities[e2]
+        for entity1 in e1s:
+            for entity2 in e2s:
+                interactions = interactions + sentenceGraph.getInteractions(entity1, entity2)
+                if not directed:
+                    interactions = interactions + sentenceGraph.getInteractions(entity2, entity1)
         
         types = set()
         for interaction in interactions:
@@ -425,6 +434,35 @@ class MultiEdgeExampleBuilder(ExampleBuilder):
             return self.getCategoryName(goldGraph, entityToGold[e1][0], entityToGold[e2][0], directed=directed)
         else:
             return "neg"
+    
+    def mergeEntities(self, sentenceGraph, allowDuplicates=True):
+        """
+        For merging duplicate entities
+        """
+        entities = sentenceGraph.entities
+        duplicates = {}
+        mergedIds = {}
+        if allowDuplicates: # no entities are filtered
+            for entity in entities:
+                mergedIds[entity] = entity.get("id")
+            return entities
+        # Mark all duplicates after the first one in the list for removal
+        removeEntities = [False] * len(entities)
+        entitiesToKeep = []
+        for i in range(len(entities)): # loop through all entities, including the last one
+            if removeEntities[i]: # entity has been already removed
+                continue
+            entitiesToKeep.append(entities[i])
+            mergedIds[entities[i]] = entities[i].get("id")
+            duplicates[entities[i]] = []
+            for j in range(i+1, len(entities)): # loop through all entities coming after entity "i"
+                # Entities are the duplicates if they have the same type and head token
+                if entities[i].get("type") == entities[j].get("type") and \
+                   sentenceGraph.entityHeadTokenByEntity[entities[i]] == sentenceGraph.entityHeadTokenByEntity[entities[j]]:
+                    removeEntities[j] = True
+                    mergedIds[entities[i]] += "/" + entities[j].get("id")
+                    duplicates[entities[i]].append(entities[j])
+        return entitiesToKeep, mergedIds, duplicates
             
     def buildExamplesFromGraph(self, sentenceGraph, outfile, goldGraph = None):
         """
@@ -438,9 +476,17 @@ class MultiEdgeExampleBuilder(ExampleBuilder):
             self.triggerFeatureBuilder.initSentence(sentenceGraph)
         if "evex" in self.styles: 
             self.evexFeatureBuilder.initSentence(sentenceGraph)
+            
+        # Filter entities, if needed
+        mergedIds = None
+        duplicateEntities = None
+        entities = sentenceGraph.entities
+        #entities, mergedIds, duplicateEntities = self.mergeEntities(sentenceGraph, "no_duplicates" in self.styles)
+        self.exampleStats.addValue("Duplicates removed", len(sentenceGraph.entities) - len(entities))
         
+        # Connect to optional gold graph
         if goldGraph != None:
-            entityToGold = EvaluateInteractionXML.mapEntities(sentenceGraph.entities, goldGraph.entities)
+            entityToGold = EvaluateInteractionXML.mapEntities(entities, goldGraph.entities)
         
         paths = None
         if not "no_path" in self.styles:
@@ -461,7 +507,7 @@ class MultiEdgeExampleBuilder(ExampleBuilder):
         
         # Generate examples based on interactions between entities or interactions between tokens
         if "entities" in self.styles:
-            loopRange = len(sentenceGraph.entities)
+            loopRange = len(entities)
         else:
             loopRange = len(sentenceGraph.tokens)
         for i in range(loopRange-1):
@@ -469,8 +515,8 @@ class MultiEdgeExampleBuilder(ExampleBuilder):
                 eI = None
                 eJ = None
                 if "entities" in self.styles:
-                    eI = sentenceGraph.entities[i]
-                    eJ = sentenceGraph.entities[j]
+                    eI = entities[i]
+                    eJ = entities[j]
                     tI = sentenceGraph.entityHeadTokenByEntity[eI]
                     tJ = sentenceGraph.entityHeadTokenByEntity[eJ]
                     #if "no_ne_interactions" in self.styles and eI.get("isName") == "True" and eJ.get("isName") == "True":
@@ -491,7 +537,7 @@ class MultiEdgeExampleBuilder(ExampleBuilder):
                 if "directed" in self.styles:
                     # define forward
                     if "entities" in self.styles:
-                        categoryName = self.getCategoryName(sentenceGraph, eI, eJ, True)
+                        categoryName = self.getCategoryName(sentenceGraph, eI, eJ, True, duplicateEntities)
                         if goldGraph != None:
                             categoryName = self.getGoldCategoryName(goldGraph, entityToGold, eI, eJ, True)
                     else:
@@ -536,13 +582,13 @@ class MultiEdgeExampleBuilder(ExampleBuilder):
                         self.exampleStats.filter("pos_only")
                     if makeExample:
                         #examples.append( self.buildExample(tI, tJ, paths, sentenceGraph, categoryName, exampleIndex, eI, eJ) )
-                        ExampleUtils.appendExamples([self.buildExample(tI, tJ, paths, sentenceGraph, categoryName, exampleIndex, eI, eJ)], outfile)
+                        ExampleUtils.appendExamples([self.buildExample(tI, tJ, paths, sentenceGraph, categoryName, exampleIndex, eI, eJ, mergedIds)], outfile)
                         exampleIndex += 1
                     self.exampleStats.endExample()
                     
                     # define reverse
                     if "entities" in self.styles:
-                        categoryName = self.getCategoryName(sentenceGraph, eJ, eI, True)
+                        categoryName = self.getCategoryName(sentenceGraph, eJ, eI, True, duplicateEntities)
                         if goldGraph != None:
                             categoryName = self.getGoldCategoryName(goldGraph, entityToGold, eJ, eI, True)
                     else:
@@ -590,7 +636,7 @@ class MultiEdgeExampleBuilder(ExampleBuilder):
                         self.exampleStats.filter("pos_only")
                     if makeExample:
                         #examples.append( self.buildExample(tJ, tI, paths, sentenceGraph, categoryName, exampleIndex, eJ, eI) )
-                        ExampleUtils.appendExamples([self.buildExample(tJ, tI, paths, sentenceGraph, categoryName, exampleIndex, eJ, eI)], outfile)
+                        ExampleUtils.appendExamples([self.buildExample(tJ, tI, paths, sentenceGraph, categoryName, exampleIndex, eJ, eI, mergedIds)], outfile)
                         exampleIndex += 1
                     self.exampleStats.endExample()
                 else:
@@ -599,9 +645,9 @@ class MultiEdgeExampleBuilder(ExampleBuilder):
                     else:
                         categoryName = self.getCategoryNameFromTokens(sentenceGraph, tI, tJ, False)
                     self.exampleStats.beginExample(categoryName)
-                    forwardExample = self.buildExample(tI, tJ, paths, sentenceGraph, categoryName, exampleIndex, eI, eJ)
+                    forwardExample = self.buildExample(tI, tJ, paths, sentenceGraph, categoryName, exampleIndex, eI, eJ, mergedIds)
                     if not "graph_kernel" in self.styles:
-                        reverseExample = self.buildExample(tJ, tI, paths, sentenceGraph, categoryName, exampleIndex, eJ, eI)
+                        reverseExample = self.buildExample(tJ, tI, paths, sentenceGraph, categoryName, exampleIndex, eJ, eI, mergedIds)
                         forwardExample[2].update(reverseExample[2])
                     #examples.append(forwardExample)
                     ExampleUtils.appendExamples([forwardExample], outfile)
@@ -611,7 +657,7 @@ class MultiEdgeExampleBuilder(ExampleBuilder):
         #return examples
         return exampleIndex
     
-    def buildExample(self, token1, token2, paths, sentenceGraph, categoryName, exampleIndex, entity1=None, entity2=None):
+    def buildExample(self, token1, token2, paths, sentenceGraph, categoryName, exampleIndex, entity1=None, entity2=None, mergedEntityIds=None):
         """
         Build a single directed example for the potential edge between token1 and token2
         """
@@ -822,9 +868,13 @@ class MultiEdgeExampleBuilder(ExampleBuilder):
         if entity1 != None:
             #extra["e1"] = entity1
             extra["e1"] = entity1.get("id")
+            if mergedEntityIds != None:
+                extra["e1GoldIds"] = mergedEntityIds[entity1]
         if entity2 != None:
             #extra["e2"] = entity2
             extra["e2"] = entity2.get("id")
+            if mergedEntityIds != None:
+                extra["e2GoldIds"] = mergedEntityIds[entity2]
         extra["categoryName"] = categoryName
         if "bacteria_renaming" in self.styles:
             if entity1.get("text") != None and entity1.get("text") != "":

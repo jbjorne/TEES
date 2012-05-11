@@ -52,39 +52,44 @@ class EntityExampleWriter(SentenceExampleWriter):
             
         # add new pairs
         for example in examples:
+            unmergeEPINeg = None
+            if "unmergeneg" in example[3] and example[3]["unmergeneg"] == "epi":
+                unmergeEPINeg = headToken.get("text")
             if "trigex" in example[3] and example[3]["trigex"] == "bb":
                 extensionRequested = True
-            unmergeEPINeg = False
-            if "unmergeneg" in example[3] and example[3]["unmergeneg"] == "epi":
-                unmergeEPINeg = True
-            prediction = predictionsByExample[example[0]]
-            entityElement = ET.Element("entity")
-            entityElement.attrib["isName"] = "False"
             headToken = example[3]["t"]
             for token in sentenceObject.tokens:
                 if token.get("id") == headToken:
                     headToken = token
                     break
-            entityElement.attrib["charOffset"] = headToken.get("charOffset") 
-            entityElement.attrib["headOffset"] = headToken.get("charOffset")
-            entityElement.attrib["text"] = headToken.get("text")
-            entityElement.attrib["id"] = sentenceId + ".e" + str(newEntityIdCount)
-            self.setElementType(entityElement, prediction, classSet, classIds, unmergeEPINeg=unmergeEPINeg)
-            if self.insertWeights: # in other words, use gold types
-                headOffset = headToken.get("charOffset")
-                if goldEntityByHeadOffset.has_key(headOffset):
-                    for entity in goldEntityByHeadOffset[headOffset]:
-                        entity.set("predictions", entityElement.get("predictions") )
-            if goldEntityTypeByHeadOffset.has_key(headToken.get("charOffset")):
-                entityElement.set("goldType", goldEntityTypeByHeadOffset[headToken.get("charOffset")])
-            if "goldIds" in example[3]: # The entities for which this example was built
-                entityElement.set("goldIds", example[3]["goldIds"])
-            if (entityElement.get("type") != "neg" and not goldEntityByHeadOffset.has_key(entityElement.get("headOffset"))) or not self.insertWeights:
-                newEntityIdCount += 1
-                sentenceElement.append(entityElement)
-            elif entityElement.get("type") == "neg":
-                newEntityIdCount += 1
-                sentenceElement.append(entityElement)
+            prediction = predictionsByExample[example[0]]
+            predictionString = self.getPredictionStrengthString(prediction, classSet, classIds)
+            for eType in self.getElementTypes(prediction, classSet, classIds, unmergeEPINegText=unmergeEPINeg): # split merged classes
+                entityElement = ET.Element("entity")
+                entityElement.set("isName", "False")
+                entityElement.set("charOffset", headToken.get("charOffset"))
+                entityElement.set("headOffset", headToken.get("charOffset"))
+                entityElement.set("text", headToken.get("text"))
+                entityElement.set("id", sentenceId + ".e" + str(newEntityIdCount))
+                entityElement.set("type", eType)
+                entityElement.set("predictions", predictionString)
+                #self.setElementType(entityElement, prediction, classSet, classIds, unmergeEPINeg=unmergeEPINeg)
+                if self.insertWeights: # in other words, use gold types
+                    headOffset = headToken.get("charOffset")
+                    if goldEntityByHeadOffset.has_key(headOffset):
+                        for entity in goldEntityByHeadOffset[headOffset]:
+                            entity.set("predictions", entityElement.get("predictions") )
+                if goldEntityTypeByHeadOffset.has_key(headToken.get("charOffset")):
+                    entityElement.set("goldType", goldEntityTypeByHeadOffset[headToken.get("charOffset")])
+                if "goldIds" in example[3]: # The entities for which this example was built
+                    entityElement.set("goldIds", example[3]["goldIds"])
+                if (entityElement.get("type") != "neg" and not goldEntityByHeadOffset.has_key(entityElement.get("headOffset"))) or not self.insertWeights:
+                    newEntityIdCount += 1
+                    sentenceElement.append(entityElement)
+                elif entityElement.get("type") == "neg":
+                    pass
+                    #newEntityIdCount += 1
+                    #sentenceElement.append(entityElement)
         
         # if only adding weights, re-attach interactions and gold entities
         if self.insertWeights:

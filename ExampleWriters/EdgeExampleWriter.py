@@ -33,18 +33,23 @@ class EdgeExampleWriter(SentenceExampleWriter):
             if example[3].has_key("causeAfterTheme"):
                 causeAfterTheme = True
             prediction = predictionsByExample[example[0]]
-            pairElement = ET.Element("interaction")
-            pairElement.set("directed", "Unknown")
-            pairElement.set("e1", example[3]["e1"]) #.attrib["id"]
-            if "e1GoldIds" in example[3]:
-                pairElement.set("e1GoldIds", example[3]["e1GoldIds"])
-            pairElement.set("e2", example[3]["e2"]) #.attrib["id"]
-            if "e2GoldIds" in example[3]:
-                pairElement.set("e2GoldIds", example[3]["e2GoldIds"])
-            pairElement.set("id", sentenceId + ".i" + str(pairCount))
-            self.setElementType(pairElement, prediction, classSet, classIds)
-            sentenceElement.append(pairElement)
-            pairCount += 1
+            predictionString = self.getPredictionStrengthString(prediction, classSet, classIds)
+            for iType in self.getElementTypes(prediction, classSet, classIds): # split merged classes
+                pairElement = ET.Element("interaction")
+                pairElement.set("directed", "Unknown")
+                pairElement.set("e1", example[3]["e1"]) #.attrib["id"]
+                if "e1GoldIds" in example[3]:
+                    pairElement.set("e1GoldIds", example[3]["e1GoldIds"])
+                pairElement.set("e2", example[3]["e2"]) #.attrib["id"]
+                if "e2GoldIds" in example[3]:
+                    pairElement.set("e2GoldIds", example[3]["e2GoldIds"])
+                pairElement.set("id", sentenceId + ".i" + str(pairCount))
+                pairElement.set("type", iType)
+                pairElement.set("predictions", predictionString)
+                #self.setElementType(pairElement, prediction, classSet, classIds)
+                if pairElement.get("type") != "neg":
+                    sentenceElement.append(pairElement)
+                    pairCount += 1
         
         # Re-attach original themes, if needed
         if causeAfterTheme:

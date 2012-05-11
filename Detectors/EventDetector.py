@@ -22,7 +22,7 @@ class EventDetector(Detector):
         self.triggerDetector = TriggerDetector()
         self.edgeDetector = EdgeDetector()
         self.unmergingDetector = UnmergingDetector()
-        self.doUnmergingSelfTraining = False
+        self.doUnmergingSelfTraining = True #False
         self.modifierDetector = ModifierDetector()
         self.stEvaluator = Evaluators.BioNLP11GeniaTools
         self.stWriteScores = False
@@ -245,8 +245,8 @@ class EventDetector(Detector):
         if self.checkStep("SELF-TRAIN-EXAMPLES-FOR-UNMERGING", self.unmerging) and self.unmerging:
             # Self-classified train data for unmerging
             if self.doUnmergingSelfTraining:
-                xml = self.triggerDetector.classifyToXML(self.trainData, self.model, None, self.workDir+"unmerging-extra-", split=True)
-                xml = self.edgeDetector.classifyToXML(xml, self.model, None, self.workDir+"unmerging-extra-", split=True)
+                xml = self.triggerDetector.classifyToXML(self.trainData, self.model, None, self.workDir+"unmerging-extra-", split=False, compressExamples=False)#, recallAdjust=0.5)
+                xml = self.edgeDetector.classifyToXML(xml, self.model, None, self.workDir+"unmerging-extra-", split=False, compressExamples=False)#, recallAdjust=0.5)
                 assert xml != None
                 EvaluateInteractionXML.run(self.edgeDetector.evaluator, xml, self.trainData, self.parse)
             else:
@@ -318,7 +318,7 @@ class EventDetector(Detector):
                         goldData = self.classifyData.replace("-nodup", "")
                 xml = self.unmergingDetector.classifyToXML(xml, self.model, None, output + "-", split=False, goldData=goldData, parse=self.parse)
             else:
-                print >> sys.stderr, "No unmerging"
+                print >> sys.stderr, "No model for unmerging"
         if self.checkStep("MODIFIERS"):
             if self.model.hasMember("modifier-classifier-model.gz"):
                 xml = self.getWorkFile(xml, [output + "-unmerging-pred.xml.gz", output + "-edge-pred.xml.gz"])

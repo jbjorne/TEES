@@ -214,7 +214,7 @@ class UnmergingExampleWriter(SentenceExampleWriter):
                         # Prediction strength is only available for classified argument groups
                         predictionStrength = self.getPredictionStrength(example, predictionsByExample, classSet, classIds)
                     #print example 
-                    if umType != "simple" and example[3]["etype"] == "Process" and len(arguments) == 0:
+                    if umType != "simple" and "eType" in example[3] and example[3]["etype"] == "Process" and len(arguments) == 0:
                         origProcess = sentenceObject.entitiesById[example[3]["e"]]
                         # Put back the original entity
                         newProcess = self.addEntity(origProcess)

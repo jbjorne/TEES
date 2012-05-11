@@ -181,6 +181,19 @@ class SentenceExampleWriter:
                 return True
         else:
             return classSet.getName(prediction[0]) == "neg"
+    
+    def getElementTypes(self, prediction, classSet=None, classIds=None, unmergeEPINegText=None):
+        if classSet == None: # binary classification
+            if prediction[0] > 0:
+                return [str(True)]
+            else:
+                return [str(False)]
+        else:
+            eTypes = classSet.getName(prediction[0]).split("---") # split merged types
+            if unmergeEPINegText != None: # an element text was provided
+                for i in range(len(eTypes)):
+                    eTypes[i] = InteractionXML.ResolveEPITriggerTypes.determineNewType(classSet.getName(prediction[0]), unmergeEPINegText)
+        return eTypes
 
     def setElementType(self, element, prediction, classSet=None, classIds=None, unmergeEPINeg=False):
         eText = element.get("text")

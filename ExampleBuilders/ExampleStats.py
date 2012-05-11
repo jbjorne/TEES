@@ -6,6 +6,13 @@ class ExampleStats:
         self.examplesByClass = {}
         self.filteredByClass = {}
         self.filteredByClassByFilter = {}
+        self.counts = {} # example counts
+        self.values = {} # generic counters
+    
+    def addValue(self, name, amount=1):
+        if name not in self.values:
+            self.values[name] = 0
+        self.values[name] += amount
     
     def addKnownPositives(self, className, number=1):
         pass
@@ -66,6 +73,9 @@ class ExampleStats:
         if counts[0] != 0:
             posCoverage = float(counts[0] - counts[1]) / float(counts[0]) * 100.0
             print >> sys.stderr, "Positives Coverage %.2f" % posCoverage,  "%", counts
+        # Print generic counts
+        for value in sorted(self.values.keys()):
+            print >> sys.stderr, value + ":", self.values[value]
         
     #def add(self, className, filteredBy=[]):
     #    pass
