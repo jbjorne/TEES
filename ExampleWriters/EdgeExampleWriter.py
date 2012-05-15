@@ -38,11 +38,11 @@ class EdgeExampleWriter(SentenceExampleWriter):
                 pairElement = ET.Element("interaction")
                 pairElement.set("directed", "Unknown")
                 pairElement.set("e1", example[3]["e1"]) #.attrib["id"]
-                if "e1GoldIds" in example[3]:
-                    pairElement.set("e1GoldIds", example[3]["e1GoldIds"])
+                if "e1DuplicateIds" in example[3]:
+                    pairElement.set("e1DuplicateIds", example[3]["e1DuplicateIds"])
                 pairElement.set("e2", example[3]["e2"]) #.attrib["id"]
-                if "e2GoldIds" in example[3]:
-                    pairElement.set("e2GoldIds", example[3]["e2GoldIds"])
+                if "e2DuplicateIds" in example[3]:
+                    pairElement.set("e2DuplicateIds", example[3]["e2DuplicateIds"])
                 pairElement.set("id", sentenceId + ".i" + str(pairCount))
                 pairElement.set("type", iType)
                 pairElement.set("predictions", predictionString)

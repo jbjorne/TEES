@@ -141,8 +141,13 @@ class SentenceGraph:
         self.interactions = None
         self.entities = None
         self.interactionGraph = None
+        self.entityGraph = None
         self.duplicateInteractionEdgesRemoved = 0
         self.tokenHeadScores = None
+        # Merged graph
+        self.mergedEntities = None
+        self.mergedEntityToDuplicates = None
+        self.mergedEntityGraph = None
         
         self.tokensById = {}
         for token in self.tokens:
@@ -175,8 +180,35 @@ class SentenceGraph:
     def getSentenceId(self):
         return self.sentenceElement.get("id")
     
+    def makeEntityGraph(self, entities, interactions, entityToDuplicates=None):
+        graph = Graph()
+        graph.addNodes(entities)
+        # initialize a helper map
+        interactionMap = {}
+        for interaction in interactions:
+            e1 = self.entitiesById[interaction.get("e1")]
+            e2 = self.entitiesById[interaction.get("e2")]
+            if e1 not in interactionMap:
+                interactionMap[e1] = {}
+            if e2 not in interactionMap[e1]:
+                interactionMap[e1][e2] = []
+            interactionMap[e1][e2].append(interaction)
+        if entityToDuplicates == None:
+            entityToDuplicates = {}
+            for e in entities:
+                entityToDuplicates[e] = []
+        # make the graph
+        for e1 in entities: # loop through all given entities
+            for e2 in entities: # loop through all given entities
+                for d1 in [e1] + entityToDuplicates[e1]: # add duplicates to each iteration
+                    for d2 in [e2] + entityToDuplicates[e2]: # add duplicates to each iteration
+                        if d1 in interactionMap and d2 in interactionMap[d1]:
+                            for interaction in interactionMap[d1][d2]:
+                                graph.addEdge(e1, e2, interaction) # add real and duplicate edges for the main entity pair
+        return graph
+    
     # TODO: This method shouldn't be needed anymore
-    def getInteractions(self, entity1, entity2):
+    def getInteractions(self, entity1, entity2, merged=False):
         """
         Return a list of interaction-elements which represent directed
         interactions from entity1 to entity2.
@@ -186,11 +218,22 @@ class SentenceGraph:
         @param entity2: a semantic node (trigger or named entity)
         @type entity2: cElementTree.Element 
         """
-        rv = []
-        for interaction in self.interactions:
-            if interaction.get("e1") == entity1.get("id") and interaction.get("e2") == entity2.get("id"):
-                rv.append(interaction)
-        return rv
+        if merged:
+            # Note: mergeInteractionGraph must be called before
+            assert self.mergedEntityToDuplicates != None
+            if self.mergedEntityGraph == None:
+                self.mergedEntityGraph = self.makeEntityGraph(self.mergedEntities, self.interactions, self.mergedEntityToDuplicates)
+            return self.mergedEntityGraph.getEdges(entity1, entity2)
+        else:
+            if self.entityGraph == None:
+                self.entityGraph = self.makeEntityGraph(self.entities, self.interactions)
+            return self.entityGraph.getEdges(entity1, entity2)
+
+#        rv = []
+#        for interaction in self.interactions:
+#            if interaction.get("e1") == entity1.get("id") and interaction.get("e2") == entity2.get("id"):
+#                rv.append(interaction)
+#        return rv
     
     def mapInteractions(self, entityElements, interactionElements, verbose=False):
         """
@@ -530,5 +573,44 @@ class SentenceGraph:
                 namedEntities.append(entity)
         c.mapInteractions(namedEntities, [])
         return c
+    
+    def mergeInteractionGraph(self, merge=True):
+        """
+        For merging duplicate entities
         
-        
+        keepDuplicates - allows calling the function with no effect, so that the same code
+                         can be used for merged and unmerged cases
+        """
+        self.mergedEntities = []
+        self.mergedEntityToDuplicates = {}
+        #duplicates = {}
+        #mergedIds = {}
+        if not merge: # no entities are filtered
+            # Create dummy structures
+            for entity in self.entities:
+                mergedIds[entity] = entity.get("id")
+                self.mergedEntities.append(entity)
+                self.mergedEntityToDuplicates[entity] = []
+            return
+        # Mark all duplicates after the first one in the list for removal
+        removeEntities = [False] * len(self.entities)
+        entitiesToKeep = []
+        for i in range(len(self.entities)): # loop through all entities, including the last one
+            if removeEntities[i]: # entity has been already removed
+                continue
+            self.mergedEntities.append(self.entities[i])
+            #mergedIds[entities[i]] = entities[i].get("id")
+            self.mergedEntityToDuplicates[self.entities[i]] = []
+            if self.entities[i].get("isName") == "True": # named entities are never merged
+                continue
+            for j in range(i+1, len(self.entities)): # loop through all entities coming after entity "i"
+                # Entities are duplicates if they have the same type and head token
+                # Also, they are not duplicates if the charOffset differs. This shoulnd't matter,
+                # as the head tokens are the same, but in practice, on the GE, task improves performance,
+                # maybe due to multiple similar examples affecting SVM learning.
+                if self.entities[i].get("type") == self.entities[j].get("type") and \
+                   self.entities[i].get("charOffset") == self.entities[j].get("charOffset"): # and self.entityHeadTokenByEntity[self.entities[i]] == self.entityHeadTokenByEntity[self.entities[j]]:
+                    removeEntities[j] = True
+                    #mergedIds[entities[i]] += "/" + entities[j].get("id")
+                    self.mergedEntityToDuplicates[self.entities[i]].append(self.entities[j])
+        #return entitiesToKeep, mergedIds, duplicates     
