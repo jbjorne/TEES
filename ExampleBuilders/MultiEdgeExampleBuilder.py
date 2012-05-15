@@ -455,9 +455,12 @@ class MultiEdgeExampleBuilder(ExampleBuilder):
             entitiesToKeep.append(entities[i])
             mergedIds[entities[i]] = entities[i].get("id")
             duplicates[entities[i]] = []
+            if entities[i].get("isName") == "True": # named entities are never merged
+                continue
             for j in range(i+1, len(entities)): # loop through all entities coming after entity "i"
                 # Entities are the duplicates if they have the same type and head token
                 if entities[i].get("type") == entities[j].get("type") and \
+                   entities[i].get("charOffset") == entities[j].get("charOffset") and \
                    sentenceGraph.entityHeadTokenByEntity[entities[i]] == sentenceGraph.entityHeadTokenByEntity[entities[j]]:
                     removeEntities[j] = True
                     mergedIds[entities[i]] += "/" + entities[j].get("id")
@@ -480,8 +483,8 @@ class MultiEdgeExampleBuilder(ExampleBuilder):
         # Filter entities, if needed
         mergedIds = None
         duplicateEntities = None
-        entities = sentenceGraph.entities
-        #entities, mergedIds, duplicateEntities = self.mergeEntities(sentenceGraph, "no_duplicates" in self.styles)
+        #entities = sentenceGraph.entities
+        entities, mergedIds, duplicateEntities = self.mergeEntities(sentenceGraph, False) # "no_duplicates" in self.styles)
         self.exampleStats.addValue("Duplicates removed", len(sentenceGraph.entities) - len(entities))
         
         # Connect to optional gold graph
