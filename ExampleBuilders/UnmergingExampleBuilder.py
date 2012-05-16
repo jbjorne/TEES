@@ -1,7 +1,7 @@
 """
 Edge Examples
 """
-__version__ = "$Revision: 1.9 $"
+__version__ = "$Revision: 1.13 $"
 
 import sys, os
 thisPath = os.path.dirname(os.path.abspath(__file__))
@@ -73,8 +73,8 @@ def compareInteractionPrecedence(e1, e2):
 
 class UnmergingExampleBuilder(ExampleBuilder):
     """
-    This example builder makes edge examples, i.e. examples describing
-    the event arguments.
+    This example builder makes unmerging examples, i.e. examples describing
+    potential events.
     """
     def __init__(self, style=["typed","directed","headsOnly"], length=None, types=[], featureSet=None, classSet=None):
         if featureSet == None:
@@ -120,23 +120,6 @@ class UnmergingExampleBuilder(ExampleBuilder):
         self.triggerFeatureBuilder.useNonNameEntities = True
         
         #self.outFile = open("exampleTempFile.txt","wt")
-
-#    @classmethod
-#    def run(cls, input, gold, output, parse, tokenization, style, idFileTag=None, append=False):
-#        """
-#        An interface for running the example builder without needing to create a class
-#        """
-#        classSet, featureSet = cls.getIdSets(idFileTag)
-#        if style != None:
-#            e = UnmergingExampleBuilder(style=style, classSet=classSet, featureSet=featureSet)
-#        else:
-#            e = UnmergingExampleBuilder(classSet=classSet, featureSet=featureSet)
-#        sentences = cls.getSentences(input, parse, tokenization)
-#        if gold != None:
-#            goldSentences = cls.getSentences(gold, parse, tokenization)
-#        else:
-#            goldSentences = None
-#        e.buildExamplesForSentences(sentences, goldSentences, output, idFileTag, append=append)
     
     def getInteractionEdgeLengths(self, sentenceGraph, paths):
         """
@@ -173,46 +156,45 @@ class UnmergingExampleBuilder(ExampleBuilder):
             interactionLengths[interaction] = (interaction, pathLength, linLength, t2Pos)
         return interactionLengths
 
-    def buildExamplesForSentences(self, sentences, goldSentences, output, idFileTag=None, append=False):            
-        examples = []
-        counter = ProgressCounter(len(sentences), "Build examples")
-        
-        if append:
-            outfile = open(output, "at")
-        else:
-            outfile = open(output, "wt")
-        exampleCount = 0
-        for i in range(len(sentences)):
-            sentence = sentences[i]
-            goldSentence = [None]
-            if goldSentences != None:
-                goldSentence = goldSentences[i]
-            counter.update(1, "Building examples ("+sentence[0].getSentenceId()+"): ")
-            examples = self.buildExamples(sentence[0], goldSentence[0], append=append)
-            exampleCount += len(examples)
-            examples = self.preProcessExamples(examples)
-            ExampleUtils.appendExamples(examples, outfile)
-        outfile.close()
-    
-        print >> sys.stderr, "Examples built:", exampleCount
-        print >> sys.stderr, "Features:", len(self.featureSet.getNames())
-        #IF LOCAL
-        if self.exampleStats.getExampleCount() > 0:
-            self.exampleStats.printStats()
-        #ENDIF
-        # Save Ids
-        if idFileTag != None: 
-            print >> sys.stderr, "Saving class names to", idFileTag + ".class_names"
-            self.classSet.write(idFileTag + ".class_names")
-            print >> sys.stderr, "Saving feature names to", idFileTag + ".feature_names"
-            self.featureSet.write(idFileTag + ".feature_names")
-
-    
-    def definePredictedValueRange(self, sentences, elementName):
-        self.multiEdgeFeatureBuilder.definePredictedValueRange(sentences, elementName)                        
-    
-    def getPredictedValueRange(self):
-        return self.multiEdgeFeatureBuilder.predictedRange
+#    def buildExamplesForSentences(self, sentences, goldSentences, output, idFileTag=None, append=False):            
+#        examples = []
+#        counter = ProgressCounter(len(sentences), "Build examples")
+#        
+#        # Open output file
+#        openStyle = "wt"
+#        if append:
+#            print "Appending examples"
+#            openStyle = "at"
+#        if output.endswith(".gz"):
+#            outfile = gzip.open(output, openStyle)
+#        else:
+#            outfile = open(output, openStyle)
+#            
+#        exampleCount = 0
+#        for i in range(len(sentences)):
+#            sentence = sentences[i]
+#            goldSentence = [None]
+#            if goldSentences != None:
+#                goldSentence = goldSentences[i]
+#            counter.update(1, "Building examples ("+sentence[0].getSentenceId()+"): ")
+#            examples = self.buildExamples(sentence[0], goldSentence[0], append=append)
+#            exampleCount += len(examples)
+#            examples = self.preProcessExamples(examples)
+#            ExampleUtils.appendExamples(examples, outfile)
+#        outfile.close()
+#    
+#        print >> sys.stderr, "Examples built:", exampleCount
+#        print >> sys.stderr, "Features:", len(self.featureSet.getNames())
+#        #IF LOCAL
+#        if self.exampleStats.getExampleCount() > 0:
+#            self.exampleStats.printStats()
+#        #ENDIF
+#        # Save Ids
+#        if idFileTag != None: 
+#            print >> sys.stderr, "Saving class names to", idFileTag + ".class_names"
+#            self.classSet.write(idFileTag + ".class_names")
+#            print >> sys.stderr, "Saving feature names to", idFileTag + ".feature_names.gz"
+#            self.featureSet.write(idFileTag + ".feature_names.gz")
     
 #    def filterEdgesByType(self, edges, typesToInclude):
 #        if len(typesToInclude) == 0:
@@ -250,54 +232,41 @@ class UnmergingExampleBuilder(ExampleBuilder):
 #        else:
 #            return "neg"
         
-    def getCategoryName(self, sentenceGraph, e1, e2, directed=True):
-        """
-        Example class. Multiple overlapping edges create a merged type.
-        """
-        interactions = sentenceGraph.getInteractions(e1, e2)
-        if not directed:
-            interactions.extend(sentenceGraph.getInteractions(e2, e1))
-        
-        types = set()
-        for interaction in interactions:
-            types.add(interaction.attrib["type"])
-        types = list(types)
-        types.sort()
-        categoryName = ""
-        for name in types:
-            if categoryName != "":
-                categoryName += "---"
-            categoryName += name
-        if categoryName != "":
-            return categoryName
-        else:
-            return "neg"           
+#    def getCategoryName(self, sentenceGraph, e1, e2, directed=True):
+#        """
+#        Example class. Multiple overlapping edges create a merged type.
+#        """
+#        interactions = sentenceGraph.getInteractions(e1, e2)
+#        if not directed:
+#            interactions.extend(sentenceGraph.getInteractions(e2, e1))
+#        
+#        types = set()
+#        for interaction in interactions:
+#            types.add(interaction.attrib["type"])
+#        types = list(types)
+#        types.sort()
+#        categoryName = ""
+#        for name in types:
+#            if categoryName != "":
+#                categoryName += "---"
+#            categoryName += name
+#        if categoryName != "":
+#            return categoryName
+#        else:
+#            return "neg"            
     
-    def preProcessExamples(self, allExamples):
-        # Duplicates cannot be removed here, as they should only be removed from the training set. This is done
-        # in the classifier.
-#        if "no_duplicates" in self.styles:
-#            count = len(allExamples)
-#            print >> sys.stderr, " Removing duplicates,", 
-#            allExamples = ExampleUtils.removeDuplicates(allExamples)
-#            print >> sys.stderr, "removed", count - len(allExamples)
-        if "normalize" in self.styles:
-            print >> sys.stderr, " Normalizing feature vectors"
-            ExampleUtils.normalizeFeatureVectors(allExamples)
-        return allExamples   
-    
-    def isPotentialGeniaInteraction(self, e1, e2):
-        """
-        Genia named entities can never act as event triggers, so
-        edges can't leave from them. We can reduce the number of 
-        examples generated by removing these always negative cases.
-        """
-        if e1.get("isName") == "True" and e2.get("isName") == "True":
-            return False
-        elif e1.get("isName") == "True" and e2.get("isName") == "False":
-            return False
-        else:
-            return True
+#    def isPotentialGeniaInteraction(self, e1, e2):
+#        """
+#        Genia named entities can never act as event triggers, so
+#        edges can't leave from them. We can reduce the number of 
+#        examples generated by removing these always negative cases.
+#        """
+#        if e1.get("isName") == "True" and e2.get("isName") == "True":
+#            return False
+#        elif e1.get("isName") == "True" and e2.get("isName") == "False":
+#            return False
+#        else:
+#            return True
     
 #    def nxMultiDiGraphToUndirected(self, graph):
 #        undirected = NX10.MultiGraph(name=graph.name)
@@ -369,7 +338,7 @@ class UnmergingExampleBuilder(ExampleBuilder):
         
         return isGold
     
-    def getArgumentCombinations(self, eType, interactions):
+    def getArgumentCombinations(self, eType, interactions, entityId=None):
         combs = []
         if eType == "Binding":
             # Making examples for only all-together/all-separate cases
@@ -387,30 +356,69 @@ class UnmergingExampleBuilder(ExampleBuilder):
                     themes.append(interaction)
                 
             for i in range(len(themes)):
-                for j in combinations(themes, i+1):
-                    combs.append(j)
+                # Looking at a2-normalize.pl reveals that there can be max 6 themes
+                # Based on training+devel data, four is maximum
+                if i < 4: 
+                    for j in combinations(themes, i+1):
+                        combs.append(j)
+#                if len(combs) >= 100:
+#                    print >> sys.stderr, "Warning, truncating unmerging examples at 100 for Binding entity", entityId
+#                    break
             return combs
+        elif eType == "Process": # For ID-task
+            argCombinations = []
+            argCombinations.append([]) # process can have 0 interactions
+            for interaction in interactions:
+                if interaction.get("type") == "Participant":
+                    argCombinations.append([interaction])
+            return argCombinations
         else: # one of the regulation-types, or one of the simple types
             themes = []
             causes = []
+            siteArgs = []
+            contextGenes = []
+            sideChains = []
+            #locTargets = []
             for interaction in interactions:
                 iType = interaction.get("type")
                 #assert iType in ["Theme", "Cause"], (iType, ETUtils.toStr(interaction))
-                if iType not in ["Theme", "Cause"]:
+                if iType not in ["Theme", "Cause", "SiteArg", "Contextgene", "Sidechain"]: # "AtLoc", "ToLoc"]:
                     continue
                 if iType == "Theme":
                     themes.append(interaction)
-                else:
+                elif iType == "Cause":
                     causes.append(interaction)
-            if eType.find("egulation") == -1: # Only regulations can have causes
+                elif iType == "SiteArg":
+                    siteArgs.append(interaction)
+                elif iType == "Contextgene":
+                    contextGenes.append(interaction)
+                elif iType == "Sidechain":
+                    sideChains.append(interaction)
+                #elif iType in ["AtLoc", "ToLoc"]:
+                #    locTargets.append(iType)
+                else:
+                    assert False, (iType, interaction.get("id"))
+            # Limit arguments to event types that can have them
+            if eType.find("egulation") == -1 and eType != "Catalysis": 
                 causes = []
+            if eType != "Glycosylation": sideChains = []
+            if eType not in ["Acetylation", "Methylation"]: contextGenes = []
+            if eType == "Catalysis": siteArgs = []
+            # Themes can always appear alone
             themeAloneCombinations = []
             for theme in themes:
                 themeAloneCombinations.append([theme])
             #print "Combine", combine.combine(themes, causes), "TA", themeAloneCombinations
-            return combine.combine(themes, causes) + themeAloneCombinations
-                
-    def buildExamplesFromGraph(self, sentenceGraph, outfile, goldGraph):
+            return combine.combine(themes, causes) \
+                   + combine.combine(themes, siteArgs) \
+                   + combine.combine(themes, sideChains) \
+                   + combine.combine(themes, contextGenes) \
+                   + combine.combine(themes, siteArgs, sideChains) \
+                   + combine.combine(themes, siteArgs, contextGenes) \
+                   + themeAloneCombinations
+                   #+ combine.combine(themes, locTargets)
+            
+    def buildExamplesFromGraph(self, sentenceGraph, outfile, goldGraph=None):
         """
         Build examples for a single sentence. Returns a list of examples.
         See Core/ExampleUtils for example format.
@@ -418,10 +426,8 @@ class UnmergingExampleBuilder(ExampleBuilder):
         self.multiEdgeFeatureBuilder.setFeatureVector(resetCache=True)
         self.triggerFeatureBuilder.initSentence(sentenceGraph)
         
-        examples = []
+        #examples = []
         exampleIndex = 0
-        #if append == True:
-        #    exampleIndex += 1000
         
         #undirected = self.nxMultiDiGraphToUndirected(sentenceGraph.dependencyGraph)
         #paths = NX10.all_pairs_shortest_path(undirected, cutoff=999)
@@ -431,11 +437,11 @@ class UnmergingExampleBuilder(ExampleBuilder):
         # Get argument order
         self.interactionLenghts = self.getInteractionEdgeLengths(sentenceGraph, paths)
         
-        # Map tokens to entities
+        # Map tokens to character offsets
         tokenByOffset = {}
         for i in range(len(sentenceGraph.tokens)):
             token = sentenceGraph.tokens[i]
-            if goldGraph != None:
+            if goldGraph != None: # check that the tokenizations match
                 goldToken = goldGraph.tokens[i]
                 assert token.get("id") == goldToken.get("id") and token.get("charOffset") == goldToken.get("charOffset")
             tokenByOffset[token.get("charOffset")] = token.get("id")
@@ -459,17 +465,12 @@ class UnmergingExampleBuilder(ExampleBuilder):
                 continue
             e1Id = interaction.get("e1")
             interactionsByEntityId[e1Id].append(interaction)
-#        if "merge" in self.styles:
-#            mergeInput = True
-#            sentenceGraph.mergeInteractionGraph(True)
-#            entities = sentenceGraph.mergedEntities
-#        else:
-#            mergeInput = False
-#            entities = sentenceGraph.entities
         
         exampleIndex = 0
         for entity in sentenceGraph.entities:
             eType = entity.get("type")
+            assert eType != None, entity.attrib
+            eType = str(eType)
             #if eType not in ["Binding", "Positive_regulation", "Negative_regulation", "Regulation"]:
             #    continue
             
@@ -477,12 +478,13 @@ class UnmergingExampleBuilder(ExampleBuilder):
             #    continue
             
             interactions = interactionsByEntityId[entity.get("id")]
-            #interactions = sentenceGraph.getOutInteractions(entity, mergeInput)
-            argCombinations = self.getArgumentCombinations(eType, interactions)
+            argCombinations = self.getArgumentCombinations(eType, interactions, entity.get("id"))
             #if len(argCombinations) <= 1:
             #    continue
+            assert argCombinations != None, (entity.get("id"), entity.get("type"))
             for argCombination in argCombinations:
-                assert len(argCombination) > 0, eType + ": " + str(argCombinations)
+                if eType != "Process":
+                    assert len(argCombination) > 0, eType + ": " + str(argCombinations)
                 # Originally binary classification
                 if goldGraph != None:
                     isGoldEvent = self.eventIsGold(entity, argCombination, sentenceGraph, goldGraph, goldEntitiesByOffset)
@@ -497,7 +499,7 @@ class UnmergingExampleBuilder(ExampleBuilder):
                     if category.find("egulation") != -1:
                         category = "All_regulation"
                     elif category != "Binding":
-                        category = "simple6"
+                        category = "Other" #"simple6"
                 else:
                     category = "neg"
                     
@@ -506,8 +508,8 @@ class UnmergingExampleBuilder(ExampleBuilder):
                 argString = ""
                 for arg in argCombination:
                     argString += "," + arg.get("id")
-                extra = {"xtype":"um","e":entity.get("id"),"i":argString[1:],"etype":entity.get("type"),"class":category}
-                
+                extra = {"xtype":"um","e":entity.get("id"),"i":argString[1:],"etype":eType,"class":category}
+                assert type(extra["etype"]) == types.StringType, extra
                 self.exampleStats.addExample(category)
                 example = self.buildExample(sentenceGraph, paths, entity, argCombination, interactions)
                 example[0] = sentenceGraph.getSentenceId()+".x"+str(exampleIndex)
@@ -550,6 +552,7 @@ class UnmergingExampleBuilder(ExampleBuilder):
         
         argThemeCount = 0
         argCauseCount = 0
+        argCounts = {}
         # Current example's edge combination
         for arg in argCombination:
             if arg.get("type") == "Theme":
@@ -559,9 +562,14 @@ class UnmergingExampleBuilder(ExampleBuilder):
                 if eventEntityType == "Binding":
                     tag += str(interactionIndex[arg])
                     self.buildArgumentFeatures(sentenceGraph, paths, features, eventToken, arg, tag)
-            else: # Cause
+            elif arg.get("type") == "Cause": # Cause
                 argCauseCount += 1
                 self.buildArgumentFeatures(sentenceGraph, paths, features, eventToken, arg, "argCause")
+            else:
+                argType = arg.get("type")
+                if argType not in argCounts: argCounts[argType] = 0
+                self.buildArgumentFeatures(sentenceGraph, paths, features, eventToken, arg, "arg"+argType)
+                argCounts[argType] += 1
         
         # Edge group context
         contextThemeCount = 0
@@ -589,7 +597,10 @@ class UnmergingExampleBuilder(ExampleBuilder):
         self.setFeature("argThemeCount_" + str(argThemeCount), 1)
         self.setFeature("argCauseCount", argCauseCount)
         self.setFeature("argCauseCount_" + str(argCauseCount), 1)
-
+        for key in sorted(argCounts.keys()):
+            self.setFeature("arg" + key + "Count", argCounts[key])
+            self.setFeature("arg" + key + "Count_" + str(argCounts[key]), 1)
+            
         self.setFeature("interactionThemeCount", contextThemeCount)
         self.setFeature("interactionThemeCount_" + str(contextThemeCount), 1)
         self.setFeature("interactionCauseCount", contextCauseCount)
