@@ -214,41 +214,41 @@ class UnmergingExampleBuilder(ExampleBuilder):
     def getPredictedValueRange(self):
         return self.multiEdgeFeatureBuilder.predictedRange
     
-    def filterEdgesByType(self, edges, typesToInclude):
-        if len(typesToInclude) == 0:
-            return edges
-        edgesToKeep = []
-        for edge in edges:
-            if edge.get("type") in typesToInclude:
-                edgesToKeep.append(edge)
-        return edgesToKeep
+#    def filterEdgesByType(self, edges, typesToInclude):
+#        if len(typesToInclude) == 0:
+#            return edges
+#        edgesToKeep = []
+#        for edge in edges:
+#            if edge.get("type") in typesToInclude:
+#                edgesToKeep.append(edge)
+#        return edgesToKeep
     
-    def getCategoryNameFromTokens(self, sentenceGraph, t1, t2, directed=True):
-        """
-        Example class. Multiple overlapping edges create a merged type.
-        """
-        types = set()
-        if sentenceGraph.interactionGraph.has_edge(t1, t2):
-            intEdges = sentenceGraph.interactionGraph.get_edge_data(t1, t2, default={})
-            # NOTE: Only works if keys are ordered integers
-            for i in range(len(intEdges)):
-                types.add(intEdges[i]["element"].get("type"))
-        if (not directed) and sentenceGraph.interactionGraph.has_edge(t2, t1):
-            intEdges = sentenceGraph.interactionGraph.get_edge(t2, t1, default={})
-            # NOTE: Only works if keys are ordered integers
-            for i in range(len(intEdges)):
-                types.add(intEdges[i]["element"].get("type"))
-        types = list(types)
-        types.sort()
-        categoryName = ""
-        for name in types:
-            if categoryName != "":
-                categoryName += "---"
-            categoryName += name
-        if categoryName != "":
-            return categoryName
-        else:
-            return "neg"
+#    def getCategoryNameFromTokens(self, sentenceGraph, t1, t2, directed=True):
+#        """
+#        Example class. Multiple overlapping edges create a merged type.
+#        """
+#        types = set()
+#        if sentenceGraph.interactionGraph.has_edge(t1, t2):
+#            intEdges = sentenceGraph.interactionGraph.get_edge_data(t1, t2, default={})
+#            # NOTE: Only works if keys are ordered integers
+#            for i in range(len(intEdges)):
+#                types.add(intEdges[i]["element"].get("type"))
+#        if (not directed) and sentenceGraph.interactionGraph.has_edge(t2, t1):
+#            intEdges = sentenceGraph.interactionGraph.get_edge(t2, t1, default={})
+#            # NOTE: Only works if keys are ordered integers
+#            for i in range(len(intEdges)):
+#                types.add(intEdges[i]["element"].get("type"))
+#        types = list(types)
+#        types.sort()
+#        categoryName = ""
+#        for name in types:
+#            if categoryName != "":
+#                categoryName += "---"
+#            categoryName += name
+#        if categoryName != "":
+#            return categoryName
+#        else:
+#            return "neg"
         
     def getCategoryName(self, sentenceGraph, e1, e2, directed=True):
         """
@@ -459,6 +459,13 @@ class UnmergingExampleBuilder(ExampleBuilder):
                 continue
             e1Id = interaction.get("e1")
             interactionsByEntityId[e1Id].append(interaction)
+#        if "merge" in self.styles:
+#            mergeInput = True
+#            sentenceGraph.mergeInteractionGraph(True)
+#            entities = sentenceGraph.mergedEntities
+#        else:
+#            mergeInput = False
+#            entities = sentenceGraph.entities
         
         exampleIndex = 0
         for entity in sentenceGraph.entities:
@@ -470,6 +477,7 @@ class UnmergingExampleBuilder(ExampleBuilder):
             #    continue
             
             interactions = interactionsByEntityId[entity.get("id")]
+            #interactions = sentenceGraph.getOutInteractions(entity, mergeInput)
             argCombinations = self.getArgumentCombinations(eType, interactions)
             #if len(argCombinations) <= 1:
             #    continue
