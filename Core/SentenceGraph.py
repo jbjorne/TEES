@@ -200,11 +200,14 @@ class SentenceGraph:
         # make the graph
         for e1 in entities: # loop through all given entities
             for e2 in entities: # loop through all given entities
+                interactionTypes = set()
                 for d1 in [e1] + entityToDuplicates[e1]: # add duplicates to each iteration
                     for d2 in [e2] + entityToDuplicates[e2]: # add duplicates to each iteration
                         if d1 in interactionMap and d2 in interactionMap[d1]:
                             for interaction in interactionMap[d1][d2]:
-                                graph.addEdge(e1, e2, interaction) # add real and duplicate edges for the main entity pair
+                                if interaction.get("type") not in interactionTypes: # remove edges with the same type that another edge already had
+                                    graph.addEdge(e1, e2, interaction) # add primary and duplicate edges for the main entity pair
+                                    interactionTypes.add(interaction.get("type"))
         return graph
     
     # TODO: This method shouldn't be needed anymore
@@ -220,7 +223,8 @@ class SentenceGraph:
         """
         if merged:
             # Note: mergeInteractionGraph must be called before
-            assert self.mergedEntityToDuplicates != None
+            if self.mergedEntityToDuplicates == None:
+                self.mergeInteractionGraph(True)
             if self.mergedEntityGraph == None:
                 self.mergedEntityGraph = self.makeEntityGraph(self.mergedEntities, self.interactions, self.mergedEntityToDuplicates)
             return self.mergedEntityGraph.getEdges(entity1, entity2)
@@ -228,6 +232,20 @@ class SentenceGraph:
             if self.entityGraph == None:
                 self.entityGraph = self.makeEntityGraph(self.entities, self.interactions)
             return self.entityGraph.getEdges(entity1, entity2)
+    
+    def getOutInteractions(self, entity, merged=False):
+        if merged:
+            # Note: mergeInteractionGraph must be called before
+            #assert self.mergedEntityToDuplicates != None
+            if self.mergedEntityToDuplicates == None:
+                self.mergeInteractionGraph(True)
+            if self.mergedEntityGraph == None:
+                self.mergedEntityGraph = self.makeEntityGraph(self.mergedEntities, self.interactions, self.mergedEntityToDuplicates)
+            return self.mergedEntityGraph.getOutEdges(entity)
+        else:
+            if self.entityGraph == None:
+                self.entityGraph = self.makeEntityGraph(self.entities, self.interactions)
+            return self.entityGraph.getOutEdges(entity)
 
 #        rv = []
 #        for interaction in self.interactions:
