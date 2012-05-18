@@ -40,7 +40,12 @@ selector = StepSelector(["TRAIN", "DEVEL", "EMPTY", "TEST"], fromStep=options.st
 
 # Check options
 assert options.output != None
-assert options.task in ["BI", "REN"]
+#assert options.task in ["BI", "REN"]
+fullTaskId = options.task
+subTask = 2
+if "." in options.task:
+    options.task, subTask = options.task.split(".")
+    subTask = int(subTask)
 if options.task == "BI":
     dataPath = os.path.expanduser("~/biotext/BioNLP2011/data/main-tasks/")
     TRAIN_FILE = dataPath + options.task + "/" + options.task + "-train-nodup.xml"
@@ -48,12 +53,18 @@ if options.task == "BI":
     FINAL_TEST_FILE = dataPath + options.task + "/" + options.task + "-test.xml"
     BXEv.setOptions("genia-BXEv", "BI", TEST_FILE, options.parse, options.tokenization, "edge-ids")
     EVALUATOR = BXEv
-else:
+elif task == "REN":
     dataPath = os.path.expanduser("~/biotext/BioNLP2011/data/supporting-tasks/REN/")
     TRAIN_FILE = dataPath + "ren-train.xml"
     TEST_FILE = dataPath + "ren-devel.xml"
     FINAL_TEST_FILE = dataPath + "ren-test.xml"
     EVALUATOR = Ev
+else:
+    dataPath = os.path.expanduser("~/biotext/BioNLP2011/data/main-tasks/")
+    TRAIN_FILE = dataPath + options.task + "/" + options.task + "-train-nodup" + options.extraTag + ".xml"
+    TEST_FILE = dataPath + options.task + "/" + options.task + "-devel-nodup" + options.extraTag + ".xml"
+    #FINAL_TEST_FILE = dataPath + options.task + "/" + options.task + "-test.xml" # test set never uses extratag
+    FINAL_TEST_FILE = dataPath + options.task + "/" + options.task + "-test" + options.extraTag + ".xml" # test set never uses extratag
 exec "CLASSIFIER = " + options.classifier
 
 if options.clearAll and "clear" not in options.csc:
