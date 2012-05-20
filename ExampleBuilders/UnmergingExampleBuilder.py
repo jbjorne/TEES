@@ -163,39 +163,45 @@ class UnmergingExampleBuilder(ExampleBuilder):
         eType = entity.get("type")
         goldEntities = goldEntitiesByOffset[offset]
         
+        # Check all gold entities for a match
         for goldEntity in goldEntities:
             isGold = True
             
+            # The entity type must match
             if goldEntity.get("type") != eType:
                 isGold = False
                 continue
             goldEntityId = goldEntity.get("id")
             
+            # Collect the gold interactions
             goldInteractions = []
             for goldInteraction in goldGraph.interactions:
                 if goldInteraction.get("e1") == goldEntityId:
                     goldInteractions.append(goldInteraction)
             
             # Argument count rules
-            if len(goldInteractions) != len(arguments):
+            if len(goldInteractions) != len(arguments): # total number of edges differs
                 isGold = False
                 continue
+            # count number of edges per type
             argTypeCounts = {}
             for argument in arguments:
                 argType = argument.get("type")
                 if not argTypeCounts.has_key(argType): argTypeCounts[argType] = 0
                 argTypeCounts[argType] += 1
+            # count number of gold edges per type
             goldTypeCounts = {}
             for argument in goldInteractions:
                 argType = argument.get("type")
                 if not goldTypeCounts.has_key(argType): goldTypeCounts[argType] = 0
                 goldTypeCounts[argType] += 1
+            # argument edge counts per type must match
             if argTypeCounts != goldTypeCounts:
                 isGold = False
                 continue
             
             # Exact argument matching
-            for argument in arguments:
+            for argument in arguments: # check all edges
                 e1 = argument.get("e1")
                 e2 = argument.get("e2")
                 e2Entity = sentenceGraph.entitiesById[e2]
@@ -210,7 +216,7 @@ class UnmergingExampleBuilder(ExampleBuilder):
                         if goldE2Entity.get("headOffset") == e2Offset and goldE2Entity.get("type") == e2Type:
                             found = True
                             break
-                if found == False:
+                if found == False: # this edge did not have a corresponding gold edge
                     isGold = False
                     break
 
@@ -339,17 +345,24 @@ class UnmergingExampleBuilder(ExampleBuilder):
                 goldEntitiesByOffset[offset].append(entity)
         
         # Generate examples based on interactions between entities or interactions between tokens
-        interactionsByEntityId = {}
-        for entity in sentenceGraph.entities:
-            interactionsByEntityId[entity.get("id")] = []
-        for interaction in sentenceGraph.interactions:
-            if interaction.get("type") == "neg":
-                continue
-            e1Id = interaction.get("e1")
-            interactionsByEntityId[e1Id].append(interaction)
+#        interactionsByEntityId = {}
+#        for entity in sentenceGraph.entities:
+#            interactionsByEntityId[entity.get("id")] = []
+#        for interaction in sentenceGraph.interactions:
+#            if interaction.get("type") == "neg":
+#                continue
+#            e1Id = interaction.get("e1")
+#            interactionsByEntityId[e1Id].append(interaction)
+        if "no_merge" in self.styles:
+            mergeInput = False
+            entities = sentenceGraph.entities
+        else:
+            mergeInput = True
+            sentenceGraph.mergeInteractionGraph(True)
+            entities = sentenceGraph.mergedEntities
         
         exampleIndex = 0
-        for entity in sentenceGraph.entities:
+        for entity in entities: # sentenceGraph.entities:
             eType = entity.get("type")
             assert eType != None, entity.attrib
             eType = str(eType)
@@ -359,7 +372,8 @@ class UnmergingExampleBuilder(ExampleBuilder):
             #if not goldEntitiesByOffset.has_key(entity.get("headOffset")):
             #    continue
             
-            interactions = interactionsByEntityId[entity.get("id")]
+            #interactions = interactionsByEntityId[entity.get("id")]
+            interactions = [x[2] for x in sentenceGraph.getOutInteractions(entity, mergeInput)]
             argCombinations = self.getArgumentCombinations(eType, interactions, entity.get("id"))
             #if len(argCombinations) <= 1:
             #    continue

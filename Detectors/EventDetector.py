@@ -258,13 +258,13 @@ class EventDetector(Detector):
             if self.doUnmergingSelfTraining:
                 if xml == None: 
                     xml = self.workDir+"unmerging-extra-edge-pred.xml"
-                self.unmergingDetector.buildExamples(self.model, [self.optData, [self.trainData, xml]], 
+                self.unmergingDetector.buildExamples(self.model, [self.optData.replace("-nodup", ""), [self.trainData.replace("-nodup", ""), xml]], 
                                                      [self.workDir+"unmerging-opt-examples.gz", self.workDir+"unmerging-train-examples.gz"], 
                                                      [GOLD_TEST_FILE, [GOLD_TRAIN_FILE, GOLD_TRAIN_FILE]], 
                                                      exampleStyle=self.unmergingExampleStyle, saveIdsToModel=True)
                 xml = None
             else:
-                self.unmergingDetector.buildExamples(self.model, [self.optData, self.trainData], 
+                self.unmergingDetector.buildExamples(self.model, [self.optData.replace("-nodup", ""), self.trainData.replace("-nodup", "")], 
                                                      [self.workDir+"unmerging-opt-examples.gz", self.workDir+"unmerging-train-examples.gz"], 
                                                      [GOLD_TEST_FILE, GOLD_TRAIN_FILE], 
                                                      exampleStyle=self.unmergingExampleStyle, saveIdsToModel=True)

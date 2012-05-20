@@ -4,11 +4,12 @@ Main class for representing a sentence
 __version__ = "$Revision: 1.40 $"
 
 #import Graph.networkx_v10rc1 as NX10 # import networkx as NX
-from Core.SimpleGraph import Graph
+from SimpleGraph import Graph
+import sys, os
+sys.path.append(os.path.dirname(os.path.abspath(__file__))+"/../CommonUtils")
 import Range
 import types
 import copy
-import sys
 
 #multiedges = True
 

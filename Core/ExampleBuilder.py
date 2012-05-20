@@ -282,4 +282,8 @@ if __name__=="__main__":
     print >> sys.stderr, "Importing modules"
     exec "from ExampleBuilders." + options.exampleBuilder + " import " + options.exampleBuilder + " as ExampleBuilderClass"
     
-    ExampleBuilderClass.run(options.input, options.output, options.parse, options.tokenization, options.parameters, options.predefined)
+    #input, output, parse, tokenization, style, classIds=None, featureIds=None, gold=None, append=False)
+    ExampleBuilderClass.run(options.input, options.output, options.parse, options.tokenization, options.parameters, 
+                            options.predefined+"/unmerging-ids.classes",
+                            options.predefined+"/unmerging-ids.features",
+                            options.input.replace("-nodup", "") )
