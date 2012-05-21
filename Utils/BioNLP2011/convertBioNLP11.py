@@ -57,22 +57,25 @@ def download(url, destPath, clear=False):
     if not os.path.exists(destPath):
         os.makedirs(destPath)
     destFileName = os.path.join(destPath, os.path.basename(url))
-    if not os.path.exists(destFileName):
-        print >> sys.stderr, "Downloading", url
+    if clear or not os.path.exists(destFileName):
+        if os.path.exists(destFileName): # clear existing file
+            os.remove(destFileName)
+        print >> sys.stderr, "Downloading file", url
         urllib.urlretrieve(url, destFileName)
     else:
-        print >> sys.stderr, "Skipping already downloaded", url
+        print >> sys.stderr, "Skipping already downloaded file", url
     return destFileName
 
-def downloadCorpus(corpus):
+def downloadCorpus(corpus, clear=False):
+    print >> sys.stderr, "---------------", "Downloading BioNLP'11 files", "---------------"
     downloaded = {}
     destPath = os.path.join(Settings.DATAPATH, "BioNLP11/original/corpus/")
     for setName in ["_DEVEL", "_TRAIN", "_TEST"]:
-        downloaded[corpus + setName] = download(urls[corpus + setName], destPath)
+        downloaded[corpus + setName] = download(urls[corpus + setName], destPath, clear)
     destPath = os.path.join(Settings.DATAPATH, "BioNLP11/original/support/")
     for analysis in ["_TOKENS", "_McCC"]:
         for setName in ["_DEVEL", "_TRAIN", "_TEST"]:
-            downloaded[corpus + setName + analysis] = download(urls[corpus + setName + analysis], destPath)
+            downloaded[corpus + setName + analysis] = download(urls[corpus + setName + analysis], destPath, clear)
     return downloaded
 
 def log(clear=False, logCmd=True, logFile="log.txt"):
@@ -89,6 +92,7 @@ def convert(outdir, corpus, files, intermediateFiles=True):
         shutil.rmtree(workdir)
     os.makedirs(workdir)
     
+    print >> sys.stderr, "---------------", "Converting to XML", "---------------"
     # All datasets are processed as one XML, to ensure all the steps (parse modification etc.) are
     # applied equally
     datasets = ["devel", "train", "test"]
@@ -123,6 +127,7 @@ def convert(outdir, corpus, files, intermediateFiles=True):
     if corpus == "BI":
         InteractionXML.MixSets.mixSets(xml, None, set(moveBI), "train", "devel")
     
+    print >> sys.stderr, "---------------", "Inserting analyses", "---------------"
     for setName in datasets:
         print >> sys.stderr, "Adding analyses for set", setName
         addAnalyses(xml, corpus, setName, files, bigfileName)
@@ -131,6 +136,7 @@ def convert(outdir, corpus, files, intermediateFiles=True):
         ETUtils.write(xml, bigfileName+"-sentences.xml")
     processParses(xml)
     
+    print >> sys.stderr, "---------------", "Writing corpora", "---------------"
     # Write out converted data
     if intermediateFiles:
         print >> sys.stderr, "Writing combined corpus", bigfileName+".xml"
@@ -138,16 +144,17 @@ def convert(outdir, corpus, files, intermediateFiles=True):
     #InteractionXML.MergeDuplicateEntities.mergeAll(xml, bigfileName+"-nodup.xml")
     #for sourceTag in ["", "-nodup"]:
     print >> sys.stderr, "Dividing into sets"
-    InteractionXML.DivideSets.processCorpus(bigfileName+".xml", outdir, corpus, ".xml")
+    InteractionXML.DivideSets.processCorpus(xml, outdir, corpus, ".xml")
+    
     if "devel" in datasets:
+        print >> sys.stderr, "---------------", "Evaluating conversion", "---------------"
         print >> sys.stderr, "Converting back"
-        STConvert.toSTFormat(corpus + "-devel.xml", workdir + "/roundtrip/" + corpus + "-devel" + "-task1", outputTag="a2", task=1)
-        STConvert.toSTFormat(corpus + "-devel.xml", workdir + "/roundtrip/" + corpus + "-devel" + "-task2", outputTag="a2", task=2)
-        if corpusName == "GE":
-            print >> sys.stderr, "Evaluating task 1 back-conversion"
-            BioNLP11GeniaTools.evaluate(workdir + "roundtrip/" + corpusName + "-devel" + "-task1", corpus + ".1")
-            print >> sys.stderr, "Evaluating task 2 back-conversion"
-            BioNLP11GeniaTools.evaluate(workdir + "roundtrip/" + corpusName + "-devel" + "-task2", corpus + ".2")
+        STConvert.toSTFormat(os.path.join(outdir, corpus + "-devel.xml"), workdir + "/roundtrip/" + corpus + "-devel" + "-task1", outputTag="a2", task=1)
+        STConvert.toSTFormat(os.path.join(outdir, corpus + "-devel.xml"), workdir + "/roundtrip/" + corpus + "-devel" + "-task2", outputTag="a2", task=2)
+        print >> sys.stderr, "Evaluating task 1 back-conversion"
+        BioNLP11GeniaTools.evaluate(workdir + "/roundtrip/" + corpus + "-devel" + "-task1", corpus + ".1")
+        print >> sys.stderr, "Evaluating task 2 back-conversion"
+        BioNLP11GeniaTools.evaluate(workdir + "/roundtrip/" + corpus + "-devel" + "-task2", corpus + ".2")
         #print >> sys.stderr, "Creating empty devel set"
         #deletionRules = {"interaction":{},"entity":{"isName":"False"}}
         #InteractionXML.DeleteElements.processCorpus(corpusName + "-devel" + sourceTag + ".xml", corpusName + "-devel" + sourceTag + "-empty.xml", deletionRules)
@@ -193,6 +200,7 @@ if __name__=="__main__":
     optparser.add_option("-c", "--corpora", default="GE", dest="corpora", help="corpus names in a comma-separated list, e.g. \"GE,EPI,ID\"")
     optparser.add_option("-o", "--outdir", default=os.path.join(Settings.DATAPATH, "BioNLP11/corpora/"), dest="outdir", help="directory for output files")
     optparser.add_option("--intermediateFiles", default=False, action="store_true", dest="intermediateFiles", help="save intermediate corpus files")
+    optparser.add_option("--forceDownload", default=False, action="store_true", dest="forceDownload", help="re-download all source files")
     (options, args) = optparser.parse_args()
     
     if not os.path.exists(options.outdir):
@@ -202,5 +210,5 @@ if __name__=="__main__":
     corpora = options.corpora.split(",")
     for corpus in corpora:
         print >> sys.stderr, "=======================", "Converting", corpus, "======================="
-        downloaded = downloadCorpus(corpus)
+        downloaded = downloadCorpus(corpus, options.forceDownload)
         convert(options.outdir, corpus, downloaded, options.intermediateFiles)
