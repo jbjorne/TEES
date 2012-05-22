@@ -58,6 +58,12 @@ class Detector():
         else:
             return False
     
+    def getStepStatus(self, step):
+        if self.select == None:
+            return "NOT_EXIST"
+        else:
+            return self.select.getStepStatus(step)
+    
     def setWorkDir(self, workDir=""):
         if workDir == None: # bypass assignment and keep currently defined workdir
             return

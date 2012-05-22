@@ -41,6 +41,24 @@ class StepSelector:
         if self.currentStep != None and self.currentStepStartTime != None:
             print >> sys.stderr, "---------", "EXIT STEP", self.currentStep + ": " + str(datetime.timedelta(seconds=time.time()-self.currentStepStartTime)), "---------"
     
+    def getStepStatus(self, step):
+        if self.omitSteps != None and step in self.omitSteps:
+            return "OMIT"
+        stepIndex = self.steps.index(step)
+        # Get range
+        fromIndex = 0
+        if self.fromStep != None: 
+            fromIndex = self.steps.index(self.fromStep)
+        toIndex = len(self.steps) - 1
+        if self.toStep != None: 
+            toIndex = self.steps.index(self.toStep)
+        # Determine if step is in range
+        if stepIndex < fromIndex:
+            return "BEFORE"
+        if stepIndex > toIndex:
+            return "AFTER"
+        return "PROCESS"
+    
     def check(self, step):
         #print "CHECK", step, self.currentStep, self.steps, self.fromStep, self.toStep
         assert step in self.steps
