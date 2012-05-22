@@ -64,7 +64,7 @@ def makeConfigXML(workdir, bannerDir):
     ET.SubElement(dictionaryTagger, "dictionaryType").text = "GENE"
     # Write to file
     filename = workdir + "/banner_config.xml"
-    ETUtils.writeUTF8(conf, workdir + "/banner_config.xml")
+    ETUtils.write(conf, workdir + "/banner_config.xml")
     return workdir + "/banner_config.xml"
 
 def makeEntityElements(beginOffset, endOffset, text, splitNewlines=False, elementName="entity"):
