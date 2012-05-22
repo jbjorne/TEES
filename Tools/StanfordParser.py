@@ -156,6 +156,8 @@ def convertXML(parser, input, output, debug=False, reparse=False):
     print >> sys.stderr, "Running Stanford conversion"
     print >> sys.stderr, "Stanford tools at:", stanfordParserDir
     print >> sys.stderr, "Stanford tools arguments:", " ".join(stanfordParserArgs)
+    parseTimeStamp = time.strftime("%d.%m.%y %H:%M:%S")
+    print >> sys.stderr, "Stanford time stamp:", parseTimeStamp
     
     print >> sys.stderr, "Loading corpus", input
     corpusTree = ETUtils.ETFromObj(input)
@@ -228,6 +230,8 @@ def convertXML(parser, input, output, debug=False, reparse=False):
         if pennTree == None or pennTree == "":
             parse.set("stanford", "no_penn")
             continue
+        parse.set("stanfordSource", "TEES")
+        parse.set("stanfordDate", parseTimeStamp)
         # Get tokens
         if sentence.find("analyses") != None:
             tokenization = getElementByAttrib(sentence.find("analyses"), "tokenization", {"tokenizer":parse.get("tokenizer")})
@@ -264,7 +268,7 @@ def convertXML(parser, input, output, debug=False, reparse=False):
         ETUtils.write(corpusRoot, output)
     return corpusTree
 
-def insertParse(sentence, stanfordOutputFile, parser):
+def insertParse(sentence, stanfordOutputFile, parser, extraAttributes={}):
     # Get parse
     analyses = setDefaultElement(sentence, "analyses")
     #parses = setDefaultElement(sentenceAnalyses, "parses")
@@ -278,6 +282,8 @@ def insertParse(sentence, stanfordOutputFile, parser):
     if pennTree == None or pennTree == "":
         parse.set("stanford", "no_penn")
         return False
+    for attr in sorted(extraAttributes.keys()):
+        parse.set(attr, extraAttributes[attr])
     # Get tokens
     tokenization = getElementByAttrib(sentence.find("analyses"), "tokenization", {"tokenizer":parse.get("tokenizer")})
     assert tokenization != None
@@ -294,7 +300,7 @@ def insertParse(sentence, stanfordOutputFile, parser):
         parse.set("stanford", "ok")
     return True
 
-def insertParses(input, parsePath, output=None, parseName="mccc-preparsed"):
+def insertParses(input, parsePath, output=None, parseName="McCC", extraAttributes={}):
     import tarfile
     from SentenceSplitter import openFile
     """
@@ -335,7 +341,7 @@ def insertParses(input, parsePath, output=None, parseName="mccc-preparsed"):
             # be moved to its own function.
             for sentence in sentences:
                 counter.update(0, "Processing Documents ("+sentence.get("id")+"/" + document.get("pmid") + "): ")
-                if not insertParse(sentence, f, parseName):
+                if not insertParse(sentence, f, parseName, extraAttributes={}):
                     failCount += 1
             f.close()
         counter.update(1, "Processing Documents ("+document.get("id")+"/" + document.get("pmid") + "): ")

@@ -9,6 +9,7 @@ except ImportError:
 import cElementTreeUtils as ETUtils
 import StanfordParser
 
+import time
 import shutil
 import subprocess
 import tempfile
@@ -135,7 +136,7 @@ def insertPhrases(phrases, parse, tokenElements, idStem="cjp_"):
 
 
 
-def insertParse(sentence, treeLine, parseName="mccc-preparsed", tokenizationName = None, makePhraseElements=True):
+def insertParse(sentence, treeLine, parseName="McCC", tokenizationName = None, makePhraseElements=True, extraAttributes={}):
     # Find or create container elements
     analyses = setDefaultElement(sentence, "analyses")#"sentenceanalyses")
     #tokenizations = setDefaultElement(sentenceAnalyses, "tokenizations")
@@ -154,6 +155,8 @@ def insertParse(sentence, treeLine, parseName="mccc-preparsed", tokenizationName
     
     tokenByIndex = {}
     parse.set("pennstring", treeLine.strip())
+    for attr in sorted(extraAttributes.keys()):
+        parse.set(attr, extraAttributes[attr])
     if treeLine.strip() == "":
         return False
     else:
@@ -164,6 +167,8 @@ def insertParse(sentence, treeLine, parseName="mccc-preparsed", tokenizationName
                 assert prevTokenization.get("tokenizer") != tokenizationName
             tokenization = ET.Element("tokenization")
             tokenization.set("tokenizer", parseName)
+            for attr in sorted(extraAttributes.keys()): # add the parser extra attributes to the parser generated tokenization 
+                tokenization.set(attr, extraAttributes[attr])
             analyses.insert(getElementIndex(analyses, parse), tokenization)
             # Insert tokens to parse
             insertTokens(tokens, sentence, tokenization)
@@ -215,13 +220,15 @@ def getSentences(corpusRoot, requireEntities=False, skipIds=[], skipParsed=True)
             if sentence.find("entity") == None:
                 continue
         if skipParsed:
-            if ETUtils.getElementByAttrib(sentence, "parse", {"parser":"McClosky"}) != None:
+            if ETUtils.getElementByAttrib(sentence, "parse", {"parser":"McCC"}) != None:
                 continue
         yield sentence
 
-def parse(input, output=None, tokenizationName=None, parseName="McClosky", requireEntities=False, skipIds=[], skipParsed=True, timeout=600, makePhraseElements=True, debug=False):
+def parse(input, output=None, tokenizationName=None, parseName="McCC", requireEntities=False, skipIds=[], skipParsed=True, timeout=600, makePhraseElements=True, debug=False):
     global charniakJohnsonParserDir, escDict
     print >> sys.stderr, "Charniak-Johnson Parser"
+    parseTimeStamp = time.strftime("%d.%m.%y %H:%M:%S")
+    print >> sys.stderr, "Charniak-Johnson time stamp:", parseTimeStamp
     
     print >> sys.stderr, "Loading corpus", input
     corpusTree = ETUtils.ETFromObj(input)
@@ -281,7 +288,7 @@ def parse(input, output=None, tokenizationName=None, parseName="McClosky", requi
     failCount = 0
     for sentence in getSentences(corpusRoot, requireEntities, skipIds, skipParsed):        
         treeLine = treeFile.readline()
-        if not insertParse(sentence, treeLine, parseName, makePhraseElements=makePhraseElements):
+        if not insertParse(sentence, treeLine, parseName, makePhraseElements=makePhraseElements, extraAttributes={"source":"TEES", "date":parseTimeStamp}):
             failCount += 1
     
     treeFile.close()
@@ -300,7 +307,7 @@ def parse(input, output=None, tokenizationName=None, parseName="McClosky", requi
         ETUtils.write(corpusRoot, output)
     return corpusTree
 
-def insertParses(input, parsePath, output=None, parseName="mccc-preparsed", tokenizationName = None, makePhraseElements=True):
+def insertParses(input, parsePath, output=None, parseName="McCC", tokenizationName = None, makePhraseElements=True, extraAttributes={}):
     import tarfile
     from SentenceSplitter import openFile
     """
@@ -345,7 +352,7 @@ def insertParses(input, parsePath, output=None, parseName="mccc-preparsed", toke
         # TODO: Following for-loop is the same as when used with a real parser, and should
         # be moved to its own function.
         for sentence, treeLine in zip(sentences, parseStrings):
-            if not insertParse(sentence, treeLine, makePhraseElements=makePhraseElements):
+            if not insertParse(sentence, treeLine, makePhraseElements=makePhraseElements, extraAttributes=extraAttributes):
                 failCount += 1
     
     if tarFile != None:
