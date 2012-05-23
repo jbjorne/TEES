@@ -18,9 +18,27 @@ import codecs
 
 sys.path.append(os.path.dirname(os.path.abspath(__file__))+"/..")
 import Utils.Settings as Settings
+import Utils.Download as Download
 #bannerDir = Settings.BANNER_DIR
 
-def makeConfigXML(workdir, bannerDir):
+def install(destDir=None, downloadDir=None, redownload=False):
+    url = "http://banner.svn.sourceforge.net/viewvc/banner/trunk/?view=tar"
+    if downloadDir == None:
+        downloadDir = os.path.join(Settings.DATAPATH, "tools/download/")
+    if destDir == None:
+        destDir = Settings.DATAPATH
+    Download.downloadAndExtract(url, destDir + "/tools/BANNER", downloadDir + "banner.tar.gz", "trunk", False)
+    
+    # Compile BANNER
+    subprocess.call("cd " + destDir + "/tools/BANNER; export JAVA_HOME=/usr/lib/jvm/java-6-openjdk; ant -f build_ext.xml", shell=True)
+    
+    #url ="http://downloads.sourceforge.net/project/biocreative/biocreative2entitytagging/1.1/bc2geneMention.tar.gz?use_mirror=auto"
+    #Download.downloadAndExtract(url, destDir + "/data", downloadDir)
+    
+    url = "http://www.java2s.com/Code/JarDownload/trove/trove-2.1.0.jar.zip"
+    Download.downloadAndExtract(url, destDir + "/tools/trove/", downloadDir)
+
+def makeConfigXML(workdir, bannerDir, oldVersion=True):
     conf = ET.Element("banner-configuration")
     banner = ET.SubElement(conf, "banner")
     eval = ET.SubElement(banner, "eval")
@@ -49,6 +67,10 @@ def makeConfigXML(workdir, bannerDir):
     ET.SubElement(eval, "useNumericNormalization").text = "true"
     ET.SubElement(eval, "tagFormat").text = "IOB"
     ET.SubElement(eval, "crfOrder").text = "2"
+    if not oldVersion:
+        ET.SubElement(eval, "mentionTypes").text = "Required"
+        ET.SubElement(eval, "sameTypeOverlapOption").text = "Exception"
+        ET.SubElement(eval, "differentTypeOverlapOption").text = "Exception"
     ET.SubElement(eval, "dictionaryTagger").text = "banner.tagging.dictionary.DictionaryTagger"
     # End eval element
     tagging = ET.SubElement(banner, "tagging") 
@@ -105,7 +127,7 @@ def makeEntityElements(beginOffset, endOffset, text, splitNewlines=False, elemen
         currentEndOffset += 1 # +1 for the newline
     return elements
     
-def run(input, output=None, elementName="entity", processElement="document", splitNewlines=False, debug=False):
+def run(input, output=None, elementName="entity", processElement="document", splitNewlines=False, debug=False, bannerPath=None, trovePath=None):
     print >> sys.stderr, "Loading corpus", input
     corpusTree = ETUtils.ETFromObj(input)
     print >> sys.stderr, "Corpus file loaded"
@@ -123,27 +145,47 @@ def run(input, output=None, elementName="entity", processElement="document", spl
     infile.close()
     
     # Define classpath for java
-    assert os.path.exists(Settings.BANNER_DIR + "/lib/banner.jar"), Settings.BANNER_DIR
-    assert os.path.exists(Settings.JAVA_TROVE_PATH), Settings.JAVA_TROVE_PATH
-    classPath = Settings.BANNER_DIR + "/bin"
-    classPath += ":" + Settings.BANNER_DIR + "/lib/banner.jar"
-    classPath += ":" + Settings.BANNER_DIR + "/lib/dragontool.jar"
-    classPath += ":" + Settings.BANNER_DIR + "/lib/heptag.jar"
-    classPath += ":" + Settings.BANNER_DIR + "/lib/commons-collections-3.2.1.jar"
-    classPath += ":" + Settings.BANNER_DIR + "/lib/commons-configuration-1.6.jar"
-    classPath += ":" + Settings.BANNER_DIR + "/lib/commons-lang-2.4.jar"
-    classPath += ":" + Settings.BANNER_DIR + "/lib/mallet.jar"
-    classPath += ":" + Settings.BANNER_DIR + "/lib/commons-logging-1.1.1.jar"
-    classPath += ":" + Settings.JAVA_TROVE_PATH # ":/usr/share/java/trove.jar"
+    if bannerPath == None:
+        bannerPath = Settings.BANNER_DIR
+    if trovePath == None:
+        trovePath = Settings.JAVA_TROVE_PATH
+    libPath = "/lib/"
+#    if not os.path.exists(bannerPath + libPath):
+#        libPath = "/libs/"
+#        assert os.path.exists(bannerPath + libPath)
+    assert os.path.exists(bannerPath + libPath + "banner.jar"), bannerPath
+    assert os.path.exists(trovePath), trovePath
+    oldVersion = True
+    classPath = bannerPath + "/bin"
+    for filename in os.listdir(bannerPath + libPath):
+        #if filename.endswith(".jar"):
+        #    classPath += ":" + bannerPath + libPath + filename
+        if filename == "uima":
+            oldVersion = False
+    classPath += ":" + bannerPath + libPath + "*"
+#    classPath += ":" + bannerPath + libPath + "banner.jar"
+#    classPath += ":" + bannerPath + libPath + "dragontool.jar"
+#    classPath += ":" + bannerPath + libPath + "heptag.jar"
+#    classPath += ":" + bannerPath + libPath + "commons-collections-3.2.1.jar"
+#    classPath += ":" + bannerPath + libPath + "commons-configuration-1.6.jar"
+#    classPath += ":" + bannerPath + libPath + "commons-lang-2.4.jar"
+#    classPath += ":" + bannerPath + libPath + "mallet.jar"
+#    classPath += ":" + bannerPath + libPath + "commons-logging-1.1.1.jar"
+    if oldVersion:
+        classPath += ":" + trovePath # ":/usr/share/java/trove.jar"
     
-    config = makeConfigXML(workdir, Settings.BANNER_DIR)
+    config = makeConfigXML(workdir, bannerPath)
     
     # Run parser
-    print >> sys.stderr, "Running BANNER", Settings.BANNER_DIR
+    print >> sys.stderr, "Running BANNER", bannerPath
+    print >> sys.stderr, "Trove library at", trovePath
     cwd = os.getcwd()
-    os.chdir(Settings.BANNER_DIR)
-    args = ["java", "-cp", classPath, "banner.eval.TestModel", config]
-    #print args
+    os.chdir(bannerPath)
+    if oldVersion: # old version
+        args = ["java", "-cp", classPath, "banner.eval.TestModel", config]
+    else:
+        args = ["java", "-cp", classPath, "banner.eval.BANNER", "test", config]
+    print args
     startTime = time.time()
     exitCode = subprocess.call(args)
     assert exitCode == 0, exitCode
@@ -258,16 +300,31 @@ if __name__=="__main__":
     optparser.add_option("--inputCorpusName", default="PMC11", dest="inputCorpusName", help="")
     optparser.add_option("-o", "--output", default=None, dest="output", help="Output file in Interaction XML format.")
     optparser.add_option("-e", "--elementName", default="entity", dest="elementName", help="BANNER created element tag in Interaction XML")
-    optparser.add_option("-p", "--processElement", default="document", dest="processElement", help="input element tag (usually \"sentence\" or \"document\")")
+    optparser.add_option("-p", "--processElement", default="sentence", dest="processElement", help="input element tag (usually \"sentence\" or \"document\")")
     optparser.add_option("-s", "--split", default=False, action="store_true", dest="splitNewlines", help="Split BANNER entities at newlines")
     optparser.add_option("--debug", default=False, action="store_true", dest="debug", help="Preserve temporary working directory")
+    optparser.add_option("--pathBANNER", default=None, dest="pathBANNER", help="")
+    optparser.add_option("--pathTrove", default=None, dest="pathTrove", help="")
+    optparser.add_option("--install", default=None, dest="install", help="Install directory (or DEFAULT)")
     (options, args) = optparser.parse_args()
     
-    if os.path.isdir(options.input) or options.input.endswith(".tar.gz"):
-        print >> sys.stderr, "Converting ST-format"
-        import STFormat.ConvertXML
-        import STFormat.STTools
-        options.input = STFormat.ConvertXML.toInteractionXML(STFormat.STTools.loadSet(options.input), options.inputCorpusName)
-    print >> sys.stderr, "Running BANNER"
-    run(input=options.input, output=options.output, elementName=options.elementName, processElement=options.processElement, splitNewlines=options.splitNewlines, debug=options.debug)
+    if options.install == None:
+        if os.path.isdir(options.input) or options.input.endswith(".tar.gz"):
+            print >> sys.stderr, "Converting ST-format"
+            import STFormat.ConvertXML
+            import STFormat.STTools
+            options.input = STFormat.ConvertXML.toInteractionXML(STFormat.STTools.loadSet(options.input), options.inputCorpusName)
+        print >> sys.stderr, "Running BANNER"
+        run(input=options.input, output=options.output, elementName=options.elementName, 
+            processElement=options.processElement, splitNewlines=options.splitNewlines, debug=options.debug,
+            bannerPath=options.pathBANNER, trovePath=options.pathTrove)
+    else:
+        downloadDir = None
+        destDir = None
+        if options.install != "DEFAULT":
+            if "," in options.install:
+                destDir, downloadDir = options.install.split(",")
+            else:
+                destDir = options.install
+        install(destDir, downloadDir)
     
