@@ -126,7 +126,29 @@ def makeEntityElements(beginOffset, endOffset, text, splitNewlines=False, elemen
         currentBeginOffset += len(entityString) + 1 # +1 for the newline
         currentEndOffset += 1 # +1 for the newline
     return elements
-    
+
+def fixOffset(origBannerEntity, bannerEntityText, begin, end, sentenceText):
+    # Here we make the (maybe optimistic) assumption that these offsets bear 
+    # some resemblance to reality and can be realigned with the text.
+    origEnd = end
+    end = begin + len(bannerEntityText) # the end offset seems random, let's take the length from the begin-one
+    assert len(sentenceText[begin:end]) == len(bannerEntityText), (bannerEntity, sentenceText[begin:end], begin, end, sentenceText)
+    slippage = 0
+    found = True
+    while bannerEntityText != sentenceText[begin:end]:
+        found = False
+        slippage += 1
+        if sentenceText[begin+slippage:end+slippage] == bannerEntityText:
+            found = True
+            break
+        if sentenceText[begin-slippage:end-slippage] == bannerEntityText:
+            found = True
+            slippage = -slippage
+            break
+    assert found, (origBannerEntity, bannerEntityText, sentenceText[begin:end], begin, end, sentenceText)
+    print "Fixed BANNER entity,", origBannerEntity + ", slippage", slippage, "end diff", origEnd - end
+    return begin + slippage, end + slippage - 1
+
 def run(input, output=None, elementName="entity", processElement="document", splitNewlines=False, debug=False, bannerPath=None, trovePath=None):
     print >> sys.stderr, "Loading corpus", input
     corpusTree = ETUtils.ETFromObj(input)
@@ -173,19 +195,19 @@ def run(input, output=None, elementName="entity", processElement="document", spl
 #    classPath += ":" + bannerPath + libPath + "commons-logging-1.1.1.jar"
     if oldVersion:
         classPath += ":" + trovePath # ":/usr/share/java/trove.jar"
+        print >> sys.stderr, "Trove library at", trovePath
     
-    config = makeConfigXML(workdir, bannerPath)
+    config = makeConfigXML(workdir, bannerPath, oldVersion)
     
     # Run parser
     print >> sys.stderr, "Running BANNER", bannerPath
-    print >> sys.stderr, "Trove library at", trovePath
     cwd = os.getcwd()
     os.chdir(bannerPath)
     if oldVersion: # old version
         args = ["java", "-cp", classPath, "banner.eval.TestModel", config]
     else:
         args = ["java", "-cp", classPath, "banner.eval.BANNER", "test", config]
-    print args
+    print >> sys.stderr, "BANNER command:", " ".join(args)
     startTime = time.time()
     exitCode = subprocess.call(args)
     assert exitCode == 0, exitCode
@@ -213,65 +235,92 @@ def run(input, output=None, elementName="entity", processElement="document", spl
     # character offsets.
     
     # Read BANNER results
-    outfile = codecs.open(os.path.join(workdir, "output.txt"), "rt", "utf-8")
-    idfile = codecs.open(os.path.join(workdir, "ids.txt"), "rt", "utf-8")
     print >> sys.stderr, "Inserting entities"
-    # Add output to sentences
-    for line in outfile:
-        bannerId = idfile.readline().strip()
-        sentence = sDict[bannerId]
-        
-        # Find or create container elements
-        sentenceId = sentence.get("id")
-        
-        sText = sentence.get("text")
-        start = 0
-        entityCount = 0
-        beginOffset = None
-        # Add tokens
-        splits = line.strip().split()
-        for split in splits:
-            tokenText, tag = split.rsplit("|", 1)
-            # Determine offsets by aligning BANNER-generated tokens to original text
-            cStart = sText.find(tokenText, start)
-            assert cStart != -1, (tokenText, tag, sText, line)
-            cEnd = cStart + len(tokenText) - 1
-            start = cStart + len(tokenText)
+    if oldVersion:
+        outfile = codecs.open(os.path.join(workdir, "output.txt"), "rt", "utf-8")
+        idfile = codecs.open(os.path.join(workdir, "ids.txt"), "rt", "utf-8")
+        # Add output to sentences
+        for line in outfile:
+            bannerId = idfile.readline().strip()
+            sentence = sDict[bannerId]
             
-            if tag == "O":
-                if beginOffset != None:
-                    ## Make element
-                    #ent = ET.Element(elementName)
-                    #ent.set("id", sentenceId + ".e" + str(entityCount))
-                    #ent.set("charOffset", str(beginOffset) + "-" + str(prevEnd))
-                    #ent.set("type", "Protein")
-                    #ent.set("isName", "True")
-                    #ent.set("source", "BANNER")
-                    #ent.set("text", sText[beginOffset:prevEnd+1])
-                    entities = makeEntityElements(beginOffset, prevEnd, sText, splitNewlines, elementName)
-                    assert len(entities) > 0
-                    nonSplitCount += 1
-                    if len(entities) > 1:
-                        splitEventCount += 1
-                    for ent in entities:
-                        ent.set("id", sentenceId + ".e" + str(entityCount))
-                        sentence.append(ent)
-                        if not sentenceHasEntities[bannerId]:
-                            sentencesWithEntities += 1
-                            sentenceHasEntities[bannerId] = True
-                        totalEntities += 1
-                        entityCount += 1
-                    beginOffset = None
-            else:
-                if beginOffset == None:
-                    beginOffset = cStart
-            prevEnd = cEnd
+            # Find or create container elements
+            sentenceId = sentence.get("id")
+            
+            sText = sentence.get("text")
+            start = 0
+            entityCount = 0
+            beginOffset = None
+            # Add tokens
+            splits = line.strip().split()
+            for split in splits:
+                tokenText, tag = split.rsplit("|", 1)
+                # Determine offsets by aligning BANNER-generated tokens to original text
+                cStart = sText.find(tokenText, start)
+                assert cStart != -1, (tokenText, tag, sText, line)
+                cEnd = cStart + len(tokenText) - 1
+                start = cStart + len(tokenText)
+                
+                if tag == "O":
+                    if beginOffset != None:
+                        ## Make element
+                        #ent = ET.Element(elementName)
+                        #ent.set("id", sentenceId + ".e" + str(entityCount))
+                        #ent.set("charOffset", str(beginOffset) + "-" + str(prevEnd))
+                        #ent.set("type", "Protein")
+                        #ent.set("isName", "True")
+                        #ent.set("source", "BANNER")
+                        #ent.set("text", sText[beginOffset:prevEnd+1])
+                        entities = makeEntityElements(beginOffset, prevEnd, sText, splitNewlines, elementName)
+                        assert len(entities) > 0
+                        nonSplitCount += 1
+                        if len(entities) > 1:
+                            splitEventCount += 1
+                        for ent in entities:
+                            ent.set("id", sentenceId + ".e" + str(entityCount))
+                            sentence.append(ent)
+                            if not sentenceHasEntities[bannerId]:
+                                sentencesWithEntities += 1
+                                sentenceHasEntities[bannerId] = True
+                            totalEntities += 1
+                            entityCount += 1
+                        beginOffset = None
+                else:
+                    if beginOffset == None:
+                        beginOffset = cStart
+                prevEnd = cEnd
+        outfile.close()
+        idfile.close()
+    else:
+        sentenceEntityCount = {}
+        mentionfile = codecs.open(os.path.join(workdir, "mention.txt"), "rt", "utf-8")
+        for line in mentionfile:
+            bannerId, offsets, word = line.strip().split("|")
+            offsets = offsets.split()
+            sentence = sDict[bannerId]
+            offsets[0], offsets[1] = fixOffset(line.strip(), word, int(offsets[0]), int(offsets[1]), sentence.get("text"))
+            entities = makeEntityElements(int(offsets[0]), int(offsets[1]), sentence.get("text"), splitNewlines, elementName)
+            entityText = "\n".join([x.get("text") for x in entities])
+            assert entityText == word, (entityText, word, bannerId, offsets, sentence.get("id"), sentence.get("text"))
+            assert len(entities) > 0, (line.strip(), sentence.get("text"))
+            nonSplitCount += 1
+            if len(entities) > 1:
+                splitEventCount += 1
+            if bannerId not in sentenceEntityCount:
+                sentenceEntityCount[bannerId] = 0
+            for ent in entities:
+                ent.set("id", sentence.get("id") + ".e" + str(sentenceEntityCount[bannerId]))
+                sentence.append(ent)
+                if not sentenceHasEntities[bannerId]:
+                    sentencesWithEntities += 1
+                    sentenceHasEntities[bannerId] = True
+                totalEntities += 1
+                sentenceEntityCount[bannerId] += 1
+        mentionfile.close()
     
     print >> sys.stderr, "BANNER found", nonSplitCount, "entities in", sentencesWithEntities, processElement + "-elements"
     print >> sys.stderr, "New", elementName + "-elements:", totalEntities, "(Split", splitEventCount, "BANNER entities with newlines)"
     
-    outfile.close()
-    idfile.close()
     # Remove work directory
     if not debug:
         shutil.rmtree(workdir)
