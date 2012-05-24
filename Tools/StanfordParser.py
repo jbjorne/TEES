@@ -2,6 +2,7 @@ import sys, os
 import shutil
 import subprocess
 import tempfile
+import tarfile
 import codecs
 from ProcessUtils import *
 try:
@@ -12,6 +13,8 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__f
 import cElementTreeUtils as ETUtils
 
 sys.path.append(os.path.dirname(os.path.abspath(__file__))+"/..")
+import Utils.Settings as Settings
+import Utils.Download as Download
 import Utils.Settings as Settings
 #stanfordParserDir = "/home/jari/biotext/tools/stanford-parser-2010-08-20"
 #stanfordParserDir = "/home/jari/temp_exec/stanford-parser-2010-08-20"
@@ -31,6 +34,26 @@ escDict={"-LRB-":"(",
          "-RSB-":"]",
          "``":"\"",
          "''":"\""}
+
+def install(destDir=None, downloadDir=None, redownload=False):
+    url = "http://nlp.stanford.edu/software/stanford-parser-2012-03-09.tgz"
+    packageName = url.split("/")[-1].split(".")[0]
+    # Download
+    if downloadDir == None:
+        downloadDir = os.path.join(Settings.DATAPATH, "tools/download/")
+    downloadFile = Download.download(url, downloadDir, clear=redownload)
+    # Prepare destination
+    if destDir == None:
+        destDir = os.path.join(Settings.DATAPATH, "tools/")
+    installDir =  os.path.join(destDir, packageName)
+    if os.path.exists(installDir):
+        print >> sys.stderr, "Removing existing installation at", installDir
+        shutil.rmtree(installDir)
+    # Unpack
+    print >> sys.stderr, "Extracting", downloadFile, "to", destDir
+    f = tarfile.open(downloadFile, 'r:gz')
+    f.extractall(destDir)
+    f.close()
 
 def runStanford(input, output):
     global stanfordParserArgs
@@ -375,7 +398,13 @@ if __name__=="__main__":
     optparser.add_option("-p", "--parse", default=None, dest="parse", help="Name of parse element.")
     optparser.add_option("--debug", default=False, action="store_true", dest="debug", help="")
     optparser.add_option("--reparse", default=False, action="store_true", dest="reparse", help="")
+    optparser.add_option("--install", default=None, dest="install", help="Install directory (or DEFAULT)")
     (options, args) = optparser.parse_args()
     
-    convertXML(input=options.input, output=options.output, parser=options.parse, debug=options.debug, reparse=options.reparse)
+    if options.install != None:
+        if options.install == "DEFAULT":
+            options.install = None
+        install(options.install)
+    else:
+        convertXML(input=options.input, output=options.output, parser=options.parse, debug=options.debug, reparse=options.reparse)
         

@@ -19,12 +19,19 @@ import codecs
 
 import Utils.Settings as Settings
 from Utils.ProgressCounter import ProgressCounter
-"""
-A wrapper for the Joachims SVM Multiclass classifier.
-"""
+import Utils.Download as Download
 
 #sentenceSplitterDir = "/home/jari/biotext/tools/geniass"
 #sentenceSplitterDir = "/home/jari/temp_exec/geniass"
+
+def install(destDir=None, downloadDir=None, redownload=False):
+    url = "http://www.nactem.ac.uk/y-matsu/geniass/geniass-1.00.tar.gz"
+    packageName = "geniass"
+    if downloadDir == None:
+        downloadDir = os.path.join(Settings.DATAPATH, "tools/download/")
+    if destDir == None:
+        destDir = os.path.join(Settings.DATAPATH, "tools/")
+    Download.downloadAndExtract(url, packageName, destDir, downloadDir)
 
 def moveElements(document):
     entMap = {}
@@ -250,7 +257,18 @@ if __name__=="__main__":
     optparser.add_option("-i", "--input", default=None, dest="input", help="Corpus in interaction xml format", metavar="FILE")
     optparser.add_option("-o", "--output", default=None, dest="output", help="Output file in interaction xml format.")
     optparser.add_option("-p", "--postprocess", default=False, action="store_true", dest="postprocess", help="Run postprocessor")
+    optparser.add_option("--install", default=None, dest="install", help="Install directory (or DEFAULT)")
     (options, args) = optparser.parse_args()
     
-    makeSentences(input=options.input, output=options.output, removeText=False, postProcess=options.postprocess)
+    if options.install == None:
+        makeSentences(input=options.input, output=options.output, removeText=False, postProcess=options.postprocess)
+    else:
+        downloadDir = None
+        destDir = None
+        if options.install != "DEFAULT":
+            if "," in options.install:
+                destDir, downloadDir = options.install.split(",")
+            else:
+                destDir = options.install
+        install(destDir, downloadDir)
     
