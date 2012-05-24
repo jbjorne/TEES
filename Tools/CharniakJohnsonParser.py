@@ -2,11 +2,12 @@ parse__version__ = "$Revision: 1.11 $"
 
 import sys,os
 import sys
+sys.path.append(os.path.dirname(os.path.abspath(__file__))+"/..")
 try:
     import xml.etree.cElementTree as ET
 except ImportError:
     import cElementTree as ET
-import cElementTreeUtils as ETUtils
+import CommonUtils.cElementTreeUtils as ETUtils
 import StanfordParser
 
 import time
@@ -16,11 +17,13 @@ import tempfile
 import codecs
 from ProcessUtils import *
 
-sys.path.append(os.path.dirname(os.path.abspath(__file__))+"/..")
+
 import Utils.Settings as Settings
 #charniakJohnsonParserDir = "/home/jari/biotext/tools/reranking-parser"
 #charniakJohnsonParserDir = "/home/jari/temp_exec/reranking-parser"
-charniakJohnsonParserDir = Settings.CHARNIAK_JOHNSON_PARSER_DIR
+#charniakJohnsonParserDir = Settings.CHARNIAK_JOHNSON_PARSER_DIR
+
+import Utils.Download as Download
 
 escDict={"-LRB-":"(",
          "-RRB-":")",
@@ -42,6 +45,16 @@ escDict={"-LRB-":"(",
 #    cscConnection.run("split -l 50 " + textFileName + " " + textFileName + "-part", True)
 #    
 #    cscConnection.run("cat " + textFileName + "-part* > cj-output.txt", True)
+
+def install(destDir=None, downloadDir=None, redownload=False):
+    url = "http://bllip.cs.brown.edu/download/reranking-parserAug06.tar.gz"
+    packageName = "reranking-parser"
+    if downloadDir == None:
+        downloadDir = os.path.join(Settings.DATAPATH, "tools/download/")
+    if destDir == None:
+        destDir = os.path.join(Settings.DATAPATH, "tools/reranking-parser")
+    Download.downloadAndExtract(url, destDir, downloadDir)
+    shutil.move(destDir + "/reranking-parser", destDir + "/reranking-parserAug06")
             
 def readPenn(treeLine):
     global escDict
@@ -179,13 +192,13 @@ def insertParse(sentence, treeLine, parseName="McCC", tokenizationName = None, m
             insertPhrases(phrases, parse, tokenization.findall("token"))
     return True           
 
-def runCharniakJohnsonParserWithTokenizer(input, output):
-    return runCharniakJohnsonParser(input, output, True)
-
-def runCharniakJohnsonParserWithoutTokenizer(input, output):
-    return runCharniakJohnsonParser(input, output, False)
+#def runCharniakJohnsonParserWithTokenizer(input, output):
+#    return runCharniakJohnsonParser(input, output, True)
+#
+#def runCharniakJohnsonParserWithoutTokenizer(input, output):
+#    return runCharniakJohnsonParser(input, output, False)
         
-def runCharniakJohnsonParser(input, output, tokenizer=False):
+def runCharniakJohnsonParser(input, output, tokenizer=False, pathBioModel=None):
     if tokenizer:
         print >> sys.stderr, "Running CJ-parser with tokenization"
     else:
@@ -194,14 +207,13 @@ def runCharniakJohnsonParser(input, output, tokenizer=False):
     #return subprocess.Popen(args, 
     #    stdin=codecs.open(input, "rt", "utf-8"),
     #    stdout=codecs.open(output, "wt", "utf-8"), shell=True)
-    
-    biomodelDir = Settings.MCCLOSKY_BIOPARSINGMODEL_DIR
-    assert os.path.exists(Settings.MCCLOSKY_BIOPARSINGMODEL_DIR), Settings.MCCLOSKY_BIOPARSINGMODEL_DIR
+
+    assert os.path.exists(pathBioModel), pathBioModel
     if tokenizer:
-        firstStageArgs = ["first-stage/PARSE/parseIt", "-l999", "-N50" , biomodelDir+"/parser/"]
+        firstStageArgs = ["first-stage/PARSE/parseIt", "-l999", "-N50" , pathBioModel+"/parser/"]
     else:
-        firstStageArgs = ["first-stage/PARSE/parseIt", "-l999", "-N50" , "-K", biomodelDir+"/parser/"]
-    secondStageArgs = ["second-stage/programs/features/best-parses", "-l", biomodelDir+"/reranker/features.gz", biomodelDir+"/reranker/weights.gz"]
+        firstStageArgs = ["first-stage/PARSE/parseIt", "-l999", "-N50" , "-K", pathBioModel+"/parser/"]
+    secondStageArgs = ["second-stage/programs/features/best-parses", "-l", pathBioModel+"/reranker/features.gz", pathBioModel+"/reranker/weights.gz"]
     
     firstStage = subprocess.Popen(firstStageArgs,
                                   stdin=codecs.open(input, "rt", "utf-8"),
@@ -224,11 +236,18 @@ def getSentences(corpusRoot, requireEntities=False, skipIds=[], skipParsed=True)
                 continue
         yield sentence
 
-def parse(input, output=None, tokenizationName=None, parseName="McCC", requireEntities=False, skipIds=[], skipParsed=True, timeout=600, makePhraseElements=True, debug=False):
-    global charniakJohnsonParserDir, escDict
+def parse(input, output=None, tokenizationName=None, parseName="McCC", requireEntities=False, skipIds=[], skipParsed=True, timeout=600, makePhraseElements=True, debug=False, pathParser=None, pathBioModel=None):
+    global escDict
     print >> sys.stderr, "Charniak-Johnson Parser"
     parseTimeStamp = time.strftime("%d.%m.%y %H:%M:%S")
     print >> sys.stderr, "Charniak-Johnson time stamp:", parseTimeStamp
+    
+    if pathParser == None:
+        pathParser = Settings.CHARNIAK_JOHNSON_PARSER_DIR
+    print >> sys.stderr, "Charniak-Johnson parser at:", pathParser
+    if pathBioModel == None:
+        pathBioModel = Settings.MCCLOSKY_BIOPARSINGMODEL_DIR
+    print >> sys.stderr, "Biomodel at:", pathBioModel
     
     print >> sys.stderr, "Loading corpus", input
     corpusTree = ETUtils.ETFromObj(input)
@@ -268,15 +287,15 @@ def parse(input, output=None, tokenizationName=None, parseName="McCC", requireEn
     #${PARSERROOT}/first-stage/PARSE/parseIt -K -l399 -N50 ${BIOPARSINGMODEL}/parser/ $* | ${PARSERROOT}/second-stage/programs/features/best-parses -l ${BIOPARSINGMODEL}/reranker/features.gz ${BIOPARSINGMODEL}/reranker/weights.gz
     
     # Run parser
-    #print >> sys.stderr, "Running parser", charniakJohnsonParserDir + "/parse.sh"
+    #print >> sys.stderr, "Running parser", pathParser + "/parse.sh"
     cwd = os.getcwd()
-    os.chdir(charniakJohnsonParserDir)
+    os.chdir(pathParser)
     if tokenizationName == None:
-        charniakOutput = runSentenceProcess(runCharniakJohnsonParserWithTokenizer, charniakJohnsonParserDir, infileName, workdir, False, "CharniakJohnsonParser", "Parsing", timeout=timeout)   
+        charniakOutput = runSentenceProcess(runCharniakJohnsonParser, pathParser, infileName, workdir, False, "CharniakJohnsonParser", "Parsing", timeout=timeout, processArgs={"tokenizer":True, "pathBioModel":pathBioModel})   
     else:
         if tokenizationName == "PARSED_TEXT": # The sentence strings are already tokenized
             tokenizationName = None
-        charniakOutput = runSentenceProcess(runCharniakJohnsonParserWithoutTokenizer, charniakJohnsonParserDir, infileName, workdir, False, "CharniakJohnsonParser", "Parsing", timeout=timeout)   
+        charniakOutput = runSentenceProcess(runCharniakJohnsonParser, pathParser, infileName, workdir, False, "CharniakJohnsonParser", "Parsing", timeout=timeout, processArgs={"tokenizer":False, "pathBioModel":pathBioModel})   
 #    args = [charniakJohnsonParserDir + "/parse-50best-McClosky.sh"]
 #    #bioParsingModel = charniakJohnsonParserDir + "/first-stage/DATA-McClosky"
 #    #args = charniakJohnsonParserDir + "/first-stage/PARSE/parseIt -K -l399 -N50 " + bioParsingModel + "/parser | " + charniakJohnsonParserDir + "/second-stage/programs/features/best-parses -l " + bioParsingModel + "/reranker/features.gz " + bioParsingModel + "/reranker/weights.gz"
@@ -382,10 +401,23 @@ if __name__=="__main__":
     optparser.add_option("-o", "--output", default=None, dest="output", help="Output file in interaction xml format.")
     optparser.add_option("-t", "--tokenization", default=None, dest="tokenization", help="Name of tokenization element.")
     optparser.add_option("-s", "--stanford", default=False, action="store_true", dest="stanford", help="Run stanford conversion.")
+    optparser.add_option("--pathParser", default=None, dest="pathParser", help="")
+    optparser.add_option("--pathBioModel", default=None, dest="pathBioModel", help="")
+    optparser.add_option("--install", default=None, dest="install", help="Install directory (or DEFAULT)")
     (options, args) = optparser.parse_args()
     
-    xml = parse(input=options.input, output=options.output, tokenizationName=options.tokenization)
-    if options.stanford:
-        import StanfordParser
-        StanfordParser.convertXML(parser="McClosky", input=xml, output=options.output)
+    if options.install != None:
+        downloadDir = None
+        destDir = None
+        if options.install != "DEFAULT":
+            if "," in options.install:
+                destDir, downloadDir = options.install.split(",")
+            else:
+                destDir = options.install
+        install(destDir, downloadDir)
+    else:
+        xml = parse(input=options.input, output=options.output, tokenizationName=options.tokenization, pathParser=options.pathParser, pathBioModel=options.pathBioModel)
+        if options.stanford:
+            import StanfordParser
+            StanfordParser.convertXML(parser="McClosky", input=xml, output=options.output)
     
