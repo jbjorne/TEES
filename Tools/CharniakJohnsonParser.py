@@ -47,14 +47,25 @@ escDict={"-LRB-":"(",
 #    cscConnection.run("cat " + textFileName + "-part* > cj-output.txt", True)
 
 def install(destDir=None, downloadDir=None, redownload=False):
-    url = "http://bllip.cs.brown.edu/download/reranking-parserAug06.tar.gz"
-    packageName = "reranking-parser"
+    url = "https://github.com/dmcc/bllip-parser/zipball/master"
     if downloadDir == None:
-        downloadDir = os.path.join(Settings.DATAPATH, "tools/download/")
+        downloadDir = os.path.join(Settings.DATAPATH)
     if destDir == None:
-        destDir = os.path.join(Settings.DATAPATH, "tools/reranking-parser")
-    Download.downloadAndExtract(url, destDir, downloadDir)
-    shutil.move(destDir + "/reranking-parser", destDir + "/reranking-parserAug06")
+        destDir = Settings.DATAPATH
+    items = Download.downloadAndExtract(url, destDir + "/tools/BLLIP", downloadDir + "/tools/download/bllip.zip", None, False)
+    # Install the parser
+#    topDirs = [] 
+#    for item in items:
+#        if item.endswith("/") and item.count("/") == 1:
+#            topDirs.append(item)
+#    assert len(topDirs) == 1
+#    parserPath = os.path.join(destDir + "/tools/BLLIP", topDirs[0])
+#    cwd = os.getcwd()
+#    os.chdir(parserPath)
+#    subprocess.call("make")
+#    os.chdir(cwd)
+    url = "http://bllip.cs.brown.edu/download/bioparsingmodel-rel1.tar.gz"
+    Download.downloadAndExtract(url, destDir + "/tools/BLLIP", downloadDir + "/tools/download/", None)
             
 def readPenn(treeLine):
     global escDict
@@ -236,7 +247,7 @@ def getSentences(corpusRoot, requireEntities=False, skipIds=[], skipParsed=True)
                 continue
         yield sentence
 
-def parse(input, output=None, tokenizationName=None, parseName="McCC", requireEntities=False, skipIds=[], skipParsed=True, timeout=600, makePhraseElements=True, debug=False, pathParser=None, pathBioModel=None):
+def parse(input, output=None, tokenizationName=None, parseName="McCC", requireEntities=False, skipIds=[], skipParsed=True, timeout=600, makePhraseElements=True, debug=False, pathParser=None, pathBioModel=None, timestamp=True):
     global escDict
     print >> sys.stderr, "Charniak-Johnson Parser"
     parseTimeStamp = time.strftime("%d.%m.%y %H:%M:%S")
@@ -307,7 +318,10 @@ def parse(input, output=None, tokenizationName=None, parseName="McCC", requireEn
     failCount = 0
     for sentence in getSentences(corpusRoot, requireEntities, skipIds, skipParsed):        
         treeLine = treeFile.readline()
-        if not insertParse(sentence, treeLine, parseName, makePhraseElements=makePhraseElements, extraAttributes={"source":"TEES", "date":parseTimeStamp}):
+        extraAttributes={"source":"TEES"}
+        if timestamp:
+            extraAttributes["date"] = parseTimeStamp
+        if not insertParse(sentence, treeLine, parseName, makePhraseElements=makePhraseElements, extraAttributes=extraAttributes):
             failCount += 1
     
     treeFile.close()
@@ -401,6 +415,7 @@ if __name__=="__main__":
     optparser.add_option("-o", "--output", default=None, dest="output", help="Output file in interaction xml format.")
     optparser.add_option("-t", "--tokenization", default=None, dest="tokenization", help="Name of tokenization element.")
     optparser.add_option("-s", "--stanford", default=False, action="store_true", dest="stanford", help="Run stanford conversion.")
+    optparser.add_option("--timestamp", default=False, action="store_true", dest="timestamp", help="Mark parses with a timestamp.")
     optparser.add_option("--pathParser", default=None, dest="pathParser", help="")
     optparser.add_option("--pathBioModel", default=None, dest="pathBioModel", help="")
     optparser.add_option("--install", default=None, dest="install", help="Install directory (or DEFAULT)")
@@ -416,7 +431,7 @@ if __name__=="__main__":
                 destDir = options.install
         install(destDir, downloadDir)
     else:
-        xml = parse(input=options.input, output=options.output, tokenizationName=options.tokenization, pathParser=options.pathParser, pathBioModel=options.pathBioModel)
+        xml = parse(input=options.input, output=options.output, tokenizationName=options.tokenization, pathParser=options.pathParser, pathBioModel=options.pathBioModel, timestamp=options.timestamp)
         if options.stanford:
             import StanfordParser
             StanfordParser.convertXML(parser="McClosky", input=xml, output=options.output)
