@@ -182,7 +182,7 @@ def getLines(filename, measureByGap):
     f.close()
     return numSentences
 
-def runSentenceProcess(launchProcess, programDir, input, workdir, measureByGap, counterName, updateMessage, timeout=None, outputArgs={}):
+def runSentenceProcess(launchProcess, programDir, input, workdir, measureByGap, counterName, updateMessage, timeout=None, processArgs={}, outputArgs={}):
     """
     Runs a process on input sentences, and in case of problems skips one sentence and 
     reruns the process on the remaining ones.
@@ -212,7 +212,7 @@ def runSentenceProcess(launchProcess, programDir, input, workdir, measureByGap, 
         inputFile.close()
 
         output = os.path.join(workdir, "output-from-" + str(startLine))
-        process = launchProcess(input, output)
+        process = launchProcess(input, output, **processArgs)
         result = waitForProcess(process, inputLines, measureByGap, (output, outputArgs), counterName, updateMessage, timeout)
         if result[0] != result[1]:
             gap = 1
