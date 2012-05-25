@@ -21,22 +21,25 @@ import Utils.Settings as Settings
 import Utils.Download as Download
 #bannerDir = Settings.BANNER_DIR
 
+def test(progDir):
+    return True
+
 def install(destDir=None, downloadDir=None, redownload=False):
-    url = "http://banner.svn.sourceforge.net/viewvc/banner/trunk/?view=tar"
+    print >> sys.stderr, "Installing BANNER"
+    url = Settings.URL["BANNER_SOURCE"]
     if downloadDir == None:
-        downloadDir = os.path.join(Settings.DATAPATH, "tools/download/")
+        downloadDir = os.path.join(Settings.DATAPATH, "tools/download")
     if destDir == None:
         destDir = Settings.DATAPATH
-    Download.downloadAndExtract(url, destDir + "/tools/BANNER", downloadDir + "banner.tar.gz", "trunk", False)
+    Download.downloadAndExtract(url, destDir + "/tools/BANNER", downloadDir + "/banner.tar.gz", "trunk", False, redownload=redownload)
     
-    # Compile BANNER
+    print >> sys.stderr, "Compiling BANNER with ANT"
     subprocess.call("cd " + destDir + "/tools/BANNER; export JAVA_HOME=/usr/lib/jvm/java-6-openjdk; ant -f build_ext.xml", shell=True)
     
-    #url ="http://downloads.sourceforge.net/project/biocreative/biocreative2entitytagging/1.1/bc2geneMention.tar.gz?use_mirror=auto"
-    #Download.downloadAndExtract(url, destDir + "/data", downloadDir)
-    
-    url = "http://www.java2s.com/Code/JarDownload/trove/trove-2.1.0.jar.zip"
-    Download.downloadAndExtract(url, destDir + "/tools/trove/", downloadDir)
+    # Newer versions of BANNER don't need trove
+    #print >> sys.stderr, "Downloading Java trove library"
+    #url = Settings.URL["BANNER_SOURCE"]
+    #Download.downloadAndExtract(url, destDir + "/tools/trove/", downloadDir)
 
 def makeConfigXML(workdir, bannerDir, oldVersion=True):
     conf = ET.Element("banner-configuration")

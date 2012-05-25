@@ -3,6 +3,7 @@ import textwrap
 from Utils.Menu import *
 import Utils.Settings as Settings
 import Classifiers.SVMMultiClassClassifier
+import Tools.BANNER
 
 def pathMenuInitializer(menu, prevMenu):
     nextMenus = []
@@ -76,27 +77,41 @@ def pathMenuInitializer(menu, prevMenu):
     menu.system.setAttr("defaultInstallDir", menu.defaultInstallDir)
     menu.system.setAttr("configFilePath", menu.configFilePath)
 
+def checkInstallPath(menu, menuVariable, setting, installSubDir, defaultInstallKey="i", defaultSkipKey="s"):
+    if getattr(menu, menuVariable) == None:
+        setattr(menu, menuVariable, os.path.join(menu.system.defaultInstallDir, installSubDir))
+    #if menu.svmInstallDir == None:
+    #    menu.svmInstallDir = os.path.join(menu.system.defaultInstallDir, "SVMMultiClass")
+    if hasattr(Settings, setting):
+        menu.text += "The " + setting + " setting is already configured, \
+        so the default option is to skip installing.\n\n"
+        menu.text += setting + "=" + getattr(Settings, setting)
+        menu.setDefault(defaultSkipKey)
+        return False
+    else:
+        menu.setDefault(defaultInstallKey)
+        return True
+
 def svmMenuInitializer(menu, prevMenu):
     menu.text = """
     TEES uses the SVM Multiclass classifer by Thorsten Joachims for all 
     classification tasks. You can optionally choose to compile it from 
     source if the precompiled Linux-binary does not work on your system.
     """
-    
-    if menu.svmInstallDir == None:
-        menu.svmInstallDir = os.path.join(menu.system.defaultInstallDir, "SVMMultiClass")
-    if hasattr(Settings, "SVM_MULTICLASS_DIR"):
-        menu.text += """
-        The SVM_MULTICLASS_DIR setting is already configured,
-        so the default option is to skip installing the classifier.
-        
-        """
-        menu.text += "SVM_MULTICLASS_DIR=" + Settings.SVM_MULTICLASS_DIR
-        menu.setDefault("s")
-    else:
-        menu.setDefault("i")
+    checkInstallPath(menu, "svmInstallDir", "SVM_MULTICLASS_DIR", "SVMMultiClass")
     menu.optDict["i"].handlerArgs = [menu.svmInstallDir, os.path.join(menu.system.defaultInstallDir, "tools/download"), True, menu.optDict["1"].toggle]
 
+def toolsMenuInitializer(menu, prevMenu):
+    handlers = []
+    handlerArgs = []
+    redownload = menu.optDict["1"].toggle
+    if menu.optDict["2"].toggle or checkInstallPath(menu, "bannerInstallDir", "BANNER_DIR", "BANNER"):
+        menu.optDict["2"].toggle = True
+        handlers.append(Tools.BANNER.install)
+        handlerArgs.append([menu.bannerInstallDir, os.path.join(menu.system.defaultInstallDir, "tools/download"), redownload])  
+    menu.optDict["i"].handler = handlers
+    menu.optDict["i"].handlerArgs = handlerArgs
+    
 def buildMenus():
     Menu("Classifier", None, [
         Option("1", "Compile from source", toggle=False),
@@ -132,18 +147,21 @@ def buildMenus():
         Option("q", "Quit", handler=sys.exit),
         ])
 
-    Menu("Classifier", None, [
-        Option("1", "Compile from source", toggle=False),
-        Option("2", "Change install directory", dataInput="svmInstallDir"),
-        Option("i", "Install", handler=Classifiers.SVMMultiClassClassifier.install),
-        Option("s", "Skip")],
-        svmMenuInitializer)
+    Menu("Models", "Not implemented yet\n", [
+        Option("i", "Install", isDefault=True),
+        Option("s", "Skip")])
     
-#    smvMenu = Menu("Install Classifier",
-#        """
-#        """,[
-#        Option()
-#             ])
+    Menu("Corpora", "Not implemented yet\n", [
+        Option("i", "Install", isDefault=True),
+        Option("s", "Skip")])
+    
+    Menu("Tools", "Not implemented yet\n", [
+        Option("1", "Redownload already downloaded files", toggle=False),
+        Option("2", "Install BANNER", toggle=False),
+        Option("20", "Change BANNER_DIR", dataInput="bannerInstallDir"),
+        Option("i", "Install", isDefault=True),
+        Option("s", "Skip")],
+        toolsMenuInitializer)
 
     return "Configure TEES"
 

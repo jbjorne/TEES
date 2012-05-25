@@ -113,10 +113,10 @@ class Menu():
                 opt = self.optDict[choiceLower]
                 if opt.toggle != None:
                     opt.toggle = not opt.toggle
-                    return self
+                    return self.title
                 elif opt.dataInput != None:
                     setattr(self, opt.dataInput, self.getDataInput(opt.dataInput))
-                    return self
+                    return self.title
                 else:
                     opt.do()
                     print >> sys.stderr

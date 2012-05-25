@@ -47,13 +47,15 @@ def extractPackage(path, destPath, subPath=None):
 def downloadAndExtract(url, extractPath=None, downloadPath=None, packagePath=None, addName=True, redownload=False):
     # Download
     downloadFile = download(url, downloadPath, addName=addName, clear=redownload)
+    if downloadFile == None:
+        return None
     # Unpack
     print >> sys.stderr, "Extracting", downloadFile, "to", extractPath
     return extractPackage(downloadFile, extractPath, packagePath)
 
 def downloadProgress(count, blockSize, totalSize):
     percent = int(count*blockSize*100/totalSize)
-    percent = min(0, max(percent, 100)) # clamp
+    percent = max(0, min(percent, 100)) # clamp
     pbar.update(percent)
 
 def download(url, destPath, addName=True, clear=False):
@@ -64,7 +66,7 @@ def download(url, destPath, addName=True, clear=False):
         print >> sys.stderr, "Redirected to", redirectedUrl
     destFileName = destPath
     if addName:
-        destFileName = os.path.join(destPath, os.path.basename(redirectedUrl))
+        destFileName = destPath + "/" + os.path.basename(redirectedUrl)
     if not os.path.exists(os.path.dirname(destFileName)):
         os.makedirs(os.path.dirname(destFileName))
     if clear or not os.path.exists(destFileName):
@@ -74,7 +76,14 @@ def download(url, destPath, addName=True, clear=False):
         widgets = [FileTransferSpeed(),' <<<', Bar(), '>>> ', Percentage(),' ', ETA()]
         pbar = ProgressBar(widgets=widgets, maxval=100)
         pbar.start()
-        urllib.urlretrieve(redirectedUrl, destFileName, reporthook=downloadProgress)
+        try:
+            urllib.FancyURLopener().retrieve(redirectedUrl, destFileName, reporthook=downloadProgress)
+        except IOError, e:
+            print >> sys.stderr, e.errno
+            print >> sys.stderr, "Error downloading file", redirectedUrl
+            pbar.finish()
+            pbar = None
+            return None
         pbar.finish()
         pbar = None
     else:
