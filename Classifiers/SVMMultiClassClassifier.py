@@ -38,9 +38,9 @@ def test(progDir):
 def install(destDir=None, downloadDir=None, redownload=False, compile=True):
     print >> sys.stderr, "Installing SVM-Multiclass"
     if compile:
-        url = "http://download.joachims.org/svm_multiclass/current/svm_multiclass.tar.gz"
+        url = Settings.URL["SVM_MULTICLASS_SOURCE"]
     else:
-        url = "http://download.joachims.org/svm_multiclass/current/svm_multiclass_linux.tar.gz"
+        url = Settings.URL["SVM_MULTICLASS_LINUX"]
     if downloadDir == None:
         downloadDir = os.path.join(Settings.DATAPATH, "tools/download/")
     if destDir == None:
