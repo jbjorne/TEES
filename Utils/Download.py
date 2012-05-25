@@ -8,6 +8,14 @@ from Libraries.progressbar import *
 
 pbar = None
 
+def checkReturnCode(code):
+    if code != 0:
+        print >> sys.stderr, "Non-zero return code", str(code) + ", program may not be working."
+        return False
+    else:
+        print >> sys.stderr, "Return code", str(code) + ", program appears to be working."
+        return True
+
 # Modified from http://code.activestate.com/recipes/576714-extract-a-compressed-file/
 def extractPackage(path, destPath, subPath=None):
     if path.endswith('.zip'):
@@ -45,6 +53,7 @@ def downloadAndExtract(url, extractPath=None, downloadPath=None, packagePath=Non
 
 def downloadProgress(count, blockSize, totalSize):
     percent = int(count*blockSize*100/totalSize)
+    percent = min(0, max(percent, 100)) # clamp
     pbar.update(percent)
 
 def download(url, destPath, addName=True, clear=False):
@@ -53,11 +62,11 @@ def download(url, destPath, addName=True, clear=False):
     redirectedUrl = urllib.urlopen(url).geturl()
     if redirectedUrl != url:
         print >> sys.stderr, "Redirected to", redirectedUrl
-    if not os.path.exists(os.path.dirname(destPath)):
-        os.makedirs(os.path.dirname(destPath))
     destFileName = destPath
     if addName:
         destFileName = os.path.join(destPath, os.path.basename(redirectedUrl))
+    if not os.path.exists(os.path.dirname(destFileName)):
+        os.makedirs(os.path.dirname(destFileName))
     if clear or not os.path.exists(destFileName):
         if os.path.exists(destFileName): # clear existing file
             os.remove(destFileName)

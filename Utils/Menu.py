@@ -1,35 +1,93 @@
 import sys
+import types
 import textwrap
 
-class Menu:
-    def __init__(self, title, text, options=None):
+class MenuSystem():
+    def run(self, mainMenu):
+        nextMenu = mainMenu
+        prevMenu = None
+        while nextMenu != None:
+            prevMenu = nextMenu
+            nextMenu = nextMenu.show(prevMenu)
+            if type(nextMenu) == types.ListType:
+                for next in nextMenu:
+                    self.run(next)
+    
+    def setAttr(self, attrName, value=None):
+        if not hasattr(self, attrName):
+            setattr(self, attrName, value)
+
+class Menu():
+    system = MenuSystem()
+    
+    def __init__(self, title, text, options, initializer=None):
         self.title = title
         self.text = text
         self.options = options
         self.optDict = {}
         for option in options:
+            option.menu = self
             assert option.key not in self.optDict
             self.optDict[option.key] = option
+            if option.dataInput != None:
+                self.setAttr(option.dataInput)
+        self.initializer = initializer
         self.width = 80
-        self.doAlignText = True 
+        self.doAlignText = True
     
-    def printBorder(self, showTitle=False):
-        if showTitle:
-            border = ((self.width - len(self.title) - 2) / 2) * "="
-            titleBar = border + " " + self.title + " " + border
-            titleBar += (len(titleBar) - self.width) * "="
+    def setDefault(self, key):
+        for option in self.options:
+            option.isDefault = False
+        self.optDict[key].isDefault = True
+    
+    def getAttrString(self, attrName):
+        if not hasattr(self, attrName):
+            return ""
+        else:
+            return getattr(self, attrName)
+    
+    def setAttr(self, attrName, value=None):
+        if not hasattr(self, attrName):
+            setattr(self, attrName, value)
+    
+    def printText(self):
+        if self.doAlignText:
+            print >> sys.stderr, self.alignText(self.text)
+        else:
+            print >> sys.stderr, self.text
+
+    def printBorder(self, title=None, style="="):
+        if title != None:
+            border = ((self.width - len(title) - 2) / 2) * style
+            titleBar = border + " " + title + " " + border
+            titleBar += (len(titleBar) - self.width) * style
             print >> sys.stderr, titleBar
         else:
-            print >> sys.stderr, self.width * "="
-    
-    def printOptionBorder(self):
-        print >> sys.stderr, self.width * "-"
+            print >> sys.stderr, self.width * style
     
     def printOptions(self):
         for option in self.options:
              option.show()
+    
+    def getDataInput(self, attr, value=None, check=None):
+        self.printBorder("Set attribute", "-")
+        if value == None:
+            value = getattr(self, attr, "")
+        print >> sys.stderr, "Current value:", value
+        ok = False
+        while not ok:
+            print >> sys.stderr, ">",
+            value = raw_input()
+            if check != None:
+                ok = check(value)
+                if not ok:
+                    print "Illegal input value"
+            else:
+                ok = True
+        self.printBorder(style="-")
+        return value
 
-    def getInput(self, items=None):
+    def getChoice(self, items):
         choice = None
         default = None
         for item in items:
@@ -41,20 +99,22 @@ class Menu:
             choice = raw_input()
             #print "Choice", type(choice), len(choice), "End"
             if choice.strip() == "" and default != None:
-                return default.key
-            elif items != None and choice.lower() in self.optDict.keys():
+                choice = default.key
+            if choice.lower() in self.optDict.keys():
                 choiceLower = choice.lower()
-                if self.optDict[choiceLower].toggle != None:
-                    self.optDict[choiceLower].toggle = not self.optDict[choiceLower].toggle
-                    self.show(askInput=False)
-                    choice = None
+                opt = self.optDict[choiceLower]
+                if opt.toggle != None:
+                    opt.toggle = not opt.toggle
+                    return self
+                elif opt.dataInput != None:
+                    setattr(self, opt.dataInput, self.getDataInput(opt.dataInput))
+                    return self
                 else:
-                    return choice
-            elif items == None:
-                return choice
+                    opt.do()
+                    return opt.nextMenu
             else:
                 print >> sys.stderr, "Unknown option", choice
-                choice = None
+                choice == None
     
     def alignText(self, text):
         lines = text.split("\n")
@@ -71,33 +131,28 @@ class Menu:
                 paragraphsToKeep.append(paragraph)
         return "\n\n".join(paragraphsToKeep)
                 
-    def show(self, askInput=True):
-        self.printBorder(True)
-        if self.doAlignText:
-            print >> sys.stderr, self.alignText(self.text)
-        else:
-            print >> sys.stderr, self.text
-        self.printOptionBorder()
-        if self.options != None:
-            self.printOptions()
-        else:
-            print >> sys.stderr, "Press any key to continue"
+    def show(self, prevMenu):
+        if self.initializer != None:
+            self.initializer(self, prevMenu)
+        self.printBorder(self.title)
+        self.printText()
+        self.printBorder(style="-")
+        assert self.options != None and len(self.options) >= 1
+        self.printOptions()
         self.printBorder()
-        if askInput:
-            choice = self.getInput(self.options)
-            for option in self.options:
-                if choice == option.key:
-                    option.do()
-                    break
+        return self.getChoice(self.options)
 
 class Option:
-    def __init__(self, key, text, action=None, isDefault=False, toggle=None, actionArgs={}):
+    def __init__(self, key, text, nextMenu=None, handler=None, isDefault=False, toggle=None, dataInput=None):
         self.key = key
         self.text = text
         self.toggle = toggle
-        self.action = action
-        self.actionArgs = actionArgs
+        self.dataInput = dataInput
         self.isDefault = isDefault
+        self.menu = None
+        self.handler = handler
+        self.handlerArgs = []
+        self.nextMenu = nextMenu
     
     def show(self, alignText=True):
         if self.isDefault:
@@ -111,14 +166,27 @@ class Option:
             print >> sys.stderr, "   ",
         print >> sys.stderr, self.key + ")",
         
-        print >> sys.stderr, self.text
+        if self.dataInput != None:
+            print >> sys.stderr, self.text, "(" + self.menu.getAttrString(self.dataInput) + ")"
+        else:
+            print >> sys.stderr, self.text
     
     def do(self):
-        assert self.action != None
-        if type(self.action) == Menu:
-            self.action.show()
+        if self.handler == None:
+            return
+        elif type(self.handler) == types.ListType:
+            for i in range(len(self.handler)):
+                self.handler[i](*self.handlerArgs[i])
         else:
-            self.action(**self.actionArgs)
+            self.handler(*self.handlerArgs)
+    
+#    def do(self):
+#        assert self.action != None
+#        if self.action.__class__.__name__ == Menu.__name__:
+#            return self.action
+#        else:
+#            self.action(**self.actionArgs)
+#            return None
 
 if __name__=="__main__":
     # Import Psyco if available

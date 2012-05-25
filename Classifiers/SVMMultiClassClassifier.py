@@ -22,7 +22,37 @@ from Utils.Timer import Timer
 from Utils.Parameters import *
 from Utils.ProgressCounter import ProgressCounter
 import Utils.Settings as Settings
+import Utils.Download as Download
 import SVMMultiClassModelUtils
+
+def test(progDir):
+    cwd = os.getcwd()
+    os.chdir(progDir)
+    print >> sys.stderr, "Testing svm_multiclass_learn...",
+    trainOK = Download.checkReturnCode(os.system("echo | ./svm_multiclass_learn -? > /dev/null"))
+    print >> sys.stderr, "Testing svm_multiclass_classify...",
+    classifyOK = Download.checkReturnCode(os.system("echo | ./svm_multiclass_classify -? > /dev/null"))
+    os.chdir(cwd)
+    return trainOK and classifyOK
+
+def install(destDir=None, downloadDir=None, redownload=False, compile=True):
+    print >> sys.stderr, "Installing SVM-Multiclass"
+    if compile:
+        url = "http://download.joachims.org/svm_multiclass/current/svm_multiclass.tar.gz"
+    else:
+        url = "http://download.joachims.org/svm_multiclass/current/svm_multiclass_linux.tar.gz"
+    if downloadDir == None:
+        downloadDir = os.path.join(Settings.DATAPATH, "tools/download/")
+    if destDir == None:
+        destDir = Settings.DATAPATH
+    destDir += "/tools/SVMMultiClass"
+    
+    Download.downloadAndExtract(url, destDir, downloadDir, redownload=redownload)
+    if compile:
+        print >> sys.stderr, "Compiling SVM-Multiclass"
+        subprocess.call("cd " + destDir + "; make", shell=True)
+    
+    test(destDir)
 
 def tempUnzip(filename):
     tempdir = tempfile.mkdtemp() # a place for the file
@@ -477,7 +507,20 @@ if __name__=="__main__":
     optparser.add_option("-c", "--classifier", default="SVMMultiClassClassifier", dest="classifier", help="Classifier Class")
     optparser.add_option("-p", "--parameters", default=None, dest="parameters", help="Parameters for the classifier")
     optparser.add_option("-d", "--ids", default=None, dest="ids", help="")
+    optparser.add_option("--install", default=None, dest="install", help="Install directory (or DEFAULT)")
+    optparser.add_option("--installFromSource", default=False, action="store_true", dest="installFromSource", help="")
     (options, args) = optparser.parse_args()
+    
+    if options.install != None:
+        downloadDir = None
+        destDir = None
+        if options.install != "DEFAULT":
+            if "," in options.install:
+                destDir, downloadDir = options.install.split(",")
+            else:
+                destDir = options.install
+        install(destDir, downloadDir, False, options.installFromSource)
+        sys.exit()
 
     # import classifier
     print >> sys.stderr, "Importing classifier module"
