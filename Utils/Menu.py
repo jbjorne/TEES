@@ -3,15 +3,20 @@ import types
 import textwrap
 
 class MenuSystem():
+    def __init__(self):
+        self.menus = {}
+    
     def run(self, mainMenu):
         nextMenu = mainMenu
         prevMenu = None
         while nextMenu != None:
-            prevMenu = nextMenu
-            nextMenu = nextMenu.show(prevMenu)
+            currentMenu = self.menus[nextMenu]
+            nextMenu = currentMenu.show(prevMenu)
             if type(nextMenu) == types.ListType:
                 for next in nextMenu:
                     self.run(next)
+                nextMenu = None
+            prevMenu = currentMenu
     
     def setAttr(self, attrName, value=None):
         if not hasattr(self, attrName):
@@ -21,6 +26,9 @@ class Menu():
     system = MenuSystem()
     
     def __init__(self, title, text, options, initializer=None):
+        assert title not in Menu.system.menus
+        Menu.system.menus[title] = self
+        
         self.title = title
         self.text = text
         self.options = options
@@ -111,6 +119,7 @@ class Menu():
                     return self
                 else:
                     opt.do()
+                    print >> sys.stderr
                     return opt.nextMenu
             else:
                 print >> sys.stderr, "Unknown option", choice
@@ -132,6 +141,8 @@ class Menu():
         return "\n\n".join(paragraphsToKeep)
                 
     def show(self, prevMenu):
+        #if prevMenu != None:
+        #    print >> sys.stderr, "Menu", self.title, "prev", prevMenu.title
         if self.initializer != None:
             self.initializer(self, prevMenu)
         self.printBorder(self.title)
@@ -176,7 +187,10 @@ class Option:
             return
         elif type(self.handler) == types.ListType:
             for i in range(len(self.handler)):
-                self.handler[i](*self.handlerArgs[i])
+                if len(self.handlerArgs) > i:
+                    self.handler[i](*self.handlerArgs[i])
+                else:
+                    self.handler[i]()
         else:
             self.handler(*self.handlerArgs)
     

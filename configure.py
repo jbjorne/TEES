@@ -5,9 +5,23 @@ import Utils.Settings as Settings
 import Classifiers.SVMMultiClassClassifier
 
 def pathMenuInitializer(menu, prevMenu):
+    nextMenus = []
+    if prevMenu.optDict["1"]:
+        nextMenus.append("Classifier")
+    if prevMenu.optDict["2"]:
+        nextMenus.append("Models")
+    if prevMenu.optDict["3"]:
+        nextMenus.append("Corpora")
+    if prevMenu.optDict["4"]:
+        nextMenus.append("Tools")
+    if len(nextMenus) == 0:
+        print >> sys.stderr, "Nothing to install, exiting"
+        sys.exit()
+    menu.optDict["c"].nextMenu = nextMenus
+    
     menu.text = """
     1. By default, all data and tools will be installed to one directory, the DATAPATH. 
-    You can set the installation directory individually for each component, or 
+    You can later set the installation directory individually for each component, or 
     you can change the default path now.
     
     """
@@ -84,27 +98,27 @@ def svmMenuInitializer(menu, prevMenu):
     menu.optDict["i"].handlerArgs = [menu.svmInstallDir, os.path.join(menu.system.defaultInstallDir, "tools/download"), True, menu.optDict["1"].toggle]
 
 def buildMenus():
-    svmMenu = Menu("Classifier", None, [
+    Menu("Classifier", None, [
         Option("1", "Compile from source", toggle=False),
         Option("2", "Change install directory", dataInput="svmInstallDir"),
         Option("i", "Install", handler=Classifiers.SVMMultiClassClassifier.install),
         Option("s", "Skip")],
         svmMenuInitializer)
        
-    dataPathMenu = Menu("Install Directory", None, [
+    Menu("Install Directory", None, [
         Option("1", "Change DATAPATH", dataInput="defaultInstallDir"),
         Option("2", "Change TEES_SETTINGS", dataInput="configFilePath"),
-        Option("c", "Continue", svmMenu, isDefault=True)],
+        Option("c", "Continue", "Classifier", isDefault=True)],
         pathMenuInitializer)
 
-    mainMenu = Menu("Configure TEES", 
+    Menu("Configure TEES", 
         """
         Welcome to using the Turku Event Extraction System (TEES)! In order to work, TEES
         depends on a number of other programs, which have to be set up before use.
         
         The classifier (1) is required for all uses of the system, and together with the official
-        models (2), you can predict events for datasets such as the Shared Task corpora (3), or if you
-        install the preprocessing tools (4), for any unprocessed text.
+        models (2), can be used to predict events for datasets such as the Shared Task corpora (3), or if
+        preprocessing tools are installed (4), for any unprocessed text.
         
         If you are unsure which components you need, just install everything (the default choice). 
         You can also rerun configure.py at any time later to install missing components.
@@ -114,9 +128,16 @@ def buildMenus():
         Option("2", "Install models (TEES models for BioNLP'11 and DDI'11)", toggle=True),
         Option("3", "Install corpora (BioNLP'11 and DDI'11)", toggle=True),
         Option("4", "Install preprocessing tools (BANNER, BLLIP parser etc)", toggle=True),
-        Option("c", "Continue and install selected items", dataPathMenu, isDefault=True),
+        Option("c", "Continue and install selected items", "Install Directory", isDefault=True),
         Option("q", "Quit", handler=sys.exit),
         ])
+
+    Menu("Classifier", None, [
+        Option("1", "Compile from source", toggle=False),
+        Option("2", "Change install directory", dataInput="svmInstallDir"),
+        Option("i", "Install", handler=Classifiers.SVMMultiClassClassifier.install),
+        Option("s", "Skip")],
+        svmMenuInitializer)
     
 #    smvMenu = Menu("Install Classifier",
 #        """
@@ -124,8 +145,7 @@ def buildMenus():
 #        Option()
 #             ])
 
-
-    return mainMenu
+    return "Configure TEES"
 
 if __name__=="__main__":
     import sys
