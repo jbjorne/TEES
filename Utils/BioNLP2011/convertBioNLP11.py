@@ -1,7 +1,5 @@
 import sys, os, time, shutil
-import subprocess
 import tempfile
-import tarfile
 thisPath = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.abspath(os.path.join(thisPath,"../../")))
 sys.path.append(os.path.abspath(os.path.join(thisPath,"../../CommonUtils")))
@@ -20,74 +18,42 @@ import Tools.SentenceSplitter
 import Tools.GeniaTagger
 import Tools.CharniakJohnsonParser
 import Tools.StanfordParser
-import InteractionXML.CopyParse
-import InteractionXML.DeleteElements
-import InteractionXML.MergeDuplicateEntities
 import cElementTreeUtils as ETUtils
-
 import Evaluators.BioNLP11GeniaTools as BioNLP11GeniaTools
-
+import Utils.Download
 import Utils.Settings as Settings
-import urllib
 
-urls = {}
-urlBase = "http://weaver.nlplab.org/~bionlp-st/BioNLP-ST/downloads/files/"
-urls["GE_DEVEL"] = urlBase + "BioNLP-ST_2011_genia_devel_data_rev1.tar.gz" 
-urls["GE_TRAIN"] = urlBase + "BioNLP-ST_2011_genia_train_data_rev1.tar.gz"
-urls["GE_TEST"] = urlBase + "BioNLP-ST_2011_genia_test_data.tar.gz"
+moveBI = ["PMID-10333516-S3", "PMID-10503549-S4", "PMID-10788508-S10", "PMID-1906867-S3",
+          "PMID-9555886-S6", "PMID-10075739-S13", "PMID-10400595-S1", "PMID-10220166-S12"]
 
-urlBase = "http://weaver.nlplab.org/~bionlp-st/BioNLP-ST/downloads/support-files/"
-urls["GE_DEVEL_TOKENS"] = urlBase + "Tokenised-BioNLP-ST_2011_genia_train_data_rev1.tar.gz"
-urls["GE_TRAIN_TOKENS"] = urlBase + "Tokenised-BioNLP-ST_2011_genia_devel_data_rev1.tar.gz"
-urls["GE_TEST_TOKENS"] = urlBase + "Tokenised-BioNLP-ST_2011_genia_test_data.tar.gz"
-urls["GE_DEVEL_McCC"] = urlBase + "McCC-parses-BioNLP-ST_2011_genia_train_data_rev1.tar.gz" 
-urls["GE_TRAIN_McCC"] = urlBase + "McCC-parses-BioNLP-ST_2011_genia_devel_data_rev1.tar.gz"
-urls["GE_TEST_McCC"] = urlBase + "McCC-parses-BioNLP-ST_2011_genia_test_data.tar.gz"
-
-moveBI = ["PMID-10333516-S3",
-          "PMID-10503549-S4",
-          "PMID-10788508-S10",
-          "PMID-1906867-S3",
-          "PMID-9555886-S6",
-          "PMID-10075739-S13",
-          "PMID-10400595-S1",
-          "PMID-10220166-S12"]
-
-def download(url, destPath, clear=False):
-    if not os.path.exists(destPath):
-        os.makedirs(destPath)
-    destFileName = os.path.join(destPath, os.path.basename(url))
-    if clear or not os.path.exists(destFileName):
-        if os.path.exists(destFileName): # clear existing file
-            os.remove(destFileName)
-        print >> sys.stderr, "Downloading file", url
-        urllib.urlretrieve(url, destFileName)
-    else:
-        print >> sys.stderr, "Skipping already downloaded file", url
-    return destFileName
-
-def downloadCorpus(corpus, clear=False):
+def downloadCorpus(corpus, destPath=None, clear=False):
     print >> sys.stderr, "---------------", "Downloading BioNLP'11 files", "---------------"
     downloaded = {}
-    destPath = os.path.join(Settings.DATAPATH, "BioNLP11/original/corpus/")
+    if destPath == None:
+        destPath = os.path.join(Settings.DATAPATH, "corpora/BioNLP11-original")
     for setName in ["_DEVEL", "_TRAIN", "_TEST"]:
-        downloaded[corpus + setName] = download(urls[corpus + setName], destPath, clear)
-    destPath = os.path.join(Settings.DATAPATH, "BioNLP11/original/support/")
+        downloaded[corpus + setName] = Utils.Download.download(Settings.URL[corpus + setName], destPath + "/corpus/", clear=clear)
     for analysis in ["_TOKENS", "_McCC"]:
         for setName in ["_DEVEL", "_TRAIN", "_TEST"]:
-            downloaded[corpus + setName + analysis] = download(urls[corpus + setName + analysis], destPath, clear)
+            downloaded[corpus + setName + analysis] = Utils.Download.download(Settings.URL[corpus + setName + analysis], destPath + "/support/", clear=clear)
     return downloaded
 
-def log(clear=False, logCmd=True, logFile="log.txt"):
-    Stream.setLog(logFile, clear)
-    Stream.setTimeStamp("[%H:%M:%S]", True)
-    print >> sys.stderr, "####### Log opened at ", time.ctime(time.time()), "#######"
-    if logCmd:
-        sys.stdout.writeToLog("Command line: " + " ".join(sys.argv) + "\n")
+def convert(corpora, outDir, downloadDir=None, redownload=False, makeIntermediateFiles=True):
+    if not os.path.exists(outDir):
+        os.makedirs(outDir)
+    else:
+        assert os.path.isdir(outDir)
+    for corpus in corpora:
+        print >> sys.stderr, "=======================", "Converting", corpus, "======================="
+        logFileName = outDir + "/conversion/" + corpus + "conversion-log.txt"
+        Stream.openLog(logFileName)
+        downloaded = downloadCorpus(corpus, downloadDir, redownload)
+        convertDownloaded(outDir, corpus, downloaded, makeIntermediateFiles)
+        Stream.closeLog(logFileName)
 
-def convert(outdir, corpus, files, intermediateFiles=True):
+def convertDownloaded(outdir, corpus, files, intermediateFiles=True):
     global moveBI
-    workdir = outdir + "/" + corpus + "-conversion"
+    workdir = outdir + "/conversion/" + corpus
     if os.path.exists(workdir):
         shutil.rmtree(workdir)
     os.makedirs(workdir)
@@ -100,7 +66,7 @@ def convert(outdir, corpus, files, intermediateFiles=True):
     documents = []
     for setName in datasets:
         sourceFile = files[corpus + "_" + setName.upper()]
-        print >> sys.stderr, "Reading", setName, "set from", sourceFile, "set,"
+        print >> sys.stderr, "Reading", setName, "set from", sourceFile, "temp at ",
         sitesAreArguments = False
         if corpus == "EPI":
             sitesAreArguments = True
@@ -127,8 +93,9 @@ def convert(outdir, corpus, files, intermediateFiles=True):
     if corpus == "BI":
         InteractionXML.MixSets.mixSets(xml, None, set(moveBI), "train", "devel")
     
-    print >> sys.stderr, "---------------", "Inserting analyses", "---------------"
-    for setName in datasets:
+    for i in range(len(datasets)):
+        print >> sys.stderr, "---------------", "Inserting analyses " + str(i+1) + "/" + str(len(datasets)), "---------------"
+        setName = datasets[i]
         print >> sys.stderr, "Adding analyses for set", setName
         addAnalyses(xml, corpus, setName, files, bigfileName)
     if intermediateFiles:
@@ -141,8 +108,6 @@ def convert(outdir, corpus, files, intermediateFiles=True):
     if intermediateFiles:
         print >> sys.stderr, "Writing combined corpus", bigfileName+".xml"
         ETUtils.write(xml, bigfileName+".xml")
-    #InteractionXML.MergeDuplicateEntities.mergeAll(xml, bigfileName+"-nodup.xml")
-    #for sourceTag in ["", "-nodup"]:
     print >> sys.stderr, "Dividing into sets"
     InteractionXML.DivideSets.processCorpus(xml, outdir, corpus, ".xml")
     
@@ -155,27 +120,19 @@ def convert(outdir, corpus, files, intermediateFiles=True):
         BioNLP11GeniaTools.evaluate(workdir + "/roundtrip/" + corpus + "-devel" + "-task1", corpus + ".1")
         print >> sys.stderr, "Evaluating task 2 back-conversion"
         BioNLP11GeniaTools.evaluate(workdir + "/roundtrip/" + corpus + "-devel" + "-task2", corpus + ".2")
-        #print >> sys.stderr, "Creating empty devel set"
-        #deletionRules = {"interaction":{},"entity":{"isName":"False"}}
-        #InteractionXML.DeleteElements.processCorpus(corpusName + "-devel" + sourceTag + ".xml", corpusName + "-devel" + sourceTag + "-empty.xml", deletionRules)
-
-def extract(filename, targetdir):
-    print >> sys.stderr, "Extracting", filename, "to", targetdir
-    f = tarfile.open(filename, 'r:gz')
-    f.extractall(targetdir)
-    f.close()
+        print >> sys.stderr, "Note! Evaluation of Task 2 back-conversion can be less than 100% due to site-argument mapping"
 
 def addAnalyses(xml, corpus, setName, files, bigfileName):
     print >> sys.stderr, "Inserting", setName, "analyses"
     tempdir = tempfile.mkdtemp()
-    extract(files[corpus + "_" + setName.upper() + "_TOKENS"], tempdir)
-    extract(files[corpus + "_" + setName.upper() + "_McCC"], tempdir)
+    Utils.Download.extractPackage(files[corpus + "_" + setName.upper() + "_TOKENS"], tempdir)
+    Utils.Download.extractPackage(files[corpus + "_" + setName.upper() + "_McCC"], tempdir)
     print >> sys.stderr, "Making sentences"
     Tools.SentenceSplitter.makeSentences(xml, tempdir + "/" + os.path.basename(files[corpus + "_" + setName.upper() + "_TOKENS"])[:-len(".tar.gz")].split("-", 1)[-1] + "/tokenised", None)
     print >> sys.stderr, "Inserting McCC parses"
-    Tools.CharniakJohnsonParser.insertParses(xml, tempdir + "/" + os.path.basename(files[corpus + "_" + setName.upper() + "_McCC"])[:-len(".tar.gz")].split("-", 2)[-1] + "/mccc/ptb", None)
+    Tools.CharniakJohnsonParser.insertParses(xml, tempdir + "/" + os.path.basename(files[corpus + "_" + setName.upper() + "_McCC"])[:-len(".tar.gz")].split("-", 2)[-1] + "/mccc/ptb", None, extraAttributes={"source":"BioNLP'11"})
     print >> sys.stderr, "Inserting Stanford conversions"
-    Tools.StanfordParser.insertParses(xml, tempdir + "/" + os.path.basename(files[corpus + "_" + setName.upper() + "_McCC"])[:-len(".tar.gz")].split("-", 2)[-1] + "/mccc/sd_ccproc", None)
+    Tools.StanfordParser.insertParses(xml, tempdir + "/" + os.path.basename(files[corpus + "_" + setName.upper() + "_McCC"])[:-len(".tar.gz")].split("-", 2)[-1] + "/mccc/sd_ccproc", None, extraAttributes={"stanfordSource":"BioNLP'11"})
     print >> sys.stderr, "Removing temporary directory", tempdir
     shutil.rmtree(tempdir)
 
@@ -198,17 +155,11 @@ if __name__=="__main__":
     from Utils.Parameters import *
     optparser = OptionParser(usage="%prog [options]\nBioNLP'11 Shared Task corpus conversion")
     optparser.add_option("-c", "--corpora", default="GE", dest="corpora", help="corpus names in a comma-separated list, e.g. \"GE,EPI,ID\"")
-    optparser.add_option("-o", "--outdir", default=os.path.join(Settings.DATAPATH, "BioNLP11/corpora/"), dest="outdir", help="directory for output files")
+    optparser.add_option("-o", "--outdir", default=os.path.join(Settings.DATAPATH, "corpora/"), dest="outdir", help="directory for output files")
+    optparser.add_option("-d", "--downloaddir", default=os.path.join(Settings.DATAPATH, "corpora/BioNLP11-original/"), dest="downloaddir", help="directory to download corpus files to")
     optparser.add_option("--intermediateFiles", default=False, action="store_true", dest="intermediateFiles", help="save intermediate corpus files")
     optparser.add_option("--forceDownload", default=False, action="store_true", dest="forceDownload", help="re-download all source files")
     (options, args) = optparser.parse_args()
     
-    if not os.path.exists(options.outdir):
-        os.makedirs(options.outdir)
-    
-    log(False, True, os.path.join(options.outdir, "conversion-log.txt"))
-    corpora = options.corpora.split(",")
-    for corpus in corpora:
-        print >> sys.stderr, "=======================", "Converting", corpus, "======================="
-        downloaded = downloadCorpus(corpus, options.forceDownload)
-        convert(options.outdir, corpus, downloaded, options.intermediateFiles)
+    Stream.openLog(os.path.join(options.outdir, "conversion-log.txt"))
+    convert(options.corpora.split(","), options.outdir, options.downloaddir, options.forceDownload, options.intermediateFiles)
