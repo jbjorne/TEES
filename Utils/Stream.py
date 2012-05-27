@@ -6,8 +6,9 @@ Based on code by Greg Pinero (Primary Searcher)
 Capture print statments and write them to a log file
 but still allow them to be printed on the screen.
 """
-import sys
+import sys, os
 import time
+import types
 
 class StreamModifier:
     """
@@ -17,7 +18,7 @@ class StreamModifier:
     """
     def __init__(self, stream):
         self.stream = stream
-        self.logfile = None
+        self.logfiles = []
         self.indent = None
         self.timeStamp = None
         self.timeStampDuplicates = False
@@ -26,7 +27,24 @@ class StreamModifier:
         self.buffer = ""
     
     def setLog(self, logfile=None):
-        self.logfile = logfile
+        if logfile != None:
+            self.logfiles = [logfile]
+        else:
+            self.logfiles = []
+    
+    def addLog(self, logfile):
+        self.logfiles.append(logfile)
+    
+    def removeLog(self, logfileName, close=True):
+        logfilesToKeep = []
+        for logfile in self.logfiles:
+            filename = logfile.name
+            if filename != logfileName:
+                logfilesToKeep.append(logfile)
+            else:
+                logfile.close()
+                print >> sys.stderr, "Closed log", filename
+        self.logfiles = logfilesToKeep
     
     def setIndent(self, indent=None):
         self.indent = indent
@@ -35,13 +53,20 @@ class StreamModifier:
         self.timeStamp = format
         self.timeStampDuplicates = duplicates
     
-    def writeToLog(self, text):
+    def writeToStream(self, text):
+        """
+        Write directly to the stream without adding to the log file
+        """
+        self.stream.write(text)
+    
+    def writeToLog(self, text, filename):
         """
         Write directly to the log file without sending the input to the stream
         """
-        if self.logfile != None:
-            self.logfile.write(text)
-            self.logfile.flush()
+        for logfile in self.logfiles:
+            if filename == None or logfile.name == filename:
+                logfile.write(text)
+                logfile.flush()
     
     def write(self, text):
         if text == None or text == "":
@@ -62,7 +87,7 @@ class StreamModifier:
             text += lastChar
         self.stream.write(text)
         self.stream.flush()
-        if self.logfile != None:
+        if len(self.logfiles) > 0:
             for char in text:
                 if char == "\r":
                     self.buffer = ""
@@ -74,14 +99,42 @@ class StreamModifier:
                         self.prevTime = timeString
                     if self.timeStamp != None:
                         self.buffer = timeString + "\t" + self.buffer
-                    self.logfile.write(self.buffer + "\n")
+                    for logfile in self.logfiles:
+                        logfile.write(self.buffer + "\n")
                     self.buffer = ""
                 else:
                     self.buffer += char
-            self.logfile.flush()
+            for logfile in self.logfiles:
+                logfile.flush()
     
     def flush(self):
         self.stream.flush()
+
+def openLog(filename="log.txt", clear=False, logCmd=True):
+    if not os.path.exists(os.path.dirname(filename)):
+        os.makedirs(os.path.dirname(filename))
+    setLog(filename, clear)
+    setTimeStamp("[%H:%M:%S]", True)
+    logOpenTime = str(time.ctime(time.time()))
+    print >> sys.stderr, "Opening log", filename, "at", logOpenTime
+    logOpenMessage = "####### Log opened at " + str(time.ctime(time.time())) + " #######"
+    writeToLog(logOpenMessage, filename)
+    if logCmd:
+        writeToLog("Command line: " + " ".join(sys.argv) + "\n", filename)
+
+def closeLog(filename):
+    assert isinstance(sys.stdout, StreamModifier)
+    sys.stdout.removeLog(filename)
+    assert isinstance(sys.stderr, StreamModifier)
+    sys.stderr.removeLog(filename)
+
+def writeToScreen(text):
+    assert isinstance(sys.stderr, StreamModifier)
+    sys.stderr.writeToStream(text)
+
+def writeToLog(text, filename=None):
+    assert isinstance(sys.stdout, StreamModifier)
+    sys.stdout.writeToLog(text, filename)
 
 def setLog(filename=None, clear=False):
     """
@@ -98,11 +151,8 @@ def setLog(filename=None, clear=False):
             logfile = open(filename,"wt")
         else:
             logfile = open(filename,"at")
-        sys.stdout.setLog(logfile)
-        sys.stderr.setLog(logfile)
-    else:
-        sys.stdout.setLog()
-        sys.stdout.setLog()
+        sys.stdout.addLog(logfile)
+        sys.stderr.addLog(logfile)
 
 def setIndent(string=None):
     if not isinstance(sys.stdout, StreamModifier):
