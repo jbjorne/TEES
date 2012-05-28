@@ -2,9 +2,9 @@ __version__ = "$Revision: 1.51 $"
 
 import sys,os
 sys.path.append(os.path.dirname(os.path.abspath(__file__))+"/..")
-import shutil
+import shutil, tempfile
 import subprocess
-import Core.ExampleUtils as Example
+import Core.ExampleUtils as ExampleUtils
 import combine
 import copy
 import tempfile
@@ -15,7 +15,7 @@ import gzip
 A wrapper for the Joachims SVM Multiclass classifier.
 """
     
-import types
+import types, copy
 from Core.Classifier import Classifier
 import Core.Split as Split
 from Utils.Timer import Timer
@@ -24,6 +24,7 @@ from Utils.ProgressCounter import ProgressCounter
 import Utils.Settings as Settings
 import Utils.Download as Download
 import SVMMultiClassModelUtils
+from Utils.Connection.Unix import UnixConnection
 
 def test(progDir):
     cwd = os.getcwd()
@@ -75,9 +76,97 @@ class SVMMultiClassClassifier(Classifier):
     #IF LOCAL
     louhiBinDir = "/v/users/jakrbj/svm-multiclass"
     #ENDIF
+    def __init__(self):
+        self.connection = UnixConnection() # A local connection
+        self.parameterGrid = None
+        self.step = None
+        self._job = None
+        
+        self.parameters = None
+        self.model = None
+        self.predictions = None
+        #self.parameterFormat = "-%k %v"
+        #self.trainDir = "SVM_MULTICLASS_DIR"
+        #self.trainCommand = "svm_multiclass_learn %a %m"
+        #self.classifyDir = "SVM_MULTICLASS_DIR"
+        #self.classifyCommand = "svm_multiclass_classify %m %e %p"
+    
+    def getStatus(self):
+        if self._job == None:
+            return "FINISHED"
+        status = self.connection.getJobStatus(self._job)
+        if status == "FINISHED":
+            self._job = None
+        return status
+    
+    def getExampleFile(self, examples, trainPath):
+        # If examples are in a list, they will be written to a file for SVM-multiclass
+        if examples == None:
+            return None
+        elif type(examples) == types.ListType:
+            ExampleUtils.writeExamples(examples, trainPath)
+        else:
+            trainPath = examples
+        remoteFile = self.connection.upload(trainPath, uncompress=True)
+        if remoteFile == examples and remoteFile.endswith(".gz"):
+            remoteFile = tempUnzip(remoteFile)
+        return remoteFile
+    
+    def train(self, examples, outDir, parameters, classifyExamples=None):
+        assert self.getStatus() == "FINISHED"
+        examples = self.getExampleFile(examples, "train.dat")
+        classifyExamples = self.getExampleFile(classifyExamples, "classify.dat")
+        parameters = splitParameters(parameters)
+        svmMulticlassDir = self.connection.getSetting("SVM_MULTICLASS_DIR")
+        
+        # Return a new classifier instance for following the training process and using the model
+        classifier = copy.copy(self)
+        classifier.model = None
+        classifier.parameters = parameters
+        classifier.predictions = None
+        # Train
+        if not os.path.exists(outDir):
+            os.makedirs(outDir)
+        trainCommand = svmMulticlassDir + "/svm_multiclass_learn "
+        paramKeys = sorted(parameters.keys())
+        idStr = ""
+        for key in paramKeys:
+            trainCommand += "-" + str(key) + " "
+            idStr += "-" + str(key)
+            if parameters[key] != None:
+                trainCommand += str(parameters[key]) + " "
+                idStr += "_" + str(parameters[key])
+        modelPath = self.connection.getPath(outDir + "/model" + idStr)
+        classifier.model = modelPath
+        trainCommand += examples + " " + modelPath
+        self.connection.addCommand(trainCommand)
+        # Classify with the trained model (optional)
+        if classifyExamples != None:
+            predictionsPath = self.connection.getPath(outDir + "/predictions" + idStr)
+            classifier.predictions = predictionsPath
+            classifyCommand = svmMulticlassDir + "/svm_multiclass_classify " + classifyExamples + " " + modelPath + " " + predictionsPath
+            self.connection.addCommand(classifyCommand)
+        # Run the process
+        logPath = self.connection.getPath(outDir + "/train_svm_multiclass" + idStr + "-log.txt")
+        classifier._job = self.connection.submit(stdout=logPath)
+        return classifier
+    
+    def downloadModel(self, outDir):
+        assert self.getStatus() == "FINISHED" and self.model != None
+        self.model = self.connection.download(self.model, outDir)
+        return self.model
+    
+    def downloadPredictions(self, outDir):
+        assert self.getStatus() == "FINISHED" and self.predictions != None
+        self.predictions = self.connection.download(self.predictions, outDir)
+        return self.predictions
+    
+    def classify(self, examples, output, model=None):
+        assert self.getStatus() == "FINISHED"
+        self.predictions = None
     
     @classmethod
-    def train(cls, examples, parameters, outputFile=None): #, timeout=None):
+    def trainOld(cls, examples, parameters, outputFile=None): #, timeout=None):
         """
         Train the SVM-multiclass classifier on a set of examples.
         
@@ -205,32 +294,7 @@ class SVMMultiClassClassifier(Classifier):
             predictions.append( [int(lines[i].split()[0])] + lines[i].split()[1:] )
             #predictions.append( (examples[i],int(lines[i].split()[0]),"multiclass",lines[i].split()[1:]) )
         print >> sys.stderr, timer.toString()
-        return predictions
-    
-#    def selfClassify(self, examples, trainParameters, folds=10):
-#        # Divide examples to folds
-#        numExamples = 0
-#        for example in examples:
-#            numExamples += 1
-#        step = numExamples / folds
-#        foldFiles = []
-#        count = step + 1
-#        outFile = None
-#        for example in examples:
-#            if count > step and len(foldFiles) < folds:
-#                foldFiles.append("fold-" + str(1+len(foldFiles)) + ".txt")
-#                if outFile != None:
-#                    outFile.close()
-#                outFile = open(foldFiles[-1], "wt")
-#                count = 0
-#            ExampleUtils.appendExamples([example])
-#            count += 1
-#        if outFile != None:
-#            outFile.close()
-#        
-#        # Train and classify on CSC
-#        for 
-                
+        return predictions                
         
     @classmethod
     def __addParametersToSubprocessCall(cls, args, parameters):
@@ -498,15 +562,16 @@ if __name__=="__main__":
     from optparse import OptionParser
     import os
     from Utils.Parameters import *
-    optparser = OptionParser(usage="%prog [options]\nCreate an html visualization for a corpus.")
+    optparser = OptionParser(usage="%prog [options]\n")
     optparser.add_option("-e", "--examples", default=None, dest="examples", help="Example File", metavar="FILE")
-    optparser.add_option("-t", "--train", default=None, dest="train", action="store_true", help="train (default = classify)")
+    optparser.add_option("-t", "--train", default=None, dest="train", action="store_true", help="train")
+    optparser.add_option("--classifyExamples", default=None, dest="classifyExamples", help="Example File", metavar="FILE")
     optparser.add_option("-m", "--model", default=None, dest="model", help="path to model file")
-    optparser.add_option("-w", "--work", default=None, dest="work", help="Working directory for intermediate and debug files")
+    #optparser.add_option("-w", "--work", default=None, dest="work", help="Working directory for intermediate and debug files")
     optparser.add_option("-o", "--output", default=None, dest="output", help="Output directory or file")
-    optparser.add_option("-c", "--classifier", default="SVMMultiClassClassifier", dest="classifier", help="Classifier Class")
+    #optparser.add_option("-c", "--classifier", default="SVMMultiClassClassifier", dest="classifier", help="Classifier Class")
     optparser.add_option("-p", "--parameters", default=None, dest="parameters", help="Parameters for the classifier")
-    optparser.add_option("-d", "--ids", default=None, dest="ids", help="")
+    #optparser.add_option("-d", "--ids", default=None, dest="ids", help="")
     optparser.add_option("--install", default=None, dest="install", help="Install directory (or DEFAULT)")
     optparser.add_option("--installFromSource", default=False, action="store_true", dest="installFromSource", help="")
     (options, args) = optparser.parse_args()
@@ -521,10 +586,22 @@ if __name__=="__main__":
                 destDir = options.install
         install(destDir, downloadDir, False, options.installFromSource)
         sys.exit()
-
+    else:
+        classifier = SVMMultiClassClassifier()
+        if options.train:
+            import time
+            trained = classifier.train(options.examples, options.output, options.parameters, options.classifyExamples)
+            status = trained.getStatus()
+            while status not in ["FINISHED", "FAILED"]:
+                print >> sys.stderr, "Training classifier, status =", status
+                time.sleep(10)
+                status = trained.getStatus()
+            print >> sys.stderr, "Training finished, status =", status
+        else:
+            classifier.classify(options.examples, options.model, options.output)
     # import classifier
-    print >> sys.stderr, "Importing classifier module"
-    exec "from Classifiers." + options.classifier + " import " + options.classifier + " as Classifier"
+    #print >> sys.stderr, "Importing classifier module"
+    #exec "from Classifiers." + options.classifier + " import " + options.classifier + " as Classifier"
 
     # Create classifier object
 #    if options.work != None:
@@ -532,24 +609,24 @@ if __name__=="__main__":
 #    else:
 #        classifier = Classifier()
     
-    if options.train:
-        parameters = getArgs(Classifier.train, options.parameters)
-        print >> sys.stderr, "Training on", options.examples, "Parameters:", parameters
-        startTime = time.time()
-        predictions = classifier.train(options.examples, options.output, **parameters)
-        print >> sys.stderr, "(Time spent:", time.time() - startTime, "s)"
-    else: # Classify
-        #parameters = getArgs(Classifier.classify, options.parameters)
-        #print >> sys.stderr, "Classifying", options.examples, "Parameters:", parameters
-        #startTime = time.time()
-        if options.ids != None:
-            predictions = Classifier.testInternal(options.examples, options.model, options.output, options.ids)
-        else:
-            predictions = Classifier.test(options.examples, options.model, options.output, forceInternal=True)
-#        print >> sys.stderr, "(Time spent:", time.time() - startTime, "s)"
-#        parameters = getArgs(Classifier.classify, options.parameters)
-#        print >> sys.stderr, "Classifying", options.examples, "Parameters:", parameters
+#    if options.train:
+#        parameters = getArgs(Classifier.train, options.parameters)
+#        print >> sys.stderr, "Training on", options.examples, "Parameters:", parameters
 #        startTime = time.time()
-#        predictions = classifier.classify(options.examples, options.output, **parameters)
+#        predictions = classifier.train(options.examples, options.output, **parameters)
 #        print >> sys.stderr, "(Time spent:", time.time() - startTime, "s)"
+#    else: # Classify
+#        #parameters = getArgs(Classifier.classify, options.parameters)
+#        #print >> sys.stderr, "Classifying", options.examples, "Parameters:", parameters
+#        #startTime = time.time()
+#        if options.ids != None:
+#            predictions = Classifier.testInternal(options.examples, options.model, options.output, options.ids)
+#        else:
+#            predictions = Classifier.test(options.examples, options.model, options.output, forceInternal=True)
+##        print >> sys.stderr, "(Time spent:", time.time() - startTime, "s)"
+##        parameters = getArgs(Classifier.classify, options.parameters)
+##        print >> sys.stderr, "Classifying", options.examples, "Parameters:", parameters
+##        startTime = time.time()
+##        predictions = classifier.classify(options.examples, options.output, **parameters)
+##        print >> sys.stderr, "(Time spent:", time.time() - startTime, "s)"
 
