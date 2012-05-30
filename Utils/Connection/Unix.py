@@ -47,7 +47,7 @@ class UnixConnection:
     def getLocalPath(self, path):
         localPath = os.path.abspath(path.split(":")[-1])
         if self.workDir != None and localPath.startswith(self.workDir): # remote work directory path
-            os.path.normpath("/" + localPath[len(self.workDir):])
+            localPath = os.path.normpath("/" + localPath[len(self.workDir):])
             #assert not localPath.startswith(self.workDir), (path, localPath) # check for duplicates
         return localPath
         
@@ -280,10 +280,10 @@ class UnixConnection:
         script = self._getScript(script)
         logFiles = [None, None]
         if type(stdout) in types.StringTypes:
-            print >> sys.stderr, "Job", jobName + "'s stdout at", stdout
+            print >> sys.stderr, "Job", jobName + "'s stdout at local file", stdout
             logFiles[0] = stdout = open(stdout, "wt")
         if type(stderr) in types.StringTypes:
-            print >> sys.stderr, "Job", jobName + "'s stderr at", stderr
+            print >> sys.stderr, "Job", jobName + "'s stderr at local file", stderr
             logFiles[1] = stderr = open(stderr, "wt")
         if self.debug:
             print >> sys.stderr, "------- Job script -------"

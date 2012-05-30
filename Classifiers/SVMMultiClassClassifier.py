@@ -169,8 +169,9 @@ class SVMMultiClassClassifier(Classifier):
             classifyCommand = svmMulticlassDir + "/svm_multiclass_classify " + classifyExamples + " " + modelPath + " " + predictionsPath
             self.connection.addCommand(classifyCommand)
         # Run the process
-        logPath = self.connection.getRemotePath(outDir + "/train_svm_multiclass" + idStr)
-        classifier._job = self.connection.submit(jobDir=outDir, jobName="svm_multiclass_learn"+idStr, stdout=logPath+".stdout")
+        jobName = "svm_multiclass_learn" + idStr
+        logPath = outDir + "/" + jobName
+        classifier._job = self.connection.submit(jobDir=outDir, jobName=jobName, stdout=logPath+".stdout")
         return classifier
     
     def downloadModel(self, outDir=""):
@@ -563,8 +564,9 @@ if __name__=="__main__":
                 time.sleep(10)
                 status = trained.getStatus()
             print >> sys.stderr, "Training finished, status =", status
-            trained.downloadPredictions()
-            trained.downloadModel()
+            if trained.getStatus() == "FINISHED":
+                trained.downloadPredictions()
+                trained.downloadModel()
         else:
             classifier.classify(options.examples, options.model, options.output)
     # import classifier

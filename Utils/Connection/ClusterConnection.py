@@ -30,17 +30,11 @@ class ClusterConnection(UnixConnection):
         print >> sys.stderr, pstdout
         return stdout
 
-    def getStreams(self, stdout, stderr, name, jobWorkDir):
-        if stdout == None:
-            stdout = "stdout"
+    def getStreams(self, stdout, stderr, jobDir, jobName):
         if stderr == None:
-            stderr = "stderr"
-        stdout += "." + name + "-log.txt"
-        stderr += "." + name + "-log.txt"
-        if jobWorkDir != None:
-            stdout = os.path.join(jobWorkDir, stdout)
-            stderr = os.path.join(jobWorkDir, stderr)
-        else:
-            stdout = self.getPath(stdout)
-            stderr = self.getPath(stderr)
+            stderr = self._getJobPath(jobDir, jobName) + ".stderr"
+        stderr = self.getRemotePath(stderr)
+        if stdout == None:
+            stdout = self._getJobPath(jobDir, jobName) + ".stdout"
+        stdout = self.getRemotePath(stdout)
         return stdout, stderr
