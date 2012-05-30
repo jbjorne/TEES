@@ -158,29 +158,29 @@ class SVMMultiClassClassifier(Classifier):
             if parameters[key] != None:
                 trainCommand += str(parameters[key]) + " "
                 idStr += "_" + str(parameters[key])
-        classifier.model = self.connection.getPath(outDir + "/model" + idStr, True)
-        modelPath = self.connection.getPath(outDir + "/model" + idStr, False)
+        classifier.model = self.connection.getRemotePath(outDir + "/model" + idStr, True)
+        modelPath = self.connection.getRemotePath(outDir + "/model" + idStr, False)
         trainCommand += examples + " " + modelPath
         self.connection.addCommand(trainCommand)
         # Classify with the trained model (optional)
         if classifyExamples != None:
-            classifier.predictions = self.connection.getPath(outDir + "/predictions" + idStr, True)
-            predictionsPath = self.connection.getPath(outDir + "/predictions" + idStr, False)
+            classifier.predictions = self.connection.getRemotePath(outDir + "/predictions" + idStr, True)
+            predictionsPath = self.connection.getRemotePath(outDir + "/predictions" + idStr, False)
             classifyCommand = svmMulticlassDir + "/svm_multiclass_classify " + classifyExamples + " " + modelPath + " " + predictionsPath
             self.connection.addCommand(classifyCommand)
         # Run the process
-        logPath = self.connection.getPath(outDir + "/train_svm_multiclass" + idStr)
-        classifier._job = self.connection.submit(jobWorkDir=self.connection.getPath(outDir), stdout=logPath+".stdout")
+        logPath = self.connection.getRemotePath(outDir + "/train_svm_multiclass" + idStr)
+        classifier._job = self.connection.submit(jobDir=outDir, jobName="svm_multiclass_learn"+idStr, stdout=logPath+".stdout")
         return classifier
     
     def downloadModel(self, outDir=""):
         assert self.getStatus() == "FINISHED" and self.model != None
-        self.model = self.connection.download(self.model, os.path.join(outDir, os.path.basename(self.model.split(":")[-1])))
+        self.model = self.connection.download(self.model)
         return self.model
     
     def downloadPredictions(self, outDir=""):
         assert self.getStatus() == "FINISHED" and self.predictions != None
-        self.predictions = self.connection.download(self.predictions, os.path.join(outDir, os.path.basename(self.predictions.split(":")[-1])))
+        self.predictions = self.connection.download(self.predictions)
         return self.predictions
     
     def classify(self, examples, output, model=None, immediate=True, replaceRemoteExamples=True):
