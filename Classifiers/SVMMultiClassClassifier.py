@@ -24,6 +24,7 @@ from Utils.ProgressCounter import ProgressCounter
 import Utils.Settings as Settings
 import Utils.Download as Download
 import SVMMultiClassModelUtils
+import Utils.Connection.Unix
 from Utils.Connection.Unix import UnixConnection
 
 def test(progDir):
@@ -76,11 +77,15 @@ class SVMMultiClassClassifier(Classifier):
     #IF LOCAL
     louhiBinDir = "/v/users/jakrbj/svm-multiclass"
     #ENDIF
-    def __init__(self):
-        self.connection = UnixConnection() # A local connection
+    def __init__(self, connection=None):
+        if connection == None:
+            self.connection = UnixConnection() # A local connection
+        else:
+            self.connection = connection
         self.parameterGrid = None
-        self.step = None
+        self.state = None
         self._job = None
+        self._prevJobStatus = None
         
         self.parameters = None
         self.model = None
@@ -92,38 +97,55 @@ class SVMMultiClassClassifier(Classifier):
         #self.classifyCommand = "svm_multiclass_classify %m %e %p"
     
     def getStatus(self):
-        if self._job == None:
-            return "FINISHED"
-        status = self.connection.getJobStatus(self._job)
-        if status == "FINISHED":
+        if self._job != None:
+            self._prevJobStatus = self.connection.getJobStatus(self._job)
+        if self._prevJobStatus in ["FINISHED", "FAILED"]:
+            self.state = None
             self._job = None
-        return status
+        if self._prevJobStatus == None:
+            return "FINISHED"
+        else:
+            return self._prevJobStatus
     
-    def getExampleFile(self, examples, trainPath):
+    def setState(self, stateName):
+        assert self.getStatus() in ["FINISHED", "FAILED"]
+        self.state = stateName
+        self._job = None
+        self._prevJobStatus = None
+        if stateName == "TRAIN":
+            self.model = None
+            self.parameters = None
+            self.predictions = None
+        elif stateName == "CLASSIFY":
+            self.predictions = None
+    
+    def getExampleFile(self, examples, remotePath=None, upload=True, replaceRemote=True):
         # If examples are in a list, they will be written to a file for SVM-multiclass
         if examples == None:
             return None
         elif type(examples) == types.ListType:
-            ExampleUtils.writeExamples(examples, trainPath)
+            assert False
+            #ExampleUtils.writeExamples(examples, trainPath + "/")
         else:
-            trainPath = examples
-        remoteFile = self.connection.upload(trainPath, uncompress=True)
-        if remoteFile == examples and remoteFile.endswith(".gz"):
-            remoteFile = tempUnzip(remoteFile)
-        return remoteFile
+            examplesPath = examples
+       
+        localPath = examplesPath
+        if upload:
+            examplesPath = self.connection.upload(examplesPath, os.path.normpath(remotePath + "/" + os.path.abspath(examplesPath)), uncompress=True, replace=replaceRemote)
+        if examplesPath == localPath and examplesPath.endswith(".gz"): # no upload happened
+            examplesPath = tempUnzip(examplesPath)
+        return examplesPath
     
-    def train(self, examples, outDir, parameters, classifyExamples=None):
-        assert self.getStatus() == "FINISHED"
-        examples = self.getExampleFile(examples, "train.dat")
-        classifyExamples = self.getExampleFile(classifyExamples, "classify.dat")
+    def train(self, examples, outDir, parameters, classifyExamples=None, replaceRemoteExamples=True):
+        examples = self.getExampleFile(examples, os.path.abspath(outDir), replaceRemote=replaceRemoteExamples)
+        classifyExamples = self.getExampleFile(classifyExamples, os.path.abspath(outDir), replaceRemote=replaceRemoteExamples)
         parameters = splitParameters(parameters)
         svmMulticlassDir = self.connection.getSetting("SVM_MULTICLASS_DIR")
         
         # Return a new classifier instance for following the training process and using the model
         classifier = copy.copy(self)
-        classifier.model = None
+        classifier.setState("TRAIN")
         classifier.parameters = parameters
-        classifier.predictions = None
         # Train
         if not os.path.exists(outDir):
             os.makedirs(outDir)
@@ -136,90 +158,58 @@ class SVMMultiClassClassifier(Classifier):
             if parameters[key] != None:
                 trainCommand += str(parameters[key]) + " "
                 idStr += "_" + str(parameters[key])
-        modelPath = self.connection.getPath(outDir + "/model" + idStr)
-        classifier.model = modelPath
+        classifier.model = self.connection.getPath(outDir + "/model" + idStr, True)
+        modelPath = self.connection.getPath(outDir + "/model" + idStr, False)
         trainCommand += examples + " " + modelPath
         self.connection.addCommand(trainCommand)
         # Classify with the trained model (optional)
         if classifyExamples != None:
-            predictionsPath = self.connection.getPath(outDir + "/predictions" + idStr)
-            classifier.predictions = predictionsPath
+            classifier.predictions = self.connection.getPath(outDir + "/predictions" + idStr, True)
+            predictionsPath = self.connection.getPath(outDir + "/predictions" + idStr, False)
             classifyCommand = svmMulticlassDir + "/svm_multiclass_classify " + classifyExamples + " " + modelPath + " " + predictionsPath
             self.connection.addCommand(classifyCommand)
         # Run the process
-        logPath = self.connection.getPath(outDir + "/train_svm_multiclass" + idStr + "-log.txt")
-        classifier._job = self.connection.submit(stdout=logPath)
+        logPath = self.connection.getPath(outDir + "/train_svm_multiclass" + idStr)
+        classifier._job = self.connection.submit(jobWorkDir=self.connection.getPath(outDir), stdout=logPath+".stdout")
         return classifier
     
-    def downloadModel(self, outDir):
+    def downloadModel(self, outDir=""):
         assert self.getStatus() == "FINISHED" and self.model != None
-        self.model = self.connection.download(self.model, outDir)
+        self.model = self.connection.download(self.model, os.path.join(outDir, os.path.basename(self.model.split(":")[-1])))
         return self.model
     
-    def downloadPredictions(self, outDir):
+    def downloadPredictions(self, outDir=""):
         assert self.getStatus() == "FINISHED" and self.predictions != None
-        self.predictions = self.connection.download(self.predictions, outDir)
+        self.predictions = self.connection.download(self.predictions, os.path.join(outDir, os.path.basename(self.predictions.split(":")[-1])))
         return self.predictions
     
-    def classify(self, examples, output, model=None):
-        assert self.getStatus() == "FINISHED"
-        self.predictions = None
-    
-    @classmethod
-    def trainOld(cls, examples, parameters, outputFile=None): #, timeout=None):
-        """
-        Train the SVM-multiclass classifier on a set of examples.
-        
-        @type examples: string (filename) or list (or iterator) of examples
-        @param examples: a list or file containing examples in SVM-format
-        @type parameters: a dictionary or string
-        @param parameters: parameters for the classifier
-        @type outputFile: string
-        @param outputFile: the name of the model file to be written
-        """
-        timer = Timer()
-        # If parameters are defined as a string, extract them
-        if type(parameters) == types.StringType:
-            parameters = splitParameters(parameters)
-            for k, v in parameters.iteritems():
-                assert(len(v)) == 1
-                parameters[k] = v[0]
-        # If examples are in a list, they will be written to a file for SVM-multiclass
-        if type(examples) == types.ListType:
-            print >> sys.stderr, "Training SVM-MultiClass on", len(examples), "examples"
-            trainPath = self.tempDir+"/train.dat"
-            examples = self.filterTrainingSet(examples)
-            #if self.negRatio != None:
-            #    examples = self.downSampleNegatives(examples, self.negRatio)
-            Example.writeExamples(examples, trainPath)
+    def classify(self, examples, output, model=None, immediate=True, replaceRemoteExamples=True):
+        # Return a new classifier instance for following the training process and using the model
+        classifier = copy.copy(self)
+        classifier.setState("CLASSIFY")
+        # Classify
+        if model == None:
+            classifier.model = model = self.model
+        if ":" in model: # a remote model
+            assert immediate == False
+            examples = self.getExampleFile(examples, os.path.abspath(os.path.dirname(model)), replaceRemote=replaceRemoteExamples)
+            classifier.predictions = self.connection.getPath(output, True)
+            predictionsPath = self.connection.getPath(output, False)
+            classifyCommand = self.connection.getSetting("SVM_MULTICLASS_DIR") + "/svm_multiclass_classify " + classifyExamples + " " + modelPath + " " + predictionsPath
+        else: # local
+            classifyExamples = self.getExampleFile(classifyExamples, "classify.dat", upload=False)
+            classifier.predictions = output
+            classifyCommand = Settings.SVM_MULTICLASS_DIR + "/svm_multiclass_classify " + classifyExamples + " " + model + " " + output
+        if immediate:
+            if subprocess.call(classifyCommand, shell=True):
+                classifier._prevJobStatus = "FINISHED"
+                return classifier
+            else:
+                classifier._prevJobStatus = "FAILED"
+                return classifier
         else:
-            print >> sys.stderr, "Training SVM-MultiClass on file", examples
-            trainPath = examples
-#        if style != None and "no_duplicates" in style:
-#            if type(examples) == types.ListType:
-#                examples = Example.removeDuplicates(examples)
-#            else:
-#                print >> sys.stderr, "Warning, duplicates not removed from example file", examples
-        
-#        if os.environ.has_key("METAWRK"):
-#            args = [SVMMultiClassClassifier.louhiBinDir+"/svm_multiclass_learn"]
-#        else:
-#            args = [Settings.SVMMultiClassDir+"/svm_multiclass_learn"]
-        args = [Settings.SVM_MULTICLASS_DIR+"/svm_multiclass_learn"]
-            
-        cls.__addParametersToSubprocessCall(args, parameters)
-        if outputFile == None:
-            args += [trainPath, "model"]
-            logFile = open("svmmulticlass.log","at")
-        else:
-            args += [trainPath, outputFile]
-            logFile = open(outputFile+".log","wt")
-        #if timeout == None:
-        #    timeout = -1
-        rv = subprocess.call(args, stdout = logFile)
-        logFile.close()
-        print >> sys.stderr, timer.toString()
-        return rv
+            classifier._job = self.connection.submit(classifyCommand)
+            return classifier
     
     @classmethod
     def test(cls, examples, modelPath, output=None, parameters=None, forceInternal=False, classIds=None): # , timeout=None):
@@ -295,149 +285,124 @@ class SVMMultiClassClassifier(Classifier):
             #predictions.append( (examples[i],int(lines[i].split()[0]),"multiclass",lines[i].split()[1:]) )
         print >> sys.stderr, timer.toString()
         return predictions                
-        
-    @classmethod
-    def __addParametersToSubprocessCall(cls, args, parameters):
-        for k,v in parameters.iteritems():
-            args.append("-"+k)
-            args.append(str(v))
     
-    @classmethod
-    def testInternal(cls, examples, modelPath, output=None, idStem=None):
-        try:
-            import numpy
-            numpy.array([]) # dummy call to survive networkx
-            numpyAvailable = True
-        except:
-            numpyAvailable = False
+#    @classmethod
+#    def testInternal(cls, examples, modelPath, output=None, idStem=None):
+#        try:
+#            import numpy
+#            numpy.array([]) # dummy call to survive networkx
+#            numpyAvailable = True
+#        except:
+#            numpyAvailable = False
+#
+#        if output == None:
+#            output = "predictions"
+#        
+#        outputDetails = False
+#        if idStem != None: # Output detailed classification
+#            outputDetails = True
+#            from Core.IdSet import IdSet
+#            featureSet = IdSet(filename=idStem+".feature_names")
+#            classSet = IdSet(filename=idStem+".class_names")
+#            
+#        assert os.path.exists(modelPath)
+#        svs = SVMMultiClassModelUtils.getSupportVectors(modelPath)
+#        #SVMMultiClassModelUtils.writeModel(svs, modelPath, output+"-test-model")
+#        if type(examples) == types.StringType: # examples are in a file
+#            print >> sys.stderr, "Classifying file", examples, "with SVM-MultiClass model (internal classifier)", modelPath        
+#            examples = Example.readExamples(examples)
+#        else:
+#            print >> sys.stderr, "Classifying examples with SVM-MultiClass model (internal classifier)", modelPath
+#        if numpyAvailable:
+#            print >> sys.stderr, "Numpy available, using"
+#        
+#        numExamples = 0
+#        for example in examples:
+#            numExamples += 1
+#        
+#        counter = ProgressCounter(numExamples, "Classify examples", step=0.1)
+#        predFile = open(output, "wt")
+#        predictions = []
+#        isFirst = True
+#        for example in examples:
+#            strengthVectors = {}
+#            strengths = {}
+#            counter.update(1, "Classifying: ")
+#            highestPrediction = -sys.maxint
+#            highestNonNegPrediction = -sys.maxint
+#            predictedClass = None
+#            highestNonNegClass = None
+#            predictionStrings = []
+#            mergedPredictionString = ""
+#            features = example[2]
+#            featureIds = sorted(features.keys())
+#            if numpyAvailable:
+#                numpyFeatures = numpy.zeros(len(svs[0]))
+#                for k, v in features.iteritems():
+#                    try:
+#                        # SVM-multiclass feature indices start from 1. However, 
+#                        # support vectors in variable svs are of course zero based
+#                        # lists. Adding -1 to ids aligns features.
+#                        numpyFeatures[k-1] = v
+#                    except:
+#                        pass
+#            for svIndex in range(len(svs)):
+#                sv = svs[svIndex]
+#                if numpyAvailable:
+#                    strengthVector = sv * numpyFeatures
+#                    prediction = numpy.sum(strengthVector)
+#                    if outputDetails:
+#                        strengthVectors[svIndex] = strengthVector
+#                        strengths[svIndex] = prediction
+#                else:
+#                    prediction = 0
+#                    for i in range(len(sv)):
+#                        if features.has_key(i+1):
+#                            prediction += features[i+1] * sv[i]
+#                if prediction > highestPrediction:
+#                    highestPrediction = prediction
+#                    predictedClass = svIndex + 1
+#                if svIndex > 0 and prediction > highestNonNegPrediction:
+#                    highestNonNegPrediction = prediction
+#                    highestNonNegClass = svIndex + 1
+#                predictionString = "%.6f" % prediction # use same precision as SVM-multiclass does
+#                predictionStrings.append(predictionString)
+#                mergedPredictionString += " " + predictionString
+#            predictions.append([predictedClass, predictionStrings])
+#            if isFirst:
+#                isFirst = False
+#            else:
+#                predFile.write("\n")
+#            predFile.write(str(predictedClass) + mergedPredictionString)
+#            if outputDetails:
+#                if example[1] != 1:
+#                    predFile.write(example[0] + " " + str(example[3]) + "\n")
+#                    cls.writeDetails(predFile, strengthVectors[0], classSet.getName(0+1) + " " + str(strengths[0]), featureSet)
+#                    #if predictedClass != 1:
+#                    #    cls.writeDetails(predFile, strengthVectors[predictedClass-1], classSet.getName(predictedClass) + " " + str(strengths[predictedClass]), featureSet)
+#                    cls.writeDetails(predFile, strengthVectors[example[1]-1], classSet.getName(example[1]) + " " + str(strengths[example[1]-1]), featureSet)
+#                else:
+#                    predFile.write(example[0] + " " + str(example[3]) + "\n")
+#                    cls.writeDetails(predFile, strengthVectors[0], classSet.getName(0+1) + " " + str(strengths[0]), featureSet)
+#                    cls.writeDetails(predFile, strengthVectors[highestNonNegClass-1], classSet.getName(highestNonNegClass) + " " + str(strengths[highestNonNegClass-1]), featureSet)
+#        predFile.close()
+#    
+#    @classmethod
+#    def writeDetails(cls, predFile, vec, className, featureSet):
+#        predFile.write(className+"\n")
+#        tuples = []
+#        for i in range(len(vec)):
+#            if float(vec[i]) != 0.0:
+#                tuples.append( (featureSet.getName(i+1), vec[i], i+1) )
+#        import operator
+#        index1 = operator.itemgetter(1)
+#        tuples.sort(key=index1, reverse=True)
+#        for t in tuples:
+#            predFile.write(" " + str(t[2]) + " " + t[0] + " " + str(t[1]) + "\n")
+#        #for i in range(len(vec)):
+#        #    if float(vec[i]) != 0.0:
+#        #        predFile.write(" " + str(i+1) + " " + featureSet.getName(i+1) + " " + str(vec[i+1]) + "\n")
 
-        if output == None:
-            output = "predictions"
-        
-        outputDetails = False
-        if idStem != None: # Output detailed classification
-            outputDetails = True
-            from Core.IdSet import IdSet
-            featureSet = IdSet(filename=idStem+".feature_names")
-            classSet = IdSet(filename=idStem+".class_names")
-            
-        assert os.path.exists(modelPath)
-        svs = SVMMultiClassModelUtils.getSupportVectors(modelPath)
-        #SVMMultiClassModelUtils.writeModel(svs, modelPath, output+"-test-model")
-        if type(examples) == types.StringType: # examples are in a file
-            print >> sys.stderr, "Classifying file", examples, "with SVM-MultiClass model (internal classifier)", modelPath        
-            examples = Example.readExamples(examples)
-        else:
-            print >> sys.stderr, "Classifying examples with SVM-MultiClass model (internal classifier)", modelPath
-        if numpyAvailable:
-            print >> sys.stderr, "Numpy available, using"
-        
-        numExamples = 0
-        for example in examples:
-            numExamples += 1
-        
-        counter = ProgressCounter(numExamples, "Classify examples", step=0.1)
-        predFile = open(output, "wt")
-        predictions = []
-        isFirst = True
-        for example in examples:
-            strengthVectors = {}
-            strengths = {}
-            counter.update(1, "Classifying: ")
-            highestPrediction = -sys.maxint
-            highestNonNegPrediction = -sys.maxint
-            predictedClass = None
-            highestNonNegClass = None
-            predictionStrings = []
-            mergedPredictionString = ""
-            features = example[2]
-            featureIds = sorted(features.keys())
-            if numpyAvailable:
-                numpyFeatures = numpy.zeros(len(svs[0]))
-                for k, v in features.iteritems():
-                    try:
-                        # SVM-multiclass feature indices start from 1. However, 
-                        # support vectors in variable svs are of course zero based
-                        # lists. Adding -1 to ids aligns features.
-                        numpyFeatures[k-1] = v
-                    except:
-                        pass
-            for svIndex in range(len(svs)):
-                sv = svs[svIndex]
-                if numpyAvailable:
-                    strengthVector = sv * numpyFeatures
-                    prediction = numpy.sum(strengthVector)
-                    if outputDetails:
-                        strengthVectors[svIndex] = strengthVector
-                        strengths[svIndex] = prediction
-                else:
-                    prediction = 0
-                    for i in range(len(sv)):
-                        if features.has_key(i+1):
-                            prediction += features[i+1] * sv[i]
-                if prediction > highestPrediction:
-                    highestPrediction = prediction
-                    predictedClass = svIndex + 1
-                if svIndex > 0 and prediction > highestNonNegPrediction:
-                    highestNonNegPrediction = prediction
-                    highestNonNegClass = svIndex + 1
-                predictionString = "%.6f" % prediction # use same precision as SVM-multiclass does
-                predictionStrings.append(predictionString)
-                mergedPredictionString += " " + predictionString
-            predictions.append([predictedClass, predictionStrings])
-            if isFirst:
-                isFirst = False
-            else:
-                predFile.write("\n")
-            predFile.write(str(predictedClass) + mergedPredictionString)
-            if outputDetails:
-                if example[1] != 1:
-                    predFile.write(example[0] + " " + str(example[3]) + "\n")
-                    cls.writeDetails(predFile, strengthVectors[0], classSet.getName(0+1) + " " + str(strengths[0]), featureSet)
-                    #if predictedClass != 1:
-                    #    cls.writeDetails(predFile, strengthVectors[predictedClass-1], classSet.getName(predictedClass) + " " + str(strengths[predictedClass]), featureSet)
-                    cls.writeDetails(predFile, strengthVectors[example[1]-1], classSet.getName(example[1]) + " " + str(strengths[example[1]-1]), featureSet)
-                else:
-                    predFile.write(example[0] + " " + str(example[3]) + "\n")
-                    cls.writeDetails(predFile, strengthVectors[0], classSet.getName(0+1) + " " + str(strengths[0]), featureSet)
-                    cls.writeDetails(predFile, strengthVectors[highestNonNegClass-1], classSet.getName(highestNonNegClass) + " " + str(strengths[highestNonNegClass-1]), featureSet)
-        predFile.close()
-    
-    @classmethod
-    def writeDetails(cls, predFile, vec, className, featureSet):
-        predFile.write(className+"\n")
-        tuples = []
-        for i in range(len(vec)):
-            if float(vec[i]) != 0.0:
-                tuples.append( (featureSet.getName(i+1), vec[i], i+1) )
-        import operator
-        index1 = operator.itemgetter(1)
-        tuples.sort(key=index1, reverse=True)
-        for t in tuples:
-            predFile.write(" " + str(t[2]) + " " + t[0] + " " + str(t[1]) + "\n")
-        #for i in range(len(vec)):
-        #    if float(vec[i]) != 0.0:
-        #        predFile.write(" " + str(i+1) + " " + featureSet.getName(i+1) + " " + str(vec[i+1]) + "\n")
-
-    #IF LOCAL
-    def downSampleNegatives(self, examples, ratio):
-        positives = []
-        negatives = []
-        for example in examples:
-            if example[1] == 1:
-                negatives.append(example)
-            else:
-                positives.append(example)
-        
-        targetNumNegatives = ratio * len(positives)
-        if targetNumNegatives > len(negatives):
-            targetNumNegatives = len(negatives)
-        sample = Split.getSample(len(negatives), targetNumNegatives / float(len(negatives)) )
-        examples = positives
-        for i in range(len(sample)):
-            if sample[i] == 0:
-                examples.append(negatives[i])
-        return examples
     
     @classmethod
     def initTrainAndTestOnLouhi(cls, trainExamples, testExamples, trainParameters, cscConnection, localWorkDir=None, classIds=None):
@@ -517,15 +482,15 @@ class SVMMultiClassClassifier(Classifier):
             counts["RUNNING"] += 1
             return "RUNNING"
 
-    @classmethod
-    def downloadModel(cls, idStr, cscConnection, localWorkDir=None):
-        #if not cls.getLouhiStatus(idStr, cscConnection):
-        #    return None
-        modelFileName = "model"+idStr
-        if localWorkDir != None:
-            modelFileName = os.path.join(localWorkDir, modelFileName)
-        cscConnection.download("model"+idStr, modelFileName)
-        return "model"+idStr
+#    @classmethod
+#    def downloadModel(cls, idStr, cscConnection, localWorkDir=None):
+#        #if not cls.getLouhiStatus(idStr, cscConnection):
+#        #    return None
+#        modelFileName = "model"+idStr
+#        if localWorkDir != None:
+#            modelFileName = os.path.join(localWorkDir, modelFileName)
+#        cscConnection.download("model"+idStr, modelFileName)
+#        return "model"+idStr
     
     @classmethod
     def getLouhiPredictions(cls, idStr, cscConnection, localWorkDir=None, dummy=None):
@@ -569,6 +534,7 @@ if __name__=="__main__":
     optparser.add_option("-m", "--model", default=None, dest="model", help="path to model file")
     #optparser.add_option("-w", "--work", default=None, dest="work", help="Working directory for intermediate and debug files")
     optparser.add_option("-o", "--output", default=None, dest="output", help="Output directory or file")
+    optparser.add_option("-r", "--remote", default=None, dest="remote", help="Remote connection")
     #optparser.add_option("-c", "--classifier", default="SVMMultiClassClassifier", dest="classifier", help="Classifier Class")
     optparser.add_option("-p", "--parameters", default=None, dest="parameters", help="Parameters for the classifier")
     #optparser.add_option("-d", "--ids", default=None, dest="ids", help="")
@@ -587,7 +553,7 @@ if __name__=="__main__":
         install(destDir, downloadDir, False, options.installFromSource)
         sys.exit()
     else:
-        classifier = SVMMultiClassClassifier()
+        classifier = SVMMultiClassClassifier(Utils.Connection.Unix.getConnection(options.remote))
         if options.train:
             import time
             trained = classifier.train(options.examples, options.output, options.parameters, options.classifyExamples)
@@ -597,6 +563,8 @@ if __name__=="__main__":
                 time.sleep(10)
                 status = trained.getStatus()
             print >> sys.stderr, "Training finished, status =", status
+            trained.downloadPredictions()
+            trained.downloadModel()
         else:
             classifier.classify(options.examples, options.model, options.output)
     # import classifier

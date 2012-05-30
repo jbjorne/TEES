@@ -1,12 +1,13 @@
 import sys, os, shutil, types
 import subprocess
+import getpass
 sys.path.append(os.path.abspath(os.path.dirname(__file__))+"/..")
 from Utils.Timer import Timer
 import Utils.Settings as Settings
 import tempfile
 
 class UnixConnection:    
-    def __init__(self, workDirBase=None, account=None, memory=4194304, cores=1):
+    def __init__(self, account=None, workDirBase=None, remoteSettingsPath=None, memory=4194304, cores=1):
         self.account = account    
         self.memory = memory
         self.cores = cores
@@ -18,16 +19,20 @@ class UnixConnection:
         self.NONZERO = "NONZERO"
         self.ZERO = "ZERO"
         
-        # Batch job queue
+        # Batch command queue
         self.commands = []
         
         self.compression = False #True
-        self.remoteSettingsPath = None
+        self.remoteSettingsPath = remoteSettingsPath
         self.cachedRemoteSettings = None
         self._logs = {}
+        self.debug = True
     
-    def isLocal(self):
-        return self.account == None
+    def getUsername(self):
+        if self.account == None: # local machine
+            return getpass.getuser()
+        else:
+            return self.account.split("@")[0]
     
     def getPath(self, path, addAccount=False):
         if self.workDir != None: # a working directory has been set
@@ -38,7 +43,10 @@ class UnixConnection:
         
     def getSetting(self, name):
         if self.account == None:
-            return getattr(Settings, name)
+            if hasattr(Settings, name):
+                return getattr(Settings, name)
+            else:
+                return None
         elif self.cachedRemoteSettings == None:
             self.cachedRemoteSettings = {}
             # Determine location of remote TEES_SETTINGS
@@ -56,20 +64,23 @@ class UnixConnection:
             f = open(tempdir + "/RemoteSettings.py", "rt")
             for line in f.readlines():
                 if "=" in line:
-                    name, value = line.split("=", 1)
-                    name = name.strip()
-                    value = value.strip()
-                    self.cachedRemoteSettings[name] = value
+                    remoteName, remoteValue = line.split("=", 1)
+                    remoteName = remoteName.strip()
+                    remoteValue = remoteValue.strip().strip("\"")
+                    self.cachedRemoteSettings[remoteName] = remoteValue
             f.close()
             shutil.rmtree(tempdir)
         # Return the remote value
-        return self.cachedRemoteSettings[name]
+        if name in self.cachedRemoteSettings:
+            return self.cachedRemoteSettings[name]
+        else:
+            return None
     
     def setWorkDir(self, workDir, delete=False):
         if self._workDirBase == None:
             self.workDir = None
             return
-        self.workDir = os.path.normpath(self._workDirBase + "/" + workSubDir)
+        self.workDir = os.path.normpath(self._workDirBase + "/" + workDir)
         if delete:
             if self.workDir == self._workDirBase:
                 print >> sys.stderr, "No workdir defined"
@@ -118,32 +129,40 @@ class UnixConnection:
         if dst == None:
             dst = os.path.split(src)[-1]
         if replace == False and ( self.exists(dst) or (uncompress and dst.endswith(".gz") and self.exists(dst[:-3])) ):
-            return False
+            return dst
         else:
             if (self.compression or compress) and not src.endswith(".gz"):
                 print >> sys.stderr, "Compressing " + src + ": ",
                 subprocess.call("gzip -fv < " + src + " > " + src + ".gz", shell=True)
                 src += ".gz"
                 dst += ".gz"
-            print "scp " + src + " " + self.account + ":" + self.workDir + "/" + dst
-            self.scp(src, self.account + ":" + self.workDir + "/" + dst)
-            #subprocess.call("scp " + src + " " + self.account + ":" + self.workDir + "/" + dst, shell=True)
+            dst = os.path.normpath(self.workDir + "/" + dst)
+            self.scp(src, self.account + ":" + dst, verbose="upload")
             if self.compression or uncompress:
-                self.run("gunzip -fv " + self.workDir + "/" + dst)
-            return True
+                assert dst.endswith(".gz")
+                self.run("gunzip -fv " + dst)
+                dst = dst.rsplit(".", 1)[0]
+            return dst
         
-    def scp(self, par1, par2):
+    def scp(self, par1, par2, verbose="transfer"):
         account1 = None
         if ":" in par1:
             account1 = par1.split(":")[0]
         account2 = None
         if ":" in par2:
             account2 = par2.split(":")[0]
-        if (account1 == None or account1 == self.account) and (account2 == None or account2 == self.account):
+        if account1 == None and account2 == None:
             # local copy
-            subprocess.call("cp -f " + par1.split(":")[-1] + " " + par2.split(":")[-1], shell=True)
+            dirPath = os.path.normpath(os.path.dirname(par2.split(":")[-1]))
+            if not os.path.exists(dirPath):
+                os.makedirs()
+            if verbose != None:
+                print >> sys.stderr, verbose + "(local copy):", par1.split(":")[-1], par2.split(":")[-1]
+            shutil.copy2(par1.split(":")[-1], par2.split(":")[-1])
         else:
             # remote copy
+            self.run("mkdir -p " + os.path.dirname(par2.split(":")[-1]))
+            print "scp " + par1 + " " + par2
             subprocess.call("scp " + par1 + " " + par2, shell=True)
         
     def download(self, src, dst=None, replace=True, compress=False, uncompress=False):
@@ -156,17 +175,19 @@ class UnixConnection:
         if dst == None:
             dst = os.path.split(src)[-1]
         if replace == False and os.path.exists(dst):
-            return False
+            return dst
         else:
             if (self.compression or compress) and not src.endswith(".gz"):
                 print >> sys.stderr, "Compressing " + src + ": ",
                 self.run("gzip < " + self.workDir + "/" + src + " > " + self.workDir + "/" + src + ".gz")
                 src = src + ".gz"
                 dst = dst + ".gz"
-            self.scp(self.account + ":" + self.workDir + "/" + src, dst)
+            self.scp(src, dst, verbose="download")
             if self.compression or uncompress:
+                assert dst.endswith(".gz")
                 subprocess.call("gunzip -f " + dst, shell=True)
-            return True
+                dst = dst.rsplit(".", 1)[0]
+            return dst
     
     def run(self, script, cdWrkDir=False):
         """
@@ -175,21 +196,25 @@ class UnixConnection:
         if cdWrkDir:
             script = "cd " + self.workDir + " ; " + script
         if self.account == None: # a local process
-            p = subprocess.Popen(script, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            p = subprocess.Popen(script, shell=True, stdout=subprocess.PIPE)
         else:
-            p = subprocess.Popen("ssh " + self.account + " '" + script + "'", shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            p = subprocess.Popen("ssh " + self.account + " '" + script + "'", shell=True, stdout=subprocess.PIPE)
         return p.stdout.readlines()
+    
+    def getScript(self, script=None, joinString=" ; "):
+        if script == None: # use command buffer
+            script = joinString.join(self.commands)
+            self.commands = []
+        return script
     
     def addCommand(self, string):
         self.commands.append(string)
     
-    def submit(self, script=None, stdout=None, stderr=None):
+    def submit(self, script=None, jobWorkDir=None, name=None, stdout=None, stderr=None):
         """
         Queue a command.
         """
-        if script == None:
-            script = " ; ".join(self.commands)
-            self.commands = []
+        script = self.getScript(script)
         logFiles = [None, None]
         if type(stdout) in types.StringTypes:
             print >> sys.stderr, "Job stdout at", stdout
@@ -197,7 +222,8 @@ class UnixConnection:
         if type(stderr) in types.StringTypes:
             print >> sys.stderr, "Job stderr at", stderr
             logFiles[1] = stderr = open(stderr, "wt")
-        print >> sys.stderr, "Submitting script:", script
+        if self.debug:
+            print >> sys.stderr, "Submitting script:", script
         if self.account == None: # a local process
             job = subprocess.Popen(script, shell=True, stdout=stdout, stderr=stderr)
         else:
@@ -226,6 +252,32 @@ class UnixConnection:
         else:
             self._closeLogs(job)
             return "FAILED"
+
+from LSF import LSFConnection
+from SLURM import SLURMConnection
+#import LSF.LSFConnection
+
+def getConnection(connection, account=None, workDirBase=None, remoteSettingsPath=None):
+    if connection == None: # return a "dummy" local connection
+        return getConnection("Unix")
+    elif type(connection) in types.StringTypes and hasattr(Settings, connection): # connection is a Settings key
+        print >> sys.stderr, "Using connection", connection
+        return getConnection(*getattr(Settings, connection))
+    else: # connection is the connection object type
+        if account == None:
+            assert workDirBase == None
+            assert remoteSettingsPath == None
+            print >> sys.stderr, "New local", connection, "connection"
+        else: 
+            print >> sys.stderr, "New remote", connection, "connection:", account, workDirBase, remoteSettingsPath
+        if connection == "Unix":
+            return UnixConnection(account, workDirBase, remoteSettingsPath)
+        elif connection == "LSF":
+            return LSFConnection(account, workDirBase, remoteSettingsPath)
+        elif connection == "SLURM":
+            return SLURMConnection(account, workDirBase, remoteSettingsPath)
+        else:
+            assert False, connection
 
 if __name__=="__main__":
     c = CSCConnection("remoteTest", "jakrbj@louhi.csc.fi", True)
