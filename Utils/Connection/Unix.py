@@ -2,7 +2,7 @@ import sys, os, shutil, types
 import subprocess
 import getpass
 import time
-sys.path.append(os.path.abspath(os.path.dirname(__file__))+"/..")
+sys.path.append(os.path.normpath(os.path.abspath(os.path.dirname(__file__))+"/.."))
 from Utils.Timer import Timer
 import Utils.Settings as Settings
 import tempfile
@@ -30,6 +30,9 @@ class UnixConnection:
         self._logs = {}
         self.debug = True
         self.resubmitOnlyFinished = True
+    
+    def isLocal(self):
+        return self.account == None
     
     def getUsername(self):
         if self.account == None: # local machine
@@ -100,14 +103,14 @@ class UnixConnection:
 #        self.run("mkdir -p " + self.workDir)
     
     def exists(self, filename):
-        stdout = self.run("ls -lh " + self.getRemotePath(filename), silent=True)
+        stdout = self.run("ls -lh " + filename, silent=True)
         if len(stdout) > 0:
             return True
         else:
             return False
     
     def mkdir(self, dir):
-        stdout = self.run("mkdir -p " + self.getRemotePath(filename))
+        stdout = self.run("mkdir -p " + dir)
         if len(stdout) > 0:
             return True
         else:
@@ -152,7 +155,7 @@ class UnixConnection:
             shutil.copy2(par1.split(":")[-1], par2.split(":")[-1])
         else:
             # remote copy
-            self.run("mkdir -p " + os.path.dirname(par2.split(":")[-1]))
+            self.mkdir(os.path.dirname(par2.split(":")[-1]))
             print "scp " + par1 + " " + par2
             subprocess.call("scp " + par1 + " " + par2, shell=True)
     
@@ -168,6 +171,9 @@ class UnixConnection:
         dst = self.getRemotePath(dst)
         
         if replace == False and ( self.exists(dst) or (uncompress and dst.endswith(".gz") and self.exists(dst[:-3])) ):
+            if uncompress and dst.endswith(".gz"): # has been uncompressed already
+                dst = dst.rsplit(".", 1)[0]
+            print >> sys.stderr, "Existing remote file", dst, "not overwritten"
             return dst
         else:
             if (self.compression or compress) and not src.endswith(".gz"):
@@ -176,8 +182,7 @@ class UnixConnection:
                 src += ".gz"
                 dst += ".gz"
             self.scp(src, self.account + ":" + dst, verbose="upload")
-            if self.compression or uncompress:
-                assert dst.endswith(".gz")
+            if (self.compression or uncompress) and dst.endswith(".gz"):
                 self.run("gunzip -fv " + dst)
                 dst = dst.rsplit(".", 1)[0]
             return dst
@@ -209,8 +214,7 @@ class UnixConnection:
                 src = src + ".gz"
                 dst = dst + ".gz"
             self.scp(self.account + ":" + src, dst, verbose="download")
-            if self.compression or uncompress:
-                assert dst.endswith(".gz")
+            if (self.compression or uncompress) and dst.endswith(".gz"):
                 subprocess.call("gunzip -f " + dst, shell=True)
                 dst = dst.rsplit(".", 1)[0]
             return dst
@@ -241,6 +245,12 @@ class UnixConnection:
     def addCommand(self, string):
         self.commands.append(string)
     
+    def clearCommands(self):
+        self.commands = []
+        
+    def getJob(self, jobDir, jobName):
+        return self._getJobPath(jobDir, jobName)
+    
     def _getJobPath(self, jobDir, jobName):
         return jobDir + "/" + jobName + ".job"
     
@@ -269,6 +279,7 @@ class UnixConnection:
         attrDict = {}
         for line in jobLines: #localJobFile:
             key, value = line.strip().split("=", 1)
+            assert key not in attrDict, (key, value, attrDict, jobLines)
             attrDict[key] = value
         #localJobFile.close()
         return attrDict
@@ -285,11 +296,13 @@ class UnixConnection:
         if type(stderr) in types.StringTypes:
             print >> sys.stderr, "Job", jobName + "'s stderr at local file", stderr
             logFiles[1] = stderr = open(stderr, "wt")
+        if jobDir != None:
+            script = "cd " + jobDir + "; " + script
+        script += "; echo retcode=$? >> " + self.getRemotePath(self._getJobPath(jobDir, jobName)) # store return value
         if self.debug:
             print >> sys.stderr, "------- Job script -------"
             print >> sys.stderr, script
             print >> sys.stderr, "--------------------------"
-        script += "; echo retcode=$? >> " + self.getRemotePath(self._getJobPath(jobDir, jobName)) # store return value
         prevStatus = self.getJobStatus(self._getJobPath(jobDir, jobName))
         if self.resubmitOnlyFinished and prevStatus == "RUNNING":
             assert False, prevStatus
@@ -314,6 +327,43 @@ class UnixConnection:
             if self._logs[job][1] != None:
                 self._logs[job][1].close()
             del self._logs[job]
+    
+    def waitForJob(self, job, pollIntervalSeconds=10):
+        while self.getJobStatus(job) not in ["FINISHED", "FAILED"]:
+            time.sleep(pollIntervalSeconds)
+    
+    def waitForJobs(self, jobs, pollIntervalSeconds=60, timeout=None, verbose=True):
+        print >> sys.stderr, "Waiting for results"
+        waitTimer = Timer()
+        while(True):
+            jobStatus = {"FINISHED":0, "QUEUED":0, "FAILED":0, "RUNNING":0}
+            for job in jobs:
+                jobStatus[self.getJobStatus(job)] += 1
+            jobStatusString = str(jobStatus["QUEUED"]) + " queued, " + str(jobStatus["RUNNING"]) + " running, " + str(jobStatus["FINISHED"]) + " finished, " + str(jobStatus["FAILED"]) + " failed"
+            if jobStatus["QUEUED"] + jobStatus["RUNNING"] == 0:
+                if verbose:
+                    print >> sys.stderr, "\nAll runs done (" + jobStatusString + ")"
+                break
+            # decide what to do
+            if timeout == None or timeoutTimer.getElapsedTime() < timeout:
+                sleepTimer = Timer()
+                accountName = self.account
+                if self.account == None:
+                    accountName = "local"
+                if verbose:
+                    sleepString = " [          ]     "
+                    print >> sys.stderr, "\rWaiting for " + str(len(jobs)) + " on " + accountName + "(" + jobStatusString + "),", waitTimer.elapsedTimeToString() + sleepString,
+                while sleepTimer.getElapsedTime() < pollIntervalSeconds:
+                    if verbose:
+                        steps = int(10 * sleepTimer.getElapsedTime() / pollIntervalSeconds) + 1
+                        sleepString = " [" + steps * "." + (10-steps) * " " + "]     "
+                        print >> sys.stderr, "\rWaiting for " + str(len(jobs)) + " on " + accountName + "(" + jobStatusString + "),", waitTimer.elapsedTimeToString() + sleepString,
+                    time.sleep(5)                
+            else:
+                if verbose:
+                    print >> sys.stderr, "\nTimed out, ", trainTimer.elapsedTimeToString()
+                break
+        return jobStatus
     
     def getJobStatus(self, job):
         # Get jobfile

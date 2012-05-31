@@ -5,6 +5,7 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__))+"/..")
 import shutil, tempfile
 import subprocess
 import Core.ExampleUtils as ExampleUtils
+import Core.OptimizeParameters
 import combine
 import copy
 import tempfile
@@ -26,6 +27,7 @@ import Utils.Download as Download
 import SVMMultiClassModelUtils
 import Utils.Connection.Unix
 from Utils.Connection.Unix import UnixConnection
+from Evaluators.AveragingMultiClassEvaluator import AveragingMultiClassEvaluator
 
 def test(progDir):
     cwd = os.getcwd()
@@ -78,6 +80,7 @@ class SVMMultiClassClassifier(Classifier):
     louhiBinDir = "/v/users/jakrbj/svm-multiclass"
     #ENDIF
     def __init__(self, connection=None):
+        self.defaultEvaluator = AveragingMultiClassEvaluator
         if connection == None:
             self.connection = UnixConnection() # A local connection
         else:
@@ -96,6 +99,9 @@ class SVMMultiClassClassifier(Classifier):
         #self.classifyDir = "SVM_MULTICLASS_DIR"
         #self.classifyCommand = "svm_multiclass_classify %m %e %p"
     
+    def getJob(self):
+        return self._job
+    
     def getStatus(self):
         if self._job != None:
             self._prevJobStatus = self.connection.getJobStatus(self._job)
@@ -112,17 +118,19 @@ class SVMMultiClassClassifier(Classifier):
         self.state = stateName
         self._job = None
         self._prevJobStatus = None
-        if stateName == "TRAIN":
+        if stateName == "TRAIN" or stateName == "OPTIMIZE":
             self.model = None
             self.parameters = None
-            self.predictions = None
-        elif stateName == "CLASSIFY":
-            self.predictions = None
+        # for all states
+        self.predictions = None
+        #self.optimizeJobs = []
     
-    def getExampleFile(self, examples, remotePath=None, upload=True, replaceRemote=True):
+    def getExampleFile(self, examples, remotePath=None, upload=True, replaceRemote=True, dummy=False):
         # If examples are in a list, they will be written to a file for SVM-multiclass
         if examples == None:
             return None
+        if dummy:
+            return "DUMMY"
         elif type(examples) == types.ListType:
             assert False
             #ExampleUtils.writeExamples(examples, trainPath + "/")
@@ -136,9 +144,9 @@ class SVMMultiClassClassifier(Classifier):
             examplesPath = tempUnzip(examplesPath)
         return examplesPath
     
-    def train(self, examples, outDir, parameters, classifyExamples=None, replaceRemoteExamples=True):
-        examples = self.getExampleFile(examples, os.path.abspath(outDir), replaceRemote=replaceRemoteExamples)
-        classifyExamples = self.getExampleFile(classifyExamples, os.path.abspath(outDir), replaceRemote=replaceRemoteExamples)
+    def train(self, examples, outDir, parameters, classifyExamples=None, finishBeforeReturn=False, replaceRemoteExamples=True, dummy=False):
+        examples = self.getExampleFile(examples, os.path.abspath(outDir), replaceRemote=replaceRemoteExamples, dummy=dummy)
+        classifyExamples = self.getExampleFile(classifyExamples, os.path.abspath(outDir), replaceRemote=replaceRemoteExamples, dummy=dummy)
         parameters = splitParameters(parameters)
         svmMulticlassDir = self.connection.getSetting("SVM_MULTICLASS_DIR")
         
@@ -158,6 +166,7 @@ class SVMMultiClassClassifier(Classifier):
             if parameters[key] != None:
                 trainCommand += str(parameters[key]) + " "
                 idStr += "_" + str(parameters[key])
+        classifier.parameterIdStr = idStr
         classifier.model = self.connection.getRemotePath(outDir + "/model" + idStr, True)
         modelPath = self.connection.getRemotePath(outDir + "/model" + idStr, False)
         trainCommand += examples + " " + modelPath
@@ -171,7 +180,13 @@ class SVMMultiClassClassifier(Classifier):
         # Run the process
         jobName = "svm_multiclass_learn" + idStr
         logPath = outDir + "/" + jobName
-        classifier._job = self.connection.submit(jobDir=outDir, jobName=jobName, stdout=logPath+".stdout")
+        if dummy: # return a classifier that connects to an existing job
+            self.connection.clearCommands()
+            classifier._job = self.connection.getJob(jobDir=outDir, jobName=jobName)
+        else: # submit the job
+            classifier._job = self.connection.submit(jobDir=outDir, jobName=jobName, stdout=logPath+".stdout")
+            if finishBeforeReturn:
+                self.connection.waitForJob(classifier._job)
         return classifier
     
     def downloadModel(self, outDir=""):
@@ -184,33 +199,77 @@ class SVMMultiClassClassifier(Classifier):
         self.predictions = self.connection.download(self.predictions)
         return self.predictions
     
-    def classify(self, examples, output, model=None, immediate=True, replaceRemoteExamples=True):
+    def classify(self, examples, output, model=None, finishBeforeReturn=False, replaceRemoteFiles=True):
         # Return a new classifier instance for following the training process and using the model
         classifier = copy.copy(self)
         classifier.setState("CLASSIFY")
         # Classify
         if model == None:
             classifier.model = model = self.model
+        model = self.connection.upload(model, uncompress=True, replace=replaceRemoteFiles)
+        classifier.predictions = self.connection.getRemotePath(output, True)
+        predictionsPath = self.connection.getRemotePath(output, False)
         if ":" in model: # a remote model
-            assert immediate == False
-            examples = self.getExampleFile(examples, os.path.abspath(os.path.dirname(model)), replaceRemote=replaceRemoteExamples)
-            classifier.predictions = self.connection.getPath(output, True)
-            predictionsPath = self.connection.getPath(output, False)
-            classifyCommand = self.connection.getSetting("SVM_MULTICLASS_DIR") + "/svm_multiclass_classify " + classifyExamples + " " + modelPath + " " + predictionsPath
-        else: # local
-            classifyExamples = self.getExampleFile(classifyExamples, "classify.dat", upload=False)
-            classifier.predictions = output
-            classifyCommand = Settings.SVM_MULTICLASS_DIR + "/svm_multiclass_classify " + classifyExamples + " " + model + " " + output
-        if immediate:
-            if subprocess.call(classifyCommand, shell=True):
-                classifier._prevJobStatus = "FINISHED"
-                return classifier
-            else:
-                classifier._prevJobStatus = "FAILED"
-                return classifier
-        else:
-            classifier._job = self.connection.submit(classifyCommand)
+            examples = self.getExampleFile(examples, os.path.abspath(output), replaceRemote=replaceRemoteFiles)
+            classifyCommand = self.connection.getSetting("SVM_MULTICLASS_DIR") + "/svm_multiclass_classify " + examples + " " + modelPath + " " + predictionsPath
+        else: # local or remote depending on connection
+            examples = self.getExampleFile(examples, "classify.dat", upload=False)
+            classifyCommand = Settings.SVM_MULTICLASS_DIR + "/svm_multiclass_classify " + examples + " " + model + " " + predictionsPath
+        classifier._job = self.connection.submit(classifyCommand, 
+                                                 jobDir=os.path.abspath(os.path.dirname(output)), 
+                                                 jobName="svm_multiclass_classify-"+os.path.basename(model))
+        if finishBeforeReturn:
+            self.connection.waitForJob(classifier._job)
+        return classifier
+    
+    def optimize(self, examples, outDir, parameters, classifyExamples, classIds, step="BOTH", evaluator=None, threshold=False, timeout=None, downloadAllModels=False):
+        assert step in ["BOTH", "SUBMIT", "RESULTS"], step
+        # Initialize training (or reconnect to existing jobs)
+        combinations = Core.OptimizeParameters.getParameterCombinations(parameters)
+        trained = []
+        for combination in combinations:
+            trained.append( self.train(examples, outDir, combination, classifyExamples, replaceRemoteExamples=(len(trained) == 0), dummy=(step == "RESULTS")) )
+        if step == "SUBMIT": # Return already
+            classifier = copy.copy(self)
+            classifier.setState("OPTIMIZE")
             return classifier
+        
+        # Wait for the training to finish
+        finalJobStatus = self.connection.waitForJobs([x.getJob() for x in trained])
+        # Evaluate the results
+        print >> sys.stderr, "Evaluating results"
+        #Stream.setIndent(" ")
+        bestResult = None
+        if evaluator == None:
+            evaluator = self.defaultEvaluator
+        for i in range(len(combinations)):
+            id = trained[i].parameterIdStr
+            #Stream.setIndent(" ")
+            # Get predictions
+            predictions = None
+            if trained[i].getStatus() == "FINISHED":
+                predictions = trained[i].downloadPredictions()
+            else:
+                print >> sys.stderr, "No results for combination" + id
+                continue
+            if downloadAllModels:
+                trained[i].downloadModel()
+            # Compare to other results
+            print >> sys.stderr, "*** Evaluating results for combination" + id + " ***"
+            evaluation = evaluator.evaluate(classifyExamples, predictions, classIds, os.path.join(outDir, "evaluation" + id + ".csv"))
+            if threshold:
+                print >> sys.stderr, "Thresholding"
+                evaluation.determineThreshold(testExamples, predictions)
+            if bestResult == None or evaluation.compare(bestResult[0]) > 0: #: averageResult.fScore > bestResult[1].fScore:
+                bestResult = [evaluation, trained[i], combinations[i]]
+            if not self.connection.isLocal():
+                os.remove(predictions) # remove predictions to save space
+        #Stream.setIndent()
+        print >> sys.stderr, "*** Evaluation complete", finalJobStatus, "***"
+        print >> sys.stderr, "Selected parameters", bestResult[-1]
+        classifier = copy.copy(bestResult[1])
+        classifier.downloadModel()
+        return classifier
     
     @classmethod
     def test(cls, examples, modelPath, output=None, parameters=None, forceInternal=False, classIds=None): # , timeout=None):
@@ -530,8 +589,10 @@ if __name__=="__main__":
     from Utils.Parameters import *
     optparser = OptionParser(usage="%prog [options]\n")
     optparser.add_option("-e", "--examples", default=None, dest="examples", help="Example File", metavar="FILE")
-    optparser.add_option("-t", "--train", default=None, dest="train", action="store_true", help="train")
+    optparser.add_option("-a", "--action", default=None, dest="action", help="TRAIN, CLASSIFY or OPTIMIZE")
+    optparser.add_option("--optimizeStep", default="BOTH", dest="optimizeStep", help="BOTH, SUBMIT or RESULTS")
     optparser.add_option("--classifyExamples", default=None, dest="classifyExamples", help="Example File", metavar="FILE")
+    optparser.add_option("--classIds", default=None, dest="classIds", help="Class ids", metavar="FILE")
     optparser.add_option("-m", "--model", default=None, dest="model", help="path to model file")
     #optparser.add_option("-w", "--work", default=None, dest="work", help="Working directory for intermediate and debug files")
     optparser.add_option("-o", "--output", default=None, dest="output", help="Output directory or file")
@@ -542,6 +603,7 @@ if __name__=="__main__":
     optparser.add_option("--install", default=None, dest="install", help="Install directory (or DEFAULT)")
     optparser.add_option("--installFromSource", default=False, action="store_true", dest="installFromSource", help="")
     (options, args) = optparser.parse_args()
+    assert options.action in ["TRAIN", "CLASSIFY", "OPTIMIZE"]
     
     if options.install != None:
         downloadDir = None
@@ -555,7 +617,7 @@ if __name__=="__main__":
         sys.exit()
     else:
         classifier = SVMMultiClassClassifier(Utils.Connection.Unix.getConnection(options.remote))
-        if options.train:
+        if options.action == "TRAIN":
             import time
             trained = classifier.train(options.examples, options.output, options.parameters, options.classifyExamples)
             status = trained.getStatus()
@@ -567,8 +629,14 @@ if __name__=="__main__":
             if trained.getStatus() == "FINISHED":
                 trained.downloadPredictions()
                 trained.downloadModel()
-        else:
-            classifier.classify(options.examples, options.model, options.output)
+        elif options.action == "CLASSIFY":
+            classified = classifier.classify(options.examples, options.output, options.model, True)
+            if classified.getStatus() == "FINISHED":
+                classified.downloadPredictions()
+        else: # OPTIMIZE
+            options.parameters = splitParameters(options.parameters)
+            optimized = classifier.optimize(options.examples, options.output, options.parameters, options.classifyExamples, options.classIds, step=options.optimizeStep)
+            
     # import classifier
     #print >> sys.stderr, "Importing classifier module"
     #exec "from Classifiers." + options.classifier + " import " + options.classifier + " as Classifier"
