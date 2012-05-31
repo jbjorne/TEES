@@ -70,7 +70,8 @@ optparser.add_option("-a", "--task", default="1", dest="task", help="task number
 optparser.add_option("-p", "--parse", default="split-McClosky", dest="parse", help="Parse XML element name")
 optparser.add_option("-t", "--tokenization", default=None, dest="tokenization", help="Tokenization XML element name")
 optparser.add_option("--step", default=None, dest="step", help="")
-optparser.add_option("--detectorStep", default=None, dest="detectorStep", help="")
+#optparser.add_option("--detectorStep", default=None, dest="detectorStep", help="")
+optparser.add_option("--copyFrom", default=None, dest="copyFrom", help="Copy this directory as template")
 # Classifier
 optparser.add_option("-c", "--classifier", default="Cls", dest="classifier", help="")
 optparser.add_option("--csc", default="", dest="csc", help="")
@@ -105,7 +106,12 @@ optparser.add_option("--negationModel", default=os.path.expanduser("~/biotext/Bi
 optparser.add_option("--task3Ids", default=os.path.expanduser("~/biotext/BioNLP2011/tests/task3/task3TrainGE-EPI-ID/genia-task3-ids"), dest="task3Ids", help="Speculation & negation SVM example class and feature id file stem (files = STEM.class_names and STEM.feature_names)")
 (options, args) = optparser.parse_args()
 
-selector = StepSelector(["TRAIN", "DEVEL", "EMPTY", "TEST"], fromStep=options.step)
+step = options.step
+detectorStep = {"TRAIN":None, "DEVEL":None, "EMPTY":None, "TEST":None} # TRAIN substep
+if options.step != None and "." in options.step:
+    step = options.step.split(".")[0]
+    detectorStep[step] = options.step.split(".")[1]
+selector = StepSelector(["TRAIN", "DEVEL", "EMPTY", "TEST"], fromStep=step)
 
 # Check options
 if options.classify:
@@ -131,8 +137,8 @@ elif options.task == "CO":
     FINAL_TEST_FILE = dataPath + "co-test.xml"
 else:
     dataPath = os.path.expanduser("~/biotext/BioNLP2011/data/main-tasks/")
-    TRAIN_FILE = dataPath + options.task + "/" + options.task + "-train-nodup" + options.extraTag + ".xml"
-    TEST_FILE = dataPath + options.task + "/" + options.task + "-devel-nodup" + options.extraTag + ".xml"
+    TRAIN_FILE = dataPath + options.task + "/" + options.task + "-train" + options.extraTag + ".xml"
+    TEST_FILE = dataPath + options.task + "/" + options.task + "-devel" + options.extraTag + ".xml"
     #FINAL_TEST_FILE = dataPath + options.task + "/" + options.task + "-test.xml" # test set never uses extratag
     FINAL_TEST_FILE = dataPath + options.task + "/" + options.task + "-test" + options.extraTag + ".xml" # test set never uses extratag
 # Optional overrides for input files
@@ -194,7 +200,11 @@ else:
 
 # These commands will be in the beginning of most pipelines
 WORKDIR=options.output
-
+if options.copyFrom != None and (options.clearAll or not os.path.exists(WORKDIR)):
+    if options.clearAll and os.path.exists(WORKDIR):
+        shutil.rmtree(WORKDIR)
+    print >> sys.stderr, "Copying template from", options.copyFrom
+    shutil.copytree(options.copyFrom, WORKDIR)
 # Start logging
 workdir(WORKDIR, options.clearAll) # Select a working directory, optionally remove existing files
 if not options.noLog:
@@ -226,13 +236,13 @@ if selector.check("TRAIN"):
                         options.recallAdjustParams, options.unmerging, options.modifiers, 
                         options.fullGrid, fullTaskId,
                         options.parse, options.tokenization,
-                        fromStep=options.detectorStep,
+                        fromStep=detectorStep["TRAIN"],
                         workDir="training")
 if selector.check("DEVEL"):
     print >> sys.stderr, "----------------------------------------------------"
     print >> sys.stderr, "------------ Check devel classification ------------"
     print >> sys.stderr, "----------------------------------------------------"
-    eventDetector.classify(TEST_FILE, "model-devel", "classification/devel", fromStep=options.detectorStep)
+    eventDetector.classify(TEST_FILE, "model-devel", "classification/devel", fromStep=detectorStep["DEVEL"])
 if selector.check("EMPTY"):
     # By passing an emptied devel set through the prediction system, we can check that we get the same predictions
     # as in the DEVEL step, ensuring the model does not use leaked information.
@@ -240,14 +250,14 @@ if selector.check("EMPTY"):
     print >> sys.stderr, "------------ Empty devel classification ------------"
     print >> sys.stderr, "----------------------------------------------------"
     #eventDetector.classify(TEST_FILE.replace(".xml", "-empty.xml"), "model-devel", "predicted-devel-empty", fromStep=options.detectorStep)
-    eventDetector.classify(getEmptyCorpus(TEST_FILE), "model-devel", "classification/devel-empty", fromStep=options.detectorStep)
+    eventDetector.classify(getEmptyCorpus(TEST_FILE), "model-devel", "classification/devel-empty", fromStep=detectorStep["EMPTY"])
 if not options.noTestSet:
     if selector.check("TEST"):
         print >> sys.stderr, "----------------------------------------------------"
         print >> sys.stderr, "------------- Test set classification --------------"
         print >> sys.stderr, "----------------------------------------------------"
         eventDetector.stWriteScores = False # the evaluation server doesn't like additional files
-        eventDetector.classify(FINAL_TEST_FILE, "model-test", "classification/test", fromStep=options.detectorStep, saveChangedModelPath="model-test-classify-ids")
+        eventDetector.classify(FINAL_TEST_FILE, "model-test", "classification/test", fromStep=detectorStep["TEST"], saveChangedModelPath="model-test-classify-ids")
         #print os.listdir(os.getcwd())
         STFormat.Compare.compare("classification/test-events.tar.gz", "classification/devel-events.tar.gz", "a2")
 
