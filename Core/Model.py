@@ -8,6 +8,7 @@ class Model():
         self.members = {} # path_inside_model:[abspath_to_file_in_model, abspath_to_cache_file]
         self.workdir = None
         self.mode = None
+        self.path = None
         self.open(path, mode)
         self.verbose = verbose
     
@@ -54,44 +55,44 @@ class Model():
         #f.close()
     
     def getStr(self, name):
-        #f = open(self.get(name), "rt")
-        #value = f.readline().strip()
-        #f.close()
-        #return value
         return self._getValues()[name]
     
     def save(self):
         if self.mode == "r":
             raise IOError("Model not open for writing")
-        if self.isPackage:
+        if self.isPackage():
             tf = tarfile.open(self.path, "r:gz")
             tarinfos = {}
             for tarinfo in tf.getmembers():
                 tarinfos[tarinfo.name] = tarinfo
             tf.close()
+        # Check which files have changed in the cache
         changed = []
         for name in sorted(self.members.keys()):
-            member = self.members[name]
-            if member[1] != None and os.path.exists(member[1]): # cache file exists
-                if self.isPackage:
-                    fi = os.stat(member[1])
+            cached = self.members[name]
+            if cached != None and os.path.exists(cached): # cache file exists
+                if self.isPackage():
+                    fi = os.stat(cached)
                     ti = None
                     if name in tarinfos:
                         ti = tarinfos[name]
                     if ti == None or fi.st_size != ti.size or fi.st_mtime != ti.mtime:
                         changed.append(name)
-                elif not os.path.exists(member[0]) or not filecmp.cmp(member[1], member[0]):
-                    changed.append(name)
+                else:
+                    modelFilename = os.path.join(self.path, name)
+                    if not os.path.exists(modelFilename) or not filecmp.cmp(modelFilename, cached):
+                        changed.append(name)
+        # Copy changed files from the cache to the model
         if len(changed) > 0:
             if self.verbose: print >> sys.stderr, "Saving model \"" + self.path + "\" (cache:" + self.workdir + ", changed:" + ",".join(changed) + ")"
-            if self.isPackage:
-                tf = tarfile.open(self.path, "w:gz")
-                tf.add(member[1], member[0])
-                tf.close()
+            if self.isPackage():
+                for name in changed:
+                    tf = tarfile.open(self.path, "w:gz")
+                    tf.add(self.members[name])
+                    tf.close()
             else:
                 for name in changed:
-                    member = self.members[name]
-                    shutil.copy2(member[1], member[0])     
+                    shutil.copy2(self.members[name], os.path.join(self.path, name))     
     
     def saveAs(self, outPath):
         print >> sys.stderr, "Saving model \"" + self.path, "as", outPath
@@ -101,14 +102,14 @@ class Model():
                 shutil.rmtree(outPath)
             else:
                 os.remove(outPath)
-        if isPackage:
+        if self.isPackage():
             # copy everything to tempdir
             tempdir = tempfile.mkdtemp()
-            # copy files from model
+            # copy all files from model to tempdir
             modelTar = tarfile.open(self.path, "r:gz")
             modelTar.extractAll(tempdir)
             modelTar.close()
-            # copy cached files
+            # copy cached (potentially updated) files to tempdir
             for f in os.listdir(self.workdir):
                 shutil.copy2(f, tempdir)
             # add everything to the new model
@@ -121,7 +122,7 @@ class Model():
         else:
             # copy files from model
             shutil.copytree(self.path, outPath)
-            # copy cached files
+            # copy cached (potentially updated) files
             for f in os.listdir(self.workdir):
                 shutil.copy2(f, outPath)
     
@@ -134,26 +135,34 @@ class Model():
                 self.add(name)
             else:
                 raise IOError("Model has no member \"" + name + "\"")
-        member = self.members[name]
-        if member[1] == None: # file has not been cached yet
+        # Cache member if not yet cached
+        if self.members[name] == None: # file has not been cached yet
             cacheFile = os.path.join(self.workdir, name)
             if self.isPackage:
-                if member[2] != None:
-                    tf = tarfile.open(self.path, "r:gz")
+                tf = tarfile.open(self.path, "r:gz")
+                try:
+                    if self.verbose: print >> sys.stderr, "Caching model \"" + self.path + "\" member \"" + name + "\" to \"" + cacheFile + "\""
                     tf.extract(name, self.workdir)
-                    tf.close()
-            else:
-                if os.path.exists(member[0]): # member already exists inside the model
-                    if self.verbose: print >> sys.stderr, "Caching model \"" + self.path + "\" member \"" + member[0] + "\" to \"" + cacheFile + "\""
-                    shutil.copy2(member[0], cacheFile)
-            member[1] = cacheFile
-        return member[1]
+                except: # member does not exist yet
+                    pass
+                tf.close()
+            elif os.path.exists(os.path.join(self.path, name)): # member already exists inside the model
+                if self.verbose: print >> sys.stderr, "Caching model \"" + self.path + "\" member \"" + name + "\" to \"" + cacheFile + "\""
+                shutil.copy2(os.path.join(self.path, name), cacheFile)
+            self.members[name] = cacheFile
+        return self.members[name]
+    
+    def isPackage(self):
+        if self.path.endswith('.tar.gz') or self.path.endswith('.tgz'):
+            return True
+        else:
+            return False
     
     def open(self, path, mode="r"):
         assert mode in ["r", "w", "a"]
         self.mode = mode
         self.path = path
-        if self.path.endswith('.tar.gz') or self.path.endswith('.tgz'):
+        if self.isPackage():
             self._openPackage(path, mode)
         else:
             self._openDir(path, mode)
@@ -168,7 +177,7 @@ class Model():
         # get members
         members = os.listdir(path)
         for member in members:
-            self.members[member] = [os.path.join(path, member), None]
+            self.members[member] = None
         self.isPackage = False
     
     def _openPackage(self, path, mode):
@@ -180,7 +189,7 @@ class Model():
         package = tarfile.open(path, 'r:gz')
         tarinfos = tarfile.getmembers()
         for tarinfo in tarinfos:
-            self.members[tarinfo.name] = [None, None]
+            self.members[tarinfo.name] = None
         self.isPackage = True
     
     # Value file
