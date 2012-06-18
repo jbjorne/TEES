@@ -11,7 +11,7 @@ from Utils.Parameters import *
 from Utils.Timer import Timer
 import Utils.Stream as Stream
 #IF LOCAL
-from Murska.CSCConnection import CSCConnection
+#from Murska.CSCConnection import CSCConnection
 #ENDIF
 import ExampleUtils
 from IdSet import IdSet

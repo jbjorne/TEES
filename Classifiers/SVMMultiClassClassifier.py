@@ -135,7 +135,7 @@ class SVMMultiClassClassifier(Classifier):
             assert False
             #ExampleUtils.writeExamples(examples, trainPath + "/")
         else:
-            examplesPath = examples
+            examplesPath = os.path.abspath(examples)
        
         localPath = examplesPath
         if upload:
@@ -145,6 +145,8 @@ class SVMMultiClassClassifier(Classifier):
         return examplesPath
     
     def train(self, examples, outDir, parameters, classifyExamples=None, finishBeforeReturn=False, replaceRemoteExamples=True, dummy=False):
+        outDir = os.path.abspath(outDir)
+        
         examples = self.getExampleFile(examples, os.path.abspath(outDir), replaceRemote=replaceRemoteExamples, dummy=dummy)
         classifyExamples = self.getExampleFile(classifyExamples, os.path.abspath(outDir), replaceRemote=replaceRemoteExamples, dummy=dummy)
         parameters = splitParameters(parameters)
@@ -200,6 +202,7 @@ class SVMMultiClassClassifier(Classifier):
         return self.predictions
     
     def classify(self, examples, output, model=None, finishBeforeReturn=False, replaceRemoteFiles=True):
+        output = os.path.abspath(output)
         # Return a new classifier instance for following the training process and using the model
         classifier = copy.copy(self)
         classifier.setState("CLASSIFY")
@@ -207,6 +210,7 @@ class SVMMultiClassClassifier(Classifier):
         if model == None:
             classifier.model = model = self.model
         model = self.connection.upload(model, uncompress=True, replace=replaceRemoteFiles)
+        model = os.path.abspath(model)
         classifier.predictions = self.connection.getRemotePath(output, True)
         predictionsPath = self.connection.getRemotePath(output, False)
         if ":" in model: # a remote model
@@ -224,6 +228,7 @@ class SVMMultiClassClassifier(Classifier):
     
     def optimize(self, examples, outDir, parameters, classifyExamples, classIds, step="BOTH", evaluator=None, threshold=False, timeout=None, downloadAllModels=False):
         assert step in ["BOTH", "SUBMIT", "RESULTS"], step
+        outDir = os.path.abspath(outDir)
         # Initialize training (or reconnect to existing jobs)
         combinations = Core.OptimizeParameters.getParameterCombinations(parameters)
         trained = []

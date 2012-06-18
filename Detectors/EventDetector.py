@@ -29,11 +29,17 @@ class EventDetector(Detector):
         self.STATE_COMPONENT_TRAIN = "COMPONENT_TRAIN"
         self.tag = "event-"
     
-    def setCSCConnection(self, options, cscworkDir):
-        self.triggerDetector.setCSCConnection(options, os.path.join(cscworkDir, "trigger"))
-        self.edgeDetector.setCSCConnection(options, os.path.join(cscworkDir, "edge"))
-        self.unmergingDetector.setCSCConnection(options, os.path.join(cscworkDir, "unmerging"))
-        self.modifierDetector.setCSCConnection(options, os.path.join(cscworkDir, "modifier"))
+    def setConnection(self, connection):
+        self.triggerDetector.setConnection(connection)
+        self.edgeDetector.setConnection(connection)
+        self.unmergingDetector.setConnection(connection)
+        self.modifierDetector.setConnection(connection)
+    
+#    def setCSCConnection(self, options, cscworkDir):
+#        self.triggerDetector.setCSCConnection(options, os.path.join(cscworkDir, "trigger"))
+#        self.edgeDetector.setCSCConnection(options, os.path.join(cscworkDir, "edge"))
+#        self.unmergingDetector.setCSCConnection(options, os.path.join(cscworkDir, "unmerging"))
+#        self.modifierDetector.setCSCConnection(options, os.path.join(cscworkDir, "modifier"))
     
     def setWorkDir(self, workDir):
         Detector.setWorkDir(self, workDir) # for EventDetector
@@ -190,13 +196,13 @@ class EventDetector(Detector):
             # Triggers and Boost
             if prevParams == None or prevParams["trigger"] != params["trigger"] or prevParams["booster"] != params["booster"]:
                 print >> sys.stderr, "Classifying trigger examples for parameters", "trigger:" + str(params["trigger"]), "booster:" + str(params["booster"])
-                xml = self.triggerDetector.classifyToXML(self.optData, self.model, self.workDir+"grid-trigger-examples.gz", self.workDir+"grid-", classifierModel=TRIGGER_MODEL_STEM+str(params["trigger"])+".gz", split=False, recallAdjust=params["booster"])
+                xml = self.triggerDetector.classifyToXML(self.optData, self.model, self.workDir+"grid-trigger-examples.gz", self.workDir+"grid-", classifierModel=TRIGGER_MODEL_STEM+str(params["trigger"]), split=False, recallAdjust=params["booster"])
             prevParams = params
             
             # Build edge examples
             self.edgeDetector.buildExamples(self.model, [xml], [self.workDir+"grid-edge-examples.gz"], [self.optData])
             # Classify with pre-defined model
-            edgeClassifierModel=EDGE_MODEL_STEM+str(params["edge"])+".gz"
+            edgeClassifierModel=EDGE_MODEL_STEM+str(params["edge"])
             xml = self.edgeDetector.classifyToXML(xml, self.model, self.workDir+"grid-edge-examples.gz", self.workDir+"grid-", classifierModel=edgeClassifierModel, split=True)
             if xml != None:                
                 # TODO: Where should the EvaluateInteractionXML evaluator come from?
@@ -212,10 +218,10 @@ class EventDetector(Detector):
                 stEvaluation = Evaluators.BioNLP11GeniaTools.evaluate(stFormatDir, self.task)
                 if stEvaluation != None:
                     if bestResults == None or stEvaluation[0] > bestResults[1][0]:
-                        bestResults = (params, stEvaluation)
+                        bestResults = (params, stEvaluation, stEvaluation[0])
                 else:
                     if bestResults == None or EIXMLResult.getData().fscore > bestResults[1].getData().fscore:
-                        bestResults = (params, EIXMLResult)
+                        bestResults = (params, EIXMLResult, EIXMLResult.getData().fscore)
                 shutil.rmtree(self.workDir+"grid-flat-geniaformat")
                 if os.path.exists(self.workDir+"grid-unmerging-geniaformat"):
                     shutil.rmtree(self.workDir+"grid-unmerging-geniaformat")
@@ -225,13 +231,13 @@ class EventDetector(Detector):
         print >> sys.stderr, "Booster search complete"
         print >> sys.stderr, "Tested", count, "out of", count, "combinations"
         print >> sys.stderr, "Best parameters:", bestResults[0]
-        print >> sys.stderr, "Best result:", bestResults[1][0] # f-score
+        print >> sys.stderr, "Best result:", bestResults[2] # f-score
         # Save grid model
         self.saveStr("recallAdjustParameter", str(bestResults[0]["booster"]), self.model)
         self.saveStr("recallAdjustParameter", str(bestResults[0]["booster"]), self.combinedModel, False)
         if self.fullGrid: # define best models
-            self.triggerDetector.addClassifierModel(self.model, TRIGGER_MODEL_STEM+str(bestResults[0]["trigger"])+".gz", bestResults[0]["trigger"])
-            self.edgeDetector.addClassifierModel(self.model, EDGE_MODEL_STEM+str(bestResults[0]["edge"])+".gz", bestResults[0]["edge"])
+            self.triggerDetector.addClassifierModel(self.model, TRIGGER_MODEL_STEM+str(bestResults[0]["trigger"]), bestResults[0]["trigger"])
+            self.edgeDetector.addClassifierModel(self.model, EDGE_MODEL_STEM+str(bestResults[0]["edge"]), bestResults[0]["edge"])
         # Remove work files
         for stepTag in [self.workDir+"grid-trigger", self.workDir+"grid-edge", self.workDir+"grid-unmerging"]:
             for fileStem in ["-classifications", "-classifications.log", "examples.gz", "pred.xml.gz"]:
@@ -279,7 +285,7 @@ class EventDetector(Detector):
                 self.combinedModel.addStr("unmerging-example-style", self.model.getStr("unmerging-example-style"))
                 self.combinedModel.insert(self.model.get("unmerging-ids.classes"), "unmerging-ids.classes")
                 self.combinedModel.insert(self.model.get("unmerging-ids.features"), "unmerging-ids.features")
-                self.unmergingDetector.addClassifierModel(self.combinedModel, self.model.get("unmerging-classifier-model.gz"), 
+                self.unmergingDetector.addClassifierModel(self.combinedModel, self.model.get("unmerging-classifier-model"), 
                                                           self.model.getStr("unmerging-classifier-parameter"))
                 self.combinedModel.save()
 

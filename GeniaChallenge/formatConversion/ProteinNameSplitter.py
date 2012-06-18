@@ -383,7 +383,7 @@ def addTokensToTree(tokens, element):
 #    if level and (not elem.tail or not elem.tail.strip()):
 #        elem.tail = i
 
-def mainFunc(input, output, parseName, tokenizationName, newParseName, newTokenizationName, logFileName=None, removeOld=True):
+def mainFunc(input, output, parseName, tokenizationName=None, newParseName=None, newTokenizationName=None, logFileName=None, removeOld=True):
     print >> sys.stderr, "Protein Name Splitter"
     if logFileName != None:
         print >> sys.stderr, "Writing log to", logFileName
@@ -395,6 +395,9 @@ def mainFunc(input, output, parseName, tokenizationName, newParseName, newTokeni
     #else:
     #    inFile = open(input)
     tree = ETUtils.ETFromObj(input)
+    
+    if tokenizationName == None:
+        tokenizationName = parseName
 
     #tree = ElementTree.parse(inFile)
     root = tree.getroot()
@@ -418,6 +421,18 @@ def mainFunc(input, output, parseName, tokenizationName, newParseName, newTokeni
         assert parse is not None, "Missing parse '%s' in sentence %s!" % (parseName, sId)
 
         split = splitTokens(tok, sentence, logFile)
+        
+        # Default names
+        if removeOld:
+            if newTokenizationName == None:
+                newTokenizationName = tok.get("tokenizer")
+            if newParseName == None:
+                newParseName = parse.get("parser")
+        else:
+            if newTokenizationName == None:
+                newTokenizationName = "split-" + tok.get("tokenizer")
+            if newParseName == None:
+                newParseName = "split-" + parse.get("parser")
 
         # add a new tokenization with the split tokens.
         splittok = addTokenization(newTokenizationName, sentence, sId)
@@ -453,7 +468,9 @@ def mainFunc(input, output, parseName, tokenizationName, newParseName, newTokeni
         for a in parse.attrib:
             if newparse.get(a) == None:
                 newparse.set(a, parse.get(a))
-
+        newparse.set("ProteinNameSplitter", "True")
+        splittok.set("ProteinNameSplitter", "True")
+        
         depSeqId = 1
         for d in parse.getiterator("dependency"):
             t1, t2, dType = d.get("t1"), d.get("t2"), d.get("type")

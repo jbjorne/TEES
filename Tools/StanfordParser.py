@@ -253,8 +253,8 @@ def convertXML(parser, input, output, debug=False, reparse=False):
         if pennTree == None or pennTree == "":
             parse.set("stanford", "no_penn")
             continue
-        parse.set("stanfordSource", "TEES")
-        parse.set("stanfordDate", parseTimeStamp)
+        parse.set("stanfordSource", "TEES") # parser was run through this wrapper
+        parse.set("stanfordDate", parseTimeStamp) # links the parse to the log file
         # Get tokens
         if sentence.find("analyses") != None:
             tokenization = getElementByAttrib(sentence.find("analyses"), "tokenization", {"tokenizer":parse.get("tokenizer")})
@@ -347,6 +347,8 @@ def insertParses(input, parsePath, output=None, parseName="McCC", extraAttribute
         tarFile = None
     
     docCount = 0
+    failCount = 0
+    sentenceCount = 0
     docsWithStanford = 0
     sentencesCreated = 0
     sourceElements = [x for x in corpusRoot.getiterator("document")] + [x for x in corpusRoot.getiterator("section")]
@@ -363,6 +365,7 @@ def insertParses(input, parsePath, output=None, parseName="McCC", extraAttribute
             # TODO: Following for-loop is the same as when used with a real parser, and should
             # be moved to its own function.
             for sentence in sentences:
+                sentenceCount += 1
                 counter.update(0, "Processing Documents ("+sentence.get("id")+"/" + document.get("pmid") + "): ")
                 if not insertParse(sentence, f, parseName, extraAttributes={}):
                     failCount += 1
@@ -373,6 +376,8 @@ def insertParses(input, parsePath, output=None, parseName="McCC", extraAttribute
         tarFile.close()
     #print >> sys.stderr, "Sentence splitting created", sentencesCreated, "sentences"
     #print >> sys.stderr, docsWithSentences, "/", docCount, "documents have stanford parses"
+
+    print >> sys.stderr, "Stanford conversion was inserted to", sentenceCount, "sentences,", failCount, "failed"
         
     if output != None:
         print >> sys.stderr, "Writing output to", output

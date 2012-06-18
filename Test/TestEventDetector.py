@@ -4,14 +4,29 @@
 import sys, os
 sys.path.append(os.path.dirname(os.path.abspath(__file__))+"/../CommonUtils") # new CommonUtils
 from InteractionXML.DeleteElements import getEmptyCorpus
-from Pipeline import *
+#from Pipeline import *
+import Utils.Stream as Stream
+from Utils.Connection.Unix import getConnection
 import STFormat.ConvertXML
 import STFormat.Compare
 import subprocess
 import shutil
+import atexit
 from Detectors.EventDetector import EventDetector
 from Detectors.StepSelector import StepSelector
 from InteractionXML.MakeSubset import makeSubset
+
+def workdir(path, deleteIfExists=True):
+    if os.path.exists(path):
+        if deleteIfExists:
+            print >> sys.stderr, "Output directory exists, removing", path
+            shutil.rmtree(path)
+            os.makedirs(path)
+    else:
+        os.makedirs(path)
+    origDir = os.getcwd()
+    os.chdir(path)
+    atexit.register(os.chdir, origDir)
 
 #def task3Classify(classifier, xml, specModel, negModel, task3Ids, task3Tag, parse, goldXML=None):
 #    # Task 3
@@ -73,8 +88,9 @@ optparser.add_option("--step", default=None, dest="step", help="")
 #optparser.add_option("--detectorStep", default=None, dest="detectorStep", help="")
 optparser.add_option("--copyFrom", default=None, dest="copyFrom", help="Copy this directory as template")
 # Classifier
-optparser.add_option("-c", "--classifier", default="Cls", dest="classifier", help="")
-optparser.add_option("--csc", default="", dest="csc", help="")
+#optparser.add_option("-c", "--classifier", default="Cls", dest="classifier", help="")
+#optparser.add_option("--csc", default="", dest="csc", help="")
+optparser.add_option("-c", "--connection", default=None, dest="connection", help="")
 # Example builders
 optparser.add_option("-f", "--triggerExampleBuilder", default="GeneralEntityTypeRecognizerGztr", dest="triggerExampleBuilder", help="")
 optparser.add_option("-g", "--edgeExampleBuilder", default="MultiEdgeExampleBuilder", dest="edgeExampleBuilder", help="")
@@ -98,6 +114,7 @@ optparser.add_option("--fullGrid", default=False, action="store_true", dest="ful
 optparser.add_option("--noLog", default=False, action="store_true", dest="noLog", help="")
 optparser.add_option("--noTestSet", default=False, action="store_true", dest="noTestSet", help="")
 optparser.add_option("--clearAll", default=False, action="store_true", dest="clearAll", help="Delete all files")
+optparser.add_option("--debug", default=False, action="store_true", dest="debug", help="More verbose output")
 optparser.add_option("-u", "--unmerging", default=False, action="store_true", dest="unmerging", help="SVM unmerging")
 optparser.add_option("-m", "--modifiers", default=False, action="store_true", dest="modifiers", help="Train model for modifier detection")
 # Task 3
@@ -146,7 +163,7 @@ if options.trainFile != None: TRAIN_FILE = options.trainFile
 if options.develFile != None: TEST_FILE = options.develFile
 if options.testFile != None: FINAL_TEST_FILE = options.testFile
 
-exec "CLASSIFIER = " + options.classifier
+#exec "CLASSIFIER = " + options.classifier
 
 # Main settings
 PARSE=options.parse
@@ -208,7 +225,8 @@ if options.copyFrom != None and (options.clearAll or not os.path.exists(WORKDIR)
 # Start logging
 workdir(WORKDIR, options.clearAll) # Select a working directory, optionally remove existing files
 if not options.noLog:
-    log() # Start logging into a file in working directory
+    Stream.openLog("log.txt")
+    #log() # Start logging into a file in working directory
 
 ## Make downsampling for learning curve
 #downSampleTag = "-r" + str(options.downSampleTrain) + "_s" + str(options.downSampleSeed)
@@ -222,8 +240,10 @@ else:
     print >> sys.stderr, "Task:", options.task
 
 eventDetector = EventDetector()
+eventDetector.debug = options.debug
 eventDetector.stWriteScores = True # write confidence scores into additional st-format files
-eventDetector.setCSCConnection(options.csc, os.path.join("CSCConnection",WORKDIR.lstrip("/")))
+#eventDetector.setCSCConnection(options.csc, os.path.join("CSCConnection",WORKDIR.lstrip("/")))
+eventDetector.setConnection(getConnection(options.connection))
 # Pre-calculate all the required SVM models
 if selector.check("TRAIN"):
     print >> sys.stderr, "----------------------------------------------------"

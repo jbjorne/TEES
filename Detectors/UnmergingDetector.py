@@ -7,6 +7,6 @@ class UnmergingDetector(SingleStageDetector):
     def __init__(self):
         SingleStageDetector.__init__(self)
         self.exampleBuilder = UnmergingExampleBuilder
-        self.classifier = SVMMultiClassClassifier
+        self.Classifier = SVMMultiClassClassifier
         self.evaluator = AveragingMultiClassEvaluator
         self.tag = "unmerging-"

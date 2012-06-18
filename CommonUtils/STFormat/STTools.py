@@ -440,6 +440,12 @@ def loadSet(path, setName=None, level="a2", sitesAreArguments=False, a2Tag="a2",
         dir = tempfile.mkdtemp()
         f = tarfile.open(path, "r")
         f.extractall(dir)
+        # Check if compressed directory is included in the package, like in the ST'11 corpus files
+        compressedFilePath = os.path.join(dir, os.path.basename(path)[:-len(".tar.gz")])
+        print compressedFilePath
+        if os.path.exists(compressedFilePath):
+            print >> sys.stderr, "Reading document set from compressed filename directory", compressedFilePath
+            dir = compressedFilePath
         f.close()
     else:
         dir = path

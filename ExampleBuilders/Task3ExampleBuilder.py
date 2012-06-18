@@ -4,6 +4,7 @@ Speculation and negation examples
 __version__ = "$Revision: 1.12 $"
 
 import sys, os
+import types
 thisPath = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.abspath(os.path.join(thisPath,"..")))
 import Core.ExampleBuilder
@@ -15,50 +16,65 @@ from Core.Gazetteer import Gazetteer
 # For gold mapping
 import Evaluators.EvaluateInteractionXML as EvaluateInteractionXML
 
-def readWords(filename):
-    f = open(filename)
-    words = set()
-    for line in f.readlines():
-        words.add(line.strip())
-    stems = set()
-    for word in words:
-        stems.add(PorterStemmer.stem(word))
-    return words, stems
+# A list of speculation related words manually picked from the BioNLP'09 GE corpus
+speculationWords = [
+    'account', 'aim', 'almost', 'analysed', 'analyses', 'analysis', 'analyzed', 'appear', 
+    'appeared', 'appears', 'argue', 'artifact', 'ascertain', 'asked', 'assayed', 
+    'assessed', 'assumes', 'believed', 'can', 'candidates', 'clarify', 'clear', 
+    'conclude', 'confirm', 'considered', 'could', 'define', 'delineate', 'determine', 
+    'determined', 'elucidate', 'elucidating', 'establish', 'evaluate', 'evaluated', 
+    'evaluates', 'evidence', 'examine', 'examined', 'explore', 'findings', 'hypothesis', 
+    'hypothesize', 'hypothesized', 'idea', 'identification', 'implicated', 'implicates', 
+    'implications', 'importance', 'important', 'indicate', 'indicated', 'indicators', 
+    'information', 'insights', 'investigate', 'investigated', 'investigation', 'isolate', 
+    'known', 'likely', 'may', 'measured', 'might', 'monitored', 'most', 'must', 
+    'objective', 'obscure', 'observations', 'observed', 'partially', 'partly', 
+    'performed', 'perhaps', 'play', 'plays', 'possible', 'postulated', 'potent', 
+    'potential', 'potentially', 'probably', 'propose', 'proposed', 'putative', 
+    'quantitated', 'reexamined', 'reported', 'revealed', 'role', 'screened', 'seemed', 
+    'seems', 'shown', 'significantly', 'since', 'sought', 'studied', 'studies', 'study', 
+    'suggest', 'suggested', 'suggesting', 'suggests', 'support', 'suspect', 'tested', 
+    'thought', 'unclear', 'undefined', 'understand', 'unknown', 'whether']
 
-def compareDependencyEdgesById(dep1, dep2):
-    """
-    Dependency edges are sorted, so that the program behaves consistently
-    on the sama data between different runs.
-    """
-    id1 = dep1[2].get("id")
-    id2 = dep2[2].get("id")
-    if id1 > id2:
-       return 1
-    elif id1 == id2:
-       return 0
-    else: # x<y
-       return -1
+def readWords(words):
+    if type(words) in types.StringTypes:
+        wordSet = set()    
+        f = open(filename)
+        for line in f.readlines():
+            wordSet.add(line.strip())
+        f.close()
+    else: # assume it's a list
+        wordSet = set(words)
+    stemSet = set()
+    for word in wordSet:
+        stemSet.add(PorterStemmer.stem(word))
+    return wordSet, stemSet
+
+#def compareDependencyEdgesById(dep1, dep2):
+#    """
+#    Dependency edges are sorted, so that the program behaves consistently
+#    on the sama data between different runs.
+#    """
+#    id1 = dep1[2].get("id")
+#    id2 = dep2[2].get("id")
+#    if id1 > id2:
+#       return 1
+#    elif id1 == id2:
+#       return 0
+#    else: # x<y
+#       return -1
 
 class Task3ExampleBuilder(ExampleBuilder):
     def __init__(self, style=None, classSet=None, featureSet=None, gazetteerFileName=None):
+        global speculationWords
+        
         if classSet == None:
             classSet = IdSet(1)
         assert( classSet.getId("neg") == 1 )
         if featureSet == None:
             featureSet = IdSet()
         
-        wordFilePath = os.path.abspath(os.path.join(thisPath,"../../data/speculation-words.txt"))
-#IF LOCAL
-        wordFilePath = "/usr/share/biotext/GeniaChallenge/extension-data/genia/task3/speculation-words.txt"    
-        wordFilePath = os.path.expanduser("~/data/BioNLP11SharedTask/resources/speculation-words.txt")    
-        if os.environ.has_key("METAWRK"): # CSC
-            wordFilePath = "/v/users/jakrbj/TEES_current/GeniaChallenge/task3/speculation-words.txt"
-#ENDIF
-        
-        self.specWords, self.specWordStems = readWords(wordFilePath) 
-        #print self.specWords
-        #print self.specWordStems
-        #sys.exit()
+        self.specWords, self.specWordStems = readWords(speculationWords) 
         
         ExampleBuilder.__init__(self, classSet, featureSet)
         #gazetteerFileName="/usr/share/biotext/GeniaChallenge/SharedTaskTriggerTest/gazetteer-train"

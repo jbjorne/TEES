@@ -5,6 +5,7 @@ import textwrap
 class MenuSystem():
     def __init__(self):
         self.menus = {}
+        self.width = 80
     
     def run(self, mainMenu):
         nextMenu = mainMenu
@@ -25,6 +26,10 @@ class MenuSystem():
 class Menu():
     system = MenuSystem()
     
+    def getDefaultOption(self, name):
+        if name == "SPACE":
+            return Option(None, None)
+    
     def __init__(self, title, text, options, initializer=None):
         assert title not in Menu.system.menus
         Menu.system.menus[title] = self
@@ -33,14 +38,18 @@ class Menu():
         self.text = text
         self.options = options
         self.optDict = {}
-        for option in options:
-            option.menu = self
-            assert option.key not in self.optDict
-            self.optDict[option.key] = option
-            if option.dataInput != None:
-                self.setAttr(option.dataInput)
+        for i in range(len(options)):
+            option = options[i]
+            if type(option) in types.StringTypes:
+                option = self.getDefaultOption(option)
+                options[i] = option
+            if option.key != None:
+                option.menu = self
+                assert option.key not in self.optDict
+                self.optDict[option.key] = option
+                if option.dataInput != None:
+                    self.setAttr(option.dataInput)
         self.initializer = initializer
-        self.width = 80
         self.doAlignText = True
     
     def setDefault(self, key):
@@ -49,7 +58,7 @@ class Menu():
         self.optDict[key].isDefault = True
     
     def getAttrString(self, attrName):
-        if not hasattr(self, attrName):
+        if not hasattr(self, attrName) or getattr(self, attrName) == None:
             return ""
         else:
             return getattr(self, attrName)
@@ -66,16 +75,16 @@ class Menu():
 
     def printBorder(self, title=None, style="="):
         if title != None:
-            border = ((self.width - len(title) - 2) / 2) * style
+            border = ((self.system.width - len(title) - 2) / 2) * style
             titleBar = border + " " + title + " " + border
-            titleBar += (len(titleBar) - self.width) * style
+            titleBar += (len(titleBar) - self.system.width) * style
             print >> sys.stderr, titleBar
         else:
-            print >> sys.stderr, self.width * style
+            print >> sys.stderr, self.system.width * style
     
     def printOptions(self):
         for option in self.options:
-             option.show()
+            option.show()
     
     def getDataInput(self, attr, value=None, check=None):
         self.printBorder("Set attribute", "-")
@@ -119,7 +128,7 @@ class Menu():
                     return self.title
                 else:
                     opt.do()
-                    print >> sys.stderr
+                    print >> sys.stderr, "\n\n"
                     return opt.nextMenu
             else:
                 print >> sys.stderr, "Unknown option", choice
@@ -135,7 +144,7 @@ class Menu():
                 paragraphs[-1] += line.strip() + " "
         paragraphsToKeep = []
         for paragraph in paragraphs:
-            paragraph = "\n".join(textwrap.wrap(paragraph, width=self.width))
+            paragraph = "\n".join(textwrap.wrap(paragraph, width=self.system.width))
             if paragraph.strip() != "":
                 paragraphsToKeep.append(paragraph)
         return "\n\n".join(paragraphsToKeep)
@@ -154,6 +163,9 @@ class Menu():
         return self.getChoice(self.options)
 
 class Option:
+    SPACE = "SPACE"
+    QUIT = "QUIT"
+    
     def __init__(self, key, text, nextMenu=None, handler=None, isDefault=False, toggle=None, dataInput=None):
         self.key = key
         self.text = text
@@ -166,6 +178,10 @@ class Option:
         self.nextMenu = nextMenu
     
     def show(self, alignText=True):
+        if self.key == None: # SPACE
+            print >> sys.stderr
+            return
+        
         if self.isDefault:
             print >> sys.stderr, " * ",
         elif self.toggle != None:

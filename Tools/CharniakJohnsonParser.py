@@ -318,9 +318,9 @@ def parse(input, output=None, tokenizationName=None, parseName="McCC", requireEn
     failCount = 0
     for sentence in getSentences(corpusRoot, requireEntities, skipIds, skipParsed):        
         treeLine = treeFile.readline()
-        extraAttributes={"source":"TEES"}
+        extraAttributes={"source":"TEES"} # parser was run through this wrapper
         if timestamp:
-            extraAttributes["date"] = parseTimeStamp
+            extraAttributes["date"] = parseTimeStamp # links the parse to the log file
         if not insertParse(sentence, treeLine, parseName, makePhraseElements=makePhraseElements, extraAttributes=extraAttributes):
             failCount += 1
     
@@ -364,7 +364,9 @@ def insertParses(input, parsePath, output=None, parseName="McCC", tokenizationNa
         tarFile = None
     
     docCount = 0
+    failCount = 0
     docsWithSentences = 0
+    numCorpusSentences = 0
     sentencesCreated = 0
     sourceElements = [x for x in corpusRoot.getiterator("document")] + [x for x in corpusRoot.getiterator("section")]
     counter = ProgressCounter(len(sourceElements), "McCC Parse Insertion")
@@ -381,6 +383,7 @@ def insertParses(input, parsePath, output=None, parseName="McCC", tokenizationNa
         parseStrings = f.readlines()
         f.close()
         sentences = document.findall("sentence")
+        numCorpusSentences += len(sentences)
         assert len(sentences) == len(parseStrings)
         # TODO: Following for-loop is the same as when used with a real parser, and should
         # be moved to its own function.
@@ -392,7 +395,13 @@ def insertParses(input, parsePath, output=None, parseName="McCC", tokenizationNa
         tarFile.close()
     #print >> sys.stderr, "Sentence splitting created", sentencesCreated, "sentences"
     #print >> sys.stderr, docsWithSentences, "/", docCount, "documents have sentences"
-        
+
+    print >> sys.stderr, "Inserted parses for", numCorpusSentences, "sentences (" + str(failCount) + " failed)"
+    if failCount == 0:
+        print >> sys.stderr, "All sentences have a parse"
+    else:
+        print >> sys.stderr, "Warning, a failed parse exists for", failCount, "out of", numCorpusSentences, "sentences"
+        print >> sys.stderr, "The \"pennstring\" attribute of these sentences has an empty string."        
     if output != None:
         print >> sys.stderr, "Writing output to", output
         ETUtils.write(corpusRoot, output)

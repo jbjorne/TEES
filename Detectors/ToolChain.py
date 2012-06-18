@@ -62,21 +62,23 @@ class ToolChain(Detector):
         self.initVariables(source=input, xml=input, outDir=outDir)
         self.enterState(self.STATE_TOOLCHAIN, [x[0] for x in self.steps], fromStep, toStep, omitSteps)
         # Run the tools
-        savedOutput = None
+        savedOutput = None # Output from a previous step if "fromStep" is used
         for step in self.steps:
             if self.checkStep(step[0]):
-                if savedOutput != None:
+                if savedOutput != None: # A previous run of the program saved an intermediate file
                     self.xml = ETUtils.ETFromObj(savedOutput)
                     savedOutput = None
-                stepArgs = copy.copy(step[2])
-                stepArgs[step[4]["input"]] = self.xml
-                if self.getIntermediateFilePath(step) != None:
+                stepArgs = copy.copy(step[2]) # make a copy of the arguments to which i/o can be added
+                stepArgs[step[4]["input"]] = self.xml # the input
+                if self.getIntermediateFilePath(step) != None: # this step should save an intermediate file
                     stepArgs[step[4]["output"]] = self.getIntermediateFilePath(step)
-                prevOutput = step[1](**stepArgs)
-            elif self.getStepStatus(step[0]) == "BEFORE":
+                step[1](**stepArgs) # call the tool
+            elif self.getStepStatus(step[0]) == "BEFORE": # this step was run earlier
                 savedOutput = self.getIntermediateFilePath(step)
         # End state and return
         xml = self.xml # state-specific member variable self.xml will be removed when exiting state
         self.exitState()
-        if self.state == None:
+        if self.state == None: # if the whole toolchain has finished, return the final product
             return xml
+        else:
+            return None

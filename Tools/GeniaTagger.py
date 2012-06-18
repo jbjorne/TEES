@@ -15,9 +15,6 @@ import codecs
 import time
 
 from ProcessUtils import *
-"""
-A wrapper for the Joachims SVM Multiclass classifier.
-"""
 
 geniaTaggerDir = "/home/jari/biotext/tools/geniatagger-3.0.1"
 

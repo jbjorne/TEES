@@ -25,7 +25,7 @@ import Utils.Download as Download
 #sentenceSplitterDir = "/home/jari/temp_exec/geniass"
 
 def install(destDir=None, downloadDir=None, redownload=False):
-    url = "http://www.nactem.ac.uk/y-matsu/geniass/geniass-1.00.tar.gz"
+    url = Settings.URL["GENIA_SENTENCE_SPLITTER"]
     packageName = "geniass"
     if downloadDir == None:
         downloadDir = os.path.join(Settings.DATAPATH, "tools/download/")

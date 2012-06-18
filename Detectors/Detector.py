@@ -6,7 +6,7 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__))+"/..")
 from Core.Model import Model
 import STFormat.ConvertXML
 import STFormat.Compare
-from JariSandbox.ComplexPPI.Source.Murska.CSCConnection import CSCConnection
+#from JariSandbox.ComplexPPI.Source.Murska.CSCConnection import CSCConnection
 from Core.OptimizeParameters import optimize
 from StepSelector import StepSelector
 import Utils.Parameters as Parameters
@@ -20,7 +20,7 @@ import InteractionXML
 class Detector():
     def __init__(self):
         self.exampleBuilder = None
-        self.classifier = None
+        self.Classifier = None
         self.evaluator = None
         self.stEvaluator = None
         self.modelPath = None
@@ -40,9 +40,11 @@ class Detector():
         self.STATE_TRAIN = "TRAIN"
         self.STATE_CLASSIFY = "CLASSIFY"
         
-        self.cscConnection = None
+        #self.cscConnection = None
+        self.connection = None
         self.modelsToClose = []
         self.variablesToRemove = set()
+        self.debug=False
     
     def __del__(self):
         self._closeModels()
@@ -75,17 +77,21 @@ class Detector():
 #    def getSharedStep(self, childDetector, step, direction=1):
 #        childDetector.select.getSharedStep(step, self.select.steps, direction)
     
-    def setCSCConnection(self, options, cscworkdir):
-        if "local" not in options:
-            clear = False
-            if "clear" in options: 
-                clear = True
-            if "louhi" in options:
-                self.cscConnection = CSCConnection(cscworkdir, "jakrbj@louhi.csc.fi", clear)
-            else:
-                self.cscConnection = CSCConnection(cscworkdir, "jakrbj@murska.csc.fi", clear)
-        else:
-            self.cscConnection = None
+    def setConnection(self, connection):
+        self.connection = connection
+        self.connection.debug = self.debug
+    
+#    def setCSCConnection(self, options, cscworkdir):
+#        if "local" not in options:
+#            clear = False
+#            if "clear" in options: 
+#                clear = True
+#            if "louhi" in options:
+#                self.cscConnection = CSCConnection(cscworkdir, "jakrbj@louhi.csc.fi", clear)
+#            else:
+#                self.cscConnection = CSCConnection(cscworkdir, "jakrbj@murska.csc.fi", clear)
+#        else:
+#            self.cscConnection = None
     
     def getModel(self):
         return self.openModel(model)
@@ -122,9 +128,10 @@ class Detector():
     def addClassifierModel(self, model, classifierModelPath, classifierParameters):
         if type(classifierParameters) in types.StringTypes:
             classifierParameters = Parameters.splitParameters(classifierParameters)
-        classifierModel = model.get(self.tag+"classifier-model.gz", True)
+        classifierModel = model.get(self.tag+"classifier-model", True)
         shutil.copy2(classifierModelPath, classifierModel)
         model.addStr(self.tag+"classifier-parameter", Parameters.toString(classifierParameters))
+        return classifierModel
         #model.addStr(self.tag+"classifier-parameters", classifierParameters)
         #Parameters.saveParameters(classifierParameters, model.get(self.tag+"classifier-parameters", True))
     

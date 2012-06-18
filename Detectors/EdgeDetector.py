@@ -7,6 +7,6 @@ class EdgeDetector(SingleStageDetector):
     def __init__(self):
         SingleStageDetector.__init__(self)
         self.exampleBuilder = MultiEdgeExampleBuilder
-        self.classifier = SVMMultiClassClassifier
+        self.Classifier = SVMMultiClassClassifier
         self.evaluator = AveragingMultiClassEvaluator
         self.tag = "edge-"

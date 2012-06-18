@@ -16,6 +16,16 @@ def checkReturnCode(code):
         print >> sys.stderr, "Return code", str(code) + ", program appears to be working."
         return True
 
+def getTopDir(path, names):
+    topDirs = [] 
+    for item in names:
+        if "/" not in item or (item.endswith("/") and item.count("/") == 1):
+            potential = os.path.join(path, item)
+            if os.path.exists(potential) and os.path.isdir(potential):                  
+                topDirs.append(item)
+    assert len(topDirs) == 1, (topDirs, names)
+    return os.path.join(path, topDirs[0])
+
 # Modified from http://code.activestate.com/recipes/576714-extract-a-compressed-file/
 def extractPackage(path, destPath, subPath=None):
     if path.endswith('.zip'):

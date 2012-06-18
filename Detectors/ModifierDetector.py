@@ -8,7 +8,7 @@ class ModifierDetector(SingleStageDetector):
     def __init__(self):
         SingleStageDetector.__init__(self)
         self.exampleBuilder = Task3ExampleBuilder
-        self.classifier = SVMMultiClassClassifier
+        self.Classifier = SVMMultiClassClassifier
         self.evaluator = AveragingMultiClassEvaluator
         self.stEvaluator = Evaluators.BioNLP11GeniaTools
         self.tag = "modifier-"

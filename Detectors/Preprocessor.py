@@ -33,12 +33,15 @@ class Preprocessor(ToolChain):
         self.addStep("DIVIDE-SETS", self.divideSets, {"outputStem":None, "saveCombined":True})
     
     def preprocess(self, source, corpusName, outDir, sourceDataSetNames=None, fromStep=None, toStep=None, omitSteps=None):
+        # Initialize variables and save existing default values
         self.intermediateFileTag = corpusName
         convertSetNames = self.stepArgs("CONVERT")["dataSetNames"]
         convertCorpusName = self.stepArgs("CONVERT")["corpusName"]
         self.stepArgs("CONVERT")["dataSetNames"] = sourceDataSetNames
         self.stepArgs("CONVERT")["corpusName"] = corpusName
+        # Run the tool chain
         xml = self.process(source, outDir, fromStep, toStep, omitSteps)
+        # Reset variables to saved default values
         self.stepArgs("CONVERT")["dataSetNames"] = convertSetNames
         self.stepArgs("CONVERT")["corpusName"] = convertCorpusName
         return xml

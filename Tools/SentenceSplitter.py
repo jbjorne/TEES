@@ -102,6 +102,7 @@ def alignSentences(document, sentenceTexts):
     sentenceStart = None
     #text = text.replace("\n", " ") # should stop sentence splitter from crashing.
     #text = text.replace("  ", " ") # should stop sentence splitter from crashing.
+    sText = None
     for sText in sentenceTexts:
         sText = sText.strip() # The text of the sentence
         if sText == "":
@@ -113,7 +114,17 @@ def alignSentences(document, sentenceTexts):
             # point must be after previous sentences
             cStart = text.find(sToken, start) # find start position
             assert cStart != -1, (text, sText, sToken, start)
-            assert text[cEnd:cStart].strip() == "", (text, text[cEnd:cStart+1], sText, sToken, start) # only whitespace should separate words
+            if not text[cEnd:cStart].strip() == "":
+                print >> sys.stderr,  "-----------------------------"
+                print >> sys.stderr,  "text:", text
+                print >> sys.stderr,  "text[cEnd:cStart+1]:", text[cEnd:cStart+1]
+                print >> sys.stderr,  "prevSText:", prevSText
+                print >> sys.stderr,  "sText:", sText
+                print >> sys.stderr,  "sToken:", sToken
+                print >> sys.stderr,  "start:", start
+                print >> sys.stderr,  "-----------------------------"
+                assert False
+            #assert text[cEnd:cStart].strip() == "", (text, text[cEnd:cStart+1], sText, sToken, start) # only whitespace should separate words
             tail = None
             if isFirst:
                 sentenceStart = cStart
@@ -137,6 +148,7 @@ def alignSentences(document, sentenceTexts):
         if sentenceCount == len(sentenceTexts): # set tail of last sentence in document
             if cEnd <= len(text):
                 e.set("tail", text[cEnd:])
+        prevSText = sText
     return sentenceCount
     
     

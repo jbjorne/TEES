@@ -37,14 +37,20 @@ class StreamModifier:
     
     def removeLog(self, logfileName, close=True):
         logfilesToKeep = []
+        closed = None
         for logfile in self.logfiles:
             filename = logfile.name
-            if filename != logfileName:
+            if logfile.name != logfileName:
                 logfilesToKeep.append(logfile)
             else:
+                closed = logfileName
                 logfile.close()
-                print >> sys.stderr, "Closed log", filename
         self.logfiles = logfilesToKeep
+        
+        if closed != None:
+            print >> sys.stderr, "Closed log", closed
+        else:
+            print >> sys.stderr, "Log not open:", logfileName
     
     def setIndent(self, indent=None):
         self.indent = indent
@@ -111,7 +117,7 @@ class StreamModifier:
         self.stream.flush()
 
 def openLog(filename="log.txt", clear=False, logCmd=True):
-    if not os.path.exists(os.path.dirname(filename)):
+    if os.path.dirname(filename) != "" and not os.path.exists(os.path.dirname(filename)):
         os.makedirs(os.path.dirname(filename))
     setLog(filename, clear)
     setTimeStamp("[%H:%M:%S]", True)
