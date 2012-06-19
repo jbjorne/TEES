@@ -11,9 +11,10 @@ import gzip
 import itertools
 sys.path.append(os.path.dirname(os.path.abspath(__file__))+"/..")
 from Utils.ProgressCounter import ProgressCounter
-from Utils.Parameters import getArgs
-from Utils.Parameters import splitParameters
-from Utils.Parameters import toString
+#from Utils.Parameters import getArgs
+#from Utils.Parameters import splitParameters
+#from Utils.Parameters import toString
+import Utils.Parameters
 import Core.ExampleUtils as ExampleUtils
 import SentenceGraph
 #IF LOCAL
@@ -48,6 +49,9 @@ class ExampleBuilder:
         #self.idFileTag = None
         self.classIdFilename = None
         self.featureIdFilename = None
+    
+    def getParameters(self, parameters, defaults=None, limitValues = None):
+        return Utils.Parameters.get(parameters, defaults=defaults, limitValues=limitValues)
     
     def setFeature(self, name, value):
         self.features[self.featureSet.getId(self.featureTag+name)] = value

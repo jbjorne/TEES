@@ -161,6 +161,7 @@ class Model():
             shutil.rmtree(path)
         if not os.path.exists(path):
             os.mkdir(path)
+            open(os.path.join(path, self.valueFileName), "wt").close()
         # get members
         members = os.listdir(path)
         for member in members:
@@ -190,7 +191,9 @@ class Model():
         if os.path.exists(settingsFileName):            
             f = open(settingsFileName, "rt")
             for line in f:
-                key, value = line.strip().split("\t", 1)
+                key, value = line.split("\t", 1)
+                key = key.strip()
+                value = value.strip()
                 values[key] = value
             f.close()
         return values

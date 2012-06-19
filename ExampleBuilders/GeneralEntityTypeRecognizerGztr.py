@@ -34,20 +34,23 @@ class GeneralEntityTypeRecognizerGztr(ExampleBuilder):
         else:
             print >> sys.stderr, "No gazetteer loaded"
             self.gazetteer=None
-        self.styles = style
-        if "selftrain_group" in self.styles:
-            self.selfTrainGroups = set()
-            if "selftrain_group-1" in self.styles:
-                self.selfTrainGroups.add("-1")
-            if "selftrain_group0" in self.styles:
-                self.selfTrainGroups.add("0")
-            if "selftrain_group1" in self.styles:
-                self.selfTrainGroups.add("1")
-            if "selftrain_group2" in self.styles:
-                self.selfTrainGroups.add("2")
-            if "selftrain_group3" in self.styles:
-                self.selfTrainGroups.add("3")
-            print >> sys.stderr, "Self-train-groups:", self.selfTrainGroups
+        self.styles = self.getParameters(style, ["rel_features", "wordnet", "bb_features", "giuliano", 
+                                          "epi_merge_negated", "limit_merged_types", "genia_task1",
+                                          "build_for_nameless", "pos_only", "all_tokens",
+                                          "names", "pos_pairs", "linear_ngrams", "phospho"])
+#        if "selftrain_group" in self.styles:
+#            self.selfTrainGroups = set()
+#            if "selftrain_group-1" in self.styles:
+#                self.selfTrainGroups.add("-1")
+#            if "selftrain_group0" in self.styles:
+#                self.selfTrainGroups.add("0")
+#            if "selftrain_group1" in self.styles:
+#                self.selfTrainGroups.add("1")
+#            if "selftrain_group2" in self.styles:
+#                self.selfTrainGroups.add("2")
+#            if "selftrain_group3" in self.styles:
+#                self.selfTrainGroups.add("3")
+#            print >> sys.stderr, "Self-train-groups:", self.selfTrainGroups
         
         self.skiplist = set()
         if skiplist != None:
@@ -56,13 +59,13 @@ class GeneralEntityTypeRecognizerGztr(ExampleBuilder):
                 self.skiplist.add(line.strip())
             f.close()
         
-        if "rel_features" in self.styles:
+        if self.styles["rel_features"]:
             self.relFeatureBuilder = RELFeatureBuilder(featureSet)
-        if "wordnet" in self.styles:
+        if self.styles["wordnet"]:
             self.wordNetFeatureBuilder = WordNetFeatureBuilder(featureSet)
-        if "bb_features" in style:
+        if self.styles["bb_features"]:
             self.bacteriaTokens = PhraseTriggerExampleBuilder.getBacteriaTokens(PhraseTriggerExampleBuilder.getBacteriaNames())
-        if "giuliano" in self.styles:
+        if self.styles["giuliano"]:
             self.giulianoFeatureBuilder = GiulianoFeatureBuilder(featureSet)
     
     def getMergedEntityType(self, entities):
@@ -74,11 +77,11 @@ class GeneralEntityTypeRecognizerGztr(ExampleBuilder):
         types = set()
         entityIds = set()
         for entity in entities:
-            if entity.get("isName") == "True" and "all_tokens" in self.styles:
+            if entity.get("isName") == "True" and self.styles["all_tokens"]:
                 continue
-            if entity.get("type") == "Entity" and "genia_task1" in self.styles:
+            if entity.get("type") == "Entity" and self.styles["genia_task1"]:
                 continue
-            if "epi_merge_negated" in self.styles:
+            if self.styles["epi_merge_negated"]:
                 types.add(InteractionXML.ResolveEPITriggerTypes.getEPIBaseType(entity.get("type")))
                 entityIds.add(entity.get("id"))
             else:
@@ -99,7 +102,7 @@ class GeneralEntityTypeRecognizerGztr(ExampleBuilder):
         
         idString = "/".join(sorted(list(entityIds)))
         
-        if "limit_merged_types" in self.styles:
+        if self.styles["limit_merged_types"]:
             if typeString.find("---") != -1:
                 if typeString == "Gene_expression---Positive_regulation":
                     return typeString, idString
@@ -127,14 +130,14 @@ class GeneralEntityTypeRecognizerGztr(ExampleBuilder):
             for entity in sentenceGraph.tokenIsEntityHead[token]:
                 if entity.get("isName") == "True":
                     features["_annType_"+entity.get("type")]=1
-        # Filip's gazetteer based features (can be used separately from exclude_gazetteer)
-        if "gazetteer_features" in self.styles:
-            tokTxtLower = tokTxt.lower()
-            if "stem_gazetteer" in self.styles:
-                tokTxtLower = PorterStemmer.stem(tokTxtLower)
-            if self.gazetteer and tokTxtLower in self.gazetteer:
-                for label,weight in self.gazetteer[tokTxtLower].items():
-                    features["_knownLabel_"+label]=weight # 1 performs slightly worse
+#        # Filip's gazetteer based features (can be used separately from exclude_gazetteer)
+#        if "gazetteer_features" in self.styles:
+#            tokTxtLower = tokTxt.lower()
+#            if "stem_gazetteer" in self.styles:
+#                tokTxtLower = PorterStemmer.stem(tokTxtLower)
+#            if self.gazetteer and tokTxtLower in self.gazetteer:
+#                for label,weight in self.gazetteer[tokTxtLower].items():
+#                    features["_knownLabel_"+label]=weight # 1 performs slightly worse
         ## BANNER features
         #if sentenceGraph.entityHintsByToken.has_key(token):
         #    features["BANNER-entity"] = 1
@@ -177,7 +180,7 @@ class GeneralEntityTypeRecognizerGztr(ExampleBuilder):
         self.tokenFeatureWeights = {}
         
         namedEntityHeadTokens = []
-        if not "names" in self.styles:
+        if not self.styles["names"]:
             namedEntityCount = 0
             for entity in sentenceGraph.entities:
                 if entity.get("isName") == "True": # known data which can be used for features
@@ -189,10 +192,10 @@ class GeneralEntityTypeRecognizerGztr(ExampleBuilder):
             # value. Such sentences can still have triggers from intersentence
             # interactions, but as such events cannot be recovered anyway,
             # looking for these triggers would be pointless.
-            if namedEntityCount == 0 and "build_for_nameless" not in self.styles: # no names, no need for triggers
+            if namedEntityCount == 0 and not self.styles["build_for_nameless"]: # no names, no need for triggers
                 return 0 #[]
             
-            if "pos_pairs" in self.styles:
+            if self.styles["pos_pairs"]:
                 namedEntityHeadTokens = self.getNamedEntityHeadTokens(sentenceGraph)
         
         bagOfWords = {}
@@ -243,33 +246,33 @@ class GeneralEntityTypeRecognizerGztr(ExampleBuilder):
             self.exampleStats.beginExample(categoryName)
             
             # Recognize only non-named entities (i.e. interaction words)
-            if sentenceGraph.tokenIsName[token] and not "names" in self.styles and not "all_tokens" in self.styles:
+            if sentenceGraph.tokenIsName[token] and not self.styles["names"] and not self.styles["all_tokens"]:
                 self.exampleStats.filter("name")
                 self.exampleStats.endExample()
                 continue
-            if "selftrain_limits" in self.styles:
-                # any predicted entity not part of the self-training set causes example to be rejected
-                filtered = False
-                for entity in sentenceGraph.tokenIsEntityHead[token]:
-                    if entity.get("selftrain") == "False":
-                        self.exampleStats.filter("selftrain_limits")
-                        self.exampleStats.endExample()
-                        filtered = True
-                        break
-                if filtered:
-                    continue
-            if "selftrain_group" in self.styles:
-                # any predicted entity not part of the self-training set causes example to be rejected
-                filtered = False
-                for entity in sentenceGraph.tokenIsEntityHead[token]:
-                    if entity.get("selftraingroup") not in self.selfTrainGroups:
-                        self.exampleStats.filter("selftrain_group")
-                        self.exampleStats.endExample()
-                        filtered = True
-                        break
-                if filtered:
-                    continue
-            if ("pos_only" in self.styles) and categoryName == "neg":
+#            if "selftrain_limits" in self.styles:
+#                # any predicted entity not part of the self-training set causes example to be rejected
+#                filtered = False
+#                for entity in sentenceGraph.tokenIsEntityHead[token]:
+#                    if entity.get("selftrain") == "False":
+#                        self.exampleStats.filter("selftrain_limits")
+#                        self.exampleStats.endExample()
+#                        filtered = True
+#                        break
+#                if filtered:
+#                    continue
+#            if "selftrain_group" in self.styles:
+#                # any predicted entity not part of the self-training set causes example to be rejected
+#                filtered = False
+#                for entity in sentenceGraph.tokenIsEntityHead[token]:
+#                    if entity.get("selftraingroup") not in self.selfTrainGroups:
+#                        self.exampleStats.filter("selftrain_group")
+#                        self.exampleStats.endExample()
+#                        filtered = True
+#                        break
+#                if filtered:
+#                    continue
+            if self.styles["pos_only"] and categoryName == "neg":
                 self.exampleStats.filter("pos_only")
                 self.exampleStats.endExample()
                 continue
@@ -277,23 +280,23 @@ class GeneralEntityTypeRecognizerGztr(ExampleBuilder):
             category = self.classSet.getId(categoryName)            
             
             tokenText = token.get("text").lower()
-            if "stem_gazetteer" in self.styles:
-                tokenText = PorterStemmer.stem(tokenText)
-            if ("exclude_gazetteer" in self.styles) and self.gazetteer and tokenText not in self.gazetteer:
-                features = {}
-                features[self.featureSet.getId("exclude_gazetteer")] = 1
-                extra = {"xtype":"token","t":token.get("id"),"excluded":"True"}
-                if entityIds != None:
-                    extra["goldIds"] = entityIds
-                #examples.append( (sentenceGraph.getSentenceId()+".x"+str(exampleIndex),category,features,extra) )
-                ExampleUtils.appendExamples([(sentenceGraph.getSentenceId()+".x"+str(exampleIndex),category,features,extra)], outfile)
-                exampleIndex += 1
-                continue
+#            if "stem_gazetteer" in self.styles:
+#                tokenText = PorterStemmer.stem(tokenText)
+#            if ("exclude_gazetteer" in self.styles) and self.gazetteer and tokenText not in self.gazetteer:
+#                features = {}
+#                features[self.featureSet.getId("exclude_gazetteer")] = 1
+#                extra = {"xtype":"token","t":token.get("id"),"excluded":"True"}
+#                if entityIds != None:
+#                    extra["goldIds"] = entityIds
+#                #examples.append( (sentenceGraph.getSentenceId()+".x"+str(exampleIndex),category,features,extra) )
+#                ExampleUtils.appendExamples([(sentenceGraph.getSentenceId()+".x"+str(exampleIndex),category,features,extra)], outfile)
+#                exampleIndex += 1
+#                continue
             
             # FEATURES
             features = {}
             
-            if not "names" in self.styles:
+            if not self.styles["names"]:
                 features[self.featureSet.getId(namedEntityCountFeature)] = 1
             #for k,v in bagOfWords.iteritems():
             #    features[self.featureSet.getId(k)] = v
@@ -342,17 +345,17 @@ class GeneralEntityTypeRecognizerGztr(ExampleBuilder):
                     self.buildLinearOrderFeatures(sentenceGraph, i + index, str(index), features)
 
             # Linear n-grams
-            if "linear_ngrams" in self.styles:
+            if self.styles["linear_ngrams"]:
                 self.buildLinearNGram(max(0, i-1), i, sentenceGraph, features)
                 self.buildLinearNGram(max(0, i-2), i, sentenceGraph, features)
             
-            if "phospho" in self.styles:
+            if self.styles["phospho"]:
                 if text.find("hospho") != -1:
                     features[self.featureSet.getId("phospho_found")] = 1
                 features[self.featureSet.getId("begin_"+text[0:2].lower())] = 1
                 features[self.featureSet.getId("begin_"+text[0:3].lower())] = 1
                 
-            if "bb_features" in self.styles:
+            if self.styles["bb_features"]:
                 if text.lower() in self.bacteriaTokens:
                     features[self.featureSet.getId("lpsnBacToken")] = 1
 
@@ -412,7 +415,7 @@ class GeneralEntityTypeRecognizerGztr(ExampleBuilder):
                 features[self.featureSet.getId("t1HOut_"+norStem+"_"+edgeType+"_"+tokenStem)] = 1
             
             # REL features
-            if "rel_features" in self.styles:
+            if self.styles["rel_features"]:
                 self.relFeatureBuilder.setFeatureVector(features)
                 self.relFeatureBuilder.buildAllFeatures(sentenceGraph.tokens, i)
                 self.relFeatureBuilder.setFeatureVector(None)
@@ -423,7 +426,7 @@ class GeneralEntityTypeRecognizerGztr(ExampleBuilder):
             #wordNetFeatures = []
             #wordNetFeatures = self.wordNetFeatureBuilder.getTokenFeatures(tokTxt, tokPOS)
             #self.wordNetFeatureBuilder.getTokenFeatures(tokTxt, tokPOS)
-            if "wordnet" in self.styles:
+            if self.styles["wordnet"]:
                 tokTxt = token.get("text")
                 tokPOS = token.get("POS")
                 wordNetFeatures = self.wordNetFeatureBuilder.getTokenFeatures(tokTxt, tokPOS)
@@ -432,15 +435,15 @@ class GeneralEntityTypeRecognizerGztr(ExampleBuilder):
                     features[self.featureSet.getId("WN_"+wordNetFeature)] = 1
                 #print
             
-            if "giuliano" in self.styles:
+            if self.styles["giuliano"]:
                 self.giulianoFeatureBuilder.setFeatureVector(features)
                 self.giulianoFeatureBuilder.buildTriggerFeatures(token, sentenceGraph)
                 self.giulianoFeatureBuilder.setFeatureVector(None)
                              
             extra = {"xtype":"token","t":token.get("id")}
-            if "bb_features" in self.styles:
+            if self.styles["bb_features"]:
                 extra["trigex"] = "bb" # Request trigger extension in ExampleWriter
-            if "epi_merge_negated" in self.styles:
+            if self.styles["epi_merge_negated"]:
                 extra["unmergeneg"] = "epi" # Request trigger type unmerging
             if entityIds != None:
                 extra["goldIds"] = entityIds # The entities to which this example corresponds
@@ -449,7 +452,7 @@ class GeneralEntityTypeRecognizerGztr(ExampleBuilder):
             # chains
             self.buildChains(token, sentenceGraph, features)
             
-            if "pos_pairs" in self.styles:
+            if self.styles["pos_pairs"]:
                 self.buildPOSPairs(token, namedEntityHeadTokens, features)
             
             example = (sentenceGraph.getSentenceId()+".x"+str(exampleIndex),category,features,extra)

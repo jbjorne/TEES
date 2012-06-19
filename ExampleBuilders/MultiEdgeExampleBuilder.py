@@ -46,66 +46,73 @@ class MultiEdgeExampleBuilder(ExampleBuilder):
         assert( classSet.getId("neg") == 1 or (len(classSet.Ids)== 2 and classSet.getId("neg") == -1) )
         
         ExampleBuilder.__init__(self, classSet=classSet, featureSet=featureSet)
-        if style == None:
-            style = ["typed","directed","headsOnly"]
-        self.styles = style
-        if "selftrain_group" in self.styles:
-            self.selfTrainGroups = set()
-            if "selftrain_group-1" in self.styles:
-                self.selfTrainGroups.add("-1")
-            if "selftrain_group0" in self.styles:
-                self.selfTrainGroups.add("0")
-            if "selftrain_group1" in self.styles:
-                self.selfTrainGroups.add("1")
-            if "selftrain_group2" in self.styles:
-                self.selfTrainGroups.add("2")
-            if "selftrain_group3" in self.styles:
-                self.selfTrainGroups.add("3")
-            print >> sys.stderr, "Self-train-groups:", self.selfTrainGroups
+        
+        self.styles = self.getParameters(style, [
+            "typed", "directed", "headsOnly", "graph_kernel", "noAnnType", "noMasking", "maxFeatures",
+            "genia_limits", "epi_limits", "id_limits", "rel_limits", "bb_limits", "bi_limits", "co_limits",
+            "genia_task1", "ontology", "nodalida", "bacteria_renaming", "trigger_features", "rel_features",
+            "ddi_features", "evex", "giuliano", "random", "themeOnly", "causeOnly", "no_path", "entities", 
+            "skip_extra_triggers", "headsOnly", "graph_kernel", "trigger_features", "no_task", "no_dependency", 
+            "disable_entity_features", "disable_terminus_features", "disable_single_element_features", 
+            "disable_ngram_features", "disable_path_edge_features", "no_linear", "subset", "binary", "pos_only",
+            "entity_type"
+        ])
+        if style == None: # no parameters given
+            style["typed"] = style["directed"] = style["headsOnly"] = True
+#        self.styles = style
+#        if "selftrain_group" in self.styles:
+#            self.selfTrainGroups = set()
+#            if "selftrain_group-1" in self.styles:
+#                self.selfTrainGroups.add("-1")
+#            if "selftrain_group0" in self.styles:
+#                self.selfTrainGroups.add("0")
+#            if "selftrain_group1" in self.styles:
+#                self.selfTrainGroups.add("1")
+#            if "selftrain_group2" in self.styles:
+#                self.selfTrainGroups.add("2")
+#            if "selftrain_group3" in self.styles:
+#                self.selfTrainGroups.add("3")
+#            print >> sys.stderr, "Self-train-groups:", self.selfTrainGroups
         
         self.multiEdgeFeatureBuilder = MultiEdgeFeatureBuilder(self.featureSet)
         # NOTE Temporarily re-enabling predicted range
         #self.multiEdgeFeatureBuilder.definePredictedValueRange([], None)
-        if "graph_kernel" in self.styles:
+        if self.styles["graph_kernel"]:
             from FeatureBuilders.GraphKernelFeatureBuilder import GraphKernelFeatureBuilder
             self.graphKernelFeatureBuilder = GraphKernelFeatureBuilder(self.featureSet)
-        if "noAnnType" in self.styles:
+        if self.styles["noAnnType"]:
             self.multiEdgeFeatureBuilder.noAnnType = True
-        if "noMasking" in self.styles:
+        if self.styles["noMasking"]:
             self.multiEdgeFeatureBuilder.maskNamedEntities = False
-        if "maxFeatures" in self.styles:
+        if self.styles["maxFeatures"]:
 			self.multiEdgeFeatureBuilder.maximum = True
-        if "genia_task1" in self.styles:
+        if self.styles["genia_task1"]:
             self.multiEdgeFeatureBuilder.filterAnnTypes.add("Entity")
         self.tokenFeatureBuilder = TokenFeatureBuilder(self.featureSet)
-        if "ontology" in self.styles:
+        if self.styles["ontology"]:
             self.multiEdgeFeatureBuilder.ontologyFeatureBuilder = BioInferOntologyFeatureBuilder(self.featureSet)
-        if "nodalida" in self.styles:
+        if self.styles["nodalida"]:
             self.nodalidaFeatureBuilder = NodalidaFeatureBuilder(self.featureSet)
-        if "bacteria_renaming" in self.styles:
+        if self.styles["bacteria_renaming"]:
             self.bacteriaRenamingFeatureBuilder = BacteriaRenamingFeatureBuilder(self.featureSet)
-        #IF LOCAL
-        if "bioinfer_limits" in self.styles:
-            self.bioinferOntologies = OntologyUtils.getBioInferTempOntology()
-        if "trigger_features" in self.styles:
+        if self.styles["trigger_features"]:
             self.triggerFeatureBuilder = TriggerFeatureBuilder(self.featureSet)
             self.triggerFeatureBuilder.useNonNameEntities = True
-            if "genia_task1" in self.styles:
+            if self.styles["genia_task1"]:
                 self.triggerFeatureBuilder.filterAnnTypes.add("Entity")
             #self.bioinferOntologies = OntologyUtils.loadOntologies(OntologyUtils.g_bioInferFileName)
-        if "rel_features" in self.styles:
+        if self.styles["rel_features"]:
             self.relFeatureBuilder = RELFeatureBuilder(featureSet)
-        #ENDIF
-        if "ddi_features" in self.styles:
+        if self.styles["ddi_features"]:
             self.drugFeatureBuilder = DrugFeatureBuilder(featureSet)
-        if "evex" in self.styles:
+        if self.styles["evex"]:
             self.evexFeatureBuilder = EVEXFeatureBuilder(featureSet)
-        if "giuliano" in self.styles:
+        if self.styles["giuliano"]:
             self.giulianoFeatureBuilder = GiulianoFeatureBuilder(featureSet)
         self.pathLengths = length
         assert(self.pathLengths == None)
         self.types = types
-        if "random" in self.styles:
+        if self.styles["random"]:
             from FeatureBuilders.RandomFeatureBuilder import RandomFeatureBuilder
             self.randomFeatureBuilder = RandomFeatureBuilder(self.featureSet)
     
@@ -182,9 +189,9 @@ class MultiEdgeExampleBuilder(ExampleBuilder):
         types.sort()
         categoryName = ""
         for name in types:
-            if "causeOnly" in self.styles and name != "Cause":
+            if self.styles["causeOnly"] and name != "Cause":
                 continue
-            if "themeOnly" in self.styles and name != "Theme":
+            if self.styles["themeOnly"] and name != "Theme":
                 continue
             if categoryName != "":
                 categoryName += "---"
@@ -192,20 +199,7 @@ class MultiEdgeExampleBuilder(ExampleBuilder):
         if categoryName != "":
             return categoryName
         else:
-            return "neg"      
-    
-#    def preProcessExamples(self, allExamples):
-#        # Duplicates cannot be removed here, as they should only be removed from the training set. This is done
-#        # in the classifier.
-##        if "no_duplicates" in self.styles:
-##            count = len(allExamples)
-##            print >> sys.stderr, " Removing duplicates,", 
-##            allExamples = ExampleUtils.removeDuplicates(allExamples)
-##            print >> sys.stderr, "removed", count - len(allExamples)
-#        if "normalize" in self.styles:
-#            print >> sys.stderr, " Normalizing feature vectors"
-#            ExampleUtils.normalizeFeatureVectors(allExamples)
-#        return allExamples   
+            return "neg"
     
     def isPotentialRELInteraction(self, e1, e2):
         if e1.get("type") == "Protein" and e2.get("type") == "Entity":
@@ -352,123 +346,13 @@ class MultiEdgeExampleBuilder(ExampleBuilder):
             else:
                 return False
         assert False, (e1Type, e2Type)
-        
-#    def isPotentialGeniaInteraction(self, e1, e2):
-#        """
-#        Genia named entities can never act as event triggers, so
-#        edges can't leave from them. We can reduce the number of 
-#        examples generated by removing these always negative cases.
-#        """
-#        if "causeOnly" in self.styles:
-#            if e1.get("type").find("egulation") == -1:
-#                return False
-#            else:
-#                return True
-#        else:
-#            ## task specific rules
-#            #if e1.get("type") == "Glycosylation": # EPI (some sidechains are still lost)
-#            #    return True
-#            #elif e1.get("type") == "Catalysis": # EPI
-#            #    return True
-#            
-#            
-#            # bionlp'09 based rules
-#            if e1.get("isName") == "True" and e2.get("isName") == "True":
-#                return False
-#            elif e1.get("isName") == "True" and e2.get("isName") == "False":
-#                return False
-#            elif e1.get("isName") == "False":
-#                # Only a protein can be a Theme for a non-regulation event
-#                # However, for Localization this destroys AtLocs etc.
-#                if e1.get("type") != "Localization" and e1.get("type").find("egulation") == -1 and e2.get("isName") == "False":
-#                    return False
-#                # Only an event or a protein can be an argument for a regulation
-#                if "egulation" in e1.get("type") and e2.get("type") == "Entity":
-#                    return False 
-#            return True
-    
-#    #IF LOCAL
-#    def getBioInferParentType(self, eType):
-#        if eType == "Physical_entity" or OntologyUtils.hasParent(eType, "Physical_entity", self.bioinferOntologies):
-#            return "Physical"
-#        elif eType == "Property_entity" or OntologyUtils.hasParent(eType, "Property_entity", self.bioinferOntologies):
-#            return "Property"
-#        elif OntologyUtils.hasParent(eType, "Relationship", self.bioinferOntologies):
-#            return "Process"
-#        else:
-#            assert False, eType
-        
-#        if self.bioinferOntologies["Entity"].has_key(eType):
-#            if OntologyUtils.hasParent(eType, "Physical_entity", self.bioinferOntologies):
-#                assert not OntologyUtils.hasParent(eType, "Property_entity", self.bioinferOntologies), eType
-#                return "Physical"
-#            else:
-#                assert OntologyUtils.hasParent(eType, "Property_entity", self.bioinferOntologies), eType
-#                return "Property"
-#                
-#        else:
-#            assert self.bioinferOntologies.has_key(eType), eType
-#            #assert OntologyUtils.hasParent(eType, "Process_entity", self.bioinferOntologies["Relationship"]), eType
-#            return "Process"
-    
-#    def isPotentialBioInferInteraction(self, e1, e2, categoryName):
-#        e1Type = self.getBioInferParentType(e1.get("type"))
-#        e2Type = self.getBioInferParentType(e2.get("type"))
-#        if e1Type == "Process" or e1Type == "Property":
-#            return True
-#        elif e1Type == "Physical" and e2Type == "Physical":
-#            return True
-#        elif e1Type == "Physical" and e2Type == "Process": # hack
-#            return True
-#        else:
-#            assert(categoryName == "neg"), categoryName + " category for " + e1Type + " and " + e2Type
-#            return False
-#    #ENDIF
-    
-#    def nxMultiDiGraphToUndirected(self, graph):
-#        undirected = NX10.MultiGraph(name=graph.name)
-#        undirected.add_nodes_from(graph)
-#        undirected.add_edges_from(graph.edges_iter())
-#        return undirected
 
     def getGoldCategoryName(self, goldGraph, entityToGold, e1, e2, directed=True):
         if len(entityToGold[e1]) > 0 and len(entityToGold[e2]) > 0:
             return self.getCategoryName(goldGraph, entityToGold[e1][0], entityToGold[e2][0], directed=directed)
         else:
             return "neg"
-    
-#    def mergeEntities(self, sentenceGraph, allowDuplicates=True):
-#        """
-#        For merging duplicate entities
-#        """
-#        entities = sentenceGraph.entities
-#        duplicates = {}
-#        mergedIds = {}
-#        if allowDuplicates: # no entities are filtered
-#            for entity in entities:
-#                mergedIds[entity] = entity.get("id")
-#            return entities
-#        # Mark all duplicates after the first one in the list for removal
-#        removeEntities = [False] * len(entities)
-#        entitiesToKeep = []
-#        for i in range(len(entities)): # loop through all entities, including the last one
-#            if removeEntities[i]: # entity has been already removed
-#                continue
-#            entitiesToKeep.append(entities[i])
-#            mergedIds[entities[i]] = entities[i].get("id")
-#            duplicates[entities[i]] = []
-#            if entities[i].get("isName") == "True": # named entities are never merged
-#                continue
-#            for j in range(i+1, len(entities)): # loop through all entities coming after entity "i"
-#                # Entities are the duplicates if they have the same type and head token
-#                if entities[i].get("type") == entities[j].get("type") and \
-#                   entities[i].get("charOffset") == entities[j].get("charOffset") and \
-#                   sentenceGraph.entityHeadTokenByEntity[entities[i]] == sentenceGraph.entityHeadTokenByEntity[entities[j]]:
-#                    removeEntities[j] = True
-#                    mergedIds[entities[i]] += "/" + entities[j].get("id")
-#                    duplicates[entities[i]].append(entities[j])
-#        return entitiesToKeep, mergedIds, duplicates
-            
+                
     def buildExamplesFromGraph(self, sentenceGraph, outfile, goldGraph = None):
         """
         Build examples for a single sentence. Returns a list of examples.
@@ -477,9 +361,9 @@ class MultiEdgeExampleBuilder(ExampleBuilder):
         #examples = []
         exampleIndex = 0
         
-        if "trigger_features" in self.styles: 
+        if self.styles["trigger_features"]: 
             self.triggerFeatureBuilder.initSentence(sentenceGraph)
-        if "evex" in self.styles: 
+        if self.styles["evex"]: 
             self.evexFeatureBuilder.initSentence(sentenceGraph)
             
         # Filter entities, if needed
@@ -497,7 +381,7 @@ class MultiEdgeExampleBuilder(ExampleBuilder):
             entityToGold = EvaluateInteractionXML.mapEntities(entities, goldGraph.entities)
         
         paths = None
-        if not "no_path" in self.styles:
+        if not self.styles["no_path"]:
             ##undirected = sentenceGraph.getUndirectedDependencyGraph()
             #undirected = self.nxMultiDiGraphToUndirected(sentenceGraph.dependencyGraph)
             ###undirected = sentenceGraph.dependencyGraph.to_undirected()
@@ -514,7 +398,7 @@ class MultiEdgeExampleBuilder(ExampleBuilder):
         #    print [(x[0].get("id"), x[1].get("id"), x[2].get("id")) for x in sentenceGraph.dependencyGraph.edges]
         
         # Generate examples based on interactions between entities or interactions between tokens
-        if "entities" in self.styles:
+        if self.styles["entities"]:
             loopRange = len(entities)
         else:
             loopRange = len(sentenceGraph.tokens)
@@ -522,7 +406,7 @@ class MultiEdgeExampleBuilder(ExampleBuilder):
             for j in range(i+1,loopRange):
                 eI = None
                 eJ = None
-                if "entities" in self.styles:
+                if self.styles["entities"]:
                     eI = entities[i]
                     eJ = entities[j]
                     tI = sentenceGraph.entityHeadTokenByEntity[eI]
@@ -531,20 +415,20 @@ class MultiEdgeExampleBuilder(ExampleBuilder):
                     #    continue
                     if eI.get("type") == "neg" or eJ.get("type") == "neg":
                         continue
-                    if "skip_extra_triggers" in self.styles:
+                    if self.styles["skip_extra_triggers"]:
                         if eI.get("source") != None or eJ.get("source") != None:
                             continue
                 else:
                     tI = sentenceGraph.tokens[i]
                     tJ = sentenceGraph.tokens[j]
                 # only consider paths between entities (NOTE! entities, not only named entities)
-                if "headsOnly" in self.styles:
+                if self.styles["headsOnly"]:
                     if (len(sentenceGraph.tokenIsEntityHead[tI]) == 0) or (len(sentenceGraph.tokenIsEntityHead[tJ]) == 0):
                         continue
                 
-                if "directed" in self.styles:
+                if self.styles["directed"]:
                     # define forward
-                    if "entities" in self.styles:
+                    if self.styles["entities"]:
                         categoryName = self.getCategoryName(sentenceGraph, eI, eJ, True)
                         if goldGraph != None:
                             categoryName = self.getGoldCategoryName(goldGraph, entityToGold, eI, eJ, True)
@@ -553,39 +437,39 @@ class MultiEdgeExampleBuilder(ExampleBuilder):
                     # make forward
                     self.exampleStats.beginExample(categoryName)
                     makeExample = True
-                    if ("genia_limits" in self.styles) and not self.isPotentialGeniaInteraction(eI, eJ):
+                    if self.styles["genia_limits"] and not self.isPotentialGeniaInteraction(eI, eJ):
                         makeExample = False
                         self.exampleStats.filter("genia_limits")
-                    if ("genia_task1" in self.styles) and (eI.get("type") == "Entity" or eJ.get("type") == "Entity"):
+                    if self.styles["genia_task1"] and (eI.get("type") == "Entity" or eJ.get("type") == "Entity"):
                         makeExample = False
                         self.exampleStats.filter("genia_task1")
-                    if ("rel_limits" in self.styles) and not self.isPotentialRELInteraction(eI, eJ):
+                    if self.styles["rel_limits"] and not self.isPotentialRELInteraction(eI, eJ):
                         makeExample = False
                         self.exampleStats.filter("rel_limits")
-                    if ("co_limits" in self.styles) and not self.isPotentialCOInteraction(eI, eJ, sentenceGraph):
+                    if self.styles["co_limits"] and not self.isPotentialCOInteraction(eI, eJ, sentenceGraph):
                         makeExample = False
                         self.exampleStats.filter("co_limits")
-                    if ("bb_limits" in self.styles) and not self.isPotentialBBInteraction(eI, eJ, sentenceGraph):
+                    if self.styles["bb_limits"] and not self.isPotentialBBInteraction(eI, eJ, sentenceGraph):
                         makeExample = False
                         self.exampleStats.filter("bb_limits")
                         if categoryName != "neg":
                             self.exampleStats.filter("bb_limits(" + categoryName + ":" + eI.get("type") + "/" + eJ.get("type") + ")")
-                    if ("bi_limits" in self.styles) and not self.isPotentialBIInteraction(eI, eJ, sentenceGraph, self.exampleStats):
+                    if self.styles["bi_limits"] and not self.isPotentialBIInteraction(eI, eJ, sentenceGraph, self.exampleStats):
                         makeExample = False
                         #self.exampleStats.filter("bi_limits")
-                    if ("epi_limits" in self.styles) and not self.isPotentialEPIInteraction(eI, eJ, sentenceGraph):
+                    if self.styles["epi_limits"] and not self.isPotentialEPIInteraction(eI, eJ, sentenceGraph):
                         makeExample = False
                         self.exampleStats.filter("epi_limits")
-                    if ("id_limits" in self.styles) and not self.isPotentialIDInteraction(eI, eJ, sentenceGraph):
+                    if self.styles["id_limits"] and not self.isPotentialIDInteraction(eI, eJ, sentenceGraph):
                         makeExample = False
                         self.exampleStats.filter("id_limits")
-                    if ("selftrain_limits" in self.styles) and (eI.get("selftrain") == "False" or eJ.get("selftrain") == "False"):
-                        makeExample = False
-                        self.exampleStats.filter("selftrain_limits")
-                    if ("selftrain_group" in self.styles) and (eI.get("selftraingroup") not in self.selfTrainGroups or eJ.get("selftraingroup") not in self.selfTrainGroups):
-                        makeExample = False
-                        self.exampleStats.filter("selftrain_group")
-                    if ("pos_only" in self.styles) and categoryName == "neg":
+#                    if self.styles["selftrain_limits"] and (eI.get("selftrain") == "False" or eJ.get("selftrain") == "False"):
+#                        makeExample = False
+#                        self.exampleStats.filter("selftrain_limits")
+#                    if self.styles["selftrain_group"] and (eI.get("selftraingroup") not in self.selfTrainGroups or eJ.get("selftraingroup") not in self.selfTrainGroups):
+#                        makeExample = False
+#                        self.exampleStats.filter("selftrain_group")
+                    if self.styles["pos_only"] and categoryName == "neg":
                         makeExample = False
                         self.exampleStats.filter("pos_only")
                     if makeExample:
@@ -595,7 +479,7 @@ class MultiEdgeExampleBuilder(ExampleBuilder):
                     self.exampleStats.endExample()
                     
                     # define reverse
-                    if "entities" in self.styles:
+                    if self.styles["entities"]:
                         categoryName = self.getCategoryName(sentenceGraph, eJ, eI, True)
                         if goldGraph != None:
                             categoryName = self.getGoldCategoryName(goldGraph, entityToGold, eJ, eI, True)
@@ -604,42 +488,39 @@ class MultiEdgeExampleBuilder(ExampleBuilder):
                     # make reverse
                     self.exampleStats.beginExample(categoryName)
                     makeExample = True
-                    if ("genia_limits" in self.styles) and not self.isPotentialGeniaInteraction(eJ, eI):
+                    if self.styles["genia_limits"] and not self.isPotentialGeniaInteraction(eJ, eI):
                         makeExample = False
                         self.exampleStats.filter("genia_limits")
-                    if ("genia_task1" in self.styles) and (eI.get("type") == "Entity" or eJ.get("type") == "Entity"):
+                    if self.styles["genia_task1"] and (eI.get("type") == "Entity" or eJ.get("type") == "Entity"):
                         makeExample = False
                         self.exampleStats.filter("genia_task1")
-                    if ("rel_limits" in self.styles) and not self.isPotentialRELInteraction(eJ, eI):
+                    if self.styles["rel_limits"] and not self.isPotentialRELInteraction(eJ, eI):
                         makeExample = False
                         self.exampleStats.filter("rel_limits")
-                    if ("co_limits" in self.styles) and not self.isPotentialCOInteraction(eJ, eI, sentenceGraph):
+                    if self.styles["co_limits"] and not self.isPotentialCOInteraction(eJ, eI, sentenceGraph):
                         makeExample = False
                         self.exampleStats.filter("co_limits")
-                    if ("bb_limits" in self.styles) and not self.isPotentialBBInteraction(eJ, eI, sentenceGraph):
+                    if self.styles["bb_limits"] and not self.isPotentialBBInteraction(eJ, eI, sentenceGraph):
                         makeExample = False
                         self.exampleStats.filter("bb_limits")
                         if categoryName != "neg":
                             self.exampleStats.filter("bb_limits(" + categoryName + ":" + eJ.get("type") + "/" + eI.get("type") + ")")
-                    if ("bi_limits" in self.styles) and not self.isPotentialBIInteraction(eJ, eI, sentenceGraph, self.exampleStats):
+                    if self.styles["bi_limits"] and not self.isPotentialBIInteraction(eJ, eI, sentenceGraph, self.exampleStats):
                         makeExample = False
                         #self.exampleStats.filter("bi_limits")
-                    if ("epi_limits" in self.styles) and not self.isPotentialEPIInteraction(eJ, eI, sentenceGraph):
+                    if self.styles["epi_limits"] and not self.isPotentialEPIInteraction(eJ, eI, sentenceGraph):
                         makeExample = False
                         self.exampleStats.filter("epi_limits")
-                    if ("id_limits" in self.styles) and not self.isPotentialIDInteraction(eJ, eI, sentenceGraph):
+                    if self.styles["id_limits"] and not self.isPotentialIDInteraction(eJ, eI, sentenceGraph):
                         makeExample = False
                         self.exampleStats.filter("id_limits")
-                    if ("bioinfer_limits" in self.styles) and not self.isPotentialBioInferInteraction(eJ, eI, categoryName):
-                        makeExample = False
-                        self.exampleStats.filter("bioinfer_limits")
-                    if ("selftrain_limits" in self.styles) and (eI.get("selftrain") == "False" or eJ.get("selftrain") == "False"):
-                        makeExample = False
-                        self.exampleStats.filter("selftrain_limits")
-                    if ("selftrain_group" in self.styles) and (eI.get("selftraingroup") not in self.selfTrainGroups or eJ.get("selftraingroup") not in self.selfTrainGroups):
-                        makeExample = False
-                        self.exampleStats.filter("selftrain_group")
-                    if ("pos_only" in self.styles) and categoryName == "neg":
+#                    if self.styles["selftrain_limits"] and (eI.get("selftrain") == "False" or eJ.get("selftrain") == "False"):
+#                        makeExample = False
+#                        self.exampleStats.filter("selftrain_limits")
+#                    if self.styles["selftrain_group"] and (eI.get("selftraingroup") not in self.selfTrainGroups or eJ.get("selftraingroup") not in self.selfTrainGroups):
+#                        makeExample = False
+#                        self.exampleStats.filter("selftrain_group")
+                    if self.styles["pos_only"] and categoryName == "neg":
                         makeExample = False
                         self.exampleStats.filter("pos_only")
                     if makeExample:
@@ -648,13 +529,13 @@ class MultiEdgeExampleBuilder(ExampleBuilder):
                         exampleIndex += 1
                     self.exampleStats.endExample()
                 else:
-                    if "entities" in self.styles:
+                    if self.styles["entities"]:
                         categoryName = self.getCategoryName(sentenceGraph, eI, eJ, False)
                     else:
                         categoryName = self.getCategoryNameFromTokens(sentenceGraph, tI, tJ, False)
                     self.exampleStats.beginExample(categoryName)
                     forwardExample = self.buildExample(tI, tJ, paths, sentenceGraph, categoryName, exampleIndex, eI, eJ)
-                    if not "graph_kernel" in self.styles:
+                    if not self.styles["graph_kernel"]:
                         reverseExample = self.buildExample(tJ, tI, paths, sentenceGraph, categoryName, exampleIndex, eJ, eI)
                         forwardExample[2].update(reverseExample[2])
                     #examples.append(forwardExample)
@@ -679,7 +560,7 @@ class MultiEdgeExampleBuilder(ExampleBuilder):
             #    path = paths[token1][token2]
             #else:
             #    path = [token1, token2]
-            if not "no_path" in self.styles:
+            if not self.styles["no_path"]:
                 # directedPath reduces performance by 0.01 pp
                 #directedPath = sentenceGraph.dependencyGraph.getPaths(token1, token2)
                 #if len(directedPath) == 0:
@@ -710,7 +591,7 @@ class MultiEdgeExampleBuilder(ExampleBuilder):
 #                    self.ontologyFeatureBuilder.setFeatureVector(features)
 #                    self.ontologyFeatureBuilder.buildOntologyFeaturesForPath(sentenceGraph, path)
 #                    self.ontologyFeatureBuilder.setFeatureVector(None)
-                if "trigger_features" in self.styles: # F 85.52 -> 85.55
+                if self.styles["trigger_features"]: # F 85.52 -> 85.55
                     self.triggerFeatureBuilder.setFeatureVector(features)
                     self.triggerFeatureBuilder.tag = "trg1_"
                     self.triggerFeatureBuilder.buildFeatures(token1)
@@ -718,19 +599,19 @@ class MultiEdgeExampleBuilder(ExampleBuilder):
                     self.triggerFeatureBuilder.buildFeatures(token2)
                     self.triggerFeatureBuilder.setFeatureVector(None)
                 # REL features
-                if "rel_features" in self.styles and not "no_task" in self.styles:
+                if self.styles["rel_features"] and not self.styles["no_task"]:
                     self.relFeatureBuilder.setFeatureVector(features)
                     self.relFeatureBuilder.tag = "rel1_"
                     self.relFeatureBuilder.buildAllFeatures(sentenceGraph.tokens, sentenceGraph.tokens.index(token1))
                     self.relFeatureBuilder.tag = "rel2_"
                     self.relFeatureBuilder.buildAllFeatures(sentenceGraph.tokens, sentenceGraph.tokens.index(token2))
                     self.relFeatureBuilder.setFeatureVector(None)
-                if "bacteria_renaming" in self.styles and not "no_task" in self.styles:
+                if self.styles["bacteria_renaming"] and not self.styles["no_task"]:
                     self.bacteriaRenamingFeatureBuilder.setFeatureVector(features)
                     self.bacteriaRenamingFeatureBuilder.buildPairFeatures(entity1, entity2)
                     #self.bacteriaRenamingFeatureBuilder.buildSubstringFeatures(entity1, entity2) # decreases perf. 74.76 -> 72.41
                     self.bacteriaRenamingFeatureBuilder.setFeatureVector(None)
-                if "co_limits" in self.styles and not "no_task" in self.styles:
+                if self.styles["co_limits"] and not self.styles["no_task"]:
                     e1Offset = Range.charOffsetToSingleTuple(entity1.get("charOffset"))
                     e2Offset = Range.charOffsetToSingleTuple(entity2.get("charOffset"))
                     if Range.contains(e1Offset, e2Offset):
@@ -741,11 +622,11 @@ class MultiEdgeExampleBuilder(ExampleBuilder):
                         features[self.featureSet.getId("e2_contains_e1")] = 1
                         if entity1.get("isName") == "True":
                             features[self.featureSet.getId("e2_contains_e1name")] = 1
-                if "ddi_features" in self.styles:
+                if self.styles["ddi_features"]:
                     self.drugFeatureBuilder.setFeatureVector(features)
                     self.drugFeatureBuilder.tag = "ddi_"
                     self.drugFeatureBuilder.buildPairFeatures(entity1, entity2)  
-                    if "ddi_mtmx" in self.styles:
+                    if self.styles["ddi_mtmx"]:
                         self.drugFeatureBuilder.buildMTMXFeatures(entity1, entity2)
                     self.drugFeatureBuilder.setFeatureVector(None)
                 #if "graph_kernel" in self.styles or not "no_dependency" in self.styles:
@@ -756,26 +637,26 @@ class MultiEdgeExampleBuilder(ExampleBuilder):
                 #        #print "g2"
                 #    else:
                 #        edges = None
-                if "graph_kernel" in self.styles:
+                if self.styles["graph_kernel"]:
                     self.graphKernelFeatureBuilder.setFeatureVector(features, entity1, entity2)
                     self.graphKernelFeatureBuilder.buildGraphKernelFeatures(sentenceGraph, path)
                     self.graphKernelFeatureBuilder.setFeatureVector(None)
-                if "entity_type" in self.styles:
+                if self.styles["entity_type"]:
                     features[self.featureSet.getId("e1_"+entity1.get("type"))] = 1
                     features[self.featureSet.getId("e2_"+entity2.get("type"))] = 1
                     features[self.featureSet.getId("distance_"+str(len(path)))] = 1
-                if not "no_dependency" in self.styles:
+                if not self.styles["no_dependency"]:
                     #print "Dep features"
                     self.multiEdgeFeatureBuilder.setFeatureVector(features, entity1, entity2)
                     #self.multiEdgeFeatureBuilder.buildStructureFeatures(sentenceGraph, paths) # remove for fast
-                    if not "disable_entity_features" in self.styles:
+                    if not self.styles["disable_entity_features"]:
                         self.multiEdgeFeatureBuilder.buildEntityFeatures(sentenceGraph)
                     self.multiEdgeFeatureBuilder.buildPathLengthFeatures(path)
-                    if not "disable_terminus_features" in self.styles:
+                    if not self.styles["disable_terminus_features"]:
                         self.multiEdgeFeatureBuilder.buildTerminusTokenFeatures(path, sentenceGraph) # remove for fast
-                    if not "disable_single_element_features" in self.styles:
+                    if not self.styles["disable_single_element_features"]:
                         self.multiEdgeFeatureBuilder.buildSingleElementFeatures(path, sentenceGraph)
-                    if not "disable_ngram_features" in self.styles:
+                    if not self.styles["disable_ngram_features"]:
                         #print "NGrams"
                         self.multiEdgeFeatureBuilder.buildPathGrams(2, path, sentenceGraph) # remove for fast
                         self.multiEdgeFeatureBuilder.buildPathGrams(3, path, sentenceGraph) # remove for fast
@@ -784,18 +665,18 @@ class MultiEdgeExampleBuilder(ExampleBuilder):
                     #if edges != None:
                     #    self.multiEdgeFeatureBuilder.buildTerminusFeatures(path[0], edges[0][1]+edges[1][0], "t1", sentenceGraph) # remove for fast
                     #    self.multiEdgeFeatureBuilder.buildTerminusFeatures(path[-1], edges[len(path)-1][len(path)-2]+edges[len(path)-2][len(path)-1], "t2", sentenceGraph) # remove for fast
-                    if not "disable_path_edge_features" in self.styles:
+                    if not self.styles["disable_path_edge_features"]:
                         self.multiEdgeFeatureBuilder.buildPathEdgeFeatures(path, sentenceGraph)
                     self.multiEdgeFeatureBuilder.buildSentenceFeatures(sentenceGraph)
                     self.multiEdgeFeatureBuilder.setFeatureVector(None)
-                if "nodalida" in self.styles:
+                if self.styles["nodalida"]:
                     self.nodalidaFeatureBuilder.setFeatureVector(features, entity1, entity2)
                     shortestPaths = self.nodalidaFeatureBuilder.buildShortestPaths(sentenceGraph.dependencyGraph, path)
                     print shortestPaths
                     if len(shortestPaths) > 0:
                         self.nodalidaFeatureBuilder.buildNGrams(shortestPaths, sentenceGraph)
                     self.nodalidaFeatureBuilder.setFeatureVector(None)
-                if not "no_linear" in self.styles:
+                if not self.styles["no_linear"]:
                     self.tokenFeatureBuilder.setFeatureVector(features)
                     for i in range(len(sentenceGraph.tokens)):
                         if sentenceGraph.tokens[i] == token1:
@@ -817,11 +698,11 @@ class MultiEdgeExampleBuilder(ExampleBuilder):
 #                    self.tokenFeatureBuilder.buildTokenGrams(token1Index+1, token2Index-1, sentenceGraph, linearPreTag+"bw", max=2)
 #                    self.tokenFeatureBuilder.buildTokenGrams(token1Index+1, len(sentenceGraph.tokens)-1, sentenceGraph, linearPreTag+"af", max=2)
                     self.tokenFeatureBuilder.setFeatureVector(None)
-                if "random" in self.styles:
+                if self.styles["random"]:
                     self.randomFeatureBuilder.setFeatureVector(features)
                     self.randomFeatureBuilder.buildRandomFeatures(100, 0.01)
                     self.randomFeatureBuilder.setFeatureVector(None)
-                if "genia_limits" in self.styles and not "no_task" in self.styles:
+                if self.styles["genia_limits"] and not self.styles["no_task"]:
                     e1Type = entity1.get("type")
                     e2Type = entity2.get("type")
                     assert(entity1.get("isName") == "False")
@@ -834,7 +715,7 @@ class MultiEdgeExampleBuilder(ExampleBuilder):
                             features[self.featureSet.getId("GENIA_regulation_of_protein")] = 1
                         else:
                             features[self.featureSet.getId("GENIA_regulation_of_event")] = 1
-                if "bi_limits" in self.styles:
+                if self.styles["bi_limits"]:
                     # Make features based on entity types
                     e1Type = entity1.get("type")
                     e2Type = entity2.get("type")
@@ -846,21 +727,21 @@ class MultiEdgeExampleBuilder(ExampleBuilder):
                     features[self.featureSet.getId("BI_e2sup_"+e2SuperType)] = 1
                     features[self.featureSet.getId("BI_e1e2_"+e1Type+"_"+e2Type)] = 1
                     features[self.featureSet.getId("BI_e1e2sup_"+e1SuperType+"_"+e2SuperType)] = 1
-                if "evex" in self.styles:
+                if self.styles["evex"]:
                     self.evexFeatureBuilder.setFeatureVector(features, entity1, entity2)
                     self.evexFeatureBuilder.buildEdgeFeatures(entity1, entity2, token1, token2, path, sentenceGraph)
                     self.evexFeatureBuilder.setFeatureVector(None)
-                if "giuliano" in self.styles:
+                if self.styles["giuliano"]:
                     self.giulianoFeatureBuilder.setFeatureVector(features, entity1, entity2)
                     self.giulianoFeatureBuilder.buildEdgeFeatures(entity1, entity2, token1, token2, path, sentenceGraph)
                     self.giulianoFeatureBuilder.setFeatureVector(None)
             else:
                 features[self.featureSet.getId("always_negative")] = 1
-                if "subset" in self.styles:
+                if self.styles["subset"]:
                     features[self.featureSet.getId("out_of_scope")] = 1
         else:
             features[self.featureSet.getId("always_negative")] = 1
-            if "subset" in self.styles:
+            if self.styles["subset"]:
                 features[self.featureSet.getId("out_of_scope")] = 1
             path = [token1, token2]
         # define extra attributes
@@ -886,7 +767,7 @@ class MultiEdgeExampleBuilder(ExampleBuilder):
                 extra["e2DuplicateIds"] = ",".join([x.get("id") for x in sentenceGraph.mergedEntityToDuplicates[entity2]])
                 #extra["e2GoldIds"] = mergedEntityIds[entity2]
         extra["categoryName"] = categoryName
-        if "bacteria_renaming" in self.styles:
+        if self.styles["bacteria_renaming"]:
             if entity1.get("text") != None and entity1.get("text") != "":
                 extra["e1t"] = entity1.get("text").replace(" ", "---").replace(":","-COL-")
             if entity2.get("text") != None and entity2.get("text") != "":
@@ -895,7 +776,7 @@ class MultiEdgeExampleBuilder(ExampleBuilder):
         if sentenceOrigId != None:
             extra["SOID"] = sentenceOrigId       
         # make example
-        if "binary" in self.styles:
+        if self.styles["binary"]:
             if categoryName != "neg":
                 category = 1
             else:

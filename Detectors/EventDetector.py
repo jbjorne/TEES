@@ -6,9 +6,7 @@ from TriggerDetector import TriggerDetector
 from EdgeDetector import EdgeDetector
 from UnmergingDetector import UnmergingDetector
 from ModifierDetector import ModifierDetector
-from Core.OptimizeParameters import getParameterCombinations
-from Core.OptimizeParameters import getCombinationString
-from Core.RecallAdjust import RecallAdjust
+#from Core.RecallAdjust import RecallAdjust
 import Utils.Parameters as Parameters
 import InteractionXML
 import Evaluators.EvaluateInteractionXML as EvaluateInteractionXML
@@ -34,12 +32,6 @@ class EventDetector(Detector):
         self.edgeDetector.setConnection(connection)
         self.unmergingDetector.setConnection(connection)
         self.modifierDetector.setConnection(connection)
-    
-#    def setCSCConnection(self, options, cscworkDir):
-#        self.triggerDetector.setCSCConnection(options, os.path.join(cscworkDir, "trigger"))
-#        self.edgeDetector.setCSCConnection(options, os.path.join(cscworkDir, "edge"))
-#        self.unmergingDetector.setCSCConnection(options, os.path.join(cscworkDir, "unmerging"))
-#        self.modifierDetector.setCSCConnection(options, os.path.join(cscworkDir, "modifier"))
     
     def setWorkDir(self, workDir):
         Detector.setWorkDir(self, workDir) # for EventDetector
@@ -94,10 +86,6 @@ class EventDetector(Detector):
             for tag in tags:
                 stringDict[tag+"parse"] = parse
                 stringDict[tag+"task"] = task
-                #self.saveStr(tag+"parse", parse, self.model)
-                #self.saveStr(tag+"task", task, self.model)
-                #self.saveStr(tag+"parse", parse, self.combinedModel, False)
-                #self.saveStr(tag+"task", task, self.combinedModel, False)
             self.saveStrings(stringDict, self.model)
             self.saveStrings(stringDict, self.combinedModel, False)
             self.triggerDetector.buildExamples(self.model, [optData.replace("-nodup", ""), trainData.replace("-nodup", "")], [self.workDir+self.triggerDetector.tag+"opt-examples.gz", self.workDir+self.triggerDetector.tag+"train-examples.gz"], saveIdsToModel=True)
@@ -155,79 +143,42 @@ class EventDetector(Detector):
         self.modifierDetector.exitState()
     
     def doGrid(self):
-        BINARY_RECALL_MODE = False # TODO: make a parameter
         print >> sys.stderr, "--------- Booster parameter search ---------"
         # Build trigger examples
         self.triggerDetector.buildExamples(self.model, [self.optData], [self.workDir+"grid-trigger-examples.gz"])
-        
-        count = 0
-        bestResults = None
+
         if self.fullGrid:
             # Parameters to optimize
             ALL_PARAMS={
-                "trigger":[int(i) for i in Parameters.splitParameters(self.triggerClassifierParameters)["c"]], 
+                "trigger":[int(i) for i in Parameters.get(self.triggerClassifierParameters, valueListKey="c")["c"]], 
                 "booster":[float(i) for i in self.recallAdjustParameters.split(",")], 
-                "edge":[int(i) for i in Parameters.splitParameters(self.edgeClassifierParameters)["c"]] }
+                "edge":[int(i) for i in Parameters.get(self.edgeClassifierParameters, valueListKey="c")["c"]] }
         else:
-            ALL_PARAMS={"trigger":Parameters.splitParameters(self.model.getStr(self.triggerDetector.tag+"classifier-parameter"))["c"],
+            ALL_PARAMS={"trigger":Parameters.get(self.model.getStr(self.triggerDetector.tag+"classifier-parameter"), valueListKey="c")["c"],
                         "booster":[float(i) for i in self.recallAdjustParameters.split(",")],
-                        "edge":Parameters.splitParameters(self.model.getStr(self.edgeDetector.tag+"classifier-parameter"))["c"]}
-        paramCombinations = getParameterCombinations(ALL_PARAMS)
-        #for boost in boosterParams:
-        #prevTriggerParam = None
+                        "edge":Parameters.get(self.model.getStr(self.edgeDetector.tag+"classifier-parameter"), valueListKey="c")["c"]}
+        
+        paramCombinations = Parameters.getCombinations(ALL_PARAMS, ["trigger", "booster", "edge"])
         prevParams = None
         EDGE_MODEL_STEM = os.path.join(self.edgeDetector.workDir, os.path.normpath(self.model.path)+"-edge-models/model-c_")
         TRIGGER_MODEL_STEM = os.path.join(self.triggerDetector.workDir, os.path.normpath(self.model.path)+"-trigger-models/model-c_")
-        for params in paramCombinations:
+        bestResults = None
+        for i in range(len(paramCombinations)):
+            params = paramCombinations[i]
             print >> sys.stderr, "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
-            print >> sys.stderr, "Processing params", str(count+1) + "/" + str(len(paramCombinations)), params
+            print >> sys.stderr, "Processing params", str(i+1) + "/" + str(len(paramCombinations)), params
             print >> sys.stderr, "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
-            
-#            # Triggers
-#            if params["trigger"] != prevTriggerParam:
-#                print >> sys.stderr, "Classifying trigger examples for parameter", params["trigger"]
-#                self.triggerDetector.classifyToXML(self.optData, self.model, self.workDir+"grid-trigger-examples.gz", self.workDir+"grid-", classifierModel=TRIGGER_MODEL_STEM+str(params["trigger"])+".gz", split=False)
-#            prevTriggerParam = params["trigger"]
-#            
-#            # Boost
-#            xml = RecallAdjust.run(self.workDir+"grid-trigger-pred.xml.gz", params["booster"], None, binary=BINARY_RECALL_MODE)
-#            xml = InteractionXML.splitMergedElements(xml, None)
-#            xml = InteractionXML.recalculateIds(xml, None, True)
             # Triggers and Boost
             if prevParams == None or prevParams["trigger"] != params["trigger"] or prevParams["booster"] != params["booster"]:
                 print >> sys.stderr, "Classifying trigger examples for parameters", "trigger:" + str(params["trigger"]), "booster:" + str(params["booster"])
                 xml = self.triggerDetector.classifyToXML(self.optData, self.model, self.workDir+"grid-trigger-examples.gz", self.workDir+"grid-", classifierModel=TRIGGER_MODEL_STEM+str(params["trigger"]), split=False, recallAdjust=params["booster"])
             prevParams = params
-            
             # Build edge examples
             self.edgeDetector.buildExamples(self.model, [xml], [self.workDir+"grid-edge-examples.gz"], [self.optData])
             # Classify with pre-defined model
             edgeClassifierModel=EDGE_MODEL_STEM+str(params["edge"])
             xml = self.edgeDetector.classifyToXML(xml, self.model, self.workDir+"grid-edge-examples.gz", self.workDir+"grid-", classifierModel=edgeClassifierModel, split=True)
-            if xml != None:                
-                # TODO: Where should the EvaluateInteractionXML evaluator come from?
-                EIXMLResult = EvaluateInteractionXML.run(self.edgeDetector.evaluator, xml, self.optData, self.parse)
-                # Convert to ST-format
-                STFormat.ConvertXML.toSTFormat(xml, self.workDir+"grid-flat-geniaformat", "a2") #getA2FileTag(options.task, subTask))
-                stFormatDir = self.workDir+"grid-flat-geniaformat"
-                
-                if self.unmerging:
-                    xml = self.unmergingDetector.classifyToXML(xml, self.model, None, self.workDir+"grid-", split=False, goldData=self.optData.replace("-nodup", ""))
-                    STFormat.ConvertXML.toSTFormat(xml, self.workDir+"grid-unmerging-geniaformat", "a2")
-                    stFormatDir = self.workDir+"grid-unmerging-geniaformat"
-                stEvaluation = Evaluators.BioNLP11GeniaTools.evaluate(stFormatDir, self.task)
-                if stEvaluation != None:
-                    if bestResults == None or stEvaluation[0] > bestResults[1][0]:
-                        bestResults = (params, stEvaluation, stEvaluation[0])
-                else:
-                    if bestResults == None or EIXMLResult.getData().fscore > bestResults[1].getData().fscore:
-                        bestResults = (params, EIXMLResult, EIXMLResult.getData().fscore)
-                shutil.rmtree(self.workDir+"grid-flat-geniaformat")
-                if os.path.exists(self.workDir+"grid-unmerging-geniaformat"):
-                    shutil.rmtree(self.workDir+"grid-unmerging-geniaformat")
-            else:
-                print >> sys.stderr, "No predicted edges"
-            count += 1
+            bestResults = self.evaluateGrid(xml, bestResults)
         print >> sys.stderr, "Booster search complete"
         print >> sys.stderr, "Tested", count, "out of", count, "combinations"
         print >> sys.stderr, "Best parameters:", bestResults[0]
@@ -243,6 +194,32 @@ class EventDetector(Detector):
             for fileStem in ["-classifications", "-classifications.log", "examples.gz", "pred.xml.gz"]:
                 if os.path.exists(stepTag+fileStem):
                     os.remove(stepTag+fileStem)
+    
+    def evaluateGrid(self, xml, bestResults):
+        if xml != None:                
+            # TODO: Where should the EvaluateInteractionXML evaluator come from?
+            EIXMLResult = EvaluateInteractionXML.run(self.edgeDetector.evaluator, xml, self.optData, self.parse)
+            # Convert to ST-format
+            STFormat.ConvertXML.toSTFormat(xml, self.workDir+"grid-flat-geniaformat", "a2") #getA2FileTag(options.task, subTask))
+            stFormatDir = self.workDir+"grid-flat-geniaformat"
+            
+            if self.unmerging:
+                xml = self.unmergingDetector.classifyToXML(xml, self.model, None, self.workDir+"grid-", split=False, goldData=self.optData.replace("-nodup", ""))
+                STFormat.ConvertXML.toSTFormat(xml, self.workDir+"grid-unmerging-geniaformat", "a2")
+                stFormatDir = self.workDir+"grid-unmerging-geniaformat"
+            stEvaluation = Evaluators.BioNLP11GeniaTools.evaluate(stFormatDir, self.task)
+            if stEvaluation != None:
+                if bestResults == None or stEvaluation[0] > bestResults[1][0]:
+                    bestResults = (params, stEvaluation, stEvaluation[0])
+            else:
+                if bestResults == None or EIXMLResult.getData().fscore > bestResults[1].getData().fscore:
+                    bestResults = (params, EIXMLResult, EIXMLResult.getData().fscore)
+            shutil.rmtree(self.workDir+"grid-flat-geniaformat")
+            if os.path.exists(self.workDir+"grid-unmerging-geniaformat"):
+                shutil.rmtree(self.workDir+"grid-unmerging-geniaformat")
+        else:
+            print >> sys.stderr, "No predicted edges"
+        return bestResults
 
     def trainUnmergingDetector(self):
         xml = None
@@ -298,11 +275,6 @@ class EventDetector(Detector):
         self.model = self.openModel(self.model, "r")
         if self.checkStep("TRIGGERS"):
             xml = self.triggerDetector.classifyToXML(self.classifyData, self.model, None, output + "-", split=False, parse=self.parse, recallAdjust=float(self.getStr("recallAdjustParameter", self.model)))
-#        if self.checkStep("RECALL-ADJUST"):
-#            xml = self.getWorkFile(xml, output + "-trigger-pred.xml.gz")
-#            xml = RecallAdjust.run(xml, float(self.getStr("recallAdjustParameter", self.model)), None, binary=BINARY_RECALL_MODE)
-#            xml = InteractionXML.splitMergedElements(xml, None)
-#            xml = InteractionXML.recalculateIds(xml, output+"-recall-adjusted.xml.gz", True)
         if self.checkStep("EDGES"):
             xml = self.getWorkFile(xml, output + "-recall-adjusted.xml.gz")
             xml = self.edgeDetector.classifyToXML(xml, self.model, None, output + "-", split=True, parse=self.parse)

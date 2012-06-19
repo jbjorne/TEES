@@ -20,7 +20,7 @@ import types, copy
 from Core.Classifier import Classifier
 import Core.Split as Split
 from Utils.Timer import Timer
-from Utils.Parameters import *
+import Utils.Parameters as Parameters
 from Utils.ProgressCounter import ProgressCounter
 import Utils.Settings as Settings
 import Utils.Download as Download
@@ -149,7 +149,7 @@ class SVMMultiClassClassifier(Classifier):
         
         examples = self.getExampleFile(examples, os.path.abspath(outDir), replaceRemote=replaceRemoteExamples, dummy=dummy)
         classifyExamples = self.getExampleFile(classifyExamples, os.path.abspath(outDir), replaceRemote=replaceRemoteExamples, dummy=dummy)
-        parameters = splitParameters(parameters)
+        parameters = Parameters.get(parameters, valueListKey="c")
         svmMulticlassDir = self.connection.getSetting("SVM_MULTICLASS_DIR")
         
         # Return a new classifier instance for following the training process and using the model
@@ -230,7 +230,7 @@ class SVMMultiClassClassifier(Classifier):
         assert step in ["BOTH", "SUBMIT", "RESULTS"], step
         outDir = os.path.abspath(outDir)
         # Initialize training (or reconnect to existing jobs)
-        combinations = Core.OptimizeParameters.getParameterCombinations(parameters)
+        combinations = Parameters.getCombinations(Parameters.get(parameters, valueListKey="c")) #Core.OptimizeParameters.getParameterCombinations(parameters)
         trained = []
         for combination in combinations:
             trained.append( self.train(examples, outDir, combination, classifyExamples, replaceRemoteExamples=(len(trained) == 0), dummy=(step == "RESULTS")) )

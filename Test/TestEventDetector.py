@@ -100,7 +100,7 @@ optparser.add_option("-g", "--edgeExampleBuilder", default="MultiEdgeExampleBuil
 # Feature params
 optparser.add_option("--triggerStyle", default=None, dest="triggerStyle", help="")
 optparser.add_option("--edgeStyle", default=None, dest="edgeStyle", help="")
-optparser.add_option("--modifierStyle", default="multiclass,speculation", dest="modifierStyle", help="")
+optparser.add_option("--modifierStyle", default=None, dest="modifierStyle", help="")
 # Id sets
 optparser.add_option("-v", "--triggerIds", default=None, dest="triggerIds", help="Trigger detector SVM example class and feature id file stem (files = STEM.class_names and STEM.feature_names)")
 optparser.add_option("-w", "--edgeIds", default=None, dest="edgeIds", help="Edge detector SVM example class and feature id file stem (files = STEM.class_names and STEM.feature_names)")
@@ -166,57 +166,42 @@ if options.trainFile != None: TRAIN_FILE = options.trainFile
 if options.develFile != None: TEST_FILE = options.develFile
 if options.testFile != None: FINAL_TEST_FILE = options.testFile
 
-#exec "CLASSIFIER = " + options.classifier
-
-# Main settings
-PARSE=options.parse
-TOK=options.tokenization
-PARSE_TAG = PARSE
 
 # Example generation parameters
 if options.edgeStyle != None:
-    EDGE_FEATURE_PARAMS="style:"+options.edgeStyle
+    EDGE_FEATURE_PARAMS=options.edgeStyle
 else:
     if options.task in ["OLD", "GE"]:
-        EDGE_FEATURE_PARAMS="style:trigger_features,typed,directed,no_linear,entities,genia_limits,noMasking,maxFeatures" #,multipath"
+        EDGE_FEATURE_PARAMS="trigger_features:typed:directed:no_linear:entities:genia_limits:noMasking:maxFeatures" #,multipath"
         if subTask == 1:
-            EDGE_FEATURE_PARAMS += ",genia_task1"
+            EDGE_FEATURE_PARAMS += ":genia_task1"
     elif options.task in ["BB"]:
-        EDGE_FEATURE_PARAMS="style:trigger_features,typed,directed,no_linear,entities,bb_limits,noMasking,maxFeatures"
+        EDGE_FEATURE_PARAMS="trigger_features:typed:directed:no_linear:entities:bb_limits:noMasking:maxFeatures"
     elif options.task == "EPI":
-        EDGE_FEATURE_PARAMS="style:trigger_features,typed,directed,no_linear,entities,epi_limits,noMasking,maxFeatures"
+        EDGE_FEATURE_PARAMS="trigger_features:typed:directed:no_linear:entities:epi_limits:noMasking:maxFeatures"
     elif options.task == "ID":
-        EDGE_FEATURE_PARAMS="style:trigger_features,typed,directed,no_linear,entities,id_limits,noMasking,maxFeatures"
+        EDGE_FEATURE_PARAMS="trigger_features:typed:directed:no_linear:entities:id_limits:noMasking:maxFeatures"
     elif options.task == "REL":
-        EDGE_FEATURE_PARAMS="trigger_features,typed,directed,no_linear,entities,noMasking,maxFeatures,rel_limits,rel_features"
+        EDGE_FEATURE_PARAMS="trigger_features:typed,directed:no_linear:entities:noMasking:maxFeatures:rel_limits:rel_features"
     elif options.task == "CO":
-        EDGE_FEATURE_PARAMS="trigger_features,typed,directed,no_linear,entities,noMasking,maxFeatures,co_limits"
+        EDGE_FEATURE_PARAMS="trigger_features:typed:directed:no_linear:entities:noMasking:maxFeatures:co_limits"
     else:
-        EDGE_FEATURE_PARAMS="style:trigger_features,typed,directed,no_linear,entities,noMasking,maxFeatures"
+        EDGE_FEATURE_PARAMS="trigger_features:typed:directed:no_linear:entities:noMasking:maxFeatures"
 if options.triggerStyle != None:  
-    TRIGGER_FEATURE_PARAMS="style:"+options.triggerStyle #"style:typed"
+    TRIGGER_FEATURE_PARAMS=options.triggerStyle #"style:typed"
 else:
-    TRIGGER_FEATURE_PARAMS="style:typed"
+    TRIGGER_FEATURE_PARAMS=None
     if options.task in ["OLD", "GE"] and subTask == 1:
-        TRIGGER_FEATURE_PARAMS += ",genia_task1"
+        TRIGGER_FEATURE_PARAMS = "genia_task1"
     elif options.task in ["BB"]:
-        TRIGGER_FEATURE_PARAMS += ",bb_features,build_for_nameless,wordnet"
+        TRIGGER_FEATURE_PARAMS = "bb_features:build_for_nameless:wordnet"
     elif options.task == "REL":
-        TRIGGER_FEATURE_PARAMS += ",rel_features"
+        TRIGGER_FEATURE_PARAMS = "rel_features"
         options.edgeParams = "10,100,1000,5000,7500,10000,20000,25000,28000,50000,60000,65000,100000,500000,1000000"
     elif options.task == "CO":
         options.triggerExampleBuilder = "PhraseTriggerExampleBuilder"
         options.edgeParams = "10,100,1000,5000,7500,10000,20000,25000,28000,50000,60000,65000,100000,500000,1000000"
         options.recallAdjustParams = "0.8,0.9,0.95,1.0"
-UNMERGING_IDS = "unmerging-ids"
-UNMERGING_CLASSIFIER_PARAMS="c:" + options.uParams
-UNMERGING_FEATURE_PARAMS="style:typed"
-
-#boosterParams = [float(i) for i in options.recallAdjustParams.split(",")]
-if options.task == "CO":
-    BINARY_RECALL_MODE = True
-else:
-    BINARY_RECALL_MODE = False
 
 # These commands will be in the beginning of most pipelines
 WORKDIR=options.output
@@ -253,9 +238,9 @@ if selector.check("TRAIN"):
     print >> sys.stderr, "--------------- Train Event Detector ---------------"
     print >> sys.stderr, "----------------------------------------------------"
     eventDetector.train(TRAIN_FILE, TEST_FILE, options.develModel, options.testModel,
-                        TRIGGER_FEATURE_PARAMS, EDGE_FEATURE_PARAMS, "", "style:"+options.modifierStyle,
-                        "c:"+options.triggerParams, "c:"+options.edgeParams, 
-                        "c:"+options.uParams, "c:"+options.modifierParams,
+                        TRIGGER_FEATURE_PARAMS, EDGE_FEATURE_PARAMS, "", options.modifierStyle,
+                        options.triggerParams, options.edgeParams, 
+                        options.uParams, options.modifierParams,
                         options.recallAdjustParams, options.unmerging, options.modifiers, 
                         options.fullGrid, fullTaskId,
                         options.parse, options.tokenization,

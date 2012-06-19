@@ -5,7 +5,6 @@ import sys, os
 sys.path.append(os.path.dirname(os.path.abspath(__file__))+"/..")
 #print os.path.dirname(os.path.abspath(__file__))+"/.."
 from Utils.ProgressCounter import ProgressCounter
-from Utils.Parameters import splitParameters
 from optparse import OptionParser
 import Core.ExampleUtils as ExampleUtils
 from Core.IdSet import IdSet

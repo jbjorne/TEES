@@ -25,9 +25,9 @@ class StepSelector:
             for step in self.doSteps:
                 assert step in self.steps, (step, self.steps)
         elif self.fromStep != None:
-            assert self.fromStep in self.steps
+            assert self.fromStep in self.steps, (self.fromStep, self.steps)
         if self.toStep != None:
-            assert self.toStep in self.steps
+            assert self.toStep in self.steps, (self.toStep, self.steps)
     
 #    def getSharedStep(self, step, allSteps, direction=1):
 #        allStepsIndex = allSteps.inxed(step)

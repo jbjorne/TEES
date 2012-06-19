@@ -83,7 +83,7 @@ class Task3ExampleBuilder(ExampleBuilder):
             print >> sys.stderr, "Loaded gazetteer from",gazetteerFileName
         else:
             self.gazetteer=None
-        self.styles = style
+        self.styles = self.getParameters(style, {"classification":"multiclass", "speculation_words":True}, {"classification":("multiclass", "speculation", "negation")})
     
     def getMergedEntityType(self, entities):
         """
@@ -116,7 +116,7 @@ class Task3ExampleBuilder(ExampleBuilder):
         features = {}
         features["_txt_"+tokTxt]=1
         features["_POS_"+token.get("POS")]=1
-        if "speculation" in self.styles: 
+        if self.styles["speculation_words"]: 
             if tokTxt in self.specWords:
                 features["_spec"]=1
                 features["_spec_"+tokTxt]=1
@@ -185,7 +185,7 @@ class Task3ExampleBuilder(ExampleBuilder):
                 bagOfWords[text] += 1
             
             text = token.get("text")
-            if "speculation" in self.styles and text in self.specWords:
+            if self.styles["speculation_words"] and text in self.specWords:
                 if not bagOfWords.has_key("spec_bow_"+text):
                     bagOfWords["spec_bow_"+text] = 0
                 bagOfWords["spec_bow_"+text] += 1
@@ -213,7 +213,7 @@ class Task3ExampleBuilder(ExampleBuilder):
                 continue
             
             # CLASS
-            if "multiclass" in self.styles:
+            if self.styles["classification"] == "multiclass":
                 task3Type = "multiclass"
                 categoryName = ""
                 if entity.get("negation") == "True":
@@ -225,7 +225,7 @@ class Task3ExampleBuilder(ExampleBuilder):
                 if categoryName == "":
                     categoryName = "neg"
                 category = self.classSet.getId(categoryName)  
-            elif "speculation" in self.styles:
+            elif self.styles["classification"] == "speculation":
                 task3Type = "speculation"
                 if entity.get("speculation") == "True":
                     category = self.classSet.getId("speculation")
@@ -237,7 +237,7 @@ class Task3ExampleBuilder(ExampleBuilder):
                     else:
                         category = 1
                 categoryName = self.classSet.getName(category)
-            else:
+            elif self.styles["classification"] == "negation":
                 task3Type = "negation"
                 if entity.get("negation") == "True":
                     category = self.classSet.getId("negation")
@@ -295,7 +295,7 @@ class Task3ExampleBuilder(ExampleBuilder):
             features[self.featureSet.getId("stem_"+stem)] = 1
             features[self.featureSet.getId("nonstem_"+text[len(stem):])] = 1
             
-            if "speculation" in self.styles:
+            if self.styles["speculation_words"]:
                 if text in self.specWords:
                     features[self.featureSet.getId("ent_spec")] = 1
                 if stem in self.specWordStems:

@@ -127,14 +127,10 @@ class Detector():
         return value
     
     def addClassifierModel(self, model, classifierModelPath, classifierParameters):
-        if type(classifierParameters) in types.StringTypes:
-            classifierParameters = Parameters.splitParameters(classifierParameters)
         classifierModel = model.get(self.tag+"classifier-model", True)
         shutil.copy2(classifierModelPath, classifierModel)
-        model.addStr(self.tag+"classifier-parameter", Parameters.toString(classifierParameters))
+        model.addStr(self.tag+"classifier-parameter", Parameters.toString(Parameters.get(classifierParameters)))
         return classifierModel
-        #model.addStr(self.tag+"classifier-parameters", classifierParameters)
-        #Parameters.saveParameters(classifierParameters, model.get(self.tag+"classifier-parameters", True))
     
     def openModel(self, model, mode="r"):
         if type(model) in types.StringTypes:
@@ -144,7 +140,7 @@ class Detector():
     
     def buildExamples(self, model, datas, outputs, golds=[], exampleStyle=None, saveIdsToModel=False, parse=None):
         if exampleStyle == None:
-            exampleStyle = Parameters.splitParameters(model.getStr(self.tag+"example-style"))
+            exampleStyle = model.getStr(self.tag+"example-style")
         if parse == None:
             parse = self.getStr(self.tag+"parse", model)
         for data, output, gold in itertools.izip_longest(datas, outputs, golds, fillvalue=[]):
@@ -187,7 +183,6 @@ class Detector():
         else:
             assert model.mode in ["a", "w"]
         for param in saveParams:
-            #Parameters.saveParameters(getattr(self, param[0]), model.get(param[1], True))
             model.addStr(param[1], Parameters.toString(getattr(self, param[0])))
         model.save()
         return model

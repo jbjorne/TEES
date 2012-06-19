@@ -76,7 +76,7 @@ class UnmergingExampleBuilder(ExampleBuilder):
     This example builder makes unmerging examples, i.e. examples describing
     potential events.
     """
-    def __init__(self, style=["typed","directed","headsOnly"], length=None, types=[], featureSet=None, classSet=None):
+    def __init__(self, style="noMasking:maxFeatures", length=None, types=[], featureSet=None, classSet=None):
         if featureSet == None:
             featureSet = IdSet()
         if classSet == None:
@@ -86,35 +86,18 @@ class UnmergingExampleBuilder(ExampleBuilder):
         assert( classSet.getId("neg") == 1 )
         
         ExampleBuilder.__init__(self, classSet=classSet, featureSet=featureSet)
-        self.styles = style
-        
-        self.styles = ["trigger_features","typed","directed","no_linear","entities","genia_limits","noMasking","maxFeatures"]
+
+        self.styles = self.getParameters(style, [
+            "noAnnType", "noMasking", "maxFeatures", "no_merge", "disable_entity_features", 
+            "disable_single_element_features", "disable_ngram_features", "disable_path_edge_features"])
         self.multiEdgeFeatureBuilder = MultiEdgeFeatureBuilder(self.featureSet)
-        if "graph_kernel" in self.styles:
-            from FeatureBuilders.GraphKernelFeatureBuilder import GraphKernelFeatureBuilder
-            self.graphKernelFeatureBuilder = GraphKernelFeatureBuilder(self.featureSet)
-        if "noAnnType" in self.styles:
-            self.multiEdgeFeatureBuilder.noAnnType = True
-        if "noMasking" in self.styles:
-            self.multiEdgeFeatureBuilder.maskNamedEntities = False
-        if "maxFeatures" in self.styles:
-            self.multiEdgeFeatureBuilder.maximum = True
+        self.multiEdgeFeatureBuilder.noAnnType = self.styles["noAnnType"]
+        self.multiEdgeFeatureBuilder.maskNamedEntities = not self.styles["noMasking"]
+        self.multiEdgeFeatureBuilder.maximum = self.styles["maxFeatures"]
         self.tokenFeatureBuilder = TokenFeatureBuilder(self.featureSet)
-        if "ontology" in self.styles:
-            self.multiEdgeFeatureBuilder.ontologyFeatureBuilder = BioInferOntologyFeatureBuilder(self.featureSet)
-        if "nodalida" in self.styles:
-            self.nodalidaFeatureBuilder = NodalidaFeatureBuilder(self.featureSet)
-        #IF LOCAL
-        if "bioinfer_limits" in self.styles:
-            self.bioinferOntologies = OntologyUtils.getBioInferTempOntology()
-            #self.bioinferOntologies = OntologyUtils.loadOntologies(OntologyUtils.g_bioInferFileName)
-        #ENDIF
         self.pathLengths = length
         assert(self.pathLengths == None)
         self.types = types
-        if "random" in self.styles:
-            from FeatureBuilders.RandomFeatureBuilder import RandomFeatureBuilder
-            self.randomFeatureBuilder = RandomFeatureBuilder(self.featureSet)
 
         self.triggerFeatureBuilder = TriggerFeatureBuilder(self.featureSet)
         self.triggerFeatureBuilder.useNonNameEntities = True
@@ -353,7 +336,7 @@ class UnmergingExampleBuilder(ExampleBuilder):
 #                continue
 #            e1Id = interaction.get("e1")
 #            interactionsByEntityId[e1Id].append(interaction)
-        if "no_merge" in self.styles:
+        if self.styles["no_merge"]:
             mergeInput = False
             entities = sentenceGraph.entities
         else:
@@ -557,18 +540,18 @@ class UnmergingExampleBuilder(ExampleBuilder):
             path = [eventToken, argToken]
             #edges = None
         
-        if not "disable_entity_features" in self.styles:
+        if not self.styles["disable_entity_features"]:
             self.multiEdgeFeatureBuilder.buildEntityFeatures(sentenceGraph)
         self.multiEdgeFeatureBuilder.buildPathLengthFeatures(path)
         #if not "disable_terminus_features" in self.styles:
         #    self.multiEdgeFeatureBuilder.buildTerminusTokenFeatures(path, sentenceGraph) # remove for fast
-        if not "disable_single_element_features" in self.styles:
+        if not self.styles["disable_single_element_features"]:
             self.multiEdgeFeatureBuilder.buildSingleElementFeatures(path, sentenceGraph)
-        if not "disable_ngram_features" in self.styles:
+        if not self.styles["disable_ngram_features"]:
             self.multiEdgeFeatureBuilder.buildPathGrams(2, path, sentenceGraph) # remove for fast
             self.multiEdgeFeatureBuilder.buildPathGrams(3, path, sentenceGraph) # remove for fast
             self.multiEdgeFeatureBuilder.buildPathGrams(4, path, sentenceGraph) # remove for fast
-        if not "disable_path_edge_features" in self.styles:
+        if not self.styles["disable_path_edge_features"]:
             self.multiEdgeFeatureBuilder.buildPathEdgeFeatures(path, sentenceGraph)
         #self.multiEdgeFeatureBuilder.buildSentenceFeatures(sentenceGraph)
         self.multiEdgeFeatureBuilder.setFeatureVector(None, None, None, False)
