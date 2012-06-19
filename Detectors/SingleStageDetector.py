@@ -37,8 +37,6 @@ class SingleStageDetector(Detector):
                 # with the parameter already defined in the import source. This is used when training
                 # the combined model.
                 if importIdsFromModel != None:
-                    #importModel = self.openModel(importIdsFromModel, "r")
-                    #model.importFrom(self.openModel(importModel, "r"), [self.tag+"ids.classes", self.tag+"ids.features", self.tag+"classifier-parameters", self.tag+"example-style", self.tag+"parse"])
                     model.importFrom(self.openModel(importIdsFromModel, "r"), [self.tag+"ids.classes", self.tag+"ids.features"],
                                      [self.tag+"classifier-parameter", self.tag+"example-style", self.tag+"parse"])
                     # Train the model with the parameters defined in the import source
@@ -59,15 +57,9 @@ class SingleStageDetector(Detector):
                 # The parameter grid is stored in the model as "*classifier-parameters-train" so that endModel can 
                 # use it, and also as annotation for the trained model. The final selected parameter will
                 # be stored as "*classifier-parameter" 
-                #classifierParameters = Parameters.splitParameters(model.getStr(self.tag+"classifier-parameters-train"))
-                #origCSCWorkDir = self.cscConnection.workSubDir
                 classifierWorkDir = self.workDir + os.path.normpath(model.path) + "-" + self.tag + "models"
-                #self.cscConnection.setWorkSubDir(os.path.join(origCSCWorkDir,classifierWorkDir), deleteWorkDir=True)
                 classifier = self.Classifier(self.connection)
                 classifier.optimize(combinedTrainExamples, classifierWorkDir, model.getStr(self.tag+"classifier-parameters-train"), testExampleFile, model.get(self.tag+"ids.classes"), step="SUBMIT", evaluator=self.evaluator)
-                #optimize(self.classifier, self.evaluator, combinedTrainExamples, testExampleFile,\
-                #         model.get(self.tag+"ids.classes"), classifierParameters, classifierWorkDir, None, self.cscConnection, False, "SUBMIT")
-                #self.cscConnection.setWorkSubDir(origCSCWorkDir)
                 model.save()
     
     def endModel(self, step, model, testExampleFile):
@@ -78,19 +70,10 @@ class SingleStageDetector(Detector):
                 # Download combined model
                 model = self.openModel(model, "a")
                 assert model.mode in ["a", "w"]
-                #classifierParameters = Parameters.splitParameters(model.getStr(self.tag+"classifier-parameters-train"))
                 classifierWorkDir = self.workDir + os.path.normpath(model.path) + "-" + self.tag+ "models"
-                #if self.cscConnection != None:
-                #    origCSCWorkDir = self.cscConnection.workSubDir
-                #    self.cscConnection.setWorkSubDir(os.path.join(origCSCWorkDir, classifierWorkDir))
                 classifier = self.Classifier(self.connection)
                 optimized = classifier.optimize("DUMMY", classifierWorkDir, model.getStr(self.tag+"classifier-parameters-train"), testExampleFile, model.get(self.tag+"ids.classes"), step="RESULTS", evaluator=self.evaluator)
-                #bestResult = optimize(self.classifier, self.evaluator, None, testExampleFile,\
-                #                      model.get(self.tag+"ids.classes"), classifierParameters, classifierWorkDir, None, self.cscConnection, False, "RESULTS")
-                #if self.cscConnection != None:
-                #    self.cscConnection.setWorkSubDir(origCSCWorkDir)
                 self.addClassifierModel(model, optimized.model, optimized.parameters)
-                #self.addClassifierModel(model, bestResult[1], bestResult[4])
                 model.save()
                 # Check for catenated example file
                 if self.deleteCombinedExamples:
