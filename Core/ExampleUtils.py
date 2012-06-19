@@ -81,14 +81,22 @@ def copyExamples(examples):
 
 def appendExamples(examples, file):
     for example in examples:
+        # Write class
         file.write(str(example[1]))
+        # Get and sort feature ids
         keys = example[2].keys()
         keys.sort()
+        # None-value as a key indicates a feature that did not match an existing id,
+        # in situations where new ids cannot be defined, such as predicting
+        if None in example[2]:
+            keys.remove(None)
+        # Write features
         for key in keys:
             file.write(" " + str(key)+":"+str(example[2][key]))
+        # Write comment area
         file.write(" # id:" + example[0])
         for extraKey, extraValue in example[3].iteritems():
-            assert(extraKey != "id")
+            assert(extraKey != "id") # id must be defined as example[0]
             if type(extraValue) == types.StringType:
                 file.write( " " + str(extraKey) + ":" + extraValue)
         file.write("\n")

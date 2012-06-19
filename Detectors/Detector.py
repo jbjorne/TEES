@@ -21,6 +21,7 @@ class Detector():
     def __init__(self):
         self.exampleBuilder = None
         self.Classifier = None
+        self.exampleWriter = None
         self.evaluator = None
         self.stEvaluator = None
         self.modelPath = None
@@ -55,7 +56,7 @@ class Detector():
     
     def checkStep(self, step, verbose=True):
         if self.select == None or self.select.check(step):
-            if verbose: print >> sys.stderr, "--------- ENTER STEP", self.__class__.__name__ + ":" + self.state + ":" + step, "---------"
+            if verbose: print >> sys.stderr, "=== ENTER STEP", self.__class__.__name__ + ":" + self.state + ":" + step, "==="
             return True
         else:
             return False
@@ -153,7 +154,7 @@ class Detector():
             append = False
             for dataSet, goldSet in itertools.izip_longest(data, gold, fillvalue=None):
                 if dataSet != None:
-                    self.exampleBuilder.run(dataSet, output, parse, None, exampleStyle, model.get(self.tag+"ids.classes", True), model.get(self.tag+"ids.features", True), goldSet, append)
+                    self.exampleBuilder.run(dataSet, output, parse, None, exampleStyle, model.get(self.tag+"ids.classes", True), model.get(self.tag+"ids.features", True), goldSet, append, saveIdsToModel)
                 append = True
         if saveIdsToModel:
             model.save()
@@ -163,7 +164,7 @@ class Detector():
             assert self.select == None
             self.state = state
             if self.select == None or (self.select.currentStep == None and fromStep == steps[0]):
-                print >> sys.stderr, "---------", self.__class__.__name__ + ":" + state + "(ENTER)", "---------"
+                print >> sys.stderr, "*", self.__class__.__name__ + ":" + state + "(ENTER)", "*"
                 self.enterStateTime = time.time()
             if steps != None:
                 self.select = StepSelector(steps, fromStep, toStep, omitSteps=omitSteps)
@@ -195,7 +196,7 @@ class Detector():
         if self.select == None or self.select.currentStep == self.select.steps[-1]:
             if self.select != None:
                 self.select.printStepTime() # print last step time
-            print >> sys.stderr, "---------", self.__class__.__name__ + ":" + self.state + "(EXIT)", str(datetime.timedelta(seconds=time.time()-self.enterStateTime)), "---------"
+            print >> sys.stderr, "*", self.__class__.__name__ + ":" + self.state + "(EXIT)", str(datetime.timedelta(seconds=time.time()-self.enterStateTime)), "*"
             self.state = None
             self.select = None
             for name in self.variablesToRemove:

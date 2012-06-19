@@ -1,11 +1,13 @@
 import sys, os, shutil
 import filecmp
-import tarfile
+import zipfile
 import tempfile
 
 class Model():
-    def __init__(self, path, mode="r", verbose=True):
-        self.members = {} # path_inside_model:[abspath_to_file_in_model, abspath_to_cache_file]
+    def __init__(self, path, mode="r", verbose=True, compression=zipfile.ZIP_DEFLATED):
+        self.members = {} # path_inside_model:path_to_cache_file (path_to_cache_file == None for members not yet requested)
+        self.valueFileName = "TEES_MODEL_VALUES.tsv"
+        self.compression = compression
         self.workdir = None
         self.mode = None
         self.path = None
@@ -23,11 +25,11 @@ class Model():
         self.members = None
     
     def add(self, name):
-        self.members[name] = [os.path.join(self.path, name), None]
+        self.members[name] = None
     
     def insert(self, filepath, name):
         shutil.copy2(filepath, os.path.join(self.workdir, name))
-        self.members[name] = [os.path.join(self.path, name), os.path.join(self.workdir, name), None]
+        self.members[name] = os.path.join(self.workdir, name)
     
     def importFrom(self, model, members, strings=None):
         for member in members:
@@ -50,9 +52,6 @@ class Model():
         elif name in values: # remove the parameter
             del values[name]
         self._setValues(values)
-        #f = open(self.get(name, True), "wt")
-        #f.write(value)
-        #f.close()
     
     def getStr(self, name):
         return self._getValues()[name]
@@ -60,23 +59,20 @@ class Model():
     def save(self):
         if self.mode == "r":
             raise IOError("Model not open for writing")
-        if self.isPackage():
-            tf = tarfile.open(self.path, "r:gz")
-            tarinfos = {}
-            for tarinfo in tf.getmembers():
-                tarinfos[tarinfo.name] = tarinfo
-            tf.close()
+        if self.isPackage:
+            package = zipfile.ZipFile(self.path, "r", self.compression)
+            packageNames = package.namelist()
         # Check which files have changed in the cache
         changed = []
         for name in sorted(self.members.keys()):
             cached = self.members[name]
             if cached != None and os.path.exists(cached): # cache file exists
-                if self.isPackage():
-                    fi = os.stat(cached)
-                    ti = None
-                    if name in tarinfos:
-                        ti = tarinfos[name]
-                    if ti == None or fi.st_size != ti.size or fi.st_mtime != ti.mtime:
+                if self.isPackage:
+                    cachedInfo = os.stat(cached)
+                    packageFileInfo = None
+                    if name in packageNames:
+                        packageFileInfo = package.getinfo(name)
+                    if packageFileInfo == None or cachedInfo.st_size != packageFileInfo.file_size:
                         changed.append(name)
                 else:
                     modelFilename = os.path.join(self.path, name)
@@ -85,14 +81,21 @@ class Model():
         # Copy changed files from the cache to the model
         if len(changed) > 0:
             if self.verbose: print >> sys.stderr, "Saving model \"" + self.path + "\" (cache:" + self.workdir + ", changed:" + ",".join(changed) + ")"
-            if self.isPackage():
-                for name in changed:
-                    tf = tarfile.open(self.path, "w:gz")
-                    tf.add(self.members[name])
-                    tf.close()
+            if self.isPackage:
+                tempdir = tempfile.mkdtemp() # place to unpack existing model
+                package.extractall(tempdir) # unpack model
+                package.close() # close model
+                for name in changed: # add changed files from cache
+                    shutil.copy2(self.members[name], os.path.join(tempdir, name)) # from cache to unpacked model
+                package = zipfile.ZipFile(self.path, "w", self.compression) # recreate the model
+                for name in os.listdir(tempdir): # add all files to model
+                    package.write(os.path.join(tempdir, name), name) # add file from tempdir
+                shutil.rmtree(tempdir) # remove temporary directory
             else:
                 for name in changed:
-                    shutil.copy2(self.members[name], os.path.join(self.path, name))     
+                    shutil.copy2(self.members[name], os.path.join(self.path, name))
+        if self.isPackage:
+            package.close()     
     
     def saveAs(self, outPath):
         print >> sys.stderr, "Saving model \"" + self.path, "as", outPath
@@ -102,23 +105,14 @@ class Model():
                 shutil.rmtree(outPath)
             else:
                 os.remove(outPath)
-        if self.isPackage():
-            # copy everything to tempdir
-            tempdir = tempfile.mkdtemp()
-            # copy all files from model to tempdir
-            modelTar = tarfile.open(self.path, "r:gz")
-            modelTar.extractAll(tempdir)
-            modelTar.close()
-            # copy cached (potentially updated) files to tempdir
+        if self.isPackage:
+            # copy current model to new location
+            shutil.copy2(self.path, outPath)
+            # add cached (potentially updated) files
+            package = zipfile.ZipFile(outPath, "a")
             for f in os.listdir(self.workdir):
-                shutil.copy2(f, tempdir)
-            # add everything to the new model
-            newTar = tarfile.open(outPath, "w:gz")
-            for filename in os.listdir(tempdir):
-                newTar.add(tempdir + "/" + filename, filename)
-            newTar.close()
-            # cleanup
-            shutil.rmtree(tempdir)
+                package.write(f)
+            package.close()
         else:
             # copy files from model
             shutil.copytree(self.path, outPath)
@@ -137,37 +131,30 @@ class Model():
                 raise IOError("Model has no member \"" + name + "\"")
         # Cache member if not yet cached
         if self.members[name] == None: # file has not been cached yet
-            cacheFile = os.path.join(self.workdir, name)
+            cacheFilename = os.path.join(self.workdir, name)
             if self.isPackage:
-                tf = tarfile.open(self.path, "r:gz")
+                package = zipfile.ZipFile(self.path, "r")
                 try:
-                    if self.verbose: print >> sys.stderr, "Caching model \"" + self.path + "\" member \"" + name + "\" to \"" + cacheFile + "\""
-                    tf.extract(name, self.workdir)
+                    if self.verbose: print >> sys.stderr, "Caching model \"" + self.path + "\" member \"" + name + "\" to \"" + cacheFilename + "\""
+                    package.extract(name, self.workdir)
                 except: # member does not exist yet
                     pass
-                tf.close()
-            elif os.path.exists(os.path.join(self.path, name)): # member already exists inside the model
-                if self.verbose: print >> sys.stderr, "Caching model \"" + self.path + "\" member \"" + name + "\" to \"" + cacheFile + "\""
-                shutil.copy2(os.path.join(self.path, name), cacheFile)
-            self.members[name] = cacheFile
+                package.close()
+            elif os.path.exists(os.path.join(self.path, name)): # member already exists inside the model directory
+                if self.verbose: print >> sys.stderr, "Caching model \"" + self.path + "\" member \"" + name + "\" to \"" + cacheFilename + "\""
+                shutil.copy2(os.path.join(self.path, name), cacheFilename)
+            self.members[name] = cacheFilename
         return self.members[name]
-    
-    def isPackage(self):
-        if self.path.endswith('.tar.gz') or self.path.endswith('.tgz'):
-            return True
-        else:
-            return False
     
     def open(self, path, mode="r"):
         assert mode in ["r", "w", "a"]
         self.mode = mode
         self.path = path
-        if self.isPackage():
+        if self.path.endswith('.zip'):
             self._openPackage(path, mode)
         else:
             self._openDir(path, mode)
         self.workdir = tempfile.mkdtemp()
-        self._openDir(path)
     
     def _openDir(self, path, mode):
         if mode == "w" and os.path.exists(path):
@@ -183,19 +170,23 @@ class Model():
     def _openPackage(self, path, mode):
         if mode == "w" and os.path.exists(path):
             os.remove(path)
-        if not os.path.exists(path):
-            tarfile.open(path, 'w:gz').close()
+        if not os.path.exists(path): # create empty archive
+            package = zipfile.ZipFile(path, "w", self.compression)
+            temp = tempfile.mkstemp()
+            package.write(temp[1], self.valueFileName)
+            package.close()
+            os.remove(temp[1])
         # get members
-        package = tarfile.open(path, 'r:gz')
-        tarinfos = tarfile.getmembers()
-        for tarinfo in tarinfos:
-            self.members[tarinfo.name] = None
+        package = zipfile.ZipFile(path, "r")
+        for name in package.namelist():
+            self.members[name] = None
+        package.close()
         self.isPackage = True
     
     # Value file
     def _getValues(self):
         values = {}
-        settingsFileName = self.get("settings.tsv", True)
+        settingsFileName = self.get(self.valueFileName, True)
         if os.path.exists(settingsFileName):            
             f = open(settingsFileName, "rt")
             for line in f:
@@ -205,7 +196,7 @@ class Model():
         return values
     
     def _setValues(self, values):
-        f = open(self.get("settings.tsv", True), "wt")
+        f = open(self.get(self.valueFileName, True), "wt")
         for key in sorted(values.keys()):
             f.write(key + "\t" + values[key] + "\n")
         f.close()

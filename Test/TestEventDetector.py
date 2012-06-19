@@ -73,6 +73,9 @@ optparser.add_option("--trainFile", default=None, dest="trainFile", help="")
 optparser.add_option("--develFile", default=None, dest="develFile", help="")
 optparser.add_option("--everythingFile", default=None, dest="everythingFile", help="")
 optparser.add_option("--testFile", default=None, dest="testFile", help="")
+# models
+optparser.add_option("--develModel", default="model-devel", dest="develModel", help="")
+optparser.add_option("--testModel", default="model-test", dest="testModel", help="")
 # extras
 optparser.add_option("--extraTag", default="", dest="extraTag", help="extra tag for input files")
 optparser.add_option("--extraTrain", default=None, dest="extraTrain", help="extra training examples")
@@ -249,7 +252,7 @@ if selector.check("TRAIN"):
     print >> sys.stderr, "----------------------------------------------------"
     print >> sys.stderr, "--------------- Train Event Detector ---------------"
     print >> sys.stderr, "----------------------------------------------------"
-    eventDetector.train(TRAIN_FILE, TEST_FILE, "model-devel", "model-test",
+    eventDetector.train(TRAIN_FILE, TEST_FILE, options.develModel, options.testModel,
                         TRIGGER_FEATURE_PARAMS, EDGE_FEATURE_PARAMS, "", "style:"+options.modifierStyle,
                         "c:"+options.triggerParams, "c:"+options.edgeParams, 
                         "c:"+options.uParams, "c:"+options.modifierParams,
@@ -262,7 +265,7 @@ if selector.check("DEVEL"):
     print >> sys.stderr, "----------------------------------------------------"
     print >> sys.stderr, "------------ Check devel classification ------------"
     print >> sys.stderr, "----------------------------------------------------"
-    eventDetector.classify(TEST_FILE, "model-devel", "classification/devel", fromStep=detectorStep["DEVEL"])
+    eventDetector.classify(TEST_FILE, options.develModel, "classification/devel", fromStep=detectorStep["DEVEL"])
 if selector.check("EMPTY"):
     # By passing an emptied devel set through the prediction system, we can check that we get the same predictions
     # as in the DEVEL step, ensuring the model does not use leaked information.
@@ -270,14 +273,14 @@ if selector.check("EMPTY"):
     print >> sys.stderr, "------------ Empty devel classification ------------"
     print >> sys.stderr, "----------------------------------------------------"
     #eventDetector.classify(TEST_FILE.replace(".xml", "-empty.xml"), "model-devel", "predicted-devel-empty", fromStep=options.detectorStep)
-    eventDetector.classify(getEmptyCorpus(TEST_FILE), "model-devel", "classification/devel-empty", fromStep=detectorStep["EMPTY"])
+    eventDetector.classify(getEmptyCorpus(TEST_FILE), options.develModel, "classification/devel-empty", fromStep=detectorStep["EMPTY"])
 if not options.noTestSet:
     if selector.check("TEST"):
         print >> sys.stderr, "----------------------------------------------------"
         print >> sys.stderr, "------------- Test set classification --------------"
         print >> sys.stderr, "----------------------------------------------------"
         eventDetector.stWriteScores = False # the evaluation server doesn't like additional files
-        eventDetector.classify(FINAL_TEST_FILE, "model-test", "classification/test", fromStep=detectorStep["TEST"], saveChangedModelPath="model-test-classify-ids")
+        eventDetector.classify(FINAL_TEST_FILE, options.testModel, "classification/test", fromStep=detectorStep["TEST"], saveChangedModelPath="model-test-classify-ids")
         #print os.listdir(os.getcwd())
         STFormat.Compare.compare("classification/test-events.tar.gz", "classification/devel-events.tar.gz", "a2")
 

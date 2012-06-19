@@ -11,7 +11,7 @@ class IdSet:
     A mapping from strings to id integers. This class is used for defining the ids for classes
     and features of machine learning systems.
     """ 
-    def __init__(self, firstNumber=1, idDict=None, locked=False, filename=None):
+    def __init__(self, firstNumber=1, idDict=None, locked=False, filename=None, allowNewIds=True):
         """
         Creates a new IdSet or loads one from a dictionary or a file.
         
@@ -33,6 +33,7 @@ class IdSet:
         self.Ids = {}
         self.nextFreeId = firstNumber
         self._namesById = {}
+        self.allowNewIds = allowNewIds # allow new ids when calling getId without specifying "createIfNotExist"
         
         if idDict != None:
             self.locked = False
@@ -45,18 +46,20 @@ class IdSet:
         if filename != None:
             self.load(filename)
     
-    def getId(self, key, createIfNotExist=True):
+    def getId(self, key, createIfNotExist=None):
         """
         Returns the id number for a name. If the name doesn't already have an id, a new id is defined,
         unless createIfNotExist is set to false, in which case None is returned for these cases.
         
         @type key: str
         @param key: name
-        @type createIfNotExist: boolean
+        @type createIfNotExist: True, False or None
         @param createIfNotExist: If the name doesn't have an id, define an id for it
         @rtype: int or None
         @return: an identifier
         """
+        if createIfNotExist == None: # no local override to object level setting
+            createIfNotExist = self.allowNewIds
         if not self.Ids.has_key(key):
             if self.locked or createIfNotExist == False:
                 return None

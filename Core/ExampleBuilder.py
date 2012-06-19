@@ -78,17 +78,9 @@ class ExampleBuilder:
             print >> sys.stderr, "Saving feature names to", self.featureIdFilename
             self.featureSet.write(self.featureIdFilename)
         else:
-            print >> sys.stderr, "Feature names not saved"        
-#        self.featureIdFilename = featureIds
-#        if self.idFileTag != None:
-#            print >> sys.stderr, "Saving class names to", self.idFileTag + ".class_names"
-#            self.classSet.write(self.idFileTag + ".class_names")
-#            print >> sys.stderr, "Saving feature names to", self.idFileTag + ".feature_names.gz"
-#            self.featureSet.write(self.idFileTag + ".feature_names.gz")
-#        else:
-#            print >> sys.stderr, "Class and feature names not saved"
+            print >> sys.stderr, "Feature names not saved"
 
-    def build(self, input, output, gold=None, append=False):
+    def processCorpus(self, input, output, gold=None, append=False, allowNewIds=True):
         # Create intermediate paths if needed
         if os.path.dirname(output) != "" and not os.path.exists(os.path.dirname(output)):
             os.makedirs(os.path.dirname(output))
@@ -138,7 +130,8 @@ class ExampleBuilder:
             self.exampleStats.printStats()
     
         # Save Ids
-        self.saveIds()
+        if allowNewIds:
+            self.saveIds()
     
     def processDocument(self, sentences, goldSentences, outfile):
         #calculatePredictedRange(self, sentences)            
@@ -147,21 +140,23 @@ class ExampleBuilder:
             goldSentence = None
             if goldSentences != None:
                 goldSentence = goldSentences[i]
-            self.processSentence(sentence, goldSentence, outfile)
+            self.progress.update(1, "Building examples ("+sentence.sentence.get("id")+"): ")
+            self.processSentence(sentence, outfile, goldSentence)
     
-    def processSentence(self, sentence, goldSentence, outfile):
-        self.progress.update(1, "Building examples ("+sentence.sentence.get("id")+"): ")
-        self.exampleCount += self.buildExamples(sentence, outfile, goldSentence)
-        #examples = self.buildExamples(sentence, goldSentence)
-        #self.exampleCount += len(examples)
-        #ExampleUtils.appendExamples(examples, outfile)
+    def processSentence(self, sentence, outfile, goldSentence=None):
+        if sentence.sentenceGraph != None:
+            goldGraph = None
+            if goldSentence != None:
+                goldGraph = goldSentence.sentenceGraph
+            self.exampleCount += self.buildExamplesFromGraph(sentence.sentenceGraph, outfile, goldGraph)
 
     @classmethod
-    def run(cls, input, output, parse, tokenization, style, classIds=None, featureIds=None, gold=None, append=False):
+    def run(cls, input, output, parse, tokenization, style, classIds=None, featureIds=None, gold=None, append=False, allowNewIds=True):
         print >> sys.stderr, "Running", cls.__name__
         print >> sys.stderr, "  input:", input
         print >> sys.stderr, "  gold:", gold
         print >> sys.stderr, "  output:", output, "(append:", str(append) + ")"
+        print >> sys.stderr, "  add new class/feature ids:", allowNewIds
         if not isinstance(style, types.StringTypes):
             style = toString(style)
         print >> sys.stderr, "  style:", style
@@ -169,24 +164,14 @@ class ExampleBuilder:
             print >> sys.stderr, "  parse:", parse
         else:
             print >> sys.stderr, "  parse:", parse + ", tokenization:", tokenization
-        classSet, featureSet = cls.getIdSets(classIds, featureIds) #cls.getIdSets(idFileTag)
+        classSet, featureSet = cls.getIdSets(classIds, featureIds, allowNewIds) #cls.getIdSets(idFileTag)
         builder = cls(style=style, classSet=classSet, featureSet=featureSet)
         #builder.idFileTag = idFileTag
         builder.classIdFilename = classIds
         builder.featureIdFilename = featureIds
         builder.parse = parse ; builder.tokenization = tokenization
-        builder.build(input, output, gold, append=append)
+        builder.processCorpus(input, output, gold, append=append, allowNewIds=allowNewIds)
         return builder
-    
-    def buildExamples(self, sentence, outfile, goldSentence=None):
-        if sentence.sentenceGraph == None:
-            return 0 #[]
-        else:
-            sentenceGraph = sentence.sentenceGraph
-        goldGraph = None
-        if goldSentence != None:
-            goldGraph = goldSentence.sentenceGraph
-        return self.buildExamplesFromGraph(sentenceGraph, outfile, goldGraph)
 
     def buildExamplesFromGraph(self, sentenceGraph, outfile, goldGraph=None):
         raise NotImplementedError
@@ -198,13 +183,13 @@ class ExampleBuilder:
         return None
     
     @classmethod
-    def getIdSets(self, classIds=None, featureIds=None):
+    def getIdSets(self, classIds=None, featureIds=None, allowNewIds=True):
         # Class ids
         #print classIds
         #print featureIds
         if classIds != None and os.path.exists(classIds):
             print >> sys.stderr, "Using predefined class names from", classIds
-            classSet = IdSet()
+            classSet = IdSet(allowNewIds=allowNewIds)
             classSet.load(classIds)
         else:
             print >> sys.stderr, "No predefined class names"
@@ -212,7 +197,7 @@ class ExampleBuilder:
         # Feature ids
         if featureIds != None and os.path.exists(featureIds):
             print >> sys.stderr, "Using predefined feature names from", featureIds
-            featureSet = IdSet()
+            featureSet = IdSet(allowNewIds=allowNewIds)
             featureSet.load(featureIds)
         else:
             print >> sys.stderr, "No predefined feature names"
