@@ -10,7 +10,7 @@ class EdgeExampleWriter(SentenceExampleWriter):
         self.xType = "edge"
         self.removeEdges = True
         SentenceExampleWriter.__init__(self)
-    
+
     def writeXMLSentence(self, examples, predictionsByExample, sentenceObject, classSet, classIds, goldSentence=None):        
         self.assertSameSentence(examples)
         

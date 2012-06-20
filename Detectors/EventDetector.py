@@ -32,6 +32,7 @@ class EventDetector(Detector):
         self.edgeDetector.setConnection(connection)
         self.unmergingDetector.setConnection(connection)
         self.modifierDetector.setConnection(connection)
+        return connection
     
     def setWorkDir(self, workDir):
         Detector.setWorkDir(self, workDir) # for EventDetector
@@ -171,16 +172,16 @@ class EventDetector(Detector):
             # Triggers and Boost
             if prevParams == None or prevParams["trigger"] != params["trigger"] or prevParams["booster"] != params["booster"]:
                 print >> sys.stderr, "Classifying trigger examples for parameters", "trigger:" + str(params["trigger"]), "booster:" + str(params["booster"])
-                xml = self.triggerDetector.classifyToXML(self.optData, self.model, self.workDir+"grid-trigger-examples.gz", self.workDir+"grid-", classifierModel=TRIGGER_MODEL_STEM+str(params["trigger"]), split=False, recallAdjust=params["booster"])
+                xml = self.triggerDetector.classifyToXML(self.optData, self.model, self.workDir+"grid-trigger-examples.gz", self.workDir+"grid-", classifierModel=TRIGGER_MODEL_STEM+str(params["trigger"]), recallAdjust=params["booster"])
             prevParams = params
             # Build edge examples
             self.edgeDetector.buildExamples(self.model, [xml], [self.workDir+"grid-edge-examples.gz"], [self.optData])
             # Classify with pre-defined model
             edgeClassifierModel=EDGE_MODEL_STEM+str(params["edge"])
-            xml = self.edgeDetector.classifyToXML(xml, self.model, self.workDir+"grid-edge-examples.gz", self.workDir+"grid-", classifierModel=edgeClassifierModel, split=True)
-            bestResults = self.evaluateGrid(xml, bestResults)
+            xml = self.edgeDetector.classifyToXML(xml, self.model, self.workDir+"grid-edge-examples.gz", self.workDir+"grid-", classifierModel=edgeClassifierModel)
+            bestResults = self.evaluateGrid(xml, params, bestResults)
         print >> sys.stderr, "Booster search complete"
-        print >> sys.stderr, "Tested", count, "out of", count, "combinations"
+        print >> sys.stderr, "Tested", len(paramCombinations), "combinations"
         print >> sys.stderr, "Best parameters:", bestResults[0]
         print >> sys.stderr, "Best result:", bestResults[2] # f-score
         # Save grid model
@@ -195,7 +196,7 @@ class EventDetector(Detector):
                 if os.path.exists(stepTag+fileStem):
                     os.remove(stepTag+fileStem)
     
-    def evaluateGrid(self, xml, bestResults):
+    def evaluateGrid(self, xml, params, bestResults):
         if xml != None:                
             # TODO: Where should the EvaluateInteractionXML evaluator come from?
             EIXMLResult = EvaluateInteractionXML.run(self.edgeDetector.evaluator, xml, self.optData, self.parse)
@@ -204,10 +205,10 @@ class EventDetector(Detector):
             stFormatDir = self.workDir+"grid-flat-geniaformat"
             
             if self.unmerging:
-                xml = self.unmergingDetector.classifyToXML(xml, self.model, None, self.workDir+"grid-", split=False, goldData=self.optData.replace("-nodup", ""))
+                xml = self.unmergingDetector.classifyToXML(xml, self.model, None, self.workDir+"grid-", goldData=self.optData.replace("-nodup", ""))
                 STFormat.ConvertXML.toSTFormat(xml, self.workDir+"grid-unmerging-geniaformat", "a2")
                 stFormatDir = self.workDir+"grid-unmerging-geniaformat"
-            stEvaluation = Evaluators.BioNLP11GeniaTools.evaluate(stFormatDir, self.task)
+            stEvaluation = self.stEvaluator.evaluate(stFormatDir, self.task)
             if stEvaluation != None:
                 if bestResults == None or stEvaluation[0] > bestResults[1][0]:
                     bestResults = (params, stEvaluation, stEvaluation[0])
@@ -228,8 +229,8 @@ class EventDetector(Detector):
         if self.checkStep("SELF-TRAIN-EXAMPLES-FOR-UNMERGING", self.unmerging) and self.unmerging:
             # Self-classified train data for unmerging
             if self.doUnmergingSelfTraining:
-                xml = self.triggerDetector.classifyToXML(self.trainData, self.model, None, self.workDir+"unmerging-extra-", split=False, compressExamples=False)#, recallAdjust=0.5)
-                xml = self.edgeDetector.classifyToXML(xml, self.model, None, self.workDir+"unmerging-extra-", split=False, compressExamples=False)#, recallAdjust=0.5)
+                xml = self.triggerDetector.classifyToXML(self.trainData, self.model, None, self.workDir+"unmerging-extra-")#, recallAdjust=0.5)
+                xml = self.edgeDetector.classifyToXML(xml, self.model, None, self.workDir+"unmerging-extra-")#, recallAdjust=0.5)
                 assert xml != None
                 EvaluateInteractionXML.run(self.edgeDetector.evaluator, xml, self.trainData, self.parse)
             else:
@@ -274,10 +275,10 @@ class EventDetector(Detector):
         #self.enterState(self.STATE_CLASSIFY, ["TRIGGERS", "RECALL-ADJUST", "EDGES", "UNMERGING", "MODIFIERS", "ST-CONVERT"], fromStep, toStep)
         self.model = self.openModel(self.model, "r")
         if self.checkStep("TRIGGERS"):
-            xml = self.triggerDetector.classifyToXML(self.classifyData, self.model, None, output + "-", split=False, parse=self.parse, recallAdjust=float(self.getStr("recallAdjustParameter", self.model)))
+            xml = self.triggerDetector.classifyToXML(self.classifyData, self.model, None, output + "-", parse=self.parse, recallAdjust=float(self.getStr("recallAdjustParameter", self.model)))
         if self.checkStep("EDGES"):
             xml = self.getWorkFile(xml, output + "-recall-adjusted.xml.gz")
-            xml = self.edgeDetector.classifyToXML(xml, self.model, None, output + "-", split=True, parse=self.parse)
+            xml = self.edgeDetector.classifyToXML(xml, self.model, None, output + "-", parse=self.parse)
             assert xml != None
             if self.parse == None:
                 edgeParse = self.getStr(self.edgeDetector.tag+"parse", self.model)
@@ -294,13 +295,13 @@ class EventDetector(Detector):
                 if type(self.classifyData) in types.StringTypes:
                     if os.path.exists(self.classifyData.replace("-nodup", "")):
                         goldData = self.classifyData.replace("-nodup", "")
-                xml = self.unmergingDetector.classifyToXML(xml, self.model, None, output + "-", split=False, goldData=goldData, parse=self.parse)
+                xml = self.unmergingDetector.classifyToXML(xml, self.model, None, output + "-", goldData=goldData, parse=self.parse)
             else:
                 print >> sys.stderr, "No model for unmerging"
         if self.checkStep("MODIFIERS"):
             if self.model.hasMember("modifier-classifier-model.gz"):
                 xml = self.getWorkFile(xml, [output + "-unmerging-pred.xml.gz", output + "-edge-pred.xml.gz"])
-                xml = self.modifierDetector.classifyToXML(xml, self.model, None, output + "-", split=False, parse=self.parse)
+                xml = self.modifierDetector.classifyToXML(xml, self.model, None, output + "-", parse=self.parse)
             else:
                 print >> sys.stderr, "No model for modifier detection"
         if self.checkStep("ST-CONVERT"):

@@ -257,34 +257,34 @@ def divideExampleFile(exampleFileName, division, outputDir):
     for v in divisionFiles.values():
         v.close()
 
-@gen2iterable        
-def loadPredictions(predictionsFile):
-    if predictionsFile.endswith(".gz"):
-        f = gzip.open(predictionsFile,"rt")
-    else:
-        f = open(predictionsFile,"rt")
-    #try:
-    for line in f:
-        splits = line.split()
-        if len(splits) == 1:
-            yield [float(splits[0])]
-        else: # multiclass
-            if "," in splits[0]: # multilabel
-                pred = [[]]
-                for value in splits[0].split(","):
-                    pred[0].append(int(value))
-            else:
-                pred = [int(splits[0])]
-            for split in splits[1:]:
-                if split != "N/A":
-                    split = float(split)
-                pred.append(split)
-            yield pred
-    #finally:
-    f.close()
+#@gen2iterable        
+#def loadPredictions(predictionsFile):
+#    if predictionsFile.endswith(".gz"):
+#        f = gzip.open(predictionsFile,"rt")
+#    else:
+#        f = open(predictionsFile,"rt")
+#    #try:
+#    for line in f:
+#        splits = line.split()
+#        if len(splits) == 1:
+#            yield [float(splits[0])]
+#        else: # multiclass
+#            if "," in splits[0]: # multilabel
+#                pred = [[]]
+#                for value in splits[0].split(","):
+#                    pred[0].append(int(value))
+#            else:
+#                pred = [int(splits[0])]
+#            for split in splits[1:]:
+#                if split != "N/A":
+#                    split = float(split)
+#                pred.append(split)
+#            yield pred
+#    #finally:
+#    f.close()
 
 @gen2iterable        
-def loadPredictionsAdjust(predictionsFile, recallAdjust=1.0):
+def loadPredictions(predictionsFile, recallAdjust=None):
     if predictionsFile.endswith(".gz"):
         f = gzip.open(predictionsFile,"rt")
     else:
@@ -293,7 +293,7 @@ def loadPredictionsAdjust(predictionsFile, recallAdjust=1.0):
     for line in f:
         splits = line.split()
         if len(splits) == 1:
-            assert recallAdjust == 1.0 # not implemented for binary classification
+            assert recallAdjust == None or recallAdjust == 1.0 # not implemented for binary classification
             yield [float(splits[0])]
         else: # multiclass
             if "," in splits[0]: # multilabel
@@ -307,7 +307,7 @@ def loadPredictionsAdjust(predictionsFile, recallAdjust=1.0):
                     split = float(split)
                 pred.append(split)
             # Recall adjust
-            if recallAdjust != 1.0:
+            if recallAdjust != None and recallAdjust != 1.0:
                 pred[1] = RecallAdjust.scaleVal(pred[1], recallAdjust)
                 if pred[0] == 1:
                     maxStrength = pred[1]

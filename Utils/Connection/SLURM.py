@@ -30,7 +30,7 @@ class SLURMConnection(ClusterConnection):
             print >> sys.stderr, "------- Job script -------"
             print >> sys.stderr, script
             print >> sys.stderr, "--------------------------"
-        print >> sys.stderr, "Submitting job", stdout
+        print >> sys.stderr, "Submitting job", jobName
         p = subprocess.Popen(command, stdout=subprocess.PIPE, stdin=subprocess.PIPE, stderr=subprocess.STDOUT)
         pstdout = p.communicate(input=script)[0]
         print >> sys.stderr, pstdout

@@ -125,7 +125,7 @@ class SVMMultiClassClassifier(Classifier):
         self.predictions = None
         #self.optimizeJobs = []
     
-    def getExampleFile(self, examples, remotePath=None, upload=True, replaceRemote=True, dummy=False):
+    def getExampleFile(self, examples, upload=True, replaceRemote=True, dummy=False):
         # If examples are in a list, they will be written to a file for SVM-multiclass
         if examples == None:
             return None
@@ -135,11 +135,11 @@ class SVMMultiClassClassifier(Classifier):
             assert False
             #ExampleUtils.writeExamples(examples, trainPath + "/")
         else:
-            examplesPath = os.path.abspath(examples)
+            examplesPath = os.path.normpath(os.path.abspath(examples))
        
         localPath = examplesPath
         if upload:
-            examplesPath = self.connection.upload(examplesPath, os.path.normpath(remotePath + "/" + os.path.abspath(examplesPath)), uncompress=True, replace=replaceRemote)
+            examplesPath = self.connection.upload(examplesPath, uncompress=True, replace=replaceRemote)
         if examplesPath == localPath and examplesPath.endswith(".gz"): # no upload happened
             examplesPath = tempUnzip(examplesPath)
         return examplesPath
@@ -147,8 +147,8 @@ class SVMMultiClassClassifier(Classifier):
     def train(self, examples, outDir, parameters, classifyExamples=None, finishBeforeReturn=False, replaceRemoteExamples=True, dummy=False):
         outDir = os.path.abspath(outDir)
         
-        examples = self.getExampleFile(examples, os.path.abspath(outDir), replaceRemote=replaceRemoteExamples, dummy=dummy)
-        classifyExamples = self.getExampleFile(classifyExamples, os.path.abspath(outDir), replaceRemote=replaceRemoteExamples, dummy=dummy)
+        examples = self.getExampleFile(examples, replaceRemote=replaceRemoteExamples, dummy=dummy)
+        classifyExamples = self.getExampleFile(classifyExamples, replaceRemote=replaceRemoteExamples, dummy=dummy)
         parameters = Parameters.get(parameters, valueListKey="c")
         svmMulticlassDir = self.connection.getSetting("SVM_MULTICLASS_DIR")
         
@@ -191,14 +191,16 @@ class SVMMultiClassClassifier(Classifier):
                 self.connection.waitForJob(classifier._job)
         return classifier
     
-    def downloadModel(self, outDir=""):
+    def downloadModel(self, outPath=None, breakConnection=True):
         assert self.getStatus() == "FINISHED" and self.model != None
-        self.model = self.connection.download(self.model)
+        self.model = self.connection.download(self.model, outPath)
+        if breakConnection:
+            self.connection = UnixConnection() # A local connection
         return self.model
     
-    def downloadPredictions(self, outDir=""):
+    def downloadPredictions(self, outPath=None):
         assert self.getStatus() == "FINISHED" and self.predictions != None
-        self.predictions = self.connection.download(self.predictions)
+        self.predictions = self.connection.download(self.predictions, outPath)
         return self.predictions
     
     def classify(self, examples, output, model=None, finishBeforeReturn=False, replaceRemoteFiles=True):
@@ -209,21 +211,18 @@ class SVMMultiClassClassifier(Classifier):
         # Classify
         if model == None:
             classifier.model = model = self.model
-        model = self.connection.upload(model, uncompress=True, replace=replaceRemoteFiles)
         model = os.path.abspath(model)
+        model = self.connection.upload(model, uncompress=True, replace=replaceRemoteFiles)
         classifier.predictions = self.connection.getRemotePath(output, True)
         predictionsPath = self.connection.getRemotePath(output, False)
-        if ":" in model: # a remote model
-            examples = self.getExampleFile(examples, os.path.abspath(output), replaceRemote=replaceRemoteFiles)
-            classifyCommand = self.connection.getSetting("SVM_MULTICLASS_DIR") + "/svm_multiclass_classify " + examples + " " + modelPath + " " + predictionsPath
-        else: # local or remote depending on connection
-            examples = self.getExampleFile(examples, "classify.dat", upload=False)
-            classifyCommand = Settings.SVM_MULTICLASS_DIR + "/svm_multiclass_classify " + examples + " " + model + " " + predictionsPath
+        examples = self.getExampleFile(examples, replaceRemote=replaceRemoteFiles)
+        classifyCommand = self.connection.getSetting("SVM_MULTICLASS_DIR") + "/svm_multiclass_classify " + examples + " " + model + " " + predictionsPath
         classifier._job = self.connection.submit(classifyCommand, 
                                                  jobDir=os.path.abspath(os.path.dirname(output)), 
                                                  jobName="svm_multiclass_classify-"+os.path.basename(model))
         if finishBeforeReturn:
             self.connection.waitForJob(classifier._job)
+            classifier.downloadPredictions()
         return classifier
     
     def optimize(self, examples, outDir, parameters, classifyExamples, classIds, step="BOTH", evaluator=None, threshold=False, timeout=None, downloadAllModels=False):

@@ -149,7 +149,7 @@ class UnixConnection:
             # local copy
             dirPath = os.path.normpath(os.path.dirname(par2.split(":")[-1]))
             if not os.path.exists(dirPath):
-                os.makedirs()
+                os.makedirs(dirPath)
             if verbose != None:
                 print >> sys.stderr, verbose + "(local copy):", par1.split(":")[-1], par2.split(":")[-1]
             shutil.copy2(par1.split(":")[-1], par2.split(":")[-1])
@@ -260,6 +260,8 @@ class UnixConnection:
         assert not "name" in attrDict
         for key in sorted(attrDict.keys()):
             jobFileText += str(key) + "=" + str(attrDict[key]) + "\n"
+        if not os.path.exists(self.getRemotePath(jobDir)):
+            self.mkdir(self.getRemotePath(jobDir))
         if self.account == None: # a local process
             jobPopen = subprocess.Popen("cat > " + jobPath, shell=True, stdin=subprocess.PIPE)
         else:
@@ -268,13 +270,14 @@ class UnixConnection:
         return self._getJobPath(jobDir, jobName)
     
     def _readJobFile(self, job):
-        if not self.exists(job):
+        jobPath = self.getRemotePath(job)
+        if not self.exists(jobPath):
             if self.debug:
-                print >> sys.stderr, "Job status for", job, "does not exist"
+                print >> sys.stderr, "Job status file", jobPath, "does not exist"
             return None
-        jobLines = self.run("cat " + self.getRemotePath(job))
+        jobLines = self.run("cat " + jobPath)
         if self.debug:
-            print >> sys.stderr, "Job status for", job, "=", jobLines
+            print >> sys.stderr, "Job status file", jobPath, "=", jobLines
         #localJobFile = open(self.download(job), "rt")
         attrDict = {}
         for line in jobLines: #localJobFile:

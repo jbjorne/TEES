@@ -26,6 +26,9 @@ class SentenceExampleWriter:
     def __init__(self):
         SentenceExampleWriter.counts = defaultdict(int)
     
+    def write(self, examples, predictions, corpus, outputFile, classSet=None, parse=None, tokenization=None, goldCorpus=None, insertWeights=False):
+        return self.writeXML(examples, predictions, corpus, outputFile, classSet, parse, tokenization, goldCorpus)
+    
     def loadCorpus(self, corpus, parse, tokenization):
         if type(corpus) == types.StringType or isinstance(corpus,ET.ElementTree): # corpus is in file
             return SentenceGraph.loadCorpus(corpus, parse, tokenization)
@@ -117,6 +120,7 @@ class SentenceExampleWriter:
         # Print statistics
         if len(self.counts) > 0:
             print >> sys.stderr, self.counts
+            self.counts = defaultdict(int)
     
         # Write corpus
         if outputFile != None:

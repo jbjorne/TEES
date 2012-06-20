@@ -101,23 +101,17 @@ class SingleStageDetector(Detector):
     def classify(self, data, model, output, parse=None, task=None):
         self.enterState(self.STATE_CLASSIFY)
         model = self.openModel(model, "r")
-        if parse == None:
-            parse = self.getStr(self.tag+"parse", model)
-        if task == None:
-            task = self.getStr(self.tag+"task", model)
-        self.buildExamples(model, [data], [output+".examples.gz"])
-        self.classifier.test(output+".examples.gz", model.get(self.tag+"classifier-model.gz"), output + ".classifications")
-        self.evaluator.evaluate(output+".examples.gz", output+".classifications", model.get(self.tag+"ids.classes"))
-        xml = BioTextExampleWriter.write(output+".examples.gz", output+".classifications", data, None, model.get(self.tag+"ids.classes"), parse)
-        #xml = InteractionXML.splitMergedElements(xml, None)
-        #xml = InteractionXML.recalculateIds(xml, output+".xml.gz", True)
+        if parse == None: parse = self.getStr(self.tag+"parse", model)
+        if task == None: task = self.getStr(self.tag+"task", model)
+        xml = self.classifyToXML(data, model, None, output + "-", 
+            model.get(self.tag+"classifier-model"), None, parse, float(model.get("recallAdjustParameter")))
         EvaluateInteractionXML.run(self.evaluator, xml, data, parse)
         STFormat.ConvertXML.toSTFormat(xml, output+".tar.gz", outputTag="a2")
         if self.stEvaluator != None:
             self.stEvaluator.evaluate(output+".tar.gz", task)
         self.exitState()
         
-    def classifyToXML(self, data, model, exampleFileName=None, tag="", classifierModel=None, split=False, goldData=None, parse=None, recallAdjust=None, compressExamples=True):
+    def classifyToXML(self, data, model, exampleFileName=None, tag="", classifierModel=None, goldData=None, parse=None, recallAdjust=None, compressExamples=True):
         model = self.openModel(model, "r")
         if parse == None:
             parse = self.getStr(self.tag+"parse", model)
@@ -130,30 +124,20 @@ class SingleStageDetector(Detector):
             classifierModel = model.get(self.tag+"classifier-model")
         else:
             assert os.path.exists(classifierModel), classifierModel
-        classifier = self.Classifier(self.connection)
+        classifier = self.Classifier()
         classifier.classify(exampleFileName, tag+self.tag+"classifications", classifierModel, finishBeforeReturn=True)
-        #self.classifier.test(exampleFileName, classifierModel, tag+self.tag+"classifications")
-        if recallAdjust == None:
-            predictions = tag+self.tag+"classifications"
-        else:
-            predictions = ExampleUtils.loadPredictionsAdjust(tag+self.tag+"classifications", recallAdjust)
+        predictions = ExampleUtils.loadPredictions(tag+self.tag+"classifications", recallAdjust)
         evaluator = self.evaluator.evaluate(exampleFileName, predictions, model.get(self.tag+"ids.classes"))
-        outputFileName = tag+self.tag+"pred.xml.gz"
-        if evaluator.getData().getTP() + evaluator.getData().getFP() > 0:
-            #if split:
-            #    xml = BioTextExampleWriter.write(exampleFileName, predictions, data, None, model.get(self.tag+"ids.classes"), parse)
-            #    xml = InteractionXML.splitMergedElements(xml, None)
-            #    xml = InteractionXML.recalculateIds(xml, outputFileName, True)
-            #else:
-            #    xml = BioTextExampleWriter.write(exampleFileName, predictions, data, outputFileName, model.get(self.tag+"ids.classes"), parse)
-            #return xml
-            return BioTextExampleWriter.write(exampleFileName, predictions, data, outputFileName, model.get(self.tag+"ids.classes"), parse)
-        else:
-            # TODO: e.g. interactions must be removed if task does unmerging
-            print >> sys.stderr, "No positive", self.tag + "predictions, XML file", tag+self.tag+"pred.xml", "unchanged from input"
-            if type(data) in types.StringTypes: # assume its a file
-                shutil.copy(data, outputFileName)
-            else: # assume its an elementtree
-                ETUtils.write(data, outputFileName)
-            #print >> sys.stderr, "No positive predictions, XML file", tag+self.tag+"pred.xml", "not written"
-            return data #None
+        #outputFileName = tag+"-"+self.tag+"pred.xml.gz"
+        return self.exampleWriter.write(exampleFileName, predictions, data, tag+self.tag+"pred.xml.gz", model.get(self.tag+"ids.classes"), parse)
+#        if evaluator.getData().getTP() + evaluator.getData().getFP() > 0:
+#            return self.exampleWriter.write(exampleFileName, predictions, data, outputFileName, model.get(self.tag+"ids.classes"), parse)
+#        else:
+#            # TODO: e.g. interactions must be removed if task does unmerging
+#            print >> sys.stderr, "No positive", self.tag + "predictions, XML file", outputFileName, "unchanged from input"
+#            if type(data) in types.StringTypes: # assume its a file
+#                shutil.copy(data, outputFileName)
+#            else: # assume its an elementtree
+#                ETUtils.write(data, outputFileName)
+#            #print >> sys.stderr, "No positive predictions, XML file", tag+self.tag+"pred.xml", "not written"
+#            return data #None

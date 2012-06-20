@@ -231,7 +231,7 @@ eventDetector = EventDetector()
 eventDetector.debug = options.debug
 eventDetector.stWriteScores = True # write confidence scores into additional st-format files
 #eventDetector.setCSCConnection(options.csc, os.path.join("CSCConnection",WORKDIR.lstrip("/")))
-eventDetector.setConnection(getConnection(options.connection))
+eventDetector.setConnection(getConnection(options.connection)).debug = options.debug
 # Pre-calculate all the required SVM models
 if selector.check("TRAIN"):
     print >> sys.stderr, "----------------------------------------------------"

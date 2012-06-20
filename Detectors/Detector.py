@@ -20,8 +20,8 @@ import InteractionXML
 class Detector():
     def __init__(self):
         self.exampleBuilder = None
-        self.Classifier = None
         self.exampleWriter = None
+        self.Classifier = None
         self.evaluator = None
         self.stEvaluator = None
         self.modelPath = None

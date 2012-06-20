@@ -18,7 +18,14 @@ class ProgressCounter:
         self.startTime = time.time()
         self.prevUpdateStringLen = 0
     
+    def endUpdate(self):
+        if self.total == None:
+            print >> sys.stderr, ""
+    
     def markFinished(self):
+        """
+        Mark as finished to suppress the error message, regardless of actual status
+        """
         self.progress = 100.0
     
     def __del__(self):

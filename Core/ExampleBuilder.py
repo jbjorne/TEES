@@ -100,7 +100,7 @@ class ExampleBuilder:
         
         # Build examples
         self.exampleCount = 0
-        if type(input) == types.StringType:
+        if type(input) in types.StringTypes:
             self.elementCounts = self.getElementCounts(input)
             if self.elementCounts["sentences"] > 0:
                 self.progress = ProgressCounter(self.elementCounts["sentences"], "Build examples")
@@ -126,6 +126,7 @@ class ExampleBuilder:
             for inputSentences in inputIterator:
                 self.processDocument(inputSentences, None, outfile)
         outfile.close()
+        self.progress.endUpdate()
         
         # Show statistics
         print >> sys.stderr, "Examples built:", self.exampleCount
