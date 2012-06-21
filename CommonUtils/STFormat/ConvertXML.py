@@ -186,11 +186,11 @@ def toInteractionXML(documents, corpusName="GENIA", output=None):
                     docEl.append(intEl)
             #docEl.append(intEl) # adding original intEl after extra argument loop broke everything
         if isSentence:
-            sentAnalysesEl = ET.SubElement(sentEl, "sentenceanalyses")
-            parsesEl = ET.SubElement(sentAnalysesEl, "parses")
-            parseEl = ET.SubElement(parsesEl, "parse")
-            tokenizationsEl = ET.SubElement(sentAnalysesEl, "tokenizations")
-            tokenizationEl = ET.SubElement(tokenizationsEl, "tokenization")
+            sentAnalysesEl = ET.SubElement(sentEl, "analyses")
+            #parsesEl = ET.SubElement(sentAnalysesEl, "parses")
+            parseEl = ET.SubElement(sentAnalysesEl, "parse")
+            #tokenizationsEl = ET.SubElement(sentAnalysesEl, "tokenizations")
+            tokenizationEl = ET.SubElement(sentAnalysesEl, "tokenization")
             parseEl.set("parser", "gold")
             parseEl.set("tokenizer", "gold")
             tokenizationEl.set("tokenizer", "gold")
