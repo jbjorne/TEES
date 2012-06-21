@@ -19,6 +19,7 @@ class StreamModifier:
     def __init__(self, stream):
         self.stream = stream
         self.logfiles = []
+        self.logfilenames = []
         self.indent = None
         self.timeStamp = None
         self.timeStampDuplicates = False
@@ -29,28 +30,35 @@ class StreamModifier:
     def setLog(self, logfile=None):
         if logfile != None:
             self.logfiles = [logfile]
+            self.logfilenames = [logfile.name]
         else:
             self.logfiles = []
+            self.logfilenames = []
     
     def addLog(self, logfile):
         self.logfiles.append(logfile)
+        self.logfilenames.append(logfile.name)
     
-    def removeLog(self, logfileName, close=True):
+    def removeLog(self, logfileName, streamName):
         logfilesToKeep = []
-        closed = None
-        for logfile in self.logfiles:
-            filename = logfile.name
-            if logfile.name != logfileName:
-                logfilesToKeep.append(logfile)
+        logfilenamesToKeep = []
+        removed = None
+        removedName = None
+        for i in range(len(self.logfiles)):
+            if self.logfilenames[i] != logfileName:
+                logfilesToKeep.append(self.logfiles[i])
+                logfilenamesToKeep.append(self.logfilenames[i])
             else:
-                closed = logfileName
-                logfile.close()
+                removed = self.logfiles[i]
+                removedName = self.logfilenames[i]
         self.logfiles = logfilesToKeep
+        self.logfilenames = logfilenamesToKeep
         
-        if closed != None:
-            print >> sys.stderr, "Closed log", closed
+        if removedName != None:
+            print >> sys.stderr, "Stopped logging", streamName, "to", removedName
         else:
-            print >> sys.stderr, "Log not open:", logfileName
+            print >> sys.stderr, "Log not open for ", streamName + ":", logfileName
+        return removed
     
     def setIndent(self, indent=None):
         self.indent = indent
@@ -130,9 +138,12 @@ def openLog(filename="log.txt", clear=False, logCmd=True):
 
 def closeLog(filename):
     assert isinstance(sys.stdout, StreamModifier)
-    sys.stdout.removeLog(filename)
+    removedStdout = sys.stdout.removeLog(filename, "stdout")
     assert isinstance(sys.stderr, StreamModifier)
-    sys.stderr.removeLog(filename)
+    removedStderr = sys.stderr.removeLog(filename, "stderr")
+    # These are most often the same file, so they (it) must be closed after removed from all streams
+    removedStdout.close()
+    removedStderr.close()
 
 def writeToScreen(text):
     assert isinstance(sys.stderr, StreamModifier)
