@@ -74,11 +74,7 @@ class SVMMultiClassClassifier(Classifier):
     """
     A wrapper for the Joachims SVM Multiclass classifier.
     """
-
-    indent = ""
-    #IF LOCAL
-    louhiBinDir = "/v/users/jakrbj/svm-multiclass"
-    #ENDIF
+    
     def __init__(self, connection=None):
         self.defaultEvaluator = AveragingMultiClassEvaluator
         if connection == None:
@@ -275,80 +271,80 @@ class SVMMultiClassClassifier(Classifier):
         classifier.downloadModel()
         return classifier
     
-    @classmethod
-    def test(cls, examples, modelPath, output=None, parameters=None, forceInternal=False, classIds=None): # , timeout=None):
-        """
-        Classify examples with a pre-trained model.
-        
-        @type examples: string (filename) or list (or iterator) of examples
-        @param examples: a list or file containing examples in SVM-format
-        @type modelPath: string
-        @param modelPath: filename of the pre-trained model file
-        @type parameters: a dictionary or string
-        @param parameters: parameters for the classifier
-        @type output: string
-        @param output: the name of the predictions file to be written
-        @type forceInternal: Boolean
-        @param forceInternal: Use python classifier even if SVM Multiclass binary is defined in Settings.py
-        """
-        if forceInternal or Settings.SVM_MULTICLASS_DIR == None:
-            return cls.testInternal(examples, modelPath, output)
-        timer = Timer()
-        if type(examples) == types.ListType:
-            print >> sys.stderr, "Classifying", len(examples), "with SVM-MultiClass model", modelPath
-            examples, predictions = self.filterClassificationSet(examples, False)
-            testPath = self.tempDir+"/test.dat"
-            Example.writeExamples(examples, testPath)
-        else:
-            print >> sys.stderr, "Classifying file", examples, "with SVM-MultiClass model", modelPath
-            testPath = examples
-            #examples = Example.readExamples(examples,False)
-        if os.environ.has_key("METAWRK"):
-            args = [SVMMultiClassClassifier.louhiBinDir+"/svm_multiclass_classify"]
-        else:
-            args = [Settings.SVM_MULTICLASS_DIR+"/svm_multiclass_classify"]
-        if modelPath == None:
-            modelPath = "model"
-        if modelPath.endswith(".gz"):
-            modelPath = tempUnzip(modelPath)
-        if testPath.endswith(".gz"):
-            testPath = tempUnzip(testPath)
-#        if parameters != None:
-#            parameters = copy.copy(parameters)
-#            if parameters.has_key("c"):
-#                del parameters["c"]
-#            if parameters.has_key("predefined"):
-#                parameters = copy.copy(parameters)
-#                modelPath = os.path.join(parameters["predefined"][0],"classifier/model")
-#                del parameters["predefined"]
-#            self.__addParametersToSubprocessCall(args, parameters)
-        if output == None:
-            output = "predictions"
-            logFile = open("svmmulticlass.log","at")
-        else:
-            logFile = open(output+".log","wt")
-        compressOutput = False
-        if output.endswith(".gz"):
-            output = output[:-3]
-            compressOutput = True
-        args += [testPath, modelPath, output]
-        #if timeout == None:
-        #    timeout = -1
-        #print args
-        subprocess.call(args, stdout = logFile, stderr = logFile)
-        
-        predictionsFile = open(output, "rt")
-        lines = predictionsFile.readlines()
-        predictionsFile.close()
-        if compressOutput:
-            subprocess.call("gzip -f " + output, shell=True)
-        
-        predictions = []
-        for i in range(len(lines)):
-            predictions.append( [int(lines[i].split()[0])] + lines[i].split()[1:] )
-            #predictions.append( (examples[i],int(lines[i].split()[0]),"multiclass",lines[i].split()[1:]) )
-        print >> sys.stderr, timer.toString()
-        return predictions                
+#    @classmethod
+#    def test(cls, examples, modelPath, output=None, parameters=None, forceInternal=False, classIds=None): # , timeout=None):
+#        """
+#        Classify examples with a pre-trained model.
+#        
+#        @type examples: string (filename) or list (or iterator) of examples
+#        @param examples: a list or file containing examples in SVM-format
+#        @type modelPath: string
+#        @param modelPath: filename of the pre-trained model file
+#        @type parameters: a dictionary or string
+#        @param parameters: parameters for the classifier
+#        @type output: string
+#        @param output: the name of the predictions file to be written
+#        @type forceInternal: Boolean
+#        @param forceInternal: Use python classifier even if SVM Multiclass binary is defined in Settings.py
+#        """
+#        if forceInternal or Settings.SVM_MULTICLASS_DIR == None:
+#            return cls.testInternal(examples, modelPath, output)
+#        timer = Timer()
+#        if type(examples) == types.ListType:
+#            print >> sys.stderr, "Classifying", len(examples), "with SVM-MultiClass model", modelPath
+#            examples, predictions = self.filterClassificationSet(examples, False)
+#            testPath = self.tempDir+"/test.dat"
+#            Example.writeExamples(examples, testPath)
+#        else:
+#            print >> sys.stderr, "Classifying file", examples, "with SVM-MultiClass model", modelPath
+#            testPath = examples
+#            #examples = Example.readExamples(examples,False)
+#        if os.environ.has_key("METAWRK"):
+#            args = [SVMMultiClassClassifier.louhiBinDir+"/svm_multiclass_classify"]
+#        else:
+#            args = [Settings.SVM_MULTICLASS_DIR+"/svm_multiclass_classify"]
+#        if modelPath == None:
+#            modelPath = "model"
+#        if modelPath.endswith(".gz"):
+#            modelPath = tempUnzip(modelPath)
+#        if testPath.endswith(".gz"):
+#            testPath = tempUnzip(testPath)
+##        if parameters != None:
+##            parameters = copy.copy(parameters)
+##            if parameters.has_key("c"):
+##                del parameters["c"]
+##            if parameters.has_key("predefined"):
+##                parameters = copy.copy(parameters)
+##                modelPath = os.path.join(parameters["predefined"][0],"classifier/model")
+##                del parameters["predefined"]
+##            self.__addParametersToSubprocessCall(args, parameters)
+#        if output == None:
+#            output = "predictions"
+#            logFile = open("svmmulticlass.log","at")
+#        else:
+#            logFile = open(output+".log","wt")
+#        compressOutput = False
+#        if output.endswith(".gz"):
+#            output = output[:-3]
+#            compressOutput = True
+#        args += [testPath, modelPath, output]
+#        #if timeout == None:
+#        #    timeout = -1
+#        #print args
+#        subprocess.call(args, stdout = logFile, stderr = logFile)
+#        
+#        predictionsFile = open(output, "rt")
+#        lines = predictionsFile.readlines()
+#        predictionsFile.close()
+#        if compressOutput:
+#            subprocess.call("gzip -f " + output, shell=True)
+#        
+#        predictions = []
+#        for i in range(len(lines)):
+#            predictions.append( [int(lines[i].split()[0])] + lines[i].split()[1:] )
+#            #predictions.append( (examples[i],int(lines[i].split()[0]),"multiclass",lines[i].split()[1:]) )
+#        print >> sys.stderr, timer.toString()
+#        return predictions                
     
 #    @classmethod
 #    def testInternal(cls, examples, modelPath, output=None, idStem=None):
@@ -530,21 +526,21 @@ class SVMMultiClassClassifier(Classifier):
             cscConnection.run("qsub -o " + cscConnection.workDir + "/" + scriptName + "-stdout -e " + cscConnection.workDir + "/" + scriptName + "-stderr " + cscConnection.workDir + "/" + scriptName)
         return idStr
     
-    @classmethod
-    def getLouhiStatus(cls, idStr, cscConnection, counts, classIds=None):
-        stderrStatus = cscConnection.getFileStatus("script" + idStr + ".sh" + "-stderr")
-        if stderrStatus == cscConnection.NOT_EXIST:
-            counts["QUEUED"] += 1
-            return "QUEUED"
-        elif stderrStatus == cscConnection.NONZERO:
-            counts["FAILED"] += 1
-            return "FAILED"
-        elif cscConnection.exists("predictions"+idStr):
-            counts["FINISHED"] += 1
-            return "FINISHED"
-        else:
-            counts["RUNNING"] += 1
-            return "RUNNING"
+#    @classmethod
+#    def getLouhiStatus(cls, idStr, cscConnection, counts, classIds=None):
+#        stderrStatus = cscConnection.getFileStatus("script" + idStr + ".sh" + "-stderr")
+#        if stderrStatus == cscConnection.NOT_EXIST:
+#            counts["QUEUED"] += 1
+#            return "QUEUED"
+#        elif stderrStatus == cscConnection.NONZERO:
+#            counts["FAILED"] += 1
+#            return "FAILED"
+#        elif cscConnection.exists("predictions"+idStr):
+#            counts["FINISHED"] += 1
+#            return "FINISHED"
+#        else:
+#            counts["RUNNING"] += 1
+#            return "RUNNING"
 
 #    @classmethod
 #    def downloadModel(cls, idStr, cscConnection, localWorkDir=None):
@@ -556,18 +552,18 @@ class SVMMultiClassClassifier(Classifier):
 #        cscConnection.download("model"+idStr, modelFileName)
 #        return "model"+idStr
     
-    @classmethod
-    def getLouhiPredictions(cls, idStr, cscConnection, localWorkDir=None, dummy=None):
-        #if not cls.getLouhiStatus(idStr, cscConnection):
-        #    return None
-        predFileName = "predictions"+idStr
-        if localWorkDir != None:
-            predFileName = os.path.join(localWorkDir, predFileName)
-        cscConnection.download("predictions"+idStr, predFileName, compress=True, uncompress=True)
-        if os.path.exists(predFileName):
-            return predFileName
-        else:
-            return None
+#    @classmethod
+#    def getLouhiPredictions(cls, idStr, cscConnection, localWorkDir=None, dummy=None):
+#        #if not cls.getLouhiStatus(idStr, cscConnection):
+#        #    return None
+#        predFileName = "predictions"+idStr
+#        if localWorkDir != None:
+#            predFileName = os.path.join(localWorkDir, predFileName)
+#        cscConnection.download("predictions"+idStr, predFileName, compress=True, uncompress=True)
+#        if os.path.exists(predFileName):
+#            return predFileName
+#        else:
+#            return None
         
 #        predictionsFile = open(predFileName, "rt")
 #        lines = predictionsFile.readlines()
