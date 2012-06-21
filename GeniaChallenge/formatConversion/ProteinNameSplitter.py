@@ -56,56 +56,26 @@ def addTokenization(tokenization, sentence, sentenceId):
 # returns a cElementTree element corresponding to the given tokenization
 # in the given sentence element.
 def getTokenization(tokenization, sentence, sentenceId, remove=False):
-    # first try the old-style format where there's an element with the
-    # name of the tokenization
-    tokPath = "sentenceanalyses/tokenizations/"+tokenization
-    found = sentence.find(tokPath)
-
-    if found is not None:
-        return found
-                                                                                    # then try the new-style format
-    tokenizations = sentence.find("sentenceanalyses/tokenizations")
-    if tokenizations == None:
-        tokenizations = sentence.find("analyses")
-    assert tokenizations is not None, "ERROR: missing tokenizations for sentence %s" % sentenceId
-
-    for t in tokenizations.getiterator("tokenization"):
+    analyses = sentence.find("analyses")
+    if analyses == None:
+        return None
+    for t in analyses.findall("tokenization"):
         if t.get("tokenizer") == tokenization:
             if remove:
-                tokenizations.remove(t)
+                analyses.remove(t)
             return t
-
     return None
-
 
 # returns a cElementTree element corresponding to a new parse in the
 # given sentence element.
 def addParse(parse, tokenization, sentence, sentenceId):
-    # check whether the XML is new-style or old-style.
-    parses = sentence.find("sentenceanalyses/parses")
-    if parses == None:
-        parses = sentence.find("analyses")
-    assert parses != None, "Missing <parses> in sentence %s" % sentenceId
-
-    # assume new-style if we have at least one <parse> with a "parser"
-    # attribute. Also check that a parse under the given name isn't there
-    # already
-#    isNew = False
-    for p in parses.getiterator("parse"):
+    for p in sentence.getiterator("parse"):
         if p.get("parser") is not None:
             assert p.get("parser") != parse, "New parse '%s' already exists in sentence %s!" % (parse, sentenceId)
-#            isNew = True
 
-    # add the parse.
-#    if isNew:
-    newParse = ElementTree.SubElement(parses, "parse")
+    newParse = ElementTree.SubElement(sentence.find("analyses"), "parse")
     newParse.attrib["parser"] = parse
     newParse.attrib["tokenizer"] = tokenization
-#    else:
-#        # check for overlap
-#        assert parses.find(parse) is None, "New parse '%s' already exists in sentence %s!" % (parse, sentenceId)
-#        newParse = ElementTree.SubElement(parses, parse)
-
     return newParse
         
 # returns a cElementTree element correspoding to the given parse
