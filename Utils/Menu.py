@@ -40,9 +40,11 @@ class Menu():
         self.optDict = {}
         for i in range(len(options)):
             option = options[i]
+            # Replace string with the default option it refers to
             if type(option) in types.StringTypes:
                 option = self.getDefaultOption(option)
                 options[i] = option
+            # Options must have a defined key
             if option.key != None:
                 option.menu = self
                 assert option.key not in self.optDict

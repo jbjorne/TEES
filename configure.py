@@ -9,17 +9,19 @@ import Tools.GeniaSentenceSplitter
 import Tools.BANNER
 import Tools.CharniakJohnsonParser
 import Tools.StanfordParser
+# Corpora
+import Utils.BioNLP2011.convertBioNLP11 as convertBioNLP11
 # TODO: Logging
 
 def pathMenuInitializer(menu, prevMenu):
     nextMenus = []
-    if prevMenu.optDict["1"]:
+    if prevMenu.optDict["1"].toggle:
         nextMenus.append("Classifier")
-    if prevMenu.optDict["2"]:
+    if prevMenu.optDict["2"].toggle:
         nextMenus.append("Models")
-    if prevMenu.optDict["3"]:
+    if prevMenu.optDict["3"].toggle:
         nextMenus.append("Corpora")
-    if prevMenu.optDict["4"]:
+    if prevMenu.optDict["4"].toggle:
         nextMenus.append("Tools")
     if len(nextMenus) == 0:
         print >> sys.stderr, "Nothing to install, exiting"
@@ -122,22 +124,21 @@ def checkInstallPath(menu, menuVariable, setting, installSubDir, defaultInstallK
         menu.setDefault(defaultInstallKey)
         return True
 
-def checkCorpusInstall(menu, menuVariable, setting, installSubDir, defaultInstallKey="i", defaultSkipKey="s"):
-    if getattr(menu, menuVariable) == None:
-        setattr(menu, menuVariable, menu.system.defaultInstallDir + "/" + installSubDir)
+def checkCorpusInstall(menu, corpus, installKey="i"):
+    # If CORPUS_DIR setting is not set, the default is to install everything
     if not hasattr(Settings, "CORPUS_DIR") or getattr(Settings, "CORPUS_DIR") == None:
-        menu.setDefault(defaultInstallKey)
+        menu.setDefault(installKey)
         return True
-    allFound = True
+    # CORPUS_DIR is set, so check if the corpus is installed
+    allFound = True # check for all corpus subsets
     for dataSet in ["-train.xml", "-devel.xml", "-test.xml"]:
         if os.path.exists(Settings.CORPUS_DIR + "/" + corpus + dataSet):
             allFound = False
             break
-    if allFound:
-        menu.setDefault(defaultSkipKey)
+    if allFound: # if corpus files are present, installing this corpora can be skipped
         return True
-    else:
-        menu.setDefault(defaultInstallKey)
+    else: # if a corpus file is missing, mark it to be installed
+        menu.setDefault(installKey)
         return False
 
 def svmMenuInitializer(menu, prevMenu):
@@ -165,17 +166,39 @@ def toolsMenuInitializer(menu, prevMenu):
     menu.optDict["i"].handlerArgs = handlerArgs
 
 def corpusMenuInitializer(menu, prevMenu):
+    menu.text = """
+    The corpora are used for training new models and testing existing
+    models. The corpora installable here are from the two BioNLP Shared
+    Tasks (BioNLP'09 and BioNLP'11) on Event Extraction (organized by 
+    University of Tokyo), and the First Challenge Task: Drug-Drug Interaction 
+    Extraction (DDI'11, organized by Universidad Carlos III de Madrid, Spain).
+    
+    The corpora will be downloaded from their publishers' pages, then converted
+    to the Interaction XML format used by TEES. You can also download the official
+    Shared Task evaluation programs, which will be used by TEES when training or
+    testing on those corpora.
+    """
+    # Set the installation path
+    if menu.corpusDir == None:
+        if not hasattr(Settings, "CORPUS_DIR") or getattr(Settings, "CORPUS_DIR") == None:
+            menu.corpusDir = menu.system.defaultInstallDir
+        else:
+            menu.corpusDir = Settings.CORPUS_DIR
+    # Mark "skip" as default option, this will be re-marked as install if a corpus is missing
+    menu.setDefault("s")
     handlers = []
     handlerArgs = []
+    # Check which corpora need to be installed
     redownload = menu.optDict["1"].toggle
-    if menu.optDict["2"].toggle or checkInstallPath(menu, "geniassInstallDir", "GENIA_SENTENCE_SPLITTER_DIR", "geniass"):
-        menu.optDict["2"].toggle = True
-        handlers.append(Tools.GeniaSentenceSplitter.install)
-        handlerArgs.append([menu.geniassInstallDir, os.path.join(menu.system.defaultInstallDir, "tools/download"), redownload])  
-    if menu.optDict["3"].toggle or checkInstallPath(menu, "bannerInstallDir", "BANNER_DIR", "BANNER"):
-        menu.optDict["3"].toggle = True
-        handlers.append(Tools.BANNER.install)
-        handlerArgs.append([menu.bannerInstallDir, os.path.join(menu.system.defaultInstallDir, "tools/download"), redownload])  
+    corporaToInstall = []
+    for item, corpus in [("5", "GE"), ("6", "EPI"), ("7", "ID"), ("8", "BB"), ("9", "BI")]:
+        if menu.optDict[item].toggle or checkCorpusInstall(menu, corpus):
+            menu.optDict[item].toggle = True
+            corporaToInstall.append(corpus)
+    if len(corporaToInstall) > 0: # All BioNLP'11 corpora can be installed with one command
+        handlers.append(convertBioNLP11.convert)
+        handlerArgs.append([corporaToInstall, menu.corpusDir + "/corpora", menu.corpusDir + "/download", redownload, False, False])
+    # Add the handlers to install option
     menu.optDict["i"].handler = handlers
     menu.optDict["i"].handlerArgs = handlerArgs
     

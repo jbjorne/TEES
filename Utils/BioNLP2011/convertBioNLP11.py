@@ -53,13 +53,15 @@ def convert(corpora, outDir, downloadDir=None, redownload=False, makeIntermediat
         os.makedirs(outDir)
     else:
         assert os.path.isdir(outDir)
+    count = 1
     for corpus in corpora:
-        print >> sys.stderr, "=======================", "Converting", corpus, "======================="
-        logFileName = outDir + "/conversion/" + corpus + "conversion-log.txt"
+        print >> sys.stderr, "=======================", "Converting BioNLP'11", corpus, "corpus ("+str(count)+"/"+str(len(corpora))+")", "======================="
+        logFileName = outDir + "/conversion/" + corpus + "-conversion-log.txt"
         Stream.openLog(logFileName)
         downloaded = downloadCorpus(corpus, downloadDir, None, redownload)
         convertDownloaded(outDir, corpus, downloaded, makeIntermediateFiles, evaluate)
         Stream.closeLog(logFileName)
+        count += 1
 
 def convertDownloaded(outdir, corpus, files, intermediateFiles=True, evaluate=True):
     global moveBI
@@ -129,7 +131,7 @@ def convertDownloaded(outdir, corpus, files, intermediateFiles=True, evaluate=Tr
         BioNLP11GeniaTools.evaluate(workdir + "/roundtrip/" + corpus + "-devel" + "-task2", corpus + ".2")
         print >> sys.stderr, "Note! Evaluation of Task 2 back-conversion can be less than 100% due to site-argument mapping"
 
-def addAnalyses(xml, corpus, setNames, files, bigfileName):
+def addAnalyses(xml, corpus, datasets, files, bigfileName):
     if corpus + "_TEES_PARSES" in files:
         print >> sys.stderr, "---------------", "Inserting TEES-generated analyses", "---------------"
         tempdir = tempfile.mkdtemp()
@@ -159,7 +161,7 @@ def addAnalyses(xml, corpus, setNames, files, bigfileName):
             print >> sys.stderr, "Removing temporary directory", tempdir
             shutil.rmtree(tempdir)
 
-def processParses(xml, splitTarget="mccc-preparsed"):
+def processParses(xml, splitTarget="McCC"):
     print >> sys.stderr, "Protein Name Splitting"
     ProteinNameSplitter.mainFunc(xml, None, splitTarget, splitTarget, "split-"+splitTarget, "split-"+splitTarget)
     print >> sys.stderr, "Head Detection"
