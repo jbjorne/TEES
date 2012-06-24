@@ -287,7 +287,7 @@ class EventDetector(Detector):
             #EvaluateInteractionXML.run(self.edgeDetector.evaluator, xml, self.classifyData, edgeParse)
             EvaluateInteractionXML.run(self.edgeDetector.evaluator, xml, None, edgeParse)
         if self.checkStep("UNMERGING"):
-            if self.model.hasMember("unmerging-classifier-model.gz"):
+            if self.model.hasMember("unmerging-classifier-model"):
                 #xml = self.getWorkFile(xml, output + "-edge-pred.xml.gz")
                 # To avoid running out of memory, always use file on disk
                 xml = self.getWorkFile(None, output + "-edge-pred.xml.gz")
@@ -299,7 +299,7 @@ class EventDetector(Detector):
             else:
                 print >> sys.stderr, "No model for unmerging"
         if self.checkStep("MODIFIERS"):
-            if self.model.hasMember("modifier-classifier-model.gz"):
+            if self.model.hasMember("modifier-classifier-model"):
                 xml = self.getWorkFile(xml, [output + "-unmerging-pred.xml.gz", output + "-edge-pred.xml.gz"])
                 xml = self.modifierDetector.classifyToXML(xml, self.model, None, output + "-", parse=self.parse)
             else:
