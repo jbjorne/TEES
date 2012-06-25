@@ -76,7 +76,7 @@ class UnmergingExampleBuilder(ExampleBuilder):
     This example builder makes unmerging examples, i.e. examples describing
     potential events.
     """
-    def __init__(self, style="noMasking:maxFeatures", length=None, types=[], featureSet=None, classSet=None):
+    def __init__(self, style="trigger_features:typed:directed:no_linear:entities:genia_limits:noMasking:maxFeatures", length=None, types=[], featureSet=None, classSet=None):
         if featureSet == None:
             featureSet = IdSet()
         if classSet == None:
@@ -87,7 +87,7 @@ class UnmergingExampleBuilder(ExampleBuilder):
         
         ExampleBuilder.__init__(self, classSet=classSet, featureSet=featureSet)
 
-        self.styles = self.getParameters(style, [
+        self.styles = self.getParameters(style, ["trigger_features","typed","directed","no_linear","entities","genia_limits",
             "noAnnType", "noMasking", "maxFeatures", "no_merge", "disable_entity_features", 
             "disable_single_element_features", "disable_ngram_features", "disable_path_edge_features"])
         self.multiEdgeFeatureBuilder = MultiEdgeFeatureBuilder(self.featureSet)
@@ -229,7 +229,7 @@ class UnmergingExampleBuilder(ExampleBuilder):
             for i in range(len(themes)):
                 # Looking at a2-normalize.pl reveals that there can be max 6 themes
                 # Based on training+devel data, four is maximum
-                if i < 4: 
+                if i < 10: #4: 
                     for j in combinations(themes, i+1):
                         combs.append(j)
 #                if len(combs) >= 100:
@@ -265,8 +265,8 @@ class UnmergingExampleBuilder(ExampleBuilder):
                     contextGenes.append(interaction)
                 elif iType == "Sidechain":
                     sideChains.append(interaction)
-                elif iType in ["AtLoc", "ToLoc"]:
-                    locTargets.append(iType)
+                #elif iType in ["AtLoc", "ToLoc"]:
+                #    locTargets.append(iType)
                 else:
                     assert False, (iType, interaction.get("id"))
             # Limit arguments to event types that can have them
@@ -496,8 +496,9 @@ class UnmergingExampleBuilder(ExampleBuilder):
         #self.setFeature("interactionCauseCount", contextCauseCount)
         #self.setFeature("interactionCauseCount_" + str(contextCauseCount), 1)
         for key in sorted(contextCounts.keys()):
-            self.setFeature("contextArg" + key + "Count", contextCounts[key])
-            self.setFeature("contextArg" + key + "Count_" + str(contextCounts[key]), 1)      
+            if key in ["Theme", "Cause"]:
+                self.setFeature("contextArg" + key + "Count", contextCounts[key])
+                self.setFeature("contextArg" + key + "Count_" + str(contextCounts[key]), 1)      
         
         self.triggerFeatureBuilder.tag = ""
         self.triggerFeatureBuilder.setFeatureVector(None)
