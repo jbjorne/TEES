@@ -28,7 +28,7 @@ class UnixConnection:
         self.remoteSettingsPath = remoteSettingsPath
         self.cachedRemoteSettings = None
         self._logs = {}
-        self.debug = True
+        self.debug = False
         self.resubmitOnlyFinished = True
     
     def isLocal(self):
