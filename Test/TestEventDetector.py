@@ -205,13 +205,14 @@ else:
 
 # These commands will be in the beginning of most pipelines
 WORKDIR=options.output
-if options.copyFrom != None and (options.clearAll or not os.path.exists(WORKDIR)):
-    if options.clearAll and os.path.exists(WORKDIR):
+if options.copyFrom != None:
+    if os.path.exists(WORKDIR):
         shutil.rmtree(WORKDIR)
     print >> sys.stderr, "Copying template from", options.copyFrom
     shutil.copytree(options.copyFrom, WORKDIR)
-# Start logging
-workdir(WORKDIR, options.clearAll) # Select a working directory, optionally remove existing files
+    workdir(WORKDIR, False)
+else:
+    workdir(WORKDIR, options.clearAll) # Select a working directory, optionally remove existing files
 if not options.noLog:
     Stream.openLog("log.txt")
     #log() # Start logging into a file in working directory
@@ -265,7 +266,7 @@ if not options.noTestSet:
         print >> sys.stderr, "------------- Test set classification --------------"
         print >> sys.stderr, "----------------------------------------------------"
         eventDetector.stWriteScores = False # the evaluation server doesn't like additional files
-        eventDetector.classify(FINAL_TEST_FILE, options.testModel, "classification/test", fromStep=detectorStep["TEST"], saveChangedModelPath="model-test-classify-ids")
+        eventDetector.classify(FINAL_TEST_FILE, options.testModel, "classification/test", fromStep=detectorStep["TEST"])
         #print os.listdir(os.getcwd())
         STFormat.Compare.compare("classification/test-events.tar.gz", "classification/devel-events.tar.gz", "a2")
 
