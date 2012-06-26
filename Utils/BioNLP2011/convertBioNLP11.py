@@ -27,23 +27,29 @@ moveBI = ["PMID-10333516-S3", "PMID-10503549-S4", "PMID-10788508-S10", "PMID-190
           "PMID-9555886-S6", "PMID-10075739-S13", "PMID-10400595-S1", "PMID-10220166-S12"]
 
 def downloadCorpus(corpus, destPath=None, downloadPath=None, clear=False):
-    print >> sys.stderr, "---------------", "Downloading BioNLP'11 files", "---------------"
+    print >> sys.stderr, "---------------", "Downloading BioNLP Shared Task files", "---------------"
     downloaded = {}
     if destPath == None:
         finalDestPath = os.path.join(Settings.DATAPATH, "corpora/BioNLP11-original")
     else:
         finalDestPath = destPath
     for setName in ["_DEVEL", "_TRAIN", "_TEST"]:
-        downloaded[corpus + setName] = Utils.Download.download(Settings.URL[corpus + setName], finalDestPath + "/corpus/", clear=clear)
+        downloaded[corpus + setName] = Utils.Download.download(Settings.URL[corpus + setName], finalDestPath, clear=clear)
     if corpus in ["REL", "REN", "CO"]:
         if destPath == None:
-            finalDestPath = os.path.join(Settings.DATAPATH, "corpora/TEES-parses")
+            finalDestPath = os.path.join(Settings.DATAPATH, "TEES-parses")
+        else:
+            finalDestPath = os.path.join(destPath, "TEES-parses")
         if downloadPath == None:
-            downloadPath = os.path.join(Settings.DATAPATH, "corpora/download")
+            downloadPath = os.path.join(Settings.DATAPATH, "download")
         Utils.Download.downloadAndExtract(Settings.URL["TEES_PARSES"], finalDestPath, downloadPath, redownload=clear)
-        downloaded[corpus + "_TEES_PARSES"] = finalDestPath
+        downloaded["TEES_PARSES"] = finalDestPath
     else:
-        for analysis in ["_TOKENS", "_McCC"]:
+        if corpus == "GE09":
+            analyses = ["_ANALYSES"]
+        else:
+            analyses = ["_TOKENS", "_McCC"]
+        for analysis in analyses:
             for setName in ["_DEVEL", "_TRAIN", "_TEST"]:
                 downloaded[corpus + setName + analysis] = Utils.Download.download(Settings.URL[corpus + setName + analysis], finalDestPath + "/support/", clear=clear)
     return downloaded
@@ -55,10 +61,10 @@ def convert(corpora, outDir, downloadDir=None, redownload=False, makeIntermediat
         assert os.path.isdir(outDir)
     count = 1
     for corpus in corpora:
-        print >> sys.stderr, "=======================", "Converting BioNLP'11", corpus, "corpus ("+str(count)+"/"+str(len(corpora))+")", "======================="
+        print >> sys.stderr, "=======================", "Converting BioNLP Shared Task", corpus, "corpus ("+str(count)+"/"+str(len(corpora))+")", "======================="
         logFileName = outDir + "/conversion/" + corpus + "-conversion-log.txt"
         Stream.openLog(logFileName)
-        downloaded = downloadCorpus(corpus, downloadDir, None, redownload)
+        downloaded = downloadCorpus(corpus, downloadDir, outDir, redownload)
         convertDownloaded(outDir, corpus, downloaded, makeIntermediateFiles, evaluate)
         Stream.closeLog(logFileName)
         count += 1
@@ -132,18 +138,15 @@ def convertDownloaded(outdir, corpus, files, intermediateFiles=True, evaluate=Tr
         print >> sys.stderr, "Note! Evaluation of Task 2 back-conversion can be less than 100% due to site-argument mapping"
 
 def addAnalyses(xml, corpus, datasets, files, bigfileName):
-    if corpus + "_TEES_PARSES" in files: # corpus for which no official parse exists
+    if "TEES_PARSES" in files: # corpus for which no official parse exists
         print >> sys.stderr, "---------------", "Inserting TEES-generated analyses", "---------------"
-        tempdir = tempfile.mkdtemp()
-        Utils.Download.extractPackage(files[corpus + "_TEES_PARSES"] + "/" + corpus + ".tar.gz", tempdir)
-        extractedFilename = tempdir + "/" + corpus
+        extractedFilename = files["TEES_PARSES"] + "/" + corpus
         print >> sys.stderr, "Making sentences"
         Tools.SentenceSplitter.makeSentences(xml, extractedFilename, None)
         print >> sys.stderr, "Inserting McCC parses"
         Tools.CharniakJohnsonParser.insertParses(xml, extractedFilename, None, extraAttributes={"source":"TEES-preparsed"})
         print >> sys.stderr, "Inserting Stanford conversions"
         Tools.StanfordParser.insertParses(xml, extractedFilename, None, extraAttributes={"stanfordSource":"TEES-preparsed"})
-        shutil.rmtree(tempdir)
     elif corpus == "GE09": # the BioNLP'09 corpus
         for i in range(len(datasets)):
             print >> sys.stderr, "---------------", "Inserting analyses " + str(i+1) + "/" + str(len(datasets)), "---------------"
