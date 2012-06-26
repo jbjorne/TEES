@@ -118,7 +118,7 @@ class Model():
             shutil.copytree(self.path, outPath)
             # copy cached (potentially updated) files
             for f in os.listdir(self.workdir):
-                shutil.copy2(f, outPath)
+                shutil.copy2(os.path.join(self.workdir, f), outPath)
     
     def hasMember(self, name):
         return name in self.members
