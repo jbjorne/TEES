@@ -1,11 +1,16 @@
 import sys, os, time
+import shutil
+import tempfile
 import subprocess
+thisPath = os.path.dirname(os.path.abspath(__file__))
+sys.path.append(os.path.abspath(os.path.join(thisPath,"../../")))
+sys.path.append(os.path.abspath(os.path.join(thisPath,"../../CommonUtils/")))
 import STFormat.STTools as ST
 import STFormat.ConvertXML as STConvert
 import InteractionXML.RemoveUnconnectedEntities
 import InteractionXML.DivideSets
-thisPath = os.path.dirname(os.path.abspath(__file__))
-sys.path.append(os.path.abspath(os.path.join(thisPath,"../../")))
+import Utils.Download
+import Utils.Settings as Settings
 import Utils.Stream as Stream
 import Utils.FindHeads as FindHeads
 import Tools.GeniaSentenceSplitter
@@ -20,10 +25,6 @@ except ImportError:
     import xml.etree.cElementTree as ET
 import cElementTreeUtils as ETUtils
 from collections import defaultdict
-thisPath = os.path.dirname(os.path.abspath(__file__))
-sys.path.append(os.path.abspath(os.path.join(thisPath,"../../")))
-sys.path.append(os.path.abspath(os.path.join(thisPath,"../../../../../GeniaChallenge/formatConversion")))
-import ProteinNameSplitter
 import Range
 
 def log(clear=False, logCmd=True, logFile="log.txt"):
@@ -122,7 +123,10 @@ def convertToInteractions(xml):
                 counts["neg"] += 1
     print "Pair counts:", counts
 
-def loadDocs(inDir):
+def loadDocs(url, outDir, tempDir):
+    inDir = Utils.Download.downloadAndExtract(url, tempDir, outDir + "/DDI11-original")[0]
+    inDir = os.path.join(tempDir, inDir)
+            
     print "Loading documents from", inDir
     sentences = {"positive":[], "negative":[]}
     docCounts = {}
@@ -158,11 +162,28 @@ def loadDocs(inDir):
     print "Negative sentences:", len(sentences["negative"])
     return documents, docById, docCounts
 
-def convertDDI(inDir, outDir):
-    bigfileName = os.path.join(outDir, "DrugDDI")
+def convertDDI(outDir, trainUnified=None, trainMTMX=None, testUnified=None, testMTMX=None, downloadDir=None, redownload=False, makeIntermediateFiles=True, debug=False):
+    cwd = os.getcwd()
+    os.chdir(outDir)
+    logFileName = os.path.join(outDir, "DDI-conversion-log.txt")
+    Stream.openLog(logFileName)
+    print >> sys.stderr, "=======================", "Converting DDI'11 corpus", "======================="
+    
+    bigfileName = os.path.join(outDir, "DDI")
     #oldXML = ETUtils.ETFromObj(bigfileName+".xml")
+    if trainUnified == None:
+        trainUnified = Settings.URL["DDI_TRAIN_UNIFIED"]
+    if trainMTMX == None:
+        trainMTMX = Settings.URL["DDI_TRAIN_MTMX"]
+    if testUnified == None:
+        testUnified = Settings.URL["DDI_TEST_UNIFIED"]
+    if testMTMX == None:
+        testMTMX = Settings.URL["DDI_TEST_MTMX"]
+    
+    tempdir = tempfile.mkdtemp()
+    print >> sys.stderr, "Temporary files directory at", tempdir
     if True:
-        documents, docById, docCounts = loadDocs(inDir["ddi-train"])
+        documents, docById, docCounts = loadDocs(trainUnified, outDir, tempdir)
         
         sortedDocCounts = sorted(docCounts.iteritems(), key=lambda (k,v): (v,k), reverse=True)
         datasetCounts = {"train":[0,0], "devel":[0,0], "test":[0,0]}
@@ -188,31 +209,28 @@ def convertDDI(inDir, outDir):
             else:
                 print key, datasetCounts[key][0], "/", float(datasetCounts[key][1])
         
-        testDocuments, testDocById, testDocCounts = loadDocs(inDir["ddi-test"])
-        for document in testDocuments:
-            document.set("set", "test")
-        documents = documents + testDocuments
+        if testUnified != None:
+            testDocuments, testDocById, testDocCounts = loadDocs(testUnified, tempdir)
+            for document in testDocuments:
+                document.set("set", "test")
+            documents = documents + testDocuments
         
-    if True:
-        xmlTree = ET.ElementTree(ET.Element("corpus"))
-        root = xmlTree.getroot()
-        root.set("source", "DrugDDI")
-        for document in documents:
-            root.append(document)
-        #root.append(ET.Element("dummy"))
-        #print type(documents[-1]), documents[-1].get("id"), documents[-1].get("origId") 
-        #print type(documents[-2])
-        #print ETUtils.toStr(documents[-2])
-        #print ETUtils.toStr(documents[-1])
-        #sys.exit()
+    xmlTree = ET.ElementTree(ET.Element("corpus"))
+    root = xmlTree.getroot()
+    root.set("source", "DrugDDI")
+    for document in documents:
+        root.append(document)
+    if makeIntermediateFiles:
         ETUtils.write(root, bigfileName + "-documents-notfixed.xml")
-        xml = xmlTree
-        print >> sys.stderr, "Fixing DDI XML"
-        fixEntities(xml)
-        convertToInteractions(xml)
+    xml = xmlTree
+    print >> sys.stderr, "Fixing DDI XML"
+    fixEntities(xml)
+    convertToInteractions(xml)
+    if makeIntermediateFiles:
         ETUtils.write(root, bigfileName + "-documents.xml")
-        #sys.exit()
+    #sys.exit()
         
+    if False:
         print >> sys.stderr, "Parsing"
         Tools.CharniakJohnsonParser.parse(xml, bigfileName+"-parsed.xml", tokenizationName=None, parseName="McClosky", requireEntities=True, timeout=10)
         print >> sys.stderr, "Stanford Conversion"
@@ -234,6 +252,11 @@ def convertDDI(inDir, outDir):
     #    deletionRules = {"interaction":{},"entity":{"isName":"False"}}
     #    InteractionXML.DeleteElements.processCorpus(corpusName + "-devel.xml", corpusName + "-devel-empty.xml", deletionRules)
     #return xml
+    Stream.closeLog(logFileName)
+    if not debug:
+        print >> sys.stderr, "Removing temporary directory", tempdir
+        shutil.rmtree(tempdir)
+    os.chdir(cwd)
 
 if __name__=="__main__":
     # Import Psyco if available
@@ -248,10 +271,16 @@ if __name__=="__main__":
     inDir["ddi-train"] = "/home/jari/data/DDIExtraction2011/DrugDDI_Unified"
     inDir["ddi-test"] = "/home/jari/data/DDIExtraction2011/Test_Unified"
     outDir = "/usr/share/biotext/DDIExtraction2011/data/"
+
+    from optparse import OptionParser
+    from Utils.Parameters import *
+    optparser = OptionParser(usage="%prog [options]\nDDI'11 Shared Task corpus conversion")
+    #optparser.add_option("-c", "--corpora", default="GE", dest="corpora", help="corpus names in a comma-separated list, e.g. \"GE,EPI,ID\"")
+    optparser.add_option("-o", "--outdir", default=os.path.normpath(Settings.DATAPATH + "/corpora"), dest="outdir", help="directory for output files")
+    optparser.add_option("-d", "--downloaddir", default=None, dest="downloaddir", help="directory to download corpus files to")
+    optparser.add_option("--intermediateFiles", default=False, action="store_true", dest="intermediateFiles", help="save intermediate corpus files")
+    optparser.add_option("--forceDownload", default=False, action="store_true", dest="forceDownload", help="re-download all source files")
+    optparser.add_option("--debug", default=False, action="store_true", dest="debug", help="Keep temporary files")
+    (options, args) = optparser.parse_args()
     
-    cwd = os.getcwd()
-    os.chdir(outDir)
-    log(False, False, "DDI-conversion-log.txt")
-    print >> sys.stderr, "Converting DDI"
-    convertDDI(inDir, outDir)
-    os.chdir(cwd)
+    convertDDI(options.outdir, None, None, None, None, options.downloaddir, options.forceDownload, options.intermediateFiles, options.debug)

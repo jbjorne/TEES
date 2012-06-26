@@ -132,7 +132,7 @@ def convertDownloaded(outdir, corpus, files, intermediateFiles=True, evaluate=Tr
         print >> sys.stderr, "Note! Evaluation of Task 2 back-conversion can be less than 100% due to site-argument mapping"
 
 def addAnalyses(xml, corpus, datasets, files, bigfileName):
-    if corpus + "_TEES_PARSES" in files:
+    if corpus + "_TEES_PARSES" in files: # corpus for which no official parse exists
         print >> sys.stderr, "---------------", "Inserting TEES-generated analyses", "---------------"
         tempdir = tempfile.mkdtemp()
         Utils.Download.extractPackage(files[corpus + "_TEES_PARSES"] + "/" + corpus + ".tar.gz", tempdir)
@@ -144,7 +144,23 @@ def addAnalyses(xml, corpus, datasets, files, bigfileName):
         print >> sys.stderr, "Inserting Stanford conversions"
         Tools.StanfordParser.insertParses(xml, extractedFilename, None, extraAttributes={"stanfordSource":"TEES-preparsed"})
         shutil.rmtree(tempdir)
-    else:
+    elif corpus == "GE09": # the BioNLP'09 corpus
+        for i in range(len(datasets)):
+            print >> sys.stderr, "---------------", "Inserting analyses " + str(i+1) + "/" + str(len(datasets)), "---------------"
+            setName = datasets[i]
+            print >> sys.stderr, "Inserting", setName, "analyses"
+            tempdir = tempfile.mkdtemp()
+            analysesSetName = corpus + "_" + setName.upper() + "_ANALYSES"
+            Utils.Download.extractPackage(files[analysesSetName], tempdir)
+            print >> sys.stderr, "Making sentences"
+            Tools.SentenceSplitter.makeSentences(xml, tempdir + "/" + os.path.basename(files[analysesSetName])[:-len(".tar.gz")] + "/tokenized", None)
+            print >> sys.stderr, "Inserting McCC parses"
+            Tools.CharniakJohnsonParser.insertParses(xml, tempdir + "/" + os.path.basename(files[analysesSetName])[:-len(".tar.gz")] + "/McClosky-Charniak/pstree", None, extraAttributes={"source":"BioNLP'09"})
+            print >> sys.stderr, "Inserting Stanford conversions"
+            Tools.StanfordParser.insertParses(xml, tempdir + "/" + os.path.basename(files[analysesSetName])[:-len(".tar.gz")] + "/McClosky-Charniak/dep", None, extraAttributes={"stanfordSource":"BioNLP'09"})
+            print >> sys.stderr, "Removing temporary directory", tempdir
+            shutil.rmtree(tempdir)
+    else: # use official BioNLP'11 parses
         for i in range(len(datasets)):
             print >> sys.stderr, "---------------", "Inserting analyses " + str(i+1) + "/" + str(len(datasets)), "---------------"
             setName = datasets[i]
