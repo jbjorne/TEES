@@ -85,11 +85,14 @@ def pathMenuInitializer(menu, prevMenu):
     #menu.text += "TEES_SETTINGS = " + menu.configFilePath + "\n\n"
     menu.system.setAttr("defaultInstallDir", menu.defaultInstallDir)
     menu.system.setAttr("configFilePath", menu.configFilePath)
+    menu.optDict["c"].handlerArgs = [menu.configFilePath]
     
 def initLocalSettings(filename):
     if os.path.exists(filename):
+        print >> sys.stderr, "Using existing local settings file", filename
         return
-    f = os.path.open(filename, "wt")
+    print >> sys.stderr, "Initializing local settings file", filename
+    f = open(filename, "wt")
     f.write("""
     # Edit these settings to configure TEES. A variable must have a value 
     # other than None for it to be usable. This file is interpreted as
@@ -111,6 +114,9 @@ def initLocalSettings(filename):
     TEES_MODEL_DIR = None # Directory for the official TEES models
     """.replace("    ", ""))
     f.close()
+    # Reset local settings
+    os.environ["TEES_SETTINGS"] = filename
+    reload(Settings)
 
 def checkInstallPath(menu, menuVariable, setting, installSubDir, defaultInstallKey="i", defaultSkipKey="s"):
     if getattr(menu, menuVariable) == None:
@@ -148,7 +154,7 @@ def svmMenuInitializer(menu, prevMenu):
     source if the precompiled Linux-binary does not work on your system.
     """
     checkInstallPath(menu, "svmInstallDir", "SVM_MULTICLASS_DIR", "SVMMultiClass")
-    menu.optDict["i"].handlerArgs = [menu.svmInstallDir, os.path.join(menu.system.defaultInstallDir, "tools/download"), True, menu.optDict["1"].toggle]
+    menu.optDict["i"].handlerArgs = [menu.svmInstallDir, os.path.join(menu.system.defaultInstallDir, "tools/download"), True, menu.optDict["1"].toggle, True]
 
 def toolsMenuInitializer(menu, prevMenu):
     handlers = []
@@ -213,7 +219,7 @@ def buildMenus():
     Menu("Install Directory", None, [
         Option("1", "Change DATAPATH", dataInput="defaultInstallDir"),
         Option("2", "Change TEES_SETTINGS", dataInput="configFilePath"),
-        Option("c", "Continue", "Classifier", isDefault=True)],
+        Option("c", "Continue", "Classifier", isDefault=True, handler=initLocalSettings)],
         pathMenuInitializer)
 
     Menu("Configure TEES", 
@@ -282,13 +288,14 @@ def buildMenus():
 
     return "Configure TEES"
 
-def configure(installDir=None, localSettings=None, auto=False, width=80, clear=False):
+def configure(installDir=None, localSettings=None, auto=False, width=80, clear=False, onError="ASK"):
     Menu.system.width = width
     Menu.system.progArgs = {}
     Menu.system.progArgs["installDir"] = installDir
     Menu.system.progArgs["localSettings"] = localSettings
     Menu.system.progArgs["clearInstallDir"] = clear
     Menu.system.run(buildMenus())
+    Menu.system.onException = onError
 
 if __name__=="__main__":
     import sys
@@ -308,9 +315,10 @@ if __name__=="__main__":
     optparser.add_option("-w", "--width", default=80, type="int", dest="width", help="")
     optparser.add_option("--auto", default=False, action="store_true", dest="auto", help="")
     optparser.add_option("--clearInstallDir", default=False, action="store_true", dest="clearInstallDir", help="")
+    optparser.add_option("--onError", default="ASK", dest="onError", help="ASK, IGNORE or EXIT")
     (options, args) = optparser.parse_args()
     
-    configure(options.installDir, options.localSettings, options.auto, options.width, options.clearInstallDir)
+    configure(options.installDir, options.localSettings, options.auto, options.width, options.clearInstallDir, options.onError)
 #    Menu.system.width = options.width
 #    Menu.system.progArgs = {}
 #    Menu.system.progArgs["installDir"] = options.installDir
