@@ -1,11 +1,13 @@
 import sys
 import types
 import textwrap
+import traceback
 
 class MenuSystem():
     def __init__(self):
         self.menus = {}
         self.width = 80
+        self.onException = "ASK"
     
     def run(self, mainMenu):
         nextMenu = mainMenu
@@ -30,9 +32,10 @@ class Menu():
         if name == "SPACE":
             return Option(None, None)
     
-    def __init__(self, title, text, options, initializer=None):
-        assert title not in Menu.system.menus
-        Menu.system.menus[title] = self
+    def __init__(self, title, text, options, initializer=None, addToSystem=True):
+        if addToSystem:
+            assert title not in Menu.system.menus
+            Menu.system.menus[title] = self
         
         self.title = title
         self.text = text
@@ -151,7 +154,7 @@ class Menu():
                 paragraphsToKeep.append(paragraph)
         return "\n\n".join(paragraphsToKeep)
                 
-    def show(self, prevMenu):
+    def show(self, prevMenu=None):
         #if prevMenu != None:
         #    print >> sys.stderr, "Menu", self.title, "prev", prevMenu.title
         if self.initializer != None:
@@ -168,7 +171,7 @@ class Option:
     SPACE = "SPACE"
     QUIT = "QUIT"
     
-    def __init__(self, key, text, nextMenu=None, handler=None, isDefault=False, toggle=None, dataInput=None):
+    def __init__(self, key, text, nextMenu=None, handler=None, isDefault=False, toggle=None, dataInput=None, handlerArgs=[]):
         self.key = key
         self.text = text
         self.toggle = toggle
@@ -176,7 +179,7 @@ class Option:
         self.isDefault = isDefault
         self.menu = None
         self.handler = handler
-        self.handlerArgs = []
+        self.handlerArgs = handlerArgs
         self.nextMenu = nextMenu
     
     def show(self, alignText=True):
@@ -206,11 +209,33 @@ class Option:
         elif type(self.handler) == types.ListType:
             for i in range(len(self.handler)):
                 if len(self.handlerArgs) > i:
-                    self.handler[i](*self.handlerArgs[i])
+                    self._runHandler(self.handler[i], self.handlerArgs[i]) #self.handler[i](*self.handlerArgs[i])
                 else:
-                    self.handler[i]()
+                    self._runHandler(self.handler[i]) #self.handler[i]()
         else:
-            self.handler(*self.handlerArgs)
+            self._runHandler(self.handler, self.handlerArgs) #self.handler(*self.handlerArgs)
+    
+    def _runHandler(self, handler, handlerArgs=[]):
+        try:
+            handler(*handlerArgs)
+        except Exception, e:
+            print >> sys.stderr, "***", "Exception processing menu '" + self.menu.title + "' option '" + self.key + " (" + self.text + ")", "***"
+            print >> sys.stderr, "Exception:", e
+            traceback.print_exc(file=sys.stderr)
+            assert self.menu.system.onException in ["EXIT", "IGNORE", "ASK"]
+            if self.menu.system.onException == "EXIT":
+                print >> sys.stderr, "Exiting"
+                sys.exit(1)
+            elif self.menu.system.onException == "IGNORE":
+                print >> sys.stderr, "Ignoring error and continuing"
+            else: # ASK
+                Option.exceptionMenu.show()
+                print >> sys.stderr, "Ignoring error and continuing"
+
+Option.exceptionMenu = Menu("Error", "There was an error processing the menu option. Please choose whether to quit or continue", 
+    [Option("i", "Ignore and continue"), 
+     Option("q", "Quit", isDefault=True, handler=sys.exit, handlerArgs=[1])], 
+    addToSystem=False)
     
 #    def do(self):
 #        assert self.action != None
