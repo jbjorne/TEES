@@ -47,7 +47,7 @@ escDict={"-LRB-":"(",
 #    cscConnection.run("cat " + textFileName + "-part* > cj-output.txt", True)
 
 def install(destDir=None, downloadDir=None, redownload=False):
-    url = "https://github.com/dmcc/bllip-parser/zipball/master"
+    url = Settings.URL["BLLIP_SOURCE"]
     if downloadDir == None:
         downloadDir = os.path.join(Settings.DATAPATH)
     if destDir == None:
@@ -378,8 +378,10 @@ def insertParses(input, parsePath, output=None, parseName="McCC", tokenizationNa
             docId = "CORPUS.d" + str(docCount)
         
         f = openFile(os.path.join(parsePath, document.get("pmid") + ".ptb"), tarFile)
-        if f == None:
-            continue
+        if f == None: # file with BioNLP'11 extension not found, try BioNLP'09 extension
+            f = openFile(os.path.join(parsePath, document.get("pmid") + ".pstree"), tarFile)
+            if f == None: # no parse found
+                continue
         parseStrings = f.readlines()
         f.close()
         sentences = document.findall("sentence")

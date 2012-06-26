@@ -36,7 +36,7 @@ escDict={"-LRB-":"(",
          "''":"\""}
 
 def install(destDir=None, downloadDir=None, redownload=False):
-    url = "http://nlp.stanford.edu/software/stanford-parser-2012-03-09.tgz"
+    url = URL["STANFORD_PARSER"]
     packageName = url.split("/")[-1].split(".")[0]
     # Download
     if downloadDir == None:
@@ -360,6 +360,8 @@ def insertParses(input, parsePath, output=None, parseName="McCC", extraAttribute
             docId = "CORPUS.d" + str(docCount)
         
         f = openFile(os.path.join(parsePath, document.get("pmid") + ".sd"), tarFile)
+        if f == None: # file with BioNLP'11 extension not found, try BioNLP'09 extension
+            f = openFile(os.path.join(parsePath, document.get("pmid") + ".dep"), tarFile)
         if f != None:
             sentences = document.findall("sentence")
             # TODO: Following for-loop is the same as when used with a real parser, and should

@@ -68,9 +68,13 @@ def makeSentences(input, tokenizationPath, output=None, removeText=False):
             if text == None or text.strip() == "":
                 continue
             
-            f = openFile(os.path.join(tokenizationPath, document.get("pmid") + ".tok"), tarFile)
-            if f == None:
-                continue
+            newFile = os.path.join(tokenizationPath, document.get("pmid") + ".tok")
+            f = openFile(newFile, tarFile)
+            if f == None: # file with BioNLP'11 extension not found, try BioNLP'09 extension
+                oldFile = os.path.join(tokenizationPath, document.get("pmid") + ".tokenized")
+                f = openFile(newFile, oldFile)
+                if f == None: # no tokenization found
+                    continue
             sentencesCreated += alignSentences(document, f.readlines())
             f.close()
     
