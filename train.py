@@ -35,15 +35,15 @@ if __name__=="__main__":
         
     from optparse import OptionParser
     optparser = OptionParser()
-    # files
+    # input
     optparser.add_option("--trainFile", default=None, dest="trainFile", help="")
     optparser.add_option("--develFile", default=None, dest="develFile", help="")
     optparser.add_option("--testFile", default=None, dest="testFile", help="")
-    # models
+    # output
+    optparser.add_option("-o", "--output", default=None, dest="output", help="output directory")
     optparser.add_option("--develModel", default="model-devel", dest="develModel", help="")
     optparser.add_option("--testModel", default="model-test", dest="testModel", help="")
     # extras
-    optparser.add_option("-o", "--output", default=None, dest="output", help="output directory")
     optparser.add_option("-a", "--task", default=None, dest="task", help="task number")
     optparser.add_option("-p", "--parse", default="split-McClosky", dest="parse", help="Parse XML element name")
     # Classifier
@@ -51,12 +51,12 @@ if __name__=="__main__":
     # Example builders
     optparser.add_option("--detector", default="Detectors.EventDetector", dest="detector", help="")
     optparser.add_option("--singleStage", default=False, action="store_true", dest="singleStage", help="Use a single stage detector")
-    # Feature params
+    # Example builder parameters
     optparser.add_option("--exampleStyle", default=None, dest="exampleStyle", help="Single-stage detector example style")
     optparser.add_option("--triggerStyle", default=None, dest="triggerStyle", help="Event detector trigger example style")
     optparser.add_option("--edgeStyle", default=None, dest="edgeStyle", help="Event detector edge example style")
     optparser.add_option("--modifierStyle", default=None, dest="modifierStyle", help="Event detector modifier example style")
-    # Parameters to optimize
+    # Classifier parameters
     optparser.add_option("--exampleParams", default=None, dest="exampleParams", help="Single-stage detector parameters")
     optparser.add_option("-x", "--triggerParams", default="1000,5000,10000,20000,50000,80000,100000,150000,180000,200000,250000,300000,350000,500000,1000000", dest="triggerParams", help="Trigger detector c-parameter values")
     optparser.add_option("-y", "--recallAdjustParams", default="0.5,0.6,0.65,0.7,0.85,1.0,1.1,1.2", dest="recallAdjustParams", help="Recall adjuster parameter values")
@@ -138,16 +138,18 @@ if __name__=="__main__":
             options.recallAdjustParams = "0.8,0.9,0.95,1.0"
     
     # These commands will be in the beginning of most pipelines
-    if options.copyFrom != None and (options.clearAll or not os.path.exists(options.output)):
-        if options.clearAll and os.path.exists(options.output):
-            shutil.rmtree(options.output)
+    WORKDIR=options.output
+    if options.copyFrom != None:
+        if os.path.exists(WORKDIR):
+            shutil.rmtree(WORKDIR)
         print >> sys.stderr, "Copying template from", options.copyFrom
-        shutil.copytree(options.copyFrom, options.output)
-    # Start logging
-    workdir(options.output, options.clearAll) # Select a working directory, optionally remove existing files
+        shutil.copytree(options.copyFrom, WORKDIR)
+        workdir(WORKDIR, False)
+    else:
+        workdir(WORKDIR, options.clearAll) # Select a working directory, optionally remove existing files
     if not options.noLog:
         Stream.openLog("log.txt")
-    print >> sys.stderr, "Task:", options.task + "." + str(subTask)
+        #log() # Start logging into a file in working directory
     
     print >> sys.stderr, "Importing detector", options.detector
     Detector = eval("from " + options.detector + " import " + options.detector.split(".")[-1])
@@ -188,5 +190,5 @@ if __name__=="__main__":
         print >> sys.stderr, "------------- Test set classification --------------"
         print >> sys.stderr, "----------------------------------------------------"
         detector.stWriteScores = False # the evaluation server doesn't like additional files
-        detector.classify(testFile, options.testModel, "classification/test", fromStep=detectorStep["TEST"], saveChangedModelPath="model-test-classify-ids")
+        detector.classify(testFile, options.testModel, "classification/test", fromStep=detectorStep["TEST"])
         STFormat.Compare.compare("classification/test-events.tar.gz", "classification/devel-events.tar.gz", "a2")
