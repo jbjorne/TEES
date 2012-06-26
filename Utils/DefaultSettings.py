@@ -92,7 +92,7 @@ URL["BI_DEVEL_McCC"] = urlBase + "McCC-parses-BioNLP-ST_2011_bacteria_interactio
 URL["BI_TRAIN_McCC"] = urlBase + "McCC-parses-BioNLP-ST_2011_bacteria_interactions_train_data_rev1.tar.gz"
 URL["BI_TEST_McCC"] = urlBase + "McCC-parses-BioNLP-ST_2011_bacteria_interactions_test_data.tar.gz"
 # Parses not provided in the shared tasks
-URL["TEES_PARSES"] = "/home/jari/biotext/BioNLP2011/data/parseExport/TEES-parses-2.0.tar.gz"
+URL["TEES_PARSES"] = "/home/jari/biotext/TEES-parses-2.0/TEES-parses-2.0.tar.gz"
 
 
 # BioNLP'09 Shared Task
