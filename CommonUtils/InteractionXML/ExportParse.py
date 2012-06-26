@@ -28,7 +28,8 @@ def exportTokenization(tokenizationElement, parseElement, sentenceElement, outFi
             tokenTexts.append(getTokenText(token))
         outFile.write(" ".join(tokenTexts) + "\n")
     else:
-        outFile.write(" ".join(sentenceElement.get("text").strip().split()) + "\n")       
+        outFile.write(" ".join(sentenceElement.get("text").strip().split()) + "\n")
+    return True  
 
 def exportPennTreeBank(parseElement, outFile):
     pennstring = None
@@ -37,6 +38,10 @@ def exportPennTreeBank(parseElement, outFile):
     if pennstring != None and pennstring.strip() != "":
         outFile.write(pennstring.strip())
     outFile.write("\n")
+    if pennstring == None:
+        return False
+    else:
+        return True
 
 def exportStanfordDependencies(parseElement, tokenizationElement, outFile):
     global unEscDict
@@ -69,6 +74,10 @@ def exportStanfordDependencies(parseElement, tokenizationElement, outFile):
             t2 = tokenById[dependency.get("t2")]
             outFile.write(dependency.get("type") + "(" + t1[2]+"-"+t1[-1] + ", " + t2[2]+"-"+t2[-1] + ")\n")
     outFile.write("\n") # one more newline to end the sentence (or to mark a sentence with no dependencies)
+    if parseElement != None:
+        return True
+    else:
+        return False
 
 def export(input, output, parse, tokenization=None, toExport=["tok", "ptb", "sd"], inputSuffixes=None, clear=False):
     print >> sys.stderr, "##### Export Parse #####"
@@ -93,6 +102,10 @@ def export(input, output, parse, tokenization=None, toExport=["tok", "ptb", "sd"
         for document in documents:
             counter.update()
             docId = document.get("pmid")
+            if docId == None:
+                docId = document.get("origId")
+            if docId == None:
+                docId = document.get("id")
             counts["document"] += 1
             # Open document output files
             outfiles = {}
@@ -118,14 +131,14 @@ def export(input, output, parse, tokenization=None, toExport=["tok", "ptb", "sd"
                         counts["tokenization"] += 1
                         break
                 if "tok" in outfiles:
-                    exportTokenization(tokenizationElement, parseElement, sentence, outfiles["tok"])
-                    counts["tok"] += 1
+                    if exportTokenization(tokenizationElement, parseElement, sentence, outfiles["tok"]):
+                        counts["tok"] += 1
                 if "ptb" in outfiles:
-                    exportPennTreeBank(parseElement, outfiles["ptb"])
-                    counts["ptb"] += 1
+                    if exportPennTreeBank(parseElement, outfiles["ptb"]):
+                        counts["ptb"] += 1
                 if "sd" in outfiles:
-                    exportStanfordDependencies(parseElement, tokenizationElement, outfiles["sd"])
-                    counts["sd"] += 1
+                    if exportStanfordDependencies(parseElement, tokenizationElement, outfiles["sd"]):
+                        counts["sd"] += 1
             # Close document output files
             for fileExt in outfiles:
                 outfiles[fileExt].close()
