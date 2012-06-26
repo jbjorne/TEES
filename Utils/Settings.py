@@ -1,4 +1,5 @@
 # Import global defaults
+import sys
 from DefaultSettings import *
 
 # Import local configuration
@@ -10,12 +11,16 @@ if "TEES_SETTINGS" in os.environ:
     # import everything from local settings module
     exec "from TEESLocalSettings import *"
     
-def setLocal(variable, value):
+def setLocal(variable, value, setVariable=True):
     # the settings file must exist and must be in the path
+    if not setVariable:
+        print >> sys.stderr, "Remember to add local setting", str(variable) + "=\"" + str(value) + "\""
+        return
     assert "TEES_SETTINGS" in os.environ
+    print >> sys.stderr, "Adding local setting", str(variable) + "=" + str(value),
     # define the variable in the current module
     exec "global " + variable
-    exec "variable = " + str(value)
+    exec variable + " = '" + str(value) + "'"
     # read the local settings file
     f = open(os.environ["TEES_SETTINGS"], "rt")
     lines = f.readlines()
@@ -24,12 +29,16 @@ def setLocal(variable, value):
     # if the variable already exists, change its value
     found = False
     for i in range(len(lines)):
-        if lines[i].split("=")[0].strip() == variable:
-            lines[i] = variable + " = " + str(value) + "\n"
+        if lines[i].strip() != "" and lines[i].strip()[0] == "#": # skip comment lines
+            continue
+        if lines[i].split("=")[0].strip() == variable: # variable definition line
+            lines[i] = variable + " = '" + str(value) + "'\n"
+            print >> sys.stderr, "(updated existing value)"
             found = True
     # if the variable doesn't exist, add it to the end of the file
     if not found:
-        lines.append(variable + " = " + str(value) + "\n")
+        lines.append(variable + " = '" + str(value) + "'\n")
+        print >> sys.stderr, "(added variable)"
     
     # write the local settings file
     f = open(os.environ["TEES_SETTINGS"], "wt")
