@@ -77,6 +77,8 @@ class UnmergingExampleBuilder(ExampleBuilder):
     potential events.
     """
     def __init__(self, style="trigger_features:typed:directed:no_linear:entities:genia_limits:noMasking:maxFeatures", length=None, types=[], featureSet=None, classSet=None):
+        # reset style regardless of input
+        style="trigger_features:typed:directed:no_linear:entities:genia_limits:noMasking:maxFeatures"
         if featureSet == None:
             featureSet = IdSet()
         if classSet == None:
@@ -86,7 +88,7 @@ class UnmergingExampleBuilder(ExampleBuilder):
         assert( classSet.getId("neg") == 1 )
         
         ExampleBuilder.__init__(self, classSet=classSet, featureSet=featureSet)
-
+        
         self.styles = self.getParameters(style, ["trigger_features","typed","directed","no_linear","entities","genia_limits",
             "noAnnType", "noMasking", "maxFeatures", "no_merge", "disable_entity_features", 
             "disable_single_element_features", "disable_ngram_features", "disable_path_edge_features"])
@@ -429,76 +431,61 @@ class UnmergingExampleBuilder(ExampleBuilder):
         
         #self.setFeature("rootType_"+eventEntity.get("type"), 1)
         
-        #argThemeCount = 0
-        #argCauseCount = 0
+        argThemeCount = 0
+        argCauseCount = 0
         argCounts = {}
         # Current example's edge combination
         for arg in argCombination:
-            argType = arg.get("type")
-            if argType not in argCounts: 
-                argCounts[argType] = 0
-            argCounts[argType] += 1
-            tag = "arg" + argType
-            if eventEntityType == "Binding":
-                tag += str(interactionIndex[arg])
-            self.buildArgumentFeatures(sentenceGraph, paths, features, eventToken, arg, tag)
-##            if arg.get("type") == "Theme":
-##                #argThemeCount += 1
-##                tag = "argTheme"
-##                self.buildArgumentFeatures(sentenceGraph, paths, features, eventToken, arg, tag)
-#            #elif arg.get("type") == "Cause": # Cause
-#            #    #argCauseCount += 1
-#            #    self.buildArgumentFeatures(sentenceGraph, paths, features, eventToken, arg, "argCause")
-#            else:               
-#                self.buildArgumentFeatures(sentenceGraph, paths, features, eventToken, arg, "arg"+argType)         
+            if arg.get("type") == "Theme":
+                argThemeCount += 1
+                tag = "argTheme"
+                self.buildArgumentFeatures(sentenceGraph, paths, features, eventToken, arg, tag)
+                if eventEntityType == "Binding":
+                    tag += str(interactionIndex[arg])
+                    self.buildArgumentFeatures(sentenceGraph, paths, features, eventToken, arg, tag)
+            elif arg.get("type") == "Cause": # Cause
+                argCauseCount += 1
+                self.buildArgumentFeatures(sentenceGraph, paths, features, eventToken, arg, "argCause")
+            else:
+                argType = arg.get("type")
+                if argType not in argCounts: argCounts[argType] = 0
+                self.buildArgumentFeatures(sentenceGraph, paths, features, eventToken, arg, "arg"+argType)
+                argCounts[argType] += 1
         
         # Edge group context
         contextThemeCount = 0
         contextCauseCount = 0
-        contextCounts = {}
         for interaction in allInteractions:
             if interaction in argCombination: # Already part of current example's combination
                 continue
-            contextArgType = interaction.get("type")
-            if contextArgType not in contextCounts: 
-                contextCounts[contextArgType] = 0
-            contextCounts[contextArgType] += 1
-            tag = "conArg" + contextArgType
-            if eventEntityType == "Binding":
-                tag += str(interactionIndex[interaction])
-            self.buildArgumentFeatures(sentenceGraph, paths, features, eventToken, interaction, tag)
-#            if interaction.get("type") == "Theme":
-#                contextThemeCount += 1
-#                tag = "conTheme"
-#                self.buildArgumentFeatures(sentenceGraph, paths, features, eventToken, interaction, tag)
-#                if eventEntityType == "Binding":
-#                    tag += str(interactionIndex[interaction])
-#                    self.buildArgumentFeatures(sentenceGraph, paths, features, eventToken, interaction, tag)
-#            else: # Cause
-#                contextCauseCount += 1
-#                self.buildArgumentFeatures(sentenceGraph, paths, features, eventToken, interaction, "conCause")
+            if interaction.get("type") == "Theme":
+                contextThemeCount += 1
+                tag = "conTheme"
+                self.buildArgumentFeatures(sentenceGraph, paths, features, eventToken, interaction, tag)
+                if eventEntityType == "Binding":
+                    tag += str(interactionIndex[interaction])
+                    self.buildArgumentFeatures(sentenceGraph, paths, features, eventToken, interaction, tag)
+            else: # Cause
+                contextCauseCount += 1
+                self.buildArgumentFeatures(sentenceGraph, paths, features, eventToken, interaction, "conCause")
         
         self.setFeature("argCount", len(argCombination))
         self.setFeature("argCount_" + str(len(argCombination)), 1)
         self.setFeature("interactionCount", len(allInteractions))
         self.setFeature("interactionCount_" + str(len(allInteractions)), 1)
         
-        #self.setFeature("argThemeCount", argThemeCount)
-        #self.setFeature("argThemeCount_" + str(argThemeCount), 1)
-        #self.setFeature("argCauseCount", argCauseCount)
-        #self.setFeature("argCauseCount_" + str(argCauseCount), 1)
+        self.setFeature("argThemeCount", argThemeCount)
+        self.setFeature("argThemeCount_" + str(argThemeCount), 1)
+        self.setFeature("argCauseCount", argCauseCount)
+        self.setFeature("argCauseCount_" + str(argCauseCount), 1)
         for key in sorted(argCounts.keys()):
             self.setFeature("arg" + key + "Count", argCounts[key])
             self.setFeature("arg" + key + "Count_" + str(argCounts[key]), 1)
             
-        #self.setFeature("interactionThemeCount", contextThemeCount)
-        #self.setFeature("interactionThemeCount_" + str(contextThemeCount), 1)
-        #self.setFeature("interactionCauseCount", contextCauseCount)
-        #self.setFeature("interactionCauseCount_" + str(contextCauseCount), 1)
-        for key in sorted(contextCounts.keys()):
-            if key in ["Theme", "Cause"]:
-                self.setFeature("contextArg" + key + "Count", contextCounts[key])
-                self.setFeature("contextArg" + key + "Count_" + str(contextCounts[key]), 1)      
+        self.setFeature("interactionThemeCount", contextThemeCount)
+        self.setFeature("interactionThemeCount_" + str(contextThemeCount), 1)
+        self.setFeature("interactionCauseCount", contextCauseCount)
+        self.setFeature("interactionCauseCount_" + str(contextCauseCount), 1)        
         
         self.triggerFeatureBuilder.tag = ""
         self.triggerFeatureBuilder.setFeatureVector(None)
