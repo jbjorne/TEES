@@ -171,12 +171,12 @@ def corpusMenuInitializer(menu, prevMenu):
     models. The corpora installable here are from the two BioNLP Shared
     Tasks (BioNLP'09 and BioNLP'11) on Event Extraction (organized by 
     University of Tokyo), and the First Challenge Task: Drug-Drug Interaction 
-    Extraction (DDI'11, organized by Universidad Carlos III de Madrid, Spain).
+    Extraction (DDI'11, organized by Universidad Carlos III de Madrid).
     
     The corpora will be downloaded from their publishers' pages, then converted
-    to the Interaction XML format used by TEES. You can also download the official
-    Shared Task evaluation programs, which will be used by TEES when training or
-    testing on those corpora.
+    to the Interaction XML format used by TEES. It is also recommended to download 
+    the official Shared Task evaluator programs, which will be used by TEES when 
+    training or testing on those corpora.
     """
     # Set the installation path
     if menu.corpusDir == None:
@@ -191,7 +191,7 @@ def corpusMenuInitializer(menu, prevMenu):
     # Check which corpora need to be installed
     redownload = menu.optDict["1"].toggle
     corporaToInstall = []
-    for item, corpus in [("5", "GE"), ("6", "EPI"), ("7", "ID"), ("8", "BB"), ("9", "BI")]:
+    for item, corpus in [("4", "GE"), ("5", "EPI"), ("6", "ID"), ("7", "BB"), ("8", "BI")]:
         if menu.optDict[item].toggle or checkCorpusInstall(menu, corpus):
             menu.optDict[item].toggle = True
             corporaToInstall.append(corpus)
@@ -246,16 +246,18 @@ def buildMenus():
         Option("2", "Change CORPUS_DIR", dataInput="corpusDir"),
         Option("3", "Change BioNLP'11 evaluator directory", dataInput="evaluatorDir"),
         Option.SPACE,
-        Option("4", "Install BioNLP'11 evaluators", toggle=False),
-        Option("5", "Install BioNLP'11 GE (GENIA) corpus", toggle=False),
-        Option("6", "Install BioNLP'11 EPI (epigenetics and PTMs) corpus", toggle=False),
-        Option("7", "Install BioNLP'11 ID (infectious diseases) corpus", toggle=False),
-        Option("8", "Install BioNLP'11 BB (bacteria biotopes) corpus", toggle=False),
-        Option("9", "Install BioNLP'11 BI (bacteria/gene interactions) corpus", toggle=False),
-        Option("10", "Install BioNLP'11 REL (entity relations) corpus", toggle=False),
-        Option("11", "Install BioNLP'11 REN (gene renaming) corpus", toggle=False),
-        Option("12", "Install BioNLP'11 CO (coreference) corpus", toggle=False),
+        Option("4", "Install BioNLP'11 GE (GENIA) corpus", toggle=False),
+        Option("5", "Install BioNLP'11 EPI (epigenetics and PTMs) corpus", toggle=False),
+        Option("6", "Install BioNLP'11 ID (infectious diseases) corpus", toggle=False),
+        Option("7", "Install BioNLP'11 BB (bacteria biotopes) corpus", toggle=False),
+        Option("8", "Install BioNLP'11 BI (bacteria/gene interactions) corpus", toggle=False),
+        Option("9", "Install BioNLP'11 REL (entity relations) corpus", toggle=False),
+        Option("10", "Install BioNLP'11 REN (gene renaming) corpus", toggle=False),
+        Option("11", "Install BioNLP'11 CO (coreference) corpus", toggle=False),
+        Option("12", "Install BioNLP'09 GE (GENIA 2009) corpus", toggle=False),
         Option("13", "Install DDI'11 (drug-drug interactions) corpus", toggle=False),
+        Option.SPACE,
+        Option("14", "Install BioNLP'11 evaluators", toggle=False),
         Option.SPACE,
         Option("i", "Install", isDefault=True),
         Option("s", "Skip")],
