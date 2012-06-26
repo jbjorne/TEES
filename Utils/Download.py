@@ -68,12 +68,14 @@ def downloadProgress(count, blockSize, totalSize):
     percent = max(0, min(percent, 100)) # clamp
     pbar.update(percent)
 
-def download(url, destPath, addName=True, clear=False):
+def download(url, destPath=None, addName=True, clear=False):
     global pbar
     
     redirectedUrl = urllib.urlopen(url).geturl()
     if redirectedUrl != url:
         print >> sys.stderr, "Redirected to", redirectedUrl
+    if destPath == None:
+        destPath = "/tmp"
     destFileName = destPath
     if addName:
         destFileName = destPath + "/" + os.path.basename(redirectedUrl)
