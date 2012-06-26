@@ -1,0 +1,38 @@
+Turku Event Extraction System 2.0
+=================================
+
+Turku Event Extraction System (TEES) is an natural language processing program developed for the
+extraction of events and relations from biomedical text. It is written mostly in Python, and should
+run in a generic UNIX/LINUX environment.
+
+TEES has been evaluated in the following Shared Tasks and models for predicting their targets are 
+included in this release.
+
+ * BioNLP 2009 Shared Task (1st place)
+ * BioNLP 2011 Shared Task (1st place in 4/8 tasks, only system to participated in all tasks)
+ * DDI 2011 (Drug-drug interactions) Challenge (4th place, at 96% performance of best system)
+
+For more information and documentation, see the TEES wiki at https://github.com/jbjorne/TEES/wiki
+
+Quick Start
+===========
+
+To get started with TEES, download the latest stable release from XXX. After downloading, you can
+optionally use "setup.py" to install TEES as a module, but this is not required, and you can just
+use it from the unpacked directory.
+
+However, before using TEES you need to run "configure.py", to setup the external tools, datasets and
+corpora TEES uses to detect events. After successfully configuring TEES, you can try predicting some
+text with "classify.py". With the "-t" (task) switch, you can select one of the pre-computed models.
+For example, to run TEES prediction for the BioNLP 2011 GENIA development corpus, use:
+
+  python classify.py -t GE -i GE-devel.xml -o OUTDIR
+ 
+where "OUTDIR" is the output file directory. To try TEES on unannotated text, you can give "classify.py"
+a PubMed citation id, such as:
+
+  python classify.py -t GE -i 12345 -o OUTDIR
+  
+TEES will use the integrated preprocessing pipeline to split the text into sentences (with the GENIA
+Sentence Splitter), detect named entities (with BANNER) and parse the text (with BLLIP parser, the 
+McClosky biomodel and Stanford format conversion), after which events are detected from the document.
