@@ -241,7 +241,7 @@ class EventDetector(Detector):
             GOLD_TRAIN_FILE = self.trainData.replace("-nodup", "")
             if self.doUnmergingSelfTraining:
                 if xml == None: 
-                    xml = self.workDir+"unmerging-extra-edge-pred.xml"
+                    xml = self.workDir+"unmerging-extra-edge-pred.xml.gz"
                 self.unmergingDetector.buildExamples(self.model, [self.optData.replace("-nodup", ""), [self.trainData.replace("-nodup", ""), xml]], 
                                                      [self.workDir+"unmerging-opt-examples.gz", self.workDir+"unmerging-train-examples.gz"], 
                                                      [GOLD_TEST_FILE, [GOLD_TRAIN_FILE, GOLD_TRAIN_FILE]], 
@@ -267,7 +267,7 @@ class EventDetector(Detector):
                                                           self.model.getStr("unmerging-classifier-parameter"))
                 self.combinedModel.save()
 
-    def classify(self, data, model, output, parse=None, task=None, fromStep=None, toStep=None, saveChangedModelPath=None):
+    def classify(self, data, model, output, parse=None, task=None, fromStep=None, toStep=None):
         BINARY_RECALL_MODE = False # TODO: make a parameter
         xml = None
         self.initVariables(classifyData=data, model=model, xml=None, task=task, parse=parse)
@@ -312,8 +312,6 @@ class EventDetector(Detector):
                 if task == None:
                     task = self.getStr(self.edgeDetector.tag+"task", self.model)
                 self.stEvaluator.evaluate(output + "-events.tar.gz", task)
-            if saveChangedModelPath != None:
-                self.model.saveAs(saveChangedModelPath)
         self.exitState()
     
     def getWorkFile(self, fileObject, serializedPath=None):
