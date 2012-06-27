@@ -81,7 +81,7 @@ def train(output, task=None, detector=None,
             detector.classify(inputFiles["test"], models["test"], "classification-test/test-events", fromStep=detectorSteps["TEST"], workDir="classification-test")
             STFormat.Compare.compare("classification-test/test-events.tar.gz", "classification-devel/devel-events.tar.gz", "a2")
 
-def getSteps(step, omitSteps, mainSteps=["TRAIN", "DEVEL", "EMPTY", "TEST"]):
+def getSteps(step, omitSteps, mainSteps):
     # Determine substep to start from, for the main step from which processing starts
     step = Parameters.get(step, mainSteps)
     fromMainStep = None
@@ -238,46 +238,60 @@ if __name__=="__main__":
         print >> sys.stderr, "Psyco not installed"
         
     from optparse import OptionParser
+    from optparse import OptionGroup
     optparser = OptionParser()
+    # main options
+    group = OptionGroup(optparser, "Main Options", "")
+    group.add_option("-t", "--task", default=None, dest="task", help="task number")
+    group.add_option("-p", "--parse", default="split-McClosky", dest="parse", help="Parse XML element name")
+    group.add_option("-c", "--connection", default=None, dest="connection", help="")
+    optparser.add_option_group(group)
     # input
-    optparser.add_option("--trainFile", default=None, dest="trainFile", help="")
-    optparser.add_option("--develFile", default=None, dest="develFile", help="")
-    optparser.add_option("--testFile", default=None, dest="testFile", help="")
+    group = OptionGroup(optparser, "Input Files", "If these are undefined, a task (-t) specific corpus file will be used")
+    group.add_option("--trainFile", default=None, dest="trainFile", help="")
+    group.add_option("--develFile", default=None, dest="develFile", help="")
+    group.add_option("--testFile", default=None, dest="testFile", help="")
+    optparser.add_option_group(group)
     # output
-    optparser.add_option("-o", "--output", default=None, dest="output", help="output directory")
-    optparser.add_option("--develModel", default="model-devel", dest="develModel", help="")
-    optparser.add_option("--testModel", default="model-test", dest="testModel", help="")
-    # extras
-    optparser.add_option("-t", "--task", default=None, dest="task", help="task number")
-    optparser.add_option("-p", "--parse", default="split-McClosky", dest="parse", help="Parse XML element name")
-    optparser.add_option("-u", "--unmerging", default=False, action="store_true", dest="unmerging", help="SVM unmerging")
-    optparser.add_option("-m", "--modifiers", default=False, action="store_true", dest="modifiers", help="Train model for modifier detection")
-    # Classifier
-    optparser.add_option("-c", "--connection", default=None, dest="connection", help="")
+    group = OptionGroup(optparser, "Output Files", "Files created from training the detector")
+    group.add_option("-o", "--output", default=None, dest="output", help="Output directory for intermediate files")
+    group.add_option("--develModel", default="model-devel", dest="develModel", help="Model trained on 'trainFile', with parameters optimized on 'develFile'")
+    group.add_option("--testModel", default="model-test", dest="testModel", help="Model trained on 'trainFile'+'develFile', with parameters from 'develModel'")
+    optparser.add_option_group(group)
     # Example builders
-    optparser.add_option("--detector", default="Detectors.EventDetector", dest="detector", help="")
-    optparser.add_option("--singleStage", default=False, action="store_true", dest="singleStage", help="Use a single stage detector")
+    group = OptionGroup(optparser, "Detector to train", "")
+    group.add_option("--detector", default="Detectors.EventDetector", dest="detector", help="the detector class to use")
+    group.add_option("--singleStage", default=False, action="store_true", dest="singleStage", help="'detector' is a single stage detector")
+    optparser.add_option_group(group)
     # Example builder parameters
-    optparser.add_option("--exampleStyle", default=None, dest="exampleStyle", help="Single-stage detector example style")
-    optparser.add_option("--triggerStyle", default=None, dest="triggerStyle", help="Event detector trigger example style")
-    optparser.add_option("--edgeStyle", default=None, dest="edgeStyle", help="Event detector edge example style")
-    optparser.add_option("--unmergingStyle", default=None, dest="unmergingStyle", help="Event detector unmerging example style")
-    optparser.add_option("--modifierStyle", default=None, dest="modifierStyle", help="Event detector modifier example style")
+    event = OptionGroup(optparser, "Event Detector Options (used when not using '--singleStage')", "")
+    single = OptionGroup(optparser, "Single Stage Detector Options (used when using '--singleStage')", "")
+    single.add_option("--exampleStyle", default=None, dest="exampleStyle", help="Single-stage detector example style")
+    event.add_option("-u", "--unmerging", default=False, action="store_true", dest="unmerging", help="SVM unmerging")
+    event.add_option("-m", "--modifiers", default=False, action="store_true", dest="modifiers", help="Train model for modifier detection")
+    event.add_option("--triggerStyle", default=None, dest="triggerStyle", help="Event detector trigger example style")
+    event.add_option("--edgeStyle", default=None, dest="edgeStyle", help="Event detector edge example style")
+    event.add_option("--unmergingStyle", default=None, dest="unmergingStyle", help="Event detector unmerging example style")
+    event.add_option("--modifierStyle", default=None, dest="modifierStyle", help="Event detector modifier example style")
     # Classifier parameters
-    optparser.add_option("-e", "--exampleParams", default=None, dest="exampleParams", help="Single-stage detector parameters")
-    optparser.add_option("-r", "--triggerParams", default="1000,5000,10000,20000,50000,80000,100000,150000,180000,200000,250000,300000,350000,500000,1000000", dest="triggerParams", help="Trigger detector c-parameter values")
-    optparser.add_option("-a", "--recallAdjustParams", default="0.5,0.6,0.65,0.7,0.85,1.0,1.1,1.2", dest="recallAdjustParams", help="Recall adjuster parameter values")
-    optparser.add_option("-d", "--edgeParams", default="5000,7500,10000,20000,25000,27500,28000,29000,30000,35000,40000,50000,60000,65000", dest="edgeParams", help="Edge detector c-parameter values")
-    optparser.add_option("-n", "--unmergingParams", default="1,10,100,500,1000,1500,2500,5000,10000,20000,50000,80000,100000", dest="unmergingParams", help="Unmerging c-parameter values")
-    optparser.add_option("-f", "--modifierParams", default="5000,10000,20000,50000,100000", dest="modifierParams", help="Modifier c-parameter values")
-    optparser.add_option("--fullGrid", default=False, action="store_true", dest="fullGrid", help="Full grid search for parameters")
+    single.add_option("-e", "--exampleParams", default=None, dest="exampleParams", help="Single-stage detector parameters")
+    event.add_option("-r", "--triggerParams", default="1000,5000,10000,20000,50000,80000,100000,150000,180000,200000,250000,300000,350000,500000,1000000", dest="triggerParams", help="Trigger detector c-parameter values")
+    event.add_option("-a", "--recallAdjustParams", default="0.5,0.6,0.65,0.7,0.85,1.0,1.1,1.2", dest="recallAdjustParams", help="Recall adjuster parameter values")
+    event.add_option("-d", "--edgeParams", default="5000,7500,10000,20000,25000,27500,28000,29000,30000,35000,40000,50000,60000,65000", dest="edgeParams", help="Edge detector c-parameter values")
+    event.add_option("-n", "--unmergingParams", default="1,10,100,500,1000,1500,2500,5000,10000,20000,50000,80000,100000", dest="unmergingParams", help="Unmerging c-parameter values")
+    event.add_option("-f", "--modifierParams", default="5000,10000,20000,50000,100000", dest="modifierParams", help="Modifier c-parameter values")
+    event.add_option("--fullGrid", default=False, action="store_true", dest="fullGrid", help="Full grid search for parameters")
+    optparser.add_option_group(single)
+    optparser.add_option_group(event)
     # Debugging and process control
-    optparser.add_option("--step", default=None, dest="step", help="")
-    optparser.add_option("--omitSteps", default=None, dest="omitSteps", help="")
-    optparser.add_option("--copyFrom", default=None, dest="copyFrom", help="Copy this directory as template")
-    optparser.add_option("--noLog", default=False, action="store_true", dest="noLog", help="")
-    optparser.add_option("--clearAll", default=False, action="store_true", dest="clearAll", help="Delete all files")
-    optparser.add_option("--debug", default=False, action="store_true", dest="debug", help="More verbose output")
+    debug = OptionGroup(optparser, "Debug and Process Control Options", "")
+    debug.add_option("--step", default=None, dest="step", help="Step to start processing from, with optional substep (STEP=SUBSTEP). Step values are TRAIN, DEVEL, EMPTY and TEST.")
+    debug.add_option("--omitSteps", default=None, dest="omitSteps", help="")
+    debug.add_option("--copyFrom", default=None, dest="copyFrom", help="Copy this directory as template")
+    debug.add_option("--noLog", default=False, action="store_true", dest="noLog", help="Do not keep a log file")
+    debug.add_option("--clearAll", default=False, action="store_true", dest="clearAll", help="Delete all files")
+    debug.add_option("--debug", default=False, action="store_true", dest="debug", help="More verbose output")
+    optparser.add_option_group(debug)
     (options, args) = optparser.parse_args()
     
     assert options.output != None
