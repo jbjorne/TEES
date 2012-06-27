@@ -378,7 +378,7 @@ def loadRelOrA2(filename, proteins, sitesAreArguments=False, readScores=False):
                     #event.arguments[i] = (arg[0], triggerMap[arg[1]], None)
                     event.arguments[i][1] = triggerMap[arg[1]]
             elif arg[1][0] == "E":
-                assert arg[2] == None # no sites on events
+                assert arg[2] == None, (filename, event.id, arg, event.arguments) # no sites on events
                 #event.arguments[i] = (arg[0], eventMap[arg[1]], None)
                 event.arguments[i][1] = eventMap[arg[1]]
     # Build links
