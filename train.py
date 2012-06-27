@@ -62,14 +62,14 @@ def train(output, task=None, detector=None,
         print >> sys.stderr, "----------------------------------------------------"
         print >> sys.stderr, "------------ Check devel classification ------------"
         print >> sys.stderr, "----------------------------------------------------"
-        detector.classify(inputFiles["devel"], models["devel"], "classification/devel", fromStep=detectorSteps["DEVEL"])
+        detector.classify(inputFiles["devel"], models["devel"], "classification-devel/devel-events", fromStep=detectorSteps["DEVEL"], workDir="classification-devel")
     if selector.check("EMPTY"):
         # By passing an emptied devel set through the prediction system, we can check that we get the same predictions
         # as in the DEVEL step, ensuring the model does not use leaked information.
         print >> sys.stderr, "----------------------------------------------------"
         print >> sys.stderr, "------------ Empty devel classification ------------"
         print >> sys.stderr, "----------------------------------------------------"
-        detector.classify(getEmptyCorpus(inputFiles["devel"]), models["devel"], "classification/devel-empty", fromStep=detectorSteps["EMPTY"])
+        detector.classify(getEmptyCorpus(inputFiles["devel"]), models["devel"], "classification-empty/devel-empty-events", fromStep=detectorSteps["EMPTY"], workDir="classification-empty")
     if selector.check("TEST"):
         print >> sys.stderr, "----------------------------------------------------"
         print >> sys.stderr, "------------- Test set classification --------------"
@@ -78,8 +78,8 @@ def train(output, task=None, detector=None,
             print >> sys.stderr, "Skipping, test file", inputFiles["test"], "does not exist"
         else:
             detector.stWriteScores = False # the evaluation server doesn't like additional files
-            detector.classify(inputFiles["test"], models["test"], "classification/test", fromStep=detectorSteps["TEST"])
-            STFormat.Compare.compare("classification/test-events.tar.gz", "classification/devel-events.tar.gz", "a2")
+            detector.classify(inputFiles["test"], models["test"], "classification-test/test-events", fromStep=detectorSteps["TEST"], workDir="classification-test")
+            STFormat.Compare.compare("classification-test/test-events.tar.gz", "classification-devel/devel-events.tar.gz", "a2")
 
 def getSteps(step, omitSteps, mainSteps=["TRAIN", "DEVEL", "EMPTY", "TEST"]):
     # Determine substep to start from, for the main step from which processing starts
@@ -118,7 +118,7 @@ def getDetector(detector, model=None):
     if detector == None:
         assert model != None
         model = Model(model, "r")
-        model.getStr("detector")
+        detector = model.getStr("detector")
         model.close()
     if type(detector) in types.StringTypes:
         print >> sys.stderr, "Importing detector", detector

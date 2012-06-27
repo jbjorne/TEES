@@ -1,6 +1,7 @@
 from train import workdir, getDetector, getSteps
 import sys, os
 import Utils.Settings as Settings
+import Utils.Stream as Stream
 from Utils.Connection.Unix import getConnection
 
 def getModel(model):
@@ -28,7 +29,7 @@ def getInput(input, model):
         pass
     elif not os.path.exists(input): # Use a predefined corpus
         for suffix in ["", ".xml", ".xml.gz"]:
-            predefined = os.path.join(Settings.CORPUS_DIR, model + suffix)
+            predefined = os.path.join(Settings.CORPUS_DIR, input + suffix)
             found = None
             if os.path.exists(predefined):
                 print >> sys.stderr, "Classifying default corpus file", predefined
@@ -43,21 +44,23 @@ def getInput(input, model):
         preprocess = True
     return input, preprocess
 
-def classify(input, model, output, workdir, step=None, omitSteps=None, detector=None, corpusName="TEES", 
+def classify(input, model, output, workDir=None, step=None, omitSteps=None, detector=None, corpusName="TEES", 
              debug=False, writeScores=True, clear=False):
     # Determine if a predefined model should be used
     model = getModel(model)
     input, preprocess = getInput(input, model)
     
     # Define processing steps
-    selector, detectorSteps, omitDetectorSteps = getSteps(step, omitSteps, ["TRAIN", "DEVEL", "EMPTY", "TEST"])
+    selector, detectorSteps, omitDetectorSteps = getSteps(step, omitSteps, ["PREPROCESS", "CLASSIFY"])
     if not preprocess:
         selector.omitStep("PREPROCESS")
     # Initialize working directory
-    workdir(output, clear)
+    if workDir != None: # use a permanent work directory
+        workdir(workDir, clear)
+    Stream.openLog(output + "-log.txt") # log in the output directory
     
+    classifyInput = input
     if selector.check("PREPROCESS"):
-        classifyInput = None
         preprocessor = Preprocessor()
         preprocessor.debug = debug
         preprocessor.source = input # This has to be defined already here, needs to be fixed later
@@ -82,7 +85,8 @@ def classify(input, model, output, workdir, step=None, omitSteps=None, detector=
         detector.debug = debug
         detector.stWriteScores = writeScores # write confidence scores into additional st-format files
         # classify
-        detector.classify(classifyInput, model, output, fromStep=detectorSteps["CLASSIFY"], omitSteps=omitDetectorSteps["CLASSIFY"])
+        detector.classify(classifyInput, model, output, fromStep=detectorSteps["CLASSIFY"], omitSteps=omitDetectorSteps["CLASSIFY"], workDir=workDir)
+
 
 if __name__=="__main__":
     # Import Psyco if available
@@ -96,8 +100,10 @@ if __name__=="__main__":
     from optparse import OptionParser
     optparser = OptionParser()
     optparser.add_option("-i", "--input", default=None, dest="input", help="input")
-    optparser.add_option("-o", "--output", default=None, dest="output", help="output directory")
+    optparser.add_option("-o", "--output", default=None, dest="output", help="output file stem")
+    optparser.add_option("-w", "--workdir", default=None, dest="workdir", help="output directory")
     optparser.add_option("-m", "--model", default=None, dest="model", help="TEES model")
+    optparser.add_option("-d", "--detector", default=None, dest="detector", help="")
     optparser.add_option("-c", "--connection", default=None, dest="connection", help="")
     optparser.add_option("-n", "--corpusName", default="TEES", dest="corpusName", help="")
     # Debugging and process control
