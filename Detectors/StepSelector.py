@@ -5,11 +5,19 @@ import time, datetime
 class StepSelector:
     def __init__(self, steps, fromStep=None, toStep=None, verbose=True, omitSteps=None):
         self.steps = steps
+        if type(omitSteps) in types.StringTypes:
+            omitSteps = [omitSteps]
         self.omitSteps = omitSteps
         self.currentStep = None
         self.currentStepStartTime = None
         self.setLimits(fromStep, toStep)
         self.verbose = verbose
+    
+    def omitStep(self, step):
+        if self.omitSteps == None:
+            self.omitSteps = []
+        if step not in self.omitSteps:
+            self.omitSteps.append(step)
     
     def setLimits(self, fromStep, toStep):
         self.fromStep = fromStep
