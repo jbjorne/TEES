@@ -66,6 +66,7 @@ def processSentence(sentence, rules, countsByType):
         removeElements(sentence, key, rules[key], countsByType)
 
 def processCorpus(inputFilename, outputFilename, rules):
+    print >> sys.stderr, "Deleting elements, rules =", rules
     print >> sys.stderr, "Loading corpus file", inputFilename
     corpusTree = ETUtils.ETFromObj(inputFilename)
     corpusRoot = corpusTree.getroot()
@@ -81,7 +82,7 @@ def processCorpus(inputFilename, outputFilename, rules):
         counter.update()
         for sentence in document.findall("sentence"):
             processSentence(sentence, rules, countsByType)
-    print >> sys.stderr, "Removed"
+    print >> sys.stderr, "Deleted elements"
     for k in sorted(countsByType.keys()):
         print >> sys.stderr, "  " + k + ":", countsByType[k]
     
