@@ -19,6 +19,8 @@ def toDict(parameters, valueListKey=None):
             if "=" in name:
                 name, values = name.split("=")
                 values = values.split(",")
+                if len(values) == 1:
+                    values = values[0]
             paramDict[name] = values
     return paramDict
 
