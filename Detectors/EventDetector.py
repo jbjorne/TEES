@@ -267,18 +267,22 @@ class EventDetector(Detector):
                                                           self.model.getStr("unmerging-classifier-parameter"))
                 self.combinedModel.save()
 
-    def classify(self, data, model, output, parse=None, task=None, fromStep=None, toStep=None):
+    def classify(self, data, model, output, parse=None, task=None, fromStep=None, toStep=None, omitSteps=None, workDir=None):
         BINARY_RECALL_MODE = False # TODO: make a parameter
         xml = None
         self.initVariables(classifyData=data, model=model, xml=None, task=task, parse=parse)
-        self.enterState(self.STATE_CLASSIFY, ["TRIGGERS", "EDGES", "UNMERGING", "MODIFIERS", "ST-CONVERT"], fromStep, toStep)
+        self.enterState(self.STATE_CLASSIFY, ["TRIGGERS", "EDGES", "UNMERGING", "MODIFIERS", "ST-CONVERT"], fromStep, toStep, omitSteps)
         #self.enterState(self.STATE_CLASSIFY, ["TRIGGERS", "RECALL-ADJUST", "EDGES", "UNMERGING", "MODIFIERS", "ST-CONVERT"], fromStep, toStep)
+        self.setWorkDir(workDir)
+        if workDir == None:
+            self.setTempWorkDir()
+        workOutputTag = os.path.join(self.workDir, os.path.basename(output) + "-")
         self.model = self.openModel(self.model, "r")
         if self.checkStep("TRIGGERS"):
-            xml = self.triggerDetector.classifyToXML(self.classifyData, self.model, None, output + "-", parse=self.parse, recallAdjust=float(self.getStr("recallAdjustParameter", self.model)))
+            xml = self.triggerDetector.classifyToXML(self.classifyData, self.model, None, workOutputTag, parse=self.parse, recallAdjust=float(self.getStr("recallAdjustParameter", self.model)))
         if self.checkStep("EDGES"):
-            xml = self.getWorkFile(xml, output + "-recall-adjusted.xml.gz")
-            xml = self.edgeDetector.classifyToXML(xml, self.model, None, output + "-", parse=self.parse)
+            xml = self.getWorkFile(xml, workOutputTag + "trigger-pred.xml.gz")
+            xml = self.edgeDetector.classifyToXML(xml, self.model, None, workOutputTag, parse=self.parse)
             assert xml != None
             if self.parse == None:
                 edgeParse = self.getStr(self.edgeDetector.tag+"parse", self.model)
@@ -290,28 +294,32 @@ class EventDetector(Detector):
             if self.model.hasMember("unmerging-classifier-model"):
                 #xml = self.getWorkFile(xml, output + "-edge-pred.xml.gz")
                 # To avoid running out of memory, always use file on disk
-                xml = self.getWorkFile(None, output + "-edge-pred.xml.gz")
+                xml = self.getWorkFile(None, workOutputTag + "edge-pred.xml.gz")
                 goldData = None
                 if type(self.classifyData) in types.StringTypes:
                     if os.path.exists(self.classifyData.replace("-nodup", "")):
                         goldData = self.classifyData.replace("-nodup", "")
-                xml = self.unmergingDetector.classifyToXML(xml, self.model, None, output + "-", goldData=goldData, parse=self.parse)
+                xml = self.unmergingDetector.classifyToXML(xml, self.model, None, workOutputTag, goldData=goldData, parse=self.parse)
             else:
                 print >> sys.stderr, "No model for unmerging"
         if self.checkStep("MODIFIERS"):
             if self.model.hasMember("modifier-classifier-model"):
-                xml = self.getWorkFile(xml, [output + "-unmerging-pred.xml.gz", output + "-edge-pred.xml.gz"])
-                xml = self.modifierDetector.classifyToXML(xml, self.model, None, output + "-", parse=self.parse)
+                xml = self.getWorkFile(xml, [workOutputTag + "unmerging-pred.xml.gz", workOutputTag + "edge-pred.xml.gz"])
+                xml = self.modifierDetector.classifyToXML(xml, self.model, None, workOutputTag, parse=self.parse)
             else:
                 print >> sys.stderr, "No model for modifier detection"
         if self.checkStep("ST-CONVERT"):
-            xml = self.getWorkFile(xml, [output + "-modifier-pred.xml.gz", output + "-unmerging-pred.xml.gz", output + "-edge-pred.xml.gz"])
-            STFormat.ConvertXML.toSTFormat(xml, output+"-events.tar.gz", outputTag="a2", writeScores=self.stWriteScores)
+            xml = self.getWorkFile(xml, [workOutputTag + "modifier-pred.xml.gz", workOutputTag + "unmerging-pred.xml.gz", workOutputTag + "edge-pred.xml.gz"])
+            STFormat.ConvertXML.toSTFormat(xml, output+".tar.gz", outputTag="a2", writeScores=self.stWriteScores)
             if self.stEvaluator != None:
                 task = self.task
                 if task == None:
                     task = self.getStr(self.edgeDetector.tag+"task", self.model)
-                self.stEvaluator.evaluate(output + "-events.tar.gz", task)
+                self.stEvaluator.evaluate(output + ".tar.gz", task)
+        finalXMLFile = self.getWorkFile(None, [workOutputTag + "modifier-pred.xml.gz", workOutputTag + "unmerging-pred.xml.gz", workOutputTag + "edge-pred.xml.gz"])
+        if finalXMLFile != None:
+            shutil.copy2(finalXMLFile, output+".xml.gz")
+        self.deleteTempWorkDir()
         self.exitState()
     
     def getWorkFile(self, fileObject, serializedPath=None):

@@ -98,17 +98,23 @@ class SingleStageDetector(Detector):
         self.endModel("END-COMBINED-MODEL", self.combinedModel, self.tag+"opt-examples.gz")
         self.exitState()
         
-    def classify(self, data, model, output, parse=None, task=None):
+    def classify(self, data, model, output, parse=None, task=None, workDir=None):
         self.enterState(self.STATE_CLASSIFY)
+        self.setWorkDir(workDir)
+        if workDir == None:
+            self.setTempWorkDir()
         model = self.openModel(model, "r")
         if parse == None: parse = self.getStr(self.tag+"parse", model)
         if task == None: task = self.getStr(self.tag+"task", model)
-        xml = self.classifyToXML(data, model, None, output + "-", 
+        workOutputTag = os.path.join(self.workDir, os.path.basename(output) + "-")
+        xml = self.classifyToXML(data, model, None, workOutputTag, 
             model.get(self.tag+"classifier-model"), None, parse, float(model.get("recallAdjustParameter")))
+        shutil.copy2(workOutputTag+self.tag+"pred.xml.gz", output+"pred.xml.gz")
         EvaluateInteractionXML.run(self.evaluator, xml, data, parse)
         STFormat.ConvertXML.toSTFormat(xml, output+".tar.gz", outputTag="a2")
         if self.stEvaluator != None:
             self.stEvaluator.evaluate(output+".tar.gz", task)
+        self.deleteTempWorkDir()
         self.exitState()
         
     def classifyToXML(self, data, model, exampleFileName=None, tag="", classifierModel=None, goldData=None, parse=None, recallAdjust=None, compressExamples=True):

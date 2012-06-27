@@ -2,6 +2,7 @@ import sys, os
 import shutil
 import itertools
 import gzip
+import tempfile
 sys.path.append(os.path.dirname(os.path.abspath(__file__))+"/..")
 from Core.Model import Model
 import STFormat.ConvertXML
@@ -30,6 +31,7 @@ class Detector():
         self.model = None
         self.combinedModel = None
         self.workDir = ""
+        self.workDirIsTempDir = False
         
         self.exampleStyle = None
         self.classifierParameters = None
@@ -71,9 +73,22 @@ class Detector():
         if workDir == None: # bypass assignment and keep currently defined workdir
             return
         elif workDir.strip() == "": # current system path
+            assert not self.workDirIsTempDir
             self.workDir = ""
         elif not workDir.endswith("/"): # make sure workdir can be combined with other paths using '+'
+            assert not self.workDirIsTempDir
             self.workDir = workDir + "/"
+    
+    def setTempWorkDir(self):
+        self.workDir = tempfile.mkdtemp()
+        self.workDirIsTempDir = True
+    
+    def deleteTempWorkDir(self):
+        if self.workDirIsTempDir:
+            print >> sys.stderr, "Removing temporary work directory", self.workDir
+            shutil.rmtree(self.workDir)
+            self.workDirIsTempDir = False
+            self.setWorkDir("")
     
 #    def getSharedStep(self, childDetector, step, direction=1):
 #        childDetector.select.getSharedStep(step, self.select.steps, direction)
@@ -104,8 +119,9 @@ class Detector():
             if modelMustExist:
                 assert model != None
             modelObj = model
-        modelObj.addStr(name, value)
-        modelObj.save()
+        if modelObj != None:
+            modelObj.addStr(name, value)
+            modelObj.save()
     
     def saveStrings(self, dict, model=None, modelMustExist=True):
         if type(model) in types.StringTypes:
@@ -114,8 +130,9 @@ class Detector():
             if modelMustExist:
                 assert model != None
             modelObj = model
-        modelObj.addStrings(dict)
-        modelObj.save()
+        if modelObj != None:
+            modelObj.addStrings(dict)
+            modelObj.save()
     
     def getStr(self, name, model):
         if type(model) in types.StringTypes:
