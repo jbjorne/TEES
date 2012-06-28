@@ -24,22 +24,26 @@ def toDict(parameters, valueListKey=None):
             paramDict[name] = values
     return paramDict
 
-def toString(parameters):
+def toString(parameters, skipKeysWithValues=[None], skipValues=[True]):
     if parameters == None:
         return ""
     if type(parameters) in types.StringTypes:
         return parameters
     s = ""
     for key in sorted(parameters.keys()):
-        if len(s) > 0: s += ":"
-        s += key + "="
         if type(parameters[key]) in [types.ListType, types.TupleType]:
-            s += ",".join([str(x) for x in parameters[key]])
+            if len(s) > 0: s += ":"
+            s += key + "=" + ",".join([str(x) for x in parameters[key]])
         else:
-            s += str(parameters[key])
+            if skipKeysWithValues == None or parameters[key] not in skipKeysWithValues: # skip defaults
+                if len(s) > 0: s += ":"
+                if skipValues != None and parameters[key] in skipValues:
+                    s += key
+                else:
+                    s += key + "=" + str(parameters[key])
     return s
 
-def get(parameters, defaults=None, allowNew=False, valueListKey=None, limitValues=None):
+def get(parameters, defaults=None, allowNew=False, valueListKey=None, valueLimits=None):
     parameters = toDict(parameters, valueListKey) # get parameter dictionary
     if defaults != None:
         if type(defaults) in [types.ListType, types.TupleType]: # convert list to dictionary
@@ -52,13 +56,13 @@ def get(parameters, defaults=None, allowNew=False, valueListKey=None, limitValue
                 newDict[key] = parameters[key]
             elif key in defaults:
                 newDict[key] = defaults[key]
-            if limitValues != None and key in limitValues:
+            if valueLimits != None and key in valueLimits:
                 values = newDict[key]
                 if type(values) not in [types.ListType, types.TupleType]:
                     values = [values]
                 for value in values:
-                    if value not in limitValues[key]:
-                        raise Exception("Illegal value " + str(value) + " for parameter " + key + " (allowed values: " + str(limitValues[key]) + ")")
+                    if value not in valueLimits[key]:
+                        raise Exception("Illegal value " + str(value) + " for parameter " + key + " (allowed values: " + str(valueLimits[key]) + ")")
         parameters = newDict
     return parameters
 
