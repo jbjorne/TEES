@@ -12,7 +12,7 @@ class UnmergingExampleWriter(SentenceExampleWriter):
         self.xType = "um"
         SentenceExampleWriter.__init__(self)
     
-    def writeXMLSentence(self, examples, predictionsByExample, sentenceObject, classSet, classIds, goldSentence=None):        
+    def writeXMLSentence(self, examples, predictionsByExample, sentenceObject, classSet, classIds, goldSentence=None, exampleStyle=None):        
         sentenceElement = sentenceObject.sentence
         self.sentenceId = sentenceElement.get("id")
         self.assertSameSentence(examples, self.sentenceId)

@@ -13,7 +13,7 @@ class EntityExampleWriter(SentenceExampleWriter):
         self.insertWeights = False
         SentenceExampleWriter.__init__(self)
     
-    def writeXMLSentence(self, examples, predictionsByExample, sentenceObject, classSet, classIds, goldSentence=None):        
+    def writeXMLSentence(self, examples, predictionsByExample, sentenceObject, classSet, classIds, goldSentence=None, exampleStyle=None):        
         self.assertSameSentence(examples)
         
         extensionRequested = False
