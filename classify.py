@@ -1,48 +1,11 @@
 from train import workdir, getDetector, getSteps
 import sys, os
+import tempfile
+import codecs
 import Utils.Settings as Settings
 import Utils.Stream as Stream
+import Utils.Download
 from Utils.Connection.Unix import getConnection
-
-def getModel(model):
-    if not os.path.exists(model):
-        for suffix in ["", ".zip", "-test.zip"]:
-            predefined = os.path.join(Settings.MODEL_DIR, model + suffix)
-            found = None
-            if os.path.exists(predefined):
-                print >> sys.stderr, "Classifying with predefined model", predefined
-                found = predefined
-                model = found
-                break
-        if found == None:
-            raise Exception("Model " + str(model) + " not found")
-    else:
-        print >> sys.stderr, "Classifying with model", model
-    return model
-
-def getInput(input, model):
-    if input == None: # Get a corpus corresponding to the model
-        assert model != None
-        input = model.split(".")[0]
-    if input.isdigit(): # PMID
-        print >> sys.stderr, "Classifying PubMed abstract", input
-        pass
-    elif not os.path.exists(input): # Use a predefined corpus
-        for suffix in ["", ".xml", ".xml.gz"]:
-            predefined = os.path.join(Settings.CORPUS_DIR, input + suffix)
-            found = None
-            if os.path.exists(predefined):
-                print >> sys.stderr, "Classifying default corpus file", predefined
-                found = predefined
-                input = found
-                preprocess = False
-                break
-        if found == None:
-            raise Exception("Default corpus file for input " + str(input) + " not found")
-    else:
-        print >> sys.stderr, "Classifying input", input
-        preprocess = True
-    return input, preprocess
 
 def classify(input, model, output, workDir=None, step=None, omitSteps=None, detector=None, corpusName="TEES", 
              debug=False, writeScores=True, clear=False):
@@ -77,16 +40,76 @@ def classify(input, model, output, workDir=None, step=None, omitSteps=None, dete
             preprocessor.setIntermediateFiles({"Convert":None, "SPLIT-SENTENCES":None, "PARSE":None, "CONVERT-PARSE":None, "SPLIT-NAMES":None})
             # Process input into interaction XML
             classifyInput = preprocessor.process(input, corpusName, output, [], fromStep=detectorSteps["PREPROCESS"], toStep=None, omitSteps=omitDetectorSteps["PREPROCESS"] + ["DIVIDE-SETS"])
-            print >> sys.stderr, "Total preprocessing time:", str(datetime.timedelta(seconds=time.time()-startTime))
     
     if selector.check("CLASSIFY"):
-        detector = getDetector(detector, model)[0]
-        detector = detector() # initialize object
+        detector = getDetector(detector, model)[0]() # initialize detector object
         detector.debug = debug
         detector.stWriteScores = writeScores # write confidence scores into additional st-format files
-        # classify
         detector.classify(classifyInput, model, output, fromStep=detectorSteps["CLASSIFY"], omitSteps=omitDetectorSteps["CLASSIFY"], workDir=workDir)
 
+def getModel(model):
+    if not os.path.exists(model):
+        for suffix in ["", ".zip", "-test.zip"]:
+            predefined = os.path.join(Settings.MODEL_DIR, model + suffix)
+            found = None
+            if os.path.exists(predefined):
+                print >> sys.stderr, "Classifying with predefined model", predefined
+                found = predefined
+                model = found
+                break
+        if found == None:
+            raise Exception("Model " + str(model) + " not found")
+    else:
+        print >> sys.stderr, "Classifying with model", model
+    return model
+
+def getInput(input, model):
+    if input == None: # Get a corpus corresponding to the model
+        assert model != None
+        input = model.split(".")[0]
+
+    if input.isdigit(): # PMID
+        print >> sys.stderr, "Classifying PubMed abstract", input
+        input = getPubMed(input)
+        preprocess = True
+    elif not os.path.exists(input): # Use a predefined corpus
+        for suffix in ["", ".xml", ".xml.gz"]:
+            predefined = os.path.join(Settings.CORPUS_DIR, input + suffix)
+            found = None
+            if os.path.exists(predefined):
+                print >> sys.stderr, "Classifying default corpus file", predefined
+                found = predefined
+                input = found
+                preprocess = False
+                break
+        if found == None:
+            raise Exception("Default corpus file for input " + str(input) + " not found")
+    else:
+        print >> sys.stderr, "Classifying input", input
+        preprocess = True
+    return input, preprocess
+
+def getPubMed(pmid):
+    print >> sys.stderr, "Downloading PubMed abstract", pmid
+    tempDir = tempfile.gettempdir()
+    url = "http://www.ncbi.nlm.nih.gov/pubmed/" + str(pmid) + "?report=xml"
+    downloaded = os.path.join(tempDir, "pmid-" + str(pmid))
+    Download.download(url, downloaded + ".xml", False)
+    # Read the text from the XML
+    f = codecs.open(downloaded, "rt", "utf-8")
+    for line in f:
+        line = line.strip()
+        textElements = []
+        for tag in ["<ArticleTitle>", "<AbstractText>"]:
+            if line.startswith(tag):
+                textElements.append(line.split(">", 1)[1].split("<")[0])
+    f.close()
+    # Save the text file
+    f = codecs.open(downloaded + ".txt", "wt", "utf-8")
+    f.write("\n".join(textElements))
+    f.close()
+    # Return text file name
+    return downloaded + ".txt"
 
 if __name__=="__main__":
     # Import Psyco if available
