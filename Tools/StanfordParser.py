@@ -35,7 +35,10 @@ escDict={"-LRB-":"(",
          "``":"\"",
          "''":"\""}
 
-def install(destDir=None, downloadDir=None, redownload=False):
+def test(progDir):
+    return True
+
+def install(destDir=None, downloadDir=None, redownload=False, updateLocalSettings=False):
     url = URL["STANFORD_PARSER"]
     packageName = url.split("/")[-1].split(".")[0]
     # Download
@@ -54,6 +57,9 @@ def install(destDir=None, downloadDir=None, redownload=False):
     f = tarfile.open(downloadFile, 'r:gz')
     f.extractall(destDir)
     f.close()
+    
+    if test(destDir):
+        Settings.setLocal("STANFORD_PARSER_DIR", destDir, updateLocalSettings)
 
 def runStanford(input, output):
     global stanfordParserArgs

@@ -19,12 +19,13 @@ import codecs
 sys.path.append(os.path.dirname(os.path.abspath(__file__))+"/..")
 import Utils.Settings as Settings
 import Utils.Download as Download
+import Tool
 #bannerDir = Settings.BANNER_DIR
 
 def test(progDir):
     return True
 
-def install(destDir=None, downloadDir=None, redownload=False):
+def install(destDir=None, downloadDir=None, redownload=False, javaHome=None, updateLocalSettings=False):
     print >> sys.stderr, "Installing BANNER"
     url = Settings.URL["BANNER_SOURCE"]
     if downloadDir == None:
@@ -34,7 +35,12 @@ def install(destDir=None, downloadDir=None, redownload=False):
     Download.downloadAndExtract(url, destDir + "/tools/BANNER", downloadDir + "/banner.tar.gz", "trunk", False, redownload=redownload)
     
     print >> sys.stderr, "Compiling BANNER with ANT"
-    subprocess.call("cd " + destDir + "/tools/BANNER; export JAVA_HOME=/usr/lib/jvm/java-6-openjdk; ant -f build_ext.xml", shell=True)
+    Tool.testPrograms("BANNER", ["ant"], {"ant":"ant -version"})
+    if javaHome == None or javaHome.strip() == "":
+        subprocess.call("cd " + destDir + "/tools/BANNER; ant -f build_ext.xml", shell=True)
+    else:
+        subprocess.call("cd " + destDir + "/tools/BANNER; export JAVA_HOME=" + javaHome + "; ant -f build_ext.xml", shell=True)
+    Tool.finalizeInstall([], None, destDir + "/tools/BANNER", {"BANNER_DIR":destDir + "/tools/BANNER"}, updateLocalSettings)
     
     # Newer versions of BANNER don't need trove
     #print >> sys.stderr, "Downloading Java trove library"

@@ -46,7 +46,10 @@ escDict={"-LRB-":"(",
 #    
 #    cscConnection.run("cat " + textFileName + "-part* > cj-output.txt", True)
 
-def install(destDir=None, downloadDir=None, redownload=False):
+def test(progDir):
+    return True
+
+def install(destDir=None, downloadDir=None, redownload=False, updateLocalSettings=False):
     url = Settings.URL["BLLIP_SOURCE"]
     if downloadDir == None:
         downloadDir = os.path.join(Settings.DATAPATH)
@@ -54,18 +57,22 @@ def install(destDir=None, downloadDir=None, redownload=False):
         destDir = Settings.DATAPATH
     items = Download.downloadAndExtract(url, destDir + "/tools/BLLIP", downloadDir + "/tools/download/bllip.zip", None, False)
     # Install the parser
-#    topDirs = [] 
-#    for item in items:
-#        if item.endswith("/") and item.count("/") == 1:
-#            topDirs.append(item)
-#    assert len(topDirs) == 1
-#    parserPath = os.path.join(destDir + "/tools/BLLIP", topDirs[0])
-#    cwd = os.getcwd()
-#    os.chdir(parserPath)
-#    subprocess.call("make")
-#    os.chdir(cwd)
+    topDirs = [] 
+    for item in items:
+        if item.endswith("/") and item.count("/") == 1:
+            topDirs.append(item)
+    assert len(topDirs) == 1
+    parserPath = os.path.join(destDir + "/tools/BLLIP", topDirs[0])
+    cwd = os.getcwd()
+    os.chdir(parserPath)
+    subprocess.call("make")
+    os.chdir(cwd)
+    if test(parserPath):
+        Settings.setLocal("CHARNIAK_JOHNSON_PARSER_DIR", parserPath, updateLocalSettings)
+    # Install the bioparsing model
     url = "http://bllip.cs.brown.edu/download/bioparsingmodel-rel1.tar.gz"
     Download.downloadAndExtract(url, destDir + "/tools/BLLIP", downloadDir + "/tools/download/", None)
+    Settings.setLocal("MCCLOSKY_BIOPARSINGMODEL_DIR", destDir + "/tools/BLLIP/biomodel", updateLocalSettings)
             
 def readPenn(treeLine):
     global escDict

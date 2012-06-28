@@ -72,7 +72,7 @@ def makeSentences(input, tokenizationPath, output=None, removeText=False):
             f = openFile(newFile, tarFile)
             if f == None: # file with BioNLP'11 extension not found, try BioNLP'09 extension
                 oldFile = os.path.join(tokenizationPath, document.get("pmid") + ".tokenized")
-                f = openFile(newFile, oldFile)
+                f = openFile(oldFile, tarFile)
                 if f == None: # no tokenization found
                     continue
             sentencesCreated += alignSentences(document, f.readlines())
