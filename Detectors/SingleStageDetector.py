@@ -135,7 +135,8 @@ class SingleStageDetector(Detector):
         predictions = ExampleUtils.loadPredictions(tag+self.tag+"classifications", recallAdjust)
         evaluator = self.evaluator.evaluate(exampleFileName, predictions, model.get(self.tag+"ids.classes"))
         #outputFileName = tag+"-"+self.tag+"pred.xml.gz"
-        return self.exampleWriter.write(exampleFileName, predictions, data, tag+self.tag+"pred.xml.gz", model.get(self.tag+"ids.classes"), parse)
+        exampleStyle = self.exampleBuilder.getParameters(model.getStr(self.tag+"example-style"))
+        return self.exampleWriter.write(exampleFileName, predictions, data, tag+self.tag+"pred.xml.gz", model.get(self.tag+"ids.classes"), parse, exampleStyle=exampleStyle)
 #        if evaluator.getData().getTP() + evaluator.getData().getFP() > 0:
 #            return self.exampleWriter.write(exampleFileName, predictions, data, outputFileName, model.get(self.tag+"ids.classes"), parse)
 #        else:
