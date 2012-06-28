@@ -1,5 +1,5 @@
-# Import global defaults
 import sys
+# Import global defaults
 from DefaultSettings import *
 
 # Import local configuration
@@ -13,7 +13,7 @@ if "TEES_SETTINGS" in os.environ:
     
 def setLocal(variable, value, setVariable=True):
     # the settings file must exist and must be in the path
-    if not setVariable:
+    if not setVariable: # notify only, do not add the variable
         print >> sys.stderr, "Remember to add local setting", str(variable) + "=\"" + str(value) + "\""
         return
     assert "TEES_SETTINGS" in os.environ
