@@ -27,13 +27,6 @@ import cElementTreeUtils as ETUtils
 from collections import defaultdict
 import Range
 
-def log(clear=False, logCmd=True, logFile="log.txt"):
-    Stream.setLog(logFile, clear)
-    Stream.setTimeStamp("[%H:%M:%S]", True)
-    print >> sys.stderr, "####### Log opened at ", time.ctime(time.time()), "#######"
-    if logCmd:
-        sys.stdout.writeToLog("Command line: " + " ".join(sys.argv) + "\n")
-
 def getSets(popSize):
     random.seed(15)
     pop = range(popSize)
@@ -228,30 +221,23 @@ def convertDDI(outDir, trainUnified=None, trainMTMX=None, testUnified=None, test
     convertToInteractions(xml)
     if makeIntermediateFiles:
         ETUtils.write(root, bigfileName + "-documents.xml")
-    #sys.exit()
-        
-    if False:
-        print >> sys.stderr, "Parsing"
-        Tools.CharniakJohnsonParser.parse(xml, bigfileName+"-parsed.xml", tokenizationName=None, parseName="McClosky", requireEntities=True, timeout=10)
-        print >> sys.stderr, "Stanford Conversion"
-        Tools.StanfordParser.convertXML("McClosky", xml, bigfileName+"-stanford.xml")
+
+    print >> sys.stderr, "---------------", "Inserting TEES-generated analyses", "---------------"
+    extractedFilename = files["TEES_PARSES"] + "/" + corpus
+    print >> sys.stderr, "Making sentences"
+    Tools.SentenceSplitter.makeSentences(xml, extractedFilename, None)
+    print >> sys.stderr, "Inserting McCC parses"
+    Tools.CharniakJohnsonParser.insertParses(xml, extractedFilename, None, extraAttributes={"source":"TEES-preparsed"})
+    print >> sys.stderr, "Inserting Stanford conversions"
+    Tools.StanfordParser.insertParses(xml, extractedFilename, None, extraAttributes={"stanfordSource":"TEES-preparsed"})
+    print >> sys.stderr, "Protein Name Splitting"
+    ProteinNameSplitter.mainFunc(xml, None, splitTarget, splitTarget, "split-"+splitTarget, "split-"+splitTarget)
+    print >> sys.stderr, "Head Detection"
+    xml = FindHeads.findHeads(xml, "split-"+splitTarget, tokenization=None, output=None, removeExisting=True)    
     
-        #if True:
-        #xml = bigfileName + "-stanford.xml"        
-        print >> sys.stderr, "Protein Name Splitting"
-        splitTarget = "McClosky"
-        xml = ProteinNameSplitter.mainFunc(xml, None, splitTarget, splitTarget, "split-"+splitTarget, "split-"+splitTarget)
-        print >> sys.stderr, "Head Detection"
-        xml = FindHeads.findHeads(xml, "split-McClosky", tokenization=None, output=bigfileName+".xml", removeExisting=True)
-        print >> sys.stderr, "Dividing into sets"
-        InteractionXML.DivideSets.processCorpus(xml, outDir, "DrugDDI-", ".xml", [("devel", "train", "test"), ("devel", "train")])
-        #InteractionXML.DivideSets.processCorpus(oldXML, outDir, "DrugDDI-", ".xml", [("devel", "train", "test"), ("devel", "train")])
-    #InteractionXML.DivideSets.processCorpus(bigfileName+".xml", outDir, "DrugDDI-", ".xml", [("devel", "train", "test"), ("devel", "train")])
-    #if "devel" in [x[0] for x in datasets]:
-    #    print >> sys.stderr, "Creating empty devel set"
-    #    deletionRules = {"interaction":{},"entity":{"isName":"False"}}
-    #    InteractionXML.DeleteElements.processCorpus(corpusName + "-devel.xml", corpusName + "-devel-empty.xml", deletionRules)
-    #return xml
+    print >> sys.stderr, "Dividing into sets"
+    InteractionXML.DivideSets.processCorpus(xml, outDir, "DDI-", ".xml", [("devel", "train", "test")])
+    
     Stream.closeLog(logFileName)
     if not debug:
         print >> sys.stderr, "Removing temporary directory", tempdir
@@ -266,16 +252,10 @@ if __name__=="__main__":
         print >> sys.stderr, "Found Psyco, using"
     except ImportError:
         print >> sys.stderr, "Psyco not installed"
-    
-    inDir = {}
-    inDir["ddi-train"] = "/home/jari/data/DDIExtraction2011/DrugDDI_Unified"
-    inDir["ddi-test"] = "/home/jari/data/DDIExtraction2011/Test_Unified"
-    outDir = "/usr/share/biotext/DDIExtraction2011/data/"
 
     from optparse import OptionParser
     from Utils.Parameters import *
     optparser = OptionParser(usage="%prog [options]\nDDI'11 Shared Task corpus conversion")
-    #optparser.add_option("-c", "--corpora", default="GE", dest="corpora", help="corpus names in a comma-separated list, e.g. \"GE,EPI,ID\"")
     optparser.add_option("-o", "--outdir", default=os.path.normpath(Settings.DATAPATH + "/corpora"), dest="outdir", help="directory for output files")
     optparser.add_option("-d", "--downloaddir", default=None, dest="downloaddir", help="directory to download corpus files to")
     optparser.add_option("--intermediateFiles", default=False, action="store_true", dest="intermediateFiles", help="save intermediate corpus files")
