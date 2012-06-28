@@ -83,7 +83,8 @@ class Task3ExampleBuilder(ExampleBuilder):
             print >> sys.stderr, "Loaded gazetteer from",gazetteerFileName
         else:
             self.gazetteer=None
-        self.styles = self.getParameters(style, {"classification":"multiclass", "speculation_words":True}, {"classification":("multiclass", "speculation", "negation")})
+        self._setDefaultParameters({"classification":"multiclass", "speculation_words":True}, {"classification":("multiclass", "speculation", "negation")})
+        self.styles = self.getParameters(style)
     
     def getMergedEntityType(self, entities):
         """

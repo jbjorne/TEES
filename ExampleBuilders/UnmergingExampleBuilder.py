@@ -89,9 +89,10 @@ class UnmergingExampleBuilder(ExampleBuilder):
         
         ExampleBuilder.__init__(self, classSet=classSet, featureSet=featureSet)
         
-        self.styles = self.getParameters(style, ["trigger_features","typed","directed","no_linear","entities","genia_limits",
+        self.styles = self._setDefaultParameters(["trigger_features","typed","directed","no_linear","entities","genia_limits",
             "noAnnType", "noMasking", "maxFeatures", "no_merge", "disable_entity_features", 
             "disable_single_element_features", "disable_ngram_features", "disable_path_edge_features"])
+        self.styles = self.getParameters(style)
         self.multiEdgeFeatureBuilder = MultiEdgeFeatureBuilder(self.featureSet)
         self.multiEdgeFeatureBuilder.noAnnType = self.styles["noAnnType"]
         self.multiEdgeFeatureBuilder.maskNamedEntities = not self.styles["noMasking"]

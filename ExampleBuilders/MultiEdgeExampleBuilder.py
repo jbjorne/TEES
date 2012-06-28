@@ -47,7 +47,7 @@ class MultiEdgeExampleBuilder(ExampleBuilder):
         
         ExampleBuilder.__init__(self, classSet=classSet, featureSet=featureSet)
         
-        self.styles = self.getParameters(style, [
+        self._setDefaultParameters([
             "typed", "directed", "headsOnly", "graph_kernel", "noAnnType", "noMasking", "maxFeatures",
             "genia_limits", "epi_limits", "id_limits", "rel_limits", "bb_limits", "bi_limits", "co_limits",
             "genia_task1", "ontology", "nodalida", "bacteria_renaming", "trigger_features", "rel_features",
@@ -55,8 +55,8 @@ class MultiEdgeExampleBuilder(ExampleBuilder):
             "skip_extra_triggers", "headsOnly", "graph_kernel", "trigger_features", "no_task", "no_dependency", 
             "disable_entity_features", "disable_terminus_features", "disable_single_element_features", 
             "disable_ngram_features", "disable_path_edge_features", "no_linear", "subset", "binary", "pos_only",
-            "entity_type"
-        ])
+            "entity_type"])
+        self.styles = self.getParameters(style)
         if style == None: # no parameters given
             style["typed"] = style["directed"] = style["headsOnly"] = True
 #        self.styles = style

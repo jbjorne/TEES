@@ -34,10 +34,11 @@ class GeneralEntityTypeRecognizerGztr(ExampleBuilder):
         else:
             print >> sys.stderr, "No gazetteer loaded"
             self.gazetteer=None
-        self.styles = self.getParameters(style, ["rel_features", "wordnet", "bb_features", "giuliano", 
-                                          "epi_merge_negated", "limit_merged_types", "genia_task1",
-                                          "build_for_nameless", "pos_only", "all_tokens",
-                                          "names", "pos_pairs", "linear_ngrams", "phospho"])
+        self._setDefaultParameters(["rel_features", "wordnet", "bb_features", "giuliano", 
+                                  "epi_merge_negated", "limit_merged_types", "genia_task1",
+                                  "build_for_nameless", "pos_only", "all_tokens",
+                                  "names", "pos_pairs", "linear_ngrams", "phospho"])
+        self.styles = self.getParameters(style)
 #        if "selftrain_group" in self.styles:
 #            self.selfTrainGroups = set()
 #            if "selftrain_group-1" in self.styles:

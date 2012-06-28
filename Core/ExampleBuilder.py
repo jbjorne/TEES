@@ -31,6 +31,9 @@ class ExampleBuilder:
     pre-existing sets of class and feature ids (optionally in files) so that the
     generated examples are consistent with other, previously generated examples.
     """
+    _defaultParameters = None
+    _parameterValueLimits = None
+        
     def __init__(self, classSet=None, featureSet=None):
         if(type(classSet) == types.StringType):
             self.classSet = IdSet(filename=classSet)
@@ -49,9 +52,16 @@ class ExampleBuilder:
         #self.idFileTag = None
         self.classIdFilename = None
         self.featureIdFilename = None
+        
+        self.styles = None
     
-    def getParameters(self, parameters, defaults=None, limitValues = None):
-        return Utils.Parameters.get(parameters, defaults=defaults, limitValues=limitValues)
+    def _setDefaultParameters(self, defaults=None, valueLimits=None):
+        ExampleBuilder._defaultParameters = defaults
+        ExampleBuilder._parameterValueLimits = valueLimits
+    
+    @classmethod
+    def getParameters(cls, parameters):
+        return Utils.Parameters.get(parameters, defaults=cls._defaultParameters, valueLimits=cls._parameterValueLimits)
     
     def setFeature(self, name, value):
         self.features[self.featureSet.getId(self.featureTag+name)] = value
@@ -91,7 +101,7 @@ class ExampleBuilder:
         # Open output file
         openStyle = "wt"
         if append:
-            print "Appending examples"
+            #print "Appending examples"
             openStyle = "at"
         if output.endswith(".gz"):
             outfile = gzip.open(output, openStyle)
@@ -131,6 +141,7 @@ class ExampleBuilder:
         # Show statistics
         print >> sys.stderr, "Examples built:", self.exampleCount
         print >> sys.stderr, "Features:", len(self.featureSet.getNames())
+        print >> sys.stderr, "Style:", Utils.Parameters.toString(self.getParameters(self.styles))
         if self.exampleStats.getExampleCount() > 0:
             self.exampleStats.printStats()
     
@@ -159,11 +170,12 @@ class ExampleBuilder:
     def run(cls, input, output, parse, tokenization, style, classIds=None, featureIds=None, gold=None, append=False, allowNewIds=True):
         print >> sys.stderr, "Running", cls.__name__
         print >> sys.stderr, "  input:", input
-        print >> sys.stderr, "  gold:", gold
+        if gold != None:
+            print >> sys.stderr, "  gold:", gold
         print >> sys.stderr, "  output:", output, "(append:", str(append) + ")"
         print >> sys.stderr, "  add new class/feature ids:", allowNewIds
         if not isinstance(style, types.StringTypes):
-            style = toString(style)
+            style = Parameters.toString(style)
         print >> sys.stderr, "  style:", style
         if tokenization == None: 
             print >> sys.stderr, "  parse:", parse
