@@ -38,6 +38,13 @@ class SLURMConnection(ClusterConnection):
         jobId = int(pstdout.split()[-1])
         return self._writeJobFile(jobDir, jobName, {"SLURMID":jobId})
     
+    def getNumJobs():
+        """
+        Get number of queued (pending or running) jobs
+        """
+        stdoutLines = self.run("squeue | grep " + self.getUserName() + " | wc -l")
+        return len(stdoutLines)
+    
     def getJobStatus(self, job):
         jobAttr = self._readJobFile(job)
         # Check whether job exists

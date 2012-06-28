@@ -30,6 +30,13 @@ class LSFConnection(ClusterConnection):
             else:
                 return "FAILED"
     
+    def getNumJobs():
+        """
+        Get number of queued (pending or running) jobs
+        """
+        stdoutLines = self.run("bjobs | grep " + self.getUserName() + " | wc -l")
+        return len(stdoutLines)
+    
     def makeJobScript(self, script, name, jobWorkDir=None, stderr=None, stdout=None, wallTime=None, modules=None):
         """
         Make an LSF job submission script
