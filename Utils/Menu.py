@@ -8,6 +8,7 @@ class MenuSystem():
         self.menus = {}
         self.width = 80
         self.onException = "ASK"
+        self.auto = False
     
     def run(self, mainMenu):
         nextMenu = mainMenu
@@ -54,6 +55,7 @@ class Menu():
                 self.optDict[option.key] = option
                 if option.dataInput != None:
                     self.setAttr(option.dataInput)
+        self.prevChoice = None
         self.initializer = initializer
         self.doAlignText = True
     
@@ -125,6 +127,7 @@ class Menu():
             if choice.lower() in self.optDict.keys():
                 choiceLower = choice.lower()
                 opt = self.optDict[choiceLower]
+                self.prevChoice = choiceLower
                 if opt.toggle != None:
                     opt.toggle = not opt.toggle
                     return self.title
@@ -204,15 +207,15 @@ class Option:
             print >> sys.stderr, self.text
     
     def do(self):
-        if self.handler == None:
+        if self.handler == None: # no handler for this menu option, proceed to next menu
             return
-        elif type(self.handler) == types.ListType:
+        elif type(self.handler) == types.ListType: # multiple handlers
             for i in range(len(self.handler)):
                 if len(self.handlerArgs) > i:
                     self._runHandler(self.handler[i], self.handlerArgs[i]) #self.handler[i](*self.handlerArgs[i])
                 else:
                     self._runHandler(self.handler[i]) #self.handler[i]()
-        else:
+        else: # one handler
             self._runHandler(self.handler, self.handlerArgs) #self.handler(*self.handlerArgs)
     
     def _runHandler(self, handler, handlerArgs=[]):
