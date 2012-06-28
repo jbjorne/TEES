@@ -254,18 +254,24 @@ class UnixConnection:
     def _getJobPath(self, jobDir, jobName):
         return jobDir + "/" + jobName + ".job"
     
-    def _writeJobFile(self, jobDir, jobName, attrDict={}):
+    def _writeJobFile(self, jobDir, jobName, attrDict={}, append=False):
         jobPath = self.getRemotePath(self._getJobPath(jobDir, jobName))
-        jobFileText = "name=" + jobName + "\n"
-        assert not "name" in attrDict
+        jobFileText = ""
+        if not append:
+            jobFileText += "name=" + jobName + "\n"
+            assert not "name" in attrDict
         for key in sorted(attrDict.keys()):
             jobFileText += str(key) + "=" + str(attrDict[key]) + "\n"
         if not os.path.exists(self.getRemotePath(jobDir)):
             self.mkdir(self.getRemotePath(jobDir))
-        if self.account == None: # a local process
-            jobPopen = subprocess.Popen("cat > " + jobPath, shell=True, stdin=subprocess.PIPE)
+        if append:
+            operator = ">>"
         else:
-            jobPopen = subprocess.Popen("ssh " + self.account + " '" + "cat > " + jobPath + "'", shell=True, stdin=subprocess.PIPE)
+            operator = ">"
+        if self.account == None: # a local process
+            jobPopen = subprocess.Popen("cat " + operator + " " + jobPath, shell=True, stdin=subprocess.PIPE)
+        else:
+            jobPopen = subprocess.Popen("ssh " + self.account + " '" + "cat " + operator + " " + jobPath + "'", shell=True, stdin=subprocess.PIPE)
         jobPopen.communicate(input=jobFileText)
         return self._getJobPath(jobDir, jobName)
     
@@ -309,6 +315,10 @@ class UnixConnection:
         prevStatus = self.getJobStatus(self._getJobPath(jobDir, jobName))
         if self.resubmitOnlyFinished and prevStatus == "RUNNING":
             assert False, prevStatus
+        # The job status file must be open before the job is submitted, so that the return code can be
+        # written to it.
+        job = self._writeJobFile(jobDir, jobName)
+        # Submit the job
         if self.account == None: # a local process
             jobPopen = subprocess.Popen(script, shell=True, stdout=stdout, stderr=stderr)
         else:
@@ -316,7 +326,8 @@ class UnixConnection:
         # The 'time' attribute marks a time after the program has started. When checking for the PID,
         # only those programs whose STIME < 'time' are considered.
         jobArgs = {"PID":jobPopen.pid, "time":time.time() + 10}
-        job = self._writeJobFile(jobDir, jobName, jobArgs)
+        job = self._writeJobFile(jobDir, jobName, jobArgs, append=True)
+        # Keep track of log files so they can be closed
         if logFiles != [None, None]:
             assert job not in self._logs
             self._logs[job] = logFiles
@@ -330,6 +341,16 @@ class UnixConnection:
             if self._logs[job][1] != None:
                 self._logs[job][1].close()
             del self._logs[job]
+    
+    def getUserName(self):
+        if self.account != None:
+            return self.account.split("@")[0]
+        else:
+            return os.getlogin()
+            
+    def getNumJobs(self, includeQueued=True):
+        stdoutLines = self.run("ps -u " + self.getUserName())
+        return len(stdoutLines)
     
     def waitForJob(self, job, pollIntervalSeconds=10):
         while self.getJobStatus(job) not in ["FINISHED", "FAILED"]:
