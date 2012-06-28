@@ -35,6 +35,10 @@ class ToolChain(Detector):
                 return
         assert False
     
+    def setIntermediateFiles(self, stepToFilename):
+        for key in sorted(stepToFilename.keys()):
+            self.setIntermediateFile(key, stepToFilename[key])
+    
     def setNoIntermediateFiles(self):
         for step in self.steps:
             self.setIntermediateFile(step[0], None)
