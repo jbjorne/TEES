@@ -131,7 +131,7 @@ def openLog(filename="log.txt", clear=False, logCmd=True):
     setTimeStamp("[%H:%M:%S]", True)
     logOpenTime = str(time.ctime(time.time()))
     print >> sys.stderr, "Opening log", filename, "at", logOpenTime
-    logOpenMessage = "####### Log opened at " + str(time.ctime(time.time())) + " #######"
+    logOpenMessage = "####### Log opened at " + str(time.ctime(time.time())) + " #######\n"
     writeToLog(logOpenMessage, filename)
     if logCmd:
         writeToLog("Command line: " + " ".join(sys.argv) + "\n", filename)
