@@ -3,10 +3,10 @@
 Turku Event Extraction System 2.0
 =================================
 
-Turku Event Extraction System (TEES) is a free & open source, Python-based 
-natural language processing system developed for the extraction of events and
-relations from biomedical text. It is written mostly in Python, and should run
-in generic UNIX/LINUX environments.
+Turku Event Extraction System (TEES) is a free and open source natural language
+processing system developed for the extraction of events and relations from 
+biomedical text. It is written mostly in Python, and should work in generic 
+UNIX/LINUX environments.
 
 TEES has been evaluated in the following Shared Tasks and models for predicting
 their targets are included in this release.
