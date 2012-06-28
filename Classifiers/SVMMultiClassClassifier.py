@@ -24,22 +24,13 @@ import Utils.Parameters as Parameters
 from Utils.ProgressCounter import ProgressCounter
 import Utils.Settings as Settings
 import Utils.Download as Download
+import Tools.Tool
 import SVMMultiClassModelUtils
 import Utils.Connection.Unix
 from Utils.Connection.Unix import UnixConnection
 from Evaluators.AveragingMultiClassEvaluator import AveragingMultiClassEvaluator
 
-def test(progDir):
-    cwd = os.getcwd()
-    os.chdir(progDir)
-    print >> sys.stderr, "Testing svm_multiclass_learn...",
-    trainOK = Download.checkReturnCode(os.system("echo | ./svm_multiclass_learn -? > /dev/null"))
-    print >> sys.stderr, "Testing svm_multiclass_classify...",
-    classifyOK = Download.checkReturnCode(os.system("echo | ./svm_multiclass_classify -? > /dev/null"))
-    os.chdir(cwd)
-    return trainOK and classifyOK
-
-def install(destDir=None, downloadDir=None, redownload=False, compile=True):
+def install(destDir=None, downloadDir=None, redownload=False, compile=True, updateLocalSettings=False):
     print >> sys.stderr, "Installing SVM-Multiclass"
     if compile:
         url = Settings.URL["SVM_MULTICLASS_SOURCE"]
@@ -54,9 +45,13 @@ def install(destDir=None, downloadDir=None, redownload=False, compile=True):
     Download.downloadAndExtract(url, destDir, downloadDir, redownload=redownload)
     if compile:
         print >> sys.stderr, "Compiling SVM-Multiclass"
+        Tools.Tool.testPrograms("SVM-Multiclass", ["make"])
         subprocess.call("cd " + destDir + "; make", shell=True)
     
-    test(destDir)
+    Tools.Tool.finalizeInstall(["svm_multiclass_learn", "svm_multiclass_classify"], 
+        {"svm_multiclass_learn":"echo | ./svm_multiclass_learn -? > /dev/null", 
+         "svm_multiclass_classify":"echo | ./svm_multiclass_classify -? > /dev/null"},
+        destDir, {"SVM_MULTICLASS_DIR":destDir}, updateLocalSettings)
 
 def tempUnzip(filename):
     tempdir = tempfile.mkdtemp() # a place for the file
@@ -603,7 +598,6 @@ if __name__=="__main__":
     optparser.add_option("--install", default=None, dest="install", help="Install directory (or DEFAULT)")
     optparser.add_option("--installFromSource", default=False, action="store_true", dest="installFromSource", help="")
     (options, args) = optparser.parse_args()
-    assert options.action in ["TRAIN", "CLASSIFY", "OPTIMIZE"]
     
     if options.install != None:
         downloadDir = None
@@ -616,6 +610,7 @@ if __name__=="__main__":
         install(destDir, downloadDir, False, options.installFromSource)
         sys.exit()
     else:
+        assert options.action in ["TRAIN", "CLASSIFY", "OPTIMIZE"]
         classifier = SVMMultiClassClassifier(Utils.Connection.Unix.getConnection(options.remote))
         if options.action == "TRAIN":
             import time
