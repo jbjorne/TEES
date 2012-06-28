@@ -158,8 +158,15 @@ def workdir(path, deleteIfExists=True, copyFrom=None, log=True):
     atexit.register(os.chdir, os.getcwd())
     os.chdir(path)
     # Open log at workdir
-    if log:
+    if log == True:
         Stream.openLog("log.txt")
+    elif log == False:
+        print >> sys.stderr, "No logging"
+    else:
+        if os.path.exists(log) and deleteIfExists:
+            os.remove(log)
+        print >> sys.stderr, "Logging to", log
+        Stream.openLog(log)
     return path
 
 def getTaskSettings(task, detector, processUnmerging, processModifiers, isSingleStage,
