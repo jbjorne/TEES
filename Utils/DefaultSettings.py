@@ -13,6 +13,7 @@ URL["SVM_MULTICLASS_SOURCE"] = "http://download.joachims.org/svm_multiclass/curr
 URL["SVM_MULTICLASS_LINUX"] = "http://download.joachims.org/svm_multiclass/current/svm_multiclass_linux.tar.gz"
 URL["GENIA_SENTENCE_SPLITTER"] = "http://www.nactem.ac.uk/y-matsu/geniass/geniass-1.00.tar.gz"
 URL["BANNER_SOURCE"] = "http://banner.svn.sourceforge.net/viewvc/banner/trunk/?view=tar"
+URL["BANNER_COMPILED"] = None
 URL["BLLIP_SOURCE"] = "https://github.com/dmcc/bllip-parser/zipball/master"
 URL["STANFORD_PARSER"] = "http://nlp.stanford.edu/software/stanford-parser-2012-03-09.tgz"
 
