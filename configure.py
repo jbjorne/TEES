@@ -72,13 +72,13 @@ def pathMenuInitializer(menu, prevMenu):
         else:
             menu.configFilePath = os.path.join(defaultInstallDir, "LocalSettings.py")
             if os.path.exists(menu.configFilePath):
-                """
+                menu.text += """
                 The "TEES_SETTINGS" environment variable is not set, but a configuration file has been
                 found in the default location. This installation program will use the existing
                 file, and by default install only missing components.
                 """     
             else:
-                """
+                menu.text += """
                 The "TEES_SETTINGS" environment variable is not set, so a new local configuration file
                 will be created.
                 """
@@ -157,6 +157,13 @@ def svmMenuInitializer(menu, prevMenu):
     menu.optDict["i"].handlerArgs = [menu.svmInstallDir, os.path.join(menu.system.defaultInstallDir, "tools/download"), True, menu.optDict["1"].toggle, True]
 
 def toolsMenuInitializer(menu, prevMenu):
+    # Java path for ANT
+    if getattr(menu, "javaHome") == None:
+        if "JAVA_HOME" in os.environ:
+            setattr(menu, "javaHome", os.environ("JAVA_HOME"))
+        else:
+            setattr(menu, "javaHome", "")
+    # Tool initializers
     handlers = []
     handlerArgs = []
     redownload = menu.optDict["1"].toggle
@@ -281,6 +288,8 @@ def buildMenus():
         Option("7", "Change BANNER_DIR", dataInput="bannerInstallDir"),
         Option("8", "Change BLLIP_PARSER_DIR", dataInput="bllipInstallDir"),
         Option("9", "Change STANFORD_PARSER_DIR", dataInput="stanfordInstallDir"),
+        Option.SPACE,
+        Option("10", "JAVA_HOME setting for compiling BANNER", dataInput="javaHome"),
         Option.SPACE,
         Option("i", "Install", isDefault=True),
         Option("s", "Skip")],
