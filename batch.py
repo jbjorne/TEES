@@ -1,10 +1,7 @@
 import sys, os
-sys.path.append(os.path.dirname(os.path.abspath(__file__))+"/..")
-sys.path.append(os.path.dirname(os.path.abspath(__file__))+"/../CommonUtils") # new CommonUtils
-import subprocess
-from subprocess import Popen, PIPE, STDOUT
 import time
 import re
+from Utils.Connection.Unix import getConnection
 
 def getMaxJobsFromFile(controlFilename):
     f = open(controlFilename, "rt")
@@ -22,20 +19,42 @@ def getMaxJobs(maxJobs, controlFilename=None):
         if controlFilename != None:
             return getMaxJobsSetting(controlFilename)
         else:
-            return 1
+            return None
     else:
         return maxJobs
 
-def prepareCommand(template, input):
-    return template.replace("%i", input)
+def prepareCommand(template, input, jobTag=None):
+    template = template.replace("%i", input)
+    template = template.replace("%a", os.path.abspath(input))
+    template = template.replace("%b", os.path.basename(input))
+    if jobTag == None:
+        jobTag = ""
+    template = template.replace("%j", jobTag)
+    return template
 
-def submitJob(command, input, inputDir, dummy=False, rerun=False, hideFinished=False):
-    if regex.match(input) == None:
+def submitJob(command, input, connection, jobTag=None, regex=None, dummy=False, rerun=False, hideFinished=False):
+    if input.endswith(".job"):
+        if connection.debug:
+            print >> sys.stderr, "Skipped job control file", input
         return
-    waitForJobs(maxJobs, submitCount, controlFilename=None, sleepTime=15)
+    if connection.debug:
+        print >> sys.stderr, "Preparing to submit job for input", input
+    if regex != None and regex.match(input) == None:
+        if connection.debug:
+            print >> sys.stderr, "Regular expression did not match input, no job submitted"
+        return
+    elif connection.debug:
+        print >> sys.stderr, "Regular expression matched the input"
+    
+    jobDir = os.path.abspath(os.path.dirname(input))
+    jobName = os.path.basename(input)
+    if jobName == "": # input is a directory
+        jobName = "job"
+    if jobTag != None:
+        jobName += "-" + jobTag
     
     print >> sys.stderr, "Processing", input
-    jobStatus = connection.getJobStatus(connection._getJobPath(inputDir, input))
+    jobStatus = connection.getJobStatus(connection._getJobPath(jobDir, jobName))
     if jobStatus != None:
         print >> sys.stderr, "input already processed, job status =", jobStatus
         if jobStatus == "RUNNING":
@@ -46,42 +65,53 @@ def submitJob(command, input, inputDir, dummy=False, rerun=False, hideFinished=F
                 print >> sys.stderr, "Skipping already processed job"
             return False
     
+    command = prepareCommand(command, input, jobTag)
+    
     if not dummy:
-        print >> sys.stderr, "Submitting job"
-        job = connection.submit(command, inputDir, input)
-        open(input + ".QUEUED", "w").close() # mark job as submitted
+        connection.submit(command, jobDir, jobName)
     else:
         print >> sys.stderr, "Dummy mode"
+        if connection.debug:
+            print >> sys.stderr, "------- Job command -------"
+            print >> sys.stderr, command
+            print >> sys.stderr, "--------------------------"
     return True
 
-def waitForJobs(maxJobs, submitCount, controlFilename=None, sleepTime=15):
+def waitForJobs(maxJobs, submitCount, connection, controlFilename=None, sleepTime=15):
     currentJobs = connection.getNumJobs()
     currentMaxJobs = getMaxJobs(maxJobs, controlFilename)
-    while(currentJobs > currentMaxJobs):
-        print >> sys.stderr, currentJobs, "jobs in queue/running, sleeping for", sleepTime, "seconds"
-        time.sleep(sleepTime)
-        currentJobs = connection.getNumJobs()
-        currentMaxJobs = getMaxJobs(maxJobs, controlFilename)
-        print >> sys.stderr, "Current jobs:", currentJobs, "max jobs", currentMaxJobs, "submitted jobs", submitCount
+    print >> sys.stderr, "Current jobs", str(currentJobs) + ", max jobs", str(currentMaxJobs) + ", submitted jobs", submitCount
+    if currentMaxJobs != None:
+        while(currentJobs > currentMaxJobs):
+            time.sleep(sleepTime)
+            currentJobs = connection.getNumJobs()
+            currentMaxJobs = getMaxJobs(maxJobs, controlFilename)
+            print >> sys.stderr, "Current jobs", str(currentJobs) + ", max jobs", str(currentMaxJobs) + ", submitted jobs", submitCount
 
-def batch():
+def batch(command, input, connection=None, jobTag=None, regex=None, regexSkipDir=None, dummy=False, rerun=False, 
+          hideFinished=False, controlFilename=None, sleepTime=15, debug=False, limit=None, loop=False):
     connection = getConnection(connection)
+    connection.debug = debug
     submitCount = 0
     if os.path.exists(input) and os.path.isfile(input): # single file
-        if submitJob(input, model, dummy, saveWorkDirs, rerun, skipTags=skipTags, hideFinished=hideFinished, eventTag=eventTag, program=program):
+        waitForJobs(limit, submitCount, connection, controlFilename, sleepTime)
+        if submitJob(command, input, connection, jobTag, regex, dummy, rerun, hideFinished):
             submitCount += 1
     else: # walk directory tree
         firstLoop = True
         while firstLoop or loop:
+            waitForJobs(limit, submitCount, connection, controlFilename, sleepTime)
             for triple in os.walk(input):
-                if regexFullPath != None and regex.match(os.path.join(triple[0])) != None:
+                if regexSkipDir != None and regexSkipDir.match(os.path.join(triple[0])) != None:
                     print "Skipping directory", triple[0]
                     continue
                 else:
                     print "Processing directory", triple[0]
-                for filename in triple[2]:                   
-                    if submitJob(source, model, dummy, saveWorkDirs, rerun, skipTags=skipTags, hideFinished=hideFinished, eventTag=eventTag, program=program):
+                for item in sorted(triple[1]) + sorted(triple[2]):
+                    #print item, triple, os.path.join(triple[0], item)
+                    if submitJob(command, os.path.join(triple[0], item), connection, jobTag, regex, dummy, rerun, hideFinished):
                         submitCount += 1
+                        waitForJobs(limit, submitCount, connection, controlFilename, sleepTime)
                 firstLoop = False
 
 if __name__=="__main__":
@@ -96,31 +126,27 @@ if __name__=="__main__":
     from optparse import OptionParser
     optparser = OptionParser()
     optparser.add_option("-i", "--input", default=None, dest="input", help="input data")
-    optparser.add_option("-m", "--model", default=None, dest="model", help="")
-    optparser.add_option("-c", "--connection", default=None, dest="connection", help="")
-    optparser.add_option("--control", default="/v/users/jakrbj/ProcessBatchesControl.txt", dest="control", help="")
-    optparser.add_option("-l", "--limit", default=None, dest="limit", help="")
+    optparser.add_option("-c", "--command", default=None, dest="command", help="")
+    optparser.add_option("-n", "--connection", default=None, dest="connection", help="")
     optparser.add_option("-r", "--regex", default=None, dest="regex", help="")
-    optparser.add_option("--regexFullPath", default=None, dest="regexFullPath", help="")
-    optparser.add_option("--eventTag", default=None, dest="eventTag", help="")
-    optparser.add_option("--program", default=None, dest="program", help="")
-    optparser.add_option("--noLog", default=False, action="store_true", dest="noLog", help="")
-    optparser.add_option("--dummy", default=False, action="store_true", dest="dummy", help="Print jobs on screen, don't submit them")
-    optparser.add_option("--saveWorkDirs", default=False, action="store_true", dest="saveWorkDirs", help="Create working directories at input file location")
+    optparser.add_option("-d", "--regexSkipDir", default=None, dest="regexSkipDir", help="")
+    optparser.add_option("-j", "--jobTag", default=None, dest="jobTag", help="")
+    optparser.add_option("-l", "--limit", default=None, dest="limit", help="")
+    optparser.add_option("--debug", default=False, action="store_true", dest="debug", help="Print jobs on screen")
+    optparser.add_option("--controlFile", default=None, dest="controlFile", help="")
+    optparser.add_option("--sleepTime", default=None, dest="sleepTime", help="")
+    optparser.add_option("--dummy", default=False, action="store_true", dest="dummy", help="Don't submit jobs")
     optparser.add_option("--rerun", default=False, action="store_true", dest="rerun", help="Rerun jobs which have already been queued")
     optparser.add_option("--maxJobs", default=None, type="int", dest="maxJobs", help="Maximum number of jobs in queue/running")
-    optparser.add_option("--skipTags", default=".QUEUED", dest="skipTags", help="")
     optparser.add_option("--hideFinished", default=False, action="store_true", dest="hideFinished", help="")
+    optparser.add_option("--loop", default=False, action="store_true", dest="loop", help="Continuously loop through the input directory")
     (options, args) = optparser.parse_args()
     
     if options.limit != None: options.limit = int(options.limit)
+    if options.sleepTime != None: options.sleepTime = int(options.sleepTime)
     if options.regex != None: options.regex = re.compile(options.regex)
-    if options.regexFullPath != None: options.regexFullPath = re.compile(options.regexFullPath)
-    options.skipTags = options.skipTags.split(",")
-    print "Skip tags", options.skipTags
-    queue(options.input, options.model, options.control, options.maxJobs, dummy=options.dummy, 
-          saveWorkDirs=options.saveWorkDirs, rerun=options.rerun, eventTag=options.eventTag,
-          skipTags=options.skipTags, hideFinished=options.hideFinished, limit=options.limit,
-          regex = options.regex, regexFullPath=options.regexFullPath, program=options.program, connection=options.connection)
-
-
+    if options.regexSkipDir != None: options.regexSkipDir = re.compile(options.regexSkipDir)
+    batch(command=options.command, input=options.input, connection=options.connection, jobTag=options.jobTag, 
+          regex=options.regex, regexSkipDir=options.regexSkipDir, dummy=options.dummy, rerun=options.rerun, 
+          hideFinished=options.hideFinished, controlFilename=options.controlFile, sleepTime=options.sleepTime, 
+          debug=options.debug, limit=options.limit, loop=options.loop)
