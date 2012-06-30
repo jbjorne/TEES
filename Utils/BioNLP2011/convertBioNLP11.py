@@ -1,9 +1,7 @@
 import sys, os, time, shutil
 import tempfile
 thisPath = os.path.dirname(os.path.abspath(__file__))
-sys.path.append(os.path.abspath(os.path.join(thisPath,"../../")))
-sys.path.append(os.path.abspath(os.path.join(thisPath,"../../CommonUtils")))
-sys.path.append(os.path.abspath(os.path.join(thisPath,"../../GeniaChallenge/formatConversion")))
+sys.path.append(os.path.abspath(os.path.join(thisPath,"../..")))
 import STFormat.STTools as ST
 import STFormat.ConvertXML as STConvert
 import STFormat.Equiv
@@ -18,7 +16,7 @@ import Tools.SentenceSplitter
 import Tools.GeniaTagger
 import Tools.CharniakJohnsonParser
 import Tools.StanfordParser
-import cElementTreeUtils as ETUtils
+import Utils.ElementTreeUtils as ETUtils
 import Evaluators.BioNLP11GeniaTools as BioNLP11GeniaTools
 import Utils.Download
 import Utils.Settings as Settings
@@ -71,10 +69,11 @@ def convert(corpora, outDir, downloadDir=None, redownload=False, makeIntermediat
 
 def convertDownloaded(outdir, corpus, files, intermediateFiles=True, evaluate=True):
     global moveBI
-    workdir = outdir + "/conversion/" + corpus
-    if os.path.exists(workdir):
-        shutil.rmtree(workdir)
-    os.makedirs(workdir)
+    if evaluate:
+        workdir = outdir + "/conversion/" + corpus
+        if os.path.exists(workdir):
+            shutil.rmtree(workdir)
+        os.makedirs(workdir)
     
     print >> sys.stderr, "---------------", "Converting to XML", "---------------"
     # All datasets are processed as one XML, to ensure all the steps (parse modification etc.) are

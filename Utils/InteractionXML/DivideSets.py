@@ -1,15 +1,12 @@
 import sys, os
-extraPath = os.path.dirname(os.path.abspath(__file__))+"/../.."
-#IF LOCAL
-extraPath = os.path.dirname(os.path.abspath(__file__))+"/../../JariSandbox/ComplexPPI/Source"
-#ENDIF
-sys.path.append(extraPath)
+thisPath = os.path.dirname(os.path.abspath(__file__))
+sys.path.append(os.path.abspath(os.path.join(thisPath,"../..")))
 from Utils.ProgressCounter import ProgressCounter
 try:
     import xml.etree.cElementTree as ET
 except ImportError:
     import cElementTree as ET
-import cElementTreeUtils as ETUtils
+import Utils.ElementTreeUtils as ETUtils
 
 def processCorpus(input, outDir, stem, tail, mergedSets=[], saveCombined=False, verbose=False):
     newCorpora = {}

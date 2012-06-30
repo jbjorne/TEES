@@ -1,6 +1,8 @@
 from STTools import *
 import Validate
-import combine
+thisPath = os.path.dirname(os.path.abspath(__file__))
+sys.path.append(os.path.abspath(os.path.join(thisPath,"../..")))
+import Utils.Libraries.combine as combine
 import copy
 
 def process(documents, debug=False):

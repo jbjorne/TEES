@@ -1,4 +1,7 @@
-import cElementTreeUtils as ETUtils
+import sys, os
+thisPath = os.path.dirname(os.path.abspath(__file__))
+sys.path.append(os.path.abspath(os.path.join(thisPath,"../..")))
+import Utils.ElementTreeUtils as ETUtils
 import sys, os
 sys.path.append(os.path.dirname(os.path.abspath(__file__))+"/..")
 import Core.SentenceGraph as SentenceGraph

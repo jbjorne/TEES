@@ -210,7 +210,7 @@ def corpusMenuInitializer(menu, prevMenu):
             corporaToInstall.append(corpus)
     if len(corporaToInstall) > 0: # All BioNLP'11 corpora can be installed with one command
         handlers.append(convertBioNLP11.convert)
-        handlerArgs.append([corporaToInstall, menu.corpusDir + "/corpora", menu.corpusDir + "/download", redownload, False, False])
+        handlerArgs.append([corporaToInstall, menu.corpusDir + "/corpora", menu.corpusDir + "/corpora/download", redownload, False, False])
     # Add the handlers to install option
     menu.optDict["i"].handler = handlers
     menu.optDict["i"].handlerArgs = handlerArgs

@@ -1,5 +1,7 @@
-import sys
-import cElementTreeUtils as ETUtils
+import sys, os
+thisPath = os.path.dirname(os.path.abspath(__file__))
+sys.path.append(os.path.abspath(os.path.join(thisPath,"../..")))
+import Utils.ElementTreeUtils as ETUtils
 
 def removeUnconnectedEntities(input, output=None):
     input = ETUtils.ETFromObj(input)
