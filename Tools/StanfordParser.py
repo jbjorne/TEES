@@ -9,22 +9,20 @@ try:
     import xml.etree.cElementTree as ET
 except ImportError:
     import cElementTree as ET
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)),"../CommonUtils")))
-import cElementTreeUtils as ETUtils
-
-sys.path.append(os.path.dirname(os.path.abspath(__file__))+"/..")
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)),"..")))
+import Utils.ElementTreeUtils as ETUtils
 import Utils.Settings as Settings
 import Utils.Download as Download
 import Utils.Settings as Settings
 #stanfordParserDir = "/home/jari/biotext/tools/stanford-parser-2010-08-20"
 #stanfordParserDir = "/home/jari/temp_exec/stanford-parser-2010-08-20"
-stanfordParserDir = Settings.STANFORD_PARSER_DIR
+#stanfordParserDir = Settings.STANFORD_PARSER_DIR
 #stanfordParserArgs = ["java", "-mx150m", "-cp", 
 #    "stanford-parser.jar", "edu.stanford.nlp.trees.EnglishGrammaticalStructure", 
 #    "-CCprocessed", "-treeFile", "-keepPunct"]
-stanfordParserArgs = ["java", "-mx500m", "-cp", 
-    "stanford-parser.jar", "edu.stanford.nlp.trees.EnglishGrammaticalStructure", 
-    "-CCprocessed", "-keepPunct", "-treeFile"]
+#stanfordParserArgs = ["java", "-mx500m", "-cp", 
+#    "stanford-parser.jar", "edu.stanford.nlp.trees.EnglishGrammaticalStructure", 
+#    "-CCprocessed", "-keepPunct", "-treeFile"]
 
 escDict={"-LRB-":"(",
          "-RRB-":")",
@@ -145,43 +143,49 @@ def addDependencies(outfile, parse, tokenByIndex=None, sentenceId=None):
             raise
     return deps
 
-def convert(input, output=None):
-    global stanfordParserDir, stanfordParserArgs
+#def convert(input, output=None):
+#    global stanfordParserDir, stanfordParserArgs
+#
+#    workdir = tempfile.mkdtemp()
+#    if output == None:
+#        output = os.path.join(workdir, "stanford-output.txt")
+#    
+#    input = os.path.abspath(input)
+#    numCorpusSentences = 0
+#    inputFile = codecs.open(input, "rt", "utf-8")
+#    for line in inputFile:
+#        numCorpusSentences += 1
+#    inputFile.close()
+#    cwd = os.getcwd()
+#    os.chdir(stanfordParserDir)
+#    #args = ["java", "-mx150m", "-cp", 
+#    #        "stanford-parser.jar", "edu.stanford.nlp.trees.EnglishGrammaticalStructure", 
+#    #        "-CCprocessed", "-treeFile", "-keepPunct",
+#    #        input]
+#    args = stanfordParserArgs + [input]
+#    #subprocess.call(args,
+#    process = subprocess.Popen(args, 
+#        stdout=codecs.open(output, "wt", "utf-8"))
+#    waitForProcess(process, numCorpusSentences, True, output, "StanfordParser", "Stanford Conversion")
+#    os.chdir(cwd)
+#
+#    lines = None    
+#    if output == None:
+#        outFile = codecs.open(output, "rt", "utf-8")
+#        lines = outFile.readlines()
+#        outFile.close()
+#    
+#    shutil.rmtree(workdir)
+#    return lines
 
-    workdir = tempfile.mkdtemp()
-    if output == None:
-        output = os.path.join(workdir, "stanford-output.txt")
-    
-    input = os.path.abspath(input)
-    numCorpusSentences = 0
-    inputFile = codecs.open(input, "rt", "utf-8")
-    for line in inputFile:
-        numCorpusSentences += 1
-    inputFile.close()
-    cwd = os.getcwd()
-    os.chdir(stanfordParserDir)
-    #args = ["java", "-mx150m", "-cp", 
-    #        "stanford-parser.jar", "edu.stanford.nlp.trees.EnglishGrammaticalStructure", 
-    #        "-CCprocessed", "-treeFile", "-keepPunct",
-    #        input]
-    args = stanfordParserArgs + [input]
-    #subprocess.call(args,
-    process = subprocess.Popen(args, 
-        stdout=codecs.open(output, "wt", "utf-8"))
-    waitForProcess(process, numCorpusSentences, True, output, "StanfordParser", "Stanford Conversion")
-    os.chdir(cwd)
-
-    lines = None    
-    if output == None:
-        outFile = codecs.open(output, "rt", "utf-8")
-        lines = outFile.readlines()
-        outFile.close()
-    
-    shutil.rmtree(workdir)
-    return lines
-
-def convertXML(parser, input, output, debug=False, reparse=False):
-    global stanfordParserDir, stanfordParserArgs
+def convertXML(parser, input, output, debug=False, reparse=False, stanfordParserDir=None, stanfordParserArgs=None):
+    #global stanfordParserDir, stanfordParserArgs
+    if stanfordParserDir == None:
+        stanfordParserDir = Settings.STANFORD_PARSER_DIR
+    if stanfordParserArgs == None:
+        stanfordParserArgs = ["java", "-mx500m", "-cp", "stanford-parser.jar", 
+                              "edu.stanford.nlp.trees.EnglishGrammaticalStructure", 
+                              "-CCprocessed", "-keepPunct", "-treeFile"]
     print >> sys.stderr, "Running Stanford conversion"
     print >> sys.stderr, "Stanford tools at:", stanfordParserDir
     print >> sys.stderr, "Stanford tools arguments:", " ".join(stanfordParserArgs)
