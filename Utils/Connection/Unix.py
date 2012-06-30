@@ -317,7 +317,7 @@ class UnixConnection:
             assert False, prevStatus
         # The job status file must be open before the job is submitted, so that the return code can be
         # written to it.
-        job = self._writeJobFile(jobDir, jobName)
+        self._writeJobFile(jobDir, jobName)
         # Submit the job
         if self.account == None: # a local process
             jobPopen = subprocess.Popen(script, shell=True, stdout=stdout, stderr=stderr)
@@ -388,6 +388,9 @@ class UnixConnection:
                     print >> sys.stderr, "\nTimed out, ", trainTimer.elapsedTimeToString()
                 break
         return jobStatus
+    
+    def getJobStatusByName(self, jobDir, jobName):
+        return self.getJobStatus(self._getJobPath(jobDir, jobName))
     
     def getJobStatus(self, job):
         # Get jobfile

@@ -30,13 +30,16 @@ class SLURMConnection(ClusterConnection):
             print >> sys.stderr, "------- Job script -------"
             print >> sys.stderr, script
             print >> sys.stderr, "--------------------------"
+        # The job status file must be open before the job is submitted, so that the return code can be
+        # written to it.
+        self._writeJobFile(jobDir, jobName)
         print >> sys.stderr, "Submitting job", jobName
         p = subprocess.Popen(command, stdout=subprocess.PIPE, stdin=subprocess.PIPE, stderr=subprocess.STDOUT)
         pstdout = p.communicate(input=script)[0]
         print >> sys.stderr, pstdout
         assert pstdout.startswith("Submitted batch job"), pstdout
         jobId = int(pstdout.split()[-1])
-        return self._writeJobFile(jobDir, jobName, {"SLURMID":jobId})
+        return self._writeJobFile(jobDir, jobName, {"SLURMID":jobId}, append=True)
     
     def getNumJobs():
         """
