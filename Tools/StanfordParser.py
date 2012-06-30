@@ -14,6 +14,7 @@ import Utils.ElementTreeUtils as ETUtils
 import Utils.Settings as Settings
 import Utils.Download as Download
 import Utils.Settings as Settings
+import Tool
 #stanfordParserDir = "/home/jari/biotext/tools/stanford-parser-2010-08-20"
 #stanfordParserDir = "/home/jari/temp_exec/stanford-parser-2010-08-20"
 #stanfordParserDir = Settings.STANFORD_PARSER_DIR
@@ -33,31 +34,40 @@ escDict={"-LRB-":"(",
          "``":"\"",
          "''":"\""}
 
-def test(progDir):
-    return True
-
 def install(destDir=None, downloadDir=None, redownload=False, updateLocalSettings=False):
-    url = URL["STANFORD_PARSER"]
-    packageName = url.split("/")[-1].split(".")[0]
-    # Download
+    print >> sys.stderr, "Installing Stanford Parser"
     if downloadDir == None:
         downloadDir = os.path.join(Settings.DATAPATH, "tools/download/")
-    downloadFile = Download.download(url, downloadDir, clear=redownload)
-    # Prepare destination
     if destDir == None:
         destDir = os.path.join(Settings.DATAPATH, "tools/")
-    installDir =  os.path.join(destDir, packageName)
-    if os.path.exists(installDir):
-        print >> sys.stderr, "Removing existing installation at", installDir
-        shutil.rmtree(installDir)
-    # Unpack
-    print >> sys.stderr, "Extracting", downloadFile, "to", destDir
-    f = tarfile.open(downloadFile, 'r:gz')
-    f.extractall(destDir)
-    f.close()
-    
-    if test(destDir):
-        Settings.setLocal("STANFORD_PARSER_DIR", destDir, updateLocalSettings)
+    items = Download.downloadAndExtract(Settings.URL["STANFORD_PARSER"], destDir, downloadDir)
+    stanfordPath = Download.getTopDir(destDir, items)
+    Tool.finalizeInstall(["stanford-parser.jar"], 
+                         {"stanford-parser.jar":"java -cp stanford-parser.jar edu.stanford.nlp.trees.EnglishGrammaticalStructure"},
+                         stanfordPath, {"STANFORD_PARSER_DIR":stanfordPath}, updateLocalSettings)
+
+
+#    url = URL["STANFORD_PARSER"]
+#    packageName = url.split("/")[-1].split(".")[0]
+#    # Download
+#    if downloadDir == None:
+#        downloadDir = os.path.join(Settings.DATAPATH, "tools/download/")
+#    downloadFile = Download.download(url, downloadDir, clear=redownload)
+#    # Prepare destination
+#    if destDir == None:
+#        destDir = os.path.join(Settings.DATAPATH, "tools/")
+#    installDir =  os.path.join(destDir, packageName)
+#    if os.path.exists(installDir):
+#        print >> sys.stderr, "Removing existing installation at", installDir
+#        shutil.rmtree(installDir)
+#    # Unpack
+#    print >> sys.stderr, "Extracting", downloadFile, "to", destDir
+#    f = tarfile.open(downloadFile, 'r:gz')
+#    f.extractall(destDir)
+#    f.close()
+#    
+#    if test(destDir):
+#        Settings.setLocal("STANFORD_PARSER_DIR", destDir, updateLocalSettings)
 
 def runStanford(input, output):
     global stanfordParserArgs
@@ -400,7 +410,7 @@ def insertParses(input, parsePath, output=None, parseName="McCC", extraAttribute
 if __name__=="__main__":
     import sys
     
-    from optparse import OptionParser
+    from optparse import OptionParser, OptionGroup
     # Import Psyco if available
     try:
         import psyco
@@ -415,13 +425,16 @@ if __name__=="__main__":
     optparser.add_option("-p", "--parse", default=None, dest="parse", help="Name of parse element.")
     optparser.add_option("--debug", default=False, action="store_true", dest="debug", help="")
     optparser.add_option("--reparse", default=False, action="store_true", dest="reparse", help="")
-    optparser.add_option("--install", default=None, dest="install", help="Install directory (or DEFAULT)")
+    group = OptionGroup(optparser, "Install Options", "")
+    group.add_option("--install", default=None, action="store_true", dest="install", help="Install BANNER")
+    group.add_option("--installDir", default=None, dest="installDir", help="Install directory")
+    group.add_option("--downloadDir", default=None, dest="downloadDir", help="Install files download directory")
+    group.add_option("--redownload", default=False, action="store_true", dest="redownload", help="Redownload install files")
+    optparser.add_option_group(group)
     (options, args) = optparser.parse_args()
     
-    if options.install != None:
-        if options.install == "DEFAULT":
-            options.install = None
-        install(options.install)
+    if options.install:
+        install(options.installDir, options.downloadDir, redownload=options.redownload)
     else:
         convertXML(input=options.input, output=options.output, parser=options.parse, debug=options.debug, reparse=options.reparse)
         

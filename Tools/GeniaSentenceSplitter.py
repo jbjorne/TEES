@@ -20,13 +20,11 @@ import Utils.Download as Download
 
 def install(destDir=None, downloadDir=None, redownload=False, updateLocalSettings=False):
     print >> sys.stderr, "Installing GENIA Sentence Splitter"
-    url = Settings.URL["GENIA_SENTENCE_SPLITTER"]
-    packageName = "geniass"
     if downloadDir == None:
         downloadDir = os.path.join(Settings.DATAPATH, "tools/download/")
     if destDir == None:
         destDir = os.path.join(Settings.DATAPATH, "tools/geniass")
-    Download.downloadAndExtract(url, destDir, downloadDir, packageName)
+    Download.downloadAndExtract(Settings.URL["GENIA_SENTENCE_SPLITTER"], destDir, downloadDir, "geniass")
     print >> sys.stderr, "Compiling GENIA Sentence Splitter"
     Tool.testPrograms("Genia Sentence Splitter", ["make", "ruby"])
     cwd = os.getcwd()
@@ -35,7 +33,7 @@ def install(destDir=None, downloadDir=None, redownload=False, updateLocalSetting
     subprocess.call("make", shell=True)
     os.chdir(cwd)
     Tool.finalizeInstall(["./run_geniass.sh"], 
-                         {"./run_geniass.sh":"./run_geniass.sh README  /dev/null " + Settings.RUBY_PATH},
+                         {"./run_geniass.sh":"./run_geniass.sh README /dev/null " + Settings.RUBY_PATH},
                          destDir, {"GENIA_SENTENCE_SPLITTER_DIR":destDir}, updateLocalSettings)
 
 def moveElements(document):
