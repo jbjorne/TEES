@@ -6,6 +6,7 @@ import Utils.Settings as Settings
 import Utils.Stream as Stream
 import Utils.Download
 from Utils.Connection.Unix import getConnection
+from Tools.Preprocessor import Preprocessor
 
 def classify(input, model, output, workDir=None, step=None, omitSteps=None, detector=None, corpusName="TEES", 
              debug=False, writeScores=True, clear=False):
@@ -49,14 +50,20 @@ def classify(input, model, output, workDir=None, step=None, omitSteps=None, dete
 
 def getModel(model):
     if not os.path.exists(model):
-        for suffix in ["", ".zip", "-test.zip"]:
-            predefined = os.path.join(Settings.MODEL_DIR, model + suffix)
-            found = None
-            if os.path.exists(predefined):
-                print >> sys.stderr, "Classifying with predefined model", predefined
-                found = predefined
-                model = found
-                break
+        print >> sys.stderr, "Model", model, "doesn't exist, looking for a default model"
+        found = None
+        if hasattr(Settings, "MODEL_DIR"):
+            for suffix in ["", ".zip", "-test.zip"]:
+                predefined = os.path.join(Settings.MODEL_DIR, model + suffix)
+                if os.path.exists(predefined):
+                    print >> sys.stderr, "Classifying with default model", predefined
+                    found = predefined
+                    model = found
+                    break
+            if found == None:
+                print >> sys.stderr, "No default model found for definition", model
+        else:
+            print >> sys.stderr, "Default model directory MODEL_DIR not defined in Settings"
         if found == None:
             raise Exception("Model " + str(model) + " not found")
     else:
