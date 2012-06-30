@@ -5,7 +5,7 @@ import Core.ExampleBuilder
 import Core.ExampleUtils as ExampleUtils
 from FeatureBuilder import FeatureBuilder
 
-import cElementTreeUtils as ETUtils
+import Utils.ElementTreeUtils as ETUtils
 from collections import defaultdict
 
 class DrugFeatureBuilder(FeatureBuilder):

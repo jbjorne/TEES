@@ -5,7 +5,7 @@ try:
     import xml.etree.cElementTree as ET
 except ImportError:
     import cElementTree as ET
-import combine
+import Utils.Libraries.combine as combine
 
 class UnmergingExampleWriter(SentenceExampleWriter):
     def __init__(self):

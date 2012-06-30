@@ -6,8 +6,8 @@ __version__ = "$Revision: 1.40 $"
 #import Graph.networkx_v10rc1 as NX10 # import networkx as NX
 from SimpleGraph import Graph
 import sys, os
-sys.path.append(os.path.dirname(os.path.abspath(__file__))+"/../CommonUtils")
-import Range
+sys.path.append(os.path.dirname(os.path.abspath(__file__))+"/..")
+import Utils.Range as Range
 import types
 import copy
 
@@ -18,7 +18,7 @@ def loadCorpus(corpus, parse, tokenization=None, removeNameInfo=False, removeInt
     Load an entire corpus through CorpusElements and add SentenceGraph-objects
     to its SentenceElements-objects.
     """
-    import cElementTreeUtils as ETUtils
+    import Utils.ElementTreeUtils as ETUtils
     import sys
     sys.path.append("..")
     from Utils.ProgressCounter import ProgressCounter
@@ -72,8 +72,8 @@ def loadCorpus(corpus, parse, tokenization=None, removeNameInfo=False, removeInt
     return corpusElements
 
 def getCorpusIterator(input, output, parse, tokenization=None, removeNameInfo=False, removeIntersentenceInteractions=True):
-    import cElementTreeUtils as ETUtils
-    from InteractionXML.SentenceElements import SentenceElements
+    import Utils.ElementTreeUtils as ETUtils
+    from Utils.InteractionXML.SentenceElements import SentenceElements
     #import xml.etree.cElementTree as ElementTree
     
     if output != None:

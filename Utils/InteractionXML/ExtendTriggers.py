@@ -3,11 +3,10 @@ try:
     import xml.etree.cElementTree as ET
 except ImportError:
     import cElementTree as ET
-import cElementTreeUtils as ETUtils
-import Range
+sys.path.append(os.path.dirname(os.path.abspath(__file__))+"/../..")
+import Utils.ElementTreeUtils as ETUtils
+import Utils.Range as Range
 from collections import defaultdict
-extraPath = os.path.dirname(os.path.abspath(__file__))+"/../../JariSandbox/ComplexPPI/Source"
-sys.path.append(extraPath)
 import ExampleBuilders.PhraseTriggerExampleBuilder 
 
 def tokenize(text):

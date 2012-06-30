@@ -1,6 +1,6 @@
 import sys, os, copy, types
 from Detector import Detector
-import cElementTreeUtils as ETUtils
+import Utils.ElementTreeUtils as ETUtils
 
 class ToolChain(Detector):
     def __init__(self):

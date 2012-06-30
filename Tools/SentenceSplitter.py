@@ -6,8 +6,6 @@ try:
     import xml.etree.cElementTree as ET
 except ImportError:
     import cElementTree as ET
-import cElementTreeUtils as ETUtils
-import Range
 
 import shutil
 import subprocess
@@ -18,6 +16,7 @@ import tarfile
 from GeniaSentenceSplitter import moveElements
 
 sys.path.append(os.path.dirname(os.path.abspath(__file__))+"/..")
+import Utils.ElementTreeUtils as ETUtils
 from Utils.ProgressCounter import ProgressCounter
 
 def openFile(path, tarFile=None):

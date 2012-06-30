@@ -1,22 +1,13 @@
 import sys, os
 import shutil
 import itertools
-import gzip
 import tempfile
 sys.path.append(os.path.dirname(os.path.abspath(__file__))+"/..")
 from Core.Model import Model
-import STFormat.ConvertXML
-import STFormat.Compare
-#from JariSandbox.ComplexPPI.Source.Murska.CSCConnection import CSCConnection
-from Core.OptimizeParameters import optimize
 from StepSelector import StepSelector
 import Utils.Parameters as Parameters
 import types
 import time, datetime
-
-from ExampleWriters.BioTextExampleWriter import BioTextExampleWriter
-import Evaluators.EvaluateInteractionXML as EvaluateInteractionXML
-import InteractionXML
 
 class Detector():
     def __init__(self):

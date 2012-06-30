@@ -8,7 +8,7 @@ import Core.ExampleUtils as ExampleUtils
 
 from EntityExampleWriter import EntityExampleWriter
 from EdgeExampleWriter import EdgeExampleWriter
-from Task3ExampleWriter import Task3ExampleWriter
+from ModifierExampleWriter import ModifierExampleWriter
 from PhraseTriggerExampleWriter import PhraseTriggerExampleWriter
 #IF LOCAL
 from UnmergingExampleWriter import UnmergingExampleWriter
@@ -42,7 +42,7 @@ class BioTextExampleWriter:
         elif xType == "edge":
             w = EdgeExampleWriter()
         elif xType == "task3":
-            w = Task3ExampleWriter()
+            w = ModifierExampleWriter()
         elif xType == "entRel":
             w = EntityRelationExampleWriter()
         elif xType == "phrase":

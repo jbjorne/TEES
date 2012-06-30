@@ -6,9 +6,8 @@ __version__ = "$Revision: 1.34 $"
 import sys, os
 thisPath = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.abspath(os.path.join(thisPath,"..")))
-import Core.ExampleBuilder
-from Core.ExampleBuilder import ExampleBuilder
-import Stemming.PorterStemmer as PorterStemmer
+from ExampleBuilder import ExampleBuilder
+import Utils.Libraries.PorterStemmer as PorterStemmer
 from Core.IdSet import IdSet
 import Core.ExampleUtils as ExampleUtils
 from Core.Gazetteer import Gazetteer
@@ -16,9 +15,8 @@ from FeatureBuilders.RELFeatureBuilder import RELFeatureBuilder
 from FeatureBuilders.WordNetFeatureBuilder import WordNetFeatureBuilder
 from FeatureBuilders.GiulianoFeatureBuilder import GiulianoFeatureBuilder
 import PhraseTriggerExampleBuilder
-import InteractionXML.ResolveEPITriggerTypes
 
-class GeneralEntityTypeRecognizerGztr(ExampleBuilder):
+class EntityExampleBuilder(ExampleBuilder):
     def __init__(self, style=None, classSet=None, featureSet=None, gazetteerFileName=None, skiplist=None):
         if classSet == None:
             classSet = IdSet(1)

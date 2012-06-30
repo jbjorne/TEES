@@ -3,7 +3,8 @@ try:
     import xml.etree.cElementTree as ET
 except ImportError:
     import cElementTree as ET
-import cElementTreeUtils as ETUtils
+sys.path.append(os.path.dirname(os.path.abspath(__file__))+"/../../")
+import Utils.ElementTreeUtils as ETUtils
 from collections import defaultdict
 
 def getEPIBaseType(eType):

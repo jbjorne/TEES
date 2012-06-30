@@ -4,7 +4,7 @@ try:
     import xml.etree.cElementTree as ET
 except ImportError:
     import cElementTree as ET
-import cElementTreeUtils as ETUtils
+import Utils.ElementTreeUtils as ETUtils
 
 def recalculateIds(input, output=None, onlyWithinSentence=False, docIndexStart=0):
     print >> sys.stderr, "##### Recalculate hierarchical interaction XML ids #####"

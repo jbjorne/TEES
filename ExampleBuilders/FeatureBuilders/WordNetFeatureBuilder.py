@@ -3,7 +3,7 @@ sys.path.append(os.path.join(os.path.dirname(os.path.abspath(__file__)), "../.."
 #print os.path.join(os.path.dirname(os.path.abspath(__file__)), "../..")
 from Core.IdSet import IdSet
 import Core.ExampleBuilder
-import Stemming.PorterStemmer as PorterStemmer
+import Utils.Libraries.PorterStemmer as PorterStemmer
 import Core.ExampleUtils as ExampleUtils
 from FeatureBuilder import FeatureBuilder
 try:

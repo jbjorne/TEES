@@ -5,8 +5,8 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__))+"/..")
 import shutil, tempfile
 import subprocess
 import Core.ExampleUtils as ExampleUtils
-import Core.OptimizeParameters
-import combine
+#import Core.OptimizeParameters
+import Utils.Libraries.combine as combine
 import copy
 import tempfile
 import subprocess

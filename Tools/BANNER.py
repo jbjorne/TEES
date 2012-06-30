@@ -7,16 +7,14 @@ try:
     import xml.etree.cElementTree as ET
 except ImportError:
     import cElementTree as ET
-sys.path.append(os.path.dirname(os.path.abspath(__file__))+"/../CommonUtils")
-import cElementTreeUtils as ETUtils
-import StanfordParser
+sys.path.append(os.path.dirname(os.path.abspath(__file__))+"/..")
+import Utils.ElementTreeUtils as ETUtils
 
 import shutil
 import subprocess
 import tempfile
 import codecs
 
-sys.path.append(os.path.dirname(os.path.abspath(__file__))+"/..")
 import Utils.Settings as Settings
 import Utils.Download as Download
 import Tool

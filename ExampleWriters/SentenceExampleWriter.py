@@ -14,8 +14,8 @@ try:
     import xml.etree.cElementTree as ET
 except ImportError:
     import cElementTree as ET
-import cElementTreeUtils as ETUtils
-import InteractionXML.ResolveEPITriggerTypes
+import Utils.ElementTreeUtils as ETUtils
+import Utils.InteractionXML.ResolveEPITriggerTypes as ResolveEPITriggerTypes
 from collections import defaultdict
 
 class SentenceExampleWriter:
@@ -196,7 +196,7 @@ class SentenceExampleWriter:
             eTypes = classSet.getName(prediction[0]).split("---") # split merged types
             if unmergeEPINegText != None: # an element text was provided
                 for i in range(len(eTypes)):
-                    eTypes[i] = InteractionXML.ResolveEPITriggerTypes.determineNewType(classSet.getName(prediction[0]), unmergeEPINegText)
+                    eTypes[i] = ResolveEPITriggerTypes.determineNewType(classSet.getName(prediction[0]), unmergeEPINegText)
         return eTypes
 
     def setElementType(self, element, prediction, classSet=None, classIds=None, unmergeEPINeg=False):
@@ -208,7 +208,7 @@ class SentenceExampleWriter:
                 element.attrib["type"] = str(False)
         else:
             if unmergeEPINeg:
-                element.set("type", InteractionXML.ResolveEPITriggerTypes.determineNewType(classSet.getName(prediction[0]), eText))
+                element.set("type", ResolveEPITriggerTypes.determineNewType(classSet.getName(prediction[0]), eText))
             else:
                 element.attrib["type"] = classSet.getName(prediction[0])
             classWeights = prediction[1:]

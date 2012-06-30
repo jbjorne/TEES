@@ -6,28 +6,18 @@ __version__ = "$Revision: 1.13 $"
 import sys, os
 thisPath = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.abspath(os.path.join(thisPath,"..")))
-sys.path.append(os.path.abspath(os.path.join(thisPath,"../CommonUtils")))
-from Core.ExampleBuilder import ExampleBuilder
-import Core.ExampleBuilder
+from ExampleBuilder import ExampleBuilder
 from Core.IdSet import IdSet
 import Core.ExampleUtils as ExampleUtils
 from FeatureBuilders.MultiEdgeFeatureBuilder import MultiEdgeFeatureBuilder
 from FeatureBuilders.TriggerFeatureBuilder import TriggerFeatureBuilder
 from FeatureBuilders.TokenFeatureBuilder import TokenFeatureBuilder
-from FeatureBuilders.BioInferOntologyFeatureBuilder import BioInferOntologyFeatureBuilder
-from FeatureBuilders.NodalidaFeatureBuilder import NodalidaFeatureBuilder
-#import Graph.networkx_v10rc1 as NX10
 from Core.SimpleGraph import Graph
 from Utils.ProgressCounter import ProgressCounter
-#IF LOCAL
-import Utils.BioInfer.OntologyUtils as OntologyUtils
-#ENDIF
-import combine
-import cElementTreeUtils as ETUtils
+import Utils.Libraries.combine as combine
+import Utils.ElementTreeUtils as ETUtils
 import gzip
 import types
-
-from multiprocessing import Process
 
 def combinations(iterable, r):
     # combinations('ABCD', 2) --> AB AC AD BC BD CD

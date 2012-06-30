@@ -1,11 +1,11 @@
 import sys
 from SentenceExampleWriter import SentenceExampleWriter
-import cElementTreeUtils as ETUtils
+import Utils.ElementTreeUtils as ETUtils
 from Core.IdSet import IdSet
 import types
 import itertools
     
-class Task3ExampleWriter(SentenceExampleWriter):
+class ModifierExampleWriter(SentenceExampleWriter):
     def __init__(self):
         self.xType = "task3"
         

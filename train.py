@@ -1,12 +1,10 @@
 import sys, os
-sys.path.append(os.path.dirname(os.path.abspath(__file__))+"/CommonUtils") # new CommonUtils
-from InteractionXML.DeleteElements import getEmptyCorpus
+from Utils.InteractionXML.DeleteElements import getEmptyCorpus
 import Utils.Stream as Stream
 import Utils.Settings as Settings
 import Utils.Parameters as Parameters
 from Utils.Connection.Unix import getConnection
-import STFormat.ConvertXML
-import STFormat.Compare
+import Utils.STFormat.Compare
 import shutil
 import atexit
 import types
@@ -79,7 +77,7 @@ def train(output, task=None, detector=None,
         else:
             detector.stWriteScores = False # the evaluation server doesn't like additional files
             detector.classify(inputFiles["test"], models["test"], "classification-test/test-events", fromStep=detectorSteps["TEST"], workDir="classification-test")
-            STFormat.Compare.compare("classification-test/test-events.tar.gz", "classification-devel/devel-events.tar.gz", "a2")
+            Utils.STFormat.Compare.compare("classification-test/test-events.tar.gz", "classification-devel/devel-events.tar.gz", "a2")
 
 def getSteps(step, omitSteps, mainSteps):
     # Determine substep to start from, for the main step from which processing starts

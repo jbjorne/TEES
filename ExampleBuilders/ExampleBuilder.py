@@ -3,23 +3,17 @@ Base class for ExampleBuilders
 """
 __version__ = "$Revision: 1.32 $"
 
-from SentenceGraph import SentenceGraph
-from SentenceGraph import getCorpusIterator
-from IdSet import IdSet
 import sys, os, types
+sys.path.append(os.path.dirname(os.path.abspath(__file__))+"/..")
+from Core.SentenceGraph import getCorpusIterator
+from Core.IdSet import IdSet
 import gzip
 import itertools
-sys.path.append(os.path.dirname(os.path.abspath(__file__))+"/..")
 from Utils.ProgressCounter import ProgressCounter
-#from Utils.Parameters import getArgs
-#from Utils.Parameters import splitParameters
-#from Utils.Parameters import toString
 import Utils.Parameters
 import Core.ExampleUtils as ExampleUtils
-import SentenceGraph
-#IF LOCAL
+import Core.SentenceGraph
 from ExampleBuilders.ExampleStats import ExampleStats
-#ENDIF
 
 class ExampleBuilder:
     """ 
@@ -239,7 +233,7 @@ class ExampleBuilder:
     def getSentences(self, input, parse, tokenization, removeNameInfo=False):
         if type(input) != types.ListType:
             # Load corpus and make sentence graphs
-            corpusElements = SentenceGraph.loadCorpus(input, parse, tokenization, removeNameInfo=removeNameInfo)
+            corpusElements = Core.SentenceGraph.loadCorpus(input, parse, tokenization, removeNameInfo=removeNameInfo)
             sentences = []
             for sentence in corpusElements.sentences:
                 if sentence.sentenceGraph != None: # required for event detection

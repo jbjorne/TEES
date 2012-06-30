@@ -4,9 +4,9 @@ Shortest path features
 __version__ = "$Revision: 1.30 $"
 
 from FeatureBuilder import FeatureBuilder
-import Stemming.PorterStemmer as PorterStemmer
+import Utils.Libraries.PorterStemmer as PorterStemmer
 #from EdgeFeatureBuilder import EdgeFeatureBuilder
-import combine
+import Utils.Libraries.combine as combine
 
 class MultiEdgeFeatureBuilder(FeatureBuilder):
     """

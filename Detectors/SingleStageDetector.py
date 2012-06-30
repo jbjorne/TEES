@@ -3,14 +3,12 @@ import shutil
 import itertools
 import gzip
 sys.path.append(os.path.dirname(os.path.abspath(__file__))+"/..")
-sys.path.append(os.path.dirname(os.path.abspath(__file__))+"/../CommonUtils")
-import cElementTreeUtils as ETUtils
+import Utils.ElementTreeUtils as ETUtils
 from Core.Model import Model
 import Core.ExampleUtils as ExampleUtils
-import STFormat.ConvertXML
-import STFormat.Compare
+import Utils.STFormat.ConvertXML
+import Utils.STFormat.Compare
 #from Murska.CSCConnection import CSCConnection
-from Core.OptimizeParameters import optimize
 from StepSelector import StepSelector
 #import Utils.Parameters as Parameters
 import types
@@ -111,7 +109,7 @@ class SingleStageDetector(Detector):
             model.get(self.tag+"classifier-model"), None, parse, float(model.get("recallAdjustParameter")))
         shutil.copy2(workOutputTag+self.tag+"pred.xml.gz", output+"pred.xml.gz")
         EvaluateInteractionXML.run(self.evaluator, xml, data, parse)
-        STFormat.ConvertXML.toSTFormat(xml, output+".tar.gz", outputTag="a2")
+        Utils.STFormat.ConvertXML.toSTFormat(xml, output+".tar.gz", outputTag="a2")
         if self.stEvaluator != None:
             self.stEvaluator.evaluate(output+".tar.gz", task)
         self.deleteTempWorkDir()

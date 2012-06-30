@@ -326,6 +326,7 @@ if __name__=="__main__":
     optparser.add_option("--clearInstallDir", default=False, action="store_true", dest="clearInstallDir", help="")
     optparser.add_option("--onError", default="ASK", dest="onError", help="ASK, IGNORE or EXIT")
     (options, args) = optparser.parse_args()
+    assert options.onError in ["ASK", "IGNORE", "EXIT"]
     
     configure(options.installDir, options.localSettings, options.auto, options.width, options.clearInstallDir, options.onError)
 #    Menu.system.width = options.width

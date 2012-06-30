@@ -2,7 +2,7 @@ import sys, os
 import shutil
 import types
 from Detector import Detector
-from TriggerDetector import TriggerDetector
+from EntityDetector import EntityDetector
 from EdgeDetector import EdgeDetector
 from UnmergingDetector import UnmergingDetector
 from ModifierDetector import ModifierDetector
@@ -17,7 +17,7 @@ import Evaluators.BioNLP11GeniaTools
 class EventDetector(Detector):
     def __init__(self):
         Detector.__init__(self)
-        self.triggerDetector = TriggerDetector()
+        self.triggerDetector = EntityDetector()
         self.edgeDetector = EdgeDetector()
         self.unmergingDetector = UnmergingDetector()
         self.doUnmergingSelfTraining = True #False

@@ -6,7 +6,7 @@ try:
     import xml.etree.cElementTree as ET
 except ImportError:
     import cElementTree as ET
-import cElementTreeUtils as ETUtils
+import Utils.ElementTreeUtils as ETUtils
 import InteractionXML.IDUtils as IDUtils
 import types
 from collections import defaultdict

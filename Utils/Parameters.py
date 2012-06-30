@@ -1,7 +1,7 @@
 import sys, os
 import types
 sys.path.append(os.path.dirname(os.path.abspath(__file__))+"/..")
-import CommonUtils.combine as combine
+import Utils.Libraries.combine as combine
 
 def toDict(parameters, valueListKey=None):
     if parameters == None:

@@ -3,11 +3,10 @@ import itertools
 import types
 thisPath = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.abspath(os.path.join(thisPath,"..")))
-sys.path.append(os.path.abspath(os.path.join(thisPath,"../CommonUtils")))
-import STFormat.STTools
-import STFormat.ConvertXML
-import STFormat.Equiv
-import cElementTreeUtils as ETUtils
+import Utils.STFormat.STTools
+import Utils.STFormat.ConvertXML
+import Utils.STFormat.Equiv
+import Utils.ElementTreeUtils as ETUtils
 import Tools.GeniaSentenceSplitter
 import Tools.GeniaTagger
 import Tools.CharniakJohnsonParser
@@ -15,7 +14,7 @@ import Tools.StanfordParser
 import Tools.BANNER
 from ToolChain import ToolChain
 import InteractionXML.DivideSets
-import GeniaChallenge.formatConversion.ProteinNameSplitter as ProteinNameSplitter
+import Utils.ProteinNameSplitter as ProteinNameSplitter
 import Utils.FindHeads as FindHeads
 from Test.Pipeline import log
 
@@ -59,12 +58,12 @@ class Preprocessor(ToolChain):
                 dataSetNames = dataSetNames.split(",")
             for dataSetDir, dataSetName in itertools.izip_longest(dataSetDirs, dataSetNames, fillvalue=None):
                 print >> sys.stderr, "Reading", dataSetDir, "set,",
-                docs = STFormat.STTools.loadSet(dataSetDir, dataSetName)
+                docs = Utils.STFormat.STTools.loadSet(dataSetDir, dataSetName)
                 print >> sys.stderr, len(docs), "documents"
                 documents.extend(docs)
             print >> sys.stderr, "Resolving equivalences"
-            STFormat.Equiv.process(documents)
-            self.xml = STFormat.ConvertXML.toInteractionXML(documents, self.intermediateFileTag, output)
+            Utils.STFormat.Equiv.process(documents)
+            self.xml = Utils.STFormat.ConvertXML.toInteractionXML(documents, self.intermediateFileTag, output)
         else:
             print >> sys.stderr, "Processing source as interaction XML"
             self.xml = ETUtils.ETFromObj(input)

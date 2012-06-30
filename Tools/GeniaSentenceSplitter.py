@@ -4,12 +4,11 @@ import sys,os
 import sys
 thisPath = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.abspath(os.path.join(thisPath,"..")))
-sys.path.append(os.path.abspath(os.path.join(thisPath,"../CommonUtils")))
 try:
     import xml.etree.cElementTree as ET
 except ImportError:
     import cElementTree as ET
-import cElementTreeUtils as ETUtils
+import Utils.ElementTreeUtils as ETUtils
 import Range
 
 import shutil
@@ -25,6 +24,7 @@ import Utils.Download as Download
 #sentenceSplitterDir = "/home/jari/temp_exec/geniass"
 
 def install(destDir=None, downloadDir=None, redownload=False):
+    print >> sys.stderr, "Installing GENIA Sentence Splitter"
     url = Settings.URL["GENIA_SENTENCE_SPLITTER"]
     packageName = "geniass"
     if downloadDir == None:

@@ -6,7 +6,7 @@ import Core.ExampleBuilder
 from Core.IdSet import IdSet
 import Core.ExampleUtils as ExampleUtils
 from FeatureBuilders.MultiEdgeFeatureBuilder import MultiEdgeFeatureBuilder
-import cElementTreeUtils as ETUtils
+import Utils.ElementTreeUtils as ETUtils
 #import Graph.networkx_v10rc1 as NX10
 
 class EntityCounter(ExampleBuilder):

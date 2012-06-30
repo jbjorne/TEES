@@ -1,6 +1,6 @@
 from SingleStageDetector import SingleStageDetector
-from ExampleBuilders.Task3ExampleBuilder import Task3ExampleBuilder
-from ExampleWriters.Task3ExampleWriter import Task3ExampleWriter
+from ExampleBuilders.ModifierExampleBuilder import ModifierExampleBuilder
+from ExampleWriters.ModifierExampleWriter import ModifierExampleWriter
 from Classifiers.SVMMultiClassClassifier import SVMMultiClassClassifier
 from Evaluators.AveragingMultiClassEvaluator import AveragingMultiClassEvaluator
 import Evaluators.BioNLP11GeniaTools
@@ -8,8 +8,8 @@ import Evaluators.BioNLP11GeniaTools
 class ModifierDetector(SingleStageDetector):
     def __init__(self):
         SingleStageDetector.__init__(self)
-        self.exampleBuilder = Task3ExampleBuilder
-        self.exampleWriter = Task3ExampleWriter()
+        self.exampleBuilder = ModifierExampleBuilder
+        self.exampleWriter = ModifierExampleWriter()
         self.Classifier = SVMMultiClassClassifier
         self.evaluator = AveragingMultiClassEvaluator
         self.stEvaluator = Evaluators.BioNLP11GeniaTools

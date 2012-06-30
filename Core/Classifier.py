@@ -4,12 +4,12 @@ Base class for classifiers
 __version__ = "$Revision: 1.21 $"
 
 import sys, os
-import combine
 #from Evaluation import Evaluation
 #import Evaluators.Evaluation as EvaluationBase
 import ExampleUtils
 import tempfile
 sys.path.append(os.path.dirname(__file__)+"/..")
+import Utils.Libraries.combine as combine
 import Utils.TableUtils as TableUtils
 from Utils.Parameters import *
 from Utils.Timer import Timer

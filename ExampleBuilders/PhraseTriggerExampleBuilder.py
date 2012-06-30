@@ -6,13 +6,12 @@ __version__ = "$Revision: 1.7 $"
 import sys, os
 thisPath = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.abspath(os.path.join(thisPath,"..")))
-import Core.ExampleBuilder
-from Core.ExampleBuilder import ExampleBuilder
-import Stemming.PorterStemmer as PorterStemmer
+from ExampleBuilder import ExampleBuilder
+import Utils.Libraries.PorterStemmer as PorterStemmer
 from Core.IdSet import IdSet
 import Core.ExampleUtils as ExampleUtils
 from Core.Gazetteer import Gazetteer
-import InteractionXML.MapPhrases as MapPhrases
+import Utils.InteractionXML.MapPhrases as MapPhrases
 from FeatureBuilders.TriggerFeatureBuilder import TriggerFeatureBuilder
 
 coNPPhraseFirstToken = set(["both", "each", "it", "its", "itself", "neither", "others",

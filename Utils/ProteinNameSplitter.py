@@ -3,13 +3,13 @@ try:
     import xml.etree.cElementTree as ElementTree
 except ImportError:
     import cElementTree as ElementTree
-import cElementTreeUtils as ETUtils
 import gzip
 import sys
 import os
 import re
 import string
-sys.path.append(os.path.dirname(os.path.abspath(__file__))+"/../../JariSandbox/ComplexPPI/Source/")
+sys.path.append(os.path.dirname(os.path.abspath(__file__))+"/..")
+import Utils.ElementTreeUtils as ETUtils
 from Utils.ProgressCounter import ProgressCounter
 
 # the prefix to use for split token ids

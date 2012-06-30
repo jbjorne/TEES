@@ -1,10 +1,10 @@
 import sys, os
 thisPath = os.path.dirname(os.path.abspath(__file__))
-sys.path.append(os.path.abspath(os.path.join(thisPath,"..")))
+sys.path.append(os.path.abspath(os.path.join(thisPath,"../..")))
 from STTools import *
 import xml.etree.cElementTree as ET
-import cElementTreeUtils as ETUtils
-import Range
+import Utils.ElementTreeUtils as ETUtils
+import Utils.Range as Range
 
 #def compareArguments(a, b):
 #    if a[0] == "Cause":

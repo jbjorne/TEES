@@ -1,13 +1,11 @@
 """
 Edge Examples
 """
-__version__ = "$Revision: 1.69 $"
 
 import sys, os
 thisPath = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.abspath(os.path.join(thisPath,"..")))
-from Core.ExampleBuilder import ExampleBuilder
-import Core.ExampleBuilder
+from ExampleBuilder import ExampleBuilder
 from Core.IdSet import IdSet
 import Core.ExampleUtils as ExampleUtils
 from FeatureBuilders.MultiEdgeFeatureBuilder import MultiEdgeFeatureBuilder
@@ -22,16 +20,13 @@ from FeatureBuilders.GiulianoFeatureBuilder import GiulianoFeatureBuilder
 #import Graph.networkx_v10rc1 as NX10
 from Core.SimpleGraph import Graph
 from FeatureBuilders.TriggerFeatureBuilder import TriggerFeatureBuilder
-#IF LOCAL
-import Utils.BioInfer.OntologyUtils as OntologyUtils
-#ENDIF
-import Range
+import Utils.Range as Range
 from multiprocessing import Process
 
 # For gold mapping
 import Evaluators.EvaluateInteractionXML as EvaluateInteractionXML
 
-class MultiEdgeExampleBuilder(ExampleBuilder):
+class EdgeExampleBuilder(ExampleBuilder):
     """
     This example builder makes edge examples, i.e. examples describing
     the event arguments.

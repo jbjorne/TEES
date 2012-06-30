@@ -2,7 +2,7 @@ import sys
 sys.path.append("..")
 import Core.ExampleBuilder
 from Core.ExampleBuilder import ExampleBuilder
-import Stemming.PorterStemmer as PorterStemmer
+import Utils.Libraries.PorterStemmer as PorterStemmer
 from Core.IdSet import IdSet
 import Core.ExampleUtils as ExampleUtils
 from Core.Gazetteer import Gazetteer

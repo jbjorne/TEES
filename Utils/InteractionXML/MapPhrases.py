@@ -1,16 +1,13 @@
 import sys, os
 from collections import defaultdict
 extraPath = os.path.dirname(os.path.abspath(__file__))+"/../.."
-#IF LOCAL
-extraPath = os.path.dirname(os.path.abspath(__file__))+"/../../JariSandbox/ComplexPPI/Source"
-#ENDIF
 sys.path.append(extraPath)
 from Utils.ProgressCounter import ProgressCounter
 try:
     import xml.etree.cElementTree as ET
 except ImportError:
     import cElementTree as ET
-import cElementTreeUtils as ETUtils
+import Utils.ElementTreeUtils as ETUtils
 import Range
 
 def fixIndices(phrases, tokens):

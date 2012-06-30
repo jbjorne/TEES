@@ -7,9 +7,8 @@ import sys, os
 import types
 thisPath = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.abspath(os.path.join(thisPath,"..")))
-import Core.ExampleBuilder
-from Core.ExampleBuilder import ExampleBuilder
-import Stemming.PorterStemmer as PorterStemmer
+from ExampleBuilder import ExampleBuilder
+import Utils.Libraries.PorterStemmer as PorterStemmer
 from Core.IdSet import IdSet
 import Core.ExampleUtils as ExampleUtils
 from Core.Gazetteer import Gazetteer
@@ -64,7 +63,7 @@ def readWords(words):
 #    else: # x<y
 #       return -1
 
-class Task3ExampleBuilder(ExampleBuilder):
+class ModifierExampleBuilder(ExampleBuilder):
     def __init__(self, style=None, classSet=None, featureSet=None, gazetteerFileName=None):
         global speculationWords
         

@@ -38,7 +38,7 @@ def submitJob(command, input, connection, jobTag=None, regex=None, dummy=False, 
             print >> sys.stderr, "Skipped job control file", input
         return
     if connection.debug:
-        print >> sys.stderr, "Preparing to submit job for input", input
+        print >> sys.stderr, "Preparing to submit a job for input", input
     if regex != None and regex.match(input) == None:
         if connection.debug:
             print >> sys.stderr, "Regular expression did not match input, no job submitted"
@@ -49,12 +49,13 @@ def submitJob(command, input, connection, jobTag=None, regex=None, dummy=False, 
     jobDir = os.path.abspath(os.path.dirname(input))
     jobName = os.path.basename(input)
     if jobName == "": # input is a directory
-        jobName = "job"
+        jobName = jobDir.rstrip("/").split("/")[-1] # use directory name as job name
+        jobDir = jobDir.rstrip("/").split("/")[0] # save job control file on the same level as the directory
     if jobTag != None:
         jobName += "-" + jobTag
     
     print >> sys.stderr, "Processing", input
-    jobStatus = connection.getJobStatus(connection._getJobPath(jobDir, jobName))
+    jobStatus = connection.getJobStatusByName(jobDir, jobName)
     if jobStatus != None:
         print >> sys.stderr, "input already processed, job status =", jobStatus
         if jobStatus == "RUNNING":
@@ -92,25 +93,25 @@ def batch(command, input, connection=None, jobTag=None, regex=None, regexSkipDir
           hideFinished=False, controlFilename=None, sleepTime=15, debug=False, limit=None, loop=False):
     connection = getConnection(connection)
     connection.debug = debug
-    submitCount = 0
     if os.path.exists(input) and os.path.isfile(input): # single file
-        waitForJobs(limit, submitCount, connection, controlFilename, sleepTime)
-        if submitJob(command, input, connection, jobTag, regex, dummy, rerun, hideFinished):
-            submitCount += 1
+        waitForJobs(limit, 0, connection, controlFilename, sleepTime)
+        submitJob(command, input, connection, jobTag, regex, dummy, rerun, hideFinished)
     else: # walk directory tree
         firstLoop = True
+        submitCount = 0
         while firstLoop or loop:
             waitForJobs(limit, submitCount, connection, controlFilename, sleepTime)
             for triple in os.walk(input):
                 if regexSkipDir != None and regexSkipDir.match(os.path.join(triple[0])) != None:
-                    print "Skipping directory", triple[0]
+                    print >> sys.stderr, "Skipping directory", triple[0]
                     continue
                 else:
-                    print "Processing directory", triple[0]
-                for item in sorted(triple[1]) + sorted(triple[2]):
+                    print >> sys.stderr, "Processing directory", triple[0]
+                for item in sorted(triple[1]) + sorted(triple[2]): # process both directories and files
                     #print item, triple, os.path.join(triple[0], item)
                     if submitJob(command, os.path.join(triple[0], item), connection, jobTag, regex, dummy, rerun, hideFinished):
                         submitCount += 1
+                        # number of submitted jobs has increased, so check if we need to wait
                         waitForJobs(limit, submitCount, connection, controlFilename, sleepTime)
                 firstLoop = False
 
@@ -125,7 +126,7 @@ if __name__=="__main__":
 
     from optparse import OptionParser
     optparser = OptionParser()
-    optparser.add_option("-i", "--input", default=None, dest="input", help="input data")
+    optparser.add_option("-i", "--input", default=None, dest="input", help="Input file or directory. A directory will be processed recursively")
     optparser.add_option("-c", "--command", default=None, dest="command", help="")
     optparser.add_option("-n", "--connection", default=None, dest="connection", help="")
     optparser.add_option("-r", "--regex", default=None, dest="regex", help="")

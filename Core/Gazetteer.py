@@ -7,12 +7,12 @@ try:
     import xml.etree.cElementTree as ET
 except:
     import cElementTree as ET
-import cElementTreeUtils as ETUtils
 import sys,os
 from optparse import OptionParser
 sys.path.append(os.path.dirname(os.path.abspath(__file__))+"/..")
+import Utils.ElementTreeUtils as ETUtils
 from Utils.ProgressCounter import ProgressCounter
-import Stemming.PorterStemmer as PorterStemmer
+import Utils.Libraries.PorterStemmer as PorterStemmer
 
 def charOffStr2tuple(cStr):
     b,e=(cStr.split(",")[0]).split("-")
