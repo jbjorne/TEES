@@ -1,7 +1,10 @@
 __version__ = "$Revision: 1.7 $"
 
 import sys,os
-import sys
+import shutil
+import subprocess
+import tempfile
+import codecs
 thisPath = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.abspath(os.path.join(thisPath,"..")))
 try:
@@ -9,29 +12,31 @@ try:
 except ImportError:
     import cElementTree as ET
 import Utils.ElementTreeUtils as ETUtils
-import Range
-
-import shutil
-import subprocess
-import tempfile
-import codecs
-
+import Utils.Range as Range
+import Tool
 import Utils.Settings as Settings
 from Utils.ProgressCounter import ProgressCounter
 import Utils.Download as Download
 
-#sentenceSplitterDir = "/home/jari/biotext/tools/geniass"
-#sentenceSplitterDir = "/home/jari/temp_exec/geniass"
-
-def install(destDir=None, downloadDir=None, redownload=False):
+def install(destDir=None, downloadDir=None, redownload=False, updateLocalSettings=False):
     print >> sys.stderr, "Installing GENIA Sentence Splitter"
     url = Settings.URL["GENIA_SENTENCE_SPLITTER"]
     packageName = "geniass"
     if downloadDir == None:
         downloadDir = os.path.join(Settings.DATAPATH, "tools/download/")
     if destDir == None:
-        destDir = os.path.join(Settings.DATAPATH, "tools/")
-    Download.downloadAndExtract(url, packageName, destDir, downloadDir)
+        destDir = os.path.join(Settings.DATAPATH, "tools/geniass")
+    Download.downloadAndExtract(url, destDir, downloadDir, packageName)
+    print >> sys.stderr, "Compiling GENIA Sentence Splitter"
+    Tool.testPrograms("Genia Sentence Splitter", ["make", "ruby"])
+    cwd = os.getcwd()
+    os.chdir(destDir)
+    print >> sys.stderr, "Compiling Genia Sentence Splitter"
+    subprocess.call("make", shell=True)
+    os.chdir(cwd)
+    Tool.finalizeInstall(["./run_geniass.sh"], 
+                         {"./run_geniass.sh":"./run_geniass.sh README  /dev/null " + Settings.RUBY_PATH},
+                         destDir, {"GENIA_SENTENCE_SPLITTER_DIR":destDir}, updateLocalSettings)
 
 def moveElements(document):
     entMap = {}
@@ -244,7 +249,7 @@ def makeSentences(input, output=None, removeText=False, postProcess=True, debug=
 if __name__=="__main__":
     import sys
     
-    from optparse import OptionParser
+    from optparse import OptionParser, OptionGroup
     # Import Psyco if available
     try:
         import psyco
@@ -257,18 +262,16 @@ if __name__=="__main__":
     optparser.add_option("-i", "--input", default=None, dest="input", help="Corpus in interaction xml format", metavar="FILE")
     optparser.add_option("-o", "--output", default=None, dest="output", help="Output file in interaction xml format.")
     optparser.add_option("-p", "--postprocess", default=False, action="store_true", dest="postprocess", help="Run postprocessor")
-    optparser.add_option("--install", default=None, dest="install", help="Install directory (or DEFAULT)")
+    group = OptionGroup(optparser, "Install Options", "")
+    group.add_option("--install", default=None, action="store_true", dest="install", help="Install BANNER")
+    group.add_option("--installDir", default=None, dest="installDir", help="Install directory")
+    group.add_option("--downloadDir", default=None, dest="downloadDir", help="Install files download directory")
+    group.add_option("--redownload", default=False, action="store_true", dest="redownload", help="Redownload install files")
+    optparser.add_option_group(group)
     (options, args) = optparser.parse_args()
     
-    if options.install == None:
+    if not options.install:
         makeSentences(input=options.input, output=options.output, removeText=False, postProcess=options.postprocess)
     else:
-        downloadDir = None
-        destDir = None
-        if options.install != "DEFAULT":
-            if "," in options.install:
-                destDir, downloadDir = options.install.split(",")
-            else:
-                destDir = options.install
-        install(destDir, downloadDir)
+        install(options.installDir, options.downloadDir, redownload=options.redownload)
     

@@ -1,29 +1,23 @@
 parse__version__ = "$Revision: 1.11 $"
 
 import sys,os
-import sys
+import time
+import shutil
+import subprocess
+import tempfile
+import codecs
 sys.path.append(os.path.dirname(os.path.abspath(__file__))+"/..")
 try:
     import xml.etree.cElementTree as ET
 except ImportError:
     import cElementTree as ET
 import Utils.ElementTreeUtils as ETUtils
+import Utils.Settings as Settings
+import Utils.Download as Download
+import Tool
 import StanfordParser
-
-import time
-import shutil
-import subprocess
-import tempfile
-import codecs
 from ProcessUtils import *
 
-
-import Utils.Settings as Settings
-#charniakJohnsonParserDir = "/home/jari/biotext/tools/reranking-parser"
-#charniakJohnsonParserDir = "/home/jari/temp_exec/reranking-parser"
-#charniakJohnsonParserDir = Settings.CHARNIAK_JOHNSON_PARSER_DIR
-
-import Utils.Download as Download
 
 escDict={"-LRB-":"(",
          "-RRB-":")",
@@ -34,45 +28,33 @@ escDict={"-LRB-":"(",
          "``":"\"",
          "''":"\""}
 
-#def makeInitScript():
-#    pass
-#
-#def launchProcesses():
-#    pass
-#
-#def runMurska(cscConnection):
-#    cscConnection.upload(textFileName, textFileName, False)
-#    cscConnection.run("split -l 50 " + textFileName + " " + textFileName + "-part", True)
-#    
-#    cscConnection.run("cat " + textFileName + "-part* > cj-output.txt", True)
-
-def test(progDir):
-    return True
-
 def install(destDir=None, downloadDir=None, redownload=False, updateLocalSettings=False):
     url = Settings.URL["BLLIP_SOURCE"]
     if downloadDir == None:
-        downloadDir = os.path.join(Settings.DATAPATH)
+        downloadDir = os.path.join(Settings.DATAPATH) + "/tools/download"
     if destDir == None:
-        destDir = Settings.DATAPATH
-    items = Download.downloadAndExtract(url, destDir + "/tools/BLLIP", downloadDir + "/tools/download/bllip.zip", None, False)
-    # Install the parser
-    topDirs = [] 
-    for item in items:
-        if item.endswith("/") and item.count("/") == 1:
-            topDirs.append(item)
-    assert len(topDirs) == 1
-    parserPath = os.path.join(destDir + "/tools/BLLIP", topDirs[0])
+        destDir = Settings.DATAPATH + "/tools/BLLIP"
+    items = Download.downloadAndExtract(url, destDir, downloadDir + "/bllip.zip", None, False)
+    print >> sys.stderr, "Installing BLLIP parser"
+    Tool.testPrograms("BLLIP parser", ["make", "flex"], {"flex":"flex --version"})
+    parserPath = Download.getTopDir(destDir, items)
     cwd = os.getcwd()
     os.chdir(parserPath)
-    subprocess.call("make")
+    print >> sys.stderr, "Compiling first-stage parser"
+    subprocess.call("make", shell=True)
+    print >> sys.stderr, "Compiling second-stage parser"
+    subprocess.call("make reranker", shell=True)
     os.chdir(cwd)
-    if test(parserPath):
-        Settings.setLocal("CHARNIAK_JOHNSON_PARSER_DIR", parserPath, updateLocalSettings)
-    # Install the bioparsing model
+    print >> sys.stderr, "Installing the McClosky biomedical parsing model"
     url = "http://bllip.cs.brown.edu/download/bioparsingmodel-rel1.tar.gz"
-    Download.downloadAndExtract(url, destDir + "/tools/BLLIP", downloadDir + "/tools/download/", None)
-    Settings.setLocal("MCCLOSKY_BIOPARSINGMODEL_DIR", destDir + "/tools/BLLIP/biomodel", updateLocalSettings)
+    Download.downloadAndExtract(url, destDir, downloadDir, None)
+    bioModelDir = os.path.abspath(destDir + "/biomodel")
+    # Check that everything works
+    Tool.finalizeInstall(["first-stage/PARSE/parseIt", "second-stage/programs/features/best-parses"], 
+                         {"first-stage/PARSE/parseIt":"first-stage/PARSE/parseIt " + bioModelDir + "/parser/ < /dev/null",
+                          "second-stage/programs/features/best-parses":"second-stage/programs/features/best-parses -l " + bioModelDir + "/reranker/features.gz " + bioModelDir + "/reranker/weights.gz < /dev/null"},
+                         parserPath, {"BLLIP_PARSER_DIR":os.path.abspath(parserPath), 
+                                      "MCCLOSKY_BIOPARSINGMODEL_DIR":bioModelDir}, updateLocalSettings)
             
 def readPenn(treeLine):
     global escDict
@@ -209,12 +191,6 @@ def insertParse(sentence, treeLine, parseName="McCC", tokenizationName = None, m
         if makePhraseElements:
             insertPhrases(phrases, parse, tokenization.findall("token"))
     return True           
-
-#def runCharniakJohnsonParserWithTokenizer(input, output):
-#    return runCharniakJohnsonParser(input, output, True)
-#
-#def runCharniakJohnsonParserWithoutTokenizer(input, output):
-#    return runCharniakJohnsonParser(input, output, False)
         
 def runCharniakJohnsonParser(input, output, tokenizer=False, pathBioModel=None):
     if tokenizer:
@@ -419,7 +395,7 @@ def insertParses(input, parsePath, output=None, parseName="McCC", tokenizationNa
 if __name__=="__main__":
     import sys
     
-    from optparse import OptionParser
+    from optparse import OptionParser, OptionGroup
     # Import Psyco if available
     try:
         import psyco
@@ -436,18 +412,16 @@ if __name__=="__main__":
     optparser.add_option("--timestamp", default=False, action="store_true", dest="timestamp", help="Mark parses with a timestamp.")
     optparser.add_option("--pathParser", default=None, dest="pathParser", help="")
     optparser.add_option("--pathBioModel", default=None, dest="pathBioModel", help="")
-    optparser.add_option("--install", default=None, dest="install", help="Install directory (or DEFAULT)")
+    group = OptionGroup(optparser, "Install Options", "")
+    group.add_option("--install", default=None, action="store_true", dest="install", help="Install BANNER")
+    group.add_option("--installDir", default=None, dest="installDir", help="Install directory")
+    group.add_option("--downloadDir", default=None, dest="downloadDir", help="Install files download directory")
+    group.add_option("--redownload", default=False, action="store_true", dest="redownload", help="Redownload install files")
+    optparser.add_option_group(group)
     (options, args) = optparser.parse_args()
     
-    if options.install != None:
-        downloadDir = None
-        destDir = None
-        if options.install != "DEFAULT":
-            if "," in options.install:
-                destDir, downloadDir = options.install.split(",")
-            else:
-                destDir = options.install
-        install(destDir, downloadDir)
+    if options.install:
+        install(options.installDir, options.downloadDir, redownload=options.redownload)
     else:
         xml = parse(input=options.input, output=options.output, tokenizationName=options.tokenization, pathParser=options.pathParser, pathBioModel=options.pathBioModel, timestamp=options.timestamp)
         if options.stanford:

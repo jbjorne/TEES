@@ -23,21 +23,24 @@ import Tool
 def test(progDir):
     return True
 
-def install(destDir=None, downloadDir=None, redownload=False, javaHome=None, updateLocalSettings=False):
+def install(destDir=None, downloadDir=None, redownload=False, compile=False, javaHome=None, updateLocalSettings=False):
     print >> sys.stderr, "Installing BANNER"
-    url = Settings.URL["BANNER_SOURCE"]
     if downloadDir == None:
         downloadDir = os.path.join(Settings.DATAPATH, "tools/download")
     if destDir == None:
         destDir = Settings.DATAPATH
-    Download.downloadAndExtract(url, destDir + "/tools/BANNER", downloadDir + "/banner.tar.gz", "trunk", False, redownload=redownload)
-    
-    print >> sys.stderr, "Compiling BANNER with ANT"
-    Tool.testPrograms("BANNER", ["ant"], {"ant":"ant -version"})
-    if javaHome == None or javaHome.strip() == "":
-        subprocess.call("cd " + destDir + "/tools/BANNER; ant -f build_ext.xml", shell=True)
+    if compile:
+        Download.downloadAndExtract(Settings.URL["BANNER_SOURCE"], destDir + "/tools/BANNER", downloadDir + "/banner.tar.gz", "trunk", False, redownload=redownload)
+        print >> sys.stderr, "Compiling BANNER with ANT"
+        Tool.testPrograms("BANNER", ["ant"], {"ant":"ant -version"})
+        #/usr/lib/jvm/java-6-openjdk
+        if javaHome == None or javaHome.strip() == "":
+            subprocess.call("cd " + destDir + "/tools/BANNER; ant -f build_ext.xml", shell=True)
+        else:
+            subprocess.call("cd " + destDir + "/tools/BANNER; export JAVA_HOME=" + javaHome + "; ant -f build_ext.xml", shell=True)
     else:
-        subprocess.call("cd " + destDir + "/tools/BANNER; export JAVA_HOME=" + javaHome + "; ant -f build_ext.xml", shell=True)
+        print >> sys.stderr, "Downloading precompiled BANNER"
+        Download.downloadAndExtract(Settings.URL["BANNER_COMPILED"], destDir + "/tools", downloadDir, redownload=redownload)
     Tool.finalizeInstall([], None, destDir + "/tools/BANNER", {"BANNER_DIR":destDir + "/tools/BANNER"}, updateLocalSettings)
     
     # Newer versions of BANNER don't need trove
@@ -342,7 +345,7 @@ def run(input, output=None, elementName="entity", processElement="document", spl
 if __name__=="__main__":
     import sys
     
-    from optparse import OptionParser
+    from optparse import OptionParser, OptionGroup
     # Import Psyco if available
     try:
         import psyco
@@ -361,10 +364,16 @@ if __name__=="__main__":
     optparser.add_option("--debug", default=False, action="store_true", dest="debug", help="Preserve temporary working directory")
     optparser.add_option("--pathBANNER", default=None, dest="pathBANNER", help="")
     optparser.add_option("--pathTrove", default=None, dest="pathTrove", help="")
-    optparser.add_option("--install", default=None, dest="install", help="Install directory (or DEFAULT)")
+    group = OptionGroup(optparser, "Install", "")
+    group.add_option("--install", default=None, action="store_true", dest="install", help="Install BANNER")
+    group.add_option("--installDir", default=None, dest="installDir", help="Install directory")
+    group.add_option("--downloadDir", default=None, dest="downloadDir", help="Install files download directory")
+    group.add_option("--javaHome", default=None, dest="javaHome", help="JAVA_HOME setting for ANT, used when compiling BANNER")
+    group.add_option("--redownload", default=False, action="store_true", dest="redownload", help="Redownload install files")
+    optparser.add_option_group(group)
     (options, args) = optparser.parse_args()
     
-    if options.install == None:
+    if not options.install:
         if os.path.isdir(options.input) or options.input.endswith(".tar.gz"):
             print >> sys.stderr, "Converting ST-format"
             import STFormat.ConvertXML
@@ -375,12 +384,5 @@ if __name__=="__main__":
             processElement=options.processElement, splitNewlines=options.splitNewlines, debug=options.debug,
             bannerPath=options.pathBANNER, trovePath=options.pathTrove)
     else:
-        downloadDir = None
-        destDir = None
-        if options.install != "DEFAULT":
-            if "," in options.install:
-                destDir, downloadDir = options.install.split(",")
-            else:
-                destDir = options.install
-        install(destDir, downloadDir)
+        install(options.installDir, options.downloadDir, javaHome=options.javaHome, redownload=options.redownload)
     
