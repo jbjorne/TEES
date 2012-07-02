@@ -319,22 +319,31 @@ def insertParse(sentence, stanfordOutputFile, parser, extraAttributes={}):
     if parse == None:
         parse = ET.SubElement(analyses, "parse")
         parse.set("parser", "None")
-    if len(parse.findall("dependency")) > 0: # don't reparse
-        return True
+    # Remove existing dependencies
+    if len(parse.findall("dependency")) > 0:
+        for dependency in parse.findall("dependency"):
+            parse.remove(dependency)
+    # If no penn tree exists, the stanford parsing can't have happened either
     pennTree = parse.get("pennstring")
     if pennTree == None or pennTree == "":
         parse.set("stanford", "no_penn")
-        return False
+    # Must not exit early, so that reading of the stanfordOutputFile stays in sync with the sentences
+    #if len(parse.findall("dependency")) > 0: # don't reparse
+    #    return True
+    #pennTree = parse.get("pennstring")
+    #if pennTree == None or pennTree == "":
+    #    parse.set("stanford", "no_penn")
+    #    return False
     for attr in sorted(extraAttributes.keys()):
         parse.set(attr, extraAttributes[attr])
     # Get tokens
-    tokenization = getElementByAttrib(sentence.find("analyses"), "tokenization", {"tokenizer":parse.get("tokenizer")})
-    assert tokenization != None
-    count = 0
     tokenByIndex = {}
-    for token in tokenization.findall("token"):
-        tokenByIndex[count] = token
-        count += 1
+    tokenization = getElementByAttrib(sentence.find("analyses"), "tokenization", {"tokenizer":parse.get("tokenizer")})
+    if tokenization != None:
+        count = 0
+        for token in tokenization.findall("token"):
+            tokenByIndex[count] = token
+            count += 1
     # Insert dependencies
     deps = addDependencies(stanfordOutputFile, parse, tokenByIndex, sentence.get("id"))
     if len(deps) == 0:
@@ -399,7 +408,7 @@ def insertParses(input, parsePath, output=None, parseName="McCC", extraAttribute
     #print >> sys.stderr, "Sentence splitting created", sentencesCreated, "sentences"
     #print >> sys.stderr, docsWithSentences, "/", docCount, "documents have stanford parses"
 
-    print >> sys.stderr, "Stanford conversion was inserted to", sentenceCount, "sentences,", failCount, "failed"
+    print >> sys.stderr, "Stanford conversion was inserted to", sentenceCount, "sentences" #, failCount, "failed"
         
     if output != None:
         print >> sys.stderr, "Writing output to", output

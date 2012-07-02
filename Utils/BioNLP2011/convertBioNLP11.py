@@ -2,14 +2,14 @@ import sys, os, time, shutil
 import tempfile
 thisPath = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.abspath(os.path.join(thisPath,"../..")))
-import STFormat.STTools as ST
-import STFormat.ConvertXML as STConvert
-import STFormat.Equiv
-import STFormat.Validate
-import InteractionXML.RemoveUnconnectedEntities
-import InteractionXML.DivideSets
-import InteractionXML.MixSets
-import ProteinNameSplitter
+import Utils.STFormat.STTools as ST
+import Utils.STFormat.ConvertXML as STConvert
+import Utils.STFormat.Equiv
+import Utils.STFormat.Validate
+#import Utils.InteractionXML.RemoveUnconnectedEntities
+import Utils.InteractionXML.DivideSets
+import Utils.InteractionXML.MixSets
+import Utils.ProteinNameSplitter as ProteinNameSplitter
 import Utils.Stream as Stream
 import Utils.FindHeads as FindHeads
 import Tools.SentenceSplitter
@@ -83,7 +83,7 @@ def convertDownloaded(outdir, corpus, files, intermediateFiles=True, evaluate=Tr
     documents = []
     for setName in datasets:
         sourceFile = files[corpus + "_" + setName.upper()]
-        print >> sys.stderr, "Reading", setName, "set from", sourceFile, "temp at ",
+        print >> sys.stderr, "Reading", setName, "set from", sourceFile
         sitesAreArguments = False
         if corpus == "EPI":
             sitesAreArguments = True
@@ -92,12 +92,12 @@ def convertDownloaded(outdir, corpus, files, intermediateFiles=True, evaluate=Tr
         documents.extend(docs)
     
     print >> sys.stderr, "Resolving equivalences"
-    STFormat.Equiv.process(documents)
+    Utils.STFormat.Equiv.process(documents)
     
     if evaluate:
         print >> sys.stderr, "Checking data validity"
         for doc in documents:
-            STFormat.Validate.validate(doc.events, simulation=True, verbose=True, docId=doc.id)
+            Utils.STFormat.Validate.validate(doc.events, simulation=True, verbose=True, docId=doc.id)
         print >> sys.stderr, "Writing all documents to geniaformat"
         ST.writeSet(documents, os.path.join(workdir, "all-geniaformat"), resultFileTag="a2", debug=False, task=2, validate=False)
     
@@ -109,7 +109,7 @@ def convertDownloaded(outdir, corpus, files, intermediateFiles=True, evaluate=Tr
         xml = STConvert.toInteractionXML(documents, corpus, None)
     
     if corpus == "BI":
-        InteractionXML.MixSets.mixSets(xml, None, set(moveBI), "train", "devel")
+        Utils.InteractionXML.MixSets.mixSets(xml, None, set(moveBI), "train", "devel")
     
     addAnalyses(xml, corpus, datasets, files, bigfileName)
     if intermediateFiles:
@@ -123,7 +123,7 @@ def convertDownloaded(outdir, corpus, files, intermediateFiles=True, evaluate=Tr
         print >> sys.stderr, "Writing combined corpus", bigfileName+".xml"
         ETUtils.write(xml, bigfileName+".xml")
     print >> sys.stderr, "Dividing into sets"
-    InteractionXML.DivideSets.processCorpus(xml, outdir, corpus, ".xml")
+    Utils.InteractionXML.DivideSets.processCorpus(xml, outdir, corpus, ".xml")
     
     if evaluate and "devel" in datasets:
         print >> sys.stderr, "---------------", "Evaluating conversion", "---------------"
