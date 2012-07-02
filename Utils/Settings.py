@@ -19,8 +19,7 @@ def setLocal(variable, value, setVariable=True):
     assert "TEES_SETTINGS" in os.environ
     print >> sys.stderr, "Adding local setting", str(variable) + "=" + str(value),
     # define the variable in the current module
-    exec "global " + variable
-    exec variable + " = '" + str(value) + "'"
+    exec (variable + " = '" + str(value) + "'") in globals()
     # read the local settings file
     f = open(os.environ["TEES_SETTINGS"], "rt")
     lines = f.readlines()
