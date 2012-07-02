@@ -1,13 +1,12 @@
 import sys, os, shutil, codecs
 sys.path.append(os.path.dirname(os.path.abspath(__file__))+"/../..")
-sys.path.append(os.path.dirname(os.path.abspath(__file__))+"/..")
 from Utils.ProgressCounter import ProgressCounter
 from Tools.CharniakJohnsonParser import escDict
 try:
     import xml.etree.cElementTree as ET
 except ImportError:
     import cElementTree as ET
-import cElementTreeUtils as ETUtils
+import Utils.ElementTreeUtils as ETUtils
 from collections import defaultdict
 
 unEscDict = {}
