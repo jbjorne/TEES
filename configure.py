@@ -23,9 +23,6 @@ def pathMenuInitializer(menu, prevMenu):
         nextMenus.append("Corpora")
     if prevMenu.optDict["4"].toggle:
         nextMenus.append("Tools")
-    if len(nextMenus) == 0:
-        print >> sys.stderr, "Nothing to install, exiting"
-        sys.exit()
     menu.optDict["c"].nextMenu = nextMenus
     
     menu.text = """
@@ -85,6 +82,7 @@ def pathMenuInitializer(menu, prevMenu):
     #menu.text += "TEES_SETTINGS = " + menu.configFilePath + "\n\n"
     menu.system.setAttr("defaultInstallDir", menu.defaultInstallDir)
     menu.system.setAttr("configFilePath", menu.configFilePath)
+    os.environ["TEES_SETTINGS"] = menu.configFilePath
     menu.optDict["c"].handlerArgs = [menu.configFilePath]
     
 def initLocalSettings(filename):
@@ -133,14 +131,15 @@ def checkInstallPath(menu, menuVariable, setting, installSubDir, defaultInstallK
 def checkCorpusInstall(menu, corpus, installKey="i"):
     # If CORPUS_DIR setting is not set, the default is to install everything
     if not hasattr(Settings, "CORPUS_DIR") or getattr(Settings, "CORPUS_DIR") == None:
-        menu.setDefault(installKey)
-        return True
+        Settings.setLocal("CORPUS_DIR", os.path.join(menu.system.defaultInstallDir, "corpora"))
+        print >> sys.stderr
     # CORPUS_DIR is set, so check if the corpus is installed
     allFound = True # check for all corpus subsets
     for dataSet in ["-train.xml", "-devel.xml", "-test.xml"]:
-        if os.path.exists(Settings.CORPUS_DIR + "/" + corpus + dataSet):
+        filePath = Settings.CORPUS_DIR + "/" + corpus + dataSet
+        if not os.path.exists(filePath):
+            #print >> sys.stderr, "Corpus file", filePath, "is not installed" 
             allFound = False
-            break
     if allFound: # if corpus files are present, installing this corpora can be skipped
         return True
     else: # if a corpus file is missing, mark it to be installed
@@ -174,7 +173,15 @@ def toolsMenuInitializer(menu, prevMenu):
     if menu.optDict["3"].toggle or checkInstallPath(menu, "bannerInstallDir", "BANNER_DIR", "BANNER"):
         menu.optDict["3"].toggle = True
         handlers.append(Tools.BANNER.install)
-        handlerArgs.append([menu.bannerInstallDir, os.path.join(menu.system.defaultInstallDir, "tools/download"), redownload])  
+        handlerArgs.append([menu.bannerInstallDir, os.path.join(menu.system.defaultInstallDir, "tools/download"), redownload, False, None, True])  
+    if menu.optDict["4"].toggle or checkInstallPath(menu, "bllipInstallDir", "BLLIP_PARSER_DIR", "reranking-parser"):
+        menu.optDict["4"].toggle = True
+        handlers.append(Tools.BANNER.install)
+        handlerArgs.append([menu.bllipInstallDir, os.path.join(menu.system.defaultInstallDir, "tools/download"), redownload, False, True])  
+    if menu.optDict["5"].toggle or checkInstallPath(menu, "stanfordInstallDir", "STANFORD_PARSER_DIR", "stanford-parser"):
+        menu.optDict["5"].toggle = True
+        handlers.append(Tools.BANNER.install)
+        handlerArgs.append([menu.stanfordInstallDir, os.path.join(menu.system.defaultInstallDir, "tools/download"), redownload, False, True])  
     menu.optDict["i"].handler = handlers
     menu.optDict["i"].handlerArgs = handlerArgs
 
@@ -205,7 +212,7 @@ def corpusMenuInitializer(menu, prevMenu):
     redownload = menu.optDict["1"].toggle
     corporaToInstall = []
     for item, corpus in [("4", "GE"), ("5", "EPI"), ("6", "ID"), ("7", "BB"), ("8", "BI")]:
-        if menu.optDict[item].toggle or checkCorpusInstall(menu, corpus):
+        if menu.optDict[item].toggle or not checkCorpusInstall(menu, corpus):
             menu.optDict[item].toggle = True
             corporaToInstall.append(corpus)
     if len(corporaToInstall) > 0: # All BioNLP'11 corpora can be installed with one command
