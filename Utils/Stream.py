@@ -128,7 +128,7 @@ def openLog(filename="log.txt", clear=False, logCmd=True):
     if os.path.dirname(filename) != "" and not os.path.exists(os.path.dirname(filename)):
         os.makedirs(os.path.dirname(filename))
     setLog(filename, clear)
-    setTimeStamp("[%H:%M:%S]", True)
+    setTimeStamp("[%H:%M:%S %d/%m]", True)
     logOpenTime = str(time.ctime(time.time()))
     print >> sys.stderr, "Opening log", filename, "at", logOpenTime
     logOpenMessage = "####### Log opened at " + str(time.ctime(time.time())) + " #######\n"
