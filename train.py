@@ -242,8 +242,7 @@ if __name__=="__main__":
     except ImportError:
         print >> sys.stderr, "Psyco not installed"
         
-    from optparse import OptionParser
-    from optparse import OptionGroup
+    from optparse import OptionParser, OptionGroup
     optparser = OptionParser()
     # main options
     group = OptionGroup(optparser, "Main Options", "")
