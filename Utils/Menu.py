@@ -100,8 +100,7 @@ class Menu():
         print >> sys.stderr, "Current value:", value
         ok = False
         while not ok:
-            print >> sys.stderr, ">",
-            value = raw_input()
+            value = raw_input(">")
             if check != None:
                 ok = check(value)
                 if not ok:
@@ -119,11 +118,11 @@ class Menu():
                 default = item
                 break
         while choice == None:
-            print >> sys.stderr, ">",
-            choice = raw_input()
+            choice = raw_input(">")
             #print "Choice", type(choice), len(choice), "End"
             if choice.strip() == "" and default != None:
                 choice = default.key
+            print >> sys.stderr
             if choice.lower() in self.optDict.keys():
                 choiceLower = choice.lower()
                 opt = self.optDict[choiceLower]
@@ -136,7 +135,6 @@ class Menu():
                     return self.title
                 else:
                     opt.do()
-                    print >> sys.stderr, "\n\n"
                     return opt.nextMenu
             else:
                 print >> sys.stderr, "Unknown option", choice
