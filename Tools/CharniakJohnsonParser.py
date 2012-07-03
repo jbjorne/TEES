@@ -93,7 +93,7 @@ def readPenn(treeLine):
             splitCount += 1
     return tokens, phrases
 
-def insertTokens(tokens, sentence, tokenization, idStem="cjt_"):
+def insertTokens(tokens, sentence, tokenization, idStem="cjt_", errorNotes=None):
     tokenCount = 0
     start = 0
     prevStart = None
@@ -108,9 +108,9 @@ def insertTokens(tokens, sentence, tokenization, idStem="cjt_"):
             cStart = sText.find(origTokenText, prevStart)
             if cStart != -1:
                 start = prevStart
-                print >> sys.stderr, "Token duplication", (tokenText, tokens, posTag, start, sText)
+                print >> sys.stderr, "Token duplication", (tokenText, tokens, posTag, start, sText, errorNotes)
         if cStart == -1:
-            print >> sys.stderr, "Token alignment error", (tokenText, tokens, posTag, start, sText)
+            print >> sys.stderr, "Token alignment error", (tokenText, tokens, posTag, start, sText, errorNotes)
             for subElement in [x for x in tokenization]:
                 tokenization.remove(subElement)
             return False
@@ -149,7 +149,7 @@ def insertPhrases(phrases, parse, tokenElements, idStem="cjp_"):
 
 
 
-def insertParse(sentence, treeLine, parseName="McCC", tokenizationName = None, makePhraseElements=True, extraAttributes={}):
+def insertParse(sentence, treeLine, parseName="McCC", tokenizationName = None, makePhraseElements=True, extraAttributes={}, docId=None):
     # Find or create container elements
     analyses = setDefaultElement(sentence, "analyses")#"sentenceanalyses")
     #tokenizations = setDefaultElement(sentenceAnalyses, "tokenizations")
@@ -184,7 +184,7 @@ def insertParse(sentence, treeLine, parseName="McCC", tokenizationName = None, m
                 tokenization.set(attr, extraAttributes[attr])
             analyses.insert(getElementIndex(analyses, parse), tokenization)
             # Insert tokens to parse
-            insertTokens(tokens, sentence, tokenization)
+            insertTokens(tokens, sentence, tokenization, errorNotes=(sentence.get("id"), docId))
         else:
             tokenization = getElementByAttrib(analyses, "tokenization", {"tokenizer":tokenizationName})
         # Insert phrases to parse
@@ -373,7 +373,7 @@ def insertParses(input, parsePath, output=None, parseName="McCC", tokenizationNa
         # TODO: Following for-loop is the same as when used with a real parser, and should
         # be moved to its own function.
         for sentence, treeLine in zip(sentences, parseStrings):
-            if not insertParse(sentence, treeLine, makePhraseElements=makePhraseElements, extraAttributes=extraAttributes):
+            if not insertParse(sentence, treeLine, makePhraseElements=makePhraseElements, extraAttributes=extraAttributes, docId=document.get("pmid")):
                 failCount += 1
     
     if tarFile != None:
