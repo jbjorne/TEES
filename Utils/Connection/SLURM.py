@@ -41,7 +41,7 @@ class SLURMConnection(ClusterConnection):
         jobId = int(pstdout.split()[-1])
         return self._writeJobFile(jobDir, jobName, {"SLURMID":jobId}, append=True)
     
-    def getNumJobs():
+    def getNumJobs(self):
         """
         Get number of queued (pending or running) jobs
         """
@@ -66,7 +66,10 @@ class SLURMConnection(ClusterConnection):
                 if jobStatus in ["RUNNING", "COMPLETING"]:
                     return "RUNNING"
                 elif jobStatus == "COMPLETED":
-                    return "FINISHED"
+                    if jobAttr["retcode"] == "0":
+                        return "FINISHED"
+                    else:
+                        return "FAILED"
                 elif jobStatus in ["FAILED", "CANCELLED", "NODE_FAIL", "PREEMPTED", "TIMEOUT"]:
                     return "FAILED"
                 elif jobStatus in ["PENDING", "RESIZING", "SUSPENDED"]:
