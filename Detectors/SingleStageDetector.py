@@ -123,7 +123,7 @@ class SingleStageDetector(Detector):
             exampleFileName = tag+self.tag+"examples"
             if compressExamples:
                 exampleFileName += ".gz"
-            self.buildExamples(model, [data], [exampleFileName], [goldData], parse=parse)
+        self.buildExamples(model, [data], [exampleFileName], [goldData], parse=parse)
         if classifierModel == None:
             classifierModel = model.get(self.tag+"classifier-model")
         else:
