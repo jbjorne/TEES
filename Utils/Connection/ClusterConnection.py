@@ -1,6 +1,6 @@
 import sys, os
 import types
-import uuid
+#import uuid
 from Unix import UnixConnection
 import subprocess
 
@@ -14,6 +14,7 @@ class ClusterConnection(UnixConnection):
     
     def submit(self, script=None, jobWorkDir=None, name=None, stdout=None, stderr=None):
         if name == None:
+            import uuid
             name = uuid.uuid1().hex
         script, stdout, stderr = self.makeJobScript(script, name, jobWorkDir, stderr, stdout)
         if self.account == None:
