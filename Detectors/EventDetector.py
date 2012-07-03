@@ -172,14 +172,19 @@ class EventDetector(Detector):
             # Triggers and Boost
             if prevParams == None or prevParams["trigger"] != params["trigger"] or prevParams["booster"] != params["booster"]:
                 print >> sys.stderr, "Classifying trigger examples for parameters", "trigger:" + str(params["trigger"]), "booster:" + str(params["booster"])
-                xml = self.triggerDetector.classifyToXML(self.optData, self.model, self.workDir+"grid-trigger-examples.gz", self.workDir+"grid-", classifierModel=TRIGGER_MODEL_STEM+str(params["trigger"]), recallAdjust=params["booster"])
+                xml = self.triggerDetector.classifyToXML(self.optData, self.model, self.workDir+"grid-trigger-examples", self.workDir+"grid-", classifierModel=TRIGGER_MODEL_STEM+str(params["trigger"]), recallAdjust=params["booster"])
             prevParams = params
             # Build edge examples
-            self.edgeDetector.buildExamples(self.model, [xml], [self.workDir+"grid-edge-examples.gz"], [self.optData])
+            self.edgeDetector.buildExamples(self.model, [xml], [self.workDir+"grid-edge-examples"], [self.optData])
             # Classify with pre-defined model
             edgeClassifierModel=EDGE_MODEL_STEM+str(params["edge"])
-            xml = self.edgeDetector.classifyToXML(xml, self.model, self.workDir+"grid-edge-examples.gz", self.workDir+"grid-", classifierModel=edgeClassifierModel)
+            xml = self.edgeDetector.classifyToXML(xml, self.model, self.workDir+"grid-edge-examples", self.workDir+"grid-", classifierModel=edgeClassifierModel)
             bestResults = self.evaluateGrid(xml, params, bestResults)
+        # Remove remaining intermediate grid files
+        for tag1 in ["edge", "trigger", "unmerging"]:
+            for tag2 in ["examples", "pred.xml.gz"]:
+                if os.path.exists(self.workDir+"grid-"+tag1+"-"+tag2):
+                    os.remove(self.workDir+"grid-"+tag1+"-"+tag2)
         print >> sys.stderr, "Booster search complete"
         print >> sys.stderr, "Tested", len(paramCombinations), "combinations"
         print >> sys.stderr, "Best parameters:", bestResults[0]
