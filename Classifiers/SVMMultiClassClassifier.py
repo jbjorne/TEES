@@ -53,17 +53,9 @@ def install(destDir=None, downloadDir=None, redownload=False, compile=True, upda
          "svm_multiclass_classify":"echo | ./svm_multiclass_classify -? > /dev/null"},
         destDir, {"SVM_MULTICLASS_DIR":destDir}, updateLocalSettings)
 
-def tempUnzip(filename):
-    tempdir = tempfile.mkdtemp() # a place for the file
-    dst = os.path.join(tempdir, os.path.basename(filename))
-    shutil.copy(filename, dst)
-    #print "gunzip -fv " + dst
-    #subprocess.call("gunzip -fv " + dst, shell=True)
-    subprocess.call("gunzip -f " + dst, shell=True)
-    if dst.endswith(".gz"):
-        dst = dst[:-3]
-    atexit.register(shutil.rmtree, tempdir) # mark for deletion
-    return os.path.join(tempdir, dst)
+def removeTempUnzipped(filename):
+    if os.path.exists(filename):
+        os.remove(filename)
 
 class SVMMultiClassClassifier(Classifier):
     """
@@ -115,7 +107,27 @@ class SVMMultiClassClassifier(Classifier):
         # for all states
         self.predictions = None
         #self.optimizeJobs = []
-    
+
+    def tempUnzip(self, filename):
+        if not filename.endswith(".gz"):
+            return filename
+        tempfilename = filename[:-3]
+        # Determine if the uncompressed file does not exist, or needs to be updated
+        uncompress = False
+        if os.path.exists(tempfilename):
+            if os.path.getmtime(filename) > os.path.getmtime(tempfilename): # compressed file has changed
+                uncompress = True
+        else:
+            uncompress = True
+        # Uncompress if needed
+        if uncompress:
+            print >> sys.stderr, "Uncompressing example file", filename
+            subprocess.call("gunzip -cfv " + filename + " > " + tempfilename, shell=True)
+            assert os.path.exists(filename)
+            assert os.path.exists(tempfilename)
+            atexit.register(removeTempUnzipped, tempfilename) # mark for deletion
+        return tempfilename
+
     def getExampleFile(self, examples, upload=True, replaceRemote=True, dummy=False):
         # If examples are in a list, they will be written to a file for SVM-multiclass
         if examples == None:
@@ -132,7 +144,8 @@ class SVMMultiClassClassifier(Classifier):
         if upload:
             examplesPath = self.connection.upload(examplesPath, uncompress=True, replace=replaceRemote)
         if examplesPath == localPath and examplesPath.endswith(".gz"): # no upload happened
-            examplesPath = tempUnzip(examplesPath)
+            examplesPath = self.tempUnzip(examplesPath)
+        print >> sys.stderr, self.__class__.__name__, "using example file", examples, "as", examplesPath
         return examplesPath
     
     def train(self, examples, outDir, parameters, classifyExamples=None, finishBeforeReturn=False, replaceRemoteExamples=True, dummy=False):
