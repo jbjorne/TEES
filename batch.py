@@ -23,17 +23,22 @@ def getMaxJobs(maxJobs, controlFilename=None):
     else:
         return maxJobs
 
-def prepareCommand(template, input, jobTag=None):
-    template = template.replace("%i", input)
-    template = template.replace("%a", os.path.abspath(input))
-    template = template.replace("%b", os.path.basename(input))
-    if jobTag == None:
-        jobTag = ""
-    template = template.replace("%j", jobTag)
+def prepareCommand(template, input=None, jobTag=None, output=None):
+    if "%i" in template or "%a" in template or "%b" in template:
+        assert input != None
+        template = template.replace("%i", input)
+        template = template.replace("%a", os.path.abspath(input))
+        template = template.replace("%b", os.path.basename(input))
+    if "%j" in template:
+        assert jobTag != None
+        template = template.replace("%j", jobTag)
+    if "%o" in template:
+        assert output != None
+        template = template.replace("%o", output)
     return template
 
-def submitJob(command, input, connection, jobTag=None, regex=None, dummy=False, rerun=False, hideFinished=False):
-    if input.endswith(".job"):
+def submitJob(command, input, connection, jobTag=None, output=None, regex=None, dummy=False, rerun=False, hideFinished=False):
+    if input != None and input.endswith(".job"):
         if connection.debug:
             print >> sys.stderr, "Skipped job control file", input
         return
@@ -43,18 +48,25 @@ def submitJob(command, input, connection, jobTag=None, regex=None, dummy=False, 
         if connection.debug:
             print >> sys.stderr, "Regular expression did not match input, no job submitted"
         return
-    elif connection.debug:
+    elif connection.debug and input != None:
         print >> sys.stderr, "Regular expression matched the input"
     
-    jobDir = os.path.abspath(os.path.dirname(input))
-    jobName = os.path.basename(input)
-    if jobName == "": # input is a directory
-        jobName = jobDir.rstrip("/").split("/")[-1] # use directory name as job name
-        jobDir = jobDir.rstrip("/").split("/")[0] # save job control file on the same level as the directory
-    if jobTag != None:
-        jobName += "-" + jobTag
+    if input != None:
+        if output == None:
+            jobDir = os.path.abspath(os.path.dirname(input))
+        else:
+            jobDir = output
+        jobName = os.path.basename(input)
+        if jobName == "": # input is a directory
+            jobName = jobDir.rstrip("/").split("/")[-1] # use directory name as job name
+            jobDir = jobDir.rstrip("/").split("/")[0] # save job control file on the same level as the directory
+        if jobTag != None:
+            jobName += "-" + jobTag
+    elif jobTag != None: # inputless job
+        jobName = jobTag
+        jobDir = output
     
-    print >> sys.stderr, "Processing", input
+    print >> sys.stderr, "Processing job", jobName, "for input", input
     jobStatus = connection.getJobStatusByName(jobDir, jobName)
     if jobStatus != None:
         print >> sys.stderr, "input already processed, job status =", jobStatus
@@ -66,7 +78,7 @@ def submitJob(command, input, connection, jobTag=None, regex=None, dummy=False, 
                 print >> sys.stderr, "Skipping already processed job"
             return False
     
-    command = prepareCommand(command, input, jobTag)
+    command = prepareCommand(command, input, jobTag, output)
     
     if not dummy:
         connection.submit(command, jobDir, jobName)
@@ -89,13 +101,23 @@ def waitForJobs(maxJobs, submitCount, connection, controlFilename=None, sleepTim
             currentMaxJobs = getMaxJobs(maxJobs, controlFilename)
             print >> sys.stderr, "Current jobs", str(currentJobs) + ", max jobs", str(currentMaxJobs) + ", submitted jobs", submitCount
 
-def batch(command, input, connection=None, jobTag=None, regex=None, regexSkipDir=None, dummy=False, rerun=False, 
+def getOutputDir(currentDir, input, output=None):
+    if output == None:
+        return None
+    else:
+        relativeCurrentDir = os.path.abspath(currentDir)[len(os.path.abspath(input)):]
+        return os.path.join(output, relativeCurrentDir)
+
+def batch(command, input=None, connection=None, jobTag=None, output=None, regex=None, regexSkipDir=None, dummy=False, rerun=False, 
           hideFinished=False, controlFilename=None, sleepTime=15, debug=False, limit=None, loop=False):
     connection = getConnection(connection)
     connection.debug = debug
-    if os.path.exists(input) and os.path.isfile(input): # single file
+    if input == None: # an inputless batch job:
         waitForJobs(limit, 0, connection, controlFilename, sleepTime)
-        submitJob(command, input, connection, jobTag, regex, dummy, rerun, hideFinished)
+        submitJob(command, input, connection, jobTag, output, regex, dummy, rerun, hideFinished)
+    elif os.path.exists(input) and os.path.isfile(input): # single file
+        waitForJobs(limit, 0, connection, controlFilename, sleepTime)
+        submitJob(command, input, connection, jobTag, output, regex, dummy, rerun, hideFinished)
     else: # walk directory tree
         firstLoop = True
         submitCount = 0
@@ -109,7 +131,7 @@ def batch(command, input, connection=None, jobTag=None, regex=None, regexSkipDir
                     print >> sys.stderr, "Processing directory", triple[0]
                 for item in sorted(triple[1]) + sorted(triple[2]): # process both directories and files
                     #print item, triple, os.path.join(triple[0], item)
-                    if submitJob(command, os.path.join(triple[0], item), connection, jobTag, regex, dummy, rerun, hideFinished):
+                    if submitJob(command, os.path.join(triple[0], item), connection, jobTag, getOutputDir(triple[0], input, output), regex, dummy, rerun, hideFinished):
                         submitCount += 1
                         # number of submitted jobs has increased, so check if we need to wait
                         waitForJobs(limit, submitCount, connection, controlFilename, sleepTime)
@@ -131,7 +153,8 @@ if __name__=="__main__":
     optparser.add_option("-n", "--connection", default=None, dest="connection", help="")
     optparser.add_option("-r", "--regex", default=None, dest="regex", help="")
     optparser.add_option("-d", "--regexSkipDir", default=None, dest="regexSkipDir", help="")
-    optparser.add_option("-j", "--jobTag", default=None, dest="jobTag", help="")
+    optparser.add_option("-j", "--job", default=None, dest="job", help="job name")
+    optparser.add_option("-o", "--output", default=None, dest="output", help="")
     optparser.add_option("-l", "--limit", default=None, dest="limit", help="")
     optparser.add_option("--debug", default=False, action="store_true", dest="debug", help="Print jobs on screen")
     optparser.add_option("--controlFile", default=None, dest="controlFile", help="")
@@ -147,7 +170,8 @@ if __name__=="__main__":
     if options.sleepTime != None: options.sleepTime = int(options.sleepTime)
     if options.regex != None: options.regex = re.compile(options.regex)
     if options.regexSkipDir != None: options.regexSkipDir = re.compile(options.regexSkipDir)
-    batch(command=options.command, input=options.input, connection=options.connection, jobTag=options.jobTag, 
+    batch(command=options.command, input=options.input, connection=options.connection, jobTag=options.job,
+          output=options.output, 
           regex=options.regex, regexSkipDir=options.regexSkipDir, dummy=options.dummy, rerun=options.rerun, 
           hideFinished=options.hideFinished, controlFilename=options.controlFile, sleepTime=options.sleepTime, 
           debug=options.debug, limit=options.limit, loop=options.loop)
