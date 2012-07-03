@@ -30,7 +30,7 @@ def openFile(path, tarFile=None):
             return open(path, "rt")
     return None
                 
-def makeSentences(input, tokenizationPath, output=None, removeText=False):
+def makeSentences(input, tokenizationPath, output=None, removeText=False, escDict={}):
     """
     Divide text in the "text" attributes of document and section 
     elements into sentence elements. These sentence elements are
@@ -74,7 +74,7 @@ def makeSentences(input, tokenizationPath, output=None, removeText=False):
                 f = openFile(oldFile, tarFile)
                 if f == None: # no tokenization found
                     continue
-            sentencesCreated += alignSentences(document, f.readlines())
+            sentencesCreated += alignSentences(document, f.readlines(), escDict)
             f.close()
     
             # Remove original text
@@ -96,7 +96,7 @@ def makeSentences(input, tokenizationPath, output=None, removeText=False):
         ETUtils.write(corpusRoot, output)
     return corpusTree
 
-def alignSentences(document, sentenceTexts):
+def alignSentences(document, sentenceTexts, escDict={}):
     text = document.get("text")
     start = 0 # sentences are consecutively aligned to the text for charOffsets
     cEnd = 0
@@ -108,6 +108,8 @@ def alignSentences(document, sentenceTexts):
     sText = None
     for sText in sentenceTexts:
         sText = sText.strip() # The text of the sentence
+        for key in sorted(escDict.keys()):
+            sText = sText.replace(key, escDict[key])
         if sText == "":
             print >> sys.stderr, "Warning, empty sentence in", document.get("id") 
             continue
