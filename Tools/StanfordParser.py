@@ -84,7 +84,7 @@ def getUnicode(string):
         pass
     return string
 
-def addDependencies(outfile, parse, tokenByIndex=None, sentenceId=None):
+def addDependencies(outfile, parse, tokenByIndex=None, sentenceId=None, skipExtra=0):
     global escDict
     escSymbols = sorted(escDict.keys())
 
@@ -93,6 +93,12 @@ def addDependencies(outfile, parse, tokenByIndex=None, sentenceId=None):
     #line = line.encode('raw_unicode_escape').decode('utf-8') # fix latin1?
     line = getUnicode(line)
     deps = []
+    # BioNLP'09 Shared Task GENIA uses _two_ newlines to denote a failed parse (usually it's one,
+    # the same as the BLLIP parser. To survive this, skipExtra can be used to define the number
+    # of lines to skip, if the first line of a dependency parse is empty (indicating a failed parse) 
+    if line.strip() == "" and skipExtra > 0:
+        for i in range(skipExtra):
+            outfile.readline()
     while line.strip() != "":            
         # Add dependencies
         depType, rest = line.strip()[:-1].split("(")
@@ -253,52 +259,53 @@ def convertXML(parser, input, output, debug=False, reparse=False, stanfordParser
     noDepCount = 0
     failCount = 0
     sentenceCount = 0
-    for sentence in corpusRoot.getiterator("sentence"):
-        # Get parse
-        if sentence.find("sentenceanalyses") != None: # old format
-            sentenceAnalyses = setDefaultElement(sentence, "sentenceanalyses")
-            parses = setDefaultElement(sentenceAnalyses, "parses")
-            parse = getElementByAttrib(parses, "parse", {"parser":parser})
-        else:
-            analyses = setDefaultElement(sentence, "analyses")
-            parse = getElementByAttrib(analyses, "parse", {"parser":parser})
-        if parse == None:
-            parse = ET.SubElement(analyses, "parse")
-            parse.set("parser", "None")
-        if reparse:
-            assert len(parse.findall("dependency")) == 0
-        elif len(parse.findall("dependency")) > 0: # don't reparse
-            continue
-        pennTree = parse.get("pennstring")
-        if pennTree == None or pennTree == "":
-            parse.set("stanford", "no_penn")
-            continue
-        parse.set("stanfordSource", "TEES") # parser was run through this wrapper
-        parse.set("stanfordDate", parseTimeStamp) # links the parse to the log file
-        # Get tokens
-        if sentence.find("analyses") != None:
-            tokenization = getElementByAttrib(sentence.find("analyses"), "tokenization", {"tokenizer":parse.get("tokenizer")})
-        else:
-            tokenization = getElementByAttrib(sentence.find("sentenceanalyses").find("tokenizations"), "tokenization", {"tokenizer":parse.get("tokenizer")})
-        assert tokenization != None
-        count = 0
-        tokenByIndex = {}
-        for token in tokenization.findall("token"):
-            tokenByIndex[count] = token
-            count += 1
-        # Insert dependencies
-        deps = addDependencies(stanfordOutputFile, parse, tokenByIndex, sentence.get("id"))
-        if len(deps) == 0:
-            parse.set("stanford", "no_dependencies")
-            noDepCount += 1
-            if parse.get("stanfordAlignmentError") != None:
-                failCount += 1
-        else:
-            parse.set("stanford", "ok")
-            if parse.get("stanfordAlignmentError") != None:
-                failCount += 1
-                parse.set("stanford", "partial")
-        sentenceCount += 1
+    for document in corpusRoot.findall("document"):
+        for sentence in document.findall("sentence"):
+            # Get parse
+            if sentence.find("sentenceanalyses") != None: # old format
+                sentenceAnalyses = setDefaultElement(sentence, "sentenceanalyses")
+                parses = setDefaultElement(sentenceAnalyses, "parses")
+                parse = getElementByAttrib(parses, "parse", {"parser":parser})
+            else:
+                analyses = setDefaultElement(sentence, "analyses")
+                parse = getElementByAttrib(analyses, "parse", {"parser":parser})
+            if parse == None:
+                parse = ET.SubElement(analyses, "parse")
+                parse.set("parser", "None")
+            if reparse:
+                assert len(parse.findall("dependency")) == 0
+            elif len(parse.findall("dependency")) > 0: # don't reparse
+                continue
+            pennTree = parse.get("pennstring")
+            if pennTree == None or pennTree == "":
+                parse.set("stanford", "no_penn")
+                continue
+            parse.set("stanfordSource", "TEES") # parser was run through this wrapper
+            parse.set("stanfordDate", parseTimeStamp) # links the parse to the log file
+            # Get tokens
+            if sentence.find("analyses") != None:
+                tokenization = getElementByAttrib(sentence.find("analyses"), "tokenization", {"tokenizer":parse.get("tokenizer")})
+            else:
+                tokenization = getElementByAttrib(sentence.find("sentenceanalyses").find("tokenizations"), "tokenization", {"tokenizer":parse.get("tokenizer")})
+            assert tokenization != None
+            count = 0
+            tokenByIndex = {}
+            for token in tokenization.findall("token"):
+                tokenByIndex[count] = token
+                count += 1
+            # Insert dependencies
+            deps = addDependencies(stanfordOutputFile, parse, tokenByIndex, (sentence.get("id"), document.get("pmid")))
+            if len(deps) == 0:
+                parse.set("stanford", "no_dependencies")
+                noDepCount += 1
+                if parse.get("stanfordAlignmentError") != None:
+                    failCount += 1
+            else:
+                parse.set("stanford", "ok")
+                if parse.get("stanfordAlignmentError") != None:
+                    failCount += 1
+                    parse.set("stanford", "partial")
+            sentenceCount += 1
     stanfordOutputFile.close()
     # Remove work directory
     if not debug:
@@ -311,7 +318,7 @@ def convertXML(parser, input, output, debug=False, reparse=False, stanfordParser
         ETUtils.write(corpusRoot, output)
     return corpusTree
 
-def insertParse(sentence, stanfordOutputFile, parser, extraAttributes={}):
+def insertParse(sentence, stanfordOutputFile, parser, extraAttributes={}, skipExtra=0):
     # Get parse
     analyses = setDefaultElement(sentence, "analyses")
     #parses = setDefaultElement(sentenceAnalyses, "parses")
@@ -345,14 +352,14 @@ def insertParse(sentence, stanfordOutputFile, parser, extraAttributes={}):
             tokenByIndex[count] = token
             count += 1
     # Insert dependencies
-    deps = addDependencies(stanfordOutputFile, parse, tokenByIndex, sentence.get("id"))
+    deps = addDependencies(stanfordOutputFile, parse, tokenByIndex, (sentence.get("id"), sentence.get("origId")), skipExtra=skipExtra)
     if len(deps) == 0:
         parse.set("stanford", "no_dependencies")
     else:
         parse.set("stanford", "ok")
     return True
 
-def insertParses(input, parsePath, output=None, parseName="McCC", extraAttributes={}):
+def insertParses(input, parsePath, output=None, parseName="McCC", extraAttributes={}, skipExtra=0):
     import tarfile
     from SentenceSplitter import openFile
     """
@@ -398,7 +405,7 @@ def insertParses(input, parsePath, output=None, parseName="McCC", extraAttribute
             for sentence in sentences:
                 sentenceCount += 1
                 counter.update(0, "Processing Documents ("+sentence.get("id")+"/" + document.get("pmid") + "): ")
-                if not insertParse(sentence, f, parseName, extraAttributes={}):
+                if not insertParse(sentence, f, parseName, extraAttributes={}, skipExtra=skipExtra):
                     failCount += 1
             f.close()
         counter.update(1, "Processing Documents ("+document.get("id")+"/" + document.get("pmid") + "): ")
