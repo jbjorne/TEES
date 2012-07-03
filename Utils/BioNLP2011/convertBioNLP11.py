@@ -32,16 +32,16 @@ def downloadCorpus(corpus, destPath=None, downloadPath=None, clear=False):
     else:
         finalDestPath = destPath
     for setName in ["_DEVEL", "_TRAIN", "_TEST"]:
-        downloaded[corpus + setName] = Utils.Download.download(Settings.URL[corpus + setName], finalDestPath, clear=clear)
+        downloaded[corpus + setName] = Utils.Download.download(Settings.URL[corpus + setName], downloadPath, clear=clear)
     if corpus in ["REL", "REN", "CO"]:
         if destPath == None:
-            finalDestPath = os.path.join(Settings.DATAPATH, "TEES-parses")
+            teesParseFinalDestPath = os.path.join(Settings.DATAPATH, "TEES-parses")
         else:
-            finalDestPath = os.path.join(destPath, "TEES-parses")
+            teesParseFinalDestPath = os.path.join(destPath, "TEES-parses")
         if downloadPath == None:
             downloadPath = os.path.join(Settings.DATAPATH, "download")
-        Utils.Download.downloadAndExtract(Settings.URL["TEES_PARSES"], finalDestPath, downloadPath, redownload=clear)
-        downloaded["TEES_PARSES"] = finalDestPath
+        Utils.Download.downloadAndExtract(Settings.URL["TEES_PARSES"], teesParseFinalDestPath, downloadPath, redownload=clear)
+        downloaded["TEES_PARSES"] = teesParseFinalDestPath
     else:
         if corpus == "GE09":
             analyses = ["_ANALYSES"]
@@ -49,7 +49,7 @@ def downloadCorpus(corpus, destPath=None, downloadPath=None, clear=False):
             analyses = ["_TOKENS", "_McCC"]
         for analysis in analyses:
             for setName in ["_DEVEL", "_TRAIN", "_TEST"]:
-                downloaded[corpus + setName + analysis] = Utils.Download.download(Settings.URL[corpus + setName + analysis], finalDestPath + "/support/", clear=clear)
+                downloaded[corpus + setName + analysis] = Utils.Download.download(Settings.URL[corpus + setName + analysis], downloadPath + "/support/", clear=clear)
     return downloaded
 
 def convert(corpora, outDir, downloadDir=None, redownload=False, makeIntermediateFiles=True, evaluate=False):
@@ -62,10 +62,20 @@ def convert(corpora, outDir, downloadDir=None, redownload=False, makeIntermediat
         print >> sys.stderr, "=======================", "Converting BioNLP Shared Task", corpus, "corpus ("+str(count)+"/"+str(len(corpora))+")", "======================="
         logFileName = outDir + "/conversion/" + corpus + "-conversion-log.txt"
         Stream.openLog(logFileName)
-        downloaded = downloadCorpus(corpus, downloadDir, outDir, redownload)
+        downloaded = downloadCorpus(corpus, outDir, downloadDir, redownload)
         convertDownloaded(outDir, corpus, downloaded, makeIntermediateFiles, evaluate)
         Stream.closeLog(logFileName)
         count += 1
+
+def corpusRENtoASCII(xml):
+    print >> sys.stderr, "Converting REN corpus to ASCII"
+    for document in xml.getiterator("document"):
+        text = document.get("text")
+        text = text.replace(u"\xc3\xb6", u"a")
+        text = text.replace(u"\xc3\xa4", u"a")
+        text = text.replace(u"\xc3\xa9", u"e")
+        text = text.replace("and Wikstram, M. (1991) Eur. J. Biochem. 197", "and Wikstrom, M. (1991) Eur. J. Biochem. 197")
+        document.set("text", text)
 
 def convertDownloaded(outdir, corpus, files, intermediateFiles=True, evaluate=True):
     global moveBI
@@ -91,6 +101,11 @@ def convertDownloaded(outdir, corpus, files, intermediateFiles=True, evaluate=Tr
         print >> sys.stderr, "Read", len(docs), "documents"
         documents.extend(docs)
     
+    if len(docs) > 0 and docs[0].license != None:
+        licenseFile = open(os.path.join(outdir, corpus + "-LICENSE"), "wt")
+        licenseFile.write(docs[0].license)
+        licenseFile.close()
+    
     print >> sys.stderr, "Resolving equivalences"
     Utils.STFormat.Equiv.process(documents)
     
@@ -110,6 +125,8 @@ def convertDownloaded(outdir, corpus, files, intermediateFiles=True, evaluate=Tr
     
     if corpus == "BI":
         Utils.InteractionXML.MixSets.mixSets(xml, None, set(moveBI), "train", "devel")
+    if corpus == "REN":
+        corpusRENtoASCII(xml)
     
     addAnalyses(xml, corpus, datasets, files, bigfileName)
     if intermediateFiles:
@@ -153,13 +170,13 @@ def addAnalyses(xml, corpus, datasets, files, bigfileName):
             print >> sys.stderr, "Inserting", setName, "analyses"
             tempdir = tempfile.mkdtemp()
             analysesSetName = corpus + "_" + setName.upper() + "_ANALYSES"
-            Utils.Download.extractPackage(files[analysesSetName], tempdir)
+            packagePath = Utils.Download.getTopDir(tempdir, Utils.Download.extractPackage(files[analysesSetName], tempdir))
             print >> sys.stderr, "Making sentences"
-            Tools.SentenceSplitter.makeSentences(xml, tempdir + "/" + os.path.basename(files[analysesSetName])[:-len(".tar.gz")] + "/tokenized", None)
+            Tools.SentenceSplitter.makeSentences(xml, packagePath + "/tokenized", None, escDict=Tools.CharniakJohnsonParser.escDict)
             print >> sys.stderr, "Inserting McCC parses"
-            Tools.CharniakJohnsonParser.insertParses(xml, tempdir + "/" + os.path.basename(files[analysesSetName])[:-len(".tar.gz")] + "/McClosky-Charniak/pstree", None, extraAttributes={"source":"BioNLP'09"})
+            Tools.CharniakJohnsonParser.insertParses(xml, packagePath + "/McClosky-Charniak/pstree", None, extraAttributes={"source":"BioNLP'09"})
             print >> sys.stderr, "Inserting Stanford conversions"
-            Tools.StanfordParser.insertParses(xml, tempdir + "/" + os.path.basename(files[analysesSetName])[:-len(".tar.gz")] + "/McClosky-Charniak/dep", None, extraAttributes={"stanfordSource":"BioNLP'09"})
+            Tools.StanfordParser.insertParses(xml, packagePath + "/McClosky-Charniak/dep", None, skipExtra=1, extraAttributes={"stanfordSource":"BioNLP'09"})
             print >> sys.stderr, "Removing temporary directory", tempdir
             shutil.rmtree(tempdir)
     else: # use official BioNLP'11 parses
