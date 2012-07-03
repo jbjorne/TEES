@@ -26,6 +26,7 @@ class Document:
         self.events = []
         self.relations = []
         self.dataSet = None
+        self.license = None
 
 class Annotation:
     def __init__(self, id = None, type = None, text=None, trigger=None, arguments=None):
@@ -442,7 +443,9 @@ def loadSet(path, setName=None, level="a2", sitesAreArguments=False, a2Tag="a2",
         f.extractall(dir)
         # Check if compressed directory is included in the package, like in the ST'11 corpus files
         compressedFilePath = os.path.join(dir, os.path.basename(path)[:-len(".tar.gz")])
-        print compressedFilePath
+        if not os.path.exists(compressedFilePath): # at least CO training set has a different dirname inside the tarfile
+            compressedFilePath = compressedFilePath.rsplit("_", 1)[0]
+            print >> sys.stderr, "Package name directory does not exist, trying", compressedFilePath
         if os.path.exists(compressedFilePath):
             print >> sys.stderr, "Reading document set from compressed filename directory", compressedFilePath
             dir = compressedFilePath
@@ -452,6 +455,11 @@ def loadSet(path, setName=None, level="a2", sitesAreArguments=False, a2Tag="a2",
     
     ids = set()
     documents = []
+    license = None
+    if os.path.exists(os.path.join(dir, "LICENSE")):
+        licenseFile = open(os.path.join(dir, "LICENSE"), "rt")
+        license = "".join(licenseFile.readlines())
+        licenseFile.close()
     for filename in os.listdir(dir):
         if filename.endswith(".txt"):
             ids.add(filename.split(".")[0])
@@ -467,6 +475,7 @@ def loadSet(path, setName=None, level="a2", sitesAreArguments=False, a2Tag="a2",
                 raise
         doc.text = loadText( os.path.join(dir, str(id) + ".txt") )
         doc.dataSet = setName
+        doc.license = license
         documents.append(doc)
     
     if dir != path:
