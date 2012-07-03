@@ -1,6 +1,6 @@
 import sys, os
 import types
-import uuid
+#import uuid
 from ClusterConnection import ClusterConnection
 import subprocess
 
