@@ -2,7 +2,7 @@ import sys, os, shutil, types
 import subprocess
 import getpass
 import time
-sys.path.append(os.path.normpath(os.path.abspath(os.path.dirname(__file__))+"/.."))
+sys.path.append(os.path.normpath(os.path.abspath(os.path.dirname(__file__))+"/../.."))
 from Utils.Timer import Timer
 import Utils.Settings as Settings
 import tempfile
@@ -66,6 +66,7 @@ class UnixConnection:
             if self.remoteSettingsPath == None: # not yet known, so look for environment variable
                 rsp = self.run("echo $TEES_SETTINGS")
             else: # download from defined location
+                assert self.remoteSettingsPath != None
                 rsp = self.remoteSettingsPath
             # Download settings to local computer
             print >> sys.stderr, "Reading remote TEES_SETTINGS from", self.account + ":" + rsp
@@ -181,6 +182,7 @@ class UnixConnection:
                 subprocess.call("gzip -fv < " + src + " > " + src + ".gz", shell=True)
                 src += ".gz"
                 dst += ".gz"
+            self.mkdir(os.path.dirname(dst))
             self.scp(src, self.account + ":" + dst, verbose="upload")
             if (self.compression or uncompress) and dst.endswith(".gz"):
                 self.run("gunzip -fv " + dst)
