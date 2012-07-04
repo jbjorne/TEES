@@ -24,6 +24,25 @@ import Utils.Settings as Settings
 moveBI = ["PMID-10333516-S3", "PMID-10503549-S4", "PMID-10788508-S10", "PMID-1906867-S3",
           "PMID-9555886-S6", "PMID-10075739-S13", "PMID-10400595-S1", "PMID-10220166-S12"]
 
+def installPreconverted(destPath=None, downloadPath=None, redownload=False, updateLocalSettings=False):
+    print >> sys.stderr, "---------------", "Downloading preconverted BioNLP'11 corpora", "---------------"
+    if destPath == None:
+        destPath = os.path.join(Settings.DATAPATH, "corpora")
+    if downloadPath == None:
+        downloadPath = os.path.join(Settings.DATAPATH, "corpora/download")
+    Utils.Download.downloadAndExtract(Settings.URL["BIONLP_CORPORA"], destPath, downloadPath, redownload=redownload)
+    Settings.setLocal("CORPUS_DIR", destPath, updateLocalSettings)
+
+def installEvaluators(destPath=None, downloadPath=None, redownload=False, updateLocalSettings=False):
+    print >> sys.stderr, "---------------", "Downloading BioNLP Shared Task evaluators", "---------------"
+    if destPath == None:
+        destPath = os.path.join(Settings.DATAPATH, "tools/evaluators")
+    if downloadPath == None:
+        downloadPath = os.path.join(Settings.DATAPATH, "tools/download")
+    Utils.Download.downloadAndExtract(Settings.URL["BIONLP11_EVALUATORS"], destPath, downloadPath, redownload=redownload)
+    Settings.setLocal("BIONLP_EVALUATOR_DIR", destPath, updateLocalSettings)
+    Settings.setLocal("BIONLP_EVALUATOR_GOLD_DIR", os.path.join(destPath, "gold"), updateLocalSettings)
+    
 def downloadCorpus(corpus, destPath=None, downloadPath=None, clear=False):
     print >> sys.stderr, "---------------", "Downloading BioNLP Shared Task files", "---------------"
     downloaded = {}
@@ -52,7 +71,9 @@ def downloadCorpus(corpus, destPath=None, downloadPath=None, clear=False):
                 downloaded[corpus + setName + analysis] = Utils.Download.download(Settings.URL[corpus + setName + analysis], downloadPath + "/support/", clear=clear)
     return downloaded
 
-def convert(corpora, outDir, downloadDir=None, redownload=False, makeIntermediateFiles=True, evaluate=False):
+def convert(corpora, outDir=None, downloadDir=None, redownload=False, makeIntermediateFiles=True, evaluate=False):
+    if outDir == None:
+        os.path.normpath(Settings.DATAPATH + "/corpora")
     if not os.path.exists(outDir):
         os.makedirs(outDir)
     else:
@@ -214,12 +235,16 @@ if __name__=="__main__":
     from optparse import OptionParser
     from Utils.Parameters import *
     optparser = OptionParser(usage="%prog [options]\nBioNLP'11 Shared Task corpus conversion")
-    optparser.add_option("-c", "--corpora", default="GE", dest="corpora", help="corpus names in a comma-separated list, e.g. \"GE,EPI,ID\"")
-    optparser.add_option("-o", "--outdir", default=os.path.normpath(Settings.DATAPATH + "/corpora"), dest="outdir", help="directory for output files")
+    optparser.add_option("-c", "--corpora", default=None, dest="corpora", help="corpus names in a comma-separated list, e.g. \"GE,EPI,ID\"")
+    optparser.add_option("-e", "--evaluators", default=False, action="store_true", dest="evaluators", help="Install evaluators")
+    optparser.add_option("-o", "--outdir", default=None, dest="outdir", help="directory for output files")
     optparser.add_option("-d", "--downloaddir", default=None, dest="downloaddir", help="directory to download corpus files to")
     optparser.add_option("--intermediateFiles", default=False, action="store_true", dest="intermediateFiles", help="save intermediate corpus files")
     optparser.add_option("--forceDownload", default=False, action="store_true", dest="forceDownload", help="re-download all source files")
     (options, args) = optparser.parse_args()
     
-    Stream.openLog(os.path.join(options.outdir, "conversion-log.txt"))
-    convert(options.corpora.split(","), options.outdir, options.downloaddir, options.forceDownload, options.intermediateFiles)
+    if options.corpora != None:
+        #Stream.openLog(os.path.join(options.outdir, "conversion-log.txt"))
+        convert(options.corpora.split(","), options.outdir, options.downloaddir, options.forceDownload, options.intermediateFiles)
+    if options.evaluators:
+        installEvaluators(options.outdir, options.downloaddir, options.forceDownload)
