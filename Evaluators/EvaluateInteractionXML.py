@@ -209,8 +209,12 @@ def getInteractionPredictions(interactionsFrom, interactionsTo, entityMap, class
     reverseEntityMap = {}
     for predictedEntity, goldEntities in entityMap.iteritems():
         for goldEntity in goldEntities:
-            assert goldEntity.get("id") not in reverseEntityMap, ([x.get("id") for x in predictedEntity], [x.get("id") for x in goldEntities])
-            reverseEntityMap[goldEntity.get("id")] = predictedEntity.get("id")
+            #assert goldEntity.get("id") not in reverseEntityMap, (predictedEntity.get("id"), [x.get("id") for x in goldEntities])
+            # One gold entity can map to more than one predicted entities,
+            # due to predicted entities created by splitting a prediction
+            if goldEntity.get("id") not in reverseEntityMap:
+                reverseEntityMap[goldEntity.get("id")] = []
+            reverseEntityMap[goldEntity.get("id")].append(predictedEntity.get("id"))
     mappedGoldEntities = reverseEntityMap.keys()
     # Process gold interactions that did not have a prediction
     for interactionTo in interactionsTo:
@@ -221,7 +225,8 @@ def getInteractionPredictions(interactionsFrom, interactionsTo, entityMap, class
             if interactionTo.get("e1") not in mappedGoldEntities or interactionTo.get("e2") not in mappedGoldEntities:
                 falseEntity[interactionTo.get("type")][1] += 1
             if interactionTo.get("e1") in reverseEntityMap: # mark an event false due to a missing gold interaction
-                events[reverseEntityMap[interactionTo.get("e1")]] = False # missing argument -> incorrect event
+                for predictedEntityId in reverseEntityMap[interactionTo.get("e1")]:
+                    events[predictedEntityId] = False # missing argument -> incorrect event
     assert len(examples) == len(predictions)
     return examples, predictions, falseEntity, events
 
