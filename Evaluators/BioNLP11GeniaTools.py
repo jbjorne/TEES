@@ -113,16 +113,16 @@ def hasGoldDocuments(sourceDir, goldDir):
                 return True
     return False
 
-def getSourceDir(input):
-    if input.endswith(".tar.gz"):
-        import tarfile
-        tempDir = tempfile.mkdtemp()
-        f = tarfile.open(input)
-        f.extractall(tempDir)
-        f.close()
-        return tempDir, True
-    else:
-        return input, False
+#def getSourceDir(input):
+#    if input.endswith(".tar.gz"):
+#        import tarfile
+#        tempDir = tempfile.mkdtemp()
+#        f = tarfile.open(input)
+#        f.extractall(tempDir)
+#        f.close()
+#        return tempDir, True
+#    else:
+#        return input, False
 
 def getFScore(results, task):
     if task in ["GE", "GE09"]:
@@ -143,50 +143,74 @@ def getFScore(results, task):
     return current
 
 def evaluate(source, task, goldDir=None, debug=False):
+    # Determine task
     subTask = "1"
     if "." in task:
         task, subTask = task.split(".")
-    results = evaluateGE(source, subTask, goldDir=goldDir, debug=debug)
+    # Do the evaluation
+    if task in ["GE", "GE09"]:
+        results = evaluateGE(source, subTask, goldDir=goldDir, debug=debug)
+    elif task in ["EPI", "ID"]:
+        results = evaluateEPIorID(task, source, goldDir)
+    elif task == "REN":
+        results = evaluateREN(source, goldDir)
+    elif task in ["BB", "BI"]:
+        results = evaluateBX(task, source, goldDir)
+    elif task == "CO":
+        results = evaluateCO(sourceDir, goldDir)
+    else:
+        results = None
+        print >> sys.stderr, corpus, "No BioNLP'11 evaluator for task", task
+    # Return results
     if results == None:
         return None
     return (getFScore(results, task), results)
 
 def checkEvaluator(corpus, sourceDir, goldDir = None):
     # Check evaluator
-    if not hasattr(Settings, corpus + "_EVALUATOR") or not os.path.exists(getattr(Settings, corpus + "_EVALUATOR")):
-        print >> sys.stderr, corpus, "Evaluator not installed"
-        return None
+    if not hasattr(Settings, "BIONLP_EVALUATOR_DIR"):
+        print >> sys.stderr, corpus, "BIONLP_EVALUATOR_DIR setting not defined"
+        evaluatorDir = None
+    else:
+        evaluatorDir = os.path.join(Settings.BIONLP_EVALUATOR_DIR, Settings.EVALUATOR[corpus])
+    # Check source data
+    tempdir = None
+    if sourceDir.endswith(".tar.gz"):
+        tempdir = tempfile.mkdtemp()
+        Download.extractPackage(sourceDir, os.path.join(tempdir, "source"))
+        sourceDir = os.path.join(tempdir, "source")
     # Check gold data
     if goldDir == None:
-        if hasattr(Settings, corpus + "_EVALUATOR_GOLD"): # Can be defined in local settings
-            goldDir = getattr(Settings, corpus + "_EVALUATOR_GOLD")
-        else: # assume default location for gold data
-            goldDir = Settings.GE_EVALUATOR
-            goldDir = goldDir.rstrip("/")
-            goldDir = goldDir.rsplit("/", 1)[0]
-            goldDir = goldDir + "/gold/" + corpus + "-devel"
+        if not hasattr(Settings, "BIONLP_EVALUATOR_GOLD_DIR"):
+            print >> sys.stderr, corpus, "BIONLP_EVALUATOR_GOLD_DIR setting not defined"
+            return evaluatorDir, None
+        goldDir = os.path.join(Settings.BIONLP_EVALUATOR_GOLD_DIR, Settings.EVALUATOR[corpus + "-gold"])
     if not os.path.exists(goldDir):
         print >> sys.stderr, corpus, "Evaluator gold data directory", goldDir, "does not exist"
-        return None
-    if not hasGoldDocuments(sourceDir, goldDir):
+        goldDir = None
+    if goldDir != None and goldDir.endswith(".tar.gz"):
+        if tempdir == None:
+            tempdir = tempfile.mkdtemp()
+        goldDir = Download.getTopDir(os.path.join(tempdir, "gold"), Download.extractPackage(goldDir, os.path.join(tempdir, "gold")))
+        print >> sys.stderr, "Uncompressed evaluation gold to", goldDir
+    if goldDir != None and not hasGoldDocuments(sourceDir, goldDir):
         print >> sys.stderr, "Evaluation input has no gold documents"
-        return None
-    return goldDir
+        goldDir = None
+    return evaluatorDir, sourceDir, goldDir, tempdir
 
 def evaluateGE(sourceDir, task=1, goldDir=None, folds=-1, foldToRemove=-1, evaluations=["strict", "approximate", "decomposition"], verbose=True, silent=False, debug=False):
-    origSourceDir = sourceDir
-    sourceDir = os.path.abspath(sourceDir)
-    sourceDir, removeSource = getSourceDir(sourceDir)
-
     task = str(task)
     assert task in ["1","2","3"]
-    goldDir = checkEvaluator("GE", sourceDir, goldDir)
+    if not silent:
+        print >> sys.stderr, "GE task", task, "evaluation of", sourceDir, "against", goldDir
+    evaluatorDir, sourceDir, goldDir, tempDir = checkEvaluator("GE", sourceDir, goldDir)
     if goldDir == None:
         return None
     
     origDir = os.getcwd()
-    os.chdir(Settings.GE_EVALUATOR)
-    tempDir = tempfile.mkdtemp()
+    os.chdir(evaluatorDir)
+    if tempDir == None:
+        tempDir = tempfile.mkdtemp()
     if folds != -1:
         folds = getFolds(sourceDir, folds)
         sourceSubsetDir = tempDir + "/source-subset"
@@ -199,12 +223,10 @@ def evaluateGE(sourceDir, task=1, goldDir=None, folds=-1, foldToRemove=-1, evalu
     
     results = {}
     
-    if not silent:
-        print >> sys.stderr, "GE task", task, "evaluation of", origSourceDir, "against", goldDir
-    
     #commands = "export PATH=$PATH:./ ; "
+    outDir = tempDir + "/output"
     commands = "perl a2-normalize.pl -g " + goldDir
-    commands += " -o " + tempDir
+    commands += " -o " + outDir
     commands += " " + sourceSubsetDir + "/*.a2"
     p = subprocess.Popen(commands, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     if verbose and not silent:
@@ -219,7 +241,7 @@ def evaluateGE(sourceDir, task=1, goldDir=None, folds=-1, foldToRemove=-1, evalu
         commands = "perl a2-evaluate.pl" 
         commands += " -t " + str(task)
         if debug: commands += " -v -d"
-        commands += " -g " + goldDir + " " + tempDir +"/*.a2"
+        commands += " -g " + goldDir + " " + outDir +"/*.a2"
         p = subprocess.Popen(commands, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         stderrLines = p.stderr.readlines()
         stdoutLines = p.stdout.readlines()
@@ -236,7 +258,7 @@ def evaluateGE(sourceDir, task=1, goldDir=None, folds=-1, foldToRemove=-1, evalu
         commands = "perl a2-evaluate.pl"
         commands += " -t " + str(task)
         if debug: commands += " -v -d"
-        commands += " -g " + goldDir + " -sp " + tempDir + "/*.a2"
+        commands += " -g " + goldDir + " -sp " + outDir + "/*.a2"
         p = subprocess.Popen(commands, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         stderrLines = p.stderr.readlines()
         stdoutLines = p.stdout.readlines()
@@ -252,7 +274,7 @@ def evaluateGE(sourceDir, task=1, goldDir=None, folds=-1, foldToRemove=-1, evalu
         commands = "perl a2-evaluate.pl"
         commands += " -t " + str(task)
         if debug: commands += " -v -d"
-        commands += " -g " + goldDir + " -sp " + tempDir + "/*.a2"
+        commands += " -g " + goldDir + " -sp " + outDir + "/*.a2"
         p = subprocess.Popen(commands, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         stderrLines = p.stderr.readlines()
         stdoutLines = p.stdout.readlines()
@@ -262,7 +284,6 @@ def evaluateGE(sourceDir, task=1, goldDir=None, folds=-1, foldToRemove=-1, evalu
         results["decomposition"] = parseResults(stdoutLines)
     
     shutil.rmtree(tempDir)
-    if removeSource: shutil.rmtree(sourceDir)
     
     # return to current dir
     os.chdir(origDir)
@@ -285,19 +306,18 @@ def printLinesBX(lines):
         print >> sys.stderr, str(category) + ":", ", ".join(queue)
         queue = []
 
-def evaluateBX(sourceDir, corpusName, goldDir=None, silent=False):
-    goldDir = checkEvaluator(corpusName, sourceDir, goldDir)
+def evaluateBX(corpusName, sourceDir, goldDir=None, silent=False):
+    assert corpusName in ["BI", "BB"], corpusName
+    evaluatorDir, sourceDir, goldDir, tempDir = checkEvaluator(corpusName, sourceDir, goldDir)
     if goldDir == None:
         return None
     
     if corpusName == "BI":
-        commands = "java -jar " + Settings.BI_EVALUATOR + "/BioNLP-ST_2011_bacteria_interactions_evaluation_software.jar " + golDir + " " + sourceDir
+        commands = "java -jar " + evaluatorDir + "/BioNLP-ST_2011_bacteria_interactions_evaluation_software.jar " + golDir + " " + sourceDir
     elif corpusName == "BB":
-        commands = "java -jar " + Settings.BB_EVALUATOR + "/BioNLP-ST_2011_Bacteria_Biotopes_evaluation_software.jar " + golDir + " " + sourceDir
+        commands = "java -jar " + evaluatorDir + "/BioNLP-ST_2011_Bacteria_Biotopes_evaluation_software.jar " + golDir + " " + sourceDir
     else:
         assert False, corpusName
-    
-    sourceDir, removeSource = getSourceDir(sourceDir)
 
     p = subprocess.Popen(commands, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     stderrLines = p.stderr.readlines()
@@ -335,20 +355,16 @@ def evaluateBX(sourceDir, corpusName, goldDir=None, silent=False):
                 results[key] = 0.0
             else:
                 results[key] = float(value)
-    if removeSource: shutil.rmtree(sourceDir)
+    if tempDir != None: 
+        shutil.rmtree(tempDir)
     return results
      
-def evaluateEPIorID(sourceDir, corpus, silent=False):
+def evaluateEPIorID(corpus, sourceDir, goldDir=None, silent=False):
     assert corpus in ["EPI", "ID"], corpus
-    if corpus == "EPI":
-        goldDir = os.path.expanduser("~/data/BioNLP11SharedTask/main-tasks/BioNLP-ST_2011_Epi_and_PTM_development_data_rev1")
-        evaluatorPath = os.path.expanduser("~/data/BioNLP11SharedTask/evaluators/BioNLP-ST_2011_EPI-eval-tools")
-    else:
-        goldDir = os.path.expanduser("~/data/BioNLP11SharedTask/main-tasks/BioNLP-ST_2011_Infectious_Diseases_development_data_rev1")
-        evaluatorPath = os.path.expanduser("~/data/BioNLP11SharedTask/evaluators/BioNLP-ST_2011_ID-eval-tools")
-    sourceDir = os.path.abspath(sourceDir)
-    sourceDir, removeSource = getSourceDir(sourceDir)
-    commands = "cd " + evaluatorPath
+    evaluatorDir, sourceDir, goldDir, tempDir = checkEvaluator(corpus, sourceDir, goldDir)
+    if goldDir == None:
+        return None
+    commands = "cd " + evaluatorDir
     commands += " ; " + "python evaluation.py -s -p -r " + goldDir + " " + sourceDir + "/*.a2"
     p = subprocess.Popen(commands, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     stderrLines = p.stderr.readlines()
@@ -359,18 +375,18 @@ def evaluateEPIorID(sourceDir, corpus, silent=False):
         for line in stdoutLines:
             print >> sys.stderr, line,
         print >> sys.stderr
-    if removeSource: shutil.rmtree(sourceDir)
     for line in stderrLines + stdoutLines:
         if "No such file or directory" in line:
             return None
+    if tempDir != None: 
+        shutil.rmtree(tempDir)
     return parseResults(stdoutLines)
 
-def evaluateREN(sourceDir, silent=False):
-    goldDir = os.path.expanduser("~/data/BioNLP11SharedTask/supporting-tasks/BioNLP-ST_2011_bacteria_rename_dev_data")
-    evaluatorPath = os.path.expanduser("~/data/BioNLP11SharedTask/supporting-tasks/BioNLP-ST_2011_bacteria_rename_evaluation_sofware")
-    sourceDir = os.path.abspath(sourceDir)
-    sourceDir, removeSource = getSourceDir(sourceDir)
-    commands = "cd " + evaluatorPath
+def evaluateREN(sourceDir, goldDir=None, silent=False):
+    evaluatorDir, sourceDir, goldDir, tempDir = checkEvaluator("REN", sourceDir, goldDir)
+    if goldDir == None:
+        return None
+    commands = "cd " + evaluatorDir
     commands += " ; " + "java -jar eval_rename.jar " + goldDir + " " + sourceDir
     p = subprocess.Popen(commands, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     stderrLines = p.stderr.readlines()
@@ -392,10 +408,11 @@ def evaluateREN(sourceDir, silent=False):
         else:
             value = int(value)
         results[category.strip()] = value
-    if removeSource: shutil.rmtree(sourceDir)
+    if tempDir != None: 
+        shutil.rmtree(tempDir)
     return results
 
-#def evaluateCO(sourceDir, silent=False):
+#def evaluateCO(sourceDir, goldDir=None, silent=False):
 #    goldDir = os.path.expanduser("~/data/BioNLP11SharedTask/supporting-tasks/BioNLP-ST_2011_coreference_development_data")
 #    evaluatorPath = os.path.expanduser("~/data/BioNLP11SharedTask/supporting-tasks/CREvalPackage1.4")
 #    sourceDir = os.path.abspath(sourceDir)
