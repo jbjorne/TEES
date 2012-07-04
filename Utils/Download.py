@@ -23,7 +23,7 @@ def getTopDir(path, names):
             potential = os.path.join(path, item)
             if os.path.exists(potential) and os.path.isdir(potential):                  
                 topDirs.append(item)
-    assert len(topDirs) == 1, (topDirs, names)
+    assert len(topDirs) == 1, (path, topDirs, names)
     return os.path.join(path, topDirs[0])
 
 # Modified from http://code.activestate.com/recipes/576714-extract-a-compressed-file/
