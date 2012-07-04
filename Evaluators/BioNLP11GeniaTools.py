@@ -196,6 +196,14 @@ def checkEvaluator(corpus, sourceDir, goldDir = None):
     if goldDir != None and not hasGoldDocuments(sourceDir, goldDir):
         print >> sys.stderr, "Evaluation input has no gold documents"
         goldDir = None
+    # Use absolute paths
+    sourceDir = os.path.abspath(sourceDir)
+    if evaluatorDir != None:
+        evaluatorDir = os.path.abspath(evaluatorDir)
+    if goldDir != None:
+        goldDir = os.path.abspath(goldDir)
+    if tempdir != None:
+        tempdir = os.path.abspath(tempdir)
     return evaluatorDir, sourceDir, goldDir, tempdir
 
 def evaluateGE(sourceDir, task=1, goldDir=None, folds=-1, foldToRemove=-1, evaluations=["strict", "approximate", "decomposition"], verbose=True, silent=False, debug=False):
