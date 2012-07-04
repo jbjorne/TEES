@@ -128,7 +128,7 @@ def checkInstallPath(menu, menuVariable, setting, installSubDir, defaultInstallK
         menu.setDefault(defaultInstallKey)
         return True
 
-def checkCorpusInstall(menu, corpus, installKey="i"):
+def checkCorpusInstall(menu, corpus):
     # If CORPUS_DIR setting is not set, the default is to install everything
     if not hasattr(Settings, "CORPUS_DIR") or getattr(Settings, "CORPUS_DIR") == None:
         Settings.setLocal("CORPUS_DIR", os.path.join(menu.system.defaultInstallDir, "corpora"))
@@ -143,7 +143,6 @@ def checkCorpusInstall(menu, corpus, installKey="i"):
     if allFound: # if corpus files are present, installing this corpora can be skipped
         return True
     else: # if a corpus file is missing, mark it to be installed
-        menu.setDefault(installKey)
         return False
 
 def svmMenuInitializer(menu, prevMenu):
@@ -198,26 +197,20 @@ def corpusMenuInitializer(menu, prevMenu):
     the official Shared Task evaluator programs, which will be used by TEES when 
     training or testing on those corpora.
     """
-    # Set the installation path
-    if menu.corpusDir == None:
-        if not hasattr(Settings, "CORPUS_DIR") or getattr(Settings, "CORPUS_DIR") == None:
-            menu.corpusDir = menu.system.defaultInstallDir
-        else:
-            menu.corpusDir = Settings.CORPUS_DIR
     # Mark "skip" as default option, this will be re-marked as install if a corpus is missing
     menu.setDefault("s")
     handlers = []
     handlerArgs = []
     # Check which corpora need to be installed
     redownload = menu.optDict["1"].toggle
-    corporaToInstall = []
-    for item, corpus in [("4", "GE"), ("5", "EPI"), ("6", "ID"), ("7", "BB"), ("8", "BI")]:
-        if menu.optDict[item].toggle or not checkCorpusInstall(menu, corpus):
+    for corpus in ["GE", "EPI", "ID", "BB", "BI", "CO", "REL", "REN", "GE09"]:
+        if not checkCorpusInstall(menu, corpus):
             menu.optDict[item].toggle = True
-            corporaToInstall.append(corpus)
-    if len(corporaToInstall) > 0: # All BioNLP'11 corpora can be installed with one command
-        handlers.append(convertBioNLP11.convert)
-        handlerArgs.append([corporaToInstall, menu.corpusDir + "/corpora", menu.corpusDir + "/corpora/download", redownload, False, False])
+    if len(corporaToInstall) > 0: # A corpus is missing
+        handlers.append(convertBioNLP11.installPreconverted)
+        handlerArgs.append([menu.system.defaultInstallDir + "corpora", menu.system.defaultInstallDir + "corpora/download", redownload, True])
+        handlers.append(convertBioNLP11.installEvaluators)
+        handlerArgs.append([menu.system.defaultInstallDir + "tools/evaluators", menu.system.defaultInstallDir + "tools/download", redownload, True])
     # Add the handlers to install option
     menu.optDict["i"].handler = handlers
     menu.optDict["i"].handlerArgs = handlerArgs
@@ -225,7 +218,6 @@ def corpusMenuInitializer(menu, prevMenu):
 def buildMenus():
     Menu("Classifier", None, [
         Option("1", "Compile from source", toggle=False),
-        Option("2", "Change install directory", dataInput="svmInstallDir"),
         Option("i", "Install", handler=Classifiers.SVMMultiClassClassifier.install),
         Option("s", "Skip")],
         svmMenuInitializer)
@@ -258,26 +250,16 @@ def buildMenus():
         ])
 
     Menu("Models", "Not implemented yet\n", [
+        Option("1", "Redownload already downloaded files", toggle=False),
+        Option.SPACE,
         Option("i", "Install", isDefault=True),
         Option("s", "Skip")])
     
     Menu("Corpora", "Install corpora\n", [
         Option("1", "Redownload already downloaded files", toggle=False),
-        Option("2", "Change CORPUS_DIR", dataInput="corpusDir"),
-        Option("3", "Change BioNLP'11 evaluator directory", dataInput="evaluatorDir"),
         Option.SPACE,
-        Option("4", "Install BioNLP'11 GE (GENIA) corpus", toggle=False),
-        Option("5", "Install BioNLP'11 EPI (epigenetics and PTMs) corpus", toggle=False),
-        Option("6", "Install BioNLP'11 ID (infectious diseases) corpus", toggle=False),
-        Option("7", "Install BioNLP'11 BB (bacteria biotopes) corpus", toggle=False),
-        Option("8", "Install BioNLP'11 BI (bacteria/gene interactions) corpus", toggle=False),
-        Option("9", "Install BioNLP'11 REL (entity relations) corpus", toggle=False),
-        Option("10", "Install BioNLP'11 REN (gene renaming) corpus", toggle=False),
-        Option("11", "Install BioNLP'11 CO (coreference) corpus", toggle=False),
-        Option("12", "Install BioNLP'09 GE (GENIA 2009) corpus", toggle=False),
-        Option("13", "Install DDI'11 (drug-drug interactions) corpus", toggle=False),
-        Option.SPACE,
-        Option("14", "Install BioNLP'11 evaluators", toggle=False),
+        Option("2", "Install BioNLP'11 and BioNLP'09 corpora", toggle=False),
+        Option("3", "Install DDI'11 (drug-drug interactions) corpus", toggle=False),
         Option.SPACE,
         Option("i", "Install", isDefault=True),
         Option("s", "Skip")],
@@ -290,13 +272,6 @@ def buildMenus():
         Option("3", "Install BANNER named entity recognizer", toggle=False),
         Option("4", "Install BLLIP parser", toggle=False),
         Option("5", "Install Stanford Parser", toggle=False),
-        Option.SPACE,
-        Option("6", "Change GENIA_SENTENCE_SPLITTER_DIR", dataInput="geniassInstallDir"),
-        Option("7", "Change BANNER_DIR", dataInput="bannerInstallDir"),
-        Option("8", "Change BLLIP_PARSER_DIR", dataInput="bllipInstallDir"),
-        Option("9", "Change STANFORD_PARSER_DIR", dataInput="stanfordInstallDir"),
-        Option.SPACE,
-        Option("10", "JAVA_HOME setting for compiling BANNER", dataInput="javaHome"),
         Option.SPACE,
         Option("i", "Install", isDefault=True),
         Option("s", "Skip")],
