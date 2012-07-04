@@ -221,9 +221,7 @@ def getTaskSettings(task, detector, processUnmerging, processModifiers, isSingle
         if classifierParameters["edge"] == None:
             print >> sys.stderr, "Classifier parameters for edge examples undefined, using default for task", fullTaskId
             classifierParameters["edge"] = "5000,7500,10000,20000,25000,27500,28000,29000,30000,35000,40000,50000,60000,65000"
-            if task == "REL":
-                classifierParameters["edge"] = "10,100,1000,5000,7500,10000,20000,25000,28000,50000,60000,65000,100000,500000,1000000"
-            elif task == "CO":
+            if task in ["REL", "CO"]:
                 classifierParameters["edge"] = "10,100,1000,5000,7500,10000,20000,25000,28000,50000,60000,65000,100000,500000,1000000"
         if classifierParameters["recall"] == None:
             print >> sys.stderr, "Recall adjust parameter undefined, using default for task", fullTaskId
@@ -250,7 +248,7 @@ if __name__=="__main__":
     # main options
     group = OptionGroup(optparser, "Main Options", "")
     group.add_option("-t", "--task", default=None, dest="task", help="task number")
-    group.add_option("-p", "--parse", default="split-McClosky", dest="parse", help="Parse XML element name")
+    group.add_option("-p", "--parse", default="split-McCC", dest="parse", help="Parse XML element name")
     group.add_option("-c", "--connection", default=None, dest="connection", help="")
     optparser.add_option_group(group)
     # input
