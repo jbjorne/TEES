@@ -18,13 +18,13 @@ def train(output, task=None, detector=None,
           exampleStyles={"examples":None, "trigger":None, "edge":None, "unmerging":None, "modifiers":None},
           classifierParams={"examples":None, "trigger":None, "recall":None, "edge":None, "unmerging":None, "modifiers":None}, 
           doFullGrid=False, deleteOutput=False, copyFrom=None, log=True, step=None, omitSteps=None, debug=False, connection=None):
+    # Initialize working directory
+    workdir(output, deleteOutput, copyFrom, log)
     # Get task specific parameters
     detector, processUnmerging, processModifiers, isSingleStage, exampleStyles, classifierParams = getTaskSettings(task, 
         detector, processUnmerging, processModifiers, isSingleStage, inputFiles, exampleStyles, classifierParams)   
     # Define processing steps
     selector, detectorSteps, omitDetectorSteps = getSteps(step, omitSteps, ["TRAIN", "DEVEL", "EMPTY", "TEST"])
-    # Initialize working directory
-    workdir(output, deleteOutput, copyFrom, log)
     
     # Initialize the detector
     detector, detectorName = getDetector(detector)
@@ -171,19 +171,22 @@ def getTaskSettings(task, detector, processUnmerging, processModifiers, isSingle
                     inputFiles, exampleStyles, classifierParameters):
     if task != None:
         print >> sys.stderr, "Determining training settings for task", task
-        assert task in ["GE00", "GE09.1", "GE09.2", "GE", "GE.1", "GE.2", "EPI", "ID", "BB", "BI", "CO", "REL", "REN", "DDI"]
+        assert task in ["GE09", "GE09.1", "GE09.2", "GE", "GE.1", "GE.2", "EPI", "ID", "BB", "BI", "CO", "REL", "REN", "DDI"]
     
         fullTaskId = task
         subTask = 2
         if "." in task:
             task, subTask = task.split(".")
             subTask = int(subTask)
-        dataPath = os.path.expanduser("~/biotext/BioNLP2011/data/main-tasks/")
-        #dataPath = Settings.CORPUS_DIR
+        #dataPath = os.path.expanduser("~/biotext/BioNLP2011/data/main-tasks/")
+        dataPath = Settings.CORPUS_DIR
         # Optional overrides for input files
-        if inputFiles["devel"] == None: inputFiles["devel"] = dataPath + task + "/" + task + "-devel.xml"
-        if inputFiles["train"] == None: inputFiles["train"] = dataPath + task + "/" + task + "-train.xml"
-        if inputFiles["test"] == None: inputFiles["test"] = dataPath + task + "/" + task + "-test.xml"
+        #if inputFiles["devel"] == None: inputFiles["devel"] = dataPath + task + "/" + task + "-devel.xml"
+        #if inputFiles["train"] == None: inputFiles["train"] = dataPath + task + "/" + task + "-train.xml"
+        #if inputFiles["test"] == None: inputFiles["test"] = dataPath + task + "/" + task + "-test.xml"
+        if inputFiles["devel"] == None: inputFiles["devel"] = os.path.join(dataPath, task + "-devel.xml")
+        if inputFiles["train"] == None: inputFiles["train"] = os.path.join(dataPath, task + "-train.xml")
+        if inputFiles["test"] == None: inputFiles["test"] = os.path.join(dataPath, task + "-test.xml")
         
         # Example generation parameters
         if exampleStyles["edge"] == None:
