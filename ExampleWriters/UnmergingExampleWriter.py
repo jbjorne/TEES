@@ -214,7 +214,7 @@ class UnmergingExampleWriter(SentenceExampleWriter):
                         # Prediction strength is only available for classified argument groups
                         predictionStrength = self.getPredictionStrength(example, predictionsByExample, classSet, classIds)
                     #print example 
-                    if umType != "simple" and "eType" in example[3] and example[3]["etype"] == "Process" and len(arguments) == 0:
+                    if umType != "simple" and "etype" in example[3] and example[3]["etype"] == "Process" and len(arguments) == 0:
                         origProcess = sentenceObject.entitiesById[example[3]["e"]]
                         # Put back the original entity
                         newProcess = self.addEntity(origProcess)
@@ -222,7 +222,7 @@ class UnmergingExampleWriter(SentenceExampleWriter):
                         if predictionStrength != None:
                             newProcess.set("umStrength", str(predictionStrength))
                     else: # example has arguments
-                        self.addEvent(arguments, sentenceObject, umType, forceAdd, predictionStrength)
+                        self.addEvent(arguments, sentenceObject, umType, forceAdd, predictionStrength, exampleNotes=example[3])
                     exampleAdded[example[0]] = True
                     examplesLeft -= 1
                     examplesAddedThisRound += 1
@@ -264,9 +264,11 @@ class UnmergingExampleWriter(SentenceExampleWriter):
                 return False
         return True
     
-    def addEvent(self, arguments, sentenceObject, umType="unknown", forceAdd=False, predictionStrength=None):
+    def addEvent(self, arguments, sentenceObject, umType="unknown", forceAdd=False, predictionStrength=None, exampleNotes=None):
+        assert len(arguments) > 0, (sentenceObject.sentence.get("id"), exampleNotes)
         # Collect e2 entities linked by this event
         e1Id = None
+        origE1 = None
         argEntities = [[]] * (len(arguments))
         for i in range(len(arguments)):
             arg = arguments[i]
@@ -289,6 +291,7 @@ class UnmergingExampleWriter(SentenceExampleWriter):
             
         entityCombinations = combine.combine(*argEntities)
         for combination in entityCombinations:
+            assert origE1 != None, (sentenceObject.sentence.get("id"), exampleNotes, [(x.get("id"), x.get("e1"), x.get("e2")) for x in arguments])
             root = self.addEntity(origE1)
             root.set("umType", umType)
             if predictionStrength != None:
