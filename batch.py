@@ -37,7 +37,7 @@ def prepareCommand(template, input=None, jobTag=None, output=None):
         template = template.replace("%o", output)
     return template
 
-def submitJob(command, input, connection, jobTag=None, output=None, regex=None, dummy=False, rerun=False, hideFinished=False):
+def submitJob(command, input, connection, jobTag=None, output=None, regex=None, dummy=False, rerun=None, hideFinished=False):
     if input != None and input.endswith(".job"):
         if connection.debug:
             print >> sys.stderr, "Skipped job control file", input
@@ -52,31 +52,33 @@ def submitJob(command, input, connection, jobTag=None, output=None, regex=None, 
         print >> sys.stderr, "Regular expression matched the input"
     
     if input != None:
-        if output == None:
-            jobDir = os.path.abspath(os.path.dirname(input))
-        else:
-            jobDir = output
+        # Determine job name and directory from the input file
+        jobDir = os.path.abspath(os.path.dirname(input))
         jobName = os.path.basename(input)
         if jobName == "": # input is a directory
             jobName = jobDir.rstrip("/").split("/")[-1] # use directory name as job name
             jobDir = jobDir.rstrip("/").split("/")[0] # save job control file on the same level as the directory
         if jobTag != None:
             jobName += "-" + jobTag
-    elif jobTag != None: # inputless job
+        # A defined output directory means the job file goes there
+        if output != None:
+            jobDir = output
+    else: # inputless job
+        assert jobTag != None
         jobName = jobTag
         jobDir = output
     
     print >> sys.stderr, "Processing job", jobName, "for input", input
     jobStatus = connection.getJobStatusByName(jobDir, jobName)
     if jobStatus != None:
-        print >> sys.stderr, "input already processed, job status =", jobStatus
-        if jobStatus == "RUNNING":
-            print >> sys.stderr, "Skipping currently running job"
-            return False
-        elif rerun == False:
-            if not hideFinished:
-                print >> sys.stderr, "Skipping already processed job"
-            return False
+        if rerun != None and jobStatus in rerun:
+            print >> sys.stderr, "Rerunning job with status", jobStatus
+        else:
+            if jobStatus == "RUNNING":
+                print >> sys.stderr, "Skipping currently running job"
+            elif not hideFinished:
+                print >> sys.stderr, "Skipping already processed job with status", jobStatus
+            return False         
     
     command = prepareCommand(command, input, jobTag, output)
     
@@ -108,7 +110,7 @@ def getOutputDir(currentDir, input, output=None):
         relativeCurrentDir = os.path.abspath(currentDir)[len(os.path.abspath(input)):]
         return os.path.join(output, relativeCurrentDir)
 
-def batch(command, input=None, connection=None, jobTag=None, output=None, regex=None, regexSkipDir=None, dummy=False, rerun=False, 
+def batch(command, input=None, connection=None, jobTag=None, output=None, regex=None, regexDir=None, dummy=False, rerun=None, 
           hideFinished=False, controlFilename=None, sleepTime=15, debug=False, limit=None, loop=False):
     connection = getConnection(connection)
     connection.debug = debug
@@ -124,7 +126,7 @@ def batch(command, input=None, connection=None, jobTag=None, output=None, regex=
         while firstLoop or loop:
             waitForJobs(limit, submitCount, connection, controlFilename, sleepTime)
             for triple in os.walk(input):
-                if regexSkipDir != None and regexSkipDir.match(os.path.join(triple[0])) != None:
+                if regexDir != None and regexDir.match(os.path.join(triple[0])) == None:
                     print >> sys.stderr, "Skipping directory", triple[0]
                     continue
                 else:
@@ -135,7 +137,7 @@ def batch(command, input=None, connection=None, jobTag=None, output=None, regex=
                         submitCount += 1
                         # number of submitted jobs has increased, so check if we need to wait
                         waitForJobs(limit, submitCount, connection, controlFilename, sleepTime)
-                firstLoop = False
+            firstLoop = False
 
 if __name__=="__main__":
     # Import Psyco if available
@@ -148,11 +150,11 @@ if __name__=="__main__":
 
     from optparse import OptionParser
     optparser = OptionParser()
-    optparser.add_option("-i", "--input", default=None, dest="input", help="Input file or directory. A directory will be processed recursively")
     optparser.add_option("-c", "--command", default=None, dest="command", help="")
+    optparser.add_option("-i", "--input", default=None, dest="input", help="Input file or directory. A directory will be processed recursively")
     optparser.add_option("-n", "--connection", default=None, dest="connection", help="")
     optparser.add_option("-r", "--regex", default=None, dest="regex", help="")
-    optparser.add_option("-d", "--regexSkipDir", default=None, dest="regexSkipDir", help="")
+    optparser.add_option("-d", "--regexDir", default=None, dest="regexDir", help="")
     optparser.add_option("-j", "--job", default=None, dest="job", help="job name")
     optparser.add_option("-o", "--output", default=None, dest="output", help="")
     optparser.add_option("-l", "--limit", default=None, dest="limit", help="")
@@ -160,18 +162,20 @@ if __name__=="__main__":
     optparser.add_option("--controlFile", default=None, dest="controlFile", help="")
     optparser.add_option("--sleepTime", default=None, dest="sleepTime", help="")
     optparser.add_option("--dummy", default=False, action="store_true", dest="dummy", help="Don't submit jobs")
-    optparser.add_option("--rerun", default=False, action="store_true", dest="rerun", help="Rerun jobs which have already been queued")
+    optparser.add_option("--rerun", default=None, dest="rerun", help="Rerun jobs which have one of these states (comma-separated list)")
     optparser.add_option("--maxJobs", default=None, type="int", dest="maxJobs", help="Maximum number of jobs in queue/running")
     optparser.add_option("--hideFinished", default=False, action="store_true", dest="hideFinished", help="")
     optparser.add_option("--loop", default=False, action="store_true", dest="loop", help="Continuously loop through the input directory")
     (options, args) = optparser.parse_args()
     
+    assert options.command != None
     if options.limit != None: options.limit = int(options.limit)
+    if options.rerun != None: options.rerun = options.rerun.split(",")
     if options.sleepTime != None: options.sleepTime = int(options.sleepTime)
     if options.regex != None: options.regex = re.compile(options.regex)
-    if options.regexSkipDir != None: options.regexSkipDir = re.compile(options.regexSkipDir)
+    if options.regexDir != None: options.regexDir = re.compile(options.regexDir)
     batch(command=options.command, input=options.input, connection=options.connection, jobTag=options.job,
           output=options.output, 
-          regex=options.regex, regexSkipDir=options.regexSkipDir, dummy=options.dummy, rerun=options.rerun, 
+          regex=options.regex, regexDir=options.regexDir, dummy=options.dummy, rerun=options.rerun, 
           hideFinished=options.hideFinished, controlFilename=options.controlFile, sleepTime=options.sleepTime, 
           debug=options.debug, limit=options.limit, loop=options.loop)
