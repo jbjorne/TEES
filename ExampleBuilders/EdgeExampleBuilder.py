@@ -50,7 +50,7 @@ class EdgeExampleBuilder(ExampleBuilder):
             "skip_extra_triggers", "headsOnly", "graph_kernel", "trigger_features", "no_task", "no_dependency", 
             "disable_entity_features", "disable_terminus_features", "disable_single_element_features", 
             "disable_ngram_features", "disable_path_edge_features", "no_linear", "subset", "binary", "pos_only",
-            "entity_type"])
+            "entity_type", "filter_shortest_path"])
         self.styles = self.getParameters(style)
         if style == None: # no parameters given
             style["typed"] = style["directed"] = style["headsOnly"] = True
@@ -142,7 +142,7 @@ class EdgeExampleBuilder(ExampleBuilder):
 #            for i in range(len(intEdges)):
 #                types.add(intEdges[i]["element"].get("type"))
         intEdges = sentenceGraph.interactionGraph.getEdges(t1, t2)
-        if (not directed):
+        if not directed:
             intEdges = intEdges + sentenceGraph.interactionGraph.getEdges(t2, t1)
         for intEdge in intEdges:
             types.add(intEdge[2].get("type"))
@@ -175,6 +175,8 @@ class EdgeExampleBuilder(ExampleBuilder):
 #                if not directed:
 #                    interactions = interactions + sentenceGraph.getInteractions(entity2, entity1)
         interactions = sentenceGraph.getInteractions(e1, e2, True)
+        if not directed:
+            interactions = interactions + sentenceGraph.getInteractions(e2, e1, True)
         #print interactions
         
         types = set()
@@ -347,6 +349,15 @@ class EdgeExampleBuilder(ExampleBuilder):
             return self.getCategoryName(goldGraph, entityToGold[e1][0], entityToGold[e2][0], directed=directed)
         else:
             return "neg"
+    
+    def filterEdge(self, edge, edgeType=[]):
+        import types
+        if types(edgeType) not in [types.ListType, types.TupleType]:
+             edgeType = [edgeType]
+        if edge[2].get("type") in edgeType:
+            return True
+        else:
+            return False
                 
     def buildExamplesFromGraph(self, sentenceGraph, outfile, goldGraph = None):
         """
@@ -384,6 +395,9 @@ class EdgeExampleBuilder(ExampleBuilder):
             undirected = sentenceGraph.dependencyGraph.toUndirected()
             #paths = NX10.all_pairs_shortest_path(undirected, cutoff=999)
             paths = undirected
+            if self.styles["filter_shortest_path"] != None: # For DDI use filter_shortest_path:conj_and
+                path.resetAnalyses() # just in case
+                paths.FloydWarshall(filterEdge, {"edgeTypes":self.styles["filter_shortest_path"]})
         
         #for edge in sentenceGraph.dependencyGraph.edges:
         #    assert edge[2] != None
@@ -525,9 +539,9 @@ class EdgeExampleBuilder(ExampleBuilder):
                     self.exampleStats.endExample()
                 else:
                     if self.styles["entities"]:
-                        categoryName = self.getCategoryName(sentenceGraph, eI, eJ, False)
+                        categoryName = self.getCategoryName(sentenceGraph, eI, eJ, directed=False)
                     else:
-                        categoryName = self.getCategoryNameFromTokens(sentenceGraph, tI, tJ, False)
+                        categoryName = self.getCategoryNameFromTokens(sentenceGraph, tI, tJ, directed=False)
                     self.exampleStats.beginExample(categoryName)
                     forwardExample = self.buildExample(tI, tJ, paths, sentenceGraph, categoryName, exampleIndex, eI, eJ)
                     if not self.styles["graph_kernel"]:
