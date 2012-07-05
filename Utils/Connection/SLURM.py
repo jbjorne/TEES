@@ -66,7 +66,9 @@ class SLURMConnection(ClusterConnection):
                 if jobStatus in ["RUNNING", "COMPLETING"]:
                     return "RUNNING"
                 elif jobStatus == "COMPLETED":
-                    if jobAttr["retcode"] == "0":
+                    if "retcode" not in jobAttr: # file hasn't had the time to be updated?
+                        return "RUNNING"
+                    elif jobAttr["retcode"] == "0":
                         return "FINISHED"
                     else:
                         return "FAILED"
