@@ -191,13 +191,15 @@ def getTaskSettings(task, detector, processUnmerging, processModifiers, isSingle
         # Example generation parameters
         if detector == None:
             detector = "Detectors.EventDetector"
-            if task == "REN":
+            if task in ["REN", "BI", "DDI"]:
                 detector = "Detectors.EdgeDetector"
                 isSingleStage = True
             print >> sys.stderr, "Detector undefined, using default '" + detector + "' for task", fullTaskId
         if exampleStyles["examples"] == None and isSingleStage:
             if task == "REN":
                 exampleStyles["examples"] = "trigger_features:typed:no_linear:entities:noMasking:maxFeatures:bacteria_renaming"
+            elif task == "BI":
+                exampleStyles["examples"] = "trigger_features:typed:directed:no_linear:entities:noMasking:maxFeatures:bi_limits"
             print >> sys.stderr, "Single-stage examples style undefined, using default '" + exampleStyles["examples"] + "' for task", fullTaskId
         if exampleStyles["edge"] == None and not isSingleStage:
             print >> sys.stderr, "Edge example style undefined, using default for task", fullTaskId
@@ -243,7 +245,10 @@ def getTaskSettings(task, detector, processUnmerging, processModifiers, isSingle
             classifierParameters["trigger"] = "1000,5000,10000,20000,50000,80000,100000,150000,180000,200000,250000,300000,350000,500000,1000000"
         if classifierParameters["examples"] == None and isSingleStage:
             print >> sys.stderr, "Classifier parameters for single-stage examples undefined, using default for task", fullTaskId
-            classifierParameters["examples"] = "10,100,1000,2000,3000,4000,4500,5000,5500,6000,7500,10000,20000,25000,28000,50000,60000"
+            if task == "REN":
+                classifierParameters["examples"] = "10,100,1000,2000,3000,4000,4500,5000,5500,6000,7500,10000,20000,25000,28000,50000,60000"
+            elif task == "BI":
+                classifierParameters["examples"] = "10,100,1000,2500,5000,7500,10000,20000,25000,28000,50000,60000,65000,80000,100000,150000"
     
     return detector, processUnmerging, processModifiers, isSingleStage, exampleStyles, classifierParameters
 
