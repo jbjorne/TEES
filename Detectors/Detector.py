@@ -87,6 +87,7 @@ class Detector():
     def setConnection(self, connection):
         self.connection = connection
         self.connection.debug = self.debug
+        return connection
     
 #    def setCSCConnection(self, options, cscworkdir):
 #        if "local" not in options:
