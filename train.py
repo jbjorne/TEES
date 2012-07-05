@@ -38,7 +38,7 @@ def train(output, task=None, detector=None,
         print >> sys.stderr, "----------------------------------------------------"
         print >> sys.stderr, "------------------ Train Detector ------------------"
         print >> sys.stderr, "----------------------------------------------------"
-        if options.singleStage:
+        if isSingleStage:
             detector.train(inputFiles["train"], inputFiles["devel"], models["devel"], models["test"],
                            exampleStyles["examples"], classifierParams["examples"], parse, None, task,
                            fromStep=detectorSteps["TRAIN"], workDir="training")
@@ -189,7 +189,17 @@ def getTaskSettings(task, detector, processUnmerging, processModifiers, isSingle
         if inputFiles["test"] == None: inputFiles["test"] = os.path.join(dataPath, task + "-test.xml")
         
         # Example generation parameters
-        if exampleStyles["edge"] == None:
+        if detector == None:
+            detector = "Detectors.EventDetector"
+            if task == "REN":
+                detector = "Detectors.EdgeDetector"
+                isSingleStage = True
+            print >> sys.stderr, "Detector undefined, using default '" + detector + "' for task", fullTaskId
+        if exampleStyles["examples"] == None and isSingleStage:
+            if task == "REN":
+                exampleStyles["examples"] = "trigger_features:typed:no_linear:entities:noMasking:maxFeatures:bacteria_renaming"
+            print >> sys.stderr, "Single-stage examples style undefined, using default '" + exampleStyles["examples"] + "' for task", fullTaskId
+        if exampleStyles["edge"] == None and not isSingleStage:
             print >> sys.stderr, "Edge example style undefined, using default for task", fullTaskId
             if task in ["GE09", "GE"]:
                 exampleStyles["edge"]="trigger_features:typed:directed:no_linear:entities:genia_limits:noMasking:maxFeatures" #,multipath"
@@ -202,12 +212,12 @@ def getTaskSettings(task, detector, processUnmerging, processModifiers, isSingle
             elif task == "ID":
                 exampleStyles["edge"]="trigger_features:typed:directed:no_linear:entities:id_limits:noMasking:maxFeatures"
             elif task == "REL":
-                exampleStyles["edge"]="trigger_features:typed,directed:no_linear:entities:noMasking:maxFeatures:rel_limits:rel_features"
+                exampleStyles["edge"]="trigger_features:typed:directed:no_linear:entities:noMasking:maxFeatures:rel_limits:rel_features"
             elif task == "CO":
                 exampleStyles["edge"]="trigger_features:typed:directed:no_linear:entities:noMasking:maxFeatures:co_limits"
             else:
                 exampleStyles["edge"]="trigger_features:typed:directed:no_linear:entities:noMasking:maxFeatures"
-        if exampleStyles["trigger"] == None:
+        if exampleStyles["trigger"] == None and not isSingleStage:
             print >> sys.stderr, "Trigger example style undefined, using default for task", fullTaskId
             if task in ["GE09", "GE"] and subTask == 1:
                 exampleStyles["trigger"] = "genia_task1"
@@ -218,19 +228,22 @@ def getTaskSettings(task, detector, processUnmerging, processModifiers, isSingle
             elif task == "CO":
                 options.triggerExampleBuilder = "PhraseTriggerExampleBuilder"
         # Classifier parameters
-        if classifierParameters["edge"] == None:
+        if classifierParameters["edge"] == None and not isSingleStage:
             print >> sys.stderr, "Classifier parameters for edge examples undefined, using default for task", fullTaskId
             classifierParameters["edge"] = "5000,7500,10000,20000,25000,27500,28000,29000,30000,35000,40000,50000,60000,65000"
             if task in ["REL", "CO"]:
                 classifierParameters["edge"] = "10,100,1000,5000,7500,10000,20000,25000,28000,50000,60000,65000,100000,500000,1000000"
-        if classifierParameters["recall"] == None:
+        if classifierParameters["recall"] == None and not isSingleStage:
             print >> sys.stderr, "Recall adjust parameter undefined, using default for task", fullTaskId
             classifierParameters["recall"] = "0.5,0.6,0.65,0.7,0.85,1.0,1.1,1.2"
             if task == "CO":
                 classifierParameters["recall"] = "0.8,0.9,0.95,1.0"
-        if classifierParameters["trigger"] == None:
+        if classifierParameters["trigger"] == None and not isSingleStage:
             print >> sys.stderr, "Classifier parameters for trigger examples undefined, using default for task", fullTaskId
             classifierParameters["trigger"] = "1000,5000,10000,20000,50000,80000,100000,150000,180000,200000,250000,300000,350000,500000,1000000"
+        if classifierParameters["examples"] == None and isSingleStage:
+            print >> sys.stderr, "Classifier parameters for single-stage examples undefined, using default for task", fullTaskId
+            classifierParameters["examples"] = "10,100,1000,2000,3000,4000,4500,5000,5500,6000,7500,10000,20000,25000,28000,50000,60000"
     
     return detector, processUnmerging, processModifiers, isSingleStage, exampleStyles, classifierParameters
 
@@ -265,7 +278,7 @@ if __name__=="__main__":
     optparser.add_option_group(group)
     # Example builders
     group = OptionGroup(optparser, "Detector to train", "")
-    group.add_option("--detector", default="Detectors.EventDetector", dest="detector", help="the detector class to use")
+    group.add_option("--detector", default=None, dest="detector", help="the detector class to use")
     group.add_option("--singleStage", default=False, action="store_true", dest="singleStage", help="'detector' is a single stage detector")
     optparser.add_option_group(group)
     # Example builder parameters
