@@ -36,7 +36,7 @@ class SingleStageDetector(Detector):
                 # the combined model.
                 if importIdsFromModel != None:
                     model.importFrom(self.openModel(importIdsFromModel, "r"), [self.tag+"ids.classes", self.tag+"ids.features"],
-                                     [self.tag+"classifier-parameter", self.tag+"example-style", self.tag+"parse"])
+                                     [self.tag+"classifier-parameter", self.tag+"example-style", self.tag+"parse", self.tag+"task"])
                     # Train the model with the parameters defined in the import source
                     model.addStr(self.tag+"classifier-parameters-train", model.getStr(self.tag+"classifier-parameter"))
                 # Catenate example files
@@ -81,22 +81,26 @@ class SingleStageDetector(Detector):
                         os.remove(combinedTrainExamples)
     
     def train(self, trainData=None, optData=None, model=None, combinedModel=None, exampleStyle=None, 
-              classifierParameters=None, parse=None, tokenization=None, task=None, fromStep=None, toStep=None):
+              classifierParameters=None, parse=None, tokenization=None, task=None, fromStep=None, toStep=None,
+              workDir=None):
         self.initVariables(trainData=trainData, optData=optData, model=model, combinedModel=combinedModel, exampleStyle=exampleStyle, classifierParameters=classifierParameters, parse=parse, tokenization=tokenization)
+        self.setWorkDir(workDir)
         self.enterState(self.STATE_TRAIN, ["EXAMPLES", "BEGIN-MODEL", "END-MODEL", "BEGIN-COMBINED-MODEL", "END-COMBINED-MODEL"], fromStep, toStep)
         if self.checkStep("EXAMPLES"):
-            self.model = self.initModel(self.model, [("exampleStyle", self.tag+"example-style"), ("classifierParameters", self.tag+"classifier-parameters")])
+            self.model = self.initModel(self.model, [("exampleStyle", self.tag+"example-style"), ("classifierParameters", self.tag+"classifier-parameters-train")])
             self.saveStr(self.tag+"parse", parse, self.model)
             self.saveStr(self.tag+"task", task, self.model)
-            self.buildExamples(self.model, [optData, trainData], [self.tag+"opt-examples.gz", self.tag+"train-examples.gz"], saveIdsToModel=True)
+            self.buildExamples(self.model, [optData, trainData], [self.workDir+self.tag+"opt-examples.gz", self.workDir+self.tag+"train-examples.gz"], saveIdsToModel=True)
         self.model = self.openModel(model, "a") # Devel model already exists, with ids etc
-        self.beginModel("BEGIN-MODEL", self.model, [self.tag+"train-examples.gz"], self.tag+"opt-examples.gz")
-        self.endModel("END-MODEL", self.model, self.tag+"opt-examples.gz")
-        self.beginModel("BEGIN-COMBINED-MODEL", self.combinedModel, [self.tag+"train-examples.gz", self.tag+"opt-examples.gz"], self.tag+"opt-examples.gz", self.model)
-        self.endModel("END-COMBINED-MODEL", self.combinedModel, self.tag+"opt-examples.gz")
+        self.beginModel("BEGIN-MODEL", self.model, [self.workDir+self.tag+"train-examples.gz"], self.workDir+self.tag+"opt-examples.gz")
+        self.endModel("END-MODEL", self.model, self.workDir+self.tag+"opt-examples.gz")
+        self.beginModel("BEGIN-COMBINED-MODEL", self.combinedModel, [self.workDir+self.tag+"train-examples.gz", self.workDir+self.tag+"opt-examples.gz"], self.workDir+self.tag+"opt-examples.gz", self.model)
+        self.endModel("END-COMBINED-MODEL", self.combinedModel, self.workDir+self.tag+"opt-examples.gz")
+        if workDir != None:
+            self.setWorkDir("")
         self.exitState()
         
-    def classify(self, data, model, output, parse=None, task=None, workDir=None):
+    def classify(self, data, model, output, parse=None, task=None, workDir=None, fromStep=None, omitSteps=None):
         self.enterState(self.STATE_CLASSIFY)
         self.setWorkDir(workDir)
         if workDir == None:
@@ -106,7 +110,7 @@ class SingleStageDetector(Detector):
         if task == None: task = self.getStr(self.tag+"task", model)
         workOutputTag = os.path.join(self.workDir, os.path.basename(output) + "-")
         xml = self.classifyToXML(data, model, None, workOutputTag, 
-            model.get(self.tag+"classifier-model"), None, parse, float(model.get("recallAdjustParameter")))
+            model.get(self.tag+"classifier-model"), None, parse, float(model.get("recallAdjustParameter", defaultIfNotExist=1.0)))
         shutil.copy2(workOutputTag+self.tag+"pred.xml.gz", output+"pred.xml.gz")
         EvaluateInteractionXML.run(self.evaluator, xml, data, parse)
         Utils.STFormat.ConvertXML.toSTFormat(xml, output+".tar.gz", outputTag="a2")
