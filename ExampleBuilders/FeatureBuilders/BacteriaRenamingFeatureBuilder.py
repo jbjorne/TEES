@@ -1,5 +1,8 @@
-import os
+import sys, os
 from FeatureBuilder import FeatureBuilder
+sys.path.append(os.path.dirname(os.path.abspath(__file__))+"/../..")
+import Utils.Settings as Settings
+import Utils.Download
 
 # 1) Lowercase bacsu names, there are differences
 # 2) Assert matching to bacsu
@@ -47,12 +50,28 @@ def readSubtiwiki(filename):
     f.close()
     return synDict
 
+def installRENData(destPath=None, downloadPath=None, redownload=False, updateLocalSettings=False):
+    print >> sys.stderr, "---------------", "Downloading REN data files", "---------------"
+    print >> sys.stderr, "These files are derived from UniProt bacsu and SubtiWiki"
+    if destPath == None:
+        destPath = os.path.join(Settings.DATAPATH, "resources")
+    if downloadPath == None:
+        downloadPath = os.path.join(Settings.DATAPATH, "resources/download")
+    Utils.Download.downloadAndExtract(Settings.URL["REN_DATA_FILES"], destPath, downloadPath, redownload=redownload)
+    Settings.setLocal("REN_DATA_FILES", destPath, updateLocalSettings)
+
+
 class BacteriaRenamingFeatureBuilder(FeatureBuilder):
     def __init__(self, featureSet):
         FeatureBuilder.__init__(self, featureSet)
-        self.bacsu = readBacsu(os.path.expanduser("~/data/BioNLP11SharedTask/supporting-tasks/bacsu-modified.txt"))
-        self.subti = readSubtiwiki(os.path.expanduser("~/data/BioNLP11SharedTask/supporting-tasks/Subtiwiki-Synonyms.csv"))
+        #self.bacsu = readBacsu(os.path.expanduser("~/data/BioNLP11SharedTask/supporting-tasks/bacsu-modified.txt"))
+        #self.subti = readSubtiwiki(os.path.expanduser("~/data/BioNLP11SharedTask/supporting-tasks/Subtiwiki-Synonyms.csv"))
         #self.subti = readSubtiwiki(os.path.expanduser("~/cvs_checkout/JariSandbox/Wiki/subtiwiki/Subtiwiki-Synonyms.csv"))
+        if not hasattr(Settings, "REN_DATA_FILES"):
+            print >> sys.stderr, "REN data files not installed, installing now"
+            installRENData(updateLocalSettings=True)
+        self.bacsu = readBacsu(os.path.join(Settings.REN_DATA_FILES, "bacsu-modified.txt"))
+        self.subti = readSubtiwiki(os.path.join(Settings.REN_DATA_FILES, "Subtiwiki-Synonyms.csv"))
         # OR the dictionaries
         self.any = {}
         for key in sorted(list(set(self.bacsu.keys() + self.subti.keys()))):
