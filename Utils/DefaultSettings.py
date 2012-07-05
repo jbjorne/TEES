@@ -142,3 +142,7 @@ URL["DDI_TRAIN_MTMX"] = urlBase + "DrugDDI_MTMX.zip"
 URL["DDI_TEST_UNIFIED"] = None
 URL["DDI_TEST_MTMX"] = None
 
+
+# Miscellaneous files
+URL["REN_DATA_FILES"] = "https://github.com/downloads/jbjorne/TEES/Bacteria-renaming-data-120705.tar.gz"
+URL["DRUG_BANK_XML"] = "http://www.drugbank.ca/system/downloads/current/drugbank.xml.zip"
