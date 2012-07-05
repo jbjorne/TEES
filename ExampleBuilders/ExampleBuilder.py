@@ -169,7 +169,7 @@ class ExampleBuilder:
         print >> sys.stderr, "  output:", output, "(append:", str(append) + ")"
         print >> sys.stderr, "  add new class/feature ids:", allowNewIds
         if not isinstance(style, types.StringTypes):
-            style = Parameters.toString(style)
+            style = Utils.Parameters.toString(style)
         print >> sys.stderr, "  style:", style
         if tokenization == None: 
             print >> sys.stderr, "  parse:", parse
@@ -252,13 +252,14 @@ class ExampleBuilder:
         print >> sys.stderr, self.getPredictedValueRange()
 
 def addBasicOptions(optparser):
-    optparser.add_option("-i", "--input", default=defaultAnalysisFilename, dest="input", help="Corpus in analysis format", metavar="FILE")
+    optparser.add_option("-i", "--input", default=None, dest="input", help="Corpus in analysis format", metavar="FILE")
     optparser.add_option("-o", "--output", default=None, dest="output", help="Output file for the examples")
-    optparser.add_option("-t", "--tokenization", default="split-McClosky", dest="tokenization", help="tokenization")
     optparser.add_option("-p", "--parse", default="split-McClosky", dest="parse", help="parse")
     optparser.add_option("-x", "--exampleBuilderParameters", default=None, dest="parameters", help="Parameters for the example builder")
     optparser.add_option("-b", "--exampleBuilder", default="SimpleDependencyExampleBuilder", dest="exampleBuilder", help="Example Builder Class")
-    optparser.add_option("-d", "--predefined", default=None, dest="predefined", help="Directory with predefined class_names.txt and feature_names.txt files")
+    optparser.add_option("-c", "--classes", default=None, dest="classes", help="Class ids")
+    optparser.add_option("-f", "--features", default=None, dest="features", help="Feature ids")
+    optparser.add_option("-a", "--addIds", default=False, action="store_true", dest="addIds", help="Add new features")
 
 if __name__=="__main__":
     # Import Psyco if available
@@ -270,8 +271,7 @@ if __name__=="__main__":
         print >> sys.stderr, "Psyco not installed"
 
     from optparse import OptionParser
-    defaultAnalysisFilename = "/usr/share/biotext/ComplexPPI/BioInferForComplexPPIVisible.xml"
-    optparser = OptionParser(usage="%prog [options]\nCreate an html visualization for a corpus.")
+    optparser = OptionParser(usage="%prog [options]\nBuild machine learning examples from interaction XML.")
     addBasicOptions(optparser)
     (options, args) = optparser.parse_args()
     
@@ -279,7 +279,5 @@ if __name__=="__main__":
     exec "from ExampleBuilders." + options.exampleBuilder + " import " + options.exampleBuilder + " as ExampleBuilderClass"
     
     #input, output, parse, tokenization, style, classIds=None, featureIds=None, gold=None, append=False)
-    ExampleBuilderClass.run(options.input, options.output, options.parse, options.tokenization, options.parameters, 
-                            options.predefined+"/unmerging-ids.classes",
-                            options.predefined+"/unmerging-ids.features",
-                            options.input.replace("-nodup", "") )
+    ExampleBuilderClass.run(options.input, options.output, options.parse, None, options.parameters, 
+                            options.classes, options.features, allowNewIds=options.addIds )
