@@ -15,6 +15,7 @@ from FeatureBuilders.RELFeatureBuilder import RELFeatureBuilder
 from FeatureBuilders.WordNetFeatureBuilder import WordNetFeatureBuilder
 from FeatureBuilders.GiulianoFeatureBuilder import GiulianoFeatureBuilder
 import PhraseTriggerExampleBuilder
+import Utils.InteractionXML.ResolveEPITriggerTypes
 
 class EntityExampleBuilder(ExampleBuilder):
     def __init__(self, style=None, classSet=None, featureSet=None, gazetteerFileName=None, skiplist=None):
@@ -81,7 +82,7 @@ class EntityExampleBuilder(ExampleBuilder):
             if entity.get("type") == "Entity" and self.styles["genia_task1"]:
                 continue
             if self.styles["epi_merge_negated"]:
-                types.add(InteractionXML.ResolveEPITriggerTypes.getEPIBaseType(entity.get("type")))
+                types.add(Utils.InteractionXML.ResolveEPITriggerTypes.getEPIBaseType(entity.get("type")))
                 entityIds.add(entity.get("id"))
             else:
                 types.add(entity.get("type"))
