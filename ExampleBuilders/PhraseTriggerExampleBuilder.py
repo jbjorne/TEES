@@ -12,11 +12,23 @@ from Core.IdSet import IdSet
 import Core.ExampleUtils as ExampleUtils
 from Core.Gazetteer import Gazetteer
 import Utils.InteractionXML.MapPhrases as MapPhrases
+import Utils.Settings as Settings
+import Utils.Download
 from FeatureBuilders.TriggerFeatureBuilder import TriggerFeatureBuilder
 
 coNPPhraseFirstToken = set(["both", "each", "it", "its", "itself", "neither", "others",
                             "that", "the", "their", "them", "themselves", "these", "they",
                             "this", "those"])
+
+def installBBData(destPath=None, downloadPath=None, redownload=False, updateLocalSettings=False):
+    print >> sys.stderr, "---------------", "Downloading TEES data files for BB", "---------------"
+    print >> sys.stderr, "Bacteria tokens derived from LPSN (http://www.bacterio.cict.fr/)"
+    if destPath == None:
+        destPath = os.path.join(Settings.DATAPATH, "resources")
+    if downloadPath == None:
+        downloadPath = os.path.join(Settings.DATAPATH, "resources/download")
+    Utils.Download.downloadAndExtract(Settings.URL["TEES_RESOURCES"], destPath, downloadPath, redownload=redownload)
+    Settings.setLocal("TEES_RESOURCES", destPath, updateLocalSettings)
 
 def getBacteriaNames():
     f = open(os.path.expanduser("~/data/BioNLP11SharedTask/resources/lpsn-bacteria-names.txt"), "rt")
@@ -31,11 +43,22 @@ def getBacteriaNames():
     f.close()
     return names
 
-def getBacteriaTokens(names):
+def getBacteriaTokens(names=None):
+    # Install file if needed
+    if not hasattr(Settings, "TEES_RESOURCES"):
+        print >> sys.stderr, "TEES example builder data files not installed, installing now"
+        installBBData(updateLocalSettings=True)
+    # Get the tokens
     tokens = set()
-    for name in names:
-        for split in name.split():
-            tokens.add(split.lower())
+    if names != None:
+        for name in names:
+            for split in name.split():
+                tokens.add(split.lower())
+    else:
+        f = open(os.path.join(Settings.TEES_RESOURCES, "bacteria-tokens.txt"), "rt")
+        for line in f:
+            tokens.add(line.strip())
+        f.close()
     return tokens
 
 class PhraseTriggerExampleBuilder(ExampleBuilder):
