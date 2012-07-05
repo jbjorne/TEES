@@ -20,9 +20,8 @@ def loadCorpus(corpus, parse, tokenization=None, removeNameInfo=False, removeInt
     """
     import Utils.ElementTreeUtils as ETUtils
     import sys
-    sys.path.append("..")
     from Utils.ProgressCounter import ProgressCounter
-    from InteractionXML.CorpusElements import CorpusElements
+    from Utils.InteractionXML.CorpusElements import CorpusElements
     
     # Corpus may be in file or not
     if type(corpus) == types.StringType:
