@@ -1,7 +1,7 @@
 import sys
 from SentenceExampleWriter import SentenceExampleWriter
-import InteractionXML.IDUtils as IDUtils
-import InteractionXML.ExtendTriggers
+import Utils.InteractionXML.IDUtils as IDUtils
+import Utils.InteractionXML.ExtendTriggers
 try:
     import xml.etree.cElementTree as ET
 except ImportError:
@@ -52,16 +52,21 @@ class EntityExampleWriter(SentenceExampleWriter):
             
         # add new pairs
         for example in examples:
+            # Entity examplesalways refer to a single head token
+            headTokenId = example[3]["t"]
+            headToken = None
+            for token in sentenceObject.tokens:
+                if token.get("id") == headTokenId:
+                    headToken = token
+                    break
+            assert headToken != None, example[3]
+            # Determine if additional processing is requested
             unmergeEPINeg = None
             if "unmergeneg" in example[3] and example[3]["unmergeneg"] == "epi":
                 unmergeEPINeg = headToken.get("text")
             if "trigex" in example[3] and example[3]["trigex"] == "bb":
                 extensionRequested = True
-            headToken = example[3]["t"]
-            for token in sentenceObject.tokens:
-                if token.get("id") == headToken:
-                    headToken = token
-                    break
+            # Make entities for positive predictions
             prediction = predictionsByExample[example[0]]
             predictionString = self.getPredictionStrengthString(prediction, classSet, classIds)
             for eType in self.getElementTypes(prediction, classSet, classIds, unmergeEPINegText=unmergeEPINeg): # split merged classes
@@ -104,7 +109,7 @@ class EntityExampleWriter(SentenceExampleWriter):
         
         # Extend bacteria triggers
         if extensionRequested:
-            InteractionXML.ExtendTriggers.extend(sentenceElement, entityTypes=["Bacterium"])
+            Utils.InteractionXML.ExtendTriggers.extend(sentenceElement, entityTypes=["Bacterium"])
     
     def getMergedEntityType(self, entities):
         """
