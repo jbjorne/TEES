@@ -160,7 +160,7 @@ def evaluate(source, task, goldDir=None, debug=False):
         results = evaluateCO(sourceDir, goldDir)
     else:
         results = None
-        print >> sys.stderr, corpus, "No BioNLP'11 evaluator for task", task
+        print >> sys.stderr, "No BioNLP'11 evaluator for task", task
     # Return results
     if results == None:
         return None
