@@ -156,8 +156,11 @@ class UnixConnection:
             shutil.copy2(par1.split(":")[-1], par2.split(":")[-1])
         else:
             # remote copy
-            self.mkdir(os.path.dirname(par2.split(":")[-1]))
-            print "scp " + par1 + " " + par2
+            print >> sys.stderr, verbose + ": scp " + par1 + " " + par2
+            if ":" in par2:
+                self.mkdir(os.path.dirname(par2.split(":")[-1]))
+            elif not os.path.exists(os.path.dirname(par2)):
+                os.makedirs(os.path.dirname(par2))
             subprocess.call("scp " + par1 + " " + par2, shell=True)
     
     def upload(self, src, dst=None, replace=True, compress=False, uncompress=False):
