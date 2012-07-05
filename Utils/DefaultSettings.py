@@ -17,7 +17,7 @@ EVALUATOR["GE-gold"] = "BioNLP-ST_2011_genia_devel_data_rev1.tar.gz"
 EVALUATOR["EPI-gold"] = "BioNLP-ST_2011_Epi_and_PTM_development_data_rev1.tar.gz"
 EVALUATOR["ID-gold"] = "BioNLP-ST_2011_Infectious_Diseases_development_data_rev1.tar.gz"
 EVALUATOR["BB-gold"] = "BioNLP-ST_2011_Bacteria_Biotopes_dev_data_rev1.tar.gz"
-EVALUATOR["BI-gold"] = "BioNLP-ST_2011_bacteria_interactions_dev_data_rev1.tar.gz"
+EVALUATOR["BI-gold"] = "BioNLP-ST_2011_bacteria_interactions_dev_data_rev1-remixed.tar.gz"
 EVALUATOR["REN-gold"] = "BioNLP-ST_2011_bacteria_rename_dev_data.tar.gz"
 EVALUATOR["CO-gold"] = "BioNLP-ST_2011_coreference_development_data.tar.gz"
 
@@ -69,7 +69,7 @@ URL["CO_DEVEL"] = urlBase + "BioNLP-ST_2011_coreference_development_data.tar.gz"
 URL["CO_TRAIN"] = urlBase + "BioNLP-ST_2011_coreference_training_data_rev1.tar.gz"
 URL["CO_TEST"] = urlBase + "BioNLP-ST_2011_coreference_test_data.tar.gz"
 # BioNLP'11 Evaluators
-URL["BIONLP11_EVALUATORS"] = "https://github.com/downloads/jbjorne/TEES/BioNLP11-evaluators-120704.tar.gz"
+URL["BIONLP11_EVALUATORS"] = "https://github.com/downloads/jbjorne/TEES/BioNLP11-evaluators-120705.tar.gz"
 URL["GE_EVALUATOR"] = urlBase + "BioNLP-ST_2011_genia_tools_rev1.tar.gz"
 #URL["EPI_EVALUATOR"] = urlBase + 
 #URL["ID_EVALUATOR"] = urlBase + 
@@ -144,5 +144,5 @@ URL["DDI_TEST_MTMX"] = None
 
 
 # Miscellaneous files
-URL["REN_DATA_FILES"] = "https://github.com/downloads/jbjorne/TEES/Bacteria-renaming-data-120705.tar.gz"
+URL["TEES_RESOURCES"] = "https://github.com/downloads/jbjorne/TEES/TEES-resources-120705.tar.gz"
 URL["DRUG_BANK_XML"] = "http://www.drugbank.ca/system/downloads/current/drugbank.xml.zip"
