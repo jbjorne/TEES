@@ -196,7 +196,7 @@ class SentenceExampleWriter:
             eTypes = classSet.getName(prediction[0]).split("---") # split merged types
             if unmergeEPINegText != None: # an element text was provided
                 for i in range(len(eTypes)):
-                    eTypes[i] = ResolveEPITriggerTypes.determineNewType(classSet.getName(prediction[0]), unmergeEPINegText)
+                    eTypes[i] = ResolveEPITriggerTypes.determineNewType(eTypes[i], unmergeEPINegText)
         return eTypes
 
     def setElementType(self, element, prediction, classSet=None, classIds=None, unmergeEPINeg=False):
