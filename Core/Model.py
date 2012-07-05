@@ -123,9 +123,11 @@ class Model():
     def hasMember(self, name):
         return name in self.members
     
-    def get(self, name, addIfNotExist=False):
+    def get(self, name, addIfNotExist=False, defaultIfNotExist=None):
         if name not in self.members:
-            if addIfNotExist:
+            if defaultIfNotExist != None:
+                return defaultIfNotExist
+            elif addIfNotExist:
                 self.add(name)
             else:
                 raise IOError("Model has no member \"" + name + "\"")
