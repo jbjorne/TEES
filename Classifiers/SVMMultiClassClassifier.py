@@ -145,7 +145,7 @@ class SVMMultiClassClassifier(Classifier):
             examplesPath = self.connection.upload(examplesPath, uncompress=True, replace=replaceRemote)
         if examplesPath == localPath and examplesPath.endswith(".gz"): # no upload happened
             examplesPath = self.tempUnzip(examplesPath)
-        print >> sys.stderr, self.__class__.__name__, "using example file", examples, "as", examplesPath
+            print >> sys.stderr, self.__class__.__name__, "using example file", examples, "as", examplesPath
         return examplesPath
     
     def train(self, examples, outDir, parameters, classifyExamples=None, finishBeforeReturn=False, replaceRemoteExamples=True, dummy=False):
