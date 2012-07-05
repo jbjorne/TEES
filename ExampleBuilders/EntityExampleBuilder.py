@@ -64,7 +64,8 @@ class EntityExampleBuilder(ExampleBuilder):
         if self.styles["wordnet"]:
             self.wordNetFeatureBuilder = WordNetFeatureBuilder(featureSet)
         if self.styles["bb_features"]:
-            self.bacteriaTokens = PhraseTriggerExampleBuilder.getBacteriaTokens(PhraseTriggerExampleBuilder.getBacteriaNames())
+            self.bacteriaTokens = PhraseTriggerExampleBuilder.getBacteriaTokens()
+            #self.bacteriaTokens = PhraseTriggerExampleBuilder.getBacteriaTokens(PhraseTriggerExampleBuilder.getBacteriaNames())
         if self.styles["giuliano"]:
             self.giulianoFeatureBuilder = GiulianoFeatureBuilder(featureSet)
     
