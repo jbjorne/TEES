@@ -46,7 +46,7 @@ class EdgeExampleBuilder(ExampleBuilder):
             "typed", "directed", "headsOnly", "graph_kernel", "noAnnType", "noMasking", "maxFeatures",
             "genia_limits", "epi_limits", "id_limits", "rel_limits", "bb_limits", "bi_limits", "co_limits",
             "genia_task1", "ontology", "nodalida", "bacteria_renaming", "trigger_features", "rel_features",
-            "ddi_features", "evex", "giuliano", "random", "themeOnly", "causeOnly", "no_path", "entities", 
+            "ddi_features", "ddi_mtmx", "evex", "giuliano", "random", "themeOnly", "causeOnly", "no_path", "entities", 
             "skip_extra_triggers", "headsOnly", "graph_kernel", "trigger_features", "no_task", "no_dependency", 
             "disable_entity_features", "disable_terminus_features", "disable_single_element_features", 
             "disable_ngram_features", "disable_path_edge_features", "no_linear", "subset", "binary", "pos_only",
@@ -350,11 +350,12 @@ class EdgeExampleBuilder(ExampleBuilder):
         else:
             return "neg"
     
-    def filterEdge(self, edge, edgeType=[]):
+    def filterEdge(self, edge, edgeTypes):
         import types
-        if types(edgeType) not in [types.ListType, types.TupleType]:
-             edgeType = [edgeType]
-        if edge[2].get("type") in edgeType:
+        assert edgeTypes != None
+        if type(edgeTypes) not in [types.ListType, types.TupleType]:
+             edgeTypes = [edgeTypes]
+        if edge[2].get("type") in edgeTypes:
             return True
         else:
             return False
@@ -395,9 +396,9 @@ class EdgeExampleBuilder(ExampleBuilder):
             undirected = sentenceGraph.dependencyGraph.toUndirected()
             #paths = NX10.all_pairs_shortest_path(undirected, cutoff=999)
             paths = undirected
-            if self.styles["filter_shortest_path"] != None: # For DDI use filter_shortest_path:conj_and
-                path.resetAnalyses() # just in case
-                paths.FloydWarshall(filterEdge, {"edgeTypes":self.styles["filter_shortest_path"]})
+            if self.styles["filter_shortest_path"] != None: # For DDI use filter_shortest_path=conj_and
+                paths.resetAnalyses() # just in case
+                paths.FloydWarshall(self.filterEdge, {"edgeTypes":self.styles["filter_shortest_path"]})
         
         #for edge in sentenceGraph.dependencyGraph.edges:
         #    assert edge[2] != None
