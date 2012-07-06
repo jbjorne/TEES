@@ -158,7 +158,7 @@ class Graph:
                 outEdges.append(edge)
         return outEdges
     
-    def FloydWarshall(self):
+    def FloydWarshall(self, filterCallback=None, callbackArgs={}):
         """
         From Wikipedia, modified to return all paths
         """
@@ -172,7 +172,16 @@ class Graph:
                 if n1 == n2:
                     self.__distances[n1][n2] = 0
                 elif len(self.getEdges(n1, n2)) > 0:
-                    if False: # temporary hack for DDI
+                    if filterCallback != None: # permanent implementation of the DDI hack
+                        edgeCount = 0
+                        for edge in self.getEdges(n1, n2):
+                            if not filterCallback(edge, **callbackArgs):
+                                edgeCount += 1
+                        if edgeCount == 0:
+                            self.__distances[n1][n2] = infinity
+                        else:
+                            self.__distances[n1][n2] = 1
+                    elif False: # temporary hack for DDI
                         edgeCount = 0
                         for edge in self.getEdges(n1, n2):
                             if edge[2].get("type") != "conj_and":
@@ -217,6 +226,11 @@ class Graph:
                                 self.__nextInPath[i][j] = []
                             self.__nextInPath[i][j].append(k)
         #self.showAnalyses()
+    
+    def resetAnalyses(self):
+        self.__nextInPath = None
+        self.__distances = None
+        self.__nextInPath = None
     
     def showAnalyses(self):
         if self.__nextInPath == None:
