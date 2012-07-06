@@ -58,7 +58,11 @@ def makeSentences(input, tokenizationPath, output=None, removeText=False, escDic
     counter = ProgressCounter(len(sourceElements), "Sentence Splitting")
     for document in sourceElements:
         docCount += 1
-        counter.update(1, "Splitting Documents ("+document.get("id")+"/" + document.get("pmid") + "): ")
+        origId = document.get("pmid")
+        if origId == None:
+            origId = document.get("origId")
+        origId = str(origId)
+        counter.update(1, "Splitting Documents ("+document.get("id")+"/" + origId + "): ")
         docId = document.get("id")
         if docId == None:
             docId = "CORPUS.d" + str(docCount)
@@ -67,10 +71,10 @@ def makeSentences(input, tokenizationPath, output=None, removeText=False, escDic
             if text == None or text.strip() == "":
                 continue
             
-            newFile = os.path.join(tokenizationPath, document.get("pmid") + ".tok")
+            newFile = os.path.join(tokenizationPath, origId + ".tok")
             f = openFile(newFile, tarFile)
             if f == None: # file with BioNLP'11 extension not found, try BioNLP'09 extension
-                oldFile = os.path.join(tokenizationPath, document.get("pmid") + ".tokenized")
+                oldFile = os.path.join(tokenizationPath, origId + ".tokenized")
                 f = openFile(oldFile, tarFile)
                 if f == None: # no tokenization found
                     continue

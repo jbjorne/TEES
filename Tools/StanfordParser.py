@@ -87,6 +87,11 @@ def getUnicode(string):
 def addDependencies(outfile, parse, tokenByIndex=None, sentenceId=None, skipExtra=0):
     global escDict
     escSymbols = sorted(escDict.keys())
+    
+    # A list of tokens for debugging
+    tokens = []
+    for key in sorted(tokenByIndex):
+        tokens.append(tokenByIndex[key].get("text"))
 
     depCount = 1
     line = outfile.readline()
@@ -129,12 +134,12 @@ def addDependencies(outfile, parse, tokenByIndex=None, sentenceId=None, skipExtr
                 while line.strip() != "": line = outfile.readline()
                 break
             if t1Word != tokenByIndex[t1Index-1].get("text"):
-                print >> sys.stderr, "Alignment error", (t1Word, tokenByIndex[t1Index-1].get("text"), t1Index-1, depCount, sentenceId)
+                print >> sys.stderr, "Alignment error", (t1Word, tokenByIndex[t1Index-1].get("text"), t1Index-1, depCount, sentenceId, tokens)
                 alignmentError = True
                 if parse.get("stanfordAlignmentError") == None:
                     parse.set("stanfordAlignmentError", t1Word)
             if t2Word != tokenByIndex[t2Index-1].get("text"):
-                print >> sys.stderr, "Alignment error", (t2Word, tokenByIndex[t2Index-1].get("text"), t2Index-1, depCount, sentenceId)
+                print >> sys.stderr, "Alignment error", (t2Word, tokenByIndex[t2Index-1].get("text"), t2Index-1, depCount, sentenceId, tokens)
                 alignmentError = True
                 if parse.get("stanfordAlignmentError") == None:
                     parse.set("stanfordAlignmentError", t2Word)
@@ -294,7 +299,11 @@ def convertXML(parser, input, output, debug=False, reparse=False, stanfordParser
                 tokenByIndex[count] = token
                 count += 1
             # Insert dependencies
-            deps = addDependencies(stanfordOutputFile, parse, tokenByIndex, (sentence.get("id"), document.get("pmid")))
+            origId = document.get("pmid")
+            if origId == None:
+                origId = document.get("origId")
+            origId = str(origId)
+            deps = addDependencies(stanfordOutputFile, parse, tokenByIndex, (sentence.get("id"), origId))
             if len(deps) == 0:
                 parse.set("stanford", "no_dependencies")
                 noDepCount += 1
@@ -392,23 +401,27 @@ def insertParses(input, parsePath, output=None, parseName="McCC", extraAttribute
     for document in sourceElements:
         docCount += 1
         docId = document.get("id")
+        origId = document.get("pmid")
+        if origId == None:
+            origId = document.get("origId")
+        origId = str(origId)
         if docId == None:
             docId = "CORPUS.d" + str(docCount)
         
-        f = openFile(os.path.join(parsePath, document.get("pmid") + ".sd"), tarFile)
+        f = openFile(os.path.join(parsePath, origId + ".sd"), tarFile)
         if f == None: # file with BioNLP'11 extension not found, try BioNLP'09 extension
-            f = openFile(os.path.join(parsePath, document.get("pmid") + ".dep"), tarFile)
+            f = openFile(os.path.join(parsePath, origId + ".dep"), tarFile)
         if f != None:
             sentences = document.findall("sentence")
             # TODO: Following for-loop is the same as when used with a real parser, and should
             # be moved to its own function.
             for sentence in sentences:
                 sentenceCount += 1
-                counter.update(0, "Processing Documents ("+sentence.get("id")+"/" + document.get("pmid") + "): ")
+                counter.update(0, "Processing Documents ("+sentence.get("id")+"/" + origId + "): ")
                 if not insertParse(sentence, f, parseName, extraAttributes={}, skipExtra=skipExtra):
                     failCount += 1
             f.close()
-        counter.update(1, "Processing Documents ("+document.get("id")+"/" + document.get("pmid") + "): ")
+        counter.update(1, "Processing Documents ("+document.get("id")+"/" + origId + "): ")
     
     if tarFile != None:
         tarFile.close()

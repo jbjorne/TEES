@@ -355,14 +355,18 @@ def insertParses(input, parsePath, output=None, parseName="McCC", tokenizationNa
     counter = ProgressCounter(len(sourceElements), "McCC Parse Insertion")
     for document in sourceElements:
         docCount += 1
-        counter.update(1, "Processing Documents ("+document.get("id")+"/" + document.get("pmid") + "): ")
+        origId = document.get("pmid")
+        if origId == None:
+            origId = document.get("origId")
+        origId = str(origId)
+        counter.update(1, "Processing Documents ("+document.get("id")+"/" + origId + "): ")
         docId = document.get("id")
         if docId == None:
             docId = "CORPUS.d" + str(docCount)
         
-        f = openFile(os.path.join(parsePath, document.get("pmid") + ".ptb"), tarFile)
+        f = openFile(os.path.join(parsePath, origId + ".ptb"), tarFile)
         if f == None: # file with BioNLP'11 extension not found, try BioNLP'09 extension
-            f = openFile(os.path.join(parsePath, document.get("pmid") + ".pstree"), tarFile)
+            f = openFile(os.path.join(parsePath, origId + ".pstree"), tarFile)
             if f == None: # no parse found
                 continue
         parseStrings = f.readlines()
