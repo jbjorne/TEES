@@ -6,15 +6,13 @@ import Core.ExampleBuilder
 import Utils.Libraries.PorterStemmer as PorterStemmer
 import Core.ExampleUtils as ExampleUtils
 from FeatureBuilder import FeatureBuilder
-try:
-    from nltk.corpus import wordnet as wn 
-except ImportError:
-    print >> sys.stderr, "nltk not installed"
-    wn = None
 
 class WordNetFeatureBuilder(FeatureBuilder):
     def __init__(self, featureSet=None):
         FeatureBuilder.__init__(self, featureSet)
+        from nltk.corpus import wordnet
+        self.wordnet = wordnet
+        print >> sys.stderr, "Using WordNet via NLTK"
     
     def pennPOSToWordNet(self, pos):
         if pos.startswith("JJ"):
@@ -33,7 +31,7 @@ class WordNetFeatureBuilder(FeatureBuilder):
     def getSynset(self, text, wordNetPos):
         if wordNetPos == None:
             return None
-        synsets = wn.synsets(text, pos=wordNetPos)
+        synsets = self.wordnet.synsets(text, pos=wordNetPos)
         if len(synsets) > 0:
             return [synsets[0]]
         else:
