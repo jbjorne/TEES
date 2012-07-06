@@ -74,6 +74,14 @@ def getClassRanges(entities):
                 classRanges[label] = [min(classRanges[label][0], confidence), max(classRanges[label][1], confidence)]
     return classRanges
 
+def getClassRangesFromPredictions(predictions):
+    classRanges = {1:[sys.maxint,-sys.maxint], 2:[sys.maxint,-sys.maxint]}
+    for prediction in predictions:
+        for cls in [1, 2]:
+            classRanges[cls][0] = min(float(prediction[cls]), classRanges[cls][0])
+            classRanges[cls][1] = max(float(prediction[cls]), classRanges[cls][1])
+    return classRanges       
+
 class RecallAdjust:    
 
     @classmethod
