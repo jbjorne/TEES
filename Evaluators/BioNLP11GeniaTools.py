@@ -131,6 +131,8 @@ def getFScore(results, task):
         path = ["TOTAL", "fscore"]
     elif task in ["BB", "BI"]:
         path = ["fscore"]
+    elif task == "CO":
+        path = ["MENTION LINKING", "fscore"]
     else:
         assert False
     
@@ -143,6 +145,7 @@ def getFScore(results, task):
     return current
 
 def evaluate(source, task, goldDir=None, debug=False):
+    print >> sys.stderr, "BioNLP'11 task", task, "devel evaluation"
     # Determine task
     subTask = "1"
     if "." in task:
@@ -157,7 +160,7 @@ def evaluate(source, task, goldDir=None, debug=False):
     elif task in ["BB", "BI"]:
         results = evaluateBX(task, source, goldDir)
     elif task == "CO":
-        results = evaluateCO(sourceDir, goldDir)
+        results = evaluateCO(source, goldDir)
     else:
         results = None
         print >> sys.stderr, "No BioNLP'11 evaluator for task", task
@@ -321,9 +324,9 @@ def evaluateBX(corpusName, sourceDir, goldDir=None, silent=False):
         return None
     
     if corpusName == "BI":
-        commands = "java -jar " + evaluatorDir + "/BioNLP-ST_2011_bacteria_interactions_evaluation_software.jar " + golDir + " " + sourceDir
+        commands = "java -jar " + evaluatorDir + "/BioNLP-ST_2011_bacteria_interactions_evaluation_software.jar " + goldDir + " " + sourceDir
     elif corpusName == "BB":
-        commands = "java -jar " + evaluatorDir + "/BioNLP-ST_2011_Bacteria_Biotopes_evaluation_software.jar " + golDir + " " + sourceDir
+        commands = "java -jar " + evaluatorDir + "/BioNLP-ST_2011_Bacteria_Biotopes_evaluation_software.jar " + goldDir + " " + sourceDir
     else:
         assert False, corpusName
 
@@ -420,33 +423,58 @@ def evaluateREN(sourceDir, goldDir=None, silent=False):
         shutil.rmtree(tempDir)
     return results
 
-#def evaluateCO(sourceDir, goldDir=None, silent=False):
-#    goldDir = os.path.expanduser("~/data/BioNLP11SharedTask/supporting-tasks/BioNLP-ST_2011_coreference_development_data")
-#    evaluatorPath = os.path.expanduser("~/data/BioNLP11SharedTask/supporting-tasks/CREvalPackage1.4")
-#    sourceDir = os.path.abspath(sourceDir)
-#    commands = "cd " + evaluatorPath
-#    commands += " ; " + "java -jar [-mention=strict|partial] [-link=atom|surface] [-recall=system|algorithm] [-details] " + goldDir + " " + sourceDir + " " + resultDir
-#    p = subprocess.Popen(commands, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-#    stderrLines = p.stderr.readlines()
-#    stdoutLines = p.stdout.readlines()
-#    if not silent:
-#        for line in stderrLines:
-#            print >> sys.stderr, line,
-#        for line in stdoutLines:
-#            print >> sys.stderr, line,
-#        print >> sys.stderr
-##    results = {}
-##    for line in stdoutLines:
-##        category, value = line.strip().split(":")
-##        value = value.strip()
-##        if value == "NaN":
-##            value = 0.0
-##        elif "." in value:
-##            value = float(value)
-##        else:
-##            value = int(value)
-##        results[category.strip()] = value
-##    return results
+def evaluateCO(sourceDir, goldDir=None, silent=False):
+    evaluatorDir, sourceDir, goldDir, tempDir = checkEvaluator("CO", sourceDir, goldDir)
+    if goldDir == None:
+        return None
+    # Run the evaluation program, which writes the result into a file
+    if tempDir == None:
+        tempDir = tempfile.mkdtemp()
+    resultDir = os.path.join(tempDir, "result")
+    os.makedirs(resultDir)
+    commands = "cd " + evaluatorDir
+    commands += " ; " + "java -jar CRScorer.jar " + goldDir + " " + sourceDir + " " + resultDir
+    p = subprocess.Popen(commands, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    stderrLines = p.stderr.readlines()
+    stdoutLines = p.stdout.readlines()
+    if not silent:
+        for i in range(len(stdoutLines)):
+            # Skip mentions of processing a document if no error happened in that document
+            if (not stdoutLines[i].strip().endswith("...")) or (i < len(stdoutLines) - 1 and not stdoutLines[i+1].strip().endswith("...")):
+                print >> sys.stderr, stdoutLines[i],
+        for line in stderrLines:
+            print >> sys.stderr, line,
+        print >> sys.stderr
+    # Read the evaluation result from the file it has been written to
+    f = open(os.path.join(resultDir, "eval.results"), "rt")
+    resultLines = f.readlines()
+    f.close()
+    results = {"MENTION DETECTION":{}, "MENTION LINKING":{}}
+    currentBlock = None
+    for line in resultLines:
+        line = line.replace("\t", " ")
+        print >> sys.stderr, line.rstrip()
+        if line[0] == "*":
+            continue
+        if "EVALUATION OF MENTION DETECTION" in line:
+            currentBlock = results["MENTION DETECTION"]
+        elif "EVALUATION OF MENTION LINKING" in line:
+            currentBlock = results["MENTION LINKING"]
+        elif ":" in line:
+            name, value = line.split(":")
+            name = name.strip()
+            value = int(value)
+            currentBlock[name] = value
+        elif line[0] == "P":
+            splits = line.split()
+            assert splits[0] == "P" and splits[1] == "=" and splits[3] == "R" and splits[4] == "=" and splits[6] == "F" and splits[7] == "=", line
+            currentBlock["precision"] = float(splits[2])
+            currentBlock["recall"] = float(splits[5])
+            currentBlock["fscore"] = float(splits[8])
+    # Remove temporary directory
+    if tempDir != None: 
+        shutil.rmtree(tempDir)
+    return results
 
 if __name__=="__main__":
     # Import Psyco if available
@@ -471,7 +499,9 @@ if __name__=="__main__":
     
     if options.install == None:
         assert(options.input != None)
-        evaluate(options.input, options.task, debug=options.debug)
+        evalResult = evaluate(options.input, options.task, debug=options.debug)
+        if options.debug:
+            print >> sys.stderr, "evaluate output:", evalResult
     else:
         downloadDir = None
         destDir = None
