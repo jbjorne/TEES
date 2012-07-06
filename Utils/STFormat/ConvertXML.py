@@ -293,6 +293,14 @@ def toSTFormat(input, output=None, outputTag="a2", useOrigIds=False, debug=False
                     for c in ann.id[1:]:
                         assert c.isdigit(), ann.id
                 stDoc.proteins.append(ann)
+                # The part below is dangerous, and incompatibilities should be handled rather
+                # by not converting to the shared task format when it cannot be done 
+                #if entity.get("origId") != None:
+                #    # Attempt to process origId, assuming it corresponds to the BioNLP Shared Task format
+                #    nonNamedEntityOrigId = entity.get("origId").rsplit(".", 1)[-1]
+                #    if len(nonNamedEntityOrigId) > 1 and nonNamedEntityOrigId[0].isupper() and nonNamedEntityOrigId[1:].isdigit():
+                #        ann.id = nonNamedEntityOrigId
+                #stDoc.proteins.append(ann)
             else:
                 found = False # prevent duplicate triggers
                 for trigger in stDoc.triggers:
