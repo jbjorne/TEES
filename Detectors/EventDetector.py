@@ -144,7 +144,7 @@ class EventDetector(Detector):
         self.modifierDetector.exitState()
     
     def doGrid(self):
-        print >> sys.stderr, "--------- Booster parameter search ---------"
+        print >> sys.stderr, "--------- Parameter grid search ---------"
         # Build trigger examples
         self.triggerDetector.buildExamples(self.model, [self.optData], [self.workDir+"grid-trigger-examples.gz"])
 
@@ -174,18 +174,18 @@ class EventDetector(Detector):
                 print >> sys.stderr, "Classifying trigger examples for parameters", "trigger:" + str(params["trigger"]), "booster:" + str(params["booster"])
                 xml = self.triggerDetector.classifyToXML(self.optData, self.model, self.workDir+"grid-trigger-examples", self.workDir+"grid-", classifierModel=TRIGGER_MODEL_STEM+str(params["trigger"]), recallAdjust=params["booster"])
             prevParams = params
-            # Build edge examples
-            self.edgeDetector.buildExamples(self.model, [xml], [self.workDir+"grid-edge-examples"], [self.optData])
+            ## Build edge examples
+            #self.edgeDetector.buildExamples(self.model, [xml], [self.workDir+"grid-edge-examples"], [self.optData])
             # Classify with pre-defined model
             edgeClassifierModel=EDGE_MODEL_STEM+str(params["edge"])
-            xml = self.edgeDetector.classifyToXML(xml, self.model, self.workDir+"grid-edge-examples", self.workDir+"grid-", classifierModel=edgeClassifierModel)
+            xml = self.edgeDetector.classifyToXML(xml, self.model, self.workDir+"grid-edge-examples", self.workDir+"grid-", classifierModel=edgeClassifierModel, goldData=self.optData)
             bestResults = self.evaluateGrid(xml, params, bestResults)
         # Remove remaining intermediate grid files
         for tag1 in ["edge", "trigger", "unmerging"]:
             for tag2 in ["examples", "pred.xml.gz"]:
                 if os.path.exists(self.workDir+"grid-"+tag1+"-"+tag2):
                     os.remove(self.workDir+"grid-"+tag1+"-"+tag2)
-        print >> sys.stderr, "Booster search complete"
+        print >> sys.stderr, "Parameter grid search complete"
         print >> sys.stderr, "Tested", len(paramCombinations), "combinations"
         print >> sys.stderr, "Best parameters:", bestResults[0]
         print >> sys.stderr, "Best result:", bestResults[2] # f-score
