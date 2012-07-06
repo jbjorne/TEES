@@ -11,7 +11,7 @@ EVALUATOR["ID"] = "BioNLP-ST_2011_ID-eval-tools"
 EVALUATOR["BB"] = "BioNLP-ST_2011_Bacteria_Biotopes_evaluation_software"
 EVALUATOR["BI"] = "BioNLP-ST_2011_bacteria_interactions_evaluation_software"
 EVALUATOR["REN"] = "BioNLP-ST_2011_bacteria_rename_evaluation_sofware"
-EVALUATOR["CO"] = "CREvalPackage1.6"
+EVALUATOR["CO"] = "CREvalPackage1.4"
 # Gold data for evaluators
 EVALUATOR["GE-gold"] = "BioNLP-ST_2011_genia_devel_data_rev1.tar.gz"
 EVALUATOR["EPI-gold"] = "BioNLP-ST_2011_Epi_and_PTM_development_data_rev1.tar.gz"
@@ -69,7 +69,7 @@ URL["CO_DEVEL"] = urlBase + "BioNLP-ST_2011_coreference_development_data.tar.gz"
 URL["CO_TRAIN"] = urlBase + "BioNLP-ST_2011_coreference_training_data_rev1.tar.gz"
 URL["CO_TEST"] = urlBase + "BioNLP-ST_2011_coreference_test_data.tar.gz"
 # BioNLP'11 Evaluators
-URL["BIONLP11_EVALUATORS"] = "https://github.com/downloads/jbjorne/TEES/BioNLP11-evaluators-120705.tar.gz"
+URL["BIONLP11_EVALUATORS"] = "https://github.com/downloads/jbjorne/TEES/BioNLP11-evaluators-120706.tar.gz"
 URL["GE_EVALUATOR"] = urlBase + "BioNLP-ST_2011_genia_tools_rev1.tar.gz"
 #URL["EPI_EVALUATOR"] = urlBase + 
 #URL["ID_EVALUATOR"] = urlBase + 
