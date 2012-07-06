@@ -191,7 +191,9 @@ def getTaskSettings(task, detector, processUnmerging, processModifiers, isSingle
         # Example generation parameters
         if detector == None:
             detector = "Detectors.EventDetector"
-            if task in ["REN", "BI", "DDI"]:
+            if task == "CO":
+                detector = "Detectors.CODetector"
+            elif task in ["REN", "BI", "DDI"]:
                 detector = "Detectors.EdgeDetector"
                 isSingleStage = True
             print >> sys.stderr, "Detector undefined, using default '" + detector + "' for task", fullTaskId
@@ -200,6 +202,8 @@ def getTaskSettings(task, detector, processUnmerging, processModifiers, isSingle
                 exampleStyles["examples"] = "trigger_features:typed:no_linear:entities:noMasking:maxFeatures:bacteria_renaming"
             elif task == "BI":
                 exampleStyles["examples"] = "trigger_features:typed:directed:no_linear:entities:noMasking:maxFeatures:bi_limits"
+            elif task == "DDI":
+                exampleStyles["examples"] = "trigger_features:typed:no_linear:entities:noMasking:maxFeatures:ddi_features:ddi_mtmx:filter_shortest_path=conj_and"
             print >> sys.stderr, "Single-stage examples style undefined, using default '" + exampleStyles["examples"] + "' for task", fullTaskId
         if exampleStyles["edge"] == None and not isSingleStage:
             print >> sys.stderr, "Edge example style undefined, using default for task", fullTaskId
@@ -249,6 +253,8 @@ def getTaskSettings(task, detector, processUnmerging, processModifiers, isSingle
                 classifierParameters["examples"] = "10,100,1000,2000,3000,4000,4500,5000,5500,6000,7500,10000,20000,25000,28000,50000,60000"
             elif task == "BI":
                 classifierParameters["examples"] = "10,100,1000,2500,5000,7500,10000,20000,25000,28000,50000,60000,65000,80000,100000,150000"
+            elif task == "DDI":
+                classifierParameters["examples"] = "5000,10000,20000,25000,28000,50000,60000,65000,80000,100000,150000"
     
     return detector, processUnmerging, processModifiers, isSingleStage, exampleStyles, classifierParameters
 
@@ -298,11 +304,11 @@ if __name__=="__main__":
     event.add_option("--modifierStyle", default=None, dest="modifierStyle", help="Event detector modifier example style")
     # Classifier parameters
     single.add_option("-e", "--exampleParams", default=None, dest="exampleParams", help="Single-stage detector parameters")
-    event.add_option("-r", "--triggerParams", default="1000,5000,10000,20000,50000,80000,100000,150000,180000,200000,250000,300000,350000,500000,1000000", dest="triggerParams", help="Trigger detector c-parameter values")
-    event.add_option("-a", "--recallAdjustParams", default="0.5,0.6,0.65,0.7,0.85,1.0,1.1,1.2", dest="recallAdjustParams", help="Recall adjuster parameter values")
-    event.add_option("-d", "--edgeParams", default="5000,7500,10000,20000,25000,27500,28000,29000,30000,35000,40000,50000,60000,65000", dest="edgeParams", help="Edge detector c-parameter values")
-    event.add_option("-n", "--unmergingParams", default="1,10,100,500,1000,1500,2500,5000,10000,20000,50000,80000,100000", dest="unmergingParams", help="Unmerging c-parameter values")
-    event.add_option("-f", "--modifierParams", default="5000,10000,20000,50000,100000", dest="modifierParams", help="Modifier c-parameter values")
+    event.add_option("-r", "--triggerParams", default=None, dest="triggerParams", help="Trigger detector c-parameter values")
+    event.add_option("-a", "--recallAdjustParams", default=None, dest="recallAdjustParams", help="Recall adjuster parameter values")
+    event.add_option("-d", "--edgeParams", default=None, dest="edgeParams", help="Edge detector c-parameter values")
+    event.add_option("-n", "--unmergingParams", default=None, dest="unmergingParams", help="Unmerging c-parameter values")
+    event.add_option("-f", "--modifierParams", default=None, dest="modifierParams", help="Modifier c-parameter values")
     event.add_option("--fullGrid", default=False, action="store_true", dest="fullGrid", help="Full grid search for parameters")
     optparser.add_option_group(single)
     optparser.add_option_group(event)
