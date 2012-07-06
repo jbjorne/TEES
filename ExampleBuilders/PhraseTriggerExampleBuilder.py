@@ -73,18 +73,19 @@ class PhraseTriggerExampleBuilder(ExampleBuilder):
         self.styles = style
         self.triggerFeatureBuilder = TriggerFeatureBuilder(self.featureSet)
         self.triggerFeatureBuilder.useNonNameEntities = False
+        self.phraseTypeCounts = {}
 
-    @classmethod
-    def run(cls, input, output, parse, tokenization, style, idFileTag=None, gazetteerFileName=None):
-        classSet, featureSet = cls.getIdSets(idFileTag)
-        e = PhraseTriggerExampleBuilder(style, classSet, featureSet)
-        if "names" in style:
-            sentences = cls.getSentences(input, parse, tokenization, removeNameInfo=True)
-        else:
-            sentences = cls.getSentences(input, parse, tokenization, removeNameInfo=False)
-        e.phraseTypeCounts = {}
-        e.buildExamplesForSentences(sentences, output, idFileTag)
-        print >> sys.stderr, "Phrase type counts:", e.phraseTypeCounts
+#    @classmethod
+#    def run(cls, input, output, parse, tokenization, style, idFileTag=None, gazetteerFileName=None):
+#        classSet, featureSet = cls.getIdSets(idFileTag)
+#        e = PhraseTriggerExampleBuilder(style, classSet, featureSet)
+#        if "names" in style:
+#            sentences = cls.getSentences(input, parse, tokenization, removeNameInfo=True)
+#        else:
+#            sentences = cls.getSentences(input, parse, tokenization, removeNameInfo=False)
+#        e.phraseTypeCounts = {}
+#        e.buildExamplesForSentences(sentences, output, idFileTag)
+#        print >> sys.stderr, "Phrase type counts:", e.phraseTypeCounts
     
     def buildLinearOrderFeatures(self,sentenceGraph,index,tag,features):
         """
@@ -139,13 +140,13 @@ class PhraseTriggerExampleBuilder(ExampleBuilder):
         else:
             return False
     
-    def buildExamples(self, sentenceGraph, appendIndex=None):
+    def buildExamplesFromGraph(self, sentenceGraph, outfile, goldGraph=None):
         """
         Build one example for each phrase in the sentence
         """
         self.triggerFeatureBuilder.initSentence(sentenceGraph)
                 
-        examples = []
+        #examples = []
         exampleIndex = 0
         
         # Prepare phrases, create subphrases
@@ -161,6 +162,7 @@ class PhraseTriggerExampleBuilder(ExampleBuilder):
             if not self.phraseTypeCounts.has_key(key):
                 self.phraseTypeCounts[key] = 0
             self.phraseTypeCounts[key] += phraseTypeCounts[key]
+        self.exampleStats.addVariable("Phrase type counts", self.phraseTypeCounts) # can be added on each loop, will always point to the same thing
         
         # Build one example for each phrase
         for phrase in phrases:
@@ -221,7 +223,8 @@ class PhraseTriggerExampleBuilder(ExampleBuilder):
                 extra["eids"] = "neg"
             else:
                 extra["eids"] = ",".join([x.get("id") for x in phraseToEntity[phrase]])
-            examples.append( (sentenceGraph.getSentenceId()+".x"+str(exampleIndex),category,features,extra) )
+            example = (sentenceGraph.getSentenceId()+".x"+str(exampleIndex), category, features, extra)
+            ExampleUtils.appendExamples([example], outfile)
             self.exampleStats.endExample()
             exampleIndex += 1
         
@@ -229,7 +232,9 @@ class PhraseTriggerExampleBuilder(ExampleBuilder):
         linkedEntities = set( sum(phraseToEntity.values(), []) )
         for entity in sentenceGraph.entities:
             if entity.get("isName") != "True" and entity not in linkedEntities:
-                self.exampleStats.beginExample(entity.get("type"))
-                self.exampleStats.filter("no_phrase")
-                self.exampleStats.endExample()
-        return examples
+                self.exampleStats.addValue("Entities with no phrase", 1)
+                # Marking these as filtered examples was misleading, as examples are per phrase, and these are entities
+                #self.exampleStats.beginExample(entity.get("type"))
+                #self.exampleStats.filter("no_phrase")
+                #self.exampleStats.endExample()
+        return exampleIndex
