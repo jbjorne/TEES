@@ -456,7 +456,7 @@ class EntityExampleBuilder(ExampleBuilder):
             if self.styles["pos_pairs"]:
                 self.buildPOSPairs(token, namedEntityHeadTokens, features)
             
-            example = (sentenceGraph.getSentenceId()+".x"+str(exampleIndex),category,features,extra)
+            example = (sentenceGraph.getSentenceId()+".x"+str(exampleIndex), category, features, extra)
             ExampleUtils.appendExamples([example], outfile)
             exampleIndex += 1
             self.exampleStats.endExample()
