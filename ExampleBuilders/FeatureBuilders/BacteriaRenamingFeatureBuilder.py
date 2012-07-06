@@ -26,7 +26,7 @@ def readBacsu(filename):
         if not synList[0] in synDict:
             synDict[synList[0]] = synList[1:]
         else:
-            print "Warning,", synList[0], "already a primary name"
+            print >> sys.stderr, "Warning,", synList[0], "already a primary name"
             synDict[synList[0]].extend(synList[1:])
     f.close()
     return synDict
@@ -45,20 +45,20 @@ def readSubtiwiki(filename):
         if not synList[0] in synDict:
             synDict[synList[0]] = synList[1:]
         else:
-            print "Warning,", synList[0], "already a primary name"
+            print >> sys.stderr, "Warning,", synList[0], "already a primary name"
             synDict[synList[0]].extend(synList[1:])
     f.close()
     return synDict
 
 def installRENData(destPath=None, downloadPath=None, redownload=False, updateLocalSettings=False):
-    print >> sys.stderr, "---------------", "Downloading REN data files", "---------------"
+    print >> sys.stderr, "---------------", "Downloading TEES data files for REN", "---------------"
     print >> sys.stderr, "These files are derived from UniProt bacsu and SubtiWiki"
     if destPath == None:
         destPath = os.path.join(Settings.DATAPATH, "resources")
     if downloadPath == None:
         downloadPath = os.path.join(Settings.DATAPATH, "resources/download")
-    Utils.Download.downloadAndExtract(Settings.URL["REN_DATA_FILES"], destPath, downloadPath, redownload=redownload)
-    Settings.setLocal("REN_DATA_FILES", destPath, updateLocalSettings)
+    Utils.Download.downloadAndExtract(Settings.URL["TEES_RESOURCES"], destPath, downloadPath, redownload=redownload)
+    Settings.setLocal("TEES_RESOURCES", destPath, updateLocalSettings)
 
 
 class BacteriaRenamingFeatureBuilder(FeatureBuilder):
@@ -67,11 +67,11 @@ class BacteriaRenamingFeatureBuilder(FeatureBuilder):
         #self.bacsu = readBacsu(os.path.expanduser("~/data/BioNLP11SharedTask/supporting-tasks/bacsu-modified.txt"))
         #self.subti = readSubtiwiki(os.path.expanduser("~/data/BioNLP11SharedTask/supporting-tasks/Subtiwiki-Synonyms.csv"))
         #self.subti = readSubtiwiki(os.path.expanduser("~/cvs_checkout/JariSandbox/Wiki/subtiwiki/Subtiwiki-Synonyms.csv"))
-        if not hasattr(Settings, "REN_DATA_FILES"):
-            print >> sys.stderr, "REN data files not installed, installing now"
+        if not hasattr(Settings, "TEES_RESOURCES"):
+            print >> sys.stderr, "TEES example builder data files not installed, installing now"
             installRENData(updateLocalSettings=True)
-        self.bacsu = readBacsu(os.path.join(Settings.REN_DATA_FILES, "bacsu-modified.txt"))
-        self.subti = readSubtiwiki(os.path.join(Settings.REN_DATA_FILES, "Subtiwiki-Synonyms.csv"))
+        self.bacsu = readBacsu(os.path.join(Settings.TEES_RESOURCES, "bacsu-modified.txt"))
+        self.subti = readSubtiwiki(os.path.join(Settings.TEES_RESOURCES, "Subtiwiki-Synonyms.csv"))
         # OR the dictionaries
         self.any = {}
         for key in sorted(list(set(self.bacsu.keys() + self.subti.keys()))):
