@@ -4,28 +4,27 @@ import tempfile
 import subprocess
 thisPath = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.abspath(os.path.join(thisPath,"../../")))
-sys.path.append(os.path.abspath(os.path.join(thisPath,"../../CommonUtils/")))
-import STFormat.STTools as ST
-import STFormat.ConvertXML as STConvert
-import InteractionXML.RemoveUnconnectedEntities
-import InteractionXML.DivideSets
+import Utils.STFormat.STTools as ST
+import Utils.STFormat.ConvertXML as STConvert
+import Utils.InteractionXML.RemoveUnconnectedEntities
+import Utils.InteractionXML.DivideSets
 import Utils.Download
+import Utils.ProteinNameSplitter as ProteinNameSplitter
 import Utils.Settings as Settings
 import Utils.Stream as Stream
 import Utils.FindHeads as FindHeads
-import Tools.GeniaSentenceSplitter
-import Tools.GeniaTagger
+import Tools.SentenceSplitter
 import Tools.CharniakJohnsonParser
 import Tools.StanfordParser
-import InteractionXML.CopyParse
-import InteractionXML.DeleteElements
+#import Utils.InteractionXML.CopyParse
 try:
     import cElementTree as ET
 except ImportError:
     import xml.etree.cElementTree as ET
-import cElementTreeUtils as ETUtils
+import Utils.ElementTreeUtils as ETUtils
 from collections import defaultdict
-import Range
+import Utils.Range as Range
+import DDITools
 
 def getSets(popSize):
     random.seed(15)
@@ -117,7 +116,7 @@ def convertToInteractions(xml):
     print "Pair counts:", counts
 
 def loadDocs(url, outDir, tempDir):
-    inDir = Utils.Download.downloadAndExtract(url, tempDir, outDir + "/DDI11-original")[0]
+    inDir = Utils.Download.downloadAndExtract(url, tempDir, outDir)[0]
     inDir = os.path.join(tempDir, inDir)
             
     print "Loading documents from", inDir
@@ -173,41 +172,42 @@ def convertDDI(outDir, trainUnified=None, trainMTMX=None, testUnified=None, test
     if testMTMX == None:
         testMTMX = Settings.URL["DDI_TEST_MTMX"]
     
+    # Load main documents
     tempdir = tempfile.mkdtemp()
     print >> sys.stderr, "Temporary files directory at", tempdir
-    if True:
-        documents, docById, docCounts = loadDocs(trainUnified, outDir, tempdir)
-        
-        sortedDocCounts = sorted(docCounts.iteritems(), key=lambda (k,v): (v,k), reverse=True)
-        datasetCounts = {"train":[0,0], "devel":[0,0], "test":[0,0]}
-        for i in range(0, len(sortedDocCounts)-3, 4):
-            for j in [0,1]:
-                docById[sortedDocCounts[i+j][0]].set("set", "train")
-                datasetCounts["train"][0] += sortedDocCounts[i+j][1][0]
-                datasetCounts["train"][1] += sortedDocCounts[i+j][1][1]
-            docById[sortedDocCounts[i+2][0]].set("set", "train") #docById[sortedDocCounts[i+2][0]].set("set", "devel")
-            docById[sortedDocCounts[i+3][0]].set("set", "devel") #docById[sortedDocCounts[i+3][0]].set("set", "test")
-            datasetCounts["train"][0] += sortedDocCounts[i+2][1][0] #datasetCounts["devel"][0] += sortedDocCounts[i+2][1][0]
-            datasetCounts["train"][1] += sortedDocCounts[i+2][1][1] #datasetCounts["devel"][1] += sortedDocCounts[i+2][1][1]
-            datasetCounts["devel"][0] += sortedDocCounts[i+3][1][0] #datasetCounts["test"][0] += sortedDocCounts[i+3][1][0]
-            datasetCounts["devel"][1] += sortedDocCounts[i+3][1][1] #datasetCounts["test"][1] += sortedDocCounts[i+3][1][1]
-        for document in documents: # epajaolliset jaa yli
-            if document.get("set") == None:
-                document.set("set", "train")
-        
-        print datasetCounts
-        for key in datasetCounts.keys():
-            if datasetCounts[key][1] != 0:
-                print key, datasetCounts[key][0] / float(datasetCounts[key][1])
-            else:
-                print key, datasetCounts[key][0], "/", float(datasetCounts[key][1])
-        
-        if testUnified != None:
-            testDocuments, testDocById, testDocCounts = loadDocs(testUnified, tempdir)
-            for document in testDocuments:
-                document.set("set", "test")
-            documents = documents + testDocuments
-        
+    documents, docById, docCounts = loadDocs(trainUnified, outDir + "/DDI11-original", tempdir)
+    # Divide training data into a train and devel set
+    sortedDocCounts = sorted(docCounts.iteritems(), key=lambda (k,v): (v,k), reverse=True)
+    datasetCounts = {"train":[0,0], "devel":[0,0], "test":[0,0]}
+    for i in range(0, len(sortedDocCounts)-3, 4):
+        for j in [0,1]:
+            docById[sortedDocCounts[i+j][0]].set("set", "train")
+            datasetCounts["train"][0] += sortedDocCounts[i+j][1][0]
+            datasetCounts["train"][1] += sortedDocCounts[i+j][1][1]
+        docById[sortedDocCounts[i+2][0]].set("set", "train") #docById[sortedDocCounts[i+2][0]].set("set", "devel")
+        docById[sortedDocCounts[i+3][0]].set("set", "devel") #docById[sortedDocCounts[i+3][0]].set("set", "test")
+        datasetCounts["train"][0] += sortedDocCounts[i+2][1][0] #datasetCounts["devel"][0] += sortedDocCounts[i+2][1][0]
+        datasetCounts["train"][1] += sortedDocCounts[i+2][1][1] #datasetCounts["devel"][1] += sortedDocCounts[i+2][1][1]
+        datasetCounts["devel"][0] += sortedDocCounts[i+3][1][0] #datasetCounts["test"][0] += sortedDocCounts[i+3][1][0]
+        datasetCounts["devel"][1] += sortedDocCounts[i+3][1][1] #datasetCounts["test"][1] += sortedDocCounts[i+3][1][1]
+    for document in documents: # epajaolliset jaa yli
+        if document.get("set") == None:
+            document.set("set", "train")
+    # Print division results
+    print >> sys.stderr, datasetCounts
+    for key in datasetCounts.keys():
+        if datasetCounts[key][1] != 0:
+            print key, datasetCounts[key][0] / float(datasetCounts[key][1])
+        else:
+            print key, datasetCounts[key][0], "/", float(datasetCounts[key][1])
+    # If test set exists, load it, too
+    if testUnified != None:
+        testDocuments, testDocById, testDocCounts = loadDocs(testUnified, outDir + "/DDI11-original", tempdir)
+        for document in testDocuments:
+            document.set("set", "test")
+        documents = documents + testDocuments
+    
+    # Add all documents into one XML
     xmlTree = ET.ElementTree(ET.Element("corpus"))
     root = xmlTree.getroot()
     root.set("source", "DrugDDI")
@@ -219,11 +219,21 @@ def convertDDI(outDir, trainUnified=None, trainMTMX=None, testUnified=None, test
     print >> sys.stderr, "Fixing DDI XML"
     fixEntities(xml)
     convertToInteractions(xml)
+    # Add MTMX
+    if trainMTMX != None:
+        inDir = Utils.Download.getTopDir(tempdir, Utils.Download.downloadAndExtract(trainMTMX, tempdir, outDir + "/DDI11-original"))
+        DDITools.addMTMX(xml, inDir)
+    if testMTMX != None:
+        inDir = Utils.Download.getTopDir(tempdir, Utils.Download.downloadAndExtract(trainMTMX, tempdir, outDir + "/DDI11-original"))
+        DDITools.addMTMX(xml, inDir)
     if makeIntermediateFiles:
         ETUtils.write(root, bigfileName + "-documents.xml")
 
+
+
     print >> sys.stderr, "---------------", "Inserting TEES-generated analyses", "---------------"
-    extractedFilename = files["TEES_PARSES"] + "/" + corpus
+    Utils.Download.downloadAndExtract(Settings.URL["TEES_PARSES"], os.path.join(Settings.DATAPATH, "TEES-parses"), downloadDir, redownload=redownload)
+    extractedFilename = os.path.join(Settings.DATAPATH, "TEES-parses") + "/DDI"
     print >> sys.stderr, "Making sentences"
     Tools.SentenceSplitter.makeSentences(xml, extractedFilename, None)
     print >> sys.stderr, "Inserting McCC parses"
@@ -231,12 +241,13 @@ def convertDDI(outDir, trainUnified=None, trainMTMX=None, testUnified=None, test
     print >> sys.stderr, "Inserting Stanford conversions"
     Tools.StanfordParser.insertParses(xml, extractedFilename, None, extraAttributes={"stanfordSource":"TEES-preparsed"})
     print >> sys.stderr, "Protein Name Splitting"
+    splitTarget = "McCC"
     ProteinNameSplitter.mainFunc(xml, None, splitTarget, splitTarget, "split-"+splitTarget, "split-"+splitTarget)
     print >> sys.stderr, "Head Detection"
     xml = FindHeads.findHeads(xml, "split-"+splitTarget, tokenization=None, output=None, removeExisting=True)    
     
     print >> sys.stderr, "Dividing into sets"
-    InteractionXML.DivideSets.processCorpus(xml, outDir, "DDI-", ".xml", [("devel", "train", "test")])
+    Utils.InteractionXML.DivideSets.processCorpus(xml, outDir, "DDI", ".xml")
     
     Stream.closeLog(logFileName)
     if not debug:
@@ -259,8 +270,8 @@ if __name__=="__main__":
     optparser.add_option("-o", "--outdir", default=os.path.normpath(Settings.DATAPATH + "/corpora"), dest="outdir", help="directory for output files")
     optparser.add_option("-d", "--downloaddir", default=None, dest="downloaddir", help="directory to download corpus files to")
     optparser.add_option("--intermediateFiles", default=False, action="store_true", dest="intermediateFiles", help="save intermediate corpus files")
-    optparser.add_option("--forceDownload", default=False, action="store_true", dest="forceDownload", help="re-download all source files")
+    optparser.add_option("--redownload", default=False, action="store_true", dest="redownload", help="re-download all source files")
     optparser.add_option("--debug", default=False, action="store_true", dest="debug", help="Keep temporary files")
     (options, args) = optparser.parse_args()
     
-    convertDDI(options.outdir, None, None, None, None, options.downloaddir, options.forceDownload, options.intermediateFiles, options.debug)
+    convertDDI(options.outdir, None, None, None, None, options.downloaddir, options.redownload, options.intermediateFiles, options.debug)

@@ -1,5 +1,7 @@
 import sys, os
-import cElementTreeUtils as ETUtils
+thisPath = os.path.dirname(os.path.abspath(__file__))
+sys.path.append(os.path.abspath(os.path.join(thisPath,"../..")))
+import Utils.ElementTreeUtils as ETUtils
 from collections import defaultdict
 
 def makeDDISubmissionFile(input, output):
@@ -44,7 +46,7 @@ def transferClassifications(input, rls, output):
         outFile.write(inputLine.rsplit("\t", 1)[0] + "\t" + rlsLine)
     outFile.close()
 
-def addMTMX(input, mtmxDir, output):
+def addMTMX(input, mtmxDir, output=None):
     from collections import defaultdict
     # read interaction XML
     print "Reading interaction XML"
@@ -63,13 +65,13 @@ def addMTMX(input, mtmxDir, output):
     print "Processing MTMX"
     for filename in sorted(os.listdir(mtmxDir)):
         if filename.endswith(".xml"):
-            print filename,
+            print >> sys.stderr, filename,
             fileId = filename.split("_")[0]
             if fileId not in docById:
-                print "skipped"
+                print >> sys.stderr, "skipped"
                 continue
             else:
-                print "processing"
+                print >> sys.stderr, "processing"
             doc = docById[fileId]
             entityByOrigId = {}
             for entity in doc.getiterator("entity"):
@@ -98,8 +100,9 @@ def addMTMX(input, mtmxDir, output):
                             entity.set("mtmxSemTypes", str(map.get("SEMTYPES")))
                             counts["mappings"] += 1
                             mapCount += 1
-    print counts
-    ETUtils.write(xml, output)
+    print >> sys.stderr, counts
+    if output != None:
+        ETUtils.write(xml, output)
                 
 if __name__=="__main__":
     # Import Psyco if available
