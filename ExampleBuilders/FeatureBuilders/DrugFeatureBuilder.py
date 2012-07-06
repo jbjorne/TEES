@@ -4,16 +4,32 @@ from Core.IdSet import IdSet
 import Core.ExampleBuilder
 import Core.ExampleUtils as ExampleUtils
 from FeatureBuilder import FeatureBuilder
-
+import Utils.Settings as Settings
+import Utils.Download
 import Utils.ElementTreeUtils as ETUtils
 from collections import defaultdict
+
+def installDrugBank(destPath=None, downloadPath=None, redownload=False, updateLocalSettings=False):
+    print >> sys.stderr, "---------------", "Downloading Drug Bank XML", "---------------"
+    print >> sys.stderr, "See http://www.drugbank.ca/downloads for conditions of use"
+    if destPath == None:
+        destPath = os.path.join(Settings.DATAPATH, "resources")
+    if downloadPath == None:
+        downloadPath = os.path.join(Settings.DATAPATH, "resources/download")
+    filenames = Utils.Download.downloadAndExtract(Settings.URL["DRUG_BANK_XML"], destPath, downloadPath, redownload=redownload)
+    assert len(filenames) == 1
+    Settings.setLocal("DRUG_BANK_XML", os.path.join(destPath, filenames[0]), updateLocalSettings)
 
 class DrugFeatureBuilder(FeatureBuilder):
     data = None
     
     def __init__(self, featureSet=None):
         FeatureBuilder.__init__(self, featureSet)
-        drugBankFile = "/home/jari/data/DDIExtraction2011/resources/drugbank.xml"
+        if not hasattr(Settings, "DRUG_BANK_XML"):
+            print >> sys.stderr, "Drug Bank XML not installed, installing now"
+            installDrugBank(updateLocalSettings=True)
+        drugBankFile = Settings.DRUG_BANK_XML
+        #drugBankFile = "/home/jari/data/DDIExtraction2011/resources/drugbank.xml"
         # Load drug data into memory on first call to constructor
         if DrugFeatureBuilder.data == None:
             DrugFeatureBuilder.data, DrugFeatureBuilder.nameToId = prepareDrugBank(drugBankFile)
