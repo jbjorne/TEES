@@ -8,11 +8,15 @@ class ExampleStats:
         self.filteredByClassByFilter = {}
         self.counts = {} # example counts
         self.values = {} # generic counters
+        self.variables = {} # generic variables
     
     def addValue(self, name, amount=1):
         if name not in self.values:
             self.values[name] = 0
         self.values[name] += amount
+    
+    def addVariable(self, name, variable):
+        self.variables[name] = variable
     
     def addKnownPositives(self, className, number=1):
         pass
@@ -76,6 +80,8 @@ class ExampleStats:
         # Print generic counts
         for value in sorted(self.values.keys()):
             print >> sys.stderr, value + ":", self.values[value]
+        for variable in sorted(self.variables.keys()):
+            print >> sys.stderr, variable + ":", self.variables[variable]
         
     #def add(self, className, filteredBy=[]):
     #    pass
