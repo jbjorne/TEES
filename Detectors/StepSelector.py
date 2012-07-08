@@ -13,11 +13,14 @@ class StepSelector:
         self.setLimits(fromStep, toStep)
         self.verbose = verbose
     
-    def omitStep(self, step):
+    def omitSteps(self, steps):
         if self.omitSteps == None:
             self.omitSteps = []
-        if step not in self.omitSteps:
-            self.omitSteps.append(step)
+        if type(steps) not in [types.ListType, types.TupleType]:
+            steps = [steps]
+        for step in steps:
+            if step not in self.omitSteps:
+                self.omitSteps.append(step)
     
     def setLimits(self, fromStep, toStep):
         self.fromStep = fromStep
