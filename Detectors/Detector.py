@@ -6,6 +6,7 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__))+"/..")
 from Core.Model import Model
 from StepSelector import StepSelector
 import Utils.Parameters as Parameters
+import Evaluators.BioNLP11GeniaTools
 import types
 import time, datetime
 
@@ -15,7 +16,8 @@ class Detector():
         self.exampleWriter = None
         self.Classifier = None
         self.evaluator = None
-        self.stEvaluator = None
+        self.bioNLPSTParams = None
+        self.stEvaluator = Evaluators.BioNLP11GeniaTools
         self.modelPath = None
         self.combinedModelPath = None
         self.tag = "UNKNOWN-"
@@ -146,6 +148,11 @@ class Detector():
             model = Model(model, mode)
             self.modelsToClose.append(model)
         return model
+    
+    def getBioNLPSharedTaskParams(self, parameters=None, model=None):
+        if parameters == None:
+            parameters = model.get("BioNLPSTParams", defaultIfNotExist=None)
+        return Parameters.get(parameters, valueListKey=["convert", "evaluate", "scores"])
     
     def buildExamples(self, model, datas, outputs, golds=[], exampleStyle=None, saveIdsToModel=False, parse=None):
         if exampleStyle == None:

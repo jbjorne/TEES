@@ -3,7 +3,6 @@ from ExampleBuilders.EdgeExampleBuilder import EdgeExampleBuilder
 from ExampleWriters.EdgeExampleWriter import EdgeExampleWriter
 from Classifiers.SVMMultiClassClassifier import SVMMultiClassClassifier
 from Evaluators.AveragingMultiClassEvaluator import AveragingMultiClassEvaluator
-import Evaluators.BioNLP11GeniaTools
 
 class EdgeDetector(SingleStageDetector):
     def __init__(self):
@@ -12,5 +11,5 @@ class EdgeDetector(SingleStageDetector):
         self.exampleWriter = EdgeExampleWriter()
         self.Classifier = SVMMultiClassClassifier
         self.evaluator = AveragingMultiClassEvaluator
-        self.stEvaluator = Evaluators.BioNLP11GeniaTools
+        #self.stEvaluator = Evaluators.BioNLP11GeniaTools
         self.tag = "edge-"

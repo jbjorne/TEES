@@ -113,9 +113,11 @@ class SingleStageDetector(Detector):
             model.get(self.tag+"classifier-model"), None, parse, float(model.get("recallAdjustParameter", defaultIfNotExist=1.0)))
         shutil.copy2(workOutputTag+self.tag+"pred.xml.gz", output+"pred.xml.gz")
         EvaluateInteractionXML.run(self.evaluator, xml, data, parse)
-        Utils.STFormat.ConvertXML.toSTFormat(xml, output+".tar.gz", outputTag="a2")
-        if self.stEvaluator != None:
-            self.stEvaluator.evaluate(output+".tar.gz", task)
+        stParams = self.getBioNLPSharedTaskParams(self.bioNLPSTParams, model)
+        if stParams["convert"]: #self.useBioNLPSTFormat:
+            Utils.STFormat.ConvertXML.toSTFormat(xml, output+".tar.gz", outputTag="a2")
+            if stParams["evaluate"]: #self.stEvaluator != None:
+                self.stEvaluator.evaluate(output+".tar.gz", task)
         self.deleteTempWorkDir()
         self.exitState()
         

@@ -22,8 +22,8 @@ class EventDetector(Detector):
         self.unmergingDetector = UnmergingDetector()
         self.doUnmergingSelfTraining = True #False
         self.modifierDetector = ModifierDetector()
-        self.stEvaluator = Evaluators.BioNLP11GeniaTools
-        self.stWriteScores = False
+        #self.stEvaluator = Evaluators.BioNLP11GeniaTools
+        #self.stWriteScores = False
         self.STATE_COMPONENT_TRAIN = "COMPONENT_TRAIN"
         self.tag = "event-"
     
@@ -97,6 +97,9 @@ class EventDetector(Detector):
         self.model = self.openModel(model, "a")
         self.combinedModel = self.openModel(combinedModel, "a")
         if self.checkStep("BEGIN-MODEL"):
+            for model in [self.model, self.combinedModel]:
+                if model != None:
+                    model.addStr("BioNLPSTParams", Parameters.toString(self.bioNLPSTParams))
             self.triggerDetector.beginModel(None, self.model, [self.workDir+self.triggerDetector.tag+"train-examples.gz"], self.workDir+self.triggerDetector.tag+"opt-examples.gz")
             self.edgeDetector.beginModel(None, self.model, [self.workDir+self.edgeDetector.tag+"train-examples.gz"], self.workDir+self.edgeDetector.tag+"opt-examples.gz")
             if trainModifiers:
@@ -206,23 +209,29 @@ class EventDetector(Detector):
             # TODO: Where should the EvaluateInteractionXML evaluator come from?
             EIXMLResult = EvaluateInteractionXML.run(self.edgeDetector.evaluator, xml, self.optData, self.parse)
             # Convert to ST-format
-            STFormat.ConvertXML.toSTFormat(xml, self.workDir+"grid-flat-geniaformat", "a2") #getA2FileTag(options.task, subTask))
-            stFormatDir = self.workDir+"grid-flat-geniaformat"
+            if self.bioNLPSTParams["evaluate"]:
+                STFormat.ConvertXML.toSTFormat(xml, self.workDir+"grid-flat-geniaformat", "a2") #getA2FileTag(options.task, subTask))
+                stFormatDir = self.workDir+"grid-flat-geniaformat"
             
             if self.unmerging:
-                xml = self.unmergingDetector.classifyToXML(xml, self.model, None, self.workDir+"grid-", goldData=self.optData.replace("-nodup", ""))
-                STFormat.ConvertXML.toSTFormat(xml, self.workDir+"grid-unmerging-geniaformat", "a2")
-                stFormatDir = self.workDir+"grid-unmerging-geniaformat"
-            stEvaluation = self.stEvaluator.evaluate(stFormatDir, self.task)
+                xml = self.unmergingDetector.classifyToXML(xml, self.model, None, self.workDir+"grid-", goldData=self.optData)
+                if self.bioNLPSTParams["evaluate"]:
+                    STFormat.ConvertXML.toSTFormat(xml, self.workDir+"grid-unmerging-geniaformat", "a2")
+                    stFormatDir = self.workDir+"grid-unmerging-geniaformat"
+            # Evaluation
+            stEvaluation = None
+            if self.bioNLPSTParams["evaluate"]:
+                stEvaluation = self.stEvaluator.evaluate(stFormatDir, self.task)
             if stEvaluation != None:
                 if bestResults == None or stEvaluation[0] > bestResults[1][0]:
                     bestResults = (params, stEvaluation, stEvaluation[0])
             else:
                 if bestResults == None or EIXMLResult.getData().fscore > bestResults[1].getData().fscore:
                     bestResults = (params, EIXMLResult, EIXMLResult.getData().fscore)
-            shutil.rmtree(self.workDir+"grid-flat-geniaformat")
-            if os.path.exists(self.workDir+"grid-unmerging-geniaformat"):
-                shutil.rmtree(self.workDir+"grid-unmerging-geniaformat")
+            if self.bioNLPSTParams["evaluate"]:
+                shutil.rmtree(self.workDir+"grid-flat-geniaformat")
+                if os.path.exists(self.workDir+"grid-unmerging-geniaformat"):
+                    shutil.rmtree(self.workDir+"grid-unmerging-geniaformat")
         else:
             print >> sys.stderr, "No predicted edges"
         return bestResults
@@ -283,6 +292,7 @@ class EventDetector(Detector):
             self.setTempWorkDir()
         workOutputTag = os.path.join(self.workDir, os.path.basename(output) + "-")
         self.model = self.openModel(self.model, "r")
+        stParams = self.getBioNLPSharedTaskParams(self.bioNLPSTParams, model)
         if self.checkStep("TRIGGERS"):
             xml = self.triggerDetector.classifyToXML(self.classifyData, self.model, None, workOutputTag, parse=self.parse, recallAdjust=float(self.getStr("recallAdjustParameter", self.model)))
         if self.checkStep("EDGES"):
@@ -314,13 +324,16 @@ class EventDetector(Detector):
             else:
                 print >> sys.stderr, "No model for modifier detection"
         if self.checkStep("ST-CONVERT"):
-            xml = self.getWorkFile(xml, [workOutputTag + "modifier-pred.xml.gz", workOutputTag + "unmerging-pred.xml.gz", workOutputTag + "edge-pred.xml.gz"])
-            STFormat.ConvertXML.toSTFormat(xml, output+".tar.gz", outputTag="a2", writeScores=self.stWriteScores)
-            if self.stEvaluator != None:
-                task = self.task
-                if task == None:
-                    task = self.getStr(self.edgeDetector.tag+"task", self.model)
-                self.stEvaluator.evaluate(output + ".tar.gz", task)
+            if stParams["convert"]:
+                xml = self.getWorkFile(xml, [workOutputTag + "modifier-pred.xml.gz", workOutputTag + "unmerging-pred.xml.gz", workOutputTag + "edge-pred.xml.gz"])
+                STFormat.ConvertXML.toSTFormat(xml, output+".tar.gz", outputTag="a2", writeScores=(stParams["scores"] == True))
+                if stParams["evaluate"]: #self.stEvaluator != None:
+                    task = self.task
+                    if task == None:
+                        task = self.getStr(self.edgeDetector.tag+"task", self.model)
+                    self.stEvaluator.evaluate(output + ".tar.gz", task)
+            else:
+                print >> sys.stderr, "No BioNLP shared task format conversion"
         finalXMLFile = self.getWorkFile(None, [workOutputTag + "modifier-pred.xml.gz", workOutputTag + "unmerging-pred.xml.gz", workOutputTag + "edge-pred.xml.gz"])
         if finalXMLFile != None:
             shutil.copy2(finalXMLFile, output+".xml.gz")
