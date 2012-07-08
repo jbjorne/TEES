@@ -1,6 +1,7 @@
 import sys, os, copy, types
 from Detector import Detector
 import Utils.ElementTreeUtils as ETUtils
+import Utils.Parameters as Parameters
 
 class ToolChain(Detector):
     def __init__(self):
@@ -8,9 +9,43 @@ class ToolChain(Detector):
         # Settings
         self.STATE_TOOLCHAIN = "PROCESS"
         self.steps = []
+        for step in self.getDefaultSteps():
+            self.addStep(*step)
         self.intermediateFilesAtSource = False
-        self.compressIntermediateFiles = False
+        self.compressIntermediateFiles = True
         self.intermediateFileTag = "temp"
+    
+    def getDefaultSteps(self):
+        return []
+    
+    def getDefaultParameters(self, defaults=None):
+        if defaults == None:
+            defaults = {"omitSteps":None, "intermediateFiles":None}
+        for step in self.getDefaultSteps():
+            for argName in sorted(step[2].keys()):
+                parameterName = step[0] + "." + argName
+                defaults[parameterName] = step[2][argName]
+        return defaults
+
+    def getParameters(self, parameters=None, model=None):
+        if parameters == None:
+            parameters = model.get("preprocessorParams", defaultIfNotExist=None)
+        defaultStepNames = [x[0] for x in self.getDefaultSteps()]
+        valueLimits={"omitSteps":defaultStepNames, "intermediateFiles":defaultStepNames}
+        defaults = self.getDefaultParameters()  
+        return Parameters.get(parameters, defaults, valueListKey=sorted(defaults.keys()), valueLimits=valueLimits)
+    
+    def applyParameters(self, parameters):
+        self.select.omitSteps(parameters["omitSteps"])
+        for step in self.steps():
+            for argName in sorted(step[2].keys()):
+                parameterName = step[0] + "." + argName
+                step[2][argName] = parameters[parameterName]
+            if parameters["intermediateFiles"] != None:
+                if step in parameters["intermediateFiles"]:
+                    self.setIntermediateFile(step, step[3])
+                else:
+                    self.setIntermediateFile(step, None)
     
     def addStep(self, name, function, argDict, intermediateFile=None, ioArgNames={"input":"input", "output":"output"}):
         assert name not in [x[0] for x in self.steps], (name, steps)
@@ -31,6 +66,10 @@ class ToolChain(Detector):
     def setIntermediateFile(self, step, filename):
         for s in self.steps:
             if step == s[0]:
+                if filename == True:
+                    filename = s[3]
+                elif filename == False or filename == "None":
+                    filename = None
                 s[3] = filename
                 return
         assert False
@@ -62,10 +101,13 @@ class ToolChain(Detector):
         else:
             return None
     
-    def process(self, input, outDir, fromStep=None, toStep=None, omitSteps=None):
+    def process(self, input, outDir, parameters=None, model=None, fromStep=None, toStep=None, omitSteps=None):
         self.initVariables(source=input, xml=input, outDir=outDir)
         self.enterState(self.STATE_TOOLCHAIN, [x[0] for x in self.steps], fromStep, toStep, omitSteps)
+        parameters = self.getParameters(parameters, model)
+        self.applyParameters(parameters)
         # Run the tools
+        print >> sys.stderr, "Tool chain parameters:", Parameters.toString(parameters, skipDefaults=self.getDefaultParameters())
         savedOutput = None # Output from a previous step if "fromStep" is used
         for step in self.steps:
             if self.checkStep(step[0]):

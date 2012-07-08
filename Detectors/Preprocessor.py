@@ -16,33 +16,37 @@ from ToolChain import ToolChain
 import InteractionXML.DivideSets
 import Utils.ProteinNameSplitter as ProteinNameSplitter
 import Utils.FindHeads as FindHeads
-from Test.Pipeline import log
+#from Test.Pipeline import log
+import Utils.Stream as Stream
 
 class Preprocessor(ToolChain):
-    def __init__(self):
-        ToolChain.__init__(self)
-        # Steps
-        self.addStep("CONVERT", self.convert, {"dataSetNames":None, "corpusName":None} , "documents.xml")
-        self.addStep("SPLIT-SENTENCES", Tools.GeniaSentenceSplitter.makeSentences, {"debug":False, "postProcess":True}, "sentences.xml")
-        self.addStep("NER", Tools.BANNER.run, {"elementName":"entity", "processElement":"sentence", "debug":False, "splitNewlines":True}, "ner.xml")
-        self.addStep("PARSE", Tools.CharniakJohnsonParser.parse, {"parseName":"McCC", "requireEntities":False, "debug":False}, "parse.xml")
-        self.addStep("CONVERT-PARSE", Tools.StanfordParser.convertXML, {"parser":"McCC", "debug":False}, "converted-parse.xml")
-        self.addStep("SPLIT-NAMES", ProteinNameSplitter.mainFunc, {"parseName":"McCC"}, "split-names.xml")
-        self.addStep("FIND-HEADS", FindHeads.findHeads, {"parse":"McCC", "removeExisting":True}, "heads.xml")
-        self.addStep("DIVIDE-SETS", self.divideSets, {"outputStem":None, "saveCombined":True})
+    def getDefaultSteps(self):
+        steps = []
+        steps.append( ("CONVERT", self.convert, {"dataSetNames":None, "corpusName":None}, "documents.xml") )
+        steps.append( ("SPLIT-SENTENCES", Tools.GeniaSentenceSplitter.makeSentences, {"debug":False, "postProcess":True}, "sentences.xml") )
+        steps.append( ("NER", Tools.BANNER.run, {"elementName":"entity", "processElement":"sentence", "debug":False, "splitNewlines":True}, "ner.xml") )
+        steps.append( ("PARSE", Tools.CharniakJohnsonParser.parse, {"parseName":"McCC", "requireEntities":False, "debug":False}, "parse.xml") )
+        steps.append( ("CONVERT-PARSE", Tools.StanfordParser.convertXML, {"parser":"McCC", "debug":False}, "converted-parse.xml") )
+        steps.append( ("SPLIT-NAMES", ProteinNameSplitter.mainFunc, {"parseName":"McCC"}, "split-names.xml") )
+        steps.append( ("FIND-HEADS", FindHeads.findHeads, {"parse":"McCC", "removeExisting":True}, "heads.xml") )
+        steps.append( ("DIVIDE-SETS", self.divideSets, {"outputStem":None, "saveCombined":True}) )
+        return steps
     
-    def preprocess(self, source, corpusName, outDir, sourceDataSetNames=None, fromStep=None, toStep=None, omitSteps=None):
+    def process(self, source, corpusName, outDir, parameters=None, model=None, sourceDataSetNames=None, fromStep=None, toStep=None, omitSteps=None):
         # Initialize variables and save existing default values
         self.intermediateFileTag = corpusName
-        convertSetNames = self.stepArgs("CONVERT")["dataSetNames"]
-        convertCorpusName = self.stepArgs("CONVERT")["corpusName"]
-        self.stepArgs("CONVERT")["dataSetNames"] = sourceDataSetNames
-        self.stepArgs("CONVERT")["corpusName"] = corpusName
+        parameters = self.getParameters(parameters, model)
+        parameters["CONVERT.dataSetNames"] = sourceDataSetNames
+        parameters["CONVERT.corpusName"] = corpusName
+        #convertSetNames = self.stepArgs("CONVERT")["dataSetNames"]
+        #convertCorpusName = self.stepArgs("CONVERT")["corpusName"]
+        #self.stepArgs("CONVERT")["dataSetNames"] = sourceDataSetNames
+        #self.stepArgs("CONVERT")["corpusName"] = corpusName
         # Run the tool chain
-        xml = self.process(source, outDir, fromStep, toStep, omitSteps)
+        xml = ToolChain.process(self, source, outDir, parameters, None, fromStep, toStep, omitSteps)
         # Reset variables to saved default values
-        self.stepArgs("CONVERT")["dataSetNames"] = convertSetNames
-        self.stepArgs("CONVERT")["corpusName"] = convertCorpusName
+        #self.stepArgs("CONVERT")["dataSetNames"] = convertSetNames
+        #self.stepArgs("CONVERT")["corpusName"] = convertCorpusName
         return xml
         
     def convert(self, input, dataSetNames=None, corpusName=None, output=None):
@@ -91,6 +95,7 @@ if __name__=="__main__":
     optparser.add_option("-n", "--inputNames", default=None, dest="inputNames", help="")
     optparser.add_option("-c", "--corpus", default=None, dest="corpus", help="corpus name")
     optparser.add_option("-o", "--output", default=None, dest="output", help="output directory")
+    optparser.add_option("-p", "--parameters", default=None, dest="parameters", help="preprocessing parameters")
     optparser.add_option("-f", "--fromStep", default=None, dest="fromStep", help="")
     optparser.add_option("-t", "--toStep", default=None, dest="toStep", help="")
     optparser.add_option("--omitSteps", default=None, dest="omitSteps", help="")
@@ -106,9 +111,10 @@ if __name__=="__main__":
     if not os.path.exists(options.output): os.makedirs(options.output)
     os.chdir(options.output)
     if not options.noLog:
-        log(False, True, os.path.join(options.output, options.corpus + "-log.txt"))
+        Stream.openLog(os.path.join(options.output, options.corpus + "-log.txt"))
+        #log(False, True, os.path.join(options.output, options.corpus + "-log.txt"))
     preprocessor = Preprocessor()
     preprocessor.setArgForAllSteps("debug", options.debug)
     preprocessor.stepArgs("PARSE")["requireEntities"] = options.requireEntities
-    preprocessor.preprocess(options.input, options.corpus, options.output, options.inputNames, fromStep=options.fromStep, toStep=options.toStep, omitSteps=options.omitSteps)
+    preprocessor.preprocess(options.input, options.corpus, options.output, options.parameters, None, options.inputNames, fromStep=options.fromStep, toStep=options.toStep, omitSteps=options.omitSteps)
     os.chdir(cwd)
