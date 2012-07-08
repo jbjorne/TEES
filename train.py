@@ -10,19 +10,21 @@ import atexit
 import types
 from Core.Model import Model
 from Detectors.StepSelector import StepSelector
+from Detectors.Preprocessor import Preprocessor
 
 def train(output, task=None, detector=None, 
           inputFiles={"train":None, "devel":None, "test":None}, 
           models={"devel":None, "test":None}, parse=None,
-          processUnmerging=True, processModifiers=True, isSingleStage=False,
+          processUnmerging=None, processModifiers=None, isSingleStage=False, 
+          bioNLPSTParams=None, preprocessorParams=None,
           exampleStyles={"examples":None, "trigger":None, "edge":None, "unmerging":None, "modifiers":None},
           classifierParams={"examples":None, "trigger":None, "recall":None, "edge":None, "unmerging":None, "modifiers":None}, 
           doFullGrid=False, deleteOutput=False, copyFrom=None, log=True, step=None, omitSteps=None, debug=False, connection=None):
     # Initialize working directory
     workdir(output, deleteOutput, copyFrom, log)
     # Get task specific parameters
-    detector, processUnmerging, processModifiers, isSingleStage, exampleStyles, classifierParams = getTaskSettings(task, 
-        detector, processUnmerging, processModifiers, isSingleStage, inputFiles, exampleStyles, classifierParams)   
+    detector, processUnmerging, processModifiers, isSingleStage, bioNLPSTParams, preprocessorParams, exampleStyles, classifierParams = getTaskSettings(task, 
+        detector, processUnmerging, processModifiers, isSingleStage, bioNLPSTParams, preprocessorParams, inputFiles, exampleStyles, classifierParams)   
     # Define processing steps
     selector, detectorSteps, omitDetectorSteps = getSteps(step, omitSteps, ["TRAIN", "DEVEL", "EMPTY", "TEST"])
     
@@ -30,7 +32,9 @@ def train(output, task=None, detector=None,
     detector, detectorName = getDetector(detector)
     detector = detector() # initialize object
     detector.debug = debug
-    detector.stWriteScores = True # write confidence scores into additional st-format files
+    detector.bioNLPSTParams = detector.getBioNLPSharedTaskParams(bioNLPSTParams)
+    #detector.useBioNLPSTFormat = useBioNLPSTFormat # classify-output and grid evaluation in ST-format
+    #detector.stWriteScores = True # write confidence scores into additional st-format files
     detector.setConnection(getConnection(connection)).debug = debug
     
     # Train
@@ -54,6 +58,9 @@ def train(output, task=None, detector=None,
             if os.path.exists(model):
                 model = Model(model, "a")
                 model.addStr("detector", detectorName)
+                if preprocessorParams != None:
+                    preprocessor = Preprocessor()
+                    model.addStr("preprocessorParams", Parameters.toString(preprocessor.getParameters(preprocessorParams), skipDefaults=preprocessor.getDefaultParameters()))
                 model.save()
                 model.close()
     if selector.check("DEVEL"):
@@ -75,7 +82,7 @@ def train(output, task=None, detector=None,
         if inputFiles["test"] == None or not os.path.exists(inputFiles["test"]):
             print >> sys.stderr, "Skipping, test file", inputFiles["test"], "does not exist"
         else:
-            detector.stWriteScores = False # the evaluation server doesn't like additional files
+            detector.bioNLPSTParams["scores"] = False # the evaluation server doesn't like additional files
             detector.classify(inputFiles["test"], models["test"], "classification-test/test-events", fromStep=detectorSteps["TEST"], workDir="classification-test")
             Utils.STFormat.Compare.compare("classification-test/test-events.tar.gz", "classification-devel/devel-events.tar.gz", "a2")
 
@@ -168,7 +175,10 @@ def workdir(path, deleteIfExists=True, copyFrom=None, log=True):
     return path
 
 def getTaskSettings(task, detector, processUnmerging, processModifiers, isSingleStage,
+                    bioNLPSTParams, preprocessorParams, 
                     inputFiles, exampleStyles, classifierParameters):
+    processUnmerging = getDefinedBool(processUnmerging)
+    processModifiers = getDefinedBool(processModifiers)
     if task != None:
         print >> sys.stderr, "Determining training settings for task", task
         assert task in ["GE09", "GE09.1", "GE09.2", "GE", "GE.1", "GE.2", "EPI", "ID", "BB", "BI", "CO", "REL", "REN", "DDI"]
@@ -184,9 +194,12 @@ def getTaskSettings(task, detector, processUnmerging, processModifiers, isSingle
         #if inputFiles["devel"] == None: inputFiles["devel"] = dataPath + task + "/" + task + "-devel.xml"
         #if inputFiles["train"] == None: inputFiles["train"] = dataPath + task + "/" + task + "-train.xml"
         #if inputFiles["test"] == None: inputFiles["test"] = dataPath + task + "/" + task + "-test.xml"
-        if inputFiles["devel"] == None: inputFiles["devel"] = os.path.join(dataPath, task + "-devel.xml")
-        if inputFiles["train"] == None: inputFiles["train"] = os.path.join(dataPath, task + "-train.xml")
-        if inputFiles["test"] == None: inputFiles["test"] = os.path.join(dataPath, task + "-test.xml")
+        if inputFiles["devel"] == None and inputFiles["devel"] != "None": 
+            inputFiles["devel"] = os.path.join(dataPath, task + "-devel.xml")
+        if inputFiles["train"] == None and inputFiles["train"] != "None": 
+            inputFiles["train"] = os.path.join(dataPath, task + "-train.xml")
+        if inputFiles["test"] == None and inputFiles["test"] != "None": 
+            inputFiles["test"] = os.path.join(dataPath, task + "-test.xml")
         
         # Example generation parameters
         if detector == None:
@@ -197,6 +210,27 @@ def getTaskSettings(task, detector, processUnmerging, processModifiers, isSingle
                 detector = "Detectors.EdgeDetector"
                 isSingleStage = True
             print >> sys.stderr, "Detector undefined, using default '" + detector + "' for task", fullTaskId
+        if bioNLPSTParams == None and task != "DDI":
+            bioNLPSTParams = "convert:evaluate:scores"
+        if preprocessorParams == None:
+            preprocessorParams = ["intermediateFiles=FIND-HEADS"]
+            if task in ["REN", "BI", "DDI"]:
+                preprocessorParams += ["omitSteps=NER,DIVIDE-SETS"]
+            else:
+                preprocessorParams += ["omitSteps=DIVIDE-SETS"]
+                preprocessorParams += ["PARSE.requireEntities"] # parse only sentences where BANNER found an entity
+            preprocessorParams = ":".join(preprocessorParams)
+            print >> sys.stderr, "Preprocessor parameters undefined, using default '" + preprocessorParams + "' for task", fullTaskId
+        if processUnmerging == None and not isSingleStage:
+            processUnmerging = True
+            if task in ["REL", "BI"]:
+                processUnmerging = False
+            print >> sys.stderr, "Unmerging undefined, using default", processUnmerging, "for task", fullTaskId
+        if processModifiers == None:
+            processModifiers = False
+            if task in ["GE", "EPI", "ID"]: 
+                processModifiers = True
+            print >> sys.stderr, "Modifier prediction undefined, using default", processModifiers, " for task", fullTaskId
         if exampleStyles["examples"] == None and isSingleStage:
             if task == "REN":
                 exampleStyles["examples"] = "trigger_features:typed:no_linear:entities:noMasking:maxFeatures:bacteria_renaming"
@@ -256,7 +290,22 @@ def getTaskSettings(task, detector, processUnmerging, processModifiers, isSingle
             elif task == "DDI":
                 classifierParameters["examples"] = "5000,10000,20000,25000,28000,50000,60000,65000,80000,100000,150000"
     
-    return detector, processUnmerging, processModifiers, isSingleStage, exampleStyles, classifierParameters
+    return detector, processUnmerging, processModifiers, isSingleStage, bioNLPSTParams, preprocessorParams, exampleStyles, classifierParameters
+
+def getDefinedBool(string):
+    assert string in (None, "True", "False")
+    if string == None:
+        return None
+    elif string == "True":
+        return True
+    else:
+        return False
+
+def getDefinedBoolOption(option, opt, value, parser):
+    if value == "":
+        return True
+    else:
+        return getDefinedBool(value)
 
 if __name__=="__main__":
     # Import Psyco if available
@@ -291,13 +340,16 @@ if __name__=="__main__":
     group = OptionGroup(optparser, "Detector to train", "")
     group.add_option("--detector", default=None, dest="detector", help="the detector class to use")
     group.add_option("--singleStage", default=False, action="store_true", dest="singleStage", help="'detector' is a single stage detector")
+    group.add_option("--noBioNLPSTFormat", default=False, action="store_true", dest="noBioNLPSTFormat", help="Do not output BioNLP Shared Task format version (a1, a2, txt)")
+    group.add_option("--bioNLPSTParams", default=None, dest="bioNLPSTParams", help="")
+    group.add_option("--preprocessorParams", default=None, dest="preprocessorParams", help="")
     optparser.add_option_group(group)
     # Example builder parameters
     event = OptionGroup(optparser, "Event Detector Options (used when not using '--singleStage')", "")
     single = OptionGroup(optparser, "Single Stage Detector Options (used when using '--singleStage')", "")
     single.add_option("--exampleStyle", default=None, dest="exampleStyle", help="Single-stage detector example style")
-    event.add_option("-u", "--unmerging", default=False, action="store_true", dest="unmerging", help="SVM unmerging")
-    event.add_option("-m", "--modifiers", default=False, action="store_true", dest="modifiers", help="Train model for modifier detection")
+    event.add_option("-u", "--unmerging", default=None, action="callback", callback=getDefinedBoolOption, dest="unmerging", help="SVM unmerging")
+    event.add_option("-m", "--modifiers", default=None, action="callback", callback=getDefinedBoolOption, dest="modifiers", help="Train model for modifier detection")
     event.add_option("--triggerStyle", default=None, dest="triggerStyle", help="Event detector trigger example style")
     event.add_option("--edgeStyle", default=None, dest="edgeStyle", help="Event detector edge example style")
     event.add_option("--unmergingStyle", default=None, dest="unmergingStyle", help="Event detector unmerging example style")
@@ -327,7 +379,8 @@ if __name__=="__main__":
     train(options.output, options.task, options.detector, 
           inputFiles={"devel":options.develFile, "train":options.trainFile, "test":options.testFile},
           models={"devel":options.develModel, "test":options.testModel}, parse=options.parse,
-          processUnmerging=options.unmerging, processModifiers=options.modifiers, isSingleStage=options.singleStage,
+          processUnmerging=options.unmerging, processModifiers=options.modifiers, isSingleStage=options.singleStage, 
+          bioNLPSTParams=options.bioNLPSTParams, preprocessorParams=options.preprocessorParams,
           exampleStyles={"examples":options.exampleStyle, "trigger":options.triggerStyle, "edge":options.edgeStyle, "unmerging":options.unmergingStyle, "modifiers":options.modifierStyle},
           classifierParams={"examples":options.exampleParams, "trigger":options.triggerParams, "recall":options.recallAdjustParams, "edge":options.edgeParams, "unmerging":options.unmergingParams, "modifiers":options.modifierParams}, 
           doFullGrid=options.fullGrid, deleteOutput=options.clearAll, copyFrom=options.copyFrom, 
