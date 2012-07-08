@@ -19,9 +19,9 @@ def getCounts(documents):
                 counts["event("+event.type+")"] += 1
                 counts["event"] += 1
                 if event.speculation != None:
-                    counts["task3(spec)"] += 1
+                    counts["modifier(spec)"] += 1
                 if event.negation != None:
-                    counts["task3(neg)"] += 1
+                    counts["modifier(neg)"] += 1
         if doc.relations != None:
             for relation in doc.relations: 
                 counts["relation("+relation.type+")"] += 1
@@ -33,6 +33,7 @@ def getCounts(documents):
     return counts
 
 def compare(a, b, a2Tag="a2"):
+    print >> sys.stderr, "Comparing BioNLP Shared Task format document sets"
     print "Loading set A:", a
     docsA = loadSet(a, a2Tag=a2Tag)
     print "Loading set B:", b
