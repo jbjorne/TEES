@@ -1,5 +1,6 @@
 import sys, os
 from Utils.InteractionXML.DeleteElements import getEmptyCorpus
+import Utils.InteractionXML.Catenate as Catenate
 import Utils.Stream as Stream
 import Utils.Settings as Settings
 import Utils.Parameters as Parameters
@@ -12,14 +13,18 @@ from Core.Model import Model
 from Detectors.StepSelector import StepSelector
 from Detectors.Preprocessor import Preprocessor
 
-def train(output, task=None, detector=None, 
-          inputFiles={"train":None, "devel":None, "test":None}, 
-          models={"devel":None, "test":None}, parse=None,
+def train(output, task=None, detector=None, inputFiles=None, models=None, parse=None,
           processUnmerging=None, processModifiers=None, isSingleStage=False, 
-          bioNLPSTParams=None, preprocessorParams=None,
-          exampleStyles={"examples":None, "trigger":None, "edge":None, "unmerging":None, "modifiers":None},
-          classifierParams={"examples":None, "trigger":None, "recall":None, "edge":None, "unmerging":None, "modifiers":None}, 
-          doFullGrid=False, deleteOutput=False, copyFrom=None, log=True, step=None, omitSteps=None, debug=False, connection=None):
+          bioNLPSTParams=None, preprocessorParams=None, exampleStyles=None, 
+          classifierParams=None,  doFullGrid=False, deleteOutput=False, copyFrom=None, 
+          log=True, step=None, omitSteps=None, debug=False, connection=None):
+    # Insert default arguments where needed
+    inputFiles = Parameters.get(inputFiles, {"train":None, "devel":None, "test":None})
+    models = Parameters.get(models, {"devel":None, "test":None})
+    exampleStyles = Parameters.get(exampleStyles, {"examples":None, "trigger":None, "edge":None, "unmerging":None, "modifiers":None})
+    classifierParams = Parameters.get(classifierParams, {"examples":None, "trigger":None, "recall":None, "edge":None, "unmerging":None, "modifiers":None})
+    processUnmerging = getDefinedBool(processUnmerging)
+    processModifiers = getDefinedBool(processModifiers)
     # Initialize working directory
     workdir(output, deleteOutput, copyFrom, log)
     # Get task specific parameters
@@ -67,7 +72,7 @@ def train(output, task=None, detector=None,
         print >> sys.stderr, "----------------------------------------------------"
         print >> sys.stderr, "------------ Check devel classification ------------"
         print >> sys.stderr, "----------------------------------------------------"
-        detector.classify(inputFiles["devel"], models["devel"], "classification-devel/devel-events", fromStep=detectorSteps["DEVEL"], workDir="classification-devel")
+        detector.classify(inputFiles["devel"], models["devel"], "classification-devel/devel-events", goldData=inputFiles["devel"], fromStep=detectorSteps["DEVEL"], workDir="classification-devel")
     if selector.check("EMPTY"):
         # By passing an emptied devel set through the prediction system, we can check that we get the same predictions
         # as in the DEVEL step, ensuring the model does not use leaked information.
@@ -177,8 +182,6 @@ def workdir(path, deleteIfExists=True, copyFrom=None, log=True):
 def getTaskSettings(task, detector, processUnmerging, processModifiers, isSingleStage,
                     bioNLPSTParams, preprocessorParams, 
                     inputFiles, exampleStyles, classifierParameters):
-    processUnmerging = getDefinedBool(processUnmerging)
-    processModifiers = getDefinedBool(processModifiers)
     if task != None:
         print >> sys.stderr, "Determining training settings for task", task
         assert task in ["GE09", "GE09.1", "GE09.2", "GE", "GE.1", "GE.2", "EPI", "ID", "BB", "BI", "CO", "REL", "REN", "DDI"]
@@ -196,8 +199,14 @@ def getTaskSettings(task, detector, processUnmerging, processModifiers, isSingle
         #if inputFiles["test"] == None: inputFiles["test"] = dataPath + task + "/" + task + "-test.xml"
         if inputFiles["devel"] == None and inputFiles["devel"] != "None": 
             inputFiles["devel"] = os.path.join(dataPath, task + "-devel.xml")
-        if inputFiles["train"] == None and inputFiles["train"] != "None": 
-            inputFiles["train"] = os.path.join(dataPath, task + "-train.xml")
+        if inputFiles["train"] == None and inputFiles["train"] != "None":
+            if task == "ID": # add GE-task data to the ID training set
+                Catenate.catenate([os.path.join(dataPath, "ID-train.xml"),
+                                   os.path.join(dataPath, "GE-devel.xml"),
+                                   os.path.join(dataPath, "GE-train.xml")], 
+                                  "training/ID-train-and-GE-devel-and-train.xml.gz", fast=True)
+            else:
+                inputFiles["train"] = os.path.join(dataPath, task + "-train.xml")
         if inputFiles["test"] == None and inputFiles["test"] != "None": 
             inputFiles["test"] = os.path.join(dataPath, task + "-test.xml")
         
@@ -268,19 +277,6 @@ def getTaskSettings(task, detector, processUnmerging, processModifiers, isSingle
             elif task == "CO":
                 options.triggerExampleBuilder = "PhraseTriggerExampleBuilder"
         # Classifier parameters
-        if classifierParameters["edge"] == None and not isSingleStage:
-            print >> sys.stderr, "Classifier parameters for edge examples undefined, using default for task", fullTaskId
-            classifierParameters["edge"] = "5000,7500,10000,20000,25000,27500,28000,29000,30000,35000,40000,50000,60000,65000"
-            if task in ["REL", "CO"]:
-                classifierParameters["edge"] = "10,100,1000,5000,7500,10000,20000,25000,28000,50000,60000,65000,100000,500000,1000000"
-        if classifierParameters["recall"] == None and not isSingleStage:
-            print >> sys.stderr, "Recall adjust parameter undefined, using default for task", fullTaskId
-            classifierParameters["recall"] = "0.5,0.6,0.65,0.7,0.85,1.0,1.1,1.2"
-            if task == "CO":
-                classifierParameters["recall"] = "0.8,0.9,0.95,1.0"
-        if classifierParameters["trigger"] == None and not isSingleStage:
-            print >> sys.stderr, "Classifier parameters for trigger examples undefined, using default for task", fullTaskId
-            classifierParameters["trigger"] = "1000,5000,10000,20000,50000,80000,100000,150000,180000,200000,250000,300000,350000,500000,1000000"
         if classifierParameters["examples"] == None and isSingleStage:
             print >> sys.stderr, "Classifier parameters for single-stage examples undefined, using default for task", fullTaskId
             if task == "REN":
@@ -289,6 +285,25 @@ def getTaskSettings(task, detector, processUnmerging, processModifiers, isSingle
                 classifierParameters["examples"] = "10,100,1000,2500,5000,7500,10000,20000,25000,28000,50000,60000,65000,80000,100000,150000"
             elif task == "DDI":
                 classifierParameters["examples"] = "5000,10000,20000,25000,28000,50000,60000,65000,80000,100000,150000"
+        if classifierParameters["trigger"] == None and not isSingleStage:
+            print >> sys.stderr, "Classifier parameters for trigger examples undefined, using default for task", fullTaskId
+            classifierParameters["trigger"] = "1000,5000,10000,20000,50000,80000,100000,150000,180000,200000,250000,300000,350000,500000,1000000"
+        if classifierParameters["recall"] == None and not isSingleStage:
+            print >> sys.stderr, "Recall adjust parameter undefined, using default for task", fullTaskId
+            classifierParameters["recall"] = "0.5,0.6,0.65,0.7,0.85,1.0,1.1,1.2"
+            if task == "CO":
+                classifierParameters["recall"] = "0.8,0.9,0.95,1.0"
+        if classifierParameters["edge"] == None and not isSingleStage:
+            print >> sys.stderr, "Classifier parameters for edge examples undefined, using default for task", fullTaskId
+            classifierParameters["edge"] = "5000,7500,10000,20000,25000,27500,28000,29000,30000,35000,40000,50000,60000,65000"
+            if task in ["REL", "CO"]:
+                classifierParameters["edge"] = "10,100,1000,5000,7500,10000,20000,25000,28000,50000,60000,65000,100000,500000,1000000"
+        if classifierParameters["unmerging"] == None and not isSingleStage:
+            print >> sys.stderr, "Classifier parameters for unmerging examples undefined, using default for task", fullTaskId
+            classifierParameters["unmerging"] = "1,10,100,500,1000,1500,2500,5000,10000,20000,50000,80000,100000"
+        if classifierParameters["modifiers"] == None and not isSingleStage:
+            print >> sys.stderr, "Classifier parameters for modifier examples undefined, using default for task", fullTaskId
+            classifierParameters["modifiers"] = "5000,10000,20000,50000,100000"
     
     return detector, processUnmerging, processModifiers, isSingleStage, bioNLPSTParams, preprocessorParams, exampleStyles, classifierParameters
 
