@@ -2,13 +2,16 @@ import sys, os, shutil, types
 import subprocess
 import getpass
 import time
+import atexit, signal
 sys.path.append(os.path.normpath(os.path.abspath(os.path.dirname(__file__))+"/../.."))
 from Utils.Timer import Timer
 import Utils.Settings as Settings
 import tempfile
 
-class UnixConnection:    
-    def __init__(self, account=None, workDir=None, remoteSettingsPath=None, memory=4194304, cores=1):
+class UnixConnection:
+    programGroupSet = False
+    
+    def __init__(self, account=None, workDir=None, remoteSettingsPath=None, memory=4194304, cores=1, jobLimit=-1, killGroup=True):
         self.account = account    
         self.memory = memory
         self.cores = cores
@@ -28,17 +31,20 @@ class UnixConnection:
         self.remoteSettingsPath = remoteSettingsPath
         self.cachedRemoteSettings = None
         self._logs = {}
+        self.jobLimit = jobLimit
         self.debug = False
         self.resubmitOnlyFinished = True
+        
+        # Make sure local processes are killed on exit
+        if self.account == None and killGroup and not UnixConnection.programGroupSet:
+            os.setpgrp() # All child processes from subprocess should be in this group
+            atexit.register(os.killpg, 0, signal.SIGKILL)
+            UnixConnection.programGroupSet = True
+            #if jobLimit == None: # limit parallel processes on a local account
+            #    self.jobLimit = 1
     
     def isLocal(self):
         return self.account == None
-    
-    def getUsername(self):
-        if self.account == None: # local machine
-            return getpass.getuser()
-        else:
-            return self.account.split("@")[0]
     
     def getRemotePath(self, path, addAccount=False):
         if self.workDir != None: # a working directory has been set
@@ -302,6 +308,8 @@ class UnixConnection:
         """
         Queue a command.
         """
+        if self.jobLimit != -1:
+            self.waitForJobCount(self.jobLimit)
         script = self._getScript(script)
         logFiles = [None, None]
         if type(stdout) in types.StringTypes:
@@ -351,11 +359,28 @@ class UnixConnection:
         if self.account != None:
             return self.account.split("@")[0]
         else:
-            return os.getlogin()
+            return getpass.getuser() #os.getlogin()
             
     def getNumJobs(self, includeQueued=True):
-        stdoutLines = self.run("ps -u " + self.getUserName())
-        return len(stdoutLines)
+        #stdoutLines = self.run("ps -u " + self.getUserName())
+        stdoutLines = self.run("ps -u " + self.getUserName() + " -o ppid")
+        groupId = str(os.getpgrp())
+        numProcesses = 0
+        for line in stdoutLines:
+            if line.strip() == groupId:
+                numProcesses += 1
+        return numProcesses
+    
+    def waitForJobCount(self, targetCount=0, pollIntervalSeconds=60, verbose=True):
+        if targetCount == -1:
+            return
+        numJobs = self.getNumJobs()
+        if numJobs <= targetCount:
+            return
+        waitTimer = Timer()
+        while numJobs > targetCount:
+            print >> sys.stderr, "\rWaiting for " + str(numJobs) + " on " + accountName + " (limit=" + str(targetCount) + ")", waitTimer.elapsedTimeToString() + sleepString,
+            numJobs = self.getNumJobs()
     
     def waitForJob(self, job, pollIntervalSeconds=10):
         while self.getJobStatus(job) not in ["FINISHED", "FAILED"]:
