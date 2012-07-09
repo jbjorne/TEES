@@ -3,9 +3,9 @@ import filecmp
 import zipfile
 import tempfile
 
+NOTHING = object()
+
 class Model():
-    NOTHING = object()
-    
     def __init__(self, path, mode="r", verbose=True, compression=zipfile.ZIP_DEFLATED):
         self.members = {} # path_inside_model:path_to_cache_file (path_to_cache_file == None for members not yet requested)
         self.valueFileName = "TEES_MODEL_VALUES.tsv"
@@ -125,9 +125,9 @@ class Model():
     def hasMember(self, name):
         return name in self.members
     
-    def get(self, name, addIfNotExist=False, defaultIfNotExist=Model.NOTHING):
+    def get(self, name, addIfNotExist=False, defaultIfNotExist=NOTHING):
         if name not in self.members:
-            if defaultIfNotExist != Model.NOTHING:
+            if defaultIfNotExist != NOTHING:
                 return defaultIfNotExist
             elif addIfNotExist:
                 self.add(name)
