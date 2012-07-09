@@ -8,7 +8,8 @@ import Utils.Download
 from Utils.Connection.Unix import getConnection
 from Tools.Preprocessor import Preprocessor
 
-def classify(input, model, output, workDir=None, step=None, omitSteps=None, detector=None, corpusName="TEES", 
+def classify(input, model, output, workDir=None, step=None, omitSteps=None, 
+             goldInput=None, detector=None, corpusName="TEES", 
              debug=False, writeScores=True, clear=False):
     # Determine if a predefined model should be used
     model = getModel(model)
@@ -17,7 +18,7 @@ def classify(input, model, output, workDir=None, step=None, omitSteps=None, dete
     # Define processing steps
     selector, detectorSteps, omitDetectorSteps = getSteps(step, omitSteps, ["PREPROCESS", "CLASSIFY"])
     if not preprocess:
-        selector.omitStep("PREPROCESS")
+        selector.omitSteps("PREPROCESS")
     # Initialize working directory
     if workDir != None: # use a permanent work directory
         workdir(workDir, clear)
@@ -26,11 +27,9 @@ def classify(input, model, output, workDir=None, step=None, omitSteps=None, dete
     classifyInput = input
     if selector.check("PREPROCESS"):
         preprocessor = Preprocessor()
-        preprocessor.debug = debug
-        preprocessor.source = input # This has to be defined already here, needs to be fixed later
-        preprocessor.compressIntermediateFiles = True # save space
-        preprocessor.intermediateFilesAtSource = False
-        preprocessor.requireEntitiesForParsing = True # parse only sentences which contain named entities
+        #preprocessor.debug = debug
+        #preprocessor.source = input # This has to be defined already here, needs to be fixed later
+        #preprocessor.requireEntitiesForParsing = True # parse only sentences which contain named entities
         if os.path.exists(preprocessor.getOutputPath("FIND-HEADS")):
             print >> sys.stderr, "Preprocessor output", preprocessor.getOutputPath("FIND-HEADS"), "exists, skipping preprocessing."
             classifyInput = preprocessor.getOutputPath("FIND-HEADS")
@@ -38,15 +37,15 @@ def classify(input, model, output, workDir=None, step=None, omitSteps=None, dete
             print >> sys.stderr, "Preprocessor output", preprocessor.getOutputPath("FIND-HEADS"), "does not exist"
             print >> sys.stderr, "------------ Preprocessing ------------"
             # Remove some of the unnecessary intermediate files
-            preprocessor.setIntermediateFiles({"Convert":None, "SPLIT-SENTENCES":None, "PARSE":None, "CONVERT-PARSE":None, "SPLIT-NAMES":None})
+            #preprocessor.setIntermediateFiles({"Convert":None, "SPLIT-SENTENCES":None, "PARSE":None, "CONVERT-PARSE":None, "SPLIT-NAMES":None})
             # Process input into interaction XML
-            classifyInput = preprocessor.process(input, corpusName, output, [], fromStep=detectorSteps["PREPROCESS"], toStep=None, omitSteps=omitDetectorSteps["PREPROCESS"] + ["DIVIDE-SETS"])
+            classifyInput = preprocessor.process(input, corpusName, output, None, model, [], fromStep=detectorSteps["PREPROCESS"], toStep=None, omitSteps=omitDetectorSteps["PREPROCESS"])
     
     if selector.check("CLASSIFY"):
         detector = getDetector(detector, model)[0]() # initialize detector object
         detector.debug = debug
         detector.stWriteScores = writeScores # write confidence scores into additional st-format files
-        detector.classify(classifyInput, model, output, fromStep=detectorSteps["CLASSIFY"], omitSteps=omitDetectorSteps["CLASSIFY"], workDir=workDir)
+        detector.classify(classifyInput, model, output, goldData=goldInput, fromStep=detectorSteps["CLASSIFY"], omitSteps=omitDetectorSteps["CLASSIFY"], workDir=workDir)
 
 def getModel(model):
     if not os.path.exists(model):
@@ -136,6 +135,7 @@ if __name__=="__main__":
     optparser.add_option("-d", "--detector", default=None, dest="detector", help="")
     optparser.add_option("-c", "--connection", default=None, dest="connection", help="")
     optparser.add_option("-n", "--corpusName", default="TEES", dest="corpusName", help="")
+    optparser.add_option("-g", "--gold", default=None, dest="gold", help="annotated version of the input file (optional)")
     # Debugging and process control
     optparser.add_option("--step", default=None, dest="step", help="")
     optparser.add_option("--omitSteps", default=None, dest="omitSteps", help="")
@@ -146,4 +146,4 @@ if __name__=="__main__":
     
     assert options.output != None
     classify(options.input, options.model, options.output, options.workdir, options.step, options.omitSteps, 
-             options.detector, options.corpusName, options.debug, options.writeScores, options.clearAll)
+             options.gold, options.detector, options.corpusName, options.debug, options.writeScores, options.clearAll)
