@@ -151,7 +151,10 @@ class Detector():
     
     def getBioNLPSharedTaskParams(self, parameters=None, model=None):
         if parameters == None:
-            parameters = model.get("BioNLPSTParams", defaultIfNotExist=None)
+            if model != None:
+                parameters = model.get("BioNLPSTParams", defaultIfNotExist=None)
+            else:
+                parameters = {}
         return Parameters.get(parameters, valueListKey=["convert", "evaluate", "scores"])
     
     def buildExamples(self, model, datas, outputs, golds=[], exampleStyle=None, saveIdsToModel=False, parse=None):
