@@ -13,7 +13,7 @@ examples.
 import sys, os, itertools
 import Split
 import types
-from IdSet import IdSet
+#from IdSet import IdSet
 #thisPath = os.path.dirname(os.path.abspath(__file__))
 #sys.path.append(os.path.abspath(os.path.join(thisPath,"..")))
 #import Utils.InteractionXML.IDUtils as IDUtils
@@ -282,7 +282,7 @@ def divideExampleFile(exampleFileName, division, outputDir):
 #    f.close()
 
 @gen2iterable        
-def loadPredictions(predictionsFile, recallAdjust=None, classRanges=None):
+def loadPredictions(predictionsFile, recallAdjust=None, classRanges=None, threshold=None):
     if predictionsFile.endswith(".gz"):
         f = gzip.open(predictionsFile,"rt")
     else:
@@ -316,7 +316,7 @@ def loadPredictions(predictionsFile, recallAdjust=None, classRanges=None):
                     split = float(split)
                 pred.append(split)
             # Recall adjust
-            if recallAdjust != None and recallAdjust != 1.0:
+            if threshold != None or (recallAdjust != None and recallAdjust != 1.0):
                 if classRanges == None:
                     pred[1] = RecallAdjust.scaleVal(pred[1], recallAdjust)
                 else: # SVM multiclass two class "binary" classification 
