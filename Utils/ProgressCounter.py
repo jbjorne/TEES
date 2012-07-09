@@ -1,7 +1,7 @@
 import sys, time
 
 class ProgressCounter:
-    def __init__(self, total, id="UNKNOWN", step=5.0):
+    def __init__(self, total=None, id="UNKNOWN", step=None):
         self.total = total
         if self.total != None:
             self.total = float(self.total)
@@ -11,6 +11,8 @@ class ProgressCounter:
         self.id = id
         self.prevUpdateString = "None"
         self.step = step
+        if total != None and step == None:
+            self.step = 5.0 # If the total is known, update at 5 percentage point intervals
         self.showMilliseconds = False
         
         self.prevPrintTime = 0
@@ -45,14 +47,13 @@ class ProgressCounter:
             self.prevUpdateString = string + str(self.current)
         
         currentTime = time.time()
-        timeStepExceeded = False
-        if currentTime - self.prevPrintTime > self.timeStep:
-            timeStepExceeded = True
+        timeStepExceeded = currentTime - self.prevPrintTime > self.timeStep
+        stepExceeded = (self.step != None) and (self.progress - self.prevProgress >= self.step)
         
         self.prevUpdateString += " (" + self.getElapsedTimeString(currentTime) + ")"
         
         if self.total != None:
-            if self.progress >= 100.0 or self.progress - self.prevProgress >= self.step or timeStepExceeded:
+            if self.progress >= 100.0 or stepExceeded or timeStepExceeded:
                 print >> sys.stderr, "\r" + self.prevUpdateString + max(0, self.prevUpdateStringLen-len(self.prevUpdateString)) * " ",
                 self.prevProgress = self.progress
                 self.prevPrintTime = currentTime
@@ -60,7 +61,7 @@ class ProgressCounter:
             if self.progress >= 100.0:
                 print >> sys.stderr
         else:
-            if self.progress >= self.step:
+            if stepExceeded or timeStepExceeded:
                 self.progress = 0
                 print >> sys.stderr, "\r" + self.prevUpdateString + max(0, self.prevUpdateStringLen-len(self.prevUpdateString)) * " ",
                 self.prevProgress = self.progress
