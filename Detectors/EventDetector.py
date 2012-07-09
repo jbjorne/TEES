@@ -281,7 +281,7 @@ class EventDetector(Detector):
                                                           self.model.getStr("unmerging-classifier-parameter"))
                 self.combinedModel.save()
 
-    def classify(self, data, model, output, parse=None, task=None, fromStep=None, toStep=None, omitSteps=None, workDir=None):
+    def classify(self, data, model, output, parse=None, task=None, goldData=None, fromStep=None, toStep=None, omitSteps=None, workDir=None):
         BINARY_RECALL_MODE = False # TODO: make a parameter
         xml = None
         self.initVariables(classifyData=data, model=model, xml=None, task=task, parse=parse)
@@ -294,33 +294,33 @@ class EventDetector(Detector):
         self.model = self.openModel(self.model, "r")
         stParams = self.getBioNLPSharedTaskParams(self.bioNLPSTParams, model)
         if self.checkStep("TRIGGERS"):
-            xml = self.triggerDetector.classifyToXML(self.classifyData, self.model, None, workOutputTag, parse=self.parse, recallAdjust=float(self.getStr("recallAdjustParameter", self.model)))
+            xml = self.triggerDetector.classifyToXML(self.classifyData, self.model, None, workOutputTag, goldData=goldData, parse=self.parse, recallAdjust=float(self.getStr("recallAdjustParameter", self.model)))
         if self.checkStep("EDGES"):
             xml = self.getWorkFile(xml, workOutputTag + "trigger-pred.xml.gz")
-            xml = self.edgeDetector.classifyToXML(xml, self.model, None, workOutputTag, parse=self.parse)
+            xml = self.edgeDetector.classifyToXML(xml, self.model, None, workOutputTag, goldData=goldData, parse=self.parse)
             assert xml != None
             if self.parse == None:
                 edgeParse = self.getStr(self.edgeDetector.tag+"parse", self.model)
             else:
                 edgeParse = self.parse
             #EvaluateInteractionXML.run(self.edgeDetector.evaluator, xml, self.classifyData, edgeParse)
-            EvaluateInteractionXML.run(self.edgeDetector.evaluator, xml, None, edgeParse)
+            EvaluateInteractionXML.run(self.edgeDetector.evaluator, xml, goldData, edgeParse)
         if self.checkStep("UNMERGING"):
             if self.model.hasMember("unmerging-classifier-model"):
                 #xml = self.getWorkFile(xml, output + "-edge-pred.xml.gz")
                 # To avoid running out of memory, always use file on disk
                 xml = self.getWorkFile(None, workOutputTag + "edge-pred.xml.gz")
-                goldData = None
-                if type(self.classifyData) in types.StringTypes:
-                    if os.path.exists(self.classifyData.replace("-nodup", "")):
-                        goldData = self.classifyData.replace("-nodup", "")
+                #goldData = None
+                #if type(self.classifyData) in types.StringTypes:
+                #    if os.path.exists(self.classifyData.replace("-nodup", "")):
+                #        goldData = self.classifyData.replace("-nodup", "")
                 xml = self.unmergingDetector.classifyToXML(xml, self.model, None, workOutputTag, goldData=goldData, parse=self.parse)
             else:
                 print >> sys.stderr, "No model for unmerging"
         if self.checkStep("MODIFIERS"):
             if self.model.hasMember("modifier-classifier-model"):
                 xml = self.getWorkFile(xml, [workOutputTag + "unmerging-pred.xml.gz", workOutputTag + "edge-pred.xml.gz"])
-                xml = self.modifierDetector.classifyToXML(xml, self.model, None, workOutputTag, parse=self.parse)
+                xml = self.modifierDetector.classifyToXML(xml, self.model, None, workOutputTag, goldData=goldData, parse=self.parse)
             else:
                 print >> sys.stderr, "No model for modifier detection"
         if self.checkStep("ST-CONVERT"):

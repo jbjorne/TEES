@@ -100,7 +100,7 @@ class SingleStageDetector(Detector):
             self.setWorkDir("")
         self.exitState()
         
-    def classify(self, data, model, output, parse=None, task=None, workDir=None, fromStep=None, omitSteps=None):
+    def classify(self, data, model, output, parse=None, task=None, goldData=None, workDir=None, fromStep=None, omitSteps=None):
         self.enterState(self.STATE_CLASSIFY)
         self.setWorkDir(workDir)
         if workDir == None:
@@ -110,7 +110,7 @@ class SingleStageDetector(Detector):
         if task == None: task = self.getStr(self.tag+"task", model)
         workOutputTag = os.path.join(self.workDir, os.path.basename(output) + "-")
         xml = self.classifyToXML(data, model, None, workOutputTag, 
-            model.get(self.tag+"classifier-model"), None, parse, float(model.get("recallAdjustParameter", defaultIfNotExist=1.0)))
+            model.get(self.tag+"classifier-model"), goldData, parse, float(model.get("recallAdjustParameter", defaultIfNotExist=1.0)))
         shutil.copy2(workOutputTag+self.tag+"pred.xml.gz", output+"pred.xml.gz")
         EvaluateInteractionXML.run(self.evaluator, xml, data, parse)
         stParams = self.getBioNLPSharedTaskParams(self.bioNLPSTParams, model)
