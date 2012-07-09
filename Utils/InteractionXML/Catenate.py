@@ -1,13 +1,55 @@
-import sys
+import sys, os
+thisPath = os.path.dirname(os.path.abspath(__file__))
+sys.path.append(os.path.abspath(os.path.join(thisPath,"../..")))
+import gzip, codecs
 try:
     import xml.etree.cElementTree as ET
 except ImportError:
     import cElementTree as ET
-import cElementTreeUtils as ETUtils
+import Utils.ElementTreeUtils as ETUtils
 import RecalculateIds
 
-def catenate(input1, input2, output):
-    print >> sys.stderr, "##### Catenate interaction XML #####"
+def catenate(inputs, output, fast):
+    if fast:
+        catenateFiles(inputs, output)
+    else:
+        catenateElements(inputs, output)
+    
+def catenateFiles(inputs, output):
+    print >> sys.stderr, "##### Catenate interaction XML as files #####"
+    assert len(inputs) > 1
+    print >> sys.stderr, "Writing catenated XML to", output
+    if output.endswith(".gz"):
+        outFile = gzip.open(output, 'wb')
+    else:
+        outFile = open(output, "wb")
+    outWriter = codecs.getwriter("utf-8")(outFile)
+    for i in range(len(inputs)):
+        print >> sys.stderr, "Catenating", inputs[i]
+        if inputs[i].endswith(".gz"):
+            f = gzip.open(inputs[i], 'rb')
+        else:
+            f = open(inputs[i], "rb")
+        state = "BEGIN"
+        for line in codecs.getreader("utf-8")(f):
+            if "<corpus" in line:
+                assert state == "BEGIN"
+                state = "MIDDLE"
+                if i > 0:
+                    continue
+            elif "</corpus" in line:
+                assert state == "MIDDLE"
+                state = "END"
+            if state == "BEGIN" and i > 0:
+                continue
+            if state == "END" and i < len(inputs) - 1:
+                continue
+            outWriter.write(line)
+        f.close()
+    outFile.close()
+
+def catenateElements(inputs, output):
+    print >> sys.stderr, "##### Catenate interaction XML as elements #####"
     c1 = RecalculateIds.recalculateIds(input1, None, False, 0)
     numDocs = len(c1.getroot().findall("document"))
     print >> sys.stderr, "Documents in input 1:", numDocs
@@ -55,22 +97,19 @@ if __name__=="__main__":
         print >> sys.stderr, "Psyco not installed"
 
     optparser = OptionParser(usage="%prog [options]\n")
-    optparser.add_option("-i", "--input", default=None, dest="input", help="Corpus in interaction xml format", metavar="FILE")
-    optparser.add_option("-j", "--input2", default=None, dest="input2", help="Corpus in interaction xml format", metavar="FILE")
+    optparser.add_option("-i", "--inputs", default=None, dest="inputs", help="A comma-separated list of corpora in interaction xml format", metavar="FILE")
     optparser.add_option("-o", "--output", default=None, dest="output", help="Output file in interaction xml format.")
+    optparser.add_option("-f", "--fast", default=False, action="store_true", dest="fast", help="Fast, but unsafe catenation")
     (options, args) = optparser.parse_args()
     
-    if options.input == None:
-        print >> sys.stderr, "Error, first input file not defined."
+    if options.inputs == None:
+        print >> sys.stderr, "Error, input files not defined."
         optparser.print_help()
         sys.exit(1)
-    if options.input2 == None:
-        print >> sys.stderr, "Error, second input file not defined."
-        optparser.print_help()
-        sys.exit(1)
+    options.inputs = options.inputs.split(",")
     if options.output == None:
         print >> sys.stderr, "Error, output file not defined."
         optparser.print_help()
         sys.exit(1)
     
-    catenate(options.input, options.input2, options.output)
+    catenate(options.inputs, options.output, options.fast)
