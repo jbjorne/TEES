@@ -3,8 +3,9 @@ from STTools import *
 
 def getCounts(documents):
     counts = defaultdict(int)
-    counts["task3(spec)"] = 0
-    counts["task3(neg)"] = 0
+    counts["modifier"] = 0
+    counts["modifier(spec)"] = 0
+    counts["modifier(neg)"] = 0
     for doc in documents:
         if doc.proteins != None:
             for protein in doc.proteins: 
@@ -19,8 +20,10 @@ def getCounts(documents):
                 counts["event("+event.type+")"] += 1
                 counts["event"] += 1
                 if event.speculation != None:
+                    counts["modifier"] += 1
                     counts["modifier(spec)"] += 1
                 if event.negation != None:
+                    counts["modifier"] += 1
                     counts["modifier(neg)"] += 1
         if doc.relations != None:
             for relation in doc.relations: 
