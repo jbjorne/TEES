@@ -53,7 +53,7 @@ class SLURMConnection(ClusterConnection):
         # Check whether job exists
         if jobAttr == None:
             return None
-        for line in self.run("sacct -u " + self.getUsername() + " -j " + jobAttr["SLURMID"]):
+        for line in self.run("sacct -u " + self.getUserName() + " -j " + jobAttr["SLURMID"]):
             line = line.strip()
             splits = line.split()
             #if self.debug:
