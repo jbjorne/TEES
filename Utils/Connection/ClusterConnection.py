@@ -6,7 +6,7 @@ import subprocess
 
 class ClusterConnection(UnixConnection):
     def __init__(self, account=None, workDirBase=None, remoteSettingsPath=None, memory=4194304, cores=1):
-        UnixConnection.__init__(self, account, workDirBase, remoteSettingsPath)
+        UnixConnection.__init__(self, account, workDirBase, remoteSettingsPath, killGroup=False)
         self.wallTime = None
         self.cores = 1
         self.modules = []
