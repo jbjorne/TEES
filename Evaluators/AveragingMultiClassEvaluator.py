@@ -78,6 +78,38 @@ class AveragingMultiClassEvaluator(Evaluator):
     def getData(self):
         return self.microF
     
+    def threshold(self, examples, predictions):
+        pairs = []
+        realPositives = 0
+        for example, prediction in itertools.izip(examples, predictions):
+            trueClass = example[1]
+            assert(trueClass > 0) # multiclass classification uses non-negative integers
+            if trueClass > 1:
+                realPositives += 1
+            negClassValue = prediction[1]
+            pairs.append( (negClassValue, trueClass) )
+        realNegatives = len(pairs) - realPositives
+        
+        binaryF = EvaluationData
+        binaryF._tp = real_positives
+        binaryF._fp = real_negatives
+        binaryF._fn = 0
+        binaryF.calculateFScore()
+        fscore = binaryF.fscore
+        threshold = pairs[0][0]-1.
+        
+        for pair in pair:
+            if pair[1] == 1:
+                binaryF._fp -= 1
+            else:
+                binaryF._tp -= 1
+                binaryF_fn += 1
+            binaryF.calculateFScore()
+            if binaryF.fscore > fscore:
+                fscore = binaryF.fscore
+                threshold = pair[0]+0.00000001
+        return threshold          
+    
 #    def pool(evaluators):
 #        predictions = []
 #        for evaluator in evaluators:
