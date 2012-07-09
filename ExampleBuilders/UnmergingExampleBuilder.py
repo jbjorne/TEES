@@ -11,7 +11,7 @@ from Core.IdSet import IdSet
 import Core.ExampleUtils as ExampleUtils
 from FeatureBuilders.MultiEdgeFeatureBuilder import MultiEdgeFeatureBuilder
 from FeatureBuilders.TriggerFeatureBuilder import TriggerFeatureBuilder
-from FeatureBuilders.TokenFeatureBuilder import TokenFeatureBuilder
+#from FeatureBuilders.TokenFeatureBuilder import TokenFeatureBuilder
 from Core.SimpleGraph import Graph
 from Utils.ProgressCounter import ProgressCounter
 import Utils.Libraries.combine as combine
@@ -87,7 +87,7 @@ class UnmergingExampleBuilder(ExampleBuilder):
         self.multiEdgeFeatureBuilder.noAnnType = self.styles["noAnnType"]
         self.multiEdgeFeatureBuilder.maskNamedEntities = not self.styles["noMasking"]
         self.multiEdgeFeatureBuilder.maximum = self.styles["maxFeatures"]
-        self.tokenFeatureBuilder = TokenFeatureBuilder(self.featureSet)
+        #self.tokenFeatureBuilder = TokenFeatureBuilder(self.featureSet)
         self.pathLengths = length
         assert(self.pathLengths == None)
         self.types = types
@@ -279,9 +279,22 @@ class UnmergingExampleBuilder(ExampleBuilder):
                    + combine.combine(themes, contextGenes) \
                    + combine.combine(themes, siteArgs, sideChains) \
                    + combine.combine(themes, siteArgs, contextGenes) \
-                   + combine.combine(themes, locTargets) \
                    + themeAloneCombinations
-            
+                   #+ combine.combine(themes, locTargets) \
+
+#    def definePredictedValueRange(self, sentences, elementName):
+#        self.multiEdgeFeatureBuilder.definePredictedValueRange(sentences, elementName)                        
+#    
+#    def getPredictedValueRange(self):
+#        return self.multiEdgeFeatureBuilder.predictedRange
+    
+    def sortInteractionsById(self, interactions):
+        pairs = []
+        for interaction in interactions:
+            pairs.append( (int(interaction.get("id").split(".i")[-1]), interaction) )
+        pairs.sort()
+        return [x[1] for x in pairs]
+    
     def buildExamplesFromGraph(self, sentenceGraph, outfile, goldGraph=None):
         """
         Build examples for a single sentence. Returns a list of examples.
@@ -336,6 +349,7 @@ class UnmergingExampleBuilder(ExampleBuilder):
             mergeInput = True
             sentenceGraph.mergeInteractionGraph(True)
             entities = sentenceGraph.mergedEntities
+            self.exampleStats.addValue("Duplicate entities skipped", len(sentenceGraph.entities) - len(entities))
         
         exampleIndex = 0
         for entity in entities: # sentenceGraph.entities:
@@ -350,6 +364,7 @@ class UnmergingExampleBuilder(ExampleBuilder):
             
             #interactions = interactionsByEntityId[entity.get("id")]
             interactions = [x[2] for x in sentenceGraph.getOutInteractions(entity, mergeInput)]
+            interactions = self.sortInteractionsById(interactions)
             argCombinations = self.getArgumentCombinations(eType, interactions, entity.get("id"))
             #if len(argCombinations) <= 1:
             #    continue
