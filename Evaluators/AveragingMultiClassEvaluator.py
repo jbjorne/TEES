@@ -57,12 +57,13 @@ class AveragingMultiClassEvaluator(Evaluator):
             self._calculate(examples, predictions)
     
     @classmethod
-    def evaluate(cls, examples, predictions, classSet=None, outputFile=None):
+    def evaluate(cls, examples, predictions, classSet=None, outputFile=None, verbose=True):
         """
         Enables using this class without having to manually instantiate it
         """
         evaluator = cls(examples, predictions, classSet)
-        print >> sys.stderr, evaluator.toStringConcise()
+        if verbose:
+            print >> sys.stderr, evaluator.toStringConcise()
         if outputFile != None:
             evaluator.saveCSV(outputFile)
         return evaluator
@@ -78,7 +79,13 @@ class AveragingMultiClassEvaluator(Evaluator):
     def getData(self):
         return self.microF
     
-    def threshold(self, examples, predictions):
+    @classmethod
+    def threshold(cls, examples, predictions):
+        # Make negative confidence score / true class pairs
+        if type(examples) in types.StringTypes:
+            examples = ExampleUtils.readExamples(examples, False)
+        if type(predictions) in types.StringTypes:
+            predictions = ExampleUtils.loadPredictions(predictions)
         pairs = []
         realPositives = 0
         for example, prediction in itertools.izip(examples, predictions):
@@ -88,27 +95,30 @@ class AveragingMultiClassEvaluator(Evaluator):
                 realPositives += 1
             negClassValue = prediction[1]
             pairs.append( (negClassValue, trueClass) )
+        pairs.sort(reverse=True)
         realNegatives = len(pairs) - realPositives
         
-        binaryF = EvaluationData
-        binaryF._tp = real_positives
-        binaryF._fp = real_negatives
+        # When starting thresholding, all examples are considered positive
+        binaryF = EvaluationData()
+        binaryF._tp = realPositives
+        binaryF._fp = realNegatives
         binaryF._fn = 0
         binaryF.calculateFScore()
         fscore = binaryF.fscore
         threshold = pairs[0][0]-1.
         
-        for pair in pair:
-            if pair[1] == 1:
-                binaryF._fp -= 1
-            else:
-                binaryF._tp -= 1
-                binaryF_fn += 1
+        # Turn one example negative at a time
+        for pair in pairs:
+            if pair[1] == 1: # the real class is negative
+                binaryF._fp -= 1 # false positive -> true negative
+            else: # the real class is a positive class
+                binaryF._tp -= 1 # true positive -> ...
+                binaryF._fn += 1 # ... false negative
             binaryF.calculateFScore()
             if binaryF.fscore > fscore:
                 fscore = binaryF.fscore
                 threshold = pair[0]+0.00000001
-        return threshold          
+        return threshold, fscore        
     
 #    def pool(evaluators):
 #        predictions = []

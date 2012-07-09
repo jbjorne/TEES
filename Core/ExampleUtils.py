@@ -316,17 +316,29 @@ def loadPredictions(predictionsFile, recallAdjust=None, classRanges=None, thresh
                     split = float(split)
                 pred.append(split)
             # Recall adjust
-            if threshold != None or (recallAdjust != None and recallAdjust != 1.0):
+            if recallAdjust != None and recallAdjust != 1.0:
                 if classRanges == None:
                     pred[1] = RecallAdjust.scaleVal(pred[1], recallAdjust)
                 else: # SVM multiclass two class "binary" classification 
                     pred[1] = RecallAdjust.scaleRange(pred[1], recallAdjust, classRanges[1])
-                if pred[0] == 1:
-                    maxStrength = pred[1]
+                #if pred[0] == 1:
+                maxStrength = pred[1]
+                pred[0] = 1
+                for i in range(2, len(pred)):
+                    if pred[i] > maxStrength:
+                        maxStrength = pred[i]
+                        pred[0] = i
+            # Thresholding
+            if threshold != None:
+                if pred[1] > threshold:
+                    pred[0] = 1
+                else:
+                    maxStrength = pred[2]
+                    pred[0] = 2
                     for i in range(2, len(pred)):
                         if pred[i] > maxStrength:
                             maxStrength = pred[i]
-                            pred[0] = i
+                            pred[0] = i       
             # Return the prediction
             yield pred
     #finally:

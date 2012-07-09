@@ -273,7 +273,7 @@ class SVMMultiClassClassifier(Classifier):
             classifier.downloadPredictions()
         return classifier
     
-    def optimize(self, examples, outDir, parameters, classifyExamples, classIds, step="BOTH", evaluator=None, threshold=False, timeout=None, downloadAllModels=False):
+    def optimize(self, examples, outDir, parameters, classifyExamples, classIds, step="BOTH", evaluator=None, determineThreshold=False, timeout=None, downloadAllModels=False):
         assert step in ["BOTH", "SUBMIT", "RESULTS"], step
         outDir = os.path.abspath(outDir)
         # Initialize training (or reconnect to existing jobs)
@@ -308,10 +308,14 @@ class SVMMultiClassClassifier(Classifier):
                 trained[i].downloadModel()
             # Compare to other results
             print >> sys.stderr, "*** Evaluating results for combination" + id + " ***"
-            evaluation = evaluator.evaluate(classifyExamples, predictions, classIds, os.path.join(outDir, "evaluation" + id + ".csv"))
-            if threshold:
-                print >> sys.stderr, "Thresholding"
-                evaluation.determineThreshold(testExamples, predictions)
+            threshold = None
+            if determineThreshold:
+                print >> sys.stderr, "Thresholding, original micro =",
+                evaluation = evaluator.evaluate(classifyExamples, predictions, classIds, os.path.join(outDir, "evaluation-before-threshold" + id + ".csv"), verbose=False)
+                print >> sys.stderr, evaluation.microF.toStringConcise()
+                threshold, bestF = evaluator.threshold(classifyExamples, predictions)
+                print >> sys.stderr, "threshold =", threshold, "at binary fscore", str(bestF)[0:6]
+            evaluation = evaluator.evaluate(classifyExamples, ExampleUtils.loadPredictions(predictions, threshold=threshold), classIds, os.path.join(outDir, "evaluation" + id + ".csv"))
             if bestResult == None or evaluation.compare(bestResult[0]) > 0: #: averageResult.fScore > bestResult[1].fScore:
                 bestResult = [evaluation, trained[i], combinations[i]]
             if not self.connection.isLocal():

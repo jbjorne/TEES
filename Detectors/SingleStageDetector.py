@@ -70,7 +70,7 @@ class SingleStageDetector(Detector):
                 assert model.mode in ["a", "w"]
                 classifierWorkDir = self.workDir + os.path.normpath(model.path) + "-" + self.tag+ "models"
                 classifier = self.Classifier(self.connection)
-                optimized = classifier.optimize("DUMMY", classifierWorkDir, model.getStr(self.tag+"classifier-parameters-train"), testExampleFile, model.get(self.tag+"ids.classes"), step="RESULTS", evaluator=self.evaluator)
+                optimized = classifier.optimize("DUMMY", classifierWorkDir, model.getStr(self.tag+"classifier-parameters-train"), testExampleFile, model.get(self.tag+"ids.classes"), step="RESULTS", evaluator=self.evaluator, determineThreshold=True)
                 self.addClassifierModel(model, optimized.model, optimized.parameters)
                 model.save()
                 # Check for catenated example file
