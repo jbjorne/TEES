@@ -55,7 +55,9 @@ def install(destDir=None, downloadDir=None, redownload=False, compile=True, upda
 
 def removeTempUnzipped(filename):
     if os.path.exists(filename):
-        os.remove(filename)
+        count = SVMMultiClassClassifier.getFileCounter(filename, removeIfZero=True)
+        if count == 0:
+            os.remove(filename)
 
 class SVMMultiClassClassifier(Classifier):
     """
@@ -72,6 +74,7 @@ class SVMMultiClassClassifier(Classifier):
         self.state = None
         self._job = None
         self._prevJobStatus = None
+        self._filesToRelease = []
         
         self.parameters = None
         self.model = None
@@ -91,6 +94,9 @@ class SVMMultiClassClassifier(Classifier):
         if self._prevJobStatus in ["FINISHED", "FAILED"]:
             self.state = None
             self._job = None
+            for filename in self._filesToRelease:
+                SVMMultiClassClassifier.getFileCounter(filename, add=-1, createIfNotExist=False)
+            self._filesToRelease = []
         if self._prevJobStatus == None:
             return "FINISHED"
         else:
@@ -107,11 +113,19 @@ class SVMMultiClassClassifier(Classifier):
         # for all states
         self.predictions = None
         #self.optimizeJobs = []
-
-    def tempUnzip(self, filename):
+    
+    @classmethod
+    def getUnzipped(cls, filename):
+        """
+        Temporarily uncompress a file, usually a compressed example file. The uncompressed
+        file appears in the same location as the original file. The /tmp directory is
+        as these examples are usually used by a classifier that is run in separate process,
+        which on clusters might end up on a different node, where the local /tmp is no
+        longer accessible.
+        """
         if not filename.endswith(".gz"):
             return filename
-        tempfilename = filename[:-3]
+        tempfilename = filename[:-3] + "-unzipped-temp"
         # Determine if the uncompressed file does not exist, or needs to be updated
         uncompress = False
         if os.path.exists(tempfilename):
@@ -127,6 +141,32 @@ class SVMMultiClassClassifier(Classifier):
             assert os.path.exists(tempfilename)
             atexit.register(removeTempUnzipped, tempfilename) # mark for deletion
         return tempfilename
+    
+    @classmethod
+    def getFileCounter(cls, filename, add=0, createIfNotExist=False, removeIfZero=False):
+        """
+        Keep track of the number of users on a temporary file
+        """
+        filename += "-counter"
+        count = 0
+        if os.path.exists(filename):
+            f = open(filename, "rt")
+            lines = f.readlines()
+            f.close()
+            assert len(lines) == 1, filename
+            count = int(lines[0])
+        elif not createIfNotExist:
+            return None
+        count += add
+        if count < 0:
+            count = 0
+        if removeIfZero and count == 0 and os.path.exists(filename):
+            os.remove(filename)
+        else:
+            f = open(filename, "wt")
+            f.write(str(count))
+            f.close()
+        return count
 
     def getExampleFile(self, examples, upload=True, replaceRemote=True, dummy=False):
         # If examples are in a list, they will be written to a file for SVM-multiclass
@@ -144,7 +184,8 @@ class SVMMultiClassClassifier(Classifier):
         if upload:
             examplesPath = self.connection.upload(examplesPath, uncompress=True, replace=replaceRemote)
         if examplesPath == localPath and examplesPath.endswith(".gz"): # no upload happened
-            examplesPath = self.tempUnzip(examplesPath)
+            examplesPath = SVMMultiClassClassifier.getUnzipped(examplesPath) # uncompress if not yet uncompressed
+            SVMMultiClassClassifier.getFileCounter(examplesPath, 1, createIfNotExist=True) # increase user counter in any case
             print >> sys.stderr, self.__class__.__name__, "using example file", examples, "as", examplesPath
         return examplesPath
     
@@ -160,6 +201,7 @@ class SVMMultiClassClassifier(Classifier):
         classifier = copy.copy(self)
         classifier.setState("TRAIN")
         classifier.parameters = parameters
+        classifier._filesToRelease = [examples, classifyExamples]
         # Train
         if not os.path.exists(outDir):
             os.makedirs(outDir)
@@ -193,6 +235,7 @@ class SVMMultiClassClassifier(Classifier):
             classifier._job = self.connection.submit(jobDir=outDir, jobName=jobName, stdout=logPath+".stdout")
             if finishBeforeReturn:
                 self.connection.waitForJob(classifier._job)
+                self.getStatus()
         return classifier
     
     def downloadModel(self, outPath=None, breakConnection=True):
@@ -220,6 +263,7 @@ class SVMMultiClassClassifier(Classifier):
         classifier.predictions = self.connection.getRemotePath(output, True)
         predictionsPath = self.connection.getRemotePath(output, False)
         examples = self.getExampleFile(examples, replaceRemote=replaceRemoteFiles)
+        classifier._filesToRelease = [examples]
         classifyCommand = self.connection.getSetting("SVM_MULTICLASS_DIR") + "/svm_multiclass_classify " + examples + " " + model + " " + predictionsPath
         classifier._job = self.connection.submit(classifyCommand, 
                                                  jobDir=os.path.abspath(os.path.dirname(output)), 
