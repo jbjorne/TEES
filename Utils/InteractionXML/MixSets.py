@@ -15,10 +15,13 @@ def mixSets(input, output, docOrigIds, sourceSet, targetSet):
     
     if docOrigIds != None:
         for document in corpusRoot.getiterator("document"):
-            if document.get("pmid") in docOrigIds:
+            docId = document.get("pmid")
+            if docId == None:
+                docId = document.get("origId")
+            if docId in docOrigIds:
                 assert document.get("set") == sourceSet
                 document.set("set", targetSet)
-                docOrigIds.remove(document.get("pmid"))
+                docOrigIds.remove(docId)
         assert len(docOrigIds) == 0, docOrigIds
     
     sentenceIds = None
