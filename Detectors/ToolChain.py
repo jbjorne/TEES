@@ -49,10 +49,10 @@ class ToolChain(Detector):
                 if parameters[parameterName] != NOTHING:
                     step[2][argName] = parameters[parameterName]
             if parameters["intermediateFiles"] != None:
-                if step in parameters["intermediateFiles"]:
-                    self.setIntermediateFile(step, step[3])
+                if parameters["intermediateFiles"] != True and step in parameters["intermediateFiles"]:
+                    self.setIntermediateFile(step[0], step[3])
                 else:
-                    self.setIntermediateFile(step, None)
+                    self.setIntermediateFile(step[0], None)
     
     def addStep(self, name, function, argDict, intermediateFile=None, ioArgNames={"input":"input", "output":"output"}):
         assert name not in [x[0] for x in self.steps], (name, steps)
@@ -70,16 +70,16 @@ class ToolChain(Detector):
                 return s[2]
         assert False
         
-    def setIntermediateFile(self, step, filename):
+    def setIntermediateFile(self, stepName, filename):
         for s in self.steps:
-            if step == s[0]:
+            if stepName == s[0]:
                 if filename == True:
                     filename = s[3]
                 elif filename in [False, "None", None]:
                     filename = None
                 s[3] = filename
                 return
-        assert False
+        assert False, (stepName, filename)
     
     def setIntermediateFiles(self, stepToFilename):
         for key in sorted(stepToFilename.keys()):
@@ -110,6 +110,10 @@ class ToolChain(Detector):
     
     def process(self, input, output, parameters=None, model=None, fromStep=None, toStep=None, omitSteps=None):
         self.initVariables(source=input, xml=input, outDir=os.path.dirname(output))
+        if os.path.basename(output) != "":
+            self.intermediateFileTag = os.path.basename(output)
+        else:
+            self.intermediateFileTag = ""
         self.enterState(self.STATE_TOOLCHAIN, [x[0] for x in self.steps], fromStep, toStep, omitSteps)
         parameters = self.getParameters(parameters, model)
         self.applyParameters(parameters)
