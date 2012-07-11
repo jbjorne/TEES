@@ -33,7 +33,8 @@ def negateType(eType):
         return "De" + eType
 
 def isNegatableEPITrigger(eType):
-    return eType in ["Dephosphorylation",
+    return eType in ["Phosphorylation",
+                     "Dephosphorylation",
                      "Hydroxylation",
                      "Dehydroxylation",
                      "Ubiquitination",
@@ -60,15 +61,16 @@ def getNewType(eType, eText):
     if not isNegatableEPITrigger(eType):
         return eType
     eBaseType = getEPIBaseType(eType)
-    if "remov" in eText:
+    eTextLower = eText.lower()
+    if "remov" in eTextLower:
         eNewType = negateType(eBaseType)
-    elif "loss" in eText:
+    elif "loss" in eTextLower:
         eNewType = negateType(eBaseType)
-    elif "erasure" in eText:
+    elif "erasure" in eTextLower:
         eNewType = negateType(eBaseType)
     #elif eText.startswith("hypo"):
     #    eNewType = negateType(eBaseType)
-    elif eText.startswith("de"):
+    elif eTextLower.startswith("de"):
         eNewType = negateType(eBaseType)
     else:
         eNewType = eBaseType
