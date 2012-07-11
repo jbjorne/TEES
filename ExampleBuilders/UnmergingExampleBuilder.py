@@ -279,9 +279,11 @@ class UnmergingExampleBuilder(ExampleBuilder):
                    + combine.combine(themes, contextGenes) \
                    + combine.combine(themes, siteArgs, sideChains) \
                    + combine.combine(themes, siteArgs, contextGenes) \
+                   + combine.combine(themes, locTargets) \
                    + themeAloneCombinations
-                   #+ combine.combine(themes, locTargets) \
 
+# The predicted value range is not used in the features the UnmergingExampleBuilder gets
+# from the MultiEdgeFeatureBuilder
 #    def definePredictedValueRange(self, sentences, elementName):
 #        self.multiEdgeFeatureBuilder.definePredictedValueRange(sentences, elementName)                        
 #    
@@ -289,6 +291,12 @@ class UnmergingExampleBuilder(ExampleBuilder):
 #        return self.multiEdgeFeatureBuilder.predictedRange
     
     def sortInteractionsById(self, interactions):
+        # The order of the interactions affects the order of the unmerging examples, and this 
+        # affects performance. It's not clear whether this is what really happens, or whether
+        # the order of the interactions has some effect on the consistency of the unmerging
+        # features (it shouldn't). However, in case it does, this function is left here for now,
+        # although it shouldn't be needed at all. In any case the impact is minimal, for GE
+        # 53.22 vs 53.28 on the development set.
         pairs = []
         for interaction in interactions:
             pairs.append( (int(interaction.get("id").split(".i")[-1]), interaction) )
