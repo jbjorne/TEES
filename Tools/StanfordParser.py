@@ -69,8 +69,8 @@ def install(destDir=None, downloadDir=None, redownload=False, updateLocalSetting
 #    if test(destDir):
 #        Settings.setLocal("STANFORD_PARSER_DIR", destDir, updateLocalSettings)
 
-def runStanford(input, output):
-    global stanfordParserArgs
+def runStanford(input, output, stanfordParserArgs):
+    #global stanfordParserArgs
     ##args = ["java", "-mx150m", "-cp", "stanford-parser.jar", "edu.stanford.nlp.trees.EnglishGrammaticalStructure", "-CCprocessed", "-treeFile", input]
     #args = ["java", "-mx500m", "-cp", "stanford-parser.jar", "edu.stanford.nlp.trees.EnglishGrammaticalStructure", "-CCprocessed", "-treeFile", input] 
     #return subprocess.Popen(args, stdout=codecs.open(output, "wt", "utf-8"))
@@ -119,40 +119,45 @@ def addDependencies(outfile, parse, tokenByIndex=None, sentenceId=None, skipExtr
         while not t2Index[-1].isdigit(): t2Index = t2Index[:-1] # invalid literal for int() with base 10: "7'"
         t2Index = int(t2Index)
         # Make element
-        dep = ET.Element("dependency")
-        dep.set("id", "cjp_" + str(depCount))
-        alignmentError = False
-        if tokenByIndex != None:
-            if t1Index-1 not in tokenByIndex:
-                print >> sys.stderr, "Token not found", (t1Word, depCount, sentenceId)
-                deps = []
-                while line.strip() != "": line = outfile.readline()
-                break
-            if t2Index-1 not in tokenByIndex:
-                print >> sys.stderr, "Token not found", (t2Word, depCount, sentenceId)
-                deps = []
-                while line.strip() != "": line = outfile.readline()
-                break
-            if t1Word != tokenByIndex[t1Index-1].get("text"):
-                print >> sys.stderr, "Alignment error", (t1Word, tokenByIndex[t1Index-1].get("text"), t1Index-1, depCount, sentenceId, tokens)
-                alignmentError = True
-                if parse.get("stanfordAlignmentError") == None:
-                    parse.set("stanfordAlignmentError", t1Word)
-            if t2Word != tokenByIndex[t2Index-1].get("text"):
-                print >> sys.stderr, "Alignment error", (t2Word, tokenByIndex[t2Index-1].get("text"), t2Index-1, depCount, sentenceId, tokens)
-                alignmentError = True
-                if parse.get("stanfordAlignmentError") == None:
-                    parse.set("stanfordAlignmentError", t2Word)
-            dep.set("t1", tokenByIndex[t1Index-1].get("id"))
-            dep.set("t2", tokenByIndex[t2Index-1].get("id"))
-        else:
-            dep.set("t1", "cjt_" + str(t1Index))
-            dep.set("t2", "cjt_" + str(t2Index))
-        dep.set("type", depType)
-        parse.insert(depCount-1, dep)
-        depCount += 1
-        if not alignmentError:
-            deps.append(dep)
+        #if depType == "root":
+        #    assert t1Word == "ROOT"
+        #    if tokenByIndex != None and t2Index-1 in tokenByIndex:
+        #        tokenByIndex[t2Index-1].set("stanford-root", "True")
+        if depType != "root":
+            dep = ET.Element("dependency")
+            dep.set("id", "sd_" + str(depCount))
+            alignmentError = False
+            if tokenByIndex != None:
+                if t1Index-1 not in tokenByIndex:
+                    print >> sys.stderr, "Token not found", (t1Word, depCount, sentenceId)
+                    deps = []
+                    while line.strip() != "": line = outfile.readline()
+                    break
+                if t2Index-1 not in tokenByIndex:
+                    print >> sys.stderr, "Token not found", (t2Word, depCount, sentenceId)
+                    deps = []
+                    while line.strip() != "": line = outfile.readline()
+                    break
+                if t1Word != tokenByIndex[t1Index-1].get("text"):
+                    print >> sys.stderr, "Alignment error", (t1Word, tokenByIndex[t1Index-1].get("text"), t1Index-1, depCount, sentenceId, tokens)
+                    alignmentError = True
+                    if parse.get("stanfordAlignmentError") == None:
+                        parse.set("stanfordAlignmentError", t1Word)
+                if t2Word != tokenByIndex[t2Index-1].get("text"):
+                    print >> sys.stderr, "Alignment error", (t2Word, tokenByIndex[t2Index-1].get("text"), t2Index-1, depCount, sentenceId, tokens)
+                    alignmentError = True
+                    if parse.get("stanfordAlignmentError") == None:
+                        parse.set("stanfordAlignmentError", t2Word)
+                dep.set("t1", tokenByIndex[t1Index-1].get("id"))
+                dep.set("t2", tokenByIndex[t2Index-1].get("id"))
+            else:
+                dep.set("t1", "bt_" + str(t1Index))
+                dep.set("t2", "bt_" + str(t2Index))
+            dep.set("type", depType)
+            parse.insert(depCount-1, dep)
+            depCount += 1
+            if not alignmentError:
+                deps.append(dep)
         line = outfile.readline()
         try:
             line = getUnicode(line)
@@ -256,7 +261,8 @@ def convertXML(parser, input, output, debug=False, reparse=False, stanfordParser
     stanfordOutput = runSentenceProcess(runStanford, stanfordParserDir, stanfordInput, 
                                         workdir, True, "StanfordParser", 
                                         "Stanford Conversion", timeout=600,
-                                        outputArgs={"encoding":"latin1", "errors":"replace"})   
+                                        outputArgs={"encoding":"latin1", "errors":"replace"},
+                                        processArgs={"stanfordParserArgs":stanfordParserArgs})   
     #stanfordOutputFile = codecs.open(stanfordOutput, "rt", "utf-8")
     stanfordOutputFile = codecs.open(stanfordOutput, "rt", "latin1", "replace")
     

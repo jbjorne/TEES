@@ -149,7 +149,7 @@ def alignSentences(document, sentenceTexts, escDict={}):
         if head != None:
             e.set("head", head)
         e.set("text", text[sentenceStart:cEnd])
-        e.set("charOffset", str(sentenceStart) + "-" + str(cEnd - 1)) # NOTE: check
+        e.set("charOffset", str(sentenceStart) + "-" + str(cEnd)) # NOTE: check
         e.set("id", document.get("id") + ".s" + str(sentenceCount))
         document.append(e) # add sentence to parent element
         prevSentence = e

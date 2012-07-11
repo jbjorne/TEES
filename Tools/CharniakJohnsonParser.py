@@ -1,5 +1,3 @@
-parse__version__ = "$Revision: 1.11 $"
-
 import sys,os
 import time
 import shutil
@@ -93,7 +91,7 @@ def readPenn(treeLine):
             splitCount += 1
     return tokens, phrases
 
-def insertTokens(tokens, sentence, tokenization, idStem="cjt_", errorNotes=None):
+def insertTokens(tokens, sentence, tokenization, idStem="bt_", errorNotes=None):
     tokenCount = 0
     start = 0
     prevStart = None
@@ -119,15 +117,15 @@ def insertTokens(tokens, sentence, tokenization, idStem="cjt_", errorNotes=None)
         start = cStart + len(tokenText)
         # Make element
         token = ET.Element("token")
-        token.set("id", idStem + str(tokenCount + 1))
+        token.set("id", idStem + str(tokenCount))
         token.set("text", tokenText)
         token.set("POS", posTag)
-        token.set("charOffset", str(cStart) + "-" + str(cEnd - 1)) # NOTE: check
+        token.set("charOffset", str(cStart) + "-" + str(cEnd)) # NOTE: check
         tokenization.append(token)
         tokenCount += 1
     return True
 
-def insertPhrases(phrases, parse, tokenElements, idStem="cjp_"):
+def insertPhrases(phrases, parse, tokenElements, idStem="bp_"):
     count = 0
     phrases.sort()
     for phrase in phrases:
@@ -192,11 +190,11 @@ def insertParse(sentence, treeLine, parseName="McCC", tokenizationName = None, m
             insertPhrases(phrases, parse, tokenization.findall("token"))
     return True           
         
-def runCharniakJohnsonParser(input, output, tokenizer=False, pathBioModel=None):
+def runBLLIPParser(input, output, tokenizer=False, pathBioModel=None):
     if tokenizer:
-        print >> sys.stderr, "Running CJ-parser with tokenization"
+        print >> sys.stderr, "Running BLLIP parser with tokenization"
     else:
-        print >> sys.stderr, "Running CJ-parser without tokenization"
+        print >> sys.stderr, "Running BLLIP parser without tokenization"
     #args = ["./parse-50best-McClosky.sh"]
     #return subprocess.Popen(args, 
     #    stdin=codecs.open(input, "rt", "utf-8"),
@@ -232,16 +230,18 @@ def getSentences(corpusRoot, requireEntities=False, skipIds=[], skipParsed=True)
 
 def parse(input, output=None, tokenizationName=None, parseName="McCC", requireEntities=False, skipIds=[], skipParsed=True, timeout=600, makePhraseElements=True, debug=False, pathParser=None, pathBioModel=None, timestamp=True):
     global escDict
-    print >> sys.stderr, "Charniak-Johnson Parser"
+    print >> sys.stderr, "BLLIP parser"
     parseTimeStamp = time.strftime("%d.%m.%y %H:%M:%S")
-    print >> sys.stderr, "Charniak-Johnson time stamp:", parseTimeStamp
+    print >> sys.stderr, "BLLIP time stamp:", parseTimeStamp
     
     if pathParser == None:
-        pathParser = Settings.CHARNIAK_JOHNSON_PARSER_DIR
-    print >> sys.stderr, "Charniak-Johnson parser at:", pathParser
+        pathParser = Settings.BLLIP_PARSER_DIR
+    print >> sys.stderr, "BLLIP parser at:", pathParser
     if pathBioModel == None:
         pathBioModel = Settings.MCCLOSKY_BIOPARSINGMODEL_DIR
     print >> sys.stderr, "Biomodel at:", pathBioModel
+    if requireEntities:
+        print >> sys.stderr, "Parsing only sentences with entities"
     
     print >> sys.stderr, "Loading corpus", input
     corpusTree = ETUtils.ETFromObj(input)
@@ -251,7 +251,7 @@ def parse(input, output=None, tokenizationName=None, parseName="McCC", requireEn
     # Write text to input file
     workdir = tempfile.mkdtemp()
     if debug:
-        print >> sys.stderr, "Charniak-Johnson parser workdir", workdir
+        print >> sys.stderr, "BLLIP parser workdir", workdir
     infileName = os.path.join(workdir, "parser-input.txt")
     infile = codecs.open(infileName, "wt", "utf-8")
     numCorpusSentences = 0
@@ -285,17 +285,17 @@ def parse(input, output=None, tokenizationName=None, parseName="McCC", requireEn
     cwd = os.getcwd()
     os.chdir(pathParser)
     if tokenizationName == None:
-        charniakOutput = runSentenceProcess(runCharniakJohnsonParser, pathParser, infileName, workdir, False, "CharniakJohnsonParser", "Parsing", timeout=timeout, processArgs={"tokenizer":True, "pathBioModel":pathBioModel})   
+        bllipOutput = runSentenceProcess(runBLLIPParser, pathParser, infileName, workdir, False, "BLLIPParser", "Parsing", timeout=timeout, processArgs={"tokenizer":True, "pathBioModel":pathBioModel})   
     else:
         if tokenizationName == "PARSED_TEXT": # The sentence strings are already tokenized
             tokenizationName = None
-        charniakOutput = runSentenceProcess(runCharniakJohnsonParser, pathParser, infileName, workdir, False, "CharniakJohnsonParser", "Parsing", timeout=timeout, processArgs={"tokenizer":False, "pathBioModel":pathBioModel})   
+        bllipOutput = runSentenceProcess(runBLLIPParser, pathParser, infileName, workdir, False, "BLLIPParser", "Parsing", timeout=timeout, processArgs={"tokenizer":False, "pathBioModel":pathBioModel})   
 #    args = [charniakJohnsonParserDir + "/parse-50best-McClosky.sh"]
 #    #bioParsingModel = charniakJohnsonParserDir + "/first-stage/DATA-McClosky"
 #    #args = charniakJohnsonParserDir + "/first-stage/PARSE/parseIt -K -l399 -N50 " + bioParsingModel + "/parser | " + charniakJohnsonParserDir + "/second-stage/programs/features/best-parses -l " + bioParsingModel + "/reranker/features.gz " + bioParsingModel + "/reranker/weights.gz"
     os.chdir(cwd)
     
-    treeFile = codecs.open(charniakOutput, "rt", "utf-8")
+    treeFile = codecs.open(bllipOutput, "rt", "utf-8")
     print >> sys.stderr, "Inserting parses"
     # Add output to sentences
     failCount = 0
@@ -377,7 +377,7 @@ def insertParses(input, parsePath, output=None, parseName="McCC", tokenizationNa
         # TODO: Following for-loop is the same as when used with a real parser, and should
         # be moved to its own function.
         for sentence, treeLine in zip(sentences, parseStrings):
-            if not insertParse(sentence, treeLine, makePhraseElements=makePhraseElements, extraAttributes=extraAttributes, docId=document.get("pmid")):
+            if not insertParse(sentence, treeLine, makePhraseElements=makePhraseElements, extraAttributes=extraAttributes, docId=origId):
                 failCount += 1
     
     if tarFile != None:

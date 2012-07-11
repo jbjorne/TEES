@@ -84,7 +84,7 @@ def moveElements(document):
 def makeSentence(text, begin, end, prevSentence=None, prevEnd=None):
     # Make sentence element
     e = ET.Element("sentence")
-    e.set("text", text[begin:end+1])
+    e.set("text", text[begin:end])
     e.set("charOffset", str(begin) + "-" + str(end)) # NOTE: check
     # Set tail string for previous sentence
     if prevSentence != None and begin - prevEnd > 1:
@@ -162,7 +162,7 @@ def makeSentences(input, output=None, removeText=False, postProcess=True, debug=
         if postProcess:
             ppIn = codecs.open(os.path.join(workdir, "sentence-splitter-output.txt"+docTag), "rt", "utf-8")
             ppOut = codecs.open(os.path.join(workdir, "sentence-splitter-output-postprocessed.txt"+docTag), "wt", "utf-8")
-            subprocess.call(os.path.join(Settings.GENIA_SENTENCE_SPLITTER_DIR, "geniass-postproc.pl"), stdin=ppIn, stdout=ppOut)
+            subprocess.call(["perl", os.path.join(os.path.dirname(os.path.abspath(__file__)), "geniass-postproc.pl")], stdin=ppIn, stdout=ppOut)
             ppIn.close()
             ppOut.close()
             # Read split sentences
@@ -194,7 +194,7 @@ def makeSentences(input, output=None, removeText=False, postProcess=True, debug=
                 while text[docIndex].isspace():
                     if text[docIndex] in ["\n", "\r"] and sentenceBeginIndex != -1:
                         redivideCount += 1
-                        prevSentence = makeSentence(text, sentenceBeginIndex, docIndex-1, prevSentence, prevEndIndex)
+                        prevSentence = makeSentence(text, sentenceBeginIndex, docIndex, prevSentence, prevEndIndex)
                         prevSentence.set("id", docId + ".s" + str(sentenceCount))
                         prevSentence.set("redevided", "True")
                         sentencesCreated += 1
@@ -209,7 +209,7 @@ def makeSentences(input, output=None, removeText=False, postProcess=True, debug=
                 docIndex += 1
                 prevText = sText
             if sentenceBeginIndex != -1:
-                prevSentence = makeSentence(text, sentenceBeginIndex, docIndex-1, prevSentence, prevEndIndex)
+                prevSentence = makeSentence(text, sentenceBeginIndex, docIndex, prevSentence, prevEndIndex)
                 prevSentence.set("id", docId + ".s" + str(sentenceCount))
                 prevEndIndex = docIndex-1
                 sentenceBeginIndex = -1

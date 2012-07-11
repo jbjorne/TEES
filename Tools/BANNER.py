@@ -124,7 +124,7 @@ def makeEntityElements(beginOffset, endOffset, text, splitNewlines=False, elemen
             if len(entityString.lstrip()) < len(entityString):
                 entityBeginOffset += len(entityString) - len(entityString.lstrip())
             # Make the element
-            ent.set("charOffset", str(entityBeginOffset) + "-" + str(entityEndOffset-1))
+            ent.set("charOffset", str(entityBeginOffset) + "-" + str(entityEndOffset))
             if ent.get("charOffset") != bannerOffset:
                 ent.set("origBANNEROffset", bannerOffset)
             ent.set("type", "Protein")
@@ -137,9 +137,9 @@ def makeEntityElements(beginOffset, endOffset, text, splitNewlines=False, elemen
         currentEndOffset += 1 # +1 for the newline
     return elements
 
-def fixOffset(origBannerEntity, bannerEntityText, begin, end, sentenceText):
-    # Here we make the (maybe optimistic) assumption that these offsets bear 
-    # some resemblance to reality and can be realigned with the text.
+def fixOffset(origBannerEntity, bannerEntityText, begin, end, sentenceText, verbose=False):
+    # The BANNER offsets appear to refer to text, from which all whitespace has been removed.
+    # Here we try to fix this situation.
     origEnd = end
     end = begin + len(bannerEntityText) # the end offset seems random, let's take the length from the begin-one
     assert len(sentenceText[begin:end]) == len(bannerEntityText), (bannerEntity, sentenceText[begin:end], begin, end, sentenceText)
@@ -156,7 +156,8 @@ def fixOffset(origBannerEntity, bannerEntityText, begin, end, sentenceText):
             slippage = -slippage
             break
     assert found, (origBannerEntity, bannerEntityText, sentenceText[begin:end], begin, end, sentenceText)
-    print "Fixed BANNER entity,", origBannerEntity + ", slippage", slippage, "end diff", origEnd - end
+    if verbose:
+        print >> sys.stderr, "Fixed BANNER entity,", str(origBannerEntity) + ", slippage", slippage, "end diff", origEnd - end
     return begin + slippage, end + slippage - 1
 
 def run(input, output=None, elementName="entity", processElement="document", splitNewlines=False, debug=False, bannerPath=None, trovePath=None):
@@ -179,14 +180,11 @@ def run(input, output=None, elementName="entity", processElement="document", spl
     # Define classpath for java
     if bannerPath == None:
         bannerPath = Settings.BANNER_DIR
-    if trovePath == None:
-        trovePath = Settings.JAVA_TROVE_PATH
     libPath = "/lib/"
 #    if not os.path.exists(bannerPath + libPath):
 #        libPath = "/libs/"
 #        assert os.path.exists(bannerPath + libPath)
     assert os.path.exists(bannerPath + libPath + "banner.jar"), bannerPath
-    assert os.path.exists(trovePath), trovePath
     oldVersion = True
     classPath = bannerPath + "/bin"
     for filename in os.listdir(bannerPath + libPath):
@@ -204,6 +202,9 @@ def run(input, output=None, elementName="entity", processElement="document", spl
 #    classPath += ":" + bannerPath + libPath + "mallet.jar"
 #    classPath += ":" + bannerPath + libPath + "commons-logging-1.1.1.jar"
     if oldVersion:
+        if trovePath == None:
+            trovePath = Settings.JAVA_TROVE_PATH
+        assert os.path.exists(trovePath), trovePath
         classPath += ":" + trovePath # ":/usr/share/java/trove.jar"
         print >> sys.stderr, "Trove library at", trovePath
     
