@@ -70,8 +70,9 @@ class SingleStageDetector(Detector):
                 assert model.mode in ["a", "w"]
                 classifierWorkDir = self.workDir + os.path.normpath(model.path) + "-" + self.tag+ "models"
                 classifier = self.Classifier(self.connection)
-                optimized = classifier.optimize("DUMMY", classifierWorkDir, model.getStr(self.tag+"classifier-parameters-train"), testExampleFile, model.get(self.tag+"ids.classes"), step="RESULTS", evaluator=self.evaluator, determineThreshold=True)
-                self.addClassifierModel(model, optimized.model, optimized.parameters)
+                optimized = classifier.optimize("DUMMY", classifierWorkDir, model.getStr(self.tag+"classifier-parameters-train"), testExampleFile, model.get(self.tag+"ids.classes"), step="RESULTS", evaluator=self.evaluator, 
+                                                determineThreshold=("TEES.threshold" in model.getStr(self.tag+"classifier-parameters-train")))
+                self.addClassifierModel(model, optimized.model, optimized.parameters, optimized.threshold)
                 model.save()
                 # Check for catenated example file
                 if self.deleteCombinedExamples:
@@ -110,7 +111,7 @@ class SingleStageDetector(Detector):
         if task == None: task = self.getStr(self.tag+"task", model)
         workOutputTag = os.path.join(self.workDir, os.path.basename(output) + "-")
         xml = self.classifyToXML(data, model, None, workOutputTag, 
-            model.get(self.tag+"classifier-model"), goldData, parse, float(model.get("recallAdjustParameter", defaultIfNotExist=1.0)))
+            model.get(self.tag+"classifier-model"), goldData, parse, float(model.getStr("recallAdjustParameter", defaultIfNotExist=1.0)))
         shutil.copy2(workOutputTag+self.tag+"pred.xml.gz", output+"pred.xml.gz")
         EvaluateInteractionXML.run(self.evaluator, xml, data, parse)
         stParams = self.getBioNLPSharedTaskParams(self.bioNLPSTParams, model)
@@ -136,7 +137,8 @@ class SingleStageDetector(Detector):
             assert os.path.exists(classifierModel), classifierModel
         classifier = self.Classifier()
         classifier.classify(exampleFileName, tag+self.tag+"classifications", classifierModel, finishBeforeReturn=True)
-        predictions = ExampleUtils.loadPredictions(tag+self.tag+"classifications", recallAdjust)
+        threshold = model.getStr(self.tag+"threshold", defaultIfNotExist=None, asType=float)
+        predictions = ExampleUtils.loadPredictions(tag+self.tag+"classifications", recallAdjust, threshold=threshold)
         evaluator = self.evaluator.evaluate(exampleFileName, predictions, model.get(self.tag+"ids.classes"))
         #outputFileName = tag+"-"+self.tag+"pred.xml.gz"
         exampleStyle = self.exampleBuilder.getParameters(model.getStr(self.tag+"example-style"))

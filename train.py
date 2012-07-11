@@ -222,8 +222,8 @@ def getTaskSettings(task, detector, processUnmerging, processModifiers, isSingle
         if bioNLPSTParams == None and task != "DDI":
             bioNLPSTParams = "convert:evaluate:scores"
         if preprocessorParams == None:
-            preprocessorParams = ["intermediateFiles=FIND-HEADS"]
-            if task in ["REN", "BI", "DDI"]:
+            preprocessorParams = ["intermediateFiles"]
+            if task in ["BI", "BB", "DDI"]:
                 preprocessorParams += ["omitSteps=NER,DIVIDE-SETS"]
             else:
                 preprocessorParams += ["omitSteps=DIVIDE-SETS"]
@@ -242,7 +242,7 @@ def getTaskSettings(task, detector, processUnmerging, processModifiers, isSingle
             print >> sys.stderr, "Modifier prediction undefined, using default", processModifiers, " for task", fullTaskId
         if exampleStyles["examples"] == None and isSingleStage:
             if task == "REN":
-                exampleStyles["examples"] = "trigger_features:typed:no_linear:entities:noMasking:maxFeatures:bacteria_renaming"
+                exampleStyles["examples"] = "trigger_features:typed:no_linear:entities:noMasking:maxFeatures:bacteria_renaming" # :maskTypeAsProtein=Gene
             elif task == "BI":
                 exampleStyles["examples"] = "trigger_features:typed:directed:no_linear:entities:noMasking:maxFeatures:bi_limits"
             elif task == "DDI":
@@ -284,7 +284,7 @@ def getTaskSettings(task, detector, processUnmerging, processModifiers, isSingle
             elif task == "BI":
                 classifierParameters["examples"] = "10,100,1000,2500,5000,7500,10000,20000,25000,28000,50000,60000,65000,80000,100000,150000"
             elif task == "DDI":
-                classifierParameters["examples"] = "5000,10000,20000,25000,28000,50000,60000,65000,80000,100000,150000"
+                classifierParameters["examples"] = "c=5000,10000,20000,25000,28000,50000,60000,65000,80000,100000,150000:TEES.threshold"
         if classifierParameters["trigger"] == None and not isSingleStage:
             print >> sys.stderr, "Classifier parameters for trigger examples undefined, using default for task", fullTaskId
             classifierParameters["trigger"] = "1000,5000,10000,20000,50000,80000,100000,150000,180000,200000,250000,300000,350000,500000,1000000"

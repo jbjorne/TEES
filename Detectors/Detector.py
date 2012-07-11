@@ -137,10 +137,12 @@ class Detector():
         if model == None: modelObj.close()
         return value
     
-    def addClassifierModel(self, model, classifierModelPath, classifierParameters):
+    def addClassifierModel(self, model, classifierModelPath, classifierParameters, threshold=None):
         classifierModel = model.get(self.tag+"classifier-model", True)
         shutil.copy2(classifierModelPath, classifierModel)
         model.addStr(self.tag+"classifier-parameter", Parameters.toString(Parameters.get(classifierParameters)))
+        if threshold != None:
+            model.addStr(self.tag+"threshold", str(threshold))
         return classifierModel
     
     def openModel(self, model, mode="r"):
@@ -152,10 +154,10 @@ class Detector():
     def getBioNLPSharedTaskParams(self, parameters=None, model=None):
         if parameters == None:
             if model != None:
-                parameters = model.get("BioNLPSTParams", defaultIfNotExist=None)
+                parameters = model.getStr("BioNLPSTParams", defaultIfNotExist=None)
             else:
                 parameters = {}
-        return Parameters.get(parameters, valueListKey=["convert", "evaluate", "scores"])
+        return Parameters.get(parameters, ["convert", "evaluate", "scores"])
     
     def buildExamples(self, model, datas, outputs, golds=[], exampleStyle=None, saveIdsToModel=False, parse=None):
         if exampleStyle == None:

@@ -209,6 +209,8 @@ class SVMMultiClassClassifier(Classifier):
         paramKeys = sorted(parameters.keys())
         idStr = ""
         for key in paramKeys:
+            if key.startswith("TEES."):
+                continue
             trainCommand += "-" + str(key) + " "
             idStr += "-" + str(key)
             if parameters[key] != None:
@@ -317,13 +319,14 @@ class SVMMultiClassClassifier(Classifier):
                 print >> sys.stderr, "threshold =", threshold, "at binary fscore", str(bestF)[0:6]
             evaluation = evaluator.evaluate(classifyExamples, ExampleUtils.loadPredictions(predictions, threshold=threshold), classIds, os.path.join(outDir, "evaluation" + id + ".csv"))
             if bestResult == None or evaluation.compare(bestResult[0]) > 0: #: averageResult.fScore > bestResult[1].fScore:
-                bestResult = [evaluation, trained[i], combinations[i]]
+                bestResult = [evaluation, trained[i], combinations[i], threshold]
             if not self.connection.isLocal():
                 os.remove(predictions) # remove predictions to save space
         #Stream.setIndent()
         print >> sys.stderr, "*** Evaluation complete", finalJobStatus, "***"
         print >> sys.stderr, "Selected parameters", bestResult[-1]
         classifier = copy.copy(bestResult[1])
+        classifier.threshold = bestResult[3]
         classifier.downloadModel()
         return classifier
     
