@@ -208,11 +208,11 @@ def encodeNewlines(filename):
     import tempfile, shutil
     # fix newlines
     tempdir = tempfile.mkdtemp()
-    tempfilepath = os.path.join(tempdir, "tempOutput")
+    tempfilepath = os.path.join(tempdir, os.path.basename(filename))
     if filename.endswith(".gz"):
         #inFile=GzipFile(filename,"rt")
-        inFile = codecs.getreader("utf-8")(GzipFile(filename,"rt"))
-        out = codecs.getwriter("utf-8")(GzipFile(tempfilepath,"wt"))
+        inFile = codecs.getreader("utf-8")(GzipFile(filename, "rb"))
+        out = codecs.getwriter("utf-8")(GzipFile(tempfilepath, "wb"))
     else:
         #inFile=open(filename,"rt")
         inFile=codecs.open(filename, "rt", "utf-8")
