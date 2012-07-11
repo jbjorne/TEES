@@ -32,12 +32,12 @@ class Preprocessor(ToolChain):
         steps.append( ("DIVIDE-SETS", self.divideSets, {"outputStem":None, "saveCombined":True}) )
         return steps
     
-    def process(self, source, corpusName, output, parameters=None, model=None, sourceDataSetNames=None, fromStep=None, toStep=None, omitSteps=None):
+    def process(self, source, output, parameters=None, model=None, sourceDataSetNames=None, fromStep=None, toStep=None, omitSteps=None):
         # Initialize variables and save existing default values
-        self.intermediateFileTag = corpusName
-        parameters = self.getParameters(parameters, model)
-        parameters["CONVERT.dataSetNames"] = sourceDataSetNames
-        parameters["CONVERT.corpusName"] = corpusName
+        #self.intermediateFileTag = corpusName
+        #parameters = self.getParameters(parameters, model)
+        #parameters["CONVERT.dataSetNames"] = sourceDataSetNames
+        #parameters["CONVERT.corpusName"] = corpusName
         #convertSetNames = self.stepArgs("CONVERT")["dataSetNames"]
         #convertCorpusName = self.stepArgs("CONVERT")["corpusName"]
         #self.stepArgs("CONVERT")["dataSetNames"] = sourceDataSetNames
@@ -52,14 +52,17 @@ class Preprocessor(ToolChain):
     def convert(self, input, dataSetNames=None, corpusName=None, output=None):
         if os.path.isdir(input) or input.endswith(".tar.gz") or "," in input:
             print >> sys.stderr, "Converting ST-format to Interaction XML"
+            # Get input file (or files)
             dataSetDirs = input
             documents = []
             if type(dataSetDirs) in types.StringTypes:
                 dataSetDirs = dataSetDirs.split(",")
+            # Get the list of "train", "devel" etc names for these sets
             if dataSetNames == None: 
                 dataSetNames = []
             elif type(dataSetNames) in types.StringTypes:
                 dataSetNames = dataSetNames.split(",")
+            # Convert all input files into one corpus
             for dataSetDir, dataSetName in itertools.izip_longest(dataSetDirs, dataSetNames, fillvalue=None):
                 print >> sys.stderr, "Reading", dataSetDir, "set,",
                 docs = Utils.STFormat.STTools.loadSet(dataSetDir, dataSetName)
@@ -67,7 +70,7 @@ class Preprocessor(ToolChain):
                 documents.extend(docs)
             print >> sys.stderr, "Resolving equivalences"
             Utils.STFormat.Equiv.process(documents)
-            self.xml = Utils.STFormat.ConvertXML.toInteractionXML(documents, self.intermediateFileTag, output)
+            self.xml = Utils.STFormat.ConvertXML.toInteractionXML(documents, corpusName, output)
         else:
             print >> sys.stderr, "Processing source as interaction XML"
             self.xml = ETUtils.ETFromObj(input)
@@ -111,5 +114,6 @@ if __name__=="__main__":
         #log(False, True, os.path.join(options.output, options.corpus + "-log.txt"))
     preprocessor = Preprocessor()
     preprocessor.setArgForAllSteps("debug", options.debug)
+    preprocessor.stepArgs("CONVERT")["corpusName"] = options.corpus
     preprocessor.stepArgs("PARSE")["requireEntities"] = options.requireEntities
-    preprocessor.process(options.input, options.corpus, options.output, options.parameters, None, options.inputNames, fromStep=options.step, toStep=options.toStep, omitSteps=options.omitSteps)
+    preprocessor.process(options.input, options.output, options.parameters, None, options.inputNames, fromStep=options.step, toStep=options.toStep, omitSteps=options.omitSteps)
