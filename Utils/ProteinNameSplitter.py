@@ -248,10 +248,11 @@ def splitTokens(tokenization, sentence, logFile=None):
         for offset in offsets.split(","):
             m = re.match(r'^(\d+)-(\d+)$', offset)
             assert m, "Failed to parse charOffset '%s'" % offset
-            start, end = int(m.group(1)), int(m.group(2))
+            #start, end = int(m.group(1)), int(m.group(2))
+            start, end = int(m.group(1)), int(m.group(2)) - 1
             entityOffsets.append((start,end))
     
-    seqId = 1
+    seqId = 0#1
     nextId = "%s%d" % (tokenIdPrefix, seqId)
 
     for token in tokenization.getiterator("token"):
@@ -264,7 +265,8 @@ def splitTokens(tokenization, sentence, logFile=None):
         # parse the token offset
         m = re.match(r'^(\d+)-(\d+)$', off)
         assert m, "Failed to parse token charOffset '%s'" % off
-        tokStart, tokEnd = int(m.group(1)), int(m.group(2))
+        #tokStart, tokEnd = int(m.group(1)), int(m.group(2))
+        tokStart, tokEnd = int(m.group(1)), int(m.group(2)) - 1
 
         # determine points at which the token must be cut
         cuts = cutPoints(tokStart, tokEnd, entityOffsets)
@@ -313,7 +315,8 @@ def splitTokens(tokenization, sentence, logFile=None):
         currentOffset = tokStart
         splitParts = []
         for part in parts:
-            tOff = "%d-%d" % (currentOffset, currentOffset + len(part)-1)
+            #tOff = "%d-%d" % (currentOffset, currentOffset + len(part)-1)
+            tOff = "%d-%d" % (currentOffset, currentOffset + len(part))
 
             t = Token(nextId, origId, POS, tOff, part)
             t.splitFromOffset = off
@@ -441,7 +444,7 @@ def mainFunc(input, output, parseName, tokenizationName=None, newParseName=None,
         newparse.set("ProteinNameSplitter", "True")
         splittok.set("ProteinNameSplitter", "True")
         
-        depSeqId = 1
+        depSeqId = 0 #1
         for d in parse.getiterator("dependency"):
             t1, t2, dType = d.get("t1"), d.get("t2"), d.get("type")
             assert t1 in tokenIdMap and t2 in tokenIdMap, "INTERNAL ERROR"
@@ -450,7 +453,7 @@ def mainFunc(input, output, parseName, tokenizationName=None, newParseName=None,
             dep.set("t1", tokenIdMap[t1])
             dep.set("t2", tokenIdMap[t2])
             dep.set("type", dType)
-            dep.set("id", "split_%d" % depSeqId)
+            dep.set("id", "spd_%d" % depSeqId)
             depSeqId += 1
 
         # Add in new dependencies between the split parts.
@@ -460,6 +463,8 @@ def mainFunc(input, output, parseName, tokenizationName=None, newParseName=None,
             dep.set("t2", t.id)
             dep.set("type", t.depType)
             dep.set("split", "PNS")
+            dep.set("id", "spd_%d" % depSeqId)
+            depSeqId += 1
 
         for phrase in parse.getiterator("phrase"):
             newparse.append(phrase)
