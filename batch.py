@@ -108,7 +108,7 @@ def getOutputDir(currentDir, input, output=None):
         return None
     else:
         relativeCurrentDir = os.path.abspath(currentDir)[len(os.path.abspath(input)):]
-        return os.path.join(output, relativeCurrentDir)
+        return os.path.join(relativeCurrentDir, output)
 
 def batch(command, input=None, connection=None, jobTag=None, output=None, regex=None, regexDir=None, dummy=False, rerun=None, 
           hideFinished=False, controlFilename=None, sleepTime=15, debug=False, limit=None, loop=False):
