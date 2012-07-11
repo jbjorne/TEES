@@ -9,7 +9,7 @@ import Utils.Settings as Settings
 import tempfile
 
 class UnixConnection:
-    programGroupSet = False
+    #programGroupSet = False
     
     def __init__(self, account=None, workDir=None, remoteSettingsPath=None, memory=4194304, cores=1, jobLimit=-1, killGroup=True):
         self.account = account    
@@ -36,12 +36,12 @@ class UnixConnection:
         self.resubmitOnlyFinished = True
         
         # Make sure local processes are killed on exit
-        if self.account == None and killGroup and not UnixConnection.programGroupSet:
+        if self.account == None and killGroup: # and not UnixConnection.programGroupSet:
+            #UnixConnection.programGroupSet = True
             os.setpgrp() # All child processes from subprocess should be in this group
-            atexit.register(os.killpg, 0, signal.SIGKILL)
-            UnixConnection.programGroupSet = True
-            #if jobLimit == None: # limit parallel processes on a local account
-            #    self.jobLimit = 1
+#            atexit.register(os.killpg, 0, signal.SIGKILL)
+#            #if jobLimit == None: # limit parallel processes on a local account
+#            #    self.jobLimit = 1
     
     def isLocal(self):
         return self.account == None
