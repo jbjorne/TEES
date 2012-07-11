@@ -116,9 +116,9 @@ def initLocalSettings(filename):
     os.environ["TEES_SETTINGS"] = filename
     reload(Settings)
 
-def checkInstallPath(menu, menuVariable, setting, installSubDir, defaultInstallKey="i", defaultSkipKey="s"):
-    if getattr(menu, menuVariable) == None:
-        setattr(menu, menuVariable, menu.system.defaultInstallDir + "/" + installSubDir)
+def checkInstallPath(menu, setting, defaultInstallKey="i", defaultSkipKey="s"):
+    #if getattr(menu, menuVariable) == None:
+    #    setattr(menu, menuVariable, menu.system.defaultInstallDir + "/" + installSubDir)
     if hasattr(Settings, setting) and getattr(Settings, setting) != None:
         menu.text += "The " + setting + " setting is already configured, so the default option is to skip installing.\n\n"
         menu.text += setting + "=" + getattr(Settings, setting)
@@ -156,31 +156,31 @@ def svmMenuInitializer(menu, prevMenu):
 
 def toolsMenuInitializer(menu, prevMenu):
     # Java path for ANT
-    if getattr(menu, "javaHome") == None:
-        if "JAVA_HOME" in os.environ:
-            setattr(menu, "javaHome", os.environ("JAVA_HOME"))
-        else:
-            setattr(menu, "javaHome", "")
+    #if getattr(menu, "javaHome") == None:
+    #    if "JAVA_HOME" in os.environ:
+    #        setattr(menu, "javaHome", os.environ("JAVA_HOME"))
+    #    else:
+    #        setattr(menu, "javaHome", "")
     # Tool initializers
     handlers = []
     handlerArgs = []
     redownload = menu.optDict["1"].toggle
-    if menu.optDict["2"].toggle or checkInstallPath(menu, "geniassInstallDir", "GENIA_SENTENCE_SPLITTER_DIR", "geniass"):
+    if menu.optDict["2"].toggle or checkInstallPath(menu, "GENIA_SENTENCE_SPLITTER_DIR"):
         menu.optDict["2"].toggle = True
         handlers.append(Tools.GeniaSentenceSplitter.install)
-        handlerArgs.append([menu.geniassInstallDir, os.path.join(menu.system.defaultInstallDir, "tools/download"), redownload])  
-    if menu.optDict["3"].toggle or checkInstallPath(menu, "bannerInstallDir", "BANNER_DIR", "BANNER"):
+        handlerArgs.append([None, None, redownload, True])  
+    if menu.optDict["3"].toggle or checkInstallPath(menu, "BANNER_DIR"):
         menu.optDict["3"].toggle = True
         handlers.append(Tools.BANNER.install)
-        handlerArgs.append([menu.bannerInstallDir, os.path.join(menu.system.defaultInstallDir, "tools/download"), redownload, False, None, True])  
-    if menu.optDict["4"].toggle or checkInstallPath(menu, "bllipInstallDir", "BLLIP_PARSER_DIR", "reranking-parser"):
+        handlerArgs.append([None, None, redownload, False, None, True])  
+    if menu.optDict["4"].toggle or checkInstallPath(menu, "BLLIP_PARSER_DIR"):
         menu.optDict["4"].toggle = True
-        handlers.append(Tools.BANNER.install)
-        handlerArgs.append([menu.bllipInstallDir, os.path.join(menu.system.defaultInstallDir, "tools/download"), redownload, False, True])  
-    if menu.optDict["5"].toggle or checkInstallPath(menu, "stanfordInstallDir", "STANFORD_PARSER_DIR", "stanford-parser"):
+        handlers.append(Tools.CharniakJohnsonParser.install)
+        handlerArgs.append([None, None, redownload, True])  
+    if menu.optDict["5"].toggle or checkInstallPath(menu, "STANFORD_PARSER_DIR"):
         menu.optDict["5"].toggle = True
-        handlers.append(Tools.BANNER.install)
-        handlerArgs.append([menu.stanfordInstallDir, os.path.join(menu.system.defaultInstallDir, "tools/download"), redownload, False, True])  
+        handlers.append(Tools.StanfordParser.install)
+        handlerArgs.append([None, None, redownload, True])  
     menu.optDict["i"].handler = handlers
     menu.optDict["i"].handlerArgs = handlerArgs
 
