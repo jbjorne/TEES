@@ -204,7 +204,7 @@ def addDependencies(outfile, parse, tokenByIndex=None, sentenceId=None, skipExtr
 #    shutil.rmtree(workdir)
 #    return lines
 
-def convertXML(parser, input, output, debug=False, reparse=False, stanfordParserDir=None, stanfordParserArgs=None):
+def convertXML(parser, input, output=None, debug=False, reparse=False, stanfordParserDir=None, stanfordParserArgs=None):
     #global stanfordParserDir, stanfordParserArgs
     if stanfordParserDir == None:
         stanfordParserDir = Settings.STANFORD_PARSER_DIR

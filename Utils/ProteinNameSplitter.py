@@ -356,7 +356,7 @@ def addTokensToTree(tokens, element):
 #    if level and (not elem.tail or not elem.tail.strip()):
 #        elem.tail = i
 
-def mainFunc(input, output, parseName, tokenizationName=None, newParseName=None, newTokenizationName=None, logFileName=None, removeOld=True):
+def mainFunc(input, output=None, parseName="McCC", tokenizationName=None, newParseName=None, newTokenizationName=None, logFileName=None, removeOld=True):
     print >> sys.stderr, "Protein Name Splitter"
     if logFileName != None:
         print >> sys.stderr, "Writing log to", logFileName
