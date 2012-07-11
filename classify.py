@@ -10,7 +10,7 @@ from Tools.Preprocessor import Preprocessor
 
 def classify(input, model, output, workDir=None, step=None, omitSteps=None, 
              goldInput=None, detector=None, corpusName="TEES", 
-             debug=False, writeScores=True, clear=False):
+             debug=False, writeScores=True, clear=False, preprocessorTag="-preprocessed.xml.gz"):
     # Determine if a predefined model should be used
     model = getModel(model)
     input, preprocess = getInput(input, model)
@@ -18,7 +18,7 @@ def classify(input, model, output, workDir=None, step=None, omitSteps=None,
     # Define processing steps
     selector, detectorSteps, omitDetectorSteps = getSteps(step, omitSteps, ["PREPROCESS", "CLASSIFY"])
     if not preprocess:
-        selector.omitSteps("PREPROCESS")
+        selector.markOmitSteps("PREPROCESS")
     # Initialize working directory
     if workDir != None: # use a permanent work directory
         workdir(workDir, clear)
@@ -27,19 +27,22 @@ def classify(input, model, output, workDir=None, step=None, omitSteps=None,
     classifyInput = input
     if selector.check("PREPROCESS"):
         preprocessor = Preprocessor()
+        preprocessorOutput = output + preprocessorTag
         #preprocessor.debug = debug
         #preprocessor.source = input # This has to be defined already here, needs to be fixed later
         #preprocessor.requireEntitiesForParsing = True # parse only sentences which contain named entities
-        if os.path.exists(preprocessor.getOutputPath("FIND-HEADS")):
-            print >> sys.stderr, "Preprocessor output", preprocessor.getOutputPath("FIND-HEADS"), "exists, skipping preprocessing."
-            classifyInput = preprocessor.getOutputPath("FIND-HEADS")
+        if os.path.exists(preprocessorOutput) and not clear: #os.path.exists(preprocessor.getOutputPath("FIND-HEADS")):
+            #print >> sys.stderr, "Preprocessor output", preprocessor.getOutputPath("FIND-HEADS"), "exists, skipping preprocessing."
+            print >> sys.stderr, "Preprocessor output", preprocessorOutput, "exists, skipping preprocessing."
+            classifyInput = preprocessorOutput # preprocessor.getOutputPath("FIND-HEADS")
         else:
-            print >> sys.stderr, "Preprocessor output", preprocessor.getOutputPath("FIND-HEADS"), "does not exist"
+            #print >> sys.stderr, "Preprocessor output", preprocessor.getOutputPath("FIND-HEADS"), "does not exist"
+            print >> sys.stderr, "Preprocessor output", preprocessorOutput, "does not exist"
             print >> sys.stderr, "------------ Preprocessing ------------"
             # Remove some of the unnecessary intermediate files
             #preprocessor.setIntermediateFiles({"Convert":None, "SPLIT-SENTENCES":None, "PARSE":None, "CONVERT-PARSE":None, "SPLIT-NAMES":None})
             # Process input into interaction XML
-            classifyInput = preprocessor.process(input, corpusName, output, None, model, [], fromStep=detectorSteps["PREPROCESS"], toStep=None, omitSteps=omitDetectorSteps["PREPROCESS"])
+            classifyInput = preprocessor.process(input, corpusName, preprocessorOutput, None, model, [], fromStep=detectorSteps["PREPROCESS"], toStep=None, omitSteps=omitDetectorSteps["PREPROCESS"])
     
     if selector.check("CLASSIFY"):
         detector = getDetector(detector, model)[0]() # initialize detector object
