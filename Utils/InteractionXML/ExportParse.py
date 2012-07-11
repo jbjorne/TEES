@@ -70,7 +70,7 @@ def exportPennTreeBank(parseElement, outFile):
     else:
         return True
 
-def exportStanfordDependencies(parseElement, tokenizationElement, outFile):
+def exportStanfordDependencies(parseElement, tokenizationElement, outFile, tokenIdOffset=0):
     global unEscDict
     escDictKeys = sorted(unEscDict.keys())
     
@@ -83,12 +83,12 @@ def exportStanfordDependencies(parseElement, tokenizationElement, outFile):
                 tokens[i] = tokens[i].replace(key, unEscDict[key])
         
     # Process dependencies
-    if parseElement != None:   
+    if parseElement != None:
         for dependency in parseElement.findall("dependency"):
             if dependency.get("split") != None: # ignore dependencies created by protein name splitter
                 continue
-            t1Index = tokenIdMap[int(dependency.get("t1").split("_")[-1]) - 1] # convert to zero-based
-            t2Index = tokenIdMap[int(dependency.get("t2").split("_")[-1]) - 1] # convert to zero-based
+            t1Index = tokenIdMap[int(dependency.get("t1").split("_")[-1]) + tokenIdOffset] # tokenIdOffset can convert to zero-based
+            t2Index = tokenIdMap[int(dependency.get("t2").split("_")[-1]) + tokenIdOffset] # tokenIdOffset can convert to zero-based
             assert t1Index < len(tokens), (t1Index, tokens, tokenIdMap, dependency.attrib)
             assert t2Index < len(tokens), (t2Index, tokens, tokenIdMap, dependency.attrib)
             t1 = tokens[t1Index] + "-" + str(t1Index + 1)
@@ -100,7 +100,7 @@ def exportStanfordDependencies(parseElement, tokenizationElement, outFile):
     else:
         return False
 
-def export(input, output, parse, tokenization=None, toExport=["tok", "ptb", "sd"], inputSuffixes=None, clear=False):
+def export(input, output, parse, tokenization=None, toExport=["tok", "ptb", "sd"], inputSuffixes=None, clear=False, tokenIdOffset=0):
     print >> sys.stderr, "##### Export Parse #####"
     
     if os.path.exists(output) and clear:
@@ -158,7 +158,7 @@ def export(input, output, parse, tokenization=None, toExport=["tok", "ptb", "sd"
                     if exportPennTreeBank(parseElement, outfiles["ptb"]):
                         counts["ptb"] += 1
                 if "sd" in outfiles:
-                    if exportStanfordDependencies(parseElement, tokenizationElement, outfiles["sd"]):
+                    if exportStanfordDependencies(parseElement, tokenizationElement, outfiles["sd"], tokenIdOffset):
                         counts["sd"] += 1
             # Close document output files
             for fileExt in outfiles:
@@ -185,8 +185,9 @@ if __name__=="__main__":
     optparser.add_option("-o", "--output", default=None, dest="output", help="Output directory.")
     optparser.add_option("-p", "--parse", default=None, dest="parse", help="")
     optparser.add_option("-c", "--clear", default=False, action="store_true", dest="clear", help="")
+    optparser.add_option("--tokenIdOffset", default=0, type="int", dest="tokenIdOffset", help="")
     (options, args) = optparser.parse_args()
     
     if options.inputSuffixes != None:
         options.inputSuffixes = options.inputSuffixes.split(",")
-    export(options.input, options.output, options.parse, clear=options.clear, inputSuffixes=options.inputSuffixes)
+    export(options.input, options.output, options.parse, clear=options.clear, inputSuffixes=options.inputSuffixes, tokenIdOffset=tokenIdOffset)
