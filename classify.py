@@ -6,15 +6,13 @@ import Utils.Settings as Settings
 import Utils.Stream as Stream
 import Utils.Download
 from Utils.Connection.Unix import getConnection
-from Tools.Preprocessor import Preprocessor
+from Detectors.Preprocessor import Preprocessor
 
 def classify(input, model, output, workDir=None, step=None, omitSteps=None, 
-             goldInput=None, detector=None, corpusName="TEES", 
-             debug=False, writeScores=True, clear=False, preprocessorTag="-preprocessed.xml.gz"):
-    # Determine if a predefined model should be used
-    model = getModel(model)
-    input, preprocess = getInput(input, model)
-    
+             goldInput=None, detector=None, 
+             debug=False, writeScores=True, clear=False, 
+             preprocessorTag="-preprocessed.xml.gz", preprocessorParams=None):
+    input, preprocess = getInput(input)
     # Define processing steps
     selector, detectorSteps, omitDetectorSteps = getSteps(step, omitSteps, ["PREPROCESS", "CLASSIFY"])
     if not preprocess:
@@ -42,9 +40,10 @@ def classify(input, model, output, workDir=None, step=None, omitSteps=None,
             # Remove some of the unnecessary intermediate files
             #preprocessor.setIntermediateFiles({"Convert":None, "SPLIT-SENTENCES":None, "PARSE":None, "CONVERT-PARSE":None, "SPLIT-NAMES":None})
             # Process input into interaction XML
-            classifyInput = preprocessor.process(input, corpusName, preprocessorOutput, None, model, [], fromStep=detectorSteps["PREPROCESS"], toStep=None, omitSteps=omitDetectorSteps["PREPROCESS"])
+            classifyInput = preprocessor.process(input, preprocessorOutput, preprocessorParams, model, [], fromStep=detectorSteps["PREPROCESS"], toStep=None, omitSteps=omitDetectorSteps["PREPROCESS"])
     
     if selector.check("CLASSIFY"):
+        model = getModel(model)
         detector = getDetector(detector, model)[0]() # initialize detector object
         detector.debug = debug
         detector.stWriteScores = writeScores # write confidence scores into additional st-format files
@@ -72,7 +71,7 @@ def getModel(model):
         print >> sys.stderr, "Classifying with model", model
     return model
 
-def getInput(input, model):
+def getInput(input, model=None):
     if input == None: # Get a corpus corresponding to the model
         assert model != None
         input = model.split(".")[0]
@@ -137,8 +136,8 @@ if __name__=="__main__":
     optparser.add_option("-m", "--model", default=None, dest="model", help="TEES model")
     optparser.add_option("-d", "--detector", default=None, dest="detector", help="")
     optparser.add_option("-c", "--connection", default=None, dest="connection", help="")
-    optparser.add_option("-n", "--corpusName", default="TEES", dest="corpusName", help="")
     optparser.add_option("-g", "--gold", default=None, dest="gold", help="annotated version of the input file (optional)")
+    optparser.add_option("-p", default=None, dest="preprocessorParams", help="")
     # Debugging and process control
     optparser.add_option("--step", default=None, dest="step", help="")
     optparser.add_option("--omitSteps", default=None, dest="omitSteps", help="")
@@ -149,4 +148,5 @@ if __name__=="__main__":
     
     assert options.output != None
     classify(options.input, options.model, options.output, options.workdir, options.step, options.omitSteps, 
-             options.gold, options.detector, options.corpusName, options.debug, options.writeScores, options.clearAll)
+             options.gold, options.detector, options.debug, options.writeScores, options.clearAll,
+             preprocessorParams=options.preprocessorParams)
