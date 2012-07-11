@@ -22,7 +22,8 @@ def toInteractionXML(documents, corpusName="GENIA", output=None):
         docId = corpusName + ".d" + str(docCounter)
         docEl.set("id", docId)
         docCounter += 1
-        docEl.set("pmid", str(doc.id))
+        #docEl.set("pmid", str(doc.id))
+        docEl.set("origId", str(doc.id))
         docEl.set("text", doc.text)
         if doc.dataSet != None:
             docEl.set("set", doc.dataSet)
@@ -33,7 +34,7 @@ def toInteractionXML(documents, corpusName="GENIA", output=None):
             sentEl = ET.SubElement(docEl, "sentence")
             sentEl.set("id", docId + ".s0")
             sentEl.set("text", doc.text)
-            sentEl.set("charOffset", "0-" + str(len(doc.text)-1))
+            sentEl.set("charOffset", "0-" + str(len(doc.text)))
             docId = sentEl.get("id") # hack to get all subelements here
             docEl = sentEl # hack to get all subelements here
         # Write triggers and entities
@@ -57,7 +58,7 @@ def toInteractionXML(documents, corpusName="GENIA", output=None):
             entEl.set("id", protId)
             entEl.set("origId", str(doc.id) + "." + str(protein.id))
             entEl.set("text", protein.text)
-            entEl.set("charOffset", str(protein.charBegin) + "-" + str(protein.charEnd-1))
+            entEl.set("charOffset", str(protein.charBegin) + "-" + str(protein.charEnd))
             if len(protein.alternativeOffsets) > 0:
                 altOffs = []
                 for ao in protein.alternativeOffsets:
@@ -80,7 +81,7 @@ def toInteractionXML(documents, corpusName="GENIA", output=None):
                 entEl.set("id", protId)
                 entEl.set("origId", str(doc.id) + "." + str(protein.id))
                 entEl.set("text", protein.text)
-                entEl.set("charOffset", str(protein.charBegin) + "-" + str(protein.charEnd-1))
+                entEl.set("charOffset", str(protein.charBegin) + "-" + str(protein.charEnd))
                 if len(protein.alternativeOffsets) > 0:
                     altOffs = []
                     for ao in protein.alternativeOffsets:
@@ -234,6 +235,8 @@ def toSTFormat(input, output=None, outputTag="a2", useOrigIds=False, debug=False
         stDoc.events = []
         stDoc.relations = []
         stDoc.id = document.get("pmid")
+        if stDoc.id == None:
+            stDoc.id = document.get("origId")
         stDoc.text = ""
         documents.append(stDoc)
         eMap = {}
@@ -274,8 +277,9 @@ def toSTFormat(input, output=None, outputTag="a2", useOrigIds=False, debug=False
                     else:
                         ann.id = entityOrigId
             ann.text = entity.get("text")
+            assert entityOffset[1] - entityOffset[0] in [len(ann.text), len(ann.text) - 1], (ann.text, entityOffset)
             ann.charBegin = entityOffset[0]
-            ann.charEnd = entityOffset[1] + 1
+            ann.charEnd = entityOffset[0] + len(ann.text) # entityOffset[1] + 1
             idStem = entity.get("id").split(".e", 1)[0]
             if sentenceOffsets.has_key(idStem):
                 sentenceOffset = sentenceOffsets[idStem]
