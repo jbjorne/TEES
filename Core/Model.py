@@ -55,9 +55,18 @@ class Model():
             del values[name]
         self._setValues(values)
     
-    def getStr(self, name):
-        return self._getValues()[name]
-    
+    def getStr(self, name, defaultIfNotExist=NOTHING, asType=None):
+        values = self._getValues()
+        if name in values:
+            if asType == None:
+                return values[name]
+            else:
+                return asType(values[name])
+        elif defaultIfNotExist != NOTHING:
+            return defaultIfNotExist
+        else:
+            raise IOError("String named '" + name + "' not defined in model " + self.path)
+        
     def save(self):
         if self.mode == "r":
             raise IOError("Model not open for writing")
@@ -125,11 +134,9 @@ class Model():
     def hasMember(self, name):
         return name in self.members
     
-    def get(self, name, addIfNotExist=False, defaultIfNotExist=NOTHING):
+    def get(self, name, addIfNotExist=False):
         if name not in self.members:
-            if defaultIfNotExist != NOTHING:
-                return defaultIfNotExist
-            elif addIfNotExist:
+            if addIfNotExist:
                 self.add(name)
             else:
                 raise IOError("Model has no member \"" + name + "\"")
