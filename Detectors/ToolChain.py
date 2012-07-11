@@ -2,6 +2,9 @@ import sys, os, copy, types
 from Detector import Detector
 import Utils.ElementTreeUtils as ETUtils
 import Utils.Parameters as Parameters
+import Utils.ElementTreeUtils as ETUtils
+
+NOTHING = object()
 
 class ToolChain(Detector):
     def __init__(self):
@@ -18,29 +21,33 @@ class ToolChain(Detector):
     def getDefaultSteps(self):
         return []
     
-    def getDefaultParameters(self, defaults=None):
+    def getDefaultParameters(self, defaults=None, noDefaultValue=False):
         if defaults == None:
             defaults = {"omitSteps":None, "intermediateFiles":None}
         for step in self.getDefaultSteps():
             for argName in sorted(step[2].keys()):
                 parameterName = step[0] + "." + argName
-                defaults[parameterName] = step[2][argName]
+                if noDefaultValue:
+                    defaults[parameterName] = NOTHING
+                else:
+                    defaults[parameterName] = step[2][argName]
         return defaults
 
     def getParameters(self, parameters=None, model=None):
-        if parameters == None:
-            parameters = model.get("preprocessorParams", defaultIfNotExist=None)
+        if parameters == None and model != None:
+            parameters = model.getStr("preprocessorParams", defaultIfNotExist=None)
         defaultStepNames = [x[0] for x in self.getDefaultSteps()]
-        valueLimits={"omitSteps":defaultStepNames, "intermediateFiles":defaultStepNames}
-        defaults = self.getDefaultParameters()  
-        return Parameters.get(parameters, defaults, valueListKey=sorted(defaults.keys()), valueLimits=valueLimits)
+        valueLimits={"omitSteps":defaultStepNames, "intermediateFiles":defaultStepNames + [True]}
+        defaults = self.getDefaultParameters(noDefaultValue=True)
+        return Parameters.get(parameters, defaults, valueLimits=valueLimits)
     
     def applyParameters(self, parameters):
-        self.select.omitSteps(parameters["omitSteps"])
-        for step in self.steps():
+        self.select.markOmitSteps(parameters["omitSteps"])
+        for step in self.steps:
             for argName in sorted(step[2].keys()):
                 parameterName = step[0] + "." + argName
-                step[2][argName] = parameters[parameterName]
+                if parameters[parameterName] != NOTHING:
+                    step[2][argName] = parameters[parameterName]
             if parameters["intermediateFiles"] != None:
                 if step in parameters["intermediateFiles"]:
                     self.setIntermediateFile(step, step[3])
@@ -68,7 +75,7 @@ class ToolChain(Detector):
             if step == s[0]:
                 if filename == True:
                     filename = s[3]
-                elif filename == False or filename == "None":
+                elif filename in [False, "None", None]:
                     filename = None
                 s[3] = filename
                 return
@@ -88,7 +95,7 @@ class ToolChain(Detector):
                 if type(self.source) in types.StringTypes:
                     firstSource = self.source.split(",") # this may be a list of directories
                     if os.path.isfile(firstSource):
-                        rv = self.source + "-" + step[3]
+                        rv = firstSource + "-" + step[3]
                     else: # is a directory
                         rv = os.path.join(firstSource, step[3])
                 else:
@@ -101,30 +108,37 @@ class ToolChain(Detector):
         else:
             return None
     
-    def process(self, input, outDir, parameters=None, model=None, fromStep=None, toStep=None, omitSteps=None):
-        self.initVariables(source=input, xml=input, outDir=outDir)
+    def process(self, input, output, parameters=None, model=None, fromStep=None, toStep=None, omitSteps=None):
+        self.initVariables(source=input, xml=input, outDir=os.path.dirname(output))
         self.enterState(self.STATE_TOOLCHAIN, [x[0] for x in self.steps], fromStep, toStep, omitSteps)
         parameters = self.getParameters(parameters, model)
         self.applyParameters(parameters)
         # Run the tools
-        print >> sys.stderr, "Tool chain parameters:", Parameters.toString(parameters, skipDefaults=self.getDefaultParameters())
-        savedOutput = None # Output from a previous step if "fromStep" is used
+        print >> sys.stderr, "Tool chain parameters:", Parameters.toString(parameters, skipKeysWithValues=[NOTHING], skipDefaults=self.getDefaultParameters())
+        if os.path.exists(output) and not os.path.isdir(output):
+            print >> sys.stderr, "Removing existing preprocessor output file", output
+            os.remove(output)
+        savedIntermediate = None # Output from a previous step if "fromStep" is used
         for step in self.steps:
             if self.checkStep(step[0]):
-                if savedOutput != None: # A previous run of the program saved an intermediate file
-                    self.xml = ETUtils.ETFromObj(savedOutput)
-                    savedOutput = None
+                if savedIntermediate != None: # A previous run of the program saved an intermediate file
+                    print >> sys.stderr, "Reading input from saved intermediate file", savedIntermediate
+                    self.xml = ETUtils.ETFromObj(savedIntermediate)
+                    savedIntermediate = None
                 stepArgs = copy.copy(step[2]) # make a copy of the arguments to which i/o can be added
                 stepArgs[step[4]["input"]] = self.xml # the input
                 if self.getIntermediateFilePath(step) != None: # this step should save an intermediate file
                     stepArgs[step[4]["output"]] = self.getIntermediateFilePath(step)
+                print >> sys.stderr, "Running step", step[0], "with arguments", stepArgs
                 step[1](**stepArgs) # call the tool
             elif self.getStepStatus(step[0]) == "BEFORE": # this step was run earlier
-                savedOutput = self.getIntermediateFilePath(step)
+                savedIntermediate = self.getIntermediateFilePath(step)
         # End state and return
         xml = self.xml # state-specific member variable self.xml will be removed when exiting state
         self.exitState()
         if self.state == None: # if the whole toolchain has finished, return the final product
+            if not os.path.isdir(output): # if output is a directory, it was given only for storing intermediate files ...
+                ETUtils.write(xml, output) # ... otherwise, save the final output
             return xml
         else:
             return None

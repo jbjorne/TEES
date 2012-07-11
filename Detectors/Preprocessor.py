@@ -13,7 +13,7 @@ import Tools.CharniakJohnsonParser
 import Tools.StanfordParser
 import Tools.BANNER
 from ToolChain import ToolChain
-import InteractionXML.DivideSets
+import Utils.InteractionXML.DivideSets
 import Utils.ProteinNameSplitter as ProteinNameSplitter
 import Utils.FindHeads as FindHeads
 #from Test.Pipeline import log
@@ -32,7 +32,7 @@ class Preprocessor(ToolChain):
         steps.append( ("DIVIDE-SETS", self.divideSets, {"outputStem":None, "saveCombined":True}) )
         return steps
     
-    def process(self, source, corpusName, outDir, parameters=None, model=None, sourceDataSetNames=None, fromStep=None, toStep=None, omitSteps=None):
+    def process(self, source, corpusName, output, parameters=None, model=None, sourceDataSetNames=None, fromStep=None, toStep=None, omitSteps=None):
         # Initialize variables and save existing default values
         self.intermediateFileTag = corpusName
         parameters = self.getParameters(parameters, model)
@@ -43,7 +43,7 @@ class Preprocessor(ToolChain):
         #self.stepArgs("CONVERT")["dataSetNames"] = sourceDataSetNames
         #self.stepArgs("CONVERT")["corpusName"] = corpusName
         # Run the tool chain
-        xml = ToolChain.process(self, source, outDir, parameters, None, fromStep, toStep, omitSteps)
+        xml = ToolChain.process(self, source, output, parameters, None, fromStep, toStep, omitSteps)
         # Reset variables to saved default values
         #self.stepArgs("CONVERT")["dataSetNames"] = convertSetNames
         #self.stepArgs("CONVERT")["corpusName"] = convertCorpusName
@@ -77,7 +77,7 @@ class Preprocessor(ToolChain):
         if outputStem != None:
             print >> sys.stderr, "Dividing into sets"
             outDir, outputStem = os.path.split(outputStem)
-            InteractionXML.DivideSets.processCorpus(input, outDir, outputStem, ".xml", saveCombined=saveCombined)
+            Utils.InteractionXML.DivideSets.processCorpus(input, outDir, outputStem, ".xml", saveCombined=saveCombined)
         else:
             print >> sys.stderr, "No set division"
 
@@ -96,7 +96,7 @@ if __name__=="__main__":
     optparser.add_option("-c", "--corpus", default=None, dest="corpus", help="corpus name")
     optparser.add_option("-o", "--output", default=None, dest="output", help="output directory")
     optparser.add_option("-p", "--parameters", default=None, dest="parameters", help="preprocessing parameters")
-    optparser.add_option("-f", "--fromStep", default=None, dest="fromStep", help="")
+    optparser.add_option("-s", "--step", default=None, dest="step", help="")
     optparser.add_option("-t", "--toStep", default=None, dest="toStep", help="")
     optparser.add_option("--omitSteps", default=None, dest="omitSteps", help="")
     optparser.add_option("--noLog", default=False, action="store_true", dest="noLog", help="")
@@ -106,15 +106,10 @@ if __name__=="__main__":
     if options.omitSteps != None:
         options.omitSteps = options.omitSteps.split(",")
     
-    cwd = os.getcwd()
-    options.output = os.path.abspath(options.output)
-    if not os.path.exists(options.output): os.makedirs(options.output)
-    os.chdir(options.output)
     if not options.noLog:
-        Stream.openLog(os.path.join(options.output, options.corpus + "-log.txt"))
+        Stream.openLog(os.path.join(options.output + "-log.txt"))
         #log(False, True, os.path.join(options.output, options.corpus + "-log.txt"))
     preprocessor = Preprocessor()
     preprocessor.setArgForAllSteps("debug", options.debug)
     preprocessor.stepArgs("PARSE")["requireEntities"] = options.requireEntities
-    preprocessor.preprocess(options.input, options.corpus, options.output, options.parameters, None, options.inputNames, fromStep=options.fromStep, toStep=options.toStep, omitSteps=options.omitSteps)
-    os.chdir(cwd)
+    preprocessor.process(options.input, options.corpus, options.output, options.parameters, None, options.inputNames, fromStep=options.step, toStep=options.toStep, omitSteps=options.omitSteps)
