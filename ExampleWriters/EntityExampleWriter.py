@@ -88,15 +88,13 @@ class EntityExampleWriter(SentenceExampleWriter):
                     entityElement.set("goldType", goldEntityTypeByHeadOffset[headToken.get("charOffset")])
                 if "goldIds" in example[3]: # The entities for which this example was built
                     entityElement.set("goldIds", example[3]["goldIds"])
-                #if (entityElement.get("type") != "neg" and not goldEntityByHeadOffset.has_key(entityElement.get("headOffset"))) or not self.insertWeights:
-                if entityElement.get("type") != "neg":
-                    if (not self.insertWeights) or (self.insertWeights and not goldEntityByHeadOffset.has_key(entityElement.get("headOffset"))):
-                        newEntityIdCount += 1
-                        sentenceElement.append(entityElement)
-                #elif entityElement.get("type") == "neg":
-                #    pass
-                #    #newEntityIdCount += 1
-                #    #sentenceElement.append(entityElement)
+                if (entityElement.get("type") != "neg" and not goldEntityByHeadOffset.has_key(entityElement.get("headOffset"))) or not self.insertWeights:
+                    newEntityIdCount += 1
+                    sentenceElement.append(entityElement)
+                elif entityElement.get("type") == "neg":
+                    pass
+                    #newEntityIdCount += 1
+                    #sentenceElement.append(entityElement)
         
         # if only adding weights, re-attach interactions and gold entities
         if self.insertWeights:
