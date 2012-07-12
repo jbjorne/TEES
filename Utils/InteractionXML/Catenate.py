@@ -10,10 +10,13 @@ import Utils.ElementTreeUtils as ETUtils
 import RecalculateIds
 
 def catenate(inputs, output, fast):
+    if not os.path.exists(os.path.dirname(output)):
+        os.makedirs(os.path.dirname(output))
     if fast:
         catenateFiles(inputs, output)
     else:
         catenateElements(inputs, output)
+    return output
     
 def catenateFiles(inputs, output):
     print >> sys.stderr, "##### Catenate interaction XML as files #####"
