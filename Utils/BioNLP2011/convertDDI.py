@@ -94,7 +94,7 @@ def fixEntities(xml):
                 # validate new offset
                 sEntity = sText[charOffset[0]:charOffset[1]+1]
                 assert sEntity == entity.get("text") or sEntity.lower() == entity.get("text"), (charOffset, sText, entity.get("text"), entity.get("id"))
-                entity.set("charOffset", Range.tuplesToCharOffset( (charOffset[0], charOffset[1])))
+                entity.set("charOffset", Range.tuplesToCharOffset( (charOffset[0], charOffset[1] + 1)))
                 entity.set("isName", "True")
         for interaction in sentence.findall("interaction"):
             interaction.set("type", "DDI")
@@ -115,7 +115,7 @@ def convertToInteractions(xml):
                 counts["neg"] += 1
     print "Pair counts:", counts
 
-def loadDocs(url, outDir, tempDir):
+def loadDocs(url, outDir, tempDir, idStart=0):
     inDir = Utils.Download.downloadAndExtract(url, tempDir, outDir)[0]
     inDir = os.path.join(tempDir, inDir)
             
@@ -200,12 +200,41 @@ def convertDDI(outDir, trainUnified=None, trainMTMX=None, testUnified=None, test
             print key, datasetCounts[key][0] / float(datasetCounts[key][1])
         else:
             print key, datasetCounts[key][0], "/", float(datasetCounts[key][1])
+    # Some of the train and test ids overlap. Let's change the train set ids, because test set ones are needed
+    # for the final evaluation.
+    changeIdCount = 1000
+    for trainId in ['DrugDDI.d312', 'DrugDDI.d316', 'DrugDDI.d332', 'DrugDDI.d334', 'DrugDDI.d337', 
+                    'DrugDDI.d342', 'DrugDDI.d349', 'DrugDDI.d354', 'DrugDDI.d373', 'DrugDDI.d379', 
+                    'DrugDDI.d383', 'DrugDDI.d388', 'DrugDDI.d392', 'DrugDDI.d396', 'DrugDDI.d398', 
+                    'DrugDDI.d409', 'DrugDDI.d411', 'DrugDDI.d415', 'DrugDDI.d425', 'DrugDDI.d430', 
+                    'DrugDDI.d433', 'DrugDDI.d448', 'DrugDDI.d450', 'DrugDDI.d452', 'DrugDDI.d462', 
+                    'DrugDDI.d467', 'DrugDDI.d470', 'DrugDDI.d474', 'DrugDDI.d480', 'DrugDDI.d482', 
+                    'DrugDDI.d485', 'DrugDDI.d492', 'DrugDDI.d494', 'DrugDDI.d496', 'DrugDDI.d498', 
+                    'DrugDDI.d500', 'DrugDDI.d503', 'DrugDDI.d506', 'DrugDDI.d518', 'DrugDDI.d523', 
+                    'DrugDDI.d528', 'DrugDDI.d535', 'DrugDDI.d539', 'DrugDDI.d552', 'DrugDDI.d554', 
+                    'DrugDDI.d558', 'DrugDDI.d561', 'DrugDDI.d570', 'DrugDDI.d578']:
+        newId = "DrugDDI.d" + str(changeIdCount)
+        print >> sys.stderr, "Changing train/devel id", trainId, "to", newId
+        for element in docById[trainId].getiterator():
+            for attrName, attrValue in element.attrib.iteritems():
+                if trainId in attrValue:
+                    element.set(attrName, attrValue.replace(trainId, newId))
+        docById[newId] = docById[trainId]
+        del docById[trainId]
+        changeIdCount += 1
     # If test set exists, load it, too
     if testUnified != None:
         testDocuments, testDocById, testDocCounts = loadDocs(testUnified, outDir + "/DDI11-original", tempdir)
         for document in testDocuments:
             document.set("set", "test")
         documents = documents + testDocuments
+        overlappingIds = []
+        for key in docById:
+            if key in testDocById:
+                overlappingIds.append(key)
+        for key in docById:
+            assert key not in testDocById, (key, docById[key].get("origId"), testDocById[key].get("origId"), sorted(docById.keys()), sorted(testDocById.keys()), sorted(overlappingIds))
+        docById.update(testDocById)
     
     # Add all documents into one XML
     xmlTree = ET.ElementTree(ET.Element("corpus"))
@@ -224,7 +253,7 @@ def convertDDI(outDir, trainUnified=None, trainMTMX=None, testUnified=None, test
         inDir = Utils.Download.getTopDir(tempdir, Utils.Download.downloadAndExtract(trainMTMX, tempdir, outDir + "/DDI11-original"))
         DDITools.addMTMX(xml, inDir)
     if testMTMX != None:
-        inDir = Utils.Download.getTopDir(tempdir, Utils.Download.downloadAndExtract(trainMTMX, tempdir, outDir + "/DDI11-original"))
+        inDir = Utils.Download.getTopDir(tempdir, Utils.Download.downloadAndExtract(testMTMX, tempdir, outDir + "/DDI11-original"))
         DDITools.addMTMX(xml, inDir)
     if makeIntermediateFiles:
         ETUtils.write(root, bigfileName + "-documents.xml")
