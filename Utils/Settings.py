@@ -8,8 +8,16 @@ if "TEES_SETTINGS" in os.environ:
     import imp
     pathname = os.environ["TEES_SETTINGS"]
     imp.load_source("TEESLocalSettings", pathname)
+    # combine the settings dictionaries
+    tempURL = URL
+    tempEVALUATOR = EVALUATOR
     # import everything from local settings module
     exec "from TEESLocalSettings import *"
+    # insert new values into the setting dictionaries
+    tempURL.update(URL)
+    URL = tempURL
+    tempEVALUATOR.update(EVALUATOR)
+    EVALUATOR = tempEVALUATOR
     
 def setLocal(variable, value, setVariable=True):
     # the settings file must exist and must be in the path
