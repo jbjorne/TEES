@@ -329,7 +329,8 @@ def run(input, output=None, elementName="entity", processElement="document", spl
                 sentenceEntityCount[bannerId] += 1
         mentionfile.close()
     
-    print >> sys.stderr, "BANNER found", nonSplitCount, "entities in", sentencesWithEntities, processElement + "-elements"
+    print >> sys.stderr, "BANNER found", nonSplitCount, "entities in", sentencesWithEntities, processElement + "-elements",
+    print >> sys.stderr, "(" + str(sCount) + " have no entities)"
     print >> sys.stderr, "New", elementName + "-elements:", totalEntities, "(Split", splitEventCount, "BANNER entities with newlines)"
     
     # Remove work directory
