@@ -18,10 +18,10 @@ def toDict(parameters, valueListKey=None):
             values = True
             if "=" in name:
                 name, values = name.split("=")
-                values = values.split(",")
+                values = values.strip().split(",")
                 if len(values) == 1:
                     values = values[0]
-            paramDict[name] = values
+            paramDict[name.strip()] = values
     return paramDict
 
 def toString(parameters, skipKeysWithValues=[None], skipValues=[True], skipDefaults={}):
