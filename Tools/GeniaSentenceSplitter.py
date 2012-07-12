@@ -119,6 +119,7 @@ def makeSentences(input, output=None, removeText=False, postProcess=True, debug=
     docCount = 0
     sentencesCreated = 0
     redivideCount = 0
+    emptySentenceCount = 0
     sourceElements = [x for x in corpusRoot.getiterator("document")] + [x for x in corpusRoot.getiterator("section")]
     counter = ProgressCounter(len(sourceElements), "GeniaSentenceSplitter")
     counter.showMilliseconds = True
@@ -179,7 +180,7 @@ def makeSentences(input, output=None, removeText=False, postProcess=True, debug=
         sentenceBeginIndex = -1
         prevSentence = None
         prevEndIndex = None
-        emptySentenceCount = 0
+        #emptySentenceCount = 0
         prevText = None
         for sText in workfile.readlines():
             sText = sText.strip() # The text of the sentence
@@ -221,8 +222,8 @@ def makeSentences(input, output=None, removeText=False, postProcess=True, debug=
             assert prevSentence.get("tail") == None, prevSentence.get("tail")
             prevSentence.set("tail", text[prevEndIndex+1:])
             
-        if emptySentenceCount > 0:
-            print >> sys.stderr, "Warning,", emptySentenceCount, "empty sentences in", document.get("id") 
+        #if emptySentenceCount > 0:
+        #    print >> sys.stderr, "Warning,", emptySentenceCount, "empty sentences in", document.get("id") 
         # Remove original text
         if removeText:
             del document["text"]
@@ -232,6 +233,8 @@ def makeSentences(input, output=None, removeText=False, postProcess=True, debug=
     
     print >> sys.stderr, "Sentence splitting created", sentencesCreated, "sentences"
     print >> sys.stderr, "Redivided", redivideCount, "sentences"
+    if emptySentenceCount > 0:
+        print >> sys.stderr, "Warning,", emptySentenceCount, "empty sentences"
     
     if debug:
         print >> sys.stderr, "Work directory preserved for debugging at", workdir
