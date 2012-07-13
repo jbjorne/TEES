@@ -324,7 +324,7 @@ class SVMMultiClassClassifier(Classifier):
                 os.remove(predictions) # remove predictions to save space
         #Stream.setIndent()
         print >> sys.stderr, "*** Evaluation complete", finalJobStatus, "***"
-        print >> sys.stderr, "Selected parameters", bestResult[-1]
+        print >> sys.stderr, "Selected parameters", bestResult[2]
         classifier = copy.copy(bestResult[1])
         classifier.threshold = bestResult[3]
         classifier.downloadModel()
