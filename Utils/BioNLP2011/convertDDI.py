@@ -14,7 +14,7 @@ import Utils.Settings as Settings
 import Utils.Stream as Stream
 import Utils.FindHeads as FindHeads
 import Tools.SentenceSplitter
-import Tools.CharniakJohnsonParser
+import Tools.BLLIPParser
 import Tools.StanfordParser
 #import Utils.InteractionXML.CopyParse
 try:
@@ -266,7 +266,7 @@ def convertDDI(outDir, trainUnified=None, trainMTMX=None, testUnified=None, test
     print >> sys.stderr, "Making sentences"
     Tools.SentenceSplitter.makeSentences(xml, extractedFilename, None)
     print >> sys.stderr, "Inserting McCC parses"
-    Tools.CharniakJohnsonParser.insertParses(xml, extractedFilename, None, extraAttributes={"source":"TEES-preparsed"})
+    Tools.BLLIPParser.insertParses(xml, extractedFilename, None, extraAttributes={"source":"TEES-preparsed"})
     print >> sys.stderr, "Inserting Stanford conversions"
     Tools.StanfordParser.insertParses(xml, extractedFilename, None, extraAttributes={"stanfordSource":"TEES-preparsed"})
     print >> sys.stderr, "Protein Name Splitting"

@@ -9,7 +9,7 @@ import Utils.STFormat.Equiv
 import Utils.ElementTreeUtils as ETUtils
 import Tools.GeniaSentenceSplitter
 import Tools.GeniaTagger
-import Tools.CharniakJohnsonParser
+import Tools.BLLIPParser
 import Tools.StanfordParser
 import Tools.BANNER
 from ToolChain import ToolChain
@@ -29,7 +29,7 @@ class Preprocessor(ToolChain):
         steps.append( ("CONVERT", self.convert, {"dataSetNames":None, "corpusName":None}, "documents.xml") )
         steps.append( ("SPLIT-SENTENCES", Tools.GeniaSentenceSplitter.makeSentences, {"debug":False, "postProcess":True}, "sentences.xml") )
         steps.append( ("NER", Tools.BANNER.run, {"elementName":"entity", "processElement":"sentence", "debug":False, "splitNewlines":True}, "ner.xml") )
-        steps.append( ("PARSE", Tools.CharniakJohnsonParser.parse, {"parseName":"McCC", "requireEntities":False, "debug":False}, "parse.xml") )
+        steps.append( ("PARSE", Tools.BLLIPParser.parse, {"parseName":"McCC", "requireEntities":False, "debug":False}, "parse.xml") )
         steps.append( ("CONVERT-PARSE", Tools.StanfordParser.convertXML, {"parser":"McCC", "debug":False}, "converted-parse.xml") )
         steps.append( ("SPLIT-NAMES", ProteinNameSplitter.mainFunc, {"parseName":"McCC"}, "split-names.xml") )
         steps.append( ("FIND-HEADS", FindHeads.findHeads, {"parse":"McCC", "removeExisting":True}, "heads.xml") )

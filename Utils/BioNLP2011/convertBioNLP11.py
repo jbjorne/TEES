@@ -14,7 +14,7 @@ import Utils.Stream as Stream
 import Utils.FindHeads as FindHeads
 import Tools.SentenceSplitter
 import Tools.GeniaTagger
-import Tools.CharniakJohnsonParser
+import Tools.BLLIPParser
 import Tools.StanfordParser
 import Utils.ElementTreeUtils as ETUtils
 import Evaluators.BioNLP11GeniaTools as BioNLP11GeniaTools
@@ -193,9 +193,9 @@ def addAnalyses(xml, corpus, datasets, files, bigfileName):
             analysesSetName = corpus + "_" + setName.upper() + "_ANALYSES"
             packagePath = Utils.Download.getTopDir(tempdir, Utils.Download.extractPackage(files[analysesSetName], tempdir))
             print >> sys.stderr, "Making sentences"
-            Tools.SentenceSplitter.makeSentences(xml, packagePath + "/tokenized", None, escDict=Tools.CharniakJohnsonParser.escDict)
+            Tools.SentenceSplitter.makeSentences(xml, packagePath + "/tokenized", None, escDict=Tools.BLLIPParser.escDict)
             print >> sys.stderr, "Inserting McCC parses"
-            Tools.CharniakJohnsonParser.insertParses(xml, packagePath + "/McClosky-Charniak/pstree", None, extraAttributes={"source":"BioNLP'09"})
+            Tools.BLLIPParser.insertParses(xml, packagePath + "/McClosky-Charniak/pstree", None, extraAttributes={"source":"BioNLP'09"})
             print >> sys.stderr, "Inserting Stanford conversions"
             Tools.StanfordParser.insertParses(xml, packagePath + "/McClosky-Charniak/dep", None, skipExtra=1, extraAttributes={"stanfordSource":"BioNLP'09"})
             print >> sys.stderr, "Removing temporary directory", tempdir
@@ -211,7 +211,7 @@ def addAnalyses(xml, corpus, datasets, files, bigfileName):
             print >> sys.stderr, "Making sentences"
             Tools.SentenceSplitter.makeSentences(xml, tempdir + "/" + os.path.basename(files[corpus + "_" + setName.upper() + "_TOKENS"])[:-len(".tar.gz")].split("-", 1)[-1] + "/tokenised", None)
             print >> sys.stderr, "Inserting McCC parses"
-            Tools.CharniakJohnsonParser.insertParses(xml, tempdir + "/" + os.path.basename(files[corpus + "_" + setName.upper() + "_McCC"])[:-len(".tar.gz")].split("-", 2)[-1] + "/mccc/ptb", None, extraAttributes={"source":"BioNLP'11"})
+            Tools.BLLIPParser.insertParses(xml, tempdir + "/" + os.path.basename(files[corpus + "_" + setName.upper() + "_McCC"])[:-len(".tar.gz")].split("-", 2)[-1] + "/mccc/ptb", None, extraAttributes={"source":"BioNLP'11"})
             print >> sys.stderr, "Inserting Stanford conversions"
             Tools.StanfordParser.insertParses(xml, tempdir + "/" + os.path.basename(files[corpus + "_" + setName.upper() + "_McCC"])[:-len(".tar.gz")].split("-", 2)[-1] + "/mccc/sd_ccproc", None, extraAttributes={"stanfordSource":"BioNLP'11"})
             print >> sys.stderr, "Removing temporary directory", tempdir

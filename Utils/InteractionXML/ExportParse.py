@@ -1,7 +1,7 @@
 import sys, os, shutil, codecs
 sys.path.append(os.path.dirname(os.path.abspath(__file__))+"/../..")
 from Utils.ProgressCounter import ProgressCounter
-from Tools.CharniakJohnsonParser import escDict
+from Tools.BLLIPParser import escDict
 try:
     import xml.etree.cElementTree as ET
 except ImportError:
