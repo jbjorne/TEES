@@ -97,21 +97,25 @@ def waitForJobs(maxJobs, submitCount, connection, controlFilename=None, sleepTim
     currentMaxJobs = getMaxJobs(maxJobs, controlFilename)
     print >> sys.stderr, "Current jobs", str(currentJobs) + ", max jobs", str(currentMaxJobs) + ", submitted jobs", submitCount
     if currentMaxJobs != None:
-        while(currentJobs > currentMaxJobs):
+        while(currentJobs >= currentMaxJobs):
             time.sleep(sleepTime)
             currentJobs = connection.getNumJobs()
             currentMaxJobs = getMaxJobs(maxJobs, controlFilename)
             print >> sys.stderr, "Current jobs", str(currentJobs) + ", max jobs", str(currentMaxJobs) + ", submitted jobs", submitCount
 
-def getOutputDir(currentDir, input, output=None):
+def getOutputDir(currentDir, currentItem, input, output=None):
     if output == None:
         return None
     else:
+        print (currentDir, currentItem, input, output, "TEST")
         relativeCurrentDir = os.path.abspath(currentDir)[len(os.path.abspath(input)):]
-        return os.path.join(relativeCurrentDir, output)
+        relativeCurrentDir = relativeCurrentDir.lstrip("/")
+        return os.path.join(output, relativeCurrentDir)
 
 def batch(command, input=None, connection=None, jobTag=None, output=None, regex=None, regexDir=None, dummy=False, rerun=None, 
-          hideFinished=False, controlFilename=None, sleepTime=15, debug=False, limit=None, loop=False):
+          hideFinished=False, controlFilename=None, sleepTime=None, debug=False, limit=None, loop=False):
+    if sleepTime == None:
+        sleepTime = 15
     connection = getConnection(connection)
     connection.debug = debug
     if input == None: # an inputless batch job:
@@ -133,7 +137,7 @@ def batch(command, input=None, connection=None, jobTag=None, output=None, regex=
                     print >> sys.stderr, "Processing directory", triple[0]
                 for item in sorted(triple[1]) + sorted(triple[2]): # process both directories and files
                     #print item, triple, os.path.join(triple[0], item)
-                    if submitJob(command, os.path.join(triple[0], item), connection, jobTag, getOutputDir(triple[0], input, output), regex, dummy, rerun, hideFinished):
+                    if submitJob(command, os.path.join(triple[0], item), connection, jobTag, getOutputDir(triple[0], item, input, output), regex, dummy, rerun, hideFinished):
                         submitCount += 1
                         # number of submitted jobs has increased, so check if we need to wait
                         waitForJobs(limit, submitCount, connection, controlFilename, sleepTime)
