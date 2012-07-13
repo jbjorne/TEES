@@ -10,7 +10,7 @@ import Tools.BANNER
 import Tools.CharniakJohnsonParser
 import Tools.StanfordParser
 # Corpora
-import Utils.BioNLP2011.convertBioNLP11 as convertBioNLP11
+import Utils.Convert.convertBioNLP as convertBioNLP
 # TODO: Logging
 
 def pathMenuInitializer(menu, prevMenu):
@@ -215,23 +215,23 @@ def corpusMenuInitializer(menu, prevMenu):
         if menu.optDict["2"].toggle or not checkCorpusInstall(corpus):
             menu.setDefault("i")
             menu.optDict["2"].toggle = True
-            handlers.append(convertBioNLP11.installPreconverted)
+            handlers.append(convertBioNLP.installPreconverted)
             handlerArgs.append(["BIONLP_11_CORPORA", menu.system.defaultInstallDir + "corpora", menu.system.defaultInstallDir + "corpora/download", redownload, True])
             break
     if menu.optDict["3"].toggle or not checkCorpusInstall("GE09"):
         menu.setDefault("i")
         menu.optDict["3"].toggle = True
-        handlers.append(convertBioNLP11.installPreconverted)
+        handlers.append(convertBioNLP.installPreconverted)
         handlerArgs.append(["BIONLP_09_CORPUS", menu.system.defaultInstallDir + "corpora", menu.system.defaultInstallDir + "corpora/download", redownload, True])
     if menu.optDict["4"].toggle or not checkCorpusInstall("DDI"):
         menu.setDefault("i")
         menu.optDict["4"].toggle = True
-        handlers.append(convertBioNLP11.installPreconverted)
+        handlers.append(convertBioNLP.installPreconverted)
         handlerArgs.append(["DDI_11_CORPUS", menu.system.defaultInstallDir + "corpora", menu.system.defaultInstallDir + "corpora/download", redownload, True])
     # A handler for installing BioNLP'11 evaluators
     if menu.optDict["5"].toggle or not hasattr(Settings, "BIONLP_EVALUATOR_DIR") or getattr(Settings, "BIONLP_EVALUATOR_DIR") == None:
         menu.setDefault("i")
-        handlers.append(convertBioNLP11.installEvaluators)
+        handlers.append(convertBioNLP.installEvaluators)
         handlerArgs.append([menu.system.defaultInstallDir + "tools/evaluators", menu.system.defaultInstallDir + "tools/download", redownload, True])
     # Add the handlers to install option
     menu.optDict["i"].handler = handlers
