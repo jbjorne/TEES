@@ -453,7 +453,7 @@ def mainFunc(input, output=None, parseName="McCC", tokenizationName=None, newPar
             dep.set("t1", tokenIdMap[t1])
             dep.set("t2", tokenIdMap[t2])
             dep.set("type", dType)
-            dep.set("id", "spd_%d" % depSeqId)
+            dep.set("id", "sd_%d" % depSeqId)
             depSeqId += 1
 
         # Add in new dependencies between the split parts.
