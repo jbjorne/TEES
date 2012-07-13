@@ -30,6 +30,34 @@ def readProteinNames(file):
         names.append(line.strip())
     return names
 
+def getSynonyms(inDir, outFilename):
+    outFile = open(outFilename, "wt")
+    for file in sorted(os.listdir(inDir)):
+        if file.find("xml") != -1:
+            protName = file.split(".")[0]
+            outFile.write(protName)
+            f = codecs.open(os.path.join(inDir, file), "rt", "utf-8")
+            geneNameLine = False
+            for line in f:
+                if geneNameLine:
+                    if line.find(protName) == -1:
+                        print "Warning,", protName, "not found"
+                        geneNameLine = False
+                if line.find("||") == -1: # not table line
+                    continue
+                if line.find("Gene Name") != -1:
+                    geneNameLine = True
+                elif line.find("Synonyms") != -1:
+                    synString = line.split("||")[1]
+                    synString = synString.replace("''", "")
+                    synonyms = synString.split(",")
+                    for i in range(len(synonyms)):
+                        #synonyms[i] = synonyms[i].strip()
+                        synonym = synonyms[i].strip()
+                        if synonym != "":
+                            outFile.write(","+synonym)
+            outFile.write("\n")             
+
 if __name__=="__main__":
     import sys
     from optparse import OptionParser
@@ -45,8 +73,10 @@ if __name__=="__main__":
     optparser.add_option("-i", "--input", default="http://subtiwiki.uni-goettingen.de/wiki/api.php", dest="input", help="")
     optparser.add_option("-o", "--output", default="subtiwiki/pages", dest="output", help="")
     optparser.add_option("-n", "--names", default="subtiwiki/Subtiwiki-Protein-Coding-Genes-Names.txt", dest="names", help="")
+    optparser.add_option("-s", "--synonyms", default="subtiwiki/Subtiwiki-Synonyms.csv", dest="synonyms", help="")
     (options, args) = optparser.parse_args()
 
     # create a Wiki object
     site = wiki.Wiki(options.input)
     loadPages(site, readProteinNames(options.names), options.output, wait=5)
+    getSynonyms(options.output, options.synonyms)
