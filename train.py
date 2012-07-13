@@ -40,7 +40,11 @@ def train(output, task=None, detector=None, inputFiles=None, models=None, parse=
     detector.bioNLPSTParams = detector.getBioNLPSharedTaskParams(bioNLPSTParams)
     #detector.useBioNLPSTFormat = useBioNLPSTFormat # classify-output and grid evaluation in ST-format
     #detector.stWriteScores = True # write confidence scores into additional st-format files
-    detector.setConnection(getConnection(connection)).debug = debug
+    connection = getConnection(connection)
+    detector.setConnection(connection)
+    connection.debug = debug
+    if deleteOutput:
+        connection.clearWorkDir()
     
     # Train
     if selector.check("TRAIN"):
@@ -65,7 +69,7 @@ def train(output, task=None, detector=None, inputFiles=None, models=None, parse=
                 model.addStr("detector", detectorName)
                 if preprocessorParams != None:
                     preprocessor = Preprocessor()
-                    model.addStr("preprocessorParams", Parameters.toString(preprocessor.getParameters(preprocessorParams), skipDefaults=preprocessor.getDefaultParameters()))
+                    model.addStr("preprocessorParams", Parameters.toString(preprocessor.getParameters(preprocessorParams)))
                 model.save()
                 model.close()
     if selector.check("DEVEL"):
@@ -89,7 +93,8 @@ def train(output, task=None, detector=None, inputFiles=None, models=None, parse=
         else:
             detector.bioNLPSTParams["scores"] = False # the evaluation server doesn't like additional files
             detector.classify(inputFiles["test"], models["test"], "classification-test/test-events", fromStep=detectorSteps["TEST"], workDir="classification-test")
-            Utils.STFormat.Compare.compare("classification-test/test-events.tar.gz", "classification-devel/devel-events.tar.gz", "a2")
+            if detector.bioNLPSTParams["convert"]:
+                Utils.STFormat.Compare.compare("classification-test/test-events.tar.gz", "classification-devel/devel-events.tar.gz", "a2")
 
 def getSteps(step, omitSteps, mainSteps):
     # Determine substep to start from, for the main step from which processing starts
@@ -201,10 +206,10 @@ def getTaskSettings(task, detector, processUnmerging, processModifiers, isSingle
             inputFiles["devel"] = os.path.join(dataPath, task + "-devel.xml")
         if inputFiles["train"] == None and inputFiles["train"] != "None":
             if task == "ID": # add GE-task data to the ID training set
-                Catenate.catenate([os.path.join(dataPath, "ID-train.xml"),
-                                   os.path.join(dataPath, "GE-devel.xml"),
-                                   os.path.join(dataPath, "GE-train.xml")], 
-                                  "training/ID-train-and-GE-devel-and-train.xml.gz", fast=True)
+                inputFiles["train"] = Catenate.catenate([os.path.join(dataPath, "ID-train.xml"),
+                                                         os.path.join(dataPath, "GE-devel.xml"),
+                                                         os.path.join(dataPath, "GE-train.xml")], 
+                                                        "training/ID-train-and-GE-devel-and-train.xml.gz", fast=True)
             else:
                 inputFiles["train"] = os.path.join(dataPath, task + "-train.xml")
         if inputFiles["test"] == None and inputFiles["test"] != "None": 
@@ -242,7 +247,7 @@ def getTaskSettings(task, detector, processUnmerging, processModifiers, isSingle
             print >> sys.stderr, "Modifier prediction undefined, using default", processModifiers, " for task", fullTaskId
         if exampleStyles["examples"] == None and isSingleStage:
             if task == "REN":
-                exampleStyles["examples"] = "trigger_features:typed:no_linear:entities:noMasking:maxFeatures:bacteria_renaming" # :maskTypeAsProtein=Gene
+                exampleStyles["examples"] = "trigger_features:typed:no_linear:entities:noMasking:maxFeatures:bacteria_renaming:maskTypeAsProtein=Gene"
             elif task == "BI":
                 exampleStyles["examples"] = "trigger_features:typed:directed:no_linear:entities:noMasking:maxFeatures:bi_limits"
             elif task == "DDI":
@@ -284,7 +289,7 @@ def getTaskSettings(task, detector, processUnmerging, processModifiers, isSingle
             elif task == "BI":
                 classifierParameters["examples"] = "10,100,1000,2500,5000,7500,10000,20000,25000,28000,50000,60000,65000,80000,100000,150000"
             elif task == "DDI":
-                classifierParameters["examples"] = "c=5000,10000,20000,25000,28000,50000,60000,65000,80000,100000,150000:TEES.threshold"
+                classifierParameters["examples"] = "c=10,100,1000,2500,4000,5000,6000,7500,10000,20000,25000,50000:TEES.threshold"
         if classifierParameters["trigger"] == None and not isSingleStage:
             print >> sys.stderr, "Classifier parameters for trigger examples undefined, using default for task", fullTaskId
             classifierParameters["trigger"] = "1000,5000,10000,20000,50000,80000,100000,150000,180000,200000,250000,300000,350000,500000,1000000"
