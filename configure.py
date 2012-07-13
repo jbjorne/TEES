@@ -101,16 +101,15 @@ def initLocalSettings(filename):
     BANNER_DIR = None # BANNER program directory
     GENIA_SENTENCE_SPLITTER_DIR = None # GENIA Sentence Splitter directory
     RUBY_PATH = "ruby" # Command to run Ruby (used only by the GENIA Sentence Splitter)
-    CHARNIAK_JOHNSON_PARSER_DIR = None # The BLLIP parser directory
+    BLLIP_PARSER_DIR = None # The BLLIP parser directory
     MCCLOSKY_BIOPARSINGMODEL_DIR = None # The McClosky BioModel directory
     STANFORD_PARSER_DIR = None # The Stanford parser directory
     
-    # BioNLP Shared Task evaluators
-    
     # Data
+    DATAPATH = DATAPATH_VALUE # Main directory for datafiles
     CORPUS_DIR = None # Directory for the corpus XML-files
     TEES_MODEL_DIR = None # Directory for the official TEES models
-    """.replace("    ", ""))
+    """.replace("    ", "")).replace("DATAPATH_VALUE", menu.system.defaultInstallDir)
     f.close()
     # Reset local settings
     os.environ["TEES_SETTINGS"] = filename
@@ -128,11 +127,7 @@ def checkInstallPath(menu, setting, defaultInstallKey="i", defaultSkipKey="s"):
         menu.setDefault(defaultInstallKey)
         return True
 
-def checkCorpusInstall(menu, corpus):
-    # If CORPUS_DIR setting is not set, the default is to install everything
-    if not hasattr(Settings, "CORPUS_DIR") or getattr(Settings, "CORPUS_DIR") == None:
-        Settings.setLocal("CORPUS_DIR", os.path.join(menu.system.defaultInstallDir, "corpora"))
-        print >> sys.stderr
+def checkCorpusInstall(corpus):
     # CORPUS_DIR is set, so check if the corpus is installed
     allFound = True # check for all corpus subsets
     for dataSet in ["-train.xml", "-devel.xml", "-test.xml"]:
@@ -184,6 +179,9 @@ def toolsMenuInitializer(menu, prevMenu):
     menu.optDict["i"].handler = handlers
     menu.optDict["i"].handlerArgs = handlerArgs
 
+def modelsMenuInitializer(menu, prevMenu):
+    pass
+
 def corpusMenuInitializer(menu, prevMenu):
     menu.text = """
     The corpora are used for training new models and testing existing
@@ -192,6 +190,11 @@ def corpusMenuInitializer(menu, prevMenu):
     University of Tokyo), and the First Challenge Task: Drug-Drug Interaction 
     Extraction (DDI'11, organized by Universidad Carlos III de Madrid).
     
+    The corpora are downloaded as interaction XML files, generated from the
+    original Shared Task files. If you need to convert the corpora from 
+    the original files, you can use the convertBioNLP.py and convertDDI.py programs
+    located at Utils.Build.
+    
     The corpora will be downloaded from their publishers' pages, then converted
     to the Interaction XML format used by TEES. It is also recommended to download 
     the official Shared Task evaluator programs, which will be used by TEES when 
@@ -199,16 +202,35 @@ def corpusMenuInitializer(menu, prevMenu):
     """
     # Mark "skip" as default option, this will be re-marked as install if a corpus is missing
     menu.setDefault("s")
+    # If CORPUS_DIR setting is not set set it now
+    if not hasattr(Settings, "CORPUS_DIR") or getattr(Settings, "CORPUS_DIR") == None:
+        Settings.setLocal("CORPUS_DIR", os.path.join(menu.system.defaultInstallDir, "corpora"))
+        print >> sys.stderr
+    # Initialize handlers
     handlers = []
     handlerArgs = []
     # Check which corpora need to be installed
     redownload = menu.optDict["1"].toggle
-    for corpus in ["GE", "EPI", "ID", "BB", "BI", "CO", "REL", "REN", "GE09"]:
-        if not checkCorpusInstall(menu, corpus):
-            menu.optDict[item].toggle = True
-    if len(corporaToInstall) > 0: # A corpus is missing
+    for corpus in ["GE", "EPI", "ID", "BB", "BI", "CO", "REL", "REN"]:
+        if menu.optDict["2"].toggle or not checkCorpusInstall(corpus):
+            menu.setDefault("i")
+            menu.optDict["2"].toggle = True
+            handlers.append(convertBioNLP11.installPreconverted)
+            handlerArgs.append(["BIONLP_11_CORPORA", menu.system.defaultInstallDir + "corpora", menu.system.defaultInstallDir + "corpora/download", redownload, True])
+            break
+    if menu.optDict["3"].toggle or not checkCorpusInstall("GE09"):
+        menu.setDefault("i")
+        menu.optDict["3"].toggle = True
         handlers.append(convertBioNLP11.installPreconverted)
-        handlerArgs.append([menu.system.defaultInstallDir + "corpora", menu.system.defaultInstallDir + "corpora/download", redownload, True])
+        handlerArgs.append(["BIONLP_09_CORPUS", menu.system.defaultInstallDir + "corpora", menu.system.defaultInstallDir + "corpora/download", redownload, True])
+    if menu.optDict["4"].toggle or not checkCorpusInstall("DDI"):
+        menu.setDefault("i")
+        menu.optDict["4"].toggle = True
+        handlers.append(convertBioNLP11.installPreconverted)
+        handlerArgs.append(["DDI_11_CORPUS", menu.system.defaultInstallDir + "corpora", menu.system.defaultInstallDir + "corpora/download", redownload, True])
+    # A handler for installing BioNLP'11 evaluators
+    if menu.optDict["5"].toggle or not hasattr(Settings, "BIONLP_EVALUATOR_DIR") or getattr(Settings, "BIONLP_EVALUATOR_DIR") == None:
+        menu.setDefault("i")
         handlers.append(convertBioNLP11.installEvaluators)
         handlerArgs.append([menu.system.defaultInstallDir + "tools/evaluators", menu.system.defaultInstallDir + "tools/download", redownload, True])
     # Add the handlers to install option
@@ -249,7 +271,7 @@ def buildMenus():
         Option("q", "Quit", handler=sys.exit),
         ])
 
-    Menu("Models", "Not implemented yet\n", [
+    Menu("Models", "Install TEES models\n", [
         Option("1", "Redownload already downloaded files", toggle=False),
         Option.SPACE,
         Option("i", "Install", isDefault=True),
@@ -258,8 +280,11 @@ def buildMenus():
     Menu("Corpora", "Install corpora\n", [
         Option("1", "Redownload already downloaded files", toggle=False),
         Option.SPACE,
-        Option("2", "Install BioNLP'11 and BioNLP'09 corpora", toggle=False),
-        Option("3", "Install DDI'11 (drug-drug interactions) corpus", toggle=False),
+        Option("2", "Install BioNLP'11 corpora", toggle=False),
+        Option("3", "Install BioNLP'09 (GENIA) corpus", toggle=False),
+        Option("4", "Install DDI'11 (Drug-Drug Interactions) corpus", toggle=False),
+        Option.SPACE,
+        Option("5", "Install BioNLP'11 evaluators", toggle=False),
         Option.SPACE,
         Option("i", "Install", isDefault=True),
         Option("s", "Skip")],
