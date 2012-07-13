@@ -50,7 +50,7 @@ class EdgeExampleBuilder(ExampleBuilder):
             "skip_extra_triggers", "headsOnly", "graph_kernel", "trigger_features", "no_task", "no_dependency", 
             "disable_entity_features", "disable_terminus_features", "disable_single_element_features", 
             "disable_ngram_features", "disable_path_edge_features", "no_linear", "subset", "binary", "pos_only",
-            "entity_type", "filter_shortest_path"])
+            "entity_type", "filter_shortest_path", "maskTypeAsProtein"])
         self.styles = self.getParameters(style)
         if style == None: # no parameters given
             style["typed"] = style["directed"] = style["headsOnly"] = True
@@ -69,7 +69,7 @@ class EdgeExampleBuilder(ExampleBuilder):
 #                self.selfTrainGroups.add("3")
 #            print >> sys.stderr, "Self-train-groups:", self.selfTrainGroups
         
-        self.multiEdgeFeatureBuilder = MultiEdgeFeatureBuilder(self.featureSet)
+        self.multiEdgeFeatureBuilder = MultiEdgeFeatureBuilder(self.featureSet, self.styles)
         # NOTE Temporarily re-enabling predicted range
         #self.multiEdgeFeatureBuilder.definePredictedValueRange([], None)
         if self.styles["graph_kernel"]:
@@ -91,7 +91,7 @@ class EdgeExampleBuilder(ExampleBuilder):
         if self.styles["bacteria_renaming"]:
             self.bacteriaRenamingFeatureBuilder = BacteriaRenamingFeatureBuilder(self.featureSet)
         if self.styles["trigger_features"]:
-            self.triggerFeatureBuilder = TriggerFeatureBuilder(self.featureSet)
+            self.triggerFeatureBuilder = TriggerFeatureBuilder(self.featureSet, self.styles)
             self.triggerFeatureBuilder.useNonNameEntities = True
             if self.styles["genia_task1"]:
                 self.triggerFeatureBuilder.filterAnnTypes.add("Entity")
@@ -652,8 +652,10 @@ class EdgeExampleBuilder(ExampleBuilder):
                     self.graphKernelFeatureBuilder.buildGraphKernelFeatures(sentenceGraph, path)
                     self.graphKernelFeatureBuilder.setFeatureVector(None)
                 if self.styles["entity_type"]:
-                    features[self.featureSet.getId("e1_"+entity1.get("type"))] = 1
-                    features[self.featureSet.getId("e2_"+entity2.get("type"))] = 1
+                    e1Type = self.multiEdgeFeatureBuilder.getEntityType(entity1)
+                    e2Type = self.multiEdgeFeatureBuilder.getEntityType(entity2)
+                    features[self.featureSet.getId("e1_"+e1Type)] = 1
+                    features[self.featureSet.getId("e2_"+e2Type)] = 1
                     features[self.featureSet.getId("distance_"+str(len(path)))] = 1
                 if not self.styles["no_dependency"]:
                     #print "Dep features"

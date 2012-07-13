@@ -23,8 +23,8 @@ from FeatureBuilder import FeatureBuilder
 #       return -1
 
 class TriggerFeatureBuilder(FeatureBuilder):
-    def __init__(self, featureSet):
-        FeatureBuilder.__init__(self, featureSet)
+    def __init__(self, featureSet, style=None):
+        FeatureBuilder.__init__(self, featureSet, style)
         self.noAnnType = False
         self.edgeTypesForFeatures = []
         self.useNonNameEntities = False
@@ -64,11 +64,11 @@ class TriggerFeatureBuilder(FeatureBuilder):
             features["_isName"]=1
             for entity in sentenceGraph.tokenIsEntityHead[token]:
                 if entity.get("isName") == "True":
-                    features["_annType_"+entity.get("type")]=1
+                    features["_annType_"+self.getEntityType(entity)]=1
         # Only for Unmerging!
         if self.useNonNameEntities:
             for entity in sentenceGraph.tokenIsEntityHead[token]:
-                features["_annType_"+entity.get("type")]=1
+                features["_annType_"+self.getEntityType(entity)]=1
 #        if self.gazetteer and tokTxt.lower() in self.gazetteer:
 #            for label,weight in self.gazetteer[tokTxt.lower()].items():
 #                pass

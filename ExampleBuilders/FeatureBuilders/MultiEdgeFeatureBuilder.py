@@ -14,12 +14,12 @@ class MultiEdgeFeatureBuilder(FeatureBuilder):
     dependencies. Most of the features it produces are built on the shortest undirected path of
     dependencies between the two tokens.
     """
-    def __init__(self, featureSet):
+    def __init__(self, featureSet, style=None):
         """
         @type featureSet: IdSet
         @param featureSet: feature ids
         """
-        FeatureBuilder.__init__(self, featureSet)
+        FeatureBuilder.__init__(self, featureSet, style=style)
         #self.edgeFeatureBuilder = EdgeFeatureBuilder(featureSet)
         self.ontologyFeatureBuilder = None
         self.noAnnType = False
@@ -164,7 +164,7 @@ class MultiEdgeFeatureBuilder(FeatureBuilder):
             else:
                 entityCombination += "e2_Entity"
             self.setFeature(entityCombination, 1)
-            self.setFeature("eTypes_"+self.entity1.get("type")+"_"+self.entity2.get("type"), 1)
+            self.setFeature("eTypes_"+self.getEntityType(self.entity1)+"_"+self.getEntityType(self.entity2), 1)
             
             if sentenceGraph.entityHeadTokenByEntity[self.entity1] == sentenceGraph.entityHeadTokenByEntity[self.entity2]:
                 self.setFeature("selfLoop", 1)

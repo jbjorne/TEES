@@ -8,7 +8,7 @@ class FeatureBuilder:
     Multiple example builders might make use of the same features. A feature builder object can be used in
     different example builders that require the same feature set.
     """
-    def __init__(self, featureSet):
+    def __init__(self, featureSet, style=None):
         """
         @type featureSet: IdSet
         @param featureSet: feature ids
@@ -21,6 +21,7 @@ class FeatureBuilder:
         self.filterAnnTypes = set() # ignore these entity types
         self.ontologyFeatureBuilder = None
         self.maximum = False # produce maximum number of features
+        self.style = style
         
         self.maskNamedEntities = True # named entity text strings are replaced with NAMED_ENT
         self.tag = "" # a prefix that is added to each feature name
@@ -117,6 +118,13 @@ class FeatureBuilder:
         self.tokenFeatures[callId] = featureList            
         return featureList
     
+    def getEntityType(self, entity):
+        eType = entity.get("type")
+        if self.style != None and "maskTypeAsProtein" in self.style and self.style["maskTypeAsProtein"] and eType in self.style["maskTypeAsProtein"]:
+            return "Protein"
+        else:
+            return eType
+    
     def getTokenAnnotatedType(self, token, sentenceGraph):
         """
         Multiple entities may have the same head token. This returns a list of the types of all entities whose
@@ -128,25 +136,25 @@ class FeatureBuilder:
         if len(sentenceGraph.tokenIsEntityHead[token]) > 0 and not self.noAnnType:
             annTypes = set()
             for entity in sentenceGraph.tokenIsEntityHead[token]:
-                eType = entity.get("type")
+                eType = self.getEntityType(entity)
                 if eType != None and not eType in annTypes and not eType in self.filterAnnTypes:
                     if self.entity1 == None and self.entity2 == None:
-                        annTypes.add(entity.get("type"))
+                        annTypes.add(eType)
                     else:
                         if self.maximum:
-                            annTypes.add(entity.get("type"))
+                            annTypes.add(eType)
                         if self.entity1 == entity:
                             if not self.maximum:
-                            	return [entity.get("type")]
+                            	return [eType]
                             else:
-                            	annTypes.add("e1_"+entity.get("type"))
+                            	annTypes.add("e1_"+eType)
                         elif self.entity2 == entity:
                             if not self.maximum:
-                            	return [entity.get("type")]
+                            	return [eType]
                             else:
-								annTypes.add("e2_"+entity.get("type"))
+								annTypes.add("e2_"+eType)
                         else:
-                            annTypes.add(entity.get("type"))
+                            annTypes.add(eType)
             annTypes = list(annTypes)
             annTypes.sort()
             if self.maximum:
