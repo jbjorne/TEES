@@ -20,6 +20,10 @@ import Utils.FindHeads as FindHeads
 import Utils.Stream as Stream
 
 class Preprocessor(ToolChain):
+    def __init__(self):
+        ToolChain.__init__(self)
+        self.modelParameterStringName = "preprocessorParams"
+    
     def getDefaultSteps(self):
         steps = []
         steps.append( ("CONVERT", self.convert, {"dataSetNames":None, "corpusName":None}, "documents.xml") )
@@ -43,7 +47,7 @@ class Preprocessor(ToolChain):
         #self.stepArgs("CONVERT")["dataSetNames"] = sourceDataSetNames
         #self.stepArgs("CONVERT")["corpusName"] = corpusName
         # Run the tool chain
-        xml = ToolChain.process(self, source, output, parameters, None, fromStep, toStep, omitSteps)
+        xml = ToolChain.process(self, source, output, parameters, model, fromStep, toStep, omitSteps)
         # Reset variables to saved default values
         #self.stepArgs("CONVERT")["dataSetNames"] = convertSetNames
         #self.stepArgs("CONVERT")["corpusName"] = convertCorpusName
@@ -70,6 +74,8 @@ class Preprocessor(ToolChain):
                 documents.extend(docs)
             print >> sys.stderr, "Resolving equivalences"
             Utils.STFormat.Equiv.process(documents)
+            if corpusName == None:
+                corpusName = "TEES"
             self.xml = Utils.STFormat.ConvertXML.toInteractionXML(documents, corpusName, output)
         else:
             print >> sys.stderr, "Processing source as interaction XML"

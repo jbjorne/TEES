@@ -1,5 +1,6 @@
 import sys, os, copy, types
 from Detector import Detector
+from Core.Model import Model
 import Utils.ElementTreeUtils as ETUtils
 import Utils.Parameters as Parameters
 import Utils.ElementTreeUtils as ETUtils
@@ -17,28 +18,33 @@ class ToolChain(Detector):
         self.intermediateFilesAtSource = False
         self.compressIntermediateFiles = True
         self.intermediateFileTag = "temp"
+        self.modelParameterStringName = None
     
     def getDefaultSteps(self):
         return []
     
-    def getDefaultParameters(self, defaults=None, noDefaultValue=False):
+    def getDefaultParameters(self, defaults=None, defaultValue=None):
         if defaults == None:
             defaults = {"omitSteps":None, "intermediateFiles":None}
         for step in self.getDefaultSteps():
             for argName in sorted(step[2].keys()):
                 parameterName = step[0] + "." + argName
-                if noDefaultValue:
+                if defaultValue == NOTHING:
                     defaults[parameterName] = NOTHING
                 else:
-                    defaults[parameterName] = step[2][argName]
+                    defaults[parameterName] = defaultValue
         return defaults
 
-    def getParameters(self, parameters=None, model=None):
+    def getParameters(self, parameters=None, model=None, defaultValue=None, modelParameterStringName=None):
+        if modelParameterStringName == None:
+            modelParameterStringName = self.modelParameterStringName
         if parameters == None and model != None:
-            parameters = model.getStr("preprocessorParams", defaultIfNotExist=None)
+            if type(model) in types.StringTypes:
+                model = Model(model)
+            parameters = model.getStr(modelParameterStringName, defaultIfNotExist=None)
         defaultStepNames = [x[0] for x in self.getDefaultSteps()]
         valueLimits={"omitSteps":defaultStepNames, "intermediateFiles":defaultStepNames + [True]}
-        defaults = self.getDefaultParameters(noDefaultValue=True)
+        defaults = self.getDefaultParameters(defaultValue=defaultValue)
         return Parameters.get(parameters, defaults, valueLimits=valueLimits)
     
     def applyParameters(self, parameters):
@@ -115,7 +121,7 @@ class ToolChain(Detector):
         else:
             self.intermediateFileTag = ""
         self.enterState(self.STATE_TOOLCHAIN, [x[0] for x in self.steps], fromStep, toStep, omitSteps)
-        parameters = self.getParameters(parameters, model)
+        parameters = self.getParameters(parameters, model, defaultValue=NOTHING)
         self.applyParameters(parameters)
         # Run the tools
         print >> sys.stderr, "Tool chain parameters:", Parameters.toString(parameters, skipKeysWithValues=[NOTHING], skipDefaults=self.getDefaultParameters())
