@@ -5,12 +5,14 @@ import subprocess
 from ClusterConnection import ClusterConnection
 
 class SLURMConnection(ClusterConnection):
-    def __init__(self, account=None, workDirBase=None, remoteSettingsPath=None):
-        ClusterConnection.__init__(self, account, workDirBase, remoteSettingsPath)
-        self.wallTime = "48:00:00"
-        self.cores = 1
-        self.memory = 4000
-        self.modules = ["python"]
+    def __init__(self, account=None, workdir=None, settings=None, wallTime=None, memory=None, cores=None, modules=None):
+        if wallTime == None:
+            wallTime = "48:00:00"
+        if memory == None:
+            memory = 4000
+        if modules == None:
+            modules = ["python", "ruby"]
+        ClusterConnection.__init__(self, account=account, workdir=workdir, settings=settings, memory=memory, cores=cores, modules=modules, wallTime=wallTime)
         self.submitCommand = "sbatch"
     
     def submit(self, script=None, jobDir=None, jobName=None, stdout=None, stderr=None):
@@ -46,7 +48,9 @@ class SLURMConnection(ClusterConnection):
         Get number of queued (pending or running) jobs
         """
         stdoutLines = self.run("squeue | grep " + self.getUserName() + " | wc -l")
-        return len(stdoutLines)
+        assert len(stdoutLines) == 1, stdoutLines
+        assert stdoutLines[0].strip().isdigit(), stdoutLines
+        return int(stdoutLines[0].strip())
     
     def getJobStatus(self, job):
         jobAttr = self._readJobFile(job)
@@ -113,8 +117,9 @@ class SLURMConnection(ClusterConnection):
                 
         if modules == None:
             modules = self.modules
-        for module in modules:
-            s += "module load " + module + "\n"
+        if modules != None:
+            for module in modules:
+                s += "module load " + module + "\n"
         if self.remoteSettingsPath != None: # Use a specific configuration file
             s += "export TEES_SETTINGS=" + self.remoteSettingsPath + "\n"
         if jobDir != None:

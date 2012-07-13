@@ -6,17 +6,22 @@ import atexit, signal
 sys.path.append(os.path.normpath(os.path.abspath(os.path.dirname(__file__))+"/../.."))
 from Utils.Timer import Timer
 import Utils.Settings as Settings
+import Utils.Parameters as Parameters
 import tempfile
 
 class UnixConnection:
     #programGroupSet = False
     
-    def __init__(self, account=None, workDir=None, remoteSettingsPath=None, memory=4194304, cores=1, jobLimit=-1, killGroup=True):
-        self.account = account    
-        self.memory = memory
-        self.cores = cores
+    def __init__(self, account=None, workdir=None, settings=None, memory=None, cores=None, jobLimit=None, killGroup=True):
+        self.account = account
+        if memory == None:
+            memory = 4194304
+        self.memory = int(memory)
+        if cores == None:
+            cores = 1
+        self.cores = int(cores)
         #self.machineName = account.split("@")[-1]
-        self.workDir = workDir
+        self.workDir = workdir
         #self._workDirBase = workDirBase
         #self.setWorkDir("", False)
         # State constants
@@ -28,10 +33,12 @@ class UnixConnection:
         self.commands = []
         
         self.compression = False #True
-        self.remoteSettingsPath = remoteSettingsPath
+        self.remoteSettingsPath = settings
         self.cachedRemoteSettings = None
         self._logs = {}
-        self.jobLimit = jobLimit
+        if jobLimit == None:
+            jobLimit = -1
+        self.jobLimit = int(jobLimit)
         self.debug = False
         self.resubmitOnlyFinished = True
         
@@ -42,6 +49,13 @@ class UnixConnection:
 #            atexit.register(os.killpg, 0, signal.SIGKILL)
 #            #if jobLimit == None: # limit parallel processes on a local account
 #            #    self.jobLimit = 1
+    
+    def clearWorkDir(self, subDir=""):
+        workSubDir = self.getRemotePath(subDir)
+        assert workSubDir != self.workDir, (self.workDir, subDir) # prevent removal of the whole remote work directory
+        assert self.account != None
+        print >> sys.stderr, "Removing remote directory", workSubDir
+        self.run("rm -R " + workSubDir)
     
     def isLocal(self):
         return self.account == None
@@ -470,27 +484,36 @@ from LSF import LSFConnection
 from SLURM import SLURMConnection
 #import LSF.LSFConnection
 
-def getConnection(connection, account=None, workDirBase=None, remoteSettingsPath=None):
+def getConnection(connection): #, account=None, workDirBase=None, remoteSettingsPath=None):
     if connection == None: # return a "dummy" local connection
         return getConnection("Unix")
     elif type(connection) in types.StringTypes and hasattr(Settings, connection): # connection is a Settings key
         print >> sys.stderr, "Using connection", connection
-        return getConnection(*getattr(Settings, connection))
-    else: # connection is the connection object type
-        if account == None:
-            assert workDirBase == None
-            assert remoteSettingsPath == None
-            print >> sys.stderr, "New local", connection, "connection"
+        return getConnection(getattr(Settings, connection))
+        #return getConnection(*getattr(Settings, connection))
+    else: # connection is a parameter string or dictionary
+        connection = Parameters.get(connection, valueListKey="connection", defaults=["connection", "account", "workdir", "settings", "memory", "cores", "modules", "wallTime"])
+        if connection["account"] == None:
+            assert connection["workdir"] == None
+            #assert remoteSettingsPath == None
+            print >> sys.stderr, "New local connection", Parameters.toString(connection)
         else: 
-            print >> sys.stderr, "New remote", connection, "connection:", account, workDirBase, remoteSettingsPath
-        if connection == "Unix":
-            return UnixConnection(account, workDirBase, remoteSettingsPath)
-        elif connection == "LSF":
-            return LSFConnection(account, workDirBase, remoteSettingsPath)
-        elif connection == "SLURM":
-            return SLURMConnection(account, workDirBase, remoteSettingsPath)
-        else:
-            assert False, connection
+            print >> sys.stderr, "New remote connection:", Parameters.toString(connection)
+        # Make the connection
+        exec "ConnectionClass = " + connection["connection"] + "Connection"
+        connectionArgs = {}
+        for key in connection:
+            if key != "connection" and connection[key] != None:
+                connectionArgs[key] = connection[key]
+        return ConnectionClass(**connectionArgs)
+#        if connection == "Unix":
+#            return UnixConnection(account, workDirBase, remoteSettingsPath)
+#        elif connection == "LSF":
+#            return LSFConnection(account, workDirBase, remoteSettingsPath)
+#        elif connection == "SLURM":
+#            return SLURMConnection(account, workDirBase, remoteSettingsPath)
+#        else:
+#            assert False, connection
 
 if __name__=="__main__":
     c = CSCConnection("remoteTest", "jakrbj@louhi.csc.fi", True)

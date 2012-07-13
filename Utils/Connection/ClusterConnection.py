@@ -5,11 +5,10 @@ from Unix import UnixConnection
 import subprocess
 
 class ClusterConnection(UnixConnection):
-    def __init__(self, account=None, workDirBase=None, remoteSettingsPath=None, memory=4194304, cores=1):
-        UnixConnection.__init__(self, account, workDirBase, remoteSettingsPath, killGroup=False)
-        self.wallTime = None
-        self.cores = 1
-        self.modules = []
+    def __init__(self, account=None, workdir=None, settings=None, memory=None, cores=None, modules=None, wallTime=None):
+        UnixConnection.__init__(self, killGroup=False, account=account, workdir=workdir, settings=settings, memory=memory, cores=cores)
+        self.wallTime = wallTime
+        self.modules = modules
         self.submitCommand = None
     
     def submit(self, script=None, jobWorkDir=None, name=None, stdout=None, stderr=None):
