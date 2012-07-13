@@ -1,5 +1,5 @@
 import types
-from Unix import UnixConnection
+from UnixConnection import UnixConnection
 
 class PBSConnection(UnixConnection):
     """

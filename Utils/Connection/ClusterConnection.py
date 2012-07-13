@@ -1,7 +1,7 @@
 import sys, os
 import types
 #import uuid
-from Unix import UnixConnection
+from UnixConnection import UnixConnection
 import subprocess
 
 class ClusterConnection(UnixConnection):

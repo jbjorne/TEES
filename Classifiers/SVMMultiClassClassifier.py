@@ -26,8 +26,8 @@ import Utils.Settings as Settings
 import Utils.Download as Download
 import Tools.Tool
 import SVMMultiClassModelUtils
-import Utils.Connection.Unix
-from Utils.Connection.Unix import UnixConnection
+import Utils.Connection.Connection as Connection
+from Utils.Connection.UnixConnection import UnixConnection
 from Evaluators.AveragingMultiClassEvaluator import AveragingMultiClassEvaluator
 
 def install(destDir=None, downloadDir=None, redownload=False, compile=True, updateLocalSettings=False):
@@ -675,7 +675,7 @@ if __name__=="__main__":
         sys.exit()
     else:
         assert options.action in ["TRAIN", "CLASSIFY", "OPTIMIZE"]
-        classifier = SVMMultiClassClassifier(Utils.Connection.Unix.getConnection(options.remote))
+        classifier = SVMMultiClassClassifier(Connection.getConnection(options.remote))
         if options.action == "TRAIN":
             import time
             trained = classifier.train(options.examples, options.output, options.parameters, options.classifyExamples)

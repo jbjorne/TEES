@@ -4,7 +4,7 @@ import Utils.InteractionXML.Catenate as Catenate
 import Utils.Stream as Stream
 import Utils.Settings as Settings
 import Utils.Parameters as Parameters
-from Utils.Connection.Unix import getConnection
+from Utils.Connection.Connection import getConnection
 import Utils.STFormat.Compare
 import shutil
 import atexit

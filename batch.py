@@ -1,7 +1,7 @@
 import sys, os
 import time
 import re
-from Utils.Connection.Unix import getConnection
+from Utils.Connection.Connection import getConnection
 
 def getMaxJobsFromFile(controlFilename):
     f = open(controlFilename, "rt")

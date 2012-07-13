@@ -5,7 +5,7 @@ import codecs
 import Utils.Settings as Settings
 import Utils.Stream as Stream
 import Utils.Download
-from Utils.Connection.Unix import getConnection
+from Utils.Connection.Connection import getConnection
 from Detectors.Preprocessor import Preprocessor
 
 def classify(input, model, output, workDir=None, step=None, omitSteps=None, 
