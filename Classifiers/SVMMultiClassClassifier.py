@@ -266,9 +266,9 @@ class SVMMultiClassClassifier(Classifier):
         predictionsPath = self.connection.getRemotePath(output, False)
         examples = self.getExampleFile(examples, replaceRemote=replaceRemoteFiles)
         classifier._filesToRelease = [examples]
-        classifyCommand = self.connection.getSetting("SVM_MULTICLASS_DIR") + "/svm_multiclass_classify " + examples + " " + model + " " + predictionsPath
-        classifier._job = self.connection.submit(classifyCommand, 
-                                                 jobDir=os.path.abspath(os.path.dirname(output)), 
+        self.connection.clearCommands()
+        self.connection.addCommand( self.connection.getSetting("SVM_MULTICLASS_DIR") + "/svm_multiclass_classify " + examples + " " + model + " " + predictionsPath )
+        classifier._job = self.connection.submit(jobDir=os.path.abspath(os.path.dirname(output)), 
                                                  jobName="svm_multiclass_classify-"+os.path.basename(model))
         if finishBeforeReturn:
             self.connection.waitForJob(classifier._job)
