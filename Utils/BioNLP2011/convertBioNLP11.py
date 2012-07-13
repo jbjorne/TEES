@@ -24,13 +24,13 @@ import Utils.Settings as Settings
 moveBI = ["PMID-10333516-S3", "PMID-10503549-S4", "PMID-10788508-S10", "PMID-1906867-S3",
           "PMID-9555886-S6", "PMID-10075739-S13", "PMID-10400595-S1", "PMID-10220166-S12"]
 
-def installPreconverted(destPath=None, downloadPath=None, redownload=False, updateLocalSettings=False):
-    print >> sys.stderr, "---------------", "Downloading preconverted BioNLP'11 corpora", "---------------"
+def installPreconverted(url="BIONLP_CORPORA", destPath=None, downloadPath=None, redownload=False, updateLocalSettings=False):
+    print >> sys.stderr, "---------------", "Downloading preconverted corpora", "---------------"
     if destPath == None:
         destPath = os.path.join(Settings.DATAPATH, "corpora")
     if downloadPath == None:
         downloadPath = os.path.join(Settings.DATAPATH, "corpora/download")
-    Utils.Download.downloadAndExtract(Settings.URL["BIONLP_CORPORA"], destPath, downloadPath, redownload=redownload)
+    Utils.Download.downloadAndExtract(Settings.URL[url], destPath, downloadPath, redownload=redownload)
     Settings.setLocal("CORPUS_DIR", destPath, updateLocalSettings)
 
 def installEvaluators(destPath=None, downloadPath=None, redownload=False, updateLocalSettings=False):
@@ -241,10 +241,11 @@ if __name__=="__main__":
     optparser.add_option("-d", "--downloaddir", default=None, dest="downloaddir", help="directory to download corpus files to")
     optparser.add_option("--intermediateFiles", default=False, action="store_true", dest="intermediateFiles", help="save intermediate corpus files")
     optparser.add_option("--forceDownload", default=False, action="store_true", dest="forceDownload", help="re-download all source files")
+    optparser.add_option("--evaluate", default=False, action="store_true", dest="evaluate", help="Convert devel sets back to ST format and evaluate")
     (options, args) = optparser.parse_args()
     
-    if options.corpora != None:
-        #Stream.openLog(os.path.join(options.outdir, "conversion-log.txt"))
-        convert(options.corpora.split(","), options.outdir, options.downloaddir, options.forceDownload, options.intermediateFiles)
     if options.evaluators:
         installEvaluators(options.outdir, options.downloaddir, options.forceDownload)
+    if options.corpora != None:
+        #Stream.openLog(os.path.join(options.outdir, "conversion-log.txt"))
+        convert(options.corpora.split(","), options.outdir, options.downloaddir, options.forceDownload, options.intermediateFiles, evaluate=options.evaluate)
