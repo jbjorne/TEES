@@ -304,7 +304,10 @@ class EventDetector(Detector):
             else:
                 edgeParse = self.parse
             #EvaluateInteractionXML.run(self.edgeDetector.evaluator, xml, self.classifyData, edgeParse)
-            EvaluateInteractionXML.run(self.edgeDetector.evaluator, xml, goldData, edgeParse)
+            if goldData != None:
+                EvaluateInteractionXML.run(self.edgeDetector.evaluator, xml, goldData, edgeParse)
+            else:
+                EvaluateInteractionXML.run(self.edgeDetector.evaluator, xml, self.classifyData, edgeParse)
         if self.checkStep("UNMERGING"):
             if self.model.hasMember("unmerging-classifier-model"):
                 #xml = self.getWorkFile(xml, output + "-edge-pred.xml.gz")
