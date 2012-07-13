@@ -12,15 +12,20 @@ def classify(input, model, output, workDir=None, step=None, omitSteps=None,
              goldInput=None, detector=None, 
              debug=False, writeScores=True, clear=False, 
              preprocessorTag="-preprocessed.xml.gz", preprocessorParams=None):
-    input, preprocess = getInput(input)
-    # Define processing steps
-    selector, detectorSteps, omitDetectorSteps = getSteps(step, omitSteps, ["PREPROCESS", "CLASSIFY"])
-    if not preprocess:
-        selector.markOmitSteps("PREPROCESS")
+    input = os.path.abspath(input)
+    if goldInput != None: goldInput = os.path.abspath(goldInput)
+    if model != None: model = os.path.abspath(model)
     # Initialize working directory
     if workDir != None: # use a permanent work directory
         workdir(workDir, clear)
     Stream.openLog(output + "-log.txt") # log in the output directory
+    # Get input files
+    input, preprocess = getInput(input)
+    model = getModel(model)
+    # Define processing steps
+    selector, detectorSteps, omitDetectorSteps = getSteps(step, omitSteps, ["PREPROCESS", "CLASSIFY"])
+    if not preprocess:
+        selector.markOmitSteps("PREPROCESS")
     
     classifyInput = input
     if selector.check("PREPROCESS"):
@@ -43,33 +48,35 @@ def classify(input, model, output, workDir=None, step=None, omitSteps=None,
             classifyInput = preprocessor.process(input, preprocessorOutput, preprocessorParams, model, [], fromStep=detectorSteps["PREPROCESS"], toStep=None, omitSteps=omitDetectorSteps["PREPROCESS"])
     
     if selector.check("CLASSIFY"):
-        model = getModel(model)
         detector = getDetector(detector, model)[0]() # initialize detector object
         detector.debug = debug
         detector.stWriteScores = writeScores # write confidence scores into additional st-format files
         detector.classify(classifyInput, model, output, goldData=goldInput, fromStep=detectorSteps["CLASSIFY"], omitSteps=omitDetectorSteps["CLASSIFY"], workDir=workDir)
 
 def getModel(model):
+    if model == None:
+        return None
     if not os.path.exists(model):
         print >> sys.stderr, "Model", model, "doesn't exist, looking for a default model"
+        modelName = os.path.basename(model)
         found = None
         if hasattr(Settings, "MODEL_DIR"):
-            for suffix in ["", ".zip", "-test.zip"]:
-                predefined = os.path.join(Settings.MODEL_DIR, model + suffix)
+            for suffix in ["", "-test", ".zip", "-test.zip"]:
+                predefined = os.path.join(Settings.MODEL_DIR, modelName + suffix)
                 if os.path.exists(predefined):
                     print >> sys.stderr, "Classifying with default model", predefined
                     found = predefined
                     model = found
                     break
             if found == None:
-                print >> sys.stderr, "No default model found for definition", model
+                print >> sys.stderr, "No default model found for definition", modelName
         else:
             print >> sys.stderr, "Default model directory MODEL_DIR not defined in Settings"
         if found == None:
             raise Exception("Model " + str(model) + " not found")
     else:
         print >> sys.stderr, "Classifying with model", model
-    return model
+    return os.path.abspath(model)
 
 def getInput(input, model=None):
     if input == None: # Get a corpus corresponding to the model
@@ -95,7 +102,7 @@ def getInput(input, model=None):
     else:
         print >> sys.stderr, "Classifying input", input
         preprocess = True
-    return input, preprocess
+    return os.path.abspath(input), preprocess
 
 def getPubMed(pmid):
     print >> sys.stderr, "Downloading PubMed abstract", pmid
