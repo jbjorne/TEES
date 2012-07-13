@@ -40,6 +40,11 @@ RUBY_PATH = "ruby" # for GENIA Sentence Splitter
 
 # Corpora #####################################################################
 
+# Preconverted
+URL["BIONLP_11_CORPORA"] =  None
+URL["BIONLP_09_CORPUS"] =  None
+URL["DDI_11_CORPUS"] =  None
+
 # BioNLP'11
 urlBase = "http://weaver.nlplab.org/~bionlp-st/BioNLP-ST/downloads/files/"
 # Main tasks
