@@ -46,7 +46,7 @@ def contains(range1, range2):
         return False
 
 def length(range):
-    return range[1] - range[0] + 1
+    return range[1] - range[0] # + 1
 
 def mismatch(range1, range2):
     l1 = length(range1)
@@ -87,7 +87,7 @@ def overlap(range1, range2):
     # Non-overlapping cases:
     # x1 <= x2 < y1 <= y2
     # y1 <= y2 < x1 <= x2
-    return not (range1[1] < range2[0] or range2[1] < range1[0])
+    return not (range1[1] <= range2[0] or range2[1] <= range1[0])
 
 def tuplesToCharOffset(tuples):
     if len(tuples) == 2 and type(tuples[0]) == types.IntType and type(tuples[1]) == types.IntType:
