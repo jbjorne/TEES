@@ -31,7 +31,7 @@ class Preprocessor(ToolChain):
         steps.append( ("NER", Tools.BANNER.run, {"elementName":"entity", "processElement":"sentence", "debug":False, "splitNewlines":True}, "ner.xml") )
         steps.append( ("PARSE", Tools.BLLIPParser.parse, {"parseName":"McCC", "requireEntities":False, "debug":False}, "parse.xml") )
         steps.append( ("CONVERT-PARSE", Tools.StanfordParser.convertXML, {"parser":"McCC", "debug":False}, "converted-parse.xml") )
-        steps.append( ("SPLIT-NAMES", ProteinNameSplitter.mainFunc, {"parseName":"McCC"}, "split-names.xml") )
+        steps.append( ("SPLIT-NAMES", ProteinNameSplitter.mainFunc, {"parseName":"McCC", "removeOld":True}, "split-names.xml") )
         steps.append( ("FIND-HEADS", FindHeads.findHeads, {"parse":"McCC", "removeExisting":True}, "heads.xml") )
         steps.append( ("DIVIDE-SETS", self.divideSets, {"outputStem":None, "saveCombined":True}) )
         return steps
