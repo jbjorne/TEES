@@ -271,9 +271,11 @@ def convertDDI(outDir, trainUnified=None, trainMTMX=None, testUnified=None, test
     Tools.StanfordParser.insertParses(xml, extractedFilename, None, extraAttributes={"stanfordSource":"TEES-preparsed"})
     print >> sys.stderr, "Protein Name Splitting"
     splitTarget = "McCC"
-    ProteinNameSplitter.mainFunc(xml, None, splitTarget, splitTarget, "split-"+splitTarget, "split-"+splitTarget)
+    #ProteinNameSplitter.mainFunc(xml, None, splitTarget, splitTarget, "split-"+splitTarget, "split-"+splitTarget)
+    ProteinNameSplitter.mainFunc(xml, None, splitTarget, removeOld=True)
     print >> sys.stderr, "Head Detection"
-    xml = FindHeads.findHeads(xml, "split-"+splitTarget, tokenization=None, output=None, removeExisting=True)    
+    #xml = FindHeads.findHeads(xml, "split-"+splitTarget, tokenization=None, output=None, removeExisting=True)
+    xml = FindHeads.findHeads(xml, splitTarget, tokenization=None, output=None, removeExisting=True)    
     
     print >> sys.stderr, "Dividing into sets"
     Utils.InteractionXML.DivideSets.processCorpus(xml, outDir, "DDI", ".xml")
