@@ -282,8 +282,9 @@ class EventDetector(Detector):
                 self.combinedModel.save()
 
     def classify(self, data, model, output, parse=None, task=None, goldData=None, fromStep=None, toStep=None, omitSteps=None, workDir=None):
-        BINARY_RECALL_MODE = False # TODO: make a parameter
+        #BINARY_RECALL_MODE = False # TODO: make a parameter
         xml = None
+        model = self.openModel(model, "r")
         self.initVariables(classifyData=data, model=model, xml=None, task=task, parse=parse)
         self.enterState(self.STATE_CLASSIFY, ["TRIGGERS", "EDGES", "UNMERGING", "MODIFIERS", "ST-CONVERT"], fromStep, toStep, omitSteps)
         #self.enterState(self.STATE_CLASSIFY, ["TRIGGERS", "RECALL-ADJUST", "EDGES", "UNMERGING", "MODIFIERS", "ST-CONVERT"], fromStep, toStep)

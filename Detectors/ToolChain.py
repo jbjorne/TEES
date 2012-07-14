@@ -39,8 +39,7 @@ class ToolChain(Detector):
         if modelParameterStringName == None:
             modelParameterStringName = self.modelParameterStringName
         if parameters == None and model != None:
-            if type(model) in types.StringTypes:
-                model = Model(model)
+            model = self.openModel(model, "r")
             parameters = model.getStr(modelParameterStringName, defaultIfNotExist=None)
         defaultStepNames = [x[0] for x in self.getDefaultSteps()]
         valueLimits={"omitSteps":defaultStepNames, "intermediateFiles":defaultStepNames + [True]}

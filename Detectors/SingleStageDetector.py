@@ -102,6 +102,7 @@ class SingleStageDetector(Detector):
         self.exitState()
         
     def classify(self, data, model, output, parse=None, task=None, goldData=None, workDir=None, fromStep=None, omitSteps=None):
+        model = self.openModel(model, "r")
         self.enterState(self.STATE_CLASSIFY)
         self.setWorkDir(workDir)
         if workDir == None:
