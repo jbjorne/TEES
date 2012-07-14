@@ -165,12 +165,12 @@ def convertDownloaded(outdir, corpus, files, intermediateFiles=True, evaluate=Tr
     
     if evaluate and "devel" in datasets:
         print >> sys.stderr, "---------------", "Evaluating conversion", "---------------"
-        print >> sys.stderr, "Converting back"
-        STConvert.toSTFormat(os.path.join(outdir, corpus + "-devel.xml"), workdir + "/roundtrip/" + corpus + "-devel" + "-task1", outputTag="a2", task=1)
-        STConvert.toSTFormat(os.path.join(outdir, corpus + "-devel.xml"), workdir + "/roundtrip/" + corpus + "-devel" + "-task2", outputTag="a2", task=2)
-        print >> sys.stderr, "Evaluating task 1 back-conversion"
-        BioNLP11GeniaTools.evaluate(workdir + "/roundtrip/" + corpus + "-devel" + "-task1", corpus + ".1")
+        if corpus != "REL": # Task 1 (removal of Entity-entities) cannot work for REL
+            print >> sys.stderr, "Evaluating task 1 back-conversion"
+            STConvert.toSTFormat(os.path.join(outdir, corpus + "-devel.xml"), workdir + "/roundtrip/" + corpus + "-devel" + "-task1", outputTag="a2", task=1)
+            BioNLP11GeniaTools.evaluate(workdir + "/roundtrip/" + corpus + "-devel" + "-task1", corpus + ".1")
         print >> sys.stderr, "Evaluating task 2 back-conversion"
+        STConvert.toSTFormat(os.path.join(outdir, corpus + "-devel.xml"), workdir + "/roundtrip/" + corpus + "-devel" + "-task2", outputTag="a2", task=2)
         BioNLP11GeniaTools.evaluate(workdir + "/roundtrip/" + corpus + "-devel" + "-task2", corpus + ".2")
         print >> sys.stderr, "Note! Evaluation of Task 2 back-conversion can be less than 100% due to site-argument mapping"
 
@@ -181,7 +181,7 @@ def addAnalyses(xml, corpus, datasets, files, bigfileName):
         print >> sys.stderr, "Making sentences"
         Tools.SentenceSplitter.makeSentences(xml, extractedFilename, None)
         print >> sys.stderr, "Inserting McCC parses"
-        Tools.CharniakJohnsonParser.insertParses(xml, extractedFilename, None, extraAttributes={"source":"TEES-preparsed"})
+        Tools.BLLIPParser.insertParses(xml, extractedFilename, None, extraAttributes={"source":"TEES-preparsed"})
         print >> sys.stderr, "Inserting Stanford conversions"
         Tools.StanfordParser.insertParses(xml, extractedFilename, None, extraAttributes={"stanfordSource":"TEES-preparsed"})
     elif corpus == "GE09": # the BioNLP'09 corpus
@@ -219,9 +219,11 @@ def addAnalyses(xml, corpus, datasets, files, bigfileName):
 
 def processParses(xml, splitTarget="McCC"):
     print >> sys.stderr, "Protein Name Splitting"
-    ProteinNameSplitter.mainFunc(xml, None, splitTarget, splitTarget, "split-"+splitTarget, "split-"+splitTarget)
+    #ProteinNameSplitter.mainFunc(xml, None, splitTarget, splitTarget, "split-"+splitTarget, "split-"+splitTarget)
+    ProteinNameSplitter.mainFunc(xml, None, splitTarget, removeOld=True)
     print >> sys.stderr, "Head Detection"
-    xml = FindHeads.findHeads(xml, "split-"+splitTarget, tokenization=None, output=None, removeExisting=True)
+    #xml = FindHeads.findHeads(xml, "split-"+splitTarget, tokenization=None, output=None, removeExisting=True)
+    xml = FindHeads.findHeads(xml, splitTarget, tokenization=None, output=None, removeExisting=True)
 
 if __name__=="__main__":
     # Import Psyco if available
