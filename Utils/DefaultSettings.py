@@ -41,9 +41,9 @@ RUBY_PATH = "ruby" # for GENIA Sentence Splitter
 # Corpora #####################################################################
 
 # Preconverted
-URL["BIONLP_11_CORPORA"] =  None
-URL["BIONLP_09_CORPUS"] =  None
-URL["DDI_11_CORPUS"] =  None
+URL["BIONLP_11_CORPORA"] =  "https://github.com/downloads/jbjorne/TEES/BioNLP11-corpora-XML-120714.zip"
+URL["BIONLP_09_CORPUS"] =  "https://github.com/downloads/jbjorne/TEES/BioNLP09-corpus-XML-120714.zip"
+URL["DDI_11_CORPUS"] =  "https://github.com/downloads/jbjorne/TEES/DDI11-corpus-XML-120714.zip"
 
 # BioNLP'11
 urlBase = "http://weaver.nlplab.org/~bionlp-st/BioNLP-ST/downloads/files/"
@@ -120,7 +120,8 @@ URL["BI_DEVEL_McCC"] = urlBase + "McCC-parses-BioNLP-ST_2011_bacteria_interactio
 URL["BI_TRAIN_McCC"] = urlBase + "McCC-parses-BioNLP-ST_2011_bacteria_interactions_train_data_rev1.tar.gz"
 URL["BI_TEST_McCC"] = urlBase + "McCC-parses-BioNLP-ST_2011_bacteria_interactions_test_data.tar.gz"
 # Parses not provided in the shared tasks
-URL["TEES_PARSES"] = "/home/jari/biotext/TEES-parses-2.0/TEES-parses-120706.tar.gz"
+#URL["TEES_PARSES"] = "/home/jari/biotext/TEES-parses-2.0/TEES-parses-120706.tar.gz"
+URL["TEES_PARSES"] = "https://github.com/downloads/jbjorne/TEES/TEES-parses-120706.tar.gz"
 
 
 # BioNLP'09 Shared Task
