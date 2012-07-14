@@ -35,7 +35,7 @@ class EntityExampleBuilder(ExampleBuilder):
             self.gazetteer=None
         self._setDefaultParameters(["rel_features", "wordnet", "bb_features", "giuliano", 
                                   "epi_merge_negated", "limit_merged_types", "genia_task1",
-                                  "build_for_nameless", "pos_only", #"all_tokens",
+                                  "build_for_nameless", "pos_only", "all_tokens",
                                   "names", "pos_pairs", "linear_ngrams", "phospho"])
         self.styles = self.getParameters(style)
 #        if "selftrain_group" in self.styles:
@@ -78,8 +78,8 @@ class EntityExampleBuilder(ExampleBuilder):
         types = set()
         entityIds = set()
         for entity in entities:
-            #if entity.get("isName") == "True" and self.styles["all_tokens"]:
-            #    continue
+            if entity.get("isName") == "True" and self.styles["all_tokens"]:
+                continue
             if entity.get("type") == "Entity" and self.styles["genia_task1"]:
                 continue
             if self.styles["epi_merge_negated"]:
@@ -247,7 +247,7 @@ class EntityExampleBuilder(ExampleBuilder):
             self.exampleStats.beginExample(categoryName)
             
             # Recognize only non-named entities (i.e. interaction words)
-            if sentenceGraph.tokenIsName[token] and not self.styles["names"]: # and not self.styles["all_tokens"]:
+            if sentenceGraph.tokenIsName[token] and not self.styles["names"] and not self.styles["all_tokens"]:
                 self.exampleStats.filter("name")
                 self.exampleStats.endExample()
                 continue
