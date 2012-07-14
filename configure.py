@@ -7,7 +7,7 @@ import Classifiers.SVMMultiClassClassifier
 # External tools wrappers
 import Tools.GeniaSentenceSplitter
 import Tools.BANNER
-import Tools.CharniakJohnsonParser
+import Tools.BLLIPParser
 import Tools.StanfordParser
 # Corpora
 import Utils.Convert.convertBioNLP as convertBioNLP
@@ -37,9 +37,13 @@ def pathMenuInitializer(menu, prevMenu):
             if menu.system.progArgs["clearInstallDir"] and os.path.exists(menu.system.progArgs["installDir"]):
                 shutil.rmtree(menu.system.progArgs["installDir"])
             menu.text += "\nUsing the DATAPATH path from configure.py command line options.\n\n"
-        else:
+        elif menu.system.progArgs["localSettings"] != None:
+            os.environ["TEES_SETTINGS"] = os.path.abspath(menu.system.progArgs["localSettings"])
+            reload(Settings)
             menu.defaultInstallDir = Settings.DATAPATH
-    if os.path.exists(menu.defaultInstallDir):
+        elif "TEES_SETTINGS" in os.environ:
+            menu.defaultInstallDir = Settings.DATAPATH
+    elif os.path.exists(menu.defaultInstallDir):
         if not os.path.isdir(menu.defaultInstallDir):
             menu.text += "WARNING! The DATAPATH directory is not a directory.\n\n"
     else:
@@ -67,7 +71,7 @@ def pathMenuInitializer(menu, prevMenu):
             exists, this installation program will use it and by default install only missing components.
             """
         else:
-            menu.configFilePath = os.path.join(defaultInstallDir, "LocalSettings.py")
+            menu.configFilePath = os.path.join(menu.defaultInstallDir, "LocalSettings.py")
             if os.path.exists(menu.configFilePath):
                 menu.text += """
                 The "TEES_SETTINGS" environment variable is not set, but a configuration file has been
@@ -170,7 +174,7 @@ def toolsMenuInitializer(menu, prevMenu):
         handlerArgs.append([None, None, redownload, False, None, True])  
     if menu.optDict["4"].toggle or checkInstallPath(menu, "BLLIP_PARSER_DIR"):
         menu.optDict["4"].toggle = True
-        handlers.append(Tools.CharniakJohnsonParser.install)
+        handlers.append(Tools.BLLIPParser.install)
         handlerArgs.append([None, None, redownload, True])  
     if menu.optDict["5"].toggle or checkInstallPath(menu, "STANFORD_PARSER_DIR"):
         menu.optDict["5"].toggle = True
@@ -193,12 +197,10 @@ def corpusMenuInitializer(menu, prevMenu):
     The corpora are downloaded as interaction XML files, generated from the
     original Shared Task files. If you need to convert the corpora from 
     the original files, you can use the convertBioNLP.py and convertDDI.py programs
-    located at Utils.Build.
+    located at Utils/Convert. 
     
-    The corpora will be downloaded from their publishers' pages, then converted
-    to the Interaction XML format used by TEES. It is also recommended to download 
-    the official Shared Task evaluator programs, which will be used by TEES when 
-    training or testing on those corpora.
+    It is also recommended to download the official BioNLP Shared Task evaluator 
+    programs, which will be used by TEES when training or testing on those corpora.
     """
     # Mark "skip" as default option, this will be re-marked as install if a corpus is missing
     menu.setDefault("s")
@@ -209,6 +211,8 @@ def corpusMenuInitializer(menu, prevMenu):
     # Initialize handlers
     handlers = []
     handlerArgs = []
+    corpusInstallPath = os.path.join(menu.system.defaultInstallDir, "corpora")
+    corpusDownloadPath = os.path.join(menu.system.defaultInstallDir, "corpora/download")
     # Check which corpora need to be installed
     redownload = menu.optDict["1"].toggle
     for corpus in ["GE", "EPI", "ID", "BB", "BI", "CO", "REL", "REN"]:
@@ -216,23 +220,25 @@ def corpusMenuInitializer(menu, prevMenu):
             menu.setDefault("i")
             menu.optDict["2"].toggle = True
             handlers.append(convertBioNLP.installPreconverted)
-            handlerArgs.append(["BIONLP_11_CORPORA", menu.system.defaultInstallDir + "corpora", menu.system.defaultInstallDir + "corpora/download", redownload, True])
+            handlerArgs.append(["BIONLP_11_CORPORA", corpusInstallPath, corpusDownloadPath, redownload, True])
             break
     if menu.optDict["3"].toggle or not checkCorpusInstall("GE09"):
         menu.setDefault("i")
         menu.optDict["3"].toggle = True
         handlers.append(convertBioNLP.installPreconverted)
-        handlerArgs.append(["BIONLP_09_CORPUS", menu.system.defaultInstallDir + "corpora", menu.system.defaultInstallDir + "corpora/download", redownload, True])
+        handlerArgs.append(["BIONLP_09_CORPUS", corpusInstallPath, corpusDownloadPath, redownload, True])
     if menu.optDict["4"].toggle or not checkCorpusInstall("DDI"):
         menu.setDefault("i")
         menu.optDict["4"].toggle = True
         handlers.append(convertBioNLP.installPreconverted)
-        handlerArgs.append(["DDI_11_CORPUS", menu.system.defaultInstallDir + "corpora", menu.system.defaultInstallDir + "corpora/download", redownload, True])
+        handlerArgs.append(["DDI_11_CORPUS", corpusInstallPath, corpusDownloadPath, redownload, True])
     # A handler for installing BioNLP'11 evaluators
+    evaluatorInstallPath = os.path.join(menu.system.defaultInstallDir, "tools/evaluators")
+    evaluatorDownloadPath = os.path.join(menu.system.defaultInstallDir, "tools/download")
     if menu.optDict["5"].toggle or not hasattr(Settings, "BIONLP_EVALUATOR_DIR") or getattr(Settings, "BIONLP_EVALUATOR_DIR") == None:
         menu.setDefault("i")
         handlers.append(convertBioNLP.installEvaluators)
-        handlerArgs.append([menu.system.defaultInstallDir + "tools/evaluators", menu.system.defaultInstallDir + "tools/download", redownload, True])
+        handlerArgs.append([evaluatorInstallPath, evaluatorDownloadPath, redownload, True])
     # Add the handlers to install option
     menu.optDict["i"].handler = handlers
     menu.optDict["i"].handlerArgs = handlerArgs
