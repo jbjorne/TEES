@@ -41,9 +41,9 @@ RUBY_PATH = "ruby" # for GENIA Sentence Splitter
 # Corpora #####################################################################
 
 # Preconverted
-URL["BIONLP_11_CORPORA"] =  "https://github.com/downloads/jbjorne/TEES/BioNLP11-corpora-XML-120714.zip"
-URL["BIONLP_09_CORPUS"] =  "https://github.com/downloads/jbjorne/TEES/BioNLP09-corpus-XML-120714.zip"
-URL["DDI_11_CORPUS"] =  "https://github.com/downloads/jbjorne/TEES/DDI11-corpus-XML-120714.zip"
+URL["BIONLP_11_CORPORA"] =  "https://github.com/downloads/jbjorne/TEES/BioNLP11-corpora-XML-120715.zip"
+URL["BIONLP_09_CORPUS"] =  "https://github.com/downloads/jbjorne/TEES/BioNLP09-corpus-XML-120715.zip"
+URL["DDI_11_CORPUS"] =  "https://github.com/downloads/jbjorne/TEES/DDI11-corpus-XML-120715.zip"
 
 # BioNLP'11
 urlBase = "http://weaver.nlplab.org/~bionlp-st/BioNLP-ST/downloads/files/"
