@@ -17,7 +17,7 @@ def train(output, task=None, detector=None, inputFiles=None, models=None, parse=
           processUnmerging=None, processModifiers=None, isSingleStage=False, 
           bioNLPSTParams=None, preprocessorParams=None, exampleStyles=None, 
           classifierParams=None,  doFullGrid=False, deleteOutput=False, copyFrom=None, 
-          log=True, step=None, omitSteps=None, debug=False, connection=None):
+          log="log.txt", step=None, omitSteps=None, debug=False, connection=None):
     # Insert default arguments where needed
     inputFiles = Parameters.get(inputFiles, {"train":None, "devel":None, "test":None})
     models = Parameters.get(models, {"devel":None, "test":None})
@@ -151,7 +151,7 @@ def getDetector(detector, model=None):
     return detector, detectorName
 
 
-def workdir(path, deleteIfExists=True, copyFrom=None, log=True):
+def workdir(path, deleteIfExists=True, copyFrom=None, log="log.txt"):
     # When using a template, always remove existing work directory
     if copyFrom != None:
         deleteIfExists = True
@@ -172,16 +172,11 @@ def workdir(path, deleteIfExists=True, copyFrom=None, log=True):
     # Remember current directory and switch to workdir
     atexit.register(os.chdir, os.getcwd())
     os.chdir(path)
-    # Open log at workdir
-    if log == True:
-        Stream.openLog("log.txt")
-    elif log == False:
-        print >> sys.stderr, "No logging"
-    else:
-        if os.path.exists(log) and deleteIfExists:
-            os.remove(log)
-        print >> sys.stderr, "Logging to", log
+    # Open log (if a relative path, it goes under workdir)
+    if log != None:
         Stream.openLog(log)
+    else:
+        print >> sys.stderr, "No logging"
     return path
 
 def getTaskSettings(task, detector, processUnmerging, processModifiers, isSingleStage,
@@ -189,7 +184,7 @@ def getTaskSettings(task, detector, processUnmerging, processModifiers, isSingle
                     inputFiles, exampleStyles, classifierParameters):
     if task != None:
         print >> sys.stderr, "Determining training settings for task", task
-        assert task in ["GE09", "GE09.1", "GE09.2", "GE", "GE.1", "GE.2", "EPI", "ID", "BB", "BI", "CO", "REL", "REN", "DDI"]
+        assert task in ["GE09", "GE09.1", "GE09.2", "GE", "GE.1", "GE.2", "EPI", "ID", "BB", "BI", "BI-FULL" "CO", "REL", "REN", "DDI", "DDI-FULL"]
     
         fullTaskId = task
         subTask = 2
@@ -224,11 +219,11 @@ def getTaskSettings(task, detector, processUnmerging, processModifiers, isSingle
                 detector = "Detectors.EdgeDetector"
                 isSingleStage = True
             print >> sys.stderr, "Detector undefined, using default '" + detector + "' for task", fullTaskId
-        if bioNLPSTParams == None and task != "DDI":
+        if bioNLPSTParams == None and task not in ["DDI", "DDI-FULL"]:
             bioNLPSTParams = "convert:evaluate:scores"
         if preprocessorParams == None:
             preprocessorParams = ["intermediateFiles"]
-            if task in ["BI", "BB", "DDI"]:
+            if task in ["BI", "BI-FULL", "BB", "DDI", "DDI-FULL"]:
                 preprocessorParams += ["omitSteps=NER,DIVIDE-SETS"]
             else:
                 preprocessorParams += ["omitSteps=DIVIDE-SETS"]
@@ -237,7 +232,7 @@ def getTaskSettings(task, detector, processUnmerging, processModifiers, isSingle
             print >> sys.stderr, "Preprocessor parameters undefined, using default '" + preprocessorParams + "' for task", fullTaskId
         if processUnmerging == None and not isSingleStage:
             processUnmerging = True
-            if task in ["REL", "BI"]:
+            if task in ["REL", "BB", "BI-FULL", "DDI-FULL"]:
                 processUnmerging = False
             print >> sys.stderr, "Unmerging undefined, using default", processUnmerging, "for task", fullTaskId
         if processModifiers == None:
@@ -269,6 +264,10 @@ def getTaskSettings(task, detector, processUnmerging, processModifiers, isSingle
                 exampleStyles["edge"]="trigger_features:typed:directed:no_linear:entities:noMasking:maxFeatures:rel_limits:rel_features"
             elif task == "CO":
                 exampleStyles["edge"]="trigger_features:typed:directed:no_linear:entities:noMasking:maxFeatures:co_limits"
+            elif task == "BI-FULL":
+                exampleStyles["edge"] = "trigger_features:typed:directed:no_linear:entities:noMasking:maxFeatures:bi_limits"
+            elif task == "DDI-FULL":
+                exampleStyles["edge"] = "trigger_features:typed:no_linear:entities:noMasking:maxFeatures:ddi_features:filter_shortest_path=conj_and"
             else:
                 exampleStyles["edge"]="trigger_features:typed:directed:no_linear:entities:noMasking:maxFeatures"
         if exampleStyles["trigger"] == None and not isSingleStage:
@@ -281,6 +280,8 @@ def getTaskSettings(task, detector, processUnmerging, processModifiers, isSingle
                 exampleStyles["trigger"] = "rel_features"
             elif task == "CO":
                 options.triggerExampleBuilder = "PhraseTriggerExampleBuilder"
+            elif task in ["BI-FULL", "DDI-FULL"]:
+                exampleStyles["trigger"] = "all_tokens:build_for_nameless:names"
         # Classifier parameters
         if classifierParameters["examples"] == None and isSingleStage:
             print >> sys.stderr, "Classifier parameters for single-stage examples undefined, using default for task", fullTaskId
@@ -341,7 +342,7 @@ if __name__=="__main__":
     # main options
     group = OptionGroup(optparser, "Main Options", "")
     group.add_option("-t", "--task", default=None, dest="task", help="task number")
-    group.add_option("-p", "--parse", default="split-McCC", dest="parse", help="Parse XML element name")
+    group.add_option("-p", "--parse", default="McCC", dest="parse", help="Parse XML element name")
     group.add_option("-c", "--connection", default=None, dest="connection", help="")
     optparser.add_option_group(group)
     # input
@@ -389,6 +390,7 @@ if __name__=="__main__":
     debug.add_option("--step", default=None, dest="step", help="Step to start processing from, with optional substep (STEP=SUBSTEP). Step values are TRAIN, DEVEL, EMPTY and TEST.")
     debug.add_option("--omitSteps", default=None, dest="omitSteps", help="")
     debug.add_option("--copyFrom", default=None, dest="copyFrom", help="Copy this directory as template")
+    debug.add_option("--log", default="log.txt", dest="log", help="Log file name")
     debug.add_option("--noLog", default=False, action="store_true", dest="noLog", help="Do not keep a log file")
     debug.add_option("--clearAll", default=False, action="store_true", dest="clearAll", help="Delete all files")
     debug.add_option("--debug", default=False, action="store_true", dest="debug", help="More verbose output")
@@ -396,6 +398,7 @@ if __name__=="__main__":
     (options, args) = optparser.parse_args()
     
     assert options.output != None
+    if options.noLog: options.log = None
     train(options.output, options.task, options.detector, 
           inputFiles={"devel":options.develFile, "train":options.trainFile, "test":options.testFile},
           models={"devel":options.develModel, "test":options.testModel}, parse=options.parse,
@@ -404,4 +407,4 @@ if __name__=="__main__":
           exampleStyles={"examples":options.exampleStyle, "trigger":options.triggerStyle, "edge":options.edgeStyle, "unmerging":options.unmergingStyle, "modifiers":options.modifierStyle},
           classifierParams={"examples":options.exampleParams, "trigger":options.triggerParams, "recall":options.recallAdjustParams, "edge":options.edgeParams, "unmerging":options.unmergingParams, "modifiers":options.modifierParams}, 
           doFullGrid=options.fullGrid, deleteOutput=options.clearAll, copyFrom=options.copyFrom, 
-          log=not options.noLog, step=options.step, omitSteps=options.omitSteps, debug=options.debug, connection=options.connection)
+          log=options.log, step=options.step, omitSteps=options.omitSteps, debug=options.debug, connection=options.connection)
