@@ -1,8 +1,11 @@
+import sys, os
+thisPath = os.path.dirname(os.path.abspath(__file__))
+sys.path.append(os.path.abspath(os.path.join(thisPath,"../..")))
 try:
     import xml.etree.cElementTree as ET
 except ImportError:
     import cElementTree as ET
-import cElementTreeUtils as ETUtils
+import Utils.ElementTreeUtils as ETUtils
 import random
 
 # From Split.py, which should be moved to CommonUtils
