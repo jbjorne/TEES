@@ -12,6 +12,7 @@ EVALUATOR["BB"] = "BioNLP-ST_2011_Bacteria_Biotopes_evaluation_software"
 EVALUATOR["BI"] = "BioNLP-ST_2011_bacteria_interactions_evaluation_software"
 EVALUATOR["REN"] = "BioNLP-ST_2011_bacteria_rename_evaluation_sofware"
 EVALUATOR["CO"] = "CREvalPackage1.4"
+EVALUATOR["GE09"] = "bionlp09_shared_task_evaluation_tools_v1"
 # Gold data for evaluators
 EVALUATOR["GE-gold"] = "BioNLP-ST_2011_genia_devel_data_rev1.tar.gz"
 EVALUATOR["EPI-gold"] = "BioNLP-ST_2011_Epi_and_PTM_development_data_rev1.tar.gz"
@@ -20,6 +21,7 @@ EVALUATOR["BB-gold"] = "BioNLP-ST_2011_Bacteria_Biotopes_dev_data_rev1.tar.gz"
 EVALUATOR["BI-gold"] = "BioNLP-ST_2011_bacteria_interactions_dev_data_rev1-remixed.tar.gz"
 EVALUATOR["REN-gold"] = "BioNLP-ST_2011_bacteria_rename_dev_data.tar.gz"
 EVALUATOR["CO-gold"] = "BioNLP-ST_2011_coreference_development_data.tar.gz"
+EVALUATOR["GE09-gold"] = "bionlp09_shared_task_development_data_rev1_for_evaluator.tar.gz"
 
 
 # A dictionary for installation URLs. If there is a problem with a 
@@ -74,7 +76,7 @@ URL["CO_DEVEL"] = urlBase + "BioNLP-ST_2011_coreference_development_data.tar.gz"
 URL["CO_TRAIN"] = urlBase + "BioNLP-ST_2011_coreference_training_data_rev1.tar.gz"
 URL["CO_TEST"] = urlBase + "BioNLP-ST_2011_coreference_test_data.tar.gz"
 # BioNLP'11 Evaluators
-URL["BIONLP11_EVALUATORS"] = "https://github.com/downloads/jbjorne/TEES/BioNLP11-evaluators-120706.tar.gz"
+URL["BIONLP11_EVALUATORS"] = "https://github.com/downloads/jbjorne/TEES/BioNLP-evaluators-120715.tar.gz"
 URL["GE_EVALUATOR"] = urlBase + "BioNLP-ST_2011_genia_tools_rev1.tar.gz"
 #URL["EPI_EVALUATOR"] = urlBase + 
 #URL["ID_EVALUATOR"] = urlBase + 

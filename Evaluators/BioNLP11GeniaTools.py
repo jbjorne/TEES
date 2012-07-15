@@ -152,7 +152,7 @@ def evaluate(source, task, goldDir=None, debug=False):
         task, subTask = task.split(".")
     # Do the evaluation
     if task in ["GE", "GE09"]:
-        results = evaluateGE(source, subTask, goldDir=goldDir, debug=debug)
+        results = evaluateGE(source, task, subTask, goldDir=goldDir, debug=debug)
     elif task in ["EPI", "ID"]:
         results = evaluateEPIorID(task, source, goldDir)
     elif task == "REN":
@@ -182,6 +182,10 @@ def checkEvaluator(corpus, sourceDir, goldDir = None):
         tempdir = tempfile.mkdtemp()
         Download.extractPackage(sourceDir, os.path.join(tempdir, "source"))
         sourceDir = os.path.join(tempdir, "source")
+    elif corpus == "GE09": # a2 files have to be renamed
+        tempdir = tempfile.mkdtemp()
+        shutil.copytree(sourceDir, os.path.join(tempdir, "source"))
+        sourceDir = os.path.join(tempdir, "source")
     # Check gold data
     if goldDir == None:
         if not hasattr(Settings, "BIONLP_EVALUATOR_GOLD_DIR"):
@@ -209,12 +213,28 @@ def checkEvaluator(corpus, sourceDir, goldDir = None):
         tempdir = os.path.abspath(tempdir)
     return evaluatorDir, sourceDir, goldDir, tempdir
 
-def evaluateGE(sourceDir, task=1, goldDir=None, folds=-1, foldToRemove=-1, evaluations=["strict", "approximate", "decomposition"], verbose=True, silent=False, debug=False):
+def evaluateGE(sourceDir, mainTask="GE", task=1, goldDir=None, folds=-1, foldToRemove=-1, evaluations=["strict", "approximate", "decomposition"], verbose=True, silent=False, debug=False):
     task = str(task)
-    assert task in ["1","2","3"]
+    assert mainTask in ["GE", "GE09"], mainTask
+    assert task in ["1","2","3"], task
     if not silent:
-        print >> sys.stderr, "GE task", task, "evaluation of", sourceDir, "against", goldDir
-    evaluatorDir, sourceDir, goldDir, tempDir = checkEvaluator("GE", sourceDir, goldDir)
+        print >> sys.stderr, mainTask, "task", task, "evaluation of", sourceDir, "against", goldDir
+    if mainTask == "GE":
+        evaluatorDir, sourceDir, goldDir, tempDir = checkEvaluator("GE", sourceDir, goldDir)
+        taskSuffix = ".a2"
+    else:
+        evaluatorDir, sourceDir, goldDir, tempDir = checkEvaluator("GE09", sourceDir, goldDir)
+        # Rename files in the copied source directory
+        taskSuffix = ".a2.t1"
+        for filename in os.listdir(sourceDir):
+            if filename.endswith(".a2"):
+                if task == 1:
+                    taskSuffix = ".a2.t1"
+                elif task == 2:
+                    taskSuffix = ".a2.t12"
+                else:
+                    taskSuffix = ".a2.t123"
+                shutil.move(os.path.join(sourceDir, filename), os.path.join(sourceDir, filename.rsplit(".", 1) + taskSuffix))
     if goldDir == None:
         return None
     
@@ -234,11 +254,28 @@ def evaluateGE(sourceDir, task=1, goldDir=None, folds=-1, foldToRemove=-1, evalu
     
     results = {}
     
-    #commands = "export PATH=$PATH:./ ; "
+    # Prepare gold data
+    if mainTask == "GE09":
+        preparedGoldDir = os.path.join(tempDir, "prepared-gold")
+        commands = "perl prepare-gold.pl " + goldDir + " " + preparedGoldDir
+        p = subprocess.Popen(commands, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        if verbose and not silent:
+            printLines(p.stderr.readlines())
+            printLines(p.stdout.readlines())
+        else: # Not reading the lines causes some error in the perl script!
+            p.stderr.readlines()
+            p.stdout.readlines()
+        goldDir = preparedGoldDir
+    
+    # Prepare evaluated data
     outDir = tempDir + "/output"
-    commands = "perl a2-normalize.pl -g " + goldDir
-    commands += " -o " + outDir
-    commands += " " + sourceSubsetDir + "/*.a2"
+    if mainTask == "GE":
+        commands = "perl a2-normalize.pl -g " + goldDir
+        commands += " -o " + outDir
+        commands += " " + sourceSubsetDir + "/*" + taskSuffix #".a2"
+    else:
+        commands = "perl prepare-eval.pl -g " + goldDir
+        commands += " " + sourceSubsetDir + " " + outDir
     p = subprocess.Popen(commands, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     if verbose and not silent:
         printLines(p.stderr.readlines())
@@ -250,9 +287,9 @@ def evaluateGE(sourceDir, task=1, goldDir=None, folds=-1, foldToRemove=-1, evalu
     if "strict" in evaluations:
         #commands = "export PATH=$PATH:./ ; "
         commands = "perl a2-evaluate.pl" 
-        commands += " -t " + str(task)
+        if mainTask == "GE": commands += " -t " + str(task)
         if debug: commands += " -v -d"
-        commands += " -g " + goldDir + " " + outDir +"/*.a2"
+        commands += " -g " + goldDir + " " + outDir + "/*" + taskSuffix #".a2"
         p = subprocess.Popen(commands, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         stderrLines = p.stderr.readlines()
         stdoutLines = p.stdout.readlines()
@@ -267,9 +304,9 @@ def evaluateGE(sourceDir, task=1, goldDir=None, folds=-1, foldToRemove=-1, evalu
             print >> sys.stderr, "##### approximate span and recursive mode #####"
         #commands = "export PATH=$PATH:./ ; "
         commands = "perl a2-evaluate.pl"
-        commands += " -t " + str(task)
+        if mainTask == "GE": commands += " -t " + str(task)
         if debug: commands += " -v -d"
-        commands += " -g " + goldDir + " -sp " + outDir + "/*.a2"
+        commands += " -g " + goldDir + " -sp " + outDir + "/*" + taskSuffix #".a2"
         p = subprocess.Popen(commands, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         stderrLines = p.stderr.readlines()
         stdoutLines = p.stdout.readlines()
@@ -283,9 +320,9 @@ def evaluateGE(sourceDir, task=1, goldDir=None, folds=-1, foldToRemove=-1, evalu
             print >> sys.stderr, "##### event decomposition in the approximate span mode #####"
         #commands = "export PATH=$PATH:./ ; "
         commands = "perl a2-evaluate.pl"
-        commands += " -t " + str(task)
+        if mainTask == "GE": commands += " -t " + str(task)
         if debug: commands += " -v -d"
-        commands += " -g " + goldDir + " -sp " + outDir + "/*.a2"
+        commands += " -g " + goldDir + " -sp " + outDir + "/*" + taskSuffix #".a2"
         p = subprocess.Popen(commands, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         stderrLines = p.stderr.readlines()
         stdoutLines = p.stdout.readlines()
@@ -294,7 +331,10 @@ def evaluateGE(sourceDir, task=1, goldDir=None, folds=-1, foldToRemove=-1, evalu
             printLines(stdoutLines)
         results["decomposition"] = parseResults(stdoutLines)
     
-    shutil.rmtree(tempDir)
+    if not debug:
+        shutil.rmtree(tempDir)
+    else:
+        print >> sys.stderr, "Temporary directory left at", tempDir
     
     # return to current dir
     os.chdir(origDir)
