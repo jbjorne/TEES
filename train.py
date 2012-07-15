@@ -28,8 +28,9 @@ def train(output, task=None, detector=None, inputFiles=None, models=None, parse=
     # Initialize working directory
     workdir(output, deleteOutput, copyFrom, log)
     # Get task specific parameters
-    detector, processUnmerging, processModifiers, isSingleStage, bioNLPSTParams, preprocessorParams, exampleStyles, classifierParams = getTaskSettings(task, 
+    detector, processUnmerging, processModifiers, isSingleStage, bioNLPSTParams, preprocessorParams, exampleStyles, classifierParams, removeNamesFromEmpty = getTaskSettings(task, 
         detector, processUnmerging, processModifiers, isSingleStage, bioNLPSTParams, preprocessorParams, inputFiles, exampleStyles, classifierParams)   
+    if task != None: task = task.replace("-MINI", "")
     # Define processing steps
     selector, detectorSteps, omitDetectorSteps = getSteps(step, omitSteps, ["TRAIN", "DEVEL", "EMPTY", "TEST"])
     
@@ -83,7 +84,7 @@ def train(output, task=None, detector=None, inputFiles=None, models=None, parse=
         print >> sys.stderr, "----------------------------------------------------"
         print >> sys.stderr, "------------ Empty devel classification ------------"
         print >> sys.stderr, "----------------------------------------------------"
-        detector.classify(getEmptyCorpus(inputFiles["devel"]), models["devel"], "classification-empty/devel-empty-events", fromStep=detectorSteps["EMPTY"], workDir="classification-empty")
+        detector.classify(getEmptyCorpus(inputFiles["devel"], removeNames=removeNamesFromEmpty), models["devel"], "classification-empty/devel-empty-events", fromStep=detectorSteps["EMPTY"], workDir="classification-empty")
     if selector.check("TEST"):
         print >> sys.stderr, "----------------------------------------------------"
         print >> sys.stderr, "------------- Test set classification --------------"
@@ -184,7 +185,7 @@ def getTaskSettings(task, detector, processUnmerging, processModifiers, isSingle
                     inputFiles, exampleStyles, classifierParameters):
     if task != None:
         print >> sys.stderr, "Determining training settings for task", task
-        assert task in ["GE09", "GE09.1", "GE09.2", "GE", "GE.1", "GE.2", "EPI", "ID", "BB", "BI", "BI-FULL" "CO", "REL", "REN", "DDI", "DDI-FULL"]
+        assert task.replace("-MINI", "") in ["GE09", "GE09.1", "GE09.2", "GE", "GE.1", "GE.2", "EPI", "ID", "BB", "BI", "BI-FULL", "CO", "REL", "REN", "DDI", "DDI-FULL"], task
     
         fullTaskId = task
         subTask = 2
@@ -198,7 +199,7 @@ def getTaskSettings(task, detector, processUnmerging, processModifiers, isSingle
         #if inputFiles["train"] == None: inputFiles["train"] = dataPath + task + "/" + task + "-train.xml"
         #if inputFiles["test"] == None: inputFiles["test"] = dataPath + task + "/" + task + "-test.xml"
         if inputFiles["devel"] == None and inputFiles["devel"] != "None": 
-            inputFiles["devel"] = os.path.join(dataPath, task + "-devel.xml")
+            inputFiles["devel"] = os.path.join(dataPath, task.replace("-FULL", "") + "-devel.xml")
         if inputFiles["train"] == None and inputFiles["train"] != "None":
             if task == "ID": # add GE-task data to the ID training set
                 inputFiles["train"] = Catenate.catenate([os.path.join(dataPath, "ID-train.xml"),
@@ -206,10 +207,11 @@ def getTaskSettings(task, detector, processUnmerging, processModifiers, isSingle
                                                          os.path.join(dataPath, "GE-train.xml")], 
                                                         "training/ID-train-and-GE-devel-and-train.xml.gz", fast=True)
             else:
-                inputFiles["train"] = os.path.join(dataPath, task + "-train.xml")
+                inputFiles["train"] = os.path.join(dataPath, task.replace("-FULL", "") + "-train.xml")
         if inputFiles["test"] == None and inputFiles["test"] != "None": 
-            inputFiles["test"] = os.path.join(dataPath, task + "-test.xml")
+            inputFiles["test"] = os.path.join(dataPath, task.replace("-FULL", "") + "-test.xml")
         
+        task = task.replace("-MINI", "")
         # Example generation parameters
         if detector == None:
             detector = "Detectors.EventDetector"
@@ -232,7 +234,7 @@ def getTaskSettings(task, detector, processUnmerging, processModifiers, isSingle
             print >> sys.stderr, "Preprocessor parameters undefined, using default '" + preprocessorParams + "' for task", fullTaskId
         if processUnmerging == None and not isSingleStage:
             processUnmerging = True
-            if task in ["REL", "BB", "BI-FULL", "DDI-FULL"]:
+            if task in ["CO", "REL", "BB", "BI-FULL", "DDI-FULL"]:
                 processUnmerging = False
             print >> sys.stderr, "Unmerging undefined, using default", processUnmerging, "for task", fullTaskId
         if processModifiers == None:
@@ -274,14 +276,20 @@ def getTaskSettings(task, detector, processUnmerging, processModifiers, isSingle
             print >> sys.stderr, "Trigger example style undefined, using default for task", fullTaskId
             if task in ["GE09", "GE"] and subTask == 1:
                 exampleStyles["trigger"] = "genia_task1"
-            elif task in ["BB"]:
+            elif task == "EPI":
+                exampleStyles["trigger"] = "epi_merge_negated"
+            elif task == "BB":
                 exampleStyles["trigger"] = "bb_features:build_for_nameless:wordnet"
             elif task == "REL":
                 exampleStyles["trigger"] = "rel_features"
             elif task == "CO":
                 options.triggerExampleBuilder = "PhraseTriggerExampleBuilder"
             elif task in ["BI-FULL", "DDI-FULL"]:
-                exampleStyles["trigger"] = "all_tokens:build_for_nameless:names"
+                exampleStyles["trigger"] = "build_for_nameless:names"
+        if exampleStyles["unmerging"] == None and not isSingleStage:
+           exampleStyles["unmerging"] = "trigger_features:typed:directed:no_linear:entities:genia_limits:noMasking:maxFeatures"
+           #if task == "ID": # Do not use catenated GE for unmerging examples
+           #    exampleStyles["unmerging"] += ":sentenceLimit=id.ID"
         # Classifier parameters
         if classifierParameters["examples"] == None and isSingleStage:
             print >> sys.stderr, "Classifier parameters for single-stage examples undefined, using default for task", fullTaskId
@@ -311,7 +319,13 @@ def getTaskSettings(task, detector, processUnmerging, processModifiers, isSingle
             print >> sys.stderr, "Classifier parameters for modifier examples undefined, using default for task", fullTaskId
             classifierParameters["modifiers"] = "5000,10000,20000,50000,100000"
     
-    return detector, processUnmerging, processModifiers, isSingleStage, bioNLPSTParams, preprocessorParams, exampleStyles, classifierParameters
+    if isSingleStage and exampleStyles["examples"] != None and "names" in exampleStyles["examples"]:
+        removeNamesFromEmpty = True
+    elif (not isSingleStage) and exampleStyles["trigger"] != None and "names" in exampleStyles["trigger"]:
+        removeNamesFromEmpty = True
+    else:
+        removeNamesFromEmpty = False
+    return detector, processUnmerging, processModifiers, isSingleStage, bioNLPSTParams, preprocessorParams, exampleStyles, classifierParameters, removeNamesFromEmpty
 
 def getDefinedBool(string):
     assert string in (None, "True", "False")
