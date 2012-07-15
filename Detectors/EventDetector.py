@@ -1,6 +1,7 @@
 import sys, os
 import shutil
 import types
+import copy
 from Detector import Detector
 from EntityDetector import EntityDetector
 from EdgeDetector import EdgeDetector
@@ -243,8 +244,16 @@ class EventDetector(Detector):
         if self.checkStep("SELF-TRAIN-EXAMPLES-FOR-UNMERGING", self.unmerging) and self.unmerging:
             # Self-classified train data for unmerging
             if self.doUnmergingSelfTraining:
-                xml = self.triggerDetector.classifyToXML(self.trainData, self.model, None, self.workDir+"unmerging-extra-")#, recallAdjust=0.5)
-                xml = self.edgeDetector.classifyToXML(xml, self.model, None, self.workDir+"unmerging-extra-")#, recallAdjust=0.5)
+                # This allows limiting to a subcorpus
+                triggerStyle = copy.copy(Parameters.get(self.triggerExampleStyle))
+                edgeStyle = copy.copy(Parameters.get(self.edgeExampleStyle))
+                unmergingStyle = Parameters.get(self.unmergingExampleStyle)
+                if "sentenceLimit" in unmergingStyle and unmergingStyle["sentenceLimit"]:
+                    triggerStyle["sentenceLimit"] = unmergingStyle["sentenceLimit"]
+                    edgeStyle["sentenceLimit"] = unmergingStyle["sentenceLimit"]
+                # Build the examples
+                xml = self.triggerDetector.classifyToXML(self.trainData, self.model, None, self.workDir+"unmerging-extra-", exampleStyle=triggerStyle)#, recallAdjust=0.5)
+                xml = self.edgeDetector.classifyToXML(xml, self.model, None, self.workDir+"unmerging-extra-", exampleStyle=edgeStyle)#, recallAdjust=0.5)
                 assert xml != None
                 EvaluateInteractionXML.run(self.edgeDetector.evaluator, xml, self.trainData, self.parse)
             else:
