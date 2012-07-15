@@ -66,9 +66,10 @@ class UnmergingExampleBuilder(ExampleBuilder):
     This example builder makes unmerging examples, i.e. examples describing
     potential events.
     """
-    def __init__(self, style="trigger_features:typed:directed:no_linear:entities:genia_limits:noMasking:maxFeatures", length=None, types=[], featureSet=None, classSet=None):
+    #def __init__(self, style="trigger_features:typed:directed:no_linear:entities:genia_limits:noMasking:maxFeatures", length=None, types=[], featureSet=None, classSet=None):
+    def __init__(self, style=None, length=None, types=[], featureSet=None, classSet=None):
         # reset style regardless of input
-        style="trigger_features:typed:directed:no_linear:entities:genia_limits:noMasking:maxFeatures"
+        #style="trigger_features:typed:directed:no_linear:entities:genia_limits:noMasking:maxFeatures"
         if featureSet == None:
             featureSet = IdSet()
         if classSet == None:
