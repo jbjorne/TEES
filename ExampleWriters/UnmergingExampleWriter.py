@@ -38,12 +38,13 @@ class UnmergingExampleWriter(SentenceExampleWriter):
         
         # early out
         cutoff = 100
-        if len(interactions) == 0 or len(interactions) > cutoff:
+        #if len(interactions) == 0 or len(interactions) > cutoff:
+        if len(interactions) > cutoff:
             # re-attach the analyses-element
             if sentenceAnalysesElement != None:
                 sentenceElement.append(sentenceAnalysesElement)
-            if len(interactions) > cutoff:
-                print >> sys.stderr, "Warning, sentence", sentenceObject.sentence.get("id"), "has more than", cutoff, "interactions, removing all."
+            #if len(interactions) > cutoff:
+            print >> sys.stderr, "Warning, sentence", sentenceObject.sentence.get("id"), "has more than", cutoff, "interactions, removing all."
             return
         
         interactionsByEntity = {}
@@ -287,7 +288,10 @@ class UnmergingExampleWriter(SentenceExampleWriter):
             argEntities[i] = self.entitiesByHeadByType[e2HeadOffset][e2Type]
             if len(argEntities[i]) == 0:
                 assert forceAdd
-                argEntities[i] = [self.addEntity(origE2)]
+                if origE2.get("isName") != "True":
+                    argEntities[i] = [self.addEntity(origE2)]
+                else:
+                    argEntities[i] = origE2
             
         entityCombinations = combine.combine(*argEntities)
         for combination in entityCombinations:
@@ -301,7 +305,7 @@ class UnmergingExampleWriter(SentenceExampleWriter):
     
     def addEntity(self, entity):
         entityElement = ET.Element("entity")
-        assert entity.get("isName") != "True"
+        assert entity.get("isName") != "True", entity.attrib
         entityElement.set("isName", "False")
         entityElement.set("charOffset", entity.get("charOffset"))
         entityElement.set("headOffset", entity.get("headOffset")) 
