@@ -70,7 +70,8 @@ class PhraseTriggerExampleBuilder(ExampleBuilder):
             featureSet = IdSet()         
         ExampleBuilder.__init__(self, classSet, featureSet)
         
-        self.styles = style
+        self._setDefaultParameters(["co_limits"])
+        self.styles = self.getParameters(style)
         self.triggerFeatureBuilder = TriggerFeatureBuilder(self.featureSet)
         self.triggerFeatureBuilder.useNonNameEntities = False
         self.phraseTypeCounts = {}
