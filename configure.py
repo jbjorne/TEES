@@ -164,19 +164,19 @@ def toolsMenuInitializer(menu, prevMenu):
     handlers = []
     handlerArgs = []
     redownload = menu.optDict["1"].toggle
-    if menu.optDict["2"].toggle or checkInstallPath(menu, "GENIA_SENTENCE_SPLITTER_DIR"):
+    if menu.optDict["2"].toggle or (menu != prevMenu and checkInstallPath(menu, "GENIA_SENTENCE_SPLITTER_DIR")):
         menu.optDict["2"].toggle = True
         handlers.append(Tools.GeniaSentenceSplitter.install)
         handlerArgs.append([None, None, redownload, True])  
-    if menu.optDict["3"].toggle or checkInstallPath(menu, "BANNER_DIR"):
+    if menu.optDict["3"].toggle or (menu != prevMenu and checkInstallPath(menu, "BANNER_DIR")):
         menu.optDict["3"].toggle = True
         handlers.append(Tools.BANNER.install)
         handlerArgs.append([None, None, redownload, False, None, True])  
-    if menu.optDict["4"].toggle or checkInstallPath(menu, "BLLIP_PARSER_DIR"):
+    if menu.optDict["4"].toggle or (menu != prevMenu and checkInstallPath(menu, "BLLIP_PARSER_DIR")):
         menu.optDict["4"].toggle = True
         handlers.append(Tools.BLLIPParser.install)
         handlerArgs.append([None, None, redownload, True])  
-    if menu.optDict["5"].toggle or checkInstallPath(menu, "STANFORD_PARSER_DIR"):
+    if menu.optDict["5"].toggle or (menu != prevMenu and checkInstallPath(menu, "STANFORD_PARSER_DIR")):
         menu.optDict["5"].toggle = True
         handlers.append(Tools.StanfordParser.install)
         handlerArgs.append([None, None, redownload, True])  
@@ -216,18 +216,18 @@ def corpusMenuInitializer(menu, prevMenu):
     # Check which corpora need to be installed
     redownload = menu.optDict["1"].toggle
     for corpus in ["GE", "EPI", "ID", "BB", "BI", "CO", "REL", "REN"]:
-        if menu.optDict["2"].toggle or not checkCorpusInstall(corpus):
+        if menu.optDict["2"].toggle or (menu != prevMenu and not checkCorpusInstall(corpus)):
             menu.setDefault("i")
             menu.optDict["2"].toggle = True
             handlers.append(convertBioNLP.installPreconverted)
             handlerArgs.append(["BIONLP_11_CORPORA", corpusInstallPath, corpusDownloadPath, redownload, True])
             break
-    if menu.optDict["3"].toggle or not checkCorpusInstall("GE09"):
+    if menu.optDict["3"].toggle or (menu != prevMenu and not checkCorpusInstall("GE09")):
         menu.setDefault("i")
         menu.optDict["3"].toggle = True
         handlers.append(convertBioNLP.installPreconverted)
         handlerArgs.append(["BIONLP_09_CORPUS", corpusInstallPath, corpusDownloadPath, redownload, True])
-    if menu.optDict["4"].toggle or not checkCorpusInstall("DDI"):
+    if menu.optDict["4"].toggle or (menu != prevMenu and not checkCorpusInstall("DDI")):
         menu.setDefault("i")
         menu.optDict["4"].toggle = True
         handlers.append(convertBioNLP.installPreconverted)
@@ -235,7 +235,7 @@ def corpusMenuInitializer(menu, prevMenu):
     # A handler for installing BioNLP'11 evaluators
     evaluatorInstallPath = os.path.join(menu.system.defaultInstallDir, "tools/evaluators")
     evaluatorDownloadPath = os.path.join(menu.system.defaultInstallDir, "tools/download")
-    if menu.optDict["5"].toggle or not hasattr(Settings, "BIONLP_EVALUATOR_DIR") or getattr(Settings, "BIONLP_EVALUATOR_DIR") == None:
+    if menu.optDict["5"].toggle or (menu != prevMenu and (not hasattr(Settings, "BIONLP_EVALUATOR_DIR") or getattr(Settings, "BIONLP_EVALUATOR_DIR") == None)):
         menu.setDefault("i")
         handlers.append(convertBioNLP.installEvaluators)
         handlerArgs.append([evaluatorInstallPath, evaluatorDownloadPath, redownload, True])
