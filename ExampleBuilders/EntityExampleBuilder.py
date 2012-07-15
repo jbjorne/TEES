@@ -126,7 +126,7 @@ class EntityExampleBuilder(ExampleBuilder):
         features = {}
         features["_txt_"+tokTxt]=1
         features["_POS_"+token.get("POS")]=1
-        if sentenceGraph.tokenIsName[token]:
+        if sentenceGraph.tokenIsName[token] and not self.styles["names"]:
             features["_isName"]=1
             for entity in sentenceGraph.tokenIsEntityHead[token]:
                 if entity.get("isName") == "True":
@@ -198,6 +198,9 @@ class EntityExampleBuilder(ExampleBuilder):
             
             if self.styles["pos_pairs"]:
                 namedEntityHeadTokens = self.getNamedEntityHeadTokens(sentenceGraph)
+        else:
+            for key in sentenceGraph.tokenIsName.keys():
+                sentenceGraph.tokenIsName[key] = False
         
         bagOfWords = {}
         for token in sentenceGraph.tokens:
@@ -491,7 +494,7 @@ class EntityExampleBuilder(ExampleBuilder):
 #                tokenText = sentenceGraph.getTokenText(nextToken)
 #                features[self.featureSet.getId("text_dist_"+strDepthLeft+tokenText)] = 1
                 
-                if sentenceGraph.tokenIsName[nextToken]:
+                if sentenceGraph.tokenIsName[nextToken] and not self.styles["names"]:
                     features[self.featureSet.getId("name_chain_dist_"+strDepthLeft+chain+"-frw_"+edgeType)] = 1
                 features[self.featureSet.getId("chain_dist_"+strDepthLeft+chain+"-frw_"+edgeType)] = 1
                 self.buildChains(nextToken,sentenceGraph,features,depthLeft-1,chain+"-frw_"+edgeType,edgeSet)
@@ -512,7 +515,7 @@ class EntityExampleBuilder(ExampleBuilder):
 #                features[self.featureSet.getId("POS_dist_"+strDepthLeft+nextToken.get("POS"))] = 1
 #                tokenText = sentenceGraph.getTokenText(nextToken)
 #                features[self.featureSet.getId("text_dist_"+strDepthLeft+tokenText)] = 1
-                if sentenceGraph.tokenIsName[nextToken]:
+                if sentenceGraph.tokenIsName[nextToken] and not self.styles["names"]:
                     features[self.featureSet.getId("name_chain_dist_"+strDepthLeft+chain+"-rev_"+edgeType)] = 1
                 
                 features[self.featureSet.getId("chain_dist_"+strDepthLeft+chain+"-rev_"+edgeType)] = 1
