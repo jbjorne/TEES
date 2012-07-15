@@ -4,6 +4,7 @@ import itertools
 import gzip
 sys.path.append(os.path.dirname(os.path.abspath(__file__))+"/..")
 import Utils.ElementTreeUtils as ETUtils
+import Utils.Parameters as Parameters
 from Core.Model import Model
 import Core.ExampleUtils as ExampleUtils
 import Utils.STFormat.ConvertXML
@@ -123,7 +124,7 @@ class SingleStageDetector(Detector):
         self.deleteTempWorkDir()
         self.exitState()
         
-    def classifyToXML(self, data, model, exampleFileName=None, tag="", classifierModel=None, goldData=None, parse=None, recallAdjust=None, compressExamples=True):
+    def classifyToXML(self, data, model, exampleFileName=None, tag="", classifierModel=None, goldData=None, parse=None, recallAdjust=None, compressExamples=True, exampleStyle=None):
         model = self.openModel(model, "r")
         if parse == None:
             parse = self.getStr(self.tag+"parse", model)
@@ -131,7 +132,7 @@ class SingleStageDetector(Detector):
             exampleFileName = tag+self.tag+"examples"
             if compressExamples:
                 exampleFileName += ".gz"
-        self.buildExamples(model, [data], [exampleFileName], [goldData], parse=parse)
+        self.buildExamples(model, [data], [exampleFileName], [goldData], parse=parse, exampleStyle=exampleStyle)
         if classifierModel == None:
             classifierModel = model.get(self.tag+"classifier-model")
         else:
@@ -142,7 +143,9 @@ class SingleStageDetector(Detector):
         predictions = ExampleUtils.loadPredictions(tag+self.tag+"classifications", recallAdjust, threshold=threshold)
         evaluator = self.evaluator.evaluate(exampleFileName, predictions, model.get(self.tag+"ids.classes"))
         #outputFileName = tag+"-"+self.tag+"pred.xml.gz"
-        exampleStyle = self.exampleBuilder.getParameters(model.getStr(self.tag+"example-style"))
+        #exampleStyle = self.exampleBuilder.getParameters(model.getStr(self.tag+"example-style"))
+        if exampleStyle == None:
+            exampleStyle = Parameters.get(model.getStr(self.tag+"example-style")) # no checking, but these should already have passed the ExampleBuilder
         return self.exampleWriter.write(exampleFileName, predictions, data, tag+self.tag+"pred.xml.gz", model.get(self.tag+"ids.classes"), parse, exampleStyle=exampleStyle)
 #        if evaluator.getData().getTP() + evaluator.getData().getFP() > 0:
 #            return self.exampleWriter.write(exampleFileName, predictions, data, outputFileName, model.get(self.tag+"ids.classes"), parse)
