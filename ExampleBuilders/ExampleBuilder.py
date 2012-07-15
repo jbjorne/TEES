@@ -24,10 +24,7 @@ class ExampleBuilder:
     for the class and feature id-numbers. An example builder can also be given
     pre-existing sets of class and feature ids (optionally in files) so that the
     generated examples are consistent with other, previously generated examples.
-    """
-    _defaultParameters = None
-    _parameterValueLimits = None
-        
+    """    
     def __init__(self, classSet=None, featureSet=None):
         if(type(classSet) == types.StringType):
             self.classSet = IdSet(filename=classSet)
@@ -48,14 +45,23 @@ class ExampleBuilder:
         self.featureIdFilename = None
         
         self.styles = None
+        self._defaultParameters = None
+        self._parameterValueLimits = None
+        self._setDefaultParameters(["sentenceLimit"])
     
     def _setDefaultParameters(self, defaults=None, valueLimits=None):
-        ExampleBuilder._defaultParameters = defaults
-        ExampleBuilder._parameterValueLimits = valueLimits
+        # Initialize
+        if self._defaultParameters == None:
+            self._defaultParameters = {}
+        if self._parameterValueLimits == None:
+            self._parameterValueLimits = {}
+        newParameters = Utils.Parameters.get({}, defaults, valueLimits=valueLimits)
+        self._defaultParameters.update(newParameters)
+        if valueLimits != None:
+            self._parameterValueLimits.update(valueLimits)
     
-    @classmethod
-    def getParameters(cls, parameters):
-        return Utils.Parameters.get(parameters, defaults=cls._defaultParameters, valueLimits=cls._parameterValueLimits)
+    def getParameters(self, parameters):
+        return Utils.Parameters.get(parameters, defaults=self._defaultParameters, valueLimits=self._parameterValueLimits)
     
     def setFeature(self, name, value):
         self.features[self.featureSet.getId(self.featureTag+name)] = value
@@ -154,6 +160,26 @@ class ExampleBuilder:
             self.processSentence(sentence, outfile, goldSentence)
     
     def processSentence(self, sentence, outfile, goldSentence=None):
+        # Process filtering rules
+        if self.styles["sentenceLimit"]: # Rules for limiting which sentences to process
+            # Get the rule list
+            limitRules = self.styles["sentenceLimit"]
+            if type(limitRules) in types.StringTypes:
+                limitRules = [limitRules]
+            # Get the list of sentence element attribute names
+            sentenceElement = sentence.sentence
+            sentenceAttributes = sorted(sentenceElement.attrib.keys())
+            # Filter sentences based on matching rules to their attribute values
+            for rule in limitRules:
+                for sentAttr in sentenceAttributes:
+                    # Rule are of the form "attr.value" where "attr" is the name
+                    # of the attribute to match, and "value" a substring within
+                    # that attribute
+                    if rule.startswith(sentAttr + "."): # rule matches the attribute
+                        value = rule.split(".", 1)[-1] # get the value part of the rule
+                        if value not in sentenceElement.get(sentAttr): # rule value must be a substring of the attribute value
+                            return # discard all sentences that do not match all rules
+        # Process the sentence
         if sentence.sentenceGraph != None:
             goldGraph = None
             if goldSentence != None:
