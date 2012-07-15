@@ -32,6 +32,9 @@ class EntityExampleWriter(SentenceExampleWriter):
         # remove entities
         newEntityIdCount = IDUtils.getNextFreeId(sentenceElement.findall("entity"))
         nonNameEntities = self.removeNonNameEntities(sentenceElement)
+        # remove named entities if needed
+        if exampleStyle != None and "names" in exampleStyle and exampleStyle["names"]: # remove all entities, including names
+            self.removeChildren(sentenceElement, ["entity"])
         
         # gold sentence elements
         goldEntityTypeByHeadOffset = {}
