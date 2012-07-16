@@ -328,7 +328,9 @@ def getTaskSettings(task, detector, processUnmerging, processModifiers, isSingle
     return detector, processUnmerging, processModifiers, isSingleStage, bioNLPSTParams, preprocessorParams, exampleStyles, classifierParameters, removeNamesFromEmpty
 
 def getDefinedBool(string):
-    assert string in (None, "True", "False")
+    if string in (True, False): # already defined
+        return string
+    assert string in (None, "True", "False") # undefined or needs to be converted to bool
     if string == None:
         return None
     elif string == "True":
@@ -337,10 +339,10 @@ def getDefinedBool(string):
         return False
 
 def getDefinedBoolOption(option, opt, value, parser):
-    if value == "":
-        return True
+    if value == None:
+        setattr(parser.values, option.dest, True)
     else:
-        return getDefinedBool(value)
+        setattr(parser.values, option.dest, getDefinedBool(value))
 
 if __name__=="__main__":
     # Import Psyco if available
