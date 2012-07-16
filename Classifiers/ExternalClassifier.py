@@ -58,7 +58,7 @@ class ExternalClassifier(Classifier):
             self.state = None
             self._job = None
             for filename in self._filesToRelease:
-                SVMMultiClassClassifier.getFileCounter(filename, add=-1, createIfNotExist=False)
+                ExternalClassifier.getFileCounter(filename, add=-1, createIfNotExist=False)
             self._filesToRelease = []
         if self._prevJobStatus == None:
             return "FINISHED"
@@ -175,7 +175,7 @@ class ExternalClassifier(Classifier):
         for key in paramKeys:
             if key.startswith("TEES."):
                 continue
-            if not paramString.endswith(" "):
+            if len(paramString) > 0 and not paramString.endswith(" "):
                 paramString += " "
             if parameters[key] != None:
                 paramString += self.parameterFormat.replace("%k", key).replace("%v", str(parameters[key])).strip()
@@ -186,14 +186,15 @@ class ExternalClassifier(Classifier):
         classifier.parameterIdStr = idStr
         classifier.model = self.connection.getRemotePath(outDir + "/model" + idStr, True)
         modelPath = self.connection.getRemotePath(outDir + "/model" + idStr, False)
-        trainCommand.replace("%p", paramString).replace("%e", examples).replace("%m", modelPath).strip()
+        trainCommand = trainCommand.replace("%p", paramString).replace("%e", examples).replace("%m", modelPath).strip()
         self.connection.addCommand(trainCommand)
         # Classify with the trained model (optional)
         if classifyExamples != None:
             classifier.predictions = self.connection.getRemotePath(outDir + "/predictions" + idStr, True)
             predictionsPath = self.connection.getRemotePath(outDir + "/predictions" + idStr, False)
-            classifyCommand = os.path.join(self.classifyDirSetting, self.classifyCommand).replace("%e", classifyExamples).replace("%m", modelPath).replace("%c", predictionsPath).strip()
-            self.connection.addCommand( classifyCommand )
+            classifyDir = self.connection.getSetting(self.classifyDirSetting)
+            classifyCommand = os.path.join(classifyDir, self.classifyCommand).replace("%e", classifyExamples).replace("%m", modelPath).replace("%c", predictionsPath).strip()
+            self.connection.addCommand(classifyCommand)
         # Run the process
         jobName = self.trainCommand.split()[0] + idStr
         logPath = outDir + "/" + jobName
@@ -234,7 +235,8 @@ class ExternalClassifier(Classifier):
         examples = self.getExampleFile(examples, replaceRemote=replaceRemoteFiles)
         classifier._filesToRelease = [examples]
         self.connection.clearCommands()
-        classifyCommand = os.path.join(self.classifyDir, self.classifyCommand).replace("%e", examples).replace("%m", model).replace("%c", predictionsPath).strip()
+        classifyDir = self.connection.getSetting(self.classifyDirSetting)
+        classifyCommand = os.path.join(classifyDir, self.classifyCommand).replace("%e", examples).replace("%m", model).replace("%c", predictionsPath).strip()
         self.connection.addCommand(classifyCommand)
         classifier._job = self.connection.submit(jobDir=os.path.abspath(os.path.dirname(output)), 
                                                  jobName=self.classifyCommand.split()[0] + "-" + os.path.basename(model))
