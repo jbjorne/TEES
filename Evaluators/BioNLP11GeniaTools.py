@@ -341,21 +341,24 @@ def evaluateGE(sourceDir, mainTask="GE", task=1, goldDir=None, folds=-1, foldToR
     return results
 
 def printLinesBX(lines):
-    queue = []
-    category = None
+#    queue = []
+#    category = None
     for line in lines:
-        if ":" in line:
-            if len(queue) > 0:
-                print >> sys.stderr, str(category) + ":", ", ".join(queue)
-                queue = []
-            category = line.split(":")[0].strip()
-        elif line.startswith("    "):
-            queue.append(line.strip())
-        else:
-            print >> sys.stderr, line[:-1]
-    if len(queue) > 0:
-        print >> sys.stderr, str(category) + ":", ", ".join(queue)
-        queue = []
+        print >> sys.stderr, line[:-1]
+    
+#    for line in lines:
+#        if ":" in line:
+#            if len(queue) > 0:
+#                print >> sys.stderr, str(category) + ":", ", ".join(queue)
+#                queue = []
+#            category = line.split(":")[0].strip()
+#        elif line.startswith("    "):
+#            queue.append(line.strip())
+#        else:
+#            print >> sys.stderr, line[:-1]
+#    if len(queue) > 0:
+#        print >> sys.stderr, str(category) + ":", ", ".join(queue)
+#        queue = []
 
 def evaluateBX(corpusName, sourceDir, goldDir=None, silent=False):
     assert corpusName in ["BI", "BB"], corpusName
