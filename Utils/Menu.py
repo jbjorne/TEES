@@ -9,6 +9,7 @@ class MenuSystem():
         self.width = 80
         self.onException = "ASK"
         self.auto = False
+        self.closingMessage = ""
     
     def run(self, mainMenu):
         nextMenu = mainMenu
@@ -21,6 +22,9 @@ class MenuSystem():
                     self.run(next)
                 nextMenu = None
             prevMenu = currentMenu
+        if self.closingMessage != None:
+            print >> sys.stderr
+            print >> sys.stderr, self.closingMessage
     
     def setAttr(self, attrName, value=None):
         if not hasattr(self, attrName):

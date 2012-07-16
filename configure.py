@@ -87,7 +87,16 @@ def pathMenuInitializer(menu, prevMenu):
     menu.system.setAttr("defaultInstallDir", menu.defaultInstallDir)
     menu.system.setAttr("configFilePath", menu.configFilePath)
     os.environ["TEES_SETTINGS"] = menu.configFilePath
+    setClosingMessage(menu.system, configFilePath)
     menu.optDict["c"].handlerArgs = [menu.configFilePath]
+    
+def setClosingMessage(configFilePath, menuSystem):
+    menuSystem.closingMessage = "!!!!!!!!!!!!!!!!!!!!!! Important Note !!!!!!!!!!!!!!!!!!!!!!\n"
+    menuSystem.closingMessage += "Before using TEES, remember to define the TEES_SETTINGS\n"
+    menuSystem.closingMessage += "environment variable. How to do this depends on your shell,\n"
+    menuSystem.closingMessage += "some common commands are:\n\n"
+    menuSystem.closingMessage += "bash: 'export TEES_SETTINGS=" + configFilePath + "'\n"
+    menuSystem.closingMessage += "tcsh: 'setenv TEES_SETTINGS " + configFilePath + "'\n" 
     
 def initLocalSettings(filename):
     if os.path.exists(filename):
@@ -261,17 +270,21 @@ def buildMenus():
         Welcome to using the Turku Event Extraction System (TEES)! In order to work, TEES
         depends on a number of other programs, which have to be set up before use.
         
-        The classifier (1) is required for all uses of the system, and together with the official
-        models (2), can be used to predict events for datasets such as the Shared Task corpora (3), or if
-        preprocessing tools are installed (4), for any unprocessed text.
+        The classifier (1) is required for all uses of the system. The models (2) are 
+        required for predicting events and together with the preprocessing tools (4)
+        can be used on any unprocessed text. The corpora (3) are used for testing the 
+        performance of a model or for training a new model.
         
         If you are unsure which components you need, just install everything (the default choice). 
         You can also rerun configure.py at any time later to install missing components.
-        """, 
+        
+        To make a choice, type the option's key and press enter, or just press enter for the
+        default option. The '*' sign indicates the default option and brackets a selectable one.
+        """,
         [
         Option("1", "Install classifier (SVM Multiclass)", toggle=True),
-        Option("2", "Install models (TEES models for BioNLP'11 and DDI'11)", toggle=True),
-        Option("3", "Install corpora (BioNLP'11 and DDI'11)", toggle=True),
+        Option("2", "Install models (TEES models for BioNLP'11, BioNLP'09 and DDI'11)", toggle=True),
+        Option("3", "Install corpora (BioNLP'11, BioNLP'09 and DDI'11)", toggle=True),
         Option("4", "Install preprocessing tools (BANNER, BLLIP parser etc)", toggle=True),
         Option("c", "Continue and install selected items", "Install Directory", isDefault=True),
         Option("q", "Quit", handler=sys.exit),
