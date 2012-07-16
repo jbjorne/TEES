@@ -30,7 +30,7 @@ def train(output, task=None, detector=None, inputFiles=None, models=None, parse=
     # Get task specific parameters
     detector, processUnmerging, processModifiers, isSingleStage, bioNLPSTParams, preprocessorParams, exampleStyles, classifierParams, removeNamesFromEmpty = getTaskSettings(task, 
         detector, processUnmerging, processModifiers, isSingleStage, bioNLPSTParams, preprocessorParams, inputFiles, exampleStyles, classifierParams)   
-    if task != None: task = task.replace("-MINI", "")
+    if task != None: task = task.replace("-MINI", "").replace("-FULL", "")
     # Define processing steps
     selector, detectorSteps, omitDetectorSteps = getSteps(step, omitSteps, ["TRAIN", "DEVEL", "EMPTY", "TEST"])
     
