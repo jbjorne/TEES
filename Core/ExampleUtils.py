@@ -78,7 +78,15 @@ def copyExamples(examples):
     return examplesCopy
 
 def appendExamples(examples, file):
+    noneClassCount = 0
     for example in examples:
+        # None-value as a class indicates a class that did not match an existing id,
+        # in situations where new ids cannot be defined, such as predicting. An example
+        # with class == None should never get this far, ideally it should be filtered
+        # in the ExampleBuilder, but this at least prevents a crash.
+        if example[1] == None:
+            noneClassCount += 1
+            continue
         # Write class
         file.write(str(example[1]))
         # Get and sort feature ids
@@ -98,6 +106,8 @@ def appendExamples(examples, file):
             if type(extraValue) == types.StringType:
                 file.write( " " + str(extraKey) + ":" + extraValue)
         file.write("\n")
+    if noneClassCount != 0: 
+        print >> sys.stderr, "Warning,", noneClassCount, "examples had an undefined class."
 
 def appendExamplesBinary(examples, file):
     import struct

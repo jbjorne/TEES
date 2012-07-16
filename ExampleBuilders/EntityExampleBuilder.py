@@ -281,7 +281,11 @@ class EntityExampleBuilder(ExampleBuilder):
                 self.exampleStats.endExample()
                 continue
 
-            category = self.classSet.getId(categoryName)            
+            category = self.classSet.getId(categoryName)
+            if category == None:
+                self.exampleStats.filter("undefined_class")
+                self.exampleStats.endExample()
+                continue           
             
             tokenText = token.get("text").lower()
 #            if "stem_gazetteer" in self.styles:

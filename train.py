@@ -223,6 +223,9 @@ def getTaskSettings(task, detector, processUnmerging, processModifiers, isSingle
             print >> sys.stderr, "Detector undefined, using default '" + detector + "' for task", fullTaskId
         if bioNLPSTParams == None and task not in ["DDI", "DDI-FULL"]:
             bioNLPSTParams = "convert:evaluate:scores"
+            if task == "BI-FULL":
+                bioNLPSTParams = "convert:scores" # the shared task evaluator is not designed for predicted entities
+            print >> sys.stderr, "BioNLP Shared Task parameters undefined, using default '" + bioNLPSTParams + "' for task", fullTaskId
         if preprocessorParams == None:
             preprocessorParams = ["intermediateFiles"]
             if task in ["BI", "BI-FULL", "BB", "DDI", "DDI-FULL"]:
