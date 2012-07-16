@@ -9,7 +9,7 @@ from optparse import OptionParser
 import Core.ExampleUtils as ExampleUtils
 from Core.IdSet import IdSet
 import Utils.TableUtils as TableUtils
-import InteractionXML.CorpusElements as CorpusElements
+import Utils.InteractionXML.CorpusElements as CorpusElements
 import copy
 from collections import defaultdict
 
@@ -384,8 +384,8 @@ if __name__=="__main__":
     #optparser.add_option("-o", "--output", default=None, dest="output", help="Output file for the statistics")
     optparser.add_option("-r", "--target", default="both", dest="target", help="edges/entities/both (default: both)")
     optparser.add_option("-e", "--evaluator", default="AveragingMultiClassEvaluator", dest="evaluator", help="Prediction evaluator class")
-    optparser.add_option("-t", "--tokenization", default="split-McClosky", dest="tokenization", help="tokenization")
-    optparser.add_option("-p", "--parse", default="split-McClosky", dest="parse", help="parse")
+#    optparser.add_option("-t", "--tokenization", default="split-McClosky", dest="tokenization", help="tokenization")
+    optparser.add_option("-p", "--parse", default="McCC", dest="parse", help="parse")
     optparser.add_option("-m", "--matching", default="SIMPLE", dest="matching", help="matching function")
     optparser.add_option("--no_intersentence", default=False, action="store_true", dest="no_intersentence", help="Exclude intersentence interactions from evaluation")
     (options, args) = optparser.parse_args()
