@@ -198,7 +198,7 @@ if __name__=="__main__":
     except ImportError:
         print >> sys.stderr, "Psyco not installed"
 
-    optparser = OptionParser(usage="%prog [options]\nRecalculate head token offsets.")
+    optparser = OptionParser(description="Resolve annotated equivalences")
     optparser.add_option("-i", "--input", default=None, dest="input", help="", metavar="FILE")
     optparser.add_option("-o", "--output", default=None, dest="output", help="")
     optparser.add_option("-d", "--debug", default=False, action="store_true", dest="debug", help="")

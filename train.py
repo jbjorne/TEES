@@ -357,7 +357,7 @@ if __name__=="__main__":
         print >> sys.stderr, "Psyco not installed"
         
     from optparse import OptionParser, OptionGroup
-    optparser = OptionParser()
+    optparser = OptionParser(description="Train a new event/relation extraction model")
     # main options
     group = OptionGroup(optparser, "Main Options", "")
     group.add_option("-t", "--task", default=None, dest="task", help="task number")

@@ -114,7 +114,7 @@ if __name__=="__main__":
         print >> sys.stderr, "Psyco not installed"
 
     from optparse import OptionParser
-    optparser = OptionParser()
+    optparser = OptionParser(description="Tools for the DDI'11 Shared Task")
     optparser.add_option("-i", "--input", default=None, dest="input", help="input file (interaction XML)")
     optparser.add_option("-o", "--output", default=None, dest="output", help="output file (txt file)")
     optparser.add_option("-d", "--add", default=None, dest="add", help="data to be added, e.g. rls classifications")

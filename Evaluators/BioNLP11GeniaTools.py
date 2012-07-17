@@ -529,11 +529,10 @@ if __name__=="__main__":
         print >> sys.stderr, "Psyco not installed"
     
     from optparse import OptionParser
-    optparser = OptionParser(usage="%prog [options]\n")
+    optparser = OptionParser(description="Evaluate BioNLP Shared Task predictions")
     optparser.add_option("-i", "--input", default=None, dest="input", help="input directory with predicted shared task files", metavar="FILE")
-    #optparser.add_option("-c", "--corpus", default="GE", dest="corpus", help="")
+    optparser.add_option("-g", "--gold", default=None, dest="input", help="optional gold directory (default is the task development set)", metavar="FILE")
     optparser.add_option("-t", "--task", default="GE.2", dest="task", help="")
-    #optparser.add_option("-t", "--task", default=1, type="int", dest="task", help="task number")
     optparser.add_option("-v", "--variance", default=0, type="int", dest="variance", help="variance folds")
     optparser.add_option("-d", "--debug", default=False, action="store_true", dest="debug", help="debug")
     optparser.add_option("--install", default=None, dest="install", help="Install directory (or DEFAULT)")
@@ -542,7 +541,7 @@ if __name__=="__main__":
     
     if options.install == None:
         assert(options.input != None)
-        evalResult = evaluate(options.input, options.task, debug=options.debug)
+        evalResult = evaluate(options.input, options.task, options.gold, debug=options.debug)
         if options.debug:
             print >> sys.stderr, "evaluate output:", evalResult
     else:

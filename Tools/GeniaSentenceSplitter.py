@@ -259,7 +259,7 @@ if __name__=="__main__":
     except ImportError:
         print >> sys.stderr, "Psyco not installed"
 
-    optparser = OptionParser(usage="%prog [options]\n")
+    optparser = OptionParser(description="GENIA Sentence Splitter wrapper")
     optparser.add_option("-i", "--input", default=None, dest="input", help="Corpus in interaction xml format", metavar="FILE")
     optparser.add_option("-o", "--output", default=None, dest="output", help="Output file in interaction xml format.")
     optparser.add_option("-p", "--postprocess", default=False, action="store_true", dest="postprocess", help="Run postprocessor")

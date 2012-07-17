@@ -69,7 +69,7 @@ if __name__=="__main__":
     except ImportError:
         print >> sys.stderr, "Psyco not installed"
 
-    optparser = OptionParser(usage="%prog [options]\n")
+    optparser = OptionParser(description="Extract information from SubtiWiki for the BioNLP'11 REN task")
     optparser.add_option("-i", "--input", default="http://subtiwiki.uni-goettingen.de/wiki/api.php", dest="input", help="")
     optparser.add_option("-o", "--output", default="subtiwiki/pages", dest="output", help="")
     optparser.add_option("-n", "--names", default="subtiwiki/Subtiwiki-Protein-Coding-Genes-Names.txt", dest="names", help="")

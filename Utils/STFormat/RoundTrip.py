@@ -37,7 +37,7 @@ if __name__=="__main__":
     except ImportError:
         print >> sys.stderr, "Psyco not installed"
 
-    optparser = OptionParser(usage="%prog [options]\n")
+    optparser = OptionParser(description="Convert ST format to interaction XML and back")
     optparser.add_option("-i", "--input", default=None, dest="input", help="Corpus in interaction xml format", metavar="FILE")
     optparser.add_option("-o", "--output", default=None, dest="output", help="Output file in interaction xml format.")
     optparser.add_option("-w", "--workdir", default=None, dest="workdir", help="Output file in interaction xml format.")

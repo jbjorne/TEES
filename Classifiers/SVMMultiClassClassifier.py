@@ -100,7 +100,7 @@ if __name__=="__main__":
     from optparse import OptionParser
     import os
     from Utils.Parameters import *
-    optparser = OptionParser(usage="%prog [options]\n")
+    optparser = OptionParser(description="Joachims SVM Multiclass classifier wrapper")
     optparser.add_option("-e", "--examples", default=None, dest="examples", help="Example File", metavar="FILE")
     optparser.add_option("-a", "--action", default=None, dest="action", help="TRAIN, CLASSIFY or OPTIMIZE")
     optparser.add_option("--optimizeStep", default="BOTH", dest="optimizeStep", help="BOTH, SUBMIT or RESULTS")

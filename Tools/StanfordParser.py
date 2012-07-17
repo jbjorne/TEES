@@ -454,7 +454,7 @@ if __name__=="__main__":
     except ImportError:
         print >> sys.stderr, "Psyco not installed"
 
-    optparser = OptionParser(usage="%prog [options]\n")
+    optparser = OptionParser(description="Stanford Parser dependency converter wrapper")
     optparser.add_option("-i", "--input", default=None, dest="input", help="Corpus in interaction xml format", metavar="FILE")
     optparser.add_option("-o", "--output", default=None, dest="output", help="Output file in interaction xml format.")
     optparser.add_option("-p", "--parse", default=None, dest="parse", help="Name of parse element.")

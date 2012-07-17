@@ -32,7 +32,7 @@ def listExecutables(filter=["Core", "FeatureBuilders", "InteractionXML"]):
                         isExecutable = True
                 if isExecutable:
                     subDir = triple[0][len(mainTEESDir)+1:]
-                    print "|", subDir, "|", filename, "|", description, "|"
+                    print "|", filename, "|", subDir, "|", description, "|"
 
 if __name__=="__main__":
     # Import Psyco if available

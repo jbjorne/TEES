@@ -136,7 +136,7 @@ if __name__=="__main__":
         print >> sys.stderr, "Psyco not installed"
         
     from optparse import OptionParser
-    optparser = OptionParser()
+    optparser = OptionParser(description="Predict events/relations")
     optparser.add_option("-i", "--input", default=None, dest="input", help="input")
     optparser.add_option("-o", "--output", default=None, dest="output", help="output file stem")
     optparser.add_option("-w", "--workdir", default=None, dest="workdir", help="output directory")

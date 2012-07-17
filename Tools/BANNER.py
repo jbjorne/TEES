@@ -356,7 +356,7 @@ if __name__=="__main__":
     except ImportError:
         print >> sys.stderr, "Psyco not installed"
 
-    optparser = OptionParser(usage="%prog [options]\n")
+    optparser = OptionParser(description="BANNER named entity recognizer wrapper")
     optparser.add_option("-i", "--input", default=None, dest="input", help="Corpus in Interaction XML format", metavar="FILE")
     optparser.add_option("--inputCorpusName", default="PMC11", dest="inputCorpusName", help="")
     optparser.add_option("-o", "--output", default=None, dest="output", help="Output file in Interaction XML format.")

@@ -199,7 +199,7 @@ if __name__=="__main__":
     #classIds = IdSet(filename="/usr/share/biotext/GeniaChallenge/extension-data/genia/edge-examples/genia-edge-ids.class_names")
     
     from optparse import OptionParser # For using command line options
-    optparser = OptionParser()
+    optparser = OptionParser(description="Joachims SVM Multiclass model file processing")
     optparser.add_option("-i", "--ids", default=None, dest="ids", help="SVM feature ids")
     optparser.add_option("-m", "--model", default=None, dest="model", help="SVM model file")
     optparser.add_option("-o", "--output", default=None, dest="output", help="Output file stem")

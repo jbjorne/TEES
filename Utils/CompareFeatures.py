@@ -21,7 +21,7 @@ if __name__=="__main__":
 
     from optparse import OptionParser
     import os
-    optparser = OptionParser(usage="%prog [options]\nCreate an html visualization for a corpus.")
+    optparser = OptionParser(description="Analyze SVM example files")
     optparser.add_option("-s", "--source", default=None, dest="source", help="examples", metavar="FILE")
     optparser.add_option("-t", "--target", default=None, dest="target", help="examples")
     optparser.add_option("-f", "--sourceFeatureIds", default=None, dest="sourceFeatureIds", help="examples", metavar="FILE")

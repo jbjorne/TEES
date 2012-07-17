@@ -99,7 +99,7 @@ if __name__=="__main__":
     except ImportError:
         print >> sys.stderr, "Psyco not installed"
     from optparse import OptionParser
-    optparser = OptionParser()
+    optparser = OptionParser(description="A tool chain for making interaction XML, sentence splitting, NER and parsing")
     optparser.add_option("-i", "--input", default=None, dest="input", help="")
     optparser.add_option("-n", "--inputNames", default=None, dest="inputNames", help="")
     optparser.add_option("-c", "--corpus", default=None, dest="corpus", help="corpus name")

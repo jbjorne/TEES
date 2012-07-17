@@ -118,7 +118,7 @@ if __name__=="__main__":
     except ImportError:
         print >> sys.stderr, "Psyco not installed"
 
-    optparser = OptionParser(usage="%prog [options]\n")
+    optparser = OptionParser(description="Compare event distribution")
     optparser.add_option("-a", "--inputA", default=None, dest="inputA", help="", metavar="FILE")
     optparser.add_option("-b", "--inputB", default=None, dest="inputB", help="")
     optparser.add_option("-t", "--a2Tag", default="a2", dest="a2Tag", help="")

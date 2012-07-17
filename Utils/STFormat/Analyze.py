@@ -47,7 +47,7 @@ if __name__=="__main__":
     
     #proteins, triggers, events = load(1335418, "/home/jari/biotext/tools/TurkuEventExtractionSystem-1.0/data/evaluation-data/evaluation-tools-devel-gold")
     #write(1335418, "/home/jari/data/temp", proteins, triggers, events )
-    optparser = OptionParser(usage="%prog [options]\n")
+    optparser = OptionParser(description="ST format statistics")
     optparser.add_option("-i", "--input", default=None, dest="input", help="", metavar="FILE")
     (options, args) = optparser.parse_args()
     

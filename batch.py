@@ -153,7 +153,7 @@ if __name__=="__main__":
         print >> sys.stderr, "Psyco not installed"
 
     from optparse import OptionParser
-    optparser = OptionParser()
+    optparser = OptionParser(description="Batch process a tree of input files")
     optparser.add_option("-c", "--command", default=None, dest="command", help="")
     optparser.add_option("-i", "--input", default=None, dest="input", help="Input file or directory. A directory will be processed recursively")
     optparser.add_option("-n", "--connection", default=None, dest="connection", help="")

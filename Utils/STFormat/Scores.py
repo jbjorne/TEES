@@ -396,7 +396,7 @@ if __name__=="__main__":
     except ImportError:
         print >> sys.stderr, "Psyco not installed"
     
-    optparser = OptionParser(usage="%prog [options]\n")
+    optparser = OptionParser(description="Analyze confidence scores")
     optparser.add_option("-i", "--input", default=None, dest="input", help="", metavar="FILE")
     optparser.add_option("-t", "--task", default="GE.2", dest="task", help="", metavar="FILE")
     optparser.add_option("-o", "--output", default=None, dest="output", help="", metavar="FILE")
