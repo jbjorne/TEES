@@ -170,7 +170,7 @@ def extend(input, output=None, entityTypes=["Bacterium"], verbose=False):
         corpusTree = ETUtils.ETFromObj(input)
         corpusRoot = corpusTree.getroot()
     
-    bacteriaTokens = ExampleBuilders.PhraseTriggerExampleBuilder.getBacteriaTokens(ExampleBuilders.PhraseTriggerExampleBuilder.getBacteriaNames())
+    bacteriaTokens = ExampleBuilders.PhraseTriggerExampleBuilder.getBacteriaTokens()
     
     if not (ET.iselement(input) and input.tag == "sentence"):
         sentences = corpusRoot.getiterator("sentence")
@@ -198,7 +198,7 @@ def extend(input, output=None, entityTypes=["Bacterium"], verbose=False):
             # find main token
             for i in range(len(tokens)):
                 token = tokens[i]
-                tokPos[1] = tokPos[0] + len(token) - 1
+                tokPos[1] = tokPos[0] + len(token) # - 1
                 if Range.overlap(headOffset, tokPos):
                     tokIndex = i
                     break
@@ -248,15 +248,15 @@ def extend(input, output=None, entityTypes=["Bacterium"], verbose=False):
                     for token in tokens[tokIndex+1:endIndex+1]:
                         tokPos[1] += len(token)
                 # Attempt to remove trailing periods and commas
-                while not sentenceText[tokPos[1]].isalnum():
+                while not sentenceText[tokPos[1] - 1].isalnum():
                     tokPos[1] -= 1
-                    if tokPos[1] < tokPos[0]:
-                        tokPos[1] = tokPos[0]
+                    if tokPos[1] < tokPos[0] + 1:
+                        tokPos[1] = tokPos[0] + 1
                         break
                 while not sentenceText[tokPos[0]].isalnum():
                     tokPos[0] += 1
-                    if tokPos[0] > tokPos[1]:
-                        tokPos[1] = tokPos[0]
+                    if tokPos[0] >= tokPos[1]:
+                        tokPos[0] = tokPos[1] - 1
                         break
                 # Split merged names
                 #newPos = [tokPos[0], tokPos[1]]
@@ -269,7 +269,8 @@ def extend(input, output=None, entityTypes=["Bacterium"], verbose=False):
             newOffsetString = Range.tuplesToCharOffset([newOffset])
             if verbose:
                 print "Entity", entity.get("id"), 
-                print [entity.get("text"), sentenceText[headOffset[0]:headOffset[1]+1], sentenceText[newOffset[0]:newOffset[1]+1]], 
+                #print [entity.get("text"), sentenceText[headOffset[0]:headOffset[1]+1], sentenceText[newOffset[0]:newOffset[1]+1]],
+                print [entity.get("text"), sentenceText[headOffset[0]:headOffset[1]], sentenceText[newOffset[0]:newOffset[1]]], 
                 print [entity.get("charOffset"), entity.get("headOffset"), newOffsetString], "Sent:", len(sentence.get("text")),
             if newOffset != headOffset:
                 counts["extended"] += 1
@@ -282,7 +283,8 @@ def extend(input, output=None, entityTypes=["Bacterium"], verbose=False):
                 incorrectCount += 1
                 if verbose: print "INCORRECT"
             entity.set("charOffset", newOffsetString)
-            entity.set("text", sentenceText[newOffset[0]:newOffset[1]+1])
+            #entity.set("text", sentenceText[newOffset[0]:newOffset[1]+1])
+            entity.set("text", sentenceText[newOffset[0]:newOffset[1]])
         if incorrectCount > 0 and verbose:
             print "TOKENS:", "|".join(tokens)
             print "--------------------------------"
