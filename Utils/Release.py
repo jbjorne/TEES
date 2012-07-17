@@ -3,9 +3,15 @@ print __file__
 mainTEESDir = os.path.abspath(os.path.join(__file__, "../.."))
 print mainTEESDir
 
-def listExecutables(filter=["Core", "FeatureBuilders", "InteractionXML"]):
-    print "| Program | Location | Description |"
-    print "|:-----------|:-----------|:-----------|"
+def listExecutables(filter=["Core", "FeatureBuilders", "InteractionXML", "GeniaEventsToSharedTask"]):
+    tableTitleLines = "| Program | Location | Description |\n"
+    tableTitleLines += "|:-----------|:-----------|:-----------|"
+    mainTableTitleLines = "| Program | Description |\n"
+    mainTableTitleLines += "|:-----------|:-----------|"
+    categories = ["Main Programs", "Tool Wrappers", "Other Programs"]
+    programs = {}
+    for category in categories:
+        programs[category] = []
     for triple in os.walk(mainTEESDir):
         for filename in sorted(triple[2]):
             skip = False
@@ -31,8 +37,27 @@ def listExecutables(filter=["Core", "FeatureBuilders", "InteractionXML"]):
                             description = description.strip()
                         isExecutable = True
                 if isExecutable:
-                    subDir = triple[0][len(mainTEESDir)+1:]
-                    print "|", filename, "|", subDir, "|", description, "|"
+                    subDir = triple[0][len(mainTEESDir)+1:].strip()
+                    if subDir == "":
+                        category = "Main Programs"
+                    elif "Tools" in subDir or "Preprocessor" in filename:
+                        category = "Tool Wrappers"
+                    else:
+                        category = "Other Programs"
+                    programs[category].append( [subDir, filename, description] )
+    
+    for category in categories:
+        print "##", category
+        if category == "Main Programs":
+            print mainTableTitleLines
+        else:
+            print tableTitleLines
+        for program in sorted(programs[category]):
+            if program[0] == "":
+                print "|", program[1], "|", program[2], "|"
+            else:
+                print "|", program[1], "|", program[0], "|", program[2], "|"
+        print
 
 if __name__=="__main__":
     # Import Psyco if available
