@@ -8,7 +8,7 @@ try:
 except ImportError:
     import cElementTree as ET
 import Utils.ElementTreeUtils as ETUtils
-import Range
+import Utils.Range as Range
 
 def fixIndices(phrases, tokens):
     fixCount = 0
