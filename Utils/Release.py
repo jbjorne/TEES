@@ -3,11 +3,18 @@ print __file__
 mainTEESDir = os.path.abspath(os.path.join(__file__, "../.."))
 print mainTEESDir
 
-def listExecutables():
+def listExecutables(filter=["Core", "FeatureBuilders", "InteractionXML"]):
     print "| Program | Location | Description |"
     print "|:-----------|:-----------|:-----------|"
     for triple in os.walk(mainTEESDir):
         for filename in sorted(triple[2]):
+            skip = False
+            for filterRule in filter:
+                if filterRule in os.path.join(triple[0], filename):
+                    skip = True
+                    break
+            if skip:
+                continue
             if filename.endswith(".py"):
                 f = open(os.path.join(triple[0], filename), "rt")
                 lines = f.readlines()
@@ -37,7 +44,7 @@ if __name__=="__main__":
         print >> sys.stderr, "Psyco not installed"
 
     from optparse import OptionParser
-    optparser = OptionParser(description="Makes TEES release files.")
+    optparser = OptionParser(description="Make TEES release files.")
     optparser.add_option("-i", "--input", default=None, dest="input", help="")
     optparser.add_option("-o", "--output", default=None, dest="output", help="")
     optparser.add_option("-a", "--action", default=None, dest="action", help="")
