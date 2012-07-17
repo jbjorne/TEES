@@ -22,6 +22,8 @@ class MenuSystem():
                     self.run(next)
                 nextMenu = None
             prevMenu = currentMenu
+    
+    def finalize(self):
         if self.closingMessage != None:
             print >> sys.stderr
             print >> sys.stderr, self.closingMessage

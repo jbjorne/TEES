@@ -87,10 +87,10 @@ def pathMenuInitializer(menu, prevMenu):
     menu.system.setAttr("defaultInstallDir", menu.defaultInstallDir)
     menu.system.setAttr("configFilePath", menu.configFilePath)
     os.environ["TEES_SETTINGS"] = menu.configFilePath
-    setClosingMessage(menu.system, configFilePath)
+    setClosingMessage(menu.system, menu.configFilePath)
     menu.optDict["c"].handlerArgs = [menu.configFilePath]
     
-def setClosingMessage(configFilePath, menuSystem):
+def setClosingMessage(menuSystem, configFilePath):
     menuSystem.closingMessage = "!!!!!!!!!!!!!!!!!!!!!! Important Note !!!!!!!!!!!!!!!!!!!!!!\n"
     menuSystem.closingMessage += "Before using TEES, remember to define the TEES_SETTINGS\n"
     menuSystem.closingMessage += "environment variable. How to do this depends on your shell,\n"
@@ -329,8 +329,9 @@ def configure(installDir=None, localSettings=None, auto=False, width=80, clear=F
     Menu.system.progArgs["installDir"] = installDir
     Menu.system.progArgs["localSettings"] = localSettings
     Menu.system.progArgs["clearInstallDir"] = clear
-    Menu.system.run(buildMenus())
     Menu.system.onException = onError
+    Menu.system.run(buildMenus())
+    Menu.system.finalize()
 
 if __name__=="__main__":
     import sys
