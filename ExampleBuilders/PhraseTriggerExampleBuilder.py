@@ -30,8 +30,8 @@ def installBBData(destPath=None, downloadPath=None, redownload=False, updateLoca
     Utils.Download.downloadAndExtract(Settings.URL["TEES_RESOURCES"], destPath, downloadPath, redownload=redownload)
     Settings.setLocal("TEES_RESOURCES", destPath, updateLocalSettings)
 
-def getBacteriaNames():
-    f = open(os.path.expanduser("~/data/BioNLP11SharedTask/resources/lpsn-bacteria-names.txt"), "rt")
+def getBacteriaNames(filename):
+    f = open(filename, "rt")
     names = []
     for line in f:
         if line.strip == "":
