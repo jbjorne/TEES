@@ -11,6 +11,7 @@ import Tools.BLLIPParser
 import Tools.StanfordParser
 # Corpora
 import Utils.Convert.convertBioNLP as convertBioNLP
+import Utils.Download
 # TODO: Logging
 
 def pathMenuInitializer(menu, prevMenu):
@@ -140,10 +141,10 @@ def checkInstallPath(menu, setting, defaultInstallKey="i", defaultSkipKey="s"):
         menu.setDefault(defaultInstallKey)
         return True
 
-def checkCorpusInstall(corpus):
+def checkCorpusInstall(corpus, dataSets=("-train.xml", "-devel.xml", "-test.xml")):
     # CORPUS_DIR is set, so check if the corpus is installed
     allFound = True # check for all corpus subsets
-    for dataSet in ["-train.xml", "-devel.xml", "-test.xml"]:
+    for dataSet in dataSets:
         filePath = Settings.CORPUS_DIR + "/" + corpus + dataSet
         if not os.path.exists(filePath):
             #print >> sys.stderr, "Corpus file", filePath, "is not installed" 
@@ -193,7 +194,25 @@ def toolsMenuInitializer(menu, prevMenu):
     menu.optDict["i"].handlerArgs = handlerArgs
 
 def modelsMenuInitializer(menu, prevMenu):
-    pass
+    menu.text = """
+    TEES models are used for predicting events or relations using
+    classify.py. Models are provided for all tasks in the BioNLP'11, 
+    BioNLP'09 and DDI'11 shared tasks.
+    
+    For a list of models and instructions for using them see
+    https://github.com/jbjorne/TEES/wiki/Classifying.
+    """
+    # Mark "skip" as default option, this will be re-marked if there is no model directory
+    if menu != prevMenu:
+        menu.setDefault("s")
+    redownload = menu.optDict["1"].toggle
+    destPath = os.path.join(menu.system.defaultInstallDir, "models")
+    downloadPath = os.path.join(menu.system.defaultInstallDir, "models/download")
+    # If MODEL_DIR setting is not set set it now
+    if menu != prevMenu and (not hasattr(Settings, "MODEL_DIR") or Settings.MODEL_DIR == None or not os.path.exists(Settings.MODEL_DIR)):
+        menu.setDefault("i")
+    menu.optDict["i"].handler = [Utils.Download.downloadAndExtract, Settings.setLocal]
+    menu.optDict["i"].handlerArgs = [[Settings.URL["MODELS"], destPath, downloadPath, None, True, redownload], ["MODEL_DIR", destPath]]
 
 def corpusMenuInitializer(menu, prevMenu):
     menu.text = """
@@ -236,7 +255,7 @@ def corpusMenuInitializer(menu, prevMenu):
         menu.optDict["3"].toggle = True
         handlers.append(convertBioNLP.installPreconverted)
         handlerArgs.append(["BIONLP_09_CORPUS", corpusInstallPath, corpusDownloadPath, redownload, True])
-    if menu.optDict["4"].toggle or (menu != prevMenu and not checkCorpusInstall("DDI")):
+    if menu.optDict["4"].toggle or (menu != prevMenu and not checkCorpusInstall("DDI", ("-train.xml", "-devel.xml"))):
         menu.setDefault("i")
         menu.optDict["4"].toggle = True
         handlers.append(convertBioNLP.installPreconverted)
@@ -294,7 +313,8 @@ def buildMenus():
         Option("1", "Redownload already downloaded files", toggle=False),
         Option.SPACE,
         Option("i", "Install", isDefault=True),
-        Option("s", "Skip")])
+        Option("s", "Skip")],
+        modelsMenuInitializer)
     
     Menu("Corpora", "Install corpora\n", [
         Option("1", "Redownload already downloaded files", toggle=False),
