@@ -98,9 +98,9 @@ class EventDetector(Detector):
         self.model = self.openModel(model, "a")
         self.combinedModel = self.openModel(combinedModel, "a")
         if self.checkStep("BEGIN-MODEL"):
-            for model in [self.model, self.combinedModel]:
-                if model != None:
-                    model.addStr("BioNLPSTParams", Parameters.toString(self.bioNLPSTParams))
+            #for model in [self.model, self.combinedModel]:
+            #    if model != None:
+            #        model.addStr("BioNLPSTParams", Parameters.toString(self.bioNLPSTParams))
             self.triggerDetector.beginModel(None, self.model, [self.workDir+self.triggerDetector.tag+"train-examples.gz"], self.workDir+self.triggerDetector.tag+"opt-examples.gz")
             self.edgeDetector.beginModel(None, self.model, [self.workDir+self.edgeDetector.tag+"train-examples.gz"], self.workDir+self.edgeDetector.tag+"opt-examples.gz")
             if trainModifiers:
@@ -339,17 +339,17 @@ class EventDetector(Detector):
         if self.checkStep("ST-CONVERT"):
             if stParams["convert"]:
                 xml = self.getWorkFile(xml, [workOutputTag + "modifier-pred.xml.gz", workOutputTag + "unmerging-pred.xml.gz", workOutputTag + "edge-pred.xml.gz"])
-                STFormat.ConvertXML.toSTFormat(xml, output+".tar.gz", outputTag="a2", writeScores=(stParams["scores"] == True))
+                STFormat.ConvertXML.toSTFormat(xml, output+"-events.tar.gz", outputTag="a2", writeScores=(stParams["scores"] == True))
                 if stParams["evaluate"]: #self.stEvaluator != None:
                     task = self.task
                     if task == None:
                         task = self.getStr(self.edgeDetector.tag+"task", self.model)
-                    self.stEvaluator.evaluate(output + ".tar.gz", task)
+                    self.stEvaluator.evaluate(output + "-events.tar.gz", task)
             else:
                 print >> sys.stderr, "No BioNLP shared task format conversion"
         finalXMLFile = self.getWorkFile(None, [workOutputTag + "modifier-pred.xml.gz", workOutputTag + "unmerging-pred.xml.gz", workOutputTag + "edge-pred.xml.gz"])
         if finalXMLFile != None:
-            shutil.copy2(finalXMLFile, output+".xml.gz")
+            shutil.copy2(finalXMLFile, output+"-pred.xml.gz")
         self.deleteTempWorkDir()
         self.exitState()
     

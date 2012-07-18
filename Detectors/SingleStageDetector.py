@@ -40,6 +40,8 @@ class SingleStageDetector(Detector):
                                      [self.tag+"classifier-parameter", self.tag+"example-style", self.tag+"parse", self.tag+"task"])
                     # Train the model with the parameters defined in the import source
                     model.addStr(self.tag+"classifier-parameters-train", model.getStr(self.tag+"classifier-parameter"))
+                if self.bioNLPSTParams != None and len(self.bioNLPSTParams) > 0:
+                    model.addStr("BioNLPSTParams", Parameters.toString(self.bioNLPSTParams))
                 # Catenate example files
                 if type(trainExampleFiles) in types.StringTypes:
                     combinedTrainExamples = trainExampleFiles
