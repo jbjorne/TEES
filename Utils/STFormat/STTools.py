@@ -450,6 +450,11 @@ def loadSet(path, setName=None, level="a2", sitesAreArguments=False, a2Tag="a2",
             print >> sys.stderr, "Reading document set from compressed filename directory", compressedFilePath
             dir = compressedFilePath
         f.close()
+    elif path.endswith(".txt"):
+        import tempfile
+        import shutil
+        dir = tempfile.mkdtemp()
+        shutil.copy2(path, os.path.join(dir, os.path.basename(path)))
     else:
         dir = path
     
