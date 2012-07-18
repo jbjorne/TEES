@@ -1,3 +1,6 @@
+"""
+For storing the results of TEES training.
+"""
 import sys, os, shutil
 import filecmp
 import zipfile
@@ -6,7 +9,26 @@ import tempfile
 NOTHING = object()
 
 class Model():
+    """ 
+    The Model object is an interface to a model file on the disk. The model file
+    itself is simply a directory or zip-archive storing all the files that result
+    from TEES being trained. In addition, it can store named string values for 
+    saved settings etc.
+    
+    When a member of a model is accessed, it is copied to a temporary cache directory.
+    When a model is saved, files that have changed in the cache are copied to the model
+    directory/archive. Note that for both files and strings that are added to the model,
+    are saved to it only when Model.save is called.
+    """    
     def __init__(self, path, mode="r", verbose=True, compression=zipfile.ZIP_DEFLATED):
+        """
+        Make a new model or open an existing one
+        
+        @param path: The model file or directory. If making a new model, a path ending in ".zip" results in a compressed archive.
+        @param mode: r, w or a for read, write or append
+        @param verbose: Model reports what is happening
+        @param compression: The compression method if a the model is a zip-archive.
+        """
         self.members = {} # path_inside_model:path_to_cache_file (path_to_cache_file == None for members not yet requested)
         self.valueFileName = "TEES_MODEL_VALUES.tsv"
         self.compression = compression
@@ -30,10 +52,19 @@ class Model():
         self.members[name] = None
     
     def insert(self, filepath, name):
+        """
+        Adds a new file to the model.
+        
+        @param filepath: Path to the file being added
+        @param name: Path of the file inside the model  
+        """
         shutil.copy2(filepath, os.path.join(self.workdir, name))
         self.members[name] = os.path.join(self.workdir, name)
     
     def importFrom(self, model, members, strings=None):
+        """
+        Copy several members from another model
+        """
         for member in members:
             self.insert(model.get(member), member)
         if strings != None:
@@ -41,10 +72,19 @@ class Model():
                 self.addStr(string, model.getStr(string))
     
     def addStrings(self, dict):
+        """
+        Add multiple name/value pairs
+        """
         for key in sorted(dict.keys()):
             self.addStr(key, dict[key])
     
     def addStr(self, name, value):
+        """
+        Add a named string to the model
+        
+        @param : the name of the string
+        @param : the string
+        """
         for c in ["\n", "\t", "\r"]:
             assert c not in name, (c, name, value)
             assert c not in value, (c, name, value)
@@ -56,6 +96,13 @@ class Model():
         self._setValues(values)
     
     def getStr(self, name, defaultIfNotExist=NOTHING, asType=None):
+        """
+        Get a named string from the model
+        
+        @param name : the name of the string
+        @param defaultIfNotExist: if set to a value != NOTHING, will be returned if a name does not exist. Otherwise an exception is raised.
+        @param asType : if set, cast the return value to this type  
+        """
         values = self._getValues()
         if name in values:
             if asType == None:
@@ -68,6 +115,11 @@ class Model():
             raise IOError("String named '" + name + "' not defined in model " + self.path)
         
     def save(self):
+        """
+        Save a model.
+        
+        When saving a model, files that have changed in the cache are written to the model.
+        """
         if self.mode == "r":
             raise IOError("Model not open for writing")
         if self.isPackage:
@@ -109,6 +161,9 @@ class Model():
             package.close()     
     
     def saveAs(self, outPath):
+        """
+        Save a model with a different name.
+        """
         print >> sys.stderr, "Saving model \"" + self.path, "as", outPath
         if os.path.exists(outPath):
             print >> sys.stderr, outPath, "exists, removing"
@@ -135,6 +190,14 @@ class Model():
         return name in self.members
     
     def get(self, name, addIfNotExist=False):
+        """
+        Return a file member from the model. The member is extracted to a cached directory
+        and returned as a path name. If this file is modified, when the model is saved,
+        it will be copied back to the model.
+        
+        @param name : the path to the file inside the model
+        @param addIfNotExist : Return a file name which can be created for adding the file
+        """
         if name not in self.members:
             if addIfNotExist:
                 self.add(name)

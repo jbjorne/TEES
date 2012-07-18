@@ -1,3 +1,6 @@
+"""
+The base class for the object oriented interface.
+"""
 import sys, os
 import shutil
 import itertools
@@ -11,6 +14,15 @@ import types
 import time, datetime
 
 class Detector():
+    """
+    Detector is the central class of the TEES object oriented interface. Subclasses derived from
+    it encapsulate the event and relation detection process used by TEES for the various tasks
+    it has been developed for. When extending TEES, a new Detector can be derived from this class.
+    
+    The Detector is designed for a pipeline where interaction XML is converted to machine learning
+    examples, these examples are used to train a classifier and this classifier in turn is used
+    to classify unknown text.
+    """
     def __init__(self):
         self.exampleBuilder = None
         self.exampleWriter = None

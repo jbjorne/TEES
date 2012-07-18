@@ -1,3 +1,6 @@
+"""
+Train a new model for event or relation detection.
+"""
 import sys, os
 from Utils.InteractionXML.DeleteElements import getEmptyCorpus
 import Utils.InteractionXML.Catenate as Catenate
@@ -18,6 +21,31 @@ def train(output, task=None, detector=None, inputFiles=None, models=None, parse=
           bioNLPSTParams=None, preprocessorParams=None, exampleStyles=None, 
           classifierParams=None,  doFullGrid=False, deleteOutput=False, copyFrom=None, 
           log="log.txt", step=None, omitSteps=None, debug=False, connection=None):
+    """
+    Train a new model for event or relation detection.
+    
+    @param output: A directory where output files will appear.
+    @param task: If defined, overridable default settings are used for many of the training parameters. Must be one of the supported TEES tasks.
+    @param detector: a Detector object, or a string defining one to be imported
+    @param inputFiles: A dictionary of file names, with keys "train", "devel" and, "test"
+    @param models: A dictionary of file names defining the place for the new models, with keys "devel" and, "test"
+    @param parse: The parse element name in the training interaction XML
+    @param processUnmerging: Use the unmerging step of EventDetector. True, False or None for task default.
+    @param processModifiers: Use the modifier detection step of EventDetector. True, False or None for task default.
+    @param isSingleStage: False for EventDetector, True for a single stage detector.
+    @param bioNLPSTParams: Parameters controlling BioNLP ST format output.
+    @param preprocessorParams: Parameters controlling the preprocessor. Not used for training, but saved to the model for use when classifying.
+    @param exampleStyles: A parameter set for controlling example builders.
+    @param classifierParams: A parameter set for controlling classifiers.
+    @param doFullGrid: Whether all parameters, as opposed to just recall adjustment, are tested in the EventDetector grid search.
+    @param deleteOutput: Remove an existing output directory
+    @param copyFrom: Copy an existing output directory for use as a template
+    @param log: An optional alternative name for the log file. None is for no logging.
+    @param step: A step=substep pair, where the steps are "TRAIN", "DEVEL", "EMPTY" and "TEST"
+    @param omitSteps: step=substep parameters, where multiple substeps can be defined.
+    @param debug: In debug mode, more output is shown, and some temporary intermediate files are saved
+    @param connection: A parameter set defining a local or remote connection for training the classifier
+    """
     # Insert default arguments where needed
     inputFiles = Parameters.get(inputFiles, {"train":None, "devel":None, "test":None})
     models = Parameters.get(models, {"devel":None, "test":None})

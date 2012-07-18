@@ -5,6 +5,9 @@ from Classifiers.SVMMultiClassClassifier import SVMMultiClassClassifier
 from Evaluators.AveragingMultiClassEvaluator import AveragingMultiClassEvaluator
 
 class EntityDetector(SingleStageDetector):
+    """
+    Detects named entities and triggers.
+    """
     def __init__(self):
         SingleStageDetector.__init__(self)
         self.exampleBuilder = EntityExampleBuilder

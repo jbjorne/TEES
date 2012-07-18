@@ -20,11 +20,18 @@ import Evaluators.EvaluateInteractionXML as EvaluateInteractionXML
 import Utils.InteractionXML as InteractionXML
 
 class SingleStageDetector(Detector):
+    """
+    A Detector for a text mining problem that can be represented as 
+    a single classification task.
+    """
     def __init__(self):
         Detector.__init__(self)
         self.deleteCombinedExamples = True
         
     def beginModel(self, step, model, trainExampleFiles, testExampleFile, importIdsFromModel=None):
+        """
+        Begin the training process leading to a new model.
+        """
         if self.checkStep(step, False):
             if model != None:
                 if self.state != None and step != None:

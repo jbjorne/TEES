@@ -16,6 +16,9 @@ import Utils.STFormat.Compare
 import Evaluators.BioNLP11GeniaTools
 
 class EventDetector(Detector):
+    """
+    A multi-stage detector used for the BioNLP Shared Task type events.
+    """
     def __init__(self):
         Detector.__init__(self)
         self.triggerDetector = EntityDetector()

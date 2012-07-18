@@ -1,3 +1,6 @@
+"""
+Detect events or relations from text.
+"""
 from train import workdir, getDetector, getSteps
 import sys, os
 import tempfile
@@ -10,9 +13,25 @@ import Utils.Download
 from Detectors.Preprocessor import Preprocessor
 
 def classify(input, model, output, workDir=None, step=None, omitSteps=None, 
-             goldInput=None, detector=None, 
-             debug=False, writeScores=True, clear=False, 
+             goldInput=None, detector=None, debug=False, clear=False, 
              preprocessorTag="-preprocessed.xml.gz", preprocessorParams=None, bioNLPSTParams=None):
+    """
+    Detect events or relations from text.
+    
+    @param input: The input file in either interaction XML or BioNLP ST format. Can also be a PMID or TEES default corpus name.
+    @param model: A path to a model file or the name of a TEES default model.
+    @param output: The output file stem. Output files will be of the form output-*
+    @param workDir: If intermediate files need to be saved, they will go here.
+    @param step: A step=substep pair, where the steps are PREPROCESS and CLASSIFY
+    @param omitSteps: step=substep parameters, where multiple substeps can be defined.
+    @param goldInput: a version of the corpus file with gold annotation. Enables measuring of performance
+    @param detector: a Detector object, or a string defining one to be imported. If None, will be read from model.
+    @param debug: In debug mode, more output is shown, and some temporary intermediate files are saved
+    @param clear: Remove existing workDir
+    @param preprocessorTag: preprocessor output file will be output + preprocessorTag
+    @param preprocessorParams: Optional parameters controlling preprocessing. If None, will be read from model.
+    @param bioNLPSTParams: Optional parameters controlling BioNLP ST format output. If None, will be read from model.
+    """
     input = os.path.abspath(input)
     if goldInput != None: goldInput = os.path.abspath(goldInput)
     if model != None: model = os.path.abspath(model)
@@ -108,6 +127,12 @@ def getInput(input, model=None):
 
 def getPubMed(pmid):
     print >> sys.stderr, "Downloading PubMed abstract", pmid
+    print >> sys.stderr, "********************** NOTE **********************"
+    print >> sys.stderr, "Do not attempt to do large-scale classification of PubMed"
+    print >> sys.stderr, "abstracts with this feature. For that, use the downloadable"
+    print >> sys.stderr, "PubMed release. This is only a demonstration feature, and"
+    print >> sys.stderr, "abusing it will cause you to be banned from PubMed!"
+    print >> sys.stderr, "**********************print >> sys.stderr, "********************** NOTE **********************" NOTE **********************"
     tempDir = tempfile.gettempdir()
     url = "http://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=pubmed&id=" + str(pmid) + "&retmode=xml"
     downloaded = os.path.join(tempDir, "pmid-" + str(pmid))
@@ -151,12 +176,11 @@ if __name__=="__main__":
     # Debugging and process control
     optparser.add_option("--step", default=None, dest="step", help="")
     optparser.add_option("--omitSteps", default=None, dest="omitSteps", help="")
-    optparser.add_option("--writeScores", default=False, action="store_true", dest="writeScores", help="")
     optparser.add_option("--clearAll", default=False, action="store_true", dest="clearAll", help="Delete all files")
     optparser.add_option("--debug", default=False, action="store_true", dest="debug", help="More verbose output")
     (options, args) = optparser.parse_args()
     
     assert options.output != None
     classify(options.input, options.model, options.output, options.workdir, options.step, options.omitSteps, 
-             options.gold, options.detector, options.debug, options.writeScores, options.clearAll,
+             options.gold, options.detector, options.debug, options.clearAll,
              preprocessorParams=options.preprocessorParams, bioNLPSTParams=options.bioNLPSTParams)

@@ -1,3 +1,7 @@
+"""
+Process a large number of input files
+"""
+
 import sys, os
 import time
 import re
@@ -114,6 +118,24 @@ def getOutputDir(currentDir, currentItem, input, output=None):
 
 def batch(command, input=None, connection=None, jobTag=None, output=None, regex=None, regexDir=None, dummy=False, rerun=None, 
           hideFinished=False, controlFilename=None, sleepTime=None, debug=False, limit=None, loop=False):
+    """
+    Process a large number of input files
+    
+    @param input: An input file or directory. A directory will be processed recursively
+    @param connection: A parameter set defining a local connection for submitting the jobs
+    @param jobTag: The name of the job file, usually if input is not defined. Can be used in the command template.
+    @param output: An optional output directory. The input directory tree will be replicated here.
+    @param regex: A regular expression for selecting input files
+    @param regexDir: A regular expression for input directories, allowing early out for entire subtrees
+    @param dummy: In dummy mode, jobs are only printed on screen, not submitted. Good for testing
+    @param rerun: A job is normally submitted only if it does not already exist. If an existing job needs to be resubmitted, this defines the status codes, usually FAILED or FINISHED
+    @param hideFinished: Do not print a notification when skipping an existing job
+    @param controlFilename: A file with only one number inside it. This is the job limit, and can be changed while batch.py is running.
+    @param sleepTime: The time to wait between checks when waiting for jobs to finish. Default is 15 seconds.
+    @param debug: Job submission scripts are printed on screen.
+    @param limit: Maximum number of jobs. Overrides controlFilename
+    @param loop: Loop over the input directory. Otherwise process it once.
+    """
     if sleepTime == None:
         sleepTime = 15
     connection = getConnection(connection)

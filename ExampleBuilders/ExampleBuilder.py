@@ -1,8 +1,6 @@
 """
 Base class for ExampleBuilders
 """
-__version__ = "$Revision: 1.32 $"
-
 import sys, os, types
 sys.path.append(os.path.dirname(os.path.abspath(__file__))+"/..")
 from Core.SentenceGraph import getCorpusIterator

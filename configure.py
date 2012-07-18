@@ -1,3 +1,7 @@
+"""
+Configure TEES by installing data files and external components.
+"""
+
 import sys, os, shutil
 import textwrap
 from Utils.Menu import *

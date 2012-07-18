@@ -5,6 +5,9 @@ from Classifiers.SVMMultiClassClassifier import SVMMultiClassClassifier
 from Evaluators.AveragingMultiClassEvaluator import AveragingMultiClassEvaluator
 
 class UnmergingDetector(SingleStageDetector):
+    """
+    Makes valid argument combinations for BioNLP type events.
+    """
     def __init__(self):
         SingleStageDetector.__init__(self)
         self.exampleBuilder = UnmergingExampleBuilder

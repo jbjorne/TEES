@@ -5,6 +5,9 @@ from Classifiers.SVMMultiClassClassifier import SVMMultiClassClassifier
 from Evaluators.AveragingMultiClassEvaluator import AveragingMultiClassEvaluator
 
 class EdgeDetector(SingleStageDetector):
+    """
+    Detects relations and event arguments.
+    """
     def __init__(self):
         SingleStageDetector.__init__(self)
         self.exampleBuilder = EdgeExampleBuilder
