@@ -1,8 +1,11 @@
 import sys,os
+import types
 import shutil
 import filecmp
 import subprocess
 mainTEESDir = os.path.abspath(os.path.join(__file__, "../.."))
+print mainTEESDir
+sys.path.append(mainTEESDir)
 
 def listExecutables(filter=["Core", "FeatureBuilders", "InteractionXML", "GeniaEventsToSharedTask"]):
     tableTitleLines = "| Program | Location | Description |\n"
@@ -60,7 +63,7 @@ def listExecutables(filter=["Core", "FeatureBuilders", "InteractionXML", "GeniaE
                 print "|", program[1], "|", program[0], "|", program[2], "|"
         print
 
-def extractModels(input, output, tasks):
+def extractModels(input, output, tasks, classificationOutput=None):
     assert input != None
     assert output != None
     assert input != output
@@ -80,7 +83,11 @@ def extractModels(input, output, tasks):
                 if os.path.exists(os.path.join(subDirAbs, "log.txt")):
                     print >> sys.stderr, "Copying training log for", subDir
                     shutil.copy2(os.path.join(subDirAbs, "log.txt"), os.path.join(output, subDir.split(".")[0] + "-train-log.txt"))
-
+                if classificationOutput != None:
+                    if os.path.exists(os.path.join(subDirAbs, "classification-" + suffix)):
+                        src = os.path.join(subDirAbs, suffix + "-events.tar.gz")
+                        dst = os.path.join(classificationOutput, subDir.split(".")[0] + "-" + suffix + "-events.tar.gz")
+                
 def linkDuplicates(input, output):
     if os.path.exists(output):
         print >> sys.stderr, "Removing output directory"
@@ -118,6 +125,22 @@ def linkDuplicates(input, output):
             print >> sys.stderr, "Linking:", lnCommand
             subprocess.call(lnCommand, shell=True)
 
+def buildModels(output, tasks, connection, dummy=False):
+    """
+    Build the release models.
+    
+    This function should be run on the cluster, so the connection argument is the
+    same for both the batch system and the train-program it runs.
+    """
+    global mainTEESDir
+    from batch import batch
+    for task in tasks:
+        taskName = task
+        if task in ["GE", "GE09"]:
+            taskName += ".2"
+        command = "python " + os.path.join(mainTEESDir, "train.py") + " -t " + taskName + " -o %o/%j -c " + connection + " --clearAll"
+        batch(command, input=None, connection=connection, jobTag=task, output=output, debug=True, dummy=dummy)
+
 if __name__=="__main__":
     # Import Psyco if available
     try:
@@ -132,13 +155,19 @@ if __name__=="__main__":
     optparser.add_option("-i", "--input", default=None, dest="input", help="")
     optparser.add_option("-o", "--output", default=None, dest="output", help="")
     optparser.add_option("-a", "--action", default=None, dest="action", help="")
-    optparser.add_option("-t", "--tasks", default=["GE", "EPI", "ID", "BB", "BI", "BI-FULL", "GE09", "DDI", "DDI-FULL"], dest="tasks", help="")
+    optparser.add_option("-t", "--tasks", default="GE,EPI,ID,BB,BI,BI-FULL,GE09,DDI,DDI-FULL", dest="tasks", help="")
+    optparser.add_option("-c", "--connection", default=None, dest="connection", help="")
+    optparser.add_option("-d", "--dummy", action="store_true", default=False, dest="dummy", help="")
+    optparser.add_option("--classificationOutput", default=None, dest="classificationOutput", help="")
     (options, args) = optparser.parse_args()
     assert options.action in ["CONVERT_CORPORA", "BUILD_MODELS", "EXTRACT_MODELS", "PACKAGE_MODELS", "BUILD_APIDOC", "LIST_EXECUTABLES"]
+    options.tasks = options.tasks.split(",")
     
     if options.action == "LIST_EXECUTABLES":
         listExecutables()
+    elif options.action == "BUILD_MODELS":
+        buildModels(options.output, options.tasks, options.connection, options.dummy)
     elif options.action == "EXTRACT_MODELS":
-        extractModels(options.input, options.output, options.tasks)
+        extractModels(options.input, options.output, options.tasks, options.classificationOutput)
     elif options.action == "PACKAGE_MODELS":
         linkDuplicates(options.input, options.output)
