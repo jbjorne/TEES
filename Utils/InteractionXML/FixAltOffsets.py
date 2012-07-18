@@ -5,8 +5,8 @@ try:
     import xml.etree.cElementTree as ET
 except ImportError:
     import cElementTree as ET
-import cElementTreeUtils as ETUtils
-import Range
+import Utils.ElementTreeUtils as ETUtils
+import Utils.Range as Range
 
 sys.path.append(os.path.dirname(os.path.abspath(__file__))+"/..")
 from Utils.ProgressCounter import ProgressCounter

@@ -1,11 +1,9 @@
 import sys
 sys.path.append("..")
-import Core.ExampleBuilder
-from Core.ExampleBuilder import ExampleBuilder
 import Utils.Libraries.PorterStemmer as PorterStemmer
 from Core.IdSet import IdSet
 import Core.ExampleUtils as ExampleUtils
-from Core.Gazetteer import Gazetteer
+#from Core.Gazetteer import Gazetteer
 from FeatureBuilder import FeatureBuilder
 
 #def compareDependencyEdgesById(dep1, dep2):

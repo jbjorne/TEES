@@ -5,7 +5,7 @@ Edge Examples
 import sys, os
 thisPath = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.abspath(os.path.join(thisPath,"..")))
-from ExampleBuilder import ExampleBuilder
+from ExampleBuilders.ExampleBuilder import ExampleBuilder
 from Core.IdSet import IdSet
 import Core.ExampleUtils as ExampleUtils
 from FeatureBuilders.MultiEdgeFeatureBuilder import MultiEdgeFeatureBuilder

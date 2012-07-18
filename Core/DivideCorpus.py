@@ -11,7 +11,7 @@ try:
 except ImportError:
     import cElementTree as ET
 import Utils.ElementTreeUtils as ETUtils
-import InteractionXML.CorpusElements as CorpusElements
+import Utils.InteractionXML.CorpusElements as CorpusElements
 
 if __name__=="__main__":
     from optparse import OptionParser

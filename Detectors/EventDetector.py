@@ -9,10 +9,10 @@ from UnmergingDetector import UnmergingDetector
 from ModifierDetector import ModifierDetector
 #from Core.RecallAdjust import RecallAdjust
 import Utils.Parameters as Parameters
-import InteractionXML
+import Utils.InteractionXML as InteractionXML
 import Evaluators.EvaluateInteractionXML as EvaluateInteractionXML
-import STFormat.ConvertXML
-import STFormat.Compare
+import Utils.STFormat.ConvertXML
+import Utils.STFormat.Compare
 import Evaluators.BioNLP11GeniaTools
 
 class EventDetector(Detector):
@@ -211,13 +211,13 @@ class EventDetector(Detector):
             EIXMLResult = EvaluateInteractionXML.run(self.edgeDetector.evaluator, xml, self.optData, self.parse)
             # Convert to ST-format
             if self.bioNLPSTParams["evaluate"]:
-                STFormat.ConvertXML.toSTFormat(xml, self.workDir+"grid-flat-geniaformat", "a2") #getA2FileTag(options.task, subTask))
+                Utils.STFormat.ConvertXML.toSTFormat(xml, self.workDir+"grid-flat-geniaformat", "a2") #getA2FileTag(options.task, subTask))
                 stFormatDir = self.workDir+"grid-flat-geniaformat"
             
             if self.unmerging:
                 xml = self.unmergingDetector.classifyToXML(xml, self.model, None, self.workDir+"grid-", goldData=self.optData)
                 if self.bioNLPSTParams["evaluate"]:
-                    STFormat.ConvertXML.toSTFormat(xml, self.workDir+"grid-unmerging-geniaformat", "a2")
+                    Utils.STFormat.ConvertXML.toSTFormat(xml, self.workDir+"grid-unmerging-geniaformat", "a2")
                     stFormatDir = self.workDir+"grid-unmerging-geniaformat"
             # Evaluation
             stEvaluation = None
@@ -339,7 +339,7 @@ class EventDetector(Detector):
         if self.checkStep("ST-CONVERT"):
             if stParams["convert"]:
                 xml = self.getWorkFile(xml, [workOutputTag + "modifier-pred.xml.gz", workOutputTag + "unmerging-pred.xml.gz", workOutputTag + "edge-pred.xml.gz"])
-                STFormat.ConvertXML.toSTFormat(xml, output+"-events.tar.gz", outputTag="a2", writeScores=(stParams["scores"] == True))
+                Utils.STFormat.ConvertXML.toSTFormat(xml, output+"-events.tar.gz", outputTag="a2", writeScores=(stParams["scores"] == True))
                 if stParams["evaluate"]: #self.stEvaluator != None:
                     task = self.task
                     if task == None:

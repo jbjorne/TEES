@@ -9,7 +9,7 @@ import BioNLP11GeniaTools
 from pylab import *
 import time, datetime
 sys.path.append(os.path.abspath(os.path.join(thisPath,"../Statistics")))
-import stats
+import Utils.Libraries.stats
 
 def getResults(results):
     if "approximate" in results and "ALL-TOTAL" in results["approximate"]:

@@ -1,4 +1,4 @@
-from Core.Classifier import Classifier
+from Classifier import Classifier
 import Core.ExampleUtils as Example
 import sys, os, shutil, types
 

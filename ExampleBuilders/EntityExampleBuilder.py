@@ -10,7 +10,7 @@ from ExampleBuilder import ExampleBuilder
 import Utils.Libraries.PorterStemmer as PorterStemmer
 from Core.IdSet import IdSet
 import Core.ExampleUtils as ExampleUtils
-from Core.Gazetteer import Gazetteer
+#from Core.Gazetteer import Gazetteer
 from FeatureBuilders.RELFeatureBuilder import RELFeatureBuilder
 from FeatureBuilders.WordNetFeatureBuilder import WordNetFeatureBuilder
 from FeatureBuilders.GiulianoFeatureBuilder import GiulianoFeatureBuilder

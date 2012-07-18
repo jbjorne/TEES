@@ -1,6 +1,6 @@
 import sys, os
 sys.path.append(os.path.dirname(os.path.abspath(__file__))+"/../..")
-import CommonUtils.cElementTreeUtils as ETUtils
+import Utils.ElementTreeUtils as ETUtils
 import Core.Split
 import shutil
 

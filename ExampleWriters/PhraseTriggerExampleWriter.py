@@ -1,11 +1,11 @@
 import sys
 from SentenceExampleWriter import SentenceExampleWriter
-import InteractionXML.IDUtils as IDUtils
+import Utils.InteractionXML.IDUtils as IDUtils
 try:
     import xml.etree.cElementTree as ET
 except ImportError:
     import cElementTree as ET
-import Range
+import Utils.Range as Range
 
 class PhraseTriggerExampleWriter(SentenceExampleWriter):
     def __init__(self):

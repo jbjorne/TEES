@@ -6,7 +6,7 @@ try:
     import xml.etree.cElementTree as ET
 except ImportError:
     import cElementTree as ET
-import cElementTreeUtils as ETUtils
+import Utils.ElementTreeUtils as ETUtils
 
 def convert(input, output=None, outputRoot=None):
     print >> sys.stderr, "##### Convert PMC to Interaction XML #####"

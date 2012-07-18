@@ -12,8 +12,8 @@ from ModifierExampleWriter import ModifierExampleWriter
 from PhraseTriggerExampleWriter import PhraseTriggerExampleWriter
 #IF LOCAL
 from UnmergingExampleWriter import UnmergingExampleWriter
-from UnmergedEdgeExampleWriter import UnmergedEdgeExampleWriter
-from AsymmetricEventExampleWriter import AsymmetricEventExampleWriter
+#from UnmergedEdgeExampleWriter import UnmergedEdgeExampleWriter
+#from AsymmetricEventExampleWriter import AsymmetricEventExampleWriter
 #ENDIF
 
 class BioTextExampleWriter:
@@ -50,10 +50,10 @@ class BioTextExampleWriter:
 #IF LOCAL
         elif xType == "um":
             w = UnmergingExampleWriter()
-        elif xType == "ue":
-            w = UnmergedEdgeExampleWriter()
-        elif xType == "asym":
-            w = AsymmetricEventExampleWriter()
+        #elif xType == "ue":
+        #    w = UnmergedEdgeExampleWriter()
+        #elif xType == "asym":
+        #    w = AsymmetricEventExampleWriter()
 #ENDIF
         else:
             assert False, ("Unknown entity type", xType)

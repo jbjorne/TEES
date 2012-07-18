@@ -9,7 +9,7 @@ try:
     import xml.etree.cElementTree as ET
 except ImportError:
     import cElementTree as ET
-import cElementTreeUtils as ETUtils
+import Utils.ElementTreeUtils as ETUtils
 
 def processCorpus(input, attrs=["text"]):
     print attrs

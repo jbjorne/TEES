@@ -15,8 +15,8 @@
                 Range.py (CommonUtils)
 """
 
-import Stemming.PorterStemmer as stemmer
-import Range
+import Utils.Libraries.PorterStemmer as stemmer
+import Utils.Range as Range
 import sys
         
 class ParseGraphNode:

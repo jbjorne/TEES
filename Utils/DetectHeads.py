@@ -1,12 +1,12 @@
-import cElementTreeUtils as ETUtils
 import sys, os
 sys.path.append(os.path.dirname(os.path.abspath(__file__))+"/..")
 import Core.SentenceGraph as SentenceGraph
 from Utils.ProgressCounter import ProgressCounter
 from FindHeads import findHeads
-import InteractionXML.CorpusElements
-import Range
-import Stemming.PorterStemmer as PorterStemmer
+import Utils.ElementTreeUtils as ETUtils
+import Utils.InteractionXML.CorpusElements
+import Utils.Range as Range
+import Utils.Libraries.PorterStemmer as PorterStemmer
 
 def getTriggers(corpus):
     """
@@ -135,7 +135,7 @@ def findHeadsDictionary(corpus, stringsFrom, parse, tokenization):
     distDict = getDistribution(trigDict)
     allStrings = sorted(distDict.keys())
     print "Determining heads for", corpus
-    corpusElements = InteractionXML.CorpusElements.loadCorpus(corpus, parse, tokenization, removeIntersentenceInteractions=False, removeNameInfo=False)
+    corpusElements = Utils.InteractionXML.CorpusElements.loadCorpus(corpus, parse, tokenization, removeIntersentenceInteractions=False, removeNameInfo=False)
     cases = {}
     counts = [0,0]
     for sentence in corpusElements.sentences:

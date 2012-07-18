@@ -1,6 +1,6 @@
 import sys
 from SentenceExampleWriter import SentenceExampleWriter
-import InteractionXML.IDUtils as IDUtils
+import Utils.InteractionXML.IDUtils as IDUtils
 try:
     import xml.etree.cElementTree as ET
 except ImportError:

@@ -3,8 +3,11 @@ Giuliano Feature Builder
 """
 __version__ = "$Revision: 1.1 $"
 
+import sys,os
 from FeatureBuilder import FeatureBuilder
-import Range
+thisPath = os.path.dirname(os.path.abspath(__file__))
+sys.path.append(os.path.abspath(os.path.join(thisPath,"../..")))
+import Utils.Range as Range
 
 class GiulianoFeatureBuilder(FeatureBuilder):
     def __init__(self, featureSet):

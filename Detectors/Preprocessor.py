@@ -8,7 +8,6 @@ import Utils.STFormat.ConvertXML
 import Utils.STFormat.Equiv
 import Utils.ElementTreeUtils as ETUtils
 import Tools.GeniaSentenceSplitter
-import Tools.GeniaTagger
 import Tools.BLLIPParser
 import Tools.StanfordParser
 import Tools.BANNER

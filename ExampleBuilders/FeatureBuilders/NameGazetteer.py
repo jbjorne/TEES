@@ -4,10 +4,10 @@ import sys, os, types
 thisPath = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.abspath(os.path.join(thisPath,"../..")))
 import Core.SentenceGraph as SentenceGraph
-import cElementTreeUtils as ETUtils
+import Utils.ElementTreeUtils as ETUtils
 #from Utils.ProgressCounter import ProgressCounter
-import InteractionXML.CorpusElements as CorpusElements
-import Range
+import Utils.InteractionXML.CorpusElements as CorpusElements
+import Utils.Range as Range
 
 class NameGazetteer:
     

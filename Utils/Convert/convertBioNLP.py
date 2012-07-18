@@ -13,7 +13,6 @@ import Utils.ProteinNameSplitter as ProteinNameSplitter
 import Utils.Stream as Stream
 import Utils.FindHeads as FindHeads
 import Tools.SentenceSplitter
-import Tools.GeniaTagger
 import Tools.BLLIPParser
 import Tools.StanfordParser
 import Utils.ElementTreeUtils as ETUtils

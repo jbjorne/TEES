@@ -1,18 +1,15 @@
 parse__version__ = "$Revision: 1.3 $"
 
 import sys,os
-import sys
+sys.path.append(os.path.dirname(os.path.abspath(__file__))+"/..")
 try:
     import xml.etree.cElementTree as ET
 except ImportError:
     import cElementTree as ET
 import Utils.ElementTreeUtils as ETUtils
-import InteractionXML.IDUtils as IDUtils
+import Utils.InteractionXML.IDUtils as IDUtils
 import types
 from collections import defaultdict
-
-import sys, os
-sys.path.append(os.path.dirname(os.path.abspath(__file__))+"/..")
 import Utils.FindHeads as FindHeads
 
 def getText(element):

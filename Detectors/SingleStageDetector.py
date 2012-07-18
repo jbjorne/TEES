@@ -17,7 +17,7 @@ from Detector import Detector
 
 from ExampleWriters.BioTextExampleWriter import BioTextExampleWriter
 import Evaluators.EvaluateInteractionXML as EvaluateInteractionXML
-import InteractionXML
+import Utils.InteractionXML as InteractionXML
 
 class SingleStageDetector(Detector):
     def __init__(self):
