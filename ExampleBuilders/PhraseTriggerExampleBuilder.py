@@ -176,7 +176,7 @@ class PhraseTriggerExampleBuilder(ExampleBuilder):
             phraseHeadToken = self.getPhraseHeadToken(phrase, phraseTokens)
             self.exampleStats.beginExample(categoryName)
             
-            if "co_limits" in self.styles and not self.isPotentialCOTrigger(phrase, phraseTokens, sentenceGraph):
+            if self.styles["co_limits"] and not self.isPotentialCOTrigger(phrase, phraseTokens, sentenceGraph):
                 self.exampleStats.filter("co_limits")
                 self.exampleStats.endExample()
                 continue
