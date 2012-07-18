@@ -145,6 +145,7 @@ class Menu():
             else:
                 print >> sys.stderr, "Unknown option", choice
                 choice == None
+                return self.title
     
     def alignText(self, text):
         lines = text.split("\n")
@@ -226,6 +227,7 @@ class Option:
         try:
             handler(*handlerArgs)
         except Exception, e:
+            print >> sys.stderr
             print >> sys.stderr, "***", "Exception processing menu '" + self.menu.title + "' option '" + self.key + " (" + self.text + ")", "***"
             print >> sys.stderr, "Exception:", e
             traceback.print_exc(file=sys.stderr)
