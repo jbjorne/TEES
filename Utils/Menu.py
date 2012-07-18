@@ -77,8 +77,8 @@ class Menu():
             return getattr(self, attrName)
     
     def setAttr(self, attrName, value=None):
-        if not hasattr(self, attrName):
-            setattr(self, attrName, value)
+        #if not hasattr(self, attrName):
+        setattr(self, attrName, value)
     
     def printText(self):
         if self.doAlignText:
@@ -167,6 +167,7 @@ class Menu():
         #    print >> sys.stderr, "Menu", self.title, "prev", prevMenu.title
         if self.initializer != None:
             self.initializer(self, prevMenu)
+        print >> sys.stderr
         self.printBorder(self.title)
         self.printText()
         self.printBorder(style="-")
