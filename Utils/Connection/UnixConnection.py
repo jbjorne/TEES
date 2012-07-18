@@ -51,9 +51,11 @@ class UnixConnection:
 #            #    self.jobLimit = 1
     
     def clearWorkDir(self, subDir=""):
+        if self.account == None:
+            print >> sys.stderr, "Local connection, remote directory not removed"
+            return
         workSubDir = self.getRemotePath(subDir)
         assert workSubDir != self.workDir, (self.workDir, subDir) # prevent removal of the whole remote work directory
-        assert self.account != None
         print >> sys.stderr, "Removing remote directory", workSubDir
         self.run("rm -R " + workSubDir)
     
