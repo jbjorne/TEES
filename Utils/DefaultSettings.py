@@ -29,6 +29,10 @@ EVALUATOR["GE09-gold"] = "bionlp09_shared_task_development_data_rev1_for_evaluat
 # local settings file.
 URL = {}
 
+# Models
+
+URL["MODELS"] = "/home/jari/biotext/TEES-models-linked-120717.tar.bz2"
+
 # External Tools ##############################################################
 
 URL["SVM_MULTICLASS_SOURCE"] = "http://download.joachims.org/svm_multiclass/current/svm_multiclass.tar.gz"
