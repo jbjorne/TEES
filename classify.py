@@ -6,12 +6,13 @@ import Utils.Settings as Settings
 import Utils.Stream as Stream
 import Utils.Download
 from Utils.Connection.Connection import getConnection
+import Utils.Download
 from Detectors.Preprocessor import Preprocessor
 
 def classify(input, model, output, workDir=None, step=None, omitSteps=None, 
              goldInput=None, detector=None, 
              debug=False, writeScores=True, clear=False, 
-             preprocessorTag="-preprocessed.xml.gz", preprocessorParams=None):
+             preprocessorTag="-preprocessed.xml.gz", preprocessorParams=None, bioNLPSTParams=None):
     input = os.path.abspath(input)
     if goldInput != None: goldInput = os.path.abspath(goldInput)
     if model != None: model = os.path.abspath(model)
@@ -50,7 +51,7 @@ def classify(input, model, output, workDir=None, step=None, omitSteps=None,
     if selector.check("CLASSIFY"):
         detector = getDetector(detector, model)[0]() # initialize detector object
         detector.debug = debug
-        detector.stWriteScores = writeScores # write confidence scores into additional st-format files
+        detector.bioNLPSTParams = detector.getBioNLPSharedTaskParams(bioNLPSTParams, model)
         detector.classify(classifyInput, model, output, goldData=goldInput, fromStep=detectorSteps["CLASSIFY"], omitSteps=omitDetectorSteps["CLASSIFY"], workDir=workDir)
 
 def getModel(model):
@@ -83,22 +84,23 @@ def getInput(input, model=None):
         assert model != None
         input = model.split(".")[0]
 
-    if input.isdigit(): # PMID
-        print >> sys.stderr, "Classifying PubMed abstract", input
-        input = getPubMed(input)
+    if os.path.basename(input).isdigit(): # PMID
+        print >> sys.stderr, "Classifying PubMed abstract", os.path.basename(input)
+        input = getPubMed(os.path.basename(input))
         preprocess = True
     elif not os.path.exists(input): # Use a predefined corpus
+        defaultInput = os.path.basename(input)
         for suffix in ["", ".xml", ".xml.gz"]:
-            predefined = os.path.join(Settings.CORPUS_DIR, input + suffix)
+            predefined = os.path.join(Settings.CORPUS_DIR, defaultInput + suffix)
             found = None
             if os.path.exists(predefined):
                 print >> sys.stderr, "Classifying default corpus file", predefined
                 found = predefined
-                input = found
                 preprocess = False
                 break
         if found == None:
-            raise Exception("Default corpus file for input " + str(input) + " not found")
+            raise Exception("Default corpus file for input " + str(defaultInput) + " not found")
+        input = found
     else:
         print >> sys.stderr, "Classifying input", input
         preprocess = True
@@ -107,14 +109,14 @@ def getInput(input, model=None):
 def getPubMed(pmid):
     print >> sys.stderr, "Downloading PubMed abstract", pmid
     tempDir = tempfile.gettempdir()
-    url = "http://www.ncbi.nlm.nih.gov/pubmed/" + str(pmid) + "?report=xml"
+    url = "http://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=pubmed&id=" + str(pmid) + "&retmode=xml"
     downloaded = os.path.join(tempDir, "pmid-" + str(pmid))
-    Download.download(url, downloaded + ".xml", False)
+    Utils.Download.download(url, downloaded + ".xml", False)
     # Read the text from the XML
-    f = codecs.open(downloaded, "rt", "utf-8")
+    f = codecs.open(downloaded + ".xml", "rt", "utf-8")
+    textElements = []
     for line in f:
         line = line.strip()
-        textElements = []
         for tag in ["<ArticleTitle>", "<AbstractText>"]:
             if line.startswith(tag):
                 textElements.append(line.split(">", 1)[1].split("<")[0])
@@ -144,7 +146,8 @@ if __name__=="__main__":
     optparser.add_option("-d", "--detector", default=None, dest="detector", help="")
     optparser.add_option("-c", "--connection", default=None, dest="connection", help="")
     optparser.add_option("-g", "--gold", default=None, dest="gold", help="annotated version of the input file (optional)")
-    optparser.add_option("-p", default=None, dest="preprocessorParams", help="")
+    optparser.add_option("-p", "--preprocessorParams", default=None, dest="preprocessorParams", help="")
+    optparser.add_option("-b", "--bioNLPSTParams", default=None, dest="bioNLPSTParams", help="")
     # Debugging and process control
     optparser.add_option("--step", default=None, dest="step", help="")
     optparser.add_option("--omitSteps", default=None, dest="omitSteps", help="")
@@ -156,4 +159,4 @@ if __name__=="__main__":
     assert options.output != None
     classify(options.input, options.model, options.output, options.workdir, options.step, options.omitSteps, 
              options.gold, options.detector, options.debug, options.writeScores, options.clearAll,
-             preprocessorParams=options.preprocessorParams)
+             preprocessorParams=options.preprocessorParams, bioNLPSTParams=options.bioNLPSTParams)
