@@ -531,7 +531,7 @@ if __name__=="__main__":
     from optparse import OptionParser
     optparser = OptionParser(description="Evaluate BioNLP Shared Task predictions")
     optparser.add_option("-i", "--input", default=None, dest="input", help="input directory with predicted shared task files", metavar="FILE")
-    optparser.add_option("-g", "--gold", default=None, dest="input", help="optional gold directory (default is the task development set)", metavar="FILE")
+    optparser.add_option("-g", "--gold", default=None, dest="gold", help="optional gold directory (default is the task development set)", metavar="FILE")
     optparser.add_option("-t", "--task", default="GE.2", dest="task", help="")
     optparser.add_option("-v", "--variance", default=0, type="int", dest="variance", help="variance folds")
     optparser.add_option("-d", "--debug", default=False, action="store_true", dest="debug", help="debug")
