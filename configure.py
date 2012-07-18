@@ -48,6 +48,8 @@ def pathMenuInitializer(menu, prevMenu):
             menu.defaultInstallDir = Settings.DATAPATH
         elif "TEES_SETTINGS" in os.environ:
             menu.defaultInstallDir = Settings.DATAPATH
+        else:
+            menu.defaultInstallDir = os.path.expanduser("~/.tees")
     elif os.path.exists(menu.defaultInstallDir):
         if not os.path.isdir(menu.defaultInstallDir):
             menu.text += "WARNING! The DATAPATH directory is not a directory.\n\n"
@@ -76,7 +78,7 @@ def pathMenuInitializer(menu, prevMenu):
             exists, this installation program will use it and by default install only missing components.
             """
         else:
-            menu.configFilePath = os.path.join(menu.defaultInstallDir, "LocalSettings.py")
+            menu.configFilePath = os.path.expanduser("~/.tees_local_settings.py")
             if os.path.exists(menu.configFilePath):
                 menu.text += """
                 The "TEES_SETTINGS" environment variable is not set, but a configuration file has been
@@ -90,6 +92,7 @@ def pathMenuInitializer(menu, prevMenu):
                 """
     #menu.text += "TEES_SETTINGS = " + menu.configFilePath + "\n\n"
     menu.system.setAttr("defaultInstallDir", menu.defaultInstallDir)
+    Settings.DATAPATH = menu.defaultInstallDir
     menu.system.setAttr("configFilePath", menu.configFilePath)
     os.environ["TEES_SETTINGS"] = menu.configFilePath
     setClosingMessage(menu.system, menu.configFilePath)
@@ -104,6 +107,7 @@ def setClosingMessage(menuSystem, configFilePath):
     menuSystem.closingMessage += "tcsh: 'setenv TEES_SETTINGS " + configFilePath + "'\n" 
     
 def initLocalSettings(filename):
+    assert Menu.system.defaultInstallDir != None
     if os.path.exists(filename):
         print >> sys.stderr, "Using existing local settings file", filename
         return
@@ -127,7 +131,7 @@ def initLocalSettings(filename):
     DATAPATH = DATAPATH_VALUE # Main directory for datafiles
     CORPUS_DIR = None # Directory for the corpus XML-files
     TEES_MODEL_DIR = None # Directory for the official TEES models
-    """.replace("    ", "")).replace("DATAPATH_VALUE", menu.system.defaultInstallDir)
+    """.replace("    ", "")).replace("DATAPATH_VALUE", Menu.system.defaultInstallDir)
     f.close()
     # Reset local settings
     os.environ["TEES_SETTINGS"] = filename
@@ -164,8 +168,14 @@ def svmMenuInitializer(menu, prevMenu):
     classification tasks. You can optionally choose to compile it from 
     source if the precompiled Linux-binary does not work on your system.
     """
-    checkInstallPath(menu, "svmInstallDir", "SVM_MULTICLASS_DIR", "SVMMultiClass")
-    menu.optDict["i"].handlerArgs = [menu.svmInstallDir, os.path.join(menu.system.defaultInstallDir, "tools/download"), True, menu.optDict["1"].toggle, True]
+    checkInstallPath(menu, "SVM_MULTICLASS_DIR")
+    if hasattr(Settings, "SVM_MULTICLASS_DIR") and getattr(Settings, "SVM_MULTICLASS_DIR") != None:
+        menu.setDefault("s")
+        svmInstallDir = Settings.SVM_MULTICLASS_DIR
+    else:
+        menu.setDefault("i")
+        svmInstallDir = None
+    menu.optDict["i"].handlerArgs = [None, os.path.join(menu.system.defaultInstallDir, "tools/download"), True, menu.optDict["1"].toggle, True]
 
 def toolsMenuInitializer(menu, prevMenu):
     # Java path for ANT
@@ -269,6 +279,7 @@ def corpusMenuInitializer(menu, prevMenu):
     evaluatorDownloadPath = os.path.join(menu.system.defaultInstallDir, "tools/download")
     if menu.optDict["5"].toggle or (menu != prevMenu and (not hasattr(Settings, "BIONLP_EVALUATOR_DIR") or getattr(Settings, "BIONLP_EVALUATOR_DIR") == None)):
         menu.setDefault("i")
+        menu.optDict["5"].toggle = True
         handlers.append(convertBioNLP.installEvaluators)
         handlerArgs.append([evaluatorInstallPath, evaluatorDownloadPath, redownload, True])
     # Add the handlers to install option
@@ -333,7 +344,24 @@ def buildMenus():
         Option("s", "Skip")],
         corpusMenuInitializer)
     
-    Menu("Tools", "Not implemented yet\n", [
+    Menu("Tools", 
+         """
+         The tools are required for processing unannotated text and can
+         be used as part of TEES, or independently through their wrappers. For
+         information and usage conditions, see https://github.com/jbjorne/TEES/wiki/Licenses.
+         Some of the tools need to be compiled from source, this will take a while.
+         
+         The external tools used by TEES are:
+         
+         The GENIA Sentence Splitter of Tokyo University (Tsuruoka Y. et. al.)
+         
+         The BANNER named entity recognizer by Robert Leaman et. al.
+         
+         The BLLIP parser of Brown University (Charniak E., Johnson M. et. al.)
+         
+         The Stanford Parser of the Stanford Natural Language Processing Group
+         """, 
+         [
         Option("1", "Redownload already downloaded files", toggle=False),
         Option.SPACE,
         Option("2", "Install GENIA Sentence Splitter", toggle=False),
