@@ -234,7 +234,7 @@ def evaluateGE(sourceDir, mainTask="GE", task=1, goldDir=None, folds=-1, foldToR
                     taskSuffix = ".a2.t12"
                 else:
                     taskSuffix = ".a2.t123"
-                shutil.move(os.path.join(sourceDir, filename), os.path.join(sourceDir, filename.rsplit(".", 1) + taskSuffix))
+                shutil.move(os.path.join(sourceDir, filename), os.path.join(sourceDir, filename.rsplit(".", 1)[0] + taskSuffix))
     if goldDir == None:
         return None
     
