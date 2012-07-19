@@ -85,8 +85,14 @@ def extractModels(input, output, tasks, classificationOutput=None):
                     shutil.copy2(os.path.join(subDirAbs, "log.txt"), os.path.join(output, subDir.split(".")[0] + "-train-log.txt"))
                 if classificationOutput != None:
                     if os.path.exists(os.path.join(subDirAbs, "classification-" + suffix)):
-                        src = os.path.join(subDirAbs, suffix + "-events.tar.gz")
+                        src = os.path.join(subDirAbs, "classification-" + suffix + "/" + suffix + "-events.tar.gz")
                         dst = os.path.join(classificationOutput, subDir.split(".")[0] + "-" + suffix + "-events.tar.gz")
+                        print src
+                        if os.path.exists(src):
+                            print >> sys.stderr, "Copying classification", src, "to", dst
+                            if not os.path.exists(os.path.dirname(dst)):
+                                os.makedirs(os.path.dirname(dst))
+                            shutil.copy2(src, dst)
                 
 def linkDuplicates(input, output):
     if os.path.exists(output):
