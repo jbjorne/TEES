@@ -126,13 +126,13 @@ def getInput(input, model=None):
     return os.path.abspath(input), preprocess
 
 def getPubMed(pmid):
-    print >> sys.stderr, "Downloading PubMed abstract", pmid
-    print >> sys.stderr, "********************** NOTE **********************"
+    print >> sys.stderr, "*************************** NOTE ***************************"
     print >> sys.stderr, "Do not attempt to do large-scale classification of PubMed"
     print >> sys.stderr, "abstracts with this feature. For that, use the downloadable"
-    print >> sys.stderr, "PubMed release. This is only a demonstration feature, and"
+    print >> sys.stderr, "PubMed release. This is a demonstration feature only, and"
     print >> sys.stderr, "abusing it will cause you to be banned from PubMed!"
-    print >> sys.stderr, "**********************print >> sys.stderr, "********************** NOTE **********************" NOTE **********************"
+    print >> sys.stderr, "************************************************************"
+    print >> sys.stderr, "Downloading PubMed abstract", pmid
     tempDir = tempfile.gettempdir()
     url = "http://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=pubmed&id=" + str(pmid) + "&retmode=xml"
     downloaded = os.path.join(tempDir, "pmid-" + str(pmid))
