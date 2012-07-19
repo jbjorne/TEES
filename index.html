@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html>
+
+  <head>
+    <meta charset='utf-8' />
+    <meta http-equiv="X-UA-Compatible" content="chrome=1" />
+    <meta name="description" content="TEES : Turku Event Extraction System" />
+
+    <link rel="stylesheet" type="text/css" media="screen" href="stylesheets/stylesheet.css">
+
+    <title>TEES</title>
+  </head>
+
+  <body>
+
+    <!-- HEADER -->
+    <div id="header_wrap" class="outer">
+        <header class="inner">
+          <a id="forkme_banner" href="https://github.com/jbjorne/TEES">View on GitHub</a>
+
+          <h1 id="project_title">TEES</h1>
+          <h2 id="project_tagline">Turku Event Extraction System</h2>
+
+            <section id="downloads">
+              <a class="zip_download_link" href="https://github.com/jbjorne/TEES/zipball/master">Download this project as a .zip file</a>
+              <a class="tar_download_link" href="https://github.com/jbjorne/TEES/tarball/master">Download this project as a tar.gz file</a>
+            </section>
+        </header>
+    </div>
+
+    <!-- MAIN CONTENT -->
+    <div id="main_content_wrap" class="outer">
+      <section id="main_content" class="inner">
+        <p>TEES is available as a <a href="https://github.com/jbjorne/TEES/downloads">stable version</a> or the latest repository version, downloadable from the above icons. To get started, read the <a href="https://github.com/jbjorne/TEES/wiki/QuickStart">Quick Start</a> guide.</p>
+
+<p>For documentation, see the <a href="https://github.com/jbjorne/TEES/wiki">Wiki</a> and the <a href="http://jbjorne.github.com/TEES/apidoc/TEES-module.html">API docs</a>.</p>
+
+<h3>Overview</h3>
+
+<p>Turku Event Extraction System (TEES) is a free and open source natural language processing system developed for the extraction of events and relations from biomedical text. It is written mostly in Python, and should work in generic Unix/Linux environments.</p>
+
+<p>Biomedical event extraction  refers to the automatic detection of molecular interactions from research articles. Events can accurately represent complex statements, e.g. the sentence “Protein A causes protein B to bind protein C” produces the event CAUSE(A, BIND(B, C)). Such formal structures can be processed with computational methods, allowing large-scale analysis of the literature, as well as applications such as pathway construction.</p>
+
+<p><img src="https://github.com/jbjorne/TEES/wiki/event-example.png" alt="Example Sentence"></p>
+
+<p>TEES has been evaluated in the following Shared Tasks. Models for predicting their targets are provided with TEES and can be used on any unannotated text.</p>
+
+<ul>
+<li>
+<a href="http://www.nactem.ac.uk/tsujii/GENIA/SharedTask/">BioNLP 2009 Shared Task</a> (1st place, <a href="www.aclweb.org/anthology/W09-1402.pdf">PDF</a>)</li>
+<li>
+<a href="https://sites.google.com/site/bionlpst/">BioNLP 2011 Shared Task</a> (1st place in 4/8 tasks, only system to participate in all tasks, <a href="http://www.aclweb.org/anthology-new/W/W11/W11-1828.pdf">PDF</a>)</li>
+<li>
+<a href="http://labda.inf.uc3m.es/DDIExtraction2011/">DDI 2011 (Drug-drug interactions) Challenge</a> (4th place, at 96% of the performance of the best system, <a href="http://ceur-ws.org/Vol-761/paper4.pdf">PDF</a>)</li>
+</ul><p>For a list of all scientific publications on TEES, see the <a href="https://github.com/jbjorne/TEES/wiki/Publications">Publications page</a>. TEES has been used to successfully predict GENIA type events for all PubMed abstracts and PMC full text articles, and the resulting data is available in the <a href="http://www.evexdb.org/">EVEX database</a>.</p>
+      </section>
+    </div>
+
+    <!-- FOOTER  -->
+    <div id="footer_wrap" class="outer">
+      <footer class="inner">
+        <p class="copyright">TEES maintained by <a href="https://github.com/jbjorne">jbjorne</a></p>
+        <p>Published with <a href="http://pages.github.com">GitHub Pages</a></p>
+      </footer>
+    </div>
+
+              <script type="text/javascript">
+            var gaJsHost = (("https:" == document.location.protocol) ? "https://ssl." : "http://www.");
+            document.write(unescape("%3Cscript src='" + gaJsHost + "google-analytics.com/ga.js' type='text/javascript'%3E%3C/script%3E"));
+          </script>
+          <script type="text/javascript">
+            try {
+              var pageTracker = _gat._getTracker("UA-32943013-1");
+            pageTracker._trackPageview();
+            } catch(err) {}
+          </script>
+
+
+  </body>
+</html>
