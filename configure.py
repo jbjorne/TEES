@@ -128,10 +128,10 @@ def initLocalSettings(filename):
     STANFORD_PARSER_DIR = None # The Stanford parser directory
     
     # Data
-    DATAPATH = DATAPATH_VALUE # Main directory for datafiles
+    DATAPATH = 'DATAPATH_VALUE' # Main directory for datafiles
     CORPUS_DIR = None # Directory for the corpus XML-files
     TEES_MODEL_DIR = None # Directory for the official TEES models
-    """.replace("    ", "")).replace("DATAPATH_VALUE", Menu.system.defaultInstallDir)
+    """.replace("    ", "").replace("DATAPATH_VALUE", Menu.system.defaultInstallDir))
     f.close()
     # Reset local settings
     os.environ["TEES_SETTINGS"] = filename
