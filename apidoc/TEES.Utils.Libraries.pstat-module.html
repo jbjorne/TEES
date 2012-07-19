@@ -1,0 +1,1929 @@
+<?xml version="1.0" encoding="ascii"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+          "DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+  <title>TEES.Utils.Libraries.pstat</title>
+  <link rel="stylesheet" href="epydoc.css" type="text/css" />
+  <script type="text/javascript" src="epydoc.js"></script>
+</head>
+
+<body bgcolor="white" text="black" link="blue" vlink="#204080"
+      alink="#204080">
+<!-- ==================== NAVIGATION BAR ==================== -->
+<table class="navbar" border="0" width="100%" cellpadding="0"
+       bgcolor="#a0c0ff" cellspacing="0">
+  <tr valign="middle">
+  <!-- Home link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="TEES-module.html">Home</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Tree link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="module-tree.html">Trees</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Index link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="identifier-index.html">Indices</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Help link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="help.html">Help</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Project homepage -->
+      <th class="navbar" align="right" width="100%">
+        <table border="0" cellpadding="0" cellspacing="0">
+          <tr><th class="navbar" align="center"
+            >Turku Event Extraction System</th>
+          </tr></table></th>
+  </tr>
+</table>
+<table width="100%" cellpadding="0" cellspacing="0">
+  <tr valign="top">
+    <td width="100%">
+      <span class="breadcrumbs">
+        <a href="TEES-module.html">Package&nbsp;TEES</a> ::
+        <a href="TEES.Utils-module.html">Package&nbsp;Utils</a> ::
+        <a href="TEES.Utils.Libraries-module.html">Package&nbsp;Libraries</a> ::
+        Module&nbsp;pstat
+      </span>
+    </td>
+    <td>
+      <table cellpadding="0" cellspacing="0">
+        <!-- hide/show private -->
+        <tr><td align="right"><span class="options">[<a href="javascript:void(0);" class="privatelink"
+    onclick="toggle_private();">hide&nbsp;private</a>]</span></td></tr>
+      </table>
+    </td>
+  </tr>
+</table>
+<!-- ==================== MODULE DESCRIPTION ==================== -->
+<h1 class="epydoc">Module pstat</h1><p class="nomargin-top"><span class="codelink"><a href="TEES.Utils.Libraries.pstat-pysrc.html">source&nbsp;code</a></span></p>
+<pre class="literalblock">
+
+pstat.py module
+
+#################################################
+#######  Written by:  Gary Strangman  ###########
+#######  Last modified:  Jun 29, 2001 ###########
+#################################################
+
+This module provides some useful list and array manipulation routines
+modeled after those found in the |Stat package by Gary Perlman, plus a
+number of other useful list/file manipulation functions.  The list-based
+functions include:
+
+      abut (source,*args)
+      simpleabut (source, addon)
+      colex (listoflists,cnums)
+      collapse (listoflists,keepcols,collapsecols,fcn1=None,fcn2=None,cfcn=None)
+      dm (listoflists,criterion)
+      flat (l)
+      linexand (listoflists,columnlist,valuelist)
+      linexor (listoflists,columnlist,valuelist)
+      linedelimited (inlist,delimiter)
+      lineincols (inlist,colsize) 
+      lineincustcols (inlist,colsizes)
+      list2string (inlist)
+      makelol(inlist)
+      makestr(x)
+      printcc (lst,extra=2)
+      printincols (listoflists,colsize)
+      pl (listoflists)
+      printl(listoflists)
+      replace (lst,oldval,newval)
+      recode (inlist,listmap,cols='all')
+      remap (listoflists,criterion)
+      roundlist (inlist,num_digits_to_round_floats_to)
+      sortby(listoflists,sortcols)
+      unique (inlist)
+      duplicates(inlist)
+      writedelimited (listoflists, delimiter, file, writetype='w')
+
+Some of these functions have alternate versions which are defined only if
+Numeric (NumPy) can be imported.  These functions are generally named as
+above, with an 'a' prefix.
+
+      aabut (source, *args)
+      acolex (a,indices,axis=1)
+      acollapse (a,keepcols,collapsecols,sterr=0,ns=0)
+      adm (a,criterion)
+      alinexand (a,columnlist,valuelist)
+      alinexor (a,columnlist,valuelist)
+      areplace (a,oldval,newval)
+      arecode (a,listmap,col='all')
+      arowcompare (row1, row2)
+      arowsame (row1, row2)
+      asortrows(a,axis=0)
+      aunique(inarray)
+      aduplicates(inarray)
+
+Currently, the code is all but completely un-optimized.  In many cases, the
+array versions of functions amount simply to aliases to built-in array
+functions/methods.  Their inclusion here is for function name consistency.
+
+</pre>
+
+<hr />
+<div class="fields">      <p><strong>Version:</strong>
+        0.4
+      </p>
+</div><!-- ==================== FUNCTIONS ==================== -->
+<a name="section-Functions"></a>
+<table class="summary" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr bgcolor="#70b0f0" class="table-header">
+  <td colspan="2" class="table-header">
+    <table border="0" cellpadding="0" cellspacing="0" width="100%">
+      <tr valign="top">
+        <td align="left"><span class="table-header">Functions</span></td>
+        <td align="right" valign="top"
+         ><span class="options">[<a href="#section-Functions"
+         class="privatelink" onclick="toggle_private();"
+         >hide private</a>]</span></td>
+      </tr>
+    </table>
+  </td>
+</tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a href="TEES.Utils.Libraries.pstat-module.html#abut" class="summary-sig-name">abut</a>(<span class="summary-sig-arg">source</span>,
+        <span class="summary-sig-arg">*args</span>)</span><br />
+      Like the |Stat abut command.</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="TEES.Utils.Libraries.pstat-pysrc.html#abut">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a href="TEES.Utils.Libraries.pstat-module.html#simpleabut" class="summary-sig-name">simpleabut</a>(<span class="summary-sig-arg">source</span>,
+        <span class="summary-sig-arg">addon</span>)</span><br />
+      Concatenates two lists as columns and returns the result.</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="TEES.Utils.Libraries.pstat-pysrc.html#simpleabut">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a href="TEES.Utils.Libraries.pstat-module.html#colex" class="summary-sig-name">colex</a>(<span class="summary-sig-arg">listoflists</span>,
+        <span class="summary-sig-arg">cnums</span>)</span><br />
+      Extracts from listoflists the columns specified in the list 'cnums'
+(cnums can be an integer, a sequence of integers, or a string-expression that
+corresponds to a slice operation on the variable x ...</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="TEES.Utils.Libraries.pstat-pysrc.html#colex">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a href="TEES.Utils.Libraries.pstat-module.html#collapse" class="summary-sig-name">collapse</a>(<span class="summary-sig-arg">listoflists</span>,
+        <span class="summary-sig-arg">keepcols</span>,
+        <span class="summary-sig-arg">collapsecols</span>,
+        <span class="summary-sig-arg">fcn1</span>=<span class="summary-sig-default">None</span>,
+        <span class="summary-sig-arg">fcn2</span>=<span class="summary-sig-default">None</span>,
+        <span class="summary-sig-arg">cfcn</span>=<span class="summary-sig-default">None</span>)</span><br />
+      Averages data in collapsecol, keeping all unique items in keepcols
+(using unique, which keeps unique LISTS of column numbers), retaining the
+unique sets of values in keepcols, the mean for each.</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="TEES.Utils.Libraries.pstat-pysrc.html#collapse">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a href="TEES.Utils.Libraries.pstat-module.html#dm" class="summary-sig-name">dm</a>(<span class="summary-sig-arg">listoflists</span>,
+        <span class="summary-sig-arg">criterion</span>)</span><br />
+      Returns rows from the passed list of lists that meet the criteria in 
+      the passed criterion expression (a string as a function of x; e.g., 
+      'x[3]&gt;=9' will return all rows where the 4th column&gt;=9 and 
+      &quot;x[2]=='N'&quot; will return rows with column 2 equal to the 
+      string 'N').</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="TEES.Utils.Libraries.pstat-pysrc.html#dm">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a href="TEES.Utils.Libraries.pstat-module.html#flat" class="summary-sig-name">flat</a>(<span class="summary-sig-arg">l</span>)</span><br />
+      Returns the flattened version of a '2D' list.</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="TEES.Utils.Libraries.pstat-pysrc.html#flat">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a href="TEES.Utils.Libraries.pstat-module.html#linexand" class="summary-sig-name">linexand</a>(<span class="summary-sig-arg">listoflists</span>,
+        <span class="summary-sig-arg">columnlist</span>,
+        <span class="summary-sig-arg">valuelist</span>)</span><br />
+      Returns the rows of a list of lists where col (from columnlist) = val
+      (from valuelist) for EVERY pair of values 
+      (columnlist[i],valuelists[i]).</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="TEES.Utils.Libraries.pstat-pysrc.html#linexand">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a href="TEES.Utils.Libraries.pstat-module.html#linexor" class="summary-sig-name">linexor</a>(<span class="summary-sig-arg">listoflists</span>,
+        <span class="summary-sig-arg">columnlist</span>,
+        <span class="summary-sig-arg">valuelist</span>)</span><br />
+      Returns the rows of a list of lists where col (from columnlist) = val
+      (from valuelist) for ANY pair of values (colunmlist[i],valuelist[i[).</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="TEES.Utils.Libraries.pstat-pysrc.html#linexor">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a href="TEES.Utils.Libraries.pstat-module.html#linedelimited" class="summary-sig-name">linedelimited</a>(<span class="summary-sig-arg">inlist</span>,
+        <span class="summary-sig-arg">delimiter</span>)</span><br />
+      Returns a string composed of elements in inlist, with each element 
+      separated by 'delimiter.'  Used by function writedelimited.</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="TEES.Utils.Libraries.pstat-pysrc.html#linedelimited">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a href="TEES.Utils.Libraries.pstat-module.html#lineincols" class="summary-sig-name">lineincols</a>(<span class="summary-sig-arg">inlist</span>,
+        <span class="summary-sig-arg">colsize</span>)</span><br />
+      Returns a string composed of elements in inlist, with each element 
+      right-aligned in columns of (fixed) colsize.</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="TEES.Utils.Libraries.pstat-pysrc.html#lineincols">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a href="TEES.Utils.Libraries.pstat-module.html#lineincustcols" class="summary-sig-name">lineincustcols</a>(<span class="summary-sig-arg">inlist</span>,
+        <span class="summary-sig-arg">colsizes</span>)</span><br />
+      Returns a string composed of elements in inlist, with each element 
+      right-aligned in a column of width specified by a sequence colsizes.</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="TEES.Utils.Libraries.pstat-pysrc.html#lineincustcols">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a href="TEES.Utils.Libraries.pstat-module.html#list2string" class="summary-sig-name">list2string</a>(<span class="summary-sig-arg">inlist</span>,
+        <span class="summary-sig-arg">delimit</span>=<span class="summary-sig-default"><code class="variable-quote">'</code><code class="variable-string"> </code><code class="variable-quote">'</code></span>)</span><br />
+      Converts a 1D list to a single long string for file output, using the
+      string.join function.</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="TEES.Utils.Libraries.pstat-pysrc.html#list2string">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a href="TEES.Utils.Libraries.pstat-module.html#makelol" class="summary-sig-name">makelol</a>(<span class="summary-sig-arg">inlist</span>)</span><br />
+      Converts a 1D list to a 2D list (i.e., a list-of-lists).</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="TEES.Utils.Libraries.pstat-pysrc.html#makelol">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="makestr"></a><span class="summary-sig-name">makestr</span>(<span class="summary-sig-arg">x</span>)</span></td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="TEES.Utils.Libraries.pstat-pysrc.html#makestr">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a href="TEES.Utils.Libraries.pstat-module.html#printcc" class="summary-sig-name">printcc</a>(<span class="summary-sig-arg">lst</span>,
+        <span class="summary-sig-arg">extra</span>=<span class="summary-sig-default">2</span>)</span><br />
+      Prints a list of lists in columns, customized by the max size of 
+      items within the columns (max size of items in col, plus 'extra' 
+      number of spaces).</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="TEES.Utils.Libraries.pstat-pysrc.html#printcc">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a href="TEES.Utils.Libraries.pstat-module.html#printincols" class="summary-sig-name">printincols</a>(<span class="summary-sig-arg">listoflists</span>,
+        <span class="summary-sig-arg">colsize</span>)</span><br />
+      Prints a list of lists in columns of (fixed) colsize width, where 
+      colsize is an integer.</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="TEES.Utils.Libraries.pstat-pysrc.html#printincols">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a href="TEES.Utils.Libraries.pstat-module.html#pl" class="summary-sig-name">pl</a>(<span class="summary-sig-arg">listoflists</span>)</span><br />
+      Prints a list of lists, 1 list (row) at a time.</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="TEES.Utils.Libraries.pstat-pysrc.html#pl">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="printl"></a><span class="summary-sig-name">printl</span>(<span class="summary-sig-arg">listoflists</span>)</span><br />
+      Alias for pl.</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="TEES.Utils.Libraries.pstat-pysrc.html#printl">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a href="TEES.Utils.Libraries.pstat-module.html#replace" class="summary-sig-name">replace</a>(<span class="summary-sig-arg">inlst</span>,
+        <span class="summary-sig-arg">oldval</span>,
+        <span class="summary-sig-arg">newval</span>)</span><br />
+      Replaces all occurrences of 'oldval' with 'newval', recursively.</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="TEES.Utils.Libraries.pstat-pysrc.html#replace">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a href="TEES.Utils.Libraries.pstat-module.html#recode" class="summary-sig-name">recode</a>(<span class="summary-sig-arg">inlist</span>,
+        <span class="summary-sig-arg">listmap</span>,
+        <span class="summary-sig-arg">cols</span>=<span class="summary-sig-default">None</span>)</span><br />
+      Changes the values in a list to a new set of values (useful when you 
+      need to recode data from (e.g.) strings to numbers.</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="TEES.Utils.Libraries.pstat-pysrc.html#recode">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a href="TEES.Utils.Libraries.pstat-module.html#remap" class="summary-sig-name">remap</a>(<span class="summary-sig-arg">listoflists</span>,
+        <span class="summary-sig-arg">criterion</span>)</span><br />
+      Remaps values in a given column of a 2D list (listoflists).</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="TEES.Utils.Libraries.pstat-pysrc.html#remap">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a href="TEES.Utils.Libraries.pstat-module.html#roundlist" class="summary-sig-name">roundlist</a>(<span class="summary-sig-arg">inlist</span>,
+        <span class="summary-sig-arg">digits</span>)</span><br />
+      Goes through each element in a 1D or 2D inlist, and applies the 
+      following function to all elements of FloatType ...</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="TEES.Utils.Libraries.pstat-pysrc.html#roundlist">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a href="TEES.Utils.Libraries.pstat-module.html#sortby" class="summary-sig-name">sortby</a>(<span class="summary-sig-arg">listoflists</span>,
+        <span class="summary-sig-arg">sortcols</span>)</span><br />
+      Sorts a list of lists on the column(s) specified in the sequence 
+      sortcols.</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="TEES.Utils.Libraries.pstat-pysrc.html#sortby">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a href="TEES.Utils.Libraries.pstat-module.html#unique" class="summary-sig-name">unique</a>(<span class="summary-sig-arg">inlist</span>)</span><br />
+      Returns all unique items in the passed list.</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="TEES.Utils.Libraries.pstat-pysrc.html#unique">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a href="TEES.Utils.Libraries.pstat-module.html#duplicates" class="summary-sig-name">duplicates</a>(<span class="summary-sig-arg">inlist</span>)</span><br />
+      Returns duplicate items in the FIRST dimension of the passed list.</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="TEES.Utils.Libraries.pstat-pysrc.html#duplicates">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a href="TEES.Utils.Libraries.pstat-module.html#nonrepeats" class="summary-sig-name">nonrepeats</a>(<span class="summary-sig-arg">inlist</span>)</span><br />
+      Returns items that are NOT duplicated in the first dim of the passed 
+      list.</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="TEES.Utils.Libraries.pstat-pysrc.html#nonrepeats">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a href="TEES.Utils.Libraries.pstat-module.html#aabut" class="summary-sig-name">aabut</a>(<span class="summary-sig-arg">source</span>,
+        <span class="summary-sig-arg">*args</span>)</span><br />
+      Like the |Stat abut command.</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="TEES.Utils.Libraries.pstat-pysrc.html#aabut">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a href="TEES.Utils.Libraries.pstat-module.html#acolex" class="summary-sig-name">acolex</a>(<span class="summary-sig-arg">a</span>,
+        <span class="summary-sig-arg">indices</span>,
+        <span class="summary-sig-arg">axis</span>=<span class="summary-sig-default">1</span>)</span><br />
+      Extracts specified indices (a list) from passed array, along passed 
+      axis (column extraction is default).</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="TEES.Utils.Libraries.pstat-pysrc.html#acolex">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a href="TEES.Utils.Libraries.pstat-module.html#acollapse" class="summary-sig-name">acollapse</a>(<span class="summary-sig-arg">a</span>,
+        <span class="summary-sig-arg">keepcols</span>,
+        <span class="summary-sig-arg">collapsecols</span>,
+        <span class="summary-sig-arg">fcn1</span>=<span class="summary-sig-default">None</span>,
+        <span class="summary-sig-arg">fcn2</span>=<span class="summary-sig-default">None</span>,
+        <span class="summary-sig-arg">cfcn</span>=<span class="summary-sig-default">None</span>)</span><br />
+      Averages data in collapsecol, keeping all unique items in keepcols
+(using unique, which keeps unique LISTS of column numbers), retaining
+the unique sets of values in keepcols, the mean for each.</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="TEES.Utils.Libraries.pstat-pysrc.html#acollapse">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a href="TEES.Utils.Libraries.pstat-module.html#adm" class="summary-sig-name">adm</a>(<span class="summary-sig-arg">a</span>,
+        <span class="summary-sig-arg">criterion</span>)</span><br />
+      Returns rows from the passed list of lists that meet the criteria in 
+      the passed criterion expression (a string as a function of x).</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="TEES.Utils.Libraries.pstat-pysrc.html#adm">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="isstring"></a><span class="summary-sig-name">isstring</span>(<span class="summary-sig-arg">x</span>)</span></td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="TEES.Utils.Libraries.pstat-pysrc.html#isstring">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a href="TEES.Utils.Libraries.pstat-module.html#alinexand" class="summary-sig-name">alinexand</a>(<span class="summary-sig-arg">a</span>,
+        <span class="summary-sig-arg">columnlist</span>,
+        <span class="summary-sig-arg">valuelist</span>)</span><br />
+      Returns the rows of an array where col (from columnlist) = val (from 
+      valuelist).</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="TEES.Utils.Libraries.pstat-pysrc.html#alinexand">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a href="TEES.Utils.Libraries.pstat-module.html#alinexor" class="summary-sig-name">alinexor</a>(<span class="summary-sig-arg">a</span>,
+        <span class="summary-sig-arg">columnlist</span>,
+        <span class="summary-sig-arg">valuelist</span>)</span><br />
+      Returns the rows of an array where col (from columnlist) = val (from 
+      valuelist).</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="TEES.Utils.Libraries.pstat-pysrc.html#alinexor">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a href="TEES.Utils.Libraries.pstat-module.html#areplace" class="summary-sig-name">areplace</a>(<span class="summary-sig-arg">a</span>,
+        <span class="summary-sig-arg">oldval</span>,
+        <span class="summary-sig-arg">newval</span>)</span><br />
+      Replaces all occurrences of oldval with newval in array a.</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="TEES.Utils.Libraries.pstat-pysrc.html#areplace">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a href="TEES.Utils.Libraries.pstat-module.html#arecode" class="summary-sig-name">arecode</a>(<span class="summary-sig-arg">a</span>,
+        <span class="summary-sig-arg">listmap</span>,
+        <span class="summary-sig-arg">col</span>=<span class="summary-sig-default"><code class="variable-quote">'</code><code class="variable-string">all</code><code class="variable-quote">'</code></span>)</span><br />
+      Remaps the values in an array to a new set of values (useful when you
+      need to recode data from (e.g.) strings to numbers as most stats 
+      packages require.</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="TEES.Utils.Libraries.pstat-pysrc.html#arecode">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a href="TEES.Utils.Libraries.pstat-module.html#arowcompare" class="summary-sig-name">arowcompare</a>(<span class="summary-sig-arg">row1</span>,
+        <span class="summary-sig-arg">row2</span>)</span><br />
+      Compares two rows from an array, regardless of whether it is an
+array of numbers or of python objects (which requires the cmp function).</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="TEES.Utils.Libraries.pstat-pysrc.html#arowcompare">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a href="TEES.Utils.Libraries.pstat-module.html#arowsame" class="summary-sig-name">arowsame</a>(<span class="summary-sig-arg">row1</span>,
+        <span class="summary-sig-arg">row2</span>)</span><br />
+      Compares two rows from an array, regardless of whether it is an array
+      of numbers or of python objects (which requires the cmp function).</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="TEES.Utils.Libraries.pstat-pysrc.html#arowsame">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a href="TEES.Utils.Libraries.pstat-module.html#asortrows" class="summary-sig-name">asortrows</a>(<span class="summary-sig-arg">a</span>,
+        <span class="summary-sig-arg">axis</span>=<span class="summary-sig-default">0</span>)</span><br />
+      Sorts an array &quot;by rows&quot;.</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="TEES.Utils.Libraries.pstat-pysrc.html#asortrows">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a href="TEES.Utils.Libraries.pstat-module.html#aunique" class="summary-sig-name">aunique</a>(<span class="summary-sig-arg">inarray</span>)</span><br />
+      Returns unique items in the FIRST dimension of the passed array.</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="TEES.Utils.Libraries.pstat-pysrc.html#aunique">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a href="TEES.Utils.Libraries.pstat-module.html#aduplicates" class="summary-sig-name">aduplicates</a>(<span class="summary-sig-arg">inarray</span>)</span><br />
+      Returns duplicate items in the FIRST dimension of the passed array.</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="TEES.Utils.Libraries.pstat-pysrc.html#aduplicates">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+</table>
+<!-- ==================== VARIABLES ==================== -->
+<a name="section-Variables"></a>
+<table class="summary" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr bgcolor="#70b0f0" class="table-header">
+  <td colspan="2" class="table-header">
+    <table border="0" cellpadding="0" cellspacing="0" width="100%">
+      <tr valign="top">
+        <td align="left"><span class="table-header">Variables</span></td>
+        <td align="right" valign="top"
+         ><span class="options">[<a href="#section-Variables"
+         class="privatelink" onclick="toggle_private();"
+         >hide private</a>]</span></td>
+      </tr>
+    </table>
+  </td>
+</tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a name="__package__"></a><span class="summary-name">__package__</span> = <code title="'TEES.Utils.Libraries'"><code class="variable-quote">'</code><code class="variable-string">TEES.Utils.Libraries</code><code class="variable-quote">'</code></code>
+    </td>
+  </tr>
+</table>
+<!-- ==================== FUNCTION DETAILS ==================== -->
+<a name="section-FunctionDetails"></a>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr bgcolor="#70b0f0" class="table-header">
+  <td colspan="2" class="table-header">
+    <table border="0" cellpadding="0" cellspacing="0" width="100%">
+      <tr valign="top">
+        <td align="left"><span class="table-header">Function Details</span></td>
+        <td align="right" valign="top"
+         ><span class="options">[<a href="#section-FunctionDetails"
+         class="privatelink" onclick="toggle_private();"
+         >hide private</a>]</span></td>
+      </tr>
+    </table>
+  </td>
+</tr>
+</table>
+<a name="abut"></a>
+<div>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr><td>
+  <table width="100%" cellpadding="0" cellspacing="0" border="0">
+  <tr valign="top"><td>
+  <h3 class="epydoc"><span class="sig"><span class="sig-name">abut</span>(<span class="sig-arg">source</span>,
+        <span class="sig-arg">*args</span>)</span>
+  </h3>
+  </td><td align="right" valign="top"
+    ><span class="codelink"><a href="TEES.Utils.Libraries.pstat-pysrc.html#abut">source&nbsp;code</a></span>&nbsp;
+    </td>
+  </tr></table>
+  
+  <pre class="literalblock">
+
+Like the |Stat abut command.  It concatenates two lists side-by-side
+and returns the result.  '2D' lists are also accomodated for either argument
+(source or addon).  CAUTION:  If one list is shorter, it will be repeated
+until it is as long as the longest list.  If this behavior is not desired,
+use pstat.simpleabut().
+
+Usage:   abut(source, args)   where args=any # of lists
+Returns: a list of lists as long as the LONGEST list past, source on the
+         'left', lists in &lt;args&gt; attached consecutively on the 'right'
+
+</pre>
+  <dl class="fields">
+  </dl>
+</td></tr></table>
+</div>
+<a name="simpleabut"></a>
+<div>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr><td>
+  <table width="100%" cellpadding="0" cellspacing="0" border="0">
+  <tr valign="top"><td>
+  <h3 class="epydoc"><span class="sig"><span class="sig-name">simpleabut</span>(<span class="sig-arg">source</span>,
+        <span class="sig-arg">addon</span>)</span>
+  </h3>
+  </td><td align="right" valign="top"
+    ><span class="codelink"><a href="TEES.Utils.Libraries.pstat-pysrc.html#simpleabut">source&nbsp;code</a></span>&nbsp;
+    </td>
+  </tr></table>
+  
+  <pre class="literalblock">
+
+Concatenates two lists as columns and returns the result.  '2D' lists
+are also accomodated for either argument (source or addon).  This DOES NOT
+repeat either list to make the 2 lists of equal length.  Beware of list pairs
+with different lengths ... the resulting list will be the length of the
+FIRST list passed.
+
+Usage:   simpleabut(source,addon)  where source, addon=list (or list-of-lists)
+Returns: a list of lists as long as source, with source on the 'left' and
+                 addon on the 'right'
+
+</pre>
+  <dl class="fields">
+  </dl>
+</td></tr></table>
+</div>
+<a name="colex"></a>
+<div>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr><td>
+  <table width="100%" cellpadding="0" cellspacing="0" border="0">
+  <tr valign="top"><td>
+  <h3 class="epydoc"><span class="sig"><span class="sig-name">colex</span>(<span class="sig-arg">listoflists</span>,
+        <span class="sig-arg">cnums</span>)</span>
+  </h3>
+  </td><td align="right" valign="top"
+    ><span class="codelink"><a href="TEES.Utils.Libraries.pstat-pysrc.html#colex">source&nbsp;code</a></span>&nbsp;
+    </td>
+  </tr></table>
+  
+  <pre class="literalblock">
+
+Extracts from listoflists the columns specified in the list 'cnums'
+(cnums can be an integer, a sequence of integers, or a string-expression that
+corresponds to a slice operation on the variable x ... e.g., 'x[3:]' will colex
+columns 3 onward from the listoflists).
+
+Usage:   colex (listoflists,cnums)
+Returns: a list-of-lists corresponding to the columns from listoflists
+         specified by cnums, in the order the column numbers appear in cnums
+
+</pre>
+  <dl class="fields">
+  </dl>
+</td></tr></table>
+</div>
+<a name="collapse"></a>
+<div>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr><td>
+  <table width="100%" cellpadding="0" cellspacing="0" border="0">
+  <tr valign="top"><td>
+  <h3 class="epydoc"><span class="sig"><span class="sig-name">collapse</span>(<span class="sig-arg">listoflists</span>,
+        <span class="sig-arg">keepcols</span>,
+        <span class="sig-arg">collapsecols</span>,
+        <span class="sig-arg">fcn1</span>=<span class="sig-default">None</span>,
+        <span class="sig-arg">fcn2</span>=<span class="sig-default">None</span>,
+        <span class="sig-arg">cfcn</span>=<span class="sig-default">None</span>)</span>
+  </h3>
+  </td><td align="right" valign="top"
+    ><span class="codelink"><a href="TEES.Utils.Libraries.pstat-pysrc.html#collapse">source&nbsp;code</a></span>&nbsp;
+    </td>
+  </tr></table>
+  
+  <pre class="literalblock">
+
+Averages data in collapsecol, keeping all unique items in keepcols
+(using unique, which keeps unique LISTS of column numbers), retaining the
+unique sets of values in keepcols, the mean for each.  Setting fcn1
+and/or fcn2 to point to a function rather than None (e.g., stats.sterr, len)
+will append those results (e.g., the sterr, N) after each calculated mean.
+cfcn is the collapse function to apply (defaults to mean, defined here in the
+pstat module to avoid circular imports with stats.py, but harmonicmean or
+others could be passed).
+
+Usage:    collapse (listoflists,keepcols,collapsecols,fcn1=None,fcn2=None,cfcn=None)
+Returns: a list of lists with all unique permutations of entries appearing in
+     columns (&quot;conditions&quot;) specified by keepcols, abutted with the result of
+     cfcn (if cfcn=None, defaults to the mean) of each column specified by
+     collapsecols.
+
+</pre>
+  <dl class="fields">
+  </dl>
+</td></tr></table>
+</div>
+<a name="dm"></a>
+<div>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr><td>
+  <table width="100%" cellpadding="0" cellspacing="0" border="0">
+  <tr valign="top"><td>
+  <h3 class="epydoc"><span class="sig"><span class="sig-name">dm</span>(<span class="sig-arg">listoflists</span>,
+        <span class="sig-arg">criterion</span>)</span>
+  </h3>
+  </td><td align="right" valign="top"
+    ><span class="codelink"><a href="TEES.Utils.Libraries.pstat-pysrc.html#dm">source&nbsp;code</a></span>&nbsp;
+    </td>
+  </tr></table>
+  
+  <p>Returns rows from the passed list of lists that meet the criteria in 
+  the passed criterion expression (a string as a function of x; e.g., 
+  'x[3]&gt;=9' will return all rows where the 4th column&gt;=9 and 
+  &quot;x[2]=='N'&quot; will return rows with column 2 equal to the string 
+  'N').</p>
+  <p>Usage:   dm (listoflists, criterion) Returns: rows from listoflists 
+  that meet the specified criterion.</p>
+  <dl class="fields">
+  </dl>
+</td></tr></table>
+</div>
+<a name="flat"></a>
+<div>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr><td>
+  <table width="100%" cellpadding="0" cellspacing="0" border="0">
+  <tr valign="top"><td>
+  <h3 class="epydoc"><span class="sig"><span class="sig-name">flat</span>(<span class="sig-arg">l</span>)</span>
+  </h3>
+  </td><td align="right" valign="top"
+    ><span class="codelink"><a href="TEES.Utils.Libraries.pstat-pysrc.html#flat">source&nbsp;code</a></span>&nbsp;
+    </td>
+  </tr></table>
+  
+  <p>Returns the flattened version of a '2D' list.  List-correlate to the 
+  a.flat() method of NumPy arrays.</p>
+  <p>Usage:    flat(l)</p>
+  <dl class="fields">
+  </dl>
+</td></tr></table>
+</div>
+<a name="linexand"></a>
+<div>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr><td>
+  <table width="100%" cellpadding="0" cellspacing="0" border="0">
+  <tr valign="top"><td>
+  <h3 class="epydoc"><span class="sig"><span class="sig-name">linexand</span>(<span class="sig-arg">listoflists</span>,
+        <span class="sig-arg">columnlist</span>,
+        <span class="sig-arg">valuelist</span>)</span>
+  </h3>
+  </td><td align="right" valign="top"
+    ><span class="codelink"><a href="TEES.Utils.Libraries.pstat-pysrc.html#linexand">source&nbsp;code</a></span>&nbsp;
+    </td>
+  </tr></table>
+  
+  <p>Returns the rows of a list of lists where col (from columnlist) = val 
+  (from valuelist) for EVERY pair of values (columnlist[i],valuelists[i]). 
+  len(columnlist) must equal len(valuelist).</p>
+  <p>Usage:   linexand (listoflists,columnlist,valuelist) Returns: the rows
+  of listoflists where columnlist[i]=valuelist[i] for ALL i</p>
+  <dl class="fields">
+  </dl>
+</td></tr></table>
+</div>
+<a name="linexor"></a>
+<div>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr><td>
+  <table width="100%" cellpadding="0" cellspacing="0" border="0">
+  <tr valign="top"><td>
+  <h3 class="epydoc"><span class="sig"><span class="sig-name">linexor</span>(<span class="sig-arg">listoflists</span>,
+        <span class="sig-arg">columnlist</span>,
+        <span class="sig-arg">valuelist</span>)</span>
+  </h3>
+  </td><td align="right" valign="top"
+    ><span class="codelink"><a href="TEES.Utils.Libraries.pstat-pysrc.html#linexor">source&nbsp;code</a></span>&nbsp;
+    </td>
+  </tr></table>
+  
+  <p>Returns the rows of a list of lists where col (from columnlist) = val 
+  (from valuelist) for ANY pair of values (colunmlist[i],valuelist[i[). One
+  value is required for each column in columnlist.  If only one value 
+  exists for columnlist but multiple values appear in valuelist, the 
+  valuelist values are all assumed to pertain to the same column.</p>
+  <p>Usage:   linexor (listoflists,columnlist,valuelist) Returns: the rows 
+  of listoflists where columnlist[i]=valuelist[i] for ANY i</p>
+  <dl class="fields">
+  </dl>
+</td></tr></table>
+</div>
+<a name="linedelimited"></a>
+<div>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr><td>
+  <table width="100%" cellpadding="0" cellspacing="0" border="0">
+  <tr valign="top"><td>
+  <h3 class="epydoc"><span class="sig"><span class="sig-name">linedelimited</span>(<span class="sig-arg">inlist</span>,
+        <span class="sig-arg">delimiter</span>)</span>
+  </h3>
+  </td><td align="right" valign="top"
+    ><span class="codelink"><a href="TEES.Utils.Libraries.pstat-pysrc.html#linedelimited">source&nbsp;code</a></span>&nbsp;
+    </td>
+  </tr></table>
+  
+  <p>Returns a string composed of elements in inlist, with each element 
+  separated by 'delimiter.'  Used by function writedelimited.  Use '      '
+  for tab-delimiting.</p>
+  <p>Usage:   linedelimited (inlist,delimiter)</p>
+  <dl class="fields">
+  </dl>
+</td></tr></table>
+</div>
+<a name="lineincols"></a>
+<div>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr><td>
+  <table width="100%" cellpadding="0" cellspacing="0" border="0">
+  <tr valign="top"><td>
+  <h3 class="epydoc"><span class="sig"><span class="sig-name">lineincols</span>(<span class="sig-arg">inlist</span>,
+        <span class="sig-arg">colsize</span>)</span>
+  </h3>
+  </td><td align="right" valign="top"
+    ><span class="codelink"><a href="TEES.Utils.Libraries.pstat-pysrc.html#lineincols">source&nbsp;code</a></span>&nbsp;
+    </td>
+  </tr></table>
+  
+  <p>Returns a string composed of elements in inlist, with each element 
+  right-aligned in columns of (fixed) colsize.</p>
+  <p>Usage:   lineincols (inlist,colsize)   where colsize is an integer</p>
+  <dl class="fields">
+  </dl>
+</td></tr></table>
+</div>
+<a name="lineincustcols"></a>
+<div>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr><td>
+  <table width="100%" cellpadding="0" cellspacing="0" border="0">
+  <tr valign="top"><td>
+  <h3 class="epydoc"><span class="sig"><span class="sig-name">lineincustcols</span>(<span class="sig-arg">inlist</span>,
+        <span class="sig-arg">colsizes</span>)</span>
+  </h3>
+  </td><td align="right" valign="top"
+    ><span class="codelink"><a href="TEES.Utils.Libraries.pstat-pysrc.html#lineincustcols">source&nbsp;code</a></span>&nbsp;
+    </td>
+  </tr></table>
+  
+  <p>Returns a string composed of elements in inlist, with each element 
+  right-aligned in a column of width specified by a sequence colsizes.  The
+  length of colsizes must be greater than or equal to the number of columns
+  in inlist.</p>
+  <p>Usage:   lineincustcols (inlist,colsizes) Returns: formatted string 
+  created from inlist</p>
+  <dl class="fields">
+  </dl>
+</td></tr></table>
+</div>
+<a name="list2string"></a>
+<div>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr><td>
+  <table width="100%" cellpadding="0" cellspacing="0" border="0">
+  <tr valign="top"><td>
+  <h3 class="epydoc"><span class="sig"><span class="sig-name">list2string</span>(<span class="sig-arg">inlist</span>,
+        <span class="sig-arg">delimit</span>=<span class="sig-default"><code class="variable-quote">'</code><code class="variable-string"> </code><code class="variable-quote">'</code></span>)</span>
+  </h3>
+  </td><td align="right" valign="top"
+    ><span class="codelink"><a href="TEES.Utils.Libraries.pstat-pysrc.html#list2string">source&nbsp;code</a></span>&nbsp;
+    </td>
+  </tr></table>
+  
+  <p>Converts a 1D list to a single long string for file output, using the 
+  string.join function.</p>
+  <p>Usage:   list2string (inlist,delimit=' ') Returns: the string created 
+  from inlist</p>
+  <dl class="fields">
+  </dl>
+</td></tr></table>
+</div>
+<a name="makelol"></a>
+<div>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr><td>
+  <table width="100%" cellpadding="0" cellspacing="0" border="0">
+  <tr valign="top"><td>
+  <h3 class="epydoc"><span class="sig"><span class="sig-name">makelol</span>(<span class="sig-arg">inlist</span>)</span>
+  </h3>
+  </td><td align="right" valign="top"
+    ><span class="codelink"><a href="TEES.Utils.Libraries.pstat-pysrc.html#makelol">source&nbsp;code</a></span>&nbsp;
+    </td>
+  </tr></table>
+  
+  <p>Converts a 1D list to a 2D list (i.e., a list-of-lists).  Useful when 
+  you want to use put() to write a 1D list one item per line in the 
+  file.</p>
+  <p>Usage:   makelol(inlist) Returns: if l = [1,2,'hi'] then returns 
+  [[1],[2],['hi']] etc.</p>
+  <dl class="fields">
+  </dl>
+</td></tr></table>
+</div>
+<a name="printcc"></a>
+<div>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr><td>
+  <table width="100%" cellpadding="0" cellspacing="0" border="0">
+  <tr valign="top"><td>
+  <h3 class="epydoc"><span class="sig"><span class="sig-name">printcc</span>(<span class="sig-arg">lst</span>,
+        <span class="sig-arg">extra</span>=<span class="sig-default">2</span>)</span>
+  </h3>
+  </td><td align="right" valign="top"
+    ><span class="codelink"><a href="TEES.Utils.Libraries.pstat-pysrc.html#printcc">source&nbsp;code</a></span>&nbsp;
+    </td>
+  </tr></table>
+  
+  <p>Prints a list of lists in columns, customized by the max size of items
+  within the columns (max size of items in col, plus 'extra' number of 
+  spaces). Use 'dashes' or '\n' in the list-of-lists to print dashes or 
+  blank lines, respectively.</p>
+  <p>Usage:   printcc (lst,extra=2) Returns: None</p>
+  <dl class="fields">
+  </dl>
+</td></tr></table>
+</div>
+<a name="printincols"></a>
+<div>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr><td>
+  <table width="100%" cellpadding="0" cellspacing="0" border="0">
+  <tr valign="top"><td>
+  <h3 class="epydoc"><span class="sig"><span class="sig-name">printincols</span>(<span class="sig-arg">listoflists</span>,
+        <span class="sig-arg">colsize</span>)</span>
+  </h3>
+  </td><td align="right" valign="top"
+    ><span class="codelink"><a href="TEES.Utils.Libraries.pstat-pysrc.html#printincols">source&nbsp;code</a></span>&nbsp;
+    </td>
+  </tr></table>
+  
+  <p>Prints a list of lists in columns of (fixed) colsize width, where 
+  colsize is an integer.</p>
+  <p>Usage:   printincols (listoflists,colsize) Returns: None</p>
+  <dl class="fields">
+  </dl>
+</td></tr></table>
+</div>
+<a name="pl"></a>
+<div>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr><td>
+  <table width="100%" cellpadding="0" cellspacing="0" border="0">
+  <tr valign="top"><td>
+  <h3 class="epydoc"><span class="sig"><span class="sig-name">pl</span>(<span class="sig-arg">listoflists</span>)</span>
+  </h3>
+  </td><td align="right" valign="top"
+    ><span class="codelink"><a href="TEES.Utils.Libraries.pstat-pysrc.html#pl">source&nbsp;code</a></span>&nbsp;
+    </td>
+  </tr></table>
+  
+  <p>Prints a list of lists, 1 list (row) at a time.</p>
+  <p>Usage:   pl(listoflists) Returns: None</p>
+  <dl class="fields">
+  </dl>
+</td></tr></table>
+</div>
+<a name="replace"></a>
+<div>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr><td>
+  <table width="100%" cellpadding="0" cellspacing="0" border="0">
+  <tr valign="top"><td>
+  <h3 class="epydoc"><span class="sig"><span class="sig-name">replace</span>(<span class="sig-arg">inlst</span>,
+        <span class="sig-arg">oldval</span>,
+        <span class="sig-arg">newval</span>)</span>
+  </h3>
+  </td><td align="right" valign="top"
+    ><span class="codelink"><a href="TEES.Utils.Libraries.pstat-pysrc.html#replace">source&nbsp;code</a></span>&nbsp;
+    </td>
+  </tr></table>
+  
+  <p>Replaces all occurrences of 'oldval' with 'newval', recursively.</p>
+  <p>Usage:   replace (inlst,oldval,newval)</p>
+  <dl class="fields">
+  </dl>
+</td></tr></table>
+</div>
+<a name="recode"></a>
+<div>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr><td>
+  <table width="100%" cellpadding="0" cellspacing="0" border="0">
+  <tr valign="top"><td>
+  <h3 class="epydoc"><span class="sig"><span class="sig-name">recode</span>(<span class="sig-arg">inlist</span>,
+        <span class="sig-arg">listmap</span>,
+        <span class="sig-arg">cols</span>=<span class="sig-default">None</span>)</span>
+  </h3>
+  </td><td align="right" valign="top"
+    ><span class="codelink"><a href="TEES.Utils.Libraries.pstat-pysrc.html#recode">source&nbsp;code</a></span>&nbsp;
+    </td>
+  </tr></table>
+  
+  <p>Changes the values in a list to a new set of values (useful when you 
+  need to recode data from (e.g.) strings to numbers.  cols defaults to 
+  None (meaning all columns are recoded).</p>
+  <p>Usage:   recode (inlist,listmap,cols=None)  cols=recode cols, 
+  listmap=2D list Returns: inlist with the appropriate values replaced with
+  new ones</p>
+  <dl class="fields">
+  </dl>
+</td></tr></table>
+</div>
+<a name="remap"></a>
+<div>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr><td>
+  <table width="100%" cellpadding="0" cellspacing="0" border="0">
+  <tr valign="top"><td>
+  <h3 class="epydoc"><span class="sig"><span class="sig-name">remap</span>(<span class="sig-arg">listoflists</span>,
+        <span class="sig-arg">criterion</span>)</span>
+  </h3>
+  </td><td align="right" valign="top"
+    ><span class="codelink"><a href="TEES.Utils.Libraries.pstat-pysrc.html#remap">source&nbsp;code</a></span>&nbsp;
+    </td>
+  </tr></table>
+  
+  <p>Remaps values in a given column of a 2D list (listoflists).  This 
+  requires a criterion as a function of 'x' so that the result of the 
+  following is returned ... map(lambda x: 'criterion',listoflists).</p>
+  <p>Usage:   remap(listoflists,criterion)    criterion=string Returns: 
+  remapped version of listoflists</p>
+  <dl class="fields">
+  </dl>
+</td></tr></table>
+</div>
+<a name="roundlist"></a>
+<div>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr><td>
+  <table width="100%" cellpadding="0" cellspacing="0" border="0">
+  <tr valign="top"><td>
+  <h3 class="epydoc"><span class="sig"><span class="sig-name">roundlist</span>(<span class="sig-arg">inlist</span>,
+        <span class="sig-arg">digits</span>)</span>
+  </h3>
+  </td><td align="right" valign="top"
+    ><span class="codelink"><a href="TEES.Utils.Libraries.pstat-pysrc.html#roundlist">source&nbsp;code</a></span>&nbsp;
+    </td>
+  </tr></table>
+  
+  <p>Goes through each element in a 1D or 2D inlist, and applies the 
+  following function to all elements of FloatType ... 
+  round(element,digits).</p>
+  <p>Usage:   roundlist(inlist,digits) Returns: list with rounded 
+  floats</p>
+  <dl class="fields">
+  </dl>
+</td></tr></table>
+</div>
+<a name="sortby"></a>
+<div>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr><td>
+  <table width="100%" cellpadding="0" cellspacing="0" border="0">
+  <tr valign="top"><td>
+  <h3 class="epydoc"><span class="sig"><span class="sig-name">sortby</span>(<span class="sig-arg">listoflists</span>,
+        <span class="sig-arg">sortcols</span>)</span>
+  </h3>
+  </td><td align="right" valign="top"
+    ><span class="codelink"><a href="TEES.Utils.Libraries.pstat-pysrc.html#sortby">source&nbsp;code</a></span>&nbsp;
+    </td>
+  </tr></table>
+  
+  <p>Sorts a list of lists on the column(s) specified in the sequence 
+  sortcols.</p>
+  <p>Usage:   sortby(listoflists,sortcols) Returns: sorted list, unchanged 
+  column ordering</p>
+  <dl class="fields">
+  </dl>
+</td></tr></table>
+</div>
+<a name="unique"></a>
+<div>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr><td>
+  <table width="100%" cellpadding="0" cellspacing="0" border="0">
+  <tr valign="top"><td>
+  <h3 class="epydoc"><span class="sig"><span class="sig-name">unique</span>(<span class="sig-arg">inlist</span>)</span>
+  </h3>
+  </td><td align="right" valign="top"
+    ><span class="codelink"><a href="TEES.Utils.Libraries.pstat-pysrc.html#unique">source&nbsp;code</a></span>&nbsp;
+    </td>
+  </tr></table>
+  
+  <p>Returns all unique items in the passed list.  If the a list-of-lists 
+  is passed, unique LISTS are found (i.e., items in the first dimension are
+  compared).</p>
+  <p>Usage:   unique (inlist) Returns: the unique elements (or rows) in 
+  inlist</p>
+  <dl class="fields">
+  </dl>
+</td></tr></table>
+</div>
+<a name="duplicates"></a>
+<div>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr><td>
+  <table width="100%" cellpadding="0" cellspacing="0" border="0">
+  <tr valign="top"><td>
+  <h3 class="epydoc"><span class="sig"><span class="sig-name">duplicates</span>(<span class="sig-arg">inlist</span>)</span>
+  </h3>
+  </td><td align="right" valign="top"
+    ><span class="codelink"><a href="TEES.Utils.Libraries.pstat-pysrc.html#duplicates">source&nbsp;code</a></span>&nbsp;
+    </td>
+  </tr></table>
+  
+  <p>Returns duplicate items in the FIRST dimension of the passed list.</p>
+  <p>Usage:   duplicates (inlist)</p>
+  <dl class="fields">
+  </dl>
+</td></tr></table>
+</div>
+<a name="nonrepeats"></a>
+<div>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr><td>
+  <table width="100%" cellpadding="0" cellspacing="0" border="0">
+  <tr valign="top"><td>
+  <h3 class="epydoc"><span class="sig"><span class="sig-name">nonrepeats</span>(<span class="sig-arg">inlist</span>)</span>
+  </h3>
+  </td><td align="right" valign="top"
+    ><span class="codelink"><a href="TEES.Utils.Libraries.pstat-pysrc.html#nonrepeats">source&nbsp;code</a></span>&nbsp;
+    </td>
+  </tr></table>
+  
+  <p>Returns items that are NOT duplicated in the first dim of the passed 
+  list.</p>
+  <p>Usage:   nonrepeats (inlist)</p>
+  <dl class="fields">
+  </dl>
+</td></tr></table>
+</div>
+<a name="aabut"></a>
+<div>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr><td>
+  <table width="100%" cellpadding="0" cellspacing="0" border="0">
+  <tr valign="top"><td>
+  <h3 class="epydoc"><span class="sig"><span class="sig-name">aabut</span>(<span class="sig-arg">source</span>,
+        <span class="sig-arg">*args</span>)</span>
+  </h3>
+  </td><td align="right" valign="top"
+    ><span class="codelink"><a href="TEES.Utils.Libraries.pstat-pysrc.html#aabut">source&nbsp;code</a></span>&nbsp;
+    </td>
+  </tr></table>
+  
+  <pre class="literalblock">
+
+Like the |Stat abut command.  It concatenates two arrays column-wise
+and returns the result.  CAUTION:  If one array is shorter, it will be
+repeated until it is as long as the other.
+
+Usage:   aabut (source, args)    where args=any # of arrays
+Returns: an array as long as the LONGEST array past, source appearing on the
+         'left', arrays in &lt;args&gt; attached on the 'right'.
+
+</pre>
+  <dl class="fields">
+  </dl>
+</td></tr></table>
+</div>
+<a name="acolex"></a>
+<div>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr><td>
+  <table width="100%" cellpadding="0" cellspacing="0" border="0">
+  <tr valign="top"><td>
+  <h3 class="epydoc"><span class="sig"><span class="sig-name">acolex</span>(<span class="sig-arg">a</span>,
+        <span class="sig-arg">indices</span>,
+        <span class="sig-arg">axis</span>=<span class="sig-default">1</span>)</span>
+  </h3>
+  </td><td align="right" valign="top"
+    ><span class="codelink"><a href="TEES.Utils.Libraries.pstat-pysrc.html#acolex">source&nbsp;code</a></span>&nbsp;
+    </td>
+  </tr></table>
+  
+  <p>Extracts specified indices (a list) from passed array, along passed 
+  axis (column extraction is default).  BEWARE: A 1D array is presumed to 
+  be a column-array (and that the whole array will be returned as a 
+  column).</p>
+  <p>Usage:   acolex (a,indices,axis=1) Returns: the columns of a specified
+  by indices</p>
+  <dl class="fields">
+  </dl>
+</td></tr></table>
+</div>
+<a name="acollapse"></a>
+<div>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr><td>
+  <table width="100%" cellpadding="0" cellspacing="0" border="0">
+  <tr valign="top"><td>
+  <h3 class="epydoc"><span class="sig"><span class="sig-name">acollapse</span>(<span class="sig-arg">a</span>,
+        <span class="sig-arg">keepcols</span>,
+        <span class="sig-arg">collapsecols</span>,
+        <span class="sig-arg">fcn1</span>=<span class="sig-default">None</span>,
+        <span class="sig-arg">fcn2</span>=<span class="sig-default">None</span>,
+        <span class="sig-arg">cfcn</span>=<span class="sig-default">None</span>)</span>
+  </h3>
+  </td><td align="right" valign="top"
+    ><span class="codelink"><a href="TEES.Utils.Libraries.pstat-pysrc.html#acollapse">source&nbsp;code</a></span>&nbsp;
+    </td>
+  </tr></table>
+  
+  <pre class="literalblock">
+
+Averages data in collapsecol, keeping all unique items in keepcols
+(using unique, which keeps unique LISTS of column numbers), retaining
+the unique sets of values in keepcols, the mean for each.  If stderror or
+N of the mean are desired, set either or both parameters to 1.
+
+Usage:   acollapse (a,keepcols,collapsecols,fcn1=None,fcn2=None,cfcn=None)
+Returns: unique 'conditions' specified by the contents of columns specified
+         by keepcols, abutted with the mean(s) of column(s) specified by
+         collapsecols
+
+</pre>
+  <dl class="fields">
+  </dl>
+</td></tr></table>
+</div>
+<a name="adm"></a>
+<div>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr><td>
+  <table width="100%" cellpadding="0" cellspacing="0" border="0">
+  <tr valign="top"><td>
+  <h3 class="epydoc"><span class="sig"><span class="sig-name">adm</span>(<span class="sig-arg">a</span>,
+        <span class="sig-arg">criterion</span>)</span>
+  </h3>
+  </td><td align="right" valign="top"
+    ><span class="codelink"><a href="TEES.Utils.Libraries.pstat-pysrc.html#adm">source&nbsp;code</a></span>&nbsp;
+    </td>
+  </tr></table>
+  
+  <p>Returns rows from the passed list of lists that meet the criteria in 
+  the passed criterion expression (a string as a function of x).</p>
+  <p>Usage:   adm (a,criterion)   where criterion is like 'x[2]==37'</p>
+  <dl class="fields">
+  </dl>
+</td></tr></table>
+</div>
+<a name="alinexand"></a>
+<div>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr><td>
+  <table width="100%" cellpadding="0" cellspacing="0" border="0">
+  <tr valign="top"><td>
+  <h3 class="epydoc"><span class="sig"><span class="sig-name">alinexand</span>(<span class="sig-arg">a</span>,
+        <span class="sig-arg">columnlist</span>,
+        <span class="sig-arg">valuelist</span>)</span>
+  </h3>
+  </td><td align="right" valign="top"
+    ><span class="codelink"><a href="TEES.Utils.Libraries.pstat-pysrc.html#alinexand">source&nbsp;code</a></span>&nbsp;
+    </td>
+  </tr></table>
+  
+  <p>Returns the rows of an array where col (from columnlist) = val (from 
+  valuelist).  One value is required for each column in columnlist.</p>
+  <p>Usage:   alinexand (a,columnlist,valuelist) Returns: the rows of a 
+  where columnlist[i]=valuelist[i] for ALL i</p>
+  <dl class="fields">
+  </dl>
+</td></tr></table>
+</div>
+<a name="alinexor"></a>
+<div>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr><td>
+  <table width="100%" cellpadding="0" cellspacing="0" border="0">
+  <tr valign="top"><td>
+  <h3 class="epydoc"><span class="sig"><span class="sig-name">alinexor</span>(<span class="sig-arg">a</span>,
+        <span class="sig-arg">columnlist</span>,
+        <span class="sig-arg">valuelist</span>)</span>
+  </h3>
+  </td><td align="right" valign="top"
+    ><span class="codelink"><a href="TEES.Utils.Libraries.pstat-pysrc.html#alinexor">source&nbsp;code</a></span>&nbsp;
+    </td>
+  </tr></table>
+  
+  <p>Returns the rows of an array where col (from columnlist) = val (from 
+  valuelist).  One value is required for each column in columnlist. The 
+  exception is if either columnlist or valuelist has only 1 value, in which
+  case that item will be expanded to match the length of the other 
+  list.</p>
+  <p>Usage:   alinexor (a,columnlist,valuelist) Returns: the rows of a 
+  where columnlist[i]=valuelist[i] for ANY i</p>
+  <dl class="fields">
+  </dl>
+</td></tr></table>
+</div>
+<a name="areplace"></a>
+<div>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr><td>
+  <table width="100%" cellpadding="0" cellspacing="0" border="0">
+  <tr valign="top"><td>
+  <h3 class="epydoc"><span class="sig"><span class="sig-name">areplace</span>(<span class="sig-arg">a</span>,
+        <span class="sig-arg">oldval</span>,
+        <span class="sig-arg">newval</span>)</span>
+  </h3>
+  </td><td align="right" valign="top"
+    ><span class="codelink"><a href="TEES.Utils.Libraries.pstat-pysrc.html#areplace">source&nbsp;code</a></span>&nbsp;
+    </td>
+  </tr></table>
+  
+  <p>Replaces all occurrences of oldval with newval in array a.</p>
+  <p>Usage:   areplace(a,oldval,newval)</p>
+  <dl class="fields">
+  </dl>
+</td></tr></table>
+</div>
+<a name="arecode"></a>
+<div>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr><td>
+  <table width="100%" cellpadding="0" cellspacing="0" border="0">
+  <tr valign="top"><td>
+  <h3 class="epydoc"><span class="sig"><span class="sig-name">arecode</span>(<span class="sig-arg">a</span>,
+        <span class="sig-arg">listmap</span>,
+        <span class="sig-arg">col</span>=<span class="sig-default"><code class="variable-quote">'</code><code class="variable-string">all</code><code class="variable-quote">'</code></span>)</span>
+  </h3>
+  </td><td align="right" valign="top"
+    ><span class="codelink"><a href="TEES.Utils.Libraries.pstat-pysrc.html#arecode">source&nbsp;code</a></span>&nbsp;
+    </td>
+  </tr></table>
+  
+  <p>Remaps the values in an array to a new set of values (useful when you 
+  need to recode data from (e.g.) strings to numbers as most stats packages
+  require.  Can work on SINGLE columns, or 'all' columns at once.</p>
+  <p>Usage:   arecode (a,listmap,col='all') Returns: a version of array a 
+  where listmap[i][0] = (instead) listmap[i][1]</p>
+  <dl class="fields">
+  </dl>
+</td></tr></table>
+</div>
+<a name="arowcompare"></a>
+<div>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr><td>
+  <table width="100%" cellpadding="0" cellspacing="0" border="0">
+  <tr valign="top"><td>
+  <h3 class="epydoc"><span class="sig"><span class="sig-name">arowcompare</span>(<span class="sig-arg">row1</span>,
+        <span class="sig-arg">row2</span>)</span>
+  </h3>
+  </td><td align="right" valign="top"
+    ><span class="codelink"><a href="TEES.Utils.Libraries.pstat-pysrc.html#arowcompare">source&nbsp;code</a></span>&nbsp;
+    </td>
+  </tr></table>
+  
+  <pre class="literalblock">
+
+Compares two rows from an array, regardless of whether it is an
+array of numbers or of python objects (which requires the cmp function).
+
+Usage:   arowcompare(row1,row2)
+Returns: an array of equal length containing 1s where the two rows had
+         identical elements and 0 otherwise
+
+</pre>
+  <dl class="fields">
+  </dl>
+</td></tr></table>
+</div>
+<a name="arowsame"></a>
+<div>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr><td>
+  <table width="100%" cellpadding="0" cellspacing="0" border="0">
+  <tr valign="top"><td>
+  <h3 class="epydoc"><span class="sig"><span class="sig-name">arowsame</span>(<span class="sig-arg">row1</span>,
+        <span class="sig-arg">row2</span>)</span>
+  </h3>
+  </td><td align="right" valign="top"
+    ><span class="codelink"><a href="TEES.Utils.Libraries.pstat-pysrc.html#arowsame">source&nbsp;code</a></span>&nbsp;
+    </td>
+  </tr></table>
+  
+  <p>Compares two rows from an array, regardless of whether it is an array 
+  of numbers or of python objects (which requires the cmp function).</p>
+  <p>Usage:   arowsame(row1,row2) Returns: 1 if the two rows are identical,
+  0 otherwise.</p>
+  <dl class="fields">
+  </dl>
+</td></tr></table>
+</div>
+<a name="asortrows"></a>
+<div>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr><td>
+  <table width="100%" cellpadding="0" cellspacing="0" border="0">
+  <tr valign="top"><td>
+  <h3 class="epydoc"><span class="sig"><span class="sig-name">asortrows</span>(<span class="sig-arg">a</span>,
+        <span class="sig-arg">axis</span>=<span class="sig-default">0</span>)</span>
+  </h3>
+  </td><td align="right" valign="top"
+    ><span class="codelink"><a href="TEES.Utils.Libraries.pstat-pysrc.html#asortrows">source&nbsp;code</a></span>&nbsp;
+    </td>
+  </tr></table>
+  
+  <p>Sorts an array &quot;by rows&quot;.  This differs from the 
+  Numeric.sort() function, which sorts elements WITHIN the given axis.  
+  Instead, this function keeps the elements along the given axis intact, 
+  but shifts them 'up or down' relative to one another.</p>
+  <p>Usage:   asortrows(a,axis=0) Returns: sorted version of a</p>
+  <dl class="fields">
+  </dl>
+</td></tr></table>
+</div>
+<a name="aunique"></a>
+<div>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr><td>
+  <table width="100%" cellpadding="0" cellspacing="0" border="0">
+  <tr valign="top"><td>
+  <h3 class="epydoc"><span class="sig"><span class="sig-name">aunique</span>(<span class="sig-arg">inarray</span>)</span>
+  </h3>
+  </td><td align="right" valign="top"
+    ><span class="codelink"><a href="TEES.Utils.Libraries.pstat-pysrc.html#aunique">source&nbsp;code</a></span>&nbsp;
+    </td>
+  </tr></table>
+  
+  <p>Returns unique items in the FIRST dimension of the passed array. Only 
+  works on arrays NOT including string items.</p>
+  <p>Usage:   aunique (inarray)</p>
+  <dl class="fields">
+  </dl>
+</td></tr></table>
+</div>
+<a name="aduplicates"></a>
+<div>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr><td>
+  <table width="100%" cellpadding="0" cellspacing="0" border="0">
+  <tr valign="top"><td>
+  <h3 class="epydoc"><span class="sig"><span class="sig-name">aduplicates</span>(<span class="sig-arg">inarray</span>)</span>
+  </h3>
+  </td><td align="right" valign="top"
+    ><span class="codelink"><a href="TEES.Utils.Libraries.pstat-pysrc.html#aduplicates">source&nbsp;code</a></span>&nbsp;
+    </td>
+  </tr></table>
+  
+  <p>Returns duplicate items in the FIRST dimension of the passed array. 
+  Only works on arrays NOT including string items.</p>
+  <p>Usage:   aunique (inarray)</p>
+  <dl class="fields">
+  </dl>
+</td></tr></table>
+</div>
+<br />
+<!-- ==================== NAVIGATION BAR ==================== -->
+<table class="navbar" border="0" width="100%" cellpadding="0"
+       bgcolor="#a0c0ff" cellspacing="0">
+  <tr valign="middle">
+  <!-- Home link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="TEES-module.html">Home</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Tree link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="module-tree.html">Trees</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Index link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="identifier-index.html">Indices</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Help link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="help.html">Help</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Project homepage -->
+      <th class="navbar" align="right" width="100%">
+        <table border="0" cellpadding="0" cellspacing="0">
+          <tr><th class="navbar" align="center"
+            >Turku Event Extraction System</th>
+          </tr></table></th>
+  </tr>
+</table>
+<table border="0" cellpadding="0" cellspacing="0" width="100%%">
+  <tr>
+    <td align="left" class="footer">
+    Generated by Epydoc 3.0.1 on Thu Jul 19 18:20:43 2012
+    </td>
+    <td align="right" class="footer">
+      <a target="mainFrame" href="http://epydoc.sourceforge.net"
+        >http://epydoc.sourceforge.net</a>
+    </td>
+  </tr>
+</table>
+
+<script type="text/javascript">
+  <!--
+  // Private objects are initially displayed (because if
+  // javascript is turned off then we want them to be
+  // visible); but by default, we want to hide them.  So hide
+  // them unless we have a cookie that says to show them.
+  checkCookie();
+  // -->
+</script>
+</body>
+</html>

@@ -1,0 +1,462 @@
+<?xml version="1.0" encoding="ascii"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+          "DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+  <title>TEES.ExampleBuilders.ExampleBuilder.ExampleBuilder</title>
+  <link rel="stylesheet" href="epydoc.css" type="text/css" />
+  <script type="text/javascript" src="epydoc.js"></script>
+</head>
+
+<body bgcolor="white" text="black" link="blue" vlink="#204080"
+      alink="#204080">
+<!-- ==================== NAVIGATION BAR ==================== -->
+<table class="navbar" border="0" width="100%" cellpadding="0"
+       bgcolor="#a0c0ff" cellspacing="0">
+  <tr valign="middle">
+  <!-- Home link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="TEES-module.html">Home</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Tree link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="module-tree.html">Trees</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Index link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="identifier-index.html">Indices</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Help link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="help.html">Help</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Project homepage -->
+      <th class="navbar" align="right" width="100%">
+        <table border="0" cellpadding="0" cellspacing="0">
+          <tr><th class="navbar" align="center"
+            >Turku Event Extraction System</th>
+          </tr></table></th>
+  </tr>
+</table>
+<table width="100%" cellpadding="0" cellspacing="0">
+  <tr valign="top">
+    <td width="100%">
+      <span class="breadcrumbs">
+        <a href="TEES-module.html">Package&nbsp;TEES</a> ::
+        <a href="TEES.ExampleBuilders-module.html">Package&nbsp;ExampleBuilders</a> ::
+        <a href="TEES.ExampleBuilders.ExampleBuilder-module.html">Module&nbsp;ExampleBuilder</a> ::
+        Class&nbsp;ExampleBuilder
+      </span>
+    </td>
+    <td>
+      <table cellpadding="0" cellspacing="0">
+        <!-- hide/show private -->
+        <tr><td align="right"><span class="options">[<a href="javascript:void(0);" class="privatelink"
+    onclick="toggle_private();">hide&nbsp;private</a>]</span></td></tr>
+      </table>
+    </td>
+  </tr>
+</table>
+<!-- ==================== CLASS DESCRIPTION ==================== -->
+<h1 class="epydoc">Class ExampleBuilder</h1><p class="nomargin-top"><span class="codelink"><a href="TEES.ExampleBuilders.ExampleBuilder-pysrc.html#ExampleBuilder">source&nbsp;code</a></span></p>
+<dl><dt>Known Subclasses:</dt>
+<dd>
+      <ul class="subclass-list">
+<li><a href="TEES.ExampleBuilders.PhraseTriggerExampleBuilder.PhraseTriggerExampleBuilder-class.html">PhraseTriggerExampleBuilder.PhraseTriggerExampleBuilder</a></li><li>, <a href="TEES.ExampleBuilders.ModifierExampleBuilder.ModifierExampleBuilder-class.html">ModifierExampleBuilder.ModifierExampleBuilder</a></li><li>, <a href="TEES.ExampleBuilders.EntityExampleBuilder.EntityExampleBuilder-class.html">EntityExampleBuilder.EntityExampleBuilder</a></li>  </ul>
+</dd></dl>
+
+<hr />
+<p>ExampleBuilder is the abstract base class for specialized example 
+  builders. Example builders take some data and convert it to examples 
+  usable by e.g. SVMs. An example builder writes three files, an 
+  example-file (in extended Joachim's SVM format) and .class_names and 
+  .feature_names files, which contain the names for the class and feature 
+  id-numbers. An example builder can also be given pre-existing sets of 
+  class and feature ids (optionally in files) so that the generated 
+  examples are consistent with other, previously generated examples.</p>
+
+<!-- ==================== INSTANCE METHODS ==================== -->
+<a name="section-InstanceMethods"></a>
+<table class="summary" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr bgcolor="#70b0f0" class="table-header">
+  <td colspan="2" class="table-header">
+    <table border="0" cellpadding="0" cellspacing="0" width="100%">
+      <tr valign="top">
+        <td align="left"><span class="table-header">Instance Methods</span></td>
+        <td align="right" valign="top"
+         ><span class="options">[<a href="#section-InstanceMethods"
+         class="privatelink" onclick="toggle_private();"
+         >hide private</a>]</span></td>
+      </tr>
+    </table>
+  </td>
+</tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="__init__"></a><span class="summary-sig-name">__init__</span>(<span class="summary-sig-arg">self</span>,
+        <span class="summary-sig-arg">classSet</span>=<span class="summary-sig-default">None</span>,
+        <span class="summary-sig-arg">featureSet</span>=<span class="summary-sig-default">None</span>)</span></td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="TEES.ExampleBuilders.ExampleBuilder-pysrc.html#ExampleBuilder.__init__">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr class="private">
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="_setDefaultParameters"></a><span class="summary-sig-name">_setDefaultParameters</span>(<span class="summary-sig-arg">self</span>,
+        <span class="summary-sig-arg">defaults</span>=<span class="summary-sig-default">None</span>,
+        <span class="summary-sig-arg">valueLimits</span>=<span class="summary-sig-default">None</span>)</span></td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="TEES.ExampleBuilders.ExampleBuilder-pysrc.html#ExampleBuilder._setDefaultParameters">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="buildExamplesFromGraph"></a><span class="summary-sig-name">buildExamplesFromGraph</span>(<span class="summary-sig-arg">self</span>,
+        <span class="summary-sig-arg">sentenceGraph</span>,
+        <span class="summary-sig-arg">outfile</span>,
+        <span class="summary-sig-arg">goldGraph</span>=<span class="summary-sig-default">None</span>)</span></td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="TEES.ExampleBuilders.ExampleBuilder-pysrc.html#ExampleBuilder.buildExamplesFromGraph">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="calculatePredictedRange"></a><span class="summary-sig-name">calculatePredictedRange</span>(<span class="summary-sig-arg">self</span>,
+        <span class="summary-sig-arg">sentences</span>)</span></td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="TEES.ExampleBuilders.ExampleBuilder-pysrc.html#ExampleBuilder.calculatePredictedRange">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="definePredictedValueRange"></a><span class="summary-sig-name">definePredictedValueRange</span>(<span class="summary-sig-arg">self</span>,
+        <span class="summary-sig-arg">sentences</span>,
+        <span class="summary-sig-arg">elementName</span>)</span></td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="TEES.ExampleBuilders.ExampleBuilder-pysrc.html#ExampleBuilder.definePredictedValueRange">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="getElementCounts"></a><span class="summary-sig-name">getElementCounts</span>(<span class="summary-sig-arg">self</span>,
+        <span class="summary-sig-arg">filename</span>)</span></td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="TEES.ExampleBuilders.ExampleBuilder-pysrc.html#ExampleBuilder.getElementCounts">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="getParameters"></a><span class="summary-sig-name">getParameters</span>(<span class="summary-sig-arg">self</span>,
+        <span class="summary-sig-arg">parameters</span>)</span></td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="TEES.ExampleBuilders.ExampleBuilder-pysrc.html#ExampleBuilder.getParameters">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="getPredictedValueRange"></a><span class="summary-sig-name">getPredictedValueRange</span>(<span class="summary-sig-arg">self</span>)</span></td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="TEES.ExampleBuilders.ExampleBuilder-pysrc.html#ExampleBuilder.getPredictedValueRange">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="getSentences"></a><span class="summary-sig-name">getSentences</span>(<span class="summary-sig-arg">self</span>,
+        <span class="summary-sig-arg">input</span>,
+        <span class="summary-sig-arg">parse</span>,
+        <span class="summary-sig-arg">tokenization</span>,
+        <span class="summary-sig-arg">removeNameInfo</span>=<span class="summary-sig-default">False</span>)</span></td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="TEES.ExampleBuilders.ExampleBuilder-pysrc.html#ExampleBuilder.getSentences">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="processCorpus"></a><span class="summary-sig-name">processCorpus</span>(<span class="summary-sig-arg">self</span>,
+        <span class="summary-sig-arg">input</span>,
+        <span class="summary-sig-arg">output</span>,
+        <span class="summary-sig-arg">gold</span>=<span class="summary-sig-default">None</span>,
+        <span class="summary-sig-arg">append</span>=<span class="summary-sig-default">False</span>,
+        <span class="summary-sig-arg">allowNewIds</span>=<span class="summary-sig-default">True</span>)</span></td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="TEES.ExampleBuilders.ExampleBuilder-pysrc.html#ExampleBuilder.processCorpus">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="processDocument"></a><span class="summary-sig-name">processDocument</span>(<span class="summary-sig-arg">self</span>,
+        <span class="summary-sig-arg">sentences</span>,
+        <span class="summary-sig-arg">goldSentences</span>,
+        <span class="summary-sig-arg">outfile</span>)</span></td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="TEES.ExampleBuilders.ExampleBuilder-pysrc.html#ExampleBuilder.processDocument">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="processSentence"></a><span class="summary-sig-name">processSentence</span>(<span class="summary-sig-arg">self</span>,
+        <span class="summary-sig-arg">sentence</span>,
+        <span class="summary-sig-arg">outfile</span>,
+        <span class="summary-sig-arg">goldSentence</span>=<span class="summary-sig-default">None</span>)</span></td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="TEES.ExampleBuilders.ExampleBuilder-pysrc.html#ExampleBuilder.processSentence">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="saveIds"></a><span class="summary-sig-name">saveIds</span>(<span class="summary-sig-arg">self</span>)</span></td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="TEES.ExampleBuilders.ExampleBuilder-pysrc.html#ExampleBuilder.saveIds">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="setFeature"></a><span class="summary-sig-name">setFeature</span>(<span class="summary-sig-arg">self</span>,
+        <span class="summary-sig-arg">name</span>,
+        <span class="summary-sig-arg">value</span>)</span></td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="TEES.ExampleBuilders.ExampleBuilder-pysrc.html#ExampleBuilder.setFeature">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+</table>
+<!-- ==================== CLASS METHODS ==================== -->
+<a name="section-ClassMethods"></a>
+<table class="summary" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr bgcolor="#70b0f0" class="table-header">
+  <td colspan="2" class="table-header">
+    <table border="0" cellpadding="0" cellspacing="0" width="100%">
+      <tr valign="top">
+        <td align="left"><span class="table-header">Class Methods</span></td>
+        <td align="right" valign="top"
+         ><span class="options">[<a href="#section-ClassMethods"
+         class="privatelink" onclick="toggle_private();"
+         >hide private</a>]</span></td>
+      </tr>
+    </table>
+  </td>
+</tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="getIdSets"></a><span class="summary-sig-name">getIdSets</span>(<span class="summary-sig-arg">self</span>,
+        <span class="summary-sig-arg">classIds</span>=<span class="summary-sig-default">None</span>,
+        <span class="summary-sig-arg">featureIds</span>=<span class="summary-sig-default">None</span>,
+        <span class="summary-sig-arg">allowNewIds</span>=<span class="summary-sig-default">True</span>)</span></td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="TEES.ExampleBuilders.ExampleBuilder-pysrc.html#ExampleBuilder.getIdSets">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="run"></a><span class="summary-sig-name">run</span>(<span class="summary-sig-arg">cls</span>,
+        <span class="summary-sig-arg">input</span>,
+        <span class="summary-sig-arg">output</span>,
+        <span class="summary-sig-arg">parse</span>,
+        <span class="summary-sig-arg">tokenization</span>,
+        <span class="summary-sig-arg">style</span>,
+        <span class="summary-sig-arg">classIds</span>=<span class="summary-sig-default">None</span>,
+        <span class="summary-sig-arg">featureIds</span>=<span class="summary-sig-default">None</span>,
+        <span class="summary-sig-arg">gold</span>=<span class="summary-sig-default">None</span>,
+        <span class="summary-sig-arg">append</span>=<span class="summary-sig-default">False</span>,
+        <span class="summary-sig-arg">allowNewIds</span>=<span class="summary-sig-default">True</span>)</span></td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="TEES.ExampleBuilders.ExampleBuilder-pysrc.html#ExampleBuilder.run">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+</table>
+<!-- ==================== NAVIGATION BAR ==================== -->
+<table class="navbar" border="0" width="100%" cellpadding="0"
+       bgcolor="#a0c0ff" cellspacing="0">
+  <tr valign="middle">
+  <!-- Home link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="TEES-module.html">Home</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Tree link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="module-tree.html">Trees</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Index link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="identifier-index.html">Indices</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Help link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="help.html">Help</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Project homepage -->
+      <th class="navbar" align="right" width="100%">
+        <table border="0" cellpadding="0" cellspacing="0">
+          <tr><th class="navbar" align="center"
+            >Turku Event Extraction System</th>
+          </tr></table></th>
+  </tr>
+</table>
+<table border="0" cellpadding="0" cellspacing="0" width="100%%">
+  <tr>
+    <td align="left" class="footer">
+    Generated by Epydoc 3.0.1 on Thu Jul 19 18:20:45 2012
+    </td>
+    <td align="right" class="footer">
+      <a target="mainFrame" href="http://epydoc.sourceforge.net"
+        >http://epydoc.sourceforge.net</a>
+    </td>
+  </tr>
+</table>
+
+<script type="text/javascript">
+  <!--
+  // Private objects are initially displayed (because if
+  // javascript is turned off then we want them to be
+  // visible); but by default, we want to hide them.  So hide
+  // them unless we have a cookie that says to show them.
+  checkCookie();
+  // -->
+</script>
+</body>
+</html>

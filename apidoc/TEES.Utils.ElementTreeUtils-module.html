@@ -1,0 +1,479 @@
+<?xml version="1.0" encoding="ascii"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+          "DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+  <title>TEES.Utils.ElementTreeUtils</title>
+  <link rel="stylesheet" href="epydoc.css" type="text/css" />
+  <script type="text/javascript" src="epydoc.js"></script>
+</head>
+
+<body bgcolor="white" text="black" link="blue" vlink="#204080"
+      alink="#204080">
+<!-- ==================== NAVIGATION BAR ==================== -->
+<table class="navbar" border="0" width="100%" cellpadding="0"
+       bgcolor="#a0c0ff" cellspacing="0">
+  <tr valign="middle">
+  <!-- Home link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="TEES-module.html">Home</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Tree link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="module-tree.html">Trees</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Index link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="identifier-index.html">Indices</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Help link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="help.html">Help</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Project homepage -->
+      <th class="navbar" align="right" width="100%">
+        <table border="0" cellpadding="0" cellspacing="0">
+          <tr><th class="navbar" align="center"
+            >Turku Event Extraction System</th>
+          </tr></table></th>
+  </tr>
+</table>
+<table width="100%" cellpadding="0" cellspacing="0">
+  <tr valign="top">
+    <td width="100%">
+      <span class="breadcrumbs">
+        <a href="TEES-module.html">Package&nbsp;TEES</a> ::
+        <a href="TEES.Utils-module.html">Package&nbsp;Utils</a> ::
+        Module&nbsp;ElementTreeUtils
+      </span>
+    </td>
+    <td>
+      <table cellpadding="0" cellspacing="0">
+        <!-- hide/show private -->
+        <tr><td align="right"><span class="options">[<a href="javascript:void(0);" class="privatelink"
+    onclick="toggle_private();">hide&nbsp;private</a>]</span></td></tr>
+      </table>
+    </td>
+  </tr>
+</table>
+<!-- ==================== MODULE DESCRIPTION ==================== -->
+<h1 class="epydoc">Module ElementTreeUtils</h1><p class="nomargin-top"><span class="codelink"><a href="TEES.Utils.ElementTreeUtils-pysrc.html">source&nbsp;code</a></span></p>
+<pre class="literalblock">
+
+Functions for easier use of cElementTree.
+
+  Program:    cElementTree Utilities
+  Date:       Oct. 16, 2007
+  Author:     Jari Bjoerne
+
+  Description: Convenience functions for easier use of cElementTree.
+
+</pre>
+
+<hr />
+<div class="fields">      <p><strong>Version:</strong>
+        $Revision: 1.20 $
+      </p>
+</div><!-- ==================== CLASSES ==================== -->
+<a name="section-Classes"></a>
+<table class="summary" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr bgcolor="#70b0f0" class="table-header">
+  <td colspan="2" class="table-header">
+    <table border="0" cellpadding="0" cellspacing="0" width="100%">
+      <tr valign="top">
+        <td align="left"><span class="table-header">Classes</span></td>
+        <td align="right" valign="top"
+         ><span class="options">[<a href="#section-Classes"
+         class="privatelink" onclick="toggle_private();"
+         >hide private</a>]</span></td>
+      </tr>
+    </table>
+  </td>
+</tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a href="TEES.Utils.ElementTreeUtils.ETWriter-class.html" class="summary-name">ETWriter</a>
+    </td>
+  </tr>
+</table>
+<!-- ==================== FUNCTIONS ==================== -->
+<a name="section-Functions"></a>
+<table class="summary" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr bgcolor="#70b0f0" class="table-header">
+  <td colspan="2" class="table-header">
+    <table border="0" cellpadding="0" cellspacing="0" width="100%">
+      <tr valign="top">
+        <td align="left"><span class="table-header">Functions</span></td>
+        <td align="right" valign="top"
+         ><span class="options">[<a href="#section-Functions"
+         class="privatelink" onclick="toggle_private();"
+         >hide private</a>]</span></td>
+      </tr>
+    </table>
+  </td>
+</tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="removeAll"></a><span class="summary-sig-name">removeAll</span>(<span class="summary-sig-arg">element</span>)</span></td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="TEES.Utils.ElementTreeUtils-pysrc.html#removeAll">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a href="TEES.Utils.ElementTreeUtils-module.html#iterparse" class="summary-sig-name">iterparse</a>(<span class="summary-sig-arg">file</span>,
+        <span class="summary-sig-arg">elementName</span>,
+        <span class="summary-sig-arg">callback</span>,
+        <span class="summary-sig-arg">limit</span>=<span class="summary-sig-default">-1</span>)</span><br />
+      Parse iteratively xml-files</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="TEES.Utils.ElementTreeUtils-pysrc.html#iterparse">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a href="TEES.Utils.ElementTreeUtils-module.html#indent" class="summary-sig-name">indent</a>(<span class="summary-sig-arg">elem</span>,
+        <span class="summary-sig-arg">level</span>=<span class="summary-sig-default">0</span>)</span><br />
+      indent-function as defined in cElementTree-documentation</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="TEES.Utils.ElementTreeUtils-pysrc.html#indent">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="ETFromObj"></a><span class="summary-sig-name">ETFromObj</span>(<span class="summary-sig-arg">obj</span>)</span><br />
+      obj can be 1) a string that ends with .xml -&gt; the file is parsed 
+      and the resulting ElementTree returned 2) a string that ends with 
+      .xml.gz -&gt; the file is unzipped, parsed, and the resulting 
+      ElementTree is returned 3) an open input stream -&gt; the input is 
+      parsed and the resulting ElementTree is returned 4) an ElementTree or
+      an Element -&gt; obj is returned as-is, nothing is done</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="TEES.Utils.ElementTreeUtils-pysrc.html#ETFromObj">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="ETIteratorFromObj"></a><span class="summary-sig-name">ETIteratorFromObj</span>(<span class="summary-sig-arg">obj</span>,
+        <span class="summary-sig-arg">events</span>=<span class="summary-sig-default">None</span>,
+        <span class="summary-sig-arg">parser</span>=<span class="summary-sig-default">None</span>)</span><br />
+      obj can be 1) a string that ends with .xml -&gt; the file is parsed 
+      and the resulting ElementTree returned 2) a string that ends with 
+      .xml.gz -&gt; the file is unzipped, parsed, and the resulting 
+      ElementTree is returned 3) an open input stream -&gt; the input is 
+      parsed and the resulting ElementTree is returned 4) an ElementTree or
+      an Element -&gt; obj is returned as-is, nothing is done</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="TEES.Utils.ElementTreeUtils-pysrc.html#ETIteratorFromObj">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="write"></a><span class="summary-sig-name">write</span>(<span class="summary-sig-arg">rootElement</span>,
+        <span class="summary-sig-arg">filename</span>)</span></td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="TEES.Utils.ElementTreeUtils-pysrc.html#write">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="encodeNewlines"></a><span class="summary-sig-name">encodeNewlines</span>(<span class="summary-sig-arg">filename</span>)</span></td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="TEES.Utils.ElementTreeUtils-pysrc.html#encodeNewlines">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="makePath"></a><span class="summary-sig-name">makePath</span>(<span class="summary-sig-arg">element</span>,
+        <span class="summary-sig-arg">tagList</span>)</span></td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="TEES.Utils.ElementTreeUtils-pysrc.html#makePath">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="toStr"></a><span class="summary-sig-name">toStr</span>(<span class="summary-sig-arg">element</span>,
+        <span class="summary-sig-arg">recursive</span>=<span class="summary-sig-default">True</span>,
+        <span class="summary-sig-arg">removePreTag</span>=<span class="summary-sig-default">True</span>)</span></td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="TEES.Utils.ElementTreeUtils-pysrc.html#toStr">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="getElementByAttrib"></a><span class="summary-sig-name">getElementByAttrib</span>(<span class="summary-sig-arg">parent</span>,
+        <span class="summary-sig-arg">tag</span>,
+        <span class="summary-sig-arg">attDict</span>)</span></td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="TEES.Utils.ElementTreeUtils-pysrc.html#getElementByAttrib">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="setDefaultElement"></a><span class="summary-sig-name">setDefaultElement</span>(<span class="summary-sig-arg">parent</span>,
+        <span class="summary-sig-arg">name</span>)</span></td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="TEES.Utils.ElementTreeUtils-pysrc.html#setDefaultElement">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+</table>
+<!-- ==================== VARIABLES ==================== -->
+<a name="section-Variables"></a>
+<table class="summary" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr bgcolor="#70b0f0" class="table-header">
+  <td colspan="2" class="table-header">
+    <table border="0" cellpadding="0" cellspacing="0" width="100%">
+      <tr valign="top">
+        <td align="left"><span class="table-header">Variables</span></td>
+        <td align="right" valign="top"
+         ><span class="options">[<a href="#section-Variables"
+         class="privatelink" onclick="toggle_private();"
+         >hide private</a>]</span></td>
+      </tr>
+    </table>
+  </td>
+</tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+        <a name="__package__"></a><span class="summary-name">__package__</span> = <code title="'TEES.Utils'"><code class="variable-quote">'</code><code class="variable-string">TEES.Utils</code><code class="variable-quote">'</code></code>
+    </td>
+  </tr>
+</table>
+<!-- ==================== FUNCTION DETAILS ==================== -->
+<a name="section-FunctionDetails"></a>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr bgcolor="#70b0f0" class="table-header">
+  <td colspan="2" class="table-header">
+    <table border="0" cellpadding="0" cellspacing="0" width="100%">
+      <tr valign="top">
+        <td align="left"><span class="table-header">Function Details</span></td>
+        <td align="right" valign="top"
+         ><span class="options">[<a href="#section-FunctionDetails"
+         class="privatelink" onclick="toggle_private();"
+         >hide private</a>]</span></td>
+      </tr>
+    </table>
+  </td>
+</tr>
+</table>
+<a name="iterparse"></a>
+<div>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr><td>
+  <table width="100%" cellpadding="0" cellspacing="0" border="0">
+  <tr valign="top"><td>
+  <h3 class="epydoc"><span class="sig"><span class="sig-name">iterparse</span>(<span class="sig-arg">file</span>,
+        <span class="sig-arg">elementName</span>,
+        <span class="sig-arg">callback</span>,
+        <span class="sig-arg">limit</span>=<span class="sig-default">-1</span>)</span>
+  </h3>
+  </td><td align="right" valign="top"
+    ><span class="codelink"><a href="TEES.Utils.ElementTreeUtils-pysrc.html#iterparse">source&nbsp;code</a></span>&nbsp;
+    </td>
+  </tr></table>
+  
+  <pre class="literalblock">
+Parse iteratively xml-files
+
+This function offers a simple way to use the cElementTree
+iterparse-function the way it is often used.
+
+Keyword arguments:
+file -- (file) file or file-like object to parse 
+elementName -- (string) matching elements are passed to the callback
+callback -- (function) called when parser has parsed an element
+            of name elementName
+limit -- (int) stop after reading &quot;limit&quot; elements. If -1, read
+         until end of file. This is mostly useful when debugging
+         programs that parse large files.
+
+</pre>
+  <dl class="fields">
+  </dl>
+</td></tr></table>
+</div>
+<a name="indent"></a>
+<div>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr><td>
+  <table width="100%" cellpadding="0" cellspacing="0" border="0">
+  <tr valign="top"><td>
+  <h3 class="epydoc"><span class="sig"><span class="sig-name">indent</span>(<span class="sig-arg">elem</span>,
+        <span class="sig-arg">level</span>=<span class="sig-default">0</span>)</span>
+  </h3>
+  </td><td align="right" valign="top"
+    ><span class="codelink"><a href="TEES.Utils.ElementTreeUtils-pysrc.html#indent">source&nbsp;code</a></span>&nbsp;
+    </td>
+  </tr></table>
+  
+  <p>indent-function as defined in cElementTree-documentation</p>
+  <p>This function will become part of cElementTree in some future release.
+  Until then, it can be used from here. This function indents the xml-tree,
+  so that it is more readable when written out.</p>
+  <p>Keyword arguments: elem -- (Element) root of the tree to indent level 
+  -- (int) starting level of indentation</p>
+  <dl class="fields">
+  </dl>
+</td></tr></table>
+</div>
+<br />
+<!-- ==================== NAVIGATION BAR ==================== -->
+<table class="navbar" border="0" width="100%" cellpadding="0"
+       bgcolor="#a0c0ff" cellspacing="0">
+  <tr valign="middle">
+  <!-- Home link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="TEES-module.html">Home</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Tree link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="module-tree.html">Trees</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Index link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="identifier-index.html">Indices</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Help link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="help.html">Help</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Project homepage -->
+      <th class="navbar" align="right" width="100%">
+        <table border="0" cellpadding="0" cellspacing="0">
+          <tr><th class="navbar" align="center"
+            >Turku Event Extraction System</th>
+          </tr></table></th>
+  </tr>
+</table>
+<table border="0" cellpadding="0" cellspacing="0" width="100%%">
+  <tr>
+    <td align="left" class="footer">
+    Generated by Epydoc 3.0.1 on Thu Jul 19 18:20:41 2012
+    </td>
+    <td align="right" class="footer">
+      <a target="mainFrame" href="http://epydoc.sourceforge.net"
+        >http://epydoc.sourceforge.net</a>
+    </td>
+  </tr>
+</table>
+
+<script type="text/javascript">
+  <!--
+  // Private objects are initially displayed (because if
+  // javascript is turned off then we want them to be
+  // visible); but by default, we want to hide them.  So hide
+  // them unless we have a cookie that says to show them.
+  checkCookie();
+  // -->
+</script>
+</body>
+</html>

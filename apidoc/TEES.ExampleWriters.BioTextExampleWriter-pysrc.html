@@ -1,0 +1,288 @@
+<?xml version="1.0" encoding="ascii"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+          "DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+  <title>TEES.ExampleWriters.BioTextExampleWriter</title>
+  <link rel="stylesheet" href="epydoc.css" type="text/css" />
+  <script type="text/javascript" src="epydoc.js"></script>
+</head>
+
+<body bgcolor="white" text="black" link="blue" vlink="#204080"
+      alink="#204080">
+<!-- ==================== NAVIGATION BAR ==================== -->
+<table class="navbar" border="0" width="100%" cellpadding="0"
+       bgcolor="#a0c0ff" cellspacing="0">
+  <tr valign="middle">
+  <!-- Home link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="TEES-module.html">Home</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Tree link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="module-tree.html">Trees</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Index link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="identifier-index.html">Indices</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Help link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="help.html">Help</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Project homepage -->
+      <th class="navbar" align="right" width="100%">
+        <table border="0" cellpadding="0" cellspacing="0">
+          <tr><th class="navbar" align="center"
+            >Turku Event Extraction System</th>
+          </tr></table></th>
+  </tr>
+</table>
+<table width="100%" cellpadding="0" cellspacing="0">
+  <tr valign="top">
+    <td width="100%">
+      <span class="breadcrumbs">
+        <a href="TEES-module.html">Package&nbsp;TEES</a> ::
+        <a href="TEES.ExampleWriters-module.html">Package&nbsp;ExampleWriters</a> ::
+        Module&nbsp;BioTextExampleWriter
+      </span>
+    </td>
+    <td>
+      <table cellpadding="0" cellspacing="0">
+        <!-- hide/show private -->
+        <tr><td align="right"><span class="options">[<a href="javascript:void(0);" class="privatelink"
+    onclick="toggle_private();">hide&nbsp;private</a>]</span></td></tr>
+      </table>
+    </td>
+  </tr>
+</table>
+<h1 class="epydoc">Source Code for <a href="TEES.ExampleWriters.BioTextExampleWriter-module.html">Module TEES.ExampleWriters.BioTextExampleWriter</a></h1>
+<pre class="py-src">
+<a name="L1"></a><tt class="py-lineno"> 1</tt>  <tt class="py-line"><tt class="py-docstring">"""</tt> </tt>
+<a name="L2"></a><tt class="py-lineno"> 2</tt>  <tt class="py-line"><tt class="py-docstring">Wrapper for all interaction XML example writers</tt> </tt>
+<a name="L3"></a><tt class="py-lineno"> 3</tt>  <tt class="py-line"><tt class="py-docstring">"""</tt> </tt>
+<a name="L4"></a><tt class="py-lineno"> 4</tt>  <tt class="py-line"><tt class="py-keyword">import</tt> <tt class="py-name">sys</tt><tt class="py-op">,</tt> <tt class="py-name">os</tt><tt class="py-op">,</tt> <tt class="py-name">types</tt> </tt>
+<a name="L5"></a><tt class="py-lineno"> 5</tt>  <tt class="py-line"><tt id="link-0" class="py-name" targets="Variable TEES.Core.RecallAdjust.thisPath=TEES.Core.RecallAdjust-module.html#thisPath,Variable TEES.Detectors.Preprocessor.thisPath=TEES.Detectors.Preprocessor-module.html#thisPath,Variable TEES.Evaluators.BioNLP11GeniaTools.thisPath=TEES.Evaluators.BioNLP11GeniaTools-module.html#thisPath,Variable TEES.ExampleBuilders.EdgeExampleBuilder.thisPath=TEES.ExampleBuilders.EdgeExampleBuilder-module.html#thisPath,Variable TEES.ExampleBuilders.EntityExampleBuilder.thisPath=TEES.ExampleBuilders.EntityExampleBuilder-module.html#thisPath,Variable TEES.ExampleBuilders.FeatureBuilders.GiulianoFeatureBuilder.thisPath=TEES.ExampleBuilders.FeatureBuilders.GiulianoFeatureBuilder-module.html#thisPath,Variable TEES.ExampleBuilders.FeatureBuilders.NameGazetteer.thisPath=TEES.ExampleBuilders.FeatureBuilders.NameGazetteer-module.html#thisPath,Variable TEES.ExampleBuilders.ModifierExampleBuilder.thisPath=TEES.ExampleBuilders.ModifierExampleBuilder-module.html#thisPath,Variable TEES.ExampleBuilders.PhraseTriggerExampleBuilder.thisPath=TEES.ExampleBuilders.PhraseTriggerExampleBuilder-module.html#thisPath,Variable TEES.ExampleBuilders.UnmergingExampleBuilder.thisPath=TEES.ExampleBuilders.UnmergingExampleBuilder-module.html#thisPath,Variable TEES.ExampleWriters.BioTextExampleWriter.thisPath=TEES.ExampleWriters.BioTextExampleWriter-module.html#thisPath,Variable TEES.ExampleWriters.SentenceExampleWriter.thisPath=TEES.ExampleWriters.SentenceExampleWriter-module.html#thisPath,Variable TEES.Tools.GeniaSentenceSplitter.thisPath=TEES.Tools.GeniaSentenceSplitter-module.html#thisPath,Variable TEES.Utils.Convert.DDITools.thisPath=TEES.Utils.Convert.DDITools-module.html#thisPath,Variable TEES.Utils.Convert.convertBioNLP.thisPath=TEES.Utils.Convert.convertBioNLP-module.html#thisPath,Variable TEES.Utils.Convert.convertDDI.thisPath=TEES.Utils.Convert.convertDDI-module.html#thisPath,Variable TEES.Utils.FindHeads.thisPath=TEES.Utils.FindHeads-module.html#thisPath,Variable TEES.Utils.InteractionXML.Catenate.thisPath=TEES.Utils.InteractionXML.Catenate-module.html#thisPath,Variable TEES.Utils.InteractionXML.CorpusElements.thisPath=TEES.Utils.InteractionXML.CorpusElements-module.html#thisPath,Variable TEES.Utils.InteractionXML.DeleteElements.thisPath=TEES.Utils.InteractionXML.DeleteElements-module.html#thisPath,Variable TEES.Utils.InteractionXML.DivideSets.thisPath=TEES.Utils.InteractionXML.DivideSets-module.html#thisPath,Variable TEES.Utils.InteractionXML.MergeDuplicateEntities.thisPath=TEES.Utils.InteractionXML.MergeDuplicateEntities-module.html#thisPath,Variable TEES.Utils.InteractionXML.MixSets.thisPath=TEES.Utils.InteractionXML.MixSets-module.html#thisPath,Variable TEES.Utils.InteractionXML.RemoveUnconnectedEntities.thisPath=TEES.Utils.InteractionXML.RemoveUnconnectedEntities-module.html#thisPath,Variable TEES.Utils.InteractionXML.Subset.thisPath=TEES.Utils.InteractionXML.Subset-module.html#thisPath,Variable TEES.Utils.STFormat.ConvertXML.thisPath=TEES.Utils.STFormat.ConvertXML-module.html#thisPath,Variable TEES.Utils.STFormat.Equiv.thisPath=TEES.Utils.STFormat.Equiv-module.html#thisPath,Variable TEES.Utils.STFormat.RoundTrip.thisPath=TEES.Utils.STFormat.RoundTrip-module.html#thisPath,Variable TEES.Utils.STFormat.Scores.thisPath=TEES.Utils.STFormat.Scores-module.html#thisPath"><a title="TEES.Core.RecallAdjust.thisPath
+TEES.Detectors.Preprocessor.thisPath
+TEES.Evaluators.BioNLP11GeniaTools.thisPath
+TEES.ExampleBuilders.EdgeExampleBuilder.thisPath
+TEES.ExampleBuilders.EntityExampleBuilder.thisPath
+TEES.ExampleBuilders.FeatureBuilders.GiulianoFeatureBuilder.thisPath
+TEES.ExampleBuilders.FeatureBuilders.NameGazetteer.thisPath
+TEES.ExampleBuilders.ModifierExampleBuilder.thisPath
+TEES.ExampleBuilders.PhraseTriggerExampleBuilder.thisPath
+TEES.ExampleBuilders.UnmergingExampleBuilder.thisPath
+TEES.ExampleWriters.BioTextExampleWriter.thisPath
+TEES.ExampleWriters.SentenceExampleWriter.thisPath
+TEES.Tools.GeniaSentenceSplitter.thisPath
+TEES.Utils.Convert.DDITools.thisPath
+TEES.Utils.Convert.convertBioNLP.thisPath
+TEES.Utils.Convert.convertDDI.thisPath
+TEES.Utils.FindHeads.thisPath
+TEES.Utils.InteractionXML.Catenate.thisPath
+TEES.Utils.InteractionXML.CorpusElements.thisPath
+TEES.Utils.InteractionXML.DeleteElements.thisPath
+TEES.Utils.InteractionXML.DivideSets.thisPath
+TEES.Utils.InteractionXML.MergeDuplicateEntities.thisPath
+TEES.Utils.InteractionXML.MixSets.thisPath
+TEES.Utils.InteractionXML.RemoveUnconnectedEntities.thisPath
+TEES.Utils.InteractionXML.Subset.thisPath
+TEES.Utils.STFormat.ConvertXML.thisPath
+TEES.Utils.STFormat.Equiv.thisPath
+TEES.Utils.STFormat.RoundTrip.thisPath
+TEES.Utils.STFormat.Scores.thisPath" class="py-name" href="#" onclick="return doclink('link-0', 'thisPath', 'link-0');">thisPath</a></tt> <tt class="py-op">=</tt> <tt class="py-name">os</tt><tt class="py-op">.</tt><tt class="py-name">path</tt><tt class="py-op">.</tt><tt class="py-name">dirname</tt><tt class="py-op">(</tt><tt class="py-name">os</tt><tt class="py-op">.</tt><tt class="py-name">path</tt><tt class="py-op">.</tt><tt class="py-name">abspath</tt><tt class="py-op">(</tt><tt class="py-name">__file__</tt><tt class="py-op">)</tt><tt class="py-op">)</tt> </tt>
+<a name="L6"></a><tt class="py-lineno"> 6</tt>  <tt class="py-line"><tt class="py-name">sys</tt><tt class="py-op">.</tt><tt class="py-name">path</tt><tt class="py-op">.</tt><tt class="py-name">append</tt><tt class="py-op">(</tt><tt class="py-name">os</tt><tt class="py-op">.</tt><tt class="py-name">path</tt><tt class="py-op">.</tt><tt class="py-name">abspath</tt><tt class="py-op">(</tt><tt class="py-name">os</tt><tt class="py-op">.</tt><tt class="py-name">path</tt><tt class="py-op">.</tt><tt class="py-name">join</tt><tt class="py-op">(</tt><tt id="link-1" class="py-name"><a title="TEES.Core.RecallAdjust.thisPath
+TEES.Detectors.Preprocessor.thisPath
+TEES.Evaluators.BioNLP11GeniaTools.thisPath
+TEES.ExampleBuilders.EdgeExampleBuilder.thisPath
+TEES.ExampleBuilders.EntityExampleBuilder.thisPath
+TEES.ExampleBuilders.FeatureBuilders.GiulianoFeatureBuilder.thisPath
+TEES.ExampleBuilders.FeatureBuilders.NameGazetteer.thisPath
+TEES.ExampleBuilders.ModifierExampleBuilder.thisPath
+TEES.ExampleBuilders.PhraseTriggerExampleBuilder.thisPath
+TEES.ExampleBuilders.UnmergingExampleBuilder.thisPath
+TEES.ExampleWriters.BioTextExampleWriter.thisPath
+TEES.ExampleWriters.SentenceExampleWriter.thisPath
+TEES.Tools.GeniaSentenceSplitter.thisPath
+TEES.Utils.Convert.DDITools.thisPath
+TEES.Utils.Convert.convertBioNLP.thisPath
+TEES.Utils.Convert.convertDDI.thisPath
+TEES.Utils.FindHeads.thisPath
+TEES.Utils.InteractionXML.Catenate.thisPath
+TEES.Utils.InteractionXML.CorpusElements.thisPath
+TEES.Utils.InteractionXML.DeleteElements.thisPath
+TEES.Utils.InteractionXML.DivideSets.thisPath
+TEES.Utils.InteractionXML.MergeDuplicateEntities.thisPath
+TEES.Utils.InteractionXML.MixSets.thisPath
+TEES.Utils.InteractionXML.RemoveUnconnectedEntities.thisPath
+TEES.Utils.InteractionXML.Subset.thisPath
+TEES.Utils.STFormat.ConvertXML.thisPath
+TEES.Utils.STFormat.Equiv.thisPath
+TEES.Utils.STFormat.RoundTrip.thisPath
+TEES.Utils.STFormat.Scores.thisPath" class="py-name" href="#" onclick="return doclink('link-1', 'thisPath', 'link-0');">thisPath</a></tt><tt class="py-op">,</tt><tt class="py-string">".."</tt><tt class="py-op">)</tt><tt class="py-op">)</tt><tt class="py-op">)</tt> </tt>
+<a name="L7"></a><tt class="py-lineno"> 7</tt>  <tt class="py-line"><tt class="py-keyword">import</tt> <tt id="link-2" class="py-name" targets="Package TEES.Core=TEES.Core-module.html"><a title="TEES.Core" class="py-name" href="#" onclick="return doclink('link-2', 'Core', 'link-2');">Core</a></tt><tt class="py-op">.</tt><tt id="link-3" class="py-name" targets="Module TEES.Core.ExampleUtils=TEES.Core.ExampleUtils-module.html"><a title="TEES.Core.ExampleUtils" class="py-name" href="#" onclick="return doclink('link-3', 'ExampleUtils', 'link-3');">ExampleUtils</a></tt> <tt class="py-keyword">as</tt> <tt id="link-4" class="py-name"><a title="TEES.Core.ExampleUtils" class="py-name" href="#" onclick="return doclink('link-4', 'ExampleUtils', 'link-3');">ExampleUtils</a></tt> </tt>
+<a name="L8"></a><tt class="py-lineno"> 8</tt>  <tt class="py-line"> </tt>
+<a name="L9"></a><tt class="py-lineno"> 9</tt>  <tt class="py-line"><tt class="py-keyword">from</tt> <tt id="link-5" class="py-name" targets="Module TEES.ExampleWriters.EntityExampleWriter=TEES.ExampleWriters.EntityExampleWriter-module.html,Class TEES.ExampleWriters.EntityExampleWriter.EntityExampleWriter=TEES.ExampleWriters.EntityExampleWriter.EntityExampleWriter-class.html"><a title="TEES.ExampleWriters.EntityExampleWriter
+TEES.ExampleWriters.EntityExampleWriter.EntityExampleWriter" class="py-name" href="#" onclick="return doclink('link-5', 'EntityExampleWriter', 'link-5');">EntityExampleWriter</a></tt> <tt class="py-keyword">import</tt> <tt id="link-6" class="py-name"><a title="TEES.ExampleWriters.EntityExampleWriter
+TEES.ExampleWriters.EntityExampleWriter.EntityExampleWriter" class="py-name" href="#" onclick="return doclink('link-6', 'EntityExampleWriter', 'link-5');">EntityExampleWriter</a></tt> </tt>
+<a name="L10"></a><tt class="py-lineno">10</tt>  <tt class="py-line"><tt class="py-keyword">from</tt> <tt id="link-7" class="py-name" targets="Module TEES.ExampleWriters.EdgeExampleWriter=TEES.ExampleWriters.EdgeExampleWriter-module.html,Class TEES.ExampleWriters.EdgeExampleWriter.EdgeExampleWriter=TEES.ExampleWriters.EdgeExampleWriter.EdgeExampleWriter-class.html"><a title="TEES.ExampleWriters.EdgeExampleWriter
+TEES.ExampleWriters.EdgeExampleWriter.EdgeExampleWriter" class="py-name" href="#" onclick="return doclink('link-7', 'EdgeExampleWriter', 'link-7');">EdgeExampleWriter</a></tt> <tt class="py-keyword">import</tt> <tt id="link-8" class="py-name"><a title="TEES.ExampleWriters.EdgeExampleWriter
+TEES.ExampleWriters.EdgeExampleWriter.EdgeExampleWriter" class="py-name" href="#" onclick="return doclink('link-8', 'EdgeExampleWriter', 'link-7');">EdgeExampleWriter</a></tt> </tt>
+<a name="L11"></a><tt class="py-lineno">11</tt>  <tt class="py-line"><tt class="py-keyword">from</tt> <tt id="link-9" class="py-name" targets="Module TEES.ExampleWriters.ModifierExampleWriter=TEES.ExampleWriters.ModifierExampleWriter-module.html,Class TEES.ExampleWriters.ModifierExampleWriter.ModifierExampleWriter=TEES.ExampleWriters.ModifierExampleWriter.ModifierExampleWriter-class.html"><a title="TEES.ExampleWriters.ModifierExampleWriter
+TEES.ExampleWriters.ModifierExampleWriter.ModifierExampleWriter" class="py-name" href="#" onclick="return doclink('link-9', 'ModifierExampleWriter', 'link-9');">ModifierExampleWriter</a></tt> <tt class="py-keyword">import</tt> <tt id="link-10" class="py-name"><a title="TEES.ExampleWriters.ModifierExampleWriter
+TEES.ExampleWriters.ModifierExampleWriter.ModifierExampleWriter" class="py-name" href="#" onclick="return doclink('link-10', 'ModifierExampleWriter', 'link-9');">ModifierExampleWriter</a></tt> </tt>
+<a name="L12"></a><tt class="py-lineno">12</tt>  <tt class="py-line"><tt class="py-keyword">from</tt> <tt id="link-11" class="py-name" targets="Module TEES.ExampleWriters.PhraseTriggerExampleWriter=TEES.ExampleWriters.PhraseTriggerExampleWriter-module.html,Class TEES.ExampleWriters.PhraseTriggerExampleWriter.PhraseTriggerExampleWriter=TEES.ExampleWriters.PhraseTriggerExampleWriter.PhraseTriggerExampleWriter-class.html"><a title="TEES.ExampleWriters.PhraseTriggerExampleWriter
+TEES.ExampleWriters.PhraseTriggerExampleWriter.PhraseTriggerExampleWriter" class="py-name" href="#" onclick="return doclink('link-11', 'PhraseTriggerExampleWriter', 'link-11');">PhraseTriggerExampleWriter</a></tt> <tt class="py-keyword">import</tt> <tt id="link-12" class="py-name"><a title="TEES.ExampleWriters.PhraseTriggerExampleWriter
+TEES.ExampleWriters.PhraseTriggerExampleWriter.PhraseTriggerExampleWriter" class="py-name" href="#" onclick="return doclink('link-12', 'PhraseTriggerExampleWriter', 'link-11');">PhraseTriggerExampleWriter</a></tt> </tt>
+<a name="L13"></a><tt class="py-lineno">13</tt>  <tt class="py-line"><tt class="py-comment">#IF LOCAL</tt> </tt>
+<a name="L14"></a><tt class="py-lineno">14</tt>  <tt class="py-line"><tt class="py-keyword">from</tt> <tt id="link-13" class="py-name" targets="Module TEES.ExampleWriters.UnmergingExampleWriter=TEES.ExampleWriters.UnmergingExampleWriter-module.html,Class TEES.ExampleWriters.UnmergingExampleWriter.UnmergingExampleWriter=TEES.ExampleWriters.UnmergingExampleWriter.UnmergingExampleWriter-class.html"><a title="TEES.ExampleWriters.UnmergingExampleWriter
+TEES.ExampleWriters.UnmergingExampleWriter.UnmergingExampleWriter" class="py-name" href="#" onclick="return doclink('link-13', 'UnmergingExampleWriter', 'link-13');">UnmergingExampleWriter</a></tt> <tt class="py-keyword">import</tt> <tt id="link-14" class="py-name"><a title="TEES.ExampleWriters.UnmergingExampleWriter
+TEES.ExampleWriters.UnmergingExampleWriter.UnmergingExampleWriter" class="py-name" href="#" onclick="return doclink('link-14', 'UnmergingExampleWriter', 'link-13');">UnmergingExampleWriter</a></tt> </tt>
+<a name="BioTextExampleWriter"></a><div id="BioTextExampleWriter-def"><a name="L15"></a><tt class="py-lineno">15</tt>  <tt class="py-line"><tt class="py-comment">#from UnmergedEdgeExampleWriter import UnmergedEdgeExampleWriter</tt> </tt>
+<a name="L16"></a><tt class="py-lineno">16</tt>  <tt class="py-line"><tt class="py-comment">#from AsymmetricEventExampleWriter import AsymmetricEventExampleWriter</tt> </tt>
+<a name="L17"></a><tt class="py-lineno">17</tt>  <tt class="py-line"><tt class="py-comment">#ENDIF</tt> </tt>
+<a name="L18"></a><tt class="py-lineno">18</tt>  <tt class="py-line"> </tt>
+<a name="L19"></a><tt class="py-lineno">19</tt> <a class="py-toggle" href="#" id="BioTextExampleWriter-toggle" onclick="return toggle('BioTextExampleWriter');">-</a><tt class="py-line"><tt class="py-keyword">class</tt> <a class="py-def-name" href="TEES.ExampleWriters.BioTextExampleWriter.BioTextExampleWriter-class.html">BioTextExampleWriter</a><tt class="py-op">:</tt> </tt>
+</div><div id="BioTextExampleWriter-collapsed" style="display:none;" pad="++" indent="++++"></div><div id="BioTextExampleWriter-expanded"><a name="L20"></a><tt class="py-lineno">20</tt>  <tt class="py-line">    <tt class="py-docstring">"""</tt> </tt>
+<a name="L21"></a><tt class="py-lineno">21</tt>  <tt class="py-line"><tt class="py-docstring">    A generic example writer that automatically calls the correct Example Writer</tt> </tt>
+<a name="L22"></a><tt class="py-lineno">22</tt>  <tt class="py-line"><tt class="py-docstring">    based on the type of the examples.</tt> </tt>
+<a name="L23"></a><tt class="py-lineno">23</tt>  <tt class="py-line"><tt class="py-docstring">    """</tt> </tt>
+<a name="L24"></a><tt class="py-lineno">24</tt>  <tt class="py-line">    <tt class="py-decorator">@</tt><tt class="py-decorator">classmethod</tt> </tt>
+<a name="BioTextExampleWriter.write"></a><div id="BioTextExampleWriter.write-def"><a name="L25"></a><tt class="py-lineno">25</tt> <a class="py-toggle" href="#" id="BioTextExampleWriter.write-toggle" onclick="return toggle('BioTextExampleWriter.write');">-</a><tt class="py-line">    <tt class="py-keyword">def</tt> <a class="py-def-name" href="TEES.ExampleWriters.BioTextExampleWriter.BioTextExampleWriter-class.html#write">write</a><tt class="py-op">(</tt><tt class="py-param">cls</tt><tt class="py-op">,</tt> <tt class="py-param">examples</tt><tt class="py-op">,</tt> <tt class="py-param">predictions</tt><tt class="py-op">,</tt> <tt class="py-param">corpus</tt><tt class="py-op">,</tt> <tt class="py-param">outputFile</tt><tt class="py-op">,</tt> <tt class="py-param">classSet</tt><tt class="py-op">=</tt><tt class="py-name">None</tt><tt class="py-op">,</tt> <tt class="py-param">parse</tt><tt class="py-op">=</tt><tt class="py-name">None</tt><tt class="py-op">,</tt> <tt class="py-param">tokenization</tt><tt class="py-op">=</tt><tt class="py-name">None</tt><tt class="py-op">,</tt> <tt class="py-param">goldCorpus</tt><tt class="py-op">=</tt><tt class="py-name">None</tt><tt class="py-op">,</tt> <tt class="py-param">insertWeights</tt><tt class="py-op">=</tt><tt class="py-name">False</tt><tt class="py-op">)</tt><tt class="py-op">:</tt> </tt>
+</div><div id="BioTextExampleWriter.write-collapsed" style="display:none;" pad="++" indent="++++++++"></div><div id="BioTextExampleWriter.write-expanded"><a name="L26"></a><tt class="py-lineno">26</tt>  <tt class="py-line">        <tt class="py-keyword">if</tt> <tt id="link-15" class="py-name" targets="Variable TEES.Evaluators.AveragingMultiClassEvaluator.AveragingMultiClassEvaluator.type=TEES.Evaluators.AveragingMultiClassEvaluator.AveragingMultiClassEvaluator-class.html#type"><a title="TEES.Evaluators.AveragingMultiClassEvaluator.AveragingMultiClassEvaluator.type" class="py-name" href="#" onclick="return doclink('link-15', 'type', 'link-15');">type</a></tt><tt class="py-op">(</tt><tt class="py-name">examples</tt><tt class="py-op">)</tt> <tt class="py-op">==</tt> <tt class="py-name">types</tt><tt class="py-op">.</tt><tt class="py-name">StringType</tt><tt class="py-op">:</tt> </tt>
+<a name="L27"></a><tt class="py-lineno">27</tt>  <tt class="py-line">            <tt class="py-keyword">print</tt> <tt class="py-op">&gt;&gt;</tt> <tt class="py-name">sys</tt><tt class="py-op">.</tt><tt class="py-name">stderr</tt><tt class="py-op">,</tt> <tt class="py-string">"Reading examples from"</tt><tt class="py-op">,</tt> <tt class="py-name">examples</tt> </tt>
+<a name="L28"></a><tt class="py-lineno">28</tt>  <tt class="py-line">            <tt class="py-name">examples</tt> <tt class="py-op">=</tt> <tt id="link-16" class="py-name"><a title="TEES.Core.ExampleUtils" class="py-name" href="#" onclick="return doclink('link-16', 'ExampleUtils', 'link-3');">ExampleUtils</a></tt><tt class="py-op">.</tt><tt id="link-17" class="py-name" targets="Function TEES.Core.ExampleUtils.readExamples()=TEES.Core.ExampleUtils-module.html#readExamples"><a title="TEES.Core.ExampleUtils.readExamples" class="py-name" href="#" onclick="return doclink('link-17', 'readExamples', 'link-17');">readExamples</a></tt><tt class="py-op">(</tt><tt class="py-name">examples</tt><tt class="py-op">,</tt> <tt class="py-name">False</tt><tt class="py-op">)</tt> </tt>
+<a name="L29"></a><tt class="py-lineno">29</tt>  <tt class="py-line">         </tt>
+<a name="L30"></a><tt class="py-lineno">30</tt>  <tt class="py-line">        <tt class="py-comment"># This looks a bit strange, but should work with the re-iterable</tt> </tt>
+<a name="L31"></a><tt class="py-lineno">31</tt>  <tt class="py-line">        <tt class="py-comment"># generators that readExamples returns</tt> </tt>
+<a name="L32"></a><tt class="py-lineno">32</tt>  <tt class="py-line">        <tt class="py-name">xType</tt> <tt class="py-op">=</tt> <tt class="py-name">None</tt> </tt>
+<a name="L33"></a><tt class="py-lineno">33</tt>  <tt class="py-line">        <tt class="py-keyword">for</tt> <tt class="py-name">example</tt> <tt class="py-keyword">in</tt> <tt class="py-name">examples</tt><tt class="py-op">:</tt> </tt>
+<a name="L34"></a><tt class="py-lineno">34</tt>  <tt class="py-line">            <tt class="py-keyword">assert</tt> <tt class="py-name">example</tt><tt class="py-op">[</tt><tt class="py-number">3</tt><tt class="py-op">]</tt><tt class="py-op">.</tt><tt class="py-name">has_key</tt><tt class="py-op">(</tt><tt class="py-string">"xtype"</tt><tt class="py-op">)</tt> </tt>
+<a name="L35"></a><tt class="py-lineno">35</tt>  <tt class="py-line">            <tt class="py-name">xType</tt> <tt class="py-op">=</tt> <tt class="py-name">example</tt><tt class="py-op">[</tt><tt class="py-number">3</tt><tt class="py-op">]</tt><tt class="py-op">[</tt><tt class="py-string">"xtype"</tt><tt class="py-op">]</tt> </tt>
+<a name="L36"></a><tt class="py-lineno">36</tt>  <tt class="py-line">            <tt class="py-keyword">break</tt> </tt>
+<a name="L37"></a><tt class="py-lineno">37</tt>  <tt class="py-line">         </tt>
+<a name="L38"></a><tt class="py-lineno">38</tt>  <tt class="py-line">        <tt class="py-keyword">if</tt> <tt class="py-name">xType</tt> <tt class="py-op">==</tt> <tt class="py-string">"token"</tt><tt class="py-op">:</tt> </tt>
+<a name="L39"></a><tt class="py-lineno">39</tt>  <tt class="py-line">            <tt class="py-name">w</tt> <tt class="py-op">=</tt> <tt id="link-18" class="py-name"><a title="TEES.ExampleWriters.EntityExampleWriter
+TEES.ExampleWriters.EntityExampleWriter.EntityExampleWriter" class="py-name" href="#" onclick="return doclink('link-18', 'EntityExampleWriter', 'link-5');">EntityExampleWriter</a></tt><tt class="py-op">(</tt><tt class="py-op">)</tt> </tt>
+<a name="L40"></a><tt class="py-lineno">40</tt>  <tt class="py-line">            <tt class="py-keyword">if</tt> <tt class="py-name">insertWeights</tt><tt class="py-op">:</tt> </tt>
+<a name="L41"></a><tt class="py-lineno">41</tt>  <tt class="py-line">                <tt class="py-name">w</tt><tt class="py-op">.</tt><tt class="py-name">insertWeights</tt> <tt class="py-op">=</tt> <tt class="py-name">True</tt> </tt>
+<a name="L42"></a><tt class="py-lineno">42</tt>  <tt class="py-line">        <tt class="py-keyword">elif</tt> <tt class="py-name">xType</tt> <tt class="py-op">==</tt> <tt class="py-string">"edge"</tt><tt class="py-op">:</tt> </tt>
+<a name="L43"></a><tt class="py-lineno">43</tt>  <tt class="py-line">            <tt class="py-name">w</tt> <tt class="py-op">=</tt> <tt id="link-19" class="py-name"><a title="TEES.ExampleWriters.EdgeExampleWriter
+TEES.ExampleWriters.EdgeExampleWriter.EdgeExampleWriter" class="py-name" href="#" onclick="return doclink('link-19', 'EdgeExampleWriter', 'link-7');">EdgeExampleWriter</a></tt><tt class="py-op">(</tt><tt class="py-op">)</tt> </tt>
+<a name="L44"></a><tt class="py-lineno">44</tt>  <tt class="py-line">        <tt class="py-keyword">elif</tt> <tt class="py-name">xType</tt> <tt class="py-op">==</tt> <tt class="py-string">"task3"</tt><tt class="py-op">:</tt> </tt>
+<a name="L45"></a><tt class="py-lineno">45</tt>  <tt class="py-line">            <tt class="py-name">w</tt> <tt class="py-op">=</tt> <tt id="link-20" class="py-name"><a title="TEES.ExampleWriters.ModifierExampleWriter
+TEES.ExampleWriters.ModifierExampleWriter.ModifierExampleWriter" class="py-name" href="#" onclick="return doclink('link-20', 'ModifierExampleWriter', 'link-9');">ModifierExampleWriter</a></tt><tt class="py-op">(</tt><tt class="py-op">)</tt> </tt>
+<a name="L46"></a><tt class="py-lineno">46</tt>  <tt class="py-line">        <tt class="py-keyword">elif</tt> <tt class="py-name">xType</tt> <tt class="py-op">==</tt> <tt class="py-string">"entRel"</tt><tt class="py-op">:</tt> </tt>
+<a name="L47"></a><tt class="py-lineno">47</tt>  <tt class="py-line">            <tt class="py-name">w</tt> <tt class="py-op">=</tt> <tt class="py-name">EntityRelationExampleWriter</tt><tt class="py-op">(</tt><tt class="py-op">)</tt> </tt>
+<a name="L48"></a><tt class="py-lineno">48</tt>  <tt class="py-line">        <tt class="py-keyword">elif</tt> <tt class="py-name">xType</tt> <tt class="py-op">==</tt> <tt class="py-string">"phrase"</tt><tt class="py-op">:</tt> </tt>
+<a name="L49"></a><tt class="py-lineno">49</tt>  <tt class="py-line">            <tt class="py-name">w</tt> <tt class="py-op">=</tt> <tt id="link-21" class="py-name"><a title="TEES.ExampleWriters.PhraseTriggerExampleWriter
+TEES.ExampleWriters.PhraseTriggerExampleWriter.PhraseTriggerExampleWriter" class="py-name" href="#" onclick="return doclink('link-21', 'PhraseTriggerExampleWriter', 'link-11');">PhraseTriggerExampleWriter</a></tt><tt class="py-op">(</tt><tt class="py-op">)</tt> </tt>
+<a name="L50"></a><tt class="py-lineno">50</tt>  <tt class="py-line"><tt class="py-comment">#IF LOCAL</tt> </tt>
+<a name="L51"></a><tt class="py-lineno">51</tt>  <tt class="py-line">        <tt class="py-keyword">elif</tt> <tt class="py-name">xType</tt> <tt class="py-op">==</tt> <tt class="py-string">"um"</tt><tt class="py-op">:</tt> </tt>
+<a name="L52"></a><tt class="py-lineno">52</tt>  <tt class="py-line">            <tt class="py-name">w</tt> <tt class="py-op">=</tt> <tt id="link-22" class="py-name"><a title="TEES.ExampleWriters.UnmergingExampleWriter
+TEES.ExampleWriters.UnmergingExampleWriter.UnmergingExampleWriter" class="py-name" href="#" onclick="return doclink('link-22', 'UnmergingExampleWriter', 'link-13');">UnmergingExampleWriter</a></tt><tt class="py-op">(</tt><tt class="py-op">)</tt> </tt>
+<a name="L53"></a><tt class="py-lineno">53</tt>  <tt class="py-line">        <tt class="py-comment">#elif xType == "ue":</tt> </tt>
+<a name="L54"></a><tt class="py-lineno">54</tt>  <tt class="py-line">        <tt class="py-comment">#    w = UnmergedEdgeExampleWriter()</tt> </tt>
+<a name="L55"></a><tt class="py-lineno">55</tt>  <tt class="py-line">        <tt class="py-comment">#elif xType == "asym":</tt> </tt>
+<a name="L56"></a><tt class="py-lineno">56</tt>  <tt class="py-line">        <tt class="py-comment">#    w = AsymmetricEventExampleWriter()</tt> </tt>
+<a name="L57"></a><tt class="py-lineno">57</tt>  <tt class="py-line"><tt class="py-comment">#ENDIF</tt> </tt>
+<a name="L58"></a><tt class="py-lineno">58</tt>  <tt class="py-line">        <tt class="py-keyword">else</tt><tt class="py-op">:</tt> </tt>
+<a name="L59"></a><tt class="py-lineno">59</tt>  <tt class="py-line">            <tt class="py-keyword">assert</tt> <tt class="py-name">False</tt><tt class="py-op">,</tt> <tt class="py-op">(</tt><tt class="py-string">"Unknown entity type"</tt><tt class="py-op">,</tt> <tt class="py-name">xType</tt><tt class="py-op">)</tt> </tt>
+<a name="L60"></a><tt class="py-lineno">60</tt>  <tt class="py-line">        <tt class="py-keyword">return</tt> <tt class="py-name">w</tt><tt class="py-op">.</tt><tt id="link-23" class="py-name" targets="Method TEES.ExampleWriters.ModifierExampleWriter.ModifierExampleWriter.writeXML()=TEES.ExampleWriters.ModifierExampleWriter.ModifierExampleWriter-class.html#writeXML,Method TEES.ExampleWriters.SentenceExampleWriter.SentenceExampleWriter.writeXML()=TEES.ExampleWriters.SentenceExampleWriter.SentenceExampleWriter-class.html#writeXML"><a title="TEES.ExampleWriters.ModifierExampleWriter.ModifierExampleWriter.writeXML
+TEES.ExampleWriters.SentenceExampleWriter.SentenceExampleWriter.writeXML" class="py-name" href="#" onclick="return doclink('link-23', 'writeXML', 'link-23');">writeXML</a></tt><tt class="py-op">(</tt><tt class="py-name">examples</tt><tt class="py-op">,</tt> <tt class="py-name">predictions</tt><tt class="py-op">,</tt> <tt class="py-name">corpus</tt><tt class="py-op">,</tt> <tt class="py-name">outputFile</tt><tt class="py-op">,</tt> <tt class="py-name">classSet</tt><tt class="py-op">,</tt> <tt id="link-24" class="py-name" targets="Function TEES.Tools.BLLIPParser.parse()=TEES.Tools.BLLIPParser-module.html#parse"><a title="TEES.Tools.BLLIPParser.parse" class="py-name" href="#" onclick="return doclink('link-24', 'parse', 'link-24');">parse</a></tt><tt class="py-op">,</tt> <tt class="py-name">tokenization</tt><tt class="py-op">,</tt> <tt class="py-name">goldCorpus</tt><tt class="py-op">=</tt><tt class="py-name">goldCorpus</tt><tt class="py-op">)</tt> </tt>
+</div></div><a name="L61"></a><tt class="py-lineno">61</tt>  <tt class="py-line"> </tt>
+<a name="L62"></a><tt class="py-lineno">62</tt>  <tt class="py-line"><tt class="py-keyword">if</tt> <tt class="py-name">__name__</tt><tt class="py-op">==</tt><tt class="py-string">"__main__"</tt><tt class="py-op">:</tt> </tt>
+<a name="L63"></a><tt class="py-lineno">63</tt>  <tt class="py-line">    <tt class="py-comment"># Import Psyco if available</tt> </tt>
+<a name="L64"></a><tt class="py-lineno">64</tt>  <tt class="py-line">    <tt class="py-keyword">try</tt><tt class="py-op">:</tt> </tt>
+<a name="L65"></a><tt class="py-lineno">65</tt>  <tt class="py-line">        <tt class="py-keyword">import</tt> <tt class="py-name">psyco</tt> </tt>
+<a name="L66"></a><tt class="py-lineno">66</tt>  <tt class="py-line">        <tt class="py-name">psyco</tt><tt class="py-op">.</tt><tt class="py-name">full</tt><tt class="py-op">(</tt><tt class="py-op">)</tt> </tt>
+<a name="L67"></a><tt class="py-lineno">67</tt>  <tt class="py-line">        <tt class="py-keyword">print</tt> <tt class="py-op">&gt;&gt;</tt> <tt class="py-name">sys</tt><tt class="py-op">.</tt><tt class="py-name">stderr</tt><tt class="py-op">,</tt> <tt class="py-string">"Found Psyco, using"</tt> </tt>
+<a name="L68"></a><tt class="py-lineno">68</tt>  <tt class="py-line">    <tt class="py-keyword">except</tt> <tt class="py-name">ImportError</tt><tt class="py-op">:</tt> </tt>
+<a name="L69"></a><tt class="py-lineno">69</tt>  <tt class="py-line">        <tt class="py-keyword">print</tt> <tt class="py-op">&gt;&gt;</tt> <tt class="py-name">sys</tt><tt class="py-op">.</tt><tt class="py-name">stderr</tt><tt class="py-op">,</tt> <tt class="py-string">"Psyco not installed"</tt> </tt>
+<a name="L70"></a><tt class="py-lineno">70</tt>  <tt class="py-line">     </tt>
+<a name="L71"></a><tt class="py-lineno">71</tt>  <tt class="py-line">    <tt class="py-keyword">from</tt> <tt class="py-name">optparse</tt> <tt class="py-keyword">import</tt> <tt class="py-name">OptionParser</tt> </tt>
+<a name="L72"></a><tt class="py-lineno">72</tt>  <tt class="py-line">    <tt class="py-name">optparser</tt> <tt class="py-op">=</tt> <tt class="py-name">OptionParser</tt><tt class="py-op">(</tt><tt class="py-name">usage</tt><tt class="py-op">=</tt><tt class="py-string">"%prog [options]\nWrite predicted examples to interaction XML"</tt><tt class="py-op">)</tt> </tt>
+<a name="L73"></a><tt class="py-lineno">73</tt>  <tt class="py-line">    <tt class="py-name">optparser</tt><tt class="py-op">.</tt><tt class="py-name">add_option</tt><tt class="py-op">(</tt><tt class="py-string">"-e"</tt><tt class="py-op">,</tt> <tt class="py-string">"--examples"</tt><tt class="py-op">,</tt> <tt class="py-name">default</tt><tt class="py-op">=</tt><tt class="py-name">None</tt><tt class="py-op">,</tt> <tt class="py-name">dest</tt><tt class="py-op">=</tt><tt class="py-string">"examples"</tt><tt class="py-op">,</tt> <tt class="py-name">help</tt><tt class="py-op">=</tt><tt class="py-string">"Machine learning example file"</tt><tt class="py-op">,</tt> <tt class="py-name">metavar</tt><tt class="py-op">=</tt><tt class="py-string">"FILE"</tt><tt class="py-op">)</tt> </tt>
+<a name="L74"></a><tt class="py-lineno">74</tt>  <tt class="py-line">    <tt class="py-name">optparser</tt><tt class="py-op">.</tt><tt class="py-name">add_option</tt><tt class="py-op">(</tt><tt class="py-string">"-p"</tt><tt class="py-op">,</tt> <tt class="py-string">"--predictions"</tt><tt class="py-op">,</tt> <tt class="py-name">default</tt><tt class="py-op">=</tt><tt class="py-name">None</tt><tt class="py-op">,</tt> <tt class="py-name">dest</tt><tt class="py-op">=</tt><tt class="py-string">"predictions"</tt><tt class="py-op">,</tt> <tt class="py-name">help</tt><tt class="py-op">=</tt><tt class="py-string">"Classifier predictions for the example file"</tt><tt class="py-op">,</tt> <tt class="py-name">metavar</tt><tt class="py-op">=</tt><tt class="py-string">"FILE"</tt><tt class="py-op">)</tt> </tt>
+<a name="L75"></a><tt class="py-lineno">75</tt>  <tt class="py-line">    <tt class="py-name">optparser</tt><tt class="py-op">.</tt><tt class="py-name">add_option</tt><tt class="py-op">(</tt><tt class="py-string">"-i"</tt><tt class="py-op">,</tt> <tt class="py-string">"--classIds"</tt><tt class="py-op">,</tt> <tt class="py-name">default</tt><tt class="py-op">=</tt><tt class="py-name">None</tt><tt class="py-op">,</tt> <tt class="py-name">dest</tt><tt class="py-op">=</tt><tt class="py-string">"classIds"</tt><tt class="py-op">,</tt> <tt class="py-name">help</tt><tt class="py-op">=</tt><tt class="py-string">"Multiclass class Ids"</tt><tt class="py-op">)</tt> </tt>
+<a name="L76"></a><tt class="py-lineno">76</tt>  <tt class="py-line">    <tt class="py-name">optparser</tt><tt class="py-op">.</tt><tt class="py-name">add_option</tt><tt class="py-op">(</tt><tt class="py-string">"-c"</tt><tt class="py-op">,</tt> <tt class="py-string">"--corpus"</tt><tt class="py-op">,</tt> <tt class="py-name">default</tt><tt class="py-op">=</tt><tt class="py-name">None</tt><tt class="py-op">,</tt> <tt class="py-name">dest</tt><tt class="py-op">=</tt><tt class="py-string">"corpus"</tt><tt class="py-op">,</tt> <tt class="py-name">help</tt><tt class="py-op">=</tt><tt class="py-string">"Interaction XML file for adding examples to"</tt><tt class="py-op">,</tt> <tt class="py-name">metavar</tt><tt class="py-op">=</tt><tt class="py-string">"FILE"</tt><tt class="py-op">)</tt> </tt>
+<a name="L77"></a><tt class="py-lineno">77</tt>  <tt class="py-line">    <tt class="py-name">optparser</tt><tt class="py-op">.</tt><tt class="py-name">add_option</tt><tt class="py-op">(</tt><tt class="py-string">"-g"</tt><tt class="py-op">,</tt> <tt class="py-string">"--goldCorpus"</tt><tt class="py-op">,</tt> <tt class="py-name">default</tt><tt class="py-op">=</tt><tt class="py-name">None</tt><tt class="py-op">,</tt> <tt class="py-name">dest</tt><tt class="py-op">=</tt><tt class="py-string">"goldCorpus"</tt><tt class="py-op">,</tt> <tt class="py-name">help</tt><tt class="py-op">=</tt><tt class="py-string">"Interaction XML file with gold elements"</tt><tt class="py-op">,</tt> <tt class="py-name">metavar</tt><tt class="py-op">=</tt><tt class="py-string">"FILE"</tt><tt class="py-op">)</tt> </tt>
+<a name="L78"></a><tt class="py-lineno">78</tt>  <tt class="py-line">    <tt class="py-name">optparser</tt><tt class="py-op">.</tt><tt class="py-name">add_option</tt><tt class="py-op">(</tt><tt class="py-string">"-a"</tt><tt class="py-op">,</tt> <tt class="py-string">"--parse"</tt><tt class="py-op">,</tt> <tt class="py-name">default</tt><tt class="py-op">=</tt><tt class="py-string">"split-McClosky"</tt><tt class="py-op">,</tt> <tt class="py-name">dest</tt><tt class="py-op">=</tt><tt class="py-string">"parse"</tt><tt class="py-op">,</tt> <tt class="py-name">help</tt><tt class="py-op">=</tt><tt class="py-string">"Parse XML element name"</tt><tt class="py-op">)</tt> </tt>
+<a name="L79"></a><tt class="py-lineno">79</tt>  <tt class="py-line">    <tt class="py-name">optparser</tt><tt class="py-op">.</tt><tt class="py-name">add_option</tt><tt class="py-op">(</tt><tt class="py-string">"-t"</tt><tt class="py-op">,</tt> <tt class="py-string">"--tokenization"</tt><tt class="py-op">,</tt> <tt class="py-name">default</tt><tt class="py-op">=</tt><tt class="py-string">"split-McClosky"</tt><tt class="py-op">,</tt> <tt class="py-name">dest</tt><tt class="py-op">=</tt><tt class="py-string">"tokenization"</tt><tt class="py-op">,</tt> <tt class="py-name">help</tt><tt class="py-op">=</tt><tt class="py-string">"Tokenization XML element name"</tt><tt class="py-op">)</tt> </tt>
+<a name="L80"></a><tt class="py-lineno">80</tt>  <tt class="py-line">    <tt class="py-name">optparser</tt><tt class="py-op">.</tt><tt class="py-name">add_option</tt><tt class="py-op">(</tt><tt class="py-string">"-o"</tt><tt class="py-op">,</tt> <tt class="py-string">"--output"</tt><tt class="py-op">,</tt> <tt class="py-name">default</tt><tt class="py-op">=</tt><tt class="py-name">None</tt><tt class="py-op">,</tt> <tt class="py-name">dest</tt><tt class="py-op">=</tt><tt class="py-string">"output"</tt><tt class="py-op">,</tt> <tt class="py-name">help</tt><tt class="py-op">=</tt><tt class="py-string">"Output file"</tt><tt class="py-op">)</tt> </tt>
+<a name="L81"></a><tt class="py-lineno">81</tt>  <tt class="py-line">    <tt class="py-name">optparser</tt><tt class="py-op">.</tt><tt class="py-name">add_option</tt><tt class="py-op">(</tt><tt class="py-string">"-w"</tt><tt class="py-op">,</tt> <tt class="py-string">"--insertWeights"</tt><tt class="py-op">,</tt> <tt class="py-name">default</tt><tt class="py-op">=</tt><tt class="py-name">False</tt><tt class="py-op">,</tt> <tt class="py-name">action</tt><tt class="py-op">=</tt><tt class="py-string">"store_true"</tt><tt class="py-op">,</tt> <tt class="py-name">dest</tt><tt class="py-op">=</tt><tt class="py-string">"insertWeights"</tt><tt class="py-op">,</tt> <tt class="py-name">help</tt><tt class="py-op">=</tt><tt class="py-string">"Write weights for gold elements"</tt><tt class="py-op">)</tt> </tt>
+<a name="L82"></a><tt class="py-lineno">82</tt>  <tt class="py-line">    <tt class="py-comment">#optparser.add_option("-t", "--task", default=1, type="int", dest="task", help="task number")</tt> </tt>
+<a name="L83"></a><tt class="py-lineno">83</tt>  <tt class="py-line">    <tt class="py-op">(</tt><tt class="py-name">options</tt><tt class="py-op">,</tt> <tt class="py-name">args</tt><tt class="py-op">)</tt> <tt class="py-op">=</tt> <tt class="py-name">optparser</tt><tt class="py-op">.</tt><tt class="py-name">parse_args</tt><tt class="py-op">(</tt><tt class="py-op">)</tt> </tt>
+<a name="L84"></a><tt class="py-lineno">84</tt>  <tt class="py-line">     </tt>
+<a name="L85"></a><tt class="py-lineno">85</tt>  <tt class="py-line">    <tt class="py-keyword">assert</tt><tt class="py-op">(</tt><tt class="py-name">options</tt><tt class="py-op">.</tt><tt class="py-name">examples</tt> <tt class="py-op">!=</tt> <tt class="py-name">None</tt><tt class="py-op">)</tt> </tt>
+<a name="L86"></a><tt class="py-lineno">86</tt>  <tt class="py-line">    <tt class="py-keyword">assert</tt><tt class="py-op">(</tt><tt class="py-name">options</tt><tt class="py-op">.</tt><tt class="py-name">predictions</tt> <tt class="py-op">!=</tt> <tt class="py-name">None</tt><tt class="py-op">)</tt> </tt>
+<a name="L87"></a><tt class="py-lineno">87</tt>  <tt class="py-line">    <tt class="py-keyword">assert</tt><tt class="py-op">(</tt><tt class="py-name">options</tt><tt class="py-op">.</tt><tt class="py-name">classIds</tt> <tt class="py-op">!=</tt> <tt class="py-name">None</tt><tt class="py-op">)</tt> </tt>
+<a name="L88"></a><tt class="py-lineno">88</tt>  <tt class="py-line">    <tt class="py-keyword">assert</tt><tt class="py-op">(</tt><tt class="py-name">options</tt><tt class="py-op">.</tt><tt class="py-name">corpus</tt> <tt class="py-op">!=</tt> <tt class="py-name">None</tt><tt class="py-op">)</tt> </tt>
+<a name="L89"></a><tt class="py-lineno">89</tt>  <tt class="py-line">    <tt class="py-keyword">assert</tt><tt class="py-op">(</tt><tt class="py-name">options</tt><tt class="py-op">.</tt><tt class="py-name">output</tt> <tt class="py-op">!=</tt> <tt class="py-name">None</tt><tt class="py-op">)</tt> </tt>
+<a name="L90"></a><tt class="py-lineno">90</tt>  <tt class="py-line">     </tt>
+<a name="L91"></a><tt class="py-lineno">91</tt>  <tt class="py-line">    <tt id="link-25" class="py-name" targets="Module TEES.ExampleWriters.BioTextExampleWriter=TEES.ExampleWriters.BioTextExampleWriter-module.html,Class TEES.ExampleWriters.BioTextExampleWriter.BioTextExampleWriter=TEES.ExampleWriters.BioTextExampleWriter.BioTextExampleWriter-class.html"><a title="TEES.ExampleWriters.BioTextExampleWriter
+TEES.ExampleWriters.BioTextExampleWriter.BioTextExampleWriter" class="py-name" href="#" onclick="return doclink('link-25', 'BioTextExampleWriter', 'link-25');">BioTextExampleWriter</a></tt><tt class="py-op">.</tt><tt id="link-26" class="py-name" targets="Method TEES.Core.IdSet.IdSet.write()=TEES.Core.IdSet.IdSet-class.html#write,Class Method TEES.ExampleWriters.BioTextExampleWriter.BioTextExampleWriter.write()=TEES.ExampleWriters.BioTextExampleWriter.BioTextExampleWriter-class.html#write,Method TEES.ExampleWriters.SentenceExampleWriter.SentenceExampleWriter.write()=TEES.ExampleWriters.SentenceExampleWriter.SentenceExampleWriter-class.html#write,Method TEES.Utils.ElementTreeUtils.ETWriter.write()=TEES.Utils.ElementTreeUtils.ETWriter-class.html#write,Function TEES.Utils.ElementTreeUtils.write()=TEES.Utils.ElementTreeUtils-module.html#write,Function TEES.Utils.STFormat.STTools.write()=TEES.Utils.STFormat.STTools-module.html#write,Method TEES.Utils.Stream.StreamModifier.write()=TEES.Utils.Stream.StreamModifier-class.html#write"><a title="TEES.Core.IdSet.IdSet.write
+TEES.ExampleWriters.BioTextExampleWriter.BioTextExampleWriter.write
+TEES.ExampleWriters.SentenceExampleWriter.SentenceExampleWriter.write
+TEES.Utils.ElementTreeUtils.ETWriter.write
+TEES.Utils.ElementTreeUtils.write
+TEES.Utils.STFormat.STTools.write
+TEES.Utils.Stream.StreamModifier.write" class="py-name" href="#" onclick="return doclink('link-26', 'write', 'link-26');">write</a></tt><tt class="py-op">(</tt><tt class="py-name">options</tt><tt class="py-op">.</tt><tt class="py-name">examples</tt><tt class="py-op">,</tt> <tt class="py-name">options</tt><tt class="py-op">.</tt><tt class="py-name">predictions</tt><tt class="py-op">,</tt> <tt class="py-name">options</tt><tt class="py-op">.</tt><tt class="py-name">corpus</tt><tt class="py-op">,</tt> <tt class="py-name">options</tt><tt class="py-op">.</tt><tt class="py-name">output</tt><tt class="py-op">,</tt> <tt class="py-name">options</tt><tt class="py-op">.</tt><tt class="py-name">classIds</tt><tt class="py-op">,</tt> <tt class="py-name">options</tt><tt class="py-op">.</tt><tt id="link-27" class="py-name"><a title="TEES.Tools.BLLIPParser.parse" class="py-name" href="#" onclick="return doclink('link-27', 'parse', 'link-24');">parse</a></tt><tt class="py-op">,</tt> <tt class="py-name">options</tt><tt class="py-op">.</tt><tt class="py-name">tokenization</tt><tt class="py-op">,</tt> <tt class="py-name">options</tt><tt class="py-op">.</tt><tt class="py-name">goldCorpus</tt><tt class="py-op">,</tt> <tt class="py-name">insertWeights</tt> <tt class="py-op">=</tt> <tt class="py-name">options</tt><tt class="py-op">.</tt><tt class="py-name">insertWeights</tt><tt class="py-op">)</tt> </tt>
+<a name="L92"></a><tt class="py-lineno">92</tt>  <tt class="py-line"> </tt><script type="text/javascript">
+<!--
+expandto(location.href);
+// -->
+</script>
+</pre>
+<br />
+<!-- ==================== NAVIGATION BAR ==================== -->
+<table class="navbar" border="0" width="100%" cellpadding="0"
+       bgcolor="#a0c0ff" cellspacing="0">
+  <tr valign="middle">
+  <!-- Home link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="TEES-module.html">Home</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Tree link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="module-tree.html">Trees</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Index link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="identifier-index.html">Indices</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Help link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="help.html">Help</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Project homepage -->
+      <th class="navbar" align="right" width="100%">
+        <table border="0" cellpadding="0" cellspacing="0">
+          <tr><th class="navbar" align="center"
+            >Turku Event Extraction System</th>
+          </tr></table></th>
+  </tr>
+</table>
+<table border="0" cellpadding="0" cellspacing="0" width="100%%">
+  <tr>
+    <td align="left" class="footer">
+    Generated by Epydoc 3.0.1 on Thu Jul 19 18:20:50 2012
+    </td>
+    <td align="right" class="footer">
+      <a target="mainFrame" href="http://epydoc.sourceforge.net"
+        >http://epydoc.sourceforge.net</a>
+    </td>
+  </tr>
+</table>
+
+<script type="text/javascript">
+  <!--
+  // Private objects are initially displayed (because if
+  // javascript is turned off then we want them to be
+  // visible); but by default, we want to hide them.  So hide
+  // them unless we have a cookie that says to show them.
+  checkCookie();
+  // -->
+</script>
+</body>
+</html>

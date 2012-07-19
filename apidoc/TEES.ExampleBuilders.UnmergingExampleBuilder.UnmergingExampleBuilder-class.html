@@ -1,0 +1,460 @@
+<?xml version="1.0" encoding="ascii"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+          "DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+  <title>TEES.ExampleBuilders.UnmergingExampleBuilder.UnmergingExampleBuilder</title>
+  <link rel="stylesheet" href="epydoc.css" type="text/css" />
+  <script type="text/javascript" src="epydoc.js"></script>
+</head>
+
+<body bgcolor="white" text="black" link="blue" vlink="#204080"
+      alink="#204080">
+<!-- ==================== NAVIGATION BAR ==================== -->
+<table class="navbar" border="0" width="100%" cellpadding="0"
+       bgcolor="#a0c0ff" cellspacing="0">
+  <tr valign="middle">
+  <!-- Home link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="TEES-module.html">Home</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Tree link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="module-tree.html">Trees</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Index link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="identifier-index.html">Indices</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Help link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="help.html">Help</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Project homepage -->
+      <th class="navbar" align="right" width="100%">
+        <table border="0" cellpadding="0" cellspacing="0">
+          <tr><th class="navbar" align="center"
+            >Turku Event Extraction System</th>
+          </tr></table></th>
+  </tr>
+</table>
+<table width="100%" cellpadding="0" cellspacing="0">
+  <tr valign="top">
+    <td width="100%">
+      <span class="breadcrumbs">
+        <a href="TEES-module.html">Package&nbsp;TEES</a> ::
+        <a href="TEES.ExampleBuilders-module.html">Package&nbsp;ExampleBuilders</a> ::
+        <a href="TEES.ExampleBuilders.UnmergingExampleBuilder-module.html">Module&nbsp;UnmergingExampleBuilder</a> ::
+        Class&nbsp;UnmergingExampleBuilder
+      </span>
+    </td>
+    <td>
+      <table cellpadding="0" cellspacing="0">
+        <!-- hide/show private -->
+        <tr><td align="right"><span class="options">[<a href="javascript:void(0);" class="privatelink"
+    onclick="toggle_private();">hide&nbsp;private</a>]</span></td></tr>
+      </table>
+    </td>
+  </tr>
+</table>
+<!-- ==================== CLASS DESCRIPTION ==================== -->
+<h1 class="epydoc">Class UnmergingExampleBuilder</h1><p class="nomargin-top"><span class="codelink"><a href="TEES.ExampleBuilders.UnmergingExampleBuilder-pysrc.html#UnmergingExampleBuilder">source&nbsp;code</a></span></p>
+<pre class="base-tree">
+ExampleBuilders.ExampleBuilder.ExampleBuilder --+
+                                                |
+                                               <strong class="uidshort">UnmergingExampleBuilder</strong>
+</pre>
+
+<hr />
+<p>This example builder makes unmerging examples, i.e. examples 
+  describing potential events.</p>
+
+<!-- ==================== INSTANCE METHODS ==================== -->
+<a name="section-InstanceMethods"></a>
+<table class="summary" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr bgcolor="#70b0f0" class="table-header">
+  <td colspan="2" class="table-header">
+    <table border="0" cellpadding="0" cellspacing="0" width="100%">
+      <tr valign="top">
+        <td align="left"><span class="table-header">Instance Methods</span></td>
+        <td align="right" valign="top"
+         ><span class="options">[<a href="#section-InstanceMethods"
+         class="privatelink" onclick="toggle_private();"
+         >hide private</a>]</span></td>
+      </tr>
+    </table>
+  </td>
+</tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a href="TEES.ExampleBuilders.UnmergingExampleBuilder.UnmergingExampleBuilder-class.html#__init__" class="summary-sig-name">__init__</a>(<span class="summary-sig-arg">self</span>,
+        <span class="summary-sig-arg">style</span>=<span class="summary-sig-default">None</span>,
+        <span class="summary-sig-arg">length</span>=<span class="summary-sig-default">None</span>,
+        <span class="summary-sig-arg">types</span>=<span class="summary-sig-default"><code class="variable-group">[</code><code class="variable-group">]</code></span>,
+        <span class="summary-sig-arg">featureSet</span>=<span class="summary-sig-default">None</span>,
+        <span class="summary-sig-arg">classSet</span>=<span class="summary-sig-default">None</span>)</span></td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="TEES.ExampleBuilders.UnmergingExampleBuilder-pysrc.html#UnmergingExampleBuilder.__init__">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="getInteractionEdgeLengths"></a><span class="summary-sig-name">getInteractionEdgeLengths</span>(<span class="summary-sig-arg">self</span>,
+        <span class="summary-sig-arg">sentenceGraph</span>,
+        <span class="summary-sig-arg">paths</span>)</span><br />
+      Return dependency and linear length of all interaction edges 
+      (measured between the two tokens).</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="TEES.ExampleBuilders.UnmergingExampleBuilder-pysrc.html#UnmergingExampleBuilder.getInteractionEdgeLengths">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="eventIsGold"></a><span class="summary-sig-name">eventIsGold</span>(<span class="summary-sig-arg">self</span>,
+        <span class="summary-sig-arg">entity</span>,
+        <span class="summary-sig-arg">arguments</span>,
+        <span class="summary-sig-arg">sentenceGraph</span>,
+        <span class="summary-sig-arg">goldGraph</span>,
+        <span class="summary-sig-arg">goldEntitiesByOffset</span>)</span></td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="TEES.ExampleBuilders.UnmergingExampleBuilder-pysrc.html#UnmergingExampleBuilder.eventIsGold">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="getArgumentCombinations"></a><span class="summary-sig-name">getArgumentCombinations</span>(<span class="summary-sig-arg">self</span>,
+        <span class="summary-sig-arg">eType</span>,
+        <span class="summary-sig-arg">interactions</span>,
+        <span class="summary-sig-arg">entityId</span>=<span class="summary-sig-default">None</span>)</span></td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="TEES.ExampleBuilders.UnmergingExampleBuilder-pysrc.html#UnmergingExampleBuilder.getArgumentCombinations">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="sortInteractionsById"></a><span class="summary-sig-name">sortInteractionsById</span>(<span class="summary-sig-arg">self</span>,
+        <span class="summary-sig-arg">interactions</span>)</span></td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="TEES.ExampleBuilders.UnmergingExampleBuilder-pysrc.html#UnmergingExampleBuilder.sortInteractionsById">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a href="TEES.ExampleBuilders.UnmergingExampleBuilder.UnmergingExampleBuilder-class.html#buildExamplesFromGraph" class="summary-sig-name">buildExamplesFromGraph</a>(<span class="summary-sig-arg">self</span>,
+        <span class="summary-sig-arg">sentenceGraph</span>,
+        <span class="summary-sig-arg">outfile</span>,
+        <span class="summary-sig-arg">goldGraph</span>=<span class="summary-sig-default">None</span>)</span><br />
+      Build examples for a single sentence.</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="TEES.ExampleBuilders.UnmergingExampleBuilder-pysrc.html#UnmergingExampleBuilder.buildExamplesFromGraph">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="buildExample"></a><span class="summary-sig-name">buildExample</span>(<span class="summary-sig-arg">self</span>,
+        <span class="summary-sig-arg">sentenceGraph</span>,
+        <span class="summary-sig-arg">paths</span>,
+        <span class="summary-sig-arg">eventEntity</span>,
+        <span class="summary-sig-arg">argCombination</span>,
+        <span class="summary-sig-arg">allInteractions</span>)</span></td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="TEES.ExampleBuilders.UnmergingExampleBuilder-pysrc.html#UnmergingExampleBuilder.buildExample">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="buildArgumentFeatures"></a><span class="summary-sig-name">buildArgumentFeatures</span>(<span class="summary-sig-arg">self</span>,
+        <span class="summary-sig-arg">sentenceGraph</span>,
+        <span class="summary-sig-arg">paths</span>,
+        <span class="summary-sig-arg">features</span>,
+        <span class="summary-sig-arg">eventToken</span>,
+        <span class="summary-sig-arg">arg</span>,
+        <span class="summary-sig-arg">tag</span>)</span></td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="TEES.ExampleBuilders.UnmergingExampleBuilder-pysrc.html#UnmergingExampleBuilder.buildArgumentFeatures">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="buildEdgeFeatures"></a><span class="summary-sig-name">buildEdgeFeatures</span>(<span class="summary-sig-arg">self</span>,
+        <span class="summary-sig-arg">sentenceGraph</span>,
+        <span class="summary-sig-arg">paths</span>,
+        <span class="summary-sig-arg">features</span>,
+        <span class="summary-sig-arg">eventToken</span>,
+        <span class="summary-sig-arg">argToken</span>,
+        <span class="summary-sig-arg">tag</span>)</span></td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="TEES.ExampleBuilders.UnmergingExampleBuilder-pysrc.html#UnmergingExampleBuilder.buildEdgeFeatures">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="buildInterArgumentBagOfWords"></a><span class="summary-sig-name">buildInterArgumentBagOfWords</span>(<span class="summary-sig-arg">self</span>,
+        <span class="summary-sig-arg">arguments</span>,
+        <span class="summary-sig-arg">sentenceGraph</span>)</span></td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="TEES.ExampleBuilders.UnmergingExampleBuilder-pysrc.html#UnmergingExampleBuilder.buildInterArgumentBagOfWords">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+  <tr>
+    <td colspan="2" class="summary">
+    <p class="indent-wrapped-lines"><b>Inherited from <code>ExampleBuilders.ExampleBuilder.ExampleBuilder</code></b>:
+      <code>calculatePredictedRange</code>,
+      <code>definePredictedValueRange</code>,
+      <code>getElementCounts</code>,
+      <code>getParameters</code>,
+      <code>getPredictedValueRange</code>,
+      <code>getSentences</code>,
+      <code>processCorpus</code>,
+      <code>processDocument</code>,
+      <code>processSentence</code>,
+      <code>saveIds</code>,
+      <code>setFeature</code>
+      </p>
+    <div class="private">    <p class="indent-wrapped-lines"><b>Inherited from <code>ExampleBuilders.ExampleBuilder.ExampleBuilder</code></b> (private):
+      <code>_setDefaultParameters</code>
+      </p></div>
+    </td>
+  </tr>
+</table>
+<!-- ==================== CLASS METHODS ==================== -->
+<a name="section-ClassMethods"></a>
+<table class="summary" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr bgcolor="#70b0f0" class="table-header">
+  <td colspan="2" class="table-header">
+    <table border="0" cellpadding="0" cellspacing="0" width="100%">
+      <tr valign="top">
+        <td align="left"><span class="table-header">Class Methods</span></td>
+        <td align="right" valign="top"
+         ><span class="options">[<a href="#section-ClassMethods"
+         class="privatelink" onclick="toggle_private();"
+         >hide private</a>]</span></td>
+      </tr>
+    </table>
+  </td>
+</tr>
+  <tr>
+    <td colspan="2" class="summary">
+    <p class="indent-wrapped-lines"><b>Inherited from <code>ExampleBuilders.ExampleBuilder.ExampleBuilder</code></b>:
+      <code>getIdSets</code>,
+      <code>run</code>
+      </p>
+    </td>
+  </tr>
+</table>
+<!-- ==================== METHOD DETAILS ==================== -->
+<a name="section-MethodDetails"></a>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr bgcolor="#70b0f0" class="table-header">
+  <td colspan="2" class="table-header">
+    <table border="0" cellpadding="0" cellspacing="0" width="100%">
+      <tr valign="top">
+        <td align="left"><span class="table-header">Method Details</span></td>
+        <td align="right" valign="top"
+         ><span class="options">[<a href="#section-MethodDetails"
+         class="privatelink" onclick="toggle_private();"
+         >hide private</a>]</span></td>
+      </tr>
+    </table>
+  </td>
+</tr>
+</table>
+<a name="__init__"></a>
+<div>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr><td>
+  <table width="100%" cellpadding="0" cellspacing="0" border="0">
+  <tr valign="top"><td>
+  <h3 class="epydoc"><span class="sig"><span class="sig-name">__init__</span>(<span class="sig-arg">self</span>,
+        <span class="sig-arg">style</span>=<span class="sig-default">None</span>,
+        <span class="sig-arg">length</span>=<span class="sig-default">None</span>,
+        <span class="sig-arg">types</span>=<span class="sig-default"><code class="variable-group">[</code><code class="variable-group">]</code></span>,
+        <span class="sig-arg">featureSet</span>=<span class="sig-default">None</span>,
+        <span class="sig-arg">classSet</span>=<span class="sig-default">None</span>)</span>
+    <br /><em class="fname">(Constructor)</em>
+  </h3>
+  </td><td align="right" valign="top"
+    ><span class="codelink"><a href="TEES.ExampleBuilders.UnmergingExampleBuilder-pysrc.html#UnmergingExampleBuilder.__init__">source&nbsp;code</a></span>&nbsp;
+    </td>
+  </tr></table>
+  
+  
+  <dl class="fields">
+    <dt>Overrides:
+        ExampleBuilders.ExampleBuilder.ExampleBuilder.__init__
+    </dt>
+  </dl>
+</td></tr></table>
+</div>
+<a name="buildExamplesFromGraph"></a>
+<div>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr><td>
+  <table width="100%" cellpadding="0" cellspacing="0" border="0">
+  <tr valign="top"><td>
+  <h3 class="epydoc"><span class="sig"><span class="sig-name">buildExamplesFromGraph</span>(<span class="sig-arg">self</span>,
+        <span class="sig-arg">sentenceGraph</span>,
+        <span class="sig-arg">outfile</span>,
+        <span class="sig-arg">goldGraph</span>=<span class="sig-default">None</span>)</span>
+  </h3>
+  </td><td align="right" valign="top"
+    ><span class="codelink"><a href="TEES.ExampleBuilders.UnmergingExampleBuilder-pysrc.html#UnmergingExampleBuilder.buildExamplesFromGraph">source&nbsp;code</a></span>&nbsp;
+    </td>
+  </tr></table>
+  
+  <p>Build examples for a single sentence. Returns a list of examples. See 
+  Core/ExampleUtils for example format.</p>
+  <dl class="fields">
+    <dt>Overrides:
+        ExampleBuilders.ExampleBuilder.ExampleBuilder.buildExamplesFromGraph
+    </dt>
+  </dl>
+</td></tr></table>
+</div>
+<br />
+<!-- ==================== NAVIGATION BAR ==================== -->
+<table class="navbar" border="0" width="100%" cellpadding="0"
+       bgcolor="#a0c0ff" cellspacing="0">
+  <tr valign="middle">
+  <!-- Home link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="TEES-module.html">Home</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Tree link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="module-tree.html">Trees</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Index link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="identifier-index.html">Indices</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Help link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="help.html">Help</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Project homepage -->
+      <th class="navbar" align="right" width="100%">
+        <table border="0" cellpadding="0" cellspacing="0">
+          <tr><th class="navbar" align="center"
+            >Turku Event Extraction System</th>
+          </tr></table></th>
+  </tr>
+</table>
+<table border="0" cellpadding="0" cellspacing="0" width="100%%">
+  <tr>
+    <td align="left" class="footer">
+    Generated by Epydoc 3.0.1 on Thu Jul 19 18:20:46 2012
+    </td>
+    <td align="right" class="footer">
+      <a target="mainFrame" href="http://epydoc.sourceforge.net"
+        >http://epydoc.sourceforge.net</a>
+    </td>
+  </tr>
+</table>
+
+<script type="text/javascript">
+  <!--
+  // Private objects are initially displayed (because if
+  // javascript is turned off then we want them to be
+  // visible); but by default, we want to hide them.  So hide
+  // them unless we have a cookie that says to show them.
+  checkCookie();
+  // -->
+</script>
+</body>
+</html>

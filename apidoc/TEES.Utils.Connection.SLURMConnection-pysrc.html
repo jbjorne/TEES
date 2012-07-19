@@ -1,0 +1,341 @@
+<?xml version="1.0" encoding="ascii"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+          "DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+  <title>TEES.Utils.Connection.SLURMConnection</title>
+  <link rel="stylesheet" href="epydoc.css" type="text/css" />
+  <script type="text/javascript" src="epydoc.js"></script>
+</head>
+
+<body bgcolor="white" text="black" link="blue" vlink="#204080"
+      alink="#204080">
+<!-- ==================== NAVIGATION BAR ==================== -->
+<table class="navbar" border="0" width="100%" cellpadding="0"
+       bgcolor="#a0c0ff" cellspacing="0">
+  <tr valign="middle">
+  <!-- Home link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="TEES-module.html">Home</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Tree link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="module-tree.html">Trees</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Index link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="identifier-index.html">Indices</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Help link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="help.html">Help</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Project homepage -->
+      <th class="navbar" align="right" width="100%">
+        <table border="0" cellpadding="0" cellspacing="0">
+          <tr><th class="navbar" align="center"
+            >Turku Event Extraction System</th>
+          </tr></table></th>
+  </tr>
+</table>
+<table width="100%" cellpadding="0" cellspacing="0">
+  <tr valign="top">
+    <td width="100%">
+      <span class="breadcrumbs">
+        <a href="TEES-module.html">Package&nbsp;TEES</a> ::
+        <a href="TEES.Utils-module.html">Package&nbsp;Utils</a> ::
+        <a href="TEES.Utils.Connection-module.html">Package&nbsp;Connection</a> ::
+        Module&nbsp;SLURMConnection
+      </span>
+    </td>
+    <td>
+      <table cellpadding="0" cellspacing="0">
+        <!-- hide/show private -->
+        <tr><td align="right"><span class="options">[<a href="javascript:void(0);" class="privatelink"
+    onclick="toggle_private();">hide&nbsp;private</a>]</span></td></tr>
+      </table>
+    </td>
+  </tr>
+</table>
+<h1 class="epydoc">Source Code for <a href="TEES.Utils.Connection.SLURMConnection-module.html">Module TEES.Utils.Connection.SLURMConnection</a></h1>
+<pre class="py-src">
+<a name="L1"></a><tt class="py-lineno">  1</tt>  <tt class="py-line"><tt class="py-keyword">import</tt> <tt class="py-name">sys</tt><tt class="py-op">,</tt> <tt class="py-name">os</tt> </tt>
+<a name="L2"></a><tt class="py-lineno">  2</tt>  <tt class="py-line"><tt class="py-keyword">import</tt> <tt class="py-name">types</tt> </tt>
+<a name="L3"></a><tt class="py-lineno">  3</tt>  <tt class="py-line"><tt class="py-comment">#import uuid</tt> </tt>
+<a name="L4"></a><tt class="py-lineno">  4</tt>  <tt class="py-line"><tt class="py-keyword">import</tt> <tt class="py-name">subprocess</tt> </tt>
+<a name="L5"></a><tt class="py-lineno">  5</tt>  <tt class="py-line"><tt class="py-keyword">from</tt> <tt id="link-0" class="py-name" targets="Module TEES.Utils.Connection.ClusterConnection=TEES.Utils.Connection.ClusterConnection-module.html,Class TEES.Utils.Connection.ClusterConnection.ClusterConnection=TEES.Utils.Connection.ClusterConnection.ClusterConnection-class.html"><a title="TEES.Utils.Connection.ClusterConnection
+TEES.Utils.Connection.ClusterConnection.ClusterConnection" class="py-name" href="#" onclick="return doclink('link-0', 'ClusterConnection', 'link-0');">ClusterConnection</a></tt> <tt class="py-keyword">import</tt> <tt id="link-1" class="py-name"><a title="TEES.Utils.Connection.ClusterConnection
+TEES.Utils.Connection.ClusterConnection.ClusterConnection" class="py-name" href="#" onclick="return doclink('link-1', 'ClusterConnection', 'link-0');">ClusterConnection</a></tt> </tt>
+<a name="L6"></a><tt class="py-lineno">  6</tt>  <tt class="py-line"> </tt>
+<a name="L7"></a><tt class="py-lineno">  7</tt>  <tt class="py-line"><tt id="link-2" class="py-name" targets="Variable TEES.Utils.Connection.SLURMConnection.SLURMJobTemplate=TEES.Utils.Connection.SLURMConnection-module.html#SLURMJobTemplate"><a title="TEES.Utils.Connection.SLURMConnection.SLURMJobTemplate" class="py-name" href="#" onclick="return doclink('link-2', 'SLURMJobTemplate', 'link-2');">SLURMJobTemplate</a></tt> <tt class="py-op">=</tt> <tt class="py-string">"""#!/bin/bash -l </tt> </tt>
+<a name="L8"></a><tt class="py-lineno">  8</tt>  <tt class="py-line"><tt class="py-string">##execution shell environment </tt> </tt>
+<a name="L9"></a><tt class="py-lineno">  9</tt>  <tt class="py-line"><tt class="py-string"></tt> </tt>
+<a name="L10"></a><tt class="py-lineno"> 10</tt>  <tt class="py-line"><tt class="py-string">## name of your job</tt> </tt>
+<a name="L11"></a><tt class="py-lineno"> 11</tt>  <tt class="py-line"><tt class="py-string">#SBATCH -J %job</tt> </tt>
+<a name="L12"></a><tt class="py-lineno"> 12</tt>  <tt class="py-line"><tt class="py-string">## system error message output file</tt> </tt>
+<a name="L13"></a><tt class="py-lineno"> 13</tt>  <tt class="py-line"><tt class="py-string">#SBATCH -e %stderr</tt> </tt>
+<a name="L14"></a><tt class="py-lineno"> 14</tt>  <tt class="py-line"><tt class="py-string">## system message output file</tt> </tt>
+<a name="L15"></a><tt class="py-lineno"> 15</tt>  <tt class="py-line"><tt class="py-string">#SBATCH -o %stdout</tt> </tt>
+<a name="L16"></a><tt class="py-lineno"> 16</tt>  <tt class="py-line"><tt class="py-string">## a per-process (soft) memory limit</tt> </tt>
+<a name="L17"></a><tt class="py-lineno"> 17</tt>  <tt class="py-line"><tt class="py-string">## limit is specified in MB</tt> </tt>
+<a name="L18"></a><tt class="py-lineno"> 18</tt>  <tt class="py-line"><tt class="py-string">## example: 1 GB is 1000</tt> </tt>
+<a name="L19"></a><tt class="py-lineno"> 19</tt>  <tt class="py-line"><tt class="py-string">#SBATCH --mem-per-cpu=%memory</tt> </tt>
+<a name="L20"></a><tt class="py-lineno"> 20</tt>  <tt class="py-line"><tt class="py-string">## how long a job takes, wallclock time hh:mm:ss</tt> </tt>
+<a name="L21"></a><tt class="py-lineno"> 21</tt>  <tt class="py-line"><tt class="py-string">#SBATCH -t %wallTime</tt> </tt>
+<a name="L22"></a><tt class="py-lineno"> 22</tt>  <tt class="py-line"><tt class="py-string">## number of processes</tt> </tt>
+<a name="L23"></a><tt class="py-lineno"> 23</tt>  <tt class="py-line"><tt class="py-string">#SBATCH -n %cores</tt> </tt>
+<a name="L24"></a><tt class="py-lineno"> 24</tt>  <tt class="py-line"><tt class="py-string"></tt> </tt>
+<a name="L25"></a><tt class="py-lineno"> 25</tt>  <tt class="py-line"><tt class="py-string">mkdir -p %stderrDir</tt> </tt>
+<a name="L26"></a><tt class="py-lineno"> 26</tt>  <tt class="py-line"><tt class="py-string">mkdir -p %stdoutDir</tt> </tt>
+<a name="L27"></a><tt class="py-lineno"> 27</tt>  <tt class="py-line"><tt class="py-string"></tt> </tt>
+<a name="L28"></a><tt class="py-lineno"> 28</tt>  <tt class="py-line"><tt class="py-string">%commands"""</tt> </tt>
+<a name="L29"></a><tt class="py-lineno"> 29</tt>  <tt class="py-line"> </tt>
+<a name="SLURMConnection"></a><div id="SLURMConnection-def"><a name="L30"></a><tt class="py-lineno"> 30</tt> <a class="py-toggle" href="#" id="SLURMConnection-toggle" onclick="return toggle('SLURMConnection');">-</a><tt class="py-line"><tt class="py-keyword">class</tt> <a class="py-def-name" href="TEES.Utils.Connection.SLURMConnection.SLURMConnection-class.html">SLURMConnection</a><tt class="py-op">(</tt><tt class="py-base-class">ClusterConnection</tt><tt class="py-op">)</tt><tt class="py-op">:</tt> </tt>
+</div><div id="SLURMConnection-collapsed" style="display:none;" pad="+++" indent="++++"></div><div id="SLURMConnection-expanded"><a name="L31"></a><tt class="py-lineno"> 31</tt>  <tt class="py-line">    <tt class="py-docstring">"""</tt> </tt>
+<a name="L32"></a><tt class="py-lineno"> 32</tt>  <tt class="py-line"><tt class="py-docstring">    For using the Simple Linux Utility for Resource Management (https://computing.llnl.gov/linux/slurm/).</tt> </tt>
+<a name="L33"></a><tt class="py-lineno"> 33</tt>  <tt class="py-line"><tt class="py-docstring">    """</tt> </tt>
+<a name="SLURMConnection.__init__"></a><div id="SLURMConnection.__init__-def"><a name="L34"></a><tt class="py-lineno"> 34</tt> <a class="py-toggle" href="#" id="SLURMConnection.__init__-toggle" onclick="return toggle('SLURMConnection.__init__');">-</a><tt class="py-line">    <tt class="py-keyword">def</tt> <a class="py-def-name" href="TEES.Utils.Connection.SLURMConnection.SLURMConnection-class.html#__init__">__init__</a><tt class="py-op">(</tt><tt class="py-param">self</tt><tt class="py-op">,</tt> <tt class="py-param">account</tt><tt class="py-op">=</tt><tt class="py-name">None</tt><tt class="py-op">,</tt> <tt class="py-param">workdir</tt><tt class="py-op">=</tt><tt class="py-name">None</tt><tt class="py-op">,</tt> <tt class="py-param">settings</tt><tt class="py-op">=</tt><tt class="py-name">None</tt><tt class="py-op">,</tt> <tt class="py-param">wallTime</tt><tt class="py-op">=</tt><tt class="py-name">None</tt><tt class="py-op">,</tt> <tt class="py-param">memory</tt><tt class="py-op">=</tt><tt class="py-name">None</tt><tt class="py-op">,</tt> <tt class="py-param">cores</tt><tt class="py-op">=</tt><tt class="py-name">None</tt><tt class="py-op">,</tt> <tt class="py-param">modules</tt><tt class="py-op">=</tt><tt class="py-name">None</tt><tt class="py-op">)</tt><tt class="py-op">:</tt> </tt>
+</div><div id="SLURMConnection.__init__-collapsed" style="display:none;" pad="+++" indent="++++++++"></div><div id="SLURMConnection.__init__-expanded"><a name="L35"></a><tt class="py-lineno"> 35</tt>  <tt class="py-line">        <tt class="py-keyword">if</tt> <tt class="py-name">wallTime</tt> <tt class="py-op">==</tt> <tt class="py-name">None</tt><tt class="py-op">:</tt> </tt>
+<a name="L36"></a><tt class="py-lineno"> 36</tt>  <tt class="py-line">            <tt class="py-name">wallTime</tt> <tt class="py-op">=</tt> <tt class="py-string">"48:00:00"</tt> </tt>
+<a name="L37"></a><tt class="py-lineno"> 37</tt>  <tt class="py-line">        <tt class="py-keyword">if</tt> <tt class="py-name">memory</tt> <tt class="py-op">==</tt> <tt class="py-name">None</tt><tt class="py-op">:</tt> </tt>
+<a name="L38"></a><tt class="py-lineno"> 38</tt>  <tt class="py-line">            <tt class="py-name">memory</tt> <tt class="py-op">=</tt> <tt class="py-number">4000</tt> </tt>
+<a name="L39"></a><tt class="py-lineno"> 39</tt>  <tt class="py-line">        <tt class="py-comment">#if modules == None:</tt> </tt>
+<a name="L40"></a><tt class="py-lineno"> 40</tt>  <tt class="py-line">        <tt class="py-comment">#    modules = ["python", "ruby"]</tt> </tt>
+<a name="L41"></a><tt class="py-lineno"> 41</tt>  <tt class="py-line">        <tt id="link-3" class="py-name"><a title="TEES.Utils.Connection.ClusterConnection
+TEES.Utils.Connection.ClusterConnection.ClusterConnection" class="py-name" href="#" onclick="return doclink('link-3', 'ClusterConnection', 'link-0');">ClusterConnection</a></tt><tt class="py-op">.</tt><tt id="link-4" class="py-name" targets="Method TEES.Classifiers.AllCorrectClassifier.AllCorrectClassifier.__init__()=TEES.Classifiers.AllCorrectClassifier.AllCorrectClassifier-class.html#__init__,Method TEES.Classifiers.AllTrueClassifier.AllTrueClassifier.__init__()=TEES.Classifiers.AllTrueClassifier.AllTrueClassifier-class.html#__init__,Method TEES.Classifiers.ExternalClassifier.ExternalClassifier.__init__()=TEES.Classifiers.ExternalClassifier.ExternalClassifier-class.html#__init__,Method TEES.Classifiers.SVMMultiClassClassifier.SVMMultiClassClassifier.__init__()=TEES.Classifiers.SVMMultiClassClassifier.SVMMultiClassClassifier-class.html#__init__,Method TEES.Core.IdSet.IdSet.__init__()=TEES.Core.IdSet.IdSet-class.html#__init__,Method TEES.Core.Model.Model.__init__()=TEES.Core.Model.Model-class.html#__init__,Method TEES.Core.SentenceGraph.SentenceGraph.__init__()=TEES.Core.SentenceGraph.SentenceGraph-class.html#__init__,Method TEES.Core.SimpleGraph.Graph.__init__()=TEES.Core.SimpleGraph.Graph-class.html#__init__,Method TEES.Detectors.CODetector.CODetector.__init__()=TEES.Detectors.CODetector.CODetector-class.html#__init__,Method TEES.Detectors.Detector.Detector.__init__()=TEES.Detectors.Detector.Detector-class.html#__init__,Method TEES.Detectors.EdgeDetector.EdgeDetector.__init__()=TEES.Detectors.EdgeDetector.EdgeDetector-class.html#__init__,Method TEES.Detectors.EntityDetector.EntityDetector.__init__()=TEES.Detectors.EntityDetector.EntityDetector-class.html#__init__,Method TEES.Detectors.EventDetector.EventDetector.__init__()=TEES.Detectors.EventDetector.EventDetector-class.html#__init__,Method TEES.Detectors.ModifierDetector.ModifierDetector.__init__()=TEES.Detectors.ModifierDetector.ModifierDetector-class.html#__init__,Method TEES.Detectors.Preprocessor.Preprocessor.__init__()=TEES.Detectors.Preprocessor.Preprocessor-class.html#__init__,Method TEES.Detectors.SingleStageDetector.SingleStageDetector.__init__()=TEES.Detectors.SingleStageDetector.SingleStageDetector-class.html#__init__,Method TEES.Detectors.StepSelector.StepSelector.__init__()=TEES.Detectors.StepSelector.StepSelector-class.html#__init__,Method TEES.Detectors.ToolChain.ToolChain.__init__()=TEES.Detectors.ToolChain.ToolChain-class.html#__init__,Method TEES.Detectors.UnmergingDetector.UnmergingDetector.__init__()=TEES.Detectors.UnmergingDetector.UnmergingDetector-class.html#__init__,Method TEES.Evaluators.AveragingMultiClassEvaluator.AveragingMultiClassEvaluator.__init__()=TEES.Evaluators.AveragingMultiClassEvaluator.AveragingMultiClassEvaluator-class.html#__init__,Method TEES.Evaluators.BinaryEvaluator.BinaryEvaluator.__init__()=TEES.Evaluators.BinaryEvaluator.BinaryEvaluator-class.html#__init__,Method TEES.Evaluators.Evaluator.EvaluationData.__init__()=TEES.Evaluators.Evaluator.EvaluationData-class.html#__init__,Method TEES.ExampleBuilders.EdgeExampleBuilder.EdgeExampleBuilder.__init__()=TEES.ExampleBuilders.EdgeExampleBuilder.EdgeExampleBuilder-class.html#__init__,Method TEES.ExampleBuilders.EntityExampleBuilder.EntityExampleBuilder.__init__()=TEES.ExampleBuilders.EntityExampleBuilder.EntityExampleBuilder-class.html#__init__,Method TEES.ExampleBuilders.ExampleBuilder.ExampleBuilder.__init__()=TEES.ExampleBuilders.ExampleBuilder.ExampleBuilder-class.html#__init__,Method TEES.ExampleBuilders.ExampleStats.ExampleStats.__init__()=TEES.ExampleBuilders.ExampleStats.ExampleStats-class.html#__init__,Method TEES.ExampleBuilders.FeatureBuilders.BacteriaRenamingFeatureBuilder.BacteriaRenamingFeatureBuilder.__init__()=TEES.ExampleBuilders.FeatureBuilders.BacteriaRenamingFeatureBuilder.BacteriaRenamingFeatureBuilder-class.html#__init__,Method TEES.ExampleBuilders.FeatureBuilders.BioInferOntologyFeatureBuilder.BioInferOntologyFeatureBuilder.__init__()=TEES.ExampleBuilders.FeatureBuilders.BioInferOntologyFeatureBuilder.BioInferOntologyFeatureBuilder-class.html#__init__,Method TEES.ExampleBuilders.FeatureBuilders.DrugFeatureBuilder.DrugFeatureBuilder.__init__()=TEES.ExampleBuilders.FeatureBuilders.DrugFeatureBuilder.DrugFeatureBuilder-class.html#__init__,Method TEES.ExampleBuilders.FeatureBuilders.EVEXFeatureBuilder.EVEXFeatureBuilder.__init__()=TEES.ExampleBuilders.FeatureBuilders.EVEXFeatureBuilder.EVEXFeatureBuilder-class.html#__init__,Method TEES.ExampleBuilders.FeatureBuilders.EdgeFeatureBuilder.EdgeFeatureBuilder.__init__()=TEES.ExampleBuilders.FeatureBuilders.EdgeFeatureBuilder.EdgeFeatureBuilder-class.html#__init__,Method TEES.ExampleBuilders.FeatureBuilders.FeatureBuilder.FeatureBuilder.__init__()=TEES.ExampleBuilders.FeatureBuilders.FeatureBuilder.FeatureBuilder-class.html#__init__,Method TEES.ExampleBuilders.FeatureBuilders.GiulianoFeatureBuilder.GiulianoFeatureBuilder.__init__()=TEES.ExampleBuilders.FeatureBuilders.GiulianoFeatureBuilder.GiulianoFeatureBuilder-class.html#__init__,Method TEES.ExampleBuilders.FeatureBuilders.GraphKernelFeatureBuilder.GraphKernelFeatureBuilder.__init__()=TEES.ExampleBuilders.FeatureBuilders.GraphKernelFeatureBuilder.GraphKernelFeatureBuilder-class.html#__init__,Method TEES.ExampleBuilders.FeatureBuilders.MultiEdgeFeatureBuilder.MultiEdgeFeatureBuilder.__init__()=TEES.ExampleBuilders.FeatureBuilders.MultiEdgeFeatureBuilder.MultiEdgeFeatureBuilder-class.html#__init__,Method TEES.ExampleBuilders.FeatureBuilders.NameGazetteer.NameGazetteer.__init__()=TEES.ExampleBuilders.FeatureBuilders.NameGazetteer.NameGazetteer-class.html#__init__,Method TEES.ExampleBuilders.FeatureBuilders.NodalidaFeatureBuilder.NodalidaFeatureBuilder.__init__()=TEES.ExampleBuilders.FeatureBuilders.NodalidaFeatureBuilder.NodalidaFeatureBuilder-class.html#__init__,Method TEES.ExampleBuilders.FeatureBuilders.RELFeatureBuilder.RELFeatureBuilder.__init__()=TEES.ExampleBuilders.FeatureBuilders.RELFeatureBuilder.RELFeatureBuilder-class.html#__init__,Method TEES.ExampleBuilders.FeatureBuilders.RandomFeatureBuilder.RandomFeatureBuilder.__init__()=TEES.ExampleBuilders.FeatureBuilders.RandomFeatureBuilder.RandomFeatureBuilder-class.html#__init__,Method TEES.ExampleBuilders.FeatureBuilders.TokenFeatureBuilder.TokenFeatureBuilder.__init__()=TEES.ExampleBuilders.FeatureBuilders.TokenFeatureBuilder.TokenFeatureBuilder-class.html#__init__,Method TEES.ExampleBuilders.FeatureBuilders.TriggerFeatureBuilder.TriggerFeatureBuilder.__init__()=TEES.ExampleBuilders.FeatureBuilders.TriggerFeatureBuilder.TriggerFeatureBuilder-class.html#__init__,Method TEES.ExampleBuilders.FeatureBuilders.WordNetFeatureBuilder.WordNetFeatureBuilder.__init__()=TEES.ExampleBuilders.FeatureBuilders.WordNetFeatureBuilder.WordNetFeatureBuilder-class.html#__init__,Method TEES.ExampleBuilders.ModifierExampleBuilder.ModifierExampleBuilder.__init__()=TEES.ExampleBuilders.ModifierExampleBuilder.ModifierExampleBuilder-class.html#__init__,Method TEES.ExampleBuilders.PhraseTriggerExampleBuilder.PhraseTriggerExampleBuilder.__init__()=TEES.ExampleBuilders.PhraseTriggerExampleBuilder.PhraseTriggerExampleBuilder-class.html#__init__,Method TEES.ExampleBuilders.UnmergingExampleBuilder.UnmergingExampleBuilder.__init__()=TEES.ExampleBuilders.UnmergingExampleBuilder.UnmergingExampleBuilder-class.html#__init__,Method TEES.ExampleWriters.EdgeExampleWriter.EdgeExampleWriter.__init__()=TEES.ExampleWriters.EdgeExampleWriter.EdgeExampleWriter-class.html#__init__,Method TEES.ExampleWriters.EntityExampleWriter.EntityExampleWriter.__init__()=TEES.ExampleWriters.EntityExampleWriter.EntityExampleWriter-class.html#__init__,Method TEES.ExampleWriters.ModifierExampleWriter.ModifierExampleWriter.__init__()=TEES.ExampleWriters.ModifierExampleWriter.ModifierExampleWriter-class.html#__init__,Method TEES.ExampleWriters.PhraseTriggerExampleWriter.PhraseTriggerExampleWriter.__init__()=TEES.ExampleWriters.PhraseTriggerExampleWriter.PhraseTriggerExampleWriter-class.html#__init__,Method TEES.ExampleWriters.SentenceExampleWriter.SentenceExampleWriter.__init__()=TEES.ExampleWriters.SentenceExampleWriter.SentenceExampleWriter-class.html#__init__,Method TEES.ExampleWriters.UnmergingExampleWriter.UnmergingExampleWriter.__init__()=TEES.ExampleWriters.UnmergingExampleWriter.UnmergingExampleWriter-class.html#__init__,Method TEES.Tools.ProcessUtils.ProcessWrapper.__init__()=TEES.Tools.ProcessUtils.ProcessWrapper-class.html#__init__,Method TEES.Utils.Connection.ClusterConnection.ClusterConnection.__init__()=TEES.Utils.Connection.ClusterConnection.ClusterConnection-class.html#__init__,Method TEES.Utils.Connection.LSFConnection.LSFConnection.__init__()=TEES.Utils.Connection.LSFConnection.LSFConnection-class.html#__init__,Method TEES.Utils.Connection.PBSConnection.PBSConnection.__init__()=TEES.Utils.Connection.PBSConnection.PBSConnection-class.html#__init__,Method TEES.Utils.Connection.SLURMConnection.SLURMConnection.__init__()=TEES.Utils.Connection.SLURMConnection.SLURMConnection-class.html#__init__,Method TEES.Utils.Connection.UnixConnection.UnixConnection.__init__()=TEES.Utils.Connection.UnixConnection.UnixConnection-class.html#__init__,Method TEES.Utils.ElementTreeUtils.ETWriter.__init__()=TEES.Utils.ElementTreeUtils.ETWriter-class.html#__init__,Method TEES.Utils.InteractionXML.CorpusElements.CorpusElements.__init__()=TEES.Utils.InteractionXML.CorpusElements.CorpusElements-class.html#__init__,Method TEES.Utils.InteractionXML.ParseGraph.ParseGraph.__init__()=TEES.Utils.InteractionXML.ParseGraph.ParseGraph-class.html#__init__,Method TEES.Utils.InteractionXML.ParseGraph.ParseGraphNode.__init__()=TEES.Utils.InteractionXML.ParseGraph.ParseGraphNode-class.html#__init__,Method TEES.Utils.InteractionXML.SentenceElements.SentenceElements.__init__()=TEES.Utils.InteractionXML.SentenceElements.SentenceElements-class.html#__init__,Method TEES.Utils.Libraries.PorterStemmer.PorterStemmer.__init__()=TEES.Utils.Libraries.PorterStemmer.PorterStemmer-class.html#__init__,Method TEES.Utils.Libraries.progressbar.Bar.__init__()=TEES.Utils.Libraries.progressbar.Bar-class.html#__init__,Method TEES.Utils.Libraries.progressbar.FileTransferSpeed.__init__()=TEES.Utils.Libraries.progressbar.FileTransferSpeed-class.html#__init__,Method TEES.Utils.Libraries.progressbar.ProgressBar.__init__()=TEES.Utils.Libraries.progressbar.ProgressBar-class.html#__init__,Method TEES.Utils.Libraries.progressbar.RotatingMarker.__init__()=TEES.Utils.Libraries.progressbar.RotatingMarker-class.html#__init__,Method TEES.Utils.Libraries.stats.Dispatch.__init__()=TEES.Utils.Libraries.stats.Dispatch-class.html#__init__,Method TEES.Utils.Menu.Menu.__init__()=TEES.Utils.Menu.Menu-class.html#__init__,Method TEES.Utils.Menu.MenuSystem.__init__()=TEES.Utils.Menu.MenuSystem-class.html#__init__,Method TEES.Utils.Menu.Option.__init__()=TEES.Utils.Menu.Option-class.html#__init__,Method TEES.Utils.ProgressCounter.ProgressCounter.__init__()=TEES.Utils.ProgressCounter.ProgressCounter-class.html#__init__,Method TEES.Utils.ProteinNameSplitter.Token.__init__()=TEES.Utils.ProteinNameSplitter.Token-class.html#__init__,Method TEES.Utils.STFormat.STTools.Annotation.__init__()=TEES.Utils.STFormat.STTools.Annotation-class.html#__init__,Method TEES.Utils.STFormat.STTools.Document.__init__()=TEES.Utils.STFormat.STTools.Document-class.html#__init__,Method TEES.Utils.Stream.StreamModifier.__init__()=TEES.Utils.Stream.StreamModifier-class.html#__init__,Method TEES.Utils.Timer.Timer.__init__()=TEES.Utils.Timer.Timer-class.html#__init__"><a title="TEES.Classifiers.AllCorrectClassifier.AllCorrectClassifier.__init__
+TEES.Classifiers.AllTrueClassifier.AllTrueClassifier.__init__
+TEES.Classifiers.ExternalClassifier.ExternalClassifier.__init__
+TEES.Classifiers.SVMMultiClassClassifier.SVMMultiClassClassifier.__init__
+TEES.Core.IdSet.IdSet.__init__
+TEES.Core.Model.Model.__init__
+TEES.Core.SentenceGraph.SentenceGraph.__init__
+TEES.Core.SimpleGraph.Graph.__init__
+TEES.Detectors.CODetector.CODetector.__init__
+TEES.Detectors.Detector.Detector.__init__
+TEES.Detectors.EdgeDetector.EdgeDetector.__init__
+TEES.Detectors.EntityDetector.EntityDetector.__init__
+TEES.Detectors.EventDetector.EventDetector.__init__
+TEES.Detectors.ModifierDetector.ModifierDetector.__init__
+TEES.Detectors.Preprocessor.Preprocessor.__init__
+TEES.Detectors.SingleStageDetector.SingleStageDetector.__init__
+TEES.Detectors.StepSelector.StepSelector.__init__
+TEES.Detectors.ToolChain.ToolChain.__init__
+TEES.Detectors.UnmergingDetector.UnmergingDetector.__init__
+TEES.Evaluators.AveragingMultiClassEvaluator.AveragingMultiClassEvaluator.__init__
+TEES.Evaluators.BinaryEvaluator.BinaryEvaluator.__init__
+TEES.Evaluators.Evaluator.EvaluationData.__init__
+TEES.ExampleBuilders.EdgeExampleBuilder.EdgeExampleBuilder.__init__
+TEES.ExampleBuilders.EntityExampleBuilder.EntityExampleBuilder.__init__
+TEES.ExampleBuilders.ExampleBuilder.ExampleBuilder.__init__
+TEES.ExampleBuilders.ExampleStats.ExampleStats.__init__
+TEES.ExampleBuilders.FeatureBuilders.BacteriaRenamingFeatureBuilder.BacteriaRenamingFeatureBuilder.__init__
+TEES.ExampleBuilders.FeatureBuilders.BioInferOntologyFeatureBuilder.BioInferOntologyFeatureBuilder.__init__
+TEES.ExampleBuilders.FeatureBuilders.DrugFeatureBuilder.DrugFeatureBuilder.__init__
+TEES.ExampleBuilders.FeatureBuilders.EVEXFeatureBuilder.EVEXFeatureBuilder.__init__
+TEES.ExampleBuilders.FeatureBuilders.EdgeFeatureBuilder.EdgeFeatureBuilder.__init__
+TEES.ExampleBuilders.FeatureBuilders.FeatureBuilder.FeatureBuilder.__init__
+TEES.ExampleBuilders.FeatureBuilders.GiulianoFeatureBuilder.GiulianoFeatureBuilder.__init__
+TEES.ExampleBuilders.FeatureBuilders.GraphKernelFeatureBuilder.GraphKernelFeatureBuilder.__init__
+TEES.ExampleBuilders.FeatureBuilders.MultiEdgeFeatureBuilder.MultiEdgeFeatureBuilder.__init__
+TEES.ExampleBuilders.FeatureBuilders.NameGazetteer.NameGazetteer.__init__
+TEES.ExampleBuilders.FeatureBuilders.NodalidaFeatureBuilder.NodalidaFeatureBuilder.__init__
+TEES.ExampleBuilders.FeatureBuilders.RELFeatureBuilder.RELFeatureBuilder.__init__
+TEES.ExampleBuilders.FeatureBuilders.RandomFeatureBuilder.RandomFeatureBuilder.__init__
+TEES.ExampleBuilders.FeatureBuilders.TokenFeatureBuilder.TokenFeatureBuilder.__init__
+TEES.ExampleBuilders.FeatureBuilders.TriggerFeatureBuilder.TriggerFeatureBuilder.__init__
+TEES.ExampleBuilders.FeatureBuilders.WordNetFeatureBuilder.WordNetFeatureBuilder.__init__
+TEES.ExampleBuilders.ModifierExampleBuilder.ModifierExampleBuilder.__init__
+TEES.ExampleBuilders.PhraseTriggerExampleBuilder.PhraseTriggerExampleBuilder.__init__
+TEES.ExampleBuilders.UnmergingExampleBuilder.UnmergingExampleBuilder.__init__
+TEES.ExampleWriters.EdgeExampleWriter.EdgeExampleWriter.__init__
+TEES.ExampleWriters.EntityExampleWriter.EntityExampleWriter.__init__
+TEES.ExampleWriters.ModifierExampleWriter.ModifierExampleWriter.__init__
+TEES.ExampleWriters.PhraseTriggerExampleWriter.PhraseTriggerExampleWriter.__init__
+TEES.ExampleWriters.SentenceExampleWriter.SentenceExampleWriter.__init__
+TEES.ExampleWriters.UnmergingExampleWriter.UnmergingExampleWriter.__init__
+TEES.Tools.ProcessUtils.ProcessWrapper.__init__
+TEES.Utils.Connection.ClusterConnection.ClusterConnection.__init__
+TEES.Utils.Connection.LSFConnection.LSFConnection.__init__
+TEES.Utils.Connection.PBSConnection.PBSConnection.__init__
+TEES.Utils.Connection.SLURMConnection.SLURMConnection.__init__
+TEES.Utils.Connection.UnixConnection.UnixConnection.__init__
+TEES.Utils.ElementTreeUtils.ETWriter.__init__
+TEES.Utils.InteractionXML.CorpusElements.CorpusElements.__init__
+TEES.Utils.InteractionXML.ParseGraph.ParseGraph.__init__
+TEES.Utils.InteractionXML.ParseGraph.ParseGraphNode.__init__
+TEES.Utils.InteractionXML.SentenceElements.SentenceElements.__init__
+TEES.Utils.Libraries.PorterStemmer.PorterStemmer.__init__
+TEES.Utils.Libraries.progressbar.Bar.__init__
+TEES.Utils.Libraries.progressbar.FileTransferSpeed.__init__
+TEES.Utils.Libraries.progressbar.ProgressBar.__init__
+TEES.Utils.Libraries.progressbar.RotatingMarker.__init__
+TEES.Utils.Libraries.stats.Dispatch.__init__
+TEES.Utils.Menu.Menu.__init__
+TEES.Utils.Menu.MenuSystem.__init__
+TEES.Utils.Menu.Option.__init__
+TEES.Utils.ProgressCounter.ProgressCounter.__init__
+TEES.Utils.ProteinNameSplitter.Token.__init__
+TEES.Utils.STFormat.STTools.Annotation.__init__
+TEES.Utils.STFormat.STTools.Document.__init__
+TEES.Utils.Stream.StreamModifier.__init__
+TEES.Utils.Timer.Timer.__init__" class="py-name" href="#" onclick="return doclink('link-4', '__init__', 'link-4');">__init__</a></tt><tt class="py-op">(</tt><tt class="py-name">self</tt><tt class="py-op">,</tt> <tt class="py-name">account</tt><tt class="py-op">=</tt><tt class="py-name">account</tt><tt class="py-op">,</tt> <tt id="link-5" class="py-name" targets="Function TEES.train.workdir()=TEES.train-module.html#workdir"><a title="TEES.train.workdir" class="py-name" href="#" onclick="return doclink('link-5', 'workdir', 'link-5');">workdir</a></tt><tt class="py-op">=</tt><tt id="link-6" class="py-name"><a title="TEES.train.workdir" class="py-name" href="#" onclick="return doclink('link-6', 'workdir', 'link-5');">workdir</a></tt><tt class="py-op">,</tt> <tt class="py-name">settings</tt><tt class="py-op">=</tt><tt class="py-name">settings</tt><tt class="py-op">,</tt> <tt class="py-name">memory</tt><tt class="py-op">=</tt><tt class="py-name">memory</tt><tt class="py-op">,</tt> <tt class="py-name">cores</tt><tt class="py-op">=</tt><tt class="py-name">cores</tt><tt class="py-op">,</tt> <tt class="py-name">modules</tt><tt class="py-op">=</tt><tt class="py-name">modules</tt><tt class="py-op">,</tt> <tt class="py-name">wallTime</tt><tt class="py-op">=</tt><tt class="py-name">wallTime</tt><tt class="py-op">)</tt> </tt>
+<a name="L42"></a><tt class="py-lineno"> 42</tt>  <tt class="py-line">        <tt class="py-name">self</tt><tt class="py-op">.</tt><tt class="py-name">submitCommand</tt> <tt class="py-op">=</tt> <tt class="py-string">"sbatch"</tt> </tt>
+<a name="L43"></a><tt class="py-lineno"> 43</tt>  <tt class="py-line">        <tt class="py-name">self</tt><tt class="py-op">.</tt><tt class="py-name">jobListCommand</tt> <tt class="py-op">=</tt> <tt class="py-string">"squeue"</tt> </tt>
+<a name="L44"></a><tt class="py-lineno"> 44</tt>  <tt class="py-line">        <tt class="py-name">self</tt><tt class="py-op">.</tt><tt class="py-name">jobTemplate</tt> <tt class="py-op">=</tt> <tt id="link-7" class="py-name"><a title="TEES.Utils.Connection.SLURMConnection.SLURMJobTemplate" class="py-name" href="#" onclick="return doclink('link-7', 'SLURMJobTemplate', 'link-2');">SLURMJobTemplate</a></tt> </tt>
+</div><a name="L45"></a><tt class="py-lineno"> 45</tt>  <tt class="py-line">     </tt>
+<a name="SLURMConnection.submit"></a><div id="SLURMConnection.submit-def"><a name="L46"></a><tt class="py-lineno"> 46</tt> <a class="py-toggle" href="#" id="SLURMConnection.submit-toggle" onclick="return toggle('SLURMConnection.submit');">-</a><tt class="py-line">    <tt class="py-keyword">def</tt> <a class="py-def-name" href="TEES.Utils.Connection.SLURMConnection.SLURMConnection-class.html#submit">submit</a><tt class="py-op">(</tt><tt class="py-param">self</tt><tt class="py-op">,</tt> <tt class="py-param">script</tt><tt class="py-op">=</tt><tt class="py-name">None</tt><tt class="py-op">,</tt> <tt class="py-param">jobDir</tt><tt class="py-op">=</tt><tt class="py-name">None</tt><tt class="py-op">,</tt> <tt class="py-param">jobName</tt><tt class="py-op">=</tt><tt class="py-name">None</tt><tt class="py-op">,</tt> <tt class="py-param">stdout</tt><tt class="py-op">=</tt><tt class="py-name">None</tt><tt class="py-op">,</tt> <tt class="py-param">stderr</tt><tt class="py-op">=</tt><tt class="py-name">None</tt><tt class="py-op">)</tt><tt class="py-op">:</tt> </tt>
+</div><div id="SLURMConnection.submit-collapsed" style="display:none;" pad="+++" indent="++++++++"></div><div id="SLURMConnection.submit-expanded"><a name="L47"></a><tt class="py-lineno"> 47</tt>  <tt class="py-line">        <tt class="py-name">pstdout</tt><tt class="py-op">,</tt> <tt class="py-name">pstderr</tt> <tt class="py-op">=</tt> <tt id="link-8" class="py-name"><a title="TEES.Utils.Connection.ClusterConnection
+TEES.Utils.Connection.ClusterConnection.ClusterConnection" class="py-name" href="#" onclick="return doclink('link-8', 'ClusterConnection', 'link-0');">ClusterConnection</a></tt><tt class="py-op">.</tt><tt id="link-9" class="py-name" targets="Method TEES.Utils.Connection.ClusterConnection.ClusterConnection.submit()=TEES.Utils.Connection.ClusterConnection.ClusterConnection-class.html#submit,Method TEES.Utils.Connection.SLURMConnection.SLURMConnection.submit()=TEES.Utils.Connection.SLURMConnection.SLURMConnection-class.html#submit,Method TEES.Utils.Connection.UnixConnection.UnixConnection.submit()=TEES.Utils.Connection.UnixConnection.UnixConnection-class.html#submit"><a title="TEES.Utils.Connection.ClusterConnection.ClusterConnection.submit
+TEES.Utils.Connection.SLURMConnection.SLURMConnection.submit
+TEES.Utils.Connection.UnixConnection.UnixConnection.submit" class="py-name" href="#" onclick="return doclink('link-9', 'submit', 'link-9');">submit</a></tt><tt class="py-op">(</tt><tt class="py-name">self</tt><tt class="py-op">,</tt> <tt class="py-name">script</tt><tt class="py-op">,</tt> <tt class="py-name">jobDir</tt><tt class="py-op">,</tt> <tt class="py-name">jobName</tt><tt class="py-op">,</tt> <tt class="py-name">stdout</tt><tt class="py-op">,</tt> <tt class="py-name">stderr</tt><tt class="py-op">)</tt> </tt>
+<a name="L48"></a><tt class="py-lineno"> 48</tt>  <tt class="py-line">        <tt class="py-keyword">if</tt> <tt class="py-name">pstderr</tt> <tt class="py-op">!=</tt> <tt class="py-name">None</tt><tt class="py-op">:</tt> </tt>
+<a name="L49"></a><tt class="py-lineno"> 49</tt>  <tt class="py-line">            <tt class="py-keyword">print</tt> <tt class="py-op">&gt;&gt;</tt> <tt class="py-name">sys</tt><tt class="py-op">.</tt><tt class="py-name">stderr</tt><tt class="py-op">,</tt> <tt class="py-name">pstderr</tt> </tt>
+<a name="L50"></a><tt class="py-lineno"> 50</tt>  <tt class="py-line">        <tt class="py-keyword">print</tt> <tt class="py-op">&gt;&gt;</tt> <tt class="py-name">sys</tt><tt class="py-op">.</tt><tt class="py-name">stderr</tt><tt class="py-op">,</tt> <tt class="py-name">pstdout</tt> </tt>
+<a name="L51"></a><tt class="py-lineno"> 51</tt>  <tt class="py-line">        <tt class="py-keyword">assert</tt> <tt class="py-name">pstdout</tt><tt class="py-op">.</tt><tt class="py-name">startswith</tt><tt class="py-op">(</tt><tt class="py-string">"Submitted batch job"</tt><tt class="py-op">)</tt><tt class="py-op">,</tt> <tt class="py-name">pstdout</tt> </tt>
+<a name="L52"></a><tt class="py-lineno"> 52</tt>  <tt class="py-line">        <tt class="py-name">jobId</tt> <tt class="py-op">=</tt> <tt class="py-name">int</tt><tt class="py-op">(</tt><tt class="py-name">pstdout</tt><tt class="py-op">.</tt><tt id="link-10" class="py-name" targets="Variable TEES.Utils.Convert.processLPSN.split=TEES.Utils.Convert.processLPSN-module.html#split"><a title="TEES.Utils.Convert.processLPSN.split" class="py-name" href="#" onclick="return doclink('link-10', 'split', 'link-10');">split</a></tt><tt class="py-op">(</tt><tt class="py-op">)</tt><tt class="py-op">[</tt><tt class="py-op">-</tt><tt class="py-number">1</tt><tt class="py-op">]</tt><tt class="py-op">)</tt> </tt>
+<a name="L53"></a><tt class="py-lineno"> 53</tt>  <tt class="py-line">        <tt class="py-keyword">return</tt> <tt class="py-name">self</tt><tt class="py-op">.</tt><tt id="link-11" class="py-name" targets="Method TEES.Utils.Connection.UnixConnection.UnixConnection._writeJobFile()=TEES.Utils.Connection.UnixConnection.UnixConnection-class.html#_writeJobFile"><a title="TEES.Utils.Connection.UnixConnection.UnixConnection._writeJobFile" class="py-name" href="#" onclick="return doclink('link-11', '_writeJobFile', 'link-11');">_writeJobFile</a></tt><tt class="py-op">(</tt><tt class="py-name">jobDir</tt><tt class="py-op">,</tt> <tt class="py-name">jobName</tt><tt class="py-op">,</tt> <tt class="py-op">{</tt><tt class="py-string">"SLURMID"</tt><tt class="py-op">:</tt><tt class="py-name">jobId</tt><tt class="py-op">}</tt><tt class="py-op">,</tt> <tt class="py-name">append</tt><tt class="py-op">=</tt><tt class="py-name">True</tt><tt class="py-op">)</tt> </tt>
+</div><a name="L54"></a><tt class="py-lineno"> 54</tt>  <tt class="py-line">     </tt>
+<a name="SLURMConnection.getJobStatus"></a><div id="SLURMConnection.getJobStatus-def"><a name="L55"></a><tt class="py-lineno"> 55</tt> <a class="py-toggle" href="#" id="SLURMConnection.getJobStatus-toggle" onclick="return toggle('SLURMConnection.getJobStatus');">-</a><tt class="py-line">    <tt class="py-keyword">def</tt> <a class="py-def-name" href="TEES.Utils.Connection.SLURMConnection.SLURMConnection-class.html#getJobStatus">getJobStatus</a><tt class="py-op">(</tt><tt class="py-param">self</tt><tt class="py-op">,</tt> <tt class="py-param">job</tt><tt class="py-op">)</tt><tt class="py-op">:</tt> </tt>
+</div><div id="SLURMConnection.getJobStatus-collapsed" style="display:none;" pad="+++" indent="++++++++"></div><div id="SLURMConnection.getJobStatus-expanded"><a name="L56"></a><tt class="py-lineno"> 56</tt>  <tt class="py-line">        <tt class="py-name">jobAttr</tt> <tt class="py-op">=</tt> <tt class="py-name">self</tt><tt class="py-op">.</tt><tt id="link-12" class="py-name" targets="Method TEES.Utils.Connection.UnixConnection.UnixConnection._readJobFile()=TEES.Utils.Connection.UnixConnection.UnixConnection-class.html#_readJobFile"><a title="TEES.Utils.Connection.UnixConnection.UnixConnection._readJobFile" class="py-name" href="#" onclick="return doclink('link-12', '_readJobFile', 'link-12');">_readJobFile</a></tt><tt class="py-op">(</tt><tt class="py-name">job</tt><tt class="py-op">)</tt> </tt>
+<a name="L57"></a><tt class="py-lineno"> 57</tt>  <tt class="py-line">        <tt class="py-comment"># Check whether job exists</tt> </tt>
+<a name="L58"></a><tt class="py-lineno"> 58</tt>  <tt class="py-line">        <tt class="py-keyword">if</tt> <tt class="py-name">jobAttr</tt> <tt class="py-op">==</tt> <tt class="py-name">None</tt><tt class="py-op">:</tt> </tt>
+<a name="L59"></a><tt class="py-lineno"> 59</tt>  <tt class="py-line">            <tt class="py-keyword">return</tt> <tt class="py-name">None</tt> </tt>
+<a name="L60"></a><tt class="py-lineno"> 60</tt>  <tt class="py-line">        <tt class="py-keyword">if</tt> <tt class="py-string">"SLURMID"</tt> <tt class="py-keyword">not</tt> <tt class="py-keyword">in</tt> <tt class="py-name">jobAttr</tt><tt class="py-op">:</tt> </tt>
+<a name="L61"></a><tt class="py-lineno"> 61</tt>  <tt class="py-line">            <tt class="py-keyword">return</tt> <tt class="py-string">"FAILED"</tt> <tt class="py-comment"># submitting the job failed</tt> </tt>
+<a name="L62"></a><tt class="py-lineno"> 62</tt>  <tt class="py-line">        <tt class="py-keyword">for</tt> <tt id="link-13" class="py-name" targets="Variable TEES.Utils.Convert.processLPSN.line=TEES.Utils.Convert.processLPSN-module.html#line"><a title="TEES.Utils.Convert.processLPSN.line" class="py-name" href="#" onclick="return doclink('link-13', 'line', 'link-13');">line</a></tt> <tt class="py-keyword">in</tt> <tt class="py-name">self</tt><tt class="py-op">.</tt><tt id="link-14" class="py-name" targets="Class Method TEES.Core.RecallAdjust.RecallAdjust.run()=TEES.Core.RecallAdjust.RecallAdjust-class.html#run,Function TEES.Evaluators.EvaluateInteractionXML.run()=TEES.Evaluators.EvaluateInteractionXML-module.html#run,Class Method TEES.ExampleBuilders.ExampleBuilder.ExampleBuilder.run()=TEES.ExampleBuilders.ExampleBuilder.ExampleBuilder-class.html#run,Function TEES.Tools.BANNER.run()=TEES.Tools.BANNER-module.html#run,Function TEES.Tools.GeniaEventsToSharedTask.run()=TEES.Tools.GeniaEventsToSharedTask-module.html#run,Method TEES.Utils.Connection.UnixConnection.UnixConnection.run()=TEES.Utils.Connection.UnixConnection.UnixConnection-class.html#run,Method TEES.Utils.Menu.MenuSystem.run()=TEES.Utils.Menu.MenuSystem-class.html#run"><a title="TEES.Core.RecallAdjust.RecallAdjust.run
+TEES.Evaluators.EvaluateInteractionXML.run
+TEES.ExampleBuilders.ExampleBuilder.ExampleBuilder.run
+TEES.Tools.BANNER.run
+TEES.Tools.GeniaEventsToSharedTask.run
+TEES.Utils.Connection.UnixConnection.UnixConnection.run
+TEES.Utils.Menu.MenuSystem.run" class="py-name" href="#" onclick="return doclink('link-14', 'run', 'link-14');">run</a></tt><tt class="py-op">(</tt><tt class="py-string">"sacct -u "</tt> <tt class="py-op">+</tt> <tt class="py-name">self</tt><tt class="py-op">.</tt><tt id="link-15" class="py-name" targets="Method TEES.Utils.Connection.UnixConnection.UnixConnection.getUserName()=TEES.Utils.Connection.UnixConnection.UnixConnection-class.html#getUserName"><a title="TEES.Utils.Connection.UnixConnection.UnixConnection.getUserName" class="py-name" href="#" onclick="return doclink('link-15', 'getUserName', 'link-15');">getUserName</a></tt><tt class="py-op">(</tt><tt class="py-op">)</tt> <tt class="py-op">+</tt> <tt class="py-string">" -j "</tt> <tt class="py-op">+</tt> <tt class="py-name">jobAttr</tt><tt class="py-op">[</tt><tt class="py-string">"SLURMID"</tt><tt class="py-op">]</tt><tt class="py-op">)</tt><tt class="py-op">:</tt> </tt>
+<a name="L63"></a><tt class="py-lineno"> 63</tt>  <tt class="py-line">            <tt id="link-16" class="py-name"><a title="TEES.Utils.Convert.processLPSN.line" class="py-name" href="#" onclick="return doclink('link-16', 'line', 'link-13');">line</a></tt> <tt class="py-op">=</tt> <tt id="link-17" class="py-name"><a title="TEES.Utils.Convert.processLPSN.line" class="py-name" href="#" onclick="return doclink('link-17', 'line', 'link-13');">line</a></tt><tt class="py-op">.</tt><tt class="py-name">strip</tt><tt class="py-op">(</tt><tt class="py-op">)</tt> </tt>
+<a name="L64"></a><tt class="py-lineno"> 64</tt>  <tt class="py-line">            <tt id="link-18" class="py-name" targets="Variable TEES.Utils.Convert.processLPSN.splits=TEES.Utils.Convert.processLPSN-module.html#splits"><a title="TEES.Utils.Convert.processLPSN.splits" class="py-name" href="#" onclick="return doclink('link-18', 'splits', 'link-18');">splits</a></tt> <tt class="py-op">=</tt> <tt id="link-19" class="py-name"><a title="TEES.Utils.Convert.processLPSN.line" class="py-name" href="#" onclick="return doclink('link-19', 'line', 'link-13');">line</a></tt><tt class="py-op">.</tt><tt id="link-20" class="py-name"><a title="TEES.Utils.Convert.processLPSN.split" class="py-name" href="#" onclick="return doclink('link-20', 'split', 'link-10');">split</a></tt><tt class="py-op">(</tt><tt class="py-op">)</tt> </tt>
+<a name="L65"></a><tt class="py-lineno"> 65</tt>  <tt class="py-line">            <tt class="py-comment">#if self.debug:</tt> </tt>
+<a name="L66"></a><tt class="py-lineno"> 66</tt>  <tt class="py-line">            <tt class="py-comment">#    print &gt;&gt; sys.stderr, "sacct line:", line</tt> </tt>
+<a name="L67"></a><tt class="py-lineno"> 67</tt>  <tt class="py-line">            <tt class="py-comment">#print splits</tt> </tt>
+<a name="L68"></a><tt class="py-lineno"> 68</tt>  <tt class="py-line">            <tt class="py-keyword">if</tt> <tt id="link-21" class="py-name"><a title="TEES.Utils.Convert.processLPSN.splits" class="py-name" href="#" onclick="return doclink('link-21', 'splits', 'link-18');">splits</a></tt><tt class="py-op">[</tt><tt class="py-number">0</tt><tt class="py-op">]</tt> <tt class="py-op">==</tt> <tt class="py-name">jobAttr</tt><tt class="py-op">[</tt><tt class="py-string">"SLURMID"</tt><tt class="py-op">]</tt><tt class="py-op">:</tt> </tt>
+<a name="L69"></a><tt class="py-lineno"> 69</tt>  <tt class="py-line">                <tt class="py-keyword">if</tt> <tt class="py-name">self</tt><tt class="py-op">.</tt><tt class="py-name">debug</tt><tt class="py-op">:</tt> </tt>
+<a name="L70"></a><tt class="py-lineno"> 70</tt>  <tt class="py-line">                    <tt class="py-keyword">print</tt> <tt class="py-op">&gt;&gt;</tt> <tt class="py-name">sys</tt><tt class="py-op">.</tt><tt class="py-name">stderr</tt><tt class="py-op">,</tt> <tt class="py-string">"sacct:"</tt><tt class="py-op">,</tt> <tt id="link-22" class="py-name"><a title="TEES.Utils.Convert.processLPSN.line" class="py-name" href="#" onclick="return doclink('link-22', 'line', 'link-13');">line</a></tt> </tt>
+<a name="L71"></a><tt class="py-lineno"> 71</tt>  <tt class="py-line">                <tt class="py-name">jobStatus</tt> <tt class="py-op">=</tt> <tt id="link-23" class="py-name"><a title="TEES.Utils.Convert.processLPSN.splits" class="py-name" href="#" onclick="return doclink('link-23', 'splits', 'link-18');">splits</a></tt><tt class="py-op">[</tt><tt class="py-number">5</tt><tt class="py-op">]</tt> </tt>
+<a name="L72"></a><tt class="py-lineno"> 72</tt>  <tt class="py-line">                <tt class="py-keyword">if</tt> <tt class="py-name">jobStatus</tt> <tt class="py-keyword">in</tt> <tt class="py-op">[</tt><tt class="py-string">"RUNNING"</tt><tt class="py-op">,</tt> <tt class="py-string">"COMPLETING"</tt><tt class="py-op">]</tt><tt class="py-op">:</tt> </tt>
+<a name="L73"></a><tt class="py-lineno"> 73</tt>  <tt class="py-line">                    <tt class="py-keyword">return</tt> <tt class="py-string">"RUNNING"</tt> </tt>
+<a name="L74"></a><tt class="py-lineno"> 74</tt>  <tt class="py-line">                <tt class="py-keyword">elif</tt> <tt class="py-name">jobStatus</tt> <tt class="py-op">==</tt> <tt class="py-string">"COMPLETED"</tt><tt class="py-op">:</tt> </tt>
+<a name="L75"></a><tt class="py-lineno"> 75</tt>  <tt class="py-line">                    <tt class="py-keyword">if</tt> <tt class="py-string">"retcode"</tt> <tt class="py-keyword">not</tt> <tt class="py-keyword">in</tt> <tt class="py-name">jobAttr</tt><tt class="py-op">:</tt> <tt class="py-comment"># file hasn't had the time to be updated?</tt> </tt>
+<a name="L76"></a><tt class="py-lineno"> 76</tt>  <tt class="py-line">                        <tt class="py-keyword">return</tt> <tt class="py-string">"RUNNING"</tt> </tt>
+<a name="L77"></a><tt class="py-lineno"> 77</tt>  <tt class="py-line">                    <tt class="py-keyword">elif</tt> <tt class="py-name">jobAttr</tt><tt class="py-op">[</tt><tt class="py-string">"retcode"</tt><tt class="py-op">]</tt> <tt class="py-op">==</tt> <tt class="py-string">"0"</tt><tt class="py-op">:</tt> </tt>
+<a name="L78"></a><tt class="py-lineno"> 78</tt>  <tt class="py-line">                        <tt class="py-keyword">return</tt> <tt class="py-string">"FINISHED"</tt> </tt>
+<a name="L79"></a><tt class="py-lineno"> 79</tt>  <tt class="py-line">                    <tt class="py-keyword">else</tt><tt class="py-op">:</tt> </tt>
+<a name="L80"></a><tt class="py-lineno"> 80</tt>  <tt class="py-line">                        <tt class="py-keyword">return</tt> <tt class="py-string">"FAILED"</tt> </tt>
+<a name="L81"></a><tt class="py-lineno"> 81</tt>  <tt class="py-line">                <tt class="py-keyword">elif</tt> <tt class="py-name">jobStatus</tt> <tt class="py-keyword">in</tt> <tt class="py-op">[</tt><tt class="py-string">"FAILED"</tt><tt class="py-op">,</tt> <tt class="py-string">"CANCELLED"</tt><tt class="py-op">,</tt> <tt class="py-string">"NODE_FAIL"</tt><tt class="py-op">,</tt> <tt class="py-string">"PREEMPTED"</tt><tt class="py-op">,</tt> <tt class="py-string">"TIMEOUT"</tt><tt class="py-op">]</tt><tt class="py-op">:</tt> </tt>
+<a name="L82"></a><tt class="py-lineno"> 82</tt>  <tt class="py-line">                    <tt class="py-keyword">return</tt> <tt class="py-string">"FAILED"</tt> </tt>
+<a name="L83"></a><tt class="py-lineno"> 83</tt>  <tt class="py-line">                <tt class="py-keyword">elif</tt> <tt class="py-name">jobStatus</tt> <tt class="py-keyword">in</tt> <tt class="py-op">[</tt><tt class="py-string">"PENDING"</tt><tt class="py-op">,</tt> <tt class="py-string">"RESIZING"</tt><tt class="py-op">,</tt> <tt class="py-string">"SUSPENDED"</tt><tt class="py-op">]</tt><tt class="py-op">:</tt> </tt>
+<a name="L84"></a><tt class="py-lineno"> 84</tt>  <tt class="py-line">                    <tt class="py-keyword">return</tt> <tt class="py-string">"QUEUED"</tt> </tt>
+<a name="L85"></a><tt class="py-lineno"> 85</tt>  <tt class="py-line">                <tt class="py-keyword">else</tt><tt class="py-op">:</tt> </tt>
+<a name="L86"></a><tt class="py-lineno"> 86</tt>  <tt class="py-line">                    <tt class="py-keyword">assert</tt> <tt class="py-name">False</tt><tt class="py-op">,</tt> <tt class="py-name">jobStatus</tt> </tt>
+<a name="L87"></a><tt class="py-lineno"> 87</tt>  <tt class="py-line">        <tt class="py-keyword">return</tt> <tt class="py-string">"QUEUED"</tt> </tt>
+</div></div><a name="L88"></a><tt class="py-lineno"> 88</tt>  <tt class="py-line"> </tt>
+<a name="L89"></a><tt class="py-lineno"> 89</tt>  <tt class="py-line"><tt class="py-comment">#    def makeJobScript(self, script, jobDir=None, jobName=None, stdout=None, stderr=None, wallTime=None, modules=None, cores=None, memory=None):</tt> </tt>
+<a name="L90"></a><tt class="py-lineno"> 90</tt>  <tt class="py-line"><tt class="py-comment">#        """</tt> </tt>
+<a name="L91"></a><tt class="py-lineno"> 91</tt>  <tt class="py-line"><tt class="py-comment">#        Make a SLURM job submission script</tt> </tt>
+<a name="L92"></a><tt class="py-lineno"> 92</tt>  <tt class="py-line"><tt class="py-comment">#        """</tt> </tt>
+<a name="L93"></a><tt class="py-lineno"> 93</tt>  <tt class="py-line"><tt class="py-comment">#        s = "#!/bin/bash -l \n"</tt> </tt>
+<a name="L94"></a><tt class="py-lineno"> 94</tt>  <tt class="py-line"><tt class="py-comment">#        s += "##execution shell environment \n\n"</tt> </tt>
+<a name="L95"></a><tt class="py-lineno"> 95</tt>  <tt class="py-line"><tt class="py-comment">#        </tt> </tt>
+<a name="L96"></a><tt class="py-lineno"> 96</tt>  <tt class="py-line"><tt class="py-comment">#        #stdout, stderr = self.getStreams(stdout, stderr, name, jobWorkDir)</tt> </tt>
+<a name="L97"></a><tt class="py-lineno"> 97</tt>  <tt class="py-line"><tt class="py-comment">#        s += "## name of your job" + "\n"</tt> </tt>
+<a name="L98"></a><tt class="py-lineno"> 98</tt>  <tt class="py-line"><tt class="py-comment">#        s += "#SBATCH -J " + jobName + "\n"</tt> </tt>
+<a name="L99"></a><tt class="py-lineno"> 99</tt>  <tt class="py-line"><tt class="py-comment">#        stdout, stderr = self.getStreams(stdout, stderr, jobDir, jobName)</tt> </tt>
+<a name="L100"></a><tt class="py-lineno">100</tt>  <tt class="py-line"><tt class="py-comment">#        s += "## system error message output file" + "\n"</tt> </tt>
+<a name="L101"></a><tt class="py-lineno">101</tt>  <tt class="py-line"><tt class="py-comment">#        s += "#SBATCH -e " + stderr + "\n"</tt> </tt>
+<a name="L102"></a><tt class="py-lineno">102</tt>  <tt class="py-line"><tt class="py-comment">#        s += "## system message output file" + "\n"</tt> </tt>
+<a name="L103"></a><tt class="py-lineno">103</tt>  <tt class="py-line"><tt class="py-comment">#        s += "#SBATCH -o " + stdout + "\n"</tt> </tt>
+<a name="L104"></a><tt class="py-lineno">104</tt>  <tt class="py-line"><tt class="py-comment">#        s += "## a per-process (soft) memory limit" + "\n"</tt> </tt>
+<a name="L105"></a><tt class="py-lineno">105</tt>  <tt class="py-line"><tt class="py-comment">#        s += "## limit is specified in MB" + "\n"</tt> </tt>
+<a name="L106"></a><tt class="py-lineno">106</tt>  <tt class="py-line"><tt class="py-comment">#        s += "## example: 1 GB is 1000" + "\n"</tt> </tt>
+<a name="L107"></a><tt class="py-lineno">107</tt>  <tt class="py-line"><tt class="py-comment">#        #s += "#SBATCH --mem-per-cpu=16000" + "\n"</tt> </tt>
+<a name="L108"></a><tt class="py-lineno">108</tt>  <tt class="py-line"><tt class="py-comment">#        if memory == None: memory = self.memory</tt> </tt>
+<a name="L109"></a><tt class="py-lineno">109</tt>  <tt class="py-line"><tt class="py-comment">#        s += "#SBATCH --mem-per-cpu=" + str(memory) + "\n"</tt> </tt>
+<a name="L110"></a><tt class="py-lineno">110</tt>  <tt class="py-line"><tt class="py-comment">#        if wallTime == None: wallTime = self.wallTime</tt> </tt>
+<a name="L111"></a><tt class="py-lineno">111</tt>  <tt class="py-line"><tt class="py-comment">#        s += "## how long a job takes, wallclock time hh:mm:ss" + "\n"</tt> </tt>
+<a name="L112"></a><tt class="py-lineno">112</tt>  <tt class="py-line"><tt class="py-comment">#        s += "#SBATCH -t " + wallTime + "\n"</tt> </tt>
+<a name="L113"></a><tt class="py-lineno">113</tt>  <tt class="py-line"><tt class="py-comment">#        if cores == None: cores = self.cores</tt> </tt>
+<a name="L114"></a><tt class="py-lineno">114</tt>  <tt class="py-line"><tt class="py-comment">#        s += "## number of processes" + "\n"</tt> </tt>
+<a name="L115"></a><tt class="py-lineno">115</tt>  <tt class="py-line"><tt class="py-comment">#        s += "#SBATCH -n " + str(cores) + "\n"</tt> </tt>
+<a name="L116"></a><tt class="py-lineno">116</tt>  <tt class="py-line"><tt class="py-comment">#        </tt> </tt>
+<a name="L117"></a><tt class="py-lineno">117</tt>  <tt class="py-line"><tt class="py-comment">#        s += "mkdir -p " + os.path.dirname(stdout) + "\n" # ensure output directory exists</tt> </tt>
+<a name="L118"></a><tt class="py-lineno">118</tt>  <tt class="py-line"><tt class="py-comment">#        s += "mkdir -p " + os.path.dirname(stderr) + "\n" # ensure output directory exists</tt> </tt>
+<a name="L119"></a><tt class="py-lineno">119</tt>  <tt class="py-line"><tt class="py-comment">#                </tt> </tt>
+<a name="L120"></a><tt class="py-lineno">120</tt>  <tt class="py-line"><tt class="py-comment">#        if modules == None:</tt> </tt>
+<a name="L121"></a><tt class="py-lineno">121</tt>  <tt class="py-line"><tt class="py-comment">#            modules = self.modules</tt> </tt>
+<a name="L122"></a><tt class="py-lineno">122</tt>  <tt class="py-line"><tt class="py-comment">#        if modules != None:</tt> </tt>
+<a name="L123"></a><tt class="py-lineno">123</tt>  <tt class="py-line"><tt class="py-comment">#            for module in modules:</tt> </tt>
+<a name="L124"></a><tt class="py-lineno">124</tt>  <tt class="py-line"><tt class="py-comment">#                s += "module load " + module + "\n"</tt> </tt>
+<a name="L125"></a><tt class="py-lineno">125</tt>  <tt class="py-line"><tt class="py-comment">#        if self.remoteSettingsPath != None: # Use a specific configuration file</tt> </tt>
+<a name="L126"></a><tt class="py-lineno">126</tt>  <tt class="py-line"><tt class="py-comment">#            s += "export TEES_SETTINGS=" + self.remoteSettingsPath + "\n"</tt> </tt>
+<a name="L127"></a><tt class="py-lineno">127</tt>  <tt class="py-line"><tt class="py-comment">#        if jobDir != None:</tt> </tt>
+<a name="L128"></a><tt class="py-lineno">128</tt>  <tt class="py-line"><tt class="py-comment">#            s += "mkdir -p " + self.getRemotePath(jobDir) + "\n" # ensure output directory exists</tt> </tt>
+<a name="L129"></a><tt class="py-lineno">129</tt>  <tt class="py-line"><tt class="py-comment">#            s += "cd " + self.getRemotePath(jobDir) + "\n\n" # move to output directory where the program will be run</tt> </tt>
+<a name="L130"></a><tt class="py-lineno">130</tt>  <tt class="py-line"><tt class="py-comment">#        s += script + "\n"</tt> </tt>
+<a name="L131"></a><tt class="py-lineno">131</tt>  <tt class="py-line"><tt class="py-comment">#        # Store return value in job file</tt> </tt>
+<a name="L132"></a><tt class="py-lineno">132</tt>  <tt class="py-line"><tt class="py-comment">#        s += "echo retcode=$? &gt;&gt; " + self.getRemotePath(self._getJobPath(jobDir, jobName))</tt> </tt>
+<a name="L133"></a><tt class="py-lineno">133</tt>  <tt class="py-line"><tt class="py-comment">#        </tt> </tt>
+<a name="L134"></a><tt class="py-lineno">134</tt>  <tt class="py-line"><tt class="py-comment">#        return s</tt> </tt>
+<a name="L135"></a><tt class="py-lineno">135</tt>  <tt class="py-line"> </tt><script type="text/javascript">
+<!--
+expandto(location.href);
+// -->
+</script>
+</pre>
+<br />
+<!-- ==================== NAVIGATION BAR ==================== -->
+<table class="navbar" border="0" width="100%" cellpadding="0"
+       bgcolor="#a0c0ff" cellspacing="0">
+  <tr valign="middle">
+  <!-- Home link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="TEES-module.html">Home</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Tree link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="module-tree.html">Trees</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Index link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="identifier-index.html">Indices</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Help link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="help.html">Help</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Project homepage -->
+      <th class="navbar" align="right" width="100%">
+        <table border="0" cellpadding="0" cellspacing="0">
+          <tr><th class="navbar" align="center"
+            >Turku Event Extraction System</th>
+          </tr></table></th>
+  </tr>
+</table>
+<table border="0" cellpadding="0" cellspacing="0" width="100%%">
+  <tr>
+    <td align="left" class="footer">
+    Generated by Epydoc 3.0.1 on Thu Jul 19 18:21:02 2012
+    </td>
+    <td align="right" class="footer">
+      <a target="mainFrame" href="http://epydoc.sourceforge.net"
+        >http://epydoc.sourceforge.net</a>
+    </td>
+  </tr>
+</table>
+
+<script type="text/javascript">
+  <!--
+  // Private objects are initially displayed (because if
+  // javascript is turned off then we want them to be
+  // visible); but by default, we want to hide them.  So hide
+  // them unless we have a cookie that says to show them.
+  checkCookie();
+  // -->
+</script>
+</body>
+</html>

@@ -1,0 +1,343 @@
+<?xml version="1.0" encoding="ascii"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+          "DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+  <title>TEES.Utils.Connection.SLURMConnection.SLURMConnection</title>
+  <link rel="stylesheet" href="epydoc.css" type="text/css" />
+  <script type="text/javascript" src="epydoc.js"></script>
+</head>
+
+<body bgcolor="white" text="black" link="blue" vlink="#204080"
+      alink="#204080">
+<!-- ==================== NAVIGATION BAR ==================== -->
+<table class="navbar" border="0" width="100%" cellpadding="0"
+       bgcolor="#a0c0ff" cellspacing="0">
+  <tr valign="middle">
+  <!-- Home link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="TEES-module.html">Home</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Tree link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="module-tree.html">Trees</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Index link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="identifier-index.html">Indices</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Help link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="help.html">Help</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Project homepage -->
+      <th class="navbar" align="right" width="100%">
+        <table border="0" cellpadding="0" cellspacing="0">
+          <tr><th class="navbar" align="center"
+            >Turku Event Extraction System</th>
+          </tr></table></th>
+  </tr>
+</table>
+<table width="100%" cellpadding="0" cellspacing="0">
+  <tr valign="top">
+    <td width="100%">
+      <span class="breadcrumbs">
+        <a href="TEES-module.html">Package&nbsp;TEES</a> ::
+        <a href="TEES.Utils-module.html">Package&nbsp;Utils</a> ::
+        <a href="TEES.Utils.Connection-module.html">Package&nbsp;Connection</a> ::
+        <a href="TEES.Utils.Connection.SLURMConnection-module.html">Module&nbsp;SLURMConnection</a> ::
+        Class&nbsp;SLURMConnection
+      </span>
+    </td>
+    <td>
+      <table cellpadding="0" cellspacing="0">
+        <!-- hide/show private -->
+        <tr><td align="right"><span class="options">[<a href="javascript:void(0);" class="privatelink"
+    onclick="toggle_private();">hide&nbsp;private</a>]</span></td></tr>
+      </table>
+    </td>
+  </tr>
+</table>
+<!-- ==================== CLASS DESCRIPTION ==================== -->
+<h1 class="epydoc">Class SLURMConnection</h1><p class="nomargin-top"><span class="codelink"><a href="TEES.Utils.Connection.SLURMConnection-pysrc.html#SLURMConnection">source&nbsp;code</a></span></p>
+<pre class="base-tree">
+  <a href="TEES.Utils.Connection.UnixConnection.UnixConnection-class.html">UnixConnection.UnixConnection</a> --+    
+                                  |    
+<a href="TEES.Utils.Connection.ClusterConnection.ClusterConnection-class.html">ClusterConnection.ClusterConnection</a> --+
+                                      |
+                                     <strong class="uidshort">SLURMConnection</strong>
+</pre>
+
+<hr />
+<p>For using the Simple Linux Utility for Resource Management 
+  (https://computing.llnl.gov/linux/slurm/).</p>
+
+<!-- ==================== INSTANCE METHODS ==================== -->
+<a name="section-InstanceMethods"></a>
+<table class="summary" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr bgcolor="#70b0f0" class="table-header">
+  <td colspan="2" class="table-header">
+    <table border="0" cellpadding="0" cellspacing="0" width="100%">
+      <tr valign="top">
+        <td align="left"><span class="table-header">Instance Methods</span></td>
+        <td align="right" valign="top"
+         ><span class="options">[<a href="#section-InstanceMethods"
+         class="privatelink" onclick="toggle_private();"
+         >hide private</a>]</span></td>
+      </tr>
+    </table>
+  </td>
+</tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a href="TEES.Utils.Connection.SLURMConnection.SLURMConnection-class.html#__init__" class="summary-sig-name">__init__</a>(<span class="summary-sig-arg">self</span>,
+        <span class="summary-sig-arg">account</span>=<span class="summary-sig-default">None</span>,
+        <span class="summary-sig-arg">workdir</span>=<span class="summary-sig-default">None</span>,
+        <span class="summary-sig-arg">settings</span>=<span class="summary-sig-default">None</span>,
+        <span class="summary-sig-arg">wallTime</span>=<span class="summary-sig-default">None</span>,
+        <span class="summary-sig-arg">memory</span>=<span class="summary-sig-default">None</span>,
+        <span class="summary-sig-arg">cores</span>=<span class="summary-sig-default">None</span>,
+        <span class="summary-sig-arg">modules</span>=<span class="summary-sig-default">None</span>)</span></td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="TEES.Utils.Connection.SLURMConnection-pysrc.html#SLURMConnection.__init__">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a href="TEES.Utils.Connection.SLURMConnection.SLURMConnection-class.html#submit" class="summary-sig-name">submit</a>(<span class="summary-sig-arg">self</span>,
+        <span class="summary-sig-arg">script</span>=<span class="summary-sig-default">None</span>,
+        <span class="summary-sig-arg">jobDir</span>=<span class="summary-sig-default">None</span>,
+        <span class="summary-sig-arg">jobName</span>=<span class="summary-sig-default">None</span>,
+        <span class="summary-sig-arg">stdout</span>=<span class="summary-sig-default">None</span>,
+        <span class="summary-sig-arg">stderr</span>=<span class="summary-sig-default">None</span>)</span><br />
+      Queue a command.</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="TEES.Utils.Connection.SLURMConnection-pysrc.html#SLURMConnection.submit">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a href="TEES.Utils.Connection.SLURMConnection.SLURMConnection-class.html#getJobStatus" class="summary-sig-name">getJobStatus</a>(<span class="summary-sig-arg">self</span>,
+        <span class="summary-sig-arg">job</span>)</span></td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="TEES.Utils.Connection.SLURMConnection-pysrc.html#SLURMConnection.getJobStatus">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+  <tr>
+    <td colspan="2" class="summary">
+    <p class="indent-wrapped-lines"><b>Inherited from <code><a href="TEES.Utils.Connection.ClusterConnection.ClusterConnection-class.html">ClusterConnection.ClusterConnection</a></code></b>:
+      <code><a href="TEES.Utils.Connection.ClusterConnection.ClusterConnection-class.html#getNumJobs">getNumJobs</a></code>,
+      <code><a href="TEES.Utils.Connection.ClusterConnection.ClusterConnection-class.html#getStreams">getStreams</a></code>,
+      <code><a href="TEES.Utils.Connection.ClusterConnection.ClusterConnection-class.html#makeJobScript">makeJobScript</a></code>
+      </p>
+    <p class="indent-wrapped-lines"><b>Inherited from <code><a href="TEES.Utils.Connection.UnixConnection.UnixConnection-class.html">UnixConnection.UnixConnection</a></code></b>:
+      <code><a href="TEES.Utils.Connection.UnixConnection.UnixConnection-class.html#addCommand">addCommand</a></code>,
+      <code><a href="TEES.Utils.Connection.UnixConnection.UnixConnection-class.html#clearCommands">clearCommands</a></code>,
+      <code><a href="TEES.Utils.Connection.UnixConnection.UnixConnection-class.html#clearWorkDir">clearWorkDir</a></code>,
+      <code><a href="TEES.Utils.Connection.UnixConnection.UnixConnection-class.html#download">download</a></code>,
+      <code><a href="TEES.Utils.Connection.UnixConnection.UnixConnection-class.html#exists">exists</a></code>,
+      <code><a href="TEES.Utils.Connection.UnixConnection.UnixConnection-class.html#getFileStatus">getFileStatus</a></code>,
+      <code><a href="TEES.Utils.Connection.UnixConnection.UnixConnection-class.html#getJob">getJob</a></code>,
+      <code><a href="TEES.Utils.Connection.UnixConnection.UnixConnection-class.html#getJobStatusByName">getJobStatusByName</a></code>,
+      <code><a href="TEES.Utils.Connection.UnixConnection.UnixConnection-class.html#getLocalPath">getLocalPath</a></code>,
+      <code><a href="TEES.Utils.Connection.UnixConnection.UnixConnection-class.html#getRemotePath">getRemotePath</a></code>,
+      <code><a href="TEES.Utils.Connection.UnixConnection.UnixConnection-class.html#getSetting">getSetting</a></code>,
+      <code><a href="TEES.Utils.Connection.UnixConnection.UnixConnection-class.html#getUserName">getUserName</a></code>,
+      <code><a href="TEES.Utils.Connection.UnixConnection.UnixConnection-class.html#isLocal">isLocal</a></code>,
+      <code><a href="TEES.Utils.Connection.UnixConnection.UnixConnection-class.html#mkdir">mkdir</a></code>,
+      <code><a href="TEES.Utils.Connection.UnixConnection.UnixConnection-class.html#run">run</a></code>,
+      <code><a href="TEES.Utils.Connection.UnixConnection.UnixConnection-class.html#scp">scp</a></code>,
+      <code><a href="TEES.Utils.Connection.UnixConnection.UnixConnection-class.html#upload">upload</a></code>,
+      <code><a href="TEES.Utils.Connection.UnixConnection.UnixConnection-class.html#waitForJob">waitForJob</a></code>,
+      <code><a href="TEES.Utils.Connection.UnixConnection.UnixConnection-class.html#waitForJobCount">waitForJobCount</a></code>,
+      <code><a href="TEES.Utils.Connection.UnixConnection.UnixConnection-class.html#waitForJobs">waitForJobs</a></code>
+      </p>
+    <div class="private">    <p class="indent-wrapped-lines"><b>Inherited from <code><a href="TEES.Utils.Connection.UnixConnection.UnixConnection-class.html">UnixConnection.UnixConnection</a></code></b> (private):
+      <code><a href="TEES.Utils.Connection.UnixConnection.UnixConnection-class.html#_closeLogs" onclick="show_private();">_closeLogs</a></code>,
+      <code><a href="TEES.Utils.Connection.UnixConnection.UnixConnection-class.html#_getJobPath" onclick="show_private();">_getJobPath</a></code>,
+      <code><a href="TEES.Utils.Connection.UnixConnection.UnixConnection-class.html#_getScript" onclick="show_private();">_getScript</a></code>,
+      <code><a href="TEES.Utils.Connection.UnixConnection.UnixConnection-class.html#_readJobFile" onclick="show_private();">_readJobFile</a></code>,
+      <code><a href="TEES.Utils.Connection.UnixConnection.UnixConnection-class.html#_writeJobFile" onclick="show_private();">_writeJobFile</a></code>
+      </p></div>
+    </td>
+  </tr>
+</table>
+<!-- ==================== METHOD DETAILS ==================== -->
+<a name="section-MethodDetails"></a>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr bgcolor="#70b0f0" class="table-header">
+  <td colspan="2" class="table-header">
+    <table border="0" cellpadding="0" cellspacing="0" width="100%">
+      <tr valign="top">
+        <td align="left"><span class="table-header">Method Details</span></td>
+        <td align="right" valign="top"
+         ><span class="options">[<a href="#section-MethodDetails"
+         class="privatelink" onclick="toggle_private();"
+         >hide private</a>]</span></td>
+      </tr>
+    </table>
+  </td>
+</tr>
+</table>
+<a name="__init__"></a>
+<div>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr><td>
+  <table width="100%" cellpadding="0" cellspacing="0" border="0">
+  <tr valign="top"><td>
+  <h3 class="epydoc"><span class="sig"><span class="sig-name">__init__</span>(<span class="sig-arg">self</span>,
+        <span class="sig-arg">account</span>=<span class="sig-default">None</span>,
+        <span class="sig-arg">workdir</span>=<span class="sig-default">None</span>,
+        <span class="sig-arg">settings</span>=<span class="sig-default">None</span>,
+        <span class="sig-arg">wallTime</span>=<span class="sig-default">None</span>,
+        <span class="sig-arg">memory</span>=<span class="sig-default">None</span>,
+        <span class="sig-arg">cores</span>=<span class="sig-default">None</span>,
+        <span class="sig-arg">modules</span>=<span class="sig-default">None</span>)</span>
+    <br /><em class="fname">(Constructor)</em>
+  </h3>
+  </td><td align="right" valign="top"
+    ><span class="codelink"><a href="TEES.Utils.Connection.SLURMConnection-pysrc.html#SLURMConnection.__init__">source&nbsp;code</a></span>&nbsp;
+    </td>
+  </tr></table>
+  
+  
+  <dl class="fields">
+    <dt>Overrides:
+        <a href="TEES.Utils.Connection.UnixConnection.UnixConnection-class.html#__init__">UnixConnection.UnixConnection.__init__</a>
+    </dt>
+  </dl>
+</td></tr></table>
+</div>
+<a name="submit"></a>
+<div>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr><td>
+  <table width="100%" cellpadding="0" cellspacing="0" border="0">
+  <tr valign="top"><td>
+  <h3 class="epydoc"><span class="sig"><span class="sig-name">submit</span>(<span class="sig-arg">self</span>,
+        <span class="sig-arg">script</span>=<span class="sig-default">None</span>,
+        <span class="sig-arg">jobDir</span>=<span class="sig-default">None</span>,
+        <span class="sig-arg">jobName</span>=<span class="sig-default">None</span>,
+        <span class="sig-arg">stdout</span>=<span class="sig-default">None</span>,
+        <span class="sig-arg">stderr</span>=<span class="sig-default">None</span>)</span>
+  </h3>
+  </td><td align="right" valign="top"
+    ><span class="codelink"><a href="TEES.Utils.Connection.SLURMConnection-pysrc.html#SLURMConnection.submit">source&nbsp;code</a></span>&nbsp;
+    </td>
+  </tr></table>
+  
+  <p>Queue a command.</p>
+  <dl class="fields">
+    <dt>Overrides:
+        <a href="TEES.Utils.Connection.UnixConnection.UnixConnection-class.html#submit">UnixConnection.UnixConnection.submit</a>
+        <dd><em class="note">(inherited documentation)</em></dd>
+    </dt>
+  </dl>
+</td></tr></table>
+</div>
+<a name="getJobStatus"></a>
+<div>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr><td>
+  <table width="100%" cellpadding="0" cellspacing="0" border="0">
+  <tr valign="top"><td>
+  <h3 class="epydoc"><span class="sig"><span class="sig-name">getJobStatus</span>(<span class="sig-arg">self</span>,
+        <span class="sig-arg">job</span>)</span>
+  </h3>
+  </td><td align="right" valign="top"
+    ><span class="codelink"><a href="TEES.Utils.Connection.SLURMConnection-pysrc.html#SLURMConnection.getJobStatus">source&nbsp;code</a></span>&nbsp;
+    </td>
+  </tr></table>
+  
+  
+  <dl class="fields">
+    <dt>Overrides:
+        <a href="TEES.Utils.Connection.UnixConnection.UnixConnection-class.html#getJobStatus">UnixConnection.UnixConnection.getJobStatus</a>
+    </dt>
+  </dl>
+</td></tr></table>
+</div>
+<br />
+<!-- ==================== NAVIGATION BAR ==================== -->
+<table class="navbar" border="0" width="100%" cellpadding="0"
+       bgcolor="#a0c0ff" cellspacing="0">
+  <tr valign="middle">
+  <!-- Home link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="TEES-module.html">Home</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Tree link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="module-tree.html">Trees</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Index link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="identifier-index.html">Indices</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Help link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="help.html">Help</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Project homepage -->
+      <th class="navbar" align="right" width="100%">
+        <table border="0" cellpadding="0" cellspacing="0">
+          <tr><th class="navbar" align="center"
+            >Turku Event Extraction System</th>
+          </tr></table></th>
+  </tr>
+</table>
+<table border="0" cellpadding="0" cellspacing="0" width="100%%">
+  <tr>
+    <td align="left" class="footer">
+    Generated by Epydoc 3.0.1 on Thu Jul 19 18:20:46 2012
+    </td>
+    <td align="right" class="footer">
+      <a target="mainFrame" href="http://epydoc.sourceforge.net"
+        >http://epydoc.sourceforge.net</a>
+    </td>
+  </tr>
+</table>
+
+<script type="text/javascript">
+  <!--
+  // Private objects are initially displayed (because if
+  // javascript is turned off then we want them to be
+  // visible); but by default, we want to hide them.  So hide
+  // them unless we have a cookie that says to show them.
+  checkCookie();
+  // -->
+</script>
+</body>
+</html>

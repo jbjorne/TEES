@@ -1,0 +1,382 @@
+<?xml version="1.0" encoding="ascii"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+          "DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+  <title>Class Hierarchy</title>
+  <link rel="stylesheet" href="epydoc.css" type="text/css" />
+  <script type="text/javascript" src="epydoc.js"></script>
+</head>
+
+<body bgcolor="white" text="black" link="blue" vlink="#204080"
+      alink="#204080">
+<!-- ==================== NAVIGATION BAR ==================== -->
+<table class="navbar" border="0" width="100%" cellpadding="0"
+       bgcolor="#a0c0ff" cellspacing="0">
+  <tr valign="middle">
+  <!-- Home link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="TEES-module.html">Home</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Tree link -->
+      <th bgcolor="#70b0f0" class="navbar-select"
+          >&nbsp;&nbsp;&nbsp;Trees&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Index link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="identifier-index.html">Indices</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Help link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="help.html">Help</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Project homepage -->
+      <th class="navbar" align="right" width="100%">
+        <table border="0" cellpadding="0" cellspacing="0">
+          <tr><th class="navbar" align="center"
+            >Turku Event Extraction System</th>
+          </tr></table></th>
+  </tr>
+</table>
+<table width="100%" cellpadding="0" cellspacing="0">
+  <tr valign="top">
+    <td width="100%">&nbsp;</td>
+    <td>
+      <table cellpadding="0" cellspacing="0">
+        <!-- hide/show private -->
+        <tr><td align="right"><span class="options">[<a href="javascript:void(0);" class="privatelink"
+    onclick="toggle_private();">hide&nbsp;private</a>]</span></td></tr>
+      </table>
+    </td>
+  </tr>
+</table>
+<center><b>
+ [ <a href="module-tree.html">Module Hierarchy</a>
+ | <a href="class-tree.html">Class Hierarchy</a> ]
+</b></center><br />
+<h1 class="epydoc">Class Hierarchy</h1>
+<ul class="nomargin-top">
+    <li> <strong class="uidlink"><a href="TEES.Utils.STFormat.STTools.Annotation-class.html">TEES.Utils.STFormat.STTools.Annotation</a></strong>
+    </li>
+    <li> <strong class="uidlink"><a href="TEES.ExampleWriters.BioTextExampleWriter.BioTextExampleWriter-class.html">TEES.ExampleWriters.BioTextExampleWriter.BioTextExampleWriter</a></strong>:
+      <em class="summary">A generic example writer that automatically calls the correct 
+        Example Writer based on the type of the examples.</em>
+    </li>
+    <li> <strong class="uidlink"><a href="TEES.Classifiers.Classifier.Classifier-class.html">TEES.Classifiers.Classifier.Classifier</a></strong>
+    <ul>
+    <li> <strong class="uidlink"><a href="TEES.Classifiers.AllCorrectClassifier.AllCorrectClassifier-class.html">TEES.Classifiers.AllCorrectClassifier.AllCorrectClassifier</a></strong>
+    </li>
+    <li> <strong class="uidlink"><a href="TEES.Classifiers.AllTrueClassifier.AllTrueClassifier-class.html">TEES.Classifiers.AllTrueClassifier.AllTrueClassifier</a></strong>
+    </li>
+    <li> <strong class="uidlink"><a href="TEES.Classifiers.ExternalClassifier.ExternalClassifier-class.html">TEES.Classifiers.ExternalClassifier.ExternalClassifier</a></strong>:
+      <em class="summary">A wrapper for external classifier executables.</em>
+    <ul>
+    <li> <strong class="uidlink"><a href="TEES.Classifiers.SVMMultiClassClassifier.SVMMultiClassClassifier-class.html">TEES.Classifiers.SVMMultiClassClassifier.SVMMultiClassClassifier</a></strong>:
+      <em class="summary">A wrapper for the Joachims SVM Multiclass classifier.</em>
+    </li>
+    </ul>
+    </li>
+    </ul>
+    </li>
+    <li> <strong class="uidlink"><a href="TEES.Utils.InteractionXML.CorpusElements.CorpusElements-class.html">TEES.Utils.InteractionXML.CorpusElements.CorpusElements</a></strong>
+    </li>
+    <li> <strong class="uidlink"><a href="TEES.Detectors.Detector.Detector-class.html">TEES.Detectors.Detector.Detector</a></strong>:
+      <em class="summary">Detector is the central class of the TEES object oriented 
+        interface.</em>
+    <ul>
+    <li> <strong class="uidlink"><a href="TEES.Detectors.EventDetector.EventDetector-class.html">TEES.Detectors.EventDetector.EventDetector</a></strong>:
+      <em class="summary">A multi-stage detector used for the BioNLP Shared Task type events.</em>
+    <ul>
+    <li> <strong class="uidlink"><a href="TEES.Detectors.CODetector.CODetector-class.html">TEES.Detectors.CODetector.CODetector</a></strong>:
+      <em class="summary">A specialized EventDetector for the CO-task.</em>
+    </li>
+    </ul>
+    </li>
+    <li> <strong class="uidlink"><a href="TEES.Detectors.SingleStageDetector.SingleStageDetector-class.html">TEES.Detectors.SingleStageDetector.SingleStageDetector</a></strong>:
+      <em class="summary">A Detector for a text mining problem that can be represented as a 
+        single classification task.</em>
+    <ul>
+    <li> <strong class="uidlink"><a href="TEES.Detectors.EdgeDetector.EdgeDetector-class.html">TEES.Detectors.EdgeDetector.EdgeDetector</a></strong>:
+      <em class="summary">Detects relations and event arguments.</em>
+    </li>
+    <li> <strong class="uidlink"><a href="TEES.Detectors.EntityDetector.EntityDetector-class.html">TEES.Detectors.EntityDetector.EntityDetector</a></strong>:
+      <em class="summary">Detects named entities and triggers.</em>
+    </li>
+    <li> <strong class="uidlink"><a href="TEES.Detectors.ModifierDetector.ModifierDetector-class.html">TEES.Detectors.ModifierDetector.ModifierDetector</a></strong>:
+      <em class="summary">Detects negation and speculation modifiers.</em>
+    </li>
+    <li> <strong class="uidlink"><a href="TEES.Detectors.UnmergingDetector.UnmergingDetector-class.html">TEES.Detectors.UnmergingDetector.UnmergingDetector</a></strong>:
+      <em class="summary">Makes valid argument combinations for BioNLP type events.</em>
+    </li>
+    </ul>
+    </li>
+    <li> <strong class="uidlink"><a href="TEES.Detectors.ToolChain.ToolChain-class.html">TEES.Detectors.ToolChain.ToolChain</a></strong>
+    <ul>
+    <li> <strong class="uidlink"><a href="TEES.Detectors.Preprocessor.Preprocessor-class.html">TEES.Detectors.Preprocessor.Preprocessor</a></strong>
+    </li>
+    </ul>
+    </li>
+    </ul>
+    </li>
+    <li> <strong class="uidlink"><a href="TEES.Utils.Libraries.stats.Dispatch-class.html">TEES.Utils.Libraries.stats.Dispatch</a></strong>:
+      <em class="summary">The Dispatch class, care of David Ascher, allows different 
+        functions to be called depending on the argument types.</em>
+    </li>
+    <li> <strong class="uidlink"><a href="TEES.Utils.STFormat.STTools.Document-class.html">TEES.Utils.STFormat.STTools.Document</a></strong>
+    </li>
+    <li> <strong class="uidlink"><a href="TEES.Utils.ElementTreeUtils.ETWriter-class.html">TEES.Utils.ElementTreeUtils.ETWriter</a></strong>
+    </li>
+    <li> <strong class="uidlink"><a href="TEES.Evaluators.Evaluator.EvaluationData-class.html">TEES.Evaluators.Evaluator.EvaluationData</a></strong>:
+      <em class="summary">Calculates F-score for data that can be divided into true/false 
+        positives and true/false negatives.</em>
+    </li>
+    <li> <strong class="uidlink"><a href="TEES.Evaluators.Evaluator.Evaluator-class.html">TEES.Evaluators.Evaluator.Evaluator</a></strong>:
+      <em class="summary">An abstract base class for classes used to evaluate the performance
+        of different classifiers.</em>
+    <ul>
+    <li> <strong class="uidlink"><a href="TEES.Evaluators.AveragingMultiClassEvaluator.AveragingMultiClassEvaluator-class.html">TEES.Evaluators.AveragingMultiClassEvaluator.AveragingMultiClassEvaluator</a></strong>:
+      <em class="summary">An evaluator for multiclass classification results, where an 
+        example can belong to one of several classes.</em>
+    </li>
+    <li> <strong class="uidlink"><a href="TEES.Evaluators.BinaryEvaluator.BinaryEvaluator-class.html">TEES.Evaluators.BinaryEvaluator.BinaryEvaluator</a></strong>
+    </li>
+    </ul>
+    </li>
+    <li> <strong class="uidlink">ExampleBuilders.ExampleBuilder.ExampleBuilder</strong>:
+      <em class="summary">ExampleBuilder is the abstract base class for specialized example 
+        builders.</em>
+    <ul>
+    <li> <strong class="uidlink"><a href="TEES.ExampleBuilders.EdgeExampleBuilder.EdgeExampleBuilder-class.html">TEES.ExampleBuilders.EdgeExampleBuilder.EdgeExampleBuilder</a></strong>:
+      <em class="summary">This example builder makes edge examples, i.e.</em>
+    </li>
+    <li> <strong class="uidlink"><a href="TEES.ExampleBuilders.UnmergingExampleBuilder.UnmergingExampleBuilder-class.html">TEES.ExampleBuilders.UnmergingExampleBuilder.UnmergingExampleBuilder</a></strong>:
+      <em class="summary">This example builder makes unmerging examples, i.e.</em>
+    </li>
+    </ul>
+    </li>
+    <li> <strong class="uidlink"><a href="TEES.ExampleBuilders.ExampleBuilder.ExampleBuilder-class.html">TEES.ExampleBuilders.ExampleBuilder.ExampleBuilder</a></strong>:
+      <em class="summary">ExampleBuilder is the abstract base class for specialized example 
+        builders.</em>
+    <ul>
+    <li> <strong class="uidlink"><a href="TEES.ExampleBuilders.EntityExampleBuilder.EntityExampleBuilder-class.html">TEES.ExampleBuilders.EntityExampleBuilder.EntityExampleBuilder</a></strong>
+    </li>
+    <li> <strong class="uidlink"><a href="TEES.ExampleBuilders.ModifierExampleBuilder.ModifierExampleBuilder-class.html">TEES.ExampleBuilders.ModifierExampleBuilder.ModifierExampleBuilder</a></strong>
+    </li>
+    <li> <strong class="uidlink"><a href="TEES.ExampleBuilders.PhraseTriggerExampleBuilder.PhraseTriggerExampleBuilder-class.html">TEES.ExampleBuilders.PhraseTriggerExampleBuilder.PhraseTriggerExampleBuilder</a></strong>
+    </li>
+    </ul>
+    </li>
+    <li> <strong class="uidlink"><a href="TEES.ExampleBuilders.ExampleStats.ExampleStats-class.html">TEES.ExampleBuilders.ExampleStats.ExampleStats</a></strong>
+    </li>
+    <li> <strong class="uidlink"><a href="TEES.ExampleBuilders.FeatureBuilders.FeatureBuilder.FeatureBuilder-class.html">TEES.ExampleBuilders.FeatureBuilders.FeatureBuilder.FeatureBuilder</a></strong>:
+      <em class="summary">Multiple example builders might make use of the same features.</em>
+    <ul>
+    <li> <strong class="uidlink"><a href="TEES.ExampleBuilders.FeatureBuilders.BacteriaRenamingFeatureBuilder.BacteriaRenamingFeatureBuilder-class.html">TEES.ExampleBuilders.FeatureBuilders.BacteriaRenamingFeatureBuilder.BacteriaRenamingFeatureBuilder</a></strong>
+    </li>
+    <li> <strong class="uidlink"><a href="TEES.ExampleBuilders.FeatureBuilders.BioInferOntologyFeatureBuilder.BioInferOntologyFeatureBuilder-class.html">TEES.ExampleBuilders.FeatureBuilders.BioInferOntologyFeatureBuilder.BioInferOntologyFeatureBuilder</a></strong>
+    </li>
+    <li> <strong class="uidlink"><a href="TEES.ExampleBuilders.FeatureBuilders.DrugFeatureBuilder.DrugFeatureBuilder-class.html">TEES.ExampleBuilders.FeatureBuilders.DrugFeatureBuilder.DrugFeatureBuilder</a></strong>
+    </li>
+    <li> <strong class="uidlink"><a href="TEES.ExampleBuilders.FeatureBuilders.EVEXFeatureBuilder.EVEXFeatureBuilder-class.html">TEES.ExampleBuilders.FeatureBuilders.EVEXFeatureBuilder.EVEXFeatureBuilder</a></strong>
+    </li>
+    <li> <strong class="uidlink"><a href="TEES.ExampleBuilders.FeatureBuilders.EdgeFeatureBuilder.EdgeFeatureBuilder-class.html">TEES.ExampleBuilders.FeatureBuilders.EdgeFeatureBuilder.EdgeFeatureBuilder</a></strong>
+    </li>
+    <li> <strong class="uidlink"><a href="TEES.ExampleBuilders.FeatureBuilders.GiulianoFeatureBuilder.GiulianoFeatureBuilder-class.html">TEES.ExampleBuilders.FeatureBuilders.GiulianoFeatureBuilder.GiulianoFeatureBuilder</a></strong>
+    </li>
+    <li> <strong class="uidlink"><a href="TEES.ExampleBuilders.FeatureBuilders.GraphKernelFeatureBuilder.GraphKernelFeatureBuilder-class.html">TEES.ExampleBuilders.FeatureBuilders.GraphKernelFeatureBuilder.GraphKernelFeatureBuilder</a></strong>
+    </li>
+    <li> <strong class="uidlink"><a href="TEES.ExampleBuilders.FeatureBuilders.MultiEdgeFeatureBuilder.MultiEdgeFeatureBuilder-class.html">TEES.ExampleBuilders.FeatureBuilders.MultiEdgeFeatureBuilder.MultiEdgeFeatureBuilder</a></strong>:
+      <em class="summary">This feature builder generates features describing a pair of word 
+        tokens connected by one or more dependencies.</em>
+    </li>
+    <li> <strong class="uidlink"><a href="TEES.ExampleBuilders.FeatureBuilders.NodalidaFeatureBuilder.NodalidaFeatureBuilder-class.html">TEES.ExampleBuilders.FeatureBuilders.NodalidaFeatureBuilder.NodalidaFeatureBuilder</a></strong>
+    </li>
+    <li> <strong class="uidlink"><a href="TEES.ExampleBuilders.FeatureBuilders.RELFeatureBuilder.RELFeatureBuilder-class.html">TEES.ExampleBuilders.FeatureBuilders.RELFeatureBuilder.RELFeatureBuilder</a></strong>
+    </li>
+    <li> <strong class="uidlink"><a href="TEES.ExampleBuilders.FeatureBuilders.RandomFeatureBuilder.RandomFeatureBuilder-class.html">TEES.ExampleBuilders.FeatureBuilders.RandomFeatureBuilder.RandomFeatureBuilder</a></strong>
+    </li>
+    <li> <strong class="uidlink"><a href="TEES.ExampleBuilders.FeatureBuilders.TokenFeatureBuilder.TokenFeatureBuilder-class.html">TEES.ExampleBuilders.FeatureBuilders.TokenFeatureBuilder.TokenFeatureBuilder</a></strong>
+    </li>
+    <li> <strong class="uidlink"><a href="TEES.ExampleBuilders.FeatureBuilders.TriggerFeatureBuilder.TriggerFeatureBuilder-class.html">TEES.ExampleBuilders.FeatureBuilders.TriggerFeatureBuilder.TriggerFeatureBuilder</a></strong>
+    </li>
+    <li> <strong class="uidlink"><a href="TEES.ExampleBuilders.FeatureBuilders.WordNetFeatureBuilder.WordNetFeatureBuilder-class.html">TEES.ExampleBuilders.FeatureBuilders.WordNetFeatureBuilder.WordNetFeatureBuilder</a></strong>
+    </li>
+    </ul>
+    </li>
+    <li> <strong class="uidlink"><a href="TEES.Core.SimpleGraph.Graph-class.html">TEES.Core.SimpleGraph.Graph</a></strong>:
+      <em class="summary">One edge per-associated data per direction</em>
+    </li>
+    <li> <strong class="uidlink"><a href="TEES.Core.IdSet.IdSet-class.html">TEES.Core.IdSet.IdSet</a></strong>:
+      <em class="summary">A mapping from strings to id integers.</em>
+    </li>
+    <li> <strong class="uidlink"><a href="TEES.Utils.Menu.Menu-class.html">TEES.Utils.Menu.Menu</a></strong>
+    </li>
+    <li> <strong class="uidlink"><a href="TEES.Utils.Menu.MenuSystem-class.html">TEES.Utils.Menu.MenuSystem</a></strong>
+    </li>
+    <li> <strong class="uidlink"><a href="TEES.Core.Model.Model-class.html">TEES.Core.Model.Model</a></strong>:
+      <em class="summary">The Model object is an interface to a model file on the disk.</em>
+    </li>
+    <li> <strong class="uidlink"><a href="TEES.ExampleBuilders.FeatureBuilders.NameGazetteer.NameGazetteer-class.html">TEES.ExampleBuilders.FeatureBuilders.NameGazetteer.NameGazetteer</a></strong>
+    </li>
+    <li> <strong class="uidlink"><a href="TEES.Utils.Menu.Option-class.html">TEES.Utils.Menu.Option</a></strong>
+    </li>
+    <li> <strong class="uidlink"><a href="TEES.Utils.InteractionXML.ParseGraph.ParseGraph-class.html">TEES.Utils.InteractionXML.ParseGraph.ParseGraph</a></strong>:
+      <em class="summary">A ParseGraph-object consists of tokens and dependencies.</em>
+    </li>
+    <li> <strong class="uidlink"><a href="TEES.Utils.InteractionXML.ParseGraph.ParseGraphNode-class.html">TEES.Utils.InteractionXML.ParseGraph.ParseGraphNode</a></strong>:
+      <em class="summary">Represents a single node (either token or dependency) in the parse 
+        graph or a path generated by a ParseGraph-object.</em>
+    </li>
+    <li> <strong class="uidlink"><a href="TEES.Utils.Libraries.PorterStemmer.PorterStemmer-class.html">TEES.Utils.Libraries.PorterStemmer.PorterStemmer</a></strong>
+    </li>
+    <li> <strong class="uidlink"><a href="TEES.Tools.ProcessUtils.ProcessWrapper-class.html">TEES.Tools.ProcessUtils.ProcessWrapper</a></strong>:
+      <em class="summary">Killing a process spawned by a shell is not really possible (at 
+        least in Python).</em>
+    </li>
+    <li> <strong class="uidlink"><a href="TEES.Utils.ProgressCounter.ProgressCounter-class.html">TEES.Utils.ProgressCounter.ProgressCounter</a></strong>
+    </li>
+    <li> <strong class="uidlink"><a href="TEES.Core.RecallAdjust.RecallAdjust-class.html">TEES.Core.RecallAdjust.RecallAdjust</a></strong>
+    </li>
+    <li> <strong class="uidlink"><a href="TEES.Utils.InteractionXML.SentenceElements.SentenceElements-class.html">TEES.Utils.InteractionXML.SentenceElements.SentenceElements</a></strong>
+    </li>
+    <li> <strong class="uidlink"><a href="TEES.ExampleWriters.SentenceExampleWriter.SentenceExampleWriter-class.html">TEES.ExampleWriters.SentenceExampleWriter.SentenceExampleWriter</a></strong>:
+      <em class="summary">Base class for ExampleWriters working with interaction XML.</em>
+    <ul>
+    <li> <strong class="uidlink"><a href="TEES.ExampleWriters.EdgeExampleWriter.EdgeExampleWriter-class.html">TEES.ExampleWriters.EdgeExampleWriter.EdgeExampleWriter</a></strong>
+    </li>
+    <li> <strong class="uidlink"><a href="TEES.ExampleWriters.EntityExampleWriter.EntityExampleWriter-class.html">TEES.ExampleWriters.EntityExampleWriter.EntityExampleWriter</a></strong>
+    </li>
+    <li> <strong class="uidlink"><a href="TEES.ExampleWriters.ModifierExampleWriter.ModifierExampleWriter-class.html">TEES.ExampleWriters.ModifierExampleWriter.ModifierExampleWriter</a></strong>
+    </li>
+    <li> <strong class="uidlink"><a href="TEES.ExampleWriters.PhraseTriggerExampleWriter.PhraseTriggerExampleWriter-class.html">TEES.ExampleWriters.PhraseTriggerExampleWriter.PhraseTriggerExampleWriter</a></strong>
+    </li>
+    <li> <strong class="uidlink"><a href="TEES.ExampleWriters.UnmergingExampleWriter.UnmergingExampleWriter-class.html">TEES.ExampleWriters.UnmergingExampleWriter.UnmergingExampleWriter</a></strong>
+    </li>
+    </ul>
+    </li>
+    <li> <strong class="uidlink"><a href="TEES.Core.SentenceGraph.SentenceGraph-class.html">TEES.Core.SentenceGraph.SentenceGraph</a></strong>:
+      <em class="summary">The main purpose of SentenceGraph is to connect the syntactic 
+        dependency parse (a graph where dependencies are edges and tokens 
+        are nodes) to the semantic interactions (which form a graph where 
+        interactions are edges and entities are nodes).</em>
+    </li>
+    <li> <strong class="uidlink"><a href="TEES.Detectors.StepSelector.StepSelector-class.html">TEES.Detectors.StepSelector.StepSelector</a></strong>
+    </li>
+    <li> <strong class="uidlink"><a href="TEES.Utils.Stream.StreamModifier-class.html">TEES.Utils.Stream.StreamModifier</a></strong>:
+      <em class="summary">This class implements a write-method and can therefore replace a 
+        stream such as sys.stderr or sys.stdout.</em>
+    </li>
+    <li> <strong class="uidlink"><a href="TEES.Utils.Timer.Timer-class.html">TEES.Utils.Timer.Timer</a></strong>
+    </li>
+    <li> <strong class="uidlink"><a href="TEES.Utils.ProteinNameSplitter.Token-class.html">TEES.Utils.ProteinNameSplitter.Token</a></strong>
+    </li>
+    <li> <strong class="uidlink"><a href="TEES.Utils.Connection.UnixConnection.UnixConnection-class.html">TEES.Utils.Connection.UnixConnection.UnixConnection</a></strong>
+    <ul>
+    <li> <strong class="uidlink"><a href="TEES.Utils.Connection.ClusterConnection.ClusterConnection-class.html">TEES.Utils.Connection.ClusterConnection.ClusterConnection</a></strong>
+    <ul>
+    <li> <strong class="uidlink"><a href="TEES.Utils.Connection.LSFConnection.LSFConnection-class.html">TEES.Utils.Connection.LSFConnection.LSFConnection</a></strong>:
+      <em class="summary">For using the Load Sharing Facility (LSF) of Platform Computing 
+        (www.platform.com).</em>
+    </li>
+    <li> <strong class="uidlink"><a href="TEES.Utils.Connection.PBSConnection.PBSConnection-class.html">TEES.Utils.Connection.PBSConnection.PBSConnection</a></strong>:
+      <em class="summary">For using Portable Batch System Professional (PBS Pro) of Altair 
+        Engineering (http://www.altair.com).</em>
+    </li>
+    <li> <strong class="uidlink"><a href="TEES.Utils.Connection.SLURMConnection.SLURMConnection-class.html">TEES.Utils.Connection.SLURMConnection.SLURMConnection</a></strong>:
+      <em class="summary">For using the Simple Linux Utility for Resource Management 
+        (https://computing.llnl.gov/linux/slurm/).</em>
+    </li>
+    </ul>
+    </li>
+    </ul>
+    </li>
+    <li> <strong class="uidlink">object</strong>:
+      <em class="summary">The most base type</em>
+    <ul>
+    <li> <strong class="uidlink"><a href="TEES.Utils.Libraries.progressbar.ProgressBar-class.html">TEES.Utils.Libraries.progressbar.ProgressBar</a></strong>:
+      <em class="summary">This is the ProgressBar class, it updates and prints the bar.</em>
+    </li>
+    <li> <strong class="uidlink"><a href="TEES.Utils.Libraries.progressbar.ProgressBarWidget-class.html">TEES.Utils.Libraries.progressbar.ProgressBarWidget</a></strong>:
+      <em class="summary">This is an element of ProgressBar formatting.</em>
+    <ul>
+    <li> <strong class="uidlink"><a href="TEES.Utils.Libraries.progressbar.ETA-class.html">TEES.Utils.Libraries.progressbar.ETA</a></strong>:
+      <em class="summary">Widget for the Estimated Time of Arrival</em>
+    </li>
+    <li> <strong class="uidlink"><a href="TEES.Utils.Libraries.progressbar.FileTransferSpeed-class.html">TEES.Utils.Libraries.progressbar.FileTransferSpeed</a></strong>:
+      <em class="summary">Widget for showing the transfer speed (useful for file transfers).</em>
+    </li>
+    <li> <strong class="uidlink"><a href="TEES.Utils.Libraries.progressbar.Percentage-class.html">TEES.Utils.Libraries.progressbar.Percentage</a></strong>:
+      <em class="summary">Just the percentage done.</em>
+    </li>
+    <li> <strong class="uidlink"><a href="TEES.Utils.Libraries.progressbar.RotatingMarker-class.html">TEES.Utils.Libraries.progressbar.RotatingMarker</a></strong>:
+      <em class="summary">A rotating marker for filling the bar of progress.</em>
+    </li>
+    </ul>
+    </li>
+    <li> <strong class="uidlink"><a href="TEES.Utils.Libraries.progressbar.ProgressBarWidgetHFill-class.html">TEES.Utils.Libraries.progressbar.ProgressBarWidgetHFill</a></strong>:
+      <em class="summary">This is a variable width element of ProgressBar formatting.</em>
+    <ul>
+    <li> <strong class="uidlink"><a href="TEES.Utils.Libraries.progressbar.Bar-class.html">TEES.Utils.Libraries.progressbar.Bar</a></strong>:
+      <em class="summary">The bar of progress.</em>
+    <ul>
+    <li> <strong class="uidlink"><a href="TEES.Utils.Libraries.progressbar.ReverseBar-class.html">TEES.Utils.Libraries.progressbar.ReverseBar</a></strong>:
+      <em class="summary">The reverse bar of progress, or bar of regress.</em>
+    </li>
+    </ul>
+    </li>
+    </ul>
+    </li>
+    </ul>
+    </li>
+</ul>
+<!-- ==================== NAVIGATION BAR ==================== -->
+<table class="navbar" border="0" width="100%" cellpadding="0"
+       bgcolor="#a0c0ff" cellspacing="0">
+  <tr valign="middle">
+  <!-- Home link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="TEES-module.html">Home</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Tree link -->
+      <th bgcolor="#70b0f0" class="navbar-select"
+          >&nbsp;&nbsp;&nbsp;Trees&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Index link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="identifier-index.html">Indices</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Help link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="help.html">Help</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Project homepage -->
+      <th class="navbar" align="right" width="100%">
+        <table border="0" cellpadding="0" cellspacing="0">
+          <tr><th class="navbar" align="center"
+            >Turku Event Extraction System</th>
+          </tr></table></th>
+  </tr>
+</table>
+<table border="0" cellpadding="0" cellspacing="0" width="100%%">
+  <tr>
+    <td align="left" class="footer">
+    Generated by Epydoc 3.0.1 on Thu Jul 19 18:20:40 2012
+    </td>
+    <td align="right" class="footer">
+      <a target="mainFrame" href="http://epydoc.sourceforge.net"
+        >http://epydoc.sourceforge.net</a>
+    </td>
+  </tr>
+</table>
+
+<script type="text/javascript">
+  <!--
+  // Private objects are initially displayed (because if
+  // javascript is turned off then we want them to be
+  // visible); but by default, we want to hide them.  So hide
+  // them unless we have a cookie that says to show them.
+  checkCookie();
+  // -->
+</script>
+</body>
+</html>

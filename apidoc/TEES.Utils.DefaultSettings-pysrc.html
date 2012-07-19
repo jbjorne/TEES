@@ -1,0 +1,454 @@
+<?xml version="1.0" encoding="ascii"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+          "DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+  <title>TEES.Utils.DefaultSettings</title>
+  <link rel="stylesheet" href="epydoc.css" type="text/css" />
+  <script type="text/javascript" src="epydoc.js"></script>
+</head>
+
+<body bgcolor="white" text="black" link="blue" vlink="#204080"
+      alink="#204080">
+<!-- ==================== NAVIGATION BAR ==================== -->
+<table class="navbar" border="0" width="100%" cellpadding="0"
+       bgcolor="#a0c0ff" cellspacing="0">
+  <tr valign="middle">
+  <!-- Home link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="TEES-module.html">Home</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Tree link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="module-tree.html">Trees</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Index link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="identifier-index.html">Indices</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Help link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="help.html">Help</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Project homepage -->
+      <th class="navbar" align="right" width="100%">
+        <table border="0" cellpadding="0" cellspacing="0">
+          <tr><th class="navbar" align="center"
+            >Turku Event Extraction System</th>
+          </tr></table></th>
+  </tr>
+</table>
+<table width="100%" cellpadding="0" cellspacing="0">
+  <tr valign="top">
+    <td width="100%">
+      <span class="breadcrumbs">
+        <a href="TEES-module.html">Package&nbsp;TEES</a> ::
+        <a href="TEES.Utils-module.html">Package&nbsp;Utils</a> ::
+        Module&nbsp;DefaultSettings
+      </span>
+    </td>
+    <td>
+      <table cellpadding="0" cellspacing="0">
+        <!-- hide/show private -->
+        <tr><td align="right"><span class="options">[<a href="javascript:void(0);" class="privatelink"
+    onclick="toggle_private();">hide&nbsp;private</a>]</span></td></tr>
+      </table>
+    </td>
+  </tr>
+</table>
+<h1 class="epydoc">Source Code for <a href="TEES.Utils.DefaultSettings-module.html">Module TEES.Utils.DefaultSettings</a></h1>
+<pre class="py-src">
+<a name="L1"></a><tt class="py-lineno">  1</tt>  <tt class="py-line"><tt class="py-keyword">import</tt> <tt class="py-name">os</tt> </tt>
+<a name="L2"></a><tt class="py-lineno">  2</tt>  <tt class="py-line"> </tt>
+<a name="L3"></a><tt class="py-lineno">  3</tt>  <tt class="py-line"><tt class="py-comment"># The default DATAPATH for installing data and tools</tt> </tt>
+<a name="L4"></a><tt class="py-lineno">  4</tt>  <tt class="py-line"><tt id="link-0" class="py-name" targets="Variable TEES.Utils.DefaultSettings.DATAPATH=TEES.Utils.DefaultSettings-module.html#DATAPATH,Variable TEES.Utils.Settings.DATAPATH=TEES.Utils.Settings-module.html#DATAPATH"><a title="TEES.Utils.DefaultSettings.DATAPATH
+TEES.Utils.Settings.DATAPATH" class="py-name" href="#" onclick="return doclink('link-0', 'DATAPATH', 'link-0');">DATAPATH</a></tt><tt class="py-op">=</tt><tt class="py-name">os</tt><tt class="py-op">.</tt><tt class="py-name">path</tt><tt class="py-op">.</tt><tt class="py-name">expanduser</tt><tt class="py-op">(</tt><tt class="py-string">"~/TEES_DATA"</tt><tt class="py-op">)</tt> </tt>
+<a name="L5"></a><tt class="py-lineno">  5</tt>  <tt class="py-line"> </tt>
+<a name="L6"></a><tt class="py-lineno">  6</tt>  <tt class="py-line"><tt class="py-comment"># Default locations for evaluators and their devel set gold data (relative to DATAPATH)</tt> </tt>
+<a name="L7"></a><tt class="py-lineno">  7</tt>  <tt class="py-line"><tt id="link-1" class="py-name" targets="Variable TEES.Utils.DefaultSettings.EVALUATOR=TEES.Utils.DefaultSettings-module.html#EVALUATOR,Variable TEES.Utils.Settings.EVALUATOR=TEES.Utils.Settings-module.html#EVALUATOR"><a title="TEES.Utils.DefaultSettings.EVALUATOR
+TEES.Utils.Settings.EVALUATOR" class="py-name" href="#" onclick="return doclink('link-1', 'EVALUATOR', 'link-1');">EVALUATOR</a></tt> <tt class="py-op">=</tt> <tt class="py-op">{</tt><tt class="py-op">}</tt> </tt>
+<a name="L8"></a><tt class="py-lineno">  8</tt>  <tt class="py-line"><tt id="link-2" class="py-name"><a title="TEES.Utils.DefaultSettings.EVALUATOR
+TEES.Utils.Settings.EVALUATOR" class="py-name" href="#" onclick="return doclink('link-2', 'EVALUATOR', 'link-1');">EVALUATOR</a></tt><tt class="py-op">[</tt><tt class="py-string">"GE"</tt><tt class="py-op">]</tt> <tt class="py-op">=</tt> <tt class="py-string">"BioNLP-ST_2011_genia_tools_rev1"</tt> </tt>
+<a name="L9"></a><tt class="py-lineno">  9</tt>  <tt class="py-line"><tt id="link-3" class="py-name"><a title="TEES.Utils.DefaultSettings.EVALUATOR
+TEES.Utils.Settings.EVALUATOR" class="py-name" href="#" onclick="return doclink('link-3', 'EVALUATOR', 'link-1');">EVALUATOR</a></tt><tt class="py-op">[</tt><tt class="py-string">"EPI"</tt><tt class="py-op">]</tt> <tt class="py-op">=</tt> <tt class="py-string">"BioNLP-ST_2011_EPI-eval-tools"</tt> </tt>
+<a name="L10"></a><tt class="py-lineno"> 10</tt>  <tt class="py-line"><tt id="link-4" class="py-name"><a title="TEES.Utils.DefaultSettings.EVALUATOR
+TEES.Utils.Settings.EVALUATOR" class="py-name" href="#" onclick="return doclink('link-4', 'EVALUATOR', 'link-1');">EVALUATOR</a></tt><tt class="py-op">[</tt><tt class="py-string">"ID"</tt><tt class="py-op">]</tt> <tt class="py-op">=</tt> <tt class="py-string">"BioNLP-ST_2011_ID-eval-tools"</tt> </tt>
+<a name="L11"></a><tt class="py-lineno"> 11</tt>  <tt class="py-line"><tt id="link-5" class="py-name"><a title="TEES.Utils.DefaultSettings.EVALUATOR
+TEES.Utils.Settings.EVALUATOR" class="py-name" href="#" onclick="return doclink('link-5', 'EVALUATOR', 'link-1');">EVALUATOR</a></tt><tt class="py-op">[</tt><tt class="py-string">"BB"</tt><tt class="py-op">]</tt> <tt class="py-op">=</tt> <tt class="py-string">"BioNLP-ST_2011_Bacteria_Biotopes_evaluation_software"</tt> </tt>
+<a name="L12"></a><tt class="py-lineno"> 12</tt>  <tt class="py-line"><tt id="link-6" class="py-name"><a title="TEES.Utils.DefaultSettings.EVALUATOR
+TEES.Utils.Settings.EVALUATOR" class="py-name" href="#" onclick="return doclink('link-6', 'EVALUATOR', 'link-1');">EVALUATOR</a></tt><tt class="py-op">[</tt><tt class="py-string">"BI"</tt><tt class="py-op">]</tt> <tt class="py-op">=</tt> <tt class="py-string">"BioNLP-ST_2011_bacteria_interactions_evaluation_software"</tt> </tt>
+<a name="L13"></a><tt class="py-lineno"> 13</tt>  <tt class="py-line"><tt id="link-7" class="py-name"><a title="TEES.Utils.DefaultSettings.EVALUATOR
+TEES.Utils.Settings.EVALUATOR" class="py-name" href="#" onclick="return doclink('link-7', 'EVALUATOR', 'link-1');">EVALUATOR</a></tt><tt class="py-op">[</tt><tt class="py-string">"REN"</tt><tt class="py-op">]</tt> <tt class="py-op">=</tt> <tt class="py-string">"BioNLP-ST_2011_bacteria_rename_evaluation_sofware"</tt> </tt>
+<a name="L14"></a><tt class="py-lineno"> 14</tt>  <tt class="py-line"><tt id="link-8" class="py-name"><a title="TEES.Utils.DefaultSettings.EVALUATOR
+TEES.Utils.Settings.EVALUATOR" class="py-name" href="#" onclick="return doclink('link-8', 'EVALUATOR', 'link-1');">EVALUATOR</a></tt><tt class="py-op">[</tt><tt class="py-string">"CO"</tt><tt class="py-op">]</tt> <tt class="py-op">=</tt> <tt class="py-string">"CREvalPackage1.4"</tt> </tt>
+<a name="L15"></a><tt class="py-lineno"> 15</tt>  <tt class="py-line"><tt id="link-9" class="py-name"><a title="TEES.Utils.DefaultSettings.EVALUATOR
+TEES.Utils.Settings.EVALUATOR" class="py-name" href="#" onclick="return doclink('link-9', 'EVALUATOR', 'link-1');">EVALUATOR</a></tt><tt class="py-op">[</tt><tt class="py-string">"GE09"</tt><tt class="py-op">]</tt> <tt class="py-op">=</tt> <tt class="py-string">"bionlp09_shared_task_evaluation_tools_v1"</tt> </tt>
+<a name="L16"></a><tt class="py-lineno"> 16</tt>  <tt class="py-line"><tt class="py-comment"># Gold data for evaluators</tt> </tt>
+<a name="L17"></a><tt class="py-lineno"> 17</tt>  <tt class="py-line"><tt id="link-10" class="py-name"><a title="TEES.Utils.DefaultSettings.EVALUATOR
+TEES.Utils.Settings.EVALUATOR" class="py-name" href="#" onclick="return doclink('link-10', 'EVALUATOR', 'link-1');">EVALUATOR</a></tt><tt class="py-op">[</tt><tt class="py-string">"GE-gold"</tt><tt class="py-op">]</tt> <tt class="py-op">=</tt> <tt class="py-string">"BioNLP-ST_2011_genia_devel_data_rev1.tar.gz"</tt> </tt>
+<a name="L18"></a><tt class="py-lineno"> 18</tt>  <tt class="py-line"><tt id="link-11" class="py-name"><a title="TEES.Utils.DefaultSettings.EVALUATOR
+TEES.Utils.Settings.EVALUATOR" class="py-name" href="#" onclick="return doclink('link-11', 'EVALUATOR', 'link-1');">EVALUATOR</a></tt><tt class="py-op">[</tt><tt class="py-string">"EPI-gold"</tt><tt class="py-op">]</tt> <tt class="py-op">=</tt> <tt class="py-string">"BioNLP-ST_2011_Epi_and_PTM_development_data_rev1.tar.gz"</tt> </tt>
+<a name="L19"></a><tt class="py-lineno"> 19</tt>  <tt class="py-line"><tt id="link-12" class="py-name"><a title="TEES.Utils.DefaultSettings.EVALUATOR
+TEES.Utils.Settings.EVALUATOR" class="py-name" href="#" onclick="return doclink('link-12', 'EVALUATOR', 'link-1');">EVALUATOR</a></tt><tt class="py-op">[</tt><tt class="py-string">"ID-gold"</tt><tt class="py-op">]</tt> <tt class="py-op">=</tt> <tt class="py-string">"BioNLP-ST_2011_Infectious_Diseases_development_data_rev1.tar.gz"</tt> </tt>
+<a name="L20"></a><tt class="py-lineno"> 20</tt>  <tt class="py-line"><tt id="link-13" class="py-name"><a title="TEES.Utils.DefaultSettings.EVALUATOR
+TEES.Utils.Settings.EVALUATOR" class="py-name" href="#" onclick="return doclink('link-13', 'EVALUATOR', 'link-1');">EVALUATOR</a></tt><tt class="py-op">[</tt><tt class="py-string">"BB-gold"</tt><tt class="py-op">]</tt> <tt class="py-op">=</tt> <tt class="py-string">"BioNLP-ST_2011_Bacteria_Biotopes_dev_data_rev1.tar.gz"</tt> </tt>
+<a name="L21"></a><tt class="py-lineno"> 21</tt>  <tt class="py-line"><tt id="link-14" class="py-name"><a title="TEES.Utils.DefaultSettings.EVALUATOR
+TEES.Utils.Settings.EVALUATOR" class="py-name" href="#" onclick="return doclink('link-14', 'EVALUATOR', 'link-1');">EVALUATOR</a></tt><tt class="py-op">[</tt><tt class="py-string">"BI-gold"</tt><tt class="py-op">]</tt> <tt class="py-op">=</tt> <tt class="py-string">"BioNLP-ST_2011_bacteria_interactions_dev_data_rev1-remixed.tar.gz"</tt> </tt>
+<a name="L22"></a><tt class="py-lineno"> 22</tt>  <tt class="py-line"><tt id="link-15" class="py-name"><a title="TEES.Utils.DefaultSettings.EVALUATOR
+TEES.Utils.Settings.EVALUATOR" class="py-name" href="#" onclick="return doclink('link-15', 'EVALUATOR', 'link-1');">EVALUATOR</a></tt><tt class="py-op">[</tt><tt class="py-string">"REN-gold"</tt><tt class="py-op">]</tt> <tt class="py-op">=</tt> <tt class="py-string">"BioNLP-ST_2011_bacteria_rename_dev_data.tar.gz"</tt> </tt>
+<a name="L23"></a><tt class="py-lineno"> 23</tt>  <tt class="py-line"><tt id="link-16" class="py-name"><a title="TEES.Utils.DefaultSettings.EVALUATOR
+TEES.Utils.Settings.EVALUATOR" class="py-name" href="#" onclick="return doclink('link-16', 'EVALUATOR', 'link-1');">EVALUATOR</a></tt><tt class="py-op">[</tt><tt class="py-string">"CO-gold"</tt><tt class="py-op">]</tt> <tt class="py-op">=</tt> <tt class="py-string">"BioNLP-ST_2011_coreference_development_data.tar.gz"</tt> </tt>
+<a name="L24"></a><tt class="py-lineno"> 24</tt>  <tt class="py-line"><tt id="link-17" class="py-name"><a title="TEES.Utils.DefaultSettings.EVALUATOR
+TEES.Utils.Settings.EVALUATOR" class="py-name" href="#" onclick="return doclink('link-17', 'EVALUATOR', 'link-1');">EVALUATOR</a></tt><tt class="py-op">[</tt><tt class="py-string">"GE09-gold"</tt><tt class="py-op">]</tt> <tt class="py-op">=</tt> <tt class="py-string">"bionlp09_shared_task_development_data_rev1_for_evaluator.tar.gz"</tt> </tt>
+<a name="L25"></a><tt class="py-lineno"> 25</tt>  <tt class="py-line"> </tt>
+<a name="L26"></a><tt class="py-lineno"> 26</tt>  <tt class="py-line"> </tt>
+<a name="L27"></a><tt class="py-lineno"> 27</tt>  <tt class="py-line"><tt class="py-comment"># A dictionary for installation URLs. If there is a problem with a </tt> </tt>
+<a name="L28"></a><tt class="py-lineno"> 28</tt>  <tt class="py-line"><tt class="py-comment"># download location, it is possible to override a URL in the "TEES_SETTINGS" </tt> </tt>
+<a name="L29"></a><tt class="py-lineno"> 29</tt>  <tt class="py-line"><tt class="py-comment"># local settings file.</tt> </tt>
+<a name="L30"></a><tt class="py-lineno"> 30</tt>  <tt class="py-line"><tt id="link-18" class="py-name" targets="Variable TEES.Utils.DefaultSettings.URL=TEES.Utils.DefaultSettings-module.html#URL,Variable TEES.Utils.Settings.URL=TEES.Utils.Settings-module.html#URL"><a title="TEES.Utils.DefaultSettings.URL
+TEES.Utils.Settings.URL" class="py-name" href="#" onclick="return doclink('link-18', 'URL', 'link-18');">URL</a></tt> <tt class="py-op">=</tt> <tt class="py-op">{</tt><tt class="py-op">}</tt> </tt>
+<a name="L31"></a><tt class="py-lineno"> 31</tt>  <tt class="py-line"> </tt>
+<a name="L32"></a><tt class="py-lineno"> 32</tt>  <tt class="py-line"><tt class="py-comment"># Models</tt> </tt>
+<a name="L33"></a><tt class="py-lineno"> 33</tt>  <tt class="py-line"> </tt>
+<a name="L34"></a><tt class="py-lineno"> 34</tt>  <tt class="py-line"><tt id="link-19" class="py-name"><a title="TEES.Utils.DefaultSettings.URL
+TEES.Utils.Settings.URL" class="py-name" href="#" onclick="return doclink('link-19', 'URL', 'link-18');">URL</a></tt><tt class="py-op">[</tt><tt class="py-string">"MODELS"</tt><tt class="py-op">]</tt> <tt class="py-op">=</tt> <tt class="py-string">"https://github.com/downloads/jbjorne/TEES/TEES-models-120719.tar.bz2"</tt> </tt>
+<a name="L35"></a><tt class="py-lineno"> 35</tt>  <tt class="py-line"> </tt>
+<a name="L36"></a><tt class="py-lineno"> 36</tt>  <tt class="py-line"><tt class="py-comment"># External Tools ##############################################################</tt> </tt>
+<a name="L37"></a><tt class="py-lineno"> 37</tt>  <tt class="py-line"> </tt>
+<a name="L38"></a><tt class="py-lineno"> 38</tt>  <tt class="py-line"><tt id="link-20" class="py-name"><a title="TEES.Utils.DefaultSettings.URL
+TEES.Utils.Settings.URL" class="py-name" href="#" onclick="return doclink('link-20', 'URL', 'link-18');">URL</a></tt><tt class="py-op">[</tt><tt class="py-string">"SVM_MULTICLASS_SOURCE"</tt><tt class="py-op">]</tt> <tt class="py-op">=</tt> <tt class="py-string">"http://download.joachims.org/svm_multiclass/current/svm_multiclass.tar.gz"</tt> </tt>
+<a name="L39"></a><tt class="py-lineno"> 39</tt>  <tt class="py-line"><tt id="link-21" class="py-name"><a title="TEES.Utils.DefaultSettings.URL
+TEES.Utils.Settings.URL" class="py-name" href="#" onclick="return doclink('link-21', 'URL', 'link-18');">URL</a></tt><tt class="py-op">[</tt><tt class="py-string">"SVM_MULTICLASS_LINUX"</tt><tt class="py-op">]</tt> <tt class="py-op">=</tt> <tt class="py-string">"http://download.joachims.org/svm_multiclass/current/svm_multiclass_linux.tar.gz"</tt> </tt>
+<a name="L40"></a><tt class="py-lineno"> 40</tt>  <tt class="py-line"><tt id="link-22" class="py-name"><a title="TEES.Utils.DefaultSettings.URL
+TEES.Utils.Settings.URL" class="py-name" href="#" onclick="return doclink('link-22', 'URL', 'link-18');">URL</a></tt><tt class="py-op">[</tt><tt class="py-string">"GENIA_SENTENCE_SPLITTER"</tt><tt class="py-op">]</tt> <tt class="py-op">=</tt> <tt class="py-string">"http://www.nactem.ac.uk/y-matsu/geniass/geniass-1.00.tar.gz"</tt> </tt>
+<a name="L41"></a><tt class="py-lineno"> 41</tt>  <tt class="py-line"><tt id="link-23" class="py-name"><a title="TEES.Utils.DefaultSettings.URL
+TEES.Utils.Settings.URL" class="py-name" href="#" onclick="return doclink('link-23', 'URL', 'link-18');">URL</a></tt><tt class="py-op">[</tt><tt class="py-string">"BANNER_SOURCE"</tt><tt class="py-op">]</tt> <tt class="py-op">=</tt> <tt class="py-string">"http://banner.svn.sourceforge.net/viewvc/banner/trunk/?view=tar"</tt> </tt>
+<a name="L42"></a><tt class="py-lineno"> 42</tt>  <tt class="py-line"><tt id="link-24" class="py-name"><a title="TEES.Utils.DefaultSettings.URL
+TEES.Utils.Settings.URL" class="py-name" href="#" onclick="return doclink('link-24', 'URL', 'link-18');">URL</a></tt><tt class="py-op">[</tt><tt class="py-string">"BANNER_COMPILED"</tt><tt class="py-op">]</tt> <tt class="py-op">=</tt> <tt class="py-string">"https://github.com/downloads/jbjorne/TEES/BANNER-svn-snapshot-120630.tar.gz"</tt> </tt>
+<a name="L43"></a><tt class="py-lineno"> 43</tt>  <tt class="py-line"><tt id="link-25" class="py-name"><a title="TEES.Utils.DefaultSettings.URL
+TEES.Utils.Settings.URL" class="py-name" href="#" onclick="return doclink('link-25', 'URL', 'link-18');">URL</a></tt><tt class="py-op">[</tt><tt class="py-string">"BLLIP_SOURCE"</tt><tt class="py-op">]</tt> <tt class="py-op">=</tt> <tt class="py-string">"https://github.com/dmcc/bllip-parser/zipball/master"</tt> </tt>
+<a name="L44"></a><tt class="py-lineno"> 44</tt>  <tt class="py-line"><tt id="link-26" class="py-name"><a title="TEES.Utils.DefaultSettings.URL
+TEES.Utils.Settings.URL" class="py-name" href="#" onclick="return doclink('link-26', 'URL', 'link-18');">URL</a></tt><tt class="py-op">[</tt><tt class="py-string">"STANFORD_PARSER"</tt><tt class="py-op">]</tt> <tt class="py-op">=</tt> <tt class="py-string">"http://nlp.stanford.edu/software/stanford-parser-2012-03-09.tgz"</tt> </tt>
+<a name="L45"></a><tt class="py-lineno"> 45</tt>  <tt class="py-line"><tt id="link-27" class="py-name" targets="Variable TEES.Utils.DefaultSettings.RUBY_PATH=TEES.Utils.DefaultSettings-module.html#RUBY_PATH,Variable TEES.Utils.Settings.RUBY_PATH=TEES.Utils.Settings-module.html#RUBY_PATH"><a title="TEES.Utils.DefaultSettings.RUBY_PATH
+TEES.Utils.Settings.RUBY_PATH" class="py-name" href="#" onclick="return doclink('link-27', 'RUBY_PATH', 'link-27');">RUBY_PATH</a></tt> <tt class="py-op">=</tt> <tt class="py-string">"ruby"</tt> <tt class="py-comment"># for GENIA Sentence Splitter</tt> </tt>
+<a name="L46"></a><tt class="py-lineno"> 46</tt>  <tt class="py-line"> </tt>
+<a name="L47"></a><tt class="py-lineno"> 47</tt>  <tt class="py-line"><tt class="py-comment"># Corpora #####################################################################</tt> </tt>
+<a name="L48"></a><tt class="py-lineno"> 48</tt>  <tt class="py-line"> </tt>
+<a name="L49"></a><tt class="py-lineno"> 49</tt>  <tt class="py-line"><tt class="py-comment"># Preconverted</tt> </tt>
+<a name="L50"></a><tt class="py-lineno"> 50</tt>  <tt class="py-line"><tt id="link-28" class="py-name"><a title="TEES.Utils.DefaultSettings.URL
+TEES.Utils.Settings.URL" class="py-name" href="#" onclick="return doclink('link-28', 'URL', 'link-18');">URL</a></tt><tt class="py-op">[</tt><tt class="py-string">"BIONLP_11_CORPORA"</tt><tt class="py-op">]</tt> <tt class="py-op">=</tt>  <tt class="py-string">"https://github.com/downloads/jbjorne/TEES/BioNLP11-corpora-XML-120715.zip"</tt> </tt>
+<a name="L51"></a><tt class="py-lineno"> 51</tt>  <tt class="py-line"><tt id="link-29" class="py-name"><a title="TEES.Utils.DefaultSettings.URL
+TEES.Utils.Settings.URL" class="py-name" href="#" onclick="return doclink('link-29', 'URL', 'link-18');">URL</a></tt><tt class="py-op">[</tt><tt class="py-string">"BIONLP_09_CORPUS"</tt><tt class="py-op">]</tt> <tt class="py-op">=</tt>  <tt class="py-string">"https://github.com/downloads/jbjorne/TEES/BioNLP09-corpus-XML-120715.zip"</tt> </tt>
+<a name="L52"></a><tt class="py-lineno"> 52</tt>  <tt class="py-line"><tt id="link-30" class="py-name"><a title="TEES.Utils.DefaultSettings.URL
+TEES.Utils.Settings.URL" class="py-name" href="#" onclick="return doclink('link-30', 'URL', 'link-18');">URL</a></tt><tt class="py-op">[</tt><tt class="py-string">"DDI_11_CORPUS"</tt><tt class="py-op">]</tt> <tt class="py-op">=</tt>  <tt class="py-string">"https://github.com/downloads/jbjorne/TEES/DDI11-corpus-XML-120715.zip"</tt> </tt>
+<a name="L53"></a><tt class="py-lineno"> 53</tt>  <tt class="py-line"> </tt>
+<a name="L54"></a><tt class="py-lineno"> 54</tt>  <tt class="py-line"><tt class="py-comment"># BioNLP'11</tt> </tt>
+<a name="L55"></a><tt class="py-lineno"> 55</tt>  <tt class="py-line"><tt id="link-31" class="py-name" targets="Variable TEES.Utils.DefaultSettings.urlBase=TEES.Utils.DefaultSettings-module.html#urlBase,Variable TEES.Utils.Settings.urlBase=TEES.Utils.Settings-module.html#urlBase"><a title="TEES.Utils.DefaultSettings.urlBase
+TEES.Utils.Settings.urlBase" class="py-name" href="#" onclick="return doclink('link-31', 'urlBase', 'link-31');">urlBase</a></tt> <tt class="py-op">=</tt> <tt class="py-string">"http://weaver.nlplab.org/~bionlp-st/BioNLP-ST/downloads/files/"</tt> </tt>
+<a name="L56"></a><tt class="py-lineno"> 56</tt>  <tt class="py-line"><tt class="py-comment"># Main tasks</tt> </tt>
+<a name="L57"></a><tt class="py-lineno"> 57</tt>  <tt class="py-line"><tt id="link-32" class="py-name"><a title="TEES.Utils.DefaultSettings.URL
+TEES.Utils.Settings.URL" class="py-name" href="#" onclick="return doclink('link-32', 'URL', 'link-18');">URL</a></tt><tt class="py-op">[</tt><tt class="py-string">"GE_DEVEL"</tt><tt class="py-op">]</tt> <tt class="py-op">=</tt> <tt id="link-33" class="py-name"><a title="TEES.Utils.DefaultSettings.urlBase
+TEES.Utils.Settings.urlBase" class="py-name" href="#" onclick="return doclink('link-33', 'urlBase', 'link-31');">urlBase</a></tt> <tt class="py-op">+</tt> <tt class="py-string">"BioNLP-ST_2011_genia_devel_data_rev1.tar.gz"</tt>  </tt>
+<a name="L58"></a><tt class="py-lineno"> 58</tt>  <tt class="py-line"><tt id="link-34" class="py-name"><a title="TEES.Utils.DefaultSettings.URL
+TEES.Utils.Settings.URL" class="py-name" href="#" onclick="return doclink('link-34', 'URL', 'link-18');">URL</a></tt><tt class="py-op">[</tt><tt class="py-string">"GE_TRAIN"</tt><tt class="py-op">]</tt> <tt class="py-op">=</tt> <tt id="link-35" class="py-name"><a title="TEES.Utils.DefaultSettings.urlBase
+TEES.Utils.Settings.urlBase" class="py-name" href="#" onclick="return doclink('link-35', 'urlBase', 'link-31');">urlBase</a></tt> <tt class="py-op">+</tt> <tt class="py-string">"BioNLP-ST_2011_genia_train_data_rev1.tar.gz"</tt> </tt>
+<a name="L59"></a><tt class="py-lineno"> 59</tt>  <tt class="py-line"><tt id="link-36" class="py-name"><a title="TEES.Utils.DefaultSettings.URL
+TEES.Utils.Settings.URL" class="py-name" href="#" onclick="return doclink('link-36', 'URL', 'link-18');">URL</a></tt><tt class="py-op">[</tt><tt class="py-string">"GE_TEST"</tt><tt class="py-op">]</tt> <tt class="py-op">=</tt> <tt id="link-37" class="py-name"><a title="TEES.Utils.DefaultSettings.urlBase
+TEES.Utils.Settings.urlBase" class="py-name" href="#" onclick="return doclink('link-37', 'urlBase', 'link-31');">urlBase</a></tt> <tt class="py-op">+</tt> <tt class="py-string">"BioNLP-ST_2011_genia_test_data.tar.gz"</tt> </tt>
+<a name="L60"></a><tt class="py-lineno"> 60</tt>  <tt class="py-line"><tt id="link-38" class="py-name"><a title="TEES.Utils.DefaultSettings.URL
+TEES.Utils.Settings.URL" class="py-name" href="#" onclick="return doclink('link-38', 'URL', 'link-18');">URL</a></tt><tt class="py-op">[</tt><tt class="py-string">"EPI_DEVEL"</tt><tt class="py-op">]</tt> <tt class="py-op">=</tt> <tt id="link-39" class="py-name"><a title="TEES.Utils.DefaultSettings.urlBase
+TEES.Utils.Settings.urlBase" class="py-name" href="#" onclick="return doclink('link-39', 'urlBase', 'link-31');">urlBase</a></tt> <tt class="py-op">+</tt> <tt class="py-string">"BioNLP-ST_2011_Epi_and_PTM_development_data_rev1.tar.gz"</tt>  </tt>
+<a name="L61"></a><tt class="py-lineno"> 61</tt>  <tt class="py-line"><tt id="link-40" class="py-name"><a title="TEES.Utils.DefaultSettings.URL
+TEES.Utils.Settings.URL" class="py-name" href="#" onclick="return doclink('link-40', 'URL', 'link-18');">URL</a></tt><tt class="py-op">[</tt><tt class="py-string">"EPI_TRAIN"</tt><tt class="py-op">]</tt> <tt class="py-op">=</tt> <tt id="link-41" class="py-name"><a title="TEES.Utils.DefaultSettings.urlBase
+TEES.Utils.Settings.urlBase" class="py-name" href="#" onclick="return doclink('link-41', 'urlBase', 'link-31');">urlBase</a></tt> <tt class="py-op">+</tt> <tt class="py-string">"BioNLP-ST_2011_Epi_and_PTM_training_data_rev1.tar.gz"</tt> </tt>
+<a name="L62"></a><tt class="py-lineno"> 62</tt>  <tt class="py-line"><tt id="link-42" class="py-name"><a title="TEES.Utils.DefaultSettings.URL
+TEES.Utils.Settings.URL" class="py-name" href="#" onclick="return doclink('link-42', 'URL', 'link-18');">URL</a></tt><tt class="py-op">[</tt><tt class="py-string">"EPI_TEST"</tt><tt class="py-op">]</tt> <tt class="py-op">=</tt> <tt id="link-43" class="py-name"><a title="TEES.Utils.DefaultSettings.urlBase
+TEES.Utils.Settings.urlBase" class="py-name" href="#" onclick="return doclink('link-43', 'urlBase', 'link-31');">urlBase</a></tt> <tt class="py-op">+</tt> <tt class="py-string">"BioNLP-ST_2011_Epi_and_PTM_test_data.tar.gz"</tt> </tt>
+<a name="L63"></a><tt class="py-lineno"> 63</tt>  <tt class="py-line"><tt id="link-44" class="py-name"><a title="TEES.Utils.DefaultSettings.URL
+TEES.Utils.Settings.URL" class="py-name" href="#" onclick="return doclink('link-44', 'URL', 'link-18');">URL</a></tt><tt class="py-op">[</tt><tt class="py-string">"ID_DEVEL"</tt><tt class="py-op">]</tt> <tt class="py-op">=</tt> <tt id="link-45" class="py-name"><a title="TEES.Utils.DefaultSettings.urlBase
+TEES.Utils.Settings.urlBase" class="py-name" href="#" onclick="return doclink('link-45', 'urlBase', 'link-31');">urlBase</a></tt> <tt class="py-op">+</tt> <tt class="py-string">"BioNLP-ST_2011_Infectious_Diseases_development_data_rev1.tar.gz"</tt>  </tt>
+<a name="L64"></a><tt class="py-lineno"> 64</tt>  <tt class="py-line"><tt id="link-46" class="py-name"><a title="TEES.Utils.DefaultSettings.URL
+TEES.Utils.Settings.URL" class="py-name" href="#" onclick="return doclink('link-46', 'URL', 'link-18');">URL</a></tt><tt class="py-op">[</tt><tt class="py-string">"ID_TRAIN"</tt><tt class="py-op">]</tt> <tt class="py-op">=</tt> <tt id="link-47" class="py-name"><a title="TEES.Utils.DefaultSettings.urlBase
+TEES.Utils.Settings.urlBase" class="py-name" href="#" onclick="return doclink('link-47', 'urlBase', 'link-31');">urlBase</a></tt> <tt class="py-op">+</tt> <tt class="py-string">"BioNLP-ST_2011_Infectious_Diseases_training_data_rev1.tar.gz"</tt> </tt>
+<a name="L65"></a><tt class="py-lineno"> 65</tt>  <tt class="py-line"><tt id="link-48" class="py-name"><a title="TEES.Utils.DefaultSettings.URL
+TEES.Utils.Settings.URL" class="py-name" href="#" onclick="return doclink('link-48', 'URL', 'link-18');">URL</a></tt><tt class="py-op">[</tt><tt class="py-string">"ID_TEST"</tt><tt class="py-op">]</tt> <tt class="py-op">=</tt> <tt id="link-49" class="py-name"><a title="TEES.Utils.DefaultSettings.urlBase
+TEES.Utils.Settings.urlBase" class="py-name" href="#" onclick="return doclink('link-49', 'urlBase', 'link-31');">urlBase</a></tt> <tt class="py-op">+</tt> <tt class="py-string">"BioNLP-ST_2011_Infectious_Diseases_test_data.tar.gz"</tt> </tt>
+<a name="L66"></a><tt class="py-lineno"> 66</tt>  <tt class="py-line"><tt id="link-50" class="py-name"><a title="TEES.Utils.DefaultSettings.URL
+TEES.Utils.Settings.URL" class="py-name" href="#" onclick="return doclink('link-50', 'URL', 'link-18');">URL</a></tt><tt class="py-op">[</tt><tt class="py-string">"BB_DEVEL"</tt><tt class="py-op">]</tt> <tt class="py-op">=</tt> <tt id="link-51" class="py-name"><a title="TEES.Utils.DefaultSettings.urlBase
+TEES.Utils.Settings.urlBase" class="py-name" href="#" onclick="return doclink('link-51', 'urlBase', 'link-31');">urlBase</a></tt> <tt class="py-op">+</tt> <tt class="py-string">"BioNLP-ST_2011_Bacteria_Biotopes_dev_data_rev1.tar.gz"</tt>  </tt>
+<a name="L67"></a><tt class="py-lineno"> 67</tt>  <tt class="py-line"><tt id="link-52" class="py-name"><a title="TEES.Utils.DefaultSettings.URL
+TEES.Utils.Settings.URL" class="py-name" href="#" onclick="return doclink('link-52', 'URL', 'link-18');">URL</a></tt><tt class="py-op">[</tt><tt class="py-string">"BB_TRAIN"</tt><tt class="py-op">]</tt> <tt class="py-op">=</tt> <tt id="link-53" class="py-name"><a title="TEES.Utils.DefaultSettings.urlBase
+TEES.Utils.Settings.urlBase" class="py-name" href="#" onclick="return doclink('link-53', 'urlBase', 'link-31');">urlBase</a></tt> <tt class="py-op">+</tt> <tt class="py-string">"BioNLP-ST_2011_Bacteria_Biotopes_train_data_rev1.tar.gz"</tt> </tt>
+<a name="L68"></a><tt class="py-lineno"> 68</tt>  <tt class="py-line"><tt id="link-54" class="py-name"><a title="TEES.Utils.DefaultSettings.URL
+TEES.Utils.Settings.URL" class="py-name" href="#" onclick="return doclink('link-54', 'URL', 'link-18');">URL</a></tt><tt class="py-op">[</tt><tt class="py-string">"BB_TEST"</tt><tt class="py-op">]</tt> <tt class="py-op">=</tt> <tt id="link-55" class="py-name"><a title="TEES.Utils.DefaultSettings.urlBase
+TEES.Utils.Settings.urlBase" class="py-name" href="#" onclick="return doclink('link-55', 'urlBase', 'link-31');">urlBase</a></tt> <tt class="py-op">+</tt> <tt class="py-string">"BioNLP-ST_2011_Bacteria_Biotopes_test_data.tar.gz"</tt> </tt>
+<a name="L69"></a><tt class="py-lineno"> 69</tt>  <tt class="py-line"><tt id="link-56" class="py-name"><a title="TEES.Utils.DefaultSettings.URL
+TEES.Utils.Settings.URL" class="py-name" href="#" onclick="return doclink('link-56', 'URL', 'link-18');">URL</a></tt><tt class="py-op">[</tt><tt class="py-string">"BI_DEVEL"</tt><tt class="py-op">]</tt> <tt class="py-op">=</tt> <tt id="link-57" class="py-name"><a title="TEES.Utils.DefaultSettings.urlBase
+TEES.Utils.Settings.urlBase" class="py-name" href="#" onclick="return doclink('link-57', 'urlBase', 'link-31');">urlBase</a></tt> <tt class="py-op">+</tt> <tt class="py-string">"BioNLP-ST_2011_bacteria_interactions_dev_data_rev1.tar.gz"</tt>  </tt>
+<a name="L70"></a><tt class="py-lineno"> 70</tt>  <tt class="py-line"><tt id="link-58" class="py-name"><a title="TEES.Utils.DefaultSettings.URL
+TEES.Utils.Settings.URL" class="py-name" href="#" onclick="return doclink('link-58', 'URL', 'link-18');">URL</a></tt><tt class="py-op">[</tt><tt class="py-string">"BI_TRAIN"</tt><tt class="py-op">]</tt> <tt class="py-op">=</tt> <tt id="link-59" class="py-name"><a title="TEES.Utils.DefaultSettings.urlBase
+TEES.Utils.Settings.urlBase" class="py-name" href="#" onclick="return doclink('link-59', 'urlBase', 'link-31');">urlBase</a></tt> <tt class="py-op">+</tt> <tt class="py-string">"BioNLP-ST_2011_bacteria_interactions_train_data_rev1.tar.gz"</tt> </tt>
+<a name="L71"></a><tt class="py-lineno"> 71</tt>  <tt class="py-line"><tt id="link-60" class="py-name"><a title="TEES.Utils.DefaultSettings.URL
+TEES.Utils.Settings.URL" class="py-name" href="#" onclick="return doclink('link-60', 'URL', 'link-18');">URL</a></tt><tt class="py-op">[</tt><tt class="py-string">"BI_TEST"</tt><tt class="py-op">]</tt> <tt class="py-op">=</tt> <tt id="link-61" class="py-name"><a title="TEES.Utils.DefaultSettings.urlBase
+TEES.Utils.Settings.urlBase" class="py-name" href="#" onclick="return doclink('link-61', 'urlBase', 'link-31');">urlBase</a></tt> <tt class="py-op">+</tt> <tt class="py-string">"BioNLP-ST_2011_bacteria_interactions_test_data.tar.gz"</tt> </tt>
+<a name="L72"></a><tt class="py-lineno"> 72</tt>  <tt class="py-line"><tt class="py-comment"># Supporting tasks</tt> </tt>
+<a name="L73"></a><tt class="py-lineno"> 73</tt>  <tt class="py-line"><tt id="link-62" class="py-name"><a title="TEES.Utils.DefaultSettings.URL
+TEES.Utils.Settings.URL" class="py-name" href="#" onclick="return doclink('link-62', 'URL', 'link-18');">URL</a></tt><tt class="py-op">[</tt><tt class="py-string">"REL_DEVEL"</tt><tt class="py-op">]</tt> <tt class="py-op">=</tt> <tt id="link-63" class="py-name"><a title="TEES.Utils.DefaultSettings.urlBase
+TEES.Utils.Settings.urlBase" class="py-name" href="#" onclick="return doclink('link-63', 'urlBase', 'link-31');">urlBase</a></tt> <tt class="py-op">+</tt> <tt class="py-string">"BioNLP-ST_2011_Entity_Relations_development_data.tar.gz"</tt>  </tt>
+<a name="L74"></a><tt class="py-lineno"> 74</tt>  <tt class="py-line"><tt id="link-64" class="py-name"><a title="TEES.Utils.DefaultSettings.URL
+TEES.Utils.Settings.URL" class="py-name" href="#" onclick="return doclink('link-64', 'URL', 'link-18');">URL</a></tt><tt class="py-op">[</tt><tt class="py-string">"REL_TRAIN"</tt><tt class="py-op">]</tt> <tt class="py-op">=</tt> <tt id="link-65" class="py-name"><a title="TEES.Utils.DefaultSettings.urlBase
+TEES.Utils.Settings.urlBase" class="py-name" href="#" onclick="return doclink('link-65', 'urlBase', 'link-31');">urlBase</a></tt> <tt class="py-op">+</tt> <tt class="py-string">"BioNLP-ST_2011_Entity_Relations_training_data.tar.gz"</tt> </tt>
+<a name="L75"></a><tt class="py-lineno"> 75</tt>  <tt class="py-line"><tt id="link-66" class="py-name"><a title="TEES.Utils.DefaultSettings.URL
+TEES.Utils.Settings.URL" class="py-name" href="#" onclick="return doclink('link-66', 'URL', 'link-18');">URL</a></tt><tt class="py-op">[</tt><tt class="py-string">"REL_TEST"</tt><tt class="py-op">]</tt> <tt class="py-op">=</tt> <tt id="link-67" class="py-name"><a title="TEES.Utils.DefaultSettings.urlBase
+TEES.Utils.Settings.urlBase" class="py-name" href="#" onclick="return doclink('link-67', 'urlBase', 'link-31');">urlBase</a></tt> <tt class="py-op">+</tt> <tt class="py-string">"BioNLP-ST_2011_Entity_Relations_test_data.tar.gz"</tt> </tt>
+<a name="L76"></a><tt class="py-lineno"> 76</tt>  <tt class="py-line"><tt id="link-68" class="py-name"><a title="TEES.Utils.DefaultSettings.URL
+TEES.Utils.Settings.URL" class="py-name" href="#" onclick="return doclink('link-68', 'URL', 'link-18');">URL</a></tt><tt class="py-op">[</tt><tt class="py-string">"REN_DEVEL"</tt><tt class="py-op">]</tt> <tt class="py-op">=</tt> <tt id="link-69" class="py-name"><a title="TEES.Utils.DefaultSettings.urlBase
+TEES.Utils.Settings.urlBase" class="py-name" href="#" onclick="return doclink('link-69', 'urlBase', 'link-31');">urlBase</a></tt> <tt class="py-op">+</tt> <tt class="py-string">"BioNLP-ST_2011_bacteria_rename_dev_data.tar.gz"</tt>  </tt>
+<a name="L77"></a><tt class="py-lineno"> 77</tt>  <tt class="py-line"><tt id="link-70" class="py-name"><a title="TEES.Utils.DefaultSettings.URL
+TEES.Utils.Settings.URL" class="py-name" href="#" onclick="return doclink('link-70', 'URL', 'link-18');">URL</a></tt><tt class="py-op">[</tt><tt class="py-string">"REN_TRAIN"</tt><tt class="py-op">]</tt> <tt class="py-op">=</tt> <tt id="link-71" class="py-name"><a title="TEES.Utils.DefaultSettings.urlBase
+TEES.Utils.Settings.urlBase" class="py-name" href="#" onclick="return doclink('link-71', 'urlBase', 'link-31');">urlBase</a></tt> <tt class="py-op">+</tt> <tt class="py-string">"BioNLP-ST_2011_bacteria_rename_train_data.tar.gz"</tt> </tt>
+<a name="L78"></a><tt class="py-lineno"> 78</tt>  <tt class="py-line"><tt id="link-72" class="py-name"><a title="TEES.Utils.DefaultSettings.URL
+TEES.Utils.Settings.URL" class="py-name" href="#" onclick="return doclink('link-72', 'URL', 'link-18');">URL</a></tt><tt class="py-op">[</tt><tt class="py-string">"REN_TEST"</tt><tt class="py-op">]</tt> <tt class="py-op">=</tt> <tt id="link-73" class="py-name"><a title="TEES.Utils.DefaultSettings.urlBase
+TEES.Utils.Settings.urlBase" class="py-name" href="#" onclick="return doclink('link-73', 'urlBase', 'link-31');">urlBase</a></tt> <tt class="py-op">+</tt> <tt class="py-string">"BioNLP-ST_2011_bacteria_rename_test_data.tar.gz"</tt> </tt>
+<a name="L79"></a><tt class="py-lineno"> 79</tt>  <tt class="py-line"><tt id="link-74" class="py-name"><a title="TEES.Utils.DefaultSettings.URL
+TEES.Utils.Settings.URL" class="py-name" href="#" onclick="return doclink('link-74', 'URL', 'link-18');">URL</a></tt><tt class="py-op">[</tt><tt class="py-string">"CO_DEVEL"</tt><tt class="py-op">]</tt> <tt class="py-op">=</tt> <tt id="link-75" class="py-name"><a title="TEES.Utils.DefaultSettings.urlBase
+TEES.Utils.Settings.urlBase" class="py-name" href="#" onclick="return doclink('link-75', 'urlBase', 'link-31');">urlBase</a></tt> <tt class="py-op">+</tt> <tt class="py-string">"BioNLP-ST_2011_coreference_development_data.tar.gz"</tt> </tt>
+<a name="L80"></a><tt class="py-lineno"> 80</tt>  <tt class="py-line"><tt id="link-76" class="py-name"><a title="TEES.Utils.DefaultSettings.URL
+TEES.Utils.Settings.URL" class="py-name" href="#" onclick="return doclink('link-76', 'URL', 'link-18');">URL</a></tt><tt class="py-op">[</tt><tt class="py-string">"CO_TRAIN"</tt><tt class="py-op">]</tt> <tt class="py-op">=</tt> <tt id="link-77" class="py-name"><a title="TEES.Utils.DefaultSettings.urlBase
+TEES.Utils.Settings.urlBase" class="py-name" href="#" onclick="return doclink('link-77', 'urlBase', 'link-31');">urlBase</a></tt> <tt class="py-op">+</tt> <tt class="py-string">"BioNLP-ST_2011_coreference_training_data_rev1.tar.gz"</tt> </tt>
+<a name="L81"></a><tt class="py-lineno"> 81</tt>  <tt class="py-line"><tt id="link-78" class="py-name"><a title="TEES.Utils.DefaultSettings.URL
+TEES.Utils.Settings.URL" class="py-name" href="#" onclick="return doclink('link-78', 'URL', 'link-18');">URL</a></tt><tt class="py-op">[</tt><tt class="py-string">"CO_TEST"</tt><tt class="py-op">]</tt> <tt class="py-op">=</tt> <tt id="link-79" class="py-name"><a title="TEES.Utils.DefaultSettings.urlBase
+TEES.Utils.Settings.urlBase" class="py-name" href="#" onclick="return doclink('link-79', 'urlBase', 'link-31');">urlBase</a></tt> <tt class="py-op">+</tt> <tt class="py-string">"BioNLP-ST_2011_coreference_test_data.tar.gz"</tt> </tt>
+<a name="L82"></a><tt class="py-lineno"> 82</tt>  <tt class="py-line"><tt class="py-comment"># BioNLP'11 Evaluators</tt> </tt>
+<a name="L83"></a><tt class="py-lineno"> 83</tt>  <tt class="py-line"><tt id="link-80" class="py-name"><a title="TEES.Utils.DefaultSettings.URL
+TEES.Utils.Settings.URL" class="py-name" href="#" onclick="return doclink('link-80', 'URL', 'link-18');">URL</a></tt><tt class="py-op">[</tt><tt class="py-string">"BIONLP11_EVALUATORS"</tt><tt class="py-op">]</tt> <tt class="py-op">=</tt> <tt class="py-string">"https://github.com/downloads/jbjorne/TEES/BioNLP-evaluators-120715.tar.gz"</tt> </tt>
+<a name="L84"></a><tt class="py-lineno"> 84</tt>  <tt class="py-line"><tt id="link-81" class="py-name"><a title="TEES.Utils.DefaultSettings.URL
+TEES.Utils.Settings.URL" class="py-name" href="#" onclick="return doclink('link-81', 'URL', 'link-18');">URL</a></tt><tt class="py-op">[</tt><tt class="py-string">"GE_EVALUATOR"</tt><tt class="py-op">]</tt> <tt class="py-op">=</tt> <tt id="link-82" class="py-name"><a title="TEES.Utils.DefaultSettings.urlBase
+TEES.Utils.Settings.urlBase" class="py-name" href="#" onclick="return doclink('link-82', 'urlBase', 'link-31');">urlBase</a></tt> <tt class="py-op">+</tt> <tt class="py-string">"BioNLP-ST_2011_genia_tools_rev1.tar.gz"</tt> </tt>
+<a name="L85"></a><tt class="py-lineno"> 85</tt>  <tt class="py-line"><tt class="py-comment">#URL["EPI_EVALUATOR"] = urlBase + </tt> </tt>
+<a name="L86"></a><tt class="py-lineno"> 86</tt>  <tt class="py-line"><tt class="py-comment">#URL["ID_EVALUATOR"] = urlBase + </tt> </tt>
+<a name="L87"></a><tt class="py-lineno"> 87</tt>  <tt class="py-line"><tt id="link-83" class="py-name"><a title="TEES.Utils.DefaultSettings.URL
+TEES.Utils.Settings.URL" class="py-name" href="#" onclick="return doclink('link-83', 'URL', 'link-18');">URL</a></tt><tt class="py-op">[</tt><tt class="py-string">"BB_EVALUATOR"</tt><tt class="py-op">]</tt> <tt class="py-op">=</tt> <tt id="link-84" class="py-name"><a title="TEES.Utils.DefaultSettings.urlBase
+TEES.Utils.Settings.urlBase" class="py-name" href="#" onclick="return doclink('link-84', 'urlBase', 'link-31');">urlBase</a></tt> <tt class="py-op">+</tt> <tt class="py-string">"BioNLP-ST_2011_Bacteria_Biotopes_evaluation_software_rev2.tar.gz"</tt> </tt>
+<a name="L88"></a><tt class="py-lineno"> 88</tt>  <tt class="py-line"><tt id="link-85" class="py-name"><a title="TEES.Utils.DefaultSettings.URL
+TEES.Utils.Settings.URL" class="py-name" href="#" onclick="return doclink('link-85', 'URL', 'link-18');">URL</a></tt><tt class="py-op">[</tt><tt class="py-string">"BI_EVALUATOR"</tt><tt class="py-op">]</tt> <tt class="py-op">=</tt> <tt id="link-86" class="py-name"><a title="TEES.Utils.DefaultSettings.urlBase
+TEES.Utils.Settings.urlBase" class="py-name" href="#" onclick="return doclink('link-86', 'urlBase', 'link-31');">urlBase</a></tt> <tt class="py-op">+</tt> <tt class="py-string">"BioNLP-ST_2011_bacteria_interactions_evaluation_software.tar.gz"</tt> </tt>
+<a name="L89"></a><tt class="py-lineno"> 89</tt>  <tt class="py-line"><tt class="py-comment">#URL["REN_EVALUATOR"] = "http://sites.google.com/site/bionlpst/home/bacteria-gene-renaming-rename/BioNLP-ST_2011_bacteria_rename_evaluation_sofware.tar.gz"</tt> </tt>
+<a name="L90"></a><tt class="py-lineno"> 90</tt>  <tt class="py-line"><tt id="link-87" class="py-name"><a title="TEES.Utils.DefaultSettings.URL
+TEES.Utils.Settings.URL" class="py-name" href="#" onclick="return doclink('link-87', 'URL', 'link-18');">URL</a></tt><tt class="py-op">[</tt><tt class="py-string">"CO_EVALUATOR"</tt><tt class="py-op">]</tt> <tt class="py-op">=</tt> <tt id="link-88" class="py-name"><a title="TEES.Utils.DefaultSettings.urlBase
+TEES.Utils.Settings.urlBase" class="py-name" href="#" onclick="return doclink('link-88', 'urlBase', 'link-31');">urlBase</a></tt> <tt class="py-op">+</tt> <tt class="py-string">"CREvalPackage1.6.tar.gz"</tt> </tt>
+<a name="L91"></a><tt class="py-lineno"> 91</tt>  <tt class="py-line"><tt class="py-comment"># BioNLP'11 Supporting resources</tt> </tt>
+<a name="L92"></a><tt class="py-lineno"> 92</tt>  <tt class="py-line"><tt id="link-89" class="py-name"><a title="TEES.Utils.DefaultSettings.urlBase
+TEES.Utils.Settings.urlBase" class="py-name" href="#" onclick="return doclink('link-89', 'urlBase', 'link-31');">urlBase</a></tt> <tt class="py-op">=</tt> <tt class="py-string">"http://weaver.nlplab.org/~bionlp-st/BioNLP-ST/downloads/support-files/"</tt> </tt>
+<a name="L93"></a><tt class="py-lineno"> 93</tt>  <tt class="py-line"><tt class="py-comment">#GE</tt> </tt>
+<a name="L94"></a><tt class="py-lineno"> 94</tt>  <tt class="py-line"><tt id="link-90" class="py-name"><a title="TEES.Utils.DefaultSettings.URL
+TEES.Utils.Settings.URL" class="py-name" href="#" onclick="return doclink('link-90', 'URL', 'link-18');">URL</a></tt><tt class="py-op">[</tt><tt class="py-string">"GE_TRAIN_TOKENS"</tt><tt class="py-op">]</tt> <tt class="py-op">=</tt> <tt id="link-91" class="py-name"><a title="TEES.Utils.DefaultSettings.urlBase
+TEES.Utils.Settings.urlBase" class="py-name" href="#" onclick="return doclink('link-91', 'urlBase', 'link-31');">urlBase</a></tt> <tt class="py-op">+</tt> <tt class="py-string">"Tokenised-BioNLP-ST_2011_genia_train_data_rev1.tar.gz"</tt> </tt>
+<a name="L95"></a><tt class="py-lineno"> 95</tt>  <tt class="py-line"><tt id="link-92" class="py-name"><a title="TEES.Utils.DefaultSettings.URL
+TEES.Utils.Settings.URL" class="py-name" href="#" onclick="return doclink('link-92', 'URL', 'link-18');">URL</a></tt><tt class="py-op">[</tt><tt class="py-string">"GE_DEVEL_TOKENS"</tt><tt class="py-op">]</tt> <tt class="py-op">=</tt> <tt id="link-93" class="py-name"><a title="TEES.Utils.DefaultSettings.urlBase
+TEES.Utils.Settings.urlBase" class="py-name" href="#" onclick="return doclink('link-93', 'urlBase', 'link-31');">urlBase</a></tt> <tt class="py-op">+</tt> <tt class="py-string">"Tokenised-BioNLP-ST_2011_genia_devel_data_rev1.tar.gz"</tt> </tt>
+<a name="L96"></a><tt class="py-lineno"> 96</tt>  <tt class="py-line"><tt id="link-94" class="py-name"><a title="TEES.Utils.DefaultSettings.URL
+TEES.Utils.Settings.URL" class="py-name" href="#" onclick="return doclink('link-94', 'URL', 'link-18');">URL</a></tt><tt class="py-op">[</tt><tt class="py-string">"GE_TEST_TOKENS"</tt><tt class="py-op">]</tt> <tt class="py-op">=</tt> <tt id="link-95" class="py-name"><a title="TEES.Utils.DefaultSettings.urlBase
+TEES.Utils.Settings.urlBase" class="py-name" href="#" onclick="return doclink('link-95', 'urlBase', 'link-31');">urlBase</a></tt> <tt class="py-op">+</tt> <tt class="py-string">"Tokenised-BioNLP-ST_2011_genia_test_data.tar.gz"</tt> </tt>
+<a name="L97"></a><tt class="py-lineno"> 97</tt>  <tt class="py-line"><tt id="link-96" class="py-name"><a title="TEES.Utils.DefaultSettings.URL
+TEES.Utils.Settings.URL" class="py-name" href="#" onclick="return doclink('link-96', 'URL', 'link-18');">URL</a></tt><tt class="py-op">[</tt><tt class="py-string">"GE_TRAIN_McCC"</tt><tt class="py-op">]</tt> <tt class="py-op">=</tt> <tt id="link-97" class="py-name"><a title="TEES.Utils.DefaultSettings.urlBase
+TEES.Utils.Settings.urlBase" class="py-name" href="#" onclick="return doclink('link-97', 'urlBase', 'link-31');">urlBase</a></tt> <tt class="py-op">+</tt> <tt class="py-string">"McCC-parses-BioNLP-ST_2011_genia_train_data_rev1.tar.gz"</tt>  </tt>
+<a name="L98"></a><tt class="py-lineno"> 98</tt>  <tt class="py-line"><tt id="link-98" class="py-name"><a title="TEES.Utils.DefaultSettings.URL
+TEES.Utils.Settings.URL" class="py-name" href="#" onclick="return doclink('link-98', 'URL', 'link-18');">URL</a></tt><tt class="py-op">[</tt><tt class="py-string">"GE_DEVEL_McCC"</tt><tt class="py-op">]</tt> <tt class="py-op">=</tt> <tt id="link-99" class="py-name"><a title="TEES.Utils.DefaultSettings.urlBase
+TEES.Utils.Settings.urlBase" class="py-name" href="#" onclick="return doclink('link-99', 'urlBase', 'link-31');">urlBase</a></tt> <tt class="py-op">+</tt> <tt class="py-string">"McCC-parses-BioNLP-ST_2011_genia_devel_data_rev1.tar.gz"</tt> </tt>
+<a name="L99"></a><tt class="py-lineno"> 99</tt>  <tt class="py-line"><tt id="link-100" class="py-name"><a title="TEES.Utils.DefaultSettings.URL
+TEES.Utils.Settings.URL" class="py-name" href="#" onclick="return doclink('link-100', 'URL', 'link-18');">URL</a></tt><tt class="py-op">[</tt><tt class="py-string">"GE_TEST_McCC"</tt><tt class="py-op">]</tt> <tt class="py-op">=</tt> <tt id="link-101" class="py-name"><a title="TEES.Utils.DefaultSettings.urlBase
+TEES.Utils.Settings.urlBase" class="py-name" href="#" onclick="return doclink('link-101', 'urlBase', 'link-31');">urlBase</a></tt> <tt class="py-op">+</tt> <tt class="py-string">"McCC-parses-BioNLP-ST_2011_genia_test_data.tar.gz"</tt> </tt>
+<a name="L100"></a><tt class="py-lineno">100</tt>  <tt class="py-line"><tt class="py-comment">#EPI</tt> </tt>
+<a name="L101"></a><tt class="py-lineno">101</tt>  <tt class="py-line"><tt id="link-102" class="py-name"><a title="TEES.Utils.DefaultSettings.URL
+TEES.Utils.Settings.URL" class="py-name" href="#" onclick="return doclink('link-102', 'URL', 'link-18');">URL</a></tt><tt class="py-op">[</tt><tt class="py-string">"EPI_DEVEL_TOKENS"</tt><tt class="py-op">]</tt> <tt class="py-op">=</tt> <tt id="link-103" class="py-name"><a title="TEES.Utils.DefaultSettings.urlBase
+TEES.Utils.Settings.urlBase" class="py-name" href="#" onclick="return doclink('link-103', 'urlBase', 'link-31');">urlBase</a></tt> <tt class="py-op">+</tt> <tt class="py-string">"Tokenised-BioNLP-ST_2011_Epi_and_PTM_development_data.tar.gz"</tt> </tt>
+<a name="L102"></a><tt class="py-lineno">102</tt>  <tt class="py-line"><tt id="link-104" class="py-name"><a title="TEES.Utils.DefaultSettings.URL
+TEES.Utils.Settings.URL" class="py-name" href="#" onclick="return doclink('link-104', 'URL', 'link-18');">URL</a></tt><tt class="py-op">[</tt><tt class="py-string">"EPI_TRAIN_TOKENS"</tt><tt class="py-op">]</tt> <tt class="py-op">=</tt> <tt id="link-105" class="py-name"><a title="TEES.Utils.DefaultSettings.urlBase
+TEES.Utils.Settings.urlBase" class="py-name" href="#" onclick="return doclink('link-105', 'urlBase', 'link-31');">urlBase</a></tt> <tt class="py-op">+</tt> <tt class="py-string">"Tokenised-BioNLP-ST_2011_Epi_and_PTM_training_data.tar.gz"</tt> </tt>
+<a name="L103"></a><tt class="py-lineno">103</tt>  <tt class="py-line"><tt id="link-106" class="py-name"><a title="TEES.Utils.DefaultSettings.URL
+TEES.Utils.Settings.URL" class="py-name" href="#" onclick="return doclink('link-106', 'URL', 'link-18');">URL</a></tt><tt class="py-op">[</tt><tt class="py-string">"EPI_TEST_TOKENS"</tt><tt class="py-op">]</tt> <tt class="py-op">=</tt> <tt id="link-107" class="py-name"><a title="TEES.Utils.DefaultSettings.urlBase
+TEES.Utils.Settings.urlBase" class="py-name" href="#" onclick="return doclink('link-107', 'urlBase', 'link-31');">urlBase</a></tt> <tt class="py-op">+</tt> <tt class="py-string">"Tokenised-BioNLP-ST_2011_Epi_and_PTM_test_data.tar.gz"</tt> </tt>
+<a name="L104"></a><tt class="py-lineno">104</tt>  <tt class="py-line"><tt id="link-108" class="py-name"><a title="TEES.Utils.DefaultSettings.URL
+TEES.Utils.Settings.URL" class="py-name" href="#" onclick="return doclink('link-108', 'URL', 'link-18');">URL</a></tt><tt class="py-op">[</tt><tt class="py-string">"EPI_DEVEL_McCC"</tt><tt class="py-op">]</tt> <tt class="py-op">=</tt> <tt id="link-109" class="py-name"><a title="TEES.Utils.DefaultSettings.urlBase
+TEES.Utils.Settings.urlBase" class="py-name" href="#" onclick="return doclink('link-109', 'urlBase', 'link-31');">urlBase</a></tt> <tt class="py-op">+</tt> <tt class="py-string">"McCC-parses-BioNLP-ST_2011_Epi_and_PTM_development_data.tar.gz"</tt>  </tt>
+<a name="L105"></a><tt class="py-lineno">105</tt>  <tt class="py-line"><tt id="link-110" class="py-name"><a title="TEES.Utils.DefaultSettings.URL
+TEES.Utils.Settings.URL" class="py-name" href="#" onclick="return doclink('link-110', 'URL', 'link-18');">URL</a></tt><tt class="py-op">[</tt><tt class="py-string">"EPI_TRAIN_McCC"</tt><tt class="py-op">]</tt> <tt class="py-op">=</tt> <tt id="link-111" class="py-name"><a title="TEES.Utils.DefaultSettings.urlBase
+TEES.Utils.Settings.urlBase" class="py-name" href="#" onclick="return doclink('link-111', 'urlBase', 'link-31');">urlBase</a></tt> <tt class="py-op">+</tt> <tt class="py-string">"McCC-parses-BioNLP-ST_2011_Epi_and_PTM_training_data.tar.gz"</tt> </tt>
+<a name="L106"></a><tt class="py-lineno">106</tt>  <tt class="py-line"><tt id="link-112" class="py-name"><a title="TEES.Utils.DefaultSettings.URL
+TEES.Utils.Settings.URL" class="py-name" href="#" onclick="return doclink('link-112', 'URL', 'link-18');">URL</a></tt><tt class="py-op">[</tt><tt class="py-string">"EPI_TEST_McCC"</tt><tt class="py-op">]</tt> <tt class="py-op">=</tt> <tt id="link-113" class="py-name"><a title="TEES.Utils.DefaultSettings.urlBase
+TEES.Utils.Settings.urlBase" class="py-name" href="#" onclick="return doclink('link-113', 'urlBase', 'link-31');">urlBase</a></tt> <tt class="py-op">+</tt> <tt class="py-string">"McCC-parses-BioNLP-ST_2011_Epi_and_PTM_test_data.tar.gz"</tt> </tt>
+<a name="L107"></a><tt class="py-lineno">107</tt>  <tt class="py-line"><tt class="py-comment">#ID</tt> </tt>
+<a name="L108"></a><tt class="py-lineno">108</tt>  <tt class="py-line"><tt id="link-114" class="py-name"><a title="TEES.Utils.DefaultSettings.URL
+TEES.Utils.Settings.URL" class="py-name" href="#" onclick="return doclink('link-114', 'URL', 'link-18');">URL</a></tt><tt class="py-op">[</tt><tt class="py-string">"ID_DEVEL_TOKENS"</tt><tt class="py-op">]</tt> <tt class="py-op">=</tt> <tt id="link-115" class="py-name"><a title="TEES.Utils.DefaultSettings.urlBase
+TEES.Utils.Settings.urlBase" class="py-name" href="#" onclick="return doclink('link-115', 'urlBase', 'link-31');">urlBase</a></tt> <tt class="py-op">+</tt> <tt class="py-string">"Tokenised-BioNLP-ST_2011_Infectious_Diseases_development_data.tar.gz"</tt> </tt>
+<a name="L109"></a><tt class="py-lineno">109</tt>  <tt class="py-line"><tt id="link-116" class="py-name"><a title="TEES.Utils.DefaultSettings.URL
+TEES.Utils.Settings.URL" class="py-name" href="#" onclick="return doclink('link-116', 'URL', 'link-18');">URL</a></tt><tt class="py-op">[</tt><tt class="py-string">"ID_TRAIN_TOKENS"</tt><tt class="py-op">]</tt> <tt class="py-op">=</tt> <tt id="link-117" class="py-name"><a title="TEES.Utils.DefaultSettings.urlBase
+TEES.Utils.Settings.urlBase" class="py-name" href="#" onclick="return doclink('link-117', 'urlBase', 'link-31');">urlBase</a></tt> <tt class="py-op">+</tt> <tt class="py-string">"Tokenised-BioNLP-ST_2011_Infectious_Diseases_training_data.tar.gz"</tt> </tt>
+<a name="L110"></a><tt class="py-lineno">110</tt>  <tt class="py-line"><tt id="link-118" class="py-name"><a title="TEES.Utils.DefaultSettings.URL
+TEES.Utils.Settings.URL" class="py-name" href="#" onclick="return doclink('link-118', 'URL', 'link-18');">URL</a></tt><tt class="py-op">[</tt><tt class="py-string">"ID_TEST_TOKENS"</tt><tt class="py-op">]</tt> <tt class="py-op">=</tt> <tt id="link-119" class="py-name"><a title="TEES.Utils.DefaultSettings.urlBase
+TEES.Utils.Settings.urlBase" class="py-name" href="#" onclick="return doclink('link-119', 'urlBase', 'link-31');">urlBase</a></tt> <tt class="py-op">+</tt> <tt class="py-string">"Tokenised-BioNLP-ST_2011_Infectious_Diseases_test_data.tar.gz"</tt> </tt>
+<a name="L111"></a><tt class="py-lineno">111</tt>  <tt class="py-line"><tt id="link-120" class="py-name"><a title="TEES.Utils.DefaultSettings.URL
+TEES.Utils.Settings.URL" class="py-name" href="#" onclick="return doclink('link-120', 'URL', 'link-18');">URL</a></tt><tt class="py-op">[</tt><tt class="py-string">"ID_DEVEL_McCC"</tt><tt class="py-op">]</tt> <tt class="py-op">=</tt> <tt id="link-121" class="py-name"><a title="TEES.Utils.DefaultSettings.urlBase
+TEES.Utils.Settings.urlBase" class="py-name" href="#" onclick="return doclink('link-121', 'urlBase', 'link-31');">urlBase</a></tt> <tt class="py-op">+</tt> <tt class="py-string">"McCC-parses-BioNLP-ST_2011_Infectious_Diseases_development_data.tar.gz"</tt>  </tt>
+<a name="L112"></a><tt class="py-lineno">112</tt>  <tt class="py-line"><tt id="link-122" class="py-name"><a title="TEES.Utils.DefaultSettings.URL
+TEES.Utils.Settings.URL" class="py-name" href="#" onclick="return doclink('link-122', 'URL', 'link-18');">URL</a></tt><tt class="py-op">[</tt><tt class="py-string">"ID_TRAIN_McCC"</tt><tt class="py-op">]</tt> <tt class="py-op">=</tt> <tt id="link-123" class="py-name"><a title="TEES.Utils.DefaultSettings.urlBase
+TEES.Utils.Settings.urlBase" class="py-name" href="#" onclick="return doclink('link-123', 'urlBase', 'link-31');">urlBase</a></tt> <tt class="py-op">+</tt> <tt class="py-string">"McCC-parses-BioNLP-ST_2011_Infectious_Diseases_training_data.tar.gz"</tt> </tt>
+<a name="L113"></a><tt class="py-lineno">113</tt>  <tt class="py-line"><tt id="link-124" class="py-name"><a title="TEES.Utils.DefaultSettings.URL
+TEES.Utils.Settings.URL" class="py-name" href="#" onclick="return doclink('link-124', 'URL', 'link-18');">URL</a></tt><tt class="py-op">[</tt><tt class="py-string">"ID_TEST_McCC"</tt><tt class="py-op">]</tt> <tt class="py-op">=</tt> <tt id="link-125" class="py-name"><a title="TEES.Utils.DefaultSettings.urlBase
+TEES.Utils.Settings.urlBase" class="py-name" href="#" onclick="return doclink('link-125', 'urlBase', 'link-31');">urlBase</a></tt> <tt class="py-op">+</tt> <tt class="py-string">"McCC-parses-BioNLP-ST_2011_Infectious_Diseases_test_data.tar.gz"</tt> </tt>
+<a name="L114"></a><tt class="py-lineno">114</tt>  <tt class="py-line"><tt class="py-comment">#BB</tt> </tt>
+<a name="L115"></a><tt class="py-lineno">115</tt>  <tt class="py-line"><tt id="link-126" class="py-name"><a title="TEES.Utils.DefaultSettings.URL
+TEES.Utils.Settings.URL" class="py-name" href="#" onclick="return doclink('link-126', 'URL', 'link-18');">URL</a></tt><tt class="py-op">[</tt><tt class="py-string">"BB_DEVEL_TOKENS"</tt><tt class="py-op">]</tt> <tt class="py-op">=</tt> <tt id="link-127" class="py-name"><a title="TEES.Utils.DefaultSettings.urlBase
+TEES.Utils.Settings.urlBase" class="py-name" href="#" onclick="return doclink('link-127', 'urlBase', 'link-31');">urlBase</a></tt> <tt class="py-op">+</tt> <tt class="py-string">"Tokenised-BioNLP-ST_2011_Bacteria_Biotopes_dev_data_rev1.tar.gz"</tt> </tt>
+<a name="L116"></a><tt class="py-lineno">116</tt>  <tt class="py-line"><tt id="link-128" class="py-name"><a title="TEES.Utils.DefaultSettings.URL
+TEES.Utils.Settings.URL" class="py-name" href="#" onclick="return doclink('link-128', 'URL', 'link-18');">URL</a></tt><tt class="py-op">[</tt><tt class="py-string">"BB_TRAIN_TOKENS"</tt><tt class="py-op">]</tt> <tt class="py-op">=</tt> <tt id="link-129" class="py-name"><a title="TEES.Utils.DefaultSettings.urlBase
+TEES.Utils.Settings.urlBase" class="py-name" href="#" onclick="return doclink('link-129', 'urlBase', 'link-31');">urlBase</a></tt> <tt class="py-op">+</tt> <tt class="py-string">"Tokenised-BioNLP-ST_2011_Bacteria_Biotopes_train_data_rev1.tar.gz"</tt> </tt>
+<a name="L117"></a><tt class="py-lineno">117</tt>  <tt class="py-line"><tt id="link-130" class="py-name"><a title="TEES.Utils.DefaultSettings.URL
+TEES.Utils.Settings.URL" class="py-name" href="#" onclick="return doclink('link-130', 'URL', 'link-18');">URL</a></tt><tt class="py-op">[</tt><tt class="py-string">"BB_TEST_TOKENS"</tt><tt class="py-op">]</tt> <tt class="py-op">=</tt> <tt id="link-131" class="py-name"><a title="TEES.Utils.DefaultSettings.urlBase
+TEES.Utils.Settings.urlBase" class="py-name" href="#" onclick="return doclink('link-131', 'urlBase', 'link-31');">urlBase</a></tt> <tt class="py-op">+</tt> <tt class="py-string">"Tokenised-BioNLP-ST_2011_Bacteria_Biotopes_test_data.tar.gz"</tt> </tt>
+<a name="L118"></a><tt class="py-lineno">118</tt>  <tt class="py-line"><tt id="link-132" class="py-name"><a title="TEES.Utils.DefaultSettings.URL
+TEES.Utils.Settings.URL" class="py-name" href="#" onclick="return doclink('link-132', 'URL', 'link-18');">URL</a></tt><tt class="py-op">[</tt><tt class="py-string">"BB_DEVEL_McCC"</tt><tt class="py-op">]</tt> <tt class="py-op">=</tt> <tt id="link-133" class="py-name"><a title="TEES.Utils.DefaultSettings.urlBase
+TEES.Utils.Settings.urlBase" class="py-name" href="#" onclick="return doclink('link-133', 'urlBase', 'link-31');">urlBase</a></tt> <tt class="py-op">+</tt> <tt class="py-string">"McCC-parses-BioNLP-ST_2011_Bacteria_Biotopes_dev_data_rev1.tar.gz"</tt>  </tt>
+<a name="L119"></a><tt class="py-lineno">119</tt>  <tt class="py-line"><tt id="link-134" class="py-name"><a title="TEES.Utils.DefaultSettings.URL
+TEES.Utils.Settings.URL" class="py-name" href="#" onclick="return doclink('link-134', 'URL', 'link-18');">URL</a></tt><tt class="py-op">[</tt><tt class="py-string">"BB_TRAIN_McCC"</tt><tt class="py-op">]</tt> <tt class="py-op">=</tt> <tt id="link-135" class="py-name"><a title="TEES.Utils.DefaultSettings.urlBase
+TEES.Utils.Settings.urlBase" class="py-name" href="#" onclick="return doclink('link-135', 'urlBase', 'link-31');">urlBase</a></tt> <tt class="py-op">+</tt> <tt class="py-string">"McCC-parses-BioNLP-ST_2011_Bacteria_Biotopes_train_data_rev1.tar.gz"</tt> </tt>
+<a name="L120"></a><tt class="py-lineno">120</tt>  <tt class="py-line"><tt id="link-136" class="py-name"><a title="TEES.Utils.DefaultSettings.URL
+TEES.Utils.Settings.URL" class="py-name" href="#" onclick="return doclink('link-136', 'URL', 'link-18');">URL</a></tt><tt class="py-op">[</tt><tt class="py-string">"BB_TEST_McCC"</tt><tt class="py-op">]</tt> <tt class="py-op">=</tt> <tt id="link-137" class="py-name"><a title="TEES.Utils.DefaultSettings.urlBase
+TEES.Utils.Settings.urlBase" class="py-name" href="#" onclick="return doclink('link-137', 'urlBase', 'link-31');">urlBase</a></tt> <tt class="py-op">+</tt> <tt class="py-string">"McCC-parses-BioNLP-ST_2011_Bacteria_Biotopes_test_data.tar.gz"</tt> </tt>
+<a name="L121"></a><tt class="py-lineno">121</tt>  <tt class="py-line"><tt class="py-comment">#BI</tt> </tt>
+<a name="L122"></a><tt class="py-lineno">122</tt>  <tt class="py-line"><tt id="link-138" class="py-name"><a title="TEES.Utils.DefaultSettings.URL
+TEES.Utils.Settings.URL" class="py-name" href="#" onclick="return doclink('link-138', 'URL', 'link-18');">URL</a></tt><tt class="py-op">[</tt><tt class="py-string">"BI_DEVEL_TOKENS"</tt><tt class="py-op">]</tt> <tt class="py-op">=</tt> <tt id="link-139" class="py-name"><a title="TEES.Utils.DefaultSettings.urlBase
+TEES.Utils.Settings.urlBase" class="py-name" href="#" onclick="return doclink('link-139', 'urlBase', 'link-31');">urlBase</a></tt> <tt class="py-op">+</tt> <tt class="py-string">"Tokenised-BioNLP-ST_2011_bacteria_interactions_dev_data_rev1.tar.gz"</tt> </tt>
+<a name="L123"></a><tt class="py-lineno">123</tt>  <tt class="py-line"><tt id="link-140" class="py-name"><a title="TEES.Utils.DefaultSettings.URL
+TEES.Utils.Settings.URL" class="py-name" href="#" onclick="return doclink('link-140', 'URL', 'link-18');">URL</a></tt><tt class="py-op">[</tt><tt class="py-string">"BI_TRAIN_TOKENS"</tt><tt class="py-op">]</tt> <tt class="py-op">=</tt> <tt id="link-141" class="py-name"><a title="TEES.Utils.DefaultSettings.urlBase
+TEES.Utils.Settings.urlBase" class="py-name" href="#" onclick="return doclink('link-141', 'urlBase', 'link-31');">urlBase</a></tt> <tt class="py-op">+</tt> <tt class="py-string">"Tokenised-BioNLP-ST_2011_bacteria_interactions_train_data_rev1.tar.gz"</tt> </tt>
+<a name="L124"></a><tt class="py-lineno">124</tt>  <tt class="py-line"><tt id="link-142" class="py-name"><a title="TEES.Utils.DefaultSettings.URL
+TEES.Utils.Settings.URL" class="py-name" href="#" onclick="return doclink('link-142', 'URL', 'link-18');">URL</a></tt><tt class="py-op">[</tt><tt class="py-string">"BI_TEST_TOKENS"</tt><tt class="py-op">]</tt> <tt class="py-op">=</tt> <tt id="link-143" class="py-name"><a title="TEES.Utils.DefaultSettings.urlBase
+TEES.Utils.Settings.urlBase" class="py-name" href="#" onclick="return doclink('link-143', 'urlBase', 'link-31');">urlBase</a></tt> <tt class="py-op">+</tt> <tt class="py-string">"Tokenised-BioNLP-ST_2011_bacteria_interactions_test_data.tar.gz"</tt> </tt>
+<a name="L125"></a><tt class="py-lineno">125</tt>  <tt class="py-line"><tt id="link-144" class="py-name"><a title="TEES.Utils.DefaultSettings.URL
+TEES.Utils.Settings.URL" class="py-name" href="#" onclick="return doclink('link-144', 'URL', 'link-18');">URL</a></tt><tt class="py-op">[</tt><tt class="py-string">"BI_DEVEL_McCC"</tt><tt class="py-op">]</tt> <tt class="py-op">=</tt> <tt id="link-145" class="py-name"><a title="TEES.Utils.DefaultSettings.urlBase
+TEES.Utils.Settings.urlBase" class="py-name" href="#" onclick="return doclink('link-145', 'urlBase', 'link-31');">urlBase</a></tt> <tt class="py-op">+</tt> <tt class="py-string">"McCC-parses-BioNLP-ST_2011_bacteria_interactions_dev_data_rev1.tar.gz"</tt>  </tt>
+<a name="L126"></a><tt class="py-lineno">126</tt>  <tt class="py-line"><tt id="link-146" class="py-name"><a title="TEES.Utils.DefaultSettings.URL
+TEES.Utils.Settings.URL" class="py-name" href="#" onclick="return doclink('link-146', 'URL', 'link-18');">URL</a></tt><tt class="py-op">[</tt><tt class="py-string">"BI_TRAIN_McCC"</tt><tt class="py-op">]</tt> <tt class="py-op">=</tt> <tt id="link-147" class="py-name"><a title="TEES.Utils.DefaultSettings.urlBase
+TEES.Utils.Settings.urlBase" class="py-name" href="#" onclick="return doclink('link-147', 'urlBase', 'link-31');">urlBase</a></tt> <tt class="py-op">+</tt> <tt class="py-string">"McCC-parses-BioNLP-ST_2011_bacteria_interactions_train_data_rev1.tar.gz"</tt> </tt>
+<a name="L127"></a><tt class="py-lineno">127</tt>  <tt class="py-line"><tt id="link-148" class="py-name"><a title="TEES.Utils.DefaultSettings.URL
+TEES.Utils.Settings.URL" class="py-name" href="#" onclick="return doclink('link-148', 'URL', 'link-18');">URL</a></tt><tt class="py-op">[</tt><tt class="py-string">"BI_TEST_McCC"</tt><tt class="py-op">]</tt> <tt class="py-op">=</tt> <tt id="link-149" class="py-name"><a title="TEES.Utils.DefaultSettings.urlBase
+TEES.Utils.Settings.urlBase" class="py-name" href="#" onclick="return doclink('link-149', 'urlBase', 'link-31');">urlBase</a></tt> <tt class="py-op">+</tt> <tt class="py-string">"McCC-parses-BioNLP-ST_2011_bacteria_interactions_test_data.tar.gz"</tt> </tt>
+<a name="L128"></a><tt class="py-lineno">128</tt>  <tt class="py-line"><tt class="py-comment"># Parses not provided in the shared tasks</tt> </tt>
+<a name="L129"></a><tt class="py-lineno">129</tt>  <tt class="py-line"><tt class="py-comment">#URL["TEES_PARSES"] = "/home/jari/biotext/TEES-parses-2.0/TEES-parses-120706.tar.gz"</tt> </tt>
+<a name="L130"></a><tt class="py-lineno">130</tt>  <tt class="py-line"><tt id="link-150" class="py-name"><a title="TEES.Utils.DefaultSettings.URL
+TEES.Utils.Settings.URL" class="py-name" href="#" onclick="return doclink('link-150', 'URL', 'link-18');">URL</a></tt><tt class="py-op">[</tt><tt class="py-string">"TEES_PARSES"</tt><tt class="py-op">]</tt> <tt class="py-op">=</tt> <tt class="py-string">"https://github.com/downloads/jbjorne/TEES/TEES-parses-120706.tar.gz"</tt> </tt>
+<a name="L131"></a><tt class="py-lineno">131</tt>  <tt class="py-line"> </tt>
+<a name="L132"></a><tt class="py-lineno">132</tt>  <tt class="py-line"> </tt>
+<a name="L133"></a><tt class="py-lineno">133</tt>  <tt class="py-line"><tt class="py-comment"># BioNLP'09 Shared Task</tt> </tt>
+<a name="L134"></a><tt class="py-lineno">134</tt>  <tt class="py-line"><tt id="link-151" class="py-name"><a title="TEES.Utils.DefaultSettings.urlBase
+TEES.Utils.Settings.urlBase" class="py-name" href="#" onclick="return doclink('link-151', 'urlBase', 'link-31');">urlBase</a></tt> <tt class="py-op">=</tt> <tt class="py-string">"http://www.nactem.ac.uk/tsujii/GENIA/SharedTask/dat/"</tt> </tt>
+<a name="L135"></a><tt class="py-lineno">135</tt>  <tt class="py-line"><tt id="link-152" class="py-name"><a title="TEES.Utils.DefaultSettings.URL
+TEES.Utils.Settings.URL" class="py-name" href="#" onclick="return doclink('link-152', 'URL', 'link-18');">URL</a></tt><tt class="py-op">[</tt><tt class="py-string">"GE09_DEVEL"</tt><tt class="py-op">]</tt> <tt class="py-op">=</tt> <tt id="link-153" class="py-name"><a title="TEES.Utils.DefaultSettings.urlBase
+TEES.Utils.Settings.urlBase" class="py-name" href="#" onclick="return doclink('link-153', 'urlBase', 'link-31');">urlBase</a></tt> <tt class="py-op">+</tt> <tt class="py-string">"bionlp09_shared_task_development_data_rev1.tar.gz"</tt>  </tt>
+<a name="L136"></a><tt class="py-lineno">136</tt>  <tt class="py-line"><tt id="link-154" class="py-name"><a title="TEES.Utils.DefaultSettings.URL
+TEES.Utils.Settings.URL" class="py-name" href="#" onclick="return doclink('link-154', 'URL', 'link-18');">URL</a></tt><tt class="py-op">[</tt><tt class="py-string">"GE09_TRAIN"</tt><tt class="py-op">]</tt> <tt class="py-op">=</tt> <tt id="link-155" class="py-name"><a title="TEES.Utils.DefaultSettings.urlBase
+TEES.Utils.Settings.urlBase" class="py-name" href="#" onclick="return doclink('link-155', 'urlBase', 'link-31');">urlBase</a></tt> <tt class="py-op">+</tt> <tt class="py-string">"bionlp09_shared_task_training_data_rev2.tar.gz"</tt> </tt>
+<a name="L137"></a><tt class="py-lineno">137</tt>  <tt class="py-line"><tt id="link-156" class="py-name"><a title="TEES.Utils.DefaultSettings.URL
+TEES.Utils.Settings.URL" class="py-name" href="#" onclick="return doclink('link-156', 'URL', 'link-18');">URL</a></tt><tt class="py-op">[</tt><tt class="py-string">"GE09_TEST"</tt><tt class="py-op">]</tt> <tt class="py-op">=</tt> <tt id="link-157" class="py-name"><a title="TEES.Utils.DefaultSettings.urlBase
+TEES.Utils.Settings.urlBase" class="py-name" href="#" onclick="return doclink('link-157', 'urlBase', 'link-31');">urlBase</a></tt> <tt class="py-op">+</tt> <tt class="py-string">"bionlp09_shared_task_test_data_without_gold_annotation.tar.gz"</tt> </tt>
+<a name="L138"></a><tt class="py-lineno">138</tt>  <tt class="py-line"><tt class="py-comment"># BioNLP'09 Evaluator</tt> </tt>
+<a name="L139"></a><tt class="py-lineno">139</tt>  <tt class="py-line"><tt id="link-158" class="py-name"><a title="TEES.Utils.DefaultSettings.URL
+TEES.Utils.Settings.URL" class="py-name" href="#" onclick="return doclink('link-158', 'URL', 'link-18');">URL</a></tt><tt class="py-op">[</tt><tt class="py-string">"GE09_EVALUATOR"</tt><tt class="py-op">]</tt> <tt class="py-op">=</tt> <tt id="link-159" class="py-name"><a title="TEES.Utils.DefaultSettings.urlBase
+TEES.Utils.Settings.urlBase" class="py-name" href="#" onclick="return doclink('link-159', 'urlBase', 'link-31');">urlBase</a></tt> <tt class="py-op">+</tt> <tt class="py-string">"bionlp09_shared_task_evaluation_tools_v1.tar.gz"</tt> </tt>
+<a name="L140"></a><tt class="py-lineno">140</tt>  <tt class="py-line"><tt class="py-comment"># BioNLP'09 Shared Task parses</tt> </tt>
+<a name="L141"></a><tt class="py-lineno">141</tt>  <tt class="py-line"><tt id="link-160" class="py-name"><a title="TEES.Utils.DefaultSettings.urlBase
+TEES.Utils.Settings.urlBase" class="py-name" href="#" onclick="return doclink('link-160', 'urlBase', 'link-31');">urlBase</a></tt> <tt class="py-op">=</tt> <tt class="py-string">"http://www-tsujii.is.s.u-tokyo.ac.jp/GENIA/SharedTask/dat/"</tt> </tt>
+<a name="L142"></a><tt class="py-lineno">142</tt>  <tt class="py-line"><tt id="link-161" class="py-name"><a title="TEES.Utils.DefaultSettings.URL
+TEES.Utils.Settings.URL" class="py-name" href="#" onclick="return doclink('link-161', 'URL', 'link-18');">URL</a></tt><tt class="py-op">[</tt><tt class="py-string">"GE09_DEVEL_ANALYSES"</tt><tt class="py-op">]</tt> <tt class="py-op">=</tt> <tt id="link-162" class="py-name"><a title="TEES.Utils.DefaultSettings.urlBase
+TEES.Utils.Settings.urlBase" class="py-name" href="#" onclick="return doclink('link-162', 'urlBase', 'link-31');">urlBase</a></tt> <tt class="py-op">+</tt> <tt class="py-string">"bionlp09_shared_task_development_analyses_rev2.tar.gz"</tt>  </tt>
+<a name="L143"></a><tt class="py-lineno">143</tt>  <tt class="py-line"><tt id="link-163" class="py-name"><a title="TEES.Utils.DefaultSettings.URL
+TEES.Utils.Settings.URL" class="py-name" href="#" onclick="return doclink('link-163', 'URL', 'link-18');">URL</a></tt><tt class="py-op">[</tt><tt class="py-string">"GE09_TRAIN_ANALYSES"</tt><tt class="py-op">]</tt> <tt class="py-op">=</tt> <tt id="link-164" class="py-name"><a title="TEES.Utils.DefaultSettings.urlBase
+TEES.Utils.Settings.urlBase" class="py-name" href="#" onclick="return doclink('link-164', 'urlBase', 'link-31');">urlBase</a></tt> <tt class="py-op">+</tt> <tt class="py-string">"bionlp09_shared_task_training_analyses_rev2.tar.gz"</tt> </tt>
+<a name="L144"></a><tt class="py-lineno">144</tt>  <tt class="py-line"><tt id="link-165" class="py-name"><a title="TEES.Utils.DefaultSettings.URL
+TEES.Utils.Settings.URL" class="py-name" href="#" onclick="return doclink('link-165', 'URL', 'link-18');">URL</a></tt><tt class="py-op">[</tt><tt class="py-string">"GE09_TEST_ANALYSES"</tt><tt class="py-op">]</tt> <tt class="py-op">=</tt> <tt id="link-166" class="py-name"><a title="TEES.Utils.DefaultSettings.urlBase
+TEES.Utils.Settings.urlBase" class="py-name" href="#" onclick="return doclink('link-166', 'urlBase', 'link-31');">urlBase</a></tt> <tt class="py-op">+</tt> <tt class="py-string">"bionlp09_shared_task_test_analyses_rev2.tar.gz"</tt> </tt>
+<a name="L145"></a><tt class="py-lineno">145</tt>  <tt class="py-line"> </tt>
+<a name="L146"></a><tt class="py-lineno">146</tt>  <tt class="py-line"> </tt>
+<a name="L147"></a><tt class="py-lineno">147</tt>  <tt class="py-line"><tt class="py-comment"># DDI</tt> </tt>
+<a name="L148"></a><tt class="py-lineno">148</tt>  <tt class="py-line"><tt id="link-167" class="py-name"><a title="TEES.Utils.DefaultSettings.urlBase
+TEES.Utils.Settings.urlBase" class="py-name" href="#" onclick="return doclink('link-167', 'urlBase', 'link-31');">urlBase</a></tt> <tt class="py-op">=</tt> <tt class="py-string">"http://labda.inf.uc3m.es/DDIExtraction2011/"</tt> </tt>
+<a name="L149"></a><tt class="py-lineno">149</tt>  <tt class="py-line"><tt id="link-168" class="py-name"><a title="TEES.Utils.DefaultSettings.URL
+TEES.Utils.Settings.URL" class="py-name" href="#" onclick="return doclink('link-168', 'URL', 'link-18');">URL</a></tt><tt class="py-op">[</tt><tt class="py-string">"DDI_TRAIN_UNIFIED"</tt><tt class="py-op">]</tt> <tt class="py-op">=</tt> <tt id="link-169" class="py-name"><a title="TEES.Utils.DefaultSettings.urlBase
+TEES.Utils.Settings.urlBase" class="py-name" href="#" onclick="return doclink('link-169', 'urlBase', 'link-31');">urlBase</a></tt> <tt class="py-op">+</tt> <tt class="py-string">"DrugDDI_Unified.zip"</tt> </tt>
+<a name="L150"></a><tt class="py-lineno">150</tt>  <tt class="py-line"><tt id="link-170" class="py-name"><a title="TEES.Utils.DefaultSettings.URL
+TEES.Utils.Settings.URL" class="py-name" href="#" onclick="return doclink('link-170', 'URL', 'link-18');">URL</a></tt><tt class="py-op">[</tt><tt class="py-string">"DDI_TRAIN_MTMX"</tt><tt class="py-op">]</tt> <tt class="py-op">=</tt> <tt id="link-171" class="py-name"><a title="TEES.Utils.DefaultSettings.urlBase
+TEES.Utils.Settings.urlBase" class="py-name" href="#" onclick="return doclink('link-171', 'urlBase', 'link-31');">urlBase</a></tt> <tt class="py-op">+</tt> <tt class="py-string">"DrugDDI_MTMX.zip"</tt> </tt>
+<a name="L151"></a><tt class="py-lineno">151</tt>  <tt class="py-line"><tt class="py-comment"># If you have registered for the DDI Shared Task, insert the paths of your downloaded</tt> </tt>
+<a name="L152"></a><tt class="py-lineno">152</tt>  <tt class="py-line"><tt class="py-comment"># test files in the following variables (in your local settings file) to have them </tt> </tt>
+<a name="L153"></a><tt class="py-lineno">153</tt>  <tt class="py-line"><tt class="py-comment"># converted for use with TEES</tt> </tt>
+<a name="L154"></a><tt class="py-lineno">154</tt>  <tt class="py-line"><tt id="link-172" class="py-name"><a title="TEES.Utils.DefaultSettings.URL
+TEES.Utils.Settings.URL" class="py-name" href="#" onclick="return doclink('link-172', 'URL', 'link-18');">URL</a></tt><tt class="py-op">[</tt><tt class="py-string">"DDI_TEST_UNIFIED"</tt><tt class="py-op">]</tt> <tt class="py-op">=</tt> <tt class="py-name">None</tt> </tt>
+<a name="L155"></a><tt class="py-lineno">155</tt>  <tt class="py-line"><tt id="link-173" class="py-name"><a title="TEES.Utils.DefaultSettings.URL
+TEES.Utils.Settings.URL" class="py-name" href="#" onclick="return doclink('link-173', 'URL', 'link-18');">URL</a></tt><tt class="py-op">[</tt><tt class="py-string">"DDI_TEST_MTMX"</tt><tt class="py-op">]</tt> <tt class="py-op">=</tt> <tt class="py-name">None</tt> </tt>
+<a name="L156"></a><tt class="py-lineno">156</tt>  <tt class="py-line"> </tt>
+<a name="L157"></a><tt class="py-lineno">157</tt>  <tt class="py-line"> </tt>
+<a name="L158"></a><tt class="py-lineno">158</tt>  <tt class="py-line"><tt class="py-comment"># Miscellaneous files</tt> </tt>
+<a name="L159"></a><tt class="py-lineno">159</tt>  <tt class="py-line"><tt id="link-174" class="py-name"><a title="TEES.Utils.DefaultSettings.URL
+TEES.Utils.Settings.URL" class="py-name" href="#" onclick="return doclink('link-174', 'URL', 'link-18');">URL</a></tt><tt class="py-op">[</tt><tt class="py-string">"TEES_RESOURCES"</tt><tt class="py-op">]</tt> <tt class="py-op">=</tt> <tt class="py-string">"https://github.com/downloads/jbjorne/TEES/TEES-resources-120705.tar.gz"</tt> </tt>
+<a name="L160"></a><tt class="py-lineno">160</tt>  <tt class="py-line"><tt id="link-175" class="py-name"><a title="TEES.Utils.DefaultSettings.URL
+TEES.Utils.Settings.URL" class="py-name" href="#" onclick="return doclink('link-175', 'URL', 'link-18');">URL</a></tt><tt class="py-op">[</tt><tt class="py-string">"DRUG_BANK_XML"</tt><tt class="py-op">]</tt> <tt class="py-op">=</tt> <tt class="py-string">"http://www.drugbank.ca/system/downloads/current/drugbank.xml.zip"</tt> </tt>
+<a name="L161"></a><tt class="py-lineno">161</tt>  <tt class="py-line"> </tt><script type="text/javascript">
+<!--
+expandto(location.href);
+// -->
+</script>
+</pre>
+<br />
+<!-- ==================== NAVIGATION BAR ==================== -->
+<table class="navbar" border="0" width="100%" cellpadding="0"
+       bgcolor="#a0c0ff" cellspacing="0">
+  <tr valign="middle">
+  <!-- Home link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="TEES-module.html">Home</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Tree link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="module-tree.html">Trees</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Index link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="identifier-index.html">Indices</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Help link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="help.html">Help</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Project homepage -->
+      <th class="navbar" align="right" width="100%">
+        <table border="0" cellpadding="0" cellspacing="0">
+          <tr><th class="navbar" align="center"
+            >Turku Event Extraction System</th>
+          </tr></table></th>
+  </tr>
+</table>
+<table border="0" cellpadding="0" cellspacing="0" width="100%%">
+  <tr>
+    <td align="left" class="footer">
+    Generated by Epydoc 3.0.1 on Thu Jul 19 18:20:56 2012
+    </td>
+    <td align="right" class="footer">
+      <a target="mainFrame" href="http://epydoc.sourceforge.net"
+        >http://epydoc.sourceforge.net</a>
+    </td>
+  </tr>
+</table>
+
+<script type="text/javascript">
+  <!--
+  // Private objects are initially displayed (because if
+  // javascript is turned off then we want them to be
+  // visible); but by default, we want to hide them.  So hide
+  // them unless we have a cookie that says to show them.
+  checkCookie();
+  // -->
+</script>
+</body>
+</html>

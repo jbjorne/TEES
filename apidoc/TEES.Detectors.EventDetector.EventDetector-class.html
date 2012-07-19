@@ -1,0 +1,544 @@
+<?xml version="1.0" encoding="ascii"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+          "DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+  <title>TEES.Detectors.EventDetector.EventDetector</title>
+  <link rel="stylesheet" href="epydoc.css" type="text/css" />
+  <script type="text/javascript" src="epydoc.js"></script>
+</head>
+
+<body bgcolor="white" text="black" link="blue" vlink="#204080"
+      alink="#204080">
+<!-- ==================== NAVIGATION BAR ==================== -->
+<table class="navbar" border="0" width="100%" cellpadding="0"
+       bgcolor="#a0c0ff" cellspacing="0">
+  <tr valign="middle">
+  <!-- Home link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="TEES-module.html">Home</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Tree link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="module-tree.html">Trees</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Index link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="identifier-index.html">Indices</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Help link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="help.html">Help</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Project homepage -->
+      <th class="navbar" align="right" width="100%">
+        <table border="0" cellpadding="0" cellspacing="0">
+          <tr><th class="navbar" align="center"
+            >Turku Event Extraction System</th>
+          </tr></table></th>
+  </tr>
+</table>
+<table width="100%" cellpadding="0" cellspacing="0">
+  <tr valign="top">
+    <td width="100%">
+      <span class="breadcrumbs">
+        <a href="TEES-module.html">Package&nbsp;TEES</a> ::
+        <a href="TEES.Detectors-module.html">Package&nbsp;Detectors</a> ::
+        <a href="TEES.Detectors.EventDetector-module.html">Module&nbsp;EventDetector</a> ::
+        Class&nbsp;EventDetector
+      </span>
+    </td>
+    <td>
+      <table cellpadding="0" cellspacing="0">
+        <!-- hide/show private -->
+        <tr><td align="right"><span class="options">[<a href="javascript:void(0);" class="privatelink"
+    onclick="toggle_private();">hide&nbsp;private</a>]</span></td></tr>
+      </table>
+    </td>
+  </tr>
+</table>
+<!-- ==================== CLASS DESCRIPTION ==================== -->
+<h1 class="epydoc">Class EventDetector</h1><p class="nomargin-top"><span class="codelink"><a href="TEES.Detectors.EventDetector-pysrc.html#EventDetector">source&nbsp;code</a></span></p>
+<pre class="base-tree">
+<a href="TEES.Detectors.Detector.Detector-class.html">Detector.Detector</a> --+
+                    |
+                   <strong class="uidshort">EventDetector</strong>
+</pre>
+
+<dl><dt>Known Subclasses:</dt>
+<dd>
+      <ul class="subclass-list">
+<li><a href="TEES.Detectors.CODetector.CODetector-class.html">CODetector.CODetector</a></li>  </ul>
+</dd></dl>
+
+<hr />
+<p>A multi-stage detector used for the BioNLP Shared Task type 
+  events.</p>
+
+<!-- ==================== INSTANCE METHODS ==================== -->
+<a name="section-InstanceMethods"></a>
+<table class="summary" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr bgcolor="#70b0f0" class="table-header">
+  <td colspan="2" class="table-header">
+    <table border="0" cellpadding="0" cellspacing="0" width="100%">
+      <tr valign="top">
+        <td align="left"><span class="table-header">Instance Methods</span></td>
+        <td align="right" valign="top"
+         ><span class="options">[<a href="#section-InstanceMethods"
+         class="privatelink" onclick="toggle_private();"
+         >hide private</a>]</span></td>
+      </tr>
+    </table>
+  </td>
+</tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a href="TEES.Detectors.EventDetector.EventDetector-class.html#__init__" class="summary-sig-name">__init__</a>(<span class="summary-sig-arg">self</span>)</span></td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="TEES.Detectors.EventDetector-pysrc.html#EventDetector.__init__">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a href="TEES.Detectors.EventDetector.EventDetector-class.html#classify" class="summary-sig-name">classify</a>(<span class="summary-sig-arg">self</span>,
+        <span class="summary-sig-arg">data</span>,
+        <span class="summary-sig-arg">model</span>,
+        <span class="summary-sig-arg">output</span>,
+        <span class="summary-sig-arg">parse</span>=<span class="summary-sig-default">None</span>,
+        <span class="summary-sig-arg">task</span>=<span class="summary-sig-default">None</span>,
+        <span class="summary-sig-arg">goldData</span>=<span class="summary-sig-default">None</span>,
+        <span class="summary-sig-arg">fromStep</span>=<span class="summary-sig-default">None</span>,
+        <span class="summary-sig-arg">toStep</span>=<span class="summary-sig-default">None</span>,
+        <span class="summary-sig-arg">omitSteps</span>=<span class="summary-sig-default">None</span>,
+        <span class="summary-sig-arg">workDir</span>=<span class="summary-sig-default">None</span>)</span></td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="TEES.Detectors.EventDetector-pysrc.html#EventDetector.classify">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="doGrid"></a><span class="summary-sig-name">doGrid</span>(<span class="summary-sig-arg">self</span>)</span></td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="TEES.Detectors.EventDetector-pysrc.html#EventDetector.doGrid">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="evaluateGrid"></a><span class="summary-sig-name">evaluateGrid</span>(<span class="summary-sig-arg">self</span>,
+        <span class="summary-sig-arg">xml</span>,
+        <span class="summary-sig-arg">params</span>,
+        <span class="summary-sig-arg">bestResults</span>)</span></td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="TEES.Detectors.EventDetector-pysrc.html#EventDetector.evaluateGrid">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a href="TEES.Detectors.EventDetector.EventDetector-class.html#getWorkFile" class="summary-sig-name">getWorkFile</a>(<span class="summary-sig-arg">self</span>,
+        <span class="summary-sig-arg">fileObject</span>,
+        <span class="summary-sig-arg">serializedPath</span>=<span class="summary-sig-default">None</span>)</span><br />
+      Returns fileObject if it is not None, otherwise tries all paths in 
+      serializedPath and returns the first one that exists.</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="TEES.Detectors.EventDetector-pysrc.html#EventDetector.getWorkFile">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a href="TEES.Detectors.EventDetector.EventDetector-class.html#setConnection" class="summary-sig-name">setConnection</a>(<span class="summary-sig-arg">self</span>,
+        <span class="summary-sig-arg">connection</span>)</span></td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="TEES.Detectors.EventDetector-pysrc.html#EventDetector.setConnection">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a href="TEES.Detectors.EventDetector.EventDetector-class.html#setWorkDir" class="summary-sig-name">setWorkDir</a>(<span class="summary-sig-arg">self</span>,
+        <span class="summary-sig-arg">workDir</span>)</span></td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="TEES.Detectors.EventDetector-pysrc.html#EventDetector.setWorkDir">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a href="TEES.Detectors.EventDetector.EventDetector-class.html#train" class="summary-sig-name">train</a>(<span class="summary-sig-arg">self</span>,
+        <span class="summary-sig-arg">trainData</span>=<span class="summary-sig-default">None</span>,
+        <span class="summary-sig-arg">optData</span>=<span class="summary-sig-default">None</span>,
+        <span class="summary-sig-arg">model</span>=<span class="summary-sig-default">None</span>,
+        <span class="summary-sig-arg">combinedModel</span>=<span class="summary-sig-default">None</span>,
+        <span class="summary-sig-arg">triggerExampleStyle</span>=<span class="summary-sig-default">None</span>,
+        <span class="summary-sig-arg">edgeExampleStyle</span>=<span class="summary-sig-default">None</span>,
+        <span class="summary-sig-arg">unmergingExampleStyle</span>=<span class="summary-sig-default">None</span>,
+        <span class="summary-sig-arg">modifierExampleStyle</span>=<span class="summary-sig-default">None</span>,
+        <span class="summary-sig-arg">triggerClassifierParameters</span>=<span class="summary-sig-default">None</span>,
+        <span class="summary-sig-arg">edgeClassifierParameters</span>=<span class="summary-sig-default">None</span>,
+        <span class="summary-sig-arg">unmergingClassifierParameters</span>=<span class="summary-sig-default">None</span>,
+        <span class="summary-sig-arg">modifierClassifierParameters</span>=<span class="summary-sig-default">None</span>,
+        <span class="summary-sig-arg">recallAdjustParameters</span>=<span class="summary-sig-default">None</span>,
+        <span class="summary-sig-arg">unmerging</span>=<span class="summary-sig-default">False</span>,
+        <span class="summary-sig-arg">trainModifiers</span>=<span class="summary-sig-default">False</span>,
+        <span class="summary-sig-arg">fullGrid</span>=<span class="summary-sig-default">False</span>,
+        <span class="summary-sig-arg">task</span>=<span class="summary-sig-default">None</span>,
+        <span class="summary-sig-arg">parse</span>=<span class="summary-sig-default">None</span>,
+        <span class="summary-sig-arg">tokenization</span>=<span class="summary-sig-default">None</span>,
+        <span class="summary-sig-arg">fromStep</span>=<span class="summary-sig-default">None</span>,
+        <span class="summary-sig-arg">toStep</span>=<span class="summary-sig-default">None</span>,
+        <span class="summary-sig-arg">workDir</span>=<span class="summary-sig-default">None</span>)</span></td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="TEES.Detectors.EventDetector-pysrc.html#EventDetector.train">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="trainUnmergingDetector"></a><span class="summary-sig-name">trainUnmergingDetector</span>(<span class="summary-sig-arg">self</span>)</span></td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="TEES.Detectors.EventDetector-pysrc.html#EventDetector.trainUnmergingDetector">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+  <tr>
+    <td colspan="2" class="summary">
+    <p class="indent-wrapped-lines"><b>Inherited from <code><a href="TEES.Detectors.Detector.Detector-class.html">Detector.Detector</a></code></b>:
+      <code><a href="TEES.Detectors.Detector.Detector-class.html#__del__">__del__</a></code>,
+      <code><a href="TEES.Detectors.Detector.Detector-class.html#addClassifierModel">addClassifierModel</a></code>,
+      <code><a href="TEES.Detectors.Detector.Detector-class.html#buildExamples">buildExamples</a></code>,
+      <code><a href="TEES.Detectors.Detector.Detector-class.html#checkStep">checkStep</a></code>,
+      <code><a href="TEES.Detectors.Detector.Detector-class.html#deleteTempWorkDir">deleteTempWorkDir</a></code>,
+      <code><a href="TEES.Detectors.Detector.Detector-class.html#enterState">enterState</a></code>,
+      <code><a href="TEES.Detectors.Detector.Detector-class.html#exitState">exitState</a></code>,
+      <code><a href="TEES.Detectors.Detector.Detector-class.html#getBioNLPSharedTaskParams">getBioNLPSharedTaskParams</a></code>,
+      <code><a href="TEES.Detectors.Detector.Detector-class.html#getModel">getModel</a></code>,
+      <code><a href="TEES.Detectors.Detector.Detector-class.html#getStepStatus">getStepStatus</a></code>,
+      <code><a href="TEES.Detectors.Detector.Detector-class.html#getStr">getStr</a></code>,
+      <code><a href="TEES.Detectors.Detector.Detector-class.html#initModel">initModel</a></code>,
+      <code><a href="TEES.Detectors.Detector.Detector-class.html#initVariables">initVariables</a></code>,
+      <code><a href="TEES.Detectors.Detector.Detector-class.html#openModel">openModel</a></code>,
+      <code><a href="TEES.Detectors.Detector.Detector-class.html#saveStr">saveStr</a></code>,
+      <code><a href="TEES.Detectors.Detector.Detector-class.html#saveStrings">saveStrings</a></code>,
+      <code><a href="TEES.Detectors.Detector.Detector-class.html#setTempWorkDir">setTempWorkDir</a></code>
+      </p>
+    <div class="private">    <p class="indent-wrapped-lines"><b>Inherited from <code><a href="TEES.Detectors.Detector.Detector-class.html">Detector.Detector</a></code></b> (private):
+      <code><a href="TEES.Detectors.Detector.Detector-class.html#_closeModels" onclick="show_private();">_closeModels</a></code>
+      </p></div>
+    </td>
+  </tr>
+</table>
+<!-- ==================== METHOD DETAILS ==================== -->
+<a name="section-MethodDetails"></a>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr bgcolor="#70b0f0" class="table-header">
+  <td colspan="2" class="table-header">
+    <table border="0" cellpadding="0" cellspacing="0" width="100%">
+      <tr valign="top">
+        <td align="left"><span class="table-header">Method Details</span></td>
+        <td align="right" valign="top"
+         ><span class="options">[<a href="#section-MethodDetails"
+         class="privatelink" onclick="toggle_private();"
+         >hide private</a>]</span></td>
+      </tr>
+    </table>
+  </td>
+</tr>
+</table>
+<a name="__init__"></a>
+<div>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr><td>
+  <table width="100%" cellpadding="0" cellspacing="0" border="0">
+  <tr valign="top"><td>
+  <h3 class="epydoc"><span class="sig"><span class="sig-name">__init__</span>(<span class="sig-arg">self</span>)</span>
+    <br /><em class="fname">(Constructor)</em>
+  </h3>
+  </td><td align="right" valign="top"
+    ><span class="codelink"><a href="TEES.Detectors.EventDetector-pysrc.html#EventDetector.__init__">source&nbsp;code</a></span>&nbsp;
+    </td>
+  </tr></table>
+  
+  
+  <dl class="fields">
+    <dt>Overrides:
+        <a href="TEES.Detectors.Detector.Detector-class.html#__init__">Detector.Detector.__init__</a>
+    </dt>
+  </dl>
+</td></tr></table>
+</div>
+<a name="classify"></a>
+<div>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr><td>
+  <table width="100%" cellpadding="0" cellspacing="0" border="0">
+  <tr valign="top"><td>
+  <h3 class="epydoc"><span class="sig"><span class="sig-name">classify</span>(<span class="sig-arg">self</span>,
+        <span class="sig-arg">data</span>,
+        <span class="sig-arg">model</span>,
+        <span class="sig-arg">output</span>,
+        <span class="sig-arg">parse</span>=<span class="sig-default">None</span>,
+        <span class="sig-arg">task</span>=<span class="sig-default">None</span>,
+        <span class="sig-arg">goldData</span>=<span class="sig-default">None</span>,
+        <span class="sig-arg">fromStep</span>=<span class="sig-default">None</span>,
+        <span class="sig-arg">toStep</span>=<span class="sig-default">None</span>,
+        <span class="sig-arg">omitSteps</span>=<span class="sig-default">None</span>,
+        <span class="sig-arg">workDir</span>=<span class="sig-default">None</span>)</span>
+  </h3>
+  </td><td align="right" valign="top"
+    ><span class="codelink"><a href="TEES.Detectors.EventDetector-pysrc.html#EventDetector.classify">source&nbsp;code</a></span>&nbsp;
+    </td>
+  </tr></table>
+  
+  
+  <dl class="fields">
+    <dt>Overrides:
+        <a href="TEES.Detectors.Detector.Detector-class.html#classify">Detector.Detector.classify</a>
+    </dt>
+  </dl>
+</td></tr></table>
+</div>
+<a name="getWorkFile"></a>
+<div>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr><td>
+  <table width="100%" cellpadding="0" cellspacing="0" border="0">
+  <tr valign="top"><td>
+  <h3 class="epydoc"><span class="sig"><span class="sig-name">getWorkFile</span>(<span class="sig-arg">self</span>,
+        <span class="sig-arg">fileObject</span>,
+        <span class="sig-arg">serializedPath</span>=<span class="sig-default">None</span>)</span>
+  </h3>
+  </td><td align="right" valign="top"
+    ><span class="codelink"><a href="TEES.Detectors.EventDetector-pysrc.html#EventDetector.getWorkFile">source&nbsp;code</a></span>&nbsp;
+    </td>
+  </tr></table>
+  
+  <p>Returns fileObject if it is not None, otherwise tries all paths in 
+  serializedPath and returns the first one that exists. Use this to get an 
+  intermediate file in a stepwise process.</p>
+  <dl class="fields">
+  </dl>
+</td></tr></table>
+</div>
+<a name="setConnection"></a>
+<div>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr><td>
+  <table width="100%" cellpadding="0" cellspacing="0" border="0">
+  <tr valign="top"><td>
+  <h3 class="epydoc"><span class="sig"><span class="sig-name">setConnection</span>(<span class="sig-arg">self</span>,
+        <span class="sig-arg">connection</span>)</span>
+  </h3>
+  </td><td align="right" valign="top"
+    ><span class="codelink"><a href="TEES.Detectors.EventDetector-pysrc.html#EventDetector.setConnection">source&nbsp;code</a></span>&nbsp;
+    </td>
+  </tr></table>
+  
+  
+  <dl class="fields">
+    <dt>Overrides:
+        <a href="TEES.Detectors.Detector.Detector-class.html#setConnection">Detector.Detector.setConnection</a>
+    </dt>
+  </dl>
+</td></tr></table>
+</div>
+<a name="setWorkDir"></a>
+<div>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr><td>
+  <table width="100%" cellpadding="0" cellspacing="0" border="0">
+  <tr valign="top"><td>
+  <h3 class="epydoc"><span class="sig"><span class="sig-name">setWorkDir</span>(<span class="sig-arg">self</span>,
+        <span class="sig-arg">workDir</span>)</span>
+  </h3>
+  </td><td align="right" valign="top"
+    ><span class="codelink"><a href="TEES.Detectors.EventDetector-pysrc.html#EventDetector.setWorkDir">source&nbsp;code</a></span>&nbsp;
+    </td>
+  </tr></table>
+  
+  
+  <dl class="fields">
+    <dt>Overrides:
+        <a href="TEES.Detectors.Detector.Detector-class.html#setWorkDir">Detector.Detector.setWorkDir</a>
+    </dt>
+  </dl>
+</td></tr></table>
+</div>
+<a name="train"></a>
+<div>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr><td>
+  <table width="100%" cellpadding="0" cellspacing="0" border="0">
+  <tr valign="top"><td>
+  <h3 class="epydoc"><span class="sig"><span class="sig-name">train</span>(<span class="sig-arg">self</span>,
+        <span class="sig-arg">trainData</span>=<span class="sig-default">None</span>,
+        <span class="sig-arg">optData</span>=<span class="sig-default">None</span>,
+        <span class="sig-arg">model</span>=<span class="sig-default">None</span>,
+        <span class="sig-arg">combinedModel</span>=<span class="sig-default">None</span>,
+        <span class="sig-arg">triggerExampleStyle</span>=<span class="sig-default">None</span>,
+        <span class="sig-arg">edgeExampleStyle</span>=<span class="sig-default">None</span>,
+        <span class="sig-arg">unmergingExampleStyle</span>=<span class="sig-default">None</span>,
+        <span class="sig-arg">modifierExampleStyle</span>=<span class="sig-default">None</span>,
+        <span class="sig-arg">triggerClassifierParameters</span>=<span class="sig-default">None</span>,
+        <span class="sig-arg">edgeClassifierParameters</span>=<span class="sig-default">None</span>,
+        <span class="sig-arg">unmergingClassifierParameters</span>=<span class="sig-default">None</span>,
+        <span class="sig-arg">modifierClassifierParameters</span>=<span class="sig-default">None</span>,
+        <span class="sig-arg">recallAdjustParameters</span>=<span class="sig-default">None</span>,
+        <span class="sig-arg">unmerging</span>=<span class="sig-default">False</span>,
+        <span class="sig-arg">trainModifiers</span>=<span class="sig-default">False</span>,
+        <span class="sig-arg">fullGrid</span>=<span class="sig-default">False</span>,
+        <span class="sig-arg">task</span>=<span class="sig-default">None</span>,
+        <span class="sig-arg">parse</span>=<span class="sig-default">None</span>,
+        <span class="sig-arg">tokenization</span>=<span class="sig-default">None</span>,
+        <span class="sig-arg">fromStep</span>=<span class="sig-default">None</span>,
+        <span class="sig-arg">toStep</span>=<span class="sig-default">None</span>,
+        <span class="sig-arg">workDir</span>=<span class="sig-default">None</span>)</span>
+  </h3>
+  </td><td align="right" valign="top"
+    ><span class="codelink"><a href="TEES.Detectors.EventDetector-pysrc.html#EventDetector.train">source&nbsp;code</a></span>&nbsp;
+    </td>
+  </tr></table>
+  
+  
+  <dl class="fields">
+    <dt>Overrides:
+        <a href="TEES.Detectors.Detector.Detector-class.html#train">Detector.Detector.train</a>
+    </dt>
+  </dl>
+</td></tr></table>
+</div>
+<br />
+<!-- ==================== NAVIGATION BAR ==================== -->
+<table class="navbar" border="0" width="100%" cellpadding="0"
+       bgcolor="#a0c0ff" cellspacing="0">
+  <tr valign="middle">
+  <!-- Home link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="TEES-module.html">Home</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Tree link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="module-tree.html">Trees</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Index link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="identifier-index.html">Indices</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Help link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="help.html">Help</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Project homepage -->
+      <th class="navbar" align="right" width="100%">
+        <table border="0" cellpadding="0" cellspacing="0">
+          <tr><th class="navbar" align="center"
+            >Turku Event Extraction System</th>
+          </tr></table></th>
+  </tr>
+</table>
+<table border="0" cellpadding="0" cellspacing="0" width="100%%">
+  <tr>
+    <td align="left" class="footer">
+    Generated by Epydoc 3.0.1 on Thu Jul 19 18:20:45 2012
+    </td>
+    <td align="right" class="footer">
+      <a target="mainFrame" href="http://epydoc.sourceforge.net"
+        >http://epydoc.sourceforge.net</a>
+    </td>
+  </tr>
+</table>
+
+<script type="text/javascript">
+  <!--
+  // Private objects are initially displayed (because if
+  // javascript is turned off then we want them to be
+  // visible); but by default, we want to hide them.  So hide
+  // them unless we have a cookie that says to show them.
+  checkCookie();
+  // -->
+</script>
+</body>
+</html>

@@ -1,0 +1,234 @@
+<?xml version="1.0" encoding="ascii"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+          "DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+  <title>TEES.Tools.Tool</title>
+  <link rel="stylesheet" href="epydoc.css" type="text/css" />
+  <script type="text/javascript" src="epydoc.js"></script>
+</head>
+
+<body bgcolor="white" text="black" link="blue" vlink="#204080"
+      alink="#204080">
+<!-- ==================== NAVIGATION BAR ==================== -->
+<table class="navbar" border="0" width="100%" cellpadding="0"
+       bgcolor="#a0c0ff" cellspacing="0">
+  <tr valign="middle">
+  <!-- Home link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="TEES-module.html">Home</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Tree link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="module-tree.html">Trees</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Index link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="identifier-index.html">Indices</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Help link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="help.html">Help</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Project homepage -->
+      <th class="navbar" align="right" width="100%">
+        <table border="0" cellpadding="0" cellspacing="0">
+          <tr><th class="navbar" align="center"
+            >Turku Event Extraction System</th>
+          </tr></table></th>
+  </tr>
+</table>
+<table width="100%" cellpadding="0" cellspacing="0">
+  <tr valign="top">
+    <td width="100%">
+      <span class="breadcrumbs">
+        <a href="TEES-module.html">Package&nbsp;TEES</a> ::
+        <a href="TEES.Tools-module.html">Package&nbsp;Tools</a> ::
+        Module&nbsp;Tool
+      </span>
+    </td>
+    <td>
+      <table cellpadding="0" cellspacing="0">
+        <!-- hide/show private -->
+        <tr><td align="right"><span class="options">[<a href="javascript:void(0);" class="privatelink"
+    onclick="toggle_private();">hide&nbsp;private</a>]</span></td></tr>
+      </table>
+    </td>
+  </tr>
+</table>
+<h1 class="epydoc">Source Code for <a href="TEES.Tools.Tool-module.html">Module TEES.Tools.Tool</a></h1>
+<pre class="py-src">
+<a name="L1"></a><tt class="py-lineno">  1</tt>  <tt class="py-line"><tt class="py-keyword">import</tt> <tt class="py-name">sys</tt><tt class="py-op">,</tt> <tt class="py-name">os</tt> </tt>
+<a name="L2"></a><tt class="py-lineno">  2</tt>  <tt class="py-line"><tt class="py-name">sys</tt><tt class="py-op">.</tt><tt class="py-name">path</tt><tt class="py-op">.</tt><tt class="py-name">append</tt><tt class="py-op">(</tt><tt class="py-name">os</tt><tt class="py-op">.</tt><tt class="py-name">path</tt><tt class="py-op">.</tt><tt class="py-name">dirname</tt><tt class="py-op">(</tt><tt class="py-name">os</tt><tt class="py-op">.</tt><tt class="py-name">path</tt><tt class="py-op">.</tt><tt class="py-name">abspath</tt><tt class="py-op">(</tt><tt class="py-name">__file__</tt><tt class="py-op">)</tt><tt class="py-op">)</tt><tt class="py-op">+</tt><tt class="py-string">"/.."</tt><tt class="py-op">)</tt> </tt>
+<a name="L3"></a><tt class="py-lineno">  3</tt>  <tt class="py-line"><tt class="py-keyword">import</tt> <tt id="link-0" class="py-name" targets="Package TEES.Utils=TEES.Utils-module.html"><a title="TEES.Utils" class="py-name" href="#" onclick="return doclink('link-0', 'Utils', 'link-0');">Utils</a></tt><tt class="py-op">.</tt><tt id="link-1" class="py-name" targets="Module TEES.Utils.Menu=TEES.Utils.Menu-module.html,Class TEES.Utils.Menu.Menu=TEES.Utils.Menu.Menu-class.html"><a title="TEES.Utils.Menu
+TEES.Utils.Menu.Menu" class="py-name" href="#" onclick="return doclink('link-1', 'Menu', 'link-1');">Menu</a></tt> </tt>
+<a name="L4"></a><tt class="py-lineno">  4</tt>  <tt class="py-line"><tt class="py-keyword">import</tt> <tt id="link-2" class="py-name"><a title="TEES.Utils" class="py-name" href="#" onclick="return doclink('link-2', 'Utils', 'link-0');">Utils</a></tt><tt class="py-op">.</tt><tt id="link-3" class="py-name" targets="Module TEES.Utils.Settings=TEES.Utils.Settings-module.html"><a title="TEES.Utils.Settings" class="py-name" href="#" onclick="return doclink('link-3', 'Settings', 'link-3');">Settings</a></tt> <tt class="py-keyword">as</tt> <tt id="link-4" class="py-name"><a title="TEES.Utils.Settings" class="py-name" href="#" onclick="return doclink('link-4', 'Settings', 'link-3');">Settings</a></tt> </tt>
+<a name="L5"></a><tt class="py-lineno">  5</tt>  <tt class="py-line"> </tt>
+<a name="finalizeInstall"></a><div id="finalizeInstall-def"><a name="L6"></a><tt class="py-lineno">  6</tt> <a class="py-toggle" href="#" id="finalizeInstall-toggle" onclick="return toggle('finalizeInstall');">-</a><tt class="py-line"><tt class="py-keyword">def</tt> <a class="py-def-name" href="TEES.Tools.Tool-module.html#finalizeInstall">finalizeInstall</a><tt class="py-op">(</tt><tt class="py-param">programs</tt><tt class="py-op">,</tt> <tt class="py-param">testCommand</tt><tt class="py-op">=</tt><tt class="py-op">{</tt><tt class="py-op">}</tt><tt class="py-op">,</tt> <tt class="py-param">programDir</tt><tt class="py-op">=</tt><tt class="py-name">None</tt><tt class="py-op">,</tt> <tt class="py-param">settings</tt><tt class="py-op">=</tt><tt class="py-op">{</tt><tt class="py-op">}</tt><tt class="py-op">,</tt> <tt class="py-param">updateLocalSettings</tt><tt class="py-op">=</tt><tt class="py-name">False</tt><tt class="py-op">)</tt><tt class="py-op">:</tt> </tt>
+</div><div id="finalizeInstall-collapsed" style="display:none;" pad="+++" indent="++++"></div><div id="finalizeInstall-expanded"><a name="L7"></a><tt class="py-lineno">  7</tt>  <tt class="py-line">    <tt class="py-keyword">if</tt> <tt id="link-5" class="py-name" targets="Function TEES.Tools.Tool.checkPrograms()=TEES.Tools.Tool-module.html#checkPrograms"><a title="TEES.Tools.Tool.checkPrograms" class="py-name" href="#" onclick="return doclink('link-5', 'checkPrograms', 'link-5');">checkPrograms</a></tt><tt class="py-op">(</tt><tt class="py-name">programs</tt><tt class="py-op">,</tt> <tt class="py-name">testCommand</tt><tt class="py-op">,</tt> <tt class="py-name">programDir</tt><tt class="py-op">)</tt><tt class="py-op">:</tt> </tt>
+<a name="L8"></a><tt class="py-lineno">  8</tt>  <tt class="py-line">        <tt class="py-name">setVariable</tt> <tt class="py-op">=</tt> <tt class="py-name">updateLocalSettings</tt> </tt>
+<a name="L9"></a><tt class="py-lineno">  9</tt>  <tt class="py-line">    <tt class="py-keyword">else</tt><tt class="py-op">:</tt> </tt>
+<a name="L10"></a><tt class="py-lineno"> 10</tt>  <tt class="py-line">        <tt class="py-keyword">print</tt> <tt class="py-op">&gt;&gt;</tt> <tt class="py-name">sys</tt><tt class="py-op">.</tt><tt class="py-name">stderr</tt><tt class="py-op">,</tt> <tt class="py-string">"All programs may not have been installed correctly"</tt> </tt>
+<a name="L11"></a><tt class="py-lineno"> 11</tt>  <tt class="py-line">        <tt class="py-keyword">print</tt> <tt class="py-op">&gt;&gt;</tt> <tt class="py-name">sys</tt><tt class="py-op">.</tt><tt class="py-name">stderr</tt><tt class="py-op">,</tt> <tt class="py-string">"Do not use the following settings if not sure:"</tt> </tt>
+<a name="L12"></a><tt class="py-lineno"> 12</tt>  <tt class="py-line">        <tt class="py-name">setVariable</tt> <tt class="py-op">=</tt> <tt class="py-name">False</tt> </tt>
+<a name="L13"></a><tt class="py-lineno"> 13</tt>  <tt class="py-line">    <tt class="py-keyword">for</tt> <tt class="py-name">key</tt> <tt class="py-keyword">in</tt> <tt class="py-name">sorted</tt><tt class="py-op">(</tt><tt class="py-name">settings</tt><tt class="py-op">.</tt><tt class="py-name">keys</tt><tt class="py-op">(</tt><tt class="py-op">)</tt><tt class="py-op">)</tt><tt class="py-op">:</tt> </tt>
+<a name="L14"></a><tt class="py-lineno"> 14</tt>  <tt class="py-line">        <tt id="link-6" class="py-name"><a title="TEES.Utils.Settings" class="py-name" href="#" onclick="return doclink('link-6', 'Settings', 'link-3');">Settings</a></tt><tt class="py-op">.</tt><tt id="link-7" class="py-name" targets="Function TEES.Utils.Settings.setLocal()=TEES.Utils.Settings-module.html#setLocal"><a title="TEES.Utils.Settings.setLocal" class="py-name" href="#" onclick="return doclink('link-7', 'setLocal', 'link-7');">setLocal</a></tt><tt class="py-op">(</tt><tt class="py-name">key</tt><tt class="py-op">,</tt> <tt class="py-name">settings</tt><tt class="py-op">[</tt><tt class="py-name">key</tt><tt class="py-op">]</tt><tt class="py-op">,</tt> <tt class="py-name">setVariable</tt><tt class="py-op">)</tt> </tt>
+</div><a name="L15"></a><tt class="py-lineno"> 15</tt>  <tt class="py-line"> </tt>
+<a name="checkReturnCode"></a><div id="checkReturnCode-def"><a name="L16"></a><tt class="py-lineno"> 16</tt> <a class="py-toggle" href="#" id="checkReturnCode-toggle" onclick="return toggle('checkReturnCode');">-</a><tt class="py-line"><tt class="py-keyword">def</tt> <a class="py-def-name" href="TEES.Tools.Tool-module.html#checkReturnCode">checkReturnCode</a><tt class="py-op">(</tt><tt class="py-param">code</tt><tt class="py-op">)</tt><tt class="py-op">:</tt> </tt>
+</div><div id="checkReturnCode-collapsed" style="display:none;" pad="+++" indent="++++"></div><div id="checkReturnCode-expanded"><a name="L17"></a><tt class="py-lineno"> 17</tt>  <tt class="py-line">    <tt class="py-keyword">if</tt> <tt class="py-name">code</tt> <tt class="py-op">!=</tt> <tt class="py-number">0</tt><tt class="py-op">:</tt> </tt>
+<a name="L18"></a><tt class="py-lineno"> 18</tt>  <tt class="py-line">        <tt class="py-keyword">print</tt> <tt class="py-op">&gt;&gt;</tt> <tt class="py-name">sys</tt><tt class="py-op">.</tt><tt class="py-name">stderr</tt><tt class="py-op">,</tt> <tt class="py-string">"*** Non-zero return code"</tt><tt class="py-op">,</tt> <tt class="py-name">str</tt><tt class="py-op">(</tt><tt class="py-name">code</tt><tt class="py-op">)</tt> <tt class="py-op">+</tt> <tt class="py-string">", program may not be working."</tt> </tt>
+<a name="L19"></a><tt class="py-lineno"> 19</tt>  <tt class="py-line">        <tt class="py-keyword">return</tt> <tt class="py-name">False</tt> </tt>
+<a name="L20"></a><tt class="py-lineno"> 20</tt>  <tt class="py-line">    <tt class="py-keyword">else</tt><tt class="py-op">:</tt> </tt>
+<a name="L21"></a><tt class="py-lineno"> 21</tt>  <tt class="py-line">        <tt class="py-keyword">print</tt> <tt class="py-op">&gt;&gt;</tt> <tt class="py-name">sys</tt><tt class="py-op">.</tt><tt class="py-name">stderr</tt><tt class="py-op">,</tt> <tt class="py-string">"*** Return code"</tt><tt class="py-op">,</tt> <tt class="py-name">str</tt><tt class="py-op">(</tt><tt class="py-name">code</tt><tt class="py-op">)</tt> <tt class="py-op">+</tt> <tt class="py-string">", program appears to be working."</tt> </tt>
+<a name="L22"></a><tt class="py-lineno"> 22</tt>  <tt class="py-line">        <tt class="py-keyword">return</tt> <tt class="py-name">True</tt> </tt>
+</div><a name="L23"></a><tt class="py-lineno"> 23</tt>  <tt class="py-line"> </tt>
+<a name="checkPrograms"></a><div id="checkPrograms-def"><a name="L24"></a><tt class="py-lineno"> 24</tt> <a class="py-toggle" href="#" id="checkPrograms-toggle" onclick="return toggle('checkPrograms');">-</a><tt class="py-line"><tt class="py-keyword">def</tt> <a class="py-def-name" href="TEES.Tools.Tool-module.html#checkPrograms">checkPrograms</a><tt class="py-op">(</tt><tt class="py-param">programs</tt><tt class="py-op">,</tt> <tt class="py-param">testCommand</tt><tt class="py-op">=</tt><tt class="py-op">{</tt><tt class="py-op">}</tt><tt class="py-op">,</tt> <tt class="py-param">programDir</tt><tt class="py-op">=</tt><tt class="py-name">None</tt><tt class="py-op">,</tt> <tt class="py-param">combineResults</tt><tt class="py-op">=</tt><tt class="py-name">True</tt><tt class="py-op">)</tt><tt class="py-op">:</tt> </tt>
+</div><div id="checkPrograms-collapsed" style="display:none;" pad="+++" indent="++++"></div><div id="checkPrograms-expanded"><a name="L25"></a><tt class="py-lineno"> 25</tt>  <tt class="py-line">    <tt class="py-keyword">if</tt> <tt class="py-name">testCommand</tt> <tt class="py-op">==</tt> <tt class="py-name">None</tt><tt class="py-op">:</tt> </tt>
+<a name="L26"></a><tt class="py-lineno"> 26</tt>  <tt class="py-line">        <tt class="py-name">testCommand</tt> <tt class="py-op">=</tt> <tt class="py-op">{</tt><tt class="py-op">}</tt> </tt>
+<a name="L27"></a><tt class="py-lineno"> 27</tt>  <tt class="py-line">    <tt class="py-keyword">if</tt> <tt class="py-name">programDir</tt> <tt class="py-op">!=</tt> <tt class="py-name">None</tt><tt class="py-op">:</tt> </tt>
+<a name="L28"></a><tt class="py-lineno"> 28</tt>  <tt class="py-line">        <tt class="py-name">cwd</tt> <tt class="py-op">=</tt> <tt class="py-name">os</tt><tt class="py-op">.</tt><tt class="py-name">getcwd</tt><tt class="py-op">(</tt><tt class="py-op">)</tt> </tt>
+<a name="L29"></a><tt class="py-lineno"> 29</tt>  <tt class="py-line">        <tt class="py-name">os</tt><tt class="py-op">.</tt><tt class="py-name">chdir</tt><tt class="py-op">(</tt><tt class="py-name">programDir</tt><tt class="py-op">)</tt> </tt>
+<a name="L30"></a><tt class="py-lineno"> 30</tt>  <tt class="py-line">    <tt class="py-name">status</tt> <tt class="py-op">=</tt> <tt class="py-op">{</tt><tt class="py-op">}</tt> </tt>
+<a name="L31"></a><tt class="py-lineno"> 31</tt>  <tt class="py-line">    <tt class="py-keyword">for</tt> <tt class="py-name">program</tt> <tt class="py-keyword">in</tt> <tt class="py-name">programs</tt><tt class="py-op">:</tt> </tt>
+<a name="L32"></a><tt class="py-lineno"> 32</tt>  <tt class="py-line">        <tt class="py-keyword">print</tt> <tt class="py-op">&gt;&gt;</tt> <tt class="py-name">sys</tt><tt class="py-op">.</tt><tt class="py-name">stderr</tt><tt class="py-op">,</tt> <tt class="py-string">"*** Testing"</tt><tt class="py-op">,</tt> <tt class="py-name">program</tt><tt class="py-op">,</tt> <tt class="py-string">"..."</tt> </tt>
+<a name="L33"></a><tt class="py-lineno"> 33</tt>  <tt class="py-line">        <tt class="py-name">command</tt> <tt class="py-op">=</tt> <tt class="py-name">program</tt> <tt class="py-op">+</tt> <tt class="py-string">" -v"</tt> </tt>
+<a name="L34"></a><tt class="py-lineno"> 34</tt>  <tt class="py-line">        <tt class="py-keyword">if</tt> <tt class="py-name">program</tt> <tt class="py-keyword">in</tt> <tt class="py-name">testCommand</tt><tt class="py-op">:</tt> </tt>
+<a name="L35"></a><tt class="py-lineno"> 35</tt>  <tt class="py-line">            <tt class="py-name">command</tt> <tt class="py-op">=</tt> <tt class="py-name">testCommand</tt><tt class="py-op">[</tt><tt class="py-name">program</tt><tt class="py-op">]</tt> </tt>
+<a name="L36"></a><tt class="py-lineno"> 36</tt>  <tt class="py-line">        <tt class="py-name">status</tt><tt class="py-op">[</tt><tt class="py-name">program</tt><tt class="py-op">]</tt> <tt class="py-op">=</tt> <tt id="link-8" class="py-name" targets="Function TEES.Tools.Tool.checkReturnCode()=TEES.Tools.Tool-module.html#checkReturnCode,Function TEES.Utils.Download.checkReturnCode()=TEES.Utils.Download-module.html#checkReturnCode"><a title="TEES.Tools.Tool.checkReturnCode
+TEES.Utils.Download.checkReturnCode" class="py-name" href="#" onclick="return doclink('link-8', 'checkReturnCode', 'link-8');">checkReturnCode</a></tt><tt class="py-op">(</tt><tt class="py-name">os</tt><tt class="py-op">.</tt><tt id="link-9" class="py-name" targets="Variable TEES.Utils.Menu.Menu.system=TEES.Utils.Menu.Menu-class.html#system"><a title="TEES.Utils.Menu.Menu.system" class="py-name" href="#" onclick="return doclink('link-9', 'system', 'link-9');">system</a></tt><tt class="py-op">(</tt><tt class="py-name">command</tt><tt class="py-op">)</tt><tt class="py-op">)</tt> </tt>
+<a name="L37"></a><tt class="py-lineno"> 37</tt>  <tt class="py-line">    <tt class="py-keyword">if</tt> <tt class="py-name">programDir</tt> <tt class="py-op">!=</tt> <tt class="py-name">None</tt><tt class="py-op">:</tt> </tt>
+<a name="L38"></a><tt class="py-lineno"> 38</tt>  <tt class="py-line">        <tt class="py-name">os</tt><tt class="py-op">.</tt><tt class="py-name">chdir</tt><tt class="py-op">(</tt><tt class="py-name">cwd</tt><tt class="py-op">)</tt> </tt>
+<a name="L39"></a><tt class="py-lineno"> 39</tt>  <tt class="py-line">    <tt class="py-keyword">if</tt> <tt class="py-name">combineResults</tt><tt class="py-op">:</tt> </tt>
+<a name="L40"></a><tt class="py-lineno"> 40</tt>  <tt class="py-line">        <tt class="py-keyword">return</tt> <tt class="py-keyword">not</tt> <tt class="py-name">False</tt> <tt class="py-keyword">in</tt> <tt class="py-name">status</tt><tt class="py-op">.</tt><tt class="py-name">values</tt><tt class="py-op">(</tt><tt class="py-op">)</tt> </tt>
+<a name="L41"></a><tt class="py-lineno"> 41</tt>  <tt class="py-line">    <tt class="py-keyword">else</tt><tt class="py-op">:</tt> </tt>
+<a name="L42"></a><tt class="py-lineno"> 42</tt>  <tt class="py-line">        <tt class="py-keyword">return</tt> <tt class="py-name">status</tt> </tt>
+</div><a name="L43"></a><tt class="py-lineno"> 43</tt>  <tt class="py-line"> </tt>
+<a name="testPrograms"></a><div id="testPrograms-def"><a name="L44"></a><tt class="py-lineno"> 44</tt> <a class="py-toggle" href="#" id="testPrograms-toggle" onclick="return toggle('testPrograms');">-</a><tt class="py-line"><tt class="py-keyword">def</tt> <a class="py-def-name" href="TEES.Tools.Tool-module.html#testPrograms">testPrograms</a><tt class="py-op">(</tt><tt class="py-param">dependentProgramName</tt><tt class="py-op">,</tt> <tt class="py-param">programs</tt><tt class="py-op">,</tt> <tt class="py-param">testCommand</tt><tt class="py-op">=</tt><tt class="py-op">{</tt><tt class="py-op">}</tt><tt class="py-op">)</tt><tt class="py-op">:</tt> </tt>
+</div><div id="testPrograms-collapsed" style="display:none;" pad="+++" indent="++++"></div><div id="testPrograms-expanded"><a name="L45"></a><tt class="py-lineno"> 45</tt>  <tt class="py-line">    <tt class="py-keyword">print</tt> <tt class="py-op">&gt;&gt;</tt> <tt class="py-name">sys</tt><tt class="py-op">.</tt><tt class="py-name">stderr</tt><tt class="py-op">,</tt> <tt class="py-string">"Testing programs"</tt><tt class="py-op">,</tt> <tt class="py-name">programs</tt> </tt>
+<a name="L46"></a><tt class="py-lineno"> 46</tt>  <tt class="py-line">    <tt class="py-comment"># check program status</tt> </tt>
+<a name="L47"></a><tt class="py-lineno"> 47</tt>  <tt class="py-line">    <tt class="py-name">status</tt> <tt class="py-op">=</tt> <tt id="link-10" class="py-name"><a title="TEES.Tools.Tool.checkPrograms" class="py-name" href="#" onclick="return doclink('link-10', 'checkPrograms', 'link-5');">checkPrograms</a></tt><tt class="py-op">(</tt><tt class="py-name">programs</tt><tt class="py-op">,</tt> <tt class="py-name">testCommand</tt><tt class="py-op">,</tt> <tt class="py-name">combineResults</tt><tt class="py-op">=</tt><tt class="py-name">False</tt><tt class="py-op">)</tt> </tt>
+<a name="L48"></a><tt class="py-lineno"> 48</tt>  <tt class="py-line">    <tt class="py-comment"># if there is a problem, show a menu</tt> </tt>
+<a name="L49"></a><tt class="py-lineno"> 49</tt>  <tt class="py-line">    <tt class="py-keyword">if</tt> <tt class="py-name">False</tt> <tt class="py-keyword">in</tt> <tt class="py-name">status</tt><tt class="py-op">.</tt><tt class="py-name">values</tt><tt class="py-op">(</tt><tt class="py-op">)</tt><tt class="py-op">:</tt> </tt>
+<a name="L50"></a><tt class="py-lineno"> 50</tt>  <tt class="py-line">        <tt class="py-name">menu</tt> <tt class="py-op">=</tt> <tt id="link-11" class="py-name"><a title="TEES.Utils" class="py-name" href="#" onclick="return doclink('link-11', 'Utils', 'link-0');">Utils</a></tt><tt class="py-op">.</tt><tt id="link-12" class="py-name"><a title="TEES.Utils.Menu
+TEES.Utils.Menu.Menu" class="py-name" href="#" onclick="return doclink('link-12', 'Menu', 'link-1');">Menu</a></tt><tt class="py-op">.</tt><tt id="link-13" class="py-name"><a title="TEES.Utils.Menu
+TEES.Utils.Menu.Menu" class="py-name" href="#" onclick="return doclink('link-13', 'Menu', 'link-1');">Menu</a></tt><tt class="py-op">(</tt><tt class="py-string">"Missing programs"</tt><tt class="py-op">,</tt> <tt class="py-string">""</tt><tt class="py-op">,</tt>  </tt>
+<a name="L51"></a><tt class="py-lineno"> 51</tt>  <tt class="py-line">            <tt class="py-op">[</tt><tt id="link-14" class="py-name"><a title="TEES.Utils" class="py-name" href="#" onclick="return doclink('link-14', 'Utils', 'link-0');">Utils</a></tt><tt class="py-op">.</tt><tt id="link-15" class="py-name"><a title="TEES.Utils.Menu
+TEES.Utils.Menu.Menu" class="py-name" href="#" onclick="return doclink('link-15', 'Menu', 'link-1');">Menu</a></tt><tt class="py-op">.</tt><tt id="link-16" class="py-name" targets="Class TEES.Utils.Menu.Option=TEES.Utils.Menu.Option-class.html"><a title="TEES.Utils.Menu.Option" class="py-name" href="#" onclick="return doclink('link-16', 'Option', 'link-16');">Option</a></tt><tt class="py-op">(</tt><tt class="py-string">"r"</tt><tt class="py-op">,</tt> <tt class="py-string">"Retry and check again program status"</tt><tt class="py-op">)</tt><tt class="py-op">,</tt> </tt>
+<a name="L52"></a><tt class="py-lineno"> 52</tt>  <tt class="py-line">            <tt id="link-17" class="py-name"><a title="TEES.Utils" class="py-name" href="#" onclick="return doclink('link-17', 'Utils', 'link-0');">Utils</a></tt><tt class="py-op">.</tt><tt id="link-18" class="py-name"><a title="TEES.Utils.Menu
+TEES.Utils.Menu.Menu" class="py-name" href="#" onclick="return doclink('link-18', 'Menu', 'link-1');">Menu</a></tt><tt class="py-op">.</tt><tt id="link-19" class="py-name"><a title="TEES.Utils.Menu.Option" class="py-name" href="#" onclick="return doclink('link-19', 'Option', 'link-16');">Option</a></tt><tt class="py-op">(</tt><tt class="py-string">"c"</tt><tt class="py-op">,</tt> <tt class="py-string">"Continue"</tt><tt class="py-op">)</tt><tt class="py-op">,</tt>  </tt>
+<a name="L53"></a><tt class="py-lineno"> 53</tt>  <tt class="py-line">            <tt id="link-20" class="py-name"><a title="TEES.Utils" class="py-name" href="#" onclick="return doclink('link-20', 'Utils', 'link-0');">Utils</a></tt><tt class="py-op">.</tt><tt id="link-21" class="py-name"><a title="TEES.Utils.Menu
+TEES.Utils.Menu.Menu" class="py-name" href="#" onclick="return doclink('link-21', 'Menu', 'link-1');">Menu</a></tt><tt class="py-op">.</tt><tt id="link-22" class="py-name"><a title="TEES.Utils.Menu.Option" class="py-name" href="#" onclick="return doclink('link-22', 'Option', 'link-16');">Option</a></tt><tt class="py-op">(</tt><tt class="py-string">"q"</tt><tt class="py-op">,</tt> <tt class="py-string">"Quit"</tt><tt class="py-op">,</tt> <tt class="py-name">isDefault</tt><tt class="py-op">=</tt><tt class="py-name">True</tt><tt class="py-op">,</tt> <tt class="py-name">handler</tt><tt class="py-op">=</tt><tt class="py-name">sys</tt><tt class="py-op">.</tt><tt class="py-name">exit</tt><tt class="py-op">,</tt> <tt class="py-name">handlerArgs</tt><tt class="py-op">=</tt><tt class="py-op">[</tt><tt class="py-number">1</tt><tt class="py-op">]</tt><tt class="py-op">)</tt><tt class="py-op">]</tt><tt class="py-op">,</tt>  </tt>
+<a name="L54"></a><tt class="py-lineno"> 54</tt>  <tt class="py-line">            <tt class="py-name">addToSystem</tt><tt class="py-op">=</tt><tt class="py-name">False</tt><tt class="py-op">,</tt> <tt class="py-name">initializer</tt><tt class="py-op">=</tt><tt id="link-23" class="py-name" targets="Function TEES.Tools.Tool.initProgramTestMenu()=TEES.Tools.Tool-module.html#initProgramTestMenu"><a title="TEES.Tools.Tool.initProgramTestMenu" class="py-name" href="#" onclick="return doclink('link-23', 'initProgramTestMenu', 'link-23');">initProgramTestMenu</a></tt><tt class="py-op">)</tt> </tt>
+<a name="L55"></a><tt class="py-lineno"> 55</tt>  <tt class="py-line">        <tt class="py-name">menu</tt><tt class="py-op">.</tt><tt class="py-name">status</tt> <tt class="py-op">=</tt> <tt class="py-name">status</tt> <tt class="py-comment"># no need to check on the first show of the menu</tt> </tt>
+<a name="L56"></a><tt class="py-lineno"> 56</tt>  <tt class="py-line">        <tt class="py-keyword">while</tt> <tt class="py-name">menu</tt><tt class="py-op">.</tt><tt class="py-name">prevChoice</tt> <tt class="py-op">==</tt> <tt class="py-name">None</tt> <tt class="py-keyword">or</tt> <tt class="py-name">menu</tt><tt class="py-op">.</tt><tt class="py-name">prevChoice</tt> <tt class="py-op">==</tt> <tt class="py-string">"r"</tt><tt class="py-op">:</tt> </tt>
+<a name="L57"></a><tt class="py-lineno"> 57</tt>  <tt class="py-line">            <tt class="py-name">menu</tt><tt class="py-op">.</tt><tt class="py-name">programName</tt> <tt class="py-op">=</tt> <tt class="py-name">dependentProgramName</tt> </tt>
+<a name="L58"></a><tt class="py-lineno"> 58</tt>  <tt class="py-line">            <tt class="py-name">menu</tt><tt class="py-op">.</tt><tt class="py-name">programs</tt> <tt class="py-op">=</tt> <tt class="py-name">programs</tt> </tt>
+<a name="L59"></a><tt class="py-lineno"> 59</tt>  <tt class="py-line">            <tt class="py-name">menu</tt><tt class="py-op">.</tt><tt class="py-name">testCommand</tt> <tt class="py-op">=</tt> <tt class="py-name">testCommand</tt> </tt>
+<a name="L60"></a><tt class="py-lineno"> 60</tt>  <tt class="py-line">            <tt class="py-name">menu</tt><tt class="py-op">.</tt><tt id="link-24" class="py-name" targets="Method TEES.Utils.Menu.Menu.show()=TEES.Utils.Menu.Menu-class.html#show,Method TEES.Utils.Menu.Option.show()=TEES.Utils.Menu.Option-class.html#show"><a title="TEES.Utils.Menu.Menu.show
+TEES.Utils.Menu.Option.show" class="py-name" href="#" onclick="return doclink('link-24', 'show', 'link-24');">show</a></tt><tt class="py-op">(</tt><tt class="py-op">)</tt> </tt>
+<a name="L61"></a><tt class="py-lineno"> 61</tt>  <tt class="py-line">            <tt class="py-name">menu</tt><tt class="py-op">.</tt><tt class="py-name">status</tt> <tt class="py-op">=</tt> <tt class="py-name">None</tt> </tt>
+</div><a name="L62"></a><tt class="py-lineno"> 62</tt>  <tt class="py-line"> </tt>
+<a name="initProgramTestMenu"></a><div id="initProgramTestMenu-def"><a name="L63"></a><tt class="py-lineno"> 63</tt> <a class="py-toggle" href="#" id="initProgramTestMenu-toggle" onclick="return toggle('initProgramTestMenu');">-</a><tt class="py-line"><tt class="py-keyword">def</tt> <a class="py-def-name" href="TEES.Tools.Tool-module.html#initProgramTestMenu">initProgramTestMenu</a><tt class="py-op">(</tt><tt class="py-param">menu</tt><tt class="py-op">,</tt> <tt class="py-param">prevMenu</tt><tt class="py-op">)</tt><tt class="py-op">:</tt> </tt>
+</div><div id="initProgramTestMenu-collapsed" style="display:none;" pad="+++" indent="++++"></div><div id="initProgramTestMenu-expanded"><a name="L64"></a><tt class="py-lineno"> 64</tt>  <tt class="py-line">    <tt class="py-comment"># Check program status if this hasn't been done yet</tt> </tt>
+<a name="L65"></a><tt class="py-lineno"> 65</tt>  <tt class="py-line">    <tt class="py-keyword">if</tt> <tt class="py-name">menu</tt><tt class="py-op">.</tt><tt class="py-name">status</tt> <tt class="py-op">==</tt> <tt class="py-name">None</tt><tt class="py-op">:</tt> </tt>
+<a name="L66"></a><tt class="py-lineno"> 66</tt>  <tt class="py-line">        <tt class="py-name">menu</tt><tt class="py-op">.</tt><tt class="py-name">status</tt> <tt class="py-op">=</tt> <tt id="link-25" class="py-name"><a title="TEES.Tools.Tool.checkPrograms" class="py-name" href="#" onclick="return doclink('link-25', 'checkPrograms', 'link-5');">checkPrograms</a></tt><tt class="py-op">(</tt><tt class="py-name">menu</tt><tt class="py-op">.</tt><tt class="py-name">programs</tt><tt class="py-op">,</tt> <tt class="py-name">menu</tt><tt class="py-op">.</tt><tt class="py-name">testCommand</tt><tt class="py-op">,</tt> <tt class="py-name">combineResults</tt><tt class="py-op">=</tt><tt class="py-name">False</tt><tt class="py-op">)</tt> </tt>
+<a name="L67"></a><tt class="py-lineno"> 67</tt>  <tt class="py-line">    <tt class="py-comment"># Explain situation</tt> </tt>
+<a name="L68"></a><tt class="py-lineno"> 68</tt>  <tt class="py-line">    <tt class="py-keyword">if</tt> <tt class="py-name">False</tt> <tt class="py-keyword">in</tt> <tt class="py-name">menu</tt><tt class="py-op">.</tt><tt class="py-name">status</tt><tt class="py-op">.</tt><tt class="py-name">values</tt><tt class="py-op">(</tt><tt class="py-op">)</tt><tt class="py-op">:</tt> </tt>
+<a name="L69"></a><tt class="py-lineno"> 69</tt>  <tt class="py-line">        <tt class="py-keyword">if</tt> <tt class="py-name">menu</tt><tt class="py-op">.</tt><tt id="link-26" class="py-name"><a title="TEES.Utils.Menu.Menu.system" class="py-name" href="#" onclick="return doclink('link-26', 'system', 'link-9');">system</a></tt><tt class="py-op">.</tt><tt class="py-name">auto</tt><tt class="py-op">:</tt> </tt>
+<a name="L70"></a><tt class="py-lineno"> 70</tt>  <tt class="py-line">            <tt class="py-name">menu</tt><tt class="py-op">.</tt><tt id="link-27" class="py-name" targets="Method TEES.Utils.Menu.Menu.setDefault()=TEES.Utils.Menu.Menu-class.html#setDefault"><a title="TEES.Utils.Menu.Menu.setDefault" class="py-name" href="#" onclick="return doclink('link-27', 'setDefault', 'link-27');">setDefault</a></tt><tt class="py-op">(</tt><tt class="py-string">"q"</tt><tt class="py-op">)</tt> <tt class="py-comment"># avoid getting in a loop</tt> </tt>
+<a name="L71"></a><tt class="py-lineno"> 71</tt>  <tt class="py-line">        <tt class="py-keyword">else</tt><tt class="py-op">:</tt> </tt>
+<a name="L72"></a><tt class="py-lineno"> 72</tt>  <tt class="py-line">            <tt class="py-name">menu</tt><tt class="py-op">.</tt><tt id="link-28" class="py-name"><a title="TEES.Utils.Menu.Menu.setDefault" class="py-name" href="#" onclick="return doclink('link-28', 'setDefault', 'link-27');">setDefault</a></tt><tt class="py-op">(</tt><tt class="py-string">"r"</tt><tt class="py-op">)</tt> </tt>
+<a name="L73"></a><tt class="py-lineno"> 73</tt>  <tt class="py-line">        <tt class="py-name">menu</tt><tt class="py-op">.</tt><tt class="py-name">text</tt> <tt class="py-op">=</tt> <tt class="py-string">"""</tt> </tt>
+<a name="L74"></a><tt class="py-lineno"> 74</tt>  <tt class="py-line"><tt class="py-string">        Some programs required for installing MAIN_PROGRAM may not be present.</tt> </tt>
+<a name="L75"></a><tt class="py-lineno"> 75</tt>  <tt class="py-line"><tt class="py-string">        The current status of required programs is:</tt> </tt>
+<a name="L76"></a><tt class="py-lineno"> 76</tt>  <tt class="py-line"><tt class="py-string">        </tt> </tt>
+<a name="L77"></a><tt class="py-lineno"> 77</tt>  <tt class="py-line"><tt class="py-string">        """</tt> </tt>
+<a name="L78"></a><tt class="py-lineno"> 78</tt>  <tt class="py-line">    <tt class="py-keyword">else</tt><tt class="py-op">:</tt> <tt class="py-comment"># ready to continue</tt> </tt>
+<a name="L79"></a><tt class="py-lineno"> 79</tt>  <tt class="py-line">        <tt class="py-name">menu</tt><tt class="py-op">.</tt><tt id="link-29" class="py-name"><a title="TEES.Utils.Menu.Menu.setDefault" class="py-name" href="#" onclick="return doclink('link-29', 'setDefault', 'link-27');">setDefault</a></tt><tt class="py-op">(</tt><tt class="py-string">"c"</tt><tt class="py-op">)</tt> </tt>
+<a name="L80"></a><tt class="py-lineno"> 80</tt>  <tt class="py-line">        <tt class="py-name">menu</tt><tt class="py-op">.</tt><tt class="py-name">text</tt> <tt class="py-op">=</tt> <tt class="py-string">"""</tt> </tt>
+<a name="L81"></a><tt class="py-lineno"> 81</tt>  <tt class="py-line"><tt class="py-string">        All programs required for installing MAIN_PROGRAM are present.</tt> </tt>
+<a name="L82"></a><tt class="py-lineno"> 82</tt>  <tt class="py-line"><tt class="py-string">        The current status of required programs is:</tt> </tt>
+<a name="L83"></a><tt class="py-lineno"> 83</tt>  <tt class="py-line"><tt class="py-string">        </tt> </tt>
+<a name="L84"></a><tt class="py-lineno"> 84</tt>  <tt class="py-line"><tt class="py-string">        """</tt> </tt>
+<a name="L85"></a><tt class="py-lineno"> 85</tt>  <tt class="py-line">    <tt class="py-comment"># Show program status</tt> </tt>
+<a name="L86"></a><tt class="py-lineno"> 86</tt>  <tt class="py-line">    <tt class="py-keyword">for</tt> <tt class="py-name">program</tt> <tt class="py-keyword">in</tt> <tt class="py-name">menu</tt><tt class="py-op">.</tt><tt class="py-name">programs</tt><tt class="py-op">:</tt> </tt>
+<a name="L87"></a><tt class="py-lineno"> 87</tt>  <tt class="py-line">        <tt class="py-name">menu</tt><tt class="py-op">.</tt><tt class="py-name">text</tt> <tt class="py-op">+=</tt> <tt class="py-name">program</tt> </tt>
+<a name="L88"></a><tt class="py-lineno"> 88</tt>  <tt class="py-line">        <tt class="py-keyword">if</tt> <tt class="py-name">menu</tt><tt class="py-op">.</tt><tt class="py-name">status</tt><tt class="py-op">[</tt><tt class="py-name">program</tt><tt class="py-op">]</tt><tt class="py-op">:</tt> </tt>
+<a name="L89"></a><tt class="py-lineno"> 89</tt>  <tt class="py-line">            <tt class="py-name">menu</tt><tt class="py-op">.</tt><tt class="py-name">text</tt> <tt class="py-op">+=</tt> <tt class="py-string">":OK "</tt> </tt>
+<a name="L90"></a><tt class="py-lineno"> 90</tt>  <tt class="py-line">        <tt class="py-keyword">else</tt><tt class="py-op">:</tt> </tt>
+<a name="L91"></a><tt class="py-lineno"> 91</tt>  <tt class="py-line">            <tt class="py-name">menu</tt><tt class="py-op">.</tt><tt class="py-name">text</tt> <tt class="py-op">+=</tt> <tt class="py-string">":ERROR "</tt> </tt>
+<a name="L92"></a><tt class="py-lineno"> 92</tt>  <tt class="py-line">    <tt class="py-comment"># Recommend option</tt> </tt>
+<a name="L93"></a><tt class="py-lineno"> 93</tt>  <tt class="py-line">    <tt class="py-keyword">if</tt> <tt class="py-name">False</tt> <tt class="py-keyword">in</tt> <tt class="py-name">menu</tt><tt class="py-op">.</tt><tt class="py-name">status</tt><tt class="py-op">.</tt><tt class="py-name">values</tt><tt class="py-op">(</tt><tt class="py-op">)</tt><tt class="py-op">:</tt> </tt>
+<a name="L94"></a><tt class="py-lineno"> 94</tt>  <tt class="py-line">        <tt class="py-name">menu</tt><tt class="py-op">.</tt><tt class="py-name">text</tt> <tt class="py-op">+=</tt> <tt class="py-string">"""</tt> </tt>
+<a name="L95"></a><tt class="py-lineno"> 95</tt>  <tt class="py-line"><tt class="py-string">        </tt> </tt>
+<a name="L96"></a><tt class="py-lineno"> 96</tt>  <tt class="py-line"><tt class="py-string">        These programs are most likely available through your operating system's</tt> </tt>
+<a name="L97"></a><tt class="py-lineno"> 97</tt>  <tt class="py-line"><tt class="py-string">        package manager. You can leave this configuration program open, while you</tt> </tt>
+<a name="L98"></a><tt class="py-lineno"> 98</tt>  <tt class="py-line"><tt class="py-string">        install the missing components. Afterwards, check the status again (r).</tt> </tt>
+<a name="L99"></a><tt class="py-lineno"> 99</tt>  <tt class="py-line"><tt class="py-string">        </tt> </tt>
+<a name="L100"></a><tt class="py-lineno">100</tt>  <tt class="py-line"><tt class="py-string">        You can also continue installing directly (c), but then it may not be</tt> </tt>
+<a name="L101"></a><tt class="py-lineno">101</tt>  <tt class="py-line"><tt class="py-string">        possible to install MAIN_PROGRAM.</tt> </tt>
+<a name="L102"></a><tt class="py-lineno">102</tt>  <tt class="py-line"><tt class="py-string">        """</tt> </tt>
+<a name="L103"></a><tt class="py-lineno">103</tt>  <tt class="py-line">    <tt class="py-keyword">else</tt><tt class="py-op">:</tt> </tt>
+<a name="L104"></a><tt class="py-lineno">104</tt>  <tt class="py-line">        <tt class="py-name">menu</tt><tt class="py-op">.</tt><tt class="py-name">text</tt> <tt class="py-op">+=</tt> <tt class="py-string">"""</tt> </tt>
+<a name="L105"></a><tt class="py-lineno">105</tt>  <tt class="py-line"><tt class="py-string">        </tt> </tt>
+<a name="L106"></a><tt class="py-lineno">106</tt>  <tt class="py-line"><tt class="py-string">        Please continue installation by choosing (c).</tt> </tt>
+<a name="L107"></a><tt class="py-lineno">107</tt>  <tt class="py-line"><tt class="py-string">        """</tt> </tt>
+<a name="L108"></a><tt class="py-lineno">108</tt>  <tt class="py-line">    <tt class="py-name">menu</tt><tt class="py-op">.</tt><tt class="py-name">text</tt> <tt class="py-op">=</tt> <tt class="py-name">menu</tt><tt class="py-op">.</tt><tt class="py-name">text</tt><tt class="py-op">.</tt><tt id="link-30" class="py-name" targets="Function TEES.Utils.Libraries.pstat.replace()=TEES.Utils.Libraries.pstat-module.html#replace"><a title="TEES.Utils.Libraries.pstat.replace" class="py-name" href="#" onclick="return doclink('link-30', 'replace', 'link-30');">replace</a></tt><tt class="py-op">(</tt><tt class="py-string">"MAIN_PROGRAM"</tt><tt class="py-op">,</tt> <tt class="py-name">menu</tt><tt class="py-op">.</tt><tt class="py-name">programName</tt><tt class="py-op">)</tt> </tt>
+</div><a name="L109"></a><tt class="py-lineno">109</tt>  <tt class="py-line"> </tt><script type="text/javascript">
+<!--
+expandto(location.href);
+// -->
+</script>
+</pre>
+<br />
+<!-- ==================== NAVIGATION BAR ==================== -->
+<table class="navbar" border="0" width="100%" cellpadding="0"
+       bgcolor="#a0c0ff" cellspacing="0">
+  <tr valign="middle">
+  <!-- Home link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="TEES-module.html">Home</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Tree link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="module-tree.html">Trees</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Index link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="identifier-index.html">Indices</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Help link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="help.html">Help</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Project homepage -->
+      <th class="navbar" align="right" width="100%">
+        <table border="0" cellpadding="0" cellspacing="0">
+          <tr><th class="navbar" align="center"
+            >Turku Event Extraction System</th>
+          </tr></table></th>
+  </tr>
+</table>
+<table border="0" cellpadding="0" cellspacing="0" width="100%%">
+  <tr>
+    <td align="left" class="footer">
+    Generated by Epydoc 3.0.1 on Thu Jul 19 18:21:03 2012
+    </td>
+    <td align="right" class="footer">
+      <a target="mainFrame" href="http://epydoc.sourceforge.net"
+        >http://epydoc.sourceforge.net</a>
+    </td>
+  </tr>
+</table>
+
+<script type="text/javascript">
+  <!--
+  // Private objects are initially displayed (because if
+  // javascript is turned off then we want them to be
+  // visible); but by default, we want to hide them.  So hide
+  // them unless we have a cookie that says to show them.
+  checkCookie();
+  // -->
+</script>
+</body>
+</html>

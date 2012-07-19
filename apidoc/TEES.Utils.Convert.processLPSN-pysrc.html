@@ -1,0 +1,155 @@
+<?xml version="1.0" encoding="ascii"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+          "DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+  <title>TEES.Utils.Convert.processLPSN</title>
+  <link rel="stylesheet" href="epydoc.css" type="text/css" />
+  <script type="text/javascript" src="epydoc.js"></script>
+</head>
+
+<body bgcolor="white" text="black" link="blue" vlink="#204080"
+      alink="#204080">
+<!-- ==================== NAVIGATION BAR ==================== -->
+<table class="navbar" border="0" width="100%" cellpadding="0"
+       bgcolor="#a0c0ff" cellspacing="0">
+  <tr valign="middle">
+  <!-- Home link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="TEES-module.html">Home</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Tree link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="module-tree.html">Trees</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Index link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="identifier-index.html">Indices</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Help link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="help.html">Help</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Project homepage -->
+      <th class="navbar" align="right" width="100%">
+        <table border="0" cellpadding="0" cellspacing="0">
+          <tr><th class="navbar" align="center"
+            >Turku Event Extraction System</th>
+          </tr></table></th>
+  </tr>
+</table>
+<table width="100%" cellpadding="0" cellspacing="0">
+  <tr valign="top">
+    <td width="100%">
+      <span class="breadcrumbs">
+        <a href="TEES-module.html">Package&nbsp;TEES</a> ::
+        <a href="TEES.Utils-module.html">Package&nbsp;Utils</a> ::
+        <a href="TEES.Utils.Convert-module.html">Package&nbsp;Convert</a> ::
+        Module&nbsp;processLPSN
+      </span>
+    </td>
+    <td>
+      <table cellpadding="0" cellspacing="0">
+        <!-- hide/show private -->
+        <tr><td align="right"><span class="options">[<a href="javascript:void(0);" class="privatelink"
+    onclick="toggle_private();">hide&nbsp;private</a>]</span></td></tr>
+      </table>
+    </td>
+  </tr>
+</table>
+<h1 class="epydoc">Source Code for <a href="TEES.Utils.Convert.processLPSN-module.html">Module TEES.Utils.Convert.processLPSN</a></h1>
+<pre class="py-src">
+<a name="L1"></a><tt class="py-lineno"> 1</tt>  <tt class="py-line"><tt id="link-0" class="py-name" targets="Variable TEES.Utils.Convert.processLPSN.f=TEES.Utils.Convert.processLPSN-module.html#f,Function TEES.Utils.STFormat.Scores.f()=TEES.Utils.STFormat.Scores-module.html#f"><a title="TEES.Utils.Convert.processLPSN.f
+TEES.Utils.STFormat.Scores.f" class="py-name" href="#" onclick="return doclink('link-0', 'f', 'link-0');">f</a></tt> <tt class="py-op">=</tt> <tt id="link-1" class="py-name" targets="Method TEES.Core.Model.Model.open()=TEES.Core.Model.Model-class.html#open"><a title="TEES.Core.Model.Model.open" class="py-name" href="#" onclick="return doclink('link-1', 'open', 'link-1');">open</a></tt><tt class="py-op">(</tt><tt class="py-string">"/home/jari/data/BioNLP11SharedTask/resources/lpsn-alintro.html"</tt><tt class="py-op">,</tt> <tt class="py-string">"rt"</tt><tt class="py-op">)</tt> </tt>
+<a name="L2"></a><tt class="py-lineno"> 2</tt>  <tt class="py-line"><tt id="link-2" class="py-name" targets="Variable TEES.Utils.Convert.processLPSN.outFile=TEES.Utils.Convert.processLPSN-module.html#outFile"><a title="TEES.Utils.Convert.processLPSN.outFile" class="py-name" href="#" onclick="return doclink('link-2', 'outFile', 'link-2');">outFile</a></tt> <tt class="py-op">=</tt> <tt id="link-3" class="py-name"><a title="TEES.Core.Model.Model.open" class="py-name" href="#" onclick="return doclink('link-3', 'open', 'link-1');">open</a></tt><tt class="py-op">(</tt><tt class="py-string">"/home/jari/data/BioNLP11SharedTask/resources/lpsn-bacteria-names.txt"</tt><tt class="py-op">,</tt> <tt class="py-string">"wt"</tt><tt class="py-op">)</tt> </tt>
+<a name="L3"></a><tt class="py-lineno"> 3</tt>  <tt class="py-line"> </tt>
+<a name="L4"></a><tt class="py-lineno"> 4</tt>  <tt class="py-line"><tt id="link-4" class="py-name" targets="Variable TEES.Utils.Convert.processLPSN.count=TEES.Utils.Convert.processLPSN-module.html#count"><a title="TEES.Utils.Convert.processLPSN.count" class="py-name" href="#" onclick="return doclink('link-4', 'count', 'link-4');">count</a></tt> <tt class="py-op">=</tt> <tt class="py-number">0</tt> </tt>
+<a name="L5"></a><tt class="py-lineno"> 5</tt>  <tt class="py-line"><tt class="py-keyword">for</tt> <tt id="link-5" class="py-name" targets="Variable TEES.Utils.Convert.processLPSN.line=TEES.Utils.Convert.processLPSN-module.html#line"><a title="TEES.Utils.Convert.processLPSN.line" class="py-name" href="#" onclick="return doclink('link-5', 'line', 'link-5');">line</a></tt> <tt class="py-keyword">in</tt> <tt id="link-6" class="py-name"><a title="TEES.Utils.Convert.processLPSN.f
+TEES.Utils.STFormat.Scores.f" class="py-name" href="#" onclick="return doclink('link-6', 'f', 'link-0');">f</a></tt><tt class="py-op">:</tt> </tt>
+<a name="L6"></a><tt class="py-lineno"> 6</tt>  <tt class="py-line">    <tt id="link-7" class="py-name"><a title="TEES.Utils.Convert.processLPSN.count" class="py-name" href="#" onclick="return doclink('link-7', 'count', 'link-4');">count</a></tt> <tt class="py-op">+=</tt> <tt class="py-number">1</tt> </tt>
+<a name="L7"></a><tt class="py-lineno"> 7</tt>  <tt class="py-line">    <tt class="py-keyword">if</tt> <tt id="link-8" class="py-name"><a title="TEES.Utils.Convert.processLPSN.count" class="py-name" href="#" onclick="return doclink('link-8', 'count', 'link-4');">count</a></tt> <tt class="py-op">&lt;</tt> <tt class="py-number">178</tt><tt class="py-op">:</tt> </tt>
+<a name="L8"></a><tt class="py-lineno"> 8</tt>  <tt class="py-line">        <tt class="py-keyword">continue</tt> </tt>
+<a name="L9"></a><tt class="py-lineno"> 9</tt>  <tt class="py-line">    <tt class="py-keyword">if</tt> <tt class="py-string">"#FF0000"</tt> <tt class="py-keyword">in</tt> <tt id="link-9" class="py-name"><a title="TEES.Utils.Convert.processLPSN.line" class="py-name" href="#" onclick="return doclink('link-9', 'line', 'link-5');">line</a></tt><tt class="py-op">:</tt> </tt>
+<a name="L10"></a><tt class="py-lineno">10</tt>  <tt class="py-line">        <tt id="link-10" class="py-name" targets="Variable TEES.Utils.Convert.processLPSN.splits=TEES.Utils.Convert.processLPSN-module.html#splits"><a title="TEES.Utils.Convert.processLPSN.splits" class="py-name" href="#" onclick="return doclink('link-10', 'splits', 'link-10');">splits</a></tt> <tt class="py-op">=</tt> <tt id="link-11" class="py-name"><a title="TEES.Utils.Convert.processLPSN.line" class="py-name" href="#" onclick="return doclink('link-11', 'line', 'link-5');">line</a></tt><tt class="py-op">.</tt><tt class="py-name">strip</tt><tt class="py-op">(</tt><tt class="py-op">)</tt><tt class="py-op">.</tt><tt id="link-12" class="py-name" targets="Variable TEES.Utils.Convert.processLPSN.split=TEES.Utils.Convert.processLPSN-module.html#split"><a title="TEES.Utils.Convert.processLPSN.split" class="py-name" href="#" onclick="return doclink('link-12', 'split', 'link-12');">split</a></tt><tt class="py-op">(</tt><tt class="py-string">"&lt;font color=\"#FF0000\"&gt;&lt;i&gt;&lt;b&gt;"</tt><tt class="py-op">)</tt> </tt>
+<a name="L11"></a><tt class="py-lineno">11</tt>  <tt class="py-line">        <tt class="py-comment">#print splits</tt> </tt>
+<a name="L12"></a><tt class="py-lineno">12</tt>  <tt class="py-line">        <tt id="link-13" class="py-name" targets="Variable TEES.Utils.Convert.processLPSN.tokens=TEES.Utils.Convert.processLPSN-module.html#tokens"><a title="TEES.Utils.Convert.processLPSN.tokens" class="py-name" href="#" onclick="return doclink('link-13', 'tokens', 'link-13');">tokens</a></tt> <tt class="py-op">=</tt> <tt class="py-op">[</tt><tt class="py-op">]</tt> </tt>
+<a name="L13"></a><tt class="py-lineno">13</tt>  <tt class="py-line">        <tt class="py-keyword">for</tt> <tt id="link-14" class="py-name"><a title="TEES.Utils.Convert.processLPSN.split" class="py-name" href="#" onclick="return doclink('link-14', 'split', 'link-12');">split</a></tt> <tt class="py-keyword">in</tt> <tt id="link-15" class="py-name"><a title="TEES.Utils.Convert.processLPSN.splits" class="py-name" href="#" onclick="return doclink('link-15', 'splits', 'link-10');">splits</a></tt><tt class="py-op">:</tt> </tt>
+<a name="L14"></a><tt class="py-lineno">14</tt>  <tt class="py-line">            <tt class="py-keyword">if</tt> <tt class="py-string">"&lt;/b&gt;&lt;/i&gt;"</tt> <tt class="py-keyword">in</tt> <tt id="link-16" class="py-name"><a title="TEES.Utils.Convert.processLPSN.split" class="py-name" href="#" onclick="return doclink('link-16', 'split', 'link-12');">split</a></tt><tt class="py-op">:</tt> </tt>
+<a name="L15"></a><tt class="py-lineno">15</tt>  <tt class="py-line">                <tt id="link-17" class="py-name" targets="Variable TEES.Utils.Convert.processLPSN.split2=TEES.Utils.Convert.processLPSN-module.html#split2"><a title="TEES.Utils.Convert.processLPSN.split2" class="py-name" href="#" onclick="return doclink('link-17', 'split2', 'link-17');">split2</a></tt> <tt class="py-op">=</tt> <tt id="link-18" class="py-name"><a title="TEES.Utils.Convert.processLPSN.split" class="py-name" href="#" onclick="return doclink('link-18', 'split', 'link-12');">split</a></tt><tt class="py-op">.</tt><tt id="link-19" class="py-name"><a title="TEES.Utils.Convert.processLPSN.split" class="py-name" href="#" onclick="return doclink('link-19', 'split', 'link-12');">split</a></tt><tt class="py-op">(</tt><tt class="py-string">"&lt;/b&gt;&lt;/i&gt;"</tt><tt class="py-op">)</tt><tt class="py-op">[</tt><tt class="py-number">0</tt><tt class="py-op">]</tt> </tt>
+<a name="L16"></a><tt class="py-lineno">16</tt>  <tt class="py-line">                <tt class="py-keyword">assert</tt> <tt id="link-20" class="py-name"><a title="TEES.Utils.Convert.processLPSN.split2" class="py-name" href="#" onclick="return doclink('link-20', 'split2', 'link-17');">split2</a></tt><tt class="py-op">.</tt><tt class="py-name">strip</tt><tt class="py-op">(</tt><tt class="py-op">)</tt> <tt class="py-op">==</tt> <tt id="link-21" class="py-name"><a title="TEES.Utils.Convert.processLPSN.split2" class="py-name" href="#" onclick="return doclink('link-21', 'split2', 'link-17');">split2</a></tt><tt class="py-op">,</tt> <tt class="py-op">(</tt><tt id="link-22" class="py-name"><a title="TEES.Utils.Convert.processLPSN.split2" class="py-name" href="#" onclick="return doclink('link-22', 'split2', 'link-17');">split2</a></tt><tt class="py-op">,</tt> <tt id="link-23" class="py-name"><a title="TEES.Utils.Convert.processLPSN.line" class="py-name" href="#" onclick="return doclink('link-23', 'line', 'link-5');">line</a></tt><tt class="py-op">)</tt> </tt>
+<a name="L17"></a><tt class="py-lineno">17</tt>  <tt class="py-line">                <tt class="py-keyword">if</tt> <tt id="link-24" class="py-name"><a title="TEES.Utils.Convert.processLPSN.split2" class="py-name" href="#" onclick="return doclink('link-24', 'split2', 'link-17');">split2</a></tt><tt class="py-op">[</tt><tt class="py-number">0</tt><tt class="py-op">]</tt> <tt class="py-op">!=</tt> <tt class="py-string">"&lt;"</tt> <tt class="py-keyword">and</tt> <tt id="link-25" class="py-name"><a title="TEES.Utils.Convert.processLPSN.split2" class="py-name" href="#" onclick="return doclink('link-25', 'split2', 'link-17');">split2</a></tt><tt class="py-op">[</tt><tt class="py-op">-</tt><tt class="py-number">1</tt><tt class="py-op">]</tt> <tt class="py-op">!=</tt> <tt class="py-string">"&gt;"</tt><tt class="py-op">:</tt> </tt>
+<a name="L18"></a><tt class="py-lineno">18</tt>  <tt class="py-line">                    <tt id="link-26" class="py-name"><a title="TEES.Utils.Convert.processLPSN.tokens" class="py-name" href="#" onclick="return doclink('link-26', 'tokens', 'link-13');">tokens</a></tt><tt class="py-op">.</tt><tt class="py-name">append</tt><tt class="py-op">(</tt><tt id="link-27" class="py-name"><a title="TEES.Utils.Convert.processLPSN.split2" class="py-name" href="#" onclick="return doclink('link-27', 'split2', 'link-17');">split2</a></tt><tt class="py-op">)</tt> </tt>
+<a name="L19"></a><tt class="py-lineno">19</tt>  <tt class="py-line">        <tt id="link-28" class="py-name" targets="Variable TEES.Utils.Convert.processLPSN.tokenString=TEES.Utils.Convert.processLPSN-module.html#tokenString"><a title="TEES.Utils.Convert.processLPSN.tokenString" class="py-name" href="#" onclick="return doclink('link-28', 'tokenString', 'link-28');">tokenString</a></tt> <tt class="py-op">=</tt> <tt class="py-string">" "</tt><tt class="py-op">.</tt><tt class="py-name">join</tt><tt class="py-op">(</tt><tt id="link-29" class="py-name"><a title="TEES.Utils.Convert.processLPSN.tokens" class="py-name" href="#" onclick="return doclink('link-29', 'tokens', 'link-13');">tokens</a></tt><tt class="py-op">)</tt><tt class="py-op">.</tt><tt class="py-name">strip</tt><tt class="py-op">(</tt><tt class="py-op">)</tt> </tt>
+<a name="L20"></a><tt class="py-lineno">20</tt>  <tt class="py-line">        <tt class="py-keyword">if</tt> <tt id="link-30" class="py-name"><a title="TEES.Utils.Convert.processLPSN.tokenString" class="py-name" href="#" onclick="return doclink('link-30', 'tokenString', 'link-28');">tokenString</a></tt> <tt class="py-op">!=</tt> <tt class="py-string">""</tt><tt class="py-op">:</tt> </tt>
+<a name="L21"></a><tt class="py-lineno">21</tt>  <tt class="py-line">            <tt class="py-keyword">print</tt> <tt id="link-31" class="py-name"><a title="TEES.Utils.Convert.processLPSN.tokenString" class="py-name" href="#" onclick="return doclink('link-31', 'tokenString', 'link-28');">tokenString</a></tt> </tt>
+<a name="L22"></a><tt class="py-lineno">22</tt>  <tt class="py-line">            <tt id="link-32" class="py-name"><a title="TEES.Utils.Convert.processLPSN.outFile" class="py-name" href="#" onclick="return doclink('link-32', 'outFile', 'link-2');">outFile</a></tt><tt class="py-op">.</tt><tt id="link-33" class="py-name" targets="Method TEES.Core.IdSet.IdSet.write()=TEES.Core.IdSet.IdSet-class.html#write,Class Method TEES.ExampleWriters.BioTextExampleWriter.BioTextExampleWriter.write()=TEES.ExampleWriters.BioTextExampleWriter.BioTextExampleWriter-class.html#write,Method TEES.ExampleWriters.SentenceExampleWriter.SentenceExampleWriter.write()=TEES.ExampleWriters.SentenceExampleWriter.SentenceExampleWriter-class.html#write,Method TEES.Utils.ElementTreeUtils.ETWriter.write()=TEES.Utils.ElementTreeUtils.ETWriter-class.html#write,Function TEES.Utils.ElementTreeUtils.write()=TEES.Utils.ElementTreeUtils-module.html#write,Function TEES.Utils.STFormat.STTools.write()=TEES.Utils.STFormat.STTools-module.html#write,Method TEES.Utils.Stream.StreamModifier.write()=TEES.Utils.Stream.StreamModifier-class.html#write"><a title="TEES.Core.IdSet.IdSet.write
+TEES.ExampleWriters.BioTextExampleWriter.BioTextExampleWriter.write
+TEES.ExampleWriters.SentenceExampleWriter.SentenceExampleWriter.write
+TEES.Utils.ElementTreeUtils.ETWriter.write
+TEES.Utils.ElementTreeUtils.write
+TEES.Utils.STFormat.STTools.write
+TEES.Utils.Stream.StreamModifier.write" class="py-name" href="#" onclick="return doclink('link-33', 'write', 'link-33');">write</a></tt><tt class="py-op">(</tt><tt id="link-34" class="py-name"><a title="TEES.Utils.Convert.processLPSN.tokenString" class="py-name" href="#" onclick="return doclink('link-34', 'tokenString', 'link-28');">tokenString</a></tt> <tt class="py-op">+</tt> <tt class="py-string">"\n"</tt><tt class="py-op">)</tt> </tt>
+<a name="L23"></a><tt class="py-lineno">23</tt>  <tt class="py-line"> </tt>
+<a name="L24"></a><tt class="py-lineno">24</tt>  <tt class="py-line"><tt id="link-35" class="py-name"><a title="TEES.Utils.Convert.processLPSN.f
+TEES.Utils.STFormat.Scores.f" class="py-name" href="#" onclick="return doclink('link-35', 'f', 'link-0');">f</a></tt><tt class="py-op">.</tt><tt id="link-36" class="py-name" targets="Method TEES.Core.Model.Model.close()=TEES.Core.Model.Model-class.html#close,Method TEES.Utils.ElementTreeUtils.ETWriter.close()=TEES.Utils.ElementTreeUtils.ETWriter-class.html#close"><a title="TEES.Core.Model.Model.close
+TEES.Utils.ElementTreeUtils.ETWriter.close" class="py-name" href="#" onclick="return doclink('link-36', 'close', 'link-36');">close</a></tt><tt class="py-op">(</tt><tt class="py-op">)</tt> </tt>
+<a name="L25"></a><tt class="py-lineno">25</tt>  <tt class="py-line"><tt id="link-37" class="py-name"><a title="TEES.Utils.Convert.processLPSN.outFile" class="py-name" href="#" onclick="return doclink('link-37', 'outFile', 'link-2');">outFile</a></tt><tt class="py-op">.</tt><tt id="link-38" class="py-name"><a title="TEES.Core.Model.Model.close
+TEES.Utils.ElementTreeUtils.ETWriter.close" class="py-name" href="#" onclick="return doclink('link-38', 'close', 'link-36');">close</a></tt><tt class="py-op">(</tt><tt class="py-op">)</tt> </tt>
+<a name="L26"></a><tt class="py-lineno">26</tt>  <tt class="py-line"> </tt><script type="text/javascript">
+<!--
+expandto(location.href);
+// -->
+</script>
+</pre>
+<br />
+<!-- ==================== NAVIGATION BAR ==================== -->
+<table class="navbar" border="0" width="100%" cellpadding="0"
+       bgcolor="#a0c0ff" cellspacing="0">
+  <tr valign="middle">
+  <!-- Home link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="TEES-module.html">Home</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Tree link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="module-tree.html">Trees</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Index link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="identifier-index.html">Indices</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Help link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="help.html">Help</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Project homepage -->
+      <th class="navbar" align="right" width="100%">
+        <table border="0" cellpadding="0" cellspacing="0">
+          <tr><th class="navbar" align="center"
+            >Turku Event Extraction System</th>
+          </tr></table></th>
+  </tr>
+</table>
+<table border="0" cellpadding="0" cellspacing="0" width="100%%">
+  <tr>
+    <td align="left" class="footer">
+    Generated by Epydoc 3.0.1 on Thu Jul 19 18:21:00 2012
+    </td>
+    <td align="right" class="footer">
+      <a target="mainFrame" href="http://epydoc.sourceforge.net"
+        >http://epydoc.sourceforge.net</a>
+    </td>
+  </tr>
+</table>
+
+<script type="text/javascript">
+  <!--
+  // Private objects are initially displayed (because if
+  // javascript is turned off then we want them to be
+  // visible); but by default, we want to hide them.  So hide
+  // them unless we have a cookie that says to show them.
+  checkCookie();
+  // -->
+</script>
+</body>
+</html>

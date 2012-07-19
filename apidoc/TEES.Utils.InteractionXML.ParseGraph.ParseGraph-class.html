@@ -1,0 +1,345 @@
+<?xml version="1.0" encoding="ascii"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+          "DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+  <title>TEES.Utils.InteractionXML.ParseGraph.ParseGraph</title>
+  <link rel="stylesheet" href="epydoc.css" type="text/css" />
+  <script type="text/javascript" src="epydoc.js"></script>
+</head>
+
+<body bgcolor="white" text="black" link="blue" vlink="#204080"
+      alink="#204080">
+<!-- ==================== NAVIGATION BAR ==================== -->
+<table class="navbar" border="0" width="100%" cellpadding="0"
+       bgcolor="#a0c0ff" cellspacing="0">
+  <tr valign="middle">
+  <!-- Home link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="TEES-module.html">Home</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Tree link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="module-tree.html">Trees</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Index link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="identifier-index.html">Indices</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Help link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="help.html">Help</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Project homepage -->
+      <th class="navbar" align="right" width="100%">
+        <table border="0" cellpadding="0" cellspacing="0">
+          <tr><th class="navbar" align="center"
+            >Turku Event Extraction System</th>
+          </tr></table></th>
+  </tr>
+</table>
+<table width="100%" cellpadding="0" cellspacing="0">
+  <tr valign="top">
+    <td width="100%">
+      <span class="breadcrumbs">
+        <a href="TEES-module.html">Package&nbsp;TEES</a> ::
+        <a href="TEES.Utils-module.html">Package&nbsp;Utils</a> ::
+        <a href="TEES.Utils.InteractionXML-module.html">Package&nbsp;InteractionXML</a> ::
+        <a href="TEES.Utils.InteractionXML.ParseGraph-module.html">Module&nbsp;ParseGraph</a> ::
+        Class&nbsp;ParseGraph
+      </span>
+    </td>
+    <td>
+      <table cellpadding="0" cellspacing="0">
+        <!-- hide/show private -->
+        <tr><td align="right"><span class="options">[<a href="javascript:void(0);" class="privatelink"
+    onclick="toggle_private();">hide&nbsp;private</a>]</span></td></tr>
+      </table>
+    </td>
+  </tr>
+</table>
+<!-- ==================== CLASS DESCRIPTION ==================== -->
+<h1 class="epydoc">Class ParseGraph</h1><p class="nomargin-top"><span class="codelink"><a href="TEES.Utils.InteractionXML.ParseGraph-pysrc.html#ParseGraph">source&nbsp;code</a></span></p>
+<p>A ParseGraph-object consists of tokens and dependencies. A dependency 
+  connects two tokens with two edges (token-&gt;dependency-&gt;token, where
+  -&gt; = edge).</p>
+
+<!-- ==================== INSTANCE METHODS ==================== -->
+<a name="section-InstanceMethods"></a>
+<table class="summary" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr bgcolor="#70b0f0" class="table-header">
+  <td colspan="2" class="table-header">
+    <table border="0" cellpadding="0" cellspacing="0" width="100%">
+      <tr valign="top">
+        <td align="left"><span class="table-header">Instance Methods</span></td>
+        <td align="right" valign="top"
+         ><span class="options">[<a href="#section-InstanceMethods"
+         class="privatelink" onclick="toggle_private();"
+         >hide private</a>]</span></td>
+      </tr>
+    </table>
+  </td>
+</tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="__init__"></a><span class="summary-sig-name">__init__</span>(<span class="summary-sig-arg">self</span>,
+        <span class="summary-sig-arg">tokenElements</span>,
+        <span class="summary-sig-arg">dependencyElements</span>,
+        <span class="summary-sig-arg">mergeDependencies</span>=<span class="summary-sig-default">False</span>)</span></td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="TEES.Utils.InteractionXML.ParseGraph-pysrc.html#ParseGraph.__init__">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="buildParseGraph"></a><span class="summary-sig-name">buildParseGraph</span>(<span class="summary-sig-arg">self</span>,
+        <span class="summary-sig-arg">tokenElements</span>,
+        <span class="summary-sig-arg">dependencyElements</span>,
+        <span class="summary-sig-arg">mergeDependencies</span>=<span class="summary-sig-default">False</span>)</span><br />
+      Returns dictionaries containing tokens and dependencies of the graph 
+      generated from ElementTree-elements.</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="TEES.Utils.InteractionXML.ParseGraph-pysrc.html#ParseGraph.buildParseGraph">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="markNamedEntities"></a><span class="summary-sig-name">markNamedEntities</span>(<span class="summary-sig-arg">self</span>,
+        <span class="summary-sig-arg">entityElements</span>)</span><br />
+      Marks tokens belonging to named entities</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="TEES.Utils.InteractionXML.ParseGraph-pysrc.html#ParseGraph.markNamedEntities">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="getNamedEntityTokenIds"></a><span class="summary-sig-name">getNamedEntityTokenIds</span>(<span class="summary-sig-arg">self</span>,
+        <span class="summary-sig-arg">namedEntityIds</span>)</span><br />
+      Returns the ids of all tokens in specified named entities</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="TEES.Utils.InteractionXML.ParseGraph-pysrc.html#ParseGraph.getNamedEntityTokenIds">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a href="TEES.Utils.InteractionXML.ParseGraph.ParseGraph-class.html#getTokenIdsByText" class="summary-sig-name">getTokenIdsByText</a>(<span class="summary-sig-arg">self</span>,
+        <span class="summary-sig-arg">texts</span>,
+        <span class="summary-sig-arg">lookInsideNamedEntities</span>=<span class="summary-sig-default">False</span>)</span><br />
+      Returns the ids of all tokens whose text attribute can be found in 
+      the list texts.</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="TEES.Utils.InteractionXML.ParseGraph-pysrc.html#ParseGraph.getTokenIdsByText">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="stemTokens"></a><span class="summary-sig-name">stemTokens</span>(<span class="summary-sig-arg">self</span>)</span></td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="TEES.Utils.InteractionXML.ParseGraph-pysrc.html#ParseGraph.stemTokens">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a href="TEES.Utils.InteractionXML.ParseGraph.ParseGraph-class.html#buildNXGraph" class="summary-sig-name">buildNXGraph</a>(<span class="summary-sig-arg">self</span>)</span><br />
+      Initializes the graph structure used by NetworkX.</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="TEES.Utils.InteractionXML.ParseGraph-pysrc.html#ParseGraph.buildNXGraph">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="buildShortestPathNX"></a><span class="summary-sig-name">buildShortestPathNX</span>(<span class="summary-sig-arg">self</span>,
+        <span class="summary-sig-arg">startTokenId</span>,
+        <span class="summary-sig-arg">endTokenId</span>,
+        <span class="summary-sig-arg">directed</span>=<span class="summary-sig-default">False</span>)</span><br />
+      Build shortest path using NetworkX</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="TEES.Utils.InteractionXML.ParseGraph-pysrc.html#ParseGraph.buildShortestPathNX">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+</table>
+<!-- ==================== METHOD DETAILS ==================== -->
+<a name="section-MethodDetails"></a>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr bgcolor="#70b0f0" class="table-header">
+  <td colspan="2" class="table-header">
+    <table border="0" cellpadding="0" cellspacing="0" width="100%">
+      <tr valign="top">
+        <td align="left"><span class="table-header">Method Details</span></td>
+        <td align="right" valign="top"
+         ><span class="options">[<a href="#section-MethodDetails"
+         class="privatelink" onclick="toggle_private();"
+         >hide private</a>]</span></td>
+      </tr>
+    </table>
+  </td>
+</tr>
+</table>
+<a name="getTokenIdsByText"></a>
+<div>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr><td>
+  <table width="100%" cellpadding="0" cellspacing="0" border="0">
+  <tr valign="top"><td>
+  <h3 class="epydoc"><span class="sig"><span class="sig-name">getTokenIdsByText</span>(<span class="sig-arg">self</span>,
+        <span class="sig-arg">texts</span>,
+        <span class="sig-arg">lookInsideNamedEntities</span>=<span class="sig-default">False</span>)</span>
+  </h3>
+  </td><td align="right" valign="top"
+    ><span class="codelink"><a href="TEES.Utils.InteractionXML.ParseGraph-pysrc.html#ParseGraph.getTokenIdsByText">source&nbsp;code</a></span>&nbsp;
+    </td>
+  </tr></table>
+  
+  <p>Returns the ids of all tokens whose text attribute can be found in the
+  list texts. Can be used f.e. detecting interaction words.</p>
+  <dl class="fields">
+  </dl>
+</td></tr></table>
+</div>
+<a name="buildNXGraph"></a>
+<div>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr><td>
+  <table width="100%" cellpadding="0" cellspacing="0" border="0">
+  <tr valign="top"><td>
+  <h3 class="epydoc"><span class="sig"><span class="sig-name">buildNXGraph</span>(<span class="sig-arg">self</span>)</span>
+  </h3>
+  </td><td align="right" valign="top"
+    ><span class="codelink"><a href="TEES.Utils.InteractionXML.ParseGraph-pysrc.html#ParseGraph.buildNXGraph">source&nbsp;code</a></span>&nbsp;
+    </td>
+  </tr></table>
+  
+  <p>Initializes the graph structure used by NetworkX. Called automatically
+  when needed.</p>
+  <dl class="fields">
+  </dl>
+</td></tr></table>
+</div>
+<br />
+<!-- ==================== NAVIGATION BAR ==================== -->
+<table class="navbar" border="0" width="100%" cellpadding="0"
+       bgcolor="#a0c0ff" cellspacing="0">
+  <tr valign="middle">
+  <!-- Home link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="TEES-module.html">Home</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Tree link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="module-tree.html">Trees</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Index link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="identifier-index.html">Indices</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Help link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="help.html">Help</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Project homepage -->
+      <th class="navbar" align="right" width="100%">
+        <table border="0" cellpadding="0" cellspacing="0">
+          <tr><th class="navbar" align="center"
+            >Turku Event Extraction System</th>
+          </tr></table></th>
+  </tr>
+</table>
+<table border="0" cellpadding="0" cellspacing="0" width="100%%">
+  <tr>
+    <td align="left" class="footer">
+    Generated by Epydoc 3.0.1 on Thu Jul 19 18:20:46 2012
+    </td>
+    <td align="right" class="footer">
+      <a target="mainFrame" href="http://epydoc.sourceforge.net"
+        >http://epydoc.sourceforge.net</a>
+    </td>
+  </tr>
+</table>
+
+<script type="text/javascript">
+  <!--
+  // Private objects are initially displayed (because if
+  // javascript is turned off then we want them to be
+  // visible); but by default, we want to hide them.  So hide
+  // them unless we have a cookie that says to show them.
+  checkCookie();
+  // -->
+</script>
+</body>
+</html>

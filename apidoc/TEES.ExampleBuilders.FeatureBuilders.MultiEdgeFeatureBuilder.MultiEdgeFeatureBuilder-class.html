@@ -1,0 +1,567 @@
+<?xml version="1.0" encoding="ascii"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+          "DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+  <title>TEES.ExampleBuilders.FeatureBuilders.MultiEdgeFeatureBuilder.MultiEdgeFeatureBuilder</title>
+  <link rel="stylesheet" href="epydoc.css" type="text/css" />
+  <script type="text/javascript" src="epydoc.js"></script>
+</head>
+
+<body bgcolor="white" text="black" link="blue" vlink="#204080"
+      alink="#204080">
+<!-- ==================== NAVIGATION BAR ==================== -->
+<table class="navbar" border="0" width="100%" cellpadding="0"
+       bgcolor="#a0c0ff" cellspacing="0">
+  <tr valign="middle">
+  <!-- Home link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="TEES-module.html">Home</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Tree link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="module-tree.html">Trees</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Index link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="identifier-index.html">Indices</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Help link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="help.html">Help</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Project homepage -->
+      <th class="navbar" align="right" width="100%">
+        <table border="0" cellpadding="0" cellspacing="0">
+          <tr><th class="navbar" align="center"
+            >Turku Event Extraction System</th>
+          </tr></table></th>
+  </tr>
+</table>
+<table width="100%" cellpadding="0" cellspacing="0">
+  <tr valign="top">
+    <td width="100%">
+      <span class="breadcrumbs">
+        <a href="TEES-module.html">Package&nbsp;TEES</a> ::
+        <a href="TEES.ExampleBuilders-module.html">Package&nbsp;ExampleBuilders</a> ::
+        <a href="TEES.ExampleBuilders.FeatureBuilders-module.html">Package&nbsp;FeatureBuilders</a> ::
+        <a href="TEES.ExampleBuilders.FeatureBuilders.MultiEdgeFeatureBuilder-module.html">Module&nbsp;MultiEdgeFeatureBuilder</a> ::
+        Class&nbsp;MultiEdgeFeatureBuilder
+      </span>
+    </td>
+    <td>
+      <table cellpadding="0" cellspacing="0">
+        <!-- hide/show private -->
+        <tr><td align="right"><span class="options">[<a href="javascript:void(0);" class="privatelink"
+    onclick="toggle_private();">hide&nbsp;private</a>]</span></td></tr>
+      </table>
+    </td>
+  </tr>
+</table>
+<!-- ==================== CLASS DESCRIPTION ==================== -->
+<h1 class="epydoc">Class MultiEdgeFeatureBuilder</h1><p class="nomargin-top"><span class="codelink"><a href="TEES.ExampleBuilders.FeatureBuilders.MultiEdgeFeatureBuilder-pysrc.html#MultiEdgeFeatureBuilder">source&nbsp;code</a></span></p>
+<pre class="base-tree">
+<a href="TEES.ExampleBuilders.FeatureBuilders.FeatureBuilder.FeatureBuilder-class.html">FeatureBuilder.FeatureBuilder</a> --+
+                                |
+                               <strong class="uidshort">MultiEdgeFeatureBuilder</strong>
+</pre>
+
+<hr />
+<p>This feature builder generates features describing a pair of word 
+  tokens connected by one or more dependencies. Most of the features it 
+  produces are built on the shortest undirected path of dependencies 
+  between the two tokens.</p>
+
+<!-- ==================== INSTANCE METHODS ==================== -->
+<a name="section-InstanceMethods"></a>
+<table class="summary" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr bgcolor="#70b0f0" class="table-header">
+  <td colspan="2" class="table-header">
+    <table border="0" cellpadding="0" cellspacing="0" width="100%">
+      <tr valign="top">
+        <td align="left"><span class="table-header">Instance Methods</span></td>
+        <td align="right" valign="top"
+         ><span class="options">[<a href="#section-InstanceMethods"
+         class="privatelink" onclick="toggle_private();"
+         >hide private</a>]</span></td>
+      </tr>
+    </table>
+  </td>
+</tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a href="TEES.ExampleBuilders.FeatureBuilders.MultiEdgeFeatureBuilder.MultiEdgeFeatureBuilder-class.html#__init__" class="summary-sig-name">__init__</a>(<span class="summary-sig-arg">self</span>,
+        <span class="summary-sig-arg">featureSet</span>,
+        <span class="summary-sig-arg">style</span>=<span class="summary-sig-default">None</span>)</span></td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="TEES.ExampleBuilders.FeatureBuilders.MultiEdgeFeatureBuilder-pysrc.html#MultiEdgeFeatureBuilder.__init__">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="getEdgeType"></a><span class="summary-sig-name">getEdgeType</span>(<span class="summary-sig-arg">self</span>,
+        <span class="summary-sig-arg">edge</span>)</span></td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="TEES.ExampleBuilders.FeatureBuilders.MultiEdgeFeatureBuilder-pysrc.html#MultiEdgeFeatureBuilder.getEdgeType">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="definePredictedValueRange"></a><span class="summary-sig-name">definePredictedValueRange</span>(<span class="summary-sig-arg">self</span>,
+        <span class="summary-sig-arg">sentences</span>,
+        <span class="summary-sig-arg">elementName</span>)</span></td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="TEES.ExampleBuilders.FeatureBuilders.MultiEdgeFeatureBuilder-pysrc.html#MultiEdgeFeatureBuilder.definePredictedValueRange">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a href="TEES.ExampleBuilders.FeatureBuilders.MultiEdgeFeatureBuilder.MultiEdgeFeatureBuilder-class.html#setFeatureVector" class="summary-sig-name">setFeatureVector</a>(<span class="summary-sig-arg">self</span>,
+        <span class="summary-sig-arg">features</span>=<span class="summary-sig-default">None</span>,
+        <span class="summary-sig-arg">entity1</span>=<span class="summary-sig-default">None</span>,
+        <span class="summary-sig-arg">entity2</span>=<span class="summary-sig-default">None</span>,
+        <span class="summary-sig-arg">resetCache</span>=<span class="summary-sig-default">True</span>)</span><br />
+      When the feature builder builds features, they are put to this 
+      feature vector.</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="TEES.ExampleBuilders.FeatureBuilders.MultiEdgeFeatureBuilder-pysrc.html#MultiEdgeFeatureBuilder.setFeatureVector">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a href="TEES.ExampleBuilders.FeatureBuilders.MultiEdgeFeatureBuilder.MultiEdgeFeatureBuilder-class.html#buildPredictedValueFeatures" class="summary-sig-name">buildPredictedValueFeatures</a>(<span class="summary-sig-arg">self</span>,
+        <span class="summary-sig-arg">element</span>,
+        <span class="summary-sig-arg">tag</span>)</span><br />
+      Edge examples are usually predicted on top of predicted entities.</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="TEES.ExampleBuilders.FeatureBuilders.MultiEdgeFeatureBuilder-pysrc.html#MultiEdgeFeatureBuilder.buildPredictedValueFeatures">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a href="TEES.ExampleBuilders.FeatureBuilders.MultiEdgeFeatureBuilder.MultiEdgeFeatureBuilder-class.html#buildEntityFeatures" class="summary-sig-name">buildEntityFeatures</a>(<span class="summary-sig-arg">self</span>,
+        <span class="summary-sig-arg">sentenceGraph</span>)</span><br />
+      Build features for the two entities of the current example.</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="TEES.ExampleBuilders.FeatureBuilders.MultiEdgeFeatureBuilder-pysrc.html#MultiEdgeFeatureBuilder.buildEntityFeatures">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="buildPathLengthFeatures"></a><span class="summary-sig-name">buildPathLengthFeatures</span>(<span class="summary-sig-arg">self</span>,
+        <span class="summary-sig-arg">pathTokens</span>)</span><br />
+      Simple numeric features about the length of the path</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="TEES.ExampleBuilders.FeatureBuilders.MultiEdgeFeatureBuilder-pysrc.html#MultiEdgeFeatureBuilder.buildPathLengthFeatures">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="buildSentenceFeatures"></a><span class="summary-sig-name">buildSentenceFeatures</span>(<span class="summary-sig-arg">self</span>,
+        <span class="summary-sig-arg">sentenceGraph</span>)</span></td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="TEES.ExampleBuilders.FeatureBuilders.MultiEdgeFeatureBuilder-pysrc.html#MultiEdgeFeatureBuilder.buildSentenceFeatures">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="buildTerminusTokenFeatures"></a><span class="summary-sig-name">buildTerminusTokenFeatures</span>(<span class="summary-sig-arg">self</span>,
+        <span class="summary-sig-arg">pathTokens</span>,
+        <span class="summary-sig-arg">sentenceGraph</span>)</span><br />
+      Token features for the first and last tokens of the path</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="TEES.ExampleBuilders.FeatureBuilders.MultiEdgeFeatureBuilder-pysrc.html#MultiEdgeFeatureBuilder.buildTerminusTokenFeatures">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="buildWalkPaths"></a><span class="summary-sig-name">buildWalkPaths</span>(<span class="summary-sig-arg">self</span>,
+        <span class="summary-sig-arg">pathTokens</span>,
+        <span class="summary-sig-arg">walks</span>,
+        <span class="summary-sig-arg">sentenceGraph</span>)</span></td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="TEES.ExampleBuilders.FeatureBuilders.MultiEdgeFeatureBuilder-pysrc.html#MultiEdgeFeatureBuilder.buildWalkPaths">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="buildPathGrams"></a><span class="summary-sig-name">buildPathGrams</span>(<span class="summary-sig-arg">self</span>,
+        <span class="summary-sig-arg">length</span>,
+        <span class="summary-sig-arg">pathTokens</span>,
+        <span class="summary-sig-arg">sentenceGraph</span>)</span><br />
+      Goes through all the possible walks and builds features for 
+      subsections of &quot;length&quot; edges.</td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="TEES.ExampleBuilders.FeatureBuilders.MultiEdgeFeatureBuilder-pysrc.html#MultiEdgeFeatureBuilder.buildPathGrams">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="addType"></a><span class="summary-sig-name">addType</span>(<span class="summary-sig-arg">self</span>,
+        <span class="summary-sig-arg">token</span>,
+        <span class="summary-sig-arg">sentenceGraph</span>,
+        <span class="summary-sig-arg">prefix</span>=<span class="summary-sig-default"><code class="variable-quote">'</code><code class="variable-string">annType_</code><code class="variable-quote">'</code></span>)</span></td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="TEES.ExampleBuilders.FeatureBuilders.MultiEdgeFeatureBuilder-pysrc.html#MultiEdgeFeatureBuilder.addType">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="buildPathEdgeFeatures"></a><span class="summary-sig-name">buildPathEdgeFeatures</span>(<span class="summary-sig-arg">self</span>,
+        <span class="summary-sig-arg">pathTokens</span>,
+        <span class="summary-sig-arg">sentenceGraph</span>)</span></td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="TEES.ExampleBuilders.FeatureBuilders.MultiEdgeFeatureBuilder-pysrc.html#MultiEdgeFeatureBuilder.buildPathEdgeFeatures">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="buildSingleElementFeatures"></a><span class="summary-sig-name">buildSingleElementFeatures</span>(<span class="summary-sig-arg">self</span>,
+        <span class="summary-sig-arg">pathTokens</span>,
+        <span class="summary-sig-arg">sentenceGraph</span>)</span></td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="TEES.ExampleBuilders.FeatureBuilders.MultiEdgeFeatureBuilder-pysrc.html#MultiEdgeFeatureBuilder.buildSingleElementFeatures">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+<tr>
+    <td width="15%" align="right" valign="top" class="summary">
+      <span class="summary-type">&nbsp;</span>
+    </td><td class="summary">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td><span class="summary-sig"><a name="buildTerminusFeatures"></a><span class="summary-sig-name">buildTerminusFeatures</span>(<span class="summary-sig-arg">self</span>,
+        <span class="summary-sig-arg">token</span>,
+        <span class="summary-sig-arg">ignoreEdges</span>,
+        <span class="summary-sig-arg">prefix</span>,
+        <span class="summary-sig-arg">sentenceGraph</span>)</span></td>
+          <td align="right" valign="top">
+            <span class="codelink"><a href="TEES.ExampleBuilders.FeatureBuilders.MultiEdgeFeatureBuilder-pysrc.html#MultiEdgeFeatureBuilder.buildTerminusFeatures">source&nbsp;code</a></span>
+            
+          </td>
+        </tr>
+      </table>
+      
+    </td>
+  </tr>
+  <tr>
+    <td colspan="2" class="summary">
+    <p class="indent-wrapped-lines"><b>Inherited from <code><a href="TEES.ExampleBuilders.FeatureBuilders.FeatureBuilder.FeatureBuilder-class.html">FeatureBuilder.FeatureBuilder</a></code></b>:
+      <code><a href="TEES.ExampleBuilders.FeatureBuilders.FeatureBuilder.FeatureBuilder-class.html#getEntityType">getEntityType</a></code>,
+      <code><a href="TEES.ExampleBuilders.FeatureBuilders.FeatureBuilder.FeatureBuilder-class.html#getPOSSuperType">getPOSSuperType</a></code>,
+      <code><a href="TEES.ExampleBuilders.FeatureBuilders.FeatureBuilder.FeatureBuilder-class.html#getTokenAnnotatedType">getTokenAnnotatedType</a></code>,
+      <code><a href="TEES.ExampleBuilders.FeatureBuilders.FeatureBuilder.FeatureBuilder-class.html#getTokenFeatures">getTokenFeatures</a></code>,
+      <code><a href="TEES.ExampleBuilders.FeatureBuilders.FeatureBuilder.FeatureBuilder-class.html#normalizeFeatureVector">normalizeFeatureVector</a></code>,
+      <code><a href="TEES.ExampleBuilders.FeatureBuilders.FeatureBuilder.FeatureBuilder-class.html#setFeature">setFeature</a></code>,
+      <code><a href="TEES.ExampleBuilders.FeatureBuilders.FeatureBuilder.FeatureBuilder-class.html#setTag">setTag</a></code>
+      </p>
+    </td>
+  </tr>
+</table>
+<!-- ==================== METHOD DETAILS ==================== -->
+<a name="section-MethodDetails"></a>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr bgcolor="#70b0f0" class="table-header">
+  <td colspan="2" class="table-header">
+    <table border="0" cellpadding="0" cellspacing="0" width="100%">
+      <tr valign="top">
+        <td align="left"><span class="table-header">Method Details</span></td>
+        <td align="right" valign="top"
+         ><span class="options">[<a href="#section-MethodDetails"
+         class="privatelink" onclick="toggle_private();"
+         >hide private</a>]</span></td>
+      </tr>
+    </table>
+  </td>
+</tr>
+</table>
+<a name="__init__"></a>
+<div>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr><td>
+  <table width="100%" cellpadding="0" cellspacing="0" border="0">
+  <tr valign="top"><td>
+  <h3 class="epydoc"><span class="sig"><span class="sig-name">__init__</span>(<span class="sig-arg">self</span>,
+        <span class="sig-arg">featureSet</span>,
+        <span class="sig-arg">style</span>=<span class="sig-default">None</span>)</span>
+    <br /><em class="fname">(Constructor)</em>
+  </h3>
+  </td><td align="right" valign="top"
+    ><span class="codelink"><a href="TEES.ExampleBuilders.FeatureBuilders.MultiEdgeFeatureBuilder-pysrc.html#MultiEdgeFeatureBuilder.__init__">source&nbsp;code</a></span>&nbsp;
+    </td>
+  </tr></table>
+  
+  
+  <dl class="fields">
+    <dt>Parameters:</dt>
+    <dd><ul class="nomargin-top">
+        <li><strong class="pname"><code>featureSet</code></strong> (IdSet) - feature ids</li>
+    </ul></dd>
+    <dt>Overrides:
+        <a href="TEES.ExampleBuilders.FeatureBuilders.FeatureBuilder.FeatureBuilder-class.html#__init__">FeatureBuilder.FeatureBuilder.__init__</a>
+    </dt>
+  </dl>
+</td></tr></table>
+</div>
+<a name="setFeatureVector"></a>
+<div>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr><td>
+  <table width="100%" cellpadding="0" cellspacing="0" border="0">
+  <tr valign="top"><td>
+  <h3 class="epydoc"><span class="sig"><span class="sig-name">setFeatureVector</span>(<span class="sig-arg">self</span>,
+        <span class="sig-arg">features</span>=<span class="sig-default">None</span>,
+        <span class="sig-arg">entity1</span>=<span class="sig-default">None</span>,
+        <span class="sig-arg">entity2</span>=<span class="sig-default">None</span>,
+        <span class="sig-arg">resetCache</span>=<span class="sig-default">True</span>)</span>
+  </h3>
+  </td><td align="right" valign="top"
+    ><span class="codelink"><a href="TEES.ExampleBuilders.FeatureBuilders.MultiEdgeFeatureBuilder-pysrc.html#MultiEdgeFeatureBuilder.setFeatureVector">source&nbsp;code</a></span>&nbsp;
+    </td>
+  </tr></table>
+  
+  <p>When the feature builder builds features, they are put to this feature
+  vector.</p>
+  <dl class="fields">
+    <dt>Parameters:</dt>
+    <dd><ul class="nomargin-top">
+        <li><strong class="pname"><code>features</code></strong> (dictionary) - a reference to the feature vector</li>
+        <li><strong class="pname"><code>entity1</code></strong> (cElementTree.Element) - an entity used by trigger or edge feature builders</li>
+        <li><strong class="pname"><code>entity2</code></strong> (cElementTree.Element) - an entity used by trigger or edge feature builders</li>
+        <li><strong class="pname"><code>resetCache</code></strong> (boolean) - Some intermediate features are cached to speed up example 
+          generation. This cache should be cleared when moving to another 
+          example.</li>
+    </ul></dd>
+    <dt>Overrides:
+        <a href="TEES.ExampleBuilders.FeatureBuilders.FeatureBuilder.FeatureBuilder-class.html#setFeatureVector">FeatureBuilder.FeatureBuilder.setFeatureVector</a>
+    </dt>
+  </dl>
+</td></tr></table>
+</div>
+<a name="buildPredictedValueFeatures"></a>
+<div>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr><td>
+  <table width="100%" cellpadding="0" cellspacing="0" border="0">
+  <tr valign="top"><td>
+  <h3 class="epydoc"><span class="sig"><span class="sig-name">buildPredictedValueFeatures</span>(<span class="sig-arg">self</span>,
+        <span class="sig-arg">element</span>,
+        <span class="sig-arg">tag</span>)</span>
+  </h3>
+  </td><td align="right" valign="top"
+    ><span class="codelink"><a href="TEES.ExampleBuilders.FeatureBuilders.MultiEdgeFeatureBuilder-pysrc.html#MultiEdgeFeatureBuilder.buildPredictedValueFeatures">source&nbsp;code</a></span>&nbsp;
+    </td>
+  </tr></table>
+  
+  <p>Edge examples are usually predicted on top of predicted entities. The 
+  entities' confidence scores can be used as features for edge detection. 
+  For these features to be used, the model must also have been trained on 
+  data that contains prediction confidence scores.</p>
+  <dl class="fields">
+  </dl>
+</td></tr></table>
+</div>
+<a name="buildEntityFeatures"></a>
+<div>
+<table class="details" border="1" cellpadding="3"
+       cellspacing="0" width="100%" bgcolor="white">
+<tr><td>
+  <table width="100%" cellpadding="0" cellspacing="0" border="0">
+  <tr valign="top"><td>
+  <h3 class="epydoc"><span class="sig"><span class="sig-name">buildEntityFeatures</span>(<span class="sig-arg">self</span>,
+        <span class="sig-arg">sentenceGraph</span>)</span>
+  </h3>
+  </td><td align="right" valign="top"
+    ><span class="codelink"><a href="TEES.ExampleBuilders.FeatureBuilders.MultiEdgeFeatureBuilder-pysrc.html#MultiEdgeFeatureBuilder.buildEntityFeatures">source&nbsp;code</a></span>&nbsp;
+    </td>
+  </tr></table>
+  
+  <p>Build features for the two entities of the current example. These 
+  features are labeled as &quot;e1&quot; or &quot;e2&quot;, so entity order
+  is meaningful.</p>
+  <dl class="fields">
+  </dl>
+</td></tr></table>
+</div>
+<br />
+<!-- ==================== NAVIGATION BAR ==================== -->
+<table class="navbar" border="0" width="100%" cellpadding="0"
+       bgcolor="#a0c0ff" cellspacing="0">
+  <tr valign="middle">
+  <!-- Home link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="TEES-module.html">Home</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Tree link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="module-tree.html">Trees</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Index link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="identifier-index.html">Indices</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Help link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="help.html">Help</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Project homepage -->
+      <th class="navbar" align="right" width="100%">
+        <table border="0" cellpadding="0" cellspacing="0">
+          <tr><th class="navbar" align="center"
+            >Turku Event Extraction System</th>
+          </tr></table></th>
+  </tr>
+</table>
+<table border="0" cellpadding="0" cellspacing="0" width="100%%">
+  <tr>
+    <td align="left" class="footer">
+    Generated by Epydoc 3.0.1 on Thu Jul 19 18:20:45 2012
+    </td>
+    <td align="right" class="footer">
+      <a target="mainFrame" href="http://epydoc.sourceforge.net"
+        >http://epydoc.sourceforge.net</a>
+    </td>
+  </tr>
+</table>
+
+<script type="text/javascript">
+  <!--
+  // Private objects are initially displayed (because if
+  // javascript is turned off then we want them to be
+  // visible); but by default, we want to hide them.  So hide
+  // them unless we have a cookie that says to show them.
+  checkCookie();
+  // -->
+</script>
+</body>
+</html>

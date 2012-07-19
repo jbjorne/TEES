@@ -1,0 +1,409 @@
+<?xml version="1.0" encoding="ascii"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+          "DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+  <title>TEES.Classifiers.SVMMultiClassClassifier</title>
+  <link rel="stylesheet" href="epydoc.css" type="text/css" />
+  <script type="text/javascript" src="epydoc.js"></script>
+</head>
+
+<body bgcolor="white" text="black" link="blue" vlink="#204080"
+      alink="#204080">
+<!-- ==================== NAVIGATION BAR ==================== -->
+<table class="navbar" border="0" width="100%" cellpadding="0"
+       bgcolor="#a0c0ff" cellspacing="0">
+  <tr valign="middle">
+  <!-- Home link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="TEES-module.html">Home</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Tree link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="module-tree.html">Trees</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Index link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="identifier-index.html">Indices</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Help link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="help.html">Help</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Project homepage -->
+      <th class="navbar" align="right" width="100%">
+        <table border="0" cellpadding="0" cellspacing="0">
+          <tr><th class="navbar" align="center"
+            >Turku Event Extraction System</th>
+          </tr></table></th>
+  </tr>
+</table>
+<table width="100%" cellpadding="0" cellspacing="0">
+  <tr valign="top">
+    <td width="100%">
+      <span class="breadcrumbs">
+        <a href="TEES-module.html">Package&nbsp;TEES</a> ::
+        <a href="TEES.Classifiers-module.html">Package&nbsp;Classifiers</a> ::
+        Module&nbsp;SVMMultiClassClassifier
+      </span>
+    </td>
+    <td>
+      <table cellpadding="0" cellspacing="0">
+        <!-- hide/show private -->
+        <tr><td align="right"><span class="options">[<a href="javascript:void(0);" class="privatelink"
+    onclick="toggle_private();">hide&nbsp;private</a>]</span></td></tr>
+      </table>
+    </td>
+  </tr>
+</table>
+<h1 class="epydoc">Source Code for <a href="TEES.Classifiers.SVMMultiClassClassifier-module.html">Module TEES.Classifiers.SVMMultiClassClassifier</a></h1>
+<pre class="py-src">
+<a name="L1"></a><tt class="py-lineno">  1</tt>  <tt class="py-line"><tt class="py-keyword">import</tt> <tt class="py-name">sys</tt><tt class="py-op">,</tt><tt class="py-name">os</tt> </tt>
+<a name="L2"></a><tt class="py-lineno">  2</tt>  <tt class="py-line"><tt class="py-name">sys</tt><tt class="py-op">.</tt><tt class="py-name">path</tt><tt class="py-op">.</tt><tt class="py-name">append</tt><tt class="py-op">(</tt><tt class="py-name">os</tt><tt class="py-op">.</tt><tt class="py-name">path</tt><tt class="py-op">.</tt><tt class="py-name">dirname</tt><tt class="py-op">(</tt><tt class="py-name">os</tt><tt class="py-op">.</tt><tt class="py-name">path</tt><tt class="py-op">.</tt><tt class="py-name">abspath</tt><tt class="py-op">(</tt><tt class="py-name">__file__</tt><tt class="py-op">)</tt><tt class="py-op">)</tt><tt class="py-op">+</tt><tt class="py-string">"/.."</tt><tt class="py-op">)</tt> </tt>
+<a name="L3"></a><tt class="py-lineno">  3</tt>  <tt class="py-line"><tt class="py-keyword">import</tt> <tt class="py-name">subprocess</tt> </tt>
+<a name="L4"></a><tt class="py-lineno">  4</tt>  <tt class="py-line"><tt class="py-keyword">import</tt> <tt class="py-name">copy</tt> </tt>
+<a name="L5"></a><tt class="py-lineno">  5</tt>  <tt class="py-line"><tt class="py-keyword">import</tt> <tt class="py-name">tempfile</tt> </tt>
+<a name="L6"></a><tt class="py-lineno">  6</tt>  <tt class="py-line"><tt class="py-keyword">import</tt> <tt class="py-name">types</tt><tt class="py-op">,</tt> <tt class="py-name">copy</tt> </tt>
+<a name="L7"></a><tt class="py-lineno">  7</tt>  <tt class="py-line"><tt class="py-keyword">from</tt> <tt id="link-0" class="py-name" targets="Module TEES.Classifiers.ExternalClassifier=TEES.Classifiers.ExternalClassifier-module.html,Class TEES.Classifiers.ExternalClassifier.ExternalClassifier=TEES.Classifiers.ExternalClassifier.ExternalClassifier-class.html"><a title="TEES.Classifiers.ExternalClassifier
+TEES.Classifiers.ExternalClassifier.ExternalClassifier" class="py-name" href="#" onclick="return doclink('link-0', 'ExternalClassifier', 'link-0');">ExternalClassifier</a></tt> <tt class="py-keyword">import</tt> <tt id="link-1" class="py-name"><a title="TEES.Classifiers.ExternalClassifier
+TEES.Classifiers.ExternalClassifier.ExternalClassifier" class="py-name" href="#" onclick="return doclink('link-1', 'ExternalClassifier', 'link-0');">ExternalClassifier</a></tt> </tt>
+<a name="L8"></a><tt class="py-lineno">  8</tt>  <tt class="py-line"><tt class="py-keyword">import</tt> <tt id="link-2" class="py-name" targets="Package TEES.Utils=TEES.Utils-module.html"><a title="TEES.Utils" class="py-name" href="#" onclick="return doclink('link-2', 'Utils', 'link-2');">Utils</a></tt><tt class="py-op">.</tt><tt id="link-3" class="py-name" targets="Module TEES.Utils.Settings=TEES.Utils.Settings-module.html"><a title="TEES.Utils.Settings" class="py-name" href="#" onclick="return doclink('link-3', 'Settings', 'link-3');">Settings</a></tt> <tt class="py-keyword">as</tt> <tt id="link-4" class="py-name"><a title="TEES.Utils.Settings" class="py-name" href="#" onclick="return doclink('link-4', 'Settings', 'link-3');">Settings</a></tt> </tt>
+<a name="L9"></a><tt class="py-lineno">  9</tt>  <tt class="py-line"><tt class="py-keyword">import</tt> <tt id="link-5" class="py-name"><a title="TEES.Utils" class="py-name" href="#" onclick="return doclink('link-5', 'Utils', 'link-2');">Utils</a></tt><tt class="py-op">.</tt><tt id="link-6" class="py-name" targets="Module TEES.Utils.Download=TEES.Utils.Download-module.html"><a title="TEES.Utils.Download" class="py-name" href="#" onclick="return doclink('link-6', 'Download', 'link-6');">Download</a></tt> <tt class="py-keyword">as</tt> <tt id="link-7" class="py-name"><a title="TEES.Utils.Download" class="py-name" href="#" onclick="return doclink('link-7', 'Download', 'link-6');">Download</a></tt> </tt>
+<a name="L10"></a><tt class="py-lineno"> 10</tt>  <tt class="py-line"><tt class="py-keyword">import</tt> <tt id="link-8" class="py-name" targets="Package TEES.Tools=TEES.Tools-module.html"><a title="TEES.Tools" class="py-name" href="#" onclick="return doclink('link-8', 'Tools', 'link-8');">Tools</a></tt><tt class="py-op">.</tt><tt id="link-9" class="py-name" targets="Module TEES.Tools.Tool=TEES.Tools.Tool-module.html"><a title="TEES.Tools.Tool" class="py-name" href="#" onclick="return doclink('link-9', 'Tool', 'link-9');">Tool</a></tt> </tt>
+<a name="L11"></a><tt class="py-lineno"> 11</tt>  <tt class="py-line"><tt class="py-comment">#import SVMMultiClassModelUtils</tt> </tt>
+<a name="L12"></a><tt class="py-lineno"> 12</tt>  <tt class="py-line"><tt class="py-keyword">from</tt> <tt id="link-10" class="py-name" targets="Package TEES.Evaluators=TEES.Evaluators-module.html"><a title="TEES.Evaluators" class="py-name" href="#" onclick="return doclink('link-10', 'Evaluators', 'link-10');">Evaluators</a></tt><tt class="py-op">.</tt><tt id="link-11" class="py-name" targets="Module TEES.Evaluators.AveragingMultiClassEvaluator=TEES.Evaluators.AveragingMultiClassEvaluator-module.html,Class TEES.Evaluators.AveragingMultiClassEvaluator.AveragingMultiClassEvaluator=TEES.Evaluators.AveragingMultiClassEvaluator.AveragingMultiClassEvaluator-class.html"><a title="TEES.Evaluators.AveragingMultiClassEvaluator
+TEES.Evaluators.AveragingMultiClassEvaluator.AveragingMultiClassEvaluator" class="py-name" href="#" onclick="return doclink('link-11', 'AveragingMultiClassEvaluator', 'link-11');">AveragingMultiClassEvaluator</a></tt> <tt class="py-keyword">import</tt> <tt id="link-12" class="py-name"><a title="TEES.Evaluators.AveragingMultiClassEvaluator
+TEES.Evaluators.AveragingMultiClassEvaluator.AveragingMultiClassEvaluator" class="py-name" href="#" onclick="return doclink('link-12', 'AveragingMultiClassEvaluator', 'link-11');">AveragingMultiClassEvaluator</a></tt> </tt>
+<a name="L13"></a><tt class="py-lineno"> 13</tt>  <tt class="py-line"> </tt>
+<a name="install"></a><div id="install-def"><a name="L14"></a><tt class="py-lineno"> 14</tt> <a class="py-toggle" href="#" id="install-toggle" onclick="return toggle('install');">-</a><tt class="py-line"><tt class="py-keyword">def</tt> <a class="py-def-name" href="TEES.Classifiers.SVMMultiClassClassifier-module.html#install">install</a><tt class="py-op">(</tt><tt class="py-param">destDir</tt><tt class="py-op">=</tt><tt class="py-name">None</tt><tt class="py-op">,</tt> <tt class="py-param">downloadDir</tt><tt class="py-op">=</tt><tt class="py-name">None</tt><tt class="py-op">,</tt> <tt class="py-param">redownload</tt><tt class="py-op">=</tt><tt class="py-name">False</tt><tt class="py-op">,</tt> <tt class="py-param">compile</tt><tt class="py-op">=</tt><tt class="py-name">True</tt><tt class="py-op">,</tt> <tt class="py-param">updateLocalSettings</tt><tt class="py-op">=</tt><tt class="py-name">False</tt><tt class="py-op">)</tt><tt class="py-op">:</tt> </tt>
+</div><div id="install-collapsed" style="display:none;" pad="+++" indent="++++"></div><div id="install-expanded"><a name="L15"></a><tt class="py-lineno"> 15</tt>  <tt class="py-line">    <tt class="py-keyword">print</tt> <tt class="py-op">&gt;&gt;</tt> <tt class="py-name">sys</tt><tt class="py-op">.</tt><tt class="py-name">stderr</tt><tt class="py-op">,</tt> <tt class="py-string">"Installing SVM-Multiclass"</tt> </tt>
+<a name="L16"></a><tt class="py-lineno"> 16</tt>  <tt class="py-line">    <tt class="py-keyword">if</tt> <tt class="py-name">compile</tt><tt class="py-op">:</tt> </tt>
+<a name="L17"></a><tt class="py-lineno"> 17</tt>  <tt class="py-line">        <tt class="py-name">url</tt> <tt class="py-op">=</tt> <tt id="link-13" class="py-name"><a title="TEES.Utils.Settings" class="py-name" href="#" onclick="return doclink('link-13', 'Settings', 'link-3');">Settings</a></tt><tt class="py-op">.</tt><tt id="link-14" class="py-name" targets="Variable TEES.Utils.DefaultSettings.URL=TEES.Utils.DefaultSettings-module.html#URL,Variable TEES.Utils.Settings.URL=TEES.Utils.Settings-module.html#URL"><a title="TEES.Utils.DefaultSettings.URL
+TEES.Utils.Settings.URL" class="py-name" href="#" onclick="return doclink('link-14', 'URL', 'link-14');">URL</a></tt><tt class="py-op">[</tt><tt class="py-string">"SVM_MULTICLASS_SOURCE"</tt><tt class="py-op">]</tt> </tt>
+<a name="L18"></a><tt class="py-lineno"> 18</tt>  <tt class="py-line">    <tt class="py-keyword">else</tt><tt class="py-op">:</tt> </tt>
+<a name="L19"></a><tt class="py-lineno"> 19</tt>  <tt class="py-line">        <tt class="py-name">url</tt> <tt class="py-op">=</tt> <tt id="link-15" class="py-name"><a title="TEES.Utils.Settings" class="py-name" href="#" onclick="return doclink('link-15', 'Settings', 'link-3');">Settings</a></tt><tt class="py-op">.</tt><tt id="link-16" class="py-name"><a title="TEES.Utils.DefaultSettings.URL
+TEES.Utils.Settings.URL" class="py-name" href="#" onclick="return doclink('link-16', 'URL', 'link-14');">URL</a></tt><tt class="py-op">[</tt><tt class="py-string">"SVM_MULTICLASS_LINUX"</tt><tt class="py-op">]</tt> </tt>
+<a name="L20"></a><tt class="py-lineno"> 20</tt>  <tt class="py-line">    <tt class="py-keyword">if</tt> <tt class="py-name">downloadDir</tt> <tt class="py-op">==</tt> <tt class="py-name">None</tt><tt class="py-op">:</tt> </tt>
+<a name="L21"></a><tt class="py-lineno"> 21</tt>  <tt class="py-line">        <tt class="py-name">downloadDir</tt> <tt class="py-op">=</tt> <tt class="py-name">os</tt><tt class="py-op">.</tt><tt class="py-name">path</tt><tt class="py-op">.</tt><tt class="py-name">join</tt><tt class="py-op">(</tt><tt id="link-17" class="py-name"><a title="TEES.Utils.Settings" class="py-name" href="#" onclick="return doclink('link-17', 'Settings', 'link-3');">Settings</a></tt><tt class="py-op">.</tt><tt id="link-18" class="py-name" targets="Variable TEES.Utils.DefaultSettings.DATAPATH=TEES.Utils.DefaultSettings-module.html#DATAPATH,Variable TEES.Utils.Settings.DATAPATH=TEES.Utils.Settings-module.html#DATAPATH"><a title="TEES.Utils.DefaultSettings.DATAPATH
+TEES.Utils.Settings.DATAPATH" class="py-name" href="#" onclick="return doclink('link-18', 'DATAPATH', 'link-18');">DATAPATH</a></tt><tt class="py-op">,</tt> <tt class="py-string">"tools/download/"</tt><tt class="py-op">)</tt> </tt>
+<a name="L22"></a><tt class="py-lineno"> 22</tt>  <tt class="py-line">    <tt class="py-keyword">if</tt> <tt class="py-name">destDir</tt> <tt class="py-op">==</tt> <tt class="py-name">None</tt><tt class="py-op">:</tt> </tt>
+<a name="L23"></a><tt class="py-lineno"> 23</tt>  <tt class="py-line">        <tt class="py-name">destDir</tt> <tt class="py-op">=</tt> <tt id="link-19" class="py-name"><a title="TEES.Utils.Settings" class="py-name" href="#" onclick="return doclink('link-19', 'Settings', 'link-3');">Settings</a></tt><tt class="py-op">.</tt><tt id="link-20" class="py-name"><a title="TEES.Utils.DefaultSettings.DATAPATH
+TEES.Utils.Settings.DATAPATH" class="py-name" href="#" onclick="return doclink('link-20', 'DATAPATH', 'link-18');">DATAPATH</a></tt> </tt>
+<a name="L24"></a><tt class="py-lineno"> 24</tt>  <tt class="py-line">    <tt class="py-name">destDir</tt> <tt class="py-op">+=</tt> <tt class="py-string">"/tools/SVMMultiClass"</tt> </tt>
+<a name="L25"></a><tt class="py-lineno"> 25</tt>  <tt class="py-line">     </tt>
+<a name="L26"></a><tt class="py-lineno"> 26</tt>  <tt class="py-line">    <tt id="link-21" class="py-name"><a title="TEES.Utils.Download" class="py-name" href="#" onclick="return doclink('link-21', 'Download', 'link-6');">Download</a></tt><tt class="py-op">.</tt><tt id="link-22" class="py-name" targets="Function TEES.Utils.Download.downloadAndExtract()=TEES.Utils.Download-module.html#downloadAndExtract"><a title="TEES.Utils.Download.downloadAndExtract" class="py-name" href="#" onclick="return doclink('link-22', 'downloadAndExtract', 'link-22');">downloadAndExtract</a></tt><tt class="py-op">(</tt><tt class="py-name">url</tt><tt class="py-op">,</tt> <tt class="py-name">destDir</tt><tt class="py-op">,</tt> <tt class="py-name">downloadDir</tt><tt class="py-op">,</tt> <tt class="py-name">redownload</tt><tt class="py-op">=</tt><tt class="py-name">redownload</tt><tt class="py-op">)</tt> </tt>
+<a name="L27"></a><tt class="py-lineno"> 27</tt>  <tt class="py-line">    <tt class="py-keyword">if</tt> <tt class="py-name">compile</tt><tt class="py-op">:</tt> </tt>
+<a name="L28"></a><tt class="py-lineno"> 28</tt>  <tt class="py-line">        <tt class="py-keyword">print</tt> <tt class="py-op">&gt;&gt;</tt> <tt class="py-name">sys</tt><tt class="py-op">.</tt><tt class="py-name">stderr</tt><tt class="py-op">,</tt> <tt class="py-string">"Compiling SVM-Multiclass"</tt> </tt>
+<a name="L29"></a><tt class="py-lineno"> 29</tt>  <tt class="py-line">        <tt id="link-23" class="py-name"><a title="TEES.Tools" class="py-name" href="#" onclick="return doclink('link-23', 'Tools', 'link-8');">Tools</a></tt><tt class="py-op">.</tt><tt id="link-24" class="py-name"><a title="TEES.Tools.Tool" class="py-name" href="#" onclick="return doclink('link-24', 'Tool', 'link-9');">Tool</a></tt><tt class="py-op">.</tt><tt id="link-25" class="py-name" targets="Function TEES.Tools.Tool.testPrograms()=TEES.Tools.Tool-module.html#testPrograms"><a title="TEES.Tools.Tool.testPrograms" class="py-name" href="#" onclick="return doclink('link-25', 'testPrograms', 'link-25');">testPrograms</a></tt><tt class="py-op">(</tt><tt class="py-string">"SVM-Multiclass"</tt><tt class="py-op">,</tt> <tt class="py-op">[</tt><tt class="py-string">"make"</tt><tt class="py-op">]</tt><tt class="py-op">)</tt> </tt>
+<a name="L30"></a><tt class="py-lineno"> 30</tt>  <tt class="py-line">        <tt class="py-name">subprocess</tt><tt class="py-op">.</tt><tt class="py-name">call</tt><tt class="py-op">(</tt><tt class="py-string">"cd "</tt> <tt class="py-op">+</tt> <tt class="py-name">destDir</tt> <tt class="py-op">+</tt> <tt class="py-string">"; make"</tt><tt class="py-op">,</tt> <tt class="py-name">shell</tt><tt class="py-op">=</tt><tt class="py-name">True</tt><tt class="py-op">)</tt> </tt>
+<a name="L31"></a><tt class="py-lineno"> 31</tt>  <tt class="py-line">     </tt>
+<a name="L32"></a><tt class="py-lineno"> 32</tt>  <tt class="py-line">    <tt id="link-26" class="py-name"><a title="TEES.Tools" class="py-name" href="#" onclick="return doclink('link-26', 'Tools', 'link-8');">Tools</a></tt><tt class="py-op">.</tt><tt id="link-27" class="py-name"><a title="TEES.Tools.Tool" class="py-name" href="#" onclick="return doclink('link-27', 'Tool', 'link-9');">Tool</a></tt><tt class="py-op">.</tt><tt id="link-28" class="py-name" targets="Function TEES.Tools.Tool.finalizeInstall()=TEES.Tools.Tool-module.html#finalizeInstall"><a title="TEES.Tools.Tool.finalizeInstall" class="py-name" href="#" onclick="return doclink('link-28', 'finalizeInstall', 'link-28');">finalizeInstall</a></tt><tt class="py-op">(</tt><tt class="py-op">[</tt><tt class="py-string">"svm_multiclass_learn"</tt><tt class="py-op">,</tt> <tt class="py-string">"svm_multiclass_classify"</tt><tt class="py-op">]</tt><tt class="py-op">,</tt>  </tt>
+<a name="L33"></a><tt class="py-lineno"> 33</tt>  <tt class="py-line">        <tt class="py-op">{</tt><tt class="py-string">"svm_multiclass_learn"</tt><tt class="py-op">:</tt><tt class="py-string">"echo | ./svm_multiclass_learn -? &gt; /dev/null"</tt><tt class="py-op">,</tt>  </tt>
+<a name="L34"></a><tt class="py-lineno"> 34</tt>  <tt class="py-line">         <tt class="py-string">"svm_multiclass_classify"</tt><tt class="py-op">:</tt><tt class="py-string">"echo | ./svm_multiclass_classify -? &gt; /dev/null"</tt><tt class="py-op">}</tt><tt class="py-op">,</tt> </tt>
+<a name="L35"></a><tt class="py-lineno"> 35</tt>  <tt class="py-line">        <tt class="py-name">destDir</tt><tt class="py-op">,</tt> <tt class="py-op">{</tt><tt class="py-string">"SVM_MULTICLASS_DIR"</tt><tt class="py-op">:</tt><tt class="py-name">destDir</tt><tt class="py-op">}</tt><tt class="py-op">,</tt> <tt class="py-name">updateLocalSettings</tt><tt class="py-op">)</tt> </tt>
+</div><a name="L36"></a><tt class="py-lineno"> 36</tt>  <tt class="py-line"> </tt>
+<a name="SVMMultiClassClassifier"></a><div id="SVMMultiClassClassifier-def"><a name="L37"></a><tt class="py-lineno"> 37</tt> <a class="py-toggle" href="#" id="SVMMultiClassClassifier-toggle" onclick="return toggle('SVMMultiClassClassifier');">-</a><tt class="py-line"><tt class="py-keyword">class</tt> <a class="py-def-name" href="TEES.Classifiers.SVMMultiClassClassifier.SVMMultiClassClassifier-class.html">SVMMultiClassClassifier</a><tt class="py-op">(</tt><tt class="py-base-class">ExternalClassifier</tt><tt class="py-op">)</tt><tt class="py-op">:</tt> </tt>
+</div><div id="SVMMultiClassClassifier-collapsed" style="display:none;" pad="+++" indent="++++"></div><div id="SVMMultiClassClassifier-expanded"><a name="L38"></a><tt class="py-lineno"> 38</tt>  <tt class="py-line">    <tt class="py-docstring">"""</tt> </tt>
+<a name="L39"></a><tt class="py-lineno"> 39</tt>  <tt class="py-line"><tt class="py-docstring">    A wrapper for the Joachims SVM Multiclass classifier.</tt> </tt>
+<a name="L40"></a><tt class="py-lineno"> 40</tt>  <tt class="py-line"><tt class="py-docstring">    """</tt> </tt>
+<a name="L41"></a><tt class="py-lineno"> 41</tt>  <tt class="py-line">     </tt>
+<a name="SVMMultiClassClassifier.__init__"></a><div id="SVMMultiClassClassifier.__init__-def"><a name="L42"></a><tt class="py-lineno"> 42</tt> <a class="py-toggle" href="#" id="SVMMultiClassClassifier.__init__-toggle" onclick="return toggle('SVMMultiClassClassifier.__init__');">-</a><tt class="py-line">    <tt class="py-keyword">def</tt> <a class="py-def-name" href="TEES.Classifiers.SVMMultiClassClassifier.SVMMultiClassClassifier-class.html#__init__">__init__</a><tt class="py-op">(</tt><tt class="py-param">self</tt><tt class="py-op">,</tt> <tt class="py-param">connection</tt><tt class="py-op">=</tt><tt class="py-name">None</tt><tt class="py-op">)</tt><tt class="py-op">:</tt> </tt>
+</div><div id="SVMMultiClassClassifier.__init__-collapsed" style="display:none;" pad="+++" indent="++++++++"></div><div id="SVMMultiClassClassifier.__init__-expanded"><a name="L43"></a><tt class="py-lineno"> 43</tt>  <tt class="py-line">        <tt id="link-29" class="py-name"><a title="TEES.Classifiers.ExternalClassifier
+TEES.Classifiers.ExternalClassifier.ExternalClassifier" class="py-name" href="#" onclick="return doclink('link-29', 'ExternalClassifier', 'link-0');">ExternalClassifier</a></tt><tt class="py-op">.</tt><tt id="link-30" class="py-name" targets="Method TEES.Classifiers.AllCorrectClassifier.AllCorrectClassifier.__init__()=TEES.Classifiers.AllCorrectClassifier.AllCorrectClassifier-class.html#__init__,Method TEES.Classifiers.AllTrueClassifier.AllTrueClassifier.__init__()=TEES.Classifiers.AllTrueClassifier.AllTrueClassifier-class.html#__init__,Method TEES.Classifiers.ExternalClassifier.ExternalClassifier.__init__()=TEES.Classifiers.ExternalClassifier.ExternalClassifier-class.html#__init__,Method TEES.Classifiers.SVMMultiClassClassifier.SVMMultiClassClassifier.__init__()=TEES.Classifiers.SVMMultiClassClassifier.SVMMultiClassClassifier-class.html#__init__,Method TEES.Core.IdSet.IdSet.__init__()=TEES.Core.IdSet.IdSet-class.html#__init__,Method TEES.Core.Model.Model.__init__()=TEES.Core.Model.Model-class.html#__init__,Method TEES.Core.SentenceGraph.SentenceGraph.__init__()=TEES.Core.SentenceGraph.SentenceGraph-class.html#__init__,Method TEES.Core.SimpleGraph.Graph.__init__()=TEES.Core.SimpleGraph.Graph-class.html#__init__,Method TEES.Detectors.CODetector.CODetector.__init__()=TEES.Detectors.CODetector.CODetector-class.html#__init__,Method TEES.Detectors.Detector.Detector.__init__()=TEES.Detectors.Detector.Detector-class.html#__init__,Method TEES.Detectors.EdgeDetector.EdgeDetector.__init__()=TEES.Detectors.EdgeDetector.EdgeDetector-class.html#__init__,Method TEES.Detectors.EntityDetector.EntityDetector.__init__()=TEES.Detectors.EntityDetector.EntityDetector-class.html#__init__,Method TEES.Detectors.EventDetector.EventDetector.__init__()=TEES.Detectors.EventDetector.EventDetector-class.html#__init__,Method TEES.Detectors.ModifierDetector.ModifierDetector.__init__()=TEES.Detectors.ModifierDetector.ModifierDetector-class.html#__init__,Method TEES.Detectors.Preprocessor.Preprocessor.__init__()=TEES.Detectors.Preprocessor.Preprocessor-class.html#__init__,Method TEES.Detectors.SingleStageDetector.SingleStageDetector.__init__()=TEES.Detectors.SingleStageDetector.SingleStageDetector-class.html#__init__,Method TEES.Detectors.StepSelector.StepSelector.__init__()=TEES.Detectors.StepSelector.StepSelector-class.html#__init__,Method TEES.Detectors.ToolChain.ToolChain.__init__()=TEES.Detectors.ToolChain.ToolChain-class.html#__init__,Method TEES.Detectors.UnmergingDetector.UnmergingDetector.__init__()=TEES.Detectors.UnmergingDetector.UnmergingDetector-class.html#__init__,Method TEES.Evaluators.AveragingMultiClassEvaluator.AveragingMultiClassEvaluator.__init__()=TEES.Evaluators.AveragingMultiClassEvaluator.AveragingMultiClassEvaluator-class.html#__init__,Method TEES.Evaluators.BinaryEvaluator.BinaryEvaluator.__init__()=TEES.Evaluators.BinaryEvaluator.BinaryEvaluator-class.html#__init__,Method TEES.Evaluators.Evaluator.EvaluationData.__init__()=TEES.Evaluators.Evaluator.EvaluationData-class.html#__init__,Method TEES.ExampleBuilders.EdgeExampleBuilder.EdgeExampleBuilder.__init__()=TEES.ExampleBuilders.EdgeExampleBuilder.EdgeExampleBuilder-class.html#__init__,Method TEES.ExampleBuilders.EntityExampleBuilder.EntityExampleBuilder.__init__()=TEES.ExampleBuilders.EntityExampleBuilder.EntityExampleBuilder-class.html#__init__,Method TEES.ExampleBuilders.ExampleBuilder.ExampleBuilder.__init__()=TEES.ExampleBuilders.ExampleBuilder.ExampleBuilder-class.html#__init__,Method TEES.ExampleBuilders.ExampleStats.ExampleStats.__init__()=TEES.ExampleBuilders.ExampleStats.ExampleStats-class.html#__init__,Method TEES.ExampleBuilders.FeatureBuilders.BacteriaRenamingFeatureBuilder.BacteriaRenamingFeatureBuilder.__init__()=TEES.ExampleBuilders.FeatureBuilders.BacteriaRenamingFeatureBuilder.BacteriaRenamingFeatureBuilder-class.html#__init__,Method TEES.ExampleBuilders.FeatureBuilders.BioInferOntologyFeatureBuilder.BioInferOntologyFeatureBuilder.__init__()=TEES.ExampleBuilders.FeatureBuilders.BioInferOntologyFeatureBuilder.BioInferOntologyFeatureBuilder-class.html#__init__,Method TEES.ExampleBuilders.FeatureBuilders.DrugFeatureBuilder.DrugFeatureBuilder.__init__()=TEES.ExampleBuilders.FeatureBuilders.DrugFeatureBuilder.DrugFeatureBuilder-class.html#__init__,Method TEES.ExampleBuilders.FeatureBuilders.EVEXFeatureBuilder.EVEXFeatureBuilder.__init__()=TEES.ExampleBuilders.FeatureBuilders.EVEXFeatureBuilder.EVEXFeatureBuilder-class.html#__init__,Method TEES.ExampleBuilders.FeatureBuilders.EdgeFeatureBuilder.EdgeFeatureBuilder.__init__()=TEES.ExampleBuilders.FeatureBuilders.EdgeFeatureBuilder.EdgeFeatureBuilder-class.html#__init__,Method TEES.ExampleBuilders.FeatureBuilders.FeatureBuilder.FeatureBuilder.__init__()=TEES.ExampleBuilders.FeatureBuilders.FeatureBuilder.FeatureBuilder-class.html#__init__,Method TEES.ExampleBuilders.FeatureBuilders.GiulianoFeatureBuilder.GiulianoFeatureBuilder.__init__()=TEES.ExampleBuilders.FeatureBuilders.GiulianoFeatureBuilder.GiulianoFeatureBuilder-class.html#__init__,Method TEES.ExampleBuilders.FeatureBuilders.GraphKernelFeatureBuilder.GraphKernelFeatureBuilder.__init__()=TEES.ExampleBuilders.FeatureBuilders.GraphKernelFeatureBuilder.GraphKernelFeatureBuilder-class.html#__init__,Method TEES.ExampleBuilders.FeatureBuilders.MultiEdgeFeatureBuilder.MultiEdgeFeatureBuilder.__init__()=TEES.ExampleBuilders.FeatureBuilders.MultiEdgeFeatureBuilder.MultiEdgeFeatureBuilder-class.html#__init__,Method TEES.ExampleBuilders.FeatureBuilders.NameGazetteer.NameGazetteer.__init__()=TEES.ExampleBuilders.FeatureBuilders.NameGazetteer.NameGazetteer-class.html#__init__,Method TEES.ExampleBuilders.FeatureBuilders.NodalidaFeatureBuilder.NodalidaFeatureBuilder.__init__()=TEES.ExampleBuilders.FeatureBuilders.NodalidaFeatureBuilder.NodalidaFeatureBuilder-class.html#__init__,Method TEES.ExampleBuilders.FeatureBuilders.RELFeatureBuilder.RELFeatureBuilder.__init__()=TEES.ExampleBuilders.FeatureBuilders.RELFeatureBuilder.RELFeatureBuilder-class.html#__init__,Method TEES.ExampleBuilders.FeatureBuilders.RandomFeatureBuilder.RandomFeatureBuilder.__init__()=TEES.ExampleBuilders.FeatureBuilders.RandomFeatureBuilder.RandomFeatureBuilder-class.html#__init__,Method TEES.ExampleBuilders.FeatureBuilders.TokenFeatureBuilder.TokenFeatureBuilder.__init__()=TEES.ExampleBuilders.FeatureBuilders.TokenFeatureBuilder.TokenFeatureBuilder-class.html#__init__,Method TEES.ExampleBuilders.FeatureBuilders.TriggerFeatureBuilder.TriggerFeatureBuilder.__init__()=TEES.ExampleBuilders.FeatureBuilders.TriggerFeatureBuilder.TriggerFeatureBuilder-class.html#__init__,Method TEES.ExampleBuilders.FeatureBuilders.WordNetFeatureBuilder.WordNetFeatureBuilder.__init__()=TEES.ExampleBuilders.FeatureBuilders.WordNetFeatureBuilder.WordNetFeatureBuilder-class.html#__init__,Method TEES.ExampleBuilders.ModifierExampleBuilder.ModifierExampleBuilder.__init__()=TEES.ExampleBuilders.ModifierExampleBuilder.ModifierExampleBuilder-class.html#__init__,Method TEES.ExampleBuilders.PhraseTriggerExampleBuilder.PhraseTriggerExampleBuilder.__init__()=TEES.ExampleBuilders.PhraseTriggerExampleBuilder.PhraseTriggerExampleBuilder-class.html#__init__,Method TEES.ExampleBuilders.UnmergingExampleBuilder.UnmergingExampleBuilder.__init__()=TEES.ExampleBuilders.UnmergingExampleBuilder.UnmergingExampleBuilder-class.html#__init__,Method TEES.ExampleWriters.EdgeExampleWriter.EdgeExampleWriter.__init__()=TEES.ExampleWriters.EdgeExampleWriter.EdgeExampleWriter-class.html#__init__,Method TEES.ExampleWriters.EntityExampleWriter.EntityExampleWriter.__init__()=TEES.ExampleWriters.EntityExampleWriter.EntityExampleWriter-class.html#__init__,Method TEES.ExampleWriters.ModifierExampleWriter.ModifierExampleWriter.__init__()=TEES.ExampleWriters.ModifierExampleWriter.ModifierExampleWriter-class.html#__init__,Method TEES.ExampleWriters.PhraseTriggerExampleWriter.PhraseTriggerExampleWriter.__init__()=TEES.ExampleWriters.PhraseTriggerExampleWriter.PhraseTriggerExampleWriter-class.html#__init__,Method TEES.ExampleWriters.SentenceExampleWriter.SentenceExampleWriter.__init__()=TEES.ExampleWriters.SentenceExampleWriter.SentenceExampleWriter-class.html#__init__,Method TEES.ExampleWriters.UnmergingExampleWriter.UnmergingExampleWriter.__init__()=TEES.ExampleWriters.UnmergingExampleWriter.UnmergingExampleWriter-class.html#__init__,Method TEES.Tools.ProcessUtils.ProcessWrapper.__init__()=TEES.Tools.ProcessUtils.ProcessWrapper-class.html#__init__,Method TEES.Utils.Connection.ClusterConnection.ClusterConnection.__init__()=TEES.Utils.Connection.ClusterConnection.ClusterConnection-class.html#__init__,Method TEES.Utils.Connection.LSFConnection.LSFConnection.__init__()=TEES.Utils.Connection.LSFConnection.LSFConnection-class.html#__init__,Method TEES.Utils.Connection.PBSConnection.PBSConnection.__init__()=TEES.Utils.Connection.PBSConnection.PBSConnection-class.html#__init__,Method TEES.Utils.Connection.SLURMConnection.SLURMConnection.__init__()=TEES.Utils.Connection.SLURMConnection.SLURMConnection-class.html#__init__,Method TEES.Utils.Connection.UnixConnection.UnixConnection.__init__()=TEES.Utils.Connection.UnixConnection.UnixConnection-class.html#__init__,Method TEES.Utils.ElementTreeUtils.ETWriter.__init__()=TEES.Utils.ElementTreeUtils.ETWriter-class.html#__init__,Method TEES.Utils.InteractionXML.CorpusElements.CorpusElements.__init__()=TEES.Utils.InteractionXML.CorpusElements.CorpusElements-class.html#__init__,Method TEES.Utils.InteractionXML.ParseGraph.ParseGraph.__init__()=TEES.Utils.InteractionXML.ParseGraph.ParseGraph-class.html#__init__,Method TEES.Utils.InteractionXML.ParseGraph.ParseGraphNode.__init__()=TEES.Utils.InteractionXML.ParseGraph.ParseGraphNode-class.html#__init__,Method TEES.Utils.InteractionXML.SentenceElements.SentenceElements.__init__()=TEES.Utils.InteractionXML.SentenceElements.SentenceElements-class.html#__init__,Method TEES.Utils.Libraries.PorterStemmer.PorterStemmer.__init__()=TEES.Utils.Libraries.PorterStemmer.PorterStemmer-class.html#__init__,Method TEES.Utils.Libraries.progressbar.Bar.__init__()=TEES.Utils.Libraries.progressbar.Bar-class.html#__init__,Method TEES.Utils.Libraries.progressbar.FileTransferSpeed.__init__()=TEES.Utils.Libraries.progressbar.FileTransferSpeed-class.html#__init__,Method TEES.Utils.Libraries.progressbar.ProgressBar.__init__()=TEES.Utils.Libraries.progressbar.ProgressBar-class.html#__init__,Method TEES.Utils.Libraries.progressbar.RotatingMarker.__init__()=TEES.Utils.Libraries.progressbar.RotatingMarker-class.html#__init__,Method TEES.Utils.Libraries.stats.Dispatch.__init__()=TEES.Utils.Libraries.stats.Dispatch-class.html#__init__,Method TEES.Utils.Menu.Menu.__init__()=TEES.Utils.Menu.Menu-class.html#__init__,Method TEES.Utils.Menu.MenuSystem.__init__()=TEES.Utils.Menu.MenuSystem-class.html#__init__,Method TEES.Utils.Menu.Option.__init__()=TEES.Utils.Menu.Option-class.html#__init__,Method TEES.Utils.ProgressCounter.ProgressCounter.__init__()=TEES.Utils.ProgressCounter.ProgressCounter-class.html#__init__,Method TEES.Utils.ProteinNameSplitter.Token.__init__()=TEES.Utils.ProteinNameSplitter.Token-class.html#__init__,Method TEES.Utils.STFormat.STTools.Annotation.__init__()=TEES.Utils.STFormat.STTools.Annotation-class.html#__init__,Method TEES.Utils.STFormat.STTools.Document.__init__()=TEES.Utils.STFormat.STTools.Document-class.html#__init__,Method TEES.Utils.Stream.StreamModifier.__init__()=TEES.Utils.Stream.StreamModifier-class.html#__init__,Method TEES.Utils.Timer.Timer.__init__()=TEES.Utils.Timer.Timer-class.html#__init__"><a title="TEES.Classifiers.AllCorrectClassifier.AllCorrectClassifier.__init__
+TEES.Classifiers.AllTrueClassifier.AllTrueClassifier.__init__
+TEES.Classifiers.ExternalClassifier.ExternalClassifier.__init__
+TEES.Classifiers.SVMMultiClassClassifier.SVMMultiClassClassifier.__init__
+TEES.Core.IdSet.IdSet.__init__
+TEES.Core.Model.Model.__init__
+TEES.Core.SentenceGraph.SentenceGraph.__init__
+TEES.Core.SimpleGraph.Graph.__init__
+TEES.Detectors.CODetector.CODetector.__init__
+TEES.Detectors.Detector.Detector.__init__
+TEES.Detectors.EdgeDetector.EdgeDetector.__init__
+TEES.Detectors.EntityDetector.EntityDetector.__init__
+TEES.Detectors.EventDetector.EventDetector.__init__
+TEES.Detectors.ModifierDetector.ModifierDetector.__init__
+TEES.Detectors.Preprocessor.Preprocessor.__init__
+TEES.Detectors.SingleStageDetector.SingleStageDetector.__init__
+TEES.Detectors.StepSelector.StepSelector.__init__
+TEES.Detectors.ToolChain.ToolChain.__init__
+TEES.Detectors.UnmergingDetector.UnmergingDetector.__init__
+TEES.Evaluators.AveragingMultiClassEvaluator.AveragingMultiClassEvaluator.__init__
+TEES.Evaluators.BinaryEvaluator.BinaryEvaluator.__init__
+TEES.Evaluators.Evaluator.EvaluationData.__init__
+TEES.ExampleBuilders.EdgeExampleBuilder.EdgeExampleBuilder.__init__
+TEES.ExampleBuilders.EntityExampleBuilder.EntityExampleBuilder.__init__
+TEES.ExampleBuilders.ExampleBuilder.ExampleBuilder.__init__
+TEES.ExampleBuilders.ExampleStats.ExampleStats.__init__
+TEES.ExampleBuilders.FeatureBuilders.BacteriaRenamingFeatureBuilder.BacteriaRenamingFeatureBuilder.__init__
+TEES.ExampleBuilders.FeatureBuilders.BioInferOntologyFeatureBuilder.BioInferOntologyFeatureBuilder.__init__
+TEES.ExampleBuilders.FeatureBuilders.DrugFeatureBuilder.DrugFeatureBuilder.__init__
+TEES.ExampleBuilders.FeatureBuilders.EVEXFeatureBuilder.EVEXFeatureBuilder.__init__
+TEES.ExampleBuilders.FeatureBuilders.EdgeFeatureBuilder.EdgeFeatureBuilder.__init__
+TEES.ExampleBuilders.FeatureBuilders.FeatureBuilder.FeatureBuilder.__init__
+TEES.ExampleBuilders.FeatureBuilders.GiulianoFeatureBuilder.GiulianoFeatureBuilder.__init__
+TEES.ExampleBuilders.FeatureBuilders.GraphKernelFeatureBuilder.GraphKernelFeatureBuilder.__init__
+TEES.ExampleBuilders.FeatureBuilders.MultiEdgeFeatureBuilder.MultiEdgeFeatureBuilder.__init__
+TEES.ExampleBuilders.FeatureBuilders.NameGazetteer.NameGazetteer.__init__
+TEES.ExampleBuilders.FeatureBuilders.NodalidaFeatureBuilder.NodalidaFeatureBuilder.__init__
+TEES.ExampleBuilders.FeatureBuilders.RELFeatureBuilder.RELFeatureBuilder.__init__
+TEES.ExampleBuilders.FeatureBuilders.RandomFeatureBuilder.RandomFeatureBuilder.__init__
+TEES.ExampleBuilders.FeatureBuilders.TokenFeatureBuilder.TokenFeatureBuilder.__init__
+TEES.ExampleBuilders.FeatureBuilders.TriggerFeatureBuilder.TriggerFeatureBuilder.__init__
+TEES.ExampleBuilders.FeatureBuilders.WordNetFeatureBuilder.WordNetFeatureBuilder.__init__
+TEES.ExampleBuilders.ModifierExampleBuilder.ModifierExampleBuilder.__init__
+TEES.ExampleBuilders.PhraseTriggerExampleBuilder.PhraseTriggerExampleBuilder.__init__
+TEES.ExampleBuilders.UnmergingExampleBuilder.UnmergingExampleBuilder.__init__
+TEES.ExampleWriters.EdgeExampleWriter.EdgeExampleWriter.__init__
+TEES.ExampleWriters.EntityExampleWriter.EntityExampleWriter.__init__
+TEES.ExampleWriters.ModifierExampleWriter.ModifierExampleWriter.__init__
+TEES.ExampleWriters.PhraseTriggerExampleWriter.PhraseTriggerExampleWriter.__init__
+TEES.ExampleWriters.SentenceExampleWriter.SentenceExampleWriter.__init__
+TEES.ExampleWriters.UnmergingExampleWriter.UnmergingExampleWriter.__init__
+TEES.Tools.ProcessUtils.ProcessWrapper.__init__
+TEES.Utils.Connection.ClusterConnection.ClusterConnection.__init__
+TEES.Utils.Connection.LSFConnection.LSFConnection.__init__
+TEES.Utils.Connection.PBSConnection.PBSConnection.__init__
+TEES.Utils.Connection.SLURMConnection.SLURMConnection.__init__
+TEES.Utils.Connection.UnixConnection.UnixConnection.__init__
+TEES.Utils.ElementTreeUtils.ETWriter.__init__
+TEES.Utils.InteractionXML.CorpusElements.CorpusElements.__init__
+TEES.Utils.InteractionXML.ParseGraph.ParseGraph.__init__
+TEES.Utils.InteractionXML.ParseGraph.ParseGraphNode.__init__
+TEES.Utils.InteractionXML.SentenceElements.SentenceElements.__init__
+TEES.Utils.Libraries.PorterStemmer.PorterStemmer.__init__
+TEES.Utils.Libraries.progressbar.Bar.__init__
+TEES.Utils.Libraries.progressbar.FileTransferSpeed.__init__
+TEES.Utils.Libraries.progressbar.ProgressBar.__init__
+TEES.Utils.Libraries.progressbar.RotatingMarker.__init__
+TEES.Utils.Libraries.stats.Dispatch.__init__
+TEES.Utils.Menu.Menu.__init__
+TEES.Utils.Menu.MenuSystem.__init__
+TEES.Utils.Menu.Option.__init__
+TEES.Utils.ProgressCounter.ProgressCounter.__init__
+TEES.Utils.ProteinNameSplitter.Token.__init__
+TEES.Utils.STFormat.STTools.Annotation.__init__
+TEES.Utils.STFormat.STTools.Document.__init__
+TEES.Utils.Stream.StreamModifier.__init__
+TEES.Utils.Timer.Timer.__init__" class="py-name" href="#" onclick="return doclink('link-30', '__init__', 'link-30');">__init__</a></tt><tt class="py-op">(</tt><tt class="py-name">self</tt><tt class="py-op">,</tt> <tt class="py-name">connection</tt><tt class="py-op">=</tt><tt class="py-name">connection</tt><tt class="py-op">)</tt> </tt>
+<a name="L44"></a><tt class="py-lineno"> 44</tt>  <tt class="py-line">        <tt class="py-name">self</tt><tt class="py-op">.</tt><tt class="py-name">defaultEvaluator</tt> <tt class="py-op">=</tt> <tt id="link-31" class="py-name"><a title="TEES.Evaluators.AveragingMultiClassEvaluator
+TEES.Evaluators.AveragingMultiClassEvaluator.AveragingMultiClassEvaluator" class="py-name" href="#" onclick="return doclink('link-31', 'AveragingMultiClassEvaluator', 'link-11');">AveragingMultiClassEvaluator</a></tt> </tt>
+<a name="L45"></a><tt class="py-lineno"> 45</tt>  <tt class="py-line">        <tt class="py-name">self</tt><tt class="py-op">.</tt><tt class="py-name">parameterFormat</tt> <tt class="py-op">=</tt> <tt class="py-string">"-%k %v"</tt> </tt>
+<a name="L46"></a><tt class="py-lineno"> 46</tt>  <tt class="py-line">        <tt class="py-name">self</tt><tt class="py-op">.</tt><tt class="py-name">trainDirSetting</tt> <tt class="py-op">=</tt> <tt class="py-string">"SVM_MULTICLASS_DIR"</tt> </tt>
+<a name="L47"></a><tt class="py-lineno"> 47</tt>  <tt class="py-line">        <tt class="py-name">self</tt><tt class="py-op">.</tt><tt class="py-name">trainCommand</tt> <tt class="py-op">=</tt> <tt class="py-string">"svm_multiclass_learn %p %e %m"</tt> </tt>
+<a name="L48"></a><tt class="py-lineno"> 48</tt>  <tt class="py-line">        <tt class="py-name">self</tt><tt class="py-op">.</tt><tt class="py-name">classifyDirSetting</tt> <tt class="py-op">=</tt> <tt class="py-string">"SVM_MULTICLASS_DIR"</tt> </tt>
+<a name="L49"></a><tt class="py-lineno"> 49</tt>  <tt class="py-line">        <tt class="py-name">self</tt><tt class="py-op">.</tt><tt class="py-name">classifyCommand</tt> <tt class="py-op">=</tt> <tt class="py-string">"svm_multiclass_classify %e %m %c"</tt> </tt>
+</div></div><a name="L50"></a><tt class="py-lineno"> 50</tt>  <tt class="py-line">     </tt>
+<a name="L51"></a><tt class="py-lineno"> 51</tt>  <tt class="py-line"><tt class="py-comment">#    def filterIds(self, ids, model, verbose=False):</tt> </tt>
+<a name="L52"></a><tt class="py-lineno"> 52</tt>  <tt class="py-line"><tt class="py-comment">#        # Get feature ids</tt> </tt>
+<a name="L53"></a><tt class="py-lineno"> 53</tt>  <tt class="py-line"><tt class="py-comment">#        if type(ids) in types.StringTypes:</tt> </tt>
+<a name="L54"></a><tt class="py-lineno"> 54</tt>  <tt class="py-line"><tt class="py-comment">#            from Core.IdSet import IdSet</tt> </tt>
+<a name="L55"></a><tt class="py-lineno"> 55</tt>  <tt class="py-line"><tt class="py-comment">#            ids = IdSet(filename=ids)</tt> </tt>
+<a name="L56"></a><tt class="py-lineno"> 56</tt>  <tt class="py-line"><tt class="py-comment">#        # Get SVM model file feature ids</tt> </tt>
+<a name="L57"></a><tt class="py-lineno"> 57</tt>  <tt class="py-line"><tt class="py-comment">#        if verbose:</tt> </tt>
+<a name="L58"></a><tt class="py-lineno"> 58</tt>  <tt class="py-line"><tt class="py-comment">#            print &gt;&gt; sys.stderr, "Reading SVM model"</tt> </tt>
+<a name="L59"></a><tt class="py-lineno"> 59</tt>  <tt class="py-line"><tt class="py-comment">#        if model.endswith(".gz"):</tt> </tt>
+<a name="L60"></a><tt class="py-lineno"> 60</tt>  <tt class="py-line"><tt class="py-comment">#            f = gzip.open(model, "rt")</tt> </tt>
+<a name="L61"></a><tt class="py-lineno"> 61</tt>  <tt class="py-line"><tt class="py-comment">#        else:</tt> </tt>
+<a name="L62"></a><tt class="py-lineno"> 62</tt>  <tt class="py-line"><tt class="py-comment">#            f = open(model, "rt")</tt> </tt>
+<a name="L63"></a><tt class="py-lineno"> 63</tt>  <tt class="py-line"><tt class="py-comment">#        supportVectorLine = f.readlines()[-1]</tt> </tt>
+<a name="L64"></a><tt class="py-lineno"> 64</tt>  <tt class="py-line"><tt class="py-comment">#        f.close()</tt> </tt>
+<a name="L65"></a><tt class="py-lineno"> 65</tt>  <tt class="py-line"><tt class="py-comment">#        modelIdNumbers = set()</tt> </tt>
+<a name="L66"></a><tt class="py-lineno"> 66</tt>  <tt class="py-line"><tt class="py-comment">#        for split in supportVectorLine.split():</tt> </tt>
+<a name="L67"></a><tt class="py-lineno"> 67</tt>  <tt class="py-line"><tt class="py-comment">#            if ":" in split:</tt> </tt>
+<a name="L68"></a><tt class="py-lineno"> 68</tt>  <tt class="py-line"><tt class="py-comment">#                idPart = split.split(":")[0]</tt> </tt>
+<a name="L69"></a><tt class="py-lineno"> 69</tt>  <tt class="py-line"><tt class="py-comment">#                if idPart.isdigit():</tt> </tt>
+<a name="L70"></a><tt class="py-lineno"> 70</tt>  <tt class="py-line"><tt class="py-comment">#                    #print idPart</tt> </tt>
+<a name="L71"></a><tt class="py-lineno"> 71</tt>  <tt class="py-line"><tt class="py-comment">#                    modelIdNumbers.add(int(idPart))</tt> </tt>
+<a name="L72"></a><tt class="py-lineno"> 72</tt>  <tt class="py-line"><tt class="py-comment">#        modelIdNumbers = list(modelIdNumbers)</tt> </tt>
+<a name="L73"></a><tt class="py-lineno"> 73</tt>  <tt class="py-line"><tt class="py-comment">#        modelIdNumbers.sort()</tt> </tt>
+<a name="L74"></a><tt class="py-lineno"> 74</tt>  <tt class="py-line"><tt class="py-comment">#        # Make a new feature set with only features that are in the model file</tt> </tt>
+<a name="L75"></a><tt class="py-lineno"> 75</tt>  <tt class="py-line"><tt class="py-comment">#        if verbose:</tt> </tt>
+<a name="L76"></a><tt class="py-lineno"> 76</tt>  <tt class="py-line"><tt class="py-comment">#            print &gt;&gt; sys.stderr, "Feature set has", len(ids.Ids), "features, highest id is", max(ids._namesById.keys())</tt> </tt>
+<a name="L77"></a><tt class="py-lineno"> 77</tt>  <tt class="py-line"><tt class="py-comment">#            print &gt;&gt; sys.stderr, "Model has", len(modelIdNumbers), "features"</tt> </tt>
+<a name="L78"></a><tt class="py-lineno"> 78</tt>  <tt class="py-line"><tt class="py-comment">#            print &gt;&gt; sys.stderr, "Filtering ids"</tt> </tt>
+<a name="L79"></a><tt class="py-lineno"> 79</tt>  <tt class="py-line"><tt class="py-comment">#        newIds = IdSet()</tt> </tt>
+<a name="L80"></a><tt class="py-lineno"> 80</tt>  <tt class="py-line"><tt class="py-comment">#        newIds.nextFreeId = 999999999</tt> </tt>
+<a name="L81"></a><tt class="py-lineno"> 81</tt>  <tt class="py-line"><tt class="py-comment">#        for featureId in modelIdNumbers:</tt> </tt>
+<a name="L82"></a><tt class="py-lineno"> 82</tt>  <tt class="py-line"><tt class="py-comment">#            featureName = ids.getName(featureId)</tt> </tt>
+<a name="L83"></a><tt class="py-lineno"> 83</tt>  <tt class="py-line"><tt class="py-comment">#            assert featureName != None, featureId</tt> </tt>
+<a name="L84"></a><tt class="py-lineno"> 84</tt>  <tt class="py-line"><tt class="py-comment">#            newIds.defineId(featureName, featureId)</tt> </tt>
+<a name="L85"></a><tt class="py-lineno"> 85</tt>  <tt class="py-line"><tt class="py-comment">#        newIds.nextFreeId = max(newIds.Ids.values())+1</tt> </tt>
+<a name="L86"></a><tt class="py-lineno"> 86</tt>  <tt class="py-line"><tt class="py-comment">#        # Print statistics</tt> </tt>
+<a name="L87"></a><tt class="py-lineno"> 87</tt>  <tt class="py-line"><tt class="py-comment">#        if verbose:</tt> </tt>
+<a name="L88"></a><tt class="py-lineno"> 88</tt>  <tt class="py-line"><tt class="py-comment">#            print &gt;&gt; sys.stderr, "Filtered ids:", len(newIds.Ids), "(original", str(len(ids.Ids)) + ")"</tt> </tt>
+<a name="L89"></a><tt class="py-lineno"> 89</tt>  <tt class="py-line"><tt class="py-comment">#        return newIds</tt> </tt>
+<a name="L90"></a><tt class="py-lineno"> 90</tt>  <tt class="py-line">     </tt>
+<a name="L91"></a><tt class="py-lineno"> 91</tt>  <tt class="py-line"><tt class="py-keyword">if</tt> <tt class="py-name">__name__</tt><tt class="py-op">==</tt><tt class="py-string">"__main__"</tt><tt class="py-op">:</tt> </tt>
+<a name="L92"></a><tt class="py-lineno"> 92</tt>  <tt class="py-line">    <tt class="py-comment"># Import Psyco if available</tt> </tt>
+<a name="L93"></a><tt class="py-lineno"> 93</tt>  <tt class="py-line">    <tt class="py-keyword">try</tt><tt class="py-op">:</tt> </tt>
+<a name="L94"></a><tt class="py-lineno"> 94</tt>  <tt class="py-line">        <tt class="py-keyword">import</tt> <tt class="py-name">psyco</tt> </tt>
+<a name="L95"></a><tt class="py-lineno"> 95</tt>  <tt class="py-line">        <tt class="py-name">psyco</tt><tt class="py-op">.</tt><tt class="py-name">full</tt><tt class="py-op">(</tt><tt class="py-op">)</tt> </tt>
+<a name="L96"></a><tt class="py-lineno"> 96</tt>  <tt class="py-line">        <tt class="py-keyword">print</tt> <tt class="py-op">&gt;&gt;</tt> <tt class="py-name">sys</tt><tt class="py-op">.</tt><tt class="py-name">stderr</tt><tt class="py-op">,</tt> <tt class="py-string">"Found Psyco, using"</tt> </tt>
+<a name="L97"></a><tt class="py-lineno"> 97</tt>  <tt class="py-line">    <tt class="py-keyword">except</tt> <tt class="py-name">ImportError</tt><tt class="py-op">:</tt> </tt>
+<a name="L98"></a><tt class="py-lineno"> 98</tt>  <tt class="py-line">        <tt class="py-keyword">print</tt> <tt class="py-op">&gt;&gt;</tt> <tt class="py-name">sys</tt><tt class="py-op">.</tt><tt class="py-name">stderr</tt><tt class="py-op">,</tt> <tt class="py-string">"Psyco not installed"</tt> </tt>
+<a name="L99"></a><tt class="py-lineno"> 99</tt>  <tt class="py-line"> </tt>
+<a name="L100"></a><tt class="py-lineno">100</tt>  <tt class="py-line">    <tt class="py-keyword">from</tt> <tt class="py-name">optparse</tt> <tt class="py-keyword">import</tt> <tt class="py-name">OptionParser</tt> </tt>
+<a name="L101"></a><tt class="py-lineno">101</tt>  <tt class="py-line">    <tt class="py-keyword">import</tt> <tt class="py-name">os</tt> </tt>
+<a name="L102"></a><tt class="py-lineno">102</tt>  <tt class="py-line">    <tt class="py-keyword">from</tt> <tt id="link-32" class="py-name"><a title="TEES.Utils" class="py-name" href="#" onclick="return doclink('link-32', 'Utils', 'link-2');">Utils</a></tt><tt class="py-op">.</tt><tt id="link-33" class="py-name" targets="Module TEES.Utils.Parameters=TEES.Utils.Parameters-module.html"><a title="TEES.Utils.Parameters" class="py-name" href="#" onclick="return doclink('link-33', 'Parameters', 'link-33');">Parameters</a></tt> <tt class="py-keyword">import</tt> <tt class="py-op">*</tt> </tt>
+<a name="L103"></a><tt class="py-lineno">103</tt>  <tt class="py-line">    <tt class="py-name">optparser</tt> <tt class="py-op">=</tt> <tt class="py-name">OptionParser</tt><tt class="py-op">(</tt><tt class="py-name">description</tt><tt class="py-op">=</tt><tt class="py-string">"Joachims SVM Multiclass classifier wrapper"</tt><tt class="py-op">)</tt> </tt>
+<a name="L104"></a><tt class="py-lineno">104</tt>  <tt class="py-line">    <tt class="py-name">optparser</tt><tt class="py-op">.</tt><tt class="py-name">add_option</tt><tt class="py-op">(</tt><tt class="py-string">"-e"</tt><tt class="py-op">,</tt> <tt class="py-string">"--examples"</tt><tt class="py-op">,</tt> <tt class="py-name">default</tt><tt class="py-op">=</tt><tt class="py-name">None</tt><tt class="py-op">,</tt> <tt class="py-name">dest</tt><tt class="py-op">=</tt><tt class="py-string">"examples"</tt><tt class="py-op">,</tt> <tt class="py-name">help</tt><tt class="py-op">=</tt><tt class="py-string">"Example File"</tt><tt class="py-op">,</tt> <tt class="py-name">metavar</tt><tt class="py-op">=</tt><tt class="py-string">"FILE"</tt><tt class="py-op">)</tt> </tt>
+<a name="L105"></a><tt class="py-lineno">105</tt>  <tt class="py-line">    <tt class="py-name">optparser</tt><tt class="py-op">.</tt><tt class="py-name">add_option</tt><tt class="py-op">(</tt><tt class="py-string">"-a"</tt><tt class="py-op">,</tt> <tt class="py-string">"--action"</tt><tt class="py-op">,</tt> <tt class="py-name">default</tt><tt class="py-op">=</tt><tt class="py-name">None</tt><tt class="py-op">,</tt> <tt class="py-name">dest</tt><tt class="py-op">=</tt><tt class="py-string">"action"</tt><tt class="py-op">,</tt> <tt class="py-name">help</tt><tt class="py-op">=</tt><tt class="py-string">"TRAIN, CLASSIFY or OPTIMIZE"</tt><tt class="py-op">)</tt> </tt>
+<a name="L106"></a><tt class="py-lineno">106</tt>  <tt class="py-line">    <tt class="py-name">optparser</tt><tt class="py-op">.</tt><tt class="py-name">add_option</tt><tt class="py-op">(</tt><tt class="py-string">"--optimizeStep"</tt><tt class="py-op">,</tt> <tt class="py-name">default</tt><tt class="py-op">=</tt><tt class="py-string">"BOTH"</tt><tt class="py-op">,</tt> <tt class="py-name">dest</tt><tt class="py-op">=</tt><tt class="py-string">"optimizeStep"</tt><tt class="py-op">,</tt> <tt class="py-name">help</tt><tt class="py-op">=</tt><tt class="py-string">"BOTH, SUBMIT or RESULTS"</tt><tt class="py-op">)</tt> </tt>
+<a name="L107"></a><tt class="py-lineno">107</tt>  <tt class="py-line">    <tt class="py-name">optparser</tt><tt class="py-op">.</tt><tt class="py-name">add_option</tt><tt class="py-op">(</tt><tt class="py-string">"--classifyExamples"</tt><tt class="py-op">,</tt> <tt class="py-name">default</tt><tt class="py-op">=</tt><tt class="py-name">None</tt><tt class="py-op">,</tt> <tt class="py-name">dest</tt><tt class="py-op">=</tt><tt class="py-string">"classifyExamples"</tt><tt class="py-op">,</tt> <tt class="py-name">help</tt><tt class="py-op">=</tt><tt class="py-string">"Example File"</tt><tt class="py-op">,</tt> <tt class="py-name">metavar</tt><tt class="py-op">=</tt><tt class="py-string">"FILE"</tt><tt class="py-op">)</tt> </tt>
+<a name="L108"></a><tt class="py-lineno">108</tt>  <tt class="py-line">    <tt class="py-name">optparser</tt><tt class="py-op">.</tt><tt class="py-name">add_option</tt><tt class="py-op">(</tt><tt class="py-string">"--classIds"</tt><tt class="py-op">,</tt> <tt class="py-name">default</tt><tt class="py-op">=</tt><tt class="py-name">None</tt><tt class="py-op">,</tt> <tt class="py-name">dest</tt><tt class="py-op">=</tt><tt class="py-string">"classIds"</tt><tt class="py-op">,</tt> <tt class="py-name">help</tt><tt class="py-op">=</tt><tt class="py-string">"Class ids"</tt><tt class="py-op">,</tt> <tt class="py-name">metavar</tt><tt class="py-op">=</tt><tt class="py-string">"FILE"</tt><tt class="py-op">)</tt> </tt>
+<a name="L109"></a><tt class="py-lineno">109</tt>  <tt class="py-line">    <tt class="py-name">optparser</tt><tt class="py-op">.</tt><tt class="py-name">add_option</tt><tt class="py-op">(</tt><tt class="py-string">"-m"</tt><tt class="py-op">,</tt> <tt class="py-string">"--model"</tt><tt class="py-op">,</tt> <tt class="py-name">default</tt><tt class="py-op">=</tt><tt class="py-name">None</tt><tt class="py-op">,</tt> <tt class="py-name">dest</tt><tt class="py-op">=</tt><tt class="py-string">"model"</tt><tt class="py-op">,</tt> <tt class="py-name">help</tt><tt class="py-op">=</tt><tt class="py-string">"path to model file"</tt><tt class="py-op">)</tt> </tt>
+<a name="L110"></a><tt class="py-lineno">110</tt>  <tt class="py-line">    <tt class="py-comment">#optparser.add_option("-w", "--work", default=None, dest="work", help="Working directory for intermediate and debug files")</tt> </tt>
+<a name="L111"></a><tt class="py-lineno">111</tt>  <tt class="py-line">    <tt class="py-name">optparser</tt><tt class="py-op">.</tt><tt class="py-name">add_option</tt><tt class="py-op">(</tt><tt class="py-string">"-o"</tt><tt class="py-op">,</tt> <tt class="py-string">"--output"</tt><tt class="py-op">,</tt> <tt class="py-name">default</tt><tt class="py-op">=</tt><tt class="py-name">None</tt><tt class="py-op">,</tt> <tt class="py-name">dest</tt><tt class="py-op">=</tt><tt class="py-string">"output"</tt><tt class="py-op">,</tt> <tt class="py-name">help</tt><tt class="py-op">=</tt><tt class="py-string">"Output directory or file"</tt><tt class="py-op">)</tt> </tt>
+<a name="L112"></a><tt class="py-lineno">112</tt>  <tt class="py-line">    <tt class="py-name">optparser</tt><tt class="py-op">.</tt><tt class="py-name">add_option</tt><tt class="py-op">(</tt><tt class="py-string">"-r"</tt><tt class="py-op">,</tt> <tt class="py-string">"--remote"</tt><tt class="py-op">,</tt> <tt class="py-name">default</tt><tt class="py-op">=</tt><tt class="py-name">None</tt><tt class="py-op">,</tt> <tt class="py-name">dest</tt><tt class="py-op">=</tt><tt class="py-string">"remote"</tt><tt class="py-op">,</tt> <tt class="py-name">help</tt><tt class="py-op">=</tt><tt class="py-string">"Remote connection"</tt><tt class="py-op">)</tt> </tt>
+<a name="L113"></a><tt class="py-lineno">113</tt>  <tt class="py-line">    <tt class="py-comment">#optparser.add_option("-c", "--classifier", default="SVMMultiClassClassifier", dest="classifier", help="Classifier Class")</tt> </tt>
+<a name="L114"></a><tt class="py-lineno">114</tt>  <tt class="py-line">    <tt class="py-name">optparser</tt><tt class="py-op">.</tt><tt class="py-name">add_option</tt><tt class="py-op">(</tt><tt class="py-string">"-p"</tt><tt class="py-op">,</tt> <tt class="py-string">"--parameters"</tt><tt class="py-op">,</tt> <tt class="py-name">default</tt><tt class="py-op">=</tt><tt class="py-name">None</tt><tt class="py-op">,</tt> <tt class="py-name">dest</tt><tt class="py-op">=</tt><tt class="py-string">"parameters"</tt><tt class="py-op">,</tt> <tt class="py-name">help</tt><tt class="py-op">=</tt><tt class="py-string">"Parameters for the classifier"</tt><tt class="py-op">)</tt> </tt>
+<a name="L115"></a><tt class="py-lineno">115</tt>  <tt class="py-line">    <tt class="py-comment">#optparser.add_option("-d", "--ids", default=None, dest="ids", help="")</tt> </tt>
+<a name="L116"></a><tt class="py-lineno">116</tt>  <tt class="py-line">    <tt class="py-comment">#optparser.add_option("--filterIds", default=None, dest="filterIds", help="")</tt> </tt>
+<a name="L117"></a><tt class="py-lineno">117</tt>  <tt class="py-line">    <tt class="py-name">optparser</tt><tt class="py-op">.</tt><tt class="py-name">add_option</tt><tt class="py-op">(</tt><tt class="py-string">"--install"</tt><tt class="py-op">,</tt> <tt class="py-name">default</tt><tt class="py-op">=</tt><tt class="py-name">None</tt><tt class="py-op">,</tt> <tt class="py-name">dest</tt><tt class="py-op">=</tt><tt class="py-string">"install"</tt><tt class="py-op">,</tt> <tt class="py-name">help</tt><tt class="py-op">=</tt><tt class="py-string">"Install directory (or DEFAULT)"</tt><tt class="py-op">)</tt> </tt>
+<a name="L118"></a><tt class="py-lineno">118</tt>  <tt class="py-line">    <tt class="py-name">optparser</tt><tt class="py-op">.</tt><tt class="py-name">add_option</tt><tt class="py-op">(</tt><tt class="py-string">"--installFromSource"</tt><tt class="py-op">,</tt> <tt class="py-name">default</tt><tt class="py-op">=</tt><tt class="py-name">False</tt><tt class="py-op">,</tt> <tt class="py-name">action</tt><tt class="py-op">=</tt><tt class="py-string">"store_true"</tt><tt class="py-op">,</tt> <tt class="py-name">dest</tt><tt class="py-op">=</tt><tt class="py-string">"installFromSource"</tt><tt class="py-op">,</tt> <tt class="py-name">help</tt><tt class="py-op">=</tt><tt class="py-string">""</tt><tt class="py-op">)</tt> </tt>
+<a name="L119"></a><tt class="py-lineno">119</tt>  <tt class="py-line">    <tt class="py-op">(</tt><tt class="py-name">options</tt><tt class="py-op">,</tt> <tt class="py-name">args</tt><tt class="py-op">)</tt> <tt class="py-op">=</tt> <tt class="py-name">optparser</tt><tt class="py-op">.</tt><tt class="py-name">parse_args</tt><tt class="py-op">(</tt><tt class="py-op">)</tt> </tt>
+<a name="L120"></a><tt class="py-lineno">120</tt>  <tt class="py-line">     </tt>
+<a name="L121"></a><tt class="py-lineno">121</tt>  <tt class="py-line">    <tt class="py-keyword">if</tt> <tt class="py-name">options</tt><tt class="py-op">.</tt><tt id="link-34" class="py-name" targets="Function TEES.Classifiers.SVMMultiClassClassifier.install()=TEES.Classifiers.SVMMultiClassClassifier-module.html#install,Function TEES.Evaluators.BioNLP11GeniaTools.install()=TEES.Evaluators.BioNLP11GeniaTools-module.html#install,Function TEES.Tools.BANNER.install()=TEES.Tools.BANNER-module.html#install,Function TEES.Tools.BLLIPParser.install()=TEES.Tools.BLLIPParser-module.html#install,Function TEES.Tools.GeniaSentenceSplitter.install()=TEES.Tools.GeniaSentenceSplitter-module.html#install,Function TEES.Tools.StanfordParser.install()=TEES.Tools.StanfordParser-module.html#install"><a title="TEES.Classifiers.SVMMultiClassClassifier.install
+TEES.Evaluators.BioNLP11GeniaTools.install
+TEES.Tools.BANNER.install
+TEES.Tools.BLLIPParser.install
+TEES.Tools.GeniaSentenceSplitter.install
+TEES.Tools.StanfordParser.install" class="py-name" href="#" onclick="return doclink('link-34', 'install', 'link-34');">install</a></tt> <tt class="py-op">!=</tt> <tt class="py-name">None</tt><tt class="py-op">:</tt> </tt>
+<a name="L122"></a><tt class="py-lineno">122</tt>  <tt class="py-line">        <tt class="py-name">downloadDir</tt> <tt class="py-op">=</tt> <tt class="py-name">None</tt> </tt>
+<a name="L123"></a><tt class="py-lineno">123</tt>  <tt class="py-line">        <tt class="py-name">destDir</tt> <tt class="py-op">=</tt> <tt class="py-name">None</tt> </tt>
+<a name="L124"></a><tt class="py-lineno">124</tt>  <tt class="py-line">        <tt class="py-keyword">if</tt> <tt class="py-name">options</tt><tt class="py-op">.</tt><tt id="link-35" class="py-name"><a title="TEES.Classifiers.SVMMultiClassClassifier.install
+TEES.Evaluators.BioNLP11GeniaTools.install
+TEES.Tools.BANNER.install
+TEES.Tools.BLLIPParser.install
+TEES.Tools.GeniaSentenceSplitter.install
+TEES.Tools.StanfordParser.install" class="py-name" href="#" onclick="return doclink('link-35', 'install', 'link-34');">install</a></tt> <tt class="py-op">!=</tt> <tt class="py-string">"DEFAULT"</tt><tt class="py-op">:</tt> </tt>
+<a name="L125"></a><tt class="py-lineno">125</tt>  <tt class="py-line">            <tt class="py-keyword">if</tt> <tt class="py-string">","</tt> <tt class="py-keyword">in</tt> <tt class="py-name">options</tt><tt class="py-op">.</tt><tt id="link-36" class="py-name"><a title="TEES.Classifiers.SVMMultiClassClassifier.install
+TEES.Evaluators.BioNLP11GeniaTools.install
+TEES.Tools.BANNER.install
+TEES.Tools.BLLIPParser.install
+TEES.Tools.GeniaSentenceSplitter.install
+TEES.Tools.StanfordParser.install" class="py-name" href="#" onclick="return doclink('link-36', 'install', 'link-34');">install</a></tt><tt class="py-op">:</tt> </tt>
+<a name="L126"></a><tt class="py-lineno">126</tt>  <tt class="py-line">                <tt class="py-name">destDir</tt><tt class="py-op">,</tt> <tt class="py-name">downloadDir</tt> <tt class="py-op">=</tt> <tt class="py-name">options</tt><tt class="py-op">.</tt><tt id="link-37" class="py-name"><a title="TEES.Classifiers.SVMMultiClassClassifier.install
+TEES.Evaluators.BioNLP11GeniaTools.install
+TEES.Tools.BANNER.install
+TEES.Tools.BLLIPParser.install
+TEES.Tools.GeniaSentenceSplitter.install
+TEES.Tools.StanfordParser.install" class="py-name" href="#" onclick="return doclink('link-37', 'install', 'link-34');">install</a></tt><tt class="py-op">.</tt><tt id="link-38" class="py-name" targets="Variable TEES.Utils.Convert.processLPSN.split=TEES.Utils.Convert.processLPSN-module.html#split"><a title="TEES.Utils.Convert.processLPSN.split" class="py-name" href="#" onclick="return doclink('link-38', 'split', 'link-38');">split</a></tt><tt class="py-op">(</tt><tt class="py-string">","</tt><tt class="py-op">)</tt> </tt>
+<a name="L127"></a><tt class="py-lineno">127</tt>  <tt class="py-line">            <tt class="py-keyword">else</tt><tt class="py-op">:</tt> </tt>
+<a name="L128"></a><tt class="py-lineno">128</tt>  <tt class="py-line">                <tt class="py-name">destDir</tt> <tt class="py-op">=</tt> <tt class="py-name">options</tt><tt class="py-op">.</tt><tt id="link-39" class="py-name"><a title="TEES.Classifiers.SVMMultiClassClassifier.install
+TEES.Evaluators.BioNLP11GeniaTools.install
+TEES.Tools.BANNER.install
+TEES.Tools.BLLIPParser.install
+TEES.Tools.GeniaSentenceSplitter.install
+TEES.Tools.StanfordParser.install" class="py-name" href="#" onclick="return doclink('link-39', 'install', 'link-34');">install</a></tt> </tt>
+<a name="L129"></a><tt class="py-lineno">129</tt>  <tt class="py-line">        <tt id="link-40" class="py-name"><a title="TEES.Classifiers.SVMMultiClassClassifier.install
+TEES.Evaluators.BioNLP11GeniaTools.install
+TEES.Tools.BANNER.install
+TEES.Tools.BLLIPParser.install
+TEES.Tools.GeniaSentenceSplitter.install
+TEES.Tools.StanfordParser.install" class="py-name" href="#" onclick="return doclink('link-40', 'install', 'link-34');">install</a></tt><tt class="py-op">(</tt><tt class="py-name">destDir</tt><tt class="py-op">,</tt> <tt class="py-name">downloadDir</tt><tt class="py-op">,</tt> <tt class="py-name">False</tt><tt class="py-op">,</tt> <tt class="py-name">options</tt><tt class="py-op">.</tt><tt class="py-name">installFromSource</tt><tt class="py-op">)</tt> </tt>
+<a name="L130"></a><tt class="py-lineno">130</tt>  <tt class="py-line">        <tt class="py-name">sys</tt><tt class="py-op">.</tt><tt class="py-name">exit</tt><tt class="py-op">(</tt><tt class="py-op">)</tt> </tt>
+<a name="L131"></a><tt class="py-lineno">131</tt>  <tt class="py-line"><tt class="py-comment">#    elif options.filterIds != None:</tt> </tt>
+<a name="L132"></a><tt class="py-lineno">132</tt>  <tt class="py-line"><tt class="py-comment">#        assert options.model != None</tt> </tt>
+<a name="L133"></a><tt class="py-lineno">133</tt>  <tt class="py-line"><tt class="py-comment">#        classifier = SVMMultiClassClassifier()</tt> </tt>
+<a name="L134"></a><tt class="py-lineno">134</tt>  <tt class="py-line"><tt class="py-comment">#        filteredIds = classifier.filterIds(options.filterIds, options.model, verbose=True)</tt> </tt>
+<a name="L135"></a><tt class="py-lineno">135</tt>  <tt class="py-line"><tt class="py-comment">#        if options.output != None:</tt> </tt>
+<a name="L136"></a><tt class="py-lineno">136</tt>  <tt class="py-line"><tt class="py-comment">#            filteredIds.write(options.output)</tt> </tt>
+<a name="L137"></a><tt class="py-lineno">137</tt>  <tt class="py-line">    <tt class="py-keyword">else</tt><tt class="py-op">:</tt> </tt>
+<a name="L138"></a><tt class="py-lineno">138</tt>  <tt class="py-line">        <tt class="py-keyword">assert</tt> <tt class="py-name">options</tt><tt class="py-op">.</tt><tt class="py-name">action</tt> <tt class="py-keyword">in</tt> <tt class="py-op">[</tt><tt class="py-string">"TRAIN"</tt><tt class="py-op">,</tt> <tt class="py-string">"CLASSIFY"</tt><tt class="py-op">,</tt> <tt class="py-string">"OPTIMIZE"</tt><tt class="py-op">]</tt> </tt>
+<a name="L139"></a><tt class="py-lineno">139</tt>  <tt class="py-line">        <tt class="py-name">classifier</tt> <tt class="py-op">=</tt> <tt id="link-41" class="py-name" targets="Module TEES.Classifiers.SVMMultiClassClassifier=TEES.Classifiers.SVMMultiClassClassifier-module.html,Class TEES.Classifiers.SVMMultiClassClassifier.SVMMultiClassClassifier=TEES.Classifiers.SVMMultiClassClassifier.SVMMultiClassClassifier-class.html"><a title="TEES.Classifiers.SVMMultiClassClassifier
+TEES.Classifiers.SVMMultiClassClassifier.SVMMultiClassClassifier" class="py-name" href="#" onclick="return doclink('link-41', 'SVMMultiClassClassifier', 'link-41');">SVMMultiClassClassifier</a></tt><tt class="py-op">(</tt><tt id="link-42" class="py-name" targets="Package TEES.Utils.Connection=TEES.Utils.Connection-module.html,Module TEES.Utils.Connection.Connection=TEES.Utils.Connection.Connection-module.html"><a title="TEES.Utils.Connection
+TEES.Utils.Connection.Connection" class="py-name" href="#" onclick="return doclink('link-42', 'Connection', 'link-42');">Connection</a></tt><tt class="py-op">.</tt><tt id="link-43" class="py-name" targets="Function TEES.Utils.Connection.Connection.getConnection()=TEES.Utils.Connection.Connection-module.html#getConnection"><a title="TEES.Utils.Connection.Connection.getConnection" class="py-name" href="#" onclick="return doclink('link-43', 'getConnection', 'link-43');">getConnection</a></tt><tt class="py-op">(</tt><tt class="py-name">options</tt><tt class="py-op">.</tt><tt class="py-name">remote</tt><tt class="py-op">)</tt><tt class="py-op">)</tt> </tt>
+<a name="L140"></a><tt class="py-lineno">140</tt>  <tt class="py-line">        <tt class="py-keyword">if</tt> <tt class="py-name">options</tt><tt class="py-op">.</tt><tt class="py-name">action</tt> <tt class="py-op">==</tt> <tt class="py-string">"TRAIN"</tt><tt class="py-op">:</tt> </tt>
+<a name="L141"></a><tt class="py-lineno">141</tt>  <tt class="py-line">            <tt class="py-keyword">import</tt> <tt class="py-name">time</tt> </tt>
+<a name="L142"></a><tt class="py-lineno">142</tt>  <tt class="py-line">            <tt class="py-name">trained</tt> <tt class="py-op">=</tt> <tt class="py-name">classifier</tt><tt class="py-op">.</tt><tt id="link-44" class="py-name" targets="Class Method TEES.Classifiers.AllCorrectClassifier.AllCorrectClassifier.train()=TEES.Classifiers.AllCorrectClassifier.AllCorrectClassifier-class.html#train,Class Method TEES.Classifiers.AllTrueClassifier.AllTrueClassifier.train()=TEES.Classifiers.AllTrueClassifier.AllTrueClassifier-class.html#train,Method TEES.Classifiers.Classifier.Classifier.train()=TEES.Classifiers.Classifier.Classifier-class.html#train,Method TEES.Classifiers.ExternalClassifier.ExternalClassifier.train()=TEES.Classifiers.ExternalClassifier.ExternalClassifier-class.html#train,Method TEES.Detectors.Detector.Detector.train()=TEES.Detectors.Detector.Detector-class.html#train,Method TEES.Detectors.EventDetector.EventDetector.train()=TEES.Detectors.EventDetector.EventDetector-class.html#train,Method TEES.Detectors.SingleStageDetector.SingleStageDetector.train()=TEES.Detectors.SingleStageDetector.SingleStageDetector-class.html#train,Module TEES.train=TEES.train-module.html,Function TEES.train.train()=TEES.train-module.html#train"><a title="TEES.Classifiers.AllCorrectClassifier.AllCorrectClassifier.train
+TEES.Classifiers.AllTrueClassifier.AllTrueClassifier.train
+TEES.Classifiers.Classifier.Classifier.train
+TEES.Classifiers.ExternalClassifier.ExternalClassifier.train
+TEES.Detectors.Detector.Detector.train
+TEES.Detectors.EventDetector.EventDetector.train
+TEES.Detectors.SingleStageDetector.SingleStageDetector.train
+TEES.train
+TEES.train.train" class="py-name" href="#" onclick="return doclink('link-44', 'train', 'link-44');">train</a></tt><tt class="py-op">(</tt><tt class="py-name">options</tt><tt class="py-op">.</tt><tt class="py-name">examples</tt><tt class="py-op">,</tt> <tt class="py-name">options</tt><tt class="py-op">.</tt><tt class="py-name">output</tt><tt class="py-op">,</tt> <tt class="py-name">options</tt><tt class="py-op">.</tt><tt class="py-name">parameters</tt><tt class="py-op">,</tt> <tt class="py-name">options</tt><tt class="py-op">.</tt><tt class="py-name">classifyExamples</tt><tt class="py-op">)</tt> </tt>
+<a name="L143"></a><tt class="py-lineno">143</tt>  <tt class="py-line">            <tt class="py-name">status</tt> <tt class="py-op">=</tt> <tt class="py-name">trained</tt><tt class="py-op">.</tt><tt id="link-45" class="py-name" targets="Method TEES.Classifiers.ExternalClassifier.ExternalClassifier.getStatus()=TEES.Classifiers.ExternalClassifier.ExternalClassifier-class.html#getStatus"><a title="TEES.Classifiers.ExternalClassifier.ExternalClassifier.getStatus" class="py-name" href="#" onclick="return doclink('link-45', 'getStatus', 'link-45');">getStatus</a></tt><tt class="py-op">(</tt><tt class="py-op">)</tt> </tt>
+<a name="L144"></a><tt class="py-lineno">144</tt>  <tt class="py-line">            <tt class="py-keyword">while</tt> <tt class="py-name">status</tt> <tt class="py-keyword">not</tt> <tt class="py-keyword">in</tt> <tt class="py-op">[</tt><tt class="py-string">"FINISHED"</tt><tt class="py-op">,</tt> <tt class="py-string">"FAILED"</tt><tt class="py-op">]</tt><tt class="py-op">:</tt> </tt>
+<a name="L145"></a><tt class="py-lineno">145</tt>  <tt class="py-line">                <tt class="py-keyword">print</tt> <tt class="py-op">&gt;&gt;</tt> <tt class="py-name">sys</tt><tt class="py-op">.</tt><tt class="py-name">stderr</tt><tt class="py-op">,</tt> <tt class="py-string">"Training classifier, status ="</tt><tt class="py-op">,</tt> <tt class="py-name">status</tt> </tt>
+<a name="L146"></a><tt class="py-lineno">146</tt>  <tt class="py-line">                <tt class="py-name">time</tt><tt class="py-op">.</tt><tt class="py-name">sleep</tt><tt class="py-op">(</tt><tt class="py-number">10</tt><tt class="py-op">)</tt> </tt>
+<a name="L147"></a><tt class="py-lineno">147</tt>  <tt class="py-line">                <tt class="py-name">status</tt> <tt class="py-op">=</tt> <tt class="py-name">trained</tt><tt class="py-op">.</tt><tt id="link-46" class="py-name"><a title="TEES.Classifiers.ExternalClassifier.ExternalClassifier.getStatus" class="py-name" href="#" onclick="return doclink('link-46', 'getStatus', 'link-45');">getStatus</a></tt><tt class="py-op">(</tt><tt class="py-op">)</tt> </tt>
+<a name="L148"></a><tt class="py-lineno">148</tt>  <tt class="py-line">            <tt class="py-keyword">print</tt> <tt class="py-op">&gt;&gt;</tt> <tt class="py-name">sys</tt><tt class="py-op">.</tt><tt class="py-name">stderr</tt><tt class="py-op">,</tt> <tt class="py-string">"Training finished, status ="</tt><tt class="py-op">,</tt> <tt class="py-name">status</tt> </tt>
+<a name="L149"></a><tt class="py-lineno">149</tt>  <tt class="py-line">            <tt class="py-keyword">if</tt> <tt class="py-name">trained</tt><tt class="py-op">.</tt><tt id="link-47" class="py-name"><a title="TEES.Classifiers.ExternalClassifier.ExternalClassifier.getStatus" class="py-name" href="#" onclick="return doclink('link-47', 'getStatus', 'link-45');">getStatus</a></tt><tt class="py-op">(</tt><tt class="py-op">)</tt> <tt class="py-op">==</tt> <tt class="py-string">"FINISHED"</tt><tt class="py-op">:</tt> </tt>
+<a name="L150"></a><tt class="py-lineno">150</tt>  <tt class="py-line">                <tt class="py-name">trained</tt><tt class="py-op">.</tt><tt id="link-48" class="py-name" targets="Method TEES.Classifiers.ExternalClassifier.ExternalClassifier.downloadPredictions()=TEES.Classifiers.ExternalClassifier.ExternalClassifier-class.html#downloadPredictions"><a title="TEES.Classifiers.ExternalClassifier.ExternalClassifier.downloadPredictions" class="py-name" href="#" onclick="return doclink('link-48', 'downloadPredictions', 'link-48');">downloadPredictions</a></tt><tt class="py-op">(</tt><tt class="py-op">)</tt> </tt>
+<a name="L151"></a><tt class="py-lineno">151</tt>  <tt class="py-line">                <tt class="py-name">trained</tt><tt class="py-op">.</tt><tt id="link-49" class="py-name" targets="Method TEES.Classifiers.ExternalClassifier.ExternalClassifier.downloadModel()=TEES.Classifiers.ExternalClassifier.ExternalClassifier-class.html#downloadModel"><a title="TEES.Classifiers.ExternalClassifier.ExternalClassifier.downloadModel" class="py-name" href="#" onclick="return doclink('link-49', 'downloadModel', 'link-49');">downloadModel</a></tt><tt class="py-op">(</tt><tt class="py-op">)</tt> </tt>
+<a name="L152"></a><tt class="py-lineno">152</tt>  <tt class="py-line">        <tt class="py-keyword">elif</tt> <tt class="py-name">options</tt><tt class="py-op">.</tt><tt class="py-name">action</tt> <tt class="py-op">==</tt> <tt class="py-string">"CLASSIFY"</tt><tt class="py-op">:</tt> </tt>
+<a name="L153"></a><tt class="py-lineno">153</tt>  <tt class="py-line">            <tt class="py-name">classified</tt> <tt class="py-op">=</tt> <tt class="py-name">classifier</tt><tt class="py-op">.</tt><tt id="link-50" class="py-name" targets="Method TEES.Classifiers.Classifier.Classifier.classify()=TEES.Classifiers.Classifier.Classifier-class.html#classify,Method TEES.Classifiers.ExternalClassifier.ExternalClassifier.classify()=TEES.Classifiers.ExternalClassifier.ExternalClassifier-class.html#classify,Method TEES.Detectors.Detector.Detector.classify()=TEES.Detectors.Detector.Detector-class.html#classify,Method TEES.Detectors.EventDetector.EventDetector.classify()=TEES.Detectors.EventDetector.EventDetector-class.html#classify,Method TEES.Detectors.SingleStageDetector.SingleStageDetector.classify()=TEES.Detectors.SingleStageDetector.SingleStageDetector-class.html#classify,Module TEES.classify=TEES.classify-module.html,Function TEES.classify.classify()=TEES.classify-module.html#classify"><a title="TEES.Classifiers.Classifier.Classifier.classify
+TEES.Classifiers.ExternalClassifier.ExternalClassifier.classify
+TEES.Detectors.Detector.Detector.classify
+TEES.Detectors.EventDetector.EventDetector.classify
+TEES.Detectors.SingleStageDetector.SingleStageDetector.classify
+TEES.classify
+TEES.classify.classify" class="py-name" href="#" onclick="return doclink('link-50', 'classify', 'link-50');">classify</a></tt><tt class="py-op">(</tt><tt class="py-name">options</tt><tt class="py-op">.</tt><tt class="py-name">examples</tt><tt class="py-op">,</tt> <tt class="py-name">options</tt><tt class="py-op">.</tt><tt class="py-name">output</tt><tt class="py-op">,</tt> <tt class="py-name">options</tt><tt class="py-op">.</tt><tt class="py-name">model</tt><tt class="py-op">,</tt> <tt class="py-name">True</tt><tt class="py-op">)</tt> </tt>
+<a name="L154"></a><tt class="py-lineno">154</tt>  <tt class="py-line">            <tt class="py-keyword">if</tt> <tt class="py-name">classified</tt><tt class="py-op">.</tt><tt id="link-51" class="py-name"><a title="TEES.Classifiers.ExternalClassifier.ExternalClassifier.getStatus" class="py-name" href="#" onclick="return doclink('link-51', 'getStatus', 'link-45');">getStatus</a></tt><tt class="py-op">(</tt><tt class="py-op">)</tt> <tt class="py-op">==</tt> <tt class="py-string">"FINISHED"</tt><tt class="py-op">:</tt> </tt>
+<a name="L155"></a><tt class="py-lineno">155</tt>  <tt class="py-line">                <tt class="py-name">classified</tt><tt class="py-op">.</tt><tt id="link-52" class="py-name"><a title="TEES.Classifiers.ExternalClassifier.ExternalClassifier.downloadPredictions" class="py-name" href="#" onclick="return doclink('link-52', 'downloadPredictions', 'link-48');">downloadPredictions</a></tt><tt class="py-op">(</tt><tt class="py-op">)</tt> </tt>
+<a name="L156"></a><tt class="py-lineno">156</tt>  <tt class="py-line">        <tt class="py-keyword">else</tt><tt class="py-op">:</tt> <tt class="py-comment"># OPTIMIZE</tt> </tt>
+<a name="L157"></a><tt class="py-lineno">157</tt>  <tt class="py-line">            <tt class="py-name">options</tt><tt class="py-op">.</tt><tt class="py-name">parameters</tt> <tt class="py-op">=</tt> <tt class="py-name">splitParameters</tt><tt class="py-op">(</tt><tt class="py-name">options</tt><tt class="py-op">.</tt><tt class="py-name">parameters</tt><tt class="py-op">)</tt> </tt>
+<a name="L158"></a><tt class="py-lineno">158</tt>  <tt class="py-line">            <tt class="py-name">optimized</tt> <tt class="py-op">=</tt> <tt class="py-name">classifier</tt><tt class="py-op">.</tt><tt id="link-53" class="py-name" targets="Method TEES.Classifiers.Classifier.Classifier.optimize()=TEES.Classifiers.Classifier.Classifier-class.html#optimize,Method TEES.Classifiers.ExternalClassifier.ExternalClassifier.optimize()=TEES.Classifiers.ExternalClassifier.ExternalClassifier-class.html#optimize"><a title="TEES.Classifiers.Classifier.Classifier.optimize
+TEES.Classifiers.ExternalClassifier.ExternalClassifier.optimize" class="py-name" href="#" onclick="return doclink('link-53', 'optimize', 'link-53');">optimize</a></tt><tt class="py-op">(</tt><tt class="py-name">options</tt><tt class="py-op">.</tt><tt class="py-name">examples</tt><tt class="py-op">,</tt> <tt class="py-name">options</tt><tt class="py-op">.</tt><tt class="py-name">output</tt><tt class="py-op">,</tt> <tt class="py-name">options</tt><tt class="py-op">.</tt><tt class="py-name">parameters</tt><tt class="py-op">,</tt> <tt class="py-name">options</tt><tt class="py-op">.</tt><tt class="py-name">classifyExamples</tt><tt class="py-op">,</tt> <tt class="py-name">options</tt><tt class="py-op">.</tt><tt class="py-name">classIds</tt><tt class="py-op">,</tt> <tt class="py-name">step</tt><tt class="py-op">=</tt><tt class="py-name">options</tt><tt class="py-op">.</tt><tt class="py-name">optimizeStep</tt><tt class="py-op">)</tt> </tt>
+<a name="L159"></a><tt class="py-lineno">159</tt>  <tt class="py-line"> </tt><script type="text/javascript">
+<!--
+expandto(location.href);
+// -->
+</script>
+</pre>
+<br />
+<!-- ==================== NAVIGATION BAR ==================== -->
+<table class="navbar" border="0" width="100%" cellpadding="0"
+       bgcolor="#a0c0ff" cellspacing="0">
+  <tr valign="middle">
+  <!-- Home link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="TEES-module.html">Home</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Tree link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="module-tree.html">Trees</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Index link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="identifier-index.html">Indices</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Help link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="help.html">Help</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Project homepage -->
+      <th class="navbar" align="right" width="100%">
+        <table border="0" cellpadding="0" cellspacing="0">
+          <tr><th class="navbar" align="center"
+            >Turku Event Extraction System</th>
+          </tr></table></th>
+  </tr>
+</table>
+<table border="0" cellpadding="0" cellspacing="0" width="100%%">
+  <tr>
+    <td align="left" class="footer">
+    Generated by Epydoc 3.0.1 on Thu Jul 19 18:20:51 2012
+    </td>
+    <td align="right" class="footer">
+      <a target="mainFrame" href="http://epydoc.sourceforge.net"
+        >http://epydoc.sourceforge.net</a>
+    </td>
+  </tr>
+</table>
+
+<script type="text/javascript">
+  <!--
+  // Private objects are initially displayed (because if
+  // javascript is turned off then we want them to be
+  // visible); but by default, we want to hide them.  So hide
+  // them unless we have a cookie that says to show them.
+  checkCookie();
+  // -->
+</script>
+</body>
+</html>

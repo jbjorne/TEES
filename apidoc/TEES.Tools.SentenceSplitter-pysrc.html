@@ -1,0 +1,345 @@
+<?xml version="1.0" encoding="ascii"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+          "DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+  <title>TEES.Tools.SentenceSplitter</title>
+  <link rel="stylesheet" href="epydoc.css" type="text/css" />
+  <script type="text/javascript" src="epydoc.js"></script>
+</head>
+
+<body bgcolor="white" text="black" link="blue" vlink="#204080"
+      alink="#204080">
+<!-- ==================== NAVIGATION BAR ==================== -->
+<table class="navbar" border="0" width="100%" cellpadding="0"
+       bgcolor="#a0c0ff" cellspacing="0">
+  <tr valign="middle">
+  <!-- Home link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="TEES-module.html">Home</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Tree link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="module-tree.html">Trees</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Index link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="identifier-index.html">Indices</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Help link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="help.html">Help</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Project homepage -->
+      <th class="navbar" align="right" width="100%">
+        <table border="0" cellpadding="0" cellspacing="0">
+          <tr><th class="navbar" align="center"
+            >Turku Event Extraction System</th>
+          </tr></table></th>
+  </tr>
+</table>
+<table width="100%" cellpadding="0" cellspacing="0">
+  <tr valign="top">
+    <td width="100%">
+      <span class="breadcrumbs">
+        <a href="TEES-module.html">Package&nbsp;TEES</a> ::
+        <a href="TEES.Tools-module.html">Package&nbsp;Tools</a> ::
+        Module&nbsp;SentenceSplitter
+      </span>
+    </td>
+    <td>
+      <table cellpadding="0" cellspacing="0">
+        <!-- hide/show private -->
+        <tr><td align="right"><span class="options">[<a href="javascript:void(0);" class="privatelink"
+    onclick="toggle_private();">hide&nbsp;private</a>]</span></td></tr>
+      </table>
+    </td>
+  </tr>
+</table>
+<h1 class="epydoc">Source Code for <a href="TEES.Tools.SentenceSplitter-module.html">Module TEES.Tools.SentenceSplitter</a></h1>
+<pre class="py-src">
+<a name="L1"></a><tt class="py-lineno">  1</tt>  <tt class="py-line"><tt class="py-name">__version__</tt> <tt class="py-op">=</tt> <tt class="py-docstring">"$Revision: 1.1 $"</tt> </tt>
+<a name="L2"></a><tt class="py-lineno">  2</tt>  <tt class="py-line"> </tt>
+<a name="L3"></a><tt class="py-lineno">  3</tt>  <tt class="py-line"><tt class="py-keyword">import</tt> <tt class="py-name">sys</tt><tt class="py-op">,</tt><tt class="py-name">os</tt> </tt>
+<a name="L4"></a><tt class="py-lineno">  4</tt>  <tt class="py-line"><tt class="py-keyword">import</tt> <tt class="py-name">sys</tt> </tt>
+<a name="L5"></a><tt class="py-lineno">  5</tt>  <tt class="py-line"><tt class="py-keyword">try</tt><tt class="py-op">:</tt> </tt>
+<a name="L6"></a><tt class="py-lineno">  6</tt>  <tt class="py-line">    <tt class="py-keyword">import</tt> <tt class="py-name">xml</tt><tt class="py-op">.</tt><tt class="py-name">etree</tt><tt class="py-op">.</tt><tt class="py-name">cElementTree</tt> <tt class="py-keyword">as</tt> <tt class="py-name">ET</tt> </tt>
+<a name="L7"></a><tt class="py-lineno">  7</tt>  <tt class="py-line"><tt class="py-keyword">except</tt> <tt class="py-name">ImportError</tt><tt class="py-op">:</tt> </tt>
+<a name="L8"></a><tt class="py-lineno">  8</tt>  <tt class="py-line">    <tt class="py-keyword">import</tt> <tt class="py-name">cElementTree</tt> <tt class="py-keyword">as</tt> <tt class="py-name">ET</tt> </tt>
+<a name="L9"></a><tt class="py-lineno">  9</tt>  <tt class="py-line"> </tt>
+<a name="L10"></a><tt class="py-lineno"> 10</tt>  <tt class="py-line"><tt class="py-keyword">import</tt> <tt class="py-name">shutil</tt> </tt>
+<a name="L11"></a><tt class="py-lineno"> 11</tt>  <tt class="py-line"><tt class="py-keyword">import</tt> <tt class="py-name">subprocess</tt> </tt>
+<a name="L12"></a><tt class="py-lineno"> 12</tt>  <tt class="py-line"><tt class="py-keyword">import</tt> <tt class="py-name">tempfile</tt> </tt>
+<a name="L13"></a><tt class="py-lineno"> 13</tt>  <tt class="py-line"><tt class="py-keyword">import</tt> <tt class="py-name">codecs</tt> </tt>
+<a name="L14"></a><tt class="py-lineno"> 14</tt>  <tt class="py-line"><tt class="py-keyword">import</tt> <tt class="py-name">tarfile</tt> </tt>
+<a name="L15"></a><tt class="py-lineno"> 15</tt>  <tt class="py-line"> </tt>
+<a name="L16"></a><tt class="py-lineno"> 16</tt>  <tt class="py-line"><tt class="py-keyword">from</tt> <tt id="link-0" class="py-name" targets="Module TEES.Tools.GeniaSentenceSplitter=TEES.Tools.GeniaSentenceSplitter-module.html"><a title="TEES.Tools.GeniaSentenceSplitter" class="py-name" href="#" onclick="return doclink('link-0', 'GeniaSentenceSplitter', 'link-0');">GeniaSentenceSplitter</a></tt> <tt class="py-keyword">import</tt> <tt id="link-1" class="py-name" targets="Function TEES.Tools.GeniaSentenceSplitter.moveElements()=TEES.Tools.GeniaSentenceSplitter-module.html#moveElements"><a title="TEES.Tools.GeniaSentenceSplitter.moveElements" class="py-name" href="#" onclick="return doclink('link-1', 'moveElements', 'link-1');">moveElements</a></tt> </tt>
+<a name="L17"></a><tt class="py-lineno"> 17</tt>  <tt class="py-line"> </tt>
+<a name="L18"></a><tt class="py-lineno"> 18</tt>  <tt class="py-line"><tt class="py-name">sys</tt><tt class="py-op">.</tt><tt class="py-name">path</tt><tt class="py-op">.</tt><tt class="py-name">append</tt><tt class="py-op">(</tt><tt class="py-name">os</tt><tt class="py-op">.</tt><tt class="py-name">path</tt><tt class="py-op">.</tt><tt class="py-name">dirname</tt><tt class="py-op">(</tt><tt class="py-name">os</tt><tt class="py-op">.</tt><tt class="py-name">path</tt><tt class="py-op">.</tt><tt class="py-name">abspath</tt><tt class="py-op">(</tt><tt class="py-name">__file__</tt><tt class="py-op">)</tt><tt class="py-op">)</tt><tt class="py-op">+</tt><tt class="py-string">"/.."</tt><tt class="py-op">)</tt> </tt>
+<a name="L19"></a><tt class="py-lineno"> 19</tt>  <tt class="py-line"><tt class="py-keyword">import</tt> <tt id="link-2" class="py-name" targets="Package TEES.Utils=TEES.Utils-module.html"><a title="TEES.Utils" class="py-name" href="#" onclick="return doclink('link-2', 'Utils', 'link-2');">Utils</a></tt><tt class="py-op">.</tt><tt id="link-3" class="py-name" targets="Module TEES.Utils.ElementTreeUtils=TEES.Utils.ElementTreeUtils-module.html"><a title="TEES.Utils.ElementTreeUtils" class="py-name" href="#" onclick="return doclink('link-3', 'ElementTreeUtils', 'link-3');">ElementTreeUtils</a></tt> <tt class="py-keyword">as</tt> <tt class="py-name">ETUtils</tt> </tt>
+<a name="L20"></a><tt class="py-lineno"> 20</tt>  <tt class="py-line"><tt class="py-keyword">from</tt> <tt id="link-4" class="py-name"><a title="TEES.Utils" class="py-name" href="#" onclick="return doclink('link-4', 'Utils', 'link-2');">Utils</a></tt><tt class="py-op">.</tt><tt id="link-5" class="py-name" targets="Module TEES.Utils.ProgressCounter=TEES.Utils.ProgressCounter-module.html,Class TEES.Utils.ProgressCounter.ProgressCounter=TEES.Utils.ProgressCounter.ProgressCounter-class.html"><a title="TEES.Utils.ProgressCounter
+TEES.Utils.ProgressCounter.ProgressCounter" class="py-name" href="#" onclick="return doclink('link-5', 'ProgressCounter', 'link-5');">ProgressCounter</a></tt> <tt class="py-keyword">import</tt> <tt id="link-6" class="py-name"><a title="TEES.Utils.ProgressCounter
+TEES.Utils.ProgressCounter.ProgressCounter" class="py-name" href="#" onclick="return doclink('link-6', 'ProgressCounter', 'link-5');">ProgressCounter</a></tt> </tt>
+<a name="L21"></a><tt class="py-lineno"> 21</tt>  <tt class="py-line"> </tt>
+<a name="openFile"></a><div id="openFile-def"><a name="L22"></a><tt class="py-lineno"> 22</tt> <a class="py-toggle" href="#" id="openFile-toggle" onclick="return toggle('openFile');">-</a><tt class="py-line"><tt class="py-keyword">def</tt> <a class="py-def-name" href="TEES.Tools.SentenceSplitter-module.html#openFile">openFile</a><tt class="py-op">(</tt><tt class="py-param">path</tt><tt class="py-op">,</tt> <tt class="py-param">tarFile</tt><tt class="py-op">=</tt><tt class="py-name">None</tt><tt class="py-op">)</tt><tt class="py-op">:</tt> </tt>
+</div><div id="openFile-collapsed" style="display:none;" pad="+++" indent="++++"></div><div id="openFile-expanded"><a name="L23"></a><tt class="py-lineno"> 23</tt>  <tt class="py-line">    <tt class="py-keyword">if</tt> <tt class="py-name">tarFile</tt> <tt class="py-op">!=</tt> <tt class="py-name">None</tt><tt class="py-op">:</tt> </tt>
+<a name="L24"></a><tt class="py-lineno"> 24</tt>  <tt class="py-line">        <tt class="py-keyword">try</tt><tt class="py-op">:</tt> </tt>
+<a name="L25"></a><tt class="py-lineno"> 25</tt>  <tt class="py-line">            <tt class="py-keyword">return</tt> <tt class="py-name">tarFile</tt><tt class="py-op">.</tt><tt class="py-name">extractfile</tt><tt class="py-op">(</tt><tt class="py-name">tarFile</tt><tt class="py-op">.</tt><tt class="py-name">getmember</tt><tt class="py-op">(</tt><tt class="py-name">path</tt><tt class="py-op">)</tt><tt class="py-op">)</tt> </tt>
+<a name="L26"></a><tt class="py-lineno"> 26</tt>  <tt class="py-line">        <tt class="py-keyword">except</tt> <tt class="py-name">KeyError</tt><tt class="py-op">:</tt> </tt>
+<a name="L27"></a><tt class="py-lineno"> 27</tt>  <tt class="py-line">            <tt class="py-keyword">pass</tt> </tt>
+<a name="L28"></a><tt class="py-lineno"> 28</tt>  <tt class="py-line">    <tt class="py-keyword">else</tt><tt class="py-op">:</tt> </tt>
+<a name="L29"></a><tt class="py-lineno"> 29</tt>  <tt class="py-line">        <tt class="py-keyword">if</tt> <tt class="py-name">os</tt><tt class="py-op">.</tt><tt class="py-name">path</tt><tt class="py-op">.</tt><tt id="link-7" class="py-name" targets="Method TEES.Utils.Connection.UnixConnection.UnixConnection.exists()=TEES.Utils.Connection.UnixConnection.UnixConnection-class.html#exists"><a title="TEES.Utils.Connection.UnixConnection.UnixConnection.exists" class="py-name" href="#" onclick="return doclink('link-7', 'exists', 'link-7');">exists</a></tt><tt class="py-op">(</tt><tt class="py-name">path</tt><tt class="py-op">)</tt><tt class="py-op">:</tt> </tt>
+<a name="L30"></a><tt class="py-lineno"> 30</tt>  <tt class="py-line">            <tt class="py-keyword">return</tt> <tt id="link-8" class="py-name" targets="Method TEES.Core.Model.Model.open()=TEES.Core.Model.Model-class.html#open"><a title="TEES.Core.Model.Model.open" class="py-name" href="#" onclick="return doclink('link-8', 'open', 'link-8');">open</a></tt><tt class="py-op">(</tt><tt class="py-name">path</tt><tt class="py-op">,</tt> <tt class="py-string">"rt"</tt><tt class="py-op">)</tt> </tt>
+<a name="L31"></a><tt class="py-lineno"> 31</tt>  <tt class="py-line">    <tt class="py-keyword">return</tt> <tt class="py-name">None</tt> </tt>
+</div><a name="L32"></a><tt class="py-lineno"> 32</tt>  <tt class="py-line">                 </tt>
+<a name="makeSentences"></a><div id="makeSentences-def"><a name="L33"></a><tt class="py-lineno"> 33</tt> <a class="py-toggle" href="#" id="makeSentences-toggle" onclick="return toggle('makeSentences');">-</a><tt class="py-line"><tt class="py-keyword">def</tt> <a class="py-def-name" href="TEES.Tools.SentenceSplitter-module.html#makeSentences">makeSentences</a><tt class="py-op">(</tt><tt class="py-param">input</tt><tt class="py-op">,</tt> <tt class="py-param">tokenizationPath</tt><tt class="py-op">,</tt> <tt class="py-param">output</tt><tt class="py-op">=</tt><tt class="py-name">None</tt><tt class="py-op">,</tt> <tt class="py-param">removeText</tt><tt class="py-op">=</tt><tt class="py-name">False</tt><tt class="py-op">,</tt> <tt class="py-param">escDict</tt><tt class="py-op">=</tt><tt class="py-op">{</tt><tt class="py-op">}</tt><tt class="py-op">)</tt><tt class="py-op">:</tt> </tt>
+</div><div id="makeSentences-collapsed" style="display:none;" pad="+++" indent="++++"></div><div id="makeSentences-expanded"><a name="L34"></a><tt class="py-lineno"> 34</tt>  <tt class="py-line">    <tt class="py-docstring">"""</tt> </tt>
+<a name="L35"></a><tt class="py-lineno"> 35</tt>  <tt class="py-line"><tt class="py-docstring">    Divide text in the "text" attributes of document and section </tt> </tt>
+<a name="L36"></a><tt class="py-lineno"> 36</tt>  <tt class="py-line"><tt class="py-docstring">    elements into sentence elements. These sentence elements are</tt> </tt>
+<a name="L37"></a><tt class="py-lineno"> 37</tt>  <tt class="py-line"><tt class="py-docstring">    inserted into their respective parent elements.</tt> </tt>
+<a name="L38"></a><tt class="py-lineno"> 38</tt>  <tt class="py-line"><tt class="py-docstring">    """</tt> </tt>
+<a name="L39"></a><tt class="py-lineno"> 39</tt>  <tt class="py-line">    <tt class="py-keyword">print</tt> <tt class="py-op">&gt;&gt;</tt> <tt class="py-name">sys</tt><tt class="py-op">.</tt><tt class="py-name">stderr</tt><tt class="py-op">,</tt> <tt class="py-string">"Loading corpus"</tt><tt class="py-op">,</tt> <tt class="py-name">input</tt> </tt>
+<a name="L40"></a><tt class="py-lineno"> 40</tt>  <tt class="py-line">    <tt class="py-name">corpusTree</tt> <tt class="py-op">=</tt> <tt class="py-name">ETUtils</tt><tt class="py-op">.</tt><tt id="link-9" class="py-name" targets="Function TEES.Utils.ElementTreeUtils.ETFromObj()=TEES.Utils.ElementTreeUtils-module.html#ETFromObj"><a title="TEES.Utils.ElementTreeUtils.ETFromObj" class="py-name" href="#" onclick="return doclink('link-9', 'ETFromObj', 'link-9');">ETFromObj</a></tt><tt class="py-op">(</tt><tt class="py-name">input</tt><tt class="py-op">)</tt> </tt>
+<a name="L41"></a><tt class="py-lineno"> 41</tt>  <tt class="py-line">    <tt class="py-keyword">print</tt> <tt class="py-op">&gt;&gt;</tt> <tt class="py-name">sys</tt><tt class="py-op">.</tt><tt class="py-name">stderr</tt><tt class="py-op">,</tt> <tt class="py-string">"Corpus file loaded"</tt> </tt>
+<a name="L42"></a><tt class="py-lineno"> 42</tt>  <tt class="py-line">    <tt class="py-name">corpusRoot</tt> <tt class="py-op">=</tt> <tt class="py-name">corpusTree</tt><tt class="py-op">.</tt><tt class="py-name">getroot</tt><tt class="py-op">(</tt><tt class="py-op">)</tt> </tt>
+<a name="L43"></a><tt class="py-lineno"> 43</tt>  <tt class="py-line">     </tt>
+<a name="L44"></a><tt class="py-lineno"> 44</tt>  <tt class="py-line">    <tt class="py-keyword">print</tt> <tt class="py-op">&gt;&gt;</tt> <tt class="py-name">sys</tt><tt class="py-op">.</tt><tt class="py-name">stderr</tt><tt class="py-op">,</tt> <tt class="py-string">"Inserting tokenizations from"</tt><tt class="py-op">,</tt> <tt class="py-name">tokenizationPath</tt> </tt>
+<a name="L45"></a><tt class="py-lineno"> 45</tt>  <tt class="py-line">    <tt class="py-keyword">if</tt> <tt class="py-name">tokenizationPath</tt><tt class="py-op">.</tt><tt class="py-name">find</tt><tt class="py-op">(</tt><tt class="py-string">".tar.gz"</tt><tt class="py-op">)</tt> <tt class="py-op">!=</tt> <tt class="py-op">-</tt><tt class="py-number">1</tt><tt class="py-op">:</tt> </tt>
+<a name="L46"></a><tt class="py-lineno"> 46</tt>  <tt class="py-line">        <tt class="py-name">tarFilePath</tt><tt class="py-op">,</tt> <tt class="py-name">tokenizationPath</tt> <tt class="py-op">=</tt> <tt class="py-name">tokenizationPath</tt><tt class="py-op">.</tt><tt id="link-10" class="py-name" targets="Variable TEES.Utils.Convert.processLPSN.split=TEES.Utils.Convert.processLPSN-module.html#split"><a title="TEES.Utils.Convert.processLPSN.split" class="py-name" href="#" onclick="return doclink('link-10', 'split', 'link-10');">split</a></tt><tt class="py-op">(</tt><tt class="py-string">".tar.gz"</tt><tt class="py-op">)</tt> </tt>
+<a name="L47"></a><tt class="py-lineno"> 47</tt>  <tt class="py-line">        <tt class="py-name">tarFilePath</tt> <tt class="py-op">+=</tt> <tt class="py-string">".tar.gz"</tt> </tt>
+<a name="L48"></a><tt class="py-lineno"> 48</tt>  <tt class="py-line">        <tt class="py-name">tarFile</tt> <tt class="py-op">=</tt> <tt class="py-name">tarfile</tt><tt class="py-op">.</tt><tt id="link-11" class="py-name"><a title="TEES.Core.Model.Model.open" class="py-name" href="#" onclick="return doclink('link-11', 'open', 'link-8');">open</a></tt><tt class="py-op">(</tt><tt class="py-name">tarFilePath</tt><tt class="py-op">)</tt> </tt>
+<a name="L49"></a><tt class="py-lineno"> 49</tt>  <tt class="py-line">        <tt class="py-keyword">if</tt> <tt class="py-name">tokenizationPath</tt><tt class="py-op">[</tt><tt class="py-number">0</tt><tt class="py-op">]</tt> <tt class="py-op">==</tt> <tt class="py-string">"/"</tt><tt class="py-op">:</tt> </tt>
+<a name="L50"></a><tt class="py-lineno"> 50</tt>  <tt class="py-line">            <tt class="py-name">tokenizationPath</tt> <tt class="py-op">=</tt> <tt class="py-name">tokenizationPath</tt><tt class="py-op">[</tt><tt class="py-number">1</tt><tt class="py-op">:</tt><tt class="py-op">]</tt> </tt>
+<a name="L51"></a><tt class="py-lineno"> 51</tt>  <tt class="py-line">    <tt class="py-keyword">else</tt><tt class="py-op">:</tt> </tt>
+<a name="L52"></a><tt class="py-lineno"> 52</tt>  <tt class="py-line">        <tt class="py-name">tarFile</tt> <tt class="py-op">=</tt> <tt class="py-name">None</tt> </tt>
+<a name="L53"></a><tt class="py-lineno"> 53</tt>  <tt class="py-line">     </tt>
+<a name="L54"></a><tt class="py-lineno"> 54</tt>  <tt class="py-line">    <tt class="py-name">docCount</tt> <tt class="py-op">=</tt> <tt class="py-number">0</tt> </tt>
+<a name="L55"></a><tt class="py-lineno"> 55</tt>  <tt class="py-line">    <tt class="py-name">docsWithSentences</tt> <tt class="py-op">=</tt> <tt class="py-number">0</tt> </tt>
+<a name="L56"></a><tt class="py-lineno"> 56</tt>  <tt class="py-line">    <tt class="py-name">sentencesCreated</tt> <tt class="py-op">=</tt> <tt class="py-number">0</tt> </tt>
+<a name="L57"></a><tt class="py-lineno"> 57</tt>  <tt class="py-line">    <tt class="py-name">sourceElements</tt> <tt class="py-op">=</tt> <tt class="py-op">[</tt><tt class="py-name">x</tt> <tt class="py-keyword">for</tt> <tt class="py-name">x</tt> <tt class="py-keyword">in</tt> <tt class="py-name">corpusRoot</tt><tt class="py-op">.</tt><tt class="py-name">getiterator</tt><tt class="py-op">(</tt><tt class="py-string">"document"</tt><tt class="py-op">)</tt><tt class="py-op">]</tt> <tt class="py-op">+</tt> <tt class="py-op">[</tt><tt class="py-name">x</tt> <tt class="py-keyword">for</tt> <tt class="py-name">x</tt> <tt class="py-keyword">in</tt> <tt class="py-name">corpusRoot</tt><tt class="py-op">.</tt><tt class="py-name">getiterator</tt><tt class="py-op">(</tt><tt class="py-string">"section"</tt><tt class="py-op">)</tt><tt class="py-op">]</tt> </tt>
+<a name="L58"></a><tt class="py-lineno"> 58</tt>  <tt class="py-line">    <tt class="py-name">counter</tt> <tt class="py-op">=</tt> <tt id="link-12" class="py-name"><a title="TEES.Utils.ProgressCounter
+TEES.Utils.ProgressCounter.ProgressCounter" class="py-name" href="#" onclick="return doclink('link-12', 'ProgressCounter', 'link-5');">ProgressCounter</a></tt><tt class="py-op">(</tt><tt class="py-name">len</tt><tt class="py-op">(</tt><tt class="py-name">sourceElements</tt><tt class="py-op">)</tt><tt class="py-op">,</tt> <tt class="py-string">"Sentence Splitting"</tt><tt class="py-op">)</tt> </tt>
+<a name="L59"></a><tt class="py-lineno"> 59</tt>  <tt class="py-line">    <tt class="py-keyword">for</tt> <tt class="py-name">document</tt> <tt class="py-keyword">in</tt> <tt class="py-name">sourceElements</tt><tt class="py-op">:</tt> </tt>
+<a name="L60"></a><tt class="py-lineno"> 60</tt>  <tt class="py-line">        <tt class="py-name">docCount</tt> <tt class="py-op">+=</tt> <tt class="py-number">1</tt> </tt>
+<a name="L61"></a><tt class="py-lineno"> 61</tt>  <tt class="py-line">        <tt class="py-name">origId</tt> <tt class="py-op">=</tt> <tt class="py-name">document</tt><tt class="py-op">.</tt><tt id="link-13" class="py-name" targets="Method TEES.Core.Model.Model.get()=TEES.Core.Model.Model-class.html#get,Function TEES.Utils.Parameters.get()=TEES.Utils.Parameters-module.html#get"><a title="TEES.Core.Model.Model.get
+TEES.Utils.Parameters.get" class="py-name" href="#" onclick="return doclink('link-13', 'get', 'link-13');">get</a></tt><tt class="py-op">(</tt><tt class="py-string">"pmid"</tt><tt class="py-op">)</tt> </tt>
+<a name="L62"></a><tt class="py-lineno"> 62</tt>  <tt class="py-line">        <tt class="py-keyword">if</tt> <tt class="py-name">origId</tt> <tt class="py-op">==</tt> <tt class="py-name">None</tt><tt class="py-op">:</tt> </tt>
+<a name="L63"></a><tt class="py-lineno"> 63</tt>  <tt class="py-line">            <tt class="py-name">origId</tt> <tt class="py-op">=</tt> <tt class="py-name">document</tt><tt class="py-op">.</tt><tt id="link-14" class="py-name"><a title="TEES.Core.Model.Model.get
+TEES.Utils.Parameters.get" class="py-name" href="#" onclick="return doclink('link-14', 'get', 'link-13');">get</a></tt><tt class="py-op">(</tt><tt class="py-string">"origId"</tt><tt class="py-op">)</tt> </tt>
+<a name="L64"></a><tt class="py-lineno"> 64</tt>  <tt class="py-line">        <tt class="py-name">origId</tt> <tt class="py-op">=</tt> <tt class="py-name">str</tt><tt class="py-op">(</tt><tt class="py-name">origId</tt><tt class="py-op">)</tt> </tt>
+<a name="L65"></a><tt class="py-lineno"> 65</tt>  <tt class="py-line">        <tt class="py-name">counter</tt><tt class="py-op">.</tt><tt id="link-15" class="py-name" targets="Method TEES.Utils.Libraries.progressbar.Bar.update()=TEES.Utils.Libraries.progressbar.Bar-class.html#update,Method TEES.Utils.Libraries.progressbar.ETA.update()=TEES.Utils.Libraries.progressbar.ETA-class.html#update,Method TEES.Utils.Libraries.progressbar.FileTransferSpeed.update()=TEES.Utils.Libraries.progressbar.FileTransferSpeed-class.html#update,Method TEES.Utils.Libraries.progressbar.Percentage.update()=TEES.Utils.Libraries.progressbar.Percentage-class.html#update,Method TEES.Utils.Libraries.progressbar.ProgressBar.update()=TEES.Utils.Libraries.progressbar.ProgressBar-class.html#update,Method TEES.Utils.Libraries.progressbar.ProgressBarWidget.update()=TEES.Utils.Libraries.progressbar.ProgressBarWidget-class.html#update,Method TEES.Utils.Libraries.progressbar.ProgressBarWidgetHFill.update()=TEES.Utils.Libraries.progressbar.ProgressBarWidgetHFill-class.html#update,Method TEES.Utils.Libraries.progressbar.ReverseBar.update()=TEES.Utils.Libraries.progressbar.ReverseBar-class.html#update,Method TEES.Utils.Libraries.progressbar.RotatingMarker.update()=TEES.Utils.Libraries.progressbar.RotatingMarker-class.html#update,Method TEES.Utils.ProgressCounter.ProgressCounter.update()=TEES.Utils.ProgressCounter.ProgressCounter-class.html#update"><a title="TEES.Utils.Libraries.progressbar.Bar.update
+TEES.Utils.Libraries.progressbar.ETA.update
+TEES.Utils.Libraries.progressbar.FileTransferSpeed.update
+TEES.Utils.Libraries.progressbar.Percentage.update
+TEES.Utils.Libraries.progressbar.ProgressBar.update
+TEES.Utils.Libraries.progressbar.ProgressBarWidget.update
+TEES.Utils.Libraries.progressbar.ProgressBarWidgetHFill.update
+TEES.Utils.Libraries.progressbar.ReverseBar.update
+TEES.Utils.Libraries.progressbar.RotatingMarker.update
+TEES.Utils.ProgressCounter.ProgressCounter.update" class="py-name" href="#" onclick="return doclink('link-15', 'update', 'link-15');">update</a></tt><tt class="py-op">(</tt><tt class="py-number">1</tt><tt class="py-op">,</tt> <tt class="py-string">"Splitting Documents ("</tt><tt class="py-op">+</tt><tt class="py-name">document</tt><tt class="py-op">.</tt><tt id="link-16" class="py-name"><a title="TEES.Core.Model.Model.get
+TEES.Utils.Parameters.get" class="py-name" href="#" onclick="return doclink('link-16', 'get', 'link-13');">get</a></tt><tt class="py-op">(</tt><tt class="py-string">"id"</tt><tt class="py-op">)</tt><tt class="py-op">+</tt><tt class="py-string">"/"</tt> <tt class="py-op">+</tt> <tt class="py-name">origId</tt> <tt class="py-op">+</tt> <tt class="py-string">"): "</tt><tt class="py-op">)</tt> </tt>
+<a name="L66"></a><tt class="py-lineno"> 66</tt>  <tt class="py-line">        <tt class="py-name">docId</tt> <tt class="py-op">=</tt> <tt class="py-name">document</tt><tt class="py-op">.</tt><tt id="link-17" class="py-name"><a title="TEES.Core.Model.Model.get
+TEES.Utils.Parameters.get" class="py-name" href="#" onclick="return doclink('link-17', 'get', 'link-13');">get</a></tt><tt class="py-op">(</tt><tt class="py-string">"id"</tt><tt class="py-op">)</tt> </tt>
+<a name="L67"></a><tt class="py-lineno"> 67</tt>  <tt class="py-line">        <tt class="py-keyword">if</tt> <tt class="py-name">docId</tt> <tt class="py-op">==</tt> <tt class="py-name">None</tt><tt class="py-op">:</tt> </tt>
+<a name="L68"></a><tt class="py-lineno"> 68</tt>  <tt class="py-line">            <tt class="py-name">docId</tt> <tt class="py-op">=</tt> <tt class="py-string">"CORPUS.d"</tt> <tt class="py-op">+</tt> <tt class="py-name">str</tt><tt class="py-op">(</tt><tt class="py-name">docCount</tt><tt class="py-op">)</tt> </tt>
+<a name="L69"></a><tt class="py-lineno"> 69</tt>  <tt class="py-line">        <tt class="py-keyword">if</tt> <tt class="py-name">document</tt><tt class="py-op">.</tt><tt class="py-name">find</tt><tt class="py-op">(</tt><tt class="py-string">"sentence"</tt><tt class="py-op">)</tt> <tt class="py-op">==</tt> <tt class="py-name">None</tt><tt class="py-op">:</tt> <tt class="py-comment"># no existing sentence split                </tt> </tt>
+<a name="L70"></a><tt class="py-lineno"> 70</tt>  <tt class="py-line">            <tt class="py-name">text</tt> <tt class="py-op">=</tt> <tt class="py-name">document</tt><tt class="py-op">.</tt><tt id="link-18" class="py-name"><a title="TEES.Core.Model.Model.get
+TEES.Utils.Parameters.get" class="py-name" href="#" onclick="return doclink('link-18', 'get', 'link-13');">get</a></tt><tt class="py-op">(</tt><tt class="py-string">"text"</tt><tt class="py-op">)</tt> </tt>
+<a name="L71"></a><tt class="py-lineno"> 71</tt>  <tt class="py-line">            <tt class="py-keyword">if</tt> <tt class="py-name">text</tt> <tt class="py-op">==</tt> <tt class="py-name">None</tt> <tt class="py-keyword">or</tt> <tt class="py-name">text</tt><tt class="py-op">.</tt><tt class="py-name">strip</tt><tt class="py-op">(</tt><tt class="py-op">)</tt> <tt class="py-op">==</tt> <tt class="py-string">""</tt><tt class="py-op">:</tt> </tt>
+<a name="L72"></a><tt class="py-lineno"> 72</tt>  <tt class="py-line">                <tt class="py-keyword">continue</tt> </tt>
+<a name="L73"></a><tt class="py-lineno"> 73</tt>  <tt class="py-line">             </tt>
+<a name="L74"></a><tt class="py-lineno"> 74</tt>  <tt class="py-line">            <tt class="py-name">newFile</tt> <tt class="py-op">=</tt> <tt class="py-name">os</tt><tt class="py-op">.</tt><tt class="py-name">path</tt><tt class="py-op">.</tt><tt class="py-name">join</tt><tt class="py-op">(</tt><tt class="py-name">tokenizationPath</tt><tt class="py-op">,</tt> <tt class="py-name">origId</tt> <tt class="py-op">+</tt> <tt class="py-string">".tok"</tt><tt class="py-op">)</tt> </tt>
+<a name="L75"></a><tt class="py-lineno"> 75</tt>  <tt class="py-line">            <tt id="link-19" class="py-name" targets="Variable TEES.Utils.Convert.processLPSN.f=TEES.Utils.Convert.processLPSN-module.html#f,Function TEES.Utils.STFormat.Scores.f()=TEES.Utils.STFormat.Scores-module.html#f"><a title="TEES.Utils.Convert.processLPSN.f
+TEES.Utils.STFormat.Scores.f" class="py-name" href="#" onclick="return doclink('link-19', 'f', 'link-19');">f</a></tt> <tt class="py-op">=</tt> <tt id="link-20" class="py-name" targets="Function TEES.Tools.SentenceSplitter.openFile()=TEES.Tools.SentenceSplitter-module.html#openFile"><a title="TEES.Tools.SentenceSplitter.openFile" class="py-name" href="#" onclick="return doclink('link-20', 'openFile', 'link-20');">openFile</a></tt><tt class="py-op">(</tt><tt class="py-name">newFile</tt><tt class="py-op">,</tt> <tt class="py-name">tarFile</tt><tt class="py-op">)</tt> </tt>
+<a name="L76"></a><tt class="py-lineno"> 76</tt>  <tt class="py-line">            <tt class="py-keyword">if</tt> <tt id="link-21" class="py-name"><a title="TEES.Utils.Convert.processLPSN.f
+TEES.Utils.STFormat.Scores.f" class="py-name" href="#" onclick="return doclink('link-21', 'f', 'link-19');">f</a></tt> <tt class="py-op">==</tt> <tt class="py-name">None</tt><tt class="py-op">:</tt> <tt class="py-comment"># file with BioNLP'11 extension not found, try BioNLP'09 extension</tt> </tt>
+<a name="L77"></a><tt class="py-lineno"> 77</tt>  <tt class="py-line">                <tt class="py-name">oldFile</tt> <tt class="py-op">=</tt> <tt class="py-name">os</tt><tt class="py-op">.</tt><tt class="py-name">path</tt><tt class="py-op">.</tt><tt class="py-name">join</tt><tt class="py-op">(</tt><tt class="py-name">tokenizationPath</tt><tt class="py-op">,</tt> <tt class="py-name">origId</tt> <tt class="py-op">+</tt> <tt class="py-string">".tokenized"</tt><tt class="py-op">)</tt> </tt>
+<a name="L78"></a><tt class="py-lineno"> 78</tt>  <tt class="py-line">                <tt id="link-22" class="py-name"><a title="TEES.Utils.Convert.processLPSN.f
+TEES.Utils.STFormat.Scores.f" class="py-name" href="#" onclick="return doclink('link-22', 'f', 'link-19');">f</a></tt> <tt class="py-op">=</tt> <tt id="link-23" class="py-name"><a title="TEES.Tools.SentenceSplitter.openFile" class="py-name" href="#" onclick="return doclink('link-23', 'openFile', 'link-20');">openFile</a></tt><tt class="py-op">(</tt><tt class="py-name">oldFile</tt><tt class="py-op">,</tt> <tt class="py-name">tarFile</tt><tt class="py-op">)</tt> </tt>
+<a name="L79"></a><tt class="py-lineno"> 79</tt>  <tt class="py-line">                <tt class="py-keyword">if</tt> <tt id="link-24" class="py-name"><a title="TEES.Utils.Convert.processLPSN.f
+TEES.Utils.STFormat.Scores.f" class="py-name" href="#" onclick="return doclink('link-24', 'f', 'link-19');">f</a></tt> <tt class="py-op">==</tt> <tt class="py-name">None</tt><tt class="py-op">:</tt> <tt class="py-comment"># no tokenization found</tt> </tt>
+<a name="L80"></a><tt class="py-lineno"> 80</tt>  <tt class="py-line">                    <tt class="py-keyword">continue</tt> </tt>
+<a name="L81"></a><tt class="py-lineno"> 81</tt>  <tt class="py-line">            <tt class="py-name">sentencesCreated</tt> <tt class="py-op">+=</tt> <tt id="link-25" class="py-name" targets="Function TEES.Tools.SentenceSplitter.alignSentences()=TEES.Tools.SentenceSplitter-module.html#alignSentences"><a title="TEES.Tools.SentenceSplitter.alignSentences" class="py-name" href="#" onclick="return doclink('link-25', 'alignSentences', 'link-25');">alignSentences</a></tt><tt class="py-op">(</tt><tt class="py-name">document</tt><tt class="py-op">,</tt> <tt id="link-26" class="py-name"><a title="TEES.Utils.Convert.processLPSN.f
+TEES.Utils.STFormat.Scores.f" class="py-name" href="#" onclick="return doclink('link-26', 'f', 'link-19');">f</a></tt><tt class="py-op">.</tt><tt class="py-name">readlines</tt><tt class="py-op">(</tt><tt class="py-op">)</tt><tt class="py-op">,</tt> <tt id="link-27" class="py-name" targets="Variable TEES.Tools.BLLIPParser.escDict=TEES.Tools.BLLIPParser-module.html#escDict,Variable TEES.Tools.StanfordParser.escDict=TEES.Tools.StanfordParser-module.html#escDict"><a title="TEES.Tools.BLLIPParser.escDict
+TEES.Tools.StanfordParser.escDict" class="py-name" href="#" onclick="return doclink('link-27', 'escDict', 'link-27');">escDict</a></tt><tt class="py-op">)</tt> </tt>
+<a name="L82"></a><tt class="py-lineno"> 82</tt>  <tt class="py-line">            <tt id="link-28" class="py-name"><a title="TEES.Utils.Convert.processLPSN.f
+TEES.Utils.STFormat.Scores.f" class="py-name" href="#" onclick="return doclink('link-28', 'f', 'link-19');">f</a></tt><tt class="py-op">.</tt><tt id="link-29" class="py-name" targets="Method TEES.Core.Model.Model.close()=TEES.Core.Model.Model-class.html#close,Method TEES.Utils.ElementTreeUtils.ETWriter.close()=TEES.Utils.ElementTreeUtils.ETWriter-class.html#close"><a title="TEES.Core.Model.Model.close
+TEES.Utils.ElementTreeUtils.ETWriter.close" class="py-name" href="#" onclick="return doclink('link-29', 'close', 'link-29');">close</a></tt><tt class="py-op">(</tt><tt class="py-op">)</tt> </tt>
+<a name="L83"></a><tt class="py-lineno"> 83</tt>  <tt class="py-line">     </tt>
+<a name="L84"></a><tt class="py-lineno"> 84</tt>  <tt class="py-line">            <tt class="py-comment"># Remove original text</tt> </tt>
+<a name="L85"></a><tt class="py-lineno"> 85</tt>  <tt class="py-line">            <tt class="py-keyword">if</tt> <tt class="py-name">removeText</tt><tt class="py-op">:</tt> </tt>
+<a name="L86"></a><tt class="py-lineno"> 86</tt>  <tt class="py-line">                <tt class="py-keyword">del</tt> <tt class="py-name">document</tt><tt class="py-op">[</tt><tt class="py-string">"text"</tt><tt class="py-op">]</tt> </tt>
+<a name="L87"></a><tt class="py-lineno"> 87</tt>  <tt class="py-line">            <tt class="py-comment"># Move elements from document element to sentences</tt> </tt>
+<a name="L88"></a><tt class="py-lineno"> 88</tt>  <tt class="py-line">            <tt id="link-30" class="py-name"><a title="TEES.Tools.GeniaSentenceSplitter.moveElements" class="py-name" href="#" onclick="return doclink('link-30', 'moveElements', 'link-1');">moveElements</a></tt><tt class="py-op">(</tt><tt class="py-name">document</tt><tt class="py-op">)</tt> </tt>
+<a name="L89"></a><tt class="py-lineno"> 89</tt>  <tt class="py-line">            <tt class="py-name">docsWithSentences</tt> <tt class="py-op">+=</tt> <tt class="py-number">1</tt> </tt>
+<a name="L90"></a><tt class="py-lineno"> 90</tt>  <tt class="py-line">        <tt class="py-keyword">else</tt><tt class="py-op">:</tt> </tt>
+<a name="L91"></a><tt class="py-lineno"> 91</tt>  <tt class="py-line">            <tt class="py-name">docsWithSentences</tt> <tt class="py-op">+=</tt> <tt class="py-number">1</tt> </tt>
+<a name="L92"></a><tt class="py-lineno"> 92</tt>  <tt class="py-line">     </tt>
+<a name="L93"></a><tt class="py-lineno"> 93</tt>  <tt class="py-line">    <tt class="py-keyword">if</tt> <tt class="py-name">tarFile</tt> <tt class="py-op">!=</tt> <tt class="py-name">None</tt><tt class="py-op">:</tt> </tt>
+<a name="L94"></a><tt class="py-lineno"> 94</tt>  <tt class="py-line">        <tt class="py-name">tarFile</tt><tt class="py-op">.</tt><tt id="link-31" class="py-name"><a title="TEES.Core.Model.Model.close
+TEES.Utils.ElementTreeUtils.ETWriter.close" class="py-name" href="#" onclick="return doclink('link-31', 'close', 'link-29');">close</a></tt><tt class="py-op">(</tt><tt class="py-op">)</tt> </tt>
+<a name="L95"></a><tt class="py-lineno"> 95</tt>  <tt class="py-line">    <tt class="py-keyword">print</tt> <tt class="py-op">&gt;&gt;</tt> <tt class="py-name">sys</tt><tt class="py-op">.</tt><tt class="py-name">stderr</tt><tt class="py-op">,</tt> <tt class="py-string">"Sentence splitting created"</tt><tt class="py-op">,</tt> <tt class="py-name">sentencesCreated</tt><tt class="py-op">,</tt> <tt class="py-string">"sentences"</tt> </tt>
+<a name="L96"></a><tt class="py-lineno"> 96</tt>  <tt class="py-line">    <tt class="py-keyword">print</tt> <tt class="py-op">&gt;&gt;</tt> <tt class="py-name">sys</tt><tt class="py-op">.</tt><tt class="py-name">stderr</tt><tt class="py-op">,</tt> <tt class="py-name">docsWithSentences</tt><tt class="py-op">,</tt> <tt class="py-string">"/"</tt><tt class="py-op">,</tt> <tt class="py-name">docCount</tt><tt class="py-op">,</tt> <tt class="py-string">"documents have sentences"</tt> </tt>
+<a name="L97"></a><tt class="py-lineno"> 97</tt>  <tt class="py-line">         </tt>
+<a name="L98"></a><tt class="py-lineno"> 98</tt>  <tt class="py-line">    <tt class="py-keyword">if</tt> <tt class="py-name">output</tt> <tt class="py-op">!=</tt> <tt class="py-name">None</tt><tt class="py-op">:</tt> </tt>
+<a name="L99"></a><tt class="py-lineno"> 99</tt>  <tt class="py-line">        <tt class="py-keyword">print</tt> <tt class="py-op">&gt;&gt;</tt> <tt class="py-name">sys</tt><tt class="py-op">.</tt><tt class="py-name">stderr</tt><tt class="py-op">,</tt> <tt class="py-string">"Writing output to"</tt><tt class="py-op">,</tt> <tt class="py-name">output</tt> </tt>
+<a name="L100"></a><tt class="py-lineno">100</tt>  <tt class="py-line">        <tt class="py-name">ETUtils</tt><tt class="py-op">.</tt><tt id="link-32" class="py-name" targets="Method TEES.Core.IdSet.IdSet.write()=TEES.Core.IdSet.IdSet-class.html#write,Class Method TEES.ExampleWriters.BioTextExampleWriter.BioTextExampleWriter.write()=TEES.ExampleWriters.BioTextExampleWriter.BioTextExampleWriter-class.html#write,Method TEES.ExampleWriters.SentenceExampleWriter.SentenceExampleWriter.write()=TEES.ExampleWriters.SentenceExampleWriter.SentenceExampleWriter-class.html#write,Method TEES.Utils.ElementTreeUtils.ETWriter.write()=TEES.Utils.ElementTreeUtils.ETWriter-class.html#write,Function TEES.Utils.ElementTreeUtils.write()=TEES.Utils.ElementTreeUtils-module.html#write,Function TEES.Utils.STFormat.STTools.write()=TEES.Utils.STFormat.STTools-module.html#write,Method TEES.Utils.Stream.StreamModifier.write()=TEES.Utils.Stream.StreamModifier-class.html#write"><a title="TEES.Core.IdSet.IdSet.write
+TEES.ExampleWriters.BioTextExampleWriter.BioTextExampleWriter.write
+TEES.ExampleWriters.SentenceExampleWriter.SentenceExampleWriter.write
+TEES.Utils.ElementTreeUtils.ETWriter.write
+TEES.Utils.ElementTreeUtils.write
+TEES.Utils.STFormat.STTools.write
+TEES.Utils.Stream.StreamModifier.write" class="py-name" href="#" onclick="return doclink('link-32', 'write', 'link-32');">write</a></tt><tt class="py-op">(</tt><tt class="py-name">corpusRoot</tt><tt class="py-op">,</tt> <tt class="py-name">output</tt><tt class="py-op">)</tt> </tt>
+<a name="L101"></a><tt class="py-lineno">101</tt>  <tt class="py-line">    <tt class="py-keyword">return</tt> <tt class="py-name">corpusTree</tt> </tt>
+</div><a name="L102"></a><tt class="py-lineno">102</tt>  <tt class="py-line"> </tt>
+<a name="alignSentences"></a><div id="alignSentences-def"><a name="L103"></a><tt class="py-lineno">103</tt> <a class="py-toggle" href="#" id="alignSentences-toggle" onclick="return toggle('alignSentences');">-</a><tt class="py-line"><tt class="py-keyword">def</tt> <a class="py-def-name" href="TEES.Tools.SentenceSplitter-module.html#alignSentences">alignSentences</a><tt class="py-op">(</tt><tt class="py-param">document</tt><tt class="py-op">,</tt> <tt class="py-param">sentenceTexts</tt><tt class="py-op">,</tt> <tt class="py-param">escDict</tt><tt class="py-op">=</tt><tt class="py-op">{</tt><tt class="py-op">}</tt><tt class="py-op">)</tt><tt class="py-op">:</tt> </tt>
+</div><div id="alignSentences-collapsed" style="display:none;" pad="+++" indent="++++"></div><div id="alignSentences-expanded"><a name="L104"></a><tt class="py-lineno">104</tt>  <tt class="py-line">    <tt class="py-name">text</tt> <tt class="py-op">=</tt> <tt class="py-name">document</tt><tt class="py-op">.</tt><tt id="link-33" class="py-name"><a title="TEES.Core.Model.Model.get
+TEES.Utils.Parameters.get" class="py-name" href="#" onclick="return doclink('link-33', 'get', 'link-13');">get</a></tt><tt class="py-op">(</tt><tt class="py-string">"text"</tt><tt class="py-op">)</tt> </tt>
+<a name="L105"></a><tt class="py-lineno">105</tt>  <tt class="py-line">    <tt id="link-34" class="py-name" targets="Method TEES.Utils.Libraries.progressbar.ProgressBar.start()=TEES.Utils.Libraries.progressbar.ProgressBar-class.html#start,Method TEES.Utils.Timer.Timer.start()=TEES.Utils.Timer.Timer-class.html#start"><a title="TEES.Utils.Libraries.progressbar.ProgressBar.start
+TEES.Utils.Timer.Timer.start" class="py-name" href="#" onclick="return doclink('link-34', 'start', 'link-34');">start</a></tt> <tt class="py-op">=</tt> <tt class="py-number">0</tt> <tt class="py-comment"># sentences are consecutively aligned to the text for charOffsets</tt> </tt>
+<a name="L106"></a><tt class="py-lineno">106</tt>  <tt class="py-line">    <tt class="py-name">cEnd</tt> <tt class="py-op">=</tt> <tt class="py-number">0</tt> </tt>
+<a name="L107"></a><tt class="py-lineno">107</tt>  <tt class="py-line">    <tt class="py-name">sentenceCount</tt> <tt class="py-op">=</tt> <tt class="py-number">0</tt> </tt>
+<a name="L108"></a><tt class="py-lineno">108</tt>  <tt class="py-line">    <tt class="py-name">head</tt> <tt class="py-op">=</tt> <tt class="py-name">None</tt> </tt>
+<a name="L109"></a><tt class="py-lineno">109</tt>  <tt class="py-line">    <tt class="py-name">sentenceStart</tt> <tt class="py-op">=</tt> <tt class="py-name">None</tt> </tt>
+<a name="L110"></a><tt class="py-lineno">110</tt>  <tt class="py-line">    <tt class="py-comment">#text = text.replace("\n", " ") # should stop sentence splitter from crashing.</tt> </tt>
+<a name="L111"></a><tt class="py-lineno">111</tt>  <tt class="py-line">    <tt class="py-comment">#text = text.replace("  ", " ") # should stop sentence splitter from crashing.</tt> </tt>
+<a name="L112"></a><tt class="py-lineno">112</tt>  <tt class="py-line">    <tt class="py-name">sText</tt> <tt class="py-op">=</tt> <tt class="py-name">None</tt> </tt>
+<a name="L113"></a><tt class="py-lineno">113</tt>  <tt class="py-line">    <tt class="py-keyword">for</tt> <tt class="py-name">sText</tt> <tt class="py-keyword">in</tt> <tt class="py-name">sentenceTexts</tt><tt class="py-op">:</tt> </tt>
+<a name="L114"></a><tt class="py-lineno">114</tt>  <tt class="py-line">        <tt class="py-name">sText</tt> <tt class="py-op">=</tt> <tt class="py-name">sText</tt><tt class="py-op">.</tt><tt class="py-name">strip</tt><tt class="py-op">(</tt><tt class="py-op">)</tt> <tt class="py-comment"># The text of the sentence</tt> </tt>
+<a name="L115"></a><tt class="py-lineno">115</tt>  <tt class="py-line">        <tt class="py-keyword">for</tt> <tt class="py-name">key</tt> <tt class="py-keyword">in</tt> <tt class="py-name">sorted</tt><tt class="py-op">(</tt><tt id="link-35" class="py-name"><a title="TEES.Tools.BLLIPParser.escDict
+TEES.Tools.StanfordParser.escDict" class="py-name" href="#" onclick="return doclink('link-35', 'escDict', 'link-27');">escDict</a></tt><tt class="py-op">.</tt><tt class="py-name">keys</tt><tt class="py-op">(</tt><tt class="py-op">)</tt><tt class="py-op">)</tt><tt class="py-op">:</tt> </tt>
+<a name="L116"></a><tt class="py-lineno">116</tt>  <tt class="py-line">            <tt class="py-name">sText</tt> <tt class="py-op">=</tt> <tt class="py-name">sText</tt><tt class="py-op">.</tt><tt id="link-36" class="py-name" targets="Function TEES.Utils.Libraries.pstat.replace()=TEES.Utils.Libraries.pstat-module.html#replace"><a title="TEES.Utils.Libraries.pstat.replace" class="py-name" href="#" onclick="return doclink('link-36', 'replace', 'link-36');">replace</a></tt><tt class="py-op">(</tt><tt class="py-name">key</tt><tt class="py-op">,</tt> <tt id="link-37" class="py-name"><a title="TEES.Tools.BLLIPParser.escDict
+TEES.Tools.StanfordParser.escDict" class="py-name" href="#" onclick="return doclink('link-37', 'escDict', 'link-27');">escDict</a></tt><tt class="py-op">[</tt><tt class="py-name">key</tt><tt class="py-op">]</tt><tt class="py-op">)</tt> </tt>
+<a name="L117"></a><tt class="py-lineno">117</tt>  <tt class="py-line">        <tt class="py-keyword">if</tt> <tt class="py-name">sText</tt> <tt class="py-op">==</tt> <tt class="py-string">""</tt><tt class="py-op">:</tt> </tt>
+<a name="L118"></a><tt class="py-lineno">118</tt>  <tt class="py-line">            <tt class="py-keyword">print</tt> <tt class="py-op">&gt;&gt;</tt> <tt class="py-name">sys</tt><tt class="py-op">.</tt><tt class="py-name">stderr</tt><tt class="py-op">,</tt> <tt class="py-string">"Warning, empty sentence in"</tt><tt class="py-op">,</tt> <tt class="py-name">document</tt><tt class="py-op">.</tt><tt id="link-38" class="py-name"><a title="TEES.Core.Model.Model.get
+TEES.Utils.Parameters.get" class="py-name" href="#" onclick="return doclink('link-38', 'get', 'link-13');">get</a></tt><tt class="py-op">(</tt><tt class="py-string">"id"</tt><tt class="py-op">)</tt>  </tt>
+<a name="L119"></a><tt class="py-lineno">119</tt>  <tt class="py-line">            <tt class="py-keyword">continue</tt> </tt>
+<a name="L120"></a><tt class="py-lineno">120</tt>  <tt class="py-line">        <tt class="py-name">isFirst</tt> <tt class="py-op">=</tt> <tt class="py-name">True</tt> </tt>
+<a name="L121"></a><tt class="py-lineno">121</tt>  <tt class="py-line">        <tt class="py-keyword">for</tt> <tt class="py-name">sToken</tt> <tt class="py-keyword">in</tt> <tt class="py-name">sText</tt><tt class="py-op">.</tt><tt id="link-39" class="py-name"><a title="TEES.Utils.Convert.processLPSN.split" class="py-name" href="#" onclick="return doclink('link-39', 'split', 'link-10');">split</a></tt><tt class="py-op">(</tt><tt class="py-op">)</tt><tt class="py-op">:</tt> </tt>
+<a name="L122"></a><tt class="py-lineno">122</tt>  <tt class="py-line">            <tt class="py-comment"># Find the starting point of the token in the text. This</tt> </tt>
+<a name="L123"></a><tt class="py-lineno">123</tt>  <tt class="py-line">            <tt class="py-comment"># point must be after previous sentences</tt> </tt>
+<a name="L124"></a><tt class="py-lineno">124</tt>  <tt class="py-line">            <tt class="py-name">cStart</tt> <tt class="py-op">=</tt> <tt class="py-name">text</tt><tt class="py-op">.</tt><tt class="py-name">find</tt><tt class="py-op">(</tt><tt class="py-name">sToken</tt><tt class="py-op">,</tt> <tt id="link-40" class="py-name"><a title="TEES.Utils.Libraries.progressbar.ProgressBar.start
+TEES.Utils.Timer.Timer.start" class="py-name" href="#" onclick="return doclink('link-40', 'start', 'link-34');">start</a></tt><tt class="py-op">)</tt> <tt class="py-comment"># find start position</tt> </tt>
+<a name="L125"></a><tt class="py-lineno">125</tt>  <tt class="py-line">            <tt class="py-keyword">assert</tt> <tt class="py-name">cStart</tt> <tt class="py-op">!=</tt> <tt class="py-op">-</tt><tt class="py-number">1</tt><tt class="py-op">,</tt> <tt class="py-op">(</tt><tt class="py-name">text</tt><tt class="py-op">,</tt> <tt class="py-name">sText</tt><tt class="py-op">,</tt> <tt class="py-name">sToken</tt><tt class="py-op">,</tt> <tt id="link-41" class="py-name"><a title="TEES.Utils.Libraries.progressbar.ProgressBar.start
+TEES.Utils.Timer.Timer.start" class="py-name" href="#" onclick="return doclink('link-41', 'start', 'link-34');">start</a></tt><tt class="py-op">)</tt> </tt>
+<a name="L126"></a><tt class="py-lineno">126</tt>  <tt class="py-line">            <tt class="py-keyword">if</tt> <tt class="py-keyword">not</tt> <tt class="py-name">text</tt><tt class="py-op">[</tt><tt class="py-name">cEnd</tt><tt class="py-op">:</tt><tt class="py-name">cStart</tt><tt class="py-op">]</tt><tt class="py-op">.</tt><tt class="py-name">strip</tt><tt class="py-op">(</tt><tt class="py-op">)</tt> <tt class="py-op">==</tt> <tt class="py-string">""</tt><tt class="py-op">:</tt> </tt>
+<a name="L127"></a><tt class="py-lineno">127</tt>  <tt class="py-line">                <tt class="py-keyword">print</tt> <tt class="py-op">&gt;&gt;</tt> <tt class="py-name">sys</tt><tt class="py-op">.</tt><tt class="py-name">stderr</tt><tt class="py-op">,</tt>  <tt class="py-string">"-----------------------------"</tt> </tt>
+<a name="L128"></a><tt class="py-lineno">128</tt>  <tt class="py-line">                <tt class="py-keyword">print</tt> <tt class="py-op">&gt;&gt;</tt> <tt class="py-name">sys</tt><tt class="py-op">.</tt><tt class="py-name">stderr</tt><tt class="py-op">,</tt>  <tt class="py-string">"text:"</tt><tt class="py-op">,</tt> <tt class="py-name">text</tt> </tt>
+<a name="L129"></a><tt class="py-lineno">129</tt>  <tt class="py-line">                <tt class="py-keyword">print</tt> <tt class="py-op">&gt;&gt;</tt> <tt class="py-name">sys</tt><tt class="py-op">.</tt><tt class="py-name">stderr</tt><tt class="py-op">,</tt>  <tt class="py-string">"text[cEnd:cStart+1]:"</tt><tt class="py-op">,</tt> <tt class="py-name">text</tt><tt class="py-op">[</tt><tt class="py-name">cEnd</tt><tt class="py-op">:</tt><tt class="py-name">cStart</tt><tt class="py-op">+</tt><tt class="py-number">1</tt><tt class="py-op">]</tt> </tt>
+<a name="L130"></a><tt class="py-lineno">130</tt>  <tt class="py-line">                <tt class="py-keyword">print</tt> <tt class="py-op">&gt;&gt;</tt> <tt class="py-name">sys</tt><tt class="py-op">.</tt><tt class="py-name">stderr</tt><tt class="py-op">,</tt>  <tt class="py-string">"prevSText:"</tt><tt class="py-op">,</tt> <tt class="py-name">prevSText</tt> </tt>
+<a name="L131"></a><tt class="py-lineno">131</tt>  <tt class="py-line">                <tt class="py-keyword">print</tt> <tt class="py-op">&gt;&gt;</tt> <tt class="py-name">sys</tt><tt class="py-op">.</tt><tt class="py-name">stderr</tt><tt class="py-op">,</tt>  <tt class="py-string">"sText:"</tt><tt class="py-op">,</tt> <tt class="py-name">sText</tt> </tt>
+<a name="L132"></a><tt class="py-lineno">132</tt>  <tt class="py-line">                <tt class="py-keyword">print</tt> <tt class="py-op">&gt;&gt;</tt> <tt class="py-name">sys</tt><tt class="py-op">.</tt><tt class="py-name">stderr</tt><tt class="py-op">,</tt>  <tt class="py-string">"sToken:"</tt><tt class="py-op">,</tt> <tt class="py-name">sToken</tt> </tt>
+<a name="L133"></a><tt class="py-lineno">133</tt>  <tt class="py-line">                <tt class="py-keyword">print</tt> <tt class="py-op">&gt;&gt;</tt> <tt class="py-name">sys</tt><tt class="py-op">.</tt><tt class="py-name">stderr</tt><tt class="py-op">,</tt>  <tt class="py-string">"start:"</tt><tt class="py-op">,</tt> <tt id="link-42" class="py-name"><a title="TEES.Utils.Libraries.progressbar.ProgressBar.start
+TEES.Utils.Timer.Timer.start" class="py-name" href="#" onclick="return doclink('link-42', 'start', 'link-34');">start</a></tt> </tt>
+<a name="L134"></a><tt class="py-lineno">134</tt>  <tt class="py-line">                <tt class="py-keyword">print</tt> <tt class="py-op">&gt;&gt;</tt> <tt class="py-name">sys</tt><tt class="py-op">.</tt><tt class="py-name">stderr</tt><tt class="py-op">,</tt>  <tt class="py-string">"-----------------------------"</tt> </tt>
+<a name="L135"></a><tt class="py-lineno">135</tt>  <tt class="py-line">                <tt class="py-keyword">assert</tt> <tt class="py-name">False</tt> </tt>
+<a name="L136"></a><tt class="py-lineno">136</tt>  <tt class="py-line">            <tt class="py-comment">#assert text[cEnd:cStart].strip() == "", (text, text[cEnd:cStart+1], sText, sToken, start) # only whitespace should separate words</tt> </tt>
+<a name="L137"></a><tt class="py-lineno">137</tt>  <tt class="py-line">            <tt class="py-name">tail</tt> <tt class="py-op">=</tt> <tt class="py-name">None</tt> </tt>
+<a name="L138"></a><tt class="py-lineno">138</tt>  <tt class="py-line">            <tt class="py-keyword">if</tt> <tt class="py-name">isFirst</tt><tt class="py-op">:</tt> </tt>
+<a name="L139"></a><tt class="py-lineno">139</tt>  <tt class="py-line">                <tt class="py-name">sentenceStart</tt> <tt class="py-op">=</tt> <tt class="py-name">cStart</tt> </tt>
+<a name="L140"></a><tt class="py-lineno">140</tt>  <tt class="py-line">                <tt class="py-keyword">if</tt> <tt class="py-name">cStart</tt> <tt class="py-op">-</tt> <tt id="link-43" class="py-name"><a title="TEES.Utils.Libraries.progressbar.ProgressBar.start
+TEES.Utils.Timer.Timer.start" class="py-name" href="#" onclick="return doclink('link-43', 'start', 'link-34');">start</a></tt> <tt class="py-op">!=</tt> <tt class="py-number">0</tt><tt class="py-op">:</tt> </tt>
+<a name="L141"></a><tt class="py-lineno">141</tt>  <tt class="py-line">                    <tt class="py-name">prevSentence</tt><tt class="py-op">.</tt><tt class="py-name">set</tt><tt class="py-op">(</tt><tt class="py-string">"tail"</tt><tt class="py-op">,</tt> <tt class="py-name">text</tt><tt class="py-op">[</tt><tt id="link-44" class="py-name"><a title="TEES.Utils.Libraries.progressbar.ProgressBar.start
+TEES.Utils.Timer.Timer.start" class="py-name" href="#" onclick="return doclink('link-44', 'start', 'link-34');">start</a></tt><tt class="py-op">:</tt><tt class="py-name">cStart</tt><tt class="py-op">]</tt><tt class="py-op">)</tt> </tt>
+<a name="L142"></a><tt class="py-lineno">142</tt>  <tt class="py-line">            <tt class="py-keyword">if</tt> <tt class="py-name">cEnd</tt> <tt class="py-op">==</tt> <tt class="py-number">0</tt> <tt class="py-keyword">and</tt> <tt class="py-name">cStart</tt> <tt class="py-op">!=</tt> <tt class="py-number">0</tt><tt class="py-op">:</tt> </tt>
+<a name="L143"></a><tt class="py-lineno">143</tt>  <tt class="py-line">                <tt class="py-name">head</tt> <tt class="py-op">=</tt> <tt class="py-name">text</tt><tt class="py-op">[</tt><tt class="py-name">cEnd</tt><tt class="py-op">:</tt><tt class="py-name">cStart</tt><tt class="py-op">]</tt> </tt>
+<a name="L144"></a><tt class="py-lineno">144</tt>  <tt class="py-line">            <tt class="py-name">cEnd</tt> <tt class="py-op">=</tt> <tt class="py-name">cStart</tt> <tt class="py-op">+</tt> <tt class="py-name">len</tt><tt class="py-op">(</tt><tt class="py-name">sToken</tt><tt class="py-op">)</tt> <tt class="py-comment"># end position is determined by length</tt> </tt>
+<a name="L145"></a><tt class="py-lineno">145</tt>  <tt class="py-line">            <tt id="link-45" class="py-name"><a title="TEES.Utils.Libraries.progressbar.ProgressBar.start
+TEES.Utils.Timer.Timer.start" class="py-name" href="#" onclick="return doclink('link-45', 'start', 'link-34');">start</a></tt> <tt class="py-op">=</tt> <tt class="py-name">cStart</tt> <tt class="py-op">+</tt> <tt class="py-name">len</tt><tt class="py-op">(</tt><tt class="py-name">sToken</tt><tt class="py-op">)</tt> <tt class="py-comment"># for next token, start search from end of this one</tt> </tt>
+<a name="L146"></a><tt class="py-lineno">146</tt>  <tt class="py-line">            <tt class="py-name">isFirst</tt> <tt class="py-op">=</tt> <tt class="py-name">False</tt> </tt>
+<a name="L147"></a><tt class="py-lineno">147</tt>  <tt class="py-line">        <tt class="py-comment"># make sentence element</tt> </tt>
+<a name="L148"></a><tt class="py-lineno">148</tt>  <tt class="py-line">        <tt id="link-46" class="py-name" targets="Variable TEES.Utils.STFormat.Scores.e=TEES.Utils.STFormat.Scores-module.html#e"><a title="TEES.Utils.STFormat.Scores.e" class="py-name" href="#" onclick="return doclink('link-46', 'e', 'link-46');">e</a></tt> <tt class="py-op">=</tt> <tt class="py-name">ET</tt><tt class="py-op">.</tt><tt class="py-name">Element</tt><tt class="py-op">(</tt><tt class="py-string">"sentence"</tt><tt class="py-op">)</tt> </tt>
+<a name="L149"></a><tt class="py-lineno">149</tt>  <tt class="py-line">        <tt class="py-keyword">if</tt> <tt class="py-name">head</tt> <tt class="py-op">!=</tt> <tt class="py-name">None</tt><tt class="py-op">:</tt> </tt>
+<a name="L150"></a><tt class="py-lineno">150</tt>  <tt class="py-line">            <tt id="link-47" class="py-name"><a title="TEES.Utils.STFormat.Scores.e" class="py-name" href="#" onclick="return doclink('link-47', 'e', 'link-46');">e</a></tt><tt class="py-op">.</tt><tt class="py-name">set</tt><tt class="py-op">(</tt><tt class="py-string">"head"</tt><tt class="py-op">,</tt> <tt class="py-name">head</tt><tt class="py-op">)</tt> </tt>
+<a name="L151"></a><tt class="py-lineno">151</tt>  <tt class="py-line">        <tt id="link-48" class="py-name"><a title="TEES.Utils.STFormat.Scores.e" class="py-name" href="#" onclick="return doclink('link-48', 'e', 'link-46');">e</a></tt><tt class="py-op">.</tt><tt class="py-name">set</tt><tt class="py-op">(</tt><tt class="py-string">"text"</tt><tt class="py-op">,</tt> <tt class="py-name">text</tt><tt class="py-op">[</tt><tt class="py-name">sentenceStart</tt><tt class="py-op">:</tt><tt class="py-name">cEnd</tt><tt class="py-op">]</tt><tt class="py-op">)</tt> </tt>
+<a name="L152"></a><tt class="py-lineno">152</tt>  <tt class="py-line">        <tt id="link-49" class="py-name"><a title="TEES.Utils.STFormat.Scores.e" class="py-name" href="#" onclick="return doclink('link-49', 'e', 'link-46');">e</a></tt><tt class="py-op">.</tt><tt class="py-name">set</tt><tt class="py-op">(</tt><tt class="py-string">"charOffset"</tt><tt class="py-op">,</tt> <tt class="py-name">str</tt><tt class="py-op">(</tt><tt class="py-name">sentenceStart</tt><tt class="py-op">)</tt> <tt class="py-op">+</tt> <tt class="py-string">"-"</tt> <tt class="py-op">+</tt> <tt class="py-name">str</tt><tt class="py-op">(</tt><tt class="py-name">cEnd</tt><tt class="py-op">)</tt><tt class="py-op">)</tt> <tt class="py-comment"># NOTE: check</tt> </tt>
+<a name="L153"></a><tt class="py-lineno">153</tt>  <tt class="py-line">        <tt id="link-50" class="py-name"><a title="TEES.Utils.STFormat.Scores.e" class="py-name" href="#" onclick="return doclink('link-50', 'e', 'link-46');">e</a></tt><tt class="py-op">.</tt><tt class="py-name">set</tt><tt class="py-op">(</tt><tt class="py-string">"id"</tt><tt class="py-op">,</tt> <tt class="py-name">document</tt><tt class="py-op">.</tt><tt id="link-51" class="py-name"><a title="TEES.Core.Model.Model.get
+TEES.Utils.Parameters.get" class="py-name" href="#" onclick="return doclink('link-51', 'get', 'link-13');">get</a></tt><tt class="py-op">(</tt><tt class="py-string">"id"</tt><tt class="py-op">)</tt> <tt class="py-op">+</tt> <tt class="py-string">".s"</tt> <tt class="py-op">+</tt> <tt class="py-name">str</tt><tt class="py-op">(</tt><tt class="py-name">sentenceCount</tt><tt class="py-op">)</tt><tt class="py-op">)</tt> </tt>
+<a name="L154"></a><tt class="py-lineno">154</tt>  <tt class="py-line">        <tt class="py-name">document</tt><tt class="py-op">.</tt><tt class="py-name">append</tt><tt class="py-op">(</tt><tt id="link-52" class="py-name"><a title="TEES.Utils.STFormat.Scores.e" class="py-name" href="#" onclick="return doclink('link-52', 'e', 'link-46');">e</a></tt><tt class="py-op">)</tt> <tt class="py-comment"># add sentence to parent element</tt> </tt>
+<a name="L155"></a><tt class="py-lineno">155</tt>  <tt class="py-line">        <tt class="py-name">prevSentence</tt> <tt class="py-op">=</tt> <tt id="link-53" class="py-name"><a title="TEES.Utils.STFormat.Scores.e" class="py-name" href="#" onclick="return doclink('link-53', 'e', 'link-46');">e</a></tt> </tt>
+<a name="L156"></a><tt class="py-lineno">156</tt>  <tt class="py-line">        <tt class="py-name">sentenceCount</tt> <tt class="py-op">+=</tt> <tt class="py-number">1</tt> </tt>
+<a name="L157"></a><tt class="py-lineno">157</tt>  <tt class="py-line">        <tt class="py-keyword">if</tt> <tt class="py-name">sentenceCount</tt> <tt class="py-op">==</tt> <tt class="py-name">len</tt><tt class="py-op">(</tt><tt class="py-name">sentenceTexts</tt><tt class="py-op">)</tt><tt class="py-op">:</tt> <tt class="py-comment"># set tail of last sentence in document</tt> </tt>
+<a name="L158"></a><tt class="py-lineno">158</tt>  <tt class="py-line">            <tt class="py-keyword">if</tt> <tt class="py-name">cEnd</tt> <tt class="py-op">&lt;=</tt> <tt class="py-name">len</tt><tt class="py-op">(</tt><tt class="py-name">text</tt><tt class="py-op">)</tt><tt class="py-op">:</tt> </tt>
+<a name="L159"></a><tt class="py-lineno">159</tt>  <tt class="py-line">                <tt id="link-54" class="py-name"><a title="TEES.Utils.STFormat.Scores.e" class="py-name" href="#" onclick="return doclink('link-54', 'e', 'link-46');">e</a></tt><tt class="py-op">.</tt><tt class="py-name">set</tt><tt class="py-op">(</tt><tt class="py-string">"tail"</tt><tt class="py-op">,</tt> <tt class="py-name">text</tt><tt class="py-op">[</tt><tt class="py-name">cEnd</tt><tt class="py-op">:</tt><tt class="py-op">]</tt><tt class="py-op">)</tt> </tt>
+<a name="L160"></a><tt class="py-lineno">160</tt>  <tt class="py-line">        <tt class="py-name">prevSText</tt> <tt class="py-op">=</tt> <tt class="py-name">sText</tt> </tt>
+<a name="L161"></a><tt class="py-lineno">161</tt>  <tt class="py-line">    <tt class="py-keyword">return</tt> <tt class="py-name">sentenceCount</tt> </tt>
+</div><a name="L162"></a><tt class="py-lineno">162</tt>  <tt class="py-line">     </tt>
+<a name="L163"></a><tt class="py-lineno">163</tt>  <tt class="py-line">     </tt>
+<a name="L164"></a><tt class="py-lineno">164</tt>  <tt class="py-line"><tt class="py-keyword">if</tt> <tt class="py-name">__name__</tt><tt class="py-op">==</tt><tt class="py-string">"__main__"</tt><tt class="py-op">:</tt> </tt>
+<a name="L165"></a><tt class="py-lineno">165</tt>  <tt class="py-line">    <tt class="py-keyword">import</tt> <tt class="py-name">sys</tt> </tt>
+<a name="L166"></a><tt class="py-lineno">166</tt>  <tt class="py-line">     </tt>
+<a name="L167"></a><tt class="py-lineno">167</tt>  <tt class="py-line">    <tt class="py-keyword">from</tt> <tt class="py-name">optparse</tt> <tt class="py-keyword">import</tt> <tt class="py-name">OptionParser</tt> </tt>
+<a name="L168"></a><tt class="py-lineno">168</tt>  <tt class="py-line">    <tt class="py-comment"># Import Psyco if available</tt> </tt>
+<a name="L169"></a><tt class="py-lineno">169</tt>  <tt class="py-line">    <tt class="py-keyword">try</tt><tt class="py-op">:</tt> </tt>
+<a name="L170"></a><tt class="py-lineno">170</tt>  <tt class="py-line">        <tt class="py-keyword">import</tt> <tt class="py-name">psyco</tt> </tt>
+<a name="L171"></a><tt class="py-lineno">171</tt>  <tt class="py-line">        <tt class="py-name">psyco</tt><tt class="py-op">.</tt><tt class="py-name">full</tt><tt class="py-op">(</tt><tt class="py-op">)</tt> </tt>
+<a name="L172"></a><tt class="py-lineno">172</tt>  <tt class="py-line">        <tt class="py-keyword">print</tt> <tt class="py-op">&gt;&gt;</tt> <tt class="py-name">sys</tt><tt class="py-op">.</tt><tt class="py-name">stderr</tt><tt class="py-op">,</tt> <tt class="py-string">"Found Psyco, using"</tt> </tt>
+<a name="L173"></a><tt class="py-lineno">173</tt>  <tt class="py-line">    <tt class="py-keyword">except</tt> <tt class="py-name">ImportError</tt><tt class="py-op">:</tt> </tt>
+<a name="L174"></a><tt class="py-lineno">174</tt>  <tt class="py-line">        <tt class="py-keyword">print</tt> <tt class="py-op">&gt;&gt;</tt> <tt class="py-name">sys</tt><tt class="py-op">.</tt><tt class="py-name">stderr</tt><tt class="py-op">,</tt> <tt class="py-string">"Psyco not installed"</tt> </tt>
+<a name="L175"></a><tt class="py-lineno">175</tt>  <tt class="py-line"> </tt>
+<a name="L176"></a><tt class="py-lineno">176</tt>  <tt class="py-line">    <tt class="py-name">optparser</tt> <tt class="py-op">=</tt> <tt class="py-name">OptionParser</tt><tt class="py-op">(</tt><tt class="py-name">description</tt><tt class="py-op">=</tt><tt class="py-string">"For inserting an existing sentence splitting"</tt><tt class="py-op">)</tt> </tt>
+<a name="L177"></a><tt class="py-lineno">177</tt>  <tt class="py-line">    <tt class="py-name">optparser</tt><tt class="py-op">.</tt><tt class="py-name">add_option</tt><tt class="py-op">(</tt><tt class="py-string">"-i"</tt><tt class="py-op">,</tt> <tt class="py-string">"--input"</tt><tt class="py-op">,</tt> <tt class="py-name">default</tt><tt class="py-op">=</tt><tt class="py-name">None</tt><tt class="py-op">,</tt> <tt class="py-name">dest</tt><tt class="py-op">=</tt><tt class="py-string">"input"</tt><tt class="py-op">,</tt> <tt class="py-name">help</tt><tt class="py-op">=</tt><tt class="py-string">"Corpus in interaction xml format"</tt><tt class="py-op">,</tt> <tt class="py-name">metavar</tt><tt class="py-op">=</tt><tt class="py-string">"FILE"</tt><tt class="py-op">)</tt> </tt>
+<a name="L178"></a><tt class="py-lineno">178</tt>  <tt class="py-line">    <tt class="py-name">optparser</tt><tt class="py-op">.</tt><tt class="py-name">add_option</tt><tt class="py-op">(</tt><tt class="py-string">"-t"</tt><tt class="py-op">,</tt> <tt class="py-string">"--tokenizationPath"</tt><tt class="py-op">,</tt> <tt class="py-name">default</tt><tt class="py-op">=</tt><tt class="py-name">None</tt><tt class="py-op">,</tt> <tt class="py-name">dest</tt><tt class="py-op">=</tt><tt class="py-string">"tokenizationPath"</tt><tt class="py-op">,</tt> <tt class="py-name">help</tt><tt class="py-op">=</tt><tt class="py-string">"Tokenization path"</tt><tt class="py-op">,</tt> <tt class="py-name">metavar</tt><tt class="py-op">=</tt><tt class="py-string">"FILE"</tt><tt class="py-op">)</tt> </tt>
+<a name="L179"></a><tt class="py-lineno">179</tt>  <tt class="py-line">    <tt class="py-name">optparser</tt><tt class="py-op">.</tt><tt class="py-name">add_option</tt><tt class="py-op">(</tt><tt class="py-string">"-o"</tt><tt class="py-op">,</tt> <tt class="py-string">"--output"</tt><tt class="py-op">,</tt> <tt class="py-name">default</tt><tt class="py-op">=</tt><tt class="py-name">None</tt><tt class="py-op">,</tt> <tt class="py-name">dest</tt><tt class="py-op">=</tt><tt class="py-string">"output"</tt><tt class="py-op">,</tt> <tt class="py-name">help</tt><tt class="py-op">=</tt><tt class="py-string">"Output file in interaction xml format."</tt><tt class="py-op">)</tt> </tt>
+<a name="L180"></a><tt class="py-lineno">180</tt>  <tt class="py-line">    <tt class="py-op">(</tt><tt class="py-name">options</tt><tt class="py-op">,</tt> <tt class="py-name">args</tt><tt class="py-op">)</tt> <tt class="py-op">=</tt> <tt class="py-name">optparser</tt><tt class="py-op">.</tt><tt class="py-name">parse_args</tt><tt class="py-op">(</tt><tt class="py-op">)</tt> </tt>
+<a name="L181"></a><tt class="py-lineno">181</tt>  <tt class="py-line">     </tt>
+<a name="L182"></a><tt class="py-lineno">182</tt>  <tt class="py-line">    <tt id="link-55" class="py-name" targets="Function TEES.Tools.GeniaSentenceSplitter.makeSentences()=TEES.Tools.GeniaSentenceSplitter-module.html#makeSentences,Function TEES.Tools.SentenceSplitter.makeSentences()=TEES.Tools.SentenceSplitter-module.html#makeSentences"><a title="TEES.Tools.GeniaSentenceSplitter.makeSentences
+TEES.Tools.SentenceSplitter.makeSentences" class="py-name" href="#" onclick="return doclink('link-55', 'makeSentences', 'link-55');">makeSentences</a></tt><tt class="py-op">(</tt><tt class="py-name">input</tt><tt class="py-op">=</tt><tt class="py-name">options</tt><tt class="py-op">.</tt><tt class="py-name">input</tt><tt class="py-op">,</tt> <tt class="py-name">tokenizationPath</tt><tt class="py-op">=</tt><tt class="py-name">options</tt><tt class="py-op">.</tt><tt class="py-name">tokenizationPath</tt><tt class="py-op">,</tt> <tt class="py-name">output</tt><tt class="py-op">=</tt><tt class="py-name">options</tt><tt class="py-op">.</tt><tt class="py-name">output</tt><tt class="py-op">,</tt> <tt class="py-name">removeText</tt><tt class="py-op">=</tt><tt class="py-name">False</tt><tt class="py-op">)</tt> </tt>
+<a name="L183"></a><tt class="py-lineno">183</tt>  <tt class="py-line"> </tt><script type="text/javascript">
+<!--
+expandto(location.href);
+// -->
+</script>
+</pre>
+<br />
+<!-- ==================== NAVIGATION BAR ==================== -->
+<table class="navbar" border="0" width="100%" cellpadding="0"
+       bgcolor="#a0c0ff" cellspacing="0">
+  <tr valign="middle">
+  <!-- Home link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="TEES-module.html">Home</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Tree link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="module-tree.html">Trees</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Index link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="identifier-index.html">Indices</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Help link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="help.html">Help</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Project homepage -->
+      <th class="navbar" align="right" width="100%">
+        <table border="0" cellpadding="0" cellspacing="0">
+          <tr><th class="navbar" align="center"
+            >Turku Event Extraction System</th>
+          </tr></table></th>
+  </tr>
+</table>
+<table border="0" cellpadding="0" cellspacing="0" width="100%%">
+  <tr>
+    <td align="left" class="footer">
+    Generated by Epydoc 3.0.1 on Thu Jul 19 18:20:48 2012
+    </td>
+    <td align="right" class="footer">
+      <a target="mainFrame" href="http://epydoc.sourceforge.net"
+        >http://epydoc.sourceforge.net</a>
+    </td>
+  </tr>
+</table>
+
+<script type="text/javascript">
+  <!--
+  // Private objects are initially displayed (because if
+  // javascript is turned off then we want them to be
+  // visible); but by default, we want to hide them.  So hide
+  // them unless we have a cookie that says to show them.
+  checkCookie();
+  // -->
+</script>
+</body>
+</html>

@@ -1,0 +1,191 @@
+<?xml version="1.0" encoding="ascii"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+          "DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+  <title>TEES.Utils.InteractionXML.IDUtils</title>
+  <link rel="stylesheet" href="epydoc.css" type="text/css" />
+  <script type="text/javascript" src="epydoc.js"></script>
+</head>
+
+<body bgcolor="white" text="black" link="blue" vlink="#204080"
+      alink="#204080">
+<!-- ==================== NAVIGATION BAR ==================== -->
+<table class="navbar" border="0" width="100%" cellpadding="0"
+       bgcolor="#a0c0ff" cellspacing="0">
+  <tr valign="middle">
+  <!-- Home link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="TEES-module.html">Home</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Tree link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="module-tree.html">Trees</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Index link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="identifier-index.html">Indices</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Help link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="help.html">Help</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Project homepage -->
+      <th class="navbar" align="right" width="100%">
+        <table border="0" cellpadding="0" cellspacing="0">
+          <tr><th class="navbar" align="center"
+            >Turku Event Extraction System</th>
+          </tr></table></th>
+  </tr>
+</table>
+<table width="100%" cellpadding="0" cellspacing="0">
+  <tr valign="top">
+    <td width="100%">
+      <span class="breadcrumbs">
+        <a href="TEES-module.html">Package&nbsp;TEES</a> ::
+        <a href="TEES.Utils-module.html">Package&nbsp;Utils</a> ::
+        <a href="TEES.Utils.InteractionXML-module.html">Package&nbsp;InteractionXML</a> ::
+        Module&nbsp;IDUtils
+      </span>
+    </td>
+    <td>
+      <table cellpadding="0" cellspacing="0">
+        <!-- hide/show private -->
+        <tr><td align="right"><span class="options">[<a href="javascript:void(0);" class="privatelink"
+    onclick="toggle_private();">hide&nbsp;private</a>]</span></td></tr>
+      </table>
+    </td>
+  </tr>
+</table>
+<h1 class="epydoc">Source Code for <a href="TEES.Utils.InteractionXML.IDUtils-module.html">Module TEES.Utils.InteractionXML.IDUtils</a></h1>
+<pre class="py-src">
+<a name="L1"></a><tt class="py-lineno"> 1</tt>  <tt class="py-line"><tt class="py-keyword">import</tt> <tt class="py-name">sys</tt> </tt>
+<a name="L2"></a><tt class="py-lineno"> 2</tt>  <tt class="py-line"> </tt>
+<a name="getNextFreeId"></a><div id="getNextFreeId-def"><a name="L3"></a><tt class="py-lineno"> 3</tt> <a class="py-toggle" href="#" id="getNextFreeId-toggle" onclick="return toggle('getNextFreeId');">-</a><tt class="py-line"><tt class="py-keyword">def</tt> <a class="py-def-name" href="TEES.Utils.InteractionXML.IDUtils-module.html#getNextFreeId">getNextFreeId</a><tt class="py-op">(</tt><tt class="py-param">elements</tt><tt class="py-op">)</tt><tt class="py-op">:</tt> </tt>
+</div><div id="getNextFreeId-collapsed" style="display:none;" pad="++" indent="++++"></div><div id="getNextFreeId-expanded"><a name="L4"></a><tt class="py-lineno"> 4</tt>  <tt class="py-line">    <tt class="py-name">highest</tt> <tt class="py-op">=</tt> <tt class="py-op">-</tt><tt class="py-number">1</tt> </tt>
+<a name="L5"></a><tt class="py-lineno"> 5</tt>  <tt class="py-line">    <tt class="py-keyword">for</tt> <tt class="py-name">element</tt> <tt class="py-keyword">in</tt> <tt class="py-name">elements</tt><tt class="py-op">:</tt> </tt>
+<a name="L6"></a><tt class="py-lineno"> 6</tt>  <tt class="py-line">        <tt class="py-name">id</tt> <tt class="py-op">=</tt> <tt class="py-name">element</tt><tt class="py-op">.</tt><tt id="link-0" class="py-name" targets="Method TEES.Core.Model.Model.get()=TEES.Core.Model.Model-class.html#get,Function TEES.Utils.Parameters.get()=TEES.Utils.Parameters-module.html#get"><a title="TEES.Core.Model.Model.get
+TEES.Utils.Parameters.get" class="py-name" href="#" onclick="return doclink('link-0', 'get', 'link-0');">get</a></tt><tt class="py-op">(</tt><tt class="py-string">"id"</tt><tt class="py-op">)</tt> </tt>
+<a name="L7"></a><tt class="py-lineno"> 7</tt>  <tt class="py-line">        <tt class="py-keyword">assert</tt> <tt class="py-name">id</tt><tt class="py-op">.</tt><tt class="py-name">find</tt><tt class="py-op">(</tt><tt class="py-string">"."</tt><tt class="py-op">)</tt> <tt class="py-op">!=</tt> <tt class="py-op">-</tt><tt class="py-number">1</tt><tt class="py-op">,</tt> <tt class="py-name">id</tt> </tt>
+<a name="L8"></a><tt class="py-lineno"> 8</tt>  <tt class="py-line">        <tt class="py-name">lastPart</tt> <tt class="py-op">=</tt> <tt class="py-name">id</tt><tt class="py-op">.</tt><tt class="py-name">rsplit</tt><tt class="py-op">(</tt><tt class="py-string">"."</tt><tt class="py-op">,</tt><tt class="py-number">1</tt><tt class="py-op">)</tt><tt class="py-op">[</tt><tt class="py-op">-</tt><tt class="py-number">1</tt><tt class="py-op">]</tt> </tt>
+<a name="L9"></a><tt class="py-lineno"> 9</tt>  <tt class="py-line">        <tt class="py-keyword">assert</tt> <tt class="py-name">len</tt><tt class="py-op">(</tt><tt class="py-name">lastPart</tt><tt class="py-op">)</tt> <tt class="py-op">&gt;</tt> <tt class="py-number">1</tt><tt class="py-op">,</tt> <tt class="py-name">id</tt> </tt>
+<a name="L10"></a><tt class="py-lineno">10</tt>  <tt class="py-line">        <tt class="py-name">number</tt> <tt class="py-op">=</tt> <tt class="py-name">int</tt><tt class="py-op">(</tt><tt class="py-name">lastPart</tt><tt class="py-op">[</tt><tt class="py-number">1</tt><tt class="py-op">:</tt><tt class="py-op">]</tt><tt class="py-op">)</tt> </tt>
+<a name="L11"></a><tt class="py-lineno">11</tt>  <tt class="py-line">        <tt class="py-keyword">if</tt> <tt class="py-name">number</tt> <tt class="py-op">&gt;</tt> <tt class="py-name">highest</tt><tt class="py-op">:</tt> </tt>
+<a name="L12"></a><tt class="py-lineno">12</tt>  <tt class="py-line">            <tt class="py-name">highest</tt> <tt class="py-op">=</tt> <tt class="py-name">number</tt> </tt>
+<a name="L13"></a><tt class="py-lineno">13</tt>  <tt class="py-line">    <tt class="py-keyword">if</tt> <tt class="py-name">len</tt><tt class="py-op">(</tt><tt class="py-name">elements</tt><tt class="py-op">)</tt> <tt class="py-op">-</tt> <tt class="py-number">1</tt> <tt class="py-op">&gt;</tt> <tt class="py-name">highest</tt><tt class="py-op">:</tt> </tt>
+<a name="L14"></a><tt class="py-lineno">14</tt>  <tt class="py-line">        <tt class="py-name">highest</tt> <tt class="py-op">=</tt> <tt class="py-name">len</tt><tt class="py-op">(</tt><tt class="py-name">elements</tt><tt class="py-op">)</tt> <tt class="py-op">-</tt> <tt class="py-number">1</tt> </tt>
+<a name="L15"></a><tt class="py-lineno">15</tt>  <tt class="py-line">    <tt class="py-keyword">return</tt> <tt class="py-name">highest</tt> <tt class="py-op">+</tt> <tt class="py-number">1</tt> </tt>
+</div><a name="L16"></a><tt class="py-lineno">16</tt>  <tt class="py-line"> </tt>
+<a name="getIdNumberType"></a><div id="getIdNumberType-def"><a name="L17"></a><tt class="py-lineno">17</tt> <a class="py-toggle" href="#" id="getIdNumberType-toggle" onclick="return toggle('getIdNumberType');">-</a><tt class="py-line"><tt class="py-keyword">def</tt> <a class="py-def-name" href="TEES.Utils.InteractionXML.IDUtils-module.html#getIdNumberType">getIdNumberType</a><tt class="py-op">(</tt><tt class="py-param">idNumber</tt><tt class="py-op">)</tt><tt class="py-op">:</tt> </tt>
+</div><div id="getIdNumberType-collapsed" style="display:none;" pad="++" indent="++++"></div><div id="getIdNumberType-expanded"><a name="L18"></a><tt class="py-lineno">18</tt>  <tt class="py-line">    <tt class="py-keyword">if</tt> <tt class="py-name">idNumber</tt><tt class="py-op">[</tt><tt class="py-number">0</tt><tt class="py-op">]</tt> <tt class="py-op">==</tt> <tt class="py-string">"d"</tt><tt class="py-op">:</tt> </tt>
+<a name="L19"></a><tt class="py-lineno">19</tt>  <tt class="py-line">        <tt class="py-keyword">return</tt> <tt class="py-string">"document"</tt> </tt>
+<a name="L20"></a><tt class="py-lineno">20</tt>  <tt class="py-line">    <tt class="py-keyword">elif</tt> <tt class="py-name">idNumber</tt><tt class="py-op">[</tt><tt class="py-number">0</tt><tt class="py-op">]</tt> <tt class="py-op">==</tt> <tt class="py-string">"s"</tt><tt class="py-op">:</tt> </tt>
+<a name="L21"></a><tt class="py-lineno">21</tt>  <tt class="py-line">        <tt class="py-keyword">return</tt> <tt class="py-string">"sentence"</tt> </tt>
+<a name="L22"></a><tt class="py-lineno">22</tt>  <tt class="py-line">    <tt class="py-keyword">elif</tt> <tt class="py-name">idNumber</tt><tt class="py-op">[</tt><tt class="py-number">0</tt><tt class="py-op">]</tt> <tt class="py-op">==</tt> <tt class="py-string">"i"</tt><tt class="py-op">:</tt> </tt>
+<a name="L23"></a><tt class="py-lineno">23</tt>  <tt class="py-line">        <tt class="py-keyword">return</tt> <tt class="py-string">"interaction"</tt> </tt>
+<a name="L24"></a><tt class="py-lineno">24</tt>  <tt class="py-line">    <tt class="py-keyword">elif</tt> <tt class="py-name">idNumber</tt><tt class="py-op">[</tt><tt class="py-number">0</tt><tt class="py-op">]</tt> <tt class="py-op">==</tt> <tt class="py-string">"p"</tt><tt class="py-op">:</tt> </tt>
+<a name="L25"></a><tt class="py-lineno">25</tt>  <tt class="py-line">        <tt class="py-keyword">return</tt> <tt class="py-string">"pair"</tt> </tt>
+<a name="L26"></a><tt class="py-lineno">26</tt>  <tt class="py-line">    <tt class="py-keyword">elif</tt> <tt class="py-name">idNumber</tt><tt class="py-op">[</tt><tt class="py-number">0</tt><tt class="py-op">]</tt> <tt class="py-op">==</tt> <tt class="py-string">"e"</tt><tt class="py-op">:</tt> </tt>
+<a name="L27"></a><tt class="py-lineno">27</tt>  <tt class="py-line">        <tt class="py-keyword">return</tt> <tt class="py-string">"entity"</tt> </tt>
+<a name="L28"></a><tt class="py-lineno">28</tt>  <tt class="py-line">    <tt class="py-keyword">elif</tt> <tt class="py-name">idNumber</tt><tt class="py-op">[</tt><tt class="py-number">0</tt><tt class="py-op">]</tt> <tt class="py-op">==</tt> <tt class="py-string">"a"</tt><tt class="py-op">:</tt> </tt>
+<a name="L29"></a><tt class="py-lineno">29</tt>  <tt class="py-line">        <tt class="py-keyword">return</tt> <tt class="py-string">"path"</tt> </tt>
+<a name="L30"></a><tt class="py-lineno">30</tt>  <tt class="py-line">    <tt class="py-keyword">else</tt><tt class="py-op">:</tt> </tt>
+<a name="L31"></a><tt class="py-lineno">31</tt>  <tt class="py-line">        <tt class="py-name">sys</tt><tt class="py-op">.</tt><tt class="py-name">exit</tt><tt class="py-op">(</tt><tt class="py-string">"Unknown type"</tt><tt class="py-op">)</tt> </tt>
+</div><a name="L32"></a><tt class="py-lineno">32</tt>  <tt class="py-line"> </tt>
+<a name="splitInteractionId"></a><div id="splitInteractionId-def"><a name="L33"></a><tt class="py-lineno">33</tt> <a class="py-toggle" href="#" id="splitInteractionId-toggle" onclick="return toggle('splitInteractionId');">-</a><tt class="py-line"><tt class="py-keyword">def</tt> <a class="py-def-name" href="TEES.Utils.InteractionXML.IDUtils-module.html#splitInteractionId">splitInteractionId</a><tt class="py-op">(</tt><tt class="py-param">id</tt><tt class="py-op">)</tt><tt class="py-op">:</tt> </tt>
+</div><div id="splitInteractionId-collapsed" style="display:none;" pad="++" indent="++++"></div><div id="splitInteractionId-expanded"><a name="L34"></a><tt class="py-lineno">34</tt>  <tt class="py-line">    <tt class="py-name">dict</tt> <tt class="py-op">=</tt> <tt class="py-op">{</tt><tt class="py-op">}</tt> </tt>
+<a name="L35"></a><tt class="py-lineno">35</tt>  <tt class="py-line">    <tt id="link-1" class="py-name" targets="Variable TEES.Utils.Convert.processLPSN.splits=TEES.Utils.Convert.processLPSN-module.html#splits"><a title="TEES.Utils.Convert.processLPSN.splits" class="py-name" href="#" onclick="return doclink('link-1', 'splits', 'link-1');">splits</a></tt> <tt class="py-op">=</tt> <tt class="py-name">id</tt><tt class="py-op">.</tt><tt id="link-2" class="py-name" targets="Variable TEES.Utils.Convert.processLPSN.split=TEES.Utils.Convert.processLPSN-module.html#split"><a title="TEES.Utils.Convert.processLPSN.split" class="py-name" href="#" onclick="return doclink('link-2', 'split', 'link-2');">split</a></tt><tt class="py-op">(</tt><tt class="py-string">"."</tt><tt class="py-op">)</tt> </tt>
+<a name="L36"></a><tt class="py-lineno">36</tt>  <tt class="py-line">    <tt class="py-name">dict</tt><tt class="py-op">[</tt><tt class="py-string">"corpus"</tt><tt class="py-op">]</tt> <tt class="py-op">=</tt> <tt id="link-3" class="py-name"><a title="TEES.Utils.Convert.processLPSN.splits" class="py-name" href="#" onclick="return doclink('link-3', 'splits', 'link-1');">splits</a></tt><tt class="py-op">[</tt><tt class="py-number">0</tt><tt class="py-op">]</tt> </tt>
+<a name="L37"></a><tt class="py-lineno">37</tt>  <tt class="py-line">    <tt class="py-keyword">for</tt> <tt class="py-name">i</tt> <tt class="py-keyword">in</tt> <tt id="link-4" class="py-name"><a title="TEES.Utils.Convert.processLPSN.splits" class="py-name" href="#" onclick="return doclink('link-4', 'splits', 'link-1');">splits</a></tt><tt class="py-op">[</tt><tt class="py-number">1</tt><tt class="py-op">:</tt><tt class="py-op">]</tt><tt class="py-op">:</tt> </tt>
+<a name="L38"></a><tt class="py-lineno">38</tt>  <tt class="py-line">        <tt class="py-name">dict</tt><tt class="py-op">[</tt><tt id="link-5" class="py-name" targets="Function TEES.Utils.InteractionXML.IDUtils.getIdNumberType()=TEES.Utils.InteractionXML.IDUtils-module.html#getIdNumberType"><a title="TEES.Utils.InteractionXML.IDUtils.getIdNumberType" class="py-name" href="#" onclick="return doclink('link-5', 'getIdNumberType', 'link-5');">getIdNumberType</a></tt><tt class="py-op">(</tt><tt class="py-name">i</tt><tt class="py-op">)</tt><tt class="py-op">]</tt> <tt class="py-op">=</tt> <tt class="py-name">int</tt><tt class="py-op">(</tt><tt class="py-name">i</tt><tt class="py-op">[</tt><tt class="py-number">1</tt><tt class="py-op">:</tt><tt class="py-op">]</tt><tt class="py-op">)</tt> </tt>
+<a name="L39"></a><tt class="py-lineno">39</tt>  <tt class="py-line">    <tt class="py-keyword">return</tt> <tt class="py-name">dict</tt> </tt>
+</div><a name="L40"></a><tt class="py-lineno">40</tt>  <tt class="py-line"> </tt>
+<a name="buildInteractionId"></a><div id="buildInteractionId-def"><a name="L41"></a><tt class="py-lineno">41</tt> <a class="py-toggle" href="#" id="buildInteractionId-toggle" onclick="return toggle('buildInteractionId');">-</a><tt class="py-line"><tt class="py-keyword">def</tt> <a class="py-def-name" href="TEES.Utils.InteractionXML.IDUtils-module.html#buildInteractionId">buildInteractionId</a><tt class="py-op">(</tt><tt class="py-param">id</tt><tt class="py-op">)</tt><tt class="py-op">:</tt> </tt>
+</div><div id="buildInteractionId-collapsed" style="display:none;" pad="++" indent="++++"></div><div id="buildInteractionId-expanded"><a name="L42"></a><tt class="py-lineno">42</tt>  <tt class="py-line">    <tt class="py-name">idString</tt> <tt class="py-op">=</tt> <tt class="py-name">id</tt><tt class="py-op">[</tt><tt class="py-string">"corpus"</tt><tt class="py-op">]</tt> </tt>
+<a name="L43"></a><tt class="py-lineno">43</tt>  <tt class="py-line">    <tt class="py-keyword">if</tt> <tt class="py-name">id</tt><tt class="py-op">.</tt><tt class="py-name">has_key</tt><tt class="py-op">(</tt><tt class="py-string">"document"</tt><tt class="py-op">)</tt><tt class="py-op">:</tt> </tt>
+<a name="L44"></a><tt class="py-lineno">44</tt>  <tt class="py-line">        <tt class="py-name">idString</tt> <tt class="py-op">+=</tt> <tt class="py-string">".d"</tt> <tt class="py-op">+</tt> <tt class="py-name">str</tt><tt class="py-op">(</tt><tt class="py-name">id</tt><tt class="py-op">[</tt><tt class="py-string">"document"</tt><tt class="py-op">]</tt><tt class="py-op">)</tt> </tt>
+<a name="L45"></a><tt class="py-lineno">45</tt>  <tt class="py-line">    <tt class="py-keyword">if</tt> <tt class="py-name">id</tt><tt class="py-op">.</tt><tt class="py-name">has_key</tt><tt class="py-op">(</tt><tt class="py-string">"sentence"</tt><tt class="py-op">)</tt><tt class="py-op">:</tt> </tt>
+<a name="L46"></a><tt class="py-lineno">46</tt>  <tt class="py-line">        <tt class="py-name">idString</tt> <tt class="py-op">+=</tt> <tt class="py-string">".s"</tt> <tt class="py-op">+</tt> <tt class="py-name">str</tt><tt class="py-op">(</tt><tt class="py-name">id</tt><tt class="py-op">[</tt><tt class="py-string">"sentence"</tt><tt class="py-op">]</tt><tt class="py-op">)</tt> </tt>
+<a name="L47"></a><tt class="py-lineno">47</tt>  <tt class="py-line">     </tt>
+<a name="L48"></a><tt class="py-lineno">48</tt>  <tt class="py-line">    <tt class="py-keyword">if</tt> <tt class="py-name">id</tt><tt class="py-op">.</tt><tt class="py-name">has_key</tt><tt class="py-op">(</tt><tt class="py-string">"entity"</tt><tt class="py-op">)</tt><tt class="py-op">:</tt> </tt>
+<a name="L49"></a><tt class="py-lineno">49</tt>  <tt class="py-line">        <tt class="py-name">idString</tt> <tt class="py-op">+=</tt> <tt class="py-string">".e"</tt> <tt class="py-op">+</tt> <tt class="py-name">str</tt><tt class="py-op">(</tt><tt class="py-name">id</tt><tt class="py-op">[</tt><tt class="py-string">"e"</tt><tt class="py-op">]</tt><tt class="py-op">)</tt> </tt>
+<a name="L50"></a><tt class="py-lineno">50</tt>  <tt class="py-line">    <tt class="py-keyword">if</tt> <tt class="py-name">id</tt><tt class="py-op">.</tt><tt class="py-name">has_key</tt><tt class="py-op">(</tt><tt class="py-string">"interaction"</tt><tt class="py-op">)</tt><tt class="py-op">:</tt> </tt>
+<a name="L51"></a><tt class="py-lineno">51</tt>  <tt class="py-line">        <tt class="py-name">idString</tt> <tt class="py-op">+=</tt> <tt class="py-string">".i"</tt> <tt class="py-op">+</tt> <tt class="py-name">str</tt><tt class="py-op">(</tt><tt class="py-name">id</tt><tt class="py-op">[</tt><tt class="py-string">"interaction"</tt><tt class="py-op">]</tt><tt class="py-op">)</tt> </tt>
+<a name="L52"></a><tt class="py-lineno">52</tt>  <tt class="py-line">    <tt class="py-keyword">if</tt> <tt class="py-name">id</tt><tt class="py-op">.</tt><tt class="py-name">has_key</tt><tt class="py-op">(</tt><tt class="py-string">"pair"</tt><tt class="py-op">)</tt><tt class="py-op">:</tt> </tt>
+<a name="L53"></a><tt class="py-lineno">53</tt>  <tt class="py-line">        <tt class="py-name">idString</tt> <tt class="py-op">+=</tt> <tt class="py-string">".p"</tt> <tt class="py-op">+</tt> <tt class="py-name">str</tt><tt class="py-op">(</tt><tt class="py-name">id</tt><tt class="py-op">[</tt><tt class="py-string">"pair"</tt><tt class="py-op">]</tt><tt class="py-op">)</tt> </tt>
+<a name="L54"></a><tt class="py-lineno">54</tt>  <tt class="py-line">    <tt class="py-keyword">if</tt> <tt class="py-name">id</tt><tt class="py-op">.</tt><tt class="py-name">has_key</tt><tt class="py-op">(</tt><tt class="py-string">"path"</tt><tt class="py-op">)</tt><tt class="py-op">:</tt> </tt>
+<a name="L55"></a><tt class="py-lineno">55</tt>  <tt class="py-line">        <tt class="py-name">idString</tt> <tt class="py-op">+=</tt> <tt class="py-string">".a"</tt> <tt class="py-op">+</tt> <tt class="py-name">str</tt><tt class="py-op">(</tt><tt class="py-name">id</tt><tt class="py-op">[</tt><tt class="py-string">"path"</tt><tt class="py-op">]</tt><tt class="py-op">)</tt> </tt>
+<a name="L56"></a><tt class="py-lineno">56</tt>  <tt class="py-line">    <tt class="py-keyword">return</tt> <tt class="py-name">idString</tt> </tt>
+</div><a name="L57"></a><tt class="py-lineno">57</tt>  <tt class="py-line">     </tt>
+<a name="sortInteractionIds"></a><div id="sortInteractionIds-def"><a name="L58"></a><tt class="py-lineno">58</tt> <a class="py-toggle" href="#" id="sortInteractionIds-toggle" onclick="return toggle('sortInteractionIds');">-</a><tt class="py-line"><tt class="py-keyword">def</tt> <a class="py-def-name" href="TEES.Utils.InteractionXML.IDUtils-module.html#sortInteractionIds">sortInteractionIds</a><tt class="py-op">(</tt><tt class="py-param">id1</tt><tt class="py-op">,</tt> <tt class="py-param">id2</tt><tt class="py-op">)</tt><tt class="py-op">:</tt> </tt>
+</div><div id="sortInteractionIds-collapsed" style="display:none;" pad="++" indent="++++"></div><div id="sortInteractionIds-expanded"><a name="L59"></a><tt class="py-lineno">59</tt>  <tt class="py-line">    <tt class="py-name">splits1</tt> <tt class="py-op">=</tt> <tt class="py-name">id1</tt><tt class="py-op">.</tt><tt id="link-6" class="py-name"><a title="TEES.Utils.Convert.processLPSN.split" class="py-name" href="#" onclick="return doclink('link-6', 'split', 'link-2');">split</a></tt><tt class="py-op">(</tt><tt class="py-string">"."</tt><tt class="py-op">)</tt> </tt>
+<a name="L60"></a><tt class="py-lineno">60</tt>  <tt class="py-line">    <tt class="py-name">splits2</tt> <tt class="py-op">=</tt> <tt class="py-name">id2</tt><tt class="py-op">.</tt><tt id="link-7" class="py-name"><a title="TEES.Utils.Convert.processLPSN.split" class="py-name" href="#" onclick="return doclink('link-7', 'split', 'link-2');">split</a></tt><tt class="py-op">(</tt><tt class="py-string">"."</tt><tt class="py-op">)</tt> </tt>
+<a name="L61"></a><tt class="py-lineno">61</tt>  <tt class="py-line">    <tt class="py-comment"># start from split 1 since token 0 is the name of the dataset</tt> </tt>
+<a name="L62"></a><tt class="py-lineno">62</tt>  <tt class="py-line">    <tt class="py-keyword">for</tt> <tt class="py-name">i</tt> <tt class="py-keyword">in</tt> <tt class="py-name">range</tt><tt class="py-op">(</tt><tt class="py-number">1</tt><tt class="py-op">,</tt><tt class="py-name">len</tt><tt class="py-op">(</tt><tt class="py-name">splits1</tt><tt class="py-op">)</tt><tt class="py-op">)</tt><tt class="py-op">:</tt> </tt>
+<a name="L63"></a><tt class="py-lineno">63</tt>  <tt class="py-line">        <tt class="py-comment"># each level's index starts with a letter (s for sentence etc.)</tt> </tt>
+<a name="L64"></a><tt class="py-lineno">64</tt>  <tt class="py-line">        <tt class="py-name">number1</tt> <tt class="py-op">=</tt> <tt class="py-name">int</tt><tt class="py-op">(</tt><tt class="py-name">splits1</tt><tt class="py-op">[</tt><tt class="py-name">i</tt><tt class="py-op">]</tt><tt class="py-op">[</tt><tt class="py-number">1</tt><tt class="py-op">:</tt><tt class="py-op">]</tt><tt class="py-op">)</tt>  </tt>
+<a name="L65"></a><tt class="py-lineno">65</tt>  <tt class="py-line">        <tt class="py-name">number2</tt> <tt class="py-op">=</tt> <tt class="py-name">int</tt><tt class="py-op">(</tt><tt class="py-name">splits2</tt><tt class="py-op">[</tt><tt class="py-name">i</tt><tt class="py-op">]</tt><tt class="py-op">[</tt><tt class="py-number">1</tt><tt class="py-op">:</tt><tt class="py-op">]</tt><tt class="py-op">)</tt> </tt>
+<a name="L66"></a><tt class="py-lineno">66</tt>  <tt class="py-line">     </tt>
+<a name="L67"></a><tt class="py-lineno">67</tt>  <tt class="py-line">        <tt class="py-keyword">if</tt> <tt class="py-name">number1</tt> <tt class="py-op">&gt;</tt> <tt class="py-name">number2</tt><tt class="py-op">:</tt> </tt>
+<a name="L68"></a><tt class="py-lineno">68</tt>  <tt class="py-line">           <tt class="py-keyword">return</tt> <tt class="py-number">1</tt> </tt>
+<a name="L69"></a><tt class="py-lineno">69</tt>  <tt class="py-line">        <tt class="py-keyword">elif</tt> <tt class="py-name">number1</tt> <tt class="py-op">&lt;</tt> <tt class="py-name">number2</tt><tt class="py-op">:</tt> </tt>
+<a name="L70"></a><tt class="py-lineno">70</tt>  <tt class="py-line">           <tt class="py-keyword">return</tt> <tt class="py-op">-</tt><tt class="py-number">1</tt> </tt>
+<a name="L71"></a><tt class="py-lineno">71</tt>  <tt class="py-line">    <tt class="py-keyword">return</tt> <tt class="py-number">0</tt> <tt class="py-comment"># last number1 == number 2</tt> </tt>
+</div><a name="L72"></a><tt class="py-lineno">72</tt>  <tt class="py-line"> </tt><script type="text/javascript">
+<!--
+expandto(location.href);
+// -->
+</script>
+</pre>
+<br />
+<!-- ==================== NAVIGATION BAR ==================== -->
+<table class="navbar" border="0" width="100%" cellpadding="0"
+       bgcolor="#a0c0ff" cellspacing="0">
+  <tr valign="middle">
+  <!-- Home link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="TEES-module.html">Home</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Tree link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="module-tree.html">Trees</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Index link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="identifier-index.html">Indices</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Help link -->
+      <th>&nbsp;&nbsp;&nbsp;<a
+        href="help.html">Help</a>&nbsp;&nbsp;&nbsp;</th>
+
+  <!-- Project homepage -->
+      <th class="navbar" align="right" width="100%">
+        <table border="0" cellpadding="0" cellspacing="0">
+          <tr><th class="navbar" align="center"
+            >Turku Event Extraction System</th>
+          </tr></table></th>
+  </tr>
+</table>
+<table border="0" cellpadding="0" cellspacing="0" width="100%%">
+  <tr>
+    <td align="left" class="footer">
+    Generated by Epydoc 3.0.1 on Thu Jul 19 18:20:53 2012
+    </td>
+    <td align="right" class="footer">
+      <a target="mainFrame" href="http://epydoc.sourceforge.net"
+        >http://epydoc.sourceforge.net</a>
+    </td>
+  </tr>
+</table>
+
+<script type="text/javascript">
+  <!--
+  // Private objects are initially displayed (because if
+  // javascript is turned off then we want them to be
+  // visible); but by default, we want to hide them.  So hide
+  // them unless we have a cookie that says to show them.
+  checkCookie();
+  // -->
+</script>
+</body>
+</html>
