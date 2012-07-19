@@ -31,7 +31,7 @@ URL = {}
 
 # Models
 
-URL["MODELS"] = "/home/jari/biotext/TEES-models-linked-120717.tar.bz2"
+URL["MODELS"] = "https://github.com/downloads/jbjorne/TEES/TEES-models-120719.tar.bz2"
 
 # External Tools ##############################################################
 
