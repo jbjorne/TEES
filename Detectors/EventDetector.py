@@ -104,6 +104,7 @@ class EventDetector(Detector):
             #for model in [self.model, self.combinedModel]:
             #    if model != None:
             #        model.addStr("BioNLPSTParams", Parameters.toString(self.bioNLPSTParams))
+            self.triggerDetector.bioNLPSTParams = self.bioNLPSTParams
             self.triggerDetector.beginModel(None, self.model, [self.workDir+self.triggerDetector.tag+"train-examples.gz"], self.workDir+self.triggerDetector.tag+"opt-examples.gz")
             self.edgeDetector.beginModel(None, self.model, [self.workDir+self.edgeDetector.tag+"train-examples.gz"], self.workDir+self.edgeDetector.tag+"opt-examples.gz")
             if trainModifiers:
