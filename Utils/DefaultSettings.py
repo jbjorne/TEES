@@ -31,7 +31,7 @@ URL = {}
 
 # Models
 
-URL["MODELS"] = "https://github.com/downloads/jbjorne/TEES/TEES-models-120719-2.tar.bz2"
+URL["MODELS"] = "https://github.com/downloads/jbjorne/TEES/TEES-models-120723.tar.bz2"
 
 # External Tools ##############################################################
 
