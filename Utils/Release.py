@@ -94,12 +94,14 @@ def extractModels(input, output, tasks, classificationOutput=None):
                                 os.makedirs(os.path.dirname(dst))
                             shutil.copy2(src, dst)
                 
-def linkDuplicates(input, output):
-    if os.path.exists(output):
+def linkDuplicates(input, output=None):
+    if output != None and os.path.exists(output):
         print >> sys.stderr, "Removing output directory"
         shutil.rmtree(output)
-    print >> sys.stderr, "Copying input directory"
-    shutil.copytree(input, output)
+        print >> sys.stderr, "Copying input directory"
+        shutil.copytree(input, output)
+    else:
+        output = input
     print >> sys.stderr, "Listing files"
     files = []
     for triple in os.walk(output):
@@ -131,6 +133,17 @@ def linkDuplicates(input, output):
             print >> sys.stderr, "Linking:", lnCommand
             subprocess.call(lnCommand, shell=True)
 
+def packageItems(input, archiveName):
+    tarCommand = lnCommand = "cd " + input + "; tar cvfj " + archiveName + " *; cd -"
+    print >> sys.stderr, "Packaging:", tarCommand
+    subprocess.call(tarCommand, shell=True)
+
+def makeModelPackage(input, output, tasks, archiveName):
+    modelPath = os.path.join(options.output, "models")
+    extractModels(options.input, modelPath, options.tasks, options.output + "/classification")
+    linkDuplicates(modelPath)
+    packageItems(modelPath, archiveName)
+    
 def buildModels(output, tasks, connection, dummy=False):
     """
     Build the release models.
@@ -165,8 +178,9 @@ if __name__=="__main__":
     optparser.add_option("-c", "--connection", default=None, dest="connection", help="")
     optparser.add_option("-d", "--dummy", action="store_true", default=False, dest="dummy", help="")
     optparser.add_option("--classificationOutput", default=None, dest="classificationOutput", help="")
+    optparser.add_option("--archiveName", default=None, dest="archiveName", help="")
     (options, args) = optparser.parse_args()
-    assert options.action in ["CONVERT_CORPORA", "BUILD_MODELS", "EXTRACT_MODELS", "PACKAGE_MODELS", "BUILD_APIDOC", "LIST_EXECUTABLES"]
+    assert options.action in ["CONVERT_CORPORA", "BUILD_MODELS", "EXTRACT_MODELS", "LINK_MODELS", "PACKAGE_MODELS", "BUILD_APIDOC", "LIST_EXECUTABLES"]
     options.tasks = options.tasks.split(",")
     
     if options.action == "LIST_EXECUTABLES":
@@ -175,5 +189,7 @@ if __name__=="__main__":
         buildModels(options.output, options.tasks, options.connection, options.dummy)
     elif options.action == "EXTRACT_MODELS":
         extractModels(options.input, options.output, options.tasks, options.classificationOutput)
-    elif options.action == "PACKAGE_MODELS":
+    elif options.action == "LINK_MODELS":
         linkDuplicates(options.input, options.output)
+    elif options.action == "PACKAGE_MODELS":
+        makeModelPackage(options.input, options.output, options.tasks, options.archiveName)
