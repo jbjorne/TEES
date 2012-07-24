@@ -18,6 +18,8 @@ if "TEES_SETTINGS" in os.environ:
     URL = tempURL
     tempEVALUATOR.update(EVALUATOR)
     EVALUATOR = tempEVALUATOR
+else:
+    print >> sys.stderr, "Warning, the TEES_SETTINGS environment variable is not defined."
     
 def setLocal(variable, value, setVariable=True):
     # the settings file must exist and must be in the path
