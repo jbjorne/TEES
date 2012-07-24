@@ -161,9 +161,12 @@ def makeSentences(input, output=None, removeText=False, postProcess=True, debug=
         #print "stdout<", p.stdout.readlines(), ">"
         #print "stderr<", p.stderr.readlines(), ">"
         if postProcess:
+            postProcessorPath = os.path.join(os.path.dirname(os.path.abspath(__file__)), "geniass-postproc.pl")
+            assert os.path.exists(postProcessorPath), postProcessorPath
             ppIn = codecs.open(os.path.join(workdir, "sentence-splitter-output.txt"+docTag), "rt", "utf-8")
             ppOut = codecs.open(os.path.join(workdir, "sentence-splitter-output-postprocessed.txt"+docTag), "wt", "utf-8")
-            subprocess.call(["perl", os.path.join(os.path.dirname(os.path.abspath(__file__)), "geniass-postproc.pl")], stdin=ppIn, stdout=ppOut)
+            perlReturnValue = subprocess.call(["perl", postProcessorPath], stdin=ppIn, stdout=ppOut)
+            assert perlReturnValue == 0, perlReturnValue
             ppIn.close()
             ppOut.close()
             # Read split sentences
