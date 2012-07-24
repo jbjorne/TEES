@@ -130,7 +130,7 @@ def initLocalSettings(filename):
     # Data
     DATAPATH = 'DATAPATH_VALUE' # Main directory for datafiles
     CORPUS_DIR = None # Directory for the corpus XML-files
-    TEES_MODEL_DIR = None # Directory for the official TEES models
+    MODEL_DIR = None # Directory for the official TEES models
     """.replace("    ", "").replace("DATAPATH_VALUE", Menu.system.defaultInstallDir))
     f.close()
     # Reset local settings
