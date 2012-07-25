@@ -45,7 +45,7 @@ class PhraseTriggerExampleWriter(SentenceExampleWriter):
             entityElement.set("headOffset", headToken.get("charOffset"))
             entityElement.set("phraseType", example[3]["ptype"])
             entOffset = Range.charOffsetToSingleTuple(example[3]["charOffset"])
-            entityElement.set("text", sentenceText[entOffset[0]:entOffset[1]+1])
+            entityElement.set("text", sentenceText[entOffset[0]:entOffset[1]])
             entityElement.set("id", sentenceId + ".e" + str(newEntityIdCount))
             self.setElementType(entityElement, prediction, classSet, classIds)
             newEntityIdCount += 1
