@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 """
 Configure TEES by installing data files and external components.
 """

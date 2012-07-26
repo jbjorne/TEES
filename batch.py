@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 """
 Process a large number of input files
 """

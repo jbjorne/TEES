@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 """
 Detect events or relations from text.
 """
