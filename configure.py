@@ -408,8 +408,12 @@ if __name__=="__main__":
     optparser.add_option("--onError", default="ASK", dest="onError", help="ASK, IGNORE or EXIT")
     (options, args) = optparser.parse_args()
     assert options.onError in ["ASK", "IGNORE", "EXIT"]
-    
-    configure(options.installDir, options.localSettings, options.auto, options.width, options.clearInstallDir, options.onError)
+
+    try:
+        configure(options.installDir, options.localSettings, options.auto, options.width, options.clearInstallDir, options.onError)
+    except KeyboardInterrupt:
+        # User interupted the program, exit gracefully
+        sys.exit(0)
 #    Menu.system.width = options.width
 #    Menu.system.progArgs = {}
 #    Menu.system.progArgs["installDir"] = options.installDir
