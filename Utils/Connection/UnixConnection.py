@@ -76,8 +76,10 @@ class UnixConnection:
             #assert not localPath.startswith(self.workDir), (path, localPath) # check for duplicates
         return localPath
         
-    def getSetting(self, name):
+    def getSetting(self, name, mustExist=True):
         if self.account == None:
+            if mustExist:
+                assert hasattr(Settings, name), name
             if hasattr(Settings, name):
                 return getattr(Settings, name)
             else:
@@ -107,6 +109,8 @@ class UnixConnection:
             f.close()
             shutil.rmtree(tempdir)
         # Return the remote value
+        if mustExist:
+            assert name in self.cachedRemoteSettings, (name, self.cachedRemoteSettings)
         if name in self.cachedRemoteSettings:
             return self.cachedRemoteSettings[name]
         else:
