@@ -19,16 +19,17 @@ import Utils.Download
 # TODO: Logging
 
 def pathMenuInitializer(menu, prevMenu):
-    nextMenus = []
-    if prevMenu.optDict["1"].toggle:
-        nextMenus.append("Classifier")
-    if prevMenu.optDict["2"].toggle:
-        nextMenus.append("Models")
-    if prevMenu.optDict["3"].toggle:
-        nextMenus.append("Corpora")
-    if prevMenu.optDict["4"].toggle:
-        nextMenus.append("Tools")
-    menu.optDict["c"].nextMenu = nextMenus
+    if menu != prevMenu:
+        nextMenus = []
+        if prevMenu.optDict["1"].toggle:
+            nextMenus.append("Classifier")
+        if prevMenu.optDict["2"].toggle:
+            nextMenus.append("Models")
+        if prevMenu.optDict["3"].toggle:
+            nextMenus.append("Corpora")
+        if prevMenu.optDict["4"].toggle:
+            nextMenus.append("Tools")
+        menu.optDict["c"].nextMenu = nextMenus
     
     menu.text = """
     1. By default, all data and tools will be installed to one directory, the DATAPATH. 
@@ -101,7 +102,9 @@ def pathMenuInitializer(menu, prevMenu):
 def setClosingMessage(menuSystem, configFilePath):
     menuSystem.closingMessage = "!!!!!!!!!!!!!!!!!!!!!! Important Note !!!!!!!!!!!!!!!!!!!!!!\n"
     menuSystem.closingMessage += "Before using TEES, remember to define the TEES_SETTINGS\n"
-    menuSystem.closingMessage += "environment variable. How to do this depends on your shell,\n"
+    menuSystem.closingMessage += "environment variable, if you used a local settings path\n"
+    menuSystem.closingMessage += "other than" + os.path.expanduser("~/.tees_local_settings.py") + "\n"
+    menuSystem.closingMessage += "How to do this depends on your shell,\n"
     menuSystem.closingMessage += "some common commands are:\n\n"
     menuSystem.closingMessage += "bash: 'export TEES_SETTINGS=" + configFilePath + "'\n"
     menuSystem.closingMessage += "tcsh: 'setenv TEES_SETTINGS " + configFilePath + "'\n" 
