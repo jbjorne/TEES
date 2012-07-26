@@ -4,9 +4,12 @@ from DefaultSettings import *
 
 # Import local configuration
 import os
-if "TEES_SETTINGS" in os.environ:
+if "TEES_SETTINGS" in os.environ or os.path.exists(DEFAULT_LOCAL_SETTINGS):
     import imp
-    pathname = os.environ["TEES_SETTINGS"]
+    if "TEES_SETTINGS" in os.environ:
+        pathname = os.environ["TEES_SETTINGS"]
+    else:
+        pathname = DEFAULT_LOCAL_SETTINGS
     imp.load_source("TEESLocalSettings", pathname)
     # combine the settings dictionaries
     tempURL = URL
@@ -19,7 +22,7 @@ if "TEES_SETTINGS" in os.environ:
     tempEVALUATOR.update(EVALUATOR)
     EVALUATOR = tempEVALUATOR
 else:
-    print >> sys.stderr, "Warning, the TEES_SETTINGS environment variable is not defined."
+    print >> sys.stderr, "Warning, no local settings file."
     
 def setLocal(variable, value, setVariable=True):
     # the settings file must exist and must be in the path
