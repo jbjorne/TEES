@@ -29,8 +29,8 @@ class MenuSystem():
             print >> sys.stderr, self.closingMessage
     
     def setAttr(self, attrName, value=None):
-        if not hasattr(self, attrName):
-            setattr(self, attrName, value)
+        #if not hasattr(self, attrName):
+        setattr(self, attrName, value)
 
 class Menu():
     system = MenuSystem()
