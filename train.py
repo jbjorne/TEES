@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 """
 Train a new model for event or relation detection.
 """
