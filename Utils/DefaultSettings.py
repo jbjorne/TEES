@@ -1,7 +1,8 @@
 import os
 
 # The default DATAPATH for installing data and tools
-DATAPATH=os.path.expanduser("~/TEES_DATA")
+DATAPATH=os.path.expanduser("~/.tees")
+DEFAULT_LOCAL_SETTINGS=os.path.expanduser("~/.tees_local_settings.py")
 
 # Default locations for evaluators and their devel set gold data (relative to DATAPATH)
 EVALUATOR = {}
