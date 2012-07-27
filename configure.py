@@ -103,7 +103,7 @@ def setClosingMessage(menuSystem, configFilePath):
     menuSystem.closingMessage = "!!!!!!!!!!!!!!!!!!!!!! Important Note !!!!!!!!!!!!!!!!!!!!!!\n"
     menuSystem.closingMessage += "Before using TEES, remember to define the TEES_SETTINGS\n"
     menuSystem.closingMessage += "environment variable, if you used a local settings path\n"
-    menuSystem.closingMessage += "other than" + os.path.expanduser("~/.tees_local_settings.py") + "\n"
+    menuSystem.closingMessage += "other than " + os.path.expanduser("~/.tees_local_settings.py") + "\n"
     menuSystem.closingMessage += "How to do this depends on your shell,\n"
     menuSystem.closingMessage += "some common commands are:\n\n"
     menuSystem.closingMessage += "bash: 'export TEES_SETTINGS=" + configFilePath + "'\n"
