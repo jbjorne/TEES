@@ -78,7 +78,7 @@ def submitJob(command, input, connection, jobTag=None, output=None, regex=None, 
     jobStatus = connection.getJobStatusByName(jobDir, jobName)
     if jobStatus != None:
         if rerun != None and jobStatus in rerun:
-            print >> sys.stderr, "Rerunning job with status", jobStatus
+            print >> sys.stderr, "Rerunning job", jobName, "with status", jobStatus
         else:
             if jobStatus == "RUNNING":
                 print >> sys.stderr, "Skipping currently running job"
@@ -113,7 +113,7 @@ def getOutputDir(currentDir, currentItem, input, output=None):
     if output == None:
         return None
     else:
-        print (currentDir, currentItem, input, output, "TEST")
+        #print (currentDir, currentItem, input, output, "TEST")
         relativeCurrentDir = os.path.abspath(currentDir)[len(os.path.abspath(input)):]
         relativeCurrentDir = relativeCurrentDir.lstrip("/")
         return os.path.join(output, relativeCurrentDir)
