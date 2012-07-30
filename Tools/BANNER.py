@@ -306,7 +306,7 @@ def run(input, output=None, elementName="entity", processElement="document", spl
         sentenceEntityCount = {}
         mentionfile = codecs.open(os.path.join(workdir, "mention.txt"), "rt", "utf-8")
         for line in mentionfile:
-            bannerId, offsets, word = line.strip().split("|")
+            bannerId, offsets, word = line.strip().split("|", 2)
             offsets = offsets.split()
             sentence = sDict[bannerId]
             offsets[0], offsets[1] = fixOffset(line.strip(), word, int(offsets[0]), int(offsets[1]), sentence.get("text"))
