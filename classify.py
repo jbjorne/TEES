@@ -52,6 +52,8 @@ def classify(input, model, output, workDir=None, step=None, omitSteps=None,
     classifyInput = input
     if selector.check("PREPROCESS"):
         preprocessor = Preprocessor()
+        if debug: 
+            preprocessor.setArgForAllSteps("debug", True)
         preprocessorOutput = output + preprocessorTag
         #preprocessor.debug = debug
         #preprocessor.source = input # This has to be defined already here, needs to be fixed later
