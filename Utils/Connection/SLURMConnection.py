@@ -69,6 +69,7 @@ class SLURMConnection(ClusterConnection):
                 if self.debug:
                     print >> sys.stderr, "sacct:", line
                 jobStatus = splits[5]
+                jobStatus = jobStatus.rstrip("+")
                 if jobStatus in ["RUNNING", "COMPLETING"]:
                     return "RUNNING"
                 elif jobStatus == "COMPLETED":
