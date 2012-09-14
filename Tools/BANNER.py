@@ -137,9 +137,42 @@ def makeEntityElements(beginOffset, endOffset, text, splitNewlines=False, elemen
         currentEndOffset += 1 # +1 for the newline
     return elements
 
-def fixOffset(origBannerEntity, bannerEntityText, begin, end, sentenceText, verbose=False):
+def getWhiteSpaceLessStringMap(string):
+    """
+    Map the characters in a string from which whitespace has been removed
+    to their indices in the original string.
+    """
+    map = {}
+    whiteSpaceLessPos = 0
+    for originalPos in range(len(string)):
+        if not string[originalPos].isspace():
+            map[whiteSpaceLessPos] = originalPos
+            whiteSpaceLessPos += 1
+    return map
+
+def fixWhiteSpaceLessOffset(entityText, sentenceText, begin, end, map):
+    # Here we assume the BANNER offsets refer to text, from which all whitespace has been removed
+    assert begin in map, (entityText, sentenceText, begin, end, map)
+    # The BANNER offset end character appears to be off by one, e.g. "JAK1" at the beginning of 
+    # a sentence would be 0:5, which would be off by one if using the python/java scheme of the
+    # end character being the last index plus one. However, since these indices refer to a string
+    # from which whitespace has been removed, the remapping could further move the end index. For
+    # the remapping, the end index must refer to the actual character, so it is reduced first by one to
+    # remove the original extra, then again by one to hit the actual end character's index, then
+    # remapped to the actual end character index in the whitespace-including sentence, and then
+    # finally, in later code, used with a +1 when getting the entity from the sentence.
+    end -= 2 # hope they are consistently off by one
+    assert end in map, (entityText, sentenceText, begin, end, map)
+    newBegin = map[begin]
+    newEnd = map[end]
+    #newEnd += 1 # hope they are consistently off by one
+    assert entityText == sentenceText[newBegin:newEnd+1], (entityText, sentenceText, (begin, end), (newBegin, newEnd), map)
+    return newBegin, newEnd
+
+def fixOffsetOld(origBannerEntity, bannerEntityText, begin, end, sentenceText, verbose=False):
     # The BANNER offsets appear to refer to text, from which all whitespace has been removed.
-    # Here we try to fix this situation.
+    # This function could map the offset to an incorrect position when the string of an entity
+    # appeared more than once in the same sentence, and has thus been replaced with "fixWhiteSpaceLessOffset"
     origEnd = end
     end = begin + len(bannerEntityText) # the end offset seems random, let's take the length from the begin-one
     assert len(sentenceText[begin:end]) == len(bannerEntityText), (bannerEntity, sentenceText[begin:end], begin, end, sentenceText)
@@ -309,7 +342,9 @@ def run(input, output=None, elementName="entity", processElement="document", spl
             bannerId, offsets, word = line.strip().split("|", 2)
             offsets = offsets.split()
             sentence = sDict[bannerId]
-            offsets[0], offsets[1] = fixOffset(line.strip(), word, int(offsets[0]), int(offsets[1]), sentence.get("text"))
+            map = getWhiteSpaceLessStringMap(sentence.get("text"))
+            offsets[0], offsets[1] = fixWhiteSpaceLessOffset(word, sentence.get("text"), int(offsets[0]), int(offsets[1]), map)
+            #offsets[0], offsets[1] = fixStrangeOffset(line.strip(), word, int(offsets[0]), int(offsets[1]), sentence.get("text"))
             entities = makeEntityElements(int(offsets[0]), int(offsets[1]), sentence.get("text"), splitNewlines, elementName)
             entityText = "\n".join([x.get("text") for x in entities])
             assert entityText == word, (entityText, word, bannerId, offsets, sentence.get("id"), sentence.get("text"))
@@ -330,7 +365,7 @@ def run(input, output=None, elementName="entity", processElement="document", spl
         mentionfile.close()
     
     print >> sys.stderr, "BANNER found", nonSplitCount, "entities in", sentencesWithEntities, processElement + "-elements",
-    print >> sys.stderr, "(" + str(sCount) + " have no entities)"
+    print >> sys.stderr, "(" + str(sCount) + " sentences processed)"
     print >> sys.stderr, "New", elementName + "-elements:", totalEntities, "(Split", splitEventCount, "BANNER entities with newlines)"
     
     # Remove work directory
