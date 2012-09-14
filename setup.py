@@ -1,6 +1,6 @@
 from distutils.core import setup
 setup (name='TEES',
-    version='2.0',
+    version='2.0.1',
     py_modules=['__init__', 'configure', 'train', 'classify', 'batch'],
     packages=['Core', 'Classifiers', 'Detectors', 'Evaluators', 'ExampleBuilders', 'ExampleBuilders.FeatureBuilders',
               'ExampleWriters', 'Tools', 'Utils', 'Utils.Connection', 'Utils.Convert', 'Utils.InteractionXML', 
@@ -8,7 +8,7 @@ setup (name='TEES',
     description='Turku Event Extraction System',
     maintainer='Jari Bjorne',
     maintainer_email='jari.bjorne@utu.fi',
-    url='http://temp/',
+    url='http://jbjorne.github.com/TEES/',
     license='GPL3',
     platforms='UNIX',
 )
