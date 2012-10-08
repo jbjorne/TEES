@@ -269,7 +269,7 @@ class SentenceGraph:
         @type interactionElements: list of cElementTree.Element objects
         @param verbose: Print selected head tokens on screen
         @param verbose: boolean
-        """
+        """     
         self.interactions = interactionElements
         self.entities = entityElements
         # Entities that have no text binding can not be mapped and are therefore removed
@@ -289,12 +289,17 @@ class SentenceGraph:
         self.entitiesByToken = {} # a mapping for fast access
         self.entitiesById = {}
         self.entityHeadTokenByEntity = {}
+        sentenceSpan = (0, len(self.sentenceElement.get("text"))) # for validating the entity offsets
         for entity in self.entities[:]:
             headToken = self.mapEntity(entity, verbose)
             if headToken != None:
                 self.entityHeadTokenByEntity[entity] = headToken
                 self.entitiesById[entity.get("id")] = entity
             else:
+                # Check that the entity is within the sentence
+                if not Range.overlap(Range.charOffsetToSingleTuple(entity.get("charOffset")), sentenceSpan):
+                    raise Exception("Entity " + entity.get("id") + ", charOffset " + entity.get("charOffset") + ", does not overlap with sentence " + self.sentenceElement.get("id") + ", length " + str(sentenceSpan[1]) )
+                # Assume there simply is no token corresponding to the entity
                 self.entities.remove(entity)
         self._markNamedEntities()
         
