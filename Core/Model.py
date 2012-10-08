@@ -61,12 +61,15 @@ class Model():
         shutil.copy2(filepath, os.path.join(self.workdir, name))
         self.members[name] = os.path.join(self.workdir, name)
     
-    def importFrom(self, model, members, strings=None):
+    def importFrom(self, model, members, strings=None, allowMissing=True):
         """
         Copy several members from another model
         """
         for member in members:
-            self.insert(model.get(member), member)
+            if model.hasMember(member):
+                self.insert(model.get(member), member)
+            elif not allowMissing:
+                raise IOError("Model to import from has no member \"" + name + "\"")
         if strings != None:
             for string in strings:
                 self.addStr(string, model.getStr(string))
