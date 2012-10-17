@@ -23,6 +23,7 @@ def toDict(parameters, valueListKey=None):
         if name.strip() != "":
             values = True
             if "=" in name:
+                assert name.count("=") == 1, name
                 name, values = name.split("=")
                 values = values.strip().split(",")
                 if len(values) == 1:
