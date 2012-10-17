@@ -72,7 +72,11 @@ class Model():
                 raise IOError("Model to import from has no member \"" + name + "\"")
         if strings != None:
             for string in strings:
-                self.addStr(string, model.getStr(string))
+                stringValue = model.getStr(string, defaultIfNotExist=None)
+                if stringValue != None:
+                    self.addStr(string, stringValue)
+                elif not allowMissing:
+                    raise IOError("Model to import from has no string \"" + string + "\"")
     
     def addStrings(self, dict):
         """
