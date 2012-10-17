@@ -16,7 +16,9 @@ def getConnection(connection): #, account=None, workDirBase=None, remoteSettings
         return getConnection(getattr(Settings, connection))
         #return getConnection(*getattr(Settings, connection))
     else: # connection is a parameter string or dictionary
-        connection = Parameters.get(connection, valueListKey="connection", defaults=["connection", "account", "workdir", "settings", "memory", "cores", "modules", "wallTime"])
+        connection = Parameters.get(connection, valueListKey="connection", defaults=["connection", "account", "workdir", "settings", "memory", "cores", "modules", "wallTime", "jobLimit"])
+        if connection["connection"] == None:
+            connection["connection"] = "Unix"
         if connection["account"] == None:
             assert connection["workdir"] == None
             #assert remoteSettingsPath == None

@@ -399,8 +399,21 @@ class UnixConnection:
             return
         waitTimer = Timer()
         while numJobs > targetCount:
-            print >> sys.stderr, "\rWaiting for " + str(numJobs) + " on " + accountName + " (limit=" + str(targetCount) + ")", waitTimer.elapsedTimeToString() + sleepString,
+            sleepTimer = Timer()
+            accountName = self.account
+            if self.account == None:
+                accountName = "local"
+            if verbose:
+                sleepString = " [          ]     "
+                print >> sys.stderr, "\rWaiting for " + str(numJobs) + " on " + accountName + " (limit=" + str(targetCount) + ")", waitTimer.elapsedTimeToString() + sleepString,
+            while sleepTimer.getElapsedTime() < pollIntervalSeconds:
+                if verbose:
+                    steps = int(10 * sleepTimer.getElapsedTime() / pollIntervalSeconds) + 1
+                    sleepString = " [" + steps * "." + (10-steps) * " " + "]     "
+                    print >> sys.stderr, "\rWaiting for " + str(numJobs) + " on " + accountName + " (limit=" + str(targetCount) + ")", waitTimer.elapsedTimeToString() + sleepString,
+                time.sleep(5)                
             numJobs = self.getNumJobs()
+        print >> sys.stderr, "\nAll jobs done"
     
     def waitForJob(self, job, pollIntervalSeconds=10):
         while self.getJobStatus(job) not in ["FINISHED", "FAILED"]:
