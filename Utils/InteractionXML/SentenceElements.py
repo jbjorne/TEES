@@ -38,32 +38,7 @@ class SentenceElements:
         self.parseElement = None
         self.tokenizationElement = None
         
-        sentenceId = sentenceElement.get("id")
-        pairElements = sentenceElement.findall("pair")
-        if pairElements != None:
-            self.pairs = pairElements
-        if removeIntersentenceInteractions:
-            pairsToKeep = []
-            for pair in pairElements:
-                if pair.get("e1").rsplit(".",1)[0] == sentenceId and pair.get("e2").rsplit(".",1)[0] == sentenceId:
-                    pairsToKeep.append(pair)
-            self.pairs = pairsToKeep
-        
-        interactionElements = sentenceElement.findall("interaction")
-        if interactionElements != None:
-            self.interactions = interactionElements
-            self.interSentenceInteractions = []
-        if removeIntersentenceInteractions:
-            interactionsToKeep = []
-            for interaction in interactionElements:
-                e1rsplits = interaction.get("e1").count(".") - 2
-                e2rsplits = interaction.get("e2").count(".") - 2
-                if interaction.get("e1").rsplit(".",e1rsplits)[0] == sentenceId and interaction.get("e2").rsplit(".",e2rsplits)[0] == sentenceId:
-                    interactionsToKeep.append(interaction)
-                else:
-                    self.interSentenceInteractions.append(interaction)
-            self.interactions = interactionsToKeep
-        
+        # Read entities
         entityElements = sentenceElement.findall("entity")
         if entityElements != None:
             entitiesToKeep = []
@@ -75,11 +50,50 @@ class SentenceElements:
             for entityElement in entityElements:
                 if removeNameInfo:
                     entityElement.set("isName","False")
-                self.entitiesById[entityElement.attrib["id"]] = entityElement
+                entityId = entityElement.get("id")
+                if entityId == None:
+                    raise Exception("entity element has no id")
+                self.entitiesById[entityId] = entityElement
+        
+        # Read pairs and interactions
+#        sentenceId = sentenceElement.get("id")
+#        pairElements = sentenceElement.findall("pair")
+#        if pairElements != None:
+#            self.pairs = pairElements
+#        if removeIntersentenceInteractions:
+#            pairsToKeep = []
+#            for pair in pairElements:
+#                if pair.get("e1").rsplit(".",1)[0] == sentenceId and pair.get("e2").rsplit(".",1)[0] == sentenceId:
+#                    pairsToKeep.append(pair)
+#            self.pairs = pairsToKeep       
+#        interactionElements = sentenceElement.findall("interaction")
+#        if interactionElements != None:
+#            self.interactions = interactionElements
+#            self.interSentenceInteractions = []
+#        if removeIntersentenceInteractions:
+#            interactionsToKeep = []
+#            for interaction in interactionElements:
+#                e1rsplits = interaction.get("e1").count(".") - 2
+#                e2rsplits = interaction.get("e2").count(".") - 2
+#                if interaction.get("e1").rsplit(".",e1rsplits)[0] == sentenceId and interaction.get("e2").rsplit(".",e2rsplits)[0] == sentenceId:
+#                    interactionsToKeep.append(interaction)
+#                else:
+#                    self.interSentenceInteractions.append(interaction)
+#            self.interactions = interactionsToKeep
+        
+        self.pairs = sentenceElement.findall("pair")
+        self.interactions = sentenceElement.findall("interaction")
+        self.interSentenceInteractions = []
+        if removeIntersentenceInteractions:
+            for targetList in (self.interactions, self.pairs):
+                for interaction in targetList[:]:
+                    if interaction.get("e1") not in self.entitiesById or interaction.get("e2") not in self.entitiesById:
+                        targetList.remove(interaction)
+                        self.interSentenceInteractions.append(interaction)
         
         sentenceAnalysesElement = sentenceElement.find("sentenceanalyses")
         analysesElement = sentenceElement.find("analyses")
-        assert sentenceAnalysesElement == None or analysesElement == None, sentenceId
+        assert sentenceAnalysesElement == None or analysesElement == None, sentenceElement.get("id")
         if sentenceAnalysesElement == None:
             sentenceAnalysesElement = analysesElement
         if sentenceAnalysesElement != None:
