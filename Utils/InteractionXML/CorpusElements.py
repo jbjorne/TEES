@@ -22,6 +22,8 @@ class CorpusElements:
     def __init__(self, rootElement, parse, tokenization=None, removeIntersentenceInteractions=True, tree=None, removeNameInfo=False):
         self.tree = tree
         self.rootElement = rootElement
+        if rootElement.tag != "corpus":
+            raise Exception("Corpus root element is not 'corpus', but '" + str(rootElement.tag) + "'")
         self.documents = rootElement.findall("document")
         self.documentsById = {}
         self.sentencesById = {}
