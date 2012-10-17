@@ -9,10 +9,16 @@ def toDict(parameters, valueListKey=None):
     if type(parameters) not in types.StringTypes:
         return parameters
     paramDict = {}
+    # Check if the parameter string is a list of values without a defined parameter name
     if valueListKey != None and ":" not in parameters and "=" not in parameters:
-        names = [valueListKey + "=" + parameters]
+        if parameters.strip() == "": # no values defined
+            names = [] # dummy list
+            paramDict = {valueListKey:None}
+        else: # values are defined for the default parameter (value list key)
+            names = [valueListKey + "=" + parameters]
     else:
         names = parameters.split(":")
+    # Process parameter=value1,value2,value3,... strings
     for name in names:
         if name.strip() != "":
             values = True
@@ -45,8 +51,9 @@ def toString(parameters, skipKeysWithValues=[None], skipValues=[True], skipDefau
                     s += key + "=" + str(parameters[key])
     return s
 
-def get(parameters, defaults=None, allowNew=False, valueListKey=None, valueLimits=None):
+def get(parameters, defaults=None, allowNew=False, valueListKey=None, valueLimits=None, valueTypes=None):
     parameters = toDict(parameters, valueListKey) # get parameter dictionary
+    # Get default values
     if defaults != None:
         if type(defaults) in [types.ListType, types.TupleType]: # convert list to dictionary
             defaults = dict( zip(defaults, len(defaults) * [None]) )
@@ -58,14 +65,26 @@ def get(parameters, defaults=None, allowNew=False, valueListKey=None, valueLimit
                 newDict[key] = parameters[key]
             elif key in defaults:
                 newDict[key] = defaults[key]
-            if valueLimits != None and key in valueLimits:
-                values = newDict[key]
-                if type(values) not in [types.ListType, types.TupleType]:
-                    values = [values]
-                for value in values:
-                    if value not in valueLimits[key]:
-                        raise Exception("Illegal value " + str(value) + " for parameter " + key + " (allowed values: " + str(valueLimits[key]) + ")")
         parameters = newDict
+    # Validate parameters
+    for key in sorted(list(parameters.keys())):
+        values = parameters[key]
+        if type(values) not in [types.ListType, types.TupleType]:
+            values = [values]
+        # Check that the value is one of a defined set
+        if valueLimits != None and key in valueLimits:
+            for value in values:
+                if value not in valueLimits[key]:
+                    raise Exception("Illegal value '" + str(value) + "' for parameter " + key + " (allowed values: " + str(valueLimits[key]) + ")")
+        # Check that the value has the correct type
+        if valueTypes != None and key in valueTypes:
+            for value in values:
+                for valueType in valueTypes[key]: # a list of cast-functions
+                    try:
+                        valueType(value) # will throw an exception if value is incompatible with the cast
+                    except:
+                        raise Exception("Value '" + str(value) + "' for parameter " + key + " cannot be cast to an allowed type (allowed types: " + str(valueTypes[key]) + ")")
+
     return parameters
 
 def getCombinations(parameters, order=None):

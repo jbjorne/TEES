@@ -43,6 +43,12 @@ class ExternalClassifier(Classifier):
         self.predictions = None
         
         self.parameterFormat = "-%k %v"
+        self.parameterDefaults = {"train":None, "classify":None}
+        self.parameterAllowNew = {"train":True, "classify":True}
+        self.parameterValueListKey = {"train":None, "classify":None}
+        self.parameterValueLimits = {"train":None, "classify":None}
+        self.parameterValueTypes = {"train":None, "classify":None}
+        
         self.trainDirSetting = None
         self.trainCommand = None
         self.classifyDirSetting = None
@@ -152,23 +158,7 @@ class ExternalClassifier(Classifier):
             print >> sys.stderr, self.__class__.__name__, "using example file", examples, "as", examplesPath
         return examplesPath
     
-    def train(self, examples, outDir, parameters, classifyExamples=None, finishBeforeReturn=False, replaceRemoteExamples=True, dummy=False):
-        outDir = os.path.abspath(outDir)
-        
-        examples = self.getExampleFile(examples, replaceRemote=replaceRemoteExamples, dummy=dummy)
-        classifyExamples = self.getExampleFile(classifyExamples, replaceRemote=replaceRemoteExamples, dummy=dummy)
-        parameters = Parameters.get(parameters, valueListKey="c")
-        trainDir = self.connection.getSetting(self.trainDirSetting)
-        
-        # Return a new classifier instance for following the training process and using the model
-        classifier = copy.copy(self)
-        classifier.setState("TRAIN")
-        classifier.parameters = parameters
-        classifier._filesToRelease = [examples, classifyExamples]
-        # Train
-        if not os.path.exists(outDir):
-            os.makedirs(outDir)
-        trainCommand = os.path.join(trainDir, self.trainCommand)
+    def _getParameterString(self, parameters):
         paramKeys = sorted(parameters.keys())
         idStr = ""
         paramString = ""
@@ -183,6 +173,29 @@ class ExternalClassifier(Classifier):
             else:
                 paramString += self.parameterFormat.replace("%k", key).replace("%v", "").strip()
                 idStr += "-" + str(key)
+        return paramString, idStr
+    
+    def train(self, examples, outDir, parameters, classifyExamples=None, finishBeforeReturn=False, replaceRemoteExamples=True, dummy=False):
+        outDir = os.path.abspath(outDir)
+        
+        examples = self.getExampleFile(examples, replaceRemote=replaceRemoteExamples, dummy=dummy)
+        classifyExamples = self.getExampleFile(classifyExamples, replaceRemote=replaceRemoteExamples, dummy=dummy)
+        #parameters = Parameters.get(parameters, valueListKey="c")
+        trainDir = self.connection.getSetting(self.trainDirSetting)
+        
+        # Return a new classifier instance for following the training process and using the model
+        classifier = copy.copy(self)
+        classifier.setState("TRAIN")
+        classifier.parameters = parameters
+        classifier._filesToRelease = [examples, classifyExamples]
+        # Train
+        if not os.path.exists(outDir):
+            os.makedirs(outDir)
+        trainCommand = os.path.join(trainDir, self.trainCommand)
+        parameters = Parameters.get(parameters, self.parameterDefaults["train"], self.parameterAllowNew["train"], 
+                                    self.parameterValueListKey["train"], self.parameterValueLimits["train"], 
+                                    self.parameterValueTypes["train"])
+        paramString, idStr = self._getParameterString(parameters)
         classifier.parameterIdStr = idStr
         classifier.model = self.connection.getRemotePath(outDir + "/model" + idStr, True)
         modelPath = self.connection.getRemotePath(outDir + "/model" + idStr, False)
@@ -293,6 +306,8 @@ class ExternalClassifier(Classifier):
             if not self.connection.isLocal():
                 os.remove(predictions) # remove predictions to save space
         #Stream.setIndent()
+        if bestResult == None:
+            raise Exception("No results for any parameter combination")
         print >> sys.stderr, "*** Evaluation complete", finalJobStatus, "***"
         print >> sys.stderr, "Selected parameters", bestResult[2]
         classifier = copy.copy(bestResult[1])

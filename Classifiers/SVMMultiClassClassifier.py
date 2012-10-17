@@ -43,6 +43,8 @@ class SVMMultiClassClassifier(ExternalClassifier):
         ExternalClassifier.__init__(self, connection=connection)
         self.defaultEvaluator = AveragingMultiClassEvaluator
         self.parameterFormat = "-%k %v"
+        self.parameterValueListKey["train"] = "c"
+        self.parameterValueTypes["train"] = {"c":[int]}
         self.trainDirSetting = "SVM_MULTICLASS_DIR"
         self.trainCommand = "svm_multiclass_learn %p %e %m"
         self.classifyDirSetting = "SVM_MULTICLASS_DIR"
