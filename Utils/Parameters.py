@@ -80,10 +80,15 @@ def get(parameters, defaults=None, allowNew=False, valueListKey=None, valueLimit
         if valueTypes != None and key in valueTypes:
             for value in values:
                 for valueType in valueTypes[key]: # a list of cast-functions
+                    passed = True # value could be cast to at least one of the given types
                     try:
                         valueType(value) # will throw an exception if value is incompatible with the cast
                     except:
-                        raise Exception("Value '" + str(value) + "' for parameter " + key + " cannot be cast to an allowed type (allowed types: " + str(valueTypes[key]) + ")")
+                        passed = False
+                    if passed:
+                        break
+                if not passed:
+                    raise Exception("Value '" + str(value) + "' for parameter " + key + " cannot be cast to an allowed type (allowed types: " + str(valueTypes[key]) + ")")
 
     return parameters
 
