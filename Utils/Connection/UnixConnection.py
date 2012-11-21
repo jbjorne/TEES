@@ -474,7 +474,7 @@ class UnixConnection:
         jobAttr["time"] = float(jobAttr["time"])
         currentTime = time.time()
         processes = []
-        for line in self.run("ps -p " + jobAttr["PID"] + " -o etime, --no-heading"):
+        for line in self.run("ps -p " + jobAttr["PID"] + " -o etime")[1:]:
             line = line.strip()
             days = 0
             if "-" in line:
