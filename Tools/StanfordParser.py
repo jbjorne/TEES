@@ -209,7 +209,12 @@ def convertXML(parser, input, output=None, debug=False, reparse=False, stanfordP
     if stanfordParserDir == None:
         stanfordParserDir = Settings.STANFORD_PARSER_DIR
     if stanfordParserArgs == None:
-        stanfordParserArgs = ["java", "-mx500m", "-cp", "stanford-parser.jar", 
+        # not sure how necessary the "-mx500m" option is, and how exactly Java
+        # options interact, but adding user defined options from Settings.JAVA
+        # after the "-mx500m" hopefully works.
+        stanfordParserArgs = Settings.JAVA.split()[0:1] + ["-mx500m"] + \
+                             Settings.JAVA.split()[1:] + \
+                             ["-cp", "stanford-parser.jar", 
                               "edu.stanford.nlp.trees.EnglishGrammaticalStructure", 
                               "-CCprocessed", "-keepPunct", "-treeFile"]
     print >> sys.stderr, "Running Stanford conversion"

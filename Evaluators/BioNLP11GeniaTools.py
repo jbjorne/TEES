@@ -367,9 +367,9 @@ def evaluateBX(corpusName, sourceDir, goldDir=None, silent=False):
         return None
     
     if corpusName == "BI":
-        commands = "java -jar " + evaluatorDir + "/BioNLP-ST_2011_bacteria_interactions_evaluation_software.jar " + goldDir + " " + sourceDir
+        commands = Settings.JAVA + " -jar " + evaluatorDir + "/BioNLP-ST_2011_bacteria_interactions_evaluation_software.jar " + goldDir + " " + sourceDir
     elif corpusName == "BB":
-        commands = "java -jar " + evaluatorDir + "/BioNLP-ST_2011_Bacteria_Biotopes_evaluation_software.jar " + goldDir + " " + sourceDir
+        commands = Settings.JAVA + " -jar " + evaluatorDir + "/BioNLP-ST_2011_Bacteria_Biotopes_evaluation_software.jar " + goldDir + " " + sourceDir
     else:
         assert False, corpusName
 
@@ -441,7 +441,7 @@ def evaluateREN(sourceDir, goldDir=None, silent=False):
     if goldDir == None:
         return None
     commands = "cd " + evaluatorDir
-    commands += " ; " + "java -jar eval_rename.jar " + goldDir + " " + sourceDir
+    commands += " ; " + Settings.JAVA + " -jar eval_rename.jar " + goldDir + " " + sourceDir
     p = subprocess.Popen(commands, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     stderrLines = p.stderr.readlines()
     stdoutLines = p.stdout.readlines()
@@ -476,7 +476,7 @@ def evaluateCO(sourceDir, goldDir=None, silent=False):
     resultDir = os.path.join(tempDir, "result")
     os.makedirs(resultDir)
     commands = "cd " + evaluatorDir
-    commands += " ; " + "java -jar CRScorer.jar " + goldDir + " " + sourceDir + " " + resultDir
+    commands += " ; " + Settings.JAVA + " -jar CRScorer.jar " + goldDir + " " + sourceDir + " " + resultDir
     p = subprocess.Popen(commands, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     stderrLines = p.stderr.readlines()
     stdoutLines = p.stdout.readlines()

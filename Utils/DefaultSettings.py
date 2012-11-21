@@ -44,6 +44,7 @@ URL["BANNER_COMPILED"] = "https://github.com/downloads/jbjorne/TEES/BANNER-svn-s
 URL["BLLIP_SOURCE"] = "https://github.com/dmcc/bllip-parser/zipball/master"
 URL["STANFORD_PARSER"] = "http://nlp.stanford.edu/software/stanford-parser-2012-03-09.tgz"
 RUBY_PATH = "ruby" # for GENIA Sentence Splitter
+JAVA = "java" # for programs using java
 
 # Corpora #####################################################################
 

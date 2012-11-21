@@ -248,9 +248,9 @@ def run(input, output=None, elementName="entity", processElement="document", spl
     cwd = os.getcwd()
     os.chdir(bannerPath)
     if oldVersion: # old version
-        args = ["java", "-cp", classPath, "banner.eval.TestModel", config]
+        args = Settings.JAVA.split() + ["-cp", classPath, "banner.eval.TestModel", config]
     else:
-        args = ["java", "-cp", classPath, "banner.eval.BANNER", "test", config]
+        args = Settings.JAVA.split() + ["-cp", classPath, "banner.eval.BANNER", "test", config]
     print >> sys.stderr, "BANNER command:", " ".join(args)
     startTime = time.time()
     exitCode = subprocess.call(args)
