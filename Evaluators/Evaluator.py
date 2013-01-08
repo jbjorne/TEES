@@ -96,21 +96,21 @@ class EvaluationData:
         else: # (not trueClassIsPositive) and (not predictedClassIsPositive)
             self._tn -= 1
         
-    def addTP(self):
+    def addTP(self, amount=1):
         self.resetStats()
-        self._tp += 1
+        self._tp += amount
 
-    def addFP(self):
+    def addFP(self, amount=1):
         self.resetStats()
-        self._fp += 1
+        self._fp += amount
     
-    def addTN(self):
+    def addTN(self, amount=1):
         self.resetStats()
-        self._tn += 1
+        self._tn += amount
     
-    def addFN(self):
+    def addFN(self, amount=1):
         self.resetStats()
-        self._fn += 1
+        self._fn += amount
     
     def getTP(self): return self._tp
     def getFP(self): return self._fp

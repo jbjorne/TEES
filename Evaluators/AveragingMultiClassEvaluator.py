@@ -281,12 +281,25 @@ class AveragingMultiClassEvaluator(Evaluator):
                     if trueClass == 1:
                         self.binaryF.addFP()
                     else:
+                        self.microF.addFN()
                         self.binaryF.addTP()
                 for cls in self.classes:
                     if cls == trueClass: # example not found -> false negative
                         self.dataByClass[cls].addFN()
                     elif cls != predictedClass:
                         self.dataByClass[cls].addTN()
+        
+        # alternative way for calculating the micro-average (the above loop should give the same result)
+        # the micro-average is calculated by micro-averaging all classes except 1 (negative). True positives
+        # for class 1 are considered true negatives for the micro-F, but this doesn't really matter, as
+        # TN does not affect F.
+#        self.microF = EvaluationData()
+#        for cls in self.classes:
+#            if cls != 1:
+#                self.microF.addTP(self.dataByClass[cls].getTP())
+#                self.microF.addFP(self.dataByClass[cls].getFP())
+#                self.microF.addFN(self.dataByClass[cls].getFN())
+#        self.microF.addTN(self.dataByClass[1].getTP())
         
         # Process remaining untyped undirected examples and calculate untyped undirected f-score
 #        self._processUntypedUndirectedQueue()
@@ -399,3 +412,22 @@ class AveragingMultiClassEvaluator(Evaluator):
             dicts.append(self.untypedUndirected.toDict())
             dicts[-1]["class"] = "untyped undirected"
         return dicts
+    
+if __name__=="__main__":
+    # Import Psyco if available
+    try:
+        import psyco
+        psyco.full()
+        print >> sys.stderr, "Found Psyco, using"
+    except ImportError:
+        print >> sys.stderr, "Psyco not installed"
+    from optparse import OptionParser
+    optparser = OptionParser(usage="%prog [options]\nCalculate f-score and other statistics.")
+    optparser.add_option("-e", "--examples", default=None, dest="examples", help="", metavar="FILE")
+    optparser.add_option("-p", "--predictions", default=None, dest="predictions", help="", metavar="FILE")
+    optparser.add_option("-c", "--classSet", default=None, dest="classSet", help="", metavar="FILE")
+    (options, args) = optparser.parse_args()
+    
+    ev = AveragingMultiClassEvaluator(options.examples, options.predictions, options.classSet)
+    print ev.toStringConcise()
+
