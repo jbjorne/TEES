@@ -44,7 +44,7 @@ class EdgeExampleBuilder(ExampleBuilder):
         
         self._setDefaultParameters([
             "typed", "directed", "headsOnly", "graph_kernel", "noAnnType", "noMasking", "maxFeatures",
-            "genia_limits", "epi_limits", "id_limits", "rel_limits", "bb_limits", "bi_limits", "co_limits",
+            "auto_limits", "genia_limits", "epi_limits", "id_limits", "rel_limits", "bb_limits", "bi_limits", "co_limits",
             "genia_task1", "ontology", "nodalida", "bacteria_renaming", "trigger_features", "rel_features",
             "ddi_features", "ddi_mtmx", "evex", "giuliano", "random", "themeOnly", "causeOnly", "no_path", "entities", 
             "skip_extra_triggers", "headsOnly", "graph_kernel", "trigger_features", "no_task", "no_dependency", 
@@ -343,6 +343,9 @@ class EdgeExampleBuilder(ExampleBuilder):
             else:
                 return False
         assert False, (e1Type, e2Type)
+    
+    def isValidInteraction(self, e1, e2):
+        return len(self.structureAnalyzer.getValidEdgeTypes(e1.get("type"), e2.get("type"))) > 0
 
     def getGoldCategoryName(self, goldGraph, entityToGold, e1, e2, directed=True):
         if len(entityToGold[e1]) > 0 and len(entityToGold[e2]) > 0:
@@ -447,6 +450,9 @@ class EdgeExampleBuilder(ExampleBuilder):
                     # make forward
                     self.exampleStats.beginExample(categoryName)
                     makeExample = True
+                    if self.styles["auto_limits"] and not self.isValidInteraction(eI, eJ):
+                        makeExample = False
+                        self.exampleStats.filter("auto_limits")
                     if self.styles["genia_limits"] and not self.isPotentialGeniaInteraction(eI, eJ):
                         makeExample = False
                         self.exampleStats.filter("genia_limits")
@@ -498,6 +504,9 @@ class EdgeExampleBuilder(ExampleBuilder):
                     # make reverse
                     self.exampleStats.beginExample(categoryName)
                     makeExample = True
+                    if self.styles["auto_limits"] and not self.isValidInteraction(eJ, eI):
+                        makeExample = False
+                        self.exampleStats.filter("auto_limits")
                     if self.styles["genia_limits"] and not self.isPotentialGeniaInteraction(eJ, eI):
                         makeExample = False
                         self.exampleStats.filter("genia_limits")

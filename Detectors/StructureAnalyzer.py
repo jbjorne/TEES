@@ -5,6 +5,7 @@ import Utils.ElementTreeUtils as ETUtils
 from Utils.InteractionXML.CorpusElements import CorpusElements
 from collections import defaultdict
 import copy
+import types
 
 class StructureAnalyzer():
     def __init__(self, modelFileName="structure.txt"):
@@ -13,12 +14,14 @@ class StructureAnalyzer():
         self.e2Types = None
         self.modelFileName = modelFileName
     
-    def getValidEdgeTypes(self, e1, e2):
-        if self.edgeTypes == null:
-            raise Error("No structure definition loaded")
-        if self.e1 in edgeTypes:
-            if self.e2 in edgeTypes[e1]:
-                return edgeTypes[e1][e2] # not a copy, so careful with using the returned list!
+    def getValidEdgeTypes(self, e1Type, e2Type):
+        assert type(e1Type) in types.StringTypes
+        assert type(e2Type) in types.StringTypes
+        if self.edgeTypes == None: 
+            raise Exception("No structure definition loaded")
+        if e1Type in self.edgeTypes:
+            if e2Type in self.edgeTypes[e1Type]:
+                return self.edgeTypes[e1Type][e2Type] # not a copy, so careful with using the returned list!
         return []
     
     def isValidEvent(self, entity, entityById=None, args=None):
@@ -75,8 +78,8 @@ class StructureAnalyzer():
                     self.edgeTypes[e1Type][e2Type].append(argType)
     
     def toString(self):
-        assert self.argLimits != None
-        assert self.e2Types != None
+        if self.argLimits == None or self.e2Types == None: 
+            raise Exception("No structure definition loaded")
         s = ""
         for entityType in sorted(self.argLimits.keys()):
             s += entityType
@@ -88,9 +91,9 @@ class StructureAnalyzer():
     
     def save(self, model, filename=None):
         if filename == None:
-            filename = modelFileName
+            filename = self.modelFileName
         if model != None:
-            filename = model.get(self.modelFileName, False)
+            filename = model.get(filename, True)
         f = open(filename, "wt")
         f.write(self.toString())
         f.close()

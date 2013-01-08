@@ -8,6 +8,7 @@ import tempfile
 sys.path.append(os.path.dirname(os.path.abspath(__file__))+"/..")
 from Core.Model import Model
 from StepSelector import StepSelector
+from StructureAnalyzer import StructureAnalyzer
 import Utils.Parameters as Parameters
 import Evaluators.BioNLP11GeniaTools
 import types
@@ -24,6 +25,7 @@ class Detector():
     to classify unknown text.
     """
     def __init__(self):
+        self.structureAnalyzer = StructureAnalyzer()
         self.exampleBuilder = None
         self.exampleWriter = None
         self.Classifier = None
@@ -177,6 +179,8 @@ class Detector():
             exampleStyle = model.getStr(self.tag+"example-style")
         if parse == None:
             parse = self.getStr(self.tag+"parse", model)
+        self.structureAnalyzer.load(model)
+        self.exampleBuilder.structureAnalyzer = self.structureAnalyzer
         for data, output, gold in itertools.izip_longest(datas, outputs, golds, fillvalue=[]):
             print >> sys.stderr, "Example generation for", output
             if not isinstance(data, (list, tuple)): data = [data]

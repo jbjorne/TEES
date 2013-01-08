@@ -96,14 +96,18 @@ class SingleStageDetector(Detector):
               workDir=None):
         self.initVariables(trainData=trainData, optData=optData, model=model, combinedModel=combinedModel, exampleStyle=exampleStyle, classifierParameters=classifierParameters, parse=parse, tokenization=tokenization)
         self.setWorkDir(workDir)
-        self.enterState(self.STATE_TRAIN, ["EXAMPLES", "BEGIN-MODEL", "END-MODEL", "BEGIN-COMBINED-MODEL", "END-COMBINED-MODEL"], fromStep, toStep)
-        if self.checkStep("EXAMPLES"):
+        self.enterState(self.STATE_TRAIN, ["ANALYZE", "EXAMPLES", "BEGIN-MODEL", "END-MODEL", "BEGIN-COMBINED-MODEL", "END-COMBINED-MODEL"], fromStep, toStep)
+        if self.checkStep("ANALYZE"):
             self.model = self.initModel(self.model, [("exampleStyle", self.tag+"example-style"), ("classifierParameters", self.tag+"classifier-parameters-train")])
             self.saveStr(self.tag+"parse", parse, self.model)
             if task != None:
                 self.saveStr(self.tag+"task", task, self.model)
-            self.buildExamples(self.model, [optData, trainData], [self.workDir+self.tag+"opt-examples.gz", self.workDir+self.tag+"train-examples.gz"], saveIdsToModel=True)
+            print >> sys.stderr, "Structure analysis for training set " + str(trainData)
+            self.structureAnalyzer.analyze(trainData, self.model)
+            print >> sys.stderr, self.structureAnalyzer.toString()
         self.model = self.openModel(model, "a") # Devel model already exists, with ids etc
+        if self.checkStep("EXAMPLES"):
+            self.buildExamples(self.model, [optData, trainData], [self.workDir+self.tag+"opt-examples.gz", self.workDir+self.tag+"train-examples.gz"], saveIdsToModel=True)
         self.beginModel("BEGIN-MODEL", self.model, [self.workDir+self.tag+"train-examples.gz"], self.workDir+self.tag+"opt-examples.gz")
         self.endModel("END-MODEL", self.model, self.workDir+self.tag+"opt-examples.gz")
         self.beginModel("BEGIN-COMBINED-MODEL", self.combinedModel, [self.workDir+self.tag+"train-examples.gz", self.workDir+self.tag+"opt-examples.gz"], self.workDir+self.tag+"opt-examples.gz", self.model)
