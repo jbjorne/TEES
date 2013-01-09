@@ -9,10 +9,23 @@ import types
 
 class StructureAnalyzer():
     def __init__(self, modelFileName="structure.txt"):
+        self.modelFileName = modelFileName
+        self.reset()
+    
+    def reset(self):
         self.edgeTypes = None
         self.argLimits = None
         self.e2Types = None
-        self.modelFileName = modelFileName
+        self.relations = None
+        self.sites = None
+        self.modifiers = None
+    
+    def _init(self):
+        self.reset()
+        self.argLimits = defaultdict(dict)
+        self.e2Types = defaultdict(lambda:defaultdict(set))
+        self.relations = {}
+        self.modifiers = {}
     
     def getValidEdgeTypes(self, e1Type, e2Type):
         assert type(e1Type) in types.StringTypes
@@ -66,27 +79,47 @@ class StructureAnalyzer():
             d[pair[0]] = pair[1]
         return d
     
-    def _defineValidEdgeTypes(self, e2Types):
-        self.edgeTypes = {}
-        for e1Type in sorted(e2Types.keys()):
-            for argType in sorted(e2Types[e1Type].keys()):
-                for e2Type in sorted(list(e2Types[e1Type][argType])):
-                    if e1Type not in self.edgeTypes:
-                        self.edgeTypes[e1Type] = {}
-                    if e2Type not in self.edgeTypes[e1Type]:
-                        self.edgeTypes[e1Type][e2Type] = []
+    def _defineValidEdgeTypes(self):
+        assert self.e2Types != None
+        self.edgeTypes = defaultdict(lambda:defaultdict(list))
+        for e1Type in sorted(self.e2Types.keys()):
+            for argType in sorted(self.e2Types[e1Type].keys()):
+                for e2Type in sorted(list(self.e2Types[e1Type][argType])):
                     self.edgeTypes[e1Type][e2Type].append(argType)
+        for relationType in sorted(self.relations.keys()):
+            relation = self.relations[relationType]
+            for e1Type in sorted(list(relation[1])):
+                for e2Type in sorted(list(relation[2])):
+                    self.edgeTypes[e1Type][e2Type].append(relationType)
+                    if not relation[1]: # undirected
+                        self.edgeTypes[e2Type][e1Type].append(relationType)
     
     def toString(self):
         if self.argLimits == None or self.e2Types == None: 
             raise Exception("No structure definition loaded")
         s = ""
         for entityType in sorted(self.argLimits.keys()):
-            s += entityType
+            argString = ""
             for argType in sorted(self.argLimits[entityType]):
                 if self.argLimits[entityType][argType][1] > 0:
-                    s += "\t" + argType + " " + str(self.argLimits[entityType][argType]).replace(" ", "") + " " + ",".join(sorted(list(self.e2Types[entityType][argType])))
-            s += "\n"
+                    argString += "\t" + argType + " " + str(self.argLimits[entityType][argType]).replace(" ", "") + " " + ",".join(sorted(list(self.e2Types[entityType][argType])))
+            if argString != "":
+                s += "EVENT "
+            else:
+                s += "ENTITY "
+            s += entityType + argString + "\n"
+        for relType in sorted(self.relations.keys()):
+            s += "RELATION " + relType
+            if relations[relType][0]:
+                s += "\t directed \t"
+            else:
+                s += "\t undirected \t"
+            s += ",".join(sorted(list(relations[relType][1])))
+            s += "\t" + ",".join(sorted(list(relations[relType][1]))) + "\n"
+        for modType in sorted(self.modifiers.keys()):
+            s += "MODIFIER " + modType + "\t" + ",".join(sorted(list(self.modifiers[modType]))) + "\n"
+        if self.sites != None:
+            s += "SITES\t" + ",".join(sorted(list(self.sites))) + "\n"
         return s
     
     def save(self, model, filename=None):
@@ -119,18 +152,28 @@ class StructureAnalyzer():
                 countsTemplate[intType] = 0
         interactionTypes = sorted(list(interactionTypes))
         # load data structures
-        self.argLimits = defaultdict(dict)
-        self.e2Types = defaultdict(lambda:defaultdict(set))
         for line in lines:
             splits = line.strip().split("\t")
-            e1Type = splits[0]
-            for intType in interactionTypes:
-                self.argLimits[e1Type][intType] = [0,0]
-            for split in splits[1:]:
-                intType, limits, argE2Types = split.split()
-                self.argLimits[e1Type][intType] = eval(limits)
-                for argE2Type in argE2Types.split(","):
-                    self.e2Types[e1Type][intType].add(argE2Type)
+            defType, e1Type = splits[0].split()
+            if defType not in ["EVENT", "ENTITY", "RELATION", "SITES", "MODIFIER"]:
+                raise Exception("Unknown structure definition " + str(defType))
+            if defType in ["EVENT", "ENTITY"]: # in the graph, entities are just events with no arguments
+                for intType in interactionTypes:
+                    self.argLimits[e1Type][intType] = [0,0]
+                for split in splits[1:]:
+                    intType, limits, argE2Types = split.split()
+                    self.argLimits[e1Type][intType] = eval(limits)
+                    for argE2Type in argE2Types.split(","):
+                        self.e2Types[e1Type][intType].add(argE2Type)
+            elif defType == "RELATION":
+                if len(splits) != 4:
+                    raise Exception("Incorrect structure definition \"" + line.strip() + "\"")
+                self.relations[e1Type] = [splits[0] == "directed", splits[1].split(","), splits[2].split(",")]
+            elif defType == "SITES":
+                self.sites = set(splits[1].split(","))
+            elif defType == "MODIFIER":
+                self.modifiers[e1Type] = set(splits[1].split(","))
+                
         # construct additional structures
         self._defineValidEdgeTypes(self.e2Types)
     
@@ -139,11 +182,14 @@ class StructureAnalyzer():
         print >> sys.stderr, "Argument limits:", self.argLimits
         print >> sys.stderr, "E2 types:", self.e2Types
         print >> sys.stderr, "Edge types:", self.edgeTypes
+        print >> sys.stderr, "Relations:", self.relations
     
     def analyze(self, xml, model=None):
         #xml = CorpusElements.loadCorpus(xml, parse=None, tokenization=None, removeIntersentenceInteractions=False, removeNameInfo=False)
         #for sentence in corpusElements.sentences:
         #    for entity in sentence.entities
+        self._init()
+        
         xml = ETUtils.ETFromObj(xml)
         interactionTypes = set()
         countsTemplate = {}
@@ -152,44 +198,73 @@ class StructureAnalyzer():
             countsTemplate[interaction.get("type")] = 0
         
         argCounts = defaultdict(set)
-        e2Types = defaultdict(lambda:defaultdict(set))
         for document in xml.getiterator("document"):
-            interactions = [x for x in document.getiterator("interaction")]
-            interactionsByE1 = defaultdict(list)
-            for interaction in interactions:
-                interactionsByE1[interaction.get("e1")].append(interaction)
+            # read entities
             entities = [x for x in document.getiterator("entity")]
             entityById = {}
             for entity in entities:
                 if entity.get("id") in entityById:
                     raise Error("Duplicate entity id " + str(entity.get("id") + " in document " + str(document.get("id"))))
                 entityById[entity.get("id")] = entity
+            # read interactions
+            interactions = [x for x in document.getiterator("interaction")]
+            interactionById = {}
+            for interaction in interactions:
+                if interaction.get("id") in interactionById:
+                    raise Error("Duplicate entity id " + str(interaction.get("id") + " in document " + str(document.get("id"))))
+                interactionById[interaction.get("id")] = interaction
+            # process interactions
+            interactionsByE1 = defaultdict(list)
+            for interaction in interactions:
+                if interaction.get("relation") == "True":
+                    relType = interaction.get("type")
+                    if not self.relations[relType]:
+                        self.relations[relType] = [None, set(), set()]
+                    isDirected = eval(interaction.get("directed", "False"))
+                    if self.relations[relType][0] == None: # no relation of this type has been seen yet
+                        self.relations[relType][0] == isDirected
+                    elif self.relations[relType][0] != isDirected:
+                        raise Exception("Conflicting relation directed-attribute for already defined relation of type " + relType)
+                    self.relations[relType][1].add(entityById[interaction.get("e1")].get("type"))
+                    self.relations[relType][2].add(entityById[interaction.get("e2")].get("type"))
+                else:
+                    interactionsByE1[interaction.get("e1")].append(interaction)
+                # check for sites
+                if interaction.get("type") == "Site" and interaction.get("parent") != None:
+                    parentInteraction = interactionById[interaction.get("parent")]
+                    if self.sites == None:
+                        self.sites = set()
+                    self.sites.add(entityById[parentInteraction.get("e1")].get("type") + " " + parentInteraction.get("type"))
+            # process events
             for entity in entities:
                 currentArgCounts = copy.copy(countsTemplate)
                 for interaction in interactionsByE1[entity.get("id")]:
                     interactionTypes.add(interaction.get("type"))
                     currentArgCounts[interaction.get("type")] += 1
-                    e2Types[entity.get("type")][interaction.get("type")].add(entityById[interaction.get("e2")].get("type"))
+                    self.e2Types[entity.get("type")][interaction.get("type")].add(entityById[interaction.get("e2")].get("type"))
                 argCounts[entity.get("type")].add(self._dictToTuple(currentArgCounts))
+                # check for modifiers
+                for modType in ("speculation", "negation"):
+                    if (entity.get(modType) != None):
+                        if modType not in self.modifiers:
+                            self.modifiers[modType] = set()
+                        self.modifiers[modType].add(entity.get("type"))
         
-        argLimits = defaultdict(dict)
         for entityType in argCounts:
             for combination in argCounts[entityType]:
                 combination = self._tupToDict(combination)
                 #print entityType, combination
                 for interactionType in interactionTypes:
-                    if not interactionType in argLimits[entityType]:
-                        argLimits[entityType][interactionType] = [sys.maxint,-sys.maxint]
-                    minmax = argLimits[entityType][interactionType]
+                    if not interactionType in self.argLimits[entityType]:
+                        self.argLimits[entityType][interactionType] = [sys.maxint,-sys.maxint]
+                    minmax = self.argLimits[entityType][interactionType]
                     if minmax[0] > combination[interactionType]:
                         minmax[0] = combination[interactionType]
                     if minmax[1] < combination[interactionType]:
                         minmax[1] = combination[interactionType]
         
         # print results
-        self._defineValidEdgeTypes(e2Types)
-        self.argLimits = argLimits
-        self.e2Types = e2Types
+        self._defineValidEdgeTypes()
         if model != None:
             self.save(model)
 
