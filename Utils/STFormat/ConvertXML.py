@@ -116,16 +116,22 @@ def addEntityElements(docEl, tMap, eventMap):
 
 def addInteractionElements(docEl, tMap):
         elCounter = 0
-        # Write events
+        # Write events and relations
         for event in doc.events:
-            if event.trigger == None: # triggerless event (simple pairwise interaction)
+            if event.trigger == None: # triggerless event (simple pairwise interaction) == relation
                 assert len(event.arguments) >= 2, (event.id, event.type, event.arguments)
                 a1 = event.arguments[0]
                 a2 = event.arguments[1]
                 origId = str(doc.id) + "." + str(event.id)
-                docEl.append(makeInteractionElement(event.type + "(" + a1[0] + "/" + a2[0] + ")", elCounter, origId, tMap[a1[1].id], tMap[a2[1].id]), True)
+                relEl = makeInteractionElement(event.type, elCounter, origId, tMap[a1[1].id], tMap[a2[1].id], True)
+                relEl.set("e1Role", a1[0])
+                relEl.set("e2Role", a2[0])
                 elCounter += 1
                 docEl.append(intEl)
+                if len(event.arguments) > 2:
+                    assert event.type == "Coref", (event.id, docId, event.type)
+                    for connProt in event.arguments[2:]: # link proteins to antecedent
+                        docEl.append(makeInteractionElement("Target", elCounter, origId, tMap[a2[1].id], tMap[connProt[1].id]), True)
             else:
                 argCount = 0
                 for arg in event.arguments:
@@ -145,24 +151,6 @@ def addInteractionElements(docEl, tMap):
                         #intEl.set("e1", tMap[arg[2].id]) # "Entity"-type entity is the source
                         #intEl.set("e2", tMap[arg[1].id]) # "Protein"-type entity is the target
                         docEl.append(siteEl)
-        # Write relations
-        for relation in doc.relations:
-            assert len(relation.arguments) >= 2, (relation.id, relation.type, relation.arguments)
-            a1 = relation.arguments[0]
-            a2 = relation.arguments[1]
-            assert a1[0] == "Arg1" or a1[0] == "Former" or a1[0] == "Anaphora", (a1, relation.arguments) 
-            assert a2[0] == "Arg2" or a2[0] == "New" or a2[0] == "Antecedent", (a2, relation.arguments)
-            origId = str(doc.id) + "." + str(relation.id)
-            relEl = makeInteractionElement(relation.type, elCounter, origId, tMap[a1[1].id], tMap[a2[1].id])
-            elCounter += 1
-            docEl.append(relEl)
-            if len(relation.arguments) > 2:
-                assert relation.type == "Coref", (relation.id, docId, relation.type)
-                for connProt in relation.arguments[2:]:
-                    intEl = makeInteractionElement("Target", elCounter, origId, tMap[a2[1].id], tMap[connProt[1].id])
-                    elCounter += 1
-                    #intEl.set("e1", tMap[a2[1].id]) # link proteins to antecedent
-                    docEl.append(intEl)
 
 def getTriggerToEventsMap(doc):
     triggerToEvents = {}

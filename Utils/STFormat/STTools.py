@@ -24,9 +24,15 @@ class Document:
         self.proteins = []
         self.triggers = []
         self.events = []
-        self.relations = []
         self.dataSet = None
         self.license = None
+    
+    def getEventOrRelationCount(self, countRelations=False):
+        count = 0
+        for event in events:
+            if countRelations == event.isRelation():
+                count += 1
+        return count
 
 class Annotation:
     def __init__(self, id = None, type = None, text=None, trigger=None, arguments=None):
@@ -37,7 +43,7 @@ class Annotation:
         self.charEnd = -1 # protein/word/trigger
         self.alternativeOffsets = []
         self.equiv = [] # group of elements that are equivalent
-        self.trigger = trigger # event
+        self.trigger = trigger # event (None for triggerless events / relations)
         self.arguments = [] # event/dependency/relation
         if arguments != None:
             self.arguments = arguments
@@ -59,6 +65,9 @@ class Annotation:
     
     def isName(self):
         return self.type == "Protein" or self.type == "Gene"
+    
+    def isRelation(self):
+        return self.trigger == None
 
     # for debugging
     def __repr__(self):
@@ -76,11 +85,11 @@ def getStatistics(documents, printStats=True, statSeparator="\n"):
     stats = defaultdict(int)
     for document in documents:
         stats["total-docs"] += 1
-        stats["total-events"] += len(document.events)
-        stats["total-relations"] += len(document.relations)
+        stats["total-events"] += document.getEventOrRelationCount()
+        stats["total-relations"] += document.getEventOrRelationCount(True)
         stats["total-proteins"] += len(document.proteins)
-        stats["doc-events-"+str(len(document.events))] += 1
-        stats["doc-relations-"+str(len(document.relations))] += 1
+        stats["doc-events-"+str(document.getEventOrRelationCount(True))] += 1
+        stats["doc-relations-"+str(document.getEventOrRelationCount())] += 1
         stats["doc-proteins-"+str(len(document.proteins))] += 1
         for event in document.events:
             stats["events-"+event.type] += 1
@@ -325,10 +334,8 @@ def loadRelOrA2(filename, proteins, sitesAreArguments=False, readScores=False):
             count += 1
     for line in lines:
         if line[0] == "R":
-            relations.append(readRAnnotation(line, readScores=readScores))
-            # NOTE: Temporarily treating relations as events to get equiv-resolution
-            # working
-            #events.append(readRAnnotation(line))
+            events.append(readRAnnotation(line, readScores=readScores))
+            eventMap[events[-1].id] = events[-1]
             count += 1
     for line in lines:
         if line[0] == "M":
@@ -382,25 +389,8 @@ def loadRelOrA2(filename, proteins, sitesAreArguments=False, readScores=False):
                 assert arg[2] == None, (filename, event.id, arg, event.arguments) # no sites on events
                 #event.arguments[i] = (arg[0], eventMap[arg[1]], None)
                 event.arguments[i][1] = eventMap[arg[1]]
-    # Build links
-    for relation in relations:
-        for i in range(len(relation.arguments)):
-            arg = relation.arguments[i]
-            if arg[1][0] == "T":
-                if arg[2] != None:
-                    #relation.arguments[i] = (arg[0], triggerMap[arg[1]], triggerMap[arg[2]])
-                    relation.arguments[i][1] = triggerMap[arg[1]]
-                    relation.arguments[i][2] = triggerMap[arg[2]]
-                else:
-#                    if not triggerMap.has_key(arg[1]): # NOTE! hack for CO bugs
-#                        relation.arguments = relation.arguments[0:i]
-#                        if len(relation.arguments) == 1: # NOTE! hack
-#                            relations = []
-#                        break
-                    #relation.arguments[i] = (arg[0], triggerMap[arg[1]], None)
-                    relation.arguments[i][1] = triggerMap[arg[1]]
 
-    return triggers, events, relations
+    return triggers, events
 
 def loadText(filename):
     #f = open(filename)
@@ -427,10 +417,10 @@ def load(id, dir, loadA2=True, sitesAreArguments=False, a2Tag="a2", readScores=F
     events = []
     relations = []
     if os.path.exists(a2Path):
-        triggers, events, relations = loadRelOrA2(a2Path, proteins, sitesAreArguments, readScores=readScores)
+        triggers, events = loadRelOrA2(a2Path, proteins, sitesAreArguments, readScores=readScores)
     elif os.path.exists(relPath):
-        triggers, events, relations = loadRelOrA2(relPath, proteins, sitesAreArguments, readScores=readScores)
-    return proteins, words, dependencies, triggers, events, relations
+        triggers, events = loadRelOrA2(relPath, proteins, sitesAreArguments, readScores=readScores)
+    return proteins, words, dependencies, triggers, events
 
 def loadSet(path, setName=None, level="a2", sitesAreArguments=False, a2Tag="a2", readScores=False):
     assert level in ["txt", "a1", "a2"]
@@ -474,7 +464,7 @@ def loadSet(path, setName=None, level="a2", sitesAreArguments=False, a2Tag="a2",
         doc.id = id
         if not level == "txt":
             try:
-                doc.proteins, doc.words, doc.dependencies, doc.triggers, doc.events, doc.relations = load(str(id), dir, level=="a2", sitesAreArguments, a2Tag=a2Tag, readScores=readScores)
+                doc.proteins, doc.words, doc.dependencies, doc.triggers, doc.events = load(str(id), dir, level=="a2", sitesAreArguments, a2Tag=a2Tag, readScores=readScores)
             except:
                 print >> sys.stderr, "Exception reading document", id, "from", dir 
                 raise
@@ -541,7 +531,7 @@ def updateIds(annotations, minId=0):
         for ann in annotations:
             if len(ann.arguments) == 0 and ann.trigger == None:
                 ann.id = "T" + str(idCount)
-            elif ann.type in ["Subunit-Complex", "Protein-Component", "Coref", "Renaming", "SR-subunitof", "SR-equivto", "SR-partof", "SR-memberof"]:
+            elif ann.trigger == None: #ann.type in ["Subunit-Complex", "Protein-Component", "Coref", "Renaming", "SR-subunitof", "SR-equivto", "SR-partof", "SR-memberof"]:
                 ann.id = "R" + str(idCount)
             #elif ann.trigger != None or ann.type in ["ActionTarget", "Interaction", "TranscriptionBy", ""]:
             else:
@@ -562,20 +552,20 @@ def writeTAnnotation(proteins, out, writeScores, idStart=0):
             out.write("\t" + protein.triggerScores.replace(":", "="))
         out.write("\n")
 
-def getDuplicatesMapping(eventLines):
-    # Duplicates are BAAADD. However, removing nested duplicates is also BAAADDD. Evaluation system doesn't like
-    # either. So, if you don't remove duplicates, it refuses to evaluate because of duplicates. If you do remove
-    # duplicates, it refuses to evaluate because of missing events. That's why they ARE THERE, how can they
-    # be duplicates, IF THEY ARE PART OF DIFFERENT NESTING CHAINS??? The "solution" is to remap nesting events
-    # to removed duplicates.
-    duplicateMap = {}
-    seenLineMap = {}
-    for eventLineTuple in eventLines:
-        if eventLineTuple[1] not in seenLineMap:
-            seenLineMap[eventLineTuple[1]] = eventLineTuple[0]
-        else:
-            duplicateMap[eventLineTuple[0]] = seenLineMap[eventLineTuple[1]]
-    return duplicateMap
+#def getDuplicatesMapping(eventLines):
+#    # Duplicates are BAAADD. However, removing nested duplicates is also BAAADDD. Evaluation system doesn't like
+#    # either. So, if you don't remove duplicates, it refuses to evaluate because of duplicates. If you do remove
+#    # duplicates, it refuses to evaluate because of missing events. That's why they ARE THERE, how can they
+#    # be duplicates, IF THEY ARE PART OF DIFFERENT NESTING CHAINS??? The "solution" is to remap nesting events
+#    # to removed duplicates.
+#    duplicateMap = {}
+#    seenLineMap = {}
+#    for eventLineTuple in eventLines:
+#        if eventLineTuple[1] not in seenLineMap:
+#            seenLineMap[eventLineTuple[1]] = eventLineTuple[0]
+#        else:
+#            duplicateMap[eventLineTuple[0]] = seenLineMap[eventLineTuple[1]]
+#    return duplicateMap
 
 #def removeDuplicates():
 #    for e1 in events[:]:
@@ -740,11 +730,6 @@ def write(id, dir, proteins, triggers, events, relations, resultFileTag="a2", co
         writeEvents(events, resultFile, counts, task, writeScores=False)
         if writeScores:
             writeEvents(events, resultScoresFile, counts, task, writeScores=True)
-    if len(relations) > 0:
-        if debug: print >> sys.stderr, "Writing relations"
-        writeEvents(relations, resultFile, counts, task)
-        if writeScores:
-            writeEvents(relations, resultScoresFile, counts, task, writeScores=True)
     resultFile.close()
     if writeScores:
         resultScoresFile.close()
@@ -792,19 +777,3 @@ if __name__=="__main__":
     assert options.input != options.output
     documents = loadSet(options.input, "GE", level="a2", sitesAreArguments=False, a2Tag="a2", readScores=False)
     writeSet(documents, options.output, resultFileTag=options.outputTag, debug=options.debug, task=options.task, validate=True, writeScores=False)
-        
-#if __name__=="__main__":
-#    # Import Psyco if available
-#    try:
-#        import psyco
-#        psyco.full()
-#        print >> sys.stderr, "Found Psyco, using"
-#    except ImportError:
-#        print >> sys.stderr, "Psyco not installed"
-#    
-#    #proteins, triggers, events = load(1335418, "/home/jari/biotext/tools/TurkuEventExtractionSystem-1.0/data/evaluation-data/evaluation-tools-devel-gold")
-#    #write(1335418, "/home/jari/data/temp", proteins, triggers, events )
-#    
-#    p = "/home/jari/data/BioNLP09SharedTask/bionlp09_shared_task_development_data_rev1"
-#    documents = loadSet(p)
-#    writeSet(documents, "/home/jari/data/temp/testSTTools")
