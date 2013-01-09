@@ -6,103 +6,115 @@ import xml.etree.cElementTree as ET
 import Utils.ElementTreeUtils as ETUtils
 import Utils.Range as Range
 
-#def compareArguments(a, b):
-#    if a[0] == "Cause":
-#        return 1
-#    elif b[0] == "Cause":
-#        return -1
-#    return 0
+def makeEntityElement(ann, idCount, docId):
+    entEl = ET.Element("entity")
+    entEl.set("type", ann.type)
+    entEl.set("text", ann.text)
+    # identifiers
+    protId = docId + ".e" + str(idCount)
+    entEl.set("id", protId)
+    if ann.id != None:
+        entEl.set("origId", str(docId) + "." + str(ann.id))
+    # offsets
+    entEl.set("charOffset", str(ann.charBegin) + "-" + str(ann.charEnd))
+    if len(ann.alternativeOffsets) > 0:
+        altOffs = []
+        for ao in protein.alternativeOffsets:
+            altOffs.append( str(ao[0]) + "-" + str(ao[1]-1) ) 
+        entEl.set("altOffset", ",".join(altOffs))
+    # determine if given data
+    assert protein.fileType in ["a1", "a2"], protein.fileType
+    if protein.fileType == "a1": #protein.isName():
+        entEl.set("isName", "True")
+    else:
+        entEl.set("isName", "False")
+    return entEl
 
-def toInteractionXML(documents, corpusName="GENIA", output=None):
-    corpusRoot = ET.Element("corpus")
-    corpusRoot.set("source", corpusName)
-    docCounter = 0
-    for doc in documents:
-        docEl = ET.Element("document")
-        docId = corpusName + ".d" + str(docCounter)
-        docEl.set("id", docId)
-        docCounter += 1
-        #docEl.set("pmid", str(doc.id))
-        docEl.set("origId", str(doc.id))
-        docEl.set("text", doc.text)
-        if doc.dataSet != None:
-            docEl.set("set", doc.dataSet)
-        corpusRoot.append(docEl)
-        # If this is a sentence, make one
-        isSentence = len(doc.words) > 0
-        if isSentence:
-            sentEl = ET.SubElement(docEl, "sentence")
-            sentEl.set("id", docId + ".s0")
-            sentEl.set("text", doc.text)
-            sentEl.set("charOffset", "0-" + str(len(doc.text)))
-            docId = sentEl.get("id") # hack to get all subelements here
-            docEl = sentEl # hack to get all subelements here
-        # Write triggers and entities
-        elCounter = 0
-        triggerToEvents = {}
-        for trigger in doc.triggers:
-            triggerId = trigger.id
-            triggerToEvents[triggerId] = []
-            for event in doc.events:
-                if event.trigger == trigger:
-                    triggerToEvents[triggerId].append(event.id)
-            if len(triggerToEvents[triggerId]) == 0:
-                triggerToEvents[triggerId].append(trigger.id)
-        tMap = {}
-        eventMap = {}
-        for event in doc.events:
-            eventMap[event.id] = event
-        for protein in doc.proteins:
-            entEl = ET.Element("entity")
-            protId = docId + ".e" + str(elCounter)
-            entEl.set("id", protId)
-            entEl.set("origId", str(doc.id) + "." + str(protein.id))
-            entEl.set("text", protein.text)
-            entEl.set("charOffset", str(protein.charBegin) + "-" + str(protein.charEnd))
-            if len(protein.alternativeOffsets) > 0:
-                altOffs = []
-                for ao in protein.alternativeOffsets:
-                    altOffs.append( str(ao[0]) + "-" + str(ao[1]-1) ) 
-                entEl.set("altOffset", ",".join(altOffs))
-            entEl.set("type", protein.type)
-            assert protein.fileType in ["a1", "a2"], protein.fileType
-            if protein.fileType == "a1": #protein.isName():
-                entEl.set("isName", "True")
-            else:
-                entEl.set("isName", "False")
+def makeDocumentElement(doc, idCount, corpusName):
+    docEl = ET.Element("document")
+    docId = corpusName + ".d" + str(idCount)
+    docEl.set("id", docId)
+    #docEl.set("pmid", str(doc.id))
+    docEl.set("origId", str(doc.id))
+    docEl.set("text", doc.text)
+    if doc.dataSet != None:
+        docEl.set("set", doc.dataSet)
+    # If this is a sentence, make one
+    isSentence = len(doc.words) > 0
+    if isSentence:
+        sentEl = ET.SubElement(docEl, "sentence")
+        sentEl.set("id", docId + ".s0")
+        sentEl.set("text", doc.text)
+        sentEl.set("charOffset", "0-" + str(len(doc.text)))
+        docId = sentEl.get("id") # hack to get all subelements here
+        docEl = sentEl # hack to get all subelements here
+    return docEl
+
+def addParseElements(doc, docEl):
+    if docEl.tag != "sentence":
+        return
+    sentAnalysesEl = ET.SubElement(sentEl, "analyses")
+    #parsesEl = ET.SubElement(sentAnalysesEl, "parses")
+    parseEl = ET.SubElement(sentAnalysesEl, "parse")
+    #tokenizationsEl = ET.SubElement(sentAnalysesEl, "tokenizations")
+    tokenizationEl = ET.SubElement(sentAnalysesEl, "tokenization")
+    parseEl.set("parser", "gold")
+    parseEl.set("tokenizer", "gold")
+    tokenizationEl.set("tokenizer", "gold")
+    tokenMap = {}
+    for word in doc.words:
+        tokEl = ET.SubElement(tokenizationEl, "token")
+        tokEl.set("id", word.id)
+        tokEl.set("text", word.text)
+        tokEl.set("POS", "None")
+        tokEl.set("charOffset", str(word.charBegin) + "-" + str(word.charEnd))
+        tokenMap[word.id] = tokEl
+    for dep in doc.dependencies:
+        depEl = ET.SubElement(parseEl, "dependency")
+        depEl.set("id", dep.id)
+        depEl.set("type", dep.type)
+        assert len(dep.arguments) == 2
+        depEl.set("t1", dep.arguments[0][1].id)
+        depEl.set("t2", dep.arguments[1][1].id)
+        if dep.type.find(":") != -1:
+            word1Type, word2Type = dep.type.split("(")[0].split(":")[-1].split("-")
+            tokenMap[dep.arguments[0][1].id].set("POS", word1Type)
+            tokenMap[dep.arguments[1][1].id].set("POS", word2Type)
+
+def makeInteractionElement(intType, idCount, origId, e1Id, e2Id, isRelation=False):
+    intEl = ET.Element("interaction")
+    intEl.set("directed", "True")
+    intEl.set("id", docId + ".i" + str(idCount))
+    intEl.set("origId", origId)
+    intEl.set("e1", e1Id)
+    intEl.set("e2", e2Id)
+    intEl.set("type", intType)
+    if isRelation:
+        intEl.set("relation", "True")
+    return intEl
+
+def addEntityElements(docEl, tMap, eventMap):
+    elCounter = 0
+    for protein in doc.proteins: # entities
+        entEl = makeEntityElement(protein, elCounter, doc.id) 
+        elCounter += 1
+        docEl.append(entEl)
+        assert not tMap.has_key(protId)
+        tMap[protein.id] = protId        
+    for protein in doc.triggers: # triggers
+        for eventId in triggerToEvents[protein.id]: # Write duplicate triggers
+            entEl = makeEntity(protein, elCounter, doc.id)
+            # Add negation and speculation
+            if eventId in eventMap and eventMap[eventId].negation != None:
+                entEl.set("negation", "True")
+            if eventId in eventMap and eventMap[eventId].speculation != None:
+                entEl.set("speculation", "True")
             elCounter += 1
             docEl.append(entEl)
             assert not tMap.has_key(protId)
-            tMap[protein.id] = protId        
-        for protein in doc.triggers:
-            for eventId in triggerToEvents[protein.id]: # Write duplicate triggers
-                entEl = ET.Element("entity")
-                protId = docId + ".e" + str(elCounter)
-                entEl.set("id", protId)
-                entEl.set("origId", str(doc.id) + "." + str(protein.id))
-                entEl.set("text", protein.text)
-                entEl.set("charOffset", str(protein.charBegin) + "-" + str(protein.charEnd))
-                if len(protein.alternativeOffsets) > 0:
-                    altOffs = []
-                    for ao in protein.alternativeOffsets:
-                        altOffs.append( str(ao[0]) + "-" + str(ao[1]-1) ) 
-                    entEl.set("altOffset", ",".join(altOffs))
-                entEl.set("type", protein.type)
-                assert protein.fileType in ["a1", "a2"], protein.fileType
-                if protein.fileType == "a1": #protein.isName():
-                    entEl.set("isName", "True")
-                else:
-                    entEl.set("isName", "False")
-                # Add negation and speculation
-                if eventId in eventMap and eventMap[eventId].negation != None:
-                    entEl.set("negation", "True")
-                if eventId in eventMap and eventMap[eventId].speculation != None:
-                    entEl.set("speculation", "True")
-                elCounter += 1
-                docEl.append(entEl)
-                assert not tMap.has_key(protId)
-                tMap[eventId] = protId
-        # Pre-define XML interaction ids
+            tMap[eventId] = protId
+
+def addInteractionElements(docEl, tMap):
         elCounter = 0
         # Write events
         for event in doc.events:
@@ -110,110 +122,78 @@ def toInteractionXML(documents, corpusName="GENIA", output=None):
                 assert len(event.arguments) >= 2, (event.id, event.type, event.arguments)
                 a1 = event.arguments[0]
                 a2 = event.arguments[1]
-                intEl = ET.Element("interaction")
-                intEl.set("directed", "True")
-                intEl.set("id", docId + ".i" + str(elCounter))
+                origId = str(doc.id) + "." + str(event.id)
+                docEl.append(makeInteractionElement(event.type + "(" + a1[0] + "/" + a2[0] + ")", elCounter, origId, tMap[a1[1].id], tMap[a2[1].id]), True)
                 elCounter += 1
-                intEl.set("origId", str(doc.id) + "." + str(event.id))
-                intEl.set("e1", tMap[a1[1].id])
-                intEl.set("e2", tMap[a2[1].id])
-                #intEl.set("type", event.type)
-                #intEl.set("argTypes", a1[0] + "/" + a2[0])
-                intEl.set("type", event.type + "(" + a1[0] + "/" + a2[0] + ")")
                 docEl.append(intEl)
             else:
                 argCount = 0
                 for arg in event.arguments:
-                    intEl = ET.Element("interaction")
-                    intEl.set("directed", "True")
-                    intEl.set("id", docId + ".i" + str(elCounter))
+                    origId = str(doc.id) + "." + str(event.id) + "." + str(argCount)
+                    argEl = makeInteractionElement(arg[0], elCounter, origId, tMap[event.id], tMap[arg[1].id])
                     elCounter += 1
-                    intEl.set("origId", str(doc.id) + "." + str(event.id) + "." + str(argCount))
-                    #intEl.set("e1", tMap[event.trigger.id])
-                    intEl.set("e1", tMap[event.id])
-                    if arg[1].trigger != None:
-                        #intEl.set("e2", tMap[arg[1].trigger.id])
-                        intEl.set("e2", tMap[arg[1].id])
-                    else:
-                        intEl.set("e2", tMap[arg[1].id])
-                    intEl.set("type", arg[0])
-                    docEl.append(intEl)
                     argCount += 1
+                    docEl.append(argEl)
                     # Add site
                     if arg[2] != None:
-                        intEl = ET.Element("interaction")
-                        intEl.set("directed", "True")
-                        intEl.set("id", docId + ".i" + str(elCounter))
+                        #assert arg[2].type == "Entity"
+                        #assert arg[1].type in ["Protein", "Gene", "Chemical", "Organism", "Regulon-operon", "Two-component-system"], (arg[1].type, doc.id, doc.dataSet, event.id)
+                        origId = str(doc.id) + "." + str(event.id) + "." + str(argCount) + ".site"
+                        siteEl = makeInteractionElement("Site", elCounter, origId, tMap[arg[2].id], tMap[arg[1].id] )
+                        siteEl.set("parent", argEl.get("id"))
                         elCounter += 1
-                        intEl.set("origId", str(doc.id) + "." + str(event.id) + "." + str(argCount) + ".site")
-                        intEl.set("e1", tMap[arg[2].id]) # "Entity"-type entity is the source
-                        assert arg[2].type == "Entity"
-                        intEl.set("e2", tMap[arg[1].id]) # "Protein"-type entity is the target
-                        assert arg[1].type in ["Protein", "Gene", "Chemical", "Organism", "Regulon-operon", "Two-component-system"], (arg[1].type, doc.id, doc.dataSet, event.id)
-                        intEl.set("type", "Site")
-                        docEl.append(intEl)
-                        argCount += 1
+                        #intEl.set("e1", tMap[arg[2].id]) # "Entity"-type entity is the source
+                        #intEl.set("e2", tMap[arg[1].id]) # "Protein"-type entity is the target
+                        docEl.append(siteEl)
         # Write relations
         for relation in doc.relations:
             assert len(relation.arguments) >= 2, (relation.id, relation.type, relation.arguments)
             a1 = relation.arguments[0]
             a2 = relation.arguments[1]
-#            if a1[0] == "Arg2":
-#                temp = a1
-#                a1 = a2
-#                a2 = temp
             assert a1[0] == "Arg1" or a1[0] == "Former" or a1[0] == "Anaphora", (a1, relation.arguments) 
             assert a2[0] == "Arg2" or a2[0] == "New" or a2[0] == "Antecedent", (a2, relation.arguments)
-            intEl = ET.Element("interaction")
-            intEl.set("directed", "True")
-            intEl.set("id", docId + ".i" + str(elCounter))
+            origId = str(doc.id) + "." + str(relation.id)
+            relEl = makeInteractionElement(relation.type, elCounter, origId, tMap[a1[1].id], tMap[a2[1].id])
             elCounter += 1
-            intEl.set("origId", str(doc.id) + "." + str(relation.id))
-            intEl.set("e1", tMap[a1[1].id])
-            intEl.set("e2", tMap[a2[1].id])
-            intEl.set("type", relation.type)
-            docEl.append(intEl)
+            docEl.append(relEl)
             if len(relation.arguments) > 2:
                 assert relation.type == "Coref", (relation.id, docId, relation.type)
                 for connProt in relation.arguments[2:]:
-                    intEl = ET.Element("interaction")
-                    intEl.set("directed", "True")
-                    intEl.set("id", docId + ".i" + str(elCounter))
+                    intEl = makeInteractionElement("Target", elCounter, origId, tMap[a2[1].id], tMap[connProt[1].id])
                     elCounter += 1
-                    intEl.set("origId", str(doc.id) + "." + str(relation.id))
-                    intEl.set("e1", tMap[a2[1].id]) # link proteins to antecedent
-                    intEl.set("e2", tMap[connProt[1].id])
-                    intEl.set("type", "Target")
+                    #intEl.set("e1", tMap[a2[1].id]) # link proteins to antecedent
                     docEl.append(intEl)
-            #docEl.append(intEl) # adding original intEl after extra argument loop broke everything
-        if isSentence:
-            sentAnalysesEl = ET.SubElement(sentEl, "analyses")
-            #parsesEl = ET.SubElement(sentAnalysesEl, "parses")
-            parseEl = ET.SubElement(sentAnalysesEl, "parse")
-            #tokenizationsEl = ET.SubElement(sentAnalysesEl, "tokenizations")
-            tokenizationEl = ET.SubElement(sentAnalysesEl, "tokenization")
-            parseEl.set("parser", "gold")
-            parseEl.set("tokenizer", "gold")
-            tokenizationEl.set("tokenizer", "gold")
-            tokenMap = {}
-            for word in doc.words:
-                tokEl = ET.SubElement(tokenizationEl, "token")
-                tokEl.set("id", word.id)
-                tokEl.set("text", word.text)
-                tokEl.set("POS", "None")
-                tokEl.set("charOffset", str(word.charBegin) + "-" + str(word.charEnd))
-                tokenMap[word.id] = tokEl
-            for dep in doc.dependencies:
-                depEl = ET.SubElement(parseEl, "dependency")
-                depEl.set("id", dep.id)
-                depEl.set("type", dep.type)
-                assert len(dep.arguments) == 2
-                depEl.set("t1", dep.arguments[0][1].id)
-                depEl.set("t2", dep.arguments[1][1].id)
-                if dep.type.find(":") != -1:
-                    word1Type, word2Type = dep.type.split("(")[0].split(":")[-1].split("-")
-                    tokenMap[dep.arguments[0][1].id].set("POS", word1Type)
-                    tokenMap[dep.arguments[1][1].id].set("POS", word2Type)
+
+def getTriggerToEventsMap(doc):
+    triggerToEvents = {}
+    for trigger in doc.triggers:
+        triggerId = trigger.id
+        triggerToEvents[triggerId] = []
+        for event in doc.events:
+            if event.trigger == trigger:
+                triggerToEvents[triggerId].append(event.id)
+        if len(triggerToEvents[triggerId]) == 0:
+            triggerToEvents[triggerId].append(trigger.id)
+    return triggerToEvents
+            
+def toInteractionXML(documents, corpusName="GENIA", output=None):
+    corpusRoot = ET.Element("corpus")
+    corpusRoot.set("source", corpusName)
+    docCounter = 0
+    for doc in documents:
+        docEl = makeDocumentElement(doc, docCounter, corpusName)
+        corpusRoot.append(docEl)
+        docCounter += 1
+        # prepare mapping structures
+        triggerToEvents = getTriggerToEventsMap(doc)
+        tMap = {}
+        eventMap = {}
+        for event in doc.events:
+            eventMap[event.id] = event
+        # write elements
+        addProteinElements(doc, docEl, tMap, eventMap)
+        addInteractionElements(doc, docEl)
+        addParseElements(doc, docEl)
     
     if output != None:
         print >> sys.stderr, "Writing output to", output
