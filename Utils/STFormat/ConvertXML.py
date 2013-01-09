@@ -198,10 +198,6 @@ def toSTFormat(input, output=None, outputTag="a2", useOrigIds=False, debug=False
     documents = []
     for document in corpusRoot.findall("document"):
         stDoc = Document()
-        stDoc.proteins = []
-        stDoc.triggers = []
-        stDoc.events = []
-        stDoc.relations = []
         stDoc.id = document.get("pmid")
         if stDoc.id == None:
             stDoc.id = document.get("origId")
