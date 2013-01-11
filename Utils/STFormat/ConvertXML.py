@@ -149,12 +149,20 @@ def addInteractionElements(doc, docEl, tMap):
                         #assert arg[2].type == "Entity"
                         #assert arg[1].type in ["Protein", "Gene", "Chemical", "Organism", "Regulon-operon", "Two-component-system"], (arg[1].type, doc.id, doc.dataSet, event.id)
                         origId = str(doc.id) + "." + str(event.id) + "." + str(argCount) + ".site"
-                        siteEl = makeInteractionElement("Site", docId, elCounter, origId, tMap[arg[2].id], tMap[arg[1].id] )
-                        siteEl.set("parent", argEl.get("id"))
+                        # The site-argument connects the event to the site entity, just like in the shared task
+                        siteEl = makeInteractionElement("Site", docId, elCounter, origId, tMap[event.id], tMap[arg[2].id])
                         elCounter += 1
+                        docEl.append(siteEl)
+                        # The SiteParent argument connects the entity to it's protein. As sites must be paired with
+                        # core arguments, the SiteParent can be used to find the protein argument corresponding to
+                        # the entity. Site and core arguments can be paired by the shared protein which is both the
+                        # immediate target of the core argument, and the Site's target via the SiteParent argument.
+                        siteEl = makeInteractionElement("SiteParent", docId, elCounter, origId, tMap[arg[2].id], tMap[arg[1].id])
+                        elCounter += 1
+                        docEl.append(siteEl)
+                        #siteEl.set("parent", argEl.get("id"))
                         #intEl.set("e1", tMap[arg[2].id]) # "Entity"-type entity is the source
                         #intEl.set("e2", tMap[arg[1].id]) # "Protein"-type entity is the target
-                        docEl.append(siteEl)
 
 def getTriggerToEventsMap(doc):
     triggerToEvents = {}
@@ -344,7 +352,7 @@ def addInteractionsToSTDoc(doc, docElement, tMap, eMap, entityElementMap):
                         rel.arguments.append(["CorefTarget", prot, None])
             stDoc.events.append(event)
         else:
-            if intType == "Site":
+            if intType == "SiteParent":
                 # These sites are real sites (i.e. task 2 sites). Other sites are just arguments called "site"
                 siteMap[interaction.get("e2")] = tMap[interaction.get("e1")]
                 siteScores[interaction.get("e2")] = interaction.get("predictions")
@@ -355,13 +363,13 @@ def addInteractionsToSTDoc(doc, docElement, tMap, eMap, entityElementMap):
                     doc.events.append(eMap[e1])
                 # add arguments
                 eMap[e1].arguments.append([interaction.get("type"), interaction.get("e2"), None, interaction.get("predictions")])
-    # Rename site-type interactions (which have been masked as "SiteArg" to prevent them being processed as Shared Task task-2 sites
-    for event in doc.events:
-        for arg in event.arguments:
-            if arg[0] == "SiteArg":
-                arg[0] = "Site"
-                if arg[3] != None: # Convert also prediction strengths
-                    arg[3] = arg[3].replace("SiteArg", "Site")
+#    # Rename site-type interactions (which have been masked as "SiteArg" to prevent them being processed as Shared Task task-2 sites
+#    for event in doc.events:
+#        for arg in event.arguments:
+#            if arg[0] == "SiteArg":
+#                arg[0] = "Site"
+#                if arg[3] != None: # Convert also prediction strengths
+#                    arg[3] = arg[3].replace("SiteArg", "Site")
     # replace argument target ids with actual target objects
     mapSTArgumentTargets(doc, siteMap, siteScores, tMap, eMap)
 
@@ -385,6 +393,18 @@ def mapSTArgumentTargets(stDoc, siteMap, siteScores, tMap, eMap):
                         arg += [None]
                     assert arg[4] == None
                     arg[4] = siteScores[id]
+    
+    # An interaction with type "Site" is the task 2 argument. An interaction with type "SiteParent" links the target
+    # of the "Site"-argument to the protein that is the target of the core argument, allowing the site to be connected
+    # to its core argument. 
+    for siteArg in event.arguments:   
+        if siteArg.type == "Site":
+            siteParents = getSiteParents(arg.target)
+            for mainArg in event.arguments:
+                if mainArg.type != "Site" and mainArg.target in siteParents:
+                    siteArg.siteOf = mainArg
+                elif event.type != "SiteOf":
+                    pass # remove site (because it's core argument cannot be determined)
 
 def toSTFormat(input, output=None, outputTag="a2", useOrigIds=False, debug=False, task=2, validate=True, writeScores=False):
     print >> sys.stderr, "Loading corpus", input
