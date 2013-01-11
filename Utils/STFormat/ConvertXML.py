@@ -6,15 +6,15 @@ import xml.etree.cElementTree as ET
 import Utils.ElementTreeUtils as ETUtils
 import Utils.Range as Range
 
-def makeEntityElement(ann, idCount, docId):
+def makeEntityElement(ann, idCount, docEl):
     entEl = ET.Element("entity")
     entEl.set("type", ann.type)
     entEl.set("text", ann.text)
     # identifiers
-    protId = docId + ".e" + str(idCount)
+    protId = docEl.get("id") + ".e" + str(idCount)
     entEl.set("id", protId)
     if ann.id != None:
-        entEl.set("origId", str(docId) + "." + str(ann.id))
+        entEl.set("origId", docEl.get("origId") + "." + str(ann.id))
     # offsets
     entEl.set("charOffset", str(ann.charBegin) + "-" + str(ann.charEnd))
     if len(ann.alternativeOffsets) > 0:
@@ -23,8 +23,8 @@ def makeEntityElement(ann, idCount, docId):
             altOffs.append( str(ao[0]) + "-" + str(ao[1]-1) ) 
         entEl.set("altOffset", ",".join(altOffs))
     # determine if given data
-    assert protein.fileType in ["a1", "a2"], protein.fileType
-    if protein.fileType == "a1": #protein.isName():
+    assert ann.fileType in ["a1", "a2", "rel"], ann.fileType
+    if ann.fileType == "a1": #protein.isName():
         entEl.set("isName", "True")
     else:
         entEl.set("isName", "False")
@@ -81,7 +81,7 @@ def addParseElements(doc, docEl):
             tokenMap[dep.arguments[0][1].id].set("POS", word1Type)
             tokenMap[dep.arguments[1][1].id].set("POS", word2Type)
 
-def makeInteractionElement(intType, idCount, origId, e1Id, e2Id, isRelation=False):
+def makeInteractionElement(intType, docId, idCount, origId, e1Id, e2Id, isRelation=False):
     intEl = ET.Element("interaction")
     intEl.set("directed", "True")
     intEl.set("id", docId + ".i" + str(idCount))
@@ -93,17 +93,18 @@ def makeInteractionElement(intType, idCount, origId, e1Id, e2Id, isRelation=Fals
         intEl.set("relation", "True")
     return intEl
 
-def addEntityElements(docEl, tMap, eventMap):
+def addEntityElements(doc, docEl, tMap, eventMap):
     elCounter = 0
     for protein in doc.proteins: # entities
-        entEl = makeEntityElement(protein, elCounter, doc.id) 
+        entEl = makeEntityElement(protein, elCounter, docEl) 
         elCounter += 1
         docEl.append(entEl)
-        assert not tMap.has_key(protId)
-        tMap[protein.id] = protId        
+        assert not tMap.has_key(entEl.get("id")), entEl.get("id")
+        tMap[protein.id] = entEl.get("id")
+    triggerToEvents = getTriggerToEventsMap(doc)
     for protein in doc.triggers: # triggers
         for eventId in triggerToEvents[protein.id]: # Write duplicate triggers
-            entEl = makeEntity(protein, elCounter, doc.id)
+            entEl = makeEntityElement(protein, elCounter, docEl)
             # Add negation and speculation
             if eventId in eventMap and eventMap[eventId].negation != None:
                 entEl.set("negation", "True")
@@ -111,11 +112,12 @@ def addEntityElements(docEl, tMap, eventMap):
                 entEl.set("speculation", "True")
             elCounter += 1
             docEl.append(entEl)
-            assert not tMap.has_key(protId)
-            tMap[eventId] = protId
+            assert not tMap.has_key(entEl.get("id")), entEl.get("id")
+            tMap[eventId] = entEl.get("id")
 
-def addInteractionElements(docEl, tMap):
+def addInteractionElements(doc, docEl, tMap):
         elCounter = 0
+        docId = docEl.get("id")
         # Write events and relations
         for event in doc.events:
             if event.trigger == None: # triggerless event (simple pairwise interaction) == relation
@@ -123,20 +125,22 @@ def addInteractionElements(docEl, tMap):
                 a1 = event.arguments[0]
                 a2 = event.arguments[1]
                 origId = str(doc.id) + "." + str(event.id)
-                relEl = makeInteractionElement(event.type, elCounter, origId, tMap[a1[1].id], tMap[a2[1].id], True)
-                relEl.set("e1Role", a1[0])
-                relEl.set("e2Role", a2[0])
+                relEl = makeInteractionElement(event.type, docId, elCounter, origId, tMap[a1[1].id], tMap[a2[1].id], True)
+                if (a1[0] != "Arg1"):
+                    relEl.set("e1Role", a1[0])
+                if (a2[0] != "Arg2"):
+                    relEl.set("e2Role", a2[0])
                 elCounter += 1
                 docEl.append(intEl)
                 if len(event.arguments) > 2:
                     assert event.type == "Coref", (event.id, docId, event.type)
                     for connProt in event.arguments[2:]: # link proteins to antecedent
-                        docEl.append(makeInteractionElement("Target", elCounter, origId, tMap[a2[1].id], tMap[connProt[1].id]), True)
+                        docEl.append(makeInteractionElement("CorefTarget", docId, elCounter, origId, tMap[a2[1].id], tMap[connProt[1].id]), True)
             else:
                 argCount = 0
                 for arg in event.arguments:
                     origId = str(doc.id) + "." + str(event.id) + "." + str(argCount)
-                    argEl = makeInteractionElement(arg[0], elCounter, origId, tMap[event.id], tMap[arg[1].id])
+                    argEl = makeInteractionElement(arg[0], docId, elCounter, origId, tMap[event.id], tMap[arg[1].id])
                     elCounter += 1
                     argCount += 1
                     docEl.append(argEl)
@@ -145,7 +149,7 @@ def addInteractionElements(docEl, tMap):
                         #assert arg[2].type == "Entity"
                         #assert arg[1].type in ["Protein", "Gene", "Chemical", "Organism", "Regulon-operon", "Two-component-system"], (arg[1].type, doc.id, doc.dataSet, event.id)
                         origId = str(doc.id) + "." + str(event.id) + "." + str(argCount) + ".site"
-                        siteEl = makeInteractionElement("Site", elCounter, origId, tMap[arg[2].id], tMap[arg[1].id] )
+                        siteEl = makeInteractionElement("Site", docId, elCounter, origId, tMap[arg[2].id], tMap[arg[1].id] )
                         siteEl.set("parent", argEl.get("id"))
                         elCounter += 1
                         #intEl.set("e1", tMap[arg[2].id]) # "Entity"-type entity is the source
@@ -164,7 +168,7 @@ def getTriggerToEventsMap(doc):
             triggerToEvents[triggerId].append(trigger.id)
     return triggerToEvents
             
-def toInteractionXML(documents, corpusName="GENIA", output=None):
+def toInteractionXML(documents, corpusName="CORPUS", output=None):
     corpusRoot = ET.Element("corpus")
     corpusRoot.set("source", corpusName)
     docCounter = 0
@@ -173,14 +177,13 @@ def toInteractionXML(documents, corpusName="GENIA", output=None):
         corpusRoot.append(docEl)
         docCounter += 1
         # prepare mapping structures
-        triggerToEvents = getTriggerToEventsMap(doc)
         tMap = {}
         eventMap = {}
         for event in doc.events:
             eventMap[event.id] = event
         # write elements
-        addProteinElements(doc, docEl, tMap, eventMap)
-        addInteractionElements(doc, docEl)
+        addEntityElements(doc, docEl, tMap, eventMap)
+        addInteractionElements(doc, docEl, tMap)
         addParseElements(doc, docEl)
     
     if output != None:
@@ -188,44 +191,37 @@ def toInteractionXML(documents, corpusName="GENIA", output=None):
         ETUtils.write(corpusRoot, output)
     return ET.ElementTree(corpusRoot)
 
-def toSTFormat(input, output=None, outputTag="a2", useOrigIds=False, debug=False, task=2, validate=True, writeScores=False):
-    print >> sys.stderr, "Loading corpus", input
-    corpusTree = ETUtils.ETFromObj(input)
-    print >> sys.stderr, "Corpus file loaded"
-    corpusRoot = corpusTree.getroot()
-    
-    nonEntitySiteCount = 0
-    documents = []
-    for document in corpusRoot.findall("document"):
-        stDoc = Document()
-        stDoc.id = document.get("pmid")
+def findDuplicateForSTTrigger(ann, triggers):
+    for trigger in triggers:
+        if trigger.charBegin == ann.charBegin and trigger.charEnd == ann.charEnd and \
+           trigger.text == ann.text and trigger.type == ann.type:
+            found = True
+            return trigger
+    return None
+
+def addTextToSTDoc(doc, docElement):
+    #sentenceOffsets = {}
+    for sentence in document.findall("sentence"):
+        head = sentence.get("head")
+        if head != None:
+            stDoc.text += head
+        stDoc.text += sentence.get("text")
+        tail = sentence.get("tail")
+        if tail != None:
+            stDoc.text += tail
+        #sentenceOffset = Range.charOffsetToSingleTuple(sentence.get("charOffset"))
+        #sentenceOffsets[sentence.get("id")] = sentenceOffset
         if stDoc.id == None:
-            stDoc.id = document.get("origId")
-        stDoc.text = ""
-        documents.append(stDoc)
-        eMap = {}
-        tMap = {}
-        siteMap = {}
-        siteScores = {}
-        sites = []
-        sentenceOffsets = {}
-        for sentence in document.findall("sentence"):
-            head = sentence.get("head")
-            if head != None:
-                stDoc.text += head
-            stDoc.text += sentence.get("text")
-            tail = sentence.get("tail")
-            if tail != None:
-                stDoc.text += tail
-            sentenceOffset = Range.charOffsetToSingleTuple(sentence.get("charOffset"))
-            sentenceOffsets[sentence.get("id")] = sentenceOffset
-            if stDoc.id == None:
-                stDoc.id = sentence.get("origId").rsplit(".", 1)[0]
-        entityElementMap = {} # for task 3
-        for entity in document.getiterator("entity"):
+            stDoc.id = sentence.get("origId").rsplit(".", 1)[0]
+
+def addEntitiesToSTDoc(doc, docElement, tMap, eMap, entityElementMap, useOrigIds=False):
+    containerElements = [docElement] + [x for x in docElement.getiterator("sentence")]
+    for containerElement in containerElements:
+        for entity in containerElement.findall("entity"):
             eType = entity.get("type")
-            if eType == "neg":
+            if eType == "neg": # skip negative predictions if they are present
                 continue
+            assert entity.get("id") != None
             entityElementMap[entity.get("id")] = entity
             entityOffset = Range.charOffsetToSingleTuple(entity.get("charOffset"))
             ann = Annotation()
@@ -244,11 +240,15 @@ def toSTFormat(input, output=None, outputTag="a2", useOrigIds=False, debug=False
             assert entityOffset[1] - entityOffset[0] in [len(ann.text), len(ann.text) - 1], (ann.text, entityOffset)
             ann.charBegin = entityOffset[0]
             ann.charEnd = entityOffset[0] + len(ann.text) # entityOffset[1] + 1
-            idStem = entity.get("id").split(".e", 1)[0]
-            if sentenceOffsets.has_key(idStem):
-                sentenceOffset = sentenceOffsets[idStem]
+            if containerElement.tag == "sentence": # entity offset is relative to the container element, and for sentences, they can be relative to the document
+                sentenceOffset = Range.charOffsetToSingleTuple(sentence.get("charOffset"))
                 ann.charBegin += sentenceOffset[0]
                 ann.charEnd += sentenceOffset[0]
+#            idStem = entity.get("id").split(".e", 1)[0]
+#            if sentenceOffsets.has_key(idStem):
+#                sentenceOffset = sentenceOffsets[idStem]
+#                ann.charBegin += sentenceOffset[0]
+#                ann.charEnd += sentenceOffset[0]
             if entity.get("speculation") == "True":
                 ann.speculation = True
             if entity.get("negation") == "True":
@@ -260,7 +260,8 @@ def toSTFormat(input, output=None, outputTag="a2", useOrigIds=False, debug=False
                     assert ann.id[0].isupper(), ann.id
                     for c in ann.id[1:]:
                         assert c.isdigit(), ann.id
-                stDoc.proteins.append(ann)
+                doc.proteins.append(ann)
+                tMap[entity.get("id")] = ann
                 # The part below is dangerous, and incompatibilities should be handled rather
                 # by not converting to the shared task format when it cannot be done 
                 #if entity.get("origId") != None:
@@ -270,182 +271,141 @@ def toSTFormat(input, output=None, outputTag="a2", useOrigIds=False, debug=False
                 #        ann.id = nonNamedEntityOrigId
                 #stDoc.proteins.append(ann)
             else:
-                found = False # prevent duplicate triggers
-                for trigger in stDoc.triggers:
-                    if trigger.charBegin == ann.charBegin and trigger.charEnd == ann.charEnd and \
-                       trigger.text == ann.text and trigger.type == ann.type:
-                        found = True
-                        ann = trigger
-                        break
-                if not found:
-                    stDoc.triggers.append(ann)
-            assert entity.get("id") != None
-            tMap[entity.get("id")] = ann
-            if entity.get("type") == "Process": # these can have 0 interactions
-                event = Annotation()
-                event.trigger = ann
-                event.type = event.trigger.type
-                eMap[entity.get("id")] = event
-                if entityElementMap[entity.get("id")].get("speculation") == "True":
-                    event.speculation = True
-                if entityElementMap[entity.get("id")].get("negation") == "True":
-                    event.negation = True
-                stDoc.events.append(event)
-            # Add confidence scores
-            ann.triggerScores = entity.get("predictions")
-            ann.unmergingScores = entity.get("umStrength")
-            ann.speculationScores = entity.get("modPred")
-            ann.negationScores = entity.get("modPred")
-        # First map Coref proteins
-        corefProtMap = {}
-        for interaction in document.getiterator("interaction"):
-            intType = interaction.get("type")
-            if intType == "Target":
+                duplicateAnn = findDuplicateForSTTrigger(ann, doc.triggers)
+                if duplicateAnn == None:
+                    doc.triggers.append(ann)
+                    tMap[entity.get("id")] = ann
+                    # Add confidence scores
+                    ann.triggerScores = entity.get("predictions")
+                    ann.unmergingScores = entity.get("umStrength")
+                    ann.speculationScores = entity.get("modPred")
+                    ann.negationScores = entity.get("modPred")
+                    # Process events with 0 interactions would not be formed when constructing events based on interactions
+                    if entity.get("type") == "Process": # Process-type events can have 0 interactions
+                        event = makeSTEvent(ann, entityElementMap[entity.get("id")])
+                        eMap[entity.get("id")] = event
+                        doc.events.append(event)
+                else: # a duplicate trigger already exists
+                    tMap[entity.get("id")] = duplicateAnn
+
+def makeSTEvent(triggerAnn, triggerElement):
+    event = Annotation()
+    event.trigger = triggerAnn
+    event.type = triggerAnn.type
+    if triggerElement.get("speculation") == "True":
+        event.speculation = True
+    if triggerElement.get("negation") == "True":
+        event.negation = True
+    if hasattr(event.trigger, "eventId"):
+        event.id = event.trigger.eventId 
+    return event
+
+def getCorefTargetMap(docElement):
+    corefProtMap = {}
+    for interaction in docElement.getiterator("interaction"):
+        intType = interaction.get("type")
+        if intType == "CorefTarget":
+            e1 = interaction.get("e1")
+            e2 = interaction.get("e2")
+            if not tMap.has_key(e2):
+                print >> sys.stderr, "Warning, no trigger for Coref Protein Target"
+                continue
+            e2 = tMap[e2]
+            if not corefProtMap.has_key(e1):
+                corefProtMap[e1] = []
+            if not e2 in corefProtMap[e1]: 
+                corefProtMap[e1].append(e2)
+    return corefProtMap
+
+def addInteractionsToSTDoc(doc, docElement, tMap, eMap, entityElementMap):
+    # First map Coref proteins
+    corefProtMap = getCorefTargetMap(docElement)
+    # Then process all interactions
+    siteMap = {}
+    siteScores = {}
+    for interaction in docElement.getiterator("interaction"):
+        intType = interaction.get("type")
+        if intType == "neg" or intType == "CorefTarget":
+            continue # Targets have already been put into a dictionary
+        if interaction.get("relation") == "True": # "/" in intType and "(" in intType: # BI-task
+            rel = Annotation()
+            rel.type = interaction.get("type")
+            e1 = interaction.get("e1")
+            e2 = interaction.get("e2")
+            e1Role = interaction.get("e1Role", "Arg1")
+            e2Role = interaction.get("e2Role", "Arg2")          
+            relScores = interaction.get("predictions")
+            rel.arguments.append([e1Role, tMap[e1], None, relScores])
+            rel.arguments.append([e2Role, tMap[e2], None, relScores])
+            if rel.type == "Coref":
+                # Add protein arguments
+                if corefProtMap.has_key(e2):
+                    for prot in corefProtMap[e2]:
+                        rel.arguments.append(["CorefTarget", prot, None])
+            stDoc.events.append(event)
+        else:
+            if intType == "Site":
+                # These sites are real sites (i.e. task 2 sites). Other sites are just arguments called "site"
+                siteMap[interaction.get("e2")] = tMap[interaction.get("e1")]
+                siteScores[interaction.get("e2")] = interaction.get("predictions")
+            else:
                 e1 = interaction.get("e1")
-                e2 = interaction.get("e2")
-                if not tMap.has_key(e2):
-                    print >> sys.stderr, "Warning, no trigger for Coref Protein Target"
-                    continue
-                e2 = tMap[e2]
-                if not corefProtMap.has_key(e1):
-                    corefProtMap[e1] = []
-                if not e2 in corefProtMap[e1]: 
-                    corefProtMap[e1].append(e2)
-        # Then process all interactions
-        for interaction in document.getiterator("interaction"):
-            intType = interaction.get("type")
-            if intType == "neg" or intType == "Target":
-                continue # Targets have already been put into a dictionary
-            #elif intType in ["Site", "Gene_expression", "Transcription", "Protein_catabolism", "Localization", "Binding", "Phosphorylation", "Positive_regulation", "Negative_regulation", "Regulation"]:
-            #elif intType in ["Site", "Gene_expression", "Transcription", "Protein_catabolism", "Localization", "Binding", "Phosphorylation", "Positive_regulation", "Negative_regulation", "Regulation",
-            #                 "InputAssociation", "InputProcess", "InputInhibitor", "OutputProcess"]:
-            if "/" in intType and "(" in intType: # BI-task
-                eventType, argTypes = intType.split("(")
-                arg1Type, arg2Type = argTypes[:-1].split("/")
-                event = Annotation()
-                event.trigger = None # triggerless event (same as relation)
-                event.type = eventType
-                event.arguments.append([arg1Type, interaction.get("e1"), None])
-                event.arguments.append([arg2Type, interaction.get("e2"), None])
-                if event.arguments[0][0] == "SiteArg": # convert back to actual sites
-                    event.arguments[0][0] = "Site"
-                if event.arguments[1][0] == "SiteArg": # convert back to actual sites
-                    event.arguments[1][0] = "Site"
-                #event.speculation = entityElementMap[e1].get("speculation")
-                #event.negation = entityElementMap[e1].get("negation")
-                stDoc.events.append(event)
-            elif intType not in ["Protein-Component", "Subunit-Complex", "Renaming", "Coref", "SR-subunitof", "SR-equivto", "SR-partof", "SR-memberof"]:
-                #if intType == "Site" and tMap[interaction.get("e1")].type == "Entity":
-                if intType == "Site":
-                    # These sites are real sites (i.e. task 2 sites).
-                    # Other sites are just arguments called "site"
-                    #sites.append(interaction)
-                    siteMap[interaction.get("e2")] = tMap[interaction.get("e1")]
-                    siteScores[interaction.get("e2")] = interaction.get("predictions")
-                else:
-                    e1 = interaction.get("e1")
-                    if eMap.has_key(e1): # event has already been created
-                        event = eMap[e1] # eMap lists events by their trigger ids
-                    else:
-                        eventType = tMap[interaction.get("e1")].type
-                        if eventType != "Entity": # "Entity"-type entities are never event roots
-                            event = Annotation()
-                            event.trigger = tMap[interaction.get("e1")]
-                            event.type = event.trigger.type
-                            if hasattr(event.trigger, "eventId"):
-                                event.id = event.trigger.eventId 
-                            eMap[e1] = event
-                            if entityElementMap[e1].get("speculation") == "True":
-                                event.speculation = True
-                            if  entityElementMap[e1].get("negation") == "True":
-                                event.negation = True 
-                            stDoc.events.append(event)
-                        else:
-                            event = None
-                    if event != None:
-                        arg = [interaction.get("type"), interaction.get("e2"), None, interaction.get("predictions")]
-                        if arg[0] == "SiteArg": # convert back to actual sites
-                            arg[0] = "Site"
-                            if arg[3] != None: # Convert also prediction strengths
-                                arg[3] = arg[3].replace("SiteArg", "Site")
-                        event.arguments.append(arg)
-            else: # interaction is a relation
-                rel = Annotation()
-                rel.type = interaction.get("type")
-                e1 = interaction.get("e1")
-                e2 = interaction.get("e2")
-                relScores = interaction.get("predictions")
-                #assert rel.type == "Protein-Component" or rel.type == "Subunit-Complex" or rel.type == "Renaming", (rel.type, stDoc.id, interaction.get("id"))
-                if rel.type == "Protein-Component" or rel.type == "Subunit-Complex": 
-                    rel.arguments.append(["Arg1", tMap[e1], None, relScores])
-                    rel.arguments.append(["Arg2", tMap[e2], None, relScores])
-                elif rel.type == "Renaming":
-                    rel.arguments.append(["Former", tMap[e1], None, relScores])
-                    rel.arguments.append(["New", tMap[e2], None, relScores])
-                elif rel.type == "Coref":
-                    rel.arguments.append(["Anaphora", tMap[e1], None, relScores])
-                    rel.arguments.append(["Antecedent", tMap[e2], None, relScores])
-                    # Add protein arguments'
-                    if corefProtMap.has_key(e2):
-                        for prot in corefProtMap[e2]:
-                            rel.arguments.append(["Target", prot, None])
-                elif rel.type.startswith("SR-"):
-                    rel.arguments.append(["Arg1", tMap[e1], None, relScores])
-                    rel.arguments.append(["Arg2", tMap[e2], None, relScores])
-                else:
-                    assert False, (rel.type, stDoc.id, interaction.get("id"))
-                stDoc.relations.append(rel)
-        # Map argument targets
-        for event in stDoc.events:
-            for arg in event.arguments[:]:
-                if arg[1] == None:
-                    assert False
-                    continue
-                id = arg[1]
-                if eMap.has_key(id):
-                    arg[1] = eMap[id]
-                elif tMap.has_key(id):
-                    arg[1] = tMap[id]
-                    ## Remove Entity-type triggers if they are Regulation-arguments
-                    #if "egulation" in event.type and tMap[id].type != "Protein":
-                    #    event.arguments.remove(arg)
-                # add sites
-                if siteMap.has_key(id):
-                    if siteMap[id].type == "Entity":
-                        assert id not in eMap
-                        assert id in tMap
-                        arg[2] = siteMap[id]
-                        if id in siteScores and siteScores[id] != None:
-                            while len(arg) < 5:
-                                arg += [None]
-                            assert arg[4] == None
-                            arg[4] = siteScores[id]
-                    else:
-                        nonEntitySiteCount += 1
-                    #assert siteMap[id].type == "Entity", (stDoc.id, event.id, id, siteMap[id].id, siteMap[id].type)
-#        # Remove eventless triggers
-#        triggersToKeep = []
-#        for trigger in stDoc.triggers:
-#            if trigger.type == "Entity":
-#                triggersToKeep.append(trigger)
-#            else:
-#                for event in stDoc.events:
-#                    if event.trigger == trigger:
-#                        triggersToKeep.append(trigger)
-#                        break
-#        stDoc.triggers = triggersToKeep
-        # Sort arguments
-        #for eKey in sorted(eMap.keys()):
-        #    event = eMap[eKey]
-        #    event.arguments.sort(cmp=compareArguments)
-        # Create STFormat ids
-        #updateIds(stDoc.proteins)
-        #updateIds(stDoc.triggers, getMaxId(stDoc.proteins) + 1)
-        #updateIds(stDoc.events)
-        #updateIds(stDoc.relations)
+                if e1 not in eMap: # event has not yet been created
+                    eMap[e1] = makeSTEvent(tMap[e1], entityElementMap[e1])
+                    doc.events.append(eMap[e1])
+                # add arguments
+                eMap[e1].arguments.append([interaction.get("type"), interaction.get("e2"), None, interaction.get("predictions")])
+    # Rename site-type interactions (which have been masked as "SiteArg" to prevent them being processed as Shared Task task-2 sites
+    for event in doc.events:
+        for arg in event.arguments:
+            if arg[0] == "SiteArg":
+                arg[0] = "Site"
+                if arg[3] != None: # Convert also prediction strengths
+                    arg[3] = arg[3].replace("SiteArg", "Site")
+    # replace argument target ids with actual target objects
+    mapSTArgumentTargets(doc, siteMap, siteScores, tMap, eMap)
+
+def mapSTArgumentTargets(stDoc, siteMap, siteScores, tMap, eMap):
+    # Map argument targets
+    for event in stDoc.events:
+        for arg in event.arguments[:]:
+            assert arg[1] != None
+            id = arg[1]
+            if eMap.has_key(id):
+                arg[1] = eMap[id]
+            elif tMap.has_key(id):
+                arg[1] = tMap[id]
+            # add sites
+            if siteMap.has_key(id):
+                assert id not in eMap
+                assert id in tMap
+                arg[2] = siteMap[id]
+                if id in siteScores and siteScores[id] != None:
+                    while len(arg) < 5:
+                        arg += [None]
+                    assert arg[4] == None
+                    arg[4] = siteScores[id]
+
+def toSTFormat(input, output=None, outputTag="a2", useOrigIds=False, debug=False, task=2, validate=True, writeScores=False):
+    print >> sys.stderr, "Loading corpus", input
+    corpusTree = ETUtils.ETFromObj(input)
+    print >> sys.stderr, "Corpus file loaded"
+    corpusRoot = corpusTree.getroot()
     
-    if nonEntitySiteCount > 0:
-        print >> sys.stderr, "Warning, discarded", nonEntitySiteCount, "non-entity sites"
+    nonEntitySiteCount = 0
+    documents = []
+    for document in corpusRoot.findall("document"):
+        stDoc = Document()
+        stDoc.id = document.get("pmid")
+        if stDoc.id == None:
+            stDoc.id = document.get("origId")
+        stDoc.text = ""
+        documents.append(stDoc)
+        eMap = {}
+        tMap = {}
+        entityElementMap = {} # for task 3
+        addEntitiesToSTDoc(stDoc, document, tMap, eMap, entityElementMap, useOrigIds)
+        addInteractionsToSTDoc(stDoc, document, tMap, eMap, entityElementMap)
     
     if output != None:
         print >> sys.stderr, "Writing output to", output
@@ -466,19 +426,35 @@ if __name__=="__main__":
     optparser = OptionParser(description="Conversion between BioNLP ST format and Interaction XML")
     optparser.add_option("-i", "--input", default=None, dest="input", help="Corpus in interaction xml format", metavar="FILE")
     optparser.add_option("-o", "--output", default=None, dest="output", help="Output file in interaction xml format.")
+    optparser.add_option("-c", "--conversion", default="TO-ST", dest="conversion", help="")
     optparser.add_option("-t", "--outputTag", default="a2", dest="outputTag", help="a2 file extension.")
     optparser.add_option("-s", "--sentences", default=False, action="store_true", dest="sentences", help="Write each sentence to its own document")
     optparser.add_option("-r", "--origIds", default=False, action="store_true", dest="origIds", help="Use stored original ids (can cause problems with duplicates).")
+    optparser.add_option("--stSitesAreArguments", default=False, action="store_true", dest="stSitesAreArguments", help="")
+    optparser.add_option("-n", "--xmlCorpusName", default="CORPUS", dest="xmlCorpusName", help="")
     optparser.add_option("-a", "--task", default=2, type="int", dest="task", help="1 or 2")
     optparser.add_option("-d", "--debug", default=False, action="store_true", dest="debug", help="Verbose output.")
     (options, args) = optparser.parse_args()
     
-    if options.input[-4:] == ".xml":
+    if options.conversion == "TO-ST":
         print >> sys.stderr, "Loading XML"
         xml = ETUtils.ETFromObj(options.input)
-        if options.sentences:
-            print >> sys.stderr, "Converting to ST Format (sentences)"
-            toSTFormatSentences(xml, options.output, options.outputTag, options.origIds)
-        else:
-            print >> sys.stderr, "Converting to ST Format"
-            toSTFormat(xml, options.output, options.outputTag, options.origIds, debug=options.debug, task=options.task)
+        print >> sys.stderr, "Converting to ST Format"
+        toSTFormat(xml, options.output, options.outputTag, options.origIds, debug=options.debug, task=options.task)
+    elif options.conversion == "TO-XML":
+        import STTools
+        print >> sys.stderr, "Loading ST format"
+        documents = STTools.loadSet(options.input, "GE", level="a2", sitesAreArguments=options.stSitesAreArguments, a2Tag="a2", readScores=False)
+        print >> sys.stderr, "Converting to XML"
+        toInteractionXML(documents, options.xmlCorpusName, options.output)
+    elif options.conversion == "ROUNDTRIP":
+        import STTools
+        print >> sys.stderr, "Loading ST format"
+        documents = STTools.loadSet(options.input, "GE", level="a2", sitesAreArguments=options.stSitesAreArguments, a2Tag="a2", readScores=False)
+        print >> sys.stderr, "Converting to XML"
+        xml = toInteractionXML(documents)
+        print >> sys.stderr, "Converting to ST Format"
+        toSTFormat(xml, options.output, options.outputTag, options.origIds, debug=options.debug, task=options.task)
+    else:
+        print >> sys.stderr, "Unknown conversion option", options.conversion
+        

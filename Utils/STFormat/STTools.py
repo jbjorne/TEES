@@ -500,7 +500,7 @@ def writeSet(documents, output, resultFileTag="a2", debug=False, task=2, validat
         #doc.proteins.sort(cmp=compareOffsets)
         #doc.triggers.sort(cmp=compareOffsets)
         if debug: print >> sys.stderr, "Writing", doc.id
-        write(doc.id, outdir, doc.proteins, doc.triggers, doc.events, doc.relations, resultFileTag, counts, task=task, writeScores=writeScores)
+        write(doc.id, outdir, doc.proteins, doc.triggers, doc.events, resultFileTag, counts, task=task, writeScores=writeScores)
         # Write text file
         #out = open(os.path.join(outdir, str(doc.id) + ".txt"), "wt")
         out = codecs.open(os.path.join(outdir, str(doc.id) + ".txt"), "wt", "utf-8")
@@ -586,8 +586,11 @@ def writeEvents(events, out, counts, task, writeScores=False):
         # Event id part ############################
         trigger = event.trigger
         if trigger == None:
+            assert event.type != None
             eventLine += event.type
         else:
+            assert trigger.type != None
+            assert trigger.id != None, (event.id, trigger.type, trigger.text)
             eventLine += trigger.type + ":" + trigger.id
             if writeScores and event.trigger.unmergingScores != None:
                 eventLine += ":" + event.trigger.unmergingScores.replace(":", "=")
@@ -704,17 +707,16 @@ def writeEvents(events, out, counts, task, writeScores=False):
     #for event in events:
     #    if event.negation != None:
 
-def write(id, dir, proteins, triggers, events, relations, resultFileTag="a2", counts=None, debug=False, task=2, writeScores=False):
+def write(id, dir, proteins, triggers, events, resultFileTag="a2", counts=None, debug=False, task=2, writeScores=False):
     id = str(id)
     if debug:
         print id
     if not os.path.exists(dir):
         os.makedirs(dir)
     
-    #updateIds(proteins)
-    #updateIds(triggers, getMaxId(stDoc.proteins) + 1)
-    #updateIds(events)
-    #updateIds(relations)
+    updateIds(proteins)
+    updateIds(triggers, getMaxId(proteins) + 1)
+    updateIds(events)
     
     if proteins != None:
         out = codecs.open(os.path.join(dir, id + ".a1"), "wt", "utf-8")
