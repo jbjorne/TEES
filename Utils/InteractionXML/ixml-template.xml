@@ -1,0 +1,48 @@
+<script>
+<![CDATA[
+import types
+
+def isOffset(offset):
+  isString(offset)
+  splits = charOffset.split("-")
+  validate(len(splits) == 2, "message")
+
+def validateSentence():
+  pass
+]]>
+</script>
+<corpus source="isString">
+  <document v:min="0" v:max="n" id="isString(source)">
+    <sentence v:validate="validateSentence" charOffset="isOffset(charOffset)" id="GE.d6.s0" tail="&#10;" text="BMP-6 induces upregulation of Id1">
+      <entity v:label="entity" charOffset="0-5" headOffset="0-5" id="GE.d6.s0.e0" isName="True" origId="PMC-1134658-06-Results-05.T1" origOffset="0-5" text="BMP-6" type="Protein" />
+      <entity charOffset="30-33" headOffset="30-33" id="GE.d6.s0.e1" isName="True" origId="PMC-1134658-06-Results-05.T2" origOffset="30-33" text="Id1" type="Protein" />
+      <entity charOffset="6-13" headOffset="6-13" id="GE.d6.s0.e28" isName="False" origId="PMC-1134658-06-Results-05.T29" origOffset="6-13" text="induces" type="Positive_regulation" />
+      <entity charOffset="14-26" headOffset="14-26" id="GE.d6.s0.e29" isName="False" origId="PMC-1134658-06-Results-05.T30" origOffset="14-26" text="upregulation" type="Positive_regulation" />
+      <interaction directed="True" e1="GE.d6.s0.e28" e2="GE.d6.s0.e29" id="GE.d6.s0.i0" origId="PMC-1134658-06-Results-05.E1.0" type="Theme" />
+      <interaction directed="True" e1="GE.d6.s0.e28" e2="GE.d6.s0.e0" id="GE.d6.s0.i1" origId="PMC-1134658-06-Results-05.E1.1" type="Cause" />
+      <interaction directed="True" e1="GE.d6.s0.e29" e2="GE.d6.s0.e1" id="GE.d6.s0.i2" origId="PMC-1134658-06-Results-05.E2.0" type="Theme" />
+      <analyses>
+        <tokenization ProteinNameSplitter="True" source="BioNLP&apos;11" tokenizer="McCC">
+          <token POS="NN" charOffset="0-5" headScore="1" id="st_0" text="BMP-6" />
+          <token POS="VBZ" charOffset="6-13" headScore="1" id="st_1" text="induces" />
+          <token POS="NN" charOffset="14-26" headScore="1" id="st_2" text="upregulation" />
+          <token POS="IN" charOffset="27-29" headScore="0" id="st_3" text="of" />
+          <token POS="NN" charOffset="30-33" headScore="1" id="st_4" text="Id1" />
+        </tokenization>
+        <parse ProteinNameSplitter="True" parser="McCC" pennstring="(S1 (S (NP (NN BMP-6)) (VP (VBZ induces) (NP (NP (NN upregulation)) (PP (IN of) (NP (NN Id1)))))))" source="BioNLP&apos;11" stanford="ok" tokenizer="McCC">
+          <dependency id="sd_0" t1="st_1" t2="st_0" type="nsubj" />
+          <dependency id="sd_1" t1="st_1" t2="st_2" type="dobj" />
+          <dependency id="sd_2" t1="st_2" t2="st_4" type="prep_of" />
+          <phrase begin="0" charOffset="0-5" end="0" id="bp_0" type="NP" />
+          <phrase begin="0" charOffset="0-33" end="4" id="bp_1" type="S" />
+          <phrase begin="0" charOffset="0-33" end="4" id="bp_2" type="S1" />
+          <phrase begin="1" charOffset="6-33" end="4" id="bp_3" type="VP" />
+          <phrase begin="2" charOffset="14-26" end="2" id="bp_4" type="NP" />
+          <phrase begin="2" charOffset="14-33" end="4" id="bp_5" type="NP" />
+          <phrase begin="3" charOffset="27-33" end="4" id="bp_6" type="PP" />
+          <phrase begin="4" charOffset="30-33" end="4" id="bp_7" type="NP" />
+        </parse>
+      </analyses>
+    </sentence>
+  </document>
+</corpus>
