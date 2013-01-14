@@ -12,6 +12,13 @@ def process(documents, debug=False):
     numOldEvents = 0
     numNewEvents = 0
     for doc in documents:
+        # Arg.siteOf links are temporarily removed, because during duplication the argument pointed to by siteOf
+        # may end up in another event. To preserve the core/site pairs, when arguments are copied, their "full type"
+        # (e.g. Theme2) is restored. After duplication is done, core/site pairs can be relinked just the way they 
+        # are linked when reading from ST-format files, because A) old arguments have an intact arg.siteIdentifier
+        # B) new arguments have full types (e.g. Theme2) and C) the argument type combination is the same for each
+        # duplicate. 
+        doc.unlinkSites()
         #if doc.id != "PMC-2806624-00-TIAB":
         #    continue
         if debug:
@@ -31,6 +38,7 @@ def process(documents, debug=False):
         doc.events = rebuildEventList(newEvents)
         doc.events.sort(key = lambda x: (x.id[0], int(x.id[1:].split(".")[0]), x.id[1:].split(".")[-1]) )
         numNewEvents += len(doc.events)
+        doc.connectSites() # rebuild site links
     print >> sys.stderr, "Duplication created", numNewEvents - numOldEvents, "new events (new total", numNewEvents, "events)"
 
 def getRoots(document):
@@ -104,40 +112,44 @@ def makeEvent(model, argCombination, count, newEvent = None, finished=False, dup
         if arg.target.id[0] != "E": # not a nested event
             # Non-event arguments never need to be duplicated
             if not finished:
-                newEvent.addArgument(arg.type, arg.target, arg.siteOf)
+                newEvent.addArgument(model.getArgumentFullType(arg), argCombination[0])
                 #newEvent.arguments.append([arg[0], argCombination[0], arg[2]])
             argCombination.pop(0) # pop first (depth-first iteration)
-            if debug: print level * " ", "SIMP", model.id, [x.target.id for x in model.arguments], "/", arg.target.id, argCombination, "/", newEvent, newEvent.arguments
+            if debug: 
+                print level * " ", "SIMP", model.id, [x.target.id for x in model.arguments], "/", arg.target.id, argCombination, "/", newEvent, newEvent.arguments
         else: # is a nested event
-            assert arg[2] == None, (model.id, arg)
+            #assert arg.siteOf == None, (model.id, arg)
             if not finished:
-                if hasNestedEquivs(arg[1]):
+                if hasNestedEquivs(arg.target):
                     # For event arguments that have children with equiv, create a new copy
                     duplId = arg.target.id + ".d" + str(count)
                     #duplId = arg[1].id.split(".d")[0] + ".d" + str(count)
                     if duplId not in duplDict:
-                        newArg = Argument(arg.type, copy.copy(argCombination[0])) #[arg[0], copy.copy(argCombination[0]), None] # Make a new event
+                        newArg = Argument(model.getArgumentFullType(arg), copy.copy(argCombination[0])) #[arg[0], copy.copy(argCombination[0]), None] # Make a new event
                         createdEvents.append(newArg.target)
                         argCombination.pop(0) # pop first (depth-first iteration)
                         newArg.target.arguments = [] # reset the argument list of the copy
                         newArg.target.id = duplId
                         newEvent.arguments.append(newArg) # add to parent copy
                         duplDict[duplId] = newArg.target # add the new event to duplDict #duplDict[duplId] = newArg
-                        if debug: print level * " ", "NEST(new)", model.id, [x.target.id for x in model.arguments], "/", arg.target.id, argCombination, "/", newEvent, newEvent.arguments
+                        if debug: 
+                            print level * " ", "NEST(new)", model.id, [x.target.id for x in model.arguments], "/", arg.target.id, argCombination, "/", newEvent, newEvent.arguments
                         createdEvents += makeEvent(arg.target, argCombination, count, newArg.target, finished, duplDict, level=level+1, debug=debug) # Continue processing with next level of model and copy
                     else:
-                        newArg = Argument(arg.type, duplDict[duplId]) #[arg[0], duplDict[duplId], None]
+                        newArg = Argument(model.getArgumentFullType(arg), duplDict[duplId]) #[arg[0], duplDict[duplId], None]
                         argCombination.pop(0) # pop first (depth-first iteration)
                         #newEvent.arguments.append(duplDict[duplId]) # add to parent copy
                         newEvent.arguments.append(newArg) # add to parent copy
-                        if debug: print level * " ", "NEST(old)", model.id, [x.target.id for x in model.arguments], "/", arg.target.id, argCombination, "/", newEvent, newEvent.arguments
+                        if debug: 
+                            print level * " ", "NEST(old)", model.id, [x.target.id for x in model.arguments], "/", arg.target.id, argCombination, "/", newEvent, newEvent.arguments
                         #makeEvent(arg[1], argCombination, count, duplDict[duplId][1], True, duplDict, level=level+1, debug=debug) # Continue processing with next level of model and copy
                         createdEvents += makeEvent(arg.target, argCombination, count, duplDict[duplId], True, duplDict, level=level+1, debug=debug) # Continue processing with next level of model and copy
                 else:
-                    newArg = Argument(arg.type, argCombination[0]) #[arg[0], argCombination[0], None]
+                    newArg = Argument(model.getArgumentFullType(arg), argCombination[0]) #[arg[0], argCombination[0], None]
                     argCombination.pop(0) # pop first (depth-first iteration)
                     newEvent.arguments.append(newArg) # add to parent copy
-                    if debug: print level * " ", "STOP", model.id, [x.target.id for x in model.arguments], "/", arg.target.id, argCombination, "/", newEvent, newEvent.arguments
+                    if debug: 
+                        print level * " ", "STOP", model.id, [x.target.id for x in model.arguments], "/", arg.target.id, argCombination, "/", newEvent, newEvent.arguments
                     # stop recursion here, it has been likewise stopped in getArgs
                     #makeEvent(arg[1], argCombination, count, newArg[1], True, duplDict, level=level+1) # Continue processing with next level of model and copy
     return createdEvents
@@ -169,7 +181,7 @@ def duplicateEquiv(event, duplDict, debug):
                     print " New Event (root):", createdEvent.id, createdEvent.type, createdEvent.arguments
                 else:
                     print " New Event:", createdEvent.id, createdEvent.type, createdEvent.arguments
-                Validate.validate([createdEvent], simulation=True)
+                #Validate.validate([createdEvent], simulation=True)
         newEvents.append(newEvent)
         count += 1
     return newEvents
@@ -185,7 +197,7 @@ def rebuildEventList(events, eventList = None):
             eventList.append(event)
         for arg in event.arguments:
             if arg.target.id[0] == "E":
-                rebuildEventList([arg[1]], eventList)
+                rebuildEventList([arg.target], eventList)
     return eventList
 
 if __name__=="__main__":
@@ -210,4 +222,4 @@ if __name__=="__main__":
     print >> sys.stderr, "Resolving equivalences"
     process(documents, debug=options.debug)
     print >> sys.stderr, "Writing documents to", options.output
-    writeSet(documents, options.output, validate=False)
+    writeSet(documents, options.output)

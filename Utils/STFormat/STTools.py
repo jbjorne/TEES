@@ -37,6 +37,14 @@ class Document:
         idMap = self.getIdMap()
         for ann in self.proteins + self.triggers + self.events:
             ann.connectObjects(idMap)
+    
+    def unlinkSites(self):
+        for event in self.events:
+            event.unlinkSites()
+    
+    def connectSites(self):
+        for event in self.events:
+            event.connectSites()
 
     def load(self, dir, a2Tags=["a2"], readExtra=False):
         if self.debug:
@@ -221,7 +229,12 @@ class Annotation:
 
     # for debugging
     def __repr__(self):
-        return "<Ann " + str(self.id) + "," + str(self.type) + "," + str(self.trigger) + "," + str(self.arguments) + ">"
+        s = "<Ann " + str(self.id) + "," + str(self.type)
+        if self.trigger != None:
+            s += ",T=" + str(self.trigger)
+        if self.arguments != None and len(self.arguments) > 0:
+            s += ",A=" + str(self.arguments)
+        return s + ">"
     
     def addArgument(self, type, target, siteOf=None, weights=None):
         newArgument = Argument(type, target, siteOf, weights)
@@ -243,6 +256,10 @@ class Annotation:
         for arg in self.arguments:
             arg.connectToObj(idMap)
     
+    def unlinkSites(self):
+        for arg in self.arguments:
+            arg.siteOf = None
+    
     def connectSites(self):
         for site in self.arguments:
             if site.type == "Site":
@@ -263,6 +280,7 @@ class Annotation:
                     return str(count)
             elif argument.type == currentArg.type:
                 count += 1
+        assert False, (argument, self)
     
     def getArgumentFullType(self, argument):
         if argument.siteOf == None:
@@ -328,7 +346,14 @@ class Argument:
     
     # for debugging
     def __repr__(self):
-        return "<Arg " + str(self.type) + "," + str(self.target) + "," + str(self.siteOf) + "," + str(self.extra) + "," + str(self.siteIdentifier) + ">"
+        s = "<Arg " + str(self.type) + ",T=" + str(self.target)
+        if self.siteOf != None:
+            s += ",S=" + str(self.siteOf)
+        if self.extra != None and len(self.extra) != 0:
+            s += ",E=" + str(self.extra)
+        if self.siteIdentifier != "":
+            s += ",SI=" + str(self.siteIdentifier)
+        return s + ">"
         
     def connectToObj(self, idMap):
         if self.target != None and type(self.target) in types.StringTypes:
@@ -441,7 +466,7 @@ def readEvent(string, debug=False):
     eventType = args[0]
     eventArguments = args[1:]
     eventTypeSplits = eventType.split(":")
-    event.type = eventType[0]
+    event.type = eventType
     event.trigger = None
     if len(eventTypeSplits) > 1:
         event.trigger = eventTypeSplits[1]
