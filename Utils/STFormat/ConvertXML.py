@@ -336,14 +336,14 @@ def getCorefTargetMap(docElement):
                 corefProtMap[e1].append(e2)
     return corefProtMap
 
-def addInteractionsToSTDoc(doc, docElement, tMap, eMap, entityElementMap, allAsRelations=False):
+def addInteractionsToSTDoc(doc, docElement, tMap, eMap, entityElementMap, skipArgs=[], allAsRelations=False):
     # First map Coref proteins
     corefProtMap = getCorefTargetMap(docElement)
     # Then process all interactions
     siteParents = defaultdict(set)
     for interaction in docElement.getiterator("interaction"):
         intType = interaction.get("type")
-        if intType == "neg" or intType == "CorefTarget":
+        if intType == "neg" or intType == "CorefTarget" or intType in skipArgs:
             continue # Targets have already been put into a dictionary
         if intType == "SiteParent" and not allAsRelations:
             siteParents[tMap[interaction.get("e1")]].add(tMap[interaction.get("e2")])
@@ -382,7 +382,6 @@ def addInteractionsToSTDoc(doc, docElement, tMap, eMap, entityElementMap, allAsR
 
 def mapSTArgumentTargets(stDoc, siteParents, tMap, eMap):
     # Map argument targets
-    print siteParents
     for event in stDoc.events:
         argTypeCounts = defaultdict(int)
         for arg in event.arguments:
@@ -413,7 +412,7 @@ def mapSTArgumentTargets(stDoc, siteParents, tMap, eMap):
             event.arguments = argsToKeep
                 
 
-def toSTFormat(input, output=None, outputTag="a2", useOrigIds=False, debug=False, task=2, validate=True, writeScores=False, allAsRelations=False):
+def toSTFormat(input, output=None, outputTag="a2", useOrigIds=False, debug=False, skipArgs=[], validate=True, writeScores=False, allAsRelations=False):
     print >> sys.stderr, "Loading corpus", input
     corpusTree = ETUtils.ETFromObj(input)
     print >> sys.stderr, "Corpus file loaded"
@@ -432,11 +431,11 @@ def toSTFormat(input, output=None, outputTag="a2", useOrigIds=False, debug=False
         tMap = {}
         entityElementMap = {} # for task 3
         addEntitiesToSTDoc(stDoc, document, tMap, eMap, entityElementMap, useOrigIds)
-        addInteractionsToSTDoc(stDoc, document, tMap, eMap, entityElementMap, allAsRelations)
+        addInteractionsToSTDoc(stDoc, document, tMap, eMap, entityElementMap, skipArgs, allAsRelations)
     
     if output != None:
         print >> sys.stderr, "Writing output to", output
-        writeSet(documents, output, resultFileTag=outputTag, debug=debug, task=task, validate=validate, writeScores=writeScores)
+        writeSet(documents, output, resultFileTag=outputTag, debug=debug, writeScores=writeScores)
     return documents
 
 if __name__=="__main__":

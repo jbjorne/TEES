@@ -135,7 +135,7 @@ class Document:
         self.text = f.read()
         f.close()
 
-    def save(self, dir, resultFileTag="a2", counts=None, debug=False, task=2, writeScores=False):
+    def save(self, dir, resultFileTag="a2", debug=False, writeScores=False):
         id = str(self.id)
         if debug:
             print id
@@ -519,7 +519,7 @@ def loadSet(path, setName=None, level="a2", sitesAreArguments=False, a2Tag="a2",
         shutil.rmtree(dir)
     return documents
 
-def writeSet(documents, output, resultFileTag="a2", debug=False, task=2, validate=True, writeScores=False):
+def writeSet(documents, output, resultFileTag="a2", debug=False, writeScores=False):
     from collections import defaultdict
     import shutil
     counts = defaultdict(int)
@@ -533,14 +533,14 @@ def writeSet(documents, output, resultFileTag="a2", debug=False, task=2, validat
     if os.path.exists(outdir):
         shutil.rmtree(outdir)
 
-    if not validate:
-        print "Warning! No validation."
+#    if not validate:
+#        print "Warning! No validation."
     for doc in documents:
 #        if validate:
 #            if debug: print >> sys.stderr, "Validating", doc.id
 #            Validate.allValidate(doc, counts, task, verbose=debug)
         if debug: print >> sys.stderr, "Writing", doc.id
-        doc.save(outdir, resultFileTag, counts, task=task, writeScores=writeScores)
+        doc.save(outdir, resultFileTag, writeScores=writeScores)
         
     if output.endswith(".tar.gz"):
         package(outdir, output, ["a1", "txt", resultFileTag, resultFileTag+".scores"])

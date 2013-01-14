@@ -51,13 +51,13 @@ def downloadCorpus(corpus, destPath=None, downloadPath=None, clear=False):
         finalDestPath = destPath
     for setName in ["_DEVEL", "_TRAIN", "_TEST"]:
         downloaded[corpus + setName] = Utils.Download.download(Settings.URL[corpus + setName], downloadPath, clear=clear)
+    if downloadPath == None:
+        downloadPath = os.path.join(Settings.DATAPATH, "download")
     if corpus in ["REL", "REN", "CO"]:
         if destPath == None:
             teesParseFinalDestPath = os.path.join(Settings.DATAPATH, "TEES-parses")
         else:
             teesParseFinalDestPath = os.path.join(destPath, "TEES-parses")
-        if downloadPath == None:
-            downloadPath = os.path.join(Settings.DATAPATH, "download")
         Utils.Download.downloadAndExtract(Settings.URL["TEES_PARSES"], teesParseFinalDestPath, downloadPath, redownload=clear)
         downloaded["TEES_PARSES"] = teesParseFinalDestPath
     else:
@@ -70,7 +70,7 @@ def downloadCorpus(corpus, destPath=None, downloadPath=None, clear=False):
                 downloaded[corpus + setName + analysis] = Utils.Download.download(Settings.URL[corpus + setName + analysis], downloadPath + "/support/", clear=clear)
     return downloaded
 
-def convert(corpora, outDir=None, downloadDir=None, redownload=False, makeIntermediateFiles=True, evaluate=False):
+def convert(corpora, outDir=None, downloadDir=None, redownload=False, makeIntermediateFiles=True, evaluate=False, processEquiv=True, addAnalyses=True):
     if outDir == None:
         os.path.normpath(Settings.DATAPATH + "/corpora")
     if not os.path.exists(outDir):
@@ -83,7 +83,7 @@ def convert(corpora, outDir=None, downloadDir=None, redownload=False, makeInterm
         logFileName = outDir + "/conversion/" + corpus + "-conversion-log.txt"
         Stream.openLog(logFileName)
         downloaded = downloadCorpus(corpus, outDir, downloadDir, redownload)
-        convertDownloaded(outDir, corpus, downloaded, makeIntermediateFiles, evaluate)
+        convertDownloaded(outDir, corpus, downloaded, makeIntermediateFiles, evaluate, processEquiv=processEquiv, addAnalyses=addAnalyses)
         Stream.closeLog(logFileName)
         count += 1
 
@@ -97,7 +97,7 @@ def corpusRENtoASCII(xml):
         text = text.replace("and Wikstram, M. (1991) Eur. J. Biochem. 197", "and Wikstrom, M. (1991) Eur. J. Biochem. 197")
         document.set("text", text)
 
-def convertDownloaded(outdir, corpus, files, intermediateFiles=True, evaluate=True):
+def convertDownloaded(outdir, corpus, files, intermediateFiles=True, evaluate=True, processEquiv=True, addAnalyses=True):
     global moveBI
     if evaluate:
         workdir = outdir + "/conversion/" + corpus
@@ -126,15 +126,18 @@ def convertDownloaded(outdir, corpus, files, intermediateFiles=True, evaluate=Tr
         licenseFile.write(docs[0].license)
         licenseFile.close()
     
-    print >> sys.stderr, "Resolving equivalences"
-    Utils.STFormat.Equiv.process(documents)
+    if processEquiv:
+        print >> sys.stderr, "Resolving equivalences"
+        Utils.STFormat.Equiv.process(documents)
+    else:
+        print >> sys.stderr, "Skipping resolving of equivalences"
     
     if evaluate:
-        print >> sys.stderr, "Checking data validity"
-        for doc in documents:
-            Utils.STFormat.Validate.validate(doc.events, simulation=True, verbose=True, docId=doc.id)
+        #print >> sys.stderr, "Checking data validity"
+        #for doc in documents:
+        #    Utils.STFormat.Validate.validate(doc.events, simulation=True, verbose=True, docId=doc.id)
         print >> sys.stderr, "Writing all documents to geniaformat"
-        ST.writeSet(documents, os.path.join(workdir, "all-geniaformat"), resultFileTag="a2", debug=False, task=2, validate=False)
+        ST.writeSet(documents, os.path.join(workdir, "all-geniaformat"), resultFileTag="a2", debug=False)
     
     if intermediateFiles:
         print >> sys.stderr, "Converting to XML, writing combined corpus to", bigfileName+"-documents.xml"
@@ -148,7 +151,10 @@ def convertDownloaded(outdir, corpus, files, intermediateFiles=True, evaluate=Tr
     if corpus == "REN":
         corpusRENtoASCII(xml)
     
-    addAnalyses(xml, corpus, datasets, files, bigfileName)
+    if addAnalyses:
+        addAnalyses(xml, corpus, datasets, files, bigfileName)
+    else:
+        print >> sys.stderr, "Skipping adding analyses"
     if intermediateFiles:
         print >> sys.stderr, "Writing combined corpus", bigfileName+"-sentences.xml"
         ETUtils.write(xml, bigfileName+"-sentences.xml")
@@ -166,10 +172,10 @@ def convertDownloaded(outdir, corpus, files, intermediateFiles=True, evaluate=Tr
         print >> sys.stderr, "---------------", "Evaluating conversion", "---------------"
         if corpus != "REL": # Task 1 (removal of Entity-entities) cannot work for REL
             print >> sys.stderr, "Evaluating task 1 back-conversion"
-            STConvert.toSTFormat(os.path.join(outdir, corpus + "-devel.xml"), workdir + "/roundtrip/" + corpus + "-devel" + "-task1", outputTag="a2", task=1)
+            STConvert.toSTFormat(os.path.join(outdir, corpus + "-devel.xml"), workdir + "/roundtrip/" + corpus + "-devel" + "-task1", outputTag="a2", skipArgs=["Site"])
             BioNLP11GeniaTools.evaluate(workdir + "/roundtrip/" + corpus + "-devel" + "-task1", corpus + ".1")
         print >> sys.stderr, "Evaluating task 2 back-conversion"
-        STConvert.toSTFormat(os.path.join(outdir, corpus + "-devel.xml"), workdir + "/roundtrip/" + corpus + "-devel" + "-task2", outputTag="a2", task=2)
+        STConvert.toSTFormat(os.path.join(outdir, corpus + "-devel.xml"), workdir + "/roundtrip/" + corpus + "-devel" + "-task2", outputTag="a2")
         BioNLP11GeniaTools.evaluate(workdir + "/roundtrip/" + corpus + "-devel" + "-task2", corpus + ".2")
         print >> sys.stderr, "Note! Evaluation of Task 2 back-conversion can be less than 100% due to site-argument mapping"
 
@@ -242,6 +248,8 @@ if __name__=="__main__":
     optparser.add_option("-d", "--downloaddir", default=None, dest="downloaddir", help="directory to download corpus files to")
     optparser.add_option("--intermediateFiles", default=False, action="store_true", dest="intermediateFiles", help="save intermediate corpus files")
     optparser.add_option("--forceDownload", default=False, action="store_true", dest="forceDownload", help="re-download all source files")
+    optparser.add_option("--noEquiv", default=False, action="store_true", dest="noEquiv", help="Don't interpret equiv annotation into duplicate events")
+    optparser.add_option("--noAnalyses", default=False, action="store_true", dest="noAnalyses", help="Don't add parses")
     optparser.add_option("--evaluate", default=False, action="store_true", dest="evaluate", help="Convert devel sets back to ST format and evaluate")
     (options, args) = optparser.parse_args()
     
@@ -249,4 +257,4 @@ if __name__=="__main__":
         installEvaluators(options.outdir, options.downloaddir, options.forceDownload)
     if options.corpora != None:
         #Stream.openLog(os.path.join(options.outdir, "conversion-log.txt"))
-        convert(options.corpora.split(","), options.outdir, options.downloaddir, options.forceDownload, options.intermediateFiles, evaluate=options.evaluate)
+        convert(options.corpora.split(","), options.outdir, options.downloaddir, options.forceDownload, options.intermediateFiles, evaluate=options.evaluate, processEquiv=not options.noEquiv, addAnalyses=not options.noAnalyses)

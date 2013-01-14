@@ -42,9 +42,9 @@ def getRoots(document):
         eventDict[event.id] = event
     for event in document.events:
         for arg in event.arguments:
-            if arg[1].id[0] == "E": # arg[1] is a nested event...
-                if arg[1].id in eventDict: # ...if it hasn't been already removed...
-                    del eventDict[arg[1].id] # ...remove it
+            if arg.target.id[0] == "E": # arg[1] is a nested event...
+                if arg.target.id in eventDict: # ...if it hasn't been already removed...
+                    del eventDict[arg.target.id] # ...remove it
     rootEvents = []
     for key in sorted(eventDict.keys()):
         rootEvents.append(eventDict[key])
@@ -58,16 +58,16 @@ def getArgs(event, argList):
     """
     hasEquiv = False
     for arg in event.arguments:
-        if len(arg[1].equiv) == 0:
-            argList.append([arg[1]])
+        if len(arg.target.equiv) == 0:
+            argList.append([arg.target])
         else:
             hasEquiv = True
-            argList.append([arg[1]] + arg[1].equiv)
-            assert arg[1] not in arg[1].equiv
-        if arg[1].id[0] == "E": # nested event
-            assert len(arg[1].equiv) == 0
-            if hasNestedEquivs(arg[1]):
-                rv = getArgs(arg[1], argList)
+            argList.append([arg.target] + arg.target.equiv)
+            assert arg.target not in arg.target.equiv
+        if arg.target.id[0] == "E": # nested event
+            assert len(arg.target.equiv) == 0
+            if hasNestedEquivs(arg.target):
+                rv = getArgs(arg.target, argList)
                 hasEquiv = rv or hasEquiv
             else:
                 pass # stop recursion
@@ -76,10 +76,10 @@ def getArgs(event, argList):
 def hasNestedEquivs(event):
     rv = False
     for arg in event.arguments:
-        if len(arg[1].equiv) != 0:
+        if len(arg.target.equiv) != 0:
             rv = True
-        elif arg[1].id[0] == "E": # nested event
-            rv = rv or hasNestedEquivs(arg[1]) 
+        elif arg.target.id[0] == "E": # nested event
+            rv = rv or hasNestedEquivs(arg.target) 
     return rv
 
 def makeEvent(model, argCombination, count, newEvent = None, finished=False, duplDict=None, debug=False, level=0):
@@ -101,42 +101,43 @@ def makeEvent(model, argCombination, count, newEvent = None, finished=False, dup
         createdEvents.append(newEvent)
     for arg in model.arguments:
         #if debug: print level * " ", model.id, [x[1].id for x in model.arguments], "/", arg[1].id, argCombination, "/", newEvent, newEvent.arguments
-        if arg[1].id[0] != "E": # not a nested event
+        if arg.target.id[0] != "E": # not a nested event
             # Non-event arguments never need to be duplicated
             if not finished:
-                newEvent.arguments.append([arg[0], argCombination[0], arg[2]])
+                newEvent.addArgument(arg.type, arg.target, arg.siteOf)
+                #newEvent.arguments.append([arg[0], argCombination[0], arg[2]])
             argCombination.pop(0) # pop first (depth-first iteration)
-            if debug: print level * " ", "SIMP", model.id, [x[1].id for x in model.arguments], "/", arg[1].id, argCombination, "/", newEvent, newEvent.arguments
+            if debug: print level * " ", "SIMP", model.id, [x.target.id for x in model.arguments], "/", arg.target.id, argCombination, "/", newEvent, newEvent.arguments
         else: # is a nested event
             assert arg[2] == None, (model.id, arg)
             if not finished:
                 if hasNestedEquivs(arg[1]):
                     # For event arguments that have children with equiv, create a new copy
-                    duplId = arg[1].id + ".d" + str(count)
+                    duplId = arg.target.id + ".d" + str(count)
                     #duplId = arg[1].id.split(".d")[0] + ".d" + str(count)
                     if duplId not in duplDict:
-                        newArg = [arg[0], copy.copy(argCombination[0]), None] # Make a new event
-                        createdEvents.append(newArg[1])
+                        newArg = Argument(arg.type, copy.copy(argCombination[0])) #[arg[0], copy.copy(argCombination[0]), None] # Make a new event
+                        createdEvents.append(newArg.target)
                         argCombination.pop(0) # pop first (depth-first iteration)
-                        newArg[1].arguments = [] # reset the argument list of the copy
-                        newArg[1].id = duplId
+                        newArg.target.arguments = [] # reset the argument list of the copy
+                        newArg.target.id = duplId
                         newEvent.arguments.append(newArg) # add to parent copy
-                        duplDict[duplId] = newArg[1] # add the new event to duplDict #duplDict[duplId] = newArg
-                        if debug: print level * " ", "NEST(new)", model.id, [x[1].id for x in model.arguments], "/", arg[1].id, argCombination, "/", newEvent, newEvent.arguments
-                        createdEvents += makeEvent(arg[1], argCombination, count, newArg[1], finished, duplDict, level=level+1, debug=debug) # Continue processing with next level of model and copy
+                        duplDict[duplId] = newArg.target # add the new event to duplDict #duplDict[duplId] = newArg
+                        if debug: print level * " ", "NEST(new)", model.id, [x.target.id for x in model.arguments], "/", arg.target.id, argCombination, "/", newEvent, newEvent.arguments
+                        createdEvents += makeEvent(arg.target, argCombination, count, newArg.target, finished, duplDict, level=level+1, debug=debug) # Continue processing with next level of model and copy
                     else:
-                        newArg = [arg[0], duplDict[duplId], None]
+                        newArg = Argument(arg.type, duplDict[duplId]) #[arg[0], duplDict[duplId], None]
                         argCombination.pop(0) # pop first (depth-first iteration)
                         #newEvent.arguments.append(duplDict[duplId]) # add to parent copy
                         newEvent.arguments.append(newArg) # add to parent copy
-                        if debug: print level * " ", "NEST(old)", model.id, [x[1].id for x in model.arguments], "/", arg[1].id, argCombination, "/", newEvent, newEvent.arguments
+                        if debug: print level * " ", "NEST(old)", model.id, [x.target.id for x in model.arguments], "/", arg.target.id, argCombination, "/", newEvent, newEvent.arguments
                         #makeEvent(arg[1], argCombination, count, duplDict[duplId][1], True, duplDict, level=level+1, debug=debug) # Continue processing with next level of model and copy
-                        createdEvents += makeEvent(arg[1], argCombination, count, duplDict[duplId], True, duplDict, level=level+1, debug=debug) # Continue processing with next level of model and copy
+                        createdEvents += makeEvent(arg.target, argCombination, count, duplDict[duplId], True, duplDict, level=level+1, debug=debug) # Continue processing with next level of model and copy
                 else:
-                    newArg = [arg[0], argCombination[0], None]
+                    newArg = Argument(arg.type, argCombination[0]) #[arg[0], argCombination[0], None]
                     argCombination.pop(0) # pop first (depth-first iteration)
                     newEvent.arguments.append(newArg) # add to parent copy
-                    if debug: print level * " ", "STOP", model.id, [x[1].id for x in model.arguments], "/", arg[1].id, argCombination, "/", newEvent, newEvent.arguments
+                    if debug: print level * " ", "STOP", model.id, [x.target.id for x in model.arguments], "/", arg.target.id, argCombination, "/", newEvent, newEvent.arguments
                     # stop recursion here, it has been likewise stopped in getArgs
                     #makeEvent(arg[1], argCombination, count, newArg[1], True, duplDict, level=level+1) # Continue processing with next level of model and copy
     return createdEvents
@@ -183,7 +184,7 @@ def rebuildEventList(events, eventList = None):
         if event not in eventList:
             eventList.append(event)
         for arg in event.arguments:
-            if arg[1].id[0] == "E":
+            if arg.target.id[0] == "E":
                 rebuildEventList([arg[1]], eventList)
     return eventList
 
