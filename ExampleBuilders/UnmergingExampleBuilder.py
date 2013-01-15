@@ -374,11 +374,30 @@ class UnmergingExampleBuilder(ExampleBuilder):
             #interactions = interactionsByEntityId[entity.get("id")]
             interactions = [x[2] for x in sentenceGraph.getOutInteractions(entity, mergeInput)]
             interactions = self.sortInteractionsById(interactions)
-            argCombinations = self.getArgumentCombinations(eType, interactions, entity.get("id"))
+            validInteractionsByType = defaultdict(list)
+            for interaction in interactions:
+                if interaction.get("type") in self.structureAnalyzer.getValidEdgeTypes(e1.get("type"), e2.get("type")):
+                    validInteractionsByType[interaction.get("type")].append(interaction)
+            #argCombinations = self.getArgumentCombinations(eType, interactions, entity.get("id"))
+            intCombinations = []
+            for intType in sorted(validInteractionsByType.keys()):
+                intCombinations.append([])
+                minArgs, maxArgs = self.structureAnalyzer.getArgLimits(entity.get("type"), intType)
+                if maxArgs > 1: # allow any number of arguments for cases like Binding
+                    maxArgs = len(validInteractionsByType[intType])
+                for combLen in range(minArgs, maxArgs+1):
+                    intCombinations[-1].extend(combinations(validInteractionsByType[intType], combLen))
+            argCombinations = combine.combine(*intCombinations)
+            sum(argCombinations, []) # flatten nested list
+            #argCombinations = combinations(validInteractions, len(validInteractions))
+            validArgCombinations = []
+            for combination in argCombinations:
+                if self.structureAnalyzer.isValidEvent(entity, combination, entityById):
+                    validArgCombinations.append(combinations)
             #if len(argCombinations) <= 1:
             #    continue
-            assert argCombinations != None, (entity.get("id"), entity.get("type"))
-            for argCombination in argCombinations:
+            assert validArgCombinations != None, (entity.get("id"), entity.get("type"))
+            for argCombination in validArgCombinations:
                 if eType != "Process":
                     assert len(argCombination) > 0, eType + ": " + str(argCombinations)
                 # Originally binary classification

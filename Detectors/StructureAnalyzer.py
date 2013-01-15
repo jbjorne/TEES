@@ -29,6 +29,9 @@ class StructureAnalyzer():
         self.e2Types = defaultdict(lambda:defaultdict(set))
         self.relations = {}
         self.modifiers = {}
+        
+    def getArgLimits(self, entityType, argType):
+        return self.argLimits[entityType][argType]
     
     def getValidEdgeTypes(self, e1Type, e2Type):
         assert type(e1Type) in types.StringTypes
@@ -48,7 +51,7 @@ class StructureAnalyzer():
         else:
             raise Exception("Unknown interaction type " + str(edgeType))
     
-    def isValidEvent(self, entity, args=None, entityById=None):
+    def isValidEvent(self, entity, args=None, entityById=None, noUpperLimitBeyondOne=True):
         if args == None:
             args = []
         if type(entity) in types.StringTypes:
@@ -79,7 +82,7 @@ class StructureAnalyzer():
             if argTypeCounts[argType] < eventArgLimits[argType][0]: # check for minimum number of arguments
                 return False
             maxArgCount = eventArgLimits[argType][1]
-            if maxArgCount > 1: # don't differentiate arguments beyond 0, 1 or more than one.
+            if maxArgCount > 1 and noUpperLimitBeyondOne: # don't differentiate arguments beyond 0, 1 or more than one.
                 maxArgCount = sys.maxint
             if argTypeCounts[argType] > maxArgCount: # check for maximum number of arguments
                 return False
