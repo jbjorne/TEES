@@ -265,7 +265,7 @@ class Annotation:
         for site in self.arguments:
             if site.type == "Site":
                 for argument in self.arguments:
-                    if argument.siteIdentifier == site.siteIdentifier and argument.type in ("Theme", "Cause") and argument.target.type == "Protein":
+                    if argument.siteIdentifier == site.siteIdentifier and argument.type in ("Theme", "Cause") and argument.target.fileType == "a1":
                         assert site.siteOf == None, (site, self.arguments)
                         site.siteOf = argument
                         if self.debug:
