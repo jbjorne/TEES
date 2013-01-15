@@ -262,6 +262,8 @@ class StructureAnalyzer():
         f = open(filename, "rt")
         lines = f.readlines()
         f.close()
+        # initialize
+        self._init()
         # determine all possible interaction types
         interactionTypes = set()
         for line in lines:
@@ -272,28 +274,29 @@ class StructureAnalyzer():
         interactionTypes = sorted(list(interactionTypes))
         # load data structures
         for line in lines:
-            splits = line.strip().split("\t")
-            defType, e1Type = splits[0].split()
+            tabSplits = line.strip().split("\t")
+            defType, defName = tabSplits[0].split()
             if defType not in ["EVENT", "ENTITY", "RELATION", "MODIFIER"]:
                 raise Exception("Unknown structure definition " + str(defType))
             if defType in ["EVENT", "ENTITY"]: # in the graph, entities are just events with no arguments
+                e1Type = defName
                 for intType in interactionTypes:
                     self.argLimits[e1Type][intType] = [0,0]
-                for split in splits[1:]:
+                for split in tabSplits[1:]:
                     intType, limits, argE2Types = split.split()
                     self.argLimits[e1Type][intType] = eval(limits)
                     for argE2Type in argE2Types.split(","):
                         self.e2Types[e1Type][intType].add(argE2Type)
             elif defType == "RELATION":
-                if len(splits) != 4:
-                    raise Exception("Incorrect structure definition \"" + line.strip() + "\"")
-                self.relations[e1Type] = [splits[0] == "directed", splits[1].split(","), splits[2].split(",")]
+                if len(tabSplits) != 4:
+                    raise Exception("Incorrect relation definition \"" + str(tabSplits) + "\"")
+                self.relations[defName] = [tabSplits[1] == "directed", tabSplits[2].split(","), tabSplits[3].split(",")]
             elif defType == "MODIFIER":
                 self.modifiers[e1Type] = set(splits[1].split(","))
                 
         # construct additional structures
         self._defineEdgeTypes()
-        self._defineValidEdgeTypes(self.e2Types)
+        self._defineValidEdgeTypes()
     
     def showDebugInfo(self):
         # print internal structures
