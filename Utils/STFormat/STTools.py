@@ -137,6 +137,7 @@ class Document:
                 count += 1
         assert count == len(lines), lines # check that all lines were processed
         self.connectObjects()
+        self.connectSites()
     
     def loadText(self, filename):
         f = codecs.open(filename, "rt", "utf-8")
@@ -264,7 +265,7 @@ class Annotation:
         for site in self.arguments:
             if site.type == "Site":
                 for argument in self.arguments:
-                    if argument.siteIdentifier == site.siteIdentifier and argument.type in ("Theme", "Cause"):
+                    if argument.siteIdentifier == site.siteIdentifier and argument.type in ("Theme", "Cause") and argument.target.type == "Protein":
                         assert site.siteOf == None, (site, self.arguments)
                         site.siteOf = argument
                         if self.debug:
@@ -476,7 +477,6 @@ def readEvent(string, debug=False):
         argType = argSplits[0]
         argTarget = argSplits[1]    
         event.addArgument(argType, argTarget)
-    event.connectSites()
     
     if len(tabSplits) == 3:
         assert ann.type == "Coref"
