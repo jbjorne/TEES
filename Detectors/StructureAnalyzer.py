@@ -19,6 +19,9 @@ class StructureAnalyzer():
         self.relations = None
         self.sites = None
         self.modifiers = None
+        
+        self.eventArgumentTypes = None
+        self.relationTypes = None
     
     def _init(self):
         self.reset()
@@ -37,18 +40,37 @@ class StructureAnalyzer():
                 return self.edgeTypes[e1Type][e2Type] # not a copy, so careful with using the returned list!
         return []
     
-    def isValidEvent(self, entity, entityById=None, args=None):
+    def isRelation(self, edgeType):
+        if edgeType in self.relationTypes:
+            return True
+        elif edgeType in self.eventArgumentTypes:
+            return False
+        else:
+            raise Exception("Unknown interaction type " + str(edgeType))
+    
+    def isValidEvent(self, entity, args=None, entityById=None):
         if args == None:
             args = []
+        if type(entity) in types.StringTypes:
+            entityElement = None
+            entityType = entity
+        else:
+            entityElement = entity
+            entityType = entity.get("type")
         # analyze proposed arguments
         argTypes = set()
         argTypeCounts = defaultdict(int)
         argE2Types = defaultdict(set)
         for arg in args:
-            assert entityById[arg.get("e1")] == entity
-            argType = arg.get("type")
+            if type(arg) in [types.TupleType, types.ListType]:
+                argType, argE2Type = arg
+            else: # arg is an interaction element
+                if entityElement != None and entityById != None:
+                    assert entityById[arg.get("e1")] == entityElement
+                argType = arg.get("type")
+                argE2Type = entityById[arg.get("e2")]
             argTypeCounts[argType] += 1
-            argE2Types[argType].add(entityById[arg.get("e2")])
+            argE2Types[argType].add(argE2Type)
             argTypes.add(argType)
         argTypes = sorted(list(argTypes))
         # check validity of proposed arguments
@@ -67,6 +89,100 @@ class StructureAnalyzer():
                 if eventArgLimits[argLimitType][0] > 0: # for arguments not part of the event, the minimum limit must be one
                     return False
     
+    def _getElementDict(self, document, elementType):
+        entities = [x for x in document.getiterator("entity")]
+        elementById = {}
+        for element in document.getiterator(elementType):
+            elementId = element.get("id")
+            if elementId == None:
+                raise Error("Element " + elementType + " without id in document " + str(document.get("id")))
+            if elementId in elementById:
+                raise Error("Duplicate " + elementType + " id " + str(elementId) + " in document " + str(document.get("id")))
+            elementById[elementId] = element
+        return elementById
+    
+    def _getElementsAndParents(self, rootElement, elementType):
+        elements = []
+        for element in rootElement:
+            elements.append((element, rootElement))
+            elements.extend(element.getElementsAndParents(element, elementType))
+        return elements
+    
+    def validate(self, xml, printCounts=True, simulation=False, debug=False):
+        # 1. validate all edges (as relations)
+        # 2. validate events constructed from remaining edges/entities
+        # 3. repeat 2. until only valid events left
+        counts = defaultdict(str)
+        xml = ETUtils.ETFromObj(xml)
+        for document in xml.getiterator("document"):
+            entities = [x for x in document.getiterator("entity")]
+            entityById = self._getElementDict(document, "entity")
+            # Remove invalid interaction edges
+            eventArgumentsByE1 = defaultdict(list)
+            relations = []
+            eventArguments = []
+            for interaction in document.getiterator("interaction"):
+                e1 = entityById[interaction.get("e1")]
+                e2 = entityById[interaction.get("e2")]
+                if interaction.get("type") in self.getValidEdgeTypes(e1.get("type"), e2.get("type")):
+                    if not self.isRelation(interaction.get("type")): # interaction is an event argument
+                        eventArguments.append(interaction)
+                        eventArgumentsByE1[interaction.get("e1")].append(interaction)
+                        if interaction.get("relation") not in (None, "False"):
+                            interaction.set("relation", None)
+                    else:
+                        relations.append(interaction)
+                        interaction.set("relation", "True")
+            # process events
+            removed = 1
+            while removed > 0:
+                removed = 0
+                remainingEntities = []
+                remainingEntityIds = set()
+                for entity in entities:
+                    entityId = entity.get("id")
+                    if self.isValidEvent(entity, eventArgumentsByE1[entityId], entityById):
+                        remainingEntities.append(entity)
+                        remainingEntityIds.add(entityId)
+                    else:
+                        if debug:
+                            print >> sys.stderr, "Removing invalid event " + entity.get("id") + ":" + entity.get("type") + ":" + ",".join([x.get("type") for x in eventArgumentsByE1[entityId]])
+                        counts[entity.get("type")] += 1
+                        removed += 1
+                entities = remainingEntities
+                if removed > 0:
+                    # Process event arguments
+                    remainingEventArguments = []
+                    eventArgumentsByE1 = defaultdict(list) # rebuild the map for current remaining entities
+                    for arg in eventArguments:
+                        if arg.get("e1") in remainingEntityIds and arg.get("e2") in remainingEntityIds:
+                            remainingEventArguments.append(arg)
+                            eventArgumentsByE1[arg.get("e1")].append(arg)
+                        elif debug:
+                            print >> sys.stderr, "Removing unconnected argument " + arg.get("id") + ":" + arg.get("type")
+                    eventArguments = remainingEventArguments
+                    # Process relations
+                    remainingRelations = []
+                    for relation in relations:
+                        if relation.get("e1") in remainingEntityIds and relation.get("e2") in remainingEntityIds:
+                            remainingRelations.append(relation)
+                        elif debug:
+                            print >> sys.stderr, "Removing unconnected relation " + relation.get("id") + ":" + relation.get("type")
+                    relations = remainingRelations
+            # clean XML
+            if not simulation:
+                interactions = eventArguments + relations
+                for interaction, parent in self._getElementsAndParents(document, "interaction"):
+                    if interaction not in interactions:
+                        parent.remove("interaction")
+                for entity, parent in self._getElementsAndParents(document, "entity"):
+                    if entity not in entities:
+                        parent.remove("entity")
+        counts = dict(counts)
+        if printCounts:
+             print >> sys.stderr, "Validation removed:", counts
+        return counts
+    
     def _dictToTuple(self, d):
         tup = []
         for key in sorted(d.keys()):
@@ -78,6 +194,13 @@ class StructureAnalyzer():
         for pair in tup:
             d[pair[0]] = pair[1]
         return d
+    
+    def _defineEdgeTypes(self):
+        self.relationTypes = set(self.relations.keys())
+        self.eventArgumentTypes = set()
+        for entityType in self.argLimits.keys():
+            for argType in self.argLimits[entityType]:
+                self.eventArgumentTypes.add(argType)
     
     def _defineValidEdgeTypes(self):
         assert self.e2Types != None
@@ -143,13 +266,11 @@ class StructureAnalyzer():
         f.close()
         # determine all possible interaction types
         interactionTypes = set()
-        countsTemplate = {}
         for line in lines:
             splits = line.strip().split("\t")
             for split in splits[1:]:
                 intType = split.split()[0]
                 interactionTypes.add(intType)
-                countsTemplate[intType] = 0
         interactionTypes = sorted(list(interactionTypes))
         # load data structures
         for line in lines:
@@ -175,6 +296,7 @@ class StructureAnalyzer():
                 self.modifiers[e1Type] = set(splits[1].split(","))
                 
         # construct additional structures
+        self._defineEdgeTypes()
         self._defineValidEdgeTypes(self.e2Types)
     
     def showDebugInfo(self):
@@ -184,86 +306,83 @@ class StructureAnalyzer():
         print >> sys.stderr, "Edge types:", self.edgeTypes
         print >> sys.stderr, "Relations:", self.relations
     
-    def analyze(self, xml, model=None):
+    def analyze(self, inputs, model=None):
         #xml = CorpusElements.loadCorpus(xml, parse=None, tokenization=None, removeIntersentenceInteractions=False, removeNameInfo=False)
         #for sentence in corpusElements.sentences:
         #    for entity in sentence.entities
         self._init()
         
-        xml = ETUtils.ETFromObj(xml)
+        if type(inputs) in types.StringTypes:
+            inputs = [inputs]
         interactionTypes = set()
-        countsTemplate = {}
-        for interaction in xml.getiterator("interaction"):
-            interactionTypes.add(interaction.get("type"))
-            countsTemplate[interaction.get("type")] = 0
-        
-        argCounts = defaultdict(set)
-        for document in xml.getiterator("document"):
-            # read entities
-            entities = [x for x in document.getiterator("entity")]
-            entityById = {}
-            for entity in entities:
-                if entity.get("id") in entityById:
-                    raise Error("Duplicate entity id " + str(entity.get("id") + " in document " + str(document.get("id"))))
-                entityById[entity.get("id")] = entity
-            # read interactions
-            interactions = [x for x in document.getiterator("interaction")]
-            interactionById = {}
-            for interaction in interactions:
-                if interaction.get("id") in interactionById:
-                    raise Error("Duplicate entity id " + str(interaction.get("id") + " in document " + str(document.get("id"))))
-                interactionById[interaction.get("id")] = interaction
-            # process interactions
-            interactionsByE1 = defaultdict(list)
-            for interaction in interactions:
-                if interaction.get("relation") == "True":
-                    relType = interaction.get("type")
-                    if not self.relations[relType]:
-                        self.relations[relType] = [None, set(), set()]
-                    isDirected = eval(interaction.get("directed", "False"))
-                    if self.relations[relType][0] == None: # no relation of this type has been seen yet
-                        self.relations[relType][0] == isDirected
-                    elif self.relations[relType][0] != isDirected:
-                        raise Exception("Conflicting relation directed-attribute for already defined relation of type " + relType)
-                    self.relations[relType][1].add(entityById[interaction.get("e1")].get("type"))
-                    self.relations[relType][2].add(entityById[interaction.get("e2")].get("type"))
-                else:
-                    interactionsByE1[interaction.get("e1")].append(interaction)
-                # check for sites
-                if interaction.get("type") == "Site" and interaction.get("parent") != None:
-                    parentInteraction = interactionById[interaction.get("parent")]
-                    if self.sites == None:
-                        self.sites = set()
-                    self.sites.add(entityById[parentInteraction.get("e1")].get("type") + " " + parentInteraction.get("type"))
-            # process events
-            for entity in entities:
-                currentArgCounts = copy.copy(countsTemplate)
-                for interaction in interactionsByE1[entity.get("id")]:
-                    interactionTypes.add(interaction.get("type"))
-                    currentArgCounts[interaction.get("type")] += 1
-                    self.e2Types[entity.get("type")][interaction.get("type")].add(entityById[interaction.get("e2")].get("type"))
-                argCounts[entity.get("type")].add(self._dictToTuple(currentArgCounts))
-                # check for modifiers
-                for modType in ("speculation", "negation"):
-                    if (entity.get(modType) != None):
-                        if modType not in self.modifiers:
-                            self.modifiers[modType] = set()
-                        self.modifiers[modType].add(entity.get("type"))
+        for xml in inputs:
+            print >> sys.stderr, "Analyzing", xml
+            xml = ETUtils.ETFromObj(xml)
+            
+#            countsTemplate = {}
+#            for interaction in xml.getiterator("interaction"):
+#                interactionTypes.add(interaction.get("type"))
+#                countsTemplate[interaction.get("type")] = 0
+            
+            argCounts = defaultdict(set)
+            for document in xml.getiterator("document"):
+                entityById = self._getElementDict(document, "entity")
+                interactionById = self._getElementDict(document, "interaction")
+                # process interactions
+                interactionsByE1 = defaultdict(list)
+                for interaction in document.getiterator("interaction"):
+                    if interaction.get("relation") == "True":
+                        relType = interaction.get("type")
+                        if not self.relations[relType]:
+                            self.relations[relType] = [None, set(), set()]
+                        isDirected = eval(interaction.get("directed", "False"))
+                        if self.relations[relType][0] == None: # no relation of this type has been seen yet
+                            self.relations[relType][0] == isDirected
+                        elif self.relations[relType][0] != isDirected:
+                            raise Exception("Conflicting relation directed-attribute for already defined relation of type " + relType)
+                        self.relations[relType][1].add(entityById[interaction.get("e1")].get("type"))
+                        self.relations[relType][2].add(entityById[interaction.get("e2")].get("type"))
+                    else:
+                        interactionsByE1[interaction.get("e1")].append(interaction)
+                    # check for sites
+                    if interaction.get("type") == "Site" and interaction.get("parent") != None:
+                        parentInteraction = interactionById[interaction.get("parent")]
+                        if self.sites == None:
+                            self.sites = set()
+                        self.sites.add(entityById[parentInteraction.get("e1")].get("type") + " " + parentInteraction.get("type"))
+                # process events
+                for entity in document.getiterator("entity"):
+                    currentArgCounts = defaultdict(int)# copy.copy(countsTemplate)
+                    for interaction in interactionsByE1[entity.get("id")]:
+                        interactionTypes.add(interaction.get("type"))
+                        currentArgCounts[interaction.get("type")] += 1
+                        self.e2Types[entity.get("type")][interaction.get("type")].add(entityById[interaction.get("e2")].get("type"))
+                    argCounts[entity.get("type")].add(self._dictToTuple(currentArgCounts)) # save only one example for each detected argument combination
+                    # check for modifiers
+                    for modType in ("speculation", "negation"):
+                        if (entity.get(modType) != None):
+                            if modType not in self.modifiers:
+                                self.modifiers[modType] = set()
+                            self.modifiers[modType].add(entity.get("type"))
         
         for entityType in argCounts:
-            for combination in argCounts[entityType]:
-                combination = self._tupToDict(combination)
+            for interactionType in interactionTypes:
+                self.argLimits[entityType][interactionType] = [sys.maxint,0]
+            for argCombination in argCounts[entityType]:
+                argCombination = self._tupToDict(argCombination)
                 #print entityType, combination
                 for interactionType in interactionTypes:
-                    if not interactionType in self.argLimits[entityType]:
-                        self.argLimits[entityType][interactionType] = [sys.maxint,-sys.maxint]
                     minmax = self.argLimits[entityType][interactionType]
-                    if minmax[0] > combination[interactionType]:
-                        minmax[0] = combination[interactionType]
-                    if minmax[1] < combination[interactionType]:
-                        minmax[1] = combination[interactionType]
+                    if interactionType not in argCombination:
+                        minmax[0] = 0
+                    else:
+                        if minmax[0] > argCombination[interactionType]:
+                            minmax[0] = argCombination[interactionType]
+                        if minmax[1] < argCombination[interactionType]:
+                            minmax[1] = argCombination[interactionType]
         
         # print results
+        self._defineEdgeTypes()
         self._defineValidEdgeTypes()
         if model != None:
             self.save(model)
@@ -281,17 +400,22 @@ if __name__=="__main__":
     optparser.add_option("-i", "--input", default=None, dest="input", help="", metavar="FILE")
     optparser.add_option("-o", "--output", default=None, dest="output", help="", metavar="FILE")
     optparser.add_option("-l", "--load", default=False, action="store_true", dest="load", help="Input is a saved structure analyzer file")
+    optparser.add_option("-d", "--debug", default=False, action="store_true", dest="debug", help="Debug mode")
+    optparser.add_option("-v", "--validate", default=None, dest="validate", help="validate input", metavar="FILE")
     (options, args) = optparser.parse_args()
     
     s = StructureAnalyzer()
     if options.load:
         s.load(None, options.input)
     else:
-        s.analyze(options.input)
-    s.showDebugInfo()
+        s.analyze(options.input.split(","))
+    if options.debug:
+        s.showDebugInfo()
     print >> sys.stderr, "--- Structure Analysis ----"
     print >> sys.stderr, s.toString()
     if options.output != None:
         s.save(None, options.output)
-
+    if options.validate != None:
+        print >> sys.stderr, "--- Validation ----"
+        s.validate(options.validate, simulation=False, debug=options.debug)
             
