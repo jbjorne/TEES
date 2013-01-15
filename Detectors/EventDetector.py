@@ -74,7 +74,8 @@ class EventDetector(Detector):
         self.edgeDetector.enterState(self.STATE_COMPONENT_TRAIN)
         self.unmergingDetector.enterState(self.STATE_COMPONENT_TRAIN)
         self.modifierDetector.enterState(self.STATE_COMPONENT_TRAIN)
-        if self.checkStep("EXAMPLES"):
+        if self.checkStep("ANALYZE"):
+            # General training initialization done at the beginning of the first state
             self.model = self.initModel(self.model, 
                                          [("triggerExampleStyle", self.triggerDetector.tag+"example-style"), 
                                           ("triggerClassifierParameters", self.triggerDetector.tag+"classifier-parameters-train"),
@@ -93,13 +94,17 @@ class EventDetector(Detector):
                 stringDict[tag+"task"] = task
             self.saveStrings(stringDict, self.model)
             self.saveStrings(stringDict, self.combinedModel, False)
+            # Perform structure analysis
+            self.structureAnalyzer.analyze([optData, trainData], self.model)
+            print >> sys.stderr, self.structureAnalyzer.toString()
+        # (Re-)open models in case we start after the first ("ANALYZE") step
+        self.model = self.openModel(model, "a")
+        self.combinedModel = self.openModel(combinedModel, "a")
+        if self.checkStep("EXAMPLES"):
             self.triggerDetector.buildExamples(self.model, [optData.replace("-nodup", ""), trainData.replace("-nodup", "")], [self.workDir+self.triggerDetector.tag+"opt-examples.gz", self.workDir+self.triggerDetector.tag+"train-examples.gz"], saveIdsToModel=True)
             self.edgeDetector.buildExamples(self.model, [optData.replace("-nodup", ""), trainData.replace("-nodup", "")], [self.workDir+self.edgeDetector.tag+"opt-examples.gz", self.workDir+self.edgeDetector.tag+"train-examples.gz"], saveIdsToModel=True)
             if trainModifiers:
                 self.modifierDetector.buildExamples(self.model, [optData, trainData], [self.workDir+self.modifierDetector.tag+"opt-examples.gz", self.workDir+self.modifierDetector.tag+"train-examples.gz"], saveIdsToModel=True)             
-        # (Re-)open models in case we start after the "EXAMPLES" step
-        self.model = self.openModel(model, "a")
-        self.combinedModel = self.openModel(combinedModel, "a")
         if self.checkStep("BEGIN-MODEL"):
             #for model in [self.model, self.combinedModel]:
             #    if model != None:
@@ -171,6 +176,7 @@ class EventDetector(Detector):
         prevParams = None
         EDGE_MODEL_STEM = os.path.join(self.edgeDetector.workDir, os.path.normpath(self.model.path)+"-edge-models/model-c_")
         TRIGGER_MODEL_STEM = os.path.join(self.triggerDetector.workDir, os.path.normpath(self.model.path)+"-trigger-models/model-c_")
+        self.structureAnalyzer.load(model)
         bestResults = None
         for i in range(len(paramCombinations)):
             params = paramCombinations[i]
@@ -214,29 +220,32 @@ class EventDetector(Detector):
             # TODO: Where should the EvaluateInteractionXML evaluator come from?
             EIXMLResult = EvaluateInteractionXML.run(self.edgeDetector.evaluator, xml, self.optData, self.parse)
             # Convert to ST-format
-            if self.bioNLPSTParams["evaluate"]:
-                Utils.STFormat.ConvertXML.toSTFormat(xml, self.workDir+"grid-flat-geniaformat", "a2") #getA2FileTag(options.task, subTask))
-                stFormatDir = self.workDir+"grid-flat-geniaformat"
-            
             if self.unmerging:
                 xml = self.unmergingDetector.classifyToXML(xml, self.model, None, self.workDir+"grid-", goldData=self.optData)
+                self.structureAnalyzer.validate(xml)
                 if self.bioNLPSTParams["evaluate"]:
                     Utils.STFormat.ConvertXML.toSTFormat(xml, self.workDir+"grid-unmerging-geniaformat", "a2")
                     stFormatDir = self.workDir+"grid-unmerging-geniaformat"
+            elif self.bioNLPSTParams["evaluate"]:
+                self.structureAnalyzer.validate(xml)
+                Utils.STFormat.ConvertXML.toSTFormat(xml, self.workDir+"grid-flat-geniaformat", "a2") #getA2FileTag(options.task, subTask))
+                stFormatDir = self.workDir+"grid-flat-geniaformat"
             # Evaluation
+            # Attempt shared task evaluation
             stEvaluation = None
             if self.bioNLPSTParams["evaluate"]:
                 stEvaluation = self.stEvaluator.evaluate(stFormatDir, self.task)
             if stEvaluation != None:
                 if bestResults == None or stEvaluation[0] > bestResults[1][0]:
                     bestResults = (params, stEvaluation, stEvaluation[0])
-            else:
+            else: # If shared task evaluation was not done (failed or not requested) fall back to internal evaluation
                 if bestResults == None or EIXMLResult.getData().fscore > bestResults[1].getData().fscore:
                     bestResults = (params, EIXMLResult, EIXMLResult.getData().fscore)
-            if self.bioNLPSTParams["evaluate"]:
+            # Remove ST-format files
+            if os.path.exists(self.workDir+"grid-flat-geniaformat"):
                 shutil.rmtree(self.workDir+"grid-flat-geniaformat")
-                if os.path.exists(self.workDir+"grid-unmerging-geniaformat"):
-                    shutil.rmtree(self.workDir+"grid-unmerging-geniaformat")
+            if os.path.exists(self.workDir+"grid-unmerging-geniaformat"):
+                shutil.rmtree(self.workDir+"grid-unmerging-geniaformat")
         else:
             print >> sys.stderr, "No predicted edges"
         return bestResults
@@ -299,7 +308,7 @@ class EventDetector(Detector):
         xml = None
         model = self.openModel(model, "r")
         self.initVariables(classifyData=data, model=model, xml=None, task=task, parse=parse)
-        self.enterState(self.STATE_CLASSIFY, ["TRIGGERS", "EDGES", "UNMERGING", "MODIFIERS", "ST-CONVERT"], fromStep, toStep, omitSteps)
+        self.enterState(self.STATE_CLASSIFY, ["TRIGGERS", "EDGES", "UNMERGING", "MODIFIERS", "VALIDATE", "ST-CONVERT"], fromStep, toStep, omitSteps)
         #self.enterState(self.STATE_CLASSIFY, ["TRIGGERS", "RECALL-ADJUST", "EDGES", "UNMERGING", "MODIFIERS", "ST-CONVERT"], fromStep, toStep)
         self.setWorkDir(workDir)
         if workDir == None:
@@ -340,9 +349,14 @@ class EventDetector(Detector):
                 xml = self.modifierDetector.classifyToXML(xml, self.model, None, workOutputTag, goldData=goldData, parse=self.parse)
             else:
                 print >> sys.stderr, "No model for modifier detection"
+        if self.checkStep("VALIDATE"):
+            xml = self.getWorkFile(xml, [workOutputTag + "modifier-pred.xml.gz", workOutputTag + "unmerging-pred.xml.gz", workOutputTag + "edge-pred.xml.gz"])
+            self.structureAnalyzer.load(model)
+            self.structureAnalyzer.validate(xml)
+            ETUtils.write(xml, workOutputTag + "validate-pred.xml.gz")
         if self.checkStep("ST-CONVERT"):
             if stParams["convert"]:
-                xml = self.getWorkFile(xml, [workOutputTag + "modifier-pred.xml.gz", workOutputTag + "unmerging-pred.xml.gz", workOutputTag + "edge-pred.xml.gz"])
+                xml = self.getWorkFile(xml, [workOutputTag + "validate-pred.xml.gz", workOutputTag + "modifier-pred.xml.gz", workOutputTag + "unmerging-pred.xml.gz", workOutputTag + "edge-pred.xml.gz"])
                 Utils.STFormat.ConvertXML.toSTFormat(xml, output+"-events.tar.gz", outputTag="a2", writeScores=(stParams["scores"] == True))
                 if stParams["evaluate"]: #self.stEvaluator != None:
                     task = self.task

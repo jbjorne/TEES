@@ -98,12 +98,13 @@ class SingleStageDetector(Detector):
         self.setWorkDir(workDir)
         self.enterState(self.STATE_TRAIN, ["ANALYZE", "EXAMPLES", "BEGIN-MODEL", "END-MODEL", "BEGIN-COMBINED-MODEL", "END-COMBINED-MODEL"], fromStep, toStep)
         if self.checkStep("ANALYZE"):
+            # General training initialization done at the beginning of the first state
             self.model = self.initModel(self.model, [("exampleStyle", self.tag+"example-style"), ("classifierParameters", self.tag+"classifier-parameters-train")])
             self.saveStr(self.tag+"parse", parse, self.model)
             if task != None:
                 self.saveStr(self.tag+"task", task, self.model)
-            print >> sys.stderr, "Structure analysis for training set " + str(trainData)
-            self.structureAnalyzer.analyze(trainData, self.model)
+            # Perform structure analysis
+            self.structureAnalyzer.analyze([optData, trainData], self.model)
             print >> sys.stderr, self.structureAnalyzer.toString()
         self.model = self.openModel(model, "a") # Devel model already exists, with ids etc
         if self.checkStep("EXAMPLES"):
@@ -127,7 +128,12 @@ class SingleStageDetector(Detector):
         workOutputTag = os.path.join(self.workDir, os.path.basename(output) + "-")
         xml = self.classifyToXML(data, model, None, workOutputTag, 
             model.get(self.tag+"classifier-model"), goldData, parse, float(model.getStr("recallAdjustParameter", defaultIfNotExist=1.0)))
-        shutil.copy2(workOutputTag+self.tag+"pred.xml.gz", output+"-pred.xml.gz")
+        if (validate):
+            self.structureAnalyzer.load(model)
+            self.structureAnalyzer.validate(xml)
+            ETUtils.write(xml, output+"-pred.xml.gz")
+        else:
+            shutil.copy2(workOutputTag+self.tag+"pred.xml.gz", output+"-pred.xml.gz")
         EvaluateInteractionXML.run(self.evaluator, xml, data, parse)
         stParams = self.getBioNLPSharedTaskParams(self.bioNLPSTParams, model)
         if stParams["convert"]: #self.useBioNLPSTFormat:
