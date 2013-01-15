@@ -233,16 +233,14 @@ class StructureAnalyzer():
             s += entityType + argString + "\n"
         for relType in sorted(self.relations.keys()):
             s += "RELATION " + relType
-            if relations[relType][0]:
-                s += "\t directed \t"
+            if self.relations[relType][0]:
+                s += "\tdirected\t"
             else:
-                s += "\t undirected \t"
-            s += ",".join(sorted(list(relations[relType][1])))
-            s += "\t" + ",".join(sorted(list(relations[relType][1]))) + "\n"
+                s += "\tundirected\t"
+            s += ",".join(sorted(list(self.relations[relType][1])))
+            s += "\t" + ",".join(sorted(list(self.relations[relType][2]))) + "\n"
         for modType in sorted(self.modifiers.keys()):
             s += "MODIFIER " + modType + "\t" + ",".join(sorted(list(self.modifiers[modType]))) + "\n"
-        if self.sites != None:
-            s += "SITES\t" + ",".join(sorted(list(self.sites))) + "\n"
         return s
     
     def save(self, model, filename=None):
@@ -276,7 +274,7 @@ class StructureAnalyzer():
         for line in lines:
             splits = line.strip().split("\t")
             defType, e1Type = splits[0].split()
-            if defType not in ["EVENT", "ENTITY", "RELATION", "SITES", "MODIFIER"]:
+            if defType not in ["EVENT", "ENTITY", "RELATION", "MODIFIER"]:
                 raise Exception("Unknown structure definition " + str(defType))
             if defType in ["EVENT", "ENTITY"]: # in the graph, entities are just events with no arguments
                 for intType in interactionTypes:
@@ -290,8 +288,6 @@ class StructureAnalyzer():
                 if len(splits) != 4:
                     raise Exception("Incorrect structure definition \"" + line.strip() + "\"")
                 self.relations[e1Type] = [splits[0] == "directed", splits[1].split(","), splits[2].split(",")]
-            elif defType == "SITES":
-                self.sites = set(splits[1].split(","))
             elif defType == "MODIFIER":
                 self.modifiers[e1Type] = set(splits[1].split(","))
                 
@@ -333,23 +329,20 @@ class StructureAnalyzer():
                 for interaction in document.getiterator("interaction"):
                     if interaction.get("relation") == "True":
                         relType = interaction.get("type")
-                        if not self.relations[relType]:
+                        if relType not in self.relations:
                             self.relations[relType] = [None, set(), set()]
-                        isDirected = eval(interaction.get("directed", "False"))
+                        if interaction.get("directed") == "True":
+                            isDirected = True
+                        elif interaction.get("directed") in (None, "False"):
+                            isDirected = False
                         if self.relations[relType][0] == None: # no relation of this type has been seen yet
-                            self.relations[relType][0] == isDirected
+                            self.relations[relType][0] = isDirected
                         elif self.relations[relType][0] != isDirected:
                             raise Exception("Conflicting relation directed-attribute for already defined relation of type " + relType)
                         self.relations[relType][1].add(entityById[interaction.get("e1")].get("type"))
                         self.relations[relType][2].add(entityById[interaction.get("e2")].get("type"))
                     else:
                         interactionsByE1[interaction.get("e1")].append(interaction)
-                    # check for sites
-                    if interaction.get("type") == "Site" and interaction.get("parent") != None:
-                        parentInteraction = interactionById[interaction.get("parent")]
-                        if self.sites == None:
-                            self.sites = set()
-                        self.sites.add(entityById[parentInteraction.get("e1")].get("type") + " " + parentInteraction.get("type"))
                 # process events
                 for entity in document.getiterator("entity"):
                     currentArgCounts = defaultdict(int)# copy.copy(countsTemplate)
