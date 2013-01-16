@@ -101,6 +101,10 @@ def ETFromObj(obj):
         #not a string, not a tree, not an element, should be a stream
         #let's parse it
         return ElementTree.parse(obj)
+    
+def escapeText(text):
+    import xml.sax.saxutils
+    return xml.sax.saxutils.escape(text).replace("'", "&apos;").replace("\"", "&quot;")
 
 class ETWriter():
     def __init__(self, out):
@@ -125,18 +129,19 @@ class ETWriter():
     
     # open element
     def begin(self, element):
+        self._flush()
         self.tags.append(element.tag)
         self.beginString = self.indentLevel * "  " + "<" + element.tag
         for key in sorted(element.attrib.keys()):
-            self.beginString += " " + key + "=\"" + element.get(key) + "\""
-        self.beginString += ">"
+            self.beginString += " " + key + "=\"" + escapeText(element.get(key)) + "\""
+        self.beginString += ">" + "\n"
         self.indentLevel += 1
         self.lastElement = element
     
     def _flush(self):
         if self.beginString != None:
             self.out.write(self.beginString)
-            self.out.write("\n" + self.indentLevel * "  ")
+            #self.out.write("\n" + self.indentLevel * "  ")
         self.beginString = None
     
     # close element
@@ -146,14 +151,17 @@ class ETWriter():
             self.beginString = None
             self.write(element)
         else:
-            self.out.write(self.indentLevel * "  " + "</" + element.tag + ">\n")
+            self.out.write(self.indentLevel * "  " + "</" + element.tag + ">")
+            if self.indentLevel > 0:
+                self.out.write("\n")
         self.lastElement = None
         return self.tags.pop()
     
     def write(self, element):
         self._flush()
         indent(element, self.indentLevel)
-        self.out.write(ElementTree.tostring(element, "utf-8"))
+        element.tail = element.tail[:-self.indentLevel * 2]
+        self.out.write(self.indentLevel * "  " + ElementTree.tostring(element, "utf-8"))
         self.lastElement = None
 
 def ETIteratorFromObj(obj, events=None, parser=None):
