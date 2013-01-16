@@ -14,6 +14,7 @@ import Utils.STFormat.Compare
 import shutil
 import atexit
 import types
+import tempfile
 from Core.Model import Model
 from Detectors.StepSelector import StepSelector
 from Detectors.Preprocessor import Preprocessor
@@ -22,7 +23,7 @@ def train(output, task=None, detector=None, inputFiles=None, models=None, parse=
           processUnmerging=None, processModifiers=None, isSingleStage=False, 
           bioNLPSTParams=None, preprocessorParams=None, exampleStyles=None, 
           classifierParams=None,  doFullGrid=False, deleteOutput=False, copyFrom=None, 
-          log="log.txt", step=None, omitSteps=None, debug=False, connection=None):
+          log="log.txt", step=None, omitSteps=None, debug=False, connection=None, subset=None):
     """
     Train a new model for event or relation detection.
     
@@ -47,12 +48,14 @@ def train(output, task=None, detector=None, inputFiles=None, models=None, parse=
     @param omitSteps: step=substep parameters, where multiple substeps can be defined.
     @param debug: In debug mode, more output is shown, and some temporary intermediate files are saved
     @param connection: A parameter set defining a local or remote connection for training the classifier
+    @param subset: A parameter set for making subsets of input files
     """
     # Insert default arguments where needed
     inputFiles = Parameters.get(inputFiles, {"train":None, "devel":None, "test":None})
     models = Parameters.get(models, {"devel":None, "test":None})
     exampleStyles = Parameters.get(exampleStyles, {"examples":None, "trigger":None, "edge":None, "unmerging":None, "modifiers":None})
     classifierParams = Parameters.get(classifierParams, {"examples":None, "trigger":None, "recall":None, "edge":None, "unmerging":None, "modifiers":None})
+    subset = Parameters.get(subset, {"train":None, "devel":None, "test":None, "seed":0, "all":None})
     processUnmerging = getDefinedBool(processUnmerging)
     processModifiers = getDefinedBool(processModifiers)
     # Initialize working directory
@@ -60,6 +63,7 @@ def train(output, task=None, detector=None, inputFiles=None, models=None, parse=
     # Get task specific parameters
     detector, processUnmerging, processModifiers, isSingleStage, bioNLPSTParams, preprocessorParams, exampleStyles, classifierParams, removeNamesFromEmpty = getTaskSettings(task, 
         detector, processUnmerging, processModifiers, isSingleStage, bioNLPSTParams, preprocessorParams, inputFiles, exampleStyles, classifierParams)   
+    getSubsets(inputFiles, subset)
     if task != None: task = task.replace("-MINI", "").replace("-FULL", "")
     # Define processing steps
     selector, detectorSteps, omitDetectorSteps = getSteps(step, omitSteps, ["TRAIN", "DEVEL", "EMPTY", "TEST"])
@@ -181,6 +185,17 @@ def getDetector(detector, model=None):
         detector = detector
     return detector, detectorName
 
+def getSubsets(inputFiles, subset, outdir="training"):
+    for dataset in ("devel", "train", "test"):
+        if inputFiles[dataset] != None and (subset[dataset] != None or subset["all"] != None):
+            fraction = subset[dataset]
+            if fraction == None:
+                fraction = subset["all"]
+            if outdir == None:
+                outdir = tempfile.mkdtemp()
+            outFileName = os.path.join(outdir, "subset_" + str(fraction) + "_" + str(seed) + "_" + os.path.basename(inputFiles[dataset]))
+            getSubset(inputFiles[dataset], outFileName, float(fraction), subset["seed"])
+            inputFiles[dataset] = outFileName
 
 def workdir(path, deleteIfExists=True, copyFrom=None, log="log.txt"):
     # When using a template, always remove existing work directory
@@ -443,6 +458,7 @@ if __name__=="__main__":
     debug.add_option("--noLog", default=False, action="store_true", dest="noLog", help="Do not keep a log file")
     debug.add_option("--clearAll", default=False, action="store_true", dest="clearAll", help="Delete all files")
     debug.add_option("--debug", default=False, action="store_true", dest="debug", help="More verbose output")
+    event.add_option("--subset", default=None, dest="subset", help="")
     optparser.add_option_group(debug)
     (options, args) = optparser.parse_args()
     
