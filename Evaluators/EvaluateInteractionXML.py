@@ -87,7 +87,7 @@ def getEventPredictions(entityMap, allGoldEntities, interactionMap, classSet, ne
     id = "Unknown.x0"
     # analyze events
     for predictedEntity, goldEntities in entityMap.iteritems():
-        if predictedEntity.get("isName") == "True":
+        if predictedEntity.get("given") == "True":
             continue
         found = False
         predictedEntityType = predictedEntity.get("type")
@@ -115,7 +115,7 @@ def getEventPredictions(entityMap, allGoldEntities, interactionMap, classSet, ne
         for e in eList:
             mappedTargetEntities.add(e)
     for e in allGoldEntities:
-        if e.get("isName") == "True":
+        if e.get("given") == "True":
             continue
         if not e in mappedTargetEntities: # false negative gold
             examples.append( [id, classSet.getId(e.get("type")), None, None] )
@@ -130,7 +130,7 @@ def getEntityPredictions(entityMap, targetEntities, classSet, negativeClassId):
     predictions = []
     id = "Unknown.x0"
     for entityFrom, entitiesTo in entityMap.iteritems():
-        if entityFrom.get("isName") == "True":
+        if entityFrom.get("given") == "True":
             continue
         found = False
         for entityTo in entitiesTo:
@@ -150,7 +150,7 @@ def getEntityPredictions(entityMap, targetEntities, classSet, negativeClassId):
         for e in eList:
             mappedTargetEntities.add(e)
     for e in targetEntities:
-        if e.get("isName") == "True":
+        if e.get("given") == "True":
             continue
         if not e in mappedTargetEntities: # false negative gold
             examples.append( [id, classSet.getId(e.get("type")), None, None] )

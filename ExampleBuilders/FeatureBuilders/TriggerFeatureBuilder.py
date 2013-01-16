@@ -59,9 +59,9 @@ class TriggerFeatureBuilder(FeatureBuilder):
         features["_txt_"+tokTxt]=1
         features["_POS_"+token.get("POS")]=1
         if sentenceGraph.tokenIsName[token]:
-            features["_isName"]=1
+            features["_given"]=1
             for entity in sentenceGraph.tokenIsEntityHead[token]:
-                if entity.get("isName") == "True":
+                if entity.get("given") == "True":
                     features["_annType_"+self.getEntityType(entity)]=1
         # Only for Unmerging!
         if self.useNonNameEntities:
@@ -96,7 +96,7 @@ class TriggerFeatureBuilder(FeatureBuilder):
         #if not "names" in self.styles:
         namedEntityCount = 0
         for entity in sentenceGraph.entities:
-            if entity.get("isName") == "True": # known data which can be used for features
+            if entity.get("given") == "True": # known data which can be used for features
                 namedEntityCount += 1
         self.namedEntityCountFeature = "nameCount_" + str(namedEntityCount)
         
@@ -244,7 +244,7 @@ class TriggerFeatureBuilder(FeatureBuilder):
                 for tokenFeature in tokenFeatures:
                     self.setFeature(strDepthLeft + tokenFeature, tokenWeights[tokenFeature])
 #                for entity in sentenceGraph.tokenIsEntityHead[nextToken]:
-#                    if entity.get("isName") == "True":
+#                    if entity.get("given") == "True":
 #                        features[self.featureSet.getId("name_dist_"+strDepthLeft)] = 1
 #                        features[self.featureSet.getId("name_dist_"+strDepthLeft+entity.get("type"))] = 1
 #                features[self.featureSet.getId("POS_dist_"+strDepthLeft+nextToken.get("POS"))] = 1
@@ -264,7 +264,7 @@ class TriggerFeatureBuilder(FeatureBuilder):
                 for tokenFeature in tokenFeatures:
                     self.setFeature(strDepthLeft + tokenFeature, tokenWeights[tokenFeature])
 #                for entity in sentenceGraph.tokenIsEntityHead[nextToken]:
-#                    if entity.get("isName") == "True":
+#                    if entity.get("given") == "True":
 #                        features[self.featureSet.getId("name_dist_"+strDepthLeft)] = 1
 #                        features[self.featureSet.getId("name_dist_"+strDepthLeft+entity.get("type"))] = 1
 #                features[self.featureSet.getId("POS_dist_"+strDepthLeft+nextToken.get("POS"))] = 1

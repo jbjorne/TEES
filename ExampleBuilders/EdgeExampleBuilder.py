@@ -424,7 +424,7 @@ class EdgeExampleBuilder(ExampleBuilder):
                     eJ = entities[j]
                     tI = sentenceGraph.entityHeadTokenByEntity[eI]
                     tJ = sentenceGraph.entityHeadTokenByEntity[eJ]
-                    #if "no_ne_interactions" in self.styles and eI.get("isName") == "True" and eJ.get("isName") == "True":
+                    #if "no_ne_interactions" in self.styles and eI.get("given") == "True" and eJ.get("given") == "True":
                     #    continue
                     if eI.get("type") == "neg" or eJ.get("type") == "neg":
                         continue
@@ -635,11 +635,11 @@ class EdgeExampleBuilder(ExampleBuilder):
                     e2Offset = Range.charOffsetToSingleTuple(entity2.get("charOffset"))
                     if Range.contains(e1Offset, e2Offset):
                         features[self.featureSet.getId("e1_contains_e2")] = 1
-                        if entity2.get("isName") == "True":
+                        if entity2.get("given") == "True":
                             features[self.featureSet.getId("e1_contains_e2name")] = 1
                     if Range.contains(e2Offset, e1Offset):
                         features[self.featureSet.getId("e2_contains_e1")] = 1
-                        if entity1.get("isName") == "True":
+                        if entity1.get("given") == "True":
                             features[self.featureSet.getId("e2_contains_e1name")] = 1
                 if self.styles["ddi_features"]:
                     self.drugFeatureBuilder.setFeatureVector(features)
@@ -726,13 +726,13 @@ class EdgeExampleBuilder(ExampleBuilder):
                 if self.styles["genia_limits"] and not self.styles["no_task"]:
                     e1Type = entity1.get("type")
                     e2Type = entity2.get("type")
-                    assert(entity1.get("isName") == "False")
-                    if entity2.get("isName") == "True":
+                    assert(entity1.get("given") in (None, "False"))
+                    if entity2.get("given") == "True":
                         features[self.featureSet.getId("GENIA_target_protein")] = 1
                     else:
                         features[self.featureSet.getId("GENIA_nested_event")] = 1
                     if e1Type.find("egulation") != -1: # leave r out to avoid problems with capitalization
-                        if entity2.get("isName") == "True":
+                        if entity2.get("given") == "True":
                             features[self.featureSet.getId("GENIA_regulation_of_protein")] = 1
                         else:
                             features[self.featureSet.getId("GENIA_regulation_of_event")] = 1

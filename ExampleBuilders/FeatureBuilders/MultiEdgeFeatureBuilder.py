@@ -145,24 +145,24 @@ class MultiEdgeFeatureBuilder(FeatureBuilder):
                     self.setFeature("e2_"+feature, 1)
         if self.entity1 != None and self.entity2 != None:
             entityCombination = ""
-            if self.entity1.get("isName") != None:
-                if self.entity1.get("isName") == "True":
-                    entityCombination += "e1_Entity_"
-                else:
-                    entityCombination += "e1_InteractionWord_"
-                    if self.predictedRange != None:
-                        self.buildPredictedValueFeatures(self.entity1, "e1")
-            else:
+            #if self.entity1.get("given") != None:
+            if self.entity1.get("given") == "True":
                 entityCombination += "e1_Entity_"
-            if self.entity2.get("isName") != None:
-                if self.entity2.get("isName") == "True":
-                    entityCombination += "e2_Entity"
-                else:
-                    entityCombination += "e2_InteractionWord"
-                    if self.predictedRange != None:
-                        self.buildPredictedValueFeatures(self.entity2, "e2")
             else:
+                entityCombination += "e1_InteractionWord_"
+                if self.predictedRange != None:
+                    self.buildPredictedValueFeatures(self.entity1, "e1")
+            #else:
+            #    entityCombination += "e1_Entity_"
+            #if self.entity2.get("given") != None:
+            if self.entity2.get("given") == "True":
                 entityCombination += "e2_Entity"
+            else:
+                entityCombination += "e2_InteractionWord"
+                if self.predictedRange != None:
+                    self.buildPredictedValueFeatures(self.entity2, "e2")
+            #else:
+            #    entityCombination += "e2_Entity"
             self.setFeature(entityCombination, 1)
             self.setFeature("eTypes_"+self.getEntityType(self.entity1)+"_"+self.getEntityType(self.entity2), 1)
             

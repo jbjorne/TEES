@@ -29,7 +29,7 @@ def getEmptyCorpus(xml, deletionRules=None, removeNames=False):
         if removeNames:
             deletionRules = {"interaction":{},"entity":{}}
         else:
-            deletionRules = {"interaction":{},"entity":{"isName":"False"}}
+            deletionRules = {"interaction":{},"entity":{"given":(None, "False")}}
     # Remove elements and return the emptied XML
     return processCorpus(xml, None, deletionRules)
     
@@ -70,7 +70,8 @@ def processCorpus(inputFilename, outputFilename, rules):
     
     for eType in rules.keys():
         for attrRule in rules[eType].keys():
-            rules[eType][attrRule] = rules[eType][attrRule].split("|")
+            if type(rules[eType][attrRule]) in types.StringTypes: 
+                rules[eType][attrRule] = rules[eType][attrRule].split("|")
     
     documents = corpusRoot.findall("document")
     counter = ProgressCounter(len(documents), "Documents")
@@ -116,7 +117,7 @@ if __name__=="__main__":
         optparser.print_help()
         sys.exit(1)
 
-    # Rules e.g. "{\"pair\":{},\"interaction\":{},\"entity\":{\"isName\":\"False\"}}"
+    # Rules e.g. "{\"pair\":{},\"interaction\":{},\"entity\":{\"given\":\"False\"}}"
     rules = eval(options.rules)
     print >> sys.stderr, "Rules:", rules
     processCorpus(options.input, options.output, rules)

@@ -549,6 +549,7 @@ class SentenceGraph:
         This method is used to define which tokens belong to _named_ entities.
         Named entities are sometimes masked when testing learning of interactions, to
         prevent the system making a trivial decision based on commonly interacting names.
+        This function assumes that all given entities are named entities.
         """
         self.tokenIsName = {}
         self.tokenIsEntity = {}
@@ -566,12 +567,14 @@ class SentenceGraph:
                 for entityOffset in entityOffsets:
                     if Range.overlap(entityOffset, tokenOffset):
                         self.tokenIsEntity[token] = True
-                        if entity.get("isName") != None:
-                            if entity.get("isName") == "True":
-                                self.tokenIsName[token] = True
-                        else:
-                            entity.set("isName", "True")
+                        if entity.get("given") == "True":
                             self.tokenIsName[token] = True
+#                        if entity.get("given") != None:
+#                            if entity.get("given") == "True":
+#                                self.tokenIsName[token] = True
+#                        else:
+#                            entity.set("given", "True")
+#                            self.tokenIsName[token] = True
                 if Range.overlap(entityHeadOffset, tokenOffset):
                     self.tokenIsEntityHead[token].append(entity)
                                                           
@@ -592,7 +595,7 @@ class SentenceGraph:
         c = SentenceGraph(self.sentenceElement, self.tokens, self.dependencies)
         namedEntities = []
         for entity in self.entities:
-            if entity.get("isName") == "True":
+            if entity.get("given") == "True":
                 namedEntities.append(entity)
         c.mapInteractions(namedEntities, [])
         return c
@@ -624,7 +627,7 @@ class SentenceGraph:
             self.mergedEntities.append(self.entities[i])
             #mergedIds[entities[i]] = entities[i].get("id")
             self.mergedEntityToDuplicates[self.entities[i]] = []
-            if self.entities[i].get("isName") == "True": # named entities are never merged
+            if self.entities[i].get("given") == "True": # named entities are never merged
                 continue
             for j in range(i+1, len(self.entities)): # loop through all entities coming after entity "i"
                 # Entities are duplicates if they have the same type and head token

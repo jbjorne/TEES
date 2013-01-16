@@ -10,7 +10,7 @@ from collections import defaultdict
 
 def compareEntities(entity1, entity2):
     if entity1.get("charOffset") == entity2.get("charOffset") and entity1.get("type") == entity2.get("type"):
-        #assert(entity1.get("isName") == entity2.get("isName"))
+        #assert(entity1.get("given") == entity2.get("given"))
         assert(entity1.get("headOffset") == entity2.get("headOffset"))
         assert(entity1.get("text") == entity2.get("text"))
         return True

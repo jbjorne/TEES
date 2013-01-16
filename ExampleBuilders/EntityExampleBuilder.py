@@ -78,7 +78,7 @@ class EntityExampleBuilder(ExampleBuilder):
         types = set()
         entityIds = set()
         for entity in entities:
-            if entity.get("isName") == "True" and self.styles["all_tokens"]:
+            if entity.get("given") == "True" and self.styles["all_tokens"]:
                 continue
             if entity.get("type") == "Entity" and self.styles["genia_task1"]:
                 continue
@@ -127,9 +127,9 @@ class EntityExampleBuilder(ExampleBuilder):
         features["_txt_"+tokTxt]=1
         features["_POS_"+token.get("POS")]=1
         if sentenceGraph.tokenIsName[token] and not self.styles["names"]:
-            features["_isName"]=1
+            features["_given"]=1
             for entity in sentenceGraph.tokenIsEntityHead[token]:
-                if entity.get("isName") == "True":
+                if entity.get("given") == "True":
                     features["_annType_"+entity.get("type")]=1
 #        # Filip's gazetteer based features (can be used separately from exclude_gazetteer)
 #        if "gazetteer_features" in self.styles:
@@ -184,7 +184,7 @@ class EntityExampleBuilder(ExampleBuilder):
         if not self.styles["names"]:
             namedEntityCount = 0
             for entity in sentenceGraph.entities:
-                if entity.get("isName") == "True": # known data which can be used for features
+                if entity.get("given") == "True": # known data which can be used for features
                     namedEntityCount += 1
             namedEntityCountFeature = "nameCount_" + str(namedEntityCount)
             # NOTE!!! This will change the number of examples and omit
@@ -491,7 +491,7 @@ class EntityExampleBuilder(ExampleBuilder):
                 for tokenFeature in tokenFeatures:
                     features[self.featureSet.getId(strDepthLeft + tokenFeature)] = tokenWeights[tokenFeature]
 #                for entity in sentenceGraph.tokenIsEntityHead[nextToken]:
-#                    if entity.get("isName") == "True":
+#                    if entity.get("given") == "True":
 #                        features[self.featureSet.getId("name_dist_"+strDepthLeft)] = 1
 #                        features[self.featureSet.getId("name_dist_"+strDepthLeft+entity.get("type"))] = 1
 #                features[self.featureSet.getId("POS_dist_"+strDepthLeft+nextToken.get("POS"))] = 1
@@ -513,7 +513,7 @@ class EntityExampleBuilder(ExampleBuilder):
                 for tokenFeature in tokenFeatures:
                     features[self.featureSet.getId(strDepthLeft + tokenFeature)] = tokenWeights[tokenFeature]
 #                for entity in sentenceGraph.tokenIsEntityHead[nextToken]:
-#                    if entity.get("isName") == "True":
+#                    if entity.get("given") == "True":
 #                        features[self.featureSet.getId("name_dist_"+strDepthLeft)] = 1
 #                        features[self.featureSet.getId("name_dist_"+strDepthLeft+entity.get("type"))] = 1
 #                features[self.featureSet.getId("POS_dist_"+strDepthLeft+nextToken.get("POS"))] = 1
@@ -528,7 +528,7 @@ class EntityExampleBuilder(ExampleBuilder):
     def getNamedEntityHeadTokens(self, sentenceGraph):
         headTokens = []
         for entity in sentenceGraph.entities:
-            if entity.get("isName") == "True": # known data which can be used for features
+            if entity.get("given") == "True": # known data which can be used for features
                 headTokens.append(sentenceGraph.entityHeadTokenByEntity[entity])
         return headTokens
                 

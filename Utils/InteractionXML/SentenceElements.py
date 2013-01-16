@@ -49,7 +49,7 @@ class SentenceElements:
             self.entities = entityElements
             for entityElement in entityElements:
                 if removeNameInfo:
-                    entityElement.set("isName","False")
+                    entityElement.set("given","False")
                 entityId = entityElement.get("id")
                 if entityId == None:
                     raise Exception("entity element has no id")

@@ -526,7 +526,7 @@ class UnmergingExampleBuilder(ExampleBuilder):
     
         # Common features
 #        if e1Type.find("egulation") != -1: # leave r out to avoid problems with capitalization
-#            if entity2.get("isName") == "True":
+#            if entity2.get("given") == "True":
 #                features[self.featureSet.getId("GENIA_regulation_of_protein")] = 1
 #            else:
 #                features[self.featureSet.getId("GENIA_regulation_of_event")] = 1
@@ -540,7 +540,7 @@ class UnmergingExampleBuilder(ExampleBuilder):
         self.buildEdgeFeatures(sentenceGraph, paths, features, eventToken, argToken, tag)
         self.triggerFeatureBuilder.tag = tag + "trg_"
         self.triggerFeatureBuilder.buildFeatures(argToken)
-        if argEntity.get("isName") == "True":
+        if argEntity.get("given") == "True":
             self.setFeature(tag+"Protein", 1)
         else:
             self.setFeature(tag+"Event", 1)

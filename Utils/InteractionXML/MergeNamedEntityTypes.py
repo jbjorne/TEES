@@ -21,7 +21,7 @@ if __name__=="__main__":
     entities = sourceRoot.getiterator("entity")
     mergedByType = {}
     for entity in entities:
-        if entity.attrib.has_key("isName") and entity.attrib["isName"] == "True":
+        if entity.attrib.has_key("given") and entity.attrib["given"] == "True":
             if not mergedByType.has_key(entity.attrib["type"]):
                 mergedByType[entity.attrib["type"]] = 0
             mergedByType[entity.attrib["type"]] += 1

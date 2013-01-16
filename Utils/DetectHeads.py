@@ -15,7 +15,7 @@ def getTriggers(corpus):
     corpus = ETUtils.ETFromObj(corpus)
     trigDict = {}
     for entity in corpus.getroot().getiterator("entity"):
-        if entity.get("isName") == "True":
+        if entity.get("given") == "True":
             continue
         eType = entity.get("type")
         if not trigDict.has_key(eType):
@@ -145,7 +145,7 @@ def findHeadsDictionary(corpus, stringsFrom, parse, tokenization):
         for entity in sentence.entities:
             if entity.get("headOffset") != None:
                 continue
-            if entity.get("isName") == "True": # Only for triggers
+            if entity.get("given") == "True": # Only for triggers
                 continue
             #if tokenHeadScores == None:
             #    tokenHeadScores = getTokenHeadScores(sentence.tokens, sentence.dependencies, sentenceId=sentence.sentence.get("id"))

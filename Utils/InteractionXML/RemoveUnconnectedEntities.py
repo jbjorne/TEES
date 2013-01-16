@@ -20,7 +20,7 @@ def removeUnconnectedEntities(input, output=None):
         for entity in document.getiterator("entity"):
             entities.append(entity)
         for entity in entities:
-            if entity.get("isName") == "True": # never remove named entities
+            if entity.get("given") == "True": # never remove named entities
                 continue
             eId = entity.get("id")
             if eId not in connected:

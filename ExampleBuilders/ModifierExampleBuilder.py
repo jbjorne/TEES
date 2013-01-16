@@ -125,9 +125,9 @@ class ModifierExampleBuilder(ExampleBuilder):
                 features["_spec_stem"]=1
                 features["_spec_stem_"+tokStem]=1
         if sentenceGraph.tokenIsName[token]:
-            features["_isName"]=1
+            features["_given"]=1
             for entity in sentenceGraph.tokenIsEntityHead[token]:
-                if entity.get("isName") == "True":
+                if entity.get("given") == "True":
                     features["_annType_"+entity.get("type")]=1
         if self.gazetteer and tokTxt.lower() in self.gazetteer:
             for label,weight in self.gazetteer[tokTxt.lower()].items():
@@ -160,7 +160,7 @@ class ModifierExampleBuilder(ExampleBuilder):
         namedEntityCount = 0
         entityCount = 0
         for entity in sentenceGraph.entities:
-            if entity.get("isName") == "True": # known data which can be used for features
+            if entity.get("given") == "True": # known data which can be used for features
                 namedEntityCount += 1
             else: # known data which can be used for features
                 entityCount += 1
@@ -209,7 +209,7 @@ class ModifierExampleBuilder(ExampleBuilder):
             #token = sentenceGraph.tokens[i]
             token = sentenceGraph.entityHeadTokenByEntity[entity]
             # Recognize only non-named entities (i.e. interaction words)
-            if entity.get("isName") == "True":
+            if entity.get("given") == "True":
                 continue
             
             # CLASS

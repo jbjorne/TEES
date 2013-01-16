@@ -83,7 +83,7 @@ def removeDuplicates(input):
         origTriggers = []
         newTriggers = []
         for entity in sentence.findall("entity"):
-            if entity.get("isName") == "False":
+            if entity.get("given") in (None, "False"):
                 if entity.get("source") == "GENIA_event_annotation_0.9":
                     newTriggers.append(entity)
                 else:
@@ -159,7 +159,7 @@ def run(input, output, eventDir, parse="split-mccc-preparsed", verbose=False):
                         counts["filtered-triggers"] += 1
                         continue
                     trigger = ET.Element("entity")
-                    trigger.set("isName", "False")
+                    #trigger.set("given", "False")
                     trigger.set("charOffset", str(event[0]) + "-" + str(event[1]))
                     trigger.set("type", str(event[2]))
                     trigger.set("text", str(event[3]))

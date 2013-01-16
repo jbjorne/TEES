@@ -13,7 +13,7 @@ class TokenFeatureBuilder(FeatureBuilder):
             self.features[self.featureSet.getId(tag+"txt_"+sentenceGraph.getTokenText(t))] = 1
             self.features[self.featureSet.getId(tag+"POS_"+t.attrib["POS"])] = 1
             if sentenceGraph.tokenIsName[t]:
-                self.features[self.featureSet.getId(tag+"isName")] = 1
+                self.features[self.featureSet.getId(tag+"given")] = 1
             count += 1
         count = 1
         for i in range(tokenIndex-1,max(tokenIndex-rangeNeg-1, -1),-1):
@@ -22,7 +22,7 @@ class TokenFeatureBuilder(FeatureBuilder):
             self.features[self.featureSet.getId(tag+"txt_"+sentenceGraph.getTokenText(t))] = 1
             self.features[self.featureSet.getId(tag+"POS_"+t.attrib["POS"])] = 1
             if sentenceGraph.tokenIsName[t]:
-                self.features[self.featureSet.getId(tag+"isName")] = 1
+                self.features[self.featureSet.getId(tag+"given")] = 1
             count += 1
     
     def buildContentFeatures(self, tokenIndex, text, duplets=True, triplets=True):

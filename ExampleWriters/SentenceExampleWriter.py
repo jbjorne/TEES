@@ -172,7 +172,7 @@ class SentenceExampleWriter:
         if entityElements != None:
             entityCount = len(entityElements) # get the count _before_ removing entities
             for entityElement in entityElements:
-                if entityElement.get("isName") == "False": # interaction word
+                if entityElement.get("given") in (None, "False"): # interaction word
                     removed.append(entityElement)
                     sentenceElement.remove(entityElement)
         return removed

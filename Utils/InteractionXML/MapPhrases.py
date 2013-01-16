@@ -50,7 +50,7 @@ def getPhrases(parse, tokens, filter=None):
 def removeNamedEntityPhrases(entities, phrases, phraseDict):
     neOffsets = set()
     for entity in entities:
-        if entity.get("isName") != "True":
+        if entity.get("given") != "True":
             continue
         neOffsets.add(entity.get("charOffset"))
     phrasesToKeep = []
@@ -199,7 +199,7 @@ def getPhraseEntityMapping(entities, phraseDict):
     phraseOffsets = phraseDict.keys()
     phraseToEntity = {}
     for entity in entities:
-        if entity.get("isName") == "True":
+        if entity.get("given") == "True":
             continue
         matches = getMatchingPhrases(entity, phraseOffsets, phraseDict)
         if len(matches) == 1:
@@ -220,7 +220,7 @@ def getNECounts(phrases, entities):
         phraseOffset = Range.charOffsetToSingleTuple(phrase.get("charOffset"))
         counts[phrase] = 0
         for entity in entities:
-            if entity.get("isName") != "True": # only check names
+            if entity.get("given") != "True": # only check names
                 continue
             if Range.contains(phraseOffset, Range.charOffsetToSingleTuple(entity.get("charOffset"))):
                 counts[phrase] += 1
@@ -283,7 +283,7 @@ def processCorpus(input, parserName):
                     corefType[interaction.get("e2")] = "Antecedent"
             
             for entity in entities:
-                if entity.get("isName") == "True":
+                if entity.get("given") == "True":
                     continue
                 counts["entity"] += 1
                 print "entity", entity.get("id")

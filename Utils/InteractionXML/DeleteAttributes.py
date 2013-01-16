@@ -69,7 +69,7 @@ if __name__=="__main__":
         optparser.print_help()
         sys.exit(1)
 
-    # Rules e.g. "{\"pair\":{},\"interaction\":{},\"entity\":{\"isName\":\"False\"}}"
+    # Rules e.g. "{\"pair\":{},\"interaction\":{},\"entity\":{\"given\":\"False\"}}"
     rules = eval(options.rules)
     print >> sys.stderr, "Rules:", rules
     processCorpus(options.input, options.output, rules)

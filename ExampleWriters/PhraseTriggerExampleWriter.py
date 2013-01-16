@@ -35,7 +35,7 @@ class PhraseTriggerExampleWriter(SentenceExampleWriter):
         for example in examples:
             prediction = predictionsByExample[example[0]]
             entityElement = ET.Element("entity")
-            entityElement.attrib["isName"] = "False"
+            #entityElement.attrib["given"] = "False"
             headToken = example[3]["t"]
             for token in sentenceObject.tokens:
                 if token.get("id") == headToken:

@@ -232,7 +232,7 @@ class PhraseTriggerExampleBuilder(ExampleBuilder):
         # Mark missed entities in exampleStats
         linkedEntities = set( sum(phraseToEntity.values(), []) )
         for entity in sentenceGraph.entities:
-            if entity.get("isName") != "True" and entity not in linkedEntities:
+            if entity.get("given") != "True" and entity not in linkedEntities:
                 self.exampleStats.addValue("Entities with no phrase", 1)
                 # Marking these as filtered examples was misleading, as examples are per phrase, and these are entities
                 #self.exampleStats.beginExample(entity.get("type"))

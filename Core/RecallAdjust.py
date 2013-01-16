@@ -62,7 +62,7 @@ def adjustEntity(entityNode,targetLabel,multiplier,classRange=None):
 def getClassRanges(entities):
     classRanges = {}
     for entity in entities:
-        if entity.get("isName") == "True":
+        if entity.get("given") == "True":
             continue
         predictions=entity.get("predictions")
         if predictions:

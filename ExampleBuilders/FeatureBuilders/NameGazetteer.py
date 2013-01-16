@@ -73,7 +73,7 @@ class NameGazetteer:
         for sentence in corpus.sentences:
             tokenTuples = self.prepareTokens(sentence.tokens)
             for entity in sentence.entities:
-                if entity.get("isName") == "True":
+                if entity.get("given") == "True":
                     tokens = self.getTokens(entity, tokenTuples)
                     assert len(tokens) > 0
                     self.addName(tokens)

@@ -74,7 +74,7 @@ class EntityExampleWriter(SentenceExampleWriter):
             predictionString = self.getPredictionStrengthString(prediction, classSet, classIds)
             for eType in self.getElementTypes(prediction, classSet, classIds, unmergeEPINegText=unmergeEPINeg): # split merged classes
                 entityElement = ET.Element("entity")
-                entityElement.set("isName", "False")
+                #entityElement.set("given", "False")
                 entityElement.set("charOffset", headToken.get("charOffset"))
                 entityElement.set("headOffset", headToken.get("charOffset"))
                 entityElement.set("text", headToken.get("text"))

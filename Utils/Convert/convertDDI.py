@@ -95,7 +95,7 @@ def fixEntities(xml):
                 sEntity = sText[charOffset[0]:charOffset[1]+1]
                 assert sEntity == entity.get("text") or sEntity.lower() == entity.get("text"), (charOffset, sText, entity.get("text"), entity.get("id"))
                 entity.set("charOffset", Range.tuplesToCharOffset( (charOffset[0], charOffset[1] + 1)))
-                entity.set("isName", "True")
+                entity.set("given", "True")
         for interaction in sentence.findall("interaction"):
             interaction.set("type", "DDI")
     print "Fix counts:", counts

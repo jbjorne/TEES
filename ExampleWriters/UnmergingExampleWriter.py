@@ -77,7 +77,7 @@ class UnmergingExampleWriter(SentenceExampleWriter):
                 self.entitiesByHeadByType[offset] = {}
             # by type
             eType = entity.get("type")
-            if entity.get("isName") != "True":
+            if entity.get("given") != "True":
                 self.entitiesByHeadByType[offset][eType] = []
             else: # add names to structure
                 if not self.entitiesByHeadByType[offset].has_key(eType):
@@ -288,7 +288,7 @@ class UnmergingExampleWriter(SentenceExampleWriter):
             argEntities[i] = self.entitiesByHeadByType[e2HeadOffset][e2Type]
             if len(argEntities[i]) == 0:
                 assert forceAdd
-                if origE2.get("isName") != "True":
+                if origE2.get("given") != "True":
                     argEntities[i] = [self.addEntity(origE2)]
                 else:
                     argEntities[i] = origE2
@@ -305,8 +305,8 @@ class UnmergingExampleWriter(SentenceExampleWriter):
     
     def addEntity(self, entity):
         entityElement = ET.Element("entity")
-        assert entity.get("isName") != "True", entity.attrib
-        entityElement.set("isName", "False")
+        assert entity.get("given") != "True", entity.attrib
+        #entityElement.set("given", "False")
         entityElement.set("charOffset", entity.get("charOffset"))
         entityElement.set("headOffset", entity.get("headOffset")) 
         entityElement.set("text", entity.get("text")) 

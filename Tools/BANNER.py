@@ -128,7 +128,7 @@ def makeEntityElements(beginOffset, endOffset, text, splitNewlines=False, elemen
             if ent.get("charOffset") != bannerOffset:
                 ent.set("origBANNEROffset", bannerOffset)
             ent.set("type", "Protein")
-            ent.set("isName", "True")
+            ent.set("given", "True")
             ent.set("source", "BANNER")
             ent.set("text", text[entityBeginOffset:entityEndOffset])
             assert ent.get("text") in text, (ent.get("text"), text)
@@ -312,7 +312,7 @@ def run(input, output=None, elementName="entity", processElement="document", spl
                         #ent.set("id", sentenceId + ".e" + str(entityCount))
                         #ent.set("charOffset", str(beginOffset) + "-" + str(prevEnd))
                         #ent.set("type", "Protein")
-                        #ent.set("isName", "True")
+                        #ent.set("given", "True")
                         #ent.set("source", "BANNER")
                         #ent.set("text", sText[beginOffset:prevEnd+1])
                         entities = makeEntityElements(beginOffset, prevEnd, sText, splitNewlines, elementName)

@@ -240,7 +240,7 @@ def splitTokens(tokenization, sentence, logFile=None):
     # of (from,to) tuples.
     entityOffsets = []
     for entity in sentence.getiterator("entity"):
-        if entity.get("isName") != None and entity.get("isName") == "False":
+        if entity.get("given") != None and entity.get("given") == "False":
             continue
         offsets = entity.get("charOffset")
         assert offsets is not None, "Missing charOffset!"
