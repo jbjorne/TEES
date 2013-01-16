@@ -27,7 +27,7 @@ class Document:
     
     def getIdMap(self):
         idMap = {}
-        for ann in self.proteins + self.triggers + self.events:
+        for ann in self.proteins + self.triggers + self.events + self.dependencies + self.words:
             if ann.id in idMap:
                 raise Exception("Duplicate id " + str(ann.id) + " in document " + str(self.id))
             idMap[ann.id] = ann
@@ -35,7 +35,7 @@ class Document:
     
     def connectObjects(self):
         idMap = self.getIdMap()
-        for ann in self.proteins + self.triggers + self.events:
+        for ann in self.proteins + self.triggers + self.events + self.dependencies:
             ann.connectObjects(idMap)
     
     def unlinkSites(self):
@@ -46,7 +46,7 @@ class Document:
         for event in self.events:
             event.connectSites()
 
-    def load(self, dir, a2Tags=["a2"], readExtra=False):
+    def load(self, dir, a2Tags=["a2", "rel"], readExtra=False):
         if self.debug:
             print >> sys.stderr, "Loading document", self.id
         a1Path = os.path.join(dir, self.id + ".a1")
@@ -66,9 +66,6 @@ class Document:
     def loadA1(self, filename, readExtra=False):
         #f = open(filename)
         f = codecs.open(filename, "rt", "utf-8")
-        self.proteins = []
-        self.words = []
-        self.dependencies = []
         lines = f.readlines()
         count = 0
         for line in lines:
@@ -95,10 +92,10 @@ class Document:
         # Mark source file type
         for ann in self.proteins + self.words + self.dependencies:
             ann.fileType = "a1"
+        if len(self.dependencies) > 0:
+            self.connectObjects()
 
     def loadA2(self, filename, readExtra=False):
-        self.triggers = []
-        self.events = []
         f = codecs.open(filename, "rt", "utf-8")
         lines = f.readlines()
         f.close()
@@ -232,7 +229,9 @@ class Annotation:
     def __repr__(self):
         s = "<Ann " + str(self.id) + "," + str(self.type)
         if self.trigger != None:
-            s += ",T=" + str(self.trigger)
+            s += ",R=" + str(self.trigger)
+        if self.text != None:
+            s += ",T=" + str(self.text)
         if self.arguments != None and len(self.arguments) > 0:
             s += ",A=" + str(self.arguments)
         return s + ">"
@@ -479,11 +478,11 @@ def readEvent(string, debug=False):
         event.addArgument(argType, argTarget)
     
     if len(tabSplits) == 3:
-        assert ann.type == "Coref"
-        assert tabSplits[2][0] == "[" and tabSplits[2][-1] == "]", (string, tabSplits)
+        assert event.type == "Coref", event
+        assert tabSplits[2][0] == "[" and tabSplits[2][-1] == "]", (event, string, tabSplits)
         protIds = tabSplits[2][1:-1].split(",")
         for protId in protIds:
-            event.addArgument("Connected", protId.strip())
+            event.addArgument("CorefTarget", protId.strip())
     return event
 
 def readDependencyAnnotation(string):
@@ -570,7 +569,7 @@ def writeSet(documents, output, resultFileTag="a2", debug=False, writeScores=Fal
     if output.endswith(".tar.gz"):
         package(outdir, output, ["a1", "txt", resultFileTag, resultFileTag+".scores"])
         shutil.rmtree(outdir)
-    print counts
+#    print counts
 
 # Convenience functions  
 

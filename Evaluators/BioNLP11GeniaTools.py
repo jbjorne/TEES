@@ -1,6 +1,7 @@
 import sys, os, shutil
 import subprocess
 import tempfile
+import codecs
 thisPath = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.join(thisPath,".."))
 import Utils.Settings as Settings
@@ -158,7 +159,7 @@ def evaluate(source, task, goldDir=None, debug=False):
     elif task == "REN11":
         results = evaluateREN(source, goldDir)
     elif task in ["BB11", "BI11"]:
-        results = evaluateBX(task, source, goldDir)
+        results = evaluateBX(task, source, goldDir, debug=debug)
     elif task == "CO11":
         results = evaluateCO(source, goldDir)
     else:
@@ -182,7 +183,9 @@ def checkEvaluator(corpus, sourceDir, goldDir = None):
         tempdir = tempfile.mkdtemp()
         Download.extractPackage(sourceDir, os.path.join(tempdir, "source"))
         sourceDir = os.path.join(tempdir, "source")
-    elif corpus == "GE09": # a2 files have to be renamed
+    elif corpus in ("GE09", "BB11", "BI11"):
+        # GE09 a2 files have to be renamed and relation identifier "R" has to be replaced with
+        # "E" for the BB11 and BI11 relations.
         tempdir = tempfile.mkdtemp()
         shutil.copytree(sourceDir, os.path.join(tempdir, "source"))
         sourceDir = os.path.join(tempdir, "source")
@@ -360,7 +363,7 @@ def printLinesBX(lines):
 #        print >> sys.stderr, str(category) + ":", ", ".join(queue)
 #        queue = []
 
-def evaluateBX(corpusName, sourceDir, goldDir=None, silent=False):
+def evaluateBX(corpusName, sourceDir, goldDir=None, silent=False, debug=False):
     assert corpusName in ["BI11", "BB11"], corpusName
     evaluatorDir, sourceDir, goldDir, tempDir = checkEvaluator(corpusName, sourceDir, goldDir)
     if goldDir == None:
@@ -372,6 +375,23 @@ def evaluateBX(corpusName, sourceDir, goldDir=None, silent=False):
         commands = Settings.JAVA + " -jar " + evaluatorDir + "/BioNLP-ST_2011_Bacteria_Biotopes_evaluation_software.jar " + goldDir + " " + sourceDir
     else:
         assert False, corpusName
+    
+    # Relabel relation annotation identifiers RX to EX.
+    for filename in os.listdir(sourceDir):
+        if filename.endswith(".a2"): # BB task is all relations, but uses a2 as file tag
+            f = codecs.open(os.path.join(sourceDir, filename), "rt", "utf-8")
+            lines = f.readlines()
+            f.close()
+            for i in range(len(lines)):
+                modified = False
+                if lines[i][0] == "R":
+                    lines[i] = "E" + lines[i][1:]
+                    modified = True
+            if modified:
+                f = codecs.open(os.path.join(sourceDir, filename), "wt", "utf-8")
+                for line in lines:
+                    f.write(line)
+                f.close()
 
     p = subprocess.Popen(commands, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     stderrLines = p.stderr.readlines()
@@ -409,8 +429,10 @@ def evaluateBX(corpusName, sourceDir, goldDir=None, silent=False):
                 results[key] = 0.0
             else:
                 results[key] = float(value)
-    if tempDir != None: 
+    if not debug and tempDir != None:
         shutil.rmtree(tempDir)
+    else:
+        print >> sys.stderr, "Temporary directory left at", tempDir
     return results
      
 def evaluateEPIorID(corpus, sourceDir, goldDir=None, silent=False):
@@ -467,7 +489,7 @@ def evaluateREN(sourceDir, goldDir=None, silent=False):
     return results
 
 def evaluateCO(sourceDir, goldDir=None, silent=False):
-    evaluatorDir, sourceDir, goldDir, tempDir = checkEvaluator("CO", sourceDir, goldDir)
+    evaluatorDir, sourceDir, goldDir, tempDir = checkEvaluator("CO11", sourceDir, goldDir)
     if goldDir == None:
         return None
     # Run the evaluation program, which writes the result into a file
