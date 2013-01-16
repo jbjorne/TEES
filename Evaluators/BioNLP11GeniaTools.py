@@ -20,7 +20,7 @@ def install(destDir=None, downloadDir=None, redownload=False):
         downloadDir = Settings.DATAPATH
     if destDir == None:
         destDir = Settings.DATAPATH
-    for corpus in ["GE", "BB", "BI", "CO"]:
+    for corpus in ["GE11", "BB11", "BI11", "CO11"]:
         print >> sys.stderr, "Installing BioNLP'11", corpus, "evaluator"
         settings[corpus + "_EVALUATOR"] = Download.getTopDir(destDir + "/tools/evaluators/", Download.downloadAndExtract(Settings.URL[corpus + "_EVALUATOR"], destDir + "/tools/evaluators/", downloadDir + "/tools/download/"))
         print >> sys.stderr, "Installing BioNLP'11", corpus, "evaluator gold data"
@@ -125,13 +125,13 @@ def hasGoldDocuments(sourceDir, goldDir):
 #        return input, False
 
 def getFScore(results, task):
-    if task in ["GE", "GE09"]:
+    if task in ["GE11", "GE09"]:
         path = ["approximate", "ALL-TOTAL", "fscore"]
-    elif task in ["EPI", "ID", "REN"]:
+    elif task in ["EPI11", "ID11", "REN11"]:
         path = ["TOTAL", "fscore"]
-    elif task in ["BB", "BI"]:
+    elif task in ["BB11", "BI11"]:
         path = ["fscore"]
-    elif task == "CO":
+    elif task == "CO11":
         path = ["MENTION LINKING", "fscore"]
     else:
         assert False
@@ -151,15 +151,15 @@ def evaluate(source, task, goldDir=None, debug=False):
     if "." in task:
         task, subTask = task.split(".")
     # Do the evaluation
-    if task in ["GE", "GE09"]:
+    if task in ["GE11", "GE09"]:
         results = evaluateGE(source, task, subTask, goldDir=goldDir, debug=debug)
-    elif task in ["EPI", "ID"]:
+    elif task in ["EPI11", "ID11"]:
         results = evaluateEPIorID(task, source, goldDir)
-    elif task == "REN":
+    elif task == "REN11":
         results = evaluateREN(source, goldDir)
-    elif task in ["BB", "BI"]:
+    elif task in ["BB11", "BI11"]:
         results = evaluateBX(task, source, goldDir)
-    elif task == "CO":
+    elif task == "CO11":
         results = evaluateCO(source, goldDir)
     else:
         results = None
@@ -213,14 +213,14 @@ def checkEvaluator(corpus, sourceDir, goldDir = None):
         tempdir = os.path.abspath(tempdir)
     return evaluatorDir, sourceDir, goldDir, tempdir
 
-def evaluateGE(sourceDir, mainTask="GE", task=1, goldDir=None, folds=-1, foldToRemove=-1, evaluations=["strict", "approximate", "decomposition"], verbose=True, silent=False, debug=False):
+def evaluateGE(sourceDir, mainTask="GE11", task=1, goldDir=None, folds=-1, foldToRemove=-1, evaluations=["strict", "approximate", "decomposition"], verbose=True, silent=False, debug=False):
     task = str(task)
-    assert mainTask in ["GE", "GE09"], mainTask
+    assert mainTask in ["GE11", "GE09"], mainTask
     assert task in ["1","2","3"], task
     if not silent:
         print >> sys.stderr, mainTask, "task", task, "evaluation of", sourceDir, "against", goldDir
-    if mainTask == "GE":
-        evaluatorDir, sourceDir, goldDir, tempDir = checkEvaluator("GE", sourceDir, goldDir)
+    if mainTask == "GE11":
+        evaluatorDir, sourceDir, goldDir, tempDir = checkEvaluator("GE11", sourceDir, goldDir)
         taskSuffix = ".a2"
     else:
         evaluatorDir, sourceDir, goldDir, tempDir = checkEvaluator("GE09", sourceDir, goldDir)
@@ -269,7 +269,7 @@ def evaluateGE(sourceDir, mainTask="GE", task=1, goldDir=None, folds=-1, foldToR
     
     # Prepare evaluated data
     outDir = tempDir + "/output"
-    if mainTask == "GE":
+    if mainTask == "GE11":
         commands = "perl a2-normalize.pl -g " + goldDir
         commands += " -o " + outDir
         commands += " " + sourceSubsetDir + "/*" + taskSuffix #".a2"
@@ -287,7 +287,7 @@ def evaluateGE(sourceDir, mainTask="GE", task=1, goldDir=None, folds=-1, foldToR
     if "strict" in evaluations:
         #commands = "export PATH=$PATH:./ ; "
         commands = "perl a2-evaluate.pl" 
-        if mainTask == "GE": commands += " -t " + str(task)
+        if mainTask == "GE11": commands += " -t " + str(task)
         if debug: commands += " -v -d"
         commands += " -g " + goldDir + " " + outDir + "/*" + taskSuffix #".a2"
         p = subprocess.Popen(commands, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
@@ -304,7 +304,7 @@ def evaluateGE(sourceDir, mainTask="GE", task=1, goldDir=None, folds=-1, foldToR
             print >> sys.stderr, "##### approximate span and recursive mode #####"
         #commands = "export PATH=$PATH:./ ; "
         commands = "perl a2-evaluate.pl"
-        if mainTask == "GE": commands += " -t " + str(task)
+        if mainTask == "GE11": commands += " -t " + str(task)
         if debug: commands += " -v -d"
         commands += " -g " + goldDir + " -sp " + outDir + "/*" + taskSuffix #".a2"
         p = subprocess.Popen(commands, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
@@ -320,7 +320,7 @@ def evaluateGE(sourceDir, mainTask="GE", task=1, goldDir=None, folds=-1, foldToR
             print >> sys.stderr, "##### event decomposition in the approximate span mode #####"
         #commands = "export PATH=$PATH:./ ; "
         commands = "perl a2-evaluate.pl"
-        if mainTask == "GE": commands += " -t " + str(task)
+        if mainTask == "GE11": commands += " -t " + str(task)
         if debug: commands += " -v -d"
         commands += " -g " + goldDir + " -sp " + outDir + "/*" + taskSuffix #".a2"
         p = subprocess.Popen(commands, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
@@ -361,14 +361,14 @@ def printLinesBX(lines):
 #        queue = []
 
 def evaluateBX(corpusName, sourceDir, goldDir=None, silent=False):
-    assert corpusName in ["BI", "BB"], corpusName
+    assert corpusName in ["BI11", "BB11"], corpusName
     evaluatorDir, sourceDir, goldDir, tempDir = checkEvaluator(corpusName, sourceDir, goldDir)
     if goldDir == None:
         return None
     
-    if corpusName == "BI":
+    if corpusName == "BI11":
         commands = Settings.JAVA + " -jar " + evaluatorDir + "/BioNLP-ST_2011_bacteria_interactions_evaluation_software.jar " + goldDir + " " + sourceDir
-    elif corpusName == "BB":
+    elif corpusName == "BB11":
         commands = Settings.JAVA + " -jar " + evaluatorDir + "/BioNLP-ST_2011_Bacteria_Biotopes_evaluation_software.jar " + goldDir + " " + sourceDir
     else:
         assert False, corpusName
@@ -381,7 +381,7 @@ def evaluateBX(corpusName, sourceDir, goldDir=None, silent=False):
         printLinesBX(stdoutLines)
     
     results = {}
-    if corpusName == "BI":
+    if corpusName == "BI11":
         category = None
         for line in stdoutLines:
             if ":" in line:
@@ -397,7 +397,7 @@ def evaluateBX(corpusName, sourceDir, goldDir=None, silent=False):
                     results[key] = 0.0
                 else:
                     results[key] = float(value)
-    elif corpusName == "BB":
+    elif corpusName == "BB11":
         for line in stdoutLines:
             key, value = line.strip().split("=")
             key = key.strip()
@@ -414,7 +414,7 @@ def evaluateBX(corpusName, sourceDir, goldDir=None, silent=False):
     return results
      
 def evaluateEPIorID(corpus, sourceDir, goldDir=None, silent=False):
-    assert corpus in ["EPI", "ID"], corpus
+    assert corpus in ["EPI11", "ID11"], corpus
     evaluatorDir, sourceDir, goldDir, tempDir = checkEvaluator(corpus, sourceDir, goldDir)
     if goldDir == None:
         return None
@@ -437,7 +437,7 @@ def evaluateEPIorID(corpus, sourceDir, goldDir=None, silent=False):
     return parseResults(stdoutLines)
 
 def evaluateREN(sourceDir, goldDir=None, silent=False):
-    evaluatorDir, sourceDir, goldDir, tempDir = checkEvaluator("REN", sourceDir, goldDir)
+    evaluatorDir, sourceDir, goldDir, tempDir = checkEvaluator("REN11", sourceDir, goldDir)
     if goldDir == None:
         return None
     commands = "cd " + evaluatorDir

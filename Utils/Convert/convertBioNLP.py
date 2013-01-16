@@ -53,7 +53,7 @@ def downloadCorpus(corpus, destPath=None, downloadPath=None, clear=False):
         downloaded[corpus + setName] = Utils.Download.download(Settings.URL[corpus + setName], downloadPath, clear=clear)
     if downloadPath == None:
         downloadPath = os.path.join(Settings.DATAPATH, "download")
-    if corpus in ["REL", "REN", "CO"]:
+    if corpus in ["REL11", "REN11", "CO11"]:
         if destPath == None:
             teesParseFinalDestPath = os.path.join(Settings.DATAPATH, "TEES-parses")
         else:
@@ -88,7 +88,7 @@ def convert(corpora, outDir=None, downloadDir=None, redownload=False, makeInterm
         count += 1
 
 def corpusRENtoASCII(xml):
-    print >> sys.stderr, "Converting REN corpus to ASCII"
+    print >> sys.stderr, "Converting REN11 corpus to ASCII"
     for document in xml.getiterator("document"):
         text = document.get("text")
         text = text.replace(u"\xc3\xb6", u"a")
@@ -114,10 +114,7 @@ def convertDownloaded(outdir, corpus, files, intermediateFiles=True, evaluate=Tr
     for setName in datasets:
         sourceFile = files[corpus + "_" + setName.upper()]
         print >> sys.stderr, "Reading", setName, "set from", sourceFile
-        sitesAreArguments = False
-        if corpus == "EPI":
-            sitesAreArguments = True
-        docs = ST.loadSet(sourceFile, setName, "a2", sitesAreArguments=sitesAreArguments)
+        docs = ST.loadSet(sourceFile, setName, "a2")
         print >> sys.stderr, "Read", len(docs), "documents"
         documents.extend(docs)
     
@@ -146,13 +143,13 @@ def convertDownloaded(outdir, corpus, files, intermediateFiles=True, evaluate=Tr
         print >> sys.stderr, "Converting to XML"
         xml = STConvert.toInteractionXML(documents, corpus, None)
     
-    if corpus == "BI":
+    if corpus == "BI11":
         Utils.InteractionXML.MixSets.mixSets(xml, None, set(moveBI), "train", "devel")
-    if corpus == "REN":
+    if corpus == "REN11":
         corpusRENtoASCII(xml)
     
     if addAnalyses:
-        addAnalyses(xml, corpus, datasets, files, bigfileName)
+        insertAnalyses(xml, corpus, datasets, files, bigfileName)
     else:
         print >> sys.stderr, "Skipping adding analyses"
     if intermediateFiles:
@@ -170,7 +167,7 @@ def convertDownloaded(outdir, corpus, files, intermediateFiles=True, evaluate=Tr
     
     if evaluate and "devel" in datasets:
         print >> sys.stderr, "---------------", "Evaluating conversion", "---------------"
-        if corpus != "REL": # Task 1 (removal of Entity-entities) cannot work for REL
+        if corpus != "REL11": # Task 1 (removal of Entity-entities) cannot work for REL
             print >> sys.stderr, "Evaluating task 1 back-conversion"
             STConvert.toSTFormat(os.path.join(outdir, corpus + "-devel.xml"), workdir + "/roundtrip/" + corpus + "-devel" + "-task1", outputTag="a2", skipArgs=["Site"])
             BioNLP11GeniaTools.evaluate(workdir + "/roundtrip/" + corpus + "-devel" + "-task1", corpus + ".1")
@@ -179,7 +176,7 @@ def convertDownloaded(outdir, corpus, files, intermediateFiles=True, evaluate=Tr
         BioNLP11GeniaTools.evaluate(workdir + "/roundtrip/" + corpus + "-devel" + "-task2", corpus + ".2")
         print >> sys.stderr, "Note! Evaluation of Task 2 back-conversion can be less than 100% due to site-argument mapping"
 
-def addAnalyses(xml, corpus, datasets, files, bigfileName):
+def insertAnalyses(xml, corpus, datasets, files, bigfileName):
     if "TEES_PARSES" in files: # corpus for which no official parse exists
         print >> sys.stderr, "---------------", "Inserting TEES-generated analyses", "---------------"
         extractedFilename = files["TEES_PARSES"] + "/" + corpus
@@ -242,7 +239,7 @@ if __name__=="__main__":
     from optparse import OptionParser
     from Utils.Parameters import *
     optparser = OptionParser(usage="%prog [options]\nBioNLP'11 Shared Task corpus conversion")
-    optparser.add_option("-c", "--corpora", default=None, dest="corpora", help="corpus names in a comma-separated list, e.g. \"GE,EPI,ID\"")
+    optparser.add_option("-c", "--corpora", default=None, dest="corpora", help="corpus names in a comma-separated list, e.g. \"GE11,EPI11,ID11\"")
     optparser.add_option("-e", "--evaluators", default=False, action="store_true", dest="evaluators", help="Install evaluators")
     optparser.add_option("-o", "--outdir", default=None, dest="outdir", help="directory for output files")
     optparser.add_option("-d", "--downloaddir", default=None, dest="downloaddir", help="directory to download corpus files to")
