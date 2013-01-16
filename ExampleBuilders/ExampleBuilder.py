@@ -72,9 +72,9 @@ class ExampleBuilder:
             f = open(filename, "rt")
         counts = {"documents":0, "sentences":0}
         for line in f:
-            if "<document " in line:
+            if "<document" in line:
                 counts["documents"] += 1
-            elif "<sentence " in line:
+            elif "<sentence" in line:
                 counts["sentences"] += 1
         f.close()
         print >> sys.stderr, counts
