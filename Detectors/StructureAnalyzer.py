@@ -43,13 +43,13 @@ class StructureAnalyzer():
                 return self.edgeTypes[e1Type][e2Type] # not a copy, so careful with using the returned list!
         return []
     
-    def isRelation(self, edgeType):
-        if edgeType in self.relationTypes:
-            return True
-        elif edgeType in self.eventArgumentTypes:
-            return False
-        else:
-            raise Exception("Unknown interaction type " + str(edgeType))
+#    def isRelation(self, edgeType):
+#        if edgeType in self.relationTypes:
+#            return True
+#        elif edgeType in self.eventArgumentTypes:
+#            return False
+#        else:
+#            raise Exception("Unknown interaction type " + str(edgeType))
     
     def isValidEvent(self, entity, args=None, entityById=None, noUpperLimitBeyondOne=True):
         if args == None:
@@ -128,14 +128,14 @@ class StructureAnalyzer():
                 e1 = entityById[interaction.get("e1")]
                 e2 = entityById[interaction.get("e2")]
                 if interaction.get("type") in self.getValidEdgeTypes(e1.get("type"), e2.get("type")):
-                    if not self.isRelation(interaction.get("type")): # interaction is an event argument
+                    if interaction.get("event") == "True": # interaction is an event argument
                         eventArguments.append(interaction)
                         eventArgumentsByE1[interaction.get("e1")].append(interaction)
-                        if interaction.get("relation") not in (None, "False"):
-                            interaction.set("relation", None)
+                        #if interaction.get("relation") not in (None, "False"):
+                        #    interaction.set("relation", None)
                     else:
                         relations.append(interaction)
-                        interaction.set("relation", "True")
+                        #interaction.set("relation", "True")
             # process events
             removed = 1
             while removed > 0:
@@ -333,7 +333,7 @@ class StructureAnalyzer():
                 # process interactions
                 interactionsByE1 = defaultdict(list)
                 for interaction in document.getiterator("interaction"):
-                    if interaction.get("relation") == "True":
+                    if not (interaction.get("event") == "True"):
                         relType = interaction.get("type")
                         if relType not in self.relations:
                             self.relations[relType] = [None, set(), set()]
