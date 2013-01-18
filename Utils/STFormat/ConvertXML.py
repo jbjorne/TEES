@@ -17,7 +17,7 @@ def makeEntityElement(ann, idCount, docEl):
     if ann.id != None:
         entEl.set("origId", docEl.get("origId") + "." + str(ann.id))
     # offsets
-    entEl.set("charOffset", str(ann.charBegin) + "-" + str(ann.charEnd))
+    entEl.set("charOffset", Range.tuplesToCharOffset(ann.charOffsets))
     if len(ann.alternativeOffsets) > 0:
         altOffs = []
         for alternativeOffset in ann.alternativeOffsets:
@@ -69,7 +69,7 @@ def addParseElements(doc, docEl):
         tokEl.set("id", word.id)
         tokEl.set("text", word.text)
         tokEl.set("POS", "None")
-        tokEl.set("charOffset", str(word.charBegin) + "-" + str(word.charEnd))
+        tokEl.set("charOffset", Range.tuplesToCharOffset(word.charOffset))
         tokenMap[word.id] = tokEl
     for dep in doc.dependencies:
         depEl = ET.SubElement(parseEl, "dependency")
@@ -223,7 +223,7 @@ def toInteractionXML(documents, corpusName="CORPUS", output=None):
 
 def findDuplicateForSTTrigger(ann, triggers):
     for trigger in triggers:
-        if trigger.charBegin == ann.charBegin and trigger.charEnd == ann.charEnd and trigger.text == ann.text and trigger.type == ann.type:
+        if trigger.charOffsets == ann.charOffsets and trigger.text == ann.text and trigger.type == ann.type:
             return trigger
     return None
 
@@ -256,7 +256,7 @@ def addEntitiesToSTDoc(doc, docElement, tMap, eMap, entityElementMap, useOrigIds
                 continue
             assert entity.get("id") != None
             entityElementMap[entity.get("id")] = entity
-            entityOffset = Range.charOffsetToSingleTuple(entity.get("charOffset"))
+            entityOffsets = Range.charOffsetToTuples(entity.get("charOffset"))
             ann = Annotation()
             ann.type = eType
             if useOrigIds:
@@ -270,13 +270,16 @@ def addEntitiesToSTDoc(doc, docElement, tMap, eMap, entityElementMap, useOrigIds
                     else:
                         ann.id = entityOrigId
             ann.text = entity.get("text")
-            assert entityOffset[1] - entityOffset[0] in [len(ann.text), len(ann.text) - 1], (ann.text, entityOffset)
-            ann.charBegin = entityOffset[0]
-            ann.charEnd = entityOffset[0] + len(ann.text) # entityOffset[1] + 1
+            #assert entityOffset[1] - entityOffset[0] in [len(ann.text), len(ann.text) - 1], (ann.text, entityOffset)
+            ann.charOffsets = entityOffsets
+            #ann.charBegin = entityOffset[0]
+            #ann.charEnd = entityOffset[0] + len(ann.text) # entityOffset[1] + 1
             if containerElement.tag == "sentence": # entity offset is relative to the container element, and for sentences, they can be relative to the document
                 sentenceOffset = Range.charOffsetToSingleTuple(containerElement.get("charOffset"))
-                ann.charBegin += sentenceOffset[0]
-                ann.charEnd += sentenceOffset[0]
+                for i in range(len(ann.charOffsets)):
+                    ann.charOffsets[i] = (ann.charOffsets[i][0] + sentenceOffset[0], ann.charOffsets[i][1] + sentenceOffset[0]) 
+                #ann.charBegin += sentenceOffset[0]
+                #ann.charEnd += sentenceOffset[0]
 #            idStem = entity.get("id").split(".e", 1)[0]
 #            if sentenceOffsets.has_key(idStem):
 #                sentenceOffset = sentenceOffsets[idStem]

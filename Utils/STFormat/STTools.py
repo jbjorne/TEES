@@ -193,8 +193,9 @@ class Annotation:
         self.id = id # protein/word/dependency/trigger/event
         self.type = type # protein/word/dependency/trigger/event
         self.text = text # protein/word/trigger
-        self.charBegin = -1 # protein/word/trigger
-        self.charEnd = -1 # protein/word/trigger
+        #self.charBegin = -1 # protein/word/trigger
+        #self.charEnd = -1 # protein/word/trigger
+        self.charOffsets = []
         self.alternativeOffsets = []
         self.equiv = [] # group of elements that are equivalent
         self.trigger = trigger # event (None for triggerless events / relations)
@@ -300,10 +301,11 @@ class Annotation:
         s += self.type
         if self.trigger != None: # event
             s += ":" + self.trigger.id
-        if self.charBegin != -1: # protein
+        if len(self.charOffsets) > 0: # protein
             if self.trigger != None:
                 raise Exception("A text-bound annotation cannot be an event (have a trigger): " + str(self) + ":" + str(self.arguments))
-            s += " " + str(self.charBegin) + " " + str(self.charEnd) + "\t" + str(self.text).replace("\n", "&#10;").replace("\r", "&#10;")
+            offsetString = ";".join([str(x[0]) + " " + str(x[1]) for x in self.charOffsets])
+            s += " " + offsetString + "\t" + str(self.text).replace("\n", "&#10;").replace("\r", "&#10;")
         argStrings = []
         corefTargetProteins = set()
         for argument in self.arguments:
@@ -409,6 +411,16 @@ def getStatistics(documents, printStats=True, statSeparator="\n"):
         print >> sys.stderr, statSeparator.join([str(key)+":"+str(stats[key]) for key in sorted(stats.keys())])
     return stats
 
+def readCharOffsets(string):
+    offsets = []
+    splits = string.split(";")
+    for split in splits:
+        charBegin, charEnd = split.strip().split()
+        charBegin = int(charBegin)
+        charEnd = int(charEnd)
+        offsets.append((charBegin, charEnd))
+    return offsets
+
 def readTAnnotation(string, debug=False):
     #print string
     assert string[0] == "T" or string[0] == "W", string
@@ -418,9 +430,11 @@ def readTAnnotation(string, debug=False):
     ann.id = splits[0]
     middle = splits[1]
     ann.text = splits[2]
-    ann.type, ann.charBegin, ann.charEnd = middle.split()
-    ann.charBegin = int(ann.charBegin)
-    ann.charEnd = int(ann.charEnd)
+    #ann.type, ann.charBegin, ann.charEnd = middle.split()
+    #ann.charBegin = int(ann.charBegin)
+    #ann.charEnd = int(ann.charEnd)
+    ann.type, charOffsetString = middle.split(None, 1) 
+    ann.charOffsets = readCharOffsets(charOffsetString)
     # Process CoRef alternative offsets
     if len(splits) > 3:
         skip = False
