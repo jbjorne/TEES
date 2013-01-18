@@ -95,8 +95,11 @@ class Document:
                 assert protein.normalization == None, lines
                 protein.normalization = normReferent
                 count += 1
+        #for line in lines:
+        #    if line[0] == "X":
+        #        count += 1
         for line in lines:
-            if line[0] == "X":
+            if line[0] == "#": # comment line
                 count += 1
         assert count == len(lines), lines # check that all lines were processed
         f.close()
@@ -105,6 +108,13 @@ class Document:
             ann.fileType = "a1"
         if len(self.dependencies) > 0:
             self.connectObjects()
+    
+    def showUnprocessedLines(self, lines, processedLines):
+        if False in processedLines:
+            print >> sys.stderr, "Warning, lines with unknown identifiers:"
+            for i in range(len(lines)):
+                if not processedLines[i]:
+                    print >> sys.stderr, lines[i].strip()
 
     def loadA2(self, filename, readExtra=False):
         f = codecs.open(filename, "rt", "utf-8")
@@ -112,12 +122,16 @@ class Document:
         f.close()
         count = 0
         eventMap = {}
-        for line in lines:
+        processedLines = [False] * len(lines)
+        for i in range(len(lines)):
+            line = lines[i]
             if line[0] == "T":
                 self.triggers.append( readTAnnotation(line, self.debug) )
                 self.triggers[-1].fileType = "a2"
+                processedLines[i] = True
                 count += 1
-        for line in lines:
+        for i in range(len(lines)):
+            line = lines[i]
             if line[0] == "E" or line[0] == "R":
                 event = readEvent(line, self.debug)
                 self.events.append(event)
@@ -125,8 +139,10 @@ class Document:
                     raise Exception("Duplicate event id " + str(event.id) + " in document " + str(self.id))
                 eventMap[self.events[-1].id] = self.events[-1]
                 self.events[-1].fileType = "a2"
+                processedLines[i] = True
                 count += 1
-        for line in lines:
+        for i in range(len(lines)):
+            line = lines[i]
             if line[0] == "M":
                 mId, rest = line.strip().split("\t")
                 mType, eventId = rest.split()
@@ -135,14 +151,25 @@ class Document:
                     eventMap[eventId].speculation = mId
                 elif mType == "Negation":
                     eventMap[eventId].negation = mId
+                processedLines[i] = True
                 count += 1
-        for line in lines:
+        for i in range(len(lines)):
+            line = lines[i]
             if line[0] == "*":
                 readStarAnnotation(line, self.proteins + self.triggers)
+                processedLines[i] = True
                 count += 1
-        for line in lines:
-            if line[0] == "X":
+        #for i in range(len(lines)):
+        #    line = lines[i]
+        #    if line[0] == "X":
+        #        processedLines[i] = True
+        #        count += 1
+        for i in range(len(lines)):
+            line = lines[i]
+            if line[0] == "#":
+                processedLines[i] = True
                 count += 1
+        self.showUnprocessedLines(lines, processedLines)
         assert count == len(lines), lines # check that all lines were processed
         self.connectObjects()
         self.connectSites()

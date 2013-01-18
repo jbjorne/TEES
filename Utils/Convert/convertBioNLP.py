@@ -19,6 +19,7 @@ import Utils.ElementTreeUtils as ETUtils
 import Evaluators.BioNLP11GeniaTools as BioNLP11GeniaTools
 import Utils.Download
 import Utils.Settings as Settings
+from Detectors.StructureAnalyzer import StructureAnalyzer
 
 moveBI = ["PMID-10333516-S3", "PMID-10503549-S4", "PMID-10788508-S10", "PMID-1906867-S3",
           "PMID-9555886-S6", "PMID-10075739-S13", "PMID-10400595-S1", "PMID-10220166-S12"]
@@ -185,6 +186,12 @@ def convertDownloaded(outdir, corpus, files, intermediateFiles=True, evaluate=Tr
         STConvert.toSTFormat(os.path.join(outdir, corpus + "-devel.xml"), workdir + "/roundtrip/" + corpus + "-devel" + "-task2", outputTag="a2")
         BioNLP11GeniaTools.evaluate(workdir + "/roundtrip/" + corpus + "-devel" + "-task2", corpus + ".2")
         print >> sys.stderr, "Note! Evaluation of Task 2 back-conversion can be less than 100% due to site-argument mapping"
+    
+    # Check what was produced by the conversion
+    print >> sys.stderr, "---------------", "Corpus Structure Analysis", "---------------"
+    analyzer = StructureAnalyzer()
+    analyzer.analyze([xml])
+    print >> sys.stderr, analyzer.toString()
 
 def insertAnalyses(xml, corpus, datasets, files, bigfileName):
     if "TEES_PARSES" in files: # corpus for which no official parse exists

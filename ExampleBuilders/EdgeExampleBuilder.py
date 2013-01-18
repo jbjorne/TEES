@@ -117,6 +117,16 @@ class EdgeExampleBuilder(ExampleBuilder):
     def getPredictedValueRange(self):
         return self.multiEdgeFeatureBuilder.predictedRange
     
+    def getEdgeClassLabel(self, interaction):
+        label = interaction.get("type")
+        if interaction.get("event") == "True":
+            label += ":Arg"
+        else:
+            label += ":Rel"
+        if interaction.get("e1Role") != None or interaction.get("e2Role") != None:
+            label += "(" + interaction.get("e1Role", "Arg1") + "," + interaction.get("e2Role", "Arg2") + ")"
+        return label
+    
     def filterEdgesByType(self, edges, typesToInclude):
         if len(typesToInclude) == 0:
             return edges

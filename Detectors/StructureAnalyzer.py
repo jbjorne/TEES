@@ -19,6 +19,7 @@ class StructureAnalyzer():
         self.relations = None
         self.sites = None
         self.modifiers = None
+        self.counts = None
         
         self.eventArgumentTypes = None
         self.relationTypes = None
@@ -29,6 +30,7 @@ class StructureAnalyzer():
         self.e2Types = defaultdict(lambda:defaultdict(set))
         self.relations = {}
         self.modifiers = {}
+        self.counts = defaultdict(dict)
         
     def getArgLimits(self, entityType, argType):
         return self.argLimits[entityType][argType]
