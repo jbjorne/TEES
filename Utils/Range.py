@@ -18,12 +18,12 @@ def merge(range1, range2):
         mergedRange[1] = range2[1]
     return (mergedRange[0],mergedRange[1])
 
-def charOffsetToSingleTuple(charOffset):
-    tuples = charOffsetToTuples(charOffset)
+def charOffsetToSingleTuple(charOffset, offsetSep="-"):
+    tuples = charOffsetToTuples(charOffset, offsetSep)
     assert(len(tuples) == 1)
     return tuples[0] 
 
-def charOffsetToTuples(charOffset):
+def charOffsetToTuples(charOffset, offsetSep="-", rangeSep=","):
     """ Splits a comma separated list of character offsets into tuples of integers.
 
     Keyword arguments:
@@ -33,10 +33,10 @@ def charOffsetToTuples(charOffset):
     A list of tuples of two integers each
     """
     tuples = []
-    ranges = charOffset.split(",")
+    ranges = charOffset.split(rangeSep)
     for r in ranges:
-        numbers = r.split("-")
-        tuples.append( (int(numbers[0]),int(numbers[1])) )
+        begin, end = r.strip().split(offsetSep)
+        tuples.append( (int(begin),int(end)) )
     return tuples
 
 def contains(range1, range2):
