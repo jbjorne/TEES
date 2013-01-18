@@ -53,6 +53,19 @@ URL["BIONLP_11_CORPORA"] =  "https://github.com/downloads/jbjorne/TEES/BioNLP11-
 URL["BIONLP_09_CORPUS"] =  "https://github.com/downloads/jbjorne/TEES/BioNLP09-corpus-XML-120715.zip"
 URL["DDI_11_CORPUS"] =  "https://github.com/downloads/jbjorne/TEES/DDI11-corpus-XML-120715.zip"
 
+
+# BioNLP'13
+urlBase = "http://2013.bionlp-st.org/tasks/"
+URL["CG13_DEVEL"] = urlBase + "BioNLP-ST_2013_CG_development_data.tar.gz" 
+URL["CG13_TRAIN"] = urlBase + "BioNLP-ST_2013_CG_training_data.tar.gz"
+URL["PC13_DEVEL"] = urlBase + "BioNLP-ST_2013_PC_development_data.tar.gz" 
+URL["PC13_TRAIN"] = urlBase + "BioNLP-ST_2013_PC_training_data.tar.gz"
+URL["GRN13_DEVEL"] = urlBase + "BioNLP-ST-2013_Gene_Regulation_Network_dev.tar.gz" 
+URL["GRN13_TRAIN"] = urlBase + "BioNLP-ST-2013_Gene_Regulation_Network_train.tar.gz"
+URL["BB13_DEVEL"] = urlBase + "BioNLP-ST-2013_Bacteria_Biotopes_dev.tar.gz" 
+URL["BB13_TRAIN"] = urlBase + "BioNLP-ST-2013_Bacteria_Biotopes_train.tar.gz"
+
+
 # BioNLP'11
 urlBase = "http://weaver.nlplab.org/~bionlp-st/BioNLP-ST/downloads/files/"
 # Main tasks

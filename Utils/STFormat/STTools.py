@@ -36,7 +36,7 @@ class Document:
     def connectObjects(self):
         idMap = self.getIdMap()
         for ann in self.proteins + self.triggers + self.events + self.dependencies:
-            ann.connectObjects(idMap)
+            ann.connectObjects(idMap, debugDocId=self.id)
     
     def unlinkSites(self):
         for event in self.events:
@@ -68,9 +68,13 @@ class Document:
         f = codecs.open(filename, "rt", "utf-8")
         lines = f.readlines()
         count = 0
+        protMap = {}
         for line in lines:
             if line[0] == "T":
-                self.proteins.append(readTAnnotation(line, self.debug))
+                protein = readTAnnotation(line, self.debug)
+                self.proteins.append(protein)
+                assert protein.id not in protMap
+                protMap[protein.id] = protein
                 count += 1
         for line in lines:
             if line[0] == "*":
@@ -83,6 +87,13 @@ class Document:
         for line in lines:
             if line[0] == "R": # in a1-files, "R" refers to dependencies
                 self.dependencies.append(readDependencyAnnotation(line))
+                count += 1
+        for line in lines:
+            if line[0] == "N": # some new feature in the GRN task, maybe given relations? 
+                normTarget, normReferent = readNAnnotation(line)
+                protein = protMap[normTarget]
+                assert protein.normalization == None, lines
+                protein.normalization = normReferent
                 count += 1
         for line in lines:
             if line[0] == "X":
@@ -174,6 +185,8 @@ class Document:
         for entity in entities:
             assert entity.id[0] == "T", (entity.id, entity.text)
             s += entity.toString(writeScores) + "\n"
+            if entity.normalization != None:
+                s += "N" + entity.id[1:] + "\tGene_Identifier Annotation:" + entity.id + " Referent:" + entity.normalization + "\n"
         return s
 
     def eventsToString(self, writeScores=False):
@@ -192,6 +205,7 @@ class Annotation:
     def __init__(self, id = None, type = None, text=None, trigger=None, arguments=None, debug=False):
         self.id = id # protein/word/dependency/trigger/event
         self.type = type # protein/word/dependency/trigger/event
+        self.normalization = None
         self.text = text # protein/word/trigger
         #self.charBegin = -1 # protein/word/trigger
         #self.charEnd = -1 # protein/word/trigger
@@ -242,9 +256,10 @@ class Annotation:
         self.arguments.append(newArgument)
         return newArgument
     
-    def connectObjects(self, idMap):
+    def connectObjects(self, idMap, debugDocId=None):
         # connect trigger
         if self.trigger != None and type(self.trigger) in types.StringTypes:
+            assert self.trigger in idMap, ("Missing trigger with identifier " + str(self.trigger) + " in document " + str(debugDocId), idMap)
             self.trigger = idMap[self.trigger]
 #            # Move scores from event to trigger
 #            trigger.unmergingScores = self.unmergingScores
@@ -255,7 +270,7 @@ class Annotation:
 #            self.speculationScores = None
         # connect arguments
         for arg in self.arguments:
-            arg.connectToObj(idMap)
+            arg.connectToObj(idMap, debugDocId=debugDocId)
     
     def unlinkSites(self):
         for arg in self.arguments:
@@ -357,8 +372,9 @@ class Argument:
             s += ",SI=" + str(self.siteIdentifier)
         return s + ">"
         
-    def connectToObj(self, idMap):
+    def connectToObj(self, idMap, debugDocId=None):
         if self.target != None and type(self.target) in types.StringTypes:
+            assert self.target in idMap, ("Missing object with identifier " + str(self.target) + " in document " + str(debugDocId), idMap)
             self.target = idMap[self.target]
             return
     
@@ -420,6 +436,20 @@ def readCharOffsets(string):
         charEnd = int(charEnd)
         offsets.append((charBegin, charEnd))
     return offsets
+
+def readNAnnotation(string, debug=False):
+    assert string[0] == "N"
+    string = string.strip()
+    tabSplits = string.split("\t")
+    assert len(tabSplits) == 2, tabSplits
+    splits = tabSplits[1].split(None, 2)
+    assert len(splits) == 3, splits
+    assert splits[0] == "Gene_Identifier", splits
+    arg1Type, arg1Value = splits[1].split(":", 1)
+    assert arg1Type == "Annotation", (splits, arg1Type, arg1Value)
+    arg2Type, arg2Value = splits[2].split(":", 1)
+    assert arg2Type == "Referent", (splits, arg2Type, arg2Value)
+    return arg1Value, arg2Value
 
 def readTAnnotation(string, debug=False):
     #print string
@@ -510,7 +540,7 @@ def readDependencyAnnotation(string):
     ann.addArgument("Word", word2)
     return ann
 
-def loadSet(path, setName=None, level="a2", sitesAreArguments=False, a2Tag="a2", readScores=False, debug=False):
+def loadSet(path, setName=None, level="a2", sitesAreArguments=False, a2Tag="a2", readScores=False, debug=False, subPath=None):
     assert level in ["txt", "a1", "a2"]
     if path.endswith(".tar.gz"):
         import tempfile
@@ -527,6 +557,8 @@ def loadSet(path, setName=None, level="a2", sitesAreArguments=False, a2Tag="a2",
         if os.path.exists(compressedFilePath):
             print >> sys.stderr, "Reading document set from compressed filename directory", compressedFilePath
             dir = compressedFilePath
+        if subPath != None:
+            dir = os.path.join(compressedFilePath, subPath)
         f.close()
     elif path.endswith(".txt"):
         import tempfile

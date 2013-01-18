@@ -146,7 +146,7 @@ def getFScore(results, task):
     return current
 
 def evaluate(source, task, goldDir=None, debug=False):
-    print >> sys.stderr, "BioNLP'11 task", task, "devel evaluation"
+    print >> sys.stderr, "BioNLP task", task, "devel evaluation"
     # Determine task
     subTask = "1"
     if "." in task:
@@ -164,7 +164,7 @@ def evaluate(source, task, goldDir=None, debug=False):
         results = evaluateCO(source, goldDir)
     else:
         results = None
-        print >> sys.stderr, "No BioNLP'11 evaluator for task", task
+        print >> sys.stderr, "No official evaluator for task", task
     # Return results
     if results == None:
         return None

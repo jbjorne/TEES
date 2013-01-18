@@ -67,10 +67,15 @@ def downloadProgress(count, blockSize, totalSize):
     percent = int(count*blockSize*100/totalSize)
     percent = max(0, min(percent, 100)) # clamp
     pbar.update(percent)
+    
+def downloadWget(url, filename):
+    import subprocess
+    subprocess.call(["wget", "--output-document=" + filename, url])
 
 def download(url, destPath=None, addName=True, clear=False):
     global pbar
     
+    origUrl = url
     redirectedUrl = urllib.urlopen(url).geturl()
     if redirectedUrl != url:
         print >> sys.stderr, "Redirected to", redirectedUrl
@@ -78,7 +83,7 @@ def download(url, destPath=None, addName=True, clear=False):
         destPath = "/tmp"
     destFileName = destPath
     if addName:
-        destFileName = destPath + "/" + os.path.basename(redirectedUrl)
+        destFileName = destPath + "/" + os.path.basename(origUrl)
     if not os.path.exists(os.path.dirname(destFileName)):
         os.makedirs(os.path.dirname(destFileName))
     if clear or not os.path.exists(destFileName):
@@ -95,7 +100,13 @@ def download(url, destPath=None, addName=True, clear=False):
             print >> sys.stderr, "Error downloading file", redirectedUrl
             pbar.finish()
             pbar = None
-            return None
+            print >> sys.stderr, "Attempting download with wget"
+            downloadWget(origUrl, destFileName)
+            if os.path.exists(destFileName):
+                return destFileName
+            else:
+                print >> sys.stderr, "Error downloading file", origUrl, "with wget"
+                return None
         pbar.finish()
         pbar = None
     else:

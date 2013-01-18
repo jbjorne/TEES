@@ -23,6 +23,8 @@ def makeEntityElement(ann, idCount, docEl):
         for alternativeOffset in ann.alternativeOffsets:
             altOffs.append( str(alternativeOffset[0]) + "-" + str(alternativeOffset[1]-1) ) 
         entEl.set("altOffset", ",".join(altOffs))
+    if ann.normalization != None:
+        entEl.set("normalization", ann.normalization)
     # determine if given data
     assert ann.fileType in ["a1", "a2", "rel"], ann.fileType
     if ann.fileType == "a1": #protein.isName():
@@ -83,7 +85,7 @@ def addParseElements(doc, docEl):
             tokenMap[dep.arguments[0].target.id].set("POS", word1Type)
             tokenMap[dep.arguments[1].target.id].set("POS", word2Type)
 
-def makeInteractionElement(intType, docId, idCount, origId, e1Id, e2Id, isEventArgument=False):
+def makeInteractionElement(intType, docId, idCount, origId, e1Id, e2Id, isEventArgument=False, annSource=None):
     intEl = ET.Element("interaction")
     intEl.set("directed", "True")
     intEl.set("id", docId + ".i" + str(idCount))
@@ -93,6 +95,8 @@ def makeInteractionElement(intType, docId, idCount, origId, e1Id, e2Id, isEventA
     intEl.set("type", intType)
     if isEventArgument:
         intEl.set("event", "True")
+    if annSource != None and annSource == "a1": #protein.isName():
+        entEl.set("given", "True")
     return intEl
 
 def addEntityElements(doc, docEl, tMap, eventMap):
@@ -129,13 +133,20 @@ def addInteractionElements(doc, docEl, tMap):
                     assert len(event.arguments) >= 2, (event.id, event.type, event.arguments)
                     a1 = event.arguments[0]
                     a2 = event.arguments[1]
-                    relEl = makeInteractionElement(event.type, docId, elCounter, origId, tMap[a1.target.id], tMap[a2.target.id])
-                    if (a1.type + a1.siteIdentifier != "Arg1"):
-                        relEl.set("e1Role", a1.type)
-                    if (a2.type + a2.siteIdentifier != "Arg2"):
-                        relEl.set("e2Role", a2.type)
-                    elCounter += 1
-                    docEl.append(relEl)
+                    #assert a1.target.id in tMap, (a1.target.id, event, docId, docEl.get("origId"))
+                    #assert a2.target.id in tMap, (a2.target.id, event, docId, docEl.get("origId"))
+                    if a1.target.id not in tMap:
+                        print >> sys.stderr, "Warning, skipping relation", event.id, "with no T-type target for argument", event.argumentToString(a1), "in document", docId + "/" + docEl.get("origId")
+                    elif a2.target.id not in tMap:
+                        print >> sys.stderr, "Warning, skipping relation", event.id, "with no T-type target for argument", event.argumentToString(a2), "in document", docId + "/" + docEl.get("origId")
+                    else:
+                        relEl = makeInteractionElement(event.type, docId, elCounter, origId, tMap[a1.target.id], tMap[a2.target.id], annSource=event.fileType)
+                        if (a1.type + a1.siteIdentifier != "Arg1"):
+                            relEl.set("e1Role", a1.type)
+                        if (a2.type + a2.siteIdentifier != "Arg2"):
+                            relEl.set("e2Role", a2.type)
+                        elCounter += 1
+                        docEl.append(relEl)
                 else: # BioNLP'11 Coref
                     assert event.type == "Coref", (event.id, docId, event.type)
                     argByType = defaultdict(list)
@@ -145,20 +156,20 @@ def addInteractionElements(doc, docEl, tMap):
                     assert len(argByType["Anaphora"]) == 1, event
                     anaphoraArg = argByType["Anaphora"][0]
                     for antecedentArg in argByType["Antecedent"]:
-                        corefEl = makeInteractionElement("Coref", docId, elCounter, origId, tMap[anaphoraArg.target.id], tMap[antecedentArg.target.id])
+                        corefEl = makeInteractionElement("Coref", docId, elCounter, origId, tMap[anaphoraArg.target.id], tMap[antecedentArg.target.id], annSource=event.fileType)
                         corefEl.set("e1Role", "Anaphora")
                         corefEl.set("e2Role", "Antecedent")
                         elCounter += 1
                         docEl.append(corefEl)
                         for connProtArg in argByType["CorefTarget"]: # link proteins to antecedent
-                            docEl.append(makeInteractionElement("CorefTarget", docId, elCounter, origId, tMap[antecedentArg.target.id], tMap[connProtArg.target.id]))
+                            docEl.append(makeInteractionElement("CorefTarget", docId, elCounter, origId, tMap[antecedentArg.target.id], tMap[connProtArg.target.id]), annSource=event.fileType)
                             elCounter += 1
             else:
                 argCount = 0
                 for arg in event.arguments:
                     if arg.type != "Site":
                         origId = str(doc.id) + "." + str(event.id) + "." + str(argCount)
-                        argEl = makeInteractionElement(arg.type, docId, elCounter, origId, tMap[event.id], tMap[arg.target.id], True)
+                        argEl = makeInteractionElement(arg.type, docId, elCounter, origId, tMap[event.id], tMap[arg.target.id], True, annSource=event.fileType)
                         elCounter += 1
                         argCount += 1
                         docEl.append(argEl)
@@ -167,7 +178,7 @@ def addInteractionElements(doc, docEl, tMap):
                         #assert arg[1].type in ["Protein", "Gene", "Chemical", "Organism", "Regulon-operon", "Two-component-system"], (arg[1].type, doc.id, doc.dataSet, event.id)
                         origId = str(doc.id) + "." + str(event.id) + "." + str(argCount) + ".site"
                         # The site-argument connects the event to the site entity, just like in the shared task
-                        siteEl = makeInteractionElement("Site", docId, elCounter, origId, tMap[event.id], tMap[arg.target.id], True)
+                        siteEl = makeInteractionElement("Site", docId, elCounter, origId, tMap[event.id], tMap[arg.target.id], True, annSource=event.fileType)
                         elCounter += 1
                         docEl.append(siteEl)
                         # The SiteParent argument connects the entity to it's protein. As sites must be paired with
@@ -179,7 +190,7 @@ def addInteractionElements(doc, docEl, tMap):
                             siteProtein = tMap[arg.siteOf.target.id]
                             siteIdentifier = (siteEntity, siteProtein)
                             if not siteIdentifier in siteParentLinks: # avoid duplicate SiteParent links
-                                siteEl = makeInteractionElement("SiteParent", docId, elCounter, origId, siteEntity, siteProtein)
+                                siteEl = makeInteractionElement("SiteParent", docId, elCounter, origId, siteEntity, siteProtein, annSource=event.fileType)
                                 elCounter += 1
                                 docEl.append(siteEl)
                                 siteParentLinks.add(siteIdentifier)
@@ -270,6 +281,8 @@ def addEntitiesToSTDoc(doc, docElement, tMap, eMap, entityElementMap, useOrigIds
                     else:
                         ann.id = entityOrigId
             ann.text = entity.get("text")
+            if entity.get("normalization") != None:
+                ann.normalization = entity.get("normalization")
             #assert entityOffset[1] - entityOffset[0] in [len(ann.text), len(ann.text) - 1], (ann.text, entityOffset)
             ann.charOffsets = entityOffsets
             #ann.charBegin = entityOffset[0]

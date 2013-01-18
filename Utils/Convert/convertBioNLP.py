@@ -50,7 +50,9 @@ def downloadCorpus(corpus, destPath=None, downloadPath=None, clear=False):
     else:
         finalDestPath = destPath
     for setName in ["_DEVEL", "_TRAIN", "_TEST"]:
-        downloaded[corpus + setName] = Utils.Download.download(Settings.URL[corpus + setName], downloadPath, clear=clear)
+        identifier = corpus + setName
+        if identifier in Settings.URL:
+            downloaded[identifier] = Utils.Download.download(Settings.URL[identifier], downloadPath, clear=clear)
     if downloadPath == None:
         downloadPath = os.path.join(Settings.DATAPATH, "download")
     if corpus in ["REL11", "REN11", "CO11"]:
@@ -67,7 +69,9 @@ def downloadCorpus(corpus, destPath=None, downloadPath=None, clear=False):
             analyses = ["_TOKENS", "_McCC"]
         for analysis in analyses:
             for setName in ["_DEVEL", "_TRAIN", "_TEST"]:
-                downloaded[corpus + setName + analysis] = Utils.Download.download(Settings.URL[corpus + setName + analysis], downloadPath + "/support/", clear=clear)
+                identifier = corpus + setName + analysis
+                if identifier in Settings.URL:
+                    downloaded[identifier] = Utils.Download.download(Settings.URL[identifier], downloadPath + "/support/", clear=clear)
     return downloaded
 
 def convert(corpora, outDir=None, downloadDir=None, redownload=False, makeIntermediateFiles=True, evaluate=False, processEquiv=True, addAnalyses=True):
@@ -83,7 +87,10 @@ def convert(corpora, outDir=None, downloadDir=None, redownload=False, makeInterm
         logFileName = outDir + "/conversion/" + corpus + "-conversion-log.txt"
         Stream.openLog(logFileName)
         downloaded = downloadCorpus(corpus, outDir, downloadDir, redownload)
-        convertDownloaded(outDir, corpus, downloaded, makeIntermediateFiles, evaluate, processEquiv=processEquiv, addAnalyses=addAnalyses)
+        packageSubPath = None
+        if corpus == "BB13":
+            packageSubPath = "task_2"
+        convertDownloaded(outDir, corpus, downloaded, makeIntermediateFiles, evaluate, processEquiv=processEquiv, addAnalyses=addAnalyses, packageSubPath=packageSubPath)
         Stream.closeLog(logFileName)
         count += 1
 
@@ -97,7 +104,7 @@ def corpusRENtoASCII(xml):
         text = text.replace("and Wikstram, M. (1991) Eur. J. Biochem. 197", "and Wikstrom, M. (1991) Eur. J. Biochem. 197")
         document.set("text", text)
 
-def convertDownloaded(outdir, corpus, files, intermediateFiles=True, evaluate=True, processEquiv=True, addAnalyses=True):
+def convertDownloaded(outdir, corpus, files, intermediateFiles=True, evaluate=True, processEquiv=True, addAnalyses=True, packageSubPath=None):
     global moveBI
     if evaluate:
         workdir = outdir + "/conversion/" + corpus
@@ -108,13 +115,16 @@ def convertDownloaded(outdir, corpus, files, intermediateFiles=True, evaluate=Tr
     print >> sys.stderr, "---------------", "Converting to XML", "---------------"
     # All datasets are processed as one XML, to ensure all the steps (parse modification etc.) are
     # applied equally
-    datasets = ["devel", "train", "test"]
+    datasets = []
+    for setName in ["devel", "train", "test"]:
+        if corpus + "_" + setName.upper() in files:
+            datasets.append(setName)
     bigfileName = os.path.join(outdir, corpus + "-" + "-and-".join(datasets))
     documents = []
     for setName in datasets:
         sourceFile = files[corpus + "_" + setName.upper()]
         print >> sys.stderr, "Reading", setName, "set from", sourceFile
-        docs = ST.loadSet(sourceFile, setName, "a2")
+        docs = ST.loadSet(sourceFile, setName, "a2", subPath=packageSubPath)
         print >> sys.stderr, "Read", len(docs), "documents"
         documents.extend(docs)
     
