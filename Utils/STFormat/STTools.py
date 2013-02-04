@@ -89,10 +89,10 @@ class Document:
                 self.dependencies.append(readDependencyAnnotation(line))
                 count += 1
         for line in lines:
-            if line[0] == "N": # some new feature in the GRN task, maybe given relations? 
+            if line[0] == "N": # normalization
                 normTarget, normReferent = readNAnnotation(line)
                 protein = protMap[normTarget]
-                assert protein.normalization == None, lines
+                assert protein.normalization == None, lines # each entity can have one normalization
                 protein.normalization = normReferent
                 count += 1
         #for line in lines:
