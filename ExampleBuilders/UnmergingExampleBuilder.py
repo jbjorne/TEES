@@ -304,6 +304,21 @@ class UnmergingExampleBuilder(ExampleBuilder):
         pairs.sort()
         return [x[1] for x in pairs]
     
+    def buildEventExamples(self):
+        pass
+    
+    def buildRelationExamples(self, eventExamplesByEntity):
+        for ex1 in eventExamplesByEntity[e1]:
+            for ex2 in eventExamplesByEntity[e2]:
+                features = copy.copy(ex1[2])
+                features.update(ex2[2])
+                self.setFeature("relType_" + relation.get("type"))
+                #self.setFeature("relType_" + relation.get("type")) # prediction strength
+                if ex[1] != 1 and ex[2] != 1:
+                    category = "relation"
+                else:
+                    category = "neg"
+    
     def buildExamplesFromGraph(self, sentenceGraph, outfile, goldGraph=None):
         """
         Build examples for a single sentence. Returns a list of examples.
@@ -380,11 +395,16 @@ class UnmergingExampleBuilder(ExampleBuilder):
                     validInteractionsByType[interaction.get("type")].append(interaction)
             #argCombinations = self.getArgumentCombinations(eType, interactions, entity.get("id"))
             intCombinations = []
+            validIntTypeCount = 0
+            maxArgCount = 0
             for intType in sorted(validInteractionsByType.keys()):
+                validIntTypeCount += 1
                 intCombinations.append([])
                 minArgs, maxArgs = self.structureAnalyzer.getArgLimits(entity.get("type"), intType)
-                if maxArgs > 1: # allow any number of arguments for cases like Binding
-                    maxArgs = len(validInteractionsByType[intType])
+                if maxArgs > maxArgCount:
+                    maxArgCount = marArgs
+                #if maxArgs > 1: # allow any number of arguments for cases like Binding
+                #    maxArgs = len(validInteractionsByType[intType])
                 for combLen in range(minArgs, maxArgs+1):
                     intCombinations[-1].extend(combinations(validInteractionsByType[intType], combLen))
             argCombinations = combine.combine(*intCombinations)
@@ -410,11 +430,16 @@ class UnmergingExampleBuilder(ExampleBuilder):
                 # Named (multi-)class
                 if isGoldEvent:
                     #category = "event"
-                    category = eType
-                    if category.find("egulation") != -1:
-                        category = "All_regulation"
-                    elif category != "Binding":
-                        category = "Other" #"simple6"
+#                    category = eType
+#                    if category.find("egulation") != -1:
+#                        category = "All_regulation"
+#                    elif category != "Binding":
+#                        category = "Other" #"simple6"
+                    category = "singleArg" # event has 0-1 arguments (old simple6)
+                    if validIntTypeCount > 1:
+                        category = "multiType" # event has arguments of several types, 0-1 of each (old Regulation)
+                    if maxArgCount > 1:
+                        category = "multiArg" # event can have 2-n of at least one argument type (old Binding)
                 else:
                     category = "neg"
                     
