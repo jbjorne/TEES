@@ -140,10 +140,7 @@ def addInteractionElements(doc, docEl, tMap):
                     elif a2.target.id not in tMap:
                         print >> sys.stderr, "Warning, skipping relation", event.id, "with no T-type target for argument", event.argumentToString(a2), "in document", docId + "/" + docEl.get("origId")
                     else:
-                        isEventArgument = a1.target.trigger != None # some relations are more like event arguments
-                        relEl = makeInteractionElement(event.type, docId, elCounter, origId, tMap[a1.target.id], tMap[a2.target.id], isEventArgument, annSource=event.fileType)
-                        if isEventArgument:
-                            relEl.set("type", relEl.get("type") + ":STRel")
+                        relEl = makeInteractionElement(event.type, docId, elCounter, origId, tMap[a1.target.id], tMap[a2.target.id], annSource=event.fileType)
                         if (a1.type + a1.siteIdentifier != "Arg1"):
                             relEl.set("e1Role", a1.type)
                         if (a2.type + a2.siteIdentifier != "Arg2"):
@@ -398,15 +395,7 @@ def addInteractionsToSTDoc(doc, docElement, tMap, eMap, entityElementMap, skipAr
                 eMap[e1] = makeSTEvent(tMap[e1], entityElementMap[e1])
                 doc.events.append(eMap[e1])
             # add arguments
-            if interaction.get("type").endswith(":STRel"): # It's really a relation
-                rel = Annotation()
-                rel.type = interaction.get("type").rsplit(":", 1)[0]
-                relScores = interaction.get("predictions")
-                rel.addArgument(interaction.get("e1Role", "Arg1"), interaction.get("e1"), None, relScores)
-                rel.addArgument(interaction.get("e2Role", "Arg2"), interaction.get("e2"), None, relScores)
-                doc.events.append(rel)
-            else:
-                eMap[e1].addArgument(interaction.get("type"), interaction.get("e2"), None, interaction.get("predictions"))
+            eMap[e1].addArgument(interaction.get("type"), interaction.get("e2"), None, interaction.get("predictions"))
 #    # Rename site-type interactions (which have been masked as "SiteArg" to prevent them being processed as Shared Task task-2 sites
 #    for event in doc.events:
 #        for arg in event.arguments:
