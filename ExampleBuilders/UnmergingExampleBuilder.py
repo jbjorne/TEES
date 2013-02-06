@@ -18,6 +18,7 @@ import Utils.Libraries.combine as combine
 import Utils.ElementTreeUtils as ETUtils
 import gzip
 import types
+from collections import defaultdict
 
 def combinations(iterable, r):
     # combinations('ABCD', 2) --> AB AC AD BC BD CD
@@ -319,7 +320,7 @@ class UnmergingExampleBuilder(ExampleBuilder):
                 else:
                     category = "neg"
     
-    def buildExamplesFromGraph(self, sentenceGraph, outfile, goldGraph=None):
+    def buildExamplesFromGraph(self, sentenceGraph, outfile, goldGraph=None, structureAnalyzer=None):
         """
         Build examples for a single sentence. Returns a list of examples.
         See Core/ExampleUtils for example format.
@@ -389,37 +390,61 @@ class UnmergingExampleBuilder(ExampleBuilder):
             #interactions = interactionsByEntityId[entity.get("id")]
             interactions = [x[2] for x in sentenceGraph.getOutInteractions(entity, mergeInput)]
             interactions = self.sortInteractionsById(interactions)
+            interactionCounts = defaultdict(int)
             validInteractionsByType = defaultdict(list)
             for interaction in interactions:
-                if interaction.get("type") in self.structureAnalyzer.getValidEdgeTypes(e1.get("type"), e2.get("type")):
+                if interaction.get("event") != "True":
+                    continue
+                e1 = sentenceGraph.entitiesById[interaction.get("e1")]
+                e2 = sentenceGraph.entitiesById[interaction.get("e2")]
+                if interaction.get("type") in structureAnalyzer.getValidEdgeTypes(e1.get("type"), e2.get("type")):
                     validInteractionsByType[interaction.get("type")].append(interaction)
+                interactionCounts[interaction.get("type")] += 1
+            interactionCountString = ",".join([key + "=" + str(interactionCounts[key]) for key in sorted(interactionCounts.keys())])
             #argCombinations = self.getArgumentCombinations(eType, interactions, entity.get("id"))
             intCombinations = []
             validIntTypeCount = 0
             maxArgCount = 0
-            for intType in sorted(validInteractionsByType.keys()):
+            if self.debug:
+                print >> sys.stderr, entity.get("id"), entity.get("type"), "int:" + interactionCountString, "validInt:" + str(validInteractionsByType)
+            for intType in sorted(validInteractionsByType.keys()): # for each argument type the event can have
                 validIntTypeCount += 1
                 intCombinations.append([])
-                minArgs, maxArgs = self.structureAnalyzer.getArgLimits(entity.get("type"), intType)
+                minArgs, maxArgs = structureAnalyzer.getArgLimits(entity.get("type"), intType)
                 if maxArgs > maxArgCount:
-                    maxArgCount = marArgs
+                    maxArgCount = maxArgs
                 #if maxArgs > 1: # allow any number of arguments for cases like Binding
                 #    maxArgs = len(validInteractionsByType[intType])
-                for combLen in range(minArgs, maxArgs+1):
-                    intCombinations[-1].extend(combinations(validInteractionsByType[intType], combLen))
+                for combLen in range(minArgs, maxArgs+1): # for each valid argument count, get all possible combinations. note that there may be zero-lenght combination
+                    for singleTypeArgCombination in combinations(validInteractionsByType[intType], combLen):
+                        intCombinations[-1].append(singleTypeArgCombination)
+                # e.g. theme:[a,b], cause:[d] = [[
+            # intCombinations now contains a list of lists, each of which has a tuple for each valid combination
+            # of one argument type. Next, we'll make all valid combinations of multiple argument types
+            if self.debug:
+                print >> sys.stderr, "intCombinations", intCombinations
             argCombinations = combine.combine(*intCombinations)
-            sum(argCombinations, []) # flatten nested list
+            if self.debug:
+                print >> sys.stderr, "argCombinations", argCombinations
+            for i in range(len(argCombinations)):
+                argCombinations[i] = sum(argCombinations[i], ())
+            #sum(argCombinations, []) # flatten nested list
+            if self.debug:
+                print >> sys.stderr, "argCombinations flat", argCombinations
             #argCombinations = combinations(validInteractions, len(validInteractions))
-            validArgCombinations = []
-            for combination in argCombinations:
-                if self.structureAnalyzer.isValidEvent(entity, combination, entityById):
-                    validArgCombinations.append(combinations)
+#            validArgCombinations = []
+#            for combination in argCombinations:
+#                issues = defaultdict(int)
+#                print "arg combination", combination,
+#                if structureAnalyzer.isValidEvent(entity, combination, sentenceGraph.entitiesById, issues=issues):
+#                    print "VALID"
+#                    validArgCombinations.append(combination)
+#                else:
+#                    print "NOT VALID", issues
             #if len(argCombinations) <= 1:
             #    continue
-            assert validArgCombinations != None, (entity.get("id"), entity.get("type"))
-            for argCombination in validArgCombinations:
-                if eType != "Process":
-                    assert len(argCombination) > 0, eType + ": " + str(argCombinations)
+            #assert validArgCombinations != None, (entity.get("id"), entity.get("type"))
+            for argCombination in argCombinations:
                 # Originally binary classification
                 if goldGraph != None:
                     isGoldEvent = self.eventIsGold(entity, argCombination, sentenceGraph, goldGraph, goldEntitiesByOffset)
@@ -429,35 +454,47 @@ class UnmergingExampleBuilder(ExampleBuilder):
                     isGoldEvent = False
                 # Named (multi-)class
                 if isGoldEvent:
-                    #category = "event"
-#                    category = eType
-#                    if category.find("egulation") != -1:
-#                        category = "All_regulation"
-#                    elif category != "Binding":
-#                        category = "Other" #"simple6"
-                    category = "singleArg" # event has 0-1 arguments (old simple6)
-                    if validIntTypeCount > 1:
-                        category = "multiType" # event has arguments of several types, 0-1 of each (old Regulation)
-                    if maxArgCount > 1:
-                        category = "multiArg" # event can have 2-n of at least one argument type (old Binding)
+#                    category = "zeroArg"
+#                    if validIntTypeCount == 1:
+#                        category = "singleArg" # event has 0-1 arguments (old simple6)
+#                    if validIntTypeCount > 1:
+#                        category = "multiType" # event has arguments of several types, 0-1 of each (old Regulation)
+#                    if maxArgCount > 1:
+#                        category = "multiArg" # event can have 2-n of at least one argument type (old Binding)
+                    category = entity.get("type")
                 else:
                     category = "neg"
-                    
-                features = {}
+                self.exampleStats.beginExample(category)
                 
-                argString = ""
-                for arg in argCombination:
-                    argString += "," + arg.get("id")
-                extra = {"xtype":"um","e":entity.get("id"),"i":argString[1:],"etype":eType,"class":category}
-                assert type(extra["etype"]) == types.StringType, extra
-                self.exampleStats.addExample(category)
-                example = self.buildExample(sentenceGraph, paths, entity, argCombination, interactions)
-                example[0] = sentenceGraph.getSentenceId()+".x"+str(exampleIndex)
-                example[1] = self.classSet.getId(category)
-                example[3] = extra
-                #examples.append( example )
-                ExampleUtils.appendExamples([example], outfile)
-                exampleIndex += 1
+                issues = defaultdict(int)
+                # early out for proteins etc.
+                if validIntTypeCount == 0 and entity.get("given") == "True":
+                    self.exampleStats.filter("given_leaf:" + entity.get("type"))
+                    if self.debug:
+                        print >> sys.stderr, category, "arg combination", argCombination, "GIVEN LEAF"
+                elif not structureAnalyzer.isValidEvent(entity, argCombination, sentenceGraph.entitiesById, issues=issues):
+                    for key in issues:
+                        self.exampleStats.filter(key)
+                    if self.debug:
+                        print >> sys.stderr, category, "arg combination", argCombination, "INVALID", issues
+                else:
+                    if self.debug:
+                        print >> sys.stderr, category, "arg combination", argCombination, "VALID"                
+                    features = {}
+                    argString = ""
+                    for arg in argCombination:
+                        argString += "," + arg.get("type") + "=" + arg.get("id")
+                    extra = {"xtype":"um","e":entity.get("id"),"i":argString[1:],"etype":eType,"class":category}
+                    extra["allInt"] = interactionCountString
+                    assert type(extra["etype"]) == types.StringType, extra
+                    example = self.buildExample(sentenceGraph, paths, entity, argCombination, interactions)
+                    example[0] = sentenceGraph.getSentenceId()+".x"+str(exampleIndex)
+                    example[1] = self.classSet.getId(category)
+                    example[3] = extra
+                    #examples.append( example )
+                    ExampleUtils.appendExamples([example], outfile)
+                    exampleIndex += 1
+                self.exampleStats.endExample()
             
         #return examples
         return exampleIndex

@@ -12,8 +12,10 @@ import Utils.Parameters
 import Core.ExampleUtils as ExampleUtils
 import Core.SentenceGraph
 from ExampleBuilders.ExampleStats import ExampleStats
+from Detectors.StructureAnalyzer import StructureAnalyzer
 
 class ExampleBuilder:
+    structureAnalyzer = None
     """ 
     ExampleBuilder is the abstract base class for specialized example builders.
     Example builders take some data and convert it to examples usable by e.g. SVMs.
@@ -46,6 +48,7 @@ class ExampleBuilder:
         self._defaultParameters = None
         self._parameterValueLimits = None
         self._setDefaultParameters(["sentenceLimit"])
+        self.debug = False
     
     def _setDefaultParameters(self, defaults=None, valueLimits=None):
         # Initialize
@@ -92,7 +95,7 @@ class ExampleBuilder:
         else:
             print >> sys.stderr, "Feature names not saved"
 
-    def processCorpus(self, input, output, gold=None, append=False, allowNewIds=True):
+    def processCorpus(self, input, output, gold=None, append=False, allowNewIds=True, structureAnalyzer=None):
         # Create intermediate paths if needed
         if os.path.dirname(output) != "" and not os.path.exists(os.path.dirname(output)):
             os.makedirs(os.path.dirname(output))
@@ -129,10 +132,10 @@ class ExampleBuilder:
             for inputSentences, goldSentences in itertools.izip_longest(inputIterator, goldIterator, fillvalue=None):
                 assert inputSentences != None
                 assert goldSentences != None
-                self.processDocument(inputSentences, goldSentences, outfile)
+                self.processDocument(inputSentences, goldSentences, outfile, structureAnalyzer=structureAnalyzer)
         else:
             for inputSentences in inputIterator:
-                self.processDocument(inputSentences, None, outfile)
+                self.processDocument(inputSentences, None, outfile, structureAnalyzer=structureAnalyzer)
         outfile.close()
         self.progress.endUpdate()
         
@@ -147,7 +150,7 @@ class ExampleBuilder:
         if allowNewIds:
             self.saveIds()
     
-    def processDocument(self, sentences, goldSentences, outfile):
+    def processDocument(self, sentences, goldSentences, outfile, structureAnalyzer=None):
         #calculatePredictedRange(self, sentences)            
         for i in range(len(sentences)):
             sentence = sentences[i]
@@ -155,9 +158,9 @@ class ExampleBuilder:
             if goldSentences != None:
                 goldSentence = goldSentences[i]
             self.progress.update(1, "Building examples ("+sentence.sentence.get("id")+"): ")
-            self.processSentence(sentence, outfile, goldSentence)
+            self.processSentence(sentence, outfile, goldSentence, structureAnalyzer=structureAnalyzer)
     
-    def processSentence(self, sentence, outfile, goldSentence=None):
+    def processSentence(self, sentence, outfile, goldSentence=None, structureAnalyzer=None):
         # Process filtering rules
         if self.styles["sentenceLimit"]: # Rules for limiting which sentences to process
             # Get the rule list
@@ -182,10 +185,10 @@ class ExampleBuilder:
             goldGraph = None
             if goldSentence != None:
                 goldGraph = goldSentence.sentenceGraph
-            self.exampleCount += self.buildExamplesFromGraph(sentence.sentenceGraph, outfile, goldGraph)
+            self.exampleCount += self.buildExamplesFromGraph(sentence.sentenceGraph, outfile, goldGraph, structureAnalyzer=structureAnalyzer)
 
     @classmethod
-    def run(cls, input, output, parse, tokenization, style, classIds=None, featureIds=None, gold=None, append=False, allowNewIds=True):
+    def run(cls, input, output, parse, tokenization, style, classIds=None, featureIds=None, gold=None, append=False, allowNewIds=True, structureAnalyzer=None, debug=False):
         print >> sys.stderr, "Running", cls.__name__
         print >> sys.stderr, "  input:", input
         if gold != None:
@@ -201,11 +204,12 @@ class ExampleBuilder:
             print >> sys.stderr, "  parse:", parse + ", tokenization:", tokenization
         classSet, featureSet = cls.getIdSets(classIds, featureIds, allowNewIds) #cls.getIdSets(idFileTag)
         builder = cls(style=style, classSet=classSet, featureSet=featureSet)
+        builder.debug = debug
         #builder.idFileTag = idFileTag
         builder.classIdFilename = classIds
         builder.featureIdFilename = featureIds
         builder.parse = parse ; builder.tokenization = tokenization
-        builder.processCorpus(input, output, gold, append=append, allowNewIds=allowNewIds)
+        builder.processCorpus(input, output, gold, append=append, allowNewIds=allowNewIds, structureAnalyzer=structureAnalyzer)
         return builder
 
     def buildExamplesFromGraph(self, sentenceGraph, outfile, goldGraph=None):
@@ -277,6 +281,7 @@ class ExampleBuilder:
 
 def addBasicOptions(optparser):
     optparser.add_option("-i", "--input", default=None, dest="input", help="Corpus in analysis format", metavar="FILE")
+    optparser.add_option("-g", "--gold", default=None, dest="gold", help="Corpus in analysis format", metavar="FILE")
     optparser.add_option("-o", "--output", default=None, dest="output", help="Output file for the examples")
     optparser.add_option("-p", "--parse", default="split-McClosky", dest="parse", help="parse")
     optparser.add_option("-x", "--exampleBuilderParameters", default=None, dest="parameters", help="Parameters for the example builder")
@@ -284,6 +289,8 @@ def addBasicOptions(optparser):
     optparser.add_option("-c", "--classes", default=None, dest="classes", help="Class ids")
     optparser.add_option("-f", "--features", default=None, dest="features", help="Feature ids")
     optparser.add_option("-a", "--addIds", default=False, action="store_true", dest="addIds", help="Add new features")
+    optparser.add_option("-d", "--debug", default=False, action="store_true", dest="debug", help="Debug mode")
+    optparser.add_option("--structure", default=None, dest="structure", help="Structure analyzer data file")
 
 if __name__=="__main__":
     # Import Psyco if available
@@ -299,9 +306,21 @@ if __name__=="__main__":
     addBasicOptions(optparser)
     (options, args) = optparser.parse_args()
     
+    if options.gold == "AUTO":
+        options.gold = options.input
+    
     print >> sys.stderr, "Importing modules"
     exec "from ExampleBuilders." + options.exampleBuilder + " import " + options.exampleBuilder + " as ExampleBuilderClass"
     
+    structureAnalyzer =None
+    if options.structure == "AUTO": # define structure from input file
+        structureAnalyzer = StructureAnalyzer()
+        structureAnalyzer.analyze(options.input)
+        print >> sys.stderr, "--- Structure Analysis ----"
+        print >> sys.stderr, structureAnalyzer.toString()
+    elif options.structure != None:
+        structureAnalyzer = StructureAnalyzer(options.structure)
     #input, output, parse, tokenization, style, classIds=None, featureIds=None, gold=None, append=False)
     ExampleBuilderClass.run(options.input, options.output, options.parse, None, options.parameters, 
-                            options.classes, options.features, allowNewIds=options.addIds )
+                            options.classes, options.features, allowNewIds=options.addIds, 
+                            structureAnalyzer=structureAnalyzer, debug=options.debug, gold=options.gold)
