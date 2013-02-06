@@ -81,9 +81,14 @@ class UnmergingExampleBuilder(ExampleBuilder):
         
         ExampleBuilder.__init__(self, classSet=classSet, featureSet=featureSet)
         
-        self.styles = self._setDefaultParameters(["trigger_features","typed","directed","no_linear","entities","genia_limits",
+        defaultNone = ["trigger_features","typed","directed","no_linear","entities","genia_limits",
             "noAnnType", "noMasking", "maxFeatures", "no_merge", "disable_entity_features", 
-            "disable_single_element_features", "disable_ngram_features", "disable_path_edge_features"])
+            "disable_single_element_features", "disable_ngram_features", "disable_path_edge_features"]
+        defaultParameters = {}
+        for name in defaultNone:
+            defaultParameters[name] = None
+        defaultParameters["intersentence_gold"] = True
+        self.styles = self._setDefaultParameters(defaultParameters)
         self.styles = self.getParameters(style)
         self.multiEdgeFeatureBuilder = MultiEdgeFeatureBuilder(self.featureSet)
         self.multiEdgeFeatureBuilder.noAnnType = self.styles["noAnnType"]
@@ -134,7 +139,7 @@ class UnmergingExampleBuilder(ExampleBuilder):
             interactionLengths[interaction] = (interaction, pathLength, linLength, t2Pos)
         return interactionLengths
     
-    def eventIsGold(self, entity, arguments, sentenceGraph, goldGraph, goldEntitiesByOffset):
+    def eventIsGold(self, entity, arguments, sentenceGraph, goldGraph, goldEntitiesByOffset, allGoldInteractions):
         offset = entity.get("headOffset")
         if not goldEntitiesByOffset.has_key(offset):
             return False
@@ -153,8 +158,8 @@ class UnmergingExampleBuilder(ExampleBuilder):
             
             # Collect the gold interactions
             goldInteractions = []
-            for goldInteraction in goldGraph.interactions:
-                if goldInteraction.get("e1") == goldEntityId:
+            for goldInteraction in allGoldInteractions: #goldGraph.interactions:
+                if goldInteraction.get("e1") == goldEntityId and goldInteraction.get("event") == "True":
                     goldInteractions.append(goldInteraction)
             
             # Argument count rules
@@ -190,10 +195,11 @@ class UnmergingExampleBuilder(ExampleBuilder):
                 found = False
                 for goldInteraction in goldInteractions:
                     if goldInteraction.get("type") == argType:
-                        goldE2Entity = goldGraph.entitiesById[goldInteraction.get("e2")] 
-                        if goldE2Entity.get("headOffset") == e2Offset and goldE2Entity.get("type") == e2Type:
-                            found = True
-                            break
+                        if goldInteraction.get("e2") in goldGraph.entitiesById: # if not, assume this goldInteraction is an intersentence interaction
+                            goldE2Entity = goldGraph.entitiesById[goldInteraction.get("e2")] 
+                            if goldE2Entity.get("headOffset") == e2Offset and goldE2Entity.get("type") == e2Type:
+                                found = True
+                                break
                 if found == False: # this edge did not have a corresponding gold edge
                     isGold = False
                     break
@@ -422,15 +428,15 @@ class UnmergingExampleBuilder(ExampleBuilder):
             # intCombinations now contains a list of lists, each of which has a tuple for each valid combination
             # of one argument type. Next, we'll make all valid combinations of multiple argument types
             if self.debug:
-                print >> sys.stderr, "intCombinations", intCombinations
+                print >> sys.stderr, " ", "intCombinations", intCombinations
             argCombinations = combine.combine(*intCombinations)
             if self.debug:
-                print >> sys.stderr, "argCombinations", argCombinations
+                print >> sys.stderr, " ", "argCombinations", argCombinations
             for i in range(len(argCombinations)):
                 argCombinations[i] = sum(argCombinations[i], ())
             #sum(argCombinations, []) # flatten nested list
             if self.debug:
-                print >> sys.stderr, "argCombinations flat", argCombinations
+                print >> sys.stderr, " ", "argCombinations flat", argCombinations
             #argCombinations = combinations(validInteractions, len(validInteractions))
 #            validArgCombinations = []
 #            for combination in argCombinations:
@@ -447,7 +453,7 @@ class UnmergingExampleBuilder(ExampleBuilder):
             for argCombination in argCombinations:
                 # Originally binary classification
                 if goldGraph != None:
-                    isGoldEvent = self.eventIsGold(entity, argCombination, sentenceGraph, goldGraph, goldEntitiesByOffset)
+                    isGoldEvent = self.eventIsGold(entity, argCombination, sentenceGraph, goldGraph, goldEntitiesByOffset, goldGraph.interactions)
                     #if eType == "Binding":
                     #    print argCombination[0].get("e1"), len(argCombination), isGoldEvent
                 else:
@@ -468,18 +474,18 @@ class UnmergingExampleBuilder(ExampleBuilder):
                 
                 issues = defaultdict(int)
                 # early out for proteins etc.
-                if validIntTypeCount == 0 and entity.get("given") == "True":
-                    self.exampleStats.filter("given_leaf:" + entity.get("type"))
+                if validIntTypeCount == 0:
+                    self.exampleStats.filter("leaf:" + entity.get("type"))
                     if self.debug:
-                        print >> sys.stderr, category, "arg combination", argCombination, "GIVEN LEAF"
+                        print >> sys.stderr, " ", category, "arg combination", argCombination, "LEAF"
                 elif not structureAnalyzer.isValidEvent(entity, argCombination, sentenceGraph.entitiesById, issues=issues):
                     for key in issues:
                         self.exampleStats.filter(key)
                     if self.debug:
-                        print >> sys.stderr, category, "arg combination", argCombination, "INVALID", issues
+                        print >> sys.stderr, " ", category, "arg combination", argCombination, "INVALID", issues
                 else:
                     if self.debug:
-                        print >> sys.stderr, category, "arg combination", argCombination, "VALID"                
+                        print >> sys.stderr, " ", category, "arg combination", argCombination, "VALID"                
                     features = {}
                     argString = ""
                     for arg in argCombination:

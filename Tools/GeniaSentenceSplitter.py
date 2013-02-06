@@ -70,10 +70,14 @@ def moveElements(document):
     # Move interactions
     intCount = 0
     for interaction in document.findall("interaction"):
-        if entSentenceIndex[interaction.get("e1")] < entSentenceIndex[interaction.get("e2")]:
-            targetSentence = entSentence[interaction.get("e1")]
-        else:
-            targetSentence = entSentence[interaction.get("e2")]
+        #if entSentenceIndex[interaction.get("e1")] < entSentenceIndex[interaction.get("e2")]:
+        #    targetSentence = entSentence[interaction.get("e1")]
+        #else:
+        #    targetSentence = entSentence[interaction.get("e2")]
+        
+        # Interactions go to a sentence always by e1, as this is the event they are an argument of.
+        # If an intersentence interaction is a relation, this shouldn't matter.
+        targetSentence = entSentence[interaction.get("e1")]  
         document.remove(interaction)
         targetSentence.append(interaction)
         interaction.set("id", targetSentence.get("id") + ".i" + str(intCount))

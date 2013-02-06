@@ -128,7 +128,11 @@ class ExampleBuilder:
         
         #goldIterator = []
         if gold != None:
-            goldIterator = getCorpusIterator(gold, None, self.parse, self.tokenization)
+            removeGoldIntersentenceInteractions = True
+            if self.styles["intersentence_gold"]:
+                print >> sys.stderr, "Keeping intersentence interactions for gold corpus"
+                removeGoldIntersentenceInteractions = False
+            goldIterator = getCorpusIterator(gold, None, self.parse, self.tokenization, removeIntersentenceInteractions=removeGoldIntersentenceInteractions)
             for inputSentences, goldSentences in itertools.izip_longest(inputIterator, goldIterator, fillvalue=None):
                 assert inputSentences != None
                 assert goldSentences != None
