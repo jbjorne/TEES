@@ -53,7 +53,7 @@ class StructureAnalyzer():
 #        else:
 #            raise Exception("Unknown interaction type " + str(edgeType))
     
-    def isValidEvent(self, entity, args=None, entityById=None, noUpperLimitBeyondOne=True):
+    def isValidEvent(self, entity, args=None, entityById=None, noUpperLimitBeyondOne=True, issues=None):
         if args == None:
             args = []
         if type(entity) in types.StringTypes:
@@ -70,29 +70,41 @@ class StructureAnalyzer():
             if type(arg) in [types.TupleType, types.ListType]:
                 argType, argE2Type = arg
             else: # arg is an interaction element
-                if entityElement != None and entityById != None:
-                    assert entityById[arg.get("e1")] == entityElement
                 argType = arg.get("type")
-                argE2Type = entityById[arg.get("e2")]
+                argE2Type = entityById[arg.get("e2")].get("type")
             argTypeCounts[argType] += 1
             argE2Types[argType].add(argE2Type)
             argTypes.add(argType)
         argTypes = sorted(list(argTypes))
         # check validity of proposed arguments
+        valid = True
         eventArgLimits = self.argLimits[entityType]
         for argType in argTypes:
             if argTypeCounts[argType] < eventArgLimits[argType][0]: # check for minimum number of arguments
-                return False
+                if issues != None:
+                    issues["TOO_FEW_ARG:"+entityType+"."+argType] += 1
+                    valid = False
+                else:
+                    return False
             maxArgCount = eventArgLimits[argType][1]
             if maxArgCount > 1 and noUpperLimitBeyondOne: # don't differentiate arguments beyond 0, 1 or more than one.
                 maxArgCount = sys.maxint
             if argTypeCounts[argType] > maxArgCount: # check for maximum number of arguments
-                return False
+                if issues != None:
+                    issues["TOO_MANY_ARG:"+entityType+"."+argType] += 1
+                    valid = False
+                else:
+                    return False
         # check that no required arguments are missing
         for argLimitType in eventArgLimits:
             if argLimitType not in argTypes: # this type of argument is not part of the proposed event
                 if eventArgLimits[argLimitType][0] > 0: # for arguments not part of the event, the minimum limit must be one
-                    return False
+                    if issues != None:
+                        issues["MISSING_ARG:"+entityType+"."+argLimitType] += 1
+                        valid = False
+                    else:
+                        return False
+        return valid
     
     def _getElementDict(self, document, elementType):
         entities = [x for x in document.getiterator("entity")]
