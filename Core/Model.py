@@ -196,7 +196,7 @@ class Model():
     def hasMember(self, name):
         return name in self.members
     
-    def get(self, name, addIfNotExist=False):
+    def get(self, name, addIfNotExist=False, defaultIfNotExist=NOTHING):
         """
         Return a file member from the model. The member is extracted to a cached directory
         and returned as a path name. If this file is modified, when the model is saved,
@@ -208,6 +208,8 @@ class Model():
         if name not in self.members:
             if addIfNotExist:
                 self.add(name)
+            elif defaultIfNotExist != NOTHING:
+                return defaultIfNotExist
             else:
                 raise IOError("Model has no member \"" + name + "\"")
         # Cache member if not yet cached

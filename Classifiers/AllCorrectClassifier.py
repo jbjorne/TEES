@@ -1,43 +1,24 @@
 from Classifier import Classifier
 import Core.ExampleUtils as Example
-import sys, os, shutil, types
+import sys, os, types, copy
 
 class AllCorrectClassifier(Classifier):
-    def __init__(self, workDir=None):
-        self._makeTempDir(workDir)        
-    
-    def __del__(self):
-        self.debugFile.close()
-        if self._workDir == None and os.path.exists(self.tempDir):
-            print >> sys.stderr, "Removing temporary classifier work directory", self.tempDir
-            shutil.rmtree(self.tempDir)
-
-    @classmethod
-    def train(cls, examples, parameters, outputFile=None, timeout=None):
-        return 0
-    
-    @classmethod
-    def test(cls, examples, modelPath, output=None, parameters=None, timeout=None):
+        
+    def classify(self, examples, output, model=None, finishBeforeReturn=False, replaceRemoteFiles=True):
+        output = os.path.abspath(output)
+        # Get examples
         if type(examples) == types.ListType:
             print >> sys.stderr, "Classifying", len(examples), "with All-Correct Classifier"
-            examples, predictions = self.filterClassificationSet(examples, False)
-            testPath = self.tempDir+"/test.dat"
-            Example.writeExamples(examples, testPath)
         else:
             print >> sys.stderr, "Classifying file", examples, "with All-Correct Classifier"
-            testPath = examples
-            examples = Example.readExamples(examples,False)
-        #examples, predictions = self.filterClassificationSet(examples, True)
-        predictions = []
-        for example in examples:
-            #predictions.append( (example, example[1]) )
-            predictions.append( [example[1]] )
-        
-        if output == None:
-            output = "predictions"
+            examples = self.getExampleFile(examples, upload=False, replaceRemote=False, dummy=False)
+            examples = Example.readExamples(examples, False)
+        # Return a new classifier instance for following the training process and using the model
+        classifier = copy.copy(self)
+        # Classify
         f = open(output, "wt")
-        for p in predictions:
-            f.write(str(p[0])+"\n")
+        for example in examples:
+            f.write(str(example[1]) + "\n")
         f.close()
-            
-        return predictions
+        classifier.predictions = output
+        return classifier

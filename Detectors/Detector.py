@@ -120,6 +120,14 @@ class Detector():
     def getModel(self):
         return self.openModel(model)
     
+    def getClassifier(self, parameters):
+        parameters = Parameters.get(parameters, ["TEES.classifier"])
+        if parameters["TEES.classifier"] == None:
+            return self.Classifier
+        else:
+            exec "from Classifiers." + parameters["TEES.classifier"] + " import " + parameters["TEES.classifier"] + " as " + parameters["TEES.classifier"]
+            return eval(parameters["TEES.classifier"])
+    
     def saveStr(self, name, value, model=None, modelMustExist=True):
         if type(model) in types.StringTypes:
             modelObj = self.openModel(model, "a")
@@ -188,7 +196,9 @@ class Detector():
             append = False
             for dataSet, goldSet in itertools.izip_longest(data, gold, fillvalue=None):
                 if dataSet != None:
-                    self.exampleBuilder.run(dataSet, output, parse, None, exampleStyle, model.get(self.tag+"ids.classes", True), model.get(self.tag+"ids.features", True), goldSet, append, saveIdsToModel)
+                    self.exampleBuilder.run(dataSet, output, parse, None, exampleStyle, model.get(self.tag+"ids.classes", 
+                        True), model.get(self.tag+"ids.features", True), goldSet, append, saveIdsToModel,
+                        structureAnalyzer=self.structureAnalyzer)
                 append = True
         if saveIdsToModel:
             model.save()

@@ -66,7 +66,7 @@ class SingleStageDetector(Detector):
                 # use it, and also as annotation for the trained model. The final selected parameter will
                 # be stored as "*classifier-parameter" 
                 classifierWorkDir = self.workDir + os.path.normpath(model.path) + "-" + self.tag + "models"
-                classifier = self.Classifier(self.connection)
+                classifier = self.getClassifier(model.getStr(self.tag+"classifier-parameters-train"))(self.connection)
                 classifier.optimize(combinedTrainExamples, classifierWorkDir, model.getStr(self.tag+"classifier-parameters-train"), testExampleFile, model.get(self.tag+"ids.classes"), step="SUBMIT", evaluator=self.evaluator)
                 model.save()
     
@@ -79,10 +79,11 @@ class SingleStageDetector(Detector):
                 model = self.openModel(model, "a")
                 assert model.mode in ["a", "w"]
                 classifierWorkDir = self.workDir + os.path.normpath(model.path) + "-" + self.tag+ "models"
-                classifier = self.Classifier(self.connection)
+                classifier = self.getClassifier(model.getStr(self.tag+"classifier-parameters-train"))(self.connection)
                 optimized = classifier.optimize("DUMMY", classifierWorkDir, model.getStr(self.tag+"classifier-parameters-train"), testExampleFile, model.get(self.tag+"ids.classes"), step="RESULTS", evaluator=self.evaluator, 
                                                 determineThreshold=("TEES.threshold" in model.getStr(self.tag+"classifier-parameters-train")))
-                self.addClassifierModel(model, optimized.model, optimized.parameters, optimized.threshold)
+                #self.addClassifierModel(model, optimized.model, optimized.parameters, optimized.threshold)
+                optimized.saveModel(model, self.tag)
                 model.save()
                 # Check for catenated example file
                 if self.deleteCombinedExamples:
@@ -127,7 +128,7 @@ class SingleStageDetector(Detector):
         if parse == None: parse = self.getStr(self.tag+"parse", model)
         workOutputTag = os.path.join(self.workDir, os.path.basename(output) + "-")
         xml = self.classifyToXML(data, model, None, workOutputTag, 
-            model.get(self.tag+"classifier-model"), goldData, parse, float(model.getStr("recallAdjustParameter", defaultIfNotExist=1.0)))
+            model.get(self.tag+"classifier-model", defaultIfNotExist=None), goldData, parse, float(model.getStr("recallAdjustParameter", defaultIfNotExist=1.0)))
         if (validate):
             self.structureAnalyzer.load(model)
             self.structureAnalyzer.validate(xml)
@@ -155,10 +156,10 @@ class SingleStageDetector(Detector):
                 exampleFileName += ".gz"
         self.buildExamples(model, [data], [exampleFileName], [goldData], parse=parse, exampleStyle=exampleStyle)
         if classifierModel == None:
-            classifierModel = model.get(self.tag+"classifier-model")
-        else:
-            assert os.path.exists(classifierModel), classifierModel
-        classifier = self.Classifier()
+            classifierModel = model.get(self.tag+"classifier-model", defaultIfNotExist=None)
+        #else:
+        #    assert os.path.exists(classifierModel), classifierModel
+        classifier = self.getClassifier(model.getStr(self.tag+"classifier-parameter", defaultIfNotExist=None))()
         classifier.classify(exampleFileName, tag+self.tag+"classifications", classifierModel, finishBeforeReturn=True)
         threshold = model.getStr(self.tag+"threshold", defaultIfNotExist=None, asType=float)
         predictions = ExampleUtils.loadPredictions(tag+self.tag+"classifications", recallAdjust, threshold=threshold)
