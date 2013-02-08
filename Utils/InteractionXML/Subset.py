@@ -45,7 +45,7 @@ def select(elementCount, documentSets, element, ids, invert):
 
 def getSubset(input, output=None, fraction=1.0, seed=0, ids=None, invert=False, targetElementTag="document"): 
     distribution = None
-    if options.ids == None:
+    if ids == None:
         print >> sys.stderr, "No id-file, using pseudorandom distribution"
         distribution = getSample(getElementCounts(input, [targetElementTag])[targetElementTag], fraction, seed)
 

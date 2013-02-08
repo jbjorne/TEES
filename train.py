@@ -11,6 +11,7 @@ import Utils.Settings as Settings
 import Utils.Parameters as Parameters
 from Utils.Connection.Connection import getConnection
 import Utils.STFormat.Compare
+import Utils.InteractionXML.Subset
 import shutil
 import atexit
 import types
@@ -99,7 +100,7 @@ def train(output, task=None, detector=None, inputFiles=None, models=None, parse=
                            fromStep=detectorSteps["TRAIN"], workDir="training")
         # Save the detector type
         for model in [models["devel"], models["test"]]:
-            if os.path.exists(model):
+            if model != None and os.path.exists(model):
                 model = Model(model, "a")
                 model.addStr("detector", detectorName)
                 if preprocessorParams != None:
@@ -193,8 +194,9 @@ def getSubsets(inputFiles, subset, outdir="training"):
                 fraction = subset["all"]
             if outdir == None:
                 outdir = tempfile.mkdtemp()
-            outFileName = os.path.join(outdir, "subset_" + str(fraction) + "_" + str(seed) + "_" + os.path.basename(inputFiles[dataset]))
-            getSubset(inputFiles[dataset], outFileName, float(fraction), subset["seed"])
+            outFileName = os.path.join(outdir, "subset_" + str(fraction) + "_" + str(subset["seed"]) + "_" + os.path.basename(inputFiles[dataset]))
+            if not os.path.exists(outFileName):
+                Utils.InteractionXML.Subset.getSubset(inputFiles[dataset], outFileName, float(fraction), subset["seed"])
             inputFiles[dataset] = outFileName
 
 def workdir(path, deleteIfExists=True, copyFrom=None, log="log.txt"):
@@ -462,6 +464,9 @@ if __name__=="__main__":
     optparser.add_option_group(debug)
     (options, args) = optparser.parse_args()
     
+    if options.testModel == "None":
+        options.testModel = None
+    
     assert options.output != None
     if options.noLog: options.log = None
     train(options.output, options.task, options.detector, 
@@ -472,4 +477,5 @@ if __name__=="__main__":
           exampleStyles={"examples":options.exampleStyle, "trigger":options.triggerStyle, "edge":options.edgeStyle, "unmerging":options.unmergingStyle, "modifiers":options.modifierStyle},
           classifierParams={"examples":options.exampleParams, "trigger":options.triggerParams, "recall":options.recallAdjustParams, "edge":options.edgeParams, "unmerging":options.unmergingParams, "modifiers":options.modifierParams}, 
           doFullGrid=options.fullGrid, deleteOutput=options.clearAll, copyFrom=options.copyFrom, 
-          log=options.log, step=options.step, omitSteps=options.omitSteps, debug=options.debug, connection=options.connection)
+          log=options.log, step=options.step, omitSteps=options.omitSteps, debug=options.debug, 
+          connection=options.connection, subset=options.subset)

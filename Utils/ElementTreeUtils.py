@@ -109,6 +109,8 @@ def escapeText(text):
 class ETWriter():
     def __init__(self, out):
         if isinstance(out,str):
+            if not os.path.exists(os.path.dirname(out)):
+                os.makedirs(os.path.dirname(out))
             if out.endswith(".gz"):
                 self.out = GzipFile(out,"wt")
             else:
