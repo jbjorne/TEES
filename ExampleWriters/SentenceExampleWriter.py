@@ -69,8 +69,14 @@ class SentenceExampleWriter:
         count = 0
         for example in examples:
             count += 1
-        assert count > 0
-        progress = ProgressCounter(count, "Write Examples")
+        #assert count > 0
+        if count > 0:
+            progress = ProgressCounter(count, "Write Examples")
+        else:
+            predCount = 0
+            for prediction in predictions:
+                predCount += 1
+            assert predCount == 0
         
         for example, prediction in itertools.izip_longest(examples, predictions):
             assert example != None

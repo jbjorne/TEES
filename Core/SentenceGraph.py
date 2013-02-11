@@ -183,20 +183,28 @@ class SentenceGraph:
     def makeEntityGraph(self, entities, interactions, entityToDuplicates=None):
         graph = Graph()
         graph.addNodes(entities)
+        # make a dummy duplicate map if it's not required
+        if entityToDuplicates == None:
+            entityToDuplicates = {}
+            for e in entities:
+                entityToDuplicates[e] = []
         # initialize a helper map
         interactionMap = {}
         for interaction in interactions:
             e1 = self.entitiesById[interaction.get("e1")]
-            e2 = self.entitiesById[interaction.get("e2")]
+            e2Id = interaction.get("e2")
+            if e2Id not in self.entitiesById: # intersentence interaction
+                if e2Id not in entities:
+                    entities.append(e2Id)
+                    entityToDuplicates[e2Id] = []
+                e2 = e2Id # make a dummy node
+            else: 
+                e2 = self.entitiesById[e2Id]
             if e1 not in interactionMap:
                 interactionMap[e1] = {}
             if e2 not in interactionMap[e1]:
                 interactionMap[e1][e2] = []
             interactionMap[e1][e2].append(interaction)
-        if entityToDuplicates == None:
-            entityToDuplicates = {}
-            for e in entities:
-                entityToDuplicates[e] = []
         # make the graph
         for e1 in entities: # loop through all given entities
             for e2 in entities: # loop through all given entities

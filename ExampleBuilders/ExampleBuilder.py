@@ -124,12 +124,16 @@ class ExampleBuilder:
         
         self.calculatePredictedRange(self.getSentences(input, self.parse, self.tokenization))
         
-        inputIterator = getCorpusIterator(input, None, self.parse, self.tokenization)            
+        removeIntersentenceInteractions = True
+        if "keep_intersentence" in self.styles and self.styles["keep_intersentence"]:
+            print >> sys.stderr, "Keeping intersentence interactions for input corpus"
+            removeIntersentenceInteractions = False
+        inputIterator = getCorpusIterator(input, None, self.parse, self.tokenization, removeIntersentenceInteractions=removeIntersentenceInteractions)            
         
         #goldIterator = []
         if gold != None:
             removeGoldIntersentenceInteractions = True
-            if self.styles["intersentence_gold"]:
+            if "keep_intersentence_gold" in self.styles and self.styles["keep_intersentence_gold"]:
                 print >> sys.stderr, "Keeping intersentence interactions for gold corpus"
                 removeGoldIntersentenceInteractions = False
             goldIterator = getCorpusIterator(gold, None, self.parse, self.tokenization, removeIntersentenceInteractions=removeGoldIntersentenceInteractions)
