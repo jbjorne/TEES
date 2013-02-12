@@ -32,7 +32,8 @@ escDict={"-LRB-":"(",
          "-LSB-":"[",
          "-RSB-":"]",
          "``":"\"",
-         "''":"\""}
+         "''":"\"",
+         "\\/":"/"}
 
 def install(destDir=None, downloadDir=None, redownload=False, updateLocalSettings=False):
     print >> sys.stderr, "Installing Stanford Parser"
@@ -393,6 +394,7 @@ def insertParses(input, parsePath, output=None, parseName="McCC", extraAttribute
     corpusRoot = corpusTree.getroot()
     
     print >> sys.stderr, "Inserting parses from", parsePath
+    assert os.path.exists(parsePath)
     if parsePath.find(".tar.gz") != -1:
         tarFilePath, parsePath = parsePath.split(".tar.gz")
         tarFilePath += ".tar.gz"
@@ -422,6 +424,8 @@ def insertParses(input, parsePath, output=None, parseName="McCC", extraAttribute
         f = openFile(os.path.join(parsePath, origId + ".sd"), tarFile)
         if f == None: # file with BioNLP'11 extension not found, try BioNLP'09 extension
             f = openFile(os.path.join(parsePath, origId + ".dep"), tarFile)
+        if f == None: # file with BioNLP'09 extension not found, try BioNLP'13 extension
+            f = openFile(os.path.join(parsePath, origId + ".sdep"), tarFile)
         if f != None:
             sentences = document.findall("sentence")
             # TODO: Following for-loop is the same as when used with a real parser, and should

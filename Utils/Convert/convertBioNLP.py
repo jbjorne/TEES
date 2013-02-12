@@ -23,6 +23,7 @@ from Detectors.StructureAnalyzer import StructureAnalyzer
 
 moveBI = ["PMID-10333516-S3", "PMID-10503549-S4", "PMID-10788508-S10", "PMID-1906867-S3",
           "PMID-9555886-S6", "PMID-10075739-S13", "PMID-10400595-S1", "PMID-10220166-S12"]
+bioNLP13AnalysesTempDir = None
 
 def installPreconverted(url="BIONLP_CORPORA", destPath=None, downloadPath=None, redownload=False, updateLocalSettings=False):
     print >> sys.stderr, "---------------", "Downloading preconverted corpora", "---------------"
@@ -63,7 +64,7 @@ def downloadCorpus(corpus, destPath=None, downloadPath=None, clear=False):
             teesParseFinalDestPath = os.path.join(destPath, "TEES-parses")
         Utils.Download.downloadAndExtract(Settings.URL["TEES_PARSES"], teesParseFinalDestPath, downloadPath, redownload=clear)
         downloaded["TEES_PARSES"] = teesParseFinalDestPath
-    else:
+    elif corpus == "GE09" or corpus.endswith("11"):
         if corpus == "GE09":
             analyses = ["_ANALYSES"]
         else:
@@ -73,9 +74,15 @@ def downloadCorpus(corpus, destPath=None, downloadPath=None, clear=False):
                 identifier = corpus + setName + analysis
                 if identifier in Settings.URL:
                     downloaded[identifier] = Utils.Download.download(Settings.URL[identifier], downloadPath + "/support/", clear=clear)
+    else:
+        assert corpus.endswith("13")
+        downloaded["BioNLP13_STANFORD_PARSES"] = Utils.Download.download(Settings.URL["BioNLP13_STANFORD_PARSES"], downloadPath + "/support/", clear=clear)
+        downloaded["BioNLP13_TOKENS"] = Utils.Download.download(Settings.URL["BioNLP13_TOKENS"], downloadPath + "/support/", clear=clear)
     return downloaded
 
 def convert(corpora, outDir=None, downloadDir=None, redownload=False, makeIntermediateFiles=True, evaluate=False, processEquiv=True, addAnalyses=True):
+    global bioNLP13AnalysesTempDir
+    
     if outDir == None:
         os.path.normpath(Settings.DATAPATH + "/corpora")
     if not os.path.exists(outDir):
@@ -94,6 +101,10 @@ def convert(corpora, outDir=None, downloadDir=None, redownload=False, makeInterm
         convertDownloaded(outDir, corpus, downloaded, makeIntermediateFiles, evaluate, processEquiv=processEquiv, addAnalyses=addAnalyses, packageSubPath=packageSubPath)
         Stream.closeLog(logFileName)
         count += 1
+    
+    if bioNLP13AnalysesTempDir != None:
+        shutil.rmtree(bioNLP13AnalysesTempDir)
+        bioNLP13AnalysesTempDir = None
 
 def corpusRENtoASCII(xml):
     print >> sys.stderr, "Converting REN11 corpus to ASCII"
@@ -104,6 +115,11 @@ def corpusRENtoASCII(xml):
         text = text.replace(u"\xc3\xa9", u"e")
         text = text.replace("and Wikstram, M. (1991) Eur. J. Biochem. 197", "and Wikstrom, M. (1991) Eur. J. Biochem. 197")
         document.set("text", text)
+
+def checkAttributes(xml):
+    for element in xml.getiterator():
+        for key in element.attrib.keys():
+            assert element.get(key) != None, (element.tag, key, element.attrib)
 
 def convertDownloaded(outdir, corpus, files, intermediateFiles=True, evaluate=True, processEquiv=True, addAnalyses=True, packageSubPath=None):
     global moveBI
@@ -160,7 +176,7 @@ def convertDownloaded(outdir, corpus, files, intermediateFiles=True, evaluate=Tr
         corpusRENtoASCII(xml)
     
     if addAnalyses:
-        insertAnalyses(xml, corpus, datasets, files, bigfileName)
+        insertAnalyses(xml, corpus, datasets, files, bigfileName, packageSubPath=packageSubPath)
     else:
         print >> sys.stderr, "Skipping adding analyses"
     if intermediateFiles:
@@ -169,6 +185,7 @@ def convertDownloaded(outdir, corpus, files, intermediateFiles=True, evaluate=Tr
     processParses(xml)
     
     print >> sys.stderr, "---------------", "Writing corpora", "---------------"
+    checkAttributes(xml)
     # Write out converted data
     if intermediateFiles:
         print >> sys.stderr, "Writing combined corpus", bigfileName+".xml"
@@ -193,7 +210,13 @@ def convertDownloaded(outdir, corpus, files, intermediateFiles=True, evaluate=Tr
     analyzer.analyze([xml])
     print >> sys.stderr, analyzer.toString()
 
-def insertAnalyses(xml, corpus, datasets, files, bigfileName):
+def insertAnalyses(xml, corpus, datasets, files, bigfileName, packageSubPath=None):
+    global bioNLP13AnalysesTempDir
+    
+    if packageSubPath != None:
+        packageSubPath = "/" + packageSubPath
+    else:
+        packageSubPath = ""
     if "TEES_PARSES" in files: # corpus for which no official parse exists
         print >> sys.stderr, "---------------", "Inserting TEES-generated analyses", "---------------"
         extractedFilename = files["TEES_PARSES"] + "/" + corpus
@@ -219,7 +242,7 @@ def insertAnalyses(xml, corpus, datasets, files, bigfileName):
             Tools.StanfordParser.insertParses(xml, packagePath + "/McClosky-Charniak/dep", None, skipExtra=1, extraAttributes={"stanfordSource":"BioNLP'09"})
             print >> sys.stderr, "Removing temporary directory", tempdir
             shutil.rmtree(tempdir)
-    else: # use official BioNLP'11 parses
+    elif corpus.endswith("11"): # use official BioNLP'11 parses
         for i in range(len(datasets)):
             print >> sys.stderr, "---------------", "Inserting analyses " + str(i+1) + "/" + str(len(datasets)), "---------------"
             setName = datasets[i]
@@ -235,6 +258,40 @@ def insertAnalyses(xml, corpus, datasets, files, bigfileName):
             Tools.StanfordParser.insertParses(xml, tempdir + "/" + os.path.basename(files[corpus + "_" + setName.upper() + "_McCC"])[:-len(".tar.gz")].split("-", 2)[-1] + "/mccc/sd_ccproc", None, extraAttributes={"stanfordSource":"BioNLP'11"})
             print >> sys.stderr, "Removing temporary directory", tempdir
             shutil.rmtree(tempdir)
+    else: # use official BioNLP'13 parses
+        assert corpus.endswith("13")
+        if bioNLP13AnalysesTempDir == None:
+            bioNLP13AnalysesTempDir = tempfile.mkdtemp()
+            Utils.Download.extractPackage(files["BioNLP13_STANFORD_PARSES"], bioNLP13AnalysesTempDir)
+            Utils.Download.extractPackage(files["BioNLP13_TOKENS"], bioNLP13AnalysesTempDir)
+            print >> sys.stderr, "Temporarily uncompressed BioNLP13 analyses to", bioNLP13AnalysesTempDir
+        tempdir = bioNLP13AnalysesTempDir
+        # Define the naming conventions for the different tasks
+        if corpus in ["CG13", "GRO13", "PC13"]:
+            setTags = {"devel":"development_data", "train":"training_data"}
+            corpusTag = corpus[:-2]
+        elif corpus == "GE13":
+            setTags = {"devel":"devel_data", "train":"train_data"}
+            corpusTag = corpus[:-2]
+        elif corpus in ["GRN13", "BB13"]:
+            setTags = {"devel":"dev", "train":"train"}
+            if corpus == "GRN13":
+                corpusTag = "Gene_Regulation_Network"
+            else:
+                corpusTag = "Bacteria_Biotopes"
+        stTag = "BioNLP-ST-2013_"
+        if corpus in ["CG13", "GRO13", "PC13"]:
+            stTag = "BioNLP-ST_2013_"
+        # Insert the analyses
+        for i in range(len(datasets)):
+            print >> sys.stderr, "---------------", "Inserting analyses " + str(i+1) + "/" + str(len(datasets)), "---------------"
+            setName = datasets[i]
+            print >> sys.stderr, "Making sentences"
+            Tools.SentenceSplitter.makeSentences(xml, tempdir + "/bionlp-st-2013_all_tasks_tokenised/" + stTag + corpusTag + "_" + setTags[setName] + packageSubPath, None)
+            print >> sys.stderr, "Inserting McCC parses"
+            Tools.BLLIPParser.insertParses(xml, tempdir + "/bionlp-st-2013_all_tasks_stanford_parser/" + stTag + corpusTag + "_" + setTags[setName] + packageSubPath, None, extraAttributes={"source":"BioNLP'13"})
+            print >> sys.stderr, "Inserting Stanford conversions"
+            Tools.StanfordParser.insertParses(xml, tempdir + "/bionlp-st-2013_all_tasks_stanford_parser/" + stTag + corpusTag + "_" + setTags[setName] + packageSubPath, None, extraAttributes={"stanfordSource":"BioNLP'13"})
 
 def processParses(xml, splitTarget="McCC"):
     print >> sys.stderr, "Protein Name Splitting"

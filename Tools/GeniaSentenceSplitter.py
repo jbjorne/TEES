@@ -47,8 +47,13 @@ def moveElements(document):
         # Move entities
         entCount = 0
         for entity in document.findall("entity"):
-            entityOffset = Range.charOffsetToSingleTuple(entity.get("charOffset"))
-            if Range.overlap(sentenceOffset, entityOffset):
+            entityOffsets = Range.charOffsetToTuples(entity.get("charOffset"))
+            overlaps = False
+            for entityOffset in entityOffsets:
+                if Range.overlap(sentenceOffset, entityOffset):
+                    overlaps = True
+                    break
+            if overlaps:
                 document.remove(entity)
                 sentence.append(entity)
                 entityId = entity.get("id")
@@ -62,9 +67,13 @@ def moveElements(document):
                     entMap[entityId] = sentence.get("id") + ".e" + str(entCount)
                 entSentence[entityId] = sentence
                 entSentenceIndex[entityId] = sentenceCount
-                newEntityOffset = (entityOffset[0] - sentenceOffset[0], entityOffset[1] - sentenceOffset[0])
+                #newEntityOffset = (entityOffset[0] - sentenceOffset[0], entityOffset[1] - sentenceOffset[0])
+                newEntityOffsets = []
+                for entityOffset in entityOffsets:
+                    newEntityOffsets.append( (entityOffset[0] - sentenceOffset[0], entityOffset[1] - sentenceOffset[0]) )
                 entity.set("origOffset", entity.get("charOffset"))
-                entity.set("charOffset", str(newEntityOffset[0]) + "-" + str(newEntityOffset[1])) 
+                #entity.set("charOffset", str(newEntityOffset[0]) + "-" + str(newEntityOffset[1]))
+                entity.set("charOffset", Range.tuplesToCharOffset(newEntityOffsets)) 
                 entCount += 1
         sentenceCount += 1
     # Move interactions

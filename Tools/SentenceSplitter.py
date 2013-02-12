@@ -42,6 +42,7 @@ def makeSentences(input, tokenizationPath, output=None, removeText=False, escDic
     corpusRoot = corpusTree.getroot()
     
     print >> sys.stderr, "Inserting tokenizations from", tokenizationPath
+    assert os.path.exists(tokenizationPath)
     if tokenizationPath.find(".tar.gz") != -1:
         tarFilePath, tokenizationPath = tokenizationPath.split(".tar.gz")
         tarFilePath += ".tar.gz"
@@ -115,14 +116,14 @@ def alignSentences(document, sentenceTexts, escDict={}):
         for key in sorted(escDict.keys()):
             sText = sText.replace(key, escDict[key])
         if sText == "":
-            print >> sys.stderr, "Warning, empty sentence in", document.get("id") 
+            print >> sys.stderr, "Warning, empty sentence in", document.get("id"), document.get("origId")
             continue
         isFirst = True
         for sToken in sText.split():
             # Find the starting point of the token in the text. This
             # point must be after previous sentences
             cStart = text.find(sToken, start) # find start position
-            assert cStart != -1, (text, sText, sToken, start)
+            assert cStart != -1, (text, sText, sToken, start, document.get("id"), document.get("origId"))
             if not text[cEnd:cStart].strip() == "":
                 print >> sys.stderr,  "-----------------------------"
                 print >> sys.stderr,  "text:", text

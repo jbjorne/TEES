@@ -24,7 +24,8 @@ escDict={"-LRB-":"(",
          "-LSB-":"[",
          "-RSB-":"]",
          "``":"\"",
-         "''":"\""}
+         "''":"\"",
+         "\\/":"/"}
 
 def install(destDir=None, downloadDir=None, redownload=False, updateLocalSettings=False):
     url = Settings.URL["BLLIP_SOURCE"]
@@ -337,6 +338,7 @@ def insertParses(input, parsePath, output=None, parseName="McCC", tokenizationNa
     corpusRoot = corpusTree.getroot()
     
     print >> sys.stderr, "Inserting parses from", parsePath
+    assert os.path.exists(parsePath)
     if parsePath.find(".tar.gz") != -1:
         tarFilePath, parsePath = parsePath.split(".tar.gz")
         tarFilePath += ".tar.gz"
