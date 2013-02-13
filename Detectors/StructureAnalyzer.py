@@ -31,6 +31,13 @@ class StructureAnalyzer():
         self.relations = {}
         self.modifiers = {}
         self.counts = defaultdict(dict)
+    
+    def isEventArgument(self, edgeType):
+        if edgeType in self.eventArgumentTypes:
+            return True
+        else:
+            assert edgeType in self.relations
+            return False
         
     def getArgLimits(self, entityType, argType):
         return self.argLimits[entityType][argType]
