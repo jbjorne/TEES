@@ -67,7 +67,7 @@ class EventDetector(Detector):
                            fullGrid=fullGrid, task=task, parse=parse, tokenization=tokenization)
         self.setWorkDir(workDir)
         # Begin the training process ####################################
-        self.enterState(self.STATE_TRAIN, ["EXAMPLES", "BEGIN-MODEL", "END-MODEL", "BEGIN-COMBINED-MODEL", 
+        self.enterState(self.STATE_TRAIN, ["ANALYZE", "EXAMPLES", "BEGIN-MODEL", "END-MODEL", "BEGIN-COMBINED-MODEL", 
                                            "SELF-TRAIN-EXAMPLES-FOR-UNMERGING", "UNMERGING-EXAMPLES", "BEGIN-UNMERGING-MODEL", "END-UNMERGING-MODEL", 
                                            "GRID", "BEGIN-COMBINED-MODEL-FULLGRID", "END-COMBINED-MODEL"], fromStep, toStep)
         self.triggerDetector.enterState(self.STATE_COMPONENT_TRAIN)
