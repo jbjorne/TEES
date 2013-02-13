@@ -145,7 +145,7 @@ class ModifierExampleBuilder(ExampleBuilder):
         for tokenFeature,w in self.getTokenFeatures(sentenceGraph.tokens[index], sentenceGraph).iteritems():
             features[self.featureSet.getId(tag+tokenFeature)] = w
     
-    def buildExamplesFromGraph(self, sentenceGraph, outfile, goldGraph=None):
+    def buildExamplesFromGraph(self, sentenceGraph, outfile, goldGraph=None, structureAnalyzer=None):
         """
         Build one example for each token of the sentence
         """

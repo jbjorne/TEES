@@ -338,7 +338,7 @@ class EdgeExampleBuilder(ExampleBuilder):
         if e1Type == "Protein":
             return False
         elif e1Type in ["Entity", "Gene_expression", "Transcription", "Protein_catabolism", "Phosphorylation", "Binding"]:
-            if e2Type == "Protein":
+            if e2Type in ["Protein", "Entity"]: #e2Type == "Protein":
                 return True
             else:
                 return False
@@ -348,10 +348,11 @@ class EdgeExampleBuilder(ExampleBuilder):
             else:
                 return False
         elif "egulation" in e1Type:
-            if e2Type != "Entity":
-                return True
-            else:
-                return False
+            return True
+#            if e2Type != "Entity":
+#                return True
+#            else:
+#                return False
         assert False, (e1Type, e2Type)
     
     def isValidInteraction(self, e1, e2):
@@ -373,7 +374,7 @@ class EdgeExampleBuilder(ExampleBuilder):
         else:
             return False
                 
-    def buildExamplesFromGraph(self, sentenceGraph, outfile, goldGraph = None):
+    def buildExamplesFromGraph(self, sentenceGraph, outfile, goldGraph = None, structureAnalyzer=None):
         """
         Build examples for a single sentence. Returns a list of examples.
         See Core/ExampleUtils for example format.
@@ -500,7 +501,7 @@ class EdgeExampleBuilder(ExampleBuilder):
                         self.exampleStats.filter("pos_only")
                     if makeExample:
                         #examples.append( self.buildExample(tI, tJ, paths, sentenceGraph, categoryName, exampleIndex, eI, eJ) )
-                        ExampleUtils.appendExamples([self.buildExample(tI, tJ, paths, sentenceGraph, categoryName, exampleIndex, eI, eJ)], outfile)
+                        ExampleUtils.appendExamples([self.buildExample(tI, tJ, paths, sentenceGraph, categoryName, exampleIndex, eI, eJ, structureAnalyzer)], outfile)
                         exampleIndex += 1
                     self.exampleStats.endExample()
                     
@@ -554,7 +555,7 @@ class EdgeExampleBuilder(ExampleBuilder):
                         self.exampleStats.filter("pos_only")
                     if makeExample:
                         #examples.append( self.buildExample(tJ, tI, paths, sentenceGraph, categoryName, exampleIndex, eJ, eI) )
-                        ExampleUtils.appendExamples([self.buildExample(tJ, tI, paths, sentenceGraph, categoryName, exampleIndex, eJ, eI)], outfile)
+                        ExampleUtils.appendExamples([self.buildExample(tJ, tI, paths, sentenceGraph, categoryName, exampleIndex, eJ, eI, structureAnalyzer)], outfile)
                         exampleIndex += 1
                     self.exampleStats.endExample()
                 else:
@@ -563,9 +564,9 @@ class EdgeExampleBuilder(ExampleBuilder):
                     else:
                         categoryName = self.getCategoryNameFromTokens(sentenceGraph, tI, tJ, directed=False)
                     self.exampleStats.beginExample(categoryName)
-                    forwardExample = self.buildExample(tI, tJ, paths, sentenceGraph, categoryName, exampleIndex, eI, eJ)
+                    forwardExample = self.buildExample(tI, tJ, paths, sentenceGraph, categoryName, exampleIndex, eI, eJ, structureAnalyzer)
                     if not self.styles["graph_kernel"]:
-                        reverseExample = self.buildExample(tJ, tI, paths, sentenceGraph, categoryName, exampleIndex, eJ, eI)
+                        reverseExample = self.buildExample(tJ, tI, paths, sentenceGraph, categoryName, exampleIndex, eJ, eI, structureAnalyzer)
                         forwardExample[2].update(reverseExample[2])
                     #examples.append(forwardExample)
                     ExampleUtils.appendExamples([forwardExample], outfile)
@@ -575,7 +576,7 @@ class EdgeExampleBuilder(ExampleBuilder):
         #return examples
         return exampleIndex
     
-    def buildExample(self, token1, token2, paths, sentenceGraph, categoryName, exampleIndex, entity1=None, entity2=None):
+    def buildExample(self, token1, token2, paths, sentenceGraph, categoryName, exampleIndex, entity1=None, entity2=None, structureAnalyzer=None):
         """
         Build a single directed example for the potential edge between token1 and token2
         """
@@ -798,6 +799,10 @@ class EdgeExampleBuilder(ExampleBuilder):
                 extra["e2DuplicateIds"] = ",".join([x.get("id") for x in sentenceGraph.mergedEntityToDuplicates[entity2]])
                 #extra["e2GoldIds"] = mergedEntityIds[entity2]
         extra["categoryName"] = categoryName
+        eventEdges = []
+        for edgeType in categoryName.split("---"):
+            eventEdges.append(structureAnalyzer.isEventArgument(edgeType))
+        extra["event"] = "---".join([str(x) for x in eventEdges])
         if self.styles["bacteria_renaming"]:
             if entity1.get("text") != None and entity1.get("text") != "":
                 extra["e1t"] = entity1.get("text").replace(" ", "---").replace(":","-COL-")

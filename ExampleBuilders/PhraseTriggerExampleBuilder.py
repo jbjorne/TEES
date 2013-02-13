@@ -141,7 +141,7 @@ class PhraseTriggerExampleBuilder(ExampleBuilder):
         else:
             return False
     
-    def buildExamplesFromGraph(self, sentenceGraph, outfile, goldGraph=None):
+    def buildExamplesFromGraph(self, sentenceGraph, outfile, goldGraph=None, structureAnalyzer=None):
         """
         Build one example for each phrase in the sentence
         """
