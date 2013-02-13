@@ -165,7 +165,7 @@ URL["GE09_TRAIN_ANALYSES"] = urlBase + "bionlp09_shared_task_training_analyses_r
 URL["GE09_TEST_ANALYSES"] = urlBase + "bionlp09_shared_task_test_analyses_rev2.tar.gz"
 
 
-# DDI
+# DDI'11 Shared Task
 urlBase = "http://labda.inf.uc3m.es/DDIExtraction2011/"
 URL["DDI11_TRAIN_UNIFIED"] = urlBase + "DrugDDI_Unified.zip"
 URL["DDI11_TRAIN_MTMX"] = urlBase + "DrugDDI_MTMX.zip"
@@ -174,6 +174,10 @@ URL["DDI11_TRAIN_MTMX"] = urlBase + "DrugDDI_MTMX.zip"
 # converted for use with TEES
 URL["DDI11_TEST_UNIFIED"] = None
 URL["DDI11_TEST_MTMX"] = None
+
+
+# DDI'13 Shared Task
+URL["DDI13_TRAIN"] = "http://www.cs.york.ac.uk/semeval-2013/task9/data/uploads/datasets/train/semeval_task9_train.zip"
 
 
 # Miscellaneous files
