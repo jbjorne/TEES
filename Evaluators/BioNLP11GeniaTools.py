@@ -170,6 +170,24 @@ def evaluate(source, task, goldDir=None, debug=False):
         return None
     return (getFScore(results, task), results)
 
+def removeX(dir, filePatterns=[".a1", ".rel", ".a2"]):
+    for filename in os.listdir(dir):
+        match = False
+        for pattern in filePatterns:
+            if pattern in filename:
+                match = True
+                break
+        if match:
+            filePath = os.path.join(dir, filename)
+            f = codecs.open(filePath, "rt", "utf-8")
+            lines = f.readlines()
+            f.close()
+            f = codecs.open(filePath, "wt", "utf-8")
+            for line in lines:
+                if line[0] != "X":
+                    file.write(line + "\n")
+            f.close()
+
 def checkEvaluator(corpus, sourceDir, goldDir = None):
     # Check evaluator
     if not hasattr(Settings, "BIONLP_EVALUATOR_DIR"):
@@ -183,12 +201,14 @@ def checkEvaluator(corpus, sourceDir, goldDir = None):
         tempdir = tempfile.mkdtemp()
         Download.extractPackage(sourceDir, os.path.join(tempdir, "source"))
         sourceDir = os.path.join(tempdir, "source")
-    elif corpus in ("GE09", "BB11", "BI11"):
-        # GE09 a2 files have to be renamed and relation identifier "R" has to be replaced with
-        # "E" for the BB11 and BI11 relations.
+    else: #if corpus in ("GE09", "BB11", "BI11"):
+        # GE09 a2 files have to be renamed and relation identifier "R" has to be replaced with "E" for the BB11 and BI11 relations.
+        # X-lines have to be removed from all tasks
         tempdir = tempfile.mkdtemp()
         shutil.copytree(sourceDir, os.path.join(tempdir, "source"))
         sourceDir = os.path.join(tempdir, "source")
+    # Filter extra data
+    removeX(sourceDir)
     # Check gold data
     if goldDir == None:
         if not hasattr(Settings, "BIONLP_EVALUATOR_GOLD_DIR"):
