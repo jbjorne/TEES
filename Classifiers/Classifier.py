@@ -1,7 +1,7 @@
 """
 Base class for classifiers
 """
-import sys, os, copy, types, subprocess, atexit
+import sys, os, copy, types, subprocess, atexit, shutil
 sys.path.append(os.path.dirname(os.path.abspath(__file__))+"/..")
 import Utils.Parameters as Parameters
 
