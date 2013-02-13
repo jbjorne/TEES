@@ -27,10 +27,10 @@ def openFile(path, tarFile=None):
             pass
     else:
         if os.path.exists(path):
-            return open(path, "rt")
+            return codecs.open(path, "rt", "utf-8") #open(path, "rt")
     return None
                 
-def makeSentences(input, tokenizationPath, output=None, removeText=False, escDict={}):
+def makeSentences(input, tokenizationPath, output=None, removeText=False, escDict={}, ignoreErrors=False):
     """
     Divide text in the "text" attributes of document and section 
     elements into sentence elements. These sentence elements are
@@ -79,7 +79,7 @@ def makeSentences(input, tokenizationPath, output=None, removeText=False, escDic
                 f = openFile(oldFile, tarFile)
                 if f == None: # no tokenization found
                     continue
-            sentencesCreated += alignSentences(document, f.readlines(), escDict)
+            sentencesCreated += alignSentences(document, f.readlines(), escDict, ignoreErrors=ignoreErrors)
             f.close()
     
             # Remove original text
@@ -101,7 +101,7 @@ def makeSentences(input, tokenizationPath, output=None, removeText=False, escDic
         ETUtils.write(corpusRoot, output)
     return corpusTree
 
-def alignSentences(document, sentenceTexts, escDict={}):
+def alignSentences(document, sentenceTexts, escDict={}, ignoreErrors=False):
     text = document.get("text")
     start = 0 # sentences are consecutively aligned to the text for charOffsets
     cEnd = 0
@@ -119,18 +119,24 @@ def alignSentences(document, sentenceTexts, escDict={}):
             print >> sys.stderr, "Warning, empty sentence in", document.get("id"), document.get("origId")
             continue
         isFirst = True
+        prevCStart = None
         for sToken in sText.split():
             # Find the starting point of the token in the text. This
             # point must be after previous sentences
             cStart = text.find(sToken, start) # find start position
-            assert cStart != -1, (text, sText, sToken, start, document.get("id"), document.get("origId"))
-            if not text[cEnd:cStart].strip() == "":
+            if ignoreErrors and cStart == -1:
+                print >> sys.stderr, "Warning, cannot align token", sToken.encode("utf-8"), "for document", document.get("id"), document.get("origId")
+                prevCStart = cStart
+                continue
+            else:
+                assert cStart != -1, (text, sText, sToken, start, document.get("id"), document.get("origId"))
+            if prevCStart != -1 and not text[cEnd:cStart].strip() == "":
                 print >> sys.stderr,  "-----------------------------"
-                print >> sys.stderr,  "text:", text
-                print >> sys.stderr,  "text[cEnd:cStart+1]:", text[cEnd:cStart+1]
-                print >> sys.stderr,  "prevSText:", prevSText
-                print >> sys.stderr,  "sText:", sText
-                print >> sys.stderr,  "sToken:", sToken
+                print >> sys.stderr,  "text:", text.encode("utf-8")
+                print >> sys.stderr,  "text[cEnd:cStart+1]:", text[cEnd:cStart+1].encode("utf-8")
+                print >> sys.stderr,  "prevSText:", prevSText.encode("utf-8")
+                print >> sys.stderr,  "sText:", sText.encode("utf-8")
+                print >> sys.stderr,  "sToken:", sToken.encode("utf-8")
                 print >> sys.stderr,  "start:", start
                 print >> sys.stderr,  "-----------------------------"
                 assert False
@@ -145,6 +151,7 @@ def alignSentences(document, sentenceTexts, escDict={}):
             cEnd = cStart + len(sToken) # end position is determined by length
             start = cStart + len(sToken) # for next token, start search from end of this one
             isFirst = False
+            prevCStart = cStart
         # make sentence element
         e = ET.Element("sentence")
         if head != None:
