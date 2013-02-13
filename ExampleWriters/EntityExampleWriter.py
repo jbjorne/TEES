@@ -80,13 +80,13 @@ class EntityExampleWriter(SentenceExampleWriter):
                 entityElement.set("text", headToken.get("text"))
                 entityElement.set("id", sentenceId + ".e" + str(newEntityIdCount))
                 entityElement.set("type", eType)
-                entityElement.set("predictions", predictionString)
+                entityElement.set("conf", predictionString)
                 #self.setElementType(entityElement, prediction, classSet, classIds, unmergeEPINeg=unmergeEPINeg)
                 if self.insertWeights: # in other words, use gold types
                     headOffset = headToken.get("charOffset")
                     if goldEntityByHeadOffset.has_key(headOffset):
                         for entity in goldEntityByHeadOffset[headOffset]:
-                            entity.set("predictions", entityElement.get("predictions") )
+                            entity.set("conf", entityElement.get("conf") )
                 if goldEntityTypeByHeadOffset.has_key(headToken.get("charOffset")):
                     entityElement.set("goldType", goldEntityTypeByHeadOffset[headToken.get("charOffset")])
                 if "goldIds" in example[3]: # The entities for which this example was built

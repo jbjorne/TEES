@@ -80,19 +80,19 @@ class ModifierExampleWriter(SentenceExampleWriter):
             if task3Type == "multiclass":
                 if specMap.has_key(eId):
                     entity.set("speculation", str(specMap[eId][0]))
-                    entity.set("modPred", self.getPredictionStrengthString(specMap[eId][1], classSet, classIds))
+                    entity.set("modConf", self.getPredictionStrengthString(specMap[eId][1], classSet, classIds))
                 if negMap.has_key(eId):
                     entity.set("negation", str(negMap[eId][0]))
-                    entity.set("modPred", self.getPredictionStrengthString(negMap[eId][1], classSet, classIds))
+                    entity.set("modConf", self.getPredictionStrengthString(negMap[eId][1], classSet, classIds))
             else:
                 if task3Type == "speculation":
                     if specMap.has_key(eId):
                         entity.set("speculation", str(specMap[eId][0]))
-                        entity.set("specPred", self.getPredictionStrengthString(specMap[eId][1], classSet, classIds, [""]))
+                        entity.set("specConf", self.getPredictionStrengthString(specMap[eId][1], classSet, classIds, [""]))
                 elif task3Type == "negation":
                     if negMap.has_key(eId):
                         entity.set("negation", str(negMap[eId][0]))
-                        entity.set("negPred", self.getPredictionStrengthString(negMap[eId][1], classSet, classIds, ["","speculation"]))
+                        entity.set("negConf", self.getPredictionStrengthString(negMap[eId][1], classSet, classIds, ["","speculation"]))
         
         # Write corpus
         if outputFile != None:

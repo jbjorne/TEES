@@ -11,20 +11,20 @@ class EdgeExampleWriter(SentenceExampleWriter):
         self.removeEdges = True
         SentenceExampleWriter.__init__(self)
     
-    def processClassLabel(self, label, intEl):
-        splits = label.rsplit(":", 1)
-        intEl.set("type", splits[0])
-        if len(splits) > 0:
-            intType = splits[1]
-            if "(" in intType:
-                intType, roles = intType.split("(")
-                roles = roles[:-1] # remove closing parenthesis
-                e1Role, e2Role = roles.split(",")
-                intEl.set("e1Role", e1Role)
-                intEl.set("e2Role", e2Role)
-            assert intType in ("Arg", "Rel")
-            if intType == "Arg":
-                intEl.set("event", "True")
+#    def processClassLabel(self, label, intEl):
+#        splits = label.rsplit(":", 1)
+#        intEl.set("type", splits[0])
+#        if len(splits) > 0:
+#            intType = splits[1]
+#            if "(" in intType:
+#                intType, roles = intType.split("(")
+#                roles = roles[:-1] # remove closing parenthesis
+#                e1Role, e2Role = roles.split(",")
+#                intEl.set("e1Role", e1Role)
+#                intEl.set("e2Role", e2Role)
+#            assert intType in ("Arg", "Rel")
+#            if intType == "Arg":
+#                intEl.set("event", "True")
 
     def writeXMLSentence(self, examples, predictionsByExample, sentenceObject, classSet, classIds, goldSentence=None, exampleStyle=None):        
         self.assertSameSentence(examples)
@@ -49,7 +49,11 @@ class EdgeExampleWriter(SentenceExampleWriter):
                 causeAfterTheme = True
             prediction = predictionsByExample[example[0]]
             predictionString = self.getPredictionStrengthString(prediction, classSet, classIds)
-            for iType in self.getElementTypes(prediction, classSet, classIds): # split merged classes
+            iTypes = self.getElementTypes(prediction, classSet, classIds)
+            eventTypes = example[3].split("---")
+            assert len(iTypes) == len(eventTypes)
+            for i in range(len(iTypes)): # split merged classes
+                iType = iTypes[i]
                 pairElement = ET.Element("interaction")
                 pairElement.set("directed", "Unknown")
                 pairElement.set("e1", example[3]["e1"]) #.attrib["id"]
@@ -60,8 +64,10 @@ class EdgeExampleWriter(SentenceExampleWriter):
                     pairElement.set("e2DuplicateIds", example[3]["e2DuplicateIds"])
                 pairElement.set("id", sentenceId + ".i" + str(pairCount))
                 #pairElement.set("type", iType)
-                processClassLabel(iType, pairElement)
-                pairElement.set("predictions", predictionString)
+                #self.processClassLabel(iType, pairElement)
+                pairElement.set("conf", predictionString)
+                if eventTypes[i] == "True":
+                    pairElement.set("event", "True")
                 #self.setElementType(pairElement, prediction, classSet, classIds)
                 if pairElement.get("type") != "neg":
                     sentenceElement.append(pairElement)
