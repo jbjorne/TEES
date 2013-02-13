@@ -188,7 +188,7 @@ def getDetector(detector, model=None):
 
 def getSubsets(inputFiles, subset, outdir="training"):
     for dataset in ("devel", "train", "test"):
-        if inputFiles[dataset] != None and (subset[dataset] != None or subset["all"] != None):
+        if inputFiles[dataset] not in [None, "None"] and (subset[dataset] != None or subset["all"] != None):
             fraction = subset[dataset]
             if fraction == None:
                 fraction = subset["all"]
@@ -461,6 +461,7 @@ if __name__=="__main__":
     debug.add_option("--clearAll", default=False, action="store_true", dest="clearAll", help="Delete all files")
     debug.add_option("--debug", default=False, action="store_true", dest="debug", help="More verbose output")
     event.add_option("--subset", default=None, dest="subset", help="")
+    event.add_option("--folds", default=None, dest="folds", help="")
     optparser.add_option_group(debug)
     (options, args) = optparser.parse_args()
     
