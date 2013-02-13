@@ -25,6 +25,7 @@ def makeEntityElement(ann, idCount, docEl):
         entEl.set("altOffset", ",".join(altOffs))
     if ann.normalization != None:
         entEl.set("normalization", ann.normalization)
+    addExtraToElement(entEl, ann.extra)
     # determine if given data
     assert ann.fileType in ["a1", "a2", "rel"], ann.fileType
     if ann.fileType == "a1": #protein.isName():
@@ -302,6 +303,7 @@ def addEntitiesToSTDoc(doc, docElement, tMap, eMap, entityElementMap, useOrigIds
                 ann.speculation = True
             if entity.get("negation") == "True":
                 ann.negation = True
+            ann.extra = getExtraFromElement(entity) # add all scores and extra data
             if entity.get("given") == "True":
                 # Remember to use original id for names!
                 if entity.get("origId") != None:
@@ -319,16 +321,17 @@ def addEntitiesToSTDoc(doc, docElement, tMap, eMap, entityElementMap, useOrigIds
                 #    if len(nonNamedEntityOrigId) > 1 and nonNamedEntityOrigId[0].isupper() and nonNamedEntityOrigId[1:].isdigit():
                 #        ann.id = nonNamedEntityOrigId
                 #stDoc.proteins.append(ann)
-            else:
+            else: # a predicted protein or trigger
                 duplicateAnn = findDuplicateForSTTrigger(ann, doc.triggers)
                 if duplicateAnn == None:
                     doc.triggers.append(ann)
                     tMap[entity.get("id")] = ann
                     # Add confidence scores
-                    ann.triggerScores = entity.get("predictions")
-                    ann.unmergingScores = entity.get("umStrength")
-                    ann.speculationScores = entity.get("modPred")
-                    ann.negationScores = entity.get("modPred")
+                    #ann.extra = getExtraFromElement(entity, ["conf"])
+                    #ann.triggerScores = entity.get("predictions")
+                    #ann.unmergingScores = entity.get("umStrength")
+                    #ann.speculationScores = entity.get("modPred")
+                    #ann.negationScores = entity.get("modPred")
                     # Process events with 0 interactions would not be formed when constructing events based on interactions
                     if entity.get("type") == "Process": # Process-type events can have 0 interactions
                         event = makeSTEvent(ann, entityElementMap[entity.get("id")])
@@ -338,9 +341,20 @@ def addEntitiesToSTDoc(doc, docElement, tMap, eMap, entityElementMap, useOrigIds
                     tMap[entity.get("id")] = duplicateAnn
 
 def makeSTEvent(triggerAnn, triggerElement):
+    """
+    triggerAnn: A deduplicated st-format entity
+    triggerElement: The original (possibly duplicate) interaction XML entity
+    """
     event = Annotation()
     event.trigger = triggerAnn
     event.type = triggerAnn.type
+    # Add event-specific extra data from the trigger element
+    event.extra = getExtraFromElement(triggerElement, ["umConf", "modConf", "specConf", "negConf"])
+    # Remove the event-specific extra data from the trigger annotation. Only the trigger confidence is left in the trigger
+    triggerAnn.extra = {}
+    if "conf" in event.extra:
+        triggerAnn.extra["conf"] = event.extra["conf"]
+    # Mark modifiers
     if triggerElement.get("speculation") == "True":
         event.speculation = True
     if triggerElement.get("negation") == "True":
@@ -366,6 +380,22 @@ def getCorefTargetMap(docElement):
                 corefProtMap[e1].append(e2)
     return corefProtMap
 
+def getExtraFromElement(element, include=["conf", "umConf", "modConf", "specConf", "negConf"], extraTag="stx_"):
+    extra = {}
+    for key in element.attrib.keys():
+        if key.startswith(extraTag) or key in include:
+            extra[key.strip(extraTag)] = element.get(key)
+    return extra
+
+def addExtraToElement(element, extra, include=["conf", "umConf", "modConf", "specConf", "negConf"], extraTag="stx_"):
+    if extra == None:
+        return
+    for key in extra.keys():
+        if key in include:
+            element.set(key, extra[key])
+        else:
+            element.set(extraTag + key, extra[key])
+
 def addInteractionsToSTDoc(doc, docElement, tMap, eMap, entityElementMap, skipArgs=[], allAsRelations=False):
     # First map Coref proteins
     corefProtMap = getCorefTargetMap(docElement)
@@ -380,7 +410,7 @@ def addInteractionsToSTDoc(doc, docElement, tMap, eMap, entityElementMap, skipAr
         elif interaction.get("event") != "True" or allAsRelations: # "/" in intType and "(" in intType: # BI-task
             rel = Annotation()
             rel.type = interaction.get("type")         
-            relScores = interaction.get("predictions")
+            relScores = getExtraFromElement(interaction) #interaction.get("conf")
             rel.addArgument(interaction.get("e1Role", "Arg1"), interaction.get("e1"), None, relScores)
             rel.addArgument(interaction.get("e2Role", "Arg2"), interaction.get("e2"), None, relScores)
             if rel.type == "Coref":
@@ -439,7 +469,7 @@ def mapSTArgumentTargets(stDoc, siteParents, tMap, eMap):
             event.arguments = argsToKeep
                 
 
-def toSTFormat(input, output=None, outputTag="a2", useOrigIds=False, debug=False, skipArgs=[], validate=True, writeScores=False, allAsRelations=False):
+def toSTFormat(input, output=None, outputTag="a2", useOrigIds=False, debug=False, skipArgs=[], validate=True, writeExtra=False, allAsRelations=False):
     print >> sys.stderr, "Loading corpus", input
     corpusTree = ETUtils.ETFromObj(input)
     print >> sys.stderr, "Corpus file loaded"
@@ -462,7 +492,7 @@ def toSTFormat(input, output=None, outputTag="a2", useOrigIds=False, debug=False
     
     if output != None:
         print >> sys.stderr, "Writing output to", output
-        writeSet(documents, output, resultFileTag=outputTag, debug=debug, writeScores=writeScores)
+        writeSet(documents, output, resultFileTag=outputTag, debug=debug, writeExtra=writeExtra)
     return documents
 
 if __name__=="__main__":

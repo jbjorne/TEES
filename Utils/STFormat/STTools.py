@@ -3,7 +3,7 @@ import codecs
 import Validate
 
 class Document:
-    def __init__(self, id=None, loadFromDir=None, a2Tags=["a2"], readScores=False, debug=False):
+    def __init__(self, id=None, loadFromDir=None, a2Tags=["a2", "rel"], readExtra=False, debug=False):
         self.id = id
         self.text = None
         self.proteins = []
@@ -16,7 +16,7 @@ class Document:
         self.license = None
         self.debug = debug
         if loadFromDir != None:
-            self.load(loadFromDir)
+            self.load(loadFromDir, a2Tags, readExtra=readExtra)
     
     def getEventOrRelationCount(self, countRelations=False):
         count = 0
@@ -63,7 +63,7 @@ class Document:
         if os.path.exists(txtPath):
             self.loadText(txtPath)
     
-    def loadA1(self, filename, readExtra=False):
+    def loadA1(self, filename, readExtraLines=False):
         #f = open(filename)
         f = codecs.open(filename, "rt", "utf-8")
         lines = f.readlines()
@@ -95,6 +95,11 @@ class Document:
                 assert protein.normalization == None, lines # each entity can have one normalization
                 protein.normalization = normReferent
                 count += 1
+        for line in lines:
+            if line[0] == "X":
+                if readExtraLines:
+                    readExtra(line, self)
+                count += 1
         #for line in lines:
         #    if line[0] == "X":
         #        count += 1
@@ -116,7 +121,7 @@ class Document:
                 if not processedLines[i]:
                     print >> sys.stderr, lines[i].strip()
 
-    def loadA2(self, filename, readExtra=False):
+    def loadA2(self, filename, readExtraLines=False):
         f = codecs.open(filename, "rt", "utf-8")
         lines = f.readlines()
         f.close()
@@ -159,6 +164,11 @@ class Document:
                 readStarAnnotation(line, self.proteins + self.triggers)
                 processedLines[i] = True
                 count += 1
+        for line in lines:
+            if line[0] == "X":
+                if readExtraLines:
+                    readExtra(line, self)
+                count += 1
         #for i in range(len(lines)):
         #    line = lines[i]
         #    if line[0] == "X":
@@ -179,7 +189,7 @@ class Document:
         self.text = f.read()
         f.close()
 
-    def save(self, dir, resultFileTag="a2", debug=False, writeScores=False):
+    def save(self, dir, resultFileTag="a2", debug=False, writeExtra=False):
         id = str(self.id)
         if debug:
             print id
@@ -190,43 +200,60 @@ class Document:
         updateIds(self.triggers, getMaxId(self.proteins) + 1)
         updateIds(self.events)
         
+        # id counters
+        self._mCounter = 1
+        self._xCounter = 1
+        
         # write a1 file
         if self.proteins != None:
             out = codecs.open(os.path.join(dir, id + ".a1"), "wt", "utf-8")
-            out.write(self.entitiesToString(self.proteins, writeScores))
+            out.write(self.entitiesToString(self.proteins, writeExtra))
             out.close()
         # write a2 (or rel) file
         resultFile = codecs.open(os.path.join(dir, id + "." + resultFileTag), "wt", "utf-8")
-        resultFile.write(self.entitiesToString(self.triggers, writeScores, getMaxId(self.proteins) + 1))
+        resultFile.write(self.entitiesToString(self.triggers, writeExtra, getMaxId(self.proteins) + 1))
         if debug: print >> sys.stderr, "Writing events"
-        resultFile.write(self.eventsToString(writeScores))
+        resultFile.write(self.eventsToString(writeExtra))
         resultFile.close()
         # Write txt file
         out = codecs.open(os.path.join(dir, str(self.id) + ".txt"), "wt", "utf-8")
         out.write(self.text)
         out.close()
+        
+        # remove id counters
+        del self._mCounter
+        del self._xCounter
 
-    def entitiesToString(self, entities, writeScores=False, idStart=0):
+    def entitiesToString(self, entities, writeExtra=False, idStart=0):
         updateIds(entities, idStart)
         s = u""
         for entity in entities:
             assert entity.id[0] == "T", (entity.id, entity.text)
-            s += entity.toString(writeScores) + "\n"
+            s += entity.toString() + "\n"
             if entity.normalization != None:
                 s += "N" + entity.id[1:] + "\tGene_Identifier Annotation:" + entity.id + " Referent:" + entity.normalization + "\n"
+            if writeExtra:
+                self.extraToString(s)
         return s
 
-    def eventsToString(self, writeScores=False):
+    def eventsToString(self, writeExtra=True):
         updateIds(self.events)
         s = u""
-        mCounter = 1
         eventLines = []
         for event in self.events:
-            s += event.toString(writeScores) + "\n"
-            for modString in event.getModifierStrings(writeScores, mCounter):
+            s += event.toString() + "\n"
+            for modString in event.getModifierStrings(self._mCounter):
                 s += modString + "\n"
-                mCounter += 1
+                self._mCounter += 1
+            if writeExtra:
+                self.extraToString(s)
         return s
+    
+    def extraToString(self, s):
+        extraString = event.getExtraString(self._xCounter)
+        if extraString != None:
+            s += extraString + "\n"
+            self._xCounter += 1
 
 class Annotation:
     def __init__(self, id = None, type = None, text=None, trigger=None, arguments=None, debug=False):
@@ -278,8 +305,8 @@ class Annotation:
             s += ",A=" + str(self.arguments)
         return s + ">"
     
-    def addArgument(self, type, target, siteOf=None, weights=None):
-        newArgument = Argument(type, target, siteOf, weights)
+    def addArgument(self, type, target, siteOf=None, extra=None):
+        newArgument = Argument(type, target, siteOf, extra)
         self.arguments.append(newArgument)
         return newArgument
     
@@ -338,7 +365,15 @@ class Annotation:
     def argumentToString(self, argument):
         return self.getArgumentFullType(argument) + ":" + argument.target.id
     
-    def toString(self, addScores=False):
+    def getArgumentMap(self):
+        argMap = {}
+        for arg in self.arguments:
+            argString = self.argumentToString(arg)
+            assert argString not in argMap, (self.id, self.arguments, argString, argMap)
+            argMap[argString] = arg
+        return argMap
+    
+    def toString(self):
         s = self.id + "\t"
         s += self.type
         if self.trigger != None: # event
@@ -361,7 +396,7 @@ class Annotation:
             s += "\t[" + ", ".join(sorted(list(corefTargetProteins))) + "]"
         return s
     
-    def getModifierStrings(self, addScores=False, modCount=0):
+    def getModifierStrings(self, modCount=0):
         modStrings = []
         if self.speculation:
             modStrings.append("M" + str(modCount) + "\tSpeculation " + self.id)
@@ -375,18 +410,27 @@ class Annotation:
 #                modStrings[-1] += ":" + self.negationScores.replace(":", "=")
         return modStrings
     
-    def getExtraStrings(self):
-        pass
+    def getExtraString(self, extraCount = 0):
+        extraString = ""
+        for key in sorted(self.extra.keys()):
+            extraString.append("\t" + self.id + " " + key + self.extra[key])
+        for argument in self.arguments:
+            for key in sorted(argument.extra.keys()):
+                extraString.append("\t" + self.id + ":" + self.argumentToString(argument) + " " + key + argument.extra[key])
+        if extraString == "":
+            return None
+        else:
+            return "X" + str(extraCount) + extraString
 
 class Argument:
     def __init__(self, type, target, siteOf=None, extra=None):
         self.type, self.siteIdentifier = self._processType(type)
         self.target = target
         self.siteOf = siteOf
+        self.extra = {}
         if extra != None:
-            self.extra = extra
-        else:
-            self.extra = {}
+            for key in extra:
+                self.extra[key] = extra[key]            
     
     # for debugging
     def __repr__(self):
@@ -567,6 +611,30 @@ def readDependencyAnnotation(string):
     ann.addArgument("Word", word2)
     return ann
 
+def readExtra(string, document):
+    tabSplits = string.split("\t")
+    assert tabSplits[0][0] == "X" and tabSplits[0][1:].isdigit()
+    tabSplits = tabSplits[1:]
+    idMap = document.getIdMap()
+    prevAnnotation = None
+    argMap = None
+    for tabSplit in tabSplits:
+        argId = None
+        id, key, value = tabSplit.strip().split(maxsplit=2)
+        if ":" in id:
+            id, argId = id.split(":", 1)
+            annotation = idMap[id]
+            if annotation != prevAnnotation: # get the arguments of the current event
+                argMap = annotation.getArgMap()
+            assert key not in argMap[argId].extra, (key, value)
+            argMap[argId].extra[key] = value
+        else:
+            annotation = idMap[id]
+            argMap = None
+            assert key not in annotation.extra, (key, value)
+            annotation.extra[key] = value
+        prevAnnotation = annotation
+
 def loadSet(path, setName=None, level="a2", sitesAreArguments=False, a2Tag="a2", readScores=False, debug=False, subPath=None):
     assert level in ["txt", "a1", "a2"]
     if path.endswith(".tar.gz"):
@@ -616,7 +684,7 @@ def loadSet(path, setName=None, level="a2", sitesAreArguments=False, a2Tag="a2",
         shutil.rmtree(dir)
     return documents
 
-def writeSet(documents, output, resultFileTag="a2", debug=False, writeScores=False):
+def writeSet(documents, output, resultFileTag="a2", debug=False, writeExtra=False):
     from collections import defaultdict
     import shutil
     counts = defaultdict(int)
@@ -637,7 +705,7 @@ def writeSet(documents, output, resultFileTag="a2", debug=False, writeScores=Fal
 #            if debug: print >> sys.stderr, "Validating", doc.id
 #            Validate.allValidate(doc, counts, task, verbose=debug)
         if debug: print >> sys.stderr, "Writing", doc.id
-        doc.save(outdir, resultFileTag, writeScores=writeScores)
+        doc.save(outdir, resultFileTag, writeExtra=writeExtra)
         
     if output.endswith(".tar.gz"):
         package(outdir, output, ["a1", "txt", resultFileTag, resultFileTag+".scores"])
