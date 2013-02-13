@@ -287,7 +287,7 @@ def insertAnalyses(xml, corpus, datasets, files, bigfileName, packageSubPath=Non
             print >> sys.stderr, "---------------", "Inserting analyses " + str(i+1) + "/" + str(len(datasets)), "---------------"
             setName = datasets[i]
             print >> sys.stderr, "Making sentences"
-            Tools.SentenceSplitter.makeSentences(xml, tempdir + "/bionlp-st-2013_all_tasks_tokenised/" + stTag + corpusTag + "_" + setTags[setName] + packageSubPath, None)
+            Tools.SentenceSplitter.makeSentences(xml, tempdir + "/bionlp-st-2013_all_tasks_tokenised/" + stTag + corpusTag + "_" + setTags[setName] + packageSubPath, None, ignoreErrors=(corpus=="GE13"))
             print >> sys.stderr, "Inserting McCC parses"
             Tools.BLLIPParser.insertParses(xml, tempdir + "/bionlp-st-2013_all_tasks_stanford_parser/" + stTag + corpusTag + "_" + setTags[setName] + packageSubPath, None, extraAttributes={"source":"BioNLP'13"})
             print >> sys.stderr, "Inserting Stanford conversions"
