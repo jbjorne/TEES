@@ -157,20 +157,20 @@ def loadDocs(url, outDir, tempDir, idStart=0):
 def convertDDI(outDir, trainUnified=None, trainMTMX=None, testUnified=None, testMTMX=None, downloadDir=None, redownload=False, makeIntermediateFiles=True, debug=False):
     cwd = os.getcwd()
     os.chdir(outDir)
-    logFileName = os.path.join(outDir, "DDI-conversion-log.txt")
+    logFileName = os.path.join(outDir, "DDI11-conversion-log.txt")
     Stream.openLog(logFileName)
     print >> sys.stderr, "=======================", "Converting DDI'11 corpus", "======================="
     
-    bigfileName = os.path.join(outDir, "DDI")
+    bigfileName = os.path.join(outDir, "DDI11")
     #oldXML = ETUtils.ETFromObj(bigfileName+".xml")
     if trainUnified == None:
-        trainUnified = Settings.URL["DDI_TRAIN_UNIFIED"]
+        trainUnified = Settings.URL["DDI11_TRAIN_UNIFIED"]
     if trainMTMX == None:
-        trainMTMX = Settings.URL["DDI_TRAIN_MTMX"]
+        trainMTMX = Settings.URL["DDI11_TRAIN_MTMX"]
     if testUnified == None:
-        testUnified = Settings.URL["DDI_TEST_UNIFIED"]
+        testUnified = Settings.URL["DDI11_TEST_UNIFIED"]
     if testMTMX == None:
-        testMTMX = Settings.URL["DDI_TEST_MTMX"]
+        testMTMX = Settings.URL["DDI11_TEST_MTMX"]
     
     # Load main documents
     tempdir = tempfile.mkdtemp()
@@ -239,7 +239,7 @@ def convertDDI(outDir, trainUnified=None, trainMTMX=None, testUnified=None, test
     # Add all documents into one XML
     xmlTree = ET.ElementTree(ET.Element("corpus"))
     root = xmlTree.getroot()
-    root.set("source", "DrugDDI")
+    root.set("source", "DDI11")
     for document in documents:
         root.append(document)
     if makeIntermediateFiles:
@@ -262,7 +262,7 @@ def convertDDI(outDir, trainUnified=None, trainMTMX=None, testUnified=None, test
 
     print >> sys.stderr, "---------------", "Inserting TEES-generated analyses", "---------------"
     Utils.Download.downloadAndExtract(Settings.URL["TEES_PARSES"], os.path.join(Settings.DATAPATH, "TEES-parses"), downloadDir, redownload=redownload)
-    extractedFilename = os.path.join(Settings.DATAPATH, "TEES-parses") + "/DDI"
+    extractedFilename = os.path.join(Settings.DATAPATH, "TEES-parses") + "/DDI11"
     print >> sys.stderr, "Making sentences"
     Tools.SentenceSplitter.makeSentences(xml, extractedFilename, None)
     print >> sys.stderr, "Inserting McCC parses"
@@ -278,7 +278,7 @@ def convertDDI(outDir, trainUnified=None, trainMTMX=None, testUnified=None, test
     xml = FindHeads.findHeads(xml, splitTarget, tokenization=None, output=None, removeExisting=True)    
     
     print >> sys.stderr, "Dividing into sets"
-    Utils.InteractionXML.DivideSets.processCorpus(xml, outDir, "DDI", ".xml")
+    Utils.InteractionXML.DivideSets.processCorpus(xml, outDir, "DDI11", ".xml")
     
     Stream.closeLog(logFileName)
     if not debug:
