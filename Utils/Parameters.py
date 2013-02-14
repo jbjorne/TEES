@@ -117,3 +117,17 @@ def getCombinations(parameters, order=None):
         for value in combinationList:
             combinations[-1][value[0]] = value[1]
     return combinations
+
+def cat(default, new, verboseMessage=None, verboseFor=["cat", "new", "default"]):
+    if new != None and new.startswith(":") and default != None:
+        if verboseMessage != None and "cat" in verboseFor:
+            print >> sys.stderr, "Extended default parameters (" + verboseMessage + "): " + default + new
+        return default + new
+    elif new != None:
+        if verboseMessage != None and "new" in verboseFor:
+            print >> sys.stderr, "Using new parameters (" + verboseMessage + "): " + new.strip(":")
+        return new.strip(":")
+    else:
+        if verboseMessage != None and "default" in verboseFor:
+            print >> sys.stderr, "Using default parameters (" + verboseMessage + "): " + str(default)
+        return default

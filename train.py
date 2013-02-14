@@ -268,20 +268,18 @@ def getTaskSettings(task, detector, processUnmerging, processModifiers, isSingle
                 detector = "Detectors.EdgeDetector"
                 isSingleStage = True
             print >> sys.stderr, "Detector undefined, using default '" + detector + "' for task", fullTaskId
-        if bioNLPSTParams == None and task not in ["DDI11", "DDI11-FULL"]:
-            bioNLPSTParams = "convert:evaluate:scores"
-            if task == "BI11-FULL":
-                bioNLPSTParams = "convert:scores" # the shared task evaluator is not designed for predicted entities
-            print >> sys.stderr, "BioNLP Shared Task parameters undefined, using default '" + bioNLPSTParams + "' for task", fullTaskId
-        if preprocessorParams == None:
-            preprocessorParams = ["intermediateFiles"]
-            if task in ["BI11", "BI11-FULL", "BB11", "DDI11", "DDI11-FULL"]:
-                preprocessorParams += ["omitSteps=NER,DIVIDE-SETS"]
-            else:
-                preprocessorParams += ["omitSteps=DIVIDE-SETS"]
-                preprocessorParams += ["PARSE.requireEntities"] # parse only sentences where BANNER found an entity
-            preprocessorParams = ":".join(preprocessorParams)
-            print >> sys.stderr, "Preprocessor parameters undefined, using default '" + preprocessorParams + "' for task", fullTaskId
+        
+        # BioNLP Shared Task and preprocessing parameters
+        if task == "BI11-FULL":
+            bioNLPSTParams = Parameters.cat(bioNLPSTParams, "convert:scores", "BioNLP Shared Task / " + fullTaskId, ["default"]) # the shared task evaluator is not designed for predicted entities
+        elif task not in ["DDI11", "DDI11-FULL"]:
+            bioNLPSTParams = Parameters.cat(bioNLPSTParams, "convert:evaluate:scores", "BioNLP Shared Task / " + fullTaskId, ["default"])
+        if task in ["BI11", "BI11-FULL", "BB11", "DDI11", "DDI11-FULL"]:
+            Parameters.cat("intermediateFiles:omitSteps=NER,DIVIDE-SETS", preprocessorParams, "Preprocessor /" + fullTaskId, ["default"])
+        else: # parse only sentences where BANNER found an entity
+            Parameters.cat("intermediateFiles:omitSteps=DIVIDE-SETS:PARSE.requireEntities", preprocessorParams, "Preprocessor /" + fullTaskId, ["default"])
+        
+        # Unmerging and modifier detection
         if processUnmerging == None and not isSingleStage:
             processUnmerging = True
             if task in ["CO11", "REL11", "BB11", "BI11-FULL", "DDI11-FULL"]:
@@ -292,82 +290,72 @@ def getTaskSettings(task, detector, processUnmerging, processModifiers, isSingle
             if task in ["GE11", "EPI11", "ID11"]: 
                 processModifiers = True
             print >> sys.stderr, "Modifier prediction undefined, using default", processModifiers, " for task", fullTaskId
-        if exampleStyles["examples"] == None and isSingleStage:
+        
+        # Example style parameters
+        if isSingleStage:
             if task == "REN11":
-                exampleStyles["examples"] = "trigger_features:typed:no_linear:entities:noMasking:maxFeatures:bacteria_renaming:maskTypeAsProtein=Gene"
+                exampleStyles["examples"] = Parameters.cat("trigger_features:typed:no_linear:entities:noMasking:maxFeatures:bacteria_renaming:maskTypeAsProtein=Gene", exampleStyles["examples"], "Single-stage example style /" + fullTaskId)
             elif task == "BI11":
-                exampleStyles["examples"] = "trigger_features:typed:directed:no_linear:entities:noMasking:maxFeatures:bi_limits"
+                exampleStyles["examples"] = Parameters.cat("trigger_features:typed:directed:no_linear:entities:noMasking:maxFeatures:bi_limits", exampleStyles["examples"], "Single-stage example style /" + fullTaskId)
             elif task == "DDI11":
-                exampleStyles["examples"] = "trigger_features:typed:no_linear:entities:noMasking:maxFeatures:ddi_features:ddi_mtmx:filter_shortest_path=conj_and"
-            print >> sys.stderr, "Single-stage examples style undefined, using default '" + str(exampleStyles["examples"]) + "' for task", fullTaskId
-        if exampleStyles["edge"] == None and not isSingleStage:
-            print >> sys.stderr, "Edge example style undefined, using default for task", fullTaskId
+                exampleStyles["examples"] = Parameters.cat("trigger_features:typed:no_linear:entities:noMasking:maxFeatures:ddi_features:ddi_mtmx:filter_shortest_path=conj_and", exampleStyles["examples"], "Single-stage example style /" + fullTaskId)
+        else:
             if task in ["GE09", "GE11"]:
-                exampleStyles["edge"]="trigger_features:typed:directed:no_linear:entities:genia_limits:noMasking:maxFeatures" #,multipath"
+                exampleStyles["edge"] = Parameters.cat("trigger_features:typed:directed:no_linear:entities:genia_limits:noMasking:maxFeatures", exampleStyles["edge"], "Edge example style / " + fullTaskId)
                 if subTask == 1:
-                    exampleStyles["edge"] += ":genia_task1"
+                    exampleStyles["edge"] = Parameters.cat(":genia_task1", exampleStyles["edge"])
             elif task in ["BB11"]:
-                exampleStyles["edge"]="trigger_features:typed:directed:no_linear:entities:bb_limits:noMasking:maxFeatures"
+                exampleStyles["edge"] = Parameters.cat("trigger_features:typed:directed:no_linear:entities:bb_limits:noMasking:maxFeatures", exampleStyles["edge"], "Edge example style / " + fullTaskId)
             elif task == "EPI11":
-                exampleStyles["edge"]="trigger_features:typed:directed:no_linear:entities:epi_limits:noMasking:maxFeatures"
+                exampleStyles["edge"] = Parameters.cat("trigger_features:typed:directed:no_linear:entities:epi_limits:noMasking:maxFeatures", exampleStyles["edge"], "Edge example style / " + fullTaskId)
             elif task == "ID11":
-                exampleStyles["edge"]="trigger_features:typed:directed:no_linear:entities:id_limits:noMasking:maxFeatures"
+                exampleStyles["edge"] = Parameters.cat("trigger_features:typed:directed:no_linear:entities:id_limits:noMasking:maxFeatures", exampleStyles["edge"], "Edge example style / " + fullTaskId)
             elif task == "REL11":
-                exampleStyles["edge"]="trigger_features:typed:directed:no_linear:entities:noMasking:maxFeatures:rel_limits:rel_features"
+                exampleStyles["edge"] = Parameters.cat("trigger_features:typed:directed:no_linear:entities:noMasking:maxFeatures:rel_limits:rel_features", exampleStyles["edge"], "Edge example style / " + fullTaskId)
             elif task == "CO11":
-                exampleStyles["edge"]="trigger_features:typed:directed:no_linear:entities:noMasking:maxFeatures:co_limits"
+                exampleStyles["edge"] = Parameters.cat("trigger_features:typed:directed:no_linear:entities:noMasking:maxFeatures:co_limits", exampleStyles["edge"], "Edge example style / " + fullTaskId)
             elif task == "BI11-FULL":
-                exampleStyles["edge"] = "trigger_features:typed:directed:no_linear:entities:noMasking:maxFeatures:bi_limits"
+                exampleStyles["edge"] = Parameters.cat("trigger_features:typed:directed:no_linear:entities:noMasking:maxFeatures:bi_limits", exampleStyles["edge"], "Edge example style / " + fullTaskId)
             elif task == "DDI11-FULL":
-                exampleStyles["edge"] = "trigger_features:typed:no_linear:entities:noMasking:maxFeatures:ddi_features:filter_shortest_path=conj_and"
+                exampleStyles["edge"] = Parameters.cat("trigger_features:typed:no_linear:entities:noMasking:maxFeatures:ddi_features:filter_shortest_path=conj_and", exampleStyles["edge"], "Edge example style / " + fullTaskId)
             else:
-                exampleStyles["edge"]="trigger_features:typed:directed:no_linear:entities:noMasking:maxFeatures"
-        if exampleStyles["trigger"] == None and not isSingleStage:
-            print >> sys.stderr, "Trigger example style undefined, using default for task", fullTaskId
+                exampleStyles["edge"] = Parameters.cat("trigger_features:typed:directed:no_linear:entities:noMasking:maxFeatures", exampleStyles["edge"], "Edge example style / " + fullTaskId)
+            # Trigger style
             if task in ["GE09", "GE11"] and subTask == 1:
-                exampleStyles["trigger"] = "genia_task1"
+                exampleStyles["trigger"] = Parameters.cat("genia_task1", exampleStyles["trigger"], "Trigger example style / " + fullTaskId)
             elif task == "EPI11":
-                exampleStyles["trigger"] = "epi_merge_negated"
+                exampleStyles["trigger"] = Parameters.cat("epi_merge_negated", exampleStyles["trigger"], "Trigger example style / " + fullTaskId)
             elif task == "BB11":
-                exampleStyles["trigger"] = "bb_features:build_for_nameless:wordnet"
+                exampleStyles["trigger"] = Parameters.cat("bb_features:build_for_nameless:wordnet", exampleStyles["trigger"], "Trigger example style / " + fullTaskId)
             elif task == "REL11":
-                exampleStyles["trigger"] = "rel_features"
+                exampleStyles["trigger"] = Parameters.cat("rel_features", exampleStyles["trigger"], "Trigger example style / " + fullTaskId)
             elif task == "CO11":
                 options.triggerExampleBuilder = "PhraseTriggerExampleBuilder"
             elif task in ["BI11-FULL", "DDI11-FULL"]:
                 exampleStyles["trigger"] = "build_for_nameless:names"
-        if exampleStyles["unmerging"] == None and not isSingleStage:
-           exampleStyles["unmerging"] = "trigger_features:typed:directed:no_linear:entities:genia_limits:noMasking:maxFeatures"
-           #if task == "ID": # Do not use catenated GE for unmerging examples
-           #    exampleStyles["unmerging"] += ":sentenceLimit=id.ID"
+            # Unmerging style
+            exampleStyles["unmerging"] = Parameters.cat("trigger_features:typed:directed:no_linear:entities:genia_limits:noMasking:maxFeatures", exampleStyles["unmerging"], "Unmerging example style / " + fullTaskId)
+        
         # Classifier parameters
-        if classifierParameters["examples"] == None and isSingleStage:
-            print >> sys.stderr, "Classifier parameters for single-stage examples undefined, using default for task", fullTaskId
+        if isSingleStage:
             if task == "REN11":
-                classifierParameters["examples"] = "10,100,1000,2000,3000,4000,4500,5000,5500,6000,7500,10000,20000,25000,28000,50000,60000"
+                classifierParameters["examples"] = Parameters.cat("c=10,100,1000,2000,3000,4000,4500,5000,5500,6000,7500,10000,20000,25000,28000,50000,60000", classifierParameters["examples"], "Classifier parameters for single-stage examples" + fullTaskId)
             elif task == "BI11":
-                classifierParameters["examples"] = "10,100,1000,2500,5000,7500,10000,20000,25000,28000,50000,60000,65000,80000,100000,150000"
+                classifierParameters["examples"] = Parameters.cat("c=10,100,1000,2500,5000,7500,10000,20000,25000,28000,50000,60000,65000,80000,100000,150000", classifierParameters["examples"], "Classifier parameters for single-stage examples" + fullTaskId)
             elif task == "DDI11":
-                classifierParameters["examples"] = "c=10,100,1000,2500,4000,5000,6000,7500,10000,20000,25000,50000:TEES.threshold"
-        if classifierParameters["trigger"] == None and not isSingleStage:
-            print >> sys.stderr, "Classifier parameters for trigger examples undefined, using default for task", fullTaskId
-            classifierParameters["trigger"] = "1000,5000,10000,20000,50000,80000,100000,150000,180000,200000,250000,300000,350000,500000,1000000"
-        if classifierParameters["recall"] == None and not isSingleStage:
-            print >> sys.stderr, "Recall adjust parameter undefined, using default for task", fullTaskId
-            classifierParameters["recall"] = "0.5,0.6,0.65,0.7,0.85,1.0,1.1,1.2"
+                classifierParameters["examples"] = Parameters.cat("c=10,100,1000,2500,4000,5000,6000,7500,10000,20000,25000,50000:TEES.threshold", classifierParameters["examples"], "Classifier parameters for single-stage examples" + fullTaskId)
+        else:
+            classifierParameters["trigger"] = Parameters.cat("c=1000,5000,10000,20000,50000,80000,100000,150000,180000,200000,250000,300000,350000,500000,1000000", classifierParameters["trigger"], "Trigger classification / " + fullTaskId)
             if task == "CO11":
-                classifierParameters["recall"] = "0.8,0.9,0.95,1.0"
-        if classifierParameters["edge"] == None and not isSingleStage:
-            print >> sys.stderr, "Classifier parameters for edge examples undefined, using default for task", fullTaskId
-            classifierParameters["edge"] = "5000,7500,10000,20000,25000,27500,28000,29000,30000,35000,40000,50000,60000,65000"
+                classifierParameters["recall"] = Parameters.cat("0.8,0.9,0.95,1.0", classifierParameters["recall"], "Recall adjust / " + fullTaskId)
+            else:
+                classifierParameters["recall"] = Parameters.cat("0.5,0.6,0.65,0.7,0.85,1.0,1.1,1.2", classifierParameters["recall"], "Recall adjust / " + fullTaskId)
             if task in ["REL11", "CO11"]:
-                classifierParameters["edge"] = "10,100,1000,5000,7500,10000,20000,25000,28000,50000,60000,65000,100000,500000,1000000"
-        if classifierParameters["unmerging"] == None and not isSingleStage:
-            print >> sys.stderr, "Classifier parameters for unmerging examples undefined, using default for task", fullTaskId
-            classifierParameters["unmerging"] = "1,10,100,500,1000,1500,2500,5000,10000,20000,50000,80000,100000"
-        if classifierParameters["modifiers"] == None and not isSingleStage:
-            print >> sys.stderr, "Classifier parameters for modifier examples undefined, using default for task", fullTaskId
-            classifierParameters["modifiers"] = "5000,10000,20000,50000,100000"
+                classifierParameters["edge"] = Parameters.cat("c=10,100,1000,5000,7500,10000,20000,25000,28000,50000,60000,65000,100000,500000,1000000", classifierParameters["edge"], "Edge classification / " + fullTaskId)
+            else:
+                classifierParameters["edge"] = Parameters.cat("c=5000,7500,10000,20000,25000,27500,28000,29000,30000,35000,40000,50000,60000,65000", classifierParameters["edge"], "Edge classification / " + fullTaskId)
+            classifierParameters["unmerging"] = Parameters.cat("c=1,10,100,500,1000,1500,2500,5000,10000,20000,50000,80000,100000", classifierParameters["unmerging"], "Unmerging classification / " + fullTaskId)
+            classifierParameters["modifiers"] = Parameters.cat("c=5000,10000,20000,50000,100000", classifierParameters["modifiers"], "Modifiers classification / " + fullTaskId)
     
     if isSingleStage and exampleStyles["examples"] != None and "names" in exampleStyles["examples"]:
         removeNamesFromEmpty = True
