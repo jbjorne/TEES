@@ -33,7 +33,8 @@ escDict={"-LRB-":"(",
          "-RSB-":"]",
          "``":"\"",
          "''":"\"",
-         "\\/":"/"}
+         "\\/":"/",
+         "\\*":"*"}
 
 def install(destDir=None, downloadDir=None, redownload=False, updateLocalSettings=False):
     print >> sys.stderr, "Installing Stanford Parser"

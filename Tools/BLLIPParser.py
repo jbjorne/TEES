@@ -25,7 +25,8 @@ escDict={"-LRB-":"(",
          "-RSB-":"]",
          "``":"\"",
          "''":"\"",
-         "\\/":"/"}
+         "\\/":"/",
+         "\\*":"*"}
 
 def install(destDir=None, downloadDir=None, redownload=False, updateLocalSettings=False):
     url = Settings.URL["BLLIP_SOURCE"]
