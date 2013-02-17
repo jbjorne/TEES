@@ -56,8 +56,8 @@ URL["DDI_11_CORPUS"] =  "https://github.com/downloads/jbjorne/TEES/DDI11-corpus-
 
 # BioNLP'13
 urlBase = "http://2013.bionlp-st.org/tasks/"
-URL["GE13_DEVEL"] = urlBase + "BioNLP-ST-2013_GE_devel_data_rev1.tar.gz" 
-URL["GE13_TRAIN"] = urlBase + "BioNLP-ST-2013_GE_train_data_rev1.tar.gz"
+URL["GE13_DEVEL"] = urlBase + "BioNLP-ST-2013_GE_devel_data_rev2.tar.gz" 
+URL["GE13_TRAIN"] = urlBase + "BioNLP-ST-2013_GE_train_data_rev2.tar.gz"
 URL["CG13_DEVEL"] = urlBase + "BioNLP-ST_2013_CG_development_data.tar.gz" 
 URL["CG13_TRAIN"] = urlBase + "BioNLP-ST_2013_CG_training_data.tar.gz"
 URL["PC13_DEVEL"] = urlBase + "BioNLP-ST_2013_PC_development_data.tar.gz" 
