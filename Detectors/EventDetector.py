@@ -176,7 +176,7 @@ class EventDetector(Detector):
         prevParams = None
         EDGE_MODEL_STEM = os.path.join(self.edgeDetector.workDir, os.path.normpath(self.model.path)+"-edge-models/model-c_")
         TRIGGER_MODEL_STEM = os.path.join(self.triggerDetector.workDir, os.path.normpath(self.model.path)+"-trigger-models/model-c_")
-        self.structureAnalyzer.load(model)
+        self.structureAnalyzer.load(self.model)
         bestResults = None
         for i in range(len(paramCombinations)):
             params = paramCombinations[i]
@@ -222,12 +222,12 @@ class EventDetector(Detector):
             # Convert to ST-format
             if self.unmerging:
                 xml = self.unmergingDetector.classifyToXML(xml, self.model, None, self.workDir+"grid-", goldData=self.optData)
-                self.structureAnalyzer.validate(xml)
+                #self.structureAnalyzer.validate(xml)
                 if self.bioNLPSTParams["evaluate"]:
                     Utils.STFormat.ConvertXML.toSTFormat(xml, self.workDir+"grid-unmerging-geniaformat", "a2")
                     stFormatDir = self.workDir+"grid-unmerging-geniaformat"
             elif self.bioNLPSTParams["evaluate"]:
-                self.structureAnalyzer.validate(xml)
+                #self.structureAnalyzer.validate(xml)
                 Utils.STFormat.ConvertXML.toSTFormat(xml, self.workDir+"grid-flat-geniaformat", "a2") #getA2FileTag(options.task, subTask))
                 stFormatDir = self.workDir+"grid-flat-geniaformat"
             # Evaluation
@@ -308,7 +308,7 @@ class EventDetector(Detector):
         xml = None
         model = self.openModel(model, "r")
         self.initVariables(classifyData=data, model=model, xml=None, task=task, parse=parse)
-        self.enterState(self.STATE_CLASSIFY, ["TRIGGERS", "EDGES", "UNMERGING", "MODIFIERS", "VALIDATE", "ST-CONVERT"], fromStep, toStep, omitSteps)
+        self.enterState(self.STATE_CLASSIFY, ["TRIGGERS", "EDGES", "UNMERGING", "MODIFIERS", "ST-CONVERT"], fromStep, toStep, omitSteps)
         #self.enterState(self.STATE_CLASSIFY, ["TRIGGERS", "RECALL-ADJUST", "EDGES", "UNMERGING", "MODIFIERS", "ST-CONVERT"], fromStep, toStep)
         self.setWorkDir(workDir)
         if workDir == None:
@@ -349,15 +349,16 @@ class EventDetector(Detector):
                 xml = self.modifierDetector.classifyToXML(xml, self.model, None, workOutputTag, goldData=goldData, parse=self.parse)
             else:
                 print >> sys.stderr, "No model for modifier detection"
-        if self.checkStep("VALIDATE"):
-            xml = self.getWorkFile(xml, [workOutputTag + "modifier-pred.xml.gz", workOutputTag + "unmerging-pred.xml.gz", workOutputTag + "edge-pred.xml.gz"])
-            self.structureAnalyzer.load(model)
-            self.structureAnalyzer.validate(xml)
-            ETUtils.write(xml, workOutputTag + "validate-pred.xml.gz")
+#        if self.checkStep("VALIDATE"):
+#            xml = self.getWorkFile(xml, [workOutputTag + "modifier-pred.xml.gz", workOutputTag + "unmerging-pred.xml.gz", workOutputTag + "edge-pred.xml.gz"])
+#            self.structureAnalyzer.load(model)
+#            self.structureAnalyzer.validate(xml)
+#            ETUtils.write(xml, workOutputTag + "validate-pred.xml.gz")
         if self.checkStep("ST-CONVERT"):
             if stParams["convert"]:
-                xml = self.getWorkFile(xml, [workOutputTag + "validate-pred.xml.gz", workOutputTag + "modifier-pred.xml.gz", workOutputTag + "unmerging-pred.xml.gz", workOutputTag + "edge-pred.xml.gz"])
-                Utils.STFormat.ConvertXML.toSTFormat(xml, output+"-events.tar.gz", outputTag="a2", writeScores=(stParams["scores"] == True))
+                #xml = self.getWorkFile(xml, [workOutputTag + "validate-pred.xml.gz", workOutputTag + "modifier-pred.xml.gz", workOutputTag + "unmerging-pred.xml.gz", workOutputTag + "edge-pred.xml.gz"])
+                xml = self.getWorkFile(xml, [workOutputTag + "modifier-pred.xml.gz", workOutputTag + "unmerging-pred.xml.gz", workOutputTag + "edge-pred.xml.gz"])
+                Utils.STFormat.ConvertXML.toSTFormat(xml, output+"-events.tar.gz", outputTag="a2", writeExtra=(stParams["scores"] == True))
                 if stParams["evaluate"]: #self.stEvaluator != None:
                     task = self.task
                     if task == None:
