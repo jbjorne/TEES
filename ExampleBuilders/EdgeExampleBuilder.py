@@ -799,10 +799,13 @@ class EdgeExampleBuilder(ExampleBuilder):
                 extra["e2DuplicateIds"] = ",".join([x.get("id") for x in sentenceGraph.mergedEntityToDuplicates[entity2]])
                 #extra["e2GoldIds"] = mergedEntityIds[entity2]
         extra["categoryName"] = categoryName
-        eventEdges = []
-        for edgeType in categoryName.split("---"):
-            eventEdges.append(structureAnalyzer.isEventArgument(edgeType))
-        extra["event"] = "---".join([str(x) for x in eventEdges])
+#        if categoryName != "neg":
+#            eventEdges = []
+#            for edgeType in categoryName.split("---"):
+#                eventEdges.append(structureAnalyzer.isEventArgument(edgeType))
+#            extra["event"] = "---".join([str(x) for x in eventEdges])
+#        else:
+#            extra["event"] = "neg"
         if self.styles["bacteria_renaming"]:
             if entity1.get("text") != None and entity1.get("text") != "":
                 extra["e1t"] = entity1.get("text").replace(" ", "---").replace(":","-COL-")
