@@ -26,8 +26,8 @@ class SentenceExampleWriter:
     def __init__(self):
         SentenceExampleWriter.counts = defaultdict(int)
     
-    def write(self, examples, predictions, corpus, outputFile, classSet=None, parse=None, tokenization=None, goldCorpus=None, insertWeights=False, exampleStyle=None):
-        return self.writeXML(examples, predictions, corpus, outputFile, classSet, parse, tokenization, goldCorpus, exampleStyle=exampleStyle)
+    def write(self, examples, predictions, corpus, outputFile, classSet=None, parse=None, tokenization=None, goldCorpus=None, insertWeights=False, exampleStyle=None, structureAnalyzer=None):
+        return self.writeXML(examples, predictions, corpus, outputFile, classSet, parse, tokenization, goldCorpus, exampleStyle=exampleStyle, structureAnalyzer=structureAnalyzer)
     
     def loadCorpus(self, corpus, parse, tokenization):
         if type(corpus) == types.StringType or isinstance(corpus,ET.ElementTree): # corpus is in file
@@ -44,7 +44,7 @@ class SentenceExampleWriter:
             examples = ExampleUtils.readExamples(examples, False)
         return examples, predictions
     
-    def writeXML(self, examples, predictions, corpus, outputFile, classSet=None, parse=None, tokenization=None, goldCorpus=None, exampleStyle=None):
+    def writeXML(self, examples, predictions, corpus, outputFile, classSet=None, parse=None, tokenization=None, goldCorpus=None, exampleStyle=None, structureAnalyzer=None):
         #print >> sys.stderr, "Writing output to Interaction XML"
         corpus = self.loadCorpus(corpus, parse, tokenization)
         if goldCorpus != None:
@@ -91,7 +91,7 @@ class SentenceExampleWriter:
                     goldSentence = None
                     if goldCorpus != None:
                         goldSentence = goldCorpus.sentencesById[currentMajorId]
-                    self.writeXMLSentence(exampleQueue, predictionsByExample, sentenceObject, classSet, classIds, goldSentence=goldSentence, exampleStyle=exampleStyle) # process queue
+                    self.writeXMLSentence(exampleQueue, predictionsByExample, sentenceObject, classSet, classIds, goldSentence=goldSentence, exampleStyle=exampleStyle, structureAnalyzer=structureAnalyzer) # process queue
                     progress.update(len(exampleQueue), "Writing examples ("+exampleQueue[-1][0]+"): ")
                 exampleQueue = []
                 predictionsByExample = {}
@@ -109,7 +109,7 @@ class SentenceExampleWriter:
             goldSentence = None
             if goldCorpus != None:
                 goldSentence = goldCorpus.sentencesById[currentMajorId]
-            self.writeXMLSentence(exampleQueue, predictionsByExample, sentenceObject, classSet, classIds, goldSentence=goldSentence, exampleStyle=exampleStyle) # process queue
+            self.writeXMLSentence(exampleQueue, predictionsByExample, sentenceObject, classSet, classIds, goldSentence=goldSentence, exampleStyle=exampleStyle, structureAnalyzer=structureAnalyzer) # process queue
             progress.update(len(exampleQueue), "Writing examples ("+exampleQueue[-1][0]+"): ")
             exampleQueue = []
             predictionsByExample = {}
@@ -121,7 +121,7 @@ class SentenceExampleWriter:
                 goldSentence = None
                 if goldCorpus != None:
                     goldSentence = goldCorpus.sentencesById[currentMajorId]
-                self.writeXMLSentence([], {}, sentenceObject, classSet, classIds, goldSentence=goldSentence, exampleStyle=exampleStyle)
+                self.writeXMLSentence([], {}, sentenceObject, classSet, classIds, goldSentence=goldSentence, exampleStyle=exampleStyle, structureAnalyzer=structureAnalyzer)
         
         # Print statistics
         if len(self.counts) > 0:
@@ -134,7 +134,7 @@ class SentenceExampleWriter:
             ETUtils.write(corpus.rootElement, outputFile)
         return corpus.tree
 
-    def writeXMLSentence(self, examples, predictionsByExample, sentenceObject, classSet, classIds, goldSentence=None, exampleStyle=None):
+    def writeXMLSentence(self, examples, predictionsByExample, sentenceObject, classSet, classIds, goldSentence=None, exampleStyle=None, structureAnalyzer=None):
         raise NotImplementedError
     
     def assertSameSentence(self, examples, sentenceId=None):

@@ -167,7 +167,7 @@ class UnmergingExampleWriter(SentenceExampleWriter):
                 # skip the rest, as the structure will be invalid anyway
                 examplesLeft = 0 
 
-    def writeXMLSentence(self, examples, predictionsByExample, sentenceObject, classSet, classIds, goldSentence=None, exampleStyle=None):        
+    def writeXMLSentence(self, examples, predictionsByExample, sentenceObject, classSet, classIds, goldSentence=None, exampleStyle=None, structureAnalyzer=None):        
         sentenceElement = sentenceObject.sentence
         self.sentenceId = sentenceElement.get("id")
         self.assertSameSentence(examples, self.sentenceId)
