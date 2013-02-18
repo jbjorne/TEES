@@ -168,7 +168,8 @@ class SingleStageDetector(Detector):
         #exampleStyle = self.exampleBuilder.getParameters(model.getStr(self.tag+"example-style"))
         if exampleStyle == None:
             exampleStyle = Parameters.get(model.getStr(self.tag+"example-style")) # no checking, but these should already have passed the ExampleBuilder
-        return self.exampleWriter.write(exampleFileName, predictions, data, tag+self.tag+"pred.xml.gz", model.get(self.tag+"ids.classes"), parse, exampleStyle=exampleStyle)
+        self.structureAnalyzer.load(model)
+        return self.exampleWriter.write(exampleFileName, predictions, data, tag+self.tag+"pred.xml.gz", model.get(self.tag+"ids.classes"), parse, exampleStyle=exampleStyle, structureAnalyzer=self.structureAnalyzer)
 #        if evaluator.getData().getTP() + evaluator.getData().getFP() > 0:
 #            return self.exampleWriter.write(exampleFileName, predictions, data, outputFileName, model.get(self.tag+"ids.classes"), parse)
 #        else:
