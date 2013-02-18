@@ -36,7 +36,7 @@ class StructureAnalyzer():
         if edgeType in self.eventArgumentTypes:
             return True
         else:
-            assert edgeType in self.relations
+            assert edgeType in self.relations, (edgeType, self.relations)
             return False
         
     def getArgLimits(self, entityType, argType):
@@ -129,7 +129,7 @@ class StructureAnalyzer():
         elements = []
         for element in rootElement:
             elements.append((element, rootElement))
-            elements.extend(element.getElementsAndParents(element, elementType))
+            elements.extend(self._getElementsAndParents(element, elementType))
         return elements
     
     def validate(self, xml, printCounts=True, simulation=False, debug=False):
