@@ -233,7 +233,7 @@ class Document:
             if entity.normalization != None:
                 s += "N" + entity.id[1:] + "\tGene_Identifier Annotation:" + entity.id + " Referent:" + entity.normalization + "\n"
             if writeExtra:
-                self.extraToString(s)
+                self.extraToString(entity, s)
         return s
 
     def eventsToString(self, writeExtra=True):
@@ -246,11 +246,11 @@ class Document:
                 s += modString + "\n"
                 self._mCounter += 1
             if writeExtra:
-                self.extraToString(s)
+                self.extraToString(event, s)
         return s
     
-    def extraToString(self, s):
-        extraString = event.getExtraString(self._xCounter)
+    def extraToString(self, ann, s):
+        extraString = ann.getExtraString(self._xCounter)
         if extraString != None:
             s += extraString + "\n"
             self._xCounter += 1
@@ -413,10 +413,10 @@ class Annotation:
     def getExtraString(self, extraCount = 0):
         extraString = ""
         for key in sorted(self.extra.keys()):
-            extraString.append("\t" + self.id + " " + key + self.extra[key])
+            extraString += "\t" + self.id + " " + key + self.extra[key]
         for argument in self.arguments:
             for key in sorted(argument.extra.keys()):
-                extraString.append("\t" + self.id + ":" + self.argumentToString(argument) + " " + key + argument.extra[key])
+                extraString += "\t" + self.id + ":" + self.argumentToString(argument) + " " + key + argument.extra[key]
         if extraString == "":
             return None
         else:
