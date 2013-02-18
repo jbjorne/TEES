@@ -185,7 +185,7 @@ def removeX(dir, filePatterns=[".a1", ".rel", ".a2"]):
             f = codecs.open(filePath, "wt", "utf-8")
             for line in lines:
                 if line[0] != "X":
-                    file.write(line + "\n")
+                    f.write(line)
             f.close()
 
 def checkEvaluator(corpus, sourceDir, goldDir = None):
