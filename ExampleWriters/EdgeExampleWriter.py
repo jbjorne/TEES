@@ -26,7 +26,16 @@ class EdgeExampleWriter(SentenceExampleWriter):
 #            if intType == "Arg":
 #                intEl.set("event", "True")
 
-    def writeXMLSentence(self, examples, predictionsByExample, sentenceObject, classSet, classIds, goldSentence=None, exampleStyle=None):        
+    def getEntityByIdMap(self, sentenceElement):
+        entityElements = sentenceElement.findall("entity")
+        entityById = {}
+        for entityElement in entityElements:
+            eId = entityElement.get("id")
+            assert eId not in entityById, eId
+            entityById[eId] = entityElement
+        return entityById
+
+    def writeXMLSentence(self, examples, predictionsByExample, sentenceObject, classSet, classIds, goldSentence=None, exampleStyle=None, structureAnalyzer=None):        
         self.assertSameSentence(examples)
         
         sentenceElement = sentenceObject.sentence
@@ -42,6 +51,8 @@ class EdgeExampleWriter(SentenceExampleWriter):
         if self.removeEdges:
             removed = self.removeChildren(sentenceElement, ["pair", "interaction"])
         
+        entityById = self.getEntityByIdMap(sentenceElement)
+        
         causeAfterTheme = False
         pairCount = 0
         for example in examples:
@@ -49,29 +60,38 @@ class EdgeExampleWriter(SentenceExampleWriter):
                 causeAfterTheme = True
             prediction = predictionsByExample[example[0]]
             predictionString = self.getPredictionStrengthString(prediction, classSet, classIds)
-            iTypes = self.getElementTypes(prediction, classSet, classIds)
-            eventTypes = example[3].split("---")
-            assert len(iTypes) == len(eventTypes)
-            for i in range(len(iTypes)): # split merged classes
-                iType = iTypes[i]
-                pairElement = ET.Element("interaction")
-                pairElement.set("directed", "Unknown")
-                pairElement.set("e1", example[3]["e1"]) #.attrib["id"]
-                if "e1DuplicateIds" in example[3]:
-                    pairElement.set("e1DuplicateIds", example[3]["e1DuplicateIds"])
-                pairElement.set("e2", example[3]["e2"]) #.attrib["id"]
-                if "e2DuplicateIds" in example[3]:
-                    pairElement.set("e2DuplicateIds", example[3]["e2DuplicateIds"])
-                pairElement.set("id", sentenceId + ".i" + str(pairCount))
-                #pairElement.set("type", iType)
-                #self.processClassLabel(iType, pairElement)
-                pairElement.set("conf", predictionString)
-                if eventTypes[i] == "True":
-                    pairElement.set("event", "True")
-                #self.setElementType(pairElement, prediction, classSet, classIds)
-                if pairElement.get("type") != "neg":
-                    sentenceElement.append(pairElement)
-                    pairCount += 1
+            #iTypes = self.getElementTypes(prediction, classSet, classIds)
+            #eventTypes = example[3]["event"].split("---")
+            #assert len(iTypes) == len(eventTypes), (iTypes, eventTypes)
+            #for i in range(len(iTypes)): # split merged classes
+            e1Id = example[3]["e1"]
+            e2Id = example[3]["e2"]
+            e1 = entityById[e1Id]
+            e2 = entityById[e2Id]
+            for iType in self.getElementTypes(prediction, classSet, classIds): # split merged classes
+                # Add only structurally valid edges
+                if iType in structureAnalyzer.getValidEdgeTypes(e1.get("type"), e2.get("type")):
+                    #iType = iTypes[i]
+                    pairElement = ET.Element("interaction")
+                    pairElement.set("directed", "Unknown")
+                    pairElement.set("e1", e1Id)
+                    if "e1DuplicateIds" in example[3]:
+                        pairElement.set("e1DuplicateIds", example[3]["e1DuplicateIds"])
+                    pairElement.set("e2", e2Id)
+                    if "e2DuplicateIds" in example[3]:
+                        pairElement.set("e2DuplicateIds", example[3]["e2DuplicateIds"])
+                    pairElement.set("id", sentenceId + ".i" + str(pairCount))
+                    pairElement.set("type", iType)
+                    #self.processClassLabel(iType, pairElement)
+                    pairElement.set("conf", predictionString)
+                    if structureAnalyzer.isEventArgument(iType): #eventTypes[i] == "True":
+                        pairElement.set("event", "True")
+                    #self.setElementType(pairElement, prediction, classSet, classIds)
+                    if iType != "neg":
+                        sentenceElement.append(pairElement)
+                        pairCount += 1
+                else:
+                    self.counts["invalid-" + iType] += 1
         
         # Re-attach original themes, if needed
         if causeAfterTheme:
