@@ -500,6 +500,7 @@ class UnmergingExampleBuilder(ExampleBuilder):
 #                    if maxArgCount > 1:
 #                        category = "multiArg" # event can have 2-n of at least one argument type (old Binding)
                     category = entity.get("type")
+                    assert category != None
                 else:
                     category = "neg"
                 self.exampleStats.beginExample(category)
@@ -524,7 +525,9 @@ class UnmergingExampleBuilder(ExampleBuilder):
                         argString += "," + arg.get("type") + "=" + arg.get("id")
                     extra = {"xtype":"um","e":entity.get("id"),"i":argString[1:],"etype":eType,"class":category}
                     extra["allInt"] = interactionCountString
-                    assert type(extra["etype"]) == types.StringType, extra
+                    assert type(extra["etype"]) in types.StringTypes, extra
+                    assert type(extra["class"]) in types.StringTypes, category
+                    assert type(extra["i"]) in types.StringTypes, argString
                     example = self.buildExample(sentenceGraph, paths, entity, argCombination, interactions)
                     example[0] = sentenceGraph.getSentenceId()+".x"+str(exampleIndex)
                     example[1] = self.classSet.getId(category)

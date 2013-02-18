@@ -103,7 +103,7 @@ def appendExamples(examples, file):
         file.write(" # id:" + example[0])
         for extraKey, extraValue in example[3].iteritems():
             assert(extraKey != "id") # id must be defined as example[0]
-            if type(extraValue) == types.StringType:
+            if type(extraValue) in types.StringTypes:
                 file.write( " " + str(extraKey) + ":" + extraValue)
         file.write("\n")
     if noneClassCount != 0: 
