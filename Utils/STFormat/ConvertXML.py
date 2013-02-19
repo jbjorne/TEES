@@ -112,6 +112,8 @@ def addEntityElements(doc, docEl, tMap, eventMap):
     for protein in doc.triggers: # triggers
         for eventId in triggerToEvents[protein.id]: # Write duplicate triggers
             entEl = makeEntityElement(protein, elCounter, docEl)
+            if eventId in eventMap and eventMap[eventId].trigger != None:
+                entEl.set("event", "True")
             # Add negation and speculation
             if eventId in eventMap and eventMap[eventId].negation != None:
                 entEl.set("negation", "True")
@@ -207,7 +209,7 @@ def getTriggerToEventsMap(doc):
         for event in doc.events:
             if event.trigger == trigger:
                 triggerToEvents[triggerId].append(event.id)
-        if len(triggerToEvents[triggerId]) == 0:
+        if len(triggerToEvents[triggerId]) == 0: # T-elements with no event (such as Entities) are included in the list
             triggerToEvents[triggerId].append(trigger.id)
     return triggerToEvents
             
@@ -332,8 +334,8 @@ def addEntitiesToSTDoc(doc, docElement, tMap, eMap, entityElementMap, useOrigIds
                     #ann.unmergingScores = entity.get("umStrength")
                     #ann.speculationScores = entity.get("modPred")
                     #ann.negationScores = entity.get("modPred")
-                    # Process events with 0 interactions would not be formed when constructing events based on interactions
-                    if entity.get("type") == "Process": # Process-type events can have 0 interactions
+                    # Events with 0 interactions (such as some Process-type events) would not be formed when constructing events based on interactions
+                    if entity.get("event") == "True":
                         event = makeSTEvent(ann, entityElementMap[entity.get("id")])
                         eMap[entity.get("id")] = event
                         doc.events.append(event)
@@ -349,11 +351,12 @@ def makeSTEvent(triggerAnn, triggerElement):
     event.trigger = triggerAnn
     event.type = triggerAnn.type
     # Add event-specific extra data from the trigger element
-    event.extra = getExtraFromElement(triggerElement, ["umConf", "modConf", "specConf", "negConf"])
+    event.extra = getExtraFromElement(triggerElement, ["conf", "umConf", "modConf", "specConf", "negConf"])
     # Remove the event-specific extra data from the trigger annotation. Only the trigger confidence is left in the trigger
     triggerAnn.extra = {}
     if "conf" in event.extra:
         triggerAnn.extra["conf"] = event.extra["conf"]
+        del event.extra["conf"]
     # Mark modifiers
     if triggerElement.get("speculation") == "True":
         event.speculation = True
@@ -410,9 +413,10 @@ def addInteractionsToSTDoc(doc, docElement, tMap, eMap, entityElementMap, skipAr
         elif interaction.get("event") != "True" or allAsRelations: # "/" in intType and "(" in intType: # BI-task
             rel = Annotation()
             rel.type = interaction.get("type")         
-            relScores = getExtraFromElement(interaction) #interaction.get("conf")
-            rel.addArgument(interaction.get("e1Role", "Arg1"), interaction.get("e1"), None, relScores)
-            rel.addArgument(interaction.get("e2Role", "Arg2"), interaction.get("e2"), None, relScores)
+            #relScores = getExtraFromElement(interaction) #interaction.get("conf")
+            rel.extra = getExtraFromElement(interaction)
+            rel.addArgument(interaction.get("e1Role", "Arg1"), interaction.get("e1")) #, None, relScores)
+            rel.addArgument(interaction.get("e2Role", "Arg2"), interaction.get("e2")) #, None, relScores)
             if rel.type == "Coref":
                 # Add protein arguments
                 if interaction.get("e2") in corefProtMap:
@@ -425,7 +429,7 @@ def addInteractionsToSTDoc(doc, docElement, tMap, eMap, entityElementMap, skipAr
                 eMap[e1] = makeSTEvent(tMap[e1], entityElementMap[e1])
                 doc.events.append(eMap[e1])
             # add arguments
-            eMap[e1].addArgument(interaction.get("type"), interaction.get("e2"), None, interaction.get("predictions"))
+            eMap[e1].addArgument(interaction.get("type"), interaction.get("e2"), None, getExtraFromElement(interaction))
 #    # Rename site-type interactions (which have been masked as "SiteArg" to prevent them being processed as Shared Task task-2 sites
 #    for event in doc.events:
 #        for arg in event.arguments:
@@ -517,13 +521,14 @@ if __name__=="__main__":
     optparser.add_option("-n", "--xmlCorpusName", default="CORPUS", dest="xmlCorpusName", help="")
     optparser.add_option("-a", "--task", default=2, type="int", dest="task", help="1 or 2")
     optparser.add_option("-d", "--debug", default=False, action="store_true", dest="debug", help="Verbose output.")
+    optparser.add_option("-x", "--extra", default=False, action="store_true", dest="extra", help="Verbose output.")
     (options, args) = optparser.parse_args()
     
     if options.conversion in ("TO-ST", "TO-ST-RELATIONS"):
         print >> sys.stderr, "Loading XML"
         xml = ETUtils.ETFromObj(options.input)
         print >> sys.stderr, "Converting to ST Format"
-        toSTFormat(xml, options.output, options.outputTag, options.origIds, debug=options.debug, allAsRelations=options.conversion=="TO-ST-RELATIONS")
+        toSTFormat(xml, options.output, options.outputTag, options.origIds, debug=options.debug, allAsRelations=options.conversion=="TO-ST-RELATIONS", writeExtra=options.extra)
     elif options.conversion == "TO-XML":
         import STTools
         print >> sys.stderr, "Loading ST format"
@@ -537,7 +542,7 @@ if __name__=="__main__":
         print >> sys.stderr, "Converting to XML"
         xml = toInteractionXML(documents)
         print >> sys.stderr, "Converting to ST Format"
-        toSTFormat(xml, options.output, options.outputTag, options.origIds, debug=options.debug)
+        toSTFormat(xml, options.output, options.outputTag, options.origIds, debug=options.debug, writeExtra=options.extra)
     else:
         print >> sys.stderr, "Unknown conversion option", options.conversion
         
