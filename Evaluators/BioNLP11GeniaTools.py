@@ -170,7 +170,7 @@ def evaluate(source, task, goldDir=None, debug=False):
         return None
     return (getFScore(results, task), results)
 
-def removeX(dir, filePatterns=[".a1", ".rel", ".a2"]):
+def removeXLines(dir, filePatterns=[".a1", ".rel", ".a2"]):
     for filename in os.listdir(dir):
         match = False
         for pattern in filePatterns:
@@ -208,7 +208,7 @@ def checkEvaluator(corpus, sourceDir, goldDir = None):
         shutil.copytree(sourceDir, os.path.join(tempdir, "source"))
         sourceDir = os.path.join(tempdir, "source")
     # Filter extra data
-    removeX(sourceDir)
+    removeXLines(sourceDir)
     # Check gold data
     if goldDir == None:
         if not hasattr(Settings, "BIONLP_EVALUATOR_GOLD_DIR"):
