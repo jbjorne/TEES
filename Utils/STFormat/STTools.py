@@ -636,7 +636,7 @@ def readExtra(string, document):
             annotation.extra[key] = value
         prevAnnotation = annotation
 
-def loadSet(path, setName=None, level="a2", sitesAreArguments=False, a2Tag="a2", readScores=False, debug=False, subPath=None):
+def loadSet(path, setName=None, level="a2", sitesAreArguments=False, a2Tags=["a2", "rel"], readScores=False, debug=False, subPath=None):
     assert level in ["txt", "a1", "a2"]
     if path.endswith(".tar.gz"):
         import tempfile
@@ -676,7 +676,7 @@ def loadSet(path, setName=None, level="a2", sitesAreArguments=False, a2Tag="a2",
             ids.add(filename.split(".")[0])
     for id in sorted(list(ids)):
         #print "Loading", id
-        doc = Document(id, dir, ["a2"], readScores, debug)
+        doc = Document(id, dir, a2Tags, readScores, debug)
         doc.dataSet = setName
         doc.license = license
         documents.append(doc)
@@ -689,6 +689,9 @@ def writeSet(documents, output, resultFileTag="a2", debug=False, writeExtra=Fals
     from collections import defaultdict
     import shutil
     counts = defaultdict(int)
+    
+    if resultFileTag == None:
+        resultFileTag = "a2"
     
     while output.endswith("/"):
         output = output[:-1]
