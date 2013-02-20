@@ -272,6 +272,8 @@ def getTaskSettings(task, detector, processUnmerging, processModifiers, isSingle
         # BioNLP Shared Task and preprocessing parameters
         if task == "BI11-FULL":
             bioNLPSTParams = Parameters.cat(bioNLPSTParams, "convert:scores", "BioNLP Shared Task / " + fullTaskId, ["default"]) # the shared task evaluator is not designed for predicted entities
+        elif task == "REL11":
+            bioNLPSTParams = Parameters.cat(bioNLPSTParams, "convert:evaluate:scores:a2Tag=rel", "BioNLP Shared Task / " + fullTaskId, ["default"])
         elif task not in ["DDI11", "DDI11-FULL"]:
             bioNLPSTParams = Parameters.cat(bioNLPSTParams, "convert:evaluate:scores", "BioNLP Shared Task / " + fullTaskId, ["default"])
         if task in ["BI11", "BI11-FULL", "BB11", "DDI11", "DDI11-FULL"]:
