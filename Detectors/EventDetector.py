@@ -358,7 +358,7 @@ class EventDetector(Detector):
             if stParams["convert"]:
                 #xml = self.getWorkFile(xml, [workOutputTag + "validate-pred.xml.gz", workOutputTag + "modifier-pred.xml.gz", workOutputTag + "unmerging-pred.xml.gz", workOutputTag + "edge-pred.xml.gz"])
                 xml = self.getWorkFile(xml, [workOutputTag + "modifier-pred.xml.gz", workOutputTag + "unmerging-pred.xml.gz", workOutputTag + "edge-pred.xml.gz"])
-                Utils.STFormat.ConvertXML.toSTFormat(xml, output+"-events.tar.gz", outputTag="a2", writeExtra=(stParams["scores"] == True))
+                Utils.STFormat.ConvertXML.toSTFormat(xml, output+"-events.tar.gz", outputTag=stParams["a2Tag"], writeExtra=(stParams["scores"] == True))
                 if stParams["evaluate"]: #self.stEvaluator != None:
                     task = self.task
                     if task == None:

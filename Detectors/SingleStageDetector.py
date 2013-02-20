@@ -44,7 +44,7 @@ class SingleStageDetector(Detector):
                 # the combined model.
                 if importIdsFromModel != None:
                     model.importFrom(self.openModel(importIdsFromModel, "r"), [self.tag+"ids.classes", self.tag+"ids.features"],
-                                     [self.tag+"classifier-parameter", self.tag+"example-style", self.tag+"parse", self.tag+"task"])
+                                     [self.tag+"classifier-parameter", self.tag+"example-style", self.tag+"parse", self.tag+"task", "structure.txt"])
                     # Train the model with the parameters defined in the import source
                     model.addStr(self.tag+"classifier-parameters-train", model.getStr(self.tag+"classifier-parameter"))
                 if self.bioNLPSTParams != None and len(self.bioNLPSTParams) > 0:
@@ -138,7 +138,7 @@ class SingleStageDetector(Detector):
         EvaluateInteractionXML.run(self.evaluator, xml, data, parse)
         stParams = self.getBioNLPSharedTaskParams(self.bioNLPSTParams, model)
         if stParams["convert"]: #self.useBioNLPSTFormat:
-            Utils.STFormat.ConvertXML.toSTFormat(xml, output+"-events.tar.gz", outputTag="a2")
+            Utils.STFormat.ConvertXML.toSTFormat(xml, output+"-events.tar.gz", outputTag=stParams["a2Tag"], writeExtra=(stParams["scores"] == True))
             if stParams["evaluate"]: #self.stEvaluator != None:
                 if task == None: 
                     task = self.getStr(self.tag+"task", model)
