@@ -155,7 +155,7 @@ def buildModels(output, tasks, connection, dummy=False):
     from batch import batch
     for task in tasks:
         taskName = task
-        if task in ["GE", "GE09"]:
+        if task in ["GE11", "GE09"]:
             taskName += ".2"
         command = "python " + os.path.join(mainTEESDir, "train.py") + " -t " + taskName + " -o %o/%j -c " + connection + " --clearAll"
         batch(command, input=None, connection=connection, jobTag=task, output=output, debug=True, dummy=dummy)
@@ -174,7 +174,7 @@ if __name__=="__main__":
     optparser.add_option("-i", "--input", default=None, dest="input", help="")
     optparser.add_option("-o", "--output", default=None, dest="output", help="")
     optparser.add_option("-a", "--action", default=None, dest="action", help="")
-    optparser.add_option("-t", "--tasks", default="GE,EPI,ID,BB,BI,BI-FULL,GE09,CO,REL,REN,DDI,DDI-FULL", dest="tasks", help="")
+    optparser.add_option("-t", "--tasks", default="GE11,EPI11,ID11,BB11,BI11,BI11-FULL,GE09,CO11,REL11,REN11,DDI11,DDI11-FULL", dest="tasks", help="")
     optparser.add_option("-c", "--connection", default=None, dest="connection", help="")
     optparser.add_option("-d", "--dummy", action="store_true", default=False, dest="dummy", help="")
     optparser.add_option("--classificationOutput", default=None, dest="classificationOutput", help="")
