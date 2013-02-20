@@ -31,7 +31,7 @@ def getCounts(documents):
                 counts["relation"] += 1
         for ann in doc.events + doc.relations:
             for arg in ann.arguments:
-                counts["arg("+arg[0]+")"] += 1
+                counts["arg("+arg.type+")"] += 1
                 counts["arg"] += 1
     return counts
 
