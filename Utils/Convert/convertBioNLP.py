@@ -219,7 +219,7 @@ def insertAnalyses(xml, corpus, datasets, files, bigfileName, packageSubPath=Non
         packageSubPath = ""
     if "TEES_PARSES" in files: # corpus for which no official parse exists
         print >> sys.stderr, "---------------", "Inserting TEES-generated analyses", "---------------"
-        extractedFilename = files["TEES_PARSES"] + "/" + corpus
+        extractedFilename = files["TEES_PARSES"] + "/" + corpus[:-2]
         print >> sys.stderr, "Making sentences"
         Tools.SentenceSplitter.makeSentences(xml, extractedFilename, None)
         print >> sys.stderr, "Inserting McCC parses"
@@ -312,7 +312,7 @@ if __name__=="__main__":
 
     from optparse import OptionParser
     from Utils.Parameters import *
-    optparser = OptionParser(usage="%prog [options]\nBioNLP'11 Shared Task corpus conversion")
+    optparser = OptionParser(usage="%prog [options]\nBioNLP Shared Task corpus conversion")
     optparser.add_option("-c", "--corpora", default=None, dest="corpora", help="corpus names in a comma-separated list, e.g. \"GE11,EPI11,ID11\"")
     optparser.add_option("-e", "--evaluators", default=False, action="store_true", dest="evaluators", help="Install evaluators")
     optparser.add_option("-o", "--outdir", default=None, dest="outdir", help="directory for output files")
@@ -327,5 +327,7 @@ if __name__=="__main__":
     if options.evaluators:
         installEvaluators(options.outdir, options.downloaddir, options.forceDownload)
     if options.corpora != None:
+        options.corpora = options.corpora.replace("ALL11", "GE11,EPI11,ID11,BB11,BI11,CO11,REL11,REN11")
+        options.corpora = options.corpora.replace("ALL13", "GE13,CG13,PC13,GRO13,GRN13,BB13")
         #Stream.openLog(os.path.join(options.outdir, "conversion-log.txt"))
         convert(options.corpora.split(","), options.outdir, options.downloaddir, options.forceDownload, options.intermediateFiles, evaluate=options.evaluate, processEquiv=not options.noEquiv, addAnalyses=not options.noAnalyses)
