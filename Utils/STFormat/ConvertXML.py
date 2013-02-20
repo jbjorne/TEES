@@ -72,7 +72,8 @@ def addParseElements(doc, docEl):
         tokEl.set("id", word.id)
         tokEl.set("text", word.text)
         tokEl.set("POS", "None")
-        tokEl.set("charOffset", Range.tuplesToCharOffset(word.charOffset))
+        assert len(word.charOffsets) == 1, (word, word.charOffsets)
+        tokEl.set("charOffset", Range.tuplesToCharOffset(word.charOffsets))
         tokenMap[word.id] = tokEl
     for dep in doc.dependencies:
         depEl = ET.SubElement(parseEl, "dependency")
@@ -165,7 +166,7 @@ def addInteractionElements(doc, docEl, tMap):
                         elCounter += 1
                         docEl.append(corefEl)
                         for connProtArg in argByType["CorefTarget"]: # link proteins to antecedent
-                            docEl.append(makeInteractionElement("CorefTarget", docId, elCounter, origId, tMap[antecedentArg.target.id], tMap[connProtArg.target.id]), annSource=event.fileType)
+                            docEl.append(makeInteractionElement("CorefTarget", docId, elCounter, origId, tMap[antecedentArg.target.id], tMap[connProtArg.target.id], annSource=event.fileType))
                             elCounter += 1
             else:
                 argCount = 0
