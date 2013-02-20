@@ -304,6 +304,7 @@ class StructureAnalyzer():
                 raise Exception("Unknown structure definition " + str(defType))
             if defType in ["EVENT", "ENTITY"]: # in the graph, entities are just events with no arguments
                 e1Type = defName
+                self.argLimits[e1Type] # initialize to include entities with no arguments
                 for intType in interactionTypes:
                     self.argLimits[e1Type][intType] = [0,0]
                 for split in tabSplits[1:]:
@@ -386,6 +387,7 @@ class StructureAnalyzer():
                             self.modifiers[modType].add(entity.get("type"))
         
         for entityType in argCounts:
+            self.argLimits[entityType] # initialize to include entities with no arguments
             for interactionType in interactionTypes:
                 self.argLimits[entityType][interactionType] = [sys.maxint,0]
             for argCombination in argCounts[entityType]:
