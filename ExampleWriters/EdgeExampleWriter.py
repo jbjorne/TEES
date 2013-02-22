@@ -68,12 +68,28 @@ class EdgeExampleWriter(SentenceExampleWriter):
             e2Id = example[3]["e2"]
             e1 = entityById[e1Id]
             e2 = entityById[e2Id]
+            # directed examples are the default from edge example generation, in which case the directedness
+            # of an interaction is defined by the structure analysis. Setting edge example generation as
+            # undirected will override this.
+            directedExample = example[3]["directed"]
             for iType in self.getElementTypes(prediction, classSet, classIds): # split merged classes
                 # Add only structurally valid edges
-                if iType in structureAnalyzer.getValidEdgeTypes(e1.get("type"), e2.get("type")):
+                if iType == "neg":
+                    self.counts["neg"] += 1
+                elif iType in structureAnalyzer.getValidEdgeTypes(e1.get("type"), e2.get("type"), forceUndirected=not directedExample):
                     #iType = iTypes[i]
                     pairElement = ET.Element("interaction")
-                    pairElement.set("directed", "Unknown")
+                    if not directedExample:
+                        pairElement.set("directed", "False")
+                    else:
+                        pairElement.set("directed", str(structureAnalyzer.isDirected(iType)))
+                    if structureAnalyzer.isEventArgument(iType): #eventTypes[i] == "True":
+                        pairElement.set("event", "True")
+                    else:
+                        entityRoles = structureAnalyzer.getEntityRoles(iType)
+                        if entityRoles != None:
+                            pairElement.set("e1Role", entityRoles[0])
+                            pairElement.set("e2Role", entityRoles[1])
                     pairElement.set("e1", e1Id)
                     if "e1DuplicateIds" in example[3]:
                         pairElement.set("e1DuplicateIds", example[3]["e1DuplicateIds"])
@@ -84,12 +100,8 @@ class EdgeExampleWriter(SentenceExampleWriter):
                     pairElement.set("type", iType)
                     #self.processClassLabel(iType, pairElement)
                     pairElement.set("conf", predictionString)
-                    if structureAnalyzer.isEventArgument(iType): #eventTypes[i] == "True":
-                        pairElement.set("event", "True")
-                    #self.setElementType(pairElement, prediction, classSet, classIds)
-                    if iType != "neg":
-                        sentenceElement.append(pairElement)
-                        pairCount += 1
+                    sentenceElement.append(pairElement)
+                    pairCount += 1
                 else:
                     self.counts["invalid-" + iType] += 1
         
