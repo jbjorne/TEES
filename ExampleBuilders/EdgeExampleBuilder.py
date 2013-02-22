@@ -813,7 +813,8 @@ class EdgeExampleBuilder(ExampleBuilder):
                 extra["e2t"] = entity2.get("text").replace(" ", "---").replace(":","-COL-")
         sentenceOrigId = sentenceGraph.sentenceElement.get("origId")
         if sentenceOrigId != None:
-            extra["SOID"] = sentenceOrigId       
+            extra["SOID"] = sentenceOrigId 
+        extra["directed"] = str(self.styles["directed"] == True)      
         # make example
         if self.styles["binary"]:
             if categoryName != "neg":
