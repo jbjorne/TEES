@@ -19,12 +19,13 @@ import tempfile
 from Core.Model import Model
 from Detectors.StepSelector import StepSelector
 from Detectors.Preprocessor import Preprocessor
+from Detectors.StructureAnalyzer import StructureAnalyzer
 
 def train(output, task=None, detector=None, inputFiles=None, models=None, parse=None,
           processUnmerging=None, processModifiers=None, isSingleStage=False, 
           bioNLPSTParams=None, preprocessorParams=None, exampleStyles=None, 
           classifierParams=None,  doFullGrid=False, deleteOutput=False, copyFrom=None, 
-          log="log.txt", step=None, omitSteps=None, debug=False, connection=None, subset=None):
+          log="log.txt", step=None, omitSteps=None, debug=False, connection=None, subset=None, folds=None):
     """
     Train a new model for event or relation detection.
     
@@ -57,6 +58,7 @@ def train(output, task=None, detector=None, inputFiles=None, models=None, parse=
     exampleStyles = Parameters.get(exampleStyles, {"examples":None, "trigger":None, "edge":None, "unmerging":None, "modifiers":None})
     classifierParams = Parameters.get(classifierParams, {"examples":None, "trigger":None, "recall":None, "edge":None, "unmerging":None, "modifiers":None})
     subset = Parameters.get(subset, {"train":None, "devel":None, "test":None, "seed":0, "all":None})
+    folds = Parameters.get(folds, {"train":None, "devel":None, "test":None})
     processUnmerging = getDefinedBool(processUnmerging)
     processModifiers = getDefinedBool(processModifiers)
     # Initialize working directory
@@ -64,6 +66,7 @@ def train(output, task=None, detector=None, inputFiles=None, models=None, parse=
     # Get task specific parameters
     detector, processUnmerging, processModifiers, isSingleStage, bioNLPSTParams, preprocessorParams, exampleStyles, classifierParams, removeNamesFromEmpty = getTaskSettings(task, 
         detector, processUnmerging, processModifiers, isSingleStage, bioNLPSTParams, preprocessorParams, inputFiles, exampleStyles, classifierParams)   
+    getFolds(inputFiles, folds)
     getSubsets(inputFiles, subset)
     if task != None: task = task.replace("-MINI", "").replace("-FULL", "")
     # Define processing steps
@@ -199,6 +202,27 @@ def getSubsets(inputFiles, subset, outdir="training"):
                 Utils.InteractionXML.Subset.getSubset(inputFiles[dataset], outFileName, float(fraction), subset["seed"])
             inputFiles[dataset] = outFileName
 
+def getFolds(inputFiles, folds, outdir="training"):
+    if folds["train"] == None or folds["devel"] == None:
+        return
+    assert inputFiles["devel"] in [None, "None"]
+    assert inputFiles["test"] in [None, "None"]
+    for dataset in ("devel", "train", "test"):
+        folds = folds[dataset]
+        if folds == None:
+            inputFiles["dataset"] = None
+            continue
+        if type(folds) in types.StringTypes:
+            folds = [folds]
+        idString = "_".join(folds)
+        idString = idString.replace("train", "t")
+        if outdir == None:
+            outdir = tempfile.mkdtemp()
+        outFileName = os.path.join(outdir, dataset + "-" + idString + ".xml")
+        if not os.path.exists(outFileName):
+            Utils.InteractionXML.Subset.getSubset(inputFiles["train"], outFileName, attributes={"set":folds})
+        inputFiles[dataset] = outFileName
+
 def workdir(path, deleteIfExists=True, copyFrom=None, log="log.txt"):
     # When using a template, always remove existing work directory
     if copyFrom != None:
@@ -226,6 +250,35 @@ def workdir(path, deleteIfExists=True, copyFrom=None, log="log.txt"):
     else:
         print >> sys.stderr, "No logging"
     return path
+
+def learnSettings(detector, isSingleStage, inputFiles):
+    if detector == None:
+        structureAnalyzer = StructureAnalyzer()
+        datasets = [x for x in sorted(inputFiles.values())].remove(None)
+        structureAnalyzer.analyze(datasets)
+        counts = structureAnalyzer.counts
+        if counts["TARGET-ENTITY"] > 0 and counts["TARGET-INTERACTION"] > 0:
+            isSingleStage = False
+            detector = "Detectors.EventDetector"
+            classifierParameters["edge"] = Parameters.cat("c=10,100,1000,2500,4000,5000,6000,7500,10000,20000,25000,50000", classifierParameters["examples"], "Classifier parameters for single-stage entities")
+            classifierParameters["trigger"] = Parameters.cat("c=10,100,1000,2500,4000,5000,6000,7500,10000,20000,25000,50000", classifierParameters["examples"], "Classifier parameters for single-stage entities")
+            classifierParameters["recall"] = Parameters.cat("c=10,100,1000,2500,4000,5000,6000,7500,10000,20000,25000,50000", classifierParameters["examples"], "Classifier parameters for single-stage entities")
+            if counts["EVENT"] > 0:
+                processUnmerging = True
+                classifierParameters["unmerging"] = Parameters.cat("c=10,100,1000,2500,4000,5000,6000,7500,10000,20000,25000,50000", classifierParameters["examples"], "Classifier parameters for single-stage entities")
+            if counts["MODIFIER"] > 0:
+                processModifiers = True
+                classifierParameters["modifier"] = Parameters.cat("c=10,100,1000,2500,4000,5000,6000,7500,10000,20000,25000,50000", classifierParameters["examples"], "Classifier parameters for single-stage entities")
+        else:
+            isSingleStage = True
+            if counts["TARGET-ENTITY"] > 0:
+                detector = "Detectors.EntityDetector"
+                classifierParameters["examples"] = Parameters.cat("c=10,100,1000,2500,4000,5000,6000,7500,10000,20000,25000,50000", classifierParameters["examples"], "Classifier parameters for single-stage entities")
+            else:
+                assert counts["TARGET-INTERACTION"] > 0
+                detector = "Detectors.EdgeDetector"
+                classifierParameters["examples"] = Parameters.cat("c=10,100,1000,2500,4000,5000,6000,7500,10000,20000,25000,50000", classifierParameters["examples"], "Classifier parameters for single-stage entities")
+    return detector, isSingleStage
 
 def getTaskSettings(task, detector, processUnmerging, processModifiers, isSingleStage,
                     bioNLPSTParams, preprocessorParams, 
@@ -298,26 +351,26 @@ def getTaskSettings(task, detector, processUnmerging, processModifiers, isSingle
             if task == "REN11":
                 exampleStyles["examples"] = Parameters.cat("trigger_features:typed:no_linear:entities:noMasking:maxFeatures:bacteria_renaming:maskTypeAsProtein=Gene", exampleStyles["examples"], "Single-stage example style /" + fullTaskId)
             elif task == "BI11":
-                exampleStyles["examples"] = Parameters.cat("trigger_features:typed:directed:no_linear:entities:noMasking:maxFeatures:bi_limits", exampleStyles["examples"], "Single-stage example style /" + fullTaskId)
+                exampleStyles["examples"] = Parameters.cat("trigger_features:typed:directed:no_linear:entities:noMasking:maxFeatures:auto_limits", exampleStyles["examples"], "Single-stage example style /" + fullTaskId)
             elif task == "DDI11":
                 exampleStyles["examples"] = Parameters.cat("trigger_features:typed:no_linear:entities:noMasking:maxFeatures:ddi_features:ddi_mtmx:filter_shortest_path=conj_and", exampleStyles["examples"], "Single-stage example style /" + fullTaskId)
         else:
             if task in ["GE09", "GE11"]:
-                exampleStyles["edge"] = Parameters.cat("trigger_features:typed:directed:no_linear:entities:genia_limits:noMasking:maxFeatures", exampleStyles["edge"], "Edge example style / " + fullTaskId)
+                exampleStyles["edge"] = Parameters.cat("trigger_features:typed:directed:no_linear:entities:auto_limits:noMasking:maxFeatures", exampleStyles["edge"], "Edge example style / " + fullTaskId)
                 if subTask == 1:
                     exampleStyles["edge"] = Parameters.cat(":genia_task1", exampleStyles["edge"])
             elif task in ["BB11"]:
-                exampleStyles["edge"] = Parameters.cat("trigger_features:typed:directed:no_linear:entities:bb_limits:noMasking:maxFeatures", exampleStyles["edge"], "Edge example style / " + fullTaskId)
+                exampleStyles["edge"] = Parameters.cat("trigger_features:typed:directed:no_linear:entities:auto_limits:noMasking:maxFeatures", exampleStyles["edge"], "Edge example style / " + fullTaskId)
             elif task == "EPI11":
-                exampleStyles["edge"] = Parameters.cat("trigger_features:typed:directed:no_linear:entities:epi_limits:noMasking:maxFeatures", exampleStyles["edge"], "Edge example style / " + fullTaskId)
+                exampleStyles["edge"] = Parameters.cat("trigger_features:typed:directed:no_linear:entities:auto_limits:noMasking:maxFeatures", exampleStyles["edge"], "Edge example style / " + fullTaskId)
             elif task == "ID11":
-                exampleStyles["edge"] = Parameters.cat("trigger_features:typed:directed:no_linear:entities:id_limits:noMasking:maxFeatures", exampleStyles["edge"], "Edge example style / " + fullTaskId)
+                exampleStyles["edge"] = Parameters.cat("trigger_features:typed:directed:no_linear:entities:auto_limits:noMasking:maxFeatures", exampleStyles["edge"], "Edge example style / " + fullTaskId)
             elif task == "REL11":
-                exampleStyles["edge"] = Parameters.cat("trigger_features:typed:directed:no_linear:entities:noMasking:maxFeatures:rel_limits:rel_features", exampleStyles["edge"], "Edge example style / " + fullTaskId)
+                exampleStyles["edge"] = Parameters.cat("trigger_features:typed:directed:no_linear:entities:noMasking:maxFeatures:auto_limits:rel_features", exampleStyles["edge"], "Edge example style / " + fullTaskId)
             elif task == "CO11":
-                exampleStyles["edge"] = Parameters.cat("trigger_features:typed:directed:no_linear:entities:noMasking:maxFeatures:co_limits", exampleStyles["edge"], "Edge example style / " + fullTaskId)
+                exampleStyles["edge"] = Parameters.cat("trigger_features:typed:directed:no_linear:entities:noMasking:maxFeatures:auto_limits", exampleStyles["edge"], "Edge example style / " + fullTaskId)
             elif task == "BI11-FULL":
-                exampleStyles["edge"] = Parameters.cat("trigger_features:typed:directed:no_linear:entities:noMasking:maxFeatures:bi_limits", exampleStyles["edge"], "Edge example style / " + fullTaskId)
+                exampleStyles["edge"] = Parameters.cat("trigger_features:typed:directed:no_linear:entities:noMasking:maxFeatures:auto_limits", exampleStyles["edge"], "Edge example style / " + fullTaskId)
             elif task == "DDI11-FULL":
                 exampleStyles["edge"] = Parameters.cat("trigger_features:typed:no_linear:entities:noMasking:maxFeatures:ddi_features:filter_shortest_path=conj_and", exampleStyles["edge"], "Edge example style / " + fullTaskId)
             else:
@@ -469,4 +522,4 @@ if __name__=="__main__":
           classifierParams={"examples":options.exampleParams, "trigger":options.triggerParams, "recall":options.recallAdjustParams, "edge":options.edgeParams, "unmerging":options.unmergingParams, "modifiers":options.modifierParams}, 
           doFullGrid=options.fullGrid, deleteOutput=options.clearAll, copyFrom=options.copyFrom, 
           log=options.log, step=options.step, omitSteps=options.omitSteps, debug=options.debug, 
-          connection=options.connection, subset=options.subset)
+          connection=options.connection, subset=options.subset, folds=options.folds)
