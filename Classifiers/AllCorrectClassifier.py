@@ -3,6 +3,10 @@ import Core.ExampleUtils as Example
 import sys, os, types, copy
 
 class AllCorrectClassifier(Classifier):
+    def optimize(self, examples, outDir, parameters, classifyExamples, classIds, step="BOTH", evaluator=None, determineThreshold=False, timeout=None, downloadAllModels=False):
+        classifier = copy.copy(self)
+        classifier.parameters = "TEES.classifier=AllCorrectClassifier"
+        return classifier
         
     def classify(self, examples, output, model=None, finishBeforeReturn=False, replaceRemoteFiles=True):
         output = os.path.abspath(output)
