@@ -168,9 +168,17 @@ class EventDetector(Detector):
                 "booster":[float(i) for i in self.recallAdjustParameters.split(",")], 
                 "edge":[int(i) for i in Parameters.get(self.edgeClassifierParameters, valueListKey="c")["c"]] }
         else:
-            ALL_PARAMS={"trigger":Parameters.get(self.model.getStr(self.triggerDetector.tag+"classifier-parameter"), valueListKey="c")["c"],
+            ALL_PARAMS={"trigger":Parameters.get(self.model.getStr(self.triggerDetector.tag+"classifier-parameter", defaultIfNotExist=""), valueListKey="c"),
                         "booster":[float(i) for i in self.recallAdjustParameters.split(",")],
-                        "edge":Parameters.get(self.model.getStr(self.edgeDetector.tag+"classifier-parameter"), valueListKey="c")["c"]}
+                        "edge":Parameters.get(self.model.getStr(self.edgeDetector.tag+"classifier-parameter", defaultIfNotExist=""), valueListKey="c")}
+            if "c" in ALL_PARAMS["trigger"]:
+                ALL_PARAMS["trigger"] = ALL_PARAMS["trigger"]["c"]
+            else:
+                ALL_PARAMS["trigger"] = None
+            if "c" in ALL_PARAMS["edge"]:
+                ALL_PARAMS["edge"] = ALL_PARAMS["edge"]["c"]
+            else:
+                ALL_PARAMS["edge"] = None
         
         paramCombinations = Parameters.getCombinations(ALL_PARAMS, ["trigger", "booster", "edge"])
         prevParams = None
