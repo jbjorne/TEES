@@ -43,8 +43,8 @@ class SingleStageDetector(Detector):
                 # with the parameter already defined in the import source. This is used when training
                 # the combined model.
                 if importIdsFromModel != None:
-                    model.importFrom(self.openModel(importIdsFromModel, "r"), [self.tag+"ids.classes", self.tag+"ids.features"],
-                                     [self.tag+"classifier-parameter", self.tag+"example-style", self.tag+"parse", self.tag+"task", "structure.txt"])
+                    model.importFrom(self.openModel(importIdsFromModel, "r"), [self.tag+"ids.classes", self.tag+"ids.features", "structure.txt"],
+                                     [self.tag+"classifier-parameter", self.tag+"example-style", self.tag+"parse", self.tag+"task"])
                     # Train the model with the parameters defined in the import source
                     model.addStr(self.tag+"classifier-parameters-train", model.getStr(self.tag+"classifier-parameter"))
                 if self.bioNLPSTParams != None and len(self.bioNLPSTParams) > 0:
