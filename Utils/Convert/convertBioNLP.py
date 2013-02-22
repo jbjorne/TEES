@@ -294,10 +294,10 @@ def insertAnalyses(xml, corpus, datasets, files, bigfileName, packageSubPath=Non
             Tools.StanfordParser.insertParses(xml, tempdir + "/bionlp-st-2013_all_tasks_stanford_parser/" + stTag + corpusTag + "_" + setTags[setName] + packageSubPath, None, extraAttributes={"stanfordSource":"BioNLP'13"})
 
 def processParses(xml, splitTarget="McCC"):
-    print >> sys.stderr, "Protein Name Splitting"
+    print >> sys.stderr, "---------------", "Protein Name Splitting", "---------------"
     #ProteinNameSplitter.mainFunc(xml, None, splitTarget, splitTarget, "split-"+splitTarget, "split-"+splitTarget)
     ProteinNameSplitter.mainFunc(xml, None, splitTarget, removeOld=True)
-    print >> sys.stderr, "Head Detection"
+    print >> sys.stderr, "---------------", "Head Detection", "---------------"
     #xml = FindHeads.findHeads(xml, "split-"+splitTarget, tokenization=None, output=None, removeExisting=True)
     xml = FindHeads.findHeads(xml, splitTarget, tokenization=None, output=None, removeExisting=True)
 
