@@ -160,6 +160,50 @@ def buildModels(output, tasks, connection, dummy=False):
         command = "python " + os.path.join(mainTEESDir, "train.py") + " -t " + taskName + " -o %o/%j -c " + connection + " --clearAll"
         batch(command, input=None, connection=connection, jobTag=task, output=output, debug=True, dummy=dummy)
 
+def getResultLine(logPath, tagPaths):
+    f = open(logPath, "rt")
+    lines = f.readlines()
+    f.close()
+    
+    for tagPath in tagPaths:
+        currentTagIndex = 0
+        for line in lines:
+            if tagPath[currentTagIndex] in line:
+                if currentTagIndex < len(tagPath) - 1:
+                    currentTagIndex += 1
+                else:
+                    return line.split("\t", 1)[-1].strip()
+    return "No result"
+
+def getResults(output, tasks):
+    for task in tasks:
+        taskName = task
+        if task in ["GE11", "GE09"]:
+            taskName += ".2"
+        logPath = output + "/" + task + "/log.txt"
+        if not os.path.exists(logPath):
+            print taskName + ": No log file"
+            continue
+        tagPaths = []
+        BioNLPEvaluatorBase = ["------------ Empty devel classification ------------", "BioNLP task "]
+        tagPaths.append(BioNLPEvaluatorBase + ["##### approximate span and recursive mode #####", "==[ALL-TOTAL]=="]) # GE11
+        tagPaths.append(BioNLPEvaluatorBase + ["====[TOTAL]===="]) # EPI11, ID11
+        tagPaths.append(BioNLPEvaluatorBase + ["Global scores:", "f-score ="]) # BB11
+        tagPaths.append(BioNLPEvaluatorBase + ["Relaxed F-score"]) # REN11
+        tagPaths.append(BioNLPEvaluatorBase + ["EVALUATION OF MENTION LINKING", "F = "]) # CO11
+        tagPaths.append(["------------ Check devel classification ------------", "##### EvaluateInteractionXML #####", "Interactions", "micro p/n:"])
+        print taskName + ": " + getResultLine(logPath, tagPaths)
+
+def buildDDI13(output, connection, dummy=False, numFolds=10):
+    global mainTEESDir
+    from batch import batch
+    for fold in range(numFolds):
+        develFolds = [str(x) for x in (range(numFolds) + range(numFolds))[fold+1:fold+2+1] ]
+        trainFolds = [str(x) for x in (range(numFolds) + range(numFolds))[fold+3:fold+9+1] ]
+        foldParameter = " --folds test=train" + str(fold) + ":devel=train" + ",train".join(develFolds) + ":train=train" + ",train".join(trainFolds)
+        command = "python " + os.path.join(mainTEESDir, "train.py") + " -t DDI13 -o %o/%j -c " + connection + " --clearAll" + foldParameter
+        batch(command, input=None, connection=connection, jobTag="DDI13-fold" + str(fold), output=output, debug=True, dummy=dummy)
+
 if __name__=="__main__":
     # Import Psyco if available
     try:
@@ -180,13 +224,17 @@ if __name__=="__main__":
     optparser.add_option("--classificationOutput", default=None, dest="classificationOutput", help="")
     optparser.add_option("--archiveName", default=None, dest="archiveName", help="")
     (options, args) = optparser.parse_args()
-    assert options.action in ["CONVERT_CORPORA", "BUILD_MODELS", "EXTRACT_MODELS", "LINK_MODELS", "PACKAGE_MODELS", "BUILD_APIDOC", "LIST_EXECUTABLES"]
+    assert options.action in ["CONVERT_CORPORA", "BUILD_MODELS", "GET_RESULTS", "BUILD_DDI13", "EXTRACT_MODELS", "LINK_MODELS", "PACKAGE_MODELS", "BUILD_APIDOC", "LIST_EXECUTABLES"]
     options.tasks = options.tasks.split(",")
     
     if options.action == "LIST_EXECUTABLES":
         listExecutables()
     elif options.action == "BUILD_MODELS":
         buildModels(options.output, options.tasks, options.connection, options.dummy)
+    elif options.action == "GET_RESULTS":
+        getResults(options.output, options.tasks)
+    elif options.action == "BUILD_DDI13":
+        buildDDI13(options.output, options.connection, options.dummy)
     elif options.action == "EXTRACT_MODELS":
         extractModels(options.input, options.output, options.tasks, options.classificationOutput)
     elif options.action == "LINK_MODELS":
