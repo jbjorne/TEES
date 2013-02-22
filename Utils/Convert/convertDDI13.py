@@ -18,6 +18,7 @@ import Tools.BLLIPParser
 import Tools.StanfordParser
 import xml.etree.cElementTree as ET
 import Utils.ElementTreeUtils as ETUtils
+import Utils.Range as Range
 from Detectors.StructureAnalyzer import StructureAnalyzer
 from Detectors.Preprocessor import Preprocessor
 
@@ -32,20 +33,28 @@ def getCorpusXML():
     corpus = ET.ElementTree(ET.Element("corpus"))
     corpusRoot = corpus.getroot()
     corpusRoot.set("source", "DDI13")
-    return corpusRoot
+    return corpus
 
 def processElements(xml):
     for ddi in xml.getiterator("ddi"):
         ddi.tag = "interaction"
     for entity in xml.getiterator("entity"):
         entity.set("given", "True")
+        # Reformat disjoint character offsets and update character range format for TEES 2.0+
+        charOffsets = Range.charOffsetToTuples(entity.get("charOffset"), rangeSep=";")
+        updatedCharOffsets = []
+        for charOffset in charOffsets:
+            updatedCharOffsets.append( (charOffset[0], charOffset[1]+1) )
+        entity.set("charOffset", Range.tuplesToCharOffset(updatedCharOffsets))
+        #entity.set("charOffset", entity.get("charOffset").replace(";", ","))
 
-def parse(xml, intermediateFileDir, debug=False):
+def parseXML(xml, intermediateFileDir, debug=False):
     preprocessor = Preprocessor()
     preprocessor.setArgForAllSteps("debug", debug)
     preprocessor.stepArgs("PARSE")["requireEntities"] = False
     #preprocessor.process(xml, intermediateFileDir, fromStep="SPLIT-SENTENCES", toStep="FIND-HEADS", omitSteps=["NER"])
-    preprocessor.process(xml, intermediateFileDir, fromStep="PARSE", toStep="FIND-HEADS")
+    #preprocessor.process(xml, intermediateFileDir, fromStep="PARSE", toStep="FIND-HEADS")
+    preprocessor.process(xml, intermediateFileDir, omitSteps=["CONVERT", "SPLIT-SENTENCES", "NER", "DIVIDE-SETS"])
 
 def combineXML(corpusXML, setName, dataDir, subDirs=["DrugBank", "MedLine"]):
     # Add all documents into one XML
@@ -79,14 +88,15 @@ def convertDDI13(outDir, downloadDir=None, redownload=False, parse=False, makeIn
     print >> sys.stderr, "Extracting package", downloaded
     Utils.Download.extractPackage(downloaded, tempdir)
         
-    xml = getCorpusXML()
+    corpusTree = getCorpusXML()
+    xml = corpusTree.getroot()
     print >> sys.stderr, "Merging input XMLs"
     combineXML(xml, "train", os.path.join(tempdir, "Train"), subDirs=["DrugBank", "MedLine"])
     print >> sys.stderr, "Processing elements"
     processElements(xml)
     if parse:
         print >> sys.stderr, "Parsing"
-        parse(xml, os.path.join(tempdir, "parsing"), debug)
+        parseXML(corpusTree, os.path.join(tempdir, "parsing"), debug)
     # Check what was produced by the conversion
     print >> sys.stderr, "---------------", "Corpus Structure Analysis", "---------------"
     analyzer = StructureAnalyzer()
