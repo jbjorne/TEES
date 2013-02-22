@@ -13,7 +13,7 @@ import Utils.ElementTreeUtils as ETUtils
 from Utils.ProgressCounter import ProgressCounter
 
 # the prefix to use for split token ids
-tokenIdPrefix = "st_"
+tokenIdPrefix = "bt_"
 
 # the default name of the new tokenization
 splitTokenizationName = "split"
