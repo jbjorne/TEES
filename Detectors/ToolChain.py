@@ -42,7 +42,7 @@ class ToolChain(Detector):
             model = self.openModel(model, "r")
             parameters = model.getStr(modelParameterStringName, defaultIfNotExist=None)
         defaultStepNames = [x[0] for x in self.getDefaultSteps()]
-        valueLimits={"omitSteps":defaultStepNames, "intermediateFiles":defaultStepNames + [True]}
+        valueLimits={"omitSteps":defaultStepNames + [None], "intermediateFiles":defaultStepNames + [True, None]}
         defaults = self.getDefaultParameters(defaultValue=defaultValue)
         return Parameters.get(parameters, defaults, valueLimits=valueLimits)
     
