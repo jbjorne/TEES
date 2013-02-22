@@ -164,10 +164,12 @@ class Document:
                 readStarAnnotation(line, self.proteins + self.triggers)
                 processedLines[i] = True
                 count += 1
-        for line in lines:
+        for i in range(len(lines)):
+            line = lines[i]
             if line[0] == "X":
                 if readExtraLines:
                     readExtra(line, self)
+                processedLines[i] = True
                 count += 1
         #for i in range(len(lines)):
         #    line = lines[i]
@@ -307,7 +309,7 @@ class Annotation:
         return s + ">"
     
     def addArgument(self, type, target, siteOf=None, extra=None):
-        newArgument = Argument(type, target, siteOf, extra)
+        newArgument = Argument(type, target, siteOf, extra, self.trigger != None)
         self.arguments.append(newArgument)
         return newArgument
     
@@ -353,8 +355,10 @@ class Annotation:
                 count += 1
         assert False, (argument, self)
     
-    def getArgumentFullType(self, argument):
-        if argument.siteOf == None:
+    def getArgumentFullType(self, argument, processType=True):
+        if not processType:
+            return argument.type
+        elif argument.siteOf == None:
             return argument.type + self._getArgumentIndex(argument)
         else:
             indexSuffix = self._getArgumentIndex(argument.siteOf)
@@ -364,7 +368,7 @@ class Annotation:
                 return argument.type + indexSuffix
     
     def argumentToString(self, argument):
-        return self.getArgumentFullType(argument) + ":" + argument.target.id
+        return self.getArgumentFullType(argument, self.trigger != None) + ":" + argument.target.id
     
     def getArgumentMap(self):
         argMap = {}
@@ -424,8 +428,12 @@ class Annotation:
             return "X" + str(extraCount) + extraString
 
 class Argument:
-    def __init__(self, type, target, siteOf=None, extra=None):
-        self.type, self.siteIdentifier = self._processType(type)
+    def __init__(self, type, target, siteOf=None, extra=None, processType=True):
+        if processType:
+            self.type, self.siteIdentifier = self._processType(type)
+        else:
+            self.type = type
+            self.siteIdentifier = ""
         self.target = target
         self.siteOf = siteOf
         self.extra = {}
@@ -582,7 +590,7 @@ def readEvent(string, debug=False):
     eventType = args[0]
     eventArguments = args[1:]
     eventTypeSplits = eventType.split(":")
-    event.type = eventType
+    event.type = eventTypeSplits[0]
     event.trigger = None
     if len(eventTypeSplits) > 1:
         event.trigger = eventTypeSplits[1]
@@ -673,6 +681,8 @@ def loadSet(path, setName=None, level="a2", sitesAreArguments=False, a2Tags=["a2
         licenseFile.close()
     for filename in os.listdir(dir):
         if filename.endswith(".txt"):
+            if filename.startswith("._"): # a hack to skip the broken files in the GRO13 data packages
+                continue
             ids.add(filename.split(".")[0])
     for id in sorted(list(ids)):
         #print "Loading", id
