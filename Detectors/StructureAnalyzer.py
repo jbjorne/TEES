@@ -73,6 +73,22 @@ class StructureAnalyzer():
                 return None
             else:
                 return (relation.e1Role, relation.e2Role)
+    
+    def _updateCounts(self):
+        self.counts["RELATION"] = len(self.relations)
+        self.counts["MODIFIER"] = len(self.modifiers)
+        self.counts["ENTITY"] = 0
+        self.counts["EVENT"] = 0
+        for entityType in sorted(self.argLimits.keys()):
+            isEvent = False
+            for argType in sorted(self.argLimits[entityType]):
+                if self.argLimits[entityType][argType][1] > 0:
+                    isEvent = True
+                    break
+            if isEvent:
+                self.counts["EVENT"] += 1
+            else:
+                self.counts["ENTITY"] += 1
         
     def isDirected(self, edgeType):
         if self.isEventArgument(edgeType):
@@ -365,6 +381,7 @@ class StructureAnalyzer():
             defType, defName = tabSplits[0].split()
             if defType not in ["EVENT", "ENTITY", "RELATION", "MODIFIER"]:
                 raise Exception("Unknown structure definition " + str(defType))
+            self.counts[defType] += 1
             if defType in ["EVENT", "ENTITY"]: # in the graph, entities are just events with no arguments
                 e1Type = defName
                 self.argLimits[e1Type] # initialize to include entities with no arguments
@@ -430,6 +447,10 @@ class StructureAnalyzer():
                 # process interactions
                 interactionsByE1 = defaultdict(list)
                 for interaction in document.getiterator("interaction"):
+                    if interaction.get("given") == "True":
+                        self.counts["GIVEN-INTERACTION"] += 1
+                    else:
+                        self.counts["TARGET-INTERACTION"] += 1
                     if not (interaction.get("event") == "True"):
                         relType = interaction.get("type")
                         if relType not in self.relations:
@@ -441,6 +462,10 @@ class StructureAnalyzer():
                         interactionsByE1[interaction.get("e1")].append(interaction)
                 # process events
                 for entity in document.getiterator("entity"):
+                    if entity.get("given") == "True":
+                        self.counts["GIVEN-ENTITY"] += 1
+                    else:
+                        self.counts["TARGET-ENTITY"] += 1
                     currentArgCounts = defaultdict(int)# copy.copy(countsTemplate)
                     for interaction in interactionsByE1[entity.get("id")]:
                         interactionTypes.add(interaction.get("type"))
@@ -474,6 +499,7 @@ class StructureAnalyzer():
         # print results
         self._defineEdgeTypes()
         self._defineValidEdgeTypes()
+        self._updateCounts()
         if model != None:
             self.save(model)
 
