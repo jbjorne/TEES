@@ -52,6 +52,7 @@ class StructureAnalyzer():
         self.sites = None
         self.modifiers = None
         self.counts = None
+        self.targets = None
         
         self.eventArgumentTypes = None
         self.relationTypes = None
@@ -62,7 +63,7 @@ class StructureAnalyzer():
         self.e2Types = defaultdict(lambda:defaultdict(set))
         self.relations = {}
         self.modifiers = {}
-        self.counts = defaultdict(dict)
+        self.targets = {}
         
     def getEntityRoles(self, edgeType):
         if self.isEventArgument(edgeType):
@@ -75,6 +76,7 @@ class StructureAnalyzer():
                 return (relation.e1Role, relation.e2Role)
     
     def _updateCounts(self):
+        self.counts = defaultdict(dict)
         self.counts["RELATION"] = len(self.relations)
         self.counts["MODIFIER"] = len(self.modifiers)
         self.counts["ENTITY"] = 0
@@ -344,6 +346,8 @@ class StructureAnalyzer():
             s += ",".join(sorted(list(relation.e2Types))) + "\n"
         for modType in sorted(self.modifiers.keys()):
             s += "MODIFIER " + modType + "\t" + ",".join(sorted(list(self.modifiers[modType]))) + "\n"
+        for target in sorted(self.targets.keys()):
+            s += "TARGET " + target + "\t" + ",".join(sorted(list(self.targets[target]))) + "\n"
         return s
     
     def save(self, model, filename=None):
@@ -379,9 +383,8 @@ class StructureAnalyzer():
         for line in lines:
             tabSplits = line.strip().split("\t")
             defType, defName = tabSplits[0].split()
-            if defType not in ["EVENT", "ENTITY", "RELATION", "MODIFIER"]:
+            if defType not in ["EVENT", "ENTITY", "RELATION", "MODIFIER", "TARGET"]:
                 raise Exception("Unknown structure definition " + str(defType))
-            self.counts[defType] += 1
             if defType in ["EVENT", "ENTITY"]: # in the graph, entities are just events with no arguments
                 e1Type = defName
                 self.argLimits[e1Type] # initialize to include entities with no arguments
@@ -409,11 +412,14 @@ class StructureAnalyzer():
                 relation.e1Types = set(tabSplits[2].split(","))
                 relation.e2Types = set(tabSplits[3].split(","))
             elif defType == "MODIFIER":
-                self.modifiers[e1Type] = set(splits[1].split(","))
+                self.modifiers[defName] = set(tabSplits[1].split(","))
+            elif defType == "TARGET":
+                self.targets[defName] = set(tabSplits[1].split(","))
                 
         # construct additional structures
         self._defineEdgeTypes()
         self._defineValidEdgeTypes()
+        self._updateCounts()
     
     def showDebugInfo(self):
         # print internal structures
@@ -447,10 +453,10 @@ class StructureAnalyzer():
                 # process interactions
                 interactionsByE1 = defaultdict(list)
                 for interaction in document.getiterator("interaction"):
-                    if interaction.get("given") == "True":
-                        self.counts["GIVEN-INTERACTION"] += 1
-                    else:
-                        self.counts["TARGET-INTERACTION"] += 1
+                    if interaction.get("given") != "True":
+                        if "INTERACTION" not in self.targets:
+                            self.targets["INTERACTION"] = set()
+                        self.targets["INTERACTION"].add(interaction.get("type"))
                     if not (interaction.get("event") == "True"):
                         relType = interaction.get("type")
                         if relType not in self.relations:
@@ -462,10 +468,10 @@ class StructureAnalyzer():
                         interactionsByE1[interaction.get("e1")].append(interaction)
                 # process events
                 for entity in document.getiterator("entity"):
-                    if entity.get("given") == "True":
-                        self.counts["GIVEN-ENTITY"] += 1
-                    else:
-                        self.counts["TARGET-ENTITY"] += 1
+                    if entity.get("given") != "True":
+                        if "ENTITY" not in self.targets:
+                            self.targets["ENTITY"] = set()
+                        self.targets["ENTITY"].add(entity.get("type"))
                     currentArgCounts = defaultdict(int)# copy.copy(countsTemplate)
                     for interaction in interactionsByE1[entity.get("id")]:
                         interactionTypes.add(interaction.get("type"))
