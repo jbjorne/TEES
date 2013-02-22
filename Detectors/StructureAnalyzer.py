@@ -7,6 +7,38 @@ from collections import defaultdict
 import copy
 import types
 
+class Relation():
+    def __init__(self, relType=None):
+        self.type = relType
+        self.isDirected = None
+        self.e1Types = set()
+        self.e2Types = set()
+        self.e1Role = None
+        self.e2Role = None
+    
+    def setStructure(self, isDirected=None, e1Role=None, e2Role=None, id="undefined"):
+        if self.isDirected == None: # no relation of this type has been seen yet
+            self.isDirected = isDirected
+        elif self.isDirected != isDirected:
+            raise Exception("Conflicting relation directed-attribute (" + str(isDirected) + ")for already defined relation of type " + self.type + " in relation " + id)
+        if self.e1Role == None: # no relation of this type has been seen yet
+            self.e1Role = e1Role
+        elif self.e1Role != e1Role:
+            raise Exception("Conflicting relation e1Role-attribute (" + str(e1Role) + ") for already defined relation of type " + self.type + " in relation " + id)
+        if self.e2Role == None: # no relation of this type has been seen yet
+            self.e2Role = e2Role
+        elif self.e2Role != e2Role:
+            raise Exception("Conflicting relation e2Role-attribute (" + str(e2Role) + ") for already defined relation of type " + self.type + " in relation " + id)
+
+    def __repr__(self): # for debugging
+        s = "<Relation"
+        s += " " + str(self.type)
+        s += " " + str(self.e1Types)
+        s += " " + str(self.e2Types)
+        s += " " + str(self.e1Role)
+        s += " " + str(self.e2Role)
+        s += ">"
+
 class StructureAnalyzer():
     def __init__(self, modelFileName="structure.txt"):
         self.modelFileName = modelFileName
@@ -31,6 +63,24 @@ class StructureAnalyzer():
         self.relations = {}
         self.modifiers = {}
         self.counts = defaultdict(dict)
+        
+    def getEntityRoles(self, edgeType):
+        if self.isEventArgument(edgeType):
+            return None
+        else:
+            relation = self.relations[edgeType]
+            if relation.e1Role == None and relation.e2Role == None:
+                return None
+            else:
+                return (relation.e1Role, relation.e2Role)
+        
+    def isDirected(self, edgeType):
+        if self.isEventArgument(edgeType):
+            return True
+        else:
+            relation = self.relations[edgeType]
+            assert relation.isDirected in [True, False]
+            return relation.isDirected
     
     def isEventArgument(self, edgeType):
         if edgeType in self.eventArgumentTypes:
@@ -42,14 +92,17 @@ class StructureAnalyzer():
     def getArgLimits(self, entityType, argType):
         return self.argLimits[entityType][argType]
     
-    def getValidEdgeTypes(self, e1Type, e2Type):
+    def getValidEdgeTypes(self, e1Type, e2Type, forceUndirected=False):
         assert type(e1Type) in types.StringTypes
         assert type(e2Type) in types.StringTypes
         if self.edgeTypes == None: 
             raise Exception("No structure definition loaded")
         if e1Type in self.edgeTypes:
             if e2Type in self.edgeTypes[e1Type]:
-                return self.edgeTypes[e1Type][e2Type] # not a copy, so careful with using the returned list!
+                if forceUndirected:
+                    return self.getValidEdgeTypes(e2Type, e1Type) + self.edgeTypes[e1Type][e2Type]
+                else:
+                    return self.edgeTypes[e1Type][e2Type] # not a copy, so careful with using the returned list!
         return []
     
 #    def isRelation(self, edgeType):
@@ -235,34 +288,44 @@ class StructureAnalyzer():
                     self.edgeTypes[e1Type][e2Type].append(argType)
         for relationType in sorted(self.relations.keys()):
             relation = self.relations[relationType]
-            for e1Type in sorted(list(relation[1])):
-                for e2Type in sorted(list(relation[2])):
+            for e1Type in sorted(list(relation.e1Types)):
+                for e2Type in sorted(list(relation.e2Types)):
                     self.edgeTypes[e1Type][e2Type].append(relationType)
-                    if not relation[1]: # undirected
+                    assert relation.isDirected in [True, False]
+                    if not relation.isDirected: # undirected
                         self.edgeTypes[e2Type][e1Type].append(relationType)
     
     def toString(self):
         if self.argLimits == None or self.e2Types == None: 
             raise Exception("No structure definition loaded")
         s = ""
+        eventStrings = []
+        entityStrings = []
         for entityType in sorted(self.argLimits.keys()):
             argString = ""
             for argType in sorted(self.argLimits[entityType]):
                 if self.argLimits[entityType][argType][1] > 0:
                     argString += "\t" + argType + " " + str(self.argLimits[entityType][argType]).replace(" ", "") + " " + ",".join(sorted(list(self.e2Types[entityType][argType])))
             if argString != "":
-                s += "EVENT "
+                eventStrings += "EVENT " + entityType + argString + "\n"
             else:
-                s += "ENTITY "
-            s += entityType + argString + "\n"
+                entityStrings += "ENTITY " + entityType + argString + "\n"
+        s += "".join(entityStrings)
+        s += "".join(eventStrings)
         for relType in sorted(self.relations.keys()):
+            relation = self.relations[relType]
             s += "RELATION " + relType
-            if self.relations[relType][0]:
+            if relation.isDirected:
                 s += "\tdirected\t"
             else:
                 s += "\tundirected\t"
-            s += ",".join(sorted(list(self.relations[relType][1])))
-            s += "\t" + ",".join(sorted(list(self.relations[relType][2]))) + "\n"
+            if relation.e1Role != None:
+                s += relation.e1Role + " "
+            s += ",".join(sorted(list(relation.e1Types)))
+            s += "\t"
+            if relation.e2Role != None:
+                s += relation.e2Role + " "
+            s += ",".join(sorted(list(relation.e2Types))) + "\n"
         for modType in sorted(self.modifiers.keys()):
             s += "MODIFIER " + modType + "\t" + ",".join(sorted(list(self.modifiers[modType]))) + "\n"
         return s
@@ -315,7 +378,19 @@ class StructureAnalyzer():
             elif defType == "RELATION":
                 if len(tabSplits) != 4:
                     raise Exception("Incorrect relation definition \"" + str(tabSplits) + "\"")
-                self.relations[defName] = [tabSplits[1] == "directed", tabSplits[2].split(","), tabSplits[3].split(",")]
+                relation = Relation(defName)
+                self.relations[defName] = relation
+                relation.isDirected = tabSplits[1] == "directed"
+                e1Role = None
+                if " " in tabSplits[2]:
+                    e1Role, tabSplits[2] = tabSplits[2].split()
+                e2Role = None
+                if " " in tabSplits[3]:
+                    e2Role, tabSplits[3] = tabSplits[3].split()
+                relation.e1Role = e1Role
+                relation.e2Role = e2Role
+                relation.e1Types = set(tabSplits[2].split(","))
+                relation.e2Types = set(tabSplits[3].split(","))
             elif defType == "MODIFIER":
                 self.modifiers[e1Type] = set(splits[1].split(","))
                 
@@ -358,17 +433,10 @@ class StructureAnalyzer():
                     if not (interaction.get("event") == "True"):
                         relType = interaction.get("type")
                         if relType not in self.relations:
-                            self.relations[relType] = [None, set(), set()]
-                        if interaction.get("directed") == "True":
-                            isDirected = True
-                        elif interaction.get("directed") in (None, "False"):
-                            isDirected = False
-                        if self.relations[relType][0] == None: # no relation of this type has been seen yet
-                            self.relations[relType][0] = isDirected
-                        elif self.relations[relType][0] != isDirected:
-                            raise Exception("Conflicting relation directed-attribute for already defined relation of type " + relType)
-                        self.relations[relType][1].add(entityById[interaction.get("e1")].get("type"))
-                        self.relations[relType][2].add(entityById[interaction.get("e2")].get("type"))
+                            self.relations[relType] = Relation(relType)
+                        self.relations[relType].setStructure(interaction.get("directed") == "True", interaction.get("e1Role"), interaction.get("e2Role"), interaction.get("id"))
+                        self.relations[relType].e1Types.add(entityById[interaction.get("e1")].get("type"))
+                        self.relations[relType].e2Types.add(entityById[interaction.get("e2")].get("type"))
                     else:
                         interactionsByE1[interaction.get("e1")].append(interaction)
                 # process events
