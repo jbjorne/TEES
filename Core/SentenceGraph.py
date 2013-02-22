@@ -504,7 +504,11 @@ class SentenceGraph:
             self.tokenHeadScores = {}
         
         # Give all tokens initial scores
+        tokenById = {}
         for token in self.tokens:
+            tokenId = token.get("id")
+            assert tokenId not in tokenById
+            tokenById[tokenId] = token
             self.tokenHeadScores[token] = 0 # initialize score as zero (unconnected token)
             for dependency in self.dependencies:
                 if dependency.get("t1") == token.get("id") or dependency.get("t2") == token.get("id"):
@@ -530,15 +534,17 @@ class SentenceGraph:
                 print >> sys.stderr, "Warning, possible loop in parse for sentence", self.getSentenceId()
                 break
             modifiedScores = False
-            for token1 in self.tokens:
-                for token2 in self.tokens: # for each combination of tokens...
-                    for dep in self.dependencies: # ... check each dependency
-                        if dep.get("t1") == token1.get("id") and dep.get("t2") == token2.get("id") and (dep.get("type") in depTypesToInclude):
-                            # The governor token of the dependency must have a higher score
-                            # than the dependent token.
-                            if self.tokenHeadScores[token1] <= self.tokenHeadScores[token2]:
-                                self.tokenHeadScores[token1] = self.tokenHeadScores[token2] + 1
-                                modifiedScores = True
+#            for token1 in self.tokens:
+#                for token2 in self.tokens: # for each combination of tokens...
+            for dep in self.dependencies: # ... check each dependency
+                token1 = tokenById[dep.get("t1")]
+                token2 = tokenById[dep.get("t2")]
+                if dep.get("type") in depTypesToInclude:
+                    # The governor token of the dependency must have a higher score
+                    # than the dependent token.
+                    if self.tokenHeadScores[token1] <= self.tokenHeadScores[token2]:
+                        self.tokenHeadScores[token1] = self.tokenHeadScores[token2] + 1
+                        modifiedScores = True
 #                        elif dep.attrib["t1"] == tokenI.attrib["id"] and dep.attrib["t2"] == tokenJ.attrib["id"] and (dep.attrib["type"] in depTypesToRemoveReverse):
 #                            #tokenScores[i] -= 1
 #                            if self.tokenHeadScores[tokenJ] <= self.tokenHeadScores[tokenI]:
