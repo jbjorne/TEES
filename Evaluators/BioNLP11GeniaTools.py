@@ -402,8 +402,8 @@ def evaluateBX(corpusName, sourceDir, goldDir=None, silent=False, debug=False):
             f = codecs.open(os.path.join(sourceDir, filename), "rt", "utf-8")
             lines = f.readlines()
             f.close()
+            modified = False
             for i in range(len(lines)):
-                modified = False
                 if lines[i][0] == "R":
                     lines[i] = "E" + lines[i][1:]
                     modified = True
