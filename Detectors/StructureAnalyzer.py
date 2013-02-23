@@ -55,7 +55,7 @@ class StructureAnalyzer():
         self.targets = None
         
         self.eventArgumentTypes = None
-        self.relationTypes = None
+        #self.relationTypes = None
     
     def _init(self):
         self.reset()
@@ -64,6 +64,7 @@ class StructureAnalyzer():
         self.relations = {}
         self.modifiers = {}
         self.targets = {}
+        self.eventArgumentTypes = set()
         
     def getEntityRoles(self, edgeType):
         if self.isEventArgument(edgeType):
@@ -290,12 +291,12 @@ class StructureAnalyzer():
             d[pair[0]] = pair[1]
         return d
     
-    def _defineEdgeTypes(self):
-        self.relationTypes = set(self.relations.keys())
-        self.eventArgumentTypes = set()
-        for entityType in self.argLimits.keys():
-            for argType in self.argLimits[entityType]:
-                self.eventArgumentTypes.add(argType)
+#    def _defineEdgeTypes(self):
+#        self.relationTypes = set(self.relations.keys())
+#        self.eventArgumentTypes = set()
+#        for entityType in self.argLimits.keys():
+#            for argType in self.argLimits[entityType]:
+#                self.eventArgumentTypes.add(argType)
     
     def _defineValidEdgeTypes(self):
         assert self.e2Types != None
@@ -392,6 +393,7 @@ class StructureAnalyzer():
                     self.argLimits[e1Type][intType] = [0,0]
                 for split in tabSplits[1:]:
                     intType, limits, argE2Types = split.split()
+                    self.eventArgumentTypes.add(intType)
                     self.argLimits[e1Type][intType] = eval(limits)
                     for argE2Type in argE2Types.split(","):
                         self.e2Types[e1Type][intType].add(argE2Type)
@@ -417,7 +419,7 @@ class StructureAnalyzer():
                 self.targets[defName] = set(tabSplits[1].split(","))
                 
         # construct additional structures
-        self._defineEdgeTypes()
+        #self._defineEdgeTypes()
         self._defineValidEdgeTypes()
         self._updateCounts()
     
@@ -465,6 +467,7 @@ class StructureAnalyzer():
                         self.relations[relType].e1Types.add(entityById[interaction.get("e1")].get("type"))
                         self.relations[relType].e2Types.add(entityById[interaction.get("e2")].get("type"))
                     else:
+                        self.eventArgumentTypes.add(interaction.get("type"))
                         interactionsByE1[interaction.get("e1")].append(interaction)
                 # process events
                 for entity in document.getiterator("entity"):
@@ -503,7 +506,7 @@ class StructureAnalyzer():
                             minmax[1] = argCombination[interactionType]
         
         # print results
-        self._defineEdgeTypes()
+        #self._defineEdgeTypes()
         self._defineValidEdgeTypes()
         self._updateCounts()
         if model != None:
