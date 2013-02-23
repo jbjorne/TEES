@@ -91,10 +91,10 @@ class EdgeExampleWriter(SentenceExampleWriter):
                             pairElement.set("e1Role", entityRoles[0])
                             pairElement.set("e2Role", entityRoles[1])
                     pairElement.set("e1", e1Id)
-                    if "e1DuplicateIds" in example[3]:
+                    if "e1DuplicateIds" in example[3] and str(example[3]["e1DuplicateIds"]).strip() != None:
                         pairElement.set("e1DuplicateIds", example[3]["e1DuplicateIds"])
                     pairElement.set("e2", e2Id)
-                    if "e2DuplicateIds" in example[3]:
+                    if "e2DuplicateIds" in example[3] and str(example[3]["e2DuplicateIds"]).strip() != None:
                         pairElement.set("e2DuplicateIds", example[3]["e2DuplicateIds"])
                     pairElement.set("id", sentenceId + ".i" + str(pairCount))
                     pairElement.set("type", iType)
