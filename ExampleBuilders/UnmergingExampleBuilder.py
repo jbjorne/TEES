@@ -81,7 +81,7 @@ class UnmergingExampleBuilder(ExampleBuilder):
         
         ExampleBuilder.__init__(self, classSet=classSet, featureSet=featureSet)
         
-        defaultNone = ["trigger_features","typed","directed","no_linear","entities","genia_limits",
+        defaultNone = ["binary", "trigger_features","typed","directed","no_linear","entities","genia_limits",
             "noAnnType", "noMasking", "maxFeatures", "no_merge", "disable_entity_features", 
             "disable_single_element_features", "disable_ngram_features", "disable_path_edge_features"]
         defaultParameters = {}
@@ -499,7 +499,11 @@ class UnmergingExampleBuilder(ExampleBuilder):
 #                        category = "multiType" # event has arguments of several types, 0-1 of each (old Regulation)
 #                    if maxArgCount > 1:
 #                        category = "multiArg" # event can have 2-n of at least one argument type (old Binding)
-                    category = entity.get("type")
+                    if self.styles["binary"]:
+                        category = "pos"
+                    else:
+                        category = entity.get("type")
+                        
                     assert category != None
                 else:
                     category = "neg"
