@@ -50,7 +50,7 @@ class EventDetector(Detector):
               triggerExampleStyle=None, edgeExampleStyle=None, unmergingExampleStyle=None, modifierExampleStyle=None,
               triggerClassifierParameters=None, edgeClassifierParameters=None, 
               unmergingClassifierParameters=None, modifierClassifierParameters=None, 
-              recallAdjustParameters=None, unmerging=False, trainModifiers=False, 
+              recallAdjustParameters=None, unmerging=None, trainModifiers=None, 
               fullGrid=False, task=None,
               parse=None, tokenization=None,
               fromStep=None, toStep=None,
@@ -86,8 +86,7 @@ class EventDetector(Detector):
                                           ("modifierExampleStyle", self.modifierDetector.tag+"example-style"), 
                                           ("modifierClassifierParameters", self.modifierDetector.tag+"classifier-parameters-train")])
             self.combinedModel = self.initModel(self.combinedModel)
-            tags = [self.triggerDetector.tag, self.edgeDetector.tag, self.unmergingDetector.tag]
-            if trainModifiers: tags += [self.modifierDetector.tag]
+            tags = [self.triggerDetector.tag, self.edgeDetector.tag, self.unmergingDetector.tag, self.modifierDetector.tag]
             stringDict = {}
             for tag in tags:
                 stringDict[tag+"parse"] = parse
@@ -100,10 +99,19 @@ class EventDetector(Detector):
         # (Re-)open models in case we start after the first ("ANALYZE") step
         self.model = self.openModel(model, "a")
         self.combinedModel = self.openModel(combinedModel, "a")
+        # Use structure analysis to define automatic parameters
+        if self.unmerging == None:
+            if not self.structureAnalyzer.isInitialized():
+                self.structureAnalyzer.load(self.model)
+            self.unmerging = self.structureAnalyzer.counts["EVENT"] > 0
+        if self.trainModifiers == None:
+            if not self.structureAnalyzer.isInitialized():
+                self.structureAnalyzer.load(self.model)
+            self.trainModifiers = self.structureAnalyzer.counts["MODIFIER"] > 0
         if self.checkStep("EXAMPLES"):
             self.triggerDetector.buildExamples(self.model, [optData.replace("-nodup", ""), trainData.replace("-nodup", "")], [self.workDir+self.triggerDetector.tag+"opt-examples.gz", self.workDir+self.triggerDetector.tag+"train-examples.gz"], saveIdsToModel=True)
             self.edgeDetector.buildExamples(self.model, [optData.replace("-nodup", ""), trainData.replace("-nodup", "")], [self.workDir+self.edgeDetector.tag+"opt-examples.gz", self.workDir+self.edgeDetector.tag+"train-examples.gz"], saveIdsToModel=True)
-            if trainModifiers:
+            if self.trainModifiers:
                 self.modifierDetector.buildExamples(self.model, [optData, trainData], [self.workDir+self.modifierDetector.tag+"opt-examples.gz", self.workDir+self.modifierDetector.tag+"train-examples.gz"], saveIdsToModel=True)             
         if self.checkStep("BEGIN-MODEL"):
             #for model in [self.model, self.combinedModel]:
@@ -112,12 +120,12 @@ class EventDetector(Detector):
             self.triggerDetector.bioNLPSTParams = self.bioNLPSTParams
             self.triggerDetector.beginModel(None, self.model, [self.workDir+self.triggerDetector.tag+"train-examples.gz"], self.workDir+self.triggerDetector.tag+"opt-examples.gz")
             self.edgeDetector.beginModel(None, self.model, [self.workDir+self.edgeDetector.tag+"train-examples.gz"], self.workDir+self.edgeDetector.tag+"opt-examples.gz")
-            if trainModifiers:
+            if self.trainModifiers:
                 self.modifierDetector.beginModel(None, self.model, [self.workDir+self.modifierDetector.tag+"train-examples.gz"], self.workDir+self.modifierDetector.tag+"opt-examples.gz")
         if self.checkStep("END-MODEL"):
             self.triggerDetector.endModel(None, self.model, self.workDir+self.triggerDetector.tag+"opt-examples.gz")
             self.edgeDetector.endModel(None, self.model, self.workDir+self.edgeDetector.tag+"opt-examples.gz")
-            if trainModifiers:
+            if self.trainModifiers:
                 self.modifierDetector.endModel(None, self.model, self.workDir+self.modifierDetector.tag+"opt-examples.gz")
         if self.checkStep("BEGIN-COMBINED-MODEL"):
             if not self.fullGrid:
@@ -126,7 +134,7 @@ class EventDetector(Detector):
                 self.edgeDetector.beginModel(None, self.combinedModel, [self.workDir+self.edgeDetector.tag+"train-examples.gz", self.workDir+self.edgeDetector.tag+"opt-examples.gz"], self.workDir+self.edgeDetector.tag+"opt-examples.gz", self.model)
             else:
                 print >> sys.stderr, "Combined model will be trained after grid search"
-            if trainModifiers:
+            if self.trainModifiers:
                 print >> sys.stderr, "Training combined model for modifier detection"
                 self.modifierDetector.beginModel(None, self.combinedModel, [self.workDir+self.modifierDetector.tag+"train-examples.gz", self.workDir+self.modifierDetector.tag+"opt-examples.gz"], self.workDir+self.modifierDetector.tag+"opt-examples.gz", self.model)
         self.trainUnmergingDetector()
@@ -137,7 +145,7 @@ class EventDetector(Detector):
                 print >> sys.stderr, "Training combined model after grid search"
                 self.triggerDetector.beginModel(None, self.combinedModel, [self.workDir+self.triggerDetector.tag+"train-examples.gz", self.workDir+self.triggerDetector.tag+"opt-examples.gz"], self.workDir+self.triggerDetector.tag+"opt-examples.gz", self.model)
                 self.edgeDetector.beginModel(None, self.combinedModel, [self.workDir+self.edgeDetector.tag+"train-examples.gz", self.workDir+self.edgeDetector.tag+"opt-examples.gz"], self.workDir+self.edgeDetector.tag+"opt-examples.gz", self.model)
-                if trainModifiers:
+                if self.trainModifiers:
                     print >> sys.stderr, "Training combined model for modifier detection"
                     self.modifierDetector.beginModel(None, self.combinedModel, [self.workDir+self.modifierDetector.tag+"train-examples.gz", self.workDir+self.modifierDetector.tag+"opt-examples.gz"], self.workDir+self.modifierDetector.tag+"opt-examples.gz", self.model)
             else:
@@ -145,7 +153,7 @@ class EventDetector(Detector):
         if self.checkStep("END-COMBINED-MODEL"):
             self.triggerDetector.endModel(None, self.combinedModel, self.workDir+self.triggerDetector.tag+"opt-examples.gz")
             self.edgeDetector.endModel(None, self.combinedModel, self.workDir+self.edgeDetector.tag+"opt-examples.gz")
-            if trainModifiers:
+            if self.trainModifiers:
                 self.modifierDetector.endModel(None, self.combinedModel, self.workDir+self.modifierDetector.tag+"opt-examples.gz")
         # End the training process ####################################
         if workDir != None:
