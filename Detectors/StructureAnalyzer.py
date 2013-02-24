@@ -43,7 +43,10 @@ class StructureAnalyzer():
     def __init__(self, modelFileName="structure.txt"):
         self.modelFileName = modelFileName
         self.reset()
-    
+
+    def isInitialized(self):
+        return self.argLimits != None
+
     def reset(self):
         self.edgeTypes = None
         self.argLimits = None
@@ -92,6 +95,19 @@ class StructureAnalyzer():
                 self.counts["EVENT"] += 1
             else:
                 self.counts["ENTITY"] += 1
+    
+    def hasDirectedTargets(self):
+        if "INTERACTION" not in self.targets: # no interactions to predict
+            return False
+        for argType in self.eventArgumentTypes: # look for event argument targets (always directed)
+            if argType in self.targets["INTERACTION"]:
+                return True
+        for relType in self.relations: # look for directed relation targets
+            relation = self.relations[relType]
+            assert relation.isDirected != None
+            if relation.isDirected and relType in self.targets["INTERACTION"]:
+                return True
+        return False
         
     def isDirected(self, edgeType):
         if self.isEventArgument(edgeType):
@@ -356,6 +372,8 @@ class StructureAnalyzer():
             filename = self.modelFileName
         if model != None:
             filename = model.get(filename, True)
+        if not os.path.exists(os.path.dirname(filename)):
+            os.makedirs(os.path.dirname(filename))
         f = open(filename, "wt")
         f.write(self.toString())
         f.close()
