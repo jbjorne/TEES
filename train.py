@@ -260,7 +260,7 @@ def learnSettings(inputFiles, detector, classifierParameters):
         print >> sys.stderr, "*** Analyzing input files to determine training settings ***"
         structureAnalyzer = StructureAnalyzer()
         if not os.path.exists("training/structure.txt"): 
-            datasets = sorted(filter(None, inputFiles.values()))
+            datasets = sorted(filter(None, [inputFiles["train"], inputFiles["devel"]]))
             print >> sys.stderr, "input files:", datasets
             structureAnalyzer.analyze(datasets)
             print >> sys.stderr, structureAnalyzer.toString()
