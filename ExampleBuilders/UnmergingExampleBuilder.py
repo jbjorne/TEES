@@ -221,94 +221,6 @@ class UnmergingExampleBuilder(ExampleBuilder):
         
         return isGold
     
-#    def getArgumentCombinations(self, eType, interactions, entityId=None):
-#        combs = []
-#        if eType == "Binding":
-#            # Making examples for only all-together/all-separate cases
-#            # doesn't work, since even gold data has several cases of
-#            # overlapping bindings with different numbers of arguments
-#            #if len(interactions) > 0:
-#            #    return [interactions]
-#            #else:
-#            #    return interactions
-#            
-#            # Skip causes
-#            themes = []
-#            for interaction in interactions:
-#                if interaction.get("type") == "Theme":
-#                    themes.append(interaction)
-#                
-#            for i in range(len(themes)):
-#                # Looking at a2-normalize.pl reveals that there can be max 6 themes
-#                # Based on training+devel data, four is maximum
-#                if i < 10: #4: 
-#                    for j in combinations(themes, i+1):
-#                        combs.append(j)
-##                if len(combs) >= 100:
-##                    print >> sys.stderr, "Warning, truncating unmerging examples at 100 for Binding entity", entityId
-##                    break
-#            return combs
-#        elif eType == "Process": # For ID-task
-#            argCombinations = []
-#            argCombinations.append([]) # process can have 0 interactions
-#            for interaction in interactions:
-#                if interaction.get("type") == "Participant":
-#                    argCombinations.append([interaction])
-#            return argCombinations
-#        else: # one of the regulation-types, or one of the simple types
-#            themes = []
-#            causes = []
-#            siteArgs = []
-#            contextGenes = []
-#            sideChains = []
-#            locTargets = []
-#            for interaction in interactions:
-#                iType = interaction.get("type")
-#                #assert iType in ["Theme", "Cause"], (iType, ETUtils.toStr(interaction))
-#                if iType not in ["Theme", "Cause", "SiteArg", "Contextgene", "Sidechain"]: # "AtLoc", "ToLoc"]:
-#                    continue
-#                if iType == "Theme":
-#                    themes.append(interaction)
-#                elif iType == "Cause":
-#                    causes.append(interaction)
-#                elif iType == "SiteArg":
-#                    siteArgs.append(interaction)
-#                elif iType == "Contextgene":
-#                    contextGenes.append(interaction)
-#                elif iType == "Sidechain":
-#                    sideChains.append(interaction)
-#                elif iType in ["AtLoc", "ToLoc"]:
-#                    locTargets.append(iType)
-#                else:
-#                    assert False, (iType, interaction.get("id"))
-#            # Limit arguments to event types that can have them
-#            if eType.find("egulation") == -1 and eType != "Catalysis": 
-#                causes = []
-#            if eType != "Glycosylation": sideChains = []
-#            if eType not in ["Acetylation", "Methylation"]: contextGenes = []
-#            if eType == "Catalysis": siteArgs = []
-#            # Themes can always appear alone
-#            themeAloneCombinations = []
-#            for theme in themes:
-#                themeAloneCombinations.append([theme])
-#            #print "Combine", combine.combine(themes, causes), "TA", themeAloneCombinations
-#            return combine.combine(themes, causes) \
-#                   + combine.combine(themes, siteArgs) \
-#                   + combine.combine(themes, sideChains) \
-#                   + combine.combine(themes, contextGenes) \
-#                   + combine.combine(themes, siteArgs, sideChains) \
-#                   + combine.combine(themes, siteArgs, contextGenes) \
-#                   + combine.combine(themes, locTargets) \
-#                   + themeAloneCombinations
-
-# The predicted value range is not used in the features the UnmergingExampleBuilder gets
-# from the MultiEdgeFeatureBuilder
-#    def definePredictedValueRange(self, sentences, elementName):
-#        self.multiEdgeFeatureBuilder.definePredictedValueRange(sentences, elementName)                        
-#    
-#    def getPredictedValueRange(self):
-#        return self.multiEdgeFeatureBuilder.predictedRange
-    
     def sortInteractionsById(self, interactions):
         # The order of the interactions affects the order of the unmerging examples, and this 
         # affects performance. It's not clear whether this is what really happens, or whether
@@ -321,21 +233,6 @@ class UnmergingExampleBuilder(ExampleBuilder):
             pairs.append( (int(interaction.get("id").split(".i")[-1]), interaction) )
         pairs.sort()
         return [x[1] for x in pairs]
-    
-#    def buildEventExamples(self):
-#        pass
-#    
-#    def buildRelationExamples(self, eventExamplesByEntity):
-#        for ex1 in eventExamplesByEntity[e1]:
-#            for ex2 in eventExamplesByEntity[e2]:
-#                features = copy.copy(ex1[2])
-#                features.update(ex2[2])
-#                self.setFeature("relType_" + relation.get("type"))
-#                #self.setFeature("relType_" + relation.get("type")) # prediction strength
-#                if ex[1] != 1 and ex[2] != 1:
-#                    category = "relation"
-#                else:
-#                    category = "neg"
     
     def processDocument(self, sentences, goldSentences, outfile, structureAnalyzer=None):
         self.documentEntitiesById = {}
@@ -358,13 +255,9 @@ class UnmergingExampleBuilder(ExampleBuilder):
         See Core/ExampleUtils for example format.
         """
         self.multiEdgeFeatureBuilder.setFeatureVector(resetCache=True)
-        self.triggerFeatureBuilder.initSentence(sentenceGraph)
+        self.triggerFeatureBuilder.initSentence(sentenceGraph)        
         
-        #examples = []
         exampleIndex = 0
-        
-        #undirected = self.nxMultiDiGraphToUndirected(sentenceGraph.dependencyGraph)
-        #paths = NX10.all_pairs_shortest_path(undirected, cutoff=999)
         undirected = sentenceGraph.dependencyGraph.toUndirected()
         paths = undirected
         
@@ -390,15 +283,6 @@ class UnmergingExampleBuilder(ExampleBuilder):
                     goldEntitiesByOffset[offset] = []
                 goldEntitiesByOffset[offset].append(entity)
         
-        # Generate examples based on interactions between entities or interactions between tokens
-#        interactionsByEntityId = {}
-#        for entity in sentenceGraph.entities:
-#            interactionsByEntityId[entity.get("id")] = []
-#        for interaction in sentenceGraph.interactions:
-#            if interaction.get("type") == "neg":
-#                continue
-#            e1Id = interaction.get("e1")
-#            interactionsByEntityId[e1Id].append(interaction)
         if self.styles["no_merge"]:
             mergeInput = False
             entities = sentenceGraph.entities
@@ -416,13 +300,7 @@ class UnmergingExampleBuilder(ExampleBuilder):
             eType = entity.get("type")
             assert eType != None, entity.attrib
             eType = str(eType)
-            #if eType not in ["Binding", "Positive_regulation", "Negative_regulation", "Regulation"]:
-            #    continue
             
-            #if not goldEntitiesByOffset.has_key(entity.get("headOffset")):
-            #    continue
-            
-            #interactions = interactionsByEntityId[entity.get("id")]
             interactions = [x[2] for x in sentenceGraph.getOutInteractions(entity, mergeInput)]
             interactions = self.sortInteractionsById(interactions)
             interactionCounts = defaultdict(int)
@@ -469,19 +347,7 @@ class UnmergingExampleBuilder(ExampleBuilder):
             #sum(argCombinations, []) # flatten nested list
             if self.debug:
                 print >> sys.stderr, " ", "argCombinations flat", argCombinations
-            #argCombinations = combinations(validInteractions, len(validInteractions))
-#            validArgCombinations = []
-#            for combination in argCombinations:
-#                issues = defaultdict(int)
-#                print "arg combination", combination,
-#                if structureAnalyzer.isValidEvent(entity, combination, sentenceGraph.entitiesById, issues=issues):
-#                    print "VALID"
-#                    validArgCombinations.append(combination)
-#                else:
-#                    print "NOT VALID", issues
-            #if len(argCombinations) <= 1:
-            #    continue
-            #assert validArgCombinations != None, (entity.get("id"), entity.get("type"))
+            
             for argCombination in argCombinations:
                 # Originally binary classification
                 if goldGraph != None:
