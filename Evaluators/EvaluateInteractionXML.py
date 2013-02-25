@@ -400,4 +400,4 @@ if __name__=="__main__":
     print >> sys.stderr, "Importing modules"
     exec "from Evaluators." + options.evaluator + " import " + options.evaluator + " as Evaluator"
     
-    run(Evaluator, options.input, options.gold, options.parse, options.tokenization, options.target, entityMatchFunction=entityMatchFunction, removeIntersentenceInteractions=options.no_intersentence)
+    run(Evaluator, options.input, options.gold, options.parse, None, options.target, entityMatchFunction=entityMatchFunction, removeIntersentenceInteractions=options.no_intersentence)
