@@ -121,7 +121,7 @@ class Detector():
         return self.openModel(model)
     
     def getClassifier(self, parameters):
-        parameters = Parameters.get(parameters, ["TEES.classifier", "c"], valueListKey="c")
+        parameters = Parameters.get(parameters, ["TEES.threshold", "TEES.classifier", "c"], valueListKey="c")
         if parameters["TEES.classifier"] == None:
             return self.Classifier
         else:
