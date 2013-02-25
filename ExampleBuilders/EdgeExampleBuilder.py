@@ -44,7 +44,7 @@ class EdgeExampleBuilder(ExampleBuilder):
         
         # Basic style = trigger_features:typed:directed:no_linear:entities:auto_limits:noMasking:maxFeatures
         self._setDefaultParameters([
-            "directed", "headsOnly", "graph_kernel", "noAnnType", "mask_nodes", "limit_features",
+            "directed", "undirected", "headsOnly", "graph_kernel", "noAnnType", "mask_nodes", "limit_features",
             "no_auto_limits", "co_features", "genia_features", "bi_features", #"genia_limits", "epi_limits", "id_limits", "rel_limits", "bb_limits", "bi_limits", "co_limits",
             "genia_task1", "ontology", "nodalida", "bacteria_renaming", "no_trigger_features", "rel_features",
             "ddi_features", "ddi_mtmx", "evex", "giuliano", "random", "themeOnly", "causeOnly", "no_path", "token_nodes", 
@@ -202,13 +202,13 @@ class EdgeExampleBuilder(ExampleBuilder):
             self.exampleStats.filter("pos_only")
         return makeExample
     
-    def getExampleCategoryName(self, e1=None, e2=None, t1=None, t2=None, sentenceGraph=None, goldGraph=None, entityToGold=None):
+    def getExampleCategoryName(self, e1=None, e2=None, t1=None, t2=None, sentenceGraph=None, goldGraph=None, entityToGold=None, isDirected=True):
         if self.styles["token_nodes"]:
-            categoryName = self.getCategoryNameFromTokens(sentenceGraph, t1, t2, True)
+            categoryName = self.getCategoryNameFromTokens(sentenceGraph, t1, t2, isDirected)
         else:
-            categoryName = self.getCategoryName(sentenceGraph, e1, e2, True)
+            categoryName = self.getCategoryName(sentenceGraph, e1, e2, isDirected)
             if goldGraph != None:
-                categoryName = self.getGoldCategoryName(goldGraph, entityToGold, e1, e2, True)
+                categoryName = self.getGoldCategoryName(goldGraph, entityToGold, e1, e2, isDirected)
         return categoryName
                 
     def buildExamplesFromGraph(self, sentenceGraph, outfile, goldGraph = None, structureAnalyzer=None):
@@ -219,11 +219,14 @@ class EdgeExampleBuilder(ExampleBuilder):
         #examples = []
         exampleIndex = 0
         # example directionality
-        if self.styles["directed"] == None: # determine directedness from corpus
+        if self.styles["directed"] == None and self.styles["undirected"] == None: # determine directedness from corpus
             examplesAreDirected = structureAnalyzer.hasDirectedTargets()
-        else:
-            assert self.styles["directed"] in [True, False]
-            examplesAreDirected = self.styles["directed"]
+        elif self.styles["directed"]:
+            assert self.styles["undirected"] in [None, False]
+            examplesAreDirected = True
+        elif self.styles["undirected"]:
+            assert self.styles["directed"] in [None, False]
+            examplesAreDirected = False
         
         if not self.styles["no_trigger_features"]: 
             self.triggerFeatureBuilder.initSentence(sentenceGraph)
@@ -295,7 +298,7 @@ class EdgeExampleBuilder(ExampleBuilder):
     
     def buildExamplesForPair(self, token1, token2, paths, sentenceGraph, goldGraph, entityToGold, entity1=None, entity2=None, structureAnalyzer=None, isDirected=True):
         # define forward
-        categoryName = self.getExampleCategoryName(entity1, entity2, token1, token2, sentenceGraph, goldGraph, entityToGold)
+        categoryName = self.getExampleCategoryName(entity1, entity2, token1, token2, sentenceGraph, goldGraph, entityToGold, isDirected)
         # make forward
         forwardExample = None
         self.exampleStats.beginExample(categoryName)
@@ -305,7 +308,7 @@ class EdgeExampleBuilder(ExampleBuilder):
         if isDirected: # build a separate reverse example (if that is valid)
             self.exampleStats.endExample() # end forward example
             # define reverse
-            categoryName = self.getExampleCategoryName(entity2, entity1, token2, token1, sentenceGraph, goldGraph, entityToGold)
+            categoryName = self.getExampleCategoryName(entity2, entity1, token2, token1, sentenceGraph, goldGraph, entityToGold, True)
             # make reverse
             self.exampleStats.beginExample(categoryName)
             reverseExample = None
@@ -315,7 +318,7 @@ class EdgeExampleBuilder(ExampleBuilder):
             return filter(None, [forwardExample, reverseExample])
         elif forwardExample != None: # merge features from the reverse example to the forward one
             reverseExample = self.buildExample(token2, token1, paths, sentenceGraph, categoryName, entity2, entity1, structureAnalyzer, isDirected)
-            forwardExample[2].update(reverseExample[2])
+            forwardExample[1].update(reverseExample[1])
             self.exampleStats.endExample() # end merged example
             return [forwardExample]
         else: # undirected example that was filtered
