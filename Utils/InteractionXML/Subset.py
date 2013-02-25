@@ -8,6 +8,7 @@ except ImportError:
 import Utils.ElementTreeUtils as ETUtils
 import random
 from collections import defaultdict
+import types
 
 def getElementCounts(filename, elementTags=[]):
     if filename.endswith(".gz"):
@@ -34,20 +35,35 @@ def getSample(popSize, sampleFraction, seed=0):
             vector.append(1)
     return vector
 
-def select(elementCount, documentSets, element, ids, invert):
-    if ids == None:
+def selectByAttributes(element, attributes):
+    for key in attributes:
+        if element.get(key) in attributes[key]:
+            return True
+    return False
+
+def select(elementCount, documentSets, element, ids, attributes, invert):
+    if ids == None and attributes == None:
         selected = documentSets[elementCount] != 0
     else:
-        selected = element.get("id") in ids
+        selected = True
+        if ids != None:
+            selected = selected and element.get("id") in ids
+        if attributes != None:
+            selected = selected and selectByAttributes(element, attributes)
+        selected = not selected
     if invert:
         selected = not selected
     return selected
 
-def getSubset(input, output=None, fraction=1.0, seed=0, ids=None, invert=False, targetElementTag="document"): 
+def getSubset(input, output=None, fraction=1.0, seed=0, ids=None, attributes=None, invert=False, targetElementTag="document"): 
     distribution = None
-    if ids == None:
+    if ids == None and attributes == None:
         print >> sys.stderr, "No id-file, using pseudorandom distribution"
         distribution = getSample(getElementCounts(input, [targetElementTag])[targetElementTag], fraction, seed)
+    elif attributes != None:
+        print >> sys.stderr, "Selecting subset with attributes:", attributes
+        for key in attributes:
+            assert type(attributes[key]) in (types.ListType, types.TupleType), attributes
 
     counts = defaultdict(int)
     
@@ -59,7 +75,7 @@ def getSubset(input, output=None, fraction=1.0, seed=0, ids=None, invert=False, 
     for event in ETUtils.ETIteratorFromObj(input, ("start", "end")):
         if event[0] == "start":
             if event[1].tag == targetElementTag:
-                skip = select(targetElementCount, distribution, event[1], ids, invert)
+                skip = select(targetElementCount, distribution, event[1], ids, attributes,invert)
                 targetElementCount += 1
             if not skip:
                 outWriter.begin(event[1])
@@ -97,6 +113,7 @@ if __name__=="__main__":
     optparser.add_option("-f", "--fraction", type="float", default=1.0, dest="fraction", help="Selected set fraction")
     optparser.add_option("-s", "--seed", type="int", default=0, dest="seed", help="Seed for random set")
     optparser.add_option("-v", "--invert", default=False, dest="invert", action="store_true", help="Invert")
+    optparser.add_option("-a", "--attributes", default=None, dest="attributes", help="Attributes")
     (options, args) = optparser.parse_args()
     
     if options.input == None:
@@ -114,4 +131,7 @@ if __name__=="__main__":
             idList.append(line.strip())
         idList = set(idList)
     
-    getSubset(options.input, options.output, options.fraction, options.seed, idList, options.invert)
+    if options.attributes != None:
+        options.attributes = eval(options.attributes)
+    
+    getSubset(options.input, options.output, options.fraction, options.seed, idList, options.attributes, options.invert)
