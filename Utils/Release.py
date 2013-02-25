@@ -6,6 +6,7 @@ import subprocess
 mainTEESDir = os.path.abspath(os.path.join(__file__, "../.."))
 print mainTEESDir
 sys.path.append(mainTEESDir)
+import Utils.InteractionXML.Catenate as Catenate
 
 def listExecutables(filter=["Core", "FeatureBuilders", "InteractionXML", "GeniaEventsToSharedTask"]):
     tableTitleLines = "| Program | Location | Description |\n"
@@ -169,6 +170,7 @@ def getResultLine(logPath, tagPaths):
         currentTagIndex = 0
         for line in lines:
             if tagPath[currentTagIndex] in line:
+                #print line, currentTagIndex, tagPath
                 if currentTagIndex < len(tagPath) - 1:
                     currentTagIndex += 1
                 else:
@@ -204,6 +206,19 @@ def buildDDI13(output, connection, dummy=False, numFolds=10):
         command = "python " + os.path.join(mainTEESDir, "train.py") + " -t DDI13 -o %o/%j -c " + connection + " --clearAll" + foldParameter
         batch(command, input=None, connection=connection, jobTag="DDI13-fold" + str(fold), output=output, debug=True, dummy=dummy)
 
+def getDDI13Result(output, numFolds=10):
+    global mainTEESDir
+    from batch import batch
+    foldPaths = []
+    for fold in range(numFolds):
+        foldPath = os.path.join(output, "DDI13-fold" + str(fold), "classification-test", "test-pred.xml.gz")
+        logPath = os.path.join(output, "DDI13-fold" + str(fold), "log.txt")
+        tagPaths = [["------------ Test set classification ------------", "##### EvaluateInteractionXML #####", "Interactions", "micro p/n:"]]
+        print "DDI13-fold" + str(fold) + ": " + getResultLine(logPath, tagPaths)
+        foldPaths.append(foldPath)
+    if len(foldPaths) > 1:
+        Catenate.catenate(foldPaths, os.path.join(output, "DDI13-train-analyses.xml.gz"), fast=True)
+
 if __name__=="__main__":
     # Import Psyco if available
     try:
@@ -223,8 +238,12 @@ if __name__=="__main__":
     optparser.add_option("-d", "--dummy", action="store_true", default=False, dest="dummy", help="")
     optparser.add_option("--classificationOutput", default=None, dest="classificationOutput", help="")
     optparser.add_option("--archiveName", default=None, dest="archiveName", help="")
+    optparser.add_option("--numFolds", default=10, dest="numFolds", help="")
     (options, args) = optparser.parse_args()
-    assert options.action in ["CONVERT_CORPORA", "BUILD_MODELS", "GET_RESULTS", "BUILD_DDI13", "EXTRACT_MODELS", "LINK_MODELS", "PACKAGE_MODELS", "BUILD_APIDOC", "LIST_EXECUTABLES"]
+    
+    assert options.action in ["CONVERT_CORPORA", "BUILD_MODELS", "GET_RESULTS", "BUILD_DDI13", "GET_DDI13_RESULT", "EXTRACT_MODELS", "LINK_MODELS", "PACKAGE_MODELS", "BUILD_APIDOC", "LIST_EXECUTABLES"]
+    options.tasks = options.tasks.replace("ALL11", "GE11,EPI11,ID11,BB11,BI11,CO11,REL11,REN11")
+    options.tasks = options.tasks.replace("ALL13", "GE13,CG13,PC13,GRO13,GRN13,BB13T2,BB13T3")
     options.tasks = options.tasks.split(",")
     
     if options.action == "LIST_EXECUTABLES":
@@ -234,7 +253,9 @@ if __name__=="__main__":
     elif options.action == "GET_RESULTS":
         getResults(options.output, options.tasks)
     elif options.action == "BUILD_DDI13":
-        buildDDI13(options.output, options.connection, options.dummy)
+        buildDDI13(options.output, options.connection, options.dummy, int(options.numFolds))
+    elif options.action == "GET_DDI13_RESULT":
+        getDDI13Result(options.output, int(options.numFolds))
     elif options.action == "EXTRACT_MODELS":
         extractModels(options.input, options.output, options.tasks, options.classificationOutput)
     elif options.action == "LINK_MODELS":
