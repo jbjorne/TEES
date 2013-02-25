@@ -14,6 +14,7 @@ EVALUATOR["BI11"] = "BioNLP-ST_2011_bacteria_interactions_evaluation_software"
 EVALUATOR["REN11"] = "BioNLP-ST_2011_bacteria_rename_evaluation_sofware"
 EVALUATOR["CO11"] = "CREvalPackage1.4"
 EVALUATOR["GE09"] = "bionlp09_shared_task_evaluation_tools_v1"
+EVALUATOR["GRN13"] = "BioNLP-ST-2013_Gene_Regulation_Network_eval"
 # Gold data for evaluators
 EVALUATOR["GE11-gold"] = "BioNLP-ST_2011_genia_devel_data_rev1.tar.gz"
 EVALUATOR["EPI11-gold"] = "BioNLP-ST_2011_Epi_and_PTM_development_data_rev1.tar.gz"
@@ -23,6 +24,7 @@ EVALUATOR["BI11-gold"] = "BioNLP-ST_2011_bacteria_interactions_dev_data_rev1-rem
 EVALUATOR["REN11-gold"] = "BioNLP-ST_2011_bacteria_rename_dev_data.tar.gz"
 EVALUATOR["CO11-gold"] = "BioNLP-ST_2011_coreference_development_data.tar.gz"
 EVALUATOR["GE09-gold"] = "bionlp09_shared_task_development_data_rev1_for_evaluator.tar.gz"
+EVALUATOR["GRN13-gold"] = "BioNLP-ST-2013_Gene_Regulation_Network_dev.tar.gz"
 
 
 # A dictionary for installation URLs. If there is a problem with a 
@@ -40,7 +42,7 @@ URL["SVM_MULTICLASS_SOURCE"] = "http://download.joachims.org/svm_multiclass/curr
 URL["SVM_MULTICLASS_LINUX"] = "http://download.joachims.org/svm_multiclass/current/svm_multiclass_linux.tar.gz"
 URL["GENIA_SENTENCE_SPLITTER"] = "http://www.nactem.ac.uk/y-matsu/geniass/geniass-1.00.tar.gz"
 URL["BANNER_SOURCE"] = "http://banner.svn.sourceforge.net/viewvc/banner/trunk/?view=tar"
-URL["BANNER_COMPILED"] = "https://github.com/downloads/jbjorne/TEES/BANNER-svn-snapshot-120630.tar.gz"
+URL["BANNER_COMPILED"] = "http://sourceforge.net/projects/tees/files/data/BANNER-svn-snapshot-120630.tar.gz"
 URL["BLLIP_SOURCE"] = "https://github.com/dmcc/bllip-parser/zipball/master"
 URL["STANFORD_PARSER"] = "http://nlp.stanford.edu/software/stanford-parser-2012-03-09.tgz"
 RUBY_PATH = "ruby" # for GENIA Sentence Splitter
@@ -49,9 +51,9 @@ JAVA = "java" # for programs using java
 # Corpora #####################################################################
 
 # Preconverted
-URL["BIONLP_11_CORPORA"] =  "https://github.com/downloads/jbjorne/TEES/BioNLP11-corpora-XML-120715.zip"
-URL["BIONLP_09_CORPUS"] =  "https://github.com/downloads/jbjorne/TEES/BioNLP09-corpus-XML-120715.zip"
-URL["DDI_11_CORPUS"] =  "https://github.com/downloads/jbjorne/TEES/DDI11-corpus-XML-120715.zip"
+URL["BIONLP_11_CORPORA"] =  "http://sourceforge.net/projects/tees/files/data/BioNLP11-corpora-XML-130224.zip"
+URL["BIONLP_09_CORPUS"] =  "http://sourceforge.net/projects/tees/files/data/BioNLP09-corpus-XML-130224.zip"
+URL["DDI_11_CORPUS"] =  "http://sourceforge.net/projects/tees/files/data/DDI11-corpus-XML-130224.zip"
 
 
 # BioNLP'13
@@ -101,7 +103,7 @@ URL["CO11_DEVEL"] = urlBase + "BioNLP-ST_2011_coreference_development_data.tar.g
 URL["CO11_TRAIN"] = urlBase + "BioNLP-ST_2011_coreference_training_data_rev1.tar.gz"
 URL["CO11_TEST"] = urlBase + "BioNLP-ST_2011_coreference_test_data.tar.gz"
 # BioNLP'11 Evaluators
-URL["BIONLP11_EVALUATORS"] = "https://github.com/downloads/jbjorne/TEES/BioNLP-evaluators-120715.tar.gz"
+URL["BIONLP11_EVALUATORS"] = "http://sourceforge.net/projects/tees/files/data/BioNLP-evaluators-130224.tar.gz"
 URL["GE11_EVALUATOR"] = urlBase + "BioNLP-ST_2011_genia_tools_rev1.tar.gz"
 #URL["EPI_EVALUATOR"] = urlBase + 
 #URL["ID_EVALUATOR"] = urlBase + 
@@ -148,7 +150,7 @@ URL["BI11_TRAIN_McCC"] = urlBase + "McCC-parses-BioNLP-ST_2011_bacteria_interact
 URL["BI11_TEST_McCC"] = urlBase + "McCC-parses-BioNLP-ST_2011_bacteria_interactions_test_data.tar.gz"
 # Parses not provided in the shared tasks
 #URL["TEES_PARSES"] = "/home/jari/biotext/TEES-parses-2.0/TEES-parses-120706.tar.gz"
-URL["TEES_PARSES"] = "https://github.com/downloads/jbjorne/TEES/TEES-parses-120706.tar.gz"
+URL["TEES_PARSES"] = "http://sourceforge.net/projects/tees/files/data/TEES-parses-130224.tar.gz"
 
 
 # BioNLP'09 Shared Task
@@ -178,8 +180,9 @@ URL["DDI11_TEST_MTMX"] = None
 
 # DDI'13 Shared Task
 URL["DDI13_TRAIN"] = "http://www.cs.york.ac.uk/semeval-2013/task9/data/uploads/datasets/train/semeval_task9_train.zip"
+URL["DDI13_TRAIN_TEES_PARSES"] = "http://sourceforge.net/projects/tees/files/data/DDI13-TEES-parses-130224.tar.gz"
 
 
 # Miscellaneous files
-URL["TEES_RESOURCES"] = "https://github.com/downloads/jbjorne/TEES/TEES-resources-120705.tar.gz"
+URL["TEES_RESOURCES"] = "http://sourceforge.net/projects/tees/files/data/TEES-resources-120705.tar.gz"
 URL["DRUG_BANK_XML"] = "http://www.drugbank.ca/system/downloads/current/drugbank.xml.zip"
