@@ -396,7 +396,8 @@ class Annotation:
                 corefTargetProteins.add(argument.target.id)
             else:
                 argStrings.append(self.argumentToString(argument))
-        s += " " + " ".join(argStrings)
+        if len(argStrings) > 0:
+            s += " " + " ".join(argStrings)
         if len(corefTargetProteins) > 0:
             s += "\t[" + ", ".join(sorted(list(corefTargetProteins))) + "]"
         return s
