@@ -418,6 +418,8 @@ def insertParses(input, parsePath, output=None, parseName="McCC", extraAttribute
         origId = document.get("pmid")
         if origId == None:
             origId = document.get("origId")
+        if origId == None:
+            origId = document.get("id")
         origId = str(origId)
         if docId == None:
             docId = "CORPUS.d" + str(docCount)
