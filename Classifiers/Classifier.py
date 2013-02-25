@@ -34,7 +34,7 @@ class Classifier:
         if hasattr(self, "parameters") and self.parameters != None:
             teesModel.addStr(tag+"classifier-parameter", Parameters.toString(Parameters.get(self.parameters)))
         if hasattr(self, "threshold") and self.threshold != None:
-            teesModel.addStr(self.tag+"threshold", str(self.threshold))
+            teesModel.addStr(tag+"threshold", str(self.threshold))
     
     
     # Utility methods ##########################################################################
