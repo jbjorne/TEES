@@ -64,11 +64,11 @@ def listExecutables(filter=["Core", "FeatureBuilders", "InteractionXML", "GeniaE
                 print "|", program[1], "|", program[0], "|", program[2], "|"
         print
 
-def extractModels(input, output, tasks, classificationOutput=None):
+def extractModels(input, output, tasks, classificationOutput=None, preserveOutput=False):
     assert input != None
     assert output != None
     assert input != output
-    if os.path.exists(output):
+    if os.path.exists(output) and not preserveOutput:
         shutil.rmtree(output)
     if not os.path.exists(output):
         os.makedirs(output)
@@ -96,9 +96,10 @@ def extractModels(input, output, tasks, classificationOutput=None):
                             shutil.copy2(src, dst)
                 
 def linkDuplicates(input, output=None):
-    if output != None and os.path.exists(output):
-        print >> sys.stderr, "Removing output directory"
-        shutil.rmtree(output)
+    if output != None:
+        if os.path.exists(output):
+            print >> sys.stderr, "Removing output directory"
+            shutil.rmtree(output)
         print >> sys.stderr, "Copying input directory"
         shutil.copytree(input, output)
     else:
@@ -135,6 +136,8 @@ def linkDuplicates(input, output=None):
             subprocess.call(lnCommand, shell=True)
 
 def packageItems(input, archiveName):
+    if not os.path.exists(os.path.dirname(archiveName)):
+        os.makedirs(os.path.dirname(archiveName))
     tarCommand = lnCommand = "cd " + input + "; tar cvfj " + archiveName + " *; cd -"
     print >> sys.stderr, "Packaging:", tarCommand
     subprocess.call(tarCommand, shell=True)
@@ -144,6 +147,15 @@ def makeModelPackage(input, output, tasks, archiveName):
     extractModels(options.input, modelPath, options.tasks, options.output + "/classification")
     linkDuplicates(modelPath)
     packageItems(modelPath, archiveName)
+
+def makeSoftwarePackage(input, output):
+    if not os.path.exists(output):
+        os.makedirs(output)
+    setupCommand = "cd " + input + " ; "
+    setupCommand += "python setup.py sdist -d " + output
+    setupCommand += " ; cd - "
+    print >> sys.stderr, "Packaging software:", setupCommand
+    subprocess.call(setupCommand, shell=True)
     
 def buildModels(output, tasks, connection, dummy=False):
     """
@@ -190,7 +202,8 @@ def getResults(output, tasks):
         BioNLPEvaluatorBase = ["------------ Empty devel classification ------------", "BioNLP task "]
         tagPaths.append(BioNLPEvaluatorBase + ["##### approximate span and recursive mode #####", "==[ALL-TOTAL]=="]) # GE11
         tagPaths.append(BioNLPEvaluatorBase + ["====[TOTAL]===="]) # EPI11, ID11
-        tagPaths.append(BioNLPEvaluatorBase + ["Global scores:", "f-score ="]) # BB11
+        tagPaths.append(BioNLPEvaluatorBase + ["Global scores:", "f-score ="]) # BI11
+        tagPaths.append(BioNLPEvaluatorBase + ["INFO", "F-score ="]) # BB11
         tagPaths.append(BioNLPEvaluatorBase + ["Relaxed F-score"]) # REN11
         tagPaths.append(BioNLPEvaluatorBase + ["EVALUATION OF MENTION LINKING", "F = "]) # CO11
         tagPaths.append(["------------ Check devel classification ------------", "##### EvaluateInteractionXML #####", "Interactions", "micro p/n:"])
@@ -236,12 +249,24 @@ if __name__=="__main__":
     optparser.add_option("-t", "--tasks", default="GE11,EPI11,ID11,BB11,BI11,BI11-FULL,GE09,CO11,REL11,REN11,DDI11,DDI11-FULL", dest="tasks", help="")
     optparser.add_option("-c", "--connection", default=None, dest="connection", help="")
     optparser.add_option("-d", "--dummy", action="store_true", default=False, dest="dummy", help="")
+    optparser.add_option("-p", "--preserve", action="store_true", default=False, dest="preserve", help="")
     optparser.add_option("--classificationOutput", default=None, dest="classificationOutput", help="")
     optparser.add_option("--archiveName", default=None, dest="archiveName", help="")
     optparser.add_option("--numFolds", default=10, dest="numFolds", help="")
     (options, args) = optparser.parse_args()
     
-    assert options.action in ["CONVERT_CORPORA", "BUILD_MODELS", "GET_RESULTS", "BUILD_DDI13", "GET_DDI13_RESULT", "EXTRACT_MODELS", "LINK_MODELS", "PACKAGE_MODELS", "BUILD_APIDOC", "LIST_EXECUTABLES"]
+    assert options.action in ["CONVERT_CORPORA", 
+                              "BUILD_MODELS", 
+                              "GET_RESULTS", 
+                              "BUILD_DDI13", 
+                              "GET_DDI13_RESULT", 
+                              "EXTRACT_MODELS", 
+                              "LINK_MODELS",
+                              "PACKAGE",
+                              "PACKAGE_MODELS",
+                              "BUILD_APIDOC", 
+                              "LIST_EXECUTABLES",
+                              "PACKAGE_SOFTWARE"]
     options.tasks = options.tasks.replace("ALL11", "GE11,EPI11,ID11,BB11,BI11,CO11,REL11,REN11")
     options.tasks = options.tasks.replace("ALL13", "GE13,CG13,PC13,GRO13,GRN13,BB13T2,BB13T3")
     options.tasks = options.tasks.split(",")
@@ -257,8 +282,14 @@ if __name__=="__main__":
     elif options.action == "GET_DDI13_RESULT":
         getDDI13Result(options.output, int(options.numFolds))
     elif options.action == "EXTRACT_MODELS":
-        extractModels(options.input, options.output, options.tasks, options.classificationOutput)
+        extractModels(options.input, options.output, options.tasks, options.classificationOutput, options.preserve)
     elif options.action == "LINK_MODELS":
         linkDuplicates(options.input, options.output)
+    elif options.action == "PACKAGE":
+        packageItems(options.input, options.output)
     elif options.action == "PACKAGE_MODELS":
         makeModelPackage(options.input, options.output, options.tasks, options.archiveName)
+    elif options.action == "PACKAGE_SOFTWARE":
+        if options.input == None:
+            options.input = mainTEESDir
+        makeSoftwarePackage(options.input, options.output)
