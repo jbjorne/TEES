@@ -132,13 +132,16 @@ class StructureAnalyzer():
         assert type(e2Type) in types.StringTypes
         if self.edgeTypes == None: 
             raise Exception("No structure definition loaded")
-        if e1Type in self.edgeTypes:
-            if e2Type in self.edgeTypes[e1Type]:
-                if forceUndirected:
-                    return self.getValidEdgeTypes(e2Type, e1Type) + self.edgeTypes[e1Type][e2Type]
-                else:
-                    return self.edgeTypes[e1Type][e2Type] # not a copy, so careful with using the returned list!
-        return []
+        validEdgeTypes = []
+        if e1Type in self.edgeTypes and e2Type in self.edgeTypes[e1Type]:
+            if forceUndirected:
+                validEdgeTypes = self.edgeTypes[e1Type][e2Type]
+            else:
+                return self.edgeTypes[e1Type][e2Type] # not a copy, so careful with using the returned list!
+        if forceUndirected and e2Type in self.edgeTypes and e1Type in self.edgeTypes[e2Type]:
+            validEdgeTypes = validEdgeTypes + self.edgeTypes[e2Type][e1Type]
+        return validEdgeTypes
+
     
 #    def isRelation(self, edgeType):
 #        if edgeType in self.relationTypes:
