@@ -53,8 +53,9 @@ def downloadCorpus(corpus, destPath=None, downloadPath=None, clear=False):
         finalDestPath = destPath
     for setName in ["_DEVEL", "_TRAIN", "_TEST"]:
         identifier = corpus + setName
-        if identifier in Settings.URL:
-            downloaded[identifier] = Utils.Download.download(Settings.URL[identifier], downloadPath, clear=clear)
+        parentIdentifier = identifier.replace("BB13T2", "BB13").replace("BB13T3", "BB13")
+        if parentIdentifier in Settings.URL:
+            downloaded[identifier] = Utils.Download.download(Settings.URL[parentIdentifier], downloadPath, clear=clear)
     if downloadPath == None:
         downloadPath = os.path.join(Settings.DATAPATH, "download")
     if corpus in ["REL11", "REN11", "CO11"]:
@@ -75,7 +76,7 @@ def downloadCorpus(corpus, destPath=None, downloadPath=None, clear=False):
                 if identifier in Settings.URL:
                     downloaded[identifier] = Utils.Download.download(Settings.URL[identifier], downloadPath + "/support/", clear=clear)
     else:
-        assert corpus.endswith("13")
+        assert corpus.endswith("13") or corpus.endswith("13T2") or corpus.endswith("13T3")
         downloaded["BioNLP13_STANFORD_PARSES"] = Utils.Download.download(Settings.URL["BioNLP13_STANFORD_PARSES"], downloadPath + "/support/", clear=clear)
         downloaded["BioNLP13_TOKENS"] = Utils.Download.download(Settings.URL["BioNLP13_TOKENS"], downloadPath + "/support/", clear=clear)
     return downloaded
@@ -96,8 +97,10 @@ def convert(corpora, outDir=None, downloadDir=None, redownload=False, makeInterm
         Stream.openLog(logFileName)
         downloaded = downloadCorpus(corpus, outDir, downloadDir, redownload)
         packageSubPath = None
-        if corpus == "BB13":
+        if corpus == "BB13T2":
             packageSubPath = "task_2"
+        elif corpus == "BB13T3":
+            packageSubPath = "task_3"
         convertDownloaded(outDir, corpus, downloaded, makeIntermediateFiles, evaluate, processEquiv=processEquiv, addAnalyses=addAnalyses, packageSubPath=packageSubPath)
         Stream.closeLog(logFileName)
         count += 1
@@ -132,6 +135,7 @@ def convertDownloaded(outdir, corpus, files, intermediateFiles=True, evaluate=Tr
     print >> sys.stderr, "---------------", "Converting to XML", "---------------"
     # All datasets are processed as one XML, to ensure all the steps (parse modification etc.) are
     # applied equally
+    #print corpus, files
     datasets = []
     for setName in ["devel", "train", "test"]:
         if corpus + "_" + setName.upper() in files:
@@ -219,7 +223,7 @@ def insertAnalyses(xml, corpus, datasets, files, bigfileName, packageSubPath=Non
         packageSubPath = ""
     if "TEES_PARSES" in files: # corpus for which no official parse exists
         print >> sys.stderr, "---------------", "Inserting TEES-generated analyses", "---------------"
-        extractedFilename = files["TEES_PARSES"] + "/" + corpus[:-2]
+        extractedFilename = files["TEES_PARSES"] + "/" + corpus #[:-2]
         print >> sys.stderr, "Making sentences"
         Tools.SentenceSplitter.makeSentences(xml, extractedFilename, None)
         print >> sys.stderr, "Inserting McCC parses"
@@ -259,7 +263,7 @@ def insertAnalyses(xml, corpus, datasets, files, bigfileName, packageSubPath=Non
             print >> sys.stderr, "Removing temporary directory", tempdir
             shutil.rmtree(tempdir)
     else: # use official BioNLP'13 parses
-        assert corpus.endswith("13")
+        assert corpus.endswith("13") or corpus.endswith("13T2") or corpus.endswith("13T3")
         if bioNLP13AnalysesTempDir == None:
             bioNLP13AnalysesTempDir = tempfile.mkdtemp()
             Utils.Download.extractPackage(files["BioNLP13_STANFORD_PARSES"], bioNLP13AnalysesTempDir)
@@ -273,7 +277,7 @@ def insertAnalyses(xml, corpus, datasets, files, bigfileName, packageSubPath=Non
         elif corpus == "GE13":
             setTags = {"devel":"devel_data", "train":"train_data"}
             corpusTag = corpus[:-2]
-        elif corpus in ["GRN13", "BB13"]:
+        elif corpus in ["GRN13", "BB13T2", "BB13T3"]:
             setTags = {"devel":"dev", "train":"train"}
             if corpus == "GRN13":
                 corpusTag = "Gene_Regulation_Network"
@@ -328,6 +332,6 @@ if __name__=="__main__":
         installEvaluators(options.outdir, options.downloaddir, options.forceDownload)
     if options.corpora != None:
         options.corpora = options.corpora.replace("ALL11", "GE11,EPI11,ID11,BB11,BI11,CO11,REL11,REN11")
-        options.corpora = options.corpora.replace("ALL13", "GE13,CG13,PC13,GRO13,GRN13,BB13")
+        options.corpora = options.corpora.replace("ALL13", "GE13,CG13,PC13,GRO13,GRN13,BB13T2,BB13T3")
         #Stream.openLog(os.path.join(options.outdir, "conversion-log.txt"))
         convert(options.corpora.split(","), options.outdir, options.downloaddir, options.forceDownload, options.intermediateFiles, evaluate=options.evaluate, processEquiv=not options.noEquiv, addAnalyses=not options.noAnalyses)
