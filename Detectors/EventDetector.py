@@ -357,6 +357,15 @@ class EventDetector(Detector):
                 #    if os.path.exists(self.classifyData.replace("-nodup", "")):
                 #        goldData = self.classifyData.replace("-nodup", "")
                 xml = self.unmergingDetector.classifyToXML(xml, self.model, None, workOutputTag, goldData=goldData, parse=self.parse)
+                # Evaluate after unmerging
+                if self.parse == None:
+                    edgeParse = self.getStr(self.edgeDetector.tag+"parse", self.model)
+                else:
+                    edgeParse = self.parse
+                if goldData != None:
+                    EvaluateInteractionXML.run(self.edgeDetector.evaluator, xml, goldData, edgeParse)
+                else:
+                    EvaluateInteractionXML.run(self.edgeDetector.evaluator, xml, self.classifyData, edgeParse)
             else:
                 print >> sys.stderr, "No model for unmerging"
         if self.checkStep("MODIFIERS"):
