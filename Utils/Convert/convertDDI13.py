@@ -21,19 +21,41 @@ import Utils.ElementTreeUtils as ETUtils
 import Utils.Range as Range
 from Detectors.StructureAnalyzer import StructureAnalyzer
 from Detectors.Preprocessor import Preprocessor
+import Core.Split
 
-def downloadCorpus(downloadPath=None, clear=False):
+def downloadFiles(downloadPath=None, extractDir=None, clear=False):
+    extracted = {}
     print >> sys.stderr, "---------------", "Downloading DDI'13 Shared Task files", "---------------"
     if downloadPath == None:
         downloadPath = os.path.join(Settings.DATAPATH, "corpora/download")
-    downloaded = Utils.Download.download(Settings.URL["DDI13_TRAIN"], downloadPath, clear=clear)
-    return downloaded
+    for dataset in ["DDI13_TRAIN", "DDI13_TRAIN_TEES_PARSES"]:
+        downloaded = Utils.Download.download(Settings.URL[dataset], downloadPath, clear=clear)
+        print >> sys.stderr, "Extracting package", downloaded
+        extracted[dataset] = Utils.Download.extractPackage(downloaded, extractDir)
+        if len(extracted[dataset]) == 1:
+            extracted[dataset] = extracted[dataset][0]
+        else:
+            extracted[dataset] = Utils.Download.getTopDir(extractDir, extracted[dataset])
+    return extracted
 
 def getCorpusXML():
     corpus = ET.ElementTree(ET.Element("corpus"))
     corpusRoot = corpus.getroot()
     corpusRoot.set("source", "DDI13")
     return corpus
+
+def divideSets(xml, sourceSet, numFolds):
+    docCount = 0
+    for doc in xml.getiterator("document"):
+        if doc.get("set") == sourceSet:
+            docCount += 1
+    
+    division = Core.Split.getFolds(docCount, numFolds, 0)
+    count = 0
+    for doc in xml.getiterator("document"):
+        if doc.get("set") == sourceSet:
+            doc.set("set", doc.get("set") + str(division[count]))
+            count += 1
 
 def processElements(xml):
     for ddi in xml.getiterator("ddi"):
@@ -54,7 +76,8 @@ def parseXML(xml, intermediateFileDir, debug=False):
     preprocessor.stepArgs("PARSE")["requireEntities"] = False
     #preprocessor.process(xml, intermediateFileDir, fromStep="SPLIT-SENTENCES", toStep="FIND-HEADS", omitSteps=["NER"])
     #preprocessor.process(xml, intermediateFileDir, fromStep="PARSE", toStep="FIND-HEADS")
-    preprocessor.process(xml, intermediateFileDir, omitSteps=["CONVERT", "SPLIT-SENTENCES", "NER", "DIVIDE-SETS"])
+    # Entity name splitting is omitted as this data may be used for predicting entities
+    preprocessor.process(xml, intermediateFileDir, omitSteps=["CONVERT", "SPLIT-SENTENCES", "NER", "SPLIT-NAMES", "DIVIDE-SETS"])
 
 def combineXML(corpusXML, setName, dataDir, subDirs=["DrugBank", "MedLine"]):
     # Add all documents into one XML
@@ -74,7 +97,7 @@ def combineXML(corpusXML, setName, dataDir, subDirs=["DrugBank", "MedLine"]):
                     document.set("set", setName)
                 corpusXML.append(document)
 
-def convertDDI13(outDir, downloadDir=None, redownload=False, parse=False, makeIntermediateFiles=True, debug=False):
+def convertDDI13(outDir, downloadDir=None, redownload=False, insertParses=True, parse=False, makeIntermediateFiles=True, debug=False):
     cwd = os.getcwd()
     if not os.path.exists(outDir):
         os.makedirs(outDir)
@@ -83,20 +106,27 @@ def convertDDI13(outDir, downloadDir=None, redownload=False, parse=False, makeIn
     Stream.openLog(logFileName)
     print >> sys.stderr, "=======================", "Converting DDI'13 corpus", "======================="
     
-    downloaded = downloadCorpus(downloadDir, redownload)
     tempdir = tempfile.mkdtemp()
-    print >> sys.stderr, "Extracting package", downloaded
-    Utils.Download.extractPackage(downloaded, tempdir)
+    downloaded = downloadFiles(downloadDir, tempdir, redownload)
+    print downloaded
         
     corpusTree = getCorpusXML()
     xml = corpusTree.getroot()
     print >> sys.stderr, "Merging input XMLs"
-    combineXML(xml, "train", os.path.join(tempdir, "Train"), subDirs=["DrugBank", "MedLine"])
+    combineXML(xml, "train", downloaded["DDI13_TRAIN"], subDirs=["DrugBank", "MedLine"])
     print >> sys.stderr, "Processing elements"
     processElements(xml)
+    print >> sys.stderr, "Dividing training set into folds"
+    divideSets(xml, "train", 10)
     if parse:
         print >> sys.stderr, "Parsing"
         parseXML(corpusTree, os.path.join(tempdir, "parsing"), debug)
+    elif insertParses:
+        assert parse == False
+        print >> sys.stderr, "Inserting McCC parses"
+        Tools.BLLIPParser.insertParses(corpusTree, downloaded["DDI13_TRAIN_TEES_PARSES"], None, extraAttributes={"source":"TEES"})
+        print >> sys.stderr, "Inserting Stanford conversions"
+        Tools.StanfordParser.insertParses(corpusTree, downloaded["DDI13_TRAIN_TEES_PARSES"], None, extraAttributes={"stanfordSource":"TEES"})
     # Check what was produced by the conversion
     print >> sys.stderr, "---------------", "Corpus Structure Analysis", "---------------"
     analyzer = StructureAnalyzer()
@@ -127,9 +157,10 @@ if __name__=="__main__":
     optparser.add_option("-o", "--outdir", default=os.path.normpath(Settings.DATAPATH + "/corpora"), dest="outdir", help="directory for output files")
     optparser.add_option("-d", "--downloaddir", default=None, dest="downloaddir", help="directory to download corpus files to")
     optparser.add_option("--intermediateFiles", default=False, action="store_true", dest="intermediateFiles", help="save intermediate corpus files")
-    optparser.add_option("-p", "--parse", default=False, action="store_true", dest="parse", help="Keep temporary files")
+    optparser.add_option("-p", "--parse", default=False, action="store_true", dest="parse", help="Parse with preprocessor")
+    optparser.add_option("-n", "--noparses", default=False, action="store_true", dest="noparses", help="Don't insert parses")
     optparser.add_option("--redownload", default=False, action="store_true", dest="redownload", help="re-download all source files")
     optparser.add_option("--debug", default=False, action="store_true", dest="debug", help="Keep temporary files")
     (options, args) = optparser.parse_args()
     
-    convertDDI13(options.outdir, options.downloaddir, options.redownload, options.parse, options.intermediateFiles, options.debug)
+    convertDDI13(options.outdir, options.downloaddir, options.redownload, not options.noparses, options.parse, options.intermediateFiles, options.debug)
