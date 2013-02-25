@@ -10,7 +10,7 @@ from SLURMConnection import SLURMConnection
 
 def getConnection(connection): #, account=None, workDirBase=None, remoteSettingsPath=None):
     if connection == None: # return a "dummy" local connection
-        return getConnection("Unix")
+        return getConnection("connection=Unix:jobLimit=1")
     elif type(connection) in types.StringTypes and hasattr(Settings, connection): # connection is a Settings key
         print >> sys.stderr, "Using connection", connection
         return getConnection(getattr(Settings, connection))
