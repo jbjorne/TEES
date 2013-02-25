@@ -190,4 +190,4 @@ if __name__=="__main__":
     
     if options.inputSuffixes != None:
         options.inputSuffixes = options.inputSuffixes.split(",")
-    export(options.input, options.output, options.parse, clear=options.clear, inputSuffixes=options.inputSuffixes, tokenIdOffset=tokenIdOffset)
+    export(options.input, options.output, options.parse, clear=options.clear, inputSuffixes=options.inputSuffixes, tokenIdOffset=options.tokenIdOffset)
