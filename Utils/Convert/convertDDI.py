@@ -67,7 +67,7 @@ def fixEntities(xml):
                     counts["incorrect-ent-offset-diff"+str(lenDiff)] += 1
                     if abs(lenDiff) > 2:
                         print "Warning, lenDiff:", (lenDiff, charOffset, sText, entity.get("text"), entity.get("id"))
-                charOffset = (charOffset[0], charOffset[0] + realLength-1)
+                charOffset = (charOffset[0], charOffset[0] + realLength)
                 # find starting position
                 entIndex = sText.find(entity.get("text"), charOffset[0])
                 if entIndex == -1:
@@ -92,9 +92,9 @@ def fixEntities(xml):
                 # move offset       
                 charOffset = (charOffset[0]+indexDiff, charOffset[1]+indexDiff)
                 # validate new offset
-                sEntity = sText[charOffset[0]:charOffset[1]+1]
+                sEntity = sText[charOffset[0]:charOffset[1]]
                 assert sEntity == entity.get("text") or sEntity.lower() == entity.get("text"), (charOffset, sText, entity.get("text"), entity.get("id"))
-                entity.set("charOffset", Range.tuplesToCharOffset( (charOffset[0], charOffset[1] + 1)))
+                entity.set("charOffset", Range.tuplesToCharOffset( (charOffset[0], charOffset[1])))
                 entity.set("given", "True")
         for interaction in sentence.findall("interaction"):
             interaction.set("type", "DDI")
@@ -104,7 +104,7 @@ def convertToInteractions(xml):
     print "Renaming pair-elements"
     counts = defaultdict(int)
     for sentence in xml.getiterator("sentence"):
-        sentence.set("charOffset", "0-" + str(len(sentence.get("text"))-1) )
+        sentence.set("charOffset", "0-" + str(len(sentence.get("text"))) )
         for pair in sentence.findall("pair"):
             if pair.get("interaction") == "true":
                 pair.tag = "interaction"
@@ -156,6 +156,8 @@ def loadDocs(url, outDir, tempDir, idStart=0):
 
 def convertDDI(outDir, trainUnified=None, trainMTMX=None, testUnified=None, testMTMX=None, downloadDir=None, redownload=False, makeIntermediateFiles=True, debug=False):
     cwd = os.getcwd()
+    if not os.path.exists(outDir):
+        os.makedirs(outDir)
     os.chdir(outDir)
     logFileName = os.path.join(outDir, "DDI11-conversion-log.txt")
     Stream.openLog(logFileName)
