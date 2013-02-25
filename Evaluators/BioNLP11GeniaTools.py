@@ -134,6 +134,10 @@ def getFScore(results, task):
         path = ["fscore"]
     elif task == "CO11":
         path = ["MENTION LINKING", "fscore"]
+    elif task == "CO11":
+        path = ["MENTION LINKING", "fscore"]
+    elif task in ["GRN13"]:
+        path = ["Relaxed F-score"]
     else:
         assert False
     
@@ -162,6 +166,8 @@ def evaluate(source, task, goldDir=None, debug=False):
         results = evaluateBX(task, source, goldDir, debug=debug)
     elif task == "CO11":
         results = evaluateCO(source, goldDir)
+    elif task == "GRN13":
+        results = evaluateGRN13(source, goldDir, debug=debug)
     else:
         results = None
         print >> sys.stderr, "No official evaluator for task", task
@@ -558,6 +564,37 @@ def evaluateCO(sourceDir, goldDir=None, silent=False):
             currentBlock["fscore"] = float(splits[8])
     # Remove temporary directory
     if tempDir != None: 
+        shutil.rmtree(tempDir)
+    return results
+
+def evaluateGRN13(sourceDir, goldDir=None, silent=False, debug=False):
+    evaluatorDir, sourceDir, goldDir, tempDir = checkEvaluator("GRN13", sourceDir, goldDir)
+    if goldDir == None:
+        return None
+    commands = "cd " + evaluatorDir
+    commands += " ; " + "python GRN.py --a1-dir " + goldDir + " --a2-dir " + goldDir + " --pred-dir " + sourceDir + " " + goldDir + "/PMID-*.txt"
+    p = subprocess.Popen(commands, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    stderrLines = p.stderr.readlines()
+    stdoutLines = p.stdout.readlines()
+    if not silent:
+        for line in stderrLines:
+            print >> sys.stderr, line,
+        for line in stdoutLines:
+            print >> sys.stderr, line,
+        print >> sys.stderr
+    results = {}
+    for line in stdoutLines:
+        splits = line.strip().split(":")
+        if len(splits) == 2 and splits[1].strip() != "":
+            value = splits[1].strip()
+            if value == "NaN":
+                value = 0.0
+            elif "." in value:
+                value = float(value)
+            else:
+                value = int(value)
+            results[splits[0].strip()] = value
+    if not debug and tempDir != None:
         shutil.rmtree(tempDir)
     return results
 
