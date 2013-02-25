@@ -108,7 +108,7 @@ def insertTokens(tokens, sentence, tokenization, idStem="bt_", errorNotes=None):
             cStart = sText.find(origTokenText, prevStart)
             if cStart != -1:
                 start = prevStart
-                print >> sys.stderr, "Token duplication", (tokenText, tokens, posTag, start, sText, errorNotes)
+                print >> sys.stderr, "Warning, token duplication", (tokenText, tokens, posTag, start, sText, errorNotes)
         if cStart == -1:
             print >> sys.stderr, "Token alignment error", (tokenText, tokens, posTag, start, sText, errorNotes)
             for subElement in [x for x in tokenization]:
@@ -361,6 +361,8 @@ def insertParses(input, parsePath, output=None, parseName="McCC", tokenizationNa
         origId = document.get("pmid")
         if origId == None:
             origId = document.get("origId")
+        if origId == None:
+            origId = document.get("id")
         origId = str(origId)
         counter.update(1, "Processing Documents ("+document.get("id")+"/" + origId + "): ")
         docId = document.get("id")
