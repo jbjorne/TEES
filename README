@@ -22,7 +22,8 @@ https://github.com/jbjorne/TEES/wiki
 Quick Start
 ===========
 
-To get started with TEES, download the latest stable release or the current 
+To get started with TEES, download the latest stable release from
+http://sourceforge.net/projects/tees/files or the current 
 version from the repository. After downloading, TEES can optionally be installed 
 as a module using "setup.py", but this is not required, and the program can 
 simply be used from the unpacked archive.
@@ -39,12 +40,12 @@ pre-computed models (listed at https://github.com/jbjorne/TEES/wiki/Classifying)
 For example, to run TEES prediction for the BioNLP 2011 GENIA development 
 corpus, use:
 
-python classify.py -m GE-devel -i GE-devel -o OUTSTEM
+python classify.py -m GE11-devel -i GE11-devel -o OUTSTEM
  
 where "OUTSTEM" is the output file stem. To try TEES on unannotated text, you 
 can give "classify.py" a PubMed citation id, such as:
 
-python classify.py -m GE -i 9668063 -o OUTSTEM
+python classify.py -m GE11 -i 9668063 -o OUTSTEM
   
 TEES will download the abstract and use the
 integrated preprocessing pipeline to split the text into sentences (with the
