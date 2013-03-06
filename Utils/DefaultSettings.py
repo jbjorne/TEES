@@ -171,7 +171,7 @@ URL["GE09_TEST_ANALYSES"] = urlBase + "bionlp09_shared_task_test_analyses_rev2.t
 urlBase = "http://labda.inf.uc3m.es/DDIExtraction2011/"
 URL["DDI11_TRAIN_UNIFIED"] = urlBase + "DrugDDI_Unified.zip"
 URL["DDI11_TRAIN_MTMX"] = urlBase + "DrugDDI_MTMX.zip"
-# If you have registered for the DDI Shared Task, insert the paths of your downloaded
+# If you have registered for the DDI'11 Shared Task, insert the paths of your downloaded
 # test files in the following variables (in your local settings file) to have them 
 # converted for use with TEES
 URL["DDI11_TEST_UNIFIED"] = None
@@ -180,6 +180,13 @@ URL["DDI11_TEST_MTMX"] = None
 
 # DDI'13 Shared Task
 URL["DDI13_TRAIN"] = "http://www.cs.york.ac.uk/semeval-2013/task9/data/uploads/datasets/train/semeval_task9_train.zip"
+# If you have registered for the DDI'11 Shared Task, insert the paths of your downloaded
+# test files in the following variables (in your local settings file) to have them 
+# converted for use with TEES when using Utils/Convert/convertDDI13.py
+URL["DDI13_TEST_TASK_9.1"] = None
+URL["DDI13_TEST_TASK_9.2"] = None
+URL["DDI13_TEST_TASK_9.1_TEES_PARSES"] = None
+URL["DDI13_TEST_TASK_9.2_TEES_PARSES"] = None
 URL["DDI13_TRAIN_TEES_PARSES"] = "http://sourceforge.net/projects/tees/files/data/DDI13-TEES-parses-130224.tar.gz"
 
 

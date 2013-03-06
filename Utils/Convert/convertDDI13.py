@@ -28,14 +28,31 @@ def downloadFiles(downloadPath=None, extractDir=None, clear=False):
     print >> sys.stderr, "---------------", "Downloading DDI'13 Shared Task files", "---------------"
     if downloadPath == None:
         downloadPath = os.path.join(Settings.DATAPATH, "corpora/download")
-    for dataset in ["DDI13_TRAIN", "DDI13_TRAIN_TEES_PARSES"]:
-        downloaded = Utils.Download.download(Settings.URL[dataset], downloadPath, clear=clear)
-        print >> sys.stderr, "Extracting package", downloaded
-        extracted[dataset] = Utils.Download.extractPackage(downloaded, extractDir)
-        if len(extracted[dataset]) == 1:
-            extracted[dataset] = extracted[dataset][0]
+    for dataset in ["DDI13_TRAIN", 
+                    "DDI13_TRAIN_TEES_PARSES",
+                    "DDI13_TEST_TASK_9.1",
+                    "DDI13_TEST_TASK_9.2",
+                    "DDI13_TEST_TASK_9.1_TEES_PARSES",
+                    "DDI13_TEST_TASK_9.2_TEES_PARSES"]:
+        if Settings.URL[dataset] != None:
+            downloaded = Utils.Download.download(Settings.URL[dataset], downloadPath, clear=clear)
+            print >> sys.stderr, "Extracting package", downloaded
+            extracted[dataset] = Utils.Download.extractPackage(downloaded, extractDir)
+            if dataset == "DDI13_TRAIN":
+                if len(extracted[dataset]) == 1:
+                    extracted[dataset] = extracted[dataset][0]
+                else:
+                    extracted[dataset] = Utils.Download.getTopDir(extractDir, extracted[dataset])
+            else:
+                # take top level directories
+                for i in range(len(extracted[dataset])):
+                    if "/" not in extracted[dataset][i] or (extracted[dataset][i].endswith("/") and extracted[dataset][i].count("/") == 1):
+                        extracted[dataset][i] = os.path.join(extractDir, extracted[dataset][i])
+                    else:
+                        extracted[dataset][i] = None
+                extracted[dataset] = filter(lambda a: a != None, extracted[dataset])
         else:
-            extracted[dataset] = Utils.Download.getTopDir(extractDir, extracted[dataset])
+            extracted[dataset] = None
     return extracted
 
 def getCorpusXML():
@@ -79,25 +96,33 @@ def parseXML(xml, intermediateFileDir, debug=False):
     # Entity name splitting is omitted as this data may be used for predicting entities
     preprocessor.process(xml, intermediateFileDir, omitSteps=["CONVERT", "SPLIT-SENTENCES", "NER", "SPLIT-NAMES", "DIVIDE-SETS"])
 
-def combineXML(corpusXML, setName, dataDir, subDirs=["DrugBank", "MedLine"]):
+def combineXML(corpusXML, setName, dataDirs, subDirs=["DrugBank", "MedLine"]):
     # Add all documents into one XML
-    ids = set()
-    for subDir in subDirs:
-        inDir = os.path.join(dataDir, subDir)
-        for filename in sorted(os.listdir(inDir)):
-            if filename.endswith(".xml"):
-                print >> sys.stderr, "Reading", filename
-                xml = ETUtils.ETFromObj(os.path.join(inDir, filename))
-                document = xml.getroot()
-                assert document.tag == "document"
-                assert document.get("id") not in ids
-                ids.add(document.get("id"))
-                document.set("source", os.path.join(subDir, filename))
-                if setName != None:
-                    document.set("set", setName)
-                corpusXML.append(document)
+    ids = {}
+    if isinstance(dataDirs, basestring):
+        dataDirs = []
+    for dataDir in dataDirs:        
+        if dataDir.startswith(".") or dataDir.startswith("_"):
+            continue
+        for subDir in [""] + subDirs:
+            inDir = dataDir + "/" + subDir
+            if "/." in dataDir or "/_" in dataDir: # attempt to survive the junk directories
+                continue
+            if os.path.exists(inDir):
+                for filename in sorted(os.listdir(inDir)):
+                    if filename.endswith(".xml"):
+                        print >> sys.stderr, "Reading", filename
+                        xml = ETUtils.ETFromObj(os.path.join(inDir, filename))
+                        document = xml.getroot()
+                        assert document.tag == "document"
+                        assert document.get("id") not in ids, (document.get("id"), os.path.join(inDir, filename), ids[document.get("id")])
+                        ids[document.get("id")] = os.path.join(inDir, filename)
+                        document.set("source", os.path.join(subDir, filename))
+                        if setName != None:
+                            document.set("set", setName)
+                        corpusXML.append(document)
 
-def convertDDI13(outDir, downloadDir=None, redownload=False, insertParses=True, parse=False, makeIntermediateFiles=True, debug=False):
+def convertDDI13(outDir, downloadDir=None, datasets=["DDI13_TRAIN", "DDI13_TEST_TASK_9.1", "DDI13_TEST_TASK_9.2"], redownload=False, insertParses=True, parse=False, makeIntermediateFiles=True, debug=False):
     cwd = os.getcwd()
     if not os.path.exists(outDir):
         os.makedirs(outDir)
@@ -108,33 +133,45 @@ def convertDDI13(outDir, downloadDir=None, redownload=False, insertParses=True, 
     
     tempdir = tempfile.mkdtemp()
     downloaded = downloadFiles(downloadDir, tempdir, redownload)
-    print downloaded
+    
+    for dataset in datasets:       
+        corpusTree = getCorpusXML()
+        xml = corpusTree.getroot()
+        print >> sys.stderr, "Merging input XMLs"
+        assert downloaded[dataset] != None
+        combineXML(xml, "train", downloaded[dataset], subDirs=["DrugBank", "MedLine", "NER"])
+        print >> sys.stderr, "Processing elements"
+        processElements(xml)
         
-    corpusTree = getCorpusXML()
-    xml = corpusTree.getroot()
-    print >> sys.stderr, "Merging input XMLs"
-    combineXML(xml, "train", downloaded["DDI13_TRAIN"], subDirs=["DrugBank", "MedLine"])
-    print >> sys.stderr, "Processing elements"
-    processElements(xml)
-    print >> sys.stderr, "Dividing training set into folds"
-    divideSets(xml, "train", 10)
-    if parse:
-        print >> sys.stderr, "Parsing"
-        parseXML(corpusTree, os.path.join(tempdir, "parsing"), debug)
-    elif insertParses:
-        assert parse == False
-        print >> sys.stderr, "Inserting McCC parses"
-        Tools.BLLIPParser.insertParses(corpusTree, downloaded["DDI13_TRAIN_TEES_PARSES"], None, extraAttributes={"source":"TEES"})
-        print >> sys.stderr, "Inserting Stanford conversions"
-        Tools.StanfordParser.insertParses(corpusTree, downloaded["DDI13_TRAIN_TEES_PARSES"], None, extraAttributes={"stanfordSource":"TEES"})
-    # Check what was produced by the conversion
-    print >> sys.stderr, "---------------", "Corpus Structure Analysis", "---------------"
-    analyzer = StructureAnalyzer()
-    analyzer.analyze([xml])
-    print >> sys.stderr, analyzer.toString()
-    outFileName = os.path.join(outDir, "DDI13-train.xml")
-    print >> sys.stderr, "Writing output to", outFileName
-    ETUtils.write(xml, outFileName)
+        if dataset == "DDI13_TRAIN":
+            print >> sys.stderr, "Dividing training set into folds"
+            divideSets(xml, "train", 10)
+        else:
+            for doc in xml.getiterator("document"):
+                doc.set("set", "test")
+
+        if parse:
+            print >> sys.stderr, "Parsing"
+            parseXML(corpusTree, os.path.join(tempdir, "parsing"), debug)
+        elif insertParses:
+            assert parse == False
+            print >> sys.stderr, "Inserting McCC parses"
+            Tools.BLLIPParser.insertParses(corpusTree, downloaded[dataset + "_TEES_PARSES"], None, extraAttributes={"source":"TEES"})
+            print >> sys.stderr, "Inserting Stanford conversions"
+            Tools.StanfordParser.insertParses(corpusTree, downloaded[dataset + "_TEES_PARSES"], None, extraAttributes={"stanfordSource":"TEES"})
+        # Check what was produced by the conversion
+        print >> sys.stderr, "---------------", "Corpus Structure Analysis", "---------------"
+        analyzer = StructureAnalyzer()
+        analyzer.analyze([xml])
+        print >> sys.stderr, analyzer.toString()
+        if "9.1" in dataset:
+            outFileName = os.path.join(outDir, "DDI13-test-task9.1.xml")
+        elif "9.2" in dataset:
+            outFileName = os.path.join(outDir, "DDI13-test-task9.2.xml")
+        else:
+            outFileName = os.path.join(outDir, "DDI13-train.xml")
+        print >> sys.stderr, "Writing output to", outFileName
+        ETUtils.write(xml, outFileName)
     
     Stream.closeLog(logFileName)
     if not debug and tempdir != None:
@@ -161,6 +198,8 @@ if __name__=="__main__":
     optparser.add_option("-n", "--noparses", default=False, action="store_true", dest="noparses", help="Don't insert parses")
     optparser.add_option("--redownload", default=False, action="store_true", dest="redownload", help="re-download all source files")
     optparser.add_option("--debug", default=False, action="store_true", dest="debug", help="Keep temporary files")
+    optparser.add_option("-s", "--datasets", default="DDI13_TRAIN,DDI13_TEST_TASK_9.1,DDI13_TEST_TASK_9.2", dest="datasets", help="Datasets to process")
     (options, args) = optparser.parse_args()
     
-    convertDDI13(options.outdir, options.downloaddir, options.redownload, not options.noparses, options.parse, options.intermediateFiles, options.debug)
+    options.datasets = options.datasets.split(",")
+    convertDDI13(options.outdir, options.downloaddir, options.datasets, options.redownload, not options.noparses, options.parse, options.intermediateFiles, options.debug)
