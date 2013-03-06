@@ -51,7 +51,7 @@ class EdgeExampleBuilder(ExampleBuilder):
             "skip_extra_triggers", "headsOnly", "graph_kernel", "no_task", "no_dependency", 
             "disable_entity_features", "disable_terminus_features", "disable_single_element_features", 
             "disable_ngram_features", "disable_path_edge_features", "linear_features", "subset", "binary", "pos_only",
-            "entity_type", "filter_shortest_path", "maskTypeAsProtein"])
+            "entity_type", "filter_shortest_path", "maskTypeAsProtein", "keep_neg"])
         self.styles = self.getParameters(style)
         #if style == None: # no parameters given
         #    style["typed"] = style["directed"] = style["headsOnly"] = True

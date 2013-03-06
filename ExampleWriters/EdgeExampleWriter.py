@@ -53,6 +53,10 @@ class EdgeExampleWriter(SentenceExampleWriter):
         
         entityById = self.getEntityByIdMap(sentenceElement)
         
+        keepNeg = False
+        if exampleStyle != None and "keep_neg" in exampleStyle and exampleStyle["keep_neg"]:
+            keepNeg = True
+        
         causeAfterTheme = False
         pairCount = 0
         for example in examples:
@@ -73,29 +77,40 @@ class EdgeExampleWriter(SentenceExampleWriter):
             # undirected will override this.
             directedExample = example[3]["directed"]
             for iType in self.getElementTypes(prediction, classSet, classIds): # split merged classes
-                # Add only structurally valid edges
-                if iType == "neg":
-                    self.counts["neg"] += 1
-                elif iType in structureAnalyzer.getValidEdgeTypes(e1.get("type"), e2.get("type"), forceUndirected=not directedExample):
+                # Keep negatives if requested
+                validatedNeg = False
+                if keepNeg:
+                    if iType != "neg" and iType not in structureAnalyzer.getValidEdgeTypes(e1.get("type"), e2.get("type"), forceUndirected=not directedExample):
+                        iType = "neg"
+                        validatedNeg = True
+                elif iType == "neg":
+                    self.counts["removed-neg"] += 1
+                    continue # skip edge element generation
+                
+                # Add only structurally valid edges (and negatives let through by keep_neg)
+                if iType == "neg" or iType in structureAnalyzer.getValidEdgeTypes(e1.get("type"), e2.get("type"), forceUndirected=not directedExample):
                     #iType = iTypes[i]
                     pairElement = ET.Element("interaction")
                     if not directedExample:
                         pairElement.set("directed", "False")
-                    else:
-                        pairElement.set("directed", str(structureAnalyzer.isDirected(iType)))
-                    if structureAnalyzer.isEventArgument(iType): #eventTypes[i] == "True":
-                        pairElement.set("event", "True")
-                    else:
-                        entityRoles = structureAnalyzer.getEntityRoles(iType)
-                        if entityRoles != None:
-                            pairElement.set("e1Role", entityRoles[0])
-                            pairElement.set("e2Role", entityRoles[1])
+                    elif iType == "neg" or structureAnalyzer.isDirected(iType):
+                        pairElement.set("directed", "True")
+                    if iType != "neg":
+                        if structureAnalyzer.isEventArgument(iType): #eventTypes[i] == "True":
+                            pairElement.set("event", "True")
+                        else:
+                            entityRoles = structureAnalyzer.getEntityRoles(iType)
+                            if entityRoles != None:
+                                pairElement.set("e1Role", entityRoles[0])
+                                pairElement.set("e2Role", entityRoles[1])
                     pairElement.set("e1", e1Id)
-                    if "e1DuplicateIds" in example[3] and str(example[3]["e1DuplicateIds"]).strip() != None:
+                    if "e1DuplicateIds" in example[3] and str(example[3]["e1DuplicateIds"]).strip() != "":
                         pairElement.set("e1DuplicateIds", example[3]["e1DuplicateIds"])
                     pairElement.set("e2", e2Id)
-                    if "e2DuplicateIds" in example[3] and str(example[3]["e2DuplicateIds"]).strip() != None:
+                    if "e2DuplicateIds" in example[3] and str(example[3]["e2DuplicateIds"]).strip() != "":
                         pairElement.set("e2DuplicateIds", example[3]["e2DuplicateIds"])
+                    if validatedNeg:
+                        pairElement.set("validatedNeg", "True") # a non-negative prediction made negative by structural limits
                     pairElement.set("id", sentenceId + ".i" + str(pairCount))
                     pairElement.set("type", iType)
                     #self.processClassLabel(iType, pairElement)

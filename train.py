@@ -344,7 +344,7 @@ def getTaskSettings(task, detector, bioNLPSTParams, preprocessorParams,
         elif task == "DDI11":
             exampleStyles["examples"] = Parameters.cat("ddi_features:ddi_mtmx:filter_shortest_path=conj_and", exampleStyles["examples"], "Single-stage example style / " + fullTaskId)
         elif task == "DDI13":
-            exampleStyles["examples"] = Parameters.cat("ddi_features:filter_shortest_path=conj_and", exampleStyles["examples"], "Single-stage example style / " + fullTaskId)
+            exampleStyles["examples"] = Parameters.cat("keep_neg:ddi_features:filter_shortest_path=conj_and", exampleStyles["examples"], "Single-stage example style / " + fullTaskId)
         elif task == "BI11":
             exampleStyles["edge"] = Parameters.cat("bi_features", exampleStyles["edge"], "Edge example style / " + fullTaskId)
         # Edge style
