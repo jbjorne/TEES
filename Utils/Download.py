@@ -16,13 +16,14 @@ def checkReturnCode(code):
         print >> sys.stderr, "Return code", str(code) + ", program appears to be working."
         return True
 
-def getTopDir(path, names):
+def getTopDir(path, names, include=None):
     topDirs = [] 
     for item in names:
         if "/" not in item or (item.endswith("/") and item.count("/") == 1):
             potential = os.path.join(path, item)
-            if os.path.exists(potential) and os.path.isdir(potential):                  
-                topDirs.append(item)
+            if os.path.exists(potential) and os.path.isdir(potential):
+                if include == None or item.strip("/") in include:                  
+                    topDirs.append(item)
     assert len(topDirs) == 1, (path, topDirs, names)
     return os.path.join(path, topDirs[0])
 
