@@ -313,7 +313,7 @@ def getTaskSettings(task, detector, bioNLPSTParams, preprocessorParams,
                 inputFiles[dataset] = Catenate.catenate([os.path.join(dataPath, "ID11-train.xml"), os.path.join(dataPath, "GE11-devel.xml"),
                                                          os.path.join(dataPath, "GE11-train.xml")], "training/ID11-train-and-GE11-devel-and-train.xml.gz", fast=True)
             if inputFiles[dataset] == "None":
-                inputFiles[dataset] == None
+                inputFiles[dataset] = None
             if inputFiles[dataset] != None and not os.path.exists(inputFiles[dataset]):
                 inputFiles[dataset] = None
                 print >> sys.stderr, "Input file", inputFiles[dataset], "for set '" + dataset + "' does not exist, skipping."
