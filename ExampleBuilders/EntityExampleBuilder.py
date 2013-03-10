@@ -21,11 +21,11 @@ class EntityExampleBuilder(ExampleBuilder):
     def __init__(self, style=None, classSet=None, featureSet=None, gazetteerFileName=None, skiplist=None):
         if classSet == None:
             classSet = IdSet(1)
-        assert( classSet.getId("neg") == 1 )
         if featureSet == None:
             featureSet = IdSet()
         
         ExampleBuilder.__init__(self, classSet, featureSet)
+        assert( classSet.getId("neg") == 1 )
         #gazetteerFileName="/usr/share/biotext/GeniaChallenge/SharedTaskTriggerTest/gazetteer-train"
         if gazetteerFileName!=None:
             self.gazetteer=Gazetteer.loadGztr(gazetteerFileName)

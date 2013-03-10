@@ -293,7 +293,7 @@ def addBasicOptions(optparser):
     optparser.add_option("-o", "--output", default=None, dest="output", help="Output file for the examples")
     optparser.add_option("-p", "--parse", default="split-McClosky", dest="parse", help="parse")
     optparser.add_option("-x", "--exampleBuilderParameters", default=None, dest="parameters", help="Parameters for the example builder")
-    optparser.add_option("-b", "--exampleBuilder", default="SimpleDependencyExampleBuilder", dest="exampleBuilder", help="Example Builder Class")
+    optparser.add_option("-b", "--exampleBuilder", default=None, dest="exampleBuilder", help="Example Builder Class")
     optparser.add_option("-c", "--classes", default=None, dest="classes", help="Class ids")
     optparser.add_option("-f", "--features", default=None, dest="features", help="Feature ids")
     optparser.add_option("-a", "--addIds", default=False, action="store_true", dest="addIds", help="Add new features")
@@ -320,13 +320,13 @@ if __name__=="__main__":
     print >> sys.stderr, "Importing modules"
     exec "from ExampleBuilders." + options.exampleBuilder + " import " + options.exampleBuilder + " as ExampleBuilderClass"
     
-    structureAnalyzer =None
-    if options.structure == "AUTO": # define structure from input file
+    structureAnalyzer = None
+    if options.structure == None: # define structure from input file
         structureAnalyzer = StructureAnalyzer()
         structureAnalyzer.analyze(options.input)
         print >> sys.stderr, "--- Structure Analysis ----"
         print >> sys.stderr, structureAnalyzer.toString()
-    elif options.structure != None:
+    elif options.structure != "NONE": # a file name
         structureAnalyzer = StructureAnalyzer(options.structure)
     #input, output, parse, tokenization, style, classIds=None, featureIds=None, gold=None, append=False)
     ExampleBuilderClass.run(options.input, options.output, options.parse, None, options.parameters, 
