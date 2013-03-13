@@ -38,9 +38,9 @@ class EdgeExampleBuilder(ExampleBuilder):
             classSet = IdSet(1)
         else:
             classSet = classSet
-        assert( classSet.getId("neg") == 1 or (len(classSet.Ids)== 2 and classSet.getId("neg") == -1) )
         
         ExampleBuilder.__init__(self, classSet=classSet, featureSet=featureSet)
+        assert( classSet.getId("neg") == 1 or (len(classSet.Ids)== 2 and classSet.getId("neg") == -1) )
         
         # Basic style = trigger_features:typed:directed:no_linear:entities:auto_limits:noMasking:maxFeatures
         self._setDefaultParameters([
@@ -170,8 +170,8 @@ class EdgeExampleBuilder(ExampleBuilder):
         else:
             return None
     
-    def isValidInteraction(self, e1, e2, forceUndirected=False):
-        return len(self.structureAnalyzer.getValidEdgeTypes(e1.get("type"), e2.get("type"), forceUndirected=forceUndirected)) > 0
+    def isValidInteraction(self, e1, e2, structureAnalyzer,forceUndirected=False):
+        return len(structureAnalyzer.getValidEdgeTypes(e1.get("type"), e2.get("type"), forceUndirected=forceUndirected)) > 0
 
     def getGoldCategoryName(self, goldGraph, entityToGold, e1, e2, directed=True):
         if len(entityToGold[e1]) > 0 and len(entityToGold[e2]) > 0:
@@ -189,9 +189,9 @@ class EdgeExampleBuilder(ExampleBuilder):
         else:
             return False
     
-    def keepExample(self, e1, e2, categoryName, isDirected):
+    def keepExample(self, e1, e2, categoryName, isDirected, structureAnalyzer):
         makeExample = True
-        if (not self.styles["no_auto_limits"]) and not self.isValidInteraction(e1, e2, forceUndirected=not isDirected):
+        if (not self.styles["no_auto_limits"]) and not self.isValidInteraction(e1, e2, structureAnalyzer, forceUndirected=not isDirected):
             makeExample = False
             self.exampleStats.filter("auto_limits")
         if self.styles["genia_task1"] and (e1.get("type") == "Entity" or e2.get("type") == "Entity"):
@@ -302,7 +302,7 @@ class EdgeExampleBuilder(ExampleBuilder):
         # make forward
         forwardExample = None
         self.exampleStats.beginExample(categoryName)
-        if self.keepExample(entity1, entity2, categoryName, isDirected):
+        if self.keepExample(entity1, entity2, categoryName, isDirected, structureAnalyzer):
             forwardExample = self.buildExample(token1, token2, paths, sentenceGraph, categoryName, entity1, entity2, structureAnalyzer, isDirected)
         
         if isDirected: # build a separate reverse example (if that is valid)
@@ -312,7 +312,7 @@ class EdgeExampleBuilder(ExampleBuilder):
             # make reverse
             self.exampleStats.beginExample(categoryName)
             reverseExample = None
-            if self.keepExample(entity2, entity1, categoryName, True):
+            if self.keepExample(entity2, entity1, categoryName, True, structureAnalyzer):
                 reverseExample = self.buildExample(token2, token1, paths, sentenceGraph, categoryName, entity2, entity1, structureAnalyzer, isDirected)
             self.exampleStats.endExample()
             return filter(None, [forwardExample, reverseExample])
