@@ -32,7 +32,43 @@ class DrugFeatureBuilder(FeatureBuilder):
         # Load drug data into memory on first call to constructor
         if DrugFeatureBuilder.data == None:
             DrugFeatureBuilder.data, DrugFeatureBuilder.nameToId = prepareDrugBank(drugBankFile)
+            
+            DrugFeatureBuilder.tokenToId = {}
+            for name in DrugFeatureBuilder.nameToId:
+                splits = name.split()
+                if len(splits) < 2:
+                    continue
+                for split in splits:
+                    if split not in DrugFeatureBuilder.tokenToId:
+                        DrugFeatureBuilder.tokenToId[split] = []
+                    DrugFeatureBuilder.tokenToId[split].extend(DrugFeatureBuilder.nameToId[name])
+            for token in DrugFeatureBuilder.tokenToId:
+                DrugFeatureBuilder.tokenToId[token] = sorted(list(set(DrugFeatureBuilder.tokenToId[token])))
+            
             DrugFeatureBuilder.interactionPairs = buildInteractionPairs(DrugFeatureBuilder.data)
+    
+    def buildDrugFeatures(self, token):
+        norText = normalizeDrugName(token.get("text"))
+        drugs = self.getDrugs(token.get("text"))
+        tokenDrugs = self.getDrugs(token.get("text"), True)
+        
+        for drugList, tag in [(drugs, ""), (tokenDrugs, "_token")]:
+            if len(drugList) > 0:
+                self.setFeature("DrugBank_match" + tag)
+            else:
+                self.setFeature("DrugBank_noMatch" + tag)
+            for drug in drugList:
+                for category in drug:
+                    if category == "interaction":
+                        continue
+                    values = drug[category]
+                    if isinstance(values, basestring):
+                        values = [values]
+                    for value in values:
+                        value = value.replace(" ", "-").replace("\n", "-")
+                        self.setFeature("DrugBank_" + category + "_" + value + tag)
+                        if norText == value:
+                            self.setFeature("DrugBank_equalsValueInCategory_" + category + tag)
     
     def buildPairFeatures(self, e1, e2):
         e1Name = normalizeDrugName(e1.get("text"))
@@ -102,6 +138,21 @@ class DrugFeatureBuilder(FeatureBuilder):
                 if DrugFeatureBuilder.interactionPairs[id1][id2]:
                     return True
         return False
+    
+    def getDrugs(self, name, isToken=False):
+        name = normalizeDrugName(name)
+        if isToken:
+            nameToId = DrugFeatureBuilder.nameToId
+        else:
+            nameToId = DrugFeatureBuilder.tokenToId
+            
+        if name not in nameToId:
+            return []
+        
+        datas = []
+        for id in nameToId[name]:
+            datas.append(DrugFeatureBuilder.data[id])
+        return datas
 
 def normalizeDrugName(text):
     return text.replace("-","").replace("/","").replace(",","").replace("\\","").replace(" ","").lower()
@@ -122,7 +173,7 @@ def resolveInteractions(data, verbose=False):
         if verbose: print id, data[id]["name"]
         for interaction in data[id]["interaction"]:
             partnerDBId = str(interaction[0])
-            partnerDBId = "DB" + (5 - len(partnerDBId)) * "0" + partnerDBId
+            #partnerDBId = "DB" + (5 - len(partnerDBId)) * "0" + partnerDBId
             interaction[0] = partnerDBId
             if partnerDBId in data:
                 interaction[1] = data[partnerDBId]["name"]
@@ -130,7 +181,8 @@ def resolveInteractions(data, verbose=False):
             else:
                 counts["missing-partner-ids"] += 1
             if verbose: print "  ", interaction
-    if verbose: print "Interaction resolution counts:", counts
+    #if verbose: 
+    print >> sys.stderr, "Interaction resolution counts:", counts
 
 def buildInteractionPairs(data):
     intPairs = defaultdict(lambda : defaultdict(lambda: False))
@@ -161,7 +213,7 @@ def mapNamesToIds(data, normalize=True, verbose=False):
 
 def loadDrugBank(filename, preTag="{http://drugbank.ca}", verbose=False):
     data = defaultdict(lambda : defaultdict(list))
-    print "Loading DrugBank XML"
+    print "Loading DrugBank XML from", filename
     xml = ETUtils.ETFromObj(filename)
     print "Processing DrugBank XML"
     root = xml.getroot()
@@ -172,6 +224,7 @@ def loadDrugBank(filename, preTag="{http://drugbank.ca}", verbose=False):
         if verbose: print id, name
         assert id not in data
         data[id]["name"] = name
+        data[id]["id"] = id
         # TODO: Enzymes & targets
         # TODO: hydrophobicity
         getNestedItems(drug, "synonym", data[id], preTag)
@@ -180,7 +233,7 @@ def loadDrugBank(filename, preTag="{http://drugbank.ca}", verbose=False):
         getNestedItems(drug, "category", data[id], preTag, "categories")
         interactions = drug.find(preTag+"drug-interactions").findall(preTag+"drug-interaction")
         for interaction in interactions:
-            data[id]["interaction"].append( [interaction.find(preTag+"drug").text, None, interaction.find(preTag+"description").text,] )
+            data[id]["interaction"].append( [interaction.find(preTag+"drug").text, interaction.find(preTag+"name").text, interaction.find(preTag+"description").text,] )
     return data
 
 def prepareDrugBank(drugBankFile):
@@ -196,6 +249,9 @@ if __name__=="__main__":
 #    #print nameToId
 #    #resolveInteractions(data)
     f = DrugFeatureBuilder()
+    print "A:", f.getDrug("Lepirudin")
+    print "B:", f.getDrug("Refludan")
+    print "C:", f.getDrug("Treprostinil")
     #print f.interactionPairs
     print "1:", f.getInteraction("Refludan", "Treprostinil")
     print "2:", f.getInteraction("Refludan", "TreprostinilBlahBlah")
