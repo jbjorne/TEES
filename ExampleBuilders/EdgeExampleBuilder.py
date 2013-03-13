@@ -47,7 +47,7 @@ class EdgeExampleBuilder(ExampleBuilder):
             "directed", "undirected", "headsOnly", "graph_kernel", "noAnnType", "mask_nodes", "limit_features",
             "no_auto_limits", "co_features", "genia_features", "bi_features", #"genia_limits", "epi_limits", "id_limits", "rel_limits", "bb_limits", "bi_limits", "co_limits",
             "genia_task1", "ontology", "nodalida", "bacteria_renaming", "no_trigger_features", "rel_features",
-            "ddi_features", "ddi_mtmx", "evex", "giuliano", "random", "themeOnly", "causeOnly", "no_path", "token_nodes", 
+            "drugbank_features", "ddi_mtmx", "evex", "giuliano", "random", "themeOnly", "causeOnly", "no_path", "token_nodes", 
             "skip_extra_triggers", "headsOnly", "graph_kernel", "no_task", "no_dependency", 
             "disable_entity_features", "disable_terminus_features", "disable_single_element_features", 
             "disable_ngram_features", "disable_path_edge_features", "linear_features", "subset", "binary", "pos_only",
@@ -87,7 +87,7 @@ class EdgeExampleBuilder(ExampleBuilder):
             #self.bioinferOntologies = OntologyUtils.loadOntologies(OntologyUtils.g_bioInferFileName)
         if self.styles["rel_features"]:
             self.relFeatureBuilder = RELFeatureBuilder(featureSet)
-        if self.styles["ddi_features"]:
+        if self.styles["drugbank_features"]:
             self.drugFeatureBuilder = DrugFeatureBuilder(featureSet)
         if self.styles["evex"]:
             self.evexFeatureBuilder = EVEXFeatureBuilder(featureSet)
@@ -374,7 +374,7 @@ class EdgeExampleBuilder(ExampleBuilder):
                 features[self.featureSet.getId("e2_contains_e1")] = 1
                 if entity1.get("given") == "True":
                     features[self.featureSet.getId("e2_contains_e1name")] = 1
-        if self.styles["ddi_features"]:
+        if self.styles["drugbank_features"]:
             self.drugFeatureBuilder.setFeatureVector(features)
             self.drugFeatureBuilder.tag = "ddi_"
             self.drugFeatureBuilder.buildPairFeatures(entity1, entity2)  

@@ -14,6 +14,7 @@ import Core.ExampleUtils as ExampleUtils
 from FeatureBuilders.RELFeatureBuilder import RELFeatureBuilder
 from FeatureBuilders.WordNetFeatureBuilder import WordNetFeatureBuilder
 from FeatureBuilders.GiulianoFeatureBuilder import GiulianoFeatureBuilder
+from FeatureBuilders.DrugFeatureBuilder import DrugFeatureBuilder
 import PhraseTriggerExampleBuilder
 import Utils.InteractionXML.ResolveEPITriggerTypes
 
@@ -36,7 +37,7 @@ class EntityExampleBuilder(ExampleBuilder):
         self._setDefaultParameters(["rel_features", "wordnet", "bb_features", "giuliano", 
                                   "epi_merge_negated", "limit_merged_types", "genia_task1",
                                   "build_for_nameless", "pos_only", "all_tokens",
-                                  "names", "pos_pairs", "linear_ngrams", "phospho"])
+                                  "names", "pos_pairs", "linear_ngrams", "phospho", "drugbank_features", "ddi13_features"])
         self.styles = self.getParameters(style)
 #        if "selftrain_group" in self.styles:
 #            self.selfTrainGroups = set()
@@ -68,6 +69,8 @@ class EntityExampleBuilder(ExampleBuilder):
             #self.bacteriaTokens = PhraseTriggerExampleBuilder.getBacteriaTokens(PhraseTriggerExampleBuilder.getBacteriaNames())
         if self.styles["giuliano"]:
             self.giulianoFeatureBuilder = GiulianoFeatureBuilder(featureSet)
+        if self.styles["drugbank_features"]:
+            self.drugFeatureBuilder = DrugFeatureBuilder(featureSet)
     
     def getMergedEntityType(self, entities):
         """
@@ -427,6 +430,17 @@ class EntityExampleBuilder(ExampleBuilder):
                 self.relFeatureBuilder.setFeatureVector(features)
                 self.relFeatureBuilder.buildAllFeatures(sentenceGraph.tokens, i)
                 self.relFeatureBuilder.setFeatureVector(None)
+            
+            # DDI13 features
+            if self.styles["ddi13_features"]:
+                for index in range(len(normalizedText)):
+                    features[self.featureSet.getId("ddi13_fromstart" + str(index) + "_" + normalizedText[:index+1])] = 1
+                    features[self.featureSet.getId("ddi13_fromend" + str(index) + "_" + normalizedText[index:])] = 1
+            if self.styles["drugbank_features"]:
+                self.drugFeatureBuilder.setFeatureVector(features)
+                self.drugFeatureBuilder.tag = "ddi_"
+                self.drugFeatureBuilder.buildDrugFeatures(token)  
+                self.drugFeatureBuilder.setFeatureVector(None)
             
             #self.wordNetFeatureBuilder.getTokenFeatures("show", "VBP")
             #tokTxt = token.get("text")
