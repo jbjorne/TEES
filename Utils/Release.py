@@ -7,6 +7,8 @@ mainTEESDir = os.path.abspath(os.path.join(__file__, "../.."))
 print mainTEESDir
 sys.path.append(mainTEESDir)
 import Utils.InteractionXML.Catenate as Catenate
+import Utils.Libraries.stats as stats
+import Utils.Convert.DDITools as DDITools
 
 def listExecutables(filter=["Core", "FeatureBuilders", "InteractionXML", "GeniaEventsToSharedTask"]):
     tableTitleLines = "| Program | Location | Description |\n"
@@ -209,27 +211,56 @@ def getResults(output, tasks):
         tagPaths.append(["------------ Check devel classification ------------", "##### EvaluateInteractionXML #####", "Interactions", "micro p/n:"])
         print taskName + ": " + getResultLine(logPath, tagPaths)
 
-def buildDDI13(output, connection, dummy=False, numFolds=10):
+def buildDDI13(output, connection, dummy=False, numFolds=10, extraParameters="", testPath=""):
     global mainTEESDir
     from batch import batch
+    
+    commandBase = "python " + os.path.join(mainTEESDir, "train.py") + " -t DDI13 -o %o/%j -c " + connection + " --clearAll"
     for fold in range(numFolds):
         develFolds = [str(x) for x in (range(numFolds) + range(numFolds))[fold+1:fold+2+1] ]
         trainFolds = [str(x) for x in (range(numFolds) + range(numFolds))[fold+3:fold+9+1] ]
         foldParameter = " --folds test=train" + str(fold) + ":devel=train" + ",train".join(develFolds) + ":train=train" + ",train".join(trainFolds)
-        command = "python " + os.path.join(mainTEESDir, "train.py") + " -t DDI13 -o %o/%j -c " + connection + " --clearAll" + foldParameter
-        batch(command, input=None, connection=connection, jobTag="DDI13-fold" + str(fold), output=output, debug=True, dummy=dummy)
+        command = commandBase + foldParameter + " " + extraParameters
+        batch(command.strip(), input=None, connection=connection, jobTag="DDI13-fold" + str(fold), output=output, debug=True, dummy=dummy)
+    
+    if testPath != "":
+        testFolds = " --folds devel=train0,train1,train2,train3,train4:train=train5,train6,train7,train8,train9"
+        testCommand = commandBase + testFolds + " --testFile " + os.path.join(testPath, "DDI13-test-task9.1.xml") + " " + extraParameters
+        batch(testCommand.strip(), input=None, connection=connection, jobTag="DDI13-test9.1", output=output, debug=True, dummy=dummy)
+        testCommand = commandBase + testFolds + " --testFile " + os.path.join(testPath, "DDI13-test-task9.2.xml") + " " + extraParameters
+        batch(testCommand.strip(), input=None, connection=connection, jobTag="DDI13-test9.2", output=output, debug=True, dummy=dummy)
 
-def getDDI13Result(output, numFolds=10):
+def getDDI13Result(output, numFolds=10, catenate=False):
     global mainTEESDir
-    from batch import batch
     foldPaths = []
+    scores = []
     for fold in range(numFolds):
         foldPath = os.path.join(output, "DDI13-fold" + str(fold), "classification-test", "test-pred.xml.gz")
+        foldPaths.append(foldPath)
+        
         logPath = os.path.join(output, "DDI13-fold" + str(fold), "log.txt")
         tagPaths = [["------------ Test set classification ------------", "##### EvaluateInteractionXML #####", "Interactions", "micro p/n:"]]
-        print "DDI13-fold" + str(fold) + ": " + getResultLine(logPath, tagPaths)
-        foldPaths.append(foldPath)
-    if len(foldPaths) > 1:
+        scoreLine = getResultLine(logPath, tagPaths)
+        print "DDI13-fold" + str(fold) + ": " + scoreLine
+        scores.append(float(scoreLine.strip().split("/")[-1]))
+        
+        parameterPaths = [["EdgeDetector:TRAIN:END-MODEL", "Selected parameters"]]
+        print "DDI13-fold" + str(fold) + ": " + getResultLine(logPath, parameterPaths)
+    print "-----"
+    for testSet in ["DDI13-test9.1", "DDI13-test9.2"]:
+        logPath = os.path.join(output, testSet, "log.txt")
+        tagPaths = [["------------ Test set classification ------------", "##### EvaluateInteractionXML #####", "Interactions", "micro p/n:"]]
+        scoreLine = getResultLine(logPath, tagPaths)
+        print "DDI13-fold" + str(fold) + ": " + scoreLine
+        parameterPaths = [["EdgeDetector:TRAIN:END-MODEL", "Selected parameters"]]
+        print "DDI13-fold" + str(fold) + ": " + getResultLine(logPath, parameterPaths)
+        
+        predPath = os.path.join(output, testSet, "classification-test", "test-pred.xml.gz")
+        DDITools.makeDDI13SubmissionFile(predPath, os.path.join(output, testSet + "-result.txt"))
+    print "-----"
+    print "Avg-score: ", stats.mean(scores), "stdev", stats.stdev(scores) 
+    
+    if catenate and len(foldPaths) > 1:
         Catenate.catenate(foldPaths, os.path.join(output, "DDI13-train-analyses.xml.gz"), fast=True)
 
 if __name__=="__main__":
@@ -250,9 +281,12 @@ if __name__=="__main__":
     optparser.add_option("-c", "--connection", default=None, dest="connection", help="")
     optparser.add_option("-d", "--dummy", action="store_true", default=False, dest="dummy", help="")
     optparser.add_option("-p", "--preserve", action="store_true", default=False, dest="preserve", help="")
+    optparser.add_option("--catenate", action="store_true", default=False, dest="catenate", help="")
     optparser.add_option("--classificationOutput", default=None, dest="classificationOutput", help="")
     optparser.add_option("--archiveName", default=None, dest="archiveName", help="")
     optparser.add_option("--numFolds", default=10, dest="numFolds", help="")
+    optparser.add_option("--ddi13TestPath", default="/wrk/jakrbj/TEESBioNLP13/DDI13TestCorpora130203/", dest="ddi13TestPath", help="")
+    optparser.add_option("--ddi13ExtraParameters", default="", dest="ddi13ExtraParameters", help="")
     (options, args) = optparser.parse_args()
     
     assert options.action in ["CONVERT_CORPORA", 
@@ -278,9 +312,9 @@ if __name__=="__main__":
     elif options.action == "GET_RESULTS":
         getResults(options.output, options.tasks)
     elif options.action == "BUILD_DDI13":
-        buildDDI13(options.output, options.connection, options.dummy, int(options.numFolds))
+        buildDDI13(options.output, options.connection, options.dummy, int(options.numFolds), options.ddi13ExtraParameters, options.ddi13TestPath)
     elif options.action == "GET_DDI13_RESULT":
-        getDDI13Result(options.output, int(options.numFolds))
+        getDDI13Result(options.output, int(options.numFolds), options.catenate)
     elif options.action == "EXTRACT_MODELS":
         extractModels(options.input, options.output, options.tasks, options.classificationOutput, options.preserve)
     elif options.action == "LINK_MODELS":
