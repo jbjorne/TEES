@@ -116,7 +116,7 @@ class ETWriter():
             else:
                 self.out = open(out,"wt")
         else:
-            self.out = obj
+            self.out = out
         print >> self.out, '<?xml version="1.0" encoding="UTF-8"?>'
         self.indentLevel = 0
         self.beginString = None
@@ -157,12 +157,16 @@ class ETWriter():
             if self.indentLevel > 0:
                 self.out.write("\n")
         self.lastElement = None
-        return self.tags.pop()
+        if len(self.tags) > 0:
+            return self.tags.pop()
+        else:
+            return None
     
     def write(self, element):
         self._flush()
         indent(element, self.indentLevel)
-        element.tail = element.tail[:-self.indentLevel * 2]
+        if element.tail != None:
+            element.tail = element.tail[:-self.indentLevel * 2]
         self.out.write(self.indentLevel * "  " + ElementTree.tostring(element, "utf-8"))
         self.lastElement = None
 
