@@ -67,8 +67,11 @@ class DrugFeatureBuilder(FeatureBuilder):
                     for value in values:
                         value = value.replace(" ", "-").replace("\n", "-")
                         self.setFeature("DrugBank_" + category + "_" + value + tag)
-                        if norText == value:
+                        norValue = normalizeDrugName(value)
+                        self.setFeature("DrugBank_nor_" + category + "_" + value + tag)
+                        if norText == norValue:
                             self.setFeature("DrugBank_equalsValueInCategory_" + category + tag)
+                            self.setFeature("DrugBank_equalsValue_" + norValue  + "_InCategory_" + category + tag)
     
     def buildPairFeatures(self, e1, e2):
         e1Name = normalizeDrugName(e1.get("text"))
