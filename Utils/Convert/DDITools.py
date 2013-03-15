@@ -5,7 +5,7 @@ import Utils.ElementTreeUtils as ETUtils
 import Utils.Range as Range
 from collections import defaultdict
 
-def makeDDI13SubmissionFile(input, output, idfilter):
+def makeDDI13SubmissionFile(input, output, mode="interactions", idfilter=None):
     xml = ETUtils.ETFromObj(input)
     outFile = open(output, "wt")
     for sentence in xml.getiterator("sentence"):
@@ -13,35 +13,37 @@ def makeDDI13SubmissionFile(input, output, idfilter):
         if idfilter != None and idfilter not in sentenceId:
             continue
         # Output entities
-        for entity in sentence.findall("entity"):
-            if entity.get("given") != "True" and entity.get("type") != "neg":
-                outFile.write(sentenceId)
-                outFile.write("|" + entity.get("charOffset").replace(",", ";"))
-                outFile.write("|" + entity.get("text"))
-                outFile.write("|" + entity.get("type"))
-                outFile.write("\n")    
-        # First determine which pairs interact
-        intMap = defaultdict(lambda:defaultdict(lambda:None))
-        for interaction in sentence.findall("interaction"):
-            # Make mapping both ways to discard edge directionality. This isn't actually needed,
-            # since MultiEdgeExampleBuilder builds entity pairs in the same order as this function,
-            # but shouldn't harm to include it and now it works regardless of pair direction.
-            if interaction.get("type") != "neg" and interaction.get("given") != "True":
-                intMap[interaction.get("e1")][interaction.get("e2")] = interaction
-                intMap[interaction.get("e2")][interaction.get("e1")] = interaction
-        # Then write all pairs to the output file
-        entities = sentence.findall("entity")
-        for i in range(0, len(entities)-1):
-            for j in range(i+1, len(entities)):
-                eIId = entities[i].get("id")
-                eJId = entities[j].get("id")
-                outFile.write(sentenceId + "|" + eIId + "|" + eJId + "|")
-                if intMap[eIId][eJId] != None:
-                    interaction = intMap[eIId][eJId]
-                    assert interaction.get("type") != "neg"
-                    outFile.write("1|" + interaction.get("type") + "\n")
-                else:
-                    outFile.write("0|null\n")
+        if mode == "entities":
+            for entity in sentence.findall("entity"):
+                if entity.get("given") != "True" and entity.get("type") != "neg":
+                    outFile.write(sentenceId)
+                    outFile.write("|" + entity.get("charOffset").replace(",", ";"))
+                    outFile.write("|" + entity.get("text"))
+                    outFile.write("|" + entity.get("type"))
+                    outFile.write("\n")    
+        if mode == "interactions":
+            # First determine which pairs interact
+            intMap = defaultdict(lambda:defaultdict(lambda:None))
+            for interaction in sentence.findall("interaction"):
+                # Make mapping both ways to discard edge directionality. This isn't actually needed,
+                # since MultiEdgeExampleBuilder builds entity pairs in the same order as this function,
+                # but shouldn't harm to include it and now it works regardless of pair direction.
+                if interaction.get("type") != "neg" and interaction.get("given") != "True":
+                    intMap[interaction.get("e1")][interaction.get("e2")] = interaction
+                    intMap[interaction.get("e2")][interaction.get("e1")] = interaction
+            # Then write all pairs to the output file
+            entities = sentence.findall("entity")
+            for i in range(0, len(entities)-1):
+                for j in range(i+1, len(entities)):
+                    eIId = entities[i].get("id")
+                    eJId = entities[j].get("id")
+                    outFile.write(sentenceId + "|" + eIId + "|" + eJId + "|")
+                    if intMap[eIId][eJId] != None:
+                        interaction = intMap[eIId][eJId]
+                        assert interaction.get("type") != "neg"
+                        outFile.write("1|" + interaction.get("type") + "\n")
+                    else:
+                        outFile.write("0|null\n")
 
 def makeDDISubmissionFile(input, output):
     xml = ETUtils.ETFromObj(input)
@@ -159,13 +161,14 @@ if __name__=="__main__":
     optparser.add_option("-d", "--add", default=None, dest="add", help="data to be added, e.g. rls classifications")
     optparser.add_option("-a", "--action", default=None, dest="action", help="")
     optparser.add_option("-f", "--idfilter", default=None, dest="idfilter", help="")
+    optparser.add_option("-m", "--mode", default=None, dest="mode", help="")
     (options, args) = optparser.parse_args()
     assert options.action in ["SUBMISSION_DDI11", "SUBMISSION_DDI13", "TRANSFER_RLS", "ADD_MTMX"]
     
     if options.action == "SUBMISSION_DDI11":
         makeDDISubmissionFile(options.input, options.output)
     if options.action == "SUBMISSION_DDI13":
-        makeDDI13SubmissionFile(options.input, options.output, options.idfilter)
+        makeDDI13SubmissionFile(options.input, options.output, options.mode, options.idfilter)
     elif options.action == "TRANSFER_RLS":
         transferClassifications(options.input, options.add, options.output)
     elif options.action == "ADD_MTMX":
