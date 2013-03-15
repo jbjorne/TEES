@@ -230,6 +230,20 @@ def buildDDI13(output, connection, dummy=False, numFolds=10, extraParameters="",
         testCommand = commandBase + testFolds + " --testFile " + os.path.join(testPath, "DDI13-test-task9.2.xml") + " " + extraParameters
         batch(testCommand.strip(), input=None, connection=connection, jobTag="DDI13-test9.2", output=output, debug=True, dummy=dummy)
 
+def getDDI13ResultLine(logPath, tag, scores=None):
+    tagPaths = [["------------ Test set classification ------------", "##### EvaluateInteractionXML #####", "Interactions", "micro p/n:"]]
+    scoreLine = getResultLine(logPath, tagPaths)
+    if scoreLine != "No result" and not scoreLine.strip().endswith("p/r/f:0.0/0.0/0"):
+        print tag + ": " + scoreLine
+        if scores != None:
+            scores.append(float(scoreLine.strip().split("/")[-1]))
+    else:
+        tagPaths = [["------------ Test set classification ------------", "##### EvaluateInteractionXML #####", "Entities", "micro p/n:"]]
+        scoreLine = getResultLine(logPath, tagPaths)
+        print tag + ": " + scoreLine
+        if scoreLine != "No result" and scores != None:
+            scores.append(float(scoreLine.strip().split("/")[-1]))
+
 def getDDI13Result(output, numFolds=10, catenate=False):
     global mainTEESDir
     foldPaths = []
@@ -239,24 +253,21 @@ def getDDI13Result(output, numFolds=10, catenate=False):
         foldPaths.append(foldPath)
         
         logPath = os.path.join(output, "DDI13-fold" + str(fold), "log.txt")
-        tagPaths = [["------------ Test set classification ------------", "##### EvaluateInteractionXML #####", "Interactions", "micro p/n:"]]
-        scoreLine = getResultLine(logPath, tagPaths)
-        print "DDI13-fold" + str(fold) + ": " + scoreLine
-        scores.append(float(scoreLine.strip().split("/")[-1]))
+        getDDI13ResultLine(logPath, "DDI13-fold" + str(fold), scores)
         
         parameterPaths = [["EdgeDetector:TRAIN:END-MODEL", "Selected parameters"]]
         print "DDI13-fold" + str(fold) + ": " + getResultLine(logPath, parameterPaths)
     print "-----"
     for testSet in ["DDI13-test9.1", "DDI13-test9.2"]:
         logPath = os.path.join(output, testSet, "log.txt")
-        tagPaths = [["------------ Test set classification ------------", "##### EvaluateInteractionXML #####", "Interactions", "micro p/n:"]]
-        scoreLine = getResultLine(logPath, tagPaths)
-        print "DDI13-fold" + str(fold) + ": " + scoreLine
+        logPath = os.path.join(output, "DDI13-fold" + str(fold), "log.txt")
+        getDDI13ResultLine(logPath, testSet)
         parameterPaths = [["EdgeDetector:TRAIN:END-MODEL", "Selected parameters"]]
-        print "DDI13-fold" + str(fold) + ": " + getResultLine(logPath, parameterPaths)
+        print testSet + ": " + getResultLine(logPath, parameterPaths)
         
         predPath = os.path.join(output, testSet, "classification-test", "test-pred.xml.gz")
-        DDITools.makeDDI13SubmissionFile(predPath, os.path.join(output, testSet + "-result.txt"))
+        DDITools.makeDDI13SubmissionFile(predPath, "interactions", os.path.join(output, testSet + "-interactions.txt"))
+        DDITools.makeDDI13SubmissionFile(predPath, "entities", os.path.join(output, testSet + "-entities.txt"))
     print "-----"
     print "Avg-score: ", stats.mean(scores), "stdev", stats.stdev(scores) 
     
