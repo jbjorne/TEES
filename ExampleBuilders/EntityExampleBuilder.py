@@ -17,6 +17,7 @@ from FeatureBuilders.GiulianoFeatureBuilder import GiulianoFeatureBuilder
 from FeatureBuilders.DrugFeatureBuilder import DrugFeatureBuilder
 import PhraseTriggerExampleBuilder
 import Utils.InteractionXML.ResolveEPITriggerTypes
+import Utils.Range as Range
 
 class EntityExampleBuilder(ExampleBuilder):
     def __init__(self, style=None, classSet=None, featureSet=None, gazetteerFileName=None, skiplist=None):
@@ -37,7 +38,8 @@ class EntityExampleBuilder(ExampleBuilder):
         self._setDefaultParameters(["rel_features", "wordnet", "bb_features", "giuliano", 
                                   "epi_merge_negated", "limit_merged_types", "genia_task1",
                                   "build_for_nameless", "pos_only", "all_tokens",
-                                  "names", "pos_pairs", "linear_ngrams", "phospho", "drugbank_features", "ddi13_features"])
+                                  "names", "pos_pairs", "linear_ngrams", "phospho", 
+                                  "drugbank_features", "ddi13_features", "metamap"])
         self.styles = self.getParameters(style)
 #        if "selftrain_group" in self.styles:
 #            self.selfTrainGroups = set()
@@ -116,6 +118,30 @@ class EntityExampleBuilder(ExampleBuilder):
                 return typeString, idString
         return typeString, idString
     
+    def getMetaMapFeatures(self, token, sentenceGraph, features):
+        analyses = sentenceGraph.sentenceElement.find("analyses")
+        if analyses == None:
+            return
+        metamap = analyses.find("metamap")
+        if metamap == None:
+            return
+        tokenOffset = Range.charOffsetToSingleTuple(token.get("charOffset"))
+        skipAttr = set(["charOffset", "text"])
+        for phrase in metamap.findall("phrase"):
+            phraseOffset = Range.charOffsetToSingleTuple(phrase.get("charOffset"))
+            if Range.overlap(tokenOffset, phraseOffset):
+                attr = phrase.attrib
+                attrNames = sorted(attr.keys())
+                for attrName in attrNames:
+                    if attrName in skipAttr:
+                        continue
+                    elif attrName == "score":
+                        features["_metamap_score"] = 0.001 * abs(int(attr[attrName]))
+                    else:
+                        attrValues = attr[attrName].split(",")
+                        for attrValue in attrValues: 
+                            features["_metamap_"+attrName+"_"+attrValue.replace(" ", "-")] = 1
+    
     def getTokenFeatures(self, token, sentenceGraph):
         """
         Returns a list of features based on the attributes of a token.
@@ -134,6 +160,8 @@ class EntityExampleBuilder(ExampleBuilder):
             for entity in sentenceGraph.tokenIsEntityHead[token]:
                 if entity.get("given") == "True":
                     features["_annType_"+entity.get("type")]=1
+        if self.styles["metamap"]:
+            self.getMetaMapFeatures(token, sentenceGraph, features)
 #        # Filip's gazetteer based features (can be used separately from exclude_gazetteer)
 #        if "gazetteer_features" in self.styles:
 #            tokTxtLower = tokTxt.lower()
