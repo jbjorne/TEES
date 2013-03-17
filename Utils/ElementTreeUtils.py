@@ -56,6 +56,36 @@ def iterparse(file, elementName, callback, limit = -1):
             if limit != -1:
                 limit -= 1
 
+def iterparse2(file, events=("start", "end")):
+    """ Parse iteratively xml-files
+    
+    This function offers a simple way to use the cElementTree
+    iterparse-function the way it is often used.
+    
+    Keyword arguments:
+    file -- (file) file or file-like object to parse 
+    elementName -- (string) matching elements are passed to the callback
+    callback -- (function) called when parser has parsed an element
+                of name elementName
+    limit -- (int) stop after reading "limit" elements. If -1, read
+             until end of file. This is mostly useful when debugging
+             programs that parse large files.
+    """
+    # get an iterable
+    context = ElementTree.iterparse(file, events=events)
+    
+    # turn it into an iterator
+    context = iter(context)
+    
+    # get the root element
+    event, root = context.next()
+    yield (event, root)
+    
+    for event, elem in context:
+        yield (event, elem)
+        if event == "end":
+            root.clear()
+
 def indent(elem, level=0):
     """ indent-function as defined in cElementTree-documentation
     
@@ -183,7 +213,7 @@ def ETIteratorFromObj(obj, events=None, parser=None):
         else:
             fStream=open(obj,"rt")
             #fStream=codecs.open(obj, "rt", "utf-8")
-        for rv in ElementTree.iterparse(fStream, events):
+        for rv in iterparse2(fStream, events):
             yield rv
     elif isinstance(obj,ElementTree.ElementTree) or ElementTree.iselement(obj):
         if ElementTree.iselement(obj):
