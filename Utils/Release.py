@@ -266,13 +266,16 @@ def getDDI13Result(output, numFolds=10, catenate=False):
         print testSet + ": " + getResultLine(logPath, parameterPaths)
         
         predPath = os.path.join(output, testSet, "classification-test", "test-pred.xml.gz")
-        DDITools.makeDDI13SubmissionFile(predPath, "interactions", os.path.join(output, testSet + "-interactions.txt"))
-        DDITools.makeDDI13SubmissionFile(predPath, "entities", os.path.join(output, testSet + "-entities.txt"))
+        DDITools.makeDDI13SubmissionFile(predPath, os.path.join(output, testSet + "-interactions.txt"), "interactions")
+        DDITools.makeDDI13SubmissionFile(predPath, os.path.join(output, testSet + "-entities.txt"), "entities")
     print "-----"
     print "Avg-score: ", stats.mean(scores), "stdev", stats.stdev(scores) 
     
     if catenate and len(foldPaths) > 1:
-        Catenate.catenate(foldPaths, os.path.join(output, "DDI13-train-analyses.xml.gz"), fast=True)
+        catPath = os.path.join(output, "DDI13-train-analyses.xml.gz")
+        Catenate.catenate(foldPaths, catPath, fast=True)
+        DDITools.makeDDI13SubmissionFile(catPath, os.path.join(output, "DDI13-train-interactions.txt"), "interactions")
+        DDITools.makeDDI13SubmissionFile(catPath, os.path.join(output, "DDI13-train-entities.txt"), "entities")
 
 if __name__=="__main__":
     # Import Psyco if available
