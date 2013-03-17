@@ -15,9 +15,12 @@ def makeDDI13SubmissionFile(input, output, mode="interactions", idfilter=None):
         # Output entities
         if mode == "entities":
             for entity in sentence.findall("entity"):
-                if entity.get("given") != "True" and entity.get("type") != "neg":
+                if entity.get("type") != "neg":
                     outFile.write(sentenceId)
-                    outFile.write("|" + entity.get("charOffset").replace(",", ";"))
+                    offsets = Range.charOffsetToTuples(entity.get("charOffset"))
+                    for i in range(len(offsets)):
+                        offsets[i] = (offsets[i][0], offsets[i][1]-1)
+                    outFile.write("|" + Range.tuplesToCharOffset(offsets, rangeSep=";"))
                     outFile.write("|" + entity.get("text"))
                     outFile.write("|" + entity.get("type"))
                     outFile.write("\n")    
