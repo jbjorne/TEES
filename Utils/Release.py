@@ -231,18 +231,29 @@ def buildDDI13(output, connection, dummy=False, numFolds=10, extraParameters="",
         batch(testCommand.strip(), input=None, connection=connection, jobTag="DDI13-test9.2", output=output, debug=True, dummy=dummy)
 
 def getDDI13ResultLine(logPath, tag, scores=None):
-    tagPaths = [["------------ Test set classification ------------", "##### EvaluateInteractionXML #####", "Interactions", "micro p/n:"]]
+    parameterPaths = [[":TRAIN:END-MODEL", "Selected parameters"]]
+    parameterLine = getResultLine(logPath, parameterPaths)
+    print tag, "c: " + parameterLine
+    parameter = int(parameterLine.strip().split("'")[-2])
+    
+    tagPaths = [[":TRAIN:END-MODEL", "combination-c_"+str(parameter)+" ***", "micro p/n:"]]
     scoreLine = getResultLine(logPath, tagPaths)
-    if scoreLine != "No result" and not scoreLine.strip().endswith("p/r/f:0.0/0.0/0"):
-        print tag + ": " + scoreLine
-        if scores != None:
-            scores.append(float(scoreLine.strip().split("/")[-1]))
-    else:
-        tagPaths = [["------------ Test set classification ------------", "##### EvaluateInteractionXML #####", "Entities", "micro p/n:"]]
-        scoreLine = getResultLine(logPath, tagPaths)
-        print tag + ": " + scoreLine
-        if scoreLine != "No result" and scores != None:
-            scores.append(float(scoreLine.strip().split("/")[-1]))
+    print tag + ": " + scoreLine
+    if scores != None:
+        scores.append(float(scoreLine.strip().split("/")[-1]))
+        
+#    tagPaths = [["------------ Test set classification ------------", "##### EvaluateInteractionXML #####", "Interactions", "micro p/n:"]]
+#    scoreLine = getResultLine(logPath, tagPaths)
+#    if scoreLine != "No result" and not scoreLine.strip().endswith("p/r/f:0.0/0.0/0"):
+#        print tag + ": " + scoreLine
+#        if scores != None:
+#            scores.append(float(scoreLine.strip().split("/")[-1]))
+#    else:
+#        tagPaths = [["------------ Test set classification ------------", "##### EvaluateInteractionXML #####", "Entities", "micro p/n:"]]
+#        scoreLine = getResultLine(logPath, tagPaths)
+#        print tag + ": " + scoreLine
+#        if scoreLine != "No result" and scores != None:
+#            scores.append(float(scoreLine.strip().split("/")[-1]))
 
 def getDDI13Result(output, numFolds=10, catenate=False):
     global mainTEESDir
@@ -255,14 +266,14 @@ def getDDI13Result(output, numFolds=10, catenate=False):
         logPath = os.path.join(output, "DDI13-fold" + str(fold), "log.txt")
         getDDI13ResultLine(logPath, "DDI13-fold" + str(fold), scores)
         
-        parameterPaths = [["EdgeDetector:TRAIN:END-MODEL", "Selected parameters"]]
+        parameterPaths = [[":TRAIN:END-MODEL", "Selected parameters"]]
         print "DDI13-fold" + str(fold) + ": " + getResultLine(logPath, parameterPaths)
     print "-----"
     for testSet in ["DDI13-test9.1", "DDI13-test9.2"]:
         logPath = os.path.join(output, testSet, "log.txt")
         logPath = os.path.join(output, "DDI13-fold" + str(fold), "log.txt")
         getDDI13ResultLine(logPath, testSet)
-        parameterPaths = [["EdgeDetector:TRAIN:END-MODEL", "Selected parameters"]]
+        parameterPaths = [[":TRAIN:END-MODEL", "Selected parameters"]]
         print testSet + ": " + getResultLine(logPath, parameterPaths)
         
         predPath = os.path.join(output, testSet, "classification-test", "test-pred.xml.gz")
