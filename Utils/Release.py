@@ -266,15 +266,14 @@ def getDDI13Result(output, numFolds=10, catenate=False):
         logPath = os.path.join(output, "DDI13-fold" + str(fold), "log.txt")
         getDDI13ResultLine(logPath, "DDI13-fold" + str(fold), scores)
         
-        parameterPaths = [[":TRAIN:END-MODEL", "Selected parameters"]]
-        print "DDI13-fold" + str(fold) + ": " + getResultLine(logPath, parameterPaths)
+        #parameterPaths = [[":TRAIN:END-MODEL", "Selected parameters"]]
+        #print "DDI13-fold" + str(fold) + ": " + getResultLine(logPath, parameterPaths)
     print "-----"
     for testSet in ["DDI13-test9.1", "DDI13-test9.2"]:
         logPath = os.path.join(output, testSet, "log.txt")
-        logPath = os.path.join(output, "DDI13-fold" + str(fold), "log.txt")
         getDDI13ResultLine(logPath, testSet)
-        parameterPaths = [[":TRAIN:END-MODEL", "Selected parameters"]]
-        print testSet + ": " + getResultLine(logPath, parameterPaths)
+        #parameterPaths = [[":TRAIN:END-MODEL", "Selected parameters"]]
+        #print testSet + ": " + getResultLine(logPath, parameterPaths)
         
         predPath = os.path.join(output, testSet, "classification-test", "test-pred.xml.gz")
         DDITools.makeDDI13SubmissionFile(predPath, os.path.join(output, testSet + "-interactions.txt"), "interactions")
