@@ -70,7 +70,7 @@ def process(input, output=None, preprocess=True, debug=False):
             if element.tag == "sentence":
                 sentence = element
                 counter.update(1, "Processing MetaMap ("+sentence.get("id")+"): ")
-                 # Run metamap for the sentence element
+                # Run metamap for the sentence element
             elif element.tag == "metamap": # skip the metamap element to remove the original one
                 skip = True
             if not skip and output != None:
