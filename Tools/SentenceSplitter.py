@@ -111,6 +111,7 @@ def alignSentences(document, sentenceTexts, escDict={}, ignoreErrors=False):
     #text = text.replace("\n", " ") # should stop sentence splitter from crashing.
     #text = text.replace("  ", " ") # should stop sentence splitter from crashing.
     sText = None
+    prevSentence = None
     for sText in sentenceTexts:
         sText = sText.strip() # The text of the sentence
         for key in sorted(escDict.keys()):
@@ -144,7 +145,7 @@ def alignSentences(document, sentenceTexts, escDict={}, ignoreErrors=False):
             tail = None
             if isFirst:
                 sentenceStart = cStart
-                if cStart - start != 0:
+                if cStart - start != 0 and prevSentence != None:
                     prevSentence.set("tail", text[start:cStart])
             if cEnd == 0 and cStart != 0:
                 head = text[cEnd:cStart]

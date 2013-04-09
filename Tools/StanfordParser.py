@@ -428,6 +428,8 @@ def insertParses(input, parsePath, output=None, parseName="McCC", extraAttribute
         if f == None: # file with BioNLP'11 extension not found, try BioNLP'09 extension
             f = openFile(os.path.join(parsePath, origId + ".dep"), tarFile)
         if f == None: # file with BioNLP'09 extension not found, try BioNLP'13 extension
+            f = openFile(os.path.join(parsePath, origId + ".sdepcc"), tarFile)
+        if f == None: # file with BioNLP'09 extension not found, try BioNLP'13 extension
             f = openFile(os.path.join(parsePath, origId + ".sdep"), tarFile)
         if f != None:
             sentences = document.findall("sentence")
