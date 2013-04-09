@@ -647,7 +647,7 @@ def readExtra(string, document):
 
 def loadSet(path, setName=None, level="a2", sitesAreArguments=False, a2Tags=["a2", "rel"], readScores=False, debug=False, subPath=None):
     assert level in ["txt", "a1", "a2"]
-    if path.endswith(".tar.gz"):
+    if path.endswith(".tar.gz") or path.endswith(".tgz"):
         import tempfile
         import tarfile
         import shutil
@@ -656,6 +656,8 @@ def loadSet(path, setName=None, level="a2", sitesAreArguments=False, a2Tags=["a2
         f.extractall(dir)
         # Check if compressed directory is included in the package, like in the ST'11 corpus files
         compressedFilePath = os.path.join(dir, os.path.basename(path)[:-len(".tar.gz")])
+        if not os.path.exists(compressedFilePath):
+            compressedFilePath = os.path.join(dir, os.path.basename(path)[:-len(".tgz")])
         if not os.path.exists(compressedFilePath): # at least CO training set has a different dirname inside the tarfile
             compressedFilePath = compressedFilePath.rsplit("_", 1)[0]
             print >> sys.stderr, "Package name directory does not exist, trying", compressedFilePath
@@ -684,7 +686,7 @@ def loadSet(path, setName=None, level="a2", sitesAreArguments=False, a2Tags=["a2
         if filename.endswith(".txt"):
             if filename.startswith("._"): # a hack to skip the broken files in the GRO13 data packages
                 continue
-            ids.add(filename.split(".")[0])
+            ids.add(filename.rsplit(".", 1)[0])
     for id in sorted(list(ids)):
         #print "Loading", id
         doc = Document(id, dir, a2Tags, readScores, debug)

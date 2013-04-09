@@ -77,8 +77,10 @@ def downloadCorpus(corpus, destPath=None, downloadPath=None, clear=False):
                     downloaded[identifier] = Utils.Download.download(Settings.URL[identifier], downloadPath + "/support/", clear=clear)
     else:
         assert corpus.endswith("13") or corpus.endswith("13T2") or corpus.endswith("13T3")
-        downloaded["BioNLP13_STANFORD_PARSES"] = Utils.Download.download(Settings.URL["BioNLP13_STANFORD_PARSES"], downloadPath + "/support/", clear=clear)
-        downloaded["BioNLP13_TOKENS"] = Utils.Download.download(Settings.URL["BioNLP13_TOKENS"], downloadPath + "/support/", clear=clear)
+        for setName in ["_DEVEL", "_TRAIN", "_TEST"]:
+            cTag = corpus.replace("13T2", "13").replace("13T3","13")
+            downloaded[corpus + setName + "_McCCJ"] = Utils.Download.download(Settings.URL[cTag + setName + "_McCCJ"], downloadPath + "/support/", clear=clear)
+            downloaded[corpus + setName + "_TOK"] = Utils.Download.download(Settings.URL[cTag + setName + "_TOK"], downloadPath + "/support/", clear=clear)
     return downloaded
 
 def convert(corpora, outDir=None, downloadDir=None, redownload=False, makeIntermediateFiles=True, evaluate=False, processEquiv=True, addAnalyses=True):
@@ -263,39 +265,26 @@ def insertAnalyses(xml, corpus, datasets, files, bigfileName, packageSubPath=Non
             print >> sys.stderr, "Removing temporary directory", tempdir
             shutil.rmtree(tempdir)
     else: # use official BioNLP'13 parses
-        assert corpus.endswith("13") or corpus.endswith("13T2") or corpus.endswith("13T3")
-        if bioNLP13AnalysesTempDir == None:
-            bioNLP13AnalysesTempDir = tempfile.mkdtemp()
-            Utils.Download.extractPackage(files["BioNLP13_STANFORD_PARSES"], bioNLP13AnalysesTempDir)
-            Utils.Download.extractPackage(files["BioNLP13_TOKENS"], bioNLP13AnalysesTempDir)
-            print >> sys.stderr, "Temporarily uncompressed BioNLP13 analyses to", bioNLP13AnalysesTempDir
-        tempdir = bioNLP13AnalysesTempDir
-        # Define the naming conventions for the different tasks
-        if corpus in ["CG13", "GRO13", "PC13"]:
-            setTags = {"devel":"development_data", "train":"training_data"}
-            corpusTag = corpus[:-2]
-        elif corpus == "GE13":
-            setTags = {"devel":"devel_data", "train":"train_data"}
-            corpusTag = corpus[:-2]
-        elif corpus in ["GRN13", "BB13T2", "BB13T3"]:
-            setTags = {"devel":"dev", "train":"train"}
-            if corpus == "GRN13":
-                corpusTag = "Gene_Regulation_Network"
-            else:
-                corpusTag = "Bacteria_Biotopes"
-        stTag = "BioNLP-ST-2013_"
-        if corpus in ["CG13", "GRO13", "PC13"]:
-            stTag = "BioNLP-ST_2013_"
-        # Insert the analyses
         for i in range(len(datasets)):
             print >> sys.stderr, "---------------", "Inserting analyses " + str(i+1) + "/" + str(len(datasets)), "---------------"
             setName = datasets[i]
+            print >> sys.stderr, "Inserting", setName, "analyses"
+            tempdir = tempfile.mkdtemp()
+            Utils.Download.extractPackage(files[corpus + "_" + setName.upper() + "_TOK"], tempdir + "/tok")
+            Utils.Download.extractPackage(files[corpus + "_" + setName.upper() + "_McCCJ"], tempdir + "/parse")
+            subPath = ""
+            if corpus.endswith("T2"):
+                subPath = "/task_2"
+            if corpus.endswith("T3"):
+                subPath = "/task_3"
             print >> sys.stderr, "Making sentences"
-            Tools.SentenceSplitter.makeSentences(xml, tempdir + "/bionlp-st-2013_all_tasks_tokenised/" + stTag + corpusTag + "_" + setTags[setName] + packageSubPath, None, ignoreErrors=(corpus=="GE13"))
+            Tools.SentenceSplitter.makeSentences(xml, tempdir + "/tok/" + os.path.basename(files[corpus + "_" + setName.upper() + "_TOK"]).rsplit("_", 2)[0] + subPath, None)
             print >> sys.stderr, "Inserting McCC parses"
-            Tools.BLLIPParser.insertParses(xml, tempdir + "/bionlp-st-2013_all_tasks_stanford_parser/" + stTag + corpusTag + "_" + setTags[setName] + packageSubPath, None, extraAttributes={"source":"BioNLP'13"})
+            Tools.BLLIPParser.insertParses(xml, tempdir + "/parse/" + os.path.basename(files[corpus + "_" + setName.upper() + "_McCCJ"]).rsplit("_", 2)[0] + subPath, None, extraAttributes={"source":"BioNLP'13"})
             print >> sys.stderr, "Inserting Stanford conversions"
-            Tools.StanfordParser.insertParses(xml, tempdir + "/bionlp-st-2013_all_tasks_stanford_parser/" + stTag + corpusTag + "_" + setTags[setName] + packageSubPath, None, extraAttributes={"stanfordSource":"BioNLP'13"})
+            Tools.StanfordParser.insertParses(xml, tempdir + "/parse/" + os.path.basename(files[corpus + "_" + setName.upper() + "_McCCJ"]).rsplit("_", 2)[0] + subPath, None, extraAttributes={"stanfordSource":"BioNLP'13"})
+            print >> sys.stderr, "Removing temporary directory", tempdir
+            shutil.rmtree(tempdir)
 
 def processParses(xml, splitTarget="McCC"):
     print >> sys.stderr, "---------------", "Protein Name Splitting", "---------------"
