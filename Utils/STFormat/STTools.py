@@ -192,7 +192,9 @@ class Document:
         f.close()
 
     def save(self, dir, resultFileTag="a2", debug=False, writeExtra=False):
-        id = str(self.id)
+        id = self.id
+        if not isinstance(id, basestring):
+            id = str(self.id)
         if debug:
             print id
         if not os.path.exists(dir):
@@ -218,7 +220,7 @@ class Document:
         resultFile.write(self.eventsToString(writeExtra))
         resultFile.close()
         # Write txt file
-        out = codecs.open(os.path.join(dir, str(self.id) + ".txt"), "wt", "utf-8")
+        out = codecs.open(os.path.join(dir, id + ".txt"), "wt", "utf-8")
         out.write(self.text)
         out.close()
         
