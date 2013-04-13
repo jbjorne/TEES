@@ -34,7 +34,7 @@ URL = {}
 
 # Models
 
-URL["MODELS"] = "http://sourceforge.net/projects/tees/files/data/TEES-models-130225.tar.bz2"
+URL["MODELS"] = "http://sourceforge.net/projects/tees/files/data/TEES-models-130413.tar.bz2"
 
 # External Tools ##############################################################
 

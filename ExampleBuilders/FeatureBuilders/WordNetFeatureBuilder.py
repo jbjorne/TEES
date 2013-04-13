@@ -62,3 +62,10 @@ class WordNetFeatureBuilder(FeatureBuilder):
 if __name__=="__main__":
     w = WordNetFeatureBuilder()
     print w.getTokenFeatures("cat", "NN")
+    print w.getTokenFeatures("rivers", "NN")
+    print w.getTokenFeatures("lakes", "NN")
+    print w.getTokenFeatures("oceans", "NN")
+    print w.getTokenFeatures("water", "NN")
+    print w.getTokenFeatures("milk", "NN")
+    print w.getTokenFeatures("chicken", "NN")
+    print w.getTokenFeatures("food", "NN")

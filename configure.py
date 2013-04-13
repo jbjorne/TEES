@@ -299,7 +299,7 @@ def corpusMenuInitializer(menu, prevMenu):
             break
     if menu.optDict["6"].toggle or (menu != prevMenu and not checkCorpusInstall("DDI13", ("-train.xml",))):
         menu.setDefault("i")
-        menu.optDict["6"].toggle = True
+        menu.optDict["6"].toggle = False #True
         handlers.append(convertDDI13.convertDDI13)
         handlerArgs.append([corpusInstallPath, corpusDownloadPath, redownload])
     # A handler for installing BioNLP'11 evaluators
@@ -366,7 +366,7 @@ def buildMenus():
         Option("3", "Install BioNLP'09 (GENIA) corpus", toggle=False),
         Option("4", "Install DDI'11 (Drug-Drug Interactions) corpus", toggle=False),
         Option.SPACE,
-        Option("5", "Install BioNLP'13 (GENIA) corpora", toggle=False),
+        Option("5", "Install BioNLP'13 corpora", toggle=False),
         Option("6", "Install DDI'13 (Drug-Drug Interactions) corpus", toggle=False),
         Option.SPACE,
         Option("7", "Install BioNLP evaluators", toggle=False),

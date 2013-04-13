@@ -119,6 +119,7 @@ def train(output, task=None, detector=None, inputFiles=None, models=None, parse=
         print >> sys.stderr, "----------------------------------------------------"
         print >> sys.stderr, "------------ Check devel classification ------------"
         print >> sys.stderr, "----------------------------------------------------"
+        #detector.bioNLPSTParams["scores"] = False # the evaluation server doesn't like additional files
         detector.classify(inputFiles["devel"], models["devel"], "classification-devel/devel", goldData=inputFiles["devel"], fromStep=detectorSteps["DEVEL"], workDir="classification-devel")
     if selector.check("EMPTY"):
         # By passing an emptied devel set through the prediction system, we can check that we get the same predictions
@@ -126,6 +127,7 @@ def train(output, task=None, detector=None, inputFiles=None, models=None, parse=
         print >> sys.stderr, "----------------------------------------------------"
         print >> sys.stderr, "------------ Empty devel classification ------------"
         print >> sys.stderr, "----------------------------------------------------"
+        #detector.bioNLPSTParams["scores"] = False # the evaluation server doesn't like additional files
         detector.classify(getEmptyCorpus(inputFiles["devel"], removeNames=("names" in str(exampleStyles["examples"]) or "names" in str(exampleStyles["trigger"])) ), models["devel"], "classification-empty/devel-empty", fromStep=detectorSteps["EMPTY"], workDir="classification-empty")
     if selector.check("TEST"):
         print >> sys.stderr, "----------------------------------------------------"
@@ -134,7 +136,7 @@ def train(output, task=None, detector=None, inputFiles=None, models=None, parse=
         if inputFiles["test"] == None or not os.path.exists(inputFiles["test"]):
             print >> sys.stderr, "Skipping, test file", inputFiles["test"], "does not exist"
         else:
-            detector.bioNLPSTParams["scores"] = False # the evaluation server doesn't like additional files
+            #detector.bioNLPSTParams["scores"] = False # the evaluation server doesn't like additional files
             detector.classify(inputFiles["test"], models["test"], "classification-test/test", fromStep=detectorSteps["TEST"], workDir="classification-test")
             if detector.bioNLPSTParams["convert"]:
                 Utils.STFormat.Compare.compare("classification-test/test-events.tar.gz", "classification-devel/devel-events.tar.gz", "a2")
