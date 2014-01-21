@@ -320,6 +320,9 @@ class Annotation:
         if self.trigger != None and type(self.trigger) in types.StringTypes:
             assert self.trigger in idMap, ("Missing trigger with identifier " + str(self.trigger) + " in document " + str(debugDocId), idMap)
             self.trigger = idMap[self.trigger]
+            if self.trigger.type != self.type:
+                print >> sys.stderr, "Warning, inconsistent trigger and entity types", self.trigger.type, "and", self.type, " in document " + str(debugDocId)
+                self.trigger.type = self.type
 #            # Move scores from event to trigger
 #            trigger.unmergingScores = self.unmergingScores
 #            trigger.negationScores = self.negationScores
@@ -382,7 +385,12 @@ class Annotation:
     
     def toString(self):
         s = self.id + "\t"
-        s += self.type
+        # A hack for GRN13 task that breaks the official BioNLP Shared Task convention of trigger and event having the same type
+        annType = self.type
+        if annType in ["Action_Target", "Transcription_by", "Transcription_from"] and self.trigger == None: # this is a trigger
+            annType = "Action"
+        
+        s += annType
         if self.trigger != None: # event
             s += ":" + self.trigger.id
         if len(self.charOffsets) > 0: # protein

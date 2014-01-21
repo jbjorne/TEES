@@ -117,6 +117,12 @@ class StructureAnalyzer():
             assert relation.isDirected in [True, False]
             return relation.isDirected
     
+    def isEvent(self, entityType):
+        if entityType in self.e2Types:
+            return True
+        else:
+            return False
+    
     def isEventArgument(self, edgeType):
         if edgeType in self.eventArgumentTypes:
             return True

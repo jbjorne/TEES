@@ -9,6 +9,7 @@ import Utils.STFormat.Validate
 #import Utils.InteractionXML.RemoveUnconnectedEntities
 import Utils.InteractionXML.DivideSets
 import Utils.InteractionXML.MixSets
+import Utils.InteractionXML.DeleteElements
 import Utils.ProteinNameSplitter as ProteinNameSplitter
 import Utils.Stream as Stream
 import Utils.FindHeads as FindHeads
@@ -150,7 +151,7 @@ def convertDownloaded(outdir, corpus, files, intermediateFiles=True, evaluate=Tr
         docs = ST.loadSet(sourceFile, setName, "a2", subPath=packageSubPath)
         print >> sys.stderr, "Read", len(docs), "documents"
         documents.extend(docs)
-    
+        
     if len(docs) > 0 and docs[0].license != None:
         licenseFile = open(os.path.join(outdir, corpus + "-LICENSE"), "wt")
         licenseFile.write(docs[0].license)
@@ -189,6 +190,13 @@ def convertDownloaded(outdir, corpus, files, intermediateFiles=True, evaluate=Tr
         print >> sys.stderr, "Writing combined corpus", bigfileName+"-sentences.xml"
         ETUtils.write(xml, bigfileName+"-sentences.xml")
     processParses(xml)
+    
+    # A hack for GRN13 task that breaks the official BioNLP Shared Task convention of trigger and event having the same type.
+    # Let's remove the unused triggers, so that there won't be an unusable node class. There is no clean way to fix this,
+    # as the GRN13 task not following the official rules introduces yet another mechanism into the Shared Task format,
+    # and supporting this would require rewriting everything.
+    if corpus == "GRN13":
+        Utils.InteractionXML.DeleteElements.processCorpus(xml, None, {"entity":{"type":["Action"]}})
     
     print >> sys.stderr, "---------------", "Writing corpora", "---------------"
     checkAttributes(xml)

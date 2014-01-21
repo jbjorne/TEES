@@ -81,6 +81,8 @@ class EntityExampleWriter(SentenceExampleWriter):
                 entityElement.set("id", sentenceId + ".e" + str(newEntityIdCount))
                 entityElement.set("type", eType)
                 entityElement.set("conf", predictionString)
+                if structureAnalyzer.isEvent(eType):
+                    entityElement.set("event", "True")
                 #self.setElementType(entityElement, prediction, classSet, classIds, unmergeEPINeg=unmergeEPINeg)
                 if self.insertWeights: # in other words, use gold types
                     headOffset = headToken.get("charOffset")
