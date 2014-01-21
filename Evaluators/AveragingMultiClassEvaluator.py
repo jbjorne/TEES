@@ -10,6 +10,7 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__))+"/..")
 from Core.IdSet import IdSet
 import Core.ExampleUtils as ExampleUtils
 import itertools
+from collections import defaultdict
 
 class AveragingMultiClassEvaluator(Evaluator):
     """
@@ -235,6 +236,10 @@ class AveragingMultiClassEvaluator(Evaluator):
         # First count instances
         self.microF = EvaluationData()
         self.binaryF = EvaluationData()
+        self.matrix = defaultdict(lambda:defaultdict(int))
+        for classId1 in self.classSet.Ids.values():
+            for classId2 in self.classSet.Ids.values():
+                self.matrix[classId1][classId2] = 0
         #self.classifications = []
         #assert(len(examples) == len(predictions))
         #for i in range(len(examples)):
@@ -247,6 +252,7 @@ class AveragingMultiClassEvaluator(Evaluator):
             predictedClass = prediction[0]
             #print predictedClass
             assert(predictedClass > 0) # multiclass classification uses non-negative integers
+            self.matrix[trueClass][predictedClass] += 1
             if predictedClass == trueClass: # correct classification
                 # correctly classified for its class -> true positive for that class
                 self.dataByClass[trueClass].addTP()
@@ -362,6 +368,36 @@ class AveragingMultiClassEvaluator(Evaluator):
         if self.untypedUndirected != None:
             string += "\n" + indent
             string += "untyped undirected " + self.untypedUndirected.toStringConcise()
+        return string
+    
+    def matrixToString(self, usePercentage=False):
+        if usePercentage:
+            percentages = defaultdict(lambda:defaultdict(int))
+            for key1 in self.matrix:
+                total = 0
+                for key2 in self.matrix[key1]:
+                    total += self.matrix[key1][key2]
+                if total == 0:
+                    total = 1
+                total = float(total)
+                for key2 in self.matrix[key1]:
+                    percentages[key1][key2] = self.matrix[key1][key2] / total
+        
+        string = "Error Matrix\n"
+        maxKey = len(max([self.classSet.getName(x) for x in self.matrix], key=len))
+        string += " " * maxKey + "|"
+        for key1 in self.matrix:
+            string += self.classSet.getName(key1).ljust(maxKey) + "|"
+        string += "\n"
+        for key1 in self.matrix:
+            keyWidth = len(self.classSet.getName(key1))
+            string += self.classSet.getName(key1).ljust(maxKey) + "|"
+            for key2 in self.matrix[key1]:
+                if usePercentage:
+                    string += ('%.2f' % (percentages[key1][key2] * 100.0)).ljust(maxKey) + "|"
+                else:
+                    string += str(self.matrix[key1][key2]).ljust(maxKey) + "|"
+            string += "\n"
         return string
     
 #    def __addClassToCSV(self, csvWriter, cls):

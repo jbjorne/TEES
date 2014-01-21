@@ -74,7 +74,7 @@ class IdSet:
         """
         Calls getId through the []-operator.
         """
-        return getId(name)
+        return self.getId(name)
     
     def defineId(self, name, id):
         """

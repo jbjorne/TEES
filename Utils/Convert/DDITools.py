@@ -5,6 +5,22 @@ import Utils.ElementTreeUtils as ETUtils
 import Utils.Range as Range
 from collections import defaultdict
 
+#def loadEntities(filename):
+#    f = open(filename)
+#    entitiesPerSentence = defaultdict(lambda:list)
+#    for line in f:
+#        id, offset, name, type = line.split("|")
+#        entitiesPerSentence[id].append([id, offset, name, type])
+#    return entitiesPerSentence
+#        
+#def compareEntities(inputFile, goldFile):
+#    input = loadEntities(inputFile)
+#    gold = loadEntities(goldFile)
+#    for id in gold:
+#        for ge in gold[id]:
+#            for ie in input[id]:
+#                Range.charOffsetToSingleTuple(charOffset, offsetSep)
+
 def makeDDI13SubmissionFile(input, output, mode="interactions", idfilter=None):
     xml = ETUtils.ETFromObj(input)
     outFile = open(output, "wt")

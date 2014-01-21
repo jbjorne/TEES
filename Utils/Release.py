@@ -9,6 +9,9 @@ sys.path.append(mainTEESDir)
 import Utils.InteractionXML.Catenate as Catenate
 import Utils.Libraries.stats as stats
 import Utils.Convert.DDITools as DDITools
+from collections import defaultdict
+import Core.ExampleUtils as ExampleUtils
+from Core.IdSet import IdSet
 
 def listExecutables(filter=["Core", "FeatureBuilders", "InteractionXML", "GeniaEventsToSharedTask"]):
     tableTitleLines = "| Program | Location | Description |\n"
@@ -255,16 +258,68 @@ def getDDI13ResultLine(logPath, tag, scores=None):
 #        if scoreLine != "No result" and scores != None:
 #            scores.append(float(scoreLine.strip().split("/")[-1]))
 
+def matrixToString(matrix, usePercentage=False):
+    if usePercentage:
+        percentages = defaultdict(lambda:defaultdict(int))
+        for key1 in matrix:
+            total = 0
+            for key2 in matrix[key1]:
+                total += matrix[key1][key2]
+            if total == 0:
+                total = 1
+            total = float(total)
+            for key2 in matrix[key1]:
+                percentages[key1][key2] = matrix[key1][key2] / total
+    
+    string = "Error Matrix\n"
+    maxKey = len(max(matrix.keys(), key=len))
+    string += " " * maxKey + "|"
+    for key1 in matrix:
+        string += key1.ljust(maxKey) + "|"
+    string += "\n"
+    for key1 in matrix:
+        string += key1.ljust(maxKey) + "|"
+        for key2 in matrix[key1]:
+            if usePercentage:
+                string += ('%.2f' % (percentages[key1][key2] * 100.0)).ljust(maxKey) + "|"
+            else:
+                string += str(matrix[key1][key2]).ljust(maxKey) + "|"
+        string += "\n"
+    return string
+
+def addExamples(exampleFile, predictionFile, classFile, matrix):
+    classSet = IdSet(filename=classFile)
+    f = open(predictionFile, "rt")
+    for example in ExampleUtils.readExamples(exampleFile, False):
+        pred = int(f.readline().split()[0])
+        predClasses = classSet.getName(pred)
+        goldClasses = classSet.getName(example[1])
+        for predClass in predClasses.split("---"):
+            for goldClass in goldClasses.split("---"):
+                matrix[predClass][goldClass]
+                matrix[goldClass][predClass] += 1
+    f.close()
+    
+
 def getDDI13Result(output, numFolds=10, catenate=False):
     global mainTEESDir
     foldPaths = []
     scores = []
+    matrix = defaultdict(lambda:defaultdict(int))
     for fold in range(numFolds):
         foldPath = os.path.join(output, "DDI13-fold" + str(fold), "classification-test", "test-pred.xml.gz")
         foldPaths.append(foldPath)
         
         logPath = os.path.join(output, "DDI13-fold" + str(fold), "log.txt")
         getDDI13ResultLine(logPath, "DDI13-fold" + str(fold), scores)
+        
+        foldPath = os.path.join(output, "DDI13-fold" + str(fold), "classification-test")
+        classPath = os.path.join(output, "DDI13-fold" + str(fold), "model-test", "trigger-ids.classes")
+        if not os.path.exists(classPath):
+            classPath = os.path.join(output, "DDI13-fold" + str(fold), "model-test", "edge-ids.classes")
+            addExamples(os.path.join(foldPath, "test-edge-examples.gz"), os.path.join(foldPath, "test-edge-classifications"), classPath, matrix)
+        else:
+            addExamples(os.path.join(foldPath, "test-trigger-examples.gz"), os.path.join(foldPath, "test-trigger-classifications"), classPath, matrix)
         
         #parameterPaths = [[":TRAIN:END-MODEL", "Selected parameters"]]
         #print "DDI13-fold" + str(fold) + ": " + getResultLine(logPath, parameterPaths)
@@ -279,7 +334,11 @@ def getDDI13Result(output, numFolds=10, catenate=False):
         DDITools.makeDDI13SubmissionFile(predPath, os.path.join(output, testSet + "-interactions.txt"), "interactions")
         DDITools.makeDDI13SubmissionFile(predPath, os.path.join(output, testSet + "-entities.txt"), "entities")
     print "-----"
-    print "Avg-score: ", stats.mean(scores), "stdev", stats.stdev(scores) 
+    print "Avg-score: ", stats.mean(scores), "stdev", stats.stdev(scores)
+    
+    print "-----"
+    print matrixToString(matrix)
+    print matrixToString(matrix, True)
     
     if catenate and len(foldPaths) > 1:
         catPath = os.path.join(output, "DDI13-train-analyses.xml.gz")
