@@ -10,7 +10,7 @@ from Core.IdSet import IdSet
 import Core.ExampleUtils as ExampleUtils
 
 class BinaryEvaluator(Evaluator.Evaluator):
-    def __init__(self, examples=None, predictions=None, classSet=None):
+    def __init__(self, examples=None, predictions=None, classSet=None, mapClasses=None):
         if type(classSet) == types.StringType: # class names are in file
             classSet = IdSet(filename=classSet)
         if type(predictions) == types.StringType: # predictions are in file
@@ -29,7 +29,7 @@ class BinaryEvaluator(Evaluator.Evaluator):
         self.AUC = None
         self.type = "binary"
         if predictions != None:
-            self._calculate(examples, predictions)
+            self._calculate(examples, predictions, mapClasses)
     
     @classmethod
     def evaluate(cls, examples, predictions, classSet=None, outputFile=None):
@@ -89,14 +89,14 @@ class BinaryEvaluator(Evaluator.Evaluator):
         return BinaryEvaluator(predictions)
     pool = staticmethod(pool)      
     
-    def __calculateAUC(self, examples, predictions):
+    def __calculateAUC(self, examples, predictions, mapClasses):
         numPositiveExamples = 0
         numNegativeExamples = 0
         predictionsForPositives = []
         predictionsForNegatives = []
         for example, prediction in itertools.izip(examples, predictions):
-            trueClass = example[1] #prediction[0][1]
-            predictedClass = prediction[0] #prediction[1]
+            trueClass = self._getClass(example[1], mapClasses) #prediction[0][1]
+            predictedClass = self._getClass(prediction[0], mapClasses) #prediction[1]
             if trueClass > 0:
                 numPositiveExamples += 1
                 if predictedClass > 0:
@@ -122,14 +122,20 @@ class BinaryEvaluator(Evaluator.Evaluator):
             auc = 0
         return auc
     
-    def _calculate(self, examples, predictions):
+    def _getClass(self, cls, mapClasses):
+        if mapClasses == None:
+            return cls
+        else:
+            return mapClasses[cls]
+    
+    def _calculate(self, examples, predictions, mapClasses=None):
         # First count instances
         #print predictions
         self.classifications = []
         #assert len(examples) == len(predictions), (len(examples), len(predictions))
         for example, prediction in itertools.izip(examples, predictions):
-            trueClass = example[1] #prediction[0][1]
-            predictedClass = prediction[0] #prediction[1]
+            trueClass = self._getClass(example[1], mapClasses) #prediction[0][1]
+            predictedClass = self._getClass(prediction[0], mapClasses) #prediction[1]
             if trueClass > 0:
                 if predictedClass > 0: # 1,1
                     self.truePositives += 1
@@ -160,7 +166,7 @@ class BinaryEvaluator(Evaluator.Evaluator):
         else:
             self.fScore = 0.0
         
-        self.AUC = self.__calculateAUC(examples, predictions)
+        self.AUC = self.__calculateAUC(examples, predictions, mapClasses)
     
     def toStringConcise(self, indent="", title=None):
         if title != None:
@@ -212,4 +218,22 @@ class BinaryEvaluator(Evaluator.Evaluator):
         else:
             dict["AUC"] = "N/A"
         return dict
+
+if __name__=="__main__":
+    # Import Psyco if available
+    try:
+        import psyco
+        psyco.full()
+        print >> sys.stderr, "Found Psyco, using"
+    except ImportError:
+        print >> sys.stderr, "Psyco not installed"
+    from optparse import OptionParser
+    optparser = OptionParser(usage="%prog [options]\nCalculate f-score and other statistics.")
+    optparser.add_option("-e", "--examples", default=None, dest="examples", help="", metavar="FILE")
+    optparser.add_option("-p", "--predictions", default=None, dest="predictions", help="", metavar="FILE")
+    optparser.add_option("-c", "--classSet", default=None, dest="classSet", help="", metavar="FILE")
+    (options, args) = optparser.parse_args()
+    
+    ev = BinaryEvaluator(options.examples, options.predictions, options.classSet, mapClasses={1:-1, 2:1})
+    print ev.toStringConcise()
     

@@ -7,6 +7,8 @@ import types, copy
 from ExternalClassifier import ExternalClassifier
 import Utils.Settings as Settings
 import Utils.Download as Download
+import Utils.Connection.Connection as Connection
+import Utils.Parameters as Parameters
 import Tools.Tool
 #import SVMMultiClassModelUtils
 from Evaluators.AveragingMultiClassEvaluator import AveragingMultiClassEvaluator
@@ -44,7 +46,7 @@ class SVMMultiClassClassifier(ExternalClassifier):
         self.defaultEvaluator = AveragingMultiClassEvaluator
         self.parameterFormat = "-%k %v"
         self.parameterValueListKey["train"] = "c"
-        self.parameterValueTypes["train"] = {"c":[int]}
+        self.parameterValueTypes["train"] = {"c":[int,float]}
         self.trainDirSetting = "SVM_MULTICLASS_DIR"
         self.trainCommand = "svm_multiclass_learn %p %e %m"
         self.classifyDirSetting = "SVM_MULTICLASS_DIR"
@@ -106,7 +108,7 @@ if __name__=="__main__":
     optparser.add_option("-e", "--examples", default=None, dest="examples", help="Example File", metavar="FILE")
     optparser.add_option("-a", "--action", default=None, dest="action", help="TRAIN, CLASSIFY or OPTIMIZE")
     optparser.add_option("--optimizeStep", default="BOTH", dest="optimizeStep", help="BOTH, SUBMIT or RESULTS")
-    optparser.add_option("--classifyExamples", default=None, dest="classifyExamples", help="Example File", metavar="FILE")
+    optparser.add_option("-c", "--classifyExamples", default=None, dest="classifyExamples", help="Example File", metavar="FILE")
     optparser.add_option("--classIds", default=None, dest="classIds", help="Class ids", metavar="FILE")
     optparser.add_option("-m", "--model", default=None, dest="model", help="path to model file")
     #optparser.add_option("-w", "--work", default=None, dest="work", help="Working directory for intermediate and debug files")
@@ -156,5 +158,5 @@ if __name__=="__main__":
             if classified.getStatus() == "FINISHED":
                 classified.downloadPredictions()
         else: # OPTIMIZE
-            options.parameters = splitParameters(options.parameters)
+            options.parameters = Parameters.get(options.parameters)
             optimized = classifier.optimize(options.examples, options.output, options.parameters, options.classifyExamples, options.classIds, step=options.optimizeStep)
