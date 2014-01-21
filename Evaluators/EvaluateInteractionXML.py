@@ -286,7 +286,7 @@ def processDocument(fromDocumentSentences, toDocumentSentences, target, classSet
     return (entityExamples, entityPredictions), (interactionExamples, interactionPredictions), (eventExamples, eventPredictions), falseEntity
 
 # Compares a prediction (from) to a gold (to) corpus
-def processCorpora(EvaluatorClass, fromCorpus, toCorpus, target, classSets, negativeClassId, entityMatchFunction):
+def processCorpora(EvaluatorClass, fromCorpus, toCorpus, target, classSets, negativeClassId, entityMatchFunction, errorMatrix=False):
     entityExamples = []
     entityPredictions = []
     interactionExamples = []
@@ -320,16 +320,25 @@ def processCorpora(EvaluatorClass, fromCorpus, toCorpus, target, classSets, nega
     evaluator = None
     if len(entityPredictions) > 0:
         evaluator = EvaluatorClass(entityExamples, entityPredictions, classSet=classSets["entity"])
-        print evaluator.toStringConcise(title="Entities")    
+        print evaluator.toStringConcise(title="Entities")
+        if errorMatrix:
+            print evaluator.matrixToString()
+            print evaluator.matrixToString(True)
     if len(interactionPredictions) > 0:
         evaluator = EvaluatorClass(interactionExamples, interactionPredictions, classSet=classSets["interaction"])
         print evaluator.toStringConcise(title="Interactions")
+        if errorMatrix:
+            print evaluator.matrixToString()
+            print evaluator.matrixToString(True)
         #print "Interactions (fp ent->fp int, fn-ent->fn-int )"
         #for key in sorted(falseEntity.keys()):
         #    print "", key, falseEntity[key][0], "/", falseEntity[key][1]
     if len(eventPredictions) > 0:
         evaluator = EvaluatorClass(eventExamples, eventPredictions, classSet=classSets["entity"])
         print evaluator.toStringConcise(title="Events")
+        if errorMatrix:
+            print evaluator.matrixToString()
+            print evaluator.matrixToString(True)
     return evaluator
 
 ## Splits entities/edges with merged types into separate elements
@@ -344,7 +353,7 @@ def processCorpora(EvaluatorClass, fromCorpus, toCorpus, target, classSets, nega
 #                    sourceList.append(newElement)
 #                sourceList.remove(element)
 
-def run(EvaluatorClass, inputCorpusFile, goldCorpusFile, parse, tokenization=None, target="both", entityMatchFunction=compareEntitiesSimple, removeIntersentenceInteractions=False):
+def run(EvaluatorClass, inputCorpusFile, goldCorpusFile, parse, tokenization=None, target="both", entityMatchFunction=compareEntitiesSimple, removeIntersentenceInteractions=False, errorMatrix=False):
     print >> sys.stderr, "##### EvaluateInteractionXML #####"
     print >> sys.stderr, "Comparing input", inputCorpusFile, "to gold", goldCorpusFile
     # Class sets are used to convert the types to ids that the evaluator can use
@@ -367,7 +376,7 @@ def run(EvaluatorClass, inputCorpusFile, goldCorpusFile, parse, tokenization=Non
     predictedCorpusElements = CorpusElements.loadCorpus(inputCorpusFile, parse, tokenization, removeIntersentenceInteractions)    
     
     # Compare the corpora and print results on screen
-    return processCorpora(EvaluatorClass, predictedCorpusElements, goldCorpusElements, target, classSets, negativeClassId, entityMatchFunction)
+    return processCorpora(EvaluatorClass, predictedCorpusElements, goldCorpusElements, target, classSets, negativeClassId, entityMatchFunction, errorMatrix=errorMatrix)
     
 if __name__=="__main__":
     import sys, os
@@ -400,4 +409,4 @@ if __name__=="__main__":
     print >> sys.stderr, "Importing modules"
     exec "from Evaluators." + options.evaluator + " import " + options.evaluator + " as Evaluator"
     
-    run(Evaluator, options.input, options.gold, options.parse, None, options.target, entityMatchFunction=entityMatchFunction, removeIntersentenceInteractions=options.no_intersentence)
+    run(Evaluator, options.input, options.gold, options.parse, None, options.target, entityMatchFunction=entityMatchFunction, removeIntersentenceInteractions=options.no_intersentence, errorMatrix=True)

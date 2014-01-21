@@ -48,7 +48,7 @@ class ProgressCounter:
         
         currentTime = time.time()
         timeStepExceeded = currentTime - self.prevPrintTime > self.timeStep
-        stepExceeded = (self.step != None) and (self.progress - self.prevProgress >= self.step)
+        stepExceeded = self.step == None or (self.progress - self.prevProgress >= self.step)
         
         self.prevUpdateString += " (" + self.getElapsedTimeString(currentTime) + ")"
         

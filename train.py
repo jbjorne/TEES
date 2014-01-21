@@ -315,7 +315,7 @@ def getTaskSettings(task, detector, bioNLPSTParams, preprocessorParams,
                 inputFiles[dataset] = Catenate.catenate([os.path.join(dataPath, "ID11-train.xml"), os.path.join(dataPath, "GE11-devel.xml"),
                                                          os.path.join(dataPath, "GE11-train.xml")], "training/ID11-train-and-GE11-devel-and-train.xml.gz", fast=True)
             if inputFiles[dataset] == "None":
-                inputFiles[dataset] == None
+                inputFiles[dataset] = None
             if inputFiles[dataset] != None and not os.path.exists(inputFiles[dataset]):
                 inputFiles[dataset] = None
                 print >> sys.stderr, "Input file", inputFiles[dataset], "for set '" + dataset + "' does not exist, skipping."
@@ -344,9 +344,9 @@ def getTaskSettings(task, detector, bioNLPSTParams, preprocessorParams,
         if task == "REN11":
             exampleStyles["examples"] = Parameters.cat("undirected:bacteria_renaming:maskTypeAsProtein=Gene", exampleStyles["examples"], "Single-stage example style / " + fullTaskId)
         elif task == "DDI11":
-            exampleStyles["examples"] = Parameters.cat("ddi_features:ddi_mtmx:filter_shortest_path=conj_and", exampleStyles["examples"], "Single-stage example style / " + fullTaskId)
+            exampleStyles["examples"] = Parameters.cat("drugbank_features:ddi_mtmx:filter_shortest_path=conj_and", exampleStyles["examples"], "Single-stage example style / " + fullTaskId)
         elif task == "DDI13":
-            exampleStyles["examples"] = Parameters.cat("keep_neg:ddi_features:filter_shortest_path=conj_and", exampleStyles["examples"], "Single-stage example style / " + fullTaskId)
+            exampleStyles["examples"] = Parameters.cat("keep_neg:drugbank_features:filter_shortest_path=conj_and", exampleStyles["examples"], "Single-stage example style / " + fullTaskId)
         elif task == "BI11":
             exampleStyles["edge"] = Parameters.cat("bi_features", exampleStyles["edge"], "Edge example style / " + fullTaskId)
         # Edge style
@@ -357,7 +357,7 @@ def getTaskSettings(task, detector, bioNLPSTParams, preprocessorParams,
         elif task == "REL11":
             exampleStyles["edge"] = Parameters.cat("rel_features", exampleStyles["edge"], "Edge example style / " + fullTaskId)
         elif task == "DDI11-FULL":
-            exampleStyles["edge"] = Parameters.cat("ddi_features:filter_shortest_path=conj_and", exampleStyles["edge"], "Edge example style / " + fullTaskId)
+            exampleStyles["edge"] = Parameters.cat("drugbank_features:filter_shortest_path=conj_and", exampleStyles["edge"], "Edge example style / " + fullTaskId)
         elif task == "CO11":
             exampleStyles["edge"] = Parameters.cat("co_features", exampleStyles["edge"], "Edge example style / " + fullTaskId)
         elif task == "BI11-FULL":

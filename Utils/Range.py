@@ -89,14 +89,14 @@ def overlap(range1, range2):
     # y1 <= y2 < x1 <= x2
     return not (range1[1] <= range2[0] or range2[1] <= range1[0])
 
-def tuplesToCharOffset(tuples):
+def tuplesToCharOffset(tuples, offsetSep="-", rangeSep=","):
     if len(tuples) == 2 and type(tuples[0]) == types.IntType and type(tuples[1]) == types.IntType:
         tuples = [tuples]
     charOffset = ""
     isFirst = True
-    for tuple in tuples:
+    for tup in tuples:
         if not isFirst:
-            charOffset += ","
-        charOffset += str(tuple[0]) + "-" + str(tuple[1])
+            charOffset += rangeSep
+        charOffset += str(tup[0]) + offsetSep + str(tup[1])
         isFirst = False
     return charOffset

@@ -1,7 +1,12 @@
 """
 Base class for FeatureBuilders
 """
-__version__ = "$Revision: 1.14 $"
+
+import sys, os
+thisPath = os.path.dirname(os.path.abspath(__file__))
+sys.path.append(os.path.abspath(os.path.join(thisPath,"../..")))
+import Utils.Libraries.PorterStemmer as PorterStemmer
+import Utils.Range as Range
 
 class FeatureBuilder:
     """
@@ -69,6 +74,31 @@ class FeatureBuilder:
         for k,v in self.features.iteritems():
             self.features[k] = float(v) / total
 
+    def getMetaMapFeatures(self, token, sentenceGraph, features):
+        analyses = sentenceGraph.sentenceElement.find("analyses")
+        if analyses == None:
+            return
+        metamap = analyses.find("metamap")
+        if metamap == None:
+            return
+        tokenOffset = Range.charOffsetToSingleTuple(token.get("charOffset"))
+        skipAttr = set(["charOffset", "text"])
+        for phrase in metamap.findall("phrase"):
+            phraseOffset = Range.charOffsetToSingleTuple(phrase.get("charOffset"))
+            if Range.overlap(tokenOffset, phraseOffset):
+                attr = phrase.attrib
+                attrNames = sorted(attr.keys())
+                for attrName in attrNames:
+                    if attrName in skipAttr:
+                        continue
+                    elif attrName == "score":
+                        continue
+                        #features["_metamap_score"] = 0.001 * abs(int(attr[attrName]))
+                    else:
+                        attrValues = attr[attrName].split(",")
+                        for attrValue in attrValues: 
+                            features["_metamap_"+attrName+"_"+attrValue.replace(" ", "-")] = 1
+
     def getTokenFeatures(self, token, sentenceGraph, text=True, POS=True, annotatedType=True, stem=False, ontology=True):
         """
         Token features are features describing an isolated word token. These subfeatures are often merged into
@@ -113,7 +143,12 @@ class FeatureBuilder:
                 for annType in annTypes:
                     featureList.extend(self.ontologyFeatureBuilder.getParents(annType))
         if stem:
-            featureList.append("stem_"+PorterStemmer.stem(sentenceGraph.getTokenText(token)))
+            featureList.append("stem_" + PorterStemmer.stem(sentenceGraph.getTokenText(token)))
+        
+        if self.style != None and self.style["metamap"]:
+            metamapFeatureDict = {}
+            self.getMetaMapFeatures(token, sentenceGraph, metamapFeatureDict)
+            featureList.extend(sorted(metamapFeatureDict.keys()))
         
         self.tokenFeatures[callId] = featureList            
         return featureList
@@ -145,22 +180,22 @@ class FeatureBuilder:
                             annTypes.add(eType)
                         if self.entity1 == entity:
                             if not self.maximum:
-                            	return [eType]
+                                return [eType]
                             else:
-                            	annTypes.add("e1_"+eType)
+                                annTypes.add("e1_"+eType)
                         elif self.entity2 == entity:
                             if not self.maximum:
-                            	return [eType]
+                                return [eType]
                             else:
-								annTypes.add("e2_"+eType)
+                                annTypes.add("e2_"+eType)
                         else:
                             annTypes.add(eType)
             annTypes = list(annTypes)
             annTypes.sort()
             if self.maximum:
-				return annTypes[0:2]
+                return annTypes[0:2]
             else:
-            	return annTypes[0:1] #annTypes[0:2]
+                return annTypes[0:1] #annTypes[0:2]
         else:
             return ["noAnnType"]
     

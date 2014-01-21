@@ -2,7 +2,67 @@ import sys, os
 thisPath = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.abspath(os.path.join(thisPath,"../..")))
 import Utils.ElementTreeUtils as ETUtils
+import Utils.Range as Range
 from collections import defaultdict
+
+#def loadEntities(filename):
+#    f = open(filename)
+#    entitiesPerSentence = defaultdict(lambda:list)
+#    for line in f:
+#        id, offset, name, type = line.split("|")
+#        entitiesPerSentence[id].append([id, offset, name, type])
+#    return entitiesPerSentence
+#        
+#def compareEntities(inputFile, goldFile):
+#    input = loadEntities(inputFile)
+#    gold = loadEntities(goldFile)
+#    for id in gold:
+#        for ge in gold[id]:
+#            for ie in input[id]:
+#                Range.charOffsetToSingleTuple(charOffset, offsetSep)
+
+def makeDDI13SubmissionFile(input, output, mode="interactions", idfilter=None):
+    xml = ETUtils.ETFromObj(input)
+    outFile = open(output, "wt")
+    for sentence in xml.getiterator("sentence"):
+        sentenceId = sentence.get("id")
+        if idfilter != None and idfilter not in sentenceId:
+            continue
+        # Output entities
+        if mode == "entities":
+            for entity in sentence.findall("entity"):
+                if entity.get("type") != "neg":
+                    outFile.write(sentenceId)
+                    offsets = Range.charOffsetToTuples(entity.get("charOffset"))
+                    for i in range(len(offsets)):
+                        offsets[i] = (offsets[i][0], offsets[i][1]-1)
+                    outFile.write("|" + Range.tuplesToCharOffset(offsets, rangeSep=";"))
+                    outFile.write("|" + entity.get("text"))
+                    outFile.write("|" + entity.get("type"))
+                    outFile.write("\n")    
+        if mode == "interactions":
+            # First determine which pairs interact
+            intMap = defaultdict(lambda:defaultdict(lambda:None))
+            for interaction in sentence.findall("interaction"):
+                # Make mapping both ways to discard edge directionality. This isn't actually needed,
+                # since MultiEdgeExampleBuilder builds entity pairs in the same order as this function,
+                # but shouldn't harm to include it and now it works regardless of pair direction.
+                if interaction.get("type") != "neg" and interaction.get("given") != "True":
+                    intMap[interaction.get("e1")][interaction.get("e2")] = interaction
+                    intMap[interaction.get("e2")][interaction.get("e1")] = interaction
+            # Then write all pairs to the output file
+            entities = sentence.findall("entity")
+            for i in range(0, len(entities)-1):
+                for j in range(i+1, len(entities)):
+                    eIId = entities[i].get("id")
+                    eJId = entities[j].get("id")
+                    outFile.write(sentenceId + "|" + eIId + "|" + eJId + "|")
+                    if intMap[eIId][eJId] != None:
+                        interaction = intMap[eIId][eJId]
+                        assert interaction.get("type") != "neg"
+                        outFile.write("1|" + interaction.get("type") + "\n")
+                    else:
+                        outFile.write("0|null\n")
 
 def makeDDISubmissionFile(input, output):
     xml = ETUtils.ETFromObj(input)
@@ -119,11 +179,15 @@ if __name__=="__main__":
     optparser.add_option("-o", "--output", default=None, dest="output", help="output file (txt file)")
     optparser.add_option("-d", "--add", default=None, dest="add", help="data to be added, e.g. rls classifications")
     optparser.add_option("-a", "--action", default=None, dest="action", help="")
+    optparser.add_option("-f", "--idfilter", default=None, dest="idfilter", help="")
+    optparser.add_option("-m", "--mode", default=None, dest="mode", help="")
     (options, args) = optparser.parse_args()
-    assert options.action in ["SUBMISSION", "TRANSFER_RLS", "ADD_MTMX"]
+    assert options.action in ["SUBMISSION_DDI11", "SUBMISSION_DDI13", "TRANSFER_RLS", "ADD_MTMX"]
     
-    if options.action == "SUBMISSION":
+    if options.action == "SUBMISSION_DDI11":
         makeDDISubmissionFile(options.input, options.output)
+    if options.action == "SUBMISSION_DDI13":
+        makeDDI13SubmissionFile(options.input, options.output, options.mode, options.idfilter)
     elif options.action == "TRANSFER_RLS":
         transferClassifications(options.input, options.add, options.output)
     elif options.action == "ADD_MTMX":
