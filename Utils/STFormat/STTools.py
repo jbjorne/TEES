@@ -17,6 +17,8 @@ class Document:
         self.debug = debug
         if loadFromDir != None:
             self.load(loadFromDir, a2Tags, readExtra=readExtra)
+        
+        self.id = self.id.decode('unicode_escape').encode('ascii','ignore') # GE13 test set contains unicode in filenames
     
     def getEventOrRelationCount(self, countRelations=False):
         count = 0
