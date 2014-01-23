@@ -48,9 +48,9 @@ class SVMMultiClassClassifier(ExternalClassifier):
         self.parameterValueListKey["train"] = "c"
         self.parameterValueTypes["train"] = {"c":[int,float]}
         self.trainDirSetting = "SVM_MULTICLASS_DIR"
-        self.trainCommand = "%d/svm_multiclass_learn %p %e %m"
+        self.trainCommand = "%dsvm_multiclass_learn %p %e %m"
         self.classifyDirSetting = "SVM_MULTICLASS_DIR"
-        self.classifyCommand = "%d/svm_multiclass_classify %e %m %c"
+        self.classifyCommand = "%dsvm_multiclass_classify %e %m %c"
     
 #    def filterIds(self, ids, model, verbose=False):
 #        # Get feature ids

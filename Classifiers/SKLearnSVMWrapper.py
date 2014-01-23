@@ -2,25 +2,33 @@ import sys,os
 from sklearn.datasets import load_svmlight_file
 from sklearn.externals import joblib
 
-def getClassifier(id):
+def getClassifier(id, params):
     #id = id.rstrip("scikit.")
     if id == "svc":
         from sklearn import svm
+        params["probability"] = True
         return svm.SVC
     elif id == "randomforest":
         from sklearn.ensemble import RandomForestClassifier
         return RandomForestClassifier
+    elif id == "naivebayes":
+        from sklearn.naive_bayes import GaussianNB
+        return GaussianNB
+    elif id == "perceptron":
+        from sklearn.linear_model import Perceptron
+        return Perceptron
 
 def train():
     params, files = getParameters(["examples", "model"])
     clfName = params["scikit"]
     del params["scikit"]
     #print params, files
-    clfClass = getClassifier(clfName)
-    clf = clfClass(probability=True, **params)
+    clfClass = getClassifier(clfName, params)
+    clf = clfClass(**params)
     X_train, y_train = load_svmlight_file(files["examples"])
     #print X_train.shape[1]
-    print >> sys.stderr, "Training", clfName, "with", params, files
+    clf.teesFeatureCount = X_train.shape[1]
+    print >> sys.stderr, "Training", clfName, "with arguments", params, "and files", files
     print >> sys.stderr, clf.fit(X_train, y_train)
     print >> sys.stderr, clfName, "model saved to", joblib.dump(clf, files["model"], True)
 
@@ -29,11 +37,18 @@ def classify():
     clf = joblib.load(files["model"])
     #print dir(clf)
     #print clf.shape_fit_
-    X_train, y_train = load_svmlight_file(files["examples"])#, clf.shape_fit_[1])
-    out = open(files["predictions"], "wt")
-    for prediction in clf.predict_proba(X_train): #clf.predict(X_train):
-        classMax = prediction.argmax() + 1
-        out.write(str(classMax) + " " + str(" ".join([str(x) for x in prediction])) + "\n")
+    print >> sys.stderr, "Classifying files", files
+    try:
+        out = open(files["predictions"], "wt")
+        X_train, y_train = load_svmlight_file(files["examples"])
+        for prediction in clf.predict_proba(X_train): #clf.predict(X_train):
+            classMax = prediction.argmax() + 1
+            out.write(str(classMax) + " " + str(" ".join([str(x) for x in prediction])) + "\n")
+    except:
+        out = open(files["predictions"], "wt")
+        X_train, y_train = load_svmlight_file(files["examples"], clf.teesFeatureCount)
+        for prediction in clf.predict(X_train): #clf.predict(X_train):
+            out.write(str(int(prediction)) + "\n")        
     out.close()
 
 def getParameters(unnamedNames=None):
@@ -42,6 +57,7 @@ def getParameters(unnamedNames=None):
     if unnamedNames != None:
         unnamed = dict.fromkeys(unnamedNames)
     unnamedIndex = 0
+    argName = None
     for arg in sys.argv[2:]:
         # get argument name
         if arg.find("--") == 0:
