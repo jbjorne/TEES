@@ -13,14 +13,16 @@ def getClassifier(id):
 
 def train():
     params, files = getParameters(["examples", "model"])
-    print params, files
-    clfClass = getClassifier(params["scikit"])
+    clfName = params["scikit"]
+    del params["scikit"]
+    #print params, files
+    clfClass = getClassifier(clfName)
     clf = clfClass(probability=True, **params)
     X_train, y_train = load_svmlight_file(files["examples"])
     #print X_train.shape[1]
-    print >> sys.stderr, "Training", params["scikit"], "with", params, files
+    print >> sys.stderr, "Training", clfName, "with", params, files
     print >> sys.stderr, clf.fit(X_train, y_train)
-    print >> sys.stderr, params["scikit"], "model saved to", joblib.dump(clf, files["model"], True)
+    print >> sys.stderr, clfName, "model saved to", joblib.dump(clf, files["model"], True)
 
 def classify():
     params, files = getParameters(["examples", "model", "predictions"])
@@ -45,27 +47,28 @@ def getParameters(unnamedNames=None):
         if arg.find("--") == 0:
             continue
         elif arg[0] == "-":
-            argName = arg
+            argName = arg[1:]
         else:
-            argName = None
-        # get argument value
-        if argName != None:
-            params[argName] = arg
-            # process argument
-            try:
-                params[argName] = float(arg)
-            except ValueError:
+            # get argument value
+            if argName != None:
+                params[argName] = arg
+                # process argument
                 try:
                     params[argName] = float(arg)
                 except ValueError:
                     try:
-                        params[argName] = bool(arg)
+                        params[argName] = float(arg)
                     except ValueError:
-                        params[argName] = arg
-        else:
-            if unnamedNames == None or unnamedIndex >= len(unnamedNames):
-                raise Exception("Unknown argument", arg)
-            unnamed[unnamedNames[unnamedIndex]] = arg
+                        if arg in ["True", "False"]:
+                            params[argName] = bool(arg) 
+                        else:
+                            params[argName] = arg
+                argName = None
+            else:
+                if unnamedNames == None or unnamedIndex >= len(unnamedNames):
+                    raise Exception("Unknown argument", arg)
+                unnamed[unnamedNames[unnamedIndex]] = arg
+                unnamedIndex += 1
     return params, unnamed
 
 if __name__=="__main__":
