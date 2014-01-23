@@ -14,9 +14,9 @@ class SKLearnSVM(ExternalClassifier):
         self.parameterValueListKey["train"] = "c"
         self.parameterValueTypes["train"] = {"c":[int,float]}
         self.trainDirSetting = "SCIKIT_WRAPPER_DIR"
-        self.trainCommand = "python SKLearnSVMWrapper.py --train %p -e %e -m %m"
+        self.trainCommand = "python %dSKLearnSVMWrapper.py --train %p -e %e -m %m"
         self.classifyDirSetting = "SCIKIT_WRAPPER_DIR"
-        self.classifyCommand = "python SKLearnSVMWrapper.py --classify -e %e -m %m --predictions %c"
+        self.classifyCommand = "python %dSKLearnSVMWrapper.py --classify -e %e -m %m --predictions %c"
     
 if __name__=="__main__":
     # Import Psyco if available

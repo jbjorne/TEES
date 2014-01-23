@@ -1,5 +1,4 @@
 import sys,os
-sys.path.append(os.path.dirname(os.path.abspath(__file__))+"/..")
 from sklearn import svm
 from sklearn.datasets import load_svmlight_file
 from sklearn.externals import joblib
@@ -7,7 +6,7 @@ from sklearn.externals import joblib
 def train(examplesPath, cparameter, modelPath):
     clf = svm.SVC(C=float(cparameter), probability=True)
     X_train, y_train = load_svmlight_file(examplesPath)
-    print X_train.shape[1]
+    #print X_train.shape[1]
     print >> sys.stderr, clf.fit(X_train, y_train)
     print >> sys.stderr, "SVM model saved to", joblib.dump(clf, modelPath, True)
 
@@ -15,10 +14,11 @@ def classify(examplesPath, modelPath, predictionsPath):
     clf = joblib.load(modelPath)
     #print dir(clf)
     #print clf.shape_fit_
-    X_train, y_train = load_svmlight_file(examplesPath, clf.shape_fit_[1])
+    X_train, y_train = load_svmlight_file(examplesPath)#, clf.shape_fit_[1])
     out = open(predictionsPath, "wt")
     for prediction in clf.predict_proba(X_train): #clf.predict(X_train):
-        out.write(str(" ".join([str(x) for x in prediction])) + "\n")
+        classMax = prediction.argmax() + 1
+        out.write(str(classMax) + " " + str(" ".join([str(x) for x in prediction])) + "\n")
     out.close()
 
 if __name__=="__main__":
