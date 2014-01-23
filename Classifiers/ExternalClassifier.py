@@ -92,6 +92,10 @@ class ExternalClassifier(Classifier):
             else:
                 paramString += self.parameterFormat.replace("%k", key).replace("%v", "").strip()
                 idStr += "-" + str(key)
+        # sanitize id
+        idStr = idStr.replace(":", ".")
+        idStr = idStr.replace(" ", "_")
+        idStr = "".join([c for c in idStr if c.isalnum() or c in ('.','_',"-")]).rstrip()
         return paramString, idStr
     
     def train(self, examples, outDir, parameters, classifyExamples=None, finishBeforeReturn=False, replaceRemoteExamples=True, dummy=False):

@@ -67,18 +67,11 @@ def getParameters(unnamedNames=None):
         else:
             # get argument value
             if argName != None:
-                params[argName] = arg
                 # process argument
                 try:
-                    params[argName] = float(arg)
-                except ValueError:
-                    try:
-                        params[argName] = float(arg)
-                    except ValueError:
-                        if arg in ["True", "False"]:
-                            params[argName] = bool(arg) 
-                        else:
-                            params[argName] = arg
+                    params[argName] = eval(arg)
+                except NameError:
+                    params[argName] = arg
                 argName = None
             else:
                 if unnamedNames == None or unnamedIndex >= len(unnamedNames):

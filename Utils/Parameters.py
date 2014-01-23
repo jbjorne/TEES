@@ -3,6 +3,22 @@ import types
 sys.path.append(os.path.dirname(os.path.abspath(__file__))+"/..")
 import Utils.Libraries.combine as combine
 
+def split(string, delimiter=":"):
+    s = ""
+    ignore = False
+    for c in string:
+        if c in "([{":
+            ignore = True
+        elif c in ")]}":
+            ignore = False
+        if c == delimiter and not ignore:
+            yield s
+            s = ""
+        else:
+            s += c
+    if s != "":
+        yield s
+
 def toDict(parameters, valueListKey=None):
     if parameters == None:
         return {}
@@ -17,7 +33,7 @@ def toDict(parameters, valueListKey=None):
         else: # values are defined for the default parameter (value list key)
             names = [valueListKey + "=" + parameters]
     else:
-        names = parameters.split(":")
+        names = split(parameters, ":")
     # Process parameter=value1,value2,value3,... strings
     for name in names:
         if name.strip() != "":
