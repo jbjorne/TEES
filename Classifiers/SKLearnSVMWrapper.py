@@ -3,23 +3,10 @@ from sklearn.datasets import load_svmlight_file
 from sklearn.externals import joblib
 
 def getClassifier(id, params):
-    #id = id.rstrip("scikit.")
-    if id == "svc":
-        from sklearn import svm
-        params["probability"] = True
-        return svm.SVC
-    elif id == "randomforest":
-        from sklearn.ensemble import RandomForestClassifier
-        return RandomForestClassifier
-    elif id == "naivebayes":
-        from sklearn.naive_bayes import GaussianNB
-        return GaussianNB
-    elif id == "perceptron":
-        from sklearn.linear_model import Perceptron
-        return Perceptron
-    elif id == "passiveaggressive":
-        from sklearn.linear_model import PassiveAggressiveClassifier
-        return PassiveAggressiveClassifier
+    if ("." in id):
+        package, cls = id.rsplit('.', 1)
+        exec "from sklearn." + package + " import " + cls + " as " + cls
+        return eval(cls)
 
 def train():
     params, files = getParameters(["examples", "model"])
