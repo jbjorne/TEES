@@ -1,23 +1,34 @@
 import sys,os
 from sklearn.datasets import load_svmlight_file
 from sklearn.externals import joblib
+sys.path.append(os.path.dirname(os.path.abspath(__file__))+"/..")
 
 def getClassifier(id, params):
-    if ("." in id):
-        package, cls = id.rsplit('.', 1)
-        exec "from sklearn." + package + " import " + cls + " as " + cls
-        return eval(cls)
+    package, cls = id.rsplit('.', 1)
+    prefix = "sklearn."
+    if package == "elm":
+        prefix = "Utils.Libraries.PythonELM."
+    #print "from " + prefix + package + " import " + cls + " as " + cls
+    exec "from " + prefix + package + " import " + cls + " as " + cls
+    return eval(cls)
 
 def train():
     params, files = getParameters(["examples", "model"])
     clfName = params["scikit"]
     del params["scikit"]
+    useProbability = "probability" in params and params["probability"]
+    if useProbability and clfName.find("svm.") != 0:
+        del params["probability"]
     #print params, files
     clfClass = getClassifier(clfName, params)
     clf = clfClass(**params)
     X_train, y_train = load_svmlight_file(files["examples"])
     #print X_train.shape[1]
-    clf.teesFeatureCount = X_train.shape[1]
+    clf.teesFeatureCount = X_train.shape[1] # store the size with a unique name
+    if useProbability:
+        clf.teesProba = True
+    else:
+        clf.teesProba = False
     print >> sys.stderr, "Training", clfName, "with arguments", params, "and files", files
     print >> sys.stderr, clf.fit(X_train, y_train)
     print >> sys.stderr, clfName, "model saved to", joblib.dump(clf, files["model"], True)
@@ -28,14 +39,13 @@ def classify():
     #print dir(clf)
     #print clf.shape_fit_
     print >> sys.stderr, "Classifying files", files
-    try:
-        out = open(files["predictions"], "wt")
+    out = open(files["predictions"], "wt")
+    if clf.teesProba:
         X_train, y_train = load_svmlight_file(files["examples"])
         for prediction in clf.predict_proba(X_train): #clf.predict(X_train):
             classMax = prediction.argmax() + 1
             out.write(str(classMax) + " " + str(" ".join([str(x) for x in prediction])) + "\n")
-    except:
-        out = open(files["predictions"], "wt")
+    else:
         X_train, y_train = load_svmlight_file(files["examples"], clf.teesFeatureCount)
         for prediction in clf.predict(X_train): #clf.predict(X_train):
             out.write(str(int(prediction)) + "\n")        
