@@ -5,8 +5,8 @@ from UnixConnection import UnixConnection
 import subprocess
 
 class ClusterConnection(UnixConnection):
-    def __init__(self, account=None, workdir=None, settings=None, memory=None, cores=None, modules=None, wallTime=None):
-        UnixConnection.__init__(self, killGroup=False, account=account, workdir=workdir, settings=settings, memory=memory, cores=cores)
+    def __init__(self, account=None, workdir=None, settings=None, memory=None, cores=None, modules=None, wallTime=None, debug=False):
+        UnixConnection.__init__(self, killGroup=False, account=account, workdir=workdir, settings=settings, memory=memory, cores=cores, debug=debug)
         self.wallTime = wallTime
         self.modules = modules
         self.submitCommand = None

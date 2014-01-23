@@ -12,7 +12,7 @@ import tempfile
 class UnixConnection:
     #programGroupSet = False
     
-    def __init__(self, account=None, workdir=None, settings=None, memory=None, cores=None, jobLimit=None, killGroup=True):
+    def __init__(self, account=None, workdir=None, settings=None, memory=None, cores=None, jobLimit=None, killGroup=True, debug=False):
         self.account = account
         if memory == None:
             memory = 4194304
@@ -39,7 +39,7 @@ class UnixConnection:
         if jobLimit == None:
             jobLimit = -1
         self.jobLimit = int(jobLimit)
-        self.debug = False
+        self.debug = debug
         self.resubmitOnlyFinished = True
         
         # Make sure local processes are killed on exit

@@ -31,14 +31,14 @@ class SLURMConnection(ClusterConnection):
     """
     For using the Simple Linux Utility for Resource Management (https://computing.llnl.gov/linux/slurm/).
     """
-    def __init__(self, account=None, workdir=None, settings=None, wallTime=None, memory=None, cores=None, modules=None):
+    def __init__(self, account=None, workdir=None, settings=None, wallTime=None, memory=None, cores=None, modules=None, debug=False):
         if wallTime == None:
             wallTime = "48:00:00"
         if memory == None:
             memory = 4000
         #if modules == None:
         #    modules = ["python", "ruby"]
-        ClusterConnection.__init__(self, account=account, workdir=workdir, settings=settings, memory=memory, cores=cores, modules=modules, wallTime=wallTime)
+        ClusterConnection.__init__(self, account=account, workdir=workdir, settings=settings, memory=memory, cores=cores, modules=modules, wallTime=wallTime, debug=debug)
         self.submitCommand = "sbatch"
         self.jobListCommand = "squeue"
         self.jobTemplate = SLURMJobTemplate
