@@ -17,6 +17,9 @@ def getClassifier(id, params):
     elif id == "perceptron":
         from sklearn.linear_model import Perceptron
         return Perceptron
+    elif id == "passiveaggressive":
+        from sklearn.linear_model import PassiveAggressiveClassifier
+        return PassiveAggressiveClassifier
 
 def train():
     params, files = getParameters(["examples", "model"])
