@@ -129,7 +129,7 @@ class ExternalClassifier(Classifier):
             classifyCommand = self.classifyCommand.replace("%d", classifyDir).replace("%e", classifyExamples).replace("%m", modelPath).replace("%c", predictionsPath).strip()
             self.connection.addCommand(classifyCommand)
         # Run the process
-        jobName = self.trainCommand.split()[0] + idStr
+        jobName = self.trainCommand.split()[0].replace("%d", "") + idStr
         logPath = outDir + "/" + jobName
         if dummy: # return a classifier that connects to an existing job
             self.connection.clearCommands()
@@ -172,7 +172,7 @@ class ExternalClassifier(Classifier):
         classifyCommand = self.classifyCommand.replace("%d", classifyDir).replace("%e", examples).replace("%m", model).replace("%c", predictionsPath).strip()
         self.connection.addCommand(classifyCommand)
         classifier._job = self.connection.submit(jobDir=os.path.abspath(os.path.dirname(output)), 
-                                                 jobName=self.classifyCommand.split()[0] + "-" + os.path.basename(model))
+                                                 jobName=self.classifyCommand.split()[0].replace("%d", "") + "-" + os.path.basename(model))
         if finishBeforeReturn:
             self.connection.waitForJob(classifier._job)
             classifier.downloadPredictions()
