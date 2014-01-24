@@ -17,7 +17,7 @@ def train():
     clfName = params["scikit"]
     del params["scikit"]
     useProbability = "probability" in params and params["probability"]
-    if useProbability and clfName.find("svm.") != 0:
+    if useProbability and clfName not in ["svm.SVC", "svm.NuSVC"]:
         del params["probability"]
     #print params, files
     clfClass = getClassifier(clfName, params)
@@ -39,46 +39,42 @@ def classify():
     #print dir(clf)
     #print clf.shape_fit_
     print >> sys.stderr, "Classifying files", files
+    X_train, y_train = load_svmlight_file(files["examples"], clf.teesFeatureCount)
     out = open(files["predictions"], "wt")
     if clf.teesProba:
-        X_train, y_train = load_svmlight_file(files["examples"])
-        for prediction in clf.predict_proba(X_train): #clf.predict(X_train):
+        for prediction in clf.predict_proba(X_train):
             classMax = prediction.argmax() + 1
             out.write(str(classMax) + " " + str(" ".join([str(x) for x in prediction])) + "\n")
     else:
-        X_train, y_train = load_svmlight_file(files["examples"], clf.teesFeatureCount)
-        for prediction in clf.predict(X_train): #clf.predict(X_train):
+        for prediction in clf.predict(X_train):
             out.write(str(int(prediction)) + "\n")        
     out.close()
 
-def getParameters(unnamedNames=None):
+def getParameters(requireWrapperParams=None):
     params = {}
-    unnamed = {}
-    if unnamedNames != None:
-        unnamed = dict.fromkeys(unnamedNames)
-    unnamedIndex = 0
+    wrapperParams = {}
     argName = None
     for arg in sys.argv[2:]:
-        # get argument name
-        if arg.find("--") == 0:
-            continue
-        elif arg[0] == "-":
-            argName = arg[1:]
-        else:
-            # get argument value
-            if argName != None:
-                # process argument
-                try:
-                    params[argName] = eval(arg)
-                except NameError:
-                    params[argName] = arg
-                argName = None
+        if arg[0] == "-": # get argument name
+            argName = arg
+        else: # get argument value
+            if argName == None:
+                raise Exception("Unnamed argument '" + arg + "'")
+            # determine where to put the argument
+            if argName.find("--") == 0:
+                targetDict = wrapperParams
             else:
-                if unnamedNames == None or unnamedIndex >= len(unnamedNames):
-                    raise Exception("Unknown argument", arg)
-                unnamed[unnamedNames[unnamedIndex]] = arg
-                unnamedIndex += 1
-    return params, unnamed
+                targetDict = params
+            # process argument
+            try:
+                targetDict[argName.lstrip("-")] = eval(arg)
+            except:
+                targetDict[argName.lstrip("-")] = arg
+            argName = None
+    for required in requireWrapperParams:
+        if required not in wrapperParams:
+            raise Exception("Missing scikit-learn wrapper parameter '" + required + "'")
+    return params, wrapperParams
 
 if __name__=="__main__":
     # Import Psyco if available
@@ -88,17 +84,13 @@ if __name__=="__main__":
         print >> sys.stderr, "Found Psyco, using"
     except ImportError:
         print >> sys.stderr, "Psyco not installed"
+    
+    if ("--classify" in sys.argv and "--train" in sys.argv):
+        raise Exception("Only one of --train and --classify must be defined")
 
-    #from optparse import OptionParser
-    #optparser = OptionParser(description="Interface to scikit-learn SVM")
-    #optparser.add_option("--train", default=False, action="store_true", dest="train")
-    #optparser.add_option("--classify", default=False, action="store_true", dest="classify")
-    #(options, args) = optparser.parse_args()
-    
-    action = sys.argv[1]
-    
-    assert action in ["train", "classify"]
-    if action == "train":
+    if "--classify" in sys.argv:
+        classify()
+    elif "--train" in sys.argv:
         train()
     else:
-        classify()
+        raise Exception("Either --train or --classify must be defined")
