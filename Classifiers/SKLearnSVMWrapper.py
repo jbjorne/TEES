@@ -17,12 +17,21 @@ def train():
     clfName = params["scikit"]
     del params["scikit"]
     useProbability = "probability" in params and params["probability"]
+    useTransform = "transform" in params
+    if useTransform:
+        del params["transform"]
     if useProbability and clfName not in ["svm.SVC", "svm.NuSVC"]:
         del params["probability"]
     #print params, files
     clfClass = getClassifier(clfName, params)
     clf = clfClass(**params)
     X_train, y_train = load_svmlight_file(files["examples"])
+    if (useTransform):
+        clf = clfClass(compute_importances = useTransform, **params)
+        X_train = clf.transform(X_train)
+        clf.teesTransform = True
+    else:
+        clf.teesTransform = False
     #print X_train.shape[1]
     clf.teesFeatureCount = X_train.shape[1] # store the size with a unique name
     if useProbability:
@@ -40,6 +49,8 @@ def classify():
     #print clf.shape_fit_
     print >> sys.stderr, "Classifying files", files
     X_train, y_train = load_svmlight_file(files["examples"], clf.teesFeatureCount)
+    if (clf.teesTransform):
+        X_train = clf.transform(X_train)
     out = open(files["predictions"], "wt")
     if clf.teesProba:
         for prediction in clf.predict_proba(X_train):
