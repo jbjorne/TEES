@@ -142,9 +142,9 @@ class ETWriter():
             if not os.path.exists(os.path.dirname(out)):
                 os.makedirs(os.path.dirname(out))
             if out.endswith(".gz"):
-                self.out = GzipFile(out,"wt")
+                self.out = codecs.getwriter("utf-8")(GzipFile(out,"wt"))
             else:
-                self.out = open(out,"wt")
+                self.out = codecs.open(out, "wt", "utf-8")
         else:
             self.out = out
         print >> self.out, '<?xml version="1.0" encoding="UTF-8"?>'
@@ -239,9 +239,9 @@ def write(rootElement, filename):
         os.makedirs(os.path.dirname(filename))
     # Open the output file
     if filename.endswith(".gz"):
-        out=GzipFile(filename,"wt")
+        out=codecs.getwriter("utf-8")(GzipFile(filename,"wt"))
     else:
-        out=open(filename,"wt")
+        out=codecs.open(filename,"wt","utf-8")
     print >> out, '<?xml version="1.0" encoding="UTF-8"?>'
     ElementTree.ElementTree(rootElement).write(out,"utf-8")
     out.close()

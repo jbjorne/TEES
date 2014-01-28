@@ -301,7 +301,7 @@ def corpusMenuInitializer(menu, prevMenu):
         menu.setDefault("i")
         menu.optDict["6"].toggle = False #True
         handlers.append(convertDDI13.convertDDI13)
-        handlerArgs.append([corpusInstallPath, corpusDownloadPath, redownload])
+        handlerArgs.append([corpusInstallPath, corpusDownloadPath, ["DDI13_TRAIN", "DDI13_TEST_TASK_9.1", "DDI13_TEST_TASK_9.2"], redownload])
     # A handler for installing BioNLP'11 evaluators
     evaluatorInstallPath = os.path.join(menu.system.defaultInstallDir, "tools/evaluators")
     evaluatorDownloadPath = os.path.join(menu.system.defaultInstallDir, "tools/download")
