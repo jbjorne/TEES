@@ -294,8 +294,10 @@ def corpusMenuInitializer(menu, prevMenu):
         if menu.optDict["5"].toggle or (menu != prevMenu and not checkCorpusInstall(corpus)):
             menu.setDefault("i")
             menu.optDict["5"].toggle = True
-            handlers.append(convertBioNLP.convert)
-            handlerArgs.append([bioNLP13Corpora, corpusInstallPath, corpusDownloadPath, redownload, False])
+            #handlers.append(convertBioNLP.convert)
+            #handlerArgs.append([bioNLP13Corpora, corpusInstallPath, corpusDownloadPath, redownload, False])
+            handlers.append(convertBioNLP.installPreconverted)
+            handlerArgs.append(["BIONLP_13_CORPORA", corpusInstallPath, corpusDownloadPath, redownload, True])
             break
     if menu.optDict["6"].toggle or (menu != prevMenu and not checkCorpusInstall("DDI13", ("-train.xml",))):
         menu.setDefault("i")

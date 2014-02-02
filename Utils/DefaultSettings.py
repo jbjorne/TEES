@@ -51,6 +51,7 @@ JAVA = "java" # for programs using java
 # Corpora #####################################################################
 
 # Preconverted
+URL["BIONLP_13_CORPORA"] =  "http://sourceforge.net/projects/tees/files/data/BioNLP13-corpora-XML-140202.zip"
 URL["BIONLP_11_CORPORA"] =  "http://sourceforge.net/projects/tees/files/data/BioNLP11-corpora-XML-130224.zip"
 URL["BIONLP_09_CORPUS"] =  "http://sourceforge.net/projects/tees/files/data/BioNLP09-corpus-XML-130224.zip"
 URL["DDI_11_CORPUS"] =  "http://sourceforge.net/projects/tees/files/data/DDI11-corpus-XML-130224.zip"
