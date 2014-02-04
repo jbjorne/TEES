@@ -339,7 +339,7 @@ class UnixConnection:
         if type(stderr) in types.StringTypes:
             print >> sys.stderr, "Job", jobName + "'s stderr at local file", stderr
             logFiles[1] = stderr = open(stderr, "wt")
-        script = self.makeJobScript(script, jobDir=None, jobName=None)
+        script = self.makeJobScript(script, jobDir, jobName)
         if self.debug:
             print >> sys.stderr, "------- Job script -------"
             print >> sys.stderr, script
@@ -366,12 +366,12 @@ class UnixConnection:
         print >> sys.stderr, "Submitted job", jobArgs["PID"], jobArgs["time"]
         return job
     
-    def makeJobScript(self, script, jobDir=None, jobName=None):
+    def makeJobScript(self, commands, jobDir=None, jobName=None):
         script = ""
         if self.preamble != None:
             script += self.preamble + ";"
         if jobDir != None:
-            script += "cd " + jobDir + "; " + script
+            script += "cd " + jobDir + "; " + commands
         script += "; echo retcode=$? >> " + self.getRemotePath(self._getJobPath(jobDir, jobName)) # store return value
         return script
     
