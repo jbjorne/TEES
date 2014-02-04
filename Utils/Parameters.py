@@ -3,10 +3,8 @@ import types
 sys.path.append(os.path.dirname(os.path.abspath(__file__))+"/..")
 import Utils.Libraries.combine as combine
 
-def split(string, delimiter=":"):
+def split(string, delimiter=":", ignoreOpen = "([{'\"", ignoreClose = ")]}'\""):
     s = ""
-    ignoreOpen = "([{'\""
-    ignoreClose = ")]}'\""
     ignore = ""
     for i in range(len(string)):
         c = string[i]
@@ -17,10 +15,7 @@ def split(string, delimiter=":"):
                 raise Exception("Mismatched opening '" + ignore[-1] + "' for closing character '" + c + "' in '" + string + "' at position " + str(i))
         elif c in ignoreOpen:
             ignore += c
-        #if c in "([{'\"" and not ignore:
-        #    ignore += True
-        #if c in ")]}'\"" and ignore:
-        #    ignore = False
+
         if c == delimiter and ignore == "":
             yield s
             s = ""
