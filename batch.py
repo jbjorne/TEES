@@ -94,7 +94,7 @@ def submitJob(command, input, connection, jobTag=None, output=None, regex=None, 
         print >> sys.stderr, "Dummy mode"
         if connection.debug:
             print >> sys.stderr, "------- Job command -------"
-            print >> sys.stderr, command
+            print >> sys.stderr, connection.makeJobScript(command, jobDir, jobName)
             print >> sys.stderr, "--------------------------"
     return True
 

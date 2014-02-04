@@ -12,7 +12,7 @@ import tempfile
 class UnixConnection:
     #programGroupSet = False
     
-    def __init__(self, account=None, workdir=None, settings=None, memory=None, cores=None, jobLimit=None, killGroup=True, debug=False):
+    def __init__(self, account=None, workdir=None, settings=None, memory=None, cores=None, jobLimit=None, killGroup=True, preamble=None, debug=False):
         self.account = account
         if memory == None:
             memory = 4194304
@@ -22,6 +22,7 @@ class UnixConnection:
         self.cores = int(cores)
         #self.machineName = account.split("@")[-1]
         self.workDir = workdir
+        self.preamble = preamble
         #self._workDirBase = workDirBase
         #self.setWorkDir("", False)
         # State constants
@@ -338,9 +339,7 @@ class UnixConnection:
         if type(stderr) in types.StringTypes:
             print >> sys.stderr, "Job", jobName + "'s stderr at local file", stderr
             logFiles[1] = stderr = open(stderr, "wt")
-        if jobDir != None:
-            script = "cd " + jobDir + "; " + script
-        script += "; echo retcode=$? >> " + self.getRemotePath(self._getJobPath(jobDir, jobName)) # store return value
+        script = self.makeJobScript(script, jobDir=None, jobName=None)
         if self.debug:
             print >> sys.stderr, "------- Job script -------"
             print >> sys.stderr, script
@@ -366,6 +365,15 @@ class UnixConnection:
             self._logs[job] = logFiles
         print >> sys.stderr, "Submitted job", jobArgs["PID"], jobArgs["time"]
         return job
+    
+    def makeJobScript(self, script, jobDir=None, jobName=None):
+        script = ""
+        if self.preamble != None:
+            script += self.preamble + ";"
+        if jobDir != None:
+            script += "cd " + jobDir + "; " + script
+        script += "; echo retcode=$? >> " + self.getRemotePath(self._getJobPath(jobDir, jobName)) # store return value
+        return script
     
     def _closeLogs(self, job):
         if job in self._logs:

@@ -6,13 +6,12 @@ import subprocess
 
 class ClusterConnection(UnixConnection):
     def __init__(self, account=None, workdir=None, settings=None, memory=None, cores=None, modules=None, wallTime=None, preamble=None, debug=False):
-        UnixConnection.__init__(self, killGroup=False, account=account, workdir=workdir, settings=settings, memory=memory, cores=cores, debug=debug)
+        UnixConnection.__init__(self, killGroup=False, account=account, workdir=workdir, settings=settings, memory=memory, cores=cores, preamble=preamble, debug=debug)
         self.wallTime = wallTime
         self.modules = modules
         self.submitCommand = None
         self.jobListCommand = None
         self.jobTemplate = None
-        self.preamble = preamble
     
     def getJobStatus(self, job):
         jobAttr = self._readJobFile(job)
@@ -90,7 +89,7 @@ class ClusterConnection(UnixConnection):
         
         commands = ""
         if self.preamble != None:
-            commands += self.preamble + "\n\n"
+            commands += self.preamble + "\n"
         if modules == None:
             modules = self.modules
         if modules != None:

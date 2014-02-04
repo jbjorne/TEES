@@ -16,7 +16,7 @@ def getConnection(connection): #, account=None, workDirBase=None, remoteSettings
         return getConnection(getattr(Settings, connection))
         #return getConnection(*getattr(Settings, connection))
     else: # connection is a parameter string or dictionary
-        defaultParams = dict.fromkeys(["connection", "account", "workdir", "settings", "memory", "cores", "modules", "wallTime", "jobLimit", "debug"])
+        defaultParams = dict.fromkeys(["connection", "account", "workdir", "settings", "memory", "cores", "modules", "wallTime", "jobLimit", "preamble", "debug"])
         defaultParams["debug"] = False
         connection = Parameters.get(connection, valueListKey="connection", valueTypes={"debug":[bool]}, defaults=defaultParams)
         if connection["connection"] == None:
