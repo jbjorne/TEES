@@ -5,13 +5,23 @@ import Utils.Libraries.combine as combine
 
 def split(string, delimiter=":"):
     s = ""
-    ignore = False
-    for c in string:
-        if c in "([{":
-            ignore = True
-        elif c in ")]}":
-            ignore = False
-        if c == delimiter and not ignore:
+    ignoreOpen = "([{'\""
+    ignoreClose = ")]}'\""
+    ignore = ""
+    for i in range(len(string)):
+        c = string[i]
+        if ignore != "" and c in ignoreClose:
+            if ignore != "" and ignoreClose[ ignoreOpen.index(ignore[-1]) ] == c:
+                ignore = ignore[:-1]
+            else:
+                raise Exception("Mismatched opening '" + ignore[-1] + "' for closing character '" + c + "' in '" + string + "' at position " + str(i))
+        elif c in ignoreOpen:
+            ignore += c
+        #if c in "([{'\"" and not ignore:
+        #    ignore += True
+        #if c in ")]}'\"" and ignore:
+        #    ignore = False
+        if c == delimiter and ignore == "":
             yield s
             s = ""
         else:
@@ -39,9 +49,9 @@ def toDict(parameters, valueListKey=None):
         if name.strip() != "":
             values = True
             if "=" in name:
-                assert name.count("=") == 1, name
-                name, values = name.split("=")
-                values = values.strip().split(",")
+                #assert name.count("=") == 1, name
+                name, values = [x for x in split(name, "=")]
+                values = [x for x in split(values.strip(), ",")]
                 if len(values) == 1:
                     values = values[0]
             paramDict[name.strip()] = values
@@ -147,3 +157,27 @@ def cat(default, new, verboseMessage=None, verboseFor=["cat", "new", "default"])
         if verboseMessage != None and "default" in verboseFor:
             print >> sys.stderr, "Using default parameters (" + verboseMessage + "): " + str(default)
         return default
+
+if __name__=="__main__":
+    # Import Psyco if available
+    try:
+        import psyco
+        psyco.full()
+        print >> sys.stderr, "Found Psyco, using"
+    except ImportError:
+        print >> sys.stderr, "Psyco not installed"
+        
+    from optparse import OptionParser
+    optparser = OptionParser(description="Predict events/relations")
+    optparser.add_option("-i", "--input", default=None, dest="input", help="input")
+    optparser.add_option("-n", "--name", default=None, dest="name", help="input is a python file, name is the setting variable in the file")
+    optparser.add_option("-o", "--output", default=None, dest="output", help="output file stem")
+    (options, args) = optparser.parse_args()
+    
+    if options.name != None:
+        import imp
+        module = imp.load_source("ParametersInput", options.input)
+        exec "options.input = module." + options.name
+    
+    params = get(options.input)
+    print >> sys.stderr, params
