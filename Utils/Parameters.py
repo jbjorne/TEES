@@ -17,9 +17,14 @@ def split(string, delimiter=":", ignoreOpen = "([{'\"", ignoreClose = ")]}'\""):
             ignore += c
 
         if c == delimiter and ignore == "":
-            yield s
-            s = ""
-        else:
+            if string[i-1:i] == "\\": # protected delimiter
+                s += c
+            else:
+                yield s
+                s = ""
+        elif c == "\\" and string[i+1:i+2] == delimiter and ignore == "": # remove delimiter protector
+            pass
+        else: 
             s += c
     if s != "":
         yield s
@@ -174,5 +179,6 @@ if __name__=="__main__":
         module = imp.load_source("ParametersInput", options.input)
         exec "options.input = module." + options.name
     
+    print >> sys.stderr, "input:", options.input
     params = get(options.input)
-    print >> sys.stderr, params
+    print >> sys.stderr, "params:", params
