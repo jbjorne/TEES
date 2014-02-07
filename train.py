@@ -53,12 +53,12 @@ def train(output, task=None, detector=None, inputFiles=None, models=None, parse=
     @param subset: A parameter set for making subsets of input files
     """
     # Insert default arguments where needed
-    inputFiles = Parameters.get(inputFiles, {"train":None, "devel":None, "test":None})
-    models = Parameters.get(models, {"devel":None, "test":None})
-    exampleStyles = Parameters.get(exampleStyles, {"examples":None, "trigger":None, "edge":None, "unmerging":None, "modifiers":None})
-    classifierParams = Parameters.get(classifierParams, {"examples":None, "trigger":None, "recall":None, "edge":None, "unmerging":None, "modifiers":None})
-    subset = Parameters.get(subset, {"train":None, "devel":None, "test":None, "seed":0, "all":None})
-    folds = Parameters.get(folds, {"train":None, "devel":None, "test":None})
+    inputFiles = setDictDefaults(inputFiles, {"train":None, "devel":None, "test":None})
+    models = setDictDefaults(models, {"devel":None, "test":None})
+    exampleStyles = setDictDefaults(exampleStyles, {"examples":None, "trigger":None, "edge":None, "unmerging":None, "modifiers":None})
+    classifierParams = setDictDefaults(classifierParams, {"examples":None, "trigger":None, "recall":None, "edge":None, "unmerging":None, "modifiers":None})
+    subset = setDictDefaults(subset, {"train":None, "devel":None, "test":None, "seed":0, "all":None})
+    folds = setDictDefaults(folds, {"train":None, "devel":None, "test":None})
     processUnmerging = getDefinedBool(processUnmerging)
     processModifiers = getDefinedBool(processModifiers)
     # Initialize working directory
@@ -140,6 +140,14 @@ def train(output, task=None, detector=None, inputFiles=None, models=None, parse=
             detector.classify(inputFiles["test"], models["test"], "classification-test/test", fromStep=detectorSteps["TEST"], workDir="classification-test")
             if detector.bioNLPSTParams["convert"]:
                 Utils.STFormat.Compare.compare("classification-test/test-events.tar.gz", "classification-devel/devel-events.tar.gz", "a2")
+
+def setDictDefaults(dictionary, defaults):
+    if dictionary == None:
+        return defaults.copy()
+    for key in defaults:
+        if key not in dictionary:
+            dictionary[key] = defaults[key]
+    return dictionary
 
 def getSteps(step, omitSteps, mainSteps):
     # Determine substep to start from, for the main step from which processing starts
@@ -288,9 +296,9 @@ def learnSettings(inputFiles, detector, classifierParameters):
     if detector == "Detectors.EventDetector":
         classifierParameters["unmerging"] = Parameters.cat("c=1,10,100,500,1000,1500,2500,5000,10000,20000,50000,80000,100000", classifierParameters["unmerging"], "Classifier parameters for unmerging")        
         classifierParameters["modifiers"] = Parameters.cat("c=5000,10000,20000,50000,100000", classifierParameters["modifiers"], "Classifier parameters for modifiers")
-        classifierParameters["edge"] = Parameters.cat("c=1000,4500,5000,7500,10000,20000,25000,27500,28000,29000,30000,35000,40000,50000,60000,65000", classifierParameters["examples"], "Classifier parameters for edges")
-        classifierParameters["trigger"] = Parameters.cat("c=1000,5000,10000,20000,50000,80000,100000,150000,180000,200000,250000,300000,350000,500000,1000000", classifierParameters["examples"], "Classifier parameters for triggers")
-        classifierParameters["recall"] = Parameters.cat("0.5,0.6,0.65,0.7,0.85,1.0,1.1,1.2", classifierParameters["examples"], "Recall adjustment parameters")
+        classifierParameters["edge"] = Parameters.cat("c=1000,4500,5000,7500,10000,20000,25000,27500,28000,29000,30000,35000,40000,50000,60000,65000", classifierParameters["edge"], "Classifier parameters for edges")
+        classifierParameters["trigger"] = Parameters.cat("c=1000,5000,10000,20000,50000,80000,100000,150000,180000,200000,250000,300000,350000,500000,1000000", classifierParameters["trigger"], "Classifier parameters for triggers")
+        classifierParameters["recall"] = Parameters.cat("0.5,0.6,0.65,0.7,0.85,1.0,1.1,1.2", classifierParameters["recall"], "Recall adjustment parameters")
     elif detector == "Detectors.EntityDetector":
         classifierParameters["examples"] = Parameters.cat("c=1000,5000,10000,20000,50000,80000,100000,150000,180000,200000,250000,300000,350000,500000,1000000", classifierParameters["examples"], "Classifier parameters for entities")
     elif detector == "Detectors.EdgeDetector":

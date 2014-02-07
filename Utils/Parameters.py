@@ -151,8 +151,8 @@ def cat(default, new, verboseMessage=None, verboseFor=["cat", "new", "default"])
         return default + new
     elif new != None:
         if verboseMessage != None and "new" in verboseFor:
-            print >> sys.stderr, "Using new parameters (" + verboseMessage + "): " + new.strip(":")
-        return new.strip(":")
+            print >> sys.stderr, "Using new parameters (" + verboseMessage + "): " + new
+        return new
     else:
         if verboseMessage != None and "default" in verboseFor:
             print >> sys.stderr, "Using default parameters (" + verboseMessage + "): " + str(default)
