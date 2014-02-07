@@ -161,7 +161,8 @@ class Detector():
     
     def addClassifierModel(self, model, classifierModelPath, classifierParameters, threshold=None):
         classifierModel = model.get(self.tag+"classifier-model", True)
-        shutil.copy2(classifierModelPath, classifierModel)
+        if classifierModelPath != None and os.path.exists(classifierModelPath):
+            shutil.copy2(classifierModelPath, classifierModel)
         model.addStr(self.tag+"classifier-parameter", Parameters.toString(Parameters.get(classifierParameters)))
         if threshold != None:
             model.addStr(self.tag+"threshold", str(threshold))
