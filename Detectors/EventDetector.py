@@ -9,6 +9,7 @@ from UnmergingDetector import UnmergingDetector
 from ModifierDetector import ModifierDetector
 #from Core.RecallAdjust import RecallAdjust
 import Utils.Parameters as Parameters
+from Utils.Libraries.combine import combine
 import Utils.InteractionXML as InteractionXML
 import Evaluators.EvaluateInteractionXML as EvaluateInteractionXML
 import Utils.STFormat.ConvertXML
@@ -170,28 +171,30 @@ class EventDetector(Detector):
         self.triggerDetector.buildExamples(self.model, [self.optData], [self.workDir+"grid-trigger-examples.gz"])
 
         if self.fullGrid:
-            # Parameters to optimize
-            ALL_PARAMS={
-                "trigger":[int(i) for i in Parameters.get(self.triggerClassifierParameters, valueListKey="c")["c"]], 
-                "booster":[float(i) for i in self.recallAdjustParameters.split(",")], 
-                "edge":[int(i) for i in Parameters.get(self.edgeClassifierParameters, valueListKey="c")["c"]] }
+            stepParams = {
+                "trigger":Parameters.get(self.model.getStr(self.triggerDetector.tag+"classifier-parameters-train", defaultIfNotExist=""), valueListKey="c"),
+                "booster":[float(i) for i in self.recallAdjustParameters.split(",")],
+                "edge":Parameters.get(self.model.getStr(self.edgeDetector.tag+"classifier-parameters-train", defaultIfNotExist=""), valueListKey="c")}
         else:
-            ALL_PARAMS={"trigger":Parameters.get(self.model.getStr(self.triggerDetector.tag+"classifier-parameter", defaultIfNotExist=""), valueListKey="c"),
-                        "booster":[float(i) for i in self.recallAdjustParameters.split(",")],
-                        "edge":Parameters.get(self.model.getStr(self.edgeDetector.tag+"classifier-parameter", defaultIfNotExist=""), valueListKey="c")}
-            if "c" in ALL_PARAMS["trigger"]:
-                ALL_PARAMS["trigger"] = ALL_PARAMS["trigger"]["c"]
-            else:
-                ALL_PARAMS["trigger"] = None
-            if "c" in ALL_PARAMS["edge"]:
-                ALL_PARAMS["edge"] = ALL_PARAMS["edge"]["c"]
-            else:
-                ALL_PARAMS["edge"] = None
+            stepParams = {
+                "trigger":Parameters.get(self.model.getStr(self.triggerDetector.tag+"classifier-parameter", defaultIfNotExist=""), valueListKey="c"),
+                "booster":[float(i) for i in self.recallAdjustParameters.split(",")],
+                "edge":Parameters.get(self.model.getStr(self.edgeDetector.tag+"classifier-parameter", defaultIfNotExist=""), valueListKey="c")}
         
-        paramCombinations = Parameters.getCombinations(ALL_PARAMS, ["trigger", "booster", "edge"])
+        for step in ["trigger", "edge"]:
+            stepParams[step] = Parameters.getCombinations(stepParams[step])
+            for i in range(len(stepParams[step])):
+                stepParams[step][i] = Parameters.toString(stepParams[step][i])
+        print >> sys.stderr, [stepParams[x] for x in ["trigger", "booster", "edge"]]
+        paramCombinations = combine(*[stepParams[x] for x in ["trigger", "booster", "edge"]])
+        print >> sys.stderr, paramCombinations
+        for i in range(len(paramCombinations)):
+            paramCombinations[i] = {"trigger":paramCombinations[i][0], "booster":paramCombinations[i][1], "edge":paramCombinations[i][2]}
+        
+        #paramCombinations = Parameters.getCombinations(ALL_PARAMS, ["trigger", "booster", "edge"])
         prevParams = None
-        EDGE_MODEL_STEM = os.path.join(self.edgeDetector.workDir, os.path.normpath(self.model.path)+"-edge-models/model-c_")
-        TRIGGER_MODEL_STEM = os.path.join(self.triggerDetector.workDir, os.path.normpath(self.model.path)+"-trigger-models/model-c_")
+        EDGE_MODEL_STEM = os.path.join(self.edgeDetector.workDir, os.path.normpath(self.model.path)+"-edge-models/model")
+        TRIGGER_MODEL_STEM = os.path.join(self.triggerDetector.workDir, os.path.normpath(self.model.path)+"-trigger-models/model")
         self.structureAnalyzer.load(self.model)
         bestResults = None
         for i in range(len(paramCombinations)):
@@ -200,14 +203,15 @@ class EventDetector(Detector):
             print >> sys.stderr, "Processing params", str(i+1) + "/" + str(len(paramCombinations)), params
             print >> sys.stderr, "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
             # Triggers and Boost
-            if prevParams == None or prevParams["trigger"] != params["trigger"] or prevParams["booster"] != params["booster"]:
-                print >> sys.stderr, "Classifying trigger examples for parameters", "trigger:" + str(params["trigger"]), "booster:" + str(params["booster"])
-                xml = self.triggerDetector.classifyToXML(self.optData, self.model, self.workDir+"grid-trigger-examples", self.workDir+"grid-", classifierModel=TRIGGER_MODEL_STEM+str(params["trigger"]), recallAdjust=params["booster"])
+            print >> sys.stderr, TRIGGER_MODEL_STEM + Parameters.toId(params["trigger"])
+            if prevParams == None or prevParams["trigger"] != params["trigger"] or prevParams["trigger"] != params["trigger"]:
+                print >> sys.stderr, "Classifying trigger examples for parameters", "trigger:" + str(params["trigger"]), "booster:" + str(params["trigger"])
+                xml = self.triggerDetector.classifyToXML(self.optData, self.model, self.workDir+"grid-trigger-examples", self.workDir+"grid-", classifierModel=TRIGGER_MODEL_STEM + Parameters.toId(params["trigger"]), recallAdjust=params["booster"])
             prevParams = params
             ## Build edge examples
             #self.edgeDetector.buildExamples(self.model, [xml], [self.workDir+"grid-edge-examples"], [self.optData])
             # Classify with pre-defined model
-            edgeClassifierModel=EDGE_MODEL_STEM+str(params["edge"])
+            edgeClassifierModel = EDGE_MODEL_STEM + Parameters.toId(params["edge"])
             xml = self.edgeDetector.classifyToXML(xml, self.model, self.workDir+"grid-edge-examples", self.workDir+"grid-", classifierModel=edgeClassifierModel, goldData=self.optData)
             bestResults = self.evaluateGrid(xml, params, bestResults)
         # Remove remaining intermediate grid files

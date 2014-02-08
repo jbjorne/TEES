@@ -1,6 +1,7 @@
 import sys,os
 from sklearn.datasets import load_svmlight_file
-from sklearn.externals import joblib
+#from sklearn.externals import joblib
+import pickle
 sys.path.append(os.path.dirname(os.path.abspath(__file__))+"/..")
 
 def getClassifier(id, params):
@@ -11,6 +12,18 @@ def getClassifier(id, params):
     #print "from " + prefix + package + " import " + cls + " as " + cls
     exec "from " + prefix + package + " import " + cls + " as " + cls
     return eval(cls)
+
+def saveClf(clf, filename):
+    f = open(filename, "w")
+    pickle.dump(clf, f)
+    f.close()
+    return filename
+
+def loadClf(filename):
+    f = open(filename, "r")
+    clf = pickle.load(f)
+    f.close()
+    return clf
 
 def train():
     params, files = getParameters(["examples", "model"])
@@ -31,11 +44,11 @@ def train():
         clf.teesProba = False
     print >> sys.stderr, "Training", clfName, "with arguments", params, "and files", files
     print >> sys.stderr, clf.fit(X_train, y_train)
-    print >> sys.stderr, clfName, "model saved to", joblib.dump(clf, files["model"], True)
+    print >> sys.stderr, clfName, "model saved to", saveClf(clf, files["model"])
 
 def classify():
     params, files = getParameters(["examples", "model", "predictions"])
-    clf = joblib.load(files["model"])
+    clf = loadClf(files["model"])
     #print dir(clf)
     #print clf.shape_fit_
     print >> sys.stderr, "Classifying files", files

@@ -29,6 +29,24 @@ def split(string, delimiter=":", ignoreOpen = "([{'\"", ignoreClose = ")]}'\""):
     if s != "":
         yield s
 
+def toId(parameters, valueListKey=None):
+    parameters = toDict(parameters, valueListKey)
+    paramKeys = sorted(parameters.keys())
+    idStr = ""
+    for key in paramKeys:
+        if key.startswith("TEES."):
+            continue
+        if parameters[key] != None:
+            idStr += "-" + str(key) + "_" + str(parameters[key])
+        else:
+            idStr += "-" + str(key)
+    # sanitize id
+    idStr = idStr.replace(":", ".")
+    idStr = idStr.replace(" ", "_")
+    idStr = "".join([c for c in idStr if c.isalnum() or c in ('.','_',"-")]).rstrip()
+    return idStr
+
+
 def toDict(parameters, valueListKey=None):
     if parameters == None:
         return {}
