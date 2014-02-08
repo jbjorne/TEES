@@ -315,7 +315,7 @@ class EventDetector(Detector):
                 self.combinedModel.addStr("unmerging-example-style", self.model.getStr("unmerging-example-style"))
                 self.combinedModel.insert(self.model.get("unmerging-ids.classes"), "unmerging-ids.classes")
                 self.combinedModel.insert(self.model.get("unmerging-ids.features"), "unmerging-ids.features")
-                self.unmergingDetector.addClassifierModel(self.combinedModel, self.model.get("unmerging-classifier-model", defaultIfNotExist=None), 
+                self.unmergingDetector.addClassifierModel(self.combinedModel, self.model.get("unmerging-classifier-model", True), 
                                                           self.model.getStr("unmerging-classifier-parameter"))
                 self.combinedModel.save()
 
