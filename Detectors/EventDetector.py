@@ -203,9 +203,8 @@ class EventDetector(Detector):
             print >> sys.stderr, "Processing params", str(i+1) + "/" + str(len(paramCombinations)), params
             print >> sys.stderr, "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
             # Triggers and Boost
-            print >> sys.stderr, TRIGGER_MODEL_STEM + Parameters.toId(params["trigger"])
             if prevParams == None or prevParams["trigger"] != params["trigger"] or prevParams["trigger"] != params["trigger"]:
-                print >> sys.stderr, "Classifying trigger examples for parameters", "trigger:" + str(params["trigger"]), "booster:" + str(params["trigger"])
+                print >> sys.stderr, "Classifying trigger examples for parameters", "trigger:" + str(params["trigger"]), "booster:" + str(params["booster"])
                 xml = self.triggerDetector.classifyToXML(self.optData, self.model, self.workDir+"grid-trigger-examples", self.workDir+"grid-", classifierModel=TRIGGER_MODEL_STEM + Parameters.toId(params["trigger"]), recallAdjust=params["booster"])
             prevParams = params
             ## Build edge examples
