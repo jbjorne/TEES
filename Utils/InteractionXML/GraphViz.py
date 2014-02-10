@@ -24,9 +24,10 @@ def toGraphViz(input, output, id, parse="McCC"):
     
     f = open(output, "wt")
     f.write("digraph " + id.replace(".", "_") + " {\n")
+    #f.write("graph [label=\"Orthogonal edges\", splines=ortho, nodesep=0.1];\n")
+    f.write("graph [nodesep=0.1];\n")
     f.write("node [shape=box];")
     
-    #f.write("subgraph tokens {\n rank=\"same\";\n")
     f.write("subgraph tokens {\n")
     f.write("edge[weight=1000, arrowhead=none];\n")
     f.write("rankdir = LR;\n")
@@ -38,6 +39,20 @@ def toGraphViz(input, output, id, parse="McCC"):
         f.write(token.get("id").replace(".", "_") + " [margin=0 label=\"" + token.get("text") + "\\n[" + token.get("POS") + "]\"];\n")
     f.write("->".join(tokenIds) + ";\n")
     f.write("}\n")
+    
+    f.write("subgraph cluster_1m {\n")
+    f.write("color=invis;\n")
+    f.write("a12m [style=invisible]\n")
+    f.write("}\n")
+    
+    f.write("subgraph dependencies {\n")
+    f.write("node [shape=ellipse margin=0];")
+    f.write("edge[weight=1 color=green];\n")
+    for dep in elements.dependencies:
+        f.write(dep.get("id").replace(".", "_") + " [margin=0 label=\"" + dep.get("type") + "\"];\n")
+        f.write(dep.get("t1").replace(".", "_") + " -> " + dep.get("id").replace(".", "_") + ";\n")
+        f.write(dep.get("id").replace(".", "_") + " -> " + dep.get("t2").replace(".", "_") + ";\n")
+    f.write("}\n")
 
     f.write("subgraph entities {\n")
     #f.write("rank=\"same\";\n")
@@ -48,12 +63,7 @@ def toGraphViz(input, output, id, parse="McCC"):
             headToken = graph.entityHeadTokenByEntity[entity]
             if headToken != None:
                 f.write(entity.get("id").replace(".", "_") + " -> " + headToken.get("id").replace(".", "_") + ";\n")
-    #f.write("}\n")
-    
-    #f.write("subgraph entities {\n")
-    #f.write("edge[weight=1];\n")
-    for entity in elements.entities:
-        if entity.get("event") == "True":
+        else:
             f.write(entity.get("id").replace(".", "_") + " [label=\"" + entity.get("type") + "\"];\n")
     f.write("}\n")
     
@@ -65,17 +75,6 @@ def toGraphViz(input, output, id, parse="McCC"):
             if headToken != None:
                 f.write(entity.get("id").replace(".", "_") + " -> " + headToken.get("id").replace(".", "_") + ";\n")
     f.write("}\n")
-
-    
-#     f.write("subgraph entity_to_token {\n")
-#     f.write("edge[weight=1000, arrowhead=none];\n")
-#     #f.write("rankdir = LR;\n")
-#     #f.write("rank=\"same\";\n")
-#     for entity in elements.entities:
-#         headToken = graph.entityHeadTokenByEntity[entity]
-#         if headToken != None:
-#             f.write(entity.get("id").replace(".", "_") + " -> " + headToken.get("id").replace(".", "_") + ";\n")
-#     f.write("}\n")
     
     f.write("subgraph interactions {\n")
     for interaction in elements.interactions:
