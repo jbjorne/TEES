@@ -1,12 +1,7 @@
 import sys, os, copy
-import sys, os
 thisPath = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.abspath(os.path.join(thisPath,"..")))
-from Utils.ProgressCounter import ProgressCounter
-try:
-    import xml.etree.cElementTree as ET
-except ImportError:
-    import cElementTree as ET
+sys.path.append(os.path.abspath(os.path.join(thisPath,"../..")))
 import Utils.ElementTreeUtils as ETUtils
 from collections import defaultdict
 import types
@@ -33,53 +28,40 @@ def getEmptyCorpus(xml, deletionRules=None, removeNames=False):
     # Remove elements and return the emptied XML
     return processCorpus(xml, None, deletionRules)
     
-def removeElements(parent, elementName, attributes, countsByType):
+def removeElements(parent, rules, reverse, countsByType):
     toRemove = []
-    for element in parent.getchildren():
+    for element in parent:
         attrType = {}
-        if element.tag == elementName:
+        if element.tag in rules:
             remove = True
-            for attrName,values in attributes.iteritems():
-                if element.get(attrName) not in values:
-                    remove = False
-                    break
-                else:
-                    if attrName not in attrType:
-                        attrType[attrName] = set()
-                    attrType[attrName].add(element.get(attrName))
+            if rules[element.tag] != None and len(rules[element.tag]) > 0:
+                for attrName in rules[element.tag]:
+                    if element.get(attrName) not in rules[element.tag][attrName]:
+                        remove = False
+                        break
+                    else:
+                        if attrName not in attrType:
+                            attrType[attrName] = set()
+                        attrType[attrName].add(element.get(attrName))
+            if reverse:
+                remove = not remove
             if remove:
                 toRemove.append(element)
-                countsByType[elementName + " " + str(attrType)] += 1
+                countsByType[element.tag + " " + str(attrType)] += 1
         else:
-            removeElements(element, elementName, attributes, countsByType)
+            removeElements(element, rules, reverse, countsByType)
     for element in toRemove:
         parent.remove(element)
-        #countsByType[elementName] += 1
-            
-# Splits entities/edges with merged types into separate elements
-def processSentence(sentence, rules, countsByType):
-    for key in sorted(rules.keys()):
-        #print key, rules[key]
-        removeElements(sentence, key, rules[key], countsByType)
 
-def processCorpus(inputFilename, outputFilename, rules):
+def processCorpus(inputFilename, outputFilename, rules, reverse=False):
     print >> sys.stderr, "Deleting elements, rules =", rules
     print >> sys.stderr, "Loading corpus file", inputFilename
     corpusTree = ETUtils.ETFromObj(inputFilename)
     corpusRoot = corpusTree.getroot()
     
-    for eType in rules.keys():
-        for attrRule in rules[eType].keys():
-            if type(rules[eType][attrRule]) in types.StringTypes: 
-                rules[eType][attrRule] = rules[eType][attrRule].split("|")
-    
-    documents = corpusRoot.findall("document")
-    counter = ProgressCounter(len(documents), "Documents")
     countsByType = defaultdict(int)
-    for document in documents:
-        counter.update()
-        for sentence in document.findall("sentence"):
-            processSentence(sentence, rules, countsByType)
+    removeElements(corpusRoot, rules, reverse, countsByType)
+    
     print >> sys.stderr, "Deleted elements"
     for k in sorted(countsByType.keys()):
         print >> sys.stderr, "  " + k + ":", countsByType[k]
@@ -90,8 +72,7 @@ def processCorpus(inputFilename, outputFilename, rules):
     return corpusTree
 
 if __name__=="__main__":
-    import sys
-    print >> sys.stderr, "##### Split elements with merged types #####"
+    print >> sys.stderr, "##### Delete Elements #####"
     
     from optparse import OptionParser
     # Import Psyco if available
@@ -106,6 +87,7 @@ if __name__=="__main__":
     optparser.add_option("-i", "--input", default=None, dest="input", help="Corpus in interaction xml format", metavar="FILE")
     optparser.add_option("-o", "--output", default=None, dest="output", help="Output file in interaction xml format.")
     optparser.add_option("-r", "--rules", default=None, dest="rules", help="dictionary of python dictionaries with attribute:value pairs.")    
+    optparser.add_option("-v", "--reverse", default=False, dest="reverse", action="store_true", help="")    
     (options, args) = optparser.parse_args()
     
     if options.input == None:
@@ -120,4 +102,4 @@ if __name__=="__main__":
     # Rules e.g. "{\"pair\":{},\"interaction\":{},\"entity\":{\"given\":\"False\"}}"
     rules = eval(options.rules)
     print >> sys.stderr, "Rules:", rules
-    processCorpus(options.input, options.output, rules)
+    processCorpus(options.input, options.output, rules, options.reverse)
