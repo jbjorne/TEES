@@ -1,6 +1,6 @@
 import sys, os, types
 import codecs
-import Validate
+from RemoveDuplicates import removeDuplicateEvents
 
 class Document:
     def __init__(self, id=None, loadFromDir=None, a2Tags=["a2", "rel"], readExtra=False, debug=False):
@@ -206,6 +206,9 @@ class Document:
         updateIds(self.proteins)
         updateIds(self.triggers, getMaxId(self.proteins) + 1)
         updateIds(self.events)
+        
+        # Remove duplicate events
+        removeDuplicateEvents(self)
         
         # id counters
         self._mCounter = 1
