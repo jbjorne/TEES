@@ -460,9 +460,9 @@ def mapSTArgumentTargets(stDoc, siteParents, tMap, eMap):
         # of the "Site"-argument to the protein that is the target of the core argument, allowing the site to be connected
         # to its core argument.
         argTypeCounts["Theme_and_Cause"] = argTypeCounts["Theme"] + argTypeCounts["Cause"]
-        argsWithSite = set() # prevent more than one site per argument
         if max(argTypeCounts.values()) > 1: # sites must be linked to core arguments
             argsToKeep = []
+            argsWithSite = set() # prevent more than one site per argument
             for arg1 in event.arguments:
                 if arg1.type == "Site":
                     for arg2 in event.arguments:
@@ -472,6 +472,7 @@ def mapSTArgumentTargets(stDoc, siteParents, tMap, eMap):
                                 argsWithSite.add(arg2)
                                 arg1.siteOf = arg2
                                 argsToKeep.append(arg1)
+                                break # so that arg1 won't be duplicated when one site has (incorrectly) two parents
                 else:
                     argsToKeep.append(arg1)
             event.arguments = argsToKeep
