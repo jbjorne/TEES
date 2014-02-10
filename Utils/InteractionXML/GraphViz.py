@@ -28,29 +28,58 @@ def toGraphViz(input, output, id, parse="McCC"):
     
     #f.write("subgraph tokens {\n rank=\"same\";\n")
     f.write("subgraph tokens {\n")
-    f.write("edge[weight=20, arrowhead=none];\n")
-    f.write("rankdir = LR;\n");
-    f.write("rank=\"same\";\n");
+    f.write("edge[weight=1000, arrowhead=none];\n")
+    f.write("rankdir = LR;\n")
+    f.write("rank=\"same\";\n")
+    f.write("nodesep=0.01;\n")
     tokenIds = []
     for token in elements.tokens:
         tokenIds.append(token.get("id").replace(".", "_"))
-        f.write(token.get("id").replace(".", "_") + " [label=\"" + token.get("text") + " [" + token.get("POS") + "]\"];\n")
+        f.write(token.get("id").replace(".", "_") + " [margin=0 label=\"" + token.get("text") + "\\n[" + token.get("POS") + "]\"];\n")
     f.write("->".join(tokenIds) + ";\n")
     f.write("}\n")
-    
+
     f.write("subgraph entities {\n")
+    #f.write("rank=\"same\";\n")
+    f.write("edge[weight=1];\n")
     for entity in elements.entities:
-        f.write(entity.get("id").replace(".", "_") + " [label=\"" + entity.get("type") + "\"];\n")
+        if entity.get("event") != "True":
+            f.write(entity.get("id").replace(".", "_") + " [label=\"" + entity.get("type") + "\"];\n")
+            headToken = graph.entityHeadTokenByEntity[entity]
+            if headToken != None:
+                f.write(entity.get("id").replace(".", "_") + " -> " + headToken.get("id").replace(".", "_") + ";\n")
+    #f.write("}\n")
+    
+    #f.write("subgraph entities {\n")
+    #f.write("edge[weight=1];\n")
+    for entity in elements.entities:
+        if entity.get("event") == "True":
+            f.write(entity.get("id").replace(".", "_") + " [label=\"" + entity.get("type") + "\"];\n")
     f.write("}\n")
     
+    f.write("subgraph event_to_token {\n")
+    f.write("edge[weight=1 color=blue];\n")
     for entity in elements.entities:
-        headToken = graph.entityHeadTokenByEntity[entity]
-        if headToken != None:
-            f.write(entity.get("id").replace(".", "_") + " -> " + headToken.get("id").replace(".", "_") + ";\n")
+        if entity.get("event") == "True":
+            headToken = graph.entityHeadTokenByEntity[entity]
+            if headToken != None:
+                f.write(entity.get("id").replace(".", "_") + " -> " + headToken.get("id").replace(".", "_") + ";\n")
+    f.write("}\n")
+
+    
+#     f.write("subgraph entity_to_token {\n")
+#     f.write("edge[weight=1000, arrowhead=none];\n")
+#     #f.write("rankdir = LR;\n")
+#     #f.write("rank=\"same\";\n")
+#     for entity in elements.entities:
+#         headToken = graph.entityHeadTokenByEntity[entity]
+#         if headToken != None:
+#             f.write(entity.get("id").replace(".", "_") + " -> " + headToken.get("id").replace(".", "_") + ";\n")
+#     f.write("}\n")
     
     f.write("subgraph interactions {\n")
     for interaction in elements.interactions:
-        f.write(interaction.get("e1").replace(".", "_") + " -> " + interaction.get("e2").replace(".", "_") + " [label=\"" + interaction.get("type") + "\"];\n")
+        f.write(interaction.get("e1").replace(".", "_") + " -> " + interaction.get("e2").replace(".", "_") + " [fontsize=8 label=\"" + interaction.get("type") + "\"];\n")
     f.write("}\n")
     
     f.write("}\n")
