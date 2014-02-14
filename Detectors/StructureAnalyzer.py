@@ -423,7 +423,7 @@ class StructureAnalyzer():
         # initialize
         self._init()
         # add definitions
-        for line in lines():
+        for line in lines:
             if line.startswith("ENTITY"):
                 definitionClass = Entity
                 definitions = self.entities
@@ -456,8 +456,8 @@ class StructureAnalyzer():
         print >> sys.stderr, "Relations:", self.relations
 
 def rangeToTuple(string):
-    assert string.startswith("[")
-    assert string.endswith("]")
+    assert string.startswith("["), string
+    assert string.endswith("]"), string
     string = string.strip("[").strip("]")
     begin, end = string.split(",")
     begin = int(begin)
@@ -548,11 +548,11 @@ class Event():
             raise Exception("Not an event definition line: " + line)
         tabSplits = line.split("\t")
         self.type = tabSplits[0].split()[1]
-        self.minArgs, self.maxArgs = rangeToTuple(tabSplits[0].split()[1])
+        self.minArgs, self.maxArgs = rangeToTuple(tabSplits[0].split()[2])
         for tabSplit in tabSplits[1:]:
             argument = Argument()
             argument.load(tabSplit)
-        self.arguments[argument.type] = argument
+            self.arguments[argument.type] = argument
 
 class Argument():
     def __init__(self, argType=None):
@@ -675,11 +675,12 @@ if __name__=="__main__":
         s.showDebugInfo()
     print >> sys.stderr, "--- Structure Analysis ----"
     print >> sys.stderr, s.toString()
-    if options.output != None:
-        s.save(None, options.output)
     if options.validate != None:
         print >> sys.stderr, "--- Validation ----"
         xml = ETUtils.ETFromObj(options.validate)
         s.validate(xml, simulation=False, debug=options.debug)
         if options.output != None:
             ETUtils.write(xml, options.output)
+    elif options.output != None:
+        print >> sys.stderr, "Structure analysis saved to", options.output
+        s.save(None, options.output)
