@@ -9,10 +9,16 @@ from Core.SentenceGraph import SentenceGraph
 def getId(element, attribute="id"):
     return element.get(attribute).replace(".", "_");
 
+def getColorScheme(scheme):
+    if scheme != None:
+        return "colorscheme="+scheme
+    else:
+        return None
+
 def getColor(string, scheme, numColors):
     if scheme == None:
         return ""
-    return "colorscheme=" + scheme + " color=" + str(numColors - hash(string) % numColors)
+    return "color=" + str(numColors - hash(string) % numColors)
 
 def getHeadScore(token):
     headScore = 0
@@ -71,11 +77,11 @@ def toGraphViz(input, output, id, parse="McCC", color=None, colorNum=None, color
     f.write("digraph " + id.replace(".", "_") + " {\n")
     #f.write("graph [label=\"Orthogonal edges\", splines=ortho, nodesep=0.1];\n")
     f.write("graph [nodesep=0.1];\n")
-    f.write("node [shape=box];")
+    f.write("node [shape=box];\n\n")
     #f.write("ranksep=0.5;")
     
     f.write("subgraph tokens {\n")
-    f.write("edge[weight=1000, arrowhead=none];\n")
+    f.write("edge [weight=1000, arrowhead=none];\n")
     f.write("rankdir = LR;\n")
     f.write("rank=\"same\";\n")
     f.write("nodesep=0.01;\n")
@@ -85,27 +91,14 @@ def toGraphViz(input, output, id, parse="McCC", color=None, colorNum=None, color
         tokenIds.append(token.get("id").replace(".", "_"))
         f.write(getId(token) + " [margin=0 label=\"" + token.get("text") + "\\n" + token.get("POS") + "\"];\n")
     f.write("->".join(tokenIds) + ";\n")
-    f.write("}\n")
+    f.write("}\n\n")
     
-    #scheme = colorParse
-    #numColors = colorNumParse
     f.write("subgraph dependencies {\n")
-    #f.write("rank=\"same\";\n")
-    #f.write("node [shape=ellipse margin=0];")
-    f.write("edge[weight=0.001 color=green];\n")
-    #f.write("{ rank=\"same\";\n")
-    #tokensByHeadScore = {}
-    #for token in elements.tokens:
-    #    headScore = getHeadScore(token)
-    #    if headScore not in tokensByHeadScore:
-    #        tokensByHeadScore[headScore] = []
-    #    tokensByHeadScore[headScore].append(token)
-    #depByHeadScore = {}
-    #depByHeadScore[0] = []
+    f.write("edge[weight=0.001 " + getColorScheme(colorParse) + "];\n")
+    f.write("node[" + getColorScheme(colorParse) + "];\n")
     depStructs = groupDependencies(elements)
     for depStruct in depStructs:
         dep = depStruct["dep"]
-        #color = "colorscheme=rdylgn11 color=" + str(11 - hash(dep.get("type")) % 11)
         depColor = getColor(dep.get("type"), colorParse, colorNumParse)
         f.write(getId(dep, "id") + "[" + depColor + " margin=0 label=\"" + dep.get("type") + "\"];\n")
         f.write(getId(dep, "t1") + " -> " + getId(dep, "id") + "[" + depColor + " weight=10];\n")
@@ -114,39 +107,19 @@ def toGraphViz(input, output, id, parse="McCC", color=None, colorNum=None, color
             #f.write(getId(dep) + " -> " + getId(depStruct["child"]["dep"]) + " [color=red];\n")
             f.write(getId(depStruct["child"]["dep"]) + " -> " + getId(dep) + " [weight=1, color=red style=invis];\n")
         
-#         token = graph.tokensById[dep.get("t1")]
-#         headScore = getHeadScore(token)
-#         if headScore not in depByHeadScore:
-#             depByHeadScore[headScore] = []
-#         depByHeadScore[headScore].append(getId(dep, "id"))
-        
-        
-        #for i in range(headScore, -1, -1):
-        #    for t in tokensByHeadScore[i]:
-        #        f.write(getId(dep) + " -> " + getId(t) + ";\n")
-        ##if token.get("headScore") != None and int(token.get("headScore")) > 0:
-        ##    f.write(getId(dep, "id") + " -> " + token.get("headScore") + ";\n")
-        #f.write(getId(dep, "t1") + " -> " + getId(dep, "t2") + ";\n")
-    #for i in range(max(depByHeadScore.keys())+ 1):
-    #    if i > 0:
-    #        for d1 in depByHeadScore[i]:
-    #            for d2 in depByHeadScore[i-1]:
-    #                f.write(d1 + " -> " + d2 + " [weight=0.01 style=invis];\n")
-    f.write("}\n")
+    f.write("}\n\n")
 
     f.write("subgraph entities {\n")
-    #f.write("rank=\"same\";\n")
     f.write("edge[weight=1];\n")
-    #f.write("{ rank=\"same\";\n")
     for entity in elements.entities:
         if entity.get("event") != "True":
             f.write(getId(entity) + " [label=\"" + entity.get("type") + "\"];\n")
             headToken = graph.entityHeadTokenByEntity[entity]
             if headToken != None:
-                f.write(getId(entity) + " -> " + getId(headToken) + ";\n")
+                f.write(getId(entity) + " -> " + getId(headToken) + " [weight=1 style=dashed color=black];\n")
         else:
             f.write(getId(entity) + " [label=\"" + entity.get("type") + "\"];\n")
-    f.write("}\n")
+    f.write("}\n\n")
     
     f.write("subgraph event_to_token {\n")
     f.write("edge[weight=1 style=dashed color=gray];\n")
@@ -155,13 +128,14 @@ def toGraphViz(input, output, id, parse="McCC", color=None, colorNum=None, color
             headToken = graph.entityHeadTokenByEntity[entity]
             if headToken != None:
                 f.write(getId(entity) + " -> " + getId(headToken) + ";\n")
-    f.write("}\n")
+    f.write("}\n\n")
     
     f.write("subgraph interactions {\n")
+    f.write("edge[" + getColorScheme(color) + "];\n")
     for interaction in elements.interactions:
         intColor = getColor(interaction.get("type"), color, colorNum)
-        f.write(getId(interaction, "e1") + " -> " + getId(interaction, "e2") + "[" + intColor + " fontsize=8 label=\"" + interaction.get("type") + "\"];\n")
-    f.write("}\n")
+        f.write(getId(interaction, "e1") + " -> " + getId(interaction, "e2") + "[" + intColor + " fontsize=10 label=\"" + interaction.get("type") + "\"];\n")
+    f.write("}\n\n")
     
     f.write("}\n")
     f.close()
