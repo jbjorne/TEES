@@ -100,7 +100,13 @@ class StructureAnalyzer():
         self.addTarget(entity)
         
         entityType = entity.get("type")
-        if entity.get("event") == "True": # or entity.get("id") in interactionsByE1:
+        isEvent = entity.get("event") == "True"
+        if not isEvent and entity.get("id") in interactionsByE1: # event can be also defined by simply having outgoing argument edges
+            for interaction in interactionsByE1[entity.get("id")]:
+                if interaction.get("event") == "True":
+                    isEvent = True
+                    break
+        if isEvent:
             if entityType not in self.events:
                 self.events[entityType] = Event(entityType)
         else:
@@ -126,6 +132,11 @@ class StructureAnalyzer():
                         self.edgeTypes[e2Type][e1Type].add(relation.type)
         # Process arguments
         for eventType in sorted(self.events.keys()):
+            # Remove conflicting entities
+            if eventType in self.entities:
+                print >> sys.stderr, "Warning, removing ENTITY conflicting with EVENT for type " + eventType
+                del self.entities[eventType]
+            # Update analyses
             for argType in sorted(self.events[eventType].arguments):
                 # Update set of known event argument types
                 self.eventArgumentTypes.add(argType)
