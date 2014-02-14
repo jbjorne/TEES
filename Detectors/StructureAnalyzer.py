@@ -305,30 +305,38 @@ class StructureAnalyzer():
         # check validity of proposed arguments
         argumentDefinitions = eventDefinition.arguments
         for argType in argTypes:
-            argDef = argumentDefinitions[argType]
-            # Check minimum limit
-            if argTypeCounts[argType] < argDef.min: # check for minimum number of arguments
+            # Check if valid argument
+            if argType not in argumentDefinitions:
                 if issues != None:
-                    issues["TOO_FEW_ARG:"+entityType+"."+argType] += 1
+                    issues["INVALID_ARG_TYPE:"+entityType+"."+argType] += 1
                     valid = False
                 else:
                     return False
-            # Check maximum limit
-            # noUpperLimitBeyondOne = don't differentiate arguments beyond 0, 1 or more than one.
-            if (not noUpperLimitBeyondOne) and argTypeCounts[argType] > argDef.max: # check for maximum number of arguments
-                if issues != None:
-                    issues["TOO_MANY_ARG:"+entityType+"."+argType] += 1
-                    valid = False
-                else:
-                    return False
-            # Check validity of E2 types
-            for e2Type in argE2Types[argType]:
-                if e2Type not in argDef.targetTypes:
+            else:
+                argDef = argumentDefinitions[argType]
+                # Check minimum limit
+                if argTypeCounts[argType] < argDef.min: # check for minimum number of arguments
                     if issues != None:
-                        issues["INVALID_ARG_TARGET:"+entityType+"."+argType+":"+e2Type] += 1
+                        issues["TOO_FEW_ARG:"+entityType+"."+argType] += 1
                         valid = False
                     else:
                         return False
+                # Check maximum limit
+                # noUpperLimitBeyondOne = don't differentiate arguments beyond 0, 1 or more than one.
+                if (not noUpperLimitBeyondOne) and argTypeCounts[argType] > argDef.max: # check for maximum number of arguments
+                    if issues != None:
+                        issues["TOO_MANY_ARG:"+entityType+"."+argType] += 1
+                        valid = False
+                    else:
+                        return False
+                # Check validity of E2 types
+                for e2Type in argE2Types[argType]:
+                    if e2Type not in argDef.targetTypes:
+                        if issues != None:
+                            issues["INVALID_ARG_TARGET:"+entityType+"."+argType+":"+e2Type] += 1
+                            valid = False
+                        else:
+                            return False
         # check that no required arguments are missing
         for argDef in argumentDefinitions.values():
             if argDef.type not in argTypes: # this type of argument is not part of the proposed event
@@ -391,7 +399,11 @@ class StructureAnalyzer():
                     entityType = entity.get("type")
                     if entityType in self.events:
                         issues = defaultdict(int)
-                        if self.isValidEvent(entity, interactionsByE1[entityId], entityById, issues=issues):
+                        eventArgs = []
+                        for arg in interactionsByE1[entityId]:
+                            if arg in keptInteractions:
+                                eventArgs.append(arg)
+                        if self.isValidEvent(entity, eventArgs, entityById, issues=issues):
                             keptEntities.add(entity)
                         else:
                             counts["EVENT:"+entity.get("type")] += 1
