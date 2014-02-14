@@ -207,6 +207,57 @@ class StructureAnalyzer():
             validEdgeTypes = validEdgeTypes.union(self.edgeTypes[e2Type][e1Type])
         return validEdgeTypes
     
+    def isValidRelation(self, interaction, entityById=None, issues=None):
+        if interaction.get("type") not in self.relations:
+            if issues != None: issues["INVALID_TYPE:"+interaction.get("type")] += 1
+            return False
+        relDef = self.relations[interaction.get("type")]
+        e1 = interaction.get("e1")
+        if e1 not in entityById:
+            if issues != None: issues["MISSING_E1:"+interaction.get("type")] += 1
+            return False
+        e2 = interaction.get("e2")
+        if e2 not in entityById:
+            if issues != None: issues["MISSING_E2:"+interaction.get("type")] += 1
+            return False
+        e1 = entityById[e1]
+        e2 = entityById[e2]
+        if e1.get("type") in relDef.e1Types and e2.get("type") in relDef.e2Types:
+            return True
+        elif (not relDef.directed) and e1.get("type") in relDef.e2Types and e2.get("type") in relDef.e1Types:
+            return True
+        else:
+            if issues != None: issues["INVALID_TARGET:"+interaction.get("type")] += 1
+            return False
+    
+    def isValidArgument(self, interaction, entityById=None, issues=None):
+        if interaction.get("type") not in self.eventArgumentTypes:
+            if issues != None: issues["INVALID_TYPE:"+interaction.get("type")] += 1
+            return False
+        e1 = interaction.get("e1")
+        if e1 not in entityById:
+            if issues != None: issues["MISSING_E1:"+interaction.get("type")] += 1
+            return False
+        e1 = entityById[e1]
+        if e1.get("type") not in self.events:
+            if issues != None: issues["INVALID_EVENT_TYPE:"+interaction.get("type")] += 1
+            return False
+        eventDef = self.events[e1.get("type")]
+        if interaction.get("type") not in eventDef.arguments:
+            if issues != None: issues["INVALID_TYPE:"+interaction.get("type")] += 1
+            return False
+        argDef = eventDef.arguments[interaction.get("type")]
+        e2 = interaction.get("e2")
+        if e2 not in entityById:
+            if issues != None: issues["MISSING_E2:"+interaction.get("type")] += 1
+            return False
+        e2 = entityById[e2]
+        if e2.get("type") in argDef.targetTypes:
+            return True
+        else:
+            if issues != None: issues["INVALID_TARGET:"+interaction.get("type")+"->"+e2.get("type")] += 1
+            return False
+    
     def isValidEvent(self, entity, args=None, entityById=None, noUpperLimitBeyondOne=True, issues=None):
         if args == None:
             args = []
@@ -276,7 +327,7 @@ class StructureAnalyzer():
                     else:
                         return False
         # check that no required arguments are missing
-        for argDef in argumentDefinitions:
+        for argDef in argumentDefinitions.values():
             if argDef.type not in argTypes: # this type of argument is not part of the proposed event
                 if argDef.min > 0: # for arguments not part of the event, the minimum limit must be zero
                     if issues != None:
@@ -286,98 +337,83 @@ class StructureAnalyzer():
                         return False
         return valid
     
-    def _getElementDict(self, document, elementType):
-        elementById = {}
-        for element in document.getiterator(elementType):
-            elementId = element.get("id")
-            if elementId == None:
-                raise Exception("Element " + elementType + " without id in document " + str(document.get("id")))
-            if elementId in elementById:
-                raise Exception("Duplicate " + elementType + " id " + str(elementId) + " in document " + str(document.get("id")))
-            elementById[elementId] = element
-        return elementById
-    
-    def _getElementsAndParents(self, rootElement, elementType):
-        elements = []
-        for element in rootElement:
-            elements.append((element, rootElement))
-            elements.extend(self._getElementsAndParents(element, elementType))
-        return elements
+    def _removeNestedElement(self, root, element):
+        for child in root:
+            if child == element:
+                root.remove(child)
+                break
+            else:
+                self._removeNestedElement(child, element)
     
     def validate(self, xml, printCounts=True, simulation=False, debug=False):
-        # 1. validate all edges (as relations)
-        # 2. validate events constructed from remaining edges/entities
-        # 3. repeat 2. until only valid events left
         counts = defaultdict(int)
-        xml = ETUtils.ETFromObj(xml)
         for document in xml.getiterator("document"):
-            entities = [x for x in document.getiterator("entity")]
-            entityById = self._getElementDict(document, "entity")
-            # Remove invalid interaction edges
-            eventArgumentsByE1 = defaultdict(list)
-            relations = []
-            eventArguments = []
-            for interaction in document.getiterator("interaction"):
-                e1 = entityById[interaction.get("e1")]
-                e2 = entityById[interaction.get("e2")]
-                if interaction.get("type") in self.getValidEdgeTypes(e1.get("type"), e2.get("type")):
-                    if interaction.get("event") == "True": # interaction is an event argument
-                        eventArguments.append(interaction)
-                        eventArgumentsByE1[interaction.get("e1")].append(interaction)
-                        #if interaction.get("relation") not in (None, "False"):
-                        #    interaction.set("relation", None)
+            while (True):
+                # Collect elements into dictionaries
+                entityById = {}
+                entities = []
+                for entity in document.getiterator("entity"):
+                    entityById[entity.get("id")] = entity
+                    entities.append(entity)
+                interactionsByE1 = defaultdict(list)
+                arguments = []
+                relations = []
+                keptInteractions = set()
+                keptEntities = set()
+                for interaction in document.getiterator("interaction"):
+                    interactionsByE1[interaction.get("e1")].append(interaction)
+                    if interaction.get("event") == "True":
+                        arguments.append(interaction)
                     else:
                         relations.append(interaction)
-                        #interaction.set("relation", "True")
-            # process events
-            removed = 1
-            while removed > 0:
-                removed = 0
-                remainingEntities = []
-                remainingEntityIds = set()
-                for entity in entities:
-                    entityId = entity.get("id")
+                
+                for relation in relations:
                     issues = defaultdict(int)
-                    if self.isValidEvent(entity, eventArgumentsByE1[entityId], entityById, issues=issues):
-                        remainingEntities.append(entity)
-                        remainingEntityIds.add(entityId)
+                    if self.isValidRelation(relation, entityById, issues):
+                        keptInteractions.add(relation)
                     else:
-                        if debug:
-                            print >> sys.stderr, "Removing invalid event " + entity.get("id") + ":" + entity.get("type") + ":" + ",".join([x.get("type") for x in eventArgumentsByE1[entityId]]) + " with issues " + str(issues)
-                        counts[entity.get("type")] += 1
-                        removed += 1
-                entities = remainingEntities
-                if removed > 0:
-                    # Process event arguments
-                    remainingEventArguments = []
-                    eventArgumentsByE1 = defaultdict(list) # rebuild the map for current remaining entities
-                    for arg in eventArguments:
-                        if arg.get("e1") in remainingEntityIds and arg.get("e2") in remainingEntityIds:
-                            remainingEventArguments.append(arg)
-                            eventArgumentsByE1[arg.get("e1")].append(arg)
-                        elif debug:
-                            print >> sys.stderr, "Removing unconnected argument " + arg.get("id") + ":" + arg.get("type")
-                    eventArguments = remainingEventArguments
-                    # Process relations
-                    remainingRelations = []
-                    for relation in relations:
-                        if relation.get("e1") in remainingEntityIds and relation.get("e2") in remainingEntityIds:
-                            remainingRelations.append(relation)
-                        elif debug:
-                            print >> sys.stderr, "Removing unconnected relation " + relation.get("id") + ":" + relation.get("type")
-                    relations = remainingRelations
-            # clean XML
-            if not simulation:
-                interactions = eventArguments + relations
-                for interaction, parent in self._getElementsAndParents(document, "interaction"):
-                    if interaction not in interactions:
-                        parent.remove(interaction)
-                for entity, parent in self._getElementsAndParents(document, "entity"):
-                    if entity not in entities:
-                        parent.remove(entity)
-        counts = dict(counts)
-        if printCounts:
-            print >> sys.stderr, "Validation removed:", counts
+                        counts["RELATION:"+relation.get("type")] += 1
+                        if debug: print >> sys.stderr, "Removing invalid relation", issues
+                
+                for argument in arguments:
+                    issues = defaultdict(int)
+                    if self.isValidArgument(argument, entityById, issues):
+                        keptInteractions.add(argument)
+                    else:
+                        counts["ARG:"+argument.get("type")] += 1
+                        if debug: print >> sys.stderr, "Removing invalid argument", argument.get("id"), argument.get("type"), issues
+                
+                for entityId in sorted(entityById):
+                    entity = entityById[entityId]
+                    entityType = entity.get("type")
+                    if entityType in self.events:
+                        issues = defaultdict(int)
+                        if self.isValidEvent(entity, interactionsByE1[entityId], entityById, issues=issues):
+                            keptEntities.add(entity)
+                        else:
+                            counts["EVENT:"+entity.get("type")] += 1
+                            if debug: print >> sys.stderr, "Removing invalid event", entityId, issues
+                    elif entityType in self.entities:
+                        keptEntities.add(entity)
+                    else:
+                        counts["ENTITY:"+entity.get("type")] += 1
+                        if debug: print >> sys.stderr, "Removing unknown entity", entityId
+            
+                # clean XML
+                interactions = arguments + relations
+                if not simulation:
+                    for interaction in interactions:
+                        if interaction not in keptInteractions:
+                            self._removeNestedElement(document, interaction)
+                    for entityId in sorted(entityById):
+                        entity = entityById[entityId]
+                        if entity not in keptEntities:
+                            self._removeNestedElement(document, entity)
+                
+                if len(interactions) == len(keptInteractions) and len(entities) == len(keptEntities):
+                    break
+
+        print >> sys.stderr, "Validation removed:", counts
         return counts
     
     # Saving and Loading ######################################################
@@ -447,13 +483,6 @@ class StructureAnalyzer():
             definitions[definition.type] = definition
         
         self._updateSupportingAnalyses()
-    
-    def showDebugInfo(self):
-        # print internal structures
-        print >> sys.stderr, "Argument limits:", self.argLimits
-        print >> sys.stderr, "E2 types:", self.e2Types
-        print >> sys.stderr, "Edge types:", self.edgeTypes
-        print >> sys.stderr, "Relations:", self.relations
 
 def rangeToTuple(string):
     assert string.startswith("["), string
@@ -671,8 +700,6 @@ if __name__=="__main__":
         s.load(None, options.input)
     else:
         s.analyze(options.input.split(","))
-    if options.debug:
-        s.showDebugInfo()
     print >> sys.stderr, "--- Structure Analysis ----"
     print >> sys.stderr, s.toString()
     if options.validate != None:
