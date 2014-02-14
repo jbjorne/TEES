@@ -50,7 +50,7 @@ def groupDependencies(elements):
                     d1["child"] = d2
     return depStructs         
 
-def toGraphViz(input, output, id, parse="McCC"):
+def toGraphViz(input, output, id, parse="McCC", color=None, colorNum=None, colorParse=None, colorNumParse=None):
     print >> sys.stderr, "====== Making Graphs ======"
     xml = ETUtils.ETFromObj(input).getroot()
     sentence = None
@@ -87,8 +87,8 @@ def toGraphViz(input, output, id, parse="McCC"):
     f.write("->".join(tokenIds) + ";\n")
     f.write("}\n")
     
-    scheme = "pastel18"
-    numColors = 8
+    #scheme = colorParse
+    #numColors = colorNumParse
     f.write("subgraph dependencies {\n")
     #f.write("rank=\"same\";\n")
     #f.write("node [shape=ellipse margin=0];")
@@ -106,10 +106,10 @@ def toGraphViz(input, output, id, parse="McCC"):
     for depStruct in depStructs:
         dep = depStruct["dep"]
         #color = "colorscheme=rdylgn11 color=" + str(11 - hash(dep.get("type")) % 11)
-        color = getColor(dep.get("type"), scheme, numColors)
-        f.write(getId(dep, "id") + "[" + color + " margin=0 label=\"" + dep.get("type") + "\"];\n")
-        f.write(getId(dep, "t1") + " -> " + getId(dep, "id") + "[" + color + " weight=10];\n")
-        f.write(getId(dep, "id") + " -> " + getId(dep, "t2") + "[" + color + " weight=10];\n")
+        depColor = getColor(dep.get("type"), colorParse, colorNumParse)
+        f.write(getId(dep, "id") + "[" + depColor + " margin=0 label=\"" + dep.get("type") + "\"];\n")
+        f.write(getId(dep, "t1") + " -> " + getId(dep, "id") + "[" + depColor + " weight=10];\n")
+        f.write(getId(dep, "id") + " -> " + getId(dep, "t2") + "[" + depColor + " weight=10];\n")
         if depStruct["child"] != None:
             #f.write(getId(dep) + " -> " + getId(depStruct["child"]["dep"]) + " [color=red];\n")
             f.write(getId(depStruct["child"]["dep"]) + " -> " + getId(dep) + " [weight=1, color=red style=invis];\n")
@@ -159,7 +159,8 @@ def toGraphViz(input, output, id, parse="McCC"):
     
     f.write("subgraph interactions {\n")
     for interaction in elements.interactions:
-        f.write(getId(interaction, "e1") + " -> " + getId(interaction, "e2") + " [fontsize=8 label=\"" + interaction.get("type") + "\"];\n")
+        intColor = getColor(interaction.get("type"), color, colorNum)
+        f.write(getId(interaction, "e1") + " -> " + getId(interaction, "e2") + "[" + intColor + " fontsize=8 label=\"" + interaction.get("type") + "\"];\n")
     f.write("}\n")
     
     f.write("}\n")
@@ -179,6 +180,11 @@ if __name__=="__main__":
     optparser.add_option("-i", "--input", default=None, dest="input", help="input interaction XML file")
     optparser.add_option("-o", "--output", default=None, dest="output", help="output interaction XML file")
     optparser.add_option("-d", "--id", default=None, dest="id", help="sentence id")
+    optparser.add_option("-p", "--parse", default="McCC", dest="parse", help="parse name")
+    optparser.add_option("-c", "--color", default=None, dest="color", help="Event color scheme")
+    optparser.add_option("-e", "--colorParse", default=None, dest="colorParse", help="Parse color scheme")
+    optparser.add_option("-n", "--colorNum", default=10, type="int", dest="colorNum", help="Event color scheme")
+    optparser.add_option("-m", "--colorNumParse", default=10, type="int", dest="colorNumParse", help="Event color scheme")
     (options, args) = optparser.parse_args()
     
-    toGraphViz(options.input, options.output, options.id)
+    toGraphViz(options.input, options.output, options.id, options.parse, options.color, options.colorNum, options.colorParse, options.colorNumParse)
