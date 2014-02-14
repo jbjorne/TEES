@@ -8,6 +8,12 @@ from Core.SentenceGraph import SentenceGraph
 def getId(element, attribute="id"):
     return element.get(attribute).replace(".", "_");
 
+def getHeadScore(token):
+    headScore = 0
+    if token.get("headScore") != None:
+        headScore = int(token.get("headScore"))
+    return headScore
+
 def toGraphViz(input, output, id, parse="McCC"):
     print >> sys.stderr, "====== Making Graphs ======"
     xml = ETUtils.ETFromObj(input).getroot()
@@ -50,10 +56,34 @@ def toGraphViz(input, output, id, parse="McCC"):
     f.write("node [shape=ellipse margin=0];")
     f.write("edge[weight=1 color=green];\n")
     #f.write("{ rank=\"same\";\n")
+    tokensByHeadScore = {}
+    for token in elements.tokens:
+        headScore = getHeadScore(token)
+        if headScore not in tokensByHeadScore:
+            tokensByHeadScore[headScore] = []
+        tokensByHeadScore[headScore].append(token)
+    depByHeadScore = {}
+    depByHeadScore[0] = []
     for dep in elements.dependencies:
         f.write(getId(dep, "id") + " [margin=0 label=\"" + dep.get("type") + "\"];\n")
-        f.write(getId(dep, "t1") + " -> " + getId(dep, "id") + ";\n")
-        f.write(getId(dep, "id") + " -> " + getId(dep, "t2") + ";\n")
+        f.write(getId(dep, "t1") + " -> " + getId(dep, "id") + " [weight=999];\n")
+        f.write(getId(dep, "id") + " -> " + getId(dep, "t2") + " [weight=999];\n")
+        token = graph.tokensById[dep.get("t1")]
+        headScore = getHeadScore(token)
+        if headScore not in depByHeadScore:
+            depByHeadScore[headScore] = []
+        depByHeadScore[headScore].append(getId(dep, "id"))
+        #for i in range(headScore, -1, -1):
+        #    for t in tokensByHeadScore[i]:
+        #        f.write(getId(dep) + " -> " + getId(t) + ";\n")
+        ##if token.get("headScore") != None and int(token.get("headScore")) > 0:
+        ##    f.write(getId(dep, "id") + " -> " + token.get("headScore") + ";\n")
+        ###f.write(getId(dep, "t1") + " -> " + getId(dep, "t2") + " [fontsize=8 label=\"" + dep.get("type") + "\"];\n")
+    for i in range(max(depByHeadScore.keys())+ 1):
+        if i > 0:
+            for d1 in depByHeadScore[i]:
+                for d2 in depByHeadScore[i-1]:
+                    f.write(d1 + " -> " + d2 + " [weight=0.01 style=invis];\n")
     f.write("}\n")
 
     f.write("subgraph entities {\n")
