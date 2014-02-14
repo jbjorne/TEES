@@ -38,6 +38,7 @@ class Relation():
         s += " " + str(self.e1Role)
         s += " " + str(self.e2Role)
         s += ">"
+        return s
 
 class StructureAnalyzer():
     def __init__(self, modelFileName="structure.txt"):
@@ -161,10 +162,8 @@ class StructureAnalyzer():
         if args == None:
             args = []
         if type(entity) in types.StringTypes:
-            entityElement = None
             entityType = entity
         else:
-            entityElement = entity
             entityType = entity.get("type")
         # analyze proposed arguments
         argTypes = set()
@@ -233,7 +232,7 @@ class StructureAnalyzer():
         # 1. validate all edges (as relations)
         # 2. validate events constructed from remaining edges/entities
         # 3. repeat 2. until only valid events left
-        counts = defaultdict(str)
+        counts = defaultdict(int)
         xml = ETUtils.ETFromObj(xml)
         for document in xml.getiterator("document"):
             entities = [x for x in document.getiterator("entity")]
@@ -295,13 +294,13 @@ class StructureAnalyzer():
                 interactions = eventArguments + relations
                 for interaction, parent in self._getElementsAndParents(document, "interaction"):
                     if interaction not in interactions:
-                        parent.remove("interaction")
+                        parent.remove(interaction)
                 for entity, parent in self._getElementsAndParents(document, "entity"):
                     if entity not in entities:
-                        parent.remove("entity")
+                        parent.remove(entity)
         counts = dict(counts)
         if printCounts:
-             print >> sys.stderr, "Validation removed:", counts
+            print >> sys.stderr, "Validation removed:", counts
         return counts
     
     def _dictToTuple(self, d):
@@ -569,5 +568,9 @@ if __name__=="__main__":
         s.save(None, options.output)
     if options.validate != None:
         print >> sys.stderr, "--- Validation ----"
-        s.validate(options.validate, simulation=False, debug=options.debug)
+        xml = ETUtils.ETFromObj(options.validate)
+        s.validate(xml, simulation=False, debug=options.debug)
+        if options.output != None:
+            ETUtils.write(xml, options.output)
+            
             
