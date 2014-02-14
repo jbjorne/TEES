@@ -9,6 +9,16 @@ from Core.SentenceGraph import SentenceGraph
 def getId(element, attribute="id"):
     return element.get(attribute).replace(".", "_");
 
+def getColor(string, scheme):
+    if scheme == None:
+        return ""
+    i = 1
+    while i < len(scheme) and scheme[-(i+1)].isdigit():
+        i += 1
+    numColors = int(scheme[-i:])
+    print numColors
+    return "colorscheme=" + scheme + " color=" + str(numColors - hash(string) % numColors)
+
 def getHeadScore(token):
     headScore = 0
     if token.get("headScore") != None:
@@ -43,7 +53,7 @@ def groupDependencies(elements):
                 score = abs((d2["range"][0] - d1["range"][0]) - (d1["range"][1] - d2["range"][1]))
                 if score < d1["childScore"]:
                     d1["child"] = d2
-    return depStructs             
+    return depStructs         
 
 def toGraphViz(input, output, id, parse="McCC"):
     print >> sys.stderr, "====== Making Graphs ======"
@@ -82,6 +92,7 @@ def toGraphViz(input, output, id, parse="McCC"):
     f.write("->".join(tokenIds) + ";\n")
     f.write("}\n")
     
+    scheme = "pastel18"
     f.write("subgraph dependencies {\n")
     #f.write("rank=\"same\";\n")
     #f.write("node [shape=ellipse margin=0];")
@@ -98,7 +109,8 @@ def toGraphViz(input, output, id, parse="McCC"):
     depStructs = groupDependencies(elements)
     for depStruct in depStructs:
         dep = depStruct["dep"]
-        color = "colorscheme=rdylgn11 color=" + str(11 - hash(dep.get("type")) % 11)
+        #color = "colorscheme=rdylgn11 color=" + str(11 - hash(dep.get("type")) % 11)
+        color = getColor(dep.get("type"), scheme)
         f.write(getId(dep, "id") + "[" + color + " margin=0 label=\"" + dep.get("type") + "\"];\n")
         f.write(getId(dep, "t1") + " -> " + getId(dep, "id") + "[" + color + " weight=10];\n")
         f.write(getId(dep, "id") + " -> " + getId(dep, "t2") + "[" + color + " weight=10];\n")
