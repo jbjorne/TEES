@@ -45,7 +45,9 @@ class StructureAnalyzer():
             
             for document in xml.getiterator("document"):
                 # Collect elements into dictionaries
-                entityById = self._getElementDict(document, "entity")
+                entityById = {}
+                for entity in document.getiterator("entity"):
+                    entityById[entity.get("id")] = entity
                 interactionsByE1 = defaultdict(list)
                 for interaction in document.getiterator("interaction"):
                     interactionsByE1[interaction.get("e1")].append(interaction)
@@ -109,6 +111,7 @@ class StructureAnalyzer():
         if isEvent:
             if entityType not in self.events:
                 self.events[entityType] = Event(entityType)
+            self.events[entityType].addTriggerInstance(entity.get("id"))
         else:
             if entityType not in self.entities:
                 self.entities[entityType] = Entity(entityType)
@@ -529,7 +532,10 @@ class Event():
         self.arguments = {}
         self._argumentsByE1Instance = defaultdict(lambda:defaultdict(int)) # event instance cache
         self._firstInstanceCache = True
-        
+    
+    def addTriggerInstance(self, entityId):
+        self._argumentsByE1Instance[entityId] = defaultdict(int)
+    
     def addArgumentInstance(self, e1Id, argType, e1Type, e2Type):
         # add argument to event definition
         if argType not in self.arguments:
