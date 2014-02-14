@@ -498,19 +498,22 @@ class Event():
         self.minArgs = -1
         self.maxArgs = -1
         self.arguments = {}
-        self.argumentsByE1Instance = defaultdict(lambda:defaultdict(int)) # event instance cache
-    
+        self._argumentsByE1Instance = defaultdict(lambda:defaultdict(int)) # event instance cache
+        self._firstInstanceCache = True
+        
     def addArgumentInstance(self, e1Id, argType, e1Type, e2Type):
         # add argument to event definition
         if argType not in self.arguments:
             self.arguments[argType] = Argument(argType)
+            if not self._firstInstanceCache: # there have been events before but this argument has not been seen
+                self.arguments[argType].min = 0
         self.arguments[argType].targetTypes.add(e2Type)
         # add to event instance cache
-        self.argumentsByE1Instance[e1Id][argType] += 1
+        self._argumentsByE1Instance[e1Id][argType] += 1
         
     def countArguments(self):
         # Update argument limits for each argument definition
-        for eventInstance in self.argumentsByE1Instance.values():
+        for eventInstance in self._argumentsByE1Instance.values():
             for argType in self.arguments: # check all possible argument types for each event instance
                 if argType in eventInstance:
                     self.arguments[argType].addCount(eventInstance[argType])
@@ -530,7 +533,8 @@ class Event():
             self.maxArgs = 0
             
         # Reset event instance cache
-        self.argumentsByE1Instance = defaultdict(lambda:defaultdict(int))
+        self._argumentsByE1Instance = defaultdict(lambda:defaultdict(int))
+        self._firstInstanceCache = False
     
     def __repr__(self):
         s = "EVENT " + self.type + " [" + str(self.minArgs) + "," + str(self.maxArgs) + "]"
