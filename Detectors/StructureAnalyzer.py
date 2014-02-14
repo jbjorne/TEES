@@ -560,7 +560,7 @@ class Modifier():
         self.entityTypes = set()
 
     def __repr__(self):
-        return "MODIFIER " + self.modType + "\t" + ",".join(sorted(list(self.entityTypes)))
+        return "MODIFIER " + self.type + "\t" + ",".join(sorted(list(self.entityTypes)))
     
     def load(self, line):
         line = line.strip()
@@ -600,15 +600,26 @@ class Relation():
         tabSplits = line.split("\t")
         self.type = tabSplits[0].split()[1]
         self.directed = bool(tabSplits[0].split()[2])
-        self.e1Role = tabSplits[1].split()[0]
-        self.e1Types = set(tabSplits[1].split()[1].split(","))
-        self.e2Role = tabSplits[2].split()[0]
-        self.e2Types = set(tabSplits[2].split()[1].split(","))
+        if " " in tabSplits[1]:
+            self.e1Role = tabSplits[1].split()[0]
+            self.e1Types = set(tabSplits[1].split()[1].split(","))
+        else:
+            self.e1Types = set(tabSplits[1].split(","))
+        if " " in tabSplits[2]:
+            self.e2Role = tabSplits[2].split()[0]
+            self.e2Types = set(tabSplits[2].split()[1].split(","))
+        else:
+            self.e2Types = set(tabSplits[2].split(","))
     
     def __repr__(self):
-        return "RELATION " + self.type + " " + str(self.directed) + "\t" + \
-            self.e1Role + ",".join(sorted(list(self.e1Types))) + "\t" + \
-            self.e2Role + ",".join(sorted(list(self.e2Types)))
+        s = "RELATION " + self.type + " " + str(self.directed) + "\t"
+        if self.e1Role != None:
+            s += self.e1Role + " "
+        s += ",".join(sorted(list(self.e1Types))) + "\t"
+        if self.e2Role != None:
+            s += self.e2Role + " "
+        s += ",".join(sorted(list(self.e2Types)))
+        return s
 
 if __name__=="__main__":
     # Import Psyco if available
