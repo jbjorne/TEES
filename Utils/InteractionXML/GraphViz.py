@@ -5,6 +5,9 @@ import subprocess
 import SentenceElements
 from Core.SentenceGraph import SentenceGraph
 
+def getId(element, attribute="id"):
+    return element.get(attribute).replace(".", "_");
+
 def toGraphViz(input, output, id, parse="McCC"):
     print >> sys.stderr, "====== Making Graphs ======"
     xml = ETUtils.ETFromObj(input).getroot()
@@ -36,7 +39,7 @@ def toGraphViz(input, output, id, parse="McCC"):
     tokenIds = []
     for token in elements.tokens:
         tokenIds.append(token.get("id").replace(".", "_"))
-        f.write(token.get("id").replace(".", "_") + " [margin=0 label=\"" + token.get("text") + "\\n[" + token.get("POS") + "]\"];\n")
+        f.write(getId(token) + " [margin=0 label=\"" + token.get("text") + "\\n[" + token.get("POS") + "]\"];\n")
     f.write("->".join(tokenIds) + ";\n")
     f.write("}\n")
     
@@ -49,9 +52,9 @@ def toGraphViz(input, output, id, parse="McCC"):
     f.write("node [shape=ellipse margin=0];")
     f.write("edge[weight=1 color=green];\n")
     for dep in elements.dependencies:
-        f.write(dep.get("id").replace(".", "_") + " [margin=0 label=\"" + dep.get("type") + "\"];\n")
-        f.write(dep.get("t1").replace(".", "_") + " -> " + dep.get("id").replace(".", "_") + ";\n")
-        f.write(dep.get("id").replace(".", "_") + " -> " + dep.get("t2").replace(".", "_") + ";\n")
+        f.write(getId(dep, "id") + " [margin=0 label=\"" + dep.get("type") + "\"];\n")
+        f.write(getId(dep, "t1") + " -> " + dep.get("id").replace(".", "_") + ";\n")
+        f.write(getId(dep, "id") + " -> " + dep.get("t2").replace(".", "_") + ";\n")
     f.write("}\n")
 
     f.write("subgraph entities {\n")
@@ -59,12 +62,12 @@ def toGraphViz(input, output, id, parse="McCC"):
     f.write("edge[weight=1];\n")
     for entity in elements.entities:
         if entity.get("event") != "True":
-            f.write(entity.get("id").replace(".", "_") + " [label=\"" + entity.get("type") + "\"];\n")
+            f.write(getId(entity) + " [label=\"" + entity.get("type") + "\"];\n")
             headToken = graph.entityHeadTokenByEntity[entity]
             if headToken != None:
-                f.write(entity.get("id").replace(".", "_") + " -> " + headToken.get("id").replace(".", "_") + ";\n")
+                f.write(getId(entity) + " -> " + getId(headToken) + ";\n")
         else:
-            f.write(entity.get("id").replace(".", "_") + " [label=\"" + entity.get("type") + "\"];\n")
+            f.write(getId(entity) + " [label=\"" + entity.get("type") + "\"];\n")
     f.write("}\n")
     
     f.write("subgraph event_to_token {\n")
@@ -73,12 +76,12 @@ def toGraphViz(input, output, id, parse="McCC"):
         if entity.get("event") == "True":
             headToken = graph.entityHeadTokenByEntity[entity]
             if headToken != None:
-                f.write(entity.get("id").replace(".", "_") + " -> " + headToken.get("id").replace(".", "_") + ";\n")
+                f.write(getId(entity) + " -> " + getId(headToken) + ";\n")
     f.write("}\n")
     
     f.write("subgraph interactions {\n")
     for interaction in elements.interactions:
-        f.write(interaction.get("e1").replace(".", "_") + " -> " + interaction.get("e2").replace(".", "_") + " [fontsize=8 label=\"" + interaction.get("type") + "\"];\n")
+        f.write(getId(interaction, "e1") + " -> " + getId(interaction, "e2") + " [fontsize=8 label=\"" + interaction.get("type") + "\"];\n")
     f.write("}\n")
     
     f.write("}\n")
