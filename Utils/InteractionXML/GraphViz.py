@@ -30,35 +30,26 @@ def toGraphViz(input, output, id, parse="McCC"):
     #f.write("graph [label=\"Orthogonal edges\", splines=ortho, nodesep=0.1];\n")
     f.write("graph [nodesep=0.1];\n")
     f.write("node [shape=box];")
-    
-    f.write("{ \n")
-    f.write(" node [shape = plaintext, fontsize = 20];\n")
-    f.write(" 0 -> 1 -> 2 -> 4;\n")
-    f.write("}\n")
+    f.write("ranksep=1;")
     
     f.write("subgraph tokens {\n")
     f.write("edge[weight=1000, arrowhead=none];\n")
     f.write("rankdir = LR;\n")
     f.write("rank=\"same\";\n")
     f.write("nodesep=0.01;\n")
-    f.write("0\n")
+    #f.write("{ rank=\"same\";\n")
     tokenIds = []
     for token in elements.tokens:
         tokenIds.append(token.get("id").replace(".", "_"))
         f.write(getId(token) + " [margin=0 label=\"" + token.get("text") + "\\n[" + token.get("POS") + "]\"];\n")
-    f.write("->".join(["0"] + tokenIds) + ";\n")
-    f.write("}\n")
-    
-    f.write("subgraph cluster_1m {\n")
-    f.write("color=invis;\n")
-    f.write("a12m [style=invisible]\n")
+    f.write("->".join(tokenIds) + ";\n")
     f.write("}\n")
     
     f.write("subgraph dependencies {\n")
+    #f.write("rank=\"same\";\n")
     f.write("node [shape=ellipse margin=0];")
     f.write("edge[weight=1 color=green];\n")
-    f.write("1\n")
-    f.write("1 -> " + getId(elements.dependencies[0]) + ";\n")
+    #f.write("{ rank=\"same\";\n")
     for dep in elements.dependencies:
         f.write(getId(dep, "id") + " [margin=0 label=\"" + dep.get("type") + "\"];\n")
         f.write(getId(dep, "t1") + " -> " + getId(dep, "id") + ";\n")
@@ -68,8 +59,7 @@ def toGraphViz(input, output, id, parse="McCC"):
     f.write("subgraph entities {\n")
     #f.write("rank=\"same\";\n")
     f.write("edge[weight=1];\n")
-    f.write("2\n")
-    f.write("2 -> " + getId(elements.entities[0]) + ";\n")
+    #f.write("{ rank=\"same\";\n")
     for entity in elements.entities:
         if entity.get("event") != "True":
             f.write(getId(entity) + " [label=\"" + entity.get("type") + "\"];\n")
