@@ -98,9 +98,10 @@ def toGraphViz(input, output, id, parse="McCC"):
     depStructs = groupDependencies(elements)
     for depStruct in depStructs:
         dep = depStruct["dep"]
-        f.write(getId(dep, "id") + " [margin=0 label=\"" + dep.get("type") + "\"];\n")
-        f.write(getId(dep, "t1") + " -> " + getId(dep, "id") + " [weight=10];\n")
-        f.write(getId(dep, "id") + " -> " + getId(dep, "t2") + " [weight=10];\n")
+        color = "colorscheme=rdylgn11 color=" + str(11 - hash(dep.get("type")) % 11)
+        f.write(getId(dep, "id") + "[" + color + " margin=0 label=\"" + dep.get("type") + "\"];\n")
+        f.write(getId(dep, "t1") + " -> " + getId(dep, "id") + "[" + color + " weight=10];\n")
+        f.write(getId(dep, "id") + " -> " + getId(dep, "t2") + "[" + color + " weight=10];\n")
         if depStruct["child"] != None:
             #f.write(getId(dep) + " -> " + getId(depStruct["child"]["dep"]) + " [color=red];\n")
             f.write(getId(depStruct["child"]["dep"]) + " -> " + getId(dep) + " [weight=1, color=red style=invis];\n")
@@ -140,7 +141,7 @@ def toGraphViz(input, output, id, parse="McCC"):
     f.write("}\n")
     
     f.write("subgraph event_to_token {\n")
-    f.write("edge[weight=1 color=blue];\n")
+    f.write("edge[weight=1 style=dashed color=gray];\n")
     for entity in elements.entities:
         if entity.get("event") == "True":
             headToken = graph.entityHeadTokenByEntity[entity]
