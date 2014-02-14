@@ -47,7 +47,7 @@ def toGraphViz(input, output, id, parse="McCC"):
     tokenIds = []
     for token in elements.tokens:
         tokenIds.append(token.get("id").replace(".", "_"))
-        f.write(getId(token) + " [margin=0 label=\"" + token.get("text") + "\\n[" + token.get("POS") + "]\"];\n")
+        f.write(getId(token) + " [margin=0 label=\"" + token.get("text") + "\\n" + token.get("POS") + "\"];\n")
     f.write("->".join(tokenIds) + ";\n")
     f.write("}\n")
     
