@@ -13,4 +13,4 @@ if __name__=="__main__":
     optparser.add_option("-m", "--colorNumParse", default=7, type="int", dest="colorNumParse", help="Event color scheme")
     (options, args) = optparser.parse_args()
     
-    toGraphViz(options.input, options.output, options.id, options.parse, options.color, options.colorNum, options.colorParse, options.colorNumParse)
+    toGraphViz(options.input, options.id, options.output, options.parse, options.color, options.colorNum, options.colorParse, options.colorNumParse)
