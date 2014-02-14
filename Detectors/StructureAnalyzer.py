@@ -373,16 +373,16 @@ class StructureAnalyzer():
         if self.events == None: 
             raise Exception("No structure definition loaded")
         s = ""
-        for entity in self.entities:
-            s += str(entity) + "\n"
-        for event in self.event:
-            s += str(event) + "\n"
-        for relation in self.relations:
-            s += str(relation) + "\n"
-        for modifier in self.modifiers:
-            s += str(modifier) + "\n"
-        for target in self.targets:
-            s += str(target) + "\n"
+        for entity in sorted(self.entities):
+            s += str(self.entities[entity]) + "\n"
+        for event in sorted(self.events):
+            s += str(self.events[event]) + "\n"
+        for relation in sorted(self.relations):
+            s += str(self.relations[relation]) + "\n"
+        for modifier in sorted(self.modifiers):
+            s += str(self.modifiers[modifier]) + "\n"
+        for target in sorted(self.targets):
+            s += str(self.targets[target]) + "\n"
         return s
     
     def save(self, model, filename=None):
@@ -493,16 +493,15 @@ class Event():
             self.arguments[argType] = Argument(argType)
         self.arguments[argType].targetTypes.add(e2Type)
         # add to event instance cache
-        self.argumentsByE1Instance.add((argType, e1Type, e2Type))
+        self.argumentsByE1Instance[e1Id].add((argType, e1Type, e2Type))
         
     def countArguments(self):
         # Update argument limits for each argument definition
-        for combination in self.argumentsByE1Instance.values():
-            counts = defaultdict(int)
-            counts[combination[0]] += 1
-            for argType in counts.keys():
-                #if argType not in self.arguments:
-                #    self.arguments[argType] = Argument(argType)
+        for combinations in self.argumentsByE1Instance.values():
+            counts = defaultdict(int) # for one event instance
+            for combination in combinations: # for each argument in the instance
+                counts[combination[0]] += 1 # increase count
+            for argType in counts.keys(): # the Argument object must already exist
                 self.arguments[argType].addCount(counts[argType])
         # Update event definition argument limits
         self.minArgs = 0
@@ -519,6 +518,7 @@ class Event():
         s = "EVENT " + self.type + " [" + str(self.minArgs) + "," + str(self.maxArgs) + "]"
         for argType in sorted(self.arguments.keys()):
             s += "\t" + str(self.arguments[argType])
+        return s
     
     def load(self, line):
         line = line.strip()
