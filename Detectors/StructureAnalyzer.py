@@ -2,25 +2,151 @@
 import sys, os
 sys.path.append(os.path.dirname(os.path.abspath(__file__))+"/..")
 import Utils.ElementTreeUtils as ETUtils
-from Utils.InteractionXML.CorpusElements import CorpusElements
 from collections import defaultdict
-import copy
 import types
+
+def rangeToTuple(string):
+    assert string.startswith("[")
+    assert string.endswith("]")
+    string = string.strip("[").strip("]")
+    begin, end = string.split(",")
+    begin = int(begin)
+    end = int(end)
+    return (begin, end)
+
+class Target():
+    def __init__(self, targetClass):
+        assert targetClass in ["INTERACTION", "ENTITY"]
+        self.targetClass = targetClass
+        self.targetTypes = set()
+    
+    def __repr__(self):
+        return "TARGET " + self.targetClass + "\t" + ",".join(sorted(list(self.targetTypes)))
+    
+    def load(self, line):
+        line = line.strip()
+        if not line.startswith("ENTITY"):
+            raise Exception("Not an entity definition line: " + line)
+        self.type = line.split()[1]
+
+class Entity():
+    def __init__(self, entityType=None):
+        self.type = entityType
+    
+    def __repr__(self):
+        return "ENTITY " + self.type
+    
+    def load(self, line):
+        line = line.strip()
+        if not line.startswith("ENTITY"):
+            raise Exception("Not an entity definition line: " + line)
+        self.type = line.split()[1]
+
+class Event():
+    def __init__(self, eventType=None):
+        self.type = eventType
+        self.minArgs = 0
+        self.maxArgs = 0
+        self.arguments = {}
+        self.argumentsByE1Instance = defaultdict(set) # event instance cache
+    
+    def addArgumentInstance(self, e1Id, argType, e1Type, e2Type):
+        # add argument to event definition
+        if argType not in self.arguments:
+            self.arguments[argType] = Argument(argType)
+        self.arguments[argType].targetTypes.add(e2Type)
+        # add to event instance cache
+        self.argumentsByE1Instance.add((argType, e1Type, e2Type))
+        
+    def countArguments(self):
+        # Update argument limits for each argument definition
+        for combination in self.argumentsByE1Instance.values():
+            counts = defaultdict(int)
+            counts[combination[0]] += 1
+            for argType in counts.keys():
+                #if argType not in self.arguments:
+                #    self.arguments[argType] = Argument(argType)
+                self.arguments[argType].addCount(counts[argType])
+        # Update event definition argument limits
+        self.minArgs = 0
+        self.maxArgs = 0
+        for argument in self.arguments.values():
+            assert argument.min != -1
+            assert argument.max != -1
+            self.minArgs += argument.min
+            self.maxArgs += argument.max
+        # Reset event instance cache
+        self.argumentsByE1Instance = defaultdict(set)
+    
+    def __repr__(self):
+        s = "EVENT " + self.type + " [" + str(self.minArgs) + "," + str(self.maxArgs) + "]"
+        for argType in sorted(self.arguments.keys()):
+            s += "\t" + str(self.arguments[argType])
+    
+    def load(self, line):
+        line = line.strip()
+        if not line.startswith("EVENT"):
+            raise Exception("Not an event definition line: " + line)
+        tabSplits = line.split("\t")
+        self.type = tabSplits[0].split()[1]
+        self.minArgs, self.maxArgs = rangeToTuple(tabSplits[0].split()[1])
+        for tabSplit in tabSplits[1:]:
+            argument = Argument()
+            argument.load(tabSplit)
+        self.arguments[argument.type] = argument
+
+class Argument():
+    def __init__(self, argType=None):
+        self.type = argType
+        self.min = -1
+        self.max = -1
+        self.targetTypes = set()
+    
+    def addCount(self, count):
+        if self.min == -1 or self.min > count:
+            self.min = count
+        if self.max == -1 or self.max < count:
+            self.max = count
+
+    def __repr__(self):
+        return self.type + " [" + str(self.min) + "," + str(self.max) + "] " + ",".join(sorted(list(self.targetTypes)))
+    
+    def load(self, string):
+        string = string.strip()
+        self.type, limits, self.targetTypes = string.split()
+        self.min, self.max = rangeToTuple(limits)
+        self.targetTypes = set(self.targetTypes.split(","))
+
+class Modifier():
+    def __init__(self, modType=None):
+        self.type = modType
+        self.entityTypes = set()
+
+    def __repr__(self):
+        return "MODIFIER " + self.modType + "\t" + ",".join(sorted(list(self.entityTypes)))
+    
+    def load(self, line):
+        line = line.strip()
+        if not line.startswith("MODIFIER"):
+            raise Exception("Not a modifier definition line: " + line)
+        tabSplits = line.split("\t")
+        self.type = tabSplits[0].split()[1]
+        self.entityTypes = set(tabSplits[1].split(","))
 
 class Relation():
     def __init__(self, relType=None):
         self.type = relType
-        self.isDirected = None
+        self.directed = None
         self.e1Types = set()
         self.e2Types = set()
         self.e1Role = None
         self.e2Role = None
-    
-    def setStructure(self, isDirected=None, e1Role=None, e2Role=None, id="undefined"):
-        if self.isDirected == None: # no relation of this type has been seen yet
-            self.isDirected = isDirected
-        elif self.isDirected != isDirected:
-            raise Exception("Conflicting relation directed-attribute (" + str(isDirected) + ")for already defined relation of type " + self.type + " in relation " + id)
+            
+    def addInstance(self, directed=None, e1Role=None, e2Role=None, id="undefined"):
+        if self.directed == None: # no relation of this type has been seen yet
+            self.directed = directed
+        elif self.directed != directed:
+            raise Exception("Conflicting relation directed-attribute (" + str(directed) + ")for already defined relation of type " + self.type + " in relation " + id)
         if self.e1Role == None: # no relation of this type has been seen yet
             self.e1Role = e1Role
         elif self.e1Role != e1Role:
@@ -29,46 +155,102 @@ class Relation():
             self.e2Role = e2Role
         elif self.e2Role != e2Role:
             raise Exception("Conflicting relation e2Role-attribute (" + str(e2Role) + ") for already defined relation of type " + self.type + " in relation " + id)
-
-    def __repr__(self): # for debugging
-        s = "<Relation"
-        s += " " + str(self.type)
-        s += " " + str(self.e1Types)
-        s += " " + str(self.e2Types)
-        s += " " + str(self.e1Role)
-        s += " " + str(self.e2Role)
-        s += ">"
-        return s
+    
+    def load(self, line):
+        line = line.strip()
+        if not line.startswith("RELATION"):
+            raise Exception("Not a relation definition line: " + line)
+        tabSplits = line.split("\t")
+        self.type = tabSplits[0].split()[1]
+        self.directed = bool(tabSplits[0].split()[2])
+        self.e1Role = tabSplits[1].split()[0]
+        self.e1Types = set(tabSplits[1].split()[1].split(","))
+        self.e2Role = tabSplits[2].split()[0]
+        self.e2Types = set(tabSplits[2].split()[1].split(","))
+    
+    def __repr__(self):
+        return "RELATION " + self.type + " " + str(self.directed) + "\t" + \
+            self.e1Role + ",".join(sorted(list(self.e1Types))) + "\t" + \
+            self.e2Role + ",".join(sorted(list(self.e2Types)))
 
 class StructureAnalyzer():
-    def __init__(self, modelFileName="structure.txt"):
-        self.modelFileName = modelFileName
+    def __init__(self, defaultFileNameInModel="structure.txt"):
+        self.modelFileName = defaultFileNameInModel
         self.reset()
 
     def isInitialized(self):
         return self.argLimits != None
-
-    def reset(self):
-        self.edgeTypes = None
-        self.argLimits = None
-        self.e2Types = None
-        self.relations = None
-        self.sites = None
-        self.modifiers = None
-        self.counts = None
-        self.targets = None
+    
+    def addTarget(self, element):
+        if element.get("given" != "True"):
+            if element.tag == "interaction":
+                targetClass = "INTERACTION"
+            elif element.tag == "entity":
+                targetClass = "ENTITY"
+            else:
+                raise Exception("Unsupported non-given element type " + element.tag)
+            if targetClass not in self.targets:
+                self.targets[targetClass] = Target(targetClass)
+            self.targets[targetClass].targetTypes.add(element.get("type"))
+    
+    def addInteractionElement(self, interaction, entityById):
+        self.addTarget(interaction)
         
-        self.eventArgumentTypes = None
-        #self.relationTypes = None
+        if not (interaction.get("event") == "True"):
+            self.addRelation(interaction, entityById)
+        else:
+            e1Type = entityById[interaction.get("e1")].get("type")
+            e2Type = entityById[interaction.get("e2")].get("type")
+            if e1Type not in self.events:
+                raise Exception("Argument " + interaction.get("id") + " of type " + interaction.get("type") + " for undefined event type " + e1Type)
+            self.events[e1Type].addArgumentInstance(interaction.get("e1"), interaction.get("type"), e1Type, e2Type)
+    
+    def addRelation(self, interaction, entityById):
+        relType = interaction.get("type")
+        if relType not in self.relations:
+            self.relations[relType] = Relation(relType)
+        self.relations[relType].addInstance(interaction.get("directed") == "True", interaction.get("e1Role"), interaction.get("e2Role"), interaction.get("id"))
+    
+    def addEntityElement(self, entity, interactionsByE1):
+        # Determine extraction target
+        self.addTarget(entity)
+        
+        entityType = entity.get("type")
+        if entity.get("event") == "True" or entity.get("id") in interactionsByE1:
+            if entityType not in self.events:
+                self.events[entityType] = Event(entityType)
+        else:
+            if entityType not in self.entities:
+                self.entities[entityType] = Entity(entityType)
+        
+#         currentArgCounts = defaultdict(int)# copy.copy(countsTemplate)
+#         for interaction in interactionsByE1[entity.get("id")]:
+#             interactionTypes.add(interaction.get("type"))
+#             currentArgCounts[interaction.get("type")] += 1
+#             self.e2Types[entity.get("type")][interaction.get("type")].add(entityById[interaction.get("e2")].get("type"))
+#         argCounts[entity.get("type")].add(self._dictToTuple(currentArgCounts)) # save only one example for each detected argument combination
+        
+        # check for modifiers
+        for modType in ("speculation", "negation"):
+            if (entity.get(modType) != None):
+                if modType not in self.modifiers:
+                    self.modifiers[modType] = Modifier(modType)
+                self.modifiers[modType].entityTypes.add(entityType)
+    
+    def reset(self):
+        self.relations = None
+        self.entities = None
+        self.events = None
+        self.modifiers = None
+        self.targets = None
     
     def _init(self):
         self.reset()
-        self.argLimits = defaultdict(dict)
-        self.e2Types = defaultdict(lambda:defaultdict(set))
         self.relations = {}
+        self.entities = {}
+        self.events = {}
         self.modifiers = {}
         self.targets = {}
-        self.eventArgumentTypes = set()
         
     def getEntityRoles(self, edgeType):
         if self.isEventArgument(edgeType):
@@ -119,10 +301,7 @@ class StructureAnalyzer():
             return relation.isDirected
     
     def isEvent(self, entityType):
-        if entityType in self.e2Types:
-            return True
-        else:
-            return False
+        return entityType in self.events
     
     def isEventArgument(self, edgeType):
         if edgeType in self.eventArgumentTypes:
@@ -132,7 +311,8 @@ class StructureAnalyzer():
             return False
         
     def getArgLimits(self, entityType, argType):
-        return self.argLimits[entityType][argType]
+        argument = self.events[entityType].arguments[argType]
+        return (argument.min, argument.max)
     
     def getValidEdgeTypes(self, e1Type, e2Type, forceUndirected=False):
         assert type(e1Type) in types.StringTypes
@@ -210,14 +390,13 @@ class StructureAnalyzer():
         return valid
     
     def _getElementDict(self, document, elementType):
-        entities = [x for x in document.getiterator("entity")]
         elementById = {}
         for element in document.getiterator(elementType):
             elementId = element.get("id")
             if elementId == None:
-                raise Error("Element " + elementType + " without id in document " + str(document.get("id")))
+                raise Exception("Element " + elementType + " without id in document " + str(document.get("id")))
             if elementId in elementById:
-                raise Error("Duplicate " + elementType + " id " + str(elementId) + " in document " + str(document.get("id")))
+                raise Exception("Duplicate " + elementType + " id " + str(elementId) + " in document " + str(document.get("id")))
             elementById[elementId] = element
         return elementById
     
@@ -303,17 +482,17 @@ class StructureAnalyzer():
             print >> sys.stderr, "Validation removed:", counts
         return counts
     
-    def _dictToTuple(self, d):
-        tup = []
-        for key in sorted(d.keys()):
-            tup.append((key, d[key]))
-        return tuple(tup)
-    
-    def _tupToDict(self, tup):
-        d = {}
-        for pair in tup:
-            d[pair[0]] = pair[1]
-        return d
+#     def _dictToTuple(self, d):
+#         tup = []
+#         for key in sorted(d.keys()):
+#             tup.append((key, d[key]))
+#         return tuple(tup)
+#     
+#     def _tupToDict(self, tup):
+#         d = {}
+#         for pair in tup:
+#             d[pair[0]] = pair[1]
+#         return d
     
 #    def _defineEdgeTypes(self):
 #        self.relationTypes = set(self.relations.keys())
@@ -339,40 +518,19 @@ class StructureAnalyzer():
                         self.edgeTypes[e2Type][e1Type].append(relationType)
     
     def toString(self):
-        if self.argLimits == None or self.e2Types == None: 
+        if self.events == None: 
             raise Exception("No structure definition loaded")
         s = ""
-        eventStrings = []
-        entityStrings = []
-        for entityType in sorted(self.argLimits.keys()):
-            argString = ""
-            for argType in sorted(self.argLimits[entityType]):
-                if self.argLimits[entityType][argType][1] > 0:
-                    argString += "\t" + argType + " " + str(self.argLimits[entityType][argType]).replace(" ", "") + " " + ",".join(sorted(list(self.e2Types[entityType][argType])))
-            if argString != "":
-                eventStrings += "EVENT " + entityType + argString + "\n"
-            else:
-                entityStrings += "ENTITY " + entityType + argString + "\n"
-        s += "".join(entityStrings)
-        s += "".join(eventStrings)
-        for relType in sorted(self.relations.keys()):
-            relation = self.relations[relType]
-            s += "RELATION " + relType
-            if relation.isDirected:
-                s += "\tdirected\t"
-            else:
-                s += "\tundirected\t"
-            if relation.e1Role != None:
-                s += relation.e1Role + " "
-            s += ",".join(sorted(list(relation.e1Types)))
-            s += "\t"
-            if relation.e2Role != None:
-                s += relation.e2Role + " "
-            s += ",".join(sorted(list(relation.e2Types))) + "\n"
-        for modType in sorted(self.modifiers.keys()):
-            s += "MODIFIER " + modType + "\t" + ",".join(sorted(list(self.modifiers[modType]))) + "\n"
-        for target in sorted(self.targets.keys()):
-            s += "TARGET " + target + "\t" + ",".join(sorted(list(self.targets[target]))) + "\n"
+        for entity in self.entities:
+            s += str(entity) + "\n"
+        for event in self.event:
+            s += str(event) + "\n"
+        for relation in self.relations:
+            s += str(relation) + "\n"
+        for modifier in self.modifiers:
+            s += str(modifier) + "\n"
+        for target in self.targets:
+            s += str(target) + "\n"
         return s
     
     def save(self, model, filename=None):
@@ -457,84 +615,29 @@ class StructureAnalyzer():
         print >> sys.stderr, "Relations:", self.relations
     
     def analyze(self, inputs, model=None):
-        #xml = CorpusElements.loadCorpus(xml, parse=None, tokenization=None, removeIntersentenceInteractions=False, removeNameInfo=False)
-        #for sentence in corpusElements.sentences:
-        #    for entity in sentence.entities
-        self._init()
-        
+        self._init()  
         if type(inputs) in types.StringTypes:
             inputs = [inputs]
-        interactionTypes = set()
         for xml in inputs:
             print >> sys.stderr, "Analyzing", xml
             xml = ETUtils.ETFromObj(xml)
             
-#            countsTemplate = {}
-#            for interaction in xml.getiterator("interaction"):
-#                interactionTypes.add(interaction.get("type"))
-#                countsTemplate[interaction.get("type")] = 0
-            
-            argCounts = defaultdict(set)
             for document in xml.getiterator("document"):
+                # Collect elements into dictionaries
                 entityById = self._getElementDict(document, "entity")
-                interactionById = self._getElementDict(document, "interaction")
-                # process interactions
                 interactionsByE1 = defaultdict(list)
                 for interaction in document.getiterator("interaction"):
-                    if interaction.get("given") != "True":
-                        if "INTERACTION" not in self.targets:
-                            self.targets["INTERACTION"] = set()
-                        self.targets["INTERACTION"].add(interaction.get("type"))
-                    if not (interaction.get("event") == "True"):
-                        relType = interaction.get("type")
-                        if relType not in self.relations:
-                            self.relations[relType] = Relation(relType)
-                        self.relations[relType].setStructure(interaction.get("directed") == "True", interaction.get("e1Role"), interaction.get("e2Role"), interaction.get("id"))
-                        self.relations[relType].e1Types.add(entityById[interaction.get("e1")].get("type"))
-                        self.relations[relType].e2Types.add(entityById[interaction.get("e2")].get("type"))
-                    else:
-                        self.eventArgumentTypes.add(interaction.get("type"))
-                        interactionsByE1[interaction.get("e1")].append(interaction)
-                # process events
+                    interactionsByE1[interaction.get("e1")].append(interaction)
+                # Add entity elements to analysis
                 for entity in document.getiterator("entity"):
-                    if entity.get("given") != "True":
-                        if "ENTITY" not in self.targets:
-                            self.targets["ENTITY"] = set()
-                        self.targets["ENTITY"].add(entity.get("type"))
-                    currentArgCounts = defaultdict(int)# copy.copy(countsTemplate)
-                    for interaction in interactionsByE1[entity.get("id")]:
-                        interactionTypes.add(interaction.get("type"))
-                        currentArgCounts[interaction.get("type")] += 1
-                        self.e2Types[entity.get("type")][interaction.get("type")].add(entityById[interaction.get("e2")].get("type"))
-                    argCounts[entity.get("type")].add(self._dictToTuple(currentArgCounts)) # save only one example for each detected argument combination
-                    # check for modifiers
-                    for modType in ("speculation", "negation"):
-                        if (entity.get(modType) != None):
-                            if modType not in self.modifiers:
-                                self.modifiers[modType] = set()
-                            self.modifiers[modType].add(entity.get("type"))
-        
-        for entityType in argCounts:
-            self.argLimits[entityType] # initialize to include entities with no arguments
-            for interactionType in interactionTypes:
-                self.argLimits[entityType][interactionType] = [sys.maxint,0]
-            for argCombination in argCounts[entityType]:
-                argCombination = self._tupToDict(argCombination)
-                #print entityType, combination
-                for interactionType in interactionTypes:
-                    minmax = self.argLimits[entityType][interactionType]
-                    if interactionType not in argCombination:
-                        minmax[0] = 0
-                    else:
-                        if minmax[0] > argCombination[interactionType]:
-                            minmax[0] = argCombination[interactionType]
-                        if minmax[1] < argCombination[interactionType]:
-                            minmax[1] = argCombination[interactionType]
-        
-        # print results
-        #self._defineEdgeTypes()
-        self._defineValidEdgeTypes()
-        self._updateCounts()
+                    self.addEntityElement(entity, interactionsByE1)
+                # Add interaction elements to analysis
+                for interaction in document.getiterator("interaction"):
+                    self.addInteractionElement(interaction, entityById)
+                # Calculate event definition argument limits from event instances
+                for event in self.events.values():
+                    event.countArguments()
+
         if model != None:
             self.save(model)
 
