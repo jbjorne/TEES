@@ -39,11 +39,10 @@ def groupDependencies(elements):
         for d2 in depStructs:
             if d1 == d2:
                 continue
-            if Range.overlap(d1["range"], d2["range"]):
-                if Range.contains(d1["range"], d2["range"]):
-                    score = abs((d2["range"][0] - d1["range"][0]) - (d1["range"][1] - d2["range"][1]))
-                    if score < d1["childScore"]:
-                        d1["child"] = d2
+            if d1["range"] != d2["range"] and Range.contains(d1["range"], d2["range"]):
+                score = abs((d2["range"][0] - d1["range"][0]) - (d1["range"][1] - d2["range"][1]))
+                if score < d1["childScore"]:
+                    d1["child"] = d2
     return depStructs             
 
 def toGraphViz(input, output, id, parse="McCC"):
@@ -68,7 +67,7 @@ def toGraphViz(input, output, id, parse="McCC"):
     #f.write("graph [label=\"Orthogonal edges\", splines=ortho, nodesep=0.1];\n")
     f.write("graph [nodesep=0.1];\n")
     f.write("node [shape=box];")
-    #f.write("ranksep=1;")
+    #f.write("ranksep=0.5;")
     
     f.write("subgraph tokens {\n")
     f.write("edge[weight=1000, arrowhead=none];\n")
@@ -100,10 +99,11 @@ def toGraphViz(input, output, id, parse="McCC"):
     for depStruct in depStructs:
         dep = depStruct["dep"]
         f.write(getId(dep, "id") + " [margin=0 label=\"" + dep.get("type") + "\"];\n")
-        f.write(getId(dep, "t1") + " -> " + getId(dep, "id") + " [weight=999];\n")
-        f.write(getId(dep, "id") + " -> " + getId(dep, "t2") + " [weight=999];\n")
+        f.write(getId(dep, "t1") + " -> " + getId(dep, "id") + " [weight=10];\n")
+        f.write(getId(dep, "id") + " -> " + getId(dep, "t2") + " [weight=10];\n")
         if depStruct["child"] != None:
-            f.write(getId(dep) + " -> " + getId(depStruct["child"]["dep"]) + " [color=red];\n")
+            #f.write(getId(dep) + " -> " + getId(depStruct["child"]["dep"]) + " [color=red];\n")
+            f.write(getId(depStruct["child"]["dep"]) + " -> " + getId(dep) + " [weight=1, color=red style=invis];\n")
         
 #         token = graph.tokensById[dep.get("t1")]
 #         headScore = getHeadScore(token)
