@@ -91,14 +91,16 @@ class StructureAnalyzer():
         relType = interaction.get("type")
         if relType not in self.relations:
             self.relations[relType] = Relation(relType)
-        self.relations[relType].addInstance(interaction.get("directed") == "True", interaction.get("e1Role"), interaction.get("e2Role"), interaction.get("id"))
+        e1Type = entityById[interaction.get("e1")].get("type")
+        e2Type = entityById[interaction.get("e2")].get("type")
+        self.relations[relType].addInstance(e1Type, e2Type, interaction.get("directed") == "True", interaction.get("e1Role"), interaction.get("e2Role"), interaction.get("id"))
     
     def addEntityElement(self, entity, interactionsByE1):
         # Determine extraction target
         self.addTarget(entity)
         
         entityType = entity.get("type")
-        if entity.get("event") == "True" or entity.get("id") in interactionsByE1:
+        if entity.get("event") == "True": # or entity.get("id") in interactionsByE1:
             if entityType not in self.events:
                 self.events[entityType] = Event(entityType)
         else:
@@ -485,7 +487,7 @@ class Event():
         self.minArgs = 0
         self.maxArgs = 0
         self.arguments = {}
-        self.argumentsByE1Instance = defaultdict(set) # event instance cache
+        self.argumentsByE1Instance = defaultdict(lambda:defaultdict(int)) # event instance cache
     
     def addArgumentInstance(self, e1Id, argType, e1Type, e2Type):
         # add argument to event definition
@@ -493,16 +495,16 @@ class Event():
             self.arguments[argType] = Argument(argType)
         self.arguments[argType].targetTypes.add(e2Type)
         # add to event instance cache
-        self.argumentsByE1Instance[e1Id].add((argType, e1Type, e2Type))
+        self.argumentsByE1Instance[e1Id][argType] += 1
         
     def countArguments(self):
         # Update argument limits for each argument definition
-        for combinations in self.argumentsByE1Instance.values():
-            counts = defaultdict(int) # for one event instance
-            for combination in combinations: # for each argument in the instance
-                counts[combination[0]] += 1 # increase count
-            for argType in counts.keys(): # the Argument object must already exist
-                self.arguments[argType].addCount(counts[argType])
+        for eventInstance in self.argumentsByE1Instance.values():
+            for argType in self.arguments: # check all possible argument types for each event instance
+                if argType in eventInstance:
+                    self.arguments[argType].addCount(eventInstance[argType])
+                else: # argument type does not exist in this event instance
+                    self.arguments[argType].addCount(0)
         # Update event definition argument limits
         self.minArgs = 0
         self.maxArgs = 0
@@ -512,7 +514,7 @@ class Event():
             self.minArgs += argument.min
             self.maxArgs += argument.max
         # Reset event instance cache
-        self.argumentsByE1Instance = defaultdict(set)
+        self.argumentsByE1Instance = defaultdict(lambda:defaultdict(int))
     
     def __repr__(self):
         s = "EVENT " + self.type + " [" + str(self.minArgs) + "," + str(self.maxArgs) + "]"
@@ -579,7 +581,9 @@ class Relation():
         self.e1Role = None
         self.e2Role = None
             
-    def addInstance(self, directed=None, e1Role=None, e2Role=None, id="undefined"):
+    def addInstance(self, e1Type, e2Type, directed=None, e1Role=None, e2Role=None, id="undefined"):
+        self.e1Types.add(e1Type)
+        self.e2Types.add(e2Type)
         if self.directed == None: # no relation of this type has been seen yet
             self.directed = directed
         elif self.directed != directed:
@@ -599,7 +603,7 @@ class Relation():
             raise Exception("Not a relation definition line: " + line)
         tabSplits = line.split("\t")
         self.type = tabSplits[0].split()[1]
-        self.directed = bool(tabSplits[0].split()[2])
+        self.directed = tabSplits[0].split()[2] == "directed"
         if " " in tabSplits[1]:
             self.e1Role = tabSplits[1].split()[0]
             self.e1Types = set(tabSplits[1].split()[1].split(","))
@@ -612,7 +616,11 @@ class Relation():
             self.e2Types = set(tabSplits[2].split(","))
     
     def __repr__(self):
-        s = "RELATION " + self.type + " " + str(self.directed) + "\t"
+        s = "RELATION " + self.type + " "
+        if self.directed:
+            s += "directed\t"
+        else:
+            s += "undirected\t"
         if self.e1Role != None:
             s += self.e1Role + " "
         s += ",".join(sorted(list(self.e1Types))) + "\t"
