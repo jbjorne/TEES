@@ -89,6 +89,18 @@ def overlap(range1, range2):
     # y1 <= y2 < x1 <= x2
     return not (range1[1] <= range2[0] or range2[1] <= range1[0])
 
+def order(range1, range2):
+    if range1[0] < range2[0]:
+        return -1
+    elif range1[0] > range2[0]:
+        return 1
+    elif range1[1] < range2[1]: # here range1[0] == range2[0]
+        return -1
+    elif range1[1] > range2[1]: # here range1[0] == range2[0]
+        return 1
+    else: # ranges are equal
+        return 0
+
 def tuplesToCharOffset(tuples, offsetSep="-", rangeSep=","):
     if len(tuples) == 2 and type(tuples[0]) == types.IntType and type(tuples[1]) == types.IntType:
         tuples = [tuples]

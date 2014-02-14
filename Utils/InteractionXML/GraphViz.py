@@ -1,6 +1,7 @@
 import sys, os
 sys.path.append(os.path.dirname(os.path.abspath(__file__))+"/../..")
 import Utils.ElementTreeUtils as ETUtils
+import Utils.Range as Range
 import subprocess
 import SentenceElements
 from Core.SentenceGraph import SentenceGraph
@@ -13,6 +14,33 @@ def getHeadScore(token):
     if token.get("headScore") != None:
         headScore = int(token.get("headScore"))
     return headScore
+
+def orderTokens(token1, token2):
+    offset1 = Range.charOffsetToSingleTuple(token1.get("charOffset"))
+    offset2 = Range.charOffsetToSingleTuple(token1.get("charOffset"))
+    return Range.order(offset1, offset2)
+
+def groupDependencies(elements):
+    tokens = sorted(elements.tokens, cmp=orderTokens)
+    indexByTokenId = {}
+    for i in range(len(tokens)):
+        indexByTokenId[tokens[i].get("id")] = i
+    
+    depStructs = []
+    for dependency in elements.dependencies:
+        depD = {"t1":indexByTokenId[dependency.get("t1")], "t2":indexByTokenId[dependency.get("t2")]}
+        if depD["t2"] > depD["t1"]:
+            depD["t1"], depD["t2"] = depD["t2"], depD["t1"]
+        depD["dep"] = dependency
+        depD["lower"] = None
+        depD["lowerScore"] = -1
+        depStructs.append(depD)
+    for d1 in depStructs:
+        for d2 in depStructs:
+            if d1 == d2:
+                continue
+            if Range.overlap((d1["t1"], d1["t2"]), (d2["t1"], d2["t2"])):
+                
 
 def toGraphViz(input, output, id, parse="McCC"):
     print >> sys.stderr, "====== Making Graphs ======"
@@ -36,7 +64,7 @@ def toGraphViz(input, output, id, parse="McCC"):
     #f.write("graph [label=\"Orthogonal edges\", splines=ortho, nodesep=0.1];\n")
     f.write("graph [nodesep=0.1];\n")
     f.write("node [shape=box];")
-    f.write("ranksep=1;")
+    #f.write("ranksep=1;")
     
     f.write("subgraph tokens {\n")
     f.write("edge[weight=1000, arrowhead=none];\n")
