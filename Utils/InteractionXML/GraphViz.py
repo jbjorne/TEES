@@ -53,8 +53,8 @@ def toGraphViz(input, output, id, parse="McCC"):
     
     f.write("subgraph dependencies {\n")
     #f.write("rank=\"same\";\n")
-    f.write("node [shape=ellipse margin=0];")
-    f.write("edge[weight=1 color=green];\n")
+    #f.write("node [shape=ellipse margin=0];")
+    f.write("edge[weight=0.001 color=green];\n")
     #f.write("{ rank=\"same\";\n")
     tokensByHeadScore = {}
     for token in elements.tokens:
@@ -73,17 +73,19 @@ def toGraphViz(input, output, id, parse="McCC"):
         if headScore not in depByHeadScore:
             depByHeadScore[headScore] = []
         depByHeadScore[headScore].append(getId(dep, "id"))
+        
+        
         #for i in range(headScore, -1, -1):
         #    for t in tokensByHeadScore[i]:
         #        f.write(getId(dep) + " -> " + getId(t) + ";\n")
         ##if token.get("headScore") != None and int(token.get("headScore")) > 0:
         ##    f.write(getId(dep, "id") + " -> " + token.get("headScore") + ";\n")
-        ###f.write(getId(dep, "t1") + " -> " + getId(dep, "t2") + " [fontsize=8 label=\"" + dep.get("type") + "\"];\n")
-    for i in range(max(depByHeadScore.keys())+ 1):
-        if i > 0:
-            for d1 in depByHeadScore[i]:
-                for d2 in depByHeadScore[i-1]:
-                    f.write(d1 + " -> " + d2 + " [weight=0.01 style=invis];\n")
+        #f.write(getId(dep, "t1") + " -> " + getId(dep, "t2") + ";\n")
+    #for i in range(max(depByHeadScore.keys())+ 1):
+    #    if i > 0:
+    #        for d1 in depByHeadScore[i]:
+    #            for d2 in depByHeadScore[i-1]:
+    #                f.write(d1 + " -> " + d2 + " [weight=0.01 style=invis];\n")
     f.write("}\n")
 
     f.write("subgraph entities {\n")
