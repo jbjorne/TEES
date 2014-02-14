@@ -201,9 +201,26 @@ class StructureAnalyzer():
             entityType = entity
         else:
             entityType = entity.get("type")
+        valid = True
         # check type
         if entityType not in self.events:
+            if issues != None: 
+                issues["INVALID_TYPE:"+entityType] += 1
             return False
+        # check validity of proposed argument count
+        eventDefinition = self.events[entityType]
+        if len(args) < eventDefinition.minArgs:
+            if issues != None: 
+                issues["ARG_COUNT_TOO_LOW:"+entityType] += 1
+                valid = False
+            else:
+                return False
+        if (not noUpperLimitBeyondOne) and len(args) > eventDefinition.maxArgs:
+            if issues != None: 
+                issues["ARG_COUNT_TOO_HIGH:"+entityType] += 1
+                valid = False
+            else:
+                return False
         # analyze proposed arguments
         argTypes = set()
         argTypeCounts = defaultdict(int)
@@ -219,30 +236,38 @@ class StructureAnalyzer():
             argTypes.add(argType)
         argTypes = sorted(list(argTypes))
         # check validity of proposed arguments
-        valid = True
-        eventArgLimits = self.argLimits[entityType]
+        argumentDefinitions = eventDefinition.arguments
         for argType in argTypes:
-            if argTypeCounts[argType] < eventArgLimits[argType][0]: # check for minimum number of arguments
+            argDef = argumentDefinitions[argType]
+            # Check minimum limit
+            if argTypeCounts[argType] < argDef.min: # check for minimum number of arguments
                 if issues != None:
                     issues["TOO_FEW_ARG:"+entityType+"."+argType] += 1
                     valid = False
                 else:
                     return False
-            maxArgCount = eventArgLimits[argType][1]
-            if maxArgCount > 1 and noUpperLimitBeyondOne: # don't differentiate arguments beyond 0, 1 or more than one.
-                maxArgCount = sys.maxint
-            if argTypeCounts[argType] > maxArgCount: # check for maximum number of arguments
+            # Check maximum limit
+            # noUpperLimitBeyondOne = don't differentiate arguments beyond 0, 1 or more than one.
+            if (not noUpperLimitBeyondOne) and argTypeCounts[argType] > argDef.max: # check for maximum number of arguments
                 if issues != None:
                     issues["TOO_MANY_ARG:"+entityType+"."+argType] += 1
                     valid = False
                 else:
                     return False
-        # check that no required arguments are missing
-        for argLimitType in eventArgLimits:
-            if argLimitType not in argTypes: # this type of argument is not part of the proposed event
-                if eventArgLimits[argLimitType][0] > 0: # for arguments not part of the event, the minimum limit must be one
+            # Check validity of E2 types
+            for e2Type in argE2Types[argType]:
+                if e2Type not in argDef.targetTypes:
                     if issues != None:
-                        issues["MISSING_ARG:"+entityType+"."+argLimitType] += 1
+                        issues["INVALID_ARG_TARGET:"+entityType+"."+argType+":"+e2Type] += 1
+                        valid = False
+                    else:
+                        return False
+        # check that no required arguments are missing
+        for argDef in argumentDefinitions:
+            if argDef.type not in argTypes: # this type of argument is not part of the proposed event
+                if argDef.min > 0: # for arguments not part of the event, the minimum limit must be zero
+                    if issues != None:
+                        issues["MISSING_ARG:"+entityType+"."+argDef.type] += 1
                         valid = False
                     else:
                         return False
@@ -299,12 +324,13 @@ class StructureAnalyzer():
                 remainingEntityIds = set()
                 for entity in entities:
                     entityId = entity.get("id")
-                    if self.isValidEvent(entity, eventArgumentsByE1[entityId], entityById):
+                    issues = defaultdict(int)
+                    if self.isValidEvent(entity, eventArgumentsByE1[entityId], entityById, issues=issues):
                         remainingEntities.append(entity)
                         remainingEntityIds.add(entityId)
                     else:
                         if debug:
-                            print >> sys.stderr, "Removing invalid event " + entity.get("id") + ":" + entity.get("type") + ":" + ",".join([x.get("type") for x in eventArgumentsByE1[entityId]])
+                            print >> sys.stderr, "Removing invalid event " + entity.get("id") + ":" + entity.get("type") + ":" + ",".join([x.get("type") for x in eventArgumentsByE1[entityId]]) + " with issues " + str(issues)
                         counts[entity.get("type")] += 1
                         removed += 1
                 entities = remainingEntities
@@ -340,22 +366,6 @@ class StructureAnalyzer():
         if printCounts:
             print >> sys.stderr, "Validation removed:", counts
         return counts
-    
-    def _defineValidEdgeTypes(self):
-        assert self.e2Types != None
-        self.edgeTypes = defaultdict(lambda:defaultdict(list))
-        for e1Type in sorted(self.e2Types.keys()):
-            for argType in sorted(self.e2Types[e1Type].keys()):
-                for e2Type in sorted(list(self.e2Types[e1Type][argType])):
-                    self.edgeTypes[e1Type][e2Type].append(argType)
-        for relationType in sorted(self.relations.keys()):
-            relation = self.relations[relationType]
-            for e1Type in sorted(list(relation.e1Types)):
-                for e2Type in sorted(list(relation.e2Types)):
-                    self.edgeTypes[e1Type][e2Type].append(relationType)
-                    assert relation.isDirected in [True, False]
-                    if not relation.isDirected: # undirected
-                        self.edgeTypes[e2Type][e1Type].append(relationType)
     
     # Saving and Loading ######################################################
     
@@ -634,5 +644,3 @@ if __name__=="__main__":
         s.validate(xml, simulation=False, debug=options.debug)
         if options.output != None:
             ETUtils.write(xml, options.output)
-            
-            
