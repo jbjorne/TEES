@@ -28,19 +28,23 @@ def groupDependencies(elements):
     
     depStructs = []
     for dependency in elements.dependencies:
-        depD = {"t1":indexByTokenId[dependency.get("t1")], "t2":indexByTokenId[dependency.get("t2")]}
-        if depD["t2"] > depD["t1"]:
-            depD["t1"], depD["t2"] = depD["t2"], depD["t1"]
+        depD = {"range":(indexByTokenId[dependency.get("t1")], indexByTokenId[dependency.get("t2")])}
+        if depD["range"][0] > depD["range"][1]:
+            depD["range"] = (depD["range"][1], depD["range"][0])
         depD["dep"] = dependency
-        depD["lower"] = None
-        depD["lowerScore"] = -1
+        depD["child"] = None
+        depD["childScore"] = 9999
         depStructs.append(depD)
     for d1 in depStructs:
         for d2 in depStructs:
             if d1 == d2:
                 continue
-            if Range.overlap((d1["t1"], d1["t2"]), (d2["t1"], d2["t2"])):
-                
+            if Range.overlap(d1["range"], d2["range"]):
+                if Range.contains(d1["range"], d2["range"]):
+                    score = abs((d2["range"][0] - d1["range"][0]) - (d1["range"][1] - d2["range"][1]))
+                    if score < d1["childScore"]:
+                        d1["child"] = d2
+    return depStructs             
 
 def toGraphViz(input, output, id, parse="McCC"):
     print >> sys.stderr, "====== Making Graphs ======"
@@ -84,23 +88,28 @@ def toGraphViz(input, output, id, parse="McCC"):
     #f.write("node [shape=ellipse margin=0];")
     f.write("edge[weight=0.001 color=green];\n")
     #f.write("{ rank=\"same\";\n")
-    tokensByHeadScore = {}
-    for token in elements.tokens:
-        headScore = getHeadScore(token)
-        if headScore not in tokensByHeadScore:
-            tokensByHeadScore[headScore] = []
-        tokensByHeadScore[headScore].append(token)
-    depByHeadScore = {}
-    depByHeadScore[0] = []
-    for dep in elements.dependencies:
+    #tokensByHeadScore = {}
+    #for token in elements.tokens:
+    #    headScore = getHeadScore(token)
+    #    if headScore not in tokensByHeadScore:
+    #        tokensByHeadScore[headScore] = []
+    #    tokensByHeadScore[headScore].append(token)
+    #depByHeadScore = {}
+    #depByHeadScore[0] = []
+    depStructs = groupDependencies(elements)
+    for depStruct in depStructs:
+        dep = depStruct["dep"]
         f.write(getId(dep, "id") + " [margin=0 label=\"" + dep.get("type") + "\"];\n")
         f.write(getId(dep, "t1") + " -> " + getId(dep, "id") + " [weight=999];\n")
         f.write(getId(dep, "id") + " -> " + getId(dep, "t2") + " [weight=999];\n")
-        token = graph.tokensById[dep.get("t1")]
-        headScore = getHeadScore(token)
-        if headScore not in depByHeadScore:
-            depByHeadScore[headScore] = []
-        depByHeadScore[headScore].append(getId(dep, "id"))
+        if depStruct["child"] != None:
+            f.write(getId(dep) + " -> " + getId(depStruct["child"]["dep"]) + " [color=red];\n")
+        
+#         token = graph.tokensById[dep.get("t1")]
+#         headScore = getHeadScore(token)
+#         if headScore not in depByHeadScore:
+#             depByHeadScore[headScore] = []
+#         depByHeadScore[headScore].append(getId(dep, "id"))
         
         
         #for i in range(headScore, -1, -1):
