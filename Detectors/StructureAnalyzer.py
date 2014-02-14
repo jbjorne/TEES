@@ -495,8 +495,8 @@ class Entity():
 class Event():
     def __init__(self, eventType=None):
         self.type = eventType
-        self.minArgs = 0
-        self.maxArgs = 0
+        self.minArgs = -1
+        self.maxArgs = -1
         self.arguments = {}
         self.argumentsByE1Instance = defaultdict(lambda:defaultdict(int)) # event instance cache
     
@@ -515,15 +515,20 @@ class Event():
                 if argType in eventInstance:
                     self.arguments[argType].addCount(eventInstance[argType])
                 else: # argument type does not exist in this event instance
-                    self.arguments[argType].addCount(0)
-        # Update event definition argument limits
-        self.minArgs = 0
-        self.maxArgs = 0
-        for argument in self.arguments.values():
-            assert argument.min != -1
-            assert argument.max != -1
-            self.minArgs += argument.min
-            self.maxArgs += argument.max
+                    self.arguments[argType].addCount(0) 
+            # Update event definition argument limits
+            totalArgs = sum(eventInstance.values())
+            if self.minArgs == -1 or self.minArgs > totalArgs:
+                self.minArgs = totalArgs
+            if self.maxArgs == -1 or self.maxArgs < totalArgs:
+                self.maxArgs = totalArgs
+        
+        # Set valid min and max for events with no arguments
+        if self.minArgs == -1:
+            self.minArgs = 0
+        if self.maxArgs == -1:
+            self.maxArgs = 0
+            
         # Reset event instance cache
         self.argumentsByE1Instance = defaultdict(lambda:defaultdict(int))
     
