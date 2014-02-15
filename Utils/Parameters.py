@@ -48,7 +48,7 @@ def toId(parameters, valueListKey=None):
 
 
 def toDict(parameters, valueListKey=None):
-    if parameters == None:
+    if parameters == None or parameters == "":
         return {}
     if type(parameters) not in types.StringTypes:
         return parameters

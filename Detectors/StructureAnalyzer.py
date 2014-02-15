@@ -66,7 +66,7 @@ class StructureAnalyzer():
             self.save(model)
 
     def addTarget(self, element):
-        if element.get("given" != "True"):
+        if element.get("given") != "True":
             if element.tag == "interaction":
                 targetClass = "INTERACTION"
             elif element.tag == "entity":
@@ -159,12 +159,18 @@ class StructureAnalyzer():
         else:
             return (relation.e1Role, relation.e2Role)
     
+    def hasEvents(self):
+        return len(self.events) > 0
+    
+    def hasModifiers(self):
+        return len(self.modifiers) > 0
+    
     def hasDirectedTargets(self):
         if "INTERACTION" not in self.targets: # no interactions to predict
             return False
         for event in self.events.values(): # look for event argument targets (always directed)
             for argType in event.arguments:
-                if argType in self.targets["INTERACTION"]:
+                if argType in self.targets["INTERACTION"].targetTypes:
                     return True
         for relType in self.relations: # look for directed relation targets
             relation = self.relations[relType]
@@ -509,19 +515,23 @@ def rangeToTuple(string):
     return (begin, end)
 
 class Target():
-    def __init__(self, targetClass):
-        assert targetClass in ["INTERACTION", "ENTITY"]
-        self.targetClass = targetClass
+    def __init__(self, targetClass=None):
+        if targetClass != None:
+            assert targetClass in ["INTERACTION", "ENTITY"]
+        self.type = targetClass
         self.targetTypes = set()
     
     def __repr__(self):
-        return "TARGET " + self.targetClass + "\t" + ",".join(sorted(list(self.targetTypes)))
+        return "TARGET " + self.type + "\t" + ",".join(sorted(list(self.targetTypes)))
     
     def load(self, line):
         line = line.strip()
-        if not line.startswith("ENTITY"):
-            raise Exception("Not an entity definition line: " + line)
-        self.type = line.split()[1]
+        if not line.startswith("TARGET"):
+            raise Exception("Not a target definition line: " + line)
+        tabSplits = line.split("\t")
+        self.type = tabSplits[0].split()[1]
+        assert self.type in ["INTERACTION", "ENTITY"]
+        self.targetTypes = set(tabSplits[1].split(","))
 
 class Entity():
     def __init__(self, entityType=None):

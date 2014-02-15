@@ -104,11 +104,11 @@ class EventDetector(Detector):
         if self.unmerging == None:
             if not self.structureAnalyzer.isInitialized():
                 self.structureAnalyzer.load(self.model)
-            self.unmerging = self.structureAnalyzer.counts["EVENT"] > 0
+            self.unmerging = self.structureAnalyzer.hasEvents()
         if self.trainModifiers == None:
             if not self.structureAnalyzer.isInitialized():
                 self.structureAnalyzer.load(self.model)
-            self.trainModifiers = self.structureAnalyzer.counts["MODIFIER"] > 0
+            self.trainModifiers = self.structureAnalyzer.hasModifiers()
         if self.checkStep("EXAMPLES"):
             self.triggerDetector.buildExamples(self.model, [optData.replace("-nodup", ""), trainData.replace("-nodup", "")], [self.workDir+self.triggerDetector.tag+"opt-examples.gz", self.workDir+self.triggerDetector.tag+"train-examples.gz"], saveIdsToModel=True)
             self.edgeDetector.buildExamples(self.model, [optData.replace("-nodup", ""), trainData.replace("-nodup", "")], [self.workDir+self.edgeDetector.tag+"opt-examples.gz", self.workDir+self.edgeDetector.tag+"train-examples.gz"], saveIdsToModel=True)

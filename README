@@ -1,4 +1,4 @@
-Turku Event Extraction System 2.1
+Turku Event Extraction System 2.2
 =================================
 
 Turku Event Extraction System (TEES) is a free and open source natural language
@@ -65,6 +65,7 @@ The primary user interface to TEES consists of the following programs
  * train.py - Train a new event/relation extraction model
  * batch.py - Batch process large sets of input files
  * configure.py - Install TEES models, external tools and corpora
+ * visualize.py - Visualize the events and parse for a sentence
  
 For information on using these programs, see the TEES wiki at 
 https://github.com/jbjorne/TEES/wiki

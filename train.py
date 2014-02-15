@@ -57,7 +57,7 @@ def train(output, task=None, detector=None, inputFiles=None, models=None, parse=
     models = setDictDefaults(models, {"devel":None, "test":None})
     exampleStyles = setDictDefaults(exampleStyles, {"examples":None, "trigger":None, "edge":None, "unmerging":None, "modifiers":None})
     classifierParams = setDictDefaults(classifierParams, {"examples":None, "trigger":None, "recall":None, "edge":None, "unmerging":None, "modifiers":None})
-    subset = setDictDefaults(subset, {"train":None, "devel":None, "test":None, "seed":0, "all":None})
+    subset = setDictDefaults(Parameters.get(subset), {"train":None, "devel":None, "test":None, "seed":0, "all":None})
     folds = setDictDefaults(folds, {"train":None, "devel":None, "test":None})
     processUnmerging = getDefinedBool(processUnmerging)
     processModifiers = getDefinedBool(processModifiers)
@@ -290,6 +290,8 @@ def learnSettings(inputFiles, detector, classifierParameters):
             detector = "Detectors.EntityDetector"
         elif "INTERACTION" in structureAnalyzer.targets:
             detector = "Detectors.EdgeDetector"
+        else:
+            assert False, structureAnalyzer.targets
     print >> sys.stderr, "Using detector '" + str(detector) + "'"
     
     # Set default parameters

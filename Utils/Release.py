@@ -225,7 +225,7 @@ def makeSoftwarePackage(input, output):
     print >> sys.stderr, "Packaging software:", setupCommand
     subprocess.call(setupCommand, shell=True)
     
-def buildModels(output, tasks, connection, dummy=False):
+def buildModels(output, tasks, connection, extra, dummy=False):
     """
     Build the release models.
     
@@ -239,6 +239,8 @@ def buildModels(output, tasks, connection, dummy=False):
         if task in ["GE11", "GE09"]:
             taskName += ".2"
         command = "python " + os.path.join(mainTEESDir, "train.py") + " -t " + taskName + " -o %o/%j -c " + connection + " --clearAll"
+        if extra != None:
+            command += " " + extra
         batch(command, input=None, connection=connection, jobTag=task, output=output, debug=True, dummy=dummy)
 
 def getResultLine(logPath, tagPaths):
@@ -427,6 +429,7 @@ if __name__=="__main__":
     optparser.add_option("-c", "--connection", default=None, dest="connection", help="")
     optparser.add_option("-d", "--dummy", action="store_true", default=False, dest="dummy", help="")
     optparser.add_option("-p", "--preserve", action="store_true", default=False, dest="preserve", help="")
+    optparser.add_option("-e", "--extra", default=None, dest="extra", help="Extra parameters for the training process")
     optparser.add_option("--catenate", action="store_true", default=False, dest="catenate", help="")
     optparser.add_option("--classificationOutput", default=None, dest="classificationOutput", help="")
     optparser.add_option("--archiveName", default=None, dest="archiveName", help="")
@@ -455,7 +458,7 @@ if __name__=="__main__":
     if options.action == "LIST_EXECUTABLES":
         listExecutables()
     elif options.action == "BUILD_MODELS":
-        buildModels(options.output, options.tasks, options.connection, options.dummy)
+        buildModels(options.output, options.tasks, options.connection, options.extra, options.dummy)
     elif options.action == "GET_RESULTS":
         getResults(options.output, options.tasks)
     elif options.action == "BUILD_DDI13":
