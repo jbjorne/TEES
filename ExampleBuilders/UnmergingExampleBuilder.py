@@ -381,7 +381,8 @@ class UnmergingExampleBuilder(ExampleBuilder):
                     self.exampleStats.filter("given-leaf:" + entity.get("type"))
                     if self.debug:
                         print >> sys.stderr, " ", category +"("+eType+")", "arg combination", argCombination, "LEAF"
-                elif not structureAnalyzer.isValidEvent(entity, argCombination, self.documentEntitiesById, issues=issues):
+                elif (validIntTypeCount == 0 and not structureAnalyzer.isValidEntity(entity)) and \
+                not structureAnalyzer.isValidEvent(entity, argCombination, self.documentEntitiesById, issues=issues):
                     for key in issues:
                         self.exampleStats.filter(key)
                     if self.debug:

@@ -140,13 +140,14 @@ class StructureAnalyzer():
                 print >> sys.stderr, "Warning, removing ENTITY conflicting with EVENT for type " + eventType
                 del self.entities[eventType]
             # Update analyses
-            for argType in sorted(self.events[eventType].arguments):
+            event = self.events[eventType]
+            for argType in event.arguments:
                 # Update set of known event argument types
                 self.eventArgumentTypes.add(argType)
                 # Add argument to edge types (argument is always directed)
-                argument = self.events[eventType].arguments[argType]
-                for e2Type in sorted(argument.targetTypes):
-                    self.edgeTypes[eventType][e2Type].add(relation.type)
+                argument = event.arguments[argType]
+                for e2Type in argument.targetTypes:
+                    self.edgeTypes[eventType][e2Type].add(argType)
     
     # validation ##############################################################
             
@@ -184,8 +185,8 @@ class StructureAnalyzer():
             return True
         else:
             relation = self.relations[edgeType]
-            assert relation.isDirected in [True, False]
-            return relation.isDirected
+            assert relation.directed in [True, False]
+            return relation.directed
     
     def isEvent(self, entityType):
         return entityType in self.events
@@ -215,6 +216,12 @@ class StructureAnalyzer():
         if forceUndirected and e2Type in self.edgeTypes and e1Type in self.edgeTypes[e2Type]:
             validEdgeTypes = validEdgeTypes.union(self.edgeTypes[e2Type][e1Type])
         return validEdgeTypes
+    
+    def isValidEntity(self, entity):
+        if entity.get("type") in self.entities and entity.get("event") != "True":
+            return True
+        else:
+            return False
     
     def isValidRelation(self, interaction, entityById=None, issues=None):
         if interaction.get("type") not in self.relations:

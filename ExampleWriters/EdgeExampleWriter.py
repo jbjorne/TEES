@@ -99,7 +99,7 @@ class EdgeExampleWriter(SentenceExampleWriter):
                         if structureAnalyzer.isEventArgument(iType): #eventTypes[i] == "True":
                             pairElement.set("event", "True")
                         else:
-                            entityRoles = structureAnalyzer.getEntityRoles(iType)
+                            entityRoles = structureAnalyzer.getRelationRoles(iType)
                             if entityRoles != None:
                                 pairElement.set("e1Role", entityRoles[0])
                                 pairElement.set("e2Role", entityRoles[1])
