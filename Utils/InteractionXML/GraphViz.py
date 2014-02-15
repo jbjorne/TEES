@@ -5,6 +5,7 @@ import Utils.Range as Range
 import subprocess
 import SentenceElements
 from Core.SentenceGraph import SentenceGraph
+import tempfile
 
 def getId(element, attribute="id"):
     return element.get(attribute).replace(".", "_");
@@ -56,8 +57,13 @@ def groupDependencies(elements):
                     d1["child"] = d2
     return depStructs         
 
-def toGraphViz(input, output, id, parse="McCC", color=None, colorNum=None, colorParse=None, colorNumParse=None):
-    print >> sys.stderr, "====== Making Graphs ======"
+def toGraphViz(input, id, output=None, parse="McCC", color=None, colorNum=None, colorParse=None, colorNumParse=None):
+    print >> sys.stderr, "====== Visualizing Sentence with GraphViz (www.graphviz.org) ======"
+    
+    if output == None:
+        output = os.path.join(tempfile.gettempdir(), id + ".gv")
+    
+    # Get the sentence
     xml = ETUtils.ETFromObj(input).getroot()
     sentence = None
     for document in xml.findall("document"):
@@ -73,6 +79,7 @@ def toGraphViz(input, output, id, parse="McCC", color=None, colorNum=None, color
     graph = SentenceGraph(elements.sentence, elements.tokens, elements.dependencies)
     graph.mapInteractions(elements.entities, elements.interactions)
     
+    print >> sys.stderr, "Graph file saved to: " + output
     f = open(output, "wt")
     f.write("digraph " + id.replace(".", "_") + " {\n")
     #f.write("graph [label=\"Orthogonal edges\", splines=ortho, nodesep=0.1];\n")
@@ -139,6 +146,8 @@ def toGraphViz(input, output, id, parse="McCC", color=None, colorNum=None, color
     
     f.write("}\n")
     f.close()
+    
+    print >> sys.stderr, "PDF file saved to: " + output + ".pdf"
     subprocess.call("dot -Tpdf " + output + " > " + output + ".pdf", shell=True)
     
 
@@ -161,4 +170,4 @@ if __name__=="__main__":
     optparser.add_option("-m", "--colorNumParse", default=7, type="int", dest="colorNumParse", help="Event color scheme")
     (options, args) = optparser.parse_args()
     
-    toGraphViz(options.input, options.output, options.id, options.parse, options.color, options.colorNum, options.colorParse, options.colorNumParse)
+    toGraphViz(options.input, options.id, options.output, options.parse, options.color, options.colorNum, options.colorParse, options.colorNumParse)
