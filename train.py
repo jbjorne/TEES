@@ -375,7 +375,7 @@ def getTaskSettings(task, detector, bioNLPSTParams, preprocessorParams,
         # Trigger style
         if task in ["GE09", "GE11", "GE13"] and subTask == 1:
             exampleStyles["trigger"] = Parameters.cat("genia_task1", exampleStyles["trigger"], "Trigger example style / " + fullTaskId)
-        elif task == "EPI11":
+        elif task in ["EPI11", "PC13"]:
             exampleStyles["trigger"] = Parameters.cat("epi_merge_negated", exampleStyles["trigger"], "Trigger example style / " + fullTaskId)
         elif task == "BB11": # "bb_features:build_for_nameless:wordnet"
             exampleStyles["trigger"] = Parameters.cat("bb_features:build_for_nameless", exampleStyles["trigger"], "Trigger example style / " + fullTaskId)
