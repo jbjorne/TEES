@@ -64,6 +64,26 @@ class StructureAnalyzer():
         self._updateSupportingAnalyses()
         if model != None:
             self.save(model)
+    
+    def buildSiteMap(self, interactionsByE1, entityById):
+        sitePrimaryArguments = defaultdict(set)
+        interactionsByE2 = {}
+        for interaction in interactionsByE1.values():
+            interactionsByE2[interaction.get("e2")] = interaction
+        for interaction in interactionsByE1.values():
+            if interaction.get("type") == "Site":
+                triggerId = interaction.get("e1")
+                entityEntityId = interaction.get("e2")
+                siteParentProteinIds = set()
+                for interaction2 in interactionsByE2[entityEntityId]:
+                    if interaction2.get("type") == "SiteParent":
+                        siteParentProteinIds.add(interaction.get("e2"))
+                for interaction2 in interactionsByE1[triggerId]:
+                    if interaction2 == interaction:
+                        continue
+                    if interaction2.get("e1") == triggerId and interaction2.get("e2") in siteParentProteinIds:
+                        sitePrimaryArguments[interaction].add(interaction2)
+        return sitePrimaryArguments
 
     def addTarget(self, element):
         if element.get("given") != "True":
@@ -624,6 +644,7 @@ class Argument():
         self.min = -1
         self.max = -1
         self.targetTypes = set()
+        self.siteOf = set()
     
     def addCount(self, count):
         if self.min == -1 or self.min > count:
