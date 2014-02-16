@@ -198,8 +198,8 @@ class StructureAnalyzer():
                     return True
         for relType in self.relations: # look for directed relation targets
             relation = self.relations[relType]
-            assert relation.isDirected != None
-            if relation.isDirected and relType in self.targets["INTERACTION"].targetTypes:
+            assert relation.directed in [True, False]
+            if relation.directed and relType in self.targets["INTERACTION"].targetTypes:
                 return True
         return False
         
@@ -220,6 +220,20 @@ class StructureAnalyzer():
         else:
             assert edgeType in self.relations, (edgeType, self.relations)
             return False
+    
+    def getArgSiteOfTypes(self, entityType, edgeType, strict=False):
+        #if not edgeType in self.eventArgumentTypes:
+        #    raise Exception("Edge type " + str(edgeType) + " is not an event argument and cannot be a site")
+        if not entityType in self.events:
+            if strict:
+                raise Exception("No event of type " + str(entityType))
+            return set()
+        event = self.events[entityType]
+        if not edgeType in event.arguments:
+            if strict:
+                raise Exception("Event of type " + str(entityType) + " cannot have an argument of type " + str(edgeType))
+            return set()
+        return self.events[entityType].arguments[edgeType].siteOfTypes
         
     def getArgLimits(self, entityType, argType):
         argument = self.events[entityType].arguments[argType]
