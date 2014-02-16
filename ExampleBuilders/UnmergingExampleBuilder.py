@@ -89,6 +89,7 @@ class UnmergingExampleBuilder(ExampleBuilder):
             defaultParameters[name] = None
         defaultParameters["keep_intersentence"] = False
         defaultParameters["keep_intersentence_gold"] = True
+        defaultParameters["no_arg_count_upper_limit"] = False
         self.styles = self._setDefaultParameters(defaultParameters)
         self.styles = self.getParameters(style)
         self.multiEdgeFeatureBuilder = MultiEdgeFeatureBuilder(self.featureSet)
@@ -381,16 +382,9 @@ class UnmergingExampleBuilder(ExampleBuilder):
                     self.exampleStats.filter("given-leaf:" + entity.get("type"))
                     if self.debug:
                         print >> sys.stderr, " ", category +"("+eType+")", "arg combination", argCombination, "LEAF"
-                elif (validIntTypeCount == 0 and not structureAnalyzer.isValidEntity(entity)) and \
-                not structureAnalyzer.isValidEvent(entity, argCombination, self.documentEntitiesById, issues=issues):
-                    for key in issues:
-                        self.exampleStats.filter(key)
+                elif structureAnalyzer.isValidEntity(entity) or structureAnalyzer.isValidEvent(entity, argCombination, self.documentEntitiesById, noUpperLimitBeyondOne=self.styles["no_arg_count_upper_limit"], issues=issues):
                     if self.debug:
-                        print >> sys.stderr, " ", category, "arg combination", argCombination, "INVALID", issues
-                else:
-                    if self.debug:
-                        print >> sys.stderr, " ", category, "arg combination", argCombination, "VALID"                
-                    features = {}
+                        print >> sys.stderr, " ", category, "arg combination", argCombination, "VALID"
                     argString = ""
                     for arg in argCombination:
                         argString += "," + arg.get("type") + "=" + arg.get("id")
@@ -406,6 +400,16 @@ class UnmergingExampleBuilder(ExampleBuilder):
                     #examples.append( example )
                     ExampleUtils.appendExamples([example], outfile)
                     exampleIndex += 1
+                else: # not a valid event or valid entity
+                    if len(issues) == 0: # must be > 0 so that it gets filtered
+                        if not structureAnalyzer.isValidEntity(entity):
+                            issues["INVALID_ENTITY:"+eType] += 1
+                        else:
+                            issues["UNKNOWN_ISSUE_FOR:"+eType] += 1
+                    for key in issues:
+                        self.exampleStats.filter(key)
+                    if self.debug:
+                        print >> sys.stderr, " ", category, "arg combination", argCombination, "INVALID", issues
                 self.exampleStats.endExample()
             
         #return examples
