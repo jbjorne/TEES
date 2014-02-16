@@ -405,6 +405,7 @@ def addInteractionsToSTDoc(doc, docElement, tMap, eMap, entityElementMap, skipAr
     corefProtMap = getCorefTargetMap(docElement)
     # Then process all interactions
     siteParents = defaultdict(set)
+    siteOfTypes = defaultdict(set)
     for interaction in docElement.getiterator("interaction"):
         intType = interaction.get("type")
         if intType == "neg" or intType == "CorefTarget" or intType in skipArgs:
@@ -430,7 +431,10 @@ def addInteractionsToSTDoc(doc, docElement, tMap, eMap, entityElementMap, skipAr
                 eMap[e1] = makeSTEvent(tMap[e1], entityElementMap[e1])
                 doc.events.append(eMap[e1])
             # add arguments
-            eMap[e1].addArgument(interaction.get("type"), interaction.get("e2"), None, getExtraFromElement(interaction))
+            arg = eMap[e1].addArgument(interaction.get("type"), interaction.get("e2"), None, getExtraFromElement(interaction))
+            siteOfTypes[arg] = interaction.get("siteOfTypes")
+            if siteOfTypes[arg] != None:
+                siteOfTypes[arg] = set(siteOfTypes[arg].split(","))
 #    # Rename site-type interactions (which have been masked as "SiteArg" to prevent them being processed as Shared Task task-2 sites
 #    for event in doc.events:
 #        for arg in event.arguments:
@@ -439,14 +443,14 @@ def addInteractionsToSTDoc(doc, docElement, tMap, eMap, entityElementMap, skipAr
 #                if arg[3] != None: # Convert also prediction strengths
 #                    arg[3] = arg[3].replace("SiteArg", "Site")
     # replace argument target ids with actual target objects
-    mapSTArgumentTargets(doc, siteParents, tMap, eMap)
+    mapSTArgumentTargets(doc, siteParents, siteOfTypes, tMap, eMap)
 
-def mapSTArgumentTargets(stDoc, siteParents, tMap, eMap):
+def mapSTArgumentTargets(stDoc, siteParents, siteOfTypes, tMap, eMap):
     # Map argument targets
     for event in stDoc.events:
-        argTypeCounts = defaultdict(int)
+        #argTypeCounts = defaultdict(int)
         for arg in event.arguments:
-            argTypeCounts[arg.type] += 1
+            #argTypeCounts[arg.type] += 1
             assert type(arg.target) in types.StringTypes, arg.target
             targetId = arg.target # at this point, target is not yet an argument, but an interaction XML id
             if targetId in eMap:
@@ -459,24 +463,38 @@ def mapSTArgumentTargets(stDoc, siteParents, tMap, eMap):
         # An interaction with type "Site" is the task 2 argument. An interaction with type "SiteParent" links the target
         # of the "Site"-argument to the protein that is the target of the core argument, allowing the site to be connected
         # to its core argument.
-        argTypeCounts["Theme_and_Cause"] = argTypeCounts["Theme"] + argTypeCounts["Cause"]
-        if max(argTypeCounts.values()) > 1: # sites must be linked to core arguments
-            argsToKeep = []
-            argsWithSite = set() # prevent more than one site per argument
-            for arg1 in event.arguments:
-                if arg1.type == "Site":
-                    for arg2 in event.arguments:
+        #argTypeCounts["Theme_and_Cause"] = argTypeCounts["Theme"] + argTypeCounts["Cause"]
+        #if max(argTypeCounts.values()) > 1: # sites must be linked to core arguments
+        argsToKeep = []
+        argsWithSite = set() # prevent more than one site per argument
+        for arg1 in event.arguments:
+            if arg1.type == "Site":
+                # Pick valid potential primary arguments
+                validPrimaryArgTypes = siteOfTypes[arg1]
+                if validPrimaryArgTypes == None:
+                    validPrimaryArgTypes = ("Theme", "Cause")
+                validPrimaryArgs = []
+                for arg2 in event.arguments:
+                    if arg2.type in validPrimaryArgTypes:
+                        validPrimaryArgs.append(arg2)
+                # Map site to a primary argument
+                if len(validPrimaryArgs) == 1: # only one valid primary argument, no siteParents are needed
+                    arg2 = validPrimaryArgs[0]
+                    if arg2 not in argsWithSite: # only if arg2 hasn't already got a site
+                        argsWithSite.add(arg2)
+                        arg1.siteOf = arg2
+                        argsToKeep.append(arg1)
+                elif len(validPrimaryArgs) > 0: # multiple potential primary arguments
+                    for arg2 in validPrimaryArgs:
                         # Keep site only if it's core argument can be determined unambiguously
-                        if arg2.type != "Site" and arg1.target in siteParents and arg2.target in siteParents[arg1.target]:
-                            if arg2 not in argsWithSite: # only if arg2 hasn't already got a site
-                                argsWithSite.add(arg2)
-                                arg1.siteOf = arg2
-                                argsToKeep.append(arg1)
-                                break # so that arg1 won't be duplicated when one site has (incorrectly) two parents
-                else:
-                    argsToKeep.append(arg1)
-            event.arguments = argsToKeep
-                
+                        if arg2 not in argsWithSite and arg1.target in siteParents and arg2.target in siteParents[arg1.target]:
+                            argsWithSite.add(arg2)
+                            arg1.siteOf = arg2
+                            argsToKeep.append(arg1)
+                            break # so that arg1 won't be duplicated when one site has (incorrectly) two parents
+            else:
+                argsToKeep.append(arg1)
+        event.arguments = argsToKeep            
 
 def toSTFormat(input, output=None, outputTag="a2", useOrigIds=False, debug=False, skipArgs=[], validate=True, writeExtra=False, allAsRelations=False):
     print >> sys.stderr, "Loading corpus", input

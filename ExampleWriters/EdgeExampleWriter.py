@@ -98,6 +98,9 @@ class EdgeExampleWriter(SentenceExampleWriter):
                     if iType != "neg":
                         if structureAnalyzer.isEventArgument(iType): #eventTypes[i] == "True":
                             pairElement.set("event", "True")
+                            siteOfTypes = structureAnalyzer.getArgSiteOfTypes(e1.get("type"), iType)
+                            if len(siteOfTypes) > 0:
+                                pairElement.set("siteOfTypes", ",".join(sorted(list(siteOfTypes))))
                         else:
                             entityRoles = structureAnalyzer.getRelationRoles(iType)
                             if entityRoles != None:
