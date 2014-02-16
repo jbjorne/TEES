@@ -48,15 +48,18 @@ class StructureAnalyzer():
                 entityById = {}
                 for entity in document.getiterator("entity"):
                     entityById[entity.get("id")] = entity
+                interactions = []
                 interactionsByE1 = defaultdict(list)
                 for interaction in document.getiterator("interaction"):
+                    interactions.append(interaction)
                     interactionsByE1[interaction.get("e1")].append(interaction)
+                siteOfTypes = self.buildSiteOfMap(interactions, interactionsByE1, entityById)
                 # Add entity elements to analysis
                 for entity in document.getiterator("entity"):
                     self.addEntityElement(entity, interactionsByE1)
                 # Add interaction elements to analysis
-                for interaction in document.getiterator("interaction"):
-                    self.addInteractionElement(interaction, entityById)
+                for interaction in interactions:
+                    self.addInteractionElement(interaction, entityById, siteOfTypes[interaction])
                 # Calculate event definition argument limits from event instances
                 for event in self.events.values():
                     event.countArguments()
@@ -65,25 +68,25 @@ class StructureAnalyzer():
         if model != None:
             self.save(model)
     
-    def buildSiteMap(self, interactionsByE1, entityById):
-        sitePrimaryArguments = defaultdict(set)
-        interactionsByE2 = {}
-        for interaction in interactionsByE1.values():
-            interactionsByE2[interaction.get("e2")] = interaction
-        for interaction in interactionsByE1.values():
+    def buildSiteOfMap(self, interactions, interactionsByE1, entityById):
+        siteOfTypes = defaultdict(set)
+        #interactionsByE2 = {}
+        #for interaction in interactions:
+        #    interactionsByE2[interaction.get("e2")] = interaction
+        for interaction in interactions:
             if interaction.get("type") == "Site":
                 triggerId = interaction.get("e1")
                 entityEntityId = interaction.get("e2")
                 siteParentProteinIds = set()
-                for interaction2 in interactionsByE2[entityEntityId]:
+                for interaction2 in interactionsByE1[entityEntityId]:
                     if interaction2.get("type") == "SiteParent":
-                        siteParentProteinIds.add(interaction.get("e2"))
+                        siteParentProteinIds.add(interaction2.get("e2"))
                 for interaction2 in interactionsByE1[triggerId]:
-                    if interaction2 == interaction:
+                    if interaction2 == interaction or interaction2.get("Type") == "Site":
                         continue
                     if interaction2.get("e1") == triggerId and interaction2.get("e2") in siteParentProteinIds:
-                        sitePrimaryArguments[interaction].add(interaction2)
-        return sitePrimaryArguments
+                        siteOfTypes[interaction].add(interaction2.get("type"))
+        return siteOfTypes
 
     def addTarget(self, element):
         if element.get("given") != "True":
@@ -97,7 +100,7 @@ class StructureAnalyzer():
                 self.targets[targetClass] = Target(targetClass)
             self.targets[targetClass].targetTypes.add(element.get("type"))
     
-    def addInteractionElement(self, interaction, entityById):
+    def addInteractionElement(self, interaction, entityById, siteOfTypes):
         self.addTarget(interaction)
         
         if not (interaction.get("event") == "True"):
@@ -107,7 +110,7 @@ class StructureAnalyzer():
             e2Type = entityById[interaction.get("e2")].get("type")
             if e1Type not in self.events:
                 raise Exception("Argument " + interaction.get("id") + " of type " + interaction.get("type") + " for undefined event type " + e1Type)
-            self.events[e1Type].addArgumentInstance(interaction.get("e1"), interaction.get("type"), e1Type, e2Type)
+            self.events[e1Type].addArgumentInstance(interaction.get("e1"), interaction.get("type"), e1Type, e2Type, siteOfTypes)
     
     def addRelation(self, interaction, entityById):
         relType = interaction.get("type")
@@ -585,12 +588,15 @@ class Event():
     def addTriggerInstance(self, entityId):
         self._argumentsByE1Instance[entityId] = defaultdict(int)
     
-    def addArgumentInstance(self, e1Id, argType, e1Type, e2Type):
+    def addArgumentInstance(self, e1Id, argType, e1Type, e2Type, siteOfTypes):
         # add argument to event definition
         if argType not in self.arguments:
-            self.arguments[argType] = Argument(argType)
+            argument = Argument(argType)
             if not self._firstInstanceCache: # there have been events before but this argument has not been seen
-                self.arguments[argType].min = 0
+                argument.min = 0
+            self.arguments[argType] = argument
+        if siteOfTypes != None and len(siteOfTypes) > 0:
+            self.arguments[argType].siteOfTypes = self.arguments[argType].siteOfTypes.union(siteOfTypes)
         self.arguments[argType].targetTypes.add(e2Type)
         # add to event instance cache
         self._argumentsByE1Instance[e1Id][argType] += 1
@@ -644,7 +650,7 @@ class Argument():
         self.min = -1
         self.max = -1
         self.targetTypes = set()
-        self.siteOf = set()
+        self.siteOfTypes = set()
     
     def addCount(self, count):
         if self.min == -1 or self.min > count:
@@ -653,13 +659,20 @@ class Argument():
             self.max = count
 
     def __repr__(self):
-        return self.type + " [" + str(self.min) + "," + str(self.max) + "] " + ",".join(sorted(list(self.targetTypes)))
+        s = self.type
+        if len(self.siteOfTypes) > 0:
+            s += " {" + ",".join(sorted(list(self.siteOfTypes))) + "}"
+        return s + " [" + str(self.min) + "," + str(self.max) + "] " + ",".join(sorted(list(self.targetTypes)))
     
     def load(self, string):
-        string = string.strip()
-        self.type, limits, self.targetTypes = string.split()
-        self.min, self.max = rangeToTuple(limits)
-        self.targetTypes = set(self.targetTypes.split(","))
+        splits = string.strip().split()
+        self.type = splits[0]
+        assert len(splits) in (3,4), string
+        if len(splits) == 4:
+            assert splits[1].startswith("{") and splits[1].endswith("}"), string
+            self.siteOfTypes = set(splits[1].strip("{").strip("}").split(","))
+        self.min, self.max = rangeToTuple(splits[1 + len(splits) - 3])
+        self.targetTypes = set(splits[2 + len(splits) - 3].split(","))
 
 class Modifier():
     def __init__(self, modType=None):
