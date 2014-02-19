@@ -73,19 +73,25 @@ class StructureAnalyzer():
         #interactionsByE2 = {}
         #for interaction in interactions:
         #    interactionsByE2[interaction.get("e2")] = interaction
+        interactionById = {}
+        for interaction in interactions:
+            interactionById[interaction.get("id")] = interaction
         for interaction in interactions:
             if interaction.get("type") == "Site":
-                triggerId = interaction.get("e1")
-                entityEntityId = interaction.get("e2")
-                siteParentProteinIds = set()
-                for interaction2 in interactionsByE1[entityEntityId]:
-                    if interaction2.get("type") == "SiteParent":
-                        siteParentProteinIds.add(interaction2.get("e2"))
-                for interaction2 in interactionsByE1[triggerId]:
-                    if interaction2 == interaction or interaction2.get("Type") == "Site":
-                        continue
-                    if interaction2.get("e1") == triggerId and interaction2.get("e2") in siteParentProteinIds:
-                        siteOfTypes[interaction].add(interaction2.get("type"))
+                if interaction.get("siteOf") != None: # annotated primary arguments
+                    siteOfTypes[interaction].add(interactionById[interaction.get("siteOf")].get("type"))
+                else:
+                    triggerId = interaction.get("e1")
+                    entityEntityId = interaction.get("e2")
+                    siteParentProteinIds = set()
+                    for interaction2 in interactionsByE1[entityEntityId]:
+                        if interaction2.get("type") == "SiteParent":
+                            siteParentProteinIds.add(interaction2.get("e2"))
+                    for interaction2 in interactionsByE1[triggerId]:
+                        if interaction2 == interaction or interaction2.get("Type") == "Site":
+                            continue
+                        if interaction2.get("e1") == triggerId and interaction2.get("e2") in siteParentProteinIds:
+                            siteOfTypes[interaction].add(interaction2.get("type"))
         return siteOfTypes
 
     def addTarget(self, element):

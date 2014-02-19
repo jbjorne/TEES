@@ -78,7 +78,10 @@ def moveElements(document):
         sentenceCount += 1
     # Move interactions
     intCount = 0
+    interactions = []
+    interactionOldToNewId = {}
     for interaction in document.findall("interaction"):
+        interactions.append(interaction)
         #if entSentenceIndex[interaction.get("e1")] < entSentenceIndex[interaction.get("e2")]:
         #    targetSentence = entSentence[interaction.get("e1")]
         #else:
@@ -89,10 +92,15 @@ def moveElements(document):
         targetSentence = entSentence[interaction.get("e1")]  
         document.remove(interaction)
         targetSentence.append(interaction)
-        interaction.set("id", targetSentence.get("id") + ".i" + str(intCount))
+        newId = targetSentence.get("id") + ".i" + str(intCount)
+        interactionOldToNewId[interaction.get("id")] = newId
+        interaction.set("id", newId)
         interaction.set("e1", entMap[interaction.get("e1")])
         interaction.set("e2", entMap[interaction.get("e2")])
         intCount += 1
+    for interaction in interactions:
+        if interaction.get("siteOf") != None:
+            interaction.set("siteOf", interactionOldToNewId[interaction.get("siteOf")])
         
 def makeSentence(text, begin, end, prevSentence=None, prevEnd=None):
     # Make sentence element

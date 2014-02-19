@@ -98,7 +98,7 @@ def makeInteractionElement(intType, docId, idCount, origId, e1Id, e2Id, isEventA
     if isEventArgument:
         intEl.set("event", "True")
     if annSource != None and annSource == "a1": #protein.isName():
-        entEl.set("given", "True")
+        intEl.set("given", "True")
     return intEl
 
 def addEntityElements(doc, docEl, tMap, eventMap):
@@ -170,19 +170,24 @@ def addInteractionElements(doc, docEl, tMap):
                             elCounter += 1
             else:
                 argCount = 0
+                elementIdByArg = {}
                 for arg in event.arguments:
                     if arg.type != "Site":
                         origId = str(doc.id) + "." + str(event.id) + "." + str(argCount)
                         argEl = makeInteractionElement(arg.type, docId, elCounter, origId, tMap[event.id], tMap[arg.target.id], True, annSource=event.fileType)
+                        elementIdByArg[arg] = argEl.get("id")
                         elCounter += 1
                         argCount += 1
                         docEl.append(argEl)
-                    else:
+                for arg in event.arguments:
+                    if arg.type == "Site":
                         #assert arg[2].type == "Entity"
                         #assert arg[1].type in ["Protein", "Gene", "Chemical", "Organism", "Regulon-operon", "Two-component-system"], (arg[1].type, doc.id, doc.dataSet, event.id)
                         origId = str(doc.id) + "." + str(event.id) + "." + str(argCount) + ".site"
                         # The site-argument connects the event to the site entity, just like in the shared task
                         siteEl = makeInteractionElement("Site", docId, elCounter, origId, tMap[event.id], tMap[arg.target.id], True, annSource=event.fileType)
+                        if arg.siteOf != None:
+                            siteEl.set("siteOf", elementIdByArg[arg.siteOf])
                         elCounter += 1
                         docEl.append(siteEl)
                         # The SiteParent argument connects the entity to it's protein. As sites must be paired with
