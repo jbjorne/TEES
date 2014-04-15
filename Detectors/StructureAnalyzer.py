@@ -658,11 +658,20 @@ class Event():
             raise Exception("Not an event definition line: " + line)
         tabSplits = line.split("\t")
         self.type = tabSplits[0].split()[1]
-        self.minArgs, self.maxArgs = rangeToTuple(tabSplits[0].split()[2])
         for tabSplit in tabSplits[1:]:
             argument = Argument()
             argument.load(tabSplit)
             self.arguments[argument.type] = argument
+        # Define maximum and minimum depending on model
+        if "[" in tabSplits[0]:
+            self.minArgs, self.maxArgs = rangeToTuple(tabSplits[0].split().strip("[]")[2])
+        else: # old model file
+            self.minArgs = 0
+            for argument in self.arguments.values():
+                if argument.min < self.minArgs:
+                    self.minArgs = argument.min
+            self.maxArgs = 999
+            print >> sys.stderr, "Warning, EVENT " + self.type + " does not have argument limits. Possibly using a model file from version <2.2. Argument limits set to [" + str(self.minArgs) + "-" + str(self.maxArgs) + "]."
 
 class Argument():
     def __init__(self, argType=None):
@@ -740,18 +749,25 @@ class Relation():
         if not line.startswith("RELATION"):
             raise Exception("Not a relation definition line: " + line)
         tabSplits = line.split("\t")
-        self.type = tabSplits[0].split()[1]
-        self.directed = tabSplits[0].split()[2] == "directed"
-        if " " in tabSplits[1]:
-            self.e1Role = tabSplits[1].split()[0]
-            self.e1Types = set(tabSplits[1].split()[1].split(","))
+        if len(tabSplits[0].split()) == 3:
+            self.type = tabSplits[0].split()[1]
+            self.directed = tabSplits[0].split()[2] == "directed"
+            offset = 0
         else:
-            self.e1Types = set(tabSplits[1].split(","))
-        if " " in tabSplits[2]:
-            self.e2Role = tabSplits[2].split()[0]
-            self.e2Types = set(tabSplits[2].split()[1].split(","))
+            print >> sys.stderr, "Warning, RELATION " + tabSplits[0] + " uses model file format <2.2."
+            self.type = tabSplits[0].split()[1]
+            self.directed = tabSplits[1] == "directed"
+            offset = 1
+        if " " in tabSplits[1+offset]:
+            self.e1Role = tabSplits[1+offset].split()[0]
+            self.e1Types = set(tabSplits[1+offset].split()[1].split(","))
         else:
-            self.e2Types = set(tabSplits[2].split(","))
+            self.e1Types = set(tabSplits[1+offset].split(","))
+        if " " in tabSplits[2+offset]:
+            self.e2Role = tabSplits[2+offset].split()[0]
+            self.e2Types = set(tabSplits[2+offset].split()[1].split(","))
+        else:
+            self.e2Types = set(tabSplits[2+offset].split(","))
     
     def __repr__(self):
         s = "RELATION " + self.type + " "
