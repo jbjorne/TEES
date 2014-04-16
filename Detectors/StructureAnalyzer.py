@@ -666,10 +666,11 @@ class Event():
         if "[" in tabSplits[0]:
             self.minArgs, self.maxArgs = rangeToTuple(tabSplits[0].split().strip("[]")[2])
         else: # old model file
-            self.minArgs = 0
             for argument in self.arguments.values():
-                if argument.min < self.minArgs:
+                if self.minArgs == -1 or (self.minArgs == 0 and argument.min > 0) or (argument.min > 0 and argument.min < self.minArgs):
                     self.minArgs = argument.min
+            if self.minArgs == -1:
+                self.minArgs = 0
             self.maxArgs = 999
             print >> sys.stderr, "Warning, EVENT " + self.type + " does not have argument limits. Possibly using a model file from version <2.2. Argument limits set to [" + str(self.minArgs) + "-" + str(self.maxArgs) + "]."
 
