@@ -4,14 +4,21 @@ import Utils.Menu
 import Utils.Settings as Settings
 
 def finalizeInstall(programs, testCommand={}, programDir=None, settings={}, updateLocalSettings=False):
-    if checkPrograms(programs, testCommand, programDir):
+    installOK = checkPrograms(programs, testCommand, programDir)
+    if installOK:
         setVariable = updateLocalSettings
     else:
         print >> sys.stderr, "All programs may not have been installed correctly"
         print >> sys.stderr, "Do not use the following settings if not sure:"
         setVariable = False
     for key in sorted(settings.keys()):
-        Settings.setLocal(key, settings[key], setVariable)
+        if settings[key] != None:
+            #raise Exception("Local setting " + str(key) + " is undefined")
+            Settings.setLocal(key, settings[key], setVariable)
+        else:
+            print >> sys.stderr, "Warning, local setting " + str(key) + " is undefined"
+    if not installOK:
+        raise Exception("Error installing programs: " + ", ".join(programs))
 
 def checkReturnCode(code):
     if code != 0:
