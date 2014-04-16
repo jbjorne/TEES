@@ -79,8 +79,9 @@ class UnixConnection:
         
     def getSetting(self, name, mustExist=True):
         if self.account == None:
-            if mustExist:
-                assert hasattr(Settings, name), name
+            if mustExist and not (hasattr(Settings, name) and getattr(Settings, name) != None):
+                raise Exception("Undefined local setting " + str(name))
+                #assert hasattr(Settings, name), name
             if hasattr(Settings, name):
                 return getattr(Settings, name)
             else:
