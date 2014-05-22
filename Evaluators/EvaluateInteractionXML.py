@@ -9,12 +9,16 @@ from optparse import OptionParser
 import Core.ExampleUtils as ExampleUtils
 from Core.IdSet import IdSet
 import Utils.TableUtils as TableUtils
-import Utils.InteractionXML.CorpusElements as CorpusElements
+import Core.SentenceGraph as SentenceGraph
 import copy
 from collections import defaultdict
 
 # for entities to match, they have to have the same head offsets and same type
 def compareEntitiesSimple(e1,e2,tokens=None):
+    #if not "headOffset" in e1:
+    #    raise Exception("Entity " + str(e1.get("id")) + " has no 'headOffset' attribute")
+    #if not "headOffset" in e2:
+    #    raise Exception("Entity " + str(e2.get("id")) + " has no 'headOffset' attribute")
     if e1.get("headOffset") == e2.get("headOffset") and e1.get("type") == e2.get("type"):
         return True
     else:
@@ -372,8 +376,8 @@ def run(EvaluatorClass, inputCorpusFile, goldCorpusFile, parse, tokenization=Non
     # Load corpus and make sentence graphs
     goldCorpusElements = None
     if goldCorpusFile != None:
-        goldCorpusElements = CorpusElements.loadCorpus(goldCorpusFile, parse, tokenization, removeIntersentenceInteractions)
-    predictedCorpusElements = CorpusElements.loadCorpus(inputCorpusFile, parse, tokenization, removeIntersentenceInteractions)    
+        goldCorpusElements = SentenceGraph.loadCorpus(goldCorpusFile, parse, tokenization, False, removeIntersentenceInteractions)
+    predictedCorpusElements = SentenceGraph.loadCorpus(inputCorpusFile, parse, tokenization, False, removeIntersentenceInteractions)    
     
     # Compare the corpora and print results on screen
     return processCorpora(EvaluatorClass, predictedCorpusElements, goldCorpusElements, target, classSets, negativeClassId, entityMatchFunction, errorMatrix=errorMatrix)
@@ -397,6 +401,7 @@ if __name__=="__main__":
     optparser.add_option("-p", "--parse", default="McCC", dest="parse", help="parse")
     optparser.add_option("-m", "--matching", default="SIMPLE", dest="matching", help="matching function")
     optparser.add_option("--no_intersentence", default=False, action="store_true", dest="no_intersentence", help="Exclude intersentence interactions from evaluation")
+    optparser.add_option("--error_matrix", default=False, action="store_true", dest="error_matrix", help="Show error matrix")
     (options, args) = optparser.parse_args()
     
     assert options.matching in ["SIMPLE", "STRICT"]
@@ -409,4 +414,4 @@ if __name__=="__main__":
     print >> sys.stderr, "Importing modules"
     exec "from Evaluators." + options.evaluator + " import " + options.evaluator + " as Evaluator"
     
-    run(Evaluator, options.input, options.gold, options.parse, None, options.target, entityMatchFunction=entityMatchFunction, removeIntersentenceInteractions=options.no_intersentence, errorMatrix=True)
+    run(Evaluator, options.input, options.gold, options.parse, None, options.target, entityMatchFunction=entityMatchFunction, removeIntersentenceInteractions=options.no_intersentence, errorMatrix=options.error_matrix)
