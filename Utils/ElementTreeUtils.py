@@ -142,9 +142,9 @@ class ETWriter():
             if not os.path.exists(os.path.dirname(out)):
                 os.makedirs(os.path.dirname(out))
             if out.endswith(".gz"):
-                self.out = codecs.getwriter("utf-8")(GzipFile(out,"wt"))
+                self.out = GzipFile(out,"wt") #codecs.getwriter("utf-8")(GzipFile(out,"wt"))
             else:
-                self.out = codecs.open(out, "wt", "utf-8")
+                self.out = codecs.open(out,"wt") #codecs.open(out, "wt", "utf-8")
         else:
             self.out = out
         print >> self.out, '<?xml version="1.0" encoding="UTF-8"?>'
@@ -165,7 +165,7 @@ class ETWriter():
         self.tags.append(element.tag)
         self.beginString = self.indentLevel * "  " + "<" + element.tag
         for key in sorted(element.attrib.keys()):
-            self.beginString += " " + key + "=\"" + escapeText(element.get(key)) + "\""
+            self.beginString += " " + key + "=\"" + unicode(escapeText(element.get(key)), "utf-8") + "\""
         self.beginString += ">" + "\n"
         self.indentLevel += 1
         self.lastElement = element
@@ -239,9 +239,9 @@ def write(rootElement, filename):
         os.makedirs(os.path.dirname(filename))
     # Open the output file
     if filename.endswith(".gz"):
-        out=codecs.getwriter("utf-8")(GzipFile(filename,"wt"))
+        out=GzipFile(filename,"wt") #out=codecs.getwriter("utf-8")(GzipFile(filename,"wt"))
     else:
-        out=codecs.open(filename,"wt","utf-8")
+        out=codecs.open(filename,"wt") #out=codecs.open(filename,"wt","utf-8")
     print >> out, '<?xml version="1.0" encoding="UTF-8"?>'
     ElementTree.ElementTree(rootElement).write(out,"utf-8")
     out.close()
