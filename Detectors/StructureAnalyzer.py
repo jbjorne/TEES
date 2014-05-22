@@ -664,7 +664,7 @@ class Event():
             self.arguments[argument.type] = argument
         # Define maximum and minimum depending on model
         if "[" in tabSplits[0]:
-            self.minArgs, self.maxArgs = rangeToTuple(tabSplits[0].split().strip("[]")[2])
+            self.minArgs, self.maxArgs = rangeToTuple(tabSplits[0].split()[2])
         else: # old model file
             for argument in self.arguments.values():
                 if self.minArgs == -1 or (self.minArgs == 0 and argument.min > 0) or (argument.min > 0 and argument.min < self.minArgs):
