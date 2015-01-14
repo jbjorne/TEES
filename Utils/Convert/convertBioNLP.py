@@ -328,6 +328,7 @@ if __name__=="__main__":
     if options.evaluators:
         installEvaluators(options.outdir, options.downloaddir, options.forceDownload)
     if options.corpora != None:
+        options.corpora = options.corpora.replace("COMPLETE", "GE09,ALL11,ALL13")
         options.corpora = options.corpora.replace("ALL11", "GE11,EPI11,ID11,BB11,BI11,CO11,REL11,REN11")
         options.corpora = options.corpora.replace("ALL13", "GE13,CG13,PC13,GRO13,GRN13,BB13T2,BB13T3")
         #Stream.openLog(os.path.join(options.outdir, "conversion-log.txt"))
