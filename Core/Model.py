@@ -93,10 +93,12 @@ class Model():
         @param : the string
         """
         for c in ["\n", "\t", "\r"]:
-            assert c not in name, (c, name, value)
-            assert c not in value, (c, name, value)
+            if name != None:
+                assert c not in name, (c, name, value)
+            if value != None:
+                assert c not in value, (c, name, value)
         values = self._getValues()
-        if name != None:
+        if value != None: # add the parameter to the model
             values[name] = value
         elif name in values: # remove the parameter
             del values[name]
