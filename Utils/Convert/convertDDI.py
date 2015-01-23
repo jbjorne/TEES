@@ -115,10 +115,7 @@ def convertToInteractions(xml):
                 counts["neg"] += 1
     print "Pair counts:", counts
 
-def loadDocs(url, outDir, tempDir, idStart=0):
-    inDir = Utils.Download.downloadAndExtract(url, tempDir, outDir)[0]
-    inDir = os.path.join(tempDir, inDir)
-            
+def loadDocs(inDir, idStart=0):       
     print "Loading documents from", inDir
     sentences = {"positive":[], "negative":[]}
     docCounts = {}
@@ -154,7 +151,7 @@ def loadDocs(url, outDir, tempDir, idStart=0):
     print "Negative sentences:", len(sentences["negative"])
     return documents, docById, docCounts
 
-def convertDDI(outDir, trainUnified=None, trainMTMX=None, testUnified=None, testMTMX=None, downloadDir=None, redownload=False, makeIntermediateFiles=True, debug=False):
+def convertDDI(outDir, downloadDir=None, redownload=False, makeIntermediateFiles=True, debug=False):
     cwd = os.getcwd()
     if not os.path.exists(outDir):
         os.makedirs(outDir)
@@ -162,22 +159,20 @@ def convertDDI(outDir, trainUnified=None, trainMTMX=None, testUnified=None, test
     logFileName = os.path.join(outDir, "DDI11-conversion-log.txt")
     Stream.openLog(logFileName)
     print >> sys.stderr, "=======================", "Converting DDI'11 corpus", "======================="
+    corpusDir = outDir + "/DDI11-original"
+    Utils.Download.downloadAndExtract(Settings.URL["DDI11_CORPUS"], corpusDir, downloadDir)
     
     bigfileName = os.path.join(outDir, "DDI11")
     #oldXML = ETUtils.ETFromObj(bigfileName+".xml")
-    if trainUnified == None:
-        trainUnified = Settings.URL["DDI11_TRAIN_UNIFIED"]
-    if trainMTMX == None:
-        trainMTMX = Settings.URL["DDI11_TRAIN_MTMX"]
-    if testUnified == None:
-        testUnified = Settings.URL["DDI11_TEST_UNIFIED"]
-    if testMTMX == None:
-        testMTMX = Settings.URL["DDI11_TEST_MTMX"]
+    trainUnified = corpusDir + "/train"
+    trainMTMX = corpusDir + "/train_MTMX"
+    testUnified = corpusDir + "/test"
+    testMTMX = corpusDir + "/test_MTMX"
     
     # Load main documents
     tempdir = tempfile.mkdtemp()
     print >> sys.stderr, "Temporary files directory at", tempdir
-    documents, docById, docCounts = loadDocs(trainUnified, outDir + "/DDI11-original", tempdir)
+    documents, docById, docCounts = loadDocs(trainUnified)
     # Divide training data into a train and devel set
     sortedDocCounts = sorted(docCounts.iteritems(), key=lambda (k,v): (v,k), reverse=True)
     datasetCounts = {"train":[0,0], "devel":[0,0], "test":[0,0]}
@@ -226,7 +221,7 @@ def convertDDI(outDir, trainUnified=None, trainMTMX=None, testUnified=None, test
         changeIdCount += 1
     # If test set exists, load it, too
     if testUnified != None:
-        testDocuments, testDocById, testDocCounts = loadDocs(testUnified, outDir + "/DDI11-original", tempdir)
+        testDocuments, testDocById, testDocCounts = loadDocs(testUnified)
         for document in testDocuments:
             document.set("set", "test")
         documents = documents + testDocuments
@@ -307,4 +302,4 @@ if __name__=="__main__":
     optparser.add_option("--debug", default=False, action="store_true", dest="debug", help="Keep temporary files")
     (options, args) = optparser.parse_args()
     
-    convertDDI(options.outdir, None, None, None, None, options.downloaddir, options.redownload, options.intermediateFiles, options.debug)
+    convertDDI(options.outdir, options.downloaddir, options.redownload, options.intermediateFiles, options.debug)
