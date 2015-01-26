@@ -27,8 +27,37 @@ def getTopDir(path, names, include=None):
     assert len(topDirs) == 1, (path, topDirs, names)
     return os.path.join(path, topDirs[0])
 
+class SizeReportingFile(file):
+    def __init__(self, filename):
+        self.totalSize = os.path.getsize(filename)
+        #self.readSize = 0
+        super(SizeReportingFile, self).__init__(filename)
+    
+    def read(self, size):
+        global pbar
+        #self.readSize += size
+        if pbar != None:
+            percent = int(self.tell() * 100 / self.totalSize)
+            percent = max(0, min(percent, 100)) # clamp
+            pbar.update(percent)
+        return file.read(self, size)
+
+def extractWithProgress(package, names, destPath):
+    global pbar
+    
+    count = 0
+    for name in names:
+        package.extract(name, destPath)
+        count += 1
+        if pbar != None:
+            percent = int(count * 100 / len(names))
+            percent = max(0, min(percent, 100)) # clamp
+            pbar.update(percent)
+
 # Modified from http://code.activestate.com/recipes/576714-extract-a-compressed-file/
 def extractPackage(path, destPath, subPath=None):
+    global pbar
+    
     if path.endswith('.zip'):
         opener, mode = zipfile.ZipFile, 'r'
         namelister = zipfile.ZipFile.namelist
@@ -41,18 +70,27 @@ def extractPackage(path, destPath, subPath=None):
     else: 
         raise ValueError, "Could not extract `%s` as no appropriate extractor is found" % path
     
-    file = opener(path, mode)
-    names = namelister(file)
+    widgets = ['[', Bar(), '] ', Percentage(), ' ', ETA()]
+    pbar = ProgressBar(widgets=widgets, maxval=100)
+    pbar.start()
+    
+    #package = opener(fileobj=SizeReportingFile(path), mode=mode)
+    package = opener(path, mode)
+    names = namelister(package)
     if subPath == None:
-        file.extractall(destPath)
+        extractWithProgress(package, names, destPath)
     else:
         tempdir = tempfile.mkdtemp()
-        file.extractall(tempdir)
+        extractWithProgress(package, names, destPath)
         if os.path.exists(destPath):
             shutil.rmtree(destPath)
         shutil.move(os.path.join(tempdir, subPath), destPath)
         shutil.rmtree(tempdir)
-    file.close()
+    package.close()
+    
+    pbar.finish()
+    pbar = None
+    
     return names
 
 def downloadAndExtract(url, extractPath=None, downloadPath=None, packagePath=None, addName=True, redownload=False):

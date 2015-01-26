@@ -52,11 +52,11 @@ JAVA = "java" # for programs using java
 # Corpora #####################################################################
 
 # Preconverted
-URL["BIONLP_13_CORPORA"] =  "http://sourceforge.net/projects/tees/files/data/BioNLP13-corpora-XML-150114.zip"
-URL["BIONLP_11_CORPORA"] =  "http://sourceforge.net/projects/tees/files/data/BioNLP11-corpora-XML-150114.zip"
-URL["BIONLP_09_CORPUS"] =  "http://sourceforge.net/projects/tees/files/data/BioNLP09-corpus-XML-150114.zip"
-URL["DDI_11_CORPUS"] =  "http://sourceforge.net/projects/tees/files/data/DDI11-corpus-XML-150126.zip"
-URL["DDI_13_CORPUS"] =  "http://sourceforge.net/projects/tees/files/data/DDI13-corpus-XML-150126.zip"
+URL["BIONLP_13_CORPORA"] =  "http://sourceforge.net/projects/tees/files/data/BioNLP13-corpora-XML-150114.tar.gz"
+URL["BIONLP_11_CORPORA"] =  "http://sourceforge.net/projects/tees/files/data/BioNLP11-corpora-XML-150114.tar.gz"
+URL["BIONLP_09_CORPUS"] =  "http://sourceforge.net/projects/tees/files/data/BioNLP09-corpus-XML-150114.tar.gz"
+URL["DDI_11_CORPUS"] =  "http://sourceforge.net/projects/tees/files/data/DDI11-corpus-XML-150126.tar.gz"
+URL["DDI_13_CORPUS"] =  "http://sourceforge.net/projects/tees/files/data/DDI13-corpus-XML-150126.tar.gz"
 
 
 # BioNLP'13
