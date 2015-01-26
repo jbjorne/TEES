@@ -1,4 +1,5 @@
 import sys
+#print "Settings.vars", vars()
 # Import global defaults
 from DefaultSettings import *
 
@@ -6,21 +7,24 @@ from DefaultSettings import *
 import os
 if "TEES_SETTINGS" in os.environ or os.path.exists(DEFAULT_LOCAL_SETTINGS):
     import imp
-    if "TEES_SETTINGS" in os.environ:
+    if "TEES_SETTINGS" in os.environ: # TEES_SETTINGS may be set to DISABLED to prevent loading of local settings at import
         pathname = os.environ["TEES_SETTINGS"]
     else:
         pathname = DEFAULT_LOCAL_SETTINGS
-    imp.load_source("TEESLocalSettings", pathname)
-    # combine the settings dictionaries
-    tempURL = URL
-    tempEVALUATOR = EVALUATOR
-    # import everything from local settings module
-    exec "from TEESLocalSettings import *"
-    # insert new values into the setting dictionaries
-    tempURL.update(URL)
-    URL = tempURL
-    tempEVALUATOR.update(EVALUATOR)
-    EVALUATOR = tempEVALUATOR
+    if pathname != "DISABLED":
+        imp.load_source("TEESLocalSettings", pathname)
+        # combine the settings dictionaries
+        tempURL = URL
+        tempEVALUATOR = EVALUATOR
+        # import everything from local settings module
+        exec "from TEESLocalSettings import *"
+        # insert new values into the setting dictionaries
+        tempURL.update(URL)
+        URL = tempURL
+        tempEVALUATOR.update(EVALUATOR)
+        EVALUATOR = tempEVALUATOR
+    else:
+        print >> sys.stderr, "No local settings loaded."
 else:
     print >> sys.stderr, "Warning, no local settings file."
     

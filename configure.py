@@ -7,7 +7,18 @@ Configure TEES by installing data files and external components.
 import sys, os, shutil
 import textwrap
 from Utils.Menu import *
+
+# Load TEES settings but ignore existing local settings
+temp_TEES_SETTINGS = None
+if "TEES_SETTINGS" in os.environ:
+    temp_TEES_SETTINGS = os.environ["TEES_SETTINGS"]
+os.environ["TEES_SETTINGS"] = "DISABLED" # temporarily disable existing local settings
 import Utils.Settings as Settings
+if temp_TEES_SETTINGS != None:
+    os.environ["TEES_SETTINGS"] = temp_TEES_SETTINGS
+else:
+    del os.environ["TEES_SETTINGS"]
+
 # Classifier wrapper
 import Classifiers.SVMMultiClassClassifier
 # External tools wrappers
@@ -234,7 +245,7 @@ def modelsMenuInitializer(menu, prevMenu):
     # If MODEL_DIR setting is not set set it now
     if menu != prevMenu and (not hasattr(Settings, "MODEL_DIR") or Settings.MODEL_DIR == None or not os.path.exists(Settings.MODEL_DIR)):
         menu.setDefault("i")
-    if getattr(Settings, "MODEL_DIR") != None:
+    if hasattr(Settings, "MODEL_DIR") and getattr(Settings, "MODEL_DIR") != None:
         menu.text += "\nMODEL_DIR=" + str(getattr(Settings, "MODEL_DIR"))
     else:
         menu.text += "\nMODEL_DIR=" + destPath
