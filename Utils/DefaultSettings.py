@@ -39,7 +39,8 @@ URL["MODELS"] = "http://sourceforge.net/projects/tees/files/data/TEES-models-130
 # External Tools ##############################################################
 
 URL["SVM_MULTICLASS_SOURCE"] = "http://download.joachims.org/svm_multiclass/current/svm_multiclass.tar.gz"
-URL["SVM_MULTICLASS_LINUX"] = "http://download.joachims.org/svm_multiclass/current/svm_multiclass_linux32.tar.gz"
+URL["SVM_MULTICLASS_LINUX_32"] = "http://download.joachims.org/svm_multiclass/current/svm_multiclass_linux32.tar.gz"
+URL["SVM_MULTICLASS_LINUX_64"] = "http://download.joachims.org/svm_multiclass/current/svm_multiclass_linux64.tar.gz"
 URL["GENIA_SENTENCE_SPLITTER"] = "http://www.nactem.ac.uk/y-matsu/geniass/geniass-1.00.tar.gz"
 URL["BANNER_SOURCE"] = "http://banner.svn.sourceforge.net/viewvc/banner/trunk/?view=tar"
 URL["BANNER_COMPILED"] = "http://sourceforge.net/projects/tees/files/data/BANNER-svn-snapshot-120630.tar.gz"
@@ -51,10 +52,11 @@ JAVA = "java" # for programs using java
 # Corpora #####################################################################
 
 # Preconverted
-URL["BIONLP_13_CORPORA"] =  "http://sourceforge.net/projects/tees/files/data/BioNLP13-corpora-XML-140216.zip"
-URL["BIONLP_11_CORPORA"] =  "http://sourceforge.net/projects/tees/files/data/BioNLP11-corpora-XML-140216.zip"
-URL["BIONLP_09_CORPUS"] =  "http://sourceforge.net/projects/tees/files/data/BioNLP09-corpus-XML-140216.zip"
-URL["DDI_11_CORPUS"] =  "http://sourceforge.net/projects/tees/files/data/DDI11-corpus-XML-130224.zip"
+URL["BIONLP_13_CORPORA"] =  "http://sourceforge.net/projects/tees/files/data/BioNLP13-corpora-XML-150114.zip"
+URL["BIONLP_11_CORPORA"] =  "http://sourceforge.net/projects/tees/files/data/BioNLP11-corpora-XML-150114.zip"
+URL["BIONLP_09_CORPUS"] =  "http://sourceforge.net/projects/tees/files/data/BioNLP09-corpus-XML-150114.zip"
+URL["DDI_11_CORPUS"] =  "http://sourceforge.net/projects/tees/files/data/DDI11-corpus-XML-150126.zip"
+URL["DDI_13_CORPUS"] =  "http://sourceforge.net/projects/tees/files/data/DDI13-corpus-XML-150126.zip"
 
 
 # BioNLP'13
