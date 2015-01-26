@@ -64,8 +64,8 @@ def train(output, task=None, detector=None, inputFiles=None, models=None, parse=
     # Initialize working directory
     workdir(output, deleteOutput, copyFrom, log)
     # Get task specific parameters
-    detector, bioNLPSTParams, preprocessorParams = getTaskSettings(task, detector, 
-        bioNLPSTParams, preprocessorParams, inputFiles, exampleStyles, classifierParams)
+    detector, bioNLPSTParams, preprocessorParams, folds = getTaskSettings(task, detector, 
+        bioNLPSTParams, preprocessorParams, inputFiles, exampleStyles, classifierParams, folds)
     # Learn training settings from input files
     detector = learnSettings(inputFiles, detector, classifierParams)   
     # Get corpus subsets   
@@ -309,7 +309,7 @@ def learnSettings(inputFiles, detector, classifierParameters):
     return detector
 
 def getTaskSettings(task, detector, bioNLPSTParams, preprocessorParams, 
-                    inputFiles, exampleStyles, classifierParameters):
+                    inputFiles, exampleStyles, classifierParameters, folds):
     if task != None:
         print >> sys.stderr, "*** Defining training settings for task", task, "***"
         fullTaskId = task
@@ -320,10 +320,20 @@ def getTaskSettings(task, detector, bioNLPSTParams, preprocessorParams,
         dataPath = Settings.CORPUS_DIR
         for dataset in ["devel", "train", "test"]:
             if inputFiles[dataset] == None and inputFiles[dataset] != "None":
-                inputFiles[dataset] = os.path.join(dataPath, task.replace("-FULL", "") + "-"+dataset+".xml")
-            if task == "ID11" and dataset == "train":
-                inputFiles[dataset] = Catenate.catenate([os.path.join(dataPath, "ID11-train.xml"), os.path.join(dataPath, "GE11-devel.xml"),
-                                                         os.path.join(dataPath, "GE11-train.xml")], "training/ID11-train-and-GE11-devel-and-train.xml.gz", fast=True)
+                if task.startswith("DDI13"):
+                    if dataset in ["devel", "train"]:
+                        inputFiles[dataset] = os.path.join(dataPath, "DDI13-train.xml")
+                    elif dataset == "test":
+                        if task.endswith("9.1"):
+                            inputFiles[dataset] = os.path.join(dataPath, "DDI13-test-task9.1.xml")
+                        elif task.endswith("9.2"):
+                            inputFiles[dataset] = os.path.join(dataPath, "DDI13-test-task9.2.xml")
+                elif task == "ID11" and dataset == "train":
+                    inputFiles[dataset] = Catenate.catenate([os.path.join(dataPath, "ID11-train.xml"), os.path.join(dataPath, "GE11-devel.xml"),
+                                                             os.path.join(dataPath, "GE11-train.xml")], "training/ID11-train-and-GE11-devel-and-train.xml.gz", fast=True)
+                else:
+                    inputFiles[dataset] = os.path.join(dataPath, task.replace("-FULL", "") + "-"+dataset+".xml")
+                
             if inputFiles[dataset] == "None":
                 inputFiles[dataset] = None
             if inputFiles[dataset] != None and not os.path.exists(inputFiles[dataset]):
@@ -335,8 +345,15 @@ def getTaskSettings(task, detector, bioNLPSTParams, preprocessorParams,
             detector = "Detectors.CODetector"
         elif task in ["BI11-FULL", "DDI11-FULL"]:
             detector = "Detectors.EventDetector"
+        elif task.startswith("DDI13"):
+            if task.endswith("9.1"):
+                detector = "Detectors.EntityDetector"
+            elif task.endswith("9.2"):
+                detector = "Detectors.EdgeDetector"
         
+        #######################################################################
         # BioNLP Shared Task and preprocessing parameters
+        #######################################################################
         if task == "BI11-FULL":
             bioNLPSTParams = Parameters.cat(bioNLPSTParams, "convert:scores", "BioNLP Shared Task / " + fullTaskId, ["default"]) # the shared task evaluator is not designed for predicted entities
         elif task == "REL11":
@@ -344,22 +361,27 @@ def getTaskSettings(task, detector, bioNLPSTParams, preprocessorParams,
         elif task not in ["DDI11", "DDI11-FULL", "DDI13"]:
             bioNLPSTParams = Parameters.cat(bioNLPSTParams, "convert:evaluate:scores", "BioNLP Shared Task / " + fullTaskId, ["default"])
         
+        #######################################################################
         # Preprocessing parameters
+        #######################################################################
         if task in ["BI11", "BI11-FULL", "BB11", "DDI11", "DDI11-FULL"]:
             Parameters.cat("intermediateFiles:omitSteps=NER,DIVIDE-SETS", preprocessorParams, "Preprocessor /" + fullTaskId, ["default"])
         else: # parse only sentences where BANNER found an entity
             Parameters.cat("intermediateFiles:omitSteps=DIVIDE-SETS:PARSE.requireEntities", preprocessorParams, "Preprocessor /" + fullTaskId, ["default"])
         
-        # Example style parameters for single-stage tasks
+        #######################################################################
+        # Example style parameters
+        #######################################################################
+        # Example style parameters for single-stage tasks #####################
         if task == "REN11":
             exampleStyles["examples"] = Parameters.cat("undirected:bacteria_renaming:maskTypeAsProtein=Gene", exampleStyles["examples"], "Single-stage example style / " + fullTaskId)
         elif task == "DDI11":
             exampleStyles["examples"] = Parameters.cat("drugbank_features:ddi_mtmx:filter_shortest_path=conj_and", exampleStyles["examples"], "Single-stage example style / " + fullTaskId)
-        elif task == "DDI13":
+        elif task.startswith("DDI13"):
             exampleStyles["examples"] = Parameters.cat("keep_neg:drugbank_features:filter_shortest_path=conj_and", exampleStyles["examples"], "Single-stage example style / " + fullTaskId)
         elif task == "BI11":
             exampleStyles["edge"] = Parameters.cat("bi_features", exampleStyles["edge"], "Edge example style / " + fullTaskId)
-        # Edge style
+        # Edge style ##########################################################
         if task in ["GE09", "GE11", "GE13"] and subTask == 1:
             exampleStyles["edge"] = Parameters.cat("genia_features:genia_task1", exampleStyles["edge"])
         elif task in ["GE09", "GE11", "GE13"]:
@@ -372,7 +394,7 @@ def getTaskSettings(task, detector, bioNLPSTParams, preprocessorParams,
             exampleStyles["edge"] = Parameters.cat("co_features", exampleStyles["edge"], "Edge example style / " + fullTaskId)
         elif task == "BI11-FULL":
             exampleStyles["edge"] = Parameters.cat("bi_features", exampleStyles["edge"], "Edge example style / " + fullTaskId)
-        # Trigger style
+        # Trigger style #######################################################
         if task in ["GE09", "GE11", "GE13"] and subTask == 1:
             exampleStyles["trigger"] = Parameters.cat("genia_task1", exampleStyles["trigger"], "Trigger example style / " + fullTaskId)
         elif task in ["EPI11", "PC13"]:
@@ -385,7 +407,10 @@ def getTaskSettings(task, detector, bioNLPSTParams, preprocessorParams,
             exampleStyles["trigger"] = Parameters.cat("rel_features", exampleStyles["trigger"], "Trigger example style / " + fullTaskId)
         elif task in ["BI11-FULL", "DDI11-FULL"]:
             exampleStyles["trigger"] = "build_for_nameless:names"        
+        
+        #######################################################################
         # Classifier parameters
+        #######################################################################
         if task == "DDI11":
             classifierParameters["examples"] = Parameters.cat("c=10,100,1000,2500,4000,5000,6000,7500,10000,20000,25000,50000:TEES.threshold", classifierParameters["examples"], "Classifier parameters for single-stage examples" + fullTaskId)
         #elif task == "DDI13":
@@ -394,8 +419,12 @@ def getTaskSettings(task, detector, bioNLPSTParams, preprocessorParams,
             classifierParameters["edge"] = Parameters.cat("c=1000,4500,5000,7500,10000,20000,25000,27500,28000,29000,30000,35000,40000,50000,60000,65000", classifierParameters["examples"], "Classifier parameters for edges / " + fullTaskId)
             classifierParameters["trigger"] = Parameters.cat("c=1000,5000,10000,20000,50000,80000,100000,150000,180000,200000,250000,300000,350000,500000,1000000", classifierParameters["examples"], "Classifier parameters for triggers / " + fullTaskId)
             classifierParameters["recall"] = Parameters.cat("0.8,0.9,0.95,1.0", classifierParameters["recall"], "Recall adjust / " + fullTaskId)
-    
-    return detector, bioNLPSTParams, preprocessorParams
+        # Training fold parameters ############################################
+        if task.startswith("DDI13"):
+            folds["devel"]=["train1", "train2", "train3", "train4"]
+            folds["train"]=["train5", "train6", "train7", "train8", "train9"]
+        
+    return detector, bioNLPSTParams, preprocessorParams, folds
 
 def getDefinedBool(string):
     if string in (True, False): # already defined
