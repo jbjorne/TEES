@@ -12,13 +12,17 @@ import Utils.Parameters as Parameters
 import Tools.Tool
 #import SVMMultiClassModelUtils
 from Evaluators.AveragingMultiClassEvaluator import AveragingMultiClassEvaluator
+import struct
 
 def install(destDir=None, downloadDir=None, redownload=False, compile=True, updateLocalSettings=False):
     print >> sys.stderr, "Installing SVM-Multiclass"
     if compile:
         url = Settings.URL["SVM_MULTICLASS_SOURCE"]
     else:
-        url = Settings.URL["SVM_MULTICLASS_LINUX"]
+        if 8 * struct.calcsize("P") == 32: # check for 32 bit or 64 bit environment (see http://stackoverflow.com/questions/1405913/how-do-i-determine-if-my-python-shell-is-executing-in-32bit-or-64bit-mode-on-os)
+            url = Settings.URL["SVM_MULTICLASS_LINUX_32"]
+        else:
+            url = Settings.URL["SVM_MULTICLASS_LINUX_64"]
     if downloadDir == None:
         downloadDir = os.path.join(Settings.DATAPATH, "tools/download/")
     if destDir == None:
