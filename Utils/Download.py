@@ -70,7 +70,7 @@ def extractPackage(path, destPath, subPath=None):
     else: 
         raise ValueError, "Could not extract `%s` as no appropriate extractor is found" % path
     
-    widgets = ['[', Bar(), '] ', Percentage(), ' ', ETA()]
+    widgets = [' [', Bar(), '] ', Percentage(), ' ', ETA()]
     pbar = ProgressBar(widgets=widgets, maxval=100)
     pbar.start()
     
@@ -81,7 +81,7 @@ def extractPackage(path, destPath, subPath=None):
         extractWithProgress(package, names, destPath)
     else:
         tempdir = tempfile.mkdtemp()
-        extractWithProgress(package, names, destPath)
+        extractWithProgress(package, names, tempdir)
         if os.path.exists(destPath):
             shutil.rmtree(destPath)
         shutil.move(os.path.join(tempdir, subPath), destPath)
