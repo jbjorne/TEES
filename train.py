@@ -324,9 +324,9 @@ def getTaskSettings(task, detector, bioNLPSTParams, preprocessorParams,
                     if dataset in ["devel", "train"]:
                         inputFiles[dataset] = os.path.join(dataPath, "DDI13-train.xml")
                     elif dataset == "test":
-                        if task.endswith("9.1"):
+                        if task.endswith("T91"):
                             inputFiles[dataset] = os.path.join(dataPath, "DDI13-test-task9.1.xml")
-                        elif task.endswith("9.2"):
+                        elif task.endswith("T92"):
                             inputFiles[dataset] = os.path.join(dataPath, "DDI13-test-task9.2.xml")
                 elif task == "ID11" and dataset == "train":
                     inputFiles[dataset] = Catenate.catenate([os.path.join(dataPath, "ID11-train.xml"), os.path.join(dataPath, "GE11-devel.xml"),
@@ -346,9 +346,9 @@ def getTaskSettings(task, detector, bioNLPSTParams, preprocessorParams,
         elif task in ["BI11-FULL", "DDI11-FULL"]:
             detector = "Detectors.EventDetector"
         elif task.startswith("DDI13"):
-            if task.endswith("9.1"):
+            if task.endswith("T91"):
                 detector = "Detectors.EntityDetector"
-            elif task.endswith("9.2"):
+            elif task.endswith("T91"):
                 detector = "Detectors.EdgeDetector"
         
         #######################################################################
