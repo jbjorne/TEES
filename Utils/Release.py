@@ -225,7 +225,7 @@ def makeSoftwarePackage(input, output):
     print >> sys.stderr, "Packaging software:", setupCommand
     subprocess.call(setupCommand, shell=True)
     
-def buildModels(output, tasks, connection, extra, dummy=False):
+def buildModels(output, tasks, connection, jobConnection, extra, dummy=False):
     """
     Build the release models.
     
@@ -238,7 +238,7 @@ def buildModels(output, tasks, connection, extra, dummy=False):
         taskName = task
         if task in ["GE11", "GE09"]:
             taskName += ".2"
-        command = "python " + os.path.join(mainTEESDir, "train.py") + " -t " + taskName + " -o %o/%j -c " + connection + " --clearAll"
+        command = "python " + os.path.join(mainTEESDir, "train.py") + " -t " + taskName + " -o %o/%j -c " + jobConnection + " --clearAll"
         if extra != None:
             command += " " + extra
         batch(command, input=None, connection=connection, jobTag=task, output=output, debug=True, dummy=dummy)
@@ -427,6 +427,7 @@ if __name__=="__main__":
     optparser.add_option("-a", "--action", default=None, dest="action", help="")
     optparser.add_option("-t", "--tasks", default="GE11,EPI11,ID11,BB11,BI11,BI11-FULL,GE09,CO11,REL11,REN11,DDI11,DDI11-FULL", dest="tasks", help="")
     optparser.add_option("-c", "--connection", default=None, dest="connection", help="")
+    optparser.add_option("--jobConnection", default=None, dest="jobConnection", help="")
     optparser.add_option("-d", "--dummy", action="store_true", default=False, dest="dummy", help="")
     optparser.add_option("-p", "--preserve", action="store_true", default=False, dest="preserve", help="")
     optparser.add_option("-e", "--extra", default=None, dest="extra", help="Extra parameters for the training process")
@@ -437,6 +438,9 @@ if __name__=="__main__":
     optparser.add_option("--ddi13TestPath", default="/wrk/jakrbj/TEESBioNLP13/DDI13TestCorpora130203/", dest="ddi13TestPath", help="")
     optparser.add_option("--ddi13ExtraParameters", default="", dest="ddi13ExtraParameters", help="")
     (options, args) = optparser.parse_args()
+    
+    if options.jobConnection == None:
+        options.jobConnection = options.connection
     
     assert options.action in ["CONVERT_CORPORA", 
                               "BUILD_MODELS", 
@@ -451,14 +455,15 @@ if __name__=="__main__":
                               "LIST_EXECUTABLES",
                               "GET_BIONLP13_SUBMISSION_FILES",
                               "PACKAGE_SOFTWARE"]
-    options.tasks = options.tasks.replace("ALL11", "GE11,EPI11,ID11,BB11,BI11,CO11,REL11,REN11")
+    options.tasks = options.tasks.replace("COMPLETE", "GE09,ALL11,ALL13,DDI11,DDI11-FULL,DDI13T91,DDI13T92")
+    options.tasks = options.tasks.replace("ALL11", "GE11,EPI11,ID11,BB11,BI11,BI11-FULL,CO11,REL11,REN11")
     options.tasks = options.tasks.replace("ALL13", "GE13,CG13,PC13,GRO13,GRN13,BB13T2,BB13T3")
     options.tasks = options.tasks.split(",")
     
     if options.action == "LIST_EXECUTABLES":
         listExecutables()
     elif options.action == "BUILD_MODELS":
-        buildModels(options.output, options.tasks, options.connection, options.extra, options.dummy)
+        buildModels(options.output, options.tasks, options.connection, options.jobConnection, options.extra, options.dummy)
     elif options.action == "GET_RESULTS":
         getResults(options.output, options.tasks)
     elif options.action == "BUILD_DDI13":
