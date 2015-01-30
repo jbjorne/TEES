@@ -470,36 +470,39 @@ def mapSTArgumentTargets(stDoc, siteParents, siteOfTypes, tMap, eMap):
         # to its core argument.
         #argTypeCounts["Theme_and_Cause"] = argTypeCounts["Theme"] + argTypeCounts["Cause"]
         #if max(argTypeCounts.values()) > 1: # sites must be linked to core arguments
-        argsToKeep = []
-        argsWithSite = set() # prevent more than one site per argument
-        for arg1 in event.arguments:
-            if arg1.type == "Site":
-                # Pick valid potential primary arguments
-                validPrimaryArgTypes = siteOfTypes[arg1]
-                if validPrimaryArgTypes == None:
-                    validPrimaryArgTypes = ("Theme", "Cause")
-                validPrimaryArgs = []
-                for arg2 in event.arguments:
-                    if arg2.type in validPrimaryArgTypes:
-                        validPrimaryArgs.append(arg2)
-                # Map site to a primary argument
-                if len(validPrimaryArgs) == 1: # only one valid primary argument, no siteParents are needed
-                    arg2 = validPrimaryArgs[0]
-                    if arg2 not in argsWithSite: # only if arg2 hasn't already got a site
-                        argsWithSite.add(arg2)
-                        arg1.siteOf = arg2
-                        argsToKeep.append(arg1)
-                elif len(validPrimaryArgs) > 0: # multiple potential primary arguments
-                    for arg2 in validPrimaryArgs:
-                        # Keep site only if it's core argument can be determined unambiguously
-                        if arg2 not in argsWithSite and arg1.target in siteParents and arg2.target in siteParents[arg1.target]:
+        # Note that Site-argument mapping applies only to events. E.g. the BI11 task has relations
+        # which have an argument called "Site", but this is not a Site in the "GE task 2" sense.
+        if not event.isRelation(): # map event sites
+            argsToKeep = []
+            argsWithSite = set() # prevent more than one site per argument
+            for arg1 in event.arguments:
+                if arg1.type == "Site":
+                    # Pick valid potential primary arguments
+                    validPrimaryArgTypes = siteOfTypes[arg1]
+                    if validPrimaryArgTypes == None:
+                        validPrimaryArgTypes = ("Theme", "Cause")
+                    validPrimaryArgs = []
+                    for arg2 in event.arguments:
+                        if arg2.type in validPrimaryArgTypes:
+                            validPrimaryArgs.append(arg2)
+                    # Map site to a primary argument
+                    if len(validPrimaryArgs) == 1: # only one valid primary argument, no siteParents are needed
+                        arg2 = validPrimaryArgs[0]
+                        if arg2 not in argsWithSite: # only if arg2 hasn't already got a site
                             argsWithSite.add(arg2)
                             arg1.siteOf = arg2
                             argsToKeep.append(arg1)
-                            break # so that arg1 won't be duplicated when one site has (incorrectly) two parents
-            else:
-                argsToKeep.append(arg1)
-        event.arguments = argsToKeep            
+                    elif len(validPrimaryArgs) > 0: # multiple potential primary arguments
+                        for arg2 in validPrimaryArgs:
+                            # Keep site only if it's core argument can be determined unambiguously
+                            if arg2 not in argsWithSite and arg1.target in siteParents and arg2.target in siteParents[arg1.target]:
+                                argsWithSite.add(arg2)
+                                arg1.siteOf = arg2
+                                argsToKeep.append(arg1)
+                                break # so that arg1 won't be duplicated when one site has (incorrectly) two parents
+                else:
+                    argsToKeep.append(arg1)
+            event.arguments = argsToKeep            
 
 def toSTFormat(input, output=None, outputTag="a2", useOrigIds=False, debug=False, skipArgs=[], validate=True, writeExtra=False, allAsRelations=False):
     print >> sys.stderr, "Loading corpus", input
