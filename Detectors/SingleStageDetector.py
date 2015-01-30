@@ -146,15 +146,19 @@ class SingleStageDetector(Detector):
         self.deleteTempWorkDir()
         self.exitState()
         
-    def classifyToXML(self, data, model, exampleFileName=None, tag="", classifierModel=None, goldData=None, parse=None, recallAdjust=None, compressExamples=True, exampleStyle=None):
+    def classifyToXML(self, data, model, exampleFileName=None, tag="", classifierModel=None, goldData=None, parse=None, recallAdjust=None, compressExamples=True, exampleStyle=None, useExistingExamples=False):
         model = self.openModel(model, "r")
         if parse == None:
             parse = self.getStr(self.tag+"parse", model)
+        if useExistingExamples:
+            assert exampleFileName != None
+            assert os.path.exists(exampleFileName)
         if exampleFileName == None:
             exampleFileName = tag+self.tag+"examples"
             if compressExamples:
                 exampleFileName += ".gz"
-        self.buildExamples(model, [data], [exampleFileName], [goldData], parse=parse, exampleStyle=exampleStyle)
+        if not useExistingExamples:
+            self.buildExamples(model, [data], [exampleFileName], [goldData], parse=parse, exampleStyle=exampleStyle)
         if classifierModel == None:
             classifierModel = model.get(self.tag+"classifier-model", defaultIfNotExist=None)
         #else:

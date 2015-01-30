@@ -168,7 +168,7 @@ class EventDetector(Detector):
     def doGrid(self):
         print >> sys.stderr, "--------- Parameter grid search ---------"
         # Build trigger examples
-        self.triggerDetector.buildExamples(self.model, [self.optData], [self.workDir+"grid-trigger-examples.gz"])
+        self.triggerDetector.buildExamples(self.model, [self.optData], [self.workDir+"grid-trigger-examples"])
 
         if self.fullGrid:
             stepParams = {
@@ -185,9 +185,9 @@ class EventDetector(Detector):
             stepParams[step] = Parameters.getCombinations(stepParams[step])
             for i in range(len(stepParams[step])):
                 stepParams[step][i] = Parameters.toString(stepParams[step][i])
-        print >> sys.stderr, [stepParams[x] for x in ["trigger", "booster", "edge"]]
+        print >> sys.stderr, "Parameters", [stepParams[x] for x in ["trigger", "booster", "edge"]]
         paramCombinations = combine(*[stepParams[x] for x in ["trigger", "booster", "edge"]])
-        print >> sys.stderr, paramCombinations
+        print >> sys.stderr, "Combinations", paramCombinations
         for i in range(len(paramCombinations)):
             paramCombinations[i] = {"trigger":paramCombinations[i][0], "booster":paramCombinations[i][1], "edge":paramCombinations[i][2]}
         
@@ -202,10 +202,10 @@ class EventDetector(Detector):
             print >> sys.stderr, "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
             print >> sys.stderr, "Processing params", str(i+1) + "/" + str(len(paramCombinations)), params
             print >> sys.stderr, "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
-            # Triggers and Boost
-            if prevParams == None or prevParams["trigger"] != params["trigger"] or prevParams["trigger"] != params["trigger"]:
+            # Triggers and Boost (the trigger predictions are recalculated only when the relevant parameters change)
+            if (prevParams == None) or (prevParams["trigger"] != params["trigger"]) or (prevParams["booster"] != params["booster"]):
                 print >> sys.stderr, "Classifying trigger examples for parameters", "trigger:" + str(params["trigger"]), "booster:" + str(params["booster"])
-                xml = self.triggerDetector.classifyToXML(self.optData, self.model, self.workDir+"grid-trigger-examples", self.workDir+"grid-", classifierModel=TRIGGER_MODEL_STEM + Parameters.toId(params["trigger"]), recallAdjust=params["booster"])
+                xml = self.triggerDetector.classifyToXML(self.optData, self.model, self.workDir+"grid-trigger-examples", self.workDir+"grid-", classifierModel=TRIGGER_MODEL_STEM + Parameters.toId(params["trigger"]), recallAdjust=params["booster"], useExistingExamples=True)
             prevParams = params
             ## Build edge examples
             #self.edgeDetector.buildExamples(self.model, [xml], [self.workDir+"grid-edge-examples"], [self.optData])
