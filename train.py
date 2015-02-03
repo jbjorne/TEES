@@ -343,12 +343,12 @@ def getTaskSettings(task, detector, bioNLPSTParams, preprocessorParams,
         # Example generation parameters
         if task == "CO11":
             detector = "Detectors.CODetector"
-        elif task in ["BI11-FULL", "DDI11-FULL"]:
+        elif task in ["BI11-FULL", "DDI11-FULL", "DDI13-FULL"]:
             detector = "Detectors.EventDetector"
         elif task.startswith("DDI13"):
             if task.endswith("T91"):
                 detector = "Detectors.EntityDetector"
-            elif task.endswith("T91"):
+            elif task.endswith("T92"):
                 detector = "Detectors.EdgeDetector"
         
         #######################################################################
@@ -358,13 +358,13 @@ def getTaskSettings(task, detector, bioNLPSTParams, preprocessorParams,
             bioNLPSTParams = Parameters.cat(bioNLPSTParams, "convert:scores", "BioNLP Shared Task / " + fullTaskId, ["default"]) # the shared task evaluator is not designed for predicted entities
         elif task == "REL11":
             bioNLPSTParams = Parameters.cat(bioNLPSTParams, "convert:evaluate:scores:a2Tag=rel", "BioNLP Shared Task / " + fullTaskId, ["default"])
-        elif task not in ["DDI11", "DDI11-FULL", "DDI13"]:
+        elif task not in ["DDI11", "DDI11-FULL", "DDI13T91", "DDI13T92", "DDI13-FULL"]:
             bioNLPSTParams = Parameters.cat(bioNLPSTParams, "convert:evaluate:scores", "BioNLP Shared Task / " + fullTaskId, ["default"])
         
         #######################################################################
         # Preprocessing parameters
         #######################################################################
-        if task in ["BI11", "BI11-FULL", "BB11", "DDI11", "DDI11-FULL"]:
+        if task in ["BI11", "BI11-FULL", "BB11", "DDI11", "DDI11-FULL", "DDI13T91", "DDI13T92", "DDI13-FULL"]:
             Parameters.cat("intermediateFiles:omitSteps=NER,DIVIDE-SETS", preprocessorParams, "Preprocessor /" + fullTaskId, ["default"])
         else: # parse only sentences where BANNER found an entity
             Parameters.cat("intermediateFiles:omitSteps=DIVIDE-SETS:PARSE.requireEntities", preprocessorParams, "Preprocessor /" + fullTaskId, ["default"])
@@ -378,7 +378,10 @@ def getTaskSettings(task, detector, bioNLPSTParams, preprocessorParams,
         elif task == "DDI11":
             exampleStyles["examples"] = Parameters.cat("drugbank_features:ddi_mtmx:filter_shortest_path=conj_and", exampleStyles["examples"], "Single-stage example style / " + fullTaskId)
         elif task.startswith("DDI13"):
-            exampleStyles["examples"] = Parameters.cat("keep_neg:drugbank_features:filter_shortest_path=conj_and", exampleStyles["examples"], "Single-stage example style / " + fullTaskId)
+            if task.endswith("T91"):
+                exampleStyles["examples"] = Parameters.cat("names:build_for_nameless:ddi13_features:drugbank_features", exampleStyles["examples"], "Single-stage example style / " + fullTaskId)
+            elif task.endswith("T92"):
+                exampleStyles["examples"] = Parameters.cat("keep_neg:drugbank_features:filter_shortest_path=conj_and", exampleStyles["examples"], "Single-stage example style / " + fullTaskId)
         elif task == "BI11":
             exampleStyles["edge"] = Parameters.cat("bi_features", exampleStyles["edge"], "Edge example style / " + fullTaskId)
         # Edge style ##########################################################
@@ -390,6 +393,8 @@ def getTaskSettings(task, detector, bioNLPSTParams, preprocessorParams,
             exampleStyles["edge"] = Parameters.cat("rel_features", exampleStyles["edge"], "Edge example style / " + fullTaskId)
         elif task == "DDI11-FULL":
             exampleStyles["edge"] = Parameters.cat("drugbank_features:filter_shortest_path=conj_and", exampleStyles["edge"], "Edge example style / " + fullTaskId)
+        elif task == "DDI13-FULL":
+            exampleStyles["edge"] = Parameters.cat("keep_neg:drugbank_features:filter_shortest_path=conj_and", exampleStyles["edge"], "Edge example style / " + fullTaskId)
         elif task == "CO11":
             exampleStyles["edge"] = Parameters.cat("co_features", exampleStyles["edge"], "Edge example style / " + fullTaskId)
         elif task == "BI11-FULL":
@@ -406,7 +411,9 @@ def getTaskSettings(task, detector, bioNLPSTParams, preprocessorParams,
         elif task == "REL11":
             exampleStyles["trigger"] = Parameters.cat("rel_features", exampleStyles["trigger"], "Trigger example style / " + fullTaskId)
         elif task in ["BI11-FULL", "DDI11-FULL"]:
-            exampleStyles["trigger"] = "build_for_nameless:names"        
+            exampleStyles["trigger"] = "build_for_nameless:names"
+        elif task == "DDI13-FULL":
+            exampleStyles["trigger"] = "names:build_for_nameless:ddi13_features:drugbank_features"
         
         #######################################################################
         # Classifier parameters
