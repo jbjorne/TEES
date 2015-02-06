@@ -155,6 +155,61 @@ def makeModelPackage(input, output, tasks, archiveName):
     extractModels(options.input, modelPath, options.tasks, options.output + "/classification")
     linkDuplicates(modelPath)
     packageItems(modelPath, archiveName)
+
+def getBioNLPSubmissionFiles(input, output, tasks, preserveOutput=False, includeTags=[".a2"]):
+    assert input != None
+    assert output != None
+    assert input != output
+    if os.path.exists(output) and not preserveOutput:
+        shutil.rmtree(output)
+    if not os.path.exists(output):
+        os.makedirs(output)
+    for subDir in os.listdir(input):
+        subDirAbs = os.path.join(input, subDir)
+        if os.path.isdir(subDirAbs) and subDir in tasks:
+            if os.path.exists(os.path.join(subDirAbs, "log.txt")):
+                print >> sys.stderr, "Copying training log for", subDir
+                shutil.copy2(os.path.join(subDirAbs, "log.txt"), os.path.join(output, subDir + "-train-log.txt"))
+            for suffix in ["devel", "test"]:
+                src = os.path.join(subDirAbs, "classification-" + suffix, suffix + "-events.tar.gz")
+                if os.path.exists(src):
+                    dst = os.path.join(output, subDir + "-" + suffix + "-scores.tar.gz")
+                    print >> sys.stderr, "Copying file", src, "to", dst
+                    shutil.copyfile(src, dst)
+                    # process for submission
+                    # extract
+                    tempdir = os.path.abspath(tempfile.mkdtemp())
+                    f = tarfile.open(dst, "r")
+                    f.extractall(tempdir)
+                    f.close()
+                    # repackage
+                    allFiles = os.listdir(tempdir)
+                    tarFiles = []
+                    for file in allFiles:
+                        for tag in includeTags:
+                            if file.endswith(tag):
+                                f = codecs.open(os.path.join(tempdir, file), "rt", "utf-8")
+                                lines = f.readlines()
+                                f.close()
+                                keptLines = []
+                                for line in lines:
+                                    if line[0] != "X":
+                                        keptLines.append(line)
+                                f = codecs.open(os.path.join(tempdir, file), "wt", "utf-8")
+                                for line in keptLines:
+                                    f.write(line)
+                                f.close()
+                                tarFiles.append(file)
+                                break
+                    outputFile = os.path.join(output, subDir + "-" + suffix + "-a2s.tar.gz")
+                    packageFile = tarfile.open(outputFile, "w:gz")
+                    tempCwd = os.getcwd()
+                    os.chdir(tempdir)
+                    for file in tarFiles:
+                        packageFile.add(file)
+                    os.chdir(tempCwd)
+                    packageFile.close()
+                    shutil.rmtree(tempdir)
     
 def getBioNLP13SubmissionFiles(input, output, tasks, preserveOutput=False, includeTags=[".a2"]):
     assert input != None
@@ -454,8 +509,9 @@ if __name__=="__main__":
                               "BUILD_APIDOC", 
                               "LIST_EXECUTABLES",
                               "GET_BIONLP13_SUBMISSION_FILES",
+                              "GET_SUBMISSION_FILES",
                               "PACKAGE_SOFTWARE"]
-    options.tasks = options.tasks.replace("COMPLETE", "GE09,ALL11,ALL13,DDI11,DDI11-FULL,DDI13T91,DDI13T92")
+    options.tasks = options.tasks.replace("COMPLETE", "GE09,ALL11,ALL13,DDI11,DDI11-FULL,DDI13T91,DDI13T92,DDI13-FULL")
     options.tasks = options.tasks.replace("ALL11", "GE11,EPI11,ID11,BB11,BI11,BI11-FULL,CO11,REL11,REN11")
     options.tasks = options.tasks.replace("ALL13", "GE13,CG13,PC13,GRO13,GRN13,BB13T2,BB13T3")
     options.tasks = options.tasks.split(",")
@@ -480,7 +536,9 @@ if __name__=="__main__":
         makeModelPackage(options.input, options.output, options.tasks, options.archiveName)
     elif options.action == "GET_BIONLP13_SUBMISSION_FILES":
         getBioNLP13SubmissionFiles(options.input, options.output, options.tasks, options.preserve)
+    elif options.action == "GET_SUBMISSION_FILES":
+        getBioNLP13SubmissionFiles(options.input, options.output, options.tasks)
     elif options.action == "PACKAGE_SOFTWARE":
         if options.input == None:
             options.input = mainTEESDir
-        makeSoftwarePackage(options.input, options.output)
+        makeSoftwarePackage(options.input, options.output, options.preserve)

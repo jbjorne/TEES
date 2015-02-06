@@ -4,7 +4,8 @@ import STFormat.STTools as STTools
 import tempfile
 import copy
 
-URL = {
+URL = {}
+URL["devel"] = {
 "EPI11":'http://weaver.nlplab.org/~bionlp-st/BioNLP-ST/EPI/eval/devel-submit.cgi',
 "ID11":'http://weaver.nlplab.org/~bionlp-st/BioNLP-ST/ID/eval/devel-submit.cgi',
 }
@@ -35,9 +36,9 @@ def removeX(filename):
     STTools.writeSet(documents, newFilename)
     return newFilename
 
-def submit(task, filename, email):
+def submit(task, dataset, filename, email):
     global URL, DATA
-    url = URL[task]
+    url = URL[task][dataset]
     filename = removeX(filename)
     
     files = {'file':open(filename)}
@@ -46,24 +47,44 @@ def submit(task, filename, email):
         value = data[key]
         if value == "%email":
             data[key] = email
-    r = requests.post(url, files=files, data=data)
+    return requests.post(url, files=files, data=data)
 
-if False:
-    url = 'http://bionlp-st.dbcls.jp/GE/2011/eval-development/eval.cgi'
-    filename = "/home/jari/experiments/TEES-upload/test-events.tar.gz"
+def process(tasks, input, output=None):
+    if output == None:
+        output == os.path.join(input, "results")
+    if not os.path.exists(output):
+        os.makedirs(output)
+    for task in tasks:
+        
+        outfile = os.path.join(outdir, os.path.basename(filename) + "-results.html")
+        email = 'jari.bjorne@utu.fi'
+        r = submit("EPI11", filename, email) 
+        print r
+        print r.text
+        f = open(outfile, "wt")
+        f.write(r.text)
+        f.close()
     
-    files = {'file':open(filename)} #'file' => name of html input field
-    data = {'email': 'jari.bjorne@utu.fi'}
-    r = requests.post(url, files=files, data=data)
+process()
 
-if True:
-    url = 'http://weaver.nlplab.org/~bionlp-st/BioNLP-ST/EPI/eval/devel-submit.cgi'
-    filename = "/home/jari/experiments/TEES-upload/EPI11-empty-events.tar.gz"
-    filename = removeX(filename)
+if __name__=="__main__":
+    # Import Psyco if available
+    try:
+        import psyco
+        psyco.full()
+        print >> sys.stderr, "Found Psyco, using"
+    except ImportError:
+        print >> sys.stderr, "Psyco not installed"
+
+    from optparse import OptionParser
+    optparser = OptionParser(description="")
+    optparser.add_option("-i", "--input", default=None, dest="input", help="")
+    optparser.add_option("-o", "--output", default=None, dest="output", help="")
+    optparser.add_option("-t", "--tasks", default="COMPLETE", dest="tasks", help="")
+    (options, args) = optparser.parse_args()
+
+    options.tasks = options.tasks.replace("COMPLETE", "GE09,ALL11,ALL13")
+    options.tasks = options.tasks.replace("ALL11", "GE11,EPI11,ID11,BB11,BI11,BI11-FULL,CO11,REL11,REN11")
+    options.tasks = options.tasks.replace("ALL13", "GE13,CG13,PC13,GRO13,GRN13,BB13T2,BB13T3")
+    options.tasks = options.tasks.split(",")
     
-    files = {'file':open(filename)} #'file' => name of html input field
-    data = {'email': 'jari.bjorne@utu.fi'}
-    r = requests.post(url, files=files, data=data)
-    
-print r
-print r.text

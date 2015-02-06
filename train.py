@@ -326,7 +326,7 @@ def getTaskSettings(task, detector, bioNLPSTParams, preprocessorParams,
                     elif dataset == "test":
                         if task.endswith("T91"):
                             inputFiles[dataset] = os.path.join(dataPath, "DDI13-test-task9.1.xml")
-                        elif task.endswith("T92"):
+                        elif task.endswith("T92") or task.endswith("FULL"):
                             inputFiles[dataset] = os.path.join(dataPath, "DDI13-test-task9.2.xml")
                 elif task == "ID11" and dataset == "train":
                     inputFiles[dataset] = Catenate.catenate([os.path.join(dataPath, "ID11-train.xml"), os.path.join(dataPath, "GE11-devel.xml"),
