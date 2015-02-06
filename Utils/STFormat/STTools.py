@@ -194,7 +194,7 @@ class Document:
         self.text = f.read()
         f.close()
 
-    def save(self, dir, resultFileTag="a2", debug=False, writeExtra=False):
+    def save(self, dir, resultFileTag="a2", debug=False, writeExtra=False, files=["txt", "a1", "a2", "rel"]):
         id = self.id
         if not isinstance(id, basestring):
             id = str(self.id)
@@ -215,20 +215,22 @@ class Document:
         self._xCounter = 1
         
         # write a1 file
-        if self.proteins != None:
+        if self.proteins != None and "a1" in files:
             out = codecs.open(os.path.join(dir, id + ".a1"), "wt", "utf-8")
             out.write(self.entitiesToString(self.proteins, writeExtra))
             out.close()
         # write a2 (or rel) file
-        resultFile = codecs.open(os.path.join(dir, id + "." + resultFileTag), "wt", "utf-8")
-        resultFile.write(self.entitiesToString(self.triggers, writeExtra, getMaxId(self.proteins) + 1))
-        if debug: print >> sys.stderr, "Writing events"
-        resultFile.write(self.eventsToString(writeExtra))
-        resultFile.close()
+        if resultFileTag in files:
+            resultFile = codecs.open(os.path.join(dir, id + "." + resultFileTag), "wt", "utf-8")
+            resultFile.write(self.entitiesToString(self.triggers, writeExtra, getMaxId(self.proteins) + 1))
+            if debug: print >> sys.stderr, "Writing events"
+            resultFile.write(self.eventsToString(writeExtra))
+            resultFile.close()
         # Write txt file
-        out = codecs.open(os.path.join(dir, id + ".txt"), "wt", "utf-8")
-        out.write(self.text)
-        out.close()
+        if "txt" in files:
+            out = codecs.open(os.path.join(dir, id + ".txt"), "wt", "utf-8")
+            out.write(self.text)
+            out.close()
         
         # remove id counters
         del self._mCounter
@@ -714,7 +716,7 @@ def loadSet(path, setName=None, level="a2", sitesAreArguments=False, a2Tags=["a2
         shutil.rmtree(dir)
     return documents
 
-def writeSet(documents, output, resultFileTag="a2", debug=False, writeExtra=False):
+def writeSet(documents, output, resultFileTag="a2", debug=False, writeExtra=False, files=["txt", "a1", "a2", "rel"]):
     from collections import defaultdict
     import shutil
     counts = defaultdict(int)
@@ -738,7 +740,7 @@ def writeSet(documents, output, resultFileTag="a2", debug=False, writeExtra=Fals
 #            if debug: print >> sys.stderr, "Validating", doc.id
 #            Validate.allValidate(doc, counts, task, verbose=debug)
         if debug: print >> sys.stderr, "Writing", doc.id
-        doc.save(outdir, resultFileTag, writeExtra=writeExtra)
+        doc.save(outdir, resultFileTag, writeExtra=writeExtra, files=files)
         
     if output.endswith(".tar.gz"):
         package(outdir, output, ["a1", "txt", resultFileTag, resultFileTag+".scores"])

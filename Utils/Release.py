@@ -15,6 +15,7 @@ import Utils.Convert.DDITools as DDITools
 from collections import defaultdict
 import Core.ExampleUtils as ExampleUtils
 from Core.IdSet import IdSet
+import STFormat.STTools as STTools
 
 def listExecutables(filter=["Core", "FeatureBuilders", "InteractionXML", "GeniaEventsToSharedTask"]):
     tableTitleLines = "| Program | Location | Description |\n"
@@ -155,6 +156,44 @@ def makeModelPackage(input, output, tasks, archiveName):
     extractModels(options.input, modelPath, options.tasks, options.output + "/classification")
     linkDuplicates(modelPath)
     packageItems(modelPath, archiveName)
+    
+def extractSubmissionFiles(src, outDir, task, dataset, includeTags=[".a2", ".rel"], questionnairePath=None):
+    # extract
+    tempdir = os.path.abspath(tempfile.mkdtemp())
+    f = tarfile.open(src, "r")
+    f.extractall(tempdir)
+    f.close()
+    # repackage
+    allFiles = os.listdir(tempdir)
+    tarFiles = []
+    for file in allFiles:
+        for tag in includeTags:
+            if file.endswith(tag):
+                f = codecs.open(os.path.join(tempdir, file), "rt", "utf-8")
+                lines = f.readlines()
+                f.close()
+                keptLines = []
+                for line in lines:
+                    if line[0] != "X":
+                        keptLines.append(line)
+                f = codecs.open(os.path.join(tempdir, file), "wt", "utf-8")
+                for line in keptLines:
+                    f.write(line)
+                f.close()
+                tarFiles.append(file)
+                break
+    if questionnairePath != None and os.path.exists(questionnairePath) and dataset == "test":
+        shutil.copy(questionnairePath, os.path.join(tempdir, "questionnaire.txt"))
+        tarFiles.append("questionnaire.txt")
+    outputFile = os.path.join(outDir, task + "-" + dataset + "-submit.tar.gz")
+    packageFile = tarfile.open(outputFile, "w:gz")
+    tempCwd = os.getcwd()
+    os.chdir(tempdir)
+    for file in tarFiles:
+        packageFile.add(file)
+    os.chdir(tempCwd)
+    packageFile.close()
+    shutil.rmtree(tempdir)
 
 def getBioNLPSubmissionFiles(input, output, tasks, preserveOutput=False, includeTags=[".a2"]):
     assert input != None
@@ -177,39 +216,7 @@ def getBioNLPSubmissionFiles(input, output, tasks, preserveOutput=False, include
                     print >> sys.stderr, "Copying file", src, "to", dst
                     shutil.copyfile(src, dst)
                     # process for submission
-                    # extract
-                    tempdir = os.path.abspath(tempfile.mkdtemp())
-                    f = tarfile.open(dst, "r")
-                    f.extractall(tempdir)
-                    f.close()
-                    # repackage
-                    allFiles = os.listdir(tempdir)
-                    tarFiles = []
-                    for file in allFiles:
-                        for tag in includeTags:
-                            if file.endswith(tag):
-                                f = codecs.open(os.path.join(tempdir, file), "rt", "utf-8")
-                                lines = f.readlines()
-                                f.close()
-                                keptLines = []
-                                for line in lines:
-                                    if line[0] != "X":
-                                        keptLines.append(line)
-                                f = codecs.open(os.path.join(tempdir, file), "wt", "utf-8")
-                                for line in keptLines:
-                                    f.write(line)
-                                f.close()
-                                tarFiles.append(file)
-                                break
-                    outputFile = os.path.join(output, subDir + "-" + suffix + "-a2s.tar.gz")
-                    packageFile = tarfile.open(outputFile, "w:gz")
-                    tempCwd = os.getcwd()
-                    os.chdir(tempdir)
-                    for file in tarFiles:
-                        packageFile.add(file)
-                    os.chdir(tempCwd)
-                    packageFile.close()
-                    shutil.rmtree(tempdir)
+                    extractSubmissionFiles(src, output, subDir, suffix)
     
 def getBioNLP13SubmissionFiles(input, output, tasks, preserveOutput=False, includeTags=[".a2"]):
     assert input != None
@@ -537,7 +544,7 @@ if __name__=="__main__":
     elif options.action == "GET_BIONLP13_SUBMISSION_FILES":
         getBioNLP13SubmissionFiles(options.input, options.output, options.tasks, options.preserve)
     elif options.action == "GET_SUBMISSION_FILES":
-        getBioNLP13SubmissionFiles(options.input, options.output, options.tasks)
+        getBioNLPSubmissionFiles(options.input, options.output, options.tasks)
     elif options.action == "PACKAGE_SOFTWARE":
         if options.input == None:
             options.input = mainTEESDir

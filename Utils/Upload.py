@@ -4,18 +4,41 @@ import STFormat.STTools as STTools
 import tempfile
 import copy
 
+# Online evaluation status
+
+# GE11
+# EPI11
+# ID11
+# BB11
+# BI11
+# CO11
+
 URL = {}
 URL["devel"] = {
 "GE11":"http://bionlp-st.dbcls.jp/GE/2011/eval-development/eval.cgi",
 "EPI11":'http://weaver.nlplab.org/~bionlp-st/BioNLP-ST/EPI/eval/devel-submit.cgi',
 "ID11":'http://weaver.nlplab.org/~bionlp-st/BioNLP-ST/ID/eval/devel-submit.cgi',
+# BB11 not available
+# BI11 not available
+"CO11":"http://bionlp-st.dbcls.jp/CO/eval-development/eval.cgi",
+"REL11":"http://weaver.nlplab.org/~bionlp-st/BioNLP-ST/REL/eval/devel-submit.cgi",
+# REN11 not available
+}
+URL["test"] = {
+"EPI11":'http://weaver.nlplab.org/~bionlp-st/BioNLP-ST/EPI/test-eval/submit.cgi',
 }
 
-DEFAULT_DATA = {"email":"%email"}
-DATA = {
-"EPI11":DEFAULT_DATA,
-"ID11":DEFAULT_DATA,
-"GE11":DEFAULT_DATA
+DEFAULT_DATA_DEVEL = {"email":"%email"}
+DATA = {}
+DATA["devel"] = {
+"GE11":DEFAULT_DATA_DEVEL,
+"EPI11":DEFAULT_DATA_DEVEL,
+"ID11":DEFAULT_DATA_DEVEL,
+"CO11":DEFAULT_DATA_DEVEL,
+"REL11":DEFAULT_DATA_DEVEL
+}
+DATA["test"] = {
+"EPI11":{"email":"%email", "password":"calmodulin"},
 }
 
 def getResultLine(logPath, tagPaths):
@@ -33,10 +56,10 @@ def getResultLine(logPath, tagPaths):
                     return line.split("\t", 1)[-1].strip()
     return "No result"
 
-def removeX(filename):
+def removeX(filename, resultFileTag="a2"):
     documents = STTools.loadSet(filename)
     newFilename = os.path.join(tempfile.tempdir, filename.rsplit(".", 2)[0] + "-no-X.tar.gz")
-    STTools.writeSet(documents, newFilename)
+    STTools.writeSet(documents, newFilename, resultFileTag=resultFileTag, writeExtra=False, files=["a2","rel"])
     return newFilename
 
 def submit(task, dataset, filename, email):
@@ -49,7 +72,7 @@ def submit(task, dataset, filename, email):
     #filename = removeX(filename)
     
     files = {'file':open(filename)}
-    data = copy.copy(DATA[task])
+    data = copy.copy(DATA[dataset][task])
     for key in data:
         value = data[key]
         if value == "%email":
@@ -70,12 +93,12 @@ def process(tasks, inDir, outDir=None, sendTest=False, sendDevel=True):
             if dataset == "test" and not sendTest:
                 continue
             
-            inputFile = os.path.join(inDir, task + "-" + dataset + "-a2s.tar.gz")
+            inputFile = os.path.join(inDir, task + "-" + dataset + "-submit.tar.gz")
             email = 'jari.bjorne@utu.fi'
             r = submit(task, dataset, inputFile, email)
             if r != None: 
                 print r
-                outputFile = os.path.join(outDir, task + "-" + dataset + "results.html")
+                outputFile = os.path.join(outDir, task + "-" + dataset + "-results.html")
                 f = open(outputFile, "wt")
                 f.write(r.text)
                 f.close()
