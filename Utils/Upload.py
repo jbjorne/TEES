@@ -6,13 +6,16 @@ import copy
 
 URL = {}
 URL["devel"] = {
+"GE11":"http://bionlp-st.dbcls.jp/GE/2011/eval-development/eval.cgi",
 "EPI11":'http://weaver.nlplab.org/~bionlp-st/BioNLP-ST/EPI/eval/devel-submit.cgi',
 "ID11":'http://weaver.nlplab.org/~bionlp-st/BioNLP-ST/ID/eval/devel-submit.cgi',
 }
 
+DEFAULT_DATA = {"email":"%email"}
 DATA = {
-"EPI11":{"email":"%email"},
-"ID11":{"email":"%email"},
+"EPI11":DEFAULT_DATA,
+"ID11":DEFAULT_DATA,
+"GE11":DEFAULT_DATA
 }
 
 def getResultLine(logPath, tagPaths):
@@ -38,8 +41,12 @@ def removeX(filename):
 
 def submit(task, dataset, filename, email):
     global URL, DATA
-    url = URL[task][dataset]
-    filename = removeX(filename)
+    if task not in URL[dataset]:
+        print "Upload settings not defined for task", task
+        return None
+    url = URL[dataset][task]
+    print url
+    #filename = removeX(filename)
     
     files = {'file':open(filename)}
     data = copy.copy(DATA[task])
@@ -49,23 +56,29 @@ def submit(task, dataset, filename, email):
             data[key] = email
     return requests.post(url, files=files, data=data)
 
-def process(tasks, input, output=None):
-    if output == None:
-        output == os.path.join(input, "results")
-    if not os.path.exists(output):
-        os.makedirs(output)
-    for task in tasks:
-        
-        outfile = os.path.join(outdir, os.path.basename(filename) + "-results.html")
-        email = 'jari.bjorne@utu.fi'
-        r = submit("EPI11", filename, email) 
-        print r
-        print r.text
-        f = open(outfile, "wt")
-        f.write(r.text)
-        f.close()
+def process(tasks, inDir, outDir=None, sendTest=False, sendDevel=True):
+    if outDir == None:
+        outDir = os.path.join(input, "results")
+    if not os.path.exists(outDir):
+        os.makedirs(outDir)
     
-process()
+    for task in tasks:
+        print "Processing task", task
+        for dataset in ["devel", "test"]:
+            if dataset == "devel" and not sendDevel:
+                continue
+            if dataset == "test" and not sendTest:
+                continue
+            
+            inputFile = os.path.join(inDir, task + "-" + dataset + "-a2s.tar.gz")
+            email = 'jari.bjorne@utu.fi'
+            r = submit(task, dataset, inputFile, email)
+            if r != None: 
+                print r
+                outputFile = os.path.join(outDir, task + "-" + dataset + "results.html")
+                f = open(outputFile, "wt")
+                f.write(r.text)
+                f.close()
 
 if __name__=="__main__":
     # Import Psyco if available
@@ -81,10 +94,16 @@ if __name__=="__main__":
     optparser.add_option("-i", "--input", default=None, dest="input", help="")
     optparser.add_option("-o", "--output", default=None, dest="output", help="")
     optparser.add_option("-t", "--tasks", default="COMPLETE", dest="tasks", help="")
+    optparser.add_option("-d", "--dataset", default="DEVEL", dest="dataset", help="")
     (options, args) = optparser.parse_args()
+    
+    assert options.dataset in ["DEVEL", "TEST", "BOTH"]
+    sendDevel = (options.dataset == "DEVEL") or (options.dataset == "BOTH")
+    sendTest = (options.dataset == "TEST") or (options.dataset == "BOTH") 
 
     options.tasks = options.tasks.replace("COMPLETE", "GE09,ALL11,ALL13")
     options.tasks = options.tasks.replace("ALL11", "GE11,EPI11,ID11,BB11,BI11,BI11-FULL,CO11,REL11,REN11")
     options.tasks = options.tasks.replace("ALL13", "GE13,CG13,PC13,GRO13,GRN13,BB13T2,BB13T3")
     options.tasks = options.tasks.split(",")
     
+    process(options.tasks, options.input, options.output, sendTest, sendDevel)
