@@ -405,13 +405,13 @@ def getTaskSettings(task, detector, bioNLPSTParams, preprocessorParams,
         elif task in ["EPI11", "PC13"]:
             exampleStyles["trigger"] = Parameters.cat("epi_merge_negated", exampleStyles["trigger"], "Trigger example style / " + fullTaskId)
         elif task == "BB11": # "bb_features:build_for_nameless:wordnet"
-            exampleStyles["trigger"] = Parameters.cat("bb_features:build_for_nameless", exampleStyles["trigger"], "Trigger example style / " + fullTaskId)
+            exampleStyles["trigger"] = Parameters.cat("bb_features", exampleStyles["trigger"], "Trigger example style / " + fullTaskId)
         elif task == "BB13T3": # "bb_features:build_for_nameless:wordnet"
-            exampleStyles["trigger"] = Parameters.cat("bb_features:build_for_nameless", exampleStyles["trigger"], "Trigger example style / " + fullTaskId)
+            exampleStyles["trigger"] = Parameters.cat("bb_features", exampleStyles["trigger"], "Trigger example style / " + fullTaskId)
         elif task == "REL11":
             exampleStyles["trigger"] = Parameters.cat("rel_features", exampleStyles["trigger"], "Trigger example style / " + fullTaskId)
         elif task in ["BI11-FULL", "DDI11-FULL"]:
-            exampleStyles["trigger"] = "build_for_nameless:names"
+            exampleStyles["trigger"] = "names:build_for_nameless"
         elif task == "DDI13-FULL":
             exampleStyles["trigger"] = "names:build_for_nameless:ddi13_features:drugbank_features"
         

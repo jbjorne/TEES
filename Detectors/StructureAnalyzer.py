@@ -18,6 +18,7 @@ class StructureAnalyzer():
         self.events = None
         self.modifiers = None
         self.targets = None
+        self.givens = None
         # supporting analyses
         self.eventArgumentTypes = None
         self.edgeTypes = None
@@ -29,6 +30,7 @@ class StructureAnalyzer():
         self.events = {}
         self.modifiers = {}
         self.targets = {}
+        self.givens = {}
 
     def isInitialized(self):
         return self.events != None
@@ -96,18 +98,26 @@ class StructureAnalyzer():
 
     def addTarget(self, element):
         if element.get("given") != "True":
-            if element.tag == "interaction":
-                targetClass = "INTERACTION"
-            elif element.tag == "entity":
-                targetClass = "ENTITY"
-            else:
-                raise Exception("Unsupported non-given element type " + element.tag)
-            if targetClass not in self.targets:
-                self.targets[targetClass] = Target(targetClass)
-            self.targets[targetClass].targetTypes.add(element.get("type"))
+            self._addToGroup("TARGET", self.targets, element)
+    
+    def addGiven(self, element):
+        if element.get("given") == "True":
+            self._addToGroup("GIVEN", self.givens, element)
+    
+    def _addToGroup(self, groupName, groups, element):
+        if element.tag == "interaction":
+            elementClass = "INTERACTION"
+        elif element.tag == "entity":
+            elementClass = "ENTITY"
+        else:
+            raise Exception("Unsupported '" + groupName + "' element type " + element.tag)
+        if elementClass not in groups:
+            groups[elementClass] = Group(groupName, elementClass)
+        groups[elementClass].targetTypes.add(element.get("type"))
     
     def addInteractionElement(self, interaction, entityById, siteOfTypes):
         self.addTarget(interaction)
+        self.addGiven(interaction)
         
         if not (interaction.get("event") == "True"):
             self.addRelation(interaction, entityById)
@@ -129,6 +139,7 @@ class StructureAnalyzer():
     def addEntityElement(self, entity, interactionsByE1):
         # Determine extraction target
         self.addTarget(entity)
+        self.addGiven(entity)
         
         entityType = entity.get("type")
         isEvent = entity.get("event") == "True"
@@ -194,6 +205,23 @@ class StructureAnalyzer():
     
     def hasModifiers(self):
         return len(self.modifiers) > 0
+    
+    def getGroups(self, name):
+        assert name in ["TARGET", "GIVEN"]
+        if name == "TARGET":
+            return self.targets
+        else:
+            return self.givens
+    
+    def hasGroupClass(self, group, elementClass):
+        groups = self.getGroups(group)
+        assert elementClass in ["INTERACTION", "ENTITY"]
+        return elementClass in groups
+    
+    def hasGroupType(self, group, elementClass, elementType):
+        if not self.hasTargetClass(elementClass):
+            return False
+        return elementType in self.getGroups(group)[elementClass].targetTypes
     
     def hasDirectedTargets(self):
         if "INTERACTION" not in self.targets: # no interactions to predict
@@ -503,6 +531,8 @@ class StructureAnalyzer():
             s += str(self.modifiers[modifier]) + "\n"
         for target in sorted(self.targets):
             s += str(self.targets[target]) + "\n"
+        for given in sorted(self.givens):
+            s += str(self.givens[given]) + "\n"
         return s
     
     def save(self, model, filename=None):
@@ -532,24 +562,26 @@ class StructureAnalyzer():
         # add definitions
         for line in lines:
             if line.startswith("ENTITY"):
-                definitionClass = Entity
+                definition = Entity()
                 definitions = self.entities
             elif line.startswith("EVENT"):
-                definitionClass = Event
+                definition = Event()
                 definitions = self.events
             elif line.startswith("RELATION"):
-                definitionClass = Relation
+                definition = Relation()
                 definitions = self.relations
             elif line.startswith("MODIFIER"):
-                definitionClass = Modifier
+                definition = Modifier()
                 definitions = self.modifiers
             elif line.startswith("TARGET"):
-                definitionClass = Target
+                definition = Group("TARGET")
                 definitions = self.targets
+            elif line.startswith("GIVEN"):
+                definition = Group("GIVEN")
+                definitions = self.givens
             else:
                 raise Exception("Unknown definition line: " + line.strip())
                 
-            definition = definitionClass()
             definition.load(line)
             definitions[definition.type] = definition
         
@@ -564,20 +596,21 @@ def rangeToTuple(string):
     end = int(end)
     return (begin, end)
 
-class Target():
-    def __init__(self, targetClass=None):
+class Group():
+    def __init__(self, name, targetClass=None):
+        self.name = name
         if targetClass != None:
             assert targetClass in ["INTERACTION", "ENTITY"]
         self.type = targetClass
         self.targetTypes = set()
     
     def __repr__(self):
-        return "TARGET " + self.type + "\t" + ",".join(sorted(list(self.targetTypes)))
+        return self.name + " " + self.type + "\t" + ",".join(sorted(list(self.targetTypes)))
     
     def load(self, line):
         line = line.strip()
-        if not line.startswith("TARGET"):
-            raise Exception("Not a target definition line: " + line)
+        if not line.startswith(self.name):
+            raise Exception("Not a '" + self.name + "' definition line: " + line)
         tabSplits = line.split("\t")
         self.type = tabSplits[0].split()[1]
         assert self.type in ["INTERACTION", "ENTITY"]

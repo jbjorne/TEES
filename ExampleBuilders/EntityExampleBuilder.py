@@ -37,9 +37,9 @@ class EntityExampleBuilder(ExampleBuilder):
             self.gazetteer=None
         self._setDefaultParameters(["rel_features", "wordnet", "bb_features", "giuliano", 
                                   "epi_merge_negated", "limit_merged_types", "genia_task1",
-                                  "build_for_nameless", "pos_only", "all_tokens",
-                                  "names", "pos_pairs", "linear_ngrams", "phospho", 
-                                  "drugbank_features", "ddi13_features", "metamap"])
+                                  "names", "build_for_nameless", "skip_for_nameless",
+                                  "pos_only", "all_tokens", "pos_pairs", "linear_ngrams", 
+                                  "phospho", "drugbank_features", "ddi13_features", "metamap"])
         self.styles = self.getParameters(style)
 #        if "selftrain_group" in self.styles:
 #            self.selfTrainGroups = set()
@@ -211,6 +211,16 @@ class EntityExampleBuilder(ExampleBuilder):
         self.tokenFeatures = {}
         self.tokenFeatureWeights = {}
         
+        # determine (manually or automatically) the setting for whether sentences with no given entities should be skipped
+        buildForNameless = False
+        if structureAnalyzer and not structureAnalyzer.hasGroupClass("GIVEN", "ENTITY"): # no given entities points to no separate NER program being used
+            buildForNameless = True
+        if self.styles["build_for_nameless"]: # manually force the setting
+            buildForNameless = True
+        if self.styles["skip_for_nameless"]: # manually force the setting
+            buildForNameless = False
+        
+        # determine whether sentences with no given entities should be skipped
         namedEntityHeadTokens = []
         if not self.styles["names"]:
             namedEntityCount = 0
@@ -224,7 +234,7 @@ class EntityExampleBuilder(ExampleBuilder):
             # value. Such sentences can still have triggers from intersentence
             # interactions, but as such events cannot be recovered anyway,
             # looking for these triggers would be pointless.
-            if namedEntityCount == 0 and not self.styles["build_for_nameless"]: # no names, no need for triggers
+            if namedEntityCount == 0 and not buildForNameless: # no names, no need for triggers
                 return 0 #[]
             
             if self.styles["pos_pairs"]:
