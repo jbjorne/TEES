@@ -229,9 +229,9 @@ def toolsMenuInitializer(menu, prevMenu):
 def modelsMenuInitializer(menu, prevMenu):
     menu.text = """
     TEES models are used for predicting events or relations using
-    classify.py. Models are provided for all tasks in the BioNLP'11, 
-    BioNLP'09 and DDI'11 shared tasks, for all BioNLP'13 tasks except
-    BB task 1, and for task 9.2 of the DDI'13 shared task.
+    classify.py. Models are provided for all tasks in the BioNLP'09, 
+    BioNLP'11, BioNLP'13, DDIExtraction'11 and DDIExtraction'13
+    Shared Tasks (except BioNLP'13 BB task 1).
     
     For a list of models and instructions for using them see
     https://github.com/jbjorne/TEES/wiki/Classifying.
