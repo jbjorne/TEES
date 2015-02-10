@@ -548,4 +548,4 @@ if __name__=="__main__":
     elif options.action == "PACKAGE_SOFTWARE":
         if options.input == None:
             options.input = mainTEESDir
-        makeSoftwarePackage(options.input, options.output, options.preserve)
+        makeSoftwarePackage(options.input, options.output)
