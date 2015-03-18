@@ -154,7 +154,7 @@ class Document:
             if line[0] == "M":
                 mId, rest = line.strip().split("\t")
                 mType, eventId = rest.split()
-                assert mType in ["Speculation", "Negation"]
+                assert mType in ["Speculation", "Negation"], line
                 if mType == "Speculation":
                     eventMap[eventId].speculation = mId
                 elif mType == "Negation":
