@@ -542,10 +542,11 @@ if __name__=="__main__":
         print >> sys.stderr, "Psyco not installed"
 
     optparser = OptionParser(description="Conversion between BioNLP ST format and Interaction XML")
-    optparser.add_option("-i", "--input", default=None, dest="input", help="Corpus in interaction xml format", metavar="FILE")
-    optparser.add_option("-o", "--output", default=None, dest="output", help="Output file in interaction xml format.")
+    optparser.add_option("-i", "--input", default=None, dest="input", help="Corpus in Interaction XML or BioNLP Shared Task format", metavar="FILE")
+    optparser.add_option("-o", "--output", default=None, dest="output", help="Output file in Interaction XML or BioNLP Shared Task format.")
     optparser.add_option("-c", "--conversion", default="TO-ST", dest="conversion", help="")
     optparser.add_option("-t", "--outputTag", default="a2", dest="outputTag", help="a2 file extension.")
+    optparser.add_option("-u", "--inputTags", default="a2", dest="inputTags", help="a2 file extension.")
     optparser.add_option("-s", "--sentences", default=False, action="store_true", dest="sentences", help="Write each sentence to its own document")
     optparser.add_option("-r", "--origIds", default=False, action="store_true", dest="origIds", help="Use stored original ids (can cause problems with duplicates).")
     optparser.add_option("--stSitesAreArguments", default=False, action="store_true", dest="stSitesAreArguments", help="")
@@ -555,6 +556,8 @@ if __name__=="__main__":
     optparser.add_option("-x", "--extra", default=False, action="store_true", dest="extra", help="Verbose output.")
     (options, args) = optparser.parse_args()
     
+    options.inputTags = options.inputTags.split(",")
+    
     if options.conversion in ("TO-ST", "TO-ST-RELATIONS"):
         print >> sys.stderr, "Loading XML"
         xml = ETUtils.ETFromObj(options.input)
@@ -563,13 +566,13 @@ if __name__=="__main__":
     elif options.conversion == "TO-XML":
         import STTools
         print >> sys.stderr, "Loading ST format"
-        documents = STTools.loadSet(options.input, "GE", level="a2", sitesAreArguments=options.stSitesAreArguments, a2Tag="a2", readScores=False, debug=options.debug)
+        documents = STTools.loadSet(options.input, "GE", level="a2", sitesAreArguments=options.stSitesAreArguments, a2Tags=options.inputTags, readScores=False, debug=options.debug)
         print >> sys.stderr, "Converting to XML"
         toInteractionXML(documents, options.xmlCorpusName, options.output)
     elif options.conversion == "ROUNDTRIP":
         import STTools
         print >> sys.stderr, "Loading ST format"
-        documents = STTools.loadSet(options.input, "GE", level="a2", sitesAreArguments=options.stSitesAreArguments, a2Tag="a2", readScores=False, debug=options.debug)
+        documents = STTools.loadSet(options.input, "GE", level="a2", sitesAreArguments=options.stSitesAreArguments, a2Tags=options.inputTags, readScores=False, debug=options.debug)
         print >> sys.stderr, "Converting to XML"
         xml = toInteractionXML(documents)
         print >> sys.stderr, "Converting to ST Format"
