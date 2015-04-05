@@ -93,6 +93,8 @@ class ClusterConnection(UnixConnection):
         if modules == None:
             modules = self.modules
         if modules != None:
+            if isinstance(modules, basestring): # just one module to load
+                modules = [modules]
             for module in modules:
                 commands += "module load " + module + "\n"
         if self.remoteSettingsPath != None: # Use a specific configuration file
