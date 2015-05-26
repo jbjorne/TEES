@@ -295,16 +295,23 @@ def learnSettings(inputFiles, detector, classifierParameters):
     print >> sys.stderr, "Using detector '" + str(detector) + "'"
     
     # Set default parameters
+    cp = classifierParameters
     if detector == "Detectors.EventDetector":
-        classifierParameters["unmerging"] = Parameters.cat("c=1,10,100,500,1000,1500,2500,5000,10000,20000,50000,80000,100000", classifierParameters["unmerging"], "Classifier parameters for unmerging")        
-        classifierParameters["modifiers"] = Parameters.cat("c=5000,10000,20000,50000,100000", classifierParameters["modifiers"], "Classifier parameters for modifiers")
-        classifierParameters["edge"] = Parameters.cat("c=1000,4500,5000,7500,10000,20000,25000,27500,28000,29000,30000,35000,40000,50000,60000,65000", classifierParameters["edge"], "Classifier parameters for edges")
-        classifierParameters["trigger"] = Parameters.cat("c=1000,5000,10000,20000,50000,80000,100000,150000,180000,200000,250000,300000,350000,500000,1000000", classifierParameters["trigger"], "Classifier parameters for triggers")
-        classifierParameters["recall"] = Parameters.cat("0.5,0.6,0.65,0.7,0.85,1.0,1.1,1.2", classifierParameters["recall"], "Recall adjustment parameters")
+        # Add common classifier parameters
+        if cp["examples"] != None:
+            cp["unmerging"] = Parameters.cat(cp["examples"], cp["unmerging"])
+            cp["modifiers"] = Parameters.cat(cp["examples"], cp["modifiers"])
+            cp["edge"] = Parameters.cat(cp["examples"], cp["edge"])
+            cp["trigger"] = Parameters.cat(cp["examples"], cp["trigger"])
+        cp["unmerging"] = Parameters.cat("c=1,10,100,500,1000,1500,2500,5000,10000,20000,50000,80000,100000", cp["unmerging"], "Classifier parameters for unmerging")        
+        cp["modifiers"] = Parameters.cat("c=5000,10000,20000,50000,100000", cp["modifiers"], "Classifier parameters for modifiers")
+        cp["edge"] = Parameters.cat("c=1000,4500,5000,7500,10000,20000,25000,27500,28000,29000,30000,35000,40000,50000,60000,65000", cp["edge"], "Classifier parameters for edges")
+        cp["trigger"] = Parameters.cat("c=1000,5000,10000,20000,50000,80000,100000,150000,180000,200000,250000,300000,350000,500000,1000000", cp["trigger"], "Classifier parameters for triggers")
+        cp["recall"] = Parameters.cat("0.5,0.6,0.65,0.7,0.85,1.0,1.1,1.2", cp["recall"], "Recall adjustment parameters")
     elif detector == "Detectors.EntityDetector":
-        classifierParameters["examples"] = Parameters.cat("c=1000,5000,10000,20000,50000,80000,100000,150000,180000,200000,250000,300000,350000,500000,1000000", classifierParameters["examples"], "Classifier parameters for entities")
+        cp["examples"] = Parameters.cat("c=1000,5000,10000,20000,50000,80000,100000,150000,180000,200000,250000,300000,350000,500000,1000000", cp["examples"], "Classifier parameters for entities")
     elif detector == "Detectors.EdgeDetector":
-        classifierParameters["examples"] = Parameters.cat("c=1000,4500,5000,7500,10000,20000,25000,27500,28000,29000,30000,35000,40000,50000,60000,65000", classifierParameters["examples"], "Classifier parameters for edges")
+        cp["examples"] = Parameters.cat("c=1000,4500,5000,7500,10000,20000,25000,27500,28000,29000,30000,35000,40000,50000,60000,65000", cp["examples"], "Classifier parameters for edges")
 
     return detector
 
@@ -498,7 +505,7 @@ if __name__=="__main__":
     event.add_option("--unmergingStyle", default=None, dest="unmergingStyle", help="Event detector unmerging example style")
     event.add_option("--modifierStyle", default=None, dest="modifierStyle", help="Event detector modifier example style")
     # Classifier parameters
-    single.add_option("-e", "--exampleParams", default=None, dest="exampleParams", help="Single-stage detector parameters")
+    single.add_option("-e", "--exampleParams", default=None, dest="exampleParams", help="Single-stage detector parameters (or general multi-stage parameters)")
     event.add_option("-r", "--triggerParams", default=None, dest="triggerParams", help="Trigger detector c-parameter values")
     event.add_option("-a", "--recallAdjustParams", default=None, dest="recallAdjustParams", help="Recall adjuster parameter values")
     event.add_option("-d", "--edgeParams", default=None, dest="edgeParams", help="Edge detector c-parameter values")
