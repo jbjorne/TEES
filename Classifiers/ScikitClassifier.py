@@ -5,7 +5,7 @@ import Utils.Connection.Connection as Connection
 import Utils.Parameters as Parameters
 from Evaluators.AveragingMultiClassEvaluator import AveragingMultiClassEvaluator
 
-class SKLearnSVM(ExternalClassifier):
+class ScikitClassifier(ExternalClassifier):
     
     def __init__(self, connection=None):
         ExternalClassifier.__init__(self, connection=connection)
@@ -14,9 +14,9 @@ class SKLearnSVM(ExternalClassifier):
         self.parameterValueListKey["train"] = "c"
         self.parameterValueTypes["train"] = {"c":[int,float]}
         self.trainDirSetting = "SCIKIT_WRAPPER_DIR"
-        self.trainCommand = "python %dSKLearnSVMWrapper.py --train %p --examples %e --model %m"
+        self.trainCommand = "python %dScikitWrapper.py --train %p --examples %e --model %m"
         self.classifyDirSetting = "SCIKIT_WRAPPER_DIR"
-        self.classifyCommand = "python %dSKLearnSVMWrapper.py --classify --examples %e --model %m --predictions %c"
+        self.classifyCommand = "python %dScikitWrapper.py --classify --examples %e --model %m --predictions %c"
     
 if __name__=="__main__":
     # Import Psyco if available
@@ -47,7 +47,7 @@ if __name__=="__main__":
     (options, args) = optparser.parse_args()
 
     assert options.action in ["TRAIN", "CLASSIFY", "OPTIMIZE"]
-    classifier = SKLearnSVM(Connection.getConnection(options.remote))
+    classifier = ScikitClassifier(Connection.getConnection(options.remote))
     if options.action == "TRAIN":
         import time
         trained = classifier.train(options.examples, options.output, options.parameters, options.classifyExamples)
