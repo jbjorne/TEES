@@ -36,7 +36,7 @@ class Preprocessor(ToolChain):
         return steps
     
     def process(self, source, output, parameters=None, model=None, sourceDataSetNames=None, fromStep=None, toStep=None, omitSteps=None):
-        if (type(omitSteps) in types.StringTypes and omitSteps == "CONVERT") or "CONVERT" in omitSteps:
+        if omitSteps != None and((type(omitSteps) in types.StringTypes and omitSteps == "CONVERT") or "CONVERT" in omitSteps):
             raise Exception("Preprocessor step 'CONVERT' may not be omitted")
             
         # Initialize variables and save existing default values
