@@ -54,8 +54,12 @@ def classify():
     print >> sys.stderr, "Classifying files", files
     X_train, y_train = load_svmlight_file(files["examples"], clf.teesFeatureCount)
     out = open(files["predictions"], "wt")
-    if clf.teesProba:
-        for prediction in clf.predict_proba(X_train):
+    if clf.teesProba or hasattr(clf, "decision_function"):
+        if clf.teesProba:
+            predictions = clf.predict_proba(X_train)
+        else:
+            predictions = clf.decision_function(X_train)
+        for prediction in predictions:
             classMax = prediction.argmax() + 1
             out.write(str(classMax) + " " + str(" ".join([str(x) for x in prediction])) + "\n")
     else:
