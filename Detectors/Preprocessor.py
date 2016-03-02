@@ -56,7 +56,7 @@ class Preprocessor(ToolChain):
         return xml
         
     def convert(self, input, dataSetNames=None, corpusName=None, output=None):
-        if os.path.isdir(input) or input.endswith(".tar.gz") or input.endswith(".txt") or "," in input:
+        if isinstance(input, basestring) and (os.path.isdir(input) or input.endswith(".tar.gz") or input.endswith(".txt") or "," in input):
             print >> sys.stderr, "Converting ST-format to Interaction XML"
             # Get input file (or files)
             dataSetDirs = input

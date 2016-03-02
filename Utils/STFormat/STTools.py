@@ -1,6 +1,7 @@
 import sys, os, types
 import codecs
 from RemoveDuplicates import removeDuplicateEvents
+import atexit
 
 class Document:
     def __init__(self, id=None, loadFromDir=None, a2Tags=["a2", "rel"], readExtra=False, debug=False):
@@ -16,10 +17,15 @@ class Document:
         self.license = None
         self.debug = debug
         if loadFromDir != None:
+            atexit.register(self._printId)
             self.load(loadFromDir, a2Tags, readExtra=readExtra)
+            atexit._exithandlers.remove((self._printId, (), {}))
         
         if id != None:
             self.id = id.decode('unicode_escape').encode('ascii','ignore') # GE13 test set contains unicode in filenames
+    
+    def _printId(self):
+        print >> sys.stderr, "Current Document id =", self.id
     
     def getEventOrRelationCount(self, countRelations=False):
         count = 0
@@ -155,6 +161,8 @@ class Document:
                 mId, rest = line.strip().split("\t")
                 mType, eventId = rest.split()
                 assert mType in ["Speculation", "Negation"], line
+                if ":" in eventId: # BioNLP'16 SeeDev
+                    eventId = eventId.split(":")[-1]
                 if mType == "Speculation":
                     eventMap[eventId].speculation = mId
                 elif mType == "Negation":
@@ -665,13 +673,18 @@ def readExtra(string, document):
 
 def loadSet(path, setName=None, level="a2", sitesAreArguments=False, a2Tags=["a2", "rel"], readScores=False, debug=False, subPath=None):
     assert level in ["txt", "a1", "a2"]
-    if path.endswith(".tar.gz") or path.endswith(".tgz"):
+    if path.endswith(".tar.gz") or path.endswith(".tgz") or path.endswith(".zip"):
         import tempfile
-        import tarfile
+        import zipfile
         import shutil
         dir = tempfile.mkdtemp()
-        f = tarfile.open(path, "r")
-        f.extractall(dir)
+        if path.endswith(".zip"):
+            with zipfile.ZipFile(path, "r") as f:
+                f.extractall(dir)
+        else:
+            import tarfile
+            f = tarfile.open(path, "r")
+            f.extractall(dir)
         # Check if compressed directory is included in the package, like in the ST'11 corpus files
         compressedFilePath = os.path.join(dir, os.path.basename(path)[:-len(".tar.gz")])
         if not os.path.exists(compressedFilePath):

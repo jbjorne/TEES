@@ -58,7 +58,16 @@ URL["BIONLP_09_CORPUS"] =  "http://sourceforge.net/projects/tees/files/data/BioN
 URL["DDI_11_CORPUS"] =  "http://sourceforge.net/projects/tees/files/data/DDI11-corpus-XML-150126.tar.gz"
 URL["DDI_13_CORPUS"] =  "http://sourceforge.net/projects/tees/files/data/DDI13-corpus-XML-150126.tar.gz"
 
-
+# BioNLP'16
+urlBase = "http://2016.bionlp-st.org/tasks/"
+URL["SDF16_DEVEL"] = urlBase + "seedev/BioNLP-ST-2016_SeeDev-full_train.zip"
+URL["SDF16_TRAIN"] = urlBase + "seedev/BioNLP-ST-2016_SeeDev-full_dev.zip"
+URL["SDB16_DEVEL"] = urlBase + "seedev/BioNLP-ST-2016_SeeDev-binary_train.zip"
+URL["SDB16_TRAIN"] = urlBase + "seedev/BioNLP-ST-2016_SeeDev-binary_dev.zip"
+URL["BBEVENT16_DEVEL"] = urlBase + "bb2/BioNLP-ST-2016_BB-event_dev.zip"
+URL["BBEVENT16_TRAIN"] = urlBase + "bb2/BioNLP-ST-2016_BB-event_train.zip"
+URL["BBKB16_DEVEL"] = urlBase + "bb2/BioNLP-ST-2016_BB-kb_dev.zip"
+URL["BBKB16_TRAIN"] = urlBase + "bb2/BioNLP-ST-2016_BB-kb_train.zip"
 # BioNLP'13
 urlBase = "http://2013.bionlp-st.org/tasks/"
 URL["GE13_DEVEL"] = urlBase + "BioNLP-ST-2013_GE_devel_data_rev3.tar.gz" 

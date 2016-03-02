@@ -21,6 +21,7 @@ import Evaluators.BioNLP11GeniaTools as BioNLP11GeniaTools
 import Utils.Download
 import Utils.Settings as Settings
 from Detectors.StructureAnalyzer import StructureAnalyzer
+from Detectors.Preprocessor import Preprocessor
 
 moveBI = ["PMID-10333516-S3", "PMID-10503549-S4", "PMID-10788508-S10", "PMID-1906867-S3",
           "PMID-9555886-S6", "PMID-10075739-S13", "PMID-10400595-S1", "PMID-10220166-S12"]
@@ -76,15 +77,16 @@ def downloadCorpus(corpus, destPath=None, downloadPath=None, clear=False):
                 identifier = corpus + setName + analysis
                 if identifier in Settings.URL:
                     downloaded[identifier] = Utils.Download.download(Settings.URL[identifier], downloadPath + "/support/", clear=clear)
-    else:
-        assert corpus.endswith("13") or corpus.endswith("13T2") or corpus.endswith("13T3")
+    elif corpus.endswith("13") or corpus.endswith("13T2") or corpus.endswith("13T3"):
         for setName in ["_DEVEL", "_TRAIN", "_TEST"]:
             cTag = corpus.replace("13T2", "13").replace("13T3","13")
             downloaded[corpus + setName + "_McCCJ"] = Utils.Download.download(Settings.URL[cTag + setName + "_McCCJ"], downloadPath + "/support/", clear=clear)
             downloaded[corpus + setName + "_TOK"] = Utils.Download.download(Settings.URL[cTag + setName + "_TOK"], downloadPath + "/support/", clear=clear)
+    else:
+        assert corpus.endswith("16")
     return downloaded
 
-def convert(corpora, outDir=None, downloadDir=None, redownload=False, makeIntermediateFiles=True, evaluate=False, processEquiv=True, addAnalyses=True):
+def convert(corpora, outDir=None, downloadDir=None, redownload=False, makeIntermediateFiles=True, evaluate=False, processEquiv=True, addAnalyses=True, doParsing=False):
     global bioNLP13AnalysesTempDir
     
     if outDir == None:
@@ -104,7 +106,7 @@ def convert(corpora, outDir=None, downloadDir=None, redownload=False, makeInterm
             packageSubPath = "task_2"
         elif corpus == "BB13T3":
             packageSubPath = "task_3"
-        convertDownloaded(outDir, corpus, downloaded, makeIntermediateFiles, evaluate, processEquiv=processEquiv, addAnalyses=addAnalyses, packageSubPath=packageSubPath)
+        convertDownloaded(outDir, corpus, downloaded, makeIntermediateFiles, evaluate, processEquiv=processEquiv, addAnalyses=addAnalyses, packageSubPath=packageSubPath, doParsing=doParsing)
         Stream.closeLog(logFileName)
         count += 1
     
@@ -127,7 +129,7 @@ def checkAttributes(xml):
         for key in element.attrib.keys():
             assert element.get(key) != None, (element.tag, key, element.attrib)
 
-def convertDownloaded(outdir, corpus, files, intermediateFiles=True, evaluate=True, processEquiv=True, addAnalyses=True, packageSubPath=None):
+def convertDownloaded(outdir, corpus, files, intermediateFiles=True, evaluate=True, processEquiv=True, addAnalyses=True, packageSubPath=None, doParsing=False):
     global moveBI
     if evaluate:
         workdir = outdir + "/conversion/" + corpus
@@ -186,6 +188,8 @@ def convertDownloaded(outdir, corpus, files, intermediateFiles=True, evaluate=Tr
         insertAnalyses(xml, corpus, datasets, files, bigfileName, packageSubPath=packageSubPath)
     else:
         print >> sys.stderr, "Skipping adding analyses"
+    if doParsing:
+        parseXML(xml)
     if intermediateFiles:
         print >> sys.stderr, "Writing combined corpus", bigfileName+"-sentences.xml"
         ETUtils.write(xml, bigfileName+"-sentences.xml")
@@ -302,6 +306,12 @@ def processParses(xml, splitTarget="McCC"):
     #xml = FindHeads.findHeads(xml, "split-"+splitTarget, tokenization=None, output=None, removeExisting=True)
     xml = FindHeads.findHeads(xml, splitTarget, tokenization=None, output=None, removeExisting=True)
 
+def parseXML(xml, debug=False):
+    preprocessor = Preprocessor()
+    preprocessor.setArgForAllSteps("debug", debug)
+    preprocessor.stepArgs("PARSE")["requireEntities"] = False
+    preprocessor.process(xml, "", omitSteps=["SPLIT-SENTENCES", "NER", "SPLIT-NAMES", "DIVIDE-SETS"])
+
 if __name__=="__main__":
     # Import Psyco if available
     try:
@@ -322,6 +332,7 @@ if __name__=="__main__":
     optparser.add_option("--forceDownload", default=False, action="store_true", dest="forceDownload", help="re-download all source files")
     optparser.add_option("--noEquiv", default=False, action="store_true", dest="noEquiv", help="Don't interpret equiv annotation into duplicate events")
     optparser.add_option("--noAnalyses", default=False, action="store_true", dest="noAnalyses", help="Don't add parses")
+    optparser.add_option("--parse", default=False, action="store_true", dest="parse", help="Generate parses")
     optparser.add_option("--evaluate", default=False, action="store_true", dest="evaluate", help="Convert devel sets back to ST format and evaluate")
     (options, args) = optparser.parse_args()
     
@@ -332,4 +343,4 @@ if __name__=="__main__":
         options.corpora = options.corpora.replace("ALL11", "GE11,EPI11,ID11,BB11,BI11,CO11,REL11,REN11")
         options.corpora = options.corpora.replace("ALL13", "GE13,CG13,PC13,GRO13,GRN13,BB13T2,BB13T3")
         #Stream.openLog(os.path.join(options.outdir, "conversion-log.txt"))
-        convert(options.corpora.split(","), options.outdir, options.downloaddir, options.forceDownload, options.intermediateFiles, evaluate=options.evaluate, processEquiv=not options.noEquiv, addAnalyses=not options.noAnalyses)
+        convert(options.corpora.split(","), options.outdir, options.downloaddir, options.forceDownload, options.intermediateFiles, evaluate=options.evaluate, processEquiv=not options.noEquiv, addAnalyses=not options.noAnalyses, doParsing=options.parse)
