@@ -16,7 +16,6 @@ import Tool
 import StanfordParser
 from ProcessUtils import *
 
-
 escDict={"-LRB-":"(",
          "-RRB-":")",
          "-LCB-":"{",
@@ -27,6 +26,13 @@ escDict={"-LRB-":"(",
          "''":"\"",
          "\\/":"/",
          "\\*":"*"}
+escSymbols = sorted(escDict.keys())
+
+def unescape(text):
+    global escDict, escSymbols
+    for escSymbol in escSymbols:
+        text = text.replace(escSymbol, escDict[escSymbol])
+    return text
 
 def install(destDir=None, downloadDir=None, redownload=False, updateLocalSettings=False):
     url = Settings.URL["BLLIP_SOURCE"]
@@ -56,41 +62,66 @@ def install(destDir=None, downloadDir=None, redownload=False, updateLocalSetting
                          parserPath, {"BLLIP_PARSER_DIR":os.path.abspath(parserPath), 
                                       "MCCLOSKY_BIOPARSINGMODEL_DIR":bioModelDir}, updateLocalSettings)
             
-def readPenn(treeLine):
-    global escDict
-    escSymbols = sorted(escDict.keys())
+def readPenn(treeLine, sentenceDebugId=None):
+    #global escDict
+    #escSymbols = sorted(escDict.keys())
     tokens = []
     phrases = []
     stack = []
-    if treeLine.strip() != "":
+    treeLine = treeLine.strip()
+    if treeLine != "":
         # Add tokens
-        prevSplit = None
+        #prevSplit = None
         tokenCount = 0
-        splitCount = 0
-        splits = treeLine.split()
-        for split in splits:
-            if split[0] != "(":
-                tokenText = split
-                while tokenText[-1] == ")":
-                    tokenText = tokenText[:-1]
-                    if tokenText[-1] == ")": # this isn't the closing parenthesis for the current token
-                        stackTop = stack.pop()
-                        phrases.append( (stackTop[0], tokenCount, stackTop[1]) )
-                origTokenText = tokenText
-                for escSymbol in escSymbols:
-                    tokenText = tokenText.replace(escSymbol, escDict[escSymbol])
-                
-                posText = prevSplit
-                while posText[0] == "(":
-                    posText = posText[1:]
-                for escSymbol in escSymbols:
-                    posText = posText.replace(escSymbol, escDict[escSymbol])
-                tokens.append( (tokenText, posText, origTokenText) )
-                tokenCount += 1
-            elif splits[splitCount + 1][0] == "(":
-                stack.append( (tokenCount, split[1:]) )
-            prevSplit = split
-            splitCount += 1
+        #splitCount = 0
+        index = 0
+        for char in treeLine:
+            if char == "(":
+                stack.append( (index + 1, tokenCount) )
+            elif char == ")":
+                span = treeLine[stack[-1][0]:index]
+                splits = span.split(None, 1) # span.split(string.whitespace)
+                if span.endswith(")"):
+                    phrases.append( (stack[-1][1], tokenCount, splits[0]) )
+                else:
+                    #if len(splits) == 2:
+                    origTokenText = splits[1]
+                    tokenText = unescape(origTokenText).strip()
+                    pos = unescape(splits[0])
+                    tokens.append( (tokenText, pos, origTokenText) )
+                    #else:
+                    #    print >> sys.stderr, "Warning, unreadable token '", repr(span), "' in", sentenceDebugId
+                    tokenCount += 1
+                stack.pop()
+            index += 1
+        
+#         stack = []
+#         splits = treeLine.split()
+#         for split in splits:
+#             if split[0] != "(":
+#                 tokenText = split
+#                 while len(tokenText) > 0 and tokenText[-1] == ")":
+#                     tokenText = tokenText[:-1]
+#                     if len(tokenText) == 0:
+#                         print >> sys.stderr, "Warning, empty token in", sentenceDebugId
+#                     if len(tokenText) > 0 and tokenText[-1] == ")": # this isn't the closing parenthesis for the current token
+#                         stackTop = stack.pop()
+#                         phrases.append( (stackTop[0], tokenCount, stackTop[1]) )
+#                 origTokenText = tokenText
+#                 for escSymbol in escSymbols:
+#                     tokenText = tokenText.replace(escSymbol, escDict[escSymbol])
+#                 
+#                 posText = prevSplit
+#                 while posText[0] == "(":
+#                     posText = posText[1:]
+#                 for escSymbol in escSymbols:
+#                     posText = posText.replace(escSymbol, escDict[escSymbol])
+#                 tokens.append( (tokenText, posText, origTokenText) )
+#                 tokenCount += 1
+#             elif splits[splitCount + 1][0] == "(":
+#                 stack.append( (tokenCount, split[1:]) )
+#             prevSplit = split
+#             splitCount += 1
     return tokens, phrases
 
 def insertTokens(tokens, sentence, tokenization, idStem="bt_", errorNotes=None):
@@ -173,7 +204,7 @@ def insertParse(sentence, treeLine, parseName="McCC", tokenizationName = None, m
     if treeLine.strip() == "":
         return False
     else:
-        tokens, phrases = readPenn(treeLine)
+        tokens, phrases = readPenn(treeLine, sentence.get("id"))
         # Get tokenization
         if tokenizationName == None: # Parser-generated tokens
             for prevTokenization in analyses.findall("tokenization"):

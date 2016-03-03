@@ -35,6 +35,13 @@ escDict={"-LRB-":"(",
          "''":"\"",
          "\\/":"/",
          "\\*":"*"}
+escSymbols = sorted(escDict.keys())
+
+def unescape(text):
+    global escDict, escSymbols
+    for escSymbol in escSymbols:
+        text = text.replace(escSymbol, escDict[escSymbol])
+    return text
 
 def install(destDir=None, downloadDir=None, redownload=False, updateLocalSettings=False):
     print >> sys.stderr, "Installing Stanford Parser"
@@ -87,8 +94,8 @@ def getUnicode(string):
     return string
 
 def addDependencies(outfile, parse, tokenByIndex=None, sentenceId=None, skipExtra=0):
-    global escDict
-    escSymbols = sorted(escDict.keys())
+    #global escDict
+    #escSymbols = sorted(escDict.keys())
     
     # A list of tokens for debugging
     tokens = []
@@ -98,7 +105,7 @@ def addDependencies(outfile, parse, tokenByIndex=None, sentenceId=None, skipExtr
     depCount = 1
     line = outfile.readline()
     #line = line.encode('raw_unicode_escape').decode('utf-8') # fix latin1?
-    line = getUnicode(line)
+    #line = getUnicode(line)
     deps = []
     # BioNLP'09 Shared Task GENIA uses _two_ newlines to denote a failed parse (usually it's one,
     # the same as the BLLIP parser. To survive this, skipExtra can be used to define the number
@@ -106,37 +113,45 @@ def addDependencies(outfile, parse, tokenByIndex=None, sentenceId=None, skipExtr
     if line.strip() == "" and skipExtra > 0:
         for i in range(skipExtra):
             outfile.readline()
-    while line.strip() != "":            
-        # Add dependencies
-        depType, rest = line.strip()[:-1].split("(")
-        t1, t2 = rest.split(", ")
-        t1Word, t1Index = t1.rsplit("-", 1)
-        for escSymbol in escSymbols:
-            t1Word = t1Word.replace(escSymbol, escDict[escSymbol])
-        while not t1Index[-1].isdigit(): t1Index = t1Index[:-1] # invalid literal for int() with base 10: "7'"
-        t1Index = int(t1Index)
-        t2Word, t2Index = t2.rsplit("-", 1)
-        for escSymbol in escSymbols:
-            t2Word = t2Word.replace(escSymbol, escDict[escSymbol])
-        while not t2Index[-1].isdigit(): t2Index = t2Index[:-1] # invalid literal for int() with base 10: "7'"
-        t2Index = int(t2Index)
+    while line.strip() != "":
+        #if "," not in line or "(" not in line:
+        #    print >> sys.stderr, "Warning, unreadable dependency '", line.strip(), "', in sentence", sentenceId
+        try:
+            # Add dependencies
+            depType, rest = line.strip()[:-1].split("(")
+            t1, t2 = rest.split(", ")
+            t1Word, t1Index = t1.rsplit("-", 1)
+            #for escSymbol in escSymbols:
+            #    t1Word = t1Word.replace(escSymbol, escDict[escSymbol])
+            t1Word = unescape(t1Word).strip()
+            while not t1Index[-1].isdigit(): t1Index = t1Index[:-1] # invalid literal for int() with base 10: "7'"
+            t1Index = int(t1Index)
+            t2Word, t2Index = t2.rsplit("-", 1)
+            #for escSymbol in escSymbols:
+            #    t2Word = t2Word.replace(escSymbol, escDict[escSymbol])
+            t2Word = unescape(t2Word).strip()
+            while not t2Index[-1].isdigit(): t2Index = t2Index[:-1] # invalid literal for int() with base 10: "7'"
+            t2Index = int(t2Index)
+        except:
+            print >> sys.stderr, "Warning, unreadable dependency '", line.strip(), "', in sentence", sentenceId
+            depType = None
         # Make element
         #if depType == "root":
         #    assert t1Word == "ROOT"
         #    if tokenByIndex != None and t2Index-1 in tokenByIndex:
         #        tokenByIndex[t2Index-1].set("stanford-root", "True")
-        if depType != "root":
+        if depType != None and depType != "root":
             dep = ET.Element("dependency")
             dep.set("id", "sd_" + str(depCount))
             alignmentError = False
             if tokenByIndex != None:
                 if t1Index-1 not in tokenByIndex:
-                    print >> sys.stderr, "Token not found", (t1Word, depCount, sentenceId)
+                    print >> sys.stderr, "Token not found", (t1Index-1, t1Word, depCount, sentenceId)
                     deps = []
                     while line.strip() != "": line = outfile.readline()
                     break
                 if t2Index-1 not in tokenByIndex:
-                    print >> sys.stderr, "Token not found", (t2Word, depCount, sentenceId)
+                    print >> sys.stderr, "Token not found", (t2Index-1, t2Word, depCount, sentenceId)
                     deps = []
                     while line.strip() != "": line = outfile.readline()
                     break
@@ -161,14 +176,14 @@ def addDependencies(outfile, parse, tokenByIndex=None, sentenceId=None, skipExtr
             if not alignmentError:
                 deps.append(dep)
         line = outfile.readline()
-        try:
-            line = getUnicode(line)
-            #line = line.encode('raw_unicode_escape').decode('utf-8') # fix latin1?
-        except:
-            print "Type", type(line)
-            print "Repr", repr(line)
-            print line
-            raise
+#         try:
+#             line = getUnicode(line)
+#             #line = line.encode('raw_unicode_escape').decode('utf-8') # fix latin1?
+#         except Exception as e:
+#             print "Type", type(line)
+#             print "Repr", repr(line)
+#             print line
+#             raise e
     return deps
 
 #def convert(input, output=None):
@@ -218,7 +233,7 @@ def convertXML(parser, input, output=None, debug=False, reparse=False, stanfordP
                              Settings.JAVA.split()[1:] + \
                              ["-cp", "stanford-parser.jar", 
                               "edu.stanford.nlp.trees.EnglishGrammaticalStructure", 
-                              "-CCprocessed", "-keepPunct", "-treeFile"]
+                              "-encoding", "utf8", "-CCprocessed", "-keepPunct", "-treeFile"]
     print >> sys.stderr, "Running Stanford conversion"
     print >> sys.stderr, "Stanford tools at:", stanfordParserDir
     print >> sys.stderr, "Stanford tools arguments:", " ".join(stanfordParserArgs)
@@ -271,7 +286,8 @@ def convertXML(parser, input, output=None, debug=False, reparse=False, stanfordP
                                         outputArgs={"encoding":"latin1", "errors":"replace"},
                                         processArgs={"stanfordParserArgs":stanfordParserArgs})   
     #stanfordOutputFile = codecs.open(stanfordOutput, "rt", "utf-8")
-    stanfordOutputFile = codecs.open(stanfordOutput, "rt", "latin1", "replace")
+    #stanfordOutputFile = codecs.open(stanfordOutput, "rt", "latin1", "replace")
+    stanfordOutputFile = codecs.open(stanfordOutput, "rt", "utf-8")
     
     # Get output and insert dependencies
     noDepCount = 0
