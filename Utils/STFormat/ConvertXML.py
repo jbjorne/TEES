@@ -149,6 +149,8 @@ def addInteractionElements(doc, docEl, tMap):
                             relEl.set("e1Role", a1.type)
                         if (a2.type + a2.siteIdentifier != "Arg2"):
                             relEl.set("e2Role", a2.type)
+                        if relEl.get("id").startswith("SDB16."):
+                            relEl.set("type", relEl.get("type") + "(" + str(relEl.get("e1Role")) + "/" + str(relEl.get("e2Role")) + ")")
                         elCounter += 1
                         docEl.append(relEl)
                 else: # BioNLP'11 Coref
@@ -419,7 +421,9 @@ def addInteractionsToSTDoc(doc, docElement, tMap, eMap, entityElementMap, skipAr
             siteParents[tMap[interaction.get("e1")]].add(tMap[interaction.get("e2")])
         elif interaction.get("event") != "True" or allAsRelations: # "/" in intType and "(" in intType: # BI-task
             rel = Annotation()
-            rel.type = interaction.get("type")         
+            rel.type = interaction.get("type")
+            if interaction.get("id").startswith("SDB16."):
+                rel.type = rel.type.split("(")[0]
             #relScores = getExtraFromElement(interaction) #interaction.get("conf")
             rel.extra = getExtraFromElement(interaction)
             rel.addArgument(interaction.get("e1Role", "Arg1"), interaction.get("e1")) #, None, relScores)

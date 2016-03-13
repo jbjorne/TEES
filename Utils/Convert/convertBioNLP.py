@@ -56,6 +56,8 @@ def downloadCorpus(corpus, destPath=None, downloadPath=None, clear=False):
     for setName in ["_DEVEL", "_TRAIN", "_TEST"]:
         identifier = corpus + setName
         parentIdentifier = identifier.replace("BB13T2", "BB13").replace("BB13T3", "BB13")
+        if setName in ("_DEVEL", "_TRAIN") and parentIdentifier not in Settings.URL:
+            raise Exception("Settings key '" + parentIdentifier + "' not found")
         if parentIdentifier in Settings.URL:
             downloaded[identifier] = Utils.Download.download(Settings.URL[parentIdentifier], downloadPath, clear=clear)
     if downloadPath == None:

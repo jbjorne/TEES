@@ -60,8 +60,8 @@ URL["DDI_13_CORPUS"] =  "http://sourceforge.net/projects/tees/files/data/DDI13-c
 
 # BioNLP'16
 urlBase = "http://2016.bionlp-st.org/tasks/"
-URL["SDF16_DEVEL"] = urlBase + "seedev/BioNLP-ST-2016_SeeDev-full_train.zip"
-URL["SDF16_TRAIN"] = urlBase + "seedev/BioNLP-ST-2016_SeeDev-full_dev.zip"
+#URL["SDF16_DEVEL"] = urlBase + "seedev/BioNLP-ST-2016_SeeDev-full_train.zip"
+#URL["SDF16_TRAIN"] = urlBase + "seedev/BioNLP-ST-2016_SeeDev-full_dev.zip"
 URL["SDB16_DEVEL"] = urlBase + "seedev/BioNLP-ST-2016_SeeDev-binary_train.zip"
 URL["SDB16_TRAIN"] = urlBase + "seedev/BioNLP-ST-2016_SeeDev-binary_dev.zip"
 URL["BB_EVENT_16_DEVEL"] = urlBase + "bb2/BioNLP-ST-2016_BB-event_dev.zip"
