@@ -39,7 +39,7 @@ class EntityExampleBuilder(ExampleBuilder):
                                   "epi_merge_negated", "limit_merged_types", "genia_task1",
                                   "names", "build_for_nameless", "skip_for_nameless",
                                   "pos_only", "all_tokens", "pos_pairs", "linear_ngrams", 
-                                  "phospho", "drugbank_features", "ddi13_features", "metamap"])
+                                  "phospho", "drugbank_features", "ddi13_features", "metamap", "only_types"])
         self.styles = self.getParameters(style)
 #        if "selftrain_group" in self.styles:
 #            self.selfTrainGroups = set()
@@ -82,16 +82,20 @@ class EntityExampleBuilder(ExampleBuilder):
         """
         types = set()
         entityIds = set()
+        limitTypes = self.styles.get("only_types")
         for entity in entities:
+            eType = entity.get("type")
             if entity.get("given") == "True" and self.styles["all_tokens"]:
                 continue
-            if entity.get("type") == "Entity" and self.styles["genia_task1"]:
+            if eType == "Entity" and self.styles["genia_task1"]:
+                continue
+            if limitTypes and eType not in limitTypes:
                 continue
             if self.styles["epi_merge_negated"]:
-                types.add(Utils.InteractionXML.ResolveEPITriggerTypes.getEPIBaseType(entity.get("type")))
+                types.add(Utils.InteractionXML.ResolveEPITriggerTypes.getEPIBaseType(eType))
                 entityIds.add(entity.get("id"))
             else:
-                types.add(entity.get("type"))
+                types.add(eType)
                 entityIds.add(entity.get("id"))
         types = list(types)
         types.sort()
