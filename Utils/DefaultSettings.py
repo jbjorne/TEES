@@ -66,6 +66,7 @@ URL["SDB16_DEVEL"] = urlBase + "seedev/BioNLP-ST-2016_SeeDev-binary_train.zip"
 URL["SDB16_TRAIN"] = urlBase + "seedev/BioNLP-ST-2016_SeeDev-binary_dev.zip"
 URL["BB_EVENT_16_DEVEL"] = urlBase + "bb2/BioNLP-ST-2016_BB-event_dev.zip"
 URL["BB_EVENT_16_TRAIN"] = urlBase + "bb2/BioNLP-ST-2016_BB-event_train.zip"
+URL["BB_EVENT_16_TEST"] = urlBase + "bb2/BioNLP-ST-2016_BB-event_test.zip"
 URL["BB_KB_16_DEVEL"] = urlBase + "bb2/BioNLP-ST-2016_BB-kb_dev.zip"
 URL["BB_KB_16_TRAIN"] = urlBase + "bb2/BioNLP-ST-2016_BB-kb_train.zip"
 # BioNLP'13
