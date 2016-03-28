@@ -413,7 +413,8 @@ class Annotation:
             if self.trigger != None:
                 raise Exception("A text-bound annotation cannot be an event (have a trigger): " + str(self) + ":" + str(self.arguments))
             offsetString = ";".join([str(x[0]) + " " + str(x[1]) for x in self.charOffsets])
-            s += " " + offsetString + "\t" + str(self.text).replace("\n", "&#10;").replace("\r", "&#10;")
+            text = self.text if self.text else ""
+            s += " " + offsetString + "\t" + text.replace("\n", "&#10;").replace("\r", "&#10;")
         argStrings = []
         corefTargetProteins = set()
         for argument in self.arguments:
