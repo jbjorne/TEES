@@ -740,7 +740,7 @@ def writeSet(documents, output, resultFileTag="a2", debug=False, writeExtra=Fals
     
     while output.endswith("/"):
         output = output[:-1]
-    if output.endswith(".tar.gz"):
+    if output.endswith(".tar.gz") or output.endswith(".zip"):
         outdir = output + "-temp"
     else:
         outdir = output
@@ -756,7 +756,7 @@ def writeSet(documents, output, resultFileTag="a2", debug=False, writeExtra=Fals
         if debug: print >> sys.stderr, "Writing", doc.id
         doc.save(outdir, resultFileTag, writeExtra=writeExtra, files=files)
         
-    if output.endswith(".tar.gz"):
+    if output.endswith(".tar.gz") or output.endswith(".zip"):
         package(outdir, output, ["a1", "txt", resultFileTag, resultFileTag+".scores"])
         shutil.rmtree(outdir)
 #    print counts
@@ -790,19 +790,25 @@ def updateIds(annotations, minId=0):
             idCount += 1
 
 def package(sourceDir, outputFile, includeTags=["a2", "a2.scores"]):
-    import tarfile
     allFiles = os.listdir(sourceDir)
-    tarFiles = []
+    packagedFiles = []
     for file in allFiles:
         for tag in includeTags:
             if file.endswith(tag):
-                tarFiles.append(file)
+                packagedFiles.append(file)
                 break
-    packageFile = tarfile.open(outputFile, "w:gz")
+    if outputFile.endswith(".zip"):
+        import zipfile
+        packageFile = zipfile.ZipFile(outputFile, "w")
+        addMethod = packageFile.write
+    else:
+        import tarfile
+        packageFile = tarfile.open(outputFile, "w:gz")
+        addMethod = packageFile.add
     tempCwd = os.getcwd()
     os.chdir(sourceDir)
-    for file in tarFiles:
-        packageFile.add(file)#, exclude = lambda x: x == submissionFileName)
+    for file in packagedFiles:
+        addMethod(file)#, exclude = lambda x: x == submissionFileName)
     #if "final" in outputFile:
     #    packageFile.add("/home/jari/data/BioNLP11SharedTask/resources/questionnaire.txt", "questionnaire.txt")
     os.chdir(tempCwd)
