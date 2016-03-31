@@ -139,7 +139,8 @@ def train(output, task=None, detector=None, inputFiles=None, models=None, parse=
             #detector.bioNLPSTParams["scores"] = False # the evaluation server doesn't like additional files
             detector.classify(inputFiles["test"], models["test"], "classification-test/test", fromStep=detectorSteps["TEST"], workDir="classification-test")
             if detector.bioNLPSTParams["convert"]:
-                Utils.STFormat.Compare.compare("classification-test/test-events.tar.gz", "classification-devel/devel-events.tar.gz", "a2")
+                extension = ".zip" if (detector.bioNLPSTParams["convert"] == "zip") else ".tar.gz" 
+                Utils.STFormat.Compare.compare("classification-test/test-events" + extension, "classification-devel/devel-events" + extension, "a2")
 
 def setDictDefaults(dictionary, defaults):
     if dictionary == None:

@@ -138,11 +138,12 @@ class SingleStageDetector(Detector):
         EvaluateInteractionXML.run(self.evaluator, xml, data, parse)
         stParams = self.getBioNLPSharedTaskParams(self.bioNLPSTParams, model)
         if stParams["convert"]: #self.useBioNLPSTFormat:
-            Utils.STFormat.ConvertXML.toSTFormat(xml, output+"-events.tar.gz", outputTag=stParams["a2Tag"], writeExtra=(stParams["scores"] == True))
+            extension = ".zip" if (stParams["convert"] == "zip") else ".tar.gz" 
+            Utils.STFormat.ConvertXML.toSTFormat(xml, output+"-events" + extension, outputTag=stParams["a2Tag"], writeExtra=(stParams["scores"] == True))
             if stParams["evaluate"]: #self.stEvaluator != None:
                 if task == None: 
                     task = self.getStr(self.tag+"task", model)
-                self.stEvaluator.evaluate(output+"-events.tar.gz", task)
+                self.stEvaluator.evaluate(output+"-events" + extension, task)
         self.deleteTempWorkDir()
         self.exitState()
         

@@ -384,14 +384,15 @@ class EventDetector(Detector):
 #            ETUtils.write(xml, workOutputTag + "validate-pred.xml.gz")
         if self.checkStep("ST-CONVERT"):
             if stParams["convert"]:
+                extension = ".zip" if (stParams["convert"] == "zip") else ".tar.gz" 
                 #xml = self.getWorkFile(xml, [workOutputTag + "validate-pred.xml.gz", workOutputTag + "modifier-pred.xml.gz", workOutputTag + "unmerging-pred.xml.gz", workOutputTag + "edge-pred.xml.gz"])
                 xml = self.getWorkFile(xml, [workOutputTag + "modifier-pred.xml.gz", workOutputTag + "unmerging-pred.xml.gz", workOutputTag + "edge-pred.xml.gz"])
-                Utils.STFormat.ConvertXML.toSTFormat(xml, output+"-events.tar.gz", outputTag=stParams["a2Tag"], writeExtra=(stParams["scores"] == True))
+                Utils.STFormat.ConvertXML.toSTFormat(xml, output+"-events" + extension, outputTag=stParams["a2Tag"], writeExtra=(stParams["scores"] == True))
                 if stParams["evaluate"]: #self.stEvaluator != None:
                     task = self.task
                     if task == None:
                         task = self.getStr(self.edgeDetector.tag+"task", self.model)
-                    self.stEvaluator.evaluate(output + "-events.tar.gz", task)
+                    self.stEvaluator.evaluate(output + "-events" + extension, task)
             else:
                 print >> sys.stderr, "No BioNLP shared task format conversion"
         finalXMLFile = self.getWorkFile(None, [workOutputTag + "modifier-pred.xml.gz", workOutputTag + "unmerging-pred.xml.gz", workOutputTag + "edge-pred.xml.gz"])
