@@ -61,7 +61,10 @@ def classify():
             predictions = clf.decision_function(X_train)
         for prediction in predictions:
             classMax = prediction.argmax() + 1
-            out.write(str(classMax) + " " + str(" ".join([str(x) for x in prediction])) + "\n")
+            try:
+                out.write(str(classMax) + " " + str(" ".join([str(x) for x in prediction])) + "\n")
+            except: # single value
+                out.write(str(classMax) + " " + str(-prediction) + " " + str(prediction) + "\n")
     else:
         for prediction in clf.predict(X_train):
             out.write(str(int(prediction)) + "\n")        
