@@ -26,7 +26,8 @@ def train(output, task=None, detector=None, inputFiles=None, models=None, parse=
           processUnmerging=None, processModifiers=None, 
           bioNLPSTParams=None, preprocessorParams=None, exampleStyles=None, 
           classifierParams=None,  doFullGrid=False, deleteOutput=False, copyFrom=None, 
-          log="log.txt", step=None, omitSteps=None, debug=False, connection=None, subset=None, folds=None):
+          log="log.txt", step=None, omitSteps=None, debug=False, connection=None, subset=None, 
+          folds=None, corpusDir=None):
     """
     Train a new model for event or relation detection.
     
@@ -65,7 +66,7 @@ def train(output, task=None, detector=None, inputFiles=None, models=None, parse=
     workdir(output, deleteOutput, copyFrom, log)
     # Get task specific parameters
     detector, bioNLPSTParams, preprocessorParams, folds = getTaskSettings(task, detector, 
-        bioNLPSTParams, preprocessorParams, inputFiles, exampleStyles, classifierParams, folds)
+        bioNLPSTParams, preprocessorParams, inputFiles, exampleStyles, classifierParams, folds, corpusDir=corpusDir)
     # Learn training settings from input files
     detector = learnSettings(inputFiles, detector, classifierParams)   
     # Get corpus subsets   
@@ -317,7 +318,7 @@ def learnSettings(inputFiles, detector, classifierParameters):
     return detector
 
 def getTaskSettings(task, detector, bioNLPSTParams, preprocessorParams, 
-                    inputFiles, exampleStyles, classifierParameters, folds):
+                    inputFiles, exampleStyles, classifierParameters, folds, corpusDir=None):
     if task != None:
         print >> sys.stderr, "*** Defining training settings for task", task, "***"
         fullTaskId = task
@@ -325,22 +326,23 @@ def getTaskSettings(task, detector, bioNLPSTParams, preprocessorParams,
         if "." in task:
             task, subTask = task.split(".")
             subTask = int(subTask)
-        dataPath = Settings.CORPUS_DIR
+        if corpusDir == None:
+            corpusDir = Settings.CORPUS_DIR
         for dataset in ["devel", "train", "test"]:
             if inputFiles[dataset] == None and inputFiles[dataset] != "None":
                 if task.startswith("DDI13"):
                     if dataset in ["devel", "train"]:
-                        inputFiles[dataset] = os.path.join(dataPath, "DDI13-train.xml")
+                        inputFiles[dataset] = os.path.join(corpusDir, "DDI13-train.xml")
                     elif dataset == "test":
                         if task.endswith("T91"):
-                            inputFiles[dataset] = os.path.join(dataPath, "DDI13-test-task9.1.xml")
+                            inputFiles[dataset] = os.path.join(corpusDir, "DDI13-test-task9.1.xml")
                         elif task.endswith("T92") or task.endswith("FULL"):
-                            inputFiles[dataset] = os.path.join(dataPath, "DDI13-test-task9.2.xml")
+                            inputFiles[dataset] = os.path.join(corpusDir, "DDI13-test-task9.2.xml")
                 elif task == "ID11" and dataset == "train":
-                    inputFiles[dataset] = Catenate.catenate([os.path.join(dataPath, "ID11-train.xml"), os.path.join(dataPath, "GE11-devel.xml"),
-                                                             os.path.join(dataPath, "GE11-train.xml")], "training/ID11-train-and-GE11-devel-and-train.xml.gz", fast=True)
+                    inputFiles[dataset] = Catenate.catenate([os.path.join(corpusDir, "ID11-train.xml"), os.path.join(corpusDir, "GE11-devel.xml"),
+                                                             os.path.join(corpusDir, "GE11-train.xml")], "training/ID11-train-and-GE11-devel-and-train.xml.gz", fast=True)
                 else:
-                    inputFiles[dataset] = os.path.join(dataPath, task.replace("-FULL", "") + "-"+dataset+".xml")
+                    inputFiles[dataset] = os.path.join(corpusDir, task.replace("-FULL", "") + "-"+dataset+".xml")
                 
             if inputFiles[dataset] == "None":
                 inputFiles[dataset] = None
@@ -351,7 +353,7 @@ def getTaskSettings(task, detector, bioNLPSTParams, preprocessorParams,
         # Example generation parameters
         if task == "CO11":
             detector = "Detectors.CODetector"
-        elif task in ["BI11-FULL", "DDI11-FULL", "DDI13-FULL"]:
+        elif task in ["BI11-FULL", "DDI11-FULL", "DDI13-FULL", "BB_EVENT_16-FULL"]:
             detector = "Detectors.EventDetector"
         elif task.startswith("DDI13"):
             if task.endswith("T91"):
@@ -366,6 +368,8 @@ def getTaskSettings(task, detector, bioNLPSTParams, preprocessorParams,
             bioNLPSTParams = Parameters.cat(bioNLPSTParams, "convert:scores", "BioNLP Shared Task / " + fullTaskId, ["default"]) # the shared task evaluator is not designed for predicted entities
         elif task == "REL11":
             bioNLPSTParams = Parameters.cat(bioNLPSTParams, "convert:evaluate:scores:a2Tag=rel", "BioNLP Shared Task / " + fullTaskId, ["default"])
+        elif task in ("BB_EVENT_16", "BB_EVENT_16-FULL", "BB_EVENT_NER_16"):
+            bioNLPSTParams = Parameters.cat(bioNLPSTParams, "convert=zip", "BioNLP Shared Task / " + fullTaskId, ["default"])
         elif task not in ["DDI11", "DDI11-FULL", "DDI13T91", "DDI13T92", "DDI13-FULL"]:
             bioNLPSTParams = Parameters.cat(bioNLPSTParams, "convert:evaluate:scores", "BioNLP Shared Task / " + fullTaskId, ["default"])
         
@@ -381,47 +385,54 @@ def getTaskSettings(task, detector, bioNLPSTParams, preprocessorParams,
         # Example style parameters
         #######################################################################
         # Example style parameters for single-stage tasks #####################
+        msg = "Single-stage example style / " + fullTaskId
         if task == "REN11":
-            exampleStyles["examples"] = Parameters.cat("undirected:bacteria_renaming:maskTypeAsProtein=Gene", exampleStyles["examples"], "Single-stage example style / " + fullTaskId)
+            exampleStyles["examples"] = Parameters.cat("undirected:bacteria_renaming:maskTypeAsProtein=Gene", exampleStyles["examples"], msg)
         elif task == "DDI11":
-            exampleStyles["examples"] = Parameters.cat("drugbank_features:ddi_mtmx:filter_shortest_path=conj_and", exampleStyles["examples"], "Single-stage example style / " + fullTaskId)
+            exampleStyles["examples"] = Parameters.cat("drugbank_features:ddi_mtmx:filter_shortest_path=conj_and", exampleStyles["examples"], msg)
         elif task.startswith("DDI13"):
             if task.endswith("T91"):
-                exampleStyles["examples"] = Parameters.cat("names:build_for_nameless:ddi13_features:drugbank_features", exampleStyles["examples"], "Single-stage example style / " + fullTaskId)
+                exampleStyles["examples"] = Parameters.cat("names:build_for_nameless:ddi13_features:drugbank_features", exampleStyles["examples"], msg)
             elif task.endswith("T92"):
-                exampleStyles["examples"] = Parameters.cat("keep_neg:drugbank_features:filter_shortest_path=conj_and", exampleStyles["examples"], "Single-stage example style / " + fullTaskId)
+                exampleStyles["examples"] = Parameters.cat("keep_neg:drugbank_features:filter_shortest_path=conj_and", exampleStyles["examples"], msg)
         elif task == "BI11":
-            exampleStyles["edge"] = Parameters.cat("bi_features", exampleStyles["edge"], "Edge example style / " + fullTaskId)
+            exampleStyles["examples"] = Parameters.cat("bi_features", exampleStyles["examples"], msg)
         # Edge style ##########################################################
+        msg = "Edge example style / " + fullTaskId
         if task in ["GE09", "GE11", "GE13"] and subTask == 1:
-            exampleStyles["edge"] = Parameters.cat("genia_features:genia_task1", exampleStyles["edge"])
+            exampleStyles["edge"] = Parameters.cat("genia_features:genia_task1", exampleStyles["edge"], msg)
         elif task in ["GE09", "GE11", "GE13"]:
-            exampleStyles["edge"] = Parameters.cat("genia_features", exampleStyles["edge"])
+            exampleStyles["edge"] = Parameters.cat("genia_features", exampleStyles["edge"], msg)
         elif task == "REL11":
-            exampleStyles["edge"] = Parameters.cat("rel_features", exampleStyles["edge"], "Edge example style / " + fullTaskId)
+            exampleStyles["edge"] = Parameters.cat("rel_features", exampleStyles["edge"], msg)
         elif task == "DDI11-FULL":
-            exampleStyles["edge"] = Parameters.cat("drugbank_features:filter_shortest_path=conj_and", exampleStyles["edge"], "Edge example style / " + fullTaskId)
+            exampleStyles["edge"] = Parameters.cat("drugbank_features:filter_shortest_path=conj_and", exampleStyles["edge"], msg)
         elif task == "DDI13-FULL":
-            exampleStyles["edge"] = Parameters.cat("keep_neg:drugbank_features:filter_shortest_path=conj_and", exampleStyles["edge"], "Edge example style / " + fullTaskId)
+            exampleStyles["edge"] = Parameters.cat("keep_neg:drugbank_features:filter_shortest_path=conj_and", exampleStyles["edge"], msg)
         elif task == "CO11":
-            exampleStyles["edge"] = Parameters.cat("co_features", exampleStyles["edge"], "Edge example style / " + fullTaskId)
+            exampleStyles["edge"] = Parameters.cat("co_features", exampleStyles["edge"], msg)
         elif task == "BI11-FULL":
-            exampleStyles["edge"] = Parameters.cat("bi_features", exampleStyles["edge"], "Edge example style / " + fullTaskId)
+            exampleStyles["edge"] = Parameters.cat("bi_features", exampleStyles["edge"], msg)
         # Trigger style #######################################################
+        msg = "Trigger example style / " + fullTaskId
         if task in ["GE09", "GE11", "GE13"] and subTask == 1:
-            exampleStyles["trigger"] = Parameters.cat("genia_task1", exampleStyles["trigger"], "Trigger example style / " + fullTaskId)
+            exampleStyles["trigger"] = Parameters.cat("genia_task1", exampleStyles["trigger"], msg)
         elif task in ["EPI11", "PC13"]:
-            exampleStyles["trigger"] = Parameters.cat("epi_merge_negated", exampleStyles["trigger"], "Trigger example style / " + fullTaskId)
+            exampleStyles["trigger"] = Parameters.cat("epi_merge_negated", exampleStyles["trigger"], msg)
         elif task == "BB11": # "bb_features:build_for_nameless:wordnet"
-            exampleStyles["trigger"] = Parameters.cat("bb_features", exampleStyles["trigger"], "Trigger example style / " + fullTaskId)
+            exampleStyles["trigger"] = Parameters.cat("bb_features", exampleStyles["trigger"], msg)
         elif task == "BB13T3": # "bb_features:build_for_nameless:wordnet"
-            exampleStyles["trigger"] = Parameters.cat("bb_features", exampleStyles["trigger"], "Trigger example style / " + fullTaskId)
+            exampleStyles["trigger"] = Parameters.cat("bb_features", exampleStyles["trigger"], msg)
         elif task == "REL11":
-            exampleStyles["trigger"] = Parameters.cat("rel_features", exampleStyles["trigger"], "Trigger example style / " + fullTaskId)
+            exampleStyles["trigger"] = Parameters.cat("rel_features", exampleStyles["trigger"], msg)
         elif task in ["BI11-FULL", "DDI11-FULL"]:
             exampleStyles["trigger"] = "names:build_for_nameless"
         elif task == "DDI13-FULL":
             exampleStyles["trigger"] = "names:build_for_nameless:ddi13_features:drugbank_features"
+        elif task == "BB_EVENT_16-FULL":
+            exampleStyles["trigger"] = Parameters.cat("bb_features:build_for_nameless:all_tokens:only_types=Bacteria,Habitat,Geographical", exampleStyles["trigger"], msg)
+        elif task in "BB_EVENT_NER_16":
+            exampleStyles["trigger"] = Parameters.cat("bb_features:build_for_nameless:all_tokens", exampleStyles["trigger"], msg)
         
         #######################################################################
         # Classifier parameters
@@ -434,6 +445,10 @@ def getTaskSettings(task, detector, bioNLPSTParams, preprocessorParams,
             classifierParameters["edge"] = Parameters.cat("c=1000,4500,5000,7500,10000,20000,25000,27500,28000,29000,30000,35000,40000,50000,60000,65000", classifierParameters["examples"], "Classifier parameters for edges / " + fullTaskId)
             classifierParameters["trigger"] = Parameters.cat("c=1000,5000,10000,20000,50000,80000,100000,150000,180000,200000,250000,300000,350000,500000,1000000", classifierParameters["examples"], "Classifier parameters for triggers / " + fullTaskId)
             classifierParameters["recall"] = Parameters.cat("0.8,0.9,0.95,1.0", classifierParameters["recall"], "Recall adjust / " + fullTaskId)
+        elif task == "BB_EVENT_16":
+            classifierParameters["examples"] = Parameters.cat("c=10,20,50,80,100,110,115,120,125,130,140,150,200,500,1000", classifierParameters["examples"], "Classifier parameters for edges / " + fullTaskId)
+        elif task in ("BB_EVENT_16-FULL", "BB_EVENT_NER_16"):
+            classifierParameters["edge"] = Parameters.cat("c=10,20,50,80,100,110,115,120,125,130,140,150,200,500,1000", classifierParameters["examples"], "Classifier parameters for edges / " + fullTaskId)
         # Training fold parameters ############################################
         if task.startswith("DDI13"):
             folds["devel"]=["train1", "train2", "train3", "train4"]
@@ -480,6 +495,7 @@ if __name__=="__main__":
     group.add_option("--trainFile", default=None, dest="trainFile", help="")
     group.add_option("--develFile", default=None, dest="develFile", help="")
     group.add_option("--testFile", default=None, dest="testFile", help="")
+    group.add_option("--corpusDir", default=None, dest="corpusDir", help="Overrides the Settings.CORPUS_DIR value")
     optparser.add_option_group(group)
     # output
     group = OptionGroup(optparser, "Output Files", "Files created from training the detector")
@@ -543,4 +559,4 @@ if __name__=="__main__":
           classifierParams={"examples":options.exampleParams, "trigger":options.triggerParams, "recall":options.recallAdjustParams, "edge":options.edgeParams, "unmerging":options.unmergingParams, "modifiers":options.modifierParams}, 
           doFullGrid=options.fullGrid, deleteOutput=options.clearAll, copyFrom=options.copyFrom, 
           log=options.log, step=options.step, omitSteps=options.omitSteps, debug=options.debug, 
-          connection=options.connection, subset=options.subset, folds=options.folds)
+          connection=options.connection, subset=options.subset, folds=options.folds, corpusDir=options.corpusDir)
