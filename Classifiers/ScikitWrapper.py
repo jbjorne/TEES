@@ -61,10 +61,9 @@ def classify():
             predictions = clf.decision_function(X_train)
         for prediction in predictions:
             classMax = prediction.argmax() + 1
-            try:
-                out.write(str(classMax) + " " + str(" ".join([str(x) for x in prediction])) + "\n")
-            except: # single value
-                out.write(str(classMax) + " " + str(-prediction) + " " + str(prediction) + "\n")
+            out.write(str(classMax) + " " + str(" ".join([str(x) for x in prediction])) + "\n")
+            #except: # single value
+            #    out.write(str(classMax) + " " + str(-prediction) + " " + str(prediction) + "\n")
     else:
         for prediction in clf.predict(X_train):
             out.write(str(int(prediction)) + "\n")        
@@ -97,14 +96,6 @@ def getParameters(requireWrapperParams=None):
     return params, wrapperParams
 
 if __name__=="__main__":
-    # Import Psyco if available
-    try:
-        import psyco
-        psyco.full()
-        print >> sys.stderr, "Found Psyco, using"
-    except ImportError:
-        print >> sys.stderr, "Psyco not installed"
-    
     if ("--classify" in sys.argv and "--train" in sys.argv):
         raise Exception("Only one of --train and --classify must be defined")
 

@@ -104,7 +104,9 @@ class ExternalClassifier(Classifier):
         examples = self.getExampleFile(examples, replaceRemote=replaceRemoteExamples, dummy=dummy)
         classifyExamples = self.getExampleFile(classifyExamples, replaceRemote=replaceRemoteExamples, dummy=dummy)
         #parameters = Parameters.get(parameters, valueListKey="c")
-        trainDir = os.path.normpath(self.connection.getSetting(self.trainDirSetting)) + os.path.sep
+        trainDir = ""
+        if self.trainDirSetting:
+            trainDir = os.path.normpath(self.connection.getSetting(self.trainDirSetting)) + os.path.sep
         
         # Return a new classifier instance for following the training process and using the model
         classifier = copy.copy(self)
@@ -129,7 +131,9 @@ class ExternalClassifier(Classifier):
         if classifyExamples != None:
             classifier.predictions = self.connection.getRemotePath(outDir + "/predictions" + idStr, True)
             predictionsPath = self.connection.getRemotePath(outDir + "/predictions" + idStr, False)
-            classifyDir = os.path.normpath(self.connection.getSetting(self.classifyDirSetting)) + os.path.sep
+            classifyDir = ""
+            if self.classifyDirSetting:
+                classifyDir = os.path.normpath(self.connection.getSetting(self.classifyDirSetting)) + os.path.sep
             classifyCommand = self.classifyCommand.replace("%d", classifyDir).replace("%e", classifyExamples).replace("%m", modelPath).replace("%c", predictionsPath).strip()
             self.connection.addCommand(classifyCommand)
         # Run the process
@@ -172,7 +176,9 @@ class ExternalClassifier(Classifier):
         examples = self.getExampleFile(examples, replaceRemote=replaceRemoteFiles)
         classifier._filesToRelease = [examples]
         self.connection.clearCommands()
-        classifyDir = os.path.normpath(self.connection.getSetting(self.classifyDirSetting)) + os.path.sep
+        classifyDir = ""
+        if self.classifyDirSetting:
+            classifyDir = os.path.normpath(self.connection.getSetting(self.classifyDirSetting)) + os.path.sep
         classifyCommand = self.classifyCommand.replace("%d", classifyDir).replace("%e", examples).replace("%m", model).replace("%c", predictionsPath).strip()
         self.connection.addCommand(classifyCommand)
         classifier._job = self.connection.submit(jobDir=os.path.abspath(os.path.dirname(output)), 

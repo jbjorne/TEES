@@ -13,20 +13,13 @@ class ScikitClassifier(ExternalClassifier):
         self.parameterFormat = "-%k %v"
         self.parameterValueListKey["train"] = "c"
         self.parameterValueTypes["train"] = {"c":[int,float]}
-        self.trainDirSetting = "SCIKIT_WRAPPER_DIR"
-        self.trainCommand = "python %dScikitWrapper.py --train %p --examples %e --model %m"
-        self.classifyDirSetting = "SCIKIT_WRAPPER_DIR"
-        self.classifyCommand = "python %dScikitWrapper.py --classify --examples %e --model %m --predictions %c"
+        #self.trainDirSetting = "SCIKIT_WRAPPER_DIR"
+        wrapperPath = os.path.join(os.path.dirname(os.path.abspath(__file__)), "ScikitWrapper.py")
+        self.trainCommand = "python " + wrapperPath + " --train %p --examples %e --model %m"
+        #self.classifyDirSetting = "SCIKIT_WRAPPER_DIR"
+        self.classifyCommand = "python " + wrapperPath + " --classify --examples %e --model %m --predictions %c"
     
 if __name__=="__main__":
-    # Import Psyco if available
-    try:
-        import psyco
-        psyco.full()
-        print >> sys.stderr, "Found Psyco, using"
-    except ImportError:
-        print >> sys.stderr, "Psyco not installed"
-
     from optparse import OptionParser
     optparser = OptionParser(description="Joachims SVM Multiclass classifier wrapper")
     optparser.add_option("-e", "--examples", default=None, dest="examples", help="Example File", metavar="FILE")
