@@ -51,7 +51,7 @@ class EdgeExampleBuilder(ExampleBuilder):
             "skip_extra_triggers", "headsOnly", "graph_kernel", "no_task", "no_dependency", 
             "disable_entity_features", "disable_terminus_features", "disable_single_element_features", 
             "disable_ngram_features", "disable_path_edge_features", "linear_features", "subset", "binary", "pos_only",
-            "entity_type", "filter_shortest_path", "maskTypeAsProtein", "keep_neg", "metamap"])
+            "entity_type", "filter_shortest_path", "maskTypeAsProtein", "keep_neg", "metamap", "sdb_merge"])
         self.styles = self.getParameters(style)
         #if style == None: # no parameters given
         #    style["typed"] = style["directed"] = style["headsOnly"] = True
@@ -170,6 +170,11 @@ class EdgeExampleBuilder(ExampleBuilder):
         else:
             return None
     
+    def mergeForSeeDev(self, categoryName):
+        if categoryName.startswith("Regulates"):
+            categoryName = "Regulates"
+        return categoryName
+    
     def isValidInteraction(self, e1, e2, structureAnalyzer,forceUndirected=False):
         return len(structureAnalyzer.getValidEdgeTypes(e1.get("type"), e2.get("type"), forceUndirected=forceUndirected)) > 0
 
@@ -209,6 +214,8 @@ class EdgeExampleBuilder(ExampleBuilder):
             categoryName = self.getCategoryName(sentenceGraph, e1, e2, isDirected)
             if goldGraph != None:
                 categoryName = self.getGoldCategoryName(goldGraph, entityToGold, e1, e2, isDirected)
+        if self.styles["sdb_merge"]:
+            categoryName = self.mergeForSeeDev(categoryName)
         return categoryName
                 
     def buildExamplesFromGraph(self, sentenceGraph, outfile, goldGraph = None, structureAnalyzer=None):
@@ -506,6 +513,8 @@ class EdgeExampleBuilder(ExampleBuilder):
         sentenceOrigId = sentenceGraph.sentenceElement.get("origId")
         if sentenceOrigId != None:
             extra["SOID"] = sentenceOrigId 
-        extra["directed"] = str(isDirected)      
+        extra["directed"] = str(isDirected)
+        if self.styles["sdb_merge"]:
+            extra["sdb_merge"] = True
         
         return (categoryName, features, extra)

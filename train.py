@@ -397,6 +397,8 @@ def getTaskSettings(task, detector, bioNLPSTParams, preprocessorParams,
                 exampleStyles["examples"] = Parameters.cat("keep_neg:drugbank_features:filter_shortest_path=conj_and", exampleStyles["examples"], msg)
         elif task == "BI11":
             exampleStyles["examples"] = Parameters.cat("bi_features", exampleStyles["examples"], msg)
+        elif task == "SDB16":
+            exampleStyles["examples"] = Parameters.cat("sdb_merge", exampleStyles["examples"], msg)
         # Edge style ##########################################################
         msg = "Edge example style / " + fullTaskId
         if task in ["GE09", "GE11", "GE13"] and subTask == 1:

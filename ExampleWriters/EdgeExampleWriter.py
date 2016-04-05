@@ -25,6 +25,22 @@ class EdgeExampleWriter(SentenceExampleWriter):
 #            assert intType in ("Arg", "Rel")
 #            if intType == "Arg":
 #                intEl.set("event", "True")
+    
+    def unmergeSeeDev(self, iType, e1, e2, structureAnalyzer):
+        e1Type = e1.get("type")
+        e2Type = e2.get("type")
+        match = None
+        if iType == "Regulates":
+            for relation in structureAnalyzer.relations:
+                if relation.type.startswith("Regulates") and e1Type in relation.e1Types and e2Type in relation.e2Types:
+                    match = relation
+                    break
+        else:
+            return iType
+        
+        if not match:
+            raise Exception("No matching relation for example " + str((iType, e1Type, e2Type)))
+        return relation.type
 
     def getEntityByIdMap(self, sentenceElement):
         entityElements = sentenceElement.findall("entity")
@@ -77,6 +93,8 @@ class EdgeExampleWriter(SentenceExampleWriter):
             # undirected will override this.
             directedExample = example[3]["directed"]
             for iType in self.getElementTypes(prediction, classSet, classIds): # split merged classes
+                if example[3].has_key("sdb_merge"):
+                    iType = self.unmergeSeeDev(iType, e1, e2, structureAnalyzer)
                 # Keep negatives if requested
                 validatedNeg = False
                 if keepNeg:
