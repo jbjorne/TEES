@@ -368,7 +368,7 @@ def getTaskSettings(task, detector, bioNLPSTParams, preprocessorParams,
             bioNLPSTParams = Parameters.cat(bioNLPSTParams, "convert:scores", "BioNLP Shared Task / " + fullTaskId, ["default"]) # the shared task evaluator is not designed for predicted entities
         elif task == "REL11":
             bioNLPSTParams = Parameters.cat(bioNLPSTParams, "convert:evaluate:scores:a2Tag=rel", "BioNLP Shared Task / " + fullTaskId, ["default"])
-        elif task in ("BB_EVENT_16", "BB_EVENT_16-FULL", "BB_EVENT_NER_16"):
+        elif task in ("BB_EVENT_16", "BB_EVENT_16-FULL", "BB_EVENT_NER_16", "SDB16"):
             bioNLPSTParams = Parameters.cat(bioNLPSTParams, "convert=zip", "BioNLP Shared Task / " + fullTaskId, ["default"])
         elif task not in ["DDI11", "DDI11-FULL", "DDI13T91", "DDI13T92", "DDI13-FULL"]:
             bioNLPSTParams = Parameters.cat(bioNLPSTParams, "convert:evaluate:scores", "BioNLP Shared Task / " + fullTaskId, ["default"])
@@ -442,13 +442,15 @@ def getTaskSettings(task, detector, bioNLPSTParams, preprocessorParams,
         #elif task == "DDI13":
         #    classifierParameters["examples"] = Parameters.cat("c=10,100,1000,2500,4000,5000,6000,7500,10000,20000,25000,50000:TEES.threshold", classifierParameters["examples"], "Classifier parameters for single-stage examples" + fullTaskId)
         elif task == "CO11":
-            classifierParameters["edge"] = Parameters.cat("c=1000,4500,5000,7500,10000,20000,25000,27500,28000,29000,30000,35000,40000,50000,60000,65000", classifierParameters["examples"], "Classifier parameters for edges / " + fullTaskId)
-            classifierParameters["trigger"] = Parameters.cat("c=1000,5000,10000,20000,50000,80000,100000,150000,180000,200000,250000,300000,350000,500000,1000000", classifierParameters["examples"], "Classifier parameters for triggers / " + fullTaskId)
+            classifierParameters["edge"] = Parameters.cat("c=1000,4500,5000,7500,10000,20000,25000,27500,28000,29000,30000,35000,40000,50000,60000,65000", classifierParameters["edge"], "Classifier parameters for edges / " + fullTaskId)
+            classifierParameters["trigger"] = Parameters.cat("c=1000,5000,10000,20000,50000,80000,100000,150000,180000,200000,250000,300000,350000,500000,1000000", classifierParameters["trigger"], "Classifier parameters for triggers / " + fullTaskId)
             classifierParameters["recall"] = Parameters.cat("0.8,0.9,0.95,1.0", classifierParameters["recall"], "Recall adjust / " + fullTaskId)
         elif task == "BB_EVENT_16":
             classifierParameters["examples"] = Parameters.cat("c=10,20,50,80,100,110,115,120,125,130,140,150,200,500,1000", classifierParameters["examples"], "Classifier parameters for edges / " + fullTaskId)
         elif task in ("BB_EVENT_16-FULL", "BB_EVENT_NER_16"):
-            classifierParameters["edge"] = Parameters.cat("c=10,20,50,80,100,110,115,120,125,130,140,150,200,500,1000", classifierParameters["examples"], "Classifier parameters for edges / " + fullTaskId)
+            classifierParameters["edge"] = Parameters.cat("c=10,20,50,80,100,110,115,120,125,130,140,150,200,500,1000", classifierParameters["edge"], "Classifier parameters for edges / " + fullTaskId)
+        elif task == "SDB16":
+            classifierParameters["edge"] = Parameters.cat("c=1000,4500,5000,7500,10000,20000,25000,27500,28000,29000,30000,35000,40000,50000,60000,65000,80000,100000,150000", classifierParameters["edge"], "Classifier parameters for edges / " + fullTaskId)
         # Training fold parameters ############################################
         if task.startswith("DDI13"):
             folds["devel"]=["train1", "train2", "train3", "train4"]
