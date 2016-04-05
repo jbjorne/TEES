@@ -171,92 +171,20 @@ class EdgeExampleBuilder(ExampleBuilder):
         else:
             return None
     
-    def mergeForSeeDev(self, categoryName):
-        for tag in ("Regulates", "Exists", "Interacts", "Is", "Occurs"):
-            if categoryName.startswith(tag):
-                categoryName = tag
-                break
+    def mergeForSeeDev(self, categoryName, structureAnalyzer):
+        if categoryName in structureAnalyzer.typeMap:
+            return structureAnalyzer.typeMap[categoryName]
         return categoryName
+#         for tag in ("Regulates", "Exists", "Interacts", "Is", "Occurs"):
+#             if categoryName.startswith(tag):
+#                 categoryName = tag
+#                 break
+#         return categoryName
     
-    def determineNonOverlappingTypes(self, structureAnalyzer):
-        print "================", "Non-overlapping types", "================"
-        groups = {}
-        index = 0
-        merged = {}
-        for relation in structureAnalyzer.relations.values():
-            firstPart = relation.type.split("(")[0].split("_")[0]
-            if firstPart not in groups:
-                groups[firstPart] = []
-            groups[firstPart].append(relation)
-            relation.permutations = [] #[zip(x,relation.e2Types) for x in itertools.permutations(relation.e1Types,len(relation.e2Types))]
-            for e1Type in sorted(relation.e1Types):
-                for e2Type in sorted(relation.e2Types):
-                    relation.permutations.append((e1Type, e2Type))
-            merged[index] = {"e1Types":relation.e1Types, "e2Types":relation.e2Types, "permutations":set(relation.permutations), "relations":[relation]}
-            index += 1
-        print "Keys:", sorted(groups.keys())
-        mergedOne = True
-        while mergedOne:
-            mergedOne = False
-            for key1 in merged:
-                candidates = []
-                for key2 in merged:
-                    if key1 == key2:
-                        continue
-                    if not (len(merged[key1]["relations"]) == 1 and len(merged[key2]["relations"]) >= 1):
-                        continue
-                    foundOverlap = False
-                    for p in merged[key1]["permutations"]:
-                        if p in merged[key2]["permutations"]:
-                            foundOverlap = True
-                            break
-                    if foundOverlap:
-                        continue
-                    priority = 0
-                    if len(merged[key1]["e1Types"].intersection(merged[key2]["e1Types"])) > 0:
-                        priority += 1
-                    if len(merged[key1]["e2Types"].intersection(merged[key2]["e2Types"])) > 0:
-                        priority += 10
-                    candidates.append((priority, merged[key2]))
-                if len(candidates) > 0:
-                    candidates.sort(key=lambda x: x[0], reverse=True)
-                    best = candidates[0][1]
-                    best["relations"].append(merged[key1]["relations"].pop())
-                    assert len(merged[key1]["relations"]) == 0
-                    for dataType in ("e1Types", "e2Types", "permutations"):
-                        best[dataType] = best[dataType].union(merged[key1][dataType])
-                    #merged[key1][1] = []
-                    mergedOne = True
-                    break
-        
-        typeMap = {}
-        for key in sorted(merged.keys()):
-            if len(merged[key]["relations"]) == 0:
-                continue
-            relTypes = [x.type for x in merged[key]["relations"]]
-            shortId = str(key) + "-" +  "_".join(sorted(set([x.split("_")[0] for x in relTypes])))
-            print key, relTypes, shortId
-            for relation in merged[key]["relations"]:
-                typeMap[relation.type] = shortId
-        return typeMap           
-            
-#         for key in sorted(groups.keys()):
-#             for rel1 in groups[key]:
-#                 for rel2 in groups[key]:
-#                     if rel1 == rel2:
-#                         continue
-#                     #p1 = rel1.permutations #[zip(x,rel1.e2Types) for x in itertools.permutations(rel1.e1Types,len(rel1.e2Types))] #itertools.permutations(rel1.e1Types, rel1.e2Types)
-#                     #p2 = [zip(x,rel2.e2Types) for x in itertools.permutations(rel2.e1Types,len(rel2.e2Types))] #itertools.permutations(rel2.e1Types, rel2.e2Types)
-#                     
-#                     foundOverlap = False
-#                     for p in rel1.permutations:
-#                         if p in rel2.permutations:
-#                             #print "Overlap in group", key, (rel1.type, rel2.type), p
-#                             foundOverlap = True
-#                             break
-#                     if not foundOverlap:
-                        
-        print "================", "Non-overlapping types", "================"
+    def processCorpus(self, input, output, gold=None, append=False, allowNewIds=True, structureAnalyzer=None):
+        if self.styles["sdb_merge"]:
+            structureAnalyzer.determineNonOverlappingTypes()
+        ExampleBuilder.processCorpus(self, input, output, gold, append, allowNewIds, structureAnalyzer)
     
     def isValidInteraction(self, e1, e2, structureAnalyzer,forceUndirected=False):
         return len(structureAnalyzer.getValidEdgeTypes(e1.get("type"), e2.get("type"), forceUndirected=forceUndirected)) > 0
