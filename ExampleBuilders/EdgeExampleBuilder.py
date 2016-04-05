@@ -22,6 +22,7 @@ from Core.SimpleGraph import Graph
 from FeatureBuilders.TriggerFeatureBuilder import TriggerFeatureBuilder
 import Utils.Range as Range
 from multiprocessing import Process
+import itertools
 
 # For gold mapping
 import Evaluators.EvaluateInteractionXML as EvaluateInteractionXML
@@ -177,6 +178,70 @@ class EdgeExampleBuilder(ExampleBuilder):
                 break
         return categoryName
     
+    def determineNonOverlappingTypes(self, structureAnalyzer):
+        print "================", "Non-overlapping types", "================"
+        groups = {}
+        index = 0
+        merged = {}
+        for relation in structureAnalyzer.relations.values():
+            firstPart = relation.type.split("(")[0].split("_")[0]
+            if firstPart not in groups:
+                groups[firstPart] = []
+            groups[firstPart].append(relation)
+            relation.permutations = [] #[zip(x,relation.e2Types) for x in itertools.permutations(relation.e1Types,len(relation.e2Types))]
+            for e1Type in sorted(relation.e1Types):
+                for e2Type in sorted(relation.e2Types):
+                    relation.permutations.append((e1Type, e2Type))
+            merged[index] = [set(relation.permutations), [relation]]
+            index += 1
+        print "Keys:", sorted(groups.keys())
+        mergedOne = True
+        while mergedOne:
+            mergedOne = False
+            for key1 in merged:
+                for key2 in merged:
+                    if key1 == key2:
+                        continue
+                    if not (len(merged[key1][1]) == 1 and len(merged[key2][1]) >= 1):
+                        continue
+                    foundOverlap = False
+                    for p in merged[key1][0]:
+                        if p in merged[key2][0]:
+                            foundOverlap = True
+                            break
+                    if foundOverlap:
+                        continue
+                    merged[key2][1].append(merged[key1][1].pop())
+                    merged[key2][0] = merged[key2][0].union(merged[key1][0])
+                    #merged[key1][1] = []
+                    mergedOne = True
+                    break
+                if mergedOne:
+                    break
+        
+        for key in sorted(merged.keys()):
+            print key, [x.type for x in merged[key][1]]
+                
+            
+            
+#         for key in sorted(groups.keys()):
+#             for rel1 in groups[key]:
+#                 for rel2 in groups[key]:
+#                     if rel1 == rel2:
+#                         continue
+#                     #p1 = rel1.permutations #[zip(x,rel1.e2Types) for x in itertools.permutations(rel1.e1Types,len(rel1.e2Types))] #itertools.permutations(rel1.e1Types, rel1.e2Types)
+#                     #p2 = [zip(x,rel2.e2Types) for x in itertools.permutations(rel2.e1Types,len(rel2.e2Types))] #itertools.permutations(rel2.e1Types, rel2.e2Types)
+#                     
+#                     foundOverlap = False
+#                     for p in rel1.permutations:
+#                         if p in rel2.permutations:
+#                             #print "Overlap in group", key, (rel1.type, rel2.type), p
+#                             foundOverlap = True
+#                             break
+#                     if not foundOverlap:
+                        
+        print "================", "Non-overlapping types", "================"
+    
     def isValidInteraction(self, e1, e2, structureAnalyzer,forceUndirected=False):
         return len(structureAnalyzer.getValidEdgeTypes(e1.get("type"), e2.get("type"), forceUndirected=forceUndirected)) > 0
 
@@ -241,6 +306,8 @@ class EdgeExampleBuilder(ExampleBuilder):
             self.triggerFeatureBuilder.initSentence(sentenceGraph)
         if self.styles["evex"]: 
             self.evexFeatureBuilder.initSentence(sentenceGraph)
+        if self.styles["sdb_merge"]:
+            self.determineNonOverlappingTypes(structureAnalyzer)
             
         # Filter entities, if needed
         sentenceGraph.mergeInteractionGraph(True)
