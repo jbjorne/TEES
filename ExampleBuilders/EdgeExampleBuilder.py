@@ -157,6 +157,8 @@ class EdgeExampleBuilder(ExampleBuilder):
                 continue
             if categoryName != "":
                 categoryName += "---"
+            if self.styles["sdb_merge"]:
+                name = self.mergeForSeeDev(name, self.structureAnalyzer)
             categoryName += name
         if categoryName != "":
             return categoryName
@@ -184,6 +186,7 @@ class EdgeExampleBuilder(ExampleBuilder):
     def processCorpus(self, input, output, gold=None, append=False, allowNewIds=True, structureAnalyzer=None):
         if self.styles["sdb_merge"]:
             structureAnalyzer.determineNonOverlappingTypes()
+            self.structureAnalyzer = structureAnalyzer
         ExampleBuilder.processCorpus(self, input, output, gold, append, allowNewIds, structureAnalyzer)
     
     def isValidInteraction(self, e1, e2, structureAnalyzer,forceUndirected=False):
@@ -218,15 +221,15 @@ class EdgeExampleBuilder(ExampleBuilder):
             self.exampleStats.filter("pos_only")
         return makeExample
     
-    def getExampleCategoryName(self, e1=None, e2=None, t1=None, t2=None, sentenceGraph=None, goldGraph=None, entityToGold=None, isDirected=True):
+    def getExampleCategoryName(self, e1=None, e2=None, t1=None, t2=None, sentenceGraph=None, goldGraph=None, entityToGold=None, isDirected=True, structureAnalyzer=None):
         if self.styles["token_nodes"]:
             categoryName = self.getCategoryNameFromTokens(sentenceGraph, t1, t2, isDirected)
         else:
             categoryName = self.getCategoryName(sentenceGraph, e1, e2, isDirected)
             if goldGraph != None:
                 categoryName = self.getGoldCategoryName(goldGraph, entityToGold, e1, e2, isDirected)
-        if self.styles["sdb_merge"]:
-            categoryName = self.mergeForSeeDev(categoryName)
+        #if self.styles["sdb_merge"]:
+        #    categoryName = self.mergeForSeeDev(categoryName, structureAnalyzer)
         return categoryName
                 
     def buildExamplesFromGraph(self, sentenceGraph, outfile, goldGraph = None, structureAnalyzer=None):
@@ -250,8 +253,8 @@ class EdgeExampleBuilder(ExampleBuilder):
             self.triggerFeatureBuilder.initSentence(sentenceGraph)
         if self.styles["evex"]: 
             self.evexFeatureBuilder.initSentence(sentenceGraph)
-        if self.styles["sdb_merge"]:
-            self.determineNonOverlappingTypes(structureAnalyzer)
+#         if self.styles["sdb_merge"]:
+#             self.determineNonOverlappingTypes(structureAnalyzer)
             
         # Filter entities, if needed
         sentenceGraph.mergeInteractionGraph(True)
@@ -318,7 +321,7 @@ class EdgeExampleBuilder(ExampleBuilder):
     
     def buildExamplesForPair(self, token1, token2, paths, sentenceGraph, goldGraph, entityToGold, entity1=None, entity2=None, structureAnalyzer=None, isDirected=True):
         # define forward
-        categoryName = self.getExampleCategoryName(entity1, entity2, token1, token2, sentenceGraph, goldGraph, entityToGold, isDirected)
+        categoryName = self.getExampleCategoryName(entity1, entity2, token1, token2, sentenceGraph, goldGraph, entityToGold, isDirected, structureAnalyzer=structureAnalyzer)
         # make forward
         forwardExample = None
         self.exampleStats.beginExample(categoryName)
@@ -328,7 +331,7 @@ class EdgeExampleBuilder(ExampleBuilder):
         if isDirected: # build a separate reverse example (if that is valid)
             self.exampleStats.endExample() # end forward example
             # define reverse
-            categoryName = self.getExampleCategoryName(entity2, entity1, token2, token1, sentenceGraph, goldGraph, entityToGold, True)
+            categoryName = self.getExampleCategoryName(entity2, entity1, token2, token1, sentenceGraph, goldGraph, entityToGold, True, structureAnalyzer=structureAnalyzer)
             # make reverse
             self.exampleStats.beginExample(categoryName)
             reverseExample = None

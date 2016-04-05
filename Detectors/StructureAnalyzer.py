@@ -42,11 +42,12 @@ class StructureAnalyzer():
         #groups = {}
         index = 0
         merged = {}
-        for relation in self.relations.values():
+        for key in sorted(self.relations.keys()): #values():
 #             firstPart = relation.type.split("(")[0].split("_")[0]
 #             if firstPart not in groups:
 #                 groups[firstPart] = []
 #             groups[firstPart].append(relation)
+            relation = self.relations[key]
             relation.permutations = [] #[zip(x,relation.e2Types) for x in itertools.permutations(relation.e1Types,len(relation.e2Types))]
             for e1Type in sorted(relation.e1Types):
                 for e2Type in sorted(relation.e2Types):
@@ -54,12 +55,13 @@ class StructureAnalyzer():
             merged[index] = {"e1Types":relation.e1Types, "e2Types":relation.e2Types, "permutations":set(relation.permutations), "relations":[relation]}
             index += 1
         #print "Keys:", sorted(groups.keys())
+        keys = sorted(merged.keys())
         mergedOne = True
         while mergedOne:
             mergedOne = False
-            for key1 in merged:
+            for key1 in keys:
                 candidates = []
-                for key2 in merged:
+                for key2 in keys:
                     if key1 == key2:
                         continue
                     if not (len(merged[key1]["relations"]) == 1 and len(merged[key2]["relations"]) >= 1):
