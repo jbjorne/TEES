@@ -30,11 +30,12 @@ class EdgeExampleWriter(SentenceExampleWriter):
         e1Type = e1.get("type")
         e2Type = e2.get("type")
         match = None
-        if iType == "Regulates":
+        if "(" not in iType:
             for relation in structureAnalyzer.relations:
-                if relation.type.startswith("Regulates") and e1Type in relation.e1Types and e2Type in relation.e2Types:
+                if relation.type.startswith(iType) and e1Type in relation.e1Types and e2Type in relation.e2Types:
+                    if match != None:
+                        raise Exception("Multiple matching relations for example " + str((iType, e1Type, e2Type)))
                     match = relation
-                    break
         else:
             return iType
         

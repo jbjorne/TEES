@@ -171,8 +171,10 @@ class EdgeExampleBuilder(ExampleBuilder):
             return None
     
     def mergeForSeeDev(self, categoryName):
-        if categoryName.startswith("Regulates"):
-            categoryName = "Regulates"
+        for tag in ("Regulates", "Exists", "Interacts", "Is", "Occurs"):
+            if categoryName.startswith(tag):
+                categoryName = tag
+                break
         return categoryName
     
     def isValidInteraction(self, e1, e2, structureAnalyzer,forceUndirected=False):
@@ -515,6 +517,7 @@ class EdgeExampleBuilder(ExampleBuilder):
             extra["SOID"] = sentenceOrigId 
         extra["directed"] = str(isDirected)
         if self.styles["sdb_merge"]:
-            extra["sdb_merge"] = True
+            extra["sdb_merge"] = "True"
+            #print extra
         
         return (categoryName, features, extra)

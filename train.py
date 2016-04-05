@@ -452,7 +452,7 @@ def getTaskSettings(task, detector, bioNLPSTParams, preprocessorParams,
         elif task in ("BB_EVENT_16-FULL", "BB_EVENT_NER_16"):
             classifierParameters["edge"] = Parameters.cat("c=10,20,50,80,100,110,115,120,125,130,140,150,200,500,1000", classifierParameters["edge"], "Classifier parameters for edges / " + fullTaskId)
         elif task == "SDB16":
-            classifierParameters["edge"] = Parameters.cat("c=1000,4500,5000,7500,10000,20000,25000,27500,28000,29000,30000,35000,40000,50000,60000,65000,80000,100000,150000", classifierParameters["edge"], "Classifier parameters for edges / " + fullTaskId)
+            classifierParameters["examples"] = Parameters.cat("c=1000,4500,5000,7500,10000,20000,25000,27500,28000,29000,30000,35000,40000,50000,60000,65000,80000,100000,150000", classifierParameters["examples"], "Classifier parameters for single-stage examples / " + fullTaskId)
         # Training fold parameters ############################################
         if task.startswith("DDI13"):
             folds["devel"]=["train1", "train2", "train3", "train4"]
