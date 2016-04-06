@@ -53,7 +53,7 @@ class EdgeExampleBuilder(ExampleBuilder):
             "disable_entity_features", "disable_terminus_features", "disable_single_element_features", 
             "disable_ngram_features", "disable_path_edge_features", "linear_features", "subset", "binary", "pos_only",
             "entity_type", "filter_shortest_path", "maskTypeAsProtein", "keep_neg", "metamap", 
-            "sdb_merge", "sdb_features"])
+            "sdb_merge", "sdb_features", "no_self_loops"])
         self.styles = self.getParameters(style)
         #if style == None: # no parameters given
         #    style["typed"] = style["directed"] = style["headsOnly"] = True
@@ -238,6 +238,9 @@ class EdgeExampleBuilder(ExampleBuilder):
         if self.styles["pos_only"] and categoryName == "neg":
             makeExample = False
             self.exampleStats.filter("pos_only")
+        if self.styles["no_self_loops"] and ((e1 == e2) or (e1.get("headOffset") == e2.get("headOffset"))):
+            makeExample = False
+            self.exampleStats.filter("no_self_loops")
         return makeExample
     
     def getExampleCategoryName(self, e1=None, e2=None, t1=None, t2=None, sentenceGraph=None, goldGraph=None, entityToGold=None, isDirected=True, structureAnalyzer=None):
