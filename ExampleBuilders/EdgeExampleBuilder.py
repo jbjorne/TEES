@@ -3,6 +3,7 @@ Edge Examples
 """
 
 import sys, os
+from ExampleBuilders.FeatureBuilders.OntoBiotopeFeatureBuilder import OntoBiotopeFeatureBuilder
 thisPath = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.abspath(os.path.join(thisPath,"..")))
 from ExampleBuilders.ExampleBuilder import ExampleBuilder
@@ -17,6 +18,7 @@ from FeatureBuilders.RELFeatureBuilder import RELFeatureBuilder
 from FeatureBuilders.DrugFeatureBuilder import DrugFeatureBuilder
 from FeatureBuilders.EVEXFeatureBuilder import EVEXFeatureBuilder
 from FeatureBuilders.GiulianoFeatureBuilder import GiulianoFeatureBuilder
+from FeatureBuilders.OntoBiotopeFeatureBuilder import OntoBiotopeFeatureBuilder
 #import Graph.networkx_v10rc1 as NX10
 from Core.SimpleGraph import Graph
 from FeatureBuilders.TriggerFeatureBuilder import TriggerFeatureBuilder
@@ -53,7 +55,7 @@ class EdgeExampleBuilder(ExampleBuilder):
             "disable_entity_features", "disable_terminus_features", "disable_single_element_features", 
             "disable_ngram_features", "disable_path_edge_features", "linear_features", "subset", "binary", "pos_only",
             "entity_type", "filter_shortest_path", "maskTypeAsProtein", "keep_neg", "metamap", 
-            "sdb_merge", "sdb_features", "no_self_loops"])
+            "sdb_merge", "sdb_features", "ontobiotope_features", "no_self_loops"])
         self.styles = self.getParameters(style)
         #if style == None: # no parameters given
         #    style["typed"] = style["directed"] = style["headsOnly"] = True
@@ -77,6 +79,8 @@ class EdgeExampleBuilder(ExampleBuilder):
         self.tokenFeatureBuilder = TokenFeatureBuilder(self.featureSet)
         if self.styles["ontology"]:
             self.multiEdgeFeatureBuilder.ontologyFeatureBuilder = BioInferOntologyFeatureBuilder(self.featureSet)
+        if self.styles["ontobiotope_features"]:
+            self.ontobiotopeFeatureBuilder = OntoBiotopeFeatureBuilder(self.featureSet)
         if self.styles["nodalida"]:
             self.nodalidaFeatureBuilder = NodalidaFeatureBuilder(self.featureSet)
         if self.styles["bacteria_renaming"]:
@@ -537,6 +541,8 @@ class EdgeExampleBuilder(ExampleBuilder):
                     if e1SuperType == e2SuperType:
                         features[self.featureSet.getId("SDB_e1e2sup_equal")] = 1
                         features[self.featureSet.getId("SDB_e1e2sup_equal_" + e1SuperType)] = 1
+        if self.styles["ontobiotope_features"]:
+            self.ontobiotopeFeatureBuilder.buildOBOFeaturesForPair(entity1, entity2)
         if self.styles["evex"]:
             self.evexFeatureBuilder.setFeatureVector(features, entity1, entity2)
             self.evexFeatureBuilder.buildEdgeFeatures(entity1, entity2, token1, token2, path, sentenceGraph)

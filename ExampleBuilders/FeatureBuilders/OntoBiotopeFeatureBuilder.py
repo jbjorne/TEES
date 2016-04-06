@@ -1,4 +1,5 @@
 from FeatureBuilder import FeatureBuilder
+import sys, os
 
 class Term():
     def __init__(self, identifier=None, name=None, parents=None, children=None):
@@ -13,6 +14,34 @@ class OntoBiotopeFeatureBuilder(FeatureBuilder):
         self.terms = {}
         self.byName = {}
         self.byKeyword = {}
+        self.loadOBO(os.path.join(os.path.dirname(os.path.abspath(__file__), "OntoBiotope_BioNLP-ST-2016.obo")))
+    
+    def getParents(self, name):
+        terms = []
+        if name:
+            terms += self.byName[name]
+        for keyword in name.split():
+            terms += self.byKeyword[keyword]
+        terms = sorted(set(terms), key=lambda x: x.id)
+        visited = set()
+        while terms:
+            for term in terms:
+                visited.add(term)
+            parents = []
+            for term in terms:
+                parents.extend(term.parents)
+            parents = sorted(set(parents), key=lambda x: x.id)
+            terms = [x for x in parents if x not in visited]
+        return sorted(visited, key=lambda x: x.id)
+    
+    def buildOBOFeatures(self, entity, tag):
+        terms = self.getParents(entity.get("text").lower())
+        for term in terms:
+            self.features[self.featureSet.getId(term.id)] = 1
+    
+    def buildOBOFeaturesForPair(self, e1, e2):
+        self.buildOBOFeatures(e1, "e1")
+        self.buildOBOFeatures(e2, "e2")
     
     ###########################################################################
     # OBO Loading
@@ -38,6 +67,7 @@ class OntoBiotopeFeatureBuilder(FeatureBuilder):
             self.byKeyword[key] = sorted(self.byKeyword[key], key=lambda x: x.id)
     
     def loadOBO(self, oboPath):
+        print >> sys.stderr, "Loading OBO from", oboPath
         f = open(oboPath, "rt")
         lines = f.readlines()
         f.close()
