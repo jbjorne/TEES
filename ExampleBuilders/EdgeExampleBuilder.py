@@ -521,16 +521,22 @@ class EdgeExampleBuilder(ExampleBuilder):
         if self.styles["sdb_features"]:
             e1Type = entity1.get("type")
             e2Type = entity2.get("type")
+            features[self.featureSet.getId("SDB_e1_"+e1Type)] = 1
+            features[self.featureSet.getId("SDB_e2_"+e2Type)] = 1
+            features[self.featureSet.getId("SDB_e1e2_"+e1Type+"_"+e2Type)] = 1
+            if e1Type == e2Type:
+                features[self.featureSet.getId("SDB_e1e2_equal")] = 1
+                features[self.featureSet.getId("SDB_e1e2_equal_" + e1Type)] = 1
             e1SuperTypes = str(self.getSeeDevSuperTypes(e1Type))
             e2SuperTypes = str(self.getSeeDevSuperTypes(e2Type))
             for e1SuperType in e1SuperTypes:
                 for e2SuperType in e2SuperTypes:
-                    features[self.featureSet.getId("SDB_e1_"+e1Type)] = 1
-                    features[self.featureSet.getId("SDB_e2_"+e2Type)] = 1
                     features[self.featureSet.getId("SDB_e1sup_"+e1SuperType)] = 1
                     features[self.featureSet.getId("SDB_e2sup_"+e2SuperType)] = 1
-                    features[self.featureSet.getId("SDB_e1e2_"+e1Type+"_"+e2Type)] = 1
-                    features[self.featureSet.getId("SDB_e1e2sup_"+e1SuperType+"_"+e2SuperType)] = 1                    
+                    features[self.featureSet.getId("SDB_e1e2sup_"+e1SuperType+"_"+e2SuperType)] = 1
+                    if e1SuperType == e2SuperType:
+                        features[self.featureSet.getId("SDB_e1e2sup_equal")] = 1
+                        features[self.featureSet.getId("SDB_e1e2sup_equal_" + e1SuperType)] = 1
         if self.styles["evex"]:
             self.evexFeatureBuilder.setFeatureVector(features, entity1, entity2)
             self.evexFeatureBuilder.buildEdgeFeatures(entity1, entity2, token1, token2, path, sentenceGraph)
