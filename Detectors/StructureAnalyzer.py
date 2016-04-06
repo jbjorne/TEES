@@ -72,7 +72,7 @@ class StructureAnalyzer():
                 for key2 in keys:
                     if key1 == key2:
                         continue
-                    if not (len(merged[key1]["relations"]) == 1 and len(merged[key2]["relations"]) >= 1):
+                    if not (len(merged[key1]["relations"]) >= 1 and len(merged[key2]["relations"]) >= 1):
                         continue
                     foundOverlap = False
                     for p in merged[key1]["permutations"]:
@@ -93,8 +93,8 @@ class StructureAnalyzer():
                     candidates.sort(key=lambda x: x[0], reverse=True)
                     #print merged[key1]["relations"][0].type, [(x[0], [x.type for x in x[1]["relations"]]) for x in candidates]
                     best = candidates[0][1]
-                    best["relations"].append(merged[key1]["relations"].pop())
-                    assert len(merged[key1]["relations"]) == 0
+                    best["relations"].extend(merged[key1]["relations"])
+                    merged[key1]["relations"] = []
                     for dataType in ("e1Types", "e2Types", "permutations", "categories"):
                         best[dataType] = best[dataType].union(merged[key1][dataType])
                     #merged[key1][1] = []
