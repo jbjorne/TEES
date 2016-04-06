@@ -183,7 +183,7 @@ class EdgeExampleBuilder(ExampleBuilder):
             return ("Amino_acid_sequence", "DNA_Product", "Molecule")
         elif eType == "Hormone":
             return ("Molecule",)
-        elif eType in ("Regulatory_Network", "Metabolic_Pathway"):
+        elif eType in ("Regulatory_Network", "Pathway"):
             return ("Dynamic_process",)
         elif eType in ("Genotype", "Tissue", "Development_Phase"):
             return ("Biological_context", "Context")
