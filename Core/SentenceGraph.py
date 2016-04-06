@@ -300,7 +300,7 @@ class SentenceGraph:
         sentenceSpan = (0, len(self.sentenceElement.get("text"))) # for validating the entity offsets
         for entity in self.entities[:]:
             headToken = self.mapEntity(entity, verbose)
-            if entity.get("type") != entity:
+            if entity.tag != "entity":
                 self.entities.remove(entity)
             elif headToken != None:
                 self.entityHeadTokenByEntity[entity] = headToken

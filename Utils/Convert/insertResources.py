@@ -55,6 +55,8 @@ def insertElements(corpus, specAnn):
             for span in specAnn[docId][:]:
                 offset = span.get("offset")
                 if Range.overlap(offset, sentOffset):
+                    if sentOffset[0] > offset[0] or sentOffset[1] < offset[1]:
+                        continue
                     specAnn[docId].remove(span)
                     charOffset = (offset[0] - sentOffset[0], offset[1] - sentOffset[0])
                     matchingText = sentence.get("text")[charOffset[0]:charOffset[1]]

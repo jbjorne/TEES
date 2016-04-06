@@ -76,6 +76,8 @@ class EntityExampleWriter(SentenceExampleWriter):
                 entityElement = ET.Element("entity")
                 #entityElement.set("given", "False")
                 entityElement.set("charOffset", headToken.get("charOffset"))
+                if "define_offset" in example[3]:
+                    entityElement.set("charOffset", example[3]["define_offset"])
                 entityElement.set("headOffset", headToken.get("charOffset"))
                 entityElement.set("text", headToken.get("text"))
                 entityElement.set("id", sentenceId + ".e" + str(newEntityIdCount))

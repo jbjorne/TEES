@@ -41,7 +41,7 @@ class EntityExampleBuilder(ExampleBuilder):
                                   "names", "build_for_nameless", "skip_for_nameless",
                                   "pos_only", "all_tokens", "pos_pairs", "linear_ngrams", 
                                   "phospho", "drugbank_features", "ddi13_features", "metamap", 
-                                  "only_types", "ontobiotope_features"])
+                                  "only_types", "ontobiotope_features", "bb_spans"])
         self.styles = self.getParameters(style)
 #        if "selftrain_group" in self.styles:
 #            self.selfTrainGroups = set()
@@ -512,7 +512,7 @@ class EntityExampleBuilder(ExampleBuilder):
                 self.ontobiotopeFeatureBuilder.setFeatureVector(features)
                 self.ontobiotopeFeatureBuilder.buildOBOFeaturesForToken(token)
                 self.ontobiotopeFeatureBuilder.setFeatureVector(None)
-                             
+                                         
             extra = {"xtype":"token","t":token.get("id")}
             if self.styles["bb_features"]:
                 extra["trigex"] = "bb" # Request trigger extension in ExampleWriter
@@ -522,6 +522,19 @@ class EntityExampleBuilder(ExampleBuilder):
                 extra["goldIds"] = entityIds # The entities to which this example corresponds
             #examples.append( (sentenceGraph.getSentenceId()+".x"+str(exampleIndex),category,features,extra) )
             
+            if self.styles["bb_spans"]:
+                for span in sentenceGraph.sentenceElement.iter("span"):
+                    if span.get("headOffset") != token.get("charOffset"):
+                        continue
+                    if span.get("source") != "spec":
+                        continue
+                    #print span.get("headOffset"), token.get("charOffset"), span.get("source"), token.get("id")
+                    features[self.featureSet.getId("span_SPECIES")] = 1
+                    features[self.featureSet.getId("span_identifier" + span.get("identifier"))] = 1
+                    features[self.featureSet.getId("span_type" + span.get("type"))] = 1
+                    features[self.featureSet.getId("span_category" + span.get("category"))] = 1
+                    extra["define_offset"] = span.get("charOffset")
+                                
             # chains
             self.buildChains(token, sentenceGraph, features)
             
