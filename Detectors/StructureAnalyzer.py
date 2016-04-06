@@ -46,6 +46,7 @@ class StructureAnalyzer():
         #groups = {}
         index = 0
         merged = {}
+        numRelations = len(self.relations)
         for key in sorted(self.relations.keys()): #values():
 #             firstPart = relation.type.split("(")[0].split("_")[0]
 #             if firstPart not in groups:
@@ -65,14 +66,17 @@ class StructureAnalyzer():
         #print "Keys:", sorted(groups.keys())
         keys = sorted(merged.keys())
         mergedOne = True
-        while mergedOne:
+        mergeLimit = 1
+        while mergedOne or (mergeLimit < numRelations):
             mergedOne = False
             for key1 in keys:
                 candidates = []
                 for key2 in keys:
                     if key1 == key2:
                         continue
-                    if not (len(merged[key1]["relations"]) >= 1 and len(merged[key2]["relations"]) >= 1):
+                    if len(merged[key1]["relations"]) == 0 or len(merged[key2]["relations"]) == 0:
+                        continue
+                    if not (len(merged[key1]["relations"]) <= mergeLimit and len(merged[key2]["relations"]) >= 1):
                         continue
                     foundOverlap = False
                     for p in merged[key1]["permutations"]:
@@ -86,8 +90,9 @@ class StructureAnalyzer():
                         priority += 1
                     if len(merged[key1]["e2Types"].intersection(merged[key2]["e2Types"])) > 0:
                         priority += 10
-                    if len(merged[key1]["categories"].intersection(merged[key2]["categories"])) > 0:
-                        priority += 100
+                    priority += 100 * len(merged[key1]["categories"].intersection(merged[key2]["categories"]))
+                    #if len(merged[key1]["categories"].intersection(merged[key2]["categories"])) > 0:
+                    #    priority += 100
                     candidates.append((priority, merged[key2]))
                 if len(candidates) > 0:
                     candidates.sort(key=lambda x: x[0], reverse=True)
@@ -100,6 +105,8 @@ class StructureAnalyzer():
                     #merged[key1][1] = []
                     mergedOne = True
                     break
+                if not mergedOne:
+                    mergeLimit += 1
         
         self.typeMap = {"forward":{}, "reverse":{}}
         for key in sorted(merged.keys()):
