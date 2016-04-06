@@ -542,7 +542,9 @@ class EdgeExampleBuilder(ExampleBuilder):
                         features[self.featureSet.getId("SDB_e1e2sup_equal")] = 1
                         features[self.featureSet.getId("SDB_e1e2sup_equal_" + e1SuperType)] = 1
         if self.styles["ontobiotope_features"]:
+            self.ontobiotopeFeatureBuilder.setFeatureVector(features)
             self.ontobiotopeFeatureBuilder.buildOBOFeaturesForPair(entity1, entity2)
+            self.ontobiotopeFeatureBuilder.setFeatureVector(None)
         if self.styles["evex"]:
             self.evexFeatureBuilder.setFeatureVector(features, entity1, entity2)
             self.evexFeatureBuilder.buildEdgeFeatures(entity1, entity2, token1, token2, path, sentenceGraph)

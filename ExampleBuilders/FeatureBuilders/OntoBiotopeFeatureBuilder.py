@@ -2,10 +2,10 @@ from FeatureBuilder import FeatureBuilder
 import sys, os
 
 class Term():
-    def __init__(self, identifier=None, name=None, parents=None, children=None):
+    def __init__(self, identifier=None, name=None):
         self.id = identifier
         self.name = name
-        self.parents = parents
+        self.parents = []
         #self.children = children
 
 class OntoBiotopeFeatureBuilder(FeatureBuilder):
@@ -14,14 +14,14 @@ class OntoBiotopeFeatureBuilder(FeatureBuilder):
         self.terms = {}
         self.byName = {}
         self.byKeyword = {}
-        self.loadOBO(os.path.join(os.path.dirname(os.path.abspath(__file__), "OntoBiotope_BioNLP-ST-2016.obo")))
+        self.loadOBO(os.path.join(os.path.dirname(os.path.abspath(__file__)), "OntoBiotope_BioNLP-ST-2016.obo"))
     
     def getParents(self, name):
         terms = []
         if name:
-            terms += self.byName[name]
+            terms += self.byName.get(name, [])
         for keyword in name.split():
-            terms += self.byKeyword[keyword]
+            terms += self.byKeyword.get(keyword, [])
         terms = sorted(set(terms), key=lambda x: x.id)
         visited = set()
         while terms:
@@ -35,9 +35,10 @@ class OntoBiotopeFeatureBuilder(FeatureBuilder):
         return sorted(visited, key=lambda x: x.id)
     
     def buildOBOFeatures(self, entity, tag):
-        terms = self.getParents(entity.get("text").lower())
-        for term in terms:
-            self.features[self.featureSet.getId(term.id)] = 1
+        if entity.get("type") in ("Geographical", "Habitat"):
+            terms = self.getParents(entity.get("text").lower())
+            for term in terms:
+                self.features[self.featureSet.getId(term.id)] = 1
     
     def buildOBOFeaturesForPair(self, e1, e2):
         self.buildOBOFeatures(e1, "e1")
@@ -54,12 +55,13 @@ class OntoBiotopeFeatureBuilder(FeatureBuilder):
             self.byName[term.name] = set()
         self.byName[term.name].add(term)
         for keyword in term.name.split():
-            if keyword not in self.byKeyword[keyword]:
+            if keyword not in self.byKeyword:
                 self.byKeyword[keyword] = set()
             self.byKeyword[keyword].add(term)
     
     def prepareTerms(self):
-        for term in sorted(self.terms.keys()):
+        for key in sorted(self.terms.keys()):
+            term = self.terms[key]
             term.parents = [self.terms[x] for x in term.parents]
         for key in self.byName:
             self.byName[key] = sorted(self.byName[key], key=lambda x: x.id)
@@ -79,14 +81,12 @@ class OntoBiotopeFeatureBuilder(FeatureBuilder):
                     self.addTerm(term)
                 term = Term()
             elif ":" in line:
-                tag, content = [x.strip() for x in line.split(":", maxsplits=1)]
+                tag, content = [x.strip() for x in line.split(":", 1)]
                 if tag == "id":
                     term.id = content
                 elif tag == "name":
-                    term.name = content
+                    term.name = content.lower()
                 if tag == "is_a":
-                    parentId = content.split("!")
-                    parentId = parentId.strip()
-                    term.parents.append(parentId)
+                    term.parents.append(content.split("!")[0].strip())
         self.addTerm(term)
         self.prepareTerms()
