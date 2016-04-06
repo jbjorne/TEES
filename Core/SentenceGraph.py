@@ -59,7 +59,7 @@ def loadCorpus(corpus, parse, tokenization=None, removeNameInfo=False, removeInt
         # Construct the basic SentenceGraph (only syntactic information)
         graph = SentenceGraph(sentence.sentence, sentence.tokens, sentence.dependencies)
         # Add semantic information, i.e. the interactions
-        graph.mapInteractions(sentence.entities, sentence.interactions)
+        graph.mapInteractions(sentence.entities + [x for x in sentence.sentence.iter("span")], sentence.interactions)
         graph.interSentenceInteractions = sentence.interSentenceInteractions
         duplicateInteractionEdgesRemoved += graph.duplicateInteractionEdgesRemoved
         sentence.sentenceGraph = graph
@@ -300,7 +300,9 @@ class SentenceGraph:
         sentenceSpan = (0, len(self.sentenceElement.get("text"))) # for validating the entity offsets
         for entity in self.entities[:]:
             headToken = self.mapEntity(entity, verbose)
-            if headToken != None:
+            if entity.get("type") != entity:
+                self.entities.remove(entity)
+            elif headToken != None:
                 self.entityHeadTokenByEntity[entity] = headToken
                 self.entitiesById[entity.get("id")] = entity
             else:

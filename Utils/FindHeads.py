@@ -4,6 +4,9 @@ import sys, os
 sys.path.append(os.path.dirname(os.path.abspath(__file__))+"/..")
 import Core.SentenceGraph as SentenceGraph
 
+def getEntities(sentence):
+    return sentence.findall("entity") + [x for x in sentence.iter("span")]
+
 def findHeads(input, parse, tokenization=None, output=None, removeExisting=True, iterate=False):
     if iterate:
         from Utils.ProgressCounter import ProgressCounter
@@ -16,7 +19,7 @@ def findHeads(input, parse, tokenization=None, output=None, removeExisting=True,
         for sentences in SentenceElements.getCorpusIterator(input, output, parse, tokenization):
             for sentence in sentences:
                 if removeExisting:
-                    for e in sentence.sentence.findall("entity"):
+                    for e in getEntities(sentence.sentence):
                         if e.get("headOffset") != None:
                             removeCount += 1
                             del e.attrib["headOffset"]
@@ -35,7 +38,7 @@ def findHeads(input, parse, tokenization=None, output=None, removeExisting=True,
             xml = ETUtils.ETFromObj(input)
             for d in xml.getroot().findall("document"):
                 for s in d.findall("sentence"):
-                    for e in s.findall("entity"):
+                    for e in getEntities(s):
                         if e.get("headOffset") != None:
                             removeCount += 1
                             del e.attrib["headOffset"]

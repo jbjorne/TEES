@@ -22,6 +22,7 @@ import Utils.Download
 import Utils.Settings as Settings
 from Detectors.StructureAnalyzer import StructureAnalyzer
 from Detectors.Preprocessor import Preprocessor
+import insertResources
 
 moveBI = ["PMID-10333516-S3", "PMID-10503549-S4", "PMID-10788508-S10", "PMID-1906867-S3",
           "PMID-9555886-S6", "PMID-10075739-S13", "PMID-10400595-S1", "PMID-10220166-S12"]
@@ -193,7 +194,7 @@ def convertDownloaded(outdir, corpus, files, intermediateFiles=True, evaluate=Tr
             ETUtils.write(xml, bigfileName+"-sentences.xml")
         processParses(xml)
     elif analysisMode == "BUILD":
-        parseXML(xml, bigfileName, intermediateFiles, debug)
+        parseXML(xml, bigfileName, intermediateFiles, debug, bbResources=(corpus.startswith("BB_")))
     else:
         print >> sys.stderr, "Skipping analyses"
     
@@ -308,8 +309,10 @@ def processParses(xml, splitTarget="McCC"):
     #xml = FindHeads.findHeads(xml, "split-"+splitTarget, tokenization=None, output=None, removeExisting=True)
     xml = FindHeads.findHeads(xml, splitTarget, tokenization=None, output=None, removeExisting=True)
 
-def parseXML(xml, outStem, intermediateFiles=True, debug=False):
+def parseXML(xml, outStem, intermediateFiles=True, debug=False, bbResources=False):
     preprocessor = Preprocessor()
+    if bbResources:
+        preprocessor.insertStep(5, "BB_RESOURCES", insertResources.process, {}, "bb-resources.xml")
     preprocessor.setArgForAllSteps("debug", debug)
     preprocessor.stepArgs("PARSE")["requireEntities"] = False
     if not intermediateFiles:

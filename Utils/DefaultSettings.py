@@ -73,6 +73,16 @@ URL["BB_EVENT_NER_16_TRAIN"] = urlBase + "bb2/BioNLP-ST-2016_BB-event+ner_train.
 URL["BB_EVENT_NER_16_TEST"] = urlBase + "bb2/BioNLP-ST-2016_BB-event+ner_test.zip"
 URL["BB_KB_16_DEVEL"] = urlBase + "bb2/BioNLP-ST-2016_BB-kb_dev.zip"
 URL["BB_KB_16_TRAIN"] = urlBase + "bb2/BioNLP-ST-2016_BB-kb_train.zip"
+# Resources
+urlBase = "https://sites.google.com/site/bionlpst2016/" 
+URL["BB16_SPECIES_TRAIN_AND_DEVEL"] = urlBase + "BB3_species-dictionary_train+dev_resources.zip"
+URL["BB16_SPECIES_TEST"] = urlBase + "BB3_species-dictionary_test_resources.zip"
+URL["BB16_STANFORD_NER_TRAIN_AND_DEVEL"] = urlBase + "BB3_stanford-ner_train+dev_resources.zip"
+URL["BB16_STANFORD_NER_TEST"] = urlBase + "BB3_stanford-ner_test_resources.zip"
+URL["BB16_LINNAEUS_TRAIN_AND_DEVEL"] = urlBase + "BB3_linnaeus_train+dev_resources.zip"
+URL["BB16_LINNAEUS_TEST"] = urlBase + "BB3_linnaeus_test_resources.zip"
+URL["BB16_SR4GN_TRAIN_AND_DEVEL"] = urlBase + "BB3_sr4gn_train+dev_resources.zip"
+URL["BB16_SR4GN_TEST"] = urlBase + "BB3_sr4gn_test_resources.zip"
 # BioNLP'13
 urlBase = "http://2013.bionlp-st.org/tasks/"
 URL["GE13_DEVEL"] = urlBase + "BioNLP-ST-2013_GE_devel_data_rev3.tar.gz" 

@@ -63,6 +63,10 @@ class ToolChain(Detector):
         assert name not in [x[0] for x in self.steps], (name, steps)
         self.steps.append([name, function, argDict, intermediateFile, ioArgNames])
     
+    def insertStep(self, index, name, function, argDict, intermediateFile=None, ioArgNames={"input":"input", "output":"output"}):
+        assert name not in [x[0] for x in self.steps], (name, steps)
+        self.steps.insert(index, [name, function, argDict, intermediateFile, ioArgNames])
+        
     def setArgForAllSteps(self, argument, value, argMustExist=True):
         for step in self.steps:
             if argMustExist and argument not in step[2]:
