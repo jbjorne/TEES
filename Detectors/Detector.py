@@ -202,7 +202,7 @@ class Detector():
                         True), model.get(self.tag+"ids.features", True), goldSet, append, saveIdsToModel,
                         structureAnalyzer=self.structureAnalyzer)
                 append = True
-        if hasattr(self.structureAnalyzer, "typeMap"):
+        if hasattr(self.structureAnalyzer, "typeMap") and model.mode != "r":
             print >> sys.stderr, "Saving StructureAnalyzer.typeMap"
             self.structureAnalyzer.save(model)
             model.save()

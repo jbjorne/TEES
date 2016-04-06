@@ -56,7 +56,11 @@ class StructureAnalyzer():
             for e1Type in sorted(relation.e1Types):
                 for e2Type in sorted(relation.e2Types):
                     relation.permutations.append((e1Type, e2Type))
-            merged[index] = {"e1Types":relation.e1Types, "e2Types":relation.e2Types, "permutations":set(relation.permutations), "relations":[relation]}
+            merged[index] = {"e1Types":relation.e1Types, 
+                             "e2Types":relation.e2Types, 
+                             "permutations":set(relation.permutations), 
+                             "relations":[relation],
+                             "categories":set([relation.type.split("_")[0]])}
             index += 1
         #print "Keys:", sorted(groups.keys())
         keys = sorted(merged.keys())
@@ -82,13 +86,16 @@ class StructureAnalyzer():
                         priority += 1
                     if len(merged[key1]["e2Types"].intersection(merged[key2]["e2Types"])) > 0:
                         priority += 10
+                    if len(merged[key1]["categories"].intersection(merged[key2]["categories"])) > 0:
+                        priority += 100
                     candidates.append((priority, merged[key2]))
                 if len(candidates) > 0:
                     candidates.sort(key=lambda x: x[0], reverse=True)
+                    #print merged[key1]["relations"][0].type, [(x[0], [x.type for x in x[1]["relations"]]) for x in candidates]
                     best = candidates[0][1]
                     best["relations"].append(merged[key1]["relations"].pop())
                     assert len(merged[key1]["relations"]) == 0
-                    for dataType in ("e1Types", "e2Types", "permutations"):
+                    for dataType in ("e1Types", "e2Types", "permutations", "categories"):
                         best[dataType] = best[dataType].union(merged[key1][dataType])
                     #merged[key1][1] = []
                     mergedOne = True
