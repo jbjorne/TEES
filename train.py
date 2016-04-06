@@ -398,7 +398,7 @@ def getTaskSettings(task, detector, bioNLPSTParams, preprocessorParams,
         elif task == "BI11":
             exampleStyles["examples"] = Parameters.cat("bi_features", exampleStyles["examples"], msg)
         elif task == "SDB16":
-            exampleStyles["examples"] = Parameters.cat("sdb_merge", exampleStyles["examples"], msg)
+            exampleStyles["examples"] = Parameters.cat("sdb_merge:sdb_features", exampleStyles["examples"], msg)
         # Edge style ##########################################################
         msg = "Edge example style / " + fullTaskId
         if task in ["GE09", "GE11", "GE13"] and subTask == 1:
