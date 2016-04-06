@@ -15,6 +15,7 @@ from FeatureBuilders.RELFeatureBuilder import RELFeatureBuilder
 from FeatureBuilders.WordNetFeatureBuilder import WordNetFeatureBuilder
 from FeatureBuilders.GiulianoFeatureBuilder import GiulianoFeatureBuilder
 from FeatureBuilders.DrugFeatureBuilder import DrugFeatureBuilder
+from FeatureBuilders.OntoBiotopeFeatureBuilder import OntoBiotopeFeatureBuilder
 import PhraseTriggerExampleBuilder
 import Utils.InteractionXML.ResolveEPITriggerTypes
 import Utils.Range as Range
@@ -39,7 +40,8 @@ class EntityExampleBuilder(ExampleBuilder):
                                   "epi_merge_negated", "limit_merged_types", "genia_task1",
                                   "names", "build_for_nameless", "skip_for_nameless",
                                   "pos_only", "all_tokens", "pos_pairs", "linear_ngrams", 
-                                  "phospho", "drugbank_features", "ddi13_features", "metamap", "only_types"])
+                                  "phospho", "drugbank_features", "ddi13_features", "metamap", 
+                                  "only_types", "ontobiotope_features"])
         self.styles = self.getParameters(style)
 #        if "selftrain_group" in self.styles:
 #            self.selfTrainGroups = set()
@@ -73,6 +75,8 @@ class EntityExampleBuilder(ExampleBuilder):
             self.giulianoFeatureBuilder = GiulianoFeatureBuilder(featureSet)
         if self.styles["drugbank_features"]:
             self.drugFeatureBuilder = DrugFeatureBuilder(featureSet)
+        if self.styles["ontobiotope_features"]:
+            self.ontobiotopeFeatureBuilder = OntoBiotopeFeatureBuilder(self.featureSet)
     
     def getMergedEntityType(self, entities):
         """
@@ -503,6 +507,11 @@ class EntityExampleBuilder(ExampleBuilder):
                 self.giulianoFeatureBuilder.setFeatureVector(features)
                 self.giulianoFeatureBuilder.buildTriggerFeatures(token, sentenceGraph)
                 self.giulianoFeatureBuilder.setFeatureVector(None)
+
+            if self.styles["ontobiotope_features"]:
+                self.ontobiotopeFeatureBuilder.setFeatureVector(features)
+                self.ontobiotopeFeatureBuilder.buildOBOFeaturesForToken(token)
+                self.ontobiotopeFeatureBuilder.setFeatureVector(None)
                              
             extra = {"xtype":"token","t":token.get("id")}
             if self.styles["bb_features"]:
