@@ -32,8 +32,11 @@ class EdgeExampleWriter(SentenceExampleWriter):
         match = None
         matchedRelTypes = []
         if "(" not in iType:
-            for relation in structureAnalyzer.relations.values():
-                if relation.type.startswith(iType) and e1Type in relation.e1Types and e2Type in relation.e2Types:
+            for relType in structureAnalyzer.typeMap["reverse"][iType]:
+                relation = structureAnalyzer.relations[relType]
+                #for relation in structureAnalyzer.relations.values():
+                #if relation.type.startswith(iType) and e1Type in relation.e1Types and e2Type in relation.e2Types:
+                if e1Type in relation.e1Types and e2Type in relation.e2Types:
                     matchedRelTypes.append(relation.type)
                     if match != None:
                         raise Exception("Multiple matching relations for example " + str((iType, e1Type, e2Type)) + " " + str(matchedRelTypes))
@@ -43,7 +46,7 @@ class EdgeExampleWriter(SentenceExampleWriter):
         
         if not match:
             raise Exception("No matching relation for example " + str((iType, e1Type, e2Type)))
-        return relation.type
+        return match.type
 
     def getEntityByIdMap(self, sentenceElement):
         entityElements = sentenceElement.findall("entity")

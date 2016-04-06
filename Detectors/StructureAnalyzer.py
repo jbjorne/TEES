@@ -1,5 +1,6 @@
 #from Detector import Detector
 import sys, os
+import json
 sys.path.append(os.path.dirname(os.path.abspath(__file__))+"/..")
 import Utils.ElementTreeUtils as ETUtils
 from collections import defaultdict
@@ -39,6 +40,9 @@ class StructureAnalyzer():
     
     def determineNonOverlappingTypes(self):
         print "================", "Non-overlapping types", "================"
+        if hasattr(self, "typeMap"):
+            print >> sys.stderr, "Using existing type map"
+            return
         #groups = {}
         index = 0
         merged = {}
@@ -90,7 +94,7 @@ class StructureAnalyzer():
                     mergedOne = True
                     break
         
-        self.typeMap = {}
+        self.typeMap = {"forward":{}, "reverse":{}}
         for key in sorted(merged.keys()):
             if len(merged[key]["relations"]) == 0:
                 continue
@@ -98,9 +102,11 @@ class StructureAnalyzer():
             shortId = str(key) + "-" +  "_".join(sorted(set([x.split("_")[0] for x in relTypes])))
             print key, relTypes, shortId
             for relation in merged[key]["relations"]:
-                self.typeMap[relation.type] = shortId
-        print "================", "Non-overlapping types", "================"
-        return self.typeMap           
+                assert relation.type not in self.typeMap["forward"]
+                self.typeMap["forward"][relation.type] = shortId
+            assert shortId not in self.typeMap["reverse"]
+            self.typeMap["reverse"][shortId] = relTypes
+        print "--------------------------------------------------------"           
     
     def analyze(self, inputs, model=None):
         self._init()  
@@ -604,6 +610,9 @@ class StructureAnalyzer():
         if filename == None:
             filename = self.modelFileName
         if model != None:
+            if hasattr(self, "typeMap"):
+                print >> sys.stderr, "Saving StructureAnalyzer.typeMap"
+                self.saveTypeMap(model, filename + "_type_map.json")
             filename = model.get(filename, True)
         if not os.path.exists(os.path.dirname(filename)):
             os.makedirs(os.path.dirname(filename))
@@ -612,12 +621,27 @@ class StructureAnalyzer():
         f.close()
         if model != None:
             model.save()
-        
+    
+    def saveTypeMap(self, model, filename):
+        filename = model.get(filename, addIfNotExist=True)
+        print >> sys.stderr, "Saving StructureAnalyzer.typeMap to", filename
+        f = open(filename, "wt")
+        json.dump(self.typeMap, f, indent=4)
+        f.close()
+    
+    def loadTypeMap(self, model, filename):
+        filename = model.get(filename, defaultIfNotExist=None)
+        if filename:
+            f = open(filename, "rt")
+            self.typeMap = json.load(f)
+            f.close()
+    
     def load(self, model, filename=None):
         # load definitions
         if filename == None:
             filename = self.modelFileName
         if model != None:
+            self.loadTypeMap(model, filename + "_type_map.json")
             filename = model.get(filename)
         f = open(filename, "rt")
         lines = f.readlines()

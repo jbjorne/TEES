@@ -52,7 +52,8 @@ class EdgeExampleBuilder(ExampleBuilder):
             "skip_extra_triggers", "headsOnly", "graph_kernel", "no_task", "no_dependency", 
             "disable_entity_features", "disable_terminus_features", "disable_single_element_features", 
             "disable_ngram_features", "disable_path_edge_features", "linear_features", "subset", "binary", "pos_only",
-            "entity_type", "filter_shortest_path", "maskTypeAsProtein", "keep_neg", "metamap", "sdb_merge"])
+            "entity_type", "filter_shortest_path", "maskTypeAsProtein", "keep_neg", "metamap", 
+            "sdb_merge", "sdb_features"])
         self.styles = self.getParameters(style)
         #if style == None: # no parameters given
         #    style["typed"] = style["directed"] = style["headsOnly"] = True
@@ -173,9 +174,27 @@ class EdgeExampleBuilder(ExampleBuilder):
         else:
             return None
     
+    def getSeeDevSuperTypes(self, eType):
+        if eType in ("Gene", "Gene_Family", "Box", "Promoter"):
+            return ("DNA", "Molecule")
+        elif eType == "RNA":
+            return ("RNA", "DNA_Product", "Molecule")
+        elif eType in ("Protein", "Protein_Family", "Protein_Complex", "Protein_Domain"):
+            return ("Amino_acid_sequence", "DNA_Product", "Molecule")
+        elif eType == "Hormone":
+            return ("Molecule",)
+        elif eType in ("Regulatory_Network", "Metabolic_Pathway"):
+            return ("Dynamic_process",)
+        elif eType in ("Genotype", "Tissue", "Development_Phase"):
+            return ("Biological_context", "Context")
+        elif eType == "Environmental_Factor":
+            return ("Context",)
+        else:
+            raise Exception("Unknown SeeDev type '" + str(eType) + "'")
+    
     def mergeForSeeDev(self, categoryName, structureAnalyzer):
-        if categoryName in structureAnalyzer.typeMap:
-            return structureAnalyzer.typeMap[categoryName]
+        if categoryName in structureAnalyzer.typeMap["forward"]:
+            return structureAnalyzer.typeMap["forward"][categoryName]
         return categoryName
 #         for tag in ("Regulates", "Exists", "Interacts", "Is", "Occurs"):
 #             if categoryName.startswith(tag):
@@ -496,6 +515,19 @@ class EdgeExampleBuilder(ExampleBuilder):
             features[self.featureSet.getId("BI_e2sup_"+e2SuperType)] = 1
             features[self.featureSet.getId("BI_e1e2_"+e1Type+"_"+e2Type)] = 1
             features[self.featureSet.getId("BI_e1e2sup_"+e1SuperType+"_"+e2SuperType)] = 1
+        if self.styles["sdb_features"]:
+            e1Type = entity1.get("type")
+            e2Type = entity2.get("type")
+            e1SuperTypes = str(self.getSeeDevSuperTypes(e1Type))
+            e2SuperTypes = str(self.getSeeDevSuperTypes(e2Type))
+            for e1SuperType in e1SuperTypes:
+                for e2SuperType in e2SuperTypes:
+                    features[self.featureSet.getId("SDB_e1_"+e1Type)] = 1
+                    features[self.featureSet.getId("SDB_e2_"+e2Type)] = 1
+                    features[self.featureSet.getId("SDB_e1sup_"+e1SuperType)] = 1
+                    features[self.featureSet.getId("SDB_e2sup_"+e2SuperType)] = 1
+                    features[self.featureSet.getId("SDB_e1e2_"+e1Type+"_"+e2Type)] = 1
+                    features[self.featureSet.getId("SDB_e1e2sup_"+e1SuperType+"_"+e2SuperType)] = 1                    
         if self.styles["evex"]:
             self.evexFeatureBuilder.setFeatureVector(features, entity1, entity2)
             self.evexFeatureBuilder.buildEdgeFeatures(entity1, entity2, token1, token2, path, sentenceGraph)
