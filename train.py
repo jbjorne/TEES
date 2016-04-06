@@ -432,9 +432,9 @@ def getTaskSettings(task, detector, bioNLPSTParams, preprocessorParams,
         elif task == "DDI13-FULL":
             exampleStyles["trigger"] = "names:build_for_nameless:ddi13_features:drugbank_features"
         elif task == "BB_EVENT_16-FULL":
-            exampleStyles["trigger"] = Parameters.cat("bb_features:build_for_nameless:all_tokens:only_types=Bacteria,Habitat,Geographical", exampleStyles["trigger"], msg)
+            exampleStyles["trigger"] = Parameters.cat("bb_features:ontobiotope_features:build_for_nameless:all_tokens:only_types=Bacteria,Habitat,Geographical", exampleStyles["trigger"], msg)
         elif task in "BB_EVENT_NER_16":
-            exampleStyles["trigger"] = Parameters.cat("bb_features:build_for_nameless:all_tokens", exampleStyles["trigger"], msg)
+            exampleStyles["trigger"] = Parameters.cat("bb_features:ontobiotope_features:build_for_nameless:all_tokens", exampleStyles["trigger"], msg)
         
         #######################################################################
         # Classifier parameters
