@@ -526,14 +526,28 @@ class EntityExampleBuilder(ExampleBuilder):
                 for span in sentenceGraph.sentenceElement.iter("span"):
                     if span.get("headOffset") != token.get("charOffset"):
                         continue
-                    if span.get("source") != "spec":
-                        continue
+                    #if span.get("source") != "spec":
+                    #    continue
                     #print span.get("headOffset"), token.get("charOffset"), span.get("source"), token.get("id")
-                    features[self.featureSet.getId("span_SPECIES")] = 1
+                    features[self.featureSet.getId("span_found")] = 1
+                    features[self.featureSet.getId("span_count")] = 1 + features.get(self.featureSet.getId("span_count"), 0)
                     features[self.featureSet.getId("span_identifier" + span.get("identifier"))] = 1
                     features[self.featureSet.getId("span_type" + span.get("type"))] = 1
                     features[self.featureSet.getId("span_category" + span.get("category"))] = 1
-                    extra["define_offset"] = span.get("charOffset")
+                    features[self.featureSet.getId("span_source" + span.get("source"))] = 1
+                    
+                    if "define_offset" in extra:
+                        prevOffset = [int(x) for x in extra["define_offset"].split("-")]
+                        assert len(prevOffset) == 2
+                        newOffset = [int(x) for x in span.get("charOffset").split("-")]
+                        assert len(newOffset) == 2
+                        prevOffsetRange = abs(prevOffset[0] - prevOffset[1])
+                        newOffsetRange = abs(newOffset[0] - newOffset[1])
+                        if newOffsetRange > prevOffsetRange:
+                            extra["define_offset"] = span.get("charOffset")
+                    else:
+                        extra["define_offset"] = span.get("charOffset")
+                features[self.featureSet.getId("span_count_" + str(features.get(self.featureSet.getId("span_count"), 0)))] = 1
                                 
             # chains
             self.buildChains(token, sentenceGraph, features)

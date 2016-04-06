@@ -55,7 +55,7 @@ class EdgeExampleBuilder(ExampleBuilder):
             "disable_entity_features", "disable_terminus_features", "disable_single_element_features", 
             "disable_ngram_features", "disable_path_edge_features", "linear_features", "subset", "binary", "pos_only",
             "entity_type", "filter_shortest_path", "maskTypeAsProtein", "keep_neg", "metamap", 
-            "sdb_merge", "sdb_features", "ontobiotope_features", "no_self_loops"])
+            "sdb_merge", "sdb_features", "ontobiotope_features", "no_self_loops", "full_entities"])
         self.styles = self.getParameters(style)
         #if style == None: # no parameters given
         #    style["typed"] = style["directed"] = style["headsOnly"] = True
@@ -545,6 +545,16 @@ class EdgeExampleBuilder(ExampleBuilder):
             self.ontobiotopeFeatureBuilder.setFeatureVector(features)
             self.ontobiotopeFeatureBuilder.buildOBOFeaturesForEntityPair(entity1, entity2)
             self.ontobiotopeFeatureBuilder.setFeatureVector(None)
+        if self.styles["full_entities"]:
+            e1Text = entity1.get("text").lower()
+            e2Text = entity2.get("text").lower()
+            features[self.featureSet.getId("FULL_e1_"+e1Text)] = 1
+            features[self.featureSet.getId("FULL_e2_"+e2Text)] = 1
+            for ep1 in e1Text.split():
+                for ep2 in e2Text.split():
+                    features[self.featureSet.getId("FULL_e1_"+ep1)] = 1
+                    features[self.featureSet.getId("FULL_e2_"+ep2)] = 1
+                    features[self.featureSet.getId("FULL_e1e2_"+ep1+"_"+ep2)] = 1
         if self.styles["evex"]:
             self.evexFeatureBuilder.setFeatureVector(features, entity1, entity2)
             self.evexFeatureBuilder.buildEdgeFeatures(entity1, entity2, token1, token2, path, sentenceGraph)

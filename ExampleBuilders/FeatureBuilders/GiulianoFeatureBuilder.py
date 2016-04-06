@@ -77,9 +77,9 @@ class GiulianoFeatureBuilder(FeatureBuilder):
             self.setFeature("pBA_" + feature, patternBetweenAfter[feature])
         
     def getGlobalContextKernel(self, patterns1, patterns2):
-        kernelFB = calculateKernel(patterns1["Fore-Between"], patterns2["Fore-Between"])
-        kernelB = calculateKernel(patterns1["Between"], patterns2["Between"])
-        kernelBA = calculateKernel(patterns1["Between-After"], patterns2["Between-After"])
+        kernelFB = self.calculateKernel(patterns1["Fore-Between"], patterns2["Fore-Between"])
+        kernelB = self.calculateKernel(patterns1["Between"], patterns2["Between"])
+        kernelBA = self.calculateKernel(patterns1["Between-After"], patterns2["Between-After"])
         return kernelFB + kernelB + kernelBA
 
     def getRelativePosition(self, entity1Range, entity2Range, token):

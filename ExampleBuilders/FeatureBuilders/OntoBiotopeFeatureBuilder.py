@@ -35,16 +35,24 @@ class OntoBiotopeFeatureBuilder(FeatureBuilder):
             terms = [x for x in parents if x not in visited]
         return sorted(visited, key=lambda x: x.id)
     
-    def buildOBOFeaturesForEntity(self, entity, tag):
+    def getOBOFeaturesForEntity(self, entity, tag):
+        names = []
         if entity.get("type") in ("Geographical", "Habitat"):
             terms = self.getParents(entity.get("text").lower())
             for term in terms:
+                names.append("OBO-" + tag + term.fullId)
                 #print term.id, term.name
-                self.features[self.featureSet.getId(tag + term.fullId)] = 1
+                #self.features[self.featureSet.getId(tag + term.fullId)] = 1
+        return names
     
     def buildOBOFeaturesForEntityPair(self, e1, e2):
-        self.buildOBOFeatures(e1, "e1_")
-        self.buildOBOFeatures(e2, "e2_")
+        e1Names = self.getOBOFeaturesForEntity(e1, "e1_")
+        e2Names = self.getOBOFeaturesForEntity(e2, "e2_")
+        for name in e1Names + e2Names:
+            self.features[self.featureSet.getId(name)] = 1
+        for e1Name in e1Names:
+            for e2Name in e2Names:
+                self.features[self.featureSet.getId(e1Name + "__" + e2Name)] = 1
     
     def buildOBOFeaturesForToken(self, token, tag=""):
         terms = self.getParents(token.get("text").lower())

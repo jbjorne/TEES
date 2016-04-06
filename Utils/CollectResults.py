@@ -19,6 +19,7 @@ SOURCE_FILES = {"DEVEL":"classification-empty/devel-empty-events.zip", "TEST":"c
 SUBMIT_FILES = {"DEVEL":"develset", "TEST":"testset"}
 
 for model in sorted(results.keys()):
+    print "===============", "Processing model", model, "==============="
     for dataSet in ("DEVEL", "TEST"):
         src = os.path.join(MODEL_DIR, model, SOURCE_FILES[dataSet])
         dst = os.path.join(OUTPUT_DIR, TEAM_NAME + "_" + results[model] + "_" + SUBMIT_FILES[dataSet] + ".zip")

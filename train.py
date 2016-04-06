@@ -397,6 +397,8 @@ def getTaskSettings(task, detector, bioNLPSTParams, preprocessorParams,
                 exampleStyles["examples"] = Parameters.cat("keep_neg:drugbank_features:filter_shortest_path=conj_and", exampleStyles["examples"], msg)
         elif task == "BI11":
             exampleStyles["examples"] = Parameters.cat("bi_features", exampleStyles["examples"], msg)
+        elif task == "BB_EVENT_16":
+            exampleStyles["examples"] = Parameters.cat("linear_features:keep_neg", exampleStyles["examples"], msg)
         elif task == "SDB16":
             exampleStyles["examples"] = Parameters.cat("sdb_merge:sdb_features", exampleStyles["examples"], msg)
         # Edge style ##########################################################
@@ -432,9 +434,9 @@ def getTaskSettings(task, detector, bioNLPSTParams, preprocessorParams,
         elif task == "DDI13-FULL":
             exampleStyles["trigger"] = "names:build_for_nameless:ddi13_features:drugbank_features"
         elif task == "BB_EVENT_16-FULL":
-            exampleStyles["trigger"] = Parameters.cat("bb_features:ontobiotope_features:build_for_nameless:all_tokens:only_types=Bacteria,Habitat,Geographical", exampleStyles["trigger"], msg)
+            exampleStyles["trigger"] = Parameters.cat("bb_spans:bb_features:ontobiotope_features:build_for_nameless:all_tokens:only_types=Bacteria,Habitat,Geographical", exampleStyles["trigger"], msg)
         elif task in "BB_EVENT_NER_16":
-            exampleStyles["trigger"] = Parameters.cat("bb_features:ontobiotope_features:build_for_nameless:all_tokens", exampleStyles["trigger"], msg)
+            exampleStyles["trigger"] = Parameters.cat("bb_spans:bb_features:ontobiotope_features:build_for_nameless:all_tokens", exampleStyles["trigger"], msg)
         
         #######################################################################
         # Classifier parameters
@@ -448,7 +450,7 @@ def getTaskSettings(task, detector, bioNLPSTParams, preprocessorParams,
             classifierParameters["trigger"] = Parameters.cat("c=1000,5000,10000,20000,50000,80000,100000,150000,180000,200000,250000,300000,350000,500000,1000000", classifierParameters["trigger"], "Classifier parameters for triggers / " + fullTaskId)
             classifierParameters["recall"] = Parameters.cat("0.8,0.9,0.95,1.0", classifierParameters["recall"], "Recall adjust / " + fullTaskId)
         elif task == "BB_EVENT_16":
-            classifierParameters["examples"] = Parameters.cat("c=10,20,50,80,100,110,115,120,125,130,140,150,200,500,1000", classifierParameters["examples"], "Classifier parameters for edges / " + fullTaskId)
+            classifierParameters["examples"] = Parameters.cat("c=10,20,30,40,50,60,70,80,100,110,115,120,125,130,140,150,200,500,1000", classifierParameters["examples"], "Classifier parameters for edges / " + fullTaskId)
         elif task in ("BB_EVENT_16-FULL", "BB_EVENT_NER_16"):
             classifierParameters["edge"] = Parameters.cat("c=10,20,50,80,100,110,115,120,125,130,140,150,200,500,1000", classifierParameters["edge"], "Classifier parameters for edges / " + fullTaskId)
         elif task == "SDB16":
