@@ -6,8 +6,9 @@ MODEL_DIR = "/home/jari/Dropbox/data/BioNLP16/models"
 OUTPUT_DIR = "/home/jari/Dropbox/data/BioNLP16/submission"
 
 results = {
-"BB_EVENT_16-160331":"BB3-event",
-"BB_EVENT_NER_16-160406":"BB3-event+ner"
+"BB_EVENT_16-160406":"BB3-event",
+"BB_EVENT_NER_16-BBSPAN-160406":"BB3-event+ner",
+"SDB16-160406":"SeeDev-binary"
 }
 
 if os.path.exists(OUTPUT_DIR):
