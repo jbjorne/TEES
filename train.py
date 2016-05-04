@@ -454,7 +454,7 @@ def getTaskSettings(task, detector, bioNLPSTParams, preprocessorParams,
             classifierParameters["trigger"] = Parameters.cat("c=1000,5000,10000,20000,50000,80000,100000,150000,180000,200000,250000,300000,350000,500000,1000000", classifierParameters["trigger"], "Classifier parameters for triggers / " + fullTaskId)
             classifierParameters["recall"] = Parameters.cat("0.8,0.9,0.95,1.0", classifierParameters["recall"], "Recall adjust / " + fullTaskId)
         elif task == "BB_EVENT_16":
-            classifierParameters["examples"] = Parameters.cat("c=10,20,30,40,50,60,70,80,100,110,115,120,125,130,140,150,200,500,1000,4500,5000,7500,10000,20000,25000,27500,28000,29000,30000,35000,40000,50000,60000,65000", classifierParameters["examples"], "Classifier parameters for edges / " + fullTaskId)
+            classifierParameters["examples"] = Parameters.cat("c=10,20,30,40,50,60,70,80,100,110,115,120,125,130,140,150,200,500,1000,2000,3000,4000,4500,5000,7500,10000,20000,25000,27500,28000,29000,30000,35000,40000,50000,60000,65000", classifierParameters["examples"], "Classifier parameters for edges / " + fullTaskId)
         elif task in ("BB_EVENT_16-FULL", "BB_EVENT_NER_16"):
             classifierParameters["edge"] = Parameters.cat("c=10,20,50,80,100,110,115,120,125,130,140,150,200,500,1000", classifierParameters["edge"], "Classifier parameters for edges / " + fullTaskId)
         elif task == "SDB16":
