@@ -13,10 +13,9 @@ def renameElements(xml, rules):
         if element.get("type") in rules:
             counts["rules-" + element.get("type") + "/" + rules[element.get("type")]] += 1
             element.set("type", rules[element.get("type")])
-        for attr in ("e1Role", "e2Role"):
-            if attr in element.attrib:
-                del element.attrib[attr]
-                counts["del-" + attr] += 1
+        if element.tag == "interaction":
+            element.set("e1Role", "Bacteria")
+            element.set("e2Role", "Location")
         if element.tag == "entity":
             element.set("given", "True")
     print counts
@@ -34,7 +33,9 @@ def mergeCorpora(corpusIds, outputId, inputDir, outDir):
                              "Bacterium":"Bacteria"})
         DeleteElements.removeElements(merged[dataSet].getroot(), {"interaction":{"type":"PartOf"}})
         if outDir != None:
-            ETUtils.write(merged[dataSet].getroot(), os.path.join(outDir, outputId + "-" + dataSet + ".xml"))
+            outPath = os.path.join(outDir, outputId + "-" + dataSet + ".xml")
+            print "Writing set", dataSet, "to", outPath
+            ETUtils.write(merged[dataSet].getroot(), outPath)
         
 if __name__=="__main__":
     from optparse import OptionParser
