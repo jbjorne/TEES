@@ -8,6 +8,7 @@ except ImportError:
     import cElementTree as ET
 import Utils.ElementTreeUtils as ETUtils
 import RecalculateIds
+import DeleteElements
 
 def catenate(inputs, output, fast):
     if not os.path.exists(os.path.dirname(output)):
@@ -53,11 +54,13 @@ def catenateFiles(inputs, output):
 
 def catenateElements(inputs, inputDir):
     print >> sys.stderr, "##### Catenate interaction XML as elements #####"
-    root = ET.Element("corpus", {"source":",".join(inputs)})
-    tree = ET.ElementTree(root)
     
+    output = {}
     for dataSet in ("devel", "train"):
+        root = ET.Element("corpus", {"source":",".join(inputs)})
+        tree = ET.ElementTree(root)
         print "Processing corpus dataset", dataSet
+        output[dataSet] = tree
         for input in inputs:
             corpusPath = os.path.join(inputDir, input + "-" + dataSet + ".xml")
             print >> sys.stderr, "Catenating", corpusPath
@@ -67,8 +70,9 @@ def catenateElements(inputs, inputDir):
             xml = ETUtils.ETFromObj(corpusPath)
             for document in xml.getiterator("document"):
                 root.append(document)
+        RecalculateIds.recalculateIds(tree)
     
-    return RecalculateIds.recalculateIds(tree)
+    return output
 
 if __name__=="__main__":
     import sys

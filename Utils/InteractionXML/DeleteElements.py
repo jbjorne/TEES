@@ -28,7 +28,9 @@ def getEmptyCorpus(xml, deletionRules=None, removeNames=False):
     # Remove elements and return the emptied XML
     return processCorpus(xml, None, deletionRules)
     
-def removeElements(parent, rules, reverse, countsByType):
+def removeElements(parent, rules, reverse=False, countsByType=None):
+    if countsByType == None:
+        countsByType = defaultdict(int)
     toRemove = []
     for element in parent:
         attrType = {}
