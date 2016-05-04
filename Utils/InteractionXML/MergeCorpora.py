@@ -10,13 +10,15 @@ import DeleteElements
 def renameElements(xml, rules):
     counts = defaultdict(int)
     for element in xml.iter():
-        if element.tag in rules:
-            element.tag = rules[element.tag]
-            counts["-".join("rules", element.tag, rules[element.tag])] += 1
-        for attr in ("e1role", "e2role"):
+        if element.get("type") in rules:
+            counts["rules-" + element.get("type") + "/" + rules[element.get("type")]] += 1
+            element.set("type", rules[element.get("type")])
+        for attr in ("e1Role", "e2Role"):
             if attr in element.attrib:
                 del element.attrib[attr]
-                counts["-".join("del", attr)] += 1
+                counts["del-" + attr] += 1
+        if element.tag == "entity":
+            element.set("given", "True")
     print counts
 
 def mergeCorpora(corpusIds, outputId, inputDir, outDir):
@@ -28,7 +30,8 @@ def mergeCorpora(corpusIds, outputId, inputDir, outDir):
                              "Food":"Habitat",
                              "Soil":"Habitat",
                              "Medical":"Habitat",
-                             "Water":"Habitat"})
+                             "Water":"Habitat",
+                             "Bacterium":"Bacteria"})
         DeleteElements.removeElements(merged[dataSet].getroot(), {"interaction":{"type":"PartOf"}})
         if outDir != None:
             ETUtils.write(merged[dataSet].getroot(), os.path.join(outDir, outputId + "-" + dataSet + ".xml"))
