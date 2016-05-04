@@ -51,41 +51,24 @@ def catenateFiles(inputs, output):
         f.close()
     outFile.close()
 
-def catenateElements(inputs, output):
+def catenateElements(inputs, inputDir):
     print >> sys.stderr, "##### Catenate interaction XML as elements #####"
-    c1 = RecalculateIds.recalculateIds(input1, None, False, 0)
-    numDocs = len(c1.getroot().findall("document"))
-    print >> sys.stderr, "Documents in input 1:", numDocs
-    c2 = RecalculateIds.recalculateIds(input2, None, False, numDocs)
+    root = ET.Element("corpus", {"source":",".join(inputs)})
+    tree = ET.ElementTree(root)
     
-    print >> sys.stderr, "Appending documents"
-    c1Root = c1.getroot()
-    for document in c2.getroot().findall("document"):
-        c1Root.append(document)
+    for dataSet in ("devel", "train"):
+        print "Processing corpus dataset", dataSet
+        for input in inputs:
+            corpusPath = os.path.join(inputDir, input + "-" + dataSet + ".xml")
+            print >> sys.stderr, "Catenating", corpusPath
+            if not os.path.exists(corpusPath):
+                print "Input", corpusPath, "not found"
+                continue
+            xml = ETUtils.ETFromObj(corpusPath)
+            for document in xml.getiterator("document"):
+                root.append(document)
     
-    print >> sys.stderr, "Validating ids"
-    ids = set()
-    for element in c1Root.getiterator("entity"):
-        id = element.get("id")
-        assert not id in ids
-        ids.add(id)
-    for element in c1Root.getiterator("interaction"):
-        id = element.get("id")
-        assert not id in ids
-        ids.add(id)
-    for element in c1Root.getiterator("sentence"):
-        id = element.get("id")
-        assert not id in ids
-        ids.add(id)
-    for element in c1Root.getiterator("document"):
-        id = element.get("id")
-        assert not id in ids
-        ids.add(id)
-    
-    if output != None:
-        print >> sys.stderr, "Writing output to", output
-        ETUtils.write(c1Root, output)
-    return c1
+    return RecalculateIds.recalculateIds(tree)
 
 if __name__=="__main__":
     import sys
