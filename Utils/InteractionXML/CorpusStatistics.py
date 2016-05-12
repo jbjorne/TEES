@@ -39,24 +39,34 @@ def getStatistics(corpusIds, inputDir):
             stats[corpusId] = {"train":{}, "devel":{}, "test":{}, "total":{}}
         for dataSet in ("train", "devel", "test"):
             corpusPath = os.path.join(inputDir, corpusId + "-" + dataSet + ".xml")
-            if not os.path.exists(corpusPath):
-                print >> sys.stderr, "Warning, cannot find", corpusPath
-                continue
-            print >> sys.stderr, "Processing", corpusPath
-            xml = ETUtils.ETFromObj(corpusPath)
-            for elementType in ("sentence", "document"):
-                addStats(elementType, len([x for x in xml.iter(elementType)]), stats[corpusId], (dataSet, "total"))
-            for elementType in ("entity", "interaction"):
-                elements = [x for x in xml.iter(elementType)]
-                for targetSet in [dataSet, "total"]:
-                    stats[corpusId][targetSet][elementType] = addAnnotation(elements, stats[corpusId][targetSet].get(elementType))
+            getFileStatistics(corpusPath, stats, (dataSet, "total"), corpusId)
+    return stats
+
+def getFileStatistics(filename, stats, targetSets, corpusId):
+    if stats == None:
+        stats = {corpusId:{x:{} for x in targetSets}}
+    if not os.path.exists(filename):
+        print >> sys.stderr, "Warning, cannot find", filename
+        return
+    xml = ETUtils.ETFromObj(filename)
+    for elementType in ("sentence", "document"):
+        addStats(elementType, len([x for x in xml.iter(elementType)]), stats[corpusId], targetSets)
+    for elementType in ("entity", "interaction"):
+        elements = [x for x in xml.iter(elementType)]
+        for targetSet in targetSets:
+            stats[corpusId][targetSet][elementType] = addAnnotation(elements, stats[corpusId][targetSet].get(elementType))
     return stats
 
 if __name__=="__main__":
     from optparse import OptionParser
     optparser = OptionParser(usage="%prog [options]\n")
+    optparser.add_option("-i", "--input", default=None, help="Datasets to process")
     optparser.add_option("-c", "--corpusIds", default="BB11,BB13T2,BB_EVENT_16", help="Datasets to process")
-    optparser.add_option("-i", "--inDir", default=os.path.normpath(Settings.DATAPATH + "/corpora"), help="directory for output files")
+    optparser.add_option("-d", "--inDir", default=os.path.normpath(Settings.DATAPATH + "/corpora"), help="directory for output files")
     (options, args) = optparser.parse_args()
     
-    print json.dumps(getStatistics(options.corpusIds.split(","), options.inDir), indent=4)
+    if options.input != None:
+        result = getFileStatistics(options.input, None, ("file",), "file")
+    else:
+        result = getStatistics(options.corpusIds.split(","), options.inDir)
+    print json.dumps(result, indent=4)
