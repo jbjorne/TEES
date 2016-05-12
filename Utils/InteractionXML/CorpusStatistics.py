@@ -25,28 +25,30 @@ def addAnnotation(elements, stats):
             stats["types"][element.get("type")] = 0
         stats["types"][element.get("type")] += 1
         if element.tag == "interaction":
-            if element.get("e1").split(".s")[0] != element.get("e2").split(".s")[0]:
+            if element.get("e1").split(".e")[0] != element.get("e2").split(".e")[0]:
                 if not "intersentence" in stats:
                     stats["intersentence"] = 0
                 stats["intersentence"] += 1
     return stats
 
 def getStatistics(corpusIds, inputDir):
-    stats = []
+    stats = {}
     for corpusId in corpusIds:
         if not corpusId in stats:
             stats[corpusId] = {"train":{}, "devel":{}, "test":{}, "total":{}}
         for dataSet in ("train", "devel", "test"):
-            corpusPath = os.path.join(inputDir, input + "-" + dataSet + ".xml")
+            corpusPath = os.path.join(inputDir, corpusId + "-" + dataSet + ".xml")
+            if not os.path.exists(corpusPath):
+                print "Warning, cannot find", corpusPath
+                continue
+            print "Processing", corpusPath
             xml = ETUtils.ETFromObj(corpusPath)
             for elementType in ("sentence", "document"):
                 addStats(elementType, len([x for x in xml.iter(elementType)]), stats[corpusId], (dataSet, "total"))
             for elementType in ("entity", "interaction"):
                 elements = [x for x in xml.iter(elementType)]
                 for targetSet in [dataSet, "total"]:
-                    if not elementType in stats[corpusId][targetSet]:
-                        stats[corpusId][targetSet][elementType] = {}
-                    addAnnotation(elements, stats[corpusId][targetSet][elementType])
+                    stats[corpusId][targetSet][elementType] = addAnnotation(elements, stats[corpusId][targetSet].get(elementType))
     return stats
 
 if __name__=="__main__":
@@ -55,7 +57,6 @@ if __name__=="__main__":
     optparser.add_option("-c", "--corpusIds", default="BB11,BB13T2,BB_EVENT_16", help="Datasets to process")
     optparser.add_option("-i", "--inDir", default=os.path.normpath(Settings.DATAPATH + "/corpora"), help="directory for output files")
     optparser.add_option("-o", "--outDir", default=os.path.normpath(Settings.DATAPATH + "/corpora"), help="directory for output files")
-    optparser.add_option("-t", "--tag", default="BBCAT", help="Parse with preprocessor")
     (options, args) = optparser.parse_args()
     
-    print getStatistics(options.corpora, options.inDir)
+    print getStatistics(options.corpusIds.split(","), options.inDir)
