@@ -57,7 +57,6 @@ if __name__=="__main__":
     optparser = OptionParser(usage="%prog [options]\n")
     optparser.add_option("-c", "--corpusIds", default="BB11,BB13T2,BB_EVENT_16", help="Datasets to process")
     optparser.add_option("-i", "--inDir", default=os.path.normpath(Settings.DATAPATH + "/corpora"), help="directory for output files")
-    optparser.add_option("-o", "--outDir", default=os.path.normpath(Settings.DATAPATH + "/corpora"), help="directory for output files")
     (options, args) = optparser.parse_args()
     
     print json.dumps(getStatistics(options.corpusIds.split(","), options.inDir), indent=4)
