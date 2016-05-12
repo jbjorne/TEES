@@ -7,6 +7,7 @@ try:
 except ImportError:
     import cElementTree as ET
 import Utils.ElementTreeUtils as ETUtils
+import json
 
 def addStats(name, value, dict, tags):
     for tag in tags:
@@ -39,9 +40,9 @@ def getStatistics(corpusIds, inputDir):
         for dataSet in ("train", "devel", "test"):
             corpusPath = os.path.join(inputDir, corpusId + "-" + dataSet + ".xml")
             if not os.path.exists(corpusPath):
-                print "Warning, cannot find", corpusPath
+                print >> sys.stderr, "Warning, cannot find", corpusPath
                 continue
-            print "Processing", corpusPath
+            print >> sys.stderr, "Processing", corpusPath
             xml = ETUtils.ETFromObj(corpusPath)
             for elementType in ("sentence", "document"):
                 addStats(elementType, len([x for x in xml.iter(elementType)]), stats[corpusId], (dataSet, "total"))
@@ -59,4 +60,4 @@ if __name__=="__main__":
     optparser.add_option("-o", "--outDir", default=os.path.normpath(Settings.DATAPATH + "/corpora"), help="directory for output files")
     (options, args) = optparser.parse_args()
     
-    print getStatistics(options.corpusIds.split(","), options.inDir)
+    print json.dumps(getStatistics(options.corpusIds.split(","), options.inDir), indent=4)
