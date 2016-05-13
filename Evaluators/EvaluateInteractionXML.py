@@ -165,7 +165,7 @@ def getEntityPredictions(entityMap, targetEntities, classSet, negativeClassId):
 
 # Uses mapped entities and predicted and gold interactions to provide
 # predictions for the interactions
-def getInteractionPredictions(interactionsFrom, interactionsTo, entityMap, classSet, negativeClassId):
+def getInteractionPredictions(interactionsFrom, interactionsTo, entityMap, classSet, negativeClassId, counts, verbose=False):
     examples = []
     predictions = []
     id = "Unknown.x0"
@@ -205,10 +205,15 @@ def getInteractionPredictions(interactionsFrom, interactionsTo, entityMap, class
                 examples.append( [id, classSet.getId(interactionTo.get("type")),None,None] )
                 predictions.append( [classSet.getId(interactionFrom.get("type"))] )
                 found = True
+                if verbose:
+                    print "predicted", counts["predicted"], interactionFrom.get("id"), "matches gold", interactionTo.get("id")
         if not found: # false positive prediction
             examples.append( [id,negativeClassId,None,None] )
             predictions.append( [classSet.getId(interactionFrom.get("type"))] )
             events[interactionFrom.get("e1")] = False # false positive argument -> incorrect event
+            if verbose:
+                print "predicted", counts["predicted"], interactionFrom.get("id"), "is a false positive"
+        counts["predicted"] +=1
     # Get ids of gold entities that had a correct prediction
     reverseEntityMap = {}
     for predictedEntity, goldEntities in entityMap.iteritems():
@@ -231,11 +236,13 @@ def getInteractionPredictions(interactionsFrom, interactionsTo, entityMap, class
             if interactionTo.get("e1") in reverseEntityMap: # mark an event false due to a missing gold interaction
                 for predictedEntityId in reverseEntityMap[interactionTo.get("e1")]:
                     events[predictedEntityId] = False # missing argument -> incorrect event
+            if verbose:
+                print "gold", interactionTo.get("id"), "has no matching prediction"
     assert len(examples) == len(predictions)
     return examples, predictions, falseEntity, events
 
 # Compares a prediction (from) to a gold (to) sentence
-def processDocument(fromDocumentSentences, toDocumentSentences, target, classSets, negativeClassId, entityMatchFunction):
+def processDocument(fromDocumentSentences, toDocumentSentences, target, classSets, negativeClassId, entityMatchFunction, verbose=False, counts=None):
     #splitMerged(fromSentence) # modify element tree to split merged elements into multiple elements
     if toDocumentSentences != None:
         assert len(fromDocumentSentences) == len(toDocumentSentences)
@@ -280,7 +287,7 @@ def processDocument(fromDocumentSentences, toDocumentSentences, target, classSet
     if target == "entities" or target == "both":
         entityExamples, entityPredictions = getEntityPredictions(entityMap, allToEntities, classSets["entity"], negativeClassId)
     if target == "interactions" or target == "both":
-        interactionExamples, interactionPredictions, sentFalseEntity, interactionMap = getInteractionPredictions(fromInteractions, toInteractions, entityMap, classSets["interaction"], negativeClassId)
+        interactionExamples, interactionPredictions, sentFalseEntity, interactionMap = getInteractionPredictions(fromInteractions, toInteractions, entityMap, classSets["interaction"], negativeClassId, counts=counts, verbose=verbose)
         for k,v in sentFalseEntity.iteritems():
             falseEntity[k][0] += v[0]
             falseEntity[k][1] += v[1]
@@ -290,7 +297,8 @@ def processDocument(fromDocumentSentences, toDocumentSentences, target, classSet
     return (entityExamples, entityPredictions), (interactionExamples, interactionPredictions), (eventExamples, eventPredictions), falseEntity
 
 # Compares a prediction (from) to a gold (to) corpus
-def processCorpora(EvaluatorClass, fromCorpus, toCorpus, target, classSets, negativeClassId, entityMatchFunction, errorMatrix=False):
+def processCorpora(EvaluatorClass, fromCorpus, toCorpus, target, classSets, negativeClassId, entityMatchFunction, errorMatrix=False, verbose=False):
+    counts = defaultdict(int)
     entityExamples = []
     entityPredictions = []
     interactionExamples = []
@@ -298,18 +306,19 @@ def processCorpora(EvaluatorClass, fromCorpus, toCorpus, target, classSets, nega
     eventExamples = []
     eventPredictions = []
     falseEntity = defaultdict(lambda: defaultdict(int))
-    counter = ProgressCounter(len(fromCorpus.sentences), "Corpus Processing")
+    if not verbose:
+        counter = ProgressCounter(len(fromCorpus.sentences), "Corpus Processing")
     # Loop through the sentences and collect all predictions
     toCorpusSentences = None
     if toCorpus != None:
         toCorpusSentences = toCorpus.documentSentences
     for i in range(len(fromCorpus.documentSentences)):
-        if len(fromCorpus.documentSentences[i]) > 0:
+        if len(fromCorpus.documentSentences[i]) > 0 and not verbose:
             counter.update(len(fromCorpus.documentSentences[i]), fromCorpus.documentSentences[i][0].sentence.get("id").rsplit(".", 1)[0])
         if toCorpusSentences != None:
-            newEntityExPred, newInteractionExPred, newEventExPred, sentFalseEntity = processDocument(fromCorpus.documentSentences[i], toCorpusSentences[i], target, classSets, negativeClassId, entityMatchFunction)
+            newEntityExPred, newInteractionExPred, newEventExPred, sentFalseEntity = processDocument(fromCorpus.documentSentences[i], toCorpusSentences[i], target, classSets, negativeClassId, entityMatchFunction, verbose=verbose, counts=counts)
         else:
-            newEntityExPred, newInteractionExPred, newEventExPred, sentFalseEntity = processDocument(fromCorpus.documentSentences[i], None, target, classSets, negativeClassId, entityMatchFunction)
+            newEntityExPred, newInteractionExPred, newEventExPred, sentFalseEntity = processDocument(fromCorpus.documentSentences[i], None, target, classSets, negativeClassId, entityMatchFunction, verbose=verbose, counts=counts)
         entityExamples.extend(newEntityExPred[0])
         entityPredictions.extend(newEntityExPred[1])
         interactionExamples.extend(newInteractionExPred[0])
@@ -357,7 +366,7 @@ def processCorpora(EvaluatorClass, fromCorpus, toCorpus, target, classSets, nega
 #                    sourceList.append(newElement)
 #                sourceList.remove(element)
 
-def run(EvaluatorClass, inputCorpusFile, goldCorpusFile, parse, tokenization=None, target="both", entityMatchFunction=compareEntitiesSimple, removeIntersentenceInteractions=False, errorMatrix=False):
+def run(EvaluatorClass, inputCorpusFile, goldCorpusFile, parse, tokenization=None, target="both", entityMatchFunction=compareEntitiesSimple, removeIntersentenceInteractions=False, errorMatrix=False, verbose=False):
     print >> sys.stderr, "##### EvaluateInteractionXML #####"
     print >> sys.stderr, "Comparing input", inputCorpusFile, "to gold", goldCorpusFile
     # Class sets are used to convert the types to ids that the evaluator can use
@@ -380,7 +389,7 @@ def run(EvaluatorClass, inputCorpusFile, goldCorpusFile, parse, tokenization=Non
     predictedCorpusElements = SentenceGraph.loadCorpus(inputCorpusFile, parse, tokenization, False, removeIntersentenceInteractions)    
     
     # Compare the corpora and print results on screen
-    return processCorpora(EvaluatorClass, predictedCorpusElements, goldCorpusElements, target, classSets, negativeClassId, entityMatchFunction, errorMatrix=errorMatrix)
+    return processCorpora(EvaluatorClass, predictedCorpusElements, goldCorpusElements, target, classSets, negativeClassId, entityMatchFunction, errorMatrix=errorMatrix, verbose=verbose)
     
 if __name__=="__main__":
     import sys, os
@@ -402,6 +411,7 @@ if __name__=="__main__":
     optparser.add_option("-m", "--matching", default="SIMPLE", dest="matching", help="matching function")
     optparser.add_option("--no_intersentence", default=False, action="store_true", dest="no_intersentence", help="Exclude intersentence interactions from evaluation")
     optparser.add_option("--error_matrix", default=False, action="store_true", dest="error_matrix", help="Show error matrix")
+    optparser.add_option("-v", "--verbose", default=False, action="store_true", dest="verbose", help="Print detailed results")
     (options, args) = optparser.parse_args()
     
     assert options.matching in ["SIMPLE", "STRICT"]
@@ -414,4 +424,4 @@ if __name__=="__main__":
     print >> sys.stderr, "Importing modules"
     exec "from Evaluators." + options.evaluator + " import " + options.evaluator + " as Evaluator"
     
-    run(Evaluator, options.input, options.gold, options.parse, None, options.target, entityMatchFunction=entityMatchFunction, removeIntersentenceInteractions=options.no_intersentence, errorMatrix=options.error_matrix)
+    run(Evaluator, options.input, options.gold, options.parse, None, options.target, entityMatchFunction=entityMatchFunction, removeIntersentenceInteractions=options.no_intersentence, errorMatrix=options.error_matrix, verbose=options.verbose)
