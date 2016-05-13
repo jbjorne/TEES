@@ -48,6 +48,7 @@ def getFileStatistics(filename, stats, targetSets, corpusId):
     if not os.path.exists(filename):
         print >> sys.stderr, "Warning, cannot find", filename
         return
+    print >> sys.stderr, "Processing", filename
     xml = ETUtils.ETFromObj(filename)
     for elementType in ("sentence", "document"):
         addStats(elementType, len([x for x in xml.iter(elementType)]), stats[corpusId], targetSets)
@@ -61,12 +62,17 @@ if __name__=="__main__":
     from optparse import OptionParser
     optparser = OptionParser(usage="%prog [options]\n")
     optparser.add_option("-i", "--input", default=None, help="Datasets to process")
-    optparser.add_option("-c", "--corpusIds", default="BB11,BB13T2,BB_EVENT_16", help="Datasets to process")
+    optparser.add_option("-c", "--corpora", default="BB11,BB13T2,BB_EVENT_16", help="Datasets to process")
     optparser.add_option("-d", "--inDir", default=os.path.normpath(Settings.DATAPATH + "/corpora"), help="directory for output files")
     (options, args) = optparser.parse_args()
     
+    options.corpora = options.corpora.replace("COMPLETE", "GE09,ALL11,ALL13,ALL16")
+    options.corpora = options.corpora.replace("ALL11", "GE11,EPI11,ID11,BB11,BI11,CO11,REL11,REN11")
+    options.corpora = options.corpora.replace("ALL13", "GE13,CG13,PC13,GRO13,GRN13,BB13T2,BB13T3")
+    options.corpora = options.corpora.replace("ALL16", "BB_EVENT_16,BB_EVENT_NER_16,SDB16")
+        
     if options.input != None:
         result = getFileStatistics(options.input, None, ("file",), "file")
     else:
-        result = getStatistics(options.corpusIds.split(","), options.inDir)
+        result = getStatistics(options.corpora.split(","), options.inDir)
     print json.dumps(result, indent=4)
