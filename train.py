@@ -402,7 +402,7 @@ def getTaskSettings(task, detector, bioNLPSTParams, preprocessorParams,
         elif task == "BI11":
             exampleStyles["examples"] = Parameters.cat("bi_features", exampleStyles["examples"], msg)
         elif task == "BB_EVENT_16":
-            pass #exampleStyles["examples"] = Parameters.cat("linear_features:keep_neg", exampleStyles["examples"], msg)
+            exampleStyles["examples"] = Parameters.cat("keep_neg", exampleStyles["examples"], msg) #exampleStyles["examples"] = Parameters.cat("linear_features:keep_neg", exampleStyles["examples"], msg)
         elif task == "SDB16":
             exampleStyles["examples"] = Parameters.cat("sdb_merge:sdb_features", exampleStyles["examples"], msg)
         # Edge style ##########################################################
