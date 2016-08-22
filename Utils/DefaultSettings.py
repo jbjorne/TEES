@@ -256,3 +256,5 @@ URL["DDI13_TRAIN_TEES_PARSES"] = "http://sourceforge.net/projects/tees/files/dat
 # Miscellaneous files
 URL["TEES_RESOURCES"] = "http://sourceforge.net/projects/tees/files/data/TEES-resources-120705.tar.gz"
 URL["DRUG_BANK_XML"] = "http://www.drugbank.ca/system/downloads/current/drugbank.xml.zip"
+
+W2VFILE = os.path.expanduser("~/Downloads/wikipedia-pubmed-and-PMC-w2v.bin")

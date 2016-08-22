@@ -16,6 +16,7 @@ from FeatureBuilders.WordNetFeatureBuilder import WordNetFeatureBuilder
 from FeatureBuilders.GiulianoFeatureBuilder import GiulianoFeatureBuilder
 from FeatureBuilders.DrugFeatureBuilder import DrugFeatureBuilder
 from FeatureBuilders.OntoBiotopeFeatureBuilder import OntoBiotopeFeatureBuilder
+from FeatureBuilders.WordVectorFeatureBuilder import WordVectorFeatureBuilder
 import PhraseTriggerExampleBuilder
 import Utils.InteractionXML.ResolveEPITriggerTypes
 import Utils.Range as Range
@@ -41,7 +42,8 @@ class EntityExampleBuilder(ExampleBuilder):
                                   "names", "build_for_nameless", "skip_for_nameless",
                                   "pos_only", "all_tokens", "pos_pairs", "linear_ngrams", 
                                   "phospho", "drugbank_features", "ddi13_features", "metamap", 
-                                  "only_types", "ontobiotope_features", "bb_spans"])
+                                  "only_types", "ontobiotope_features", "bb_spans", "w2v",
+                                  "no_context"])
         self.styles = self.getParameters(style)
 #        if "selftrain_group" in self.styles:
 #            self.selfTrainGroups = set()
@@ -77,6 +79,8 @@ class EntityExampleBuilder(ExampleBuilder):
             self.drugFeatureBuilder = DrugFeatureBuilder(featureSet)
         if self.styles["ontobiotope_features"]:
             self.ontobiotopeFeatureBuilder = OntoBiotopeFeatureBuilder(self.featureSet)
+        if self.styles["w2v"]:
+            self.wordVectorFeatureBuilder = WordVectorFeatureBuilder(featureSet)
     
     def getMergedEntityType(self, entities):
         """
@@ -396,15 +400,16 @@ class EntityExampleBuilder(ExampleBuilder):
                 features[self.featureSet.getId("substring_"+stringLower)] = 1
                 features[self.featureSet.getId("substringstem_"+PorterStemmer.stem(stringLower))] = 1
             
-            # Linear order features
-            for index in [-3,-2,-1,1,2,3]:
-                if i + index > 0 and i + index < len(sentenceGraph.tokens):
-                    self.buildLinearOrderFeatures(sentenceGraph, i + index, str(index), features)
-
-            # Linear n-grams
-            if self.styles["linear_ngrams"]:
-                self.buildLinearNGram(max(0, i-1), i, sentenceGraph, features)
-                self.buildLinearNGram(max(0, i-2), i, sentenceGraph, features)
+            if not self.styles["no_context"]:
+                # Linear order features
+                for index in [-3,-2,-1,1,2,3]:
+                    if i + index > 0 and i + index < len(sentenceGraph.tokens):
+                        self.buildLinearOrderFeatures(sentenceGraph, i + index, str(index), features)
+    
+                # Linear n-grams
+                if self.styles["linear_ngrams"]:
+                    self.buildLinearNGram(max(0, i-1), i, sentenceGraph, features)
+                    self.buildLinearNGram(max(0, i-2), i, sentenceGraph, features)
             
             if self.styles["phospho"]:
                 if text.find("hospho") != -1:
@@ -444,32 +449,33 @@ class EntityExampleBuilder(ExampleBuilder):
                 #    features[self.featureSet.getId("qt_"+text[j-3:j+1].lower())] = 1
             
             # Attached edges (Hanging in and out edges)
-            t1InEdges = self.inEdgesByToken[token]
-            for edge in t1InEdges:
-                edgeType = edge[2].get("type")
-                features[self.featureSet.getId("t1HIn_"+edgeType)] = 1
-                features[self.featureSet.getId("t1HIn_"+edge[0].get("POS"))] = 1
-                features[self.featureSet.getId("t1HIn_"+edgeType+"_"+edge[0].get("POS"))] = 1
-                tokenText = sentenceGraph.getTokenText(edge[0])
-                features[self.featureSet.getId("t1HIn_"+tokenText)] = 1
-                features[self.featureSet.getId("t1HIn_"+edgeType+"_"+tokenText)] = 1
-                tokenStem = PorterStemmer.stem(tokenText)
-                features[self.featureSet.getId("t1HIn_"+tokenStem)] = 1
-                features[self.featureSet.getId("t1HIn_"+edgeType+"_"+tokenStem)] = 1
-                features[self.featureSet.getId("t1HIn_"+norStem+"_"+edgeType+"_"+tokenStem)] = 1
-            t1OutEdges = self.outEdgesByToken[token]
-            for edge in t1OutEdges:
-                edgeType = edge[2].get("type")
-                features[self.featureSet.getId("t1HOut_"+edgeType)] = 1
-                features[self.featureSet.getId("t1HOut_"+edge[1].get("POS"))] = 1
-                features[self.featureSet.getId("t1HOut_"+edgeType+"_"+edge[1].get("POS"))] = 1
-                tokenText = sentenceGraph.getTokenText(edge[1])
-                features[self.featureSet.getId("t1HOut_"+tokenText)] = 1
-                features[self.featureSet.getId("t1HOut_"+edgeType+"_"+tokenText)] = 1
-                tokenStem = PorterStemmer.stem(tokenText)
-                features[self.featureSet.getId("t1HOut_"+tokenStem)] = 1
-                features[self.featureSet.getId("t1HOut_"+edgeType+"_"+tokenStem)] = 1
-                features[self.featureSet.getId("t1HOut_"+norStem+"_"+edgeType+"_"+tokenStem)] = 1
+            if not self.styles["no_context"]:
+                t1InEdges = self.inEdgesByToken[token]
+                for edge in t1InEdges:
+                    edgeType = edge[2].get("type")
+                    features[self.featureSet.getId("t1HIn_"+edgeType)] = 1
+                    features[self.featureSet.getId("t1HIn_"+edge[0].get("POS"))] = 1
+                    features[self.featureSet.getId("t1HIn_"+edgeType+"_"+edge[0].get("POS"))] = 1
+                    tokenText = sentenceGraph.getTokenText(edge[0])
+                    features[self.featureSet.getId("t1HIn_"+tokenText)] = 1
+                    features[self.featureSet.getId("t1HIn_"+edgeType+"_"+tokenText)] = 1
+                    tokenStem = PorterStemmer.stem(tokenText)
+                    features[self.featureSet.getId("t1HIn_"+tokenStem)] = 1
+                    features[self.featureSet.getId("t1HIn_"+edgeType+"_"+tokenStem)] = 1
+                    features[self.featureSet.getId("t1HIn_"+norStem+"_"+edgeType+"_"+tokenStem)] = 1
+                t1OutEdges = self.outEdgesByToken[token]
+                for edge in t1OutEdges:
+                    edgeType = edge[2].get("type")
+                    features[self.featureSet.getId("t1HOut_"+edgeType)] = 1
+                    features[self.featureSet.getId("t1HOut_"+edge[1].get("POS"))] = 1
+                    features[self.featureSet.getId("t1HOut_"+edgeType+"_"+edge[1].get("POS"))] = 1
+                    tokenText = sentenceGraph.getTokenText(edge[1])
+                    features[self.featureSet.getId("t1HOut_"+tokenText)] = 1
+                    features[self.featureSet.getId("t1HOut_"+edgeType+"_"+tokenText)] = 1
+                    tokenStem = PorterStemmer.stem(tokenText)
+                    features[self.featureSet.getId("t1HOut_"+tokenStem)] = 1
+                    features[self.featureSet.getId("t1HOut_"+edgeType+"_"+tokenStem)] = 1
+                    features[self.featureSet.getId("t1HOut_"+norStem+"_"+edgeType+"_"+tokenStem)] = 1
             
             # REL features
             if self.styles["rel_features"]:
@@ -550,10 +556,14 @@ class EntityExampleBuilder(ExampleBuilder):
                 features[self.featureSet.getId("span_count_" + str(features.get(self.featureSet.getId("span_count"), 0)))] = 1
                                 
             # chains
-            self.buildChains(token, sentenceGraph, features)
+            if not self.styles["no_context"]:
+                self.buildChains(token, sentenceGraph, features)
             
             if self.styles["pos_pairs"]:
                 self.buildPOSPairs(token, namedEntityHeadTokens, features)
+            
+            if self.styles["w2v"]:
+                self.wordVectorFeatureBuilder.buildFeatures(token)
             
             example = (sentenceGraph.getSentenceId()+".x"+str(exampleIndex), category, features, extra)
             ExampleUtils.appendExamples([example], outfile)
