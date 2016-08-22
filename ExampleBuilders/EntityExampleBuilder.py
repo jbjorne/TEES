@@ -563,7 +563,9 @@ class EntityExampleBuilder(ExampleBuilder):
                 self.buildPOSPairs(token, namedEntityHeadTokens, features)
             
             if self.styles["w2v"]:
+                self.wordVectorFeatureBuilder.setFeatureVector(features)
                 self.wordVectorFeatureBuilder.buildFeatures(token)
+                self.wordVectorFeatureBuilder.setFeatureVector(None)
             
             example = (sentenceGraph.getSentenceId()+".x"+str(exampleIndex), category, features, extra)
             ExampleUtils.appendExamples([example], outfile)

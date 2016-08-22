@@ -11,4 +11,8 @@ class WordVectorFeatureBuilder(FeatureBuilder):
         
     def buildFeatures(self, token):
         weights = self.model.w_to_normv(token.get("text").lower())
-        #self.setFeature(self.namedEntityCountFeature, 1)
+        if weights is not None:
+            for i in range(len(weights)):
+                self.setFeature("W2V_" + str(i), weights[i])
+        else:
+            self.setFeature("W2V_None", 1)
