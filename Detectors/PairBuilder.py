@@ -13,5 +13,5 @@ class PairBuilder(EdgeDetector):
         workDir=None):
         
         exampleStyle = Parameters.cat(exampleStyle, "keep_neg:no_features")
-        SingleStageDetector.train(self, trainData, optData, model, combinedModel, exampleStyle, classifierParameters, parse, tokenization, fromStep, toStep)
+        EdgeDetector.train(self, trainData, optData, model, combinedModel, exampleStyle, classifierParameters, parse, tokenization, fromStep, toStep)
         self.classify(trainData, model, "classification-train/train", goldData=trainData, workDir="classification-train")
