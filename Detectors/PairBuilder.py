@@ -1,7 +1,6 @@
 from Detectors.EdgeDetector import EdgeDetector
 from Classifiers.AllCorrectClassifier import AllCorrectClassifier
 import Utils.Parameters as Parameters
-from Detectors.SingleStageDetector import SingleStageDetector
 
 class PairBuilder(EdgeDetector):
     def __init__(self):
