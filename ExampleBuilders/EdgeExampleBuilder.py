@@ -55,7 +55,8 @@ class EdgeExampleBuilder(ExampleBuilder):
             "disable_entity_features", "disable_terminus_features", "disable_single_element_features", 
             "disable_ngram_features", "disable_path_edge_features", "linear_features", "subset", "binary", "pos_only",
             "entity_type", "filter_shortest_path", "maskTypeAsProtein", "keep_neg", "metamap", 
-            "sdb_merge", "sdb_features", "ontobiotope_features", "no_self_loops", "full_entities"])
+            "sdb_merge", "sdb_features", "ontobiotope_features", "no_self_loops", "full_entities",
+            "no_features"])
         self.styles = self.getParameters(style)
         #if style == None: # no parameters given
         #    style["typed"] = style["directed"] = style["headsOnly"] = True
@@ -225,7 +226,7 @@ class EdgeExampleBuilder(ExampleBuilder):
         import types
         assert edgeTypes != None
         if type(edgeTypes) not in [types.ListType, types.TupleType]:
-             edgeTypes = [edgeTypes]
+            edgeTypes = [edgeTypes]
         if edge[2].get("type") in edgeTypes:
             return True
         else:
@@ -379,19 +380,56 @@ class EdgeExampleBuilder(ExampleBuilder):
         Build a single directed example for the potential edge between token1 and token2
         """
         # define features
-        features = {}
-        if not self.styles["no_path"]:            
+        if not self.styles["no_path"]:
             path = paths.getPaths(token1, token2)
             if len(path) > 0:
                 path = path[0]
-                pathExists = True
+                #pathExists = True
             else:
                 path = [token1, token2]
-                pathExists = False
+                #pathExists = False
         else:
             path = [token1, token2]
-            pathExists = False
+            #pathExists = False
         
+        features = {}
+        if not self.styles["no_features"]:
+            features = self.buildFeatures(sentenceGraph, entity1, entity2, token1, token2, path)
+        
+        # define extra attributes
+        if int(path[0].get("charOffset").split("-")[0]) < int(path[-1].get("charOffset").split("-")[0]):
+            extra = {"xtype":"edge","type":"i","t1":path[0].get("id"),"t2":path[-1].get("id")}
+            extra["deprev"] = False
+        else:
+            extra = {"xtype":"edge","type":"i","t1":path[-1].get("id"),"t2":path[0].get("id")}
+            extra["deprev"] = True
+        if entity1 != None:
+            extra["e1"] = entity1.get("id")
+            if sentenceGraph.mergedEntityToDuplicates != None:
+                extra["e1DuplicateIds"] = ",".join([x.get("id") for x in sentenceGraph.mergedEntityToDuplicates[entity1]])
+        if entity2 != None:
+            extra["e2"] = entity2.get("id")
+            if sentenceGraph.mergedEntityToDuplicates != None:
+                extra["e2DuplicateIds"] = ",".join([x.get("id") for x in sentenceGraph.mergedEntityToDuplicates[entity2]])
+        extra["categoryName"] = categoryName
+        if self.styles["bacteria_renaming"]:
+            if entity1.get("text") != None and entity1.get("text") != "":
+                extra["e1t"] = entity1.get("text").replace(" ", "---").replace(":","-COL-")
+            if entity2.get("text") != None and entity2.get("text") != "":
+                extra["e2t"] = entity2.get("text").replace(" ", "---").replace(":","-COL-")
+        sentenceOrigId = sentenceGraph.sentenceElement.get("origId")
+        if sentenceOrigId != None:
+            extra["SOID"] = sentenceOrigId 
+        extra["directed"] = str(isDirected)
+        if self.styles["sdb_merge"]:
+            extra["sdb_merge"] = "True"
+            #print extra
+        
+        return (categoryName, features, extra)
+        
+    
+    def buildFeatures(self, sentenceGraph, entity1, entity2, token1, token2, path):
+        features = {} 
         if not self.styles["no_trigger_features"]: # F 85.52 -> 85.55
             self.triggerFeatureBuilder.setFeatureVector(features)
             self.triggerFeatureBuilder.tag = "trg1_"
@@ -564,33 +602,4 @@ class EdgeExampleBuilder(ExampleBuilder):
             self.giulianoFeatureBuilder.buildEdgeFeatures(entity1, entity2, token1, token2, path, sentenceGraph)
             self.giulianoFeatureBuilder.setFeatureVector(None)
         
-        # define extra attributes
-        if int(path[0].get("charOffset").split("-")[0]) < int(path[-1].get("charOffset").split("-")[0]):
-            extra = {"xtype":"edge","type":"i","t1":path[0].get("id"),"t2":path[-1].get("id")}
-            extra["deprev"] = False
-        else:
-            extra = {"xtype":"edge","type":"i","t1":path[-1].get("id"),"t2":path[0].get("id")}
-            extra["deprev"] = True
-        if entity1 != None:
-            extra["e1"] = entity1.get("id")
-            if sentenceGraph.mergedEntityToDuplicates != None:
-                extra["e1DuplicateIds"] = ",".join([x.get("id") for x in sentenceGraph.mergedEntityToDuplicates[entity1]])
-        if entity2 != None:
-            extra["e2"] = entity2.get("id")
-            if sentenceGraph.mergedEntityToDuplicates != None:
-                extra["e2DuplicateIds"] = ",".join([x.get("id") for x in sentenceGraph.mergedEntityToDuplicates[entity2]])
-        extra["categoryName"] = categoryName
-        if self.styles["bacteria_renaming"]:
-            if entity1.get("text") != None and entity1.get("text") != "":
-                extra["e1t"] = entity1.get("text").replace(" ", "---").replace(":","-COL-")
-            if entity2.get("text") != None and entity2.get("text") != "":
-                extra["e2t"] = entity2.get("text").replace(" ", "---").replace(":","-COL-")
-        sentenceOrigId = sentenceGraph.sentenceElement.get("origId")
-        if sentenceOrigId != None:
-            extra["SOID"] = sentenceOrigId 
-        extra["directed"] = str(isDirected)
-        if self.styles["sdb_merge"]:
-            extra["sdb_merge"] = "True"
-            #print extra
-        
-        return (categoryName, features, extra)
+        return features
