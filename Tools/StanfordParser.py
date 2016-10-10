@@ -26,24 +26,6 @@ from Parser import Parser
 #    "-CCprocessed", "-keepPunct", "-treeFile"]
 
 class StanfordParser(Parser):
-    
-    def __init__(self):  
-        self.escDict={"-LRB-":"(",
-                 "-RRB-":")",
-                 "-LCB-":"{",
-                 "-RCB-":"}",
-                 "-LSB-":"[",
-                 "-RSB-":"]",
-                 "``":"\"",
-                 "''":"\"",
-                 "\\/":"/",
-                 "\\*":"*"}
-        self.escSymbols = sorted(self.escDict.keys())
-
-    def unescape(self, text):
-        for escSymbol in self.escSymbols:
-            text = text.replace(escSymbol, self.escDict[escSymbol])
-        return text
 
     def install(self, destDir=None, downloadDir=None, redownload=False, updateLocalSettings=False):
         print >> sys.stderr, "Installing Stanford Parser"
