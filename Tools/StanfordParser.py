@@ -229,32 +229,8 @@ class StanfordParser(Parser):
     def process(cls, parser, input, output=None, debug=False, reparse=False, stanfordParserDir=None, stanfordParserArgs=None):
         parserObj = cls()
         parserObj.convertXML(parser, input, output, debug, reparse, stanfordParserDir, stanfordParserArgs)
-
-    def convertXML(self, parser, input, output=None, debug=False, reparse=False, stanfordParserDir=None, stanfordParserArgs=None):
-        #global stanfordParserDir, stanfordParserArgs
-        if stanfordParserDir == None:
-            stanfordParserDir = Settings.STANFORD_PARSER_DIR
-        if stanfordParserArgs == None:
-            # not sure how necessary the "-mx500m" option is, and how exactly Java
-            # options interact, but adding user defined options from Settings.JAVA
-            # after the "-mx500m" hopefully works.
-            stanfordParserArgs = Settings.JAVA.split()[0:1] + ["-mx500m"] + \
-                                 Settings.JAVA.split()[1:] + \
-                                 ["-cp", "stanford-parser.jar", 
-                                  "edu.stanford.nlp.trees.EnglishGrammaticalStructure", 
-                                  "-encoding", "utf8", "-CCprocessed", "-keepPunct", "-treeFile"]
-        print >> sys.stderr, "Running Stanford conversion"
-        print >> sys.stderr, "Stanford tools at:", stanfordParserDir
-        print >> sys.stderr, "Stanford tools arguments:", " ".join(stanfordParserArgs)
-        parseTimeStamp = time.strftime("%d.%m.%y %H:%M:%S")
-        print >> sys.stderr, "Stanford time stamp:", parseTimeStamp
-        
-        print >> sys.stderr, "Loading corpus", input
-        corpusTree = ETUtils.ETFromObj(input)
-        print >> sys.stderr, "Corpus file loaded"
-        corpusRoot = corpusTree.getroot()
-        
-        workdir = tempfile.mkdtemp()
+    
+    def _makeStanfordInputFile(self, corpusRoot, workdir, parser, reparse=False, debug=False):
         if debug:
             print >> sys.stderr, "Stanford parser workdir", workdir
         stanfordInput = os.path.join(workdir, "input")
@@ -281,18 +257,49 @@ class StanfordParser(Parser):
         stanfordInputFile.close()
         if existingCount != 0:
             print >> sys.stderr, "Skipping", existingCount, "already converted sentences."
-        
+        return stanfordInput
+    
+    def _runStanfordProcess(self, stanfordParserArgs, stanfordParserDir, stanfordInput, workdir):
+        if stanfordParserArgs == None:
+            # not sure how necessary the "-mx500m" option is, and how exactly Java
+            # options interact, but adding user defined options from Settings.JAVA
+            # after the "-mx500m" hopefully works.
+            stanfordParserArgs = Settings.JAVA.split()[0:1] + ["-mx500m"] + \
+                                 Settings.JAVA.split()[1:] + \
+                                 ["-cp", "stanford-parser.jar", 
+                                  "edu.stanford.nlp.trees.EnglishGrammaticalStructure", 
+                                  "-encoding", "utf8", "-CCprocessed", "-keepPunct", "-treeFile"]
+        print >> sys.stderr, "Running Stanford conversion"
+        print >> sys.stderr, "Stanford tools at:", stanfordParserDir
+        print >> sys.stderr, "Stanford tools arguments:", " ".join(stanfordParserArgs)
         # Run Stanford parser
-        stanfordOutput = runSentenceProcess(self.runStanford, stanfordParserDir, stanfordInput, 
-                                            workdir, True, "StanfordParser", 
-                                            "Stanford Conversion", timeout=600,
-                                            outputArgs={"encoding":"latin1", "errors":"replace"},
-                                            processArgs={"stanfordParserArgs":stanfordParserArgs})   
+        return runSentenceProcess(self.runStanford, stanfordParserDir, stanfordInput, 
+            workdir, True, "StanfordParser", "Stanford Conversion", timeout=600,
+            outputArgs={"encoding":"latin1", "errors":"replace"},
+            processArgs={"stanfordParserArgs":stanfordParserArgs})        
+        
+        
+    def convertXML(self, parser, input, output=None, debug=False, reparse=False, stanfordParserDir=None, stanfordParserArgs=None):
+        #global stanfordParserDir, stanfordParserArgs
+        if stanfordParserDir == None:
+            stanfordParserDir = Settings.STANFORD_PARSER_DIR
+        
+        print >> sys.stderr, "Loading corpus", input
+        corpusTree = ETUtils.ETFromObj(input)
+        print >> sys.stderr, "Corpus file loaded"
+        corpusRoot = corpusTree.getroot()
+        
+        workdir = tempfile.mkdtemp()
+
+        stanfordInput = self._makeStanfordInputFile(corpusRoot, workdir, parser, reparse, debug)
+        stanfordOutput = self._runStanfordProcess(stanfordParserArgs, stanfordParserDir, stanfordInput, workdir)
         #stanfordOutputFile = codecs.open(stanfordOutput, "rt", "utf-8")
         #stanfordOutputFile = codecs.open(stanfordOutput, "rt", "latin1", "replace")
         stanfordOutputFile = codecs.open(stanfordOutput, "rt", "utf-8")
         
         # Get output and insert dependencies
+        parseTimeStamp = time.strftime("%d.%m.%y %H:%M:%S")
+        print >> sys.stderr, "Stanford time stamp:", parseTimeStamp
         noDepCount = 0
         failCount = 0
         sentenceCount = 0
