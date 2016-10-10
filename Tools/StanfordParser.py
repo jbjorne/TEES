@@ -13,6 +13,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__f
 import Utils.ElementTreeUtils as ETUtils
 import Utils.Settings as Settings
 import Utils.Download as Download
+from Utils.FileUtils import openWithExt, getTarFilePath
 import Tool
 from Parser import Parser
 
@@ -209,8 +210,6 @@ class StanfordParser(Parser):
 #         return True
     
     def insertParses(self, input, parsePath, output=None, parseName="McCC", extraAttributes={}, skipExtra=0):
-        import tarfile
-        from SentenceSplitter import openFile
         """
         Divide text in the "text" attributes of document and section 
         elements into sentence elements. These sentence elements are
@@ -220,14 +219,10 @@ class StanfordParser(Parser):
         
         print >> sys.stderr, "Inserting parses from", parsePath
         assert os.path.exists(parsePath)
-        if parsePath.find(".tar.gz") != -1:
-            tarFilePath, parsePath = parsePath.split(".tar.gz")
-            tarFilePath += ".tar.gz"
+        tarFilePath, parsePath = getTarFilePath(parsePath)
+        tarFile = None
+        if tarFilePath != None:
             tarFile = tarfile.open(tarFilePath)
-            if parsePath[0] == "/":
-                parsePath = parsePath[1:]
-        else:
-            tarFile = None
         
         counts = {"fail":0, "no_dependencies":0, "sentences":0, "documents":0, "existing":0, "no_penn":0}
         sourceElements = [x for x in corpusRoot.getiterator("document")] + [x for x in corpusRoot.getiterator("section")]
@@ -239,29 +234,16 @@ class StanfordParser(Parser):
             if docId == None:
                 docId = "CORPUS.d" + str(counts["document"])
             
-            f = openFile(os.path.join(parsePath, origId + ".sd"), tarFile)
-            if f == None: # file with BioNLP'11 extension not found, try BioNLP'09 extension
-                f = openFile(os.path.join(parsePath, origId + ".dep"), tarFile)
-            if f == None: # file with BioNLP'09 extension not found, try BioNLP'13 extension
-                f = openFile(os.path.join(parsePath, origId + ".sdepcc"), tarFile)
-            if f == None: # file with BioNLP'09 extension not found, try BioNLP'13 extension
-                f = openFile(os.path.join(parsePath, origId + ".sdep"), tarFile)
+            f = openWithExt(os.path.join(parsePath, origId), ["sd", "dep", "sdepcc", "sdep"]) # Extensions for BioNLP 2011, 2009, and 2013
             if f != None:
-                sentences = document.findall("sentence")
-                # TODO: Following for-loop is the same as when used with a real parser, and should
-                # be moved to its own function.
-                for sentence in sentences:
+                for sentence in document.findall("sentence"):
                     counts["sentences"] += 1
                     counter.update(0, "Processing Documents ("+sentence.get("id")+"/" + origId + "): ")
                     self._insertParse(sentence, f, parseName, True, None, counts, skipExtra, origId)
                 f.close()
-            counter.update(1, "Processing Documents ("+document.get("id")+"/" + origId + "): ")
-        
+            counter.update(1, "Processing Documents ("+document.get("id")+"/" + origId + "): ")        
         if tarFile != None:
             tarFile.close()
-        #print >> sys.stderr, "Sentence splitting created", sentencesCreated, "sentences"
-        #print >> sys.stderr, docsWithSentences, "/", docCount, "documents have stanford parses"
-    
         print >> sys.stderr, "Stanford conversion was inserted to", counts["sentences"], "sentences" #, failCount, "failed"
             
         if output != None:
