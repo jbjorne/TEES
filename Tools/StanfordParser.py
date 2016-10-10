@@ -252,17 +252,7 @@ class StanfordParser(Parser):
         return corpusTree
 
 if __name__=="__main__":
-    import sys
-    
     from optparse import OptionParser, OptionGroup
-    # Import Psyco if available
-    try:
-        import psyco
-        psyco.full()
-        print >> sys.stderr, "Found Psyco, using"
-    except ImportError:
-        print >> sys.stderr, "Psyco not installed"
-
     optparser = OptionParser(description="Stanford Parser dependency converter wrapper")
     optparser.add_option("-i", "--input", default=None, dest="input", help="Corpus in interaction xml format", metavar="FILE")
     optparser.add_option("-o", "--output", default=None, dest="output", help="Output file in interaction xml format.")

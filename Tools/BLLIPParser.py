@@ -133,25 +133,37 @@ class BLLIPParser(Parser):
         parser = cls()
         parser.parse(input, output, tokenizationName, parseName, requireEntities, skipIds, skipParsed, timeout, makePhraseElements, debug, pathParser, pathBioModel, timestamp)
     
-    def parse(self, input, output=None, tokenizationName=None, parseName="McCC", requireEntities=False, skipIds=[], skipParsed=True, timeout=600, makePhraseElements=True, debug=False, pathParser=None, pathBioModel=None, timestamp=True):
-        global escDict
-        print >> sys.stderr, "BLLIP parser"
-        parseTimeStamp = time.strftime("%d.%m.%y %H:%M:%S")
-        print >> sys.stderr, "BLLIP time stamp:", parseTimeStamp
-        
+    def _runProcess(self, infileName, workdir, pathParser, pathBioModel, tokenizationName, timeout):
         if pathParser == None:
             pathParser = Settings.BLLIP_PARSER_DIR
         print >> sys.stderr, "BLLIP parser at:", pathParser
         if pathBioModel == None:
             pathBioModel = Settings.MCCLOSKY_BIOPARSINGMODEL_DIR
         print >> sys.stderr, "Biomodel at:", pathBioModel
+        #PARSERROOT=/home/smp/tools/McClosky-Charniak/reranking-parser
+        #BIOPARSINGMODEL=/home/smp/tools/McClosky-Charniak/reranking-parser/biomodel
+        #${PARSERROOT}/first-stage/PARSE/parseIt -K -l399 -N50 ${BIOPARSINGMODEL}/parser/ $* | ${PARSERROOT}/second-stage/programs/features/best-parses -l ${BIOPARSINGMODEL}/reranker/features.gz ${BIOPARSINGMODEL}/reranker/weights.gz
+        
+        # Run parser
+        #print >> sys.stderr, "Running parser", pathParser + "/parse.sh"
+        cwd = os.getcwd()
+        os.chdir(pathParser)
+        if tokenizationName == None:
+            bllipOutput = runSentenceProcess(self.run, pathParser, infileName, workdir, False, "BLLIPParser", "Parsing", timeout=timeout, processArgs={"tokenizer":True, "pathBioModel":pathBioModel})   
+        else:
+            if tokenizationName == "PARSED_TEXT": # The sentence strings are already tokenized
+                tokenizationName = None
+            bllipOutput = runSentenceProcess(self.run, pathParser, infileName, workdir, False, "BLLIPParser", "Parsing", timeout=timeout, processArgs={"tokenizer":False, "pathBioModel":pathBioModel})   
+    #    args = [charniakJohnsonParserDir + "/parse-50best-McClosky.sh"]
+    #    #bioParsingModel = charniakJohnsonParserDir + "/first-stage/DATA-McClosky"
+    #    #args = charniakJohnsonParserDir + "/first-stage/PARSE/parseIt -K -l399 -N50 " + bioParsingModel + "/parser | " + charniakJohnsonParserDir + "/second-stage/programs/features/best-parses -l " + bioParsingModel + "/reranker/features.gz " + bioParsingModel + "/reranker/weights.gz"
+        os.chdir(cwd)
+        return bllipOutput
+    
+    def _makeInputFile(self, workdir, corpusRoot, requireEntities, skipIds, skipParsed, tokenizationName, debug):    
         if requireEntities:
             print >> sys.stderr, "Parsing only sentences with entities"
-        
-        corpusTree, corpusRoot = self.getCorpus(input)
-        
         # Write text to input file
-        workdir = tempfile.mkdtemp()
         if debug:
             print >> sys.stderr, "BLLIP parser workdir", workdir
         infileName = os.path.join(workdir, "parser-input.txt")
@@ -177,29 +189,20 @@ class BLLIPParser(Parser):
                 infile.write("<s> " + s + "</s>\n")
                 numCorpusSentences += 1
         infile.close()
+        return infileName, numCorpusSentences
+
+    def parse(self, input, output=None, tokenizationName=None, parseName="McCC", requireEntities=False, skipIds=[], skipParsed=True, timeout=600, makePhraseElements=True, debug=False, pathParser=None, pathBioModel=None, timestamp=True):
+        print >> sys.stderr, "BLLIP parser"
+        corpusTree, corpusRoot = self.getCorpus(input)
+        workdir = tempfile.mkdtemp()
+        infileName, numCorpusSentences = self._makeInputFile(workdir, corpusRoot, requireEntities, skipIds, skipParsed, tokenizationName, debug)
+        bllipOutput = self._runProcess(infileName, workdir, pathParser, pathBioModel, tokenizationName, timeout)        
         
-        #PARSERROOT=/home/smp/tools/McClosky-Charniak/reranking-parser
-        #BIOPARSINGMODEL=/home/smp/tools/McClosky-Charniak/reranking-parser/biomodel
-        #${PARSERROOT}/first-stage/PARSE/parseIt -K -l399 -N50 ${BIOPARSINGMODEL}/parser/ $* | ${PARSERROOT}/second-stage/programs/features/best-parses -l ${BIOPARSINGMODEL}/reranker/features.gz ${BIOPARSINGMODEL}/reranker/weights.gz
-        
-        # Run parser
-        #print >> sys.stderr, "Running parser", pathParser + "/parse.sh"
-        cwd = os.getcwd()
-        os.chdir(pathParser)
-        if tokenizationName == None:
-            bllipOutput = runSentenceProcess(self.run, pathParser, infileName, workdir, False, "BLLIPParser", "Parsing", timeout=timeout, processArgs={"tokenizer":True, "pathBioModel":pathBioModel})   
-        else:
-            if tokenizationName == "PARSED_TEXT": # The sentence strings are already tokenized
-                tokenizationName = None
-            bllipOutput = runSentenceProcess(self.run, pathParser, infileName, workdir, False, "BLLIPParser", "Parsing", timeout=timeout, processArgs={"tokenizer":False, "pathBioModel":pathBioModel})   
-    #    args = [charniakJohnsonParserDir + "/parse-50best-McClosky.sh"]
-    #    #bioParsingModel = charniakJohnsonParserDir + "/first-stage/DATA-McClosky"
-    #    #args = charniakJohnsonParserDir + "/first-stage/PARSE/parseIt -K -l399 -N50 " + bioParsingModel + "/parser | " + charniakJohnsonParserDir + "/second-stage/programs/features/best-parses -l " + bioParsingModel + "/reranker/features.gz " + bioParsingModel + "/reranker/weights.gz"
-        os.chdir(cwd)
-        
-        treeFile = codecs.open(bllipOutput, "rt", "utf-8")
         print >> sys.stderr, "Inserting parses"
+        treeFile = codecs.open(bllipOutput, "rt", "utf-8")
         # Add output to sentences
+        parseTimeStamp = time.strftime("%d.%m.%y %H:%M:%S")
+        print >> sys.stderr, "BLLIP time stamp:", parseTimeStamp
         failCount = 0
         for sentence in self.getSentences(corpusRoot, requireEntities, skipIds, skipParsed):        
             treeLine = treeFile.readline()
@@ -302,17 +305,7 @@ class BLLIPParser(Parser):
         return corpusTree
     
 if __name__=="__main__":
-    import sys
-    
     from optparse import OptionParser, OptionGroup
-    # Import Psyco if available
-    try:
-        import psyco
-        psyco.full()
-        print >> sys.stderr, "Found Psyco, using"
-    except ImportError:
-        print >> sys.stderr, "Psyco not installed"
-
     optparser = OptionParser(description="BLLIP parser wrapper")
     optparser.add_option("-i", "--input", default=None, dest="input", help="Corpus in interaction xml format", metavar="FILE")
     optparser.add_option("-o", "--output", default=None, dest="output", help="Output file in interaction xml format.")
