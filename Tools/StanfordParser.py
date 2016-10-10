@@ -263,13 +263,7 @@ class StanfordParser(Parser):
         # Put penn tree lines in input file
         existingCount = 0
         for sentence in corpusRoot.getiterator("sentence"):
-            if sentence.find("sentenceanalyses") != None: # old format
-                sentenceAnalyses = setDefaultElement(sentence, "sentenceanalyses")
-                parses = setDefaultElement(sentenceAnalyses, "parses")
-                parse = getElementByAttrib(parses, "parse", {"parser":parser})
-            else:
-                analyses = setDefaultElement(sentence, "analyses")
-                parse = getElementByAttrib(analyses, "parse", {"parser":parser})
+            parse = self.getAnalysis(sentence, "parse", {"parser":parser}, "parses")
             if parse == None:
                 continue
             if len(parse.findall("dependency")) > 0:
@@ -305,31 +299,21 @@ class StanfordParser(Parser):
         for document in corpusRoot.findall("document"):
             for sentence in document.findall("sentence"):
                 # Get parse
-                if sentence.find("sentenceanalyses") != None: # old format
-                    sentenceAnalyses = setDefaultElement(sentence, "sentenceanalyses")
-                    parses = setDefaultElement(sentenceAnalyses, "parses")
-                    parse = getElementByAttrib(parses, "parse", {"parser":parser})
-                else:
-                    analyses = setDefaultElement(sentence, "analyses")
-                    parse = getElementByAttrib(analyses, "parse", {"parser":parser})
+                parse = self.getAnalysis(sentence, "parse", {"parser":parser}, "parses")
                 if parse == None:
-                    parse = ET.SubElement(analyses, "parse")
+                    parse = self.addAnalysis(sentence, "parse", "parses")
                     parse.set("parser", "None")
                 if reparse:
                     assert len(parse.findall("dependency")) == 0
                 elif len(parse.findall("dependency")) > 0: # don't reparse
                     continue
-                pennTree = parse.get("pennstring")
-                if pennTree == None or pennTree == "":
+                if parse.get("pennstring") in (None, ""):
                     parse.set("stanford", "no_penn")
                     continue
                 parse.set("stanfordSource", "TEES") # parser was run through this wrapper
                 parse.set("stanfordDate", parseTimeStamp) # links the parse to the log file
                 # Get tokens
-                if sentence.find("analyses") != None:
-                    tokenization = getElementByAttrib(sentence.find("analyses"), "tokenization", {"tokenizer":parse.get("tokenizer")})
-                else:
-                    tokenization = getElementByAttrib(sentence.find("sentenceanalyses").find("tokenizations"), "tokenization", {"tokenizer":parse.get("tokenizer")})
+                tokenization = self.getAnalysis(sentence, "tokenization", {"tokenizer":parse.get("tokenizer")}, "tokenizations")
                 assert tokenization != None
                 count = 0
                 tokenByIndex = {}
