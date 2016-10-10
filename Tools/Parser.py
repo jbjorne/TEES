@@ -193,6 +193,24 @@ class Parser:
                     elements.append(element)
         return elements
     
+    def getTokenByIndex(self, sentence, parse):
+        tokenization = self.getAnalysis(sentence, "tokenization", {"tokenizer":parse.get("tokenizer")}, "tokenizations")
+        assert tokenization != None
+        count = 0
+        tokenByIndex = {}
+        for token in tokenization.findall("token"):
+            tokenByIndex[count] = token
+            count += 1
+        return tokenByIndex
+    
+    def getDocumentOrigId(self, document):
+        origId = document.get("pmid")
+        if origId == None:
+            origId = document.get("origId")
+        if origId == None:
+            origId = document.get("id")
+        return origId
+    
     ###########################################################################
     # Analysis Elements
     ###########################################################################

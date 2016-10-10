@@ -104,110 +104,109 @@ class StanfordParser(Parser):
         stanfordInput = self._makeStanfordInputFile(corpusRoot, workdir, parser, reparse, action, debug)
         stanfordOutput = self._runStanfordProcess(stanfordParserArgs, stanfordParserDir, stanfordInput, workdir, action)
         if action == "convert":
-            self.insertConversion(corpusRoot, stanfordOutput, workdir, parser, reparse, debug)
+            self._insertConversion(corpusRoot, stanfordOutput, workdir, parser, reparse, debug)
         
         if output != None:
             print >> sys.stderr, "Writing output to", output
             ETUtils.write(corpusRoot, output)
         return corpusTree
     
-    def insertConversion(self, corpusRoot, stanfordOutput, workdir, parser, reparse, debug):
+    def _insertConversion(self, corpusRoot, stanfordOutput, workdir, parser, reparse, debug):
         #stanfordOutputFile = codecs.open(stanfordOutput, "rt", "utf-8")
         #stanfordOutputFile = codecs.open(stanfordOutput, "rt", "latin1", "replace")
         stanfordOutputFile = codecs.open(stanfordOutput, "rt", "utf-8") 
         # Get output and insert dependencies
         parseTimeStamp = time.strftime("%d.%m.%y %H:%M:%S")
         print >> sys.stderr, "Stanford time stamp:", parseTimeStamp
-        noDepCount = 0
-        failCount = 0
-        sentenceCount = 0
+        counts = {"fail":0, "no_dependencies":0, "sentences":0, "existing":0, "no_penn":0}
+        extraAttributes={"stanfordSource":"TEES", # parser was run through this wrapper
+                         "stanfordDate":parseTimeStamp # links the parse to the log file
+                        }
         for document in corpusRoot.findall("document"):
+            origId = self.getDocumentOrigId(document)
             for sentence in document.findall("sentence"):
-                # Get parse
-                parse = self.getAnalysis(sentence, "parse", {"parser":parser}, "parses")
-                if parse == None:
-                    parse = self.addAnalysis(sentence, "parse", "parses")
-                    parse.set("parser", "None")
-                if reparse:
-                    assert len(parse.findall("dependency")) == 0
-                elif len(parse.findall("dependency")) > 0: # don't reparse
-                    continue
-                if parse.get("pennstring") in (None, ""):
-                    parse.set("stanford", "no_penn")
-                    continue
-                parse.set("stanfordSource", "TEES") # parser was run through this wrapper
-                parse.set("stanfordDate", parseTimeStamp) # links the parse to the log file
-                # Get tokens
-                tokenization = self.getAnalysis(sentence, "tokenization", {"tokenizer":parse.get("tokenizer")}, "tokenizations")
-                assert tokenization != None
-                count = 0
-                tokenByIndex = {}
-                for token in tokenization.findall("token"):
-                    tokenByIndex[count] = token
-                    count += 1
-                # Insert dependencies
-                origId = document.get("pmid")
-                if origId == None:
-                    origId = document.get("origId")
-                origId = str(origId)
-                deps = self.insertDependencies(stanfordOutputFile, parse, tokenByIndex, (sentence.get("id"), origId))
-                if len(deps) == 0:
-                    parse.set("stanford", "no_dependencies")
-                    noDepCount += 1
-                    if parse.get("stanfordAlignmentError") != None:
-                        failCount += 1
-                else:
-                    parse.set("stanford", "ok")
-                    if parse.get("stanfordAlignmentError") != None:
-                        failCount += 1
-                        parse.set("stanford", "partial")
-                sentenceCount += 1
+                self._insertParse(sentence, stanfordOutputFile, parser, reparse, extraAttributes, counts, 0, origId)
+
         stanfordOutputFile.close()
         # Remove work directory
         if not debug:
             shutil.rmtree(workdir)
-        print >> sys.stderr, "Stanford conversion was done for", sentenceCount, "sentences,", noDepCount, "had no dependencies,", failCount, "failed"
-    
-    def insertParse(self, sentence, stanfordOutputFile, parser, extraAttributes={}, skipExtra=0):
+        print >> sys.stderr, "Stanford parsing was done for", counts["sentences"], "sentences,", counts["no_dependencies"], "had no dependencies,", counts["fail"], "failed, ", counts["existing"], "existing"
+                
+    def _insertParse(self, sentence, stanfordOutputFile, parser, reparse, extraAttributes=None, counts=None, skipExtra=0, origId=None):
         # Get parse
-        analyses = setDefaultElement(sentence, "analyses")
-        #parses = setDefaultElement(sentenceAnalyses, "parses")
-        parse = getElementByAttrib(analyses, "parse", {"parser":parser})
+        parse = self.getAnalysis(sentence, "parse", {"parser":parser}, "parses")
         if parse == None:
-            parse = ET.SubElement(analyses, "parse")
+            parse = self.addAnalysis(sentence, "parse", "parses")
             parse.set("parser", "None")
-        # Remove existing dependencies
-        if len(parse.findall("dependency")) > 0:
-            for dependency in parse.findall("dependency"):
-                parse.remove(dependency)
-        # If no penn tree exists, the stanford parsing can't have happened either
-        pennTree = parse.get("pennstring")
-        if pennTree == None or pennTree == "":
+        if reparse: # Remove existing dependencies
+            if len(parse.findall("dependency")) > 0:
+                for dependency in parse.findall("dependency"):
+                    parse.remove(dependency)
+        elif len(parse.findall("dependency")) > 0: # don't reparse
+            if counts != None: counts["existing"] += 1
+            return
+        if parse.get("pennstring") in (None, ""):
             parse.set("stanford", "no_penn")
-        # Must not exit early, so that reading of the stanfordOutputFile stays in sync with the sentences
-        #if len(parse.findall("dependency")) > 0: # don't reparse
-        #    return True
-        #pennTree = parse.get("pennstring")
-        #if pennTree == None or pennTree == "":
-        #    parse.set("stanford", "no_penn")
-        #    return False
-        for attr in sorted(extraAttributes.keys()):
-            parse.set(attr, extraAttributes[attr])
+            if counts != None: counts["no_penn"] += 1
+            return
+        if extraAttributes != None:
+            for attr in sorted(extraAttributes.keys()):
+                parse.set(attr, extraAttributes[attr])
         # Get tokens
-        tokenByIndex = {}
-        tokenization = getElementByAttrib(sentence.find("analyses"), "tokenization", {"tokenizer":parse.get("tokenizer")})
-        if tokenization != None:
-            count = 0
-            for token in tokenization.findall("token"):
-                tokenByIndex[count] = token
-                count += 1
+        tokenByIndex = self.getTokenByIndex(sentence, parse)
         # Insert dependencies
-        deps = self.insertDependencies(stanfordOutputFile, parse, tokenByIndex, (sentence.get("id"), sentence.get("origId")), skipExtra=skipExtra)
+        if origId == None:
+            origId = sentence.get("origId")
+        origId = str(origId)
+        deps = self.insertDependencies(stanfordOutputFile, parse, tokenByIndex, (sentence.get("id"), origId), skipExtra=skipExtra)
         if len(deps) == 0:
             parse.set("stanford", "no_dependencies")
+            if counts != None: counts["no_dependencies"] += 1
+            if parse.get("stanfordAlignmentError") != None:
+                if counts != None: counts["fail"] += 1
         else:
             parse.set("stanford", "ok")
-        return True
+            if parse.get("stanfordAlignmentError") != None:
+                if counts != None: counts["fail"] += 1
+                parse.set("stanford", "partial")
+        if counts != None: 
+            counts["sentences"] += 1
+    
+#     def insertParse(self, sentence, stanfordOutputFile, parser, extraAttributes={}, skipExtra=0):
+#         # Get parse
+#         analyses = setDefaultElement(sentence, "analyses")
+#         #parses = setDefaultElement(sentenceAnalyses, "parses")
+#         parse = getElementByAttrib(analyses, "parse", {"parser":parser})
+#         if parse == None:
+#             parse = ET.SubElement(analyses, "parse")
+#             parse.set("parser", "None")
+#         # Remove existing dependencies
+#         if len(parse.findall("dependency")) > 0:
+#             for dependency in parse.findall("dependency"):
+#                 parse.remove(dependency)
+#         # If no penn tree exists, the stanford parsing can't have happened either
+#         pennTree = parse.get("pennstring")
+#         if pennTree == None or pennTree == "":
+#             parse.set("stanford", "no_penn")
+#         # Must not exit early, so that reading of the stanfordOutputFile stays in sync with the sentences
+#         #if len(parse.findall("dependency")) > 0: # don't reparse
+#         #    return True
+#         #pennTree = parse.get("pennstring")
+#         #if pennTree == None or pennTree == "":
+#         #    parse.set("stanford", "no_penn")
+#         #    return False
+#         for attr in sorted(extraAttributes.keys()):
+#             parse.set(attr, extraAttributes[attr])
+#         # Get tokens
+#         tokenByIndex = self.getTokenByIndex(sentence, parse)
+#         # Insert dependencies
+#         deps = self.insertDependencies(stanfordOutputFile, parse, tokenByIndex, (sentence.get("id"), sentence.get("origId")), skipExtra=skipExtra)
+#         if len(deps) == 0:
+#             parse.set("stanford", "no_dependencies")
+#         else:
+#             parse.set("stanford", "ok")
+#         return True
     
     def insertParses(self, input, parsePath, output=None, parseName="McCC", extraAttributes={}, skipExtra=0):
         import tarfile
@@ -217,10 +216,7 @@ class StanfordParser(Parser):
         elements into sentence elements. These sentence elements are
         inserted into their respective parent elements.
         """  
-        print >> sys.stderr, "Loading corpus", input
-        corpusTree = ETUtils.ETFromObj(input)
-        print >> sys.stderr, "Corpus file loaded"
-        corpusRoot = corpusTree.getroot()
+        corpusTree, corpusRoot = self.getCorpus(input)
         
         print >> sys.stderr, "Inserting parses from", parsePath
         assert os.path.exists(parsePath)
@@ -233,24 +229,15 @@ class StanfordParser(Parser):
         else:
             tarFile = None
         
-        docCount = 0
-        failCount = 0
-        sentenceCount = 0
-        docsWithStanford = 0
-        sentencesCreated = 0
+        counts = {"fail":0, "no_dependencies":0, "sentences":0, "documents":0, "existing":0, "no_penn":0}
         sourceElements = [x for x in corpusRoot.getiterator("document")] + [x for x in corpusRoot.getiterator("section")]
         counter = ProgressCounter(len(sourceElements), "McCC Parse Insertion")
         for document in sourceElements:
-            docCount += 1
+            counts["document"] += 1
             docId = document.get("id")
-            origId = document.get("pmid")
-            if origId == None:
-                origId = document.get("origId")
-            if origId == None:
-                origId = document.get("id")
-            origId = str(origId)
+            origId = self.getDocumentOrigId(document)
             if docId == None:
-                docId = "CORPUS.d" + str(docCount)
+                docId = "CORPUS.d" + str(counts["document"])
             
             f = openFile(os.path.join(parsePath, origId + ".sd"), tarFile)
             if f == None: # file with BioNLP'11 extension not found, try BioNLP'09 extension
@@ -264,10 +251,9 @@ class StanfordParser(Parser):
                 # TODO: Following for-loop is the same as when used with a real parser, and should
                 # be moved to its own function.
                 for sentence in sentences:
-                    sentenceCount += 1
+                    counts["sentences"] += 1
                     counter.update(0, "Processing Documents ("+sentence.get("id")+"/" + origId + "): ")
-                    if not self.insertParse(sentence, f, parseName, extraAttributes={}, skipExtra=skipExtra):
-                        failCount += 1
+                    self._insertParse(sentence, f, parseName, True, None, counts, skipExtra, origId)
                 f.close()
             counter.update(1, "Processing Documents ("+document.get("id")+"/" + origId + "): ")
         
@@ -276,7 +262,7 @@ class StanfordParser(Parser):
         #print >> sys.stderr, "Sentence splitting created", sentencesCreated, "sentences"
         #print >> sys.stderr, docsWithSentences, "/", docCount, "documents have stanford parses"
     
-        print >> sys.stderr, "Stanford conversion was inserted to", sentenceCount, "sentences" #, failCount, "failed"
+        print >> sys.stderr, "Stanford conversion was inserted to", counts["sentences"], "sentences" #, failCount, "failed"
             
         if output != None:
             print >> sys.stderr, "Writing output to", output
