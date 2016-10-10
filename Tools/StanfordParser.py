@@ -15,15 +15,6 @@ import Utils.Settings as Settings
 import Utils.Download as Download
 import Tool
 from Parser import Parser
-#stanfordParserDir = "/home/jari/biotext/tools/stanford-parser-2010-08-20"
-#stanfordParserDir = "/home/jari/temp_exec/stanford-parser-2010-08-20"
-#stanfordParserDir = Settings.STANFORD_PARSER_DIR
-#stanfordParserArgs = ["java", "-mx150m", "-cp", 
-#    "stanford-parser.jar", "edu.stanford.nlp.trees.EnglishGrammaticalStructure", 
-#    "-CCprocessed", "-treeFile", "-keepPunct"]
-#stanfordParserArgs = ["java", "-mx500m", "-cp", 
-#    "stanford-parser.jar", "edu.stanford.nlp.trees.EnglishGrammaticalStructure", 
-#    "-CCprocessed", "-keepPunct", "-treeFile"]
 
 class StanfordParser(Parser):
 
@@ -38,49 +29,11 @@ class StanfordParser(Parser):
         Tool.finalizeInstall(["stanford-parser.jar"], 
                              {"stanford-parser.jar":"java -cp stanford-parser.jar edu.stanford.nlp.trees.EnglishGrammaticalStructure"},
                              stanfordPath, {"STANFORD_PARSER_DIR":stanfordPath}, updateLocalSettings)
-    
-    
-    #    url = URL["STANFORD_PARSER"]
-    #    packageName = url.split("/")[-1].split(".")[0]
-    #    # Download
-    #    if downloadDir == None:
-    #        downloadDir = os.path.join(Settings.DATAPATH, "tools/download/")
-    #    downloadFile = Download.download(url, downloadDir, clear=redownload)
-    #    # Prepare destination
-    #    if destDir == None:
-    #        destDir = os.path.join(Settings.DATAPATH, "tools/")
-    #    installDir =  os.path.join(destDir, packageName)
-    #    if os.path.exists(installDir):
-    #        print >> sys.stderr, "Removing existing installation at", installDir
-    #        shutil.rmtree(installDir)
-    #    # Unpack
-    #    print >> sys.stderr, "Extracting", downloadFile, "to", destDir
-    #    f = tarfile.open(downloadFile, 'r:gz')
-    #    f.extractall(destDir)
-    #    f.close()
-    #    
-    #    if test(destDir):
-    #        Settings.setLocal("STANFORD_PARSER_DIR", destDir, updateLocalSettings)
 
     def runStanford(self, input, output, stanfordParserArgs):
-        #global stanfordParserArgs
-        ##args = ["java", "-mx150m", "-cp", "stanford-parser.jar", "edu.stanford.nlp.trees.EnglishGrammaticalStructure", "-CCprocessed", "-treeFile", input]
-        #args = ["java", "-mx500m", "-cp", "stanford-parser.jar", "edu.stanford.nlp.trees.EnglishGrammaticalStructure", "-CCprocessed", "-treeFile", input] 
-        #return subprocess.Popen(args, stdout=codecs.open(output, "wt", "utf-8"))
         return subprocess.Popen(stanfordParserArgs + [input], stdout=codecs.open(output, "wt", "utf-8"))
-        #return subprocess.Popen(stanfordParserArgs + [input], stdout=codecs.open(output, "wt", "latin1", "replace"))
-    
-    def getUnicode(self, string):
-        try:
-            string = string.encode('raw_unicode_escape').decode('utf-8') # fix latin1?
-        except:
-            pass
-        return string
 
     def addDependencies(self, outfile, parse, tokenByIndex=None, sentenceId=None, skipExtra=0):
-        #global escDict
-        #escSymbols = sorted(escDict.keys())
-        
         # A list of tokens for debugging
         tokens = []
         for key in sorted(tokenByIndex):
@@ -122,10 +75,6 @@ class StanfordParser(Parser):
                 print >> sys.stderr, "Warning, unreadable dependency '", line.strip(), "', in sentence", sentenceId, [depType, t1, t2, (t1Word, t1Index), (t2Word, t2Index)]
                 depType = None
             # Make element
-            #if depType == "root":
-            #    assert t1Word == "ROOT"
-            #    if tokenByIndex != None and t2Index-1 in tokenByIndex:
-            #        tokenByIndex[t2Index-1].set("stanford-root", "True")
             if depType != None and depType != "root":
                 dep = ET.Element("dependency")
                 dep.set("id", "sd_" + str(depCount))
@@ -162,50 +111,7 @@ class StanfordParser(Parser):
                 if not alignmentError:
                     deps.append(dep)
             line = outfile.readline()
-    #         try:
-    #             line = getUnicode(line)
-    #             #line = line.encode('raw_unicode_escape').decode('utf-8') # fix latin1?
-    #         except Exception as e:
-    #             print "Type", type(line)
-    #             print "Repr", repr(line)
-    #             print line
-    #             raise e
         return deps
-
-    #def convert(input, output=None):
-    #    global stanfordParserDir, stanfordParserArgs
-    #
-    #    workdir = tempfile.mkdtemp()
-    #    if output == None:
-    #        output = os.path.join(workdir, "stanford-output.txt")
-    #    
-    #    input = os.path.abspath(input)
-    #    numCorpusSentences = 0
-    #    inputFile = codecs.open(input, "rt", "utf-8")
-    #    for line in inputFile:
-    #        numCorpusSentences += 1
-    #    inputFile.close()
-    #    cwd = os.getcwd()
-    #    os.chdir(stanfordParserDir)
-    #    #args = ["java", "-mx150m", "-cp", 
-    #    #        "stanford-parser.jar", "edu.stanford.nlp.trees.EnglishGrammaticalStructure", 
-    #    #        "-CCprocessed", "-treeFile", "-keepPunct",
-    #    #        input]
-    #    args = stanfordParserArgs + [input]
-    #    #subprocess.call(args,
-    #    process = subprocess.Popen(args, 
-    #        stdout=codecs.open(output, "wt", "utf-8"))
-    #    waitForProcess(process, numCorpusSentences, True, output, "StanfordParser", "Stanford Conversion")
-    #    os.chdir(cwd)
-    #
-    #    lines = None    
-    #    if output == None:
-    #        outFile = codecs.open(output, "rt", "utf-8")
-    #        lines = outFile.readlines()
-    #        outFile.close()
-    #    
-    #    shutil.rmtree(workdir)
-    #    return lines
     
     @classmethod
     def process(cls, parser, input, output=None, debug=False, reparse=False, stanfordParserDir=None, stanfordParserArgs=None):
@@ -448,108 +354,6 @@ class StanfordParser(Parser):
     
         print >> sys.stderr, "Stanford conversion was inserted to", sentenceCount, "sentences" #, failCount, "failed"
             
-        if output != None:
-            print >> sys.stderr, "Writing output to", output
-            ETUtils.write(corpusRoot, output)
-        return corpusTree
-    
-    
-    def parse(self, input, output=None, debug=False, reparse=False, stanfordParserDir=None, stanfordParserArgs=None):
-        if stanfordParserDir == None:
-            stanfordParserDir = Settings.STANFORD_PARSER_DIR
-        if stanfordParserArgs == None:
-            stanfordParserArgs = Settings.JAVA.split()[0:1] + ["-mx500m"] + \
-                                 Settings.JAVA.split()[1:] + \
-                                 ["-cp", "./*:", "edu.stanford.nlp.parser.lexparser.LexicalizedParser",
-                                  "-outputFormat", "typedDependencies",
-                                  "edu/stanford/nlp/models/lexparser/englishPCFG.ser.gz"
-                                  ]
-        print >> sys.stderr, "Running Stanford conversion"
-        print >> sys.stderr, "Stanford tools at:", stanfordParserDir
-        print >> sys.stderr, "Stanford tools arguments:", " ".join(stanfordParserArgs)
-        parseTimeStamp = time.strftime("%d.%m.%y %H:%M:%S")
-        print >> sys.stderr, "Stanford time stamp:", parseTimeStamp
-        
-        print >> sys.stderr, "Loading corpus", input
-        corpusTree = ETUtils.ETFromObj(input)
-        print >> sys.stderr, "Corpus file loaded"
-        corpusRoot = corpusTree.getroot()
-        
-        workdir = tempfile.mkdtemp()
-        if debug:
-            print >> sys.stderr, "Stanford parser workdir", workdir
-        stanfordInput = os.path.join(workdir, "input")
-        stanfordInputFile = codecs.open(stanfordInput, "wt", "utf-8")
-        
-        # Put unparsed sentences in the input file
-        for sentence in corpusRoot.getiterator("sentence"):
-            stanfordInputFile.write(sentence.text.replace("\n", " ") + "\n")
-        stanfordInputFile.close()
-        
-        # Run Stanford parser
-        stanfordOutput = runSentenceProcess(self.runStanford, stanfordParserDir, stanfordInput, 
-                                            workdir, True, "StanfordParser", 
-                                            "Stanford Conversion", timeout=600,
-                                            outputArgs={"encoding":"latin1", "errors":"replace"},
-                                            processArgs={"stanfordParserArgs":stanfordParserArgs})   
-        stanfordOutputFile = codecs.open(stanfordOutput, "rt", "utf-8")
-        
-        # Get output and insert dependencies
-        noDepCount = 0
-        failCount = 0
-        sentenceCount = 0
-        for document in corpusRoot.findall("document"):
-            for sentence in document.findall("sentence"):
-                # Get parse
-                if sentence.find("sentenceanalyses") != None: # old format
-                    sentenceAnalyses = setDefaultElement(sentence, "sentenceanalyses")
-                    parses = setDefaultElement(sentenceAnalyses, "parses")
-                    parse = getElementByAttrib(parses, "parse", {"parser":self.parser})
-                else:
-                    analyses = setDefaultElement(sentence, "analyses")
-                    parse = getElementByAttrib(analyses, "parse", {"parser":self.parser})
-                if reparse:
-                    assert len(parse.findall("dependency")) == 0
-                elif len(parse.findall("dependency")) > 0: # don't reparse
-                    continue
-                
-                parse.set("stanfordSource", "TEES") # parser was run through this wrapper
-                parse.set("stanfordDate", parseTimeStamp) # links the parse to the log file
-                # Get tokens
-                if sentence.find("analyses") != None:
-                    tokenization = getElementByAttrib(sentence.find("analyses"), "tokenization", {"tokenizer":parse.get("tokenizer")})
-                else:
-                    tokenization = getElementByAttrib(sentence.find("sentenceanalyses").find("tokenizations"), "tokenization", {"tokenizer":parse.get("tokenizer")})
-                assert tokenization != None
-                count = 0
-                tokenByIndex = {}
-                for token in tokenization.findall("token"):
-                    tokenByIndex[count] = token
-                    count += 1
-                # Insert dependencies
-                origId = document.get("pmid")
-                if origId == None:
-                    origId = document.get("origId")
-                origId = str(origId)
-                deps = self.addDependencies(stanfordOutputFile, parse, tokenByIndex, (sentence.get("id"), origId))
-                if len(deps) == 0:
-                    parse.set("stanford", "no_dependencies")
-                    noDepCount += 1
-                    if parse.get("stanfordAlignmentError") != None:
-                        failCount += 1
-                else:
-                    parse.set("stanford", "ok")
-                    if parse.get("stanfordAlignmentError") != None:
-                        failCount += 1
-                        parse.set("stanford", "partial")
-                sentenceCount += 1
-        stanfordOutputFile.close()
-        # Remove work directory
-        if not debug:
-            shutil.rmtree(workdir)
-            
-        print >> sys.stderr, "Stanford conversion was done for", sentenceCount, "sentences,", noDepCount, "had no dependencies,", failCount, "failed"
-        
         if output != None:
             print >> sys.stderr, "Writing output to", output
             ETUtils.write(corpusRoot, output)

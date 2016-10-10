@@ -19,6 +19,10 @@ class Parser:
             text = text.replace(escSymbol, self.escDict[escSymbol])
         return text
     
+    ###########################################################################
+    # Analysis Elements
+    ###########################################################################
+    
     def addAnalysis(self, sentence, name, group):
         if sentence.find("sentenceanalyses") != None: # old format
             sentenceAnalyses = setDefaultElement(sentence, "sentenceanalyses")
