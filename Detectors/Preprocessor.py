@@ -19,7 +19,9 @@ import Utils.FindHeads as FindHeads
 import Utils.Stream as Stream
 
 class Preprocessor(ToolChain):
-    def __init__(self):
+    def __init__(self, parsingStyle="BLLIPBIO"):
+        assert parsingStyle in ("BLLIP", "BLLIP_BIO", "STANFORD", "STANFORD_CONVERT")
+        self.parsingStyle = parsingStyle
         ToolChain.__init__(self)
         self.modelParameterStringName = "preprocessorParams"
     
@@ -28,12 +30,25 @@ class Preprocessor(ToolChain):
         steps.append( ("CONVERT", self.convert, {"dataSetNames":None, "corpusName":None}, "documents.xml") )
         steps.append( ("SPLIT-SENTENCES", Tools.GeniaSentenceSplitter.makeSentences, {"debug":False, "postProcess":True}, "sentences.xml") )
         steps.append( ("NER", Tools.BANNER.run, {"elementName":"entity", "processElement":"sentence", "debug":False, "splitNewlines":True}, "ner.xml") )
-        steps.append( ("PARSE", BLLIPParser.process, {"parseName":"McCC", "requireEntities":False, "debug":False}, "parse.xml") )
-        steps.append( ("CONVERT-PARSE", StanfordParser.process, {"parser":"McCC", "debug":False}, "converted-parse.xml") )
+        self.addParsingSteps(steps)
         steps.append( ("SPLIT-NAMES", ProteinNameSplitter.mainFunc, {"parseName":"McCC", "removeOld":True}, "split-names.xml") )
         steps.append( ("FIND-HEADS", FindHeads.findHeads, {"parse":"McCC", "removeExisting":True}, "heads.xml") )
         steps.append( ("DIVIDE-SETS", self.divideSets, {"outputStem":None, "saveCombined":True}) )
         return steps
+    
+    def addParsingSteps(self, steps):
+        if self.parsingStyle == "BLLIP_BIO":
+            steps.append( ("PARSE", BLLIPParser.process, {"parseName":"McCC", "requireEntities":False, "debug":False}, "parse.xml") )
+            steps.append( ("CONVERT-PARSE", StanfordParser.process, {"parser":"McCC", "debug":False, "action":"convert"}, "converted-parse.xml") )
+        elif self.parsingStyle == "BLLIP":
+            steps.append( ("PARSE", BLLIPParser.process, {"parseName":"McCC", "requireEntities":False, "debug":False}, "parse.xml") )
+            steps.append( ("CONVERT-PARSE", StanfordParser.process, {"parser":"McCC", "debug":False, "action":"convert"}, "converted-parse.xml") )
+        elif self.parsingStyle == "STANFORD":
+            steps.append( ("PARSE-PENN", StanfordParser.process, {"parser":"McCC", "debug":False, "action":"penn"}, "penn-parse.xml") )
+            steps.append( ("PARSE-DEP", StanfordParser.process, {"parser":"McCC", "debug":False, "action":"dep"}, "dep-parse.xml") )
+        else: # STANFORD_CONVERT
+            steps.append( ("PARSE", StanfordParser.process, {"parser":"McCC", "debug":False, "action":"penn"}, "parse.xml") )
+            steps.append( ("CONVERT-PARSE", StanfordParser.process, {"parser":"McCC", "debug":False, "action":"convert"}, "converted-parse.xml") )
     
     def process(self, source, output, parameters=None, model=None, sourceDataSetNames=None, fromStep=None, toStep=None, omitSteps=None):
         if omitSteps != None and((type(omitSteps) in types.StringTypes and omitSteps == "CONVERT") or "CONVERT" in omitSteps):
@@ -113,6 +128,7 @@ if __name__=="__main__":
     optparser.add_option("--noLog", default=False, action="store_true", dest="noLog", help="")
     optparser.add_option("--debug", default=False, action="store_true", dest="debug", help="")
     optparser.add_option("--requireEntities", default=False, action="store_true", dest="requireEntities", help="")
+    optparser.add_option("--parsingStyle", default="BLLIP_BIO")
     (options, args) = optparser.parse_args()
     if options.omitSteps != None:
         options.omitSteps = options.omitSteps.split(",")
@@ -120,7 +136,7 @@ if __name__=="__main__":
     if not options.noLog:
         Stream.openLog(os.path.join(options.output + "-log.txt"))
         #log(False, True, os.path.join(options.output, options.corpus + "-log.txt"))
-    preprocessor = Preprocessor()
+    preprocessor = Preprocessor(options.parsingStyle)
     preprocessor.setArgForAllSteps("debug", options.debug)
     preprocessor.stepArgs("CONVERT")["corpusName"] = options.corpus
     preprocessor.stepArgs("PARSE")["requireEntities"] = options.requireEntities

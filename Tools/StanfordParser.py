@@ -34,11 +34,11 @@ class StanfordParser(Parser):
         return subprocess.Popen(stanfordParserArgs + [input], stdout=codecs.open(output, "wt", "utf-8"))
     
     @classmethod
-    def process(cls, parser, input, output=None, debug=False, reparse=False, stanfordParserDir=None, stanfordParserArgs=None):
+    def process(cls, parser, input, output=None, debug=False, reparse=False, stanfordParserDir=None, stanfordParserArgs=None, action="convert"):
         parserObj = cls()
-        parserObj.convertXML(parser, input, output, debug, reparse, stanfordParserDir, stanfordParserArgs)
+        parserObj.parse(parser, input, output, debug, reparse, stanfordParserDir, stanfordParserArgs)
     
-    def _makeStanfordInputFile(self, corpusRoot, workdir, parser, reparse=False, debug=False):
+    def _makeStanfordInputFile(self, corpusRoot, workdir, parser, reparse=False, action="convert", debug=False):
         if debug:
             print >> sys.stderr, "Stanford parser workdir", workdir
         stanfordInput = os.path.join(workdir, "input")
@@ -47,48 +47,57 @@ class StanfordParser(Parser):
         # Put penn tree lines in input file
         existingCount = 0
         for sentence in corpusRoot.getiterator("sentence"):
-            parse = self.getAnalysis(sentence, "parse", {"parser":parser}, "parses")
-            if parse == None:
-                continue
-            if len(parse.findall("dependency")) > 0:
-                if reparse: # remove existing stanford conversion
-                    for dep in parse.findall("dependency"):
-                        parse.remove(dep)
-                    del parse.attrib["stanford"]
-                else: # don't reparse
-                    existingCount += 1
+            if action == "convert":
+                parse = self.getAnalysis(sentence, "parse", {"parser":parser}, "parses")
+                if parse == None:
                     continue
-            pennTree = parse.get("pennstring")
-            if pennTree == None or pennTree == "":
-                continue
-            stanfordInputFile.write(pennTree + "\n")
+                if len(parse.findall("dependency")) > 0:
+                    if reparse: # remove existing stanford conversion
+                        for dep in parse.findall("dependency"):
+                            parse.remove(dep)
+                        del parse.attrib["stanford"]
+                    else: # don't reparse
+                        existingCount += 1
+                        continue
+                pennTree = parse.get("pennstring")
+                if pennTree == None or pennTree == "":
+                    continue
+                stanfordInputFile.write(pennTree + "\n")
+            else: # action in ("penn", "dep")
+                stanfordInputFile.write(sentence.get("text").replace("\n", " ").replace("\r", " ").strip() + "\n")
         stanfordInputFile.close()
         if existingCount != 0:
             print >> sys.stderr, "Skipping", existingCount, "already converted sentences."
         return stanfordInput
     
-    def _runStanfordProcess(self, stanfordParserArgs, stanfordParserDir, stanfordInput, workdir):
+    def _runStanfordProcess(self, stanfordParserArgs, stanfordParserDir, stanfordInput, workdir, action="convert"):
         if stanfordParserArgs == None:
             # not sure how necessary the "-mx500m" option is, and how exactly Java
             # options interact, but adding user defined options from Settings.JAVA
             # after the "-mx500m" hopefully works.
-            stanfordParserArgs = Settings.JAVA.split()[0:1] + ["-mx500m"] + \
-                                 Settings.JAVA.split()[1:] + \
-                                 ["-cp", "stanford-parser.jar", 
-                                  "edu.stanford.nlp.trees.EnglishGrammaticalStructure", 
-                                  "-encoding", "utf8", "-CCprocessed", "-keepPunct", "-treeFile"]
-        print >> sys.stderr, "Running Stanford conversion"
+            stanfordParserArgs = Settings.JAVA.split()[0:1] + ["-mx500m"] + Settings.JAVA.split()[1:]
+            if action == "convert":
+                stanfordParserArgs += ["-cp", "stanford-parser.jar", 
+                                      "edu.stanford.nlp.trees.EnglishGrammaticalStructure", 
+                                      "-encoding", "utf8", "-CCprocessed", "-keepPunct", "-treeFile"]
+                print >> sys.stderr, "Running Stanford conversion"
+            else:
+                stanfordParserArgs += ["-cp", "./*",
+                                      "edu.stanford.nlp.parser.lexparser.LexicalizedParser", 
+                                      "-outputFormat", "typedDependencies" if action == "dep" else "penn",
+                                      "edu/stanford/nlp/models/lexparser/englishPCFG.ser.gz"]
+                print >> sys.stderr, "Running Stanford parsing for target", action
         print >> sys.stderr, "Stanford tools at:", stanfordParserDir
         print >> sys.stderr, "Stanford tools arguments:", " ".join(stanfordParserArgs)
         # Run Stanford parser
         return runSentenceProcess(self.runStanford, stanfordParserDir, stanfordInput, 
-            workdir, True, "StanfordParser", "Stanford Conversion", timeout=600,
+            workdir, True, "StanfordParser", "Stanford (" + action + ")", timeout=600,
             outputArgs={"encoding":"latin1", "errors":"replace"},
-            processArgs={"stanfordParserArgs":stanfordParserArgs})        
+            processArgs={"stanfordParserArgs":stanfordParserArgs})
         
-        
-    def convertXML(self, parser, input, output=None, debug=False, reparse=False, stanfordParserDir=None, stanfordParserArgs=None):
+    def parse(self, parser, input, output=None, debug=False, reparse=False, stanfordParserDir=None, stanfordParserArgs=None, action="convert"):
         #global stanfordParserDir, stanfordParserArgs
+        assert action in ("convert", "penn", "dep")
         if stanfordParserDir == None:
             stanfordParserDir = Settings.STANFORD_PARSER_DIR
         
@@ -99,8 +108,8 @@ class StanfordParser(Parser):
         
         workdir = tempfile.mkdtemp()
 
-        stanfordInput = self._makeStanfordInputFile(corpusRoot, workdir, parser, reparse, debug)
-        stanfordOutput = self._runStanfordProcess(stanfordParserArgs, stanfordParserDir, stanfordInput, workdir)
+        stanfordInput = self._makeStanfordInputFile(corpusRoot, workdir, parser, reparse, action, debug)
+        stanfordOutput = self._runStanfordProcess(stanfordParserArgs, stanfordParserDir, stanfordInput, workdir, action)
         #stanfordOutputFile = codecs.open(stanfordOutput, "rt", "utf-8")
         #stanfordOutputFile = codecs.open(stanfordOutput, "rt", "latin1", "replace")
         stanfordOutputFile = codecs.open(stanfordOutput, "rt", "utf-8")
