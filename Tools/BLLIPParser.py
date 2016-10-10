@@ -35,7 +35,7 @@ class BLLIPParser(Parser):
 
     def unescape(self, text):
         for escSymbol in self.escSymbols:
-            text = text.replace(escSymbol, self.escDict[self.escSymbol])
+            text = text.replace(escSymbol, self.escDict[escSymbol])
         return text
 
     def install(self, destDir=None, downloadDir=None, redownload=False, updateLocalSettings=False):

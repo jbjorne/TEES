@@ -9,7 +9,7 @@ import Utils.STFormat.Equiv
 import Utils.ElementTreeUtils as ETUtils
 import Tools.GeniaSentenceSplitter
 from Tools.BLLIPParser import BLLIPParser
-import Tools.StanfordParser
+from Tools.StanfordParser import StanfordParser
 import Tools.BANNER
 from ToolChain import ToolChain
 import Utils.InteractionXML.DivideSets
@@ -29,7 +29,7 @@ class Preprocessor(ToolChain):
         steps.append( ("SPLIT-SENTENCES", Tools.GeniaSentenceSplitter.makeSentences, {"debug":False, "postProcess":True}, "sentences.xml") )
         steps.append( ("NER", Tools.BANNER.run, {"elementName":"entity", "processElement":"sentence", "debug":False, "splitNewlines":True}, "ner.xml") )
         steps.append( ("PARSE", BLLIPParser.process, {"parseName":"McCC", "requireEntities":False, "debug":False}, "parse.xml") )
-        steps.append( ("CONVERT-PARSE", Tools.StanfordParser.convertXML, {"parser":"McCC", "debug":False}, "converted-parse.xml") )
+        steps.append( ("CONVERT-PARSE", StanfordParser.process, {"parser":"McCC", "debug":False}, "converted-parse.xml") )
         steps.append( ("SPLIT-NAMES", ProteinNameSplitter.mainFunc, {"parseName":"McCC", "removeOld":True}, "split-names.xml") )
         steps.append( ("FIND-HEADS", FindHeads.findHeads, {"parse":"McCC", "removeExisting":True}, "heads.xml") )
         steps.append( ("DIVIDE-SETS", self.divideSets, {"outputStem":None, "saveCombined":True}) )
