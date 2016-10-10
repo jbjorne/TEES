@@ -17,7 +17,6 @@ import Tool
 from Parser import Parser
 
 class StanfordParser(Parser):
-
     def install(self, destDir=None, downloadDir=None, redownload=False, updateLocalSettings=False):
         print >> sys.stderr, "Installing Stanford Parser"
         if downloadDir == None:
@@ -44,10 +43,9 @@ class StanfordParser(Parser):
         stanfordInput = os.path.join(workdir, "input")
         stanfordInputFile = codecs.open(stanfordInput, "wt", "utf-8")
         
-        # Put penn tree lines in input file
         existingCount = 0
         for sentence in corpusRoot.getiterator("sentence"):
-            if action == "convert":
+            if action == "convert": # Put penn tree lines in input file
                 parse = self.getAnalysis(sentence, "parse", {"parser":parser}, "parses")
                 if parse == None:
                     continue
@@ -110,10 +108,18 @@ class StanfordParser(Parser):
 
         stanfordInput = self._makeStanfordInputFile(corpusRoot, workdir, parser, reparse, action, debug)
         stanfordOutput = self._runStanfordProcess(stanfordParserArgs, stanfordParserDir, stanfordInput, workdir, action)
+        if action == "convert":
+            self.insertConversion(corpusRoot, stanfordOutput, workdir, parser, reparse, debug)
+        
+        if output != None:
+            print >> sys.stderr, "Writing output to", output
+            ETUtils.write(corpusRoot, output)
+        return corpusTree
+    
+    def insertConversion(self, corpusRoot, stanfordOutput, workdir, parser, reparse, debug):
         #stanfordOutputFile = codecs.open(stanfordOutput, "rt", "utf-8")
         #stanfordOutputFile = codecs.open(stanfordOutput, "rt", "latin1", "replace")
-        stanfordOutputFile = codecs.open(stanfordOutput, "rt", "utf-8")
-        
+        stanfordOutputFile = codecs.open(stanfordOutput, "rt", "utf-8") 
         # Get output and insert dependencies
         parseTimeStamp = time.strftime("%d.%m.%y %H:%M:%S")
         print >> sys.stderr, "Stanford time stamp:", parseTimeStamp
@@ -165,13 +171,7 @@ class StanfordParser(Parser):
         # Remove work directory
         if not debug:
             shutil.rmtree(workdir)
-            
         print >> sys.stderr, "Stanford conversion was done for", sentenceCount, "sentences,", noDepCount, "had no dependencies,", failCount, "failed"
-        
-        if output != None:
-            print >> sys.stderr, "Writing output to", output
-            ETUtils.write(corpusRoot, output)
-        return corpusTree
     
     def insertParse(self, sentence, stanfordOutputFile, parser, extraAttributes={}, skipExtra=0):
         # Get parse
