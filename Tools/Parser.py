@@ -31,6 +31,23 @@ class Parser:
     # Parsing Elements
     ###########################################################################
     
+    def insertPennTrees(self, treeFileName, corpusRoot, parseName, requireEntities=False, makePhraseElements=True, skipIds=[], skipParsed=True, addTimeStamp=True):
+        print >> sys.stderr, "Inserting parses"
+        treeFile = codecs.open(treeFileName, "rt", "utf-8")
+        # Add output to sentences
+        parseTimeStamp = time.strftime("%d.%m.%y %H:%M:%S")
+        print >> sys.stderr, "BLLIP time stamp:", parseTimeStamp
+        failCount = 0
+        for sentence in self.getSentences(corpusRoot, requireEntities, skipIds, skipParsed):        
+            treeLine = treeFile.readline()
+            extraAttributes={"source":"TEES"} # parser was run through this wrapper
+            if addTimeStamp:
+                extraAttributes["date"] = parseTimeStamp # links the parse to the log file
+            if not self.insertParse(sentence, treeLine, parseName, makePhraseElements=makePhraseElements, extraAttributes=extraAttributes):
+                failCount += 1
+        treeFile.close()
+        return failCount
+    
     def readPenn(self, treeLine, sentenceDebugId=None):
         #global escDict
         #escSymbols = sorted(escDict.keys())

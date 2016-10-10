@@ -106,6 +106,8 @@ class StanfordParser(Parser):
         stanfordOutput = self._runStanfordProcess(stanfordParserArgs, stanfordParserDir, stanfordInput, workdir, action)
         if action == "convert":
             self._insertConversion(corpusRoot, stanfordOutput, workdir, parser, reparse, debug)
+        elif action == "penn":
+            self.insertPennTrees(stanfordOutput, corpusRoot, parser)
         
         if output != None:
             print >> sys.stderr, "Writing output to", output

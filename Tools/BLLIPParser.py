@@ -13,12 +13,10 @@ import Utils.ElementTreeUtils as ETUtils
 import Utils.Settings as Settings
 import Utils.Download as Download
 import Tool
-import StanfordParser
 from Parser import Parser
 from ProcessUtils import *
 
 class BLLIPParser(Parser):
-
     def install(self, destDir=None, downloadDir=None, redownload=False, updateLocalSettings=False):
         url = Settings.URL["BLLIP_SOURCE"]
         if downloadDir == None:
@@ -64,7 +62,6 @@ class BLLIPParser(Parser):
             parse.set("tokenizer", tokenizationName)
         analyses.insert(getPrevElementIndex(analyses, "parse"), parse)
         
-        tokenByIndex = {}
         parse.set("pennstring", treeLine.strip())
         for attr in sorted(extraAttributes.keys()):
             parse.set(attr, extraAttributes[attr])
@@ -91,19 +88,12 @@ class BLLIPParser(Parser):
         return True           
         
     def run(self, input, output, tokenizer=False, pathBioModel=None):
-        if tokenizer:
-            print >> sys.stderr, "Running BLLIP parser with tokenization"
-        else:
-            print >> sys.stderr, "Running BLLIP parser without tokenization"
-        #args = ["./parse-50best-McClosky.sh"]
-        #return subprocess.Popen(args, 
-        #    stdin=codecs.open(input, "rt", "utf-8"),
-        #    stdout=codecs.open(output, "wt", "utf-8"), shell=True)
-    
         assert os.path.exists(pathBioModel), pathBioModel
         if tokenizer:
+            print >> sys.stderr, "Running BLLIP parser with tokenization"
             firstStageArgs = ["first-stage/PARSE/parseIt", "-l999", "-N50" , pathBioModel+"/parser/"]
         else:
+            print >> sys.stderr, "Running BLLIP parser without tokenization"
             firstStageArgs = ["first-stage/PARSE/parseIt", "-l999", "-N50" , "-K", pathBioModel+"/parser/"]
         secondStageArgs = ["second-stage/programs/features/best-parses", "-l", pathBioModel+"/reranker/features.gz", pathBioModel+"/reranker/weights.gz"]
         
@@ -177,23 +167,6 @@ class BLLIPParser(Parser):
                 numCorpusSentences += 1
         infile.close()
         return infileName, numCorpusSentences
-    
-    def insertPennTrees(self, treeFileName, corpusRoot, parseName, requireEntities, makePhraseElements=True, skipIds=[], skipParsed=True, addTimeStamp=True):
-        print >> sys.stderr, "Inserting parses"
-        treeFile = codecs.open(treeFileName, "rt", "utf-8")
-        # Add output to sentences
-        parseTimeStamp = time.strftime("%d.%m.%y %H:%M:%S")
-        print >> sys.stderr, "BLLIP time stamp:", parseTimeStamp
-        failCount = 0
-        for sentence in self.getSentences(corpusRoot, requireEntities, skipIds, skipParsed):        
-            treeLine = treeFile.readline()
-            extraAttributes={"source":"TEES"} # parser was run through this wrapper
-            if addTimeStamp:
-                extraAttributes["date"] = parseTimeStamp # links the parse to the log file
-            if not self.insertParse(sentence, treeLine, parseName, makePhraseElements=makePhraseElements, extraAttributes=extraAttributes):
-                failCount += 1
-        treeFile.close()
-        return failCount
 
     def parse(self, input, output=None, tokenizationName=None, parseName="McCC", requireEntities=False, skipIds=[], skipParsed=True, timeout=600, makePhraseElements=True, debug=False, pathParser=None, pathBioModel=None, addTimeStamp=True):
         print >> sys.stderr, "BLLIP parser"
@@ -319,6 +292,6 @@ if __name__=="__main__":
     else:
         xml = parser.parse(input=options.input, output=options.output, tokenizationName=options.tokenization, pathParser=options.pathParser, pathBioModel=options.pathBioModel, timestamp=options.timestamp)
         if options.stanford:
-            import StanfordParser
-            StanfordParser.convertXML(parser="McClosky", input=xml, output=options.output)
+            from StanfordParser import StanfordParser
+            StanfordParser().convertXML(parser="McClosky", input=xml, output=options.output)
     
