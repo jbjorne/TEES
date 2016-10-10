@@ -110,86 +110,80 @@ class Parser:
                 phraseElement.set("charOffset", t1.get("charOffset").split("-")[0] + "-" + t2.get("charOffset").split("-")[-1])
             parse.append(phraseElement)
             count += 1
-
-    def insertDependencies(self, outfile, parse, tokenByIndex=None, sentenceId=None, skipExtra=0):
-        # A list of tokens for debugging
-        tokens = []
-        for key in sorted(tokenByIndex):
-            tokens.append(tokenByIndex[key].get("text"))
     
-        depCount = 1
-        line = outfile.readline()
-        #line = line.encode('raw_unicode_escape').decode('utf-8') # fix latin1?
-        #line = getUnicode(line)
+    def readDependencies(self, depFile, skipExtra=0, sentenceId=None):
+        line = depFile.readline()
         deps = []
         # BioNLP'09 Shared Task GENIA uses _two_ newlines to denote a failed parse (usually it's one,
         # the same as the BLLIP parser. To survive this, skipExtra can be used to define the number
         # of lines to skip, if the first line of a dependency parse is empty (indicating a failed parse) 
         if line.strip() == "" and skipExtra > 0:
             for i in range(skipExtra):
-                outfile.readline()
+                depFile.readline()
         while line.strip() != "":
-            #if "," not in line or "(" not in line:
-            #    print >> sys.stderr, "Warning, unreadable dependency '", line.strip(), "', in sentence", sentenceId
             depType = t1 = t2 = t1Word = t2Word = t1Index = t2Index = None
             try:
-                # Add dependencies
                 depType, rest = line.strip()[:-1].split("(")
                 t1, t2 = rest.split(", ")
                 t1Word, t1Index = t1.rsplit("-", 1)
-                #for escSymbol in escSymbols:
-                #    t1Word = t1Word.replace(escSymbol, escDict[escSymbol])
                 t1Word = self.unescape(t1Word).strip()
                 while not t1Index[-1].isdigit(): t1Index = t1Index[:-1] # invalid literal for int() with base 10: "7'"
                 t1Index = int(t1Index)
                 t2Word, t2Index = t2.rsplit("-", 1)
-                #for escSymbol in escSymbols:
-                #    t2Word = t2Word.replace(escSymbol, escDict[escSymbol])
                 t2Word = self.unescape(t2Word).strip()
                 while not t2Index[-1].isdigit(): t2Index = t2Index[:-1] # invalid literal for int() with base 10: "7'"
                 t2Index = int(t2Index)
+                deps.append({"type":depType, "t1Word":t1Word, "t1":t1Index, "t2Word":t2Word, "t2":t2Index})
             except Exception as e:
                 print >> sys.stderr, e
                 print >> sys.stderr, "Warning, unreadable dependency '", line.strip(), "', in sentence", sentenceId, [depType, t1, t2, (t1Word, t1Index), (t2Word, t2Index)]
-                depType = None
-            # Make element
-            if depType != None and depType != "root":
-                dep = ET.Element("dependency")
-                dep.set("id", "sd_" + str(depCount))
-                alignmentError = False
-                if tokenByIndex != None:
-                    if t1Index-1 not in tokenByIndex:
-                        print >> sys.stderr, "Token not found", (t1Index-1, t1Word, depCount, sentenceId)
-                        deps = []
-                        while line.strip() != "": line = outfile.readline()
-                        break
-                    if t2Index-1 not in tokenByIndex:
-                        print >> sys.stderr, "Token not found", (t2Index-1, t2Word, depCount, sentenceId)
-                        deps = []
-                        while line.strip() != "": line = outfile.readline()
-                        break
-                    if t1Word != tokenByIndex[t1Index-1].get("text"):
-                        print >> sys.stderr, "Alignment error", (t1Word, tokenByIndex[t1Index-1].get("text"), t1Index-1, depCount, sentenceId, tokens)
-                        alignmentError = True
-                        if parse.get("stanfordAlignmentError") == None:
-                            parse.set("stanfordAlignmentError", t1Word)
-                    if t2Word != tokenByIndex[t2Index-1].get("text"):
-                        print >> sys.stderr, "Alignment error", (t2Word, tokenByIndex[t2Index-1].get("text"), t2Index-1, depCount, sentenceId, tokens)
-                        alignmentError = True
-                        if parse.get("stanfordAlignmentError") == None:
-                            parse.set("stanfordAlignmentError", t2Word)
-                    dep.set("t1", tokenByIndex[t1Index-1].get("id"))
-                    dep.set("t2", tokenByIndex[t2Index-1].get("id"))
-                else:
-                    dep.set("t1", "bt_" + str(t1Index))
-                    dep.set("t2", "bt_" + str(t2Index))
-                dep.set("type", depType)
-                parse.insert(depCount-1, dep)
-                depCount += 1
-                if not alignmentError:
-                    deps.append(dep)
-            line = outfile.readline()
+            line = depFile.readline()
         return deps
+    
+    def insertDependencies(self, depFile, parse, tokenByIndex=None, sentenceId=None, skipExtra=0):
+        # A list of tokens for debugging
+        tokens = []
+        for key in sorted(tokenByIndex):
+            tokens.append(tokenByIndex[key].get("text"))
+    
+        depCount = 1
+        deps = self.readDependencies(depFile, skipExtra, sentenceId)
+        elements = []
+        for dep in deps:
+            # Make element
+            if dep["type"] != None and dep["type"] != "root":
+                element = ET.Element("dependency")
+                element.set("id", "sd_" + str(depCount))
+                element.set("type", dep["type"])
+                skip = True
+                if tokenByIndex != None:
+                    if dep["t1"] - 1 not in tokenByIndex:
+                        print >> sys.stderr, "Token 1 not found", (dep, depCount, sentenceId)
+                    elif dep["t2"] - 1 not in tokenByIndex:
+                        print >> sys.stderr, "Token 2 not found", (dep, depCount, sentenceId)
+                    else:
+                        skip = False
+                        if dep["t1Word"] != tokenByIndex[dep["t1"] - 1].get("text"):
+                            print >> sys.stderr, "Alignment error for token 1", (dep, tokenByIndex[dep["t1"] - 1].get("text"), depCount, sentenceId, tokens)
+                            skip = True
+                            if parse.get("stanfordAlignmentError") == None:
+                                parse.set("stanfordAlignmentError", dep["t1Word"])
+                        if dep["t2Word"] != tokenByIndex[dep["t2"] - 1].get("text"):
+                            print >> sys.stderr, "Alignment error for token 2", (dep, tokenByIndex[dep["t2"] - 1].get("text"), depCount, sentenceId, tokens)
+                            skip = True
+                            if parse.get("stanfordAlignmentError") == None:
+                                parse.set("stanfordAlignmentError", dep["t2Word"])
+                        element.set("t1", tokenByIndex[dep["t1"] - 1].get("id"))
+                        element.set("t2", tokenByIndex[dep["t2"] - 1].get("id"))
+                else:
+                    element.set("t1", "bt_" + str(dep["t1"]))
+                    element.set("t2", "bt_" + str(dep["t2"]))
+                    skip = False
+                if not skip:
+                    parse.insert(depCount - 1, element)
+                    depCount += 1
+                    elements.append(element)
+        return elements
     
     ###########################################################################
     # Analysis Elements
