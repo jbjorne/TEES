@@ -211,6 +211,19 @@ class Parser:
             origId = document.get("id")
         return origId
     
+    def getSentences(self, corpusRoot, requireEntities=False, skipIds=[], skipParsed=True):
+        for sentence in corpusRoot.getiterator("sentence"):
+            if sentence.get("id") in skipIds:
+                print >> sys.stderr, "Skipping sentence", sentence.get("id")
+                continue
+            if requireEntities:
+                if sentence.find("entity") == None:
+                    continue
+            if skipParsed:
+                if ETUtils.getElementByAttrib(sentence, "parse", {"parser":"McCC"}) != None:
+                    continue
+            yield sentence
+    
     ###########################################################################
     # Analysis Elements
     ###########################################################################
