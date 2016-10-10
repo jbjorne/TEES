@@ -1,3 +1,4 @@
+import Utils.ElementTreeUtils as ETUtils
 from ProcessUtils import *
 
 class Parser:
@@ -18,6 +19,13 @@ class Parser:
         for escSymbol in self.escSymbols:
             text = text.replace(escSymbol, self.escDict[escSymbol])
         return text
+    
+    def getCorpus(self, input):
+        print >> sys.stderr, "Loading corpus", input
+        corpusTree = ETUtils.ETFromObj(input)
+        print >> sys.stderr, "Corpus file loaded"
+        corpusRoot = corpusTree.getroot()
+        return corpusTree, corpusRoot
     
     ###########################################################################
     # Parsing Elements

@@ -99,13 +99,8 @@ class StanfordParser(Parser):
         if stanfordParserDir == None:
             stanfordParserDir = Settings.STANFORD_PARSER_DIR
         
-        print >> sys.stderr, "Loading corpus", input
-        corpusTree = ETUtils.ETFromObj(input)
-        print >> sys.stderr, "Corpus file loaded"
-        corpusRoot = corpusTree.getroot()
-        
+        corpusTree, corpusRoot = self.getCorpus(input)
         workdir = tempfile.mkdtemp()
-
         stanfordInput = self._makeStanfordInputFile(corpusRoot, workdir, parser, reparse, action, debug)
         stanfordOutput = self._runStanfordProcess(stanfordParserArgs, stanfordParserDir, stanfordInput, workdir, action)
         if action == "convert":

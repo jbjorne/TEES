@@ -148,10 +148,7 @@ class BLLIPParser(Parser):
         if requireEntities:
             print >> sys.stderr, "Parsing only sentences with entities"
         
-        print >> sys.stderr, "Loading corpus", input
-        corpusTree = ETUtils.ETFromObj(input)
-        print >> sys.stderr, "Corpus file loaded"
-        corpusRoot = corpusTree.getroot()
+        corpusTree, corpusRoot = self.getCorpus(input)
         
         # Write text to input file
         workdir = tempfile.mkdtemp()
