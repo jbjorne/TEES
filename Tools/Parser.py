@@ -153,11 +153,11 @@ class Parser:
                 t1Word, t1Index = t1.rsplit("-", 1)
                 t1Word = self.unescape(t1Word).strip()
                 while not t1Index[-1].isdigit(): t1Index = t1Index[:-1] # invalid literal for int() with base 10: "7'"
-                t1Index = int(t1Index)
+                t1Index = int(t1Index) - 1
                 t2Word, t2Index = t2.rsplit("-", 1)
                 t2Word = self.unescape(t2Word).strip()
                 while not t2Index[-1].isdigit(): t2Index = t2Index[:-1] # invalid literal for int() with base 10: "7'"
-                t2Index = int(t2Index)
+                t2Index = int(t2Index) - 1
                 deps.append({"type":depType, "t1Word":t1Word, "t1":t1Index, "t2Word":t2Word, "t2":t2Index})
             except Exception as e:
                 print >> sys.stderr, e
@@ -182,24 +182,24 @@ class Parser:
                 element.set("type", dep["type"])
                 skip = True
                 if tokenByIndex != None:
-                    if dep["t1"] - 1 not in tokenByIndex:
+                    if dep["t1"] not in tokenByIndex:
                         print >> sys.stderr, "Token 1 not found", (dep, depCount, sentenceId)
-                    elif dep["t2"] - 1 not in tokenByIndex:
+                    elif dep["t2"] not in tokenByIndex:
                         print >> sys.stderr, "Token 2 not found", (dep, depCount, sentenceId)
                     else:
                         skip = False
-                        if dep["t1Word"] != tokenByIndex[dep["t1"] - 1].get("text"):
-                            print >> sys.stderr, "Alignment error for token 1", (dep, tokenByIndex[dep["t1"] - 1].get("text"), depCount, sentenceId, tokens)
+                        if dep["t1Word"] != tokenByIndex[dep["t1"]].get("text"):
+                            print >> sys.stderr, "Alignment error for token 1", (dep, tokenByIndex[dep["t1"]].get("text"), depCount, sentenceId, tokens)
                             skip = True
                             if parse.get("stanfordAlignmentError") == None:
                                 parse.set("stanfordAlignmentError", dep["t1Word"])
-                        if dep["t2Word"] != tokenByIndex[dep["t2"] - 1].get("text"):
-                            print >> sys.stderr, "Alignment error for token 2", (dep, tokenByIndex[dep["t2"] - 1].get("text"), depCount, sentenceId, tokens)
+                        if dep["t2Word"] != tokenByIndex[dep["t2"]].get("text"):
+                            print >> sys.stderr, "Alignment error for token 2", (dep, tokenByIndex[dep["t2"]].get("text"), depCount, sentenceId, tokens)
                             skip = True
                             if parse.get("stanfordAlignmentError") == None:
                                 parse.set("stanfordAlignmentError", dep["t2Word"])
-                        element.set("t1", tokenByIndex[dep["t1"] - 1].get("id"))
-                        element.set("t2", tokenByIndex[dep["t2"] - 1].get("id"))
+                        element.set("t1", tokenByIndex[dep["t1"]].get("id"))
+                        element.set("t2", tokenByIndex[dep["t2"]].get("id"))
                 else:
                     element.set("t1", "bt_" + str(dep["t1"]))
                     element.set("t2", "bt_" + str(dep["t2"]))

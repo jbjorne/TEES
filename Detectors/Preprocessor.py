@@ -19,9 +19,12 @@ import Utils.FindHeads as FindHeads
 import Utils.Stream as Stream
 
 class Preprocessor(ToolChain):
-    def __init__(self, parsingStyle="BLLIPBIO"):
-        assert parsingStyle in ("BLLIP", "BLLIP_BIO", "STANFORD", "STANFORD_CONVERT")
-        self.parsingStyle = parsingStyle
+    def __init__(self, constParser="BLLIP_BIO", depParser="STANFORD_CONVERT", requireEntities=False):
+        assert constParser in ("BLLIP", "BLLIP_BIO", "STANFORD", None)
+        assert depParser in ("STANFORD", "STANFORD_CONVERT", None)
+        self.constParser = constParser
+        self.depParser = depParser
+        self.requireEntities = requireEntities
         ToolChain.__init__(self)
         self.modelParameterStringName = "preprocessorParams"
     
@@ -37,18 +40,16 @@ class Preprocessor(ToolChain):
         return steps
     
     def addParsingSteps(self, steps):
-        if self.parsingStyle == "BLLIP_BIO":
-            steps.append( ("PARSE", BLLIPParser.process, {"parseName":"McCC", "requireEntities":False, "debug":False}, "parse.xml") )
-            steps.append( ("CONVERT-PARSE", StanfordParser.process, {"parser":"McCC", "debug":False, "action":"convert"}, "converted-parse.xml") )
-        elif self.parsingStyle == "BLLIP":
-            steps.append( ("PARSE", BLLIPParser.process, {"parseName":"McCC", "requireEntities":False, "debug":False}, "parse.xml") )
-            steps.append( ("CONVERT-PARSE", StanfordParser.process, {"parser":"McCC", "debug":False, "action":"convert"}, "converted-parse.xml") )
-        elif self.parsingStyle == "STANFORD":
-            steps.append( ("PARSE-PENN", StanfordParser.process, {"parser":"McCC", "debug":False, "action":"penn"}, "penn-parse.xml") )
-            steps.append( ("PARSE-DEP", StanfordParser.process, {"parser":"McCC", "debug":False, "action":"dep"}, "dep-parse.xml") )
-        else: # STANFORD_CONVERT
-            steps.append( ("PARSE", StanfordParser.process, {"parser":"McCC", "debug":False, "action":"penn"}, "parse.xml") )
-            steps.append( ("CONVERT-PARSE", StanfordParser.process, {"parser":"McCC", "debug":False, "action":"convert"}, "converted-parse.xml") )
+        # Add the constituency parser
+        if self.constParser == "BLLIP_BIO" or self.constParser == "BLLIP":
+            steps.append( (self.constParser, BLLIPParser.process, {"parseName":"McCC", "requireEntities":self.requireEntities, "debug":False}, "parse.xml") )
+        elif self.constParser == "STANFORD":
+            steps.append( (self.constParser, StanfordParser.process, {"parser":"McCC", "debug":False, "action":"penn"}, "parse.xml") )
+        # Add the dependency parser
+        if self.depParser == "STANFORD":
+            steps.append( (self.depParser, StanfordParser.process, {"parser":"McCC", "debug":False, "action":"dep"}, "dependencies.xml") )
+        elif self.depParser == "STANFORD_CONVERT":
+            steps.append( (self.depParser, StanfordParser.process, {"parser":"McCC", "debug":False, "action":"convert"}, "dependencies.xml") )
     
     def process(self, source, output, parameters=None, model=None, sourceDataSetNames=None, fromStep=None, toStep=None, omitSteps=None):
         if omitSteps != None and((type(omitSteps) in types.StringTypes and omitSteps == "CONVERT") or "CONVERT" in omitSteps):
@@ -128,16 +129,19 @@ if __name__=="__main__":
     optparser.add_option("--noLog", default=False, action="store_true", dest="noLog", help="")
     optparser.add_option("--debug", default=False, action="store_true", dest="debug", help="")
     optparser.add_option("--requireEntities", default=False, action="store_true", dest="requireEntities", help="")
-    optparser.add_option("--parsingStyle", default="BLLIP_BIO")
+    optparser.add_option("--constParser", default="BLLIP_BIO", help="BLLIP, BLLIP_BIO or STANFORD")
+    optparser.add_option("--depParser", default="STANFORD_CONVERT", help="STANFORD or STANFORD_CONVERT")
     (options, args) = optparser.parse_args()
     if options.omitSteps != None:
         options.omitSteps = options.omitSteps.split(",")
+    options.constParser = options.constParser if options.constParser != "None" else None
+    options.depParser = options.depParser if options.depParser != "None" else None
     
     if not options.noLog:
         Stream.openLog(os.path.join(options.output + "-log.txt"))
         #log(False, True, os.path.join(options.output, options.corpus + "-log.txt"))
-    preprocessor = Preprocessor(options.parsingStyle)
+    preprocessor = Preprocessor(options.constParser, options.depParser, options.requireEntities)
     preprocessor.setArgForAllSteps("debug", options.debug)
     preprocessor.stepArgs("CONVERT")["corpusName"] = options.corpus
-    preprocessor.stepArgs("PARSE")["requireEntities"] = options.requireEntities
+    #preprocessor.stepArgs("PARSE")["requireEntities"] = options.requireEntities
     preprocessor.process(options.input, options.output, options.parameters, None, options.inputNames, fromStep=options.step, toStep=options.toStep, omitSteps=options.omitSteps)
