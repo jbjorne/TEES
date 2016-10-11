@@ -89,10 +89,12 @@ class StanfordParser(Parser):
             else:
                 stanfordParserArgs += ["-cp", "./*",
                                       "edu.stanford.nlp.parser.lexparser.LexicalizedParser",
-                                      "-sentences", "newline",
-                                      "-tokenized",
-                                      "-outputFormat", "typedDependencies" if action == "dep" else "penn",
-                                      "edu/stanford/nlp/models/lexparser/englishPCFG.ser.gz"]
+                                      "-sentences", "newline"]
+                if action == "penn":
+                    stanfordParserArgs += ["-outputFormat", "penn"]
+                else: # action == "dep"
+                    stanfordParserArgs += ["-tokenized", "-outputFormat", "typedDependencies"]
+                stanfordParserArgs += ["edu/stanford/nlp/models/lexparser/englishPCFG.ser.gz"]
                 print >> sys.stderr, "Running Stanford parsing for target", action
         print >> sys.stderr, "Stanford tools at:", stanfordParserDir
         print >> sys.stderr, "Stanford tools arguments:", " ".join(stanfordParserArgs)
