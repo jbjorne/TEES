@@ -55,7 +55,9 @@ class Preprocessor(ToolChain):
     def process(self, source, output, parameters=None, model=None, sourceDataSetNames=None, fromStep=None, toStep=None, omitSteps=None):
         if omitSteps != None and((type(omitSteps) in types.StringTypes and omitSteps == "CONVERT") or "CONVERT" in omitSteps):
             raise Exception("Preprocessor step 'CONVERT' may not be omitted")
-            
+        if os.path.basename(source).isdigit(): # PMID
+            print >> sys.stderr, "Preprocessing PubMed abstract", os.path.basename(source)
+            source = Utils.Download.getPubMed(int(source))   
         # Initialize variables and save existing default values
         #self.intermediateFileTag = corpusName
         #parameters = self.getParameters(parameters, model)

@@ -4,6 +4,7 @@ import urllib
 import tarfile
 import tempfile
 import zipfile
+import codecs
 from Libraries.progressbar import *
 
 pbar = None
@@ -163,7 +164,7 @@ def getPubMed(pmid):
     tempDir = tempfile.gettempdir()
     url = "http://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=pubmed&id=" + str(pmid) + "&retmode=xml"
     downloaded = os.path.join(tempDir, "pmid-" + str(pmid))
-    Utils.Download.download(url, downloaded + ".xml", False)
+    download(url, downloaded + ".xml", False)
     # Read the text from the XML
     f = codecs.open(downloaded + ".xml", "rt", "utf-8")
     textElements = []
