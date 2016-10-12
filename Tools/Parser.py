@@ -36,7 +36,7 @@ class Parser:
         treeFile = codecs.open(treeFileName, "rt", "utf-8")
         # Add output to sentences
         parseTimeStamp = time.strftime("%d.%m.%y %H:%M:%S")
-        print >> sys.stderr, "BLLIP time stamp:", parseTimeStamp
+        print >> sys.stderr, "Constituency parsing time stamp:", parseTimeStamp
         failCount = 0
         for sentence in self.getSentences(corpusRoot, requireEntities, skipIds, skipParsed):        
             treeLine = treeFile.readline()
