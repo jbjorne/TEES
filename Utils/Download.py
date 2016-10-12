@@ -151,3 +151,31 @@ def download(url, destPath=None, addName=True, clear=False):
     else:
         print >> sys.stderr, "Skipping already downloaded file", url
     return destFileName
+
+def getPubMed(pmid):
+    print >> sys.stderr, "*************************** NOTE ***************************"
+    print >> sys.stderr, "Do not attempt to do large-scale classification of PubMed"
+    print >> sys.stderr, "abstracts with this feature. For that, use the downloadable"
+    print >> sys.stderr, "PubMed release. This is a demonstration feature only, and"
+    print >> sys.stderr, "abusing it will cause you to be banned from PubMed!"
+    print >> sys.stderr, "************************************************************"
+    print >> sys.stderr, "Downloading PubMed abstract", pmid
+    tempDir = tempfile.gettempdir()
+    url = "http://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=pubmed&id=" + str(pmid) + "&retmode=xml"
+    downloaded = os.path.join(tempDir, "pmid-" + str(pmid))
+    Utils.Download.download(url, downloaded + ".xml", False)
+    # Read the text from the XML
+    f = codecs.open(downloaded + ".xml", "rt", "utf-8")
+    textElements = []
+    for line in f:
+        line = line.strip()
+        for tag in ["<ArticleTitle>", "<AbstractText>"]:
+            if line.startswith(tag):
+                textElements.append(line.split(">", 1)[1].split("<")[0])
+    f.close()
+    # Save the text file
+    f = codecs.open(downloaded + ".txt", "wt", "utf-8")
+    f.write("\n".join(textElements))
+    f.close()
+    # Return text file name
+    return downloaded + ".txt"
