@@ -42,14 +42,14 @@ class Preprocessor(ToolChain):
     def addParsingSteps(self, steps):
         # Add the constituency parser
         if self.constParser == "BLLIP_BIO" or self.constParser == "BLLIP":
-            steps.append( (self.constParser, BLLIPParser.process, {"parseName":"McCC", "requireEntities":self.requireEntities, "debug":False}, "parse.xml") )
+            steps.append( (self.constParser + "_CONST", BLLIPParser.process, {"parseName":"McCC", "requireEntities":self.requireEntities, "debug":False}, "parse.xml") )
         elif self.constParser == "STANFORD":
-            steps.append( (self.constParser, StanfordParser.process, {"parser":"McCC", "debug":False, "action":"penn"}, "parse.xml") )
+            steps.append( (self.constParser + "_CONST", StanfordParser.process, {"parser":"McCC", "debug":False, "action":"penn"}, "parse.xml") )
         # Add the dependency parser
         if self.depParser == "STANFORD":
-            steps.append( (self.depParser, StanfordParser.process, {"parser":"McCC", "debug":False, "action":"dep"}, "dependencies.xml") )
+            steps.append( (self.depParser + "_DEP", StanfordParser.process, {"parser":"McCC", "debug":False, "action":"dep"}, "dependencies.xml") )
         elif self.depParser == "STANFORD_CONVERT":
-            steps.append( (self.depParser, StanfordParser.process, {"parser":"McCC", "debug":False, "action":"convert"}, "dependencies.xml") )
+            steps.append( (self.depParser + "_DEP", StanfordParser.process, {"parser":"McCC", "debug":False, "action":"convert"}, "dependencies.xml") )
     
     def process(self, source, output, parameters=None, model=None, sourceDataSetNames=None, fromStep=None, toStep=None, omitSteps=None):
         if omitSteps != None and((type(omitSteps) in types.StringTypes and omitSteps == "CONVERT") or "CONVERT" in omitSteps):

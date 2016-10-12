@@ -60,11 +60,11 @@ class ToolChain(Detector):
                     self.setIntermediateFile(step[0], None)
     
     def addStep(self, name, function, argDict, intermediateFile=None, ioArgNames={"input":"input", "output":"output"}):
-        assert name not in [x[0] for x in self.steps], (name, steps)
+        assert name not in [x[0] for x in self.steps], (name, self.steps)
         self.steps.append([name, function, argDict, intermediateFile, ioArgNames])
     
     def insertStep(self, index, name, function, argDict, intermediateFile=None, ioArgNames={"input":"input", "output":"output"}):
-        assert name not in [x[0] for x in self.steps], (name, steps)
+        assert name not in [x[0] for x in self.steps], (name, self.steps)
         self.steps.insert(index, [name, function, argDict, intermediateFile, ioArgNames])
         
     def setArgForAllSteps(self, argument, value, argMustExist=True):

@@ -91,7 +91,7 @@ class StanfordParser(Parser):
                                       "edu.stanford.nlp.parser.lexparser.LexicalizedParser",
                                       "-sentences", "newline"]
                 if action == "penn":
-                    stanfordParserArgs += ["-outputFormat", "penn"]
+                    stanfordParserArgs += ["-outputFormat", "oneline"]
                 else: # action == "dep"
                     stanfordParserArgs += ["-tokenized", "-outputFormat", "typedDependencies"]
                 stanfordParserArgs += ["edu/stanford/nlp/models/lexparser/englishPCFG.ser.gz"]
@@ -100,7 +100,8 @@ class StanfordParser(Parser):
         print >> sys.stderr, "Stanford tools arguments:", " ".join(stanfordParserArgs)
         # Run Stanford parser
         return runSentenceProcess(self.runStanford, stanfordParserDir, stanfordInput, 
-            workdir, True, "StanfordParser", "Stanford (" + action + ")", timeout=600,
+            workdir, False if action == "penn" else True, 
+            "StanfordParser", "Stanford (" + action + ")", timeout=600,
             outputArgs={"encoding":"latin1", "errors":"replace"},
             processArgs={"stanfordParserArgs":stanfordParserArgs})
         

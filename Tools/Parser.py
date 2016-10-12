@@ -43,10 +43,52 @@ class Parser:
             extraAttributes={"source":"TEES"} # parser was run through this wrapper
             if addTimeStamp:
                 extraAttributes["date"] = parseTimeStamp # links the parse to the log file
-            if not self.insertParse(sentence, treeLine, parseName, makePhraseElements=makePhraseElements, extraAttributes=extraAttributes):
+            if not self.insertPennTree(sentence, treeLine, parseName, makePhraseElements=makePhraseElements, extraAttributes=extraAttributes):
                 failCount += 1
         treeFile.close()
         return failCount
+    
+    def insertPennTree(self, sentence, treeLine, parseName="McCC", tokenizationName = None, makePhraseElements=True, extraAttributes={}, docId=None):
+        # Find or create container elements
+        analyses = setDefaultElement(sentence, "analyses")#"sentenceanalyses")
+        #tokenizations = setDefaultElement(sentenceAnalyses, "tokenizations")
+        #parses = setDefaultElement(sentenceAnalyses, "parses")
+        # Check that the parse does not exist
+        for prevParse in analyses.findall("parse"):
+            assert prevParse.get("parser") != parseName
+        # Create a new parse element
+        parse = ET.Element("parse")
+        parse.set("parser", parseName)
+        if tokenizationName == None:
+            parse.set("tokenizer", parseName)
+        else:
+            parse.set("tokenizer", tokenizationName)
+        analyses.insert(getPrevElementIndex(analyses, "parse"), parse)
+        
+        parse.set("pennstring", treeLine.strip())
+        for attr in sorted(extraAttributes.keys()):
+            parse.set(attr, extraAttributes[attr])
+        if treeLine.strip() == "":
+            return False
+        else:
+            tokens, phrases = self.readPenn(treeLine, sentence.get("id"))
+            # Get tokenization
+            if tokenizationName == None: # Parser-generated tokens
+                for prevTokenization in analyses.findall("tokenization"):
+                    assert prevTokenization.get("tokenizer") != tokenizationName
+                tokenization = ET.Element("tokenization")
+                tokenization.set("tokenizer", parseName)
+                for attr in sorted(extraAttributes.keys()): # add the parser extra attributes to the parser generated tokenization 
+                    tokenization.set(attr, extraAttributes[attr])
+                analyses.insert(getElementIndex(analyses, parse), tokenization)
+                # Insert tokens to parse
+                self.insertTokens(tokens, sentence, tokenization, errorNotes=(sentence.get("id"), docId))
+            else:
+                tokenization = getElementByAttrib(analyses, "tokenization", {"tokenizer":tokenizationName})
+            # Insert phrases to parse
+            if makePhraseElements:
+                self.insertPhrases(phrases, parse, tokenization.findall("token"))
+        return True  
     
     def readPenn(self, treeLine, sentenceDebugId=None):
         #global escDict

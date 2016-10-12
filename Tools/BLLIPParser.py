@@ -43,49 +43,7 @@ class BLLIPParser(Parser):
                              {"first-stage/PARSE/parseIt":"first-stage/PARSE/parseIt " + bioModelDir + "/parser/ < /dev/null",
                               "second-stage/programs/features/best-parses":"second-stage/programs/features/best-parses -l " + bioModelDir + "/reranker/features.gz " + bioModelDir + "/reranker/weights.gz < /dev/null"},
                              parserPath, {"BLLIP_PARSER_DIR":os.path.abspath(parserPath), 
-                                          "MCCLOSKY_BIOPARSINGMODEL_DIR":bioModelDir}, updateLocalSettings)
-
-    def insertParse(self, sentence, treeLine, parseName="McCC", tokenizationName = None, makePhraseElements=True, extraAttributes={}, docId=None):
-        # Find or create container elements
-        analyses = setDefaultElement(sentence, "analyses")#"sentenceanalyses")
-        #tokenizations = setDefaultElement(sentenceAnalyses, "tokenizations")
-        #parses = setDefaultElement(sentenceAnalyses, "parses")
-        # Check that the parse does not exist
-        for prevParse in analyses.findall("parse"):
-            assert prevParse.get("parser") != parseName
-        # Create a new parse element
-        parse = ET.Element("parse")
-        parse.set("parser", parseName)
-        if tokenizationName == None:
-            parse.set("tokenizer", parseName)
-        else:
-            parse.set("tokenizer", tokenizationName)
-        analyses.insert(getPrevElementIndex(analyses, "parse"), parse)
-        
-        parse.set("pennstring", treeLine.strip())
-        for attr in sorted(extraAttributes.keys()):
-            parse.set(attr, extraAttributes[attr])
-        if treeLine.strip() == "":
-            return False
-        else:
-            tokens, phrases = self.readPenn(treeLine, sentence.get("id"))
-            # Get tokenization
-            if tokenizationName == None: # Parser-generated tokens
-                for prevTokenization in analyses.findall("tokenization"):
-                    assert prevTokenization.get("tokenizer") != tokenizationName
-                tokenization = ET.Element("tokenization")
-                tokenization.set("tokenizer", parseName)
-                for attr in sorted(extraAttributes.keys()): # add the parser extra attributes to the parser generated tokenization 
-                    tokenization.set(attr, extraAttributes[attr])
-                analyses.insert(getElementIndex(analyses, parse), tokenization)
-                # Insert tokens to parse
-                self.insertTokens(tokens, sentence, tokenization, errorNotes=(sentence.get("id"), docId))
-            else:
-                tokenization = getElementByAttrib(analyses, "tokenization", {"tokenizer":tokenizationName})
-            # Insert phrases to parse
-            if makePhraseElements:
-                self.insertPhrases(phrases, parse, tokenization.findall("token"))
-        return True           
+                                          "MCCLOSKY_BIOPARSINGMODEL_DIR":bioModelDir}, updateLocalSettings)         
         
     def run(self, input, output, tokenizer=False, pathBioModel=None):
         assert os.path.exists(pathBioModel), pathBioModel
@@ -218,9 +176,7 @@ class BLLIPParser(Parser):
         
         docCount = 0
         failCount = 0
-        docsWithSentences = 0
         numCorpusSentences = 0
-        sentencesCreated = 0
         sourceElements = [x for x in corpusRoot.getiterator("document")] + [x for x in corpusRoot.getiterator("section")]
         counter = ProgressCounter(len(sourceElements), "McCC Parse Insertion")
         for document in sourceElements:
@@ -249,7 +205,7 @@ class BLLIPParser(Parser):
             # TODO: Following for-loop is the same as when used with a real parser, and should
             # be moved to its own function.
             for sentence, treeLine in zip(sentences, parseStrings):
-                if not self.insertParse(sentence, treeLine, makePhraseElements=makePhraseElements, extraAttributes=extraAttributes, docId=origId):
+                if not self.insertPennTree(sentence, treeLine, makePhraseElements=makePhraseElements, extraAttributes=extraAttributes, docId=origId):
                     failCount += 1
         
         if tarFile != None:
