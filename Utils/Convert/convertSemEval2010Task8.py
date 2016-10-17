@@ -17,14 +17,13 @@ class Sentence():
     
     def process(self, directed):
         # Build the entities
-        self.entities.append(self._getEntity(self.text, "e1"))
-        self.entities.append(self._getEntity(self.text, "e2"))
         for tag in ("e1", "e2"):
-            self.entities.append(self._getEntity(self.text, "e1"))
+            self.entities.append(self._getEntity(self.text, tag))
             self.text = self.text.replace("<" + tag + ">", "").replace("</" + tag + ">", "")
-        for entity in self.entities: # check offsets
+        # Check entity offsets
+        for entity in self.entities:
             begin, end = [int(x) for x in entity.get("charOffset").split("-")]
-            assert entity.get("text") == self.text[begin, end], (entity.get("text"), self.text, self.text[begin, end], [begin, end])
+            assert entity.get("text") == self.text[begin:end], (entity.get("text"), self.text, self.text[begin:end], [begin, end])
         # Build the interactions
         # Build the sentence
         sentElem = ET.Element("sentence", {"id":self.id, "charOffset":"0-"+str(len(self.text))})
@@ -33,7 +32,11 @@ class Sentence():
         return sentElem
     
     def _getEntity(self, line, tag):
-        before, entityText, after = re.split(r'<' + tag + '>|</' + tag + '>', line)
+        try:
+            before, entityText, after = re.split(r'<' + tag + '>|</' + tag + '>', line)
+        except ValueError as e:
+            print "ValueError in line '" + line + "' for tag", tag
+            raise e
         begin = len(before)
         end = len(before) + len(entityText)
         return ET.Element("entity", {"text":entityText, "charOffset":str(begin)+"-"+str(end), "id":self.id + "." + tag})
@@ -46,11 +49,11 @@ def processLines(lines, dataSet, directed=True, tree=None, corpusId="SE10T8"):
         corpus = tree.getroot()
     sentence = None
     for line in lines:
-        line = line.strip().strip("\"")
+        line = line.strip()
         if sentence == None:
             assert line[0].isdigit(), line
             origId, line = line.split("\t")
-            sentence = Sentence(origId, line, corpusId)
+            sentence = Sentence(origId, line.strip().strip("\""), corpusId)
         else:
             if line.startswith("Comment:"):
                 sentence.comment = line.split(":", 1)[-1].strip()
