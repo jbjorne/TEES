@@ -4,8 +4,12 @@ import zipfile
 import shutil
 thisPath = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.abspath(os.path.join(thisPath,"../../")))
-import xml.etree.ElementTree as ET
+try:
+    import cElementTree as ET
+except ImportError:
+    import xml.etree.cElementTree as ET
 import Utils.ElementTreeUtils as ETUtils
+import Utils.InteractionXML.MakeSets as MakeSets
 from Detectors.Preprocessor import Preprocessor
 
 class Sentence():
@@ -99,8 +103,15 @@ def processLines(lines, setName, usedIds, directed=True, negatives=False, tree=N
     return tree
 
 def convert(inPath, outDir, corpusId, directed, negatives, preprocess, debug=False, clear=False):
+    # Prepare the output directory
+    if not os.path.exists(outDir):
+        print "Making output directory", outDir
+        os.makedirs(outDir)
+    elif clear:
+        print "Removing output directory", outDir
+        shutil.rmtree(outDir)
+    # Read and process the corpus files
     archive = zipfile.ZipFile(inPath, 'r')
-    #print archive.namelist()
     usedIds = set()
     tree = None
     for fileName, setName in [("SemEval2010_task8_all_data/SemEval2010_task8_training/TRAIN_FILE.TXT", "train"),\
@@ -109,20 +120,18 @@ def convert(inPath, outDir, corpusId, directed, negatives, preprocess, debug=Fal
         f = archive.open(fileName)
         tree = processLines(f.readlines(), setName, directed=directed, negatives=negatives, usedIds=usedIds, tree=tree, corpusId=corpusId)
         f.close()
-    if not os.path.exists(outDir):
-        print "Making output directory", outDir
-        os.makedirs(outDir)
-    elif clear:
-        print "Removing output directory", outDir
-        shutil.rmtree(outDir)
+    # Divide the training set into training and development sets
+    MakeSets.processCorpus(tree, None, "train", [("train", 0.7), ("devel", 1.0)], 1)
+    # Write out the converted corpus
     convertedPath = os.path.join(outDir, "SemEval2010Task8-converted.xml")
     ETUtils.write(tree.getroot(), convertedPath)
+    # Preprocess the converted corpus
     if preprocess:
         outPath = os.path.join(outDir, "SemEval2010Task8.xml")
-        preprocessor = Preprocessor("STANFORD", "STANFORD_CONVERT")
+        preprocessor = Preprocessor("STANFORD", "STANFORD-CONVERT")
         preprocessor.setArgForAllSteps("debug", debug)
         preprocessor.stepArgs("CONVERT")["corpusName"] = corpusId
-        preprocessor.process(convertedPath, outPath, omitSteps=["SPLIT-SENTENCES", "NER"])
+        preprocessor.process(convertedPath, outPath, omitSteps=["SPLIT-SENTENCES", "NER", "STANFORD-CONST", "STANFORD-CONVERT-DEP"])
 
 if __name__=="__main__":
     from optparse import OptionParser

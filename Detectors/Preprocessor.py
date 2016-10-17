@@ -19,9 +19,9 @@ import Utils.FindHeads as FindHeads
 import Utils.Stream as Stream
 
 class Preprocessor(ToolChain):
-    def __init__(self, constParser="BLLIP_BIO", depParser="STANFORD_CONVERT", parseName="McCC", requireEntities=False):
-        assert constParser in ("BLLIP", "BLLIP_BIO", "STANFORD", None)
-        assert depParser in ("STANFORD", "STANFORD_CONVERT", None)
+    def __init__(self, constParser="BLLIP-BIO", depParser="STANFORD-CONVERT", parseName="McCC", requireEntities=False):
+        assert constParser in ("BLLIP", "BLLIP-BIO", "STANFORD", None)
+        assert depParser in ("STANFORD", "STANFORD-CONVERT", None)
         self.constParser = constParser
         self.depParser = depParser
         self.requireEntities = requireEntities
@@ -37,20 +37,20 @@ class Preprocessor(ToolChain):
         self.addParsingSteps(steps)
         steps.append( ("SPLIT-NAMES", ProteinNameSplitter.mainFunc, {"parseName":self.parseName, "removeOld":True}, "split-names.xml") )
         steps.append( ("FIND-HEADS", FindHeads.findHeads, {"parse":self.parseName, "removeExisting":True}, "heads.xml") )
-        steps.append( ("DIVIDE-SETS", self.divideSets, {"outputStem":None, "saveCombined":True}) )
+        steps.append( ("DIVIDE-SETS", self.divideSets, {"saveCombined":False}, "dummy.xml") )
         return steps
     
     def addParsingSteps(self, steps):
         # Add the constituency parser
-        if self.constParser == "BLLIP_BIO" or self.constParser == "BLLIP":
-            steps.append( (self.constParser + "_CONST", BLLIPParser.process, {"parseName":self.parseName, "requireEntities":self.requireEntities, "debug":False}, "parse.xml") )
+        if self.constParser == "BLLIP-BIO" or self.constParser == "BLLIP":
+            steps.append( (self.constParser + "-CONST", BLLIPParser.process, {"parseName":self.parseName, "requireEntities":self.requireEntities, "debug":False}, "parse.xml") )
         elif self.constParser == "STANFORD":
-            steps.append( (self.constParser + "_CONST", StanfordParser.process, {"parser":self.parseName, "debug":False, "action":"penn"}, "parse.xml") )
+            steps.append( (self.constParser + "-CONST", StanfordParser.process, {"parser":self.parseName, "debug":False, "action":"penn"}, "parse.xml") )
         # Add the dependency parser
         if self.depParser == "STANFORD":
-            steps.append( (self.depParser + "_DEP", StanfordParser.process, {"parser":self.parseName, "debug":False, "action":"dep"}, "dependencies.xml") )
-        elif self.depParser == "STANFORD_CONVERT":
-            steps.append( (self.depParser + "_DEP", StanfordParser.process, {"parser":self.parseName, "debug":False, "action":"convert"}, "dependencies.xml") )
+            steps.append( (self.depParser + "-DEP", StanfordParser.process, {"parser":self.parseName, "debug":False, "action":"dep"}, "dependencies.xml") )
+        elif self.depParser == "STANFORD-CONVERT":
+            steps.append( (self.depParser + "-DEP", StanfordParser.process, {"parser":self.parseName, "debug":False, "action":"convert"}, "dependencies.xml") )
     
     def process(self, source, output, parameters=None, model=None, sourceDataSetNames=None, fromStep=None, toStep=None, omitSteps=None):
         if omitSteps != None and((type(omitSteps) in types.StringTypes and omitSteps == "CONVERT") or "CONVERT" in omitSteps):
@@ -103,10 +103,14 @@ class Preprocessor(ToolChain):
             self.xml = ETUtils.ETFromObj(input)
         return self.xml
     
-    def divideSets(self, input, outputStem, saveCombined=True):
-        if outputStem != None:
+    def divideSets(self, input, output, saveCombined=False):
+        if output != None:
             print >> sys.stderr, "Dividing into sets"
-            outDir, outputStem = os.path.split(outputStem)
+            outDir, outputStem = os.path.split(output)
+            if "-dummy.xml" in outputStem:
+                outputStem = outputStem.split("-dummy.xml")[0]
+            if outputStem.endswith(".xml"):
+                outputStem = outputStem[:-4]
             Utils.InteractionXML.DivideSets.processCorpus(input, outDir, outputStem, ".xml", saveCombined=saveCombined)
         else:
             print >> sys.stderr, "No set division"
