@@ -68,6 +68,19 @@ class Sentence():
                 ET.SubElement(sentElem, "interaction", {"id":self.id + ".i0", "type":relType + "(" + relFrom + "," + relTo + ")", "directed":"False", "e1":eMap["e1"].get("id"), "e2":eMap["e2"].get("id"), "from":relFrom, "to":relTo})
         return docElem
     
+    def _getInteraction(self, relType, relFrom, relTo, directed, count):
+        if directed or relType == "Other":
+            intType = relType
+        else:
+            intType = relType + "(" + relFrom + "," + relTo + ")"
+        ET.Element("document", {"id":self.id + ".i" + str(count), 
+                                "type":relType + "(" + relFrom + "," + relTo + ")", 
+                                "directed":"False", 
+                                "e1":eMap["e1"].get("id"), 
+                                "e2":eMap["e2"].get("id"), 
+                                "from":relFrom, 
+                                "to":relTo})
+    
     def _getEntity(self, line, tag):
         try:
             before, entityText, after = re.split(r'<' + tag + '>|</' + tag + '>', line)
