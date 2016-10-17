@@ -46,15 +46,23 @@ class BLLIPParser(Parser):
                                           "MCCLOSKY_BIOPARSINGMODEL_DIR":bioModelDir}, updateLocalSettings)         
         
     def run(self, input, output, tokenizer=False, pathBioModel=None):
-        assert os.path.exists(pathBioModel), pathBioModel
+        if pathBioModel != None:
+            assert os.path.exists(pathBioModel), pathBioModel
         if tokenizer:
             print >> sys.stderr, "Running BLLIP parser with tokenization"
-            firstStageArgs = ["first-stage/PARSE/parseIt", "-l999", "-N50" , pathBioModel+"/parser/"]
+            firstStageArgs = ["first-stage/PARSE/parseIt", "-l999", "-N50"]
         else:
             print >> sys.stderr, "Running BLLIP parser without tokenization"
-            firstStageArgs = ["first-stage/PARSE/parseIt", "-l999", "-N50" , "-K", pathBioModel+"/parser/"]
-        secondStageArgs = ["second-stage/programs/features/best-parses", "-l", pathBioModel+"/reranker/features.gz", pathBioModel+"/reranker/weights.gz"]
-        
+            firstStageArgs = ["first-stage/PARSE/parseIt", "-l999", "-N50" , "-K"]
+        secondStageArgs = ["second-stage/programs/features/best-parses", "-l"]
+        if pathBioModel != None:
+            firstStageArgs += [pathBioModel+"/parser/"]
+            secondStageArgs += [pathBioModel+"/reranker/features.gz", pathBioModel+"/reranker/weights.gz"]
+        else:
+            firstStageArgs += ["first-stage/DATA/EN/"]
+            secondStageArgs += ["second-stage/models/ec50spfinal/features.gz", "second-stage/models/ec50spfinal/cvlm-l1c10P1-weights.gz"]
+        print >> sys.stderr, "1st Stage arguments:", firstStageArgs
+        print >> sys.stderr, "2nd Stage arguments:", secondStageArgs 
         firstStage = subprocess.Popen(firstStageArgs,
                                       stdin=codecs.open(input, "rt", "utf-8"),
                                       stdout=subprocess.PIPE)
@@ -64,7 +72,7 @@ class BLLIPParser(Parser):
         return ProcessWrapper([firstStage, secondStage])
     
     @classmethod
-    def process(cls, input, output=None, tokenizationName=None, parseName="McCC", requireEntities=False, skipIds=[], skipParsed=True, timeout=600, makePhraseElements=True, debug=False, pathParser=None, pathBioModel=None, timestamp=True):
+    def process(cls, input, output=None, tokenizationName=None, parseName="McCC", requireEntities=False, skipIds=[], skipParsed=True, timeout=600, makePhraseElements=True, debug=False, pathParser=None, pathBioModel="AUTO", timestamp=True):
         parser = cls()
         parser.parse(input, output, tokenizationName, parseName, requireEntities, skipIds, skipParsed, timeout, makePhraseElements, debug, pathParser, pathBioModel, timestamp)
     
@@ -72,9 +80,10 @@ class BLLIPParser(Parser):
         if pathParser == None:
             pathParser = Settings.BLLIP_PARSER_DIR
         print >> sys.stderr, "BLLIP parser at:", pathParser
-        if pathBioModel == None:
+        if pathBioModel == "AUTO":
             pathBioModel = Settings.MCCLOSKY_BIOPARSINGMODEL_DIR
-        print >> sys.stderr, "Biomodel at:", pathBioModel
+        if pathBioModel != None:
+            print >> sys.stderr, "Biomodel at:", pathBioModel
         #PARSERROOT=/home/smp/tools/McClosky-Charniak/reranking-parser
         #BIOPARSINGMODEL=/home/smp/tools/McClosky-Charniak/reranking-parser/biomodel
         #${PARSERROOT}/first-stage/PARSE/parseIt -K -l399 -N50 ${BIOPARSINGMODEL}/parser/ $* | ${PARSERROOT}/second-stage/programs/features/best-parses -l ${BIOPARSINGMODEL}/reranker/features.gz ${BIOPARSINGMODEL}/reranker/weights.gz
@@ -126,7 +135,7 @@ class BLLIPParser(Parser):
         infile.close()
         return infileName, numCorpusSentences
 
-    def parse(self, input, output=None, tokenizationName=None, parseName="McCC", requireEntities=False, skipIds=[], skipParsed=True, timeout=600, makePhraseElements=True, debug=False, pathParser=None, pathBioModel=None, addTimeStamp=True):
+    def parse(self, input, output=None, tokenizationName=None, parseName="McCC", requireEntities=False, skipIds=[], skipParsed=True, timeout=600, makePhraseElements=True, debug=False, pathParser=None, pathBioModel="AUTO", addTimeStamp=True):
         print >> sys.stderr, "BLLIP parser"
         corpusTree, corpusRoot = self.getCorpus(input)
         workdir = tempfile.mkdtemp()

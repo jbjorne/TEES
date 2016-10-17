@@ -20,8 +20,8 @@ import Utils.Stream as Stream
 
 class Preprocessor(ToolChain):
     def __init__(self, constParser="BLLIP-BIO", depParser="STANFORD-CONVERT", parseName="McCC", requireEntities=False):
-        assert constParser in ("BLLIP", "BLLIP-BIO", "STANFORD", None)
-        assert depParser in ("STANFORD", "STANFORD-CONVERT", None)
+        assert constParser in ("BLLIP", "BLLIP-BIO", "STANFORD", None), constParser
+        assert depParser in ("STANFORD", "STANFORD-CONVERT", None), depParser
         self.constParser = constParser
         self.depParser = depParser
         self.requireEntities = requireEntities
@@ -42,8 +42,10 @@ class Preprocessor(ToolChain):
     
     def addParsingSteps(self, steps):
         # Add the constituency parser
-        if self.constParser == "BLLIP-BIO" or self.constParser == "BLLIP":
-            steps.append( (self.constParser + "-CONST", BLLIPParser.process, {"parseName":self.parseName, "requireEntities":self.requireEntities, "debug":False}, "parse.xml") )
+        if self.constParser == "BLLIP-BIO":
+            steps.append( (self.constParser + "-CONST", BLLIPParser.process, {"parseName":self.parseName, "requireEntities":self.requireEntities, "debug":False, "pathBioModel":"AUTO"}, "parse.xml") )
+        elif self.constParser == "BLLIP":
+            steps.append( (self.constParser + "-CONST", BLLIPParser.process, {"parseName":self.parseName, "requireEntities":self.requireEntities, "debug":False, "pathBioModel":None}, "parse.xml") )
         elif self.constParser == "STANFORD":
             steps.append( (self.constParser + "-CONST", StanfordParser.process, {"parser":self.parseName, "debug":False, "action":"penn"}, "parse.xml") )
         # Add the dependency parser
@@ -136,8 +138,8 @@ if __name__=="__main__":
     optparser.add_option("--noLog", default=False, action="store_true", dest="noLog", help="")
     optparser.add_option("--debug", default=False, action="store_true", dest="debug", help="")
     optparser.add_option("--requireEntities", default=False, action="store_true", dest="requireEntities", help="")
-    optparser.add_option("--constParser", default="BLLIP_BIO", help="BLLIP, BLLIP_BIO or STANFORD")
-    optparser.add_option("--depParser", default="STANFORD_CONVERT", help="STANFORD or STANFORD_CONVERT")
+    optparser.add_option("--constParser", default="BLLIP-BIO", help="BLLIP, BLLIP-BIO or STANFORD")
+    optparser.add_option("--depParser", default="STANFORD-CONVERT", help="STANFORD or STANFORD-CONVERT")
     optparser.add_option("--parseName", default="McCC")
     (options, args) = optparser.parse_args()
     if options.omitSteps != None:
