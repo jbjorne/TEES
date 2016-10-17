@@ -88,7 +88,7 @@ class Sentence():
             raise e
         begin = len(before)
         end = len(before) + len(entityText)
-        return ET.Element("entity", {"text":entityText, "type":"entity", "charOffset":str(begin)+"-"+str(end), "id":self.id + "." + tag})
+        return ET.Element("entity", {"text":entityText, "type":"entity", "given":"True", "charOffset":str(begin)+"-"+str(end), "id":self.id + "." + tag})
         
 def processLines(lines, setName, usedIds, directed=True, negatives=False, tree=None, corpusId="SE10T8"):
     if tree == None:
