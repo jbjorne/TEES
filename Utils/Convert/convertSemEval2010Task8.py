@@ -11,6 +11,7 @@ except ImportError:
 import Utils.ElementTreeUtils as ETUtils
 import Utils.InteractionXML.MakeSets as MakeSets
 from Detectors.Preprocessor import Preprocessor
+import Utils.Stream as Stream
 
 class Sentence():
     def __init__(self, origId, text, corpusId, usedIds, setName):
@@ -120,7 +121,9 @@ def convert(inPath, outDir, corpusId, directed, negatives, preprocess, debug=Fal
         os.makedirs(outDir)
     elif clear:
         print "Removing output directory", outDir
-        shutil.rmtree(outDir)
+        for filename in os.listdir(outDir):
+            if filename != "log.txt":
+                os.remove(os.path.join(outDir, filename))
     # Read and process the corpus files
     archive = zipfile.ZipFile(inPath, 'r')
     usedIds = set()
@@ -157,7 +160,11 @@ if __name__=="__main__":
     optparser.add_option("--depParser", default=None)
     optparser.add_option("-d", "--debug", default=False, action="store_true", help="")
     optparser.add_option("--clear", default=False, action="store_true", help="")
+    optparser.add_option("--noLog", default=False, action="store_true", dest="noLog", help="")
     (options, args) = optparser.parse_args()
+    
+    if not options.noLog:
+        Stream.openLog(os.path.join(options.outdir, "log.txt"))
     
     convert(options.input, options.outdir, directed=options.directed, negatives=options.negatives, 
             preprocess=options.preprocess, corpusId=options.corpus,
