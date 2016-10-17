@@ -8,29 +8,41 @@ class Sentence():
         self.entities = []
         self.relation = None
         self.comment = None
+    
+    def process(self):
+        entity = None
+        for i in range(len(self.text)):
+            if self.text[i] == "<":
+                assert entity == None:
+                entity = [None]
+            
         
 def processLines(lines):
-    inDefinition = False
-    comment = None
+    sentences = []
     sentence = None
-    entities = []
-    relation = None
     for line in lines:
         line = line.strip()
-        if not inDefinition:
-            inDefinition = True
+        if sentence == None:
             assert line[0].isdigit(), line
             origId, line = line.split("\t")
+            sentence = Sentence(origId, line)
         else:
             if line.startswith("Comment:"):
-                comment = line.split(":", 1)[-1].strip()
+                sentence.comment = line.split(":", 1)[-1].strip()
+            elif line != "":
+                sentence.relation = line
+            else:
+                assert sentence != None
+                sentences.append(sentence)
+                sentence = None
 
 def getFiles(inputPath):
     archive = zipfile.ZipFile(inputPath, 'r')
     #print archive.namelist()
     trainFile = archive.open("SemEval2010_task8_all_data/SemEval2010_task8_training/TRAIN_FILE.TXT")
-    trainLines = trainFile.readlines()
+    train = processLines(trainFile.readlines())
     trainFile.close()
+    
     return trainFile, None
 
 def convert(inputPath):
