@@ -1,17 +1,29 @@
 import sys,os
 import zipfile
 
+class Sentence():
+    def __init__(self, origId, text):
+        self.origId = origId
+        self.text = text
+        self.entities = []
+        self.relation = None
+        self.comment = None
+        
 def processLines(lines):
     inDefinition = False
+    comment = None
+    sentence = None
+    entities = []
+    relation = None
     for line in lines:
         line = line.strip()
         if not inDefinition:
             inDefinition = True
             assert line[0].isdigit(), line
-            origId, line = line.strip().split("\t")
+            origId, line = line.split("\t")
         else:
             if line.startswith("Comment:"):
-                comment = line.strip()
+                comment = line.split(":", 1)[-1].strip()
 
 def getFiles(inputPath):
     archive = zipfile.ZipFile(inputPath, 'r')
