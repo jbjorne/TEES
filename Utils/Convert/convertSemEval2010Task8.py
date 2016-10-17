@@ -41,7 +41,7 @@ class Sentence():
             assert eMap[key].get("id").endswith("." + key)
         # Build the sentence
         docElem = ET.Element("document", {"id":self.corpusId + ".d" + self.origId, "set":self.setName})
-        sentElem = ET.SubElement(docElem, "sentence", {"id":self.id, "charOffset":"0-"+str(len(self.text)), "text":self.text})
+        sentElem = ET.SubElement(docElem, "sentence", {"id":self.id, "charOffset":"0-"+str(len(self.text)), "text":self.text, "origId":self.origId})
         if self.comment != None and self.comment != "":
             sentElem.set("comment", self.comment)
         for entity in self.entities:
