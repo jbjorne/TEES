@@ -46,6 +46,7 @@ class Sentence():
         for entity in self.entities:
             sentElem.append(entity)
         # Determine interaction types per direction
+        relFrom, relTo = "", ""
         if self.relation == "Other":
             forwardType = "Other"
             reverseType = "Other"
@@ -63,21 +64,20 @@ class Sentence():
         # Build the interactions
         if directed:
             if negatives or (forwardType != "neg"):
-                sentElem.append(self._getInteraction(forwardType, "e1", "e2", directed, 0, eMap))
+                sentElem.append(self._getInteraction(forwardType, "e1", "e2", directed, 0, eMap, "e1", "e2"))
             if negatives or (reverseType != "neg"):
-                sentElem.append(self._getInteraction(reverseType, "e2", "e1", directed, 1, eMap))
+                sentElem.append(self._getInteraction(reverseType, "e2", "e1", directed, 1, eMap, "e2", "e1"))
         else:
-            sentElem.append(self._getInteraction(self.relation, "e1", "e2", directed, 0, eMap))
+            sentElem.append(self._getInteraction(self.relation, "e1", "e2", directed, 0, eMap, relFrom, relTo))
         return docElem
     
-    def _getInteraction(self, relType, relFrom, relTo, directed, count, eMap):
-        return ET.Element("interaction", {"id":self.id + ".i" + str(count), 
-                                       "type":relType, 
-                                       "directed":str(directed), 
-                                       "e1":eMap[relFrom].get("id"), 
-                                       "e2":eMap[relTo].get("id"), 
-                                       "from":relFrom, 
-                                       "to":relTo})
+    def _getInteraction(self, relType, e1, e2, directed, count, eMap, relFrom=None, relTo=None):
+        if relFrom == None: relFrom = e1
+        if relTo == None: relFrom = e2
+        attrs = {"id":self.id + ".i" + str(count), "type":relType, "directed":str(directed), "e1":eMap[e1].get("id"), "e2":eMap[e2].get("id")}
+        if relFrom != "": attrs["from"] = relFrom
+        if relTo != "": attrs["to"] = relTo
+        return ET.Element("interaction", attrs)
     
     def _getEntity(self, line, tag):
         try:
