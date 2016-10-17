@@ -164,7 +164,7 @@ if __name__=="__main__":
     (options, args) = optparser.parse_args()
     
     if not options.noLog:
-        Stream.openLog(os.path.join(options.outdir, "log.txt"))
+        Stream.openLog(os.path.join(options.outdir, "log.txt"), clear=options.clear)
     
     convert(options.input, options.outdir, directed=options.directed, negatives=options.negatives, 
             preprocess=options.preprocess, corpusId=options.corpus,
