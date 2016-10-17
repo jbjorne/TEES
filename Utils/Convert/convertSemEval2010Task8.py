@@ -102,7 +102,7 @@ def processLines(lines, setName, usedIds, directed=True, negatives=False, tree=N
                 sentence = None
     return tree
 
-def convert(inPath, outDir, corpusId, directed, negatives, preprocess, debug=False, clear=False):
+def convert(inPath, outDir, corpusId, directed, negatives, preprocess, debug=False, clear=False, constParser="BLLIP-BIO", depParser="STANFORD-CONVERT"):
     # Prepare the output directory
     if not os.path.exists(outDir):
         print "Making output directory", outDir
@@ -128,10 +128,10 @@ def convert(inPath, outDir, corpusId, directed, negatives, preprocess, debug=Fal
     # Preprocess the converted corpus
     if preprocess:
         outPath = os.path.join(outDir, "SemEval2010Task8.xml")
-        preprocessor = Preprocessor("STANFORD", "STANFORD-CONVERT")
+        preprocessor = Preprocessor(constParser, depParser)
         preprocessor.setArgForAllSteps("debug", debug)
         preprocessor.stepArgs("CONVERT")["corpusName"] = corpusId
-        preprocessor.process(convertedPath, outPath, omitSteps=["SPLIT-SENTENCES", "NER", "STANFORD-CONST", "STANFORD-CONVERT-DEP"])
+        preprocessor.process(convertedPath, outPath, omitSteps=["SPLIT-SENTENCES", "NER", "SPLIT-NAMES"])
 
 if __name__=="__main__":
     from optparse import OptionParser
@@ -140,11 +140,15 @@ if __name__=="__main__":
     optparser.add_option("-o", "--outdir", default=None, dest="outdir", help="directory for output files")
     optparser.add_option("-r", "--directed", default=False, action="store_true", help="")
     optparser.add_option("-n", "--negatives", default=False, action="store_true", help="")
-    optparser.add_option("-p", "--preprocess", default=False, action="store_true", help="")
     optparser.add_option("-c", "--corpus", default="SE10T8", help="")
+    optparser.add_option("-p", "--preprocess", default=False, action="store_true", help="")
+    optparser.add_option("--constParser", default=None)
+    optparser.add_option("--depParser", default=None)
     optparser.add_option("-d", "--debug", default=False, action="store_true", help="")
     optparser.add_option("--clear", default=False, action="store_true", help="")
     (options, args) = optparser.parse_args()
     
     convert(options.input, options.outdir, directed=options.directed, negatives=options.negatives, 
-            preprocess=options.preprocess, corpusId=options.corpus, debug=options.debug, clear=options.clear)
+            preprocess=options.preprocess, corpusId=options.corpus,
+            constParser=options.constParser, depParser=options.depParser, 
+            debug=options.debug, clear=options.clear)
