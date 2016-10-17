@@ -1,10 +1,12 @@
 import sys,os
 import re
 import zipfile
+import shutil
 thisPath = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.abspath(os.path.join(thisPath,"../../")))
 import xml.etree.ElementTree as ET
 import Utils.ElementTreeUtils as ETUtils
+from Detectors.Preprocessor import Preprocessor
 
 class Sentence():
     def __init__(self, origId, text, corpusId, usedIds, setName):
@@ -96,7 +98,7 @@ def processLines(lines, setName, usedIds, directed=True, negatives=False, tree=N
                 sentence = None
     return tree
 
-def convert(inPath, outDir, directed, negatives):
+def convert(inPath, outDir, corpusId, directed, negatives, preprocess, debug=False, clear=False):
     archive = zipfile.ZipFile(inPath, 'r')
     #print archive.namelist()
     usedIds = set()
@@ -105,20 +107,35 @@ def convert(inPath, outDir, directed, negatives):
                               ("SemEval2010_task8_all_data/SemEval2010_task8_testing_keys/TEST_FILE_FULL.TXT", "test")]:
         print "Processing file", fileName, "as set", setName
         f = archive.open(fileName)
-        tree = processLines(f.readlines(), setName, directed=directed, negatives=negatives, usedIds=usedIds, tree=tree)
+        tree = processLines(f.readlines(), setName, directed=directed, negatives=negatives, usedIds=usedIds, tree=tree, corpusId=corpusId)
         f.close()
     if not os.path.exists(outDir):
+        print "Making output directory", outDir
         os.makedirs(outDir)
-    ETUtils.write(tree.getroot(), os.path.join(outDir, "SemEval201-Task8-all.xml"))
+    elif clear:
+        print "Removing output directory", outDir
+        shutil.rmtree(outDir)
+    convertedPath = os.path.join(outDir, "SemEval2010Task8-converted.xml")
+    ETUtils.write(tree.getroot(), convertedPath)
+    if preprocess:
+        outPath = os.path.join(outDir, "SemEval2010Task8.xml")
+        preprocessor = Preprocessor("STANFORD", "STANFORD_CONVERT")
+        preprocessor.setArgForAllSteps("debug", debug)
+        preprocessor.stepArgs("CONVERT")["corpusName"] = corpusId
+        preprocessor.process(convertedPath, outPath, omitSteps=["SPLIT-SENTENCES", "NER"])
 
 if __name__=="__main__":
     from optparse import OptionParser
     optparser = OptionParser(usage="%prog [options]\n")
     optparser.add_option("-i", "--input", default=None)
     optparser.add_option("-o", "--outdir", default=None, dest="outdir", help="directory for output files")
-    optparser.add_option("--debug", default=False, action="store_true", help="")
-    optparser.add_option("--directed", default=False, action="store_true", help="")
-    optparser.add_option("--negatives", default=False, action="store_true", help="")
+    optparser.add_option("-r", "--directed", default=False, action="store_true", help="")
+    optparser.add_option("-n", "--negatives", default=False, action="store_true", help="")
+    optparser.add_option("-p", "--preprocess", default=False, action="store_true", help="")
+    optparser.add_option("-c", "--corpus", default="SE10T8", help="")
+    optparser.add_option("-d", "--debug", default=False, action="store_true", help="")
+    optparser.add_option("--clear", default=False, action="store_true", help="")
     (options, args) = optparser.parse_args()
     
-    convert(options.input, options.outdir, options.directed, options.negatives)
+    convert(options.input, options.outdir, directed=options.directed, negatives=options.negatives, 
+            preprocess=options.preprocess, corpusId=options.corpus, debug=options.debug, clear=options.clear)
