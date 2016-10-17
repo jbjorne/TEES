@@ -45,41 +45,39 @@ class Sentence():
             sentElem.set("comment", self.comment)
         for entity in self.entities:
             sentElem.append(entity)
-        # Build the interactions
-        relFrom = None
-        relTo = None
+        # Determine interaction types per direction
         if self.relation == "Other":
-            relType = "Other"
+            forwardType = "Other"
+            reverseType = "Other"
         else:
             relType, rest = self.relation.strip(")").split("(")
             relFrom, relTo = rest.split(",")
+            if relFrom == "e1":
+                assert relTo == "e2"
+                forwardType = relType
+                reverseType = "neg"
+            else:
+                assert relFrom == "e2" and relTo == "e1"
+                forwardType = "neg"
+                reverseType = relType
+        # Build the interactions
         if directed:
-            if relType == "Other":
-                ET.SubElement(sentElem, "interaction", {"id":self.id + ".i0", "type":relType, "directed":"True", "e1":eMap["e1"].get("id"), "e2":eMap["e2"].get("id")})
-                ET.SubElement(sentElem, "interaction", {"id":self.id + ".i0", "type":relType, "directed":"True", "e1":eMap["e2"].get("id"), "e2":eMap["e1"].get("id")})
-            else:
-                ET.SubElement(sentElem, "interaction", {"id":self.id + ".i0", "type":relType, "directed":"True", "e1":eMap[relFrom].get("id"), "e2":eMap[relTo].get("id")})
-                if negatives:
-                    ET.SubElement(sentElem, "interaction", {"id":self.id + ".i0", "type":"neg", "directed":"True", "e1":eMap[relTo].get("id"), "e2":eMap[relFrom].get("id")})                
+            if negatives or (forwardType != "neg"):
+                sentElem.append(self._getInteraction(forwardType, "e1", "e2", directed, 0, eMap))
+            if negatives or (reverseType != "neg"):
+                sentElem.append(self._getInteraction(reverseType, "e2", "e1", directed, 1, eMap))
         else:
-            if relType == "Other":
-                ET.SubElement(sentElem, "interaction", {"id":self.id + ".i0", "type":relType, "directed":"False", "e1":eMap["e1"].get("id"), "e2":eMap["e2"].get("id")})
-            else:
-                ET.SubElement(sentElem, "interaction", {"id":self.id + ".i0", "type":relType + "(" + relFrom + "," + relTo + ")", "directed":"False", "e1":eMap["e1"].get("id"), "e2":eMap["e2"].get("id"), "from":relFrom, "to":relTo})
+            sentElem.append(self._getInteraction(self.relation, "e1", "e2", directed, 0, eMap))
         return docElem
     
-    def _getInteraction(self, relType, relFrom, relTo, directed, count):
-        if directed or relType == "Other":
-            intType = relType
-        else:
-            intType = relType + "(" + relFrom + "," + relTo + ")"
-        ET.Element("document", {"id":self.id + ".i" + str(count), 
-                                "type":relType + "(" + relFrom + "," + relTo + ")", 
-                                "directed":"False", 
-                                "e1":eMap["e1"].get("id"), 
-                                "e2":eMap["e2"].get("id"), 
-                                "from":relFrom, 
-                                "to":relTo})
+    def _getInteraction(self, relType, relFrom, relTo, directed, count, eMap):
+        return ET.Element("interaction", {"id":self.id + ".i" + str(count), 
+                                       "type":relType, 
+                                       "directed":str(directed), 
+                                       "e1":eMap[relFrom].get("id"), 
+                                       "e2":eMap[relTo].get("id"), 
+                                       "from":relFrom, 
+                                       "to":relTo})
     
     def _getEntity(self, line, tag):
         try:
