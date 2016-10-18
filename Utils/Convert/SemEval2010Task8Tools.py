@@ -31,7 +31,8 @@ def readInteraction(interaction):
     return {"type":relType, "e1":e1, "e2":e2}
 
 def getConfDict(conf):
-    assert conf != None
+    if conf == None:
+        return None
     conf = [x.split(":") for x in conf.split(",")]
     return dict((key, value) for (key, value) in conf)
 
@@ -42,7 +43,7 @@ def getRelation(interactions):
     # Check for the undirected "Other" class examples
     otherCount = sum([1 for x in interactions if x.get("type") == "Other"])
     if otherCount == len(interactions):
-        {"type":"Other", "e1":None, "e2":None} 
+        return {"type":"Other", "e1":None, "e2":None}
     if len(interactions) == 0:
         return None
     elif len(interactions) == 1:
@@ -51,13 +52,14 @@ def getRelation(interactions):
         i1 = interactions[0]
         i2 = interactions[1]
         # Prefer non-Other type interactions
-        if i1["type"] != "Other" and i2["type"] == "Other":
+        if i1.get("type") != "Other" and i2.get("type") == "Other":
             return readInteraction(i1)
-        elif i1["type"] == "Other" and i2["type"] != "Other":
+        elif i1.get("type") == "Other" and i2.get("type") != "Other":
             return readInteraction(i2)
         # Pick the stronger one
         conf1 = getConfDict(i1.get("conf"))
         conf2 = getConfDict(i2.get("conf"))
+        assert conf1 != None and conf2 != None, (i1.attrib, i2.attrib, otherCount, len(interactions))
         if conf1[i1.get("type")] > conf2[i2.get("type")]:
             return readInteraction(i1)
         else:
@@ -83,6 +85,7 @@ def runCommand(programPath, f1Path=None, f2Path=None, silent=False):
         command += " " + f1Path
     if f2Path != None:
         command += " " + f2Path
+    print "Running:", command
     p = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     stderrLines = p.stderr.readlines()
     stdoutLines = p.stdout.readlines()
@@ -97,6 +100,7 @@ def evaluate(inputXML, goldXML):
     formatChecker = "semeval2010_task8_format_checker.pl"
     evaluator = "semeval2010_task8_scorer-v1.2.pl"
     if not os.path.exists(tempDir):
+        print "Extracting the evaluator to", tempDir
         os.makedirs(tempDir)
         archive = zipfile.ZipFile(Settings.SE10T8_CORPUS, 'r')
         basePath = "SemEval2010_task8_all_data/SemEval2010_task8_scorer-v1.2/"
@@ -111,11 +115,13 @@ def evaluate(inputXML, goldXML):
     for filePath in (inputPath, goldPath):
         if os.path.exists(filePath):
             os.remove(filePath)
+    print "Exporting relations from", inputPath
     exportRelations(inputXML, inputPath)
+    print "Exporting relations from", goldPath
     exportRelations(goldXML, goldPath)
-    runCommand(formatChecker, inputXML)
-    runCommand(formatChecker, goldXML)
-    runCommand(evaluator, inputXML, goldXML)
+    runCommand(os.path.join(tempDir, formatChecker), inputXML)
+    runCommand(os.path.join(tempDir, formatChecker), goldXML)
+    runCommand(os.path.join(tempDir, evaluator), inputXML, goldXML)
 
 if __name__=="__main__":
     from optparse import OptionParser
