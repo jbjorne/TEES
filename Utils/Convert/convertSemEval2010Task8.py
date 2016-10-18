@@ -145,11 +145,11 @@ def convert(inPath, outDir, corpusId, directed, negatives, preprocess, debug=Fal
     # Divide the training set into training and development sets
     MakeSets.processCorpus(tree, None, "train", [("train", 0.7), ("devel", 1.0)], 1)
     # Write out the converted corpus
-    convertedPath = os.path.join(outDir, "SemEval2010Task8-converted.xml")
+    convertedPath = os.path.join(outDir, corpusId + "-converted.xml")
     ETUtils.write(tree.getroot(), convertedPath)
     # Preprocess the converted corpus
     if preprocess:
-        outPath = os.path.join(outDir, "SemEval2010Task8.xml")
+        outPath = os.path.join(outDir, corpusId + ".xml")
         preprocessor = Preprocessor(constParser, depParser)
         preprocessor.setArgForAllSteps("debug", debug)
         preprocessor.stepArgs("CONVERT")["corpusName"] = corpusId
