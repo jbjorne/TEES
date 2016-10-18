@@ -119,9 +119,9 @@ def evaluate(inputXML, goldXML):
     exportRelations(inputXML, inputPath)
     print "Exporting relations from", goldPath
     exportRelations(goldXML, goldPath)
-    runCommand(os.path.join(tempDir, formatChecker), inputXML)
-    runCommand(os.path.join(tempDir, formatChecker), goldXML)
-    runCommand(os.path.join(tempDir, evaluator), inputXML, goldXML)
+    runCommand(os.path.join(tempDir, formatChecker), inputPath)
+    runCommand(os.path.join(tempDir, formatChecker), goldPath)
+    runCommand(os.path.join(tempDir, evaluator), inputPath, goldPath)
 
 if __name__=="__main__":
     from optparse import OptionParser
