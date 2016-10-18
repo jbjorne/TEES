@@ -125,33 +125,7 @@ def setClosingMessage(menuSystem, configFilePath):
     
 def initLocalSettings(filename):
     assert Menu.system.defaultInstallDir != None
-    if os.path.exists(filename):
-        print >> sys.stderr, "Using existing local settings file", filename
-    else:
-        print >> sys.stderr, "Initializing local settings file", filename
-        if not os.path.exists(os.path.dirname(filename)):
-            os.makedirs(os.path.dirname(filename))
-        f = open(filename, "wt")
-        f.write("""
-        # Edit these settings to configure TEES. A variable must have a value 
-        # other than None for it to be usable. This file is interpreted as
-        # a Python module, so Python code can be used.
-        
-        # Tools
-        SVM_MULTICLASS_DIR = None # svm_multiclass_learn and svm_multiclass_classify directory
-        BANNER_DIR = None # BANNER program directory
-        GENIA_SENTENCE_SPLITTER_DIR = None # GENIA Sentence Splitter directory
-        RUBY_PATH = "ruby" # Command to run Ruby (used only by the GENIA Sentence Splitter)
-        BLLIP_PARSER_DIR = None # The BLLIP parser directory
-        MCCLOSKY_BIOPARSINGMODEL_DIR = None # The McClosky BioModel directory
-        STANFORD_PARSER_DIR = None # The Stanford parser directory
-        
-        # Data
-        DATAPATH = 'DATAPATH_VALUE' # Main directory for datafiles
-        CORPUS_DIR = None # Directory for the corpus XML-files
-        MODEL_DIR = None # Directory for the official TEES models
-        """.replace("    ", "").replace("DATAPATH_VALUE", Menu.system.defaultInstallDir))
-        f.close()
+    Settings.initLocalSettings(filename, Menu.system.defaultInstallDir)
     # Reset local settings
     os.environ["TEES_SETTINGS"] = filename
     reload(Settings)
