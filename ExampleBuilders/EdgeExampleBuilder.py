@@ -19,6 +19,7 @@ from FeatureBuilders.DrugFeatureBuilder import DrugFeatureBuilder
 from FeatureBuilders.EVEXFeatureBuilder import EVEXFeatureBuilder
 from FeatureBuilders.GiulianoFeatureBuilder import GiulianoFeatureBuilder
 from FeatureBuilders.OntoBiotopeFeatureBuilder import OntoBiotopeFeatureBuilder
+from FeatureBuilders.WordNetFeatureBuilder import WordNetFeatureBuilder
 #import Graph.networkx_v10rc1 as NX10
 from Core.SimpleGraph import Graph
 from FeatureBuilders.TriggerFeatureBuilder import TriggerFeatureBuilder
@@ -56,7 +57,7 @@ class EdgeExampleBuilder(ExampleBuilder):
             "disable_ngram_features", "disable_path_edge_features", "linear_features", "subset", "binary", "pos_only",
             "entity_type", "filter_shortest_path", "maskTypeAsProtein", "keep_neg", "metamap", 
             "sdb_merge", "sdb_features", "ontobiotope_features", "no_self_loops", "full_entities",
-            "no_features"])
+            "no_features", "wordnet"])
         self.styles = self.getParameters(style)
         #if style == None: # no parameters given
         #    style["typed"] = style["directed"] = style["headsOnly"] = True
@@ -98,6 +99,8 @@ class EdgeExampleBuilder(ExampleBuilder):
             self.drugFeatureBuilder = DrugFeatureBuilder(featureSet)
         if self.styles["evex"]:
             self.evexFeatureBuilder = EVEXFeatureBuilder(featureSet)
+        if self.styles["wordnet"]:
+            self.wordNetFeatureBuilder = WordNetFeatureBuilder(featureSet)
         if self.styles["giuliano"]:
             self.giulianoFeatureBuilder = GiulianoFeatureBuilder(featureSet)
         self.types = types
@@ -597,6 +600,10 @@ class EdgeExampleBuilder(ExampleBuilder):
             self.evexFeatureBuilder.setFeatureVector(features, entity1, entity2)
             self.evexFeatureBuilder.buildEdgeFeatures(entity1, entity2, token1, token2, path, sentenceGraph)
             self.evexFeatureBuilder.setFeatureVector(None)
+        if self.styles["wordnet"]:
+            self.wordNetFeatureBuilder.setFeatureVector(features, entity1, entity2)
+            self.wordNetFeatureBuilder.buildFeaturesForEntityPair(token1, token2)
+            self.wordNetFeatureBuilder.setFeatureVector(None)
         if self.styles["giuliano"]:
             self.giulianoFeatureBuilder.setFeatureVector(features, entity1, entity2)
             self.giulianoFeatureBuilder.buildEdgeFeatures(entity1, entity2, token1, token2, path, sentenceGraph)

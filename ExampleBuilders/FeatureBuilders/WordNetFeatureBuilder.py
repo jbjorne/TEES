@@ -36,14 +36,14 @@ class WordNetFeatureBuilder(FeatureBuilder):
         else:
             return None
         
-    def getHypernyms(self, synset):
+    def getHypernyms(self, synset, tag=""):
         rv = []
-        rv.append("HYPER_"+synset.name) # add also the base level
+        rv.append("HYPER_" + tag + synset.name()) # add also the base level
         for hypernym in synset.hypernyms():
-            rv.append("HYPER_"+hypernym.name)
+            rv.append("HYPER_" + tag + hypernym.name())
         return rv
     
-    def getTokenFeatures(self, tokenText, pennPos):
+    def getTokenFeatures(self, tokenText, pennPos, tag=""):
         #print tokenText, pennPos, "X",
         rv = []
         if tokenText == None:
@@ -55,9 +55,18 @@ class WordNetFeatureBuilder(FeatureBuilder):
         #print "C",
         if synsets != None:
             rv.extend(self.getHypernyms(synsets[0]))
-            rv.append("LEX_" + synsets[0].lexname)
+            rv.append("LEX_" + tag + synsets[0].lexname())
         #print "D"
         return rv
+    
+    def buildFeaturesForEntityPair(self, token1, token2):
+        f1 = self.getTokenFeatures(token1.get("text"), token2.get("POS"), "e1_")
+        f2 = self.getTokenFeatures(token1.get("text"), token2.get("POS"), "e1_")
+        for name in f1 + f2:
+            self.features[self.featureSet.getId(name)] = 1
+        for e1Name in f1:
+            for e2Name in f2:
+                self.features[self.featureSet.getId(e1Name + "__" + e2Name)] = 1
 
 if __name__=="__main__":
     w = WordNetFeatureBuilder()
