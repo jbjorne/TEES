@@ -90,8 +90,10 @@ def runCommand(programPath, f1Path=None, f2Path=None, silent=False):
     stderrLines = p.stderr.readlines()
     stdoutLines = p.stdout.readlines()
     if not silent:
-        print >> sys.stderr, "".join(stderrLines)
-        print >> sys.stderr, "".join(stdoutLines)
+        for lines in (stderrLines, stdoutLines):
+            text = "".join(lines).strip()
+            if text != "":
+                print >> sys.stderr, text
 
 def evaluate(inputXML, goldXML):
     install()
