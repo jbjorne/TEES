@@ -68,6 +68,8 @@ def getRelation(interactions):
 def exportRelations(xml, outPath):
     xml = ETFromObj(xml).getroot()
     assert outPath != None
+    if not os.path.exists(os.path.dirname(outPath)):
+        os.makedirs(outPath)
     outFile = open(outPath, "wt")
     for sentence in xml.getiterator("sentence"):
         origId = sentence.get("origId")
@@ -79,6 +81,7 @@ def exportRelations(xml, outPath):
             if rel["e1"] != None and rel["e2"] != None:
                 outFile.write("(" + rel["e1"] + "," + rel["e2"] + ")")
             outFile.write("\n")
+    outFile.close()
 
 def runCommand(programPath, f1Path=None, f2Path=None, silent=False):
     command = "perl " + programPath
