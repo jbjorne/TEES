@@ -1,8 +1,8 @@
 import sys, os
 import shutil
-from Utils.ElementTreeUtils import ETFromObj
 thisPath = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.abspath(os.path.join(thisPath,"../../")))
+from Utils.ElementTreeUtils import ETFromObj
 import Utils.Settings as Settings
 import Utils.Download
 import tempfile
@@ -24,7 +24,7 @@ def readInteraction(interaction):
     e2 = None
     if interaction.get("directed") == "True":
         e1 = interaction.get("e1").rsplit(".")[-1]
-        e2 = interaction.get("e1").rsplit(".")[-1]
+        e2 = interaction.get("e2").rsplit(".")[-1]
     elif relType != "Other":
         relType, rest = relType.strip(")").split("(")
         e1, e2 = rest.split(",")
@@ -77,7 +77,7 @@ def exportRelations(xml, outPath):
                 outFile.write("(" + rel["e1"] + "," + rel["e2"] + ")")
             outFile.write("\n")
 
-def runPL(programPath, f1Path=None, f2Path=None, silent=False):
+def runCommand(programPath, f1Path=None, f2Path=None, silent=False):
     command = "perl " + programPath
     if f1Path != None:
         command += " " + f1Path
@@ -94,11 +94,13 @@ def evaluate(inputXML, goldXML):
     install()
     tempDir = os.path.join(tempfile.gettempdir(), "SE10T8_evaluator")
     basePath = "SemEval2010_task8_all_data/SemEval2010_task8_scorer-v1.2/"
+    formatChecker = "semeval2010_task8_format_checker.pl"
+    evaluator = "semeval2010_task8_scorer-v1.2.pl"
     if not os.path.exists(tempDir):
         os.makedirs(tempDir)
         archive = zipfile.ZipFile(Settings.SE10T8_CORPUS, 'r')
         basePath = "SemEval2010_task8_all_data/SemEval2010_task8_scorer-v1.2/"
-        for filename in ("semeval2010_task8_format_checker.pl", "semeval2010_task8_scorer-v1.2.pl"):
+        for filename in (formatChecker, evaluator):
             source = archive.open(basePath + filename)
             target = file(os.path.join(tempDir, filename), "wt")
             shutil.copyfileobj(source, target)
@@ -111,19 +113,21 @@ def evaluate(inputXML, goldXML):
             os.remove(filePath)
     exportRelations(inputXML, inputPath)
     exportRelations(goldXML, goldPath)
-    runPL("")
+    runCommand(formatChecker, inputXML)
+    runCommand(formatChecker, goldXML)
+    runCommand(evaluator, inputXML, goldXML)
 
 if __name__=="__main__":
     from optparse import OptionParser
     optparser = OptionParser(usage="%prog [options]\n")
     optparser.add_option("-i", "--input", default=None)
-    optparser.add_option("-o", "--output", default=None)
+    optparser.add_option("-g", "--gold", default=None)
     optparser.add_option("-a", "--action", default=None)
     (options, args) = optparser.parse_args()
     
     if options.action == "install":
         install()
     elif options.action == "evaluate":
-        evaluate(None, None)
+        evaluate(options.input, options.gold)
     else:
         print "Unknown action", options.action
