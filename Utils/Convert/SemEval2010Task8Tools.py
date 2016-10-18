@@ -67,6 +67,7 @@ def getRelation(interactions):
 
 def exportRelations(xml, outPath):
     xml = ETFromObj(xml).getroot()
+    assert outPath != None
     outFile = open(outPath, "wt")
     for sentence in xml.getiterator("sentence"):
         origId = sentence.get("origId")
@@ -129,6 +130,7 @@ if __name__=="__main__":
     from optparse import OptionParser
     optparser = OptionParser(usage="%prog [options]\n")
     optparser.add_option("-i", "--input", default=None)
+    optparser.add_option("-o", "--output", default=None)
     optparser.add_option("-g", "--gold", default=None)
     optparser.add_option("-a", "--action", default=None)
     (options, args) = optparser.parse_args()
@@ -137,5 +139,7 @@ if __name__=="__main__":
         install()
     elif options.action == "evaluate":
         evaluate(options.input, options.gold)
+    elif options.action == "export":
+        exportRelations(options.input, options.output)
     else:
         print "Unknown action", options.action
