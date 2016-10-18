@@ -43,13 +43,14 @@ def getRelation(interactions):
     interactions = [x for x in interactions if x.get("type") != "neg"]
     # Check for the undirected "Other" class examples
     otherCount = sum([1 for x in interactions if x.get("type") == "Other"])
-    if otherCount == len(interactions):
+    if otherCount == len(interactions): # all predictions are for the type "Other"
         return {"type":"Other", "e1":None, "e2":None}
+    # Generate a relation from the interactions
     if len(interactions) == 0:
         return None
     elif len(interactions) == 1:
         return readInteraction(interactions[0])
-    else:
+    else: # The two directed predictions have to be converted into a single relation
         i1 = interactions[0]
         i2 = interactions[1]
         # Prefer non-Other type interactions
@@ -106,6 +107,7 @@ def evaluate(inputXML, goldXML):
     basePath = "SemEval2010_task8_all_data/SemEval2010_task8_scorer-v1.2/"
     formatChecker = "semeval2010_task8_format_checker.pl"
     evaluator = "semeval2010_task8_scorer-v1.2.pl"
+    # Uncompress the evaluator program
     if not os.path.exists(tempDir):
         print "Extracting the evaluator to", tempDir
         os.makedirs(tempDir)
@@ -117,17 +119,21 @@ def evaluate(inputXML, goldXML):
             shutil.copyfileobj(source, target)
             source.close()
             target.close()
+    # Remove existing answer key files
     inputPath = os.path.join(tempDir, "input.txt")
     goldPath = os.path.join(tempDir, "gold.txt")
     for filePath in (inputPath, goldPath):
         if os.path.exists(filePath):
             os.remove(filePath)
+    # Save the answer keys for the current files
     print "Exporting relations from", inputPath
     exportRelations(inputXML, inputPath)
     print "Exporting relations from", goldPath
     exportRelations(goldXML, goldPath)
+    # Check the answer key file format
     runCommand(os.path.join(tempDir, formatChecker), inputPath)
     runCommand(os.path.join(tempDir, formatChecker), goldPath)
+    # Run the evaluator
     runCommand(os.path.join(tempDir, evaluator), inputPath, goldPath)
 
 if __name__=="__main__":
