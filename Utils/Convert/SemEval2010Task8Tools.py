@@ -129,10 +129,10 @@ def evaluate(inputXML, goldXML):
 if __name__=="__main__":
     from optparse import OptionParser
     optparser = OptionParser(usage="%prog [options]\n")
-    optparser.add_option("-i", "--input", default=None)
-    optparser.add_option("-o", "--output", default=None)
-    optparser.add_option("-g", "--gold", default=None)
-    optparser.add_option("-a", "--action", default=None)
+    optparser.add_option("-i", "--input", default=None, help="Input file in Interaction XML format")
+    optparser.add_option("-o", "--output", default=None, help="Output file, used only when exporting relations")
+    optparser.add_option("-g", "--gold", default=None, help="Correct annotation file for evaluation in Interaction XML format")
+    optparser.add_option("-a", "--action", default=None, help="One of 'install', 'evaluate' or 'export'")
     (options, args) = optparser.parse_args()
     
     if options.action == "install":

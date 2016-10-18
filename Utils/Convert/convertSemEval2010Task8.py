@@ -157,18 +157,18 @@ def convert(inPath, outDir, corpusId, directed, negatives, preprocess, debug=Fal
 
 if __name__=="__main__":
     from optparse import OptionParser
-    optparser = OptionParser(usage="%prog [options]\n")
+    optparser = OptionParser(usage="%prog [options]\nConvert the SemEval 2010 Task 8 corpus to Interaction XML")
     optparser.add_option("-i", "--corpusPath", default=None, help="Optional path to the corpus zip file (if undefined the corpus will be downloaded)")
-    optparser.add_option("-o", "--outdir", default=None, help="directory for output files")
-    optparser.add_option("-r", "--directed", default=False, action="store_true", help="")
-    optparser.add_option("-n", "--negatives", default=False, action="store_true", help="")
-    optparser.add_option("-c", "--corpus", default="SE10T8", help="")
-    optparser.add_option("-p", "--preprocess", default=False, action="store_true", help="")
-    optparser.add_option("--constParser", default=None)
-    optparser.add_option("--depParser", default=None)
-    optparser.add_option("-d", "--debug", default=False, action="store_true", help="")
-    optparser.add_option("--clear", default=False, action="store_true", help="")
-    optparser.add_option("--noLog", default=False, action="store_true", dest="noLog", help="")
+    optparser.add_option("-o", "--outdir", default=None, help="Directory for the output files")
+    optparser.add_option("-r", "--directed", default=False, action="store_true", help="Generate directed interaction elements")
+    optparser.add_option("-n", "--negatives", default=False, action="store_true", help="Generate negative interactions (used only with the --directed option")
+    optparser.add_option("-c", "--corpus", default="SE10T8", help="The name for the converted corpus")
+    optparser.add_option("-p", "--preprocess", default=False, action="store_true", help="Run the preprocessor after converting to the Interaction XML format")
+    optparser.add_option("--constParser", default=None, help="Check Preprocessor.py for the available options")
+    optparser.add_option("--depParser", default=None, help="Check Preprocessor.py for the available options")
+    optparser.add_option("-d", "--debug", default=False, action="store_true", help="Debug mode (preserve intermediate files)")
+    optparser.add_option("--clear", default=False, action="store_true", help="Delete the contents of the output directory")
+    optparser.add_option("--noLog", default=False, action="store_true", dest="noLog", help="Do not save a log file")
     (options, args) = optparser.parse_args()
     
     if not options.noLog:
