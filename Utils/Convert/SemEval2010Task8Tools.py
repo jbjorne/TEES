@@ -22,12 +22,13 @@ def readInteraction(interaction):
     relType = interaction.get("type")
     e1 = None
     e2 = None
-    if interaction.get("directed") == "True":
-        e1 = interaction.get("e1").rsplit(".")[-1]
-        e2 = interaction.get("e2").rsplit(".")[-1]
-    elif relType != "Other":
-        relType, rest = relType.strip(")").split("(")
-        e1, e2 = rest.split(",")
+    if relType != "Other":
+        if interaction.get("directed") == "True":
+            e1 = interaction.get("e1").rsplit(".")[-1]
+            e2 = interaction.get("e2").rsplit(".")[-1]
+        else:
+            relType, rest = relType.strip(")").split("(")
+            e1, e2 = rest.split(",")
     return {"type":relType, "e1":e1, "e2":e2}
 
 def getConfDict(conf):
