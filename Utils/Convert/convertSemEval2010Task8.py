@@ -12,6 +12,8 @@ import Utils.ElementTreeUtils as ETUtils
 import Utils.InteractionXML.MakeSets as MakeSets
 from Detectors.Preprocessor import Preprocessor
 import Utils.Stream as Stream
+import Utils.Settings as Settings
+import SemEval2010Task8Tools
 
 class Sentence():
     def __init__(self, origId, text, corpusId, usedIds, setName):
@@ -115,6 +117,12 @@ def processLines(lines, setName, usedIds, directed=True, negatives=False, tree=N
     return tree
 
 def convert(inPath, outDir, corpusId, directed, negatives, preprocess, debug=False, clear=False, constParser="BLLIP-BIO", depParser="STANFORD-CONVERT"):
+    # Download the corpus if needed
+    if inPath == None:
+        if not hasattr(Settings, "SE10T8_CORPUS"):
+            SemEval2010Task8Tools.install()
+        inPath = Settings.SE10T8_CORPUS
+    assert os.path.exists(inPath)
     # Prepare the output directory
     if not os.path.exists(outDir):
         print "Making output directory", outDir
@@ -150,8 +158,8 @@ def convert(inPath, outDir, corpusId, directed, negatives, preprocess, debug=Fal
 if __name__=="__main__":
     from optparse import OptionParser
     optparser = OptionParser(usage="%prog [options]\n")
-    optparser.add_option("-i", "--input", default=None)
-    optparser.add_option("-o", "--outdir", default=None, dest="outdir", help="directory for output files")
+    optparser.add_option("-i", "--corpusPath", default=None, help="Optional path to the corpus zip file (if undefined the corpus will be downloaded)")
+    optparser.add_option("-o", "--outdir", default=None, help="directory for output files")
     optparser.add_option("-r", "--directed", default=False, action="store_true", help="")
     optparser.add_option("-n", "--negatives", default=False, action="store_true", help="")
     optparser.add_option("-c", "--corpus", default="SE10T8", help="")
@@ -166,7 +174,7 @@ if __name__=="__main__":
     if not options.noLog:
         Stream.openLog(os.path.join(options.outdir, "log.txt"), clear=options.clear)
     
-    convert(options.input, options.outdir, directed=options.directed, negatives=options.negatives, 
+    convert(options.corpusPath, options.outdir, directed=options.directed, negatives=options.negatives, 
             preprocess=options.preprocess, corpusId=options.corpus,
             constParser=options.constParser, depParser=options.depParser, 
             debug=options.debug, clear=options.clear)
