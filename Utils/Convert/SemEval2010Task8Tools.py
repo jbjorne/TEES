@@ -93,15 +93,15 @@ def runCommand(programPath, f1Path=None, f2Path=None, silent=False):
         command += " " + f2Path
     print "Running:", command
     p = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    stderrLines = p.stderr.readlines()
-    stdoutLines = p.stdout.readlines()
+    stderrText = "".join(p.stderr.readlines()).strip()
+    stdoutText = "".join(p.stdout.readlines()).strip()
     if not silent:
-        for lines in (stderrLines, stdoutLines):
-            text = "".join(lines).strip()
+        for text in (stderrText, stdoutText):
             if text != "":
                 print >> sys.stderr, text
+    return stderrText, stdoutText
 
-def evaluate(inputXML, goldXML):
+def evaluate(inputXML, goldXML, outPath):
     install()
     tempDir = os.path.join(tempfile.gettempdir(), "SE10T8_evaluator")
     basePath = "SemEval2010_task8_all_data/SemEval2010_task8_scorer-v1.2/"
@@ -134,7 +134,13 @@ def evaluate(inputXML, goldXML):
     runCommand(os.path.join(tempDir, formatChecker), inputPath)
     runCommand(os.path.join(tempDir, formatChecker), goldPath)
     # Run the evaluator
-    runCommand(os.path.join(tempDir, evaluator), inputPath, goldPath)
+    stderrText, stdoutText = runCommand(os.path.join(tempDir, evaluator), inputPath, goldPath)
+    # Write the results
+    if outPath != None:
+        outFile = open(outPath, "wt")
+        for text in (stderrText, stdoutText):
+            outFile.write(text)
+        outFile.close()
 
 if __name__=="__main__":
     from optparse import OptionParser
@@ -148,7 +154,7 @@ if __name__=="__main__":
     if options.action == "install":
         install()
     elif options.action == "evaluate":
-        evaluate(options.input, options.gold)
+        evaluate(options.input, options.gold, options.output)
     elif options.action == "export":
         exportRelations(options.input, options.output)
     else:
