@@ -27,6 +27,7 @@ def readInteraction(interaction):
             e1 = interaction.get("e1").rsplit(".")[-1]
             e2 = interaction.get("e2").rsplit(".")[-1]
         else:
+            assert ")" in relType, interaction.attrib
             relType, rest = relType.strip(")").split("(")
             e1, e2 = rest.split(",")
     return {"type":relType, "e1":e1, "e2":e2}
