@@ -207,6 +207,35 @@ class Parser:
             line = depFile.readline()
         return deps
     
+    def alignDependencyToken(self, dep, tok, errors, tokenByIndex=None, sentenceId=None, tokens=None):
+        assert tok in ("t1", "t2")
+        if tokenByIndex == None:
+            return "bt_" + str(dep[tok])
+        else:
+            token = None
+            if dep[tok] not in tokenByIndex:
+                errors.append("Token " + tok + " not found.")
+            elif dep[tok + "Word"] != tokenByIndex[dep[tok]].get("text"):
+                #indices = (dep[tok],)
+                #print >> sys.stderr, (tokenByIndex[dep[tok]].get("text"), "." in tokenByIndex[dep[tok]].get("text"))
+                if "." in tokenByIndex[dep[tok]].get("text"):
+                    if dep[tok + "Word"] == tokenByIndex[dep[tok]].get("text").replace(".", ""):
+                        token = tokenByIndex[dep[tok]]
+                    else:
+                        indices = (dep[tok] - 1, dep[tok] + 1)
+                        for index in indices:
+                            if index in tokenByIndex and dep[tok + "Word"] == tokenByIndex[index].get("text"):
+                                token = tokenByIndex[index]
+                                break
+                    #print index, indices, dep[tok + "Word"], tokenByIndex[index].attrib, token != None
+                if token == None:
+                    errors.append("Alignment error for " + tok)
+                    print >> sys.stderr, "Alignment error for " + tok, (dep, tokenByIndex[dep[tok]].get("text"), sentenceId, tokens)
+            if token != None:
+                return token.get("id")
+            else:
+                return None
+    
     def insertDependencies(self, depFile, parse, tokenByIndex=None, sentenceId=None, skipExtra=0):
         # A list of tokens for debugging
         tokens = []
@@ -222,34 +251,17 @@ class Parser:
                 element = ET.Element("dependency")
                 element.set("id", "sd_" + str(depCount))
                 element.set("type", dep["type"])
-                skip = True
-                if tokenByIndex != None:
-                    if dep["t1"] not in tokenByIndex:
-                        print >> sys.stderr, "Token 1 not found", (dep, depCount, sentenceId)
-                    elif dep["t2"] not in tokenByIndex:
-                        print >> sys.stderr, "Token 2 not found", (dep, depCount, sentenceId)
-                    else:
-                        skip = False
-                        if dep["t1Word"] != tokenByIndex[dep["t1"]].get("text"):
-                            print >> sys.stderr, "Alignment error for token 1", (dep, tokenByIndex[dep["t1"]].get("text"), depCount, sentenceId, tokens)
-                            skip = True
-                            if parse.get("stanfordAlignmentError") == None:
-                                parse.set("stanfordAlignmentError", dep["t1Word"])
-                        if dep["t2Word"] != tokenByIndex[dep["t2"]].get("text"):
-                            print >> sys.stderr, "Alignment error for token 2", (dep, tokenByIndex[dep["t2"]].get("text"), depCount, sentenceId, tokens)
-                            skip = True
-                            if parse.get("stanfordAlignmentError") == None:
-                                parse.set("stanfordAlignmentError", dep["t2Word"])
-                        element.set("t1", tokenByIndex[dep["t1"]].get("id"))
-                        element.set("t2", tokenByIndex[dep["t2"]].get("id"))
-                else:
-                    element.set("t1", "bt_" + str(dep["t1"]))
-                    element.set("t2", "bt_" + str(dep["t2"]))
-                    skip = False
-                if not skip:
+                errors = []
+                t1 = self.alignDependencyToken(dep, "t1", errors, tokenByIndex, sentenceId, tokens)
+                t2 = self.alignDependencyToken(dep, "t2", errors, tokenByIndex, sentenceId, tokens)
+                if t1 != None and t2 != None:
+                    element.set("t1", t1)
+                    element.set("t2", t2)
                     parse.insert(depCount - 1, element)
                     depCount += 1
                     elements.append(element)
+                elif len(errors) > 0:
+                    parse.set("stanfordErrors", " ".join(errors))
         return elements
     
     def getTokenByIndex(self, sentence, parse):
