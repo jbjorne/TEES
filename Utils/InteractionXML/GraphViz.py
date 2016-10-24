@@ -57,7 +57,7 @@ def groupDependencies(elements):
                     d1["child"] = d2
     return depStructs         
 
-def toGraphViz(input, id, output=None, parse="McCC", color=None, colorNum=None, colorParse=None, colorNumParse=None):
+def toGraphViz(input, id, output=None, parse="McCC", color=None, colorNum=None, colorParse=None, colorNumParse=None, width=None, height=None):
     print >> sys.stderr, "====== Visualizing Sentence with GraphViz (www.graphviz.org) ======"
     
     #if output == None:
@@ -82,7 +82,10 @@ def toGraphViz(input, id, output=None, parse="McCC", color=None, colorNum=None, 
     s = ""
     s += "digraph " + id.replace(".", "_") + " {\n"
     #f.write("graph [label=\"Orthogonal edges\", splines=ortho, nodesep=0.1];\n")
-    s += "graph [nodesep=0.1];\n"
+    if width != None and height != None:
+        s += "graph [nodesep=0.1,size=\"" + str(width) + "," + str(height) + "!\", resolution=1];\n"
+    else:
+        s += "graph [nodesep=0.1];\n"
     s += "node [shape=box];\n\n"
     #f.write("ranksep=0.5;")
     
@@ -143,7 +146,7 @@ def toGraphViz(input, id, output=None, parse="McCC", color=None, colorNum=None, 
         s += getId(interaction, "e1") + " -> " + getId(interaction, "e2") + "[" + intColor + " fontsize=10 label=\"" + interaction.get("type") + "\"];\n"
     s += "}\n\n"
     s += "}\n"
-    
+
     if output != None:
         gvPath = output + ".gv"
         print >> sys.stderr, "Graph file saved to: " + gvPath
@@ -178,6 +181,8 @@ if __name__=="__main__":
     optparser.add_option("-e", "--colorParse", default="set27", dest="colorParse", help="Parse color scheme")
     optparser.add_option("-n", "--colorNum", default=7, type="int", dest="colorNum", help="Event color scheme")
     optparser.add_option("-m", "--colorNumParse", default=7, type="int", dest="colorNumParse", help="Event color scheme")
+    optparser.add_option("--width", default=None, type="int")
+    optparser.add_option("--height", default=None, type="int")
     (options, args) = optparser.parse_args()
     
-    toGraphViz(options.input, options.id, options.output, options.parse, options.color, options.colorNum, options.colorParse, options.colorNumParse)
+    toGraphViz(options.input, options.id, options.output, options.parse, options.color, options.colorNum, options.colorParse, options.colorNumParse, options.width, options.height)

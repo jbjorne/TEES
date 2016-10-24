@@ -16,7 +16,7 @@ class Application(tk.Frame):
         self.colorNum = colorNum
         self.colorParse = colorParse
         self.colorNumParse = colorNumParse
-        self.pack()
+        self.pack(fill=tk.BOTH, expand=tk.YES)
         self.createWidgets()
         self.showSentence()
     
@@ -31,14 +31,16 @@ class Application(tk.Frame):
     def showSentence(self):
         sentenceId = self.sentences[self.index].get("id")
         self.label['text'] = sentenceId
-        gif = toGraphViz(self.xml, sentenceId, None, self.parse, self.color, self.colorNum, self.colorParse, self.colorNumParse)
+        #gif = toGraphViz(self.xml, sentenceId, None, self.parse, self.color, self.colorNum, self.colorParse, self.colorNumParse, width=self.canvas['width'], height=self.canvas['height'])
+        gif = toGraphViz(self.xml, sentenceId, None, self.parse, self.color, self.colorNum, self.colorParse, self.colorNumParse, width=self.canvas.winfo_width(), height=self.canvas.winfo_height())
         gif = base64.b64encode(gif)
         self.photo = tk.PhotoImage(data=gif)
+        #self.photo = self.photo.subsample(700)
         self.canvas.create_image(0, 0, image=self.photo, anchor='nw')
 
     def createWidgets(self):
         self.canvas = tk.Canvas(self, width=700, height=300, bg='white')
-        self.canvas.pack(side='top', fill='both', expand='yes')
+        self.canvas.pack(fill=tk.BOTH, expand=tk.YES)
         
 #         self.QUIT = Button(self)
 #         self.QUIT["text"] = "QUIT"
