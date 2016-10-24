@@ -29,7 +29,9 @@ class Application(Frame):
         self.showSentence()
     
     def showSentence(self):
-        gif = toGraphViz(self.xml, self.sentences[self.index].get("id"), None, self.parse, self.color, self.colorNum, self.colorParse, self.colorNumParse)
+        sentenceId = self.sentences[self.index].get("id")
+        self.label['text'] = sentenceId
+        gif = toGraphViz(self.xml, sentenceId, None, self.parse, self.color, self.colorNum, self.colorParse, self.colorNumParse)
         gif = base64.b64encode(gif)
         self.photo = PhotoImage(data=gif)
         self.canvas.create_image(0, 0, image=self.photo, anchor='nw')
@@ -38,11 +40,15 @@ class Application(Frame):
         self.canvas = Canvas(self, width=700, height=300, bg='white')
         self.canvas.pack(side='top', fill='both', expand='yes')
         
-        self.QUIT = Button(self)
-        self.QUIT["text"] = "QUIT"
-        self.QUIT["fg"]   = "red"
-        self.QUIT["command"] =  self.quit
-        self.QUIT.pack({"side": "left"})
+#         self.QUIT = Button(self)
+#         self.QUIT["text"] = "QUIT"
+#         self.QUIT["fg"]   = "red"
+#         self.QUIT["command"] =  self.quit
+#         self.QUIT.pack({"side": "left"})
+        
+        self.label = Label(self)
+        self.label["text"] = "N/A",
+        self.label.pack({"side": "left"})
 
         self.next = Button(self)
         self.next["text"] = "Next",
