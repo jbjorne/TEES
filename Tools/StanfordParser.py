@@ -89,7 +89,8 @@ class StanfordParser(Parser):
             else:
                 stanfordParserArgs += ["-cp", "./*",
                                       "edu.stanford.nlp.parser.lexparser.LexicalizedParser",
-                                      "-sentences", "newline"]
+                                      "-sentences", "newline",
+                                      "-tokenizerOptions", "americanize=false"]
                 if action == "penn":
                     stanfordParserArgs += ["-outputFormat", "oneline"]
                 else: # action == "dep"
