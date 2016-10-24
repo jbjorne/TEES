@@ -215,22 +215,29 @@ class Parser:
             token = None
             if dep[tok] not in tokenByIndex:
                 errors.append("Token " + tok + " not found.")
+                print >> sys.stderr, "Token not found: " + tok, (dep, tokenByIndex[dep[tok]].get("text"), sentenceId, tokens)
             elif dep[tok + "Word"] != tokenByIndex[dep[tok]].get("text"):
-                #indices = (dep[tok],)
-                #print >> sys.stderr, (tokenByIndex[dep[tok]].get("text"), "." in tokenByIndex[dep[tok]].get("text"))
-                if "." in tokenByIndex[dep[tok]].get("text"):
-                    if dep[tok + "Word"] == tokenByIndex[dep[tok]].get("text").replace(".", ""):
-                        token = tokenByIndex[dep[tok]]
-                    else:
-                        indices = (dep[tok] - 1, dep[tok] + 1)
-                        for index in indices:
-                            if index in tokenByIndex and dep[tok + "Word"] == tokenByIndex[index].get("text"):
-                                token = tokenByIndex[index]
-                                break
-                    #print index, indices, dep[tok + "Word"], tokenByIndex[index].attrib, token != None
-                if token == None:
+                if dep[tok + "Word"] == tokenByIndex[dep[tok]].get("text").replace(".", ""):
+                    token = tokenByIndex[dep[tok]]
+                else:
                     errors.append("Alignment error for " + tok)
                     print >> sys.stderr, "Alignment error for " + tok, (dep, tokenByIndex[dep[tok]].get("text"), sentenceId, tokens)
+#                 #indices = (dep[tok],)
+#                 #print >> sys.stderr, (tokenByIndex[dep[tok]].get("text"), "." in tokenByIndex[dep[tok]].get("text"))
+#                 if "." in tokenByIndex[dep[tok]].get("text"):
+#                     if dep[tok + "Word"] == tokenByIndex[dep[tok]].get("text").replace(".", ""):
+#                         token = tokenByIndex[dep[tok]]
+#                     else:
+#                         indices = (dep[tok] - 1, dep[tok] + 1)
+#                         for index in indices:
+#                             if index in tokenByIndex and dep[tok + "Word"] == tokenByIndex[index].get("text"):
+#                                 token = tokenByIndex[index]
+#                                 break
+#                     #print index, indices, dep[tok + "Word"], tokenByIndex[index].attrib, token != None
+#                 if token == None:
+            else:
+                token = tokenByIndex[dep[tok]]
+            # Return the matching token id
             if token != None:
                 return token.get("id")
             else:
@@ -264,12 +271,14 @@ class Parser:
                     parse.set("stanfordErrors", " ".join(errors))
         return elements
     
-    def getTokenByIndex(self, sentence, parse):
+    def getTokenByIndex(self, sentence, parse, ignore=None):
         tokenization = self.getAnalysis(sentence, "tokenization", {"tokenizer":parse.get("tokenizer")}, "tokenizations")
         assert tokenization != None
         count = 0
         tokenByIndex = {}
         for token in tokenization.findall("token"):
+            if ignore != None and token.get("text") in ignore:
+                continue
             tokenByIndex[count] = token
             count += 1
         return tokenByIndex

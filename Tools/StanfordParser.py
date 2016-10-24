@@ -78,7 +78,10 @@ class StanfordParser(Parser):
                     stanfordInputFile.write(pennTree + "\n")
                 else: # action == "dep"
                     tokenByIndex = self.getTokenByIndex(sentence, parse)
-                    tokenized = " ".join([tokenByIndex[index].get("text") for index in sorted(tokenByIndex.keys())])
+                    tokenTexts = [tokenByIndex[index].get("text") for index in sorted(tokenByIndex.keys())]
+                    # Periods in the middle of the sentence break the token indexing of the dependency output
+                    tokenTexts = [x for x in tokenTexts[:-1] if x != "."] + tokenTexts[-1:]
+                    tokenized = " ".join(tokenTexts)
                     tokenized = tokenized.replace(" . ",  " : ")
                     stanfordInputFile.write(tokenized.replace("\n", " ").replace("\r", " ").strip() + "\n")
             else: # action == "penn"
