@@ -217,7 +217,7 @@ class Parser:
                 errors.append("Token " + tok + " not found.")
                 print >> sys.stderr, "Token not found: " + tok, (dep, sentenceId, tokens)
             elif dep[tok + "Word"] != tokenByIndex[dep[tok]].get("text"):
-                if dep[tok + "Word"] == tokenByIndex[dep[tok]].get("text").replace(".", ""):
+                if dep[tok + "Word"] == tokenByIndex[dep[tok]].get("text").strip("."):
                     token = tokenByIndex[dep[tok]]
                 else:
                     errors.append("Alignment error for " + tok)

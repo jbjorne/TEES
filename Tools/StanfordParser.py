@@ -44,7 +44,10 @@ class StanfordParser(Parser):
                              stanfordPath, {"STANFORD_PARSER_DIR":stanfordPath}, updateLocalSettings)
 
     def runStanford(self, input, output, stanfordParserArgs):
-        return subprocess.Popen(stanfordParserArgs + [input], stdout=codecs.open(output, "wt", "utf-8"))
+        return subprocess.Popen(stanfordParserArgs + [input], stdout=codecs.open(output, "wt", "utf-8"), stderr=codecs.open(self._getStderrPath(output), "wt", "utf-8"))
+    
+    def _getStderrPath(self, outputFilePath):
+        return os.path.join(os.path.dirname(outputFilePath), "stderr.log")
     
     @classmethod
     def process(cls, parser, input, output=None, debug=False, reparse=False, stanfordParserDir=None, stanfordParserArgs=None, action="convert"):
@@ -139,6 +142,12 @@ class StanfordParser(Parser):
         workdir = tempfile.mkdtemp()
         stanfordInput = self._makeStanfordInputFile(corpusRoot, workdir, parser, reparse, action, debug)
         stanfordOutput = self._runStanfordProcess(stanfordParserArgs, stanfordParserDir, stanfordInput, workdir, action)
+        # Show the stderr output from the parser process
+        with codecs.open(self._getStderrPath(stanfordOutput), "rt", "utf-8") as stderrFile:
+            for line in stderrFile:
+                if not line.startswith("Parsing"):
+                    print >> sys.stderr, line.strip()
+        # Insert the parses
         if action in ("convert", "dep"):
             self._insertDependencyParse(corpusRoot, stanfordOutput, workdir, parser, reparse, action, debug)
         elif action == "penn":
