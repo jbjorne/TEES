@@ -19,6 +19,10 @@ class Application(tk.Frame):
         self.pack(fill=tk.BOTH, expand=tk.YES)
         self.createWidgets()
         self.showSentence()
+        self.bind("<Configure>", self.onResize)
+    
+    def onResize(self, event):
+        self.showSentence(event.width, event.height)
     
     def nextSentence(self):
         self.index = min(len(self.sentences) - 1, self.index + 1)
@@ -28,11 +32,20 @@ class Application(tk.Frame):
         self.index = max(0, self.index - 1)
         self.showSentence()
     
-    def showSentence(self):
+    def showSentence(self, width=None, height=None):
         sentenceId = self.sentences[self.index].get("id")
         self.label['text'] = sentenceId
+        if width == None:
+            width = self.canvas.winfo_width()
+        if height == None:
+            height = self.canvas.winfo_height()
+        if width == 1:
+            width = self.canvas["width"]
+        if height == 1:
+            height = self.canvas["height"]
+        print width, height
         #gif = toGraphViz(self.xml, sentenceId, None, self.parse, self.color, self.colorNum, self.colorParse, self.colorNumParse, width=self.canvas['width'], height=self.canvas['height'])
-        gif = toGraphViz(self.xml, sentenceId, None, self.parse, self.color, self.colorNum, self.colorParse, self.colorNumParse, width=self.canvas.winfo_width(), height=self.canvas.winfo_height())
+        gif = toGraphViz(self.xml, sentenceId, None, self.parse, self.color, self.colorNum, self.colorParse, self.colorNumParse, width, height)
         gif = base64.b64encode(gif)
         self.photo = tk.PhotoImage(data=gif)
         #self.photo = self.photo.subsample(700)
