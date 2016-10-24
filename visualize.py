@@ -6,8 +6,33 @@ import base64
 #from PIL import ImageTk, Image
 
 class Application(Frame):
-    def say_hi(self):
-        print "hi there, everyone!"
+    def __init__(self, xml, index=0, parse="McCC", color="set27", colorNum=7, colorParse="set27", colorNumParse=7, master=None):
+        Frame.__init__(self, master)
+        self.xml = ETUtils.ETFromObj(xml)
+        self.sentences = self.xml.findall("document/sentence")
+        self.index = 0
+        self.parse = parse
+        self.color = color
+        self.colorNum = colorNum
+        self.colorParse = colorParse
+        self.colorNumParse = colorNumParse
+        self.pack()
+        self.createWidgets()
+        self.showSentence()
+    
+    def nextSentence(self):
+        self.index = min(len(self.sentences) - 1, self.index + 1)
+        self.showSentence()
+    
+    def prevSentence(self):
+        self.index = max(0, self.index - 1)
+        self.showSentence()
+    
+    def showSentence(self):
+        gif = toGraphViz(self.xml, self.sentences[self.index].get("id"), None, self.parse, self.color, self.colorNum, self.colorParse, self.colorNumParse)
+        gif = base64.b64encode(gif)
+        self.photo = PhotoImage(data=gif)
+        self.canvas.create_image(0, 0, image=self.photo, anchor='nw')
 
     def createWidgets(self):
         self.canvas = Canvas(self, width=700, height=300, bg='white')
@@ -17,19 +42,17 @@ class Application(Frame):
         self.QUIT["text"] = "QUIT"
         self.QUIT["fg"]   = "red"
         self.QUIT["command"] =  self.quit
-
         self.QUIT.pack({"side": "left"})
 
-        self.hi_there = Button(self)
-        self.hi_there["text"] = "Hello",
-        self.hi_there["command"] = self.say_hi
-
-        self.hi_there.pack({"side": "left"})
-
-    def __init__(self, master=None):
-        Frame.__init__(self, master)
-        self.pack()
-        self.createWidgets()
+        self.next = Button(self)
+        self.next["text"] = "Next",
+        self.next["command"] = self.nextSentence
+        self.next.pack({"side": "right"})
+        
+        self.next = Button(self)
+        self.next["text"] = "Prev",
+        self.next["command"] = self.prevSentence
+        self.next.pack({"side": "right"})
 
 # def svgPhotoImage(self, svgString):
 #     "Returns a ImageTk.PhotoImage object represeting the svg file" 
@@ -46,19 +69,18 @@ class Application(Frame):
 #     return tk_image
 
 def run(inPath, firstId, outPath, parse, color, colorNum, colorParse, colorNumParse):
-    xml = ETUtils.ETFromObj(inPath)
-    sentences = xml.findall("document/sentence")
-    if firstId == None:
-        firstId = sentences[0].get("id")
-    gif = toGraphViz(xml, firstId, None, parse, color, colorNum, colorParse, colorNumParse)
-    gif = base64.b64encode(gif)
+    #xml = ETUtils.ETFromObj(inPath)
+    #sentences = xml.findall("document/sentence")
+    #if firstId == None:
+    #    firstId = sentences[0].get("id")
+    #gif = toGraphViz(xml, firstId, None, parse, color, colorNum, colorParse, colorNumParse)
+    #gif = base64.b64encode(gif)
     #print svg
     #tk_image = svgPhotoImage
     root = Tk()
-    photo = PhotoImage(data=gif)
-    app = Application(master=root)
+    app = Application(master=root, xml=inPath)
     #app.FRAME.configure(image=gif)
-    app.canvas.create_image(100, 100, image=photo, anchor='nw')
+    #app.canvas.create_image(0, 0, image=photo, anchor='nw')
     app.mainloop()
     root.destroy()
 
