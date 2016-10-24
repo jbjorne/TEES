@@ -1,13 +1,13 @@
 from Utils.InteractionXML.GraphViz import toGraphViz
-from Tkinter import *
+import Tkinter as tk
 import Utils.ElementTreeUtils as ETUtils
 import base64
 #import Image, ImageTk, rsvg, cairo
 #from PIL import ImageTk, Image
 
-class Application(Frame):
+class Application(tk.Frame):
     def __init__(self, xml, index=0, parse="McCC", color="set27", colorNum=7, colorParse="set27", colorNumParse=7, master=None):
-        Frame.__init__(self, master)
+        tk.Frame.__init__(self, master)
         self.xml = ETUtils.ETFromObj(xml)
         self.sentences = self.xml.findall("document/sentence")
         self.index = 0
@@ -33,11 +33,11 @@ class Application(Frame):
         self.label['text'] = sentenceId
         gif = toGraphViz(self.xml, sentenceId, None, self.parse, self.color, self.colorNum, self.colorParse, self.colorNumParse)
         gif = base64.b64encode(gif)
-        self.photo = PhotoImage(data=gif)
+        self.photo = tk.PhotoImage(data=gif)
         self.canvas.create_image(0, 0, image=self.photo, anchor='nw')
 
     def createWidgets(self):
-        self.canvas = Canvas(self, width=700, height=300, bg='white')
+        self.canvas = tk.Canvas(self, width=700, height=300, bg='white')
         self.canvas.pack(side='top', fill='both', expand='yes')
         
 #         self.QUIT = Button(self)
@@ -46,16 +46,16 @@ class Application(Frame):
 #         self.QUIT["command"] =  self.quit
 #         self.QUIT.pack({"side": "left"})
         
-        self.label = Label(self)
+        self.label = tk.Label(self)
         self.label["text"] = "N/A",
         self.label.pack({"side": "left"})
 
-        self.next = Button(self)
+        self.next = tk.Button(self)
         self.next["text"] = "Next",
         self.next["command"] = self.nextSentence
         self.next.pack({"side": "right"})
         
-        self.next = Button(self)
+        self.next = tk.Button(self)
         self.next["text"] = "Prev",
         self.next["command"] = self.prevSentence
         self.next.pack({"side": "right"})
@@ -83,7 +83,7 @@ def run(inPath, firstId, outPath, parse, color, colorNum, colorParse, colorNumPa
     #gif = base64.b64encode(gif)
     #print svg
     #tk_image = svgPhotoImage
-    root = Tk()
+    root = tk.Tk()
     app = Application(master=root, xml=inPath)
     #app.FRAME.configure(image=gif)
     #app.canvas.create_image(0, 0, image=photo, anchor='nw')
