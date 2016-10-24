@@ -17,6 +17,19 @@ from Utils.FileUtils import openWithExt, getTarFilePath
 import Tool
 from Parser import Parser
 
+# class StanfordOutputFilter:
+#     def __init__(self, stream):
+#         self.stream = stream
+#     
+#     def write(self, text):
+#         raise Exception("SDFSDF")
+#         print >> self.stream, "WRITING", text
+#         if not text.startswith("Parsing"):
+#             self.stream.write(text)
+#     
+#     def fileno(self):
+#         return self.stream.fileno()
+
 class StanfordParser(Parser):
     def install(self, destDir=None, downloadDir=None, redownload=False, updateLocalSettings=False):
         print >> sys.stderr, "Installing Stanford Parser"
@@ -89,8 +102,13 @@ class StanfordParser(Parser):
             else:
                 stanfordParserArgs += ["-cp", "./*",
                                       "edu.stanford.nlp.parser.lexparser.LexicalizedParser",
-                                      "-sentences", "newline",
-                                      "-tokenizerOptions", "americanize=false"]
+                                      "-sentences", "newline"]
+                tokenizerOptions = "untokenizable=allKeep"
+                for normalization in ("Space", "AmpersandEntity", "Currency", "Fractions", "OtherBrackets"):
+                    tokenizerOptions += ",normalize" + normalization + "=false"
+                for tokOpt in ("americanize", "asciiQuotes", "latexQuotes", "unicodeQuotes", "ptb3Ellipsis", "ptb3Dashes", "escapeForwardSlashAsterisk"):
+                    tokenizerOptions += "," + tokOpt + "=false"
+                stanfordParserArgs += ["-tokenizerOptions", tokenizerOptions]
                 if action == "penn":
                     stanfordParserArgs += ["-outputFormat", "oneline"]
                 else: # action == "dep"
