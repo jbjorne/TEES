@@ -143,10 +143,15 @@ class StanfordParser(Parser):
         stanfordInput = self._makeStanfordInputFile(corpusRoot, workdir, parser, reparse, action, debug)
         stanfordOutput = self._runStanfordProcess(stanfordParserArgs, stanfordParserDir, stanfordInput, workdir, action)
         # Show the stderr output from the parser process
-        with codecs.open(self._getStderrPath(stanfordOutput), "rt", "utf-8") as stderrFile:
+        stderrPath = self._getStderrPath(stanfordOutput)
+        print >> sys.stderr, "Parser output from", stderrPath + ":"
+        print >> sys.stderr, "---"
+        with codecs.open(stderrPath, "rt", "utf-8") as stderrFile:
             for line in stderrFile:
-                if not line.startswith("Parsing"):
-                    print >> sys.stderr, line.strip()
+                line = line.strip()
+                if line != "" and not line.startswith("Parsing [sent."):
+                    print >> sys.stderr, line
+        print >> sys.stderr, "---"
         # Insert the parses
         if action in ("convert", "dep"):
             self._insertDependencyParse(corpusRoot, stanfordOutput, workdir, parser, reparse, action, debug)
