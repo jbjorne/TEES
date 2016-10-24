@@ -81,9 +81,10 @@ class StanfordParser(Parser):
                     stanfordInputFile.write(pennTree + "\n")
                 else: # action == "dep"
                     tokenByIndex = self.getTokenByIndex(sentence, parse, ["."])
-                    tokenTexts = [tokenByIndex[index].get("text") for index in sorted(tokenByIndex.keys())]
+                    tokenTexts = [tokenByIndex[index].get("filteredText") for index in sorted(tokenByIndex.keys())]
                     # Periods in the middle of the sentence break the token indexing of the dependency output
-                    tokenTexts = [x.strip(".") for x in tokenTexts[:-1]] + tokenTexts[-1:]
+                    #tokenTexts = [x.replace(".", "").strip() for x in tokenTexts[:-1]] + tokenTexts[-1:]
+                    #tokenTexts = [x for x in tokenTexts if x != ""]
                     tokenized = " ".join(tokenTexts)
                     #tokenized = tokenized.replace(" . ",  " : ")
                     stanfordInputFile.write(tokenized.replace("\n", " ").replace("\r", " ").strip() + "\n")
@@ -108,7 +109,7 @@ class StanfordParser(Parser):
             else:
                 stanfordParserArgs += ["-cp", "./*",
                                       "edu.stanford.nlp.parser.lexparser.LexicalizedParser",
-                                      "-sentences", "newline"]
+                                      "-sentences", "newline"] #"-escaper", "edu.stanford.nlp.process.PTBEscapingProcessor"]
                 # Add tokenizer options
                 tokenizerOptions = "untokenizable=allKeep"
                 for normalization in ("Space", "AmpersandEntity", "Currency", "Fractions", "OtherBrackets"):

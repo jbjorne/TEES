@@ -216,12 +216,12 @@ class Parser:
             if dep[tok] not in tokenByIndex:
                 errors.append("Token " + tok + " not found.")
                 print >> sys.stderr, "Token not found: " + tok, (dep, sentenceId, tokens)
-            elif dep[tok + "Word"] != tokenByIndex[dep[tok]].get("text"):
-                if dep[tok + "Word"] == tokenByIndex[dep[tok]].get("text").strip("."):
+            elif dep[tok + "Word"] != tokenByIndex[dep[tok]].get("filteredText"):
+                if dep[tok + "Word"] == tokenByIndex[dep[tok]].get("filteredText").strip("."):
                     token = tokenByIndex[dep[tok]]
                 else:
                     errors.append("Alignment error for " + tok)
-                    print >> sys.stderr, "Alignment error for " + tok, (dep, tokenByIndex[dep[tok]].get("text"), sentenceId, tokens)
+                    print >> sys.stderr, "Alignment error for " + tok, (dep, tokenByIndex[dep[tok]].attrib, sentenceId, tokens)
 #                 #indices = (dep[tok],)
 #                 #print >> sys.stderr, (tokenByIndex[dep[tok]].get("text"), "." in tokenByIndex[dep[tok]].get("text"))
 #                 if "." in tokenByIndex[dep[tok]].get("text"):
@@ -277,10 +277,16 @@ class Parser:
         count = 0
         tokenByIndex = {}
         for token in tokenization.findall("token"):
-            if ignore != None and token.get("text") in ignore:
-                continue
-            tokenByIndex[count] = token
-            count += 1
+            tokenText = token.get("text")
+            if ignore != None:
+                for char in ignore:
+                    tokenText = tokenText.replace(char, "")
+                tokenText = tokenText.strip()
+            if tokenText != "":
+                token = ET.Element(token.tag, token.attrib) # copy the element so it can be modified
+                token.set("filteredText", tokenText)
+                tokenByIndex[count] = token
+                count += 1
         return tokenByIndex
     
     def getDocumentOrigId(self, document):
