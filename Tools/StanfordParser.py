@@ -77,12 +77,12 @@ class StanfordParser(Parser):
                         continue
                     stanfordInputFile.write(pennTree + "\n")
                 else: # action == "dep"
-                    tokenByIndex = self.getTokenByIndex(sentence, parse)
+                    tokenByIndex = self.getTokenByIndex(sentence, parse, ["."])
                     tokenTexts = [tokenByIndex[index].get("text") for index in sorted(tokenByIndex.keys())]
                     # Periods in the middle of the sentence break the token indexing of the dependency output
-                    tokenTexts = [x for x in tokenTexts[:-1] if x != "."] + tokenTexts[-1:]
+                    tokenTexts = [x.strip(".") for x in tokenTexts[:-1]] + tokenTexts[-1:]
                     tokenized = " ".join(tokenTexts)
-                    tokenized = tokenized.replace(" . ",  " : ")
+                    #tokenized = tokenized.replace(" . ",  " : ")
                     stanfordInputFile.write(tokenized.replace("\n", " ").replace("\r", " ").strip() + "\n")
             else: # action == "penn"
                 stanfordInputFile.write(sentence.get("text").replace("\n", " ").replace("\r", " ").strip() + "\n")
@@ -106,12 +106,14 @@ class StanfordParser(Parser):
                 stanfordParserArgs += ["-cp", "./*",
                                       "edu.stanford.nlp.parser.lexparser.LexicalizedParser",
                                       "-sentences", "newline"]
+                # Add tokenizer options
                 tokenizerOptions = "untokenizable=allKeep"
                 for normalization in ("Space", "AmpersandEntity", "Currency", "Fractions", "OtherBrackets"):
                     tokenizerOptions += ",normalize" + normalization + "=false"
                 for tokOpt in ("americanize", "asciiQuotes", "latexQuotes", "unicodeQuotes", "ptb3Ellipsis", "ptb3Dashes", "escapeForwardSlashAsterisk"):
                     tokenizerOptions += "," + tokOpt + "=false"
                 stanfordParserArgs += ["-tokenizerOptions", tokenizerOptions]
+                # Add action specific options
                 if action == "penn":
                     stanfordParserArgs += ["-outputFormat", "oneline"]
                 else: # action == "dep"
@@ -191,7 +193,7 @@ class StanfordParser(Parser):
             for attr in sorted(extraAttributes.keys()):
                 parse.set(attr, extraAttributes[attr])
         # Get tokens
-        tokenByIndex = self.getTokenByIndex(sentence, parse)
+        tokenByIndex = self.getTokenByIndex(sentence, parse, ["."])
         # Insert dependencies
         if origId == None:
             origId = sentence.get("origId")
