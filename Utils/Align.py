@@ -24,6 +24,20 @@ def initMatrix(stringA, stringB, weights):
             matrix[i][j] = getScore(matrix, i, j, stringA, stringB, weights)
     return matrix
 
+def getAlignment(matrix):
+    pos = (len(matrix[0]) - 1, len(matrix) - 1) # lower right corner
+    alignment = []
+    while pos != (0, 0):
+        alignment = [pos] + alignment 
+        pos = move(matrix, pos)
+    return [pos] + alignment
+
+def move(matrix, pos):
+    moves = [(-1, -1), (-1, 0), (0, -1)] # move diagonally, up, or left
+    values = [(matrix[pos[0] + m[0]][pos[1] + m[1]], m) for m in moves]
+    bestMove = sorted(values, reverse=True)[0][1]
+    return (pos[0] + bestMove[0], pos[1] + bestMove[1])
+
 def printMatrix(matrix):
     for row in matrix:
         print row
@@ -37,3 +51,4 @@ if __name__=="__main__":
     
     matrix = initMatrix(options.a, options.b, WEIGHTS)
     printMatrix(matrix)
+    print getAlignment(matrix)
