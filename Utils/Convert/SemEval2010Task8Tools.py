@@ -8,6 +8,12 @@ import Utils.Download
 import tempfile
 import zipfile
 import subprocess
+import convertSemEval2010Task8
+import train
+
+###############################################################################
+# Install
+###############################################################################
 
 def install(destPath=None, redownload=False, updateLocalSettings=True):
     if hasattr(Settings, "SE10T8_CORPUS"): # Already installed
@@ -17,6 +23,10 @@ def install(destPath=None, redownload=False, updateLocalSettings=True):
         destPath = os.path.join(Settings.DATAPATH, "resources/SemEval2010_task8_all_data.zip")
     Utils.Download.download(Settings.URL["SE10T8_CORPUS"], destPath, addName=False, clear=redownload)
     Settings.setLocal("SE10T8_CORPUS", destPath, updateLocalSettings)
+
+###############################################################################
+# Evaluate and Export
+###############################################################################
 
 def readInteraction(interaction):
     relType = interaction.get("type")
@@ -143,13 +153,61 @@ def evaluate(inputXML, goldXML, outPath):
             outFile.write(text)
         outFile.close()
 
+###############################################################################
+# Batch Processing
+###############################################################################
+
+CORPUS_ID = "SE10T8"
+
+def getTargets():
+    targets = []
+    for directed in (True, False):
+        for const in ("BLLIP-BIO", "BLLIP", "STANFORD"):
+            for dep in ("STANFORD", "STANFORD-CONVERT"):
+                targets.append({"directed":directed, "const":const, "dep":dep})
+    return targets[0:1]
+
+def getTargetDir(target):
+    return "_".join([CORPUS_ID, ("DIR" if target["directed"] else "UNDIR"), target["const"], target["dep"]])
+
+def convert(outPath, dummy, debug=False):
+    targets = getTargets()
+    for target in targets:
+        targetDir = os.path.join(outPath, getTargetDir(target))
+        if os.path.exists(targetDir):
+            print "Skipping existing target", targetDir
+        else:
+            print "Processing target", targetDir
+            if not dummy:
+                convertSemEval2010Task8.convert(inPath=None, outDir=targetDir, corpusId=CORPUS_ID, directed=target["directed"], negatives=True, preprocess=True, debug=debug, clear=False, constParser=target["const"], depParser=target["dep"], logging=True)
+
+def predict(inPath, outPath, dummy):
+    targets = getTargets()
+    for target in targets:
+        corpusDir = os.path.join(inPath, getTargetDir(target))
+        targetDir = os.path.join(outPath, getTargetDir(target))
+        if os.path.exists(targetDir):
+            print "Skipping existing target", targetDir
+        else:
+            print "Processing target", targetDir
+            if not dummy:
+                train.train(targetDir, CORPUS_ID, corpusDir=corpusDir, exampleStyles={"examples":":wordnet"},
+                            classifierParams={"examples":"c=1,10,100,500,1000,1500,2500,3500,4000,4500,5000,7500,10000,20000,25000,27500,28000,29000,30000,35000,40000,50000,60000,65000"})
+                for dataset in ("devel", "test"):
+                    predicted = os.path.join(targetDir, "classification-" + dataset, dataset + "-pred.xml.gz")
+                    if os.path.exists(predicted):
+                        gold = os.path.join(corpusDir, CORPUS_ID + "-" + dataset + ".xml")
+                        evaluate(predicted, gold, os.path.join(targetDir, "official-eval-" + dataset + ".txt"))
+
 if __name__=="__main__":
     from optparse import OptionParser
     optparser = OptionParser(usage="%prog [options]\n")
     optparser.add_option("-i", "--input", default=None, help="Input file in Interaction XML format")
     optparser.add_option("-o", "--output", default=None, help="Output file, used only when exporting relations")
     optparser.add_option("-g", "--gold", default=None, help="Correct annotation file for evaluation in Interaction XML format")
-    optparser.add_option("-a", "--action", default=None, help="One of 'install', 'evaluate' or 'export'")
+    optparser.add_option("-a", "--action", default=None, help="'install', 'evaluate', 'export', 'convert' or 'predict'")
+    optparser.add_option("--dummy", default=False, action="store_true", help="")
+    optparser.add_option("--debug", default=False, action="store_true", dest="debug", help="")
     (options, args) = optparser.parse_args()
     
     if options.action == "install":
@@ -158,5 +216,9 @@ if __name__=="__main__":
         evaluate(options.input, options.gold, options.output)
     elif options.action == "export":
         exportRelations(options.input, options.output)
+    elif options.action == "convert":
+        convert(options.output, options.dummy, options.debug)
+    elif options.action == "predict":
+        predict(options.input, options.output, options.dummy)
     else:
         print "Unknown action", options.action

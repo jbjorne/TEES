@@ -116,7 +116,7 @@ def processLines(lines, setName, usedIds, directed=True, negatives=False, tree=N
                 sentence = None
     return tree
 
-def convert(inPath, outDir, corpusId, directed, negatives, preprocess, debug=False, clear=False, constParser="BLLIP-BIO", depParser="STANFORD-CONVERT"):
+def convert(inPath, outDir, corpusId, directed, negatives, preprocess, debug=False, clear=False, constParser="BLLIP-BIO", depParser="STANFORD-CONVERT", logging=True):
     # Download the corpus if needed
     if inPath == None:
         if not hasattr(Settings, "SE10T8_CORPUS"):
@@ -129,9 +129,10 @@ def convert(inPath, outDir, corpusId, directed, negatives, preprocess, debug=Fal
         os.makedirs(outDir)
     elif clear:
         print "Removing output directory", outDir
-        for filename in os.listdir(outDir):
-            if filename != "log.txt":
-                os.remove(os.path.join(outDir, filename))
+        shutil.rmtree(outDir)
+    # Start logging
+    if logging:
+        Stream.openLog(os.path.join(outDir, "log.txt"), clear=clear)
     # Read and process the corpus files
     archive = zipfile.ZipFile(inPath, 'r')
     usedIds = set()
@@ -154,6 +155,9 @@ def convert(inPath, outDir, corpusId, directed, negatives, preprocess, debug=Fal
         preprocessor.setArgForAllSteps("debug", debug)
         preprocessor.stepArgs("CONVERT")["corpusName"] = corpusId
         preprocessor.process(convertedPath, outPath, omitSteps=["SPLIT-SENTENCES", "NER", "SPLIT-NAMES"])
+    # Stop logging
+    if logging:
+        Stream.closeLog(os.path.join(outDir, "log.txt"))
 
 if __name__=="__main__":
     from optparse import OptionParser
@@ -171,10 +175,7 @@ if __name__=="__main__":
     optparser.add_option("--noLog", default=False, action="store_true", dest="noLog", help="Do not save a log file")
     (options, args) = optparser.parse_args()
     
-    if not options.noLog:
-        Stream.openLog(os.path.join(options.outdir, "log.txt"), clear=options.clear)
-    
     convert(options.corpusPath, options.outdir, directed=options.directed, negatives=options.negatives, 
             preprocess=options.preprocess, corpusId=options.corpus,
             constParser=options.constParser, depParser=options.depParser, 
-            debug=options.debug, clear=options.clear)
+            debug=options.debug, clear=options.clear, logging=not options.noLog)

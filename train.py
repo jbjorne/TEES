@@ -142,7 +142,10 @@ def train(output, task=None, detector=None, inputFiles=None, models=None, parse=
             if detector.bioNLPSTParams["convert"]:
                 extension = ".zip" if (detector.bioNLPSTParams["convert"] == "zip") else ".tar.gz" 
                 Utils.STFormat.Compare.compare("classification-test/test-events" + extension, "classification-devel/devel-events" + extension, "a2")
-
+    # Stop logging
+    if log != None:
+        Stream.closeLog(log)
+    
 def setDictDefaults(dictionary, defaults):
     if dictionary == None:
         return defaults.copy()
