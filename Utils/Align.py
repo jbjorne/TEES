@@ -42,6 +42,27 @@ def printMatrix(matrix):
     for row in matrix:
         print row
 
+def printAlignment(stringA, stringB, matrix, alignment):
+    prevPos = (0, 0)
+    alignedA = ""
+    alignedB = ""
+    for pos in alignment[1:]:
+        delta = (pos[0] - prevPos[0], pos[1] - prevPos[1])
+        if delta == (1,1):
+            alignedA += stringA[pos[0] - 1]
+            alignedB += stringB[pos[1] - 1]
+        elif delta == (1,0):
+            alignedA += stringA[pos[0] - 1]
+            alignedB += "-"
+        elif delta == (0,1):
+            alignedA += "-"
+            alignedB += stringB[pos[1] - 1]
+        else:
+            raise Exception("Illegal move " + str(delta))
+        prevPos = pos
+    print alignedA
+    print alignedB
+
 if __name__=="__main__":
     from optparse import OptionParser
     optparser = OptionParser(description="")
@@ -51,4 +72,6 @@ if __name__=="__main__":
     
     matrix = initMatrix(options.a, options.b, WEIGHTS)
     printMatrix(matrix)
-    print getAlignment(matrix)
+    alignment = getAlignment(matrix)
+    print alignment
+    printAlignment(options.a, options.b, matrix, alignment)
