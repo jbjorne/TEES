@@ -190,7 +190,7 @@ class Parser:
         while line.strip() != "":
             depType = t1 = t2 = t1Word = t2Word = t1Index = t2Index = None
             try:
-                depType, rest = line.strip()[:-1].split("(")
+                depType, rest = line.strip()[:-1].split("(", 1)
                 t1, t2 = rest.split(", ")
                 t1Word, t1Index = t1.rsplit("-", 1)
                 t1Word = self.unescape(t1Word).strip()

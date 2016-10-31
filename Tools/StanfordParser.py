@@ -64,8 +64,14 @@ class StanfordParser(Parser):
         for sentence in corpusRoot.getiterator("sentence"):
             if action in ("convert", "dep"):
                 parse = self.getAnalysis(sentence, "parse", {"parser":parser}, "parses")
+                # Sentences with no parse (from the constituency step) are skipped
                 if parse == None:
                     continue
+                # Both the 'convert' and 'dep' actions rely on tokens generated from the penn tree
+                pennTree = parse.get("pennstring")
+                if pennTree == None or pennTree == "":
+                    continue
+                # Check for existing dependencies
                 if len(parse.findall("dependency")) > 0:
                     if reparse: # remove existing stanford conversion
                         for dep in parse.findall("dependency"):
@@ -74,13 +80,11 @@ class StanfordParser(Parser):
                     else: # don't reparse
                         existingCount += 1
                         continue
+                # Generate the input
                 if action == "convert": # Put penn tree lines in input file
-                    pennTree = parse.get("pennstring")
-                    if pennTree == None or pennTree == "":
-                        continue
                     stanfordInputFile.write(pennTree + "\n")
                 else: # action == "dep"
-                    tokenByIndex = self.getTokenByIndex(sentence, parse, ["."])
+                    tokenByIndex = self.getTokenByIndex(sentence, parse) #, ["."])
                     tokenTexts = [tokenByIndex[index].get("filteredText") for index in sorted(tokenByIndex.keys())]
                     # Periods in the middle of the sentence break the token indexing of the dependency output
                     #tokenTexts = [x.replace(".", "").strip() for x in tokenTexts[:-1]] + tokenTexts[-1:]
@@ -109,19 +113,23 @@ class StanfordParser(Parser):
             else:
                 stanfordParserArgs += ["-cp", "./*",
                                       "edu.stanford.nlp.parser.lexparser.LexicalizedParser",
-                                      "-sentences", "newline"] #"-escaper", "edu.stanford.nlp.process.PTBEscapingProcessor"]
-                # Add tokenizer options
-                tokenizerOptions = "untokenizable=allKeep"
-                for normalization in ("Space", "AmpersandEntity", "Currency", "Fractions", "OtherBrackets"):
-                    tokenizerOptions += ",normalize" + normalization + "=false"
-                for tokOpt in ("americanize", "asciiQuotes", "latexQuotes", "unicodeQuotes", "ptb3Ellipsis", "ptb3Dashes", "escapeForwardSlashAsterisk"):
-                    tokenizerOptions += "," + tokOpt + "=false"
-                stanfordParserArgs += ["-tokenizerOptions", tokenizerOptions]
+                                      "-sentences", "newline"] #"-escaper", "edu.stanford.nlp.process.PTBEscapingProcessor"]                
                 # Add action specific options
                 if action == "penn":
+                    # Add tokenizer options
+                    tokenizerOptions = "untokenizable=allKeep"
+                    for normalization in ("Space", "AmpersandEntity", "Currency", "Fractions", "OtherBrackets"):
+                        tokenizerOptions += ",normalize" + normalization + "=false"
+                    for tokOpt in ("americanize", "asciiQuotes", "latexQuotes", "unicodeQuotes", "ptb3Ellipsis", "ptb3Dashes", "escapeForwardSlashAsterisk"):
+                        tokenizerOptions += "," + tokOpt + "=false"
+                    stanfordParserArgs += ["-tokenizerOptions", tokenizerOptions]
                     stanfordParserArgs += ["-outputFormat", "oneline"]
                 else: # action == "dep"
-                    stanfordParserArgs += ["-tokenized", "-outputFormat", "typedDependencies"]
+                    stanfordParserArgs += ["-tokenized",
+                                           "-escaper", "edu.stanford.nlp.process.PTBEscapingProcessor",
+                                           "-tokenizerFactory", "edu.stanford.nlp.process.WhitespaceTokenizer",
+                                           "-tokenizerMethod", "newCoreLabelTokenizerFactory",
+                                           "-outputFormat", "typedDependencies"]
                 stanfordParserArgs += ["edu/stanford/nlp/models/lexparser/englishPCFG.ser.gz"]
                 print >> sys.stderr, "Running Stanford parsing for target", action
         print >> sys.stderr, "Stanford tools at:", stanfordParserDir
@@ -208,7 +216,7 @@ class StanfordParser(Parser):
             for attr in sorted(extraAttributes.keys()):
                 parse.set(attr, extraAttributes[attr])
         # Get tokens
-        tokenByIndex = self.getTokenByIndex(sentence, parse, ["."])
+        tokenByIndex = self.getTokenByIndex(sentence, parse) #, ["."])
         # Insert dependencies
         if origId == None:
             origId = sentence.get("origId")
