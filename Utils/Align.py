@@ -118,13 +118,16 @@ def getAlignment(stringA, stringB, matrix, traversal):
 # Visualization
 ###############################################################################
 
-def printMatrix(matrix, stringA, stringB):
+def printMatrix(matrix, stringA, stringB, traversal=None):
     columns, rows = getDim(stringA, stringB)
     cells = [" ", " "] + [char for char in stringA]
     for y in range(rows):
         cells += [(" " + stringB)[y]]
         for x in range(columns):
-            cells.append(str(matrix[x][y][0]) + ":" + ("*" if (matrix[x][y][1] == "mismatch") else matrix[x][y][1][0]))
+            sep = " "
+            if traversal != None and (x, y) in traversal:
+                sep = "="
+            cells.append(str(matrix[x][y][0]) + sep + ("*" if (matrix[x][y][1] == "mismatch") else matrix[x][y][1][0]))
     maxLen = max([len(x) for x in cells])
     s = ""
     for i in range(len(cells)):
@@ -154,7 +157,7 @@ if __name__=="__main__":
     
     weights = {k:getattr(options, k) for k in ("match", "mismatch", "open", "extend")}
     matrix = buildScoringMatrix(options.a, options.b, weights)
-    printMatrix(matrix, options.a, options.b)
     traversal = getTraversal(matrix)
+    printMatrix(matrix, options.a, options.b, traversal)
     print traversal
     printAlignment(*getAlignment(options.a, options.b, matrix, traversal))
