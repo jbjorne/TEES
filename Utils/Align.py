@@ -1,10 +1,13 @@
+import sys
+import operator
+
 WEIGHTS = {"match":2, "mismatch":-1, "gap":-1}
 
 def getScore(matrix, x, y, stringA, stringB, weights):
-    similarity = weights["match"] if (stringA[x-1] == stringB[y - 1]) else weights["mismatch"]
+    similarity = weights["match"] if (stringA[x - 1] == stringB[y - 1]) else weights["mismatch"]
     
     scoreDiagonal = matrix[x - 1][y - 1] + similarity
-    scoreUp   = matrix[x - 1][y] + weights["gap"]
+    scoreUp = matrix[x - 1][y] + weights["gap"]
     scoreLeft = matrix[x][y - 1] + weights["gap"]
     return max(0, scoreDiagonal, scoreUp, scoreLeft)
 
@@ -25,18 +28,26 @@ def initMatrix(stringA, stringB, weights):
     return matrix
 
 def getAlignment(matrix):
-    pos = (len(matrix[0]) - 1, len(matrix) - 1) # lower right corner
+    # Start from the lower right corner
+    x = len(matrix[0]) - 1
+    y = len(matrix) - 1
     alignment = []
-    while pos != (0, 0):
-        alignment = [pos] + alignment 
-        pos = move(matrix, pos)
-    return [pos] + alignment
+    while x != 0 and y != 0:
+        alignment = [(x, y)] + alignment 
+        x, y = move(matrix, x, y)
+    return [(0, 0)] + alignment
 
-def move(matrix, pos):
-    moves = [(-1, -1), (-1, 0), (0, -1)] # move diagonally, up, or left
-    values = [(matrix[pos[0] + m[0]][pos[1] + m[1]], m) for m in moves]
-    bestMove = sorted(values, reverse=True)[0][1]
-    return (pos[0] + bestMove[0], pos[1] + bestMove[1])
+def move(matrix, x, y):
+    moveDiagonal = matrix[x-1][y-1] if (x > 0 and y > 0) else None
+    moveUp = matrix[x-1][y] if x > 0 else None
+    moveLeft = matrix[x][y-1] if y > 0 else None
+    if moveDiagonal > moveUp and moveDiagonal > moveLeft:
+        return
+    moves = [(x-1, y-1), (x-1, y), (x, y-1)] # move diagonally, up, or left
+    moves = [m for m in moves if m[0] >= 0 and m[1] >= 0] # limit to matrix area
+    values = [matrix[m[0]][m[1]] for m in moves]
+    minIndex, minValue = min(enumerate(values), key=operator.itemgetter(1))
+    return moves[minIndex]
 
 def printMatrix(matrix):
     for row in matrix:
