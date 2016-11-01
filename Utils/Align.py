@@ -11,47 +11,46 @@ def getScore(matrix, x, y, stringA, stringB, weights):
     scoreLeft = matrix[x][y - 1] + weights["gap"]
     return max(0, scoreDiagonal, scoreUp, scoreLeft)
 
+def getDim(stringA, stringB):
+    columns = len(stringA) + 1
+    rows = len(stringB) + 1
+    return columns, rows
+
 def initMatrix(stringA, stringB, weights):
-    matrix = [[None] * (len(stringB) + 1) for i in range(len(stringA) + 1)]
+    columns, rows = getDim(stringA, stringB)
+    matrix = [[None] * rows for x in range(columns)]
     matrix[0][0] = 0
-    weight = -1
-    for i in range(1, len(stringB) + 1):
-        matrix[0][i] = weight
-        weight -= 1
-    weight = -1
-    for i in range(1, len(stringB) + 1):
-        matrix[i][0] = weight
-        weight -= 1
-    for i in range(1, len(stringA) + 1):
-        for j in range(1, len(stringB) + 1):
-            matrix[i][j] = getScore(matrix, i, j, stringA, stringB, weights)
+    for x in range(columns):
+        matrix[x][0] = -x
+    for y in range(rows):
+        matrix[0][y] = -y
+    for x in range(1, columns):
+        for y in range(1, rows):
+            matrix[x][y] = getScore(matrix, x, y, stringA, stringB, weights)
     return matrix
 
 def getAlignment(matrix):
     # Start from the lower right corner
-    x = len(matrix[0]) - 1
-    y = len(matrix) - 1
+    x = len(matrix) - 1
+    y = len(matrix[0]) - 1
     alignment = []
-    while x != 0 and y != 0:
+    while x != 0 or y != 0:
         alignment = [(x, y)] + alignment 
         x, y = move(matrix, x, y)
     return [(0, 0)] + alignment
 
 def move(matrix, x, y):
-    moveDiagonal = matrix[x-1][y-1] if (x > 0 and y > 0) else None
-    moveUp = matrix[x-1][y] if x > 0 else None
-    moveLeft = matrix[x][y-1] if y > 0 else None
-    if moveDiagonal > moveUp and moveDiagonal > moveLeft:
-        return
     moves = [(x-1, y-1), (x-1, y), (x, y-1)] # move diagonally, up, or left
     moves = [m for m in moves if m[0] >= 0 and m[1] >= 0] # limit to matrix area
     values = [matrix[m[0]][m[1]] for m in moves]
-    minIndex, minValue = min(enumerate(values), key=operator.itemgetter(1))
-    return moves[minIndex]
+    maxIndex, maxValue = max(enumerate(values), key=operator.itemgetter(1))
+    return moves[maxIndex]
 
-def printMatrix(matrix):
-    for row in matrix:
-        print row
+def printMatrix(matrix, stringA, stringB):
+    columns, rows = getDim(stringA, stringB)
+    print "  " + str([char for char in (" " + stringA)]).replace("'", "")
+    for y in range(rows):
+        print (" " + stringB)[y], [matrix[x][y] for x in range(columns)]
 
 def printAlignment(stringA, stringB, matrix, alignment):
     prevPos = (0, 0)
@@ -82,7 +81,7 @@ if __name__=="__main__":
     (options, args) = optparser.parse_args()
     
     matrix = initMatrix(options.a, options.b, WEIGHTS)
-    printMatrix(matrix)
+    printMatrix(matrix, options.a, options.b)
     alignment = getAlignment(matrix)
     print alignment
     printAlignment(options.a, options.b, matrix, alignment)
