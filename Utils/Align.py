@@ -3,6 +3,10 @@ import operator
 
 WEIGHTS = {"match":2, "nomatch":-2, "open":-1, "extend":0}
 
+###############################################################################
+# Scoring Matrix
+###############################################################################
+
 def getGapScore(matrix, x, y, weights):
     gap = "extend" if matrix[x][y][1] in ("open", "extend") else "open"
     return (matrix[x][y][0] + weights[gap], gap)
@@ -37,7 +41,11 @@ def initMatrix(stringA, stringB, weights):
             matrix[x][y] = getScore(matrix, x, y, stringA, stringB, weights)
     return matrix
 
-def getAlignment(matrix):
+###############################################################################
+# NeedleMan-Wunsch Global Alignment
+###############################################################################
+
+def getPath(matrix):
     # Start from the lower right corner
     x = len(matrix) - 1
     y = len(matrix[0]) - 1
@@ -53,6 +61,10 @@ def move(matrix, x, y):
     values = [matrix[m[0]][m[1]][0] for m in moves]
     maxIndex, maxValue = max(enumerate(values), key=operator.itemgetter(1))
     return moves[maxIndex]
+
+###############################################################################
+# Analysing of the Alignment Path
+###############################################################################
 
 def printMatrix(matrix, stringA, stringB):
     columns, rows = getDim(stringA, stringB)
@@ -75,7 +87,7 @@ def printMatrix(matrix, stringA, stringB):
 #     for y in range(rows):
 #         print (" " + stringB)[y], str([matrix[x][y][0] for x in range(columns)]).replace(", -", ",-")
 
-def printAlignment(stringA, stringB, matrix, alignment):
+def getAlignment(stringA, stringB, matrix, path):
     prevX = prevY = 0
     alignedA = ""
     alignedB = ""
@@ -83,7 +95,7 @@ def printAlignment(stringA, stringB, matrix, alignment):
     posA = 0
     posB = 0
     offsets = [] # map of string B offsets to string A offsets
-    for x, y in alignment[1:]:
+    for x, y in path[1:]:
         delta = (x - prevX, y - prevY)
         if delta == (1,1):
             posA += 1
@@ -108,10 +120,7 @@ def printAlignment(stringA, stringB, matrix, alignment):
             raise Exception("Illegal move " + str(delta))
         prevX = x
         prevY = y
-    print alignedA
-    print diff
-    print alignedB
-    print offsets
+    return alignedA, alignedB, diff, offsets
 
 if __name__=="__main__":
     from optparse import OptionParser
@@ -124,6 +133,10 @@ if __name__=="__main__":
     
     matrix = initMatrix(options.a, options.b, WEIGHTS)
     printMatrix(matrix, options.a, options.b)
-    alignment = getAlignment(matrix)
-    print alignment
-    printAlignment(options.a, options.b, matrix, alignment)
+    path = getPath(matrix)
+    print path
+    alignedA, alignedB, diff, offsets = getAlignment(options.a, options.b, matrix, path)
+    print alignedA
+    print diff
+    print alignedB
+    print offsets
