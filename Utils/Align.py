@@ -76,31 +76,50 @@ def printMatrix(matrix, stringA, stringB):
 #         print (" " + stringB)[y], str([matrix[x][y][0] for x in range(columns)]).replace(", -", ",-")
 
 def printAlignment(stringA, stringB, matrix, alignment):
-    prevPos = (0, 0)
+    prevX = prevY = 0
     alignedA = ""
     alignedB = ""
-    for pos in alignment[1:]:
-        delta = (pos[0] - prevPos[0], pos[1] - prevPos[1])
+    diff = ""
+    posA = 0
+    posB = 0
+    offsets = [] # map of string B offsets to string A offsets
+    for x, y in alignment[1:]:
+        delta = (x - prevX, y - prevY)
         if delta == (1,1):
-            alignedA += stringA[pos[0] - 1]
-            alignedB += stringB[pos[1] - 1]
+            posA += 1
+            posB += 1
+            alignedA += stringA[x - 1]
+            alignedB += stringB[y - 1]
+            diff += "*" if (stringA[x - 1] != stringB[y - 1]) else "|"
+            offsets.append(posB)
         elif delta == (1,0):
-            alignedA += stringA[pos[0] - 1]
+            posB += 1
+            alignedA += stringA[x - 1]
             alignedB += "-"
+            diff += "-"
+            #offsets += [None]
         elif delta == (0,1):
+            posA += 1
             alignedA += "-"
-            alignedB += stringB[pos[1] - 1]
+            alignedB += stringB[y - 1]
+            diff += "-"
+            offsets += [None]
         else:
             raise Exception("Illegal move " + str(delta))
-        prevPos = pos
+        prevX = x
+        prevY = y
     print alignedA
+    print diff
     print alignedB
+    print offsets
 
 if __name__=="__main__":
     from optparse import OptionParser
     optparser = OptionParser(description="")
     optparser.add_option("-a", default=None, help="")
     optparser.add_option("-b", default=None, help="")
+    #optparser.add_option("--match", default=None, help="")
+    #optparser.add_option("-b", default=None, help="")
     (options, args) = optparser.parse_args()
     
     matrix = initMatrix(options.a, options.b, WEIGHTS)
