@@ -1,7 +1,7 @@
 import sys
 import operator
 
-WEIGHTS = {"match":2, "nomatch":-2, "open":-1, "extend":-1}
+WEIGHTS = {"match":2, "nomatch":-2, "open":-1, "extend":0}
 
 def getGapScore(matrix, x, y, weights):
     gap = "extend" if matrix[x][y][1] in ("open", "extend") else "open"
