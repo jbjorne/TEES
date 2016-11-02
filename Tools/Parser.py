@@ -1,6 +1,7 @@
 import Utils.ElementTreeUtils as ETUtils
 from ProcessUtils import *
 import Utils.Align as Align
+from collections import defaultdict
 
 class Parser:
     def __init__(self):
@@ -50,18 +51,20 @@ class Parser:
         # Add output to sentences
         parseTimeStamp = time.strftime("%d.%m.%y %H:%M:%S")
         print >> sys.stderr, "Constituency parsing time stamp:", parseTimeStamp
-        failCount = 0
+        #failCount = 0
+        counts = defaultdict(int)
         for sentence in self.getSentences(corpusRoot, requireEntities, skipIds, skipParsed):        
             treeLine = treeFile.readline()
             extraAttributes={"source":"TEES"} # parser was run through this wrapper
             if addTimeStamp:
                 extraAttributes["date"] = parseTimeStamp # links the parse to the log file
-            if not self.insertPennTree(sentence, treeLine, parseName, makePhraseElements=makePhraseElements, extraAttributes=extraAttributes):
-                failCount += 1
+            if not self.insertPennTree(sentence, treeLine, parseName, makePhraseElements=makePhraseElements, extraAttributes=extraAttributes, counts=counts):
+                counts["fail"] += 1
+            counts["sentences"] += 1
         treeFile.close()
-        return failCount
+        return counts
     
-    def insertPennTree(self, sentence, treeLine, parseName="McCC", tokenizationName = None, makePhraseElements=True, extraAttributes={}, docId=None):
+    def insertPennTree(self, sentence, treeLine, parseName="McCC", tokenizationName = None, makePhraseElements=True, extraAttributes={}, docId=None, counts=None):
         # Find or create container elements
         analyses = setDefaultElement(sentence, "analyses")#"sentenceanalyses")
         #tokenizations = setDefaultElement(sentenceAnalyses, "tokenizations")
@@ -95,7 +98,7 @@ class Parser:
                     tokenization.set(attr, extraAttributes[attr])
                 analyses.insert(getElementIndex(analyses, parse), tokenization)
                 # Insert tokens to parse
-                self.insertTokens(tokens, sentence, tokenization, errorNotes=(sentence.get("id"), docId))
+                self.insertPennTokens(tokens, sentence, tokenization, counts=counts)
             else:
                 tokenization = getElementByAttrib(analyses, "tokenization", {"tokenizer":tokenizationName})
             # Insert phrases to parse
@@ -137,35 +140,53 @@ class Parser:
                 index += 1
         return tokens, phrases
     
-    def insertPennTokens(self, tokens, sentence, tokenization, idStem="bt_", errorNotes=None):
-        catenatedTokens, catToToken = self.mapTokens([x["text"] for x in tokens])
-        alignedSentence, alignedCat, diff, alignedOffsets = Align.align("".join(sentence.get("text").split()), catenatedTokens)
-        if diff.count("|") != len(diff):
+    def insertPennTokens(self, tokens, sentence, tokenization, idStem="bt_", counts=None):
+        #catenatedTokens, catToToken = self.mapTokens([x["text"] for x in tokens])
+        if counts == None:
+            counts = defaultdict(int)
+        tokenSep = " "
+        tokensText = tokenSep.join([x["text"] for x in tokens])
+        sentenceText = sentence.get("text")
+        alignedSentence, alignedCat, diff, alignedOffsets = Align.align(sentenceText, tokensText)
+        if diff.count("|") + diff.count("-") != len(diff):
             print >> sys.stderr, alignedSentence
             print >> sys.stderr, diff
             print >> sys.stderr, alignedCat
         pos = 0
-        tokenCount = 0
+        tokenIndex = 0
         for token in tokens:
+            counts["tokens-parse"] += 1
             tokenOffsets = [x for x in alignedOffsets[pos:len(token)] if x != None]
-            matching = {}
-            for offset in tokenOffsets:
-                if offset != None:
-                    tokenIndex = catToToken[offset]
-                    if tokenIndex not in matching:
-                        matching[tokenIndex] = 0
-                    matching[tokenIndex] += 1
-            if len(matching) > 0:
-                tokenIndex = max(matching, key=lambda key: matching[key])
+#             matching = {}
+#             for offset in tokenOffsets:
+#                 if offset != None:
+#                     tokenIndex = catToToken[offset]
+#                     if tokenIndex not in matching:
+#                         matching[tokenIndex] = 0
+#                     matching[tokenIndex] += 1
+            if len(tokenOffsets) > 0:
+                #tokenIndex = max(matching, key=lambda key: matching[key])
                 # Make element
-                token = ET.Element("token")
-                token.set("id", idStem + str(tokenCount))
-                token.set("text", token["text"])
-                token.set("POS", token["POS"])
-                token.set("match", str(tokenIndex))
-                token.set("charOffset", str(min(tokenOffsets)) + "-" + str(max(tokenOffsets) + 1))
-                tokenization.append(token)
-            pos += len(token)
+                element = ET.Element("token")
+                element.set("id", idStem + str(tokenIndex))
+                element.set("text", token["text"])
+                offset = (min(tokenOffsets), max(tokenOffsets) + 1)
+                matchingText = sentenceText[offset[0]:offset[1]]
+                if token["text"] != matchingText:
+                    element.set("match", "part")
+                    element.set("matchText", matchingText)
+                    counts["tokens-partial-match"] += 1
+                else:
+                    element.set("match", "exact")
+                    counts["tokens-exact-match"] += 1
+                element.set("POS", token["POS"])
+                element.set("charOffset", str(offset[0]) + "-" + str(offset[1]))
+                tokenization.append(element)
+                counts["tokens-elements"] += 1
+            else:
+                counts["tokens-no-match"] += 1
+            tokenIndex += 1
+            pos += len(token) + len(tokenSep)
 
     def insertTokens(self, tokens, sentence, tokenization, idStem="bt_", errorNotes=None):
         tokenCount = 0
