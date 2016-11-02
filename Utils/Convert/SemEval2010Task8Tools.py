@@ -73,15 +73,13 @@ def getRelation(interactions):
         conf1 = getConfDict(i1.get("conf"))
         conf2 = getConfDict(i2.get("conf"))
         if conf1 == None and conf2 == None: # assume this is gold annotation
-            if i1.get("type")[0] == "-": # check that only one of the types is reversed
-                assert i2.get("type")[0] != "-"
-            else:
-                assert i2.get("type")[0] == "-"
             assert i1.get("type").lstrip("-") == i2.get("type").lstrip("-") # check that types match except for reversing
-            if i1.get("type")[0] != "-":
+            if i1.get("type")[0] != "-": # check that only one of the types is reversed
+                assert i2.get("type")[0] == "-"
                 return readInteraction(i1)
             else:
-                return readInteraction(i2)
+                assert i2.get("type")[0] != "-"
+                return readInteraction(i1)
         assert conf1 != None and conf2 != None, (i1.attrib, i2.attrib, otherCount, len(interactions))
         if conf1[i1.get("type")] > conf2[i2.get("type")]:
             return readInteraction(i1)
