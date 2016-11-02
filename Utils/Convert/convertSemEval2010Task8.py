@@ -59,16 +59,16 @@ class Sentence():
             if relFrom == "e1":
                 assert relTo == "e2"
                 forwardType = relType
-                reverseType = "neg"
+                reverseType = "-" + relType if (negatives == "REVERSE_POS") else "neg"
             else:
                 assert relFrom == "e2" and relTo == "e1"
-                forwardType = "neg"
+                forwardType = "-" + relType if (negatives == "REVERSE_POS") else "neg"
                 reverseType = relType
         # Build the interactions
         if directed:
-            if negatives or (forwardType != "neg"):
+            if forwardType != "neg" or negatives == "INCLUDE":
                 sentElem.append(self._getInteraction(forwardType, "e1", "e2", directed, 0, eMap, "e1", "e2"))
-            if negatives or (reverseType != "neg"):
+            if reverseType != "neg" or negatives == "INCLUDE":
                 sentElem.append(self._getInteraction(reverseType, "e2", "e1", directed, 1, eMap, "e2", "e1"))
         else:
             sentElem.append(self._getInteraction(self.relation, "e1", "e2", directed, 0, eMap, relFrom, relTo))
@@ -92,7 +92,7 @@ class Sentence():
         end = len(before) + len(entityText)
         return ET.Element("entity", {"text":entityText, "type":"entity", "given":"True", "charOffset":str(begin)+"-"+str(end), "id":self.id + "." + tag})
         
-def processLines(lines, setName, usedIds, directed=True, negatives=False, tree=None, corpusId="SE10T8"):
+def processLines(lines, setName, usedIds, directed=True, negatives="INCLUDE", tree=None, corpusId="SE10T8"):
     if tree == None:
         corpus = ET.Element("corpus", {"source":corpusId})
         tree = ET.ElementTree(corpus)
@@ -117,6 +117,7 @@ def processLines(lines, setName, usedIds, directed=True, negatives=False, tree=N
     return tree
 
 def convert(inPath, outDir, corpusId, directed, negatives, preprocess, debug=False, clear=False, constParser="BLLIP-BIO", depParser="STANFORD-CONVERT", logging=True):
+    assert negatives in ("INCLUDE", "SKIP", "REVERSE_POS")
     # Download the corpus if needed
     if inPath == None:
         if not hasattr(Settings, "SE10T8_CORPUS"):
@@ -165,7 +166,7 @@ if __name__=="__main__":
     optparser.add_option("-i", "--corpusPath", default=None, help="Optional path to the corpus zip file (if undefined the corpus will be downloaded)")
     optparser.add_option("-o", "--outdir", default=None, help="Directory for the output files")
     optparser.add_option("-r", "--directed", default=False, action="store_true", help="Generate directed interaction elements")
-    optparser.add_option("-n", "--negatives", default=False, action="store_true", help="Generate negative interactions (used only with the --directed option")
+    optparser.add_option("-n", "--negatives", default="INCLUDE", help="Generate negative interactions (used only with the --directed option")
     optparser.add_option("-c", "--corpus", default="SE10T8", help="The name for the converted corpus")
     optparser.add_option("-p", "--preprocess", default=False, action="store_true", help="Run the preprocessor after converting to the Interaction XML format")
     optparser.add_option("--constParser", default=None, help="Check Preprocessor.py for the available options")

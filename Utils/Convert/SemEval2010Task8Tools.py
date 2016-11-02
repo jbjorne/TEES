@@ -72,6 +72,16 @@ def getRelation(interactions):
         # Pick the stronger one
         conf1 = getConfDict(i1.get("conf"))
         conf2 = getConfDict(i2.get("conf"))
+        if conf1 == None and conf2 == None: # assume this is gold annotation
+            if i1.get("type")[0] == "-": # check that only one of the types is reversed
+                assert i2.get("type")[0] != "-"
+            else:
+                assert i2.get("type")[0] == "-"
+            assert i1.get("type").lstrip("-") == i2.get("type").lstrip("-") # check that types match except for reversing
+            if i1.get("type")[0] != "-":
+                return readInteraction(i1)
+            else:
+                return readInteraction(i2)
         assert conf1 != None and conf2 != None, (i1.attrib, i2.attrib, otherCount, len(interactions))
         if conf1[i1.get("type")] > conf2[i2.get("type")]:
             return readInteraction(i1)
@@ -84,16 +94,23 @@ def exportRelations(xml, outPath):
     if not os.path.exists(os.path.dirname(outPath)):
         os.makedirs(outPath)
     outFile = open(outPath, "wt")
+    reverseCount = 0
     for sentence in xml.getiterator("sentence"):
         origId = sentence.get("origId")
         assert origId != None and origId.isdigit()
         interactions = [x for x in sentence.findall("interaction")]
         rel = getRelation(interactions)
         if rel != None:
+            if rel["type"].startswith("-"): # reversed positive interaction
+                rel["e1"], rel["e2"] = rel["e2"], rel["e1"]
+                rel["type"] = rel["type"][1:]
+                reverseCount += 1
             outFile.write(origId + "\t" + rel["type"])
             if rel["e1"] != None and rel["e2"] != None:
                 outFile.write("(" + rel["e1"] + "," + rel["e2"] + ")")
             outFile.write("\n")
+    if reverseCount > 0:
+        print "Reversed", reverseCount, "interactions"
     outFile.close()
 
 def runCommand(programPath, f1Path=None, f2Path=None, silent=False):
@@ -167,13 +184,15 @@ def getTargets():
                 targets.append({"directed":directed, "const":const, "dep":dep})
     return targets[0:1]
 
-def getTargetDir(target):
-    return "_".join([CORPUS_ID, ("DIR" if target["directed"] else "UNDIR"), target["const"], target["dep"]])
+def getCorpusId(target, corpusId=None):
+    if corpusId == None:
+        corpusId = "_".join([CORPUS_ID, ("DIR" if target["directed"] else "UNDIR"), target["const"], target["dep"]])
+    return corpusId
 
 def convert(outPath, dummy, debug=False):
     targets = getTargets()
     for target in targets:
-        targetDir = os.path.join(outPath, getTargetDir(target))
+        targetDir = os.path.join(outPath, getCorpusId(target))
         if os.path.exists(targetDir):
             print "Skipping existing target", targetDir
         else:
@@ -181,22 +200,25 @@ def convert(outPath, dummy, debug=False):
             if not dummy:
                 convertSemEval2010Task8.convert(inPath=None, outDir=targetDir, corpusId=CORPUS_ID, directed=target["directed"], negatives=True, preprocess=True, debug=debug, clear=False, constParser=target["const"], depParser=target["dep"], logging=True)
 
-def predict(inPath, outPath, dummy):
+def predict(inPath, outPath, dummy, corpusId = None):
     targets = getTargets()
     for target in targets:
-        corpusDir = os.path.join(inPath, getTargetDir(target))
-        targetDir = os.path.join(outPath, getTargetDir(target))
+        targetCorpusId = getCorpusId(target, corpusId)
+        corpusDir = inPath
+        if corpusId == None: 
+            corpusDir = os.path.join(inPath, targetCorpusId)
+        targetDir = os.path.join(outPath, targetCorpusId)
         if os.path.exists(targetDir):
             print "Skipping existing target", targetDir
         else:
             print "Processing target", targetDir
             if not dummy:
-                train.train(targetDir, CORPUS_ID, corpusDir=corpusDir, exampleStyles={"examples":":wordnet"},
+                train.train(targetDir, targetCorpusId, corpusDir=corpusDir, exampleStyles={"examples":":wordnet"},
                             classifierParams={"examples":"c=1,10,100,500,1000,1500,2500,3500,4000,4500,5000,7500,10000,20000,25000,27500,28000,29000,30000,35000,40000,50000,60000,65000"})
                 for dataset in ("devel", "test"):
                     predicted = os.path.join(targetDir, "classification-" + dataset, dataset + "-pred.xml.gz")
                     if os.path.exists(predicted):
-                        gold = os.path.join(corpusDir, CORPUS_ID + "-" + dataset + ".xml")
+                        gold = os.path.join(corpusDir, targetCorpusId + "-" + dataset + ".xml")
                         evaluate(predicted, gold, os.path.join(targetDir, "official-eval-" + dataset + ".txt"))
 
 if __name__=="__main__":
@@ -208,6 +230,7 @@ if __name__=="__main__":
     optparser.add_option("-a", "--action", default=None, help="'install', 'evaluate', 'export', 'convert' or 'predict'")
     optparser.add_option("--dummy", default=False, action="store_true", help="")
     optparser.add_option("--debug", default=False, action="store_true", dest="debug", help="")
+    optparser.add_option("--corpusId", default=None, help="")
     (options, args) = optparser.parse_args()
     
     if options.action == "install":
@@ -219,6 +242,6 @@ if __name__=="__main__":
     elif options.action == "convert":
         convert(options.output, options.dummy, options.debug)
     elif options.action == "predict":
-        predict(options.input, options.output, options.dummy)
+        predict(options.input, options.output, options.dummy, options.corpusId)
     else:
         print "Unknown action", options.action
