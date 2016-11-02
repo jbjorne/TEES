@@ -1,5 +1,6 @@
 import Utils.ElementTreeUtils as ETUtils
 from ProcessUtils import *
+import Utils.Align as Align
 
 class Parser:
     def __init__(self):
@@ -30,6 +31,18 @@ class Parser:
     ###########################################################################
     # Parsing Elements
     ###########################################################################
+    
+    def mapTokens(self, tokens):
+        catenated = ""
+        mapping = [] # character offset to token id
+        offset = 0
+        for i in range(len(tokens)):
+            token = tokens[i]
+            for char in token:
+                catenated += char
+                mapping[offset] = i
+                offset += 1
+        return catenated, mapping
     
     def insertPennTrees(self, treeFileName, corpusRoot, parseName, requireEntities=False, makePhraseElements=True, skipIds=[], skipParsed=True, addTimeStamp=True):
         print >> sys.stderr, "Inserting parses"
@@ -116,13 +129,43 @@ class Parser:
                         origTokenText = splits[1]
                         tokenText = self.unescape(origTokenText).strip()
                         pos = self.unescape(splits[0])
-                        tokens.append( (tokenText, pos, origTokenText) )
+                        tokens.append( {"text":tokenText, "POS":pos, "origText":origTokenText} )
                         #else:
                         #    print >> sys.stderr, "Warning, unreadable token '", repr(span), "' in", sentenceDebugId
                         tokenCount += 1
                     stack.pop()
                 index += 1
         return tokens, phrases
+    
+    def insertPennTokens(self, tokens, sentence, tokenization, idStem="bt_", errorNotes=None):
+        catenatedTokens, catToToken = self.mapTokens([x["text"] for x in tokens])
+        alignedSentence, alignedCat, diff, alignedOffsets = Align.align("".join(sentence.get("text").split()), catenatedTokens)
+        if diff.count("|") != len(diff):
+            print >> sys.stderr, alignedSentence
+            print >> sys.stderr, diff
+            print >> sys.stderr, alignedCat
+        pos = 0
+        tokenCount = 0
+        for token in tokens:
+            tokenOffsets = [x for x in alignedOffsets[pos:len(token)] if x != None]
+            matching = {}
+            for offset in tokenOffsets:
+                if offset != None:
+                    tokenIndex = catToToken[offset]
+                    if tokenIndex not in matching:
+                        matching[tokenIndex] = 0
+                    matching[tokenIndex] += 1
+            if len(matching) > 0:
+                tokenIndex = max(matching, key=lambda key: matching[key])
+                # Make element
+                token = ET.Element("token")
+                token.set("id", idStem + str(tokenCount))
+                token.set("text", token["text"])
+                token.set("POS", token["POS"])
+                token.set("match", str(tokenIndex))
+                token.set("charOffset", str(min(tokenOffsets)) + "-" + str(max(tokenOffsets) + 1))
+                tokenization.append(token)
+            pos += len(token)
 
     def insertTokens(self, tokens, sentence, tokenization, idStem="bt_", errorNotes=None):
         tokenCount = 0

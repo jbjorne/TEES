@@ -84,8 +84,8 @@ def getAlignment(stringA, stringB, matrix, traversal):
     alignedA = ""
     alignedB = ""
     diff = ""
-    posA = 0
-    posB = 0
+    posA = -1
+    posB = -1
     offsets = [] # map of string B offsets to string A offsets
     for x, y in traversal[1:]:
         delta = (x - prevX, y - prevY)
@@ -114,6 +114,11 @@ def getAlignment(stringA, stringB, matrix, traversal):
         prevY = y
     return alignedA, alignedB, diff, offsets
 
+def align(stringA, stringB, weights=None):
+    matrix = buildScoringMatrix(stringA, stringB, weights)
+    traversal = getTraversal(matrix)
+    return getAlignment(stringA, stringB, matrix, traversal)
+    
 ###############################################################################
 # Visualization
 ###############################################################################
