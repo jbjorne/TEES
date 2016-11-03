@@ -4,7 +4,8 @@ import subprocess
 import tempfile
 import tarfile
 import codecs
-from ProcessUtils import *
+import time
+import ProcessUtils
 import Utils.InteractionXML.InteractionXMLUtils as IXMLUtils
 from collections import defaultdict
 try:
@@ -15,6 +16,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__f
 import Utils.ElementTreeUtils as ETUtils
 import Utils.Settings as Settings
 import Utils.Download as Download
+from Utils.ProgressCounter import ProgressCounter
 from Utils.FileUtils import openWithExt, getTarFilePath
 import Tool
 from Parser import Parser
@@ -126,7 +128,7 @@ class StanfordParser(Parser):
         print >> sys.stderr, "Stanford tools at:", stanfordParserDir
         print >> sys.stderr, "Stanford tools arguments:", " ".join(stanfordParserArgs)
         # Run Stanford parser
-        return runSentenceProcess(self.run, stanfordParserDir, stanfordInput, 
+        return ProcessUtils.runSentenceProcess(self.run, stanfordParserDir, stanfordInput, 
             workdir, False if action == "penn" else True, 
             "StanfordParser", "Stanford (" + action + ")", timeout=600,
             outputArgs={"encoding":"latin1", "errors":"replace"},

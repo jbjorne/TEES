@@ -158,10 +158,10 @@ class SentenceGraph:
         # as edge data
         for dependency in self.dependencies:
             #self.dependencyGraph.add_edge(self.tokensById[dependency.attrib["t1"]],\
-            self.dependencyGraph.addEdge(self.tokensById[dependency.get("t1")],\
-                                          self.tokensById[dependency.get("t2")],\
-                                          dependency)
-            #                              element=dependency)
+            t1 = self.tokensById.get(dependency.get("t1"))
+            t2 = self.tokensById.get(dependency.get("t2"))
+            assert t1 != None and t2 != None, (t1, t2, self.tokensById.keys())
+            self.dependencyGraph.addEdge(t1, t2, dependency)
     
 #    def getUndirectedDependencyGraph(self):
 #        """

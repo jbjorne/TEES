@@ -1,5 +1,4 @@
 import sys,os
-import time
 import shutil
 import subprocess
 import tempfile
@@ -10,11 +9,13 @@ try:
 except ImportError:
     import cElementTree as ET
 import Utils.ElementTreeUtils as ETUtils
+import Utils.InteractionXML.InteractionXMLUtils as IXMLUtils
 import Utils.Settings as Settings
 import Utils.Download as Download
+from Utils.ProgressCounter import ProgressCounter
 import Tool
 from Parser import Parser
-from ProcessUtils import *
+import ProcessUtils
 
 class BLLIPParser(Parser):
     ###########################################################################
@@ -99,7 +100,7 @@ class BLLIPParser(Parser):
         secondStage = subprocess.Popen(secondStageArgs,
                                        stdin=firstStage.stdout,
                                        stdout=codecs.open(output, "wt", "utf-8"))
-        return ProcessWrapper([firstStage, secondStage])
+        return ProcessUtils.ProcessWrapper([firstStage, secondStage])
         
     def runProcess(self, infileName, workdir, pathParser, pathBioModel, tokenizationName, timeout):
         if pathParser == None:
@@ -118,11 +119,11 @@ class BLLIPParser(Parser):
         cwd = os.getcwd()
         os.chdir(pathParser)
         if tokenizationName == None:
-            bllipOutput = runSentenceProcess(self.run, pathParser, infileName, workdir, False, "BLLIPParser", "Parsing", timeout=timeout, processArgs={"tokenizer":True, "pathBioModel":pathBioModel})   
+            bllipOutput = ProcessUtils.runSentenceProcess(self.run, pathParser, infileName, workdir, False, "BLLIPParser", "Parsing", timeout=timeout, processArgs={"tokenizer":True, "pathBioModel":pathBioModel})   
         else:
             if tokenizationName == "PARSED_TEXT": # The sentence strings are already tokenized
                 tokenizationName = None
-            bllipOutput = runSentenceProcess(self.run, pathParser, infileName, workdir, False, "BLLIPParser", "Parsing", timeout=timeout, processArgs={"tokenizer":False, "pathBioModel":pathBioModel})   
+            bllipOutput = ProcessUtils.runSentenceProcess(self.run, pathParser, infileName, workdir, False, "BLLIPParser", "Parsing", timeout=timeout, processArgs={"tokenizer":False, "pathBioModel":pathBioModel})   
     #    args = [charniakJohnsonParserDir + "/parse-50best-McClosky.sh"]
     #    #bioParsingModel = charniakJohnsonParserDir + "/first-stage/DATA-McClosky"
     #    #args = charniakJohnsonParserDir + "/first-stage/PARSE/parseIt -K -l399 -N50 " + bioParsingModel + "/parser | " + charniakJohnsonParserDir + "/second-stage/programs/features/best-parses -l " + bioParsingModel + "/reranker/features.gz " + bioParsingModel + "/reranker/weights.gz"
@@ -154,7 +155,7 @@ class BLLIPParser(Parser):
         else: # Use existing tokenization
             print >> sys.stderr, "Using existing tokenization", tokenizationName 
             for sentence in self.getSentences(corpusRoot, requireEntities, skipIds, skipParsed):
-                tokenization = getElementByAttrib(sentence.find("analyses"), "tokenization", {"tokenizer":tokenizationName})
+                tokenization = IXMLUtils.getElementByAttrib(sentence.find("analyses"), "tokenization", {"tokenizer":tokenizationName})
                 assert tokenization.get("tokenizer") == tokenizationName
                 s = ""
                 for token in tokenization.findall("token"):

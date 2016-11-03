@@ -140,7 +140,7 @@ class Parser:
                     element.set("matchText", matchingText)
                     counts["tokens-partial-match"] += 1
                 else:
-                    element.set("match", "exact")
+                    #element.set("match", "exact")
                     counts["tokens-exact-match"] += 1
                 if "POS" in token:
                     element.set("POS", token["POS"])
@@ -238,48 +238,32 @@ class Parser:
         return counts
     
     def insertPennTree(self, sentence, treeLine, parserName="McCC", tokenizerName = None, extraAttributes={}, counts=None, makePhraseElements=True, docId=None):
-        parse = IXMLUtils.getParseElement(sentence, parserName, addIfNotExist=True, mustNotExist=True)
-#         # Find or create container elements
-#         analyses = setDefaultElement(sentence, "analyses")#"sentenceanalyses")
-#         # Check that the parse does not exist
-#         for prevParse in analyses.findall("parse"):
-#             assert prevParse.get("parser") != parseName
-#         # Create a new parse element
-#         parse = ET.Element("parse")
-#         parse.set("parser", parseName)
-#         if tokenizationName == None:
-#             parse.set("tokenizer", parseName)
-#         else:
-#             parse.set("tokenizer", tokenizationName)
-#         analyses.insert(getPrevElementIndex(analyses, "parse"), parse) 
-        parse.set("pennstring", treeLine.strip())
-        for attr in sorted(extraAttributes.keys()):
-            parse.set(attr, extraAttributes[attr])
-        if treeLine.strip() == "":
+        tokens, phrases = None, None
+        treeLine = treeLine.strip()
+        # First add the tokenization element
+        if treeLine == "":
             counts["sentences-without-penn-tree"] += 1
         else:
             tokens, phrases = self.readPennTree(treeLine, sentence.get("id"))
-            # Get tokenization
             tokenization = None
             if tokenizerName != None: # Check for existing tokenization
                 tokenization = IXMLUtils.getTokenizationElement(sentence, tokenizerName, addIfNotExist=False, mustNotExist=False)
             if tokenization == None: # Parser-generated tokens
                 tokenization = IXMLUtils.getTokenizationElement(sentence, parserName, addIfNotExist=True, mustNotExist=True)
-#                 for prevTokenization in analyses.findall("tokenization"):
-#                     assert prevTokenization.get("tokenizer") != tokenizationName
-#                 tokenization = ET.Element("tokenization")
-#                 tokenization.set("tokenizer", parseName)
                 for attr in sorted(extraAttributes.keys()): # add the parser extra attributes to the parser generated tokenization 
                     tokenization.set(attr, extraAttributes[attr])
-#                analyses.insert(getElementIndex(analyses, parse), tokenization)
-                # Insert tokens to parse
                 self.insertTokens(tokens, sentence, tokenization, counts=counts)
             else:
                 self.alignTokens(tokens, sentence, tokenization, counts=counts)
-            # Insert phrases to parse
-            if makePhraseElements:
-                self.insertPhrases(phrases, parse, tokens)
-            counts["sentences-with-penn-tree"]
+            counts["sentences-with-penn-tree"] += 1
+        # Then add the parse element
+        parse = IXMLUtils.getParseElement(sentence, parserName, addIfNotExist=True, mustNotExist=True)
+        parse.set("pennstring", treeLine)
+        for attr in sorted(extraAttributes.keys()):
+            parse.set(attr, extraAttributes[attr])
+        # Insert phrases to the parse
+        if makePhraseElements and phrases != None:
+            self.insertPhrases(phrases, parse, tokens)
     
     def readPennTree(self, treeLine, sentenceDebugId=None):
         #global escDict

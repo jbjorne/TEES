@@ -73,20 +73,8 @@ def getAnalysis(sentence, name, attrib, group, addIfNotExist=False, mustNotExist
         element = addAnalysis(sentence, name, group=group, attrib=attrib)
     return element
 
-# def getParseElements(sentence, parserName, addIfNotExist=True, mustNotExist=False):
-#     parse = getAnalysis(sentence, parserName, None, "parses")
-#     tokenization = getAnalysis(sentence, parserName, None, "tokenizations")
-#     if mustNotExist and (parse != None or tokenization != None):
-#         raise Exception("Existing parse in sentence", sentence.get("id"))
-#     if addIfNotExist:
-#         if parse == None:
-#             parse = addAnalysis(sentence, parserName, group="parses")
-#         if tokenization == None:
-#             tokenization = addAnalysis(sentence, parserName, group="tokenizations")
-#     return parse, tokenization
-
 def getParseElement(sentence, parserName, addIfNotExist=False, mustNotExist=False):
-    return getAnalysis(sentence, "parse", {"parser":parserName}, "parses", addIfNotExist, mustNotExist)
+    return getAnalysis(sentence, "parse", {"parser":parserName, "tokenizer":parserName}, "parses", addIfNotExist, mustNotExist)
 
 def getTokenizationElement(sentence, tokenizerName, addIfNotExist=False, mustNotExist=False):
     return getAnalysis(sentence, "tokenization", {"tokenizer":tokenizerName}, "tokenizations", addIfNotExist, mustNotExist)
