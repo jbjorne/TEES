@@ -152,11 +152,12 @@ class Parser:
             print >> sys.stderr, alignedSentence
             print >> sys.stderr, diff
             print >> sys.stderr, alignedCat
+            #print alignedOffsets
         pos = 0
         tokenIndex = 0
         for token in tokens:
             counts["tokens-parse"] += 1
-            tokenOffsets = [x for x in alignedOffsets[pos:len(token)] if x != None]
+            tokenOffsets = [x for x in alignedOffsets[pos:pos + len(token["text"])] if x != None]
 #             matching = {}
 #             for offset in tokenOffsets:
 #                 if offset != None:
@@ -186,7 +187,7 @@ class Parser:
             else:
                 counts["tokens-no-match"] += 1
             tokenIndex += 1
-            pos += len(token) + len(tokenSep)
+            pos += len(token["text"]) + len(tokenSep)
 
     def insertTokens(self, tokens, sentence, tokenization, idStem="bt_", errorNotes=None):
         tokenCount = 0
