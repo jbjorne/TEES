@@ -87,7 +87,7 @@ class StanfordParser(Parser):
                     s += line + "\n"
         if s != "":
             print >> sys.stderr, "Parser output from", stderrPath + ":"
-            print >> sys.stderr, "---\n", s, "---\n"
+            print >> sys.stderr, "---\n", s, "---"
 
     def run(self, input, output, stanfordParserArgs):
         return subprocess.Popen(stanfordParserArgs + [input], stdout=codecs.open(output, "wt", "utf-8"), stderr=codecs.open(self.getStderrPath(output), "wt", "utf-8"))
