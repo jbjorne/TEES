@@ -98,7 +98,7 @@ class Parser:
                     tokenization.set(attr, extraAttributes[attr])
                 analyses.insert(getElementIndex(analyses, parse), tokenization)
                 # Insert tokens to parse
-                self.insertPennTokens(tokens, sentence, tokenization, counts=counts)
+                self.insertTokens(tokens, sentence, tokenization, counts=counts)
             else:
                 tokenization = getElementByAttrib(analyses, "tokenization", {"tokenizer":tokenizationName})
             # Insert phrases to parse
@@ -126,13 +126,13 @@ class Parser:
                     span = treeLine[stack[-1][0]:index]
                     splits = span.split(None, 1) # span.split(string.whitespace)
                     if span.endswith(")"):
-                        phrases.append( (stack[-1][1], tokenCount, splits[0]) )
+                        phrases.append({"begin":stack[-1][1], "end":tokenCount, "type":splits[0]})
                     else:
                         #if len(splits) == 2:
                         origTokenText = splits[1]
                         tokenText = self.unescape(origTokenText).strip()
                         pos = self.unescape(splits[0])
-                        tokens.append( {"text":tokenText, "POS":pos, "origText":origTokenText} )
+                        tokens.append({"text":tokenText, "POS":pos, "origText":origTokenText, "index":tokenCount})
                         #else:
                         #    print >> sys.stderr, "Warning, unreadable token '", repr(span), "' in", sentenceDebugId
                         tokenCount += 1
@@ -140,7 +140,7 @@ class Parser:
                 index += 1
         return tokens, phrases
     
-    def insertPennTokens(self, tokens, sentence, tokenization, idStem="bt_", counts=None):
+    def insertTokens(self, tokens, sentence, tokenization, idStem="t", counts=None):
         #catenatedTokens, catToToken = self.mapTokens([x["text"] for x in tokens])
         if counts == None:
             counts = defaultdict(int)
@@ -170,6 +170,8 @@ class Parser:
                 # Make element
                 element = ET.Element("token")
                 element.set("id", idStem + str(tokenIndex))
+                token["id"] = element.get("id")
+                #element.set("i", str(token["index"]))
                 element.set("text", token["text"])
                 offset = (min(tokenOffsets), max(tokenOffsets) + 1)
                 matchingText = sentenceText[offset[0]:offset[1]]
@@ -189,55 +191,58 @@ class Parser:
             tokenIndex += 1
             pos += len(token["text"]) + len(tokenSep)
 
-    def insertTokens(self, tokens, sentence, tokenization, idStem="bt_", errorNotes=None):
-        tokenCount = 0
-        start = 0
-        prevStart = None
-        for tokenText, posTag, origTokenText in tokens:
-            sText = sentence.get("text")
-            # Determine offsets
-            cStart = sText.find(tokenText, start)
-            #assert cStart != -1, (tokenText, tokens, posTag, start, sText)
-            if cStart == -1: # Try again with original text (sometimes escaping can remove correct text)
-                cStart = sText.find(origTokenText, start)
-            if cStart == -1 and prevStart != None: # Try again with the previous position, sometimes the parser duplicates tokens
-                cStart = sText.find(origTokenText, prevStart)
-                if cStart != -1:
-                    start = prevStart
-                    print >> sys.stderr, "Warning, token duplication", (tokenText, tokens, posTag, start, sText, errorNotes)
-            if cStart == -1:
-                print >> sys.stderr, "Token alignment error", (tokenText, tokens, posTag, start, sText, errorNotes)
-                for subElement in [x for x in tokenization]:
-                    tokenization.remove(subElement)
-                return False
-            cEnd = cStart + len(tokenText)
-            prevStart = start
-            start = cStart + len(tokenText)
-            # Make element
-            token = ET.Element("token")
-            token.set("id", idStem + str(tokenCount))
-            token.set("text", tokenText)
-            token.set("POS", posTag)
-            token.set("charOffset", str(cStart) + "-" + str(cEnd)) # NOTE: check
-            tokenization.append(token)
-            tokenCount += 1
-        return True
+#     def insertTokens(self, tokens, sentence, tokenization, idStem="bt_", errorNotes=None):
+#         tokenCount = 0
+#         start = 0
+#         prevStart = None
+#         for tokenText, posTag, origTokenText in tokens:
+#             sText = sentence.get("text")
+#             # Determine offsets
+#             cStart = sText.find(tokenText, start)
+#             #assert cStart != -1, (tokenText, tokens, posTag, start, sText)
+#             if cStart == -1: # Try again with original text (sometimes escaping can remove correct text)
+#                 cStart = sText.find(origTokenText, start)
+#             if cStart == -1 and prevStart != None: # Try again with the previous position, sometimes the parser duplicates tokens
+#                 cStart = sText.find(origTokenText, prevStart)
+#                 if cStart != -1:
+#                     start = prevStart
+#                     print >> sys.stderr, "Warning, token duplication", (tokenText, tokens, posTag, start, sText, errorNotes)
+#             if cStart == -1:
+#                 print >> sys.stderr, "Token alignment error", (tokenText, tokens, posTag, start, sText, errorNotes)
+#                 for subElement in [x for x in tokenization]:
+#                     tokenization.remove(subElement)
+#                 return False
+#             cEnd = cStart + len(tokenText)
+#             prevStart = start
+#             start = cStart + len(tokenText)
+#             # Make element
+#             token = ET.Element("token")
+#             token.set("id", idStem + str(tokenCount))
+#             token.set("text", tokenText)
+#             token.set("POS", posTag)
+#             token.set("charOffset", str(cStart) + "-" + str(cEnd)) # NOTE: check
+#             tokenization.append(token)
+#             tokenCount += 1
+#         return True
 
-    def insertPhrases(self, phrases, parse, tokenElements, idStem="bp_"):
+    def insertPhrases(self, phrases, parse, tokenElements, idStem="p"):
         count = 0
         phrases.sort()
+        tokenByIndex = {int(x.get("i")):x for x in tokenElements}
         for phrase in phrases:
             phraseElement = ET.Element("phrase")
-            phraseElement.set("type", phrase[2])
+            phraseElement.set("type", phrase["type"])
             phraseElement.set("id", idStem + str(count))
-            phraseElement.set("begin", str(phrase[0]))
-            phraseElement.set("end", str(phrase[1]))
+            begin = phrase["begin"]
+            end = phrase["end"]
+            phraseElement.set("begin", str(phrase["begin"]))
+            phraseElement.set("end", str(phrase["end"]))
             t1 = None
             t2 = None
-            if phrase[0] < len(tokenElements):
-                t1 = tokenElements[phrase[0]]
-            if phrase[1] < len(tokenElements):
-                t2 = tokenElements[phrase[1]]
+            if begin in tokenByIndex:
+                t1 = tokenByIndex[begin]
+            if end in tokenByIndex:
+                t2 = tokenByIndex[end]
             if t1 != None and t2 != None:
                 phraseElement.set("charOffset", t1.get("charOffset").split("-")[0] + "-" + t2.get("charOffset").split("-")[-1])
             parse.append(phraseElement)
