@@ -1,10 +1,9 @@
 import sys
 import codecs
+import time
 import Utils.ElementTreeUtils as ETUtils
-#from ProcessUtils import *
-import Utils.Align as Align
-from collections import defaultdict
 from ProcessUtils import *
+import Utils.Align as Align
 from collections import defaultdict
 try:
     import xml.etree.cElementTree as ET
@@ -41,18 +40,6 @@ class Parser:
     # Parsing Elements
     ###########################################################################
     
-#     def mapTokens(self, tokens):
-#         catenated = ""
-#         mapping = [] # character offset to token id
-#         offset = 0
-#         for i in range(len(tokens)):
-#             token = tokens[i]
-#             for char in token:
-#                 catenated += char
-#                 mapping[offset] = i
-#                 offset += 1
-#         return catenated, mapping
-    
     def insertPennTrees(self, treeFileName, corpusRoot, parseName, requireEntities=False, makePhraseElements=True, skipIds=[], skipParsed=True, addTimeStamp=True):
         print >> sys.stderr, "Inserting parses"
         treeFile = codecs.open(treeFileName, "rt", "utf-8")
@@ -83,8 +70,6 @@ class Parser:
     def insertPennTree(self, sentence, treeLine, parseName="McCC", tokenizationName = None, makePhraseElements=True, extraAttributes={}, docId=None, counts=None):
         # Find or create container elements
         analyses = setDefaultElement(sentence, "analyses")#"sentenceanalyses")
-        #tokenizations = setDefaultElement(sentenceAnalyses, "tokenizations")
-        #parses = setDefaultElement(sentenceAnalyses, "parses")
         # Check that the parse does not exist
         for prevParse in analyses.findall("parse"):
             assert prevParse.get("parser") != parseName
@@ -159,20 +144,7 @@ class Parser:
     def alignTokens(self, tokens, tokenization, counts=None, tag="dep-"):
         if counts == None:
             counts = defaultdict(int)
-#         tokenSep = " "
-#         newText = tokenSep.join([x["text"] for x in tokens])
-#         # Convert existing tokenization to a string and map this string to the text
-#         oldText = ""
-#         oldOffsetToElement = {}
-#         pos = 0
         elements = tokenization.findall("token")
-#         for element in elements:
-#             for i in range(pos, pos + len(element.get("text"))):
-#                 oldOffsetToElement[i] = element
-#             if element != elements[0]:
-#                 oldText += tokenSep
-#             oldText += element.get("text")
-#             pos += len(tokenSep) + len(element.get("text"))
         weights = None #{"match":1, "mismatch":-2, "space":-3, "open":-3, "extend":-3}
         alignedSentence, alignedCat, diff, alignedOffsets = Align.align([x.get("text") for x in elements], [x["text"] for x in tokens], weights=weights)
         if diff.count("|") + diff.count("-") != len(diff):
@@ -189,26 +161,6 @@ class Parser:
                 counts[tag + "tokens-align"] += 1
             else:
                 counts[tag + "tokens-no-align"] += 1
-                
-            
-            
-#             oldOffsets = [x for x in alignedOffsets[pos:pos + len(token["text"])] if x != None]
-#             elements = {}
-#             for offset in oldOffsets:
-#                 if offset in oldOffsetToElement:
-#                     element = oldOffsetToElement[offset]
-#                     if not element in elements:
-#                         elements[element] = 0
-#                     elements[element] += 1
-#             if len(elements) > 0:
-#                 maxHits = max(elements.values())
-#                 topElements = [x for x in elements if elements[x] == maxHits]
-#                 topElements.sort(key=lambda x: int(x.get("charOffset").split("-")[0]))
-#                 token["element"] = topElements[0]
-#                 counts[tag + "align"] += 1
-#             else:
-#                 counts[tag + "-no-align"] += 1
-#             pos += len(token["text"]) + len(tokenSep)
 
     def insertTokens(self, tokens, sentence, tokenization, idStem="t", counts=None):
         #catenatedTokens, catToToken = self.mapTokens([x["text"] for x in tokens])
@@ -228,13 +180,6 @@ class Parser:
         for token in tokens:
             counts["tokens-parse"] += 1
             tokenOffsets = [x for x in alignedOffsets[pos:pos + len(token["text"])] if x != None]
-#             matching = {}
-#             for offset in tokenOffsets:
-#                 if offset != None:
-#                     tokenIndex = catToToken[offset]
-#                     if tokenIndex not in matching:
-#                         matching[tokenIndex] = 0
-#                     matching[tokenIndex] += 1
             if len(tokenOffsets) > 0:
                 #tokenIndex = max(matching, key=lambda key: matching[key])
                 # Make element
@@ -263,40 +208,6 @@ class Parser:
             pos += len(token["text"]) + len(tokenSep)
         if len(tokens) > 0:
             counts["sentences-with-tokens"] += 1
-
-#     def insertTokens(self, tokens, sentence, tokenization, idStem="bt_", errorNotes=None):
-#         tokenCount = 0
-#         start = 0
-#         prevStart = None
-#         for tokenText, posTag, origTokenText in tokens:
-#             sText = sentence.get("text")
-#             # Determine offsets
-#             cStart = sText.find(tokenText, start)
-#             #assert cStart != -1, (tokenText, tokens, posTag, start, sText)
-#             if cStart == -1: # Try again with original text (sometimes escaping can remove correct text)
-#                 cStart = sText.find(origTokenText, start)
-#             if cStart == -1 and prevStart != None: # Try again with the previous position, sometimes the parser duplicates tokens
-#                 cStart = sText.find(origTokenText, prevStart)
-#                 if cStart != -1:
-#                     start = prevStart
-#                     print >> sys.stderr, "Warning, token duplication", (tokenText, tokens, posTag, start, sText, errorNotes)
-#             if cStart == -1:
-#                 print >> sys.stderr, "Token alignment error", (tokenText, tokens, posTag, start, sText, errorNotes)
-#                 for subElement in [x for x in tokenization]:
-#                     tokenization.remove(subElement)
-#                 return False
-#             cEnd = cStart + len(tokenText)
-#             prevStart = start
-#             start = cStart + len(tokenText)
-#             # Make element
-#             token = ET.Element("token")
-#             token.set("id", idStem + str(tokenCount))
-#             token.set("text", tokenText)
-#             token.set("POS", posTag)
-#             token.set("charOffset", str(cStart) + "-" + str(cEnd)) # NOTE: check
-#             tokenization.append(token)
-#             tokenCount += 1
-#         return True
 
     def insertPhrases(self, phrases, parse, tokens, idStem="p"):
         count = 0
@@ -345,42 +256,6 @@ class Parser:
                 print >> sys.stderr, "Warning, unreadable dependency '", line.strip(), "', in sentence", sentenceId, [depType, t1, t2, (t1Word, t1Index), (t2Word, t2Index)]
             line = depFile.readline()
         return deps
-    
-#     def alignDependencyToken(self, dep, tok, errors, tokenByIndex=None, sentenceId=None, tokens=None):
-#         assert tok in ("t1", "t2")
-#         if tokenByIndex == None:
-#             return "bt_" + str(dep[tok])
-#         else:
-#             token = None
-#             if dep[tok] not in tokenByIndex:
-#                 errors.append("Token " + tok + " not found.")
-#                 print >> sys.stderr, "Token not found: " + tok, (dep, sentenceId, tokens)
-#             elif dep[tok + "Word"] != tokenByIndex[dep[tok]].get("filteredText"):
-#                 if dep[tok + "Word"] == tokenByIndex[dep[tok]].get("filteredText").strip("."):
-#                     token = tokenByIndex[dep[tok]]
-#                 else:
-#                     errors.append("Alignment error for " + tok)
-#                     print >> sys.stderr, "Alignment error for " + tok, (dep, tokenByIndex[dep[tok]].attrib, sentenceId, tokens)
-# #                 #indices = (dep[tok],)
-# #                 #print >> sys.stderr, (tokenByIndex[dep[tok]].get("text"), "." in tokenByIndex[dep[tok]].get("text"))
-# #                 if "." in tokenByIndex[dep[tok]].get("text"):
-# #                     if dep[tok + "Word"] == tokenByIndex[dep[tok]].get("text").replace(".", ""):
-# #                         token = tokenByIndex[dep[tok]]
-# #                     else:
-# #                         indices = (dep[tok] - 1, dep[tok] + 1)
-# #                         for index in indices:
-# #                             if index in tokenByIndex and dep[tok + "Word"] == tokenByIndex[index].get("text"):
-# #                                 token = tokenByIndex[index]
-# #                                 break
-# #                     #print index, indices, dep[tok + "Word"], tokenByIndex[index].attrib, token != None
-# #                 if token == None:
-#             else:
-#                 token = tokenByIndex[dep[tok]]
-#             # Return the matching token id
-#             if token != None:
-#                 return token.get("id")
-#             else:
-#                 return None
             
     def insertDependencies(self, dependencies, sentence, parse, tokenization, idStem="d", counts=None):
         tokensById = {}
@@ -424,34 +299,6 @@ class Parser:
         deps = self.readDependencies(depFile, skipExtra, sentence.get("id"))
         elements = self.insertDependencies(deps, sentence, parse, tokenization, counts=counts)
         return elements
-        
-#     def insertDependencies(self, depFile, parse, tokenByIndex=None, sentenceId=None, skipExtra=0):
-#         # A list of tokens for debugging
-#         tokens = []
-#         for key in sorted(tokenByIndex):
-#             tokens.append(tokenByIndex[key].get("text"))
-#     
-#         depCount = 1
-#         deps = self.readDependencies(depFile, skipExtra, sentenceId)
-#         elements = []
-#         for dep in deps:
-#             # Make element
-#             if dep["type"] != None and dep["type"] != "root":
-#                 element = ET.Element("dependency")
-#                 element.set("id", "sd_" + str(depCount))
-#                 element.set("type", dep["type"])
-#                 errors = []
-#                 t1 = self.alignDependencyToken(dep, "t1", errors, tokenByIndex, sentenceId, tokens)
-#                 t2 = self.alignDependencyToken(dep, "t2", errors, tokenByIndex, sentenceId, tokens)
-#                 if t1 != None and t2 != None:
-#                     element.set("t1", t1)
-#                     element.set("t2", t2)
-#                     parse.insert(depCount - 1, element)
-#                     depCount += 1
-#                     elements.append(element)
-#                 elif len(errors) > 0:
-#                     parse.set("stanfordErrors", " ".join(errors))
-#         return elements
     
     def getTokenByIndex(self, sentence, parse, ignore=None):
         tokenization = self.getAnalysis(sentence, "tokenization", {"tokenizer":parse.get("tokenizer")}, "tokenizations")
