@@ -1,7 +1,7 @@
 import sys
 import operator
 
-WEIGHTS = {"match":2, "mismatch":-2, "open":-1, "extend":0}
+WEIGHTS = {"match":2, "mismatch":-2, "open":-1, "extend":-1}
 
 ###############################################################################
 # Scoring Matrix
@@ -12,10 +12,16 @@ def getGapScore(matrix, x, y, weights):
     gap = "extend" if matrix[x][y][1] in ("open", "extend") else "open"
     return (matrix[x][y][0] + weights[gap], gap)
 
+def getSimilarity(a, b):
+    if a == b:
+        return "match"
+    else:
+        return "mismatch"
+
 def getBestMoveScore(matrix, x, y, stringA, stringB, weights):
     # The valid moves are diagonal, up and left
     # The diagonal move represents a match or a mismatch
-    similarity = "match" if (stringA[x - 1] == stringB[y - 1]) else "mismatch"
+    similarity = getSimilarity(stringA[x - 1], stringB[y - 1])
     scoreDiagonal = (matrix[x - 1][y - 1][0] + weights[similarity], similarity)
     # The up and left moves represent gaps in one of the strings
     scoreUp = getGapScore(matrix, x - 1, y, weights)
@@ -81,8 +87,8 @@ def move(matrix, x, y):
 
 def getAlignment(stringA, stringB, matrix, traversal):
     prevX = prevY = 0
-    alignedA = ""
-    alignedB = ""
+    alignedA = []
+    alignedB = []
     diff = ""
     posA = -1
     posB = -1
@@ -92,26 +98,30 @@ def getAlignment(stringA, stringB, matrix, traversal):
         if delta == (1,1):
             posA += 1
             posB += 1
-            alignedA += stringA[x - 1]
-            alignedB += stringB[y - 1]
+            alignedA.append(stringA[x - 1])
+            alignedB.append(stringB[y - 1])
             diff += "*" if (stringA[x - 1] != stringB[y - 1]) else "|"
             offsets.append(posB)
         elif delta == (1,0):
             posB += 1
-            alignedA += stringA[x - 1]
-            alignedB += "-"
+            alignedA.append(stringA[x - 1])
+            alignedB.append("-")
             diff += "-"
             #offsets += [None]
         elif delta == (0,1):
             posA += 1
-            alignedA += "-"
-            alignedB += stringB[y - 1]
+            alignedA.append("-")
+            alignedB.append(stringB[y - 1])
             diff += "-"
             offsets += [None]
         else:
             raise Exception("Illegal move " + str(delta))
         prevX = x
         prevY = y
+    if isinstance(stringA, basestring):
+        assert isinstance(stringB, basestring)
+        alignedA = "".join(alignedA)
+        alignedB = "".join(alignedB)
     return alignedA, alignedB, diff, offsets
 
 def align(stringA, stringB, weights=None):
@@ -126,8 +136,9 @@ def align(stringA, stringB, weights=None):
 def printMatrix(matrix, stringA, stringB, traversal=None):
     columns, rows = getDim(stringA, stringB)
     cells = [" ", " "] + [char for char in stringA]
+    charsB = [" "] + [char for char in stringB]
     for y in range(rows):
-        cells += [(" " + stringB)[y]]
+        cells += [charsB[y]]
         for x in range(columns):
             sep = " "
             if traversal != None and (x, y) in traversal:
@@ -158,9 +169,14 @@ if __name__=="__main__":
     optparser.add_option("--mismatch", default=WEIGHTS["mismatch"], type=int, help="")
     optparser.add_option("--open", default=WEIGHTS["open"], type=int, help="")
     optparser.add_option("--extend", default=WEIGHTS["extend"], type=int, help="")
+    optparser.add_option("--words", default=False, action="store_true")
     (options, args) = optparser.parse_args()
     
+    if options.words:
+        options.a = options.a.split()
+        options.b = options.b.split()
     weights = {k:getattr(options, k) for k in ("match", "mismatch", "open", "extend")}
+    #weights["space"] = weights["mismatch"]
     matrix = buildScoringMatrix(options.a, options.b, weights)
     traversal = getTraversal(matrix)
     printMatrix(matrix, options.a, options.b, traversal)

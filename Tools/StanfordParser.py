@@ -5,6 +5,7 @@ import tempfile
 import tarfile
 import codecs
 from ProcessUtils import *
+from collections import defaultdict
 try:
     import xml.etree.cElementTree as ET
 except ImportError:
@@ -118,10 +119,10 @@ class StanfordParser(Parser):
                 if action == "penn":
                     # Add tokenizer options
                     tokenizerOptions = "untokenizable=allKeep"
-                    for normalization in ("Space", "AmpersandEntity", "Currency", "Fractions", "OtherBrackets"):
-                        tokenizerOptions += ",normalize" + normalization + "=false"
-                    for tokOpt in ("americanize", "asciiQuotes", "latexQuotes", "unicodeQuotes", "ptb3Ellipsis", "ptb3Dashes", "escapeForwardSlashAsterisk"):
-                        tokenizerOptions += "," + tokOpt + "=false"
+                    #for normalization in ("Space", "AmpersandEntity", "Currency", "Fractions", "OtherBrackets"):
+                    #    tokenizerOptions += ",normalize" + normalization + "=false"
+                    #for tokOpt in ("americanize", "asciiQuotes", "latexQuotes", "unicodeQuotes", "ptb3Ellipsis", "ptb3Dashes", "escapeForwardSlashAsterisk"):
+                    #    tokenizerOptions += "," + tokOpt + "=false"
                     stanfordParserArgs += ["-tokenizerOptions", tokenizerOptions]
                     stanfordParserArgs += ["-outputFormat", "oneline"]
                 else: # action == "dep"
@@ -179,7 +180,8 @@ class StanfordParser(Parser):
         # Get output and insert dependencies
         parseTimeStamp = time.strftime("%d.%m.%y %H:%M:%S")
         print >> sys.stderr, "Stanford time stamp:", parseTimeStamp
-        counts = {"fail":0, "no_dependencies":0, "sentences":0, "existing":0, "no_penn":0}
+        #counts = {"fail":0, "no_dependencies":0, "sentences":0, "existing":0, "no_penn":0}
+        counts = defaultdict(int)
         extraAttributes={"stanfordSource":"TEES", # parser was run through this wrapper
                          "stanfordDate":parseTimeStamp, # links the parse to the log file
                          "depParseType":action
@@ -188,12 +190,12 @@ class StanfordParser(Parser):
             origId = self.getDocumentOrigId(document)
             for sentence in document.findall("sentence"):
                 self._insertParse(sentence, stanfordOutputFile, parser, reparse, extraAttributes, counts, 0, origId)
-
         stanfordOutputFile.close()
         # Remove work directory
         if not debug:
             shutil.rmtree(workdir)
-        print >> sys.stderr, "Stanford parsing was done for", counts["sentences"], "sentences,", counts["no_dependencies"], "had no dependencies,", counts["fail"], "failed, ", counts["existing"], "existing"
+        print >> sys.stderr, "Stanford done"
+        print >> sys.stderr, dict(counts)
                 
     def _insertParse(self, sentence, stanfordOutputFile, parser, reparse, extraAttributes=None, counts=None, skipExtra=0, origId=None):
         # Get parse
@@ -215,23 +217,18 @@ class StanfordParser(Parser):
         if extraAttributes != None:
             for attr in sorted(extraAttributes.keys()):
                 parse.set(attr, extraAttributes[attr])
-        # Get tokens
-        tokenByIndex = self.getTokenByIndex(sentence, parse) #, ["."])
+        # Get tokenization
+        tokenization = self.getAnalysis(sentence, "tokenization", {"tokenizer":parser}, "tokenizations")
+        #tokenByIndex = self.getTokenByIndex(sentence, parse) #, ["."])
         # Insert dependencies
         if origId == None:
             origId = sentence.get("origId")
         origId = str(origId)
-        deps = self.insertDependencies(stanfordOutputFile, parse, tokenByIndex, (sentence.get("id"), origId), skipExtra=skipExtra)
-        if len(deps) == 0:
+        elements = self.insertDependenciesFromFile(stanfordOutputFile, sentence, parse, tokenization, skipExtra=skipExtra, counts=counts)
+        if len(elements) == 0:
             parse.set("stanford", "no_dependencies")
-            if counts != None: counts["no_dependencies"] += 1
-            if parse.get("stanfordAlignmentError") != None:
-                if counts != None: counts["fail"] += 1
         else:
             parse.set("stanford", "ok")
-            if parse.get("stanfordAlignmentError") != None:
-                if counts != None: counts["fail"] += 1
-                parse.set("stanford", "partial")
         if counts != None: 
             counts["sentences"] += 1
     
