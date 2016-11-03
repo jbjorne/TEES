@@ -28,6 +28,9 @@ class Sentence():
         self.comment = None
         self.setName = setName
     
+    def mergeType(self, relType, e1, e2):
+        return relType + "(" + e1 + "," + e2 + ")"
+    
     def process(self, directed, negatives):
         # Build the entities
         for tag in ("e1", "e2"):
@@ -39,11 +42,12 @@ class Sentence():
             assert entity.get("text") == self.text[begin:end], (entity.get("text"), self.text, self.text[begin:end], [begin, end])
         assert len(self.entities) == 2
         eMap = {"e1":self.entities[0], "e2":self.entities[1]}
-        for key in eMap:
+        for key in eMap: # Check that e1 == e1 and e2 == e2
             assert eMap[key].get("id").endswith("." + key)
         # Build the sentence
         docElem = ET.Element("document", {"id":self.corpusId + ".d" + self.origId, "set":self.setName})
         sentElem = ET.SubElement(docElem, "sentence", {"id":self.id, "charOffset":"0-"+str(len(self.text)), "text":self.text, "origId":self.origId})
+        sentElem.set("relation", self.relation)
         if self.comment != None and self.comment != "":
             sentElem.set("comment", self.comment)
         for entity in self.entities:
@@ -51,27 +55,26 @@ class Sentence():
         # Determine interaction types per direction
         relFrom, relTo = "", ""
         if self.relation == "Other":
-            forwardType = "Other"
-            reverseType = "Other"
+            sentElem.append(self._getInteraction(self.relation, "e1", "e2", directed, 0, eMap, relFrom, relTo))
         else:
             relType, rest = self.relation.strip(")").split("(")
             relFrom, relTo = rest.split(",")
-            if relFrom == "e1":
-                assert relTo == "e2"
-                forwardType = relType
-                reverseType = "-" + relType if (negatives == "REVERSE_POS") else "neg"
+            reverse = (relFrom == "e2" and relTo == "e1")  
+            if not reverse:
+                assert relFrom == "e1" and relTo == "e2"
+                forwardType = self.mergeType(relType, relFrom, relTo) if (negatives == "REVERSE_POS") else relType
+                reverseType = self.mergeType(relType, relTo, relFrom) if (negatives == "REVERSE_POS") else "neg"
             else:
-                assert relFrom == "e2" and relTo == "e1"
-                forwardType = "-" + relType if (negatives == "REVERSE_POS") else "neg"
-                reverseType = relType
-        # Build the interactions
-        if directed:
-            if forwardType != "neg" or negatives == "INCLUDE":
-                sentElem.append(self._getInteraction(forwardType, "e1", "e2", directed, 0, eMap, "e1", "e2"))
-            if reverseType != "neg" or negatives == "INCLUDE":
-                sentElem.append(self._getInteraction(reverseType, "e2", "e1", directed, 1, eMap, "e2", "e1"))
-        else:
-            sentElem.append(self._getInteraction(self.relation, "e1", "e2", directed, 0, eMap, relFrom, relTo))
+                forwardType = self.mergeType(relType, relFrom, relTo) if (negatives == "REVERSE_POS") else "neg"
+                reverseType = self.mergeType(relType, relTo, relFrom) if (negatives == "REVERSE_POS") else relType
+            # Build the interactions
+            if directed:
+                if forwardType != "neg" or negatives == "INCLUDE":
+                    sentElem.append(self._getInteraction(forwardType, "e1", "e2", directed, 0, eMap, "e1", "e2"))
+                if reverseType != "neg" or negatives == "INCLUDE":
+                    sentElem.append(self._getInteraction(reverseType, "e2", "e1", directed, 1, eMap, "e2", "e1"))
+            else:
+                sentElem.append(self._getInteraction(self.relation, "e1", "e2", directed, 0, eMap, relFrom, relTo))
         return docElem
     
     def _getInteraction(self, relType, e1, e2, directed, count, eMap, relFrom=None, relTo=None):

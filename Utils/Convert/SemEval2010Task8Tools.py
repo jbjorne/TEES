@@ -33,10 +33,10 @@ def readInteraction(interaction):
     e1 = None
     e2 = None
     if relType != "Other":
-        if interaction.get("directed") == "True":
+        if interaction.get("directed") == "True" and not "(" in interaction.get("type"):
             e1 = interaction.get("e1").rsplit(".")[-1]
             e2 = interaction.get("e2").rsplit(".")[-1]
-        else:
+        else: # undirected or REVERSE_POS
             assert ")" in relType, interaction.attrib
             relType, rest = relType.strip(")").split("(")
             e1, e2 = rest.split(",")
@@ -73,13 +73,11 @@ def getRelation(interactions):
         conf1 = getConfDict(i1.get("conf"))
         conf2 = getConfDict(i2.get("conf"))
         if conf1 == None and conf2 == None: # assume this is gold annotation
-            assert i1.get("type").lstrip("-") == i2.get("type").lstrip("-") # check that types match except for reversing
-            if i1.get("type")[0] != "-": # check that only one of the types is reversed
-                assert i2.get("type")[0] == "-"
-                return readInteraction(i1)
-            else:
-                assert i2.get("type")[0] != "-"
-                return readInteraction(i1)
+            assert i1.get("type").split("(")[0] == i2.get("type").split("(")[0] # check that types match except for reversing
+            # The first gold interaction is for e1->e2
+            assert i1.get("e1").endswith(".e1")
+            assert i1.get("e2").endswith(".e2")
+            return readInteraction(i1)
         assert conf1 != None and conf2 != None, (i1.attrib, i2.attrib, otherCount, len(interactions))
         if conf1[i1.get("type")] > conf2[i2.get("type")]:
             return readInteraction(i1)
@@ -203,15 +201,16 @@ def predict(inPath, outPath, dummy, corpusId = None):
     for target in targets:
         targetCorpusId = getCorpusId(target, corpusId)
         corpusDir = inPath
+        targetDir = outPath
         if corpusId == None: 
             corpusDir = os.path.join(inPath, targetCorpusId)
-        targetDir = os.path.join(outPath, targetCorpusId)
+            targetDir = os.path.join(outPath, targetCorpusId)
         if os.path.exists(targetDir):
             print "Skipping existing target", targetDir
         else:
             print "Processing target", targetDir
             if not dummy:
-                train.train(targetDir, targetCorpusId, corpusDir=corpusDir, exampleStyles={"examples":":wordnet"},
+                train.train(targetDir, targetCorpusId, corpusDir=corpusDir, exampleStyles={"examples":":wordnet"}, parse="McCC",
                             classifierParams={"examples":"c=1,10,100,500,1000,1500,2500,3500,4000,4500,5000,7500,10000,20000,25000,27500,28000,29000,30000,35000,40000,50000,60000,65000"})
                 for dataset in ("devel", "test"):
                     predicted = os.path.join(targetDir, "classification-" + dataset, dataset + "-pred.xml.gz")
