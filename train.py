@@ -55,7 +55,7 @@ def train(output, task=None, detector=None, inputFiles=None, models=None, parse=
     """
     # Insert default arguments where needed
     inputFiles = setDictDefaults(inputFiles, {"train":None, "devel":None, "test":None})
-    models = setDictDefaults(models, {"devel":None, "test":None})
+    models = setDictDefaults(models, {"devel":"model-devel", "test":"model-test"})
     exampleStyles = setDictDefaults(exampleStyles, {"examples":None, "trigger":None, "edge":None, "unmerging":None, "modifiers":None})
     classifierParams = setDictDefaults(classifierParams, {"examples":None, "trigger":None, "recall":None, "edge":None, "unmerging":None, "modifiers":None})
     subset = setDictDefaults(Parameters.get(subset), {"train":None, "devel":None, "test":None, "seed":0, "all":None})
