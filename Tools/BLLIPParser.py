@@ -52,6 +52,7 @@ class BLLIPParser(Parser):
     ###########################################################################
     # Main Interface
     ###########################################################################
+    
     @classmethod
     def parseCls(cls, input, output=None, tokenizationName=None, parseName="McCC", requireEntities=False, skipIds=[], skipParsed=True, timeout=600, makePhraseElements=True, debug=False, pathParser=None, pathBioModel="AUTO", timestamp=True):
         parser = cls()

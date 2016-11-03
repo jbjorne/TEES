@@ -2,7 +2,6 @@ import sys
 import codecs
 import time
 import Utils.ElementTreeUtils as ETUtils
-#from ProcessUtils import *
 import Utils.InteractionXML.InteractionXMLUtils as IXMLUtils
 import Utils.Align as Align
 from collections import defaultdict
@@ -40,24 +39,6 @@ class Parser:
         print >> sys.stderr, "Corpus file loaded"
         corpusRoot = corpusTree.getroot()
         return corpusTree, corpusRoot
-    
-#     def getTokenByIndex(self, sentence, parse, ignore=None):
-#         tokenization = self.getAnalysis(sentence, "tokenization", {"tokenizer":parse.get("tokenizer")}, "tokenizations")
-#         assert tokenization != None
-#         count = 0
-#         tokenByIndex = {}
-#         for token in tokenization.findall("token"):
-#             tokenText = token.get("text")
-#             if ignore != None:
-#                 for char in ignore:
-#                     tokenText = tokenText.replace(char, "")
-#                 tokenText = tokenText.strip()
-#             if tokenText != "":
-#                 token = ET.Element(token.tag, token.attrib) # copy the element so it can be modified
-#                 token.set("filteredText", tokenText)
-#                 tokenByIndex[count] = token
-#                 count += 1
-#         return tokenByIndex
     
     def getDocumentOrigId(self, document):
         origId = document.get("pmid")
@@ -265,17 +246,13 @@ class Parser:
             self.insertPhrases(phrases, parse, tokens)
     
     def readPennTree(self, treeLine, sentenceDebugId=None):
-        #global escDict
-        #escSymbols = sorted(escDict.keys())
         tokens = []
         phrases = []
         stack = []
         treeLine = treeLine.strip()
         if treeLine != "":
             # Add tokens
-            #prevSplit = None
             tokenCount = 0
-            #splitCount = 0
             index = 0
             for char in treeLine:
                 if char == "(":
@@ -310,7 +287,6 @@ class Parser:
             for sentence in document.findall("sentence"):
                 self.insertDependencyParse(sentence, depFile, parseName, None, extraAttributes, counts, skipExtra=skipExtra, removeExisting=removeExisting)
         depFile.close()
-        #print >> sys.stderr, "Inserted Dependencies"
         print >> sys.stderr, "Dependency parse statistics:", dict(counts)
         if counts["deps-total"] == counts["deps-elements"]:
             print >> sys.stderr, "All dependency elements were aligned"
@@ -370,5 +346,4 @@ class Parser:
                 print >> sys.stderr, e
                 print >> sys.stderr, "Warning, unreadable dependency '", line.strip(), "', in sentence", sentenceId, [depType, t1, t2, (t1Word, t1Index), (t2Word, t2Index)]
             line = depFile.readline()
-        return deps
-            
+        return deps 

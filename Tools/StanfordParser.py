@@ -40,6 +40,7 @@ class StanfordParser(Parser):
     ###########################################################################
     # Main Interface
     ###########################################################################
+    
     @classmethod
     def parseCls(cls, parserName, input, output=None, debug=False, reparse=False, stanfordParserDir=None, stanfordParserArgs=None, action="convert"):
         parserObj = cls()
@@ -188,24 +189,18 @@ class StanfordParser(Parser):
         # Get output and insert dependencies
         parseTimeStamp = time.strftime("%d.%m.%y %H:%M:%S")
         print >> sys.stderr, "Stanford time stamp:", parseTimeStamp
-        #counts = {"fail":0, "no_dependencies":0, "sentences":0, "existing":0, "no_penn":0}
         counts = defaultdict(int)
         extraAttributes={"stanfordSource":"TEES", # parser was run through this wrapper
                          "stanfordDate":parseTimeStamp, # links the parse to the log file
                          "depParseType":action
                         }
         for document in corpusRoot.findall("document"):
-            #origId = self.getDocumentOrigId(document)
             for sentence in document.findall("sentence"):
                 self.insertDependencyParse(sentence, parserOutputFile, parserName, parserName, extraAttributes, counts, skipExtra=0, removeExisting=reparse)
         parserOutputFile.close()
         # Remove work directory
         if not debug:
             shutil.rmtree(workdir)
-                
-#     def insertParse(self, sentence, stanfordOutputFile, parser, reparse, extraAttributes=None, counts=None, skipExtra=0, origId=None):
-#         # Insert dependencies
-#         elements = self.insertDependencyParses(stanfordOutputFile, sentence, parse, tokenization, skipExtra=skipExtra, counts=counts)
 
     ###########################################################################
     # Serialized Parses
@@ -226,7 +221,7 @@ class StanfordParser(Parser):
         if tarFilePath != None:
             tarFile = tarfile.open(tarFilePath)
         
-        counts = {"fail":0, "no_dependencies":0, "sentences":0, "documents":0, "existing":0, "no_penn":0}
+        counts = defaultdict(int) #counts = {"fail":0, "no_dependencies":0, "sentences":0, "documents":0, "existing":0, "no_penn":0}
         sourceElements = [x for x in corpusRoot.getiterator("document")] + [x for x in corpusRoot.getiterator("section")]
         counter = ProgressCounter(len(sourceElements), "McCC Parse Insertion")
         for document in sourceElements:
