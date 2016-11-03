@@ -223,8 +223,7 @@ class Parser:
         treeFile = codecs.open(treeFileName, "rt", "utf-8")
         for sentence in self.getSentences(corpusRoot, requireEntities, skipIds, skipParsed):
             treeLine = treeFile.readline()
-            if not self.insertPennTree(sentence, treeLine, parseName, makePhraseElements=makePhraseElements, extraAttributes=extraAttributes, counts=counts):
-                counts["fail"] += 1
+            self.insertPennTree(sentence, treeLine, parseName, makePhraseElements=makePhraseElements, extraAttributes=extraAttributes, counts=counts)
             counts["sentences"] += 1
         treeFile.close()
         # Show statistics

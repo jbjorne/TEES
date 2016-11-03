@@ -138,7 +138,7 @@ class StanfordParser(Parser):
     # Parsing Process File IO
     ###########################################################################
     
-    def makeInputFile(self, corpusRoot, workdir, parser, reparse=False, action="convert", debug=False):
+    def makeInputFile(self, corpusRoot, workdir, parserName, reparse=False, action="convert", debug=False):
         if debug:
             print >> sys.stderr, "Stanford parser workdir", workdir
         stanfordInput = os.path.join(workdir, "input")
@@ -147,7 +147,7 @@ class StanfordParser(Parser):
         existingCount = 0
         for sentence in corpusRoot.getiterator("sentence"):
             if action in ("convert", "dep"):
-                parse = IXMLUtils.getParseElement(sentence, parser, addIfNotExist=(action == "dep"))
+                parse = IXMLUtils.getParseElement(sentence, parserName, addIfNotExist=(action == "dep"))
                 # Sentences with no parse (from the constituency step) are skipped in converter mode
                 if parse == None:
                     continue
@@ -168,15 +168,12 @@ class StanfordParser(Parser):
                 if action == "convert": # Put penn tree lines in input file
                     stanfordInputFile.write(pennTree + "\n")
                 else: # action == "dep"
-                    tokenization = self.getAnalysis(sentence, "tokenization", {"tokenizer":parser}, "tokenizations")
-#                     #tokenByIndex = self.getTokenByIndex(sentence, parse) #, ["."])
-#                     tokenTexts = [tokenByIndex[index].get("filteredText") for index in sorted(tokenByIndex.keys())]
-#                     # Periods in the middle of the sentence break the token indexing of the dependency output
-#                     #tokenTexts = [x.replace(".", "").strip() for x in tokenTexts[:-1]] + tokenTexts[-1:]
-#                     #tokenTexts = [x for x in tokenTexts if x != ""]
-                    tokenized = " ".join([x["text"] for x in tokenization.findall("token")])
-                    #tokenized = tokenized.replace(" . ",  " : ")
-                    stanfordInputFile.write(tokenized.replace("\n", " ").replace("\r", " ").strip() + "\n")
+                    tokenization = IXMLUtils.getTokenizationElement(sentence, parserName, addIfNotExist=False)
+                    if tokenization != None:
+                        tokenized = " ".join([x.get("text") for x in tokenization.findall("token")])
+                        stanfordInputFile.write(tokenized.replace("\n", " ").replace("\r", " ").strip() + "\n")
+                    else:
+                        stanfordInputFile.write(sentence.get("text").replace("\n", " ").replace("\r", " ").strip() + "\n")
             else: # action == "penn"
                 stanfordInputFile.write(sentence.get("text").replace("\n", " ").replace("\r", " ").strip() + "\n")
         stanfordInputFile.close()
