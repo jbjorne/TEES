@@ -4,6 +4,7 @@ import time
 import Utils.ElementTreeUtils as ETUtils
 import Utils.InteractionXML.InteractionXMLUtils as IXMLUtils
 import Utils.Align as Align
+from Utils.ProgressCounter import ProgressCounter
 from collections import defaultdict
 try:
     import xml.etree.cElementTree as ET
@@ -202,7 +203,10 @@ class Parser:
         counts = defaultdict(int)
         extraAttributes = self.getExtraAttributes("const")
         treeFile = codecs.open(treeFileName, "rt", "utf-8")
-        for sentence in self.getSentences(corpusRoot, requireEntities, skipIds, skipParsed):
+        sentences = [x for x in self.getSentences(corpusRoot, requireEntities, skipIds, skipParsed)]
+        counter = ProgressCounter(len(sentences), "Penn Tree Insertion")
+        for sentence in sentences:
+            counter.update(1, "Inserting parse for (" + sentence.get("id") + "): ")
             treeLine = treeFile.readline()
             self.insertPennTree(sentence, treeLine, parseName, makePhraseElements=makePhraseElements, extraAttributes=extraAttributes, counts=counts)
             counts["sentences"] += 1
@@ -283,9 +287,14 @@ class Parser:
         counts = defaultdict(int)
         extraAttributes = self.getExtraAttributes("dep", extraAttributes)
         depFile = codecs.open(depFilePath, "rt", "utf-8")
+        sentences = []
         for document in corpusRoot.findall("document"):
             for sentence in document.findall("sentence"):
-                self.insertDependencyParse(sentence, depFile, parseName, None, extraAttributes, counts, skipExtra=skipExtra, removeExisting=removeExisting)
+                sentences.append(sentence)
+        counter = ProgressCounter(len(sentences), "Dependency Parse Insertion")
+        for sentence in sentences:
+            counter.update(1, "Inserting parse for (" + sentence.get("id") + "): ")
+            self.insertDependencyParse(sentence, depFile, parseName, None, extraAttributes, counts, skipExtra=skipExtra, removeExisting=removeExisting)
         depFile.close()
         print >> sys.stderr, "Dependency parse statistics:", dict(counts)
         if counts["deps-total"] == counts["deps-elements"]:
