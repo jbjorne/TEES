@@ -151,14 +151,15 @@ def printMatrix(matrix, stringA, stringB, traversal=None):
             s += " | "
         s += (maxLen - len(cells[i])) * " " + cells[i]
         if i > 0 and (i + 1) % (columns + 1) == 0:
-            print s
+            print >> sys.stderr, s
             s = ""
 
-def printAlignment(alignedA, alignedB, diff, offsets):
-    print alignedA
-    print diff
-    print alignedB
-    print offsets
+def printAlignment(alignedA, alignedB, diff, offsets=None):
+    print >> sys.stderr, alignedA
+    print >> sys.stderr, diff
+    print >> sys.stderr, alignedB
+    if offsets:
+        print >> sys.stderr, offsets
 
 if __name__=="__main__":
     from optparse import OptionParser
@@ -180,5 +181,5 @@ if __name__=="__main__":
     matrix = buildScoringMatrix(options.a, options.b, weights)
     traversal = getTraversal(matrix)
     printMatrix(matrix, options.a, options.b, traversal)
-    print traversal
+    print >> sys.stderr, traversal
     printAlignment(*getAlignment(options.a, options.b, matrix, traversal))

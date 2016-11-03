@@ -43,16 +43,16 @@ class Preprocessor(ToolChain):
     def addParsingSteps(self, steps):
         # Add the constituency parser
         if self.constParser == "BLLIP-BIO":
-            steps.append( (self.constParser + "-CONST", BLLIPParser.process, {"parseName":self.parseName, "requireEntities":self.requireEntities, "debug":False, "pathBioModel":"AUTO"}, "parse.xml") )
+            steps.append( (self.constParser + "-CONST", BLLIPParser.parseCls, {"parseName":self.parseName, "requireEntities":self.requireEntities, "debug":False, "pathBioModel":"AUTO"}, "parse.xml") )
         elif self.constParser == "BLLIP":
-            steps.append( (self.constParser + "-CONST", BLLIPParser.process, {"parseName":self.parseName, "requireEntities":self.requireEntities, "debug":False, "pathBioModel":None}, "parse.xml") )
+            steps.append( (self.constParser + "-CONST", BLLIPParser.parseCls, {"parseName":self.parseName, "requireEntities":self.requireEntities, "debug":False, "pathBioModel":None}, "parse.xml") )
         elif self.constParser == "STANFORD":
-            steps.append( (self.constParser + "-CONST", StanfordParser.process, {"parser":self.parseName, "debug":False, "action":"penn"}, "parse.xml") )
+            steps.append( (self.constParser + "-CONST", StanfordParser.parseCls, {"parser":self.parseName, "debug":False, "action":"penn"}, "parse.xml") )
         # Add the dependency parser
         if self.depParser == "STANFORD":
-            steps.append( (self.depParser + "-DEP", StanfordParser.process, {"parser":self.parseName, "debug":False, "action":"dep"}, "dependencies.xml") )
+            steps.append( (self.depParser + "-DEP", StanfordParser.parseCls, {"parser":self.parseName, "debug":False, "action":"dep"}, "dependencies.xml") )
         elif self.depParser == "STANFORD-CONVERT":
-            steps.append( (self.depParser + "-DEP", StanfordParser.process, {"parser":self.parseName, "debug":False, "action":"convert"}, "dependencies.xml") )
+            steps.append( (self.depParser + "-DEP", StanfordParser.parseCls, {"parser":self.parseName, "debug":False, "action":"convert"}, "dependencies.xml") )
     
     def process(self, source, output, parameters=None, model=None, sourceDataSetNames=None, fromStep=None, toStep=None, omitSteps=None):
         if omitSteps != None and((type(omitSteps) in types.StringTypes and omitSteps == "CONVERT") or "CONVERT" in omitSteps):

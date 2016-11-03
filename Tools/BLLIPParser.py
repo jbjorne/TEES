@@ -17,6 +17,9 @@ from Parser import Parser
 from ProcessUtils import *
 
 class BLLIPParser(Parser):
+    ###########################################################################
+    # Installation
+    ###########################################################################
     def install(self, destDir=None, downloadDir=None, redownload=False, updateLocalSettings=False):
         url = Settings.URL["BLLIP_SOURCE"]
         if downloadDir == None:
@@ -44,7 +47,34 @@ class BLLIPParser(Parser):
                               "second-stage/programs/features/best-parses":"second-stage/programs/features/best-parses -l " + bioModelDir + "/reranker/features.gz " + bioModelDir + "/reranker/weights.gz < /dev/null"},
                              parserPath, {"BLLIP_PARSER_DIR":os.path.abspath(parserPath), 
                                           "MCCLOSKY_BIOPARSINGMODEL_DIR":bioModelDir}, updateLocalSettings)         
-        
+    
+    ###########################################################################
+    # Main Interface
+    ###########################################################################
+    @classmethod
+    def parseCls(cls, input, output=None, tokenizationName=None, parseName="McCC", requireEntities=False, skipIds=[], skipParsed=True, timeout=600, makePhraseElements=True, debug=False, pathParser=None, pathBioModel="AUTO", timestamp=True):
+        parser = cls()
+        parser.parse(input, output, tokenizationName, parseName, requireEntities, skipIds, skipParsed, timeout, makePhraseElements, debug, pathParser, pathBioModel, timestamp)
+    
+    def parse(self, input, output=None, tokenizationName=None, parseName="McCC", requireEntities=False, skipIds=[], skipParsed=True, timeout=600, makePhraseElements=True, debug=False, pathParser=None, pathBioModel="AUTO", addTimeStamp=True):
+        print >> sys.stderr, "BLLIP parser"
+        corpusTree, corpusRoot = self.getCorpus(input)
+        workdir = tempfile.mkdtemp()
+        infileName, numCorpusSentences = self.makeInputFile(workdir, corpusRoot, requireEntities, skipIds, skipParsed, tokenizationName, debug)
+        bllipOutput = self.runProcess(infileName, workdir, pathParser, pathBioModel, tokenizationName, timeout)        
+        self.insertPennTrees(bllipOutput, corpusRoot, parseName, requireEntities, makePhraseElements, skipIds, skipParsed, addTimeStamp)
+        if output != None:
+            print >> sys.stderr, "Writing output to", output
+            ETUtils.write(corpusRoot, output)
+        # Remove work directory
+        if not debug:
+            shutil.rmtree(workdir)
+        return corpusTree
+    
+    ###########################################################################
+    # Parser Process Control
+    ###########################################################################
+    
     def run(self, input, output, tokenizer=False, pathBioModel=None):
         if pathBioModel != None:
             assert os.path.exists(pathBioModel), pathBioModel
@@ -70,13 +100,8 @@ class BLLIPParser(Parser):
                                        stdin=firstStage.stdout,
                                        stdout=codecs.open(output, "wt", "utf-8"))
         return ProcessWrapper([firstStage, secondStage])
-    
-    @classmethod
-    def process(cls, input, output=None, tokenizationName=None, parseName="McCC", requireEntities=False, skipIds=[], skipParsed=True, timeout=600, makePhraseElements=True, debug=False, pathParser=None, pathBioModel="AUTO", timestamp=True):
-        parser = cls()
-        parser.parse(input, output, tokenizationName, parseName, requireEntities, skipIds, skipParsed, timeout, makePhraseElements, debug, pathParser, pathBioModel, timestamp)
-    
-    def _runProcess(self, infileName, workdir, pathParser, pathBioModel, tokenizationName, timeout):
+        
+    def runProcess(self, infileName, workdir, pathParser, pathBioModel, tokenizationName, timeout):
         if pathParser == None:
             pathParser = Settings.BLLIP_PARSER_DIR
         print >> sys.stderr, "BLLIP parser at:", pathParser
@@ -104,7 +129,11 @@ class BLLIPParser(Parser):
         os.chdir(cwd)
         return bllipOutput
     
-    def _makeInputFile(self, workdir, corpusRoot, requireEntities, skipIds, skipParsed, tokenizationName, debug):    
+    ###########################################################################
+    # Parsing Process File IO
+    ###########################################################################
+    
+    def makeInputFile(self, workdir, corpusRoot, requireEntities, skipIds, skipParsed, tokenizationName, debug):    
         if requireEntities:
             print >> sys.stderr, "Parsing only sentences with entities"
         # Write text to input file
@@ -134,30 +163,11 @@ class BLLIPParser(Parser):
                 numCorpusSentences += 1
         infile.close()
         return infileName, numCorpusSentences
-
-    def parse(self, input, output=None, tokenizationName=None, parseName="McCC", requireEntities=False, skipIds=[], skipParsed=True, timeout=600, makePhraseElements=True, debug=False, pathParser=None, pathBioModel="AUTO", addTimeStamp=True):
-        print >> sys.stderr, "BLLIP parser"
-        corpusTree, corpusRoot = self.getCorpus(input)
-        workdir = tempfile.mkdtemp()
-        infileName, numCorpusSentences = self._makeInputFile(workdir, corpusRoot, requireEntities, skipIds, skipParsed, tokenizationName, debug)
-        bllipOutput = self._runProcess(infileName, workdir, pathParser, pathBioModel, tokenizationName, timeout)        
-        self.insertPennTrees(bllipOutput, corpusRoot, parseName, requireEntities, makePhraseElements, skipIds, skipParsed, addTimeStamp)
-#         print >> sys.stderr, "Parsed", numCorpusSentences, "sentences"
-#         print >> sys.stderr, dict(counts)
-#         if counts["fail"] == 0:
-#             print >> sys.stderr, "All sentences were parsed succesfully"
-#         else:
-#             print >> sys.stderr, "Warning, parsing failed for", counts["fail"], "out of", numCorpusSentences, "sentences"
-#             print >> sys.stderr, "The \"pennstring\" attribute of these sentences has an empty string."
-        if output != None:
-            print >> sys.stderr, "Writing output to", output
-            ETUtils.write(corpusRoot, output)
-        # Remove work directory
-        if not debug:
-            shutil.rmtree(workdir)
-        
-        return corpusTree
-
+    
+    ###########################################################################
+    # Serialized Parses
+    ###########################################################################
+    
     def insertParses(self, input, parsePath, output=None, parseName="McCC", tokenizationName = None, makePhraseElements=True, extraAttributes={}):
         import tarfile
         from SentenceSplitter import openFile
@@ -218,15 +228,6 @@ class BLLIPParser(Parser):
         
         if tarFile != None:
             tarFile.close()
-        #print >> sys.stderr, "Sentence splitting created", sentencesCreated, "sentences"
-        #print >> sys.stderr, docsWithSentences, "/", docCount, "documents have sentences"
-    
-        print >> sys.stderr, "Inserted parses for", numCorpusSentences, "sentences (" + str(failCount) + " failed)"
-        if failCount == 0:
-            print >> sys.stderr, "All sentences have a parse"
-        else:
-            print >> sys.stderr, "Warning, a failed parse exists for", failCount, "out of", numCorpusSentences, "sentences"
-            print >> sys.stderr, "The \"pennstring\" attribute of these sentences has an empty string."        
         if output != None:
             print >> sys.stderr, "Writing output to", output
             ETUtils.write(corpusRoot, output)
