@@ -232,38 +232,3 @@ def runSentenceProcess(launchProcess, programDir, input, workdir, measureByGap, 
     else:
         print >> sys.stderr, "Warning, processing failed for", numMissedSentences, "out of", numCorpusSentences, "sentences"
     return os.path.abspath(os.path.join(workdir, "merged-output"))
-
-def getElementIndex(parent, element):
-    index = 0
-    for e in parent:
-        if e == element:
-            return index
-        index += 1
-    return -1
-
-def getPrevElementIndex(parent, eTag):
-    index = 0
-    elemIndex = -1
-    for element in parent:
-        if element.tag == eTag:
-            elemIndex = index
-        index += 1
-    return elemIndex
-
-def getElementByAttrib(parent, tag, attDict):
-    for element in parent.getiterator():
-        if element.tag == tag:
-            found = True
-            for k, v in attDict.iteritems():
-                if element.get(k) != v:
-                    found = False
-            if found:
-                return element
-    return None
-
-def setDefaultElement(parent, name):
-    element = parent.find(name)
-    if element == None:
-        element = ET.Element(name)
-        parent.append(element)
-    return element

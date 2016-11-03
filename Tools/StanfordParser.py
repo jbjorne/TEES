@@ -5,6 +5,7 @@ import tempfile
 import tarfile
 import codecs
 from ProcessUtils import *
+import Utils.InteractionXML.InteractionXMLUtils as IXMLUtils
 from collections import defaultdict
 try:
     import xml.etree.cElementTree as ET
@@ -38,36 +39,30 @@ class StanfordParser(Parser):
     # Main Interface
     ###########################################################################
     @classmethod
-    def parseCls(cls, parser, input, output=None, debug=False, reparse=False, stanfordParserDir=None, stanfordParserArgs=None, action="convert"):
+    def parseCls(cls, parserName, input, output=None, debug=False, reparse=False, stanfordParserDir=None, stanfordParserArgs=None, action="convert"):
         parserObj = cls()
-        parserObj.parse(parser, input, output, debug, reparse, stanfordParserDir, stanfordParserArgs, action)
+        parserObj.parse(parserName, input, output, debug, reparse, stanfordParserDir, stanfordParserArgs, action)
     
-    def parse(self, parser, input, output=None, debug=False, reparse=False, stanfordParserDir=None, stanfordParserArgs=None, action="convert"):
+    def parse(self, parserName, input, output=None, debug=False, reparse=False, stanfordParserDir=None, stanfordParserArgs=None, action="convert"):
         #global stanfordParserDir, stanfordParserArgs
         assert action in ("convert", "penn", "dep")
         if stanfordParserDir == None:
             stanfordParserDir = Settings.STANFORD_PARSER_DIR
-        
+        # Run the parser process
         corpusTree, corpusRoot = self.getCorpus(input)
         workdir = tempfile.mkdtemp()
-        stanfordInput = self.makeInputFile(corpusRoot, workdir, parser, reparse, action, debug)
-        stanfordOutput = self.runProcess(stanfordParserArgs, stanfordParserDir, stanfordInput, workdir, action)
-        # Show the stderr output from the parser process
-        stderrPath = self.getStderrPath(stanfordOutput)
-        print >> sys.stderr, "Parser output from", stderrPath + ":"
-        print >> sys.stderr, "---"
-        with codecs.open(stderrPath, "rt", "utf-8") as stderrFile:
-            for line in stderrFile:
-                line = line.strip()
-                if line != "" and not line.startswith("Parsing [sent."):
-                    print >> sys.stderr, line
-        print >> sys.stderr, "---"
-        # Insert the parses
+        inPath = self.makeInputFile(corpusRoot, workdir, parserName, reparse, action, debug)
+        outPath = self.runProcess(stanfordParserArgs, stanfordParserDir, inPath, workdir, action)
+        self.printStderr(outPath)
+        # Insert the parses    
         if action in ("convert", "dep"):
-            self.insertDependencyOutput(corpusRoot, stanfordOutput, workdir, parser, reparse, action, debug)
+            self.insertDependencyParses(outPath, corpusRoot, parserName, {"stanford-mode":action}, addTimeStamp=True, skipExtra=0, removeExisting=True)
         elif action == "penn":
-            self.insertPennTrees(stanfordOutput, corpusRoot, parser)
-        
+            self.insertPennTrees(outPath, corpusRoot, parserName)
+        # Remove work directory
+        if not debug:
+            shutil.rmtree(workdir)
+        # Write the output XML file
         if output != None:
             print >> sys.stderr, "Writing output to", output
             ETUtils.write(corpusRoot, output)
@@ -79,6 +74,18 @@ class StanfordParser(Parser):
     
     def getStderrPath(self, outputFilePath):
         return os.path.join(os.path.dirname(outputFilePath), "stderr.log")
+    
+    def printStderr(self, outputFilePath):
+        stderrPath = self.getStderrPath(outputFilePath)
+        s = ""
+        with codecs.open(stderrPath, "rt", "utf-8") as stderrFile:
+            for line in stderrFile:
+                line = line.strip()
+                if line != "" and not line.startswith("Parsing [sent."):
+                    s += line + "\n"
+        if s != "":
+            print >> sys.stderr, "Parser output from", stderrPath + ":"
+            print >> sys.stderr, "---\n", s, "---\n"
 
     def run(self, input, output, stanfordParserArgs):
         return subprocess.Popen(stanfordParserArgs + [input], stdout=codecs.open(output, "wt", "utf-8"), stderr=codecs.open(self.getStderrPath(output), "wt", "utf-8"))
@@ -138,8 +145,8 @@ class StanfordParser(Parser):
         existingCount = 0
         for sentence in corpusRoot.getiterator("sentence"):
             if action in ("convert", "dep"):
-                parse = self.getAnalysis(sentence, "parse", {"parser":parser}, "parses")
-                # Sentences with no parse (from the constituency step) are skipped
+                parse = IXMLUtils.getParseElement(sentence, parser, addIfNotExist=(action == "dep"))
+                # Sentences with no parse (from the constituency step) are skipped in converter mode
                 if parse == None:
                     continue
                 # Both the 'convert' and 'dep' actions rely on tokens generated from the penn tree
@@ -175,10 +182,10 @@ class StanfordParser(Parser):
             print >> sys.stderr, "Skipping", existingCount, "already converted sentences."
         return stanfordInput
     
-    def insertDependencyOutput(self, corpusRoot, stanfordOutput, workdir, parser, reparse, action, debug):
+    def insertDependencyOutput(self, corpusRoot, parserOutputPath, workdir, parserName, reparse, action, debug):
         #stanfordOutputFile = codecs.open(stanfordOutput, "rt", "utf-8")
         #stanfordOutputFile = codecs.open(stanfordOutput, "rt", "latin1", "replace")
-        stanfordOutputFile = codecs.open(stanfordOutput, "rt", "utf-8") 
+        parserOutputFile = codecs.open(parserOutputPath, "rt", "utf-8") 
         # Get output and insert dependencies
         parseTimeStamp = time.strftime("%d.%m.%y %H:%M:%S")
         print >> sys.stderr, "Stanford time stamp:", parseTimeStamp
@@ -189,43 +196,17 @@ class StanfordParser(Parser):
                          "depParseType":action
                         }
         for document in corpusRoot.findall("document"):
-            origId = self.getDocumentOrigId(document)
+            #origId = self.getDocumentOrigId(document)
             for sentence in document.findall("sentence"):
-                self.insertParse(sentence, stanfordOutputFile, parser, reparse, extraAttributes, counts, 0, origId)
-        stanfordOutputFile.close()
+                self.insertDependencyParse(sentence, parserOutputFile, parserName, parserName, extraAttributes, counts, skipExtra=0, removeExisting=reparse)
+        parserOutputFile.close()
         # Remove work directory
         if not debug:
             shutil.rmtree(workdir)
-        print >> sys.stderr, "Stanford done"
-        print >> sys.stderr, dict(counts)    
                 
-    def insertParse(self, sentence, stanfordOutputFile, parser, reparse, extraAttributes=None, counts=None, skipExtra=0, origId=None):
-        # Get parse
-        parse = self.getAnalysis(sentence, "parse", {"parser":parser}, "parses")
-        if parse == None:
-            parse = self.addAnalysis(sentence, "parse", "parses")
-            parse.set("parser", "None")
-        if reparse: # Remove existing dependencies
-            if len(parse.findall("dependency")) > 0:
-                for dependency in parse.findall("dependency"):
-                    parse.remove(dependency)
-        elif len(parse.findall("dependency")) > 0: # don't reparse
-            if counts != None: counts["existing"] += 1
-            return
-        if parse.get("pennstring") in (None, ""):
-            parse.set("stanford", "no_penn")
-            if counts != None: counts["no_penn"] += 1
-            return
-        if extraAttributes != None:
-            for attr in sorted(extraAttributes.keys()):
-                parse.set(attr, extraAttributes[attr])
-        # Get tokenization
-        tokenization = self.getAnalysis(sentence, "tokenization", {"tokenizer":parser}, "tokenizations")
-        # Insert dependencies
-        elements = self.insertDependencyParses(stanfordOutputFile, sentence, parse, tokenization, skipExtra=skipExtra, counts=counts)
-        parse.set("stanford", "no_dependencies" if (len(elements) == 0) else "ok")
-        if counts != None: 
-            counts["sentences"] += 1
+#     def insertParse(self, sentence, stanfordOutputFile, parser, reparse, extraAttributes=None, counts=None, skipExtra=0, origId=None):
+#         # Insert dependencies
+#         elements = self.insertDependencyParses(stanfordOutputFile, sentence, parse, tokenization, skipExtra=skipExtra, counts=counts)
 
     ###########################################################################
     # Serialized Parses
@@ -261,7 +242,8 @@ class StanfordParser(Parser):
                 for sentence in document.findall("sentence"):
                     counts["sentences"] += 1
                     counter.update(0, "Processing Documents ("+sentence.get("id")+"/" + origId + "): ")
-                    self.insertParse(sentence, f, parseName, True, None, counts, skipExtra, origId)
+                    self.insertDependencyParse(sentence, f, parseName, parseName, extraAttributes, counts, skipExtra, removeExisting=False)
+                    #self.insertParse(sentence, f, parseName, True, None, counts, skipExtra, origId)
                 f.close()
             counter.update(1, "Processing Documents ("+document.get("id")+"/" + origId + "): ")        
         if tarFile != None:

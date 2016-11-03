@@ -2,7 +2,8 @@ import sys
 import codecs
 import time
 import Utils.ElementTreeUtils as ETUtils
-from ProcessUtils import *
+#from ProcessUtils import *
+import Utils.InteractionXML.InteractionXMLUtils as IXMLUtils
 import Utils.Align as Align
 from collections import defaultdict
 try:
@@ -39,31 +40,6 @@ class Parser:
         print >> sys.stderr, "Corpus file loaded"
         corpusRoot = corpusTree.getroot()
         return corpusTree, corpusRoot
-    
-    def addAnalysis(self, sentence, name, group, attrib=None):
-        if sentence.find("sentenceanalyses") != None: # old format
-            sentenceAnalyses = setDefaultElement(sentence, "sentenceanalyses")
-            groupElement = setDefaultElement(sentenceAnalyses, group)
-            element = setDefaultElement(groupElement, name)
-        else:
-            analyses = setDefaultElement(sentence, "analyses")
-            element = setDefaultElement(analyses, name)
-        if attrib != None:
-            for key in attrib:
-                element.set(key, attrib[key])
-        return element
-    
-    def getAnalysis(self, sentence, name, attrib, group, addIfNotExist=False):
-        if sentence.find("sentenceanalyses") != None: # old format
-            sentenceAnalyses = setDefaultElement(sentence, "sentenceanalyses")
-            groupElement = setDefaultElement(sentenceAnalyses, group)
-            element = getElementByAttrib(groupElement, name, attrib)
-        else:
-            analyses = setDefaultElement(sentence, "analyses")
-            element = getElementByAttrib(analyses, name, attrib)
-        if element == None and addIfNotExist:
-            element = self.addAnalysis(sentence, name, group=group, attrib=attrib)
-        return element
     
 #     def getTokenByIndex(self, sentence, parse, ignore=None):
 #         tokenization = self.getAnalysis(sentence, "tokenization", {"tokenizer":parse.get("tokenizer")}, "tokenizations")
@@ -102,7 +78,17 @@ class Parser:
             if skipParsed:
                 if ETUtils.getElementByAttrib(sentence, "parse", {"parser":"McCC"}) != None:
                     continue
-            yield sentence    
+            yield sentence
+    
+    def getExtraAttributes(self, parserType, extraAttributes=None, addTimeStamp=True):
+        parseTimeStamp = time.strftime("%d.%m.%y %H:%M:%S")
+        print >> sys.stderr, "Time stamp for " + parserType + " parsing:", parseTimeStamp
+        if extraAttributes == None:
+            extraAttributes = {}
+        extraAttributes[parserType + "-source"] = "TEES" # parser was run through this wrapper
+        if addTimeStamp:
+            extraAttributes[parserType + "-date"] = parseTimeStamp # links the parse to the log file
+        return extraAttributes   
     
     ###########################################################################
     # Tokens, Phrases and Dependencies
@@ -229,27 +215,21 @@ class Parser:
     ###########################################################################
     # Penn Tree File Processing
     ###########################################################################
-    
+                
     def insertPennTrees(self, treeFileName, corpusRoot, parseName, requireEntities=False, makePhraseElements=True, skipIds=[], skipParsed=True, addTimeStamp=True):
         print >> sys.stderr, "Inserting parses"
-        treeFile = codecs.open(treeFileName, "rt", "utf-8")
-        # Add output to sentences
-        parseTimeStamp = time.strftime("%d.%m.%y %H:%M:%S")
-        print >> sys.stderr, "Constituency parsing time stamp:", parseTimeStamp
-        #failCount = 0
         counts = defaultdict(int)
-        for sentence in self.getSentences(corpusRoot, requireEntities, skipIds, skipParsed):        
+        extraAttributes = self.getExtraAttributes("const")
+        treeFile = codecs.open(treeFileName, "rt", "utf-8")
+        for sentence in self.getSentences(corpusRoot, requireEntities, skipIds, skipParsed):
             treeLine = treeFile.readline()
-            extraAttributes={"source":"TEES"} # parser was run through this wrapper
-            if addTimeStamp:
-                extraAttributes["date"] = parseTimeStamp # links the parse to the log file
             if not self.insertPennTree(sentence, treeLine, parseName, makePhraseElements=makePhraseElements, extraAttributes=extraAttributes, counts=counts):
                 counts["fail"] += 1
             counts["sentences"] += 1
         treeFile.close()
         # Show statistics
+        print >> sys.stderr, "Penn parse statistics:", dict(counts)
         print >> sys.stderr, "Parsed", counts["sentences"], "sentences"
-        print >> sys.stderr, dict(counts)
         if counts["sentences-without-penn-tree"] == 0:
             print >> sys.stderr, "All sentences had a Penn tree"
         else:
@@ -257,21 +237,21 @@ class Parser:
             print >> sys.stderr, "The \"pennstring\" attribute of these sentences has an empty string."  
         return counts
     
-    def insertPennTree(self, sentence, treeLine, parseName="McCC", tokenizationName = None, makePhraseElements=True, extraAttributes={}, docId=None, counts=None):
-        # Find or create container elements
-        analyses = setDefaultElement(sentence, "analyses")#"sentenceanalyses")
-        # Check that the parse does not exist
-        for prevParse in analyses.findall("parse"):
-            assert prevParse.get("parser") != parseName
-        # Create a new parse element
-        parse = ET.Element("parse")
-        parse.set("parser", parseName)
-        if tokenizationName == None:
-            parse.set("tokenizer", parseName)
-        else:
-            parse.set("tokenizer", tokenizationName)
-        analyses.insert(getPrevElementIndex(analyses, "parse"), parse)
-        
+    def insertPennTree(self, sentence, treeLine, parserName="McCC", tokenizerName = None, extraAttributes={}, counts=None, makePhraseElements=True, docId=None):
+        parse = IXMLUtils.getParseElement(sentence, parserName, addIfNotExist=True, mustNotExist=True)
+#         # Find or create container elements
+#         analyses = setDefaultElement(sentence, "analyses")#"sentenceanalyses")
+#         # Check that the parse does not exist
+#         for prevParse in analyses.findall("parse"):
+#             assert prevParse.get("parser") != parseName
+#         # Create a new parse element
+#         parse = ET.Element("parse")
+#         parse.set("parser", parseName)
+#         if tokenizationName == None:
+#             parse.set("tokenizer", parseName)
+#         else:
+#             parse.set("tokenizer", tokenizationName)
+#         analyses.insert(getPrevElementIndex(analyses, "parse"), parse) 
         parse.set("pennstring", treeLine.strip())
         for attr in sorted(extraAttributes.keys()):
             parse.set(attr, extraAttributes[attr])
@@ -280,18 +260,22 @@ class Parser:
         else:
             tokens, phrases = self.readPennTree(treeLine, sentence.get("id"))
             # Get tokenization
-            if tokenizationName == None: # Parser-generated tokens
-                for prevTokenization in analyses.findall("tokenization"):
-                    assert prevTokenization.get("tokenizer") != tokenizationName
-                tokenization = ET.Element("tokenization")
-                tokenization.set("tokenizer", parseName)
+            tokenization = None
+            if tokenizerName != None: # Check for existing tokenization
+                tokenization = IXMLUtils.getTokenizationElement(sentence, tokenizerName, addIfNotExist=False, mustNotExist=False)
+            if tokenization == None: # Parser-generated tokens
+                tokenization = IXMLUtils.getTokenizationElement(sentence, parserName, addIfNotExist=True, mustNotExist=True)
+#                 for prevTokenization in analyses.findall("tokenization"):
+#                     assert prevTokenization.get("tokenizer") != tokenizationName
+#                 tokenization = ET.Element("tokenization")
+#                 tokenization.set("tokenizer", parseName)
                 for attr in sorted(extraAttributes.keys()): # add the parser extra attributes to the parser generated tokenization 
                     tokenization.set(attr, extraAttributes[attr])
-                analyses.insert(getElementIndex(analyses, parse), tokenization)
+#                analyses.insert(getElementIndex(analyses, parse), tokenization)
                 # Insert tokens to parse
                 self.insertTokens(tokens, sentence, tokenization, counts=counts)
             else:
-                tokenization = getElementByAttrib(analyses, "tokenization", {"tokenizer":tokenizationName})
+                self.alignTokens(tokens, sentence, tokenization, counts=counts)
             # Insert phrases to parse
             if makePhraseElements:
                 self.insertPhrases(phrases, parse, tokens)
@@ -334,10 +318,46 @@ class Parser:
     ###########################################################################
     # Dependency Parse File Processing
     ###########################################################################
-            
-    def insertDependencyParses(self, depFile, sentence, parse, tokenization, skipExtra=0, counts=None):
+    
+    def insertDependencyParses(self, depFilePath, corpusRoot, parseName, extraAttributes, addTimeStamp=True, skipExtra=0, removeExisting=False):
+        counts = defaultdict(int)
+        extraAttributes = self.getExtraAttributes("dep", extraAttributes)
+        depFile = codecs.open(depFilePath, "rt", "utf-8")
+        for document in corpusRoot.findall("document"):
+            for sentence in document.findall("sentence"):
+                self.insertDependencyParse(sentence, depFile, parseName, None, extraAttributes, counts, skipExtra=skipExtra, removeExisting=removeExisting)
+        depFile.close()
+        #print >> sys.stderr, "Inserted Dependencies"
+        print >> sys.stderr, "Dependency parse statistics:", dict(counts)
+        if counts["deps-total"] == counts["deps-elements"]:
+            print >> sys.stderr, "All dependency elements were aligned"
+        else:
+            print >> sys.stderr, "Warning", counts["deps-total"] - counts["deps-elements"], "dependencies could not be aligned"
+        
+    def insertDependencyParse(self, sentence, depFile, parserName="McCC", tokenizerName = None, extraAttributes={}, counts=None, skipExtra=0, removeExisting=False):
         deps = self.readDependencies(depFile, skipExtra, sentence.get("id"))
+        # Initialize the parse element
+        parse = IXMLUtils.getParseElement(sentence, parserName, addIfNotExist=True)
+        if len(parse.findall("dependency")) > 0:
+            if removeExisting: # Remove existing dependencies
+                for dependency in parse.findall("dependency"):
+                    parse.remove(dependency)
+            else: # don't reparse
+                if counts != None: counts["existing-dep-parse"] += 1
+                return
+        if parse.get("pennstring") in (None, ""):
+            parse.set("dep-parse", "no penn")
+            if counts != None: counts["no-penn"] += 1
+            return
+        for attr in sorted(extraAttributes.keys()):
+            parse.set(attr, extraAttributes[attr])
+        # Add the dependencies
+        if tokenizerName == None:
+            tokenizerName = parserName
+        tokenization = IXMLUtils.getTokenizationElement(sentence, tokenizerName, addIfNotExist=False)        
         elements = self.insertDependencies(deps, sentence, parse, tokenization, counts=counts)
+        parse.set("dep-parse", "no dependencies" if (len(elements) == 0) else "ok")
+        counts["sentences"] += 1
         return elements
     
     def readDependencies(self, depFile, skipExtra=0, sentenceId=None):
