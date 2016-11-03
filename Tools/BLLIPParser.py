@@ -141,19 +141,17 @@ class BLLIPParser(Parser):
         workdir = tempfile.mkdtemp()
         infileName, numCorpusSentences = self._makeInputFile(workdir, corpusRoot, requireEntities, skipIds, skipParsed, tokenizationName, debug)
         bllipOutput = self._runProcess(infileName, workdir, pathParser, pathBioModel, tokenizationName, timeout)        
-        counts = self.insertPennTrees(bllipOutput, corpusRoot, parseName, requireEntities, makePhraseElements, skipIds, skipParsed, addTimeStamp)
-
-        print >> sys.stderr, "Parsed", numCorpusSentences, "sentences"
-        print >> sys.stderr, dict(counts)
-        if counts["fail"] == 0:
-            print >> sys.stderr, "All sentences were parsed succesfully"
-        else:
-            print >> sys.stderr, "Warning, parsing failed for", counts["fail"], "out of", numCorpusSentences, "sentences"
-            print >> sys.stderr, "The \"pennstring\" attribute of these sentences has an empty string."
+        self.insertPennTrees(bllipOutput, corpusRoot, parseName, requireEntities, makePhraseElements, skipIds, skipParsed, addTimeStamp)
+#         print >> sys.stderr, "Parsed", numCorpusSentences, "sentences"
+#         print >> sys.stderr, dict(counts)
+#         if counts["fail"] == 0:
+#             print >> sys.stderr, "All sentences were parsed succesfully"
+#         else:
+#             print >> sys.stderr, "Warning, parsing failed for", counts["fail"], "out of", numCorpusSentences, "sentences"
+#             print >> sys.stderr, "The \"pennstring\" attribute of these sentences has an empty string."
         if output != None:
             print >> sys.stderr, "Writing output to", output
             ETUtils.write(corpusRoot, output)
-        
         # Remove work directory
         if not debug:
             shutil.rmtree(workdir)

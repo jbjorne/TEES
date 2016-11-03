@@ -224,7 +224,7 @@ class StanfordParser(Parser):
         if origId == None:
             origId = sentence.get("origId")
         origId = str(origId)
-        elements = self.insertDependenciesFromFile(stanfordOutputFile, sentence, parse, tokenization, skipExtra=skipExtra, counts=counts)
+        elements = self.insertDependencyParses(stanfordOutputFile, sentence, parse, tokenization, skipExtra=skipExtra, counts=counts)
         if len(elements) == 0:
             parse.set("stanford", "no_dependencies")
         else:

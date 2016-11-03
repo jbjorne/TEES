@@ -70,6 +70,14 @@ class Parser:
                 counts["fail"] += 1
             counts["sentences"] += 1
         treeFile.close()
+        # Show statistics
+        print >> sys.stderr, "Parsed", counts["sentences"], "sentences"
+        print >> sys.stderr, dict(counts)
+        if counts["sentences-without-penn-tree"] == 0:
+            print >> sys.stderr, "All sentences had a Penn tree"
+        else:
+            print >> sys.stderr, "Warning, no penn tree for", counts["sentences-without-penn-tree"], "out of", counts["sentences"], "sentences"
+            print >> sys.stderr, "The \"pennstring\" attribute of these sentences has an empty string."  
         return counts
     
     def insertPennTree(self, sentence, treeLine, parseName="McCC", tokenizationName = None, makePhraseElements=True, extraAttributes={}, docId=None, counts=None):
@@ -93,7 +101,7 @@ class Parser:
         for attr in sorted(extraAttributes.keys()):
             parse.set(attr, extraAttributes[attr])
         if treeLine.strip() == "":
-            return False
+            counts["sentences-without-penn-tree"] += 1
         else:
             tokens, phrases = self.readPennTree(treeLine, sentence.get("id"))
             # Get tokenization
@@ -112,7 +120,7 @@ class Parser:
             # Insert phrases to parse
             if makePhraseElements:
                 self.insertPhrases(phrases, parse, tokens)
-            return True  
+            counts["sentences-with-penn-tree"]
     
     def readPennTree(self, treeLine, sentenceDebugId=None):
         #global escDict
@@ -412,7 +420,7 @@ class Parser:
             counts["sentences-with-deps"] += 1
         return elements
             
-    def insertDependenciesFromFile(self, depFile, sentence, parse, tokenization, skipExtra=0, counts=None):
+    def insertDependencyParses(self, depFile, sentence, parse, tokenization, skipExtra=0, counts=None):
         deps = self.readDependencies(depFile, skipExtra, sentence.get("id"))
         elements = self.insertDependencies(deps, sentence, parse, tokenization, counts=counts)
         return elements
