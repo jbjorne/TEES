@@ -174,15 +174,19 @@ CORPUS_ID = "SE10T8"
 
 def getTargets():
     targets = []
-    for directed in (True, False):
-        for const in ("BLLIP-BIO", "BLLIP", "STANFORD"):
-            for dep in ("STANFORD", "STANFORD-CONVERT"):
-                targets.append({"directed":directed, "const":const, "dep":dep})
-    return targets[0:1]
+    for const in ("BLLIP-BIO", "BLLIP", "STANFORD"):
+        for dep in ("STANFORD", "STANFORD-CONVERT"):
+            targets.append({"directed":False, "const":const, "dep":dep})
+            targets.append({"directed":True, "const":const, "dep":dep, "negatives":"NEG"})
+            targets.append({"directed":True, "const":const, "dep":dep, "negatives":"REVERSE_POS"})
+    return targets #[0:1]
 
 def getCorpusId(target, corpusId=None):
     if corpusId == None:
-        corpusId = "_".join([CORPUS_ID, ("DIR" if target["directed"] else "UNDIR"), target["const"], target["dep"]])
+        mode = "DIR" if target["directed"] else "UNDIR"
+        if target["directed"]:
+            mode += "-" + target["negatives"]
+        corpusId = "_".join([CORPUS_ID, mode, target["const"], target["dep"]])
     return corpusId
 
 def convert(outPath, dummy, debug=False):
@@ -194,7 +198,7 @@ def convert(outPath, dummy, debug=False):
         else:
             print "Processing target", targetDir
             if not dummy:
-                convertSemEval2010Task8.convert(inPath=None, outDir=targetDir, corpusId=CORPUS_ID, directed=target["directed"], negatives=True, preprocess=True, debug=debug, clear=False, constParser=target["const"], depParser=target["dep"], logging=True)
+                convertSemEval2010Task8.convert(inPath=None, outDir=targetDir, corpusId=CORPUS_ID, directed=target["directed"], negatives="REVERSE_POS", preprocess=True, debug=debug, clear=False, constParser=target["const"], depParser=target["dep"], logging=True)
 
 def predict(inPath, outPath, dummy, corpusId = None):
     targets = getTargets()
