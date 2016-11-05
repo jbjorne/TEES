@@ -104,11 +104,13 @@ class StanfordParser(Parser):
             if action == "convert":
                 stanfordParserArgs += ["-cp", "stanford-parser.jar", 
                                       "edu.stanford.nlp.trees.EnglishGrammaticalStructure", 
-                                      "-encoding", "utf8", "-CCprocessed", "-keepPunct", "-treeFile"]
+                                      "-encoding", "utf8", 
+                                      "-CCprocessed", "-keepPunct", "-treeFile"]
                 print >> sys.stderr, "Running Stanford conversion"
             else:
                 stanfordParserArgs += ["-cp", "./*",
                                       "edu.stanford.nlp.parser.lexparser.LexicalizedParser",
+                                      "-encoding", "utf8",
                                       "-sentences", "newline"] #"-escaper", "edu.stanford.nlp.process.PTBEscapingProcessor"]                
                 # Add action specific options
                 tokenizerOptions = "untokenizable=allKeep"
