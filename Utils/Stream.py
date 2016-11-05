@@ -8,7 +8,7 @@ but still allow them to be printed on the screen.
 """
 import sys, os
 import time
-import types
+import codecs
 
 class StreamModifier:
     """
@@ -153,7 +153,7 @@ def writeToLog(text, filename=None):
     assert isinstance(sys.stdout, StreamModifier)
     sys.stdout.writeToLog(text, filename)
 
-def setLog(filename=None, clear=False):
+def setLog(filename=None, clear=False, encoding="utf-8"):
     """
     Replace sys.stderr and sys.stdout with a StreamModifier, capturing
     all output for these streams to a log file while still passing it
@@ -165,9 +165,9 @@ def setLog(filename=None, clear=False):
         sys.stderr = StreamModifier(sys.stderr)
     if filename != None:
         if clear:
-            logfile = open(filename,"wt")
+            logfile = codecs.open(filename, "wt", encoding)
         else:
-            logfile = open(filename,"at")
+            logfile = codecs.open(filename, "at", encoding)
         sys.stdout.addLog(logfile)
         sys.stderr.addLog(logfile)
 
