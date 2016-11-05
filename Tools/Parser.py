@@ -70,7 +70,10 @@ class Parser:
         extraAttributes[parserType + "-source"] = "TEES" # parser was run through this wrapper
         if addTimeStamp:
             extraAttributes[parserType + "-date"] = parseTimeStamp # links the parse to the log file
-        return extraAttributes   
+        return extraAttributes
+    
+    def depToString(self, dep):
+        return dep["type"] + "(" + dep["t1Word"] + "-" + str(dep["t1"]) + ", " + dep["t2Word"] + "-" + str(dep["t2"]) + ")"
     
     ###########################################################################
     # Tokens, Phrases and Dependencies
@@ -170,6 +173,7 @@ class Parser:
             self.insertTokens(depTokens, sentence, tokenization, counts=counts)
         count = 0
         elements = []
+        skipped = []
         for dep in dependencies:
             counts["deps-total"] += 1
             t1, t2 = int(dep["t1"]), int(dep["t2"])
@@ -184,6 +188,7 @@ class Parser:
                 count += 1
                 counts["deps-elements"] += 1
             else:
+                skipped.append(dep)
                 counts["deps-skipped"] += 1
         if count == 0:
             if len(dependencies) == 0:
@@ -192,6 +197,9 @@ class Parser:
                 counts["sentences-with-no-element-deps"] += 1
         else:
             counts["sentences-with-deps"] += 1
+        if len(skipped) > 0:
+            parse.set("skipped-deps", ", ".join([self.depToString(dep) for dep in skipped]))
+            print >> sys.stderr, "Could not align dependencies:", parse.get("skipped-deps")
         return elements
     
     ###########################################################################
@@ -300,7 +308,7 @@ class Parser:
         if counts["deps-total"] == counts["deps-elements"]:
             print >> sys.stderr, "All dependency elements were aligned"
         else:
-            print >> sys.stderr, "Warning", counts["deps-total"] - counts["deps-elements"], "dependencies could not be aligned"
+            print >> sys.stderr, "Warning,", counts["deps-total"] - counts["deps-elements"], "dependencies could not be aligned"
         
     def insertDependencyParse(self, sentence, depFile, parserName="McCC", tokenizerName = None, extraAttributes={}, counts=None, skipExtra=0, removeExisting=False):
         deps = self.readDependencies(depFile, skipExtra, sentence.get("id"))
