@@ -65,6 +65,8 @@ class StanfordParser(Parser):
         # Remove work directory
         if not debug:
             shutil.rmtree(workdir)
+        else:
+            print >> sys.stderr, "Parser IO files at", workdir
         # Write the output XML file
         if output != None:
             print >> sys.stderr, "Writing output to", output
@@ -109,9 +111,9 @@ class StanfordParser(Parser):
                                       "edu.stanford.nlp.parser.lexparser.LexicalizedParser",
                                       "-sentences", "newline"] #"-escaper", "edu.stanford.nlp.process.PTBEscapingProcessor"]                
                 # Add action specific options
+                tokenizerOptions = "untokenizable=allKeep"
                 if action == "penn":
                     # Add tokenizer options
-                    tokenizerOptions = "untokenizable=allKeep"
                     #for normalization in ("Space", "AmpersandEntity", "Currency", "Fractions", "OtherBrackets"):
                     #    tokenizerOptions += ",normalize" + normalization + "=false"
                     #for tokOpt in ("americanize", "asciiQuotes", "latexQuotes", "unicodeQuotes", "ptb3Ellipsis", "ptb3Dashes", "escapeForwardSlashAsterisk"):
@@ -119,10 +121,11 @@ class StanfordParser(Parser):
                     stanfordParserArgs += ["-tokenizerOptions", tokenizerOptions]
                     stanfordParserArgs += ["-outputFormat", "oneline"]
                 else: # action == "dep"
-                    stanfordParserArgs += ["-tokenized",
-                                           "-escaper", "edu.stanford.nlp.process.PTBEscapingProcessor",
-                                           "-tokenizerFactory", "edu.stanford.nlp.process.WhitespaceTokenizer",
-                                           "-tokenizerMethod", "newCoreLabelTokenizerFactory",
+                    stanfordParserArgs += ["-tokenizerOptions", tokenizerOptions,
+                                           #"-tokenized",
+                                           #"-escaper", "edu.stanford.nlp.process.PTBEscapingProcessor",
+                                           #"-tokenizerFactory", "edu.stanford.nlp.process.WhitespaceTokenizer",
+                                           #"-tokenizerMethod", "newCoreLabelTokenizerFactory",
                                            "-outputFormat", "typedDependencies"]
                 stanfordParserArgs += ["edu/stanford/nlp/models/lexparser/englishPCFG.ser.gz"]
                 print >> sys.stderr, "Running Stanford parsing for target", action
@@ -169,12 +172,12 @@ class StanfordParser(Parser):
                 if action == "convert": # Put penn tree lines in input file
                     stanfordInputFile.write(pennTree + "\n")
                 else: # action == "dep"
-                    tokenization = IXMLUtils.getTokenizationElement(sentence, parserName, addIfNotExist=False)
-                    if tokenization != None:
-                        tokenized = " ".join([x.get("text") for x in tokenization.findall("token")])
-                        stanfordInputFile.write(tokenized.replace("\n", " ").replace("\r", " ").strip() + "\n")
-                    else:
-                        stanfordInputFile.write(sentence.get("text").replace("\n", " ").replace("\r", " ").strip() + "\n")
+                    #tokenization = IXMLUtils.getTokenizationElement(sentence, parserName, addIfNotExist=False)
+                    #if tokenization != None:
+                    #    tokenized = " ".join([x.get("text") for x in tokenization.findall("token")])
+                    #    stanfordInputFile.write(tokenized.replace("\n", " ").replace("\r", " ").strip() + "\n")
+                    #else:
+                    stanfordInputFile.write(sentence.get("text").replace("\n", " ").replace("\r", " ").strip() + "\n")
             else: # action == "penn"
                 stanfordInputFile.write(sentence.get("text").replace("\n", " ").replace("\r", " ").strip() + "\n")
         stanfordInputFile.close()
@@ -182,25 +185,27 @@ class StanfordParser(Parser):
             print >> sys.stderr, "Skipping", existingCount, "already converted sentences."
         return stanfordInput
     
-    def insertDependencyOutput(self, corpusRoot, parserOutputPath, workdir, parserName, reparse, action, debug):
-        #stanfordOutputFile = codecs.open(stanfordOutput, "rt", "utf-8")
-        #stanfordOutputFile = codecs.open(stanfordOutput, "rt", "latin1", "replace")
-        parserOutputFile = codecs.open(parserOutputPath, "rt", "utf-8") 
-        # Get output and insert dependencies
-        parseTimeStamp = time.strftime("%d.%m.%y %H:%M:%S")
-        print >> sys.stderr, "Stanford time stamp:", parseTimeStamp
-        counts = defaultdict(int)
-        extraAttributes={"stanfordSource":"TEES", # parser was run through this wrapper
-                         "stanfordDate":parseTimeStamp, # links the parse to the log file
-                         "depParseType":action
-                        }
-        for document in corpusRoot.findall("document"):
-            for sentence in document.findall("sentence"):
-                self.insertDependencyParse(sentence, parserOutputFile, parserName, parserName, extraAttributes, counts, skipExtra=0, removeExisting=reparse)
-        parserOutputFile.close()
-        # Remove work directory
-        if not debug:
-            shutil.rmtree(workdir)
+#     def insertDependencyOutput(self, corpusRoot, parserOutputPath, workdir, parserName, reparse, action, debug):
+#         #stanfordOutputFile = codecs.open(stanfordOutput, "rt", "utf-8")
+#         #stanfordOutputFile = codecs.open(stanfordOutput, "rt", "latin1", "replace")
+#         parserOutputFile = codecs.open(parserOutputPath, "rt", "utf-8") 
+#         # Get output and insert dependencies
+#         parseTimeStamp = time.strftime("%d.%m.%y %H:%M:%S")
+#         print >> sys.stderr, "Stanford time stamp:", parseTimeStamp
+#         counts = defaultdict(int)
+#         extraAttributes={"stanfordSource":"TEES", # parser was run through this wrapper
+#                          "stanfordDate":parseTimeStamp, # links the parse to the log file
+#                          "depParseType":action
+#                         }
+#         for document in corpusRoot.findall("document"):
+#             for sentence in document.findall("sentence"):
+#                 self.insertDependencyParse(sentence, parserOutputFile, parserName, parserName, extraAttributes, counts, skipExtra=0, removeExisting=reparse)
+#         parserOutputFile.close()
+#         # Remove work directory
+#         if not debug:
+#             shutil.rmtree(workdir)
+#         else:
+#             print >> sys.stderr, "Parser IO files at", workdir
 
     ###########################################################################
     # Serialized Parses

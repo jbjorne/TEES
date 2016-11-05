@@ -71,6 +71,8 @@ class BLLIPParser(Parser):
         # Remove work directory
         if not debug:
             shutil.rmtree(workdir)
+        else:
+            print >> sys.stderr, "Parser IO files at", workdir
         return corpusTree
     
     ###########################################################################
