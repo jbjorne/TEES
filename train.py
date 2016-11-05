@@ -331,6 +331,7 @@ def getTaskSettings(task, detector, bioNLPSTParams, preprocessorParams,
             subTask = int(subTask)
         if corpusDir == None:
             corpusDir = Settings.CORPUS_DIR
+        print >> sys.stderr, "Loading corpus", task, "from", corpusDir
         for dataset in ["devel", "train", "test"]:
             if inputFiles[dataset] == None and inputFiles[dataset] != "None":
                 if task.startswith("DDI13"):

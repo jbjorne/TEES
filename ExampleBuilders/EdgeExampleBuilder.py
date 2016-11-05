@@ -57,7 +57,7 @@ class EdgeExampleBuilder(ExampleBuilder):
             "disable_ngram_features", "disable_path_edge_features", "linear_features", "subset", "binary", "pos_only",
             "entity_type", "filter_shortest_path", "maskTypeAsProtein", "keep_neg", "metamap", 
             "sdb_merge", "sdb_features", "ontobiotope_features", "no_self_loops", "full_entities",
-            "no_features", "wordnet"])
+            "no_features", "wordnet", "se10t8_strip", "filter_types"])
         self.styles = self.getParameters(style)
         #if style == None: # no parameters given
         #    style["typed"] = style["directed"] = style["headsOnly"] = True
@@ -75,7 +75,7 @@ class EdgeExampleBuilder(ExampleBuilder):
         else:
             self.multiEdgeFeatureBuilder.maskNamedEntities = False
         if not self.styles["limit_features"]:
-			self.multiEdgeFeatureBuilder.maximum = True
+            self.multiEdgeFeatureBuilder.maximum = True
         if self.styles["genia_task1"]:
             self.multiEdgeFeatureBuilder.filterAnnTypes.add("Entity")
         self.tokenFeatureBuilder = TokenFeatureBuilder(self.featureSet)
@@ -258,6 +258,10 @@ class EdgeExampleBuilder(ExampleBuilder):
             categoryName = self.getCategoryName(sentenceGraph, e1, e2, isDirected)
             if goldGraph != None:
                 categoryName = self.getGoldCategoryName(goldGraph, entityToGold, e1, e2, isDirected)
+        if self.styles["filter_types"] != None and categoryName in self.styles["filter_types"]:
+            categoryName = "neg"
+        if self.styles["se10t8_strip"] and "(" in categoryName:
+            categoryName = categoryName.split("(")[0]
         #if self.styles["sdb_merge"]:
         #    categoryName = self.mergeForSeeDev(categoryName, structureAnalyzer)
         return categoryName

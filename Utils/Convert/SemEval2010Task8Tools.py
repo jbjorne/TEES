@@ -57,8 +57,8 @@ def getRelation(interactions):
     if otherCount == len(interactions): # all predictions are for the type "Other"
         return {"type":"Other", "e1":None, "e2":None}
     # Generate a relation from the interactions
-    if len(interactions) == 0:
-        return None
+    if len(interactions) == 0: # Predit "Other" for all "neg" sentences
+        return {"type":"Other", "e1":None, "e2":None} #None
     elif len(interactions) == 1:
         return readInteraction(interactions[0])
     else: # The two directed predictions have to be converted into a single relation
@@ -176,17 +176,19 @@ def getTargets():
     targets = []
     for const in ("BLLIP-BIO", "BLLIP", "STANFORD"):
         for dep in ("STANFORD", "STANFORD-CONVERT"):
-            targets.append({"directed":False, "const":const, "dep":dep})
-            targets.append({"directed":True, "const":const, "dep":dep, "negatives":"NEG"})
-            targets.append({"directed":True, "const":const, "dep":dep, "negatives":"REVERSE_POS"})
+            targets.append({"const":const, "dep":dep})
+            #targets.append({"directed":False, "const":const, "dep":dep})
+            #targets.append({"directed":True, "const":const, "dep":dep, "negatives":"NEG"})
+            #targets.append({"directed":True, "const":const, "dep":dep, "negatives":"REVERSE_POS"})
     return targets #[0:1]
 
 def getCorpusId(target, corpusId=None):
     if corpusId == None:
-        mode = "DIR" if target["directed"] else "UNDIR"
-        if target["directed"]:
-            mode += "-" + target["negatives"]
-        corpusId = "_".join([CORPUS_ID, mode, target["const"], target["dep"]])
+        #mode = "DIR" if target["directed"] else "UNDIR"
+        #if target["directed"]:
+        #    mode += "-" + target["negatives"]
+        #corpusId = "_".join([CORPUS_ID, mode, target["const"], target["dep"]])
+        corpusId = "_".join([CORPUS_ID, target["const"], target["dep"]])
     return corpusId
 
 def convert(outPath, dummy, debug=False):
@@ -198,29 +200,32 @@ def convert(outPath, dummy, debug=False):
         else:
             print "Processing target", targetDir
             if not dummy:
-                convertSemEval2010Task8.convert(inPath=None, outDir=targetDir, corpusId=CORPUS_ID, directed=target["directed"], negatives="REVERSE_POS", preprocess=True, debug=debug, clear=False, constParser=target["const"], depParser=target["dep"], logging=True)
+                convertSemEval2010Task8.convert(inPath=None, outDir=targetDir, corpusId=CORPUS_ID, directed=True, negatives="REVERSE_POS", preprocess=True, debug=debug, clear=False, constParser=target["const"], depParser=target["dep"], logging=True)
 
 def predict(inPath, outPath, dummy, corpusId = None):
     targets = getTargets()
     for target in targets:
         targetCorpusId = getCorpusId(target, corpusId)
-        corpusDir = inPath
-        targetDir = outPath
-        if corpusId == None: 
-            corpusDir = os.path.join(inPath, targetCorpusId)
-            targetDir = os.path.join(outPath, targetCorpusId)
-        if os.path.exists(targetDir):
-            print "Skipping existing target", targetDir
-        else:
-            print "Processing target", targetDir
-            if not dummy:
-                train.train(targetDir, targetCorpusId, corpusDir=corpusDir, exampleStyles={"examples":":wordnet"}, parse="McCC",
-                            classifierParams={"examples":"c=1,10,100,500,1000,1500,2500,3500,4000,4500,5000,7500,10000,20000,25000,27500,28000,29000,30000,35000,40000,50000,60000,65000"})
-                for dataset in ("devel", "test"):
-                    predicted = os.path.join(targetDir, "classification-" + dataset, dataset + "-pred.xml.gz")
-                    if os.path.exists(predicted):
-                        gold = os.path.join(corpusDir, targetCorpusId + "-" + dataset + ".xml")
-                        evaluate(predicted, gold, os.path.join(targetDir, "official-eval-" + dataset + ".txt"))
+        corpusDir = os.path.join(inPath, targetCorpusId) if (corpusId == None) else corpusId
+        for directed in (True, False):
+            targetDir = os.path.join(outPath, targetCorpusId) if (corpusId == None) else outPath
+            if os.path.exists(targetDir):
+                print "Skipping existing target", targetDir
+                continue
+            print "Processing target", targetDir, "directed =", directed
+            if dummy:
+                continue
+            exampleStyle = "wordnet:filter_types=Other"
+            if not directed:
+                exampleStyle += ":undirected"
+            train.train(targetDir, task=CORPUS_ID, corpusDir=corpusDir,
+                        exampleStyles={"examples":exampleStyle}, parse="McCC",
+                        classifierParams={"examples":"c=1,10,100,500,1000,1500,2500,3500,4000,4500,5000,7500,10000,20000,25000,27500,28000,29000,30000,35000,40000,50000,60000,65000"})
+            for dataset in ("devel", "test"):
+                predicted = os.path.join(targetDir, "classification-" + dataset, dataset + "-pred.xml.gz")
+                if os.path.exists(predicted):
+                    gold = os.path.join(corpusDir, targetCorpusId + "-" + dataset + ".xml")
+                    evaluate(predicted, gold, os.path.join(targetDir, "official-eval-" + dataset + ".txt"))
 
 if __name__=="__main__":
     from optparse import OptionParser
