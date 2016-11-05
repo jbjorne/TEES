@@ -208,7 +208,7 @@ def predict(inPath, outPath, dummy, corpusId = None):
         targetCorpusId = getCorpusId(target, corpusId)
         corpusDir = os.path.join(inPath, targetCorpusId) if (corpusId == None) else corpusId
         for directed in (True, False):
-            targetDir = os.path.join(outPath, targetCorpusId) if (corpusId == None) else outPath
+            targetDir = os.path.join(outPath, targetCorpusId + ("_DIR" if directed else "_UNDIR")) if (corpusId == None) else outPath
             if os.path.exists(targetDir):
                 print "Skipping existing target", targetDir
                 continue
