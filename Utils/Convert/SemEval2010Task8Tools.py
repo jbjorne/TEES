@@ -10,6 +10,9 @@ import zipfile
 import subprocess
 import convertSemEval2010Task8
 import train
+import re
+
+SPLIT_CONF = re.compile(r'(?:[^,(]|\([^)]*\))+') # split by commas outside parentheses
 
 ###############################################################################
 # Install
@@ -33,19 +36,27 @@ def readInteraction(interaction):
     e1 = None
     e2 = None
     if relType != "Other":
-        if interaction.get("directed") == "True" and not "(" in interaction.get("type"):
-            e1 = interaction.get("e1").rsplit(".")[-1]
-            e2 = interaction.get("e2").rsplit(".")[-1]
-        else: # undirected or REVERSE_POS
+        e1 = interaction.get("e1").rsplit(".")[-1]
+        e2 = interaction.get("e2").rsplit(".")[-1]
+        # Check if SemEval directionality is included in the interaction type
+        if interaction.get("directed") != "True" or "(" in interaction.get("type"):
             assert ")" in relType, interaction.attrib
             relType, rest = relType.strip(")").split("(")
-            e1, e2 = rest.split(",")
+            # In the SemEval corpus, relations are defined relative to the linear order of the entities e1->e2
+            typeE1, typeE2 = rest.split(",") # In the XML, the interaction type is the SemEval relation defined relative to the interaction element
+            if e1 == "e1" and e2 == "e2": # The interaction element is e1->e1, therefore the type is the SemEval relation
+                #e1, e2 = e2, e1
+                e1, e2 = typeE1, typeE2
+            else: # The interaction element is e2->e1, therefore the reverse of the type equals is SemEval relation
+                assert e1 == "e2" and e2 == "e1"
+                e1, e2 = typeE2, typeE1
     return {"type":relType, "e1":e1, "e2":e2}
 
 def getConfDict(conf):
+    global SPLIT_CONF
     if conf == None:
         return None
-    conf = [x.split(":") for x in conf.split(",")]
+    conf = [x.split(":") for x in SPLIT_CONF.findall(conf)]
     return dict((key, value) for (key, value) in conf)
 
 def getRelation(interactions):
@@ -202,29 +213,29 @@ def convert(outPath, dummy, debug=False):
             if not dummy:
                 convertSemEval2010Task8.convert(inPath=None, outDir=targetDir, corpusId=CORPUS_ID, directed=True, negatives="REVERSE_POS", preprocess=True, debug=debug, clear=False, constParser=target["const"], depParser=target["dep"], logging=True)
 
-def predict(inPath, outPath, dummy, corpusId = None):
+def predict(inPath, outPath, dummy, corpusId=None, connection=None):
     targets = getTargets()
     for target in targets:
         targetCorpusId = getCorpusId(target, corpusId)
         corpusDir = os.path.join(inPath, targetCorpusId) if (corpusId == None) else corpusId
         for directed in (True, False):
             targetDir = os.path.join(outPath, targetCorpusId + ("_DIR" if directed else "_UNDIR")) if (corpusId == None) else outPath
-            if os.path.exists(targetDir):
-                print "Skipping existing target", targetDir
-                continue
+            #if os.path.exists(targetDir):
+            #    print "Skipping existing target", targetDir
+            #    continue
             print "Processing target", targetDir, "directed =", directed
             if dummy:
                 continue
             exampleStyle = "wordnet:filter_types=Other"
             if not directed:
                 exampleStyle += ":undirected"
-            train.train(targetDir, task=CORPUS_ID, corpusDir=corpusDir,
-                        exampleStyles={"examples":exampleStyle}, parse="McCC",
-                        classifierParams={"examples":"c=1,10,100,500,1000,1500,2500,3500,4000,4500,5000,7500,10000,20000,25000,27500,28000,29000,30000,35000,40000,50000,60000,65000"})
+            #train.train(targetDir, task=CORPUS_ID, corpusDir=corpusDir, connection=connection,
+            #            exampleStyles={"examples":exampleStyle}, parse="McCC",
+            #            classifierParams={"examples":"c=1,10,100,500,1000,1500,2500,3500,4000,4500,5000,7500,10000,20000,25000,27500,28000,29000,30000,35000,40000,50000,60000,65000"})
             for dataset in ("devel", "test"):
                 predicted = os.path.join(targetDir, "classification-" + dataset, dataset + "-pred.xml.gz")
                 if os.path.exists(predicted):
-                    gold = os.path.join(corpusDir, targetCorpusId + "-" + dataset + ".xml")
+                    gold = os.path.join(corpusDir, CORPUS_ID + "-" + dataset + ".xml")
                     evaluate(predicted, gold, os.path.join(targetDir, "official-eval-" + dataset + ".txt"))
 
 if __name__=="__main__":
@@ -237,6 +248,7 @@ if __name__=="__main__":
     optparser.add_option("--dummy", default=False, action="store_true", help="")
     optparser.add_option("--debug", default=False, action="store_true", dest="debug", help="")
     optparser.add_option("--corpusId", default=None, help="")
+    optparser.add_option("--connection", default=None, help="")
     (options, args) = optparser.parse_args()
     
     if options.action == "install":
@@ -248,6 +260,6 @@ if __name__=="__main__":
     elif options.action == "convert":
         convert(options.output, options.dummy, options.debug)
     elif options.action == "predict":
-        predict(options.input, options.output, options.dummy, options.corpusId)
+        predict(options.input, options.output, options.dummy, options.corpusId, options.connection)
     else:
         print "Unknown action", options.action
