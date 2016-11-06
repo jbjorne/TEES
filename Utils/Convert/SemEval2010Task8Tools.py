@@ -75,8 +75,6 @@ def getRelation(interactions):
     else: # The two directed predictions have to be converted into a single relation
         i1 = interactions[0]
         i2 = interactions[1]
-        assert i1.get("e1") == i2.get("e2")
-        assert i1.get("e2") == i2.get("e1")
         # Prefer non-Other type interactions
         if i1.get("type") != "Other" and i2.get("type") == "Other":
             return readInteraction(i1)
@@ -85,18 +83,12 @@ def getRelation(interactions):
         # Pick the stronger one
         conf1 = getConfDict(i1.get("conf"))
         conf2 = getConfDict(i2.get("conf"))
-        mirrored = False
-        if "(" in i1.get("type") and "(" in i2.get("type"):
-            mirrored = i1.get("type").split("(")[0] == i2.get("type").split("(")[0] # check that types match except for reversing
         if conf1 == None and conf2 == None: # assume this is gold annotation
-            assert mirrored
+            assert i1.get("type").split("(")[0] == i2.get("type").split("(")[0] # check that types match except for reversing
             # The first gold interaction is for e1->e2
             assert i1.get("e1").endswith(".e1")
             assert i1.get("e2").endswith(".e2")
             return readInteraction(i1)
-        elif mirrored: # confidence scores in TEES undirected mode are for merged classes
-            return readInteraction(i1)
-        # Return by confidence score
         assert conf1 != None and conf2 != None, (i1.attrib, i2.attrib, otherCount, len(interactions))
         if conf1[i1.get("type")] > conf2[i2.get("type")]:
             return readInteraction(i1)
@@ -230,18 +222,18 @@ def predict(inPath, outPath, dummy, corpusId=None, connection=None):
         corpusDir = os.path.join(inPath, targetCorpusId) if (corpusId == None) else corpusId
         for directed in (True, False):
             targetDir = os.path.join(outPath, targetCorpusId + ("_DIR" if directed else "_UNDIR")) if (corpusId == None) else outPath
-            #if os.path.exists(targetDir):
-            #    print "Skipping existing target", targetDir
-            #    continue
+            if os.path.exists(targetDir):
+                print "Skipping existing target", targetDir
+                continue
             print "Processing target", targetDir, "directed =", directed
             if dummy:
                 continue
             exampleStyle = "wordnet:filter_types=Other"
             if not directed:
-                exampleStyle += ":undirected:se8t10_strip"
-            #train.train(targetDir, task=CORPUS_ID, corpusDir=corpusDir, connection=connection,
-            #            exampleStyles={"examples":exampleStyle}, parse="McCC",
-            #            classifierParams={"examples":"c=1,10,100,500,1000,1500,2500,3500,4000,4500,5000,7500,10000,20000,25000,27500,28000,29000,30000,35000,40000,50000,60000,65000"})
+                exampleStyle += ":undirected"
+            train.train(targetDir, task=CORPUS_ID, corpusDir=corpusDir, connection=connection,
+                        exampleStyles={"examples":exampleStyle}, parse="McCC",
+                        classifierParams={"examples":"c=1,10,100,500,1000,1500,2500,3500,4000,4500,5000,7500,10000,20000,25000,27500,28000,29000,30000,35000,40000,50000,60000,65000"})
             for dataset in ("devel", "test"):
                 predicted = os.path.join(targetDir, "classification-" + dataset, dataset + "-pred.xml.gz")
                 if os.path.exists(predicted):
