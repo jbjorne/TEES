@@ -173,6 +173,8 @@ def evaluate(inputXML, goldXML, outPath):
     # Write the results
     if outPath != None:
         outFile = open(outPath, "wt")
+        outFile.write("Input file: " + inputXML + "\n")
+        outFile.write("Gold file: " + goldXML + "\n")
         for text in (stderrText, stdoutText):
             outFile.write(text)
         outFile.close()
@@ -220,18 +222,18 @@ def predict(inPath, outPath, dummy, corpusId=None, connection=None):
         corpusDir = os.path.join(inPath, targetCorpusId) if (corpusId == None) else corpusId
         for directed in (True, False):
             targetDir = os.path.join(outPath, targetCorpusId + ("_DIR" if directed else "_UNDIR")) if (corpusId == None) else outPath
-            #if os.path.exists(targetDir):
-            #    print "Skipping existing target", targetDir
-            #    continue
+            if os.path.exists(targetDir):
+                print "Skipping existing target", targetDir
+                continue
             print "Processing target", targetDir, "directed =", directed
             if dummy:
                 continue
             exampleStyle = "wordnet:filter_types=Other"
             if not directed:
                 exampleStyle += ":undirected"
-            #train.train(targetDir, task=CORPUS_ID, corpusDir=corpusDir, connection=connection,
-            #            exampleStyles={"examples":exampleStyle}, parse="McCC",
-            #            classifierParams={"examples":"c=1,10,100,500,1000,1500,2500,3500,4000,4500,5000,7500,10000,20000,25000,27500,28000,29000,30000,35000,40000,50000,60000,65000"})
+            train.train(targetDir, task=CORPUS_ID, corpusDir=corpusDir, connection=connection,
+                        exampleStyles={"examples":exampleStyle}, parse="McCC",
+                        classifierParams={"examples":"c=1,10,100,500,1000,1500,2500,3500,4000,4500,5000,7500,10000,20000,25000,27500,28000,29000,30000,35000,40000,50000,60000,65000"})
             for dataset in ("devel", "test"):
                 predicted = os.path.join(targetDir, "classification-" + dataset, dataset + "-pred.xml.gz")
                 if os.path.exists(predicted):
