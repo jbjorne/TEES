@@ -11,6 +11,7 @@ import subprocess
 import convertSemEval2010Task8
 import train
 import re
+import csv
 
 SPLIT_CONF = re.compile(r'(?:[^,(]|\([^)]*\))+') # split by commas outside parentheses
 
@@ -215,30 +216,61 @@ def convert(outPath, dummy, debug=False):
             if not dummy:
                 convertSemEval2010Task8.convert(inPath=None, outDir=targetDir, corpusId=CORPUS_ID, directed=True, negatives="REVERSE_POS", preprocess=True, debug=debug, clear=False, constParser=target["const"], depParser=target["dep"], logging=True)
 
-def predict(inPath, outPath, dummy, corpusId=None, connection=None):
+def getModels(corpusPath, modelsPath, corpusId):
+    models = []
     targets = getTargets()
     for target in targets:
         targetCorpusId = getCorpusId(target, corpusId)
-        corpusDir = os.path.join(inPath, targetCorpusId) if (corpusId == None) else corpusId
+        corpusDir = os.path.join(corpusPath, targetCorpusId) if (corpusId == None) else corpusId
         for directed in (True, False):
-            targetDir = os.path.join(outPath, targetCorpusId + ("_DIR" if directed else "_UNDIR")) if (corpusId == None) else outPath
-            if os.path.exists(targetDir):
-                print "Skipping existing target", targetDir
-                continue
-            print "Processing target", targetDir, "directed =", directed
-            if dummy:
-                continue
-            exampleStyle = "wordnet:filter_types=Other"
+            targetDir = os.path.join(modelsPath, targetCorpusId + ("_DIR" if directed else "_UNDIR")) if (corpusId == None) else modelsPath
+            model = {"model":targetDir, "corpusDir":corpusDir, "directed":directed, "const":target["const"], "dep":target["dep"]}
+            for dataset in ("devel", "test"): 
+                model[dataset] = os.path.join(targetDir, "classification-" + dataset, dataset + "-pred.xml.gz")
+                model[dataset + "-gold"] = os.path.join(corpusDir, CORPUS_ID + "-" + dataset + ".xml")
+                model[dataset + "-eval"] = os.path.join(targetDir, "official-eval-" + dataset + ".txt")
+            model["exampleStyle"] = "wordnet:filter_types=Other"
             if not directed:
-                exampleStyle += ":undirected:se10t8_strip"
-            train.train(targetDir, task=CORPUS_ID, corpusDir=corpusDir, connection=connection,
-                        exampleStyles={"examples":exampleStyle}, parse="McCC",
-                        classifierParams={"examples":"c=1,10,100,500,1000,1500,2500,3500,4000,4500,5000,7500,10000,20000,25000,27500,28000,29000,30000,35000,40000,50000,60000,65000"})
-            for dataset in ("devel", "test"):
-                predicted = os.path.join(targetDir, "classification-" + dataset, dataset + "-pred.xml.gz")
-                if os.path.exists(predicted):
-                    gold = os.path.join(corpusDir, CORPUS_ID + "-" + dataset + ".xml")
-                    evaluate(predicted, gold, os.path.join(targetDir, "official-eval-" + dataset + ".txt"))
+                model["exampleStyle"] += ":undirected:se10t8_strip"
+            models.append(model)
+    return models
+
+def predict(corpusPath, modelsPath, dummy, corpusId=None, connection=None):
+    for model in getModels(corpusPath, modelsPath, corpusId):
+        if os.path.exists(model["model"]):
+            print "Skipping existing target", model["model"]
+            continue
+        print "Processing target", model["model"], "directed =", model["directed"]
+        if dummy:
+            continue
+        train.train(model["model"], task=CORPUS_ID, corpusDir=model["corpusDir"], connection=connection,
+                    exampleStyles={"examples":model["exampleStyle"]}, parse="McCC",
+                    classifierParams={"examples":"c=1,10,100,500,1000,1500,2500,3500,4000,4500,5000,7500,10000,20000,25000,27500,28000,29000,30000,35000,40000,50000,60000,65000"})
+        for dataset in ("devel", "test"):
+            if os.path.exists(model[dataset]):
+                evaluate(model[dataset], model[dataset + "-gold"], model[dataset + "-eval"])
+
+def collect(modelsPath, resultPath, corpusId=None):
+    csvFile = open(resultPath, "wt")
+    fields = ["const", "dep", "score-devel", "score-test"]
+    dw = csv.DictWriter(csvFile, delimiter='\t', fieldnames=fields)
+    dw.writeheader()
+    for model in getModels("DUMMY", modelsPath, corpusId):
+        if not model["directed"]:
+            continue
+        print "Processing target", model["model"], "directed =", model["directed"]
+        result = {#"directed":model["directed"], 
+                  "const":model["const"], "dep":model["dep"]}
+        for dataset in ("devel", "test"):
+            if os.path.exists(model[dataset + "-eval"]):
+                with open(model[dataset + "-eval"], "rt") as f:
+                    lines = f.readlines()
+                    lines = [x for x in lines if x.startswith("<<< The official score")]
+                    assert len(lines) == 1
+                    score = lines[0].split("=")[1].strip().split()[0]
+                    result["score-" + dataset] = score
+        dw.writerow(result)
+    csvFile.close()
 
 if __name__=="__main__":
     from optparse import OptionParser
@@ -263,7 +295,7 @@ if __name__=="__main__":
         convert(options.output, options.dummy, options.debug)
     elif options.action == "predict":
         predict(options.input, options.output, options.dummy, options.corpusId, options.connection)
-    elif options.action == "connect":
-        predict(options.input, options.output, options.corpusId, options.connection)
+    elif options.action == "collect":
+        collect(options.input, options.output, options.corpusId)
     else:
         print "Unknown action", options.action
