@@ -39,7 +39,7 @@ def readInteraction(interaction):
         e1 = interaction.get("e1").rsplit(".")[-1]
         e2 = interaction.get("e2").rsplit(".")[-1]
         # Check if SemEval directionality is included in the interaction type
-        if interaction.get("directed") != "True" or "(" in interaction.get("type"):
+        if interaction.get("directed") == "True" or "(" in interaction.get("type"):
             assert ")" in relType, interaction.attrib
             relType, rest = relType.strip(")").split("(")
             # In the SemEval corpus, relations are defined relative to the linear order of the entities e1->e2
@@ -230,7 +230,7 @@ def predict(inPath, outPath, dummy, corpusId=None, connection=None):
                 continue
             exampleStyle = "wordnet:filter_types=Other"
             if not directed:
-                exampleStyle += ":undirected"
+                exampleStyle += ":undirected:se10t8_strip"
             train.train(targetDir, task=CORPUS_ID, corpusDir=corpusDir, connection=connection,
                         exampleStyles={"examples":exampleStyle}, parse="McCC",
                         classifierParams={"examples":"c=1,10,100,500,1000,1500,2500,3500,4000,4500,5000,7500,10000,20000,25000,27500,28000,29000,30000,35000,40000,50000,60000,65000"})
@@ -263,5 +263,7 @@ if __name__=="__main__":
         convert(options.output, options.dummy, options.debug)
     elif options.action == "predict":
         predict(options.input, options.output, options.dummy, options.corpusId, options.connection)
+    elif options.action == "connect":
+        predict(options.input, options.output, options.corpusId, options.connection)
     else:
         print "Unknown action", options.action

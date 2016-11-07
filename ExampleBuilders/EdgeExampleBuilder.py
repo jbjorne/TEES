@@ -123,6 +123,14 @@ class EdgeExampleBuilder(ExampleBuilder):
                 edgesToKeep.append(edge)
         return edgesToKeep
     
+    def filterTypes(self, types):
+        if self.styles["se10t8_strip"]:
+            for i in range(len(types)):
+                if "(" in types[i]:
+                    types[i] = types[i].split("(")[0]
+            types = list(set(types))
+        return types
+    
     def getCategoryNameFromTokens(self, sentenceGraph, t1, t2, directed=True):
         """
         Example class. Multiple overlapping edges create a merged type.
@@ -134,6 +142,7 @@ class EdgeExampleBuilder(ExampleBuilder):
         for intEdge in intEdges:
             types.add(intEdge[2].get("type"))
         types = list(types)
+        types = self.filterTypes(types)
         types.sort()
         categoryName = ""
         for name in types:
@@ -157,6 +166,7 @@ class EdgeExampleBuilder(ExampleBuilder):
         for interaction in interactions:
             types.add(interaction[2].get("type"))
         types = list(types)
+        types = self.filterTypes(types)
         types.sort()
         categoryName = ""
         for name in types:
@@ -260,8 +270,6 @@ class EdgeExampleBuilder(ExampleBuilder):
                 categoryName = self.getGoldCategoryName(goldGraph, entityToGold, e1, e2, isDirected)
         if self.styles["filter_types"] != None and categoryName in self.styles["filter_types"]:
             categoryName = "neg"
-        if self.styles["se10t8_strip"] and "(" in categoryName:
-            categoryName = categoryName.split("(")[0]
         #if self.styles["sdb_merge"]:
         #    categoryName = self.mergeForSeeDev(categoryName, structureAnalyzer)
         return categoryName
