@@ -216,13 +216,17 @@ def convert(outPath, dummy, debug=False):
             if not dummy:
                 convertSemEval2010Task8.convert(inPath=None, outDir=targetDir, corpusId=CORPUS_ID, directed=True, negatives="REVERSE_POS", preprocess=True, debug=debug, clear=False, constParser=target["const"], depParser=target["dep"], logging=True)
 
-def getModels(corpusPath, modelsPath, corpusId):
+def getModels(corpusPath, modelsPath, corpusId, directed="both"):
     models = []
+    assert directed in ("both", "true", "false")
+    modelTypes = (True, False)
+    if directed != "both": 
+        modelTypes = (True,) if directed == "true" else (False,)
     targets = getTargets()
     for target in targets:
         targetCorpusId = getCorpusId(target, corpusId)
         corpusDir = os.path.join(corpusPath, targetCorpusId) if (corpusId == None) else corpusId
-        for directed in (True, False):
+        for directed in modelTypes:
             targetDir = os.path.join(modelsPath, targetCorpusId + ("_DIR" if directed else "_UNDIR")) if (corpusId == None) else modelsPath
             model = {"model":targetDir, "corpusDir":corpusDir, "directed":directed, "const":target["const"], "dep":target["dep"]}
             for dataset in ("devel", "test"): 
@@ -231,12 +235,12 @@ def getModels(corpusPath, modelsPath, corpusId):
                 model[dataset + "-eval"] = os.path.join(targetDir, "official-eval-" + dataset + ".txt")
             model["exampleStyle"] = "wordnet:filter_types=Other"
             if not directed:
-                model["exampleStyle"] += ":undirected:se10t8_strip"
+                model["exampleStyle"] += ":undirected:se10t8_undirected"
             models.append(model)
     return models
 
-def predict(corpusPath, modelsPath, dummy, corpusId=None, connection=None):
-    for model in getModels(corpusPath, modelsPath, corpusId):
+def predict(corpusPath, modelsPath, dummy, corpusId=None, connection=None, directed="both"):
+    for model in getModels(corpusPath, modelsPath, corpusId, directed):
         if os.path.exists(model["model"]):
             print "Skipping existing target", model["model"]
             continue
@@ -250,14 +254,14 @@ def predict(corpusPath, modelsPath, dummy, corpusId=None, connection=None):
             if os.path.exists(model[dataset]):
                 evaluate(model[dataset], model[dataset + "-gold"], model[dataset + "-eval"])
 
-def collect(modelsPath, resultPath, corpusId=None):
+def collect(modelsPath, resultPath, corpusId=None, directed="both"):
     csvFile = open(resultPath, "wt")
     fields = ["const", "dep", "score-devel", "score-test"]
     dw = csv.DictWriter(csvFile, delimiter='\t', fieldnames=fields)
     dw.writeheader()
-    for model in getModels("DUMMY", modelsPath, corpusId):
-        if not model["directed"]:
-            continue
+    for model in getModels("DUMMY", modelsPath, corpusId, directed):
+        #if not model["directed"]:
+        #    continue
         print "Processing target", model["model"], "directed =", model["directed"]
         result = {#"directed":model["directed"], 
                   "const":model["const"], "dep":model["dep"]}
@@ -283,6 +287,7 @@ if __name__=="__main__":
     optparser.add_option("--debug", default=False, action="store_true", dest="debug", help="")
     optparser.add_option("--corpusId", default=None, help="")
     optparser.add_option("--connection", default=None, help="")
+    optparser.add_option("--directed", default="both", help="both, true or false")
     (options, args) = optparser.parse_args()
     
     if options.action == "install":
@@ -294,8 +299,8 @@ if __name__=="__main__":
     elif options.action == "convert":
         convert(options.output, options.dummy, options.debug)
     elif options.action == "predict":
-        predict(options.input, options.output, options.dummy, options.corpusId, options.connection)
+        predict(options.input, options.output, options.dummy, options.corpusId, options.connection, options.directed)
     elif options.action == "collect":
-        collect(options.input, options.output, options.corpusId)
+        collect(options.input, options.output, options.corpusId, options.directed)
     else:
         print "Unknown action", options.action

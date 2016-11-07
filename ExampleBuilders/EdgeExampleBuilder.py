@@ -57,7 +57,7 @@ class EdgeExampleBuilder(ExampleBuilder):
             "disable_ngram_features", "disable_path_edge_features", "linear_features", "subset", "binary", "pos_only",
             "entity_type", "filter_shortest_path", "maskTypeAsProtein", "keep_neg", "metamap", 
             "sdb_merge", "sdb_features", "ontobiotope_features", "no_self_loops", "full_entities",
-            "no_features", "wordnet", "se10t8_strip", "filter_types"])
+            "no_features", "wordnet", "se10t8_undirected", "filter_types"])
         self.styles = self.getParameters(style)
         #if style == None: # no parameters given
         #    style["typed"] = style["directed"] = style["headsOnly"] = True
@@ -123,14 +123,6 @@ class EdgeExampleBuilder(ExampleBuilder):
                 edgesToKeep.append(edge)
         return edgesToKeep
     
-    def filterTypes(self, types):
-        if self.styles["se10t8_strip"]:
-            for i in range(len(types)):
-                if "(" in types[i]:
-                    types[i] = types[i].split("(")[0]
-            types = list(set(types))
-        return types
-    
     def getCategoryNameFromTokens(self, sentenceGraph, t1, t2, directed=True):
         """
         Example class. Multiple overlapping edges create a merged type.
@@ -142,7 +134,6 @@ class EdgeExampleBuilder(ExampleBuilder):
         for intEdge in intEdges:
             types.add(intEdge[2].get("type"))
         types = list(types)
-        types = self.filterTypes(types)
         types.sort()
         categoryName = ""
         for name in types:
@@ -159,14 +150,13 @@ class EdgeExampleBuilder(ExampleBuilder):
         Example class. Multiple overlapping edges create a merged type.
         """
         interactions = sentenceGraph.getInteractions(e1, e2, True)
-        if not directed:
+        if not directed and not self.styles["se10t8_undirected"]:
             interactions = interactions + sentenceGraph.getInteractions(e2, e1, True)
         
         types = set()
         for interaction in interactions:
             types.add(interaction[2].get("type"))
         types = list(types)
-        types = self.filterTypes(types)
         types.sort()
         categoryName = ""
         for name in types:
@@ -270,6 +260,9 @@ class EdgeExampleBuilder(ExampleBuilder):
                 categoryName = self.getGoldCategoryName(goldGraph, entityToGold, e1, e2, isDirected)
         if self.styles["filter_types"] != None and categoryName in self.styles["filter_types"]:
             categoryName = "neg"
+        if self.styles["se10t8_undirected"]:
+            assert e1.get("id").endswith(".e1")
+            assert e2.get("id").endswith(".e2")
         #if self.styles["sdb_merge"]:
         #    categoryName = self.mergeForSeeDev(categoryName, structureAnalyzer)
         return categoryName
