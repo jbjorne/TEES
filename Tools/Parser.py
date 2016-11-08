@@ -363,4 +363,35 @@ class Parser:
                 print >> sys.stderr, e
                 print >> sys.stderr, "Warning, unreadable dependency '", line.strip(), "', in sentence", sentenceId, [depType, t1, t2, (t1Word, t1Index), (t2Word, t2Index)]
             line = depFile.readline()
-        return deps 
+        return deps
+    
+    ###########################################################################
+    # CoNLL File Processing
+    ###########################################################################
+    
+    def readCoNLL(self, inPath, columns=None):
+        # Columns from http://ilk.uvt.nl/conll/#dataformat
+        if columns == None:
+            columns = ["ID", "FORM", "LEMMA", "CPOSTAG", "POSTAG", "FEATS", "HEAD", "DEPREL", "PHEAD", "PDEPREL"] 
+        sentences = []
+        sentence = {}
+        with codecs.open(inPath, "rt", "utf-8") as f:
+            for line in f:
+                line = line.strip()
+                if line == "":
+                    sentences.append(sentence)
+                else:
+                    splits = line.split()
+                    assert len(splits) == len(columns), (splits, columns)
+                for i in range(len(columns)):
+                    sentence[columns[i]] = splits[i]
+            if len(sentence) > 0:
+                sentences.append(sentence)
+        return sentences
+    
+    def processCoNLLSentences(self, sentences):
+        tokens = []
+        dependencies = []
+        outSentences = []
+        for sentences in sentences:
+            
