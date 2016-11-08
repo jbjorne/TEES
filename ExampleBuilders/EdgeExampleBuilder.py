@@ -374,6 +374,9 @@ class EdgeExampleBuilder(ExampleBuilder):
                 reverseExample = self.buildExample(token2, token1, paths, sentenceGraph, categoryName, entity2, entity1, structureAnalyzer, isDirected)
             self.exampleStats.endExample()
             return filter(None, [forwardExample, reverseExample])
+        elif self.styles["se10t8_undirected"]: # undirected example with a directed type
+            self.exampleStats.endExample()
+            return [forwardExample]
         elif forwardExample != None: # merge features from the reverse example to the forward one
             reverseExample = self.buildExample(token2, token1, paths, sentenceGraph, categoryName, entity2, entity1, structureAnalyzer, isDirected)
             forwardExample[1].update(reverseExample[1])
