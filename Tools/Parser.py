@@ -162,15 +162,21 @@ class Parser:
     def insertDependencies(self, dependencies, sentence, parse, tokenization, idStem="d", counts=None):
         tokensById = {}
         dependencies = [x for x in dependencies if x["type"] != "root"]
-        for dep in dependencies:
-            t1, t2 = int(dep["t1"]), int(dep["t2"])
-            tokensById[t1] = {"text":dep["t1Word"], "index":t1}
-            tokensById[t2] = {"text":dep["t2Word"], "index":t2}
-        depTokens = [tokensById[i] for i in sorted(tokensById.keys())]
-        if tokenization != None:
-            self.alignTokens(depTokens, tokenization, counts=counts, tag="dep-")
+        if tokenization == "linked":
+            for dep in dependencies:
+                assert dep["t1Token"] != None and dep["t2Token"] != None
+                tokensById[dep["t1"]] = dep["t1Token"]
+                tokensById[dep["t2"]] = dep["t2Token"]
         else:
-            self.insertTokens(depTokens, sentence, tokenization, counts=counts)
+            for dep in dependencies:
+                t1, t2 = int(dep["t1"]), int(dep["t2"])
+                tokensById[t1] = {"text":dep["t1Word"], "index":t1}
+                tokensById[t2] = {"text":dep["t2Word"], "index":t2}
+            depTokens = [tokensById[i] for i in sorted(tokensById.keys())]
+            if tokenization != None:
+                self.alignTokens(depTokens, tokenization, counts=counts, tag="dep-")
+            else:
+                self.insertTokens(depTokens, sentence, tokenization, counts=counts)
         count = 0
         elements = []
         skipped = []
@@ -374,24 +380,56 @@ class Parser:
         if columns == None:
             columns = ["ID", "FORM", "LEMMA", "CPOSTAG", "POSTAG", "FEATS", "HEAD", "DEPREL", "PHEAD", "PDEPREL"] 
         sentences = []
-        sentence = {}
+        sentence = []
         with codecs.open(inPath, "rt", "utf-8") as f:
             for line in f:
                 line = line.strip()
                 if line == "":
                     sentences.append(sentence)
+                    sentence = []
                 else:
                     splits = line.split()
                     assert len(splits) == len(columns), (splits, columns)
-                for i in range(len(columns)):
-                    sentence[columns[i]] = splits[i]
+                    word = {columns[i]:splits[i] for i in range(len(columns))}
+                    sentence.append(word)
             if len(sentence) > 0:
                 sentences.append(sentence)
         return sentences
     
     def processCoNLLSentences(self, sentences):
-        tokens = []
-        dependencies = []
         outSentences = []
-        for sentences in sentences:
-            
+        for sentence in sentences:
+            tokens = []
+            dependencies = []
+            wordById = {}
+            for word in sentence:
+                token = {"text":word["FORM"], "POS":word["POSTAG"], "index":word["ID"]}
+                wordById[int(token["index"]) - 1] = token
+            for word in sentence:
+                t1 = int(word["HEAD"]) - 1
+                if t1 > 0:
+                    t2 = int(word["PHEAD"]) - 1
+                    dependencies.append({"type":word["DEPREL"].lower(), "t1":t1, "t2":t2, "t1Token":wordById[t1], "t2Token":wordById[t2]})
+            outSentences = {"tokens":tokens, "dependencies":dependencies}
+        return outSentences
+    
+    def insertCoNLLParses(self, coNLLFilePath, corpusRoot, parseName, extraAttributes, addTimeStamp=True, skipExtra=0, removeExisting=False):
+        counts = defaultdict(int)
+        sentRows = self.readCoNLL(coNLLFilePath)
+        sentObjs = self.processCoNLLSentences(sentRows)
+        extraAttributes = self.getExtraAttributes("dep", extraAttributes)
+        sentences = []
+        for document in corpusRoot.findall("document"):
+            for sentence in document.findall("sentence"):
+                sentences.append(sentence)
+        assert len(sentObjs) == len(sentences), (len(sentObjs), len(sentences))
+        counter = ProgressCounter(len(sentences), "Dependency Parse Insertion")
+        for objs, sentence in zip(sentObjs, sentences):
+            counter.update(1, "Inserting parse for (" + sentence.get("id") + "): ")
+            self.insertTokens(objs["tokens"], sentence, "linked", counts=counts)
+            self.insertDependencies(objs["dependencies"], sentence, parseName, tokenization, counts=counts)
+        print >> sys.stderr, "CoNLL parse statistics:", dict(counts)
+        if counts["deps-total"] == counts["deps-elements"]:
+            print >> sys.stderr, "All dependency elements were aligned"
+        else:
+            print >> sys.stderr, "Warning,", counts["deps-total"] - counts["deps-elements"], "dependencies could not be aligned"
