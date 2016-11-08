@@ -62,7 +62,8 @@ class SyntaxNetParser(Parser):
         parserEval = "bazel-bin/syntaxnet/parser_eval"
         modelDir = "syntaxnet/models/parsey_mcparseface"
         
-        taggerArgs = ["--input", "stdin"
+        taggerArgs = [parserEval,
+                      "--input", "stdin"
                       "--output", "stdout-conll",
                       "--hidden_layer_sizes", "64",
                       "--arg_prefix", "brain_tagger",
@@ -73,87 +74,35 @@ class SyntaxNetParser(Parser):
                       "--batch_size", "1024",
                       "--alsologtostderr"]
 
-      $PARSER_EVAL \
-  --input=stdin-conll \
-  --output=stdout-conll \
-  --hidden_layer_sizes=512,512 \
-  --arg_prefix=brain_parser \
-  --graph_builder=structured \
-  --task_context=$MODEL_DIR/context.pbtxt \
-  --model_path=$MODEL_DIR/parser-params \
-  --slim_model \
-  --batch_size=1024 \
-  --alsologtostderr
+        parserArgs = [parserEval,
+                      "--input", "stdin-conll",
+                      "--output", "stdout-conll",
+                      "--hidden_layer_sizes", "512,512",
+                      "--arg_prefix", "brain_parser",
+                      "--graph_builder", "structured",
+                      "--task_context", os.path.join(modelDir, "context.pbtxt"),
+                      "--model_path", os.path.join(modelDir, "parser-params"),
+                      "--slim_model",
+                      "--batch_size", "1024",
+                      "--alsologtostderr"]
 
-        if pathBioModel != None:
-            assert os.path.exists(pathBioModel), pathBioModel
-        if tokenizer:
-            print >> sys.stderr, "Running BLLIP parser with tokenization"
-            firstStageArgs = ["first-stage/PARSE/parseIt", "-l999", "-N50"]
-        else:
-            print >> sys.stderr, "Running BLLIP parser without tokenization"
-            firstStageArgs = ["first-stage/PARSE/parseIt", "-l999", "-N50" , "-K"]
-        secondStageArgs = ["second-stage/programs/features/best-parses", "-l"]
-        if pathBioModel != None:
-            firstStageArgs += [pathBioModel+"/parser/"]
-            secondStageArgs += [pathBioModel+"/reranker/features.gz", pathBioModel+"/reranker/weights.gz"]
-        else:
-            firstStageArgs += ["first-stage/DATA/EN/"]
-            secondStageArgs += ["second-stage/models/ec50spfinal/features.gz", "second-stage/models/ec50spfinal/cvlm-l1c10P1-weights.gz"]
-        print >> sys.stderr, "1st Stage arguments:", firstStageArgs
-        print >> sys.stderr, "2nd Stage arguments:", secondStageArgs 
-        firstStage = subprocess.Popen(firstStageArgs,
-                                      stdin=codecs.open(input, "rt", "utf-8"),
-                                      stdout=subprocess.PIPE)
-        secondStage = subprocess.Popen(secondStageArgs,
-                                       stdin=firstStage.stdout,
-                                       stdout=codecs.open(output, "wt", "utf-8"))
-        return ProcessUtils.ProcessWrapper([firstStage, secondStage])
+        print >> sys.stderr, "Tagger arguments:", taggerArgs
+        print >> sys.stderr, "Parser arguments:", parserArgs 
+        tagger = subprocess.Popen(taggerArgs,
+                                  stdin=codecs.open(input, "rt", "utf-8"),
+                                  stdout=subprocess.PIPE)
+        parser = subprocess.Popen(parserArgs,
+                                  stdin=tagger.stdout,
+                                  stdout=codecs.open(output, "wt", "utf-8"))
+        return ProcessUtils.ProcessWrapper([tagger, parser])
         
-    def runProcess(self, stanfordParserArgs, stanfordParserDir, stanfordInput, workdir, action="convert"):
-        if stanfordParserArgs == None:
-            # not sure how necessary the "-mx500m" option is, and how exactly Java
-            # options interact, but adding user defined options from Settings.JAVA
-            # after the "-mx500m" hopefully works.
-            stanfordParserArgs = Settings.JAVA.split()[0:1] + ["-mx500m"] + Settings.JAVA.split()[1:]
-            if action == "convert":
-                stanfordParserArgs += ["-cp", "stanford-parser.jar", 
-                                      "edu.stanford.nlp.trees.EnglishGrammaticalStructure", 
-                                      "-encoding", "utf8", 
-                                      "-CCprocessed", "-keepPunct", "-treeFile"]
-                print >> sys.stderr, "Running Stanford conversion"
-            else:
-                stanfordParserArgs += ["-cp", "./*",
-                                      "edu.stanford.nlp.parser.lexparser.LexicalizedParser",
-                                      "-encoding", "utf8",
-                                      "-sentences", "newline"] #"-escaper", "edu.stanford.nlp.process.PTBEscapingProcessor"]                
-                # Add action specific options
-                tokenizerOptions = "untokenizable=allKeep"
-                if action == "penn":
-                    # Add tokenizer options
-                    #for normalization in ("Space", "AmpersandEntity", "Currency", "Fractions", "OtherBrackets"):
-                    #    tokenizerOptions += ",normalize" + normalization + "=false"
-                    #for tokOpt in ("americanize", "asciiQuotes", "latexQuotes", "unicodeQuotes", "ptb3Ellipsis", "ptb3Dashes", "escapeForwardSlashAsterisk"):
-                    #    tokenizerOptions += "," + tokOpt + "=false"
-                    stanfordParserArgs += ["-tokenizerOptions", tokenizerOptions]
-                    stanfordParserArgs += ["-outputFormat", "oneline"]
-                else: # action == "dep"
-                    stanfordParserArgs += ["-tokenizerOptions", tokenizerOptions,
-                                           #"-tokenized",
-                                           #"-escaper", "edu.stanford.nlp.process.PTBEscapingProcessor",
-                                           #"-tokenizerFactory", "edu.stanford.nlp.process.WhitespaceTokenizer",
-                                           #"-tokenizerMethod", "newCoreLabelTokenizerFactory",
-                                           "-outputFormat", "typedDependencies"]
-                stanfordParserArgs += ["edu/stanford/nlp/models/lexparser/englishPCFG.ser.gz"]
-                print >> sys.stderr, "Running Stanford parsing for target", action
-        print >> sys.stderr, "Stanford tools at:", stanfordParserDir
-        print >> sys.stderr, "Stanford tools arguments:", " ".join(stanfordParserArgs)
-        # Run Stanford parser
-        return ProcessUtils.runSentenceProcess(self.run, stanfordParserDir, stanfordInput, 
-            workdir, False if action == "penn" else True, 
-            "StanfordParser", "Stanford (" + action + ")", timeout=600,
-            outputArgs={"encoding":"latin1", "errors":"replace"},
-            processArgs={"stanfordParserArgs":stanfordParserArgs})
+    def runProcess(self, infileName, workdir, pathParser, pathBioModel, tokenizationName, timeout):
+        # Run parser
+        cwd = os.getcwd()
+        os.chdir(syntaxNetDir)
+        outPath = ProcessUtils.runSentenceProcess(self.run, pathParser, infileName, workdir, False, "BLLIPParser", "Parsing", timeout=timeout)   
+        os.chdir(cwd)
+        return outPath
     
     ###########################################################################
     # Parsing Process File IO
