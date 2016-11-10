@@ -413,7 +413,7 @@ class Parser:
             outSentences = {"tokens":tokens, "dependencies":dependencies}
         return outSentences
     
-    def insertCoNLLParses(self, coNLLFilePath, corpusRoot, parseName, extraAttributes, addTimeStamp=True, skipExtra=0, removeExisting=False):
+    def insertCoNLLParses(self, coNLLFilePath, corpusRoot, parseName="McCC", extraAttributes=None, addTimeStamp=True, skipExtra=0, removeExisting=False):
         counts = defaultdict(int)
         sentRows = self.readCoNLL(coNLLFilePath)
         sentObjs = self.processCoNLLSentences(sentRows)
@@ -426,8 +426,9 @@ class Parser:
         counter = ProgressCounter(len(sentences), "Dependency Parse Insertion")
         for objs, sentence in zip(sentObjs, sentences):
             counter.update(1, "Inserting parse for (" + sentence.get("id") + "): ")
-            self.insertTokens(objs["tokens"], sentence, "linked", counts=counts)
-            self.insertDependencies(objs["dependencies"], sentence, parseName, tokenization, counts=counts)
+            tokenization = IXMLUtils.getTokenizationElement(sentence, parseName, addIfNotExist=True)
+            self.insertTokens(objs["tokens"], sentence, tokenization, counts=counts)
+            self.insertDependencies(objs["dependencies"], sentence, parseName, "linked", counts=counts)
         print >> sys.stderr, "CoNLL parse statistics:", dict(counts)
         if counts["deps-total"] == counts["deps-elements"]:
             print >> sys.stderr, "All dependency elements were aligned"
