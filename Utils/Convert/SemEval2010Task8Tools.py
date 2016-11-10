@@ -257,7 +257,7 @@ def predict(corpusPath, modelsPath, dummy, corpusId=None, connection=None, direc
 
 def collect(modelsPath, resultPath, corpusId=None, directed="both"):
     csvFile = open(resultPath, "wt")
-    fields = ["const", "dep", "score-devel", "score-test"]
+    fields = ["directed", "const", "dep", "score-devel", "score-test"]
     dw = csv.DictWriter(csvFile, delimiter='\t', fieldnames=fields)
     dw.writeheader()
     for model in getModels("DUMMY", modelsPath, corpusId, directed):
