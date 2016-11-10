@@ -73,7 +73,10 @@ class Parser:
         return extraAttributes
     
     def depToString(self, dep):
-        return dep["type"] + "(" + dep["t1Word"] + "-" + str(dep["t1"]) + ", " + dep["t2Word"] + "-" + str(dep["t2"]) + ")"
+        if "t1Word" in dep:
+            return dep["type"] + "(" + dep["t1Word"] + "-" + str(dep["t1"]) + ", " + dep["t2Word"] + "-" + str(dep["t2"]) + ")"
+        else:
+            return dep["type"] + "(" + dep["t1Token"].get("text") + "-" + str(dep["t1"]) + ", " + dep["t2Token"].get("text") + "-" + str(dep["t2"]) + ")"
     
     ###########################################################################
     # Tokens, Phrases and Dependencies
@@ -379,21 +382,23 @@ class Parser:
         # Columns from http://ilk.uvt.nl/conll/#dataformat
         if columns == None:
             columns = ["ID", "FORM", "LEMMA", "CPOSTAG", "POSTAG", "FEATS", "HEAD", "DEPREL", "PHEAD", "PDEPREL"] 
+        sentence = None
         sentences = []
-        sentence = []
         with codecs.open(inPath, "rt", "utf-8") as f:
             for line in f:
                 line = line.strip()
                 if line == "":
-                    sentences.append(sentence)
-                    sentence = []
+                    if sentence == None: # Additional empty line
+                        sentences.append([])
+                    sentence = None
                 else:
+                    if sentence == None:
+                        sentence = []
+                        sentences.append(sentence)
                     splits = line.split()
                     assert len(splits) == len(columns), (splits, columns)
                     word = {columns[i]:splits[i] for i in range(len(columns))}
                     sentence.append(word)
-            if len(sentence) > 0:
-                sentences.append(sentence)
         return sentences
     
     def processCoNLLSentences(self, sentences):
@@ -408,9 +413,9 @@ class Parser:
             for word in sentence:
                 t1 = int(word["HEAD"]) - 1
                 if t1 > 0:
-                    t2 = int(word["PHEAD"]) - 1
+                    t2 = int(word["ID"]) - 1
                     dependencies.append({"type":word["DEPREL"].lower(), "t1":t1, "t2":t2, "t1Token":wordById[t1], "t2Token":wordById[t2]})
-            outSentences = {"tokens":tokens, "dependencies":dependencies}
+            outSentences.append({"tokens":tokens, "dependencies":dependencies})
         return outSentences
     
     def insertCoNLLParses(self, coNLLFilePath, corpusRoot, parseName="McCC", extraAttributes=None, addTimeStamp=True, skipExtra=0, removeExisting=False):
@@ -428,7 +433,8 @@ class Parser:
             counter.update(1, "Inserting parse for (" + sentence.get("id") + "): ")
             tokenization = IXMLUtils.getTokenizationElement(sentence, parseName, addIfNotExist=True)
             self.insertTokens(objs["tokens"], sentence, tokenization, counts=counts)
-            self.insertDependencies(objs["dependencies"], sentence, parseName, "linked", counts=counts)
+            parse = IXMLUtils.getParseElement(sentence, parseName, addIfNotExist=True)
+            self.insertDependencies(objs["dependencies"], sentence, parse, "linked", counts=counts)
         print >> sys.stderr, "CoNLL parse statistics:", dict(counts)
         if counts["deps-total"] == counts["deps-elements"]:
             print >> sys.stderr, "All dependency elements were aligned"
