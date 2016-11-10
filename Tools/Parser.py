@@ -408,7 +408,7 @@ class Parser:
             dependencies = []
             wordById = {}
             for word in sentence:
-                token = {"text":word["FORM"], "POS":word["POSTAG"], "index":word["ID"]}
+                token = {"text":self.unescape(word["FORM"]), "POS":word["POSTAG"], "index":word["ID"]}
                 wordById[int(token["index"]) - 1] = token
                 tokens.append(token)
             for word in sentence:
