@@ -410,6 +410,7 @@ class Parser:
             for word in sentence:
                 token = {"text":word["FORM"], "POS":word["POSTAG"], "index":word["ID"]}
                 wordById[int(token["index"]) - 1] = token
+                tokens.append(token)
             for word in sentence:
                 t1 = int(word["HEAD"]) - 1
                 if t1 > 0:
