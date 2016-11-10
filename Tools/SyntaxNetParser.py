@@ -45,7 +45,7 @@ class SyntaxNetParser(Parser):
         modelDir = "syntaxnet/models/parsey_mcparseface"
         
         taggerArgs = [parserEval,
-                      "--input", "stdin"
+                      "--input", "stdin",
                       "--output", "stdout-conll",
                       "--hidden_layer_sizes", "64",
                       "--arg_prefix", "brain_tagger",
