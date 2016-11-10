@@ -7,6 +7,7 @@ import ProcessUtils
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)),"..")))
 import Utils.ElementTreeUtils as ETUtils
 from Parser import Parser
+import Utils.Settings as Settings
 
 class SyntaxNetParser(Parser):    
     ###########################################################################
@@ -20,6 +21,8 @@ class SyntaxNetParser(Parser):
     
     def parse(self, parserName, input, output=None, debug=False, reparse=False, syntaxNetDir=None):
         # Run the parser process
+        if syntaxNetDir == None:
+            syntaxNetDir = Settings.SYNTAXNET_DIR
         corpusTree, corpusRoot = self.getCorpus(input)
         workdir = tempfile.mkdtemp()
         inPath = self.makeInputFile(corpusRoot, workdir)

@@ -10,6 +10,7 @@ import Utils.ElementTreeUtils as ETUtils
 import Tools.GeniaSentenceSplitter
 from Tools.BLLIPParser import BLLIPParser
 from Tools.StanfordParser import StanfordParser
+from Tools.SyntaxNetParser import SyntaxNetParser
 import Tools.BANNER
 from ToolChain import ToolChain
 import Utils.InteractionXML.DivideSets
@@ -21,7 +22,7 @@ import Utils.Stream as Stream
 class Preprocessor(ToolChain):
     def __init__(self, constParser="BLLIP-BIO", depParser="STANFORD-CONVERT", parseName="McCC", requireEntities=False):
         assert constParser in ("BLLIP", "BLLIP-BIO", "STANFORD", None), constParser
-        assert depParser in ("STANFORD", "STANFORD-CONVERT", None), depParser
+        assert depParser in ("STANFORD", "STANFORD-CONVERT", "SYNTAXNET", None), depParser
         self.constParser = constParser
         self.depParser = depParser
         self.requireEntities = requireEntities
@@ -53,6 +54,8 @@ class Preprocessor(ToolChain):
             steps.append( (self.depParser + "-DEP", StanfordParser.parseCls, {"parserName":self.parseName, "debug":False, "action":"dep"}, "dependencies.xml") )
         elif self.depParser == "STANFORD-CONVERT":
             steps.append( (self.depParser + "-DEP", StanfordParser.parseCls, {"parserName":self.parseName, "debug":False, "action":"convert"}, "dependencies.xml") )
+        elif self.depParser == "SYNTAXNET":
+            steps.append( (self.depParser + "-DEP", SyntaxNetParser.parseCls, {"parserName":self.parseName, "debug":False}, "dependencies.xml") )
     
     def process(self, source, output, parameters=None, model=None, sourceDataSetNames=None, fromStep=None, toStep=None, omitSteps=None):
         if omitSteps != None and((type(omitSteps) in types.StringTypes and omitSteps == "CONVERT") or "CONVERT" in omitSteps):
