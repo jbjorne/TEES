@@ -80,15 +80,7 @@ class SyntaxNetParser(Parser):
                                   stdin=tagger.stdout,
                                   stdout=codecs.open(output, "wt", "utf-8"))
         return ProcessUtils.ProcessWrapper([tagger, parser])
-        
-#     def runProcess(self, syntaxNetDir, infileName, workdir, timeout=None):
-#         # Run parser
-#         #cwd = os.getcwd()
-#         #os.chdir(syntaxNetDir)
-#         outPath = ProcessUtils.runSentenceProcess(self.run, syntaxNetDir, infileName, workdir, True, "SyntaxNetParser", "Parsing", timeout=timeout)   
-#         #os.chdir(cwd)
-#         return outPath
-    
+
     ###########################################################################
     # Parsing Process File IO
     ###########################################################################
@@ -101,26 +93,13 @@ class SyntaxNetParser(Parser):
         return inputPath
 
 if __name__=="__main__":
-    from optparse import OptionParser, OptionGroup
+    from optparse import OptionParser
     optparser = OptionParser(description="SyntaxNet Parser Wrapper")
     optparser.add_option("-i", "--input", default=None, dest="input", help="Corpus in interaction xml format", metavar="FILE")
-    optparser.add_option("-o", "--output", default=None, dest="output", help="Output file in interaction xml format.")
-    optparser.add_option("-p", "--parse", default="McCC", dest="parse", help="Name of parse element.")
-    optparser.add_option("-d", "--syntaxNetDir", default=None, dest="syntaxNetDir", help="SyntaxNet parser directory")
+    optparser.add_option("-o", "--output", default=None, dest="output", help="Output file in interaction xml format")
+    optparser.add_option("-p", "--parse", default="McCC", dest="parse", help="Name of the parse element")
+    optparser.add_option("-d", "--syntaxNetDir", default=None, dest="syntaxNetDir", help="SyntaxNet program directory")
     optparser.add_option("--debug", default=False, action="store_true", dest="debug", help="")
-    #optparser.add_option("--reparse", default=False, action="store_true", dest="reparse", help="")
-    #group = OptionGroup(optparser, "Install Options", "")
-    #group.add_option("--install", default=None, action="store_true", dest="install", help="Install BANNER")
-    #group.add_option("--installDir", default=None, dest="installDir", help="Install directory")
-    #group.add_option("--downloadDir", default=None, dest="downloadDir", help="Install files download directory")
-    #group.add_option("--redownload", default=False, action="store_true", dest="redownload", help="Redownload install files")
-    #optparser.add_option_group(group)
     (options, args) = optparser.parse_args()
     
-    SyntaxNetParser.parseCls(options.parse, options.input, options.output, options.debug, False, options.syntaxNetDir)
-    #parser = SyntaxNetParser
-    #if options.install:
-    #    parser.install(options.installDir, options.downloadDir, redownload=options.redownload)
-    #else:
-    #parser.parse(input=options.input, output=options.output, parser=options.parse, debug=options.debug, reparse=options.reparse)
-        
+    SyntaxNetParser.parseCls(options.parse, options.input, options.output, options.debug, False, options.syntaxNetDir)        
