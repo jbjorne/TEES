@@ -194,7 +194,8 @@ def getTargets():
             #targets.append({"directed":False, "const":const, "dep":dep})
             #targets.append({"directed":True, "const":const, "dep":dep, "negatives":"NEG"})
             #targets.append({"directed":True, "const":const, "dep":dep, "negatives":"REVERSE_POS"})
-    return targets #[0:1]
+    #return targets #[0:1]
+    return [{"const":None, "dep":"SYNTAXNET"}]
 
 def getCorpusId(target, corpusId=None):
     if corpusId == None:
@@ -202,7 +203,7 @@ def getCorpusId(target, corpusId=None):
         #if target["directed"]:
         #    mode += "-" + target["negatives"]
         #corpusId = "_".join([CORPUS_ID, mode, target["const"], target["dep"]])
-        corpusId = "_".join([CORPUS_ID, target["const"], target["dep"]])
+        corpusId = "_".join([CORPUS_ID, str(target["const"]), str(target["dep"])])
     return corpusId
 
 def convert(outPath, dummy, debug=False):
@@ -263,8 +264,7 @@ def collect(modelsPath, resultPath, corpusId=None, directed="both"):
         #if not model["directed"]:
         #    continue
         print "Processing target", model["model"], "directed =", model["directed"]
-        result = {#"directed":model["directed"], 
-                  "const":model["const"], "dep":model["dep"]}
+        result = {"directed":model["directed"], "const":model["const"], "dep":model["dep"]}
         for dataset in ("devel", "test"):
             if os.path.exists(model[dataset + "-eval"]):
                 with open(model[dataset + "-eval"], "rt") as f:
