@@ -5,10 +5,15 @@ import pickle
 sys.path.append(os.path.dirname(os.path.abspath(__file__))+"/..")
 
 def getClassifier(id, params):
-    package, cls = id.rsplit('.', 1)
-    prefix = "sklearn."
-    if package == "elm":
-        prefix = "Utils.Libraries.PythonELM."
+    if id == "XGBClassifier":
+        prefix = ""
+        package = "xgboost"
+        cls = id
+    else:
+        package, cls = id.rsplit('.', 1)
+        prefix = "sklearn."
+        if package == "elm":
+            prefix = "Utils.Libraries.PythonELM."
     #print "from " + prefix + package + " import " + cls + " as " + cls
     exec "from " + prefix + package + " import " + cls + " as " + cls
     return eval(cls)
