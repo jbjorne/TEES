@@ -126,7 +126,7 @@ class StanfordParser(Parser):
                     stanfordParserArgs += ["-outputFormat", "oneline"]
                 else: # action == "dep"
                     if outputFormat == None: 
-                        outputFormat = "typedDependencies"
+                        outputFormat = "typedDependenciesCollapsed"
                     stanfordParserArgs += ["-tokenizerOptions", tokenizerOptions,
                                            #"-tokenized",
                                            #"-escaper", "edu.stanford.nlp.process.PTBEscapingProcessor",
