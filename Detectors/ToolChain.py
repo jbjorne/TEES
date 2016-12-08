@@ -26,6 +26,7 @@ class ToolChain(Detector):
     def getDefaultParameters(self, defaults=None, defaultValue=None):
         if defaults == None:
             defaults = {"omitSteps":None, "intermediateFiles":None}
+        valueTypes = {}
         for step in self.getDefaultSteps():
             for argName in sorted(step[2].keys()):
                 parameterName = step[0] + "." + argName

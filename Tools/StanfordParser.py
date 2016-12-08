@@ -42,11 +42,11 @@ class StanfordParser(Parser):
     ###########################################################################
     
     @classmethod
-    def parseCls(cls, parserName, input, output=None, debug=False, reparse=False, stanfordParserDir=None, stanfordParserArgs=None, action="convert"):
+    def parseCls(cls, parserName, input, output=None, debug=False, reparse=False, stanfordParserDir=None, stanfordParserArgs=None, action="convert", outputFormat=None):
         parserObj = cls()
-        parserObj.parse(parserName, input, output, debug, reparse, stanfordParserDir, stanfordParserArgs, action)
+        parserObj.parse(parserName, input, output, debug, reparse, stanfordParserDir, stanfordParserArgs, action, outputFormat)
     
-    def parse(self, parserName, input, output=None, debug=False, reparse=False, stanfordParserDir=None, stanfordParserArgs=None, action="convert"):
+    def parse(self, parserName, input, output=None, debug=False, reparse=False, stanfordParserDir=None, stanfordParserArgs=None, action="convert", outputFormat=None):
         #global stanfordParserDir, stanfordParserArgs
         assert action in ("convert", "penn", "dep")
         if stanfordParserDir == None:
@@ -55,7 +55,7 @@ class StanfordParser(Parser):
         corpusTree, corpusRoot = self.getCorpus(input)
         workdir = tempfile.mkdtemp()
         inPath = self.makeInputFile(corpusRoot, workdir, parserName, reparse, action, debug)
-        outPath = self.runProcess(stanfordParserArgs, stanfordParserDir, inPath, workdir, action)
+        outPath = self.runProcess(stanfordParserArgs, stanfordParserDir, inPath, workdir, action, outputFormat)
         self.printStderr(outPath)
         # Insert the parses    
         if action in ("convert", "dep"):
@@ -95,19 +95,21 @@ class StanfordParser(Parser):
     def run(self, input, output, stanfordParserArgs):
         return subprocess.Popen(stanfordParserArgs + [input], stdout=codecs.open(output, "wt", "utf-8"), stderr=codecs.open(self.getStderrPath(output), "wt", "utf-8"))
         
-    def runProcess(self, stanfordParserArgs, stanfordParserDir, stanfordInput, workdir, action="convert"):
+    def runProcess(self, stanfordParserArgs, stanfordParserDir, stanfordInput, workdir, action="convert", outputFormat=None):
         if stanfordParserArgs == None:
             # not sure how necessary the "-mx500m" option is, and how exactly Java
             # options interact, but adding user defined options from Settings.JAVA
             # after the "-mx500m" hopefully works.
             stanfordParserArgs = Settings.JAVA.split()[0:1] + ["-mx500m"] + Settings.JAVA.split()[1:]
             if action == "convert":
+                if outputFormat == None: 
+                    outputFormat = "CCprocessed"
                 stanfordParserArgs += ["-cp", "stanford-parser.jar", 
                                       "edu.stanford.nlp.trees.EnglishGrammaticalStructure", 
                                       "-encoding", "utf8", 
-                                      "-CCprocessed", "-keepPunct", "-treeFile"]
+                                      "-" + outputFormat, "-keepPunct", "-treeFile"]
                 print >> sys.stderr, "Running Stanford conversion"
-            else:
+            else: # action in ("penn", "dep")
                 stanfordParserArgs += ["-cp", "./*",
                                       "edu.stanford.nlp.parser.lexparser.LexicalizedParser",
                                       "-encoding", "utf8",
@@ -123,12 +125,14 @@ class StanfordParser(Parser):
                     stanfordParserArgs += ["-tokenizerOptions", tokenizerOptions]
                     stanfordParserArgs += ["-outputFormat", "oneline"]
                 else: # action == "dep"
+                    if outputFormat == None: 
+                        outputFormat = "typedDependencies"
                     stanfordParserArgs += ["-tokenizerOptions", tokenizerOptions,
                                            #"-tokenized",
                                            #"-escaper", "edu.stanford.nlp.process.PTBEscapingProcessor",
                                            #"-tokenizerFactory", "edu.stanford.nlp.process.WhitespaceTokenizer",
                                            #"-tokenizerMethod", "newCoreLabelTokenizerFactory",
-                                           "-outputFormat", "typedDependencies"]
+                                           "-outputFormat", outputFormat]
                 stanfordParserArgs += ["edu/stanford/nlp/models/lexparser/englishPCFG.ser.gz"]
                 print >> sys.stderr, "Running Stanford parsing for target", action
         print >> sys.stderr, "Stanford tools at:", stanfordParserDir

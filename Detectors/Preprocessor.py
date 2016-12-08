@@ -51,9 +51,9 @@ class Preprocessor(ToolChain):
             steps.append( (self.constParser + "-CONST", StanfordParser.parseCls, {"parserName":self.parseName, "debug":False, "action":"penn"}, "parse.xml") )
         # Add the dependency parser
         if self.depParser == "STANFORD":
-            steps.append( (self.depParser + "-DEP", StanfordParser.parseCls, {"parserName":self.parseName, "debug":False, "action":"dep"}, "dependencies.xml") )
+            steps.append( (self.depParser + "-DEP", StanfordParser.parseCls, {"parserName":self.parseName, "debug":False, "action":"dep", "outputFormat":None}, "dependencies.xml") )
         elif self.depParser == "STANFORD-CONVERT":
-            steps.append( (self.depParser + "-DEP", StanfordParser.parseCls, {"parserName":self.parseName, "debug":False, "action":"convert"}, "dependencies.xml") )
+            steps.append( (self.depParser + "-DEP", StanfordParser.parseCls, {"parserName":self.parseName, "debug":False, "action":"convert", "outputFormat":None}, "dependencies.xml") )
         elif self.depParser == "SYNTAXNET":
             steps.append( (self.depParser + "-DEP", SyntaxNetParser.parseCls, {"parserName":self.parseName, "debug":False}, "dependencies.xml") )
     
