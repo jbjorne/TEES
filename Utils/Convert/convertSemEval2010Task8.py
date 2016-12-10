@@ -119,7 +119,7 @@ def processLines(lines, setName, usedIds, directed=True, negatives="INCLUDE", tr
                 sentence = None
     return tree
 
-def convert(inPath, outDir, corpusId, directed, negatives, preprocess, debug=False, clear=False, constParser="BLLIP-BIO", depParser="STANFORD-CONVERT", logging=True):
+def convert(inPath, outDir, corpusId, directed, negatives, preprocess, preprocessorParameters=None, debug=False, clear=False, constParser="BLLIP-BIO", depParser="STANFORD-CONVERT", logging=True):
     assert negatives in ("INCLUDE", "SKIP", "REVERSE_POS")
     # Download the corpus if needed
     if inPath == None:
@@ -158,7 +158,7 @@ def convert(inPath, outDir, corpusId, directed, negatives, preprocess, debug=Fal
         preprocessor = Preprocessor(constParser, depParser)
         preprocessor.setArgForAllSteps("debug", debug)
         preprocessor.stepArgs("CONVERT")["corpusName"] = corpusId
-        preprocessor.process(convertedPath, outPath, omitSteps=["SPLIT-SENTENCES", "NER", "SPLIT-NAMES"])
+        preprocessor.process(convertedPath, outPath, preprocessorParameters, omitSteps=["SPLIT-SENTENCES", "NER", "SPLIT-NAMES"])
     # Stop logging
     if logging:
         Stream.closeLog(os.path.join(outDir, "log.txt"))
@@ -169,9 +169,10 @@ if __name__=="__main__":
     optparser.add_option("-i", "--corpusPath", default=None, help="Optional path to the corpus zip file (if undefined the corpus will be downloaded)")
     optparser.add_option("-o", "--outdir", default=None, help="Directory for the output files")
     optparser.add_option("-r", "--directed", default=False, action="store_true", help="Generate directed interaction elements")
-    optparser.add_option("-n", "--negatives", default="INCLUDE", help="Generate negative interactions (used only with the --directed option")
+    optparser.add_option("-n", "--negatives", default="REVERSE_POS", help="Generate negative interactions (used only with the --directed option")
     optparser.add_option("-c", "--corpus", default="SE10T8", help="The name for the converted corpus")
     optparser.add_option("-p", "--preprocess", default=False, action="store_true", help="Run the preprocessor after converting to the Interaction XML format")
+    optparser.add_option("--parameters", default=None, help="Preprocessor parameters")
     optparser.add_option("--constParser", default=None, help="Check Preprocessor.py for the available options")
     optparser.add_option("--depParser", default=None, help="Check Preprocessor.py for the available options")
     optparser.add_option("-d", "--debug", default=False, action="store_true", help="Debug mode (preserve intermediate files)")
@@ -180,6 +181,6 @@ if __name__=="__main__":
     (options, args) = optparser.parse_args()
     
     convert(options.corpusPath, options.outdir, directed=options.directed, negatives=options.negatives, 
-            preprocess=options.preprocess, corpusId=options.corpus,
+            preprocess=options.preprocess, preprocessorParameters=options.parameters, corpusId=options.corpus,
             constParser=options.constParser, depParser=options.depParser, 
             debug=options.debug, clear=options.clear, logging=not options.noLog)
