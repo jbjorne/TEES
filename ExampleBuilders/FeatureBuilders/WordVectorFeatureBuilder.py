@@ -31,7 +31,7 @@ class WordVectorFeatureBuilder(FeatureBuilder):
             return
         wordByPOS = {}
         for token in path[1:-1]:
-            pos = token.get("POS")
+            pos = token.get("POS")[0]
             if pos not in wordByPOS:
                 wordByPOS[pos] = token.get("text").lower()
         for pos in sorted(wordByPOS.keys()):
