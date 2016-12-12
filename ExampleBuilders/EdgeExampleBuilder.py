@@ -20,6 +20,7 @@ from FeatureBuilders.EVEXFeatureBuilder import EVEXFeatureBuilder
 from FeatureBuilders.GiulianoFeatureBuilder import GiulianoFeatureBuilder
 from FeatureBuilders.OntoBiotopeFeatureBuilder import OntoBiotopeFeatureBuilder
 from FeatureBuilders.WordNetFeatureBuilder import WordNetFeatureBuilder
+from FeatureBuilders.WordVectorFeatureBuilder import WordVectorFeatureBuilder
 #import Graph.networkx_v10rc1 as NX10
 from Core.SimpleGraph import Graph
 from FeatureBuilders.TriggerFeatureBuilder import TriggerFeatureBuilder
@@ -57,7 +58,7 @@ class EdgeExampleBuilder(ExampleBuilder):
             "disable_ngram_features", "disable_path_edge_features", "linear_features", "subset", "binary", "pos_only",
             "entity_type", "filter_shortest_path", "maskTypeAsProtein", "keep_neg", "metamap", 
             "sdb_merge", "sdb_features", "ontobiotope_features", "no_self_loops", "full_entities",
-            "no_features", "wordnet", "se10t8_undirected", "filter_types"])
+            "no_features", "wordnet", "wordvector", "se10t8_undirected", "filter_types"])
         self.styles = self.getParameters(style)
         #if style == None: # no parameters given
         #    style["typed"] = style["directed"] = style["headsOnly"] = True
@@ -101,6 +102,8 @@ class EdgeExampleBuilder(ExampleBuilder):
             self.evexFeatureBuilder = EVEXFeatureBuilder(featureSet)
         if self.styles["wordnet"]:
             self.wordNetFeatureBuilder = WordNetFeatureBuilder(featureSet)
+        if self.styles["wordvector"]:
+            self.wordVectorFeatureBuilder = WordVectorFeatureBuilder(featureSet)
         if self.styles["giuliano"]:
             self.giulianoFeatureBuilder = GiulianoFeatureBuilder(featureSet)
         self.types = types
@@ -612,6 +615,11 @@ class EdgeExampleBuilder(ExampleBuilder):
             self.wordNetFeatureBuilder.setFeatureVector(features, entity1, entity2)
             self.wordNetFeatureBuilder.buildFeaturesForEntityPair(token1, token2)
             self.wordNetFeatureBuilder.setFeatureVector(None)
+        if self.styles["wordvector"]:
+            self.wordVectorFeatureBuilder.setFeatureVector(features, entity1, entity2)
+            self.wordVectorFeatureBuilder.buildFeatures(token1, "t1_")
+            self.wordVectorFeatureBuilder.buildFeatures(token2, "t2_")
+            self.wordVectorFeatureBuilder.setFeatureVector(None)
         if self.styles["giuliano"]:
             self.giulianoFeatureBuilder.setFeatureVector(features, entity1, entity2)
             self.giulianoFeatureBuilder.buildEdgeFeatures(entity1, entity2, token1, token2, path, sentenceGraph)
