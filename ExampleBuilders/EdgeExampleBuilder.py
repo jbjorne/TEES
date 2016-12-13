@@ -620,6 +620,7 @@ class EdgeExampleBuilder(ExampleBuilder):
             self.wordVectorFeatureBuilder.buildFeatures(token1, "t1_")
             self.wordVectorFeatureBuilder.buildFeatures(token2, "t2_")
             self.wordVectorFeatureBuilder.buildPathFeatures(path)
+            self.wordVectorFeatureBuilder.buildFBAFeatures(sentenceGraph.tokens, sentenceGraph.tokens.index(token1), sentenceGraph.tokens.index(token2))
             self.wordVectorFeatureBuilder.setFeatureVector(None)
         if self.styles["giuliano"]:
             self.giulianoFeatureBuilder.setFeatureVector(features, entity1, entity2)

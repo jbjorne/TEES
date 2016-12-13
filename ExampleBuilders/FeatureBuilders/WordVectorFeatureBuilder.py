@@ -3,6 +3,7 @@ sys.path.append("..")
 from FeatureBuilder import FeatureBuilder
 from Utils.Libraries.wvlib_light.lwvlib import WV
 import Utils.Settings as Settings
+import numpy as np
 
 class WordVectorFeatureBuilder(FeatureBuilder):
     def __init__(self, featureSet, style=None):
@@ -29,6 +30,14 @@ class WordVectorFeatureBuilder(FeatureBuilder):
     def buildPathFeatures(self, path):
         if len(path) < 3:
             return
+        index = 1
+        for token in path[1:-1]:
+            self.vectorToFeatures(self.model.w_to_normv(token.get("text").lower()), "path_" + str(index) + "_")
+            index += 1
+    
+    def buildPathPOSFeatures(self, path):
+        if len(path) < 3:
+            return
         wordByPOS = {}
         for token in path[1:-1]:
             pos = token.get("POS")[0]
@@ -39,3 +48,23 @@ class WordVectorFeatureBuilder(FeatureBuilder):
             #vector = self.model.w_to_normv(wordByPOS[pos])
             #if vector != None:
             #    vectorToFeatures
+    
+    def combineTokenVectors(self, tokens, tag):
+        vectors = [self.model.w_to_normv(x.get("text").lower()) for x in tokens]
+        vectors = [x for x in vectors if x != None]
+        if len(vectors) > 0:
+            combined = self.combineVectors(vectors)
+            self.vectorToFeatures(combined, tag)
+    
+    def buildFBAFeatures(self, tokens, t1Index, t2Index):
+        if t1Index > t2Index:
+            t1Index, t2Index = t2Index, t1Index
+        self.combineTokenVectors(tokens[:t1Index], "FB_")
+        self.combineTokenVectors(tokens[t1Index+1:t2Index], "B_")
+        self.combineTokenVectors(tokens[t1Index+1:], "BA_")
+            
+    def combineVectors(self, vectors):
+        combined = vectors[0]
+        for vector in vectors[1:]:
+            combined = np.add(combined, vector)
+        return combined / len(vectors)
