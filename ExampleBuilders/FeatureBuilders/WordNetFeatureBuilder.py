@@ -60,8 +60,8 @@ class WordNetFeatureBuilder(FeatureBuilder):
         return rv
     
     def buildFeaturesForEntityPair(self, token1, token2):
-        f1 = self.getTokenFeatures(token1.get("text"), token2.get("POS"), "e1_")
-        f2 = self.getTokenFeatures(token1.get("text"), token2.get("POS"), "e1_")
+        f1 = self.getTokenFeatures(token1.get("text"), token1.get("POS"), "e1_")
+        f2 = self.getTokenFeatures(token2.get("text"), token2.get("POS"), "e2_")
         for name in f1 + f2:
             self.features[self.featureSet.getId(name)] = 1
         for e1Name in f1:
