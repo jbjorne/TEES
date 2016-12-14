@@ -51,7 +51,7 @@ class WordVectorFeatureBuilder(FeatureBuilder):
     
     def combineTokenVectors(self, tokens, tag):
         vectors = [self.model.w_to_normv(x.get("text").lower()) for x in tokens]
-        vectors = [x for x in vectors if x != None]
+        vectors = [x for x in vectors if x is not None]
         if len(vectors) > 0:
             combined = self.combineVectors(vectors)
             self.vectorToFeatures(combined, tag)
