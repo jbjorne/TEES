@@ -60,8 +60,9 @@ def getConfDict(conf):
     conf = [x.split(":") for x in SPLIT_CONF.findall(conf)]
     return dict((key, value) for (key, value) in conf)
 
-def getRelation(interactions):
+def getRelation(interactions, conflict="conf"):
     assert len(interactions) in (0,1,2)
+    assert conflict in ("conf", "remove")
     # Remove negatives
     interactions = [x for x in interactions if x.get("type") != "neg"]
     # Check for the undirected "Other" class examples
@@ -72,6 +73,9 @@ def getRelation(interactions):
     if len(interactions) == 0: # Predit "Other" for all "neg" sentences
         return {"type":"Other", "e1":None, "e2":None} #None
     elif len(interactions) == 1:
+        #if conflict == "remove":
+        #    return {"type":"Other", "e1":None, "e2":None}
+        #else:
         return readInteraction(interactions[0])
     else: # The two directed predictions have to be converted into a single relation
         i1 = interactions[0]
@@ -84,19 +88,23 @@ def getRelation(interactions):
         # Pick the stronger one
         conf1 = getConfDict(i1.get("conf"))
         conf2 = getConfDict(i2.get("conf"))
+        undirected1 = i1.get("type").split("(")[0]
+        undirected2 = i2.get("type").split("(")[0]
         if conf1 == None and conf2 == None: # assume this is gold annotation
-            assert i1.get("type").split("(")[0] == i2.get("type").split("(")[0] # check that types match except for reversing
+            assert undirected1 == undirected2 # check that types match except for reversing
             # The first gold interaction is for e1->e2
             assert i1.get("e1").endswith(".e1")
             assert i1.get("e2").endswith(".e2")
             return readInteraction(i1)
         assert conf1 != None and conf2 != None, (i1.attrib, i2.attrib, otherCount, len(interactions))
-        if conf1[i1.get("type")] > conf2[i2.get("type")]:
+        if (undirected1 != undirected2) and conflict == "remove":
+            return {"type":"Other", "e1":None, "e2":None}
+        elif conf1[i1.get("type")] > conf2[i2.get("type")]:
             return readInteraction(i1)
         else:
             return readInteraction(i2)
 
-def exportRelations(xml, outPath):
+def exportRelations(xml, outPath, conflict="conf"):
     xml = ETFromObj(xml).getroot()
     assert outPath != None
     if not os.path.exists(os.path.dirname(outPath)):
@@ -107,7 +115,7 @@ def exportRelations(xml, outPath):
         origId = sentence.get("origId")
         assert origId != None and origId.isdigit()
         interactions = [x for x in sentence.findall("interaction")]
-        rel = getRelation(interactions)
+        rel = getRelation(interactions, conflict)
         if rel != None:
             if rel["type"].startswith("-"): # reversed positive interaction
                 rel["e1"], rel["e2"] = rel["e2"], rel["e1"]
@@ -137,7 +145,7 @@ def runCommand(programPath, f1Path=None, f2Path=None, silent=False):
                 print >> sys.stderr, text
     return stderrText, stdoutText
 
-def evaluate(inputXML, goldXML, outPath):
+def evaluate(inputXML, goldXML, outPath, conflict="conf"):
     install()
     tempDir = os.path.join(tempfile.gettempdir(), "SE10T8_evaluator")
     basePath = "SemEval2010_task8_all_data/SemEval2010_task8_scorer-v1.2/"
@@ -163,9 +171,9 @@ def evaluate(inputXML, goldXML, outPath):
             os.remove(filePath)
     # Save the answer keys for the current files
     print "Exporting relations from", inputPath
-    exportRelations(inputXML, inputPath)
+    exportRelations(inputXML, inputPath, conflict)
     print "Exporting relations from", goldPath
-    exportRelations(goldXML, goldPath)
+    exportRelations(goldXML, goldPath, conflict)
     # Check the answer key file format
     runCommand(os.path.join(tempDir, formatChecker), inputPath)
     runCommand(os.path.join(tempDir, formatChecker), goldPath)
@@ -283,6 +291,7 @@ if __name__=="__main__":
     optparser.add_option("-o", "--output", default=None, help="Output file, used only when exporting relations")
     optparser.add_option("-g", "--gold", default=None, help="Correct annotation file for evaluation in Interaction XML format")
     optparser.add_option("-a", "--action", default=None, help="'install', 'evaluate', 'export', 'convert' or 'predict'")
+    optparser.add_option("--conflict", default="conf", help="How to merge conflicting relations")
     optparser.add_option("--dummy", default=False, action="store_true", help="")
     optparser.add_option("--debug", default=False, action="store_true", dest="debug", help="")
     optparser.add_option("--corpusId", default=None, help="")
@@ -293,7 +302,7 @@ if __name__=="__main__":
     if options.action == "install":
         install()
     elif options.action == "evaluate":
-        evaluate(options.input, options.gold, options.output)
+        evaluate(options.input, options.gold, options.output, options.conflict)
     elif options.action == "export":
         exportRelations(options.input, options.output)
     elif options.action == "convert":
