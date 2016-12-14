@@ -38,7 +38,7 @@ class WordNetFeatureBuilder(FeatureBuilder):
         
     def getHypernyms(self, synset, tag=""):
         rv = []
-        rv.append("HYPER_" + tag + synset.name()) # add also the base level
+        rv.append("SYNSET_" + tag + synset.name()) # add also the base level
         for hypernym in synset.hypernyms():
             rv.append("HYPER_" + tag + hypernym.name())
         return rv
@@ -54,7 +54,7 @@ class WordNetFeatureBuilder(FeatureBuilder):
         synsets = self.getSynset(tokenText, wordNetPos)
         #print "C",
         if synsets != None:
-            rv.extend(self.getHypernyms(synsets[0]))
+            rv.extend(self.getHypernyms(synsets[0], tag))
             rv.append("LEX_" + tag + synsets[0].lexname())
         #print "D"
         return rv
