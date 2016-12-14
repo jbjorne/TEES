@@ -33,8 +33,11 @@ class Application(tk.Frame):
         self.showSentence()
     
     def showSentence(self, width=None, height=None):
-        sentenceId = self.sentences[self.index].get("id")
+        sentence = self.sentences[self.index]
+        sentenceId = sentence.get("id")
         self.label['text'] = sentenceId
+        if sentence.get("relation") != None:
+            self.label['text'] += " (" + sentence.get("relation") + ")"
         if width == None:
             width = self.canvas.winfo_width()
         if height == None:
