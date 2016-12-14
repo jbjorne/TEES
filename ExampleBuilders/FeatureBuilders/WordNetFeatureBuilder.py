@@ -55,6 +55,7 @@ class WordNetFeatureBuilder(FeatureBuilder):
         #print "C",
         if synsets != None:
             rv.extend(self.getHypernyms(synsets[0], tag))
+            #rv.append("SYNSET_" + tag + synsets[0].name())
             rv.append("LEX_" + tag + synsets[0].lexname())
         #print "D"
         return rv
