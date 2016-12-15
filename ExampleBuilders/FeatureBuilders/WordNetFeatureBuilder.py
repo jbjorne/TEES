@@ -60,6 +60,23 @@ class WordNetFeatureBuilder(FeatureBuilder):
         #print "D"
         return rv
     
+    def buildPathFeatures(self, path):
+        if len(path) < 3:
+            return
+        lexnames = []
+        for token in path[1:-1]:
+            pos = self.pennPOSToWordNet(token.get("POS"))
+            synsets = self.getSynset(token.get("text"), pos)
+            if synsets != None:
+                lexnames.append(synsets[0].lexname())
+            else:
+                lexnames.append("NONE")
+        lexnames = ["ENT"] + lexnames + ["ENT"]
+        if len(lexnames) <= 4:
+            self.features[self.featureSet.getId("WNP_" + "-".join(lexnames))] = 1
+        for i in range(len(lexnames) - 2):
+            self.features[self.featureSet.getId("WNP_" + "-".join(lexnames[i:i+3]))] = 1
+    
     def buildFeaturesForEntityPair(self, token1, token2):
         f1 = self.getTokenFeatures(token1.get("text"), token1.get("POS"), "e1_")
         f2 = self.getTokenFeatures(token2.get("text"), token2.get("POS"), "e2_")

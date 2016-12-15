@@ -614,6 +614,7 @@ class EdgeExampleBuilder(ExampleBuilder):
         if self.styles["wordnet"]:
             self.wordNetFeatureBuilder.setFeatureVector(features, entity1, entity2)
             self.wordNetFeatureBuilder.buildFeaturesForEntityPair(token1, token2)
+            self.wordNetFeatureBuilder.buildPathFeatures(path)
             self.wordNetFeatureBuilder.setFeatureVector(None)
         if self.styles["wordvector"]:
             self.wordVectorFeatureBuilder.setFeatureVector(features, entity1, entity2)
