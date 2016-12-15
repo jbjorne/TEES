@@ -21,6 +21,8 @@ import Utils.Stream as Stream
 
 class Preprocessor(ToolChain):
     def __init__(self, constParser="BLLIP-BIO", depParser="STANFORD-CONVERT", parseName="McCC", requireEntities=False):
+        if constParser == "None": constParser = None
+        if depParser == "None": depParser = None
         assert constParser in ("BLLIP", "BLLIP-BIO", "STANFORD", None), constParser
         assert depParser in ("STANFORD", "STANFORD-CONVERT", "SYNTAXNET", None), depParser
         self.constParser = constParser
@@ -55,7 +57,7 @@ class Preprocessor(ToolChain):
         elif self.depParser == "STANFORD-CONVERT":
             steps.append( (self.depParser + "-DEP", StanfordParser.parseCls, {"parserName":self.parseName, "debug":False, "action":"convert", "outputFormat":None}, "dependencies.xml") )
         elif self.depParser == "SYNTAXNET":
-            steps.append( (self.depParser + "-DEP", SyntaxNetParser.parseCls, {"parserName":self.parseName, "debug":False}, "dependencies.xml") )
+            steps.append( (self.depParser + "-DEP", SyntaxNetParser.parseCls, {"parserName":self.parseName, "debug":False, "modelDir":None}, "dependencies.xml") )
     
     def process(self, source, output, parameters=None, model=None, sourceDataSetNames=None, fromStep=None, toStep=None, omitSteps=None):
         if omitSteps != None and((type(omitSteps) in types.StringTypes and omitSteps == "CONVERT") or "CONVERT" in omitSteps):

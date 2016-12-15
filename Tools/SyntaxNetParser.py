@@ -15,18 +15,18 @@ class SyntaxNetParser(Parser):
     ###########################################################################
     
     @classmethod
-    def parseCls(cls, parserName, input, output=None, debug=False, reparse=False, syntaxNetDir=None):
+    def parseCls(cls, parserName, input, output=None, debug=False, reparse=False, syntaxNetDir=None, modelDir=None):
         parserObj = cls()
-        parserObj.parse(parserName, input, output, debug, reparse, syntaxNetDir)
+        parserObj.parse(parserName, input, output, debug, reparse, syntaxNetDir, modelDir)
     
-    def parse(self, parserName, input, output=None, debug=False, reparse=False, syntaxNetDir=None):
+    def parse(self, parserName, input, output=None, debug=False, reparse=False, syntaxNetDir=None, modelDir=None):
         # Run the parser process
         if syntaxNetDir == None:
             syntaxNetDir = Settings.SYNTAXNET_DIR
         corpusTree, corpusRoot = self.getCorpus(input)
         workdir = tempfile.mkdtemp()
         inPath = self.makeInputFile(corpusRoot, workdir)
-        outPath = ProcessUtils.runSentenceProcess(self.run, syntaxNetDir, inPath, workdir, True, "SyntaxNetParser", "Parsing")
+        outPath = ProcessUtils.runSentenceProcess(self.run, syntaxNetDir, inPath, workdir, True, "SyntaxNetParser", "Parsing", processArgs={"modelDir":modelDir})
         self.insertCoNLLParses(outPath, corpusRoot, parserName)
         # Remove work directory
         if not debug:
@@ -43,12 +43,27 @@ class SyntaxNetParser(Parser):
     # Parser Process Control
     ###########################################################################
 
-    def run(self, input, output):
+    def run(self, input, output, modelDir=None):
         parserEval = "bazel-bin/syntaxnet/parser_eval"
-        modelDir = "syntaxnet/models/parsey_mcparseface"
+        if modelDir == None:
+            modelDir = "syntaxnet/models/parsey_mcparseface"
+        universal = modelDir.endswith("universal")
+        
+        morpherArgs = [parserEval,
+                      "--input", "stdin",
+                      "--output", "stdout-conll",
+                      "--hidden_layer_sizes", "64",
+                      "--arg_prefix", "brain_morpher",
+                      "--graph_builder", "structured",
+                      "--task_context", os.path.join(modelDir, "context.pbtxt"),
+                      "--resource_dir", modelDir,
+                      "--model_path", os.path.join(modelDir, "morpher-params"),
+                      "--slim_model",
+                      "--batch_size", "1024",
+                      "--alsologtostderr"]
         
         taggerArgs = [parserEval,
-                      "--input", "stdin",
+                      "--input", "stdin-conll" if universal else "stdin",
                       "--output", "stdout-conll",
                       "--hidden_layer_sizes", "64",
                       "--arg_prefix", "brain_tagger",
@@ -58,6 +73,9 @@ class SyntaxNetParser(Parser):
                       "--slim_model",
                       "--batch_size", "1024",
                       "--alsologtostderr"]
+        if universal:
+            taggerArgs += ["--resource_dir", modelDir]
+        
 
         parserArgs = [parserEval,
                       "--input", "stdin-conll",
@@ -70,16 +88,25 @@ class SyntaxNetParser(Parser):
                       "--slim_model",
                       "--batch_size", "1024",
                       "--alsologtostderr"]
-
+        if universal:
+            parserArgs += ["--resource_dir", modelDir]
+        
+        print >> sys.stderr, "SyntaxNet model:", modelDir
+        if universal:
+            print >> sys.stderr, "Morpher arguments:", taggerArgs
         print >> sys.stderr, "Tagger arguments:", taggerArgs
-        print >> sys.stderr, "Parser arguments:", parserArgs 
-        tagger = subprocess.Popen(taggerArgs,
+        print >> sys.stderr, "Parser arguments:", parserArgs
+        if universal:
+            morpher = subprocess.Popen(morpherArgs,
                                   stdin=codecs.open(input, "rt", "utf-8"),
+                                  stdout=subprocess.PIPE)
+        tagger = subprocess.Popen(taggerArgs,
+                                  stdin=morpher.stdout if universal else codecs.open(input, "rt", "utf-8"),
                                   stdout=subprocess.PIPE)
         parser = subprocess.Popen(parserArgs,
                                   stdin=tagger.stdout,
                                   stdout=codecs.open(output, "wt", "utf-8"))
-        return ProcessUtils.ProcessWrapper([tagger, parser])
+        return ProcessUtils.ProcessWrapper([morpher, tagger, parser] if universal else [tagger, parser])
 
     ###########################################################################
     # Parsing Process File IO
