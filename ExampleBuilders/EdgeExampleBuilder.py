@@ -103,7 +103,7 @@ class EdgeExampleBuilder(ExampleBuilder):
         if self.styles["wordnet"]:
             self.wordNetFeatureBuilder = WordNetFeatureBuilder(featureSet)
         if self.styles["wordvector"]:
-            self.wordVectorFeatureBuilder = WordVectorFeatureBuilder(featureSet)
+            self.wordVectorFeatureBuilder = WordVectorFeatureBuilder(featureSet, self.styles)
         if self.styles["giuliano"]:
             self.giulianoFeatureBuilder = GiulianoFeatureBuilder(featureSet)
         self.types = types

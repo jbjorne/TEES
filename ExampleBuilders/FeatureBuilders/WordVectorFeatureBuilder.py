@@ -8,8 +8,12 @@ import numpy as np
 class WordVectorFeatureBuilder(FeatureBuilder):
     def __init__(self, featureSet, style=None):
         FeatureBuilder.__init__(self, featureSet, style)
-        print >> sys.stderr, "Loading word vectors from", Settings.W2VFILE
-        self.model = WV.load(Settings.W2VFILE, 100000, 10000000) #10000, 500000)
+        if "wordvector" in style and isinstance(style["wordvector"], basestring):
+            wordVectorPath = style["wordvector"]
+        else:
+            wordVectorPath = Settings.W2VFILE
+        print >> sys.stderr, "Loading word vectors from", wordVectorPath
+        self.model = WV.load(wordVectorPath, 100000, 10000000) #10000, 500000)
         
     def buildFeatures(self, token, tag=""):
         self.vectorToFeatures(self.model.w_to_normv(token.get("text").lower()), tag)
