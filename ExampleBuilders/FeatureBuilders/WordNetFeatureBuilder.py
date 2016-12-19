@@ -85,6 +85,19 @@ class WordNetFeatureBuilder(FeatureBuilder):
         for e1Name in f1:
             for e2Name in f2:
                 self.features[self.featureSet.getId(e1Name + "__" + e2Name)] = 1
+    
+    def buildCompoundFeatures(self, token1, token2, tokens):
+        t1Index = tokens.index(token1)
+        t2Index = tokens.index(token1)
+        if abs(t1Index - t2Index) > 1:
+            return
+        synsets = self.wordnet.synsets(token1.get("text") + "_" + token2.get("text"))
+        if synsets != None:
+            self.features[self.featureSet.getId("WNC_True")] = 1
+            for synset in synsets:
+                self.features[self.featureSet.getId("WNC_" + synset.lexname())] = 1
+        else:
+            self.features[self.featureSet.getId("WNC_False")] = 1
 
 if __name__=="__main__":
     w = WordNetFeatureBuilder()
