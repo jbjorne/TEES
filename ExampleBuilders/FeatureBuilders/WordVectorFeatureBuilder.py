@@ -66,6 +66,15 @@ class WordVectorFeatureBuilder(FeatureBuilder):
         self.combineTokenVectors(tokens[:t1Index], "FB_")
         self.combineTokenVectors(tokens[t1Index+1:t2Index], "B_")
         self.combineTokenVectors(tokens[t1Index+1:], "BA_")
+    
+    def buildLinearFeatures(self, token, tokens, before=1, after=1, tag=""):
+        tokenIndex = tokens.index(token)
+        numTokens = len(tokens)
+        for i in range(-before, 0) + range(1, 1 + after):
+            currentIndex = tokenIndex + i 
+            if currentIndex < 0 or currentIndex >= numTokens:
+                continue
+            self.buildFeatures(tokens[currentIndex], tag + "_lin" + str(i) + "_")   
             
     def combineVectors(self, vectors):
         combined = vectors[0]

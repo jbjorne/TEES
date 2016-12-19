@@ -620,6 +620,8 @@ class EdgeExampleBuilder(ExampleBuilder):
             self.wordVectorFeatureBuilder.setFeatureVector(features, entity1, entity2)
             self.wordVectorFeatureBuilder.buildFeatures(token1, "t1_")
             self.wordVectorFeatureBuilder.buildFeatures(token2, "t2_")
+            self.wordVectorFeatureBuilder.buildLinearFeatures(token1, sentenceGraph.tokens, 1, 1, "t1_")
+            self.wordVectorFeatureBuilder.buildLinearFeatures(token2, sentenceGraph.tokens, 1, 1, "t2_")
             self.wordVectorFeatureBuilder.buildPathFeatures(path)
             self.wordVectorFeatureBuilder.buildFBAFeatures(sentenceGraph.tokens, sentenceGraph.tokens.index(token1), sentenceGraph.tokens.index(token2))
             self.wordVectorFeatureBuilder.setFeatureVector(None)
