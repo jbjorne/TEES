@@ -98,6 +98,18 @@ class WordNetFeatureBuilder(FeatureBuilder):
                 self.features[self.featureSet.getId("WNC_" + synset.lexname())] = 1
         else:
             self.features[self.featureSet.getId("WNC_False")] = 1
+    
+    def buildLinearFeatures(self, token, tokens, before=1, after=1, tag=""):
+        tokenIndex = tokens.index(token)
+        numTokens = len(tokens)
+        for i in range(-before, 0) + range(1, 1 + after):
+            currentIndex = tokenIndex + i 
+            if currentIndex < 0 or currentIndex >= numTokens:
+                continue
+            t = tokens[currentIndex]
+            synsets = self.wordnet.synsets(t.get("text"), self.pennPOSToWordNet(t.get("POS")))
+            if len(synsets) > 0:
+                self.features[self.featureSet.getId("WNL_" + tag + "_lin" + str(i) + "_" + synsets[0].lexname())] = 1
 
 if __name__=="__main__":
     w = WordNetFeatureBuilder()
