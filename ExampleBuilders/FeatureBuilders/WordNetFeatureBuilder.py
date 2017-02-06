@@ -99,7 +99,7 @@ class WordNetFeatureBuilder(FeatureBuilder):
         else:
             self.features[self.featureSet.getId("WNC_False")] = 1
     
-    def buildLinearFeatures(self, token, tokens, before=2, after=2, tag=""):
+    def buildLinearFeatures(self, token, tokens, before=1, after=1, tag=""):
         tokenIndex = tokens.index(token)
         numTokens = len(tokens)
         for i in range(-before, 0) + range(1, 1 + after):
