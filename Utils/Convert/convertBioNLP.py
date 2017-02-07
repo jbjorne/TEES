@@ -89,7 +89,7 @@ def downloadCorpus(corpus, destPath=None, downloadPath=None, clear=False):
         assert corpus.endswith("16")
     return downloaded
 
-def convert(corpora, outDir=None, downloadDir=None, redownload=False, makeIntermediateFiles=True, evaluate=False, processEquiv=True, analysisMode="INSERT", debug=False):
+def convert(corpora, outDir=None, downloadDir=None, redownload=False, makeIntermediateFiles=True, evaluate=False, processEquiv=True, analysisMode="INSERT", debug=False, constParser=None, depParser=None, preprocessorParameters=None):
     global bioNLP13AnalysesTempDir
     
     if outDir == None:
@@ -109,7 +109,7 @@ def convert(corpora, outDir=None, downloadDir=None, redownload=False, makeInterm
             packageSubPath = "task_2"
         elif corpus == "BB13T3":
             packageSubPath = "task_3"
-        convertDownloaded(outDir, corpus, downloaded, makeIntermediateFiles, evaluate, processEquiv=processEquiv, analysisMode=analysisMode, packageSubPath=packageSubPath, debug=debug)
+        convertDownloaded(outDir, corpus, downloaded, makeIntermediateFiles, evaluate, processEquiv=processEquiv, analysisMode=analysisMode, packageSubPath=packageSubPath, debug=debug, constParser=constParser, depParser=depParser, preprocessorParameters=preprocessorParameters)
         Stream.closeLog(logFileName)
         count += 1
     
@@ -132,7 +132,7 @@ def checkAttributes(xml):
         for key in element.attrib.keys():
             assert element.get(key) != None, (element.tag, key, element.attrib)
 
-def convertDownloaded(outdir, corpus, files, intermediateFiles=True, evaluate=True, processEquiv=True, analysisMode="INSERT", packageSubPath=None, debug=False):
+def convertDownloaded(outdir, corpus, files, intermediateFiles=True, evaluate=True, processEquiv=True, analysisMode="INSERT", packageSubPath=None, debug=False, constParser=None, depParser=None, preprocessorParameters=None):
     global moveBI
     if evaluate:
         workdir = outdir + "/conversion/" + corpus
@@ -194,7 +194,7 @@ def convertDownloaded(outdir, corpus, files, intermediateFiles=True, evaluate=Tr
             ETUtils.write(xml, bigfileName+"-sentences.xml")
         processParses(xml)
     elif analysisMode == "BUILD":
-        parseXML(xml, bigfileName, intermediateFiles, debug, bbResources=(corpus.startswith("BB_")))
+        parseXML(xml, bigfileName, intermediateFiles, debug, bbResources=(corpus.startswith("BB_")), constParser=constParser, depParser=depParser, preprocessorParameters=preprocessorParameters)
     else:
         print >> sys.stderr, "Skipping analyses"
     
@@ -309,15 +309,15 @@ def processParses(xml, splitTarget="McCC"):
     #xml = FindHeads.findHeads(xml, "split-"+splitTarget, tokenization=None, output=None, removeExisting=True)
     xml = FindHeads.findHeads(xml, splitTarget, tokenization=None, output=None, removeExisting=True)
 
-def parseXML(xml, outStem, intermediateFiles=True, debug=False, bbResources=False):
-    preprocessor = Preprocessor()
+def parseXML(xml, outStem, intermediateFiles=True, debug=False, bbResources=False, constParser=None, depParser=None, preprocessorParameters=None):
+    preprocessor = Preprocessor(constParser=constParser, depParser=depParser)
     if bbResources:
         preprocessor.insertStep(5, "BB_RESOURCES", insertResources.process, {}, "bb-resources.xml")
     preprocessor.setArgForAllSteps("debug", debug)
     #preprocessor.stepArgs("PARSE")["requireEntities"] = False
     if not intermediateFiles:
         preprocessor.setNoIntermediateFiles()
-    preprocessor.process(xml, outStem, omitSteps=["NER", "DIVIDE-SETS"])
+    preprocessor.process(xml, outStem, omitSteps=["NER", "DIVIDE-SETS"], parameters=preprocessorParameters)
 
 if __name__=="__main__":
     # Import Psyco if available
@@ -336,6 +336,9 @@ if __name__=="__main__":
     optparser.add_option("-o", "--outdir", default=None, dest="outdir", help="directory for output files")
     optparser.add_option("-d", "--downloaddir", default=None, dest="downloaddir", help="directory to download corpus files to")
     optparser.add_option("-a", "--analyses", default="INSERT", dest="analyses", help="Analysis (generally parsing) mode: NONE, INSERT or BUILD")
+    optparser.add_option("--constParser", default="BLLIP-BIO", help="Preprocessor setting, only used with 'BUILD' analyses option")
+    optparser.add_option("--depParser", default="STANFORD-CONVERT", help="Preprocessor setting, only used with 'BUILD' analyses option")
+    optparser.add_option("-p", "--preprocessorParameters", default=None, dest="preprocessorParameters", help="preprocessing parameters")
     optparser.add_option("--intermediateFiles", default=False, action="store_true", dest="intermediateFiles", help="save intermediate corpus files")
     optparser.add_option("--forceDownload", default=False, action="store_true", dest="forceDownload", help="re-download all source files")
     optparser.add_option("--noEquiv", default=False, action="store_true", dest="noEquiv", help="Don't interpret equiv annotation into duplicate events")
@@ -353,4 +356,6 @@ if __name__=="__main__":
         options.corpora = options.corpora.replace("ALL13", "GE13,CG13,PC13,GRO13,GRN13,BB13T2,BB13T3")
         options.corpora = options.corpora.replace("ALL16", "BB_EVENT_16,BB_EVENT_NER_16,SDB16")
         #Stream.openLog(os.path.join(options.outdir, "conversion-log.txt"))
-        convert(options.corpora.split(","), options.outdir, options.downloaddir, options.forceDownload, options.intermediateFiles, evaluate=options.evaluate, processEquiv=not options.noEquiv, analysisMode=options.analyses, debug=options.debug)
+        convert(options.corpora.split(","), options.outdir, options.downloaddir, options.forceDownload, options.intermediateFiles, 
+                evaluate=options.evaluate, processEquiv=not options.noEquiv, analysisMode=options.analyses, debug=options.debug,
+                constParser=options.constParser, depParser=options.depParser, preprocessorParameters=options.preprocessorParameters)
