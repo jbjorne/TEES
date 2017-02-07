@@ -314,7 +314,7 @@ def parseXML(xml, outStem, intermediateFiles=True, debug=False, bbResources=Fals
     if bbResources:
         preprocessor.insertStep(5, "BB_RESOURCES", insertResources.process, {}, "bb-resources.xml")
     preprocessor.setArgForAllSteps("debug", debug)
-    preprocessor.stepArgs("PARSE")["requireEntities"] = False
+    #preprocessor.stepArgs("PARSE")["requireEntities"] = False
     if not intermediateFiles:
         preprocessor.setNoIntermediateFiles()
     preprocessor.process(xml, outStem, omitSteps=["NER", "DIVIDE-SETS"])
