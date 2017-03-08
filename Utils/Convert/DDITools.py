@@ -1,6 +1,10 @@
 import sys, os
 thisPath = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.abspath(os.path.join(thisPath,"../..")))
+try:
+    import xml.etree.cElementTree as ET
+except ImportError:
+    import cElementTree as ET
 import Utils.ElementTreeUtils as ETUtils
 import Utils.Range as Range
 from collections import defaultdict
@@ -163,6 +167,76 @@ def addMTMX(input, mtmxDir, output=None):
     print >> sys.stderr, counts
     if output != None:
         ETUtils.write(xml, output)
+
+def addTestGold(input, testGoldPath, output=None):
+    counts = defaultdict(int)
+    print >> sys.stderr, "Reading interaction XML"
+    xml = ETUtils.ETFromObj(input).getroot()
+    goldInteractions = {}
+    goldEntities = {}
+    if os.path.isfile(testGoldPath):
+        print >> sys.stderr, "Reading gold interactions from file", testGoldPath
+        with open(testGoldPath, "rt") as f:
+            for line in f:
+                e1, e2, isDDI = line.strip().split()
+                assert isDDI in ("1", "0")
+                isDDI = isDDI == "1"
+                sentId = e1.rsplit(".", 1)[0]
+                if sentId not in goldInteractions:
+                    goldInteractions[sentId] = []
+                goldInteractions[sentId].append(ET.Element("interaction", {"type":("DDI" if isDDI else "neg"), "e1":e1, "e2":e2, "interaction":("true" if isDDI else "false"), "id":sentId + "." + str(len(goldInteractions[sentId]))}))
+    else:
+        print >> sys.stderr, "Reading gold interactions from directory", testGoldPath
+        assert os.path.isdir(testGoldPath), testGoldPath
+        for subDir in ("DrugBank", "MedLine"):
+            subPath = os.path.join(testGoldPath, subDir)
+            assert os.path.isdir(subPath), subPath
+            for filename in os.listdir(subPath):
+                counts["subDir-" + subDir] += 1
+                #print >> sys.stderr, "Processing", os.path.join(subPath, filename)
+                if not filename.endswith(".xml"):
+                    continue
+                docXML = ETUtils.ETFromObj(os.path.join(subPath, filename)).getroot()
+                for sentence in docXML.iter("sentence"):
+                    sentId = sentence.get("id")
+                    for entity in sentence.findall("entity"):
+                        assert entity.get("id") not in goldEntities, entity.attrib
+                        goldEntities[entity.get("id")] = entity
+                    for interaction in sentence.findall("pair"):
+                        interaction.tag = "interaction"
+                        if interaction.get("type") == None:
+                            assert interaction.get("ddi") == "false", interaction.attrib
+                            interaction.set("type", "neg")
+                        if sentId not in goldInteractions:
+                            goldInteractions[sentId] = []
+                        goldInteractions[sentId].append(interaction)
+    for sentId in goldInteractions:
+        counts["gold-sentences"] += 1
+        for interaction in goldInteractions[sentId]:
+            counts["gold-" + interaction.get("type")] += 1
+    print >> sys.stderr, "Adding gold interactions to corpus"
+    for sentence in xml.iter("sentence"):
+        counts["corpus-sentences"] += 1
+        entities = {}
+        for entity in sentence.findall("entity"):
+            assert entity.get("id") not in entities
+            entities[entity.get("id")] = entity
+        sentGoldInteractions = goldInteractions.get(sentence.get("id"), [])
+        if len(sentGoldInteractions) > 0:
+            counts["corpus-sentences-with-matching-gold"] += 1
+        for interaction in sentGoldInteractions:
+            goldE1 = goldEntities.get(interaction.get("e1"))
+            goldE2 = goldEntities.get(interaction.get("e2"))
+            for goldEntity in (goldE1, goldE2):
+                if goldEntity != None:
+                    corpusEntity = entities[goldEntity.get("id")]
+                    assert goldEntity.get("text") == corpusEntity.get("text"), [goldEntity.attrib, corpusEntity.attrib]
+            if interaction.get("type") != "neg":
+                sentence.append(interaction)
+                counts["added-" + interaction.get("type")] += 1
+    print >> sys.stderr, counts
+    if output != None:
+        ETUtils.write(xml, output)
                 
 if __name__=="__main__":
     # Import Psyco if available
@@ -182,7 +256,6 @@ if __name__=="__main__":
     optparser.add_option("-f", "--idfilter", default=None, dest="idfilter", help="")
     optparser.add_option("-m", "--mode", default=None, dest="mode", help="")
     (options, args) = optparser.parse_args()
-    assert options.action in ["SUBMISSION_DDI11", "SUBMISSION_DDI13", "TRANSFER_RLS", "ADD_MTMX"]
     
     if options.action == "SUBMISSION_DDI11":
         makeDDISubmissionFile(options.input, options.output)
@@ -192,5 +265,7 @@ if __name__=="__main__":
         transferClassifications(options.input, options.add, options.output)
     elif options.action == "ADD_MTMX":
         addMTMX(options.input, options.add, options.output)
+    elif options.action == "ADD_TEST_GOLD":
+        addTestGold(options.input, options.add, options.output)
     else:
         assert False, options.action
