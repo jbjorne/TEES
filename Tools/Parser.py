@@ -367,7 +367,8 @@ class Parser:
                 t2Word = self.unescape(t2Word).strip()
                 while not t2Index[-1].isdigit(): t2Index = t2Index[:-1] # invalid literal for int() with base 10: "7'"
                 t2Index = int(t2Index) - 1
-                deps.append({"type":depType, "t1Word":t1Word, "t1":t1Index, "t2Word":t2Word, "t2":t2Index})
+                if t1Word != "DUMMYINPUTTOKEN" and t2Word != "DUMMYINPUTTOKEN":
+                    deps.append({"type":depType, "t1Word":t1Word, "t1":t1Index, "t2Word":t2Word, "t2":t2Index})
             except Exception as e:
                 print >> sys.stderr, e
                 print >> sys.stderr, "Warning, unreadable dependency '", line.strip(), "', in sentence", sentenceId, [depType, t1, t2, (t1Word, t1Index), (t2Word, t2Index)]

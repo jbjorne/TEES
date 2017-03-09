@@ -158,32 +158,36 @@ class StanfordParser(Parser):
         for sentence in corpusRoot.getiterator("sentence"):
             if action in ("convert", "dep"):
                 parse = IXMLUtils.getParseElement(sentence, parserName, addIfNotExist=(action == "dep"))
+                pennTree = ""
                 # Sentences with no parse (from the constituency step) are skipped in converter mode
-                if parse == None:
-                    continue
-                # Both the 'convert' and 'dep' actions rely on tokens generated from the penn tree
-                pennTree = parse.get("pennstring")
-                if pennTree == None or pennTree == "":
-                    continue
-                # Check for existing dependencies
-                if len(parse.findall("dependency")) > 0:
-                    if reparse: # remove existing stanford conversion
-                        for dep in parse.findall("dependency"):
-                            parse.remove(dep)
-                        del parse.attrib["stanford"]
-                    else: # don't reparse
-                        existingCount += 1
-                        continue
+                if parse != None:
+                    # Both the 'convert' and 'dep' actions rely on tokens generated from the penn tree
+                    pennTree = parse.get("pennstring", "")
+                    # Check for existing dependencies
+                    if len(parse.findall("dependency")) > 0:
+                        if reparse: # remove existing stanford conversion
+                            for dep in parse.findall("dependency"):
+                                parse.remove(dep)
+                            del parse.attrib["stanford"]
+                        else: # don't reparse
+                            existingCount += 1
+                            pennTree = ""
                 # Generate the input
                 if action == "convert": # Put penn tree lines in input file
-                    stanfordInputFile.write(pennTree + "\n")
+                    inputString = pennTree
+                    if inputString == "":
+                        inputString = "(S1 (S (NN DUMMYINPUTTOKEN)))"
                 else: # action == "dep"
                     #tokenization = IXMLUtils.getTokenizationElement(sentence, parserName, addIfNotExist=False)
                     #if tokenization != None:
                     #    tokenized = " ".join([x.get("text") for x in tokenization.findall("token")])
                     #    stanfordInputFile.write(tokenized.replace("\n", " ").replace("\r", " ").strip() + "\n")
                     #else:
-                    stanfordInputFile.write(sentence.get("text").replace("\n", " ").replace("\r", " ").strip() + "\n")
+                    inputString = sentence.get("text").replace("\n", " ").replace("\r", " ").strip()
+                inputString = inputString.strip()
+                if inputString == "":
+                    inputString = "DUMMYINPUTTOKEN" # The parser skips empty lines
+                stanfordInputFile.write(inputString  + "\n")
             else: # action == "penn"
                 stanfordInputFile.write(sentence.get("text").replace("\n", " ").replace("\r", " ").strip() + "\n")
         stanfordInputFile.close()
