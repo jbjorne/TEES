@@ -11,6 +11,7 @@ except ImportError:
     
 import sys
 import re
+import codecs
 
 class SVGOptions:
 
@@ -39,7 +40,7 @@ def tokSpec(tokTxt):
 
 class Token:
 
-    def __init__(self,txt,pos,styleDict={},token=None):
+    def __init__(self,txt,pos,styleDict={}):
         
         self.txt,self.spec=tokSpec(txt)
         self.otherLines=[] #text in all other lines
@@ -76,7 +77,6 @@ class Token:
             styleStr=";".join("%s:%s"%(var,val) for var,val in self.style().items())
             node.set("style",styleStr)
             node.text=txt
-
             nodes.append(node)
             runningY-=SVGOptions.fontSize+SVGOptions.lineSep
         return nodes
@@ -290,20 +290,13 @@ def drawOrder(a,b):
     else:
         return 0
     
-def generateSVG(tokens,dependencies,title=None):
+def generateSVG(tokens,dependencies):
     layout(tokens,dependencies)
-    tokens = sorted(tokens.values(), key=lambda x:x.pos)
     tree=ET.Element("svg")
     tree.set("xmlns","http://www.w3.org/2000/svg")
     tree.set("xmlns:xlink","http://www.w3.org/1999/xlink")
     tree.set("version","1.1")
     tree.set("baseProfile","full")
-
-    if title is not None:
-        t=ET.Element("title")
-        t.text=title
-        tree.append(t)
-
     allNodes=[]
     totalWidth=0
     totalHeight=tokens[0].y+10
@@ -326,10 +319,165 @@ def generateSVG(tokens,dependencies,title=None):
 
 #The main layout function -> fills in all the parameters needed to draw the tree
 def layout(tokens,deps):
-    tokens = sorted(tokens.values(), key=lambda x:x.pos)
     maxHeight=depHeights(len(tokens),deps)
     baseY=(len(tokens[0].otherLines)+1)*(SVGOptions.fontSize+SVGOptions.lineSep)+SVGOptions.lineSep+maxHeight*SVGOptions.depVertSpace+SVGOptions.labelFontSize//2+5
     simpleTokenLayout(tokens,deps,baseY)
     improveTokenLayout(tokens,deps)
     for dep in deps:
-        dep.computeParameters(1+len(tokens[0].otherLines))        
+        dep.computeParameters(1+len(tokens[0].otherLines))
+
+
+def styleStr2Dict(s):
+    if not s:
+        return {}
+    s=s.strip()
+    if s.endswith(";"):
+        s=s[:-1]
+    d={}
+    for x in s.split(";"):
+        try:
+            k,v=x.split(":")
+        except:
+            print >> sys.stderr, ">>",x,"<<"
+            raise
+        d[k]=v
+    return d
+
+depRe=re.compile(r"^(\S+) +(\S+) +(\S+) *(#ARC *(.*?))? *(#LAB *(.*))?$")
+tokRe=re.compile(r"^(\S+) *#TXT *(.*)")
+
+def readInput(fName):
+    lines=codecs.open(fName,"rt","utf-8")
+    tokens=None
+    deps=[]
+    for line in lines:
+        line=line.strip()
+        if not line or line[0]=="#":
+            continue
+        if line.startswith("tokens:"):
+            tokLine=line[7:].strip()
+            if not tokens:
+                tokens=[Token(txt,idx) for (idx,txt) in enumerate(tokLine.split())]
+            else:
+                texts=tokLine.split()
+                assert len(texts)==len(tokens), "This token line has an uneven number of tokens: %s"%tokLine
+                for tok,txt in zip(tokens,texts):
+                    if txt!="<<NONE>>":
+                        tok.otherLines.append(txt)
+                    else:
+                        tok.otherLines.append("")
+        else: #we have a dependency or token style
+            if not tokens:
+                raise ValueError("You must have tokens line, starting with \"tokens:\"")
+            match=tokRe.match(line)
+            if match:
+                tokTxt,tokenSpec=tokSpec(match.group(1))
+                candidates=[tok for tok in tokens if tok.matches(tokTxt,tokenSpec)]
+                if len(candidates)!=1:
+                    raise ValueError("I have %d candidates for %s in dependency \"%s\""%(len(candidates),match.group(1),line))
+                token=candidates[0]
+                txtStyleDict=styleStr2Dict(match.group(2))
+                for k,v in txtStyleDict.items():
+                    token.styleDict[k]=v
+                continue
+            match=depRe.match(line)
+            if match:
+                t1=match.group(1)
+                dType=match.group(2)
+                t2=match.group(3)
+                t1txt,t1spec=tokSpec(t1)
+                matching1=[tok for tok in tokens if tok.matches(t1txt,t1spec)]
+                if len(matching1)!=1:
+                    raise ValueError("I have %d candidates for %s in dependency \"%s\""%(len(matching1),t1,line))
+                t2txt,t2spec=tokSpec(t2)
+                matching2=[tok for tok in tokens if tok.matches(t2txt,t2spec)]
+                if len(matching2)!=1:
+                    raise ValueError("I have %d candidates for %s in dependency \"%s\""%(len(matching2),t2,line))
+                tok1=matching1[0]
+                tok2=matching2[0]
+                arcStyleDict=styleStr2Dict(match.group(5))
+                labStyleDict=styleStr2Dict(match.group(7))
+                if tok1==tok2:
+                    print >> sys.stderr, "Warning: Ignoring a self-dependency!"
+                    continue
+                deps.append(Dep(tok1,tok2,dType,arcStyleDict,labStyleDict))
+                continue
+            raise ValueError("Do not understand this line: %s"%line)
+            
+    if len(deps)==0:
+        raise ValueError("Zero dependencies read!")
+    return tokens,deps
+                                 
+        
+def indent(elem, level=0):
+    #shamelessly stolen from ET documentation
+    """ indent-function as defined in cElementTree-documentation
+    
+    This function will become part of cElementTree in some future
+    release. Until then, it can be used from here. This function
+    indents the xml-tree, so that it is more readable when written
+    out. 
+    
+    Keyword arguments:
+    elem -- (Element) root of the tree to indent 
+    level -- (int) starting level of indentation
+    """
+    i = "\n" + level*"  "
+    if len(elem):
+        if not elem.text or not elem.text.strip():
+            elem.text = i + "  "
+        for e in elem:
+            indent(e, level+1)
+        if not e.tail or not e.tail.strip():
+            e.tail = i
+    if level and (not elem.tail or not elem.tail.strip()):
+        elem.tail = i
+
+def writeUTF8(rootElement,out):
+    indent(rootElement)
+    if isinstance(out,str):
+        f=open(out,"wt")
+        print >> f, '<?xml version="1.0" encoding="UTF-8"?>'
+        ET.ElementTree(rootElement).write(f,"utf-8")
+        f.close()
+    else:
+        print >> out, '<?xml version="1.0" encoding="UTF-8"?>'
+        ET.ElementTree(rootElement).write(out,"utf-8")
+    
+
+if __name__=="__main__":
+    import optparse
+    desc=\
+"""A program for plotting dependency structures into SVG.
+
+cat example.dep | python draw_dg.py > example.svg
+
+The format of the dependency file is specified in example.dep
+
+To convert a .svg to .pdf, you can use for example inkscape
+
+inkscape -A file.pdf file.svg
+"""
+    parser=optparse.OptionParser(usage=desc)
+    parser.add_option("--tokenSize", dest="fontSize",action="store",default=24,help="Token font size.", metavar="INTEGER")
+    parser.add_option("--labelSize", dest="labelFontSize",action="store",default=20,help="Dependency label font size.", metavar="INTEGER")
+    parser.add_option("--depVSpace", dest="depVertSpace",action="store",default=20,help="Vertical space between dependency layers.", metavar="INTEGER")
+    parser.add_option("--tokenHSpace", dest="tokenSpace",action="store",default=10,help="Horizontal space between tokens.", metavar="INTEGER")
+    parser.add_option("--lineVSpace", dest="lineSep",action="store",default=5,help="Vertical separation between text lines.", metavar="INTEGER")
+    parser.add_option("--minDepPadding", dest="minDepPadding",action="store",default=10,help="Horizontal space reserved for the curve of a dependency.", metavar="INTEGER")
+    (options,args)=parser.parse_args()
+
+    SVGOptions.fontSize=int(options.fontSize)
+    SVGOptions.labelFontSize=int(options.labelFontSize)
+    SVGOptions.depVertSpace=int(options.depVertSpace)
+    SVGOptions.tokenSpace=int(options.tokenSpace)
+    SVGOptions.lineSep=int(options.lineSep)
+    SVGOptions.minDepPadding=int(options.minDepPadding)
+    
+    
+    
+    
+    tokens,deps=readInput("/dev/stdin")
+    t=generateSVG(tokens,deps)
+    writeUTF8(t,sys.stdout)
+    print
