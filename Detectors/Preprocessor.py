@@ -146,6 +146,7 @@ if __name__=="__main__":
     optparser.add_option("--constParser", default="BLLIP-BIO", help="BLLIP, BLLIP-BIO or STANFORD")
     optparser.add_option("--depParser", default="STANFORD-CONVERT", help="STANFORD or STANFORD-CONVERT")
     optparser.add_option("--parseName", default="McCC")
+    optparser.add_option("--noIntermediateFiles", default=False, action="store_true", dest="noIntermediateFiles", help="")
     (options, args) = optparser.parse_args()
     if options.omitSteps != None:
         options.omitSteps = options.omitSteps.split(",")
@@ -158,5 +159,7 @@ if __name__=="__main__":
     preprocessor = Preprocessor(options.constParser, options.depParser, options.parseName, options.requireEntities)
     preprocessor.setArgForAllSteps("debug", options.debug)
     preprocessor.stepArgs("CONVERT")["corpusName"] = options.corpus
+    if options.noIntermediateFiles:
+        preprocessor.setNoIntermediateFiles()
     #preprocessor.stepArgs("PARSE")["requireEntities"] = options.requireEntities
     preprocessor.process(options.input, options.output, options.parameters, None, options.inputNames, fromStep=options.step, toStep=options.toStep, omitSteps=options.omitSteps)
