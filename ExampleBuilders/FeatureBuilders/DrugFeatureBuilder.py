@@ -214,13 +214,14 @@ def mapNamesToIds(data, normalize=True, verbose=False):
     if verbose: print "Name to id:", counts
     return nameToId
 
-def loadDrugBank(filename, preTag="{http://drugbank.ca}", verbose=False):
+def loadDrugBank(filename, preTag="{http://www.drugbank.ca}", verbose=False):
     data = defaultdict(lambda : defaultdict(list))
     print "Loading DrugBank XML from", filename
     xml = ETUtils.ETFromObj(filename)
     print "Processing DrugBank XML"
     root = xml.getroot()
-    assert root.tag == preTag+"drugs", root.tag
+    allowedRoots = (preTag+"drugs", preTag+"drugbank")
+    assert root.tag in allowedRoots, (root.tag, allowedRoots)
     for drug in root.findall(preTag+"drug"):
         id = drug.find(preTag+"drugbank-id").text
         name = drug.find(preTag+"name").text
@@ -236,7 +237,7 @@ def loadDrugBank(filename, preTag="{http://drugbank.ca}", verbose=False):
         getNestedItems(drug, "category", data[id], preTag, "categories")
         interactions = drug.find(preTag+"drug-interactions").findall(preTag+"drug-interaction")
         for interaction in interactions:
-            data[id]["interaction"].append( [interaction.find(preTag+"drug").text, interaction.find(preTag+"name").text, interaction.find(preTag+"description").text,] )
+            data[id]["interaction"].append( [interaction.find(preTag+"drugbank-id").text, interaction.find(preTag+"name").text, interaction.find(preTag+"description").text,] )
     return data
 
 def prepareDrugBank(drugBankFile):
