@@ -334,7 +334,7 @@ def getTaskSettings(task, detector, bioNLPSTParams, preprocessorParams,
         print >> sys.stderr, "Loading corpus", task, "from", corpusDir
         for dataset in ["devel", "train", "test"]:
             if inputFiles[dataset] == None and inputFiles[dataset] != "None":
-                if task.startswith("DDI13"):
+                if task.startswith("DDI13") and task != "DDI13":
                     if dataset in ["devel", "train"]:
                         inputFiles[dataset] = os.path.join(corpusDir, "DDI13-train.xml")
                     elif dataset == "test":
@@ -366,7 +366,7 @@ def getTaskSettings(task, detector, bioNLPSTParams, preprocessorParams,
         elif task.startswith("DDI13"):
             if task.endswith("T91"):
                 detector = "Detectors.EntityDetector"
-            elif task.endswith("T92"):
+            elif task.endswith("T92") or task == "DDI13":
                 detector = "Detectors.EdgeDetector"
         
         #######################################################################
@@ -378,13 +378,13 @@ def getTaskSettings(task, detector, bioNLPSTParams, preprocessorParams,
             bioNLPSTParams = Parameters.cat(bioNLPSTParams, "convert:evaluate:scores:a2Tag=rel", "BioNLP Shared Task / " + fullTaskId, ["default"])
         elif task in ("BB_EVENT_16", "BB_EVENT_16-FULL", "BB_EVENT_NER_16", "SDB16"):
             bioNLPSTParams = Parameters.cat(bioNLPSTParams, "convert=zip", "BioNLP Shared Task / " + fullTaskId, ["default"])
-        elif task not in ["DDI11", "DDI11-FULL", "DDI13T91", "DDI13T92", "DDI13-FULL"]:
+        elif task not in ["DDI11", "DDI11-FULL", "DDI13T91", "DDI13T92", "DDI13-FULL", "DDI13"]:
             bioNLPSTParams = Parameters.cat(bioNLPSTParams, "convert:evaluate:scores", "BioNLP Shared Task / " + fullTaskId, ["default"])
         
         #######################################################################
         # Preprocessing parameters
         #######################################################################
-        if task in ["BI11", "BI11-FULL", "BB11", "DDI11", "DDI11-FULL", "DDI13T91", "DDI13T92", "DDI13-FULL"]:
+        if task in ["BI11", "BI11-FULL", "BB11", "DDI11", "DDI11-FULL", "DDI13T91", "DDI13T92", "DDI13-FULL", "DDI13"]:
             Parameters.cat("intermediateFiles:omitSteps=NER,DIVIDE-SETS", preprocessorParams, "Preprocessor /" + fullTaskId, ["default"])
         else: # parse only sentences where BANNER found an entity
             Parameters.cat("intermediateFiles:omitSteps=DIVIDE-SETS:PARSE.requireEntities", preprocessorParams, "Preprocessor /" + fullTaskId, ["default"])
@@ -401,7 +401,7 @@ def getTaskSettings(task, detector, bioNLPSTParams, preprocessorParams,
         elif task.startswith("DDI13"):
             if task.endswith("T91"):
                 exampleStyles["examples"] = Parameters.cat("names:build_for_nameless:ddi13_features:drugbank_features", exampleStyles["examples"], msg)
-            elif task.endswith("T92"):
+            elif task.endswith("T92") or task == "DDI13":
                 exampleStyles["examples"] = Parameters.cat("keep_neg:drugbank_features:filter_shortest_path=conj_and", exampleStyles["examples"], msg)
         elif task == "BI11":
             exampleStyles["examples"] = Parameters.cat("bi_features", exampleStyles["examples"], msg)
@@ -464,7 +464,7 @@ def getTaskSettings(task, detector, bioNLPSTParams, preprocessorParams,
         elif task == "SDB16":
             classifierParameters["examples"] = Parameters.cat("c=1000,4500,5000,7500,10000,20000,25000,27500,28000,29000,30000,35000,40000,50000,60000,65000,80000,100000,150000", classifierParameters["examples"], "Classifier parameters for single-stage examples / " + fullTaskId)
         # Training fold parameters ############################################
-        if task.startswith("DDI13"):
+        if task.startswith("DDI13") and task != "DDI13":
             folds["devel"]=["train1", "train2", "train3", "train4"]
             folds["train"]=["train5", "train6", "train7", "train8", "train9"]
         
