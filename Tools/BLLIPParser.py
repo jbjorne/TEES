@@ -153,7 +153,7 @@ class BLLIPParser(Parser):
                 print >> sys.stderr, "Parsing tokenized text"
             #for sentence in corpusRoot.getiterator("sentence"):
             for sentence in self.getSentences(corpusRoot, requireEntities, skipIds, skipParsed):
-                infile.write("<s> " + sentence.get("text") + " </s>\n")
+                infile.write("<s> " + sentence.get("text").replace("\n", " ").replace("\r", " ").strip() + " </s>\n")
                 numCorpusSentences += 1
         else: # Use existing tokenization
             print >> sys.stderr, "Using existing tokenization", tokenizationName 
