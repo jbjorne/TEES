@@ -6,10 +6,10 @@ from Parser import Parser
 from Utils.ProgressCounter import ProgressCounter
 
 class ParseConverter(Parser):    
-    @classmethod
-    def insertCls(cls, parseDir, input, output=None, parseName="McCC", extensions=None, subDirs=None, debug=False, skipParsed=False, docMatchKey="origId"):
-        parserObj = cls()
-        parserObj.insertParses(parseDir, input, output, parseName, extensions, subDirs, debug, skipParsed, docMatchKey)
+#     @classmethod
+#     def insertCls(cls, parseDir, input, output=None, parseName="McCC", extensions=None, subDirs=None, debug=False, skipParsed=False, docMatchKey="origId"):
+#         parserObj = cls()
+#         parserObj.insertParses(parseDir, input, output, parseName, extensions, subDirs, debug, skipParsed, docMatchKey)
     
     def readParses(self, parseDir, extensions, subDirs, counts):
         files = {}

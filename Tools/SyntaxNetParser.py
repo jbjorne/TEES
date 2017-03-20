@@ -14,10 +14,10 @@ class SyntaxNetParser(Parser):
     # Main Interface
     ###########################################################################
     
-    @classmethod
-    def parseCls(cls, parserName, input, output=None, debug=False, reparse=False, syntaxNetDir=None, modelDir=None):
-        parserObj = cls()
-        parserObj.parse(parserName, input, output, debug, reparse, syntaxNetDir, modelDir)
+#     @classmethod
+#     def parseCls(cls, parserName, input, output=None, debug=False, reparse=False, syntaxNetDir=None, modelDir=None):
+#         parserObj = cls()
+#         parserObj.parse(parserName, input, output, debug, reparse, syntaxNetDir, modelDir)
     
     def parse(self, parserName, input, output=None, debug=False, reparse=False, syntaxNetDir=None, modelDir=None):
         # Run the parser process
@@ -129,4 +129,4 @@ if __name__=="__main__":
     optparser.add_option("--debug", default=False, action="store_true", dest="debug", help="")
     (options, args) = optparser.parse_args()
     
-    SyntaxNetParser.parseCls(options.parse, options.input, options.output, options.debug, False, options.syntaxNetDir)        
+    SyntaxNetParser().parse(options.parse, options.input, options.output, options.debug, False, options.syntaxNetDir)        

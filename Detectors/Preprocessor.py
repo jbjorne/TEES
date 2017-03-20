@@ -21,6 +21,10 @@ import Utils.FindHeads as FindHeads
 import Utils.Stream as Stream
 import Utils.InteractionXML.DeleteElements
 
+def clsStep(cls, method):
+    return lambda *args, **kwargs: getattr(cls(), method)(*args, **kwargs)
+    #return lambda *args, **kwargs: method(cls(), *args, **kwargs)
+
 class Preprocessor(ToolChain):
     def __init__(self, steps=["PRESET-PREPROCESS-BIO"], parseName="McCC", requireEntities=False):
         #if constParser == "None": constParser = None
@@ -65,15 +69,17 @@ class Preprocessor(ToolChain):
         self.allSteps["GENIA-SPLITTER"] = [Tools.GeniaSentenceSplitter.makeSentences, {"debug":False, "postProcess":True}, "sentences.xml"]
         self.allSteps["BANNER"] = [Tools.BANNER.run, {"elementName":"entity", "processElement":"sentence", "debug":False, "splitNewlines":True}, "ner.xml"]
         # Constituency parsing steps
-        self.allSteps["BLLIP-BIO"] = [BLLIPParser.parseCls, {"parseName":self.parseName, "requireEntities":self.requireEntities, "debug":False, "pathBioModel":"AUTO"}, "parse.xml"]
-        self.allSteps["BLLIP"] = [BLLIPParser.parseCls, {"parseName":self.parseName, "requireEntities":self.requireEntities, "debug":False, "pathBioModel":None}, "parse.xml"]
-        self.allSteps["STANFORD-CONST"] = [StanfordParser.parseCls, {"parserName":self.parseName, "debug":False, "action":"penn"}, "parse.xml"]
+        self.allSteps["BLLIP-BIO"] = [clsStep(BLLIPParser, "parse"), {"parseName":self.parseName, "requireEntities":self.requireEntities, "debug":False, "pathBioModel":"AUTO"}, "parse.xml"]
+        self.allSteps["BLLIP"] = [clsStep(BLLIPParser, "parse"), {"parseName":self.parseName, "requireEntities":self.requireEntities, "debug":False, "pathBioModel":None}, "parse.xml"]
+        self.allSteps["STANFORD-CONST"] = [clsStep(StanfordParser, "parse"), {"parserName":self.parseName, "debug":False, "action":"penn"}, "parse.xml"]
         # Dependency parsing steps
-        self.allSteps["STANFORD-DEP"] = [StanfordParser.parseCls, {"parserName":self.parseName, "debug":False, "action":"dep", "outputFormat":None}, "dependencies.xml"]
-        self.allSteps["STANFORD-CONVERT"] = [StanfordParser.parseCls, {"parserName":self.parseName, "debug":False, "action":"convert", "outputFormat":None}, "dependencies.xml"]
-        self.allSteps["SYNTAXNET"] = [SyntaxNetParser.parseCls, {"parserName":self.parseName, "debug":False, "modelDir":None}, "dependencies.xml"]
+        self.allSteps["STANFORD-DEP"] = [clsStep(StanfordParser, "parse"), {"parserName":self.parseName, "debug":False, "action":"dep", "outputFormat":None}, "dependencies.xml"]
+        self.allSteps["STANFORD-CONVERT"] = [clsStep(StanfordParser, "parse"), {"parserName":self.parseName, "debug":False, "action":"convert", "outputFormat":None}, "dependencies.xml"]
+        self.allSteps["SYNTAXNET"] = [clsStep(SyntaxNetParser, "parse"), {"parserName":self.parseName, "debug":False, "modelDir":None}, "dependencies.xml"]
         # Alternative parsing steps
-        self.allSteps["IMPORT-PARSE"] = [ParseConverter.insertCls, {"parseDir":None, "debug":False}, "import-parse.xml"]        
+        self.allSteps["IMPORT-PARSE"] = [clsStep(ParseConverter, "insertParses"), {"parseDir":None, "debug":False}, "import-parse.xml"]
+        #self.allSteps["IMPORT-PARSE"] = [clsStep(ParseConverter, ParseConverter.insertParses), {"parseDir":None, "debug":False}, "import-parse.xml"]
+        #self.allSteps["IMPORT-PARSE"] = [lambda *args, **kwargs: ParseConverter().insertParses(*args, **kwargs), {"parseDir":None, "debug":False}, "import-parse.xml"]        
         # Post-parsing steps
         self.allSteps["SPLIT-NAMES"] = [ProteinNameSplitter.mainFunc, {"parseName":self.parseName, "removeOld":True}, "split-names.xml"]
         self.allSteps["FIND-HEADS"] = [FindHeads.findHeads, {"parse":self.parseName, "removeExisting":True}, "heads.xml"]

@@ -41,10 +41,10 @@ class StanfordParser(Parser):
     # Main Interface
     ###########################################################################
     
-    @classmethod
-    def parseCls(cls, parserName, input, output=None, debug=False, reparse=False, stanfordParserDir=None, stanfordParserArgs=None, action="convert", outputFormat=None):
-        parserObj = cls()
-        parserObj.parse(parserName, input, output, debug, reparse, stanfordParserDir, stanfordParserArgs, action, outputFormat)
+#     @classmethod
+#     def parseCls(cls, parserName, input, output=None, debug=False, reparse=False, stanfordParserDir=None, stanfordParserArgs=None, action="convert", outputFormat=None):
+#         parserObj = cls()
+#         parserObj.parse(parserName, input, output, debug, reparse, stanfordParserDir, stanfordParserArgs, action, outputFormat)
     
     def parse(self, parserName, input, output=None, debug=False, reparse=False, stanfordParserDir=None, stanfordParserArgs=None, action="convert", outputFormat=None):
         #global stanfordParserDir, stanfordParserArgs

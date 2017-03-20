@@ -53,10 +53,10 @@ class BLLIPParser(Parser):
     # Main Interface
     ###########################################################################
     
-    @classmethod
-    def parseCls(cls, input, output=None, tokenizationName=None, parseName="McCC", requireEntities=False, skipIds=[], skipParsed=True, timeout=600, makePhraseElements=True, debug=False, pathParser=None, pathBioModel="AUTO", timestamp=True):
-        parser = cls()
-        parser.parse(input, output, tokenizationName, parseName, requireEntities, skipIds, skipParsed, timeout, makePhraseElements, debug, pathParser, pathBioModel, timestamp)
+#     @classmethod
+#     def parseCls(cls, input, output=None, tokenizationName=None, parseName="McCC", requireEntities=False, skipIds=[], skipParsed=True, timeout=600, makePhraseElements=True, debug=False, pathParser=None, pathBioModel="AUTO", timestamp=True):
+#         parser = cls()
+#         parser.parse(input, output, tokenizationName, parseName, requireEntities, skipIds, skipParsed, timeout, makePhraseElements, debug, pathParser, pathBioModel, timestamp)
     
     def parse(self, input, output=None, tokenizationName=None, parseName="McCC", requireEntities=False, skipIds=[], skipParsed=True, timeout=600, makePhraseElements=True, debug=False, pathParser=None, pathBioModel="AUTO", addTimeStamp=True):
         print >> sys.stderr, "BLLIP parser"
