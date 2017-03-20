@@ -19,47 +19,94 @@ import Utils.FindHeads as FindHeads
 #from Test.Pipeline import log
 import Utils.Stream as Stream
 
+
 class Preprocessor(ToolChain):
-    def __init__(self, constParser="BLLIP-BIO", depParser="STANFORD-CONVERT", parseName="McCC", requireEntities=False):
-        if constParser == "None": constParser = None
-        if depParser == "None": depParser = None
-        assert constParser in ("BLLIP", "BLLIP-BIO", "STANFORD", None), constParser
-        assert depParser in ("STANFORD", "STANFORD-CONVERT", "SYNTAXNET", None), depParser
-        self.constParser = constParser
-        self.depParser = depParser
+    def __init__(self, steps=["PRESET-PREPROCESS-BIO"], parseName="McCC", requireEntities=False):
+        #if constParser == "None": constParser = None
+        #if depParser == "None": depParser = None
+        #assert constParser in ("BLLIP", "BLLIP-BIO", "STANFORD", None), constParser
+        #assert depParser in ("STANFORD", "STANFORD-CONVERT", "SYNTAXNET", None), depParser
+        #self.constParser = constParser
+        #self.depParser = depParser
         self.requireEntities = requireEntities
         self.parseName = parseName
         ToolChain.__init__(self)
         self.modelParameterStringName = "preprocessorParams"
+        
+        self.initSteps()
+        self.initPresets()
+        self.defineSteps(steps)
     
-    def getDefaultSteps(self):
-        steps = []
-        steps.append( ("CONVERT", self.convert, {"dataSetNames":None, "corpusName":None}, "documents.xml") )
-        steps.append( ("SPLIT-SENTENCES", Tools.GeniaSentenceSplitter.makeSentences, {"debug":False, "postProcess":True}, "sentences.xml") )
-        steps.append( ("NER", Tools.BANNER.run, {"elementName":"entity", "processElement":"sentence", "debug":False, "splitNewlines":True}, "ner.xml") )
-        self.addParsingSteps(steps)
-        steps.append( ("SPLIT-NAMES", ProteinNameSplitter.mainFunc, {"parseName":self.parseName, "removeOld":True}, "split-names.xml") )
-        steps.append( ("FIND-HEADS", FindHeads.findHeads, {"parse":self.parseName, "removeExisting":True}, "heads.xml") )
-        steps.append( ("DIVIDE-SETS", self.divideSets, {"saveCombined":False}, "dummy.xml") )
-        return steps
+    def defineSteps(self, steps):
+        steps = self.expandPresets(steps)
+        for step in steps:
+            if step not in self.allSteps:
+                raise Exception("Unknown preprocessor step '" + str(step) + "'")
+            self.addStep(*([step] + self.allSteps[step]))
     
-    def addParsingSteps(self, steps):
-        # Add the constituency parser
-        if self.constParser == "BLLIP-BIO":
-            steps.append( (self.constParser + "-CONST", BLLIPParser.parseCls, {"parseName":self.parseName, "requireEntities":self.requireEntities, "debug":False, "pathBioModel":"AUTO"}, "parse.xml") )
-        elif self.constParser == "BLLIP":
-            steps.append( (self.constParser + "-CONST", BLLIPParser.parseCls, {"parseName":self.parseName, "requireEntities":self.requireEntities, "debug":False, "pathBioModel":None}, "parse.xml") )
-        elif self.constParser == "STANFORD":
-            steps.append( (self.constParser + "-CONST", StanfordParser.parseCls, {"parserName":self.parseName, "debug":False, "action":"penn"}, "parse.xml") )
-        # Add the dependency parser
-        if self.depParser == "STANFORD":
-            steps.append( (self.depParser + "-DEP", StanfordParser.parseCls, {"parserName":self.parseName, "debug":False, "action":"dep", "outputFormat":None}, "dependencies.xml") )
-        elif self.depParser == "STANFORD-CONVERT":
-            steps.append( (self.depParser + "-DEP", StanfordParser.parseCls, {"parserName":self.parseName, "debug":False, "action":"convert", "outputFormat":None}, "dependencies.xml") )
-        elif self.depParser == "SYNTAXNET":
-            steps.append( (self.depParser + "-DEP", SyntaxNetParser.parseCls, {"parserName":self.parseName, "debug":False, "modelDir":None}, "dependencies.xml") )
+    def expandPresets(self, steps):
+        newSteps = []
+        for step in steps:
+            if step.startswith("PRESET-"):
+                assert step in self.presets
+                newSteps.extend(self.presets[step])
+            else:
+                newSteps.append(step)
+        return newSteps
+    
+    def initSteps(self):
+        self.allSteps = {}
+        # Pre-parsing steps
+        self.allSteps["CONVERT"] = [self.convert, {"dataSetNames":None, "corpusName":None}, "documents.xml"]
+        self.allSteps["GENIA-SPLITTER"] = [Tools.GeniaSentenceSplitter.makeSentences, {"debug":False, "postProcess":True}, "sentences.xml"]
+        self.allSteps["BANNER"] = [Tools.BANNER.run, {"elementName":"entity", "processElement":"sentence", "debug":False, "splitNewlines":True}, "ner.xml"]
+        # Constituency parsing steps
+        self.allSteps["BLLIP-BIO"] = [BLLIPParser.parseCls, {"parseName":self.parseName, "requireEntities":self.requireEntities, "debug":False, "pathBioModel":"AUTO"}, "parse.xml"]
+        self.allSteps["BLLIP"] = [BLLIPParser.parseCls, {"parseName":self.parseName, "requireEntities":self.requireEntities, "debug":False, "pathBioModel":None}, "parse.xml"]
+        self.allSteps["STANFORD-CONST"] = [StanfordParser.parseCls, {"parserName":self.parseName, "debug":False, "action":"penn"}, "parse.xml"]
+        # Dependency parsing steps
+        self.allSteps["STANFORD-DEP"] = [StanfordParser.parseCls, {"parserName":self.parseName, "debug":False, "action":"dep", "outputFormat":None}, "dependencies.xml"]
+        self.allSteps["STANFORD-CONVERT"] = [StanfordParser.parseCls, {"parserName":self.parseName, "debug":False, "action":"convert", "outputFormat":None}, "dependencies.xml"]
+        self.allSteps["SYNTAXNET"] = [SyntaxNetParser.parseCls, {"parserName":self.parseName, "debug":False, "modelDir":None}, "dependencies.xml"]
+        # Post-parsing steps
+        self.allSteps["SPLIT-NAMES"] = [ProteinNameSplitter.mainFunc, {"parseName":self.parseName, "removeOld":True}, "split-names.xml"]
+        self.allSteps["FIND-HEADS"] = [FindHeads.findHeads, {"parse":self.parseName, "removeExisting":True}, "heads.xml"]
+        self.allSteps["DIVIDE-SETS"] = [self.divideSets, {"saveCombined":False}, "dummy.xml"]
+    
+    def initPresets(self):
+        self.presets = {}
+        self.presets["PRESET-PREPROCESS-BIO"] = ["CONVERT", "GENIA-SPLITTER", "BANNER", "BLLIP-BIO", "STANFORD-CONVERT", "SPLIT-NAMES", "FIND-HEADS", "DIVIDE-SETS"]
+        self.presets["PRESET-PARSE-BIO"] = ["CONVERT", "GENIA-SPLITTER", "BLLIP-BIO", "STANFORD-CONVERT", "SPLIT-NAMES", "FIND-HEADS", "DIVIDE-SETS"]
+    
+#     def getDefaultSteps(self):
+#         steps = []
+#         steps.append( ("CONVERT", self.convert, {"dataSetNames":None, "corpusName":None}, "documents.xml") )
+#         steps.append( ("SPLIT-SENTENCES", Tools.GeniaSentenceSplitter.makeSentences, {"debug":False, "postProcess":True}, "sentences.xml") )
+#         steps.append( ("NER", Tools.BANNER.run, {"elementName":"entity", "processElement":"sentence", "debug":False, "splitNewlines":True}, "ner.xml") )
+#         self.addParsingSteps(steps)
+#         steps.append( ("SPLIT-NAMES", ProteinNameSplitter.mainFunc, {"parseName":self.parseName, "removeOld":True}, "split-names.xml") )
+#         steps.append( ("FIND-HEADS", FindHeads.findHeads, {"parse":self.parseName, "removeExisting":True}, "heads.xml") )
+#         steps.append( ("DIVIDE-SETS", self.divideSets, {"saveCombined":False}, "dummy.xml") )
+#         return steps
+#     
+#     def addParsingSteps(self, steps):
+#         # Add the constituency parser
+#         if self.constParser == "BLLIP-BIO":
+#             steps.append( (self.constParser + "-CONST", BLLIPParser.parseCls, {"parseName":self.parseName, "requireEntities":self.requireEntities, "debug":False, "pathBioModel":"AUTO"}, "parse.xml") )
+#         elif self.constParser == "BLLIP":
+#             steps.append( (self.constParser + "-CONST", BLLIPParser.parseCls, {"parseName":self.parseName, "requireEntities":self.requireEntities, "debug":False, "pathBioModel":None}, "parse.xml") )
+#         elif self.constParser == "STANFORD":
+#             steps.append( (self.constParser + "-CONST", StanfordParser.parseCls, {"parserName":self.parseName, "debug":False, "action":"penn"}, "parse.xml") )
+#         # Add the dependency parser
+#         if self.depParser == "STANFORD":
+#             steps.append( (self.depParser + "-DEP", StanfordParser.parseCls, {"parserName":self.parseName, "debug":False, "action":"dep", "outputFormat":None}, "dependencies.xml") )
+#         elif self.depParser == "STANFORD-CONVERT":
+#             steps.append( (self.depParser + "-DEP", StanfordParser.parseCls, {"parserName":self.parseName, "debug":False, "action":"convert", "outputFormat":None}, "dependencies.xml") )
+#         elif self.depParser == "SYNTAXNET":
+#             steps.append( (self.depParser + "-DEP", SyntaxNetParser.parseCls, {"parserName":self.parseName, "debug":False, "modelDir":None}, "dependencies.xml") )
     
     def process(self, source, output, parameters=None, model=None, sourceDataSetNames=None, fromStep=None, toStep=None, omitSteps=None):
+        print >> sys.stderr, "Preprocessor steps:", [x[0] for x in self.steps]
         if omitSteps != None and((type(omitSteps) in types.StringTypes and omitSteps == "CONVERT") or "CONVERT" in omitSteps):
             raise Exception("Preprocessor step 'CONVERT' may not be omitted")
         if isinstance(source, basestring) and os.path.basename(source).isdigit(): # PMID
@@ -137,29 +184,34 @@ if __name__=="__main__":
     optparser.add_option("-c", "--corpus", default=None, dest="corpus", help="corpus name")
     optparser.add_option("-o", "--output", default=None, dest="output", help="output directory")
     optparser.add_option("-p", "--parameters", default=None, dest="parameters", help="preprocessing parameters")
-    optparser.add_option("-s", "--step", default=None, dest="step", help="")
+    optparser.add_option("-s", "--steps", default=None, dest="omitSteps", help="")
+    optparser.add_option("-f", "--fromStep", default=None, dest="fromStep", help="")
     optparser.add_option("-t", "--toStep", default=None, dest="toStep", help="")
-    optparser.add_option("--omitSteps", default=None, dest="omitSteps", help="")
+    #optparser.add_option("--omitSteps", default=None, dest="omitSteps", help="")
     optparser.add_option("--noLog", default=False, action="store_true", dest="noLog", help="")
     optparser.add_option("--debug", default=False, action="store_true", dest="debug", help="")
-    optparser.add_option("--requireEntities", default=False, action="store_true", dest="requireEntities", help="")
-    optparser.add_option("--constParser", default="BLLIP-BIO", help="BLLIP, BLLIP-BIO or STANFORD")
-    optparser.add_option("--depParser", default="STANFORD-CONVERT", help="STANFORD or STANFORD-CONVERT")
-    optparser.add_option("--parseName", default="McCC")
+    #optparser.add_option("--requireEntities", default=False, action="store_true", dest="requireEntities", help="")
+    #optparser.add_option("--constParser", default="BLLIP-BIO", help="BLLIP, BLLIP-BIO or STANFORD")
+    #optparser.add_option("--depParser", default="STANFORD-CONVERT", help="STANFORD or STANFORD-CONVERT")
+    #optparser.add_option("--parseName", default="McCC")
     optparser.add_option("--noIntermediateFiles", default=False, action="store_true", dest="noIntermediateFiles", help="")
     (options, args) = optparser.parse_args()
-    if options.omitSteps != None:
-        options.omitSteps = options.omitSteps.split(",")
-    options.constParser = options.constParser if options.constParser != "None" else None
-    options.depParser = options.depParser if options.depParser != "None" else None
+    
+    if options.steps == None:
+        raise Exception("No preprocessing steps defined")
+    options.steps = [x.strip() for x in options.steps.split(",")]
+    #if options.omitSteps != None:
+    #    options.omitSteps = options.omitSteps.split(",")
+    #options.constParser = options.constParser if options.constParser != "None" else None
+    #options.depParser = options.depParser if options.depParser != "None" else None
     
     if not options.noLog:
         Stream.openLog(os.path.join(options.output + "-log.txt"))
         #log(False, True, os.path.join(options.output, options.corpus + "-log.txt"))
-    preprocessor = Preprocessor(options.constParser, options.depParser, options.parseName, options.requireEntities)
+    preprocessor = Preprocessor(options.steps, options.parseName, options.requireEntities)
     preprocessor.setArgForAllSteps("debug", options.debug)
     preprocessor.stepArgs("CONVERT")["corpusName"] = options.corpus
     if options.noIntermediateFiles:
         preprocessor.setNoIntermediateFiles()
     #preprocessor.stepArgs("PARSE")["requireEntities"] = options.requireEntities
-    preprocessor.process(options.input, options.output, options.parameters, None, options.inputNames, fromStep=options.step, toStep=options.toStep, omitSteps=options.omitSteps)
+    preprocessor.process(options.input, options.output, options.parameters, None, options.inputNames, fromStep=options.fromStep, toStep=options.toStep, omitSteps=options.omitSteps)

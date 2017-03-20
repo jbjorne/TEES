@@ -409,7 +409,7 @@ class Parser:
             dependencies = []
             wordById = {}
             for word in sentence:
-                token = {"text":self.unescape(word["FORM"]), "POS":word["POSTAG"], "index":word["ID"]}
+                token = {"text":self.unescape(word["FORM"]), "POS":word["POSTAG"], "index":word["ID"], "feats":word["FEATS"]}
                 wordById[int(token["index"]) - 1] = token
                 tokens.append(token)
             for word in sentence:
@@ -425,10 +425,7 @@ class Parser:
         sentRows = self.readCoNLL(coNLLFilePath)
         sentObjs = self.processCoNLLSentences(sentRows)
         extraAttributes = self.getExtraAttributes("dep", extraAttributes)
-        sentences = []
-        for document in corpusRoot.findall("document"):
-            for sentence in document.findall("sentence"):
-                sentences.append(sentence)
+        sentences = [x for x in self.getSentences(corpusRoot, skipParsed=not removeExisting)]
         assert len(sentObjs) == len(sentences), (len(sentObjs), len(sentences))
         counter = ProgressCounter(len(sentences), "Dependency Parse Insertion")
         for objs, sentence in zip(sentObjs, sentences):

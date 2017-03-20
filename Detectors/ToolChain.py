@@ -13,27 +13,28 @@ class ToolChain(Detector):
         # Settings
         self.STATE_TOOLCHAIN = "PROCESS"
         self.steps = []
-        for step in self.getDefaultSteps():
-            self.addStep(*step)
+        #for step in self.getDefaultSteps():
+        #    self.addStep(*step)
         self.intermediateFilesAtSource = False
         self.compressIntermediateFiles = True
         self.intermediateFileTag = "temp"
         self.modelParameterStringName = None
     
-    def getDefaultSteps(self):
-        return []
+    #def getDefaultSteps(self):
+    #    return []
     
     def getDefaultParameters(self, defaults=None, defaultValue=None):
         if defaults == None:
             defaults = {"omitSteps":None, "intermediateFiles":None}
-        valueTypes = {}
-        for step in self.getDefaultSteps():
+        #valueTypes = {}
+        for step in self.steps: #self.getDefaultSteps():
             for argName in sorted(step[2].keys()):
                 parameterName = step[0] + "." + argName
-                if defaultValue == NOTHING:
-                    defaults[parameterName] = NOTHING
-                else:
-                    defaults[parameterName] = defaultValue
+                defaults[parameterName] = defaultValue
+                #if defaultValue == NOTHING:
+                #    defaults[parameterName] = NOTHING
+                #else:
+                #    defaults[parameterName] = defaultValue
         return defaults
 
     def getParameters(self, parameters=None, model=None, defaultValue=None, modelParameterStringName=None):
@@ -42,8 +43,9 @@ class ToolChain(Detector):
         if parameters == None and model != None:
             model = self.openModel(model, "r")
             parameters = model.getStr(modelParameterStringName, defaultIfNotExist=None)
-        defaultStepNames = [x[0] for x in self.getDefaultSteps()]
-        valueLimits={"omitSteps":defaultStepNames + [None], "intermediateFiles":defaultStepNames + [True, None]}
+        #defaultStepNames = [x[0] for x in self.getDefaultSteps()]
+        stepNames = [x[0] for x in self.steps]
+        valueLimits={"omitSteps":stepNames + [None], "intermediateFiles":stepNames + [True, None]}
         defaults = self.getDefaultParameters(defaultValue=defaultValue)
         return Parameters.get(parameters, defaults, valueLimits=valueLimits)
     
@@ -52,6 +54,8 @@ class ToolChain(Detector):
         for step in self.steps:
             for argName in sorted(step[2].keys()):
                 parameterName = step[0] + "." + argName
+                if parameterName not in parameters:
+                    raise Exception("Unknown parameter name '" + str(parameterName) + "', parameters are " + str(parameters))
                 if parameters[parameterName] != NOTHING:
                     step[2][argName] = parameters[parameterName]
             if parameters["intermediateFiles"] != None:
