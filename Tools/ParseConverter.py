@@ -1,68 +1,65 @@
 import sys, os
-import shutil
-import subprocess
-import tempfile
-import codecs
-import ProcessUtils
+from collections import defaultdict
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)),"..")))
 import Utils.ElementTreeUtils as ETUtils
 from Parser import Parser
-import Utils.Settings as Settings
 
-class ParseConverter(Parser):
-    
-    ###########################################################################
-    # Main Interface
-    ###########################################################################
-    
+class ParseConverter(Parser):    
     @classmethod
-    def insertCls(cls, parserName, input, output=None, debug=False, reparse=False, syntaxNetDir=None, modelDir=None):
+    def insertCls(cls, parseDir, input, output=None, parseName="McCC", extensions=None, subDirs=None, debug=False, skipParsed=False, docMatchKey="origId"):
         parserObj = cls()
-        parserObj.parse(parserName, input, output, debug, reparse, syntaxNetDir, modelDir)
+        parserObj.parse(parseDir, input, output, parseName, extensions, subDirs, debug, skipParsed, docMatchKey)
     
-    def loadParses(self, corpusRoot, parseInput, extensions=None):
-        if not os.path.exists(parseInput):
-            raise Exception("Cannot find parse input '" + str(parseInput) + "'")
-        if os.path.isdir(parseInput):
-            if extensions == None:
-                extensions = ["ptb", "conll", "sd"]
-            files = {}
-            for filename in os.listdir(parseInput):
-                if "." not in filename:
-                    continue
-                docName, ext = filename.rsplit(".", 1)
-                if ext not in extensions:
-                    continue
-                if docName not in files:
-                    files[docName] = {}
-                files[docName][ext] = os.path.join(parseInput, filename)
-            for document in corpusRoot.findall("document"):
-                origId = document.get("origId")
-                if origId not in files:
-                    continue
-                for ext in extensions:
-                    if ext not in files[origId]:
-                        continue
-                    elif ext == "ptb":
-                        self.insertPennTrees(files[origId][ext], document, addTimeStamp=False)
-                    elif ext == "conll":
-                        self.insertCoNLLParses(files[origId][ext], document, addTimeStamp=False)
-                    elif ext == "sd":
-                        self.insertDependencyParses(files[origId][ext], document, addTimeStamp=False)
-                        
-                
-    
-    def insert(self, parseInput, input, output=None, debug=False, reparse=False):
+    def readParses(self, parseDir, extensions, subDirs, counts):
+        files = {}
+        for filename in os.listdir(parseDir):
+            if "." not in filename:
+                continue
+            docName, ext = filename.rsplit(".", 1)
+            if ext not in extensions:
+                continue
+            if docName not in files:
+                files[docName] = {}
+            files[docName][ext] = os.path.join(parseDir, filename)
+            counts[ext + "-read"] += 1
+            
+    def insertParses(self, parseDir, input, output=None, parseName="McCC", extensions=None, subDirs=None, debug=False, skipParsed=False, docMatchKey="origId"):
         corpusTree, corpusRoot = self.getCorpus(input)
-        workdir = tempfile.mkdtemp()
-        inPath = self.makeInputFile(corpusRoot, workdir)
-        outPath = ProcessUtils.runSentenceProcess(self.run, syntaxNetDir, inPath, workdir, True, "SyntaxNetParser", "Parsing", processArgs={"modelDir":modelDir})
-        self.insertCoNLLParses(outPath, corpusRoot, parserName)
-        # Remove work directory
-        if not debug:
-            shutil.rmtree(workdir)
-        else:
-            print >> sys.stderr, "Parser IO files at", workdir
+        if not os.path.exists(parseDir):
+            raise Exception("Cannot find parse input '" + str(parseDir) + "'")
+        if not os.path.isdir(parseDir):
+            raise Exception("Parse input '" + str(parseDir) + "' is not a directory")
+        if extensions == None:
+            extensions = ["ptb", "conll", "sd"]
+        print >> sys.stderr, "Inserting parses from file types:", extensions
+        files = self.readParses(parseDir, extensions, subDirs, counts)
+        counts = defaultdict(int)
+        for filename in os.listdir(parseDir):
+            if "." not in filename:
+                continue
+            docName, ext = filename.rsplit(".", 1)
+            if ext not in extensions:
+                continue
+            if docName not in files:
+                files[docName] = {}
+            files[docName][ext] = os.path.join(parseDir, filename)
+            counts[ext + "-read"] += 1
+        for document in corpusRoot.findall("document"):
+            counts["document"] += 1
+            docMatchValue = document.get(docMatchKey)
+            if docMatchValue not in files:
+                continue
+            counts["document-match"] += 1
+            for ext in extensions:
+                if ext not in files[docMatchValue]:
+                    continue
+                counts[ext + "-match"] += 1
+                if ext == "ptb":
+                    self.insertPennTrees(files[docMatchValue][ext], document, skipParsed=skipParsed, addTimeStamp=False)
+                elif ext == "conll":
+                    self.insertCoNLLParses(files[docMatchValue][ext], document, skipParsed=skipParsed, addTimeStamp=False)
+                elif ext == "sd":
+                    self.insertDependencyParses(files[docMatchValue][ext], document, skipParsed=skipParsed, addTimeStamp=False)
         # Write the output XML file
         if output != None:
             print >> sys.stderr, "Writing output to", output
@@ -74,9 +71,9 @@ if __name__=="__main__":
     optparser = OptionParser(description="SyntaxNet Parser Wrapper")
     optparser.add_option("-i", "--input", default=None, dest="input", help="Corpus in interaction xml format", metavar="FILE")
     optparser.add_option("-o", "--output", default=None, dest="output", help="Output file in interaction xml format")
+    optparser.add_option("-d", "--parseDir", default=None, dest="parseDir", help="Parse files directory")
     optparser.add_option("-p", "--parse", default="McCC", dest="parse", help="Name of the parse element")
-    optparser.add_option("-d", "--syntaxNetDir", default=None, dest="syntaxNetDir", help="SyntaxNet program directory")
     optparser.add_option("--debug", default=False, action="store_true", dest="debug", help="")
     (options, args) = optparser.parse_args()
     
-    SyntaxNetParser.parseCls(options.parse, options.input, options.output, options.debug, False, options.syntaxNetDir)        
+    ParseConverter.insertCls(options.parse, options.input, options.output, options.debug, False, options.syntaxNetDir)        
