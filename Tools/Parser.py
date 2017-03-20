@@ -442,14 +442,19 @@ class Parser:
     # CoNLL File Processing
     ###########################################################################
     
-    def readCoNLL(self, inPath, columns=None):
+    def readCoNLL(self, inPath, conllFormat="conll-x"):
         # Columns from http://ilk.uvt.nl/conll/#dataformat
-        if columns == None:
-            columns = ["ID", "FORM", "LEMMA", "CPOSTAG", "POSTAG", "FEATS", "HEAD", "DEPREL", "PHEAD", "PDEPREL"] 
+        assert conllFormat in ("conll-x", "conll-u")
+        if conllFormat == "conll-x":
+            columns = ["ID", "FORM", "LEMMA", "CPOSTAG", "POSTAG", "FEATS", "HEAD", "DEPREL", "PHEAD", "PDEPREL"]
+        else:
+            columns = ["ID", "FORM", "LEMMA", "UPOSTAG", "XPOSTAG", "FEATS", "HEAD", "DEPREL", "DEPS", "MISC"] 
         sentence = None
         sentences = []
         with codecs.open(inPath, "rt", "utf-8") as f:
             for line in f:
+                if line.startswith("#"): # A comment line
+                    continue
                 line = line.strip()
                 if line == "":
                     if sentence == None: # Additional empty line
@@ -472,7 +477,12 @@ class Parser:
             dependencies = []
             wordById = {}
             for word in sentence:
-                token = {"text":self.unescape(word["FORM"]), "POS":word["POSTAG"], "index":word["ID"], "feats":word["FEATS"]}
+                pos = "_"
+                for key in ("CPOSTAG", "POSTAG", "UPOSTAG", "XPOSTAG"):
+                    if key in word and word[key] != "_":
+                        pos = word[key]
+                token = {"text":self.unescape(word["FORM"]), "POS":pos, "index":word["ID"], "feats":word["FEATS"]}
+                token = {key:token[key] for key in token if token[key] != "_"}
                 wordById[int(token["index"]) - 1] = token
                 tokens.append(token)
             for word in sentence:

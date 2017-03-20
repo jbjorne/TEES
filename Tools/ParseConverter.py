@@ -35,7 +35,7 @@ class ParseConverter(Parser):
                 counts[ext + "-read"] += 1
         return files
             
-    def insertParses(self, parseDir, input, output=None, parseName="McCC", extensions=None, subDirs=None, debug=False, skipParsed=False, docMatchKey="origId"):
+    def insertParses(self, parseDir, input, output=None, parseName="McCC", extensions=None, subDirs=None, debug=False, skipParsed=False, docMatchKey="origId", conllFormat="conll-x"):
         corpusTree, corpusRoot = self.getCorpus(input)
         if not os.path.exists(parseDir):
             raise Exception("Cannot find parse input '" + str(parseDir) + "'")
@@ -75,7 +75,7 @@ class ParseConverter(Parser):
                     sentObjs = self.readPennTrees(files[docMatchValue][ext])
                     counts = self.insertElements(sentObjs, sentences, parseName, counts=typeCounts[ext])
                 elif ext == "conll":
-                    sentRows = self.readCoNLL(files[docMatchValue][ext])
+                    sentRows = self.readCoNLL(files[docMatchValue][ext], conllFormat=conllFormat)
                     sentObjs = self.processCoNLLSentences(sentRows)
                     self.insertElements(sentObjs, sentences, parseName, "LINKED", counts=typeCounts[ext])
                 elif ext == "sd":
