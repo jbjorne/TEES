@@ -66,20 +66,24 @@ class ParseConverter(Parser):
             if docMatchValue not in files:
                 continue
             counts["document-match"] += 1
+            sentences = [x for x in self.getSentences(document, skipParsed=skipParsed)]
             for ext in extensions:
                 if ext not in files[docMatchValue]:
                     continue
                 counts[ext + "-match"] += 1
                 if ext == "ptb":
-                    self.insertPennTrees(files[docMatchValue][ext], document, skipParsed=skipParsed, addTimeStamp=False)
+                    sentObjs = self.readPennTrees(files[docMatchValue][ext])
+                    counts = self.insertElements(sentObjs, sentences, parseName, counts=typeCounts[ext])
                 elif ext == "conll":
                     sentRows = self.readCoNLL(files[docMatchValue][ext])
                     sentObjs = self.processCoNLLSentences(sentRows)
-                    self.insertElements(sentObjs, document.findall("sentence"), parseName, "LINKED", None, typeCounts[ext])
+                    self.insertElements(sentObjs, sentences, parseName, "LINKED", counts=typeCounts[ext])
                 elif ext == "sd":
-                    self.insertDependencyParses(files[docMatchValue][ext], document, skipParsed=skipParsed, addTimeStamp=False)
+                    sentObjs = self.readDependencies(files[docMatchValue][ext])
+                    self.insertElements(sentObjs, sentences, parseName, parseName, counts=typeCounts[ext])
+        print >> sys.stderr, "Counts", dict(counts)
         for ext in extensions:
-            print >> sys.stderr, "Counts for type '" + ext + "':", typeCounts[ext]
+            print >> sys.stderr, "Counts for type '" + ext + "':", dict(typeCounts[ext])
         # Write the output XML file
         if output != None:
             print >> sys.stderr, "Writing output to", output
