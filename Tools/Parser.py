@@ -184,7 +184,7 @@ class Parser:
         count = 0
         elements = []
         skipped = []
-        parse.set("deps-parse", len(dependencies))
+        parse.set("deps-parse", str(len(dependencies)))
         for dep in dependencies:
             counts["deps-total"] += 1
             t1, t2 = int(dep["t1"]), int(dep["t2"])
@@ -201,7 +201,7 @@ class Parser:
             else:
                 skipped.append(dep)
                 counts["deps-skipped"] += 1
-        parse.set("deps-inserted", count)
+        parse.set("deps-inserted", str(count))
         if count == 0:
             if len(dependencies) == 0:
                 counts["sentences-with-no-parser-deps"] += 1
@@ -228,12 +228,14 @@ class Parser:
             if "treeline" in sentObj:
                 parse.set("pennstring", sentObj["treeline"])
                 counts["sentences-with-penn-tree" if sentObj["treeline"] != "" else "sentences-without-penn-tree"] += 1
-            if "tokens" in sentObj:
-                tokenization = None
+            tokenization = None
+            if "tokens" in sentObj or "dependencies" in sentObj:
                 if tokenizerName != None: # Check for existing tokenization
                     tokenization = IXMLUtils.getTokenizationElement(sentence, tokenizerName, addIfNotExist=False, mustNotExist=False)
                 if tokenization == None: # Parser-generated tokens
                     tokenization = IXMLUtils.getTokenizationElement(sentence, parseName, addIfNotExist=True, mustNotExist=True)
+            if "tokens" in sentObj:
+                if tokenization.find("token") == None:
                     self.insertTokens(sentObj["tokens"], sentence, tokenization, counts=counts)
                 else:
                     self.alignTokens(sentObj["tokens"], sentence, tokenization, counts=counts)
@@ -351,7 +353,7 @@ class Parser:
         #depFile = codecs.open(depFilePath, "rt", "utf-8")
         sentObjs = self.readDependencies(depFilePath)
         sentences = [x for x in self.getSentences(corpusRoot, requireEntities, skipIds, skipParsed)]
-        counts = self.insertElements(sentObjs, sentences, parseName, "Dependency Parse Insertion")
+        counts = self.insertElements(sentObjs, sentences, parseName, parseName, "Dependency Parse Insertion")
         #sentences = []
         #for document in corpusRoot.findall("document"):
         #    for sentence in document.findall("sentence"):
