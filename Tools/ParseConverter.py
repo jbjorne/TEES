@@ -35,27 +35,17 @@ class ParseConverter(Parser):
                 counts[ext + "-read"] += 1
         return files
             
-    def insertParses(self, parseDir, input, output=None, parseName="McCC", extensions=None, subDirs=None, debug=False, skipParsed=False, docMatchKey="origId", conllFormat="conll-x"):
+    def insertParses(self, parseDir, input, output=None, parseName="McCC", extensions=None, subDirs=None, debug=False, skipParsed=False, docMatchKey="origId", conllFormat=None):
         corpusTree, corpusRoot = self.getCorpus(input)
         if not os.path.exists(parseDir):
             raise Exception("Cannot find parse input '" + str(parseDir) + "'")
         if not os.path.isdir(parseDir):
             raise Exception("Parse input '" + str(parseDir) + "' is not a directory")
         if extensions == None:
-            extensions = ["ptb", "conll", "sd"]
+            extensions = ["ptb", "sd", "conll", "conllx", "conllu"]
         print >> sys.stderr, "Inserting parses from file types:", extensions
         counts = defaultdict(int)
         files = self.readParses(parseDir, extensions, subDirs, counts)
-        for filename in os.listdir(parseDir):
-            if "." not in filename:
-                continue
-            docName, ext = filename.rsplit(".", 1)
-            if ext not in extensions:
-                continue
-            if docName not in files:
-                files[docName] = {}
-            files[docName][ext] = os.path.join(parseDir, filename)
-            counts[ext + "-read"] += 1
         documents = [x for x in corpusRoot.findall("document")]
         counter = ProgressCounter(len(documents), "Parse Insertion")
         typeCounts = {x:defaultdict(int) for x in extensions}
@@ -83,7 +73,8 @@ class ParseConverter(Parser):
                     self.insertElements(sentObjs, sentences, parseName, parseName, counts=typeCounts[ext])
         print >> sys.stderr, "Counts", dict(counts)
         for ext in extensions:
-            print >> sys.stderr, "Counts for type '" + ext + "':", dict(typeCounts[ext])
+            if len(typeCounts[ext]) > 0:
+                print >> sys.stderr, "Counts for type '" + ext + "':", dict(typeCounts[ext])
         # Write the output XML file
         if output != None:
             print >> sys.stderr, "Writing output to", output

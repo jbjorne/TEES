@@ -442,10 +442,15 @@ class Parser:
     # CoNLL File Processing
     ###########################################################################
     
-    def readCoNLL(self, inPath, conllFormat="conll-x"):
-        # Columns from http://ilk.uvt.nl/conll/#dataformat
-        assert conllFormat in ("conll-x", "conll-u")
-        if conllFormat == "conll-x":
+    def readCoNLL(self, inPath, conllFormat=None):
+        if conllFormat == None:
+            ext = inPath.rsplit(".", 1)[-1]
+            if ext in ("conll", "conllx"):
+                conllFormat = "conllx"
+            elif ext == "conllu":
+                conllFormat = "conllu"
+        assert conllFormat in ("conllx", "conllu")
+        if conllFormat == "conllx":
             columns = ["ID", "FORM", "LEMMA", "CPOSTAG", "POSTAG", "FEATS", "HEAD", "DEPREL", "PHEAD", "PDEPREL"]
         else:
             columns = ["ID", "FORM", "LEMMA", "UPOSTAG", "XPOSTAG", "FEATS", "HEAD", "DEPREL", "DEPS", "MISC"] 
