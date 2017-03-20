@@ -184,7 +184,6 @@ class Parser:
         count = 0
         elements = []
         skipped = []
-        parse.set("deps-parse", str(len(dependencies)))
         for dep in dependencies:
             counts["deps-total"] += 1
             t1, t2 = int(dep["t1"]), int(dep["t2"])
@@ -201,7 +200,9 @@ class Parser:
             else:
                 skipped.append(dep)
                 counts["deps-skipped"] += 1
-        parse.set("deps-inserted", str(count))
+        if count != len(dependencies):
+            parse.set("deps-parse", str(len(dependencies)))
+            parse.set("deps-inserted", str(count))
         if count == 0:
             if len(dependencies) == 0:
                 counts["sentences-with-no-parser-deps"] += 1
