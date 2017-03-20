@@ -36,7 +36,8 @@ class Preprocessor(ToolChain):
         
         self.initSteps()
         self.initPresets()
-        self.defineSteps(steps)
+        if steps != None:
+            self.defineSteps(steps)
     
     def defineSteps(self, steps):
         steps = self.expandPresets(steps)
@@ -190,34 +191,41 @@ if __name__=="__main__":
     optparser.add_option("-c", "--corpus", default=None, dest="corpus", help="corpus name")
     optparser.add_option("-o", "--output", default=None, dest="output", help="output directory")
     optparser.add_option("-p", "--parameters", default=None, dest="parameters", help="preprocessing parameters")
-    optparser.add_option("-s", "--steps", default=None, dest="omitSteps", help="")
+    optparser.add_option("-s", "--steps", default=None, dest="steps", help="")
     optparser.add_option("-f", "--fromStep", default=None, dest="fromStep", help="")
     optparser.add_option("-t", "--toStep", default=None, dest="toStep", help="")
-    #optparser.add_option("--omitSteps", default=None, dest="omitSteps", help="")
+    optparser.add_option("--omitSteps", default=None, dest="omitSteps", help="")
     optparser.add_option("--noLog", default=False, action="store_true", dest="noLog", help="")
     optparser.add_option("--debug", default=False, action="store_true", dest="debug", help="")
-    #optparser.add_option("--requireEntities", default=False, action="store_true", dest="requireEntities", help="")
+    optparser.add_option("--requireEntities", default=False, action="store_true", dest="requireEntities", help="")
     #optparser.add_option("--constParser", default="BLLIP-BIO", help="BLLIP, BLLIP-BIO or STANFORD")
     #optparser.add_option("--depParser", default="STANFORD-CONVERT", help="STANFORD or STANFORD-CONVERT")
-    #optparser.add_option("--parseName", default="McCC")
+    optparser.add_option("--parseName", default="McCC")
     optparser.add_option("--noIntermediateFiles", default=False, action="store_true", dest="noIntermediateFiles", help="")
+    optparser.add_option("--listPresets", default=False, action="store_true", dest="listPresets", help="")
     (options, args) = optparser.parse_args()
     
-    if options.steps == None:
+    if options.steps == None and not options.listPresets:
         raise Exception("No preprocessing steps defined")
-    options.steps = [x.strip() for x in options.steps.split(",")]
-    #if options.omitSteps != None:
-    #    options.omitSteps = options.omitSteps.split(",")
-    #options.constParser = options.constParser if options.constParser != "None" else None
-    #options.depParser = options.depParser if options.depParser != "None" else None
-    
-    if not options.noLog:
-        Stream.openLog(os.path.join(options.output + "-log.txt"))
-        #log(False, True, os.path.join(options.output, options.corpus + "-log.txt"))
+    if options.steps != None:
+        options.steps = [x.strip() for x in options.steps.split(",")]
+    if options.omitSteps != None:
+        options.omitSteps = options.omitSteps.split(",")
+        
     preprocessor = Preprocessor(options.steps, options.parseName, options.requireEntities)
-    preprocessor.setArgForAllSteps("debug", options.debug)
-    preprocessor.stepArgs("CONVERT")["corpusName"] = options.corpus
-    if options.noIntermediateFiles:
-        preprocessor.setNoIntermediateFiles()
-    #preprocessor.stepArgs("PARSE")["requireEntities"] = options.requireEntities
-    preprocessor.process(options.input, options.output, options.parameters, None, options.inputNames, fromStep=options.fromStep, toStep=options.toStep, omitSteps=options.omitSteps)
+    if options.listPresets:
+        for preset in sorted(preprocessor.presets.keys()):
+            print >> sys.stderr, preset + ": " + ",".join(preprocessor.presets[preset])
+    else:
+        #options.constParser = options.constParser if options.constParser != "None" else None
+        #options.depParser = options.depParser if options.depParser != "None" else None
+        
+        if not options.noLog:
+            Stream.openLog(os.path.join(options.output + "-log.txt"))
+            #log(False, True, os.path.join(options.output, options.corpus + "-log.txt"))
+        preprocessor.setArgForAllSteps("debug", options.debug)
+        preprocessor.stepArgs("CONVERT")["corpusName"] = options.corpus
+        if options.noIntermediateFiles:
+            preprocessor.setNoIntermediateFiles()
+        #preprocessor.stepArgs("PARSE")["requireEntities"] = options.requireEntities
+        preprocessor.process(options.input, options.output, options.parameters, None, options.inputNames, fromStep=options.fromStep, toStep=options.toStep, omitSteps=options.omitSteps)

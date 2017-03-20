@@ -3,25 +3,37 @@ from collections import defaultdict
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)),"..")))
 import Utils.ElementTreeUtils as ETUtils
 from Parser import Parser
+from Utils.ProgressCounter import ProgressCounter
 
 class ParseConverter(Parser):    
     @classmethod
     def insertCls(cls, parseDir, input, output=None, parseName="McCC", extensions=None, subDirs=None, debug=False, skipParsed=False, docMatchKey="origId"):
         parserObj = cls()
-        parserObj.parse(parseDir, input, output, parseName, extensions, subDirs, debug, skipParsed, docMatchKey)
+        parserObj.insertParses(parseDir, input, output, parseName, extensions, subDirs, debug, skipParsed, docMatchKey)
     
     def readParses(self, parseDir, extensions, subDirs, counts):
         files = {}
-        for filename in os.listdir(parseDir):
-            if "." not in filename:
+        if subDirs == None:
+            subDirs = ["ptb", "conll", "sd_ccproc"]
+        directories = [parseDir] + [os.path.join(parseDir, x) for x in subDirs]
+        for directory in directories:
+            if not os.path.exists(directory):
                 continue
-            docName, ext = filename.rsplit(".", 1)
-            if ext not in extensions:
-                continue
-            if docName not in files:
-                files[docName] = {}
-            files[docName][ext] = os.path.join(parseDir, filename)
-            counts[ext + "-read"] += 1
+            print >> sys.stderr, "Collecting parses from", directory
+            for filename in os.listdir(parseDir):
+                if "." not in filename:
+                    continue
+                docName, ext = filename.rsplit(".", 1)
+                if ext not in extensions:
+                    continue
+                if docName not in files:
+                    files[docName] = {}
+                filePath = os.path.join(parseDir, filename)
+                if ext in files[docName]:
+                    print >> sys.stderr, "Multiple files for extension", ext, [files[docName][ext], filePath]
+                files[docName][ext] = filePath
+                counts[ext + "-read"] += 1
+        return files
             
     def insertParses(self, parseDir, input, output=None, parseName="McCC", extensions=None, subDirs=None, debug=False, skipParsed=False, docMatchKey="origId"):
         corpusTree, corpusRoot = self.getCorpus(input)
@@ -32,8 +44,8 @@ class ParseConverter(Parser):
         if extensions == None:
             extensions = ["ptb", "conll", "sd"]
         print >> sys.stderr, "Inserting parses from file types:", extensions
-        files = self.readParses(parseDir, extensions, subDirs, counts)
         counts = defaultdict(int)
+        files = self.readParses(parseDir, extensions, subDirs, counts)
         for filename in os.listdir(parseDir):
             if "." not in filename:
                 continue
@@ -44,9 +56,13 @@ class ParseConverter(Parser):
                 files[docName] = {}
             files[docName][ext] = os.path.join(parseDir, filename)
             counts[ext + "-read"] += 1
+        documents = [x for x in corpusRoot.findall("document")]
+        counter = ProgressCounter(len(documents), "Parse Insertion")
+        typeCounts = {x:defaultdict(int) for x in extensions}
         for document in corpusRoot.findall("document"):
             counts["document"] += 1
             docMatchValue = document.get(docMatchKey)
+            counter.update(1, "Inserting parses for (" + document.get("id") + "/" + str(docMatchValue) + "): ")
             if docMatchValue not in files:
                 continue
             counts["document-match"] += 1
@@ -57,9 +73,13 @@ class ParseConverter(Parser):
                 if ext == "ptb":
                     self.insertPennTrees(files[docMatchValue][ext], document, skipParsed=skipParsed, addTimeStamp=False)
                 elif ext == "conll":
-                    self.insertCoNLLParses(files[docMatchValue][ext], document, skipParsed=skipParsed, addTimeStamp=False)
+                    sentRows = self.readCoNLL(files[docMatchValue][ext])
+                    sentObjs = self.processCoNLLSentences(sentRows)
+                    self.insertCoNLLSentences(sentObjs, document.findall("sentence"), counts=typeCounts[ext])
                 elif ext == "sd":
                     self.insertDependencyParses(files[docMatchValue][ext], document, skipParsed=skipParsed, addTimeStamp=False)
+        for ext in extensions:
+            print >> sys.stderr, "Counts for type '" + ext + "':", typeCounts[ext]
         # Write the output XML file
         if output != None:
             print >> sys.stderr, "Writing output to", output
@@ -76,4 +96,4 @@ if __name__=="__main__":
     optparser.add_option("--debug", default=False, action="store_true", dest="debug", help="")
     (options, args) = optparser.parse_args()
     
-    ParseConverter.insertCls(options.parse, options.input, options.output, options.debug, False, options.syntaxNetDir)        
+    ParseConverter.insertCls(options.parseDir, options.input, options.output, parseName=options.parse, debug=options.debug)        

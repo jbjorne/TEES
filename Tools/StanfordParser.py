@@ -16,8 +16,8 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__f
 import Utils.ElementTreeUtils as ETUtils
 import Utils.Settings as Settings
 import Utils.Download as Download
-from Utils.ProgressCounter import ProgressCounter
-from Utils.FileUtils import openWithExt, getTarFilePath
+# from Utils.ProgressCounter import ProgressCounter
+# from Utils.FileUtils import openWithExt, getTarFilePath
 import Tool
 from Parser import Parser
 
@@ -59,7 +59,8 @@ class StanfordParser(Parser):
         self.printStderr(outPath)
         # Insert the parses    
         if action in ("convert", "dep"):
-            self.insertDependencyParses(outPath, corpusRoot, parserName, {"stanford-mode":action}, addTimeStamp=True, skipExtra=0, removeExisting=True)
+            #self.insertDependencyParses(outPath, corpusRoot, parserName, {"stanford-mode":action}, addTimeStamp=True, skipExtra=0, removeExisting=True)
+            self.insertDependencyParses(outPath, corpusRoot, parserName, skipParsed=reparse, removeExisting=reparse)
         elif action == "penn":
             self.insertPennTrees(outPath, corpusRoot, parserName)
         # Remove work directory
@@ -217,52 +218,52 @@ class StanfordParser(Parser):
 #         else:
 #             print >> sys.stderr, "Parser IO files at", workdir
 
-    ###########################################################################
-    # Serialized Parses
-    ###########################################################################
-    
-    def insertParses(self, input, parsePath, output=None, parseName="McCC", extraAttributes={}, skipExtra=0):
-        """
-        Divide text in the "text" attributes of document and section 
-        elements into sentence elements. These sentence elements are
-        inserted into their respective parent elements.
-        """  
-        corpusTree, corpusRoot = self.getCorpus(input)
-        
-        print >> sys.stderr, "Inserting parses from", parsePath
-        assert os.path.exists(parsePath)
-        tarFilePath, parsePath = getTarFilePath(parsePath)
-        tarFile = None
-        if tarFilePath != None:
-            tarFile = tarfile.open(tarFilePath)
-        
-        counts = defaultdict(int) #counts = {"fail":0, "no_dependencies":0, "sentences":0, "documents":0, "existing":0, "no_penn":0}
-        sourceElements = [x for x in corpusRoot.getiterator("document")] + [x for x in corpusRoot.getiterator("section")]
-        counter = ProgressCounter(len(sourceElements), "McCC Parse Insertion")
-        for document in sourceElements:
-            counts["document"] += 1
-            docId = document.get("id")
-            origId = self.getDocumentOrigId(document)
-            if docId == None:
-                docId = "CORPUS.d" + str(counts["document"])
-            
-            f = openWithExt(os.path.join(parsePath, origId), ["sd", "dep", "sdepcc", "sdep"]) # Extensions for BioNLP 2011, 2009, and 2013
-            if f != None:
-                for sentence in document.findall("sentence"):
-                    counts["sentences"] += 1
-                    counter.update(0, "Processing Documents ("+sentence.get("id")+"/" + origId + "): ")
-                    self.insertDependencyParse(sentence, f, parseName, parseName, extraAttributes, counts, skipExtra, removeExisting=False)
-                    #self.insertParse(sentence, f, parseName, True, None, counts, skipExtra, origId)
-                f.close()
-            counter.update(1, "Processing Documents ("+document.get("id")+"/" + origId + "): ")        
-        if tarFile != None:
-            tarFile.close()
-        print >> sys.stderr, "Stanford conversion was inserted to", counts["sentences"], "sentences" #, failCount, "failed"
-            
-        if output != None:
-            print >> sys.stderr, "Writing output to", output
-            ETUtils.write(corpusRoot, output)
-        return corpusTree
+#     ###########################################################################
+#     # Serialized Parses
+#     ###########################################################################
+#     
+#     def insertParses(self, input, parsePath, output=None, parseName="McCC", extraAttributes={}, skipExtra=0):
+#         """
+#         Divide text in the "text" attributes of document and section 
+#         elements into sentence elements. These sentence elements are
+#         inserted into their respective parent elements.
+#         """  
+#         corpusTree, corpusRoot = self.getCorpus(input)
+#         
+#         print >> sys.stderr, "Inserting parses from", parsePath
+#         assert os.path.exists(parsePath)
+#         tarFilePath, parsePath = getTarFilePath(parsePath)
+#         tarFile = None
+#         if tarFilePath != None:
+#             tarFile = tarfile.open(tarFilePath)
+#         
+#         counts = defaultdict(int) #counts = {"fail":0, "no_dependencies":0, "sentences":0, "documents":0, "existing":0, "no_penn":0}
+#         sourceElements = [x for x in corpusRoot.getiterator("document")] + [x for x in corpusRoot.getiterator("section")]
+#         counter = ProgressCounter(len(sourceElements), "McCC Parse Insertion")
+#         for document in sourceElements:
+#             counts["document"] += 1
+#             docId = document.get("id")
+#             origId = self.getDocumentOrigId(document)
+#             if docId == None:
+#                 docId = "CORPUS.d" + str(counts["document"])
+#             
+#             f = openWithExt(os.path.join(parsePath, origId), ["sd", "dep", "sdepcc", "sdep"]) # Extensions for BioNLP 2011, 2009, and 2013
+#             if f != None:
+#                 for sentence in document.findall("sentence"):
+#                     counts["sentences"] += 1
+#                     counter.update(0, "Processing Documents ("+sentence.get("id")+"/" + origId + "): ")
+#                     self.insertDependencyParse(sentence, f, parseName, parseName, extraAttributes, counts, skipExtra, removeExisting=False)
+#                     #self.insertParse(sentence, f, parseName, True, None, counts, skipExtra, origId)
+#                 f.close()
+#             counter.update(1, "Processing Documents ("+document.get("id")+"/" + origId + "): ")        
+#         if tarFile != None:
+#             tarFile.close()
+#         print >> sys.stderr, "Stanford conversion was inserted to", counts["sentences"], "sentences" #, failCount, "failed"
+#             
+#         if output != None:
+#             print >> sys.stderr, "Writing output to", output
+#             ETUtils.write(corpusRoot, output)
+#         return corpusTree
 
 if __name__=="__main__":
     from optparse import OptionParser, OptionGroup

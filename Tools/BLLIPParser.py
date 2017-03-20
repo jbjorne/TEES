@@ -64,7 +64,7 @@ class BLLIPParser(Parser):
         workdir = tempfile.mkdtemp()
         infileName, numCorpusSentences = self.makeInputFile(workdir, corpusRoot, requireEntities, skipIds, skipParsed, tokenizationName, debug)
         bllipOutput = self.runProcess(infileName, workdir, pathParser, pathBioModel, tokenizationName, timeout)        
-        self.insertPennTrees(bllipOutput, corpusRoot, parseName, requireEntities, makePhraseElements, skipIds, skipParsed, addTimeStamp)
+        self.insertPennTrees(bllipOutput, corpusRoot, parseName, requireEntities, skipIds, skipParsed)
         if output != None:
             print >> sys.stderr, "Writing output to", output
             ETUtils.write(corpusRoot, output)
