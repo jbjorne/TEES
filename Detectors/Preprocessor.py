@@ -11,6 +11,7 @@ import Tools.GeniaSentenceSplitter
 from Tools.BLLIPParser import BLLIPParser
 from Tools.StanfordParser import StanfordParser
 from Tools.SyntaxNetParser import SyntaxNetParser
+from Tools.ParseConverter import ParseConverter
 import Tools.BANNER
 from ToolChain import ToolChain
 import Utils.InteractionXML.DivideSets
@@ -18,7 +19,7 @@ import Utils.ProteinNameSplitter as ProteinNameSplitter
 import Utils.FindHeads as FindHeads
 #from Test.Pipeline import log
 import Utils.Stream as Stream
-
+import Utils.InteractionXML.DeleteElements
 
 class Preprocessor(ToolChain):
     def __init__(self, steps=["PRESET-PREPROCESS-BIO"], parseName="McCC", requireEntities=False):
@@ -58,6 +59,8 @@ class Preprocessor(ToolChain):
         self.allSteps = {}
         # Pre-parsing steps
         self.allSteps["CONVERT"] = [self.convert, {"dataSetNames":None, "corpusName":None}, "documents.xml"]
+        self.allSteps["REMOVE-ANALYSES"] = [Utils.InteractionXML.DeleteElements.processCorpus, {"rules":{"analyses":{}}, "reverse":False}, "remove-analyses.xml"]
+        #self.allSteps["REMOVE-SENTENCES"] = [Tools.GeniaSentenceSplitter.makeSentences, {"debug":False, "postProcess":True}, "sentences.xml"]
         self.allSteps["GENIA-SPLITTER"] = [Tools.GeniaSentenceSplitter.makeSentences, {"debug":False, "postProcess":True}, "sentences.xml"]
         self.allSteps["BANNER"] = [Tools.BANNER.run, {"elementName":"entity", "processElement":"sentence", "debug":False, "splitNewlines":True}, "ner.xml"]
         # Constituency parsing steps
@@ -68,6 +71,8 @@ class Preprocessor(ToolChain):
         self.allSteps["STANFORD-DEP"] = [StanfordParser.parseCls, {"parserName":self.parseName, "debug":False, "action":"dep", "outputFormat":None}, "dependencies.xml"]
         self.allSteps["STANFORD-CONVERT"] = [StanfordParser.parseCls, {"parserName":self.parseName, "debug":False, "action":"convert", "outputFormat":None}, "dependencies.xml"]
         self.allSteps["SYNTAXNET"] = [SyntaxNetParser.parseCls, {"parserName":self.parseName, "debug":False, "modelDir":None}, "dependencies.xml"]
+        # Parse import steps
+        self.allSteps["IMPORT-PARSE"] = [ParseConverter.insertCls, {"parseName":self.parseName, "debug":False}, "import-parse.xml"]        
         # Post-parsing steps
         self.allSteps["SPLIT-NAMES"] = [ProteinNameSplitter.mainFunc, {"parseName":self.parseName, "removeOld":True}, "split-names.xml"]
         self.allSteps["FIND-HEADS"] = [FindHeads.findHeads, {"parse":self.parseName, "removeExisting":True}, "heads.xml"]
@@ -77,6 +82,7 @@ class Preprocessor(ToolChain):
         self.presets = {}
         self.presets["PRESET-PREPROCESS-BIO"] = ["CONVERT", "GENIA-SPLITTER", "BANNER", "BLLIP-BIO", "STANFORD-CONVERT", "SPLIT-NAMES", "FIND-HEADS", "DIVIDE-SETS"]
         self.presets["PRESET-PARSE-BIO"] = ["CONVERT", "GENIA-SPLITTER", "BLLIP-BIO", "STANFORD-CONVERT", "SPLIT-NAMES", "FIND-HEADS", "DIVIDE-SETS"]
+        self.presets["PRESET-INSERT-PARSE"] = ["CONVERT", "REMOVE-ANALYSES", "IMPORT-PARSE", "DIVIDE-SETS"]
     
 #     def getDefaultSteps(self):
 #         steps = []

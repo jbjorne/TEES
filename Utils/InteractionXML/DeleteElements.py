@@ -55,10 +55,10 @@ def removeElements(parent, rules, reverse=False, countsByType=None):
     for element in toRemove:
         parent.remove(element)
 
-def processCorpus(inputFilename, outputFilename, rules, reverse=False):
+def processCorpus(input, output, rules, reverse=False):
     print >> sys.stderr, "Deleting elements, rules =", rules
-    print >> sys.stderr, "Loading corpus file", inputFilename
-    corpusTree = ETUtils.ETFromObj(inputFilename)
+    print >> sys.stderr, "Loading corpus file", input
+    corpusTree = ETUtils.ETFromObj(input)
     corpusRoot = corpusTree.getroot()
     
     countsByType = defaultdict(int)
@@ -68,9 +68,9 @@ def processCorpus(inputFilename, outputFilename, rules, reverse=False):
     for k in sorted(countsByType.keys()):
         print >> sys.stderr, "  " + k + ":", countsByType[k]
     
-    if outputFilename != None:
-        print >> sys.stderr, "Writing output to", outputFilename
-        ETUtils.write(corpusRoot, outputFilename)
+    if output != None:
+        print >> sys.stderr, "Writing output to", output
+        ETUtils.write(corpusRoot, output)
     return corpusTree
 
 if __name__=="__main__":
