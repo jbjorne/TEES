@@ -166,7 +166,7 @@ class Parser:
     def insertDependencies(self, dependencies, sentence, parse, tokenization, idStem="d", counts=None):
         tokensById = {}
         dependencies = [x for x in dependencies if x["type"] != "root"]
-        if tokenization == "linked":
+        if tokenization == "LINKED":
             for dep in dependencies:
                 assert dep["t1Token"] != None and dep["t2Token"] != None
                 tokensById[dep["t1"]] = dep["t1Token"]
@@ -242,7 +242,7 @@ class Parser:
             #if "dependencies" in sentObj or "phrases" in sentObj:
             #    parse = IXMLUtils.getParseElement(sentence, parseName, addIfNotExist=True)
             if "dependencies" in sentObj:
-                self.insertDependencies(sentObj["dependencies"], sentence, parse, tokenization, counts=counts)
+                self.insertDependencies(sentObj["dependencies"], sentence, parse, tokenization if tokenizerName != "LINKED" else "LINKED", counts=counts)
             if "phrases" in sentObj:
                 self.insertPhrases(sentObj["phrases"], parse, sentObj["tokens"])
         return counts
@@ -502,7 +502,7 @@ class Parser:
         sentences = [x for x in self.getSentences(corpusRoot, skipParsed=not removeExisting)]
         counter = ProgressCounter(len(sentences), "Dependency Parse Insertion")
         counts = defaultdict(int)
-        self.insertElements(sentObjs, sentences, parseName, counts, counter)
+        self.insertElements(sentObjs, sentences, parseName, "LINKED", counts, counter)
         print >> sys.stderr, "CoNLL parse statistics:", dict(counts)
         if counts["deps-total"] == counts["deps-elements"]:
             print >> sys.stderr, "All dependency elements were aligned"

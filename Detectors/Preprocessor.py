@@ -72,8 +72,8 @@ class Preprocessor(ToolChain):
         self.allSteps["STANFORD-DEP"] = [StanfordParser.parseCls, {"parserName":self.parseName, "debug":False, "action":"dep", "outputFormat":None}, "dependencies.xml"]
         self.allSteps["STANFORD-CONVERT"] = [StanfordParser.parseCls, {"parserName":self.parseName, "debug":False, "action":"convert", "outputFormat":None}, "dependencies.xml"]
         self.allSteps["SYNTAXNET"] = [SyntaxNetParser.parseCls, {"parserName":self.parseName, "debug":False, "modelDir":None}, "dependencies.xml"]
-        # Parse import steps
-        self.allSteps["IMPORT-PARSE"] = [ParseConverter.insertCls, {"parseName":self.parseName, "debug":False}, "import-parse.xml"]        
+        # Alternative parsing steps
+        self.allSteps["IMPORT-PARSE"] = [ParseConverter.insertCls, {"parseDir":None, "debug":False}, "import-parse.xml"]        
         # Post-parsing steps
         self.allSteps["SPLIT-NAMES"] = [ProteinNameSplitter.mainFunc, {"parseName":self.parseName, "removeOld":True}, "split-names.xml"]
         self.allSteps["FIND-HEADS"] = [FindHeads.findHeads, {"parse":self.parseName, "removeExisting":True}, "heads.xml"]
@@ -201,6 +201,7 @@ if __name__=="__main__":
     #optparser.add_option("--constParser", default="BLLIP-BIO", help="BLLIP, BLLIP-BIO or STANFORD")
     #optparser.add_option("--depParser", default="STANFORD-CONVERT", help="STANFORD or STANFORD-CONVERT")
     optparser.add_option("--parseName", default="McCC")
+    optparser.add_option("--parseDir", default=None, help="Only used with IMPORT-PARSE")
     optparser.add_option("--noIntermediateFiles", default=False, action="store_true", dest="noIntermediateFiles", help="")
     optparser.add_option("--listPresets", default=False, action="store_true", dest="listPresets", help="")
     (options, args) = optparser.parse_args()
@@ -225,6 +226,8 @@ if __name__=="__main__":
             #log(False, True, os.path.join(options.output, options.corpus + "-log.txt"))
         preprocessor.setArgForAllSteps("debug", options.debug)
         preprocessor.stepArgs("CONVERT")["corpusName"] = options.corpus
+        if options.parseDir:
+            preprocessor.stepArgs("IMPORT-PARSE")["parseDir"] = options.parseDir
         if options.noIntermediateFiles:
             preprocessor.setNoIntermediateFiles()
         #preprocessor.stepArgs("PARSE")["requireEntities"] = options.requireEntities

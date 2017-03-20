@@ -75,7 +75,7 @@ class ParseConverter(Parser):
                 elif ext == "conll":
                     sentRows = self.readCoNLL(files[docMatchValue][ext])
                     sentObjs = self.processCoNLLSentences(sentRows)
-                    self.insertCoNLLSentences(sentObjs, document.findall("sentence"), counts=typeCounts[ext])
+                    self.insertElements(sentObjs, document.findall("sentence"), parseName, "LINKED", None, typeCounts[ext])
                 elif ext == "sd":
                     self.insertDependencyParses(files[docMatchValue][ext], document, skipParsed=skipParsed, addTimeStamp=False)
         for ext in extensions:
