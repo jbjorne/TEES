@@ -22,7 +22,6 @@ import Utils.Stream as Stream
 import Utils.InteractionXML.DeleteElements
 import Utils.InteractionXML.MergeSentences
 import Utils.InteractionXML.MergeSets
-import Utils.STFormat.ConvertXML
 
 def clsStep(cls, method):
     return lambda *args, **kwargs: getattr(cls(), method)(*args, **kwargs)

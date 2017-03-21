@@ -3,7 +3,6 @@ from Detector import Detector
 from Core.Model import Model
 import Utils.ElementTreeUtils as ETUtils
 import Utils.Parameters as Parameters
-import Utils.ElementTreeUtils as ETUtils
 
 NOTHING = object()
 
@@ -30,7 +29,7 @@ class ToolChain(Detector):
             if name not in self.allSteps:
                 raise Exception("Unknown preprocessor step '" + str(name) + "'")
             step = self.allSteps[name]
-            self.addStep(step["name"], step["function"], step["argDict"], step["intermediateFile"], step["ioArgNames"])
+            self.addStep(step["name"], step["function"], step["argDict"], None, step["ioArgNames"])
             #self.addStep(*([step] + self.allSteps[step][0:2] + [None]))
     
     def expandPresets(self, steps):
