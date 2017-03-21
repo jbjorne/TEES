@@ -32,6 +32,15 @@ def processCorpus(input, output, rules, reverse=False):
             document.remove(sentence)
             combinedText += sentence.get("head", "") + sentence.get("text", "") + sentence.get("tail", "")
             sentOffset = Range.charOffsetToSingleTuple(sentence.get("charOffset"))
+            for entity in sentence.findall("entity"):
+                entityOffset = Range.charOffsetToTuples(entity.get("charOffset"))
+                for i in range(len(entityOffset)):
+                    entityOffset[i][0] += sentOffset[0]
+                    entityOffset[i][1] += sentOffset[0]
+                entity.set("charOffset", Range.tuplesToCharOffset(entityOffset)
+                if entity.get("headOffset") != None:
+                    headOffset = Range.charOffsetToTuples(entity.get("headOffset"))
+            for interaction in sentence.findall("interaction")
         if document.get("text") != None and document.get("text") != combinedText:
             raise Exception("Document '" + str(document.get("id")) + "' text differs from combined sentence text: " + str([document.get("text"), combinedText])
         
