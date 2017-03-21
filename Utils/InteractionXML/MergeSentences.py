@@ -45,7 +45,7 @@ def mergeSentences(input, output):
                         # Compare a continous entity's text with the combined sentence text
                         if offsetKey == "charOffset" and len(offset) == 1:
                             if not Range.contains((0, len(combinedText)), offset[0]):
-                                raise Exception("Document '" + str(document.get("id")) + "' entity '" + str(entity.get("id")) + "' offset is not contained in combined sentence text: " + str([entity.attrib, [0, len(combinedText)], combinedText]))
+                                raise Exception("Document '" + str(document.get("id")) + "' entity '" + str(entity.get("id")) + "' offset is not contained in combined sentence text: " + str([entity.attrib, offset, [0, len(combinedText)], combinedText]))
                             combTextSpan = combinedText[offset[0][0]:offset[0][1]]
                             if entity.get("text") != combTextSpan:
                                 raise Exception("Document '" + str(document.get("id")) + "' entity '" + str(entity.get("id")) + "' text does not match combined sentence text: " + str([entity.get("text"), combTextSpan]))
@@ -59,21 +59,28 @@ def mergeSentences(input, output):
                     del entity.attrib["origOffset"]
                 assert entity.get("id") not in entityById
                 entityById[entity.get("id")] = entity # For re-mapping the interaction e1 and e2 attributes
-                entity.set("id", docId + ".e" + str(len(entities)))
+                entity.set("id", docId + ".e" + str(len(entities))) # Update the id for the document level
                 entities.append(entity)
                 counts["moved-entities"] += 1
             # Collect and update the interaction elements
             for interaction in sentence.findall("interaction"):
-                # Re-map the interaction to the updated entity ids
-                for entKey in ("e1", "e2"):
-                    interaction.set(entKey, entityById[interaction.get(entKey)].get("id"))
-                interaction.set("id", docId + ".i" + str(len(interactions)))
+                interaction.set("id", docId + ".i" + str(len(interactions))) # Update the id for the document level
                 interactions.append(interaction)
                 counts["moved-interactions"] += 1
         # Check that the combined sentence text matches the document text, if available
         if document.get("text") != None and document.get("text") != combinedText:
-            raise Exception("Document '" + str(document.get("id")) + "' text differs from combined sentence text: " + str([document.get("text"), combinedText]))
+            if combinedText == document.get("text")[0:len(combinedText)] and document.get("text")[len(combinedText):].strip() == "":
+                print >> sys.stderr, "Warning, document '" + document.get("id") + "' text has trailing whitespace not included in the combined sentence text"
+                combinedText = document.get("text") 
+            else:
+                raise Exception("Document '" + str(document.get("id")) + "' text differs from combined sentence text: " + str([document.get("text"), combinedText]))
             counts["checked-document-texts"] += 1
+        # Set the combined text as the document text
+        document.set("text", combinedText)
+        # Update interaction e1 and e2 ids (cannot be done earlier because interactions may refer to entities in multiple sentences)
+        for interaction in sentence.findall("interaction"):
+            for entKey in ("e1", "e2"):
+                interaction.set(entKey, entityById[interaction.get(entKey)].get("id"))
         # Add the entity and interaction elements to the document
         document.extend(entities)
         document.extend(interactions)
