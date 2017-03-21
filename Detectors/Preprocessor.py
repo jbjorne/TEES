@@ -119,7 +119,11 @@ class Preprocessor(ToolChain):
 #         elif self.depParser == "SYNTAXNET":
 #             steps.append( (self.depParser + "-DEP", SyntaxNetParser.parseCls, {"parserName":self.parseName, "debug":False, "modelDir":None}, "dependencies.xml") )
     
-    def process(self, source, output, parameters=None, model=None, sourceDataSetNames=None, fromStep=None, toStep=None, omitSteps=None):
+    def process(self, source, output, parameters=None, model=None, sourceDataSetNames=None, fromStep=None, toStep=None, omitSteps=None, logPath="AUTO"):
+        if logPath == "AUTO":
+            logPath = os.path.join(options.output + "-log.txt")
+        if logPath not in (None, "None"):
+            Stream.openLog(logPath)
         print >> sys.stderr, "Preprocessor steps:", [x[0] for x in self.steps]
         if omitSteps != None and((type(omitSteps) in types.StringTypes and omitSteps == "CONVERT") or "CONVERT" in omitSteps):
             raise Exception("Preprocessor step 'CONVERT' may not be omitted")
@@ -202,7 +206,7 @@ if __name__=="__main__":
     optparser.add_option("-f", "--fromStep", default=None, dest="fromStep", help="")
     optparser.add_option("-t", "--toStep", default=None, dest="toStep", help="")
     optparser.add_option("--omitSteps", default=None, dest="omitSteps", help="")
-    optparser.add_option("--noLog", default=False, action="store_true", dest="noLog", help="")
+    optparser.add_option("--logPath", default="AUTO", dest="logPath", help="AUTO, None, or a path")
     optparser.add_option("--debug", default=False, action="store_true", dest="debug", help="")
     optparser.add_option("--requireEntities", default=False, action="store_true", dest="requireEntities", help="")
     #optparser.add_option("--constParser", default="BLLIP-BIO", help="BLLIP, BLLIP-BIO or STANFORD")
@@ -228,8 +232,8 @@ if __name__=="__main__":
         #options.constParser = options.constParser if options.constParser != "None" else None
         #options.depParser = options.depParser if options.depParser != "None" else None
         
-        if not options.noLog:
-            Stream.openLog(os.path.join(options.output + "-log.txt"))
+        #if not options.noLog:
+        #    Stream.openLog(os.path.join(options.output + "-log.txt"))
             #log(False, True, os.path.join(options.output, options.corpus + "-log.txt"))
         preprocessor.setArgForAllSteps("debug", options.debug)
         preprocessor.stepArgs("CONVERT")["corpusName"] = options.corpus
@@ -238,4 +242,4 @@ if __name__=="__main__":
         if options.noIntermediateFiles:
             preprocessor.setNoIntermediateFiles()
         #preprocessor.stepArgs("PARSE")["requireEntities"] = options.requireEntities
-        preprocessor.process(options.input, options.output, options.parameters, None, options.inputNames, fromStep=options.fromStep, toStep=options.toStep, omitSteps=options.omitSteps)
+        preprocessor.process(options.input, options.output, options.parameters, None, options.inputNames, fromStep=options.fromStep, toStep=options.toStep, omitSteps=options.omitSteps, logPath=options.logPath)
