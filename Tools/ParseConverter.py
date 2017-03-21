@@ -39,7 +39,7 @@ class ParseConverter(Parser):
         if not splitting:
             return sentences
         if len(sentObjs) > 0 and len(sentences) == 0:
-            self.splitSentences(sentObjs, document, "Splitting Sentences", counts)
+            self.splitSentences(sentObjs, document, counts=counts)
         return [x for x in document.findall("sentence")]
             
     def insertParses(self, parseDir, input, output=None, parseName="McCC", extensions=None, subDirs=None, debug=False, skipParsed=False, docMatchKey="origId", conllFormat=None, splitting=True):

@@ -29,6 +29,7 @@ def mergeSentences(input, output, verbose=False):
         interactions = []
         entities = []
         entityById = {}
+        interactionById = {}
         combinedText = ""
         for sentence in children:
             document.remove(sentence)
@@ -50,11 +51,13 @@ def mergeSentences(input, output, verbose=False):
                     counts["checked-origOffsets"] += 1
                     del entity.attrib["origOffset"]
                 assert entity.get("id") not in entityById
-                entityById[entity.get("id")] = entity # For re-mapping the interaction e1 and e2 attributes
+                entityById[entity.get("id")] = entity # For re-mapping the interaction 'e1' and 'e2' attributes
                 entities.append(entity)
                 counts["moved-entities"] += 1
             # Collect and update the interaction elements
             for interaction in sentence.findall("interaction"):
+                assert interaction.get("id") not in interactionById
+                interactionById[interaction.get("id")] = interaction # For re-mapping the interaction 'siteOf' attributes
                 interactions.append(interaction)
                 counts["moved-interactions"] += 1
         # Check that the combined sentence text matches the document text, if available
@@ -79,15 +82,18 @@ def mergeSentences(input, output, verbose=False):
                 counts["checked-charOffsets"] += 1
         # Set the combined text as the document text
         document.set("text", combinedText)
-        # Update entity ids (not done earlier so that possible error messages will refer to original ids)
+        # Update entity and interaction ids (not done earlier so that possible error messages will refer to original ids, also because of siteOf-remapping)
         for i in range(len(entities)):
             entities[i].set("id", docId + ".e" + str(i)) # Update the id for the document level
+        for i in range(len(interactions)):
+            interaction.set("id", docId + ".i" + str(i)) # Update the id for the document level
         # Update interaction e1 and e2 ids (cannot be done earlier because interactions may refer to entities from multiple sentences)
         for i in range(len(interactions)):
             interaction = interactions[i]
-            interaction.set("id", docId + ".i" + str(i)) # Update the id for the document level
             for entKey in ("e1", "e2"):
                 interaction.set(entKey, entityById[interaction.get(entKey)].get("id"))
+            if interaction.get("siteOf") != None:
+                interaction.set("siteOf", interactionById[interaction.get("siteOf")].get("id"))
         # Add the entity and interaction elements to the document
         document.extend(entities)
         document.extend(interactions)

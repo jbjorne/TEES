@@ -318,24 +318,23 @@ class Parser:
         for i in range(len(tokenChars)):
             counts["tokens-total"] += 1
             if counter:
-                counter.update(1, "Processing token character + " + str(i) + " for sentence index " + str(tokenCharSentences[i]))
+                counter.update(1, "Processing token character " + str(i) + " for sentence index " + str(tokenCharSentences[i]) + ": ")
             sentenceIndex = tokenCharSentences[i]
             #token = tokens[i]
             docCharIndex = alignedOffsets[i]
             if docCharIndex != None:
                 alignedCharOffset = docCharOffsets[docCharIndex]
-                if currentSentence == None: # Start a sentence from the first aligned character
-                    currentSentence = {"begin":alignedCharOffset, "end":None, "index":tokenCharSentences[i]}
-                elif sentenceIndex != currentSentence["index"]:
-                    self.makeSentenceElement(document, (currentSentence["begin"], currentSentence["end"]), sentences)
-                    currentSentence = {"begin":alignedCharOffset, "index":tokenCharSentences[i]}
-                else:
-                    currentSentence["end"] = alignedCharOffset
+                if currentSentence == None or sentenceIndex != currentSentence["index"]: # Start a new sentence
+                    if currentSentence != None: # Make an element for the current sentence
+                        self.makeSentenceElement(document, currentSentence["offset"], sentences)
+                    currentSentence = {"offset":[alignedCharOffset, alignedCharOffset+1], "index":sentenceIndex} # Start a sentence from the first aligned character
+                else: # Extend current sentence
+                    currentSentence["offset"][1] = alignedCharOffset + 1
                 counts["tokens-aligned"] += 1
             else:
                 counts["tokens-not-aligned"] += 1
-        if currentSentence != None and alignedCharOffset > currentSentence["begin"]:
-            self.makeSentenceElement(document, (currentSentence["begin"], alignedCharOffset), sentences)
+        if currentSentence != None: # and alignedCharOffset > currentSentence["begin"]:
+            self.makeSentenceElement(document, currentSentence["offset"], sentences)
         for sentence in sentences:
             document.append(sentence)
             counts["new-sentences"] += 1
