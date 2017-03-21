@@ -13,6 +13,7 @@ class ToolChain(Detector):
         # Settings
         self.STATE_TOOLCHAIN = "PROCESS"
         self.steps = []
+        self.allSteps = {}
         #for step in self.getDefaultSteps():
         #    self.addStep(*step)
         self.intermediateFilesAtSource = False
@@ -91,20 +92,20 @@ class ToolChain(Detector):
         for s in self.steps:
             if stepName == s[0]:
                 if filename == True:
-                    filename = s[3]
+                    filename = self.allSteps[stepName][3]
                 elif filename in [False, "None", None]:
                     filename = None
                 s[3] = filename
                 return
         assert False, (stepName, filename)
     
-    def setIntermediateFiles(self, stepToFilename):
-        for key in sorted(stepToFilename.keys()):
-            self.setIntermediateFile(key, stepToFilename[key])
+#     def setIntermediateFiles(self, stepToFilename):
+#         for key in sorted(stepToFilename.keys()):
+#             self.setIntermediateFile(key, stepToFilename[key])
     
-    def setNoIntermediateFiles(self):
+    def setIntermediateFiles(self, state):
         for step in self.steps:
-            self.setIntermediateFile(step[0], None)
+            self.setIntermediateFile(step[0], state)
     
     def getIntermediateFilePath(self, step):
         if step[3] != None:

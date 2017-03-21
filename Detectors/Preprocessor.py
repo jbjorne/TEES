@@ -50,7 +50,7 @@ class Preprocessor(ToolChain):
         for step in steps:
             if step not in self.allSteps:
                 raise Exception("Unknown preprocessor step '" + str(step) + "'")
-            self.addStep(*([step] + self.allSteps[step]))
+            self.addStep(*([step] + self.allSteps[step][0:2] + [None]))
     
     def expandPresets(self, steps):
         newSteps = []
@@ -225,7 +225,7 @@ if __name__=="__main__":
     #optparser.add_option("--depParser", default="STANFORD-CONVERT", help="STANFORD or STANFORD-CONVERT")
     optparser.add_option("--parseName", default="McCC")
     optparser.add_option("--parseDir", default=None, help="Only used with IMPORT-PARSE")
-    optparser.add_option("--noIntermediateFiles", default=False, action="store_true", dest="noIntermediateFiles", help="")
+    optparser.add_option("--intermediateFiles", default=False, action="store_true", dest="intermediateFiles", help="Save an intermediate file for each step")
     optparser.add_option("--listPresets", default=False, action="store_true", dest="listPresets", help="")
     (options, args) = optparser.parse_args()
     
@@ -256,7 +256,7 @@ if __name__=="__main__":
             preprocessor.stepArgs("CONVERT")["corpusName"] = options.corpus
         if options.parseDir:
             preprocessor.stepArgs("IMPORT-PARSE")["parseDir"] = options.parseDir
-        if options.noIntermediateFiles:
-            preprocessor.setNoIntermediateFiles()
+        if options.intermediateFiles:
+            preprocessor.setIntermediateFiles(True)
         #preprocessor.stepArgs("PARSE")["requireEntities"] = options.requireEntities
         preprocessor.process(options.input, options.output, options.parameters, None, options.inputNames, fromStep=options.fromStep, toStep=options.toStep, omitSteps=options.omitSteps, logPath=options.logPath)
