@@ -47,8 +47,9 @@ class Preprocessor(ToolChain):
     
     def initSteps(self):
         self.initStepGroup("Loading")
+        self.initStep("LOAD", self.load, {"dataSetNames":None, "corpusName":None}, "load.xml")
         self.initStep("DOWNLOAD-PUBMED", self.downloadPubmed, {}, "pubmed.xml")
-        self.initStep("CONVERT", self.convert, {"dataSetNames":None, "corpusName":None}, "documents.xml")
+        self.initStep("CONVERT", self.convert, {"dataSetNames":None, "corpusName":None}, "convert.xml")
         self.initStep("MERGE-SETS", Utils.InteractionXML.MergeSets.mergeSets, {"corpusDir":None}, "merged-sets.xml")
         self.initStepGroup("Pre-parsing")
         self.initStep("REMOVE-ANALYSES", Utils.InteractionXML.DeleteElements.processCorpus, {"rules":{"analyses":{}}, "reverse":False}, "remove-analyses.xml")
@@ -136,39 +137,54 @@ class Preprocessor(ToolChain):
         #self.stepArgs("CONVERT")["corpusName"] = convertCorpusName
         return xml
     
+    ###########################################################################
+    # Loading Steps
+    ###########################################################################
+    
+    def load(self, input, dataSetNames=None, corpusName=None, output=None):
+        if isinstance(input, basestring) and input.isdigit():
+            return self.downloadPubmed(input, output)
+        elif isinstance(input, basestring) and (os.path.isdir(input) or input.endswith(".tar.gz") or input.endswith(".txt") or "," in input):
+            return self.convert(input, dataSetNames, corpusName, output)
+        else:
+            print >> sys.stderr, "Processing source as interaction XML"
+            return ETUtils.ETFromObj(input)
+        
     def downloadPubmed(self, input, output=None):
         assert isinstance(input, basestring) and input.isdigit() # PMID
         print >> sys.stderr, "Preprocessing PubMed abstract", input
-        self.source = Utils.Download.getPubMed(int(input))   
+        txtPath = Utils.Download.getPubMed(int(input))
+        documents = Utils.STFormat.STTools.loadSet(txtPath)
+        return Utils.STFormat.ConvertXML.toInteractionXML(documents, "PubMed", output)
         
     def convert(self, input, dataSetNames=None, corpusName=None, output=None):
-        if isinstance(input, basestring) and (os.path.isdir(input) or input.endswith(".tar.gz") or input.endswith(".txt") or "," in input):
-            print >> sys.stderr, "Converting ST-format to Interaction XML"
-            # Get input file (or files)
-            dataSetDirs = input
-            documents = []
-            if type(dataSetDirs) in types.StringTypes:
-                dataSetDirs = dataSetDirs.split(",")
-            # Get the list of "train", "devel" etc names for these sets
-            if dataSetNames == None: 
-                dataSetNames = []
-            elif type(dataSetNames) in types.StringTypes:
-                dataSetNames = dataSetNames.split(",")
-            # Convert all input files into one corpus
-            for dataSetDir, dataSetName in itertools.izip_longest(dataSetDirs, dataSetNames, fillvalue=None):
-                print >> sys.stderr, "Reading", dataSetDir, "set,",
-                docs = Utils.STFormat.STTools.loadSet(dataSetDir, dataSetName)
-                print >> sys.stderr, len(docs), "documents"
-                documents.extend(docs)
-            print >> sys.stderr, "Resolving equivalences"
-            Utils.STFormat.Equiv.process(documents)
-            if corpusName == None:
-                corpusName = "TEES"
-            self.xml = Utils.STFormat.ConvertXML.toInteractionXML(documents, corpusName, output)
-        else:
-            print >> sys.stderr, "Processing source as interaction XML"
-            self.xml = ETUtils.ETFromObj(input)
-        return self.xml
+        assert isinstance(input, basestring) and (os.path.isdir(input) or input.endswith(".tar.gz") or input.endswith(".txt") or "," in input)
+        print >> sys.stderr, "Converting ST-format to Interaction XML"
+        # Get input file (or files)
+        dataSetDirs = input
+        documents = []
+        if type(dataSetDirs) in types.StringTypes:
+            dataSetDirs = dataSetDirs.split(",")
+        # Get the list of "train", "devel" etc names for these sets
+        if dataSetNames == None: 
+            dataSetNames = []
+        elif type(dataSetNames) in types.StringTypes:
+            dataSetNames = dataSetNames.split(",")
+        # Convert all input files into one corpus
+        for dataSetDir, dataSetName in itertools.izip_longest(dataSetDirs, dataSetNames, fillvalue=None):
+            print >> sys.stderr, "Reading", dataSetDir, "set,",
+            docs = Utils.STFormat.STTools.loadSet(dataSetDir, dataSetName)
+            print >> sys.stderr, len(docs), "documents"
+            documents.extend(docs)
+        print >> sys.stderr, "Resolving equivalences"
+        Utils.STFormat.Equiv.process(documents)
+        if corpusName == None:
+            corpusName = "TEES"
+        return Utils.STFormat.ConvertXML.toInteractionXML(documents, corpusName, output)
+    
+    ###########################################################################
+    # Saving Steps
+    ###########################################################################
     
     def divideSets(self, input, output, saveCombined=False):
         if output != None:
