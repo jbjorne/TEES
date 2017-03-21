@@ -168,74 +168,74 @@ class BLLIPParser(Parser):
         infile.close()
         return infileName, numCorpusSentences
     
-    ###########################################################################
-    # Serialized Parses
-    ###########################################################################
-    
-    def insertParses(self, input, parsePath, output=None, parseName="McCC", tokenizationName = None, makePhraseElements=True, extraAttributes={}):
-        import tarfile
-        from SentenceSplitter import openFile
-        """
-        Divide text in the "text" attributes of document and section 
-        elements into sentence elements. These sentence elements are
-        inserted into their respective parent elements.
-        """  
-        print >> sys.stderr, "Loading corpus", input
-        corpusTree = ETUtils.ETFromObj(input)
-        print >> sys.stderr, "Corpus file loaded"
-        corpusRoot = corpusTree.getroot()
-        
-        print >> sys.stderr, "Inserting parses from", parsePath
-        assert os.path.exists(parsePath)
-        if parsePath.find(".tar.gz") != -1:
-            tarFilePath, parsePath = parsePath.split(".tar.gz")
-            tarFilePath += ".tar.gz"
-            tarFile = tarfile.open(tarFilePath)
-            if parsePath[0] == "/":
-                parsePath = parsePath[1:]
-        else:
-            tarFile = None
-        
-        docCount = 0
-        failCount = 0
-        numCorpusSentences = 0
-        sourceElements = [x for x in corpusRoot.getiterator("document")] + [x for x in corpusRoot.getiterator("section")]
-        counter = ProgressCounter(len(sourceElements), "McCC Parse Insertion")
-        for document in sourceElements:
-            docCount += 1
-            origId = document.get("pmid")
-            if origId == None:
-                origId = document.get("origId")
-            if origId == None:
-                origId = document.get("id")
-            origId = str(origId)
-            counter.update(1, "Processing Documents ("+document.get("id")+"/" + origId + "): ")
-            docId = document.get("id")
-            if docId == None:
-                docId = "CORPUS.d" + str(docCount)
-            
-            f = openFile(os.path.join(parsePath, origId + ".ptb"), tarFile)
-            if f == None: # file with BioNLP'11 extension not found, try BioNLP'09 extension
-                f = openFile(os.path.join(parsePath, origId + ".pstree"), tarFile)
-                if f == None: # no parse found
-                    continue
-            parseStrings = f.readlines()
-            f.close()
-            sentences = document.findall("sentence")
-            numCorpusSentences += len(sentences)
-            assert len(sentences) == len(parseStrings)
-            # TODO: Following for-loop is the same as when used with a real parser, and should
-            # be moved to its own function.
-            for sentence, treeLine in zip(sentences, parseStrings):
-                if not self.insertPennTree(sentence, treeLine, makePhraseElements=makePhraseElements, extraAttributes=extraAttributes, docId=origId):
-                    failCount += 1
-        
-        if tarFile != None:
-            tarFile.close()
-        if output != None:
-            print >> sys.stderr, "Writing output to", output
-            ETUtils.write(corpusRoot, output)
-        return corpusTree
+#     ###########################################################################
+#     # Serialized Parses
+#     ###########################################################################
+#     
+#     def insertParses(self, input, parsePath, output=None, parseName="McCC", tokenizationName = None, makePhraseElements=True, extraAttributes={}):
+#         import tarfile
+#         from SentenceSplitter import openFile
+#         """
+#         Divide text in the "text" attributes of document and section 
+#         elements into sentence elements. These sentence elements are
+#         inserted into their respective parent elements.
+#         """  
+#         print >> sys.stderr, "Loading corpus", input
+#         corpusTree = ETUtils.ETFromObj(input)
+#         print >> sys.stderr, "Corpus file loaded"
+#         corpusRoot = corpusTree.getroot()
+#         
+#         print >> sys.stderr, "Inserting parses from", parsePath
+#         assert os.path.exists(parsePath)
+#         if parsePath.find(".tar.gz") != -1:
+#             tarFilePath, parsePath = parsePath.split(".tar.gz")
+#             tarFilePath += ".tar.gz"
+#             tarFile = tarfile.open(tarFilePath)
+#             if parsePath[0] == "/":
+#                 parsePath = parsePath[1:]
+#         else:
+#             tarFile = None
+#         
+#         docCount = 0
+#         failCount = 0
+#         numCorpusSentences = 0
+#         sourceElements = [x for x in corpusRoot.getiterator("document")] + [x for x in corpusRoot.getiterator("section")]
+#         counter = ProgressCounter(len(sourceElements), "McCC Parse Insertion")
+#         for document in sourceElements:
+#             docCount += 1
+#             origId = document.get("pmid")
+#             if origId == None:
+#                 origId = document.get("origId")
+#             if origId == None:
+#                 origId = document.get("id")
+#             origId = str(origId)
+#             counter.update(1, "Processing Documents ("+document.get("id")+"/" + origId + "): ")
+#             docId = document.get("id")
+#             if docId == None:
+#                 docId = "CORPUS.d" + str(docCount)
+#             
+#             f = openFile(os.path.join(parsePath, origId + ".ptb"), tarFile)
+#             if f == None: # file with BioNLP'11 extension not found, try BioNLP'09 extension
+#                 f = openFile(os.path.join(parsePath, origId + ".pstree"), tarFile)
+#                 if f == None: # no parse found
+#                     continue
+#             parseStrings = f.readlines()
+#             f.close()
+#             sentences = document.findall("sentence")
+#             numCorpusSentences += len(sentences)
+#             assert len(sentences) == len(parseStrings)
+#             # TODO: Following for-loop is the same as when used with a real parser, and should
+#             # be moved to its own function.
+#             for sentence, treeLine in zip(sentences, parseStrings):
+#                 if not self.insertPennTree(sentence, treeLine, makePhraseElements=makePhraseElements, extraAttributes=extraAttributes, docId=origId):
+#                     failCount += 1
+#         
+#         if tarFile != None:
+#             tarFile.close()
+#         if output != None:
+#             print >> sys.stderr, "Writing output to", output
+#             ETUtils.write(corpusRoot, output)
+#         return corpusTree
     
 if __name__=="__main__":
     from optparse import OptionParser, OptionGroup

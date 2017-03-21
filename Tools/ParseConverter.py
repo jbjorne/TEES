@@ -34,8 +34,15 @@ class ParseConverter(Parser):
                 files[docName][ext] = filePath
                 counts[ext + "-read"] += 1
         return files
+    
+    def prepareSentences(self, document, sentences, sentObjs, splitting=False, counts=None):
+        if not splitting:
+            return sentences
+        if len(sentObjs) > 0 and len(sentences) == 0:
+            self.splitSentences(sentObjs, document, "Splitting Sentences", counts)
+        return [x for x in document.findall("sentence")]
             
-    def insertParses(self, parseDir, input, output=None, parseName="McCC", extensions=None, subDirs=None, debug=False, skipParsed=False, docMatchKey="origId", conllFormat=None):
+    def insertParses(self, parseDir, input, output=None, parseName="McCC", extensions=None, subDirs=None, debug=False, skipParsed=False, docMatchKey="origId", conllFormat=None, splitting=True):
         corpusTree, corpusRoot = self.getCorpus(input)
         if not os.path.exists(parseDir):
             raise Exception("Cannot find parse input '" + str(parseDir) + "'")
@@ -49,6 +56,7 @@ class ParseConverter(Parser):
         documents = [x for x in corpusRoot.findall("document")]
         counter = ProgressCounter(len(documents), "Parse Insertion")
         typeCounts = {x:defaultdict(int) for x in extensions}
+        typeCounts["sentence-splitting"] = defaultdict(int)
         for document in corpusRoot.findall("document"):
             counts["document"] += 1
             docMatchValue = document.get(docMatchKey)
@@ -63,10 +71,12 @@ class ParseConverter(Parser):
                 counts[ext + "-match"] += 1
                 if ext == "ptb":
                     sentObjs = self.readPennTrees(files[docMatchValue][ext])
+                    sentences = self.prepareSentences(document, sentences, sentObjs, splitting, typeCounts["sentence-splitting"])
                     counts = self.insertElements(sentObjs, sentences, parseName, counts=typeCounts[ext])
                 elif ext == "conll":
                     sentRows = self.readCoNLL(files[docMatchValue][ext], conllFormat=conllFormat)
                     sentObjs = self.processCoNLLSentences(sentRows)
+                    sentences = self.prepareSentences(document, sentences, sentObjs, splitting, typeCounts["sentence-splitting"])
                     self.insertElements(sentObjs, sentences, parseName, "LINKED", counts=typeCounts[ext])
                 elif ext == "sd":
                     sentObjs = self.readDependencies(files[docMatchValue][ext])

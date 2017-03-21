@@ -1,11 +1,13 @@
 import sys
 import codecs
 import time
+import Tools.GeniaSentenceSplitter as GeniaSentenceSplitter
 import Utils.ElementTreeUtils as ETUtils
 import Utils.InteractionXML.InteractionXMLUtils as IXMLUtils
 import Utils.Align as Align
 from Utils.ProgressCounter import ProgressCounter
 from collections import defaultdict
+import re
 try:
     import xml.etree.cElementTree as ET
 except ImportError:
@@ -246,6 +248,81 @@ class Parser:
                 self.insertDependencies(sentObj["dependencies"], sentence, parse, tokenization if tokenizerName != "LINKED" else "LINKED", counts=counts)
             if "phrases" in sentObj:
                 self.insertPhrases(sentObj["phrases"], parse, sentObj["tokens"])
+        return counts
+    
+    ###########################################################################
+    # Sentence Splitting
+    ###########################################################################
+    
+    def makeSentenceElement(self, docText, offset, prevSentence=None):
+        # Make sentence element
+        e = ET.Element("sentence")
+        e.set("text", docText[offset[0]:offset[1]])
+        e.set("charOffset", str(offset[0]) + "-" + str(offset[1]))
+        # Set tail string for previous sentence
+        if prevSentence != None:
+            prevEnd = int(prevSentence.get("charOffset").split("-")[1])
+            if offset[0] - prevEnd > 1:
+                prevSentence.set("tail", docText[prevEnd + 1:offset[0]])
+        # Set head string for first sentence in document
+        if offset[0] > 0 and prevSentence == None:
+            e.set("head", docText[0:offset[0]])
+        return e
+    
+    def splitSentences(self, sentObjs, document, counter=None, counts=None):
+        docText = document.get("text")
+        if docText.strip() == "": # Document has no text
+            return
+        if len([x for x in document if x.tag == "sentence"]) != 0:
+            raise Exception("Cannot split sentences (document already has child elements).")
+        # Collect tokens from all sentence object and mark their sentence index in them
+        tokens = []
+        for i in range(len(sentObjs)):
+            for token in sentObjs[i].get("tokens", []):
+                token["sentenceIndex"] = i
+                tokens.append(token)
+        # Split the document text into words and define their character offsets
+        docWords = re.split(r'(\s+)', docText)
+        docWordCharOffsets = []
+        pos = 0
+        for word in docWords:
+            docWordCharOffsets.append((pos, pos + len(word)))
+            pos += len(word)
+        # Align tokens agains document words
+        alignedSentence, alignedCat, diff, alignedOffsets = Align.align(docWords, [x["text"] for x in tokens])
+        if diff.count("|") + diff.count("-") != len(diff):
+            Align.printAlignment(alignedSentence, alignedCat, diff)
+        # Initialize counters
+        if counts == None:
+            counts = defaultdict(int)
+        if isinstance(counter, basestring):
+            counter = ProgressCounter(len(tokens), counter)
+        # Use the aligned tokens to generate sentence elements
+        currentSentIndex = -1
+        currentSentBegin = -1
+        sentEl = None
+        for i in range(len(tokens)):
+            if counter:
+                counter.update(1, "Processing token + " + str(i) + " for sentence index " + str(token["sentenceIndex"]))
+            token = tokens[i]
+            counts["tokens-total"] += 1
+            docWordIndex = alignedOffsets[i]
+            if docWordIndex != None:
+                tokenCharOffset = docWordCharOffsets[docWordIndex]
+                if token["sentenceIndex"] != currentSentIndex:
+                    if currentSentIndex != -1:
+                        sentEl = self.makeSentenceElement(docText, (currentSentBegin, tokenCharOffset[1]), sentEl)
+                        document.append(sentEl)
+                        counts["new-sentences"] += 1
+                    currentSentIndex = token["sentenceIndex"]
+                    currentSentBegin = tokenCharOffset[0]
+                counts["tokens-aligned"] += 1
+            else:
+                counts["tokens-not-aligned"] += 1
+        if currentSentIndex != -1:
+            document.append(self.makeSentenceElement(docText, (currentSentBegin, tokenCharOffset[1]), sentEl))
+            counts["new-sentences"] += 1
+        GeniaSentenceSplitter.moveElements(document)
         return counts
     
     ###########################################################################
