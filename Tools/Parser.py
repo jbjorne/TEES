@@ -254,20 +254,23 @@ class Parser:
     # Sentence Splitting
     ###########################################################################
     
-    def makeSentenceElement(self, docText, offset, prevSentence=None):
+    def makeSentenceElement(self, document, offset, sentences):
         # Make sentence element
+        docText = document.get("text")
         e = ET.Element("sentence")
+        e.set("id", document.get("id") + ".s" + str(len(sentences)))
         e.set("text", docText[offset[0]:offset[1]])
         e.set("charOffset", str(offset[0]) + "-" + str(offset[1]))
         # Set tail string for previous sentence
-        if prevSentence != None:
+        if len(sentences) > 0:
+            prevSentence = sentences[-1]
             prevEnd = int(prevSentence.get("charOffset").split("-")[1])
             if offset[0] - prevEnd > 1:
                 prevSentence.set("tail", docText[prevEnd + 1:offset[0]])
         # Set head string for first sentence in document
         if offset[0] > 0 and prevSentence == None:
             e.set("head", docText[0:offset[0]])
-        return e
+        sentences.append(e)
     
     def splitSentences(self, sentObjs, document, counter=None, counts=None):
         docText = document.get("text")
@@ -282,12 +285,14 @@ class Parser:
                 token["sentenceIndex"] = i
                 tokens.append(token)
         # Split the document text into words and define their character offsets
-        docWords = re.split(r'(\s+)', docText)
+        docWords = []
         docWordCharOffsets = []
         pos = 0
-        for word in docWords:
-            docWordCharOffsets.append((pos, pos + len(word)))
-            pos += len(word)
+        for span in re.split(r'(\s+)', docText):
+            if span.strip() != "":
+                docWords.append(span)
+                docWordCharOffsets.append((pos, pos + len(span)))
+            pos += len(span)
         # Align tokens agains document words
         alignedSentence, alignedCat, diff, alignedOffsets = Align.align(docWords, [x["text"] for x in tokens])
         if diff.count("|") + diff.count("-") != len(diff):
@@ -300,7 +305,7 @@ class Parser:
         # Use the aligned tokens to generate sentence elements
         currentSentIndex = -1
         currentSentBegin = -1
-        sentEl = None
+        sentences = []
         for i in range(len(tokens)):
             if counter:
                 counter.update(1, "Processing token + " + str(i) + " for sentence index " + str(token["sentenceIndex"]))
@@ -311,16 +316,16 @@ class Parser:
                 tokenCharOffset = docWordCharOffsets[docWordIndex]
                 if token["sentenceIndex"] != currentSentIndex:
                     if currentSentIndex != -1:
-                        sentEl = self.makeSentenceElement(docText, (currentSentBegin, tokenCharOffset[1]), sentEl)
-                        document.append(sentEl)
-                        counts["new-sentences"] += 1
+                        self.makeSentenceElement(document, (currentSentBegin, tokenCharOffset[1]), sentences)
                     currentSentIndex = token["sentenceIndex"]
                     currentSentBegin = tokenCharOffset[0]
                 counts["tokens-aligned"] += 1
             else:
                 counts["tokens-not-aligned"] += 1
         if currentSentIndex != -1:
-            document.append(self.makeSentenceElement(docText, (currentSentBegin, tokenCharOffset[1]), sentEl))
+            self.makeSentenceElement(document, (currentSentBegin, tokenCharOffset[1]), sentences)
+        for sentence in sentences:
+            document.append(sentence)
             counts["new-sentences"] += 1
         GeniaSentenceSplitter.moveElements(document)
         return counts
