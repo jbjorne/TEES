@@ -78,7 +78,7 @@ class Preprocessor(ToolChain):
         self.allSteps["STANFORD-CONVERT"] = [clsStep(StanfordParser, "parse"), {"parserName":self.parseName, "debug":False, "action":"convert", "outputFormat":None}, "stanford-convert-dependencies.xml"]
         self.allSteps["SYNTAXNET"] = [clsStep(SyntaxNetParser, "parse"), {"parserName":self.parseName, "debug":False, "modelDir":None}, "syntaxnet-dependencies.xml"]
         # Alternative parsing steps
-        self.allSteps["IMPORT-PARSE"] = [clsStep(ParseConverter, "insertParses"), {"parseDir":None, "debug":False, "extensions":None, "subDirs":None, "docMatchKey":"origId", "conllFormat":None}, "import-parse.xml"]
+        self.allSteps["IMPORT-PARSE"] = [clsStep(ParseConverter, "insertParses"), {"parseDir":None, "debug":False, "extensions":None, "subDirs":None, "docMatchKey":"origId", "conllFormat":None, "splitting":True}, "import-parse.xml"]
         #self.allSteps["IMPORT-PARSE"] = [clsStep(ParseConverter, ParseConverter.insertParses), {"parseDir":None, "debug":False}, "import-parse.xml"]
         #self.allSteps["IMPORT-PARSE"] = [lambda *args, **kwargs: ParseConverter().insertParses(*args, **kwargs), {"parseDir":None, "debug":False}, "import-parse.xml"]        
         # Post-parsing steps

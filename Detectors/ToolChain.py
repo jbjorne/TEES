@@ -147,6 +147,8 @@ class ToolChain(Detector):
                 stepArgs[step[4]["input"]] = self.xml # the input
                 if self.getIntermediateFilePath(step) != None: # this step should save an intermediate file
                     stepArgs[step[4]["output"]] = self.getIntermediateFilePath(step)
+                else:
+                    stepArgs[step[4]["output"]] = None
                 print >> sys.stderr, "Running step", step[0], "with arguments", stepArgs
                 step[1](**stepArgs) # call the tool
             elif self.getStepStatus(step[0]) == "BEFORE": # this step was run earlier
