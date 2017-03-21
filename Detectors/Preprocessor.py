@@ -22,6 +22,7 @@ import Utils.Stream as Stream
 import Utils.InteractionXML.DeleteElements
 import Utils.InteractionXML.MergeSentences
 import Utils.InteractionXML.MergeSets
+import Utils.STFormat.ConvertXML
 
 def clsStep(cls, method):
     return lambda *args, **kwargs: getattr(cls(), method)(*args, **kwargs)
@@ -88,8 +89,10 @@ class Preprocessor(ToolChain):
         # Post-parsing steps
         self.allSteps["SPLIT-NAMES"] = [ProteinNameSplitter.mainFunc, {"parseName":self.parseName, "removeOld":True}, "split-names.xml"]
         self.allSteps["FIND-HEADS"] = [FindHeads.findHeads, {"parse":self.parseName, "removeExisting":True}, "heads.xml"]
+        # Saving steps
         self.allSteps["DIVIDE-SETS"] = [self.divideSets, {"saveCombined":False}, None]
         self.allSteps["SAVE"] = [self.save, {}, None]
+        self.allSteps["EXPORT-STFORMAT"] = [Utils.STFormat.ConvertXML.toSTFormat, {"outputTag":"a2", "useOrigIds":False, "debug":False, "skipArgs":[], "validate":True, "writeExtra":False, "allAsRelations":False}, None]
     
     def initPresets(self):
         self.presets = {}
