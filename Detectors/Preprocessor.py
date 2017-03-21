@@ -125,6 +125,8 @@ class Preprocessor(ToolChain):
         if logPath not in (None, "None"):
             Stream.openLog(logPath)
         print >> sys.stderr, "Preprocessor steps:", [x[0] for x in self.steps]
+        if len(self.steps) == 0:
+            raise Exception("No preprocessing steps defined")
         if omitSteps != None and((type(omitSteps) in types.StringTypes and omitSteps == "CONVERT") or "CONVERT" in omitSteps):
             raise Exception("Preprocessor step 'CONVERT' may not be omitted")
         if isinstance(source, basestring) and os.path.basename(source).isdigit(): # PMID
@@ -217,17 +219,21 @@ if __name__=="__main__":
     optparser.add_option("--listPresets", default=False, action="store_true", dest="listPresets", help="")
     (options, args) = optparser.parse_args()
     
-    if options.steps == None and not options.listPresets:
-        raise Exception("No preprocessing steps defined")
+    #if options.steps == None and not options.listPresets:
+    #    raise Exception("No preprocessing steps defined")
     if options.steps != None:
         options.steps = [x.strip() for x in options.steps.split(",")]
     if options.omitSteps != None:
         options.omitSteps = options.omitSteps.split(",")
         
     preprocessor = Preprocessor(options.steps, options.parseName, options.requireEntities)
-    if options.listPresets:
-        for preset in sorted(preprocessor.presets.keys()):
-            print >> sys.stderr, preset + ": " + ",".join(preprocessor.presets[preset])
+    if options.steps == None:
+        print >> sys.stderr, "==========", "Available preprocessor steps", "=========="
+        for name in sorted(preprocessor.allSteps.keys()):
+            print >> sys.stderr, name + ": " + str(preprocessor.allSteps[name][1])
+        print >> sys.stderr, "==========", "Available preprocessor presets", "=========="  
+        for name in sorted(preprocessor.presets.keys()):
+            print >> sys.stderr, name + ": " + ",".join(preprocessor.presets[name])
     else:
         #options.constParser = options.constParser if options.constParser != "None" else None
         #options.depParser = options.depParser if options.depParser != "None" else None
