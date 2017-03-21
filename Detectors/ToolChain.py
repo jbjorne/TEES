@@ -113,7 +113,7 @@ class ToolChain(Detector):
                     else: # is a directory
                         rv = os.path.join(firstSource, step[3])
                 else:
-                    rv = filename
+                    rv = None #filename
             else:
                 rv = os.path.join(self.outDir, self.intermediateFileTag + "-" + step[3])
             if self.compressIntermediateFiles and not rv.endswith(".gz"):
