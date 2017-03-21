@@ -134,7 +134,8 @@ class Parser:
                 else:
                     #element.set("match", "exact")
                     counts["tokens-exact-match"] += 1
-                for key in ("POS", "feats"):
+                element.set("POS", token.get("POS"))
+                for key in ("feats", ): # Additional token data
                     if key in token:
                         element.set(key, token[key])
                 element.set("charOffset", str(offset[0]) + "-" + str(offset[1]))
@@ -575,10 +576,13 @@ class Parser:
             dependencies = []
             wordById = {}
             for word in sentence:
+                # Use the first available, non-underscore tag from the list as the token's POS tag
                 pos = "_"
                 for key in ("CPOSTAG", "POSTAG", "UPOSTAG", "XPOSTAG"):
-                    if key in word and word[key] != "_":
+                    if word.get(key, "_") != "_":
                         pos = word[key]
+                        break
+                # Define the token
                 token = {"text":self.unescape(word["FORM"]), "POS":pos, "index":word["ID"], "feats":word["FEATS"]}
                 token = {key:token[key] for key in token if token[key] != "_"}
                 wordById[int(token["index"]) - 1] = token
