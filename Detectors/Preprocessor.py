@@ -85,6 +85,7 @@ class Preprocessor(ToolChain):
         self.allSteps["SPLIT-NAMES"] = [ProteinNameSplitter.mainFunc, {"parseName":self.parseName, "removeOld":True}, "split-names.xml"]
         self.allSteps["FIND-HEADS"] = [FindHeads.findHeads, {"parse":self.parseName, "removeExisting":True}, "heads.xml"]
         self.allSteps["DIVIDE-SETS"] = [self.divideSets, {"saveCombined":False}, "dummy.xml"]
+        self.allSteps["SAVE"] = [self.save, {}, "dummy.xml"]
     
     def initPresets(self):
         self.presets = {}

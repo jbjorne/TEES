@@ -145,7 +145,9 @@ class ToolChain(Detector):
                     savedIntermediate = None
                 stepArgs = copy.copy(step[2]) # make a copy of the arguments to which i/o can be added
                 stepArgs[step[4]["input"]] = self.xml # the input
-                if self.getIntermediateFilePath(step) != None: # this step should save an intermediate file
+                if step == self.steps[-1]: # The final step in the tool chain should save the final output
+                    stepArgs[step[4]["output"]] = output
+                elif self.getIntermediateFilePath(step) != None: # This step can save an intermediate file
                     stepArgs[step[4]["output"]] = self.getIntermediateFilePath(step)
                 else:
                     stepArgs[step[4]["output"]] = None
@@ -157,8 +159,13 @@ class ToolChain(Detector):
         xml = self.xml # state-specific member variable self.xml will be removed when exiting state
         self.exitState()
         if self.state == None: # if the whole toolchain has finished, return the final product
-            if not os.path.isdir(output): # if output is a directory, it was given only for storing intermediate files ...
-                ETUtils.write(xml, output) # ... otherwise, save the final output
+            #if not os.path.isdir(output): # if output is a directory, it was given only for storing intermediate files ...
+            #    ETUtils.write(xml, output) # ... otherwise, save the final output
             return xml
         else:
             return None
+    
+    def save(self, input, output=None):
+        self.xml = ETUtils.ETFromObj(input)
+        print >> sys.stderr, "Writing output to", output
+        ETUtils.write(input, output)
