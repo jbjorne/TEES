@@ -20,6 +20,7 @@ import Utils.FindHeads as FindHeads
 #from Test.Pipeline import log
 import Utils.Stream as Stream
 import Utils.InteractionXML.DeleteElements
+import Utils.InteractionXML.MergeSentences
 
 def clsStep(cls, method):
     return lambda *args, **kwargs: getattr(cls(), method)(*args, **kwargs)
@@ -65,17 +66,17 @@ class Preprocessor(ToolChain):
         # Pre-parsing steps
         self.allSteps["CONVERT"] = [self.convert, {"dataSetNames":None, "corpusName":None}, "documents.xml"]
         self.allSteps["REMOVE-ANALYSES"] = [Utils.InteractionXML.DeleteElements.processCorpus, {"rules":{"analyses":{}}, "reverse":False}, "remove-analyses.xml"]
-        #self.allSteps["REMOVE-SENTENCES"] = [Tools.GeniaSentenceSplitter.makeSentences, {"debug":False, "postProcess":True}, "sentences.xml"]
-        self.allSteps["GENIA-SPLITTER"] = [Tools.GeniaSentenceSplitter.makeSentences, {"debug":False, "postProcess":True}, "sentences.xml"]
-        self.allSteps["BANNER"] = [Tools.BANNER.run, {"elementName":"entity", "processElement":"sentence", "debug":False, "splitNewlines":True}, "ner.xml"]
+        self.allSteps["MERGE-SENTENCES"] = [Utils.InteractionXML.MergeSentences.mergeSentences, {}, "merge-sentences.xml"]
+        self.allSteps["GENIA-SPLITTER"] = [Tools.GeniaSentenceSplitter.makeSentences, {"debug":False, "postProcess":True}, "split-sentences.xml"]
+        self.allSteps["BANNER"] = [Tools.BANNER.run, {"elementName":"entity", "processElement":"sentence", "debug":False, "splitNewlines":True}, "banner.xml"]
         # Constituency parsing steps
-        self.allSteps["BLLIP-BIO"] = [clsStep(BLLIPParser, "parse"), {"parseName":self.parseName, "requireEntities":self.requireEntities, "debug":False, "pathBioModel":"AUTO"}, "parse.xml"]
-        self.allSteps["BLLIP"] = [clsStep(BLLIPParser, "parse"), {"parseName":self.parseName, "requireEntities":self.requireEntities, "debug":False, "pathBioModel":None}, "parse.xml"]
-        self.allSteps["STANFORD-CONST"] = [clsStep(StanfordParser, "parse"), {"parserName":self.parseName, "debug":False, "action":"penn"}, "parse.xml"]
+        self.allSteps["BLLIP-BIO"] = [clsStep(BLLIPParser, "parse"), {"parseName":self.parseName, "requireEntities":self.requireEntities, "debug":False, "pathBioModel":"AUTO"}, "bllip-bio-parse.xml"]
+        self.allSteps["BLLIP"] = [clsStep(BLLIPParser, "parse"), {"parseName":self.parseName, "requireEntities":self.requireEntities, "debug":False, "pathBioModel":None}, "bllip-parse.xml"]
+        self.allSteps["STANFORD-CONST"] = [clsStep(StanfordParser, "parse"), {"parserName":self.parseName, "debug":False, "action":"penn"}, "stanford-const-parse.xml"]
         # Dependency parsing steps
-        self.allSteps["STANFORD-DEP"] = [clsStep(StanfordParser, "parse"), {"parserName":self.parseName, "debug":False, "action":"dep", "outputFormat":None}, "dependencies.xml"]
-        self.allSteps["STANFORD-CONVERT"] = [clsStep(StanfordParser, "parse"), {"parserName":self.parseName, "debug":False, "action":"convert", "outputFormat":None}, "dependencies.xml"]
-        self.allSteps["SYNTAXNET"] = [clsStep(SyntaxNetParser, "parse"), {"parserName":self.parseName, "debug":False, "modelDir":None}, "dependencies.xml"]
+        self.allSteps["STANFORD-DEP"] = [clsStep(StanfordParser, "parse"), {"parserName":self.parseName, "debug":False, "action":"dep", "outputFormat":None}, "stanford-dependencies.xml"]
+        self.allSteps["STANFORD-CONVERT"] = [clsStep(StanfordParser, "parse"), {"parserName":self.parseName, "debug":False, "action":"convert", "outputFormat":None}, "stanford-convert-dependencies.xml"]
+        self.allSteps["SYNTAXNET"] = [clsStep(SyntaxNetParser, "parse"), {"parserName":self.parseName, "debug":False, "modelDir":None}, "syntaxnet-dependencies.xml"]
         # Alternative parsing steps
         self.allSteps["IMPORT-PARSE"] = [clsStep(ParseConverter, "insertParses"), {"parseDir":None, "debug":False, "extensions":None, "subDirs":None, "docMatchKey":"origId", "conllFormat":None}, "import-parse.xml"]
         #self.allSteps["IMPORT-PARSE"] = [clsStep(ParseConverter, ParseConverter.insertParses), {"parseDir":None, "debug":False}, "import-parse.xml"]

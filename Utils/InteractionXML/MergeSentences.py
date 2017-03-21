@@ -1,14 +1,12 @@
-import sys, os, copy
+import sys, os
 thisPath = os.path.dirname(os.path.abspath(__file__))
-sys.path.append(os.path.abspath(os.path.join(thisPath,"..")))
 sys.path.append(os.path.abspath(os.path.join(thisPath,"../..")))
 import Utils.ElementTreeUtils as ETUtils
 import Utils.Range as Range
 from collections import defaultdict
-import types
 
-def processCorpus(input, output, rules, reverse=False):
-    print >> sys.stderr, "Merging sentences into documents", rules
+def mergeSentences(input, output):
+    print >> sys.stderr, "Merging sentences into documents"
     print >> sys.stderr, "Loading corpus file", input
     corpusTree = ETUtils.ETFromObj(input)
     corpusRoot = corpusTree.getroot()
@@ -25,32 +23,39 @@ def processCorpus(input, output, rules, reverse=False):
             assert docChildTypes[0] == "sentence"
         else:
             raise Exception("Document '" + str(document.get("id")) + "' has non-sentence children: " + str(docChildTypes))
+        docId = document.get("id")
         interactions = []
         entities = []
+        entityById = {}
         combinedText = ""
         for sentence in children:
             document.remove(sentence)
             combinedText += sentence.get("head", "") + sentence.get("text", "") + sentence.get("tail", "")
             sentOffset = Range.charOffsetToSingleTuple(sentence.get("charOffset"))
             for entity in sentence.findall("entity"):
-                entityOffset = Range.charOffsetToTuples(entity.get("charOffset"))
-                for i in range(len(entityOffset)):
-                    entityOffset[i][0] += sentOffset[0]
-                    entityOffset[i][1] += sentOffset[0]
-                entity.set("charOffset", Range.tuplesToCharOffset(entityOffset)
-                if entity.get("headOffset") != None:
-                    headOffset = Range.charOffsetToTuples(entity.get("headOffset"))
-            for interaction in sentence.findall("interaction")
+                for offsetKey in ("charOffset", "headOffset"):
+                    if entity.get(offsetKey) != None:
+                        offset = Range.charOffsetToTuples(entity.get(offsetKey))
+                        for i in range(len(offset)):
+                            offset[i][0] += sentOffset[0]
+                            offset[i][1] += sentOffset[0]
+                        entity.set(offsetKey, Range.tuplesToCharOffset(offset))
+                assert entity.get("id") not in entityById
+                entityById[entity.get("id")] = entity
+                entity.set("id", docId + ".e" + str(len(entities)))
+                entities.append(entity)
+                counts["moved-entities"] += 1
+            for interaction in sentence.findall("interaction"):
+                for entKey in ("e1", "e2"):
+                    interaction.set(entKey, entityById[interaction.get(entKey)].get("id"))
+                interaction.set("id", docId + ".i" + str(len(interactions)))
+                interactions.append(interaction)
+                counts["moved-interactions"] += 1
         if document.get("text") != None and document.get("text") != combinedText:
-            raise Exception("Document '" + str(document.get("id")) + "' text differs from combined sentence text: " + str([document.get("text"), combinedText])
-        
-    
-    countsByType = defaultdict(int)
-    removeElements(corpusRoot, rules, reverse, countsByType)
-    
-    print >> sys.stderr, "Deleted elements"
-    for k in sorted(countsByType.keys()):
-        print >> sys.stderr, "  " + k + ":", countsByType[k]
+            raise Exception("Document '" + str(document.get("id")) + "' text differs from combined sentence text: " + str([document.get("text"), combinedText]))
+        document.extend(entities)
+        document.extend(interactions)
+    print >> sys.stderr, "Counts:", dict(counts)
     
     if output != None:
         print >> sys.stderr, "Writing output to", output
