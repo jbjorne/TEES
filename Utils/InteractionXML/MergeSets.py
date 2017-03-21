@@ -10,18 +10,24 @@ except ImportError:
 import Utils.ElementTreeUtils as ETUtils
 import re
 
-def mergeSets(pattern, inputDir, outPath):
+def mergeSets(input, corpusDir=None, output=None, allowNone=False):
     counts = defaultdict(int)
-    pattern = re.compile(pattern)
-    matched = sorted([x for x in os.listdir(inputDir) if pattern.match(x)])
-    print "Merging input files", matched
+    if corpusDir == None:
+        corpusDir = os.path.normpath(Settings.DATAPATH + "/corpora")
+    print >> sys.stderr, "Searching for corpus files at " + corpusDir + " using pattern " + input
+    pattern = re.compile(input)
+    matched = sorted([x for x in os.listdir(corpusDir) if pattern.match(x)])
+    print >> sys.stderr, "Merging input files", matched
     if len(matched) == 0:
-        print "Nothing to merge"
-        return
+        if allowNone:
+            print >> sys.stderr, "Nothing to merge"
+            return
+        else:
+            raise Exception("No input files found for merging")
     newRoot = None
     for filename in matched:
-        filePath = os.path.join(inputDir, filename)
-        print "Merging file", filePath
+        filePath = os.path.join(corpusDir, filename)
+        print >> sys.stderr, "Merging file", filePath
         xml = ETUtils.ETFromObj(filePath).getroot()
         if newRoot == None:
             newRoot = ET.Element("corpus", xml.attrib)
@@ -33,17 +39,18 @@ def mergeSets(pattern, inputDir, outPath):
             counts["set(" + filename + ")=" + doc.get("set")] += 1
         for element in xml:
             newRoot.append(element)
-    print dict(counts)
-    if outPath != None:
-        print "Writing merged corpus to", outPath
-        ETUtils.write(newRoot, outPath)
+    print >> sys.stderr, dict(counts)
+    if output != None:
+        print "Writing merged corpus to", output
+        ETUtils.write(newRoot, output)
+    return ET.ElementTree(newRoot)
         
 if __name__=="__main__":
     from optparse import OptionParser
     optparser = OptionParser(usage="%prog [options]\n")
     optparser.add_option("-p", "--pattern", default=None, help="Datasets to process")
-    optparser.add_option("-i", "--inDir", default=os.path.normpath(Settings.DATAPATH + "/corpora"), help="directory for output files")
+    optparser.add_option("-i", "--inDir", default=None, help="directory for input files")
     optparser.add_option("-o", "--outPath", default=None, help="directory for output files")
     (options, args) = optparser.parse_args()
     
-    mergeSets(options.pattern, options.inDir, options.outPath)
+    mergeSets(options.pattern, options.inDir, options.outPath, allowNone=True)

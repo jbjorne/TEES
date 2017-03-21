@@ -64,6 +64,9 @@ class ToolChain(Detector):
                 else:
                     self.setIntermediateFile(step[0], None)
     
+    def hasStep(self, name):
+        return name in self.steps
+    
     def addStep(self, name, function, argDict, intermediateFile=None, ioArgNames={"input":"input", "output":"output"}):
         assert name not in [x[0] for x in self.steps], (name, self.steps)
         self.steps.append([name, function, argDict, intermediateFile, ioArgNames])
@@ -82,7 +85,7 @@ class ToolChain(Detector):
         for s in self.steps:
             if step == s[0]:
                 return s[2]
-        assert False
+        raise Exception("Step '" + str(step) + "' is not defined")
         
     def setIntermediateFile(self, stepName, filename):
         for s in self.steps:
@@ -122,8 +125,9 @@ class ToolChain(Detector):
         else:
             return None
     
-    def process(self, input, output, parameters=None, model=None, fromStep=None, toStep=None, omitSteps=None):
-        self.initVariables(source=input, xml=input, outDir=os.path.dirname(output))
+    def process(self, source, output, parameters=None, model=None, fromStep=None, toStep=None, omitSteps=None):
+        #self.initVariables(source=input, xml=input, outDir=os.path.dirname(output))
+        self.initVariables(outDir=os.path.dirname(output))
         if os.path.basename(output) != "":
             self.intermediateFileTag = os.path.basename(output)
         else:
@@ -141,10 +145,10 @@ class ToolChain(Detector):
             if self.checkStep(step[0]):
                 if savedIntermediate != None: # A previous run of the program saved an intermediate file
                     print >> sys.stderr, "Reading input from saved intermediate file", savedIntermediate
-                    self.xml = ETUtils.ETFromObj(savedIntermediate)
+                    source = ETUtils.ETFromObj(savedIntermediate)
                     savedIntermediate = None
                 stepArgs = copy.copy(step[2]) # make a copy of the arguments to which i/o can be added
-                stepArgs[step[4]["input"]] = self.xml # the input
+                stepArgs[step[4]["input"]] = source # the input
                 if step == self.steps[-1]: # The final step in the tool chain should save the final output
                     stepArgs[step[4]["output"]] = output
                 elif self.getIntermediateFilePath(step) != None: # This step can save an intermediate file
@@ -152,20 +156,21 @@ class ToolChain(Detector):
                 else:
                     stepArgs[step[4]["output"]] = None
                 print >> sys.stderr, "Running step", step[0], "with arguments", stepArgs
-                step[1](**stepArgs) # call the tool
+                source = step[1](**stepArgs) # call the tool
             elif self.getStepStatus(step[0]) == "BEFORE": # this step was run earlier
                 savedIntermediate = self.getIntermediateFilePath(step)
         # End state and return
-        xml = self.xml # state-specific member variable self.xml will be removed when exiting state
+        #xml = self.xml # state-specific member variable self.xml will be removed when exiting state
         self.exitState()
         if self.state == None: # if the whole toolchain has finished, return the final product
             #if not os.path.isdir(output): # if output is a directory, it was given only for storing intermediate files ...
             #    ETUtils.write(xml, output) # ... otherwise, save the final output
-            return xml
+            return source
         else:
             return None
     
     def save(self, input, output=None):
-        self.xml = ETUtils.ETFromObj(input)
+        xml = ETUtils.ETFromObj(input)
         print >> sys.stderr, "Writing output to", output
         ETUtils.write(input, output)
+        return xml

@@ -21,6 +21,7 @@ import Utils.FindHeads as FindHeads
 import Utils.Stream as Stream
 import Utils.InteractionXML.DeleteElements
 import Utils.InteractionXML.MergeSentences
+import Utils.InteractionXML.MergeSets
 
 def clsStep(cls, method):
     return lambda *args, **kwargs: getattr(cls(), method)(*args, **kwargs)
@@ -63,8 +64,11 @@ class Preprocessor(ToolChain):
     
     def initSteps(self):
         self.allSteps = {}
-        # Pre-parsing steps
+        # Loading steps
+        self.allSteps["DOWNLOAD-PUBMED"] = [self.downloadPubmed, {}, "pubmed.xml"]
         self.allSteps["CONVERT"] = [self.convert, {"dataSetNames":None, "corpusName":None}, "documents.xml"]
+        self.allSteps["MERGE-SETS"] = [Utils.InteractionXML.MergeSets.mergeSets, {"corpusDir":None}, "merged-sets.xml"]
+        # Pre-parsing steps
         self.allSteps["REMOVE-ANALYSES"] = [Utils.InteractionXML.DeleteElements.processCorpus, {"rules":{"analyses":{}}, "reverse":False}, "remove-analyses.xml"]
         self.allSteps["MERGE-SENTENCES"] = [Utils.InteractionXML.MergeSentences.mergeSentences, {}, "merge-sentences.xml"]
         self.allSteps["GENIA-SPLITTER"] = [Tools.GeniaSentenceSplitter.makeSentences, {"debug":False, "postProcess":True}, "split-sentences.xml"]
@@ -128,11 +132,11 @@ class Preprocessor(ToolChain):
         print >> sys.stderr, "Preprocessor steps:", [x[0] for x in self.steps]
         if len(self.steps) == 0:
             raise Exception("No preprocessing steps defined")
-        if omitSteps != None and((type(omitSteps) in types.StringTypes and omitSteps == "CONVERT") or "CONVERT" in omitSteps):
-            raise Exception("Preprocessor step 'CONVERT' may not be omitted")
-        if isinstance(source, basestring) and os.path.basename(source).isdigit(): # PMID
-            print >> sys.stderr, "Preprocessing PubMed abstract", os.path.basename(source)
-            source = Utils.Download.getPubMed(int(source))   
+        #if omitSteps != None and((type(omitSteps) in types.StringTypes and omitSteps == "CONVERT") or "CONVERT" in omitSteps):
+        #    raise Exception("Preprocessor step 'CONVERT' may not be omitted")
+        #if isinstance(source, basestring) and os.path.basename(source).isdigit(): # PMID
+        #    print >> sys.stderr, "Preprocessing PubMed abstract", os.path.basename(source)
+        #    source = Utils.Download.getPubMed(int(source))   
         # Initialize variables and save existing default values
         #self.intermediateFileTag = corpusName
         #parameters = self.getParameters(parameters, model)
@@ -148,6 +152,11 @@ class Preprocessor(ToolChain):
         #self.stepArgs("CONVERT")["dataSetNames"] = convertSetNames
         #self.stepArgs("CONVERT")["corpusName"] = convertCorpusName
         return xml
+    
+    def downloadPubmed(self, input, output=None):
+        assert isinstance(input, basestring) and input.isdigit() # PMID
+        print >> sys.stderr, "Preprocessing PubMed abstract", input
+        self.source = Utils.Download.getPubMed(int(input))   
         
     def convert(self, input, dataSetNames=None, corpusName=None, output=None):
         if isinstance(input, basestring) and (os.path.isdir(input) or input.endswith(".tar.gz") or input.endswith(".txt") or "," in input):
@@ -243,7 +252,8 @@ if __name__=="__main__":
         #    Stream.openLog(os.path.join(options.output + "-log.txt"))
             #log(False, True, os.path.join(options.output, options.corpus + "-log.txt"))
         preprocessor.setArgForAllSteps("debug", options.debug)
-        preprocessor.stepArgs("CONVERT")["corpusName"] = options.corpus
+        if preprocessor.hasStep("CONVERT"):
+            preprocessor.stepArgs("CONVERT")["corpusName"] = options.corpus
         if options.parseDir:
             preprocessor.stepArgs("IMPORT-PARSE")["parseDir"] = options.parseDir
         if options.noIntermediateFiles:
