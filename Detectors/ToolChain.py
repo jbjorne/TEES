@@ -14,6 +14,9 @@ class ToolChain(Detector):
         self.STATE_TOOLCHAIN = "PROCESS"
         self.steps = []
         self.allSteps = {}
+        self.allStepsList = []
+        self.groups = []
+        self.presets = {}
         #for step in self.getDefaultSteps():
         #    self.addStep(*step)
         self.intermediateFilesAtSource = False
@@ -21,6 +24,33 @@ class ToolChain(Detector):
         self.intermediateFileTag = "temp"
         self.modelParameterStringName = None
     
+    def defineSteps(self, steps):
+        steps = self.expandPresets(steps)
+        for name in steps:
+            if name not in self.allSteps:
+                raise Exception("Unknown preprocessor step '" + str(name) + "'")
+            step = self.allSteps[name]
+            self.addStep(step["name"], step["function"], step["argDict"], step["intermediateFile"], step["ioArgNames"])
+            #self.addStep(*([step] + self.allSteps[step][0:2] + [None]))
+    
+    def expandPresets(self, steps):
+        newSteps = []
+        for step in steps:
+            if step.startswith("PRESET-"):
+                assert step in self.presets
+                newSteps.extend(self.presets[step])
+            else:
+                newSteps.append(step)
+        return newSteps
+    
+    def initStepGroup(self, name):
+        self.groups.append(name)
+    
+    def initStep(self, name, function, argDict, intermediateFile=None, ioArgNames={"input":"input", "output":"output"}):
+        assert name not in self.allSteps
+        self.allSteps[name] = {"name":name, "function":function, "argDict":argDict, "intermediateFile":intermediateFile, "ioArgNames":ioArgNames, "group":len(self.groups) - 1}
+        self.allStepsList.append(self.allSteps[name])
+        
     #def getDefaultSteps(self):
     #    return []
     
@@ -92,7 +122,7 @@ class ToolChain(Detector):
         for s in self.steps:
             if stepName == s[0]:
                 if filename == True:
-                    filename = self.allSteps[stepName][3]
+                    filename = self.allSteps[stepName]["intermediateFile"]
                 elif filename in [False, "None", None]:
                     filename = None
                 s[3] = filename

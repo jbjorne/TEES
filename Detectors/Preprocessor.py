@@ -46,56 +46,37 @@ class Preprocessor(ToolChain):
         if steps != None:
             self.defineSteps(steps)
     
-    def defineSteps(self, steps):
-        steps = self.expandPresets(steps)
-        for step in steps:
-            if step not in self.allSteps:
-                raise Exception("Unknown preprocessor step '" + str(step) + "'")
-            self.addStep(*([step] + self.allSteps[step][0:2] + [None]))
-    
-    def expandPresets(self, steps):
-        newSteps = []
-        for step in steps:
-            if step.startswith("PRESET-"):
-                assert step in self.presets
-                newSteps.extend(self.presets[step])
-            else:
-                newSteps.append(step)
-        return newSteps
-    
     def initSteps(self):
-        self.allSteps = {}
-        # Loading steps
-        self.allSteps["DOWNLOAD-PUBMED"] = [self.downloadPubmed, {}, "pubmed.xml"]
-        self.allSteps["CONVERT"] = [self.convert, {"dataSetNames":None, "corpusName":None}, "documents.xml"]
-        self.allSteps["MERGE-SETS"] = [Utils.InteractionXML.MergeSets.mergeSets, {"corpusDir":None}, "merged-sets.xml"]
-        # Pre-parsing steps
-        self.allSteps["REMOVE-ANALYSES"] = [Utils.InteractionXML.DeleteElements.processCorpus, {"rules":{"analyses":{}}, "reverse":False}, "remove-analyses.xml"]
-        self.allSteps["MERGE-SENTENCES"] = [Utils.InteractionXML.MergeSentences.mergeSentences, {}, "merge-sentences.xml"]
-        self.allSteps["GENIA-SPLITTER"] = [Tools.GeniaSentenceSplitter.makeSentences, {"debug":False, "postProcess":True}, "split-sentences.xml"]
-        self.allSteps["BANNER"] = [Tools.BANNER.run, {"elementName":"entity", "processElement":"sentence", "debug":False, "splitNewlines":True}, "banner.xml"]
-        # Constituency parsing steps
-        self.allSteps["BLLIP-BIO"] = [clsStep(BLLIPParser, "parse"), {"parseName":self.parseName, "requireEntities":self.requireEntities, "debug":False, "pathBioModel":"AUTO"}, "bllip-bio-parse.xml"]
-        self.allSteps["BLLIP"] = [clsStep(BLLIPParser, "parse"), {"parseName":self.parseName, "requireEntities":self.requireEntities, "debug":False, "pathBioModel":None}, "bllip-parse.xml"]
-        self.allSteps["STANFORD-CONST"] = [clsStep(StanfordParser, "parse"), {"parserName":self.parseName, "debug":False, "action":"penn"}, "stanford-const-parse.xml"]
-        # Dependency parsing steps
-        self.allSteps["STANFORD-DEP"] = [clsStep(StanfordParser, "parse"), {"parserName":self.parseName, "debug":False, "action":"dep", "outputFormat":None}, "stanford-dependencies.xml"]
-        self.allSteps["STANFORD-CONVERT"] = [clsStep(StanfordParser, "parse"), {"parserName":self.parseName, "debug":False, "action":"convert", "outputFormat":None}, "stanford-convert-dependencies.xml"]
-        self.allSteps["SYNTAXNET"] = [clsStep(SyntaxNetParser, "parse"), {"parserName":self.parseName, "debug":False, "modelDir":None}, "syntaxnet-dependencies.xml"]
-        # Alternative parsing steps
-        self.allSteps["IMPORT-PARSE"] = [clsStep(ParseConverter, "insertParses"), {"parseDir":None, "debug":False, "extensions":None, "subDirs":None, "docMatchKey":"origId", "conllFormat":None, "splitting":True}, "import-parse.xml"]
-        #self.allSteps["IMPORT-PARSE"] = [clsStep(ParseConverter, ParseConverter.insertParses), {"parseDir":None, "debug":False}, "import-parse.xml"]
-        #self.allSteps["IMPORT-PARSE"] = [lambda *args, **kwargs: ParseConverter().insertParses(*args, **kwargs), {"parseDir":None, "debug":False}, "import-parse.xml"]        
-        # Post-parsing steps
-        self.allSteps["SPLIT-NAMES"] = [ProteinNameSplitter.mainFunc, {"parseName":self.parseName, "removeOld":True}, "split-names.xml"]
-        self.allSteps["FIND-HEADS"] = [FindHeads.findHeads, {"parse":self.parseName, "removeExisting":True}, "heads.xml"]
-        # Saving steps
-        self.allSteps["DIVIDE-SETS"] = [self.divideSets, {"saveCombined":False}, None]
-        self.allSteps["SAVE"] = [self.save, {}, None]
-        self.allSteps["EXPORT-STFORMAT"] = [Utils.STFormat.ConvertXML.toSTFormat, {"outputTag":"a2", "useOrigIds":False, "debug":False, "skipArgs":[], "validate":True, "writeExtra":False, "allAsRelations":False}, None]
+        self.initStepGroup("Loading")
+        self.initStep("DOWNLOAD-PUBMED", self.downloadPubmed, {}, "pubmed.xml")
+        self.initStep("CONVERT", self.convert, {"dataSetNames":None, "corpusName":None}, "documents.xml")
+        self.initStep("MERGE-SETS", Utils.InteractionXML.MergeSets.mergeSets, {"corpusDir":None}, "merged-sets.xml")
+        self.initStepGroup("Pre-parsing")
+        self.initStep("REMOVE-ANALYSES", Utils.InteractionXML.DeleteElements.processCorpus, {"rules":{"analyses":{}}, "reverse":False}, "remove-analyses.xml")
+        self.initStep("MERGE-SENTENCES", Utils.InteractionXML.MergeSentences.mergeSentences, {}, "merge-sentences.xml")
+        self.initStep("GENIA-SPLITTER", Tools.GeniaSentenceSplitter.makeSentences, {"debug":False, "postProcess":True}, "split-sentences.xml")
+        self.initStep("BANNER", Tools.BANNER.run, {"elementName":"entity", "processElement":"sentence", "debug":False, "splitNewlines":True}, "banner.xml")
+        self.initStepGroup("Constituency Parsing")
+        self.initStep("BLLIP-BIO", clsStep(BLLIPParser, "parse"), {"parseName":self.parseName, "requireEntities":self.requireEntities, "debug":False, "pathBioModel":"AUTO"}, "bllip-bio-parse.xml")
+        self.initStep("BLLIP", clsStep(BLLIPParser, "parse"), {"parseName":self.parseName, "requireEntities":self.requireEntities, "debug":False, "pathBioModel":None}, "bllip-parse.xml")
+        self.initStep("STANFORD-CONST", clsStep(StanfordParser, "parse"), {"parserName":self.parseName, "debug":False, "action":"penn"}, "stanford-const-parse.xml")
+        self.initStepGroup("Dependency Parsing")
+        self.initStep("STANFORD-DEP", clsStep(StanfordParser, "parse"), {"parserName":self.parseName, "debug":False, "action":"dep", "outputFormat":None}, "stanford-dependencies.xml")
+        self.initStep("STANFORD-CONVERT", clsStep(StanfordParser, "parse"), {"parserName":self.parseName, "debug":False, "action":"convert", "outputFormat":None}, "stanford-convert-dependencies.xml")
+        self.initStep("SYNTAXNET", clsStep(SyntaxNetParser, "parse"), {"parserName":self.parseName, "debug":False, "modelDir":None}, "syntaxnet-dependencies.xml")
+        self.initStepGroup("Alternative Parsing")
+        self.initStep("IMPORT-PARSE", clsStep(ParseConverter, "insertParses"), {"parseDir":None, "debug":False, "extensions":None, "subDirs":None, "docMatchKey":"origId", "conllFormat":None, "splitting":True}, "import-parse.xml")
+        #self.allSteps["IMPORT-PARSE", clsStep(ParseConverter, ParseConverter.insertParses), {"parseDir":None, "debug":False}, "import-parse.xml"]
+        #self.allSteps["IMPORT-PARSE", lambda *args, **kwargs: ParseConverter().insertParses(*args, **kwargs), {"parseDir":None, "debug":False}, "import-parse.xml"]        
+        self.initStepGroup("Post-parsing")
+        self.initStep("SPLIT-NAMES", ProteinNameSplitter.mainFunc, {"parseName":self.parseName, "removeOld":True}, "split-names.xml")
+        self.initStep("FIND-HEADS", FindHeads.findHeads, {"parse":self.parseName, "removeExisting":True}, "heads.xml")
+        self.initStepGroup("Saving")
+        self.initStep("DIVIDE-SETS", self.divideSets, {"saveCombined":False}, None)
+        self.initStep("SAVE", self.save, {}, None)
+        self.initStep("EXPORT-STFORMAT", Utils.STFormat.ConvertXML.toSTFormat, {"outputTag":"a2", "useOrigIds":False, "debug":False, "skipArgs":[], "validate":True, "writeExtra":False, "allAsRelations":False}, None)
     
     def initPresets(self):
-        self.presets = {}
         self.presets["PRESET-PREPROCESS-BIO"] = ["CONVERT", "GENIA-SPLITTER", "BANNER", "BLLIP-BIO", "STANFORD-CONVERT", "SPLIT-NAMES", "FIND-HEADS", "DIVIDE-SETS"]
         self.presets["PRESET-PARSE-BIO"] = ["CONVERT", "GENIA-SPLITTER", "BLLIP-BIO", "STANFORD-CONVERT", "SPLIT-NAMES", "FIND-HEADS", "DIVIDE-SETS"]
         self.presets["PRESET-INSERT-PARSE"] = ["CONVERT", "REMOVE-ANALYSES", "IMPORT-PARSE", "DIVIDE-SETS"]
@@ -242,8 +223,13 @@ if __name__=="__main__":
     preprocessor = Preprocessor(options.steps, options.parseName, options.requireEntities)
     if options.steps == None:
         print >> sys.stderr, "==========", "Available preprocessor steps", "=========="
-        for name in sorted(preprocessor.allSteps.keys()):
-            print >> sys.stderr, name + ": " + str(preprocessor.allSteps[name][1])
+        groupIndex = -1
+        for step in preprocessor.allStepsList:
+            if step["group"] != groupIndex:
+                groupIndex = step["group"]
+                #print >> sys.stderr, "*", preprocessor.groups[groupIndex], "*"
+                print >> sys.stderr, "[" + preprocessor.groups[groupIndex] + "]"
+            print >> sys.stderr, " ", step["name"] + ": " + str(step["argDict"])
         print >> sys.stderr, "==========", "Available preprocessor presets", "=========="  
         for name in sorted(preprocessor.presets.keys()):
             print >> sys.stderr, name + ": " + ",".join(preprocessor.presets[name])
