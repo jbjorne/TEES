@@ -91,6 +91,7 @@ class Parser:
         weights = None #{"match":1, "mismatch":-2, "space":-3, "open":-3, "extend":-3}
         alignedSentence, alignedCat, diff, alignedOffsets = Align.align([x.get("text") for x in elements], [x["text"] for x in tokens], weights=weights)
         if diff.count("|") + diff.count("-") != len(diff):
+            print >> sys.stderr, "Partial alignment with existing tokenization"
             Align.printAlignment(alignedSentence, alignedCat, diff)
         for i in range(len(tokens)):
             counts[tag + "tokens-total"] += 1
@@ -110,6 +111,7 @@ class Parser:
         sentenceText = sentence.get("text")
         alignedSentence, alignedCat, diff, alignedOffsets = Align.align(sentenceText, tokensText)
         if diff.count("|") + diff.count("-") != len(diff):
+            print >> sys.stderr, "Partial alignment when inserting tokens into sentence", sentence.get("id"), [sentenceText, tokensText]
             Align.printAlignment(alignedSentence, alignedCat, diff)
         pos = 0
         tokenIndex = 0
@@ -255,6 +257,7 @@ class Parser:
     ###########################################################################
     
     def makeSentenceElement(self, document, offset, sentences):
+        assert offset[1] > offset[0]
         # Make sentence element
         docText = document.get("text")
         e = ET.Element("sentence")
@@ -279,51 +282,59 @@ class Parser:
         if len([x for x in document if x.tag == "sentence"]) != 0:
             raise Exception("Cannot split sentences (document already has child elements).")
         # Collect tokens from all sentence object and mark their sentence index in them
-        tokens = []
+        #tokens = []
+        tokenChars = ""
+        tokenCharSentences = []
         for i in range(len(sentObjs)):
             for token in sentObjs[i].get("tokens", []):
-                token["sentenceIndex"] = i
-                tokens.append(token)
+                #token["sentenceIndex"] = i
+                #tokens.append(token)
+                tokenText = token["text"]
+                tokenCharSentences.extend([i] * len(tokenText))
+                tokenChars += tokenText
         # Split the document text into words and define their character offsets
-        docWords = []
-        docWordCharOffsets = []
-        pos = 0
-        for span in re.split(r'(\s+)', docText):
-            if span.strip() != "":
-                docWords.append(span)
-                docWordCharOffsets.append((pos, pos + len(span)))
-            pos += len(span)
+        docChars = ""
+        docCharOffsets = []
+        for i in range(len(docText)): #re.split(r'(\s+)', docText):
+            if not docText[i].isspace(): #if span.strip() != "":
+                docChars += docText[i]
+                docCharOffsets.append(i) #((i, i + 1))
         # Align tokens agains document words
-        alignedSentence, alignedCat, diff, alignedOffsets = Align.align(docWords, [x["text"] for x in tokens])
+        #print [docChars, tokenChars]
+        alignedSentence, alignedCat, diff, alignedOffsets = Align.align(docChars, tokenChars)
         if diff.count("|") + diff.count("-") != len(diff):
+            print >> sys.stderr, "Partial alignment in sentence splitting for document", document.get("id")
             Align.printAlignment(alignedSentence, alignedCat, diff)
         # Initialize counters
         if counts == None:
             counts = defaultdict(int)
         if isinstance(counter, basestring):
-            counter = ProgressCounter(len(tokens), counter)
+            counter = ProgressCounter(len(tokenChars), counter)
         # Use the aligned tokens to generate sentence elements
-        currentSentIndex = -1
+        currentSentIndex = 0
         currentSentBegin = -1
         sentences = []
-        for i in range(len(tokens)):
+        for i in range(len(tokenChars)):
             if counter:
-                counter.update(1, "Processing token + " + str(i) + " for sentence index " + str(token["sentenceIndex"]))
-            token = tokens[i]
+                counter.update(1, "Processing token character + " + str(i) + " for sentence index " + str(tokenCharSentences[i]))
+            #token = tokens[i]
             counts["tokens-total"] += 1
-            docWordIndex = alignedOffsets[i]
-            if docWordIndex != None:
-                tokenCharOffset = docWordCharOffsets[docWordIndex]
-                if token["sentenceIndex"] != currentSentIndex:
-                    if currentSentIndex != -1:
-                        self.makeSentenceElement(document, (currentSentBegin, tokenCharOffset[1]), sentences)
-                    currentSentIndex = token["sentenceIndex"]
-                    currentSentBegin = tokenCharOffset[0]
+            docCharIndex = alignedOffsets[i]
+            if docCharIndex != None:
+                alignedCharOffset = docCharOffsets[docCharIndex]
+                if tokenCharSentences[i] != currentSentIndex:
+                    if currentSentBegin != -1:
+                        self.makeSentenceElement(document, (currentSentBegin, alignedCharOffset), sentences)
+                        currentSentBegin = -1
+                    currentSentBegin = alignedCharOffset
+                elif currentSentBegin == -1: # Start a sentence from the first aligned character
+                    currentSentBegin = alignedCharOffset
+                currentSentIndex = tokenCharSentences[i]
                 counts["tokens-aligned"] += 1
             else:
                 counts["tokens-not-aligned"] += 1
-        if currentSentIndex != -1:
-            self.makeSentenceElement(document, (currentSentBegin, tokenCharOffset[1]), sentences)
+        if currentSentBegin != -1 and alignedCharOffset > currentSentBegin:
+            self.makeSentenceElement(document, (currentSentBegin, alignedCharOffset), sentences)
         for sentence in sentences:
             document.append(sentence)
             counts["new-sentences"] += 1

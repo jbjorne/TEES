@@ -125,8 +125,8 @@ def getAlignment(stringA, stringB, matrix, traversal):
     return alignedA, alignedB, diff, offsets
 
 def align(stringA, stringB, weights=None):
-    #if stringA == stringB:
-    #    return stringA, stringB, len(stringA) * "|", range(len(stringA))
+    if stringA == stringB:
+        return stringA, stringB, len(stringA) * ["|"], range(len(stringA))
     matrix = buildScoringMatrix(stringA, stringB, weights)
     traversal = getTraversal(matrix)
     return getAlignment(stringA, stringB, matrix, traversal)
