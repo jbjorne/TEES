@@ -73,7 +73,7 @@ class ParseConverter(Parser):
                     sentObjs = self.readPennTrees(files[docMatchValue][ext])
                     sentences = self.prepareSentences(document, sentences, sentObjs, splitting, typeCounts["sentence-splitting"])
                     counts = self.insertElements(sentObjs, sentences, parseName, counts=typeCounts[ext])
-                elif ext == "conll":
+                elif ext in ("conll", "conllx", "conllu"):
                     sentRows = self.readCoNLL(files[docMatchValue][ext], conllFormat=conllFormat)
                     sentObjs = self.processCoNLLSentences(sentRows)
                     sentences = self.prepareSentences(document, sentences, sentObjs, splitting, typeCounts["sentence-splitting"])
