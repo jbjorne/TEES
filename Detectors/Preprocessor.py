@@ -24,6 +24,7 @@ import Utils.InteractionXML.DeleteAttributes
 import Utils.InteractionXML.MergeSentences
 import Utils.InteractionXML.MergeSets
 import Utils.InteractionXML.ExportParse
+import Utils.Settings as Settings
 
 def clsStep(cls, method):
     return lambda *args, **kwargs: getattr(cls(), method)(*args, **kwargs)
@@ -54,7 +55,7 @@ class Preprocessor(ToolChain):
         self.initStep("CONVERT", self.convert, {"dataSetNames":None, "corpusName":None}, "convert.xml")
         self.initStep("MERGE-SETS", Utils.InteractionXML.MergeSets.mergeSets, {"corpusDir":None}, "merged-sets.xml")
         self.initStepGroup("Pre-parsing")
-        self.initStep("REMOVE-HEADS", Utils.InteractionXML.DeleteAttributes.processCorpus, {"rules":{"analyses":{}}, "reverse":False}, "remove-analyses.xml")
+        self.initStep("REMOVE-HEADS", Utils.InteractionXML.DeleteAttributes.processCorpus, {"rules":{"entity":["headOffset"]}}, "remove-heads.xml")
         self.initStep("REMOVE-ANALYSES", Utils.InteractionXML.DeleteElements.processCorpus, {"rules":{"analyses":{}}, "reverse":False}, "remove-analyses.xml")
         self.initStep("MERGE-SENTENCES", Utils.InteractionXML.MergeSentences.mergeSentences, {}, "merge-sentences.xml")
         self.initStep("GENIA-SPLITTER", Tools.GeniaSentenceSplitter.makeSentences, {"debug":False, "postProcess":True}, "split-sentences.xml")
@@ -164,6 +165,13 @@ class Preprocessor(ToolChain):
             return self.downloadPubmed(input, output)
         elif isinstance(input, basestring) and (os.path.isdir(input) or input.endswith(".tar.gz") or input.endswith(".txt") or "," in input):
             return self.convert(input, dataSetNames, corpusName, output)
+        elif isinstance(input, basestring) and not os.path.exists(input):
+            fullPath = os.path.join(Settings.CORPUS_DIR, input)
+            print >> sys.stderr, "Loading installed corpus from", fullPath
+            if os.path.exists(fullPath):
+                return ETUtils.ETFromObj(fullPath)
+            else:
+                raise Exception("Cannot find input '" + str(input) + "'")
         else:
             print >> sys.stderr, "Processing source as interaction XML"
             return ETUtils.ETFromObj(input)
