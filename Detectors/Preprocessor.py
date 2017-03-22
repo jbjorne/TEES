@@ -81,6 +81,20 @@ class Preprocessor(ToolChain):
         self.presets["PRESET-PARSE-BIO"] = ["CONVERT", "GENIA-SPLITTER", "BLLIP-BIO", "STANFORD-CONVERT", "SPLIT-NAMES", "FIND-HEADS", "DIVIDE-SETS"]
         self.presets["PRESET-INSERT-PARSE"] = ["CONVERT", "REMOVE-ANALYSES", "IMPORT-PARSE", "DIVIDE-SETS"]
     
+    def getHelpString(self):
+        s = "==========" + " Available preprocessor steps " + "==========" + "\n"
+        groupIndex = -1
+        for step in self.allStepsList:
+            if step["group"] != groupIndex:
+                groupIndex = step["group"]
+                #print >> sys.stderr, "*", preprocessor.groups[groupIndex], "*"
+                s += "[" + self.groups[groupIndex] + "]"
+            s += " " + step["name"] + ": " + str(step["argDict"])
+        s += "==========" + "Available preprocessor presets" + "==========" + "\n"
+        for name in sorted(self.presets.keys()):
+            s += name + ": " + ",".join(self.presets[name])
+        return s
+    
 #     def getDefaultSteps(self):
 #         steps = []
 #         steps.append( ("CONVERT", self.convert, {"dataSetNames":None, "corpusName":None}, "documents.xml") )
@@ -110,7 +124,7 @@ class Preprocessor(ToolChain):
     
     def process(self, source, output, parameters=None, model=None, fromStep=None, toStep=None, omitSteps=None, logPath="AUTO"):
         if logPath == "AUTO":
-            logPath = os.path.join(options.output + "-log.txt")
+            logPath = os.path.join(output + "-log.txt")
         if logPath not in (None, "None"):
             Stream.openLog(logPath)
         print >> sys.stderr, "Preprocessor steps:", [x[0] for x in self.steps]
@@ -198,73 +212,73 @@ class Preprocessor(ToolChain):
         else:
             print >> sys.stderr, "No set division"
 
-if __name__=="__main__":
-    # Import Psyco if available
-    try:
-        import psyco
-        psyco.full()
-        print >> sys.stderr, "Found Psyco, using"
-    except ImportError:
-        print >> sys.stderr, "Psyco not installed"
-    from optparse import OptionParser, OptionGroup
-    optparser = OptionParser(description="A tool chain for making interaction XML, sentence splitting, NER and parsing")
-    optparser.add_option("-i", "--input", default=None, dest="input", help="The input argument for the first step")
-    optparser.add_option("-o", "--output", default=None, dest="output", help="The output argument for the last step")
-    optparser.add_option("-p", "--parameters", default=None, dest="parameters", help="Step parameters, a comma-separated list of 'STEP.parameter=value' definitions")
-    optparser.add_option("-s", "--steps", default=None, dest="steps", help="A comma separated list of steps or presets")
-    shortcuts = OptionGroup(optparser, "Preprocessing step parameter shortcuts", "")
-    shortcuts.add_option("-n", "--dataSetNames", default=None, dest="dataSetNames", help="CONVERT step dataset names")
-    shortcuts.add_option("-c", "--corpus", default=None, dest="corpus", help="CONVERT step XML corpus element name")
-    shortcuts.add_option("--requireEntities", default=False, action="store_true", dest="requireEntities", help="Default setting for parsing steps")
-    #optparser.add_option("--constParser", default="BLLIP-BIO", help="BLLIP, BLLIP-BIO or STANFORD")
-    #optparser.add_option("--depParser", default="STANFORD-CONVERT", help="STANFORD or STANFORD-CONVERT")
-    shortcuts.add_option("--parseName", default="McCC", help="Default setting for parsing steps")
-    shortcuts.add_option("--parseDir", default=None, help="IMPORT-PARSE step parse files directory")
-    optparser.add_option_group(shortcuts)
-    debug = OptionGroup(optparser, "Debug and Process Control Options", "")
-    debug.add_option("-f", "--fromStep", default=None, dest="fromStep", help="Continue from this step")
-    debug.add_option("-t", "--toStep", default=None, dest="toStep", help="Stop at after this step")
-    debug.add_option("--omitSteps", default=None, dest="omitSteps", help="Skip these steps")
-    debug.add_option("--logPath", default="AUTO", dest="logPath", help="AUTO, None, or a path")
-    debug.add_option("--intermediateFiles", default=False, action="store_true", dest="intermediateFiles", help="Save an intermediate file for each step")
-    debug.add_option("--debug", default=False, action="store_true", dest="debug", help="Set debug mode for all steps")
-    optparser.add_option_group(debug)
-    (options, args) = optparser.parse_args()
-    
-    #if options.steps == None and not options.listPresets:
-    #    raise Exception("No preprocessing steps defined")
-    if options.steps != None:
-        options.steps = [x.strip() for x in options.steps.split(",")]
-    if options.omitSteps != None:
-        options.omitSteps = options.omitSteps.split(",")
-        
-    preprocessor = Preprocessor(options.steps, options.parseName, options.requireEntities)
-    if options.steps == None:
-        print >> sys.stderr, "==========", "Available preprocessor steps", "=========="
-        groupIndex = -1
-        for step in preprocessor.allStepsList:
-            if step["group"] != groupIndex:
-                groupIndex = step["group"]
-                #print >> sys.stderr, "*", preprocessor.groups[groupIndex], "*"
-                print >> sys.stderr, "[" + preprocessor.groups[groupIndex] + "]"
-            print >> sys.stderr, " ", step["name"] + ": " + str(step["argDict"])
-        print >> sys.stderr, "==========", "Available preprocessor presets", "=========="  
-        for name in sorted(preprocessor.presets.keys()):
-            print >> sys.stderr, name + ": " + ",".join(preprocessor.presets[name])
-    else:
-        #options.constParser = options.constParser if options.constParser != "None" else None
-        #options.depParser = options.depParser if options.depParser != "None" else None
-        
-        #if not options.noLog:
-        #    Stream.openLog(os.path.join(options.output + "-log.txt"))
-            #log(False, True, os.path.join(options.output, options.corpus + "-log.txt"))
-        preprocessor.setArgForAllSteps("debug", options.debug)
-        if preprocessor.hasStep("CONVERT"):
-            preprocessor.stepArgs("CONVERT")["corpusName"] = options.corpus
-            preprocessor.stepArgs("CONVERT")["dataSetNames"] = options.dataSetNames
-        if options.parseDir:
-            preprocessor.stepArgs("IMPORT-PARSE")["parseDir"] = options.parseDir
-        if options.intermediateFiles:
-            preprocessor.setIntermediateFiles(True)
-        #preprocessor.stepArgs("PARSE")["requireEntities"] = options.requireEntities
-        preprocessor.process(options.input, options.output, options.parameters, model=None, fromStep=options.fromStep, toStep=options.toStep, omitSteps=options.omitSteps, logPath=options.logPath)
+# if __name__=="__main__":
+#     # Import Psyco if available
+#     try:
+#         import psyco
+#         psyco.full()
+#         print >> sys.stderr, "Found Psyco, using"
+#     except ImportError:
+#         print >> sys.stderr, "Psyco not installed"
+#     from optparse import OptionParser, OptionGroup
+#     optparser = OptionParser(description="A tool chain for making interaction XML, sentence splitting, NER and parsing")
+#     optparser.add_option("-i", "--input", default=None, dest="input", help="The input argument for the first step")
+#     optparser.add_option("-o", "--output", default=None, dest="output", help="The output argument for the last step")
+#     optparser.add_option("-p", "--parameters", default=None, dest="parameters", help="Step parameters, a comma-separated list of 'STEP.parameter=value' definitions")
+#     optparser.add_option("-s", "--steps", default=None, dest="steps", help="A comma separated list of steps or presets")
+#     shortcuts = OptionGroup(optparser, "Preprocessing step parameter shortcuts", "")
+#     shortcuts.add_option("-n", "--dataSetNames", default=None, dest="dataSetNames", help="CONVERT step dataset names")
+#     shortcuts.add_option("-c", "--corpus", default=None, dest="corpus", help="CONVERT step XML corpus element name")
+#     shortcuts.add_option("--requireEntities", default=False, action="store_true", dest="requireEntities", help="Default setting for parsing steps")
+#     #optparser.add_option("--constParser", default="BLLIP-BIO", help="BLLIP, BLLIP-BIO or STANFORD")
+#     #optparser.add_option("--depParser", default="STANFORD-CONVERT", help="STANFORD or STANFORD-CONVERT")
+#     shortcuts.add_option("--parseName", default="McCC", help="Default setting for parsing steps")
+#     shortcuts.add_option("--parseDir", default=None, help="IMPORT-PARSE step parse files directory")
+#     optparser.add_option_group(shortcuts)
+#     debug = OptionGroup(optparser, "Debug and Process Control Options", "")
+#     debug.add_option("-f", "--fromStep", default=None, dest="fromStep", help="Continue from this step")
+#     debug.add_option("-t", "--toStep", default=None, dest="toStep", help="Stop at after this step")
+#     debug.add_option("--omitSteps", default=None, dest="omitSteps", help="Skip these steps")
+#     debug.add_option("--logPath", default="AUTO", dest="logPath", help="AUTO, None, or a path")
+#     debug.add_option("--intermediateFiles", default=False, action="store_true", dest="intermediateFiles", help="Save an intermediate file for each step")
+#     debug.add_option("--debug", default=False, action="store_true", dest="debug", help="Set debug mode for all steps")
+#     optparser.add_option_group(debug)
+#     (options, args) = optparser.parse_args()
+#     
+#     #if options.steps == None and not options.listPresets:
+#     #    raise Exception("No preprocessing steps defined")
+#     if options.steps != None:
+#         options.steps = [x.strip() for x in options.steps.split(",")]
+#     if options.omitSteps != None:
+#         options.omitSteps = options.omitSteps.split(",")
+#         
+#     preprocessor = Preprocessor(options.steps, options.parseName, options.requireEntities)
+#     if options.steps == None:
+#         print >> sys.stderr, "==========", "Available preprocessor steps", "=========="
+#         groupIndex = -1
+#         for step in preprocessor.allStepsList:
+#             if step["group"] != groupIndex:
+#                 groupIndex = step["group"]
+#                 #print >> sys.stderr, "*", preprocessor.groups[groupIndex], "*"
+#                 print >> sys.stderr, "[" + preprocessor.groups[groupIndex] + "]"
+#             print >> sys.stderr, " ", step["name"] + ": " + str(step["argDict"])
+#         print >> sys.stderr, "==========", "Available preprocessor presets", "=========="  
+#         for name in sorted(preprocessor.presets.keys()):
+#             print >> sys.stderr, name + ": " + ",".join(preprocessor.presets[name])
+#     else:
+#         #options.constParser = options.constParser if options.constParser != "None" else None
+#         #options.depParser = options.depParser if options.depParser != "None" else None
+#         
+#         #if not options.noLog:
+#         #    Stream.openLog(os.path.join(options.output + "-log.txt"))
+#             #log(False, True, os.path.join(options.output, options.corpus + "-log.txt"))
+#         preprocessor.setArgForAllSteps("debug", options.debug)
+#         if preprocessor.hasStep("CONVERT"):
+#             preprocessor.stepArgs("CONVERT")["corpusName"] = options.corpus
+#             preprocessor.stepArgs("CONVERT")["dataSetNames"] = options.dataSetNames
+#         if options.parseDir:
+#             preprocessor.stepArgs("IMPORT-PARSE")["parseDir"] = options.parseDir
+#         if options.intermediateFiles:
+#             preprocessor.setIntermediateFiles(True)
+#         #preprocessor.stepArgs("PARSE")["requireEntities"] = options.requireEntities
+#         preprocessor.process(options.input, options.output, options.parameters, model=None, fromStep=options.fromStep, toStep=options.toStep, omitSteps=options.omitSteps, logPath=options.logPath)
