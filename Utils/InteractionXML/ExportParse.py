@@ -1,7 +1,9 @@
 import sys, os, shutil, codecs
-sys.path.append(os.path.dirname(os.path.abspath(__file__))+"/../..")
+thisPath = os.path.dirname(os.path.abspath(__file__))
+sys.path.append(os.path.abspath(os.path.join(thisPath,"..")))
+sys.path.append(os.path.abspath(os.path.join(thisPath,"../..")))
 from Utils.ProgressCounter import ProgressCounter
-from Tools.BLLIPParser import escDict
+from Tools.Parser import Parser
 try:
     import xml.etree.cElementTree as ET
 except ImportError:
@@ -9,8 +11,9 @@ except ImportError:
 import Utils.ElementTreeUtils as ETUtils
 from collections import defaultdict
 
+parser = Parser()
 unEscDict = {}
-for k, v in escDict.iteritems():
+for k, v in parser.escDict.iteritems():
     unEscDict[v] = k
 
 def getTokenText(tokenElement):
@@ -102,6 +105,8 @@ def exportStanfordDependencies(parseElement, tokenizationElement, outFile, token
 
 def export(input, output, parse, tokenization=None, toExport=["tok", "ptb", "sd"], inputSuffixes=None, clear=False, tokenIdOffset=0):
     print >> sys.stderr, "##### Export Parse #####"
+    if toExport == None:
+        toExport = ["tok", "ptb", "sd", "sentences"]
     
     if os.path.exists(output) and clear:
         shutil.rmtree(output)
@@ -151,6 +156,9 @@ def export(input, output, parse, tokenization=None, toExport=["tok", "ptb", "sd"
                         tokenizationElement = e
                         counts["tokenization"] += 1
                         break
+                if "sentences" in outfiles:
+                    outfiles["sentences"].write(sentence.get("text").strip().replace("\n", " ").replace("\r", " ") + "\n")
+                    counts["sentences"] += 1
                 if "tok" in outfiles:
                     if exportTokenization(tokenizationElement, parseElement, sentence, outfiles["tok"]):
                         counts["tok"] += 1

@@ -20,8 +20,10 @@ import Utils.FindHeads as FindHeads
 #from Test.Pipeline import log
 import Utils.Stream as Stream
 import Utils.InteractionXML.DeleteElements
+import Utils.InteractionXML.DeleteAttributes
 import Utils.InteractionXML.MergeSentences
 import Utils.InteractionXML.MergeSets
+import Utils.InteractionXML.ExportParse
 
 def clsStep(cls, method):
     return lambda *args, **kwargs: getattr(cls(), method)(*args, **kwargs)
@@ -52,6 +54,7 @@ class Preprocessor(ToolChain):
         self.initStep("CONVERT", self.convert, {"dataSetNames":None, "corpusName":None}, "convert.xml")
         self.initStep("MERGE-SETS", Utils.InteractionXML.MergeSets.mergeSets, {"corpusDir":None}, "merged-sets.xml")
         self.initStepGroup("Pre-parsing")
+        self.initStep("REMOVE-HEADS", Utils.InteractionXML.DeleteAttributes.processCorpus, {"rules":{"analyses":{}}, "reverse":False}, "remove-analyses.xml")
         self.initStep("REMOVE-ANALYSES", Utils.InteractionXML.DeleteElements.processCorpus, {"rules":{"analyses":{}}, "reverse":False}, "remove-analyses.xml")
         self.initStep("MERGE-SENTENCES", Utils.InteractionXML.MergeSentences.mergeSentences, {}, "merge-sentences.xml")
         self.initStep("GENIA-SPLITTER", Tools.GeniaSentenceSplitter.makeSentences, {"debug":False, "postProcess":True}, "split-sentences.xml")
@@ -74,6 +77,7 @@ class Preprocessor(ToolChain):
         self.initStepGroup("Saving")
         self.initStep("DIVIDE-SETS", self.divideSets, {"saveCombined":False}, None)
         self.initStep("SAVE", self.save, {}, None)
+        self.initStep("EXPORT", self.export, {"formats":None}, None)
         self.initStep("EXPORT-STFORMAT", Utils.STFormat.ConvertXML.toSTFormat, {"outputTag":"a2", "useOrigIds":False, "debug":False, "skipArgs":[], "validate":True, "writeExtra":False, "allAsRelations":False}, None)
     
     def initPresets(self):
@@ -88,11 +92,11 @@ class Preprocessor(ToolChain):
             if step["group"] != groupIndex:
                 groupIndex = step["group"]
                 #print >> sys.stderr, "*", preprocessor.groups[groupIndex], "*"
-                s += "[" + self.groups[groupIndex] + "]"
-            s += " " + step["name"] + ": " + str(step["argDict"])
+                s += "[" + self.groups[groupIndex] + "]" + "\n"
+            s += " " + step["name"] + ": " + str(step["argDict"]) + "\n"
         s += "==========" + "Available preprocessor presets" + "==========" + "\n"
         for name in sorted(self.presets.keys()):
-            s += name + ": " + ",".join(self.presets[name])
+            s += name + ": " + ",".join(self.presets[name]) + "\n"
         return s
     
 #     def getDefaultSteps(self):
@@ -200,6 +204,15 @@ class Preprocessor(ToolChain):
     # Saving Steps
     ###########################################################################
     
+    def export(self, input, output, formats=None):
+        exportedParses = False
+        if formats == None or set(formats).intersection(set(["tok", "sentences", "ptb", "sd", "conll"])):
+            Utils.InteractionXML.ExportParse.export(input, output, "McCC", "McCC", formats, clear=True)
+            exportedParses = True
+        if formats == None or set(formats).intersection(set(["txt", "a1", "a2", "rel"])):
+            Utils.STFormat.ConvertXML.toSTFormat(input, output, files=formats, clear=not exportedParses)
+        return input
+    
     def divideSets(self, input, output, saveCombined=False):
         if output != None:
             print >> sys.stderr, "Dividing into sets"
@@ -211,6 +224,7 @@ class Preprocessor(ToolChain):
             Utils.InteractionXML.DivideSets.processCorpus(input, outDir, outputStem, ".xml", saveCombined=saveCombined)
         else:
             print >> sys.stderr, "No set division"
+        return input
 
 # if __name__=="__main__":
 #     # Import Psyco if available

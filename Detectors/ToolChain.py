@@ -95,7 +95,7 @@ class ToolChain(Detector):
                     self.setIntermediateFile(step[0], None)
     
     def hasStep(self, name):
-        return name in self.steps
+        return name in [x[0] for x in self.steps]
     
     def addStep(self, name, function, argDict, intermediateFile=None, ioArgNames={"input":"input", "output":"output"}):
         assert name not in [x[0] for x in self.steps], (name, self.steps)

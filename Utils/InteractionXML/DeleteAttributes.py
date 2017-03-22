@@ -1,7 +1,6 @@
-import sys, os, copy
+import sys, os
 extraPath = os.path.dirname(os.path.abspath(__file__))+"/../.."
 sys.path.append(extraPath)
-from Utils.ProgressCounter import ProgressCounter
 try:
     import xml.etree.cElementTree as ET
 except ImportError:
@@ -17,13 +16,10 @@ def removeAttributes(parent, elementName, attributes, countsByType):
                     countsByType[elementName + ":" + attribute] += 1
         removeAttributes(element, elementName, attributes, countsByType)
 
-def processCorpus(inputFilename, outputFilename, rules):
-    print >> sys.stderr, "Loading corpus file", inputFilename
-    if inputFilename.rsplit(".",1)[-1] == "gz":
-        import gzip
-        corpusTree = ET.parse(gzip.open(inputFilename))
-    else:
-        corpusTree = ET.parse(inputFilename)
+def processCorpus(input, output, rules):
+    print >> sys.stderr, "Deleting attributes, rules =", rules
+    print >> sys.stderr, "Loading corpus file", input
+    corpusTree = ETUtils.ETFromObj(input)
     corpusRoot = corpusTree.getroot()
     
     countsByType = {}
@@ -36,9 +32,9 @@ def processCorpus(inputFilename, outputFilename, rules):
     for k in sorted(countsByType.keys()):
         print >> sys.stderr, "  " + k + ":", countsByType[k]
     
-    if outputFilename != None:
-        print >> sys.stderr, "Writing output to", outputFilename
-        ETUtils.write(corpusRoot, outputFilename)
+    if output != None:
+        print >> sys.stderr, "Writing output to", output
+        ETUtils.write(corpusRoot, output)
     return corpusTree
 
 if __name__=="__main__":

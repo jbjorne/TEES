@@ -508,7 +508,7 @@ def mapSTArgumentTargets(stDoc, siteParents, siteOfTypes, tMap, eMap):
                     argsToKeep.append(arg1)
             event.arguments = argsToKeep            
 
-def toSTFormat(input, output=None, outputTag="a2", useOrigIds=False, debug=False, skipArgs=[], validate=True, writeExtra=False, allAsRelations=False):
+def toSTFormat(input, output=None, outputTag="a2", useOrigIds=False, debug=False, skipArgs=[], validate=True, writeExtra=False, allAsRelations=False, files=None, clear=True):
     print >> sys.stderr, "Loading corpus", input
     corpusTree = ETUtils.ETFromObj(input)
     print >> sys.stderr, "Corpus file loaded"
@@ -531,7 +531,7 @@ def toSTFormat(input, output=None, outputTag="a2", useOrigIds=False, debug=False
     
     if output != None:
         print >> sys.stderr, "Writing output to", output
-        writeSet(documents, output, resultFileTag=outputTag, debug=debug, writeExtra=writeExtra)
+        writeSet(documents, output, resultFileTag=outputTag, debug=debug, writeExtra=writeExtra, files=files, clear=clear)
     return documents
 
 if __name__=="__main__":

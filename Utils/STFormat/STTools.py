@@ -730,10 +730,13 @@ def loadSet(path, setName=None, level="a2", sitesAreArguments=False, a2Tags=["a2
         shutil.rmtree(dir)
     return documents
 
-def writeSet(documents, output, resultFileTag="a2", debug=False, writeExtra=False, files=["txt", "a1", "a2", "rel"]):
+def writeSet(documents, output, resultFileTag="a2", debug=False, writeExtra=False, files=None, clear=True):
     from collections import defaultdict
     import shutil
     counts = defaultdict(int)
+    
+    if files == None:
+        files = ["txt", "a1", "a2", "rel"]
     
     if resultFileTag == None:
         resultFileTag = "a2"
@@ -741,10 +744,11 @@ def writeSet(documents, output, resultFileTag="a2", debug=False, writeExtra=Fals
     while output.endswith("/"):
         output = output[:-1]
     if output.endswith(".tar.gz") or output.endswith(".zip"):
+        assert clear
         outdir = output + "-temp"
     else:
         outdir = output
-    if os.path.exists(outdir):
+    if os.path.exists(outdir) and clear:
         shutil.rmtree(outdir)
 
 #    if not validate:
@@ -757,6 +761,7 @@ def writeSet(documents, output, resultFileTag="a2", debug=False, writeExtra=Fals
         doc.save(outdir, resultFileTag, writeExtra=writeExtra, files=files)
         
     if output.endswith(".tar.gz") or output.endswith(".zip"):
+        assert clear
         package(outdir, output, ["a1", "txt", resultFileTag, resultFileTag+".scores"])
         shutil.rmtree(outdir)
 #    print counts

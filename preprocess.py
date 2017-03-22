@@ -16,6 +16,7 @@ if __name__=="__main__":
     #optparser.add_option("--depParser", default="STANFORD-CONVERT", help="STANFORD or STANFORD-CONVERT")
     shortcuts.add_option("--parseName", default="McCC", help="Default setting for parsing steps")
     shortcuts.add_option("--parseDir", default=None, help="IMPORT-PARSE step parse files directory")
+    shortcuts.add_option("--formats", default=None, help="EXPORT format options")
     optparser.add_option_group(shortcuts)
     debug = OptionGroup(optparser, "Debug and Process Control Options", "")
     debug.add_option("-f", "--fromStep", default=None, dest="fromStep", help="Continue from this step")
@@ -61,6 +62,10 @@ if __name__=="__main__":
             preprocessor.stepArgs("CONVERT")["dataSetNames"] = options.dataSetNames
         if options.parseDir:
             preprocessor.stepArgs("IMPORT-PARSE")["parseDir"] = options.parseDir
+        if options.formats:
+            print "SDFSDFDSFS", preprocessor.steps
+            if preprocessor.hasStep("EXPORT"):
+                preprocessor.stepArgs("EXPORT")["formats"] = options.formats.split(",")
         if options.intermediateFiles:
             preprocessor.setIntermediateFiles(True)
         #preprocessor.stepArgs("PARSE")["requireEntities"] = options.requireEntities
