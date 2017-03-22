@@ -213,6 +213,7 @@ class Preprocessor(ToolChain):
     ###########################################################################
     
     def export(self, input, output, formats=None):
+        print >> sys.stderr, "Exporting formats:", formats
         exportedParses = False
         if formats == None or set(formats).intersection(set(["tok", "sentences", "ptb", "sd", "conll"])):
             Utils.InteractionXML.ExportParse.export(input, output, "McCC", "McCC", formats, clear=True)
