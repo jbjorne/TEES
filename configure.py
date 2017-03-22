@@ -24,8 +24,8 @@ import Classifiers.SVMMultiClassClassifier
 # External tools wrappers
 import Tools.GeniaSentenceSplitter
 import Tools.BANNER
-import Tools.BLLIPParser
-import Tools.StanfordParser
+from Tools.BLLIPParser import BLLIPParser
+from Tools.StanfordParser import StanfordParser
 # Corpora
 import Utils.Convert.convertBioNLP as convertBioNLP
 import Utils.Convert.convertDDI13 as convertDDI13
@@ -170,6 +170,9 @@ def svmMenuInitializer(menu, prevMenu):
         svmInstallDir = None
     menu.optDict["i"].handlerArgs = [None, os.path.join(menu.system.defaultInstallDir, "tools/download"), True, menu.optDict["1"].toggle, True]
 
+def clsCall(cls, method):
+    return lambda *args, **kwargs: getattr(cls(), method)(*args, **kwargs)
+
 def toolsMenuInitializer(menu, prevMenu):
     # Java path for ANT
     #if getattr(menu, "javaHome") == None:
@@ -191,11 +194,11 @@ def toolsMenuInitializer(menu, prevMenu):
         handlerArgs.append([None, None, redownload, False, None, True])  
     if menu.optDict["4"].toggle or (menu != prevMenu and checkInstallPath(menu, "BLLIP_PARSER_DIR")):
         menu.optDict["4"].toggle = True
-        handlers.append(Tools.BLLIPParser.install)
+        handlers.append(clsCall(BLLIPParser, "install"))
         handlerArgs.append([None, None, redownload, True])  
     if menu.optDict["5"].toggle or (menu != prevMenu and checkInstallPath(menu, "STANFORD_PARSER_DIR")):
         menu.optDict["5"].toggle = True
-        handlers.append(Tools.StanfordParser.install)
+        handlers.append(clsCall(StanfordParser, "install"))
         handlerArgs.append([None, None, redownload, True])  
     menu.optDict["i"].handler = handlers
     menu.optDict["i"].handlerArgs = handlerArgs
