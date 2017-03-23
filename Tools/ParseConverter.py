@@ -42,7 +42,7 @@ class ParseConverter(Parser):
             self.splitSentences(sentObjs, document, counts=counts)
         return [x for x in document.findall("sentence")]
             
-    def insertParses(self, parseDir, input, output=None, parseName="McCC", extensions=None, subDirs=None, debug=False, skipParsed=False, docMatchKey="origId", conllFormat=None, splitting=True):
+    def insertParses(self, parseDir, input, output=None, parseName="McCC", extensions=None, subDirs=None, debug=False, skipParsed=False, docMatchKeys=None, conllFormat=None, splitting=True):
         corpusTree, corpusRoot = self.getCorpus(input)
         if not os.path.exists(parseDir):
             raise Exception("Cannot find parse input '" + str(parseDir) + "'")
@@ -50,6 +50,10 @@ class ParseConverter(Parser):
             raise Exception("Parse input '" + str(parseDir) + "' is not a directory")
         if extensions == None:
             extensions = ["ptb", "sd", "conll", "conllx", "conllu"]
+        if docMatchKeys == None:
+            docMatchKeys = ["origId", "pmid", "id"]
+        elif isinstance(docMatchKeys, basestring):
+            docMatchKeys = docMatchKeys.split(",")
         print >> sys.stderr, "Inserting parses from file types:", extensions
         counts = defaultdict(int)
         files = self.readParses(parseDir, extensions, subDirs, counts)
@@ -59,28 +63,33 @@ class ParseConverter(Parser):
         typeCounts["sentence-splitting"] = defaultdict(int)
         for document in corpusRoot.findall("document"):
             counts["document"] += 1
-            docMatchValue = document.get(docMatchKey)
-            counter.update(1, "Inserting parses for (" + document.get("id") + "/" + str(docMatchValue) + "): ")
-            if docMatchValue not in files:
-                continue
-            counts["document-match"] += 1
-            sentences = [x for x in self.getSentences(document, skipParsed=skipParsed)]
-            for ext in extensions:
-                if ext not in files[docMatchValue]:
-                    continue
-                counts[ext + "-match"] += 1
-                if ext == "ptb":
-                    sentObjs = self.readPennTrees(files[docMatchValue][ext])
-                    sentences = self.prepareSentences(document, sentences, sentObjs, splitting, typeCounts["sentence-splitting"])
-                    counts = self.insertElements(sentObjs, sentences, parseName, counts=typeCounts[ext])
-                elif ext in ("conll", "conllx", "conllu"):
-                    sentRows = self.readCoNLL(files[docMatchValue][ext], conllFormat=conllFormat)
-                    sentObjs = self.processCoNLLSentences(sentRows)
-                    sentences = self.prepareSentences(document, sentences, sentObjs, splitting, typeCounts["sentence-splitting"])
-                    self.insertElements(sentObjs, sentences, parseName, "LINKED", counts=typeCounts[ext])
-                elif ext == "sd":
-                    sentObjs = self.readDependencies(files[docMatchValue][ext])
-                    self.insertElements(sentObjs, sentences, parseName, parseName, counts=typeCounts[ext])
+            matchFound = False
+            for docMatchValue in [document.get(x) for x in docMatchKeys if document.get(x) != None]:
+                if docMatchValue in files:
+                    if matchFound:
+                        raise Exception("Multiple matching parses for document " + str(document.attrib) + " using keys " + str(docMatchKeys))
+                    matchFound = True
+                    counter.update(1, "Inserting parses for (" + document.get("id") + "/" + str(docMatchValue) + "): ")
+                    counts["document-match"] += 1
+                    sentences = [x for x in self.getSentences(document, skipParsed=skipParsed)]
+                    for ext in extensions:
+                        if ext not in files[docMatchValue]:
+                            continue
+                        counts[ext + "-match"] += 1
+                        if ext == "ptb":
+                            sentObjs = self.readPennTrees(files[docMatchValue][ext])
+                            sentences = self.prepareSentences(document, sentences, sentObjs, splitting, typeCounts["sentence-splitting"])
+                            counts = self.insertElements(sentObjs, sentences, parseName, counts=typeCounts[ext])
+                        elif ext in ("conll", "conllx", "conllu"):
+                            sentRows = self.readCoNLL(files[docMatchValue][ext], conllFormat=conllFormat)
+                            sentObjs = self.processCoNLLSentences(sentRows)
+                            sentences = self.prepareSentences(document, sentences, sentObjs, splitting, typeCounts["sentence-splitting"])
+                            self.insertElements(sentObjs, sentences, parseName, "LINKED", counts=typeCounts[ext])
+                        elif ext == "sd":
+                            sentObjs = self.readDependencies(files[docMatchValue][ext])
+                            self.insertElements(sentObjs, sentences, parseName, parseName, counts=typeCounts[ext])
+            if not matchFound:
+                counts["document-no-match"] += 1
         print >> sys.stderr, "Counts", dict(counts)
         for ext in extensions:
             if len(typeCounts[ext]) > 0:

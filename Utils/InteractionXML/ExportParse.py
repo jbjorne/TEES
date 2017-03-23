@@ -104,7 +104,7 @@ def exportStanfordDependencies(parseElement, tokenizationElement, outFile, token
     else:
         return False
 
-def export(input, output, parse, tokenization=None, toExport=["tok", "ptb", "sd"], inputSuffixes=None, clear=False, tokenIdOffset=0):
+def export(input, output, parse, tokenization=None, toExport=["tok", "ptb", "sd"], inputSuffixes=None, clear=False, tokenIdOffset=0, exportIds=None):
     print >> sys.stderr, "##### Export Parse #####"
     if toExport == None:
         toExport = ["txt", "sentences", "tok", "ptb", "sd"]
@@ -133,7 +133,7 @@ def export(input, output, parse, tokenization=None, toExport=["tok", "ptb", "sd"
 #                 docId = document.get("origId")
 #             if docId == None:
 #                 docId = document.get("id")
-            exportId = IXMLUtils.getExportId(document)
+            exportId = IXMLUtils.getExportId(document, exportIds)
             counts["document"] += 1
             # Open document output files
             outfiles = {}

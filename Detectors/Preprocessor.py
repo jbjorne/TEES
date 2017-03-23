@@ -69,7 +69,7 @@ class Preprocessor(ToolChain):
         self.initStep("STANFORD-CONVERT", clsStep(StanfordParser, "parse"), {"parserName":self.parseName, "debug":False, "action":"convert", "outputFormat":None}, "stanford-convert-dependencies.xml")
         self.initStep("SYNTAXNET", clsStep(SyntaxNetParser, "parse"), {"parserName":self.parseName, "debug":False, "modelDir":None}, "syntaxnet-dependencies.xml")
         self.initStepGroup("Alternative Parsing")
-        self.initStep("IMPORT-PARSE", clsStep(ParseConverter, "insertParses"), {"parseDir":None, "debug":False, "extensions":None, "subDirs":None, "docMatchKey":"origId", "conllFormat":None, "splitting":True}, "import-parse.xml")
+        self.initStep("IMPORT-PARSE", clsStep(ParseConverter, "insertParses"), {"parseDir":None, "debug":False, "extensions":None, "subDirs":None, "docMatchKeys":None, "conllFormat":None, "splitting":True}, "import-parse.xml")
         #self.allSteps["IMPORT-PARSE", clsStep(ParseConverter, ParseConverter.insertParses), {"parseDir":None, "debug":False}, "import-parse.xml"]
         #self.allSteps["IMPORT-PARSE", lambda *args, **kwargs: ParseConverter().insertParses(*args, **kwargs), {"parseDir":None, "debug":False}, "import-parse.xml"]        
         self.initStepGroup("Post-parsing")
@@ -78,8 +78,8 @@ class Preprocessor(ToolChain):
         self.initStepGroup("Saving")
         self.initStep("DIVIDE-SETS", self.divideSets, {"saveCombined":False}, None)
         self.initStep("SAVE", self.save, {}, None)
-        self.initStep("EXPORT", self.export, {"formats":None}, None)
-        self.initStep("EXPORT-STFORMAT", Utils.STFormat.ConvertXML.toSTFormat, {"outputTag":"a2", "useOrigIds":False, "debug":False, "skipArgs":[], "validate":True, "writeExtra":False, "allAsRelations":False}, None)
+        self.initStep("EXPORT", self.export, {"formats":None, "exportIds":None}, None)
+        self.initStep("EXPORT-STFORMAT", Utils.STFormat.ConvertXML.toSTFormat, {"outputTag":"a2", "useOrigIds":False, "debug":False, "skipArgs":[], "validate":True, "writeExtra":False, "allAsRelations":False, "exportIds":None}, None)
     
     def initPresets(self):
         self.presets["PRESET-PREPROCESS-BIO"] = ["CONVERT", "GENIA-SPLITTER", "BANNER", "BLLIP-BIO", "STANFORD-CONVERT", "SPLIT-NAMES", "FIND-HEADS", "DIVIDE-SETS"]
@@ -212,7 +212,7 @@ class Preprocessor(ToolChain):
     # Saving Steps
     ###########################################################################
     
-    def export(self, input, output, formats=None):
+    def export(self, input, output, formats=None, exportIds=None):
         print >> sys.stderr, "Exporting formats:", formats
         exportedParses = False
         if formats == None:
@@ -220,10 +220,10 @@ class Preprocessor(ToolChain):
         parseFormats = [x for x in formats if x in ["txt", "sentences", "tok", "ptb", "sd", "conll"]]
         stFormats = [x for x in formats if x in ["a1", "a2", "rel"]]
         if len(parseFormats) > 0:
-            Utils.InteractionXML.ExportParse.export(input, output, "McCC", "McCC", formats, clear=True)
+            Utils.InteractionXML.ExportParse.export(input, output, "McCC", "McCC", toExport=formats, exportIds=exportIds, clear=True)
             exportedParses = True
         if len(stFormats) > 0:
-            Utils.STFormat.ConvertXML.toSTFormat(input, output, files=formats, clear=not exportedParses)
+            Utils.STFormat.ConvertXML.toSTFormat(input, output, files=formats, exportIds=exportIds, clear=not exportedParses)
         return input
     
     def divideSets(self, input, output, saveCombined=False):

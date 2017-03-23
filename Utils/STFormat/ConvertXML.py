@@ -5,6 +5,7 @@ from STTools import *
 import xml.etree.cElementTree as ET
 import Utils.ElementTreeUtils as ETUtils
 import Utils.Range as Range
+import Utils.InteractionXML.InteractionXMLUtils as IXMLUtils
 from collections import defaultdict
 
 def makeEntityElement(ann, idCount, docEl):
@@ -508,7 +509,7 @@ def mapSTArgumentTargets(stDoc, siteParents, siteOfTypes, tMap, eMap):
                     argsToKeep.append(arg1)
             event.arguments = argsToKeep            
 
-def toSTFormat(input, output=None, outputTag="a2", useOrigIds=False, debug=False, skipArgs=[], validate=True, writeExtra=False, allAsRelations=False, files=None, clear=True):
+def toSTFormat(input, output=None, outputTag="a2", useOrigIds=False, debug=False, skipArgs=[], validate=True, writeExtra=False, allAsRelations=False, files=None, exportIds=None, clear=True):
     print >> sys.stderr, "Loading corpus", input
     corpusTree = ETUtils.ETFromObj(input)
     print >> sys.stderr, "Corpus file loaded"
@@ -518,9 +519,10 @@ def toSTFormat(input, output=None, outputTag="a2", useOrigIds=False, debug=False
     documents = []
     for document in corpusRoot.findall("document"):
         stDoc = Document()
-        stDoc.id = document.get("pmid")
-        if stDoc.id == None:
-            stDoc.id = document.get("origId")
+        stDoc.id = IXMLUtils.getExportId(document, exportIds)
+        #stDoc.id = document.get("pmid")
+        #if stDoc.id == None:
+        #    stDoc.id = document.get("origId")
         addTextToSTDoc(stDoc, document)
         documents.append(stDoc)
         eMap = {}
