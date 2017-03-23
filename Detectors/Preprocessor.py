@@ -215,10 +215,14 @@ class Preprocessor(ToolChain):
     def export(self, input, output, formats=None):
         print >> sys.stderr, "Exporting formats:", formats
         exportedParses = False
-        if formats == None or set(formats).intersection(set(["tok", "sentences", "ptb", "sd", "conll"])):
+        if formats == None:
+            formats = []
+        parseFormats = [x for x in formats if x in ["txt", "sentences", "tok", "ptb", "sd", "conll"]]
+        stFormats = [x for x in formats if x in ["a1", "a2", "rel"]]
+        if len(parseFormats) > 0:
             Utils.InteractionXML.ExportParse.export(input, output, "McCC", "McCC", formats, clear=True)
             exportedParses = True
-        if formats == None or set(formats).intersection(set(["txt", "a1", "a2", "rel"])):
+        if len(stFormats) > 0:
             Utils.STFormat.ConvertXML.toSTFormat(input, output, files=formats, clear=not exportedParses)
         return input
     

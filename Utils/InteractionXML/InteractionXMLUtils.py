@@ -43,6 +43,18 @@ def setDefaultElement(parent, name):
     return element
 
 ###############################################################################
+# Identifiers
+###############################################################################
+
+def getExportId(document, ids=None):
+    if ids == None:
+        ids = ["origId", "pmid", "id"]
+    for key in ids:
+        if document.get(key) != None:
+            return document.get(key)
+    raise Exception("Document '" + document.get("id") + "' has no export id (tested " + str(ids) + ")")
+
+###############################################################################
 # Sentence Analyses
 ###############################################################################
 

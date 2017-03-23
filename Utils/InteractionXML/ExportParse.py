@@ -9,6 +9,7 @@ try:
 except ImportError:
     import cElementTree as ET
 import Utils.ElementTreeUtils as ETUtils
+import Utils.InteractionXML.InteractionXMLUtils as IXMLUtils
 from collections import defaultdict
 
 parser = Parser()
@@ -106,7 +107,7 @@ def exportStanfordDependencies(parseElement, tokenizationElement, outFile, token
 def export(input, output, parse, tokenization=None, toExport=["tok", "ptb", "sd"], inputSuffixes=None, clear=False, tokenIdOffset=0):
     print >> sys.stderr, "##### Export Parse #####"
     if toExport == None:
-        toExport = ["tok", "ptb", "sd", "sentences"]
+        toExport = ["txt", "sentences", "tok", "ptb", "sd"]
     
     if os.path.exists(output) and clear:
         shutil.rmtree(output)
@@ -127,18 +128,25 @@ def export(input, output, parse, tokenization=None, toExport=["tok", "ptb", "sd"
         counts = defaultdict(int)
         for document in documents:
             counter.update()
-            docId = document.get("pmid")
-            if docId == None:
-                docId = document.get("origId")
-            if docId == None:
-                docId = document.get("id")
+#             docId = document.get("pmid")
+#             if docId == None:
+#                 docId = document.get("origId")
+#             if docId == None:
+#                 docId = document.get("id")
+            exportId = IXMLUtils.getExportId(document)
             counts["document"] += 1
             # Open document output files
             outfiles = {}
             for fileExt in toExport:
-                outfilePath = output + "/" + docId + "." + fileExt
-                assert not os.path.exists(outfilePath) # check for overlapping files
+                #print output, exportId , fileExt
+                outfilePath = output + "/" + exportId + "." + fileExt
+                if os.path.exists(outfilePath): # check for overlapping files
+                    raise Exception("Export file '" + str(outfilePath) + "' already exists")
                 outfiles[fileExt] = codecs.open(outfilePath, "wt", "utf-8")
+            # Export document text
+            if "txt" in outfiles and document.get("text") != None:
+                outfiles["txt"].write(document.get("text"))
+                counts["txt"] += 1
             # Process all the sentences in the document
             for sentence in document.findall("sentence"):
                 counts["sentence"] += 1
