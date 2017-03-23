@@ -108,6 +108,7 @@ def export(input, output, parse, tokenization=None, toExport=["tok", "ptb", "sd"
     print >> sys.stderr, "##### Export Parse #####"
     if toExport == None:
         toExport = ["txt", "sentences", "tok", "ptb", "sd"]
+    print >> sys.stderr, "Exporting parse formats", toExport
     
     if os.path.exists(output) and clear:
         shutil.rmtree(output)
