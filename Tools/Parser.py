@@ -286,11 +286,13 @@ class Parser:
         #tokens = []
         tokenChars = ""
         tokenCharSentences = []
+        pattern = re.compile(r'\s+')
         for i in range(len(sentObjs)):
             for token in sentObjs[i].get("tokens", []):
                 #token["sentenceIndex"] = i
                 #tokens.append(token)
                 tokenText = token["text"]
+                tokenText = re.sub(pattern, '', tokenText)
                 tokenCharSentences.extend([i] * len(tokenText))
                 tokenChars += tokenText
         # Split the document text into words and define their character offsets
