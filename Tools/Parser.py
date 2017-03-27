@@ -563,7 +563,7 @@ class Parser:
                     if sentence == None:
                         sentence = []
                         sentences.append(sentence)
-                    splits = line.split()
+                    splits = line.split("\t")
                     assert len(splits) == len(columns), (splits, columns)
                     word = {columns[i]:splits[i] for i in range(len(columns))}
                     sentence.append(word)
