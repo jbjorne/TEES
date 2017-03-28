@@ -7,6 +7,11 @@ except ImportError:
 # XML Utilities
 ###############################################################################
 
+def makeEmptyCorpus(source="CORPUS"):
+    corpusRoot = ET.Element("corpus")
+    corpusRoot.set("source", source)
+    return ET.ElementTree(corpusRoot)
+
 def getElementIndex(parent, element):
     index = 0
     for e in parent:

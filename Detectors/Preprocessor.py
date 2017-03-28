@@ -24,6 +24,7 @@ import Utils.InteractionXML.DeleteAttributes
 import Utils.InteractionXML.MergeSentences
 import Utils.InteractionXML.MergeSets
 import Utils.InteractionXML.ExportParse
+import Utils.InteractionXML.InteractionXMLUtils as IXMLUtils
 import Utils.Settings as Settings
 
 def clsStep(cls, method):
@@ -82,9 +83,10 @@ class Preprocessor(ToolChain):
         self.initStep("EXPORT-STFORMAT", Utils.STFormat.ConvertXML.toSTFormat, {"outputTag":"a2", "useOrigIds":False, "debug":False, "skipArgs":[], "validate":True, "writeExtra":False, "allAsRelations":False, "exportIds":None}, None)
     
     def initPresets(self):
-        self.presets["PRESET-PREPROCESS-BIO"] = ["CONVERT", "GENIA-SPLITTER", "BANNER", "BLLIP-BIO", "STANFORD-CONVERT", "SPLIT-NAMES", "FIND-HEADS", "DIVIDE-SETS"]
-        self.presets["PRESET-PARSE-BIO"] = ["CONVERT", "GENIA-SPLITTER", "BLLIP-BIO", "STANFORD-CONVERT", "SPLIT-NAMES", "FIND-HEADS", "DIVIDE-SETS"]
-        self.presets["PRESET-INSERT-PARSE"] = ["CONVERT", "REMOVE-ANALYSES", "IMPORT-PARSE", "DIVIDE-SETS"]
+        self.presets["PRESET-CONVERT-PARSE"] = ["LOAD", "EXPORT"]
+        #self.presets["PRESET-PREPROCESS-BIO"] = ["CONVERT", "GENIA-SPLITTER", "BANNER", "BLLIP-BIO", "STANFORD-CONVERT", "SPLIT-NAMES", "FIND-HEADS", "DIVIDE-SETS"]
+        #self.presets["PRESET-PARSE-BIO"] = ["CONVERT", "GENIA-SPLITTER", "BLLIP-BIO", "STANFORD-CONVERT", "SPLIT-NAMES", "FIND-HEADS", "DIVIDE-SETS"]
+        #self.presets["PRESET-INSERT-PARSE"] = ["CONVERT", "REMOVE-ANALYSES", "IMPORT-PARSE", "DIVIDE-SETS"]
     
     def getHelpString(self):
         s = "==========" + " Available preprocessor steps " + "==========" + "\n"
@@ -182,31 +184,50 @@ class Preprocessor(ToolChain):
         txtPath = Utils.Download.getPubMed(int(input))
         documents = Utils.STFormat.STTools.loadSet(txtPath)
         return Utils.STFormat.ConvertXML.toInteractionXML(documents, "PubMed", output)
-        
-    def convert(self, input, dataSetNames=None, corpusName=None, output=None):
-        assert isinstance(input, basestring) and (os.path.isdir(input) or input.endswith(".tar.gz") or input.endswith(".txt") or "," in input)
-        print >> sys.stderr, "Converting ST-format to Interaction XML"
+    
+    def getSourceDirs(self, input, dataSetNames=None):
         # Get input file (or files)
-        dataSetDirs = input
-        documents = []
-        if type(dataSetDirs) in types.StringTypes:
-            dataSetDirs = dataSetDirs.split(",")
+        inputDirs = input
+        if type(inputDirs) in types.StringTypes:
+            dataSetDirs = inputDirs.split(",")
         # Get the list of "train", "devel" etc names for these sets
         if dataSetNames == None: 
             dataSetNames = []
         elif type(dataSetNames) in types.StringTypes:
             dataSetNames = dataSetNames.split(",")
-        # Convert all input files into one corpus
+        dirs = []
         for dataSetDir, dataSetName in itertools.izip_longest(dataSetDirs, dataSetNames, fillvalue=None):
-            print >> sys.stderr, "Reading", dataSetDir, "set,",
-            docs = Utils.STFormat.STTools.loadSet(dataSetDir, dataSetName)
+            assert os.path.exists(dataSetDir)
+            extensions = sorted(set([x.rsplit(".", 1)[-1] for x in os.listdir(dataSetDir) if "." in x]))
+            dirs.append({"dataset":dataSetName, "path":dataSetDir, "extensions":extensions})
+        return dirs
+        
+    def convert(self, input, dataSetNames=None, corpusName=None, output=None):
+        assert isinstance(input, basestring) and (os.path.isdir(input) or input.endswith(".tar.gz") or input.endswith(".txt") or "," in input)
+        print >> sys.stderr, "Converting ST-format to Interaction XML"
+        sourceDirs = self.getSourceDirs(input, dataSetNames)
+        if corpusName == None:
+            corpusName = "TEES"
+        # Convert all input files into one corpus
+        stExtensions = set(["txt", "a1", "a2", "rel"])
+        documents = []
+        for sourceDir in sourceDirs:
+            print >> sys.stderr, "Reading", sourceDir["path"]
+            docs = Utils.STFormat.STTools.loadSet(sourceDir["path"], sourceDir["dataset"])
             print >> sys.stderr, len(docs), "documents"
             documents.extend(docs)
         print >> sys.stderr, "Resolving equivalences"
         Utils.STFormat.Equiv.process(documents)
-        if corpusName == None:
-            corpusName = "TEES"
-        return Utils.STFormat.ConvertXML.toInteractionXML(documents, corpusName, output)
+        xml = Utils.STFormat.ConvertXML.toInteractionXML(documents, corpusName, output)
+        parseExtensions = set(["sentences", "tok", "ptb", "sd", "conll", "conllx", "conllu"])
+        for sourceDir in sourceDirs:
+            extensions = set([x.rsplit(".", 1)[-1] for x in os.listdir(sourceDir["path"]) if "." in x])
+            if len(extensions.intersection(parseExtensions)) > 0:
+                print >> sys.stderr, "Importing parses from", sourceDir["path"], "file types", sorted(extensions)
+                if xml == None:
+                    IXMLUtils.makeEmptyCorpus(corpusName)
+                xml = ParseConverter().insertParses(sourceDir["path"], xml, output, "McCC", extensions)
+        return xml
     
     ###########################################################################
     # Saving Steps
@@ -217,7 +238,7 @@ class Preprocessor(ToolChain):
         exportedParses = False
         if formats == None:
             formats = []
-        parseFormats = [x for x in formats if x in ["txt", "sentences", "tok", "ptb", "sd", "conll"]]
+        parseFormats = [x for x in formats if x in ["txt", "sentences", "tok", "ptb", "sd", "conll", "conllx", "conllu"]]
         stFormats = [x for x in formats if x in ["a1", "a2", "rel"]]
         if len(parseFormats) > 0:
             Utils.InteractionXML.ExportParse.export(input, output, "McCC", "McCC", toExport=formats, exportIds=exportIds, clear=True)
