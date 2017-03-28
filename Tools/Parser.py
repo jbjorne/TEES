@@ -540,7 +540,7 @@ class Parser:
     # CoNLL File Processing
     ###########################################################################
     
-    def readCoNLL(self, inPath, conllFormat=None):
+    def getCoNLLFormat(self, inPath, conllFormat=None):
         if conllFormat == None:
             ext = inPath.rsplit(".", 1)[-1]
             if ext in ("conll", "conllx"):
@@ -548,10 +548,18 @@ class Parser:
             elif ext == "conllu":
                 conllFormat = "conllu"
         assert conllFormat in ("conllx", "conllu")
+        return conllFormat
+    
+    def getCoNLLColumns(self, inPath=None, conllFormat=None):
+        assert inPath != None or conllFormat != None
+        conllFormat = self.getCoNLLFormat(inPath, conllFormat)
         if conllFormat == "conllx":
-            columns = ["ID", "FORM", "LEMMA", "CPOSTAG", "POSTAG", "FEATS", "HEAD", "DEPREL", "PHEAD", "PDEPREL"]
+            return ["ID", "FORM", "LEMMA", "CPOSTAG", "POSTAG", "FEATS", "HEAD", "DEPREL", "PHEAD", "PDEPREL"]
         else:
-            columns = ["ID", "FORM", "LEMMA", "UPOSTAG", "XPOSTAG", "FEATS", "HEAD", "DEPREL", "DEPS", "MISC"] 
+            return ["ID", "FORM", "LEMMA", "UPOSTAG", "XPOSTAG", "FEATS", "HEAD", "DEPREL", "DEPS", "MISC"]
+    
+    def readCoNLL(self, inPath, conllFormat=None):
+        columns = self.getCoNLLColumns(inPath, conllFormat)
         sentence = None
         sentences = []
         with codecs.open(inPath, "rt", "utf-8") as f:
@@ -587,7 +595,14 @@ class Parser:
                         pos = word[key]
                         break
                 # Define the token
-                token = {"text":self.unescape(word["FORM"]), "POS":pos, "index":word["ID"], "feats":word["FEATS"]}
+                token = {"POS":pos}
+                for key in word:
+                    if key == "FORM":
+                        token["text"] = self.unescape(word[key])
+                    elif key == "ID":
+                        token["index"] = word[key]
+                    else:
+                        token[key] = word[key]
                 token = {key:token[key] for key in token if token[key] != "_"}
                 wordById[int(token["index"]) - 1] = token
                 tokens.append(token)
