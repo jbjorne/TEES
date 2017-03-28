@@ -8,7 +8,9 @@ except ImportError:
 from Parser import Parser
 import Utils.ElementTreeUtils as ETUtils
 import Utils.InteractionXML.InteractionXMLUtils as IXMLUtils
+import Utils.Range
 from collections import defaultdict
+import json
 
 class ParseExporter(Parser):
     def __init__(self):
@@ -176,6 +178,30 @@ class ParseExporter(Parser):
         outFile.write("\n") # one more newline to end the sentence (or to mark a sentence with no parse)
         return parseElement != None
     
+    def exportEPE(self, tokenizationElement, parseElement, sentenceCount, outFile):
+        tokens = self.getSortedTokens(tokenizationElement)
+        tokenIndexById = self.getTokenIndexById(tokens)
+        dependenciesByHead = self.getDependenciesByHead(parseElement)
+        obj = {"id":sentenceCount, "nodes":[]}
+        basicKeys = set(["POS", "text", "charOffset", "headOffset"])
+        for i in range(len(tokens)):
+            token = tokens[i]
+            charOffset = Utils.Range.charOffsetToSingleTuple(token.get("charOffset"))
+            node = {"id":i+1, "start":charOffset[0], "end":charOffset[1], "form":token.get("text"), "properties":{"pos":token.get("POS")}}
+            for key in token.attrib:
+                if key not in basicKeys:
+                    node["properties"][key] = token.get(key)
+            # Add dependencies
+            tokenId = token.get("id")
+            if tokenId in dependenciesByHead:
+                edges = []
+                for dep in dependenciesByHead[tokenId]:
+                    edges.append({"label":dep.get("type"), "target":str(tokenIndexById[dep.get("t2")] + 1)})
+                node["edges"] = edges
+            obj["nodes"].append(node)
+        outFile.write(json.dumps(obj) + "\n")
+        return True
+    
     def export(self, input, output, parseName, tokenizerName=None, toExport=["tok", "ptb", "sd"], inputSuffixes=None, clear=False, tokenIdOffset=0, exportIds=None):
         print >> sys.stderr, "##### Export Parse #####"
         if toExport == None:
@@ -216,6 +242,7 @@ class ParseExporter(Parser):
                     outfiles["txt"].write(document.get("text"))
                     counts["txt"] += 1
                 # Process all the sentences in the document
+                sentenceCount = 0
                 for sentence in document.findall("sentence"):
                     counts["sentence"] += 1
                     parse = IXMLUtils.getParseElement(sentence, parseName)
@@ -238,6 +265,10 @@ class ParseExporter(Parser):
                                 if conllFormat in outfiles:
                                     if self.exportCoNLL(tokenization, parse, outfiles[conllFormat], conllFormat):
                                         counts[conllFormat] += 1
+                            if "epe" in outfiles:
+                                if self.exportEPE(tokenization, parse, sentenceCount, outfiles["epe"]):
+                                    counts["epe"] += 1
+                    sentenceCount += 1
                 # Close document output files
                 for fileExt in outfiles:
                     outfiles[fileExt].close()
