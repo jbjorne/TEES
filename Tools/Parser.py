@@ -8,6 +8,7 @@ import Utils.Align as Align
 from Utils.ProgressCounter import ProgressCounter
 from collections import defaultdict
 import re
+import json
 try:
     import xml.etree.cElementTree as ET
 except ImportError:
@@ -135,8 +136,9 @@ class Parser:
                     #element.set("match", "exact")
                     counts["tokens-exact-match"] += 1
                 element.set("POS", token.get("POS"))
-                for key in ("feats", ): # Additional token data
-                    if key in token:
+                basicKeys = set(("id", "text", "origText", "index" "POS")) # Additional token data
+                for key in token:
+                    if key not in basicKeys:
                         element.set(key, token[key])
                 element.set("charOffset", str(offset[0]) + "-" + str(offset[1]))
                 tokenization.append(element)
@@ -623,3 +625,29 @@ class Parser:
             print >> sys.stderr, "All dependency elements were aligned"
         else:
             print >> sys.stderr, "Warning,", counts["deps-total"] - counts["deps-elements"], "dependencies could not be aligned"
+    
+    ###########################################################################
+    # EPE File Processing
+    ###########################################################################
+    
+    def readEPE(self, inPath):
+        sentences = []
+        with codecs.open(inPath, "rt", "utf-8") as f:
+            for line in f:
+                obj = json.loads(line.strip())
+                tokens = []
+                tokenById = {}
+                for node in obj["nodes"]:
+                    properties = node.get("properties", {})
+                    token = {"text":node["form"], "index":node["id"], "POS":properties.get("pos")}
+                    tokens.append(token)
+                    assert token["index"] not in tokenById
+                    tokenById[token["index"]] = token
+                dependencies = []
+                for node in obj["nodes"]:
+                    nodeId = node["id"]
+                    edges = node.get("edges", [])
+                    for edge in edges:
+                        dependencies.append({"type":edge["label"], "t1":nodeId, "t2":edge["target"], "t1Token":tokenById[nodeId], "t2Token":tokenById[edge["target"]]})
+                sentences.append({"tokens":tokens, "dependencies":dependencies})
+        return sentences

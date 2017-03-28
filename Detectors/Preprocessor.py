@@ -224,7 +224,7 @@ class Preprocessor(ToolChain):
             Utils.STFormat.Equiv.process(documents)
             xml = Utils.STFormat.ConvertXML.toInteractionXML(documents, corpusName, output)
         # Add parse files into the corpus
-        parseExtensions = set(["sentences", "tok", "ptb", "sd", "conll", "conllx", "conllu"])
+        parseExtensions = set(["sentences", "tok", "ptb", "sd", "conll", "conllx", "conllu", "epe"])
         for sourceDir in sourceDirs:
             if len(parseExtensions.intersection(sourceDir["extensions"])) > 0:
                 print >> sys.stderr, "Importing parses from", sourceDir["path"], "file types", sorted(sourceDir["extensions"])
@@ -242,7 +242,7 @@ class Preprocessor(ToolChain):
         exportedParses = False
         if formats == None:
             formats = []
-        parseFormats = [x for x in formats if x in ["txt", "sentences", "tok", "ptb", "sd", "conll", "conllx", "conllu"]]
+        parseFormats = [x for x in formats if x in ["txt", "sentences", "tok", "ptb", "sd", "conll", "conllx", "conllu", "epe"]]
         stFormats = [x for x in formats if x in ["a1", "a2", "rel"]]
         if len(parseFormats) > 0:
             Utils.InteractionXML.ExportParse.export(input, output, "McCC", "McCC", toExport=formats, exportIds=exportIds, clear=True)

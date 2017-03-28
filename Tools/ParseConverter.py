@@ -58,10 +58,11 @@ class ParseConverter(Parser):
             #filePaths = files[docName]
             extensions = sorted(files[docName].keys())
             sentObjs = self.readParse(files[docName][extensions[0]], conllFormat)
-            docText = ""
+            sentTexts = []
             for sentObj in sentObjs:
                 if "tokens" in sentObj:
-                    docText += " ".join([x["text"] for x in sentObj["tokens"]])
+                    sentTexts.append(" ".join([x["text"] for x in sentObj["tokens"]]))
+            docText = " ".join(sentTexts)
             ET.SubElement(corpusRoot, "document", id=corpusName + ".d" + str(i), origId=docName, text=docText)
         return [x for x in corpusRoot.findall("document")]
         
@@ -74,6 +75,8 @@ class ParseConverter(Parser):
             sentObjs = self.processCoNLLSentences(sentRows)
         elif ext == "sd":
             sentObjs = self.readDependencies(filePath)
+        elif ext == "epe":
+            sentObjs = self.readEPE(filePath)
         else:
             raise Exception("Unknown extension '" + str(ext) + "'")
         return sentObjs
@@ -84,7 +87,7 @@ class ParseConverter(Parser):
         if ext == "ptb":
             sentences = self.prepareSentences(document, sentences, sentObjs, splitting, typeCounts["sentence-splitting"])
             self.insertElements(sentObjs, sentences, parseName, counts=typeCounts[ext])
-        elif ext in ("conll", "conllx", "conllu"):
+        elif ext in ("conll", "conllx", "conllu", "epe"):
             sentences = self.prepareSentences(document, sentences, sentObjs, splitting, typeCounts["sentence-splitting"])
             self.insertElements(sentObjs, sentences, parseName, "LINKED", counts=typeCounts[ext])
         elif ext == "sd":
@@ -99,7 +102,7 @@ class ParseConverter(Parser):
         if not os.path.isdir(parseDir):
             raise Exception("Parse input '" + str(parseDir) + "' is not a directory")
         if extensions == None:
-            extensions = ["ptb", "sd", "conll", "conllx", "conllu"]
+            extensions = ["ptb", "sd", "conll", "conllx", "conllu", "epe"]
         if docMatchKeys == None:
             docMatchKeys = ["origId", "pmid", "id"]
         elif isinstance(docMatchKeys, basestring):
