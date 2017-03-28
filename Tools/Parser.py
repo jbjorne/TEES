@@ -136,7 +136,7 @@ class Parser:
                     #element.set("match", "exact")
                     counts["tokens-exact-match"] += 1
                 element.set("POS", token.get("POS"))
-                basicKeys = set(("id", "text", "origText", "index" "POS")) # Additional token data
+                basicKeys = set(["id", "text", "origText", "index", "POS"]) # Additional token data
                 for key in token:
                     if key not in basicKeys:
                         element.set(key, token[key])
@@ -540,13 +540,16 @@ class Parser:
     # CoNLL File Processing
     ###########################################################################
     
-    def getCoNLLFormat(self, inPath, conllFormat=None):
+    def getCoNLLFormat(self, inPath=None, conllFormat=None):
         if conllFormat == None:
+            assert inPath != None
             ext = inPath.rsplit(".", 1)[-1]
             if ext in ("conll", "conllx"):
                 conllFormat = "conllx"
             elif ext == "conllu":
                 conllFormat = "conllu"
+        if conllFormat == "conll":
+            conllFormat = "conllx"
         assert conllFormat in ("conllx", "conllu")
         return conllFormat
     
@@ -601,8 +604,8 @@ class Parser:
                         token["text"] = self.unescape(word[key])
                     elif key == "ID":
                         token["index"] = word[key]
-                    else:
-                        token[key] = word[key]
+                    elif key != "POS":
+                        token[key.lower()] = str(word[key])
                 token = {key:token[key] for key in token if token[key] != "_"}
                 wordById[int(token["index"]) - 1] = token
                 tokens.append(token)
@@ -647,6 +650,7 @@ class Parser:
     
     def readEPE(self, inPath):
         sentences = []
+        basicKeys = set(["form", "id", "properties", "edges", "text", "index", "POS", "pos", "start", "end"])
         with codecs.open(inPath, "rt", "utf-8") as f:
             for line in f:
                 obj = json.loads(line.strip())
@@ -655,6 +659,13 @@ class Parser:
                 for node in obj["nodes"]:
                     properties = node.get("properties", {})
                     token = {"text":node["form"], "index":node["id"], "POS":properties.get("pos")}
+                    for subset in node, properties:
+                        for key in subset:
+                            if key not in basicKeys:
+                                if isinstance(subset[key], basestring):
+                                    token[key.lower()] = subset[key]
+                                else:
+                                    token[key.lower()] = str(subset[key])
                     tokens.append(token)
                     assert token["index"] not in tokenById
                     tokenById[token["index"]] = token

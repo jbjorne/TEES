@@ -76,8 +76,16 @@ class ParseExporter(Parser):
                 tokenTextById[token.get("id")] = token.get("text").replace(key, self.unEscDict[key])
         return tokenTextById
     
-    def getDependencyByHead(self, parseElement):
-        return {x.get("t1"):x for x in parseElement.findall("dependency")}
+    def getTokenIndexById(self, sortedTokens):
+        return {sortedTokens[i].get("id"):i for i in range(len(sortedTokens))}
+    
+    def getDependenciesByHead(self, parseElement):
+        dependenciesByHead = {}
+        for dep in parseElement.findall("dependency"):
+            if dep.get("t1") not in dependenciesByHead:
+                dependenciesByHead[dep.get("t1")] = []
+            dependenciesByHead[dep.get("t1")].append(dep)
+        return dependenciesByHead
     
     def exportTokenization(self, tokenizationElement, parseElement, sentenceElement, outFile):
         tokens = self.getSortedTokens(tokenizationElement)
@@ -109,7 +117,7 @@ class ParseExporter(Parser):
             #for token in tokens:
             #    for key in escDictKeys:
             #        tokenTextById[token["id"]] = token["text"].replace(key, self.unEscDict[key])
-            tokenIndexById = {tokens[i].get("id"):i for i in range(len(tokens))}
+            tokenIndexById = self.getTokenIndexById(tokens)
             
         # Process dependencies
         if parseElement != None:
@@ -130,19 +138,41 @@ class ParseExporter(Parser):
     
     def exportCoNLL(self, tokenizationElement, parseElement, outFile, conllFormat):
         tokens = self.getSortedTokens(tokenizationElement)
-        dependencyByHead = self.getDependencyByHead(parseElement)
-        columns = self.getCoNLLColumns(conllFormat)
+        tokenIndexById = self.getTokenIndexById(tokens)
+        dependenciesByHead = self.getDependenciesByHead(parseElement)
+        conllFormat = self.getCoNLLFormat(conllFormat=conllFormat)
+        columns = self.getCoNLLColumns(conllFormat=conllFormat)
         for i in range(len(tokens)):
             token = tokens[i]
-            values = []
+            row = {}
             for column in columns:
                 if column == "ID":
-                    values.append(str(i + 1))
+                    row[column] = str(i + 1)
                 elif column == "FORM":
-                    values.append(token.get("text"))
+                    row[column] = token.get("text")
                 else:
-                    values.append(token.get(column, "_"))
-            if "CPOSTAG" and "POSTAG" in columns
+                    row[column] = "_"
+                    for key in (column, column.lower()):
+                        if token.get(key) != None:
+                            row[column] = token.get(key)
+            if conllFormat == "conllx" and row.get("POSTAG") == "_" and row.get("CPOSTAG") == "_":
+                row["CPOSTAG"] = token.get("POS", "_")
+            elif conllFormat == "conllu" and row.get("UPOSTAG") == "_" and row.get("XPOSTAG") == "_":
+                row["UPOSTAG"] = token.get("POS", "_")
+            # Add dependencies
+            tokenId = token.get("id")
+            if tokenId in dependenciesByHead:
+                for dep in dependenciesByHead[tokenId]:
+                    if dep == dependenciesByHead[tokenId][0]:
+                        row["HEAD"] = str(tokenIndexById[dep.get("t2")] + 1)
+                        row["DEPREL"] = dep.get("type")
+                    elif conllFormat == "conllu":
+                        if row["DEPS"] == "_":
+                            row["DEPS"] = ""
+                        else:
+                            row["DEPS"] += "|"
+                        row["DEPS"] += str(tokenIndexById[dep.get("t2")] + 1) + ":" + dep.get("type")
+            outFile.write("\t".join(row[x] for x in columns) + "\n")
         outFile.write("\n") # one more newline to end the sentence (or to mark a sentence with no parse)
         return parseElement != None
     
@@ -193,15 +223,21 @@ class ParseExporter(Parser):
                     if "sentences" in outfiles:
                         outfiles["sentences"].write(sentence.get("text").strip().replace("\n", " ").replace("\r", " ") + "\n")
                         counts["sentences"] += 1
-                    if "tok" in outfiles and parse != None and tokenization != None:
-                        if self.exportTokenization(tokenization, parse, sentence, outfiles["tok"]):
-                            counts["tok"] += 1
-                    if "ptb" in outfiles and parse != None:
-                        if self.exportPennTreeBank(parse, outfiles["ptb"]):
-                            counts["ptb"] += 1
-                    if "sd" in outfiles and parse != None and tokenization != None:
-                        if self.exportStanfordDependencies(parse, tokenization, outfiles["sd"], tokenIdOffset):
-                            counts["sd"] += 1
+                    if parse != None:
+                        if "ptb" in outfiles:
+                            if self.exportPennTreeBank(parse, outfiles["ptb"]):
+                                counts["ptb"] += 1
+                        if tokenization != None:
+                            if "tok" in outfiles:
+                                if self.exportTokenization(tokenization, parse, sentence, outfiles["tok"]):
+                                    counts["tok"] += 1
+                            if "sd" in outfiles:
+                                if self.exportStanfordDependencies(parse, tokenization, outfiles["sd"], tokenIdOffset):
+                                    counts["sd"] += 1
+                            for conllFormat in ("conll", "conllx", "conllu"):
+                                if conllFormat in outfiles:
+                                    if self.exportCoNLL(tokenization, parse, outfiles[conllFormat], conllFormat):
+                                        counts[conllFormat] += 1
                 # Close document output files
                 for fileExt in outfiles:
                     outfiles[fileExt].close()

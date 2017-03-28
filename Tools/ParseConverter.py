@@ -50,7 +50,7 @@ class ParseConverter(Parser):
         print >> sys.stderr, "Generating document elements from the parses"
         docNames = sorted(files.keys())
         corpusName = corpusRoot.get("source", "CORPUS")
-        #parseExtensions = set(("ptb", "conll", "conllx", "conllu"))
+        #parseExtensions = set(["ptb", "conll", "conllx", "conllu"])
         counter = ProgressCounter(len(docNames), "Document Generation")
         for i in range(len(docNames)):
             docName = docNames[i]
