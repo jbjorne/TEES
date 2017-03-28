@@ -605,7 +605,10 @@ class Parser:
                     elif key == "ID":
                         token["index"] = word[key]
                     elif key != "POS":
-                        token[key.lower()] = str(word[key])
+                        if isinstance(word[key], basestring):
+                            token[key.lower()] = word[key]
+                        else:
+                            token[key.lower()] = str(word[key])
                 token = {key:token[key] for key in token if token[key] != "_"}
                 wordById[int(token["index"]) - 1] = token
                 tokens.append(token)
