@@ -1,6 +1,7 @@
 import sys, os
 import itertools
 import types
+from Tools.ParseExporter import ParseExporter
 thisPath = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.abspath(os.path.join(thisPath,"..")))
 import Utils.STFormat.STTools
@@ -23,7 +24,7 @@ import Utils.InteractionXML.DeleteElements
 import Utils.InteractionXML.DeleteAttributes
 import Utils.InteractionXML.MergeSentences
 import Utils.InteractionXML.MergeSets
-import Utils.InteractionXML.ExportParse
+#import Utils.InteractionXML.ExportParse
 import Utils.InteractionXML.InteractionXMLUtils as IXMLUtils
 import Utils.Settings as Settings
 
@@ -245,7 +246,7 @@ class Preprocessor(ToolChain):
         parseFormats = [x for x in formats if x in ["txt", "sentences", "tok", "ptb", "sd", "conll", "conllx", "conllu", "epe"]]
         stFormats = [x for x in formats if x in ["a1", "a2", "rel"]]
         if len(parseFormats) > 0:
-            Utils.InteractionXML.ExportParse.export(input, output, "McCC", "McCC", toExport=formats, exportIds=exportIds, clear=True)
+            ParseExporter().export(input, output, "McCC", "McCC", toExport=formats, exportIds=exportIds, clear=True)
             exportedParses = True
         if len(stFormats) > 0:
             Utils.STFormat.ConvertXML.toSTFormat(input, output, files=formats, exportIds=exportIds, clear=not exportedParses)

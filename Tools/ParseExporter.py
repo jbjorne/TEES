@@ -1,7 +1,6 @@
 import sys, os, shutil
 import codecs
 from Utils.ProgressCounter import ProgressCounter
-from Tools.Parser import Parser
 try:
     import xml.etree.cElementTree as ET
 except ImportError:
@@ -130,11 +129,6 @@ class ParseExporter(Parser):
             counts = defaultdict(int)
             for document in documents:
                 counter.update()
-    #             docId = document.get("pmid")
-    #             if docId == None:
-    #                 docId = document.get("origId")
-    #             if docId == None:
-    #                 docId = document.get("id")
                 exportId = IXMLUtils.getExportId(document, exportIds)
                 counts["document"] += 1
                 # Open document output files
