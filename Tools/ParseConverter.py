@@ -1,6 +1,10 @@
 import sys, os
 from collections import defaultdict
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)),"..")))
+try:
+    import xml.etree.cElementTree as ET
+except ImportError:
+    import cElementTree as ET
 import Utils.ElementTreeUtils as ETUtils
 from Parser import Parser
 from Utils.ProgressCounter import ProgressCounter
@@ -41,6 +45,52 @@ class ParseConverter(Parser):
         if len(sentObjs) > 0 and len(sentences) == 0:
             self.splitSentences(sentObjs, document, counts=counts)
         return [x for x in document.findall("sentence")]
+    
+    def prepareDocuments(self, corpusRoot, files, conllFormat=None, counts=None):
+        print >> sys.stderr, "Generating document elements from the parses"
+        docNames = sorted(files.keys())
+        corpusName = corpusRoot.get("source", "CORPUS")
+        #parseExtensions = set(("ptb", "conll", "conllx", "conllu"))
+        counter = ProgressCounter(len(docNames), "Document Generation")
+        for i in range(len(docNames)):
+            docName = docNames[i]
+            counter.update(1, "Making document element for document '" + str(docName) + "': ")
+            #filePaths = files[docName]
+            extensions = sorted(files[docName].keys())
+            sentObjs = self.readParse(files[docName][extensions[0]], conllFormat)
+            docText = ""
+            for sentObj in sentObjs:
+                if "tokens" in sentObj:
+                    docText += " ".join([x["text"] for x in sentObj["tokens"]])
+            ET.SubElement(corpusRoot, "document", id=corpusName + ".d" + str(i), origId=docName, text=docText)
+        return [x for x in corpusRoot.findall("document")]
+        
+    def readParse(self, filePath, conllFormat=None):
+        ext = filePath.rsplit(".", 1)[-1]
+        if ext == "ptb":
+            sentObjs = self.readPennTrees(filePath)
+        elif ext in ("conll", "conllx", "conllu"):
+            sentRows = self.readCoNLL(filePath, conllFormat=conllFormat)
+            sentObjs = self.processCoNLLSentences(sentRows)
+        elif ext == "sd":
+            sentObjs = self.readDependencies(filePath)
+        else:
+            raise Exception("Unknown extension '" + str(ext) + "'")
+        return sentObjs
+    
+    def insertParse(self, document, sentences, filePath, parseName, splitting, typeCounts, conllFormat=None):
+        ext = filePath.rsplit(".", 1)[-1]
+        sentObjs = self.readParse(filePath, conllFormat)      
+        if ext == "ptb":
+            sentences = self.prepareSentences(document, sentences, sentObjs, splitting, typeCounts["sentence-splitting"])
+            self.insertElements(sentObjs, sentences, parseName, counts=typeCounts[ext])
+        elif ext in ("conll", "conllx", "conllu"):
+            sentences = self.prepareSentences(document, sentences, sentObjs, splitting, typeCounts["sentence-splitting"])
+            self.insertElements(sentObjs, sentences, parseName, "LINKED", counts=typeCounts[ext])
+        elif ext == "sd":
+            self.insertElements(sentObjs, sentences, parseName, parseName, counts=typeCounts[ext])
+        else:
+            raise Exception("Unknown extension '" + str(ext) + "'")
             
     def insertParses(self, parseDir, input, output=None, parseName="McCC", extensions=None, subDirs=None, debug=False, skipParsed=False, docMatchKeys=None, conllFormat=None, splitting=True):
         corpusTree, corpusRoot = self.getCorpus(input)
@@ -57,11 +107,17 @@ class ParseConverter(Parser):
         print >> sys.stderr, "Inserting parses from file types:", extensions
         counts = defaultdict(int)
         files = self.readParses(parseDir, extensions, subDirs, counts)
-        documents = [x for x in corpusRoot.findall("document")]
-        counter = ProgressCounter(len(documents), "Parse Insertion")
         typeCounts = {x:defaultdict(int) for x in extensions}
+        # Make document elements if needed
+        documents = [x for x in corpusRoot.findall("document")]
+        if len(documents) == 0:
+            typeCounts["document-generation"] = defaultdict(int)
+            documents = self.prepareDocuments(corpusRoot, files)
+        counter = ProgressCounter(len(documents), "Parse Insertion")
+        # Insert parses and make sentence elements if needed
         typeCounts["sentence-splitting"] = defaultdict(int)
-        for document in corpusRoot.findall("document"):
+        print >> sys.stderr, "Inserting parses for", len(documents), "documents"
+        for document in documents:
             counts["document"] += 1
             matchFound = False
             for docMatchValue in [document.get(x) for x in docMatchKeys if document.get(x) != None]:
@@ -76,18 +132,7 @@ class ParseConverter(Parser):
                         if ext not in files[docMatchValue]:
                             continue
                         counts[ext + "-match"] += 1
-                        if ext == "ptb":
-                            sentObjs = self.readPennTrees(files[docMatchValue][ext])
-                            sentences = self.prepareSentences(document, sentences, sentObjs, splitting, typeCounts["sentence-splitting"])
-                            counts = self.insertElements(sentObjs, sentences, parseName, counts=typeCounts[ext])
-                        elif ext in ("conll", "conllx", "conllu"):
-                            sentRows = self.readCoNLL(files[docMatchValue][ext], conllFormat=conllFormat)
-                            sentObjs = self.processCoNLLSentences(sentRows)
-                            sentences = self.prepareSentences(document, sentences, sentObjs, splitting, typeCounts["sentence-splitting"])
-                            self.insertElements(sentObjs, sentences, parseName, "LINKED", counts=typeCounts[ext])
-                        elif ext == "sd":
-                            sentObjs = self.readDependencies(files[docMatchValue][ext])
-                            self.insertElements(sentObjs, sentences, parseName, parseName, counts=typeCounts[ext])
+                        self.insertParse(document, sentences, files[docMatchValue][ext], parseName, splitting, typeCounts, conllFormat)
             if not matchFound:
                 counts["document-no-match"] += 1
         print >> sys.stderr, "Counts", dict(counts)

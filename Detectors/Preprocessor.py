@@ -198,7 +198,7 @@ class Preprocessor(ToolChain):
         dirs = []
         for dataSetDir, dataSetName in itertools.izip_longest(dataSetDirs, dataSetNames, fillvalue=None):
             assert os.path.exists(dataSetDir)
-            extensions = sorted(set([x.rsplit(".", 1)[-1] for x in os.listdir(dataSetDir) if "." in x]))
+            extensions = set([x.rsplit(".", 1)[-1] for x in os.listdir(dataSetDir) if "." in x])
             dirs.append({"dataset":dataSetName, "path":dataSetDir, "extensions":extensions})
         return dirs
         
@@ -206,27 +206,31 @@ class Preprocessor(ToolChain):
         assert isinstance(input, basestring) and (os.path.isdir(input) or input.endswith(".tar.gz") or input.endswith(".txt") or "," in input)
         print >> sys.stderr, "Converting ST-format to Interaction XML"
         sourceDirs = self.getSourceDirs(input, dataSetNames)
+        print >> sys.stderr, "Checking source directories:", sourceDirs
         if corpusName == None:
             corpusName = "TEES"
-        # Convert all input files into one corpus
+        # Convert all ST format input files into one corpus
         stExtensions = set(["txt", "a1", "a2", "rel"])
         documents = []
+        xml = None
         for sourceDir in sourceDirs:
-            print >> sys.stderr, "Reading", sourceDir["path"]
-            docs = Utils.STFormat.STTools.loadSet(sourceDir["path"], sourceDir["dataset"])
-            print >> sys.stderr, len(docs), "documents"
-            documents.extend(docs)
-        print >> sys.stderr, "Resolving equivalences"
-        Utils.STFormat.Equiv.process(documents)
-        xml = Utils.STFormat.ConvertXML.toInteractionXML(documents, corpusName, output)
+            if len(stExtensions.intersection(sourceDir["extensions"])) > 0:
+                print >> sys.stderr, "Reading", sourceDir["path"]
+                docs = Utils.STFormat.STTools.loadSet(sourceDir["path"], sourceDir["dataset"])
+                print >> sys.stderr, len(docs), "documents"
+                documents.extend(docs)
+        if len(documents) > 0:
+            print >> sys.stderr, "Resolving equivalences"
+            Utils.STFormat.Equiv.process(documents)
+            xml = Utils.STFormat.ConvertXML.toInteractionXML(documents, corpusName, output)
+        # Add parse files into the corpus
         parseExtensions = set(["sentences", "tok", "ptb", "sd", "conll", "conllx", "conllu"])
         for sourceDir in sourceDirs:
-            extensions = set([x.rsplit(".", 1)[-1] for x in os.listdir(sourceDir["path"]) if "." in x])
-            if len(extensions.intersection(parseExtensions)) > 0:
-                print >> sys.stderr, "Importing parses from", sourceDir["path"], "file types", sorted(extensions)
+            if len(parseExtensions.intersection(sourceDir["extensions"])) > 0:
+                print >> sys.stderr, "Importing parses from", sourceDir["path"], "file types", sorted(sourceDir["extensions"])
                 if xml == None:
-                    IXMLUtils.makeEmptyCorpus(corpusName)
-                xml = ParseConverter().insertParses(sourceDir["path"], xml, output, "McCC", extensions)
+                    xml = IXMLUtils.makeEmptyCorpus(corpusName)
+                xml = ParseConverter().insertParses(sourceDir["path"], xml, output, "McCC", sourceDir["extensions"])
         return xml
     
     ###########################################################################
