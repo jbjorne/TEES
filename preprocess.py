@@ -28,8 +28,6 @@ if __name__=="__main__":
     optparser.add_option_group(debug)
     (options, args) = optparser.parse_args()
     
-    #if options.steps == None and not options.listPresets:
-    #    raise Exception("No preprocessing steps defined")
     if options.steps != None:
         options.steps = [x.strip() for x in options.steps.split(",")]
     if options.omitSteps != None:
@@ -38,24 +36,7 @@ if __name__=="__main__":
     preprocessor = Preprocessor(options.steps, options.parseName, options.requireEntities)
     if options.steps == None:
         print >> sys.stderr, preprocessor.getHelpString()
-#         print >> sys.stderr, "==========", "Available preprocessor steps", "=========="
-#         groupIndex = -1
-#         for step in preprocessor.allStepsList:
-#             if step["group"] != groupIndex:
-#                 groupIndex = step["group"]
-#                 #print >> sys.stderr, "*", preprocessor.groups[groupIndex], "*"
-#                 print >> sys.stderr, "[" + preprocessor.groups[groupIndex] + "]"
-#             print >> sys.stderr, " ", step["name"] + ": " + str(step["argDict"])
-#         print >> sys.stderr, "==========", "Available preprocessor presets", "=========="  
-#         for name in sorted(preprocessor.presets.keys()):
-#             print >> sys.stderr, name + ": " + ",".join(preprocessor.presets[name])
     else:
-        #options.constParser = options.constParser if options.constParser != "None" else None
-        #options.depParser = options.depParser if options.depParser != "None" else None
-        
-        #if not options.noLog:
-        #    Stream.openLog(os.path.join(options.output + "-log.txt"))
-            #log(False, True, os.path.join(options.output, options.corpus + "-log.txt"))
         preprocessor.setArgForAllSteps("debug", options.debug)
         if preprocessor.hasStep("CONVERT"):
             preprocessor.stepArgs("CONVERT")["corpusName"] = options.corpus
@@ -63,10 +44,8 @@ if __name__=="__main__":
         if options.parseDir:
             preprocessor.stepArgs("IMPORT-PARSE")["parseDir"] = options.parseDir
         if options.formats:
-            print "SDFSDFDSFS", preprocessor.steps
             if preprocessor.hasStep("EXPORT"):
                 preprocessor.stepArgs("EXPORT")["formats"] = options.formats.split(",")
         if options.intermediateFiles:
             preprocessor.setIntermediateFiles(True)
-        #preprocessor.stepArgs("PARSE")["requireEntities"] = options.requireEntities
         preprocessor.process(options.input, options.output, options.parameters, model=None, fromStep=options.fromStep, toStep=options.toStep, omitSteps=options.omitSteps, logPath=options.logPath)
