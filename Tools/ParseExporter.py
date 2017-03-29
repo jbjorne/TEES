@@ -84,9 +84,9 @@ class ParseExporter(Parser):
     def getDependenciesByHead(self, parseElement):
         dependenciesByHead = {}
         for dep in parseElement.findall("dependency"):
-            if dep.get("t1") not in dependenciesByHead:
-                dependenciesByHead[dep.get("t1")] = []
-            dependenciesByHead[dep.get("t1")].append(dep)
+            if dep.get("t2") not in dependenciesByHead:
+                dependenciesByHead[dep.get("t2")] = []
+            dependenciesByHead[dep.get("t2")].append(dep)
         return dependenciesByHead
     
     def exportTokenization(self, tokenizationElement, parseElement, sentenceElement, outFile):
@@ -181,7 +181,7 @@ class ParseExporter(Parser):
                         secondaryDeps += primaryDeps[1:]
                 # Add the single primary dependency
                 if len(primaryDeps) > 0:
-                    row["HEAD"] = str(tokenIndexById[primaryDeps[0].get("t2")] + 1)
+                    row["HEAD"] = str(tokenIndexById[primaryDeps[0].get("t1")] + 1)
                     row["DEPREL"] = primaryDeps[0].get("type")
                 # If the token is the root token, set the primary dependency as the root dependency
                 if token.get("root") != None:
@@ -192,7 +192,7 @@ class ParseExporter(Parser):
                         row["DEPREL"] = token.get("root")
                 # In CoNLL-U format, add the secondary dependencies
                 if len(secondaryDeps) > 0 and conllFormat == "conllu":
-                    secondaryDeps = sorted([(tokenIndexById[x.get("t2")] + 1, x.get("type")) for x in secondaryDeps])
+                    secondaryDeps = sorted([(tokenIndexById[x.get("t1")] + 1, x.get("type")) for x in secondaryDeps])
                     row["DEPS"] = "|".join([str(x[0]) + ":" + x[1] for x in secondaryDeps])
             outFile.write("\t".join(row[x] for x in columns) + "\n")
         outFile.write("\n") # one more newline to end the sentence (or to mark a sentence with no parse)
