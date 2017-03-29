@@ -121,7 +121,7 @@ class Parser:
             Align.printAlignment(alignedSentence, alignedCat, diff)
         pos = 0
         tokenIndex = 0
-        tokKeys = set(["id", "text", "origText", "index", "POS"])
+        tokKeys = set(["id", "text", "origText", "index", "POS", "root"])
         for token in tokens:
             counts["tokens-parse"] += 1
             tokenOffsets = [x for x in alignedOffsets[pos:pos + len(token["text"])] if x != None]
@@ -631,9 +631,10 @@ class Parser:
                 t1 = word["HEAD"]
                 if t1 == "_":
                     continue
-                if t1.isdigit() and int(t1) == 0:
-                    assert word["DEPREL"] == "root"
-                    tokenById[word["ID"]]["root"] = "True"
+                if t1.isdigit() and int(t1) == 0 and t1 not in tokenById:
+                    #if word["DEPREL"] != "root":
+                    #    raise Exception("Non-root dependency token + '" + str([t1,t2]) + "' for word " + str(word) + " in sentence " + str(sentence))
+                    tokenById[word["ID"]]["root"] = word["DEPREL"]
                 else:
                     if t1 not in tokenById or t2 not in tokenById:
                         raise Exception("Dependency token + '" + str([t1,t2]) + "' not defined for word " + str(word) + " in sentence " + str(sentence))
@@ -653,7 +654,10 @@ class Parser:
                     key, value = None, line[1:].strip()
                     if "=" in value:
                         key, value = value.split("=", 1)
-                        key, value = key.strip(), value.strip()
+                        key = key.strip()
+                        value = value.rstrip()
+                        if value[0] == " ":
+                            value = value[1:]
                     outSentence["metadata"].append({"type":key, "text":value})
             outSentences.append(outSentence)
         return outSentences

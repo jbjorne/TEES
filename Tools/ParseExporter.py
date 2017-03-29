@@ -138,12 +138,18 @@ class ParseExporter(Parser):
         outFile.write("\n") # one more newline to end the sentence (or to mark a sentence with no dependencies)
         return parseElement != None
     
-    def exportCoNLL(self, tokenizationElement, parseElement, outFile, conllFormat):
+    def exportCoNLL(self, tokenizationElement, parseElement, outFile, conllFormat, counts):
         tokens = self.getSortedTokens(tokenizationElement)
         tokenIndexById = self.getTokenIndexById(tokens)
         dependenciesByHead = self.getDependenciesByHead(parseElement)
         conllFormat = self.getCoNLLFormat(conllFormat=conllFormat)
         columns = self.getCoNLLColumns(conllFormat=conllFormat)
+        for metadata in parseElement.findall("meta"):
+            metaline = u"# "
+            if metadata.get("type") != None:
+                metaline += metadata.get("type") + " = "
+            metaline += metadata.get("text") + "\n"
+            outFile.write(metaline)
         for i in range(len(tokens)):
             token = tokens[i]
             row = {}
@@ -164,16 +170,30 @@ class ParseExporter(Parser):
             # Add dependencies
             tokenId = token.get("id")
             if tokenId in dependenciesByHead:
-                for dep in dependenciesByHead[tokenId]:
-                    if dep == dependenciesByHead[tokenId][0]:
-                        row["HEAD"] = str(tokenIndexById[dep.get("t2")] + 1)
-                        row["DEPREL"] = dep.get("type")
-                    elif conllFormat == "conllu":
-                        if row["DEPS"] == "_":
-                            row["DEPS"] = ""
-                        else:
-                            row["DEPS"] += "|"
-                        row["DEPS"] += str(tokenIndexById[dep.get("t2")] + 1) + ":" + dep.get("type")
+                primaryDeps = [x for x in dependenciesByHead[tokenId] if x.get("secondary") == None]
+                secondaryDeps = [x for x in dependenciesByHead[tokenId] if x.get("secondary") == "True"]
+                # Check if any dependencies will be lost
+                if len(primaryDeps) > 1:
+                    if conllFormat == "conllx": # CoNLL-X can have only one dependency per token
+                        counts["tokens-with-lost-deps"] += len(primaryDeps) - 1
+                    else: # CoNLL-U can have only one primary dependency per token
+                        counts["tokens-with-unranked-deps"] += len(primaryDeps) - 1
+                        secondaryDeps += primaryDeps[1:]
+                # Add the single primary dependency
+                if len(primaryDeps) > 0:
+                    row["HEAD"] = str(tokenIndexById[primaryDeps[0].get("t2")] + 1)
+                    row["DEPREL"] = primaryDeps[0].get("type")
+                # If the token is the root token, set the primary dependency as the root dependency
+                if token.get("root") != None:
+                    if "HEAD" in row:
+                        counts["tokens-with-lost-root-dep"] += 1
+                    else:
+                        row["HEAD"] = 0
+                        row["DEPREL"] = token.get("root")
+                # In CoNLL-U format, add the secondary dependencies
+                if len(secondaryDeps) > 0 and conllFormat == "conllu":
+                    secondaryDeps = sorted([(tokenIndexById[x.get("t2")] + 1, x.get("type")) for x in secondaryDeps])
+                    row["DEPS"] = "|".join([str(x[0]) + ":" + x[1] for x in secondaryDeps])
             outFile.write("\t".join(row[x] for x in columns) + "\n")
         outFile.write("\n") # one more newline to end the sentence (or to mark a sentence with no parse)
         return parseElement != None
@@ -224,11 +244,11 @@ class ParseExporter(Parser):
             corpusRoot = ETUtils.ETFromObj(inputFileName).getroot()
             documents = corpusRoot.findall("document")
             counter = ProgressCounter(len(documents), "Documents")
-            counts = defaultdict(int)
+            counts = {"corpus":defaultdict(int)}
             for document in documents:
                 counter.update()
+                counts["corpus"]["documents"] += 1
                 exportId = IXMLUtils.getExportId(document, exportIds)
-                counts["document"] += 1
                 # Open document output files
                 outfiles = {}
                 for fileExt in toExport:
@@ -237,14 +257,17 @@ class ParseExporter(Parser):
                     if os.path.exists(outfilePath): # check for overlapping files
                         raise Exception("Export file '" + str(outfilePath) + "' already exists")
                     outfiles[fileExt] = codecs.open(outfilePath, "wt", "utf-8")
+                    counts[fileExt] = defaultdict(int)
                 # Export document text
                 if "txt" in outfiles and document.get("text") != None:
                     outfiles["txt"].write(document.get("text"))
-                    counts["txt"] += 1
+                    if "txt" not in counts:
+                        counts["txt"] = defaultdict(int)
+                    counts["txt"]["documents"] += 1
                 # Process all the sentences in the document
                 sentenceCount = 0
                 for sentence in document.findall("sentence"):
-                    counts["sentence"] += 1
+                    counts["corpus"]["sentences"] += 1
                     parse = IXMLUtils.getParseElement(sentence, parseName)
                     tokenization = IXMLUtils.getTokenizationElement(sentence, tokenizerName)
                     if "sentences" in outfiles:
@@ -253,21 +276,21 @@ class ParseExporter(Parser):
                     if parse != None:
                         if "ptb" in outfiles:
                             if self.exportPennTreeBank(parse, outfiles["ptb"]):
-                                counts["ptb"] += 1
+                                counts["ptb"]["sentences"] += 1
                         if tokenization != None:
                             if "tok" in outfiles:
                                 if self.exportTokenization(tokenization, parse, sentence, outfiles["tok"]):
-                                    counts["tok"] += 1
+                                    counts["tok"]["sentences"] += 1
                             if "sd" in outfiles:
                                 if self.exportStanfordDependencies(parse, tokenization, outfiles["sd"], tokenIdOffset):
-                                    counts["sd"] += 1
+                                    counts["sd"]["sentences"] += 1
                             for conllFormat in ("conll", "conllx", "conllu"):
                                 if conllFormat in outfiles:
-                                    if self.exportCoNLL(tokenization, parse, outfiles[conllFormat], conllFormat):
-                                        counts[conllFormat] += 1
+                                    if self.exportCoNLL(tokenization, parse, outfiles[conllFormat], conllFormat, counts[conllFormat]):
+                                        counts[conllFormat]["sentences"] += 1
                             if "epe" in outfiles:
                                 if self.exportEPE(tokenization, parse, sentenceCount, outfiles["epe"]):
-                                    counts["epe"] += 1
+                                    counts["epe"]["sentences"] += 1
                     sentenceCount += 1
                 # Close document output files
                 for fileExt in outfiles:
@@ -276,4 +299,4 @@ class ParseExporter(Parser):
             
         print >> sys.stderr, "Parse export counts:"
         for k in sorted(counts.keys()):
-            print >> sys.stderr, "  " + str(k) + ":", counts[k]
+            print >> sys.stderr, "  " + str(k) + ":", dict(counts[k])
