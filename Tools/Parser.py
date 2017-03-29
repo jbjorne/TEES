@@ -183,9 +183,9 @@ class Parser:
                 tokensById[dep["t2"]] = dep["t2Token"]
         else:
             for dep in dependencies:
-                t1, t2 = int(dep["t1"]), int(dep["t2"])
-                tokensById[t1] = {"text":dep["t1Word"], "index":t1}
-                tokensById[t2] = {"text":dep["t2Word"], "index":t2}
+                t1, t2 = dep["t1"], dep["t2"]
+                tokensById[t1] = {"text":dep["t1Word"], "id":t1}
+                tokensById[t2] = {"text":dep["t2Word"], "id":t2}
             depTokens = [tokensById[i] for i in sorted(tokensById.keys())]
             if tokenization != None:
                 self.alignTokens(depTokens, tokenization, counts=counts, tag="dep-")
@@ -602,7 +602,10 @@ class Parser:
             tokens = []
             dependencies = []
             tokenById = {}
-            for word in sentence["words"]:
+            origIdsRequired = False
+            # Build the tokens
+            for i in range(len(sentence["words"])):
+                word = sentence["words"][i]
                 # Use the first available, non-underscore tag from the list as the token's POS tag
                 pos = "_"
                 for key in ("CPOSTAG", "POSTAG", "UPOSTAG", "XPOSTAG"):
@@ -615,15 +618,22 @@ class Parser:
                     if key == "FORM":
                         token["text"] = self.unescape(word[key])
                     elif key == "ID":
-                        token["index"] = word[key]
+                        token["id"] = word[key]
+                        if not origIdsRequired and not (token["id"].isdigit() and int(token["id"]) == i + 1):
+                            origIdsRequired = True
                     elif key != "POS":
                         if isinstance(word[key], basestring):
                             token[key.lower()] = word[key]
                         else:
                             token[key.lower()] = str(word[key])
                 token = {key:token[key] for key in token if token[key] != "_"}
-                tokenById[token["index"]] = token
+                token["index"] = i
+                tokenById[token["id"]] = token
                 tokens.append(token)
+            if origIdsRequired:
+                for token in tokens:
+                    token["origId"] = token["id"]
+            # Build the dependencies
             for word in sentence["words"]:
                 # The word is the second node for the dependency edge
                 t2 = word["ID"]
@@ -703,7 +713,7 @@ class Parser:
                 tokenById = {}
                 for node in obj["nodes"]:
                     properties = node.get("properties", {})
-                    token = {"text":node["form"], "index":node["id"], "POS":properties.get("pos")}
+                    token = {"text":node["form"], "id":node["id"], "POS":properties.get("pos")}
                     for subset in node, properties:
                         for key in subset:
                             if key not in basicKeys:
@@ -711,9 +721,10 @@ class Parser:
                                     token[key.lower()] = subset[key]
                                 else:
                                     token[key.lower()] = str(subset[key])
+                    tokens["index"] = len(tokens)
                     tokens.append(token)
-                    assert token["index"] not in tokenById
-                    tokenById[token["index"]] = token
+                    assert token["id"] not in tokenById
+                    tokenById[token["id"]] = token
                 dependencies = []
                 for node in obj["nodes"]:
                     nodeId = node["id"]

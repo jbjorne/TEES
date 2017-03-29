@@ -141,6 +141,12 @@ class ParseExporter(Parser):
     def exportCoNLL(self, tokenizationElement, parseElement, outFile, conllFormat, counts):
         tokens = self.getSortedTokens(tokenizationElement)
         tokenIndexById = self.getTokenIndexById(tokens)
+        tokenIdMap = {key:str(tokenIndexById[key] + 1) for key in tokenIndexById}
+        for token in tokens:
+            if token.get("origId") != None:
+                tokenIdMap[token.get("id")] = token.get("origId")
+        if len(tokenIdMap.values()) != len(set(tokenIdMap.values())):
+            raise Exception("Duplicate ids in exporting CoNLL format")
         dependenciesByHead = self.getDependenciesByHead(parseElement)
         conllFormat = self.getCoNLLFormat(conllFormat=conllFormat)
         columns = self.getCoNLLColumns(conllFormat=conllFormat)
@@ -155,7 +161,9 @@ class ParseExporter(Parser):
             row = {}
             for column in columns:
                 if column == "ID":
-                    row[column] = str(i + 1)
+                    #if token.get("origId") != None:
+                    #    tokenIdMap[token.get("id")] = token.get("origId")
+                    row[column] = tokenIdMap[token.get("id")]
                 elif column == "FORM":
                     row[column] = token.get("text")
                 else:
@@ -181,7 +189,7 @@ class ParseExporter(Parser):
                         secondaryDeps += primaryDeps[1:]
                 # Add the single primary dependency
                 if len(primaryDeps) > 0:
-                    row["HEAD"] = str(tokenIndexById[primaryDeps[0].get("t1")] + 1)
+                    row["HEAD"] = tokenIdMap[primaryDeps[0].get("t1")]
                     row["DEPREL"] = primaryDeps[0].get("type")
                 # If the token is the root token, set the primary dependency as the root dependency
                 if token.get("root") != None:
@@ -192,8 +200,9 @@ class ParseExporter(Parser):
                         row["DEPREL"] = token.get("root")
                 # In CoNLL-U format, add the secondary dependencies
                 if len(secondaryDeps) > 0 and conllFormat == "conllu":
-                    secondaryDeps = sorted([(tokenIndexById[x.get("t1")] + 1, x.get("type")) for x in secondaryDeps])
-                    row["DEPS"] = "|".join([str(x[0]) + ":" + x[1] for x in secondaryDeps])
+                    #secondaryDeps = [x[1] for x in sorted([(tokenIndexById[x.get("t1")], x) for x in secondaryDeps])] # Sort by token index
+                    secondaryDeps.sort(key=lambda x: tokenIndexById[x.get("t1")])
+                    row["DEPS"] = "|".join([tokenIdMap[x.get("t1")] + ":" + x.get("type") for x in secondaryDeps])
             outFile.write("\t".join(row[x] for x in columns) + "\n")
         outFile.write("\n") # one more newline to end the sentence (or to mark a sentence with no parse)
         return parseElement != None
@@ -245,6 +254,8 @@ class ParseExporter(Parser):
             documents = corpusRoot.findall("document")
             counter = ProgressCounter(len(documents), "Documents")
             counts = {"corpus":defaultdict(int)}
+            for fileExt in toExport:
+                counts[fileExt] = defaultdict(int)
             for document in documents:
                 counter.update()
                 counts["corpus"]["documents"] += 1
@@ -257,7 +268,6 @@ class ParseExporter(Parser):
                     if os.path.exists(outfilePath): # check for overlapping files
                         raise Exception("Export file '" + str(outfilePath) + "' already exists")
                     outfiles[fileExt] = codecs.open(outfilePath, "wt", "utf-8")
-                    counts[fileExt] = defaultdict(int)
                 # Export document text
                 if "txt" in outfiles and document.get("text") != None:
                     outfiles["txt"].write(document.get("text"))

@@ -77,6 +77,7 @@ class Preprocessor(ToolChain):
         self.initStepGroup("Post-parsing")
         self.initStep("SPLIT-NAMES", ProteinNameSplitter.mainFunc, {"parseName":self.parseName, "removeOld":True}, "split-names.xml")
         self.initStep("FIND-HEADS", FindHeads.findHeads, {"parse":self.parseName, "removeExisting":True}, "heads.xml")
+        self.initStep("REMOVE-DOCUMENT-TEXTS", Utils.InteractionXML.DeleteAttributes.processCorpus, {"rules":{"document":["text"]}}, "remove-document-texts.xml")
         self.initStepGroup("Saving")
         self.initStep("DIVIDE-SETS", self.divideSets, {"saveCombined":False}, None)
         self.initStep("SAVE", self.save, {}, None)
