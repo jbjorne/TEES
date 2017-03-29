@@ -193,7 +193,7 @@ class Parser:
         skipped = []
         for dep in dependencies:
             counts["deps-total"] += 1
-            t1, t2 = int(dep["t1"]), int(dep["t2"])
+            t1, t2 = dep["t1"], dep["t2"]
             if "element" in tokensById[t1] and "element" in tokensById[t2]:
                 element = ET.Element("dependency")
                 element.set("type", dep["type"])
@@ -221,6 +221,10 @@ class Parser:
             parse.set("skipped-deps", ", ".join([self.depToString(dep) for dep in skipped]))
             print >> sys.stderr, "Could not align dependencies:", parse.get("skipped-deps")
         return elements
+    
+    def insertMetadata(self, metadatas, parse, idStem="m"):
+        for i in range(len(metadatas)):
+            ET.SubElement(parse, "meta", metadatas[i], id=idStem + str(i))
     
     def insertElements(self, sentObjs, sentences, parseName, tokenizerName=None, counter=None, counts=None):
         assert len(sentObjs) == len(sentences), (len(sentObjs), len(sentences))
@@ -253,6 +257,8 @@ class Parser:
                 self.insertDependencies(sentObj["dependencies"], sentence, parse, tokenization if tokenizerName != "LINKED" else "LINKED", counts=counts)
             if "phrases" in sentObj:
                 self.insertPhrases(sentObj["phrases"], parse, sentObj["tokens"])
+            if "metadata" in sentObj:
+                self.insertMetadata(sentObj["metadata"], parse)
         return counts
     
     ###########################################################################
@@ -567,8 +573,6 @@ class Parser:
         sentences = []
         with codecs.open(inPath, "rt", "utf-8") as f:
             for line in f:
-                if line.startswith("#"): # A comment line
-                    continue
                 line = line.strip()
                 if line == "":
                     if sentence == None: # Additional empty line
@@ -576,12 +580,15 @@ class Parser:
                     sentence = None
                 else:
                     if sentence == None:
-                        sentence = []
+                        sentence = {"words":[], "metadata":[]}
                         sentences.append(sentence)
-                    splits = line.split("\t")
-                    assert len(splits) == len(columns), (splits, columns)
-                    word = {columns[i]:splits[i] for i in range(len(columns))}
-                    sentence.append(word)
+                    if line.startswith("#"): # A metadata line
+                        sentence["metadata"].append(line)
+                    else:
+                        splits = line.split("\t")
+                        assert len(splits) == len(columns), (splits, columns)
+                        word = {columns[i]:splits[i] for i in range(len(columns))}
+                        sentence["words"].append(word)
         return sentences
     
     def processCoNLLSentences(self, sentences):
@@ -589,8 +596,8 @@ class Parser:
         for sentence in sentences:
             tokens = []
             dependencies = []
-            wordById = {}
-            for word in sentence:
+            tokenById = {}
+            for word in sentence["words"]:
                 # Use the first available, non-underscore tag from the list as the token's POS tag
                 pos = "_"
                 for key in ("CPOSTAG", "POSTAG", "UPOSTAG", "XPOSTAG"):
@@ -610,14 +617,31 @@ class Parser:
                         else:
                             token[key.lower()] = str(word[key])
                 token = {key:token[key] for key in token if token[key] != "_"}
-                wordById[int(token["index"]) - 1] = token
+                tokenById[token["index"]] = token
                 tokens.append(token)
-            for word in sentence:
-                t1 = int(word["HEAD"]) - 1
-                if t1 > 0:
-                    t2 = int(word["ID"]) - 1
-                    dependencies.append({"type":word["DEPREL"].lower(), "t1":t1, "t2":t2, "t1Token":wordById[t1], "t2Token":wordById[t2]})
-            outSentences.append({"tokens":tokens, "dependencies":dependencies})
+            for word in sentence["words"]:
+                t1 = word["HEAD"]
+                if t1 == "_":
+                    continue
+                if t1.isdigit() and int(t1) == 0:
+                    assert word["DEPREL"] == "root"
+                    tokenById[word["ID"]]["root"] = "True"
+                else:
+                    t2 = word["ID"]
+                    if t1 not in tokenById or t2 not in tokenById:
+                        raise Exception("Dependency token not defined for word " + str(word) + " in sentence " + str(sentence))
+                    dependencies.append({"type":word["DEPREL"].lower(), "t1":t1, "t2":t2, "t1Token":tokenById[t1], "t2Token":tokenById[t2]})
+            outSentence = {"tokens":tokens, "dependencies":dependencies}
+            if len(sentence["metadata"]) > 0:
+                outSentence["metadata"] = []
+                for line in sentence["metadata"]:
+                    assert line[0] == "#"
+                    key, value = None, line[1:].strip()
+                    if "=" in value:
+                        key, value = value.split("=", 1)
+                        key, value = key.strip(), value.strip()
+                    outSentence["metadata"].append({"type":key, "text":value})
+            outSentences.append(outSentence)
         return outSentences
     
 #     def insertCoNLLSentences(self, sentObjs, sentences, parseName="McCC", skipExtra=0, removeExisting=False, counter=None, counts=None):
