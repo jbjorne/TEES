@@ -102,7 +102,12 @@ class Parser:
                 counts[tag + "tokens-aligned"] += 1
             else:
                 counts[tag + "tokens-not-aligned"] += 1
-
+    
+    def addExtraAttributes(self, element, sourceDict, skipKeys):
+        for key in sourceDict:
+            if key not in skipKeys:
+                element.set(key, sourceDict[key])
+    
     def insertTokens(self, tokens, sentence, tokenization, idStem="t", counts=None):
         #catenatedTokens, catToToken = self.mapTokens([x["text"] for x in tokens])
         if counts == None:
@@ -116,6 +121,7 @@ class Parser:
             Align.printAlignment(alignedSentence, alignedCat, diff)
         pos = 0
         tokenIndex = 0
+        tokKeys = set(["id", "text", "origText", "index", "POS"])
         for token in tokens:
             counts["tokens-parse"] += 1
             tokenOffsets = [x for x in alignedOffsets[pos:pos + len(token["text"])] if x != None]
@@ -136,10 +142,7 @@ class Parser:
                     #element.set("match", "exact")
                     counts["tokens-exact-match"] += 1
                 element.set("POS", token.get("POS"))
-                basicKeys = set(["id", "text", "origText", "index", "POS"]) # Additional token data
-                for key in token:
-                    if key not in basicKeys:
-                        element.set(key, token[key])
+                self.addExtraAttributes(element, token, tokKeys) # Additional token data
                 element.set("charOffset", str(offset[0]) + "-" + str(offset[1]))
                 tokenization.append(element)
                 token["element"] = element
@@ -191,6 +194,7 @@ class Parser:
         count = 0
         elements = []
         skipped = []
+        depKeys = set(["id", "type", "t1", "t2", "t1Word", "t2Word", "t1Token", "t2Token"])
         for dep in dependencies:
             counts["deps-total"] += 1
             t1, t2 = dep["t1"], dep["t2"]
@@ -200,6 +204,7 @@ class Parser:
                 element.set("id", idStem + str(count))
                 element.set("t1", tokensById[t1]["element"].get("id"))
                 element.set("t2", tokensById[t2]["element"].get("id"))
+                self.addExtraAttributes(element, dep, depKeys) # Additional token data
                 elements.append(element)
                 parse.insert(count, element)
                 count += 1
@@ -620,6 +625,9 @@ class Parser:
                 tokenById[token["index"]] = token
                 tokens.append(token)
             for word in sentence["words"]:
+                # The word is the second node for the dependency edge
+                t2 = word["ID"]
+                # Process the primary dependency
                 t1 = word["HEAD"]
                 if t1 == "_":
                     continue
@@ -627,10 +635,16 @@ class Parser:
                     assert word["DEPREL"] == "root"
                     tokenById[word["ID"]]["root"] = "True"
                 else:
-                    t2 = word["ID"]
                     if t1 not in tokenById or t2 not in tokenById:
-                        raise Exception("Dependency token not defined for word " + str(word) + " in sentence " + str(sentence))
-                    dependencies.append({"type":word["DEPREL"].lower(), "t1":t1, "t2":t2, "t1Token":tokenById[t1], "t2Token":tokenById[t2]})
+                        raise Exception("Dependency token + '" + str([t1,t2]) + "' not defined for word " + str(word) + " in sentence " + str(sentence))
+                    dependencies.append({"type":word["DEPREL"], "t1":t1, "t2":t2, "t1Token":tokenById[t1], "t2Token":tokenById[t2]})
+                # Process secondary dependencies
+                if word["DEPS"] != "_":
+                    for depString in word["DEPS"].strip().split("|"):
+                        t1, depType = depString.split(":", 1)
+                        if t1 not in tokenById or t2 not in tokenById:
+                            raise Exception("Secondary dependency token + '" + str([t1,t2]) + "' not defined for word " + str(word) + " in sentence " + str(sentence))
+                        dependencies.append({"type":depType, "t1":t1, "t2":t2, "t1Token":tokenById[t1], "t2Token":tokenById[t2], "secondary":"True"})
             outSentence = {"tokens":tokens, "dependencies":dependencies}
             if len(sentence["metadata"]) > 0:
                 outSentence["metadata"] = []
