@@ -175,7 +175,7 @@ class Parser:
             
     def insertDependencies(self, dependencies, sentence, parse, tokenization, idStem="d", counts=None):
         tokensById = {}
-        dependencies = [x for x in dependencies if x["type"] != "root"]
+        #dependencies = [x for x in dependencies if x["type"] != "root"]
         if tokenization == "LINKED":
             for dep in dependencies:
                 assert dep["t1Token"] != None and dep["t2Token"] != None
