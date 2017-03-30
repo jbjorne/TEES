@@ -661,14 +661,16 @@ class Parser:
                 outSentence["metadata"] = []
                 for line in sentence["metadata"]:
                     assert line[0] == "#"
-                    key, value = None, line[1:].strip()
-                    if "=" in value:
-                        key, value = value.split("=", 1)
+                    line = line[1:].strip()
+                    metadata = {"text":line}
+                    if "=" in line:
+                        key, value = line.split("=", 1)
                         key = key.strip()
                         value = value.rstrip()
                         if value[0] == " ":
                             value = value[1:]
-                    outSentence["metadata"].append({"type":key, "text":value})
+                        metadata = {"type":key, "text":value}
+                    outSentence["metadata"].append(metadata)
             outSentences.append(outSentence)
         return outSentences
     
