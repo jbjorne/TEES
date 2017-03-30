@@ -581,7 +581,7 @@ class Parser:
                 line = line.strip()
                 if line == "":
                     if sentence == None: # Additional empty line
-                        sentences.append([])
+                        sentences.append({"words":[], "metadata":[]})
                     sentence = None
                 else:
                     if sentence == None:
@@ -650,7 +650,7 @@ class Parser:
                         raise Exception("Dependency token + '" + str([t1,t2]) + "' not defined for word " + str(word) + " in sentence " + str(sentence))
                     dependencies.append({"type":word["DEPREL"], "t1":t1, "t2":t2, "t1Token":tokenById[t1], "t2Token":tokenById[t2]})
                 # Process secondary dependencies
-                if word["DEPS"] != "_":
+                if "DEPS" in word and word["DEPS"] != "_":
                     for depString in word["DEPS"].strip().split("|"):
                         t1, depType = depString.split(":", 1)
                         if t1 not in tokenById or t2 not in tokenById:
