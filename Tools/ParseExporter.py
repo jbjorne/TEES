@@ -9,7 +9,7 @@ from Parser import Parser
 import Utils.ElementTreeUtils as ETUtils
 import Utils.InteractionXML.InteractionXMLUtils as IXMLUtils
 import Utils.Range
-from collections import defaultdict
+from collections import defaultdict, OrderedDict
 import json
 
 class ParseExporter(Parser):
@@ -211,7 +211,7 @@ class ParseExporter(Parser):
         tokens = self.getSortedTokens(tokenizationElement)
         tokenIndexById = self.getTokenIndexById(tokens)
         dependenciesByHead = self.getDependenciesByHead(parseElement)
-        obj = {"id":sentenceCount + 1, "nodes":[]}
+        obj = OrderedDict([("id",sentenceCount + 1), ("nodes",[])])
         basicKeys = set(["POS", "text", "charOffset", "headOffset"])
         if propertyTypes == "EPE":
             propertyTypes = ("POS", "lemma")
@@ -219,7 +219,7 @@ class ParseExporter(Parser):
         for i in range(len(tokens)):
             token = tokens[i]
             charOffset = Utils.Range.charOffsetToSingleTuple(token.get("charOffset"))
-            node = {"id":i+1, "start":charOffset[0] + sentencePos, "end":charOffset[1] + sentencePos, "form":token.get("text"), "properties":{"pos":token.get("POS")}}
+            node = OrderedDict([("id",i+1), ("form",token.get("text")), ("start",charOffset[0] + sentencePos), ("end",charOffset[1] + sentencePos), ("properties",OrderedDict([("pos",token.get("POS"))]))])
             for key in token.attrib:
                 if key not in basicKeys:
                     if propertyTypes == None or key in propertyTypes:
@@ -229,10 +229,10 @@ class ParseExporter(Parser):
             if tokenId in dependenciesByHead:
                 edges = []
                 for dep in dependenciesByHead[tokenId]:
-                    edges.append({"label":dep.get("type"), "target":str(tokenIndexById[dep.get("t2")] + 1)})
+                    edges.append(OrderedDict([("label",dep.get("type")), ("target",str(tokenIndexById[dep.get("t2")] + 1))]))
                 node["edges"] = edges
             obj["nodes"].append(node)
-        outFile.write(json.dumps(obj, sort_keys=True) + "\n")
+        outFile.write(json.dumps(obj) + "\n")
         return True
     
     def export(self, input, output, parseName, tokenizerName=None, toExport=["tok", "ptb", "sd"], inputSuffixes=None, clear=False, tokenIdOffset=0, exportIds=None):
