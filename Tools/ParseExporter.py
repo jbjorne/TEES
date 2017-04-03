@@ -207,19 +207,23 @@ class ParseExporter(Parser):
         outFile.write("\n") # one more newline to end the sentence (or to mark a sentence with no parse)
         return parseElement != None
     
-    def exportEPE(self, tokenizationElement, parseElement, sentenceCount, outFile):
+    def exportEPE(self, tokenizationElement, parseElement, sentence, sentenceCount, outFile, propertyTypes="EPE"):
         tokens = self.getSortedTokens(tokenizationElement)
         tokenIndexById = self.getTokenIndexById(tokens)
         dependenciesByHead = self.getDependenciesByHead(parseElement)
-        obj = {"id":sentenceCount, "nodes":[]}
+        obj = {"id":sentenceCount + 1, "nodes":[]}
         basicKeys = set(["POS", "text", "charOffset", "headOffset"])
+        if propertyTypes == "EPE":
+            propertyTypes = ("POS", "lemma")
+        sentencePos = Utils.Range.charOffsetToSingleTuple(sentence.get("charOffset"))[0]
         for i in range(len(tokens)):
             token = tokens[i]
             charOffset = Utils.Range.charOffsetToSingleTuple(token.get("charOffset"))
-            node = {"id":i+1, "start":charOffset[0], "end":charOffset[1], "form":token.get("text"), "properties":{"pos":token.get("POS")}}
+            node = {"id":i+1, "start":charOffset[0] + sentencePos, "end":charOffset[1] + sentencePos, "form":token.get("text"), "properties":{"pos":token.get("POS")}}
             for key in token.attrib:
                 if key not in basicKeys:
-                    node["properties"][key] = token.get(key)
+                    if propertyTypes == None or key in propertyTypes:
+                        node["properties"][key] = token.get(key)
             # Add dependencies
             tokenId = token.get("id")
             if tokenId in dependenciesByHead:
@@ -228,7 +232,7 @@ class ParseExporter(Parser):
                     edges.append({"label":dep.get("type"), "target":str(tokenIndexById[dep.get("t2")] + 1)})
                 node["edges"] = edges
             obj["nodes"].append(node)
-        outFile.write(json.dumps(obj) + "\n")
+        outFile.write(json.dumps(obj, sort_keys=True) + "\n")
         return True
     
     def export(self, input, output, parseName, tokenizerName=None, toExport=["tok", "ptb", "sd"], inputSuffixes=None, clear=False, tokenIdOffset=0, exportIds=None):
@@ -299,7 +303,7 @@ class ParseExporter(Parser):
                                     if self.exportCoNLL(tokenization, parse, outfiles[conllFormat], conllFormat, counts[conllFormat]):
                                         counts[conllFormat]["sentences"] += 1
                             if "epe" in outfiles:
-                                if self.exportEPE(tokenization, parse, sentenceCount, outfiles["epe"]):
+                                if self.exportEPE(tokenization, parse, sentence, sentenceCount, outfiles["epe"]):
                                     counts["epe"]["sentences"] += 1
                     sentenceCount += 1
                 # Close document output files
