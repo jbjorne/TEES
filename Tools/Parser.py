@@ -596,7 +596,7 @@ class Parser:
                         sentence["words"].append(word)
         return sentences
     
-    def processCoNLLSentences(self, sentences):
+    def processCoNLLSentences(self, sentences, unescaping=False):
         outSentences = []
         for sentence in sentences:
             tokens = []
@@ -616,7 +616,9 @@ class Parser:
                 token = {"POS":pos}
                 for key in word:
                     if key == "FORM":
-                        token["text"] = self.unescape(word[key])
+                        token["text"] = word[key]
+                        if self.unescape:
+                            token["text"] = self.unescape(token["text"])
                     elif key == "ID":
                         token["id"] = word[key]
                         if not origIdsRequired and not (token["id"].isdigit() and int(token["id"]) == i + 1):
@@ -688,9 +690,9 @@ class Parser:
 #             self.insertDependencies(objs["dependencies"], sentence, parse, "linked", counts=counts)
 #         return counts
     
-    def insertCoNLLParses(self, coNLLFilePath, corpusRoot, parseName="McCC", extraAttributes=None, removeExisting=False):
+    def insertCoNLLParses(self, coNLLFilePath, corpusRoot, parseName="McCC", extraAttributes=None, removeExisting=False, unescaping=False):
         sentRows = self.readCoNLL(coNLLFilePath)
-        sentObjs = self.processCoNLLSentences(sentRows)
+        sentObjs = self.processCoNLLSentences(sentRows, unescaping=unescaping)
         sentences = [x for x in self.getSentences(corpusRoot, skipParsed=not removeExisting)]
         counter = ProgressCounter(len(sentences), "Dependency Parse Insertion")
         counts = defaultdict(int)
