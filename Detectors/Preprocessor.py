@@ -52,7 +52,7 @@ class Preprocessor(ToolChain):
     
     def initSteps(self):
         self.initStepGroup("Loading")
-        self.initStep("LOAD", self.load, {"dataSetNames":None, "corpusName":None}, "load.xml")
+        self.initStep("LOAD", self.load, {"dataSetNames":None, "corpusName":None, "extensions":None}, "load.xml")
         self.initStep("DOWNLOAD-PUBMED", self.downloadPubmed, {}, "pubmed.xml")
         self.initStep("CONVERT", self.convert, {"dataSetNames":None, "corpusName":None}, "convert.xml")
         self.initStep("MERGE-SETS", Utils.InteractionXML.MergeSets.mergeSets, {"corpusDir":None}, "merged-sets.xml")
@@ -164,11 +164,11 @@ class Preprocessor(ToolChain):
     # Loading Steps
     ###########################################################################
     
-    def load(self, input, dataSetNames=None, corpusName=None, output=None):
+    def load(self, input, dataSetNames=None, corpusName=None, output=None, extensions=None):
         if isinstance(input, basestring) and input.isdigit():
             return self.downloadPubmed(input, output)
         elif isinstance(input, basestring) and (os.path.isdir(input) or input.endswith(".tar.gz") or input.endswith(".txt") or "," in input):
-            return self.convert(input, dataSetNames, corpusName, output)
+            return self.convert(input, dataSetNames, corpusName, output, extensions=extensions)
         elif isinstance(input, basestring) and not os.path.exists(input):
             fullPath = os.path.join(Settings.CORPUS_DIR, input)
             print >> sys.stderr, "Loading installed corpus from", fullPath
@@ -204,7 +204,7 @@ class Preprocessor(ToolChain):
             dirs.append({"dataset":dataSetName, "path":dataSetDir, "extensions":extensions})
         return dirs
         
-    def convert(self, input, dataSetNames=None, corpusName=None, output=None):
+    def convert(self, input, dataSetNames=None, corpusName=None, output=None, extensions=None):
         assert isinstance(input, basestring) and (os.path.isdir(input) or input.endswith(".tar.gz") or input.endswith(".txt") or "," in input)
         print >> sys.stderr, "Converting ST-format to Interaction XML"
         sourceDirs = self.getSourceDirs(input, dataSetNames)
@@ -213,6 +213,8 @@ class Preprocessor(ToolChain):
             corpusName = "TEES"
         # Convert all ST format input files into one corpus
         stExtensions = set(["txt", "a1", "a2", "rel"])
+        if extensions != None:
+            stExtensions = set([x for x in stExtensions if x in extensions])
         documents = []
         xml = None
         for sourceDir in sourceDirs:
@@ -227,6 +229,8 @@ class Preprocessor(ToolChain):
             xml = Utils.STFormat.ConvertXML.toInteractionXML(documents, corpusName, output)
         # Add parse files into the corpus
         parseExtensions = set(["sentences", "tok", "ptb", "sd", "conll", "conllx", "conllu", "epe"])
+        if extensions != None:
+            parseExtensions = set([x for x in parseExtensions if x in extensions])
         for sourceDir in sourceDirs:
             if len(parseExtensions.intersection(sourceDir["extensions"])) > 0:
                 print >> sys.stderr, "Importing parses from", sourceDir["path"], "file types", sorted(sourceDir["extensions"])

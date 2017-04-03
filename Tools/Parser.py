@@ -559,9 +559,11 @@ class Parser:
                 conllFormat = "conllx"
             elif ext == "conllu":
                 conllFormat = "conllu"
+            elif ext == "corenlp":
+                conllFormat = "corenlp"
         if conllFormat == "conll":
             conllFormat = "conllx"
-        assert conllFormat in ("conllx", "conllu")
+        assert conllFormat in ("conllx", "conllu", "corenlp"), conllFormat
         return conllFormat
     
     def getCoNLLColumns(self, inPath=None, conllFormat=None):
@@ -569,6 +571,8 @@ class Parser:
         conllFormat = self.getCoNLLFormat(inPath, conllFormat)
         if conllFormat == "conllx":
             return ["ID", "FORM", "LEMMA", "CPOSTAG", "POSTAG", "FEATS", "HEAD", "DEPREL", "PHEAD", "PDEPREL"]
+        elif conllFormat == "corenlp": # Official column names are wordIndex, token, lemma, POS, NER, head, depRel
+            return ["ID", "FORM", "LEMMA", "POS", "NER", "HEAD", "DEPREL"]
         else:
             return ["ID", "FORM", "LEMMA", "UPOSTAG", "XPOSTAG", "FEATS", "HEAD", "DEPREL", "DEPS", "MISC"]
     
@@ -608,7 +612,7 @@ class Parser:
                 word = sentence["words"][i]
                 # Use the first available, non-underscore tag from the list as the token's POS tag
                 pos = "_"
-                for key in ("CPOSTAG", "POSTAG", "UPOSTAG", "XPOSTAG"):
+                for key in ("CPOSTAG", "POSTAG", "UPOSTAG", "XPOSTAG", "POS"):
                     if word.get(key, "_") != "_":
                         pos = word[key]
                         break

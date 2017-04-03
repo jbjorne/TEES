@@ -16,7 +16,8 @@ if __name__=="__main__":
     #optparser.add_option("--depParser", default="STANFORD-CONVERT", help="STANFORD or STANFORD-CONVERT")
     shortcuts.add_option("--parseName", default="McCC", help="Default setting for parsing steps")
     shortcuts.add_option("--parseDir", default=None, help="IMPORT-PARSE step parse files directory")
-    shortcuts.add_option("--formats", default=None, help="EXPORT format options")
+    shortcuts.add_option("--importFormats", default=None, help="LOAD/IMPORT-PARSE format options")
+    shortcuts.add_option("--exportFormats", default=None, help="EXPORT format options")
     optparser.add_option_group(shortcuts)
     debug = OptionGroup(optparser, "Debug and Process Control Options", "")
     debug.add_option("-f", "--fromStep", default=None, dest="fromStep", help="Continue from this step")
@@ -43,9 +44,13 @@ if __name__=="__main__":
             preprocessor.stepArgs("CONVERT")["dataSetNames"] = options.dataSetNames
         if options.parseDir:
             preprocessor.stepArgs("IMPORT-PARSE")["parseDir"] = options.parseDir
-        if options.formats:
-            if preprocessor.hasStep("EXPORT"):
-                preprocessor.stepArgs("EXPORT")["formats"] = options.formats.split(",")
+        if options.exportFormats and preprocessor.hasStep("EXPORT"):
+            preprocessor.stepArgs("EXPORT")["formats"] = options.exportFormats.split(",")
+        if options.importFormats:
+            if preprocessor.hasStep("LOAD"):
+                preprocessor.stepArgs("LOAD")["extensions"] = options.importFormats.split(",")
+            if preprocessor.hasStep("IMPORT-PARSE"):
+                preprocessor.stepArgs("IMPORT-PARSE")["extensions"] = options.importFormats.split(",")
         if options.intermediateFiles:
             preprocessor.setIntermediateFiles(True)
         preprocessor.process(options.input, options.output, options.parameters, model=None, fromStep=options.fromStep, toStep=options.toStep, omitSteps=options.omitSteps, logPath=options.logPath)
