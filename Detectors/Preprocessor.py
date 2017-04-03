@@ -135,6 +135,8 @@ class Preprocessor(ToolChain):
         if logPath == "AUTO":
             logPath = os.path.join(output + "-log.txt")
         if logPath not in (None, "None"):
+            if not os.path.exists(os.path.dirname(logPath)):
+                os.makedirs(os.path.dirname(logPath))
             Stream.openLog(logPath)
         print >> sys.stderr, "Preprocessor steps:", [x[0] for x in self.steps]
         if len(self.steps) == 0:
