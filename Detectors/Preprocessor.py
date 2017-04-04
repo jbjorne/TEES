@@ -140,7 +140,7 @@ class Preprocessor(ToolChain):
     
     def process(self, source, output=None, parameters=None, model=None, fromStep=None, toStep=None, omitSteps=None, logPath=None):
         if logPath == "AUTO":
-            logPath = os.path.join(output + "-log.txt")
+            logPath = os.path.join(output.rstrip("/").rstrip("\\") + "-log.txt")
         if logPath not in (None, "None"):
             if not os.path.exists(os.path.dirname(logPath)):
                 os.makedirs(os.path.dirname(logPath))
