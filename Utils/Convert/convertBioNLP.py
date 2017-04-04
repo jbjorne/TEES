@@ -51,6 +51,8 @@ def installEvaluators(destPath=None, downloadPath=None, redownload=False, update
 def downloadCorpus(corpus, destPath=None, downloadPath=None, clear=False):
     print >> sys.stderr, "---------------", "Downloading BioNLP Shared Task files", "---------------"
     downloaded = {}
+    if downloadPath == None:
+        downloadPath = os.path.join(Settings.DATAPATH, "download")
     if destPath == None:
         finalDestPath = os.path.join(Settings.DATAPATH, "corpora/BioNLP11-original")
     else:
@@ -62,8 +64,6 @@ def downloadCorpus(corpus, destPath=None, downloadPath=None, clear=False):
             raise Exception("Settings key '" + parentIdentifier + "' not found")
         if parentIdentifier in Settings.URL:
             downloaded[identifier] = Utils.Download.download(Settings.URL[parentIdentifier], downloadPath, clear=clear)
-    if downloadPath == None:
-        downloadPath = os.path.join(Settings.DATAPATH, "download")
     if corpus in ["REL11", "REN11", "CO11"]:
         if destPath == None:
             teesParseFinalDestPath = os.path.join(Settings.DATAPATH, "TEES-parses")
@@ -139,13 +139,15 @@ def convertCorpus(corpus, outDir=None, downloadDir=None, redownload=False, makeI
         packageSubPath = "task_2"
     elif corpus == "BB13T3":
         packageSubPath = "task_3"
-    convertDownloaded(outDir, corpus, downloaded, makeIntermediateFiles, evaluate, processEquiv=processEquiv, analysisMode=analysisMode, packageSubPath=packageSubPath, debug=debug, preprocessorSteps=preprocessorSteps, preprocessorParameters=preprocessorParameters)
+    xml = convertDownloaded(outDir, corpus, downloaded, makeIntermediateFiles, evaluate, processEquiv=processEquiv, analysisMode=analysisMode, packageSubPath=packageSubPath, debug=debug, preprocessorSteps=preprocessorSteps, preprocessorParameters=preprocessorParameters)
     if logPath != None:
         Stream.closeLog(logFileName)
     
     if bioNLP13AnalysesTempDir != None:
         shutil.rmtree(bioNLP13AnalysesTempDir)
         bioNLP13AnalysesTempDir = None
+    
+    return xml
 
 def corpusRENtoASCII(xml):
     print >> sys.stderr, "Converting REN11 corpus to ASCII"
@@ -164,6 +166,9 @@ def checkAttributes(xml):
 
 def convertDownloaded(outdir, corpus, files, intermediateFiles=False, evaluate=True, processEquiv=True, analysisMode="INSERT", packageSubPath=None, debug=False, preprocessorSteps=None, preprocessorParameters=None):
     global moveBI
+    
+    if outdir != None and not os.path.exists(outdir):
+        os.makedirs(outdir)
     if evaluate:
         workdir = outdir + "/conversion/" + corpus
         if os.path.exists(workdir):
@@ -187,7 +192,7 @@ def convertDownloaded(outdir, corpus, files, intermediateFiles=False, evaluate=T
         print >> sys.stderr, "Read", len(docs), "documents"
         documents.extend(docs)
         
-    if len(docs) > 0 and docs[0].license != None:
+    if outdir != None and len(docs) > 0 and docs[0].license != None:
         licenseFile = open(os.path.join(outdir, corpus + "-LICENSE"), "wt")
         licenseFile.write(docs[0].license)
         licenseFile.close()
@@ -266,7 +271,7 @@ def convertDownloaded(outdir, corpus, files, intermediateFiles=False, evaluate=T
     print >> sys.stderr, "---------------", "Corpus Structure Analysis", "---------------"
     analyzer = StructureAnalyzer()
     analyzer.analyze([xml])
-    print >> sys.stderr, analyzer.toString()
+    print >> sys.stderr, analyzer.toString().strip()
     return xml
 
 def insertAnalyses(xml, corpus, datasets, files, bigfileName, packageSubPath=None):

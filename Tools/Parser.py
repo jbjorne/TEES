@@ -205,6 +205,7 @@ class Parser:
                 assert t1 >= 0 or t2 >= 0, dep
                 tId = t1 if t1 >= 0 else t2
                 tokensById[tId]["element"].set("root", dep["type"])
+                count += 1
                 counts["deps-root"] += 1
             elif "element" in tokensById[t1] and "element" in tokensById[t2]:
                 element = ET.Element("dependency")
