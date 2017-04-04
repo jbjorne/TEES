@@ -63,12 +63,8 @@ class ParseExporter(Parser):
 #             if escaping:
     
     def getSortedTokens(self, tokenizationElement):
-        tokens = []
-        for token in tokenizationElement.findall("token"):
-            begin, end = token.get("charOffset").split("-")
-            tokens.append( [int(begin), int(end), token, token] )
-        tokens.sort()
-        return [x[2] for x in tokens]
+        tokens = sorted([(Utils.Range.charOffsetToSingleTuple(x.get("charOffset")), x) for x in tokenizationElement.findall("token")])
+        return [x[1] for x in tokens]
     
     def getEscapedTokenTexts(self, tokens):
         tokenTextById = {}
@@ -81,13 +77,14 @@ class ParseExporter(Parser):
     def getTokenIndexById(self, sortedTokens):
         return {sortedTokens[i].get("id"):i for i in range(len(sortedTokens))}
     
-    def getDependenciesByHead(self, parseElement):
-        dependenciesByHead = {}
+    def getDependenciesByToken(self, parseElement, tokenAttrName):
+        assert tokenAttrName in ("t1", "t2")
+        dependenciesByToken = {}
         for dep in parseElement.findall("dependency"):
-            if dep.get("t2") not in dependenciesByHead:
-                dependenciesByHead[dep.get("t2")] = []
-            dependenciesByHead[dep.get("t2")].append(dep)
-        return dependenciesByHead
+            if dep.get(tokenAttrName) not in dependenciesByToken:
+                dependenciesByToken[dep.get(tokenAttrName)] = []
+            dependenciesByToken[dep.get(tokenAttrName)].append(dep)
+        return dependenciesByToken
     
     def exportTokenization(self, tokenizationElement, parseElement, sentenceElement, outFile):
         tokens = self.getSortedTokens(tokenizationElement)
@@ -147,7 +144,7 @@ class ParseExporter(Parser):
                 tokenIdMap[token.get("id")] = token.get("origId")
         if len(tokenIdMap.values()) != len(set(tokenIdMap.values())):
             raise Exception("Duplicate ids in exporting CoNLL format")
-        dependenciesByHead = self.getDependenciesByHead(parseElement)
+        dependenciesByHead = self.getDependenciesByToken(parseElement, "t2")
         conllFormat = self.getCoNLLFormat(conllFormat=conllFormat)
         columns = self.getCoNLLColumns(conllFormat=conllFormat)
         for metadata in parseElement.findall("meta"):
@@ -210,7 +207,7 @@ class ParseExporter(Parser):
     def exportEPE(self, tokenizationElement, parseElement, sentence, sentenceCount, outFile, propertyTypes="EPE"):
         tokens = self.getSortedTokens(tokenizationElement)
         tokenIndexById = self.getTokenIndexById(tokens)
-        dependenciesByHead = self.getDependenciesByHead(parseElement)
+        dependenciesByHead = self.getDependenciesByToken(parseElement, "t1")
         obj = OrderedDict([("id",sentenceCount + 1), ("nodes",[])])
         basicKeys = set(["POS", "text", "charOffset", "headOffset"])
         if propertyTypes == "EPE":
@@ -218,8 +215,12 @@ class ParseExporter(Parser):
         sentencePos = Utils.Range.charOffsetToSingleTuple(sentence.get("charOffset"))[0]
         for i in range(len(tokens)):
             token = tokens[i]
+            #print token.attrib
             charOffset = Utils.Range.charOffsetToSingleTuple(token.get("charOffset"))
-            node = OrderedDict([("id",i+1), ("form",token.get("text")), ("start",charOffset[0] + sentencePos), ("end",charOffset[1] + sentencePos), ("properties",OrderedDict([("pos",token.get("POS"))]))])
+            node = OrderedDict([("id",i+1), ("form",token.get("text")), ("start",charOffset[0] + sentencePos), ("end",charOffset[1] + sentencePos)])
+            if token.get("root") != None:
+                node["top"] = True
+            node["properties"] = OrderedDict([("pos",token.get("POS"))])
             for key in token.attrib:
                 if key not in basicKeys:
                     if propertyTypes == None or key in propertyTypes:

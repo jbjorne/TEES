@@ -122,7 +122,7 @@ class Parser:
             Align.printAlignment(alignedSentence, alignedCat, diff)
         pos = 0
         tokenIndex = 0
-        tokKeys = set(["id", "text", "origText", "index", "POS", "root"])
+        tokKeys = set(["id", "text", "origText", "index", "POS"])
         for token in tokens:
             counts["tokens-parse"] += 1
             tokenOffsets = [x for x in alignedOffsets[pos:pos + len(token["text"])] if x != None]

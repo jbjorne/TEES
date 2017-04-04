@@ -120,6 +120,7 @@ class ParseConverter(Parser):
             raise Exception("Parse input '" + str(parseDir) + "' is not a directory")
         if extensions == None:
             extensions = self.allExt
+        extensions = [x for x in extensions if x in self.allExt]
         unescapeFormats = self.getUnescapeFormats(unescapeFormats)
         if docMatchKeys == None:
             docMatchKeys = ["origId", "pmid", "id"]
