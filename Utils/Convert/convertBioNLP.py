@@ -91,7 +91,7 @@ def downloadCorpus(corpus, destPath=None, downloadPath=None, clear=False):
     return downloaded
 
 def convert(corpora, outDir=None, downloadDir=None, redownload=False, makeIntermediateFiles=True, evaluate=False, processEquiv=True, analysisMode="INSERT", debug=False, preprocessorSteps=None, preprocessorParameters=None, logPath=None):
-    global bioNLP13AnalysesTempDir
+#    global bioNLP13AnalysesTempDir
     
     if outDir == None:
         os.path.normpath(Settings.DATAPATH + "/corpora")
@@ -104,20 +104,44 @@ def convert(corpora, outDir=None, downloadDir=None, redownload=False, makeInterm
         corpora = corpora.split(",")
     for corpus in corpora:
         print >> sys.stderr, "=======================", "Converting BioNLP Shared Task", corpus, "corpus ("+str(count)+"/"+str(len(corpora))+")", "======================="
-        if logPath != None:
-            if logPath == "AUTO":
-                logFileName = outDir + "/conversion/" + corpus + "-conversion-log.txt"
-            Stream.openLog(logFileName)
-        downloaded = downloadCorpus(corpus, outDir, downloadDir, redownload)
-        packageSubPath = None
-        if corpus == "BB13T2":
-            packageSubPath = "task_2"
-        elif corpus == "BB13T3":
-            packageSubPath = "task_3"
-        convertDownloaded(outDir, corpus, downloaded, makeIntermediateFiles, evaluate, processEquiv=processEquiv, analysisMode=analysisMode, packageSubPath=packageSubPath, debug=debug, preprocessorSteps=preprocessorSteps, preprocessorParameters=preprocessorParameters)
-        if logPath != None:
-            Stream.closeLog(logFileName)
+        convertCorpus(corpus, outDir, downloadDir, redownload, makeIntermediateFiles, evaluate, processEquiv, analysisMode, debug, preprocessorSteps, preprocessorParameters, logPath)
+#         if logPath != None:
+#             if logPath == "AUTO":
+#                 logFileName = outDir + "/conversion/" + corpus + "-conversion-log.txt"
+#             Stream.openLog(logFileName)
+#         downloaded = downloadCorpus(corpus, outDir, downloadDir, redownload)
+#         packageSubPath = None
+#         if corpus == "BB13T2":
+#             packageSubPath = "task_2"
+#         elif corpus == "BB13T3":
+#             packageSubPath = "task_3"
+#         convertDownloaded(outDir, corpus, downloaded, makeIntermediateFiles, evaluate, processEquiv=processEquiv, analysisMode=analysisMode, packageSubPath=packageSubPath, debug=debug, preprocessorSteps=preprocessorSteps, preprocessorParameters=preprocessorParameters)
+#         if logPath != None:
+#             Stream.closeLog(logFileName)
         count += 1
+    
+#     if bioNLP13AnalysesTempDir != None:
+#         shutil.rmtree(bioNLP13AnalysesTempDir)
+#         bioNLP13AnalysesTempDir = None
+        
+def convertCorpus(corpus, outDir=None, downloadDir=None, redownload=False, makeIntermediateFiles=True, evaluate=False, processEquiv=True, analysisMode="INSERT", debug=False, preprocessorSteps=None, preprocessorParameters=None, logPath=None):
+    global bioNLP13AnalysesTempDir
+    
+    print >> sys.stderr, "==========", "Converting BioNLP Shared Task", corpus, "corpus", "=========="
+    assert analysisMode in ("AUTO", "INSERT", "BUILD", "SKIP")
+    if logPath != None:
+        if logPath == "AUTO":
+            logFileName = outDir + "/conversion/" + corpus + "-conversion-log.txt"
+        Stream.openLog(logFileName)
+    downloaded = downloadCorpus(corpus, outDir, downloadDir, redownload)
+    packageSubPath = None
+    if corpus == "BB13T2":
+        packageSubPath = "task_2"
+    elif corpus == "BB13T3":
+        packageSubPath = "task_3"
+    convertDownloaded(outDir, corpus, downloaded, makeIntermediateFiles, evaluate, processEquiv=processEquiv, analysisMode=analysisMode, packageSubPath=packageSubPath, debug=debug, preprocessorSteps=preprocessorSteps, preprocessorParameters=preprocessorParameters)
+    if logPath != None:
+        Stream.closeLog(logFileName)
     
     if bioNLP13AnalysesTempDir != None:
         shutil.rmtree(bioNLP13AnalysesTempDir)
@@ -154,7 +178,7 @@ def convertDownloaded(outdir, corpus, files, intermediateFiles=False, evaluate=T
     for setName in ["devel", "train", "test"]:
         if corpus + "_" + setName.upper() in files:
             datasets.append(setName)
-    bigfileName = os.path.join(outdir, corpus + "-" + "-and-".join(datasets))
+    
     documents = []
     for setName in datasets:
         sourceFile = files[corpus + "_" + setName.upper()]
@@ -181,6 +205,8 @@ def convertDownloaded(outdir, corpus, files, intermediateFiles=False, evaluate=T
         print >> sys.stderr, "Writing all documents to geniaformat"
         ST.writeSet(documents, os.path.join(workdir, "all-geniaformat"), resultFileTag="a2", debug=False)
     
+    if outdir != None:
+        bigfileName = os.path.join(outdir, corpus + "-" + "-and-".join(datasets))
     if intermediateFiles:
         print >> sys.stderr, "Converting to XML, writing combined corpus to", bigfileName+"-documents.xml"
         xml = STConvert.toInteractionXML(documents, corpus, bigfileName+"-documents.xml")
@@ -215,14 +241,15 @@ def convertDownloaded(outdir, corpus, files, intermediateFiles=False, evaluate=T
     if corpus == "GRN13":
         Utils.InteractionXML.DeleteElements.processCorpus(xml, None, {"entity":{"type":["Action"]}})
     
-    print >> sys.stderr, "---------------", "Writing corpora", "---------------"
     checkAttributes(xml)
     # Write out converted data
-    if intermediateFiles:
-        print >> sys.stderr, "Writing combined corpus", bigfileName+".xml"
-        ETUtils.write(xml, bigfileName+".xml")
-    print >> sys.stderr, "Dividing into sets"
-    Utils.InteractionXML.DivideSets.processCorpus(xml, outdir, corpus, ".xml")
+    if outdir != None:
+        print >> sys.stderr, "---------------", "Writing corpora", "---------------"
+        if intermediateFiles:
+            print >> sys.stderr, "Writing combined corpus", bigfileName+".xml"
+            ETUtils.write(xml, bigfileName+".xml")
+        print >> sys.stderr, "Dividing into sets"
+        Utils.InteractionXML.DivideSets.processCorpus(xml, outdir, corpus, ".xml")
     
     if evaluate and "devel" in datasets:
         print >> sys.stderr, "---------------", "Evaluating conversion", "---------------"
@@ -240,6 +267,7 @@ def convertDownloaded(outdir, corpus, files, intermediateFiles=False, evaluate=T
     analyzer = StructureAnalyzer()
     analyzer.analyze([xml])
     print >> sys.stderr, analyzer.toString()
+    return xml
 
 def insertAnalyses(xml, corpus, datasets, files, bigfileName, packageSubPath=None):
     global bioNLP13AnalysesTempDir

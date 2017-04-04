@@ -55,6 +55,7 @@ class Preprocessor(ToolChain):
     def initSteps(self):
         self.initStepGroup("Corpus Conversion")
         self.initStep("CONVERT-BIONLP", Utils.Convert.convertBioNLP.convert, {"corpora":None, "outDir":None, "downloadDir":None, "redownload":False, "makeIntermediateFiles":False, "evaluate":False, "processEquiv":True, "analysisMode":"AUTO", "debug":False, "preprocessorSteps":None, "preprocessorParameters":None}, "convert-bionlp.xml", {"input":"corpora", "output":"outDir"})
+        self.initStep("DOWNLOAD-CORPUS", Utils.Convert.convertBioNLP.convertCorpus, {"corpus":None, "outDir":None, "downloadDir":None, "redownload":False, "makeIntermediateFiles":False, "evaluate":False, "processEquiv":True, "analysisMode":"SKIP", "debug":False, "preprocessorSteps":None, "preprocessorParameters":None}, "download-bionlp.xml", {"input":"corpus", "output":"outDir"})
         self.initStepGroup("Loading")
         self.initStep("LOAD", self.load, {"dataSetNames":None, "corpusName":None, "extensions":None}, "load.xml")
         self.initStep("DOWNLOAD-PUBMED", self.downloadPubmed, {}, "pubmed.xml")
