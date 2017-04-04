@@ -81,9 +81,10 @@ class ParseExporter(Parser):
         assert tokenAttrName in ("t1", "t2")
         dependenciesByToken = {}
         for dep in parseElement.findall("dependency"):
-            if dep.get(tokenAttrName) not in dependenciesByToken:
-                dependenciesByToken[dep.get(tokenAttrName)] = []
-            dependenciesByToken[dep.get(tokenAttrName)].append(dep)
+            tId = dep.get(tokenAttrName)
+            if tId not in dependenciesByToken:
+                dependenciesByToken[tId] = []
+            dependenciesByToken[tId].append(dep)
         return dependenciesByToken
     
     def exportTokenization(self, tokenizationElement, parseElement, sentenceElement, outFile):
@@ -228,9 +229,11 @@ class ParseExporter(Parser):
             # Add dependencies
             tokenId = token.get("id")
             if tokenId in dependenciesByHead:
+                #print token.attrib, [x.attrib for x in dependenciesByHead[tokenId]]
                 edges = []
                 for dep in dependenciesByHead[tokenId]:
-                    edges.append(OrderedDict([("label",dep.get("type")), ("target",str(tokenIndexById[dep.get("t2")] + 1))]))
+                    edges.append(OrderedDict([("label",dep.get("type")), ("target",tokenIndexById[dep.get("t2")] + 1)]))
+                edges.sort(key=lambda k: k["target"], reverse=True)
                 node["edges"] = edges
             obj["nodes"].append(node)
         outFile.write(json.dumps(obj) + "\n")
