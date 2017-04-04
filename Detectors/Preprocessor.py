@@ -15,6 +15,7 @@ from Tools.SyntaxNetParser import SyntaxNetParser
 from Tools.ParseConverter import ParseConverter
 import Tools.BANNER
 from ToolChain import ToolChain
+from Detectors.StructureAnalyzer import StructureAnalyzer
 import Utils.InteractionXML.DivideSets
 import Utils.ProteinNameSplitter as ProteinNameSplitter
 import Utils.FindHeads as FindHeads
@@ -27,6 +28,7 @@ import Utils.InteractionXML.MergeSets
 #import Utils.InteractionXML.ExportParse
 import Utils.InteractionXML.InteractionXMLUtils as IXMLUtils
 import Utils.Settings as Settings
+import Utils.Convert.convertBioNLP
 
 def clsStep(cls, method):
     return lambda *args, **kwargs: getattr(cls(), method)(*args, **kwargs)
@@ -51,6 +53,8 @@ class Preprocessor(ToolChain):
             self.defineSteps(steps)
     
     def initSteps(self):
+        self.initStepGroup("Corpus Conversion")
+        self.initStep("CONVERT-BIONLP", Utils.Convert.convertBioNLP.convert, {"corpora":None, "outDir":None, "downloadDir":None, "redownload":False, "makeIntermediateFiles":False, "evaluate":False, "processEquiv":True, "analysisMode":"AUTO", "debug":False, "preprocessorSteps":None, "preprocessorParameters":None}, "convert-bionlp.xml", {"input":"corpora", "output":"outDir"})
         self.initStepGroup("Loading")
         self.initStep("LOAD", self.load, {"dataSetNames":None, "corpusName":None, "extensions":None}, "load.xml")
         self.initStep("DOWNLOAD-PUBMED", self.downloadPubmed, {}, "pubmed.xml")
@@ -78,6 +82,7 @@ class Preprocessor(ToolChain):
         self.initStep("SPLIT-NAMES", ProteinNameSplitter.mainFunc, {"parseName":self.parseName, "removeOld":True}, "split-names.xml")
         self.initStep("FIND-HEADS", FindHeads.findHeads, {"parse":self.parseName, "removeExisting":True}, "heads.xml")
         self.initStep("REMOVE-DOCUMENT-TEXTS", Utils.InteractionXML.DeleteAttributes.processCorpus, {"rules":{"document":["text"]}}, "remove-document-texts.xml")
+        self.initStep("ANALYZE-STRUCTURE", clsStep(StructureAnalyzer, "analyze"), {}, None)
         self.initStepGroup("Saving")
         self.initStep("DIVIDE-SETS", self.divideSets, {"saveCombined":False}, None)
         self.initStep("SAVE", self.save, {}, None)
@@ -86,6 +91,7 @@ class Preprocessor(ToolChain):
     
     def initPresets(self):
         self.presets["PRESET-CONVERT-PARSE"] = ["LOAD", "EXPORT"]
+        self.presets["PRESET-REPARSE-BIO-CORPUS"] = ["MERGE-SETS", "REMOVE-ANALYSES", "REMOVE-HEADS", "BLLIP-BIO", "STANFORD-CONVERT", "FIND-HEADS", "SPLIT-NAMES", "DIVIDE-SETS"]
         #self.presets["PRESET-PREPROCESS-BIO"] = ["CONVERT", "GENIA-SPLITTER", "BANNER", "BLLIP-BIO", "STANFORD-CONVERT", "SPLIT-NAMES", "FIND-HEADS", "DIVIDE-SETS"]
         #self.presets["PRESET-PARSE-BIO"] = ["CONVERT", "GENIA-SPLITTER", "BLLIP-BIO", "STANFORD-CONVERT", "SPLIT-NAMES", "FIND-HEADS", "DIVIDE-SETS"]
         #self.presets["PRESET-INSERT-PARSE"] = ["CONVERT", "REMOVE-ANALYSES", "IMPORT-PARSE", "DIVIDE-SETS"]
@@ -131,14 +137,14 @@ class Preprocessor(ToolChain):
 #         elif self.depParser == "SYNTAXNET":
 #             steps.append( (self.depParser + "-DEP", SyntaxNetParser.parseCls, {"parserName":self.parseName, "debug":False, "modelDir":None}, "dependencies.xml") )
     
-    def process(self, source, output, parameters=None, model=None, fromStep=None, toStep=None, omitSteps=None, logPath="AUTO"):
+    def process(self, source, output=None, parameters=None, model=None, fromStep=None, toStep=None, omitSteps=None, logPath=None):
         if logPath == "AUTO":
             logPath = os.path.join(output + "-log.txt")
         if logPath not in (None, "None"):
             if not os.path.exists(os.path.dirname(logPath)):
                 os.makedirs(os.path.dirname(logPath))
             Stream.openLog(logPath)
-        print >> sys.stderr, "Preprocessor steps:", [x[0] for x in self.steps]
+        print >> sys.stderr, "Preprocessor steps:", [x["name"] for x in self.steps]
         if len(self.steps) == 0:
             raise Exception("No preprocessing steps defined")
         #if omitSteps != None and((type(omitSteps) in types.StringTypes and omitSteps == "CONVERT") or "CONVERT" in omitSteps):

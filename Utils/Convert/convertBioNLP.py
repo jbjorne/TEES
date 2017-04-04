@@ -10,18 +10,19 @@ import Utils.STFormat.Validate
 import Utils.InteractionXML.DivideSets
 import Utils.InteractionXML.MixSets
 import Utils.InteractionXML.DeleteElements
-import Utils.ProteinNameSplitter as ProteinNameSplitter
+#import Utils.ProteinNameSplitter as ProteinNameSplitter
 import Utils.Stream as Stream
-import Utils.FindHeads as FindHeads
+#import Utils.FindHeads as FindHeads
 import Tools.SentenceSplitter
-import Tools.BLLIPParser
-import Tools.StanfordParser
+#from Tools.BLLIPParser import BLLIPParser
+#from Tools.StanfordParser import StanfordParser
+from Tools.ParseConverter import ParseConverter
 import Utils.ElementTreeUtils as ETUtils
 import Evaluators.BioNLP11GeniaTools as BioNLP11GeniaTools
 import Utils.Download
 import Utils.Settings as Settings
 from Detectors.StructureAnalyzer import StructureAnalyzer
-from Detectors.Preprocessor import Preprocessor
+import Detectors.Preprocessor
 import insertResources
 
 moveBI = ["PMID-10333516-S3", "PMID-10503549-S4", "PMID-10788508-S10", "PMID-1906867-S3",
@@ -86,10 +87,10 @@ def downloadCorpus(corpus, destPath=None, downloadPath=None, clear=False):
             downloaded[corpus + setName + "_McCCJ"] = Utils.Download.download(Settings.URL[cTag + setName + "_McCCJ"], downloadPath + "/support/", clear=clear)
             downloaded[corpus + setName + "_TOK"] = Utils.Download.download(Settings.URL[cTag + setName + "_TOK"], downloadPath + "/support/", clear=clear)
     else:
-        assert corpus.endswith("16")
+        assert corpus.startswith("BB16") or corpus.startswith("SDB16")
     return downloaded
 
-def convert(corpora, outDir=None, downloadDir=None, redownload=False, makeIntermediateFiles=True, evaluate=False, processEquiv=True, analysisMode="INSERT", debug=False, constParser=None, depParser=None, preprocessorParameters=None):
+def convert(corpora, outDir=None, downloadDir=None, redownload=False, makeIntermediateFiles=True, evaluate=False, processEquiv=True, analysisMode="INSERT", debug=False, preprocessorSteps=None, preprocessorParameters=None, logPath=None):
     global bioNLP13AnalysesTempDir
     
     if outDir == None:
@@ -99,18 +100,23 @@ def convert(corpora, outDir=None, downloadDir=None, redownload=False, makeInterm
     else:
         assert os.path.isdir(outDir)
     count = 1
+    if isinstance(corpora, basestring):
+        corpora = corpora.split(",")
     for corpus in corpora:
         print >> sys.stderr, "=======================", "Converting BioNLP Shared Task", corpus, "corpus ("+str(count)+"/"+str(len(corpora))+")", "======================="
-        logFileName = outDir + "/conversion/" + corpus + "-conversion-log.txt"
-        Stream.openLog(logFileName)
+        if logPath != None:
+            if logPath == "AUTO":
+                logFileName = outDir + "/conversion/" + corpus + "-conversion-log.txt"
+            Stream.openLog(logFileName)
         downloaded = downloadCorpus(corpus, outDir, downloadDir, redownload)
         packageSubPath = None
         if corpus == "BB13T2":
             packageSubPath = "task_2"
         elif corpus == "BB13T3":
             packageSubPath = "task_3"
-        convertDownloaded(outDir, corpus, downloaded, makeIntermediateFiles, evaluate, processEquiv=processEquiv, analysisMode=analysisMode, packageSubPath=packageSubPath, debug=debug, constParser=constParser, depParser=depParser, preprocessorParameters=preprocessorParameters)
-        Stream.closeLog(logFileName)
+        convertDownloaded(outDir, corpus, downloaded, makeIntermediateFiles, evaluate, processEquiv=processEquiv, analysisMode=analysisMode, packageSubPath=packageSubPath, debug=debug, preprocessorSteps=preprocessorSteps, preprocessorParameters=preprocessorParameters)
+        if logPath != None:
+            Stream.closeLog(logFileName)
         count += 1
     
     if bioNLP13AnalysesTempDir != None:
@@ -132,7 +138,7 @@ def checkAttributes(xml):
         for key in element.attrib.keys():
             assert element.get(key) != None, (element.tag, key, element.attrib)
 
-def convertDownloaded(outdir, corpus, files, intermediateFiles=True, evaluate=True, processEquiv=True, analysisMode="INSERT", packageSubPath=None, debug=False, constParser=None, depParser=None, preprocessorParameters=None):
+def convertDownloaded(outdir, corpus, files, intermediateFiles=False, evaluate=True, processEquiv=True, analysisMode="INSERT", packageSubPath=None, debug=False, preprocessorSteps=None, preprocessorParameters=None):
     global moveBI
     if evaluate:
         workdir = outdir + "/conversion/" + corpus
@@ -187,16 +193,20 @@ def convertDownloaded(outdir, corpus, files, intermediateFiles=True, evaluate=Tr
     if corpus == "REN11":
         corpusRENtoASCII(xml)
     
-    if analysisMode == "INSERT":
-        insertAnalyses(xml, corpus, datasets, files, bigfileName, packageSubPath=packageSubPath)
-        if intermediateFiles:
-            print >> sys.stderr, "Writing combined corpus", bigfileName+"-sentences.xml"
-            ETUtils.write(xml, bigfileName+"-sentences.xml")
-        processParses(xml)
-    elif analysisMode == "BUILD":
-        parseXML(xml, bigfileName, intermediateFiles, debug, bbResources=(corpus.startswith("BB_")), constParser=constParser, depParser=depParser, preprocessorParameters=preprocessorParameters)
+    if analysisMode != None:
+        parseInserted = False
+        if analysisMode in ("INSERT", "AUTO"):
+            parseInserted = insertAnalyses(xml, corpus, datasets, files, bigfileName, packageSubPath=packageSubPath)
+            if parseInserted:
+                xml = Detectors.Preprocessor.Preprocessor(steps=["SPLIT-NAMES", "FIND-HEADS"]).process(xml) # processParses(xml)
+                if intermediateFiles:
+                    print >> sys.stderr, "Writing combined corpus", bigfileName+"-sentences.xml"
+                    ETUtils.write(xml, bigfileName+"-sentences.xml")
+        if analysisMode in ("BUILD", "AUTO") and not parseInserted:
+            print >> sys.stderr, "Building analyses for corpus", corpus
+            xml = preprocessXML(xml, bigfileName, intermediateFiles, debug, bbResources=(corpus.startswith("BB_")), preprocessorSteps=preprocessorSteps, preprocessorParameters=preprocessorParameters)
     else:
-        print >> sys.stderr, "Skipping analyses"
+        print >> sys.stderr, "Skipping analyses for corpus", corpus
     
     # A hack for GRN13 task that breaks the official BioNLP Shared Task convention of trigger and event having the same type.
     # Let's remove the unused triggers, so that there won't be an unusable node class. There is no clean way to fix this,
@@ -241,12 +251,14 @@ def insertAnalyses(xml, corpus, datasets, files, bigfileName, packageSubPath=Non
     if "TEES_PARSES" in files: # corpus for which no official parse exists
         print >> sys.stderr, "---------------", "Inserting TEES-generated analyses", "---------------"
         extractedFilename = files["TEES_PARSES"] + "/" + corpus #[:-2]
-        print >> sys.stderr, "Making sentences"
-        Tools.SentenceSplitter.makeSentences(xml, extractedFilename, None)
+        #print >> sys.stderr, "Making sentences"
+        #Tools.SentenceSplitter.makeSentences(xml, extractedFilename, None)
         print >> sys.stderr, "Inserting McCC parses"
-        Tools.BLLIPParser.insertParses(xml, extractedFilename, None, extraAttributes={"source":"TEES-preparsed"})
-        print >> sys.stderr, "Inserting Stanford conversions"
-        Tools.StanfordParser.insertParses(xml, extractedFilename, None, extraAttributes={"stanfordSource":"TEES-preparsed"})
+        ParseConverter().insertParses(extractedFilename, xml)
+        #ParseConverter().insertParses(xml, extractedFilename, None, extraAttributes={"source":"TEES-preparsed"})
+        #print >> sys.stderr, "Inserting Stanford conversions"
+        #Tools.ParseConverter.insertParses(xml, extractedFilename, None, extraAttributes={"stanfordSource":"TEES-preparsed"})
+        return True
     elif corpus == "GE09": # the BioNLP'09 corpus
         for i in range(len(datasets)):
             print >> sys.stderr, "---------------", "Inserting analyses " + str(i+1) + "/" + str(len(datasets)), "---------------"
@@ -263,6 +275,7 @@ def insertAnalyses(xml, corpus, datasets, files, bigfileName, packageSubPath=Non
             Tools.StanfordParser.insertParses(xml, packagePath + "/McClosky-Charniak/dep", None, skipExtra=1, extraAttributes={"stanfordSource":"BioNLP'09"})
             print >> sys.stderr, "Removing temporary directory", tempdir
             shutil.rmtree(tempdir)
+        return True
     elif corpus.endswith("11"): # use official BioNLP'11 parses
         for i in range(len(datasets)):
             print >> sys.stderr, "---------------", "Inserting analyses " + str(i+1) + "/" + str(len(datasets)), "---------------"
@@ -279,7 +292,8 @@ def insertAnalyses(xml, corpus, datasets, files, bigfileName, packageSubPath=Non
             Tools.StanfordParser.insertParses(xml, tempdir + "/" + os.path.basename(files[corpus + "_" + setName.upper() + "_McCC"])[:-len(".tar.gz")].split("-", 2)[-1] + "/mccc/sd_ccproc", None, extraAttributes={"stanfordSource":"BioNLP'11"})
             print >> sys.stderr, "Removing temporary directory", tempdir
             shutil.rmtree(tempdir)
-    else: # use official BioNLP'13 parses
+        return True
+    elif corpus.endswith("13"): # use official BioNLP'13 parses
         for i in range(len(datasets)):
             print >> sys.stderr, "---------------", "Inserting analyses " + str(i+1) + "/" + str(len(datasets)), "---------------"
             setName = datasets[i]
@@ -300,24 +314,31 @@ def insertAnalyses(xml, corpus, datasets, files, bigfileName, packageSubPath=Non
             Tools.StanfordParser.insertParses(xml, tempdir + "/parse/" + os.path.basename(files[corpus + "_" + setName.upper() + "_McCCJ"]).rsplit("_", 2)[0] + subPath, None, extraAttributes={"stanfordSource":"BioNLP'13"})
             print >> sys.stderr, "Removing temporary directory", tempdir
             shutil.rmtree(tempdir)
+        return True
+    else:
+        print >> sys.stderr, "No pre-existing analyses available for corpus", corpus
+        return False
 
-def processParses(xml, splitTarget="McCC"):
-    print >> sys.stderr, "---------------", "Protein Name Splitting", "---------------"
-    #ProteinNameSplitter.mainFunc(xml, None, splitTarget, splitTarget, "split-"+splitTarget, "split-"+splitTarget)
-    ProteinNameSplitter.mainFunc(xml, None, splitTarget, removeOld=True)
-    print >> sys.stderr, "---------------", "Head Detection", "---------------"
-    #xml = FindHeads.findHeads(xml, "split-"+splitTarget, tokenization=None, output=None, removeExisting=True)
-    xml = FindHeads.findHeads(xml, splitTarget, tokenization=None, output=None, removeExisting=True)
+#def processParses(xml, splitTarget="McCC"):
+#    return Preprocessor(steps=["SPLIT-NAMES", "FIND-HEADS"]).process(xml)
+#     print >> sys.stderr, "---------------", "Protein Name Splitting", "---------------"
+#     #ProteinNameSplitter.mainFunc(xml, None, splitTarget, splitTarget, "split-"+splitTarget, "split-"+splitTarget)
+#     ProteinNameSplitter.mainFunc(xml, None, splitTarget, removeOld=True)
+#     print >> sys.stderr, "---------------", "Head Detection", "---------------"
+#     #xml = FindHeads.findHeads(xml, "split-"+splitTarget, tokenization=None, output=None, removeExisting=True)
+#     xml = FindHeads.findHeads(xml, splitTarget, tokenization=None, output=None, removeExisting=True)
 
-def parseXML(xml, outStem, intermediateFiles=True, debug=False, bbResources=False, constParser=None, depParser=None, preprocessorParameters=None):
-    preprocessor = Preprocessor(constParser=constParser, depParser=depParser)
+def preprocessXML(xml, outStem, intermediateFiles=False, debug=False, bbResources=False, preprocessorSteps=None, preprocessorParameters=None):
+    if preprocessorSteps == None:
+        preprocessorSteps = ["GENIA-SPLITTER", "BLLIP-BIO", "STANFORD-CONVERT", "SPLIT-NAMES", "FIND-HEADS"]
+    preprocessor = Detectors.Preprocessor.Preprocessor(steps=preprocessorSteps)
     if bbResources:
         preprocessor.insertStep(5, "BB_RESOURCES", insertResources.process, {}, "bb-resources.xml")
     preprocessor.setArgForAllSteps("debug", debug)
     #preprocessor.stepArgs("PARSE")["requireEntities"] = False
-    if not intermediateFiles:
-        preprocessor.setNoIntermediateFiles()
-    preprocessor.process(xml, outStem, omitSteps=["NER", "DIVIDE-SETS"], parameters=preprocessorParameters)
+    if intermediateFiles:
+        preprocessor.setIntermediateFiles(True)
+    return preprocessor.process(xml, outStem, parameters=preprocessorParameters)
 
 if __name__=="__main__":
     # Import Psyco if available
@@ -336,13 +357,15 @@ if __name__=="__main__":
     optparser.add_option("-o", "--outdir", default=None, dest="outdir", help="directory for output files")
     optparser.add_option("-d", "--downloaddir", default=None, dest="downloaddir", help="directory to download corpus files to")
     optparser.add_option("-a", "--analyses", default="INSERT", dest="analyses", help="Analysis (generally parsing) mode: NONE, INSERT or BUILD")
-    optparser.add_option("--constParser", default="BLLIP-BIO", help="Preprocessor setting, only used with 'BUILD' analyses option")
-    optparser.add_option("--depParser", default="STANFORD-CONVERT", help="Preprocessor setting, only used with 'BUILD' analyses option")
+    #optparser.add_option("--constParser", default="BLLIP-BIO", help="Preprocessor setting, only used with 'BUILD' analyses option")
+    #optparser.add_option("--depParser", default="STANFORD-CONVERT", help="Preprocessor setting, only used with 'BUILD' analyses option")
+    optparser.add_option("-s", "--preprocessorSteps", default=None, dest="preprocessorSteps", help="preprocessing steps")
     optparser.add_option("-p", "--preprocessorParameters", default=None, dest="preprocessorParameters", help="preprocessing parameters")
     optparser.add_option("--intermediateFiles", default=False, action="store_true", dest="intermediateFiles", help="save intermediate corpus files")
     optparser.add_option("--forceDownload", default=False, action="store_true", dest="forceDownload", help="re-download all source files")
     optparser.add_option("--noEquiv", default=False, action="store_true", dest="noEquiv", help="Don't interpret equiv annotation into duplicate events")
     optparser.add_option("--evaluate", default=False, action="store_true", dest="evaluate", help="Convert devel sets back to ST format and evaluate")
+    optparser.add_option("--logPath", default="AUTO", dest="logPath", help="AUTO, None, or a path")
     optparser.add_option("--debug", default=False, action="store_true", dest="debug", help="")
     (options, args) = optparser.parse_args()
     
@@ -358,4 +381,5 @@ if __name__=="__main__":
         #Stream.openLog(os.path.join(options.outdir, "conversion-log.txt"))
         convert(options.corpora.split(","), options.outdir, options.downloaddir, options.forceDownload, options.intermediateFiles, 
                 evaluate=options.evaluate, processEquiv=not options.noEquiv, analysisMode=options.analyses, debug=options.debug,
-                constParser=options.constParser, depParser=options.depParser, preprocessorParameters=options.preprocessorParameters)
+                preprocessorSteps=options.preprocessorSteps, preprocessorParameters=options.preprocessorParameters, logPath=options.logPath)
+        

@@ -58,8 +58,8 @@ class ToolChain(Detector):
             defaults = {"omitSteps":None, "intermediateFiles":None}
         #valueTypes = {}
         for step in self.steps: #self.getDefaultSteps():
-            for argName in sorted(step[2].keys()):
-                parameterName = step[0] + "." + argName
+            for argName in sorted(step["argDict"].keys()):
+                parameterName = step["name"] + "." + argName
                 defaults[parameterName] = defaultValue
                 #if defaultValue == NOTHING:
                 #    defaults[parameterName] = NOTHING
@@ -74,7 +74,7 @@ class ToolChain(Detector):
             model = self.openModel(model, "r")
             parameters = model.getStr(modelParameterStringName, defaultIfNotExist=None)
         #defaultStepNames = [x[0] for x in self.getDefaultSteps()]
-        stepNames = [x[0] for x in self.steps]
+        stepNames = [x["name"] for x in self.steps]
         valueLimits={"omitSteps":stepNames + [None], "intermediateFiles":stepNames + [True, None]}
         defaults = self.getDefaultParameters(defaultValue=defaultValue)
         return Parameters.get(parameters, defaults, valueLimits=valueLimits)
@@ -82,44 +82,44 @@ class ToolChain(Detector):
     def applyParameters(self, parameters):
         self.select.markOmitSteps(parameters["omitSteps"])
         for step in self.steps:
-            for argName in sorted(step[2].keys()):
-                parameterName = step[0] + "." + argName
+            for argName in sorted(step["argDict"].keys()):
+                parameterName = step["name"] + "." + argName
                 if parameterName not in parameters:
                     raise Exception("Unknown parameter name '" + str(parameterName) + "', parameters are " + str(parameters))
                 if parameters[parameterName] != NOTHING:
                     step[2][argName] = parameters[parameterName]
             if parameters["intermediateFiles"] != None:
                 if parameters["intermediateFiles"] != True and step in parameters["intermediateFiles"]:
-                    self.setIntermediateFile(step[0], step[3])
+                    self.setIntermediateFile(step["name"], step["intermediateFile"])
                 else:
-                    self.setIntermediateFile(step[0], None)
+                    self.setIntermediateFile(step["name"], None)
     
     def hasStep(self, name):
-        return name in [x[0] for x in self.steps]
+        return name in [x["name"] for x in self.steps]
     
     def addStep(self, name, function, argDict, intermediateFile=None, ioArgNames={"input":"input", "output":"output"}):
-        assert name not in [x[0] for x in self.steps], (name, self.steps)
-        self.steps.append([name, function, argDict, intermediateFile, ioArgNames])
+        assert name not in [x["name"] for x in self.steps], (name, self.steps)
+        self.steps.append({"name":name, "function":function, "argDict":argDict, "intermediateFile":intermediateFile, "ioArgNames":ioArgNames})
     
     def insertStep(self, index, name, function, argDict, intermediateFile=None, ioArgNames={"input":"input", "output":"output"}):
-        assert name not in [x[0] for x in self.steps], (name, self.steps)
-        self.steps.insert(index, [name, function, argDict, intermediateFile, ioArgNames])
+        assert name not in [x["name"] for x in self.steps], (name, self.steps)
+        self.steps.insert(index, {"name":name, "function":function, "argDict":argDict, "intermediateFile":intermediateFile, "ioArgNames":ioArgNames})
         
     def setArgForAllSteps(self, argument, value, argMustExist=True):
         for step in self.steps:
-            if argMustExist and argument not in step[2]:
+            if argMustExist and argument not in step["argDict"]:
                 continue
-            step[2][argument] = value
+            step["argDict"][argument] = value
     
     def stepArgs(self, step):
         for s in self.steps:
-            if step == s[0]:
-                return s[2]
+            if step == s["name"]:
+                return s["argDict"]
         raise Exception("Step '" + str(step) + "' is not defined")
         
     def setIntermediateFile(self, stepName, filename):
         for s in self.steps:
-            if stepName == s[0]:
+            if stepName == s["name"]:
                 if filename == True:
                     filename = self.allSteps[stepName]["intermediateFile"]
                 elif filename in [False, "None", None]:
@@ -134,17 +134,17 @@ class ToolChain(Detector):
     
     def setIntermediateFiles(self, state):
         for step in self.steps:
-            self.setIntermediateFile(step[0], state)
+            self.setIntermediateFile(step["name"], state)
     
     def getIntermediateFilePath(self, step):
-        if step[3] != None:
+        if step["intermediateFile"] != None:
             if self.intermediateFilesAtSource:
                 if type(self.source) in types.StringTypes:
                     firstSource = self.source.split(",") # this may be a list of directories
                     if os.path.isfile(firstSource):
-                        rv = firstSource + "-" + step[3]
+                        rv = firstSource + "-" + step["intermediateFile"]
                     else: # is a directory
-                        rv = os.path.join(firstSource, step[3])
+                        rv = os.path.join(firstSource, step["intermediateFile"])
                 else:
                     rv = None #filename
             else:
@@ -157,37 +157,38 @@ class ToolChain(Detector):
     
     def process(self, source, output, parameters=None, model=None, fromStep=None, toStep=None, omitSteps=None):
         #self.initVariables(source=input, xml=input, outDir=os.path.dirname(output))
-        self.initVariables(outDir=os.path.dirname(output))
-        if os.path.basename(output) != "":
-            self.intermediateFileTag = os.path.basename(output)
-        else:
-            self.intermediateFileTag = ""
-        self.enterState(self.STATE_TOOLCHAIN, [x[0] for x in self.steps], fromStep, toStep, omitSteps)
+        if output != None:
+            self.initVariables(outDir=os.path.dirname(output))
+            if os.path.basename(output) != "":
+                self.intermediateFileTag = os.path.basename(output)
+            else:
+                self.intermediateFileTag = ""
+        self.enterState(self.STATE_TOOLCHAIN, [x["name"] for x in self.steps], fromStep, toStep, omitSteps)
         parameters = self.getParameters(parameters, model, defaultValue=NOTHING)
         self.applyParameters(parameters)
         # Run the tools
         print >> sys.stderr, "Tool chain parameters:", Parameters.toString(parameters, skipKeysWithValues=[NOTHING], skipDefaults=self.getDefaultParameters())
-        if os.path.exists(output) and not os.path.isdir(output):
+        if output != None and os.path.exists(output) and not os.path.isdir(output):
             print >> sys.stderr, "Removing existing preprocessor output file", output
             os.remove(output)
         savedIntermediate = None # Output from a previous step if "fromStep" is used
         for step in self.steps:
-            if self.checkStep(step[0]):
+            if self.checkStep(step["name"]):
                 if savedIntermediate != None: # A previous run of the program saved an intermediate file
                     print >> sys.stderr, "Reading input from saved intermediate file", savedIntermediate
                     source = ETUtils.ETFromObj(savedIntermediate)
                     savedIntermediate = None
-                stepArgs = copy.copy(step[2]) # make a copy of the arguments to which i/o can be added
-                stepArgs[step[4]["input"]] = source # the input
+                stepArgs = copy.copy(step["argDict"]) # make a copy of the arguments to which i/o can be added
+                stepArgs[step["ioArgNames"]["input"]] = source # the input
                 if step == self.steps[-1]: # The final step in the tool chain should save the final output
-                    stepArgs[step[4]["output"]] = output
+                    stepArgs[step["ioArgNames"]["output"]] = output
                 elif self.getIntermediateFilePath(step) != None: # This step can save an intermediate file
-                    stepArgs[step[4]["output"]] = self.getIntermediateFilePath(step)
+                    stepArgs[step["ioArgNames"]["output"]] = self.getIntermediateFilePath(step)
                 else:
-                    stepArgs[step[4]["output"]] = None
-                print >> sys.stderr, "Running step", step[0], "with arguments", stepArgs
-                source = step[1](**stepArgs) # call the tool
-            elif self.getStepStatus(step[0]) == "BEFORE": # this step was run earlier
+                    stepArgs[step["ioArgNames"]["output"]] = None
+                print >> sys.stderr, "Running step", step["name"], "with arguments", stepArgs
+                source = step["function"](**stepArgs) # call the tool
+            elif self.getStepStatus(step["name"]) == "BEFORE": # this step was run earlier
                 savedIntermediate = self.getIntermediateFilePath(step)
         # End state and return
         #xml = self.xml # state-specific member variable self.xml will be removed when exiting state
