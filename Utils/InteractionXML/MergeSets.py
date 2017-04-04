@@ -13,7 +13,11 @@ import re
 def mergeSets(input, corpusDir=None, output=None, allowNone=False):
     counts = defaultdict(int)
     if corpusDir == None:
-        corpusDir = os.path.normpath(Settings.DATAPATH + "/corpora")
+        if os.path.dirname(input):
+            corpusDir = os.path.dirname(input)
+            input = os.path.basename(input)
+        else:
+            corpusDir = os.path.normpath(Settings.DATAPATH + "/corpora")
     print >> sys.stderr, "Searching for corpus files at " + corpusDir + " using pattern " + input
     pattern = re.compile(input)
     matched = sorted([x for x in os.listdir(corpusDir) if pattern.match(x)])
