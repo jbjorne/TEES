@@ -76,6 +76,7 @@ class Parser:
 #         return extraAttributes
     
     def depToString(self, dep):
+        print "DEPTOSTRING", dep
         if "t1Word" in dep:
             return dep["type"] + "(" + dep["t1Word"] + "-" + str(dep["t1"]) + ", " + dep["t2Word"] + "-" + str(dep["t2"]) + ")"
         else:
@@ -184,8 +185,10 @@ class Parser:
         else:
             for dep in dependencies:
                 t1, t2 = dep["t1"], dep["t2"]
-                tokensById[t1] = {"text":dep["t1Word"], "id":t1}
-                tokensById[t2] = {"text":dep["t2Word"], "id":t2}
+                if t1 >= 0: # a root dependency
+                    tokensById[t1] = {"text":dep["t1Word"], "id":t1}
+                if t2 >= 0: # a root dependency
+                    tokensById[t2] = {"text":dep["t2Word"], "id":t2}
             depTokens = [tokensById[i] for i in sorted(tokensById.keys())]
             if tokenization != None:
                 self.alignTokens(depTokens, tokenization, counts=counts, tag="dep-")
@@ -198,7 +201,12 @@ class Parser:
         for dep in dependencies:
             counts["deps-total"] += 1
             t1, t2 = dep["t1"], dep["t2"]
-            if "element" in tokensById[t1] and "element" in tokensById[t2]:
+            if t1 == -1 or t2 == -1: # A root dependency
+                assert t1 >= 0 or t2 >= 0, dep
+                tId = t1 if t1 >= 0 else t2
+                tokensById[tId]["element"].set("root", dep["type"])
+                counts["deps-root"] += 1
+            elif "element" in tokensById[t1] and "element" in tokensById[t2]:
                 element = ET.Element("dependency")
                 element.set("type", dep["type"])
                 element.set("id", idStem + str(count))
@@ -239,7 +247,7 @@ class Parser:
             counter = ProgressCounter(len(sentences), counter)
         for sentObj, sentence in zip(sentObjs, sentences):
             counts["sentences"] += 1
-            if counter:
+            if counter != None:
                 counter.update(1, "Inserting elements for (" + sentence.get("id") + "): ")
             parse = IXMLUtils.getParseElement(sentence, parseName, addIfNotExist=True)
             if "treeline" in sentObj:
@@ -369,7 +377,7 @@ class Parser:
         sentObjs = self.readPennTrees(treeFileName)
         sentences = [x for x in self.getSentences(corpusRoot, requireEntities, skipIds, skipParsed)]
         #counter = ProgressCounter(len(sentences), "Penn Tree Insertion")
-        counts = self.insertElements(sentObjs, sentences, parseName, "Penn Tree Insertion")
+        counts = self.insertElements(sentObjs, sentences, parseName, counter="Penn Tree Insertion")
         #for sentence in sentences:
         #    counter.update(1, "Inserting parse for (" + sentence.get("id") + "): ")
         #    treeLine = treeFile.readline()
@@ -454,16 +462,16 @@ class Parser:
         return tokens, phrases
     
     ###########################################################################
-    # Dependency Parse File Processing
+    # Stanford Dependency Parse File Processing
     ###########################################################################
     
-    def insertDependencyParses(self, depFilePath, corpusRoot, parseName, requireEntities=False, skipIds=[], skipParsed=True, skipExtra=0, removeExisting=False):
+    def insertStanfordDependencyParses(self, depFilePath, corpusRoot, parseName, requireEntities=False, skipIds=[], skipParsed=True, skipExtra=0, removeExisting=False):
         #counts = defaultdict(int)
         #extraAttributes = self.getExtraAttributes("dep", extraAttributes)
         #depFile = codecs.open(depFilePath, "rt", "utf-8")
-        sentObjs = self.readDependencies(depFilePath)
+        sentObjs = self.readStanfordDependencies(depFilePath)
         sentences = [x for x in self.getSentences(corpusRoot, requireEntities, skipIds, skipParsed)]
-        counts = self.insertElements(sentObjs, sentences, parseName, parseName, "Dependency Parse Insertion")
+        counts = self.insertElements(sentObjs, sentences, parseName, parseName, counter="Dependency Parse Insertion")
         #sentences = []
         #for document in corpusRoot.findall("document"):
         #    for sentence in document.findall("sentence"):
@@ -505,7 +513,7 @@ class Parser:
 #         counts["sentences"] += 1
 #         return elements
     
-    def readDependencies(self, depFilePath): #, skipExtra=0, sentenceId=None):
+    def readStanfordDependencies(self, depFilePath): #, skipExtra=0, sentenceId=None):
         sentences = []
         with codecs.open(depFilePath, "rt", "utf-8") as f:
             deps = None
@@ -528,7 +536,7 @@ class Parser:
                         deps = []
                     depType = t1 = t2 = t1Word = t2Word = t1Index = t2Index = None
                     try:
-                        depType, rest = line.strip()[:-1].split("(", 1)
+                        depType, rest = line[:-1].split("(", 1)
                         t1, t2 = rest.split(", ")
                         t1Word, t1Index = t1.rsplit("-", 1)
                         t1Word = self.unescape(t1Word).strip()

@@ -60,7 +60,7 @@ class StanfordParser(Parser):
         # Insert the parses    
         if action in ("convert", "dep"):
             #self.insertDependencyParses(outPath, corpusRoot, parserName, {"stanford-mode":action}, addTimeStamp=True, skipExtra=0, removeExisting=True)
-            self.insertDependencyParses(outPath, corpusRoot, parserName, skipParsed=reparse, removeExisting=reparse)
+            self.insertStanfordDependencyParses(outPath, corpusRoot, parserName, skipParsed=reparse, removeExisting=reparse)
         elif action == "penn":
             self.insertPennTrees(outPath, corpusRoot, parserName)
         # Remove work directory

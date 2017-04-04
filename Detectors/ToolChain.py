@@ -87,7 +87,7 @@ class ToolChain(Detector):
                 if parameterName not in parameters:
                     raise Exception("Unknown parameter name '" + str(parameterName) + "', parameters are " + str(parameters))
                 if parameters[parameterName] != NOTHING:
-                    step[2][argName] = parameters[parameterName]
+                    step["argDict"][argName] = parameters[parameterName]
             if parameters["intermediateFiles"] != None:
                 if parameters["intermediateFiles"] != True and step in parameters["intermediateFiles"]:
                     self.setIntermediateFile(step["name"], step["intermediateFile"])

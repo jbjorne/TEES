@@ -91,7 +91,7 @@ class ParseConverter(Parser):
             sentRows = self.readCoNLL(filePath, conllFormat=conllFormat)
             sentObjs = self.processCoNLLSentences(sentRows, unescaping=ext in unescapeFormats)
         elif ext == "sd":
-            sentObjs = self.readDependencies(filePath)
+            sentObjs = self.readStanfordDependencies(filePath)
         elif ext == "epe":
             sentObjs = self.readEPE(filePath)
         else:
