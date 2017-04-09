@@ -398,7 +398,7 @@ class Parser:
     ###########################################################################
     
     def makeSentenceElement(self, document, offset, sentences):
-        assert offset[1] > offset[0]
+        #assert offset[1] > offset[0]
         # Make sentence element
         docText = document.get("text")
         e = ET.Element("sentence")
@@ -430,17 +430,29 @@ class Parser:
                         continue
                     candScore = 0
                     for j in range(i, max(0, i - window), -1):
-                        lower = [candidate - x for x in matches[j] if x != None and x < candidate]
-                        if len(lower) > 0:
-                            candScore += 1 #min(lower)
-                        else:
-                            candScore -= 1
+                        found = False
+                        for x in matches[j]:
+                            if x < candidate:
+                                found = True
+                                break
+                        candScore += 1 if found else -1
+                        #lower = [candidate - x for x in matches[j] if x != None and x < candidate]
+#                         if len(lower) > 0:
+#                             candScore += 1 #min(lower)
+#                         else:
+#                             candScore -= 1
                     for j in range(i, min(maxIndex, i + window)):
-                        higher = [x - candidate for x in matches[j] if x != None and x > candidate]
-                        if len(higher) > 0:
-                            candScore += 1 #min(higher)
-                        else:
-                            candScore -= 1
+                        found = False
+                        for x in matches[j]:
+                            if x > candidate:
+                                found = True
+                                break
+                        candScore += 1 if found else -1
+#                         higher = [x - candidate for x in matches[j] if x != None and x > candidate]
+#                         if len(higher) > 0:
+#                             candScore += 1 #min(higher)
+#                         else:
+#                             candScore -= 1
                     candScores.append(candScore)
                     if candScore > bestScore:
                         bestScore = candScore
@@ -469,7 +481,7 @@ class Parser:
         docTokenOffsets = []
         docPos = 0
         for docToken in re.split(r"([\w']+|[.,!?;])", docText): #re.split(r'(\s+)', docText):
-            if not docToken.isspace():
+            if not docToken.isspace() and len(docToken) > 0:
                 docTokens.append(docToken)
                 docTokenOffsets.append((docPos, docPos + len(docToken)))
             docPos += len(docToken)
@@ -482,8 +494,8 @@ class Parser:
                 matches += [i for i in range(len(docTokens)) if docTokens[i] == unescaped]
             tokenMatches.append(matches)
         window = 100
-        bestMatches, allCandScores = self.alignMatches(tokenMatches, window)
-        bestMatches, allCandScores = self.alignMatches([[x] for x in bestMatches], window)
+        bestMatches, allCandScores = self.alignMatches(tokenMatches, window=20)
+        bestMatches, allCandScores = self.alignMatches([[x] for x in bestMatches], window=10)
 #         print tokenTexts
 #         print docTokens
 #         print tokenMatches
@@ -498,7 +510,7 @@ class Parser:
             counter = ProgressCounter(len(bestMatches), counter)
         currentSentence = None
         sentences = []
-        prevOffsetEnd = 0
+        #prevOffsetEnd = 0
         for i in range(len(bestMatches)):
             sentenceIndex = tokenSentences[i]
             counts["tokens-total"] += 1
@@ -509,16 +521,16 @@ class Parser:
                 offset = docTokenOffsets[docTokenIndex]
                 if currentSentence == None or sentenceIndex != currentSentence["index"]: # Start a new sentence
                     if currentSentence != None: # Make an element for the current sentence
-                        self.makeSentenceElement(document, (currentSentence["offset"][0], offset[0]), sentences)
-                        prevOffsetEnd = currentSentence["offset"][1]
-                    currentSentence = {"offset":[min(prevOffsetEnd, offset[0]), offset[1]+1], "index":sentenceIndex} # Start a sentence from the first aligned character
+                        self.makeSentenceElement(document, currentSentence["offset"], sentences)
+                        #prevOffsetEnd = currentSentence["offset"][1]
+                    currentSentence = {"offset":[offset[0], offset[1]+1], "index":sentenceIndex} # Start a sentence from the first aligned character
                 else: # Extend current sentence
-                    currentSentence["offset"][1] = max(offset) + 1
+                    currentSentence["offset"][1] = offset[1] + 1
                 counts["tokens-aligned"] += 1
             else:
                 counts["tokens-not-aligned"] += 1
         if currentSentence != None: # and alignedCharOffset > currentSentence["begin"]:
-            self.makeSentenceElement(document, (currentSentence["offset"][0], docTokenOffsets[-1][1]), sentences)
+            self.makeSentenceElement(document, currentSentence["offset"], sentences)
         for sentence in sentences:
             document.append(sentence)
             counts["new-sentences"] += 1
