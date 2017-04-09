@@ -74,8 +74,10 @@ class ParseConverter(Parser):
         if unescapeFormats in (None, "None"):
             return set()
         if isinstance(unescapeFormats, basestring):
-            if unescapeFormats == "all":
+            if unescapeFormats == "ALL":
                 unescapeFormats = set(self.allExt)
+            elif unescapeFormats == "AUTO":
+                unescapeFormats = set(["ptb", "sd"])
             else:
                 unescapeFormats = set(unescapeFormats.split(","))
         for item in unescapeFormats:
@@ -112,7 +114,7 @@ class ParseConverter(Parser):
         else:
             raise Exception("Unknown extension '" + str(ext) + "'")
     
-    def insertParses(self, parseDir, input, output=None, parseName="McCC", extensions=None, subDirs=None, debug=False, skipParsed=False, docMatchKeys=None, conllFormat=None, splitting=True, unescapeFormats="all"):
+    def insertParses(self, parseDir, input, output=None, parseName="McCC", extensions=None, subDirs=None, debug=False, skipParsed=False, docMatchKeys=None, conllFormat=None, splitting=True, unescapeFormats="AUTO"):
         corpusTree, corpusRoot = self.getCorpus(input)
         if not os.path.exists(parseDir):
             raise Exception("Cannot find parse input '" + str(parseDir) + "'")
