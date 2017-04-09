@@ -440,6 +440,47 @@ class Parser:
                 docTokens.append(docToken)
                 docTokenOffsets.append((docPos, docPos + len(docToken)))
             docPos += len(docToken)
+        
+        tokenMatches = []
+        for tokenText in tokenTexts:
+            matches = [i for i in range(len(docTokens)) if docTokens[i] == tokenText]
+            if tokenText in self.escDict:
+                unescaped = self.escDict[tokenText]
+                matches += [i for i in range(len(docTokens)) if docTokens[i] == unescaped]
+            tokenMatches.append(matches)
+        window = 10
+        bestMatches = []
+        for i in range(len(tokenMatches)):
+            bestScore = 999999
+            bestCandidate = None
+            if len(tokenMatches[i]) > 0:
+                for candidate in tokenMatches[i]:
+                    candScore = 0
+                    for j in range(i, i - window):
+                        lower = [candidate - x for x in tokenMatches[j] if x < candidate]
+                        if len(lower) > 0:
+                            candScore += min(lower)
+                    for j in range(i, i - window):
+                        higher = [x - candidate for x in tokenMatches[j] if x > candidate]
+                        if len(higher) > 0:
+                            candScore += min(higher)
+                    if candScore < bestScore:
+                        bestScore = candScore
+                        bestCandidate = candidate
+                bestMatches.append(bestCandidate)
+            else:
+                bestMatches.append(None)
+        print tokenTexts
+        print docTokens
+        print tokenMatches
+        print "BEST", bestMatches
+        print "COMP", [(tokenTexts[i], bestMatches[i]) for i in range(len(tokenTexts))]    
+        sys.exit()
+                    
+                    
+                        
+        
+            
         tokenAlignments = self.alignTokens(tokenTexts, docTokens, debugMessage=None)
         if counts == None:
             counts = defaultdict(int)
