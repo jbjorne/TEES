@@ -54,7 +54,7 @@ class Preprocessor(ToolChain):
     
     def initSteps(self):
         self.initStepGroup("Corpus Conversion")
-        self.initStep("CONVERT-BIONLP", Utils.Convert.convertBioNLP.convert, {"corpora":None, "outDir":None, "downloadDir":None, "redownload":False, "makeIntermediateFiles":False, "evaluate":False, "processEquiv":True, "analysisMode":"AUTO", "debug":False, "preprocessorSteps":None, "preprocessorParameters":None}, "convert-bionlp.xml", {"input":"corpora", "output":"outDir"})
+        self.initStep("CONVERT-BIONLP", Utils.Convert.convertBioNLP.convert, {"corpora":None, "outDir":None, "downloadDir":None, "redownload":False, "makeIntermediateFiles":False, "evaluate":False, "processEquiv":True, "analysisMode":"AUTO", "debug":False, "preprocessorSteps":None, "preprocessorParameters":None, "logPath":"AUTO"}, "convert-bionlp.xml", {"input":"corpora", "output":"outDir"})
         self.initStep("DOWNLOAD-CORPUS", Utils.Convert.convertBioNLP.convertCorpus, {"corpus":None, "outDir":None, "downloadDir":None, "redownload":False, "makeIntermediateFiles":False, "evaluate":False, "processEquiv":True, "analysisMode":"SKIP", "debug":False, "preprocessorSteps":None, "preprocessorParameters":None}, "download-bionlp.xml", {"input":"corpus", "output":"outDir"})
         self.initStepGroup("Loading")
         self.initStep("LOAD", self.load, {"dataSetNames":None, "corpusName":None, "extensions":None}, "load.xml")
@@ -76,7 +76,7 @@ class Preprocessor(ToolChain):
         self.initStep("STANFORD-CONVERT", clsStep(StanfordParser, "parse"), {"parserName":self.parseName, "debug":False, "action":"convert", "outputFormat":None}, "stanford-convert-dependencies.xml")
         self.initStep("SYNTAXNET", clsStep(SyntaxNetParser, "parse"), {"parserName":self.parseName, "debug":False, "modelDir":None}, "syntaxnet-dependencies.xml")
         self.initStepGroup("Alternative Parsing")
-        self.initStep("IMPORT-PARSE", clsStep(ParseConverter, "insertParses"), {"parseDir":None, "debug":False, "extensions":None, "subDirs":None, "docMatchKeys":None, "conllFormat":None, "splitting":True}, "import-parse.xml")
+        self.initStep("IMPORT-PARSE", clsStep(ParseConverter, "insertParses"), {"parseDir":None, "debug":False, "extensions":None, "subDirs":None, "docMatchKeys":None, "conllFormat":None, "splitting":True, "unescapeFormats":"all"}, "import-parse.xml")
         #self.allSteps["IMPORT-PARSE", clsStep(ParseConverter, ParseConverter.insertParses), {"parseDir":None, "debug":False}, "import-parse.xml"]
         #self.allSteps["IMPORT-PARSE", lambda *args, **kwargs: ParseConverter().insertParses(*args, **kwargs), {"parseDir":None, "debug":False}, "import-parse.xml"]        
         self.initStepGroup("Post-parsing")
