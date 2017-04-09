@@ -448,33 +448,40 @@ class Parser:
                 unescaped = self.escDict[tokenText]
                 matches += [i for i in range(len(docTokens)) if docTokens[i] == unescaped]
             tokenMatches.append(matches)
-        window = 10
+        window = 100
         bestMatches = []
+        allCandScores = []
+        maxIndex = len(tokenTexts) - 1
         for i in range(len(tokenMatches)):
             bestScore = 999999
             bestCandidate = None
+            candScores = []
             if len(tokenMatches[i]) > 0:
                 for candidate in tokenMatches[i]:
                     candScore = 0
-                    for j in range(i, i - window):
+                    for j in range(i, max(0, i - window), -1):
                         lower = [candidate - x for x in tokenMatches[j] if x < candidate]
                         if len(lower) > 0:
                             candScore += min(lower)
-                    for j in range(i, i - window):
+                    for j in range(i, min(maxIndex, i + window)):
                         higher = [x - candidate for x in tokenMatches[j] if x > candidate]
                         if len(higher) > 0:
                             candScore += min(higher)
+                    candScores.append(candScore)
                     if candScore < bestScore:
                         bestScore = candScore
                         bestCandidate = candidate
                 bestMatches.append(bestCandidate)
             else:
                 bestMatches.append(None)
+            allCandScores.append(candScores)
         print tokenTexts
         print docTokens
         print tokenMatches
         print "BEST", bestMatches
-        print "COMP", [(tokenTexts[i], bestMatches[i]) for i in range(len(tokenTexts))]    
+        for i in range(len(tokenTexts)):
+            print tokenTexts[i], bestMatches[i], tokenMatches[i], allCandScores[i]
+        #print "COMP", [(tokenTexts[i], bestMatches[i], tokenMatches[i]) for i in range(len(tokenTexts))]    
         sys.exit()
                     
                     
