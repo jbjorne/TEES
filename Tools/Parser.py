@@ -453,7 +453,7 @@ class Parser:
         allCandScores = []
         maxIndex = len(tokenTexts) - 1
         for i in range(len(tokenMatches)):
-            bestScore = 999999
+            bestScore = 0
             bestCandidate = None
             candScores = []
             if len(tokenMatches[i]) > 0:
@@ -462,13 +462,13 @@ class Parser:
                     for j in range(i, max(0, i - window), -1):
                         lower = [candidate - x for x in tokenMatches[j] if x < candidate]
                         if len(lower) > 0:
-                            candScore += min(lower)
+                            candScore += 1 #min(lower)
                     for j in range(i, min(maxIndex, i + window)):
                         higher = [x - candidate for x in tokenMatches[j] if x > candidate]
                         if len(higher) > 0:
-                            candScore += min(higher)
+                            candScore += 1 #min(higher)
                     candScores.append(candScore)
-                    if candScore < bestScore:
+                    if candScore > bestScore:
                         bestScore = candScore
                         bestCandidate = candidate
                 bestMatches.append(bestCandidate)
