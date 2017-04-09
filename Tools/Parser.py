@@ -416,86 +416,86 @@ class Parser:
             e.set("head", docText[0:offset[0]])
         sentences.append(e)
     
-    def alignMatches(self, matches, window=100):
-        bestMatches = []
-        allCandScores = []
-        maxIndex = len(matches) - 1
-        for i in range(len(matches)):
-            bestScore = 0
-            bestMatch = None
-            candScores = []
-            if len(matches[i]) > 0:
-                for candidate in matches[i]:
-                    if candidate == None:
-                        continue
-                    candScore = 0
-                    for j in range(i, max(0, i - window), -1):
-                        found = False
-                        for x in matches[j]:
-                            if x < candidate:
-                                found = True
-                                break
-                        candScore += 1 if found else -1
-                        #lower = [candidate - x for x in matches[j] if x != None and x < candidate]
-#                         if len(lower) > 0:
-#                             candScore += 1 #min(lower)
-#                         else:
-#                             candScore -= 1
-                    for j in range(i, min(maxIndex, i + window)):
-                        found = False
-                        for x in matches[j]:
-                            if x > candidate:
-                                found = True
-                                break
-                        candScore += 1 if found else -1
-#                         higher = [x - candidate for x in matches[j] if x != None and x > candidate]
-#                         if len(higher) > 0:
-#                             candScore += 1 #min(higher)
-#                         else:
-#                             candScore -= 1
-                    candScores.append(candScore)
-                    if candScore > bestScore:
-                        bestScore = candScore
-                        bestMatch = candidate
-            bestMatches.append(bestMatch)
-            allCandScores.append(candScores)
-        return bestMatches, allCandScores
+#     def alignMatches(self, matches, window=100):
+#         bestMatches = []
+#         allCandScores = []
+#         maxIndex = len(matches) - 1
+#         for i in range(len(matches)):
+#             bestScore = 0
+#             bestMatch = None
+#             candScores = []
+#             if len(matches[i]) > 0:
+#                 for candidate in matches[i]:
+#                     if candidate == None:
+#                         continue
+#                     candScore = 0
+#                     for j in range(i, max(0, i - window), -1):
+#                         found = False
+#                         for x in matches[j]:
+#                             if x < candidate:
+#                                 found = True
+#                                 break
+#                         candScore += 1 if found else -1
+#                         #lower = [candidate - x for x in matches[j] if x != None and x < candidate]
+# #                         if len(lower) > 0:
+# #                             candScore += 1 #min(lower)
+# #                         else:
+# #                             candScore -= 1
+#                     for j in range(i, min(maxIndex, i + window)):
+#                         found = False
+#                         for x in matches[j]:
+#                             if x > candidate:
+#                                 found = True
+#                                 break
+#                         candScore += 1 if found else -1
+# #                         higher = [x - candidate for x in matches[j] if x != None and x > candidate]
+# #                         if len(higher) > 0:
+# #                             candScore += 1 #min(higher)
+# #                         else:
+# #                             candScore -= 1
+#                     candScores.append(candScore)
+#                     if candScore > bestScore:
+#                         bestScore = candScore
+#                         bestMatch = candidate
+#             bestMatches.append(bestMatch)
+#             allCandScores.append(candScores)
+#         return bestMatches, allCandScores
 
-    def splitSentences(self, sentObjs, document, counter=None, counts=None):
-        docText = document.get("text")
-        if docText.strip() == "": # Document has no text
-            return
-        if len([x for x in document if x.tag == "sentence"]) != 0:
-            raise Exception("Cannot split sentences (document already has child elements).")
-        # Collect tokens from all sentence object and mark their sentence index in them
-        removeWhitespacePattern = re.compile(r'\s+')
-        tokenTexts = []
-        tokenSentences = []
-        for i in range(len(sentObjs)):
-            for token in sentObjs[i].get("tokens", []):
-                tokenSentences.append(i)
-                tokenText = token["text"]
-                tokenText = re.sub(removeWhitespacePattern, '', tokenText)
-                tokenTexts.append(tokenText)
-        docTokens = []
-        docTokenOffsets = []
-        docPos = 0
-        for docToken in re.split(r"([\w']+|[.,!?;])", docText): #re.split(r'(\s+)', docText):
-            if not docToken.isspace() and len(docToken) > 0:
-                docTokens.append(docToken)
-                docTokenOffsets.append((docPos, docPos + len(docToken)))
-            docPos += len(docToken)
-        
-        tokenMatches = []
-        for tokenText in tokenTexts:
-            matches = [i for i in range(len(docTokens)) if docTokens[i] == tokenText]
-            if tokenText in self.escDict:
-                unescaped = self.escDict[tokenText]
-                matches += [i for i in range(len(docTokens)) if docTokens[i] == unescaped]
-            tokenMatches.append(matches)
-        window = 100
-        bestMatches, allCandScores = self.alignMatches(tokenMatches, window=20)
-        bestMatches, allCandScores = self.alignMatches([[x] for x in bestMatches], window=10)
+#     def splitSentences(self, sentObjs, document, counter=None, counts=None):
+#         docText = document.get("text")
+#         if docText.strip() == "": # Document has no text
+#             return
+#         if len([x for x in document if x.tag == "sentence"]) != 0:
+#             raise Exception("Cannot split sentences (document already has child elements).")
+#         # Collect tokens from all sentence object and mark their sentence index in them
+#         removeWhitespacePattern = re.compile(r'\s+')
+#         tokenTexts = []
+#         tokenSentences = []
+#         for i in range(len(sentObjs)):
+#             for token in sentObjs[i].get("tokens", []):
+#                 tokenSentences.append(i)
+#                 tokenText = token["text"]
+#                 tokenText = re.sub(removeWhitespacePattern, '', tokenText)
+#                 tokenTexts.append(tokenText)
+#         docTokens = []
+#         docTokenOffsets = []
+#         docPos = 0
+#         for docToken in re.split(r"([\w']+|[.,!?;])", docText): #re.split(r'(\s+)', docText):
+#             if not docToken.isspace() and len(docToken) > 0:
+#                 docTokens.append(docToken)
+#                 docTokenOffsets.append((docPos, docPos + len(docToken)))
+#             docPos += len(docToken)
+#         
+#         tokenMatches = []
+#         for tokenText in tokenTexts:
+#             matches = [i for i in range(len(docTokens)) if docTokens[i] == tokenText]
+#             if tokenText in self.escDict:
+#                 unescaped = self.escDict[tokenText]
+#                 matches += [i for i in range(len(docTokens)) if docTokens[i] == unescaped]
+#             tokenMatches.append(matches)
+#         window = 100
+#         bestMatches, allCandScores = self.alignMatches(tokenMatches, window=20)
+#         bestMatches, allCandScores = self.alignMatches([[x] for x in bestMatches], window=10)
 #         print tokenTexts
 #         print docTokens
 #         print tokenMatches
@@ -503,39 +503,44 @@ class Parser:
 #         for i in range(len(tokenTexts)):
 #             print tokenTexts[i], bestMatches[i], allCandScores[i]
 #         #print "COMP", [(tokenTexts[i], bestMatches[i], tokenMatches[i]) for i in range(len(tokenTexts))]    
-#         sys.exit()
-        if counts == None:
-            counts = defaultdict(int)
-        if isinstance(counter, basestring):
-            counter = ProgressCounter(len(bestMatches), counter)
-        currentSentence = None
-        sentences = []
-        #prevOffsetEnd = 0
-        for i in range(len(bestMatches)):
-            sentenceIndex = tokenSentences[i]
-            counts["tokens-total"] += 1
-            if counter:
-                counter.update(1, "Processing token " + str(i) + " for sentence index " + str(tokenSentences[i]) + ": ")
-            if bestMatches[i] != None:
-                docTokenIndex = bestMatches[i]
-                offset = docTokenOffsets[docTokenIndex]
-                if currentSentence == None or sentenceIndex != currentSentence["index"]: # Start a new sentence
-                    if currentSentence != None: # Make an element for the current sentence
-                        self.makeSentenceElement(document, currentSentence["offset"], sentences)
-                        #prevOffsetEnd = currentSentence["offset"][1]
-                    currentSentence = {"offset":[offset[0], offset[1]+1], "index":sentenceIndex} # Start a sentence from the first aligned character
-                else: # Extend current sentence
-                    currentSentence["offset"][1] = offset[1] + 1
-                counts["tokens-aligned"] += 1
-            else:
-                counts["tokens-not-aligned"] += 1
-        if currentSentence != None: # and alignedCharOffset > currentSentence["begin"]:
-            self.makeSentenceElement(document, currentSentence["offset"], sentences)
-        for sentence in sentences:
-            document.append(sentence)
-            counts["new-sentences"] += 1
-        GeniaSentenceSplitter.moveElements(document)
-        return counts
+# #         sys.exit()
+#         if counts == None:
+#             counts = defaultdict(int)
+#         if isinstance(counter, basestring):
+#             counter = ProgressCounter(len(bestMatches), counter)
+#         currentSentence = None
+#         sentences = []
+#         #prevOffsetEnd = 0
+#         prevOffset = (0, 1)
+#         for i in range(len(bestMatches)):
+#             sentenceIndex = tokenSentences[i]
+#             if currentSentence == None or sentenceIndex != currentSentence["index"]: # Start a new sentence
+#                 if currentSentence != None: # Make an element for the current sentence
+#                     self.makeSentenceElement(document, currentSentence["offset"], sentences)
+#                     currentSentence = {"offset":prevOffset, "index":sentenceIndex} # Start a sentence from the first aligned character
+#             counts["tokens-total"] += 1
+#             if counter:
+#                 counter.update(1, "Processing token " + str(i) + " for sentence index " + str(tokenSentences[i]) + ": ")
+#             if bestMatches[i] != None:
+#                 docTokenIndex = bestMatches[i]
+#                 offset = docTokenOffsets[docTokenIndex]
+#                 if currentSentence == None or sentenceIndex != currentSentence["index"]: # Start a new sentence
+#                     if currentSentence != None: # Make an element for the current sentence
+#                         self.makeSentenceElement(document, currentSentence["offset"], sentences)
+#                         #prevOffsetEnd = currentSentence["offset"][1]
+#                     currentSentence = {"offset":[offset[0], offset[1]+1], "index":sentenceIndex} # Start a sentence from the first aligned character
+#                 else: # Extend current sentence
+#                     currentSentence["offset"][1] = offset[1] + 1
+#                 counts["tokens-aligned"] += 1
+#             else:
+#                 counts["tokens-not-aligned"] += 1
+#         if currentSentence != None: # and alignedCharOffset > currentSentence["begin"]:
+#             self.makeSentenceElement(document, currentSentence["offset"], sentences)
+#         for sentence in sentences:
+#             document.append(sentence)
+#             counts["new-sentences"] += 1
+#         GeniaSentenceSplitter.moveElements(document)
+#         return counts
     
 #     def splitSentences(self, sentObjs, document, counter=None, counts=None):
 #         docText = document.get("text")
