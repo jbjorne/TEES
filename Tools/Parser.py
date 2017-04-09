@@ -82,6 +82,63 @@ class Parser:
         else:
             return dep["type"] + "(" + dep["t1Token"].get("text") + "-" + str(dep["t1"]) + ", " + dep["t2Token"].get("text") + "-" + str(dep["t2"]) + ")"
     
+    def getCatenated(self, tokens, tokenSep=" "):
+        catenated = ""
+        tokenOffsets = []
+        for i in range(len(tokens)):
+            if i > 0:
+                catenated += tokenSep
+            tokenOffsets.append(range(len(catenated), len(catenated) + len(tokens[i])))
+            catenated += tokens[i]
+        return catenated, tokenOffsets
+    
+    def getFilteredText(self, text, skipRE):
+        filtered = ""
+        offsets = []
+        for i in range(len(text)):
+            if skipRE == None or not skipRE.match(text[i]):
+                filtered += text[i]
+                offsets.append(i)
+        return filtered, offsets
+    
+    def alignStrings(self, tokens, text, tokenSep=" ", skipRE=None, debugId=None, debugMessage="Partial alignment"):
+        text, textOffsets = self.getFilteredText(text, skipRE)
+        catenated, tokenOffsets = self.getCatenated(tokens, tokenSep)
+        #for char in text:
+        alignedText, alignedCat, diff, alignedOffsets = Align.align(text, catenated)
+        mismatchCount = diff.count("*")
+        if mismatchCount > 0:
+            usedEscapings = []
+            for escSymbol in [x for x in sorted(self.escDict.keys()) if x in tokens]:
+                newTokens = [x.replace(escSymbol, self.escDict[escSymbol]) for x in tokens]
+                newCatenated, newTokenOffsets = self.getCatenated(newTokens, tokenSep)
+                newAlignedText, newAlignedCat, newDiff, newAlignedOffsets = Align.align(text, newCatenated)
+                newDiffMismatchCount = newDiff.count("*")
+                #print "NEWCAT", newCatenated, newDiffMismatchCount
+                if newDiffMismatchCount < mismatchCount:
+                    mismatchCount = newDiffMismatchCount
+                    tokens = newTokens
+                    catenated, tokenOffsets = newCatenated, newTokenOffsets
+                    alignedText, alignedCat, diff, alignedOffsets = newAlignedText, newAlignedCat, newDiff, newAlignedOffsets
+                    usedEscapings.append(escSymbol)
+                if newDiffMismatchCount == 0:
+                    break
+            if mismatchCount > 0:
+                print >> sys.stderr, debugMessage, debugId, [catenated, text], usedEscapings
+                Align.printAlignment(alignedText, alignedCat, diff)
+        tokenAlignments = []
+        #print tokens, tokenOffsets
+        #print text, textOffsets
+        #print "aligned", alignedOffsets
+        for tokenIndex in range(len(tokens)):
+            tokenAlignedOffsets = [alignedOffsets[x] for x in tokenOffsets[tokenIndex] if alignedOffsets[x] != None]
+            if len(tokenAlignedOffsets) == 0:
+                tokenAlignments.append(None)
+            else:
+                tokenTextOffsets = [textOffsets[x] for x in tokenAlignedOffsets]
+                tokenAlignments.append((min(tokenTextOffsets), max(tokenTextOffsets) + 1))
+        return tokenAlignments        
+    
     ###########################################################################
     # Tokens, Phrases and Dependencies
     ###########################################################################
@@ -109,35 +166,62 @@ class Parser:
             if key not in skipKeys:
                 element.set(key, sourceDict[key])
     
-    def insertTokens(self, tokens, sentence, tokenization, idStem="t", counts=None):
+#     def alignIterative(self, tokens, sentence, tokenSep = " "):
+#         tokenTexts = [x["text"] for x in tokens]
+#         tokensText = tokenSep.join([x["text"] for x in tokens])
+#         sentenceText = sentence.get("text")
+#         alignedSentence, alignedCat, diff, alignedOffsets = Align.align(sentenceText, tokensText)
+#         diffErrorCount = diff.count("|") + diff.count("-")
+#         if diffErrorCount != len(diff):
+#             for escSymbol in sorted(self.escDict.keys()):
+#                 newTokenTexts = [x["text"].replace(escSymbol, self.escDict[escSymbol]) for x in tokens]
+#                 newTokensText = tokenSep.join(newTokenTexts)
+#                 if newTokensText != tokensText:
+#                     newAlignedSentence, newAlignedCat, newDiff, newAlignedOffsets = Align.align(sentenceText, tokensText)
+#                     newDiffErrorCount = newDiff.count("|") + newDiff.count("-")
+#                     if newDiffErrorCount < diffErrorCount:
+#                         alignedSentence, alignedCat, diff, alignedOffsets = newAlignedSentence, newAlignedCat, newDiff, newAlignedOffsets 
+#             if diffErrorCount != len(diff):
+#                 print >> sys.stderr, "Partial alignment when inserting tokens into sentence", sentence.get("id"), [sentenceText, tokensText]
+#                 Align.printAlignment(alignedSentence, alignedCat, diff)
+#         return alignedSentence, alignedCat, diff, alignedOffsets
+    
+    def insertTokens(self, tokens, sentence, tokenization, idStem="t", counts=None, iterativeAlign=True):
         #catenatedTokens, catToToken = self.mapTokens([x["text"] for x in tokens])
         if counts == None:
             counts = defaultdict(int)
-        tokenSep = " "
-        tokensText = tokenSep.join([x["text"] for x in tokens])
+#         tokenSep = " "
+#         tokensText = tokenSep.join([x["text"] for x in tokens])
+#         sentenceText = sentence.get("text")
+#         alignedSentence, alignedCat, diff, alignedOffsets = Align.align(sentenceText, tokensText)
+#         diffErrorCount = diff.count("|") + diff.count("-")
+#         if diffErrorCount != len(diff):   
+#             print >> sys.stderr, "Partial alignment when inserting tokens into sentence", sentence.get("id"), [sentenceText, tokensText]
+#             Align.printAlignment(alignedSentence, alignedCat, diff)
+#         pos = 0
         sentenceText = sentence.get("text")
-        alignedSentence, alignedCat, diff, alignedOffsets = Align.align(sentenceText, tokensText)
-        if diff.count("|") + diff.count("-") != len(diff):
-            print >> sys.stderr, "Partial alignment when inserting tokens into sentence", sentence.get("id"), [sentenceText, tokensText]
-            Align.printAlignment(alignedSentence, alignedCat, diff)
-        pos = 0
-        tokenIndex = 0
+        charOffsets = self.alignStrings([x["text"] for x in tokens], sentenceText, " ", None, sentence.get("id"), "Partial alignment when inserting tokens into sentence")
+        #tokenIndex = 0
         tokKeys = set(["id", "text", "origText", "index", "POS"])
-        for token in tokens:
+        for i in range(len(tokens)):
+            token = tokens[i]
             counts["tokens-parse"] += 1
-            tokenOffsets = [x for x in alignedOffsets[pos:pos + len(token["text"])] if x != None]
-            if len(tokenOffsets) > 0:
+            #tokenOffsets = [x for x in alignedOffsets[pos:pos + len(token["text"])] if x != None]
+            if charOffsets[i] != None: #len(tokenOffsets) > 0:
                 #tokenIndex = max(matching, key=lambda key: matching[key])
                 # Make element
                 element = ET.Element("token")
-                element.set("id", idStem + str(tokenIndex))
+                element.set("id", idStem + str(i))
                 #element.set("i", str(token["index"]))
                 element.set("text", token["text"])
-                offset = (min(tokenOffsets), max(tokenOffsets) + 1)
+                #offset = (min(tokenOffsets), max(tokenOffsets) + 1)
+                offset = charOffsets[i]
                 matchingText = sentenceText[offset[0]:offset[1]]
                 if token["text"] != matchingText:
-                    element.set("match", "part")
-                    element.set("matchText", matchingText)
+                    element.set("text", matchingText)
+                    element.set("origText", token["text"])
+                    #element.set("match", "part")
+                    #element.set("matchText", matchingText)
                     counts["tokens-partial-match"] += 1
                 else:
                     #element.set("match", "exact")
@@ -150,8 +234,8 @@ class Parser:
                 counts["tokens-elements"] += 1
             else:
                 counts["tokens-no-match"] += 1
-            tokenIndex += 1
-            pos += len(token["text"]) + len(tokenSep)
+            #tokenIndex += 1
+            #pos += len(token["text"]) + len(tokenSep)
         if len(tokens) > 0:
             counts["sentences-with-tokens"] += 1
 
@@ -306,55 +390,60 @@ class Parser:
             raise Exception("Cannot split sentences (document already has child elements).")
         # Collect tokens from all sentence object and mark their sentence index in them
         #tokens = []
-        tokenChars = ""
-        tokenCharSentences = []
+        #tokenChars = ""
+        #tokenCharSentences = []
         removeWhitespacePattern = re.compile(r'\s+')
+        tokenTexts = []
+        tokenSentences = []
         for i in range(len(sentObjs)):
             for token in sentObjs[i].get("tokens", []):
+                tokenSentences.append(i)
                 #token["sentenceIndex"] = i
                 #tokens.append(token)
                 tokenText = token["text"]
                 tokenText = re.sub(removeWhitespacePattern, '', tokenText)
-                tokenCharSentences.extend([i] * len(tokenText))
-                tokenChars += tokenText
-        # Split the document text into words and define their character offsets
-        docChars = ""
-        docCharOffsets = []
-        for i in range(len(docText)): #re.split(r'(\s+)', docText):
-            if not docText[i].isspace(): #if span.strip() != "":
-                docChars += docText[i]
-                docCharOffsets.append(i) #((i, i + 1))
+                tokenTexts.append(tokenText)
+                #tokenCharSentences.extend([i] * len(tokenText))
+                #tokenChars += tokenText
+        tokenAlignments = self.alignStrings(tokenTexts, docText, "", removeWhitespacePattern, document.get("id"), "Partial alignment in sentence splitting for document")
+#         # Split the document text into words and define their character offsets
+#         docChars = ""
+#         docCharOffsets = []
+#         for i in range(len(docText)): #re.split(r'(\s+)', docText):
+#             if not docText[i].isspace(): #if span.strip() != "":
+#                 docChars += docText[i]
+#                 docCharOffsets.append(i) #((i, i + 1))
         # Align tokens agains document words
         #print [docChars, tokenChars]
-        alignedSentence, alignedCat, diff, alignedOffsets = Align.align(docChars, tokenChars)
-        if diff.count("|") + diff.count("-") != len(diff):
-            print >> sys.stderr, "Partial alignment in sentence splitting for document", document.get("id")
-            Align.printAlignment(alignedSentence, alignedCat, diff)
+#         alignedSentence, alignedCat, diff, alignedOffsets = Align.align(docChars, tokenChars)
+#         if diff.count("|") + diff.count("-") != len(diff):
+#             print >> sys.stderr, "Partial alignment in sentence splitting for document", document.get("id")
+#             Align.printAlignment(alignedSentence, alignedCat, diff)
         # Initialize counters
         if counts == None:
             counts = defaultdict(int)
         if isinstance(counter, basestring):
-            counter = ProgressCounter(len(tokenChars), counter)
+            counter = ProgressCounter(len(tokenAlignments), counter)
         # Use the aligned tokens to generate sentence elements
         #currentSentIndex = 0
         #currentSentBegin = -1
         currentSentence = None #{"begin":None, "index":0}
         sentences = []
-        for i in range(len(tokenChars)):
+        for i in range(len(tokenAlignments)):
             counts["tokens-total"] += 1
             if counter:
-                counter.update(1, "Processing token character " + str(i) + " for sentence index " + str(tokenCharSentences[i]) + ": ")
-            sentenceIndex = tokenCharSentences[i]
+                counter.update(1, "Processing token " + str(i) + " for sentence index " + str(tokenSentences[i]) + ": ")
+            sentenceIndex = tokenSentences[i]
             #token = tokens[i]
-            docCharIndex = alignedOffsets[i]
-            if docCharIndex != None:
-                alignedCharOffset = docCharOffsets[docCharIndex]
+            docCharIndices = tokenAlignments[i]
+            if docCharIndices != None:
+                #alignedCharOffset = docCharOffsets[docCharIndex]
                 if currentSentence == None or sentenceIndex != currentSentence["index"]: # Start a new sentence
                     if currentSentence != None: # Make an element for the current sentence
                         self.makeSentenceElement(document, currentSentence["offset"], sentences)
-                    currentSentence = {"offset":[alignedCharOffset, alignedCharOffset+1], "index":sentenceIndex} # Start a sentence from the first aligned character
+                    currentSentence = {"offset":[min(docCharIndices), max(docCharIndices)+1], "index":sentenceIndex} # Start a sentence from the first aligned character
                 else: # Extend current sentence
-                    currentSentence["offset"][1] = alignedCharOffset + 1
+                    currentSentence["offset"][1] = max(docCharIndices) + 1
                 counts["tokens-aligned"] += 1
             else:
                 counts["tokens-not-aligned"] += 1
@@ -630,7 +719,7 @@ class Parser:
                 for key in word:
                     if key == "FORM":
                         token["text"] = word[key]
-                        if self.unescape:
+                        if unescaping:
                             token["text"] = self.unescape(token["text"])
                     elif key == "ID":
                         token["id"] = word[key]

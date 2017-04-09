@@ -71,7 +71,7 @@ class ParseConverter(Parser):
         return [x for x in corpusRoot.findall("document")]
     
     def getUnescapeFormats(self, unescapeFormats=None):
-        if unescapeFormats == None:
+        if unescapeFormats in (None, "None"):
             return set()
         if isinstance(unescapeFormats, basestring):
             if unescapeFormats == "all":
