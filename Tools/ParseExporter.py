@@ -164,6 +164,8 @@ class ParseExporter(Parser):
                     row[column] = tokenIdMap[token.get("id")]
                 elif column == "FORM":
                     row[column] = token.get("text")
+                    if token.get("origText") != None:
+                        row[column] = token.get("origText")
                 else:
                     row[column] = "_"
                     for key in (column, column.lower()):
@@ -205,13 +207,13 @@ class ParseExporter(Parser):
         outFile.write("\n") # one more newline to end the sentence (or to mark a sentence with no parse)
         return parseElement != None
     
-    def exportEPE(self, tokenizationElement, parseElement, sentence, sentenceCount, outFile, propertyTypes="EPE"):
+    def exportEPE(self, tokenizationElement, parseElement, sentence, sentenceCount, outFile, propertyTypes="AUTO"):
         tokens = self.getSortedTokens(tokenizationElement)
         tokenIndexById = self.getTokenIndexById(tokens)
         dependenciesByHead = self.getDependenciesByToken(parseElement, "t1")
         obj = OrderedDict([("id",sentenceCount + 1), ("nodes",[])])
-        basicKeys = set(["POS", "text", "charOffset", "headOffset"])
-        if propertyTypes == "EPE":
+        basicKeys = set(["POS", "text", "origText", "charOffset", "headOffset"])
+        if propertyTypes == "AUTO":
             propertyTypes = ("POS", "lemma")
         sentencePos = Utils.Range.charOffsetToSingleTuple(sentence.get("charOffset"))[0]
         for i in range(len(tokens)):
@@ -219,6 +221,8 @@ class ParseExporter(Parser):
             #print token.attrib
             charOffset = Utils.Range.charOffsetToSingleTuple(token.get("charOffset"))
             node = OrderedDict([("id",i+1), ("form",token.get("text")), ("start",charOffset[0] + sentencePos), ("end",charOffset[1] + sentencePos)])
+            if token.get("origText") != None:
+                node["form"] = token.get("origText")
             if token.get("root") != None:
                 node["top"] = True
             node["properties"] = OrderedDict([("pos",token.get("POS"))])
