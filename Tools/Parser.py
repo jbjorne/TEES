@@ -101,49 +101,83 @@ class Parser:
                 offsets.append(i)
         return filtered, offsets
     
-    def alignStrings(self, tokens, text, tokenSep=" ", skipRE=None, debugId=None, debugMessage="Partial alignment"):
-        text, textOffsets = self.getFilteredText(text, skipRE)
-        catenated, tokenOffsets = self.getCatenated(tokens, tokenSep)
+    def alignTokens(self, tokens, target, tokenSep=" ", skipRE=None, debugId=None, debugMessage="Partial alignment"):
+        targetIsString = isinstance(target, basestring)
+        if targetIsString:
+            target, textOffsets = self.getFilteredText(target, skipRE)
+            source, tokenOffsets = self.getCatenated(tokens, tokenSep)
+        else:
+            source = tokens
         #for char in text:
-        alignedText, alignedCat, diff, alignedOffsets = Align.align(text, catenated)
+        alignedText, alignedCat, diff, alignedOffsets = Align.align(target, source)
         mismatchCount = diff.count("*")
         if mismatchCount > 0:
             usedEscapings = []
             for escSymbol in [x for x in sorted(self.escDict.keys()) if x in tokens]:
                 newTokens = [x.replace(escSymbol, self.escDict[escSymbol]) for x in tokens]
-                newCatenated, newTokenOffsets = self.getCatenated(newTokens, tokenSep)
-                newAlignedText, newAlignedCat, newDiff, newAlignedOffsets = Align.align(text, newCatenated)
+                if targetIsString:
+                    newSource, newTokenOffsets = self.getCatenated(newTokens, tokenSep)
+                else:
+                    newSource = newTokens
+                newAlignedText, newAlignedCat, newDiff, newAlignedOffsets = Align.align(target, newSource)
                 newDiffMismatchCount = newDiff.count("*")
                 #print "NEWCAT", newCatenated, newDiffMismatchCount
                 if newDiffMismatchCount < mismatchCount:
                     mismatchCount = newDiffMismatchCount
                     tokens = newTokens
-                    catenated, tokenOffsets = newCatenated, newTokenOffsets
+                    if targetIsString:
+                        source, tokenOffsets = newSource, newTokenOffsets
                     alignedText, alignedCat, diff, alignedOffsets = newAlignedText, newAlignedCat, newDiff, newAlignedOffsets
                     usedEscapings.append(escSymbol)
                 if newDiffMismatchCount == 0:
                     break
-            if mismatchCount > 0:
-                print >> sys.stderr, debugMessage, debugId, [catenated, text], usedEscapings
+            if mismatchCount > 0 and debugMessage != None:
+                print >> sys.stderr, debugMessage, debugId, [source, target], usedEscapings
                 Align.printAlignment(alignedText, alignedCat, diff)
         tokenAlignments = []
         #print tokens, tokenOffsets
         #print text, textOffsets
         #print "aligned", alignedOffsets
-        for tokenIndex in range(len(tokens)):
-            tokenAlignedOffsets = [alignedOffsets[x] for x in tokenOffsets[tokenIndex] if alignedOffsets[x] != None]
-            if len(tokenAlignedOffsets) == 0:
-                tokenAlignments.append(None)
-            else:
-                tokenTextOffsets = [textOffsets[x] for x in tokenAlignedOffsets]
-                tokenAlignments.append((min(tokenTextOffsets), max(tokenTextOffsets) + 1))
-        return tokenAlignments        
+        if targetIsString:
+            tokenAlignments = []
+            for tokenIndex in range(len(tokens)):
+                tokenAlignedOffsets = [alignedOffsets[x] for x in tokenOffsets[tokenIndex] if alignedOffsets[x] != None]
+                if len(tokenAlignedOffsets) == 0:
+                    tokenAlignments.append(None)
+                else:
+                    tokenTextOffsets = [textOffsets[x] for x in tokenAlignedOffsets]
+                    tokenAlignments.append((min(tokenTextOffsets), max(tokenTextOffsets) + 1))
+            return tokenAlignments
+        else:
+            return alignedOffsets
+    
+#     def alignTokens(self, sourceTokens, targetTokens, debugId=None, debugMessage="Partial alignment"):
+#         alignedText, alignedCat, diff, alignedOffsets = Align.align(targetTokens, sourceTokens)
+#         mismatchCount = diff.count("*")
+#         if mismatchCount > 0:
+#             usedEscapings = []
+#             for escSymbol in [x for x in sorted(self.escDict.keys()) if x in sourceTokens]:
+#                 newTokens = [x.replace(escSymbol, self.escDict[escSymbol]) for x in sourceTokens]
+#                 newAlignedText, newAlignedCat, newDiff, newAlignedOffsets = Align.align(targetTokens, sourceTokens)
+#                 newDiffMismatchCount = newDiff.count("*")
+#                 #print "NEWCAT", newCatenated, newDiffMismatchCount
+#                 if newDiffMismatchCount < mismatchCount:
+#                     mismatchCount = newDiffMismatchCount
+#                     sourceTokens = newTokens
+#                     alignedText, alignedCat, diff, alignedOffsets = newAlignedText, newAlignedCat, newDiff, newAlignedOffsets
+#                     usedEscapings.append(escSymbol)
+#                 if newDiffMismatchCount == 0:
+#                     break
+#             if mismatchCount > 0:
+#                 print >> sys.stderr, debugMessage, debugId, [sourceTokens, targetTokens], usedEscapings
+#                 Align.printAlignment(alignedText, alignedCat, diff)
+#         return alignedOffsets     
     
     ###########################################################################
     # Tokens, Phrases and Dependencies
     ###########################################################################
     
-    def alignTokens(self, tokens, tokenization, counts=None, tag="dep-"):
+    def mapTokens(self, tokens, tokenization, counts=None, tag="dep-"):
         if counts == None:
             counts = defaultdict(int)
         elements = tokenization.findall("token")
@@ -200,7 +234,7 @@ class Parser:
 #             Align.printAlignment(alignedSentence, alignedCat, diff)
 #         pos = 0
         sentenceText = sentence.get("text")
-        charOffsets = self.alignStrings([x["text"] for x in tokens], sentenceText, " ", None, sentence.get("id"), "Partial alignment when inserting tokens into sentence")
+        charOffsets = self.alignTokens([x["text"] for x in tokens], sentenceText, " ", None, sentence.get("id"), "Partial alignment when inserting tokens into sentence")
         #tokenIndex = 0
         tokKeys = set(["id", "text", "origText", "index", "POS"])
         for i in range(len(tokens)):
@@ -275,7 +309,7 @@ class Parser:
                     tokensById[t2] = {"text":dep["t2Word"], "id":t2}
             depTokens = [tokensById[i] for i in sorted(tokensById.keys())]
             if tokenization != None:
-                self.alignTokens(depTokens, tokenization, counts=counts, tag="dep-")
+                self.mapTokens(depTokens, tokenization, counts=counts, tag="dep-")
             else:
                 self.insertTokens(depTokens, sentence, tokenization, counts=counts)
         count = 0
@@ -348,7 +382,7 @@ class Parser:
                 if tokenization.find("token") == None:
                     self.insertTokens(sentObj["tokens"], sentence, tokenization, counts=counts)
                 else:
-                    self.alignTokens(sentObj["tokens"], sentence, tokenization, counts=counts)
+                    self.mapTokens(sentObj["tokens"], sentence, tokenization, counts=counts)
             #if "dependencies" in sentObj or "phrases" in sentObj:
             #    parse = IXMLUtils.getParseElement(sentence, parseName, addIfNotExist=True)
             if "dependencies" in sentObj:
@@ -381,44 +415,174 @@ class Parser:
         if offset[0] > 0 and prevSentence == None:
             e.set("head", docText[0:offset[0]])
         sentences.append(e)
-
+        
     def splitSentences(self, sentObjs, document, counter=None, counts=None):
         docText = document.get("text")
         if docText.strip() == "": # Document has no text
             return
         if len([x for x in document if x.tag == "sentence"]) != 0:
             raise Exception("Cannot split sentences (document already has child elements).")
+        # Collect tokens from all sentence object and mark their sentence index in them
         removeWhitespacePattern = re.compile(r'\s+')
+        tokenTexts = []
+        tokenSentences = []
+        for i in range(len(sentObjs)):
+            for token in sentObjs[i].get("tokens", []):
+                tokenSentences.append(i)
+                tokenText = token["text"]
+                tokenText = re.sub(removeWhitespacePattern, '', tokenText)
+                tokenTexts.append(tokenText)
+        docTokens = []
+        docTokenOffsets = []
+        docPos = 0
+        for docToken in re.split(r'(\s+)', docText):
+            if not docToken.isspace():
+                docTokens.append(docToken)
+                docTokenOffsets.append((docPos, docPos + len(docToken)))
+            docPos += len(docToken)
+        tokenAlignments = self.alignTokens(tokenTexts, docTokens, debugMessage=None)
         if counts == None:
             counts = defaultdict(int)
         if isinstance(counter, basestring):
-            counter = ProgressCounter(len(sentObjs), counter)
-        docText = document.get("text")
-        docTextPos = 0
+            counter = ProgressCounter(len(tokenAlignments), counter)
+        currentSentence = None #{"begin":None, "index":0}
         sentences = []
-        for i in range(len(sentObjs)):
+        for i in range(len(tokenAlignments)):
+            counts["tokens-total"] += 1
             if counter:
-                counter.update(1, "Processing sentence " + str(i) + ": ")
-            tokens = sentObjs[i].get("tokens", [])
-            tokenTexts = [re.sub(removeWhitespacePattern, '', x["text"]) for x in tokens]
-            tokenAlignments = []
-            tokenTextLength = sum([len(x) for x in tokenTexts])
-            if tokenTextLength > 0:
-                docSpan = docText[docTextPos:docTextPos + 2 * tokenTextLength + len(tokenTexts)]
-                tokenAlignments = self.alignStrings(tokenTexts, docSpan, "", removeWhitespacePattern, document.get("id") + "/" + str(i), "Partial alignment in sentence splitting for document")
-                tokenAlignments = [x for x in tokenAlignments if x != None]
-            if len(tokenAlignments) > 0:
-                sentenceOffset = (docTextPos + min([x[0] for x in tokenAlignments]), docTextPos + max([x[1] for x in tokenAlignments]))
-                docTextPos = sentenceOffset[1]
-                self.makeSentenceElement(document, sentenceOffset, sentences)
-                counts["sentences-aligned"] += 1
+                counter.update(1, "Processing token " + str(i) + " for sentence index " + str(tokenSentences[i]) + ": ")
+            sentenceIndex = tokenSentences[i]
+            docTokenIndex = tokenAlignments[i]
+            if docTokenIndex != None:
+                offset = docTokenOffsets[docTokenIndex]
+                if currentSentence == None or sentenceIndex != currentSentence["index"]: # Start a new sentence
+                    if currentSentence != None: # Make an element for the current sentence
+                        self.makeSentenceElement(document, currentSentence["offset"], sentences)
+                    currentSentence = {"offset":[min(offset), max(offset)+1], "index":sentenceIndex} # Start a sentence from the first aligned character
+                else: # Extend current sentence
+                    currentSentence["offset"][1] = max(offset) + 1
+                counts["tokens-aligned"] += 1
             else:
-                counts["sentences-not-aligned"] += 1
+                counts["tokens-not-aligned"] += 1
+        if currentSentence != None: # and alignedCharOffset > currentSentence["begin"]:
+            self.makeSentenceElement(document, currentSentence["offset"], sentences)
         for sentence in sentences:
             document.append(sentence)
             counts["new-sentences"] += 1
         GeniaSentenceSplitter.moveElements(document)
         return counts
+    
+#     def splitSentences(self, sentObjs, document, counter=None, counts=None):
+#         docText = document.get("text")
+#         if docText.strip() == "": # Document has no text
+#             return
+#         if len([x for x in document if x.tag == "sentence"]) != 0:
+#             raise Exception("Cannot split sentences (document already has child elements).")
+#         removeWhitespacePattern = re.compile(r'\s+')
+#         docTokens = re.split(r'(\s+)', docText)
+#         docTokenOffsets = []
+#         docPos = 0
+#         for docToken in docTokens:
+#             docTokenOffsets.append((docPos, docPos + len(docToken)))
+#             docPos += len(docToken)
+#         docTokenIndex = 0
+#         sentOffset = [0,0]
+#         sentences = []
+#         for i in range(len(sentObjs)):
+#             for token in sentObjs[i].get("tokens", []):
+#                 tokenText = token["text"]
+#                 tokenText = re.sub(removeWhitespacePattern, '', tokenText)
+#                 if tokenText != docTokens[docTokenIndex] and tokenText in self.escDict:
+#                     tokenText = self.escDict[tokenText]
+#                 if tokenText == docTokens[docTokenIndex]:
+#                     sentOffset[1] = docTokenOffsets[docTokenIndex][1]
+#                     docTokenIndex += 1
+#             if sentOffset[0] != sentOffset[1]:
+#                 self.makeSentenceElement(document, sentOffset, sentences)
+#                 sentOffset = [sentOffset[1], sentOffset[1]]
+#                 counts["new-sentences"] += 1
+#             else:
+#                 counts["unmatched-sentences"] += 1
+#         for sentence in sentences:
+#             document.append(sentence)
+#         GeniaSentenceSplitter.moveElements(document)
+#         return counts
+
+#     def splitSentences(self, sentObjs, document, counter=None, counts=None):
+#         docText = document.get("text")
+#         if docText.strip() == "": # Document has no text
+#             return
+#         if len([x for x in document if x.tag == "sentence"]) != 0:
+#             raise Exception("Cannot split sentences (document already has child elements).")
+#         removeWhitespacePattern = re.compile(r'\s+')
+#         if counts == None:
+#             counts = defaultdict(int)
+#         if isinstance(counter, basestring):
+#             counter = ProgressCounter(len(sentObjs), counter)
+#         docTokens = document.get("text").split()
+#         docTextPos = 0
+#         sentences = []
+#         for i in range(len(sentObjs)):
+#             if counter:
+#                 counter.update(1, "Processing sentence " + str(i) + ": ")
+#             tokens = sentObjs[i].get("tokens", [])
+#             tokenTexts = [re.sub(removeWhitespacePattern, '', x["text"]) for x in tokens]
+#             tokenAlignments = []
+#             tokenTextLength = sum([len(x) for x in tokenTexts])
+#             if tokenTextLength > 0:
+#                 docSpan = docText[docTextPos:docTextPos + 2 * tokenTextLength + len(tokenTexts)]
+#                 tokenAlignments = self.alignStrings(tokenTexts, docSpan, "", removeWhitespacePattern, document.get("id") + "/" + str(i), "Partial alignment in sentence splitting for document")
+#                 tokenAlignments = [x for x in tokenAlignments if x != None]
+#             if len(tokenAlignments) > 0:
+#                 sentenceOffset = (docTextPos + min([x[0] for x in tokenAlignments]), docTextPos + max([x[1] for x in tokenAlignments]))
+#                 docTextPos = sentenceOffset[1]
+#                 self.makeSentenceElement(document, sentenceOffset, sentences)
+#                 counts["sentences-aligned"] += 1
+#             else:
+#                 counts["sentences-not-aligned"] += 1
+#         for sentence in sentences:
+#             document.append(sentence)
+#             counts["new-sentences"] += 1
+#         GeniaSentenceSplitter.moveElements(document)
+#         return counts
+
+#     def splitSentences(self, sentObjs, document, counter=None, counts=None):
+#         docText = document.get("text")
+#         if docText.strip() == "": # Document has no text
+#             return
+#         if len([x for x in document if x.tag == "sentence"]) != 0:
+#             raise Exception("Cannot split sentences (document already has child elements).")
+#         removeWhitespacePattern = re.compile(r'\s+')
+#         if counts == None:
+#             counts = defaultdict(int)
+#         if isinstance(counter, basestring):
+#             counter = ProgressCounter(len(sentObjs), counter)
+#         docText = document.get("text")
+#         docTextPos = 0
+#         sentences = []
+#         for i in range(len(sentObjs)):
+#             if counter:
+#                 counter.update(1, "Processing sentence " + str(i) + ": ")
+#             tokens = sentObjs[i].get("tokens", [])
+#             tokenTexts = [re.sub(removeWhitespacePattern, '', x["text"]) for x in tokens]
+#             tokenAlignments = []
+#             tokenTextLength = sum([len(x) for x in tokenTexts])
+#             if tokenTextLength > 0:
+#                 docSpan = docText[docTextPos:docTextPos + 2 * tokenTextLength + len(tokenTexts)]
+#                 tokenAlignments = self.alignStrings(tokenTexts, docSpan, "", removeWhitespacePattern, document.get("id") + "/" + str(i), "Partial alignment in sentence splitting for document")
+#                 tokenAlignments = [x for x in tokenAlignments if x != None]
+#             if len(tokenAlignments) > 0:
+#                 sentenceOffset = (docTextPos + min([x[0] for x in tokenAlignments]), docTextPos + max([x[1] for x in tokenAlignments]))
+#                 docTextPos = sentenceOffset[1]
+#                 self.makeSentenceElement(document, sentenceOffset, sentences)
+#                 counts["sentences-aligned"] += 1
+#             else:
+#                 counts["sentences-not-aligned"] += 1
+#         for sentence in sentences:
+#             document.append(sentence)
+#             counts["new-sentences"] += 1
+#         GeniaSentenceSplitter.moveElements(document)
+#         return counts
     
 #     def splitSentencesOld(self, sentObjs, document, counter=None, counts=None):
 #         docText = document.get("text")
