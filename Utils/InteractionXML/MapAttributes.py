@@ -11,21 +11,26 @@ import re
 
 RETYPE = type(re.compile('dummy'))
     
-def mapAttributes(parent, elementName, attributes, counts):
+def mapAttributes(parent, elementName, attributes, counts, compiled=None):
+    if compiled == None:
+        compiled = {}
     for element in parent.getchildren():
         if element.tag == elementName:
             for name in attributes.keys():
                 values = attributes[name]
                 currentValue = element.get(name)
-                if currentValue in values:
-                    newValue = values[currentValue]
-                    if newValue == None:
-                        del element.attrib[name]
-                        counts["del:" + elementName + ":" + name + ":" + str(currentValue)] += 1
-                    else:
-                        element.set(name, newValue)
-                        counts["map:" + elementName + ":" + name + ":" + str(currentValue) + "->" + str(newValue)] += 1
-        mapAttributes(element, elementName, attributes, counts)
+                for valuePattern in values.keys():
+                    if valuePattern not in compiled:
+                        compiled[valuePattern] = re.compile(valuePattern)
+                    if compiled[valuePattern].match(currentValue) != None:
+                        newValue = values[valuePattern]
+                        if newValue == None:
+                            del element.attrib[name]
+                            counts["del:" + elementName + ":" + name + ":" + str(currentValue)] += 1
+                        else:
+                            element.set(name, newValue)
+                            counts["map:" + elementName + ":" + name + ":" + str(currentValue) + "->" + str(newValue)] += 1
+        mapAttributes(element, elementName, attributes, counts, compiled)
 
 def processCorpus(input, output, rules):
     if rules == None:

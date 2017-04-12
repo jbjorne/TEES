@@ -73,6 +73,8 @@ def toDict(parameters, valueListKey=None):
             values = True
             if "=" in name:
                 #assert name.count("=") == 1, name
+                splits = [x for x in split(name, "=")]
+                assert len(splits) == 2, splits
                 name, values = [x for x in split(name, "=")]
                 values = [x for x in split(values.strip(), ",")]
                 if len(values) == 1:
