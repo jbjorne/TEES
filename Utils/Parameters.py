@@ -9,10 +9,15 @@ def split(string, delimiter=":", ignoreOpen = "([{'\"", ignoreClose = ")]}'\""):
     for i in range(len(string)):
         c = string[i]
         if ignore != "" and c in ignoreClose:
-            if ignore != "" and ignoreClose[ ignoreOpen.index(ignore[-1]) ] == c:
+            if c in "'\"":
+                if ignore[-1] == c:
+                    ignore = ignore[:-1]
+                elif ignore[-1] not in "'\"":
+                    ignore += c
+            elif ignoreClose[ ignoreOpen.index(ignore[-1]) ] == c:
                 ignore = ignore[:-1]
             else:
-                raise Exception("Mismatched opening '" + ignore[-1] + "' for closing character '" + c + "' in '" + string + "' at position " + str(i))
+                raise Exception("Mismatched opening '" + ignore[-1] + "' for closing character '" + c + "' in '" + string + "' at position " + str(i) + " " + str(ignore))
         elif c in ignoreOpen:
             ignore += c
 

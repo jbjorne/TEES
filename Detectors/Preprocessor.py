@@ -23,6 +23,7 @@ import Utils.FindHeads as FindHeads
 import Utils.Stream as Stream
 import Utils.InteractionXML.DeleteElements
 import Utils.InteractionXML.DeleteAttributes
+import Utils.InteractionXML.MapAttributes
 import Utils.InteractionXML.MergeSentences
 import Utils.InteractionXML.MergeSets
 #import Utils.InteractionXML.ExportParse
@@ -62,6 +63,7 @@ class Preprocessor(ToolChain):
         self.initStep("CONVERT", self.convert, {"dataSetNames":None, "corpusName":None}, "convert.xml")
         self.initStep("MERGE-SETS", Utils.InteractionXML.MergeSets.mergeSets, {"corpusDir":None}, "merged-sets.xml")
         self.initStepGroup("Pre-parsing")
+        self.initStep("MAP-ATTRIBUTES", Utils.InteractionXML.MapAttributes.processCorpus, {"rules":None}, "map-attributes.xml")
         self.initStep("REMOVE-HEADS", Utils.InteractionXML.DeleteAttributes.processCorpus, {"rules":{"entity":["headOffset"]}}, "remove-heads.xml")
         self.initStep("REMOVE-ANALYSES", Utils.InteractionXML.DeleteElements.processCorpus, {"rules":{"analyses":{}}, "reverse":False}, "remove-analyses.xml")
         self.initStep("MERGE-SENTENCES", Utils.InteractionXML.MergeSentences.mergeSentences, {}, "merge-sentences.xml")
