@@ -742,9 +742,11 @@ class Parser:
                 conllFormat = "conllu"
             elif ext == "corenlp":
                 conllFormat = "corenlp"
+            else:
+                raise Exception("Unknown CoNLL file extension '" + str(ext) + "'")
         if conllFormat == "conll":
             conllFormat = "conllx"
-        assert conllFormat in ("conllx", "conllu", "corenlp"), conllFormat
+        assert conllFormat in ("conllx", "conllu", "corenlp", "corenlp"), conllFormat
         return conllFormat
     
     def getCoNLLColumns(self, inPath=None, conllFormat=None):
@@ -875,13 +877,13 @@ class Parser:
 #             self.insertDependencies(objs["dependencies"], sentence, parse, "linked", counts=counts)
 #         return counts
     
-    def insertCoNLLParses(self, coNLLFilePath, corpusRoot, parseName="McCC", extraAttributes=None, removeExisting=False, unescaping=False):
-        sentRows = self.readCoNLL(coNLLFilePath)
+    def insertCoNLLParses(self, coNLLFilePath, corpusRoot, parseName="McCC", extraAttributes=None, removeExisting=False, unescaping=False, conllFormat=None):
+        sentRows = self.readCoNLL(coNLLFilePath, conllFormat=conllFormat)
         sentObjs = self.processCoNLLSentences(sentRows, unescaping=unescaping)
         sentences = [x for x in self.getSentences(corpusRoot, skipParsed=not removeExisting)]
         counter = ProgressCounter(len(sentences), "Dependency Parse Insertion")
         counts = defaultdict(int)
-        self.insertElements(sentObjs, sentences, parseName, "LINKED", counts, counter)
+        self.insertElements(sentObjs, sentences, parseName, "LINKED", counts=counts, counter=counter)
         print >> sys.stderr, "CoNLL parse statistics:", dict(counts)
         if counts["deps-total"] == counts["deps-elements"]:
             print >> sys.stderr, "All dependency elements were aligned"

@@ -27,7 +27,7 @@ class SyntaxNetParser(Parser):
         workdir = tempfile.mkdtemp()
         inPath = self.makeInputFile(corpusRoot, workdir)
         outPath = ProcessUtils.runSentenceProcess(self.run, syntaxNetDir, inPath, workdir, True, "SyntaxNetParser", "Parsing", processArgs={"modelDir":modelDir})
-        self.insertCoNLLParses(outPath, corpusRoot, parserName)
+        self.insertCoNLLParses(outPath, corpusRoot, parserName, unescaping=True, conllFormat="conllx")
         # Remove work directory
         if not debug:
             shutil.rmtree(workdir)
