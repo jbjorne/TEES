@@ -294,7 +294,7 @@ class ParseExporter(Parser):
                     tokenization = IXMLUtils.getTokenizationElement(sentence, tokenizerName)
                     if "sentences" in outfiles:
                         outfiles["sentences"].write(sentence.get("text").strip().replace("\n", " ").replace("\r", " ") + "\n")
-                        counts["sentences"] += 1
+                        counts["sentences"]["sentences"] += 1
                     if parse != None:
                         if "ptb" in outfiles:
                             if self.exportPennTreeBank(parse, outfiles["ptb"]):
