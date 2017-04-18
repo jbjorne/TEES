@@ -14,6 +14,7 @@ class EventDetector(Detector):
         self.STATE_COMPONENT_TRAIN = "COMPONENT_TRAIN"
         self.tag = "keras-"
         self.exampleBuilder = KerasExampleBuilder
+        self.dimFeatures = None
         self.arrays = None
     
 #     def beginModel(self, step, model, trainExampleFiles, testExampleFile, importIdsFromModel=None):
@@ -49,15 +50,19 @@ class EventDetector(Detector):
             print >> sys.stderr, "Example generation for", output
             if not isinstance(data, (list, tuple)): data = [data]
             if not isinstance(gold, (list, tuple)): gold = [gold]
+            builders = {}
             for dataSet, goldSet in itertools.izip_longest(data, gold, fillvalue=None):
                 if dataSet != None:
                     if saveIdsToModel:
                         modelChanged = True
-                    builder = self.exampleBuilder.run(dataSet, output, parse, None, exampleStyle, model.get(self.tag+"ids.classes", 
+                    builders[dataSet] = self.exampleBuilder.run(dataSet, output, parse, None, exampleStyle, model.get(self.tag+"ids.classes", 
                         True), model.get(self.tag+"ids.features", True), goldSet, False, saveIdsToModel,
                         structureAnalyzer=self.structureAnalyzer)
-                    builder.saveMatrices(output)
-                    self.arrays[dataSet] = {"source":self.exampleBuilder.sourceArrays, "target":self.exampleBuilder.targetArrays}
+            for dataSet in builders:
+                self.dimFeatures = len(builders[dataSet].featureIds)
+                model.addStr("dimFeatures", str(self.dimFeatures))
+                builders[dataSet].saveMatrices(output)
+                self.arrays[dataSet] = {"source":self.exampleBuilder.sourceArrays, "target":self.exampleBuilder.targetArrays}
                     
         if hasattr(self.structureAnalyzer, "typeMap") and model.mode != "r":
             print >> sys.stderr, "Saving StructureAnalyzer.typeMap"
@@ -67,6 +72,9 @@ class EventDetector(Detector):
             model.save()
     
     def defineModel(self):
+        if self.dimFeatures == None:
+            self.dimFeatures = int(self.model.getStr("dimFeatures"))
+        
         inputShape = Input(shape=(30, 30, self.dimFeatures))  # adapt this if using `channels_first` image data format
 
         x = Conv2D(16, (3, 3), activation='relu', padding='same')(inputShape)
