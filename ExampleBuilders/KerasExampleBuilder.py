@@ -13,8 +13,11 @@ class KerasExampleBuilder(ExampleBuilder):
             featureSet = IdSet()
         
         ExampleBuilder.__init__(self, classSet, featureSet)
+        
+        self.sourceMatrices = []
+        self.targetMatrices = []
     
-    def processSentence(self, sentence, outfile, goldSentence=None, structureAnalyzer=None):
+    #def processSentence(self, sentence, outfile, goldSentence=None, structureAnalyzer=None):
         #return ExampleBuilder.processSentence(self, sentence, outfile, goldSentence=goldSentence, structureAnalyzer=structureAnalyzer)
     
     def buildExamplesFromGraph(self, sentenceGraph, outfile, goldGraph = None, structureAnalyzer=None):
@@ -22,80 +25,74 @@ class KerasExampleBuilder(ExampleBuilder):
         Build examples for a single sentence. Returns a list of examples.
         See Core/ExampleUtils for example format.
         """
-        #examples = []
-        exampleIndex = 0
-        # example directionality
-        if self.styles["directed"] == None and self.styles["undirected"] == None: # determine directedness from corpus
-            examplesAreDirected = structureAnalyzer.hasDirectedTargets()
-        elif self.styles["directed"]:
-            assert self.styles["undirected"] in [None, False]
-            examplesAreDirected = True
-        elif self.styles["undirected"]:
-            assert self.styles["directed"] in [None, False]
-            examplesAreDirected = False
-        
-        if not self.styles["no_trigger_features"]: 
-            self.triggerFeatureBuilder.initSentence(sentenceGraph)
-        if self.styles["evex"]: 
-            self.evexFeatureBuilder.initSentence(sentenceGraph)
-#         if self.styles["sdb_merge"]:
-#             self.determineNonOverlappingTypes(structureAnalyzer)
+#         #examples = []
+#         exampleIndex = 0
+#         # example directionality
+#         if self.styles["directed"] == None and self.styles["undirected"] == None: # determine directedness from corpus
+#             examplesAreDirected = structureAnalyzer.hasDirectedTargets()
+#         elif self.styles["directed"]:
+#             assert self.styles["undirected"] in [None, False]
+#             examplesAreDirected = True
+#         elif self.styles["undirected"]:
+#             assert self.styles["directed"] in [None, False]
+#             examplesAreDirected = False
+    
             
         # Filter entities, if needed
         sentenceGraph.mergeInteractionGraph(True)
         entities = sentenceGraph.mergedEntities
-        entityToDuplicates = sentenceGraph.mergedEntityToDuplicates
         self.exampleStats.addValue("Duplicate entities skipped", len(sentenceGraph.entities) - len(entities))
         
-        # Connect to optional gold graph
-        entityToGold = None
-        if goldGraph != None:
-            entityToGold = EvaluateInteractionXML.mapEntities(entities, goldGraph.entities)
+#         # Connect to optional gold graph
+#         entityToGold = None
+#         if goldGraph != None:
+#             entityToGold = EvaluateInteractionXML.mapEntities(entities, goldGraph.entities)
         
-        paths = None
+        depGraph = None
         if not self.styles["no_path"]:
             undirected = sentenceGraph.dependencyGraph.toUndirected()
-            paths = undirected
+            depGraph = undirected
             if self.styles["filter_shortest_path"] != None: # For DDI use filter_shortest_path=conj_and
-                paths.resetAnalyses() # just in case
-                paths.FloydWarshall(self.filterEdge, {"edgeTypes":self.styles["filter_shortest_path"]})
+                depGraph.resetAnalyses() # just in case
+                depGraph.FloydWarshall(self.filterEdge, {"edgeTypes":self.styles["filter_shortest_path"]})
         
         # Generate examples based on interactions between entities or interactions between tokens
         numTokens = len(sentenceGraph.tokens)
-        matrix = []
+        matrices = {"source":[], "target":[]}
         dim = 30
         for i in range(dim):
-            matrix.append([])
+            matrices["source"].append([])
+            matrices["target"].append([])
             for j in range(dim):
-                features = {}
+                sourceFeatures = {}
+                targetFeatures = {}
                 if dim >= numTokens:
                     pass #features[self.featureSet.getId("padding")] = 1
                 elif i == j: # diagonal
+                    sourceFeatures[self.featureSet.getId("path-zero")] = 1
                     token = sentenceGraph.tokens[i]
-                    features[self.featureSet.getId(token.get("POS"))] = 1
-                matrix[-1].append(features)
-                eI = None
-                eJ = None
-                tI = sentenceGraph.tokens[i]
-                tJ = sentenceGraph.tokens[j]
-                # only consider paths between entities (NOTE! entities, not only named entities)
-                if self.styles["headsOnly"]:
-                    if (len(sentenceGraph.tokenIsEntityHead[tI]) == 0) or (len(sentenceGraph.tokenIsEntityHead[tJ]) == 0):
-                        continue
-                
-                examples = self.buildExamplesForPair(tI, tJ, paths, sentenceGraph, goldGraph, entityToGold, eI, eJ, structureAnalyzer, examplesAreDirected)
-                for categoryName, features, extra in examples:
-                    # make example
-                    if self.styles["binary"]:
-                        if categoryName != "neg":
-                            category = 1
-                        else:
-                            category = -1
-                        extra["categoryName"] = "i"
+                    sourceFeatures[self.featureSet.getId(token.get("POS"))] = 1
+                    if len(self.tokenIsEntityHead[token]) > 0:
+                        sourceFeatures[self.featureSet.getId("entity")] = 1
+                        targetFeatures[self.featureSet.getId("entity")] = 1
+                        for entity in self.tokenIsEntityHead[token]:
+                            sourceFeatures[self.featureSet.getId(entity.get("type"))] = 1
+                            targetFeatures[self.featureSet.getId(entity.get("type"))] = 1
+                else:
+                    # define features
+                    tI = sentenceGraph.tokens[i]
+                    tJ = sentenceGraph.tokens[j]
+                    shortestPaths = depGraph.getPaths(tI, tJ)
+                    if len(shortestPaths) > 0:
+                        path = shortestPaths[0]
+                        sourceFeatures[self.featureSet.getId("path-true")] = 1
+                        sourceFeatures[self.featureSet.getId("path-length")] = len(path)
+                        for token in path:
+                            sourceFeatures[self.featureSet.getId(token.get("POS"))] = 1
+                        for i in range(1, len(path)):
+                            for edge in depGraph.getEdges(path[i], path[i-1]), depGraph.getEdges(path[i-1], path[i]):
+                                sourceFeatures[self.featureSet.getId(edge.get("type"))] = 1
                     else:
-                        category = self.classSet.getId(categoryName)
-                    example = [sentenceGraph.getSentenceId()+".x"+str(exampleIndex), category, features, extra]
-                    ExampleUtils.appendExamples([example], outfile)
-                    exampleIndex += 1
-
-        return exampleIndex
+                        sourceFeatures[self.featureSet.getId("path-false")] = 1
+                matrices["source"][-1].append(sourceFeatures)
+                matrices["target"][-1].append(targetFeatures)
