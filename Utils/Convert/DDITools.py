@@ -171,7 +171,8 @@ def addMTMX(input, mtmxDir, output=None):
 def addTestGold(input, testGoldPath, output=None):
     counts = defaultdict(int)
     print >> sys.stderr, "Reading interaction XML"
-    xml = ETUtils.ETFromObj(input).getroot()
+    corpusTree = ETUtils.ETFromObj(input)
+    corpusRoot = corpusTree.getroot()
     goldInteractions = {}
     goldEntities = {}
     if os.path.isfile(testGoldPath):
@@ -215,7 +216,7 @@ def addTestGold(input, testGoldPath, output=None):
         for interaction in goldInteractions[sentId]:
             counts["gold-" + interaction.get("type")] += 1
     print >> sys.stderr, "Adding gold interactions to corpus"
-    for sentence in xml.iter("sentence"):
+    for sentence in corpusRoot.iter("sentence"):
         counts["corpus-sentences"] += 1
         entities = {}
         for entity in sentence.findall("entity"):
@@ -234,9 +235,10 @@ def addTestGold(input, testGoldPath, output=None):
             if interaction.get("type") != "neg":
                 sentence.append(interaction)
                 counts["added-" + interaction.get("type")] += 1
-    print >> sys.stderr, counts
+    print >> sys.stderr, dict(counts)
     if output != None:
-        ETUtils.write(xml, output)
+        ETUtils.write(corpusTree, output)
+    return corpusTree
                 
 if __name__=="__main__":
     # Import Psyco if available
