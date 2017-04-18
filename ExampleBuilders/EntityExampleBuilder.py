@@ -42,7 +42,7 @@ class EntityExampleBuilder(ExampleBuilder):
                                   "names", "build_for_nameless", "skip_for_nameless",
                                   "pos_only", "all_tokens", "pos_pairs", "linear_ngrams", 
                                   "phospho", "drugbank_features", "ddi13_features", "metamap", 
-                                  "only_types", "ontobiotope_features", "bb_spans", "w2v",
+                                  "only_types", "ontobiotope_features", "bb_spans", "wordvector",
                                   "no_context"])
         self.styles = self.getParameters(style)
 #        if "selftrain_group" in self.styles:
@@ -79,8 +79,8 @@ class EntityExampleBuilder(ExampleBuilder):
             self.drugFeatureBuilder = DrugFeatureBuilder(featureSet)
         if self.styles["ontobiotope_features"]:
             self.ontobiotopeFeatureBuilder = OntoBiotopeFeatureBuilder(self.featureSet)
-        if self.styles["w2v"]:
-            self.wordVectorFeatureBuilder = WordVectorFeatureBuilder(featureSet)
+        if self.styles["wordvector"]:
+            self.wordVectorFeatureBuilder = WordVectorFeatureBuilder(featureSet, self.styles)
     
     def getMergedEntityType(self, entities):
         """
@@ -562,7 +562,7 @@ class EntityExampleBuilder(ExampleBuilder):
             if self.styles["pos_pairs"]:
                 self.buildPOSPairs(token, namedEntityHeadTokens, features)
             
-            if self.styles["w2v"]:
+            if self.styles["wordvector"]:
                 self.wordVectorFeatureBuilder.setFeatureVector(features)
                 self.wordVectorFeatureBuilder.buildFeatures(token)
                 self.wordVectorFeatureBuilder.setFeatureVector(None)
