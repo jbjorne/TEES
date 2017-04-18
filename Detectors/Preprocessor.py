@@ -95,7 +95,7 @@ class Preprocessor(ToolChain):
     def initPresets(self):
         self.presets["PRESET-CONVERT-PARSE"] = ["LOAD", "EXPORT"]
         self.presets["PRESET-REPARSE-BIO-CORPUS"] = ["MERGE-SETS", "REMOVE-ANALYSES", "REMOVE-HEADS", "BLLIP-BIO", "STANFORD-CONVERT", "FIND-HEADS", "SPLIT-NAMES", "DIVIDE-SETS"]
-        #self.presets["PRESET-PREPROCESS-BIO"] = ["CONVERT", "GENIA-SPLITTER", "BANNER", "BLLIP-BIO", "STANFORD-CONVERT", "SPLIT-NAMES", "FIND-HEADS", "DIVIDE-SETS"]
+        self.presets["PRESET-PREPROCESS-BIO"] = ["LOAD", "GENIA-SPLITTER", "BANNER", "BLLIP-BIO", "STANFORD-CONVERT", "SPLIT-NAMES", "FIND-HEADS", "SAVE"]
         #self.presets["PRESET-PARSE-BIO"] = ["CONVERT", "GENIA-SPLITTER", "BLLIP-BIO", "STANFORD-CONVERT", "SPLIT-NAMES", "FIND-HEADS", "DIVIDE-SETS"]
         #self.presets["PRESET-INSERT-PARSE"] = ["CONVERT", "REMOVE-ANALYSES", "IMPORT-PARSE", "DIVIDE-SETS"]
     
@@ -199,6 +199,11 @@ class Preprocessor(ToolChain):
         return Utils.STFormat.ConvertXML.toInteractionXML(documents, "PubMed", output)
     
     def getSourceDirs(self, input, dataSetNames=None):
+        if os.path.exists(input) and os.path.isfile(input):
+            ext = None
+            if "." in input:
+                ext = input.rsplit(".")[-1]
+            return [{"dataset":None, "path":input, "extensions":[ext]}]
         # Get input file (or files)
         inputDirs = input
         if type(inputDirs) in types.StringTypes:
