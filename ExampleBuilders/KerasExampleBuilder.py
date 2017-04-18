@@ -34,28 +34,6 @@ class KerasExampleBuilder(ExampleBuilder):
             data = json.load(f)
             self.sourceMatrices = data["source"]
             self.targetMatrices = data["target"]
-                
-    def vectorizeMatrices(self):
-        assert len(self.sourceMatrices) == len(self.targetMatrices)
-        numExamples = len(self.sourceMatrices)
-        dimFeatures = len(self.featureSet.Ids)
-        self.sourceArrays = []
-        self.targetArrays = []
-        for exampleIndex in range(len(numExamples)):
-            sourceArray = np.zeros((self.dimMatrix, self.dimMatrix, dimFeatures), dtype=np.float32)
-            targetArray = np.zeros((self.dimMatrix, self.dimMatrix, dimFeatures), dtype=np.float32)
-            self.sourceArrays.append(sourceArray)
-            self.targetArrays.append(targetArray)
-            sourceMatrix = self.sourceMatrices.pop(0) #[exampleIndex]
-            targetMatrix = self.targetMatrices.pop(0) #[exampleIndex]
-            for matrix, array in [(sourceMatrix, sourceArray), (targetMatrix, targetArray)]:
-                for i in self.rangeMatrix:
-                    for j in self.rangeMatrix:
-                        features = matrix[i][j]
-                        for featureId in features:
-                            array[i][j][featureId] = features[featureId]
-        self.sourceMatrices = None
-        self.targetMatrices = None
     
     def buildExamplesFromGraph(self, sentenceGraph, outfile, goldGraph = None, structureAnalyzer=None):
         """

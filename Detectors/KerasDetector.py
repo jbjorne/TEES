@@ -6,8 +6,9 @@ from keras.models import Model
 from keras import backend as K
 from ExampleBuilders.KerasExampleBuilder import KerasExampleBuilder
 from Detectors import SingleStageDetector
+import numpy as np
 
-class EventDetector(Detector):
+class KerasDetector(Detector):
 
     def __init__(self):
         Detector.__init__(self)
@@ -15,6 +16,7 @@ class EventDetector(Detector):
         self.tag = "keras-"
         self.exampleBuilder = KerasExampleBuilder
         self.dimFeatures = None
+        self.matrices = None
         self.arrays = None
     
 #     def beginModel(self, step, model, trainExampleFiles, testExampleFile, importIdsFromModel=None):
@@ -62,7 +64,7 @@ class EventDetector(Detector):
                 self.dimFeatures = len(builders[dataSet].featureIds)
                 model.addStr("dimFeatures", str(self.dimFeatures))
                 builders[dataSet].saveMatrices(output)
-                self.arrays[dataSet] = {"source":self.exampleBuilder.sourceArrays, "target":self.exampleBuilder.targetArrays}
+                self.matrices[dataSet] = {"source":self.exampleBuilder.sourceArrays, "target":self.exampleBuilder.targetArrays}
                     
         if hasattr(self.structureAnalyzer, "typeMap") and model.mode != "r":
             print >> sys.stderr, "Saving StructureAnalyzer.typeMap"
@@ -97,13 +99,43 @@ class EventDetector(Detector):
         self.model = Model(inputShape, decoded)
         self.model.compile(optimizer='adadelta', loss='binary_crossentropy')
     
+    def vectorizeMatrices(self):
+        self.arrays = {}
+        for dataSet in self.matrices:
+            print >> sys.stderr, "Vectorizing dataset", dataSet
+            sourceMatrices = self.matrices[dataSet]["source"]
+            targetMatrices = self.matrices[dataSet]["target"]
+            assert len(sourceMatrices) == len(targetMatrices)
+            numExamples = len(sourceMatrices)
+            dimFeatures = len(self.featureSet.Ids)
+            sourceArrays = []
+            targetArrays = []
+            for exampleIndex in range(len(numExamples)):
+                sourceArray = np.zeros((self.dimMatrix, self.dimMatrix, dimFeatures), dtype=np.float32)
+                targetArray = np.zeros((self.dimMatrix, self.dimMatrix, dimFeatures), dtype=np.float32)
+                sourceArrays.append(sourceArray)
+                targetArrays.append(targetArray)
+                sourceMatrix = sourceMatrices.pop(0) #[exampleIndex]
+                targetMatrix = targetMatrices.pop(0) #[exampleIndex]
+                for matrix, array in [(sourceMatrix, sourceArray), (targetMatrix, targetArray)]:
+                    for i in self.rangeMatrix:
+                        for j in self.rangeMatrix:
+                            features = matrix[i][j]
+                            for featureId in features:
+                                array[i][j][featureId] = features[featureId]
+            del self.matrices[dataSet]
+            self.arrays[dataSet] = {"source":sourceArrays, "target":targetArrays}
+    
     def fitModel(self, exampleFiles):
-        if self.arrays == None:
-            self.arrays = {}
+        if self.matrices == None:
+            self.matrices = {}
             for dataSet in exampleFiles:
+                print >> sys.stderr, "Loading dataset", dataSet, "from", exampleFiles[dataSet]
                 builder = self.exampleBuilder()
-                builder.loadMatrices(self.model.get(exampleFiles[dataSet]))
-                self.arrays[dataSet] = {"source":self.exampleBuilder.sourceArrays, "target":self.exampleBuilder.targetArrays}
+                builder.loadMatrices(exampleFiles[dataSet])
+                self.matrices[dataSet] = {"source":self.exampleBuilder.sourceArrays, "target":self.exampleBuilder.targetArrays}
+        if self.arrays == None:
+            self.vectorizeMatrices()
         self.model.fit(self.arrays["train"]["source"], self.arrays["train"]["target"],
             epochs=100,
             batch_size=128,
