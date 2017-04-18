@@ -40,7 +40,7 @@ def loadCorpus(corpus, parse, tokenization=None, removeNameInfo=False, removeInt
         counter.update(1, "Making sentence graphs ("+sentence.sentence.get("id")+"): ")
         # No tokens, no sentence. No also no dependencies = no sentence.
         # Let's not remove them though, so that we don't lose sentences from input.
-        if len(sentence.tokens) == 0 or len(sentence.dependencies) == 0: 
+        if len(sentence.tokens) == 0: # or len(sentence.dependencies) == 0: 
             #corpusElements.sentences.remove(sentence)
             sentence.sentenceGraph = None
             continue
@@ -84,7 +84,7 @@ def getCorpusIterator(input, output, parse, tokenization=None, removeNameInfo=Fa
             for sentenceElement in element.findall("sentence"):
                 #print ElementTree.tostring(sentenceElement)
                 sentence = SentenceElements(sentenceElement, parse, tokenization, removeIntersentenceInteractions=removeIntersentenceInteractions)
-                if len(sentence.tokens) == 0 or len(sentence.dependencies) == 0: 
+                if len(sentence.tokens) == 0: # or len(sentence.dependencies) == 0: 
                     sentence.sentenceGraph = None
                 else:
                     # Construct the basic SentenceGraph (only syntactic information)
