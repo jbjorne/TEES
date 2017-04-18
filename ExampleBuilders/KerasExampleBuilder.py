@@ -3,7 +3,9 @@ thisPath = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.abspath(os.path.join(thisPath,"..")))
 from ExampleBuilder import ExampleBuilder
 from Core.IdSet import IdSet
-import Core.ExampleUtils as ExampleUtils
+import numpy as np
+import gzip
+import json
 
 class KerasExampleBuilder(ExampleBuilder):
     def __init__(self, style=None, classSet=None, featureSet=None, gazetteerFileName=None, skiplist=None):
@@ -14,11 +16,46 @@ class KerasExampleBuilder(ExampleBuilder):
         
         ExampleBuilder.__init__(self, classSet, featureSet)
         
+        self.dimMatrix = 30
+        self.rangeMatrix = range(self.dimMatrix)
         self.sourceMatrices = []
         self.targetMatrices = []
     
     #def processSentence(self, sentence, outfile, goldSentence=None, structureAnalyzer=None):
         #return ExampleBuilder.processSentence(self, sentence, outfile, goldSentence=goldSentence, structureAnalyzer=structureAnalyzer)
+    
+    def saveMatrices(self, filePath):
+        assert self.sourceMatrices != None and self.targetMatrices != None
+        with gzip.open(filePath, "wt") as f:
+            json.dump({"source":self.sourceMatrices, "target":self.targetMatrices}, f)
+    
+    def loadMatrices(self, filePath):
+        with gzip.open(filePath, "rt") as f:
+            data = json.load(f)
+            self.sourceMatrices = data["source"]
+            self.targetMatrices = data["target"]
+                
+    def vectorizeMatrices(self):
+        assert len(self.sourceMatrices) == len(self.targetMatrices)
+        numExamples = len(self.sourceMatrices)
+        dimFeatures = len(self.featureSet.Ids)
+        self.sourceArrays = []
+        self.targetArrays = []
+        for exampleIndex in range(len(numExamples)):
+            sourceArray = np.zeros((self.dimMatrix, self.dimMatrix, dimFeatures), dtype=np.float32)
+            targetArray = np.zeros((self.dimMatrix, self.dimMatrix, dimFeatures), dtype=np.float32)
+            self.sourceArrays.append(sourceArray)
+            self.targetArrays.append(targetArray)
+            sourceMatrix = self.sourceMatrices.pop(0) #[exampleIndex]
+            targetMatrix = self.targetMatrices.pop(0) #[exampleIndex]
+            for matrix, array in [(sourceMatrix, sourceArray), (targetMatrix, targetArray)]:
+                for i in self.rangeMatrix:
+                    for j in self.rangeMatrix:
+                        features = matrix[i][j]
+                        for featureId in features:
+                            array[i][j][featureId] = features[featureId]
+        self.sourceMatrices = None
+        self.targetMatrices = None
     
     def buildExamplesFromGraph(self, sentenceGraph, outfile, goldGraph = None, structureAnalyzer=None):
         """
@@ -58,15 +95,15 @@ class KerasExampleBuilder(ExampleBuilder):
         
         # Generate examples based on interactions between entities or interactions between tokens
         numTokens = len(sentenceGraph.tokens)
-        matrices = {"source":[], "target":[]}
-        dim = 30
-        for i in range(dim):
-            matrices["source"].append([])
-            matrices["target"].append([])
-            for j in range(dim):
+        sourceMatrix = []
+        targetMatrix = []
+        for i in self.rangeMatrix:
+            sourceMatrix.append([])
+            targetMatrix.append([])
+            for j in self.rangeMatrix:
                 sourceFeatures = {}
                 targetFeatures = {}
-                if dim >= numTokens:
+                if i >= numTokens or j >= numTokens:
                     pass #features[self.featureSet.getId("padding")] = 1
                 elif i == j: # diagonal
                     sourceFeatures[self.featureSet.getId("path-zero")] = 1
@@ -94,5 +131,8 @@ class KerasExampleBuilder(ExampleBuilder):
                                 sourceFeatures[self.featureSet.getId(edge.get("type"))] = 1
                     else:
                         sourceFeatures[self.featureSet.getId("path-false")] = 1
-                matrices["source"][-1].append(sourceFeatures)
-                matrices["target"][-1].append(targetFeatures)
+                sourceMatrix[-1].append(sourceFeatures)
+                targetMatrix[-1].append(targetFeatures)
+        
+        self.sourceMatrices.append(sourceMatrix)
+        self.targetMatrices.append(targetMatrix)
