@@ -30,9 +30,9 @@ def combineParses(inDir, outDir, subDirectories):
     return outDir    
 
 def ask(question):
-    valid = {"yes": True, "y": True, "no": False, "n": False, "":True}
+    valid = {"yes": True, "y": True, "no": False, "n": False, "":False}
     while True:
-        sys.stdout.write(question + " [Y/n]")
+        sys.stdout.write(question + " [y/N] ")
         choice = raw_input().lower()
         if choice in valid:
             return valid[choice]
