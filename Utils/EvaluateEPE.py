@@ -29,11 +29,22 @@ def combineParses(inDir, outDir, subDirectories):
     print >> sys.stderr, dict(counts)
     return outDir    
 
-def run(inPath, outPath, subDirs, model, connection, numJobs, clear, debug):
+def ask(question):
+    valid = {"yes": True, "y": True, "no": False, "n": False, "":True}
+    while True:
+        sys.stdout.write(question + " [Y/n]")
+        choice = raw_input().lower()
+        if choice in valid:
+            return valid[choice]
+        else:
+            sys.stdout.write("Please respond with 'yes' or 'no' (or 'y' or 'n').\n")
+
+def run(inPath, outPath, subDirs, model, connection, numJobs, clear, debug, force=False):
     # Remove existing work directory, if requested to do so
     if os.path.exists(outPath) and clear:
-        print >> sys.stderr, "Output directory exists, removing", outPath
-        shutil.rmtree(outPath)
+        if force or ask("Output directory '" + outPath + "' exists, remove?"):
+            print >> sys.stderr, "Output directory exists, removing", outPath
+            shutil.rmtree(outPath)
     # Create work directory if needed
     if not os.path.exists(outPath):
         print >> sys.stderr, "Making output directory", outPath
@@ -41,7 +52,7 @@ def run(inPath, outPath, subDirs, model, connection, numJobs, clear, debug):
     
     # Collect the parse files
     parseDir = os.path.join(outPath, "parses")
-    if not os.path.exists(parseDir):
+    if not os.path.exists(parseDir) or len(os.listdir(parseDir)) == 0:
         parseDir = combineParses(inPath, parseDir, subDirs)
     else:
         print >> sys.stderr, "Using collected parses from", parseDir
@@ -53,7 +64,7 @@ def run(inPath, outPath, subDirs, model, connection, numJobs, clear, debug):
         #preprocessor = Preprocessor(["MERGE-SETS", "REMOVE-ANALYSES", "REMOVE-HEADS", "MERGE-SENTENCES", "IMPORT-PARSE", "VALIDATE", "DIVIDE-SETS"])
         preprocessor.setArgForAllSteps("debug", options.debug)
         preprocessor.stepArgs("IMPORT-PARSE")["parseDir"] = parseDir
-        preprocessor.process(model + ".+\.xml", os.path.join(corpusDir, model))
+        preprocessor.process(model + ".+\.xml", os.path.join(corpusDir, model), logPath="AUTO")
     else:
         print >> sys.stderr, "Using imported parses from", corpusDir
     
@@ -72,6 +83,7 @@ if __name__== "__main__":
     optparser.add_option("--model", default="GE09", help="TEES model")
     optparser.add_option("--noClear", default=False, action="store_true", help="Continue a previous run")
     optparser.add_option("--debug", default=False, action="store_true", help="Debug mode")
+    optparser.add_option("-f", "--force", default=False, action="store_true", help="Force removal of existing output directory")
     (options, args) = optparser.parse_args()
     
     run(options.input, options.output, options.subdirs, options.model, options.connection, options.numJobs, not options.noClear, options.debug)

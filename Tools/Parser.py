@@ -76,7 +76,7 @@ class Parser:
 #         return extraAttributes
     
     def depToString(self, dep):
-        print "DEPTOSTRING", dep
+        #print "DEPTOSTRING", dep
         if "t1Word" in dep:
             return dep["type"] + "(" + dep["t1Word"] + "-" + str(dep["t1"]) + ", " + dep["t2Word"] + "-" + str(dep["t2"]) + ")"
         else:
