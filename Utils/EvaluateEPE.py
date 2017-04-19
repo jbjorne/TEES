@@ -86,4 +86,4 @@ if __name__== "__main__":
     optparser.add_option("-f", "--force", default=False, action="store_true", help="Force removal of existing output directory")
     (options, args) = optparser.parse_args()
     
-    run(options.input, options.output, options.subdirs, options.model, options.connection, options.numJobs, not options.noClear, options.debug)
+    run(options.input, options.output, options.subdirs, options.model, options.connection, options.numJobs, not options.noClear, options.debug, options.force)
