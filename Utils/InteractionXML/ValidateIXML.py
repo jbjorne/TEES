@@ -1,23 +1,36 @@
 import sys, os
+from collections import defaultdict
 extraPath = os.path.dirname(os.path.abspath(__file__))+"/../.."
 sys.path.append(extraPath)
 import Utils.ElementTreeUtils as ETUtils
-    
-def validate(parent):
-    attrib = parent.attrib
-    for key in attrib:
-        if not isinstance(attrib[key], basestring):
-            raise Exception("Non-string value '" + str(attrib[key]) + "' for attribute '" + str(key) + "' in element '" + parent.tag + "': " + str(attrib) + "'")
-    for element in parent.getchildren():
-        validate(element)
 
-def validateCorpus(input, output):
+def onError(message, strict=True):
+    if strict:
+        raise Exception(message)
+    else:
+        print >> sys.stderr, "Warning:", message
+    
+def validate(element, strict=True, counts=None):
+    if counts == None:
+        counts = defaultdict(int)
+    counts["element"] += 1
+    attrib = element.attrib
+    for key in attrib:
+        counts["attribute"] += 1
+        if not isinstance(attrib[key], basestring):
+            onError("Non-string value '" + str(attrib[key]) + "' for attribute '" + str(key) + "' in element '" + element.tag + "': " + str(attrib) + "'")
+    for child in element.getchildren():
+        validate(child, strict, counts)
+    return counts
+
+def validateCorpus(input, output, strict=True):
     print >> sys.stderr, "Validating XML"
     print >> sys.stderr, "Loading corpus file", input
     corpusTree = ETUtils.ETFromObj(input)
     corpusRoot = corpusTree.getroot()
     
-    validate(corpusRoot)
+    counts = validate(corpusRoot, strict)
+    print >> sys.stderr, "Corpus validated:", dict(counts)
     
     if output != None:
         print >> sys.stderr, "Writing output to", output

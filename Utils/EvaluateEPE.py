@@ -4,6 +4,7 @@ mainTEESDir = os.path.abspath(os.path.join(__file__, "../.."))
 sys.path.append(mainTEESDir)
 from Detectors.Preprocessor import Preprocessor
 from collections import defaultdict
+from train import train
 
 def combineParses(inDir, outDir, subDirectories):
     print >> sys.stderr, "Collecting parses from", inDir
@@ -28,8 +29,7 @@ def combineParses(inDir, outDir, subDirectories):
     print >> sys.stderr, dict(counts)
     return outDir    
 
-def run(inPath, outPath, pattern, connection, numJobs, clear, debug):
-    model = "GE09"
+def run(inPath, outPath, pattern, model, connection, numJobs, clear, debug):
     # Remove existing work directory, if requested to do so
     if os.path.exists(outPath) and clear:
         print >> sys.stderr, "Output directory exists, removing", outPath
@@ -38,14 +38,21 @@ def run(inPath, outPath, pattern, connection, numJobs, clear, debug):
     if not os.path.exists(outPath):
         print >> sys.stderr, "Making output directory", outPath
         os.makedirs(outPath)
-        
+    
+    # Collect the parse files    
     parseDir = combineParses(inPath, os.path.join(outPath, "parses"), pattern)
-        
-    #preprocessor = Preprocessor(["MERGE-SETS", "REMOVE-ANALYSES", "REMOVE-HEADS", "MERGE-SENTENCES", "IMPORT-PARSE", "SPLIT-NAMES", "FIND-HEADS", "DIVIDE-SETS"])
-    preprocessor = Preprocessor(["MERGE-SETS", "REMOVE-ANALYSES", "REMOVE-HEADS", "MERGE-SENTENCES", "IMPORT-PARSE", "VALIDATE", "DIVIDE-SETS"])
+    
+    # Import the parses
+    preprocessor = Preprocessor(["MERGE-SETS", "REMOVE-ANALYSES", "REMOVE-HEADS", "MERGE-SENTENCES", "IMPORT-PARSE", "SPLIT-NAMES", "FIND-HEADS", "DIVIDE-SETS"])
+    #preprocessor = Preprocessor(["MERGE-SETS", "REMOVE-ANALYSES", "REMOVE-HEADS", "MERGE-SENTENCES", "IMPORT-PARSE", "VALIDATE", "DIVIDE-SETS"])
     preprocessor.setArgForAllSteps("debug", options.debug)
     preprocessor.stepArgs("IMPORT-PARSE")["parseDir"] = parseDir
-    preprocessor.process(model + ".+\.xml", os.path.join(outPath, "corpus/" + model))
+    corpusDir = os.path.join(outPath, "corpus")
+    preprocessor.process(model + ".+\.xml", os.path.join(corpusDir, model))
+    
+    # Train the model
+    connection = connection.replace("$JOBS", str(numJobs))
+    train(outPath, model, parse="McCC", debug=debug, connection=connection, corpusDir=corpusDir)
 
 if __name__== "__main__":
     from optparse import OptionParser
@@ -55,9 +62,9 @@ if __name__== "__main__":
     optparser.add_option("-p", "--pattern", default=None, help="input directory pattern")
     optparser.add_option("-n", "--numJobs", default=1, type=int, help="")
     optparser.add_option("-c", "--connection", default="connection=Unix:jobLimit=$JOBS", help="")
-    # Debugging and process control
+    optparser.add_option("--model", default="GE09", help="")
     optparser.add_option("--clear", default=False, action="store_true", help="Delete all output files")
     optparser.add_option("--debug", default=False, action="store_true", help="Debug mode")
     (options, args) = optparser.parse_args()
     
-    run(options.input, options.output, options.pattern, options.connection, options.numJobs, options.clear, options.debug)
+    run(options.input, options.output, options.pattern, options.model, options.connection, options.numJobs, options.clear, options.debug)

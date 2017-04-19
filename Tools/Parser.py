@@ -248,7 +248,7 @@ class Parser:
             sentenceOffset = (int(sentenceOffset[0]), int(sentenceOffset[1]))
             charOffsets = []
             for i in range(len(tokenOffsets)):
-                charOffsets.append((tokenOffsets[i][0] - sentenceOffset[0], tokenOffsets[i][1] - sentenceOffset[1]))
+                charOffsets.append((tokenOffsets[i][0] - sentenceOffset[0], tokenOffsets[i][1] - sentenceOffset[0]))
                 if charOffsets[-1][0] < 0 or charOffsets[-1][1] < 0:
                     raise Exception("Negative character offset for token " + str(tokens[i]) + " in sentence " + sentence.get("id") + ": " + str(sentence.attrib))
         #tokenIndex = 0
