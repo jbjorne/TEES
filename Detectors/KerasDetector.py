@@ -7,6 +7,8 @@ from keras import backend as K
 from ExampleBuilders.KerasExampleBuilder import KerasExampleBuilder
 from Detectors import SingleStageDetector
 import numpy as np
+import xml.etree.ElementTree as ET
+import Utils.ElementTreeUtils as ETUtils
 
 class KerasDetector(Detector):
 
@@ -98,6 +100,34 @@ class KerasDetector(Detector):
         
         self.model = Model(inputShape, decoded)
         self.model.compile(optimizer='adadelta', loss='binary_crossentropy')
+    
+    def matrixToTable(self, matrix):
+        table = ET.Element('table')
+        for i in self.rangeMatrix:
+            tr = ET.SubElement(table, 'tr')
+            for j in self.rangeMatrix:
+                td = ET.SubElement(tr, 'td')
+                td.text = str(matrix[i][j])
+    
+    def matricesToHTML(self, outPath):
+        root = ET.Element('html')
+        table = ET.SubElement(root, 'table')
+        tr = ET.SubElement(table, 'tr')
+        td = ET.SubElement(tr, 'td')
+        td.text = "This is the first line "
+        # note how to end td tail
+        td.tail = None
+        br = ET.SubElement(td, 'br')
+        # now continue your text with br.tail
+        br.tail = " and the second"
+        
+        for dataSet in self.matrices:
+            sourceMatrices = self.matrices[dataSet]["source"]
+            #targetMatrices = self.matrices[dataSet]["target"]
+            #numExamples = len(sourceMatrices)
+            root.append(self.matrixToTable(sourceMatrices[0]))
+        
+        ETUtils.write(root, outPath)
     
     def vectorizeMatrices(self):
         self.arrays = {}

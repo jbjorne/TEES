@@ -20,6 +20,7 @@ class KerasExampleBuilder(ExampleBuilder):
         self.rangeMatrix = range(self.dimMatrix)
         self.sourceMatrices = []
         self.targetMatrices = []
+        self.stringKeys = True
     
     #def processSentence(self, sentence, outfile, goldSentence=None, structureAnalyzer=None):
         #return ExampleBuilder.processSentence(self, sentence, outfile, goldSentence=goldSentence, structureAnalyzer=structureAnalyzer)
@@ -34,6 +35,13 @@ class KerasExampleBuilder(ExampleBuilder):
             data = json.load(f)
             self.sourceMatrices = data["source"]
             self.targetMatrices = data["target"]
+    
+    def setFeature(self, features, name, value=1):
+        featureId = self.featureSet.getId(name)
+        if self.stringKeys:
+            features[name] = value
+        else:
+            features[featureId] = value
     
     def buildExamplesFromGraph(self, sentenceGraph, outfile, goldGraph = None, structureAnalyzer=None):
         """
@@ -84,15 +92,15 @@ class KerasExampleBuilder(ExampleBuilder):
                 if i >= numTokens or j >= numTokens:
                     pass #features[self.featureSet.getId("padding")] = 1
                 elif i == j: # diagonal
-                    sourceFeatures[self.featureSet.getId("path-zero")] = 1
+                    self.setFeature(sourceFeatures, "path-zero")
                     token = sentenceGraph.tokens[i]
-                    sourceFeatures[self.featureSet.getId(token.get("POS"))] = 1
+                    self.setFeature(sourceFeatures, token.get("POS"))
                     if len(self.tokenIsEntityHead[token]) > 0:
-                        sourceFeatures[self.featureSet.getId("entity")] = 1
-                        targetFeatures[self.featureSet.getId("entity")] = 1
+                        self.setFeature(sourceFeatures, "entity")
+                        self.setFeature(targetFeatures, "entity")
                         for entity in self.tokenIsEntityHead[token]:
-                            sourceFeatures[self.featureSet.getId(entity.get("type"))] = 1
-                            targetFeatures[self.featureSet.getId(entity.get("type"))] = 1
+                            self.setFeature(sourceFeatures, entity.get("type"))
+                            self.setFeature(targetFeatures, entity.get("type"))
                 else:
                     # define features
                     tI = sentenceGraph.tokens[i]
@@ -100,15 +108,15 @@ class KerasExampleBuilder(ExampleBuilder):
                     shortestPaths = depGraph.getPaths(tI, tJ)
                     if len(shortestPaths) > 0:
                         path = shortestPaths[0]
-                        sourceFeatures[self.featureSet.getId("path-true")] = 1
-                        sourceFeatures[self.featureSet.getId("path-length")] = len(path)
+                        self.setFeature(sourceFeatures, "P:T") # path true
+                        self.setFeature(sourceFeatures, "P:L", len(path)) # path length
                         for token in path:
-                            sourceFeatures[self.featureSet.getId(token.get("POS"))] = 1
+                            self.setFeature(sourceFeatures, token.get("POS"))
                         for i in range(1, len(path)):
                             for edge in depGraph.getEdges(path[i], path[i-1]), depGraph.getEdges(path[i-1], path[i]):
-                                sourceFeatures[self.featureSet.getId(edge.get("type"))] = 1
+                                self.setFeature(sourceFeatures, edge.get("type"))
                     else:
-                        sourceFeatures[self.featureSet.getId("path-false")] = 1
+                        self.setFeature(sourceFeatures, "P:F") # path false
                 sourceMatrix[-1].append(sourceFeatures)
                 targetMatrix[-1].append(targetFeatures)
         
