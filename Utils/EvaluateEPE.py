@@ -29,7 +29,7 @@ def combineParses(inDir, outDir, subDirectories):
     print >> sys.stderr, dict(counts)
     return outDir    
 
-def run(inPath, outPath, pattern, model, connection, numJobs, clear, debug):
+def run(inPath, outPath, subDirs, model, connection, numJobs, clear, debug):
     # Remove existing work directory, if requested to do so
     if os.path.exists(outPath) and clear:
         print >> sys.stderr, "Output directory exists, removing", outPath
@@ -39,16 +39,23 @@ def run(inPath, outPath, pattern, model, connection, numJobs, clear, debug):
         print >> sys.stderr, "Making output directory", outPath
         os.makedirs(outPath)
     
-    # Collect the parse files    
-    parseDir = combineParses(inPath, os.path.join(outPath, "parses"), pattern)
+    # Collect the parse files
+    parseDir = os.path.join(outPath, "parses")
+    if not os.path.exists(parseDir):
+        parseDir = combineParses(inPath, parseDir, subDirs)
+    else:
+        print >> sys.stderr, "Using collected parses from", parseDir
     
     # Import the parses
-    preprocessor = Preprocessor(["MERGE-SETS", "REMOVE-ANALYSES", "REMOVE-HEADS", "MERGE-SENTENCES", "IMPORT-PARSE", "SPLIT-NAMES", "FIND-HEADS", "DIVIDE-SETS"])
-    #preprocessor = Preprocessor(["MERGE-SETS", "REMOVE-ANALYSES", "REMOVE-HEADS", "MERGE-SENTENCES", "IMPORT-PARSE", "VALIDATE", "DIVIDE-SETS"])
-    preprocessor.setArgForAllSteps("debug", options.debug)
-    preprocessor.stepArgs("IMPORT-PARSE")["parseDir"] = parseDir
     corpusDir = os.path.join(outPath, "corpus")
-    preprocessor.process(model + ".+\.xml", os.path.join(corpusDir, model))
+    if not os.path.exists(corpusDir):
+        preprocessor = Preprocessor(["MERGE-SETS", "REMOVE-ANALYSES", "REMOVE-HEADS", "MERGE-SENTENCES", "IMPORT-PARSE", "SPLIT-NAMES", "FIND-HEADS", "DIVIDE-SETS"])
+        #preprocessor = Preprocessor(["MERGE-SETS", "REMOVE-ANALYSES", "REMOVE-HEADS", "MERGE-SENTENCES", "IMPORT-PARSE", "VALIDATE", "DIVIDE-SETS"])
+        preprocessor.setArgForAllSteps("debug", options.debug)
+        preprocessor.stepArgs("IMPORT-PARSE")["parseDir"] = parseDir
+        preprocessor.process(model + ".+\.xml", os.path.join(corpusDir, model))
+    else:
+        print >> sys.stderr, "Using imported parses from", corpusDir
     
     # Train the model
     connection = connection.replace("$JOBS", str(numJobs))
@@ -56,15 +63,15 @@ def run(inPath, outPath, pattern, model, connection, numJobs, clear, debug):
 
 if __name__== "__main__":
     from optparse import OptionParser
-    optparser = OptionParser(description="Predict events/relations")
-    optparser.add_option("-i", "--input", default=None, help="input directory")
-    optparser.add_option("-o", "--output", default=None, help="output directory")
-    optparser.add_option("-p", "--pattern", default=None, help="input directory pattern")
-    optparser.add_option("-n", "--numJobs", default=1, type=int, help="")
-    optparser.add_option("-c", "--connection", default="connection=Unix:jobLimit=$JOBS", help="")
-    optparser.add_option("--model", default="GE09", help="")
-    optparser.add_option("--clear", default=False, action="store_true", help="Delete all output files")
+    optparser = OptionParser(description="Train a TEES model using EPE parses")
+    optparser.add_option("-i", "--input", default=None, help="Input directory")
+    optparser.add_option("-o", "--output", default=None, help="Output directory")
+    optparser.add_option("-s", "--subdirs", default=None, help="Input directory subdirectories (optional)")
+    optparser.add_option("-n", "--numJobs", default=1, type=int, help="Number of parallel SVM processes to use while training")
+    optparser.add_option("--connection", default="connection=Unix:jobLimit=$JOBS", help="TEES local or remote training settings")
+    optparser.add_option("--model", default="GE09", help="TEES model")
+    optparser.add_option("--noClear", default=False, action="store_true", help="Continue a previous run")
     optparser.add_option("--debug", default=False, action="store_true", help="Debug mode")
     (options, args) = optparser.parse_args()
     
-    run(options.input, options.output, options.pattern, options.model, options.connection, options.numJobs, options.clear, options.debug)
+    run(options.input, options.output, options.subdirs, options.model, options.connection, options.numJobs, not options.noClear, options.debug)
