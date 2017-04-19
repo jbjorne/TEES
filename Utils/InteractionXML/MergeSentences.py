@@ -20,9 +20,7 @@ def mergeSentences(input, output, verbose=False):
         if len(docChildTypes) == 0:
             counts["documents-with-no-sentences"] += 1
             continue
-        elif len(docChildTypes) == 1:
-            assert docChildTypes[0] == "sentence"
-        else:
+        elif len(docChildTypes) > 1 or docChildTypes[0] != "sentence":
             raise Exception("Document '" + str(document.get("id")) + "' has non-sentence children: " + str(docChildTypes))
         # Process all the child sentence elements
         docId = document.get("id")

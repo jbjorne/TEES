@@ -137,10 +137,10 @@ class ParseConverter(Parser):
         if len(documents) == 0:
             typeCounts["document-generation"] = defaultdict(int)
             documents = self.prepareDocuments(corpusRoot, files)
-        counter = ProgressCounter(len(documents), "Parse Insertion")
+        counter = ProgressCounter(len(files), "Parse Insertion")
         # Insert parses and make sentence elements if needed
         typeCounts["sentence-splitting"] = defaultdict(int)
-        print >> sys.stderr, "Inserting parses for", len(documents), "documents"
+        print >> sys.stderr, "Inserting parses for", len(files), "out of total", len(documents), "documents"
         for document in documents:
             counts["document"] += 1
             matchFound = False

@@ -27,6 +27,7 @@ import Utils.InteractionXML.DeleteAttributes
 import Utils.InteractionXML.MapAttributes
 import Utils.InteractionXML.MergeSentences
 import Utils.InteractionXML.MergeSets
+import Utils.InteractionXML.ValidateIXML
 #import Utils.InteractionXML.ExportParse
 import Utils.InteractionXML.InteractionXMLUtils as IXMLUtils
 import Utils.Settings as Settings
@@ -89,6 +90,7 @@ class Preprocessor(ToolChain):
         self.initStep("ANALYZE-STRUCTURE", clsStep(StructureAnalyzer, "analyze"), {}, None)
         self.initStepGroup("Miscellaneous")
         self.initStep("ADD-DDI-TEST-GOLD", DDITools.addTestGold, {"testGoldPath":None}, None)
+        self.initStep("VALIDATE", Utils.InteractionXML.ValidateIXML.validateCorpus, {}, None)
         self.initStepGroup("Saving")
         self.initStep("DIVIDE-SETS", self.divideSets, {"saveCombined":False}, None)
         self.initStep("SAVE", self.save, {}, None)

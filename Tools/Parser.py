@@ -200,6 +200,7 @@ class Parser:
     def addExtraAttributes(self, element, sourceDict, skipKeys):
         for key in sourceDict:
             if key not in skipKeys:
+                assert isinstance(sourceDict[key], basestring), (key, sourceDict, element.attrib) 
                 element.set(key, sourceDict[key])
     
 #     def alignIterative(self, tokens, sentence, tokenSep = " "):
@@ -236,9 +237,22 @@ class Parser:
 #             Align.printAlignment(alignedSentence, alignedCat, diff)
 #         pos = 0
         sentenceText = sentence.get("text").rstrip()
-        charOffsets = self.alignTokens([x["text"] for x in tokens], sentenceText, " ", None, sentence.get("id"), "Partial alignment when inserting tokens into sentence")
+        tokenTexts = [x["text"] for x in tokens]
+        tokenOffsets = [x["offset"] for x in tokens if "offset" in x]
+        counts["input-tokens"] = len(tokenTexts)
+        counts["input-offsets"] = len(tokenOffsets)
+        if len(tokenTexts) != len(tokenOffsets):
+            charOffsets = self.alignTokens(tokenTexts, sentenceText, " ", None, sentence.get("id"), "Partial alignment when inserting tokens into sentence")
+        else:
+            sentenceOffset = sentence.get("charOffset").split("-")
+            sentenceOffset = (int(sentenceOffset[0]), int(sentenceOffset[1]))
+            charOffsets = []
+            for i in range(len(tokenOffsets)):
+                charOffsets.append((tokenOffsets[i][0] - sentenceOffset[0], tokenOffsets[i][1] - sentenceOffset[1]))
+                if charOffsets[-1][0] < 0 or charOffsets[-1][1] < 0:
+                    raise Exception("Negative character offset for token " + str(tokens[i]) + " in sentence " + sentence.get("id") + ": " + str(sentence.attrib))
         #tokenIndex = 0
-        tokKeys = set(["id", "text", "origText", "index", "POS"])
+        tokKeys = set(["id", "text", "origText", "index", "POS", "offset"])
         for i in range(len(tokens)):
             token = tokens[i]
             counts["tokens-parse"] += 1
@@ -429,13 +443,19 @@ class Parser:
         removeWhitespacePattern = re.compile(r'\s+')
         tokenTexts = []
         tokenSentences = []
+        tokenAlignments = []
         for i in range(len(sentObjs)):
             for token in sentObjs[i].get("tokens", []):
                 tokenSentences.append(i)
                 tokenText = token["text"]
                 tokenText = re.sub(removeWhitespacePattern, '', tokenText)
                 tokenTexts.append(tokenText)
-        tokenAlignments = self.alignTokens(tokenTexts, docText, "", removeWhitespacePattern, document.get("id"), "Partial alignment in sentence splitting for document")
+                if "offset" in token:
+                    tokenAlignments.append(token["offset"])
+        counts["input-tokens"] = len(tokenTexts)
+        counts["input-alignments"] = len(tokenAlignments)
+        if len(tokenAlignments) != len(tokenTexts): # use token offset only if all tokens have an offset
+            tokenAlignments = self.alignTokens(tokenTexts, docText, "", removeWhitespacePattern, document.get("id"), "Partial alignment in sentence splitting for document")
         # Initialize counters
         if counts == None:
             counts = defaultdict(int)
@@ -904,7 +924,13 @@ class Parser:
                 tokenById = {}
                 for node in obj["nodes"]:
                     properties = node.get("properties", {})
-                    token = {"text":node["form"], "id":node["id"], "POS":properties.get("pos")}
+                    token = {"text":node["form"], "id":node["id"], "offset":(int(node["start"]), int(node["end"])), "POS":properties.get("pos")}
+                    if token["POS"] == None:
+                        for altPOS in ("xpos", "upos"):
+                            if properties.get(altPOS) != None:
+                                token["POS"] = properties.get(altPOS)
+                    if token["POS"] == None:
+                        token["POS"] = "ERROR"
                     for subset in node, properties:
                         for key in subset:
                             if key not in basicKeys:
@@ -912,7 +938,7 @@ class Parser:
                                     token[key.lower()] = subset[key]
                                 else:
                                     token[key.lower()] = str(subset[key])
-                    tokens["index"] = len(tokens)
+                    token["index"] = len(tokens)
                     tokens.append(token)
                     assert token["id"] not in tokenById
                     tokenById[token["id"]] = token
