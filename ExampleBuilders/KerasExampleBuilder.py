@@ -20,6 +20,7 @@ class KerasExampleBuilder(ExampleBuilder):
         self.rangeMatrix = range(self.dimMatrix)
         self.sourceMatrices = []
         self.targetMatrices = []
+        self.tokenLists = []
         self.stringKeys = True
     
     #def processSentence(self, sentence, outfile, goldSentence=None, structureAnalyzer=None):
@@ -37,17 +38,20 @@ class KerasExampleBuilder(ExampleBuilder):
             self.targetMatrices = data["target"]
     
     def setFeature(self, features, name, value=1):
-        featureId = self.featureSet.getId(name)
-        if self.stringKeys:
-            features[name] = value
-        else:
-            features[featureId] = value
+        features[self.featureSet.getId(name)] = value
+        #featureId = self.featureSet.getId(name)
+        #if self.stringKeys:
+        #    features[name] = value
+        #else:
+        #    features[featureId] = value
     
     def buildExamplesFromGraph(self, sentenceGraph, outfile, goldGraph = None, structureAnalyzer=None):
         """
         Build examples for a single sentence. Returns a list of examples.
         See Core/ExampleUtils for example format.
         """
+        if self.exampleCount > 0:
+            return
 #         #examples = []
 #         exampleIndex = 0
 #         # example directionality
@@ -72,10 +76,10 @@ class KerasExampleBuilder(ExampleBuilder):
 #             entityToGold = EvaluateInteractionXML.mapEntities(entities, goldGraph.entities)
         
         depGraph = None
-        if not self.styles["no_path"]:
+        if not self.hasStyle("no_path"):
             undirected = sentenceGraph.dependencyGraph.toUndirected()
             depGraph = undirected
-            if self.styles["filter_shortest_path"] != None: # For DDI use filter_shortest_path=conj_and
+            if self.styles.get("filter_shortest_path") != None: # For DDI use filter_shortest_path=conj_and
                 depGraph.resetAnalyses() # just in case
                 depGraph.FloydWarshall(self.filterEdge, {"edgeTypes":self.styles["filter_shortest_path"]})
         
@@ -83,6 +87,7 @@ class KerasExampleBuilder(ExampleBuilder):
         numTokens = len(sentenceGraph.tokens)
         sourceMatrix = []
         targetMatrix = []
+        tokenList = [x for x in sentenceGraph.tokens]
         for i in self.rangeMatrix:
             sourceMatrix.append([])
             targetMatrix.append([])
@@ -92,15 +97,18 @@ class KerasExampleBuilder(ExampleBuilder):
                 if i >= numTokens or j >= numTokens:
                     pass #features[self.featureSet.getId("padding")] = 1
                 elif i == j: # diagonal
-                    self.setFeature(sourceFeatures, "path-zero")
+                    #self.setFeature(sourceFeatures, "P:0")
                     token = sentenceGraph.tokens[i]
                     self.setFeature(sourceFeatures, token.get("POS"))
-                    if len(self.tokenIsEntityHead[token]) > 0:
-                        self.setFeature(sourceFeatures, "entity")
-                        self.setFeature(targetFeatures, "entity")
-                        for entity in self.tokenIsEntityHead[token]:
+                    if len(sentenceGraph.tokenIsEntityHead[token]) > 0:
+                        #self.setFeature(sourceFeatures, "E:1")
+                        #self.setFeature(targetFeatures, "E:1")
+                        for entity in sentenceGraph.tokenIsEntityHead[token]:
                             self.setFeature(sourceFeatures, entity.get("type"))
                             self.setFeature(targetFeatures, entity.get("type"))
+                    else:
+                        self.setFeature(sourceFeatures, "E:0")
+                        self.setFeature(targetFeatures, "E:0")
                 else:
                     # define features
                     tI = sentenceGraph.tokens[i]
@@ -108,17 +116,22 @@ class KerasExampleBuilder(ExampleBuilder):
                     shortestPaths = depGraph.getPaths(tI, tJ)
                     if len(shortestPaths) > 0:
                         path = shortestPaths[0]
-                        self.setFeature(sourceFeatures, "P:T") # path true
-                        self.setFeature(sourceFeatures, "P:L", len(path)) # path length
-                        for token in path:
-                            self.setFeature(sourceFeatures, token.get("POS"))
-                        for i in range(1, len(path)):
-                            for edge in depGraph.getEdges(path[i], path[i-1]), depGraph.getEdges(path[i-1], path[i]):
-                                self.setFeature(sourceFeatures, edge.get("type"))
+                        if len(path) > 2:
+                            self.setFeature(sourceFeatures, "D:0") # path > 2
+                        else:
+                            #self.setFeature(sourceFeatures, "P:T") # path true
+                            #self.setFeature(sourceFeatures, "P:L", len(path)) # path length
+                            for tokenIndex in range(len(path)):
+                                self.setFeature(sourceFeatures, "T" + str(tokenIndex) + ":" + path[tokenIndex].get("POS"))
+                            for k in range(1, len(path)):
+                                for edge in depGraph.getEdges(path[k], path[k-1]) + depGraph.getEdges(path[k-1], path[k]):
+                                    self.setFeature(sourceFeatures, edge[2].get("type"))
                     else:
-                        self.setFeature(sourceFeatures, "P:F") # path false
+                        self.setFeature(sourceFeatures, "D:0") # no path
                 sourceMatrix[-1].append(sourceFeatures)
                 targetMatrix[-1].append(targetFeatures)
         
         self.sourceMatrices.append(sourceMatrix)
         self.targetMatrices.append(targetMatrix)
+        self.tokenLists.append(tokenList)
+        return 1

@@ -44,11 +44,14 @@ class ExampleBuilder:
         self.classIdFilename = None
         self.featureIdFilename = None
         
-        self.styles = None
+        self.styles = {}
         self._defaultParameters = None
         self._parameterValueLimits = None
         self._setDefaultParameters(["sentenceLimit"])
         self.debug = False
+    
+    def hasStyle(self, style):
+        return style in self.styles and not self.styles[style]
     
     def _setDefaultParameters(self, defaults=None, valueLimits=None):
         # Initialize
@@ -170,7 +173,7 @@ class ExampleBuilder:
     
     def processSentence(self, sentence, outfile, goldSentence=None, structureAnalyzer=None):
         # Process filtering rules
-        if self.styles["sentenceLimit"]: # Rules for limiting which sentences to process
+        if "sentenceLimit" in self.styles and self.styles["sentenceLimit"]: # Rules for limiting which sentences to process
             # Get the rule list
             limitRules = self.styles["sentenceLimit"]
             if type(limitRules) in types.StringTypes:

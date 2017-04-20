@@ -1,14 +1,12 @@
 import sys
 from Detector import Detector
 import itertools
-from keras.layers import Input, Dense, Conv2D, MaxPooling2D, UpSampling2D
-from keras.models import Model
-from keras import backend as K
 from ExampleBuilders.KerasExampleBuilder import KerasExampleBuilder
 from Detectors import SingleStageDetector
 import numpy as np
 import xml.etree.ElementTree as ET
 import Utils.ElementTreeUtils as ETUtils
+from Core.IdSet import IdSet
 
 class KerasDetector(Detector):
 
@@ -48,7 +46,7 @@ class KerasDetector(Detector):
             parse = self.getStr(self.tag+"parse", model)
         self.structureAnalyzer.load(model)
         self.exampleBuilder.structureAnalyzer = self.structureAnalyzer
-        self.arrays = {}
+        self.matrices = {}
         modelChanged = False
         for data, output, gold in itertools.izip_longest(datas, outputs, golds, fillvalue=[]):
             print >> sys.stderr, "Example generation for", output
@@ -63,10 +61,10 @@ class KerasDetector(Detector):
                         True), model.get(self.tag+"ids.features", True), goldSet, False, saveIdsToModel,
                         structureAnalyzer=self.structureAnalyzer)
             for dataSet in builders:
-                self.dimFeatures = len(builders[dataSet].featureIds)
+                self.dimFeatures = len(builders[dataSet].featureSet.Ids)
                 model.addStr("dimFeatures", str(self.dimFeatures))
                 builders[dataSet].saveMatrices(output)
-                self.matrices[dataSet] = {"source":self.exampleBuilder.sourceArrays, "target":self.exampleBuilder.targetArrays}
+                self.matrices[dataSet] = {"source":builders[dataSet].sourceMatrices, "target":builders[dataSet].targetMatrices, "tokens":builders[dataSet].tokenLists}
                     
         if hasattr(self.structureAnalyzer, "typeMap") and model.mode != "r":
             print >> sys.stderr, "Saving StructureAnalyzer.typeMap"
@@ -74,8 +72,15 @@ class KerasDetector(Detector):
             modelChanged = True
         if modelChanged:
             model.save()
+        
+        self.matricesToHTML(outputs[0] + ".html", model)
+        sys.exit()
     
     def defineModel(self):
+        from keras.layers import Input, Dense, Conv2D, MaxPooling2D, UpSampling2D
+        from keras.models import Model
+        from keras import backend as K
+
         if self.dimFeatures == None:
             self.dimFeatures = int(self.model.getStr("dimFeatures"))
         
@@ -101,31 +106,43 @@ class KerasDetector(Detector):
         self.model = Model(inputShape, decoded)
         self.model.compile(optimizer='adadelta', loss='binary_crossentropy')
     
-    def matrixToTable(self, matrix):
-        table = ET.Element('table')
-        for i in self.rangeMatrix:
+    def matrixToTable(self, matrix, tokens, featureSet):
+        matrixRange = range(len(matrix) + 1)
+        table = ET.Element('table', {"border":"1"})
+        for i in matrixRange:
             tr = ET.SubElement(table, 'tr')
-            for j in self.rangeMatrix:
+            for j in matrixRange:
                 td = ET.SubElement(tr, 'td')
-                td.text = str(matrix[i][j])
+                if i == 0 or j == 0:
+                    if i != 0 and i > 0 and i <= len(tokens): td.text = tokens[i - 1].get("text")
+                    elif j != 0 and j > 0 and j <= len(tokens): td.text = tokens[j - 1].get("text")
+                else:
+                    if i == j:
+                        td.set("bgcolor", "#FF0000")
+                    features = matrix[i - 1][j - 1]
+                    featureNames = []
+                    for featureId in features:
+                        name = featureSet.getName(featureId)
+                        value = features[featureId]
+                        if value != 1:
+                            name += "=" + str(value)
+                        featureNames.append(name)
+                    featureNames.sort()
+                    td.text = ",".join(featureNames)
+        return table
     
-    def matricesToHTML(self, outPath):
-        root = ET.Element('html')
-        table = ET.SubElement(root, 'table')
-        tr = ET.SubElement(table, 'tr')
-        td = ET.SubElement(tr, 'td')
-        td.text = "This is the first line "
-        # note how to end td tail
-        td.tail = None
-        br = ET.SubElement(td, 'br')
-        # now continue your text with br.tail
-        br.tail = " and the second"
+    def matricesToHTML(self, outPath, model):
+        featureSet = IdSet(filename=model.get(self.tag+"ids.features"))
         
+        root = ET.Element('html')     
         for dataSet in self.matrices:
             sourceMatrices = self.matrices[dataSet]["source"]
-            #targetMatrices = self.matrices[dataSet]["target"]
+            tokenLists = self.matrices[dataSet]["tokens"]
+            targetMatrices = self.matrices[dataSet]["target"]
             #numExamples = len(sourceMatrices)
-            root.append(self.matrixToTable(sourceMatrices[0]))
+            root.append(self.matrixToTable(sourceMatrices[0], tokenLists[0], featureSet))
+            root.append(self.matrixToTable(targetMatrices[0], tokenLists[0], featureSet))
+            break
         
         ETUtils.write(root, outPath)
     
