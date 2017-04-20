@@ -64,7 +64,7 @@ class KerasDetector(Detector):
                 self.dimFeatures = len(builders[dataSet].featureSet.Ids)
                 model.addStr("dimFeatures", str(self.dimFeatures))
                 builders[dataSet].saveMatrices(output)
-                self.matrices[dataSet] = {"source":builders[dataSet].sourceMatrices, "target":builders[dataSet].targetMatrices, "tokens":builders[dataSet].tokenLists}
+                self.matrices[output] = {"source":builders[dataSet].sourceMatrices, "target":builders[dataSet].targetMatrices, "tokens":builders[dataSet].tokenLists}
                     
         if hasattr(self.structureAnalyzer, "typeMap") and model.mode != "r":
             print >> sys.stderr, "Saving StructureAnalyzer.typeMap"
@@ -73,7 +73,7 @@ class KerasDetector(Detector):
         if modelChanged:
             model.save()
         
-        self.matricesToHTML(outputs[0] + ".html", model)
+        self.matricesToHTML(model)
         sys.exit()
     
     def defineModel(self):
@@ -131,20 +131,20 @@ class KerasDetector(Detector):
                     td.text = ",".join(featureNames)
         return table
     
-    def matricesToHTML(self, outPath, model):
+    def matricesToHTML(self, model):
         featureSet = IdSet(filename=model.get(self.tag+"ids.features"))
         
         root = ET.Element('html')     
-        for dataSet in self.matrices:
-            sourceMatrices = self.matrices[dataSet]["source"]
-            tokenLists = self.matrices[dataSet]["tokens"]
-            targetMatrices = self.matrices[dataSet]["target"]
+        for outPathStem in self.matrices:
+            sourceMatrices = self.matrices[outPathStem]["source"]
+            tokenLists = self.matrices[outPathStem]["tokens"]
+            targetMatrices = self.matrices[outPathStem]["target"]
             #numExamples = len(sourceMatrices)
-            root.append(self.matrixToTable(sourceMatrices[0], tokenLists[0], featureSet))
-            root.append(self.matrixToTable(targetMatrices[0], tokenLists[0], featureSet))
-            break
-        
-        ETUtils.write(root, outPath)
+            for i in range(len(sourceMatrices)):
+                ET.SubElement(root, "p").text = str(i) + ": " + " ".join([x.get("text") for x in tokenLists[i]])
+                root.append(self.matrixToTable(sourceMatrices[i], tokenLists[i], featureSet))
+                root.append(self.matrixToTable(targetMatrices[i], tokenLists[i], featureSet))
+            ETUtils.write(root, outPathStem + ".html")
     
     def vectorizeMatrices(self):
         self.arrays = {}
@@ -206,7 +206,7 @@ class KerasDetector(Detector):
             self.structureAnalyzer.analyze([optData, trainData], self.model)
             print >> sys.stderr, self.structureAnalyzer.toString()
         self.model = self.openModel(model, "a") # Devel model already exists, with ids etc
-        exampleFiles = {"devel":self.workDir+self.tag+"opt-examples.gz", "train":self.workDir+self.tag+"train-examples.gz"}
+        exampleFiles = {"devel":self.workDir+self.tag+"opt-examples.json.gz", "train":self.workDir+self.tag+"train-examples.json.gz"}
         if self.checkStep("EXAMPLES"):
             self.buildExamples(self.model, [optData, trainData], [exampleFiles["devel"], exampleFiles["train"]], saveIdsToModel=True)
         #self.beginModel("BEGIN-MODEL", self.model, [self.workDir+self.tag+"train-examples.gz"], self.workDir+self.tag+"opt-examples.gz")

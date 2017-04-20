@@ -16,10 +16,12 @@ class KerasExampleBuilder(ExampleBuilder):
         
         ExampleBuilder.__init__(self, classSet, featureSet)
         
-        self._setDefaultParameters(["directed", "undirected", "cutoff"])
+        self._setDefaultParameters(["directed", "undirected", "cutoff", "annotated_only"])
         self.styles = self.getParameters(style)
+        if self.styles["cutoff"]:
+            self.styles["cutoff"] = int(self.styles["cutoff"])
         
-        self.dimMatrix = 30
+        self.dimMatrix = 50
         self.rangeMatrix = range(self.dimMatrix)
         self.sourceMatrices = []
         self.targetMatrices = []
@@ -63,8 +65,14 @@ class KerasExampleBuilder(ExampleBuilder):
         Build examples for a single sentence. Returns a list of examples.
         See Core/ExampleUtils for example format.
         """
-        if self.exampleCount > 0:
-            return
+        
+        if self.styles.get("annotated_only") and len(sentenceGraph.interactions) == 0:
+            return 1
+        
+        #print len(self.sourceMatrices), self.styles.get("cutoff"), len(self.sourceMatrices) > self.styles.get("cutoff")
+        if self.styles.get("cutoff") and len(self.sourceMatrices) > self.styles.get("cutoff"):
+            #print "SDFSDFDS"
+            return 1
 #         #examples = []
 #         exampleIndex = 0
 #         # example directionality
