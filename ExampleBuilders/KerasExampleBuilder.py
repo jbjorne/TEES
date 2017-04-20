@@ -16,7 +16,7 @@ class KerasExampleBuilder(ExampleBuilder):
         
         ExampleBuilder.__init__(self, classSet, featureSet)
         
-        self._setDefaultParameters(["directed", "undirected"])
+        self._setDefaultParameters(["directed", "undirected", "cutoff"])
         self.styles = self.getParameters(style)
         
         self.dimMatrix = 30
@@ -118,7 +118,8 @@ class KerasExampleBuilder(ExampleBuilder):
                         #self.setFeature(sourceFeatures, "E:1")
                         #self.setFeature(targetFeatures, "E:1")
                         for entity in sentenceGraph.tokenIsEntityHead[token]:
-                            self.setFeature(sourceFeatures, entity.get("type"))
+                            if entity.get("given") == "True":
+                                self.setFeature(sourceFeatures, entity.get("type"))
                             self.setFeature(targetFeatures, entity.get("type"))
                     else:
                         self.setFeature(sourceFeatures, "E:0")
@@ -130,16 +131,16 @@ class KerasExampleBuilder(ExampleBuilder):
                     shortestPaths = depGraph.getPaths(tI, tJ)
                     if len(shortestPaths) > 0:
                         path = shortestPaths[0]
-                        if len(path) > 2:
-                            self.setFeature(sourceFeatures, "D:0") # path > 2
-                        else:
+                        #if len(path) > 2:
+                        #    self.setFeature(sourceFeatures, "D:0") # path > 2
+                        #else:
                             #self.setFeature(sourceFeatures, "P:T") # path true
                             #self.setFeature(sourceFeatures, "P:L", len(path)) # path length
-                            for tokenIndex in range(len(path)):
-                                self.setFeature(sourceFeatures, "T" + str(tokenIndex) + ":" + path[tokenIndex].get("POS"))
-                            for k in range(1, len(path)):
-                                for edge in depGraph.getEdges(path[k], path[k-1]) + depGraph.getEdges(path[k-1], path[k]):
-                                    self.setFeature(sourceFeatures, edge[2].get("type"))
+                        for tokenIndex in (0, -1): #range(len(path)):
+                            self.setFeature(sourceFeatures, "T" + str(tokenIndex) + ":" + path[tokenIndex].get("POS"))
+                        for k in range(1, len(path)):
+                            for edge in depGraph.getEdges(path[k], path[k-1]) + depGraph.getEdges(path[k-1], path[k]):
+                                self.setFeature(sourceFeatures, edge[2].get("type"))
                     else:
                         self.setFeature(sourceFeatures, "D:0") # no path
                     # define target features
