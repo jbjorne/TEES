@@ -16,6 +16,9 @@ class KerasExampleBuilder(ExampleBuilder):
         
         ExampleBuilder.__init__(self, classSet, featureSet)
         
+        self._setDefaultParameters(["directed", "undirected"])
+        self.styles = self.getParameters(style)
+        
         self.dimMatrix = 30
         self.rangeMatrix = range(self.dimMatrix)
         self.sourceMatrices = []
@@ -45,6 +48,16 @@ class KerasExampleBuilder(ExampleBuilder):
         #else:
         #    features[featureId] = value
     
+    def getDirectionality(self, structureAnalyzer):
+        if self.styles["directed"] == None and self.styles["undirected"] == None: # determine directedness from corpus
+            return structureAnalyzer.hasDirectedTargets()
+        elif self.styles["directed"]:
+            assert self.styles["undirected"] in [None, False]
+            return True
+        elif self.styles["undirected"]:
+            assert self.styles["directed"] in [None, False]
+            return False
+    
     def buildExamplesFromGraph(self, sentenceGraph, outfile, goldGraph = None, structureAnalyzer=None):
         """
         Build examples for a single sentence. Returns a list of examples.
@@ -63,7 +76,8 @@ class KerasExampleBuilder(ExampleBuilder):
 #         elif self.styles["undirected"]:
 #             assert self.styles["directed"] in [None, False]
 #             examplesAreDirected = False
-    
+        
+        directed = self.getDirectionality(structureAnalyzer)
             
         # Filter entities, if needed
         sentenceGraph.mergeInteractionGraph(True)
@@ -110,7 +124,7 @@ class KerasExampleBuilder(ExampleBuilder):
                         self.setFeature(sourceFeatures, "E:0")
                         self.setFeature(targetFeatures, "E:0")
                 else:
-                    # define features
+                    # define source features
                     tI = sentenceGraph.tokens[i]
                     tJ = sentenceGraph.tokens[j]
                     shortestPaths = depGraph.getPaths(tI, tJ)
@@ -128,6 +142,18 @@ class KerasExampleBuilder(ExampleBuilder):
                                     self.setFeature(sourceFeatures, edge[2].get("type"))
                     else:
                         self.setFeature(sourceFeatures, "D:0") # no path
+                    # define target features
+                    intTypes = set()
+                    intEdges = sentenceGraph.interactionGraph.getEdges(tI, tJ)
+                    if not directed:
+                        intEdges = intEdges + sentenceGraph.interactionGraph.getEdges(tJ, tI)
+                    for intEdge in intEdges:
+                        intTypes.add(intEdge[2].get("type"))
+                    if len(intTypes) > 0:
+                        for intType in sorted(list(intTypes)):
+                            self.setFeature(targetFeatures, intType)
+                    else:
+                        self.setFeature(targetFeatures, "I:0")
                 sourceMatrix[-1].append(sourceFeatures)
                 targetMatrix[-1].append(targetFeatures)
         
