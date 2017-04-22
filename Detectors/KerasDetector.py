@@ -7,6 +7,7 @@ import numpy as np
 import xml.etree.ElementTree as ET
 import Utils.ElementTreeUtils as ETUtils
 from Core.IdSet import IdSet
+from keras.models import Sequential
 
 class KerasDetector(Detector):
 
@@ -83,33 +84,54 @@ class KerasDetector(Detector):
         from keras.models import Model
         from keras import backend as K
         
+        dimFeatures = int(self.model.getStr("dimFeatures"))
+        dimMatrix = int(self.model.getStr("dimMatrix"))
+        
         print >> sys.stderr, "Defining model"
         if self.dimFeatures == None:
             self.dimFeatures = int(self.model.getStr("dimFeatures"))
         
-        inputShape = Input(shape=(30, 30, self.dimFeatures))  # adapt this if using `channels_first` image data format
-
+        inputShape = Input(shape=(dimMatrix, dimMatrix, dimFeatures))  # adapt this if using `channels_first` image data format
+ 
         x = Conv2D(16, (3, 3), activation='relu', padding='same')(inputShape)
         x = MaxPooling2D((2, 2), padding='same')(x)
         x = Conv2D(8, (3, 3), activation='relu', padding='same')(x)
         x = MaxPooling2D((2, 2), padding='same')(x)
         x = Conv2D(8, (3, 3), activation='relu', padding='same')(x)
         encoded = MaxPooling2D((2, 2), padding='same')(x)
-        
+         
         # at this point the representation is (4, 4, 8) i.e. 128-dimensional
-        
+         
         x = Conv2D(8, (3, 3), activation='relu', padding='same')(encoded)
         x = UpSampling2D((2, 2))(x)
         x = Conv2D(8, (3, 3), activation='relu', padding='same')(x)
         x = UpSampling2D((2, 2))(x)
         x = Conv2D(16, (3, 3), activation='relu')(x)
         x = UpSampling2D((2, 2))(x)
-        decoded = Conv2D(1, (3, 3), activation='sigmoid', padding='same')(x)
+        decoded = Conv2D(dimFeatures, (3, 3), activation='sigmoid', padding='same')(x)
         
         self.kerasModel = Model(inputShape, decoded)
         
         print >> sys.stderr, "Compiling model"
         self.kerasModel.compile(optimizer='adadelta', loss='binary_crossentropy')
+
+    def fitModel(self, exampleFiles):
+        if self.matrices == None:
+            self.matrices = {}
+            for dataSet in exampleFiles:
+                print >> sys.stderr, "Loading dataset", dataSet, "from", exampleFiles[dataSet]
+                builder = self.exampleBuilder()
+                builder.loadMatrices(exampleFiles[dataSet])
+                self.matrices[dataSet] = {"source":builder.sourceMatrices, "target":builder.targetMatrices}
+        if self.arrays == None:
+            self.vectorizeMatrices(self.model)
+        print >> sys.stderr, "Fitting model"
+        self.kerasModel.fit(self.arrays["train"]["source"], self.arrays["train"]["target"],
+            epochs=100,
+            batch_size=128,
+            shuffle=True,
+            validation_data=(self.arrays["devel"]["source"], self.arrays["devel"]["target"]),
+            callbacks=None)
     
     def matrixToTable(self, matrix, tokens, featureSet):
         matrixRange = range(len(matrix) + 1)
@@ -166,13 +188,11 @@ class KerasDetector(Detector):
             targetMatrices = dataSetValue["target"]
             assert len(sourceMatrices) == len(targetMatrices)
             numExamples = len(sourceMatrices)
-            sourceArrays = []
-            targetArrays = []
+            sourceArrays = np.zeros((numExamples, dimMatrix, dimMatrix, dimFeatures), dtype=np.float32)
+            targetArrays = np.zeros((numExamples, dimMatrix, dimMatrix, dimFeatures), dtype=np.float32)
             for exampleIndex in range(numExamples):
-                sourceArray = np.zeros((dimMatrix, dimMatrix, dimFeatures), dtype=np.float32)
-                targetArray = np.zeros((dimMatrix, dimMatrix, dimFeatures), dtype=np.float32)
-                sourceArrays.append(sourceArray)
-                targetArrays.append(targetArray)
+                sourceArray = sourceArrays[exampleIndex] #sourceArray = np.zeros((dimMatrix, dimMatrix, dimFeatures), dtype=np.float32)
+                targetArray = targetArrays[exampleIndex] #targetArray = np.zeros((dimMatrix, dimMatrix, dimFeatures), dtype=np.float32)
                 sourceMatrix = sourceMatrices.pop(0) #[exampleIndex]
                 targetMatrix = targetMatrices.pop(0) #[exampleIndex]
                 for matrix, array in [(sourceMatrix, sourceArray), (targetMatrix, targetArray)]:
@@ -183,24 +203,6 @@ class KerasDetector(Detector):
                             for featureName in features:
                                 array[i][j][featureSet.getId(featureName)] = features[featureName]
             self.arrays[dataSetName] = {"source":sourceArrays, "target":targetArrays}
-    
-    def fitModel(self, exampleFiles):
-        if self.matrices == None:
-            self.matrices = {}
-            for dataSet in exampleFiles:
-                print >> sys.stderr, "Loading dataset", dataSet, "from", exampleFiles[dataSet]
-                builder = self.exampleBuilder()
-                builder.loadMatrices(exampleFiles[dataSet])
-                self.matrices[dataSet] = {"source":builder.sourceMatrices, "target":builder.targetMatrices}
-        if self.arrays == None:
-            self.vectorizeMatrices(self.model)
-        print >> sys.stderr, "Fitting model"
-        self.kerasModel.fit(self.arrays["train"]["source"], self.arrays["train"]["target"],
-            epochs=100,
-            batch_size=128,
-            shuffle=True,
-            validation_data=(self.arrays["devel"]["source"], self.arrays["devel"]["target"]),
-            callbacks=None)
     
     def train(self, trainData=None, optData=None, model=None, combinedModel=None, exampleStyle=None, 
               classifierParameters=None, parse=None, tokenization=None, task=None, fromStep=None, toStep=None,
