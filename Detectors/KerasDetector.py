@@ -19,7 +19,6 @@ class KerasDetector(Detector):
         self.STATE_COMPONENT_TRAIN = "COMPONENT_TRAIN"
         self.tag = "keras-"
         self.exampleBuilder = KerasExampleBuilder
-        self.dimFeatures = None
         self.matrices = None
         self.arrays = None
     
@@ -59,13 +58,15 @@ class KerasDetector(Detector):
             builder = self.exampleBuilder.run(data, output, parse, None, exampleStyle, model.get(self.tag+"ids.classes", 
                 True), model.get(self.tag+"ids.features", True), gold, False, saveIdsToModel,
                 structureAnalyzer=self.structureAnalyzer)
-            model.addStr("dimFeatures", str(len(builder.featureSet.Ids)))
+            model.addStr("dimSourceFeatures", str(len(builder.featureSet.Ids)))
+            model.addStr("dimTargetFeatures", str(len(builder.classSet.Ids)))
             model.addStr("dimMatrix", str(builder.dimMatrix))
             examples =  {"source":builder.sourceMatrices, "target":builder.targetMatrices, "tokens":builder.tokenLists, "setName":setName}
             print >> sys.stderr, "Saving examples to", output
             self.saveJSON(output, examples)
             #builders[dataSet].saveMatrices(output)
             self.matrices[setName] = examples
+            self.matricesToHTML(model, self.matrices[setName], output + ".html")
                     
 #             for setName in builders:
 #                 self.dimFeatures = len(builders[dataSet].featureSet.Ids)
@@ -83,7 +84,6 @@ class KerasDetector(Detector):
         if modelChanged:
             model.save()
         
-        self.matricesToHTML(model, self.matrices, {x[0]:x[1] for x in zip(setNames, outputs)})
         #sys.exit()
     
     def defineModel(self):
@@ -92,18 +92,16 @@ class KerasDetector(Detector):
         from keras.models import Model
         from keras import backend as K
         
-        dimFeatures = int(self.model.getStr("dimFeatures"))
+        dimSourceFeatures = int(self.model.getStr("dimSourceFeatures"))
+        dimTargetFeatures = int(self.model.getStr("dimTargetFeatures"))
         dimMatrix = int(self.model.getStr("dimMatrix"))
         
         print >> sys.stderr, "Defining model"
-        if self.dimFeatures == None:
-            self.dimFeatures = int(self.model.getStr("dimFeatures"))
-        
-        inputShape = Input(shape=(dimMatrix, dimMatrix, dimFeatures))  # adapt this if using `channels_first` image data format
+        inputShape = Input(shape=(dimMatrix, dimMatrix, dimSourceFeatures))  # adapt this if using `channels_first` image data format
 
         x = Conv2D(8, (4, 4), activation='relu', padding='same')(inputShape)
         #x = UpSampling2D((2, 2))(x)
-        decoded = Conv2D(dimFeatures, (3, 3), activation='sigmoid', padding='same')(x)
+        decoded = Conv2D(dimTargetFeatures, (3, 3), activation='sigmoid', padding='same')(x)
  
 #         x = Conv2D(16, (3, 3), activation='relu', padding='same')(inputShape)
 #         x = MaxPooling2D((2, 2), padding='same')(x)
@@ -156,7 +154,7 @@ class KerasDetector(Detector):
         
         predMatrices = self.loadJSON(exampleFiles["devel"])
         predMatrices["predicted"] = self.devectorizePredictions(predictions)
-        self.matricesToHTML(self.model, {"devel":predMatrices}, {"devel":self.workDir + self.tag + "devel-predictions"})
+        self.matricesToHTML(self.model, predMatrices, self.workDir + self.tag + "devel-predictions.html")
         
         sys.exit()
     
@@ -186,24 +184,21 @@ class KerasDetector(Detector):
                     td.text = ",".join(featureNames)
         return table
     
-    def matricesToHTML(self, model, data, filePaths):
-        #featureSet = IdSet(filename=model.get(self.tag+"ids.features"), locked=True)
-        
+    def matricesToHTML(self, model, data, filePath):
         root = ET.Element('html')     
-        for setName in data:
-            sourceMatrices = data[setName]["source"]
-            targetMatrices = data[setName]["target"]
-            predMatrices = data[setName].get("predicted")
-            tokenLists = data[setName]["tokens"]
-            #numExamples = len(sourceMatrices)
-            for i in range(len(sourceMatrices)):
-                ET.SubElement(root, "p").text = str(i) + ": " + " ".join(tokenLists[i])
-                root.append(self.matrixToTable(sourceMatrices[i], tokenLists[i]))
-                root.append(self.matrixToTable(targetMatrices[i], tokenLists[i]))
-                if predMatrices is not None:
-                    root.append(self.matrixToTable(predMatrices[i], tokenLists[i]))
-            print >> sys.stderr, "Writing adjacency matrix visualization to", filePaths[setName] + ".html"
-            ETUtils.write(root, filePaths[setName] + ".html")
+        sourceMatrices = data["source"]
+        targetMatrices = data["target"]
+        predMatrices = data.get("predicted")
+        tokenLists = data["tokens"]
+        #numExamples = len(sourceMatrices)
+        for i in range(len(sourceMatrices)):
+            ET.SubElement(root, "p").text = str(i) + ": " + " ".join(tokenLists[i])
+            root.append(self.matrixToTable(sourceMatrices[i], tokenLists[i]))
+            root.append(self.matrixToTable(targetMatrices[i], tokenLists[i]))
+            if predMatrices is not None:
+                root.append(self.matrixToTable(predMatrices[i], tokenLists[i]))
+        print >> sys.stderr, "Writing adjacency matrix visualization to", filePath
+        ETUtils.write(root, filePath)
     
     def saveJSON(self, filePath, data):
         with gzip.open(filePath, "wt") as f:
@@ -214,7 +209,8 @@ class KerasDetector(Detector):
             return json.load(f)
     
     def devectorizePredictions(self, predictions):
-        featureSet = IdSet(filename=self.model.get(self.tag+"ids.features"), locked=True)
+        #sourceIds = IdSet(filename=self.model.get(self.tag+"ids.features"), locked=True)
+        targetIds = IdSet(filename=self.model.get(self.tag+"ids.classes"), locked=True)
         #dimFeatures = int(self.model.getStr("dimFeatures"))
         dimMatrix = int(self.model.getStr("dimMatrix"))
         rangeMatrix = range(dimMatrix)
@@ -229,13 +225,15 @@ class KerasDetector(Detector):
                     features = {}
                     devectorized[-1][-1].append(features)
                     maxFeature = predictions[exampleIndex][i][j]
-                    features[featureSet.getName(maxFeature)] = 1
+                    features[targetIds.getName(maxFeature)] = 1
         return devectorized
     
     def vectorizeMatrices(self, model):
         self.arrays = {}
-        featureSet = IdSet(filename=model.get(self.tag+"ids.features"), locked=True)
-        dimFeatures = int(model.getStr("dimFeatures"))
+        sourceIds = IdSet(filename=model.get(self.tag+"ids.features"), locked=True)
+        targetIds = IdSet(filename=model.get(self.tag+"ids.classes"), locked=True)
+        dimSourceFeatures = int(model.getStr("dimSourceFeatures"))
+        dimTargetFeatures = int(model.getStr("dimTargetFeatures"))
         dimMatrix = int(model.getStr("dimMatrix"))
         rangeMatrix = range(dimMatrix)
         dataSets = [(x, self.matrices[x]) for x in sorted(self.matrices.keys())]
@@ -247,20 +245,20 @@ class KerasDetector(Detector):
             targetMatrices = dataSetValue["target"]
             assert len(sourceMatrices) == len(targetMatrices)
             numExamples = len(sourceMatrices)
-            sourceArrays = np.zeros((numExamples, dimMatrix, dimMatrix, dimFeatures), dtype=np.float32)
-            targetArrays = np.zeros((numExamples, dimMatrix, dimMatrix, dimFeatures), dtype=np.float32)
+            sourceArrays = np.zeros((numExamples, dimMatrix, dimMatrix, dimSourceFeatures), dtype=np.float32)
+            targetArrays = np.zeros((numExamples, dimMatrix, dimMatrix, dimTargetFeatures), dtype=np.float32)
             for exampleIndex in range(numExamples):
                 sourceArray = sourceArrays[exampleIndex] #sourceArray = np.zeros((dimMatrix, dimMatrix, dimFeatures), dtype=np.float32)
                 targetArray = targetArrays[exampleIndex] #targetArray = np.zeros((dimMatrix, dimMatrix, dimFeatures), dtype=np.float32)
                 sourceMatrix = sourceMatrices.pop(0) #[exampleIndex]
                 targetMatrix = targetMatrices.pop(0) #[exampleIndex]
-                for matrix, array in [(sourceMatrix, sourceArray), (targetMatrix, targetArray)]:
+                for matrix, array, ids in [(sourceMatrix, sourceArray, sourceIds), (targetMatrix, targetArray, targetIds)]:
                     for i in rangeMatrix:
                         for j in rangeMatrix:
                             features = matrix[i][j]
                             #print features
                             for featureName in features:
-                                array[i][j][featureSet.getId(featureName)] = features[featureName]
+                                array[i][j][ids.getId(featureName)] = features[featureName]
             self.arrays[dataSetName] = {"source":sourceArrays, "target":targetArrays}
     
     def train(self, trainData=None, optData=None, model=None, combinedModel=None, exampleStyle=None, 

@@ -7,11 +7,14 @@ from Core.IdSet import IdSet
 class KerasExampleBuilder(ExampleBuilder):
     def __init__(self, style=None, classSet=None, featureSet=None, gazetteerFileName=None, skiplist=None):
         if classSet == None:
-            classSet = IdSet(1)
+            classSet = IdSet(0)
         if featureSet == None:
             featureSet = IdSet(0)
         
         ExampleBuilder.__init__(self, classSet, featureSet)
+        
+        self.sourceIds = self.featureSet
+        self.targetIds = self.classSet
         
         self._setDefaultParameters(["directed", "undirected", "cutoff", "annotated_only"])
         self.styles = self.getParameters(style)
@@ -39,8 +42,8 @@ class KerasExampleBuilder(ExampleBuilder):
 #             self.sourceMatrices = data["source"]
 #             self.targetMatrices = data["target"]
     
-    def setFeature(self, features, name, value=1):
-        self.featureSet.getId(name)
+    def setFeature(self, featureSet, features, name, value=1):
+        featureSet.getId(name)
         features[name] = value
         #features[self.featureSet.getId(name)] = value
         ##featureId = self.featureSet.getId(name)
@@ -120,17 +123,17 @@ class KerasExampleBuilder(ExampleBuilder):
                 elif i == j: # diagonal
                     #self.setFeature(sourceFeatures, "P:0")
                     token = sentenceGraph.tokens[i]
-                    self.setFeature(sourceFeatures, token.get("POS"))
+                    self.setFeature(self.sourceIds, sourceFeatures, token.get("POS"))
                     if len(sentenceGraph.tokenIsEntityHead[token]) > 0:
                         #self.setFeature(sourceFeatures, "E:1")
                         #self.setFeature(targetFeatures, "E:1")
                         for entity in sentenceGraph.tokenIsEntityHead[token]:
                             if entity.get("given") == "True":
-                                self.setFeature(sourceFeatures, entity.get("type"))
-                            self.setFeature(targetFeatures, entity.get("type"))
+                                self.setFeature(self.sourceIds, sourceFeatures, entity.get("type"))
+                            self.setFeature(self.targetIds, targetFeatures, entity.get("type"))
                     else:
-                        self.setFeature(sourceFeatures, "E:0")
-                        self.setFeature(targetFeatures, "E:0")
+                        self.setFeature(self.sourceIds, sourceFeatures, "E:0")
+                        self.setFeature(self.targetIds, targetFeatures, "E:0")
                 else:
                     # define source features
                     tI = sentenceGraph.tokens[i]
@@ -144,12 +147,12 @@ class KerasExampleBuilder(ExampleBuilder):
                             #self.setFeature(sourceFeatures, "P:T") # path true
                             #self.setFeature(sourceFeatures, "P:L", len(path)) # path length
                         for tokenIndex in (0, -1): #range(len(path)):
-                            self.setFeature(sourceFeatures, "T" + str(tokenIndex) + ":" + path[tokenIndex].get("POS"))
+                            self.setFeature(self.sourceIds, sourceFeatures, "T" + str(tokenIndex) + ":" + path[tokenIndex].get("POS"))
                         for k in range(1, len(path)):
                             for edge in depGraph.getEdges(path[k], path[k-1]) + depGraph.getEdges(path[k-1], path[k]):
-                                self.setFeature(sourceFeatures, edge[2].get("type"))
+                                self.setFeature(self.sourceIds, sourceFeatures, edge[2].get("type"))
                     else:
-                        self.setFeature(sourceFeatures, "D:0") # no path
+                        self.setFeature(self.sourceIds, sourceFeatures, "D:0") # no path
                     # define target features
                     intTypes = set()
                     intEdges = sentenceGraph.interactionGraph.getEdges(tI, tJ)
@@ -159,9 +162,9 @@ class KerasExampleBuilder(ExampleBuilder):
                         intTypes.add(intEdge[2].get("type"))
                     if len(intTypes) > 0:
                         for intType in sorted(list(intTypes)):
-                            self.setFeature(targetFeatures, intType)
+                            self.setFeature(self.targetIds, targetFeatures, intType)
                     else:
-                        self.setFeature(targetFeatures, "I:0")
+                        self.setFeature(self.targetIds, targetFeatures, "I:0")
                 sourceMatrix[-1].append(sourceFeatures)
                 targetMatrix[-1].append(targetFeatures)
         
