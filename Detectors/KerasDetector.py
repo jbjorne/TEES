@@ -139,6 +139,7 @@ class KerasDetector(Detector):
         #es_cb = EarlyStopping(monitor='val_loss', patience=10, verbose=1)
         #cp_cb = ModelCheckpoint(filepath=self.workDir + self.tag + 'model.hdf5', save_best_only=True, verbose=1)
         
+        #print "ARRAYS", self.arrays.keys()
         self.kerasModel.fit(self.arrays["train"]["source"], self.arrays["train"]["target"],
             epochs=1, #100,
             batch_size=128,
@@ -151,7 +152,7 @@ class KerasDetector(Detector):
         
         predMatrices = self.loadJSON(exampleFiles["devel"])
         predMatrices["predicted"] = self.devectorizePredictions(predictions)
-        self.matricesToHTML(self.model, {self.workDir + self.tag + "devel-predictions.html" + predMatrices})
+        self.matricesToHTML(self.model, {self.workDir + self.tag + "devel-predictions.html":predMatrices})
         
         sys.exit()
     
