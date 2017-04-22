@@ -92,23 +92,27 @@ class KerasDetector(Detector):
             self.dimFeatures = int(self.model.getStr("dimFeatures"))
         
         inputShape = Input(shape=(dimMatrix, dimMatrix, dimFeatures))  # adapt this if using `channels_first` image data format
- 
-        x = Conv2D(16, (3, 3), activation='relu', padding='same')(inputShape)
-        x = MaxPooling2D((2, 2), padding='same')(x)
-        x = Conv2D(8, (3, 3), activation='relu', padding='same')(x)
-        x = MaxPooling2D((2, 2), padding='same')(x)
-        x = Conv2D(8, (3, 3), activation='relu', padding='same')(x)
-        encoded = MaxPooling2D((2, 2), padding='same')(x)
-         
-        # at this point the representation is (4, 4, 8) i.e. 128-dimensional
-         
-        x = Conv2D(8, (3, 3), activation='relu', padding='same')(encoded)
-        x = UpSampling2D((2, 2))(x)
-        x = Conv2D(8, (3, 3), activation='relu', padding='same')(x)
-        x = UpSampling2D((2, 2))(x)
-        x = Conv2D(16, (3, 3), activation='relu')(x)
-        x = UpSampling2D((2, 2))(x)
+
+        x = Conv2D(8, (4, 4), activation='relu', padding='same')(inputShape)
+        #x = UpSampling2D((2, 2))(x)
         decoded = Conv2D(dimFeatures, (3, 3), activation='sigmoid', padding='same')(x)
+ 
+#         x = Conv2D(16, (3, 3), activation='relu', padding='same')(inputShape)
+#         x = MaxPooling2D((2, 2), padding='same')(x)
+#         x = Conv2D(8, (3, 3), activation='relu', padding='same')(x)
+#         x = MaxPooling2D((2, 2), padding='same')(x)
+#         x = Conv2D(8, (3, 3), activation='relu', padding='same')(x)
+#         encoded = MaxPooling2D((2, 2), padding='same')(x)
+#          
+#         # at this point the representation is (4, 4, 8) i.e. 128-dimensional
+#          
+#         x = Conv2D(8, (3, 3), activation='relu', padding='same')(encoded)
+#         x = UpSampling2D((2, 2))(x)
+#         x = Conv2D(8, (3, 3), activation='relu', padding='same')(x)
+#         x = UpSampling2D((2, 2))(x)
+#         x = Conv2D(16, (3, 3), activation='relu')(x)
+#         x = UpSampling2D((2, 2))(x)
+#         decoded = Conv2D(dimFeatures, (3, 3), activation='sigmoid', padding='same')(x)
         
         self.kerasModel = Model(inputShape, decoded)
         
@@ -131,7 +135,7 @@ class KerasDetector(Detector):
             batch_size=128,
             shuffle=True,
             validation_data=(self.arrays["devel"]["source"], self.arrays["devel"]["target"]),
-            callbacks=None)
+            verbose=3)
     
     def matrixToTable(self, matrix, tokens, featureSet):
         matrixRange = range(len(matrix) + 1)
