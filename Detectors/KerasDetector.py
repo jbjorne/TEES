@@ -143,7 +143,7 @@ class KerasDetector(Detector):
         
         print "ARRAYS", self.arrays.keys()
         self.kerasModel.fit(self.arrays["train"]["source"], self.arrays["train"]["target"],
-            epochs=1, #100,
+            epochs=100,
             batch_size=128,
             shuffle=True,
             validation_data=(self.arrays["devel"]["source"], self.arrays["devel"]["target"]))
