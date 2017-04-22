@@ -43,12 +43,14 @@ class KerasExampleBuilder(ExampleBuilder):
             self.targetMatrices = data["target"]
     
     def setFeature(self, features, name, value=1):
-        features[self.featureSet.getId(name)] = value
-        #featureId = self.featureSet.getId(name)
-        #if self.stringKeys:
-        #    features[name] = value
-        #else:
-        #    features[featureId] = value
+        self.featureSet.getId(name)
+        features[name] = value
+        #features[self.featureSet.getId(name)] = value
+        ##featureId = self.featureSet.getId(name)
+        ##if self.stringKeys:
+        ##    features[name] = value
+        ##else:
+        ##    features[featureId] = value
     
     def getDirectionality(self, structureAnalyzer):
         if self.styles["directed"] == None and self.styles["undirected"] == None: # determine directedness from corpus
