@@ -52,25 +52,20 @@ class KerasDetector(Detector):
         self.exampleBuilder.structureAnalyzer = self.structureAnalyzer
         self.matrices = {}
         modelChanged = False
-        for setName, data, output, gold in itertools.izip_longest(setNames, datas, outputs, golds, fillvalue=[]):
+        for setName, data, output, gold in itertools.izip_longest(setNames, datas, outputs, golds, fillvalue=None):
             print >> sys.stderr, "Example generation for set", setName, "to file", output
-            if not isinstance(data, (list, tuple)): data = [data]
-            if not isinstance(gold, (list, tuple)): gold = [gold]
-            #builders = {}
-            for dataSet, goldSet in itertools.izip_longest(data, gold, fillvalue=None):
-                if dataSet != None:
-                    if saveIdsToModel:
-                        modelChanged = True
-                    builder = self.exampleBuilder.run(dataSet, output, parse, None, exampleStyle, model.get(self.tag+"ids.classes", 
-                        True), model.get(self.tag+"ids.features", True), goldSet, False, saveIdsToModel,
-                        structureAnalyzer=self.structureAnalyzer)
-                    model.addStr("dimFeatures", str(len(builder.featureSet.Ids)))
-                    model.addStr("dimMatrix", str(builder.dimMatrix))
-                    examples =  {"source":builder.sourceMatrices, "target":builder.targetMatrices, "tokens":builder.tokenLists, "setName":setName}
-                    print >> sys.stderr, "Saving examples to", output
-                    self.saveJSON(output, examples)
-                    #builders[dataSet].saveMatrices(output)
-                    self.matrices[setName] = examples
+            if saveIdsToModel:
+                modelChanged = True
+            builder = self.exampleBuilder.run(data, output, parse, None, exampleStyle, model.get(self.tag+"ids.classes", 
+                True), model.get(self.tag+"ids.features", True), gold, False, saveIdsToModel,
+                structureAnalyzer=self.structureAnalyzer)
+            model.addStr("dimFeatures", str(len(builder.featureSet.Ids)))
+            model.addStr("dimMatrix", str(builder.dimMatrix))
+            examples =  {"source":builder.sourceMatrices, "target":builder.targetMatrices, "tokens":builder.tokenLists, "setName":setName}
+            print >> sys.stderr, "Saving examples to", output
+            self.saveJSON(output, examples)
+            #builders[dataSet].saveMatrices(output)
+            self.matrices[setName] = examples
                     
 #             for setName in builders:
 #                 self.dimFeatures = len(builders[dataSet].featureSet.Ids)
@@ -88,7 +83,7 @@ class KerasDetector(Detector):
         if modelChanged:
             model.save()
         
-        self.matricesToHTML(model, self.matrices)
+        self.matricesToHTML(model, self.matrices, {x[0]:x[1] for x in zip(setNames, outputs)})
         #sys.exit()
     
     def defineModel(self):
@@ -161,7 +156,7 @@ class KerasDetector(Detector):
         
         predMatrices = self.loadJSON(exampleFiles["devel"])
         predMatrices["predicted"] = self.devectorizePredictions(predictions)
-        self.matricesToHTML(self.model, {self.workDir + self.tag + "devel-predictions.html":predMatrices})
+        self.matricesToHTML(self.model, {"devel":predMatrices}, {"devel":self.workDir + self.tag + "devel-predictions"})
         
         sys.exit()
     
@@ -191,15 +186,15 @@ class KerasDetector(Detector):
                     td.text = ",".join(featureNames)
         return table
     
-    def matricesToHTML(self, model, data):
+    def matricesToHTML(self, model, data, filePaths):
         #featureSet = IdSet(filename=model.get(self.tag+"ids.features"), locked=True)
         
         root = ET.Element('html')     
-        for outPathStem in data:
-            sourceMatrices = data[outPathStem]["source"]
-            targetMatrices = data[outPathStem]["target"]
-            predMatrices = data[outPathStem].get("predicted")
-            tokenLists = data[outPathStem]["tokens"]
+        for setName in data:
+            sourceMatrices = data[setName]["source"]
+            targetMatrices = data[setName]["target"]
+            predMatrices = data[setName].get("predicted")
+            tokenLists = data[setName]["tokens"]
             #numExamples = len(sourceMatrices)
             for i in range(len(sourceMatrices)):
                 ET.SubElement(root, "p").text = str(i) + ": " + " ".join(tokenLists[i])
@@ -207,7 +202,8 @@ class KerasDetector(Detector):
                 root.append(self.matrixToTable(targetMatrices[i], tokenLists[i]))
                 if predMatrices is not None:
                     root.append(self.matrixToTable(predMatrices[i], tokenLists[i]))
-            ETUtils.write(root, outPathStem + ".html")
+            print >> sys.stderr, "Writing adjacency matrix visualization to", filePaths[setName] + ".html"
+            ETUtils.write(root, filePaths[setName] + ".html")
     
     def saveJSON(self, filePath, data):
         with gzip.open(filePath, "wt") as f:
