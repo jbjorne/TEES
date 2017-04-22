@@ -144,14 +144,9 @@ class KerasDetector(Detector):
         
         print >> sys.stderr, "Predicting devel examples"
         predictions = self.kerasModel.predict(self.arrays["devel"]["source"], 128, 1)
-        predictions = np.argmax(predictions, axis=-1)
-        self.predictionsToDicts(predictions)
+        print self.devectorizePredictions(predictions)
         
         sys.exit()
-    
-    def predictionsToDicts(self, predictions):
-        for exampleIndex in range(predictions.shape[0]):
-            print predictions[exampleIndex]
     
     def matrixToTable(self, matrix, tokens, featureSet):
         matrixRange = range(len(matrix) + 1)
@@ -192,6 +187,25 @@ class KerasDetector(Detector):
                 root.append(self.matrixToTable(sourceMatrices[i], tokenLists[i], featureSet))
                 root.append(self.matrixToTable(targetMatrices[i], tokenLists[i], featureSet))
             ETUtils.write(root, outPathStem + ".html")
+    
+    def devectorizePredictions(self, predictions):
+        featureSet = IdSet(filename=self.model.get(self.tag+"ids.features"), locked=True)
+        #dimFeatures = int(self.model.getStr("dimFeatures"))
+        dimMatrix = int(self.model.getStr("dimMatrix"))
+        rangeMatrix = range(dimMatrix)
+        predictions = np.argmax(predictions, axis=-1)
+        devectorized = []
+        for exampleIndex in range(predictions.shape[0]):
+            #print predictions[exampleIndex]
+            devectorized.append([])
+            for i in rangeMatrix:
+                devectorized[-1].append([])
+                for j in rangeMatrix:
+                    features = {}
+                    devectorized[-1][-1].append(features)
+                    maxFeature = predictions[exampleIndex][i][j]
+                    features[featureSet.getName(maxFeature)] = 1
+        return devectorized
     
     def vectorizeMatrices(self, model):
         self.arrays = {}
