@@ -136,13 +136,22 @@ class KerasDetector(Detector):
         #cp_cb = ModelCheckpoint(filepath=self.workDir + self.tag + 'model.hdf5', save_best_only=True, verbose=1)
         
         self.kerasModel.fit(self.arrays["train"]["source"], self.arrays["train"]["target"],
-            epochs=100,
+            epochs=1, #100,
             batch_size=128,
             shuffle=True,
             validation_data=(self.arrays["devel"]["source"], self.arrays["devel"]["target"]))
             #callbacks=[es_cb])#, cp_cb])
         
+        print >> sys.stderr, "Predicting devel examples"
+        predictions = self.kerasModel.predict(self.arrays["devel"]["source"], 128, 1)
+        predictions = np.argmax(predictions, axis=-1)
+        self.predictionsToDicts(predictions)
+        
         sys.exit()
+    
+    def predictionsToDicts(self, predictions):
+        for exampleIndex in range(predictions.shape[0]):
+            print predictions[exampleIndex]
     
     def matrixToTable(self, matrix, tokens, featureSet):
         matrixRange = range(len(matrix) + 1)
