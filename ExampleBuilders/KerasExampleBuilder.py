@@ -133,7 +133,7 @@ class KerasExampleBuilder(ExampleBuilder):
                             self.setFeature(self.targetIds, targetFeatures, entity.get("type"))
                     else:
                         self.setFeature(self.sourceIds, sourceFeatures, "E:0")
-                        self.setFeature(self.targetIds, targetFeatures, "E:0")
+                        #self.setFeature(self.targetIds, targetFeatures, "E:0")
                 else:
                     # define source features
                     tI = sentenceGraph.tokens[i]
@@ -164,7 +164,7 @@ class KerasExampleBuilder(ExampleBuilder):
                         for intType in sorted(list(intTypes)):
                             self.setFeature(self.targetIds, targetFeatures, intType)
                     else:
-                        self.setFeature(self.targetIds, targetFeatures, "I:0")
+                        pass #self.setFeature(self.targetIds, targetFeatures, "I:0")
                 sourceMatrix[-1].append(sourceFeatures)
                 targetMatrix[-1].append(targetFeatures)
         

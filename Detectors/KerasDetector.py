@@ -99,9 +99,9 @@ class KerasDetector(Detector):
         print >> sys.stderr, "Defining model"
         inputShape = Input(shape=(dimMatrix, dimMatrix, dimSourceFeatures))  # adapt this if using `channels_first` image data format
 
-        x = Conv2D(8, (4, 4), activation='relu', padding='same')(inputShape)
-        #x = UpSampling2D((2, 2))(x)
-        decoded = Conv2D(dimTargetFeatures, (3, 3), activation='sigmoid', padding='same')(x)
+#         x = Conv2D(8, (4, 4), activation='relu', padding='same')(inputShape)
+#         #x = UpSampling2D((2, 2))(x)
+#         decoded = Conv2D(dimTargetFeatures, (3, 3), activation='sigmoid', padding='same')(x)
  
 #         x = Conv2D(16, (3, 3), activation='relu', padding='same')(inputShape)
 #         x = MaxPooling2D((2, 2), padding='same')(x)
@@ -120,7 +120,11 @@ class KerasDetector(Detector):
 #         x = UpSampling2D((2, 2))(x)
 #         decoded = Conv2D(dimFeatures, (3, 3), activation='sigmoid', padding='same')(x)
         
-        self.kerasModel = Model(inputShape, decoded)
+        
+        x = Conv2D(16, (3, 3), padding='same')(inputShape)
+        output = Conv2D(dimTargetFeatures, (1, 1), activation='tanh', padding='same')(x)
+        
+        self.kerasModel = Model(inputShape, output)
         
         print >> sys.stderr, "Compiling model"
         self.kerasModel.compile(optimizer='adadelta', loss='binary_crossentropy', metrics=['accuracy'])
