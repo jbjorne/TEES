@@ -8,6 +8,7 @@ import xml.etree.ElementTree as ET
 import Utils.ElementTreeUtils as ETUtils
 from Core.IdSet import IdSet
 from keras.models import Sequential
+from keras.callbacks import EarlyStopping, ModelCheckpoint
 
 class KerasDetector(Detector):
 
@@ -117,7 +118,7 @@ class KerasDetector(Detector):
         self.kerasModel = Model(inputShape, decoded)
         
         print >> sys.stderr, "Compiling model"
-        self.kerasModel.compile(optimizer='adadelta', loss='binary_crossentropy')
+        self.kerasModel.compile(optimizer='adadelta', loss='binary_crossentropy', metrics=['accuracy'])
 
     def fitModel(self, exampleFiles):
         if self.matrices == None:
@@ -130,12 +131,18 @@ class KerasDetector(Detector):
         if self.arrays == None:
             self.vectorizeMatrices(self.model)
         print >> sys.stderr, "Fitting model"
+        
+        #es_cb = EarlyStopping(monitor='val_loss', patience=10, verbose=1)
+        #cp_cb = ModelCheckpoint(filepath=self.workDir + self.tag + 'model.hdf5', save_best_only=True, verbose=1)
+        
         self.kerasModel.fit(self.arrays["train"]["source"], self.arrays["train"]["target"],
             epochs=100,
             batch_size=128,
             shuffle=True,
-            validation_data=(self.arrays["devel"]["source"], self.arrays["devel"]["target"]),
-            verbose=3)
+            validation_data=(self.arrays["devel"]["source"], self.arrays["devel"]["target"]))
+            #callbacks=[es_cb])#, cp_cb])
+        
+        sys.exit()
     
     def matrixToTable(self, matrix, tokens, featureSet):
         matrixRange = range(len(matrix) + 1)
