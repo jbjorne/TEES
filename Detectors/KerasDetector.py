@@ -9,6 +9,8 @@ import Utils.ElementTreeUtils as ETUtils
 from Core.IdSet import IdSet
 from keras.models import Sequential
 from keras.callbacks import EarlyStopping, ModelCheckpoint
+import gzip
+import json
 
 class KerasDetector(Detector):
 
@@ -66,7 +68,8 @@ class KerasDetector(Detector):
                 self.dimFeatures = len(builders[dataSet].featureSet.Ids)
                 model.addStr("dimFeatures", str(self.dimFeatures))
                 model.addStr("dimMatrix", str(builders[dataSet].dimMatrix))
-                builders[dataSet].saveMatrices(output)
+                self.saveJSON(output, {"source":builders[dataSet].sourceMatrices, "target":builders[dataSet].targetMatrices, "tokens":builders[dataSet].tokenLists})
+                #builders[dataSet].saveMatrices(output)
                 self.matrices[output] = {"source":builders[dataSet].sourceMatrices, "target":builders[dataSet].targetMatrices, "tokens":builders[dataSet].tokenLists}
                     
         if hasattr(self.structureAnalyzer, "typeMap") and model.mode != "r":
@@ -76,7 +79,7 @@ class KerasDetector(Detector):
         if modelChanged:
             model.save()
         
-        self.matricesToHTML(model)
+        self.matricesToHTML(model, self.matrices)
         #sys.exit()
     
     def defineModel(self):
@@ -125,9 +128,10 @@ class KerasDetector(Detector):
             self.matrices = {}
             for dataSet in exampleFiles:
                 print >> sys.stderr, "Loading dataset", dataSet, "from", exampleFiles[dataSet]
-                builder = self.exampleBuilder()
-                builder.loadMatrices(exampleFiles[dataSet])
-                self.matrices[dataSet] = {"source":builder.sourceMatrices, "target":builder.targetMatrices}
+                #builder = self.exampleBuilder()
+                #builder.loadMatrices(exampleFiles[dataSet])
+                #self.matrices[dataSet] = {"source":builder.sourceMatrices, "target":builder.targetMatrices}
+                self.matrices[dataSet] = self.loadJSON(exampleFiles[dataSet])
         if self.arrays == None:
             self.vectorizeMatrices(self.model)
         print >> sys.stderr, "Fitting model"
@@ -144,11 +148,14 @@ class KerasDetector(Detector):
         
         print >> sys.stderr, "Predicting devel examples"
         predictions = self.kerasModel.predict(self.arrays["devel"]["source"], 128, 1)
-        print self.devectorizePredictions(predictions)
+        
+        predMatrices = self.loadJSON(exampleFiles["devel"])
+        predMatrices["predicted"] = self.devectorizePredictions(predictions)
+        self.matricesToHTML(self.model, {self.workDir + self.tag + "devel-predictions.html" + predMatrices})
         
         sys.exit()
     
-    def matrixToTable(self, matrix, tokens, featureSet):
+    def matrixToTable(self, matrix, tokens):
         matrixRange = range(len(matrix) + 1)
         table = ET.Element('table', {"border":"1"})
         for i in matrixRange:
@@ -156,37 +163,49 @@ class KerasDetector(Detector):
             for j in matrixRange:
                 td = ET.SubElement(tr, 'td')
                 if i == 0 or j == 0:
-                    if i != 0 and i > 0 and i <= len(tokens): td.text = tokens[i - 1].get("text")
-                    elif j != 0 and j > 0 and j <= len(tokens): td.text = tokens[j - 1].get("text")
+                    if i != 0 and i > 0 and i <= len(tokens): td.text = tokens[i - 1]
+                    elif j != 0 and j > 0 and j <= len(tokens): td.text = tokens[j - 1]
                 else:
                     if i == j:
                         td.set("bgcolor", "#FF0000")
                     features = matrix[i - 1][j - 1]
-                    featureNames = []
-                    for featureId in features:
-                        name = featureSet.getName(featureId)
-                        value = features[featureId]
-                        if value != 1:
-                            name += "=" + str(value)
-                        featureNames.append(name)
+                    featureNames = features.keys() #[]
+#                     for featureId in features:
+#                         name = featureSet.getName(featureId)
+#                         assert name != None
+#                         value = features[featureId]
+#                         if value != 1:
+#                             name += "=" + str(value)
+#                         featureNames.append(name)
                     featureNames.sort()
                     td.text = ",".join(featureNames)
         return table
     
-    def matricesToHTML(self, model):
-        featureSet = IdSet(filename=model.get(self.tag+"ids.features"), locked=True)
+    def matricesToHTML(self, model, data):
+        #featureSet = IdSet(filename=model.get(self.tag+"ids.features"), locked=True)
         
         root = ET.Element('html')     
-        for outPathStem in self.matrices:
-            sourceMatrices = self.matrices[outPathStem]["source"]
-            tokenLists = self.matrices[outPathStem]["tokens"]
-            targetMatrices = self.matrices[outPathStem]["target"]
+        for outPathStem in data:
+            sourceMatrices = data[outPathStem]["source"]
+            targetMatrices = data[outPathStem]["target"]
+            predMatrices = data[outPathStem].get("predicted")
+            tokenLists = data[outPathStem]["tokens"]
             #numExamples = len(sourceMatrices)
             for i in range(len(sourceMatrices)):
-                ET.SubElement(root, "p").text = str(i) + ": " + " ".join([x.get("text") for x in tokenLists[i]])
-                root.append(self.matrixToTable(sourceMatrices[i], tokenLists[i], featureSet))
-                root.append(self.matrixToTable(targetMatrices[i], tokenLists[i], featureSet))
+                ET.SubElement(root, "p").text = str(i) + ": " + " ".join(tokenLists[i])
+                root.append(self.matrixToTable(sourceMatrices[i], tokenLists[i]))
+                root.append(self.matrixToTable(targetMatrices[i], tokenLists[i]))
+                if predMatrices is not None:
+                    root.append(self.matrixToTable(predMatrices[i], tokenLists[i]))
             ETUtils.write(root, outPathStem + ".html")
+    
+    def saveJSON(self, filePath, data):
+        with gzip.open(filePath, "wt") as f:
+            json.dump(data, f)
+    
+    def loadJSON(self, filePath):
+        with gzip.open(filePath, "rt") as f:
+            return json.load(f)
     
     def devectorizePredictions(self, predictions):
         featureSet = IdSet(filename=self.model.get(self.tag+"ids.features"), locked=True)

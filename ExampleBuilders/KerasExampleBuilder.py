@@ -3,16 +3,13 @@ thisPath = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.abspath(os.path.join(thisPath,"..")))
 from ExampleBuilder import ExampleBuilder
 from Core.IdSet import IdSet
-import numpy as np
-import gzip
-import json
 
 class KerasExampleBuilder(ExampleBuilder):
     def __init__(self, style=None, classSet=None, featureSet=None, gazetteerFileName=None, skiplist=None):
         if classSet == None:
             classSet = IdSet(1)
         if featureSet == None:
-            featureSet = IdSet()
+            featureSet = IdSet(0)
         
         ExampleBuilder.__init__(self, classSet, featureSet)
         
@@ -31,16 +28,16 @@ class KerasExampleBuilder(ExampleBuilder):
     #def processSentence(self, sentence, outfile, goldSentence=None, structureAnalyzer=None):
         #return ExampleBuilder.processSentence(self, sentence, outfile, goldSentence=goldSentence, structureAnalyzer=structureAnalyzer)
     
-    def saveMatrices(self, filePath):
-        assert self.sourceMatrices != None and self.targetMatrices != None
-        with gzip.open(filePath, "wt") as f:
-            json.dump({"source":self.sourceMatrices, "target":self.targetMatrices}, f)
-    
-    def loadMatrices(self, filePath):
-        with gzip.open(filePath, "rt") as f:
-            data = json.load(f)
-            self.sourceMatrices = data["source"]
-            self.targetMatrices = data["target"]
+#     def saveMatrices(self, filePath):
+#         assert self.sourceMatrices != None and self.targetMatrices != None
+#         with gzip.open(filePath, "wt") as f:
+#             json.dump({"source":self.sourceMatrices, "target":self.targetMatrices}, f)
+#     
+#     def loadMatrices(self, filePath):
+#         with gzip.open(filePath, "rt") as f:
+#             data = json.load(f)
+#             self.sourceMatrices = data["source"]
+#             self.targetMatrices = data["target"]
     
     def setFeature(self, features, name, value=1):
         self.featureSet.getId(name)
@@ -111,7 +108,7 @@ class KerasExampleBuilder(ExampleBuilder):
         numTokens = len(sentenceGraph.tokens)
         sourceMatrix = []
         targetMatrix = []
-        tokenList = [x for x in sentenceGraph.tokens]
+        tokenList = [x.get("text") for x in sentenceGraph.tokens]
         for i in self.rangeMatrix:
             sourceMatrix.append([])
             targetMatrix.append([])
