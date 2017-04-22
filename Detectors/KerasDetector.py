@@ -43,7 +43,7 @@ class KerasDetector(Detector):
 #                 assert model.mode in ["a", "w"]
 #                 model.save()
     
-    def buildExamples(self, model, datas, outputs, golds=[], exampleStyle=None, saveIdsToModel=False, parse=None):
+    def buildExamples(self, model, setNames, datas, outputs, golds=[], exampleStyle=None, saveIdsToModel=False, parse=None):
         if exampleStyle == None:
             exampleStyle = model.getStr(self.tag+"example-style")
         if parse == None:
@@ -52,25 +52,34 @@ class KerasDetector(Detector):
         self.exampleBuilder.structureAnalyzer = self.structureAnalyzer
         self.matrices = {}
         modelChanged = False
-        for data, output, gold in itertools.izip_longest(datas, outputs, golds, fillvalue=[]):
-            print >> sys.stderr, "Example generation for", output
+        for setName, data, output, gold in itertools.izip_longest(setNames, datas, outputs, golds, fillvalue=[]):
+            print >> sys.stderr, "Example generation for set", setName, "to file", output
             if not isinstance(data, (list, tuple)): data = [data]
             if not isinstance(gold, (list, tuple)): gold = [gold]
-            builders = {}
+            #builders = {}
             for dataSet, goldSet in itertools.izip_longest(data, gold, fillvalue=None):
                 if dataSet != None:
                     if saveIdsToModel:
                         modelChanged = True
-                    builders[dataSet] = self.exampleBuilder.run(dataSet, output, parse, None, exampleStyle, model.get(self.tag+"ids.classes", 
+                    builder = self.exampleBuilder.run(dataSet, output, parse, None, exampleStyle, model.get(self.tag+"ids.classes", 
                         True), model.get(self.tag+"ids.features", True), goldSet, False, saveIdsToModel,
                         structureAnalyzer=self.structureAnalyzer)
-            for dataSet in builders:
-                self.dimFeatures = len(builders[dataSet].featureSet.Ids)
-                model.addStr("dimFeatures", str(self.dimFeatures))
-                model.addStr("dimMatrix", str(builders[dataSet].dimMatrix))
-                self.saveJSON(output, {"source":builders[dataSet].sourceMatrices, "target":builders[dataSet].targetMatrices, "tokens":builders[dataSet].tokenLists})
-                #builders[dataSet].saveMatrices(output)
-                self.matrices[output] = {"source":builders[dataSet].sourceMatrices, "target":builders[dataSet].targetMatrices, "tokens":builders[dataSet].tokenLists}
+                    model.addStr("dimFeatures", str(len(builder.featureSet.Ids)))
+                    model.addStr("dimMatrix", str(builder.dimMatrix))
+                    examples =  {"source":builder.sourceMatrices, "target":builder.targetMatrices, "tokens":builder.tokenLists, "setName":setName}
+                    print >> sys.stderr, "Saving examples to", output
+                    self.saveJSON(output, examples)
+                    #builders[dataSet].saveMatrices(output)
+                    self.matrices[setName] = examples
+                    
+#             for setName in builders:
+#                 self.dimFeatures = len(builders[dataSet].featureSet.Ids)
+#                 model.addStr("dimFeatures", str(self.dimFeatures))
+#                 model.addStr("dimMatrix", str(builders[dataSet].dimMatrix))
+#                 examples =  {"source":builders[dataSet].sourceMatrices, "target":builders[dataSet].targetMatrices, "tokens":builders[dataSet].tokenLists, "setName":setName}
+#                 self.saveJSON(output, examples)
+#                 #builders[dataSet].saveMatrices(output)
+#                 self.matrices[setName] = examples
                     
         if hasattr(self.structureAnalyzer, "typeMap") and model.mode != "r":
             print >> sys.stderr, "Saving StructureAnalyzer.typeMap"
@@ -126,12 +135,12 @@ class KerasDetector(Detector):
     def fitModel(self, exampleFiles):
         if self.matrices == None:
             self.matrices = {}
-            for dataSet in exampleFiles:
-                print >> sys.stderr, "Loading dataset", dataSet, "from", exampleFiles[dataSet]
+            for setName in exampleFiles:
+                print >> sys.stderr, "Loading dataset", setName, "from", exampleFiles[setName]
                 #builder = self.exampleBuilder()
                 #builder.loadMatrices(exampleFiles[dataSet])
                 #self.matrices[dataSet] = {"source":builder.sourceMatrices, "target":builder.targetMatrices}
-                self.matrices[dataSet] = self.loadJSON(exampleFiles[dataSet])
+                self.matrices[setName] = self.loadJSON(exampleFiles[setName])
         if self.arrays == None:
             self.vectorizeMatrices(self.model)
         print >> sys.stderr, "Fitting model"
@@ -139,7 +148,7 @@ class KerasDetector(Detector):
         #es_cb = EarlyStopping(monitor='val_loss', patience=10, verbose=1)
         #cp_cb = ModelCheckpoint(filepath=self.workDir + self.tag + 'model.hdf5', save_best_only=True, verbose=1)
         
-        #print "ARRAYS", self.arrays.keys()
+        print "ARRAYS", self.arrays.keys()
         self.kerasModel.fit(self.arrays["train"]["source"], self.arrays["train"]["target"],
             epochs=1, #100,
             batch_size=128,
@@ -276,7 +285,7 @@ class KerasDetector(Detector):
         self.model = self.openModel(model, "a") # Devel model already exists, with ids etc
         exampleFiles = {"devel":self.workDir+self.tag+"opt-examples.json.gz", "train":self.workDir+self.tag+"train-examples.json.gz"}
         if self.checkStep("EXAMPLES"):
-            self.buildExamples(self.model, [optData, trainData], [exampleFiles["devel"], exampleFiles["train"]], saveIdsToModel=True)
+            self.buildExamples(self.model, ["devel", "train"], [optData, trainData], [exampleFiles["devel"], exampleFiles["train"]], saveIdsToModel=True)
         #self.beginModel("BEGIN-MODEL", self.model, [self.workDir+self.tag+"train-examples.gz"], self.workDir+self.tag+"opt-examples.gz")
         if self.checkStep("DEFINE-MODEL"):
             self.defineModel()
