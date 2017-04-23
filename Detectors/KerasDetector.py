@@ -12,7 +12,7 @@ import json
 from keras.layers import Input, Dense, Conv2D, MaxPooling2D, UpSampling2D
 from keras.models import Model, Sequential
 from keras.layers.normalization import BatchNormalization
-from keras.layers.core import Activation, Reshape, Permute
+from keras.layers.core import Activation, Reshape, Permute, Dropout
 from keras.optimizers import SGD
 
 class KerasDetector(Detector):
@@ -114,17 +114,19 @@ class KerasDetector(Detector):
         
         print >> sys.stderr, "Defining model"
         x = inputShape = Input(shape=(dimMatrix, dimMatrix, dimSourceFeatures))
-        x = Conv2D(64, (3, 3), activation='sigmoid', padding='same')(x)
-        x = Conv2D(32, (3, 3), activation='sigmoid', padding='same')(x)
-        x = Conv2D(dimTargetFeatures, (3, 3), activation='sigmoid', padding='same')(x)
-        x = Conv2D(dimTargetFeatures, (1, 1), activation='sigmoid', padding='same')(x)
-        #x = Conv2D(16, (1, 9), activation='relu', padding='same')(inputShape)
-        #x = Conv2D(16, (9, 1), activation='relu', padding='same')(x)
+        x = Conv2D(dimSourceFeatures, (1, 1), activation="relu", padding='same')(x)
+        x = Dense(dimSourceFeatures, activation="relu")(x)
+        #x = Conv2D(dimSourceFeatures, (3, 3), padding='same')(x)
+        #x = Conv2D(16, (1, 3), padding='same')(x)
+        #x = Conv2D(16, (3, 1), padding='same')(x)
+        x = Dropout(0.5)(x)
+        #x = Conv2D(16, (1, 1), padding='same')(x)
+        #x = Conv2D(16, (1, 1), padding='same')(x)
         #x = MaxPooling2D((2, 2))(x)
-        #x = Dense(100)(inputShape)
-        #x = Conv2D(16, (3, 3), activation='relu', padding='same')(x)
-        #x = Dense(100)(x)
-        #x = Conv2D(dimTargetFeatures, (1, 1), activation='sigmoid', padding='same')(x)
+        #x = Dense(18)(x)
+        #x = Dense(128)(x)
+        #x = Dense(dimTargetFeatures, activation='sigmoid')(x)
+        x = Conv2D(dimTargetFeatures, (1, 1), activation='sigmoid', padding='same')(x)
         #x = UpSampling2D((2, 2))(x)
         #x = Activation('softmax')(x)
         self.kerasModel = Model(inputShape, x)

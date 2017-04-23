@@ -99,7 +99,7 @@ class KerasExampleBuilder(ExampleBuilder):
         sourceMatrix = []
         targetMatrix = []
         tokenList = [x.get("text") for x in sentenceGraph.tokens]
-        negValue = 0.001
+        negValue = 0.000001 #0.001
         sourceEntityFeatures = self.getEntityTypeFeatures(sentenceGraph.tokens, True, negValue, sentenceGraph)
         targetEntityFeatures = self.getEntityTypeFeatures(sentenceGraph.tokens, False, negValue, sentenceGraph)
         for i in self.rangeMatrix:
