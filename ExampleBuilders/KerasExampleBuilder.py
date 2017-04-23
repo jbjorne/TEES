@@ -30,7 +30,7 @@ class KerasExampleBuilder(ExampleBuilder):
         if self.styles["cutoff"]:
             self.styles["cutoff"] = int(self.styles["cutoff"])
         
-        self.dimMatrix = 50
+        self.dimMatrix = 48
         self.rangeMatrix = range(self.dimMatrix)
         self.sourceMatrices = []
         self.targetMatrices = []

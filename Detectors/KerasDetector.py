@@ -14,6 +14,7 @@ from keras.models import Model, Sequential
 from keras.layers.normalization import BatchNormalization
 from keras.layers.core import Activation, Reshape, Permute, Dropout
 from keras.optimizers import SGD
+from keras.layers.local import LocallyConnected2D
 
 class KerasDetector(Detector):
     """
@@ -113,24 +114,28 @@ class KerasDetector(Detector):
         dimMatrix = int(self.model.getStr("dimMatrix")) # The width/height of both the source and target matrix
         
         print >> sys.stderr, "Defining model"
-        x = inputShape = Input(shape=(dimMatrix, dimMatrix, dimSourceFeatures))
-        x = Conv2D(dimSourceFeatures, (1, 1), activation="relu", padding='same')(x)
-        x = Dense(dimSourceFeatures, activation="relu")(x)
-        #x = Conv2D(dimSourceFeatures, (3, 3), padding='same')(x)
-        #x = Conv2D(16, (1, 3), padding='same')(x)
-        #x = Conv2D(16, (3, 1), padding='same')(x)
-        x = Dropout(0.5)(x)
-        #x = Conv2D(16, (1, 1), padding='same')(x)
-        #x = Conv2D(16, (1, 1), padding='same')(x)
-        #x = MaxPooling2D((2, 2))(x)
-        #x = Dense(18)(x)
-        #x = Dense(128)(x)
-        #x = Dense(dimTargetFeatures, activation='sigmoid')(x)
-        x = Conv2D(dimTargetFeatures, (1, 1), activation='sigmoid', padding='same')(x)
-        #x = UpSampling2D((2, 2))(x)
-        #x = Activation('softmax')(x)
-        self.kerasModel = Model(inputShape, x)
-        self.kerasModel.compile(optimizer="adadelta", loss='categorical_crossentropy', metrics=['accuracy'])
+#         x = inputShape = Input(shape=(dimMatrix, dimMatrix, dimSourceFeatures))
+#         #x = Conv2D(dimSourceFeatures, (1, 1), activation="relu", padding='same')(x)
+#         #x = Dense(dimSourceFeatures, activation="relu")(x)
+#         #x = Conv2D(dimSourceFeatures, (3, 3), padding='same')(x)
+#         x = Conv2D(32, (1, 3), padding='same')(x)
+#         x = MaxPooling2D((2, 2))(x)
+#         x = Conv2D(32, (3, 1), padding='same')(x)
+#         x = MaxPooling2D((2, 2))(x)
+#         x = UpSampling2D((2, 2))(x)
+#         x = UpSampling2D((2, 2))(x)
+#         #x = Dropout(0.5)(x)
+#         #x = Conv2D(16, (1, 1), padding='same')(x)
+#         #x = Conv2D(16, (1, 1), padding='same')(x)
+#         #x = MaxPooling2D((2, 2))(x)
+#         #x = Dense(18)(x)
+#         #x = Dense(128)(x)
+#         #x = Dense(dimTargetFeatures, activation='sigmoid')(x)
+#         x = Conv2D(dimTargetFeatures, (1, 1), activation='sigmoid', padding='same')(x)
+#         #x = UpSampling2D((2, 2))(x)
+#         #x = Activation('softmax')(x)
+#         self.kerasModel = Model(inputShape, x)
+#         self.kerasModel.compile(optimizer="adadelta", loss='categorical_crossentropy', metrics=['accuracy'])
         
 #         x = Conv2D(4, (3, 3), activation='relu', padding='same')(inputShape)
 #         x = MaxPooling2D((2, 2))(x)
@@ -149,7 +154,7 @@ class KerasDetector(Detector):
 #             BatchNormalization(),
 #             Activation('relu'),
 #             MaxPooling2D()]
-#     
+#      
 #         decoding_layers = [
 #             UpSampling2D(),
 #             Conv2D(dimTargetFeatures, (kernel, kernel), padding='same'),
@@ -161,16 +166,128 @@ class KerasDetector(Detector):
 #             Conv2D(dimTargetFeatures, (kernel, kernel), padding='same'),
 #             BatchNormalization(),
 #             Activation('relu')]
-#         
+#          
 #         self.kerasModel = Sequential()
 #         for l in encoding_layers + decoding_layers:
 #             self.kerasModel.add(l)
+        
+        kernel = 3
+        
+        encoding_layers = [
+            Conv2D(64, kernel, kernel, border_mode='same', input_shape=(dimMatrix, dimMatrix, dimSourceFeatures)),
+            BatchNormalization(),
+            Activation('relu'),
+            Conv2D(64, kernel, kernel, border_mode='same'),
+            BatchNormalization(),
+            Activation('relu'),
+            MaxPooling2D(),
+        
+            Conv2D(128, kernel, kernel, border_mode='same'),
+            BatchNormalization(),
+            Activation('relu'),
+            Conv2D(128, kernel, kernel, border_mode='same'),
+            BatchNormalization(),
+            Activation('relu'),
+            MaxPooling2D(),
+        
+            Conv2D(256, kernel, kernel, border_mode='same'),
+            BatchNormalization(),
+            Activation('relu'),
+            Conv2D(256, kernel, kernel, border_mode='same'),
+            BatchNormalization(),
+            Activation('relu'),
+            Conv2D(256, kernel, kernel, border_mode='same'),
+            BatchNormalization(),
+            Activation('relu'),
+            MaxPooling2D(),
+        
+#             Conv2D(512, kernel, kernel, border_mode='same'),
+#             BatchNormalization(),
+#             Activation('relu'),
+#             Conv2D(512, kernel, kernel, border_mode='same'),
+#             BatchNormalization(),
+#             Activation('relu'),
+#             Conv2D(512, kernel, kernel, border_mode='same'),
+#             BatchNormalization(),
+#             Activation('relu'),
+#             MaxPooling2D(),
 #         
-#         self.kerasModel.add(Activation('softmax'))
+#             Conv2D(512, kernel, kernel, border_mode='same'),
+#             BatchNormalization(),
+#             Activation('relu'),
+#             Conv2D(512, kernel, kernel, border_mode='same'),
+#             BatchNormalization(),
+#             Activation('relu'),
+#             Conv2D(512, kernel, kernel, border_mode='same'),
+#             BatchNormalization(),
+#             Activation('relu'),
+#             MaxPooling2D(),
+        ]
+        
+        self.kerasModel = Sequential()
+        self.kerasModel.encoding_layers = encoding_layers
+        
+        for l in self.kerasModel.encoding_layers:
+            self.kerasModel.add(l)
+        
+        decoding_layers = [
+#             UpSampling2D(),
+#             Conv2D(512, kernel, kernel, border_mode='same'),
+#             BatchNormalization(),
+#             Activation('relu'),
+#             Conv2D(512, kernel, kernel, border_mode='same'),
+#             BatchNormalization(),
+#             Activation('relu'),
+#             Conv2D(512, kernel, kernel, border_mode='same'),
+#             BatchNormalization(),
+#             Activation('relu'),
 #         
-#         print >> sys.stderr, "Compiling model"
-#         optimizer = SGD(lr=0.001, momentum=0.9, decay=0.0005, nesterov=False)
-#         self.kerasModel.compile(optimizer=optimizer, loss='categorical_crossentropy', metrics=['accuracy'])
+#             UpSampling2D(),
+#             Conv2D(512, kernel, kernel, border_mode='same'),
+#             BatchNormalization(),
+#             Activation('relu'),
+#             Conv2D(512, kernel, kernel, border_mode='same'),
+#             BatchNormalization(),
+#             Activation('relu'),
+#             Conv2D(256, kernel, kernel, border_mode='same'),
+#             BatchNormalization(),
+#             Activation('relu'),
+        
+            UpSampling2D(),
+            Conv2D(256, kernel, kernel, border_mode='same'),
+            BatchNormalization(),
+            Activation('relu'),
+            Conv2D(256, kernel, kernel, border_mode='same'),
+            BatchNormalization(),
+            Activation('relu'),
+            Conv2D(128, kernel, kernel, border_mode='same'),
+            BatchNormalization(),
+            Activation('relu'),
+        
+            UpSampling2D(),
+            Conv2D(128, kernel, kernel, border_mode='same'),
+            BatchNormalization(),
+            Activation('relu'),
+            Conv2D(64, kernel, kernel, border_mode='same'),
+            BatchNormalization(),
+            Activation('relu'),
+        
+            UpSampling2D(),
+            Conv2D(64, kernel, kernel, border_mode='same'),
+            BatchNormalization(),
+            Activation('relu'),
+            Conv2D(dimTargetFeatures, 1, 1, border_mode='valid'),
+            BatchNormalization(),
+        ]
+        self.kerasModel.decoding_layers = decoding_layers
+        for l in self.kerasModel.decoding_layers:
+            self.kerasModel.add(l)
+         
+        self.kerasModel.add(Activation('softmax'))
+         
+        print >> sys.stderr, "Compiling model"
+        optimizer = SGD(lr=0.001, momentum=0.9, decay=0.0005, nesterov=False)
+        self.kerasModel.compile(optimizer=optimizer, loss='categorical_crossentropy', metrics=['accuracy'])
         
         # Various attempts at neural networks: ##########################################        
         
