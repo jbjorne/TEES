@@ -134,8 +134,7 @@ class KerasDetector(Detector):
         #x = Conv2D(dimTargetFeatures, (1, 1), padding='same')(x)
         
         x = Conv2D(16, (3, 3), padding='same')(inputShape)
-        x = Dense(dimTargetFeatures)(x)
-        #x = Conv2D(dimTargetFeatures, (1, 1), activation='softmax', padding='same')(x)
+        x = Conv2D(dimTargetFeatures, (1, 1), activation='softmax', padding='same')(x)
         
         self.kerasModel = Model(inputShape, x)
         
