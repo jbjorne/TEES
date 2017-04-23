@@ -91,7 +91,8 @@ class KerasDetector(Detector):
             print >> sys.stderr, "Saving examples to", output
             self.saveJSON(output, examples)
             self.matrices[setName] = examples
-            self.matricesToHTML(model, self.matrices[setName], output + ".html")
+            if "html" in self.styles:
+                self.matricesToHTML(model, self.matrices[setName], output + ".html", int(self.styles["html"]))
                     
         if hasattr(self.structureAnalyzer, "typeMap") and model.mode != "r":
             print >> sys.stderr, "Saving StructureAnalyzer.typeMap"
@@ -183,7 +184,8 @@ class KerasDetector(Detector):
         # The predicted matrices are saved as an HTML heat map
         predMatrices = self.loadJSON(exampleFiles["devel"])
         predMatrices["predicted"] = self.devectorizePredictions(predictions)
-        self.matricesToHTML(self.model, predMatrices, self.workDir + self.tag + "devel-predictions.html")
+        if "html" in self.styles:
+            self.matricesToHTML(self.model, predMatrices, self.workDir + self.tag + "devel-predictions.html", int(self.styles["html"]))
         
         # For now the training ends here, later the predicted matrices should be converted back to XML events
         sys.exit()
@@ -216,7 +218,7 @@ class KerasDetector(Detector):
                     td.text = ",".join(featureNames)
         return table
     
-    def matricesToHTML(self, model, data, filePath):
+    def matricesToHTML(self, model, data, filePath, cutoff=None):
         """
         Saves the source (features), target (labels) and predicted adjacency matrices
         for a list of sentences as HTML tables.
@@ -227,6 +229,8 @@ class KerasDetector(Detector):
         predMatrices = data.get("predicted")
         tokenLists = data["tokens"]
         for i in range(len(sourceMatrices)):
+            if cutoff is not None and i >= cutoff:
+                break
             ET.SubElement(root, "p").text = str(i) + ": " + " ".join(tokenLists[i])
             root.append(self.matrixToTable(sourceMatrices[i], tokenLists[i]))
             root.append(self.matrixToTable(targetMatrices[i], tokenLists[i]))

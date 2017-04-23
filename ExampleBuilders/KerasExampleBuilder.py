@@ -25,7 +25,7 @@ class KerasExampleBuilder(ExampleBuilder):
         self.sourceIds = self.featureSet
         self.targetIds = self.classSet
         
-        self._setDefaultParameters(["directed", "undirected", "cutoff", "annotated_only", "epochs"])
+        self._setDefaultParameters(["directed", "undirected", "cutoff", "annotated_only", "epochs", "html"])
         self.styles = self.getParameters(style)
         if self.styles["cutoff"]:
             self.styles["cutoff"] = int(self.styles["cutoff"])
