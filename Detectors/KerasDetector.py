@@ -127,13 +127,20 @@ class KerasDetector(Detector):
         
         #x = Dense(100)(inputShape)
         #x = Dense(18)(x)
-
-        x = Conv2D(dimTargetFeatures, (1, 1), padding='same')(inputShape)
+        
+        #x = Conv2D(100, (5, 5), padding='same')(inputShape)
+        #x = Conv2D(100, (3, 3), padding='same')(x)
+        #x = Conv2D(100, (2, 2), padding='same')(x)
+        #x = Conv2D(dimTargetFeatures, (1, 1), padding='same')(x)
+        
+        x = Conv2D(16, (3, 3), padding='same')(inputShape)
+        x = Conv2D(dimTargetFeatures, (1, 1), activation='softmax', padding='same')(x)
         
         self.kerasModel = Model(inputShape, x)
         
         print >> sys.stderr, "Compiling model"
-        self.kerasModel.compile(optimizer='adadelta', loss='binary_crossentropy', metrics=['accuracy'])
+        #self.kerasModel.compile(optimizer='adadelta', loss='binary_crossentropy', metrics=['accuracy'])
+        self.kerasModel.compile(optimizer='adadelta', loss='categorical_crossentropy', metrics=['accuracy'])
 
     def fitModel(self, exampleFiles):
         if self.matrices == None:
@@ -295,7 +302,7 @@ class KerasDetector(Detector):
               workDir=None):
         self.initVariables(trainData=trainData, optData=optData, model=model, combinedModel=combinedModel, exampleStyle=exampleStyle, classifierParameters=classifierParameters, parse=parse, tokenization=tokenization)
         self.setWorkDir(workDir)
-        self.enterState(self.STATE_TRAIN, ["ANALYZE", "EXAMPLES", "DEFINE-MODEL", "FIT-MODEL"], fromStep, toStep)
+        self.enterState(self.STATE_TRAIN, ["ANALYZE", "EXAMPLES", "MODEL"], fromStep, toStep)
         if self.checkStep("ANALYZE"):
             # General training initialization done at the beginning of the first state
             self.model = self.initModel(self.model, [("exampleStyle", self.tag+"example-style"), ("classifierParameters", self.tag+"classifier-parameters-train")])
@@ -311,9 +318,8 @@ class KerasDetector(Detector):
         if self.checkStep("EXAMPLES"):
             self.buildExamples(self.model, ["devel", "train"], [optData, trainData], [exampleFiles["devel"], exampleFiles["train"]], saveIdsToModel=True)
         #self.beginModel("BEGIN-MODEL", self.model, [self.workDir+self.tag+"train-examples.gz"], self.workDir+self.tag+"opt-examples.gz")
-        if self.checkStep("DEFINE-MODEL"):
+        if self.checkStep("MODEL"):
             self.defineModel()
-        if self.checkStep("FIT-MODEL"):
             self.fitModel(exampleFiles)
         #self.endModel("END-MODEL", self.model, self.workDir+self.tag+"opt-examples.gz")
         #self.beginModel("BEGIN-COMBINED-MODEL", self.combinedModel, [self.workDir+self.tag+"train-examples.gz", self.workDir+self.tag+"opt-examples.gz"], self.workDir+self.tag+"opt-examples.gz", self.model)
