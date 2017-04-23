@@ -147,7 +147,7 @@ class KerasDetector(Detector):
         
         print "ARRAYS", self.arrays.keys()
         self.kerasModel.fit(self.arrays["train"]["source"], self.arrays["train"]["target"],
-            epochs=100,
+            epochs=1,
             batch_size=128,
             shuffle=True,
             validation_data=(self.arrays["devel"]["source"], self.arrays["devel"]["target"]))
@@ -174,9 +174,13 @@ class KerasDetector(Detector):
                     elif j != 0 and j > 0 and j <= len(tokens): td.text = tokens[j - 1]
                 else:
                     if i == j:
-                        td.set("bgcolor", "#FF0000")
+                        #td.set("bgcolor", "#FF0000")
+                        td.set("style", "font-weight:bold;")
                     features = matrix[i - 1][j - 1]
-                    featureNames = features.keys() #[]
+                    #featureNames = features.keys() #[]
+                    if "color" in features:
+                        td.set("bgcolor", features["color"])
+                    featureNames = [x for x in features if x != "color"]
 #                     for featureId in features:
 #                         name = featureSet.getName(featureId)
 #                         assert name != None
@@ -212,13 +216,27 @@ class KerasDetector(Detector):
         with gzip.open(filePath, "rt") as f:
             return json.load(f)
     
+    def clamp(self, value, lower, upper):
+        return max(lower, min(value, upper))
+    
+    def getColor(self, value):
+        r = self.clamp(int(1.0 - value * 255.0), 0, 255)
+        g = self.clamp(int(value * 255.0), 0, 255)
+        b = 0
+        return '#%02x%02x%02x' % (r, g, b)
+    
     def devectorizePredictions(self, predictions):
         #sourceIds = IdSet(filename=self.model.get(self.tag+"ids.features"), locked=True)
         targetIds = IdSet(filename=self.model.get(self.tag+"ids.classes"), locked=True)
         #dimFeatures = int(self.model.getStr("dimFeatures"))
         dimMatrix = int(self.model.getStr("dimMatrix"))
         rangeMatrix = range(dimMatrix)
-        predictions = np.argmax(predictions, axis=-1)
+        labels = np.argmax(predictions, axis=-1)
+        values = np.max(predictions, axis=-1)
+        minValue = np.max(values)
+        maxValue = np.min(values)
+        valRange = maxValue - minValue
+        #print "MINMAX", minValue, maxValue
         devectorized = []
         for exampleIndex in range(predictions.shape[0]):
             #print predictions[exampleIndex]
@@ -228,8 +246,9 @@ class KerasDetector(Detector):
                 for j in rangeMatrix:
                     features = {}
                     devectorized[-1][-1].append(features)
-                    maxFeature = predictions[exampleIndex][i][j]
+                    maxFeature = labels[exampleIndex][i][j]
                     features[targetIds.getName(maxFeature)] = 1
+                    features["color"] = self.getColor((values[exampleIndex][i][j] - minValue) / valRange)
         return devectorized
     
     def vectorizeMatrices(self, model):
