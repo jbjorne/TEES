@@ -114,7 +114,8 @@ class KerasDetector(Detector):
         
         print >> sys.stderr, "Defining model"
         inputShape = Input(shape=(dimMatrix, dimMatrix, dimSourceFeatures))
-        x = Conv2D(16, (1, 1), padding='same')(inputShape)
+        x = Conv2D(16, (1, 5), activation='relu', padding='same')(inputShape)
+        x = Conv2D(16, (5, 1), activation='relu', padding='same')(x)
         #x = MaxPooling2D((2, 2))(x)
         x = Conv2D(dimTargetFeatures, (1, 1), activation='softmax', padding='same')(x)
         #x = UpSampling2D((2, 2))(x)
