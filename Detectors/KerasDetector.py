@@ -263,6 +263,7 @@ class KerasDetector(Detector):
                     featureNames = [x for x in features if x != "color"]
                     featureNames.sort()
                     td.text = ",".join(featureNames)
+                    td.set("weights", ",".join([x + "=" + str(features[x]) for x in featureNames]))
         return table
     
     def matricesToHTML(self, model, data, filePath, cutoff=None):
@@ -325,10 +326,10 @@ class KerasDetector(Detector):
         rangeMatrix = range(dimMatrix)
         labels = np.argmax(predictions, axis=-1)
         values = np.max(predictions, axis=-1)
-        minValue = np.max(values)
-        maxValue = np.min(values)
+        minValue = np.min(values)
+        maxValue = np.max(values)
         valRange = maxValue - minValue
-        #print "MINMAX", minValue, maxValue
+        print "MINMAX", minValue, maxValue
         devectorized = []
         for exampleIndex in range(predictions.shape[0]):
             #print predictions[exampleIndex]

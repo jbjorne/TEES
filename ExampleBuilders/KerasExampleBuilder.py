@@ -113,7 +113,7 @@ class KerasExampleBuilder(ExampleBuilder):
                     else: # There is no entity for this token
                         self.setFeature(self.sourceIds, sourceFeatures, "neg")
                         self.setFeature(self.targetIds, targetFeatures, "neg")
-                elif False: # This element of the adjacency matrix describes the relation from token i to token j
+                else: # This element of the adjacency matrix describes the relation from token i to token j
                     # Define the dependency features for the source matrix
                     tI = sentenceGraph.tokens[i]
                     tJ = sentenceGraph.tokens[j]
@@ -136,7 +136,7 @@ class KerasExampleBuilder(ExampleBuilder):
                         intTypes.add(intEdge[2].get("type"))
                     if len(intTypes) > 0: # A bag of interactions for all interaction types between the two tokens
                         for intType in sorted(list(intTypes)):
-                            self.setFeature(self.targetIds, targetFeatures, intType)
+                            self.setFeature(self.targetIds, targetFeatures, intType, 1000)
                     else:
                         self.setFeature(self.targetIds, targetFeatures, "neg")
                 sourceMatrix[-1].append(sourceFeatures)
