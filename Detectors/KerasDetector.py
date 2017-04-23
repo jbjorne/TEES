@@ -9,6 +9,7 @@ import Utils.ElementTreeUtils as ETUtils
 from Core.IdSet import IdSet
 from keras.models import Sequential
 from keras.callbacks import EarlyStopping, ModelCheckpoint
+import Utils.Parameters
 import gzip
 import json
 
@@ -121,10 +122,15 @@ class KerasDetector(Detector):
 #         decoded = Conv2D(dimFeatures, (3, 3), activation='sigmoid', padding='same')(x)
         
         
-        x = Conv2D(16, (3, 3), padding='same')(inputShape)
-        output = Conv2D(dimTargetFeatures, (1, 1), activation='tanh', padding='same')(x)
+        #x = Conv2D(16, (3, 3), padding='same')(inputShape)
+        #output = Conv2D(dimTargetFeatures, (1, 1), activation='tanh', padding='same')(x)
         
-        self.kerasModel = Model(inputShape, output)
+        #x = Dense(100)(inputShape)
+        #x = Dense(18)(x)
+
+        x = Conv2D(dimTargetFeatures, (1, 1), padding='same')(inputShape)
+        
+        self.kerasModel = Model(inputShape, x)
         
         print >> sys.stderr, "Compiling model"
         self.kerasModel.compile(optimizer='adadelta', loss='binary_crossentropy', metrics=['accuracy'])
@@ -147,7 +153,7 @@ class KerasDetector(Detector):
         
         print "ARRAYS", self.arrays.keys()
         self.kerasModel.fit(self.arrays["train"]["source"], self.arrays["train"]["target"],
-            epochs=1,
+            epochs=100 if not "epochs" in self.styles else int(self.styles["epochs"]),
             batch_size=128,
             shuffle=True,
             validation_data=(self.arrays["devel"]["source"], self.arrays["devel"]["target"]))
@@ -299,6 +305,7 @@ class KerasDetector(Detector):
             # Perform structure analysis
             self.structureAnalyzer.analyze([optData, trainData], self.model)
             print >> sys.stderr, self.structureAnalyzer.toString()
+        self.styles = Utils.Parameters.get(exampleStyle)
         self.model = self.openModel(model, "a") # Devel model already exists, with ids etc
         exampleFiles = {"devel":self.workDir+self.tag+"opt-examples.json.gz", "train":self.workDir+self.tag+"train-examples.json.gz"}
         if self.checkStep("EXAMPLES"):
