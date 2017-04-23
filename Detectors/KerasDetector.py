@@ -2,18 +2,22 @@ import sys, os
 from Detector import Detector
 import itertools
 from ExampleBuilders.KerasExampleBuilder import KerasExampleBuilder
-from Detectors import SingleStageDetector
 import numpy as np
 import xml.etree.ElementTree as ET
 import Utils.ElementTreeUtils as ETUtils
 from Core.IdSet import IdSet
-from keras.models import Sequential
-from keras.callbacks import EarlyStopping, ModelCheckpoint
 import Utils.Parameters
 import gzip
 import json
+from keras.layers import Input, Dense, Conv2D, MaxPooling2D, UpSampling2D
+from keras.models import Model
 
 class KerasDetector(Detector):
+    """
+    The KerasDetector replaces the default SVM-based learning with a pipeline where
+    sentences from the XML corpora are converted into adjacency matrix examples which
+    are used to train the Keras model defined in the KerasDetector.
+    """
 
     def __init__(self):
         Detector.__init__(self)
@@ -23,35 +27,56 @@ class KerasDetector(Detector):
         self.matrices = None
         self.arrays = None
     
-#     def beginModel(self, step, model, trainExampleFiles, testExampleFile, importIdsFromModel=None):
-#         if self.checkStep(step, False):
-#             if model != None:
-#                 if self.state != None and step != None:
-#                     print >> sys.stderr, self.__class__.__name__ + ":" + self.state + ":" + step
-#                 # Create combined model
-#                 model = self.openModel(model, "w")
-#                 assert model.mode in ["a", "w"], (model.path, model.mode)
-#                 model.save()
-#     
-#     def endModel(self, step, model, testExampleFile):
-#         if self.checkStep(step, False):
-#             if model != None:
-#                 if self.state != None and step != None:
-#                     print >> sys.stderr, self.__class__.__name__ + ":" + self.state + ":" + step
-#                 # Download combined model
-#                 model = self.openModel(model, "a")
-#                 assert model.mode in ["a", "w"]
-#                 model.save()
+    ###########################################################################
+    # Main Pipeline Interface
+    ###########################################################################
+    
+    def train(self, trainData=None, optData=None, model=None, combinedModel=None, exampleStyle=None, 
+              classifierParameters=None, parse=None, tokenization=None, task=None, fromStep=None, toStep=None,
+              workDir=None):
+        self.initVariables(trainData=trainData, optData=optData, model=model, combinedModel=combinedModel, exampleStyle=exampleStyle, classifierParameters=classifierParameters, parse=parse, tokenization=tokenization)
+        self.setWorkDir(workDir)
+        self.enterState(self.STATE_TRAIN, ["ANALYZE", "EXAMPLES", "MODEL"], fromStep, toStep)
+        if self.checkStep("ANALYZE"):
+            # General training initialization done at the beginning of the first state
+            self.model = self.initModel(self.model, [("exampleStyle", self.tag+"example-style"), ("classifierParameters", self.tag+"classifier-parameters-train")])
+            self.saveStr(self.tag+"parse", parse, self.model)
+            if task != None:
+                self.saveStr(self.tag+"task", task, self.model)
+            # Perform structure analysis
+            self.structureAnalyzer.analyze([optData, trainData], self.model)
+            print >> sys.stderr, self.structureAnalyzer.toString()
+        self.styles = Utils.Parameters.get(exampleStyle)
+        self.model = self.openModel(model, "a") # Devel model already exists, with ids etc
+        exampleFiles = {"devel":self.workDir+self.tag+"opt-examples.json.gz", "train":self.workDir+self.tag+"train-examples.json.gz"}
+        if self.checkStep("EXAMPLES"): # Generate the adjacency matrices
+            self.buildExamples(self.model, ["devel", "train"], [optData, trainData], [exampleFiles["devel"], exampleFiles["train"]], saveIdsToModel=True)
+        if self.checkStep("MODEL"): # Define and train the Keras model
+            self.defineModel()
+            self.fitModel(exampleFiles)
+        if workDir != None:
+            self.setWorkDir("")
+        self.arrays = None
+        self.exitState()
+        
+    ###########################################################################
+    # Main Pipeline Steps
+    ###########################################################################
     
     def buildExamples(self, model, setNames, datas, outputs, golds=[], exampleStyle=None, saveIdsToModel=False, parse=None):
+        """
+        Runs the KerasExampleBuilder for the input XML files and saves the generated adjacency matrices
+        into JSON files.
+        """
         if exampleStyle == None:
             exampleStyle = model.getStr(self.tag+"example-style")
         if parse == None:
             parse = self.getStr(self.tag+"parse", model)
         self.structureAnalyzer.load(model)
         self.exampleBuilder.structureAnalyzer = self.structureAnalyzer
-        self.matrices = {}
+        self.matrices = {} # For the Python-dictionary matrices generated by KerasExampleBuilder
         modelChanged = False
+        # Make example for all input files
         for setName, data, output, gold in itertools.izip_longest(setNames, datas, outputs, golds, fillvalue=None):
             print >> sys.stderr, "Example generation for set", setName, "to file", output
             if saveIdsToModel:
@@ -65,18 +90,8 @@ class KerasDetector(Detector):
             examples =  {"source":builder.sourceMatrices, "target":builder.targetMatrices, "tokens":builder.tokenLists, "setName":setName}
             print >> sys.stderr, "Saving examples to", output
             self.saveJSON(output, examples)
-            #builders[dataSet].saveMatrices(output)
             self.matrices[setName] = examples
             self.matricesToHTML(model, self.matrices[setName], output + ".html")
-                    
-#             for setName in builders:
-#                 self.dimFeatures = len(builders[dataSet].featureSet.Ids)
-#                 model.addStr("dimFeatures", str(self.dimFeatures))
-#                 model.addStr("dimMatrix", str(builders[dataSet].dimMatrix))
-#                 examples =  {"source":builders[dataSet].sourceMatrices, "target":builders[dataSet].targetMatrices, "tokens":builders[dataSet].tokenLists, "setName":setName}
-#                 self.saveJSON(output, examples)
-#                 #builders[dataSet].saveMatrices(output)
-#                 self.matrices[setName] = examples
                     
         if hasattr(self.structureAnalyzer, "typeMap") and model.mode != "r":
             print >> sys.stderr, "Saving StructureAnalyzer.typeMap"
@@ -84,42 +99,46 @@ class KerasDetector(Detector):
             modelChanged = True
         if modelChanged:
             model.save()
-        
-        #sys.exit()
     
     def defineModel(self):
-        print >> sys.stderr, "Importing Keras"
-        from keras.layers import Input, Dense, Conv2D, MaxPooling2D, UpSampling2D
-        from keras.models import Model
-        from keras import backend as K
-        
-        dimSourceFeatures = int(self.model.getStr("dimSourceFeatures"))
-        dimTargetFeatures = int(self.model.getStr("dimTargetFeatures"))
-        dimMatrix = int(self.model.getStr("dimMatrix"))
+        """
+        Defines the Keras model and compiles it.
+        """
+        dimSourceFeatures = int(self.model.getStr("dimSourceFeatures")) # Number of channels in the source matrix
+        dimTargetFeatures = int(self.model.getStr("dimTargetFeatures")) # Number of channels in the target matrix
+        dimMatrix = int(self.model.getStr("dimMatrix")) # The width/height of both the source and target matrix
         
         print >> sys.stderr, "Defining model"
         inputShape = Input(shape=(dimMatrix, dimMatrix, dimSourceFeatures))  # adapt this if using `channels_first` image data format
-
-#         x = Conv2D(8, (4, 4), activation='relu', padding='same')(inputShape)
-#         #x = UpSampling2D((2, 2))(x)
-#         decoded = Conv2D(dimTargetFeatures, (3, 3), activation='sigmoid', padding='same')(x)
- 
-#         x = Conv2D(16, (3, 3), activation='relu', padding='same')(inputShape)
-#         x = MaxPooling2D((2, 2), padding='same')(x)
-#         x = Conv2D(8, (3, 3), activation='relu', padding='same')(x)
-#         x = MaxPooling2D((2, 2), padding='same')(x)
-#         x = Conv2D(8, (3, 3), activation='relu', padding='same')(x)
-#         encoded = MaxPooling2D((2, 2), padding='same')(x)
-#          
-#         # at this point the representation is (4, 4, 8) i.e. 128-dimensional
-#          
-#         x = Conv2D(8, (3, 3), activation='relu', padding='same')(encoded)
-#         x = UpSampling2D((2, 2))(x)
-#         x = Conv2D(8, (3, 3), activation='relu', padding='same')(x)
-#         x = UpSampling2D((2, 2))(x)
-#         x = Conv2D(16, (3, 3), activation='relu')(x)
-#         x = UpSampling2D((2, 2))(x)
-#         decoded = Conv2D(dimFeatures, (3, 3), activation='sigmoid', padding='same')(x)
+        x = Conv2D(16, (3, 3), padding='same')(inputShape)
+        x = Conv2D(dimTargetFeatures, (1, 1), activation='softmax', padding='same')(x)
+        self.kerasModel = Model(inputShape, x)
+        
+        print >> sys.stderr, "Compiling model"
+        self.kerasModel.compile(optimizer='adadelta', loss='categorical_crossentropy', metrics=['accuracy'])
+        
+        # Various attempts at neural networks: ##########################################        
+        
+        #         x = Conv2D(8, (4, 4), activation='relu', padding='same')(inputShape)
+        #         #x = UpSampling2D((2, 2))(x)
+        #         decoded = Conv2D(dimTargetFeatures, (3, 3), activation='sigmoid', padding='same')(x)
+         
+        #         x = Conv2D(16, (3, 3), activation='relu', padding='same')(inputShape)
+        #         x = MaxPooling2D((2, 2), padding='same')(x)
+        #         x = Conv2D(8, (3, 3), activation='relu', padding='same')(x)
+        #         x = MaxPooling2D((2, 2), padding='same')(x)
+        #         x = Conv2D(8, (3, 3), activation='relu', padding='same')(x)
+        #         encoded = MaxPooling2D((2, 2), padding='same')(x)
+        #          
+        #         # at this point the representation is (4, 4, 8) i.e. 128-dimensional
+        #          
+        #         x = Conv2D(8, (3, 3), activation='relu', padding='same')(encoded)
+        #         x = UpSampling2D((2, 2))(x)
+        #         x = Conv2D(8, (3, 3), activation='relu', padding='same')(x)
+        #         x = UpSampling2D((2, 2))(x)
+        #         x = Conv2D(16, (3, 3), activation='relu')(x)
+        #         x = UpSampling2D((2, 2))(x)
+        #         decoded = Conv2D(dimFeatures, (3, 3), activation='sigmoid', padding='same')(x)
         
         
         #x = Conv2D(16, (3, 3), padding='same')(inputShape)
@@ -133,32 +152,24 @@ class KerasDetector(Detector):
         #x = Conv2D(100, (2, 2), padding='same')(x)
         #x = Conv2D(dimTargetFeatures, (1, 1), padding='same')(x)
         
-        x = Conv2D(16, (3, 3), padding='same')(inputShape)
-        x = Conv2D(dimTargetFeatures, (1, 1), activation='softmax', padding='same')(x)
-        
-        self.kerasModel = Model(inputShape, x)
-        
-        print >> sys.stderr, "Compiling model"
         #self.kerasModel.compile(optimizer='adadelta', loss='binary_crossentropy', metrics=['accuracy'])
-        self.kerasModel.compile(optimizer='adadelta', loss='categorical_crossentropy', metrics=['accuracy'])
 
     def fitModel(self, exampleFiles):
-        if self.matrices == None:
+        """
+        Fits the compiled Keras model to the adjacency matrix examples. The model is trained on the
+        train set, validated on the devel set and finally the devel set is predicted using the model.
+        """
+        if self.matrices == None: # If program is run from the TRAIN.MODEL step matrices are loaded from files
             self.matrices = {}
             for setName in exampleFiles:
                 print >> sys.stderr, "Loading dataset", setName, "from", exampleFiles[setName]
-                #builder = self.exampleBuilder()
-                #builder.loadMatrices(exampleFiles[dataSet])
-                #self.matrices[dataSet] = {"source":builder.sourceMatrices, "target":builder.targetMatrices}
                 self.matrices[setName] = self.loadJSON(exampleFiles[setName])
-        if self.arrays == None:
+        if self.arrays == None: # The Python dictionary matrices are converted into dense Numpy arrays
             self.vectorizeMatrices(self.model)
-        print >> sys.stderr, "Fitting model"
         
+        print >> sys.stderr, "Fitting model"
         #es_cb = EarlyStopping(monitor='val_loss', patience=10, verbose=1)
         #cp_cb = ModelCheckpoint(filepath=self.workDir + self.tag + 'model.hdf5', save_best_only=True, verbose=1)
-        
-        #print "ARRAYS", self.arrays.keys()
         self.kerasModel.fit(self.arrays["train"]["source"], self.arrays["train"]["target"],
             epochs=100 if not "epochs" in self.styles else int(self.styles["epochs"]),
             batch_size=128,
@@ -169,13 +180,22 @@ class KerasDetector(Detector):
         print >> sys.stderr, "Predicting devel examples"
         predictions = self.kerasModel.predict(self.arrays["devel"]["source"], 128, 1)
         
+        # The predicted matrices are saved as an HTML heat map
         predMatrices = self.loadJSON(exampleFiles["devel"])
         predMatrices["predicted"] = self.devectorizePredictions(predictions)
         self.matricesToHTML(self.model, predMatrices, self.workDir + self.tag + "devel-predictions.html")
         
+        # For now the training ends here, later the predicted matrices should be converted back to XML events
         sys.exit()
     
+    ###########################################################################
+    # HTML Table visualization
+    ###########################################################################
+    
     def matrixToTable(self, matrix, tokens):
+        """
+        Converts a single Python dictionary adjacency matrix into an HTML table structure.
+        """
         matrixRange = range(len(matrix) + 1)
         table = ET.Element('table', {"border":"1"})
         for i in matrixRange:
@@ -186,32 +206,26 @@ class KerasDetector(Detector):
                     if i != 0 and i > 0 and i <= len(tokens): td.text = tokens[i - 1]
                     elif j != 0 and j > 0 and j <= len(tokens): td.text = tokens[j - 1]
                 else:
-                    if i == j:
-                        #td.set("bgcolor", "#FF0000")
+                    if i == j: # This element is on the diagonal
                         td.set("style", "font-weight:bold;")
                     features = matrix[i - 1][j - 1]
-                    #featureNames = features.keys() #[]
-                    if "color" in features:
+                    if "color" in features: # The 'color' is not a real feature, but rather defines this table element's background color
                         td.set("bgcolor", features["color"])
                     featureNames = [x for x in features if x != "color"]
-#                     for featureId in features:
-#                         name = featureSet.getName(featureId)
-#                         assert name != None
-#                         value = features[featureId]
-#                         if value != 1:
-#                             name += "=" + str(value)
-#                         featureNames.append(name)
                     featureNames.sort()
                     td.text = ",".join(featureNames)
         return table
     
     def matricesToHTML(self, model, data, filePath):
+        """
+        Saves the source (features), target (labels) and predicted adjacency matrices
+        for a list of sentences as HTML tables.
+        """
         root = ET.Element('html')     
         sourceMatrices = data["source"]
         targetMatrices = data["target"]
         predMatrices = data.get("predicted")
         tokenLists = data["tokens"]
-        #numExamples = len(sourceMatrices)
         for i in range(len(sourceMatrices)):
             ET.SubElement(root, "p").text = str(i) + ": " + " ".join(tokenLists[i])
             root.append(self.matrixToTable(sourceMatrices[i], tokenLists[i]))
@@ -220,15 +234,7 @@ class KerasDetector(Detector):
                 root.append(self.matrixToTable(predMatrices[i], tokenLists[i]))
         print >> sys.stderr, "Writing adjacency matrix visualization to", os.path.abspath(filePath)
         ETUtils.write(root, filePath)
-    
-    def saveJSON(self, filePath, data):
-        with gzip.open(filePath, "wt") as f:
-            json.dump(data, f)
-    
-    def loadJSON(self, filePath):
-        with gzip.open(filePath, "rt") as f:
-            return json.load(f)
-    
+        
     def clamp(self, value, lower, upper):
         return max(lower, min(value, upper))
     
@@ -238,10 +244,29 @@ class KerasDetector(Detector):
         b = 0
         return '#%02x%02x%02x' % (r, g, b)
     
+    ###########################################################################
+    # Serialization
+    ###########################################################################
+    
+    def saveJSON(self, filePath, data):
+        with gzip.open(filePath, "wt") as f:
+            json.dump(data, f)
+    
+    def loadJSON(self, filePath):
+        with gzip.open(filePath, "rt") as f:
+            return json.load(f)
+    
+    ###########################################################################
+    # Vectorization
+    ###########################################################################
+    
     def devectorizePredictions(self, predictions):
-        #sourceIds = IdSet(filename=self.model.get(self.tag+"ids.features"), locked=True)
+        """
+        Converts a dense Numpy array of [examples][width][height][features] into
+        the corresponding Python list matrices where features are stored in a key-value
+        dictionary.
+        """
         targetIds = IdSet(filename=self.model.get(self.tag+"ids.classes"), locked=True)
-        #dimFeatures = int(self.model.getStr("dimFeatures"))
         dimMatrix = int(self.model.getStr("dimMatrix"))
         rangeMatrix = range(dimMatrix)
         labels = np.argmax(predictions, axis=-1)
@@ -265,6 +290,10 @@ class KerasDetector(Detector):
         return devectorized
     
     def vectorizeMatrices(self, model):
+        """
+        Converts the Python input matrices of the form [examples][width][height]{features} into
+        corresponding dense Numpy arrays.
+        """
         self.arrays = {}
         sourceIds = IdSet(filename=model.get(self.tag+"ids.features"), locked=True)
         targetIds = IdSet(filename=model.get(self.tag+"ids.classes"), locked=True)
@@ -296,35 +325,3 @@ class KerasDetector(Detector):
                             for featureName in features:
                                 array[i][j][ids.getId(featureName)] = features[featureName]
             self.arrays[dataSetName] = {"source":sourceArrays, "target":targetArrays}
-    
-    def train(self, trainData=None, optData=None, model=None, combinedModel=None, exampleStyle=None, 
-              classifierParameters=None, parse=None, tokenization=None, task=None, fromStep=None, toStep=None,
-              workDir=None):
-        self.initVariables(trainData=trainData, optData=optData, model=model, combinedModel=combinedModel, exampleStyle=exampleStyle, classifierParameters=classifierParameters, parse=parse, tokenization=tokenization)
-        self.setWorkDir(workDir)
-        self.enterState(self.STATE_TRAIN, ["ANALYZE", "EXAMPLES", "MODEL"], fromStep, toStep)
-        if self.checkStep("ANALYZE"):
-            # General training initialization done at the beginning of the first state
-            self.model = self.initModel(self.model, [("exampleStyle", self.tag+"example-style"), ("classifierParameters", self.tag+"classifier-parameters-train")])
-            self.saveStr(self.tag+"parse", parse, self.model)
-            if task != None:
-                self.saveStr(self.tag+"task", task, self.model)
-            # Perform structure analysis
-            self.structureAnalyzer.analyze([optData, trainData], self.model)
-            print >> sys.stderr, self.structureAnalyzer.toString()
-        self.styles = Utils.Parameters.get(exampleStyle)
-        self.model = self.openModel(model, "a") # Devel model already exists, with ids etc
-        exampleFiles = {"devel":self.workDir+self.tag+"opt-examples.json.gz", "train":self.workDir+self.tag+"train-examples.json.gz"}
-        if self.checkStep("EXAMPLES"):
-            self.buildExamples(self.model, ["devel", "train"], [optData, trainData], [exampleFiles["devel"], exampleFiles["train"]], saveIdsToModel=True)
-        #self.beginModel("BEGIN-MODEL", self.model, [self.workDir+self.tag+"train-examples.gz"], self.workDir+self.tag+"opt-examples.gz")
-        if self.checkStep("MODEL"):
-            self.defineModel()
-            self.fitModel(exampleFiles)
-        #self.endModel("END-MODEL", self.model, self.workDir+self.tag+"opt-examples.gz")
-        #self.beginModel("BEGIN-COMBINED-MODEL", self.combinedModel, [self.workDir+self.tag+"train-examples.gz", self.workDir+self.tag+"opt-examples.gz"], self.workDir+self.tag+"opt-examples.gz", self.model)
-        #self.endModel("END-COMBINED-MODEL", self.combinedModel, self.workDir+self.tag+"opt-examples.gz")
-        if workDir != None:
-            self.setWorkDir("")
-        self.arrays = None
-        self.exitState()

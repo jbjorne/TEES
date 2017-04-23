@@ -5,6 +5,15 @@ from ExampleBuilder import ExampleBuilder
 from Core.IdSet import IdSet
 
 class KerasExampleBuilder(ExampleBuilder):
+    """
+    Adjacency matrix generation. This ExampleBuilder generates one source and one target
+    adjacency matrix per sentence. The generated matrices are stored in the self.sourceMatrices
+    and self.targetMatrices variables of the KerasExampleBuilder object. 
+    
+    Of the two IdSets, featureSet is used for source features and classSet for target features 
+    (labels). Unlike with other TEES ExampleBuilders, the feature keys in the produced matrices
+    are feature names, not feature ids.
+    """
     def __init__(self, style=None, classSet=None, featureSet=None, gazetteerFileName=None, skiplist=None):
         if classSet == None:
             classSet = IdSet(0)
@@ -26,31 +35,10 @@ class KerasExampleBuilder(ExampleBuilder):
         self.sourceMatrices = []
         self.targetMatrices = []
         self.tokenLists = []
-        self.stringKeys = True
-    
-    #def processSentence(self, sentence, outfile, goldSentence=None, structureAnalyzer=None):
-        #return ExampleBuilder.processSentence(self, sentence, outfile, goldSentence=goldSentence, structureAnalyzer=structureAnalyzer)
-    
-#     def saveMatrices(self, filePath):
-#         assert self.sourceMatrices != None and self.targetMatrices != None
-#         with gzip.open(filePath, "wt") as f:
-#             json.dump({"source":self.sourceMatrices, "target":self.targetMatrices}, f)
-#     
-#     def loadMatrices(self, filePath):
-#         with gzip.open(filePath, "rt") as f:
-#             data = json.load(f)
-#             self.sourceMatrices = data["source"]
-#             self.targetMatrices = data["target"]
     
     def setFeature(self, featureSet, features, name, value=1):
         featureSet.getId(name)
         features[name] = value
-        #features[self.featureSet.getId(name)] = value
-        ##featureId = self.featureSet.getId(name)
-        ##if self.stringKeys:
-        ##    features[name] = value
-        ##else:
-        ##    features[featureId] = value
     
     def getDirectionality(self, structureAnalyzer):
         if self.styles["directed"] == None and self.styles["undirected"] == None: # determine directedness from corpus
@@ -68,25 +56,15 @@ class KerasExampleBuilder(ExampleBuilder):
         See Core/ExampleUtils for example format.
         """
         
+        # The annotated_only style skips sentences with no annotated interactions
         if self.styles.get("annotated_only") and len(sentenceGraph.interactions) == 0:
             return 1
         
-        #print len(self.sourceMatrices), self.styles.get("cutoff"), len(self.sourceMatrices) > self.styles.get("cutoff")
+        # The cutoff style limits example generation to the first n sentences
         if self.styles.get("cutoff") and len(self.sourceMatrices) > self.styles.get("cutoff"):
-            #print "SDFSDFDS"
             return 1
-#         #examples = []
-#         exampleIndex = 0
-#         # example directionality
-#         if self.styles["directed"] == None and self.styles["undirected"] == None: # determine directedness from corpus
-#             examplesAreDirected = structureAnalyzer.hasDirectedTargets()
-#         elif self.styles["directed"]:
-#             assert self.styles["undirected"] in [None, False]
-#             examplesAreDirected = True
-#         elif self.styles["undirected"]:
-#             assert self.styles["directed"] in [None, False]
-#             examplesAreDirected = False
         
+        # Whether to use directer or undirected interaction edges
         directed = self.getDirectionality(structureAnalyzer)
             
         # Filter entities, if needed
@@ -94,11 +72,7 @@ class KerasExampleBuilder(ExampleBuilder):
         entities = sentenceGraph.mergedEntities
         self.exampleStats.addValue("Duplicate entities skipped", len(sentenceGraph.entities) - len(entities))
         
-#         # Connect to optional gold graph
-#         entityToGold = None
-#         if goldGraph != None:
-#             entityToGold = EvaluateInteractionXML.mapEntities(entities, goldGraph.entities)
-        
+        # The dependency graph connects the tokens with the shortest paths
         depGraph = None
         if not self.hasStyle("no_path"):
             undirected = sentenceGraph.dependencyGraph.toUndirected()
@@ -107,7 +81,7 @@ class KerasExampleBuilder(ExampleBuilder):
                 depGraph.resetAnalyses() # just in case
                 depGraph.FloydWarshall(self.filterEdge, {"edgeTypes":self.styles["filter_shortest_path"]})
         
-        # Generate examples based on interactions between entities or interactions between tokens
+        # Generate the two matrices in the format [row_index][column_index][feature_name]
         numTokens = len(sentenceGraph.tokens)
         sourceMatrix = []
         targetMatrix = []
@@ -118,57 +92,47 @@ class KerasExampleBuilder(ExampleBuilder):
             for j in self.rangeMatrix:
                 sourceFeatures = {}
                 targetFeatures = {}
-                if i >= numTokens or j >= numTokens:
+                if i >= numTokens or j >= numTokens: # Padding outside the sentence range (left empty, later fille with Numpy zeros)
                     pass #features[self.featureSet.getId("padding")] = 1
-                elif i == j: # diagonal
-                    #self.setFeature(sourceFeatures, "P:0")
+                elif i == j: # The diagonal defines the linear order of the tokens in the sentence
                     token = sentenceGraph.tokens[i]
                     self.setFeature(self.sourceIds, sourceFeatures, token.get("POS"))
-                    if len(sentenceGraph.tokenIsEntityHead[token]) > 0:
-                        #self.setFeature(sourceFeatures, "E:1")
-                        #self.setFeature(targetFeatures, "E:1")
+                    if len(sentenceGraph.tokenIsEntityHead[token]) > 0: # The token is the head token of an entity
                         for entity in sentenceGraph.tokenIsEntityHead[token]:
-                            if entity.get("given") == "True":
+                            if entity.get("given") == "True": # This entity can be used as a training feature
                                 self.setFeature(self.sourceIds, sourceFeatures, entity.get("type"))
                             self.setFeature(self.targetIds, targetFeatures, entity.get("type"))
-                    else:
+                    else: # There is no entity for this token
                         self.setFeature(self.sourceIds, sourceFeatures, "E:0")
-                        #self.setFeature(self.targetIds, targetFeatures, "E:0")
-                else:
-                    # define source features
+                else: # This element of the adjacency matrix describes the relation from token i to token j
+                    # Define the dependency features for the source matrix
                     tI = sentenceGraph.tokens[i]
                     tJ = sentenceGraph.tokens[j]
                     shortestPaths = depGraph.getPaths(tI, tJ)
-                    if len(shortestPaths) > 0:
+                    if len(shortestPaths) > 0: # There is a path of dependencies between these two tokens
                         path = shortestPaths[0]
-                        #if len(path) > 2:
-                        #    self.setFeature(sourceFeatures, "D:0") # path > 2
-                        #else:
-                            #self.setFeature(sourceFeatures, "P:T") # path true
-                            #self.setFeature(sourceFeatures, "P:L", len(path)) # path length
-                        for tokenIndex in (0, -1): #range(len(path)):
+                        for tokenIndex in (0, -1): # The first and last token in the path
                             self.setFeature(self.sourceIds, sourceFeatures, "T" + str(tokenIndex) + ":" + path[tokenIndex].get("POS"))
-                        for k in range(1, len(path)):
+                        for k in range(1, len(path)): # A bag of dependencies for this shortest path
                             for edge in depGraph.getEdges(path[k], path[k-1]) + depGraph.getEdges(path[k-1], path[k]):
                                 self.setFeature(self.sourceIds, sourceFeatures, edge[2].get("type"))
                     else:
                         self.setFeature(self.sourceIds, sourceFeatures, "D:0") # no path
-                    # define target features
+                    # Define the relation features (labels) for the target matrix
                     intTypes = set()
                     intEdges = sentenceGraph.interactionGraph.getEdges(tI, tJ)
                     if not directed:
                         intEdges = intEdges + sentenceGraph.interactionGraph.getEdges(tJ, tI)
                     for intEdge in intEdges:
                         intTypes.add(intEdge[2].get("type"))
-                    if len(intTypes) > 0:
+                    if len(intTypes) > 0: # A bag of interactions for all interaction types between the two tokens
                         for intType in sorted(list(intTypes)):
                             self.setFeature(self.targetIds, targetFeatures, intType)
-                    else:
-                        pass #self.setFeature(self.targetIds, targetFeatures, "I:0")
                 sourceMatrix[-1].append(sourceFeatures)
                 targetMatrix[-1].append(targetFeatures)
         
+        # Add this sentences's matrices and list of tokens to the result lists
         self.sourceMatrices.append(sourceMatrix)
         self.targetMatrices.append(targetMatrix)
         self.tokenLists.append(tokenList)
-        return 1
+        return 1 # One sentence is one example
