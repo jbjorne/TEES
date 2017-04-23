@@ -110,7 +110,7 @@ class KerasDetector(Detector):
         dimMatrix = int(self.model.getStr("dimMatrix")) # The width/height of both the source and target matrix
         
         print >> sys.stderr, "Defining model"
-        inputShape = Input(shape=(dimMatrix, dimMatrix, dimSourceFeatures))  # adapt this if using `channels_first` image data format
+        inputShape = Input(shape=(dimMatrix, dimMatrix, dimSourceFeatures))
         x = Conv2D(16, (3, 3), padding='same')(inputShape)
         x = Conv2D(dimTargetFeatures, (1, 1), activation='softmax', padding='same')(x)
         self.kerasModel = Model(inputShape, x)
