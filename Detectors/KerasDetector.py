@@ -231,10 +231,13 @@ class KerasDetector(Detector):
         for i in range(len(sourceMatrices)):
             if cutoff is not None and i >= cutoff:
                 break
-            ET.SubElement(root, "p").text = str(i) + ": " + " ".join(tokenLists[i])
+            ET.SubElement(root, "h3").text = str(i) + ": " + " ".join(tokenLists[i])
+            ET.SubElement(root, "p").text = "Source"
             root.append(self.matrixToTable(sourceMatrices[i], tokenLists[i]))
+            ET.SubElement(root, "p").text = "Target"
             root.append(self.matrixToTable(targetMatrices[i], tokenLists[i]))
             if predMatrices is not None:
+                ET.SubElement(root, "p").text = "Predicted"
                 root.append(self.matrixToTable(predMatrices[i], tokenLists[i]))
         print >> sys.stderr, "Writing adjacency matrix visualization to", os.path.abspath(filePath)
         ETUtils.write(root, filePath)
