@@ -113,13 +113,18 @@ class KerasDetector(Detector):
         dimMatrix = int(self.model.getStr("dimMatrix")) # The width/height of both the source and target matrix
         
         print >> sys.stderr, "Defining model"
-        inputShape = Input(shape=(dimMatrix, dimMatrix, dimSourceFeatures))
+        x = inputShape = Input(shape=(dimMatrix, dimMatrix, dimSourceFeatures))
+        x = Conv2D(64, (3, 3), activation='sigmoid', padding='same')(x)
+        x = Conv2D(32, (3, 3), activation='sigmoid', padding='same')(x)
+        x = Conv2D(dimTargetFeatures, (3, 3), activation='sigmoid', padding='same')(x)
+        x = Conv2D(dimTargetFeatures, (1, 1), activation='sigmoid', padding='same')(x)
         #x = Conv2D(16, (1, 9), activation='relu', padding='same')(inputShape)
         #x = Conv2D(16, (9, 1), activation='relu', padding='same')(x)
         #x = MaxPooling2D((2, 2))(x)
-        x = Dense(18)(inputShape)
-        x = Dense(18)(x)
-        x = Conv2D(dimTargetFeatures, (1, 1), activation='softmax', padding='same')(x)
+        #x = Dense(100)(inputShape)
+        #x = Conv2D(16, (3, 3), activation='relu', padding='same')(x)
+        #x = Dense(100)(x)
+        #x = Conv2D(dimTargetFeatures, (1, 1), activation='sigmoid', padding='same')(x)
         #x = UpSampling2D((2, 2))(x)
         #x = Activation('softmax')(x)
         self.kerasModel = Model(inputShape, x)
@@ -214,6 +219,11 @@ class KerasDetector(Detector):
                 self.matrices[setName] = self.loadJSON(exampleFiles[setName])
         if self.arrays == None: # The Python dictionary matrices are converted into dense Numpy arrays
             self.vectorizeMatrices(self.model)
+            
+#         targetIds = IdSet(filename=self.model.get(self.tag+"ids.classes"), locked=True)
+#         class_weight = {}
+#         for className in targetIds.Ids:
+#             class_weight[targetIds.getId(className)] = 1.0 if className != "neg" else 0.00001
         
         print >> sys.stderr, "Fitting model"
         #es_cb = EarlyStopping(monitor='val_loss', patience=10, verbose=1)
@@ -223,6 +233,7 @@ class KerasDetector(Detector):
             batch_size=128,
             shuffle=True,
             validation_data=(self.arrays["devel"]["source"], self.arrays["devel"]["target"]))
+            #class_weight=class_weight)
             #callbacks=[es_cb])#, cp_cb])
         
         print >> sys.stderr, "Predicting devel examples"

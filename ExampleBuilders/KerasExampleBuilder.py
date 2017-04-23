@@ -50,6 +50,19 @@ class KerasExampleBuilder(ExampleBuilder):
             assert self.styles["directed"] in [None, False]
             return False
     
+    def getEntityTypeFeatures(self, tokens, onlyGiven, negValue, sentenceGraph):
+        features = []
+        for token in tokens:
+            if onlyGiven:
+                entityTypes = [x.get("type") for x in sentenceGraph.tokenIsEntityHead[token] if x.get("given") == "True"]
+            else:
+                entityTypes = [x.get("type") for x in sentenceGraph.tokenIsEntityHead[token]]
+            if len(entityTypes) == 0:
+                features.append([("neg", negValue)])
+            else:
+                features.append([(x,1.0) for x in entityTypes])
+        return features
+    
     def buildExamplesFromGraph(self, sentenceGraph, outfile, goldGraph = None, structureAnalyzer=None):
         """
         Build examples for a single sentence. Returns a list of examples.
@@ -86,6 +99,9 @@ class KerasExampleBuilder(ExampleBuilder):
         sourceMatrix = []
         targetMatrix = []
         tokenList = [x.get("text") for x in sentenceGraph.tokens]
+        negValue = 0.001
+        sourceEntityFeatures = self.getEntityTypeFeatures(sentenceGraph.tokens, True, negValue, sentenceGraph)
+        targetEntityFeatures = self.getEntityTypeFeatures(sentenceGraph.tokens, False, negValue, sentenceGraph)
         for i in self.rangeMatrix:
             sourceMatrix.append([])
             targetMatrix.append([])
@@ -99,20 +115,18 @@ class KerasExampleBuilder(ExampleBuilder):
                     self.setFeature(self.sourceIds, sourceFeatures, "E")
                     #self.setFeature(self.sourceIds, sourceFeatures, token.get("POS"))
                     sourceEntityTypes = []
+                    targeEntityTypes = []
                     if len(sentenceGraph.tokenIsEntityHead[token]) > 0: # The token is the head token of an entity
                         sourceEntityTypes = [x.get("type") for x in sentenceGraph.tokenIsEntityHead[token] if x.get("given") == "True"]
                         targeEntityTypes = [x.get("type") for x in sentenceGraph.tokenIsEntityHead[token]]
-                        if len(sourceEntityTypes) == 0:
-                            sourceEntityTypes = ["neg"]
-                        if len(targeEntityTypes) == 0:
-                            targeEntityTypes = ["neg"]
-                        for eType in sourceEntityTypes:
-                            self.setFeature(self.sourceIds, sourceFeatures, eType, 1000)
-                        for eType in targeEntityTypes:
-                            self.setFeature(self.targetIds, targetFeatures, eType, 1000)
-                    else: # There is no entity for this token
-                        self.setFeature(self.sourceIds, sourceFeatures, "neg")
-                        self.setFeature(self.targetIds, targetFeatures, "neg")
+                    if len(sourceEntityTypes) == 0: # There is no entity for this token
+                        sourceEntityTypes = ["neg"]
+                    if len(targeEntityTypes) == 0: # There is no entity for this token
+                        targeEntityTypes = ["neg"]
+                    for eType, eValue in sourceEntityFeatures[i]:
+                        self.setFeature(self.sourceIds, sourceFeatures, eType, eValue)
+                    for eType, eValue in targetEntityFeatures[i]:
+                        self.setFeature(self.targetIds, targetFeatures, eType, eValue)
                 else: # This element of the adjacency matrix describes the relation from token i to token j
                     # Define the dependency features for the source matrix
                     tI = sentenceGraph.tokens[i]
@@ -120,11 +134,12 @@ class KerasExampleBuilder(ExampleBuilder):
                     shortestPaths = depGraph.getPaths(tI, tJ)
                     if len(shortestPaths) > 0: # There is a path of dependencies between these two tokens
                         path = shortestPaths[0]
-                        for tokenIndex in (0, -1): # The first and last token in the path
-                            self.setFeature(self.sourceIds, sourceFeatures, "T" + str(tokenIndex) + ":" + path[tokenIndex].get("POS"))
-                        for k in range(1, len(path)): # A bag of dependencies for this shortest path
-                            for edge in depGraph.getEdges(path[k], path[k-1]) + depGraph.getEdges(path[k-1], path[k]):
-                                self.setFeature(self.sourceIds, sourceFeatures, edge[2].get("type"))
+                        if True: #len(path) == 2:
+                            for tokenIndex in (0, -1): # The first and last token in the path
+                                self.setFeature(self.sourceIds, sourceFeatures, "T" + str(tokenIndex) + ":" + path[tokenIndex].get("POS"))
+                            for k in range(1, len(path)): # A bag of dependencies for this shortest path
+                                for edge in depGraph.getEdges(path[k], path[k-1]) + depGraph.getEdges(path[k-1], path[k]):
+                                    self.setFeature(self.sourceIds, sourceFeatures, edge[2].get("type"))
                     else:
                         self.setFeature(self.sourceIds, sourceFeatures, "D:0") # no path
                     # Define the relation features (labels) for the target matrix
@@ -136,9 +151,18 @@ class KerasExampleBuilder(ExampleBuilder):
                         intTypes.add(intEdge[2].get("type"))
                     if len(intTypes) > 0: # A bag of interactions for all interaction types between the two tokens
                         for intType in sorted(list(intTypes)):
-                            self.setFeature(self.targetIds, targetFeatures, intType, 1000)
+                            self.setFeature(self.targetIds, targetFeatures, intType)
                     else:
-                        self.setFeature(self.targetIds, targetFeatures, "neg")
+                        self.setFeature(self.targetIds, targetFeatures, "neg", negValue)
+                    # Define the features for the two entities
+                    for eType, eValue in sourceEntityFeatures[i]:
+                        self.setFeature(self.sourceIds, sourceFeatures, eType + "[0]", eValue)
+                    for eType, eValue in sourceEntityFeatures[j]:
+                        self.setFeature(self.sourceIds, sourceFeatures, eType + "[1]", eValue)
+#                     for eType, eValue in targetEntityFeatures[i]:
+#                         self.setFeature(self.targetIds, targetFeatures, eType + "[0]", eValue)
+#                     for eType, eValue in targetEntityFeatures[j]:
+#                         self.setFeature(self.targetIds, targetFeatures, eType + "[1]", eValue)
                 sourceMatrix[-1].append(sourceFeatures)
                 targetMatrix[-1].append(targetFeatures)
         
