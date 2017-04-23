@@ -10,7 +10,10 @@ import Utils.Parameters
 import gzip
 import json
 from keras.layers import Input, Dense, Conv2D, MaxPooling2D, UpSampling2D
-from keras.models import Model
+from keras.models import Model, Sequential
+from keras.layers.normalization import BatchNormalization
+from keras.layers.core import Activation, Reshape, Permute
+from keras.optimizers import SGD
 
 class KerasDetector(Detector):
     """
@@ -111,12 +114,53 @@ class KerasDetector(Detector):
         
         print >> sys.stderr, "Defining model"
         inputShape = Input(shape=(dimMatrix, dimMatrix, dimSourceFeatures))
-        x = Conv2D(16, (3, 3), padding='same')(inputShape)
+        x = Conv2D(16, (1, 1), padding='same')(inputShape)
+        #x = MaxPooling2D((2, 2))(x)
         x = Conv2D(dimTargetFeatures, (1, 1), activation='softmax', padding='same')(x)
+        #x = UpSampling2D((2, 2))(x)
+        #x = Activation('softmax')(x)
         self.kerasModel = Model(inputShape, x)
+        self.kerasModel.compile(optimizer="adadelta", loss='categorical_crossentropy', metrics=['accuracy'])
         
-        print >> sys.stderr, "Compiling model"
-        self.kerasModel.compile(optimizer='adadelta', loss='categorical_crossentropy', metrics=['accuracy'])
+#         x = Conv2D(4, (3, 3), activation='relu', padding='same')(inputShape)
+#         x = MaxPooling2D((2, 2))(x)
+#         x = Conv2D(4, (3, 3), activation='relu', padding='same')(x)
+#         x = UpSampling2D((2, 2))(x)
+#         x = Conv2D(dimTargetFeatures, (3, 3), activation='relu', padding='same')(x)
+#         self.kerasModel = Model(inputShape, x)
+#         self.kerasModel.compile(optimizer="adadelta", loss='categorical_crossentropy', metrics=['accuracy'])
+        
+#         kernel = 3
+#         encoding_layers = [
+#             Conv2D(16, (kernel, kernel), padding='same', input_shape=(dimMatrix, dimMatrix, dimSourceFeatures)),
+#             BatchNormalization(),
+#             Activation('relu'),
+#             Conv2D(64, (kernel, kernel), padding='same'),
+#             BatchNormalization(),
+#             Activation('relu'),
+#             MaxPooling2D()]
+#     
+#         decoding_layers = [
+#             UpSampling2D(),
+#             Conv2D(dimTargetFeatures, (kernel, kernel), padding='same'),
+#             BatchNormalization(),
+#             Activation('relu'),
+#             Conv2D(dimTargetFeatures, (kernel, kernel), padding='same'),
+#             BatchNormalization(),
+#             Activation('relu'),
+#             Conv2D(dimTargetFeatures, (kernel, kernel), padding='same'),
+#             BatchNormalization(),
+#             Activation('relu')]
+#         
+#         self.kerasModel = Sequential()
+#         for l in encoding_layers + decoding_layers:
+#             self.kerasModel.add(l)
+#         
+#         self.kerasModel.add(Activation('softmax'))
+#         
+#         print >> sys.stderr, "Compiling model"
+#         optimizer = SGD(lr=0.001, momentum=0.9, decay=0.0005, nesterov=False)
+#         self.kerasModel.compile(optimizer=optimizer, loss='categorical_crossentropy', metrics=['accuracy'])
         
         # Various attempts at neural networks: ##########################################        
         
@@ -184,6 +228,9 @@ class KerasDetector(Detector):
         # The predicted matrices are saved as an HTML heat map
         predMatrices = self.loadJSON(exampleFiles["devel"])
         predMatrices["predicted"] = self.devectorizePredictions(predictions)
+        if "save_predictions" in self.styles:
+            print >> sys.stderr, "Saving predictions to", self.workDir + self.tag + "devel-predictions.json.gz"
+            self.saveJSON(self.workDir + self.tag + "devel-predictions.json.gz", predMatrices)
         if "html" in self.styles:
             self.matricesToHTML(self.model, predMatrices, self.workDir + self.tag + "devel-predictions.html", int(self.styles["html"]))
         
@@ -257,7 +304,7 @@ class KerasDetector(Detector):
     
     def saveJSON(self, filePath, data):
         with gzip.open(filePath, "wt") as f:
-            json.dump(data, f)
+            json.dump(data, f, indent=2)
     
     def loadJSON(self, filePath):
         with gzip.open(filePath, "rt") as f:
@@ -292,7 +339,7 @@ class KerasDetector(Detector):
                     features = {}
                     devectorized[-1][-1].append(features)
                     maxFeature = labels[exampleIndex][i][j]
-                    features[targetIds.getName(maxFeature)] = 1
+                    features[targetIds.getName(maxFeature)] = float(values[exampleIndex][i][j])
                     features["color"] = self.getColor((values[exampleIndex][i][j] - minValue) / valRange)
         return devectorized
     

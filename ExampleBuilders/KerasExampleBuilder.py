@@ -96,15 +96,24 @@ class KerasExampleBuilder(ExampleBuilder):
                     pass #features[self.featureSet.getId("padding")] = 1
                 elif i == j: # The diagonal defines the linear order of the tokens in the sentence
                     token = sentenceGraph.tokens[i]
-                    self.setFeature(self.sourceIds, sourceFeatures, token.get("POS"))
+                    self.setFeature(self.sourceIds, sourceFeatures, "E")
+                    #self.setFeature(self.sourceIds, sourceFeatures, token.get("POS"))
+                    sourceEntityTypes = []
                     if len(sentenceGraph.tokenIsEntityHead[token]) > 0: # The token is the head token of an entity
-                        for entity in sentenceGraph.tokenIsEntityHead[token]:
-                            if entity.get("given") == "True": # This entity can be used as a training feature
-                                self.setFeature(self.sourceIds, sourceFeatures, entity.get("type"))
-                            self.setFeature(self.targetIds, targetFeatures, entity.get("type"))
+                        sourceEntityTypes = [x.get("type") for x in sentenceGraph.tokenIsEntityHead[token] if x.get("given") == "True"]
+                        targeEntityTypes = [x.get("type") for x in sentenceGraph.tokenIsEntityHead[token]]
+                        if len(sourceEntityTypes) == 0:
+                            sourceEntityTypes = ["neg"]
+                        if len(targeEntityTypes) == 0:
+                            targeEntityTypes = ["neg"]
+                        for eType in sourceEntityTypes:
+                            self.setFeature(self.sourceIds, sourceFeatures, eType, 1000)
+                        for eType in targeEntityTypes:
+                            self.setFeature(self.targetIds, targetFeatures, eType, 1000)
                     else: # There is no entity for this token
-                        self.setFeature(self.sourceIds, sourceFeatures, "E:0")
-                else: # This element of the adjacency matrix describes the relation from token i to token j
+                        self.setFeature(self.sourceIds, sourceFeatures, "neg")
+                        self.setFeature(self.targetIds, targetFeatures, "neg")
+                elif False: # This element of the adjacency matrix describes the relation from token i to token j
                     # Define the dependency features for the source matrix
                     tI = sentenceGraph.tokens[i]
                     tJ = sentenceGraph.tokens[j]
@@ -128,6 +137,8 @@ class KerasExampleBuilder(ExampleBuilder):
                     if len(intTypes) > 0: # A bag of interactions for all interaction types between the two tokens
                         for intType in sorted(list(intTypes)):
                             self.setFeature(self.targetIds, targetFeatures, intType)
+                    else:
+                        self.setFeature(self.targetIds, targetFeatures, "neg")
                 sourceMatrix[-1].append(sourceFeatures)
                 targetMatrix[-1].append(targetFeatures)
         
