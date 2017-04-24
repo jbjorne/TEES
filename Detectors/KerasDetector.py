@@ -114,6 +114,24 @@ class KerasDetector(Detector):
         dimMatrix = int(self.model.getStr("dimMatrix")) # The width/height of both the source and target matrix
         
         print >> sys.stderr, "Defining model"
+        
+#         inputShape = x = Input(shape=(dimMatrix, dimMatrix, dimSourceFeatures))
+#         x = Conv2D(64, (1, 9), padding='same')(x)
+#         x = MaxPooling2D((1, 2), padding='same')(x)
+#         x = UpSampling2D((1, 2))(x)
+#         x = Conv2D(32, (1, 5), padding='same')(x)
+#         x = MaxPooling2D((1, 2), padding='same')(x)
+#         x = UpSampling2D((1, 2))(x)
+#         x = Conv2D(16, (1, 3), padding='same')(x)
+#         x = MaxPooling2D((1, 2), padding='same')(x)
+#         x = UpSampling2D((1, 2))(x)
+#         x = Dense(256)(x)
+#         #x = Conv2D(16, (5, 1), activation='relu', padding='same')(x)
+#         x = Conv2D(dimTargetFeatures, (1, 1), activation='softmax', padding='same')(x)
+#         self.kerasModel = Model(inputShape, x)
+#         self.kerasModel.compile(optimizer="adadelta", loss='categorical_crossentropy', metrics=['accuracy'])
+
+        
 #         x = inputShape = Input(shape=(dimMatrix, dimMatrix, dimSourceFeatures))
 #         #x = Conv2D(dimSourceFeatures, (1, 1), activation="relu", padding='same')(x)
 #         #x = Dense(dimSourceFeatures, activation="relu")(x)
@@ -171,36 +189,37 @@ class KerasDetector(Detector):
 #         for l in encoding_layers + decoding_layers:
 #             self.kerasModel.add(l)
         
-        kernel = 3
-        
+        kernel = (1, 9)
+        size = (1, 2)
+         
         encoding_layers = [
-            Conv2D(64, kernel, kernel, border_mode='same', input_shape=(dimMatrix, dimMatrix, dimSourceFeatures)),
-            BatchNormalization(),
+            Conv2D(64, kernel, padding='same', input_shape=(dimMatrix, dimMatrix, dimSourceFeatures)),
+            #BatchNormalization(),
             Activation('relu'),
-            Conv2D(64, kernel, kernel, border_mode='same'),
-            BatchNormalization(),
+            Conv2D(64, kernel, padding='same'),
+            #BatchNormalization(),
             Activation('relu'),
-            MaxPooling2D(),
-        
-            Conv2D(128, kernel, kernel, border_mode='same'),
-            BatchNormalization(),
+            MaxPooling2D(pool_size=size),
+         
+            Conv2D(128, kernel, padding='same'),
+            #BatchNormalization(),
             Activation('relu'),
-            Conv2D(128, kernel, kernel, border_mode='same'),
-            BatchNormalization(),
+            Conv2D(128, kernel, padding='same'),
+            #BatchNormalization(),
             Activation('relu'),
-            MaxPooling2D(),
-        
-            Conv2D(256, kernel, kernel, border_mode='same'),
-            BatchNormalization(),
+            MaxPooling2D(pool_size=size),
+         
+            Conv2D(256, kernel, padding='same'),
+            #BatchNormalization(),
             Activation('relu'),
-            Conv2D(256, kernel, kernel, border_mode='same'),
-            BatchNormalization(),
+            Conv2D(256, kernel, padding='same'),
+            #BatchNormalization(),
             Activation('relu'),
-            Conv2D(256, kernel, kernel, border_mode='same'),
-            BatchNormalization(),
+            Conv2D(256, kernel, padding='same'),
+            #BatchNormalization(),
             Activation('relu'),
-            MaxPooling2D(),
-        
+            MaxPooling2D(pool_size=size),
+         
 #             Conv2D(512, kernel, kernel, border_mode='same'),
 #             BatchNormalization(),
 #             Activation('relu'),
@@ -223,13 +242,13 @@ class KerasDetector(Detector):
 #             Activation('relu'),
 #             MaxPooling2D(),
         ]
-        
+         
         self.kerasModel = Sequential()
         self.kerasModel.encoding_layers = encoding_layers
-        
+         
         for l in self.kerasModel.encoding_layers:
             self.kerasModel.add(l)
-        
+         
         decoding_layers = [
 #             UpSampling2D(),
 #             Conv2D(512, kernel, kernel, border_mode='same'),
@@ -252,39 +271,39 @@ class KerasDetector(Detector):
 #             Conv2D(256, kernel, kernel, border_mode='same'),
 #             BatchNormalization(),
 #             Activation('relu'),
-        
-            UpSampling2D(),
-            Conv2D(256, kernel, kernel, border_mode='same'),
-            BatchNormalization(),
+         
+            UpSampling2D(size=size),
+            Conv2D(256, kernel, padding='same'),
+            #BatchNormalization(),
             Activation('relu'),
-            Conv2D(256, kernel, kernel, border_mode='same'),
-            BatchNormalization(),
+            Conv2D(256, kernel, padding='same'),
+            #BatchNormalization(),
             Activation('relu'),
-            Conv2D(128, kernel, kernel, border_mode='same'),
-            BatchNormalization(),
+            Conv2D(128, kernel, padding='same'),
+            #BatchNormalization(),
             Activation('relu'),
-        
-            UpSampling2D(),
-            Conv2D(128, kernel, kernel, border_mode='same'),
-            BatchNormalization(),
+         
+            UpSampling2D(size=size),
+            Conv2D(128, kernel, padding='same'),
+            #BatchNormalization(),
             Activation('relu'),
-            Conv2D(64, kernel, kernel, border_mode='same'),
-            BatchNormalization(),
+            Conv2D(64, kernel, padding='same'),
+            #BatchNormalization(),
             Activation('relu'),
-        
-            UpSampling2D(),
-            Conv2D(64, kernel, kernel, border_mode='same'),
-            BatchNormalization(),
+         
+            UpSampling2D(size=size),
+            Conv2D(64, kernel, padding='same'),
+            #BatchNormalization(),
             Activation('relu'),
-            Conv2D(dimTargetFeatures, 1, 1, border_mode='valid'),
-            BatchNormalization(),
+            Conv2D(dimTargetFeatures, (1, 1), padding='valid'),
+            #BatchNormalization(),
         ]
         self.kerasModel.decoding_layers = decoding_layers
         for l in self.kerasModel.decoding_layers:
             self.kerasModel.add(l)
-         
+          
         self.kerasModel.add(Activation('softmax'))
-         
+          
         print >> sys.stderr, "Compiling model"
         optimizer = SGD(lr=0.001, momentum=0.9, decay=0.0005, nesterov=False)
         self.kerasModel.compile(optimizer=optimizer, loss='categorical_crossentropy', metrics=['accuracy'])

@@ -25,7 +25,8 @@ class KerasExampleBuilder(ExampleBuilder):
         self.sourceIds = self.featureSet
         self.targetIds = self.classSet
         
-        self._setDefaultParameters(["directed", "undirected", "cutoff", "annotated_only", "epochs", "html"])
+        self._setDefaultParameters(["directed", "undirected", "cutoff", "annotated_only", "all_positive", 
+                                    "epochs", "html"])
         self.styles = self.getParameters(style)
         if self.styles["cutoff"]:
             self.styles["cutoff"] = int(self.styles["cutoff"])
@@ -110,6 +111,8 @@ class KerasExampleBuilder(ExampleBuilder):
                 targetFeatures = {}
                 if i >= numTokens or j >= numTokens: # Padding outside the sentence range (left empty, later fille with Numpy zeros)
                     pass #features[self.featureSet.getId("padding")] = 1
+                    #self.setFeature(self.sourceIds, sourceFeatures, "[out]", 1)
+                    #self.setFeature(self.targetIds, targetFeatures, "[out]", negValue)
                 elif i == j: # The diagonal defines the linear order of the tokens in the sentence
                     token = sentenceGraph.tokens[i]
                     self.setFeature(self.sourceIds, sourceFeatures, "E")
@@ -143,17 +146,23 @@ class KerasExampleBuilder(ExampleBuilder):
                     else:
                         self.setFeature(self.sourceIds, sourceFeatures, "D:0") # no path
                     # Define the relation features (labels) for the target matrix
-                    intTypes = set()
-                    intEdges = sentenceGraph.interactionGraph.getEdges(tI, tJ)
-                    if not directed:
-                        intEdges = intEdges + sentenceGraph.interactionGraph.getEdges(tJ, tI)
-                    for intEdge in intEdges:
-                        intTypes.add(intEdge[2].get("type"))
-                    if len(intTypes) > 0: # A bag of interactions for all interaction types between the two tokens
-                        for intType in sorted(list(intTypes)):
-                            self.setFeature(self.targetIds, targetFeatures, intType)
+                    if "all_positive" in self.styles:
+                        if "neg" not in sourceEntityFeatures[i] and "neg" not in sourceEntityFeatures[j]:
+                            self.setFeature(self.targetIds, targetFeatures, "REL")
+                        else:
+                            self.setFeature(self.targetIds, targetFeatures, "neg", negValue)
                     else:
-                        self.setFeature(self.targetIds, targetFeatures, "neg", negValue)
+                        intTypes = set()
+                        intEdges = sentenceGraph.interactionGraph.getEdges(tI, tJ)
+                        if not directed:
+                            intEdges = intEdges + sentenceGraph.interactionGraph.getEdges(tJ, tI)
+                        for intEdge in intEdges:
+                            intTypes.add(intEdge[2].get("type"))
+                        if len(intTypes) > 0: # A bag of interactions for all interaction types between the two tokens
+                            for intType in sorted(list(intTypes)):
+                                self.setFeature(self.targetIds, targetFeatures, intType)
+                        else:
+                            self.setFeature(self.targetIds, targetFeatures, "neg", negValue)
                     # Define the features for the two entities
                     for eType, eValue in sourceEntityFeatures[i]:
                         self.setFeature(self.sourceIds, sourceFeatures, eType + "[0]", eValue)
