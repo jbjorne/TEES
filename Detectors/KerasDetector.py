@@ -119,9 +119,12 @@ class KerasDetector(Detector):
         metrics = ["accuracy"]
         
         m = self.kerasModel = Sequential()
-        m.add(Dense(300, activation='tanh', input_shape=(dimMatrix, dimMatrix, dimSourceFeatures)))
+        m.add(Dense(300, input_shape=(dimMatrix, dimMatrix, dimSourceFeatures)))
         #m.add(Conv2D(dimTargetFeatures, (1, 1), activation='sigmoid', padding='same'))
         m.add(Conv2D(dimTargetFeatures, (1, 1), activation='softmax', padding='same'))
+
+        print >> sys.stderr, "Compiling model"
+        self.kerasModel.compile(optimizer="adam", loss='categorical_crossentropy', metrics=metrics) #, metrics=['accuracy'])
         
         
 #         inputShape = x = Input(shape=(dimMatrix, dimMatrix, dimSourceFeatures))
@@ -141,9 +144,6 @@ class KerasDetector(Detector):
 #         x = Conv2D(dimTargetFeatures, (1, 1), activation='sigmoid', padding='same')(x)
 #         x = Conv2D(dimTargetFeatures, (1, 1), activation='softmax', padding='same')(x)
 #         self.kerasModel = Model(inputShape, x)
-        
-        print >> sys.stderr, "Compiling model"
-        self.kerasModel.compile(optimizer="adam", loss='categorical_crossentropy', metrics=metrics) #, metrics=['accuracy'])
 
         
 #         x = inputShape = Input(shape=(dimMatrix, dimMatrix, dimSourceFeatures))
