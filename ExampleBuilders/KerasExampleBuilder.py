@@ -116,7 +116,7 @@ class KerasExampleBuilder(ExampleBuilder):
                 elif i == j: # The diagonal defines the linear order of the tokens in the sentence
                     token = sentenceGraph.tokens[i]
                     #self.setFeature(self.sourceIds, sourceFeatures, "E")
-                    #self.setFeature(self.sourceIds, sourceFeatures, token.get("POS"))
+                    self.setFeature(self.sourceIds, sourceFeatures, token.get("POS"))
                     sourceEntityTypes = []
                     targeEntityTypes = []
                     if len(sentenceGraph.tokenIsEntityHead[token]) > 0: # The token is the head token of an entity
@@ -134,17 +134,17 @@ class KerasExampleBuilder(ExampleBuilder):
                     # Define the dependency features for the source matrix
                     tI = sentenceGraph.tokens[i]
                     tJ = sentenceGraph.tokens[j]
-#                     shortestPaths = depGraph.getPaths(tI, tJ)
-#                     if len(shortestPaths) > 0: # There is a path of dependencies between these two tokens
-#                         path = shortestPaths[0]
-#                         if True: #len(path) == 2:
-#                             for tokenIndex in (0, -1): # The first and last token in the path
-#                                 self.setFeature(self.sourceIds, sourceFeatures, "T" + str(tokenIndex) + ":" + path[tokenIndex].get("POS"))
-#                             for k in range(1, len(path)): # A bag of dependencies for this shortest path
-#                                 for edge in depGraph.getEdges(path[k], path[k-1]) + depGraph.getEdges(path[k-1], path[k]):
-#                                     self.setFeature(self.sourceIds, sourceFeatures, edge[2].get("type"))
-#                     else:
-#                         self.setFeature(self.sourceIds, sourceFeatures, "D:0") # no path
+                    shortestPaths = depGraph.getPaths(tI, tJ)
+                    if len(shortestPaths) > 0: # There is a path of dependencies between these two tokens
+                        path = shortestPaths[0]
+                        if len(path) == 2:
+                            for tokenIndex in (0, -1): # The first and last token in the path
+                                self.setFeature(self.sourceIds, sourceFeatures, "T" + str(tokenIndex) + ":" + path[tokenIndex].get("POS"))
+                            for k in range(1, len(path)): # A bag of dependencies for this shortest path
+                                for edge in depGraph.getEdges(path[k], path[k-1]) + depGraph.getEdges(path[k-1], path[k]):
+                                    self.setFeature(self.sourceIds, sourceFeatures, edge[2].get("type"))
+                    #else:
+                    #    self.setFeature(self.sourceIds, sourceFeatures, "D:0") # no path
                     # Define the relation features (labels) for the target matrix
                     if "all_positive" in self.styles:
                         if len(targetEntityFeatures[i]) > 0 and len(targetEntityFeatures[j]) > 0:

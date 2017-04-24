@@ -113,10 +113,11 @@ class KerasDetector(Detector):
         dimTargetFeatures = int(self.model.getStr("dimTargetFeatures")) # Number of channels in the target matrix
         dimMatrix = int(self.model.getStr("dimMatrix")) # The width/height of both the source and target matrix
         
-        print >> sys.stderr, "Defining model"
+        print >> sys.stderr, "Defining model", (dimMatrix, dimSourceFeatures, dimTargetFeatures)
         
         inputShape = x = Input(shape=(dimMatrix, dimMatrix, dimSourceFeatures))
-        #x = Conv2D(64, (1, 1), padding='same')(x)
+        x = Conv2D(32, (3, 3), activation='relu', padding='same')(x)
+        x = Conv2D(16, (5, 5), activation='relu', padding='same')(x)
         #x = MaxPooling2D((1, 2), padding='same')(x)
         #x = Conv2D(32, (1, 1), padding='same')(x)
         #x = MaxPooling2D((1, 2), padding='same')(x)
@@ -129,7 +130,9 @@ class KerasDetector(Detector):
         #x = Conv2D(16, (5, 1), activation='relu', padding='same')(x)
         x = Conv2D(dimTargetFeatures, (1, 1), activation='sigmoid', padding='same')(x)
         self.kerasModel = Model(inputShape, x)
-        self.kerasModel.compile(optimizer="adadelta", loss='categorical_crossentropy', metrics=['accuracy'])
+        
+        print >> sys.stderr, "Compiling model"
+        self.kerasModel.compile(optimizer="adam", loss='categorical_crossentropy', metrics=['accuracy'])
 
         
 #         x = inputShape = Input(shape=(dimMatrix, dimMatrix, dimSourceFeatures))
