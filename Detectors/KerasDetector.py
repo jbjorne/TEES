@@ -380,7 +380,10 @@ class KerasDetector(Detector):
         print >> sys.stderr, "Fitting model"
         #es_cb = EarlyStopping(monitor='val_loss', patience=10, verbose=1)
         #cp_cb = ModelCheckpoint(filepath=self.workDir + self.tag + 'model.hdf5', save_best_only=True, verbose=1)
-        features = "source" if not "autoencode" in self.styles else "target"
+        features = "source"
+        if "autoencode" in self.styles:
+            features = "target"
+        print >> sys.stderr, features, "->", "target", ("(autoencode)" if "autoencode" in self.styles else "")
         self.kerasModel.fit(self.arrays["train"][features], self.arrays["train"]["target"],
             epochs=100 if not "epochs" in self.styles else int(self.styles["epochs"]),
             batch_size=128,
