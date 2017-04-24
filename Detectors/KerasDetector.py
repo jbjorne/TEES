@@ -111,28 +111,39 @@ class KerasDetector(Detector):
         """
         dimSourceFeatures = int(self.model.getStr("dimSourceFeatures")) # Number of channels in the source matrix
         dimTargetFeatures = int(self.model.getStr("dimTargetFeatures")) # Number of channels in the target matrix
+        if "autoencode" in self.styles:
+            dimSourceFeatures = dimTargetFeatures
         dimMatrix = int(self.model.getStr("dimMatrix")) # The width/height of both the source and target matrix
         
         print >> sys.stderr, "Defining model", (dimMatrix, dimSourceFeatures, dimTargetFeatures)
+        metrics = ["accuracy"]
         
-        inputShape = x = Input(shape=(dimMatrix, dimMatrix, dimSourceFeatures))
-        x = Conv2D(32, (3, 3), activation='relu', padding='same')(x)
-        x = Conv2D(16, (5, 5), activation='relu', padding='same')(x)
-        #x = MaxPooling2D((1, 2), padding='same')(x)
-        #x = Conv2D(32, (1, 1), padding='same')(x)
-        #x = MaxPooling2D((1, 2), padding='same')(x)
-        #x = Conv2D(16, (1, 1), padding='same')(x)
-        #x = UpSampling2D((1, 2))(x)
-        #x = Conv2D(32, (1, 1), padding='same')(x)
-        #x = UpSampling2D((1, 2))(x)
-        #x = Conv2D(64, (1, 1), padding='same')(x)
-        #x = Dense(256)(x)
-        #x = Conv2D(16, (5, 1), activation='relu', padding='same')(x)
-        x = Conv2D(dimTargetFeatures, (1, 1), activation='sigmoid', padding='same')(x)
-        self.kerasModel = Model(inputShape, x)
+        m = self.kerasModel = Sequential()
+        m.add(Dense(300, activation='tanh', input_shape=(dimMatrix, dimMatrix, dimSourceFeatures)))
+        #m.add(Conv2D(dimTargetFeatures, (1, 1), activation='sigmoid', padding='same'))
+        m.add(Conv2D(dimTargetFeatures, (1, 1), activation='softmax', padding='same'))
+        
+        
+#         inputShape = x = Input(shape=(dimMatrix, dimMatrix, dimSourceFeatures))
+#         #x = Conv2D(32, (3, 3), activation='relu', padding='same')(x)
+#         #x = Conv2D(16, (5, 5), activation='relu', padding='same')(x)
+#         #x = Conv2D(8, (1, 9), activation='relu', padding='same')(x)
+#         #x = MaxPooling2D((1, 2), padding='same')(x)
+#         #x = Conv2D(32, (1, 1), padding='same')(x)
+#         #x = MaxPooling2D((1, 2), padding='same')(x)
+#         #x = Conv2D(16, (1, 1), padding='same')(x)
+#         #x = UpSampling2D((1, 2))(x)
+#         #x = Conv2D(32, (1, 1), padding='same')(x)
+#         #x = UpSampling2D((1, 2))(x)
+#         #x = Conv2D(64, (1, 1), padding='same')(x)
+#         x = Dense(300, activation='tanh')(x)
+#         #x = Conv2D(16, (5, 1), activation='relu', padding='same')(x)
+#         x = Conv2D(dimTargetFeatures, (1, 1), activation='sigmoid', padding='same')(x)
+#         x = Conv2D(dimTargetFeatures, (1, 1), activation='softmax', padding='same')(x)
+#         self.kerasModel = Model(inputShape, x)
         
         print >> sys.stderr, "Compiling model"
-        self.kerasModel.compile(optimizer="adam", loss='categorical_crossentropy', metrics=['accuracy'])
+        self.kerasModel.compile(optimizer="adam", loss='categorical_crossentropy', metrics=metrics) #, metrics=['accuracy'])
 
         
 #         x = inputShape = Input(shape=(dimMatrix, dimMatrix, dimSourceFeatures))
@@ -369,16 +380,17 @@ class KerasDetector(Detector):
         print >> sys.stderr, "Fitting model"
         #es_cb = EarlyStopping(monitor='val_loss', patience=10, verbose=1)
         #cp_cb = ModelCheckpoint(filepath=self.workDir + self.tag + 'model.hdf5', save_best_only=True, verbose=1)
-        self.kerasModel.fit(self.arrays["train"]["source"], self.arrays["train"]["target"],
+        features = "source" if not "autoencode" in self.styles else "target"
+        self.kerasModel.fit(self.arrays["train"][features], self.arrays["train"]["target"],
             epochs=100 if not "epochs" in self.styles else int(self.styles["epochs"]),
             batch_size=128,
             shuffle=True,
-            validation_data=(self.arrays["devel"]["source"], self.arrays["devel"]["target"]))
+            validation_data=(self.arrays["devel"][features], self.arrays["devel"]["target"]))
             #class_weight=class_weight)
             #callbacks=[es_cb])#, cp_cb])
         
         print >> sys.stderr, "Predicting devel examples"
-        predictions = self.kerasModel.predict(self.arrays["devel"]["source"], 128, 1)
+        predictions = self.kerasModel.predict_proba(self.arrays["devel"][features], 128, 1)
         
         # The predicted matrices are saved as an HTML heat map
         predMatrices = self.loadJSON(exampleFiles["devel"])
@@ -495,8 +507,9 @@ class KerasDetector(Detector):
                     features = {}
                     devectorized[-1][-1].append(features)
                     maxFeature = labels[exampleIndex][i][j]
-                    features[targetIds.getName(maxFeature)] = float(values[exampleIndex][i][j])
-                    features["color"] = self.getColor((values[exampleIndex][i][j] - minValue) / valRange)
+                    predValue = predictions[exampleIndex][i][j][maxFeature]
+                    features[targetIds.getName(maxFeature)] = float(predValue)
+                    features["color"] = self.getColor((predValue - minValue) / valRange)
         return devectorized
     
     def vectorizeMatrices(self, model):
