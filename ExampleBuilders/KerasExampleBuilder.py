@@ -60,12 +60,13 @@ class KerasExampleBuilder(ExampleBuilder):
                 entities = [x for x in sentenceGraph.tokenIsEntityHead[token]]
             entFeatures = set()
             for entity in entities:
-                for key in ("type", "mtmxNameShort"):
-                    if entity.get(key) != None:
-                        entFeatures.add(entity.get(key))
-                if entity.get("mtmxSemTypes") != None:
-                    for semType in entity.get("mtmxSemTypes").split(","):
-                        entFeatures.add(semType)
+                entFeatures.add(entity.get("type"))
+#                 for key in ("type", "mtmxNameShort"):
+#                     if entity.get(key) != None:
+#                         entFeatures.add(entity.get(key))
+#                 if entity.get("mtmxSemTypes") != None:
+#                     for semType in entity.get("mtmxSemTypes").split(","):
+#                         entFeatures.add(semType)
             entFeatures = sorted(entFeatures)
             if len(entFeatures) == 0:
                 features.append([("Eneg", negValue)])
