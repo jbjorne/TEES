@@ -134,10 +134,13 @@ class KerasDetector(Detector):
         
         x = inputLayer = Input(shape=(dimMatrix, dimMatrix, dimSourceFeatures))
         #x = Conv2D(dimTargetFeatures, (1, 3), activation='relu', padding='same')(x)
-        #x = Reshape((dimMatrix * dimMatrix, dimSourceFeatures))(x)
-        #x = TimeDistributed(Dense(dimTargetFeatures, activation="sigmoid"))(x)
-        #x = Reshape((dimMatrix, dimMatrix, dimTargetFeatures))(x)
-        x = Conv2D(dimTargetFeatures, (1, 1), activation='sigmoid', padding='same')(x)
+        x = Reshape((dimMatrix * dimMatrix * dimSourceFeatures,))(x)
+        x = Dense(1024)(x)
+        x = Dense(dimMatrix * dimMatrix * dimSourceFeatures, activation="sigmoid")(x)
+        x = Reshape((dimMatrix, dimMatrix, dimTargetFeatures))(x)
+        #x = Conv2D(dimTargetFeatures, (1, 1), activation='sigmoid', padding='same')(x)
+        #x = Dense(12)(x)
+        #x = Dense(dimTargetFeatures, activation='sigmoid')(x)
         self.kerasModel = Model(inputLayer, x)
         
         learningRate = float(self.styles.get("lr", 0.001))
@@ -147,6 +150,7 @@ class KerasDetector(Detector):
         print >> sys.stderr, "Compiling model"
         self.kerasModel.compile(optimizer=optimizer, loss='categorical_crossentropy', metrics=metrics) #, sample_weight_mode="temporal") #, metrics=['accuracy'])
         
+        self.kerasModel.summary()
         
 #         inputShape = x = Input(shape=(dimMatrix, dimMatrix, dimSourceFeatures))
 #         #x = Conv2D(32, (3, 3), activation='relu', padding='same')(x)
