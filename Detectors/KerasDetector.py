@@ -13,7 +13,7 @@ from keras.layers import Input, Dense, Conv2D, MaxPooling2D, UpSampling2D
 from keras.models import Model, Sequential, load_model
 from keras.layers.normalization import BatchNormalization
 from keras.layers.core import Activation, Reshape, Permute, Dropout
-from keras.optimizers import SGD
+from keras.optimizers import SGD, Adam
 from keras.layers.local import LocallyConnected2D
 from keras.layers.wrappers import TimeDistributed
 from keras.callbacks import EarlyStopping, ModelCheckpoint
@@ -134,7 +134,8 @@ class KerasDetector(Detector):
 
         self.kerasModel = Model(x, reshaped_xx)
         print >> sys.stderr, "Compiling model"
-        self.kerasModel.compile(optimizer="adam", loss='categorical_crossentropy', metrics=metrics) #, metrics=['accuracy'])
+        optimizer = Adam(lr=0.1)
+        self.kerasModel.compile(optimizer=optimizer, loss='categorical_crossentropy', metrics=metrics) #, metrics=['accuracy'])
         
         
 #         inputShape = x = Input(shape=(dimMatrix, dimMatrix, dimSourceFeatures))
