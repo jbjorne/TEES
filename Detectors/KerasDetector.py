@@ -175,6 +175,8 @@ class KerasDetector(Detector):
 
         x = inputLayer = Input(shape=(dimMatrix, dimMatrix, dimSourceFeatures))
         #x = Conv2D(32, (3, 3), padding='same')(x)
+        x = Conv2D(16, (3, 3), padding='same')(x)
+        x = Conv2D(16, (3, 3), padding='same')(x)
         x = Conv2D(256, (1, 1), padding='same')(x)
         x = Conv2D(dimTargetFeatures, (1, 1), activation='sigmoid', padding='same')(x)
         self.kerasModel = Model(inputLayer, x)
