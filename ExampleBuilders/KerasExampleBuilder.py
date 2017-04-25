@@ -146,10 +146,9 @@ class KerasExampleBuilder(ExampleBuilder):
                     #else:
                     #    self.setFeature(self.sourceIds, sourceFeatures, "D:0") # no path
                     # Define the relation features (labels) for the target matrix
-                    if "all_positive" in self.styles:
+                    if "all_positive" in self.styles: # Add a target relation for each pair of entities
                         #if len(targetEntityFeatures[i]) > 0 and len(targetEntityFeatures[j]) > 0:
                         if (targetEntityFeatures[i][0][0] != "neg") and (targetEntityFeatures[j][0][0] != "neg"):
-                            self.setFeature(self.sourceIds, sourceFeatures, "REL")
                             self.setFeature(self.targetIds, targetFeatures, "REL")
                         #else:
                         #    self.setFeature(self.targetIds, targetFeatures, "neg", negValue)
