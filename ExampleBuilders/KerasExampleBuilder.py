@@ -137,7 +137,7 @@ class KerasExampleBuilder(ExampleBuilder):
                     shortestPaths = depGraph.getPaths(tI, tJ)
                     if len(shortestPaths) > 0: # There is a path of dependencies between these two tokens
                         path = shortestPaths[0]
-                        if len(path) == 2:
+                        if True: #len(path) == 2:
                             for tokenIndex in (0, -1): # The first and last token in the path
                                 self.setFeature(self.sourceIds, sourceFeatures, "T" + str(tokenIndex) + ":" + path[tokenIndex].get("POS"))
                             for k in range(1, len(path)): # A bag of dependencies for this shortest path

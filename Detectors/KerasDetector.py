@@ -17,6 +17,7 @@ from keras.optimizers import SGD, Adam
 from keras.layers.local import LocallyConnected2D
 from keras.layers.wrappers import TimeDistributed
 from keras.callbacks import EarlyStopping, ModelCheckpoint
+from Detectors import SingleStageDetector
 
 class KerasDetector(Detector):
     """
@@ -64,6 +65,35 @@ class KerasDetector(Detector):
             self.setWorkDir("")
         self.arrays = None
         self.exitState()
+    
+#     def classifyToXML(self, data, model, exampleFileName=None, tag="", classifierModel=None, goldData=None, parse=None, recallAdjust=None, compressExamples=True, exampleStyle=None, useExistingExamples=False):
+#         model = self.openModel(model, "r")
+#         if parse == None:
+#             parse = self.getStr(self.tag+"parse", model)
+#         if useExistingExamples:
+#             assert exampleFileName != None
+#             assert os.path.exists(exampleFileName)
+#         if exampleFileName == None:
+#             exampleFileName = tag+self.tag+"examples"
+#             if compressExamples:
+#                 exampleFileName += ".gz"
+#         if not useExistingExamples:
+#             self.buildExamples(model, [data], [exampleFileName], [goldData], parse=parse, exampleStyle=exampleStyle)
+#         if classifierModel == None:
+#             classifierModel = model.get(self.tag+"classifier-model", defaultIfNotExist=None)
+#         #else:
+#         #    assert os.path.exists(classifierModel), classifierModel
+#         classifier = self.getClassifier(model.getStr(self.tag+"classifier-parameter", defaultIfNotExist=None))()
+#         classifier.classify(exampleFileName, tag+self.tag+"classifications", classifierModel, finishBeforeReturn=True)
+#         threshold = model.getStr(self.tag+"threshold", defaultIfNotExist=None, asType=float)
+#         predictions = ExampleUtils.loadPredictions(tag+self.tag+"classifications", recallAdjust, threshold=threshold)
+#         evaluator = self.evaluator.evaluate(exampleFileName, predictions, model.get(self.tag+"ids.classes"))
+#         #outputFileName = tag+"-"+self.tag+"pred.xml.gz"
+#         #exampleStyle = self.exampleBuilder.getParameters(model.getStr(self.tag+"example-style"))
+#         if exampleStyle == None:
+#             exampleStyle = Parameters.get(model.getStr(self.tag+"example-style")) # no checking, but these should already have passed the ExampleBuilder
+#         self.structureAnalyzer.load(model)
+#         return self.exampleWriter.write(exampleFileName, predictions, data, tag+self.tag+"pred.xml.gz", model.get(self.tag+"ids.classes"), parse, exampleStyle=exampleStyle, structureAnalyzer=self.structureAnalyzer)
         
     ###########################################################################
     # Main Pipeline Steps
@@ -410,7 +440,7 @@ class KerasDetector(Detector):
         
         print >> sys.stderr, "Fitting model"
         es_cb = EarlyStopping(monitor='val_loss', patience=10, verbose=1)
-        bestModelPath = self.workDir + self.tag + 'model.hdf5'
+        bestModelPath = self.model.get(self.tag + "model.hdf5", True) #self.workDir + self.tag + 'model.hdf5'
         cp_cb = ModelCheckpoint(filepath=bestModelPath, save_best_only=True, verbose=1)
         features = "source"
         #import pdb;pdb.set_trace()
@@ -429,6 +459,7 @@ class KerasDetector(Detector):
         print >> sys.stderr, "Predicting devel examples"
         self.kerasModel = load_model(bestModelPath)
         predictions = self.kerasModel.predict(self.arrays["devel"][features], 128, 1)
+        self.model.save()
         
         # The predicted matrices are saved as an HTML heat map
         predMatrices = self.loadJSON(exampleFiles["devel"])
