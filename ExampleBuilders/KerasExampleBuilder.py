@@ -112,7 +112,7 @@ class KerasExampleBuilder(ExampleBuilder):
                 if i >= numTokens or j >= numTokens: # Padding outside the sentence range (left empty, later fille with Numpy zeros)
                     pass #features[self.featureSet.getId("padding")] = 1
                     #self.setFeature(self.sourceIds, sourceFeatures, "[out]", 1)
-                    #self.setFeature(self.targetIds, targetFeatures, "[out]", negValue)
+                    self.setFeature(self.targetIds, targetFeatures, "[out]", negValue)
                 elif i == j: # The diagonal defines the linear order of the tokens in the sentence
                     token = sentenceGraph.tokens[i]
                     #self.setFeature(self.sourceIds, sourceFeatures, "E")

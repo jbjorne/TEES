@@ -153,6 +153,7 @@ class ExampleBuilder:
         # Show statistics
         print >> sys.stderr, "Examples built:", self.exampleCount
         print >> sys.stderr, "Features:", len(self.featureSet.getNames())
+        print >> sys.stderr, "Classes:", len(self.classSet.getNames())
         print >> sys.stderr, "Style:", Utils.Parameters.toString(self.getParameters(self.styles))
         if self.exampleStats.getExampleCount() > 0:
             self.exampleStats.printStats()

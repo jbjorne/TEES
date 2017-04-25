@@ -19,6 +19,19 @@ from keras.layers.wrappers import TimeDistributed
 from keras.callbacks import EarlyStopping, ModelCheckpoint
 from Detectors import SingleStageDetector
 
+# def categorical_crossentropy(output, target, from_logits=False):
+#     from keras.backend.common import _EPSILON
+#     from theano import tensor as T
+#     from theano.tensor import basic as tensor
+#     if from_logits:
+#         output = T.nnet.softmax(output)
+#     else:
+#         # scale preds so that the class probas of each sample sum to 1
+#         output /= output.sum(axis=-1, keepdims=True)
+#     # avoid numerical instability with _EPSILON clipping
+#     output = T.clip(output, _EPSILON, 1.0 - _EPSILON)
+#     return T.nnet.categorical_crossentropy(output, target)
+
 class KerasDetector(Detector):
     """
     The KerasDetector replaces the default SVM-based learning with a pipeline where
@@ -174,9 +187,9 @@ class KerasDetector(Detector):
 #         self.kerasModel = Model(inputLayer, x)
 
         x = inputLayer = Input(shape=(dimMatrix, dimMatrix, dimSourceFeatures))
-        #x = Conv2D(32, (3, 3), padding='same')(x)
-        x = Conv2D(16, (3, 3), padding='same')(x)
-        x = Conv2D(16, (3, 3), padding='same')(x)
+        ##x = Conv2D(32, (3, 3), padding='same')(x)
+        #x = Conv2D(16, (3, 3), padding='same')(x)
+        #x = Conv2D(16, (3, 3), padding='same')(x)
         x = Conv2D(256, (1, 1), padding='same')(x)
         x = Conv2D(dimTargetFeatures, (1, 1), activation='sigmoid', padding='same')(x)
         self.kerasModel = Model(inputLayer, x)
@@ -186,7 +199,7 @@ class KerasDetector(Detector):
         optimizer = Adam(lr=learningRate)
         
         print >> sys.stderr, "Compiling model"
-        self.kerasModel.compile(optimizer=optimizer, loss='categorical_crossentropy', metrics=metrics) #, sample_weight_mode="temporal") #, metrics=['accuracy'])
+        self.kerasModel.compile(optimizer=optimizer, loss='cosine_proximity', metrics=metrics) #, sample_weight_mode="temporal") #, metrics=['accuracy'])
         
         self.kerasModel.summary()
         
@@ -421,7 +434,7 @@ class KerasDetector(Detector):
         #x = Conv2D(dimTargetFeatures, (1, 1), padding='same')(x)
         
         #self.kerasModel.compile(optimizer='adadelta', loss='binary_crossentropy', metrics=['accuracy'])
-
+    
     def fitModel(self, exampleFiles):
         """
         Fits the compiled Keras model to the adjacency matrix examples. The model is trained on the
@@ -435,10 +448,10 @@ class KerasDetector(Detector):
         if self.arrays == None: # The Python dictionary matrices are converted into dense Numpy arrays
             self.vectorizeMatrices(self.model)
             
-#         targetIds = IdSet(filename=self.model.get(self.tag+"ids.classes"), locked=True)
-#         class_weight = {}
-#         for className in targetIds.Ids:
-#             class_weight[targetIds.getId(className)] = 1.0 if className != "neg" else 0.00001
+        targetIds = IdSet(filename=self.model.get(self.tag+"ids.classes"), locked=True)
+        class_weight = {}
+        for className in targetIds.Ids:
+            class_weight[targetIds.getId(className)] = 1.0 if className != "neg" else 0.00001
         
         print >> sys.stderr, "Fitting model"
         es_cb = EarlyStopping(monitor='val_loss', patience=10, verbose=1)
@@ -455,7 +468,7 @@ class KerasDetector(Detector):
             shuffle=True,
             validation_data=(self.arrays["devel"][features], self.arrays["devel"]["target"]), #, self.arrays["devel"]["mask"]),
             #sample_weight=self.arrays["train"]["mask"],
-            #class_weight=class_weight)
+            #class_weight=class_weight,
             callbacks=[es_cb, cp_cb])
         
         print >> sys.stderr, "Predicting devel examples"
