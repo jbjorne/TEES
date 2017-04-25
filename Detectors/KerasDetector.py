@@ -199,7 +199,7 @@ class KerasDetector(Detector):
         optimizer = Adam(lr=learningRate)
         
         print >> sys.stderr, "Compiling model"
-        self.kerasModel.compile(optimizer=optimizer, loss='cosine_proximity', metrics=metrics) #, sample_weight_mode="temporal") #, metrics=['accuracy'])
+        self.kerasModel.compile(optimizer=optimizer, loss='categorical_crossentropy', metrics=metrics) #, sample_weight_mode="temporal") #, metrics=['accuracy'])
         
         self.kerasModel.summary()
         
@@ -492,12 +492,13 @@ class KerasDetector(Detector):
     # HTML Table visualization
     ###########################################################################
     
-    def matrixToTable(self, matrix, tokens):
+    def matrixToTable(self, matrix, tokens, parent):
         """
         Converts a single Python dictionary adjacency matrix into an HTML table structure.
         """
         matrixRange = range(len(matrix) + 1)
-        table = ET.Element('table', {"border":"1"})
+        table = ET.SubElement(parent, 'table', {"border":"1"})
+        outCount = 0
         for i in matrixRange:
             tr = ET.SubElement(table, 'tr')
             for j in matrixRange:
@@ -514,8 +515,12 @@ class KerasDetector(Detector):
                     featureNames = [x for x in features if x != "color"]
                     featureNames.sort()
                     td.text = ",".join(featureNames)
+                    if td.text == "[out]":
+                        outCount += 1
+                        td.text = ""
                     td.set("weights", ",".join([x + "=" + str(features[x]) for x in featureNames]))
-        return table
+        if outCount > 0:
+            ET.SubElement(parent, "p").text = "[out]: " + str(outCount)
     
     def matricesToHTML(self, model, data, filePath, cutoff=None):
         """
@@ -532,12 +537,12 @@ class KerasDetector(Detector):
                 break
             ET.SubElement(root, "h3").text = str(i) + ": " + " ".join(tokenLists[i])
             ET.SubElement(root, "p").text = "Source"
-            root.append(self.matrixToTable(sourceMatrices[i], tokenLists[i]))
+            self.matrixToTable(sourceMatrices[i], tokenLists[i], root)
             ET.SubElement(root, "p").text = "Target"
-            root.append(self.matrixToTable(targetMatrices[i], tokenLists[i]))
+            self.matrixToTable(targetMatrices[i], tokenLists[i], root)
             if predMatrices is not None:
                 ET.SubElement(root, "p").text = "Predicted"
-                root.append(self.matrixToTable(predMatrices[i], tokenLists[i]))
+                self.matrixToTable(predMatrices[i], tokenLists[i], root)
         print >> sys.stderr, "Writing adjacency matrix visualization to", os.path.abspath(filePath)
         ETUtils.write(root, filePath)
         

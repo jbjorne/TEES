@@ -59,7 +59,7 @@ class KerasExampleBuilder(ExampleBuilder):
             else:
                 entityTypes = [x.get("type") for x in sentenceGraph.tokenIsEntityHead[token]]
             if len(entityTypes) == 0:
-                features.append([("neg", negValue)])
+                features.append([("Eneg", negValue)])
             else:
                 features.append([(x,1.0) for x in entityTypes])
         return features
@@ -110,22 +110,22 @@ class KerasExampleBuilder(ExampleBuilder):
                 sourceFeatures = {}
                 targetFeatures = {}
                 if i >= numTokens or j >= numTokens: # Padding outside the sentence range (left empty, later fille with Numpy zeros)
-                    pass #features[self.featureSet.getId("padding")] = 1
-                    #self.setFeature(self.sourceIds, sourceFeatures, "[out]", 1)
+                    #pass #features[self.featureSet.getId("padding")] = 1
+                    self.setFeature(self.sourceIds, sourceFeatures, "[out]", negValue)
                     self.setFeature(self.targetIds, targetFeatures, "[out]", negValue)
                 elif i == j: # The diagonal defines the linear order of the tokens in the sentence
                     token = sentenceGraph.tokens[i]
                     #self.setFeature(self.sourceIds, sourceFeatures, "E")
                     self.setFeature(self.sourceIds, sourceFeatures, token.get("POS"))
-                    sourceEntityTypes = []
-                    targeEntityTypes = []
-                    if len(sentenceGraph.tokenIsEntityHead[token]) > 0: # The token is the head token of an entity
-                        sourceEntityTypes = [x.get("type") for x in sentenceGraph.tokenIsEntityHead[token] if x.get("given") == "True"]
-                        targeEntityTypes = [x.get("type") for x in sentenceGraph.tokenIsEntityHead[token]]
-                    if len(sourceEntityTypes) == 0: # There is no entity for this token
-                        sourceEntityTypes = ["neg"]
-                    if len(targeEntityTypes) == 0: # There is no entity for this token
-                        targeEntityTypes = ["neg"]
+#                     sourceEntityTypes = []
+#                     targeEntityTypes = []
+#                     if len(sentenceGraph.tokenIsEntityHead[token]) > 0: # The token is the head token of an entity
+#                         sourceEntityTypes = [x.get("type") for x in sentenceGraph.tokenIsEntityHead[token] if x.get("given") == "True"]
+#                         targeEntityTypes = [x.get("type") for x in sentenceGraph.tokenIsEntityHead[token]]
+#                     if len(sourceEntityTypes) == 0: # There is no entity for this token
+#                         sourceEntityTypes = ["neg"]
+#                     if len(targeEntityTypes) == 0: # There is no entity for this token
+#                         targeEntityTypes = ["neg"]
                     for eType, eValue in sourceEntityFeatures[i]:
                         self.setFeature(self.sourceIds, sourceFeatures, eType, eValue)
                     for eType, eValue in targetEntityFeatures[i]:
@@ -148,7 +148,7 @@ class KerasExampleBuilder(ExampleBuilder):
                     # Define the relation features (labels) for the target matrix
                     if self.styles.get("all_positive"): # Add a target relation for each pair of entities
                         #if len(targetEntityFeatures[i]) > 0 and len(targetEntityFeatures[j]) > 0:
-                        if (targetEntityFeatures[i][0][0] != "neg") and (targetEntityFeatures[j][0][0] != "neg"):
+                        if (targetEntityFeatures[i][0][0] != "Eneg") and (targetEntityFeatures[j][0][0] != "Eneg"):
                             self.setFeature(self.targetIds, targetFeatures, "REL")
                         #else:
                         #    self.setFeature(self.targetIds, targetFeatures, "neg", negValue)
@@ -163,7 +163,7 @@ class KerasExampleBuilder(ExampleBuilder):
                             for intType in sorted(list(intTypes)):
                                 self.setFeature(self.targetIds, targetFeatures, intType)
                         else:
-                            self.setFeature(self.targetIds, targetFeatures, "neg", negValue)
+                            self.setFeature(self.targetIds, targetFeatures, "Ineg", negValue)
                     # Define the features for the two entities
 #                     for eType, eValue in sourceEntityFeatures[i]:
 #                         self.setFeature(self.sourceIds, sourceFeatures, eType + "[0]", eValue)
