@@ -15,6 +15,7 @@ from keras.layers.normalization import BatchNormalization
 from keras.layers.core import Activation, Reshape, Permute, Dropout
 from keras.optimizers import SGD
 from keras.layers.local import LocallyConnected2D
+from keras.layers.wrappers import TimeDistributed
 
 class KerasDetector(Detector):
     """
@@ -118,11 +119,19 @@ class KerasDetector(Detector):
         print >> sys.stderr, "Defining model", (dimMatrix, dimSourceFeatures, dimTargetFeatures)
         metrics = ["accuracy"]
         
-        m = self.kerasModel = Sequential()
-        m.add(Dense(300, input_shape=(dimMatrix, dimMatrix, dimSourceFeatures)))
+        #m = self.kerasModel = Sequential()
+        #m.add(Dense(300, input_shape=(dimMatrix, dimMatrix, dimSourceFeatures)))
         #m.add(Conv2D(dimTargetFeatures, (1, 1), activation='sigmoid', padding='same'))
-        m.add(Conv2D(dimTargetFeatures, (1, 1), activation='softmax', padding='same'))
+        #m.add(Conv2D(dimTargetFeatures, (1, 1), activation='sigmoid', padding='same', input_shape=(dimMatrix, dimMatrix, dimSourceFeatures)))
 
+   
+        x = Input(shape=(dimMatrix, dimMatrix, dimSourceFeatures))
+        reshaped_x = Reshape((dimMatrix * dimMatrix, dimSourceFeatures))(x)
+        xx = TimeDistributed(Dense(3, activation="softmax"))(reshaped_x)
+        
+        reshaped_xx = Reshape((dimMatrix, dimMatrix, 3))(xx)
+
+        self.kerasModel = Model(x, reshaped_xx)
         print >> sys.stderr, "Compiling model"
         self.kerasModel.compile(optimizer="adam", loss='categorical_crossentropy', metrics=metrics) #, metrics=['accuracy'])
         
@@ -381,6 +390,7 @@ class KerasDetector(Detector):
         #es_cb = EarlyStopping(monitor='val_loss', patience=10, verbose=1)
         #cp_cb = ModelCheckpoint(filepath=self.workDir + self.tag + 'model.hdf5', save_best_only=True, verbose=1)
         features = "source"
+        import pdb;pdb.set_trace()
         if "autoencode" in self.styles:
             features = "target"
         print >> sys.stderr, features, "->", "target", ("(autoencode)" if "autoencode" in self.styles else "")
@@ -393,7 +403,7 @@ class KerasDetector(Detector):
             #callbacks=[es_cb])#, cp_cb])
         
         print >> sys.stderr, "Predicting devel examples"
-        predictions = self.kerasModel.predict_proba(self.arrays["devel"][features], 128, 1)
+        predictions = self.kerasModel.predict(self.arrays["devel"][features], 128, 1)
         
         # The predicted matrices are saved as an HTML heat map
         predMatrices = self.loadJSON(exampleFiles["devel"])

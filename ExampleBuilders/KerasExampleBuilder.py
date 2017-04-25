@@ -58,10 +58,10 @@ class KerasExampleBuilder(ExampleBuilder):
                 entityTypes = [x.get("type") for x in sentenceGraph.tokenIsEntityHead[token] if x.get("given") == "True"]
             else:
                 entityTypes = [x.get("type") for x in sentenceGraph.tokenIsEntityHead[token]]
-            #if len(entityTypes) == 0:
-            #    features.append([("neg", negValue)])
-            #else:
-            features.append([(x,1.0) for x in entityTypes])
+            if len(entityTypes) == 0:
+                features.append([("neg", negValue)])
+            else:
+                features.append([(x,1.0) for x in entityTypes])
         return features
     
     def buildExamplesFromGraph(self, sentenceGraph, outfile, goldGraph = None, structureAnalyzer=None):
@@ -100,7 +100,7 @@ class KerasExampleBuilder(ExampleBuilder):
         sourceMatrix = []
         targetMatrix = []
         tokenList = [x.get("text") for x in sentenceGraph.tokens]
-        negValue = 0.000001 #0.001
+        negValue = 1 #0.000001 #0.001
         sourceEntityFeatures = self.getEntityTypeFeatures(sentenceGraph.tokens, True, negValue, sentenceGraph)
         targetEntityFeatures = self.getEntityTypeFeatures(sentenceGraph.tokens, False, negValue, sentenceGraph)
         for i in self.rangeMatrix:
@@ -147,11 +147,12 @@ class KerasExampleBuilder(ExampleBuilder):
                     #    self.setFeature(self.sourceIds, sourceFeatures, "D:0") # no path
                     # Define the relation features (labels) for the target matrix
                     if "all_positive" in self.styles:
-                        if len(targetEntityFeatures[i]) > 0 and len(targetEntityFeatures[j]) > 0:
+                        #if len(targetEntityFeatures[i]) > 0 and len(targetEntityFeatures[j]) > 0:
+                        if (targetEntityFeatures[i][0] != "neg") and (targetEntityFeatures[j][0] != "neg"):
                             self.setFeature(self.sourceIds, sourceFeatures, "REL")
                             self.setFeature(self.targetIds, targetFeatures, "REL")
-                        #else:
-                        #    self.setFeature(self.targetIds, targetFeatures, "neg", negValue)
+                        else:
+                            self.setFeature(self.targetIds, targetFeatures, "neg", negValue)
                     else:
                         intTypes = set()
                         intEdges = sentenceGraph.interactionGraph.getEdges(tI, tJ)
