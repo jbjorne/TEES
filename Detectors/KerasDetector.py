@@ -457,7 +457,9 @@ class KerasDetector(Detector):
             class_weight[targetIds.getId(className)] = 1.0 if className != "neg" else 0.00001
         
         print >> sys.stderr, "Fitting model"
-        es_cb = EarlyStopping(monitor='val_loss', patience=10, verbose=1)
+        patience = int(self.styles.get("patience", 10))
+        print >> sys.stderr, "Early stopping patience:", patience
+        es_cb = EarlyStopping(monitor='val_loss', patience=patience, verbose=1)
         bestModelPath = self.model.get(self.tag + "model.hdf5", True) #self.workDir + self.tag + 'model.hdf5'
         cp_cb = ModelCheckpoint(filepath=bestModelPath, save_best_only=True, verbose=1)
         features = "source"
