@@ -146,7 +146,7 @@ class KerasExampleBuilder(ExampleBuilder):
                     #else:
                     #    self.setFeature(self.sourceIds, sourceFeatures, "D:0") # no path
                     # Define the relation features (labels) for the target matrix
-                    if "all_positive" in self.styles: # Add a target relation for each pair of entities
+                    if self.styles.get("all_positive"): # Add a target relation for each pair of entities
                         #if len(targetEntityFeatures[i]) > 0 and len(targetEntityFeatures[j]) > 0:
                         if (targetEntityFeatures[i][0][0] != "neg") and (targetEntityFeatures[j][0][0] != "neg"):
                             self.setFeature(self.targetIds, targetFeatures, "REL")
@@ -162,8 +162,8 @@ class KerasExampleBuilder(ExampleBuilder):
                         if len(intTypes) > 0: # A bag of interactions for all interaction types between the two tokens
                             for intType in sorted(list(intTypes)):
                                 self.setFeature(self.targetIds, targetFeatures, intType)
-                        #else:
-                        #    self.setFeature(self.targetIds, targetFeatures, "neg", negValue)
+                        else:
+                            self.setFeature(self.targetIds, targetFeatures, "neg", negValue)
                     # Define the features for the two entities
 #                     for eType, eValue in sourceEntityFeatures[i]:
 #                         self.setFeature(self.sourceIds, sourceFeatures, eType + "[0]", eValue)
