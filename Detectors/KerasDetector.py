@@ -10,12 +10,13 @@ import Utils.Parameters
 import gzip
 import json
 from keras.layers import Input, Dense, Conv2D, MaxPooling2D, UpSampling2D
-from keras.models import Model, Sequential
+from keras.models import Model, Sequential, load_model
 from keras.layers.normalization import BatchNormalization
 from keras.layers.core import Activation, Reshape, Permute, Dropout
 from keras.optimizers import SGD
 from keras.layers.local import LocallyConnected2D
 from keras.layers.wrappers import TimeDistributed
+from keras.callbacks import EarlyStopping, ModelCheckpoint
 
 class KerasDetector(Detector):
     """
@@ -387,8 +388,9 @@ class KerasDetector(Detector):
 #             class_weight[targetIds.getId(className)] = 1.0 if className != "neg" else 0.00001
         
         print >> sys.stderr, "Fitting model"
-        #es_cb = EarlyStopping(monitor='val_loss', patience=10, verbose=1)
-        #cp_cb = ModelCheckpoint(filepath=self.workDir + self.tag + 'model.hdf5', save_best_only=True, verbose=1)
+        es_cb = EarlyStopping(monitor='val_loss', patience=10, verbose=1)
+        bestModelPath = self.workDir + self.tag + 'model.hdf5'
+        cp_cb = ModelCheckpoint(filepath=bestModelPath, save_best_only=True, verbose=1)
         features = "source"
         #import pdb;pdb.set_trace()
         if "autoencode" in self.styles:
@@ -398,11 +400,12 @@ class KerasDetector(Detector):
             epochs=100 if not "epochs" in self.styles else int(self.styles["epochs"]),
             batch_size=128,
             shuffle=True,
-            validation_data=(self.arrays["devel"][features], self.arrays["devel"]["target"]))
+            validation_data=(self.arrays["devel"][features], self.arrays["devel"]["target"]),
             #class_weight=class_weight)
-            #callbacks=[es_cb])#, cp_cb])
+            callbacks=[es_cb, cp_cb])
         
         print >> sys.stderr, "Predicting devel examples"
+        self.kerasModel = load_model(bestModelPath)
         predictions = self.kerasModel.predict(self.arrays["devel"][features], 128, 1)
         
         # The predicted matrices are saved as an HTML heat map
@@ -544,13 +547,16 @@ class KerasDetector(Detector):
             print >> sys.stderr, "Vectorizing dataset", dataSetName
             sourceMatrices = dataSetValue["source"]
             targetMatrices = dataSetValue["target"]
+            numTokens = len(dataSetValue["tokens"])
             assert len(sourceMatrices) == len(targetMatrices)
             numExamples = len(sourceMatrices)
             sourceArrays = np.zeros((numExamples, dimMatrix, dimMatrix, dimSourceFeatures), dtype=np.float32)
             targetArrays = np.zeros((numExamples, dimMatrix, dimMatrix, dimTargetFeatures), dtype=np.float32)
+            maskArrays = np.ones((numExamples, dimMatrix, dimMatrix, dimTargetFeatures), dtype=np.float32)
             for exampleIndex in range(numExamples):
                 sourceArray = sourceArrays[exampleIndex] #sourceArray = np.zeros((dimMatrix, dimMatrix, dimFeatures), dtype=np.float32)
                 targetArray = targetArrays[exampleIndex] #targetArray = np.zeros((dimMatrix, dimMatrix, dimFeatures), dtype=np.float32)
+                maskArray = maskArrays[exampleIndex]
                 sourceMatrix = sourceMatrices.pop(0) #[exampleIndex]
                 targetMatrix = targetMatrices.pop(0) #[exampleIndex]
                 for matrix, array, ids in [(sourceMatrix, sourceArray, sourceIds), (targetMatrix, targetArray, targetIds)]:
@@ -560,4 +566,6 @@ class KerasDetector(Detector):
                             #print features
                             for featureName in features:
                                 array[i][j][ids.getId(featureName)] = features[featureName]
-            self.arrays[dataSetName] = {"source":sourceArrays, "target":targetArrays}
+                            if i > numTokens or j > numTokens:
+                                maskArray[i][j] = 1.0
+            self.arrays[dataSetName] = {"source":sourceArrays, "target":targetArrays, "mask":maskArrays}
