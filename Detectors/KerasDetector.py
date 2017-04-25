@@ -139,7 +139,7 @@ class KerasDetector(Detector):
         optimizer = Adam(lr=learningRate)
         
         print >> sys.stderr, "Compiling model"
-        self.kerasModel.compile(optimizer=optimizer, loss='categorical_crossentropy', metrics=metrics, sample_weight_mode="temporal") #, metrics=['accuracy'])
+        self.kerasModel.compile(optimizer=optimizer, loss='categorical_crossentropy', metrics=metrics) #, sample_weight_mode="temporal") #, metrics=['accuracy'])
         
         
 #         inputShape = x = Input(shape=(dimMatrix, dimMatrix, dimSourceFeatures))
@@ -405,8 +405,8 @@ class KerasDetector(Detector):
             epochs=100 if not "epochs" in self.styles else int(self.styles["epochs"]),
             batch_size=128,
             shuffle=True,
-            validation_data=(self.arrays["devel"][features], self.arrays["devel"]["target"], self.arrays["devel"]["mask"]),
-            sample_weight=self.arrays["train"]["mask"],
+            validation_data=(self.arrays["devel"][features], self.arrays["devel"]["target"]), #, self.arrays["devel"]["mask"]),
+            #sample_weight=self.arrays["train"]["mask"],
             #class_weight=class_weight)
             callbacks=[es_cb, cp_cb])
         
@@ -534,7 +534,7 @@ class KerasDetector(Detector):
                     features["color"] = self.getColor((predValue - minValue) / valRange)
         return devectorized
     
-    def vectorizeMatrices(self, model):
+    def vectorizeMatrices(self, model, useMask=False):
         """
         Converts the Python input matrices of the form [examples][width][height]{features} into
         corresponding dense Numpy arrays.
@@ -558,11 +558,13 @@ class KerasDetector(Detector):
             numExamples = len(sourceMatrices)
             sourceArrays = np.zeros((numExamples, dimMatrix, dimMatrix, dimSourceFeatures), dtype=np.float32)
             targetArrays = np.zeros((numExamples, dimMatrix, dimMatrix, dimTargetFeatures), dtype=np.float32)
-            maskArrays = np.ones((numExamples, dimMatrix, dimMatrix, dimTargetFeatures), dtype=np.float32)
+            if useMask:
+                maskArrays = np.ones((numExamples, dimMatrix, dimMatrix, dimTargetFeatures), dtype=np.float32)
             for exampleIndex in range(numExamples):
                 sourceArray = sourceArrays[exampleIndex] #sourceArray = np.zeros((dimMatrix, dimMatrix, dimFeatures), dtype=np.float32)
                 targetArray = targetArrays[exampleIndex] #targetArray = np.zeros((dimMatrix, dimMatrix, dimFeatures), dtype=np.float32)
-                maskArray = maskArrays[exampleIndex]
+                if useMask:
+                    maskArray = maskArrays[exampleIndex]
                 sourceMatrix = sourceMatrices.pop(0) #[exampleIndex]
                 targetMatrix = targetMatrices.pop(0) #[exampleIndex]
                 for matrix, array, ids in [(sourceMatrix, sourceArray, sourceIds), (targetMatrix, targetArray, targetIds)]:
@@ -572,6 +574,9 @@ class KerasDetector(Detector):
                             #print features
                             for featureName in features:
                                 array[i][j][ids.getId(featureName)] = features[featureName]
-                            if i > numTokens or j > numTokens:
-                                maskArray[i][j] = 0.0
-            self.arrays[dataSetName] = {"source":sourceArrays, "target":targetArrays, "mask":maskArrays}
+                            if useMask:
+                                if i > numTokens or j > numTokens:
+                                    maskArray[i][j] = 0.0
+            self.arrays[dataSetName] = {"source":sourceArrays, "target":targetArrays}
+            if useMask:
+                self.arrays[dataSetName]["mask"] = maskArrays
