@@ -144,15 +144,24 @@ class KerasExampleBuilder(ExampleBuilder):
                     # Define the dependency features for the source matrix
                     tI = sentenceGraph.tokens[i]
                     tJ = sentenceGraph.tokens[j]
+                    for eType, eValue in sourceEntityFeatures[i]:
+                        self.setFeature(self.sourceIds, sourceFeatures, "A:" + eType, eValue)
+                    for eType, eValue in sourceEntityFeatures[j]:
+                        self.setFeature(self.sourceIds, sourceFeatures, "B:" + eType, eValue)
                     shortestPaths = depGraph.getPaths(tI, tJ)
+                    depTypes = set()
                     if len(shortestPaths) > 0: # There is a path of dependencies between these two tokens
                         path = shortestPaths[0]
                         if True: #len(path) == 2:
-                            for tokenIndex in (0, -1): # The first and last token in the path
-                                self.setFeature(self.sourceIds, sourceFeatures, "T" + str(tokenIndex) + ":" + path[tokenIndex].get("POS"))
+                            #for tokenIndex in (0, -1): # The first and last token in the path
+                            #    self.setFeature(self.sourceIds, sourceFeatures, "T" + str(tokenIndex) + ":" + path[tokenIndex].get("POS"))
                             for k in range(1, len(path)): # A bag of dependencies for this shortest path
                                 for edge in depGraph.getEdges(path[k], path[k-1]) + depGraph.getEdges(path[k-1], path[k]):
-                                    self.setFeature(self.sourceIds, sourceFeatures, edge[2].get("type"))
+                                    depTypes.add(edge[2].get("type")) #self.setFeature(self.sourceIds, sourceFeatures, edge[2].get("type"))
+                    if len(depTypes) == 0:
+                        depTypes.add("DNeg")
+                    for depType in sorted(depTypes):
+                        self.setFeature(self.sourceIds, sourceFeatures, depType)
                     #else:
                     #    self.setFeature(self.sourceIds, sourceFeatures, "D:0") # no path
                     # Define the relation features (labels) for the target matrix
