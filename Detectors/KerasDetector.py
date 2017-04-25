@@ -127,9 +127,9 @@ class KerasDetector(Detector):
    
         x = Input(shape=(dimMatrix, dimMatrix, dimSourceFeatures))
         reshaped_x = Reshape((dimMatrix * dimMatrix, dimSourceFeatures))(x)
-        xx = TimeDistributed(Dense(3, activation="softmax"))(reshaped_x)
+        xx = TimeDistributed(Dense(3, activation="sigmoid"))(reshaped_x)
         
-        reshaped_xx = Reshape((dimMatrix, dimMatrix, 3))(xx)
+        reshaped_xx = Reshape((dimMatrix, dimMatrix, dimTargetFeatures))(xx)
 
         self.kerasModel = Model(x, reshaped_xx)
         print >> sys.stderr, "Compiling model"
@@ -390,7 +390,7 @@ class KerasDetector(Detector):
         #es_cb = EarlyStopping(monitor='val_loss', patience=10, verbose=1)
         #cp_cb = ModelCheckpoint(filepath=self.workDir + self.tag + 'model.hdf5', save_best_only=True, verbose=1)
         features = "source"
-        import pdb;pdb.set_trace()
+        #import pdb;pdb.set_trace()
         if "autoencode" in self.styles:
             features = "target"
         print >> sys.stderr, features, "->", "target", ("(autoencode)" if "autoencode" in self.styles else "")

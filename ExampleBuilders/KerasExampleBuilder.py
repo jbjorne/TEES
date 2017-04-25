@@ -148,11 +148,11 @@ class KerasExampleBuilder(ExampleBuilder):
                     # Define the relation features (labels) for the target matrix
                     if "all_positive" in self.styles:
                         #if len(targetEntityFeatures[i]) > 0 and len(targetEntityFeatures[j]) > 0:
-                        if (targetEntityFeatures[i][0] != "neg") and (targetEntityFeatures[j][0] != "neg"):
+                        if (targetEntityFeatures[i][0][0] != "neg") and (targetEntityFeatures[j][0][0] != "neg"):
                             self.setFeature(self.sourceIds, sourceFeatures, "REL")
                             self.setFeature(self.targetIds, targetFeatures, "REL")
-                        else:
-                            self.setFeature(self.targetIds, targetFeatures, "neg", negValue)
+                        #else:
+                        #    self.setFeature(self.targetIds, targetFeatures, "neg", negValue)
                     else:
                         intTypes = set()
                         intEdges = sentenceGraph.interactionGraph.getEdges(tI, tJ)
