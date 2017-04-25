@@ -126,13 +126,19 @@ class KerasDetector(Detector):
         #m.add(Conv2D(dimTargetFeatures, (1, 1), activation='sigmoid', padding='same', input_shape=(dimMatrix, dimMatrix, dimSourceFeatures)))
 
    
-        x = Input(shape=(dimMatrix, dimMatrix, dimSourceFeatures))
-        reshaped_x = Reshape((dimMatrix * dimMatrix, dimSourceFeatures))(x)
-        xx = TimeDistributed(Dense(dimTargetFeatures, activation="sigmoid"))(reshaped_x)
+#         x = Input(shape=(dimMatrix, dimMatrix, dimSourceFeatures))
+#         reshaped_x = Reshape((dimMatrix * dimMatrix, dimSourceFeatures))(x)
+#         xx = TimeDistributed(Dense(dimTargetFeatures, activation="sigmoid"))(reshaped_x)
+#         reshaped_xx = Reshape((dimMatrix, dimMatrix, dimTargetFeatures))(xx)
+#         self.kerasModel = Model(x, reshaped_xx)
         
-        reshaped_xx = Reshape((dimMatrix, dimMatrix, dimTargetFeatures))(xx)
-
-        self.kerasModel = Model(x, reshaped_xx)
+        x = inputLayer = Input(shape=(dimMatrix, dimMatrix, dimSourceFeatures))
+        #x = Conv2D(dimTargetFeatures, (1, 3), activation='relu', padding='same')(x)
+        #x = Reshape((dimMatrix * dimMatrix, dimSourceFeatures))(x)
+        #x = TimeDistributed(Dense(dimTargetFeatures, activation="sigmoid"))(x)
+        #x = Reshape((dimMatrix, dimMatrix, dimTargetFeatures))(x)
+        x = Conv2D(dimTargetFeatures, (1, 1), activation='sigmoid', padding='same')(x)
+        self.kerasModel = Model(inputLayer, x)
         
         learningRate = float(self.styles.get("lr", 0.001))
         print >> sys.stderr, "Using learning rate", learningRate
