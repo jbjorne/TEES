@@ -133,8 +133,12 @@ class KerasDetector(Detector):
         reshaped_xx = Reshape((dimMatrix, dimMatrix, dimTargetFeatures))(xx)
 
         self.kerasModel = Model(x, reshaped_xx)
+        
+        learningRate = float(self.styles.get("lr", 0.001))
+        print >> sys.stderr, "Using learning rate", learningRate
+        optimizer = Adam(lr=learningRate)
+        
         print >> sys.stderr, "Compiling model"
-        optimizer = Adam(lr=0.1)
         self.kerasModel.compile(optimizer=optimizer, loss='categorical_crossentropy', metrics=metrics) #, metrics=['accuracy'])
         
         
