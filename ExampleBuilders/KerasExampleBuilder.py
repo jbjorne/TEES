@@ -55,13 +55,22 @@ class KerasExampleBuilder(ExampleBuilder):
         features = []
         for token in tokens:
             if onlyGiven:
-                entityTypes = [x.get("type") for x in sentenceGraph.tokenIsEntityHead[token] if x.get("given") == "True"]
+                entities = [x for x in sentenceGraph.tokenIsEntityHead[token] if x.get("given") == "True"]
             else:
-                entityTypes = [x.get("type") for x in sentenceGraph.tokenIsEntityHead[token]]
-            if len(entityTypes) == 0:
+                entities = [x for x in sentenceGraph.tokenIsEntityHead[token]]
+            entFeatures = set()
+            for entity in entities:
+                for key in ("type", "mtmxNameShort"):
+                    if entity.get(key) != None:
+                        entFeatures.add(entity.get(key))
+                if entity.get("mtmxSemTypes") != None:
+                    for semType in entity.get("mtmxSemTypes").split(","):
+                        entFeatures.add(semType)
+            entFeatures = sorted(entFeatures)
+            if len(entFeatures) == 0:
                 features.append([("Eneg", negValue)])
             else:
-                features.append([(x,1.0) for x in entityTypes])
+                features.append([(x,1.0) for x in entFeatures])
         return features
     
     def buildExamplesFromGraph(self, sentenceGraph, outfile, goldGraph = None, structureAnalyzer=None):
