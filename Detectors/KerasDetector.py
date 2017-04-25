@@ -127,7 +127,7 @@ class KerasDetector(Detector):
    
         x = Input(shape=(dimMatrix, dimMatrix, dimSourceFeatures))
         reshaped_x = Reshape((dimMatrix * dimMatrix, dimSourceFeatures))(x)
-        xx = TimeDistributed(Dense(3, activation="sigmoid"))(reshaped_x)
+        xx = TimeDistributed(Dense(dimTargetFeatures, activation="sigmoid"))(reshaped_x)
         
         reshaped_xx = Reshape((dimMatrix, dimMatrix, dimTargetFeatures))(xx)
 
