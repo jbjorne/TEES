@@ -139,7 +139,7 @@ class KerasDetector(Detector):
         optimizer = Adam(lr=learningRate)
         
         print >> sys.stderr, "Compiling model"
-        self.kerasModel.compile(optimizer=optimizer, loss='categorical_crossentropy', metrics=metrics) #, metrics=['accuracy'])
+        self.kerasModel.compile(optimizer=optimizer, loss='categorical_crossentropy', metrics=metrics, sample_weight_mode="temporal") #, metrics=['accuracy'])
         
         
 #         inputShape = x = Input(shape=(dimMatrix, dimMatrix, dimSourceFeatures))
@@ -405,7 +405,8 @@ class KerasDetector(Detector):
             epochs=100 if not "epochs" in self.styles else int(self.styles["epochs"]),
             batch_size=128,
             shuffle=True,
-            validation_data=(self.arrays["devel"][features], self.arrays["devel"]["target"]),
+            validation_data=(self.arrays["devel"][features], self.arrays["devel"]["target"], self.arrays["devel"]["mask"]),
+            sample_weight=self.arrays["train"]["mask"],
             #class_weight=class_weight)
             callbacks=[es_cb, cp_cb])
         
@@ -572,5 +573,5 @@ class KerasDetector(Detector):
                             for featureName in features:
                                 array[i][j][ids.getId(featureName)] = features[featureName]
                             if i > numTokens or j > numTokens:
-                                maskArray[i][j] = 1.0
+                                maskArray[i][j] = 0.0
             self.arrays[dataSetName] = {"source":sourceArrays, "target":targetArrays, "mask":maskArrays}
