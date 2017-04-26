@@ -21,11 +21,16 @@ def removeAttributes(parent, elementName, attributes, countsByType):
                     countsByType[elementName + ":" + attribute] += 1
         removeAttributes(element, elementName, attributes, countsByType)
 
+def addVector(word, vector, vocabulary):
+    vocabulary["indices"][word] = len(vocabulary["vectors"])
+    vocabulary["vectors"].append(vector)
+
 def processCorpus(input, output, wordVectorPath, tokenizerName="McCC", max_rank_mem=100000, max_rank=10000000):
     print >> sys.stderr, "Making vocabulary"
     print >> sys.stderr, "Loading corpus file", input
     corpusTree = ETUtils.ETFromObj(input)
     corpusRoot = corpusTree.getroot()
+    vocabulary = {"indices":{}, "vectors":[]}
     
     print >> sys.stderr, "Loading word vectors from", wordVectorPath
     print >> sys.stderr, "max_rank_mem", max_rank_mem
@@ -33,11 +38,14 @@ def processCorpus(input, output, wordVectorPath, tokenizerName="McCC", max_rank_
     max_rank_mem = int(max_rank_mem)
     max_rank = int(max_rank)
     wv = WV.load(wordVectorPath, max_rank_mem, max_rank)
+    dimVector = wv.vectors.shape[1]
+    print >> sys.stderr, "WordVector length", dimVector
+    addVector("[out]", dimVector * [0.0], vocabulary) # Outside sentence range
+    addVector("[OoV]", dimVector * [0.0], vocabulary) # Out of vocabulary
     
     documents = corpusRoot.findall("document")
     counter = ProgressCounter(len(documents), "Documents")
     counts = defaultdict(int)
-    vocabulary = {"indices":{}, "vectors":[]}
     for document in documents:
         counter.update()
         counts["document"] += 1

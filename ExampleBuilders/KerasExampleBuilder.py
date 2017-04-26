@@ -26,7 +26,7 @@ class KerasExampleBuilder(ExampleBuilder):
         self.sourceIds = self.featureSet
         self.targetIds = self.classSet
         
-        self._setDefaultParameters(["directed", "undirected", "cutoff", "annotated_only", "all_positive", 
+        self._setDefaultParameters(["directed", "undirected", "cutoff", "annotated_only", "all_positive", "wv", 
                                     "epochs", "html", "autoencode", "lr", "patience"])
         self.styles = self.getParameters(style)
         if self.styles["cutoff"]:
@@ -35,13 +35,14 @@ class KerasExampleBuilder(ExampleBuilder):
         self.wvIndices = None
         if self.styles.get("wv") != None:
             print >> sys.stderr, "Loading word vector indices from", self.styles.get("wv")
-            with gzip.open(self.styles.get("wv"), "rt") as f:
+            with gzip.open(self.styles.get("wv") + "-indices.json.gz", "rt") as f:
                 self.wvIndices = json.load(f)["indices"]
         
         self.dimMatrix = 32
         self.rangeMatrix = range(self.dimMatrix)
         self.sourceMatrices = []
         self.targetMatrices = []
+        self.embeddingMatrices = []
         self.tokenLists = []
     
     def setFeature(self, featureSet, features, name, value=1):
@@ -158,14 +159,13 @@ class KerasExampleBuilder(ExampleBuilder):
                     self.setFeature(self.sourceIds, sourceFeatures, "[out]", negValue)
                     self.setFeature(self.targetIds, targetFeatures, "[out]", negValue)
                     if embeddingMatrix != None:
-                        embeddingFeatures = [self.wvIndices["[out]"], self.wvIndices["[out]"]]
+                        embeddingFeatures = 2 * [self.wvIndices["[out]"]]
                 elif i == j: # The diagonal defines the linear order of the tokens in the sentence
                     token = sentenceGraph.tokens[i]
                     #self.setFeature(self.sourceIds, sourceFeatures, "E")
                     self.setFeature(self.sourceIds, sourceFeatures, token.get("POS"))
                     if embeddingMatrix != None:
-                        tokText = token.get("text").lower()
-                        embeddingFeatures = [self.wvIndices[tokText], self.wvIndices[tokText]]
+                        embeddingFeatures = 2 * [self.getEmbeddingIndex(token)]
 #                     sourceEntityTypes = []
 #                     targeEntityTypes = []
 #                     if len(sentenceGraph.tokenIsEntityHead[token]) > 0: # The token is the head token of an entity
@@ -183,6 +183,7 @@ class KerasExampleBuilder(ExampleBuilder):
                     # Define the dependency features for the source matrix
                     tI = sentenceGraph.tokens[i]
                     tJ = sentenceGraph.tokens[j]
+                    embeddingFeatures = [self.getEmbeddingIndex(tI), self.getEmbeddingIndex(tJ)]
                     for eType, eValue in sourceEntityFeatures[i]:
                         self.setFeature(self.sourceIds, sourceFeatures, "A:" + eType, eValue)
                     for eType, eValue in sourceEntityFeatures[j]:
@@ -246,5 +247,7 @@ class KerasExampleBuilder(ExampleBuilder):
         # Add this sentences's matrices and list of tokens to the result lists
         self.sourceMatrices.append(sourceMatrix)
         self.targetMatrices.append(targetMatrix)
+        if embeddingMatrix != None:
+            self.embeddingMatrices.append(embeddingMatrix)
         self.tokenLists.append(tokenList)
         return 1 # One sentence is one example

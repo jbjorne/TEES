@@ -136,7 +136,11 @@ class KerasDetector(Detector):
             model.addStr("dimSourceFeatures", str(len(builder.featureSet.Ids)))
             model.addStr("dimTargetFeatures", str(len(builder.classSet.Ids)))
             model.addStr("dimMatrix", str(builder.dimMatrix))
-            examples =  {"source":builder.sourceMatrices, "target":builder.targetMatrices, "tokens":builder.tokenLists, "setName":setName}
+            examples = {"source":builder.sourceMatrices,
+                        "embeddings":builder.embeddingMatrices, 
+                        "target":builder.targetMatrices, 
+                        "tokens":builder.tokenLists, 
+                        "setName":setName}
             print >> sys.stderr, "Saving examples to", output
             self.saveJSON(output, examples)
             self.matrices[setName] = examples
