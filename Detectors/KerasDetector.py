@@ -149,6 +149,13 @@ class KerasDetector(Detector):
             modelChanged = True
         if modelChanged:
             model.save()
+            
+    def serializeLayers(self, kerasModel, filePath):
+        layers = []
+        for layer in kerasModel.layers:
+            layers.append({'class_name': layer.__class__.__name__, 'config': layer.get_config()})
+        with open(filePath, "wt") as f:
+            json.dump(layers, f, indent=2)
     
     def defineModel(self):
         """
@@ -190,12 +197,16 @@ class KerasDetector(Detector):
         ##x = Conv2D(32, (3, 3), padding='same')(x)
         #x = Conv2D(16, (3, 3), padding='same')(x)
         #x = Conv2D(16, (1, 21), padding='same')(x)
-        x = Conv2D(32, (1, 1), activation='relu', padding='same')(x)
-        x = Conv2D(8, (1, 9), activation='relu', padding='same')(x)
-        x = Conv2D(8, (1, 5), activation='relu', padding='same')(x)
-        x = Conv2D(8, (1, 3), activation='relu', padding='same')(x)
+        x = Conv2D(64, (1, 1), activation='relu', padding='same')(x)
+        x = Conv2D(16, (1, 9), activation='relu', padding='same')(x)
+        x = Conv2D(16, (1, 5), activation='relu', padding='same')(x)
+        x = Conv2D(16, (1, 3), activation='relu', padding='same')(x)
         x = Conv2D(dimTargetFeatures, (1, 1), activation='sigmoid', padding='same')(x)
         self.kerasModel = Model(inputLayer, x)
+        
+        layersPath = self.workDir + self.tag + "layers.json"
+        print >> sys.stderr, "Saving layers to", layersPath
+        self.serializeLayers(self.kerasModel, layersPath)
         
         learningRate = float(self.styles.get("lr", 0.001))
         print >> sys.stderr, "Using learning rate", learningRate
