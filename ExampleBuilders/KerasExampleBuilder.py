@@ -82,10 +82,10 @@ class KerasExampleBuilder(ExampleBuilder):
         for i in range(1,len(pathTokens)):
             for edge in depGraph.getEdges(pt[i], pt[i-1]):
                 depType = edge[2].get("type")
-                features.append(depType + ">")
+                features.append(depType)# + ">")
             for edge in depGraph.getEdges(pt[i-1], pt[i]):
                 depType = edge[2].get("type")
-                features.append(depType + "<")
+                features.append(depType)# + "<")
         return features
     
     def buildExamplesFromGraph(self, sentenceGraph, outfile, goldGraph = None, structureAnalyzer=None):
