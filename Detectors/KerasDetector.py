@@ -212,13 +212,15 @@ class KerasDetector(Detector):
             dimWordVector = len(self.wordvectors["vectors"][0])
             numWordVectors = len(self.wordvectors["vectors"])
             embedding_matrix = self.makeEmbeddingMatrix()
-            input_embedding = Input(shape=(dimMatrix, dimMatrix, dimEmbeddings), name='embedding')
+            x = input_embedding = Input(shape=(dimMatrix, dimMatrix, dimEmbeddings), name='embedding')
             inputs.append(input_embedding)
             embedding_input_length = dimMatrix * dimMatrix * dimEmbeddings
-            x = Reshape((embedding_input_length,))(input_embedding)
+            #x = Reshape((dimMatrix * dimMatrix, dimEmbeddings))(x)
             x = Embedding(numWordVectors + 1, dimWordVector, weights=[embedding_matrix], 
                           input_length=embedding_input_length, trainable=False)(x)
-            x = Reshape((dimMatrix, dimMatrix, dimEmbeddings))(x)
+            x = Reshape((dimMatrix * dimMatrix, 2 * dimWordVector))(x)
+            x = Reshape((dimMatrix, dimMatrix, 2 * dimWordVector))(x)
+            #x = Reshape((dimMatrix, dimMatrix, dimEmbeddings))(x)
             x = merge([input_features, x], mode='concat')
         else:
             x = input_features
