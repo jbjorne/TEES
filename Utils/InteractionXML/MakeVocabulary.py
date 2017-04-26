@@ -1,5 +1,4 @@
 import sys, os
-from Utils.ProgressCounter import ProgressCounter
 extraPath = os.path.dirname(os.path.abspath(__file__))+"/../.."
 sys.path.append(extraPath)
 try:
@@ -9,7 +8,9 @@ except ImportError:
 import Utils.ElementTreeUtils as ETUtils
 import Utils.InteractionXML.InteractionXMLUtils as IXMLUtils
 from Utils.Libraries.wvlib_light.lwvlib import WV
+from Utils.ProgressCounter import ProgressCounter
 import gzip, json
+from collections import defaultdict
     
 def removeAttributes(parent, elementName, attributes, countsByType):
     for element in parent.getchildren():
@@ -31,18 +32,28 @@ def processCorpus(input, output, wordVectorPath, tokenizerName="McCC"):
     
     documents = corpusRoot.findall("document")
     counter = ProgressCounter(len(documents), "Documents")
+    counts = defaultdict(int)
     vocabulary = {}
     for document in documents:
         counter.update()
+        counts["document"] += 1
         for sentence in document.findall("sentence"):
+            counts["sentence"] += 1
             tokenization = IXMLUtils.getTokenizationElement(sentence, tokenizerName)
-            for token in tokenization.findall(token):
-                text = token.get("text")
-                if text not in vocabulary:
-                    vector = wv.w_to_normv(token.get("text").lower())
-                    if vector != None:
-                        vector = vector.tolist()
-                    vocabulary[text] = vector              
+            if tokenization != None:
+                counts["tokenization"] += 1
+                for token in tokenization.findall(token):
+                    counts["token"] += 1
+                    text = token.get("text")
+                    if text not in vocabulary:
+                        counts["token-unique"] += 1
+                        vector = wv.w_to_normv(token.get("text").lower())
+                        if vector != None:
+                            counts["vector"] += 1
+                            vector = vector.tolist()
+                        else:
+                            counts["no-vector"] += 1
+                        vocabulary[text] = vector              
     
     #for k in sorted(countsByType.keys()):
     #    print >> sys.stderr, "  " + k + ":", countsByType[k]
