@@ -35,7 +35,7 @@ def processCorpus(input, output, wordVectorPath, tokenizerName="McCC", max_rank_
     documents = corpusRoot.findall("document")
     counter = ProgressCounter(len(documents), "Documents")
     counts = defaultdict(int)
-    vocabulary = {}
+    vocabulary = {"indices":{}, "vectors":[]}
     for document in documents:
         counter.update()
         counts["document"] += 1
@@ -47,7 +47,7 @@ def processCorpus(input, output, wordVectorPath, tokenizerName="McCC", max_rank_
                 for token in tokenization.findall("token"):
                     counts["token"] += 1
                     text = token.get("text")
-                    if text not in vocabulary:
+                    if text not in vocabulary["indices"]:
                         counts["token-unique"] += 1
                         vector = wv.w_to_normv(token.get("text").lower())
                         if vector is not None:
@@ -55,7 +55,8 @@ def processCorpus(input, output, wordVectorPath, tokenizerName="McCC", max_rank_
                             vector = vector.tolist()
                         else:
                             counts["no-vector"] += 1
-                        vocabulary[text] = vector              
+                        vocabulary["indices"][text] = len(vocabulary["vectors"])
+                        vocabulary["vectors"].append(vector)              
     
     print >> sys.stderr, "Counts:", dict(counts)
     
