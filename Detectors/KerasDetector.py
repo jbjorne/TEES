@@ -572,6 +572,7 @@ class KerasDetector(Detector):
             for name in names:
                 if data.get(name) != None:
                     ET.SubElement(root, "p").text = name
+                    assert i < len(data[name]) and i < len(tokenLists), (name, len(data[name]), len(tokenLists))
                     self.matrixToTable(data[name][i], tokenLists[i], root)
         ETUtils.write(root, filePath)
         
@@ -657,10 +658,10 @@ class KerasDetector(Detector):
         corresponding dense Numpy arrays.
         """
         self.arrays = {}
-        sourceIds = IdSet(filename=model.get(self.tag+"ids.features"), locked=True)
-        targetIds = IdSet(filename=model.get(self.tag+"ids.classes"), locked=True)
-        dimSourceFeatures = int(model.getStr("dimSourceFeatures"))
-        dimTargetFeatures = int(model.getStr("dimTargetFeatures"))
+        featureIds = IdSet(filename=model.get(self.tag+"ids.features"), locked=True)
+        labelIDs = IdSet(filename=model.get(self.tag+"ids.classes"), locked=True)
+        dimFeatures = int(model.getStr("dimFeatures"))
+        dimLabels = int(model.getStr("dimLabels"))
         dimMatrix = int(model.getStr("dimMatrix"))
         rangeMatrix = range(dimMatrix)
         dataSets = [(x, self.matrices[x]) for x in sorted(self.matrices.keys())]
@@ -674,13 +675,13 @@ class KerasDetector(Detector):
             numTokens = len(dataSetValue["tokens"])
             assert len(featureMatrices) == len(labelMatrices)
             numExamples = len(featureMatrices)
-            self.arrays[dataSetName] = {"features":np.zeros((numExamples, dimMatrix, dimMatrix, dimSourceFeatures), dtype=np.float32), 
-                                        "labels":np.zeros((numExamples, dimMatrix, dimMatrix, dimTargetFeatures), dtype=np.float32)}
+            self.arrays[dataSetName] = {"features":np.zeros((numExamples, dimMatrix, dimMatrix, dimFeatures), dtype=np.float32), 
+                                        "labels":np.zeros((numExamples, dimMatrix, dimMatrix, dimLabels), dtype=np.float32)}
             if self.styles.get("wv") != None:
                 embeddingMatrices = dataSetValue["embeddings"]
                 self.arrays[dataSetName]["embeddings"] = np.zeros((numExamples, dimMatrix, dimMatrix, 2), dtype=np.int32)
             if useMask:
-                self.arrays[dataSetName]["mask"] = np.ones((numExamples, dimMatrix, dimMatrix, dimTargetFeatures), dtype=np.float32)
+                self.arrays[dataSetName]["mask"] = np.ones((numExamples, dimMatrix, dimMatrix, dimLabels), dtype=np.float32)
             for exampleIndex in range(numExamples):
                 featureArray = self.arrays[dataSetName]["features"][exampleIndex] #sourceArray = np.zeros((dimMatrix, dimMatrix, dimFeatures), dtype=np.float32)
                 labelArray = self.arrays[dataSetName]["labels"][exampleIndex] #targetArray = np.zeros((dimMatrix, dimMatrix, dimFeatures), dtype=np.float32)
@@ -688,7 +689,7 @@ class KerasDetector(Detector):
                     maskArray = self.arrays[dataSetName]["mask"][exampleIndex]
                 featureMatrix = featureMatrices.pop(0) #[exampleIndex]
                 labelMatrix = labelMatrices.pop(0) #[exampleIndex]
-                transfers = [(featureMatrix, featureArray, sourceIds), (labelMatrix, labelArray, targetIds)]
+                transfers = [(featureMatrix, featureArray, featureIds), (labelMatrix, labelArray, labelIDs)]
                 for matrix, array, ids in transfers:
                     for i in rangeMatrix:
                         for j in rangeMatrix:

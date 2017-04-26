@@ -34,6 +34,7 @@ class KerasExampleBuilder(ExampleBuilder):
             self.styles["cutoff"] = int(self.styles["cutoff"])
         
         self.wvIndices = None
+        self.embeddingMatrices = None
         if self.styles.get("wv") != None:
             indexPath = self.styles.get("wv") + "-indices.json.gz"
             if not os.path.exists(indexPath):
@@ -41,12 +42,12 @@ class KerasExampleBuilder(ExampleBuilder):
             print >> sys.stderr, "Loading word vector indices from", indexPath
             with gzip.open(indexPath, "rt") as f:
                 self.wvIndices = json.load(f)["indices"]
+            self.embeddingMatrices = []
         
         self.dimMatrix = 32
         self.rangeMatrix = range(self.dimMatrix)
         self.featureMatrices = []
         self.labelMatrices = []
-        self.embeddingMatrices = []
         self.tokenLists = []
     
     def setFeature(self, featureSet, features, name, value=1):
