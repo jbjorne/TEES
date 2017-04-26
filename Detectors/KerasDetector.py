@@ -157,6 +157,14 @@ class KerasDetector(Detector):
         if modelChanged:
             model.save()
     
+    def makeEmbeddingMatrix(self):
+        dimWordVector = len(self.wordvectors["vectors"][0])
+        numWordVectors = len(self.wordvectors["vectors"])
+        embedding_matrix = np.zeros((numWordVectors, dimWordVector))
+        for i in range(len(self.wordvectors["vectors"])):
+            embedding_matrix[i] = self.wordvectors[i]
+        return embedding_matrix
+    
     def defineModel(self):
         """
         Defines the Keras model and compiles it.
@@ -202,10 +210,11 @@ class KerasDetector(Detector):
             self.wordvectors = self.loadEmbeddings(self.styles.get("wv"))
             dimWordVector = len(self.wordvectors["vectors"][0])
             numWordVectors = len(self.wordvectors["vectors"])
+            embedding_matrix = self.makeEmbeddingMatrix()
             embedding = Input(shape=(dimMatrix, dimMatrix, dimEmbeddings), name='embedding')
             inputs.append(embedding)
             x = Reshape((dimMatrix * dimMatrix * dimEmbeddings,))(embedding)
-            x = Embedding(numWordVectors, dimWordVector)(x)
+            x = Embedding(numWordVectors, dimWordVector, weights=[embedding_matrix], trainable=False)(x)
             x = Reshape((dimMatrix, dimMatrix, dimWordVector))(x)
             x = merge([features, x], mode='concat')
         else:
