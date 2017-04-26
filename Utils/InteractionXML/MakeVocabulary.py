@@ -30,6 +30,8 @@ def processCorpus(input, output, wordVectorPath, tokenizerName="McCC", max_rank_
     print >> sys.stderr, "Loading word vectors from", wordVectorPath
     print >> sys.stderr, "max_rank_mem", max_rank_mem
     print >> sys.stderr, "max_rank", max_rank
+    max_rank_mem = int(max_rank_mem)
+    max_rank = int(max_rank)
     wv = WV.load(wordVectorPath, max_rank_mem, max_rank)
     
     documents = corpusRoot.findall("document")

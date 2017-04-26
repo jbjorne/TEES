@@ -26,6 +26,7 @@ import Utils.InteractionXML.DeleteAttributes
 import Utils.InteractionXML.MapAttributes
 import Utils.InteractionXML.MergeSentences
 import Utils.InteractionXML.MergeSets
+import Utils.InteractionXML.MakeVocabulary
 #import Utils.InteractionXML.ExportParse
 import Utils.InteractionXML.InteractionXMLUtils as IXMLUtils
 import Utils.Settings as Settings
@@ -91,6 +92,7 @@ class Preprocessor(ToolChain):
         self.initStep("SAVE", self.save, {}, None)
         self.initStep("EXPORT", self.export, {"formats":None, "exportIds":None}, None)
         self.initStep("EXPORT-STFORMAT", Utils.STFormat.ConvertXML.toSTFormat, {"outputTag":"a2", "useOrigIds":False, "debug":False, "skipArgs":[], "validate":True, "writeExtra":False, "allAsRelations":False, "exportIds":None}, None)
+        self.initStep("MAKE-VOCABULARY", Utils.InteractionXML.MakeVocabulary.processCorpus, {"wordVectorPath":None, "tokenizerName":"McCC", "max_rank_mem":100000, "max_rank":10000000}, None)
     
     def initPresets(self):
         self.presets["PRESET-CONVERT-PARSE"] = ["LOAD", "EXPORT"]
