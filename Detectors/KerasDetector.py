@@ -476,19 +476,19 @@ class KerasDetector(Detector):
         #    sourceData = "target"
         #print >> sys.stderr, sourceData, "->", "target", ("(autoencode)" if "autoencode" in self.styles else "")
         print >> sys.stderr, "Autoencoding:", self.styles.get("autoencode") != None
-        print >> sys.stderr, "Arrays:", {x:sorted(self.arrays[x].keys()) for x in self.arrays}
-        self.kerasModel.fit(self.arrays["train"], #[sourceData], self.arrays["train"]["target"],
+        print >> sys.stderr, "Arrays:", {x:{y:self.arrays[x][y].shape for y in self.arrays[x]} for x in self.arrays}
+        self.kerasModel.fit(self.arrays["train"], self.arrays["train"], #[sourceData], self.arrays["train"]["target"],
             epochs=100 if not "epochs" in self.styles else int(self.styles["epochs"]),
             batch_size=128,
             shuffle=True,
-            validation_data=self.arrays["devel"], #[sourceData], self.arrays["devel"]["target"]), #, self.arrays["devel"]["mask"]),
+            validation_data=(self.arrays["devel"], self.arrays["devel"]), #[sourceData], self.arrays["devel"]["target"]), #, self.arrays["devel"]["mask"]),
             #sample_weight=self.arrays["train"]["mask"],
             #class_weight=class_weight,
             callbacks=[es_cb, cp_cb])
         
         print >> sys.stderr, "Predicting devel examples"
         self.kerasModel = load_model(bestModelPath)
-        predictions = self.kerasModel.predict(self.arrays["devel"][sourceData], 128, 1)
+        predictions = self.kerasModel.predict(self.arrays["devel"], 128, 1)
         self.model.save()
         
         # The predicted matrices are saved as an HTML heat map
