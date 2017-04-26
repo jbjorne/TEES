@@ -18,6 +18,9 @@ from keras.layers.local import LocallyConnected2D
 from keras.layers.wrappers import TimeDistributed
 from keras.callbacks import EarlyStopping, ModelCheckpoint
 from Detectors import SingleStageDetector
+import Utils.Settings as Settings
+from keras.layers.embeddings import Embedding
+from keras.layers import merge
 
 # def categorical_crossentropy(output, target, from_logits=False):
 #     from keras.backend.common import _EPSILON
@@ -189,8 +192,21 @@ class KerasDetector(Detector):
 #         #x = Dense(12)(x)
 #         #x = Dense(dimTargetFeatures, activation='sigmoid')(x)
 #         self.kerasModel = Model(inputLayer, x)
+        
+        inputs = []
 
-        x = inputLayer = Input(shape=(dimMatrix, dimMatrix, dimSourceFeatures), name='features')
+        features = Input(shape=(dimMatrix, dimMatrix, dimSourceFeatures), name='features')
+        inputs.append(features)
+        if self.styles.get("wv") != None:
+            dimWordVector = len(self.wordvectors["vectors"][0])
+            embedding = Input(shape=(dimMatrix, dimMatrix, 2), name='embedding')
+            inputs.append(embedding)
+            x = Reshape((dimMatrix * dimMatrix * 2,))(embedding)
+            x = Embedding(self.wordvectors, dimWordVector)(x)
+            x = Reshape((dimMatrix, dimMatrix, dimWordVector))(x)
+            x = merge([features, x], mode='concat')
+        else:
+            x = features
         ##x = Conv2D(32, (3, 3), padding='same')(x)
         #x = Conv2D(16, (3, 3), padding='same')(x)
         #x = Conv2D(16, (1, 21), padding='same')(x)
@@ -199,7 +215,7 @@ class KerasDetector(Detector):
         x = Conv2D(32, (1, 5), activation='relu', padding='same')(x)
         x = Conv2D(32, (1, 3), activation='relu', padding='same')(x)
         x = Conv2D(dimTargetFeatures, (1, 1), activation='sigmoid', padding='same', name='labels')(x)
-        self.kerasModel = Model(inputLayer, x)
+        self.kerasModel = Model(inputs, x)
         
         layersPath = self.workDir + self.tag + "layers.json"
         print >> sys.stderr, "Saving layers to", layersPath
@@ -470,7 +486,7 @@ class KerasDetector(Detector):
         es_cb = EarlyStopping(monitor='val_loss', patience=patience, verbose=1)
         bestModelPath = self.model.get(self.tag + "model.hdf5", True) #self.workDir + self.tag + 'model.hdf5'
         cp_cb = ModelCheckpoint(filepath=bestModelPath, save_best_only=True, verbose=1)
-        sourceData = "source"
+        #sourceData = "source"
         #import pdb;pdb.set_trace()
         #if "autoencode" in self.styles:
         #    sourceData = "target"
@@ -537,27 +553,23 @@ class KerasDetector(Detector):
         if outCount > 0:
             ET.SubElement(parent, "p").text = "[out]: " + str(outCount)
     
-    def matricesToHTML(self, model, data, filePath, cutoff=None):
+    def matricesToHTML(self, model, data, filePath, cutoff=None, names=None):
         """
         Saves the source (features), target (labels) and predicted adjacency matrices
         for a list of sentences as HTML tables.
         """
-        root = ET.Element('html')     
-        sourceMatrices = data["source"]
-        targetMatrices = data["target"]
-        predMatrices = data.get("predicted")
+        root = ET.Element('html')
+        if names == None:
+            names = ["embeddings", "features", "labels", "predicted"]
         tokenLists = data["tokens"]
-        for i in range(len(sourceMatrices)):
+        for i in range(len(tokenLists)):
             if cutoff is not None and i >= cutoff:
                 break
             ET.SubElement(root, "h3").text = str(i) + ": " + " ".join(tokenLists[i])
-            ET.SubElement(root, "p").text = "Source"
-            self.matrixToTable(sourceMatrices[i], tokenLists[i], root)
-            ET.SubElement(root, "p").text = "Target"
-            self.matrixToTable(targetMatrices[i], tokenLists[i], root)
-            if predMatrices is not None:
-                ET.SubElement(root, "p").text = "Predicted"
-                self.matrixToTable(predMatrices[i], tokenLists[i], root)
+            for name in names:
+                if data.get(name) != None:
+                    ET.SubElement(root, "p").text = name
+                    self.matrixToTable(data[name][i], tokenLists[i], root)
         print >> sys.stderr, "Writing adjacency matrix visualization to", os.path.abspath(filePath)
         ETUtils.write(root, filePath)
         
@@ -594,6 +606,14 @@ class KerasDetector(Detector):
             print >> sys.stderr, "_________________________________________________________________"
         with open(filePath, "wt") as f:
             json.dump(layers, f, indent=2)
+    
+    def loadEmbeddings(self, wvPath):
+        vectorPath = self.styles.get("wv") + "-vectors.json.gz"
+        if not os.path.exists(vectorPath):
+            indexPath = os.path.join(Settings.DATAPATH, "wv", vectorPath)
+        print >> sys.stderr, "Loading word vector indices from", vectorPath
+        with gzip.open(vectorPath, "rt") as f:
+            return json.load(f)
     
     ###########################################################################
     # Vectorization
@@ -648,21 +668,26 @@ class KerasDetector(Detector):
             print >> sys.stderr, "Vectorizing dataset", dataSetName
             sourceMatrices = dataSetValue["source"]
             targetMatrices = dataSetValue["target"]
+            embeddingMatrices = None
             numTokens = len(dataSetValue["tokens"])
             assert len(sourceMatrices) == len(targetMatrices)
             numExamples = len(sourceMatrices)
-            sourceArrays = np.zeros((numExamples, dimMatrix, dimMatrix, dimSourceFeatures), dtype=np.float32)
-            targetArrays = np.zeros((numExamples, dimMatrix, dimMatrix, dimTargetFeatures), dtype=np.float32)
+            self.arrays[dataSetName] = {"features":np.zeros((numExamples, dimMatrix, dimMatrix, dimSourceFeatures), dtype=np.float32), 
+                                        "labels":np.zeros((numExamples, dimMatrix, dimMatrix, dimTargetFeatures), dtype=np.float32)}
+            if self.styles.get("wv") != None:
+                embeddingMatrices = dataSetValue["embeddings"]
+                self.arrays[dataSetName]["embeddings"] = np.zeros((numExamples, dimMatrix, dimMatrix, 2), dtype=np.int32)
             if useMask:
-                maskArrays = np.ones((numExamples, dimMatrix, dimMatrix, dimTargetFeatures), dtype=np.float32)
+                self.arrays[dataSetName]["mask"] = np.ones((numExamples, dimMatrix, dimMatrix, dimTargetFeatures), dtype=np.float32)
             for exampleIndex in range(numExamples):
-                sourceArray = sourceArrays[exampleIndex] #sourceArray = np.zeros((dimMatrix, dimMatrix, dimFeatures), dtype=np.float32)
-                targetArray = targetArrays[exampleIndex] #targetArray = np.zeros((dimMatrix, dimMatrix, dimFeatures), dtype=np.float32)
+                featureArray = self.arrays[dataSetName]["features"][exampleIndex] #sourceArray = np.zeros((dimMatrix, dimMatrix, dimFeatures), dtype=np.float32)
+                labelArray = self.arrays[dataSetName]["labels"][exampleIndex] #targetArray = np.zeros((dimMatrix, dimMatrix, dimFeatures), dtype=np.float32)
                 if useMask:
-                    maskArray = maskArrays[exampleIndex]
+                    maskArray = self.arrays[dataSetName]["mask"][exampleIndex]
                 sourceMatrix = sourceMatrices.pop(0) #[exampleIndex]
                 targetMatrix = targetMatrices.pop(0) #[exampleIndex]
-                for matrix, array, ids in [(sourceMatrix, sourceArray, sourceIds), (targetMatrix, targetArray, targetIds)]:
+                transfers = [(sourceMatrix, featureArray, sourceIds), (targetMatrix, labelArray, targetIds)]
+                for matrix, array, ids in transfers:
                     for i in rangeMatrix:
                         for j in rangeMatrix:
                             features = matrix[i][j]
@@ -672,9 +697,15 @@ class KerasDetector(Detector):
                             if useMask:
                                 if i > numTokens or j > numTokens:
                                     maskArray[i][j] = 0.0
-            self.arrays[dataSetName] = {"features":sourceArrays, "labels":targetArrays}
+                if embeddingMatrices != None:
+                    embeddingMatrix = embeddingMatrices.pop(0)
+                    embeddingArray = self.arrays[dataSetName]["embeddings"][exampleIndex]
+                    for i in rangeMatrix:
+                        for j in rangeMatrix:
+                            embeddingArray[i][j][0] = embeddingMatrix[i][j][0]
+                            embeddingArray[i][j][1] = embeddingMatrix[i][j][1]
             if self.styles.get("autoencode") != None:
                 print >> sys.stderr, "Autoencoding dataset", dataSetName
                 self.arrays[dataSetName]["features"] = self.arrays["labels"]
-            if useMask:
-                self.arrays[dataSetName]["mask"] = maskArrays
+            if embeddingMatrices != None:
+                self.arrays[dataSetName]["embeddings"] = self.arrays["embeddings"]
