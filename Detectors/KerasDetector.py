@@ -21,6 +21,7 @@ from Detectors import SingleStageDetector
 import Utils.Settings as Settings
 from keras.layers.embeddings import Embedding
 from keras.layers import merge
+from keras.layers.merge import Concatenate
 
 # def categorical_crossentropy(output, target, from_logits=False):
 #     from keras.backend.common import _EPSILON
@@ -212,8 +213,8 @@ class KerasDetector(Detector):
             dimWordVector = len(self.wordvectors["vectors"][0])
             numWordVectors = len(self.wordvectors["vectors"])
             embedding_matrix = self.makeEmbeddingMatrix()
-            x = input_embedding = Input(shape=(dimMatrix, dimMatrix, dimEmbeddings), name='embedding')
-            inputs.append(input_embedding)
+            x = input_embeddings = Input(shape=(dimMatrix, dimMatrix, dimEmbeddings), name='embeddings')
+            inputs.append(input_embeddings)
             embedding_input_length = dimMatrix * dimMatrix * dimEmbeddings
             #x = Reshape((dimMatrix * dimMatrix, dimEmbeddings))(x)
             x = Embedding(numWordVectors + 1, dimWordVector, weights=[embedding_matrix], 
@@ -222,6 +223,7 @@ class KerasDetector(Detector):
             x = Reshape((dimMatrix, dimMatrix, 2 * dimWordVector))(x)
             #x = Reshape((dimMatrix, dimMatrix, dimEmbeddings))(x)
             x = merge([input_features, x], mode='concat')
+            #x = Concatenate([input_features, x])
         else:
             x = input_features
         ##x = Conv2D(32, (3, 3), padding='same')(x)
@@ -733,6 +735,4 @@ class KerasDetector(Detector):
             if self.styles.get("autoencode") != None:
                 print >> sys.stderr, "Autoencoding dataset", dataSetName
                 self.arrays[dataSetName]["features"] = self.arrays["labels"]
-            if embeddingMatrices != None:
-                self.arrays[dataSetName]["embeddings"] = self.arrays["embeddings"]
             print >> sys.stderr, dataSetName, self.getArrayShapes(self.arrays[dataSetName]) 
