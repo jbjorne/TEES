@@ -190,7 +190,7 @@ class KerasDetector(Detector):
 #         #x = Dense(dimTargetFeatures, activation='sigmoid')(x)
 #         self.kerasModel = Model(inputLayer, x)
 
-        x = inputLayer = Input(shape=(dimMatrix, dimMatrix, dimSourceFeatures))
+        x = inputLayer = Input(shape=(dimMatrix, dimMatrix, dimSourceFeatures), name='features')
         ##x = Conv2D(32, (3, 3), padding='same')(x)
         #x = Conv2D(16, (3, 3), padding='same')(x)
         #x = Conv2D(16, (1, 21), padding='same')(x)
@@ -198,7 +198,7 @@ class KerasDetector(Detector):
         x = Conv2D(32, (1, 9), activation='relu', padding='same')(x)
         x = Conv2D(32, (1, 5), activation='relu', padding='same')(x)
         x = Conv2D(32, (1, 3), activation='relu', padding='same')(x)
-        x = Conv2D(dimTargetFeatures, (1, 1), activation='sigmoid', padding='same')(x)
+        x = Conv2D(dimTargetFeatures, (1, 1), activation='sigmoid', padding='same', name='labels')(x)
         self.kerasModel = Model(inputLayer, x)
         
         layersPath = self.workDir + self.tag + "layers.json"
@@ -470,23 +470,25 @@ class KerasDetector(Detector):
         es_cb = EarlyStopping(monitor='val_loss', patience=patience, verbose=1)
         bestModelPath = self.model.get(self.tag + "model.hdf5", True) #self.workDir + self.tag + 'model.hdf5'
         cp_cb = ModelCheckpoint(filepath=bestModelPath, save_best_only=True, verbose=1)
-        features = "source"
+        sourceData = "source"
         #import pdb;pdb.set_trace()
-        if "autoencode" in self.styles:
-            features = "target"
-        print >> sys.stderr, features, "->", "target", ("(autoencode)" if "autoencode" in self.styles else "")
-        self.kerasModel.fit(self.arrays["train"][features], self.arrays["train"]["target"],
+        #if "autoencode" in self.styles:
+        #    sourceData = "target"
+        #print >> sys.stderr, sourceData, "->", "target", ("(autoencode)" if "autoencode" in self.styles else "")
+        print >> sys.stderr, "Autoencoding:", self.styles.get("autoencode") != None
+        print >> sys.stderr, "Arrays:", {x:sorted(self.arrays[x].keys()) for x in self.arrays}
+        self.kerasModel.fit(self.arrays["train"], #[sourceData], self.arrays["train"]["target"],
             epochs=100 if not "epochs" in self.styles else int(self.styles["epochs"]),
             batch_size=128,
             shuffle=True,
-            validation_data=(self.arrays["devel"][features], self.arrays["devel"]["target"]), #, self.arrays["devel"]["mask"]),
+            validation_data=self.arrays["devel"], #[sourceData], self.arrays["devel"]["target"]), #, self.arrays["devel"]["mask"]),
             #sample_weight=self.arrays["train"]["mask"],
             #class_weight=class_weight,
             callbacks=[es_cb, cp_cb])
         
         print >> sys.stderr, "Predicting devel examples"
         self.kerasModel = load_model(bestModelPath)
-        predictions = self.kerasModel.predict(self.arrays["devel"][features], 128, 1)
+        predictions = self.kerasModel.predict(self.arrays["devel"][sourceData], 128, 1)
         self.model.save()
         
         # The predicted matrices are saved as an HTML heat map
@@ -670,6 +672,9 @@ class KerasDetector(Detector):
                             if useMask:
                                 if i > numTokens or j > numTokens:
                                     maskArray[i][j] = 0.0
-            self.arrays[dataSetName] = {"source":sourceArrays, "target":targetArrays}
+            self.arrays[dataSetName] = {"features":sourceArrays, "labels":targetArrays}
+            if self.styles.get("autoencode") != None:
+                print >> sys.stderr, "Autoencoding dataset", dataSetName
+                self.arrays[dataSetName]["features"] = self.arrays["labels"]
             if useMask:
                 self.arrays[dataSetName]["mask"] = maskArrays

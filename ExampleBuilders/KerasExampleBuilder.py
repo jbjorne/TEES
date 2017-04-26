@@ -4,6 +4,7 @@ sys.path.append(os.path.abspath(os.path.join(thisPath,"..")))
 from ExampleBuilder import ExampleBuilder
 from Core.IdSet import IdSet
 import gzip, json
+import Utils.Settings as Settings
 
 class KerasExampleBuilder(ExampleBuilder):
     """
@@ -34,8 +35,11 @@ class KerasExampleBuilder(ExampleBuilder):
         
         self.wvIndices = None
         if self.styles.get("wv") != None:
-            print >> sys.stderr, "Loading word vector indices from", self.styles.get("wv")
-            with gzip.open(self.styles.get("wv") + "-indices.json.gz", "rt") as f:
+            indexPath = self.styles.get("wv") + "-indices.json.gz"
+            if not os.path.exists(indexPath):
+                indexPath = os.path.join(Settings.DATAPATH, "wv", indexPath)
+            print >> sys.stderr, "Loading word vector indices from", indexPath
+            with gzip.open(indexPath, "rt") as f:
                 self.wvIndices = json.load(f)["indices"]
         
         self.dimMatrix = 32
@@ -183,7 +187,8 @@ class KerasExampleBuilder(ExampleBuilder):
                     # Define the dependency features for the source matrix
                     tI = sentenceGraph.tokens[i]
                     tJ = sentenceGraph.tokens[j]
-                    embeddingFeatures = [self.getEmbeddingIndex(tI), self.getEmbeddingIndex(tJ)]
+                    if embeddingMatrix != None:
+                        embeddingFeatures = [self.getEmbeddingIndex(tI), self.getEmbeddingIndex(tJ)]
                     for eType, eValue in sourceEntityFeatures[i]:
                         self.setFeature(self.sourceIds, sourceFeatures, "A:" + eType, eValue)
                     for eType, eValue in sourceEntityFeatures[j]:
@@ -242,6 +247,7 @@ class KerasExampleBuilder(ExampleBuilder):
                 sourceMatrix[-1].append(sourceFeatures)
                 targetMatrix[-1].append(targetFeatures)
                 if embeddingMatrix != None:
+                    assert len(embeddingFeatures) == 2
                     embeddingMatrix[-1].append(embeddingFeatures)
         
         # Add this sentences's matrices and list of tokens to the result lists
