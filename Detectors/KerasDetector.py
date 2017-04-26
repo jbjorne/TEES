@@ -204,24 +204,24 @@ class KerasDetector(Detector):
         
         inputs = []
 
-        features = Input(shape=(dimMatrix, dimMatrix, dimFeatures), name='features')
-        inputs.append(features)
+        input_features = Input(shape=(dimMatrix, dimMatrix, dimFeatures), name='features')
+        inputs.append(input_features)
         if self.styles.get("wv") != None:
             dimEmbeddings = 2
             self.wordvectors = self.loadEmbeddings(self.styles.get("wv"))
             dimWordVector = len(self.wordvectors["vectors"][0])
             numWordVectors = len(self.wordvectors["vectors"])
             embedding_matrix = self.makeEmbeddingMatrix()
-            embedding = Input(shape=(dimMatrix, dimMatrix, dimEmbeddings), name='embedding')
-            inputs.append(embedding)
-            input_length = dimMatrix * dimMatrix * dimEmbeddings
-            x = Reshape((input_length,))(embedding)
+            input_embedding = Input(shape=(dimMatrix, dimMatrix, dimEmbeddings), name='embedding')
+            inputs.append(input_embedding)
+            embedding_input_length = dimMatrix * dimMatrix * dimEmbeddings
+            x = Reshape((embedding_input_length,))(input_embedding)
             x = Embedding(numWordVectors + 1, dimWordVector, weights=[embedding_matrix], 
-                          input_length=input_length, trainable=False)(x)
+                          input_length=embedding_input_length, trainable=False)(x)
             x = Reshape((dimMatrix, dimMatrix, dimEmbeddings))(x)
-            x = merge([features, x], mode='concat')
+            x = merge([input_features, x], mode='concat')
         else:
-            x = features
+            x = input_features
         ##x = Conv2D(32, (3, 3), padding='same')(x)
         #x = Conv2D(16, (3, 3), padding='same')(x)
         #x = Conv2D(16, (1, 21), padding='same')(x)
@@ -602,6 +602,9 @@ class KerasDetector(Detector):
         b = 0
         return '#%02x%02x%02x' % (r, g, b)
     
+    def getArrayShapes(self, arrayDict):
+        return {x:(arrayDict.get(x).shape if arrayDict.get(x) != None else None) for x in arrayDict}
+    
     ###########################################################################
     # Serialization
     ###########################################################################
@@ -730,3 +733,4 @@ class KerasDetector(Detector):
                 self.arrays[dataSetName]["features"] = self.arrays["labels"]
             if embeddingMatrices != None:
                 self.arrays[dataSetName]["embeddings"] = self.arrays["embeddings"]
+            print >> sys.stderr, dataSetName, self.getArrayShapes(self.arrays[dataSetName]) 
