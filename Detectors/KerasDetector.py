@@ -228,9 +228,9 @@ class KerasDetector(Detector):
             x2 = Reshape((dimMatrix * dimMatrix, 2 * dimWordVector))(x2)
             x2 = Reshape((dimMatrix, dimMatrix, 2 * dimWordVector))(x2)
             #x = Reshape((dimMatrix, dimMatrix, dimEmbeddings))(x)
-            x1 = Conv2D(dimWordVector, (1, 3), activation='relu', padding='same')(x1)
-            x1 = Conv2D(dimWordVector, (1, 3), activation='relu', padding='same')(x1)
-            x1 = Conv2D(dimWordVector, (1, 3), activation='relu', padding='same')(x1)
+            x2 = Conv2D(dimWordVector, (1, 3), activation='relu', padding='same')(x2)
+            x2 = Conv2D(dimWordVector, (1, 3), activation='relu', padding='same')(x2)
+            x2 = Conv2D(dimWordVector, (1, 3), activation='relu', padding='same')(x2)
             
             # Merge
             x = merge([x1, x2], mode='concat')
@@ -245,6 +245,7 @@ class KerasDetector(Detector):
             x = Conv2D(32, (1, 9), activation='relu', padding='same')(x)
             x = Conv2D(32, (1, 5), activation='relu', padding='same')(x)
             x = Conv2D(32, (1, 3), activation='relu', padding='same')(x)
+        
         x = Conv2D(dimLabels, (1, 1), activation='sigmoid', padding='same', name='labels')(x)
         self.kerasModel = Model(inputs, x)
         
@@ -619,7 +620,7 @@ class KerasDetector(Detector):
         return '#%02x%02x%02x' % (r, g, b)
     
     def getArrayShapes(self, arrayDict):
-        return {x:(arrayDict.get(x).shape if arrayDict.get(x) != None else None) for x in arrayDict}
+        return {x:(arrayDict.get(x).shape if arrayDict.get(x) is not None else None) for x in arrayDict}
     
     ###########################################################################
     # Serialization
