@@ -156,8 +156,12 @@ class KerasExampleBuilder(ExampleBuilder):
                             #for tokenIndex in (0, -1): # The first and last token in the path
                             #    self.setFeature(self.sourceIds, sourceFeatures, "T" + str(tokenIndex) + ":" + path[tokenIndex].get("POS"))
                             for k in range(1, len(path)): # A bag of dependencies for this shortest path
-                                for edge in depGraph.getEdges(path[k], path[k-1]) + depGraph.getEdges(path[k-1], path[k]):
+                                for edge in depGraph.getEdges(path[k], path[k-1]): # + depGraph.getEdges(path[k-1], path[k]):
                                     depTypes.add(edge[2].get("type")) #self.setFeature(self.sourceIds, sourceFeatures, edge[2].get("type"))
+                                    if k == 1:
+                                        self.setFeature(self.sourceIds, sourceFeatures, "a:" + edge[2].get("type"))
+                                    if k == len(path) - 1:
+                                        self.setFeature(self.sourceIds, sourceFeatures, "b:" + edge[2].get("type"))
                     if len(depTypes) == 0:
                         depTypes.add("DNeg")
                     for depType in sorted(depTypes):
