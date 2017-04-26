@@ -149,13 +149,6 @@ class KerasDetector(Detector):
             modelChanged = True
         if modelChanged:
             model.save()
-            
-    def serializeLayers(self, kerasModel, filePath):
-        layers = []
-        for layer in kerasModel.layers:
-            layers.append({'class_name': layer.__class__.__name__, 'config': layer.get_config()})
-        with open(filePath, "wt") as f:
-            json.dump(layers, f, indent=2)
     
     def defineModel(self):
         """
@@ -582,6 +575,19 @@ class KerasDetector(Detector):
     def loadJSON(self, filePath):
         with gzip.open(filePath, "rt") as f:
             return json.load(f)
+    
+    def serializeLayers(self, kerasModel, filePath, verbose=True):
+        layers = []
+        for layer in kerasModel.layers:
+            layers.append({'class_name': layer.__class__.__name__, 'config': layer.get_config()})
+        if verbose:
+            print >> sys.stderr, "Layer configuration:"
+            print >> sys.stderr, "_________________________________________________________________"
+            for layer in layers:
+                print >> sys.stderr, layer
+            print >> sys.stderr, "_________________________________________________________________"
+        with open(filePath, "wt") as f:
+            json.dump(layers, f, indent=2)
     
     ###########################################################################
     # Vectorization
