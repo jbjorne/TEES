@@ -74,6 +74,20 @@ class KerasExampleBuilder(ExampleBuilder):
                 features.append([(x,1.0) for x in entFeatures])
         return features
     
+    def buildSingleElementFeatures(self, pathTokens, sentenceGraph):
+        depGraph = sentenceGraph.dependencyGraph
+        pt = pathTokens
+        # Edges directed relative to the path
+        features = []
+        for i in range(1,len(pathTokens)):
+            for edge in depGraph.getEdges(pt[i], pt[i-1]):
+                depType = edge[2].get("type")
+                features.append(depType + ">")
+            for edge in depGraph.getEdges(pt[i-1], pt[i]):
+                depType = edge[2].get("type")
+                features.append(depType + "<")
+        return features
+    
     def buildExamplesFromGraph(self, sentenceGraph, outfile, goldGraph = None, structureAnalyzer=None):
         """
         Build examples for a single sentence. Returns a list of examples.
@@ -151,21 +165,24 @@ class KerasExampleBuilder(ExampleBuilder):
                     shortestPaths = depGraph.getPaths(tI, tJ)
                     depTypes = set()
                     if len(shortestPaths) > 0: # There is a path of dependencies between these two tokens
-                        path = shortestPaths[0]
-                        if True: #len(path) == 2:
-                            #for tokenIndex in (0, -1): # The first and last token in the path
-                            #    self.setFeature(self.sourceIds, sourceFeatures, "T" + str(tokenIndex) + ":" + path[tokenIndex].get("POS"))
-                            for k in range(1, len(path)): # A bag of dependencies for this shortest path
-                                for edge in depGraph.getEdges(path[k], path[k-1]): # + depGraph.getEdges(path[k-1], path[k]):
-                                    if edge[0] == path[k]:
-                                        eDir = ">"
-                                    else:
-                                        eDir = "<"
-                                    depTypes.add(eDir + edge[2].get("type")) #self.setFeature(self.sourceIds, sourceFeatures, edge[2].get("type"))
-                                    #if k == 1:
-                                    #    self.setFeature(self.sourceIds, sourceFeatures, "a:" + eDir + edge[2].get("type"))
-                                    #if k == len(path) - 1:
-                                    #    self.setFeature(self.sourceIds, sourceFeatures, "b:" + eDir + edge[2].get("type"))
+                        #path = shortestPaths[0]
+                        for path in shortestPaths:
+                            for edgeFeature in self.buildSingleElementFeatures(path, sentenceGraph):
+                                self.setFeature(self.sourceIds, sourceFeatures, edgeFeature)
+#                         if True: #len(path) == 2:
+#                             #for tokenIndex in (0, -1): # The first and last token in the path
+#                             #    self.setFeature(self.sourceIds, sourceFeatures, "T" + str(tokenIndex) + ":" + path[tokenIndex].get("POS"))
+#                             for k in range(1, len(path)): # A bag of dependencies for this shortest path
+#                                 for edge in depGraph.getEdges(path[k], path[k-1]): # + depGraph.getEdges(path[k-1], path[k]):
+#                                     if edge[0] == path[k]:
+#                                         eDir = ">"
+#                                     else:
+#                                         eDir = "<"
+#                                     depTypes.add(eDir + edge[2].get("type")) #self.setFeature(self.sourceIds, sourceFeatures, edge[2].get("type"))
+#                                     #if k == 1:
+#                                     #    self.setFeature(self.sourceIds, sourceFeatures, "a:" + eDir + edge[2].get("type"))
+#                                     #if k == len(path) - 1:
+#                                     #    self.setFeature(self.sourceIds, sourceFeatures, "b:" + eDir + edge[2].get("type"))
                     if len(depTypes) == 0:
                         depTypes.add("DNeg")
                     for depType in sorted(depTypes):
