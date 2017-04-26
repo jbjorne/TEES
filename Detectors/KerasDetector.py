@@ -158,11 +158,12 @@ class KerasDetector(Detector):
             model.save()
     
     def makeEmbeddingMatrix(self):
-        dimWordVector = len(self.wordvectors["vectors"][0])
-        numWordVectors = len(self.wordvectors["vectors"])
-        embedding_matrix = np.zeros((numWordVectors, dimWordVector))
-        for i in range(len(self.wordvectors["vectors"])):
-            embedding_matrix[i] = self.wordvectors[i]
+        vectors = self.wordvectors["vectors"]
+        dimWordVector = len(vectors[0])
+        numWordVectors = len(vectors)
+        embedding_matrix = np.zeros((numWordVectors + 1, dimWordVector))
+        for i in range(len(vectors)):
+            embedding_matrix[i] = vectors[i]
         return embedding_matrix
     
     def defineModel(self):
@@ -213,9 +214,11 @@ class KerasDetector(Detector):
             embedding_matrix = self.makeEmbeddingMatrix()
             embedding = Input(shape=(dimMatrix, dimMatrix, dimEmbeddings), name='embedding')
             inputs.append(embedding)
-            x = Reshape((dimMatrix * dimMatrix * dimEmbeddings,))(embedding)
-            x = Embedding(numWordVectors, dimWordVector, weights=[embedding_matrix], trainable=False)(x)
-            x = Reshape((dimMatrix, dimMatrix, dimWordVector))(x)
+            input_length = dimMatrix * dimMatrix * dimEmbeddings
+            x = Reshape((input_length,))(embedding)
+            x = Embedding(numWordVectors + 1, dimWordVector, weights=[embedding_matrix], 
+                          input_length=input_length, trainable=False)(x)
+            x = Reshape((dimMatrix, dimMatrix, dimEmbeddings))(x)
             x = merge([features, x], mode='concat')
         else:
             x = features
