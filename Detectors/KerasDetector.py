@@ -190,10 +190,10 @@ class KerasDetector(Detector):
         ##x = Conv2D(32, (3, 3), padding='same')(x)
         #x = Conv2D(16, (3, 3), padding='same')(x)
         #x = Conv2D(16, (1, 21), padding='same')(x)
-        x = Conv2D(64, (1, 1), activation='relu', padding='same')(x)
-        x = Conv2D(16, (1, 9), activation='relu', padding='same')(x)
-        x = Conv2D(16, (1, 5), activation='relu', padding='same')(x)
-        x = Conv2D(16, (1, 3), activation='relu', padding='same')(x)
+        x = Conv2D(128, (1, 1), activation='relu', padding='same')(x)
+        x = Conv2D(32, (1, 9), activation='relu', padding='same')(x)
+        x = Conv2D(32, (1, 5), activation='relu', padding='same')(x)
+        x = Conv2D(32, (1, 3), activation='relu', padding='same')(x)
         x = Conv2D(dimTargetFeatures, (1, 1), activation='sigmoid', padding='same')(x)
         self.kerasModel = Model(inputLayer, x)
         
@@ -576,7 +576,7 @@ class KerasDetector(Detector):
         with gzip.open(filePath, "rt") as f:
             return json.load(f)
     
-    def serializeLayers(self, kerasModel, filePath, verbose=True):
+    def serializeLayers(self, kerasModel, filePath, verbose=False):
         layers = []
         for layer in kerasModel.layers:
             layers.append({'class_name': layer.__class__.__name__, 'config': layer.get_config()})
