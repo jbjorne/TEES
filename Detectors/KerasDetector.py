@@ -199,11 +199,13 @@ class KerasDetector(Detector):
         inputs.append(features)
         if self.styles.get("wv") != None:
             dimEmbeddings = 2
+            self.wordvectors = self.loadEmbeddings(self.styles.get("wv"))
             dimWordVector = len(self.wordvectors["vectors"][0])
+            numWordVectors = len(self.wordvectors["vectors"])
             embedding = Input(shape=(dimMatrix, dimMatrix, dimEmbeddings), name='embedding')
             inputs.append(embedding)
             x = Reshape((dimMatrix * dimMatrix * dimEmbeddings,))(embedding)
-            x = Embedding(self.wordvectors, dimWordVector)(x)
+            x = Embedding(numWordVectors, dimWordVector)(x)
             x = Reshape((dimMatrix, dimMatrix, dimWordVector))(x)
             x = merge([features, x], mode='concat')
         else:
@@ -515,7 +517,7 @@ class KerasDetector(Detector):
             print >> sys.stderr, "Saving predictions to", self.workDir + self.tag + "devel-predictions.json.gz"
             self.saveJSON(self.workDir + self.tag + "devel-predictions.json.gz", predMatrices)
         if "html" in self.styles:
-            self.matricesToHTML(self.model, predMatrices, self.workDir + self.tag + "devel-predictions.html", int(self.styles["html"]))
+            self.matricesToHTML(self.model, predMatrices, self.workDir + self.tag + "devel-predictions.html", int(self.styles["html"]), names = ["features", "labels", "predicted"])
         
         # For now the training ends here, later the predicted matrices should be converted back to XML events
         sys.exit()
@@ -524,7 +526,7 @@ class KerasDetector(Detector):
     # HTML Table visualization
     ###########################################################################
     
-    def matrixToTable(self, matrix, tokens, parent):
+    def matrixToTable(self, matrix, tokens, parent, name):
         """
         Converts a single Python dictionary adjacency matrix into an HTML table structure.
         """
@@ -544,13 +546,16 @@ class KerasDetector(Detector):
                     features = matrix[i - 1][j - 1]
                     if "color" in features: # The 'color' is not a real feature, but rather defines this table element's background color
                         td.set("bgcolor", features["color"])
-                    featureNames = [x for x in features if x != "color"]
+                    if name == "embeddings":
+                        featureNames = [x + "=" + str(features[x]) for x in features]
+                    else:
+                        featureNames = [x for x in features if x != "color"]
+                        td.set("weights", ",".join([x + "=" + str(features[x]) for x in featureNames]))
                     featureNames.sort()
-                    td.text = ",".join(featureNames)
+                    td.text = ",".join([x for x in featureNames])
                     if td.text == "[out]":
                         outCount += 1
                         td.text = ""
-                    td.set("weights", ",".join([x + "=" + str(features[x]) for x in featureNames]))
         if outCount > 0:
             ET.SubElement(parent, "p").text = "[out]: " + str(outCount)
     
@@ -573,7 +578,7 @@ class KerasDetector(Detector):
                 if data.get(name) != None:
                     ET.SubElement(root, "p").text = name
                     assert i < len(data[name]) and i < len(tokenLists), (name, len(data[name]), len(tokenLists))
-                    self.matrixToTable(data[name][i], tokenLists[i], root)
+                    self.matrixToTable(data[name][i], tokenLists[i], root, name)
         ETUtils.write(root, filePath)
         
     def clamp(self, value, lower, upper):
@@ -613,8 +618,9 @@ class KerasDetector(Detector):
     def loadEmbeddings(self, wvPath):
         vectorPath = self.styles.get("wv") + "-vectors.json.gz"
         if not os.path.exists(vectorPath):
-            indexPath = os.path.join(Settings.DATAPATH, "wv", vectorPath)
+            vectorPath = os.path.join(Settings.DATAPATH, "wv", vectorPath)
         print >> sys.stderr, "Loading word vector indices from", vectorPath
+        assert os.path.exists(vectorPath)
         with gzip.open(vectorPath, "rt") as f:
             return json.load(f)
     
@@ -705,8 +711,8 @@ class KerasDetector(Detector):
                     embeddingArray = self.arrays[dataSetName]["embeddings"][exampleIndex]
                     for i in rangeMatrix:
                         for j in rangeMatrix:
-                            embeddingArray[i][j][0] = embeddingMatrix[i][j][0]
-                            embeddingArray[i][j][1] = embeddingMatrix[i][j][1]
+                            embeddingArray[i][j][0] = embeddingMatrix[i][j]["0"]
+                            embeddingArray[i][j][1] = embeddingMatrix[i][j]["1"]
             if self.styles.get("autoencode") != None:
                 print >> sys.stderr, "Autoencoding dataset", dataSetName
                 self.arrays[dataSetName]["features"] = self.arrays["labels"]

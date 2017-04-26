@@ -164,13 +164,13 @@ class KerasExampleBuilder(ExampleBuilder):
                     self.setFeature(self.featureIds, features, "[out]", negValue)
                     self.setFeature(self.labelIds, labels, "[out]", negValue)
                     if embeddingMatrix != None:
-                        embeddingFeatures = 2 * [self.wvIndices["[out]"]]
+                        embeddingFeatures = {"0":self.wvIndices["[out]"], "1":self.wvIndices["[out]"]}
                 elif i == j: # The diagonal defines the linear order of the tokens in the sentence
                     token = sentenceGraph.tokens[i]
                     #self.setFeature(self.sourceIds, sourceFeatures, "E")
                     self.setFeature(self.featureIds, features, token.get("POS"))
                     if embeddingMatrix != None:
-                        embeddingFeatures = 2 * [self.getEmbeddingIndex(token)]
+                        embeddingFeatures = {"0":self.getEmbeddingIndex(token), "1":self.getEmbeddingIndex(token)}
 #                     sourceEntityTypes = []
 #                     targeEntityTypes = []
 #                     if len(sentenceGraph.tokenIsEntityHead[token]) > 0: # The token is the head token of an entity
@@ -189,7 +189,7 @@ class KerasExampleBuilder(ExampleBuilder):
                     tI = sentenceGraph.tokens[i]
                     tJ = sentenceGraph.tokens[j]
                     if embeddingMatrix != None:
-                        embeddingFeatures = [self.getEmbeddingIndex(tI), self.getEmbeddingIndex(tJ)]
+                        embeddingFeatures = {"0":self.getEmbeddingIndex(tI), "1":self.getEmbeddingIndex(tJ)}
                     for eType, eValue in sourceEntityFeatures[i]:
                         self.setFeature(self.featureIds, features, "A:" + eType, eValue)
                     for eType, eValue in sourceEntityFeatures[j]:
