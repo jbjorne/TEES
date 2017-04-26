@@ -98,7 +98,7 @@ class KerasExampleBuilder(ExampleBuilder):
         
         # The dependency graph connects the tokens with the shortest paths
         depGraph = None
-        if not self.hasStyle("no_path"):
+        if not self.styles.get("no_path"): #not self.hasStyle("no_path"):
             undirected = sentenceGraph.dependencyGraph.toUndirected()
             depGraph = undirected
             if self.styles.get("filter_shortest_path") != None: # For DDI use filter_shortest_path=conj_and
@@ -157,11 +157,15 @@ class KerasExampleBuilder(ExampleBuilder):
                             #    self.setFeature(self.sourceIds, sourceFeatures, "T" + str(tokenIndex) + ":" + path[tokenIndex].get("POS"))
                             for k in range(1, len(path)): # A bag of dependencies for this shortest path
                                 for edge in depGraph.getEdges(path[k], path[k-1]): # + depGraph.getEdges(path[k-1], path[k]):
-                                    depTypes.add(edge[2].get("type")) #self.setFeature(self.sourceIds, sourceFeatures, edge[2].get("type"))
-                                    if k == 1:
-                                        self.setFeature(self.sourceIds, sourceFeatures, "a:" + edge[2].get("type"))
-                                    if k == len(path) - 1:
-                                        self.setFeature(self.sourceIds, sourceFeatures, "b:" + edge[2].get("type"))
+                                    if edge[0] == path[k]:
+                                        eDir = ">"
+                                    else:
+                                        eDir = "<"
+                                    depTypes.add(eDir + edge[2].get("type")) #self.setFeature(self.sourceIds, sourceFeatures, edge[2].get("type"))
+                                    #if k == 1:
+                                    #    self.setFeature(self.sourceIds, sourceFeatures, "a:" + eDir + edge[2].get("type"))
+                                    #if k == len(path) - 1:
+                                    #    self.setFeature(self.sourceIds, sourceFeatures, "b:" + eDir + edge[2].get("type"))
                     if len(depTypes) == 0:
                         depTypes.add("DNeg")
                     for depType in sorted(depTypes):
