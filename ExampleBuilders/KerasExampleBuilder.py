@@ -24,8 +24,8 @@ class KerasExampleBuilder(ExampleBuilder):
         
         ExampleBuilder.__init__(self, classSet, featureSet)
         
-        self.sourceIds = self.featureSet
-        self.targetIds = self.classSet
+        self.featureIds = self.featureSet
+        self.labelIds = self.classSet
         
         self._setDefaultParameters(["directed", "undirected", "cutoff", "annotated_only", "all_positive", "wv", 
                                     "epochs", "html", "autoencode", "lr", "patience"])
@@ -44,8 +44,8 @@ class KerasExampleBuilder(ExampleBuilder):
         
         self.dimMatrix = 32
         self.rangeMatrix = range(self.dimMatrix)
-        self.sourceMatrices = []
-        self.targetMatrices = []
+        self.featureMatrices = []
+        self.labelMatrices = []
         self.embeddingMatrices = []
         self.tokenLists = []
     
@@ -117,7 +117,7 @@ class KerasExampleBuilder(ExampleBuilder):
             return 1
         
         # The cutoff style limits example generation to the first n sentences
-        if self.styles.get("cutoff") and len(self.sourceMatrices) > self.styles.get("cutoff"):
+        if self.styles.get("cutoff") and len(self.featureMatrices) > self.styles.get("cutoff"):
             return 1
         
         # Whether to use directer or undirected interaction edges
@@ -139,8 +139,8 @@ class KerasExampleBuilder(ExampleBuilder):
         
         # Generate the two matrices in the format [row_index][column_index][feature_name]
         numTokens = len(sentenceGraph.tokens)
-        sourceMatrix = []
-        targetMatrix = []
+        featureMatrix = []
+        labelMatrix = []
         embeddingMatrix = None
         if self.wvIndices != None:
             embeddingMatrix = []
@@ -149,25 +149,25 @@ class KerasExampleBuilder(ExampleBuilder):
         sourceEntityFeatures = self.getEntityTypeFeatures(sentenceGraph.tokens, True, negValue, sentenceGraph)
         targetEntityFeatures = self.getEntityTypeFeatures(sentenceGraph.tokens, False, negValue, sentenceGraph)
         for i in self.rangeMatrix:
-            sourceMatrix.append([])
-            targetMatrix.append([])
+            featureMatrix.append([])
+            labelMatrix.append([])
             if embeddingMatrix != None:
                 embeddingMatrix.append([])
             for j in self.rangeMatrix:
-                sourceFeatures = {}
-                targetFeatures = {}
+                features = {}
+                labels = {}
                 if embeddingMatrix != None:
                     embeddingFeatures = None
                 if i >= numTokens or j >= numTokens: # Padding outside the sentence range (left empty, later fille with Numpy zeros)
                     #pass #features[self.featureSet.getId("padding")] = 1
-                    self.setFeature(self.sourceIds, sourceFeatures, "[out]", negValue)
-                    self.setFeature(self.targetIds, targetFeatures, "[out]", negValue)
+                    self.setFeature(self.featureIds, features, "[out]", negValue)
+                    self.setFeature(self.labelIds, labels, "[out]", negValue)
                     if embeddingMatrix != None:
                         embeddingFeatures = 2 * [self.wvIndices["[out]"]]
                 elif i == j: # The diagonal defines the linear order of the tokens in the sentence
                     token = sentenceGraph.tokens[i]
                     #self.setFeature(self.sourceIds, sourceFeatures, "E")
-                    self.setFeature(self.sourceIds, sourceFeatures, token.get("POS"))
+                    self.setFeature(self.featureIds, features, token.get("POS"))
                     if embeddingMatrix != None:
                         embeddingFeatures = 2 * [self.getEmbeddingIndex(token)]
 #                     sourceEntityTypes = []
@@ -180,9 +180,9 @@ class KerasExampleBuilder(ExampleBuilder):
 #                     if len(targeEntityTypes) == 0: # There is no entity for this token
 #                         targeEntityTypes = ["neg"]
                     for eType, eValue in sourceEntityFeatures[i]:
-                        self.setFeature(self.sourceIds, sourceFeatures, eType, eValue)
+                        self.setFeature(self.featureIds, features, eType, eValue)
                     for eType, eValue in targetEntityFeatures[i]:
-                        self.setFeature(self.targetIds, targetFeatures, eType, eValue)
+                        self.setFeature(self.labelIds, labels, eType, eValue)
                 else: # This element of the adjacency matrix describes the relation from token i to token j
                     # Define the dependency features for the source matrix
                     tI = sentenceGraph.tokens[i]
@@ -190,16 +190,16 @@ class KerasExampleBuilder(ExampleBuilder):
                     if embeddingMatrix != None:
                         embeddingFeatures = [self.getEmbeddingIndex(tI), self.getEmbeddingIndex(tJ)]
                     for eType, eValue in sourceEntityFeatures[i]:
-                        self.setFeature(self.sourceIds, sourceFeatures, "A:" + eType, eValue)
+                        self.setFeature(self.featureIds, features, "A:" + eType, eValue)
                     for eType, eValue in sourceEntityFeatures[j]:
-                        self.setFeature(self.sourceIds, sourceFeatures, "B:" + eType, eValue)
+                        self.setFeature(self.featureIds, features, "B:" + eType, eValue)
                     shortestPaths = depGraph.getPaths(tI, tJ)
                     depTypes = set()
                     if len(shortestPaths) > 0: # There is a path of dependencies between these two tokens
                         #path = shortestPaths[0]
                         for path in shortestPaths:
                             for edgeFeature in self.buildSingleElementFeatures(path, sentenceGraph):
-                                self.setFeature(self.sourceIds, sourceFeatures, edgeFeature)
+                                self.setFeature(self.featureIds, features, edgeFeature)
 #                         if True: #len(path) == 2:
 #                             #for tokenIndex in (0, -1): # The first and last token in the path
 #                             #    self.setFeature(self.sourceIds, sourceFeatures, "T" + str(tokenIndex) + ":" + path[tokenIndex].get("POS"))
@@ -217,14 +217,14 @@ class KerasExampleBuilder(ExampleBuilder):
                     if len(depTypes) == 0:
                         depTypes.add("DNeg")
                     for depType in sorted(depTypes):
-                        self.setFeature(self.sourceIds, sourceFeatures, depType)
+                        self.setFeature(self.featureIds, features, depType)
                     #else:
                     #    self.setFeature(self.sourceIds, sourceFeatures, "D:0") # no path
                     # Define the relation features (labels) for the target matrix
                     if self.styles.get("all_positive"): # Add a target relation for each pair of entities
                         #if len(targetEntityFeatures[i]) > 0 and len(targetEntityFeatures[j]) > 0:
                         if (targetEntityFeatures[i][0][0] != "Eneg") and (targetEntityFeatures[j][0][0] != "Eneg"):
-                            self.setFeature(self.targetIds, targetFeatures, "REL")
+                            self.setFeature(self.labelIds, labels, "REL")
                         #else:
                         #    self.setFeature(self.targetIds, targetFeatures, "neg", negValue)
                     else:
@@ -236,23 +236,23 @@ class KerasExampleBuilder(ExampleBuilder):
                             intTypes.add(intEdge[2].get("type"))
                         if len(intTypes) > 0: # A bag of interactions for all interaction types between the two tokens
                             for intType in sorted(list(intTypes)):
-                                self.setFeature(self.targetIds, targetFeatures, intType)
+                                self.setFeature(self.labelIds, labels, intType)
                         else:
-                            self.setFeature(self.targetIds, targetFeatures, "Ineg", negValue)
+                            self.setFeature(self.labelIds, labels, "Ineg", negValue)
                     # Define the features for the two entities
 #                     for eType, eValue in sourceEntityFeatures[i]:
 #                         self.setFeature(self.sourceIds, sourceFeatures, eType + "[0]", eValue)
 #                     for eType, eValue in sourceEntityFeatures[j]:
 #                         self.setFeature(self.sourceIds, sourceFeatures, eType + "[1]", eValue)
-                sourceMatrix[-1].append(sourceFeatures)
-                targetMatrix[-1].append(targetFeatures)
+                featureMatrix[-1].append(features)
+                labelMatrix[-1].append(labels)
                 if embeddingMatrix != None:
                     assert len(embeddingFeatures) == 2
                     embeddingMatrix[-1].append(embeddingFeatures)
         
         # Add this sentences's matrices and list of tokens to the result lists
-        self.sourceMatrices.append(sourceMatrix)
-        self.targetMatrices.append(targetMatrix)
+        self.featureMatrices.append(featureMatrix)
+        self.labelMatrices.append(labelMatrix)
         if embeddingMatrix != None:
             self.embeddingMatrices.append(embeddingMatrix)
         self.tokenLists.append(tokenList)
