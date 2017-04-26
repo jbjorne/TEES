@@ -3,6 +3,7 @@ thisPath = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.abspath(os.path.join(thisPath,"..")))
 from ExampleBuilder import ExampleBuilder
 from Core.IdSet import IdSet
+import gzip, json
 
 class KerasExampleBuilder(ExampleBuilder):
     """
@@ -30,6 +31,12 @@ class KerasExampleBuilder(ExampleBuilder):
         self.styles = self.getParameters(style)
         if self.styles["cutoff"]:
             self.styles["cutoff"] = int(self.styles["cutoff"])
+        
+        self.wvIndices = None
+        if self.styles.get("wv") != None:
+            print >> sys.stderr, "Loading word vector indices from", self.styles.get("wv")
+            with gzip.open(self.styles.get("wv"), "rt") as f:
+                self.wvIndices = json.load(f)["indices"]
         
         self.dimMatrix = 32
         self.rangeMatrix = range(self.dimMatrix)
@@ -88,6 +95,12 @@ class KerasExampleBuilder(ExampleBuilder):
                 features.append(depType)# + "<")
         return features
     
+    def getEmbeddingIndex(self, token):
+        tokText = token.get("text").lower()
+        if tokText not in self.wvIndices:
+            tokText = "[OoV]"
+        return self.wvIndices[tokText]
+    
     def buildExamplesFromGraph(self, sentenceGraph, outfile, goldGraph = None, structureAnalyzer=None):
         """
         Build examples for a single sentence. Returns a list of examples.
@@ -123,6 +136,9 @@ class KerasExampleBuilder(ExampleBuilder):
         numTokens = len(sentenceGraph.tokens)
         sourceMatrix = []
         targetMatrix = []
+        embeddingMatrix = None
+        if self.wvIndices != None:
+            embeddingMatrix = []
         tokenList = [x.get("text") for x in sentenceGraph.tokens]
         negValue = 1 #0.000001 #0.001
         sourceEntityFeatures = self.getEntityTypeFeatures(sentenceGraph.tokens, True, negValue, sentenceGraph)
@@ -130,17 +146,26 @@ class KerasExampleBuilder(ExampleBuilder):
         for i in self.rangeMatrix:
             sourceMatrix.append([])
             targetMatrix.append([])
+            if embeddingMatrix != None:
+                embeddingMatrix.append([])
             for j in self.rangeMatrix:
                 sourceFeatures = {}
                 targetFeatures = {}
+                if embeddingMatrix != None:
+                    embeddingFeatures = None
                 if i >= numTokens or j >= numTokens: # Padding outside the sentence range (left empty, later fille with Numpy zeros)
                     #pass #features[self.featureSet.getId("padding")] = 1
                     self.setFeature(self.sourceIds, sourceFeatures, "[out]", negValue)
                     self.setFeature(self.targetIds, targetFeatures, "[out]", negValue)
+                    if embeddingMatrix != None:
+                        embeddingFeatures = [self.wvIndices["[out]"], self.wvIndices["[out]"]]
                 elif i == j: # The diagonal defines the linear order of the tokens in the sentence
                     token = sentenceGraph.tokens[i]
                     #self.setFeature(self.sourceIds, sourceFeatures, "E")
                     self.setFeature(self.sourceIds, sourceFeatures, token.get("POS"))
+                    if embeddingMatrix != None:
+                        tokText = token.get("text").lower()
+                        embeddingFeatures = [self.wvIndices[tokText], self.wvIndices[tokText]]
 #                     sourceEntityTypes = []
 #                     targeEntityTypes = []
 #                     if len(sentenceGraph.tokenIsEntityHead[token]) > 0: # The token is the head token of an entity
@@ -215,6 +240,8 @@ class KerasExampleBuilder(ExampleBuilder):
 #                         self.setFeature(self.sourceIds, sourceFeatures, eType + "[1]", eValue)
                 sourceMatrix[-1].append(sourceFeatures)
                 targetMatrix[-1].append(targetFeatures)
+                if embeddingMatrix != None:
+                    embeddingMatrix[-1].append(embeddingFeatures)
         
         # Add this sentences's matrices and list of tokens to the result lists
         self.sourceMatrices.append(sourceMatrix)

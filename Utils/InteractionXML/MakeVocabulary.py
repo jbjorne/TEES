@@ -63,9 +63,12 @@ def processCorpus(input, output, wordVectorPath, tokenizerName="McCC", max_rank_
     print >> sys.stderr, "Counts:", dict(counts)
     
     if output != None:
-        print >> sys.stderr, "Writing output to", output
-        with gzip.open(output, "wt") as f:
+        print >> sys.stderr, "Writing vectors to", output + "-vectors.json.gz"
+        with gzip.open(output + "-vectors.json.gz", "wt") as f:
             json.dump(vocabulary, f)
+        print >> sys.stderr, "Writing indices to", output + "-indices.json.gz"
+        with gzip.open(output + "-indices.json.gz", "wt") as f:
+            json.dump({"indices":vocabulary["indices"], "vectors":None}, f)
     return vocabulary
 
 if __name__=="__main__":
