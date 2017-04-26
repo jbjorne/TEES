@@ -21,14 +21,16 @@ def removeAttributes(parent, elementName, attributes, countsByType):
                     countsByType[elementName + ":" + attribute] += 1
         removeAttributes(element, elementName, attributes, countsByType)
 
-def processCorpus(input, output, wordVectorPath, tokenizerName="McCC"):
+def processCorpus(input, output, wordVectorPath, tokenizerName="McCC", max_rank_mem=100000, max_rank=10000000):
     print >> sys.stderr, "Making vocabulary"
     print >> sys.stderr, "Loading corpus file", input
     corpusTree = ETUtils.ETFromObj(input)
     corpusRoot = corpusTree.getroot()
     
     print >> sys.stderr, "Loading word vectors from", wordVectorPath
-    wv = WV.load(wordVectorPath, 100000, 10000000)
+    print >> sys.stderr, "max_rank_mem", max_rank_mem
+    print >> sys.stderr, "max_rank", max_rank
+    wv = WV.load(wordVectorPath, max_rank_mem, max_rank)
     
     documents = corpusRoot.findall("document")
     counter = ProgressCounter(len(documents), "Documents")
@@ -42,25 +44,24 @@ def processCorpus(input, output, wordVectorPath, tokenizerName="McCC"):
             tokenization = IXMLUtils.getTokenizationElement(sentence, tokenizerName)
             if tokenization != None:
                 counts["tokenization"] += 1
-                for token in tokenization.findall(token):
+                for token in tokenization.findall("token"):
                     counts["token"] += 1
                     text = token.get("text")
                     if text not in vocabulary:
                         counts["token-unique"] += 1
                         vector = wv.w_to_normv(token.get("text").lower())
-                        if vector != None:
+                        if vector is not None:
                             counts["vector"] += 1
                             vector = vector.tolist()
                         else:
                             counts["no-vector"] += 1
                         vocabulary[text] = vector              
     
-    #for k in sorted(countsByType.keys()):
-    #    print >> sys.stderr, "  " + k + ":", countsByType[k]
+    print >> sys.stderr, "Counts:", dict(counts)
     
     if output != None:
         print >> sys.stderr, "Writing output to", output
-        with gzip.open(output) as f:
+        with gzip.open(output, "wt") as f:
             json.dump(vocabulary, f)
     return vocabulary
 
@@ -81,6 +82,8 @@ if __name__=="__main__":
     optparser.add_option("-i", "--input", default=None, dest="input", help="Corpus in interaction xml format", metavar="FILE")
     optparser.add_option("-o", "--output", default=None, dest="output", help="Output file in interaction xml format.")
     optparser.add_option("-w", "--wordvectors", default=None, dest="wordvectors", help="dictionary of python dictionaries with attribute:value pairs.")    
+    optparser.add_option("--max_rank_mem", default=100000, dest="max_rank_mem", type=int)    
+    optparser.add_option("--max_rank", default=10000000, dest="max_rank", type=int)    
     (options, args) = optparser.parse_args()
     
     if options.input == None:
@@ -93,4 +96,4 @@ if __name__=="__main__":
         sys.exit(1)
 
     # Rules e.g. "{\"pair\":{},\"interaction\":{},\"entity\":{\"given\":\"False\"}}"
-    processCorpus(options.input, options.output, options.wordvectors)
+    processCorpus(options.input, options.output, options.wordvectors, max_rank_mem=options.max_rank_mem, max_rank=options.max_rank)
