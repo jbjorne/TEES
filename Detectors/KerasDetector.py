@@ -162,7 +162,7 @@ class KerasDetector(Detector):
         vectors = self.wordvectors["vectors"]
         dimWordVector = len(vectors[0])
         numWordVectors = len(vectors)
-        embedding_matrix = np.zeros((numWordVectors + 1, dimWordVector))
+        embedding_matrix = np.zeros((numWordVectors, dimWordVector))
         for i in range(len(vectors)):
             embedding_matrix[i] = vectors[i]
         return embedding_matrix
@@ -204,35 +204,47 @@ class KerasDetector(Detector):
 #         self.kerasModel = Model(inputLayer, x)
         
         inputs = []
-
-        input_features = Input(shape=(dimMatrix, dimMatrix, dimFeatures), name='features')
-        inputs.append(input_features)
         if self.styles.get("wv") != None:
+            # Features
+            x1 = input_features = Input(shape=(dimMatrix, dimMatrix, dimFeatures), name='features')
+            inputs.append(input_features)
+            x1 = Conv2D(128, (1, 1), activation='relu', padding='same')(x1)
+            x1 = Conv2D(32, (1, 9), activation='relu', padding='same')(x1)
+            x1 = Conv2D(32, (1, 5), activation='relu', padding='same')(x1)
+            x1 = Conv2D(32, (1, 3), activation='relu', padding='same')(x1)
+            
+            # Embeddings
             dimEmbeddings = 2
             self.wordvectors = self.loadEmbeddings(self.styles.get("wv"))
             dimWordVector = len(self.wordvectors["vectors"][0])
             numWordVectors = len(self.wordvectors["vectors"])
             embedding_matrix = self.makeEmbeddingMatrix()
-            x = input_embeddings = Input(shape=(dimMatrix, dimMatrix, dimEmbeddings), name='embeddings')
+            x2 = input_embeddings = Input(shape=(dimMatrix, dimMatrix, dimEmbeddings), name='embeddings')
             inputs.append(input_embeddings)
             embedding_input_length = dimMatrix * dimMatrix * dimEmbeddings
-            #x = Reshape((dimMatrix * dimMatrix, dimEmbeddings))(x)
-            x = Embedding(numWordVectors + 1, dimWordVector, weights=[embedding_matrix], 
-                          input_length=embedding_input_length, trainable=False)(x)
-            x = Reshape((dimMatrix * dimMatrix, 2 * dimWordVector))(x)
-            x = Reshape((dimMatrix, dimMatrix, 2 * dimWordVector))(x)
+            x2 = Reshape((dimMatrix * dimMatrix * dimEmbeddings, ))(x2)
+            x2 = Embedding(numWordVectors, dimWordVector, weights=[embedding_matrix], 
+                          input_length=embedding_input_length, trainable=True)(x2)
+            x2 = Reshape((dimMatrix * dimMatrix, 2 * dimWordVector))(x2)
+            x2 = Reshape((dimMatrix, dimMatrix, 2 * dimWordVector))(x2)
             #x = Reshape((dimMatrix, dimMatrix, dimEmbeddings))(x)
-            x = merge([input_features, x], mode='concat')
+            x1 = Conv2D(dimWordVector, (1, 3), activation='relu', padding='same')(x1)
+            x1 = Conv2D(dimWordVector, (1, 3), activation='relu', padding='same')(x1)
+            x1 = Conv2D(dimWordVector, (1, 3), activation='relu', padding='same')(x1)
+            
+            # Merge
+            x = merge([x1, x2], mode='concat')
             #x = Concatenate([input_features, x])
         else:
-            x = input_features
-        ##x = Conv2D(32, (3, 3), padding='same')(x)
-        #x = Conv2D(16, (3, 3), padding='same')(x)
-        #x = Conv2D(16, (1, 21), padding='same')(x)
-        x = Conv2D(128, (1, 1), activation='relu', padding='same')(x)
-        x = Conv2D(32, (1, 9), activation='relu', padding='same')(x)
-        x = Conv2D(32, (1, 5), activation='relu', padding='same')(x)
-        x = Conv2D(32, (1, 3), activation='relu', padding='same')(x)
+            x = Input(shape=(dimMatrix, dimMatrix, dimFeatures), name='features')
+            inputs.append(x)
+            ##x = Conv2D(32, (3, 3), padding='same')(x)
+            #x = Conv2D(16, (3, 3), padding='same')(x)
+            #x = Conv2D(16, (1, 21), padding='same')(x)
+            x = Conv2D(128, (1, 1), activation='relu', padding='same')(x)
+            x = Conv2D(32, (1, 9), activation='relu', padding='same')(x)
+            x = Conv2D(32, (1, 5), activation='relu', padding='same')(x)
+            x = Conv2D(32, (1, 3), activation='relu', padding='same')(x)
         x = Conv2D(dimLabels, (1, 1), activation='sigmoid', padding='same', name='labels')(x)
         self.kerasModel = Model(inputs, x)
         
