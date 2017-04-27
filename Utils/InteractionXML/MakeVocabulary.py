@@ -40,8 +40,10 @@ def processCorpus(input, output, wordVectorPath, tokenizerName="McCC", max_rank_
     wv = WV.load(wordVectorPath, max_rank_mem, max_rank)
     dimVector = wv.vectors.shape[1]
     print >> sys.stderr, "WordVector length", dimVector
-    addVector("[out]", wv.w_to_normv("and").tolist(), vocabulary) #addVector("[out]", dimVector * [0.0] + [0.0, 1.0], vocabulary) # Outside sentence range
-    addVector("[OoV]", wv.w_to_normv("and").tolist(), vocabulary) #addVector("[OoV]", dimVector * [0.0] + [1.0, 0.0], vocabulary) # Out of vocabulary
+    #addVector("[out]", wv.w_to_normv("and").tolist(), vocabulary) #addVector("[out]", dimVector * [0.0] + [0.0, 1.0], vocabulary) # Outside sentence range
+    #addVector("[OoV]", wv.w_to_normv("and").tolist(), vocabulary) #addVector("[OoV]", dimVector * [0.0] + [1.0, 0.0], vocabulary) # Out of vocabulary
+    addVector("[out]", dimVector * [0.0] + [0.0, 1.0], vocabulary) # Outside sentence range
+    addVector("[OoV]", dimVector * [0.0] + [1.0, 0.0], vocabulary) # Out of vocabulary
     
     documents = corpusRoot.findall("document")
     counter = ProgressCounter(len(documents), "Documents")
@@ -62,7 +64,7 @@ def processCorpus(input, output, wordVectorPath, tokenizerName="McCC", max_rank_
                         vector = wv.w_to_normv(token.get("text").lower())
                         if vector is not None:
                             counts["vector"] += 1
-                            vector = vector.tolist() # + [0.0, 0.0]
+                            vector = vector.tolist() + [0.0, 0.0]
                             addVector(text, vector, vocabulary)
                         else:
                             counts["no-vector"] += 1           
