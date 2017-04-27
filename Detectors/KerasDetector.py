@@ -26,6 +26,7 @@ import keras.backend as K
 from itertools import product
 from functools import partial
 from numpy import reshape
+from collections import defaultdict
 
 # def categorical_crossentropy(output, target, from_logits=False):
 #     from keras.backend.common import _EPSILON
@@ -703,6 +704,8 @@ class KerasDetector(Detector):
         """
         targetIds = IdSet(filename=self.model.get(self.tag+"ids.classes"), locked=True)
         dimMatrix = int(self.model.getStr("dimMatrix"))
+        dimLabels = int(self.model.getStr("dimLabels"))
+        predictions = reshape(predictions, (predictions.shape[0], dimMatrix, dimMatrix, dimLabels))
         rangeMatrix = range(dimMatrix)
         labels = np.argmax(predictions, axis=-1)
         values = np.max(predictions, axis=-1)
@@ -730,9 +733,12 @@ class KerasDetector(Detector):
         Converts the Python input matrices of the form [examples][width][height]{features} into
         corresponding dense Numpy arrays.
         """
+        counts = defaultdict(int)
         self.arrays = {}
         featureIds = IdSet(filename=model.get(self.tag+"ids.features"), locked=True)
-        labelIDs = IdSet(filename=model.get(self.tag+"ids.classes"), locked=True)
+        labelIds = IdSet(filename=model.get(self.tag+"ids.classes"), locked=True)
+        #negLabelIds = set([labelIds.getId(x) for x in ["Eneg", "Ineg", "[out]"]])
+        negLabels = str(["Eneg", "Ineg", "[out]"])
         dimFeatures = int(model.getStr("dimFeatures"))
         dimLabels = int(model.getStr("dimLabels"))
         dimMatrix = int(model.getStr("dimMatrix"))
@@ -745,7 +751,6 @@ class KerasDetector(Detector):
             featureMatrices = dataSetValue["features"]
             labelMatrices = dataSetValue["labels"]
             embeddingMatrices = None
-            numTokens = len(dataSetValue["tokens"])
             assert len(featureMatrices) == len(labelMatrices)
             numExamples = len(featureMatrices)
             self.arrays[dataSetName] = {"features":np.zeros((numExamples, dimMatrix, dimMatrix, dimFeatures), dtype=np.float32), 
@@ -754,15 +759,16 @@ class KerasDetector(Detector):
                 embeddingMatrices = dataSetValue["embeddings"]
                 self.arrays[dataSetName]["embeddings"] = np.zeros((numExamples, dimMatrix, dimMatrix, 2), dtype=np.int32)
             if useMask:
-                self.arrays[dataSetName]["mask"] = np.ones((numExamples, dimMatrix, dimMatrix, dimLabels), dtype=np.float32)
+                self.arrays[dataSetName]["mask"] = np.ones((numExamples, dimMatrix, dimMatrix), dtype=np.float32)
             for exampleIndex in range(numExamples):
+                numTokens = len(dataSetValue["tokens"][exampleIndex])
                 featureArray = self.arrays[dataSetName]["features"][exampleIndex] #sourceArray = np.zeros((dimMatrix, dimMatrix, dimFeatures), dtype=np.float32)
                 labelArray = self.arrays[dataSetName]["labels"][exampleIndex] #targetArray = np.zeros((dimMatrix, dimMatrix, dimFeatures), dtype=np.float32)
                 if useMask:
                     maskArray = self.arrays[dataSetName]["mask"][exampleIndex]
                 featureMatrix = featureMatrices.pop(0) #[exampleIndex]
                 labelMatrix = labelMatrices.pop(0) #[exampleIndex]
-                transfers = [(featureMatrix, featureArray, featureIds), (labelMatrix, labelArray, labelIDs)]
+                transfers = [(featureMatrix, featureArray, featureIds), (labelMatrix, labelArray, labelIds)]
                 for matrix, array, ids in transfers:
                     for i in rangeMatrix:
                         for j in rangeMatrix:
@@ -770,9 +776,15 @@ class KerasDetector(Detector):
                             #print features
                             for featureName in features:
                                 array[i][j][ids.getId(featureName)] = features[featureName]
-                            if useMask:
-                                if i > numTokens or j > numTokens:
-                                    maskArray[i][j] = 0.0
+                if useMask:
+                    for i in rangeMatrix:
+                        for j in rangeMatrix:
+                            if i > numTokens or j > numTokens:
+                                maskArray[i][j] = 0.0
+                                counts["masked-out"] += 1
+                            elif len(set(labelMatrix[i][j].keys()).union(negLabels)) > 0:
+                                maskArray[i][j] = 0.001
+                                counts["masked-neg"] += 1
                 if embeddingMatrices != None:
                     embeddingMatrix = embeddingMatrices.pop(0)
                     embeddingArray = self.arrays[dataSetName]["embeddings"][exampleIndex]
@@ -785,5 +797,9 @@ class KerasDetector(Detector):
                 self.arrays[dataSetName]["features"] = self.arrays["labels"]
             dimLast = {"features":dimFeatures, "labels":dimLabels, "embeddings":2, "mask":dimLabels}
             for arrayName in self.arrays[dataSetName]:
-                self.arrays[dataSetName][arrayName] = reshape(self.arrays[dataSetName][arrayName], (numExamples, dimMatrix * dimMatrix, dimLast[arrayName]))
-            print >> sys.stderr, dataSetName, self.getArrayShapes(self.arrays[dataSetName]) 
+                if arrayName != "mask":
+                    targetShape = (numExamples, dimMatrix * dimMatrix, dimLast[arrayName])
+                else:
+                    targetShape = (numExamples, dimMatrix * dimMatrix)
+                self.arrays[dataSetName][arrayName] = reshape(self.arrays[dataSetName][arrayName], targetShape)
+            print >> sys.stderr, dataSetName, self.getArrayShapes(self.arrays[dataSetName]), dict(counts)
