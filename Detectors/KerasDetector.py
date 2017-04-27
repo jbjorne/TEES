@@ -542,34 +542,36 @@ class KerasDetector(Detector):
                 self.matrices[setName] = self.loadJSON(exampleFiles[setName])
         if self.arrays == None: # The Python dictionary matrices are converted into dense Numpy arrays
             self.vectorizeMatrices(self.model, useMask=True)
+        
+        if False:    
+            targetIds = IdSet(filename=self.model.get(self.tag+"ids.classes"), locked=True)
+            class_weight = {}
+            for className in targetIds.Ids:
+                class_weight[targetIds.getId(className)] = 1.0 if className != "neg" else 0.00001
             
-        targetIds = IdSet(filename=self.model.get(self.tag+"ids.classes"), locked=True)
-        class_weight = {}
-        for className in targetIds.Ids:
-            class_weight[targetIds.getId(className)] = 1.0 if className != "neg" else 0.00001
+            print >> sys.stderr, "Fitting model"
+            patience = int(self.styles.get("patience", 10))
+            print >> sys.stderr, "Early stopping patience:", patience
+            es_cb = EarlyStopping(monitor='val_loss', patience=patience, verbose=1)
+            bestModelPath = self.model.get(self.tag + "model.hdf5", True) #self.workDir + self.tag + 'model.hdf5'
+            cp_cb = ModelCheckpoint(filepath=bestModelPath, save_best_only=True, verbose=1)
+            #sourceData = "source"
+            #import pdb;pdb.set_trace()
+            #if "autoencode" in self.styles:
+            #    sourceData = "target"
+            #print >> sys.stderr, sourceData, "->", "target", ("(autoencode)" if "autoencode" in self.styles else "")
+            print >> sys.stderr, "Autoencoding:", self.styles.get("autoencode") != None
+            print >> sys.stderr, "Arrays:", {x:{y:self.arrays[x][y].shape for y in self.arrays[x]} for x in self.arrays}
+            self.kerasModel.fit(self.arrays["train"], self.arrays["train"], #[sourceData], self.arrays["train"]["target"],
+                epochs=100 if not "epochs" in self.styles else int(self.styles["epochs"]),
+                batch_size=64,
+                shuffle=True,
+                validation_data=(self.arrays["devel"], self.arrays["devel"], self.arrays["devel"]["mask"]), #[sourceData], self.arrays["devel"]["target"]), #, self.arrays["devel"]["mask"]),
+                sample_weight=self.arrays["train"]["mask"],
+                #class_weight=class_weight,
+                callbacks=[es_cb, cp_cb])
         
-        print >> sys.stderr, "Fitting model"
-        patience = int(self.styles.get("patience", 10))
-        print >> sys.stderr, "Early stopping patience:", patience
-        es_cb = EarlyStopping(monitor='val_loss', patience=patience, verbose=1)
-        bestModelPath = self.model.get(self.tag + "model.hdf5", True) #self.workDir + self.tag + 'model.hdf5'
-        cp_cb = ModelCheckpoint(filepath=bestModelPath, save_best_only=True, verbose=1)
-        #sourceData = "source"
-        #import pdb;pdb.set_trace()
-        #if "autoencode" in self.styles:
-        #    sourceData = "target"
-        #print >> sys.stderr, sourceData, "->", "target", ("(autoencode)" if "autoencode" in self.styles else "")
-        print >> sys.stderr, "Autoencoding:", self.styles.get("autoencode") != None
-        print >> sys.stderr, "Arrays:", {x:{y:self.arrays[x][y].shape for y in self.arrays[x]} for x in self.arrays}
-        self.kerasModel.fit(self.arrays["train"], self.arrays["train"], #[sourceData], self.arrays["train"]["target"],
-            epochs=100 if not "epochs" in self.styles else int(self.styles["epochs"]),
-            batch_size=64,
-            shuffle=True,
-            validation_data=(self.arrays["devel"], self.arrays["devel"], self.arrays["devel"]["mask"]), #[sourceData], self.arrays["devel"]["target"]), #, self.arrays["devel"]["mask"]),
-            sample_weight=self.arrays["train"]["mask"],
-            #class_weight=class_weight,
-            callbacks=[es_cb, cp_cb])
-        
+        bestModelPath = self.model.get(self.tag + "model.hdf5", True) 
         print >> sys.stderr, "Predicting devel examples"
         self.kerasModel = load_model(bestModelPath)
         predictions = self.kerasModel.predict(self.arrays["devel"], 128, 1)
