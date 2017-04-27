@@ -22,6 +22,10 @@ import Utils.Settings as Settings
 from keras.layers.embeddings import Embedding
 from keras.layers import merge
 from keras.layers.merge import Concatenate
+import keras.backend as K
+from itertools import product
+from functools import partial
+from numpy import reshape
 
 # def categorical_crossentropy(output, target, from_logits=False):
 #     from keras.backend.common import _EPSILON
@@ -35,6 +39,16 @@ from keras.layers.merge import Concatenate
 #     # avoid numerical instability with _EPSILON clipping
 #     output = T.clip(output, _EPSILON, 1.0 - _EPSILON)
 #     return T.nnet.categorical_crossentropy(output, target)
+
+def w_categorical_crossentropy(y_true, y_pred, weights):
+    nb_cl = len(weights)
+    final_mask = K.zeros_like(y_pred[:, 0])
+    y_pred_max = K.max(y_pred, axis=1)
+    y_pred_max = K.reshape(y_pred_max, (K.shape(y_pred)[0], 1))
+    y_pred_max_mat = K.equal(y_pred, y_pred_max)
+    for c_p, c_t in product(range(nb_cl), range(nb_cl)):
+        final_mask += (weights[c_t, c_p] * y_pred_max_mat[:, c_p] * y_true[:, c_t])
+    return K.categorical_crossentropy(y_pred, y_true) * final_mask
 
 class KerasDetector(Detector):
     """
@@ -206,12 +220,13 @@ class KerasDetector(Detector):
         inputs = []
         if self.styles.get("wv") != None:
             # Features
-            x1 = input_features = Input(shape=(dimMatrix, dimMatrix, dimFeatures), name='features')
+            x1 = input_features = Input(shape=(dimMatrix * dimMatrix, dimFeatures), name='features')
             inputs.append(input_features)
-            x1 = Conv2D(128, (1, 1), activation='relu', padding='same')(x1)
-            x1 = Conv2D(32, (1, 9), activation='relu', padding='same')(x1)
-            x1 = Conv2D(32, (1, 5), activation='relu', padding='same')(x1)
-            x1 = Conv2D(32, (1, 3), activation='relu', padding='same')(x1)
+            x1 = Reshape((dimMatrix, dimMatrix, dimFeatures))(x1)
+            x1 = Conv2D(128, (1, 1), activation='relu', padding='same', name='X1_C2D_reduce')(x1)
+            x1 = Conv2D(32, (1, 9), activation='relu', padding='same', name='X1_C2D_C1')(x1)
+            x1 = Conv2D(32, (1, 5), activation='relu', padding='same', name='X1_C2D_C2')(x1)
+            x1 = Conv2D(32, (1, 3), activation='relu', padding='same', name='X1_C2D_C3')(x1)
             
             # Embeddings
             dimEmbeddings = 2
@@ -219,8 +234,9 @@ class KerasDetector(Detector):
             dimWordVector = len(self.wordvectors["vectors"][0])
             numWordVectors = len(self.wordvectors["vectors"])
             embedding_matrix = self.makeEmbeddingMatrix()
-            x2 = input_embeddings = Input(shape=(dimMatrix, dimMatrix, dimEmbeddings), name='embeddings')
+            x2 = input_embeddings = Input(shape=(dimMatrix * dimMatrix, dimEmbeddings), name='embeddings')
             inputs.append(input_embeddings)
+            x2 = Reshape((dimMatrix, dimMatrix, dimEmbeddings))(x2)
             embedding_input_length = dimMatrix * dimMatrix * dimEmbeddings
             x2 = Reshape((dimMatrix * dimMatrix * dimEmbeddings, ))(x2)
             x2 = Embedding(numWordVectors, dimWordVector, weights=[embedding_matrix], 
@@ -228,9 +244,9 @@ class KerasDetector(Detector):
             x2 = Reshape((dimMatrix * dimMatrix, 2 * dimWordVector))(x2)
             x2 = Reshape((dimMatrix, dimMatrix, 2 * dimWordVector))(x2)
             #x = Reshape((dimMatrix, dimMatrix, dimEmbeddings))(x)
-            x2 = Conv2D(dimWordVector, (1, 9), activation='relu', padding='same')(x2)
-            x2 = Conv2D(dimWordVector, (1, 5), activation='relu', padding='same')(x2)
-            x2 = Conv2D(dimWordVector, (1, 3), activation='relu', padding='same')(x2)
+            x2 = Conv2D(dimWordVector, (1, 9), activation='relu', padding='same', name='X2_C2D_C1')(x2)
+            x2 = Conv2D(dimWordVector, (1, 5), activation='relu', padding='same', name='X2_C2D_C2')(x2)
+            x2 = Conv2D(dimWordVector, (1, 3), activation='relu', padding='same', name='X2_C2D_C3')(x2)
             
             # Merge
             x = merge([x1, x2], mode='concat')
@@ -250,7 +266,8 @@ class KerasDetector(Detector):
             x = Conv2D(32, (1, 5), activation='relu', padding='same')(x)
             x = Conv2D(32, (1, 3), activation='relu', padding='same')(x)
         
-        x = Conv2D(dimLabels, (1, 1), activation='sigmoid', padding='same', name='labels')(x)
+        x = Conv2D(dimLabels, (1, 1), activation='sigmoid', padding='same')(x)
+        x = Reshape((dimMatrix * dimMatrix, dimLabels), name='labels')(x)
         self.kerasModel = Model(inputs, x)
         
         layersPath = self.workDir + self.tag + "layers.json"
@@ -261,8 +278,22 @@ class KerasDetector(Detector):
         print >> sys.stderr, "Using learning rate", learningRate
         optimizer = Adam(lr=learningRate)
         
+#         w_array = np.ones((dimLabels,dimLabels))
+#         labelIds = IdSet(filename=self.model.get(self.tag+"ids.classes"), locked=True)
+#         negLabelIds = set([labelIds.getId(x) for x in ["Eneg", "Ineg", "[out]"]])
+#         negWeight = 0.001
+#         for i in range(dimLabels):
+#             for j in range(dimLabels):
+#                 if i in negLabelIds and j in negLabelIds:
+#                     w_array[i, j] = negWeight
+#                     w_array[j, i] = negWeight
+#         print >> sys.stderr, "Loss weights:", w_array
+#         
+#         ncce = partial(w_categorical_crossentropy, weights=w_array)
+#         ncce.__name__ = "w_categorical_crossentropy"
+        
         print >> sys.stderr, "Compiling model"
-        self.kerasModel.compile(optimizer=optimizer, loss='categorical_crossentropy', metrics=metrics) #, sample_weight_mode="temporal") #, metrics=['accuracy'])
+        self.kerasModel.compile(optimizer=optimizer, loss="categorical_crossentropy", metrics=metrics, sample_weight_mode="temporal") #, metrics=['accuracy'])
         
         self.kerasModel.summary()
         
@@ -509,7 +540,7 @@ class KerasDetector(Detector):
                 print >> sys.stderr, "Loading dataset", setName, "from", exampleFiles[setName]
                 self.matrices[setName] = self.loadJSON(exampleFiles[setName])
         if self.arrays == None: # The Python dictionary matrices are converted into dense Numpy arrays
-            self.vectorizeMatrices(self.model)
+            self.vectorizeMatrices(self.model, useMask=True)
             
         targetIds = IdSet(filename=self.model.get(self.tag+"ids.classes"), locked=True)
         class_weight = {}
@@ -533,8 +564,8 @@ class KerasDetector(Detector):
             epochs=100 if not "epochs" in self.styles else int(self.styles["epochs"]),
             batch_size=64,
             shuffle=True,
-            validation_data=(self.arrays["devel"], self.arrays["devel"]), #[sourceData], self.arrays["devel"]["target"]), #, self.arrays["devel"]["mask"]),
-            #sample_weight=self.arrays["train"]["mask"],
+            validation_data=(self.arrays["devel"], self.arrays["devel"], self.arrays["devel"]["mask"]), #[sourceData], self.arrays["devel"]["target"]), #, self.arrays["devel"]["mask"]),
+            sample_weight=self.arrays["train"]["mask"],
             #class_weight=class_weight,
             callbacks=[es_cb, cp_cb])
         
@@ -752,4 +783,7 @@ class KerasDetector(Detector):
             if self.styles.get("autoencode") != None:
                 print >> sys.stderr, "Autoencoding dataset", dataSetName
                 self.arrays[dataSetName]["features"] = self.arrays["labels"]
+            dimLast = {"features":dimFeatures, "labels":dimLabels, "embeddings":2, "mask":dimLabels}
+            for arrayName in self.arrays[dataSetName]:
+                self.arrays[dataSetName][arrayName] = reshape(self.arrays[dataSetName][arrayName], (numExamples, dimMatrix * dimMatrix, dimLast[arrayName]))
             print >> sys.stderr, dataSetName, self.getArrayShapes(self.arrays[dataSetName]) 
