@@ -228,12 +228,16 @@ class KerasDetector(Detector):
             x2 = Reshape((dimMatrix * dimMatrix, 2 * dimWordVector))(x2)
             x2 = Reshape((dimMatrix, dimMatrix, 2 * dimWordVector))(x2)
             #x = Reshape((dimMatrix, dimMatrix, dimEmbeddings))(x)
-            x2 = Conv2D(dimWordVector, (1, 3), activation='relu', padding='same')(x2)
-            x2 = Conv2D(dimWordVector, (1, 3), activation='relu', padding='same')(x2)
+            x2 = Conv2D(dimWordVector, (1, 9), activation='relu', padding='same')(x2)
+            x2 = Conv2D(dimWordVector, (1, 5), activation='relu', padding='same')(x2)
             x2 = Conv2D(dimWordVector, (1, 3), activation='relu', padding='same')(x2)
             
             # Merge
             x = merge([x1, x2], mode='concat')
+#             x = Conv2D(128, (1, 1), activation='relu', padding='same')(x)
+#             x = Conv2D(32, (1, 9), activation='relu', padding='same')(x)
+#             x = Conv2D(32, (1, 5), activation='relu', padding='same')(x)
+#             x = Conv2D(32, (1, 3), activation='relu', padding='same')(x)
             #x = Concatenate([input_features, x])
         else:
             x = Input(shape=(dimMatrix, dimMatrix, dimFeatures), name='features')
@@ -527,7 +531,7 @@ class KerasDetector(Detector):
         print >> sys.stderr, "Arrays:", {x:{y:self.arrays[x][y].shape for y in self.arrays[x]} for x in self.arrays}
         self.kerasModel.fit(self.arrays["train"], self.arrays["train"], #[sourceData], self.arrays["train"]["target"],
             epochs=100 if not "epochs" in self.styles else int(self.styles["epochs"]),
-            batch_size=128,
+            batch_size=64,
             shuffle=True,
             validation_data=(self.arrays["devel"], self.arrays["devel"]), #[sourceData], self.arrays["devel"]["target"]), #, self.arrays["devel"]["mask"]),
             #sample_weight=self.arrays["train"]["mask"],
