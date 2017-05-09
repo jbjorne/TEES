@@ -503,7 +503,7 @@ class Parser:
         if currentSentence != None: # and alignedCharOffset > currentSentence["begin"]:
             self.addSentenceElements(document, currentSentence["offset"], sentences, counts)
         # Set the tail attribute for the last sentence
-        if docText[currentSentence["offset"][1]:len(docText)].strip() != None:
+        if docText[currentSentence["offset"][1]:len(docText)].strip() != "":
             self.makeSentenceElement(document, sentences, [currentSentence["offset"][1], len(docText)], extra={"split-error":"non-empty-doc-tail"})
             counts["non-empty-doc-tail"] += 1
         elif len(sentences) > 0:
