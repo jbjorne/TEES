@@ -159,6 +159,8 @@ class ParseConverter(Parser):
                         self.insertParse(document, sentences, files[docMatchValue][ext], parseName, splitting, typeCounts, conllFormat, unescapeFormats=unescapeFormats)
             if not matchFound:
                 counts["document-no-match"] += 1
+        if len(typeCounts["sentence-splitting"]) > 0:
+            print >> sys.stderr, "Sentence Splitting Counts", dict(typeCounts["sentence-splitting"])
         print >> sys.stderr, "Counts", dict(counts)
         for ext in extensions:
             if len(typeCounts[ext]) > 0:
