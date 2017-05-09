@@ -462,20 +462,38 @@ class Parser:
         # Collect tokens from all sentence object and mark their sentence index in them
         removeWhitespacePattern = re.compile(r'\s+')
         tokenTexts = []
-        tokenSentences = []
-        tokenAlignments = []
+        tokenSentenceIndices = []
+        sentenceOffsets = [] # Only used when tokens already have offsets
+        sentenceOffsetSentenceIndices = []
+        tokenAlignments = [] # Alignments for individual tokens
+        numPrealignedTokens = 0
         for i in range(len(sentObjs)):
+            sentOffset = [None, None]
             for token in sentObjs[i].get("tokens", []):
-                tokenSentences.append(i)
+                tokenSentenceIndices.append(i)
                 tokenText = token["text"]
                 tokenText = re.sub(removeWhitespacePattern, '', tokenText)
                 tokenTexts.append(tokenText)
                 if "offset" in token:
-                    tokenAlignments.append(token["offset"])
-        counts["input-tokens"] = len(tokenTexts)
-        counts["input-alignments"] = len(tokenAlignments)
-        if len(tokenAlignments) != len(tokenTexts): # use token offset only if all tokens have an offset
+                    #tokenAlignments.append(token["offset"])
+                    numPrealignedTokens += 1
+                    if sentOffset[0] == None or token["offset"][0] < sentOffset[0]:
+                        sentOffset[0] = token["offset"][0]
+                    if sentOffset[1] == None or token["offset"][1] > sentOffset[1]:
+                        sentOffset[1] = token["offset"][1]
+            if sentOffset != [None, None]:
+                sentenceOffsets.append(sentOffset)
+                sentenceOffsetSentenceIndices.append(i)
+        #counts["input-tokens"] = len(tokenTexts)
+        #counts["input-alignments"] = numPrealignedTokens
+        if numPrealignedTokens != len(tokenTexts): # use token offset only if all tokens have an offset
             tokenAlignments = self.alignTokens(tokenTexts, docText, "", removeWhitespacePattern, document.get("id"), "Partial alignment in sentence splitting for document")
+            sentenceIndices = tokenSentenceIndices
+            counts["sentences-aligned"] += 1
+        else:
+            tokenAlignments = sentenceOffsets # Each sentence is used as a single token
+            sentenceIndices = sentenceOffsetSentenceIndices
+            counts["sentences-pre-aligned"] += 1
         # Initialize counters
         if counts == None:
             counts = defaultdict(int)
@@ -484,11 +502,12 @@ class Parser:
         # Use the aligned tokens to generate sentence elements
         currentSentence = None #{"begin":None, "index":0}
         sentences = []
+        assert len(sentenceIndices) == len(tokenAlignments)
         for i in range(len(tokenAlignments)):
-            counts["tokens-total"] += 1
+            #counts["aligned-tokens-total"] += 1
             if counter:
-                counter.update(1, "Processing token " + str(i) + " for sentence index " + str(tokenSentences[i]) + ": ")
-            sentenceIndex = tokenSentences[i]
+                counter.update(1, "Processing token " + str(i) + " for sentence index " + str(sentenceIndices[i]) + ": ")
+            sentenceIndex = sentenceIndices[i]
             docCharIndices = tokenAlignments[i]
             if docCharIndices != None:
                 if currentSentence == None or sentenceIndex != currentSentence["index"]: # Start a new sentence
@@ -974,6 +993,8 @@ class Parser:
                     nodeId = node["id"]
                     edges = node.get("edges", [])
                     for edge in edges:
+                        if edge["label"] == "edge_list_sum":
+                            continue
                         dependencies.append({"type":edge["label"], "t1":nodeId, "t2":edge["target"], "t1Token":tokenById[nodeId], "t2Token":tokenById[edge["target"]]})
                 sentences.append({"tokens":tokens, "dependencies":dependencies})
         return sentences
