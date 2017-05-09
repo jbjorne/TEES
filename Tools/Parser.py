@@ -375,6 +375,7 @@ class Parser:
             ET.SubElement(parse, "meta", metadatas[i], id=idStem + str(i))
     
     def insertElements(self, sentObjs, sentences, parseName, tokenizerName=None, counter=None, counts=None):
+        sentences = [x for x in sentences if x.get("split-error") == None]
         assert len(sentObjs) == len(sentences), (len(sentObjs), len(sentences))
         if counts == None:
             counts = defaultdict(int)
@@ -413,25 +414,44 @@ class Parser:
     # Sentence Splitting
     ###########################################################################
     
-    def makeSentenceElement(self, document, offset, sentences):
+    def makeSentenceElement(self, document, sentences, offset, head=None, tail=None, extra=None):
+        e = ET.Element("sentence")
+        e.set("id", document.get("id") + ".s" + str(len(sentences)))
+        docText = document.get("text")
+        e.set("text", docText[offset[0]:offset[1]])
+        e.set("charOffset", str(offset[0]) + "-" + str(offset[1]))
+        if head != None:
+            e.set("head", head)
+        if tail != None:
+            e.set("tail", tail)
+        if extra != None:
+            for key in extra:
+                e.set(key, extra[key])
+        sentences.append(e)
+    
+    def addSentenceElements(self, document, offset, sentences, counts):
         #assert offset[1] > offset[0]
         # Make sentence element
         docText = document.get("text")
-        e = ET.Element("sentence")
-        e.set("id", document.get("id") + ".s" + str(len(sentences)))
-        e.set("text", docText[offset[0]:offset[1]])
-        e.set("charOffset", str(offset[0]) + "-" + str(offset[1]))
+        head = None
         # Set tail string for previous sentence
-        prevSentence = None
         if len(sentences) > 0:
             prevSentence = sentences[-1]
             prevEnd = int(prevSentence.get("charOffset").split("-")[1])
             if offset[0] - prevEnd > 1:
-                prevSentence.set("tail", docText[prevEnd + 1:offset[0]])
+                if docText[prevEnd + 1:offset[0]].strip() == "":
+                    prevSentence.set("tail", docText[prevEnd + 1:offset[0]])
+                else:
+                    self.makeSentenceElement(document, sentences, [prevEnd + 1, offset[0]], extra={"split-error":"non-empty-tail"})
+                    counts["non-empty-tail"] += 1         
         # Set head string for first sentence in document
-        if offset[0] > 0 and prevSentence == None:
-            e.set("head", docText[0:offset[0]])
-        sentences.append(e)
+        elif offset[0] > 0:
+            if docText[0:offset[0]].strip() == "":
+                head = docText[0:offset[0]]
+            else:
+                self.makeSentenceElement(document, sentences, [0, offset[0]], extra={"split-error":"non-empty-head"})
+                counts["non-empty-head"] += 1            
+        self.makeSentenceElement(document, sentences, offset, head)
 
     def splitSentences(self, sentObjs, document, counter=None, counts=None):
         docText = document.get("text")
@@ -473,7 +493,7 @@ class Parser:
             if docCharIndices != None:
                 if currentSentence == None or sentenceIndex != currentSentence["index"]: # Start a new sentence
                     if currentSentence != None: # Make an element for the current sentence
-                        self.makeSentenceElement(document, currentSentence["offset"], sentences)
+                        self.addSentenceElements(document, currentSentence["offset"], sentences, counts)
                     currentSentence = {"offset":[min(docCharIndices), max(docCharIndices)+1], "index":sentenceIndex} # Start a sentence from the first aligned character
                 else: # Extend current sentence
                     currentSentence["offset"][1] = max(docCharIndices) + 1
@@ -481,7 +501,14 @@ class Parser:
             else:
                 counts["tokens-not-aligned"] += 1
         if currentSentence != None: # and alignedCharOffset > currentSentence["begin"]:
-            self.makeSentenceElement(document, currentSentence["offset"], sentences)
+            self.addSentenceElements(document, currentSentence["offset"], sentences, counts)
+        # Set the tail attribute for the last sentence
+        if docText[currentSentence["offset"][1]:len(docText)].strip() != None:
+            self.makeSentenceElement(document, sentences, [currentSentence["offset"][1], len(docText)], extra={"split-error":"non-empty-doc-tail"})
+            counts["non-empty-doc-tail"] += 1
+        elif len(sentences) > 0:
+            sentences[-1].set("tail", docText[currentSentence["offset"][1]:len(docText)])
+        # Insert the sentences into the document
         for sentence in sentences:
             document.append(sentence)
             counts["new-sentences"] += 1

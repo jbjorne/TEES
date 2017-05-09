@@ -39,7 +39,7 @@ def ask(question):
         else:
             sys.stdout.write("Please respond with 'yes' or 'no' (or 'y' or 'n').\n")
 
-def run(inPath, outPath, subDirs, model, connection, numJobs, clear, debug, force=False):
+def run(inPath, outPath, subDirs, model, connection, numJobs, clear, debug, force=False, training=True, preprocessorSteps=None):
     # Remove existing work directory, if requested to do so
     if os.path.exists(outPath) and clear:
         if force or ask("Output directory '" + outPath + "' exists, remove?"):
@@ -60,7 +60,9 @@ def run(inPath, outPath, subDirs, model, connection, numJobs, clear, debug, forc
     # Import the parses
     corpusDir = os.path.join(outPath, "corpus")
     if not os.path.exists(corpusDir):
-        preprocessor = Preprocessor(["MERGE-SETS", "REMOVE-ANALYSES", "REMOVE-HEADS", "MERGE-SENTENCES", "IMPORT-PARSE", "SPLIT-NAMES", "FIND-HEADS", "DIVIDE-SETS"])
+        if preprocessorSteps == None:
+            preprocessorSteps = ["MERGE-SETS", "REMOVE-ANALYSES", "REMOVE-HEADS", "MERGE-SENTENCES", "IMPORT-PARSE", "SPLIT-NAMES", "FIND-HEADS", "DIVIDE-SETS"]
+        preprocessor = Preprocessor(preprocessorSteps)
         #preprocessor = Preprocessor(["MERGE-SETS", "REMOVE-ANALYSES", "REMOVE-HEADS", "MERGE-SENTENCES", "IMPORT-PARSE", "VALIDATE", "DIVIDE-SETS"])
         preprocessor.setArgForAllSteps("debug", options.debug)
         preprocessor.stepArgs("IMPORT-PARSE")["parseDir"] = parseDir
@@ -69,8 +71,9 @@ def run(inPath, outPath, subDirs, model, connection, numJobs, clear, debug, forc
         print >> sys.stderr, "Using imported parses from", corpusDir
     
     # Train the model
-    connection = connection.replace("$JOBS", str(numJobs))
-    train(outPath, model, parse="McCC", debug=debug, connection=connection, corpusDir=corpusDir)
+    if training:
+        connection = connection.replace("$JOBS", str(numJobs))
+        train(outPath, model, parse="McCC", debug=debug, connection=connection, corpusDir=corpusDir)
 
 if __name__== "__main__":
     from optparse import OptionParser
@@ -84,6 +87,9 @@ if __name__== "__main__":
     optparser.add_option("--noClear", default=False, action="store_true", help="Continue a previous run")
     optparser.add_option("--debug", default=False, action="store_true", help="Debug mode")
     optparser.add_option("-f", "--force", default=False, action="store_true", help="Force removal of existing output directory")
+    optparser.add_option("--preprocessor", default="MERGE-SETS,REMOVE-ANALYSES,REMOVE-HEADS,MERGE-SENTENCES,IMPORT-PARSE,SPLIT-NAMES,FIND-HEADS,DIVIDE-SETS", help="List of preprocessing steps")
+    optparser.add_option("--noTraining", default=False, action="store_true", help="Do only the preprocessing")
     (options, args) = optparser.parse_args()
     
-    run(options.input, options.output, options.subdirs, options.model, options.connection, options.numJobs, not options.noClear, options.debug, options.force)
+    run(options.input, options.output, options.subdirs, options.model, options.connection, options.numJobs, 
+        not options.noClear, options.debug, options.force, training=not options.noTraining, preprocessorSteps=options.preprocessor.split(","))

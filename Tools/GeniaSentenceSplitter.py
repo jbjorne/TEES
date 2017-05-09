@@ -76,6 +76,8 @@ def moveElements(document):
                 entity.set("charOffset", Range.tuplesToCharOffset(newEntityOffsets)) 
                 entCount += 1
         sentenceCount += 1
+    if len([x for x in document.findall("entity")]) != 0:
+        raise Exception("Sentence splitting does not cover the entire document")
     # Move interactions
     intCount = 0
     interactions = []
