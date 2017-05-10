@@ -294,8 +294,7 @@ class Parser:
                     #element.set("match", "exact")
                     counts["tokens-exact-match"] += 1
                 element.set("POS", token.get("POS"))
-                for key in ("text", "POS"):
-                    self.sanitizeAttribute(element, key, counts)
+                self.sanitizeAttributes(element, ("text", "POS"), counts)
                 self.addExtraAttributes(element, token, self.tokenDefaultAttributes) # Additional token data
                 element.set("charOffset", str(offset[0]) + "-" + str(offset[1]))
                 tokenization.append(element)
@@ -363,7 +362,7 @@ class Parser:
             elif "element" in tokensById[t1] and "element" in tokensById[t2]:
                 element = ET.Element("dependency")
                 element.set("type", dep["type"])
-                self.sanitizeAttribute(element, "type", counts)
+                self.sanitizeAttributes(element, ("type",), counts)
                 element.set("id", idStem + str(count))
                 element.set("t1", tokensById[t1]["element"].get("id"))
                 element.set("t2", tokensById[t2]["element"].get("id"))
