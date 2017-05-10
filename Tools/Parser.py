@@ -278,7 +278,7 @@ class Parser:
                 else:
                     #element.set("match", "exact")
                     counts["tokens-exact-match"] += 1
-                element.set("POS", token.get("POS"))
+                element.set("POS", token.get("POS", "[NO-POS]"))
                 self.addExtraAttributes(element, token, self.tokenDefaultAttributes) # Additional token data
                 element.set("charOffset", str(offset[0]) + "-" + str(offset[1]))
                 tokenization.append(element)
@@ -465,7 +465,12 @@ class Parser:
                     for key in token:
                         if key == "POS" or key not in self.tokenDefaultAttributes:
                             if isinstance(token[key], set):
-                                token[key] = "---".join(sorted(token[key]))       
+                                if None in token[key]:
+                                    token[key].remove(None)
+                                if len(token[key]) == 0:
+                                    token[key] = None
+                                else:
+                                    token[key] = "---".join(sorted(token[key]))       
     
     ###########################################################################
     # Sentence Splitting
@@ -1032,8 +1037,6 @@ class Parser:
                         for altPOS in ("xpos", "upos"):
                             if properties.get(altPOS) != None:
                                 token["POS"] = properties.get(altPOS)
-                    if token["POS"] == None:
-                        token["POS"] = "ERROR"
                     for subset in node, properties:
                         for key in subset:
                             if key not in basicKeys:
