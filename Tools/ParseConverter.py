@@ -19,7 +19,7 @@ class ParseConverter(Parser):
         Parser.__init__(self)
         self.allExt = ["ptb", "sd", "conll", "conllx", "conllu", "corenlp", "epe"]
     
-    def readParses(self, parseDir, extensions, subDirs, counts):
+    def getParseFiles(self, parseDir, extensions, subDirs, counts):
         files = {}
         if subDirs == None:
             subDirs = ["ptb", "conll", "sd_ccproc"]
@@ -84,7 +84,7 @@ class ParseConverter(Parser):
             assert item in self.allExt, item
         return unescapeFormats
         
-    def readParse(self, filePath, conllFormat=None, unescapeFormats=None):
+    def readParse(self, filePath, conllFormat=None, unescapeFormats=None, tokenMerging=True, counts=None):
         unescapeFormats = self.getUnescapeFormats(unescapeFormats)
         ext = filePath.rsplit(".", 1)[-1]
         if ext == "ptb":
@@ -98,23 +98,26 @@ class ParseConverter(Parser):
             sentObjs = self.readEPE(filePath)
         else:
             raise Exception("Unknown extension '" + str(ext) + "'")
+        if tokenMerging:
+            self.mergeOverlappingTokens(sentObjs, counts=counts)
         return sentObjs
     
-    def insertParse(self, document, sentences, filePath, parseName, splitting, typeCounts, conllFormat=None, unescapeFormats=None):
+    def insertParse(self, document, sentences, filePath, parseName, splitting, typeCounts, conllFormat=None, unescapeFormats=None, tokenMerging=True):
         ext = filePath.rsplit(".", 1)[-1]
-        sentObjs = self.readParse(filePath, conllFormat, unescapeFormats=unescapeFormats)      
+        extCounts = typeCounts[ext]
+        sentObjs = self.readParse(filePath, conllFormat, unescapeFormats=unescapeFormats, tokenMerging=tokenMerging, counts=extCounts)      
         if ext == "ptb":
             sentences = self.prepareSentences(document, sentences, sentObjs, splitting, typeCounts["sentence-splitting"])
-            self.insertElements(sentObjs, sentences, parseName, counts=typeCounts[ext])
+            self.insertElements(sentObjs, sentences, parseName, counts=extCounts)
         elif ext in ("conll", "conllx", "conllu", "corenlp", "epe"):
             sentences = self.prepareSentences(document, sentences, sentObjs, splitting, typeCounts["sentence-splitting"])
-            self.insertElements(sentObjs, sentences, parseName, "LINKED", counts=typeCounts[ext])
+            self.insertElements(sentObjs, sentences, parseName, "LINKED", counts=extCounts)
         elif ext == "sd":
-            self.insertElements(sentObjs, sentences, parseName, parseName, counts=typeCounts[ext])
+            self.insertElements(sentObjs, sentences, parseName, parseName, counts=extCounts)
         else:
             raise Exception("Unknown extension '" + str(ext) + "'")
     
-    def insertParses(self, parseDir, input, output=None, parseName="McCC", extensions=None, subDirs=None, debug=False, skipParsed=False, docMatchKeys=None, conllFormat=None, splitting=True, unescapeFormats="AUTO"):
+    def insertParses(self, parseDir, input, output=None, parseName="McCC", extensions=None, subDirs=None, debug=False, skipParsed=False, docMatchKeys=None, conllFormat=None, splitting=True, unescapeFormats="AUTO", tokenMerging=True):
         corpusTree, corpusRoot = self.getCorpus(input)
         if not os.path.exists(parseDir):
             raise Exception("Cannot find parse input '" + str(parseDir) + "'")
@@ -130,7 +133,7 @@ class ParseConverter(Parser):
             docMatchKeys = docMatchKeys.split(",")
         print >> sys.stderr, "Inserting parses from file types:", extensions
         counts = defaultdict(int)
-        files = self.readParses(parseDir, extensions, subDirs, counts)
+        files = self.getParseFiles(parseDir, extensions, subDirs, counts)
         typeCounts = {x:defaultdict(int) for x in extensions}
         # Make document elements if needed
         documents = [x for x in corpusRoot.findall("document")]
@@ -156,7 +159,7 @@ class ParseConverter(Parser):
                         if ext not in files[docMatchValue]:
                             continue
                         counts[ext + "-match"] += 1
-                        self.insertParse(document, sentences, files[docMatchValue][ext], parseName, splitting, typeCounts, conllFormat, unescapeFormats=unescapeFormats)
+                        self.insertParse(document, sentences, files[docMatchValue][ext], parseName, splitting, typeCounts, conllFormat, unescapeFormats=unescapeFormats, tokenMerging=tokenMerging)
             if not matchFound:
                 counts["document-no-match"] += 1
         if len(typeCounts["sentence-splitting"]) > 0:

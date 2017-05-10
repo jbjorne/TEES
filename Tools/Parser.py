@@ -7,6 +7,7 @@ import Utils.InteractionXML.InteractionXMLUtils as IXMLUtils
 import Utils.Align as Align
 from Utils.ProgressCounter import ProgressCounter
 from collections import defaultdict
+import Utils.Range
 import re
 import json
 try:
@@ -27,6 +28,7 @@ class Parser:
                  "\\/":"/",
                  "\\*":"*"}
         self.escSymbols = sorted(self.escDict.keys())
+        self.tokenDefaultAttributes = set(["id", "text", "origText", "index", "POS", "offset"])
     
     ###########################################################################
     # Utilities
@@ -252,7 +254,7 @@ class Parser:
                 if charOffsets[-1][0] < 0 or charOffsets[-1][1] < 0:
                     raise Exception("Negative character offset for token " + str(tokens[i]) + " in sentence " + sentence.get("id") + ": " + str(sentence.attrib))
         #tokenIndex = 0
-        tokKeys = set(["id", "text", "origText", "index", "POS", "offset"])
+        #tokKeys = set(["id", "text", "origText", "index", "POS", "offset"])
         for i in range(len(tokens)):
             token = tokens[i]
             counts["tokens-parse"] += 1
@@ -277,7 +279,7 @@ class Parser:
                     #element.set("match", "exact")
                     counts["tokens-exact-match"] += 1
                 element.set("POS", token.get("POS"))
-                self.addExtraAttributes(element, token, tokKeys) # Additional token data
+                self.addExtraAttributes(element, token, self.tokenDefaultAttributes) # Additional token data
                 element.set("charOffset", str(offset[0]) + "-" + str(offset[1]))
                 tokenization.append(element)
                 token["element"] = element
@@ -409,6 +411,56 @@ class Parser:
             if "metadata" in sentObj:
                 self.insertMetadata(sentObj["metadata"], parse)
         return counts
+    
+    def mergeOverlappingTokens(self, sentObjs, counts):
+        for sentObj in sentObjs:
+            tokens = sentObj["tokens"]
+            #keepToken = len(tokens) * [True]
+            #tokenOffsets = [Utils.Range.charOffsetToSingleTuple(x.get("charOffset")) for x in tokens]
+            # Map tokens to be removed to tokens to be kept
+            tokenMap = {} # removed -> kept
+            for i in range(len(sentObjs)): # compare each token...
+                for j in range(0, i): # ...against every token before it
+                    if Utils.Range.overlap(tokens[i]["offset"], tokens[j]["offset"]):
+                        #keepToken[i] = False
+                        tokenMap[tokens[i]] = tokens[j]
+                        # Put attributes into sets for merging
+                        for key in tokens[j]:
+                            if key == "POS" or key not in self.tokenDefaultAttributes:
+                                if isinstance(tokens[j][key], basestring):
+                                    tokens[j][key] = set([tokens[j][key]])
+                        # Merge the attributes from the token to be removed
+                        for key in tokens[i]:
+                            if key == "POS" or key not in self.tokenDefaultAttributes:
+                                if key in tokens[i]:
+                                    tokens[j][key].add(tokens[i][key])
+                                else:
+                                    tokens[j][key] = set([tokens[i][key]])
+                        counts["merged-tokens"] += 1
+            # If tokens are to be removed
+            if len(tokenMap) > 0:
+                # Merge removed tokens' offsets into the kept tokens' offsets
+                for removed in sorted(tokenMap.keys()):
+                    targetOffset = tokenMap[removed]["offset"]
+                    sourceOffset = removed["offset"]
+                    if sourceOffset[0] < targetOffset[0]:
+                        tokenMap[removed]["offset"] = (sourceOffset[0], targetOffset[1])
+                    if sourceOffset[1] > targetOffset[1]:
+                        tokenMap[removed]["offset"] = (targetOffset[0], sourceOffset[1])
+                # Remap the dependencies
+                for dep in sentObj["dependencies"]:
+                    for tag in ("t1", "t2"):
+                        if dep[tag + "Token"] in tokenMap:
+                            dep[tag + "Token"] = tokenMap[dep[tag + "Token"]]
+                            dep[tag] = tokenMap[dep[tag + "Token"]]["id"]
+                            counts["merged-deps"] += 1
+                # Keep only the marked tokens and join the merged attribute sets
+                sentObj["tokens"] = [x for x in tokens if x not in tokenMap]
+                for token in sentObj["tokens"]:
+                    for key in tokens:
+                        if key == "POS" or key not in self.tokenDefaultAttributes:
+                            if isinstance(token[key], set):
+                                token[key] = "---".join(sorted(token[key]))       
     
     ###########################################################################
     # Sentence Splitting
