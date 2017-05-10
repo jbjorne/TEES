@@ -57,7 +57,8 @@ class Detector():
         self.debug=False
     
     def __del__(self):
-        self._closeModels()
+        if not self.debug:
+            self._closeModels()
     
     def _closeModels(self):
         for model in self.modelsToClose:

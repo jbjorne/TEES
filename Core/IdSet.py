@@ -63,6 +63,10 @@ class IdSet:
         if not self.Ids.has_key(key):
             if self.locked or createIfNotExist == False:
                 return None
+            if key.strip() == "":
+                raise Exception("Cannot define id for empty key")
+            if "\n" in key or "\r" in key:
+                raise Exception("Cannot define id for key with newline '" + key + "'")
             id = self.nextFreeId
             self.nextFreeId += 1
             #assert(not id in self.Ids.values())
@@ -86,6 +90,8 @@ class IdSet:
         assert(not id in self.Ids.values())
         assert(not name in self.Ids.keys())
         assert(id < self.nextFreeId)
+        if name.strip() == "":
+            raise Exception("Cannot define id for empty key")
         self.Ids[name] = id
         self._namesById[id] = name
     

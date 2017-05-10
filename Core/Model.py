@@ -37,9 +37,11 @@ class Model():
         self.path = None
         self.open(path, mode)
         self.verbose = verbose
+        self.debug = False
     
     def __del__(self):
-        self.close()
+        if not self.debug:
+            self.close()
     
     def close(self):
         if self.workdir != None:

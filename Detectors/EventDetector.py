@@ -87,6 +87,7 @@ class EventDetector(Detector):
                                           ("modifierExampleStyle", self.modifierDetector.tag+"example-style"), 
                                           ("modifierClassifierParameters", self.modifierDetector.tag+"classifier-parameters-train")])
             self.combinedModel = self.initModel(self.combinedModel)
+            self.model.debug = self.combinedModel.debug = self.debug
             tags = [self.triggerDetector.tag, self.edgeDetector.tag, self.unmergingDetector.tag, self.modifierDetector.tag]
             stringDict = {}
             for tag in tags:
