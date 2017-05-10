@@ -419,11 +419,14 @@ class Parser:
             #tokenOffsets = [Utils.Range.charOffsetToSingleTuple(x.get("charOffset")) for x in tokens]
             # Map tokens to be removed to tokens to be kept
             tokenMap = {} # removed -> kept
-            for i in range(len(sentObjs)): # compare each token...
-                for j in range(0, i): # ...against every token before it
+            tokenIdMap = {}
+            #tokenById = {x["id"]:x for x in tokens}
+            for i in range(len(tokens)): # compare each token...
+                for j in range(0, i - 1): # ...against every token before it
                     if Utils.Range.overlap(tokens[i]["offset"], tokens[j]["offset"]):
                         #keepToken[i] = False
-                        tokenMap[tokens[i]] = tokens[j]
+                        tokenMap[i] = j
+                        tokenIdMap[tokens[i]["id"]] = tokens[j]
                         # Put attributes into sets for merging
                         for key in tokens[j]:
                             if key == "POS" or key not in self.tokenDefaultAttributes:
@@ -440,24 +443,26 @@ class Parser:
             # If tokens are to be removed
             if len(tokenMap) > 0:
                 # Merge removed tokens' offsets into the kept tokens' offsets
-                for removed in sorted(tokenMap.keys()):
-                    targetOffset = tokenMap[removed]["offset"]
-                    sourceOffset = removed["offset"]
-                    if sourceOffset[0] < targetOffset[0]:
-                        tokenMap[removed]["offset"] = (sourceOffset[0], targetOffset[1])
-                    if sourceOffset[1] > targetOffset[1]:
-                        tokenMap[removed]["offset"] = (targetOffset[0], sourceOffset[1])
+                for index in sorted(tokenMap.keys()):
+                    keptToken = tokens[tokenMap[index]]
+                    removedToken = tokens[index]
+                    keptOffset = keptToken["offset"]
+                    removedOffset = removedToken["offset"]
+                    if removedOffset[0] < keptOffset[0]:
+                        keptToken["offset"] = (removedOffset[0], keptOffset[1])
+                    if removedOffset[1] > keptOffset[1]:
+                        keptToken["offset"] = (keptOffset[0], removedOffset[1])
                 # Remap the dependencies
                 for dep in sentObj["dependencies"]:
                     for tag in ("t1", "t2"):
-                        if dep[tag + "Token"] in tokenMap:
-                            dep[tag + "Token"] = tokenMap[dep[tag + "Token"]]
-                            dep[tag] = tokenMap[dep[tag + "Token"]]["id"]
+                        if dep[tag] in tokenIdMap:
+                            dep[tag + "Token"] = tokenIdMap[dep[tag]]
+                            dep[tag] = tokenIdMap[dep[tag]]["id"]
                             counts["merged-deps"] += 1
                 # Keep only the marked tokens and join the merged attribute sets
-                sentObj["tokens"] = [x for x in tokens if x not in tokenMap]
+                sentObj["tokens"] = [x for x in tokens if x["id"] not in tokenIdMap]
                 for token in sentObj["tokens"]:
-                    for key in tokens:
+                    for key in token:
                         if key == "POS" or key not in self.tokenDefaultAttributes:
                             if isinstance(token[key], set):
                                 token[key] = "---".join(sorted(token[key]))       
