@@ -177,18 +177,20 @@ class Parser:
 #                 Align.printAlignment(alignedText, alignedCat, diff)
 #         return alignedOffsets     
     
-    def sanitizeAttribute(self, element, key, counts):
-        if key in element:
-            value = element.get(key)
-            if value == None:
-                element.set(key, "[NO:" + key + "]")
-                counts["ATTR:NO:" + key + ":" + element.tag] += 1
-            elif value.strip == "":
-                element.set(key, "[EMPTY:" + key + "]")
-                counts["ATTR:EMPTY:" + key + ":" + element.tag] += 1
-            elif "\n" in value or "\r" in value:
-                element.set(key, value.replace("\n", " ").replace("\r", " "))
-                counts["ATTR:NEWLINE:" + key + ":" + element.tag] += 1
+    def sanitizeAttributes(self, element, keys, counts):
+        attrib = element.attrib
+        for key in keys:
+            if key in attrib:
+                value = element.get(key)
+                if value == None:
+                    element.set(key, "[NO:" + key + "]")
+                    counts["ATTR:NO:" + key + ":" + element.tag] += 1
+                elif value.strip == "":
+                    element.set(key, "[EMPTY:" + key + "]")
+                    counts["ATTR:EMPTY:" + key + ":" + element.tag] += 1
+                elif "\n" in value or "\r" in value:
+                    element.set(key, value.replace("\n", " ").replace("\r", " "))
+                    counts["ATTR:NEWLINE:" + key + ":" + element.tag] += 1
     
     ###########################################################################
     # Tokens, Phrases and Dependencies
@@ -291,11 +293,9 @@ class Parser:
                 else:
                     #element.set("match", "exact")
                     counts["tokens-exact-match"] += 1
-                element.set("POS", token.get("POS", "[NO:POS]"))
+                element.set("POS", token.get("POS"))
                 for key in ("text", "POS"):
-                    if element.get(key).strip() == "":
-                        element.set(key, "[EMPTY]")
-                        counts["tokens-empty-attribute-" + key] += 1
+                    self.sanitizeAttribute(element, key, counts)
                 self.addExtraAttributes(element, token, self.tokenDefaultAttributes) # Additional token data
                 element.set("charOffset", str(offset[0]) + "-" + str(offset[1]))
                 tokenization.append(element)
@@ -363,9 +363,7 @@ class Parser:
             elif "element" in tokensById[t1] and "element" in tokensById[t2]:
                 element = ET.Element("dependency")
                 element.set("type", dep["type"])
-                if element.get("type").strip() == "":
-                    element.set("type", "[EMPTY]")
-                    counts["dep-empty-type"] += 1
+                self.sanitizeAttribute(element, "type", counts)
                 element.set("id", idStem + str(count))
                 element.set("t1", tokensById[t1]["element"].get("id"))
                 element.set("t2", tokensById[t2]["element"].get("id"))
