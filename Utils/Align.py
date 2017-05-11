@@ -1,5 +1,6 @@
 import sys
 import operator
+import itertools
 
 WEIGHTS = {"match":2, "mismatch":-2, "open":-1, "extend":-1}
 
@@ -124,12 +125,60 @@ def getAlignment(stringA, stringB, matrix, traversal):
         alignedB = "".join(alignedB)
     return alignedA, alignedB, diff, offsets
 
-def align(stringA, stringB, weights=None):
+def fastAlign(stringA, stringB):
+    i = j = 0
+    fa = {"a":"", "b":"", "diff":"", "offsets":[]}
+    while i < len(stringA):
+        while i < len(stringA) and stringA[i].isspace():
+            i += 1
+            fa["b"] += "-"
+            fa["diff"] += "-"
+            fa["offsets"] += [None]
+        while j < len(stringB) and stringB[j].isspace():
+            j += 1
+            fa["a"] += "-"
+            fa["diff"] += "-"
+        if i < len(stringA):
+            if j >= len(stringB): # out of string B
+                return None
+            if stringA[i] != stringB[j]: # mismatch
+                return None
+            fa["a"] += stringA[i]
+            fa["b"] += stringB[j]
+            fa["diff"] += "|"
+            fa["offsets"] += [j]
+            i += 1
+            j += 1
+    return fa
+
+def align(stringA, stringB, weights=None, verbose=False):
+    alignedA = alignedB = diff = offsets = traversal = None
+    mode = None
     if stringA == stringB:
-        return stringA, stringB, len(stringA) * ["|"], range(len(stringA))
-    matrix = buildScoringMatrix(stringA, stringB, weights)
-    traversal = getTraversal(matrix)
-    return getAlignment(stringA, stringB, matrix, traversal)
+        alignedA = stringA
+        alignedB = stringB
+        diff = len(stringA) * "|"
+        offsets = range(len(stringA))
+        mode = "identical"
+    if mode == None and isinstance(stringA, basestring) and isinstance(stringB, basestring):
+        fa = fastAlign(stringA, stringB)
+        if fa != None:
+            mode = "fast"          
+            alignedA = fa["a"]
+            alignedB = fa["b"]
+            diff = fa["diff"]
+            offsets = fa["offsets"]
+    if mode == None:
+        mode = "matrix"
+        matrix = buildScoringMatrix(stringA, stringB, weights)
+        traversal = getTraversal(matrix)
+        alignedA, alignedB, diff, offsets = getAlignment(stringA, stringB, matrix, traversal)
+    if verbose:
+        print >> sys.stderr, "alignment mode:", mode
+        if traversal:
+            print >> sys.stderr, traversal
+        printAlignment(alignedA, alignedB, diff, offsets)
+    return alignedA, alignedB, diff, offsets
     
 ###############################################################################
 # Visualization
@@ -173,6 +222,7 @@ if __name__=="__main__":
     optparser.add_option("--open", default=WEIGHTS["open"], type=int, help="")
     optparser.add_option("--extend", default=WEIGHTS["extend"], type=int, help="")
     optparser.add_option("--words", default=False, action="store_true")
+    optparser.add_option("--tryfast", default=False, action="store_true")
     (options, args) = optparser.parse_args()
     
     if options.words:
@@ -180,8 +230,9 @@ if __name__=="__main__":
         options.b = options.b.split()
     weights = {k:getattr(options, k) for k in ("match", "mismatch", "open", "extend")}
     #weights["space"] = weights["mismatch"]
-    matrix = buildScoringMatrix(options.a, options.b, weights)
-    traversal = getTraversal(matrix)
-    printMatrix(matrix, options.a, options.b, traversal)
-    print >> sys.stderr, traversal
-    printAlignment(*getAlignment(options.a, options.b, matrix, traversal))
+    align(options.a, options.b, weights, True)
+#     matrix = buildScoringMatrix(options.a, options.b, weights)
+#     traversal = getTraversal(matrix)
+#     printMatrix(matrix, options.a, options.b, traversal)
+#     print >> sys.stderr, traversal
+#     printAlignment(*getAlignment(options.a, options.b, matrix, traversal))
