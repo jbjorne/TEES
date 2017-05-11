@@ -19,7 +19,7 @@ class ParseConverter(Parser):
         Parser.__init__(self)
         self.allExt = ["ptb", "sd", "conll", "conllx", "conllu", "corenlp", "epe"]
     
-    def getParseFiles(self, parseDir, extensions, subDirs, counts):
+    def getParseFiles(self, parseDir, extensions, subDirs, counts, extMap=None):
         files = {}
         if subDirs == None:
             subDirs = ["ptb", "conll", "sd_ccproc"]
@@ -32,6 +32,8 @@ class ParseConverter(Parser):
                 if "." not in filename:
                     continue
                 docName, ext = filename.rsplit(".", 1)
+                if extMap and ext in extMap:
+                    ext = extMap[ext]
                 if ext not in extensions:
                     continue
                 if docName not in files:
@@ -61,7 +63,7 @@ class ParseConverter(Parser):
             counter.update(1, "Making document element for document '" + str(docName) + "': ")
             #filePaths = files[docName]
             extensions = sorted(files[docName].keys())
-            sentObjs = self.readParse(files[docName][extensions[0]], conllFormat)
+            sentObjs = self.readParse(extensions[0], files[docName][extensions[0]], conllFormat)
             sentTexts = []
             for sentObj in sentObjs:
                 if "tokens" in sentObj:
@@ -84,16 +86,16 @@ class ParseConverter(Parser):
             assert item in self.allExt, item
         return unescapeFormats
         
-    def readParse(self, filePath, conllFormat=None, unescapeFormats=None, tokenMerging=True, counts=None):
+    def readParse(self, ext, filePath, conllFormat=None, unescapeFormats=None, tokenMerging=True, counts=None, sdFailedFormat="empty"):
         unescapeFormats = self.getUnescapeFormats(unescapeFormats)
-        ext = filePath.rsplit(".", 1)[-1]
+        #ext = filePath.rsplit(".", 1)[-1]
         if ext == "ptb":
             sentObjs = self.readPennTrees(filePath)
         elif ext in ("conll", "conllx", "conllu", "corenlp"):
             sentRows = self.readCoNLL(filePath, conllFormat=conllFormat)
             sentObjs = self.processCoNLLSentences(sentRows, unescaping=ext in unescapeFormats)
         elif ext == "sd":
-            sentObjs = self.readStanfordDependencies(filePath)
+            sentObjs = self.readStanfordDependencies(filePath, failedFormat=sdFailedFormat)
         elif ext == "epe":
             sentObjs = self.readEPE(filePath)
         else:
@@ -102,10 +104,10 @@ class ParseConverter(Parser):
             self.mergeOverlappingTokens(sentObjs, counts=counts)
         return sentObjs
     
-    def insertParse(self, document, sentences, filePath, parseName, splitting, typeCounts, conllFormat=None, unescapeFormats=None, tokenMerging=True):
-        ext = filePath.rsplit(".", 1)[-1]
+    def insertParse(self, document, sentences, ext, filePath, parseName, splitting, typeCounts, conllFormat=None, unescapeFormats=None, tokenMerging=True, sdFailedFormat="empty"):
+        #ext = filePath.rsplit(".", 1)[-1]
         extCounts = typeCounts[ext]
-        sentObjs = self.readParse(filePath, conllFormat, unescapeFormats=unescapeFormats, tokenMerging=tokenMerging, counts=extCounts)      
+        sentObjs = self.readParse(ext, filePath, conllFormat, unescapeFormats=unescapeFormats, tokenMerging=tokenMerging, counts=extCounts, sdFailedFormat=sdFailedFormat)      
         if ext == "ptb":
             sentences = self.prepareSentences(document, sentences, sentObjs, splitting, typeCounts["sentence-splitting"])
             self.insertElements(sentObjs, sentences, parseName, counts=extCounts)
@@ -117,7 +119,7 @@ class ParseConverter(Parser):
         else:
             raise Exception("Unknown extension '" + str(ext) + "'")
     
-    def insertParses(self, parseDir, input, output=None, parseName="McCC", extensions=None, subDirs=None, debug=False, skipParsed=False, docMatchKeys=None, conllFormat=None, splitting=True, unescapeFormats="AUTO", tokenMerging=True):
+    def insertParses(self, parseDir, input, output=None, parseName="McCC", extensions=None, subDirs=None, debug=False, skipParsed=False, docMatchKeys=None, conllFormat=None, splitting=True, unescapeFormats="AUTO", tokenMerging=True, extMap=None, sdFailedFormat="empty"):
         corpusTree, corpusRoot = self.getCorpus(input)
         if not os.path.exists(parseDir):
             raise Exception("Cannot find parse input '" + str(parseDir) + "'")
@@ -133,7 +135,7 @@ class ParseConverter(Parser):
             docMatchKeys = docMatchKeys.split(",")
         print >> sys.stderr, "Inserting parses from file types:", extensions
         counts = defaultdict(int)
-        files = self.getParseFiles(parseDir, extensions, subDirs, counts)
+        files = self.getParseFiles(parseDir, extensions, subDirs, counts, extMap=extMap)
         typeCounts = {x:defaultdict(int) for x in extensions}
         # Make document elements if needed
         documents = [x for x in corpusRoot.findall("document")]
@@ -159,7 +161,7 @@ class ParseConverter(Parser):
                         if ext not in files[docMatchValue]:
                             continue
                         counts[ext + "-match"] += 1
-                        self.insertParse(document, sentences, files[docMatchValue][ext], parseName, splitting, typeCounts, conllFormat, unescapeFormats=unescapeFormats, tokenMerging=tokenMerging)
+                        self.insertParse(document, sentences, ext, files[docMatchValue][ext], parseName, splitting, typeCounts, conllFormat, unescapeFormats=unescapeFormats, tokenMerging=tokenMerging, sdFailedFormat=sdFailedFormat)
             if not matchFound:
                 counts["document-no-match"] += 1
         if len(typeCounts["sentence-splitting"]) > 0:

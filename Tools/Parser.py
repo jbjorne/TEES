@@ -431,6 +431,8 @@ class Parser:
     
     def mergeOverlappingTokens(self, sentObjs, counts):
         for sentObj in sentObjs:
+            if "tokens" not in sentObj:
+                continue
             tokens = sentObj["tokens"]
             #keepToken = len(tokens) * [True]
             #tokenOffsets = [Utils.Range.charOffsetToSingleTuple(x.get("charOffset")) for x in tokens]
@@ -439,7 +441,9 @@ class Parser:
             tokenIdMap = {}
             #tokenById = {x["id"]:x for x in tokens}
             for i in range(len(tokens)): # compare each token...
+                if "offset" not in tokens[i]: continue
                 for j in range(0, i - 1): # ...against every token before it
+                    if "offset" not in tokens[j]: continue
                     if Utils.Range.overlap(tokens[i]["offset"], tokens[j]["offset"]):
                         #keepToken[i] = False
                         tokenMap[i] = j
@@ -754,7 +758,7 @@ class Parser:
         phrases = []
         stack = []
         treeLine = treeLine.strip()
-        if treeLine != "":
+        if treeLine not in ("", "(S1 (NP (JJ PARSE-FAILED)))"):
             # Add tokens
             tokenCount = 0
             index = 0
@@ -831,24 +835,25 @@ class Parser:
 #         counts["sentences"] += 1
 #         return elements
     
-    def readStanfordDependencies(self, depFilePath): #, skipExtra=0, sentenceId=None):
+    def readStanfordDependencies(self, depFilePath, failedFormat="empty"):
+        assert failedFormat in ("empty", "newline")
         sentences = []
         with codecs.open(depFilePath, "rt", "utf-8") as f:
             deps = None
             for line in f:
                 line = line.strip()
-                ## BioNLP'09 Shared Task GENIA uses _two_ newlines to denote a failed parse (usually it's one,
-                ## the same as the BLLIP parser. To survive this, skipExtra can be used to define the number
-                ## of lines to skip, if the first line of a dependency parse is empty (indicating a failed parse) 
-                #if line.strip() == "" and skipExtra > 0:
-                #    for i in range(skipExtra):
-                #        depFile.readline()
+                # BioNLP'09 Shared Task GENIA uses _two_ newlines to denote a failed parse (usually it's one,
+                # the same as the BLLIP parser. To survive this, skipExtra can be used to define the number
+                # of lines to skip, if the first line of a dependency parse is empty (indicating a failed parse) 
                 if line == "":
-                    if deps != None:
+                    if deps != None: # Finish current sentence
                         sentences.append({"dependencies":deps})
                         deps = None # End the current sentence
                     else: # Extra empty lines indicate a failed parse
-                        sentences.append({"dependencies":[]})
+                        if failedFormat == "empty": # A failed sentence is an empty string, followed by the regular sentence ending newline
+                            sentences.append({"dependencies":[]}) # Add the failed sentence immediately
+                        else: # A failed sentence is a single newline, , followed by the regular sentence ending newline
+                            deps = [] # The failed sentence will be added by the sentence ending newline
                 else:
                     if deps == None: # Begin a new sentence
                         deps = []
@@ -1047,6 +1052,7 @@ class Parser:
                 obj = json.loads(line.strip())
                 tokens = []
                 tokenById = {}
+                idMap = {} # For renaming ids
                 for node in obj["nodes"]:
                     properties = node.get("properties", {})
                     token = {"text":node["form"], "id":node["id"], "offset":(int(node["start"]), int(node["end"])), "POS":properties.get("pos")}
@@ -1063,7 +1069,9 @@ class Parser:
                                     token[key.lower()] = str(subset[key])
                     token["index"] = len(tokens)
                     tokens.append(token)
-                    assert token["id"] not in tokenById
+                    while token["id"] in tokenById:
+                        token["id"] += 10000
+                        idMap[node["id"]] = token["id"]
                     tokenById[token["id"]] = token
                 dependencies = []
                 for node in obj["nodes"]:
@@ -1072,6 +1080,10 @@ class Parser:
                     for edge in edges:
                         if edge["label"] == "edge_list_sum":
                             continue
-                        dependencies.append({"type":edge["label"], "t1":nodeId, "t2":edge["target"], "t1Token":tokenById[nodeId], "t2Token":tokenById[edge["target"]]})
+                        t1 = nodeId
+                        if t1 in idMap: t1 = idMap[t1]
+                        t2 = edge["target"]
+                        if t2 in idMap: t2 = idMap[t2]
+                        dependencies.append({"type":edge["label"], "t1":t1, "t2":t2, "t1Token":tokenById[t1], "t2Token":tokenById[t2]})
                 sentences.append({"tokens":tokens, "dependencies":dependencies})
         return sentences

@@ -299,13 +299,16 @@ def insertAnalyses(xml, corpus, datasets, files, bigfileName, packageSubPath=Non
             print >> sys.stderr, "Inserting", setName, "analyses"
             tempdir = tempfile.mkdtemp()
             analysesSetName = corpus + "_" + setName.upper() + "_ANALYSES"
+            print >> sys.stderr, "Extracting package", files[analysesSetName], "to", tempdir
             packagePath = Utils.Download.getTopDir(tempdir, Utils.Download.extractPackage(files[analysesSetName], tempdir))
             print >> sys.stderr, "Making sentences"
-            Tools.SentenceSplitter.makeSentences(xml, packagePath + "/tokenized", None, escDict=Tools.BLLIPParser.escDict)
+            Tools.SentenceSplitter.makeSentences(xml, packagePath + "/tokenized", None, escDict=ParseConverter().escDict)
             print >> sys.stderr, "Inserting McCC parses"
-            Tools.BLLIPParser.insertParses(xml, packagePath + "/McClosky-Charniak/pstree", None, extraAttributes={"source":"BioNLP'09"})
+            ParseConverter().insertParses(packagePath + "/McClosky-Charniak/pstree", xml, None, "McCC", ["ptb"], extMap={"pstree":"ptb"})
+            #Tools.BLLIPParser.insertParses(xml, packagePath + "/McClosky-Charniak/pstree", None, extraAttributes={"source":"BioNLP'09"})
             print >> sys.stderr, "Inserting Stanford conversions"
-            Tools.StanfordParser.insertParses(xml, packagePath + "/McClosky-Charniak/dep", None, skipExtra=1, extraAttributes={"stanfordSource":"BioNLP'09"})
+            ParseConverter().insertParses(packagePath + "/McClosky-Charniak/dep", xml, None, "McCC", ["sd"], extMap={"dep":"sd"}, sdFailedFormat="newline")
+            #Tools.StanfordParser.insertParses(xml, packagePath + "/McClosky-Charniak/dep", None, skipExtra=1, extraAttributes={"stanfordSource":"BioNLP'09"})
             print >> sys.stderr, "Removing temporary directory", tempdir
             shutil.rmtree(tempdir)
         return True
@@ -320,6 +323,7 @@ def insertAnalyses(xml, corpus, datasets, files, bigfileName, packageSubPath=Non
             print >> sys.stderr, "Making sentences"
             Tools.SentenceSplitter.makeSentences(xml, tempdir + "/" + os.path.basename(files[corpus + "_" + setName.upper() + "_TOKENS"])[:-len(".tar.gz")].split("-", 1)[-1] + "/tokenised", None)
             print >> sys.stderr, "Inserting McCC parses"
+            ParseConverter().insertParses(parseDir, input, output, parseName, extensions, subDirs, debug, skipParsed, docMatchKeys, conllFormat, splitting, unescapeFormats, tokenMerging)
             Tools.BLLIPParser.insertParses(xml, tempdir + "/" + os.path.basename(files[corpus + "_" + setName.upper() + "_McCC"])[:-len(".tar.gz")].split("-", 2)[-1] + "/mccc/ptb", None, extraAttributes={"source":"BioNLP'11"})
             print >> sys.stderr, "Inserting Stanford conversions"
             Tools.StanfordParser.insertParses(xml, tempdir + "/" + os.path.basename(files[corpus + "_" + setName.upper() + "_McCC"])[:-len(".tar.gz")].split("-", 2)[-1] + "/mccc/sd_ccproc", None, extraAttributes={"stanfordSource":"BioNLP'11"})

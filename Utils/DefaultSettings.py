@@ -233,7 +233,7 @@ URL["GE09_TEST"] = urlBase + "bionlp09_shared_task_test_data_without_gold_annota
 # BioNLP'09 Evaluator
 URL["GE09_EVALUATOR"] = urlBase + "bionlp09_shared_task_evaluation_tools_v1.tar.gz"
 # BioNLP'09 Shared Task parses
-urlBase = "http://www-tsujii.is.s.u-tokyo.ac.jp/GENIA/SharedTask/dat/"
+#urlBase = "http://www-tsujii.is.s.u-tokyo.ac.jp/GENIA/SharedTask/dat/"
 URL["GE09_DEVEL_ANALYSES"] = urlBase + "bionlp09_shared_task_development_analyses_rev2.tar.gz" 
 URL["GE09_TRAIN_ANALYSES"] = urlBase + "bionlp09_shared_task_training_analyses_rev2.tar.gz"
 URL["GE09_TEST_ANALYSES"] = urlBase + "bionlp09_shared_task_test_analyses_rev2.tar.gz"
