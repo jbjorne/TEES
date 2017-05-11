@@ -208,9 +208,11 @@ class ParseExporter(Parser):
         return parseElement != None
     
     def exportEPE(self, tokenizationElement, parseElement, sentence, sentenceCount, outFile, propertyTypes="AUTO"):
-        tokens = self.getSortedTokens(tokenizationElement)
+        tokens = self.getSortedTokens(tokenizationElement) if tokenizationElement != None else []
+        if len(tokens) == 0: # There is no parse for this sentence
+            return False
         tokenIndexById = self.getTokenIndexById(tokens)
-        dependenciesByHead = self.getDependenciesByToken(parseElement, "t1")
+        dependenciesByHead = self.getDependenciesByToken(parseElement, "t1") if parseElement != None else {}
         obj = OrderedDict([("id",sentenceCount + 1), ("nodes",[])])
         basicKeys = set(["POS", "text", "origText", "charOffset", "headOffset"])
         if propertyTypes == "AUTO":
@@ -243,7 +245,7 @@ class ParseExporter(Parser):
         outFile.write(json.dumps(obj) + "\n")
         return True
     
-    def export(self, input, output, parseName, tokenizerName=None, toExport=["tok", "ptb", "sd"], inputSuffixes=None, clear=False, tokenIdOffset=0, exportIds=None):
+    def export(self, input, output, parseName, tokenizerName=None, toExport=["tok", "ptb", "sd"], inputSuffixes=None, clear=False, tokenIdOffset=0, exportIds=None, useSetDirs=False):
         print >> sys.stderr, "##### Export Parse #####"
         if toExport == None:
             toExport = ["txt", "sentences", "tok", "ptb", "sd"]
@@ -276,9 +278,14 @@ class ParseExporter(Parser):
                 outfiles = {}
                 for fileExt in toExport:
                     #print output, exportId , fileExt
-                    outfilePath = output + "/" + exportId + "." + fileExt
+                    if useSetDirs:
+                        outfilePath = os.path.join(output, document.get("set"), exportId + "." + fileExt)
+                    else:
+                        outfilePath = os.path.join(output, exportId + "." + fileExt)
                     if os.path.exists(outfilePath): # check for overlapping files
                         raise Exception("Export file '" + str(outfilePath) + "' already exists")
+                    if not os.path.exists(os.path.dirname(outfilePath)):
+                        os.makedirs(os.path.dirname(outfilePath))
                     outfiles[fileExt] = codecs.open(outfilePath, "wt", "utf-8")
                 # Export document text
                 if "txt" in outfiles and document.get("text") != None:
@@ -295,24 +302,23 @@ class ParseExporter(Parser):
                     if "sentences" in outfiles:
                         outfiles["sentences"].write(sentence.get("text").strip().replace("\n", " ").replace("\r", " ") + "\n")
                         counts["sentences"]["sentences"] += 1
-                    if parse != None:
-                        if "ptb" in outfiles:
-                            if self.exportPennTreeBank(parse, outfiles["ptb"]):
-                                counts["ptb"]["sentences"] += 1
-                        if tokenization != None:
-                            if "tok" in outfiles:
-                                if self.exportTokenization(tokenization, parse, sentence, outfiles["tok"]):
-                                    counts["tok"]["sentences"] += 1
-                            if "sd" in outfiles:
-                                if self.exportStanfordDependencies(parse, tokenization, outfiles["sd"], tokenIdOffset):
-                                    counts["sd"]["sentences"] += 1
-                            for conllFormat in ("conll", "conllx", "conllu"):
-                                if conllFormat in outfiles:
-                                    if self.exportCoNLL(tokenization, parse, outfiles[conllFormat], conllFormat, counts[conllFormat]):
-                                        counts[conllFormat]["sentences"] += 1
-                            if "epe" in outfiles:
-                                if self.exportEPE(tokenization, parse, sentence, sentenceCount, outfiles["epe"]):
-                                    counts["epe"]["sentences"] += 1
+                    if "ptb" in outfiles:
+                        if self.exportPennTreeBank(parse, outfiles["ptb"]):
+                            counts["ptb"]["sentences"] += 1
+                    if tokenization != None:
+                        if "tok" in outfiles:
+                            if self.exportTokenization(tokenization, parse, sentence, outfiles["tok"]):
+                                counts["tok"]["sentences"] += 1
+                        if "sd" in outfiles:
+                            if self.exportStanfordDependencies(parse, tokenization, outfiles["sd"], tokenIdOffset):
+                                counts["sd"]["sentences"] += 1
+                        for conllFormat in ("conll", "conllx", "conllu"):
+                            if conllFormat in outfiles:
+                                if self.exportCoNLL(tokenization, parse, outfiles[conllFormat], conllFormat, counts[conllFormat]):
+                                    counts[conllFormat]["sentences"] += 1
+                        if "epe" in outfiles:
+                            if self.exportEPE(tokenization, parse, sentence, sentenceCount, outfiles["epe"]):
+                                counts["epe"]["sentences"] += 1
                     sentenceCount += 1
                 # Close document output files
                 for fileExt in outfiles:
