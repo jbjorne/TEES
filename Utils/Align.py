@@ -131,28 +131,31 @@ def fastAlign(stringA, stringB):
     while i < len(stringA):
         while i < len(stringA):
             a = stringA[i]
-            if j < len(stringB):
-                b = stringB[j]
-            else:
-                b = None
+            b = stringB[j] if j < len(stringB) else None
             if a == b or (a.isspace() and (b == None or b.isspace())):
                 fa["a"] += a
                 fa["b"] += b if b != None else "-"
                 fa["diff"] += "|"
                 fa["offsets"] += [j] if b != None else [None]
             else:
+                if not (a.isspace() or (b == None or b.isspace())):
+                    return None
                 break
             i += 1
             j += 1
         while i < len(stringA) and stringA[i].isspace():
-            i += 1
+            fa["a"] += stringA[i]
             fa["b"] += "-"
             fa["diff"] += "-"
             fa["offsets"] += [None]
+            i += 1
         while j < len(stringB) and stringB[j].isspace():
-            j += 1
             fa["a"] += "-"
+            fa["b"] += stringB[j]
             fa["diff"] += "-"
+            j += 1
+    if fa != None:
+        assert len(stringA) == len(fa["offsets"])
     return fa
 
 def align(stringA, stringB, weights=None, verbose=False):
@@ -182,7 +185,7 @@ def align(stringA, stringB, weights=None, verbose=False):
         if traversal:
             print >> sys.stderr, traversal
         printAlignment(alignedA, alignedB, diff, offsets)
-    return alignedA, alignedB, diff, offsets
+    return alignedA, alignedB, diff, offsets, mode
     
 ###############################################################################
 # Visualization

@@ -111,7 +111,7 @@ class Parser:
         else:
             source = tokens
         #for char in text:
-        alignedText, alignedCat, diff, alignedOffsets = Align.align(target, source)
+        alignedText, alignedCat, diff, alignedOffsets, mode = Align.align(target, source)
         mismatchCount = diff.count("*")
         if mismatchCount > 0:
             usedEscapings = []
@@ -121,7 +121,7 @@ class Parser:
                     newSource, newTokenOffsets = self.getCatenated(newTokens, tokenSep)
                 else:
                     newSource = newTokens
-                newAlignedText, newAlignedCat, newDiff, newAlignedOffsets = Align.align(target, newSource)
+                newAlignedText, newAlignedCat, newDiff, newAlignedOffsets, newMode = Align.align(target, newSource)
                 newDiffMismatchCount = newDiff.count("*")
                 #print "NEWCAT", newCatenated, newDiffMismatchCount
                 if newDiffMismatchCount < mismatchCount:
@@ -129,12 +129,12 @@ class Parser:
                     tokens = newTokens
                     if targetIsString:
                         source, tokenOffsets = newSource, newTokenOffsets
-                    alignedText, alignedCat, diff, alignedOffsets = newAlignedText, newAlignedCat, newDiff, newAlignedOffsets
+                    alignedText, alignedCat, diff, alignedOffsets, mode = newAlignedText, newAlignedCat, newDiff, newAlignedOffsets, newMode
                     usedEscapings.append(escSymbol)
                 if newDiffMismatchCount == 0:
                     break
             if mismatchCount > 0 and debugMessage != None:
-                print >> sys.stderr, debugMessage, debugId, [source, target], usedEscapings
+                print >> sys.stderr, debugMessage, debugId, [source, target], (usedEscapings, mode)
                 Align.printAlignment(alignedText, alignedCat, diff)
         #Align.printAlignment(alignedText, alignedCat, diff)
         tokenAlignments = []
@@ -143,7 +143,10 @@ class Parser:
         #print "aligned", alignedOffsets
         if targetIsString:
             tokenAlignments = []
-            assert len(source) == len(alignedOffsets)
+            if not len(source) == len(alignedOffsets):
+                Align.printAlignment(alignedText, alignedCat, diff)
+                print >> sys.stderr, (len(source), len(alignedOffsets)), (source, alignedOffsets, mode)
+                assert False
             for tokenIndex in range(len(tokens)):
                 tokenAlignedOffsets = [alignedOffsets[x] for x in tokenOffsets[tokenIndex] if alignedOffsets[x] != None]
                 if len(tokenAlignedOffsets) == 0:
@@ -201,7 +204,7 @@ class Parser:
             counts = defaultdict(int)
         elements = tokenization.findall("token")
         weights = None #{"match":1, "mismatch":-2, "space":-3, "open":-3, "extend":-3}
-        alignedSentence, alignedCat, diff, alignedOffsets = Align.align([x.get("text") for x in elements], [x["text"] for x in tokens], weights=weights)
+        alignedSentence, alignedCat, diff, alignedOffsets, mode = Align.align([x.get("text") for x in elements], [x["text"] for x in tokens], weights=weights)
         if diff.count("|") + diff.count("-") != len(diff):
             print >> sys.stderr, "Partial alignment with existing tokenization"
             Align.printAlignment(alignedSentence, alignedCat, diff)
