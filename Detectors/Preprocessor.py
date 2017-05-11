@@ -94,7 +94,7 @@ class Preprocessor(ToolChain):
         self.initStepGroup("Saving")
         self.initStep("DIVIDE-SETS", self.divideSets, {"saveCombined":False}, None)
         self.initStep("SAVE", self.save, {}, None)
-        self.initStep("EXPORT", self.export, {"formats":None, "exportIds":None}, None)
+        self.initStep("EXPORT", self.export, {"formats":None, "exportIds":None, "useSetDirs":False}, None)
         self.initStep("EXPORT-STFORMAT", Utils.STFormat.ConvertXML.toSTFormat, {"outputTag":"a2", "useOrigIds":False, "debug":False, "skipArgs":[], "validate":True, "writeExtra":False, "allAsRelations":False, "exportIds":None}, None)
     
     def initPresets(self):
@@ -264,7 +264,7 @@ class Preprocessor(ToolChain):
     # Saving Steps
     ###########################################################################
     
-    def export(self, input, output, formats=None, exportIds=None):
+    def export(self, input, output, formats=None, exportIds=None, useSetDirs=False):
         print >> sys.stderr, "Exporting formats:", formats
         exportedParses = False
         if formats == None:
@@ -272,7 +272,7 @@ class Preprocessor(ToolChain):
         parseFormats = [x for x in formats if x in ["txt", "sentences", "tok", "ptb", "sd", "conll", "conllx", "conllu", "epe"]]
         stFormats = [x for x in formats if x in ["a1", "a2", "rel"]]
         if len(parseFormats) > 0:
-            ParseExporter().export(input, output, "McCC", "McCC", toExport=formats, exportIds=exportIds, clear=True)
+            ParseExporter().export(input, output, "McCC", "McCC", toExport=formats, exportIds=exportIds, clear=True, useSetDirs=useSetDirs)
             exportedParses = True
         if len(stFormats) > 0:
             Utils.STFormat.ConvertXML.toSTFormat(input, output, files=formats, exportIds=exportIds, clear=not exportedParses)
