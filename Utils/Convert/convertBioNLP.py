@@ -93,18 +93,19 @@ def downloadCorpus(corpus, destPath=None, downloadPath=None, clear=False):
 def convert(corpora, outDir=None, downloadDir=None, redownload=False, makeIntermediateFiles=True, evaluate=False, processEquiv=True, analysisMode="INSERT", debug=False, preprocessorSteps=None, preprocessorParameters=None, logPath=None):
 #    global bioNLP13AnalysesTempDir
     
-    if outDir == None:
+    if outDir == "AUTO":
         os.path.normpath(Settings.DATAPATH + "/corpora")
-    if not os.path.exists(outDir):
-        os.makedirs(outDir)
-    else:
-        assert os.path.isdir(outDir)
+    elif outDir != None:
+        if not os.path.exists(outDir):
+            os.makedirs(outDir)
+        else:
+            assert os.path.isdir(outDir)
     count = 1
     if isinstance(corpora, basestring):
         corpora = corpora.split(",")
     for corpus in corpora:
         print >> sys.stderr, "=======================", "Converting BioNLP Shared Task", corpus, "corpus ("+str(count)+"/"+str(len(corpora))+")", "======================="
-        convertCorpus(corpus, outDir, downloadDir, redownload, makeIntermediateFiles, evaluate, processEquiv, analysisMode, debug, preprocessorSteps, preprocessorParameters, logPath)
+        xml = convertCorpus(corpus, outDir, downloadDir, redownload, makeIntermediateFiles, evaluate, processEquiv, analysisMode, debug, preprocessorSteps, preprocessorParameters, logPath)
 #         if logPath != None:
 #             if logPath == "AUTO":
 #                 logFileName = outDir + "/conversion/" + corpus + "-conversion-log.txt"
@@ -119,6 +120,10 @@ def convert(corpora, outDir=None, downloadDir=None, redownload=False, makeInterm
 #         if logPath != None:
 #             Stream.closeLog(logFileName)
         count += 1
+    if len(corpora) == 1:
+        return xml
+    else:
+        return None
     
 #     if bioNLP13AnalysesTempDir != None:
 #         shutil.rmtree(bioNLP13AnalysesTempDir)
@@ -129,10 +134,10 @@ def convertCorpus(corpus, outDir=None, downloadDir=None, redownload=False, makeI
     
     print >> sys.stderr, "==========", "Converting BioNLP Shared Task", corpus, "corpus", "=========="
     assert analysisMode in ("AUTO", "INSERT", "BUILD", "SKIP")
-    if logPath != None:
-        if logPath == "AUTO":
-            logFileName = outDir + "/conversion/" + corpus + "-conversion-log.txt"
-        Stream.openLog(logFileName)
+    if logPath == "AUTO" and outDir != None:
+        logPath = outDir + "/conversion/" + corpus + "-conversion-log.txt"
+    if logPath:
+        Stream.openLog(logPath)
     downloaded = downloadCorpus(corpus, outDir, downloadDir, redownload)
     packageSubPath = None
     if corpus == "BB13T2":
@@ -141,7 +146,7 @@ def convertCorpus(corpus, outDir=None, downloadDir=None, redownload=False, makeI
         packageSubPath = "task_3"
     xml = convertDownloaded(outDir, corpus, downloaded, makeIntermediateFiles, evaluate, processEquiv=processEquiv, analysisMode=analysisMode, packageSubPath=packageSubPath, debug=debug, preprocessorSteps=preprocessorSteps, preprocessorParameters=preprocessorParameters)
     if logPath != None:
-        Stream.closeLog(logFileName)
+        Stream.closeLog(logPath)
     
     if bioNLP13AnalysesTempDir != None:
         shutil.rmtree(bioNLP13AnalysesTempDir)
@@ -225,11 +230,13 @@ def convertDownloaded(outdir, corpus, files, intermediateFiles=False, evaluate=T
         corpusRENtoASCII(xml)
     
     if analysisMode != None:
+        if isinstance(preprocessorSteps, basestring):
+            preprocessorSteps = preprocessorSteps.split(",")
         parseInserted = False
         if analysisMode in ("INSERT", "AUTO"):
-            parseInserted = insertAnalyses(xml, corpus, datasets, files, bigfileName, packageSubPath=packageSubPath)
+            parseInserted = insertAnalyses(xml, corpus, datasets, files, packageSubPath=packageSubPath)
             if parseInserted:
-                xml = Detectors.Preprocessor.Preprocessor(steps=["SPLIT-NAMES", "FIND-HEADS"]).process(xml) # processParses(xml)
+                xml = Detectors.Preprocessor.Preprocessor(steps=["SPLIT-NAMES", "FIND-HEADS"] if preprocessorSteps == None else preprocessorSteps).process(xml) # processParses(xml)
                 if intermediateFiles:
                     print >> sys.stderr, "Writing combined corpus", bigfileName+"-sentences.xml"
                     ETUtils.write(xml, bigfileName+"-sentences.xml")
@@ -274,7 +281,7 @@ def convertDownloaded(outdir, corpus, files, intermediateFiles=False, evaluate=T
     print >> sys.stderr, analyzer.toString().strip()
     return xml
 
-def insertAnalyses(xml, corpus, datasets, files, bigfileName, packageSubPath=None):
+def insertAnalyses(xml, corpus, datasets, files, packageSubPath=None):
     global bioNLP13AnalysesTempDir
     
     if packageSubPath != None:
