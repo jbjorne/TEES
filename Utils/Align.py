@@ -129,6 +129,21 @@ def fastAlign(stringA, stringB):
     i = j = 0
     fa = {"a":"", "b":"", "diff":"", "offsets":[]}
     while i < len(stringA):
+        while i < len(stringA):
+            a = stringA[i]
+            if j < len(stringB):
+                b = stringB[j]
+            else:
+                b = None
+            if a == b or (a.isspace() and (b == None or b.isspace())):
+                fa["a"] += a
+                fa["b"] += b if b != None else "-"
+                fa["diff"] += "|"
+                fa["offsets"] += [j] if b != None else [None]
+            else:
+                break
+            i += 1
+            j += 1
         while i < len(stringA) and stringA[i].isspace():
             i += 1
             fa["b"] += "-"
@@ -138,17 +153,6 @@ def fastAlign(stringA, stringB):
             j += 1
             fa["a"] += "-"
             fa["diff"] += "-"
-        if i < len(stringA):
-            if j >= len(stringB): # out of string B
-                return None
-            if stringA[i] != stringB[j]: # mismatch
-                return None
-            fa["a"] += stringA[i]
-            fa["b"] += stringB[j]
-            fa["diff"] += "|"
-            fa["offsets"] += [j]
-            i += 1
-            j += 1
     return fa
 
 def align(stringA, stringB, weights=None, verbose=False):
