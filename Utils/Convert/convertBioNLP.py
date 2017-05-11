@@ -94,7 +94,7 @@ def convert(corpora, outDir=None, downloadDir=None, redownload=False, makeInterm
 #    global bioNLP13AnalysesTempDir
     
     if outDir == "AUTO":
-        os.path.normpath(Settings.DATAPATH + "/corpora")
+        outDir = os.path.normpath(Settings.DATAPATH + "/corpora")
     elif outDir != None:
         if not os.path.exists(outDir):
             os.makedirs(outDir)
@@ -134,8 +134,11 @@ def convertCorpus(corpus, outDir=None, downloadDir=None, redownload=False, makeI
     
     print >> sys.stderr, "==========", "Converting BioNLP Shared Task", corpus, "corpus", "=========="
     assert analysisMode in ("AUTO", "INSERT", "BUILD", "SKIP")
-    if logPath == "AUTO" and outDir != None:
-        logPath = outDir + "/conversion/" + corpus + "-conversion-log.txt"
+    if logPath == "AUTO":
+        if outDir != None:
+            logPath = outDir + "/conversion/" + corpus + "-conversion-log.txt"
+        else:
+            logPath = None
     if logPath:
         Stream.openLog(logPath)
     downloaded = downloadCorpus(corpus, outDir, downloadDir, redownload)
