@@ -125,16 +125,16 @@ def getAlignment(stringA, stringB, matrix, traversal):
         alignedB = "".join(alignedB)
     return alignedA, alignedB, diff, offsets
 
-def fastAlign(stringA, stringB):
+def fastAlign(target, source):
     i = j = 0
-    fa = {"a":"", "b":"", "diff":"", "offsets":[]}
-    while i < len(stringA):
-        while i < len(stringA):
-            a = stringA[i]
-            b = stringB[j] if j < len(stringB) else None
+    fa = {"target":"", "source":"", "diff":"", "offsets":[]}
+    while i < len(source):
+        while i < len(source):
+            a = source[i]
+            b = target[j] if j < len(target) else None
             if a == b or (a.isspace() and (b == None or b.isspace())):
-                fa["a"] += a
-                fa["b"] += b if b != None else "-"
+                fa["source"] += a
+                fa["target"] += b if b != None else "-"
                 fa["diff"] += "|"
                 fa["offsets"] += [j] if b != None else [None]
             else:
@@ -143,19 +143,17 @@ def fastAlign(stringA, stringB):
                 break
             i += 1
             j += 1
-        while i < len(stringA) and stringA[i].isspace():
-            fa["a"] += stringA[i]
-            fa["b"] += "-"
+        while i < len(source) and source[i].isspace():
+            fa["source"] += source[i]
+            fa["target"] += "-"
             fa["diff"] += "-"
             fa["offsets"] += [None]
             i += 1
-        while j < len(stringB) and stringB[j].isspace():
-            fa["a"] += "-"
-            fa["b"] += stringB[j]
+        while j < len(target) and target[j].isspace():
+            fa["source"] += "-"
+            fa["target"] += target[j]
             fa["diff"] += "-"
             j += 1
-    if fa != None:
-        assert len(stringA) == len(fa["offsets"])
     return fa
 
 def align(stringA, stringB, weights=None, verbose=False):
@@ -171,8 +169,8 @@ def align(stringA, stringB, weights=None, verbose=False):
         fa = fastAlign(stringA, stringB)
         if fa != None:
             mode = "fast"          
-            alignedA = fa["a"]
-            alignedB = fa["b"]
+            alignedA = fa["target"]
+            alignedB = fa["source"]
             diff = fa["diff"]
             offsets = fa["offsets"]
     if mode == None:
