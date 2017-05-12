@@ -11,26 +11,40 @@ import re
 
 RETYPE = type(re.compile('dummy'))
     
-def mapAttributes(parent, elementName, attributes, counts, compiled=None):
+def mapAttributes(parent, elementName, attributes, counts, compiled=None, masks=None):
     if compiled == None:
         compiled = {}
+    if masks == None:
+        masks = {}
     for element in parent.getchildren():
         if element.tag == elementName:
             for name in attributes.keys():
                 values = attributes[name]
                 currentValue = element.get(name)
                 for valuePattern in values.keys():
-                    if valuePattern not in compiled:
-                        compiled[valuePattern] = re.compile(valuePattern)
-                    if compiled[valuePattern].match(currentValue) != None:
-                        newValue = values[valuePattern]
-                        if newValue == None:
-                            del element.attrib[name]
-                            counts["del:" + elementName + ":" + name + ":" + str(currentValue)] += 1
-                        else:
-                            element.set(name, newValue)
-                            counts["map:" + elementName + ":" + name + ":" + str(currentValue) + "->" + str(newValue)] += 1
-        mapAttributes(element, elementName, attributes, counts, compiled)
+                    if valuePattern == "mask": # mask mapping
+                        assert len(values) == 1
+                        if element.tag not in masks:
+                            masks[element.tag] = {}
+                        if name not in masks[element.tag]:
+                            masks[element.tag][name] = {}
+                        mask = masks[element.tag][name]
+                        if currentValue not in mask:
+                            mask[currentValue] = str(values[valuePattern]) + str(len(mask))
+                        element.set(name, mask[currentValue])
+                        counts["mask:" + elementName + ":" + name + ":" + str(currentValue) + "->" + str(mask[currentValue])] += 1
+                    else: # regular mapping
+                        if valuePattern not in compiled:
+                            compiled[valuePattern] = re.compile(valuePattern)
+                        if compiled[valuePattern].match(currentValue) != None:
+                            newValue = values[valuePattern]
+                            if newValue == None:
+                                del element.attrib[name]
+                                counts["del:" + elementName + ":" + name + ":" + str(currentValue)] += 1
+                            else:
+                                element.set(name, newValue)
+                                counts["map:" + elementName + ":" + name + ":" + str(currentValue) + "->" + str(newValue)] += 1
+        mapAttributes(element, elementName, attributes, counts, compiled, masks)
 
 def processCorpus(input, output, rules):
     if rules == None:
@@ -62,6 +76,7 @@ if __name__=="__main__":
     optparser.add_option("-i", "--input", default=None, dest="input", help="Corpus in interaction xml format", metavar="FILE")
     optparser.add_option("-o", "--output", default=None, dest="output", help="Output file in interaction xml format.")
     optparser.add_option("-r", "--rules", default=None, dest="rules", help="dictionary of python dictionaries with attribute:value pairs.")    
+    optparser.add_option("-m", "--mask", default=False, action="store_true", dest="mask", help="Mask attributes")    
     (options, args) = optparser.parse_args()
     
     if options.input == None:
