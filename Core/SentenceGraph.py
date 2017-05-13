@@ -475,22 +475,21 @@ class SentenceGraph:
             outEdges = self.dependencyGraph.getOutEdges(token)
             for outEdge in outEdges:
                 counts["out-to-candidate" if outEdge[1] in candidateTokenSet else "out-to-external"] += 1
+            tokenScore.append(1 if len(inEdges) + len(outEdges) > 0 else 0) # prefer tokens connected to the parse
             tokenScore.append(1 if counts["in-from-external"] > 0 else 0) # prefer tokens with incoming external edges
             tokenScore.append(1 if counts["out-to-candidate"] > 0 else 0) # prefer tokens with outgoing edges to other candidates
             tokenScore.append(1 if re.search('[a-zA-Z]', token.get("text")) != None else 0) # prefer tokens with letters
             tokenScore.append(index) # if everything else is equal, prefer the rightmost token
             tokenScore.append(token)
             index += 1
+            tokenScores.append(tokenScore)
         tokenScores.sort(reverse=True)
-        prevScore = tokenScores[0][:-1]
         rank = 0
         for tokenScore in tokenScores:
-            score = tokenScore[:-1]
-            if score != prevScore:
-                rank += 1
             tokenScore[-1].set("headRank", str(rank))
-            tokenScore[-1].set("headScore", str(",".join(score)))
-        return sorted(tokenScores[-1])
+            tokenScore[-1].set("headScore", str(",".join([str(x) for x in tokenScore[:-1]])))
+            rank += 1
+        return tokenScores[0][-1]
 
 #     def findHeadTokenOld(self, candidateTokens):
 #         """

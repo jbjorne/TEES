@@ -48,12 +48,12 @@ def findHeads(input, parse, tokenization=None, output=None, removeExisting=True,
         print >> sys.stderr, "Determining head offsets using parse", parse, "and tokenization", tokenization
         corpusElements = SentenceGraph.loadCorpus(xml, parse, tokenization)
         
-        # Make sure every parse gets head scores
-        for sentence in corpusElements.sentences:
-            if sentence.sentenceGraph == None:
-                continue
-            if sentence.sentenceGraph.tokenHeadScores == None:
-                sentence.sentenceGraph.getTokenHeadScores()
+#         # Make sure every parse gets head scores
+#         for sentence in corpusElements.sentences:
+#             if sentence.sentenceGraph == None:
+#                 continue
+#             if sentence.sentenceGraph.tokenHeadScores == None:
+#                 sentence.sentenceGraph.getTokenHeadScores()
         
         if output != None:
             print >> sys.stderr, "Writing output to", output
