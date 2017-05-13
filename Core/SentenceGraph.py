@@ -462,6 +462,26 @@ class SentenceGraph:
 #                self.entityHintsByToken[token].append(entityElement)
 
     def findHeadToken(self, candidateTokens):
+        candidateTokenSet = set(candidateTokens)
+        tokenScores = []
+        index = 0
+        for token in candidateTokens:
+            tokenScore = []
+            counts = {"in-from-candidate":0, "out-to-candidate":0, "in-from-external":0, "out-to-external":0}
+            inEdges = self.dependencyGraph.getInEdges(token)
+            for inEdge in inEdges:
+                counts["in-from-candidate" if inEdge[0] in candidateTokenSet else "in-from-external"] += 1
+            outEdges = self.dependencyGraph.getOutEdges(token)
+            for outEdge in outEdges:
+                counts["out-to-candidate" if outEdge[1] in candidateTokenSet else "out-to-external"] += 1
+            tokenScore.append(1 if counts["in-from-external"] > 0 else 0)
+            tokenScore.append(1 if counts["out-to-candidate"] > 0 else 0)
+            tokenScore.append(index)
+            tokenScore.append(token)
+            index += 1
+        return sorted(tokenScores[-1])
+
+    def findHeadTokenOld(self, candidateTokens):
         """
         Select the candidate token that is closest to the root of the subtree of the depencdeny parse
         to which the candidate tokens belong to. See getTokenHeadScores method for the algorithm.
