@@ -461,6 +461,9 @@ class SentenceGraph:
 #                if not self.entityHintsByToken.has_key(token):
 #                    self.entityHintsByToken[token] = []
 #                self.entityHintsByToken[token].append(entityElement)
+    
+#     def findHeadToken(self, candidateTokens):
+#         return sorted([(int(x.get("headScore")), x) for x in candidateTokens])[0][-1]
 
     def findHeadToken(self, candidateTokens):
         candidateTokenSet = set(candidateTokens)
@@ -476,11 +479,13 @@ class SentenceGraph:
             for outEdge in outEdges:
                 counts["out-to-candidate" if outEdge[1] in candidateTokenSet else "out-to-external"] += 1
             tokenScore.append(1 if len(inEdges) + len(outEdges) > 0 else 0) # prefer tokens connected to the parse
-            tokenScore.append(counts["out-to-external"]) # prefer tokens with outgoing external edges
-            tokenScore.append(-counts["in-from-candidate"]) # prefer tokens without incoming edges from other candidates
-            tokenScore.append(counts["out-to-candidate"]) # prefer tokens with outgoing edges to other candidates
-            tokenScore.append(counts["in-from-external"]) # prefer tokens with incoming external edges
-            tokenScore.append(1 if re.search('[a-zA-Z]', token.get("text")) != None else 0) # prefer tokens with letters
+            tokenScore.append(counts["out-to-candidate"])
+#             tokenScore.append(len(outEdges))
+#             #tokenScore.append(counts["out-to-external"]) # prefer tokens with outgoing external edges
+#             #tokenScore.append(-counts["in-from-candidate"]) # prefer tokens without incoming edges from other candidates
+#             #tokenScore.append(counts["out-to-candidate"]) # prefer tokens with outgoing edges to other candidates
+#             #tokenScore.append(counts["in-from-external"]) # prefer tokens with incoming external edges
+#             tokenScore.append(1 if re.search('[a-zA-Z]', token.get("text")) != None else 0) # prefer tokens with letters
             tokenScore.append(index) # if everything else is equal, prefer the rightmost token
             tokenScore.append(token) # add the token itself as the last element of the score list so it will get sorted along with the score
             index += 1
@@ -494,104 +499,104 @@ class SentenceGraph:
             rank += 1
         return tokenScores[0][-1]
 
-#     def findHeadTokenOld(self, candidateTokens):
-#         """
-#         Select the candidate token that is closest to the root of the subtree of the depencdeny parse
-#         to which the candidate tokens belong to. See getTokenHeadScores method for the algorithm.
-#         
-#         @param candidateTokens: the list of syntactic tokens from which the head token is selected
-#         @type candidateTokens: list of cElementTree.Element objects
-#         """
-#         tokenHeadScores = self.getTokenHeadScores()
-#         
-#         #if debug:
-#         #    print "Tokens:", candidateTokenIds
-#         #    print "Scores:", tokenScores
-#         
-#         if len(candidateTokens) == 0:
-#             return None
-#         
-#         highestScore = -9999999
-#         bestTokens = []
-#         for token in candidateTokens:
-#             if tokenHeadScores[token] > highestScore:
-#                 highestScore = tokenHeadScores[token]
-#         for token in candidateTokens:
-#             if tokenHeadScores[token] == highestScore:
-#                 bestTokens.append(token)
-# #        if debug:
-# #            print "tokens:"
-# #            for i in range(len(candidateTokenIds)):
-# #                print "[", candidateTokenIds[i], self.tokensById[candidateTokenIds[i]].text, tokenHeadScores[candidateTokenIds[i]], "]"
-#         return bestTokens[-1]
-# 
-#     def getTokenHeadScores(self):
-#         """
-#         A head token is chosen using a heuristic that prefers tokens closer to the
-#         root of the dependency parse. In a list of candidate tokens, the one with
-#         the highest score is the head token. The return value of this method
-#         is a dictionary that maps token elements to their scores.
-#         """
-#         # Token head scores are cached the first time this function is called
-#         if self.tokenHeadScores != None:
-#             return self.tokenHeadScores
-#         else:
-#             self.tokenHeadScores = {}
-#         
-#         # Give all tokens initial scores
-#         tokenById = {}
-#         for token in self.tokens:
-#             tokenId = token.get("id")
-#             assert tokenId not in tokenById
-#             tokenById[tokenId] = token
-#             self.tokenHeadScores[token] = 0 # initialize score as zero (unconnected token)
-#             for dependency in self.dependencies:
-#                 if dependency.get("t1") == token.get("id") or dependency.get("t2") == token.get("id"):
-#                     self.tokenHeadScores[token] = 1 # token is connected by a dependency
-#                     break               
-#         
-#         # Give a low score for tokens that clearly can't be head and are probably produced by hyphen-splitter
-#         for token in self.tokens:
-#             tokenText = token.get("text")
-#             if tokenText == "\\" or tokenText == "/" or tokenText == "-":
-#                 self.tokenHeadScores[token] = -1
-#         
-#         # Loop over all dependencies and increase the scores of all governor tokens
-#         # until each governor token has a higher score than its dependent token.
-#         # Some dependencies might form a loop so a list is used to define those
-#         # dependency types used in determining head scores.
-#         depTypesToInclude = ["prep", "nn", "det", "hyphen", "num", "amod", "nmod", "appos", "measure", "dep", "partmod"]
-#         #depTypesToRemoveReverse = ["A/AN"]
-#         modifiedScores = True
-#         loopCount = 0 # loopcount for devel set approx. 2-4
-#         while modifiedScores == True: # loop until the scores no longer change
-#             if loopCount > 20: # survive loops
-#                 print >> sys.stderr, "Warning, possible loop in parse for sentence", self.getSentenceId()
-#                 break
-#             modifiedScores = False
-# #            for token1 in self.tokens:
-# #                for token2 in self.tokens: # for each combination of tokens...
-#             for dep in self.dependencies: # ... check each dependency
-#                 token1 = tokenById[dep.get("t1")]
-#                 token2 = tokenById[dep.get("t2")]
-#                 if dep.get("type") in depTypesToInclude:
-#                     # The governor token of the dependency must have a higher score
-#                     # than the dependent token.
-#                     if self.tokenHeadScores[token1] <= self.tokenHeadScores[token2]:
-#                         self.tokenHeadScores[token1] = self.tokenHeadScores[token2] + 1
-#                         modifiedScores = True
-# #                        elif dep.attrib["t1"] == tokenI.attrib["id"] and dep.attrib["t2"] == tokenJ.attrib["id"] and (dep.attrib["type"] in depTypesToRemoveReverse):
-# #                            #tokenScores[i] -= 1
-# #                            if self.tokenHeadScores[tokenJ] <= self.tokenHeadScores[tokenI]:
-# #                                self.tokenHeadScores[tokenJ] = self.tokenHeadScores[tokenI] + 1
-# #                                modifiedScores = True
-#             loopCount += 1
-#         
-#         # Add scores to tokens
-#         for token in self.tokens:
-#             token.set("headScore", str(self.tokenHeadScores[token]))
-#             
-#         return self.tokenHeadScores
+    def findHeadTokenOld(self, candidateTokens):
+        """
+        Select the candidate token that is closest to the root of the subtree of the depencdeny parse
+        to which the candidate tokens belong to. See getTokenHeadScores method for the algorithm.
+        
+        @param candidateTokens: the list of syntactic tokens from which the head token is selected
+        @type candidateTokens: list of cElementTree.Element objects
+        """
+        tokenHeadScores = self.getTokenHeadScores()
+        
+        #if debug:
+        #    print "Tokens:", candidateTokenIds
+        #    print "Scores:", tokenScores
+        
+        if len(candidateTokens) == 0:
+            return None
+        
+        highestScore = -9999999
+        bestTokens = []
+        for token in candidateTokens:
+            if tokenHeadScores[token] > highestScore:
+                highestScore = tokenHeadScores[token]
+        for token in candidateTokens:
+            if tokenHeadScores[token] == highestScore:
+                bestTokens.append(token)
+#        if debug:
+#            print "tokens:"
+#            for i in range(len(candidateTokenIds)):
+#                print "[", candidateTokenIds[i], self.tokensById[candidateTokenIds[i]].text, tokenHeadScores[candidateTokenIds[i]], "]"
+        return bestTokens[-1]
+
+    def getTokenHeadScores(self):
+        """
+        A head token is chosen using a heuristic that prefers tokens closer to the
+        root of the dependency parse. In a list of candidate tokens, the one with
+        the highest score is the head token. The return value of this method
+        is a dictionary that maps token elements to their scores.
+        """
+        # Token head scores are cached the first time this function is called
+        if self.tokenHeadScores != None:
+            return self.tokenHeadScores
+        else:
+            self.tokenHeadScores = {}
+        
+        # Give all tokens initial scores
+        tokenById = {}
+        for token in self.tokens:
+            tokenId = token.get("id")
+            assert tokenId not in tokenById
+            tokenById[tokenId] = token
+            self.tokenHeadScores[token] = 0 # initialize score as zero (unconnected token)
+            for dependency in self.dependencies:
+                if dependency.get("t1") == token.get("id") or dependency.get("t2") == token.get("id"):
+                    self.tokenHeadScores[token] = 1 # token is connected by a dependency
+                    break               
+        
+        # Give a low score for tokens that clearly can't be head and are probably produced by hyphen-splitter
+        for token in self.tokens:
+            tokenText = token.get("text")
+            if tokenText == "\\" or tokenText == "/" or tokenText == "-":
+                self.tokenHeadScores[token] = -1
+        
+        # Loop over all dependencies and increase the scores of all governor tokens
+        # until each governor token has a higher score than its dependent token.
+        # Some dependencies might form a loop so a list is used to define those
+        # dependency types used in determining head scores.
+        #depTypesToInclude = ["prep", "nn", "det", "hyphen", "num", "amod", "nmod", "appos", "measure", "dep", "partmod"]
+        #depTypesToRemoveReverse = ["A/AN"]
+        modifiedScores = True
+        loopCount = 0 # loopcount for devel set approx. 2-4
+        while modifiedScores == True: # loop until the scores no longer change
+            if loopCount > 20: # survive loops
+                #print >> sys.stderr, "Warning, possible loop in parse for sentence", self.getSentenceId()
+                break
+            modifiedScores = False
+#            for token1 in self.tokens:
+#                for token2 in self.tokens: # for each combination of tokens...
+            for dep in self.dependencies: # ... check each dependency
+                token1 = tokenById[dep.get("t1")]
+                token2 = tokenById[dep.get("t2")]
+                #if dep.get("type") in depTypesToInclude:
+                # The governor token of the dependency must have a higher score
+                # than the dependent token.
+                if self.tokenHeadScores[token1] <= self.tokenHeadScores[token2]:
+                    self.tokenHeadScores[token1] = self.tokenHeadScores[token2] + 1
+                    modifiedScores = True
+#                        elif dep.attrib["t1"] == tokenI.attrib["id"] and dep.attrib["t2"] == tokenJ.attrib["id"] and (dep.attrib["type"] in depTypesToRemoveReverse):
+#                            #tokenScores[i] -= 1
+#                            if self.tokenHeadScores[tokenJ] <= self.tokenHeadScores[tokenI]:
+#                                self.tokenHeadScores[tokenJ] = self.tokenHeadScores[tokenI] + 1
+#                                modifiedScores = True
+            loopCount += 1
+        
+        # Add scores to tokens
+        for token in self.tokens:
+            token.set("headScore", str(self.tokenHeadScores[token]))
+            
+        return self.tokenHeadScores
 
     def _markNamedEntities(self):
         """
