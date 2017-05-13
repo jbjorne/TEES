@@ -467,7 +467,7 @@ class SentenceGraph:
         tokenScores = []
         index = 0
         for token in candidateTokens:
-            tokenScore = []
+            tokenScore = [] # a hierarchical score list
             counts = {"in-from-candidate":0, "out-to-candidate":0, "in-from-external":0, "out-to-external":0}
             inEdges = self.dependencyGraph.getInEdges(token)
             for inEdge in inEdges:
@@ -482,7 +482,7 @@ class SentenceGraph:
             tokenScore.append(counts["in-from-external"]) # prefer tokens with incoming external edges
             tokenScore.append(1 if re.search('[a-zA-Z]', token.get("text")) != None else 0) # prefer tokens with letters
             tokenScore.append(index) # if everything else is equal, prefer the rightmost token
-            tokenScore.append(token)
+            tokenScore.append(token) # add the token itself as the last element of the score list so it will get sorted along with the score
             index += 1
             tokenScores.append(tokenScore)
             #token.set("headCounts", str(counts))
