@@ -476,13 +476,16 @@ class SentenceGraph:
             for outEdge in outEdges:
                 counts["out-to-candidate" if outEdge[1] in candidateTokenSet else "out-to-external"] += 1
             tokenScore.append(1 if len(inEdges) + len(outEdges) > 0 else 0) # prefer tokens connected to the parse
-            tokenScore.append(1 if counts["in-from-external"] > 0 else 0) # prefer tokens with incoming external edges
-            tokenScore.append(1 if counts["out-to-candidate"] > 0 else 0) # prefer tokens with outgoing edges to other candidates
+            tokenScore.append(counts["out-to-external"]) # prefer tokens with outgoing external edges
+            tokenScore.append(-counts["in-from-candidate"]) # prefer tokens without incoming edges from other candidates
+            tokenScore.append(counts["out-to-candidate"]) # prefer tokens with outgoing edges to other candidates
+            tokenScore.append(counts["in-from-external"]) # prefer tokens with incoming external edges
             tokenScore.append(1 if re.search('[a-zA-Z]', token.get("text")) != None else 0) # prefer tokens with letters
             tokenScore.append(index) # if everything else is equal, prefer the rightmost token
             tokenScore.append(token)
             index += 1
             tokenScores.append(tokenScore)
+            #token.set("headCounts", str(counts))
         tokenScores.sort(reverse=True)
         rank = 0
         for tokenScore in tokenScores:
