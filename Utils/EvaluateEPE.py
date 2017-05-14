@@ -7,11 +7,17 @@ from collections import defaultdict
 from train import train
 
 def combineParses(inDir, outDir, subDirectories):
-    print >> sys.stderr, "Collecting parses from", inDir
+    print >> sys.stderr, "Parse input directory:", inDir
     counts = defaultdict(int)
     paths = []
     if subDirectories == None:
         paths.append(inDir)
+    elif subDirectories == "*":
+        paths.append(inDir)
+        for filename in os.listdir(inDir):
+            fullPath = os.path.join(inDir, filename)
+            if os.path.isdir(fullPath):
+                paths.append(fullPath)
     else:
         if isinstance(subDirectories, basestring):
             subDirectories = subDirectories.split(",")
@@ -20,6 +26,7 @@ def combineParses(inDir, outDir, subDirectories):
     if os.path.exists(outDir):
         shutil.rmtree(outDir)
     os.makedirs(outDir)
+    print >> sys.stderr, "Collecting parses from directories:", paths
     for path in paths:
         for filename in os.listdir(path):
             dst = os.path.join(outDir, filename)
@@ -39,7 +46,7 @@ def ask(question):
         else:
             sys.stdout.write("Please respond with 'yes' or 'no' (or 'y' or 'n').\n")
 
-def run(inPath, outPath, subDirs, model, connection, numJobs, clear, debug, force=False, training=True, preprocessorSteps=None, preprocessorParams=None):
+def run(inPath, outPath, subDirs, model, connection, numJobs, useTestSet=False, clear=True, debug=False, force=False, training=True, preprocessorSteps=None, preprocessorParams=None):
     # Remove existing work directory, if requested to do so
     if os.path.exists(outPath) and clear:
         if force or ask("Output directory '" + outPath + "' exists, remove?"):
@@ -66,7 +73,8 @@ def run(inPath, outPath, subDirs, model, connection, numJobs, clear, debug, forc
         #preprocessor = Preprocessor(["MERGE-SETS", "REMOVE-ANALYSES", "REMOVE-HEADS", "MERGE-SENTENCES", "IMPORT-PARSE", "VALIDATE", "DIVIDE-SETS"])
         preprocessor.setArgForAllSteps("debug", options.debug)
         preprocessor.stepArgs("IMPORT-PARSE")["parseDir"] = parseDir
-        preprocessor.process(model + ".+\.xml", os.path.join(corpusDir, model), preprocessorParams, logPath="AUTO")
+        modelPattern = model + ".+\.xml" if useTestSet else model + "-devel\.xml|" + model + "-train\.xml"
+        preprocessor.process(modelPattern, os.path.join(corpusDir, model), preprocessorParams, logPath="AUTO")
     else:
         print >> sys.stderr, "Using imported parses from", corpusDir
     
@@ -80,8 +88,9 @@ if __name__== "__main__":
     optparser = OptionParser(description="Train a TEES model using EPE parses")
     optparser.add_option("-i", "--input", default=None, help="Input directory")
     optparser.add_option("-o", "--output", default=None, help="Output directory")
-    optparser.add_option("-s", "--subdirs", default=None, help="Input directory subdirectories (optional)")
+    optparser.add_option("-s", "--subdirs", default="*", help="Input directory subdirectories (optional)")
     optparser.add_option("-n", "--numJobs", default=1, type=int, help="Number of parallel SVM processes to use while training")
+    optparser.add_option("-t", "--testSet", default=False, action="store_true", help="Do only the preprocessing")
     optparser.add_option("--connection", default="connection=Unix:jobLimit=$JOBS", help="TEES local or remote training settings")
     optparser.add_option("--model", default="GE09", help="TEES model")
     optparser.add_option("--noClear", default=False, action="store_true", help="Continue a previous run")
@@ -92,5 +101,5 @@ if __name__== "__main__":
     optparser.add_option("--noTraining", default=False, action="store_true", help="Do only the preprocessing")
     (options, args) = optparser.parse_args()
     
-    run(options.input, options.output, options.subdirs, options.model, options.connection, options.numJobs, 
+    run(options.input, options.output, options.subdirs, options.model, options.connection, options.numJobs, options.testSet, 
         not options.noClear, options.debug, options.force, training=not options.noTraining, preprocessorSteps=options.preprocessorSteps.split(","), preprocessorParams=options.preprocessorParams)
