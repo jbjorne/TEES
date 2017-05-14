@@ -398,11 +398,11 @@ class SentenceGraph:
 #                         #print "Head:", selHead.get("text"), "/", entityElement.get("text"), entityElement.get("headOffset"), selHead.get("charOffset")
 #                         entityElement.set("headOffset", selHead.get("charOffset"))
 #                         break
-            elif "egulation" in entityElement.get("type"):
-                self.getTokenHeadScores()
-                regulationHeads = [x for x in headTokens if self.tokenHeadScores[x] >= 1]
-                if len(regulationHeads) > 0:
-                    selHead = regulationHeads[-1]
+#             elif "egulation" in entityElement.get("type"):
+#                 self.getTokenHeadScores()
+#                 regulationHeads = [x for x in headTokens if self.tokenHeadScores[x] >= 1]
+#                 if len(regulationHeads) > 0:
+#                     selHead = regulationHeads[-1]
             if selHead == None: 
                 token = self.findHeadToken(headTokens)
             else:
@@ -420,7 +420,7 @@ class SentenceGraph:
         else:
             print >> sys.stderr, "Warning, no tokens for entity", entityElement.get("id")
         return token
-
+    
 #    def mapEntityHints(self, verbose=False):
 #        """
 #        Determine the head token for a named entity or trigger. The head token is the token closest
