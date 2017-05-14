@@ -73,7 +73,7 @@ def run(inPath, outPath, subDirs, model, connection, numJobs, clear, debug, forc
     # Train the model
     if training:
         connection = connection.replace("$JOBS", str(numJobs))
-        train(outPath, model, parse="McCC", debug=debug, connection=connection, corpusDir=corpusDir)
+        train(outPath, model, parse="McCC", debug=debug, connection=connection, corpusDir=corpusDir) #classifierParams={"examples":None, "trigger":"150000", "recall":None, "edge":"7500", "unmerging":"2500", "modifiers":"10000"})
 
 if __name__== "__main__":
     from optparse import OptionParser

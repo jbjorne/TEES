@@ -387,11 +387,22 @@ class SentenceGraph:
             if entityElement.get("type") == "Binding":
                 for t in headTokens:
                     compText = t.get("text").lower()
-                    if compText.find("bind") != -1 or compText.find("complex") != -1:
-                        selHead = t
-                        #print "Head:", selHead.get("text"), "/", entityElement.get("text"), entityElement.get("headOffset"), selHead.get("charOffset")
-                        entityElement.set("headOffset", selHead.get("charOffset"))
-                        break
+                    for bindWord in ("bind", "complex", "homo", "hetero", "dimer"):
+                        if bindWord in compText:
+                            selHead = t
+                            break
+                    if selHead != None:
+                        break    
+#                     if compText.find("bind") != -1 or compText.find("complex") != -1:
+#                         selHead = t
+#                         #print "Head:", selHead.get("text"), "/", entityElement.get("text"), entityElement.get("headOffset"), selHead.get("charOffset")
+#                         entityElement.set("headOffset", selHead.get("charOffset"))
+#                         break
+            elif "egulation" in entityElement.get("type"):
+                self.getTokenHeadScores()
+                regulationHeads = [x for x in headTokens if self.tokenHeadScores[x] >= 1]
+                if len(regulationHeads) > 0:
+                    selHead = regulationHeads[-1]
             if selHead == None: 
                 token = self.findHeadToken(headTokens)
             else:
@@ -465,41 +476,42 @@ class SentenceGraph:
 #     def findHeadToken(self, candidateTokens):
 #         return sorted([(int(x.get("headScore")), x) for x in candidateTokens])[0][-1]
 
-    def findHeadToken(self, candidateTokens):
-        candidateTokenSet = set(candidateTokens)
-        tokenScores = []
-        index = 0
-        for token in candidateTokens:
-            tokenScore = [] # a hierarchical score list
-            counts = {"in-from-candidate":0, "out-to-candidate":0, "in-from-external":0, "out-to-external":0}
-            inEdges = self.dependencyGraph.getInEdges(token)
-            for inEdge in inEdges:
-                counts["in-from-candidate" if inEdge[0] in candidateTokenSet else "in-from-external"] += 1
-            outEdges = self.dependencyGraph.getOutEdges(token)
-            for outEdge in outEdges:
-                counts["out-to-candidate" if outEdge[1] in candidateTokenSet else "out-to-external"] += 1
-            tokenScore.append(1 if len(inEdges) + len(outEdges) > 0 else 0) # prefer tokens connected to the parse
-            tokenScore.append(counts["out-to-candidate"])
-#             tokenScore.append(len(outEdges))
-#             #tokenScore.append(counts["out-to-external"]) # prefer tokens with outgoing external edges
-#             #tokenScore.append(-counts["in-from-candidate"]) # prefer tokens without incoming edges from other candidates
-#             #tokenScore.append(counts["out-to-candidate"]) # prefer tokens with outgoing edges to other candidates
-#             #tokenScore.append(counts["in-from-external"]) # prefer tokens with incoming external edges
-#             tokenScore.append(1 if re.search('[a-zA-Z]', token.get("text")) != None else 0) # prefer tokens with letters
-            tokenScore.append(index) # if everything else is equal, prefer the rightmost token
-            tokenScore.append(token) # add the token itself as the last element of the score list so it will get sorted along with the score
-            index += 1
-            tokenScores.append(tokenScore)
-            #token.set("headCounts", str(counts))
-        tokenScores.sort(reverse=True)
-        rank = 0
-        for tokenScore in tokenScores:
-            tokenScore[-1].set("headRank", str(rank))
-            tokenScore[-1].set("headScore", str(",".join([str(x) for x in tokenScore[:-1]])))
-            rank += 1
-        return tokenScores[0][-1]
+#     def findHeadToken(self, candidateTokens):
+#         candidateTokenSet = set(candidateTokens)
+#         tokenScores = []
+#         index = 0
+#         for token in candidateTokens:
+#             tokenScore = [] # a hierarchical score list
+#             counts = {"in-from-candidate":0, "out-to-candidate":0, "in-from-external":0, "out-to-external":0}
+#             inEdges = self.dependencyGraph.getInEdges(token)
+#             for inEdge in inEdges:
+#                 counts["in-from-candidate" if inEdge[0] in candidateTokenSet else "in-from-external"] += 1
+#             outEdges = self.dependencyGraph.getOutEdges(token)
+#             for outEdge in outEdges:
+#                 counts["out-to-candidate" if outEdge[1] in candidateTokenSet else "out-to-external"] += 1
+#             tokenScore.append(1 if len(inEdges) + len(outEdges) > 0 else 0) # prefer tokens connected to the parse
+#             tokenScore.append(counts["out-to-candidate"])
+#             tokenScore.append(-counts["in-from-external"])
+# #             tokenScore.append(len(outEdges))
+# #             #tokenScore.append(counts["out-to-external"]) # prefer tokens with outgoing external edges
+# #             #tokenScore.append(-counts["in-from-candidate"]) # prefer tokens without incoming edges from other candidates
+# #             #tokenScore.append(counts["out-to-candidate"]) # prefer tokens with outgoing edges to other candidates
+# #             #tokenScore.append(counts["in-from-external"]) # prefer tokens with incoming external edges
+# #             tokenScore.append(1 if re.search('[a-zA-Z]', token.get("text")) != None else 0) # prefer tokens with letters
+#             tokenScore.append(index) # if everything else is equal, prefer the rightmost token
+#             tokenScore.append(token) # add the token itself as the last element of the score list so it will get sorted along with the score
+#             index += 1
+#             tokenScores.append(tokenScore)
+#             #token.set("headCounts", str(counts))
+#         tokenScores.sort(reverse=True)
+#         rank = 0
+#         for tokenScore in tokenScores:
+#             tokenScore[-1].set("headRank", str(rank))
+#             tokenScore[-1].set("headScore", str(",".join([str(x) for x in tokenScore[:-1]])))
+#             rank += 1
+#         return tokenScores[0][-1]
 
-    def findHeadTokenOld(self, candidateTokens):
+    def findHeadToken(self, candidateTokens):
         """
         Select the candidate token that is closest to the root of the subtree of the depencdeny parse
         to which the candidate tokens belong to. See getTokenHeadScores method for the algorithm.
@@ -529,7 +541,7 @@ class SentenceGraph:
 #            for i in range(len(candidateTokenIds)):
 #                print "[", candidateTokenIds[i], self.tokensById[candidateTokenIds[i]].text, tokenHeadScores[candidateTokenIds[i]], "]"
         return bestTokens[-1]
-
+    
     def getTokenHeadScores(self):
         """
         A head token is chosen using a heuristic that prefers tokens closer to the
