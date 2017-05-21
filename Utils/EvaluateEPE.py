@@ -31,9 +31,11 @@ def combineParses(inDir, outDir, subDirectories):
         for filename in os.listdir(path):
             dst = os.path.join(outDir, filename)
             assert not os.path.exists(dst)
-            shutil.copy2(os.path.join(path, filename), dst)
-            counts[path] += 1
-    print >> sys.stderr, dict(counts)
+            filePath = os.path.join(path, filename)
+            if os.path.isfile(filePath) and filePath.endswith(".epe"):
+                shutil.copy2(os.path.join(path, filename), dst)
+                counts[path] += 1
+    print >> sys.stderr, "Found epe parse files:", dict(counts)
     return outDir    
 
 def ask(question):
@@ -46,7 +48,7 @@ def ask(question):
         else:
             sys.stdout.write("Please respond with 'yes' or 'no' (or 'y' or 'n').\n")
 
-def run(inPath, outPath, subDirs, model, connection, numJobs, useTestSet=False, clear=True, debug=False, force=False, training=True, preprocessorSteps=None, preprocessorParams=None):
+def run(inPath, outPath, subDirs, model, connection, numJobs, useTestSet=False, clear=True, debug=False, force=False, training=True, preprocessorSteps=None, preprocessorParams=None, subset=None):
     # Remove existing work directory, if requested to do so
     if os.path.exists(outPath) and clear:
         if force or ask("Output directory '" + outPath + "' exists, remove?"):
@@ -81,7 +83,7 @@ def run(inPath, outPath, subDirs, model, connection, numJobs, useTestSet=False, 
     # Train the model
     if training:
         connection = connection.replace("$JOBS", str(numJobs))
-        train(outPath, model, parse="McCC", debug=debug, connection=connection, corpusDir=corpusDir) #classifierParams={"examples":None, "trigger":"150000", "recall":None, "edge":"7500", "unmerging":"2500", "modifiers":"10000"})
+        train(outPath, model, parse="McCC", debug=debug, connection=connection, corpusDir=corpusDir, subset=subset) #classifierParams={"examples":None, "trigger":"150000", "recall":None, "edge":"7500", "unmerging":"2500", "modifiers":"10000"})
 
 if __name__== "__main__":
     from optparse import OptionParser
@@ -98,8 +100,9 @@ if __name__== "__main__":
     optparser.add_option("-f", "--force", default=False, action="store_true", help="Force removal of existing output directory")
     optparser.add_option("--preprocessorSteps", default="MERGE-SETS,REMOVE-ANALYSES,REMOVE-HEADS,MERGE-SENTENCES,IMPORT-PARSE,SPLIT-NAMES,FIND-HEADS,DIVIDE-SETS", help="List of preprocessing steps")
     optparser.add_option("--preprocessorParams", default=None, help="List of preprocessing steps")
+    optparser.add_option("--subset", default=None, dest="subset", help="")
     optparser.add_option("--noTraining", default=False, action="store_true", help="Do only the preprocessing")
     (options, args) = optparser.parse_args()
     
     run(options.input, options.output, options.subdirs, options.model, options.connection, options.numJobs, options.testSet, 
-        not options.noClear, options.debug, options.force, training=not options.noTraining, preprocessorSteps=options.preprocessorSteps.split(","), preprocessorParams=options.preprocessorParams)
+        not options.noClear, options.debug, options.force, training=not options.noTraining, preprocessorSteps=options.preprocessorSteps.split(","), preprocessorParams=options.preprocessorParams, subset=options.subset)
