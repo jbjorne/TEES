@@ -9,34 +9,40 @@ def getLines(lines, boundaries):
                 subset = []
             elif end in line:
                 endFound = True
-                assert subset != None
+                if subset == None:
+                    print >> sys.stderr, "Warning, couldn't find log section", (begin, end)
+                    return None
                 break
             elif subset != None:
                 subset.append(line)
-        assert endFound
+        if not endFound:
+            print >> sys.stderr, "Warning, couldn't find end marker for log section", (begin, end)
+            return None
         lines = subset
     return subset
 
 def getGENIAResults(lines, outPath=None):
     lines = getLines(lines, [("------------ Empty devel classification ------------", "=== EXIT STEP EMPTY"), 
                              ("Finished!", "=== EXIT STEP ST-CONVERT")])
-    fullResults = [x.split("\t", 1)[-1] for x in lines]
-    mainResult = getLines(fullResults, [("##### approximate span and recursive mode #####", "##### event decomposition in the approximate span mode #####")])
-    for line in mainResult:
-        if "==[ALL-TOTAL]==" in line:
-            mainResult = line
-            break
-    if outPath != None:
-        with open(outPath, "wt") as f:
-            f.write("------------ Primary Result ------------\n")
-            f.write(mainResult)
-            f.write("\n")
-            f.write("------------ All Results ------------\n")
-            for line in fullResults:
-                f.write(line)
+    fullResults = mainResult = None  
+    if lines != None:
+        fullResults = [x.split("\t", 1)[-1] for x in lines]
+        mainResult = getLines(fullResults, [("##### approximate span and recursive mode #####", "##### event decomposition in the approximate span mode #####")])
+        for line in mainResult:
+            if "==[ALL-TOTAL]==" in line:
+                mainResult = line
+                break
+        if outPath != None:
+            with open(outPath, "wt") as f:
+                f.write("------------ Primary Result ------------\n")
+                f.write(mainResult)
+                f.write("\n")
+                f.write("------------ All Results ------------\n")
+                for line in fullResults:
+                    f.write(line)
     return fullResults, mainResult                   
 
-def collectResults(inDir, inPattern, outDir):
+def collectResults(inDir, inPattern, outDir=None):
     print >> sys.stderr, "Collecting results from:", inDir
     models = []
     for filename in os.listdir(inDir):
@@ -48,10 +54,15 @@ def collectResults(inDir, inPattern, outDir):
         modelName = os.path.basename(model)
         print >> sys.stderr, "Reading model:", modelName
         logPath = os.path.join(model, "log.txt")
-        assert os.path.exists(logPath), logPath
+        if not os.path.exists(logPath):
+            print >> sys.stderr, "Warning, no log file"
+            continue
         with open(logPath, "rt") as f:
             fullResults, mainResult = getGENIAResults(f.readlines(), outDir)
-            print >> sys.stderr, mainResult.strip()
+            if mainResult != None:
+                print >> sys.stderr, mainResult.strip()
+            else:
+                print >> sys.stderr, "Warning, no result"
 
 if __name__== "__main__":
     from optparse import OptionParser
