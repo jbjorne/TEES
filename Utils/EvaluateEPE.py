@@ -49,8 +49,8 @@ def ask(question):
             sys.stdout.write("Please respond with 'yes' or 'no' (or 'y' or 'n').\n")
 
 def run(inPath, outPath, subDirs, model, connection, numJobs, useTestSet=False, clear=True, debug=False, force=False, training=True, preprocessorSteps=None, preprocessorParams=None, subset=None):
-    # Remove existing work directory, if requested to do so
-    if os.path.exists(outPath) and clear:
+    # Remove existing non-empty work directory, if requested to do so
+    if os.path.exists(outPath) and len(os.listdir(outPath)) > 0 and clear:
         if force or ask("Output directory '" + outPath + "' exists, remove?"):
             print >> sys.stderr, "Output directory exists, removing", outPath
             shutil.rmtree(outPath)
