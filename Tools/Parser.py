@@ -195,6 +195,11 @@ class Parser:
                     element.set(key, value.replace("\n", " ").replace("\r", " "))
                     counts["ATTR:NEWLINE:" + key + ":" + element.tag] += 1
     
+    def validateOffset(self, offset, text=None, sourceText=None):
+        assert offset[0] >= 0 and offset[1] >= 0 and offset[1] > offset[0], offset
+        if text != None and sourceText != None:
+            assert sourceText[offset[0]:offset[1]] == text, (offset, text, sourceText[offset[0]:offset[1]])
+    
     ###########################################################################
     # Tokens, Phrases and Dependencies
     ###########################################################################
@@ -286,6 +291,7 @@ class Parser:
                 element.set("text", token["text"])
                 #offset = (min(tokenOffsets), max(tokenOffsets) + 1)
                 offset = charOffsets[i]
+                self.validateOffset(offset)
                 matchingText = sentenceText[offset[0]:offset[1]]
                 if token["text"] != matchingText:
                     element.set("text", matchingText)
@@ -501,6 +507,7 @@ class Parser:
     ###########################################################################
     
     def makeSentenceElement(self, document, sentences, offset, head=None, tail=None, extra=None):
+        self.validateOffset(offset)
         e = ET.Element("sentence")
         e.set("id", document.get("id") + ".s" + str(len(sentences)))
         docText = document.get("text")
