@@ -148,7 +148,9 @@ class Preprocessor(ToolChain):
     def process(self, source, output=None, parameters=None, model=None, fromStep=None, toStep=None, omitSteps=None, logPath=None):
         if logPath == "AUTO":
             logPath = os.path.join(output.rstrip("/").rstrip("\\") + "-log.txt")
-        if logPath not in (None, "None"):
+        elif logPath == "None":
+            logPath = None
+        if logPath != None:
             if not os.path.exists(os.path.dirname(logPath)):
                 os.makedirs(os.path.dirname(logPath))
             Stream.openLog(logPath)
@@ -174,6 +176,8 @@ class Preprocessor(ToolChain):
         # Reset variables to saved default values
         #self.stepArgs("CONVERT")["dataSetNames"] = convertSetNames
         #self.stepArgs("CONVERT")["corpusName"] = convertCorpusName
+        if logPath != None:
+            Stream.closeLog(logPath)
         return xml
     
     ###########################################################################
