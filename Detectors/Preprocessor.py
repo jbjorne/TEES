@@ -243,7 +243,8 @@ class Preprocessor(ToolChain):
         documents = []
         xml = None
         for sourceDir in sourceDirs:
-            if len(stExtensions.intersection(sourceDir["extensions"])) > 0:
+            sp = sourceDir["path"]
+            if len(stExtensions.intersection(sourceDir["extensions"])) > 0 or sp.endswith(".tar.gz") or sp.endswith(".tgz") or sp.endswith(".zip"):
                 print >> sys.stderr, "Reading", sourceDir["path"]
                 docs = Utils.STFormat.STTools.loadSet(sourceDir["path"], sourceDir["dataset"])
                 print >> sys.stderr, len(docs), "documents"
