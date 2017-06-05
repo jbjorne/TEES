@@ -1,11 +1,11 @@
 import sys, os
-import ElementTreeUtils as ETUtils
-import sys, os
-from collections import defaultdict
 sys.path.append(os.path.dirname(os.path.abspath(__file__))+"/..")
+import ElementTreeUtils as ETUtils
+from collections import defaultdict
 import Core.SentenceGraph as SentenceGraph
 import Utils.InteractionXML.InteractionXMLUtils as IXMLUtils
 import Utils.Range as Range
+import re
 
 def getEntities(sentence):
     return sentence.findall("entity") + [x for x in sentence.iter("span")]
@@ -18,44 +18,89 @@ def getEntityTokens(entity, tokens):
                 entityTokens = []
     return entityTokens
 
-def findHeads(input, parseName, tokenization=None, output=None, removeExisting=True, iterate=False):
-    xml = ETUtils.ETFromObj(input)    
+def getSentenceTokens(sentence, parseName):
+    parse = IXMLUtils.getParseElement(sentence, parseName, False, False)
+    tokens = None
+    if parse:
+        tokenization = IXMLUtils.getTokenizationElement(sentence, parse.get("tokenizer"), False, False)
+        tokens = tokenization.findall("token")
+    return tokens
+
+def findHeads(input, parseName, tokenizationName=None, output=None, removeExisting=True, iterate=False):   
     print >> sys.stderr, "Removing existing head offsets"
     counts = defaultdict(int)
-    removeCount = 0
-    totalCount = 0
+    tokenCounts = {}
     xml = ETUtils.ETFromObj(input)
     for document in xml.getroot().findall("document"):
         counts["documents"] += 1
         for sentence in document.findall("sentence"):
             counts["sentences"] += 1
-            parse = IXMLUtils.getParseElement(sentence, parseName, False, False)
-            tokens = None
-            if parse:
-                tokenization = IXMLUtils.getTokenizationElement(sentence, parse.get("tokenizer"), False, False)
-                tokens = tokenization.findall("token")
+            tokens = getSentenceTokens(sentence, parseName)
             for entity in getEntities(sentence):
                 counts["entities"] += 1
-                totalCount += 1
                 if entity.get("headOffset") != None:
-                    counts["heads-existing"] += 1
+                    counts["existing-heads"] += 1
                     if removeExisting:
-                        counts["heads-removed"] += 1
-                        removeCount += 1
+                        counts["removed-heads"] += 1
                         del entity.attrib["headOffset"]
+                candidates = getEntityTokens(entity, tokens)
+                if len(candidates) == 0:
+                    entity.set("headOffset", entity.get("charOffset"))
+                    counts["head-defined"] += 1
+                    counts["head-none"] += 1
+                elif len(candidates) == 1:
+                    entity.set("headOffset", candidates[0].get("charOffset"))
+                    counts["head-defined"] += 1
+                    counts["head-unique"] += 1
+                entityType = entity.get("type")
+                for candidate in candidates:
+                    tokenText = candidate.get("text")
+                    if tokenText not in tokenCounts:
+                        tokenCounts[tokenText] = {}
+                    if entityType not in tokenCounts[tokenText]:
+                        tokenCounts[tokenText][entityType] = 0
+                    tokenCounts[tokenText][entityType] += 1
     if removeExisting:
-        print >> sys.stderr, "Removed head offsets from", counts["heads-removed"], "out of", counts["entities"], "entities"
+        print >> sys.stderr, "Removed head offsets from", counts["removed-heads"], "out of", counts["existing-heads"], "entities with existing head offset"
+    
+    if counts["head-defined"] != counts["entities"]:
+        for document in xml.getroot().findall("document"):
+            for sentence in document.findall("sentence"):
+                tokens = getSentenceTokens(sentence, parseName)
+                for entity in getEntities(sentence):
+                    if entity.get("headOffset") != None: # head offset is already defined
+                        continue
+                    candidates = getEntityTokens(entity, tokens)
+                    candidates = [{"token":x, "text":x.get("text"), "scores":[]} for x in candidates]
+                    entityType = entity.get("type")
+                    for c in candidates:
+                        c["scores"].append(tokenCounts[entityType][c["token"]["text"]])
+                    for candidate in candidates:
+                        c["scores"].append(1 if re.search('[a-zA-Z]', c["token"]["text"]) != None else 0) # prefer tokens with letters
+                    for i in range(len(candidates)):
+                        c = candidates[i]
+                        c["scores"].append(i) # prefer the rightmost token in the linear order
+                    candidates.sort(reverse=True, key=lambda k: k['scores'])
+                    entity.set("headOffset", candidates[0]["token"].get("charOffset"))
+                    for index, comparison in ((0, "frequency"), (1, "alpha"), (2, "linear")): 
+                        if candidates[0]["scores"][index] > candidates[1]["scores"][index]:
+                            break
+                    counts["head-" + comparison] += 1
+                    counts["head-defined"] += 1
+                    entity.set("headScores", ";".join([x["text"] + ":" + ",".join(x["scores"]) for x in candidates]))
     
     # SentenceGraph automatically calculates head offsets and adds them to entities if they are missing
-    print >> sys.stderr, "Determining head offsets using parse", parse, "and tokenization", tokenization
-    corpusElements = SentenceGraph.loadCorpus(xml, parse, tokenization)
+    if counts["head-defined"] != counts["entities"]:
+        print >> sys.stderr, "Determining head offsets using parse", parseName, "and tokenization", tokenizationName
+        corpusElements = SentenceGraph.loadCorpus(xml, parseName, tokenizationName) 
+        # Make sure every parse gets head scores
+        for sentence in corpusElements.sentences:
+            if sentence.sentenceGraph == None:
+                continue
+            if sentence.sentenceGraph.tokenHeadScores == None:
+                sentence.sentenceGraph.getTokenHeadScores()
     
-    # Make sure every parse gets head scores
-    for sentence in corpusElements.sentences:
-        if sentence.sentenceGraph == None:
-            continue
-        if sentence.sentenceGraph.tokenHeadScores == None:
-            sentence.sentenceGraph.getTokenHeadScores()
+    print >> sys.stderr, "Counts", dict(counts)
     
     if output != None:
         print >> sys.stderr, "Writing output to", output
