@@ -15,15 +15,18 @@ def getEntityTokens(entity, tokens):
     for entityOffset in Range.charOffsetToTuples(entity.get("charOffset")):
         for token in tokens:
             if Range.overlap(entityOffset, Range.charOffsetToSingleTuple(token.get("charOffset"))):
-                entityTokens = []
+                entityTokens.append(token)
     return entityTokens
 
-def getSentenceTokens(sentence, parseName):
+def getSentenceTokens(sentence, parseName, counts=None):
     parse = IXMLUtils.getParseElement(sentence, parseName, False, False)
-    tokens = None
+    tokens = []
     if parse:
+        if counts: counts["parses"] += 1
         tokenization = IXMLUtils.getTokenizationElement(sentence, parse.get("tokenizer"), False, False)
-        tokens = tokenization.findall("token")
+        if tokenization != None:
+            if counts: counts["tokenizations"] += 1
+            tokens = tokenization.findall("token")
     return tokens
 
 def findHeads(input, parseName, tokenizationName=None, output=None, removeExisting=True, iterate=False):   
@@ -35,7 +38,7 @@ def findHeads(input, parseName, tokenizationName=None, output=None, removeExisti
         counts["documents"] += 1
         for sentence in document.findall("sentence"):
             counts["sentences"] += 1
-            tokens = getSentenceTokens(sentence, parseName)
+            tokens = getSentenceTokens(sentence, parseName, counts)
             for entity in getEntities(sentence):
                 counts["entities"] += 1
                 if entity.get("headOffset") != None:
@@ -44,14 +47,15 @@ def findHeads(input, parseName, tokenizationName=None, output=None, removeExisti
                         counts["removed-heads"] += 1
                         del entity.attrib["headOffset"]
                 candidates = getEntityTokens(entity, tokens)
-                if len(candidates) == 0:
-                    entity.set("headOffset", entity.get("charOffset"))
-                    counts["head-defined"] += 1
-                    counts["head-none"] += 1
-                elif len(candidates) == 1:
-                    entity.set("headOffset", candidates[0].get("charOffset"))
-                    counts["head-defined"] += 1
-                    counts["head-unique"] += 1
+                if entity.get("headOffset") == None:
+                    if len(candidates) == 0:
+                        entity.set("headOffset", entity.get("charOffset"))
+                        counts["head-defined"] += 1
+                        counts["head-notokens"] += 1
+                    elif len(candidates) == 1:
+                        entity.set("headOffset", candidates[0].get("charOffset"))
+                        counts["head-defined"] += 1
+                        counts["head-unique"] += 1
                 entityType = entity.get("type")
                 for candidate in candidates:
                     tokenText = candidate.get("text")
@@ -64,6 +68,7 @@ def findHeads(input, parseName, tokenizationName=None, output=None, removeExisti
         print >> sys.stderr, "Removed head offsets from", counts["removed-heads"], "out of", counts["existing-heads"], "entities with existing head offset"
     
     if counts["head-defined"] != counts["entities"]:
+        print >> sys.stderr, "Determining head offsets by token ranking"
         for document in xml.getroot().findall("document"):
             for sentence in document.findall("sentence"):
                 tokens = getSentenceTokens(sentence, parseName)
@@ -71,16 +76,24 @@ def findHeads(input, parseName, tokenizationName=None, output=None, removeExisti
                     if entity.get("headOffset") != None: # head offset is already defined
                         continue
                     candidates = getEntityTokens(entity, tokens)
-                    candidates = [{"token":x, "text":x.get("text"), "scores":[]} for x in candidates]
+                    candidates = [{"token":x, "text":x.get("text"), "scores":[], "offset":Range.charOffsetToSingleTuple(x.get("charOffset"))} for x in candidates]
+                    candidates.sort(key=lambda k: k['offset']) # sort by token linear order
                     entityType = entity.get("type")
                     for c in candidates:
-                        c["scores"].append(tokenCounts[entityType][c["token"]["text"]])
+                        c["scores"].append(tokenCounts[c["token"]["text"]][entityType])
                     for candidate in candidates:
-                        c["scores"].append(1 if re.search('[a-zA-Z]', c["token"]["text"]) != None else 0) # prefer tokens with letters
+                        hasLetters = re.search('[a-zA-Z]', c["token"]["text"]) != None
+                        hasDigits = re.search('[0-9]', c["token"]["text"]) != None
+                        if hasLetters:
+                            c["scores"].append(2) # prefer tokens with letters
+                        elif hasDigits:
+                            c["scores"].append(1) # prefer digits over special characters
+                        else:
+                            c["scores"].append(0)
                     for i in range(len(candidates)):
                         c = candidates[i]
                         c["scores"].append(i) # prefer the rightmost token in the linear order
-                    candidates.sort(reverse=True, key=lambda k: k['scores'])
+                    candidates.sort(reverse=True, key=lambda k: k['scores']) # sort by hierarchical scores
                     entity.set("headOffset", candidates[0]["token"].get("charOffset"))
                     for index, comparison in ((0, "frequency"), (1, "alpha"), (2, "linear")): 
                         if candidates[0]["scores"][index] > candidates[1]["scores"][index]:
