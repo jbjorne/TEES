@@ -120,7 +120,9 @@ class SentenceElements:
                                 break             
                 else: # old format
                     if parse != None:
-                        self.parseElement = parsesElement.find(parse)
+                        parsesElement = sentenceAnalysesElement.find("parses")
+                        if parsesElement != None:
+                            self.parseElement = parsesElement.find(parse)
                     if tokenization != None:
                         tokenizationsElement = sentenceAnalysesElement.find("tokenizations")
                         if tokenizationsElement != None:
