@@ -1066,6 +1066,7 @@ class Parser:
                 for node in obj["nodes"]:
                     properties = node.get("properties", {})
                     token = {"text":node["form"], "id":node["id"], "offset":(int(node["start"]), int(node["end"])), "POS":properties.get("pos")}
+                    assert token["offset"][0] >= 0 and token["offset"][1] > token["offset"][0], (node, inPath)
                     if token["POS"] == None:
                         for altPOS in ("xpos", "upos"):
                             if properties.get(altPOS) != None:

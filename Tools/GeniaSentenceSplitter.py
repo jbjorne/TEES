@@ -70,7 +70,12 @@ def moveElements(document):
                 #newEntityOffset = (entityOffset[0] - sentenceOffset[0], entityOffset[1] - sentenceOffset[0])
                 newEntityOffsets = []
                 for entityOffset in entityOffsets:
-                    newEntityOffsets.append( (entityOffset[0] - sentenceOffset[0], entityOffset[1] - sentenceOffset[0]) )
+                    newOffset = (entityOffset[0] - sentenceOffset[0], entityOffset[1] - sentenceOffset[0])
+                    newOffset = (max(0, newOffset[0]), max(0, newOffset[1]))
+                    if newOffset != (0, 0):
+                        assert newOffset[1] > newOffset[0], (entity.attrib, entityOffsets, sentenceOffset)
+                        newEntityOffsets.append( (entityOffset[0] - sentenceOffset[0], entityOffset[1] - sentenceOffset[0]) )
+                assert len(newEntityOffsets) > 0, (entity.attrib, entityOffsets, sentenceOffset)
                 entity.set("origOffset", entity.get("charOffset"))
                 #entity.set("charOffset", str(newEntityOffset[0]) + "-" + str(newEntityOffset[1]))
                 entity.set("charOffset", Range.tuplesToCharOffset(newEntityOffsets)) 
