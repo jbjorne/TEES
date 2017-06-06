@@ -1094,6 +1094,9 @@ class Parser:
                         if t1 in idMap: t1 = idMap[t1]
                         t2 = edge["target"]
                         if t2 in idMap: t2 = idMap[t2]
-                        dependencies.append({"type":edge["label"], "t1":t1, "t2":t2, "t1Token":tokenById[t1], "t2Token":tokenById[t2]})
+                        if t1 not in tokenById or t2 not in tokenById:
+                            print >> sys.stderr, "Warning, removed an edge of type '" + edge["label"] + "' which refers to a token that does not exist:", (edge, inPath)
+                        else:
+                            dependencies.append({"type":edge["label"], "t1":t1, "t2":t2, "t1Token":tokenById[t1], "t2Token":tokenById[t2]})
                 sentences.append({"tokens":tokens, "dependencies":dependencies})
         return sentences
