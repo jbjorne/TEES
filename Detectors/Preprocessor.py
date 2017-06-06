@@ -85,7 +85,7 @@ class Preprocessor(ToolChain):
         #self.allSteps["IMPORT-PARSE", lambda *args, **kwargs: ParseConverter().insertParses(*args, **kwargs), {"parseDir":None, "debug":False}, "import-parse.xml"]        
         self.initStepGroup("Post-parsing")
         self.initStep("SPLIT-NAMES", ProteinNameSplitter.mainFunc, {"parseName":self.parseName, "removeOld":True}, "split-names.xml")
-        self.initStep("FIND-HEADS", FindHeads.findHeads, {"parseName":self.parseName, "removeExisting":True}, "heads.xml")
+        self.initStep("FIND-HEADS", FindHeads.findHeads, {"parse":self.parseName, "removeExisting":True}, "heads.xml")
         self.initStep("REMOVE-DOCUMENT-TEXTS", Utils.InteractionXML.DeleteAttributes.processCorpus, {"rules":{"document":["text"]}}, "remove-document-texts.xml")
         self.initStep("ANALYZE-STRUCTURE", clsStep(StructureAnalyzer, "analyze"), {}, None)
         self.initStepGroup("Miscellaneous")
