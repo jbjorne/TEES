@@ -1065,8 +1065,13 @@ class Parser:
                 idMap = {} # For renaming ids
                 for node in obj["nodes"]:
                     properties = node.get("properties", {})
+                    if "start" not in node or "end" not in node:
+                        print >> sys.stderr, "Warning, removed node which has no offset", (node, inPath)
+                        continue
                     token = {"text":node["form"], "id":node["id"], "offset":(int(node["start"]), int(node["end"])), "POS":properties.get("pos")}
-                    assert token["offset"][0] >= 0 and token["offset"][1] > token["offset"][0], (node, inPath)
+                    if not (token["offset"][0] >= 0 and token["offset"][1] > token["offset"][0]):
+                        print >> sys.stderr, "Warning, removed non text bound node", (node, inPath)
+                        continue
                     if token["POS"] == None:
                         for altPOS in ("xpos", "upos"):
                             if properties.get(altPOS) != None:
