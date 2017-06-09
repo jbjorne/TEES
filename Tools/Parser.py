@@ -248,32 +248,43 @@ class Parser:
 #                 Align.printAlignment(alignedSentence, alignedCat, diff)
 #         return alignedSentence, alignedCat, diff, alignedOffsets
     
-    def fillInMissingTokens(self, tokenization, sentence):
+    def fillInMissingTokens(self, tokenization, sentence, counts=None):
         sentenceText = sentence.get("text")
-        tokens = tokenization.findall("token")
+        children = [x for x in tokenization]
+        tokens = []
+        tokenIndices = []
+        for i in range(len(children)):
+            if children[i].tag == "token":
+                tokens.append(children[i])
+                tokenIndices.append(i)
+        if len(tokens) == 0: # Fill in missing tokens only for at least partially parsed sentences
+            return
         tokenIds = set([x.get("id") for x in tokens])
-        prevToken = {"charOffset":"0-0"}
-        prevOffset = (0, 0)
         offsets = [Utils.Range.charOffsetToSingleTuple(x.get("charOffset")) for x in tokens]
         offsets = [(0,0)] + offsets + [len(sentenceText), len(sentenceText)]
+        offsetIndices = [0] + tokenIndices + [tokenIndices[-1] + 1]
         dtCount = 0
         for i in range(1, len(offsets)):
-            if offsets[i-1][1] != offsets[i-1][0]:
-                span = sentenceText[offsets[i-1][1]:offsets[i-1][0]]
+            if offsets[i-1][1] != offsets[i][0]:
+                span = sentenceText[offsets[i-1][1]:offsets[i][0]]
                 if span.isspace():
                     continue
                 spanTokens = re.split(r'(\s+)', span)
                 spanTokenBegin = offsets[i-1][1]
+                insertIndex = offsetIndices[i]
                 for j in range(len(spanTokens)):
-                    if spanTokens[j].isspace():
+                    if not spanTokens[j].isspace():
                         tokenId = "dt_" + dtCount
                         while tokenId in tokenIds:
                             dtCount += 1
                             tokenId = "dt_" + dtCount
                         dtCount += 1
                         element = ET.Element("token", {"POS":"DUMMY", "text":spanTokens[j], "id":tokenId})
-                    spanTokenBegin += len(spanTokens[j])
-                    
+                        tokenization.insert(insertIndex, element)
+                        insertIndex += 1
+                        if counts != None:
+                            counts["dummy-tokens"] += 1
+                    spanTokenBegin += len(spanTokens[j])                   
     
     def insertTokens(self, tokens, sentence, tokenization, idStem="t", counts=None, iterativeAlign=True):
         #catenatedTokens, catToToken = self.mapTokens([x["text"] for x in tokens])
@@ -342,6 +353,7 @@ class Parser:
             #pos += len(token["text"]) + len(tokenSep)
         if len(tokens) > 0:
             counts["sentences-with-tokens"] += 1
+        self.fillInMissingTokens(tokenization, sentence, counts)
 
     def insertPhrases(self, phrases, parse, tokens, idStem="p"):
         count = 0
