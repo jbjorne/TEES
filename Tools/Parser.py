@@ -248,6 +248,33 @@ class Parser:
 #                 Align.printAlignment(alignedSentence, alignedCat, diff)
 #         return alignedSentence, alignedCat, diff, alignedOffsets
     
+    def fillInMissingTokens(self, tokenization, sentence):
+        sentenceText = sentence.get("text")
+        tokens = tokenization.findall("token")
+        tokenIds = set([x.get("id") for x in tokens])
+        prevToken = {"charOffset":"0-0"}
+        prevOffset = (0, 0)
+        offsets = [Utils.Range.charOffsetToSingleTuple(x.get("charOffset")) for x in tokens]
+        offsets = [(0,0)] + offsets + [len(sentenceText), len(sentenceText)]
+        dtCount = 0
+        for i in range(1, len(offsets)):
+            if offsets[i-1][1] != offsets[i-1][0]:
+                span = sentenceText[offsets[i-1][1]:offsets[i-1][0]]
+                if span.isspace():
+                    continue
+                spanTokens = re.split(r'(\s+)', span)
+                spanTokenBegin = offsets[i-1][1]
+                for j in range(len(spanTokens)):
+                    if spanTokens[j].isspace():
+                        tokenId = "dt_" + dtCount
+                        while tokenId in tokenIds:
+                            dtCount += 1
+                            tokenId = "dt_" + dtCount
+                        dtCount += 1
+                        element = ET.Element("token", {"POS":"DUMMY", "text":spanTokens[j], "id":tokenId})
+                    spanTokenBegin += len(spanTokens[j])
+                    
+    
     def insertTokens(self, tokens, sentence, tokenization, idStem="t", counts=None, iterativeAlign=True):
         #catenatedTokens, catToToken = self.mapTokens([x["text"] for x in tokens])
         if counts == None:
