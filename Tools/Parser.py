@@ -261,9 +261,10 @@ class Parser:
             return
         tokenIds = set([x.get("id") for x in tokens])
         offsets = [Utils.Range.charOffsetToSingleTuple(x.get("charOffset")) for x in tokens]
-        offsets = [(0,0)] + offsets + [len(sentenceText), len(sentenceText)]
+        offsets = [(0,0)] + offsets + [(len(sentenceText), len(sentenceText))]
         offsetIndices = [0] + tokenIndices + [tokenIndices[-1] + 1]
         dtCount = 0
+        numNewTokens = 0
         for i in range(1, len(offsets)):
             if offsets[i-1][1] != offsets[i][0]:
                 span = sentenceText[offsets[i-1][1]:offsets[i][0]]
@@ -271,17 +272,19 @@ class Parser:
                     continue
                 spanTokens = re.split(r'(\s+)', span)
                 spanTokenBegin = offsets[i-1][1]
-                insertIndex = offsetIndices[i]
+                insertIndex = offsetIndices[i] + numNewTokens
                 for j in range(len(spanTokens)):
-                    if not spanTokens[j].isspace():
-                        tokenId = "dt_" + dtCount
+                    if spanTokens[j].strip() != "":
+                        tokenId = "dt_" + str(dtCount)
                         while tokenId in tokenIds:
                             dtCount += 1
-                            tokenId = "dt_" + dtCount
+                            tokenId = "dt_" + str(dtCount)
                         dtCount += 1
-                        element = ET.Element("token", {"POS":"DUMMY", "text":spanTokens[j], "id":tokenId})
+                        element = ET.Element("token", {"POS":"DUMMY", "text":spanTokens[j], "id":tokenId, 
+                                                       "charOffset":Utils.Range.tuplesToCharOffset((spanTokenBegin, spanTokenBegin + len(spanTokens[j])))})
                         tokenization.insert(insertIndex, element)
                         insertIndex += 1
+                        numNewTokens += 1
                         if counts != None:
                             counts["dummy-tokens"] += 1
                     spanTokenBegin += len(spanTokens[j])                   
