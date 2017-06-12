@@ -1,10 +1,10 @@
-import sys, os, copy, types
+import sys, os#, copy, types
 from Detector import Detector
-from Core.Model import Model
+#from Core.Model import Model
 import Utils.ElementTreeUtils as ETUtils
-import Utils.Parameters as Parameters
+#import Utils.Parameters as Parameters
 
-NOTHING = object()
+#NOTHING = object()
 
 class Step():
     def __init__(self, name, func, argDict=None, ioArgNames=None, funcCls=None, argListKey=None):
@@ -24,23 +24,27 @@ class Step():
         self.argDict[name] = value
     
     def __call__(self, *args, **kwargs):
+        self.argDict = self.getArgs(*args, **kwargs)
+        return self
+    
+    def run(self, *args, **kwargs):
+        arguments = self.getArgs(*args, **kwargs)
+        if self.funcCls == None:
+            return self.func(**arguments)
+        else:
+            return self.func(self.funcCls(), **arguments)
+    
+    def getArgs(self, *args, **kwargs):
         if len(args) > 0:
             assert self.argListKey != None
             assert self.argListKey not in kwargs
             kwargs[self.argListKey] = args
+        arguments = self.argDict.copy()
         for argName in kwargs:
-            if argName not in self.argDict:
+            if argName not in arguments:
                 raise Exception("Unknown argument '" + argName + "' for step '" + self.name + "'")
-            self.argDict[argName] = kwargs[argName]
-        return self
-    
-    def run(self, *args, **kwargs):
-        self.__call__(*args, **kwargs)
-        #print self.argDict
-        if self.funcCls == None:
-            return self.func(**self.argDict)
-        else:
-            return self.func(self.cls(), **self.argDict)
+            arguments[argName] = kwargs[argName]
+        return arguments
 
 class ToolChain(Detector):
     def __init__(self):
