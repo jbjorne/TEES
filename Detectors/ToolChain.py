@@ -7,7 +7,7 @@ import Utils.ElementTreeUtils as ETUtils
 #NOTHING = object()
 
 class Step():
-    def __init__(self, name, func, argDict=None, ioArgNames=None, funcCls=None, argListKey=None):
+    def __init__(self, name, func, argDict=None, ioArgNames=None, funcCls=None, argListKey=None, group=None):
         self.name = name
         self.func = func
         self.funcCls = funcCls
@@ -18,6 +18,7 @@ class Step():
             for key in self.ioArgNames:
                 if self.ioArgNames[key] not in self.argDict:
                     self.argDict[self.ioArgNames[key]] = None
+        self.group = group
     
     def setArg(self, name, value):
         assert name in self.argDict
@@ -51,6 +52,9 @@ class ToolChain(Detector):
         Detector.__init__(self)
         # Settings
         self.STATE_TOOLCHAIN = "PROCESS"
+        self.group = None
+        self.definedSteps = []
+        self.definedStepDict = []
         self.steps = []
         #self.allSteps = {}
         #self.allStepsList = []
@@ -62,6 +66,15 @@ class ToolChain(Detector):
         self.compressIntermediateFiles = True
         self.intermediateFileTag = "temp"
         self.modelParameterStringName = None
+    
+    def defGroup(self, group):
+        self.group = group
+    
+    def defStep(self, name, func, argDict=None, ioArgNames=None, funcCls=None, argListKey=None):
+        assert name not in self.definedStepDict
+        step = Step(name, func, argDict, ioArgNames, funcCls, argListKey)
+        self.definedStepDict[name] = step
+        self.definedSteps.append(step)
     
 #     def defineSteps(self, steps):
 #         steps = self.expandPresets(steps)
