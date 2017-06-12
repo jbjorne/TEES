@@ -54,7 +54,7 @@ class ToolChain(Detector):
         self.STATE_TOOLCHAIN = "PROCESS"
         self.group = None
         self.definedSteps = []
-        self.definedStepDict = []
+        self.definedStepDict = {}
         self.steps = []
         #self.allSteps = {}
         #self.allStepsList = []
@@ -260,8 +260,8 @@ class ToolChain(Detector):
         else:
             return None
     
-#     def save(self, input, output=None):
-#         xml = ETUtils.ETFromObj(input)
-#         print >> sys.stderr, "Writing output to", output
-#         ETUtils.write(input, output)
-#         return xml
+    def save(self, input, output=None):
+        xml = ETUtils.ETFromObj(input)
+        print >> sys.stderr, "Writing output to", output
+        ETUtils.write(input, output)
+        return xml
