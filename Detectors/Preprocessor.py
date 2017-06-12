@@ -38,7 +38,7 @@ def clsStep(cls, method):
     #return lambda *args, **kwargs: method(cls(), *args, **kwargs)
 
 class Preprocessor(ToolChain):
-    def __init__(self, steps=["PRESET-PREPROCESS-BIO"], parseName="McCC", requireEntities=False):
+    def __init__(self, steps, parseName="McCC", requireEntities=False):
         #if constParser == "None": constParser = None
         #if depParser == "None": depParser = None
         #assert constParser in ("BLLIP", "BLLIP-BIO", "STANFORD", None), constParser
@@ -50,17 +50,21 @@ class Preprocessor(ToolChain):
         ToolChain.__init__(self)
         self.modelParameterStringName = "preprocessorParams"
         
-        self.initSteps()
+        #self.initSteps()
         #self.initPresets()
-        if steps != None:
-            self.defineSteps(steps)
+        #if steps != None:
+        #    self.defineSteps(steps)
+        self.steps = self.getSteps(steps)
     
     def getSteps(self, steps):
-        CONVERT_BIONLP = Step("CONVERT_BIONLP", Utils.Convert.convertBioNLP.convert, {"corpora":None, "outDir":None, "downloadDir":None, "redownload":False, "makeIntermediateFiles":False, "evaluate":False, "processEquiv":True, "analysisMode":"AUTO", "debug":False, "preprocessorSteps":None, "preprocessorParameters":None, "logPath":"AUTO"}, "convert-bionlp.xml", {"input":"corpora", "output":"outDir"})
+        CONVERT_BIONLP = Step("CONVERT_BIONLP", Utils.Convert.convertBioNLP.convert, {"corpora":None, "outDir":None, "downloadDir":None, "redownload":False, "makeIntermediateFiles":False, "evaluate":False, "processEquiv":True, "analysisMode":"AUTO", "debug":False, "preprocessorSteps":None, "preprocessorParameters":None, "logPath":"AUTO"}, {"input":"corpora", "output":"outDir"})
+        MERGE_SETS = Step("MERGE_SETS", Utils.InteractionXML.MergeSets.mergeSets, {"corpusDir":None})
+        EXPORT = Step("EXPORT", self.export, {"formats":None, "exportIds":None, "useSetDirs":False})
         if isinstance(steps, basestring):
             steps = eval("[" + steps + "]")
         else:
             steps = [eval(x) for x in steps]
+        return steps
     
     def initSteps(self):
         self.initStepGroup("Corpus Conversion")
@@ -161,7 +165,7 @@ class Preprocessor(ToolChain):
             if not os.path.exists(os.path.dirname(logPath)):
                 os.makedirs(os.path.dirname(logPath))
             Stream.openLog(logPath)
-        print >> sys.stderr, "Preprocessor steps:", [x["name"] for x in self.steps]
+        print >> sys.stderr, "Preprocessor steps:", [x.name for x in self.steps]
         if len(self.steps) == 0:
             raise Exception("No preprocessing steps defined")
         #if omitSteps != None and((type(omitSteps) in types.StringTypes and omitSteps == "CONVERT") or "CONVERT" in omitSteps):

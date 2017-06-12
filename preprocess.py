@@ -40,17 +40,17 @@ if __name__=="__main__":
     else:
         preprocessor.setArgForAllSteps("debug", options.debug)
         if preprocessor.hasStep("CONVERT"):
-            preprocessor.stepArgs("CONVERT")["corpusName"] = options.corpus
-            preprocessor.stepArgs("CONVERT")["dataSetNames"] = options.dataSetNames
+            preprocessor.getStep("CONVERT").setArg("corpusName", options.corpus)
+            preprocessor.getStep("CONVERT").setArg("dataSetNames", options.dataSetNames)
         if options.parseDir:
-            preprocessor.stepArgs("IMPORT-PARSE")["parseDir"] = options.parseDir
+            preprocessor.getStep("IMPORT-PARSE").setArg("parseDir", options.parseDir)
         if options.exportFormats and preprocessor.hasStep("EXPORT"):
-            preprocessor.stepArgs("EXPORT")["formats"] = options.exportFormats.split(",")
+            preprocessor.getStep("EXPORT").setArg("formats", options.exportFormats.split(","))
         if options.importFormats:
             if preprocessor.hasStep("LOAD"):
-                preprocessor.stepArgs("LOAD")["extensions"] = options.importFormats.split(",")
+                preprocessor.getStep("LOAD").setArg("extensions", options.importFormats.split(","))
             if preprocessor.hasStep("IMPORT-PARSE"):
-                preprocessor.stepArgs("IMPORT-PARSE")["extensions"] = options.importFormats.split(",")
+                preprocessor.getStep("IMPORT-PARSE").setArg("extensions", options.importFormats.split(","))
         if options.intermediateFiles:
             preprocessor.setIntermediateFiles(True)
         preprocessor.process(options.input, options.output, options.parameters, model=None, fromStep=options.fromStep, toStep=options.toStep, omitSteps=options.omitSteps, logPath=options.logPath)
