@@ -285,6 +285,8 @@ class Preprocessor(ToolChain):
         exportedParses = False
         if formats == None:
             formats = []
+        elif isinstance(formats, basestring):
+            formats = formats.split(",")
         parseFormats = [x for x in formats if x in ["txt", "sentences", "tok", "ptb", "sd", "conll", "conllx", "conllu", "epe"]]
         stFormats = [x for x in formats if x in ["a1", "a2", "rel"]]
         if len(parseFormats) > 0:
