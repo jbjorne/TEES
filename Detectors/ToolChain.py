@@ -30,6 +30,7 @@ class Step():
     
     def run(self, *args, **kwargs):
         arguments = self.getArgs(*args, **kwargs)
+        print >> sys.stderr, "Running step", self.name, "with arguments", arguments
         if self.funcCls == None:
             return self.func(**arguments)
         else:
@@ -261,7 +262,7 @@ class ToolChain(Detector):
 #                     stepArgs[ioArgNames["output"]] = self.getIntermediateFilePath(step)
                 else:
                     stepArgs[step.ioArgNames["output"]] = None
-                print >> sys.stderr, "Running step", step.name, "with arguments", stepArgs
+                #print >> sys.stderr, "Running step", step.name, "with arguments", stepArgs
                 source = step.run(**stepArgs) #source = step["function"](**stepArgs) # call the tool
             elif self.getStepStatus(step["name"]) == "BEFORE": # this step was run earlier
                 savedIntermediate = self.getIntermediateFilePath(step)
