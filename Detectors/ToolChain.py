@@ -87,7 +87,7 @@ class ToolChain(Detector):
     
     def defStep(self, name, func, argDict=None, ioArgNames=None, funcCls=None, argListKey=None):
         assert name not in self.definedStepDict
-        step = Step(name, func, argDict, ioArgNames, funcCls, argListKey)
+        step = Step(name, func, argDict, ioArgNames, funcCls, argListKey, self.group)
         self.definedStepDict[name] = step
         self.definedSteps.append(step)
     

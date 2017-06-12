@@ -153,7 +153,7 @@ class Preprocessor(ToolChain):
             if step.group != currentGroup:
                 currentGroup = step.group
                 s += "[" + currentGroup + "]" + "\n"
-            s += " " + step.name + ": " + str(sorted(step.argDict.keys())) + "\n"
+            s += " " + step.name + "(" + ",".join(sorted(step.argDict.keys())) + ")\n"
         return s
     
 #     def getDefaultSteps(self):
