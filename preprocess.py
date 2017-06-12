@@ -6,7 +6,7 @@ if __name__=="__main__":
     optparser = OptionParser(description="A tool chain for making interaction XML, sentence splitting, NER and parsing")
     optparser.add_option("-i", "--input", default=None, dest="input", help="The input argument for the first step")
     optparser.add_option("-o", "--output", default=None, dest="output", help="The output argument for the last step")
-    optparser.add_option("-p", "--parameters", default=None, dest="parameters", help="Step parameters, a comma-separated list of 'STEP.parameter=value' definitions")
+    #optparser.add_option("-p", "--parameters", default=None, dest="parameters", help="Step parameters, a comma-separated list of 'STEP.parameter=value' definitions")
     optparser.add_option("-s", "--steps", default=None, dest="steps", help="A comma separated list of steps or presets")
     shortcuts = OptionGroup(optparser, "Preprocessing step parameter shortcuts", "")
     shortcuts.add_option("-n", "--dataSetNames", default=None, dest="dataSetNames", help="CONVERT step dataset names")
@@ -24,7 +24,7 @@ if __name__=="__main__":
     debug.add_option("-t", "--toStep", default=None, dest="toStep", help="Stop at after this step")
     debug.add_option("--omitSteps", default=None, dest="omitSteps", help="Skip these steps")
     debug.add_option("--logPath", default="AUTO", dest="logPath", help="AUTO, None, or a path")
-    debug.add_option("--intermediateFiles", default=False, action="store_true", dest="intermediateFiles", help="Save an intermediate file for each step")
+    #debug.add_option("--intermediateFiles", default=False, action="store_true", dest="intermediateFiles", help="Save an intermediate file for each step")
     debug.add_option("--debug", default=False, action="store_true", dest="debug", help="Set debug mode for all steps")
     optparser.add_option_group(debug)
     (options, args) = optparser.parse_args()
@@ -43,14 +43,14 @@ if __name__=="__main__":
             preprocessor.getStep("CONVERT").setArg("corpusName", options.corpus)
             preprocessor.getStep("CONVERT").setArg("dataSetNames", options.dataSetNames)
         if options.parseDir:
-            preprocessor.getStep("IMPORT-PARSE").setArg("parseDir", options.parseDir)
+            preprocessor.getStep("IMPORT_PARSE").setArg("parseDir", options.parseDir)
         if options.exportFormats and preprocessor.hasStep("EXPORT"):
             preprocessor.getStep("EXPORT").setArg("formats", options.exportFormats.split(","))
         if options.importFormats:
             if preprocessor.hasStep("LOAD"):
                 preprocessor.getStep("LOAD").setArg("extensions", options.importFormats.split(","))
-            if preprocessor.hasStep("IMPORT-PARSE"):
-                preprocessor.getStep("IMPORT-PARSE").setArg("extensions", options.importFormats.split(","))
-        if options.intermediateFiles:
-            preprocessor.setIntermediateFiles(True)
-        preprocessor.process(options.input, options.output, options.parameters, model=None, fromStep=options.fromStep, toStep=options.toStep, omitSteps=options.omitSteps, logPath=options.logPath)
+            if preprocessor.hasStep("IMPORT_PARSE"):
+                preprocessor.getStep("IMPORT_PARSE").setArg("extensions", options.importFormats.split(","))
+        #if options.intermediateFiles:
+        #    preprocessor.setIntermediateFiles(True)
+        preprocessor.process(options.input, options.output, model=None, fromStep=options.fromStep, toStep=options.toStep, omitSteps=options.omitSteps, logPath=options.logPath)

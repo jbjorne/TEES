@@ -48,7 +48,7 @@ def ask(question):
         else:
             sys.stdout.write("Please respond with 'yes' or 'no' (or 'y' or 'n').\n")
 
-def run(inPath, outPath, subDirs, model, connection, numJobs, useTestSet=False, clear=True, debug=False, force=False, training=True, preprocessorSteps=None, preprocessorParams=None, subset=None):
+def run(inPath, outPath, subDirs, model, connection, numJobs, useTestSet=False, clear=True, debug=False, force=False, training=True, preprocessorSteps=None, subset=None):
     # Remove existing non-empty work directory, if requested to do so
     if os.path.exists(outPath) and len(os.listdir(outPath)) > 0 and clear:
         if force or ask("Output directory '" + outPath + "' exists, remove?"):
@@ -70,13 +70,13 @@ def run(inPath, outPath, subDirs, model, connection, numJobs, useTestSet=False, 
     corpusDir = os.path.join(outPath, "corpus")
     if not os.path.exists(corpusDir):
         if preprocessorSteps == None:
-            preprocessorSteps = ["MERGE-SETS", "REMOVE-ANALYSES", "REMOVE-HEADS", "MERGE-SENTENCES", "IMPORT-PARSE", "SPLIT-NAMES", "FIND-HEADS", "DIVIDE-SETS"]
+            preprocessorSteps = ["MERGE_SETS", "REMOVE_ANALYSES", "REMOVE_HEADS", "MERGE_SENTENCES", "IMPORT_PARSE", "SPLIT_NAMES", "FIND_HEADS", "DIVIDE_SETS"]
         preprocessor = Preprocessor(preprocessorSteps)
         #preprocessor = Preprocessor(["MERGE-SETS", "REMOVE-ANALYSES", "REMOVE-HEADS", "MERGE-SENTENCES", "IMPORT-PARSE", "VALIDATE", "DIVIDE-SETS"])
-        preprocessor.setArgForAllSteps("debug", options.debug)
-        preprocessor.stepArgs("IMPORT-PARSE")["parseDir"] = parseDir
+        preprocessor.setArgForAllSteps("debug", debug)
+        preprocessor.getStep("IMPORT-PARSE").setArg("parseDir", parseDir)
         modelPattern = model + ".+\.xml" if useTestSet else model + "-devel\.xml|" + model + "-train\.xml"
-        preprocessor.process(modelPattern, os.path.join(corpusDir, model), preprocessorParams, logPath="AUTO")
+        preprocessor.process(modelPattern, os.path.join(corpusDir, model), logPath="AUTO")
     else:
         print >> sys.stderr, "Using imported parses from", corpusDir
     
@@ -98,11 +98,10 @@ if __name__== "__main__":
     optparser.add_option("--noClear", default=False, action="store_true", help="Continue a previous run")
     optparser.add_option("--debug", default=False, action="store_true", help="Debug mode")
     optparser.add_option("-f", "--force", default=False, action="store_true", help="Force removal of existing output directory")
-    optparser.add_option("--preprocessorSteps", default="MERGE-SETS,REMOVE-ANALYSES,REMOVE-HEADS,MERGE-SENTENCES,IMPORT-PARSE,SPLIT-NAMES,FIND-HEADS,DIVIDE-SETS", help="List of preprocessing steps")
-    optparser.add_option("--preprocessorParams", default=None, help="List of preprocessing steps")
+    optparser.add_option("--preprocessorSteps", default=None, help="List of preprocessing steps")
     optparser.add_option("--subset", default=None, dest="subset", help="")
     optparser.add_option("--noTraining", default=False, action="store_true", help="Do only the preprocessing")
     (options, args) = optparser.parse_args()
     
     run(options.input, options.output, options.subdirs, options.model, options.connection, options.numJobs, options.testSet, 
-        not options.noClear, options.debug, options.force, training=not options.noTraining, preprocessorSteps=options.preprocessorSteps.split(","), preprocessorParams=options.preprocessorParams, subset=options.subset)
+        not options.noClear, options.debug, options.force, training=not options.noTraining, preprocessorSteps=options.preprocessorSteps.split(","), subset=options.subset)

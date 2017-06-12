@@ -183,7 +183,7 @@ class Preprocessor(ToolChain):
 #         elif self.depParser == "SYNTAXNET":
 #             steps.append( (self.depParser + "-DEP", SyntaxNetParser.parseCls, {"parserName":self.parseName, "debug":False, "modelDir":None}, "dependencies.xml") )
     
-    def process(self, source, output=None, parameters=None, model=None, fromStep=None, toStep=None, omitSteps=None, logPath=None):
+    def process(self, source, output=None, model=None, fromStep=None, toStep=None, omitSteps=None, logPath=None):
         if logPath == "AUTO":
             logPath = os.path.join(output.rstrip("/").rstrip("\\") + "-log.txt")
         elif logPath == "None":
@@ -210,7 +210,7 @@ class Preprocessor(ToolChain):
         #self.stepArgs("CONVERT")["dataSetNames"] = sourceDataSetNames
         #self.stepArgs("CONVERT")["corpusName"] = corpusName
         # Run the tool chain
-        xml = ToolChain.process(self, source, output, parameters, model, fromStep, toStep, omitSteps)
+        xml = ToolChain.process(self, source, output, model, fromStep, toStep, omitSteps)
         # Reset variables to saved default values
         #self.stepArgs("CONVERT")["dataSetNames"] = convertSetNames
         #self.stepArgs("CONVERT")["corpusName"] = convertCorpusName

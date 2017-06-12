@@ -226,7 +226,7 @@ class ToolChain(Detector):
 #         else:
 #             return None
     
-    def process(self, source, output, parameters=None, model=None, fromStep=None, toStep=None, omitSteps=None):
+    def process(self, source, output, model=None, fromStep=None, toStep=None, omitSteps=None):
         #self.initVariables(source=input, xml=input, outDir=os.path.dirname(output))
         if output != None:
             self.initVariables(outDir=os.path.dirname(output))

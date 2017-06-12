@@ -50,7 +50,7 @@ def classify(input, model, output, workDir=None, step=None, omitSteps=None,
     
     classifyInput = input
     if selector.check("PREPROCESS"):
-        preprocessor = Preprocessor()
+        preprocessor = Preprocessor(["LOAD", "GENIA_SPLITTER", "BANNER", "BLLIP_BIO", "STANFORD_CONVERT", "SPLIT_NAMES", "FIND_HEADS", "SAVE"])
         if debug: 
             preprocessor.setArgForAllSteps("debug", True)
         preprocessorOutput = output + preprocessorTag
