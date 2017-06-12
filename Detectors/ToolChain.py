@@ -6,6 +6,26 @@ import Utils.Parameters as Parameters
 
 NOTHING = object()
 
+class Step():
+    def __init__(self, name, func, funcCls=None, argDict=None, argListKey=None, ioArgNames=None):
+        self.name = name
+        self.func = func
+        self.funcCls = funcCls
+        self.argDict = argDict if argDict != None else {}
+        self.argListKey = argListKey
+        self.ioArgNames = ioArgNames
+    
+    def __call__(self, *args, **kwargs):
+        if args != None:
+            assert self.argListKey != None
+            assert self.argListKey not in kwargs
+            kwargs[self.argListKey] = args
+        for argName in args:
+            if argName not in self.argDict:
+                raise Exception("Unknown argument '" + argName + "' for step '" + self.name + "'")
+            self.argDict[argName] = args[argName]
+        return self
+
 class ToolChain(Detector):
     def __init__(self):
         Detector.__init__(self)

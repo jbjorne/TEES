@@ -15,7 +15,7 @@ from Tools.StanfordParser import StanfordParser
 from Tools.SyntaxNetParser import SyntaxNetParser
 from Tools.ParseConverter import ParseConverter
 import Tools.BANNER
-from ToolChain import ToolChain
+from ToolChain import ToolChain, Step
 from Detectors.StructureAnalyzer import StructureAnalyzer
 import Utils.InteractionXML.DivideSets
 import Utils.ProteinNameSplitter as ProteinNameSplitter
@@ -51,9 +51,16 @@ class Preprocessor(ToolChain):
         self.modelParameterStringName = "preprocessorParams"
         
         self.initSteps()
-        self.initPresets()
+        #self.initPresets()
         if steps != None:
             self.defineSteps(steps)
+    
+    def getSteps(self, steps):
+        CONVERT_BIONLP = Step("CONVERT_BIONLP", Utils.Convert.convertBioNLP.convert, {"corpora":None, "outDir":None, "downloadDir":None, "redownload":False, "makeIntermediateFiles":False, "evaluate":False, "processEquiv":True, "analysisMode":"AUTO", "debug":False, "preprocessorSteps":None, "preprocessorParameters":None, "logPath":"AUTO"}, "convert-bionlp.xml", {"input":"corpora", "output":"outDir"})
+        if isinstance(steps, basestring):
+            steps = eval("[" + steps + "]")
+        else:
+            steps = [eval(x) for x in steps]
     
     def initSteps(self):
         self.initStepGroup("Corpus Conversion")
@@ -97,12 +104,12 @@ class Preprocessor(ToolChain):
         self.initStep("EXPORT", self.export, {"formats":None, "exportIds":None, "useSetDirs":False}, None)
         self.initStep("EXPORT-STFORMAT", Utils.STFormat.ConvertXML.toSTFormat, {"outputTag":"a2", "useOrigIds":False, "debug":False, "skipArgs":[], "validate":True, "writeExtra":False, "allAsRelations":False, "exportIds":None}, None)
     
-    def initPresets(self):
-        self.presets["PRESET-CONVERT-PARSE"] = ["LOAD", "EXPORT"]
-        self.presets["PRESET-REPARSE-BIO-CORPUS"] = ["MERGE-SETS", "REMOVE-ANALYSES", "REMOVE-HEADS", "BLLIP-BIO", "STANFORD-CONVERT", "FIND-HEADS", "SPLIT-NAMES", "DIVIDE-SETS"]
-        self.presets["PRESET-PREPROCESS-BIO"] = ["LOAD", "GENIA-SPLITTER", "BANNER", "BLLIP-BIO", "STANFORD-CONVERT", "SPLIT-NAMES", "FIND-HEADS", "SAVE"]
-        #self.presets["PRESET-PARSE-BIO"] = ["CONVERT", "GENIA-SPLITTER", "BLLIP-BIO", "STANFORD-CONVERT", "SPLIT-NAMES", "FIND-HEADS", "DIVIDE-SETS"]
-        #self.presets["PRESET-INSERT-PARSE"] = ["CONVERT", "REMOVE-ANALYSES", "IMPORT-PARSE", "DIVIDE-SETS"]
+#     def initPresets(self):
+#         self.presets["PRESET-CONVERT-PARSE"] = ["LOAD", "EXPORT"]
+#         self.presets["PRESET-REPARSE-BIO-CORPUS"] = ["MERGE-SETS", "REMOVE-ANALYSES", "REMOVE-HEADS", "BLLIP-BIO", "STANFORD-CONVERT", "FIND-HEADS", "SPLIT-NAMES", "DIVIDE-SETS"]
+#         self.presets["PRESET-PREPROCESS-BIO"] = ["LOAD", "GENIA-SPLITTER", "BANNER", "BLLIP-BIO", "STANFORD-CONVERT", "SPLIT-NAMES", "FIND-HEADS", "SAVE"]
+#         #self.presets["PRESET-PARSE-BIO"] = ["CONVERT", "GENIA-SPLITTER", "BLLIP-BIO", "STANFORD-CONVERT", "SPLIT-NAMES", "FIND-HEADS", "DIVIDE-SETS"]
+#         #self.presets["PRESET-INSERT-PARSE"] = ["CONVERT", "REMOVE-ANALYSES", "IMPORT-PARSE", "DIVIDE-SETS"]
     
     def getHelpString(self):
         s = "==========" + " Available preprocessor steps " + "==========" + "\n"
