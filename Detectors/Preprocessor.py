@@ -47,16 +47,17 @@ class Preprocessor(ToolChain):
         #self.depParser = depParser
         self.requireEntities = requireEntities
         self.parseName = parseName
-        ToolChain.__init__(self)
+        ToolChain.__init__(self, steps)
         self.modelParameterStringName = "preprocessorParams"
         
         #self.initSteps()
         #self.initPresets()
         #if steps != None:
         #    self.defineSteps(steps)
-        self.steps = self.getSteps(steps)
+        #self.defineSteps()
+        #self.steps = self.getSteps(steps)
     
-    def getSteps(self, steps):
+    def defineSteps(self):
         self.defGroup("Corpus Conversion")
         self.defStep("CONVERT_BIONLP", Utils.Convert.convertBioNLP.convert, {"corpora":None, "outDir":None, "downloadDir":None, "redownload":False, "makeIntermediateFiles":False, "evaluate":False, "processEquiv":True, "analysisMode":"AUTO", "debug":False, "preprocessorSteps":None, "preprocessorParameters":None, "logPath":"AUTO"}, {"input":"corpora", "output":"outDir"})
         self.defStep("DOWNLOAD_CORPUS", Utils.Convert.convertBioNLP.convertCorpus, {"corpus":None, "outDir":None, "downloadDir":None, "redownload":False, "makeIntermediateFiles":False, "evaluate":False, "processEquiv":True, "analysisMode":"SKIP", "debug":False, "preprocessorSteps":None, "preprocessorParameters":None}, {"input":"corpus", "output":"outDir"})
@@ -95,55 +96,48 @@ class Preprocessor(ToolChain):
         self.defStep("SAVE", self.save)
         self.defStep("EXPORT", self.export, {"formats":None, "exportIds":None, "useSetDirs":False})
         self.defStep("EXPORT_STFORMAT", Utils.STFormat.ConvertXML.toSTFormat, {"outputTag":"a2", "useOrigIds":False, "debug":False, "skipArgs":[], "validate":True, "writeExtra":False, "allAsRelations":False, "exportIds":None})
-        for step in self.definedSteps:
-            exec(step.name + " = self.definedStepDict['" + step.name + "']")
-        if isinstance(steps, basestring):
-            steps = eval("[" + steps + "]")
-        else:
-            steps = [eval(x) for x in steps]
-        return steps
     
-    def initSteps(self):
-        self.initStepGroup("Corpus Conversion")
-        self.initStep("CONVERT-BIONLP", Utils.Convert.convertBioNLP.convert, {"corpora":None, "outDir":None, "downloadDir":None, "redownload":False, "makeIntermediateFiles":False, "evaluate":False, "processEquiv":True, "analysisMode":"AUTO", "debug":False, "preprocessorSteps":None, "preprocessorParameters":None, "logPath":"AUTO"}, "convert-bionlp.xml", {"input":"corpora", "output":"outDir"})
-        self.initStep("DOWNLOAD-CORPUS", Utils.Convert.convertBioNLP.convertCorpus, {"corpus":None, "outDir":None, "downloadDir":None, "redownload":False, "makeIntermediateFiles":False, "evaluate":False, "processEquiv":True, "analysisMode":"SKIP", "debug":False, "preprocessorSteps":None, "preprocessorParameters":None}, "download-bionlp.xml", {"input":"corpus", "output":"outDir"})
-        self.initStepGroup("Loading")
-        self.initStep("LOAD", self.load, {"dataSetNames":None, "corpusName":None, "extensions":None}, "load.xml")
-        self.initStep("DOWNLOAD-PUBMED", self.downloadPubmed, {}, "pubmed.xml")
-        self.initStep("CONVERT", self.convert, {"dataSetNames":None, "corpusName":None}, "convert.xml")
-        self.initStep("MERGE-SETS", Utils.InteractionXML.MergeSets.mergeSets, {"corpusDir":None}, "merged-sets.xml")
-        self.initStepGroup("Pre-parsing")
-        self.initStep("MAP-ATTRIBUTES", Utils.InteractionXML.MapAttributes.processCorpus, {"rules":None}, "map-attributes.xml")
-        self.initStep("REMOVE-HEADS", Utils.InteractionXML.DeleteAttributes.processCorpus, {"rules":{"entity":["headOffset"]}}, "remove-heads.xml")
-        self.initStep("REMOVE-ANALYSES", Utils.InteractionXML.DeleteElements.processCorpus, {"rules":{"analyses":{}}, "reverse":False}, "remove-analyses.xml")
-        self.initStep("MERGE-SENTENCES", Utils.InteractionXML.MergeSentences.mergeSentences, {}, "merge-sentences.xml")
-        self.initStep("GENIA-SPLITTER", Tools.GeniaSentenceSplitter.makeSentences, {"debug":False, "postProcess":True}, "split-sentences.xml")
-        self.initStep("BANNER", Tools.BANNER.run, {"elementName":"entity", "processElement":"sentence", "debug":False, "splitNewlines":True}, "banner.xml")
-        self.initStepGroup("Constituency Parsing")
-        self.initStep("BLLIP-BIO", clsStep(BLLIPParser, "parse"), {"parseName":self.parseName, "requireEntities":self.requireEntities, "debug":False, "pathBioModel":"AUTO"}, "bllip-bio-parse.xml")
-        self.initStep("BLLIP", clsStep(BLLIPParser, "parse"), {"parseName":self.parseName, "requireEntities":self.requireEntities, "debug":False, "pathBioModel":None}, "bllip-parse.xml")
-        self.initStep("STANFORD-CONST", clsStep(StanfordParser, "parse"), {"parserName":self.parseName, "debug":False, "action":"penn"}, "stanford-const-parse.xml")
-        self.initStepGroup("Dependency Parsing")
-        self.initStep("STANFORD-DEP", clsStep(StanfordParser, "parse"), {"parserName":self.parseName, "debug":False, "action":"dep", "outputFormat":None}, "stanford-dependencies.xml")
-        self.initStep("STANFORD-CONVERT", clsStep(StanfordParser, "parse"), {"parserName":self.parseName, "debug":False, "action":"convert", "outputFormat":None}, "stanford-convert-dependencies.xml")
-        self.initStep("SYNTAXNET", clsStep(SyntaxNetParser, "parse"), {"parserName":self.parseName, "debug":False, "modelDir":None}, "syntaxnet-dependencies.xml")
-        self.initStepGroup("Alternative Parsing")
-        self.initStep("IMPORT-PARSE", clsStep(ParseConverter, "insertParses"), {"parseDir":None, "debug":False, "extensions":None, "subDirs":None, "docMatchKeys":None, "conllFormat":None, "splitting":True, "unescapeFormats":"AUTO"}, "import-parse.xml")
-        #self.allSteps["IMPORT-PARSE", clsStep(ParseConverter, ParseConverter.insertParses), {"parseDir":None, "debug":False}, "import-parse.xml"]
-        #self.allSteps["IMPORT-PARSE", lambda *args, **kwargs: ParseConverter().insertParses(*args, **kwargs), {"parseDir":None, "debug":False}, "import-parse.xml"]        
-        self.initStepGroup("Post-parsing")
-        self.initStep("SPLIT-NAMES", ProteinNameSplitter.mainFunc, {"parseName":self.parseName, "removeOld":True}, "split-names.xml")
-        self.initStep("FIND-HEADS", FindHeads.findHeads, {"parse":self.parseName, "removeExisting":True}, "heads.xml")
-        self.initStep("REMOVE-DOCUMENT-TEXTS", Utils.InteractionXML.DeleteAttributes.processCorpus, {"rules":{"document":["text"]}}, "remove-document-texts.xml")
-        self.initStep("ANALYZE-STRUCTURE", clsStep(StructureAnalyzer, "analyze"), {}, None)
-        self.initStepGroup("Miscellaneous")
-        self.initStep("ADD-DDI-TEST-GOLD", DDITools.addTestGold, {"testGoldPath":None}, None)
-        self.initStep("VALIDATE", Utils.InteractionXML.ValidateIXML.validateCorpus, {}, None)
-        self.initStepGroup("Saving")
-        self.initStep("DIVIDE-SETS", self.divideSets, {"saveCombined":False}, None)
-        self.initStep("SAVE", self.save, {}, None)
-        self.initStep("EXPORT", self.export, {"formats":None, "exportIds":None, "useSetDirs":False}, None)
-        self.initStep("EXPORT-STFORMAT", Utils.STFormat.ConvertXML.toSTFormat, {"outputTag":"a2", "useOrigIds":False, "debug":False, "skipArgs":[], "validate":True, "writeExtra":False, "allAsRelations":False, "exportIds":None}, None)
+#     def initSteps(self):
+#         self.initStepGroup("Corpus Conversion")
+#         self.initStep("CONVERT-BIONLP", Utils.Convert.convertBioNLP.convert, {"corpora":None, "outDir":None, "downloadDir":None, "redownload":False, "makeIntermediateFiles":False, "evaluate":False, "processEquiv":True, "analysisMode":"AUTO", "debug":False, "preprocessorSteps":None, "preprocessorParameters":None, "logPath":"AUTO"}, "convert-bionlp.xml", {"input":"corpora", "output":"outDir"})
+#         self.initStep("DOWNLOAD-CORPUS", Utils.Convert.convertBioNLP.convertCorpus, {"corpus":None, "outDir":None, "downloadDir":None, "redownload":False, "makeIntermediateFiles":False, "evaluate":False, "processEquiv":True, "analysisMode":"SKIP", "debug":False, "preprocessorSteps":None, "preprocessorParameters":None}, "download-bionlp.xml", {"input":"corpus", "output":"outDir"})
+#         self.initStepGroup("Loading")
+#         self.initStep("LOAD", self.load, {"dataSetNames":None, "corpusName":None, "extensions":None}, "load.xml")
+#         self.initStep("DOWNLOAD-PUBMED", self.downloadPubmed, {}, "pubmed.xml")
+#         self.initStep("CONVERT", self.convert, {"dataSetNames":None, "corpusName":None}, "convert.xml")
+#         self.initStep("MERGE-SETS", Utils.InteractionXML.MergeSets.mergeSets, {"corpusDir":None}, "merged-sets.xml")
+#         self.initStepGroup("Pre-parsing")
+#         self.initStep("MAP-ATTRIBUTES", Utils.InteractionXML.MapAttributes.processCorpus, {"rules":None}, "map-attributes.xml")
+#         self.initStep("REMOVE-HEADS", Utils.InteractionXML.DeleteAttributes.processCorpus, {"rules":{"entity":["headOffset"]}}, "remove-heads.xml")
+#         self.initStep("REMOVE-ANALYSES", Utils.InteractionXML.DeleteElements.processCorpus, {"rules":{"analyses":{}}, "reverse":False}, "remove-analyses.xml")
+#         self.initStep("MERGE-SENTENCES", Utils.InteractionXML.MergeSentences.mergeSentences, {}, "merge-sentences.xml")
+#         self.initStep("GENIA-SPLITTER", Tools.GeniaSentenceSplitter.makeSentences, {"debug":False, "postProcess":True}, "split-sentences.xml")
+#         self.initStep("BANNER", Tools.BANNER.run, {"elementName":"entity", "processElement":"sentence", "debug":False, "splitNewlines":True}, "banner.xml")
+#         self.initStepGroup("Constituency Parsing")
+#         self.initStep("BLLIP-BIO", clsStep(BLLIPParser, "parse"), {"parseName":self.parseName, "requireEntities":self.requireEntities, "debug":False, "pathBioModel":"AUTO"}, "bllip-bio-parse.xml")
+#         self.initStep("BLLIP", clsStep(BLLIPParser, "parse"), {"parseName":self.parseName, "requireEntities":self.requireEntities, "debug":False, "pathBioModel":None}, "bllip-parse.xml")
+#         self.initStep("STANFORD-CONST", clsStep(StanfordParser, "parse"), {"parserName":self.parseName, "debug":False, "action":"penn"}, "stanford-const-parse.xml")
+#         self.initStepGroup("Dependency Parsing")
+#         self.initStep("STANFORD-DEP", clsStep(StanfordParser, "parse"), {"parserName":self.parseName, "debug":False, "action":"dep", "outputFormat":None}, "stanford-dependencies.xml")
+#         self.initStep("STANFORD-CONVERT", clsStep(StanfordParser, "parse"), {"parserName":self.parseName, "debug":False, "action":"convert", "outputFormat":None}, "stanford-convert-dependencies.xml")
+#         self.initStep("SYNTAXNET", clsStep(SyntaxNetParser, "parse"), {"parserName":self.parseName, "debug":False, "modelDir":None}, "syntaxnet-dependencies.xml")
+#         self.initStepGroup("Alternative Parsing")
+#         self.initStep("IMPORT-PARSE", clsStep(ParseConverter, "insertParses"), {"parseDir":None, "debug":False, "extensions":None, "subDirs":None, "docMatchKeys":None, "conllFormat":None, "splitting":True, "unescapeFormats":"AUTO"}, "import-parse.xml")
+#         #self.allSteps["IMPORT-PARSE", clsStep(ParseConverter, ParseConverter.insertParses), {"parseDir":None, "debug":False}, "import-parse.xml"]
+#         #self.allSteps["IMPORT-PARSE", lambda *args, **kwargs: ParseConverter().insertParses(*args, **kwargs), {"parseDir":None, "debug":False}, "import-parse.xml"]        
+#         self.initStepGroup("Post-parsing")
+#         self.initStep("SPLIT-NAMES", ProteinNameSplitter.mainFunc, {"parseName":self.parseName, "removeOld":True}, "split-names.xml")
+#         self.initStep("FIND-HEADS", FindHeads.findHeads, {"parse":self.parseName, "removeExisting":True}, "heads.xml")
+#         self.initStep("REMOVE-DOCUMENT-TEXTS", Utils.InteractionXML.DeleteAttributes.processCorpus, {"rules":{"document":["text"]}}, "remove-document-texts.xml")
+#         self.initStep("ANALYZE-STRUCTURE", clsStep(StructureAnalyzer, "analyze"), {}, None)
+#         self.initStepGroup("Miscellaneous")
+#         self.initStep("ADD-DDI-TEST-GOLD", DDITools.addTestGold, {"testGoldPath":None}, None)
+#         self.initStep("VALIDATE", Utils.InteractionXML.ValidateIXML.validateCorpus, {}, None)
+#         self.initStepGroup("Saving")
+#         self.initStep("DIVIDE-SETS", self.divideSets, {"saveCombined":False}, None)
+#         self.initStep("SAVE", self.save, {}, None)
+#         self.initStep("EXPORT", self.export, {"formats":None, "exportIds":None, "useSetDirs":False}, None)
+#         self.initStep("EXPORT-STFORMAT", Utils.STFormat.ConvertXML.toSTFormat, {"outputTag":"a2", "useOrigIds":False, "debug":False, "skipArgs":[], "validate":True, "writeExtra":False, "allAsRelations":False, "exportIds":None}, None)
     
 #     def initPresets(self):
 #         self.presets["PRESET-CONVERT-PARSE"] = ["LOAD", "EXPORT"]
@@ -154,16 +148,12 @@ class Preprocessor(ToolChain):
     
     def getHelpString(self):
         s = "==========" + " Available preprocessor steps " + "==========" + "\n"
-        groupIndex = -1
-        for step in self.allStepsList:
-            if step["group"] != groupIndex:
-                groupIndex = step["group"]
-                #print >> sys.stderr, "*", preprocessor.groups[groupIndex], "*"
-                s += "[" + self.groups[groupIndex] + "]" + "\n"
-            s += " " + step["name"] + ": " + str(step["argDict"]) + "\n"
-        s += "==========" + "Available preprocessor presets" + "==========" + "\n"
-        for name in sorted(self.presets.keys()):
-            s += name + ": " + ",".join(self.presets[name]) + "\n"
+        currentGroup = None
+        for step in self.definedSteps:
+            if step.group != currentGroup:
+                currentGroup = step.group
+                s += "[" + currentGroup + "]" + "\n"
+            s += " " + step.name + ": " + str(sorted(step.argDict.keys())) + "\n"
         return s
     
 #     def getDefaultSteps(self):

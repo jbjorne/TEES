@@ -48,14 +48,15 @@ class Step():
         return arguments
 
 class ToolChain(Detector):
-    def __init__(self):
+    def __init__(self, steps=None):
         Detector.__init__(self)
         # Settings
         self.STATE_TOOLCHAIN = "PROCESS"
         self.group = None
         self.definedSteps = []
         self.definedStepDict = {}
-        self.steps = []
+        self.defineSteps()
+        self.steps = self.getSteps(steps)
         #self.allSteps = {}
         #self.allStepsList = []
         #self.groups = []
@@ -66,6 +67,20 @@ class ToolChain(Detector):
         self.compressIntermediateFiles = True
         self.intermediateFileTag = "temp"
         self.modelParameterStringName = None
+    
+    def getSteps(self, steps):
+        if steps == None:
+            return []
+        for step in self.definedSteps:
+            exec(step.name + " = self.definedStepDict['" + step.name + "']")
+        if isinstance(steps, basestring):
+            steps = eval("[" + steps + "]")
+        else:
+            steps = [eval(x) if isinstance(x, basestring) else x for x in steps]
+        return steps
+    
+    def defineSteps(self):
+        pass
     
     def defGroup(self, group):
         self.group = group
