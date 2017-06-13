@@ -81,6 +81,7 @@ def updateXML(root, removeAnalyses=True):
                 if pair.get("interaction") == "True":
                     del pair.attrib["interaction"]
                     pair.set("id", pair.get("id").rsplit(".", 1)[0] + ".i" + str(numInteractions))
+                    pair.set("type", "PPI")
                     ET.SubElement(sentence, "interaction", pair.attrib)
                     numInteractions += 1
                     counts["interactions"] += 1
