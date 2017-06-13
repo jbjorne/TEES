@@ -1,10 +1,16 @@
 import sys, os
+try:
+    import cElementTree as ET
+except ImportError:
+    import xml.etree.cElementTree as ET
+from collections import defaultdict
 thisPath = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.abspath(os.path.join(thisPath,"../..")))
 import Utils.Settings as Settings
 import Utils.Stream as Stream
 import Utils.Download
 import Utils.ElementTreeUtils as ETUtils
+import Utils.Range as Range
 
 PPI_CORPORA = ["AIMed", "BioInfer", "HPRD50", "IEPA", "LLL"]
 
@@ -36,6 +42,32 @@ def convert(corpora, outDir=None, downloadDir=None, redownload=False, removePars
         xml = convertCorpus(corpus, outDir, downloadDir, redownload, removeParses, logPath)
     return xml if len(corpora) == 1 else None
 
+def updateXML(root, removeParses=True):
+    counts = defaultdict(int)
+    for document in root.findall("document"):
+        counts["documents"] += 1
+        for sentence in document.findall("sentence"):
+            counts["sentences"] += 1
+            analyses = sentence.find("sentenceanalyses")
+            if analyses != None:
+                counts["analyses"] += 1
+                if removeParses:
+                    counts["removed-analyses"] += 1
+                    sentence.remove(analyses)
+            sentenceText = sentence.get("text")
+            for entity in sentence.findall("entity"):
+                offset = Range.charOffsetToSingleTuple(entity.get("charOffset"))
+                offset = (offset[0], offset[1] + 1)
+                assert sentenceText[offset[0]:offset[1]] == entity.get("text")
+                entity.set("charOffset", Range.tuplesToCharOffset(offset))
+            numInteractions = 0
+            for pair in sentence.findall("pair"):
+                sentence.remove(pair)
+                if pair.get("interaction") == "True":
+                    del pair.attrib["interaction"]
+                    pair.set("id", pair.get("id").replace(".p", ".i"))
+                    ET.SubElement(sentence, "interaction", pair.attrib)
+
 def convertCorpus(corpus, outDir=None, downloadDir=None, redownload=False, removeParses=True, logPath=None):
     assert corpus in PPI_CORPORA
     if logPath == "AUTO":
@@ -46,10 +78,12 @@ def convertCorpus(corpus, outDir=None, downloadDir=None, redownload=False, remov
     downloaded = downloadCorpus(corpus, outDir, downloadDir, redownload)
     print >> sys.stderr, "Loading", downloaded[corpus + "_LEARNING_FORMAT"]
     xml = ETUtils.ETFromObj(downloaded[corpus + "_LEARNING_FORMAT"])
+    print >> sys.stderr, "Updating Interaction XML format"
+    xml = updateXML
     
     if logPath != None:
         Stream.closeLog(logPath)
-        
+    return xml  
 
 if __name__=="__main__":
     from optparse import OptionParser
