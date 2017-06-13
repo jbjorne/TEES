@@ -64,10 +64,16 @@ def updateXML(root, removeAnalyses=True):
             sentence.set("charOffset", Range.tuplesToCharOffset((sentencePos, sentencePos + len(sentenceText))))
             # Update the character offsets of all entities from the old format (begin,end) to the new one (begin,end+1)
             for entity in sentence.findall("entity"):
-                offset = Range.charOffsetToSingleTuple(entity.get("charOffset"))
-                offset = (offset[0], offset[1] + 1)
-                assert sentenceText[offset[0]:offset[1]] == entity.get("text")
-                entity.set("charOffset", Range.tuplesToCharOffset(offset))
+                offsets = Range.charOffsetToTuples(entity.get("charOffset"))
+                entityTexts = [entity.get("text")]
+                if len(offsets) > 1:
+                    entityTexts = entity.get("text").split()
+                    assert len(offsets) == len(entityTexts), (offsets, entityTexts, sentenceText)
+                for i in range(len(offsets)):
+                    offsets[i] = (offsets[i][0], offsets[i][1] + 1)
+                    entitySpan = sentenceText[offsets[i][0]:offsets[i][1]]
+                    assert entitySpan == entityTexts[i], (offsets, entityTexts, entitySpan, sentenceText)
+                    entity.set("charOffset", Range.tuplesToCharOffset(offsets))
             # Convert positive pairs into interaction elements
             numInteractions = 0
             for pair in sentence.findall("pair"):
