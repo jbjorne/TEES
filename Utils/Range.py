@@ -20,7 +20,7 @@ def merge(range1, range2):
 
 def charOffsetToSingleTuple(charOffset, offsetSep="-"):
     tuples = charOffsetToTuples(charOffset, offsetSep)
-    assert(len(tuples) == 1)
+    assert len(tuples) == 1, charOffset
     return tuples[0] 
 
 def charOffsetToTuples(charOffset, offsetSep="-", rangeSep=","):
