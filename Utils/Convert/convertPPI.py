@@ -62,11 +62,16 @@ def updateXML(root, removeParses=True):
                 entity.set("charOffset", Range.tuplesToCharOffset(offset))
             numInteractions = 0
             for pair in sentence.findall("pair"):
+                counts["pairs"] += 1
                 sentence.remove(pair)
                 if pair.get("interaction") == "True":
                     del pair.attrib["interaction"]
-                    pair.set("id", pair.get("id").replace(".p", ".i"))
+                    pair.set("id", pair.get("id").rsplit(".", 1)[0] + ".i" + str(numInteractions))
                     ET.SubElement(sentence, "interaction", pair.attrib)
+                    numInteractions += 1
+                    counts["interactions"] += 1
+    print >> sys.stderr, "Updated Interaction XML format:", dict(counts)
+    return root
 
 def convertCorpus(corpus, outDir=None, downloadDir=None, redownload=False, removeParses=True, logPath=None):
     assert corpus in PPI_CORPORA
@@ -79,7 +84,14 @@ def convertCorpus(corpus, outDir=None, downloadDir=None, redownload=False, remov
     print >> sys.stderr, "Loading", downloaded[corpus + "_LEARNING_FORMAT"]
     xml = ETUtils.ETFromObj(downloaded[corpus + "_LEARNING_FORMAT"])
     print >> sys.stderr, "Updating Interaction XML format"
-    xml = updateXML
+    xml = updateXML(xml.getroot(), removeParses)
+    if outDir != None:
+        print >> sys.stderr, "---------------", "Writing corpus", "---------------"
+        #if intermediateFiles:
+        print >> sys.stderr, "Writing combined corpus"
+        ETUtils.write(xml, os.path.join(outDir, corpus + ".xml"))
+        #print >> sys.stderr, "Dividing into sets"
+        #Utils.InteractionXML.DivideSets.processCorpus(xml, outdir, corpus, ".xml")
     
     if logPath != None:
         Stream.closeLog(logPath)
