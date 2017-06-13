@@ -6,7 +6,7 @@ sys.path.append(os.path.abspath(os.path.join(thisPath,"../..")))
 import Utils.ElementTreeUtils as ETUtils
 
 def processCorpus(inPath, outPath, sourceSet, newSets, seed=1):
-    print >> sys.stderr, "Loading corpus file", input
+    print >> sys.stderr, "Loading corpus file", inPath
     corpusRoot = ETUtils.ETFromObj(inPath).getroot()
     
     rand = random.Random(seed)
@@ -25,9 +25,9 @@ def processCorpus(inPath, outPath, sourceSet, newSets, seed=1):
                 document.set("set", setName)
                 break
         counts["new"][document.get("set")] += 1
-    for key in counts:
-        counts[key] = dict(counts[key])
-    print "MakeSets result:", counts
+    #for key in counts:
+    #    counts[key] = dict(counts[key])
+    print "MakeSets result:", "old=" + str(dict(counts["old"])) + ", new=" + str(dict(counts["new"]))
     if outPath != None:
         ETUtils.write(corpusRoot, outPath)
     return corpusRoot
