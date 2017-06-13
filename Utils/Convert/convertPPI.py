@@ -3,6 +3,8 @@ thisPath = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.abspath(os.path.join(thisPath,"../..")))
 import Utils.Settings as Settings
 import Utils.Stream as Stream
+import Utils.Download
+import Utils.ElementTreeUtils as ETUtils
 
 PPI_CORPORA = ["AIMed", "BioInfer", "HPRD50", "IEPA", "LLL"]
 
@@ -10,38 +12,9 @@ def downloadCorpus(corpus, destPath=None, downloadPath=None, clear=False):
     print >> sys.stderr, "---------------", "Downloading PPI corpus", corpus, "files", "---------------"
     downloaded = {}
     downloadPath = downloadPath if downloadPath else os.path.join(Settings.DATAPATH, "download")
-    finalDestPath = destPath if destPath else os.path.join(Settings.DATAPATH, "corpora/BioNLP11-original") 
-    for setName in ["_DEVEL", "_TRAIN", "_TEST"]:
-        identifier = corpus + setName
-        parentIdentifier = identifier.replace("BB13T2", "BB13").replace("BB13T3", "BB13")
-        if setName in ("_DEVEL", "_TRAIN") and parentIdentifier not in Settings.URL:
-            raise Exception("Settings key '" + parentIdentifier + "' not found")
-        if parentIdentifier in Settings.URL:
-            downloaded[identifier] = Utils.Download.download(Settings.URL[parentIdentifier], downloadPath, clear=clear)
-    if corpus in ["REL11", "REN11", "CO11"]:
-        if destPath == None:
-            teesParseFinalDestPath = os.path.join(Settings.DATAPATH, "TEES-parses")
-        else:
-            teesParseFinalDestPath = os.path.join(destPath, "TEES-parses")
-        Utils.Download.downloadAndExtract(Settings.URL["TEES_PARSES"], teesParseFinalDestPath, downloadPath, redownload=clear)
-        downloaded["TEES_PARSES"] = teesParseFinalDestPath
-    elif corpus == "GE09" or corpus.endswith("11"):
-        if corpus == "GE09":
-            analyses = ["_ANALYSES"]
-        else:
-            analyses = ["_TOKENS", "_McCC"]
-        for analysis in analyses:
-            for setName in ["_DEVEL", "_TRAIN", "_TEST"]:
-                identifier = corpus + setName + analysis
-                if identifier in Settings.URL:
-                    downloaded[identifier] = Utils.Download.download(Settings.URL[identifier], downloadPath + "/support/", clear=clear)
-    elif corpus.endswith("13") or corpus.endswith("13T2") or corpus.endswith("13T3"):
-        for setName in ["_DEVEL", "_TRAIN", "_TEST"]:
-            cTag = corpus.replace("13T2", "13").replace("13T3","13")
-            downloaded[corpus + setName + "_McCCJ"] = Utils.Download.download(Settings.URL[cTag + setName + "_McCCJ"], downloadPath + "/support/", clear=clear)
-            downloaded[corpus + setName + "_TOK"] = Utils.Download.download(Settings.URL[cTag + setName + "_TOK"], downloadPath + "/support/", clear=clear)
-    else:
-        assert corpus.startswith("BB16") or corpus.startswith("SDB16")
+    identifier = corpus + "_LEARNING_FORMAT"
+    downloaded[identifier] = Utils.Download.download(Settings.URL[identifier], downloadPath, clear=clear)
+    downloaded["PPI_EVALUATION_STANDARD"] = Utils.Download.download(Settings.URL["PPI_EVALUATION_STANDARD"], downloadPath, clear=clear)
     return downloaded
 
 def convert(corpora, outDir=None, downloadDir=None, redownload=False, removeParses=True, logPath=None):
@@ -71,6 +44,8 @@ def convertCorpus(corpus, outDir=None, downloadDir=None, redownload=False, remov
         Stream.openLog(logPath)
     print >> sys.stderr, "==========", "Converting PPI corpus", corpus, "=========="
     downloaded = downloadCorpus(corpus, outDir, downloadDir, redownload)
+    print >> sys.stderr, "Loading", downloaded[corpus + "_LEARNING_FORMAT"]
+    xml = ETUtils.ETFromObj(downloaded[corpus + "_LEARNING_FORMAT"])
     
     if logPath != None:
         Stream.closeLog(logPath)

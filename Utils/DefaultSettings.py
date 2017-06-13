@@ -254,6 +254,16 @@ URL["DDI13_TEST_TASK_9.2_TEES_PARSES"] = None
 URL["DDI13_TRAIN_TEES_PARSES"] = "http://sourceforge.net/projects/tees/files/data/DDI13-TEES-parses-130224.tar.gz"
 
 
+# Five protein-protein interaction corpora
+urlBase = "http://mars.cs.utu.fi/PPICorpora/"
+URL["AIMed_LEARNING_FORMAT"] = urlBase + "AImed-learning-format.xml.gz"
+URL["BioInfer_LEARNING_FORMAT"] = urlBase + "BioInfer-learning-format.xml.gz"
+URL["HPRD50_LEARNING_FORMAT"] = urlBase + "HPRD50-learning-format.xml.gz"
+URL["IEPA_LEARNING_FORMAT"] = urlBase + "IEPA-learning-format.xml.gz"
+URL["LLL_LEARNING_FORMAT"] = urlBase + "LLL-learning-format.xml.gz"
+URL["PPI_EVALUATION_STANDARD"] = urlBase + "ppi-eval-standard-0.9.2b.tar.gz"
+
+
 # Miscellaneous files
 URL["TEES_RESOURCES"] = "http://sourceforge.net/projects/tees/files/data/TEES-resources-120705.tar.gz"
 URL["DRUG_BANK_XML"] = "http://sourceforge.net/projects/tees/files/data/drugbank.xml-150128.zip"
