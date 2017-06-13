@@ -54,12 +54,12 @@ def convertCorpus(corpus, outDir=None, downloadDir=None, redownload=False, remov
 if __name__=="__main__":
     from optparse import OptionParser
     optparser = OptionParser(usage="%prog [options]\nFive PPI corpora conversion")
-    optparser.add_option("-c", "--corpora", default=None, dest="corpora", help="corpus names in a comma-separated list")
-    optparser.add_option("-o", "--outdir", default=None, dest="outdir", help="directory for output files")
-    optparser.add_option("-d", "--downloaddir", default=None, dest="downloaddir", help="directory to download corpus files to")
+    optparser.add_option("-c", "--corpora", default=None, help="corpus names in a comma-separated list")
+    optparser.add_option("-o", "--outdir", default=None, help="directory for output files")
+    optparser.add_option("-d", "--downloaddir", default=None, help="directory to download corpus files to")
     optparser.add_option("--forceDownload", default=False, action="store_true", dest="forceDownload", help="re-download all source files")
-    optparser.add_option("--logPath", default="AUTO", dest="logPath", help="AUTO, None, or a path")
-    optparser.add_option("--debug", default=False, action="store_true", dest="debug", help="")
+    optparser.add_option("--logPath", default="AUTO", help="AUTO, None, or a path")
+    optparser.add_option("--debug", default=False, action="store_true", help="")
     (options, args) = optparser.parse_args()
     
-        
+    convert(options.corpora, options.outdir, options.downloaddir, options.forceDownload, True, options.logPath)
