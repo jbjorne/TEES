@@ -13,6 +13,7 @@ import Utils.Download
 import Utils.ElementTreeUtils as ETUtils
 import Utils.Range as Range
 import Utils.InteractionXML.DivideSets
+import Utils.InteractionXML.MakeSets as MakeSets
 
 PPI_CORPORA = ["AIMed", "BioInfer", "HPRD50", "IEPA", "LLL"]
 
@@ -107,10 +108,10 @@ def addSets(corpus, xml, evalStandardDownloadPath, evalStandardPackageDir="ppi-e
         else:
             document.set("set", "train")
             counts["missing"] += 1
-    print >> sys.stderr, "PPI Evaluation Standard sets for corpus", corpus + ": ", dict(counts)
+    print >> sys.stderr, "PPI Evaluation Standard sets for corpus", corpus, "documents:", dict(counts)
     return xml
 
-def convertCorpus(corpus, outDir=None, downloadDir=None, redownload=False, removeParses=True, logPath=None):
+def convertCorpus(corpus, outDir=None, downloadDir=None, redownload=False, removeParses=True, develFraction=0.3, logPath=None):
     assert corpus in PPI_CORPORA
     if logPath == "AUTO":
         logPath = outDir + "/conversion/" + corpus + "-conversion-log.txt" if outDir != None else None
@@ -125,6 +126,9 @@ def convertCorpus(corpus, outDir=None, downloadDir=None, redownload=False, remov
     updateXML(root, removeParses)
     print >> sys.stderr, "Adding sets from the PPI evaluation standard"
     addSets(corpus, root, downloaded["PPI_EVALUATION_STANDARD"])
+    if develFraction > 0.0:
+        print >> sys.stderr, "Generating devel set"
+        MakeSets.processCorpus(xml, None, "train", [("train", 1.0 - develFraction), ("devel", 1.0)], 1)
     if outDir != None:
         print >> sys.stderr, "---------------", "Writing corpus", "---------------"
         #if intermediateFiles:
