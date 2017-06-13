@@ -12,6 +12,7 @@ import Utils.Stream as Stream
 import Utils.Download
 import Utils.ElementTreeUtils as ETUtils
 import Utils.Range as Range
+import Utils.InteractionXML.DivideSets
 
 PPI_CORPORA = ["AIMed", "BioInfer", "HPRD50", "IEPA", "LLL"]
 
@@ -81,9 +82,27 @@ def updateXML(root, removeParses=True):
     print >> sys.stderr, "Updated Interaction XML format:", dict(counts)
     return root
 
-def addSets(xml, evalStandardDownloadPath):
+def addSets(corpus, xml, evalStandardDownloadPath, evalStandardPackageDir="ppi-eval-standard"):
     #evalStandardExtractPath = os.path.join(tempfile.gettempdir(), "PPIEvalStandard")
-    print Utils.Download.extractPackage(evalStandardDownloadPath, tempfile.gettempdir())
+    evalStandardPath = os.path.join(tempfile.gettempdir(), evalStandardPackageDir)
+    if not os.path.exists(evalStandardPath):
+        print >> sys.stderr, "Extracting evaluation standard from", evalStandardDownloadPath
+        Utils.Download.extractPackage(evalStandardDownloadPath, tempfile.gettempdir())
+    print >> sys.stderr, "Using extracted evaluation standard at", evalStandardPath
+    assert os.path.exists(evalStandardPath)
+    docIds = {}
+    for dataSet in "train", "test":
+        dataSetXMLPath = os.path.join(evalStandardPath, dataSet, corpus + "-" + dataSet + ".xml")
+        print >> sys.stderr, "Loading evaluation standard XML from", dataSetXMLPath
+        dataSetXML = ETUtils.ETFromObj(dataSetXMLPath)
+        for document in dataSetXML.getroot().findall("document"):
+            assert document.get("id") not in docIds
+            docIds[document.get("id")] = dataSet
+    print >> sys.stderr, "Assigning sets"
+    for document in xml.findall("document"):
+        assert document.get("id") in docIds, document.get("id")
+        document.set("set", docIds[document.get("id")])
+    return xml
 
 def convertCorpus(corpus, outDir=None, downloadDir=None, redownload=False, removeParses=True, logPath=None):
     assert corpus in PPI_CORPORA
@@ -98,14 +117,14 @@ def convertCorpus(corpus, outDir=None, downloadDir=None, redownload=False, remov
     print >> sys.stderr, "Updating Interaction XML format"
     xml = updateXML(xml.getroot(), removeParses)
     print >> sys.stderr, "Adding sets from the PPI evaluation standard"
-    addSets(xml, downloaded["PPI_EVALUATION_STANDARD"])
+    addSets(corpus, xml, downloaded["PPI_EVALUATION_STANDARD"])
     if outDir != None:
         print >> sys.stderr, "---------------", "Writing corpus", "---------------"
         #if intermediateFiles:
-        print >> sys.stderr, "Writing combined corpus"
-        ETUtils.write(xml, os.path.join(outDir, corpus + ".xml"))
-        #print >> sys.stderr, "Dividing into sets"
-        #Utils.InteractionXML.DivideSets.processCorpus(xml, outdir, corpus, ".xml")
+        #print >> sys.stderr, "Writing combined corpus"
+        #ETUtils.write(xml, os.path.join(outDir, corpus + ".xml"))
+        print >> sys.stderr, "Dividing into sets"
+        Utils.InteractionXML.DivideSets.processCorpus(xml, outDir, corpus, ".xml")
     
     if logPath != None:
         Stream.closeLog(logPath)
