@@ -97,23 +97,30 @@ def addSets(corpus, xml, evalStandardDownloadPath, evalStandardPackageDir="ppi-e
         Utils.Download.extractPackage(evalStandardDownloadPath, tempfile.gettempdir())
     print >> sys.stderr, "Using extracted evaluation standard at", evalStandardPath
     assert os.path.exists(evalStandardPath)
-    docIds = {}
+    docSets = {}
     for dataSet in "train", "test":
         dataSetXMLPath = os.path.join(evalStandardPath, dataSet, corpus + "-" + dataSet + ".xml")
         print >> sys.stderr, "Loading evaluation standard XML from", dataSetXMLPath
         dataSetXML = ETUtils.ETFromObj(dataSetXMLPath)
         for document in dataSetXML.getroot().findall("document"):
-            assert document.get("id") not in docIds
-            docIds[document.get("id")] = dataSet
+            assert document.get("id") not in docSets
+            docSets[document.get("id")] = {"set":dataSet, "element":document}
     print >> sys.stderr, "Assigning sets"
     counts = defaultdict(int)
     for document in xml.findall("document"):
-        if document.get("id") in docIds:
-            document.set("set", docIds[document.get("id")])
-            counts[docIds[document.get("id")]] += 1
+        counts["documents"] += 1
+        docId = document.get("id")
+        if docId in docSets:
+            counts["documents-in-eval-standard"] += 1
+            document.set("set", docSets[docId]["set"])
+            if document.get("origId") != None and docSets[docId]["element"].get("origId") != None:
+                assert document.get("origId") == docSets[docId]["element"].get("origId"), docId
+                counts["documents-match-by-origId"] += 1
+            counts["eval-standard-set:" + docSets[docId]["set"]] += 1
         else:
             document.set("set", "train")
-            counts["missing"] += 1
+            counts["missing-from-eval-standard"] += 1
+        counts["set:" + document.get("set")] += 1
     print >> sys.stderr, "PPI Evaluation Standard sets for corpus", corpus, "documents:", dict(counts)
     return xml
 
