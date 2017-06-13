@@ -65,12 +65,12 @@ def updateXML(root, removeAnalyses=True):
             # Update the character offsets of all entities from the old format (begin,end) to the new one (begin,end+1)
             for entity in sentence.findall("entity"):
                 offsets = Range.charOffsetToTuples(entity.get("charOffset"))
-                entityTexts = [entity.get("text")]
-                if len(offsets) > 1:
-                    entityTexts = entity.get("text").split()
-                    assert len(offsets) == len(entityTexts), (offsets, entityTexts, sentenceText)
                 for i in range(len(offsets)):
                     offsets[i] = (offsets[i][0], offsets[i][1] + 1)
+                entityTexts = [entity.get("text")] if len(offsets) == 1 else entity.get("text").split()
+                entitySpans = [sentenceText[x[0]:x[1]] for x in offsets]
+                assert len(offsets) == len(entityTexts), (offsets, entityTexts, entitySpans, sentenceText)
+                for i in range(len(offsets)):
                     entitySpan = sentenceText[offsets[i][0]:offsets[i][1]]
                     assert entitySpan == entityTexts[i], (offsets, entityTexts, entitySpan, sentenceText)
                     entity.set("charOffset", Range.tuplesToCharOffset(offsets))
