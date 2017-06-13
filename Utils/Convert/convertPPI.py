@@ -26,7 +26,7 @@ def downloadCorpus(corpus, destPath=None, downloadPath=None, clear=False):
     downloaded["PPI_EVALUATION_STANDARD"] = Utils.Download.download(Settings.URL["PPI_EVALUATION_STANDARD"], downloadPath, clear=clear)
     return downloaded
 
-def convert(corpora, outDir=None, downloadDir=None, redownload=False, removeParses=True, logPath=None):
+def convert(corpora, outDir=None, downloadDir=None, redownload=False, removeAnalyses=True, develFraction=0.3, logPath=None):
     if outDir == "AUTO":
         outDir = os.path.normpath(Settings.DATAPATH + "/corpora")
     elif outDir != None:
@@ -41,11 +41,11 @@ def convert(corpora, outDir=None, downloadDir=None, redownload=False, removePars
 
     for i in range(len(corpora)):
         corpus = corpora[i]
-        print >> sys.stderr, "=======================", "Converting PPI", corpus, "corpus ("+str(i)+"/"+str(len(corpora))+")", "======================="
-        xml = convertCorpus(corpus, outDir, downloadDir, redownload, removeParses, logPath)
+        print >> sys.stderr, "=======================", "Converting PPI", corpus, "corpus ("+str(i+1)+"/"+str(len(corpora))+")", "======================="
+        xml = convertCorpus(corpus, outDir, downloadDir, redownload, removeAnalyses, develFraction, logPath)
     return xml if len(corpora) == 1 else None
 
-def updateXML(root, removeParses=True):
+def updateXML(root, removeAnalyses=True):
     counts = defaultdict(int)
     for document in root.findall("document"):
         sentencePos = 0
@@ -56,7 +56,7 @@ def updateXML(root, removeParses=True):
             analyses = sentence.find("sentenceanalyses")
             if analyses != None:
                 counts["analyses"] += 1
-                if removeParses:
+                if removeAnalyses:
                     counts["removed-analyses"] += 1
                     sentence.remove(analyses)
             # Add an artifical sentence offset so that sentences can be exported as a single document
@@ -111,7 +111,7 @@ def addSets(corpus, xml, evalStandardDownloadPath, evalStandardPackageDir="ppi-e
     print >> sys.stderr, "PPI Evaluation Standard sets for corpus", corpus, "documents:", dict(counts)
     return xml
 
-def convertCorpus(corpus, outDir=None, downloadDir=None, redownload=False, removeParses=True, develFraction=0.3, logPath=None):
+def convertCorpus(corpus, outDir=None, downloadDir=None, redownload=False, removeAnalyses=True, develFraction=0.3, logPath=None):
     assert corpus in PPI_CORPORA
     if logPath == "AUTO":
         logPath = outDir + "/conversion/" + corpus + "-conversion-log.txt" if outDir != None else None
@@ -119,16 +119,16 @@ def convertCorpus(corpus, outDir=None, downloadDir=None, redownload=False, remov
         Stream.openLog(logPath)
     print >> sys.stderr, "==========", "Converting PPI corpus", corpus, "=========="
     downloaded = downloadCorpus(corpus, outDir, downloadDir, redownload)
+    print >> sys.stderr, "---------------", "Updating Interaction XML format", "---------------"
     print >> sys.stderr, "Loading", downloaded[corpus + "_LEARNING_FORMAT"]
     xml = ETUtils.ETFromObj(downloaded[corpus + "_LEARNING_FORMAT"])
     root = xml.getroot()
-    print >> sys.stderr, "Updating Interaction XML format"
-    updateXML(root, removeParses)
-    print >> sys.stderr, "Adding sets from the PPI evaluation standard"
+    updateXML(root, removeAnalyses)
+    print >> sys.stderr, "---------------", "Adding sets from the PPI evaluation standard", "---------------"
     addSets(corpus, root, downloaded["PPI_EVALUATION_STANDARD"])
     if develFraction > 0.0:
-        print >> sys.stderr, "Generating devel set"
-        MakeSets.processCorpus(xml, None, "train", [("train", 1.0 - develFraction), ("devel", 1.0)], 1)
+        print >> sys.stderr, "---------------", "Generating devel set", "---------------"
+        MakeSets.processCorpus(xml, None, "train", [("devel", develFraction), ("train", 1.0)], 1)
     if outDir != None:
         print >> sys.stderr, "---------------", "Writing corpus", "---------------"
         #if intermediateFiles:
@@ -147,9 +147,11 @@ if __name__=="__main__":
     optparser.add_option("-c", "--corpora", default=None, help="corpus names in a comma-separated list")
     optparser.add_option("-o", "--outdir", default=None, help="directory for output files")
     optparser.add_option("-d", "--downloaddir", default=None, help="directory to download corpus files to")
+    optparser.add_option("-f", "--develFraction", default=0.3, type=float, help="fraction of train set to use as devel set")
+    optparser.add_option("-k", "--keepAnalyses", default=False, action="store_true", help="keep existing sentence analyses (parses)")
     optparser.add_option("--forceDownload", default=False, action="store_true", dest="forceDownload", help="re-download all source files")
     optparser.add_option("--logPath", default="AUTO", help="AUTO, None, or a path")
     optparser.add_option("--debug", default=False, action="store_true", help="")
     (options, args) = optparser.parse_args()
     
-    convert(options.corpora, options.outdir, options.downloaddir, options.forceDownload, True, options.logPath)
+    convert(options.corpora, options.outdir, options.downloaddir, options.forceDownload, not options.keepAnalyses, options.develFraction, options.logPath)
