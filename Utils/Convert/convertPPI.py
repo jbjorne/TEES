@@ -1,4 +1,5 @@
 import sys, os
+import tempfile
 try:
     import cElementTree as ET
 except ImportError:
@@ -45,21 +46,27 @@ def convert(corpora, outDir=None, downloadDir=None, redownload=False, removePars
 def updateXML(root, removeParses=True):
     counts = defaultdict(int)
     for document in root.findall("document"):
+        sentencePos = 0
         counts["documents"] += 1
         for sentence in document.findall("sentence"):
             counts["sentences"] += 1
+            # Remove the original parses
             analyses = sentence.find("sentenceanalyses")
             if analyses != None:
                 counts["analyses"] += 1
                 if removeParses:
                     counts["removed-analyses"] += 1
                     sentence.remove(analyses)
+            # Add an artifical sentence offset so that sentences can be exported as a single document
             sentenceText = sentence.get("text")
+            sentence.set("charOffset", Range.tuplesToCharOffset((sentencePos, sentencePos + len(sentenceText))))
+            # Update the character offsets of all entities from the old format (begin,end) to the new one (begin,end+1)
             for entity in sentence.findall("entity"):
                 offset = Range.charOffsetToSingleTuple(entity.get("charOffset"))
                 offset = (offset[0], offset[1] + 1)
                 assert sentenceText[offset[0]:offset[1]] == entity.get("text")
                 entity.set("charOffset", Range.tuplesToCharOffset(offset))
+            # Convert positive pairs into interaction elements
             numInteractions = 0
             for pair in sentence.findall("pair"):
                 counts["pairs"] += 1
@@ -70,8 +77,13 @@ def updateXML(root, removeParses=True):
                     ET.SubElement(sentence, "interaction", pair.attrib)
                     numInteractions += 1
                     counts["interactions"] += 1
+            sentencePos += len(sentenceText) + 1
     print >> sys.stderr, "Updated Interaction XML format:", dict(counts)
     return root
+
+def addSets(xml, evalStandardDownloadPath):
+    #evalStandardExtractPath = os.path.join(tempfile.gettempdir(), "PPIEvalStandard")
+    print Utils.Download.extractPackage(evalStandardDownloadPath, tempfile.gettempdir())
 
 def convertCorpus(corpus, outDir=None, downloadDir=None, redownload=False, removeParses=True, logPath=None):
     assert corpus in PPI_CORPORA
@@ -85,6 +97,8 @@ def convertCorpus(corpus, outDir=None, downloadDir=None, redownload=False, remov
     xml = ETUtils.ETFromObj(downloaded[corpus + "_LEARNING_FORMAT"])
     print >> sys.stderr, "Updating Interaction XML format"
     xml = updateXML(xml.getroot(), removeParses)
+    print >> sys.stderr, "Adding sets from the PPI evaluation standard"
+    addSets(xml, downloaded["PPI_EVALUATION_STANDARD"])
     if outDir != None:
         print >> sys.stderr, "---------------", "Writing corpus", "---------------"
         #if intermediateFiles:
