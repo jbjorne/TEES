@@ -99,9 +99,15 @@ def addSets(corpus, xml, evalStandardDownloadPath, evalStandardPackageDir="ppi-e
             assert document.get("id") not in docIds
             docIds[document.get("id")] = dataSet
     print >> sys.stderr, "Assigning sets"
+    counts = defaultdict(int)
     for document in xml.findall("document"):
-        assert document.get("id") in docIds, document.get("id")
-        document.set("set", docIds[document.get("id")])
+        if document.get("id") in docIds:
+            document.set("set", docIds[document.get("id")])
+            counts[docIds[document.get("id")]] += 1
+        else:
+            document.set("set", "train")
+            counts["missing"] += 1
+    print >> sys.stderr, "PPI Evaluation Standard sets for corpus", corpus + ": ", dict(counts)
     return xml
 
 def convertCorpus(corpus, outDir=None, downloadDir=None, redownload=False, removeParses=True, logPath=None):
@@ -114,10 +120,11 @@ def convertCorpus(corpus, outDir=None, downloadDir=None, redownload=False, remov
     downloaded = downloadCorpus(corpus, outDir, downloadDir, redownload)
     print >> sys.stderr, "Loading", downloaded[corpus + "_LEARNING_FORMAT"]
     xml = ETUtils.ETFromObj(downloaded[corpus + "_LEARNING_FORMAT"])
+    root = xml.getroot()
     print >> sys.stderr, "Updating Interaction XML format"
-    xml = updateXML(xml.getroot(), removeParses)
+    updateXML(root, removeParses)
     print >> sys.stderr, "Adding sets from the PPI evaluation standard"
-    addSets(corpus, xml, downloaded["PPI_EVALUATION_STANDARD"])
+    addSets(corpus, root, downloaded["PPI_EVALUATION_STANDARD"])
     if outDir != None:
         print >> sys.stderr, "---------------", "Writing corpus", "---------------"
         #if intermediateFiles:
