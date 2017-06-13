@@ -32,6 +32,7 @@ import Utils.InteractionXML.ValidateIXML
 import Utils.InteractionXML.InteractionXMLUtils as IXMLUtils
 import Utils.Settings as Settings
 import Utils.Convert.convertBioNLP
+import Utils.Convert.convertPPI
 
 def clsStep(cls, method):
     return lambda *args, **kwargs: getattr(cls(), method)(*args, **kwargs)
@@ -59,8 +60,9 @@ class Preprocessor(ToolChain):
     
     def defineSteps(self):
         self.defGroup("Corpus Conversion")
+        self.defStep("DOWNLOAD", self.downloadCorpus, {"corpus":None, "outDir":None, "downloadDir":None, "redownload":False, "debug":False}, {"input":"corpus", "output":"outDir"})
+        self.defStep("DOWNLOAD_BIONLP", Utils.Convert.convertBioNLP.convertCorpus, {"corpus":None, "outDir":None, "downloadDir":None, "redownload":False, "makeIntermediateFiles":False, "evaluate":False, "processEquiv":True, "analysisMode":"SKIP", "debug":False, "preprocessorSteps":None, "preprocessorParameters":None}, {"input":"corpus", "output":"outDir"})
         self.defStep("CONVERT_BIONLP", Utils.Convert.convertBioNLP.convert, {"corpora":None, "outDir":None, "downloadDir":None, "redownload":False, "makeIntermediateFiles":False, "evaluate":False, "processEquiv":True, "analysisMode":"AUTO", "debug":False, "preprocessorSteps":None, "preprocessorParameters":None, "logPath":"AUTO"}, {"input":"corpora", "output":"outDir"})
-        self.defStep("DOWNLOAD_CORPUS", Utils.Convert.convertBioNLP.convertCorpus, {"corpus":None, "outDir":None, "downloadDir":None, "redownload":False, "makeIntermediateFiles":False, "evaluate":False, "processEquiv":True, "analysisMode":"SKIP", "debug":False, "preprocessorSteps":None, "preprocessorParameters":None}, {"input":"corpus", "output":"outDir"})
         self.defGroup("Loading")
         self.defStep("LOAD", self.load, {"dataSetNames":None, "corpusName":None, "extensions":None})
         self.defStep("DOWNLOAD_PUBMED", self.downloadPubmed)
@@ -237,6 +239,14 @@ class Preprocessor(ToolChain):
         else:
             print >> sys.stderr, "Processing source as interaction XML"
             return ETUtils.ETFromObj(input)
+    
+    def downloadCorpus(self, corpus, outDir, downloadDir, redownload, debug):
+        if corpus in Utils.Convert.convertPPI.PPI_CORPORA:
+            print >> sys.stderr, "Downloading PPI corpus", corpus
+            return Utils.Convert.convertPPI.convertCorpus(corpus, outDir, downloadDir, redownload)
+        else:
+            print >> sys.stderr, "Downloading BioNLP Shared Task corpus", corpus
+            return Utils.Convert.convertBioNLP.convertCorpus(corpus, outDir, downloadDir, redownload, makeIntermediateFiles=False, analysisMode="SKIP", debug=debug)
         
     def downloadPubmed(self, input, output=None):
         assert isinstance(input, basestring) and input.isdigit() # PMID
