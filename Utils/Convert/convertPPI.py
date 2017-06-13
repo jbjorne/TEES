@@ -65,19 +65,14 @@ def updateXML(root, removeAnalyses=True):
             # Update the character offsets of all entities from the old format (begin,end) to the new one (begin,end+1)
             for entity in sentence.findall("entity"):
                 counts["entities"] += 1
-                offsets = Range.charOffsetToTuples(entity.get("charOffset"))
-                for i in range(len(offsets)):
-                    offsets[i] = (offsets[i][0], offsets[i][1] + 1)
-                entityText = entity.get("text") #entityTexts = [entity.get("text")] if len(offsets) == 1 else entity.get("text").split()
-                entitySpans = [sentenceText[x[0]:x[1]] for x in offsets]
-                #assert len(offsets) == len(entityTexts), (offsets, entityTexts, entitySpans, sentenceText)
-                for i in range(len(offsets)):
+                offsets = [(x[0], x[1] + 1) for x in Range.charOffsetToTuples(entity.get("charOffset"))]
+                entityText = entity.get("text")
+                for offset, entitySpan in zip(offsets, [sentenceText[x[0]:x[1]] for x in offsets]):
                     counts["entity-offsets"] += 1
-                    offset = offsets[i]
                     lenOffset = offset[1] - offset[0]
                     offsetText, entityText = entityText[:lenOffset].strip(), entityText[lenOffset:].strip()
-                    assert offsetText == entitySpans[i], (offsets, offsetText, entityText, entitySpans, sentenceText)
-                    entity.set("charOffset", Range.tuplesToCharOffset(offsets))
+                    assert offsetText == entitySpan, (offsets, (entity.get("text"), entitySpan), (offsetText, entityText), sentenceText)
+                entity.set("charOffset", Range.tuplesToCharOffset(offsets))
             # Convert positive pairs into interaction elements
             numInteractions = 0
             for pair in sentence.findall("pair"):
