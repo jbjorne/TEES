@@ -118,9 +118,10 @@ def addSets(corpus, xml, evalStandardDownloadPath, evalStandardPackageDir="ppi-e
                 counts["documents-match-by-origId"] += 1
             counts["eval-standard-set:" + docSets[docId]["set"]] += 1
         else:
+            print >> sys.stderr, "Warning, removing document", document.get("id"), "which is not included in the PPI evaluation standard"
             document.set("set", "train")
             counts["missing-from-eval-standard"] += 1
-        counts["set:" + document.get("set")] += 1
+            xml.remove(document)
     print >> sys.stderr, "PPI Evaluation Standard sets for corpus", corpus, "documents:", dict(counts)
     return xml
 
