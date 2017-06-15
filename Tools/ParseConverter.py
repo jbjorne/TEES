@@ -138,6 +138,8 @@ class ParseConverter(Parser):
             raise Exception("Parse input '" + str(parseDir) + "' is not a directory")
         if extensions == None:
             extensions = self.allExt
+        elif isinstance(extensions, basestring):
+            extensions = extensions.split(",")
         extensions = [x for x in extensions if x in self.allExt]
         unescapeFormats = self.getUnescapeFormats(unescapeFormats)
         if docMatchKeys == None:

@@ -261,8 +261,8 @@ class ToolChain(Detector):
                     stepArgs[step.ioArgNames["output"]] = output
 #                 elif self.getIntermediateFilePath(step) != None: # This step can save an intermediate file
 #                     stepArgs[ioArgNames["output"]] = self.getIntermediateFilePath(step)
-                else:
-                    stepArgs[step.ioArgNames["output"]] = None
+                #else:
+                #    stepArgs[step.ioArgNames["output"]] = None
                 #print >> sys.stderr, "Running step", step.name, "with arguments", stepArgs
                 source = step.run(**stepArgs) #source = step["function"](**stepArgs) # call the tool
             elif self.getStepStatus(step["name"]) == "BEFORE": # this step was run earlier

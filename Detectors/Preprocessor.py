@@ -66,7 +66,7 @@ class Preprocessor(ToolChain):
         self.defGroup("Loading")
         self.defStep("LOAD", self.load, {"dataSetNames":None, "corpusName":None, "extensions":None})
         self.defStep("DOWNLOAD_PUBMED", self.downloadPubmed)
-        self.defStep("CONVERT", self.convert, {"dataSetNames":None, "corpusName":None})
+        self.defStep("CONVERT", self.convert, {"dataSetNames":None, "corpusName":None, "extensions":None})
         self.defStep("MERGE_SETS", Utils.InteractionXML.MergeSets.mergeSets, {"corpusDir":None})
         self.defGroup("Pre-parsing")
         self.defStep("MAP_ATTRIBUTES", Utils.InteractionXML.MapAttributes.processCorpus, {"rules":None})
@@ -296,6 +296,8 @@ class Preprocessor(ToolChain):
         # Convert all ST format input files into one corpus
         stExtensions = set(["txt", "a1", "a2", "rel"])
         if extensions != None:
+            if isinstance(extensions, basestring):
+                extensions = extensions.split(",")
             stExtensions = set([x for x in stExtensions if x in extensions])
         documents = []
         xml = None
