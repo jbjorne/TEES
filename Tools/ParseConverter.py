@@ -17,32 +17,38 @@ class ParseConverter(Parser):
     
     def __init__(self):
         Parser.__init__(self)
-        self.allExt = ["ptb", "sd", "conll", "conllx", "conllu", "corenlp", "epe"]
+        self.allExt = ["ptb", "sd", "conll", "conllx", "conllu", "corenlp", "epe", "tt"]
     
     def getParseFiles(self, parseDir, extensions, subDirs, counts, extMap=None):
         files = {}
         if subDirs == None:
             subDirs = ["ptb", "conll", "sd_ccproc"]
+        elif isinstance(subDirs, basestring):
+            subDirs = subDirs.split(",")
         directories = [parseDir] + [os.path.join(parseDir, x) for x in subDirs]
         for directory in directories:
+            fileCounts = defaultdict(int)
             if not os.path.exists(directory):
                 continue
-            print >> sys.stderr, "Collecting parses from", directory
-            for filename in os.listdir(parseDir):
-                if "." not in filename:
+            print >> sys.stderr, "Collecting parses from", directory,
+            for filename in os.listdir(directory):
+                filePath = os.path.join(directory, filename)
+                if "." not in filename or os.path.isdir(filePath):
                     continue
                 docName, ext = filename.rsplit(".", 1)
                 if extMap and ext in extMap:
                     ext = extMap[ext]
                 if ext not in extensions:
+                    fileCounts["skipped:" + ext] += 1
                     continue
                 if docName not in files:
                     files[docName] = {}
-                filePath = os.path.join(parseDir, filename)
                 if ext in files[docName]:
                     print >> sys.stderr, "Multiple files for extension", ext, [files[docName][ext], filePath]
                 files[docName][ext] = filePath
+                fileCounts[ext] += 1
                 counts[ext + "-read"] += 1
+            print >> sys.stderr, dict(fileCounts)
         return files
     
     def prepareSentences(self, document, sentences, sentObjs, splitting=False, counts=None):
@@ -98,6 +104,8 @@ class ParseConverter(Parser):
             sentObjs = self.readStanfordDependencies(filePath, failedFormat=sdFailedFormat)
         elif ext == "epe":
             sentObjs = self.readEPE(filePath)
+        elif ext == "tt":
+            sentObjs = self.readTT(filePath)
         else:
             raise Exception("Unknown extension '" + str(ext) + "'")
         if tokenMerging:
@@ -115,6 +123,9 @@ class ParseConverter(Parser):
             sentences = self.prepareSentences(document, sentences, sentObjs, splitting, typeCounts["sentence-splitting"])
             self.insertElements(sentObjs, sentences, parseName, "LINKED", counts=extCounts)
         elif ext == "sd":
+            self.insertElements(sentObjs, sentences, parseName, parseName, counts=extCounts)
+        elif ext == "tt":
+            sentences = self.prepareSentences(document, sentences, sentObjs, splitting, typeCounts["sentence-splitting"])
             self.insertElements(sentObjs, sentences, parseName, parseName, counts=extCounts)
         else:
             raise Exception("Unknown extension '" + str(ext) + "'")

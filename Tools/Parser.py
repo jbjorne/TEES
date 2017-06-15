@@ -944,11 +944,13 @@ class Parser:
                 conllFormat = "conllu"
             elif ext == "corenlp":
                 conllFormat = "corenlp"
+            elif ext == "tt":
+                conllFormat = "tt"
             else:
                 raise Exception("Unknown CoNLL file extension '" + str(ext) + "'")
         if conllFormat == "conll":
             conllFormat = "conllx"
-        assert conllFormat in ("conllx", "conllu", "corenlp", "corenlp"), conllFormat
+        assert conllFormat in ("conllx", "conllu", "corenlp", "corenlp", "tt"), conllFormat
         return conllFormat
     
     def getCoNLLColumns(self, inPath=None, conllFormat=None):
@@ -958,6 +960,8 @@ class Parser:
             return ["ID", "FORM", "LEMMA", "CPOSTAG", "POSTAG", "FEATS", "HEAD", "DEPREL", "PHEAD", "PDEPREL"]
         elif conllFormat == "corenlp": # Official column names are wordIndex, token, lemma, POS, NER, head, depRel
             return ["ID", "FORM", "LEMMA", "POS", "NER", "HEAD", "DEPREL"]
+        elif conllFormat == "tt":
+            return ["BEGIN", "END", "FORM", "POS"]
         else:
             return ["ID", "FORM", "LEMMA", "UPOSTAG", "XPOSTAG", "FEATS", "HEAD", "DEPREL", "DEPS", "MISC"]
     
@@ -1148,3 +1152,19 @@ class Parser:
                             dependencies.append({"type":edge["label"], "t1":t1, "t2":t2, "t1Token":tokenById[t1], "t2Token":tokenById[t2]})
                 sentences.append({"tokens":tokens, "dependencies":dependencies})
         return sentences
+    
+    ###########################################################################
+    # TT File Processing
+    ###########################################################################
+    
+    def readTT(self, inPath):
+        sentences = self.readCoNLL(inPath, "tt")
+        outSentences = []
+        for sentence in sentences:
+            tokens = []
+            # Build the tokens
+            for i in range(len(sentence["words"])):
+                word = sentence["words"][i]
+                tokens.append({"POS":word["POS"], "text":word["FORM"], "offset":(word["BEGIN"], word["END"]), "index":i})
+            outSentences.append({"tokens":tokens, "dependencies":None})
+        return outSentences
