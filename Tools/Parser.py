@@ -961,7 +961,7 @@ class Parser:
         elif conllFormat == "corenlp": # Official column names are wordIndex, token, lemma, POS, NER, head, depRel
             return ["ID", "FORM", "LEMMA", "POS", "NER", "HEAD", "DEPREL"]
         elif conllFormat == "tt":
-            return ["BEGIN", "END", "FORM", "POS"]
+            return ["BEGIN", "END", "FORM", "LEMMA", "POS"]
         else:
             return ["ID", "FORM", "LEMMA", "UPOSTAG", "XPOSTAG", "FEATS", "HEAD", "DEPREL", "DEPS", "MISC"]
     
@@ -1165,6 +1165,6 @@ class Parser:
             # Build the tokens
             for i in range(len(sentence["words"])):
                 word = sentence["words"][i]
-                tokens.append({"POS":word["POS"], "text":word["FORM"], "offset":(word["BEGIN"], word["END"]), "index":i})
-            outSentences.append({"tokens":tokens, "dependencies":None})
+                tokens.append({"POS":word["POS"], "text":word["FORM"], "offset":(int(word["BEGIN"]), int(word["END"])), "index":i})
+            outSentences.append({"tokens":tokens})
         return outSentences
