@@ -70,6 +70,7 @@ class ToolChain(Detector):
         self.modelParameterStringName = None
     
     def getSteps(self, steps):
+        print >> sys.stderr, "Initializing steps:", steps
         if steps == None:
             return []
         for step in self.definedSteps:

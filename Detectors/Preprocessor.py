@@ -270,12 +270,21 @@ class Preprocessor(ToolChain):
             dataSetNames = []
         elif type(dataSetNames) in types.StringTypes:
             dataSetNames = dataSetNames.split(",")
-        dirs = []
-        for dataSetDir, dataSetName in itertools.izip_longest(dataSetDirs, dataSetNames, fillvalue=None):
-            assert os.path.exists(dataSetDir)
-            extensions = set([x.rsplit(".", 1)[-1] for x in os.listdir(dataSetDir) if "." in x])
-            dirs.append({"dataset":dataSetName, "path":dataSetDir, "extensions":extensions})
-        return dirs
+        inDirs = []
+        if len(dataSetNames) == len(dataSetDirs): # Dataset names define the names for the directories
+            for dataSetName, dataSetDir in zip(dataSetNames, dataSetDirs):
+                assert os.path.exists(dataSetDir), (dataSetDir, dataSetDirs, dataSetNames)
+                inDirs.append({"dataset":dataSetName, "path":dataSetDir})
+        else: # Datasets are subdirectories within the input directories
+            for dataSetDir in dataSetDirs:
+                for dataSetName in dataSetNames: # in itertools.izip_longest(dataSetDirs, dataSetNames, fillvalue=None):
+                    assert dataSetDir != None and dataSetName != None, (dataSetDirs, dataSetNames)
+                    fullDataSetDir = os.path.join(dataSetDir, dataSetName)
+                    os.path.exists(fullDataSetDir), (fullDataSetDir, dataSetDirs, dataSetNames)
+                    inDirs.append({"dataset":dataSetName, "path":fullDataSetDir})
+        for inDir in inDirs:
+            inDir["extensions"] = set([x.rsplit(".", 1)[-1] for x in os.listdir(inDir["path"]) if "." in x])
+        return inDirs
         
     def convert(self, input, dataSetNames=None, corpusName=None, output=None, extensions=None):
         assert isinstance(input, basestring) and (os.path.isdir(input) or input.endswith(".tar.gz") or input.endswith(".txt") or "," in input)

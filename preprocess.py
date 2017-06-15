@@ -20,28 +20,30 @@ if __name__=="__main__":
     shortcuts.add_option("--exportFormats", default=None, help="EXPORT format options")
     optparser.add_option_group(shortcuts)
     debug = OptionGroup(optparser, "Debug and Process Control Options", "")
-    debug.add_option("-f", "--fromStep", default=None, dest="fromStep", help="Continue from this step")
-    debug.add_option("-t", "--toStep", default=None, dest="toStep", help="Stop at after this step")
-    debug.add_option("--omitSteps", default=None, dest="omitSteps", help="Skip these steps")
+#    debug.add_option("-f", "--fromStep", default=None, dest="fromStep", help="Continue from this step")
+#    debug.add_option("-t", "--toStep", default=None, dest="toStep", help="Stop at after this step")
+#    debug.add_option("--omitSteps", default=None, dest="omitSteps", help="Skip these steps")
     debug.add_option("--logPath", default="AUTO", dest="logPath", help="AUTO, None, or a path")
     #debug.add_option("--intermediateFiles", default=False, action="store_true", dest="intermediateFiles", help="Save an intermediate file for each step")
     debug.add_option("--debug", default=False, action="store_true", dest="debug", help="Set debug mode for all steps")
     optparser.add_option_group(debug)
     (options, args) = optparser.parse_args()
     
-    if options.steps != None:
-        options.steps = [x.strip() for x in options.steps.split(",")]
-    if options.omitSteps != None:
-        options.omitSteps = options.omitSteps.split(",")
-        
+#     if options.steps != None:
+#         options.steps = [x.strip() for x in options.steps.split(",")]
+#     if options.omitSteps != None:
+#         options.omitSteps = options.omitSteps.split(",")
+#         
     preprocessor = Preprocessor(options.steps, options.parseName, options.requireEntities)
     if options.steps == None:
         print >> sys.stderr, preprocessor.getHelpString()
     else:
         preprocessor.setArgForAllSteps("debug", options.debug)
         if preprocessor.hasStep("CONVERT"):
-            preprocessor.getStep("CONVERT").setArg("corpusName", options.corpus)
-            preprocessor.getStep("CONVERT").setArg("dataSetNames", options.dataSetNames)
+            if options.corpus != None:
+                preprocessor.getStep("CONVERT").setArg("corpusName", options.corpus)
+            if options.dataSetNames != None:
+                preprocessor.getStep("CONVERT").setArg("dataSetNames", options.dataSetNames)
         if options.parseDir:
             preprocessor.getStep("IMPORT_PARSE").setArg("parseDir", options.parseDir)
         if options.exportFormats and preprocessor.hasStep("EXPORT"):
@@ -53,4 +55,4 @@ if __name__=="__main__":
                 preprocessor.getStep("IMPORT_PARSE").setArg("extensions", options.importFormats.split(","))
         #if options.intermediateFiles:
         #    preprocessor.setIntermediateFiles(True)
-        preprocessor.process(options.input, options.output, model=None, fromStep=options.fromStep, toStep=options.toStep, omitSteps=options.omitSteps, logPath=options.logPath)
+        preprocessor.process(options.input, options.output, model=None, logPath=options.logPath)
