@@ -610,6 +610,7 @@ class Parser:
                 tokenText = re.sub(removeWhitespacePattern, '', tokenText)
                 tokenTexts.append(tokenText)
                 if "offset" in token:
+                    counts["tokens-pre-aligned"] += 1
                     #tokenAlignments.append(token["offset"])
                     numPrealignedTokens += 1
                     if sentOffset[0] == None or token["offset"][0] < sentOffset[0]:
@@ -624,11 +625,11 @@ class Parser:
         if numPrealignedTokens != len(tokenTexts): # use token offset only if all tokens have an offset
             tokenAlignments = self.alignTokens(tokenTexts, docText, "", removeWhitespacePattern, document.get("id"), "Partial alignment in sentence splitting for document")
             sentenceIndices = tokenSentenceIndices
-            counts["sentences-aligned"] += 1
+            counts["documents-aligned"] += 1
         else:
             tokenAlignments = sentenceOffsets # Each sentence is used as a single token
             sentenceIndices = sentenceOffsetSentenceIndices
-            counts["sentences-pre-aligned"] += 1
+            counts["documents-pre-aligned"] += 1
         # Initialize counters
         if counts == None:
             counts = defaultdict(int)

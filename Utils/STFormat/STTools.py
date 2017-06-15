@@ -2,10 +2,14 @@ import sys, os, types
 import codecs
 from RemoveDuplicates import removeDuplicateEvents
 import atexit
+sysPath = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.append(sysPath)
+import Utils.InteractionXML.InteractionXMLUtils as IXMLUtils
 
 class Document:
-    def __init__(self, id=None, loadFromDir=None, a2Tags=["a2", "rel"], readExtra=False, debug=False):
+    def __init__(self, id=None, loadFromDir=None, a2Tags=["a2", "rel"], readExtra=False, debug=False, origId=None):
         self.id = id
+        self.origId = id if origId == None else origId
         self.text = None
         self.proteins = []
         self.triggers = []
@@ -672,7 +676,7 @@ def readExtra(string, document):
             annotation.extra[key] = value
         prevAnnotation = annotation
 
-def loadSet(path, setName=None, level="a2", sitesAreArguments=False, a2Tags=["a2", "rel"], readScores=False, debug=False, subPath=None):
+def loadSet(path, setName=None, level="a2", sitesAreArguments=False, a2Tags=["a2", "rel"], readScores=False, debug=False, subPath=None, origIdType=None):
     assert level in ["txt", "a1", "a2"]
     if path.endswith(".tar.gz") or path.endswith(".tgz") or path.endswith(".zip"):
         import tempfile
@@ -714,14 +718,17 @@ def loadSet(path, setName=None, level="a2", sitesAreArguments=False, a2Tags=["a2
         licenseFile = open(os.path.join(dir, "LICENSE"), "rt")
         license = "".join(licenseFile.readlines())
         licenseFile.close()
+    origIds = {}
     for filename in os.listdir(dir):
         if filename.endswith(".txt"):
             if filename.startswith("._"): # a hack to skip the broken files in the GRO13 data packages
                 continue
-            ids.add(filename.rsplit(".", 1)[0])
+            id = filename.rsplit(".", 1)[0]
+            ids.add(id)
+            origIds[id] = IXMLUtils.getOrigId(os.path.join(dir, filename), origIdType)
     for id in sorted(list(ids)):
         #print "Loading", id
-        doc = Document(id, dir, a2Tags, readScores, debug)
+        doc = Document(id, dir, a2Tags, readScores, debug, origId=origIds[id])
         doc.dataSet = setName
         doc.license = license
         documents.append(doc)

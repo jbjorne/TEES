@@ -2,6 +2,7 @@ try:
     import xml.etree.cElementTree as ET
 except ImportError:
     import cElementTree as ET
+import os
     
 ###############################################################################
 # XML Utilities
@@ -58,6 +59,18 @@ def getExportId(document, ids=None):
         if document.get(key) != None:
             return document.get(key)
     raise Exception("Document '" + document.get("id") + "' has no export id (tested " + str(ids) + ")")
+
+def getOrigId(filePath, method=None):
+    filePath = os.path.normpath(os.path.abspath(filePath))
+    if method == None:
+        method = "basename"
+    assert method in ("basename", "setname")
+    if method == "basename":
+        return os.path.basename(filePath).rsplit(".", 1)[0]
+    elif method == "setname":
+        return os.sep.join(os.path.normpath(filePath).split(os.sep)[-2:]).rsplit(".", 1)[0]
+    else:
+        raise Exception("Unknown origId method '" + str(method) + "'")
 
 ###############################################################################
 # Sentence Analyses

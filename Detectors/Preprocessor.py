@@ -66,7 +66,7 @@ class Preprocessor(ToolChain):
         self.defGroup("Loading")
         self.defStep("LOAD", self.load, {"dataSetNames":None, "corpusName":None, "extensions":None})
         self.defStep("DOWNLOAD_PUBMED", self.downloadPubmed)
-        self.defStep("CONVERT", self.convert, {"dataSetNames":None, "corpusName":None, "extensions":None})
+        self.defStep("CONVERT", self.convert, {"dataSetNames":None, "corpusName":None, "extensions":None, "origIdType":None})
         self.defStep("MERGE_SETS", Utils.InteractionXML.MergeSets.mergeSets, {"corpusDir":None})
         self.defGroup("Pre-parsing")
         self.defStep("MAP_ATTRIBUTES", Utils.InteractionXML.MapAttributes.processCorpus, {"rules":None})
@@ -84,7 +84,7 @@ class Preprocessor(ToolChain):
         self.defStep("STANFORD_CONVERT", clsStep(StanfordParser, "parse"), {"parserName":self.parseName, "debug":False, "action":"convert", "outputFormat":None})
         self.defStep("SYNTAXNET", clsStep(SyntaxNetParser, "parse"), {"parserName":self.parseName, "debug":False, "modelDir":None})
         self.defGroup("Alternative Parsing")
-        self.defStep("IMPORT_PARSE", clsStep(ParseConverter, "insertParses"), {"parseDir":None, "debug":False, "extensions":None, "subDirs":None, "docMatchKeys":None, "conllFormat":None, "splitting":True, "unescapeFormats":"AUTO"})
+        self.defStep("IMPORT_PARSE", clsStep(ParseConverter, "insertParses"), {"parseDir":None, "debug":False, "extensions":None, "subDirs":None, "docMatchKeys":None, "conllFormat":None, "splitting":True, "unescapeFormats":"AUTO", "origIdType":None})
         self.defGroup("Post-parsing")
         self.defStep("SPLIT_NAMES", ProteinNameSplitter.mainFunc, {"parseName":self.parseName, "removeOld":True})
         self.defStep("FIND_HEADS", FindHeads.findHeads, {"parse":self.parseName, "removeExisting":True})
@@ -286,7 +286,7 @@ class Preprocessor(ToolChain):
             inDir["extensions"] = set([x.rsplit(".", 1)[-1] for x in os.listdir(inDir["path"]) if "." in x])
         return inDirs
         
-    def convert(self, input, dataSetNames=None, corpusName=None, output=None, extensions=None):
+    def convert(self, input, dataSetNames=None, corpusName=None, output=None, extensions=None, origIdType=None):
         assert isinstance(input, basestring) and (os.path.isdir(input) or input.endswith(".tar.gz") or input.endswith(".txt") or "," in input)
         print >> sys.stderr, "Converting ST-format to Interaction XML"
         sourceDirs = self.getSourceDirs(input, dataSetNames)
@@ -305,7 +305,7 @@ class Preprocessor(ToolChain):
             sp = sourceDir["path"]
             if len(stExtensions.intersection(sourceDir["extensions"])) > 0 or sp.endswith(".tar.gz") or sp.endswith(".tgz") or sp.endswith(".zip"):
                 print >> sys.stderr, "Reading", sourceDir["path"]
-                docs = Utils.STFormat.STTools.loadSet(sourceDir["path"], sourceDir["dataset"])
+                docs = Utils.STFormat.STTools.loadSet(sourceDir["path"], sourceDir["dataset"], origIdType=origIdType)
                 print >> sys.stderr, len(docs), "documents"
                 documents.extend(docs)
         if len(documents) > 0:
@@ -321,7 +321,7 @@ class Preprocessor(ToolChain):
                 print >> sys.stderr, "Importing parses from", sourceDir["path"], "file types", sorted(sourceDir["extensions"])
                 if xml == None:
                     xml = IXMLUtils.makeEmptyCorpus(corpusName)
-                xml = ParseConverter().insertParses(sourceDir["path"], xml, output, "McCC", sourceDir["extensions"])
+                xml = ParseConverter().insertParses(sourceDir["path"], xml, output, "McCC", sourceDir["extensions"], origIdType=origIdType)
         return xml
     
     ###########################################################################

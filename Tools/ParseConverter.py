@@ -6,6 +6,7 @@ try:
 except ImportError:
     import cElementTree as ET
 import Utils.ElementTreeUtils as ETUtils
+import Utils.InteractionXML.InteractionXMLUtils as IXMLUtils
 from Parser import Parser
 from Utils.ProgressCounter import ProgressCounter
 
@@ -19,7 +20,7 @@ class ParseConverter(Parser):
         Parser.__init__(self)
         self.allExt = ["ptb", "sd", "conll", "conllx", "conllu", "corenlp", "epe", "tt"]
     
-    def getParseFiles(self, parseDir, extensions, subDirs, counts, extMap=None):
+    def getParseFiles(self, parseDir, extensions, subDirs, counts, extMap=None, origIdType=None):
         files = {}
         if subDirs == None:
             subDirs = ["ptb", "conll", "sd_ccproc"]
@@ -35,7 +36,8 @@ class ParseConverter(Parser):
                 filePath = os.path.join(directory, filename)
                 if "." not in filename or os.path.isdir(filePath):
                     continue
-                docName, ext = filename.rsplit(".", 1)
+                ext = filename.rsplit(".", 1)[-1]
+                docName = IXMLUtils.getOrigId(filePath, origIdType)
                 if extMap and ext in extMap:
                     ext = extMap[ext]
                 if ext not in extensions:
@@ -44,7 +46,7 @@ class ParseConverter(Parser):
                 if docName not in files:
                     files[docName] = {}
                 if ext in files[docName]:
-                    print >> sys.stderr, "Multiple files for extension", ext, [files[docName][ext], filePath]
+                    raise Exception("Error, multiple files for extension: " + str((ext, [files[docName][ext], filePath])))
                 files[docName][ext] = filePath
                 fileCounts[ext] += 1
                 counts[ext + "-read"] += 1
@@ -130,7 +132,7 @@ class ParseConverter(Parser):
         else:
             raise Exception("Unknown extension '" + str(ext) + "'")
     
-    def insertParses(self, parseDir, input, output=None, parseName="McCC", extensions=None, subDirs=None, debug=False, skipParsed=False, docMatchKeys=None, conllFormat=None, splitting=True, unescapeFormats="AUTO", tokenMerging=True, extMap=None, sdFailedFormat="empty"):
+    def insertParses(self, parseDir, input, output=None, parseName="McCC", extensions=None, subDirs=None, debug=False, skipParsed=False, docMatchKeys=None, conllFormat=None, splitting=True, unescapeFormats="AUTO", tokenMerging=True, extMap=None, sdFailedFormat="empty", origIdType=None):
         corpusTree, corpusRoot = self.getCorpus(input)
         if not os.path.exists(parseDir):
             raise Exception("Cannot find parse input '" + str(parseDir) + "'")
@@ -148,7 +150,7 @@ class ParseConverter(Parser):
             docMatchKeys = docMatchKeys.split(",")
         print >> sys.stderr, "Inserting parses from file types:", extensions
         counts = defaultdict(int)
-        files = self.getParseFiles(parseDir, extensions, subDirs, counts, extMap=extMap)
+        files = self.getParseFiles(parseDir, extensions, subDirs, counts, extMap=extMap, origIdType=origIdType)
         typeCounts = {x:defaultdict(int) for x in extensions}
         # Make document elements if needed
         documents = [x for x in corpusRoot.findall("document")]

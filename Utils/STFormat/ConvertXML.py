@@ -40,7 +40,7 @@ def addDocumentElement(doc, corpusEl, idCount, corpusName):
     docId = corpusName + ".d" + str(idCount)
     docEl.set("id", docId)
     #docEl.set("pmid", str(doc.id))
-    docEl.set("origId", str(doc.id))
+    docEl.set("origId", str(doc.origId))
     docEl.set("text", doc.text)
     if doc.dataSet != None:
         docEl.set("set", doc.dataSet)
