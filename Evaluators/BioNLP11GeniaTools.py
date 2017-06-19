@@ -194,6 +194,25 @@ def removeXLines(dir, filePatterns=[".a1", ".rel", ".a2"]):
                     f.write(line)
             f.close()
 
+def prepareGoldForEvaluation(corpus, sourceDir, tempdir, goldDir=None, goldPackage=None):
+    if goldDir == None:
+        if not hasattr(Settings, "BIONLP_EVALUATOR_GOLD_DIR"):
+            print >> sys.stderr, corpus, "BIONLP_EVALUATOR_GOLD_DIR setting not defined"
+            return None
+        if goldPackage == None:
+            goldPackage = Settings.EVALUATOR[corpus + "_DEVEL-gold"]
+        goldDir = os.path.join(Settings.BIONLP_EVALUATOR_GOLD_DIR, goldPackage)
+    if not os.path.exists(goldDir):
+        print >> sys.stderr, corpus, "Evaluator gold data directory", goldDir, "does not exist"
+        goldDir = None
+    if goldDir != None and goldDir.endswith(".tar.gz"):
+        goldDir = Download.getTopDir(os.path.join(tempdir, "gold"), Download.extractPackage(goldDir, os.path.join(tempdir, "gold")))
+        print >> sys.stderr, "Uncompressed evaluation gold to", goldDir
+    if goldDir != None and not hasGoldDocuments(sourceDir, goldDir):
+        print >> sys.stderr, "Evaluation input has no gold documents"
+        goldDir = None
+    return goldDir
+
 def checkEvaluator(corpus, sourceDir, goldDir = None):
     # Check evaluator
     if not hasattr(Settings, "BIONLP_EVALUATOR_DIR"):
@@ -202,36 +221,25 @@ def checkEvaluator(corpus, sourceDir, goldDir = None):
     else:
         evaluatorDir = os.path.join(Settings.BIONLP_EVALUATOR_DIR, Settings.EVALUATOR[corpus])
     # Check source data
-    tempdir = None
+    tempdir = tempfile.mkdtemp()
     if sourceDir.endswith(".tar.gz"):
-        tempdir = tempfile.mkdtemp()
         Download.extractPackage(sourceDir, os.path.join(tempdir, "source"))
         sourceDir = os.path.join(tempdir, "source")
     else: #if corpus in ("GE09", "BB11", "BI11"):
         # GE09 a2 files have to be renamed and relation identifier "R" has to be replaced with "E" for the BB11 and BI11 relations.
         # X-lines have to be removed from all tasks
-        tempdir = tempfile.mkdtemp()
         shutil.copytree(sourceDir, os.path.join(tempdir, "source"))
         sourceDir = os.path.join(tempdir, "source")
     # Filter extra data
     removeXLines(sourceDir)
     # Check gold data
-    if goldDir == None:
-        if not hasattr(Settings, "BIONLP_EVALUATOR_GOLD_DIR"):
-            print >> sys.stderr, corpus, "BIONLP_EVALUATOR_GOLD_DIR setting not defined"
-            return evaluatorDir, None
-        goldDir = os.path.join(Settings.BIONLP_EVALUATOR_GOLD_DIR, Settings.EVALUATOR[corpus + "-gold"])
-    if not os.path.exists(goldDir):
-        print >> sys.stderr, corpus, "Evaluator gold data directory", goldDir, "does not exist"
-        goldDir = None
-    if goldDir != None and goldDir.endswith(".tar.gz"):
-        if tempdir == None:
-            tempdir = tempfile.mkdtemp()
-        goldDir = Download.getTopDir(os.path.join(tempdir, "gold"), Download.extractPackage(goldDir, os.path.join(tempdir, "gold")))
-        print >> sys.stderr, "Uncompressed evaluation gold to", goldDir
-    if goldDir != None and not hasGoldDocuments(sourceDir, goldDir):
-        print >> sys.stderr, "Evaluation input has no gold documents"
-        goldDir = None
+    print >> sys.stderr, "Using devel set gold for evaluation"
+    goldDir = prepareGoldForEvaluation(corpus, sourceDir, tempdir, goldDir)
+    if goldDir == None and hasattr(Settings, corpus + "_TEST-gold"):
+        print >> sys.stderr, "Using test set gold for evaluation"
+        goldDir = prepareGoldForEvaluation(corpus, sourceDir, tempdir, goldDir, Settings.EVALUATOR[corpus + "_TEST-gold"])
+    else:
+        print Settings.EVALUATOR
     # Use absolute paths
     sourceDir = os.path.abspath(sourceDir)
     if evaluatorDir != None:
