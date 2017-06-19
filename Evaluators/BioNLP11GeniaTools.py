@@ -157,7 +157,7 @@ def evaluate(source, task, goldDir=None, debug=False):
         task, subTask = task.split(".")
     # Do the evaluation
     if task in ["GE11", "GE09"]:
-        results = evaluateGE(source, task, subTask, goldDir=goldDir, debug=debug)
+        results = evaluateGE(source, task, int(subTask), goldDir=goldDir, debug=debug)
     elif task in ["EPI11", "ID11"]:
         results = evaluateEPIorID(task, source, goldDir)
     elif task == "REN11":
@@ -251,9 +251,8 @@ def checkEvaluator(corpus, sourceDir, goldDir = None):
     return evaluatorDir, sourceDir, goldDir, tempdir
 
 def evaluateGE(sourceDir, mainTask="GE11", task=1, goldDir=None, folds=-1, foldToRemove=-1, evaluations=["strict", "approximate", "decomposition"], verbose=True, silent=False, debug=False):
-    task = str(task)
     assert mainTask in ["GE11", "GE09"], mainTask
-    assert task in ["1","2","3"], task
+    assert task in [1, 2, 3], (task, type(task))
     if not silent:
         print >> sys.stderr, mainTask, "task", task, "evaluation of", sourceDir, "against", goldDir
     if mainTask == "GE11":
