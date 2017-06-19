@@ -195,6 +195,8 @@ def removeXLines(dir, filePatterns=[".a1", ".rel", ".a2"]):
             f.close()
 
 def prepareGoldForEvaluation(corpus, sourceDir, tempdir, goldDir=None, goldPackage=None):
+    if os.path.exists(os.path.join(tempdir, "gold")):
+        shutil.rmtree(os.path.join(tempdir, "gold"))
     if goldDir == None:
         if not hasattr(Settings, "BIONLP_EVALUATOR_GOLD_DIR"):
             print >> sys.stderr, corpus, "BIONLP_EVALUATOR_GOLD_DIR setting not defined"
@@ -205,7 +207,7 @@ def prepareGoldForEvaluation(corpus, sourceDir, tempdir, goldDir=None, goldPacka
     if not os.path.exists(goldDir):
         print >> sys.stderr, corpus, "Evaluator gold data directory", goldDir, "does not exist"
         goldDir = None
-    if goldDir != None and goldDir.endswith(".tar.gz"):
+    if goldDir != None and goldDir.endswith(".tar.gz") or goldDir.endswith(".tgz"):
         goldDir = Download.getTopDir(os.path.join(tempdir, "gold"), Download.extractPackage(goldDir, os.path.join(tempdir, "gold")))
         print >> sys.stderr, "Uncompressed evaluation gold to", goldDir
     if goldDir != None and not hasGoldDocuments(sourceDir, goldDir):
@@ -235,11 +237,9 @@ def checkEvaluator(corpus, sourceDir, goldDir = None):
     # Check gold data
     print >> sys.stderr, "Using devel set gold for evaluation"
     goldDir = prepareGoldForEvaluation(corpus, sourceDir, tempdir, goldDir)
-    if goldDir == None and hasattr(Settings, corpus + "_TEST-gold"):
+    if goldDir == None and Settings.EVALUATOR.has_key(corpus + "_TEST-gold"):
         print >> sys.stderr, "Using test set gold for evaluation"
         goldDir = prepareGoldForEvaluation(corpus, sourceDir, tempdir, goldDir, Settings.EVALUATOR[corpus + "_TEST-gold"])
-    else:
-        print Settings.EVALUATOR
     # Use absolute paths
     sourceDir = os.path.abspath(sourceDir)
     if evaluatorDir != None:
@@ -262,16 +262,17 @@ def evaluateGE(sourceDir, mainTask="GE11", task=1, goldDir=None, folds=-1, foldT
     else:
         evaluatorDir, sourceDir, goldDir, tempDir = checkEvaluator("GE09", sourceDir, goldDir)
         # Rename files in the copied source directory
-        taskSuffix = ".a2.t1"
+        if task == 1:
+            taskSuffix = ".a2.t1"
+        elif task == 2:
+            taskSuffix = ".a2.t12"
+        else:
+            taskSuffix = ".a2.t123"
         for filename in os.listdir(sourceDir):
             if filename.endswith(".a2"):
-                if task == 1:
-                    taskSuffix = ".a2.t1"
-                elif task == 2:
-                    taskSuffix = ".a2.t12"
-                else:
-                    taskSuffix = ".a2.t123"
                 shutil.move(os.path.join(sourceDir, filename), os.path.join(sourceDir, filename.rsplit(".", 1)[0] + taskSuffix))
+            elif filename.endswith(".a2.t123"):
+                shutil.move(os.path.join(sourceDir, filename), os.path.join(sourceDir, filename.rsplit(".", 2)[0] + taskSuffix))
     if goldDir == None:
         return None
     

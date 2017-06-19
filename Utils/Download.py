@@ -25,6 +25,8 @@ def getTopDir(path, names, include=None):
             if os.path.exists(potential) and os.path.isdir(potential):
                 if include == None or item.strip("/") in include:                  
                     topDirs.append(item)
+    if len(topDirs) == 0:
+        topDirs = [os.path.join(path, x) for x in os.listdir(path) if os.path.isdir(os.path.join(path, x))]
     assert len(topDirs) == 1, (path, topDirs, names)
     return os.path.join(path, topDirs[0])
 
