@@ -270,8 +270,6 @@ def evaluateGE(sourceDir, mainTask="GE11", task=1, goldDir=None, folds=-1, foldT
             taskSuffix = ".a2.t123"
         for filename in os.listdir(sourceDir):
             if filename.endswith(".a2"):
-                shutil.move(os.path.join(sourceDir, filename), os.path.join(sourceDir, filename.rsplit(".", 1)[0] + taskSuffix))
-            elif filename.endswith(".a2.t123"):
                 shutil.move(os.path.join(sourceDir, filename), os.path.join(sourceDir, filename.rsplit(".", 2)[0] + taskSuffix))
     if goldDir == None:
         return None
