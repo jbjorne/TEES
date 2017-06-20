@@ -275,6 +275,8 @@ class Preprocessor(ToolChain):
             for dataSetName, dataSetDir in zip(dataSetNames, dataSetDirs):
                 assert os.path.exists(dataSetDir), (dataSetDir, dataSetDirs, dataSetNames)
                 inDirs.append({"dataset":dataSetName, "path":dataSetDir})
+        elif len(dataSetNames) == 0:
+            inDirs = [{"dataset":None, "path":x} for x in dataSetDirs]
         else: # Datasets are subdirectories within the input directories
             for dataSetDir in dataSetDirs:
                 for dataSetName in dataSetNames: # in itertools.izip_longest(dataSetDirs, dataSetNames, fillvalue=None):
