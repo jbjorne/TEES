@@ -74,7 +74,7 @@ def run(inPath, outPath, subDirs, model, connection, numJobs, useTestSet=False, 
         preprocessor = Preprocessor(preprocessorSteps)
         #preprocessor = Preprocessor(["MERGE-SETS", "REMOVE-ANALYSES", "REMOVE-HEADS", "MERGE-SENTENCES", "IMPORT-PARSE", "VALIDATE", "DIVIDE-SETS"])
         preprocessor.setArgForAllSteps("debug", debug)
-        preprocessor.getStep("IMPORT-PARSE").setArg("parseDir", parseDir)
+        preprocessor.getStep("IMPORT_PARSE").setArg("parseDir", parseDir)
         modelPattern = model + ".+\.xml" if useTestSet else model + "-devel\.xml|" + model + "-train\.xml"
         preprocessor.process(modelPattern, os.path.join(corpusDir, model), logPath="AUTO")
     else:
@@ -104,4 +104,4 @@ if __name__== "__main__":
     (options, args) = optparser.parse_args()
     
     run(options.input, options.output, options.subdirs, options.model, options.connection, options.numJobs, options.testSet, 
-        not options.noClear, options.debug, options.force, training=not options.noTraining, preprocessorSteps=options.preprocessorSteps.split(","), subset=options.subset)
+        not options.noClear, options.debug, options.force, training=not options.noTraining, preprocessorSteps=options.preprocessorSteps, subset=options.subset)
