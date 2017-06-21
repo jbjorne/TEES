@@ -5,6 +5,22 @@ sys.path.append(mainTEESDir)
 from Detectors.Preprocessor import Preprocessor
 from collections import defaultdict
 from train import train
+import Utils.Stream as Stream
+
+def beginLog(outDir, logPath="AUTO"):
+    if logPath == "AUTO":
+        logPath = os.path.join(outDir, "log.txt")
+    elif logPath == "None":
+        logPath = None
+    if logPath != None:
+        if not os.path.exists(os.path.dirname(logPath)):
+            os.makedirs(os.path.dirname(logPath))
+        Stream.openLog(logPath)
+    return logPath
+
+def endLog(logPath):
+    if logPath != None:
+        Stream.closeLog(logPath)
 
 def combineParses(inDir, outDir, subDirectories):
     print >> sys.stderr, "Parse input directory:", inDir
@@ -48,7 +64,7 @@ def ask(question):
         else:
             sys.stdout.write("Please respond with 'yes' or 'no' (or 'y' or 'n').\n")
 
-def run(inPath, outPath, subDirs, model, connection, numJobs, useTestSet=False, clear=True, debug=False, force=False, training=True, preprocessorSteps=None, subset=None):
+def run(inPath, outPath, subDirs, model, connection, numJobs, subTask=3, useTestSet=False, clear=True, debug=False, force=False, training=True, preprocessorSteps=None, subset=None):
     # Remove existing non-empty work directory, if requested to do so
     if os.path.exists(outPath) and len(os.listdir(outPath)) > 0 and clear:
         if force or ask("Output directory '" + outPath + "' exists, remove?"):
@@ -58,6 +74,9 @@ def run(inPath, outPath, subDirs, model, connection, numJobs, useTestSet=False, 
     if not os.path.exists(outPath):
         print >> sys.stderr, "Making output directory", outPath
         os.makedirs(outPath)
+    
+    # Begin logging
+    logPath = beginLog(outPath)
     
     # Collect the parse files
     parseDir = os.path.join(outPath, "parses")
@@ -76,15 +95,20 @@ def run(inPath, outPath, subDirs, model, connection, numJobs, useTestSet=False, 
         preprocessor.setArgForAllSteps("debug", debug)
         preprocessor.getStep("IMPORT_PARSE").setArg("parseDir", parseDir)
         modelPattern = model + ".+\.xml" if useTestSet else model + "-devel\.xml|" + model + "-train\.xml"
-        preprocessor.process(modelPattern, os.path.join(corpusDir, model), logPath="AUTO")
+        preprocessor.process(modelPattern, os.path.join(corpusDir, model), logPath=None)
     else:
         print >> sys.stderr, "Using imported parses from", corpusDir
     
     # Train the model
     if training:
         connection = connection.replace("$JOBS", str(numJobs))
-        train(outPath, model, parse="McCC", debug=debug, connection=connection, corpusDir=corpusDir, subset=subset) #classifierParams={"examples":None, "trigger":"150000", "recall":None, "edge":"7500", "unmerging":"2500", "modifiers":"10000"})
-
+        if subTask > 0:
+            model = model + "." + str(subTask)
+        train(outPath, model, parse="McCC", debug=debug, connection=connection, corpusDir=corpusDir, subset=subset, log=None) #classifierParams={"examples":None, "trigger":"150000", "recall":None, "edge":"7500", "unmerging":"2500", "modifiers":"10000"})
+        
+    # Close the log
+    endLog(logPath)
+    
 if __name__== "__main__":
     from optparse import OptionParser
     optparser = OptionParser(description="Train a TEES model using EPE parses")
@@ -95,6 +119,7 @@ if __name__== "__main__":
     optparser.add_option("-t", "--testSet", default=False, action="store_true", help="Do only the preprocessing")
     optparser.add_option("--connection", default="connection=Unix:jobLimit=$JOBS", help="TEES local or remote training settings")
     optparser.add_option("--model", default="GE09", help="TEES model")
+    optparser.add_option("--subTask", default=3, type=int, help="GE09 subtask (1, 2 or 3)")
     optparser.add_option("--noClear", default=False, action="store_true", help="Continue a previous run")
     optparser.add_option("--debug", default=False, action="store_true", help="Debug mode")
     optparser.add_option("-f", "--force", default=False, action="store_true", help="Force removal of existing output directory")
@@ -103,5 +128,5 @@ if __name__== "__main__":
     optparser.add_option("--noTraining", default=False, action="store_true", help="Do only the preprocessing")
     (options, args) = optparser.parse_args()
     
-    run(options.input, options.output, options.subdirs, options.model, options.connection, options.numJobs, options.testSet, 
+    run(options.input, options.output, options.subdirs, options.model, options.connection, options.numJobs, options.subTask, options.testSet, 
         not options.noClear, options.debug, options.force, training=not options.noTraining, preprocessorSteps=options.preprocessorSteps, subset=options.subset)
