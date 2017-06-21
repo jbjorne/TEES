@@ -18,8 +18,8 @@ def parseResults(lines):
         if line.startswith ("####"):
             evaluation = line.strip("#").strip()
             if "strict" in evaluation: evaluation = "strict"
-            elif "approximate" in evaluation: evaluation = "approximate"
             elif "decomposition" in evaluation: evaluation = "decomposition"
+            elif "approximate" in evaluation: evaluation = "approximate"
         elif "Event Class" in line:
             continue
         else:
