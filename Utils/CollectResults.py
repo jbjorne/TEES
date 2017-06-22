@@ -50,11 +50,8 @@ def getLines(lines, boundaries):
         for line in lines:
             if subset == None and begin in line:
                 subset = []
-            elif end in line:
+            elif subset != None and end in line: # Look for the end marker only after finding a begin marker
                 endFound = True
-                if subset == None:
-                    print >> sys.stderr, "Warning, couldn't find log section", (begin, end)
-                    return None
                 break
             elif subset != None:
                 subset.append(line)
@@ -91,6 +88,7 @@ def collectResults(inDir, inPattern, outStem=None):
         fullPath = os.path.join(inDir, filename)
         if os.path.isdir(fullPath) and (inPattern is None or inPattern.match(filename)):
             models.append(fullPath)
+    models.sort()
     print >> sys.stderr, "Collecting results for models:", models
     results = {"devel":[], "test":[]}
     for model in models:
@@ -101,21 +99,21 @@ def collectResults(inDir, inPattern, outStem=None):
             print >> sys.stderr, "Warning, no log file"
             continue
         logLines = None
+        print >> sys.stderr, "Reading log file:", logPath
         with open(logPath, "rt") as f:
             logLines = f.readlines()
         for setName in "devel", "test":
-            with open(logPath, "rt") as f:
-                fullResults, mainResult = getGENIAResults(logLines, MARKERS[setName])
-                if fullResults == None:
-                    continue
-                rows = parseResults(fullResults)
-                for row in rows:
-                    row["submission"] = modelName
-                results[setName].extend(rows)
-                if mainResult != None:
-                    print >> sys.stderr, setName, "=", mainResult.strip()
-                else:
-                    print >> sys.stderr, "Warning, no result"
+            fullResults, mainResult = getGENIAResults(logLines, MARKERS[setName])
+            if fullResults == None:
+                continue
+            rows = parseResults(fullResults)
+            for row in rows:
+                row["submission"] = modelName
+            results[setName].extend(rows)
+            if mainResult != None:
+                print >> sys.stderr, setName, "=", mainResult.strip()
+            else:
+                print >> sys.stderr, "Warning, no result"
     if outStem != None:
         for setName in "devel", "test":
             outPath = outStem + "-" + setName + ".tsv"
