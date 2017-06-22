@@ -8,6 +8,8 @@ MARKERS = {
              ("Generation of files for evaluation", "=== EXIT STEP ST-CONVERT")],
 }
 
+GENIA_COLUMNS = ["evaluation", "category", "gold", "gold_match", "answer", "answer_match", "precision", "recall", "fscore"]
+
 def parseResults(lines):
     lines = lines[1:]
     rows = []
@@ -81,7 +83,7 @@ def getGENIAResults(lines, markers=None):
 #                     f.write(line)
     return fullResults, mainResult                   
 
-def collectResults(inDir, inPattern, outStem=None):
+def collectResults(inDir, inPattern, outStem=None, addEmpties=False):
     print >> sys.stderr, "Collecting results from:", inDir
     models = []
     for filename in os.listdir(inDir):
@@ -105,8 +107,14 @@ def collectResults(inDir, inPattern, outStem=None):
         for setName in "devel", "test":
             fullResults, mainResult = getGENIAResults(logLines, MARKERS[setName])
             if fullResults == None:
-                continue
-            rows = parseResults(fullResults)
+                rows = []
+                if addEmpties:
+                    emptyRow = {x:"" for x in GENIA_COLUMNS}
+                    emptyRow["evaluation"] = "approximate"
+                    emptyRow["category"] = "ALL-TOTAL"
+                    rows.append(emptyRow)
+            else:
+                rows = parseResults(fullResults)
             for row in rows:
                 row["submission"] = modelName
             results[setName].extend(rows)
@@ -121,7 +129,7 @@ def collectResults(inDir, inPattern, outStem=None):
                 continue
             print >> sys.stderr, "Writing results to", outPath
             with open(outPath, "wt") as f:
-                dw = csv.DictWriter(f, ["submission", "evaluation", "category", "gold", "gold_match", "answer", "answer_match", "precision", "recall", "fscore"], delimiter='\t')
+                dw = csv.DictWriter(f, ["submission"] + GENIA_COLUMNS, delimiter='\t')
                 dw.writeheader()
                 dw.writerows(results[setName])           
 
@@ -131,6 +139,7 @@ if __name__== "__main__":
     optparser.add_option("-i", "--input", default=None, help="Input directory")
     optparser.add_option("-o", "--output", default=None, help="Output directory")
     optparser.add_option("-p", "--pattern", default=None, help="Input directory subdirectories (optional)")
+    optparser.add_option("-e", "--empties", default=False, action="store_true", help="")
     (options, args) = optparser.parse_args()
 
-    collectResults(options.input, options.pattern, options.output)
+    collectResults(options.input, options.pattern, options.output, options.empties)
