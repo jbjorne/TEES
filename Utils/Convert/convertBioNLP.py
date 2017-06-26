@@ -172,7 +172,7 @@ def checkAttributes(xml):
         for key in element.attrib.keys():
             assert element.get(key) != None, (element.tag, key, element.attrib)
 
-def convertDownloaded(outdir, corpus, files, intermediateFiles=False, evaluate=True, processEquiv=True, analysisMode="INSERT", packageSubPath=None, debug=False, preprocessorSteps=None, preprocessorParameters=None):
+def convertDownloaded(outdir, corpus, files, intermediateFiles=False, evaluate=True, processEquiv=True, analysisMode="INSERT", packageSubPath=None, debug=False, preprocessorSteps="AUTO", preprocessorParameters=None):
     global moveBI
     
     if outdir != None and not os.path.exists(outdir):
@@ -233,13 +233,15 @@ def convertDownloaded(outdir, corpus, files, intermediateFiles=False, evaluate=T
         corpusRENtoASCII(xml)
     
     if analysisMode != None:
-        if isinstance(preprocessorSteps, basestring):
+        if preprocessorSteps == "AUTO":
+            preprocessorSteps = ["SPLIT_NAMES", "FIND_HEADS"]
+        elif isinstance(preprocessorSteps, basestring):
             preprocessorSteps = preprocessorSteps.split(",")
         parseInserted = False
         if analysisMode in ("INSERT", "AUTO"):
             parseInserted = insertAnalyses(xml, corpus, datasets, files, packageSubPath=packageSubPath)
-            if parseInserted:
-                xml = Detectors.Preprocessor.Preprocessor(steps=["SPLIT-NAMES", "FIND-HEADS"] if preprocessorSteps == None else preprocessorSteps).process(xml) # processParses(xml)
+            if parseInserted and preprocessorSteps != None:
+                xml = Detectors.Preprocessor.Preprocessor(steps=preprocessorSteps).process(xml) # processParses(xml)
                 if intermediateFiles:
                     print >> sys.stderr, "Writing combined corpus", bigfileName+"-sentences.xml"
                     ETUtils.write(xml, bigfileName+"-sentences.xml")
