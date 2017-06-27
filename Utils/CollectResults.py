@@ -1,5 +1,6 @@
 import sys, os
 import csv
+import copy
 
 MARKERS = {
     "devel":[("------------ Empty devel classification ------------", "=== EXIT STEP EMPTY"), 
@@ -131,7 +132,25 @@ def collectResults(inDir, inPattern, outStem=None, addEmpties=False):
             with open(outPath, "wt") as f:
                 dw = csv.DictWriter(f, ["submission"] + GENIA_COLUMNS, delimiter='\t')
                 dw.writeheader()
-                dw.writerows(results[setName])           
+                dw.writerows(results[setName])
+    
+def combineResults(results):
+    results = copy.deepcopy(results)
+    submissionNames = set()
+    for setName in "devel", "test":
+        results[setName] = [x for x in results[setName] if x["category"] == "ALL-TOTAL" and x["evaluation"] == "approximate"]
+        for row in results[setName]:
+            submissionNames.add(row["submission"])
+            for key in row.keys():
+                if key in ("precision", "recall", "fscore"):
+                    row[key + ":" + setName] = row.pop(key)
+                elif key != "submission":
+                    del row[key]
+    combined = {}
+    
+    for submissionName in sorted(submissionNames):
+        row = {"submission":submissionName}
+        if
 
 if __name__== "__main__":
     from optparse import OptionParser
