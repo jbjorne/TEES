@@ -139,17 +139,17 @@ def combineResults(results, outStem):
     print >> sys.stderr, "Combining results"
     combined = {}
     for setName in "devel", "test":
-        results[setName] = [x for x in results[setName] if x["category"] == "ALL-TOTAL" and x["evaluation"] == "approximate"]
         for row in results[setName]:
-            if x["category"] != "ALL-TOTAL" or x["evaluation"] != "approximate":
+            if row["category"] != "ALL-TOTAL" or row["evaluation"] != "approximate":
                 continue
+            submission = row["submission"]
             if row["submission"] not in combined:
-                combined["submission"] = {"submission":row["submission"]}
+                combined[submission] = {"submission":submission}
             for key in row.keys():
                 if key in ("precision", "recall", "fscore"):
-                    combined[key + ":" + setName] = row.pop(key)
-    
+                    combined[submission][key + ":" + setName] = row.pop(key)
     combined = [combined[x] for x in sorted(combined.keys())]
+    print combined
     if outStem != None:
         outPath = outStem + "-combined.tsv"
         print >> sys.stderr, "Writing combined results to", outPath
@@ -158,7 +158,7 @@ def combineResults(results, outStem):
             cols = ["submission"] + [x + ":devel" for x in cols] + [x + ":test" for x in cols]
             dw = csv.DictWriter(f, cols, delimiter='\t', extrasaction='ignore')
             dw.writeheader()
-            dw.writerows(results[setName])
+            dw.writerows(combined)
     return combined
 
 if __name__== "__main__":
