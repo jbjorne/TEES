@@ -133,24 +133,33 @@ def collectResults(inDir, inPattern, outStem=None, addEmpties=False):
                 dw = csv.DictWriter(f, ["submission"] + GENIA_COLUMNS, delimiter='\t')
                 dw.writeheader()
                 dw.writerows(results[setName])
+    combineResults(results, outStem)
     
-def combineResults(results):
-    results = copy.deepcopy(results)
-    submissionNames = set()
+def combineResults(results, outStem):
+    print >> sys.stderr, "Combining results"
+    combined = {}
     for setName in "devel", "test":
         results[setName] = [x for x in results[setName] if x["category"] == "ALL-TOTAL" and x["evaluation"] == "approximate"]
         for row in results[setName]:
-            submissionNames.add(row["submission"])
+            if x["category"] != "ALL-TOTAL" or x["evaluation"] != "approximate":
+                continue
+            if row["submission"] not in combined:
+                combined["submission"] = {"submission":row["submission"]}
             for key in row.keys():
                 if key in ("precision", "recall", "fscore"):
-                    row[key + ":" + setName] = row.pop(key)
-                elif key != "submission":
-                    del row[key]
-    combined = {}
+                    combined[key + ":" + setName] = row.pop(key)
     
-    for submissionName in sorted(submissionNames):
-        row = {"submission":submissionName}
-        if
+    combined = [combined[x] for x in sorted(combined.keys())]
+    if outStem != None:
+        outPath = outStem + "-combined.tsv"
+        print >> sys.stderr, "Writing combined results to", outPath
+        with open(outPath, "wt") as f:
+            cols = ("precision", "recall", "fscore")
+            cols = ["submission"] + [x + ":devel" for x in cols] + [x + ":test" for x in cols]
+            dw = csv.DictWriter(f, cols, delimiter='\t', extrasaction='ignore')
+            dw.writeheader()
+            dw.writerows(results[setName])
+    return combined
 
 if __name__== "__main__":
     from optparse import OptionParser
