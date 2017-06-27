@@ -74,6 +74,10 @@ def train(output, task=None, detector=None, inputFiles=None, models=None, parse=
     getSubsets(inputFiles, subset)
     if task != None: 
         task = task.replace("-FULL", "")
+    if "." in task:
+        _, subTask = getSubTask(task)
+        if subTask != 3:
+            processModifiers = False
     # Define processing steps
     selector, detectorSteps, omitDetectorSteps = getSteps(step, omitSteps, ["TRAIN", "DEVEL", "EMPTY", "TEST"])
     
@@ -320,15 +324,19 @@ def learnSettings(inputFiles, detector, classifierParameters):
 
     return detector
 
+def getSubTask(task):
+    subTask = None
+    if "." in task:
+        task, subTask = task.split(".")
+        subTask = int(subTask)
+    return task, subTask
+
 def getTaskSettings(task, detector, bioNLPSTParams, preprocessorParams, 
                     inputFiles, exampleStyles, classifierParameters, folds, corpusDir=None):
     if task != None:
         print >> sys.stderr, "*** Defining training settings for task", task, "***"
         fullTaskId = task
-        subTask = 2
-        if "." in task:
-            task, subTask = task.split(".")
-            subTask = int(subTask)
+        task, subTask = getSubTask(task)
         if corpusDir == None:
             corpusDir = Settings.CORPUS_DIR
         print >> sys.stderr, "Loading corpus", task, "from", corpusDir
