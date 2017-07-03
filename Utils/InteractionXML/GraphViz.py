@@ -76,15 +76,23 @@ def toGraphViz(xml, sentenceId, output=None, parse="McCC", color=None, colorNum=
     root = xml.getroot()
     sentences = []
     sentenceCount = 0
-    for sentence in root.getiterator("sentence"):
-        if len(sentences) == 0 and (sentence.get("id") == begin or sentenceCount == begin):
-            sentences.append(sentence)
-        if len(sentences) > 0:
-            if end != None:
+    breakLoop = False
+    documentBySentence = {}
+    for document in root.findall("document"):
+        for sentence in document.findall("sentence"):
+            if len(sentences) == 0 and (sentence.get("id") == begin or sentenceCount == begin):
                 sentences.append(sentence)
-            if end == None or sentence.get("id") == end or sentenceCount == end:
-                break
-        sentenceCount += 1
+                documentBySentence[sentence] = document
+            if len(sentences) > 0:
+                if end != None:
+                    sentences.append(sentence)
+                    documentBySentence[sentence] = document
+                if end == None or sentence.get("id") == end or sentenceCount == end:
+                    breakLoop = True
+                    break
+            sentenceCount += 1
+        if breakLoop:
+            break
     
     print >> sys.stderr, "Sentence Range:", (begin, end), len(sentences)
     if sentences == None:
@@ -166,7 +174,7 @@ def toGraphViz(xml, sentenceId, output=None, parse="McCC", color=None, colorNum=
         s += "}\n"
         
         if output != None:
-            currentOutput = output.replace("%i", sentence.get("id")).replace("%o", sentence.get("origId", ""))
+            currentOutput = output.replace("%i", sentence.get("id")).replace("%o", documentBySentence[sentence].get("origId", ""))
             outDir = os.path.dirname(currentOutput)
             if not os.path.exists(outDir):
                 os.makedirs(outDir)
