@@ -84,7 +84,7 @@ def toGraphViz(xml, sentenceId, output=None, parse="McCC", color=None, colorNum=
                 sentences.append(sentence)
                 documentBySentence[sentence] = document
             if len(sentences) > 0:
-                if end != None:
+                if sentence != sentences[-1]:
                     sentences.append(sentence)
                     documentBySentence[sentence] = document
                 if end == None or sentence.get("id") == end or sentenceCount == end:
