@@ -76,14 +76,15 @@ def toGraphViz(xml, sentenceId, output=None, parse="McCC", color=None, colorNum=
     root = xml.getroot()
     sentences = []
     sentenceCount = 0
-    for document in root.findall("document"):
-        for sentence in document.findall("sentence"):
-            if len(sentences) == 0 and (sentence.get("id") == begin or sentenceCount == begin):
+    for sentence in root.getiterator("sentence"):
+        if len(sentences) == 0 and (sentence.get("id") == begin or sentenceCount == begin):
+            sentences.append(sentence)
+        if len(sentences) > 0:
+            if end != None:
                 sentences.append(sentence)
-            if len(sentences) > 0 and (end == None or sentence.get("id") == end or sentenceCount == end):
-                if end != None:
-                    sentences.append(sentence)
+            if end == None or sentence.get("id") == end or sentenceCount == end:
                 break
+        sentenceCount += 1
     
     print >> sys.stderr, "Sentence Range:", (begin, end), len(sentences)
     if sentences == None:
