@@ -170,13 +170,15 @@ def toGraphViz(xml, sentenceId, output=None, parse="McCC", color=None, colorNum=
             outDir = os.path.dirname(currentOutput)
             if not os.path.exists(outDir):
                 os.makedirs(outDir)
-            currentOutput, ext = os.path.splitext(currentOutput)
+            outStem, ext = os.path.splitext(currentOutput)
+            exts = None
             if ext != None:
                 ext = ext.strip(".")
-                assert ext in ("gv", "pdf", "gif"), ext
-                exts = [ext]
-            else:
-                exts = ("gv", "pdf", "gif")
+                if ext in ("gv", "pdf", "gif"):
+                    exts = [ext]
+                    currentOutput = outStem
+            if exts == None:
+                exts = ("gv", "pdf")
             if "gv" in exts:
                 gvPath = currentOutput + ".gv"
                 print >> sys.stderr, "Graph file saved to: " + gvPath
