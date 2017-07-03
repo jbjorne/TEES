@@ -166,20 +166,31 @@ def toGraphViz(xml, sentenceId, output=None, parse="McCC", color=None, colorNum=
         s += "}\n"
         
         if output != None:
-            currentOutput = output.replace("%i", sentence.get("id"))
+            currentOutput = output.replace("%i", sentence.get("id")).replace("%o", sentence.get("origId", ""))
             outDir = os.path.dirname(currentOutput)
             if not os.path.exists(outDir):
                 os.makedirs(outDir)
-            gvPath = currentOutput + ".gv"
-            print >> sys.stderr, "Graph file saved to: " + gvPath
-            with open(gvPath, "wt") as f:
-                f.write(s)
-            if currentOutput.endswith(".gif"):
-                print >> sys.stderr, "GIF file saved to: " + currentOutput
-                subprocess.call("dot -Tgif " + gvPath + " > " + currentOutput, shell=True)
+            currentOutput, ext = os.path.splitext(currentOutput)
+            if ext != None:
+                ext = ext.strip(".")
+                assert ext in ("gv", "pdf", "gif"), ext
+                exts = [ext]
             else:
-                print >> sys.stderr, "PDF file saved to: " + currentOutput
-                subprocess.call("dot -Tpdf " + gvPath + " > " + currentOutput, shell=True)
+                exts = ("gv", "pdf", "gif")
+            if "gv" in exts:
+                gvPath = currentOutput + ".gv"
+                print >> sys.stderr, "Graph file saved to: " + gvPath
+                with open(gvPath, "wt") as f:
+                    f.write(s)
+            for imageExt in ("gif", "pdf"):
+                if imageExt in exts:
+                    print >> sys.stderr, imageExt.upper(), "file saved to: " + currentOutput + "." + imageExt
+                    #subprocess.call("dot -T" + imageExt + " " + gvPath + " > " + currentOutput + "." + imageExt, shell=True)
+                    p = subprocess.Popen(["dot -T" + imageExt + " > " + currentOutput + "." + imageExt], stdin=subprocess.PIPE, stdout=subprocess.PIPE, shell=True)
+                    out, err = p.communicate(input=s)
+                    for stream in out, err:
+                        if stream != None and stream.strip() != "":
+                            print stream.strip()
         else:
             p = subprocess.Popen(["dot", "-Tgif"], stdin=subprocess.PIPE, stdout=subprocess.PIPE)
             out, err = p.communicate(input=s)
