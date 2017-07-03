@@ -57,112 +57,137 @@ def groupDependencies(elements):
                     d1["child"] = d2
     return depStructs         
 
-def toGraphViz(input, id, output=None, parse="McCC", color=None, colorNum=None, colorParse=None, colorNumParse=None, width=None, height=None):
-    print >> sys.stderr, "====== Visualizing Sentence with GraphViz (www.graphviz.org) ======"
+def toGraphViz(xml, sentenceId, output=None, parse="McCC", color=None, colorNum=None, colorParse=None, colorNumParse=None, width=None, height=None):
+    print >> sys.stderr, "====== Visualizing Sentences with GraphViz (www.graphviz.org) ======"
     
     #if output == None:
     #    output = os.path.join(tempfile.gettempdir(), id + ".gv")
     
-    # Get the sentence
-    xml = ETUtils.ETFromObj(input).getroot()
-    sentence = None
-    for document in xml.findall("document"):
-        for s in document.findall("sentence"):
-            if s.get("id") == id:
-                sentence = s
+    begin, end = sentenceId, None
+    if "-" in sentenceId:
+        begin, end = sentenceId.split("-")
+        if begin.isdigit():
+            assert end.isdigit()
+            begin = int(begin)
+            end = int(end)
+    
+    # Get the sentences
+    xml = ETUtils.ETFromObj(xml)
+    root = xml.getroot()
+    sentences = []
+    sentenceCount = 0
+    for document in root.findall("document"):
+        for sentence in document.findall("sentence"):
+            if len(sentences) == 0 and (sentence.get("id") == begin or sentenceCount == begin):
+                sentences.append(sentence)
+            if len(sentences) > 0 and (end == None or sentence.get("id") == end or sentenceCount == end):
+                if end != None:
+                    sentences.append(sentence)
                 break
-    if sentence == None:
-        print >> sys.stderr, "No sentence for id", id
+    
+    print >> sys.stderr, "Sentence Range:", (begin, end), len(sentences)
+    if sentences == None:
+        print >> sys.stderr, "No sentences for ids", sentenceId
         return
     
-    elements = SentenceElements.SentenceElements(sentence, parse)
-    graph = SentenceGraph(elements.sentence, elements.tokens, elements.dependencies)
-    graph.mapInteractions(elements.entities, elements.interactions)
-    
-    s = ""
-    s += "digraph " + id.replace(".", "_") + " {\n"
-    #f.write("graph [label=\"Orthogonal edges\", splines=ortho, nodesep=0.1];\n")
-    if width != None and height != None:
-        s += "graph [nodesep=0.1,size=\"" + str(width) + "," + str(height) + "!\", resolution=1];\n"
-    else:
-        s += "graph [nodesep=0.1];\n"
-    s += "node [shape=box];\n\n"
-    #f.write("ranksep=0.5;")
-    
-    s += "subgraph tokens {\n"
-    s += "edge [weight=1000, arrowhead=none];\n"
-    s += "rankdir = LR;\n"
-    s += "rank=\"same\";\n"
-    s += "nodesep=0.01;\n"
-    #f.write("{ rank=\"same\";\n")
-    tokenIds = []
-    for token in elements.tokens:
-        tokenIds.append(token.get("id").replace(".", "_"))
-        s += getId(token) + " [margin=0 label=\"" + token.get("text") + "\\n" + token.get("POS") + "\"];\n"
-    s += "->".join(tokenIds) + ";\n"
-    s += "}\n\n"
-    
-    s += "subgraph dependencies {\n"
-    s += "edge[weight=0.001 " + getColorScheme(colorParse) + "];\n"
-    s += "node[" + getColorScheme(colorParse) + "];\n"
-    depStructs = groupDependencies(elements)
-    for depStruct in depStructs:
-        dep = depStruct["dep"]
-        depColor = getColor(dep.get("type"), colorParse, colorNumParse)
-        s += getId(dep, "id") + "[" + depColor + " margin=0 label=\"" + dep.get("type") + "\"];\n"
-        s += getId(dep, "t1") + " -> " + getId(dep, "id") + "[" + depColor + " weight=10];\n"
-        s += getId(dep, "id") + " -> " + getId(dep, "t2") + "[" + depColor + " weight=10];\n"
-        if depStruct["child"] != None:
-            #f.write(getId(dep) + " -> " + getId(depStruct["child"]["dep"]) + " [color=red];\n")
-            s += getId(depStruct["child"]["dep"]) + " -> " + getId(dep) + " [weight=1, color=red style=invis];\n"
+    results = []
+    for sentence in sentences:
+        elements = SentenceElements.SentenceElements(sentence, parse)
+        graph = SentenceGraph(elements.sentence, elements.tokens, elements.dependencies)
+        graph.mapInteractions(elements.entities, elements.interactions)
         
-    s += "}\n\n"
-
-    s += "subgraph entities {\n"
-    s += "edge[weight=1];\n"
-    for entity in elements.entities:
-        if entity.get("event") != "True":
-            s += getId(entity) + " [label=\"" + entity.get("type") + "\"];\n"
-            headToken = graph.entityHeadTokenByEntity[entity]
-            if headToken != None:
-                s += getId(entity) + " -> " + getId(headToken) + " [weight=1 style=dashed color=black];\n"
+        s = ""
+        s += "digraph " + sentence.get("id").replace(".", "_") + " {\n"
+        #f.write("graph [label=\"Orthogonal edges\", splines=ortho, nodesep=0.1];\n")
+        if width != None and height != None:
+            s += "graph [nodesep=0.1,size=\"" + str(width) + "," + str(height) + "!\", resolution=1];\n"
         else:
-            s += getId(entity) + " [label=\"" + entity.get("type") + "\"];\n"
-    s += "}\n\n"
+            s += "graph [nodesep=0.1];\n"
+        s += "node [shape=box];\n\n"
+        #f.write("ranksep=0.5;")
+        
+        s += "subgraph tokens {\n"
+        s += "edge [weight=1000, arrowhead=none];\n"
+        s += "rankdir = LR;\n"
+        s += "rank=\"same\";\n"
+        s += "nodesep=0.01;\n"
+        #f.write("{ rank=\"same\";\n")
+        tokenIds = []
+        for token in elements.tokens:
+            tokenIds.append(token.get("id").replace(".", "_"))
+            s += getId(token) + " [margin=0 label=\"" + token.get("text") + "\\n" + token.get("POS") + "\"];\n"
+        s += "->".join(tokenIds) + ";\n"
+        s += "}\n\n"
+        
+        s += "subgraph dependencies {\n"
+        s += "edge[weight=0.001 " + getColorScheme(colorParse) + "];\n"
+        s += "node[" + getColorScheme(colorParse) + "];\n"
+        depStructs = groupDependencies(elements)
+        for depStruct in depStructs:
+            dep = depStruct["dep"]
+            depColor = getColor(dep.get("type"), colorParse, colorNumParse)
+            s += getId(dep, "id") + "[" + depColor + " margin=0 label=\"" + dep.get("type") + "\"];\n"
+            s += getId(dep, "t1") + " -> " + getId(dep, "id") + "[" + depColor + " weight=10];\n"
+            s += getId(dep, "id") + " -> " + getId(dep, "t2") + "[" + depColor + " weight=10];\n"
+            if depStruct["child"] != None:
+                #f.write(getId(dep) + " -> " + getId(depStruct["child"]["dep"]) + " [color=red];\n")
+                s += getId(depStruct["child"]["dep"]) + " -> " + getId(dep) + " [weight=1, color=red style=invis];\n"
+            
+        s += "}\n\n"
     
-    s += "subgraph event_to_token {\n"
-    s += "edge[weight=1 style=dashed color=gray];\n"
-    for entity in elements.entities:
-        if entity.get("event") == "True":
-            headToken = graph.entityHeadTokenByEntity[entity]
-            if headToken != None:
-                s += getId(entity) + " -> " + getId(headToken) + ";\n"
-    s += "}\n\n"
-    
-    s += "subgraph interactions {\n"
-    s += "edge[" + getColorScheme(color) + "];\n"
-    for interaction in elements.interactions:
-        intColor = getColor(interaction.get("type"), color, colorNum)
-        s += getId(interaction, "e1") + " -> " + getId(interaction, "e2") + "[" + intColor + " fontsize=10 label=\"" + interaction.get("type") + "\"];\n"
-    s += "}\n\n"
-    s += "}\n"
-
-    if output != None:
-        gvPath = output + ".gv"
-        print >> sys.stderr, "Graph file saved to: " + gvPath
-        with open(gvPath, "wt") as f:
-            f.write(s)
-        if output.endswith(".gif"):
-            print >> sys.stderr, "GIF file saved to: " + output
-            subprocess.call("dot -Tgif " + gvPath + " > " + output, shell=True)
+        s += "subgraph entities {\n"
+        s += "edge[weight=1];\n"
+        for entity in elements.entities:
+            if entity.get("event") != "True":
+                s += getId(entity) + " [label=\"" + entity.get("type") + "\"];\n"
+                headToken = graph.entityHeadTokenByEntity[entity]
+                if headToken != None:
+                    s += getId(entity) + " -> " + getId(headToken) + " [weight=1 style=dashed color=black];\n"
+            else:
+                s += getId(entity) + " [label=\"" + entity.get("type") + "\"];\n"
+        s += "}\n\n"
+        
+        s += "subgraph event_to_token {\n"
+        s += "edge[weight=1 style=dashed color=gray];\n"
+        for entity in elements.entities:
+            if entity.get("event") == "True":
+                headToken = graph.entityHeadTokenByEntity[entity]
+                if headToken != None:
+                    s += getId(entity) + " -> " + getId(headToken) + ";\n"
+        s += "}\n\n"
+        
+        s += "subgraph interactions {\n"
+        s += "edge[" + getColorScheme(color) + "];\n"
+        for interaction in elements.interactions:
+            intColor = getColor(interaction.get("type"), color, colorNum)
+            s += getId(interaction, "e1") + " -> " + getId(interaction, "e2") + "[" + intColor + " fontsize=10 label=\"" + interaction.get("type") + "\"];\n"
+        s += "}\n\n"
+        s += "}\n"
+        
+        if output != None:
+            currentOutput = output.replace("%i", sentence.get("id"))
+            outDir = os.path.dirname(currentOutput)
+            if not os.path.exists(outDir):
+                os.makedirs(outDir)
+            gvPath = currentOutput + ".gv"
+            print >> sys.stderr, "Graph file saved to: " + gvPath
+            with open(gvPath, "wt") as f:
+                f.write(s)
+            if currentOutput.endswith(".gif"):
+                print >> sys.stderr, "GIF file saved to: " + currentOutput
+                subprocess.call("dot -Tgif " + gvPath + " > " + currentOutput, shell=True)
+            else:
+                print >> sys.stderr, "PDF file saved to: " + currentOutput
+                subprocess.call("dot -Tpdf " + gvPath + " > " + currentOutput, shell=True)
         else:
-            print >> sys.stderr, "PDF file saved to: " + output
-            subprocess.call("dot -Tpdf " + gvPath + " > " + output, shell=True)
-        return None
+            p = subprocess.Popen(["dot", "-Tgif"], stdin=subprocess.PIPE, stdout=subprocess.PIPE)
+            out, err = p.communicate(input=s)
+            results.append(out)
+    
+    if len(results) == 1:
+        return results[0]
     else:
-        p = subprocess.Popen(["dot", "-Tgif"], stdin=subprocess.PIPE, stdout=subprocess.PIPE)
-        out, err = p.communicate(input=s)
-        return out
+        return results
 
 if __name__=="__main__":
     try:
