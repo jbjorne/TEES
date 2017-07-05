@@ -1101,7 +1101,11 @@ class Parser:
     # EPE File Processing
     ###########################################################################
     
-    def readEPE(self, inPath):
+    def readEPE(self, inPath, posTags=None):
+        if posTags == None:
+            posTags = ("pos", "xpos", "upos")
+        elif isinstance(posTags, basestring):
+            posTags = [x.strip() for x in posTags.split(",")]
         sentences = []
         basicKeys = set(["form", "id", "properties", "edges", "text", "index", "POS", "pos", "start", "end"])
         with codecs.open(inPath, "rt", "utf-8") as f:
@@ -1115,14 +1119,14 @@ class Parser:
                     if "start" not in node or "end" not in node:
                         print >> sys.stderr, "Warning, removed node which has no offset", (node, inPath)
                         continue
-                    token = {"text":node["form"], "id":node["id"], "offset":(int(node["start"]), int(node["end"])), "POS":properties.get("pos")}
+                    token = {"text":node["form"], "id":node["id"], "offset":(int(node["start"]), int(node["end"])), "POS":None}
                     if not (token["offset"][0] >= 0 and token["offset"][1] > token["offset"][0]):
                         print >> sys.stderr, "Warning, removed non text bound node", (node, inPath)
                         continue
-                    if token["POS"] == None:
-                        for altPOS in ("xpos", "upos"):
-                            if properties.get(altPOS) != None:
-                                token["POS"] = properties.get(altPOS)
+                    for posTag in posTags:
+                        if properties.get(posTag) != None:
+                            token["POS"] = properties.get(posTag)
+                            break
                     for subset in node, properties:
                         for key in subset:
                             if key not in basicKeys:

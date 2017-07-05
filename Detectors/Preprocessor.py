@@ -84,7 +84,7 @@ class Preprocessor(ToolChain):
         self.defStep("STANFORD_CONVERT", clsStep(StanfordParser, "parse"), {"parserName":self.parseName, "debug":False, "action":"convert", "outputFormat":None})
         self.defStep("SYNTAXNET", clsStep(SyntaxNetParser, "parse"), {"parserName":self.parseName, "debug":False, "modelDir":None})
         self.defGroup("Alternative Parsing")
-        self.defStep("IMPORT_PARSE", clsStep(ParseConverter, "insertParses"), {"parseDir":None, "debug":False, "extensions":None, "subDirs":None, "docMatchKeys":None, "conllFormat":None, "splitting":True, "unescapeFormats":"AUTO", "origIdType":None})
+        self.defStep("IMPORT_PARSE", clsStep(ParseConverter, "insertParses"), {"parseDir":None, "debug":False, "extensions":None, "subDirs":None, "docMatchKeys":None, "conllFormat":None, "splitting":True, "unescapeFormats":"AUTO", "origIdType":None, "posTags":None})
         self.defGroup("Post-parsing")
         self.defStep("SPLIT_NAMES", ProteinNameSplitter.mainFunc, {"parseName":self.parseName, "removeOld":True})
         self.defStep("FIND_HEADS", FindHeads.findHeads, {"parse":self.parseName, "removeExisting":True})

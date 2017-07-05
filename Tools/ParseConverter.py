@@ -94,7 +94,7 @@ class ParseConverter(Parser):
             assert item in self.allExt, item
         return unescapeFormats
         
-    def readParse(self, ext, filePath, conllFormat=None, unescapeFormats=None, tokenMerging=True, counts=None, sdFailedFormat="empty"):
+    def readParse(self, ext, filePath, conllFormat=None, unescapeFormats=None, tokenMerging=True, counts=None, sdFailedFormat="empty", posTags=None):
         unescapeFormats = self.getUnescapeFormats(unescapeFormats)
         #ext = filePath.rsplit(".", 1)[-1]
         if ext == "ptb":
@@ -105,7 +105,7 @@ class ParseConverter(Parser):
         elif ext == "sd":
             sentObjs = self.readStanfordDependencies(filePath, failedFormat=sdFailedFormat)
         elif ext == "epe":
-            sentObjs = self.readEPE(filePath)
+            sentObjs = self.readEPE(filePath, posTags)
         elif ext == "tt":
             sentObjs = self.readTT(filePath)
         else:
@@ -114,10 +114,10 @@ class ParseConverter(Parser):
             self.mergeOverlappingTokens(sentObjs, counts=counts)
         return sentObjs
     
-    def insertParse(self, document, sentences, ext, filePath, parseName, splitting, typeCounts, conllFormat=None, unescapeFormats=None, tokenMerging=True, sdFailedFormat="empty"):
+    def insertParse(self, document, sentences, ext, filePath, parseName, splitting, typeCounts, conllFormat=None, unescapeFormats=None, tokenMerging=True, sdFailedFormat="empty", posTags=None):
         #ext = filePath.rsplit(".", 1)[-1]
         extCounts = typeCounts[ext]
-        sentObjs = self.readParse(ext, filePath, conllFormat, unescapeFormats=unescapeFormats, tokenMerging=tokenMerging, counts=extCounts, sdFailedFormat=sdFailedFormat)      
+        sentObjs = self.readParse(ext, filePath, conllFormat, unescapeFormats=unescapeFormats, tokenMerging=tokenMerging, counts=extCounts, sdFailedFormat=sdFailedFormat, posTags=posTags)      
         if ext == "ptb":
             sentences = self.prepareSentences(document, sentences, sentObjs, splitting, typeCounts["sentence-splitting"])
             self.insertElements(sentObjs, sentences, parseName, counts=extCounts)
@@ -132,7 +132,7 @@ class ParseConverter(Parser):
         else:
             raise Exception("Unknown extension '" + str(ext) + "'")
     
-    def insertParses(self, parseDir, input, output=None, parseName="McCC", extensions=None, subDirs=None, debug=False, skipParsed=False, docMatchKeys=None, conllFormat=None, splitting=True, unescapeFormats="AUTO", tokenMerging=True, extMap=None, sdFailedFormat="empty", origIdType=None):
+    def insertParses(self, parseDir, input, output=None, parseName="McCC", extensions=None, subDirs=None, debug=False, skipParsed=False, docMatchKeys=None, conllFormat=None, splitting=True, unescapeFormats="AUTO", tokenMerging=True, extMap=None, sdFailedFormat="empty", origIdType=None, posTags=None):
         corpusTree, corpusRoot = self.getCorpus(input)
         if not os.path.exists(parseDir):
             raise Exception("Cannot find parse input '" + str(parseDir) + "'")
@@ -176,7 +176,7 @@ class ParseConverter(Parser):
                         if ext not in files[docMatchValue]:
                             continue
                         counts[ext + "-match"] += 1
-                        self.insertParse(document, sentences, ext, files[docMatchValue][ext], parseName, splitting, typeCounts, conllFormat, unescapeFormats=unescapeFormats, tokenMerging=tokenMerging, sdFailedFormat=sdFailedFormat)
+                        self.insertParse(document, sentences, ext, files[docMatchValue][ext], parseName, splitting, typeCounts, conllFormat, unescapeFormats=unescapeFormats, tokenMerging=tokenMerging, sdFailedFormat=sdFailedFormat, posTags=posTags)
             if not matchFound:
                 counts["document-no-match"] += 1
         if len(typeCounts["sentence-splitting"]) > 0:

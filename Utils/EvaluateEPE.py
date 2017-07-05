@@ -64,7 +64,7 @@ def ask(question):
         else:
             sys.stdout.write("Please respond with 'yes' or 'no' (or 'y' or 'n').\n")
 
-def run(inPath, outPath, subDirs, model, connection, numJobs, subTask=3, useTestSet=False, clear=True, debug=False, force=False, training=True, preprocessorSteps=None, subset=None):
+def run(inPath, outPath, subDirs, model, connection, numJobs, subTask=3, posTags=None, useTestSet=False, clear=True, debug=False, force=False, training=True, preprocessorSteps=None, subset=None):
     # Remove existing non-empty work directory, if requested to do so
     if os.path.exists(outPath) and len(os.listdir(outPath)) > 0 and clear:
         if force or ask("Output directory '" + outPath + "' exists, remove?"):
@@ -94,6 +94,7 @@ def run(inPath, outPath, subDirs, model, connection, numJobs, subTask=3, useTest
         #preprocessor = Preprocessor(["MERGE-SETS", "REMOVE-ANALYSES", "REMOVE-HEADS", "MERGE-SENTENCES", "IMPORT-PARSE", "VALIDATE", "DIVIDE-SETS"])
         preprocessor.setArgForAllSteps("debug", debug)
         preprocessor.getStep("IMPORT_PARSE").setArg("parseDir", parseDir)
+        preprocessor.getStep("IMPORT_PARSE").setArg("posTags", posTags)
         modelPattern = model + ".+\.xml" if useTestSet else model + "-devel\.xml|" + model + "-train\.xml"
         preprocessor.process(modelPattern, os.path.join(corpusDir, model), logPath=None)
     else:
@@ -119,6 +120,7 @@ if __name__== "__main__":
     optparser.add_option("-t", "--testSet", default=False, action="store_true", help="Do only the preprocessing")
     optparser.add_option("--connection", default="connection=Unix:jobLimit=$JOBS", help="TEES local or remote training settings")
     optparser.add_option("--model", default="GE09", help="TEES model")
+    optparser.add_option("--pos", default="pos,xpos,upos", help="Preferred POS tag attributes")
     optparser.add_option("--subTask", default=3, type=int, help="GE09 subtask (1, 2 or 3)")
     optparser.add_option("--noClear", default=False, action="store_true", help="Continue a previous run")
     optparser.add_option("--debug", default=False, action="store_true", help="Debug mode")
@@ -128,5 +130,5 @@ if __name__== "__main__":
     optparser.add_option("--noTraining", default=False, action="store_true", help="Do only the preprocessing")
     (options, args) = optparser.parse_args()
     
-    run(options.input, options.output, options.subdirs, options.model, options.connection, options.numJobs, options.subTask, options.testSet, 
+    run(options.input, options.output, options.subdirs, options.model, options.connection, options.numJobs, options.subTask, options.pos, options.testSet, 
         not options.noClear, options.debug, options.force, training=not options.noTraining, preprocessorSteps=options.preprocessorSteps, subset=options.subset)
