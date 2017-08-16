@@ -188,7 +188,10 @@ class Preprocessor(ToolChain):
     def process(self, source, output=None, model=None, fromStep=None, toStep=None, omitSteps=None, logPath=None):
         if logPath == "AUTO":
             if output != None:
-                logPath = os.path.join(output.rstrip("/").rstrip("\\") + "-log.txt")
+                logPath = output
+                if "*" in logPath:
+                    logPath = logPath.split("*")[0].rstrip("-")
+                logPath = os.path.join(logPath.rstrip("/").rstrip("\\") + "-log.txt")
             else:
                 logPath = None
         elif logPath == "None":
@@ -339,6 +342,19 @@ class Preprocessor(ToolChain):
     # Saving Steps
     ###########################################################################
     
+    def save(self, input, output=None):
+        if "*" in output:
+            if output.endswith("*.xml"):
+                return self.divideSets(input, output.split("*")[0].rstrip("-"))
+            else:
+                exportPath, extension = output.split("*")
+                extension = extension.strip(".")
+                if not os.path.exists(exportPath):
+                    os.makedirs(exportPath)
+                self.export(input, exportPath, [extension]) 
+        else:
+            return ToolChain.save(self, input, output)
+    
     def export(self, input, output, formats=None, exportIds=None, useSetDirs=False):
         print >> sys.stderr, "Exporting formats:", formats
         exportedParses = False
@@ -346,8 +362,11 @@ class Preprocessor(ToolChain):
             formats = []
         elif isinstance(formats, basestring):
             formats = formats.split(",")
+        if "st" in formats:
+            formats.remove("st")
+            formats = formats + ["txt", "a1", "a2", "rel"]
         parseFormats = [x for x in formats if x in ["txt", "sentences", "tok", "ptb", "sd", "conll", "conllx", "conllu", "epe"]]
-        stFormats = [x for x in formats if x in ["a1", "a2", "rel"]]
+        stFormats = [x for x in formats if x in ["txt", "a1", "a2", "rel"]]
         if len(parseFormats) > 0:
             ParseExporter().export(input, output, "McCC", "McCC", toExport=formats, exportIds=exportIds, clear=True, useSetDirs=useSetDirs)
             exportedParses = True
