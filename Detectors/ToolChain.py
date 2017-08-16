@@ -256,7 +256,8 @@ class ToolChain(Detector):
                 #if step.ioArgNames != None:
                 #    ioArgNames = step.ioArgNames
                 #stepArgs = copy.copy(step["argDict"]) # make a copy of the arguments to which i/o can be added
-                stepArgs[step.ioArgNames["input"]] = source # the input
+                if source != None:
+                    stepArgs[step.ioArgNames["input"]] = source # the input
                 if step == self.steps[-1]: # The final step in the tool chain should save the final output
                     if "output" in step.ioArgNames: # not all steps have an output argument
                         stepArgs[step.ioArgNames["output"]] = output
