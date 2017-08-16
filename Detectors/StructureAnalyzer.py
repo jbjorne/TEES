@@ -5,6 +5,7 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__))+"/..")
 import Utils.ElementTreeUtils as ETUtils
 from collections import defaultdict
 import types
+import collections
 
 class StructureAnalyzer():
     def __init__(self, defaultFileNameInModel="structure.txt"):
@@ -115,9 +116,9 @@ class StructureAnalyzer():
             self.typeMap["reverse"][shortId] = relTypes
         print "--------------------------------------------------------"           
     
-    def analyze(self, inputs, model=None):
+    def analyze(self, inputs, model=None, verbose=False):
         self._init()  
-        if type(inputs) in types.StringTypes:
+        if type(inputs) in types.StringTypes or not isinstance(inputs, collections.Sequence):
             inputs = [inputs]
         for xml in inputs:
             print >> sys.stderr, "Analyzing", xml
@@ -145,6 +146,8 @@ class StructureAnalyzer():
                     event.countArguments()
         
         self._updateSupportingAnalyses()
+        if verbose:
+            print >> sys.stderr, self.toString()
         if model != None:
             self.save(model)
     

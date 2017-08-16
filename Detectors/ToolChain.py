@@ -258,7 +258,8 @@ class ToolChain(Detector):
                 #stepArgs = copy.copy(step["argDict"]) # make a copy of the arguments to which i/o can be added
                 stepArgs[step.ioArgNames["input"]] = source # the input
                 if step == self.steps[-1]: # The final step in the tool chain should save the final output
-                    stepArgs[step.ioArgNames["output"]] = output
+                    if "output" in step.ioArgNames: # not all steps have an output argument
+                        stepArgs[step.ioArgNames["output"]] = output
 #                 elif self.getIntermediateFilePath(step) != None: # This step can save an intermediate file
 #                     stepArgs[ioArgNames["output"]] = self.getIntermediateFilePath(step)
                 #else:

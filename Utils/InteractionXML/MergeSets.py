@@ -10,6 +10,10 @@ except ImportError:
 import Utils.ElementTreeUtils as ETUtils
 import re
 
+def getMatchingFiles(pattern, path):
+    pattern = re.compile(pattern)
+    return sorted([x for x in os.listdir(path) if pattern.match(x)])
+
 def mergeSets(input, corpusDir=None, output=None, allowNone=False):
     counts = defaultdict(int)
     if corpusDir == None:
@@ -19,8 +23,7 @@ def mergeSets(input, corpusDir=None, output=None, allowNone=False):
         else:
             corpusDir = os.path.normpath(Settings.DATAPATH + "/corpora")
     print >> sys.stderr, "Searching for corpus files at " + corpusDir + " using pattern " + input
-    pattern = re.compile(input)
-    matched = sorted([x for x in os.listdir(corpusDir) if pattern.match(x)])
+    matched = getMatchingFiles(input, corpusDir)
     print >> sys.stderr, "Merging input files", matched
     if len(matched) == 0:
         if allowNone:

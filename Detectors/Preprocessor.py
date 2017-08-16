@@ -89,7 +89,7 @@ class Preprocessor(ToolChain):
         self.defStep("SPLIT_NAMES", ProteinNameSplitter.mainFunc, {"parseName":self.parseName, "removeOld":True})
         self.defStep("FIND_HEADS", FindHeads.findHeads, {"parse":self.parseName, "removeExisting":True})
         self.defStep("REMOVE_DOCUMENT_TEXTS", Utils.InteractionXML.DeleteAttributes.processCorpus, {"rules":{"document":["text"]}})
-        self.defStep("ANALYZE_STRUCTURE", clsStep(StructureAnalyzer, "analyze"))
+        self.defStep("ANALYZE_STRUCTURE", clsStep(StructureAnalyzer, "analyze"), {"verbose":True}, {"input":"inputs"})
         self.defGroup("Miscellaneous")
         self.defStep("ADD_DDI_TEST_GOLD", DDITools.addTestGold, {"testGoldPath":None})
         self.defStep("VALIDATE", Utils.InteractionXML.ValidateIXML.validateCorpus)
@@ -187,7 +187,10 @@ class Preprocessor(ToolChain):
     
     def process(self, source, output=None, model=None, fromStep=None, toStep=None, omitSteps=None, logPath=None):
         if logPath == "AUTO":
-            logPath = os.path.join(output.rstrip("/").rstrip("\\") + "-log.txt")
+            if output != None:
+                logPath = os.path.join(output.rstrip("/").rstrip("\\") + "-log.txt")
+            else:
+                logPath = None
         elif logPath == "None":
             logPath = None
         if logPath != None:
@@ -235,7 +238,13 @@ class Preprocessor(ToolChain):
             if os.path.exists(fullPath):
                 return ETUtils.ETFromObj(fullPath)
             else:
-                raise Exception("Cannot find input '" + str(input) + "'")
+                #setPaths = [fullPath + x for x in ("-train.xml", "-devel.xml", "-test.xml")]
+                pattern = input + ".+\.xml" #"|".join([input + x for x in ("-train.xml", "-devel.xml", "-test.xml")])
+                matching = Utils.InteractionXML.MergeSets.getMatchingFiles(pattern, Settings.CORPUS_DIR)
+                if len(matching) > 0: #any([os.path.exists(x) for x in setPaths]):
+                    return Utils.InteractionXML.MergeSets.mergeSets(pattern)
+                else:
+                    raise Exception("Cannot find input '" + str(input) + "'")
         else:
             print >> sys.stderr, "Processing source as interaction XML"
             return ETUtils.ETFromObj(input)
