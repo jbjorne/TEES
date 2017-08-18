@@ -18,7 +18,7 @@ class ParseConverter(Parser):
     
     def __init__(self):
         Parser.__init__(self)
-        self.allExt = ["ptb", "sd", "conll", "conllx", "conllu", "corenlp", "epe", "tt"]
+        self.allExt = ["tt", "ptb", "sd", "conll", "conllx", "conllu", "corenlp", "epe"]
     
     def getParseFiles(self, parseDir, extensions, subDirs, counts, extMap=None, origIdType=None):
         files = {}
