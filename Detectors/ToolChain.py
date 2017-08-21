@@ -28,7 +28,7 @@ class Step():
     def expandAlias(self):
         if self.isAlias():
             steps = self.func
-            steps[0] = steps[0](**{"input":self.argDict["input"]})
+            steps[0] = steps[0](**{x:self.argDict[x] for x in self.argDict if "x" != "output"})
             steps[-1] = steps[-1](**{"output":self.argDict["output"]})
             return steps
         else:
