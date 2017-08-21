@@ -3,6 +3,7 @@ from Detector import Detector
 #from Core.Model import Model
 import Utils.ElementTreeUtils as ETUtils
 #import Utils.Parameters as Parameters
+import itertools
 
 #NOTHING = object()
 
@@ -19,6 +20,9 @@ class Step():
                 if self.ioArgNames[key] not in self.argDict:
                     self.argDict[self.ioArgNames[key]] = None
         self.group = group
+    
+    def isAlias(self):
+        return isinstance(self.func, (list, tuple))
     
     def setArg(self, name, value):
         assert name in self.argDict
@@ -79,6 +83,8 @@ class ToolChain(Detector):
             steps = eval("[" + steps + "]")
         else:
             steps = [eval(x) if isinstance(x, basestring) else x for x in steps]
+        # Alias expansion
+        steps = list(itertools.chain(*[x.func if x.isAlias() else [x] for x in steps]))
         return steps
     
     def defineSteps(self):
@@ -90,6 +96,13 @@ class ToolChain(Detector):
     def defStep(self, name, func, argDict=None, ioArgNames=None, funcCls=None, argListKey=None):
         assert name not in self.definedStepDict
         step = Step(name, func, argDict, ioArgNames, funcCls, argListKey, self.group)
+        self.definedStepDict[name] = step
+        self.definedSteps.append(step)
+    
+    def defAlias(self, name, steps):
+        assert name not in self.definedStepDict
+        steps = [self.definedStepDict[x] for x in steps]
+        step = Step(name, steps, None, None, None, None, self.group)
         self.definedStepDict[name] = step
         self.definedSteps.append(step)
     

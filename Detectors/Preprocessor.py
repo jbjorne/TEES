@@ -84,6 +84,7 @@ class Preprocessor(ToolChain):
         self.defStep("STANFORD_CONVERT", clsStep(StanfordParser, "parse"), {"parserName":self.parseName, "debug":False, "action":"convert", "outputFormat":None})
         self.defStep("SYNTAXNET", clsStep(SyntaxNetParser, "parse"), {"parserName":self.parseName, "debug":False, "modelDir":None})
         self.defGroup("Alternative Parsing")
+        self.defAlias("CLEAR_PARSE", ["REMOVE_ANALYSES", "REMOVE_HEADS", "MERGE_SENTENCES"])
         self.defStep("IMPORT_PARSE", clsStep(ParseConverter, "insertParses"), {"parseDir":None, "debug":False, "extensions":None, "subDirs":None, "docMatchKeys":None, "conllFormat":None, "splitting":True, "unescapeFormats":"AUTO", "origIdType":None, "posTags":None})
         self.defGroup("Post-parsing")
         self.defStep("SPLIT_NAMES", ProteinNameSplitter.mainFunc, {"parseName":self.parseName, "removeOld":True})
@@ -155,7 +156,10 @@ class Preprocessor(ToolChain):
             if step.group != currentGroup:
                 currentGroup = step.group
                 s += "[" + currentGroup + "]" + "\n"
-            s += " " + step.name + "(" + ",".join(sorted(step.argDict.keys())) + ")\n"
+            s += " " + step.name + "(" + ",".join(sorted(step.argDict.keys())) + ")"
+            if step.isAlias():
+                s += " = alias for [" + ",".join([x.name for x in step.func]) + "]"
+            s += "\n"
         return s
     
 #     def getDefaultSteps(self):
