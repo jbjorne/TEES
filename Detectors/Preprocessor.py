@@ -33,6 +33,7 @@ import Utils.InteractionXML.InteractionXMLUtils as IXMLUtils
 import Utils.Settings as Settings
 import Utils.Convert.convertBioNLP
 import Utils.Convert.convertPPI
+import Utils.Convert.convertChemProt
 
 def clsStep(cls, method):
     return lambda *args, **kwargs: getattr(cls(), method)(*args, **kwargs)
@@ -63,6 +64,7 @@ class Preprocessor(ToolChain):
         self.defStep("DOWNLOAD", self.downloadCorpus, {"corpus":None, "outDir":None, "downloadDir":None, "redownload":False, "debug":False}, {"input":"corpus", "output":"outDir"})
         self.defStep("DOWNLOAD_BIONLP", Utils.Convert.convertBioNLP.convertCorpus, {"corpus":None, "outDir":None, "downloadDir":None, "redownload":False, "makeIntermediateFiles":False, "evaluate":False, "processEquiv":True, "analysisMode":"SKIP", "debug":False, "preprocessorSteps":None, "preprocessorParameters":None}, {"input":"corpus", "output":"outDir"})
         self.defStep("CONVERT_BIONLP", Utils.Convert.convertBioNLP.convert, {"corpora":None, "outDir":None, "downloadDir":None, "redownload":False, "makeIntermediateFiles":False, "evaluate":False, "processEquiv":True, "analysisMode":"AUTO", "debug":False, "preprocessorSteps":None, "preprocessorParameters":None, "logPath":"AUTO"}, {"input":"corpora", "output":"outDir"})
+        self.defStep("CONVERT_CHEMPROT", Utils.Convert.convertChemProt.convertChemProt, None, {"input":"inDir", "output":"outPath"})
         self.defGroup("Loading")
         self.defStep("LOAD", self.load, {"dataSetNames":None, "corpusName":None, "extensions":None})
         self.defStep("DOWNLOAD_PUBMED", self.downloadPubmed)

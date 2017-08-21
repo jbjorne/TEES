@@ -1,6 +1,7 @@
 import os, sys
 import csv
 import codecs
+from collections import defaultdict
 try:
     import cElementTree as ET
 except ImportError:
@@ -8,8 +9,9 @@ except ImportError:
 thisPath = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.abspath(os.path.join(thisPath,"../..")))
 import Utils.Range as Range
+import Utils.ElementTreeUtils as ETUtils
 
-def convertChemProt(inDir):
+def convertChemProt(inDir, outPath=None):
     filenames = os.listdir(inDir)
     filetypes = ["_abstracts.tsv", "_entities.tsv", "_relations.tsv"]
     dataSets = []
@@ -23,18 +25,20 @@ def convertChemProt(inDir):
             dataSets[dataSetId] = {}
         assert dataType not in dataSets[dataSetId]
         dataSets[dataSetId][dataType] = os.path.join(inDir, filename)
+    print >> sys.stderr, "Found", len(dataSets), "ChemProt datasets at", inDir
     # Build the Interaction XML
     corpusName = "CP17"
     corpus = ET.Element("root", {"source":corpusName})
-    docCount = 0
+    counts = defaultdict(int)
     docById = {}
     entityById = {}
     for dataSetId in sorted(dataSets.keys()):
         dataSet = dataSets[dataSetId]
+        counts["set"] += 1
         with codecs.open(dataSet["abstracts"], "rt", "utf-8") as f:
             for row in csv.DictReader(f, delimiter="\t", fieldnames=["id", "title", "abstract"]):
                 document = ET.SubElement(corpus, "document", {"id":corpusName + ".d" + str(docCount), "origId":row["id"], "text":row["text"], "title":row["title"], "set":dataSetId})
-                docCount += 1
+                counts["document"] += 1
                 assert document.get("origId") not in docById
                 docById[document.get("origId")] = document
         with codecs.open(dataSet["entities"], "rt", "utf-8") as f:
@@ -52,6 +56,7 @@ def convertChemProt(inDir):
                     entityById[row["docId"]] = {}
                 assert entity.get("origId") not in entityById[row["docId"]]
                 entityById[row["docId"]][entity.get("origId")] = entity
+                counts["entity"] += 1
         with codecs.open(dataSet["entities"], "rt", "utf-8") as f:
             for row in csv.DictReader(f, delimiter="\t", fieldnames=["docId", "group", "groupEval", "type", "arg1", "arg2"]):
                 document = docById[row["docId"]]
@@ -61,5 +66,9 @@ def convertChemProt(inDir):
                 interaction.set("groupEval", "True" if row["groupEval"] == "Y" else "False")
                 interaction.set("e1", entityById[row["docId"]][row["arg1"]].get("id"))
                 interaction.set("e2", entityById[row["docId"]][row["arg2"]].get("id"))
+                counts["interaction"] += 1
+    print >> sys.stderr, "ChemProt conversion:", counts
+    if outPath != None:
+        ETUtils.write(corpus, outPath)
     return ET.ElementTree(corpus)
         
