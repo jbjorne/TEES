@@ -741,6 +741,21 @@ class Parser:
 #         bestMatches, allCandScores = self.alignMatches(tokenMatches, window=20)
     
     ###########################################################################
+    # Simple Text Format File Processing
+    ###########################################################################
+    
+    def readTok(self, tokFileName): 
+        sentences = []
+        with codecs.open(tokFileName, "rt", "utf-8") as f:
+            for line in f:
+                tokens = []
+                lineTokens = line.strip().split()
+                for i in range(len(lineTokens)):
+                    tokens.append({"text":lineTokens[i], "index":i})
+                sentences.append({"tokens":tokens})
+        return sentences
+    
+    ###########################################################################
     # Penn Tree File Processing
     ###########################################################################
                 

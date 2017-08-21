@@ -18,7 +18,7 @@ class ParseConverter(Parser):
     
     def __init__(self):
         Parser.__init__(self)
-        self.allExt = ["tt", "ptb", "sd", "conll", "conllx", "conllu", "corenlp", "epe"]
+        self.allExt = ["tok", "tt", "ptb", "sd", "conll", "conllx", "conllu", "corenlp", "epe"]
     
     def getParseFiles(self, parseDir, extensions, subDirs, counts, extMap=None, origIdType=None):
         files = {}
@@ -108,6 +108,8 @@ class ParseConverter(Parser):
             sentObjs = self.readEPE(filePath, posTags)
         elif ext == "tt":
             sentObjs = self.readTT(filePath)
+        elif ext == "tok":
+            sentObjs = self.readTok(filePath)
         else:
             raise Exception("Unknown extension '" + str(ext) + "'")
         if tokenMerging:
@@ -126,7 +128,7 @@ class ParseConverter(Parser):
             self.insertElements(sentObjs, sentences, parseName, "LINKED", counts=extCounts)
         elif ext == "sd":
             self.insertElements(sentObjs, sentences, parseName, parseName, counts=extCounts)
-        elif ext == "tt":
+        elif ext in ("tt", "tok"):
             sentences = self.prepareSentences(document, sentences, sentObjs, splitting, typeCounts["sentence-splitting"])
             self.insertElements(sentObjs, sentences, parseName, parseName, counts=extCounts)
         else:
@@ -171,11 +173,11 @@ class ParseConverter(Parser):
                     matchFound = True
                     counter.update(1, "Inserting parses for (" + document.get("id") + "/" + str(docMatchValue) + "): ")
                     counts["document-match"] += 1
-                    sentences = [x for x in self.getSentences(document, skipParsed=skipParsed)]
                     for ext in extensions:
                         if ext not in files[docMatchValue]:
                             continue
                         counts[ext + "-match"] += 1
+                        sentences = [x for x in self.getSentences(document, skipParsed=skipParsed)]
                         self.insertParse(document, sentences, ext, files[docMatchValue][ext], parseName, splitting, typeCounts, conllFormat, unescapeFormats=unescapeFormats, tokenMerging=tokenMerging, sdFailedFormat=sdFailedFormat, posTags=posTags)
             if not matchFound:
                 counts["document-no-match"] += 1
