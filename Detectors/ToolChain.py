@@ -4,6 +4,7 @@ from Detector import Detector
 import Utils.ElementTreeUtils as ETUtils
 #import Utils.Parameters as Parameters
 import itertools
+import copy
 
 #NOTHING = object()
 
@@ -24,13 +25,23 @@ class Step():
     def isAlias(self):
         return isinstance(self.func, (list, tuple))
     
+    def expandAlias(self):
+        if self.isAlias():
+            steps = self.func
+            steps[0] = steps[0](**{"input":self.argDict["input"]})
+            steps[-1] = steps[-1](**{"output":self.argDict["output"]})
+            return steps
+        else:
+            return [self]
+    
     def setArg(self, name, value):
         assert name in self.argDict
         self.argDict[name] = value
     
     def __call__(self, *args, **kwargs):
-        self.argDict = self.getArgs(*args, **kwargs)
-        return self
+        clone = copy.copy(self) # Make a new copy for modifying the arguments of this step "prototype"
+        clone.argDict = self.getArgs(*args, **kwargs)
+        return clone
     
     def run(self, *args, **kwargs):
         arguments = self.getArgs(*args, **kwargs)
@@ -84,7 +95,7 @@ class ToolChain(Detector):
         else:
             steps = [eval(x) if isinstance(x, basestring) else x for x in steps]
         # Alias expansion
-        steps = list(itertools.chain(*[x.func if x.isAlias() else [x] for x in steps]))
+        steps = list(itertools.chain(*[x.expandAlias() for x in steps]))
         return steps
     
     def defineSteps(self):
