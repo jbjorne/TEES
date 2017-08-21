@@ -2,6 +2,7 @@ import os, sys
 import csv
 import codecs
 from collections import defaultdict
+from theano.sandbox.cuda.basic_ops import row
 try:
     import cElementTree as ET
 except ImportError:
@@ -53,7 +54,8 @@ def convertChemProt(inDir, outPath=None):
                 entity = ET.SubElement(document, "entity", {"id":document.get("id") + ".e" + str(len([x for x in document.findall("entity")]))})
                 entity.set("origId", row["id"])
                 entity.set("type", row["type"].split("-")[0])
-                entity.set("normalized", "True" if row["type"].endswith("Y") else "False")
+                assert row["type"] in ("CHEMICAL", "GENE-Y", "GENE-N")
+                entity.set("normalized", "True" if row["type"].endswith("-Y") else "False")
                 offset = (int(row["begin"]), int(row["end"]))
                 docSpan = document.get("text")[offset[0]:offset[1]]
                 assert docSpan == row["text"], (offset, docSpan, row)
@@ -71,9 +73,11 @@ def convertChemProt(inDir, outPath=None):
                     row["arg" + argId] = row["arg" + argId][5:]
                 document = docById[row["docId"]]
                 interaction = ET.SubElement(document, "interaction", {"id":document.get("id") + ".i" + str(len([x for x in document.findall("interaction")]))})
-                interaction.set("type", row["type"])
-                interaction.set("group", row["group"])
-                interaction.set("groupEval", "True" if row["groupEval"] == "Y" else "False")
+                interaction.set("type", row["group"])
+                interaction.set("relType", row["type"])
+                row["groupEval"] = row["groupEval"].strip()
+                assert row["groupEval"] in ("Y", "N")
+                interaction.set("evaluated", "True" if row["groupEval"] == "Y" else "False")
                 interaction.set("e1", entityById[row["docId"]][row["arg1"]].get("id"))
                 interaction.set("e2", entityById[row["docId"]][row["arg2"]].get("id"))
                 counts["interaction"] += 1
@@ -94,5 +98,5 @@ def exportChemProtPredictions(xml, outPath):
             for interaction in document.getiterator("interaction"):
                 e1 = entityById[interaction.get("e1")]
                 e2 = entityById[interaction.get("e2")]
-                f.write("\t".join([docId, interaction.get("group"), "Arg1:" + e1.get("origId"), "Arg2:" + e2.get("origId")]) + "\n")
+                f.write("\t".join([docId, interaction.get("type"), "Arg1:" + e1.get("origId"), "Arg2:" + e2.get("origId")]) + "\n")
     return xml 
