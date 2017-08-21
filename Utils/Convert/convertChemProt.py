@@ -81,4 +81,18 @@ def convertChemProt(inDir, outPath=None):
     if outPath != None:
         ETUtils.write(corpus, outPath)
     return ET.ElementTree(corpus)
-        
+
+def exportChemProtPredictions(xml, outPath):
+    xml = ETUtils.ETFromObj(xml)
+    with open(outPath, "wt") as f:
+        for document in xml.getiterator("document"):
+            docId = document.get("origId")
+            entityById = {}
+            for entity in document.getiterator("entity"):
+                assert entity.get("id") not in entityById
+                entityById[entity.get("id")] = entity
+            for interaction in document.getiterator("interaction"):
+                e1 = entityById[interaction.get("e1")]
+                e2 = entityById[interaction.get("e2")]
+                f.write("\t".join([docId, interaction.get("group"), "Arg1:" + e1.get("origId"), "Arg2:" + e2.get("origId")]) + "\n")
+    return xml 
