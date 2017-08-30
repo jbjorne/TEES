@@ -50,7 +50,9 @@ def classify(input, model, output, workDir=None, step=None, omitSteps=None,
     
     classifyInput = input
     if selector.check("PREPROCESS"):
-        preprocessor = Preprocessor(["LOAD", "GENIA_SPLITTER", "BANNER", "BLLIP_BIO", "STANFORD_CONVERT", "SPLIT_NAMES", "FIND_HEADS", "SAVE"])
+        if preprocessorParams == None:
+            preprocessorParams = ["LOAD", "GENIA_SPLITTER", "BANNER", "BLLIP_BIO", "STANFORD_CONVERT", "SPLIT_NAMES", "FIND_HEADS", "SAVE"]
+        preprocessor = Preprocessor(preprocessorParams)
         if debug: 
             preprocessor.setArgForAllSteps("debug", True)
         preprocessorOutput = output + preprocessorTag
@@ -68,7 +70,7 @@ def classify(input, model, output, workDir=None, step=None, omitSteps=None,
             # Remove some of the unnecessary intermediate files
             #preprocessor.setIntermediateFiles({"Convert":None, "SPLIT-SENTENCES":None, "PARSE":None, "CONVERT-PARSE":None, "SPLIT-NAMES":None})
             # Process input into interaction XML
-            classifyInput = preprocessor.process(input, preprocessorOutput, preprocessorParams, model, fromStep=detectorSteps["PREPROCESS"], toStep=None, omitSteps=omitDetectorSteps["PREPROCESS"])
+            classifyInput = preprocessor.process(input, preprocessorOutput, model)
     
     if selector.check("CLASSIFY"):
         detector = getDetector(detector, model)[0]() # initialize detector object
