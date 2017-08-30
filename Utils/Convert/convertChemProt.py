@@ -43,7 +43,7 @@ def convertChemProt(inDir, outPath=None):
         dataSet = dataSets[dataSetId]
         counts["set"] += 1
         with open(dataSet["abstracts"], "rt") as f:
-            for row in UnicodeDictReader(f, delimiter="\t", fieldnames=["id", "title", "abstract"]):
+            for row in UnicodeDictReader(f, delimiter="\t", fieldnames=["id", "title", "abstract"], quoting=csv.QUOTE_NONE):
                 document = ET.SubElement(corpus, "document", {"id":corpusName + ".d" + str(counts["document"]), "origId":row["id"], "set":dataSetId})
                 document.set("text", row["title"] + "\t" + row["abstract"])
                 counts["document"] += 1
