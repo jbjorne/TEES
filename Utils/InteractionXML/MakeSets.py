@@ -7,7 +7,8 @@ import Utils.ElementTreeUtils as ETUtils
 
 def processCorpus(inPath, outPath, sourceSet, newSets, seed=1):
     print >> sys.stderr, "Loading corpus file", inPath
-    corpusRoot = ETUtils.ETFromObj(inPath).getroot()
+    corpusTree = ETUtils.ETFromObj(inPath)
+    corpusRoot = corpusTree.getroot()
     
     rand = random.Random(seed)
     documents = corpusRoot.findall("document")
@@ -30,7 +31,7 @@ def processCorpus(inPath, outPath, sourceSet, newSets, seed=1):
     print "MakeSets result:", "old=" + str(dict(counts["old"])) + ", new=" + str(dict(counts["new"]))
     if outPath != None:
         ETUtils.write(corpusRoot, outPath)
-    return corpusRoot
+    return corpusTree
 
 if __name__=="__main__":
     from optparse import OptionParser
