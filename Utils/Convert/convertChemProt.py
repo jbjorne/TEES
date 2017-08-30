@@ -58,30 +58,38 @@ def convertChemProt(inDir, outPath=None):
                 entity.set("normalized", "True" if row["type"].endswith("-Y") else "False")
                 offset = (int(row["begin"]), int(row["end"]))
                 docSpan = document.get("text")[offset[0]:offset[1]]
-                assert docSpan == row["text"], (offset, docSpan, row)
-                entity.set("charOffset", Range.tuplesToCharOffset((offset[0], offset[1])))
-                entity.set("text", row["text"])
-                if row["docId"] not in entityById:
-                    entityById[row["docId"]] = {}
-                assert entity.get("origId") not in entityById[row["docId"]]
-                entityById[row["docId"]][entity.get("origId")] = entity
-                counts["entity"] += 1
+                if docSpan == row["text"]:
+                    entity.set("charOffset", Range.tuplesToCharOffset((offset[0], offset[1])))
+                    entity.set("text", row["text"])
+                    if row["docId"] not in entityById:
+                        entityById[row["docId"]] = {}
+                    assert entity.get("origId") not in entityById[row["docId"]]
+                    entityById[row["docId"]][entity.get("origId")] = entity
+                    counts["entity"] += 1
+                else:
+                    print >> sys.stderr, "Alignment error in document", row["docId"], (offset, docSpan, row)
+                    counts["entity-error"] += 1
         with open(dataSet["relations"], "rt") as f:
             for row in UnicodeDictReader(f, delimiter="\t", fieldnames=["docId", "group", "groupEval", "type", "arg1", "arg2"]):
                 for argId in ("1", "2"):
                     assert row["arg" + argId].startswith("Arg" + argId + ":")
                     row["arg" + argId] = row["arg" + argId][5:]
                 document = docById[row["docId"]]
-                interaction = ET.SubElement(document, "interaction", {"id":document.get("id") + ".i" + str(len([x for x in document.findall("interaction")]))})
-                interaction.set("type", row["group"])
-                interaction.set("relType", row["type"])
-                row["groupEval"] = row["groupEval"].strip()
-                assert row["groupEval"] in ("Y", "N")
-                interaction.set("evaluated", "True" if row["groupEval"] == "Y" else "False")
-                interaction.set("e1", entityById[row["docId"]][row["arg1"]].get("id"))
-                interaction.set("e2", entityById[row["docId"]][row["arg2"]].get("id"))
-                counts["interaction"] += 1
-    print >> sys.stderr, "ChemProt conversion:", counts
+                e1 = entityById[row["docId"]].get(row["arg1"])
+                e2 = entityById[row["docId"]].get(row["arg2"])
+                if e1 != None and e2 != None:
+                    interaction = ET.SubElement(document, "interaction", {"id":document.get("id") + ".i" + str(len([x for x in document.findall("interaction")]))})
+                    interaction.set("type", row["group"])
+                    interaction.set("relType", row["type"])
+                    row["groupEval"] = row["groupEval"].strip()
+                    assert row["groupEval"] in ("Y", "N")
+                    interaction.set("evaluated", "True" if row["groupEval"] == "Y" else "False")
+                    interaction.set("e1", e1.get("id"))
+                    interaction.set("e2", e2.get("id"))
+                    counts["interaction"] += 1
+                else:
+                    counts["interaction-error"] += 1
+    print >> sys.stderr, "ChemProt conversion:", dict(counts)
     if outPath != None:
         ETUtils.write(corpus, outPath)
     return ET.ElementTree(corpus)
