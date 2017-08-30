@@ -38,6 +38,7 @@ def convertChemProt(inDir, outPath=None):
     counts = defaultdict(int)
     docById = {}
     entityById = {}
+    docsWithErrors = set()
     for dataSetId in sorted(dataSets.keys()):
         dataSet = dataSets[dataSetId]
         counts["set"] += 1
@@ -51,14 +52,14 @@ def convertChemProt(inDir, outPath=None):
         with open(dataSet["entities"], "rt") as f:
             for row in UnicodeDictReader(f, delimiter="\t", fieldnames=["docId", "id", "type", "begin", "end", "text"]):
                 document = docById[row["docId"]]
-                entity = ET.SubElement(document, "entity", {"id":document.get("id") + ".e" + str(len([x for x in document.findall("entity")]))})
-                entity.set("origId", row["id"])
-                entity.set("type", row["type"].split("-")[0])
                 assert row["type"] in ("CHEMICAL", "GENE-Y", "GENE-N")
-                entity.set("normalized", "True" if row["type"].endswith("-Y") else "False")
                 offset = (int(row["begin"]), int(row["end"]))
                 docSpan = document.get("text")[offset[0]:offset[1]]
                 if docSpan == row["text"]:
+                    entity = ET.SubElement(document, "entity", {"id":document.get("id") + ".e" + str(len([x for x in document.findall("entity")]))})
+                    entity.set("origId", row["id"])
+                    entity.set("type", row["type"].split("-")[0])
+                    entity.set("normalized", "True" if row["type"].endswith("-Y") else "False")
                     entity.set("charOffset", Range.tuplesToCharOffset((offset[0], offset[1])))
                     entity.set("text", row["text"])
                     if row["docId"] not in entityById:
@@ -69,6 +70,7 @@ def convertChemProt(inDir, outPath=None):
                 else:
                     print >> sys.stderr, "Alignment error in document", row["docId"], (offset, docSpan, row)
                     counts["entity-error"] += 1
+                    docsWithErrors.add(row["docId"])
         with open(dataSet["relations"], "rt") as f:
             for row in UnicodeDictReader(f, delimiter="\t", fieldnames=["docId", "group", "groupEval", "type", "arg1", "arg2"]):
                 for argId in ("1", "2"):
@@ -89,6 +91,8 @@ def convertChemProt(inDir, outPath=None):
                     counts["interaction"] += 1
                 else:
                     counts["interaction-error"] += 1
+                    docsWithErrors.add(row["docId"])
+    counts["documents-with-errors"] = len(docsWithErrors)
     print >> sys.stderr, "ChemProt conversion:", dict(counts)
     if outPath != None:
         ETUtils.write(corpus, outPath)
