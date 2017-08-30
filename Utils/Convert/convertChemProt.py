@@ -34,7 +34,7 @@ def convertChemProt(inDir, outPath=None):
     print >> sys.stderr, "Found", len(dataSets), "ChemProt datasets at", inDir
     # Build the Interaction XML
     corpusName = "CP17"
-    corpus = ET.Element("root", {"source":corpusName})
+    corpus = ET.Element("corpus", {"source":corpusName})
     counts = defaultdict(int)
     docById = {}
     entityById = {}
