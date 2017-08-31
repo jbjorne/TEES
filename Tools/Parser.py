@@ -1006,7 +1006,7 @@ class Parser:
                         sentence["words"].append(word)
         return sentences
     
-    def processCoNLLSentences(self, sentences, unescaping=False):
+    def processCoNLLSentences(self, sentences, unescaping=False, allowNonTextBoundTokens = False):
         outSentences = []
         for sentence in sentences:
             tokens = []
@@ -1040,14 +1040,15 @@ class Parser:
                         else:
                             token[key.lower()] = str(word[key])
                 token = {key:token[key] for key in token if token[key] != "_"}
-                #assert "text" in token, (token, word, (tokens, sentence))
                 if "text" in token:
                     token["index"] = index
                     tokenById[token["id"]] = token   
                     tokens.append(token)
                     index += 1
-                else:
+                elif allowNonTextBoundTokens:
                     nonTextBound.add(token["id"])
+                else:
+                    raise Exception("No text for token " + str(token) + " based on word " + str(word) + " in sentence " + str(sentence))
             if origIdsRequired:
                 for token in tokens:
                     token["origId"] = token["id"]
@@ -1066,7 +1067,7 @@ class Parser:
                 else:
                     for t in (t1, t2):
                         if t not in tokenById and t not in nonTextBound:
-                            raise Exception("Dependency token + '" + str([t1,t2]) + "' not defined for word " + str(word) + " in sentence " + str(sentence))
+                            raise Exception("Dependency token '" + str(t) + "' not defined for word " + str(word) + " in sentence " + str(sentence))
                     if t1 in tokenById and t2 in tokenById:
                         dependencies.append({"type":word["DEPREL"], "t1":t1, "t2":t2, "t1Token":tokenById[t1], "t2Token":tokenById[t2]})
                 # Process secondary dependencies
