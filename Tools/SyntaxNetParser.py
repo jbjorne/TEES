@@ -116,7 +116,7 @@ class SyntaxNetParser(Parser):
         inputPath = os.path.join(workdir, "input")
         with codecs.open(inputPath, "wt", "utf-8") as f:
             for sentence in corpusRoot.getiterator("sentence"):
-                f.write(sentence.get("text").replace("\n", " ").replace("\r", " ").strip() + "\n")
+                f.write(sentence.get("text").replace("\n", " ").replace("\r", " ").replace("\t", " ").strip() + "\n")
         return inputPath
 
 if __name__=="__main__":
