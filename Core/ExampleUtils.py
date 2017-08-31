@@ -180,7 +180,7 @@ def readExamples(filename, readFeatures=True):
         for commentSplit in commentSplits:
             #if commentSplit.find("id:") == -1:
             #    continue
-            key, value = commentSplit.split(":")
+            key, value = commentSplit.split(":", 1)
             if key == "id":
                 id = value
             else:
