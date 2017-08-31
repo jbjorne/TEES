@@ -57,6 +57,7 @@ def convertChemProt(inDir, outPath=None):
                 docSpan = document.get("text")[offset[0]:offset[1]]
                 if docSpan == row["text"]:
                     entity = ET.SubElement(document, "entity", {"id":document.get("id") + ".e" + str(len([x for x in document.findall("entity")]))})
+                    entity.set("given", "True")
                     entity.set("origId", row["id"])
                     entity.set("type", row["type"].split("-")[0])
                     entity.set("normalized", "True" if row["type"].endswith("-Y") else "False")
@@ -81,6 +82,7 @@ def convertChemProt(inDir, outPath=None):
                 e2 = entityById[row["docId"]].get(row["arg2"])
                 if e1 != None and e2 != None:
                     interaction = ET.SubElement(document, "interaction", {"id":document.get("id") + ".i" + str(len([x for x in document.findall("interaction")]))})
+                    interaction.set("directed", "True")
                     interaction.set("type", row["group"])
                     interaction.set("relType", row["type"])
                     row["groupEval"] = row["groupEval"].strip()
