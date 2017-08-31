@@ -303,6 +303,7 @@ class Parser:
 #             Align.printAlignment(alignedSentence, alignedCat, diff)
 #         pos = 0
         sentenceText = sentence.get("text").rstrip()
+        assert all(["text" in x for x in tokens]), tokens
         tokenTexts = [x["text"] for x in tokens]
         tokenOffsets = [x["offset"] for x in tokens if "offset" in x]
         counts["input-tokens"] = len(tokenTexts)
@@ -1013,8 +1014,9 @@ class Parser:
             tokenById = {}
             origIdsRequired = False
             # Build the tokens
-            for i in range(len(sentence["words"])):
-                word = sentence["words"][i]
+            index = 0
+            nonTextBound = set()
+            for word in sentence["words"]:
                 # Use the first available, non-underscore tag from the list as the token's POS tag
                 pos = "_"
                 for key in ("CPOSTAG", "POSTAG", "UPOSTAG", "XPOSTAG", "POS"):
@@ -1030,7 +1032,7 @@ class Parser:
                             token["text"] = self.unescape(token["text"])
                     elif key == "ID":
                         token["id"] = word[key]
-                        if not origIdsRequired and not (token["id"].isdigit() and int(token["id"]) == i + 1):
+                        if not origIdsRequired and not (token["id"].isdigit() and int(token["id"]) == index + 1):
                             origIdsRequired = True
                     elif key != "POS":
                         if isinstance(word[key], basestring):
@@ -1038,9 +1040,14 @@ class Parser:
                         else:
                             token[key.lower()] = str(word[key])
                 token = {key:token[key] for key in token if token[key] != "_"}
-                token["index"] = i
-                tokenById[token["id"]] = token
-                tokens.append(token)
+                #assert "text" in token, (token, word, (tokens, sentence))
+                if "text" in token:
+                    token["index"] = index
+                    tokenById[token["id"]] = token   
+                    tokens.append(token)
+                    index += 1
+                else:
+                    nonTextBound.add(token["id"])
             if origIdsRequired:
                 for token in tokens:
                     token["origId"] = token["id"]
@@ -1057,9 +1064,11 @@ class Parser:
                     #    raise Exception("Non-root dependency token + '" + str([t1,t2]) + "' for word " + str(word) + " in sentence " + str(sentence))
                     tokenById[word["ID"]]["root"] = word["DEPREL"]
                 else:
-                    if t1 not in tokenById or t2 not in tokenById:
-                        raise Exception("Dependency token + '" + str([t1,t2]) + "' not defined for word " + str(word) + " in sentence " + str(sentence))
-                    dependencies.append({"type":word["DEPREL"], "t1":t1, "t2":t2, "t1Token":tokenById[t1], "t2Token":tokenById[t2]})
+                    for t in (t1, t2):
+                        if t not in tokenById and t not in nonTextBound:
+                            raise Exception("Dependency token + '" + str([t1,t2]) + "' not defined for word " + str(word) + " in sentence " + str(sentence))
+                    if t1 in tokenById and t2 in tokenById:
+                        dependencies.append({"type":word["DEPREL"], "t1":t1, "t2":t2, "t1Token":tokenById[t1], "t2Token":tokenById[t2]})
                 # Process secondary dependencies
                 if "DEPS" in word and word["DEPS"] != "_":
                     for depString in word["DEPS"].strip().split("|"):
