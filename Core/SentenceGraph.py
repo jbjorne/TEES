@@ -96,6 +96,7 @@ def getCorpusIterator(input, output, parse, tokenization=None, removeNameInfo=Fa
                     #duplicateInteractionEdgesRemoved += graph.duplicateInteractionEdgesRemoved
                     sentence.sentenceGraph = graph
                     graph.parseElement = sentence.parseElement
+                    graph.documentElement = element
                 sentences.append(sentence)
             yield sentences
             if output != None:
