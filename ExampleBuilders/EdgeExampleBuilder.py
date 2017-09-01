@@ -58,7 +58,8 @@ class EdgeExampleBuilder(ExampleBuilder):
             "disable_ngram_features", "disable_path_edge_features", "linear_features", "subset", "binary", "pos_only",
             "entity_type", "filter_shortest_path", "maskTypeAsProtein", "keep_neg", "metamap", 
             "sdb_merge", "sdb_features", "ontobiotope_features", "no_self_loops", "full_entities",
-            "no_features", "wordnet", "wordvector", "se10t8_undirected", "filter_types", "doc_extra"])
+            "no_features", "wordnet", "wordvector", "se10t8_undirected", "filter_types", "doc_extra",
+            "entity_extra"])
         self.styles = self.getParameters(style)
         #if style == None: # no parameters given
         #    style["typed"] = style["directed"] = style["headsOnly"] = True
@@ -433,7 +434,10 @@ class EdgeExampleBuilder(ExampleBuilder):
                 extra["e2t"] = entity2.get("text").replace(" ", "---").replace(":","-COL-")
         if self.styles["doc_extra"]:
             if hasattr(sentenceGraph, "documentElement") and sentenceGraph.documentElement.get("origId") != None:
-                extra["DOID"] = sentenceGraph.documentElement.get("origId") 
+                extra["DOID"] = sentenceGraph.documentElement.get("origId")
+        if self.styles["entity_extra"]:
+            if entity1.get("origId") != None: extra["e1OID"] = entity1.get("origId")
+            if entity2.get("origId") != None: extra["e2OID"] = entity2.get("origId")
         sentenceOrigId = sentenceGraph.sentenceElement.get("origId")
         if sentenceOrigId != None:
             extra["SOID"] = sentenceOrigId 
