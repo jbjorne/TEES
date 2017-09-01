@@ -15,35 +15,42 @@ def getMatchingFiles(pattern, path):
     return sorted([x for x in os.listdir(path) if pattern.match(x)])
 
 def mergeSets(input, corpusDir=None, output=None, allowNone=False):
-    counts = defaultdict(int)
-    if corpusDir == None:
-        if os.path.dirname(input):
-            corpusDir = os.path.dirname(input)
-            input = os.path.basename(input)
-        else:
-            corpusDir = os.path.normpath(Settings.DATAPATH + "/corpora")
-    print >> sys.stderr, "Searching for corpus files at " + corpusDir + " using pattern " + input
-    matched = getMatchingFiles(input, corpusDir)
-    print >> sys.stderr, "Merging input files", matched
-    if len(matched) == 0:
+    # Find the files
+    if isinstance(input, dict):
+        filenames = [{"path":input[x], "set":x} for x in input]
+    else:
+        if corpusDir == None:
+            if os.path.dirname(input):
+                corpusDir = os.path.dirname(input)
+                input = os.path.basename(input)
+            else:
+                corpusDir = os.path.normpath(Settings.DATAPATH + "/corpora")
+        print >> sys.stderr, "Searching for corpus files at " + corpusDir + " using pattern " + input
+        filenames = [{"path":os.path.join(corpusDir, x), "set":None} for x in getMatchingFiles(input, corpusDir)]
+    
+    # Merge the files
+    print >> sys.stderr, "Merging input files", filenames
+    if len(filenames) == 0:
         if allowNone:
             print >> sys.stderr, "Nothing to merge"
             return
         else:
             raise Exception("No input files found for merging")
     newRoot = None
-    for filename in matched:
-        filePath = os.path.join(corpusDir, filename)
-        print >> sys.stderr, "Merging file", filePath
-        xml = ETUtils.ETFromObj(filePath).getroot()
+    counts = defaultdict(int)
+    for filename in filenames:
+        print >> sys.stderr, "Merging file", filename["path"]
+        xml = ETUtils.ETFromObj(filename["path"]).getroot()
         if newRoot == None:
             newRoot = ET.Element("corpus", xml.attrib)
         else:
             assert newRoot.attrib == xml.attrib
         for doc in xml.iter("document"):
             assert doc.get("set") != None, doc.attrib
+            if filename["set"] != None:
+                assert filename["set"] == doc.get("set")
             counts["set=" + doc.get("set")] += 1
-            counts["set(" + filename + ")=" + doc.get("set")] += 1
+            counts["set(" + filename["path"] + ")=" + doc.get("set")] += 1
         for element in xml:
             newRoot.append(element)
     print >> sys.stderr, dict(counts)

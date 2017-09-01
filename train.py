@@ -27,7 +27,7 @@ def train(output, task=None, detector=None, inputFiles=None, models=None, parse=
           bioNLPSTParams=None, preprocessorParams=None, exampleStyles=None, 
           classifierParams=None,  doFullGrid=False, deleteOutput=False, copyFrom=None, 
           log="log.txt", step=None, omitSteps=None, debug=False, connection=None, subset=None, 
-          folds=None, corpusDir=None):
+          folds=None, corpusDir=None, corpusPreprocessing=None):
     """
     Train a new model for event or relation detection.
     
@@ -78,6 +78,17 @@ def train(output, task=None, detector=None, inputFiles=None, models=None, parse=
         _, subTask = getSubTask(task)
         if subTask != 3:
             processModifiers = False
+    # Preprocess the corpus if required
+    if corpusPreprocessing != None:
+        preprocessor = Preprocessor(steps=corpusPreprocessing)
+        assert preprocessor.steps[0].name == "MERGE_SETS"
+        assert preprocessor.steps[-1].name == "DIVIDE_SETS"
+        preprocessedCorpusDir = os.path.join(output, "corpus")
+        #outputFiles = {x:os.path.join(preprocessedCorpusDir, os.path.basename(inputFiles[x])) for x in inputFiles}
+        preprocessor.process(inputFiles, os.path.join(preprocessedCorpusDir, task))
+        #inputFiles = outputFiles
+        for setName in inputFiles.keys():
+            inputFiles[setName] = os.path.join(preprocessedCorpusDir, task + "-" + setName + ".xml")
     # Define processing steps
     selector, detectorSteps, omitDetectorSteps = getSteps(step, omitSteps, ["TRAIN", "DEVEL", "EMPTY", "TEST"])
     
@@ -518,6 +529,7 @@ if __name__=="__main__":
     group.add_option("--develFile", default=None, dest="develFile", help="")
     group.add_option("--testFile", default=None, dest="testFile", help="")
     group.add_option("--corpusDir", default=None, dest="corpusDir", help="Overrides the Settings.CORPUS_DIR value")
+    group.add_option("--corpusPreprocess", default=None, dest="corpusPreprocess", help="Preprocessor steps for the corpus")
     optparser.add_option_group(group)
     # output
     group = OptionGroup(optparser, "Output Files", "Files created from training the detector")
@@ -581,4 +593,4 @@ if __name__=="__main__":
           classifierParams={"examples":options.exampleParams, "trigger":options.triggerParams, "recall":options.recallAdjustParams, "edge":options.edgeParams, "unmerging":options.unmergingParams, "modifiers":options.modifierParams}, 
           doFullGrid=options.fullGrid, deleteOutput=options.clearAll, copyFrom=options.copyFrom, 
           log=options.log, step=options.step, omitSteps=options.omitSteps, debug=options.debug, 
-          connection=options.connection, subset=options.subset, folds=options.folds, corpusDir=options.corpusDir)
+          connection=options.connection, subset=options.subset, folds=options.folds, corpusDir=options.corpusDir, corpusPreprocessing=options.corpusPreprocess)

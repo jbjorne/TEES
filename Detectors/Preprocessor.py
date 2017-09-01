@@ -99,6 +99,7 @@ class Preprocessor(ToolChain):
         self.defStep("CONVERT_CHEMPROT", Utils.Convert.convertChemProt.convertChemProt, None, {"input":"inDir", "output":"outPath"})
         self.defStep("EXPORT_CHEMPROT_PRED", Utils.Convert.convertChemProt.exportChemProtPredictions, None, {"input":"xml", "output":"outPath"})
         self.defStep("MAKE_SETS", Utils.InteractionXML.MakeSets.processCorpus, {"sourceSet":None, "newSets":None, "seed":1}, {"input":"inPath", "output":"outPath"})
+        self.defStep("DELETE_ELEMENTS", Utils.InteractionXML.DeleteElements.processCorpus, {"rules":None, "reverse":False})
         self.defGroup("Saving")
         self.defStep("DIVIDE_SETS", self.divideSets, {"saveCombined":False})
         self.defStep("SAVE", self.save)
@@ -257,6 +258,8 @@ class Preprocessor(ToolChain):
                     return Utils.InteractionXML.MergeSets.mergeSets(pattern)
                 else:
                     raise Exception("Cannot find input '" + str(input) + "'")
+        elif isinstance(input, dict):
+            return Utils.InteractionXML.MergeSets.mergeSets(pattern)
         else:
             print >> sys.stderr, "Processing source as interaction XML"
             return ETUtils.ETFromObj(input)

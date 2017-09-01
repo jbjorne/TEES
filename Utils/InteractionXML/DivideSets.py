@@ -8,7 +8,7 @@ except ImportError:
     import cElementTree as ET
 import Utils.ElementTreeUtils as ETUtils
 
-def processCorpus(input, outDir, stem, tail, mergedSets=[], saveCombined=False, verbose=False):
+def processCorpus(input, outDir, stem=None, tail=".xml", mergedSets=[], saveCombined=False, verbose=False):
     newCorpora = {}
     print >> sys.stderr, "Loading corpus file", input
     corpusRoot = ETUtils.ETFromObj(input).getroot()
@@ -50,6 +50,8 @@ def processCorpus(input, outDir, stem, tail, mergedSets=[], saveCombined=False, 
     for k in sorted(countsByType.keys()):
         print >> sys.stderr, "  " + str(k) + ":", countsByType[k]
     
+    if stem == None:
+        outDir, stem = os.path.dirname(outDir), os.path.basename(outDir)
     if not os.path.exists(outDir):
         os.makedirs(outDir)
     
