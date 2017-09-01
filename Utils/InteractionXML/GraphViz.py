@@ -3,9 +3,9 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__))+"/../..")
 import Utils.ElementTreeUtils as ETUtils
 import Utils.Range as Range
 import subprocess
+import codecs
 import SentenceElements
 from Core.SentenceGraph import SentenceGraph
-import tempfile
 
 def getId(element, attribute="id"):
     return element.get(attribute).replace(".", "_");
@@ -190,20 +190,20 @@ def toGraphViz(xml, sentenceId, output=None, parse="McCC", color=None, colorNum=
             if "gv" in exts:
                 gvPath = currentOutput + ".gv"
                 print >> sys.stderr, "Graph file saved to: " + gvPath
-                with open(gvPath, "wt") as f:
+                with codecs.open(gvPath, "wt", "utf-8") as f:
                     f.write(s)
             for imageExt in ("gif", "pdf"):
                 if imageExt in exts:
                     print >> sys.stderr, imageExt.upper(), "file saved to: " + currentOutput + "." + imageExt
                     #subprocess.call("dot -T" + imageExt + " " + gvPath + " > " + currentOutput + "." + imageExt, shell=True)
                     p = subprocess.Popen(["dot -T" + imageExt + " > " + currentOutput + "." + imageExt], stdin=subprocess.PIPE, stdout=subprocess.PIPE, shell=True)
-                    out, err = p.communicate(input=s)
+                    out, err = p.communicate(input=s.encode(sys.getfilesystemencoding()))
                     for stream in out, err:
                         if stream != None and stream.strip() != "":
                             print stream.strip()
         else:
             p = subprocess.Popen(["dot", "-Tgif"], stdin=subprocess.PIPE, stdout=subprocess.PIPE)
-            out, err = p.communicate(input=s)
+            out, err = p.communicate(input=s.encode(sys.getfilesystemencoding()))
             results.append(out)
     
     if len(results) == 1:
