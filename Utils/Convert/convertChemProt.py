@@ -67,6 +67,7 @@ def convertChemProt(inDirs=None, setNames=None, outPath=None, downloadDir=None, 
         print >> sys.stderr, "Found ChemProt datasets", list(dirDataSets), "at", inDir
     print >> sys.stderr, "Read datasets:", dataSets.keys()
     # Build the Interaction XML
+    print >> sys.stderr, "Converting to Interaction XML"
     corpusName = "CP17"
     corpus = ET.Element("corpus", {"source":corpusName})
     counts = defaultdict(int)
@@ -75,12 +76,12 @@ def convertChemProt(inDirs=None, setNames=None, outPath=None, downloadDir=None, 
     docsWithErrors = set()
     for dataSetId in sorted(dataSets.keys()):
         dataSet = dataSets[dataSetId]
-        counts["set"] += 1
+        counts["sets"] += 1
         with open(dataSet["abstracts"], "rt") as f:
             for row in UnicodeDictReader(f, delimiter="\t", fieldnames=["id", "title", "abstract"], quoting=csv.QUOTE_NONE):
-                document = ET.SubElement(corpus, "document", {"id":corpusName + ".d" + str(counts["document"]), "origId":row["id"], "set":dataSetId})
+                document = ET.SubElement(corpus, "document", {"id":corpusName + ".d" + str(counts["documents"]), "origId":row["id"], "set":dataSetId})
                 document.set("text", row["title"] + "\t" + row["abstract"])
-                counts["document"] += 1
+                counts["documents"] += 1
                 assert document.get("origId") not in docById
                 docById[document.get("origId")] = document
         with open(dataSet["entities"], "rt") as f:
@@ -101,10 +102,10 @@ def convertChemProt(inDirs=None, setNames=None, outPath=None, downloadDir=None, 
                         entityById[row["docId"]] = {}
                     assert entity.get("origId") not in entityById[row["docId"]]
                     entityById[row["docId"]][entity.get("origId")] = entity
-                    counts["entity"] += 1
+                    counts["entities"] += 1
                 else:
                     print >> sys.stderr, "Alignment error in document", row["docId"], (offset, docSpan, row)
-                    counts["entity-error"] += 1
+                    counts["entities-error"] += 1
                     docsWithErrors.add(row["docId"])
         with open(dataSet["relations"], "rt") as f:
             for row in UnicodeDictReader(f, delimiter="\t", fieldnames=["docId", "group", "groupEval", "type", "arg1", "arg2"]):
@@ -124,11 +125,12 @@ def convertChemProt(inDirs=None, setNames=None, outPath=None, downloadDir=None, 
                     interaction.set("evaluated", "True" if row["groupEval"] == "Y" else "False")
                     interaction.set("e1", e1.get("id"))
                     interaction.set("e2", e2.get("id"))
-                    counts["interaction"] += 1
+                    counts["interactions"] += 1
                 else:
                     counts["interaction-error"] += 1
                     docsWithErrors.add(row["docId"])
-    counts["documents-with-errors"] = len(docsWithErrors)
+    if len(docsWithErrors) > 0:
+        counts["documents-with-errors"] = len(docsWithErrors)
     print >> sys.stderr, "ChemProt conversion:", dict(counts)
     if tempDir != None and not debug:
         print >> sys.stderr, "Removing temporary directory", tempDir
