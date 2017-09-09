@@ -204,7 +204,7 @@ def exportChemProtPredictions(xml, outPath, fileTypes="predictions", setNames=No
             if outFile != None:
                 evaluated = "X"
                 if interaction.get("evaluated") != None:
-                    evaluated = "Y" if entity.get("evaluated") == "True" else "N"
+                    evaluated = "Y " if interaction.get("evaluated") == "True" else "N "
                 outFile.write("\t".join([docId, interaction.get("type"), evaluated, interaction.get("relType"), "Arg1:" + e1.get("origId"), "Arg2:" + e2.get("origId")]) + "\n")
             outFile = openOutFile(setName, outPath, "predictions", fileTypes, outFiles, openFiles)
             if outFile != None:
