@@ -264,6 +264,13 @@ URL["LLL_LEARNING_FORMAT"] = urlBase + "LLL-learning-format.xml.gz"
 URL["PPI_EVALUATION_STANDARD"] = urlBase + "ppi-eval-standard-0.9.2b.tar.gz"
 
 
+# BioCreative VI Task 5: Text mining chemical-protein interactions (CHEMPROT)
+urlBase = "http://www.biocreative.org/media/store/files/2017/"
+URL["CP17_TRAIN"] = urlBase + "chemprot_training.zip"
+URL["CP17_DEVEL"] = urlBase + "chemprot_development.zip"
+URL["CP17_TEST"] = None
+
+
 # Miscellaneous files
 URL["TEES_RESOURCES"] = "http://sourceforge.net/projects/tees/files/data/TEES-resources-120705.tar.gz"
 URL["DRUG_BANK_XML"] = "http://sourceforge.net/projects/tees/files/data/drugbank.xml-150128.zip"

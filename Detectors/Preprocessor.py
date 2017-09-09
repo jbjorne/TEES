@@ -96,7 +96,7 @@ class Preprocessor(ToolChain):
         self.defGroup("Miscellaneous")
         self.defStep("ADD_DDI_TEST_GOLD", DDITools.addTestGold, {"testGoldPath":None})
         self.defStep("VALIDATE", Utils.InteractionXML.ValidateIXML.validateCorpus)
-        self.defStep("CONVERT_CHEMPROT", Utils.Convert.convertChemProt.convertChemProt, None, {"input":"inDir", "output":"outPath"})
+        self.defStep("CONVERT_CHEMPROT", Utils.Convert.convertChemProt.convertChemProt, {"setNames":{"chemprot_training":"train", "chemprot_development":"devel"}, "downloadDir":None, "extractDir":None, "redownload":False}, {"input":"inDirs", "output":"outPath"})
         self.defStep("EXPORT_CHEMPROT_PRED", Utils.Convert.convertChemProt.exportChemProtPredictions, None, {"input":"xml", "output":"outPath"})
         self.defStep("MAKE_SETS", Utils.InteractionXML.MakeSets.processCorpus, {"sourceSet":None, "newSets":None, "seed":1}, {"input":"inPath", "output":"outPath"})
         self.defStep("DELETE_ELEMENTS", Utils.InteractionXML.DeleteElements.processCorpus, {"rules":None, "reverse":False})

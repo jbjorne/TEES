@@ -1,4 +1,5 @@
 import os, sys
+import shutil
 import csv
 import codecs
 from collections import defaultdict
@@ -11,27 +12,56 @@ thisPath = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.abspath(os.path.join(thisPath,"../..")))
 import Utils.Range as Range
 import Utils.ElementTreeUtils as ETUtils
+import Utils.Settings as Settings
+import Utils
+import tempfile
 
 def UnicodeDictReader(utf8_data, **kwargs):
     csv_reader = csv.DictReader(utf8_data, **kwargs)
     for row in csv_reader:
         yield {unicode(key, 'utf-8'):unicode(value, 'utf-8') for key, value in row.iteritems()}
 
-def convertChemProt(inDir, outPath=None):
-    filenames = os.listdir(inDir)
-    filetypes = ["_abstracts.tsv", "_entities.tsv", "_relations.tsv"]
-    dataSets = {}
-    # Collect the file paths for the data types
-    for filename in filenames:
-        if not (filename.endswith(".tsv") and any([filename.endswith(x) for x in filetypes])):
-            continue
-        dataSetId, dataType = filename.rsplit("_", 1)
-        dataType = dataType.split(".")[0]
-        if dataSetId not in dataSets:
-            dataSets[dataSetId] = {}
-        assert dataType not in dataSets[dataSetId]
-        dataSets[dataSetId][dataType] = os.path.join(inDir, filename)
-    print >> sys.stderr, "Found", len(dataSets), "ChemProt datasets at", inDir
+def downloadFile(url, downloadDir=None, extractDir=None, clear=False):
+    if downloadDir == None:
+        downloadDir = os.path.join(Settings.DATAPATH, "corpora/download")
+    downloaded = Utils.Download.download(url, downloadDir, clear=clear)
+    print >> sys.stderr, "Extracting package", downloaded
+    subPath = os.path.basename(downloaded).rsplit(".", 1)[0] + "/"
+    extracted = Utils.Download.extractPackage(downloaded, extractDir) #, subPath)
+    assert subPath in extracted
+    return os.path.normpath(os.path.join(extractDir, subPath))
+
+def convertChemProt(inDirs=None, setNames=None, outPath=None, downloadDir=None, extractDir=None, redownload=False):
+    tempDir = None
+    if inDirs == None:
+        print >> sys.stderr, "---------------", "Downloading ChemProt files", "---------------"
+        if extractDir == None:
+            tempDir = tempfile.mkdtemp()
+        inDirs = []
+        for setName in ("TRAIN", "DEVEL", "TEST"):
+            if Settings.URL["CP17_" + setName] != None:
+                currentExtractDir = extractDir if extractDir else tempDir
+                currentExtractDir = os.path.join(currentExtractDir, setName.lower())
+                inDirs.append(downloadFile(Settings.URL["CP17_" + setName], downloadDir, currentExtractDir, redownload))
+    print >> sys.stderr, "Reading ChemProt corpus from input", inDirs, "using dataset mapping", setNames
+    sys.exit()
+    for inDir in inDirs:
+        filenames = os.listdir(inDir)
+        filetypes = ["_abstracts.tsv", "_entities.tsv", "_relations.tsv"]
+        dataSets = {}
+        # Collect the file paths for the data types
+        for filename in filenames:
+            if not (filename.endswith(".tsv") and any([filename.endswith(x) for x in filetypes])):
+                continue
+            dataSetId, dataType = filename.rsplit("_", 1)
+            if setNames != None:
+                dataSetId = setNames.get(dataSetId, dataSetId)
+            dataType = dataType.split(".")[0]
+            if dataSetId not in dataSets:
+                dataSets[dataSetId] = {}
+            assert dataType not in dataSets[dataSetId]
+            dataSets[dataSetId][dataType] = os.path.join(inDir, filename)
+        print >> sys.stderr, "Found", len(dataSets), "ChemProt datasets at", inDir
     # Build the Interaction XML
     corpusName = "CP17"
     corpus = ET.Element("corpus", {"source":corpusName})
@@ -96,6 +126,8 @@ def convertChemProt(inDir, outPath=None):
                     docsWithErrors.add(row["docId"])
     counts["documents-with-errors"] = len(docsWithErrors)
     print >> sys.stderr, "ChemProt conversion:", dict(counts)
+    if tempDir != None:
+        shutil.rmtree(tempDir)
     if outPath != None:
         ETUtils.write(corpus, outPath)
     return ET.ElementTree(corpus)
