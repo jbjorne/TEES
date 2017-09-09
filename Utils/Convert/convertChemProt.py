@@ -139,17 +139,58 @@ def convertChemProt(inDirs=None, setNames=None, outPath=None, downloadDir=None, 
         ETUtils.write(corpus, outPath)
     return ET.ElementTree(corpus)
 
-def exportChemProtPredictions(xml, outPath):
+def openOutFile(setName, outPath, fileType, fileTypes, outFiles):
+    if fileType in fileTypes:
+        if fileType not in outFiles[setName]:
+            outFiles[setName][fileType] = open(os.path.join(outPath, setName + "_" + fileType + ".tsv"), "wt")
+        return outFiles[setName][fileType]
+    return None
+
+def exportChemProtPredictions(xml, outPath, mode="predictions", setNames=None):
+    assert mode in ("predictions", "full")
     xml = ETUtils.ETFromObj(xml)
-    with open(outPath, "wt") as f:
-        for document in xml.getiterator("document"):
-            docId = document.get("origId")
-            entityById = {}
-            for entity in document.getiterator("entity"):
-                assert entity.get("id") not in entityById
-                entityById[entity.get("id")] = entity
-            for interaction in document.getiterator("interaction"):
-                e1 = entityById[interaction.get("e1")]
-                e2 = entityById[interaction.get("e2")]
-                f.write("\t".join([docId, interaction.get("type"), "Arg1:" + e1.get("origId"), "Arg2:" + e2.get("origId")]) + "\n")
+    if mode == "predictions":
+        fileTypes = ["predictions"]
+    else:
+        fileTypes = ["abstracts", "entities", "relations"]
+    #with open(outPath, "wt") as f
+    outFiles = {}
+    for document in xml.getiterator("document"):
+        docId = document.get("origId")
+        setName = document.get("set")
+        if setNames != None:
+            setName = setNames.get(setName, setName)
+        if mode == "full" and setName not in outFiles:
+            outFiles[setName] = {}
+        outFile = openOutFile(setName, outPath, "abstracts", fileTypes, outFiles)
+        if outFile != None:
+            title, abstract = document.get("text").split("\t")
+            outFile.write("\t".join([docId, title, abstract]))  
+        entityById = {}
+        for entity in document.getiterator("entity"):
+            outFile = openOutFile(setName, outPath, "entities", fileTypes, outFiles)
+            if outFile != None:
+                eType = entity.get("type")
+                if "normalized" in entity:
+                    eType += "-Y" if bool(entity.get("normalized")) else "-N"
+                offset = Range.charOffsetToSingleTuple(entity.get("charOffset"))
+                outFile.write("\t".join([docId, entity.get("origId"), eType, str[offset[0]], str[offset[1]], entity.get("text")]))
+            assert entity.get("id") not in entityById
+            entityById[entity.get("id")] = entity
+        for interaction in document.getiterator("interaction"):
+            e1 = entityById[interaction.get("e1")]
+            e2 = entityById[interaction.get("e2")]
+            outFile = openOutFile(setName, outPath, "relations", fileTypes, outFiles)
+            if outFile != None:
+                evaluated = "X"
+                if "evaluated" in interaction:
+                    evaluated = "Y" if bool(entity.get("evaluated")) else "N"
+                outFile.write("\t".join([docId, interaction.get("type"), evaluated, interaction.get("relType"), "Arg1:" + e1.get("origId"), "Arg2:" + e2.get("origId")]) + "\n")
+            outFile = openOutFile(setName, outPath, "predictions", fileTypes, outFiles)
+            if outFile != None:
+                outFile.write("\t".join([docId, interaction.get("type"), "Arg1:" + e1.get("origId"), "Arg2:" + e2.get("origId")]) + "\n")
+    print >> sys.stderr, "Closing output files"
+    for setName in outFiles:
+        for fileType in setName:
+            outFiles[setName][fileType].close()
     return xml 
