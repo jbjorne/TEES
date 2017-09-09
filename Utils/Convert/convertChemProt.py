@@ -157,13 +157,15 @@ def openOutFile(setName, outPath, fileType, fileTypes, outFiles, openFiles):
         return outFiles[setName][fileType]
     return None
 
-def exportChemProtPredictions(xml, outPath, mode="predictions", setNames=None):
-    assert mode in ("predictions", "full")
+def exportChemProtPredictions(xml, outPath, fileTypes="predictions", setNames=None):
+    if fileTypes == "all":
+        fileTypes = ["predictions", "abstracts", "entities", "relations"]
+    elif isinstance(fileTypes, basestring):
+        fileTypes = fileTypes.split(",")
+    for fileType in fileTypes:
+        if fileType not in ["predictions", "abstracts", "entities", "relations"]:
+            raise Exception("Unknown ChemProt file type '" + str(fileType) + "'")
     xml = ETUtils.ETFromObj(xml)
-    if mode == "predictions":
-        fileTypes = ["predictions"]
-    else:
-        fileTypes = ["abstracts", "entities", "relations"]
     #with open(outPath, "wt") as f
     outFiles = {}
     openFiles = {}

@@ -53,8 +53,8 @@ class Step():
     
     def getArgs(self, *args, **kwargs):
         if len(args) > 0:
-            assert self.argListKey != None
-            assert self.argListKey not in kwargs
+            assert self.argListKey != None, (self.argListKey, args, kwargs)
+            assert self.argListKey not in kwargs, (self.argListKey, args, kwargs)
             kwargs[self.argListKey] = args
         arguments = self.argDict.copy()
         for argName in kwargs:

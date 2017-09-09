@@ -97,7 +97,7 @@ class Preprocessor(ToolChain):
         self.defStep("ADD_DDI_TEST_GOLD", DDITools.addTestGold, {"testGoldPath":None})
         self.defStep("VALIDATE", Utils.InteractionXML.ValidateIXML.validateCorpus)
         self.defStep("CONVERT_CHEMPROT", Utils.Convert.convertChemProt.convertChemProt, {"setNames":{"chemprot_training":"train", "chemprot_development":"devel"}, "downloadDir":None, "extractDir":None, "redownload":False, "debug":False}, {"input":"inDirs", "output":"outPath"})
-        self.defStep("EXPORT_CHEMPROT", Utils.Convert.convertChemProt.exportChemProtPredictions, {"mode":"predictions", "setNames":{"train":"chemprot_training", "devel":"chemprot_development"}}, {"input":"xml", "output":"outPath"})
+        self.defStep("EXPORT_CHEMPROT", Utils.Convert.convertChemProt.exportChemProtPredictions, {"fileTypes":"predictions", "setNames":{"train":"chemprot_training", "devel":"chemprot_development"}}, {"input":"xml", "output":"outPath"})
         self.defStep("MAKE_SETS", Utils.InteractionXML.MakeSets.processCorpus, {"sourceSet":None, "newSets":None, "seed":1}, {"input":"inPath", "output":"outPath"})
         self.defStep("DELETE_ELEMENTS", Utils.InteractionXML.DeleteElements.processCorpus, {"rules":None, "reverse":False})
         self.defGroup("Saving")
