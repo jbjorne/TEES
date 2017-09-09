@@ -198,10 +198,7 @@ def exportChemProtPredictions(xml, outPath, mode="predictions", setNames=None):
                 if "evaluated" in interaction:
                     evaluated = "Y" if bool(entity.get("evaluated")) else "N"
                 outFile.write("\t".join([docId, interaction.get("type"), evaluated, interaction.get("relType"), "Arg1:" + e1.get("origId"), "Arg2:" + e2.get("origId")]) + "\n")
-            if mode == "predictions" and outPath.endswith(".tsv"):
-                outFile = openOutFile(setName, os.path.dirname(outPath), "predictions", fileTypes, outFiles, openFiles, os.path.basename(outPath))
-            else:
-                outFile = openOutFile(setName, outPath, "predictions", fileTypes, outFiles, openFiles)
+            outFile = openOutFile(setName, outPath, "predictions", fileTypes, outFiles, openFiles)
             if outFile != None:
                 outFile.write("\t".join([docId, interaction.get("type"), "Arg1:" + e1.get("origId"), "Arg2:" + e2.get("origId")]) + "\n")
     print >> sys.stderr, "Closing output files"
