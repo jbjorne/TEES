@@ -139,10 +139,21 @@ def convertChemProt(inDirs=None, setNames=None, outPath=None, downloadDir=None, 
         ETUtils.write(corpus, outPath)
     return ET.ElementTree(corpus)
 
-def openOutFile(setName, outPath, fileType, fileTypes, outFiles):
+def openOutFile(setName, outPath, fileType, fileTypes, outFiles, openFiles):
     if fileType in fileTypes:
         if fileType not in outFiles[setName]:
-            outFiles[setName][fileType] = open(os.path.join(outPath, setName + "_" + fileType + ".tsv"), "wt")
+            if outPath.endswith(".tsv"):
+                filePath = outPath
+                if not os.path.exists(os.path.dirname(outPath)):
+                    os.makedirs(os.path.dirname(outPath))
+            else:
+                filePath = os.path.join(outPath, setName + "_" + fileType + ".tsv")
+                if not os.path.exists(outPath):
+                    os.makedirs(outPath)
+            if filePath not in openFiles:
+                print >> sys.stderr, "Opening output file", filePath
+                openFiles[filePath] = open(filePath, "wt")
+            outFiles[setName][fileType] = openFiles[filePath]
         return outFiles[setName][fileType]
     return None
 
@@ -155,20 +166,21 @@ def exportChemProtPredictions(xml, outPath, mode="predictions", setNames=None):
         fileTypes = ["abstracts", "entities", "relations"]
     #with open(outPath, "wt") as f
     outFiles = {}
+    openFiles = {}
     for document in xml.getiterator("document"):
         docId = document.get("origId")
         setName = document.get("set")
         if setNames != None:
             setName = setNames.get(setName, setName)
-        if mode == "full" and setName not in outFiles:
+        if setName not in outFiles:
             outFiles[setName] = {}
-        outFile = openOutFile(setName, outPath, "abstracts", fileTypes, outFiles)
+        outFile = openOutFile(setName, outPath, "abstracts", fileTypes, outFiles, openFiles)
         if outFile != None:
             title, abstract = document.get("text").split("\t")
             outFile.write("\t".join([docId, title, abstract]))  
         entityById = {}
         for entity in document.getiterator("entity"):
-            outFile = openOutFile(setName, outPath, "entities", fileTypes, outFiles)
+            outFile = openOutFile(setName, outPath, "entities", fileTypes, outFiles, openFiles)
             if outFile != None:
                 eType = entity.get("type")
                 if "normalized" in entity:
@@ -180,17 +192,19 @@ def exportChemProtPredictions(xml, outPath, mode="predictions", setNames=None):
         for interaction in document.getiterator("interaction"):
             e1 = entityById[interaction.get("e1")]
             e2 = entityById[interaction.get("e2")]
-            outFile = openOutFile(setName, outPath, "relations", fileTypes, outFiles)
+            outFile = openOutFile(setName, outPath, "relations", fileTypes, outFiles, openFiles)
             if outFile != None:
                 evaluated = "X"
                 if "evaluated" in interaction:
                     evaluated = "Y" if bool(entity.get("evaluated")) else "N"
                 outFile.write("\t".join([docId, interaction.get("type"), evaluated, interaction.get("relType"), "Arg1:" + e1.get("origId"), "Arg2:" + e2.get("origId")]) + "\n")
-            outFile = openOutFile(setName, outPath, "predictions", fileTypes, outFiles)
+            if mode == "predictions" and outPath.endswith(".tsv"):
+                outFile = openOutFile(setName, os.path.dirname(outPath), "predictions", fileTypes, outFiles, openFiles, os.path.basename(outPath))
+            else:
+                outFile = openOutFile(setName, outPath, "predictions", fileTypes, outFiles, openFiles)
             if outFile != None:
                 outFile.write("\t".join([docId, interaction.get("type"), "Arg1:" + e1.get("origId"), "Arg2:" + e2.get("origId")]) + "\n")
     print >> sys.stderr, "Closing output files"
-    for setName in outFiles:
-        for fileType in setName:
-            outFiles[setName][fileType].close()
+    for f in openFiles.values():
+        f.close()
     return xml 
