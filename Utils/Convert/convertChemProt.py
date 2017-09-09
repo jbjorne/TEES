@@ -4,13 +4,13 @@ import csv
 import codecs
 from collections import defaultdict
 from theano.sandbox.cuda.basic_ops import row
+from Utils import Range
 try:
     import cElementTree as ET
 except ImportError:
     import xml.etree.cElementTree as ET
 thisPath = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.abspath(os.path.join(thisPath,"../..")))
-import Utils.Range as Range
 import Utils.ElementTreeUtils as ETUtils
 import Utils.Settings as Settings
 import Utils
@@ -80,7 +80,8 @@ def convertChemProt(inDirs=None, setNames=None, outPath=None, downloadDir=None, 
         with open(dataSet["abstracts"], "rt") as f:
             for row in UnicodeDictReader(f, delimiter="\t", fieldnames=["id", "title", "abstract"], quoting=csv.QUOTE_NONE):
                 document = ET.SubElement(corpus, "document", {"id":corpusName + ".d" + str(counts["documents"]), "origId":row["id"], "set":dataSetId})
-                document.set("text", row["title"] + "\t" + row["abstract"])
+                document.set("text", row["title"] + " " + row["abstract"])
+                document.set("titleOffset", Range.tuplesToCharOffset((0, len(row["title"]))))
                 counts["documents"] += 1
                 assert document.get("origId") not in docById
                 docById[document.get("origId")] = document
@@ -152,7 +153,7 @@ def openOutFile(setName, outPath, fileType, fileTypes, outFiles, openFiles):
                     os.makedirs(outPath)
             if filePath not in openFiles:
                 print >> sys.stderr, "Opening output file", filePath
-                openFiles[filePath] = open(filePath, "wt")
+                openFiles[filePath] = codecs.open(filePath, "wt", "utf-8")
             outFiles[setName][fileType] = openFiles[filePath]
         return outFiles[setName][fileType]
     return None
@@ -178,17 +179,22 @@ def exportChemProtPredictions(xml, outPath, fileTypes="predictions", setNames=No
             outFiles[setName] = {}
         outFile = openOutFile(setName, outPath, "abstracts", fileTypes, outFiles, openFiles)
         if outFile != None:
-            title, abstract = document.get("text").split("\t")
-            outFile.write("\t".join([docId, title, abstract]))  
+            docText = document.get("text")
+            #assert docText.count("\t") == 1, (docText.count("\t"), document.attrib)
+            #title, abstract = docText.split("\t")
+            #titleLength = document.get("titleLength")
+            titleOffset = Range.charOffsetToSingleTuple(document.get("titleOffset"))
+            assert titleOffset[0] == 0
+            outFile.write("\t".join([docId, docText[:titleOffset[1]], docText[titleOffset[1]+1:]]) + "\n")  
         entityById = {}
         for entity in document.getiterator("entity"):
             outFile = openOutFile(setName, outPath, "entities", fileTypes, outFiles, openFiles)
             if outFile != None:
                 eType = entity.get("type")
-                if "normalized" in entity:
-                    eType += "-Y" if bool(entity.get("normalized")) else "-N"
+                if entity.get("normalized") != None and entity.get("type") == "GENE":
+                    eType += "-Y" if entity.get("normalized") == "True" else "-N"
                 offset = Range.charOffsetToSingleTuple(entity.get("charOffset"))
-                outFile.write("\t".join([docId, entity.get("origId"), eType, str[offset[0]], str[offset[1]], entity.get("text")]))
+                outFile.write("\t".join([docId, entity.get("origId"), eType, str(offset[0]), str(offset[1]), entity.get("text")]) + "\n")
             assert entity.get("id") not in entityById
             entityById[entity.get("id")] = entity
         for interaction in document.getiterator("interaction"):
@@ -197,8 +203,8 @@ def exportChemProtPredictions(xml, outPath, fileTypes="predictions", setNames=No
             outFile = openOutFile(setName, outPath, "relations", fileTypes, outFiles, openFiles)
             if outFile != None:
                 evaluated = "X"
-                if "evaluated" in interaction:
-                    evaluated = "Y" if bool(entity.get("evaluated")) else "N"
+                if interaction.get("evaluated") != None:
+                    evaluated = "Y" if entity.get("evaluated") == "True" else "N"
                 outFile.write("\t".join([docId, interaction.get("type"), evaluated, interaction.get("relType"), "Arg1:" + e1.get("origId"), "Arg2:" + e2.get("origId")]) + "\n")
             outFile = openOutFile(setName, outPath, "predictions", fileTypes, outFiles, openFiles)
             if outFile != None:
