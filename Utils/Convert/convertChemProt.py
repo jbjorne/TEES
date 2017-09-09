@@ -15,6 +15,7 @@ import Utils.ElementTreeUtils as ETUtils
 import Utils.Settings as Settings
 import Utils
 import tempfile
+from collections import OrderedDict
 
 def UnicodeDictReader(utf8_data, **kwargs):
     csv_reader = csv.DictReader(utf8_data, **kwargs)
@@ -31,7 +32,7 @@ def downloadFile(url, downloadDir=None, extractDir=None, clear=False):
     assert subPath in extracted
     return os.path.normpath(os.path.join(extractDir, subPath))
 
-def convertChemProt(inDirs=None, setNames=None, outPath=None, downloadDir=None, extractDir=None, redownload=False):
+def convertChemProt(inDirs=None, setNames=None, outPath=None, downloadDir=None, extractDir=None, redownload=False, debug=False):
     tempDir = None
     if inDirs == None:
         print >> sys.stderr, "---------------", "Downloading ChemProt files", "---------------"
@@ -44,24 +45,27 @@ def convertChemProt(inDirs=None, setNames=None, outPath=None, downloadDir=None, 
                 currentExtractDir = os.path.join(currentExtractDir, setName.lower())
                 inDirs.append(downloadFile(Settings.URL["CP17_" + setName], downloadDir, currentExtractDir, redownload))
     print >> sys.stderr, "Reading ChemProt corpus from input", inDirs, "using dataset mapping", setNames
-    sys.exit()
+    dataSets = OrderedDict()
     for inDir in inDirs:
+        print >> sys.stderr, "Reading input directory", inDir
         filenames = os.listdir(inDir)
         filetypes = ["_abstracts.tsv", "_entities.tsv", "_relations.tsv"]
-        dataSets = {}
         # Collect the file paths for the data types
+        dirDataSets = set()
         for filename in filenames:
             if not (filename.endswith(".tsv") and any([filename.endswith(x) for x in filetypes])):
                 continue
             dataSetId, dataType = filename.rsplit("_", 1)
             if setNames != None:
                 dataSetId = setNames.get(dataSetId, dataSetId)
+            dirDataSets.add(dataSetId)
             dataType = dataType.split(".")[0]
             if dataSetId not in dataSets:
                 dataSets[dataSetId] = {}
             assert dataType not in dataSets[dataSetId]
             dataSets[dataSetId][dataType] = os.path.join(inDir, filename)
-        print >> sys.stderr, "Found", len(dataSets), "ChemProt datasets at", inDir
+        print >> sys.stderr, "Found ChemProt datasets", list(dirDataSets), "at", inDir
+    print >> sys.stderr, "Read datasets:", dataSets.keys()
     # Build the Interaction XML
     corpusName = "CP17"
     corpus = ET.Element("corpus", {"source":corpusName})
@@ -126,7 +130,8 @@ def convertChemProt(inDirs=None, setNames=None, outPath=None, downloadDir=None, 
                     docsWithErrors.add(row["docId"])
     counts["documents-with-errors"] = len(docsWithErrors)
     print >> sys.stderr, "ChemProt conversion:", dict(counts)
-    if tempDir != None:
+    if tempDir != None and not debug:
+        print >> sys.stderr, "Removing temporary directory", tempDir
         shutil.rmtree(tempDir)
     if outPath != None:
         ETUtils.write(corpus, outPath)
