@@ -79,12 +79,17 @@ def convertChemProt(inDirs=None, setNames=None, outPath=None, downloadDir=None, 
         counts["sets"] += 1
         with open(dataSet["abstracts"], "rt") as f:
             for row in UnicodeDictReader(f, delimiter="\t", fieldnames=["id", "title", "abstract"], quoting=csv.QUOTE_NONE):
-                document = ET.SubElement(corpus, "document", {"id":corpusName + ".d" + str(counts["documents"]), "origId":row["id"], "set":dataSetId})
+                document = ET.Element("document", {"id":corpusName + ".d" + str(counts["documents"]), "origId":row["id"], "set":dataSetId})
                 document.set("text", row["title"] + " " + row["abstract"])
                 document.set("titleOffset", Range.tuplesToCharOffset((0, len(row["title"]))))
-                counts["documents"] += 1
-                assert document.get("origId") not in docById
-                docById[document.get("origId")] = document
+                if document.get("origId") in docById:
+                    assert document.get("text") == docById[document.get("origId")].get("text")
+                    assert document.get("titleOffset") == docById[document.get("origId")].get("titleOffset")
+                    counts["duplicate-documents"] += 1
+                else:
+                    corpus.append(document)
+                    docById[document.get("origId")] = document
+                    counts["documents"] += 1
         with open(dataSet["entities"], "rt") as f:
             for row in UnicodeDictReader(f, delimiter="\t", fieldnames=["docId", "id", "type", "begin", "end", "text"]):
                 document = docById[row["docId"]]
