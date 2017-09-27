@@ -73,11 +73,14 @@ def convertChemProt(inDirs=None, setNames=None, outPath=None, downloadDir=None, 
     counts = defaultdict(int)
     docById = {}
     entityById = {}
+    entitiesByDoc = {}
     docsWithErrors = set()
     for dataSetId in sorted(dataSets.keys()):
+        print >> sys.stderr, "Building elements for dataset", dataSetId
         dataSet = dataSets[dataSetId]
         counts["sets"] += 1
         with open(dataSet["abstracts"], "rt") as f:
+            print >> sys.stderr, "Adding document elements for dataset", dataSetId
             for row in UnicodeDictReader(f, delimiter="\t", fieldnames=["id", "title", "abstract"], quoting=csv.QUOTE_NONE):
                 document = ET.Element("document", {"id":corpusName + ".d" + str(counts["documents"]), "origId":row["id"], "set":dataSetId})
                 document.set("text", row["title"] + " " + row["abstract"])
@@ -91,9 +94,16 @@ def convertChemProt(inDirs=None, setNames=None, outPath=None, downloadDir=None, 
                     docById[document.get("origId")] = document
                     counts["documents"] += 1
         with open(dataSet["entities"], "rt") as f:
+            print >> sys.stderr, "Adding entity elements for dataset", dataSetId
             for row in UnicodeDictReader(f, delimiter="\t", fieldnames=["docId", "id", "type", "begin", "end", "text"], quoting=csv.QUOTE_NONE):
                 document = docById[row["docId"]]
                 assert row["type"] in ("CHEMICAL", "GENE-Y", "GENE-N")
+                # Check for duplicate entities
+                if row["docId"] not in entitiesByDoc:
+                    entitiesByDoc[row["docId"]] = set()
+                assert row["id"] not in entitiesByDoc[row["docId"]]
+                entitiesByDoc[row["docId"]].add(row["id"])
+                # Determine the offset
                 offset = (int(row["begin"]), int(row["end"]))
                 docSpan = document.get("text")[offset[0]:offset[1]]
                 if docSpan == row["text"]:
@@ -113,9 +123,8 @@ def convertChemProt(inDirs=None, setNames=None, outPath=None, downloadDir=None, 
                     print >> sys.stderr, "Alignment error in document", row["docId"], (offset, docSpan, row)
                     counts["entities-error"] += 1
                     docsWithErrors.add(row["docId"])
-        counts["relation-files-" + dataSetId] += 0
         if "relations" in dataSet:
-            counts["relation-files-" + dataSetId] += 1
+            print >> sys.stderr, "Adding relation elements for dataset", dataSetId
             with open(dataSet["relations"], "rt") as f:
                 for row in UnicodeDictReader(f, delimiter="\t", fieldnames=["docId", "group", "groupEval", "type", "arg1", "arg2"], quoting=csv.QUOTE_NONE):
                     for argId in ("1", "2"):
@@ -138,6 +147,8 @@ def convertChemProt(inDirs=None, setNames=None, outPath=None, downloadDir=None, 
                     else:
                         counts["interaction-error"] += 1
                         docsWithErrors.add(row["docId"])
+        else:
+            print >> sys.stderr, "No relations for dataset", dataSetId
     if len(docsWithErrors) > 0:
         counts["documents-with-errors"] = len(docsWithErrors)
     print >> sys.stderr, "ChemProt conversion:", dict(counts)
