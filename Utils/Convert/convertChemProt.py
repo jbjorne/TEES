@@ -71,10 +71,11 @@ def convertChemProt(inDirs=None, setNames=None, outPath=None, downloadDir=None, 
     corpusName = "CP17"
     corpus = ET.Element("corpus", {"source":corpusName})
     counts = defaultdict(int)
-    docById = {}
-    entityById = {}
+    origIdSets = {}
     docsWithErrors = set()
     for dataSetId in sorted(dataSets.keys()):
+        docById = {}
+        entityById = {}
         dataSet = dataSets[dataSetId]
         counts["sets"] += 1
         with open(dataSet["abstracts"], "rt") as f:
@@ -83,8 +84,12 @@ def convertChemProt(inDirs=None, setNames=None, outPath=None, downloadDir=None, 
                 document.set("text", row["title"] + " " + row["abstract"])
                 document.set("titleOffset", Range.tuplesToCharOffset((0, len(row["title"]))))
                 counts["documents"] += 1
-                assert document.get("origId") not in docById
-                docById[document.get("origId")] = document
+                origId = document.get("origId")
+                assert origId not in docById, (origId, dataSetId)
+                docById[origId] = document
+                if origId not in origIdSets:
+                    origIdSets[origId] = set()
+                origIdSets[origId].add(dataSetId)
         with open(dataSet["entities"], "rt") as f:
             for row in UnicodeDictReader(f, delimiter="\t", fieldnames=["docId", "id", "type", "begin", "end", "text"]):
                 document = docById[row["docId"]]
@@ -130,8 +135,13 @@ def convertChemProt(inDirs=None, setNames=None, outPath=None, downloadDir=None, 
                 else:
                     counts["interaction-error"] += 1
                     docsWithErrors.add(row["docId"])
+    # Check for documents with errors
     if len(docsWithErrors) > 0:
         counts["documents-with-errors"] = len(docsWithErrors)
+    # Check for documents belonging to more than one set
+    for setType in ["/".join(sorted(x)) for x in origIdSets.values()]:
+        counts["doc-set:" + setType] += 1
+    # Show the counts    
     print >> sys.stderr, "ChemProt conversion:", dict(counts)
     if tempDir != None and not debug:
         print >> sys.stderr, "Removing temporary directory", tempDir
@@ -200,6 +210,7 @@ def exportChemProtPredictions(xml, outPath, fileTypes="predictions", setNames=No
         for interaction in document.getiterator("interaction"):
             e1 = entityById[interaction.get("e1")]
             e2 = entityById[interaction.get("e2")]
+            assert e1.get("type") == "CHEMICAL" and e2.get("type") == "GENE", (interaction.attrib, e1.attrib, e2.attrib)
             outFile = openOutFile(setName, outPath, "relations", fileTypes, outFiles, openFiles)
             if outFile != None:
                 evaluated = "X"
