@@ -46,7 +46,7 @@ class StanfordParser(Parser):
 #         parserObj = cls()
 #         parserObj.parse(parserName, input, output, debug, reparse, stanfordParserDir, stanfordParserArgs, action, outputFormat)
     
-    def parse(self, parserName, input, output=None, debug=False, reparse=False, stanfordParserDir=None, stanfordParserArgs=None, action="convert", outputFormat=None):
+    def parse(self, parserName, input, output=None, debug=False, reparse=False, stanfordParserDir=None, stanfordParserArgs=None, action="convert", outputFormat=None, memory=None):
         #global stanfordParserDir, stanfordParserArgs
         assert action in ("convert", "penn", "dep")
         if stanfordParserDir == None:
@@ -55,7 +55,7 @@ class StanfordParser(Parser):
         corpusTree, corpusRoot = self.getCorpus(input)
         workdir = tempfile.mkdtemp()
         inPath = self.makeInputFile(corpusRoot, workdir, parserName, reparse, action, debug)
-        outPath = self.runProcess(stanfordParserArgs, stanfordParserDir, inPath, workdir, action, outputFormat)
+        outPath = self.runProcess(stanfordParserArgs, stanfordParserDir, inPath, workdir, action, outputFormat, memory)
         self.printStderr(outPath)
         # Insert the parses    
         if action in ("convert", "dep"):
@@ -96,12 +96,12 @@ class StanfordParser(Parser):
     def run(self, input, output, stanfordParserArgs):
         return subprocess.Popen(stanfordParserArgs + [input], stdout=codecs.open(output, "wt", "utf-8"), stderr=codecs.open(self.getStderrPath(output), "wt", "utf-8"))
         
-    def runProcess(self, stanfordParserArgs, stanfordParserDir, stanfordInput, workdir, action="convert", outputFormat=None):
+    def runProcess(self, stanfordParserArgs, stanfordParserDir, stanfordInput, workdir, action="convert", outputFormat=None, memory=None):
         if stanfordParserArgs == None:
             # not sure how necessary the "-mx500m" option is, and how exactly Java
             # options interact, but adding user defined options from Settings.JAVA
             # after the "-mx500m" hopefully works.
-            stanfordParserArgs = Settings.JAVA.split()[0:1] + ["-mx500m"] + Settings.JAVA.split()[1:]
+            stanfordParserArgs = Settings.JAVA.split()[0:1] + ["-mx" + str(memory if memory != None else 500) + "m"] + Settings.JAVA.split()[1:]
             if action == "convert":
                 if outputFormat == None: 
                     outputFormat = "CCprocessed"
