@@ -9,6 +9,7 @@ import Utils.Settings as Settings
 sys.path.append(os.path.dirname(os.path.abspath(__file__))+"/..")
 from Core.IdSet import IdSet
 import Core.ExampleUtils as ExampleUtils
+from Evaluators.AveragingMultiClassEvaluator import AveragingMultiClassEvaluator
 
 class ChemProtEvaluator(Evaluator):
     def __init__(self, examples, predictions=None, classSet=None):
@@ -20,9 +21,24 @@ class ChemProtEvaluator(Evaluator):
             examples = ExampleUtils.readExamples(examples, False)
 
         self.classSet = classSet
-        
+        self.results = None
         if predictions != None:
+            print >> sys.stderr, "ChemProt Evaluator:"
             self._calculate(examples, predictions)
+            internal = AveragingMultiClassEvaluator(examples, predictions, classSet)
+            print >> sys.stderr, "AveragingMultiClassEvaluator:"
+            print >> sys.stderr, internal.toStringConcise()
+    
+    def compare(self, evaluation):
+        if self.results["F-score"] > evaluation.results["F-score"]:
+            return 1
+        elif self.results["F-score"] == evaluation.results["F-score"]:
+            return 0
+        else:
+            return -1
+    
+    def getData(self):
+        return self.results["F-score"]
     
     @classmethod
     def evaluate(cls, examples, predictions, classSet=None, outputFile=None, verbose=True):
@@ -75,7 +91,8 @@ class ChemProtEvaluator(Evaluator):
                     results[key] = value
         os.chdir(currentDir)
         self.results = results
-        #shutil.rmtree(tempDir)
+        print >> sys.stderr, "Removing temporary evaluation directory", tempDir
+        shutil.rmtree(tempDir)
 
 if __name__=="__main__":
     from optparse import OptionParser
