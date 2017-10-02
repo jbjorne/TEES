@@ -41,6 +41,8 @@ class ChemProtEvaluator(Evaluator):
             for example, prediction in itertools.izip(examples, predictions):
                 predClassId = prediction[0]
                 predClassName = self.classSet.getName(predClassId)
+                if predClassName == "neg":
+                    continue
                 docId = example[3]["DOID"]
                 e1 = example[3]["e1OID"]
                 e2 = example[3]["e2OID"]
@@ -48,19 +50,32 @@ class ChemProtEvaluator(Evaluator):
     
     def _calculate(self, examples, predictions):
         tempDir = tempfile.mkdtemp()
+        print >> sys.stderr, "Using temporary evaluation directory", tempDir
         predFilePath = os.path.join(tempDir, "predictions.tsv")
         self._writePredictions(examples, predictions, predFilePath)
-        evaluatorDir = os.path.join(Settings.DATAPATH, "Evaluators", "ChemProtEvaluator")
-        #evaluatorPath = os.path.join(evaluatorDir, "bc6chemprot_eval.jar")
+        evaluatorDir = os.path.join(Settings.DATAPATH, "tools", "evaluators", "ChemProtEvaluator")
+        evaluatorTempDir = os.path.join(tempDir, "ChemProtEvaluator")
+        shutil.copytree(evaluatorDir, evaluatorTempDir)
         currentDir = os.getcwd()
-        os.chdir(evaluatorDir)
-        command = "java -cp bc6chemprot_eval.jar org.biocreative.tasks.chemprot.main.Main " + os.path.abspath(predFilePath)
-        print "Running CP17 evaluator: " + command
+        os.chdir(evaluatorTempDir)
+        command = "java -cp bc6chemprot_eval.jar org.biocreative.tasks.chemprot.main.Main " + os.path.abspath(predFilePath) + " ./data/chemprot_development_gold_standard.tsv"
+        print >> sys.stderr, "Running CP17 evaluator: " + command
         p = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        print "".join(p.stderr.readlines())
-        print "".join(p.stdout.readlines())
+        for s in ["".join(x.readlines()).strip() for x in (p.stderr, p.stdout)]:
+            if s != "":
+                print >> sys.stderr, s
+        results = {}
+        with open(os.path.join(evaluatorTempDir, "out", "eval.txt"), "rt") as f:
+            for line in f:
+                if ":" in line:
+                    print >> sys.stderr, line.strip()
+                    key, value = [x.strip() for x in line.split(":")]
+                    value = float(value) if "." in value else int(value)
+                    assert key not in results
+                    results[key] = value
         os.chdir(currentDir)
-        shutil.rmtree(tempDir)
+        self.results = results
+        #shutil.rmtree(tempDir)
 
 if __name__=="__main__":
     from optparse import OptionParser
