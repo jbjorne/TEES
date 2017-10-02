@@ -3,7 +3,6 @@ import shutil
 import csv
 import codecs
 from collections import defaultdict
-from theano.sandbox.cuda.basic_ops import row
 from Utils import Range
 try:
     import cElementTree as ET
