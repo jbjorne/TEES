@@ -10,8 +10,11 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__))+"/..")
 from Core.IdSet import IdSet
 import Core.ExampleUtils as ExampleUtils
 from Evaluators.AveragingMultiClassEvaluator import AveragingMultiClassEvaluator
+import json
 
 class ChemProtEvaluator(Evaluator):
+    type = "multiclass"
+    
     def __init__(self, examples, predictions=None, classSet=None):
         if type(classSet) == types.StringType: # class names are in file
             classSet = IdSet(filename=classSet)
@@ -22,12 +25,18 @@ class ChemProtEvaluator(Evaluator):
 
         self.classSet = classSet
         self.results = None
+        self.internal = None
         if predictions != None:
-            print >> sys.stderr, "ChemProt Evaluator:"
-            self._calculate(examples, predictions)
-            internal = AveragingMultiClassEvaluator(examples, predictions, classSet)
+            for example in examples:
+                if example[3] != None:
+                    print >> sys.stderr, "ChemProt Evaluator:"
+                    self._calculate(examples, predictions)
+                else:
+                    print >> sys.stderr, "No example extra info, skipping ChemProt evaluation"
+                break
+            self.internal = AveragingMultiClassEvaluator(examples, predictions, classSet)
             print >> sys.stderr, "AveragingMultiClassEvaluator:"
-            print >> sys.stderr, internal.toStringConcise()
+            print >> sys.stderr, self.internal.toStringConcise()
     
     def compare(self, evaluation):
         if self.results["F-score"] > evaluation.results["F-score"]:
@@ -48,8 +57,8 @@ class ChemProtEvaluator(Evaluator):
         evaluator = cls(examples, predictions, classSet)
         if verbose:
             print >> sys.stderr, evaluator.toStringConcise()
-        if outputFile != None:
-            evaluator.saveCSV(outputFile)
+        #if outputFile != None:
+        #    evaluator.saveCSV(outputFile)
         return evaluator
     
     def _writePredictions(self, examples, predictions, filePath):
@@ -89,10 +98,17 @@ class ChemProtEvaluator(Evaluator):
                     value = float(value) if "." in value else int(value)
                     assert key not in results
                     results[key] = value
+        print >> sys.stderr, "ChemProt results:", json.dumps(results)
         os.chdir(currentDir)
         self.results = results
         print >> sys.stderr, "Removing temporary evaluation directory", tempDir
         shutil.rmtree(tempDir)
+    
+    def toStringConcise(self, indent="", title=None):
+        self.internal.toStringConcise(indent, title)
+        
+    def toDict(self):
+        return {x:self.results[x] for x in self.results}
 
 if __name__=="__main__":
     from optparse import OptionParser

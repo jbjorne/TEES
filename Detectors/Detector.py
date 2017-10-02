@@ -106,6 +106,9 @@ class Detector():
         self.connection.debug = self.debug
         return connection
     
+    def setEvaluator(self, evaluator):
+        self.evaluator = evaluator
+    
 #    def setCSCConnection(self, options, cscworkdir):
 #        if "local" not in options:
 #            clear = False

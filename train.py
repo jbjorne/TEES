@@ -27,7 +27,7 @@ def train(output, task=None, detector=None, inputFiles=None, models=None, parse=
           bioNLPSTParams=None, preprocessorParams=None, exampleStyles=None, 
           classifierParams=None,  doFullGrid=False, deleteOutput=False, copyFrom=None, 
           log="log.txt", step=None, omitSteps=None, debug=False, connection=None, subset=None, 
-          folds=None, corpusDir=None, corpusPreprocessing=None):
+          folds=None, corpusDir=None, corpusPreprocessing=None, evaluator=None):
     """
     Train a new model for event or relation detection.
     
@@ -88,13 +88,18 @@ def train(output, task=None, detector=None, inputFiles=None, models=None, parse=
         preprocessor.process(inputFiles, os.path.join(preprocessedCorpusDir, task))
         #inputFiles = outputFiles
         for setName in inputFiles.keys():
-            inputFiles[setName] = os.path.join(preprocessedCorpusDir, task + "-" + setName + ".xml")
+            if inputFiles[setName] != None:
+                inputFiles[setName] = os.path.join(preprocessedCorpusDir, task + "-" + setName + ".xml")
     # Define processing steps
     selector, detectorSteps, omitDetectorSteps = getSteps(step, omitSteps, ["TRAIN", "DEVEL", "EMPTY", "TEST"])
     
     # Initialize the detector
-    detector, detectorName = getDetector(detector)
+    detector, detectorName = getDetector(detector, evaluator=evaluator)
+    evaluator, evaluatorName = importClass(evaluator, "evaluator")
     detector = detector() # initialize object
+    if evaluator != None:
+        print >> sys.stderr, "Using evaluator", evaluator.__name__
+        detector.evaluator = evaluator
     detector.debug = debug
     detector.bioNLPSTParams = detector.getBioNLPSharedTaskParams(bioNLPSTParams)
     #detector.useBioNLPSTFormat = useBioNLPSTFormat # classify-output and grid evaluation in ST-format
@@ -126,6 +131,8 @@ def train(output, task=None, detector=None, inputFiles=None, models=None, parse=
             if model != None and os.path.exists(model):
                 model = Model(model, "a")
                 model.addStr("detector", detectorName)
+                if evaluatorName != None:
+                    model.addStr("detector", evaluatorName)
                 if preprocessorParams != None:
                     preprocessor = Preprocessor()
                     model.addStr("preprocessorParams", Parameters.toString(preprocessor.getParameters(preprocessorParams)))
@@ -201,27 +208,31 @@ def getSteps(step, omitSteps, mainSteps):
     selector = StepSelector(mainSteps, fromStep=fromMainStep, omitSteps=omitMainSteps)
     return selector, fromSubStep, omitSubSteps
 
-def getDetector(detector, model=None):
+def importClass(cls, category=""):
+    if cls == None:
+        return None, None
+    elif type(cls) in types.StringTypes:
+        className = cls
+        print >> sys.stderr, "Importing", category, cls
+        if cls.startswith("from"):
+            exec cls
+            cls = eval(cls.split(".")[-1])
+        else:
+            exec "from " + cls + " import " + cls.split(".")[-1]
+            cls = eval(cls.split(".")[-1])
+    else: # assume it is a class
+        className = cls.__name__
+        print >> sys.stderr, "Using", category, className
+    return cls, className
+
+def getDetector(detector, model=None, evaluator=None):
     # Get the detector
     if detector == None:
         assert model != None
         model = Model(model, "r")
         detector = model.getStr("detector")
         model.close()
-    if type(detector) in types.StringTypes:
-        print >> sys.stderr, "Importing detector", detector
-        detectorName = detector
-        if detector.startswith("from"):
-            exec detector
-            detector = eval(detector.split(".")[-1])
-        else:
-            exec "from " + detector + " import " + detector.split(".")[-1]
-            detector = eval(detector.split(".")[-1])
-    else: # assume it is a class
-        detectorName = detector.__name__
-        print >> sys.stderr, "Using detector", detectorName
-        detector = detector
-    return detector, detectorName
+    return importClass(detector, "detector")
 
 def getSubsets(inputFiles, subset, outdir="training"):
     for dataset in ("devel", "train", "test"):
@@ -540,6 +551,7 @@ if __name__=="__main__":
     # Example builders
     group = OptionGroup(optparser, "Detector to train", "")
     group.add_option("--detector", default=None, dest="detector", help="the detector class to use")
+    group.add_option("--evaluator", default=None, dest="evaluator", help="change the detector's default evaluator")
     #group.add_option("--singleStage", default=False, action="store_true", dest="singleStage", help="'detector' is a single stage detector")
     #group.add_option("--noBioNLPSTFormat", default=False, action="store_true", dest="noBioNLPSTFormat", help="Do not output BioNLP Shared Task format version (a1, a2, txt)")
     group.add_option("--bioNLPSTParams", default=None, dest="bioNLPSTParams", help="")
@@ -593,4 +605,5 @@ if __name__=="__main__":
           classifierParams={"examples":options.exampleParams, "trigger":options.triggerParams, "recall":options.recallAdjustParams, "edge":options.edgeParams, "unmerging":options.unmergingParams, "modifiers":options.modifierParams}, 
           doFullGrid=options.fullGrid, deleteOutput=options.clearAll, copyFrom=options.copyFrom, 
           log=options.log, step=options.step, omitSteps=options.omitSteps, debug=options.debug, 
-          connection=options.connection, subset=options.subset, folds=options.folds, corpusDir=options.corpusDir, corpusPreprocessing=options.corpusPreprocess)
+          connection=options.connection, subset=options.subset, folds=options.folds, corpusDir=options.corpusDir, corpusPreprocessing=options.corpusPreprocess,
+          evaluator=options.evaluator)
