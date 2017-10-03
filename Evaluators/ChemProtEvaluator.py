@@ -22,6 +22,8 @@ class ChemProtEvaluator(Evaluator):
             predictions = ExampleUtils.loadPredictions(predictions)
         if type(examples) == types.StringType: # examples are in file
             examples = ExampleUtils.readExamples(examples, False)
+        
+        self.keep = set(["CPR:3", "CPR:4", "CPR:5", "CPR:6", "CPR:9"])
 
         self.classSet = classSet
         self.results = None
@@ -68,6 +70,8 @@ class ChemProtEvaluator(Evaluator):
                 predClassName = self.classSet.getName(predClassId)
                 if predClassName == "neg":
                     continue
+                if predClassName not in self.keep:
+                    continue
                 docId = example[3]["DOID"]
                 e1 = example[3]["e1OID"]
                 e2 = example[3]["e2OID"]
@@ -95,7 +99,7 @@ class ChemProtEvaluator(Evaluator):
                 if ":" in line:
                     print >> sys.stderr, line.strip()
                     key, value = [x.strip() for x in line.split(":")]
-                    value = float(value) if "." in value else int(value)
+                    value = float(value) if ("." in value or value == "NaN") else int(value)
                     assert key not in results
                     results[key] = value
         print >> sys.stderr, "ChemProt results:", json.dumps(results)
