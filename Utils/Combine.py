@@ -7,6 +7,7 @@ import Evaluators.EvaluateInteractionXML as EvaluateIXML
 from Evaluators.AveragingMultiClassEvaluator import AveragingMultiClassEvaluator
 from collections import OrderedDict
 import itertools
+from Utils.ProgressCounter import ProgressCounter
 
 # from sklearn.metrics import classification_report
 # #from sklearn.cross_validation import LabelKFold
@@ -56,7 +57,13 @@ import itertools
 def getConfScore(interaction):
     intType = interaction.get("type")
     conf = interaction.get("conf")
-    confScores = {x[0]:float(x[1]) for x in [y.split(":") for y in conf.split(",")]}
+    return 0.0
+    try:
+        confScores = {x[0]:float(x[1]) for x in [y.split(":") for y in conf.split(",")]}
+    except Exception as e:
+        print conf
+        print e.__doc__
+        print e.message
     return confScores[intType]
 
 # def buildFeatures(interactions, entities, show=10):
@@ -112,23 +119,24 @@ def addInteraction(interaction, interactions, category):
     key = interaction.get("e1") + "/" + interaction.get("e2")
     if key not in interactions:
         interactions[key] = {"a":None, "b":None, "gold":None}
+    assert category in ("a", "b", "gold")
     interactions[key][category] = interaction
 
 def getInteractions(a, b, gold):
     interactions = OrderedDict()
-    for interaction in a.getroot().iter('interaction'):
+    for interaction in a.findall('interaction'):
         addInteraction(interaction, interactions, "a")
-    for interaction in b.getroot().iter('interaction'):
-        addInteraction(interaction, interactions, "a")
+    for interaction in b.findall('interaction'):
+        addInteraction(interaction, interactions, "b")
     if gold:
         numIntersentence = 0
-        for interaction in gold.getroot().iter('interaction'):
+        for interaction in gold.findall('interaction'):
             #print interaction.get("e1").split(".i")[0], interaction.get("e2").split(".i")[0]
             if interaction.get("e1").split(".e")[0] != interaction.get("e2").split(".e")[0]:
                 numIntersentence += 1
                 continue
-            addInteraction(interaction, interactions, "a")
-        print "Skipped", numIntersentence, "intersentence interactions"
+            addInteraction(interaction, interactions, "gold")
+        #print "Skipped", numIntersentence, "intersentence interactions"
     return interactions
 
 def getCombinedInteraction(intDict, mode):
@@ -197,19 +205,20 @@ def getCombinedInteraction(intDict, mode):
     
 def combine(inputA, inputB, inputGold, outPath=None, mode="AND"):
     print "Loading the Interaction XML files"
+    print "Loading A from", inputA
     a = ETUtils.ETFromObj(inputA)
+    print "Loading B from", inputB
     b = ETUtils.ETFromObj(inputB)
+    print "Loading gold from", inputGold
     gold = ETUtils.ETFromObj(inputGold) if inputGold else None
+    print "Copying gold as template"
     template = copy.deepcopy(gold)
-    if gold != None:
-        print "Evaluating A"
-        EvaluateIXML.run(AveragingMultiClassEvaluator, a, gold, "McCC")
-        print "Evaluating B"
-        EvaluateIXML.run(AveragingMultiClassEvaluator, b, gold, "McCC")
-        print "Combining"
-    for docA, docB, docGold, templateDoc in itertools.izip_longest(a, b, gold, template):
+    print "Combining"
+    counter = ProgressCounter(len([x for x in a.findall("document")]), "Combine")
+    for docA, docB, docGold, templateDoc in itertools.izip_longest(*[x.findall("document") for x in (a, b, gold, template)]):
         assert len(set([x.get("id") for x in (docA, docB, docGold, templateDoc)])) == 1
-        interactions = getInteractions(a, b, gold)
+        counter.update()
+        interactions = getInteractions(docA, docB, docGold)
         for interaction in templateDoc.findall("interaction"):
             templateDoc.remove(interaction)
         if templateDoc.find("analyses"):
@@ -217,10 +226,14 @@ def combine(inputA, inputB, inputGold, outPath=None, mode="AND"):
         for key in interactions:
             interaction = getCombinedInteraction(interactions[key], mode)
             if interaction != None:
-                templateDoc.append(interaction)
+                templateDoc.append(copy.deepcopy(interaction))
     if gold != None:
-        print "Evaluating Combined"
+        print "Evaluating A"
+        EvaluateIXML.run(AveragingMultiClassEvaluator, a, gold, "McCC")
+        print "Evaluating B"
         EvaluateIXML.run(AveragingMultiClassEvaluator, b, gold, "McCC")
+        print "Evaluating Combined"
+        EvaluateIXML.run(AveragingMultiClassEvaluator, template, gold, "McCC")
     if outPath != None:
         ETUtils.write(template, outPath)
     
