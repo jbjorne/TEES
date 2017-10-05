@@ -241,12 +241,13 @@ def combine(inputA, inputB, inputGold, outPath=None, mode="AND"):
     b = ETUtils.ETFromObj(inputB)
     print "Loading gold from", inputGold
     gold = ETUtils.ETFromObj(inputGold) if inputGold else None
-    print "Copying gold as template"
-    template = copy.deepcopy(gold)
+    print "Copying a as template"
+    template = copy.deepcopy(a)
     print "Calculating scores"
     scoreRanges = {}
     scoreRanges["a"] = getScoreRange(a)
     scoreRanges["b"] = getScoreRange(b)
+    print scoreRanges
     print "Combining"
     counts = defaultdict(int)
     counter = ProgressCounter(len([x for x in a.findall("document")]), "Combine")
@@ -265,6 +266,8 @@ def combine(inputA, inputB, inputGold, outPath=None, mode="AND"):
                 interaction = getCombinedInteraction(interactions[key], mode, counts, scoreRanges)
                 if interaction != None:
                     sentTemplate.append(copy.deepcopy(interaction))
+            if analyses:
+                sentTemplate.append(analyses)
     print "Counts:", dict(counts)
     if gold != None:
         print "Evaluating A"
