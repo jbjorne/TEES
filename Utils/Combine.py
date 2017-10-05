@@ -1,9 +1,13 @@
 import sys, os
 import copy
 from collections import defaultdict
+import tempfile
+import shutil
 sys.path.append(os.path.dirname(os.path.abspath(__file__))+"/..")
+from Detectors.Preprocessor import Preprocessor
 import Utils.ElementTreeUtils as ETUtils
 import Utils.STFormat.ConvertXML as ConvertXML
+from Evaluators.ChemProtEvaluator import ChemProtEvaluator
 import Evaluators.EvaluateInteractionXML as EvaluateIXML
 from Evaluators.AveragingMultiClassEvaluator import AveragingMultiClassEvaluator
 from collections import OrderedDict
@@ -232,6 +236,17 @@ def getCombinedInteraction(intDict, mode, counts, scoreRange):
 #     f1score = f1_score(labels, predictions)
 #     #print f1score
 #     results.append((f1score, tag, title, predictions))
+
+def evaluateChemProt(xml, gold):
+    EvaluateIXML.run(AveragingMultiClassEvaluator, xml, gold, "McCC")
+    preprocessor = Preprocessor(steps=["EXPORT_CHEMPROT"])
+    tempDir = tempfile.mkdtemp()
+    print >> sys.stderr, "Using temporary evaluation directory", tempDir
+    tsvPath = os.path.join(tempDir, "predictions.tsv")
+    preprocessor.process(xml, tsvPath)
+    ChemProtEvaluator().evaluateTSV(tsvPath, tempDir)
+    print >> sys.stderr, "Removing temporary evaluation directory", tempDir
+    shutil.rmtree(tempDir)
     
 def combine(inputA, inputB, inputGold, outPath=None, mode="AND"):
     print "Loading the Interaction XML files"
@@ -270,12 +285,12 @@ def combine(inputA, inputB, inputGold, outPath=None, mode="AND"):
                 sentTemplate.append(analyses)
     print "Counts:", dict(counts)
     if gold != None:
-        print "Evaluating A"
-        EvaluateIXML.run(AveragingMultiClassEvaluator, a, gold, "McCC")
-        print "Evaluating B"
-        EvaluateIXML.run(AveragingMultiClassEvaluator, b, gold, "McCC")
-        print "Evaluating Combined"
-        EvaluateIXML.run(AveragingMultiClassEvaluator, template, gold, "McCC")
+        print "*** Evaluating A ***"
+        evaluateChemProt(a, gold) #EvaluateIXML.run(AveragingMultiClassEvaluator, a, gold, "McCC")
+        print "*** Evaluating B ***"
+        evaluateChemProt(b, gold) #EvaluateIXML.run(AveragingMultiClassEvaluator, b, gold, "McCC")
+        print "*** Evaluating Combined ***"
+        evaluateChemProt(template, gold) #EvaluateIXML.run(AveragingMultiClassEvaluator, template, gold, "McCC")
     if outPath != None:
         ETUtils.write(template, outPath)
     

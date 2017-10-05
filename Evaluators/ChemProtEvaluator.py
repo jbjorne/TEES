@@ -6,7 +6,7 @@ import tempfile
 import shutil
 sys.path.append(os.path.dirname(os.path.abspath(__file__))+"/..")
 import Utils.Settings as Settings
-sys.path.append(os.path.dirname(os.path.abspath(__file__))+"/..")
+import Utils.ElementTreeUtils as ETUtils
 from Core.IdSet import IdSet
 import Core.ExampleUtils as ExampleUtils
 from Evaluators.AveragingMultiClassEvaluator import AveragingMultiClassEvaluator
@@ -15,7 +15,7 @@ import json
 class ChemProtEvaluator(Evaluator):
     type = "multiclass"
     
-    def __init__(self, examples, predictions=None, classSet=None):
+    def __init__(self, examples=None, predictions=None, classSet=None):
         if type(classSet) == types.StringType: # class names are in file
             classSet = IdSet(filename=classSet)
         if type(predictions) == types.StringType: # predictions are in file
@@ -82,6 +82,13 @@ class ChemProtEvaluator(Evaluator):
         print >> sys.stderr, "Using temporary evaluation directory", tempDir
         predFilePath = os.path.join(tempDir, "predictions.tsv")
         self._writePredictions(examples, predictions, predFilePath)
+        results = self.evaluateTSV(predFilePath, tempDir)
+        print >> sys.stderr, "Removing temporary evaluation directory", tempDir
+        shutil.rmtree(tempDir)
+        print >> sys.stderr, "ChemProt results:", json.dumps(results)
+        self.results = results
+    
+    def evaluateTSV(self, predFilePath, tempDir=None):
         evaluatorDir = os.path.join(Settings.DATAPATH, "tools", "evaluators", "ChemProtEvaluator")
         evaluatorTempDir = os.path.join(tempDir, "ChemProtEvaluator")
         shutil.copytree(evaluatorDir, evaluatorTempDir)
@@ -93,6 +100,7 @@ class ChemProtEvaluator(Evaluator):
         for s in ["".join(x.readlines()).strip() for x in (p.stderr, p.stdout)]:
             if s != "":
                 print >> sys.stderr, s
+        os.chdir(currentDir)
         results = {}
         with open(os.path.join(evaluatorTempDir, "out", "eval.txt"), "rt") as f:
             for line in f:
@@ -102,11 +110,7 @@ class ChemProtEvaluator(Evaluator):
                     value = float(value) if ("." in value or value == "NaN") else int(value)
                     assert key not in results
                     results[key] = value
-        print >> sys.stderr, "ChemProt results:", json.dumps(results)
-        os.chdir(currentDir)
-        self.results = results
-        print >> sys.stderr, "Removing temporary evaluation directory", tempDir
-        shutil.rmtree(tempDir)
+        return results
     
     def toStringConcise(self, indent="", title=None):
         self.internal.toStringConcise(indent, title)
@@ -122,5 +126,8 @@ if __name__=="__main__":
     optparser.add_option("-c", "--classSet", default=None, dest="classSet", help="", metavar="FILE")
     (options, args) = optparser.parse_args()
     
-    ev = ChemProtEvaluator(options.examples, options.predictions, options.classSet)
+    if options.examples.endswith(".tsv"):
+        ChemProtEvaluator().evaluateTSV(options.examples)
+    else:
+        ev = ChemProtEvaluator(options.examples, options.predictions, options.classSet)
     #print ev.toStringConcise()
