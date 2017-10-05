@@ -66,6 +66,7 @@ def getInteractions(a, b, gold):
 
 def getCombinedInteraction(intDict, mode, counts, scoreRange):
     assert mode in ("AND", "OR"), mode
+    counts["total"] += 1
     if intDict["a"] == None and intDict["b"] == None:
         counts["both-None"] += 1
         return None
@@ -82,12 +83,16 @@ def getCombinedInteraction(intDict, mode, counts, scoreRange):
         if intDict["a"].get("type") == intDict["b"].get("type"):
             counts["both-same"] += 1
             return intDict["a"]
-        counts["both-different"] += 1
         confA = getConfScores(intDict["a"])[intDict["a"].get("type")]
         confA = (confA - scoreRange["a"][0]) / (scoreRange["a"][2])
         confB = getConfScores(intDict["b"])[intDict["b"].get("type")]
         confB = (confB - scoreRange["b"][0]) / (scoreRange["b"][2])
-        return intDict["a"] if confA > confB else intDict["b"]
+        if confA > confB:
+            counts["conf-A"] += 1
+            return intDict["a"]
+        else:
+            counts["conf-B"] += 1
+            return intDict["b"]
 
 def evaluateChemProt(xml, gold):
     EvaluateIXML.run(AveragingMultiClassEvaluator, xml, gold, "McCC")
@@ -101,16 +106,19 @@ def evaluateChemProt(xml, gold):
     shutil.rmtree(tempDir)
     
 def combine(inputA, inputB, inputGold, outPath=None, mode="OR"):
+    assert options.mode in ("AND", "OR")
     print "Loading the Interaction XML files"
     print "Loading A from", inputA
     a = ETUtils.ETFromObj(inputA)
     print "Loading B from", inputB
     b = ETUtils.ETFromObj(inputB)
-    print "Loading gold from", inputGold
-    gold = ETUtils.ETFromObj(inputGold) if inputGold else None
+    gold = None
+    if inputGold:
+        print "Loading gold from", inputGold
+        gold = ETUtils.ETFromObj(inputGold) if inputGold else None
     print "Copying a as template"
     template = copy.deepcopy(a)
-    print "Calculating scores"
+    print "Calculating confidence score ranges"
     scoreRanges = {}
     scoreRanges["a"] = getScoreRange(a)
     scoreRanges["b"] = getScoreRange(b)
@@ -137,27 +145,24 @@ def combine(inputA, inputB, inputGold, outPath=None, mode="OR"):
                 sentTemplate.append(analyses)
     print "Counts:", dict(counts)
     if gold != None:
-        print "*** Evaluating A ***"
+        print "****** Evaluating A ******"
         evaluateChemProt(a, gold) #EvaluateIXML.run(AveragingMultiClassEvaluator, a, gold, "McCC")
-        print "*** Evaluating B ***"
+        print "****** Evaluating B ******"
         evaluateChemProt(b, gold) #EvaluateIXML.run(AveragingMultiClassEvaluator, b, gold, "McCC")
-        print "*** Evaluating Combined ***"
+        print "****** Evaluating Combined ******"
         evaluateChemProt(template, gold) #EvaluateIXML.run(AveragingMultiClassEvaluator, template, gold, "McCC")
     if outPath != None:
+        print "Writing output to", outPath
         ETUtils.write(template, outPath)
 
 if __name__=="__main__":       
     from optparse import OptionParser
-    optparser = OptionParser(description="Combine relation predictions (All input files must include both positive and negative interaction elements)")
+    optparser = OptionParser(description="Combine interaction predictions")
     optparser.add_option("-a", "--inputA", default=None, dest="inputA", help="First set of predictions in Interaction XML format")
     optparser.add_option("-b", "--inputB", default=None, dest="inputB", help="Second set of predictions in Interaction XML format")
     optparser.add_option("-g", "--gold", default=None, dest="gold", help="Gold interactions in Interaction XML format")
     optparser.add_option("-o", "--output", default=None, dest="output", help="Path to output Interaction XML file (if exists will be overwritten)")
-    #optparser.add_option("-l", "--learning", default=False, action="store_true", dest="learning", help="Train a classifier for combining the predictions")
-    optparser.add_option("-m", "--mode", default="OR", dest="mode", help="The combination for the output. If none is defined, the best performing one is used.")
-    #optparser.add_option("-w", "--write", default="OR", dest="write", help="The combination for the output. If none is defined, the best performing one is used.")
-    #optparser.add_option("--concise", default=False, action="store_true", dest="concise", help="")
+    optparser.add_option("-m", "--mode", default="OR", dest="mode", help="The combination for the output (AND or OR).")
     (options, args) = optparser.parse_args()
     
-    assert options.mode in ("AND", "OR")
     combine(options.inputA, options.inputB, options.gold, options.output, options.mode)
