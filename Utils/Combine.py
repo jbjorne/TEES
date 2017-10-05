@@ -140,7 +140,7 @@ def getInteractions(a, b, gold):
     return interactions
 
 def getCombinedInteraction(intDict, mode):
-    assert mode in "AND", "OR"
+    assert mode in ("AND", "OR"), mode
     if intDict["a"] == None and intDict["b"] == None:
         return None
     elif intDict["a"] == None or intDict["b"] == None:
@@ -215,18 +215,21 @@ def combine(inputA, inputB, inputGold, outPath=None, mode="AND"):
     template = copy.deepcopy(gold)
     print "Combining"
     counter = ProgressCounter(len([x for x in a.findall("document")]), "Combine")
-    for docA, docB, docGold, templateDoc in itertools.izip_longest(*[x.findall("document") for x in (a, b, gold, template)]):
-        assert len(set([x.get("id") for x in (docA, docB, docGold, templateDoc)])) == 1
+    for docA, docB, docGold, docTemplate in itertools.izip_longest(*[x.findall("document") for x in (a, b, gold, template)]):
         counter.update()
-        interactions = getInteractions(docA, docB, docGold)
-        for interaction in templateDoc.findall("interaction"):
-            templateDoc.remove(interaction)
-        if templateDoc.find("analyses"):
-            analyses = templateDoc.remove("analyses")
-        for key in interactions:
-            interaction = getCombinedInteraction(interactions[key], mode)
-            if interaction != None:
-                templateDoc.append(copy.deepcopy(interaction))
+        assert len(set([x.get("id") for x in (docA, docB, docGold, docTemplate)])) == 1
+        for sentA, sentB, sentGold, sentTemplate in itertools.izip_longest(*[x.findall("sentence") for x in (docA, docB, docGold, docTemplate)]):
+            assert len(set([x.get("id") for x in (sentA, sentB, sentGold, sentTemplate)])) == 1
+            interactions = getInteractions(sentA, sentB, sentGold)
+            for interaction in sentTemplate.findall("interaction"):
+                sentTemplate.remove(interaction)
+            analyses = sentTemplate.find("analyses") 
+            if analyses:
+                sentTemplate.remove(analyses)
+            for key in interactions:
+                interaction = getCombinedInteraction(interactions[key], mode)
+                if interaction != None:
+                    sentTemplate.append(copy.deepcopy(interaction))
     if gold != None:
         print "Evaluating A"
         EvaluateIXML.run(AveragingMultiClassEvaluator, a, gold, "McCC")
