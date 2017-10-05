@@ -55,17 +55,37 @@ from Utils.ProgressCounter import ProgressCounter
 #     for setName in ("a", "b"):
 #         print setName, [min(confScores[setName]), max(confScores[setName])]
 
-def getConfScore(interaction):
+def getConfScores(interaction):
     intType = interaction.get("type")
     conf = interaction.get("conf")
-    return 0.0
-    try:
-        confScores = {x[0]:float(x[1]) for x in [y.split(":") for y in conf.split(",")]}
-    except Exception as e:
-        print conf
-        print e.__doc__
-        print e.message
-    return confScores[intType]
+    confScores = {}
+    for commaSplit in conf.split(","):
+        cls, confidence = commaSplit.rsplit(":", 1)
+        confidence = float(confidence)
+        if "---" not in cls:
+            assert cls not in confScores
+            confScores[cls] = confidence
+#     try:
+#         confScores = {x[0]:float(x[1]) for x in [y.split(":") for y in conf.split(",")]}
+#     except Exception as e:
+#         print conf
+#         print e.__doc__
+#         print e.message
+    return confScores
+
+def getScoreRange(root):
+    scoreRange = [None, None]
+    for interaction in root.iter("interaction"):
+        scores = getConfScores(interaction)
+        values = scores.values()
+        minScore = min(values)
+        if scoreRange[0] == None or minScore < scoreRange[0]:
+            scoreRange[0] = minScore
+        maxScore = max(values)
+        if scoreRange[1] == None or maxScore > scoreRange[1]:
+            scoreRange[1] = maxScore
+    scoreRange.append(scoreRange[1] - scoreRange[0])
+    return tuple(scoreRange)
 
 # def buildFeatures(interactions, entities, show=10):
 #     features = []
@@ -140,7 +160,7 @@ def getInteractions(a, b, gold):
         #print "Skipped", numIntersentence, "intersentence interactions"
     return interactions
 
-def getCombinedInteraction(intDict, mode, counts):
+def getCombinedInteraction(intDict, mode, counts, scoreRange):
     assert mode in ("AND", "OR"), mode
     if intDict["a"] == None and intDict["b"] == None:
         counts["both-None"] += 1
@@ -159,8 +179,10 @@ def getCombinedInteraction(intDict, mode, counts):
             counts["both-same"] += 1
             return intDict["a"]
         counts["both-different"] += 1
-        confA = getConfScore(intDict["a"])
-        confB = getConfScore(intDict["b"])
+        confA = getConfScores(intDict["a"])[intDict["a"].get("type")]
+        confA = (confA - scoreRange["a"][0]) / (scoreRange["a"][2])
+        confB = getConfScores(intDict["b"])[intDict["b"].get("type")]
+        confB = (confB - scoreRange["b"][0]) / (scoreRange["b"][2])
         return intDict["a"] if confA > confB else intDict["b"]
     
 
@@ -221,6 +243,10 @@ def combine(inputA, inputB, inputGold, outPath=None, mode="AND"):
     gold = ETUtils.ETFromObj(inputGold) if inputGold else None
     print "Copying gold as template"
     template = copy.deepcopy(gold)
+    print "Calculating scores"
+    scoreRanges = {}
+    scoreRanges["a"] = getScoreRange(a)
+    scoreRanges["b"] = getScoreRange(b)
     print "Combining"
     counts = defaultdict(int)
     counter = ProgressCounter(len([x for x in a.findall("document")]), "Combine")
@@ -236,7 +262,7 @@ def combine(inputA, inputB, inputGold, outPath=None, mode="AND"):
             if analyses:
                 sentTemplate.remove(analyses)
             for key in interactions:
-                interaction = getCombinedInteraction(interactions[key], mode, counts)
+                interaction = getCombinedInteraction(interactions[key], mode, counts, scoreRanges)
                 if interaction != None:
                     sentTemplate.append(copy.deepcopy(interaction))
     print "Counts:", dict(counts)
