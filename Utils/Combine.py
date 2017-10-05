@@ -1,5 +1,6 @@
 import sys, os
 import copy
+from collections import defaultdict
 sys.path.append(os.path.dirname(os.path.abspath(__file__))+"/..")
 import Utils.ElementTreeUtils as ETUtils
 import Utils.STFormat.ConvertXML as ConvertXML
@@ -139,18 +140,25 @@ def getInteractions(a, b, gold):
         #print "Skipped", numIntersentence, "intersentence interactions"
     return interactions
 
-def getCombinedInteraction(intDict, mode):
+def getCombinedInteraction(intDict, mode, counts):
     assert mode in ("AND", "OR"), mode
     if intDict["a"] == None and intDict["b"] == None:
+        counts["both-None"] += 1
         return None
     elif intDict["a"] == None or intDict["b"] == None:
+        if intDict["a"]:
+            counts["only-A"] += 1
+        else:
+            counts["only-B"] += 1
         if mode == "AND":
             return None
         elif mode == "OR":
             return intDict["a"] if (intDict["a"] != None) else intDict["b"]
     else:
         if intDict["a"].get("type") == intDict["b"].get("type"):
+            counts["both-same"] += 1
             return intDict["a"]
+        counts["both-different"] += 1
         confA = getConfScore(intDict["a"])
         confB = getConfScore(intDict["b"])
         return intDict["a"] if confA > confB else intDict["b"]
@@ -214,6 +222,7 @@ def combine(inputA, inputB, inputGold, outPath=None, mode="AND"):
     print "Copying gold as template"
     template = copy.deepcopy(gold)
     print "Combining"
+    counts = defaultdict(int)
     counter = ProgressCounter(len([x for x in a.findall("document")]), "Combine")
     for docA, docB, docGold, docTemplate in itertools.izip_longest(*[x.findall("document") for x in (a, b, gold, template)]):
         counter.update()
@@ -227,9 +236,10 @@ def combine(inputA, inputB, inputGold, outPath=None, mode="AND"):
             if analyses:
                 sentTemplate.remove(analyses)
             for key in interactions:
-                interaction = getCombinedInteraction(interactions[key], mode)
+                interaction = getCombinedInteraction(interactions[key], mode, counts)
                 if interaction != None:
                     sentTemplate.append(copy.deepcopy(interaction))
+    print "Counts:", dict(counts)
     if gold != None:
         print "Evaluating A"
         EvaluateIXML.run(AveragingMultiClassEvaluator, a, gold, "McCC")
