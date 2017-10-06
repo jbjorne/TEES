@@ -6,7 +6,7 @@ import shutil
 sys.path.append(os.path.dirname(os.path.abspath(__file__))+"/..")
 from Detectors.Preprocessor import Preprocessor
 import Utils.ElementTreeUtils as ETUtils
-import Utils.STFormat.ConvertXML as ConvertXML
+import Utils.Stream as Stream
 from Evaluators.ChemProtEvaluator import ChemProtEvaluator
 import Evaluators.EvaluateInteractionXML as EvaluateIXML
 from Evaluators.AveragingMultiClassEvaluator import AveragingMultiClassEvaluator
@@ -105,8 +105,17 @@ def evaluateChemProt(xml, gold):
     print >> sys.stderr, "Removing temporary evaluation directory", tempDir
     shutil.rmtree(tempDir)
     
-def combine(inputA, inputB, inputGold, outPath=None, mode="OR"):
+def combine(inputA, inputB, inputGold, outPath=None, mode="OR", logPath="AUTO"):
     assert options.mode in ("AND", "OR")
+    if logPath == "AUTO":
+        if outPath != None:
+            logPath = os.path.join(outPath.rstrip("/").rstrip("\\") + "-log.txt")
+        else:
+            logPath = None
+    if logPath != None:
+        if not os.path.exists(os.path.dirname(logPath)):
+            os.makedirs(os.path.dirname(logPath))
+        Stream.openLog(logPath)
     print "Loading the Interaction XML files"
     print "Loading A from", inputA
     a = ETUtils.ETFromObj(inputA)
@@ -153,7 +162,12 @@ def combine(inputA, inputB, inputGold, outPath=None, mode="OR"):
         evaluateChemProt(template, gold) #EvaluateIXML.run(AveragingMultiClassEvaluator, template, gold, "McCC")
     if outPath != None:
         print "Writing output to", outPath
-        ETUtils.write(template, outPath)
+        if outPath.endswith(".tsv"):
+            Preprocessor(steps=["EXPORT_CHEMPROT"]).process(template, outPath)
+        else:
+            ETUtils.write(template, outPath)
+    if logPath != None:
+        Stream.closeLog(logPath)
 
 if __name__=="__main__":       
     from optparse import OptionParser
