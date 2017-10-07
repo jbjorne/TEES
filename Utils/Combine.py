@@ -26,9 +26,11 @@ def getConfScores(interaction):
             confScores[cls] = confidence
     return confScores
 
-def getScoreRange(root):
+def getScoreRange(root, skip=None):
     scoreRange = [None, None]
     for interaction in root.iter("interaction"):
+        if skip != None and interaction.get("type") in skip:
+            continue
         scores = getConfScores(interaction)
         values = scores.values()
         minScore = min(values)
@@ -40,19 +42,22 @@ def getScoreRange(root):
     scoreRange.append(scoreRange[1] - scoreRange[0])
     return tuple(scoreRange)
 
-def addInteraction(interaction, interactions, category):
+def addInteraction(interaction, interactions, category, skip=None, skipCounts=None):
+    if skip != None and interaction.get("type") in skip:
+        skipCounts[category + "/" + interaction.get("type")] += 1
+        return
     key = interaction.get("e1") + "/" + interaction.get("e2")
     if key not in interactions:
         interactions[key] = {"a":None, "b":None, "gold":None}
     assert category in ("a", "b", "gold")
     interactions[key][category] = interaction
 
-def getInteractions(a, b, gold):
+def getInteractions(a, b, gold, skip=None, skipCounts=None):
     interactions = OrderedDict()
     for interaction in a.findall('interaction'):
-        addInteraction(interaction, interactions, "a")
+        addInteraction(interaction, interactions, "a", skip, skipCounts)
     for interaction in b.findall('interaction'):
-        addInteraction(interaction, interactions, "b")
+        addInteraction(interaction, interactions, "b", skip, skipCounts)
     if gold:
         numIntersentence = 0
         for interaction in gold.findall('interaction'):
@@ -60,7 +65,7 @@ def getInteractions(a, b, gold):
             if interaction.get("e1").split(".e")[0] != interaction.get("e2").split(".e")[0]:
                 numIntersentence += 1
                 continue
-            addInteraction(interaction, interactions, "gold")
+            addInteraction(interaction, interactions, "gold", skip, skipCounts)
         #print "Skipped", numIntersentence, "intersentence interactions"
     return interactions
 
@@ -105,8 +110,12 @@ def evaluateChemProt(xml, gold):
     print >> sys.stderr, "Removing temporary evaluation directory", tempDir
     shutil.rmtree(tempDir)
     
-def combine(inputA, inputB, inputGold, outPath=None, mode="OR", logPath="AUTO"):
+def combine(inputA, inputB, inputGold, outPath=None, mode="OR", skip=None, logPath="AUTO"):
     assert options.mode in ("AND", "OR")
+    if skip != None and isinstance(skip, basestring):
+        skip = set(skip.split(","))
+    if skip != None:
+        print "Skipping interaction types:", skip
     if logPath == "AUTO":
         if outPath != None:
             logPath = os.path.join(outPath.rstrip("/").rstrip("\\") + "-log.txt")
@@ -129,18 +138,19 @@ def combine(inputA, inputB, inputGold, outPath=None, mode="OR", logPath="AUTO"):
     template = copy.deepcopy(a)
     print "Calculating confidence score ranges"
     scoreRanges = {}
-    scoreRanges["a"] = getScoreRange(a)
-    scoreRanges["b"] = getScoreRange(b)
+    scoreRanges["a"] = getScoreRange(a, skip)
+    scoreRanges["b"] = getScoreRange(b, skip)
     print scoreRanges
     print "Combining"
     counts = defaultdict(int)
+    counts["skipped"] = defaultdict(int)
     counter = ProgressCounter(len([x for x in a.findall("document")]), "Combine")
     for docA, docB, docGold, docTemplate in itertools.izip_longest(*[x.findall("document") for x in (a, b, gold, template)]):
         counter.update()
         assert len(set([x.get("id") for x in (docA, docB, docGold, docTemplate)])) == 1
         for sentA, sentB, sentGold, sentTemplate in itertools.izip_longest(*[x.findall("sentence") for x in (docA, docB, docGold, docTemplate)]):
             assert len(set([x.get("id") for x in (sentA, sentB, sentGold, sentTemplate)])) == 1
-            interactions = getInteractions(sentA, sentB, sentGold)
+            interactions = getInteractions(sentA, sentB, sentGold, skip, counts["skipped"])
             for interaction in sentTemplate.findall("interaction"):
                 sentTemplate.remove(interaction)
             analyses = sentTemplate.find("analyses") 
@@ -152,6 +162,7 @@ def combine(inputA, inputB, inputGold, outPath=None, mode="OR", logPath="AUTO"):
                     sentTemplate.append(copy.deepcopy(interaction))
             if analyses:
                 sentTemplate.append(analyses)
+    counts["skipped"] = dict(counts["skipped"])
     print "Counts:", dict(counts)
     if gold != None:
         print "****** Evaluating A ******"
@@ -177,6 +188,7 @@ if __name__=="__main__":
     optparser.add_option("-g", "--gold", default=None, dest="gold", help="Gold interactions in Interaction XML format")
     optparser.add_option("-o", "--output", default=None, dest="output", help="Path to output Interaction XML file (if exists will be overwritten)")
     optparser.add_option("-m", "--mode", default="OR", dest="mode", help="The combination for the output (AND or OR).")
+    optparser.add_option("-s", "--skip", default=None, dest="skip", help="Comma-separated list of interaction types to skip.")
     (options, args) = optparser.parse_args()
-    
-    combine(options.inputA, options.inputB, options.gold, options.output, options.mode)
+
+    combine(options.inputA, options.inputB, options.gold, options.output, options.mode, options.skip)
