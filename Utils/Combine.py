@@ -76,7 +76,7 @@ def getCombinedInteraction(intDict, mode, counts, scoreRange):
         counts["both-None"] += 1
         return None
     elif intDict["a"] == None or intDict["b"] == None:
-        if intDict["a"]:
+        if intDict["a"] != None:
             counts["only-A"] += 1
         else:
             counts["only-B"] += 1
