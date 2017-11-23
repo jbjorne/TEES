@@ -58,13 +58,13 @@ class TriggerFeatureBuilder(FeatureBuilder):
         features = {}
         features["_txt_"+tokTxt]=1
         features["_POS_"+token.get("POS")]=1
-        if sentenceGraph.tokenIsName[token]:
+        if sentenceGraph.tokenIsName[token] and not self.noAnnType:
             features["_given"]=1
             for entity in sentenceGraph.tokenIsEntityHead[token]:
                 if entity.get("given") == "True":
                     features["_annType_"+self.getEntityType(entity)]=1
         # Only for Unmerging!
-        if self.useNonNameEntities:
+        if self.useNonNameEntities and not self.noAnnType:
             for entity in sentenceGraph.tokenIsEntityHead[token]:
                 features["_annType_"+self.getEntityType(entity)]=1
 #        if self.gazetteer and tokTxt.lower() in self.gazetteer:

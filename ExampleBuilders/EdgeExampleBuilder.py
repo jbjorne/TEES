@@ -92,6 +92,8 @@ class EdgeExampleBuilder(ExampleBuilder):
         if not self.styles["no_trigger_features"]:
             self.triggerFeatureBuilder = TriggerFeatureBuilder(self.featureSet, self.styles)
             self.triggerFeatureBuilder.useNonNameEntities = True
+            if self.styles["noAnnType"]:
+                self.triggerFeatureBuilder.noAnnType = True
             if self.styles["genia_task1"]:
                 self.triggerFeatureBuilder.filterAnnTypes.add("Entity")
             #self.bioinferOntologies = OntologyUtils.loadOntologies(OntologyUtils.g_bioInferFileName)
