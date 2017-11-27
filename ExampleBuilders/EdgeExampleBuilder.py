@@ -282,7 +282,7 @@ class EdgeExampleBuilder(ExampleBuilder):
         exampleIndex = 0
         # example directionality
         if self.styles["directed"] == None and self.styles["undirected"] == None: # determine directedness from corpus
-            examplesAreDirected = structureAnalyzer.hasDirectedTargets()
+            examplesAreDirected = structureAnalyzer.hasDirectedTargets() if structureAnalyzer != None else True
         elif self.styles["directed"]:
             assert self.styles["undirected"] in [None, False]
             examplesAreDirected = True

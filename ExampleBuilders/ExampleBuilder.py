@@ -291,7 +291,7 @@ def addBasicOptions(optparser):
     optparser.add_option("-i", "--input", default=None, dest="input", help="Corpus in analysis format", metavar="FILE")
     optparser.add_option("-g", "--gold", default=None, dest="gold", help="Corpus in analysis format", metavar="FILE")
     optparser.add_option("-o", "--output", default=None, dest="output", help="Output file for the examples")
-    optparser.add_option("-p", "--parse", default="split-McClosky", dest="parse", help="parse")
+    optparser.add_option("-p", "--parse", default="McCC", dest="parse", help="parse")
     optparser.add_option("-x", "--exampleBuilderParameters", default=None, dest="parameters", help="Parameters for the example builder")
     optparser.add_option("-b", "--exampleBuilder", default=None, dest="exampleBuilder", help="Example Builder Class")
     optparser.add_option("-c", "--classes", default=None, dest="classes", help="Class ids")
