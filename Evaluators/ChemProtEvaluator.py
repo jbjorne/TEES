@@ -11,6 +11,7 @@ from Core.IdSet import IdSet
 import Core.ExampleUtils as ExampleUtils
 from Evaluators.AveragingMultiClassEvaluator import AveragingMultiClassEvaluator
 import json
+import math
 
 class ChemProtEvaluator(Evaluator):
     type = "multiclass"
@@ -77,24 +78,35 @@ class ChemProtEvaluator(Evaluator):
                 e2 = example[3]["e2OID"]
                 f.write("\t".join([docId, predClassName, "Arg1:" + e1, "Arg2:" + e2]) + "\n")
     
-    def _calculate(self, examples, predictions):
-        tempDir = tempfile.mkdtemp()
+    def _prepareEval(self, examples, predictions, tempDir):
+        if os.path.exists(tempDir):
+            shutil.rmtree(tempDir)
+        os.makedirs(tempDir)
         print >> sys.stderr, "Using temporary evaluation directory", tempDir
         predFilePath = os.path.join(tempDir, "predictions.tsv")
         self._writePredictions(examples, predictions, predFilePath)
-        results = self.evaluateTSV(predFilePath, tempDir)
+        return predFilePath
+    
+    def _calculate(self, examples, predictions):
+        tempDir = tempfile.mkdtemp()
+        predFilePath = self._prepareEval(examples, predictions, tempDir)
+        results = self.evaluateTSV(predFilePath, "./data/chemprot_development_gold_standard.tsv", tempDir)
+        if math.isnan(results.get("F-score")):
+            print >> sys.stderr, "Development set F-score is NaN, attempting evaluation with test set"
+            predFilePath = self._prepareEval(examples, predictions, tempDir)
+            results = self.evaluateTSV(predFilePath, "./data/chemprot_test_gold_standard.tsv", tempDir)
         print >> sys.stderr, "Removing temporary evaluation directory", tempDir
         shutil.rmtree(tempDir)
         print >> sys.stderr, "ChemProt results:", json.dumps(results)
         self.results = results
     
-    def evaluateTSV(self, predFilePath, tempDir=None):
+    def evaluateTSV(self, predFilePath, goldPath="./data/chemprot_development_gold_standard.tsv", tempDir=None):
         evaluatorDir = os.path.join(Settings.DATAPATH, "tools", "evaluators", "ChemProtEvaluator")
         evaluatorTempDir = os.path.join(tempDir, "ChemProtEvaluator")
         shutil.copytree(evaluatorDir, evaluatorTempDir)
         currentDir = os.getcwd()
         os.chdir(evaluatorTempDir)
-        command = "java -cp bc6chemprot_eval.jar org.biocreative.tasks.chemprot.main.Main " + os.path.abspath(predFilePath) + " ./data/chemprot_development_gold_standard.tsv"
+        command = "java -cp bc6chemprot_eval.jar org.biocreative.tasks.chemprot.main.Main " + os.path.abspath(predFilePath) + " " + goldPath
         print >> sys.stderr, "Running CP17 evaluator: " + command
         p = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         for s in ["".join(x.readlines()).strip() for x in (p.stderr, p.stdout)]:
