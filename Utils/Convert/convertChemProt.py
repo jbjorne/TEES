@@ -4,6 +4,7 @@ import csv
 import codecs
 from collections import defaultdict
 from Utils import Range
+import copy
 try:
     import cElementTree as ET
 except ImportError:
@@ -31,7 +32,7 @@ def downloadFile(url, downloadDir=None, extractDir=None, clear=False):
     assert subPath in extracted
     return os.path.normpath(os.path.join(extractDir, subPath))
 
-def convertChemProt(inDirs=None, setNames=None, outPath=None, downloadDir=None, extractDir=None, redownload=False, debug=False):
+def convertChemProt(inDirs=None, setNames=None, outPath=None, goldTestSet=True, downloadDir=None, extractDir=None, redownload=False, debug=False):
     tempDir = None
     if inDirs == None:
         print >> sys.stderr, "---------------", "Downloading ChemProt files", "---------------"
@@ -39,6 +40,8 @@ def convertChemProt(inDirs=None, setNames=None, outPath=None, downloadDir=None, 
             tempDir = tempfile.mkdtemp()
         inDirs = []
         for setName in ("TRAIN", "DEVEL", "TEST"):
+            if goldTestSet and setName == "TEST":
+                setName = "TEST_GOLD"
             if Settings.URL["CP17_" + setName] != None:
                 currentExtractDir = extractDir if extractDir else tempDir
                 currentExtractDir = os.path.join(currentExtractDir, setName.lower())
@@ -48,13 +51,13 @@ def convertChemProt(inDirs=None, setNames=None, outPath=None, downloadDir=None, 
     for inDir in inDirs:
         print >> sys.stderr, "Reading input directory", inDir
         filenames = os.listdir(inDir)
-        filetypes = ["_abstracts.tsv", "_entities.tsv", "_relations.tsv"]
+        filetypes = ["_abstracts", "_entities", "_relations"]
         # Collect the file paths for the data types
         dirDataSets = set()
         for filename in filenames:
-            if not (filename.endswith(".tsv") and any([filename.endswith(x) for x in filetypes])):
+            if not (filename.endswith(".tsv") and any([x in filename for x in filetypes])):
                 continue
-            dataSetId, dataType = filename.rsplit("_", 1)
+            dataSetId, dataType = filename.replace("_gs", "").rsplit("_", 1)
             if setNames != None:
                 dataSetId = setNames.get(dataSetId, dataSetId)
             dirDataSets.add(dataSetId)
@@ -75,7 +78,8 @@ def convertChemProt(inDirs=None, setNames=None, outPath=None, downloadDir=None, 
     entitiesByDoc = {}
     docsWithErrors = set()
     for dataSetId in sorted(dataSets.keys()):
-        print >> sys.stderr, "Building elements for dataset", dataSetId
+        prevCounts = copy.copy(counts)
+        print >> sys.stderr, "---", "Building elements for dataset", dataSetId, "---"
         dataSet = dataSets[dataSetId]
         counts["sets"] += 1
         with open(dataSet["abstracts"], "rt") as f:
@@ -148,8 +152,10 @@ def convertChemProt(inDirs=None, setNames=None, outPath=None, downloadDir=None, 
                         docsWithErrors.add(row["docId"])
         else:
             print >> sys.stderr, "No relations for dataset", dataSetId
+        print >> sys.stderr, "dataset", dataSetId, {x:counts[x] - prevCounts.get(x, 0) for x in counts if counts[x] - prevCounts.get(x, 0) > 0}
     if len(docsWithErrors) > 0:
         counts["documents-with-errors"] = len(docsWithErrors)
+    print >> sys.stderr, "---", "All Datasets Done", "---"
     print >> sys.stderr, "ChemProt conversion:", dict(counts)
     if tempDir != None and not debug:
         print >> sys.stderr, "Removing temporary directory", tempDir

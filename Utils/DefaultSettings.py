@@ -269,6 +269,7 @@ urlBase = "http://www.biocreative.org/media/store/files/2017/"
 URL["CP17_TRAIN"] = urlBase + "chemprot_training.zip"
 URL["CP17_DEVEL"] = urlBase + "chemprot_development.zip"
 URL["CP17_TEST"] = urlBase + "chemprot_test.zip"
+URL["CP17_TEST_GOLD"] = urlBase + "chemprot_test_gs.zip"
 
 
 # Miscellaneous files
