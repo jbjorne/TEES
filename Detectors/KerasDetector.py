@@ -267,6 +267,7 @@ class KerasDetector(Detector):
             x = Conv2D(32, (1, 5), activation='relu', padding='same')(x)
             x = Conv2D(32, (1, 3), activation='relu', padding='same')(x)
         
+        x = Conv2D(256, (1, 1), activation='relu', padding='same')(x)
         x = Conv2D(dimLabels, (1, 1), activation='sigmoid', padding='same')(x)
         x = Reshape((dimMatrix * dimMatrix, dimLabels), name='labels')(x)
         self.kerasModel = Model(inputs, x)
