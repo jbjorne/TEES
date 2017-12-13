@@ -11,7 +11,7 @@ def removeTempUnzipped(filename):
         if count == 0:
             os.remove(filename)
 
-class Classifier:
+class Classifier():
     # Public interface ##########################################################################
     def __init__(self, connection=None):
         pass

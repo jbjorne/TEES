@@ -41,6 +41,12 @@ class KerasClassifier(Classifier):
         self.parameters = None
         self.model = None
         self.predictions = None
+        self.numFeatures = None
+    
+#     def saveModel(self, teesModel, tag=""):
+#         Classifier.saveModel(self, teesModel, tag)
+#         if hasattr(self, "numFeatures") and self.numFeatures != None:
+#             teesModel.addStr(tag+"numFeatures", str(self.numFeatures))
     
     def classify(self, examples, output, model=None, finishBeforeReturn=False, replaceRemoteFiles=True):
         print >> sys.stderr, "Predicting devel examples"
@@ -56,8 +62,11 @@ class KerasClassifier(Classifier):
         examples = self.getExampleFile(examples, replaceRemote=replaceRemoteFiles)
         classifier._filesToRelease = [examples]
         
-        features, classes = datasets.load_svmlight_file(examples)
         self.kerasModel = load_model(model)
+        numFeatures = self.kerasModel.layers[0].get_input_shape_at(0)[1]
+        
+        features, classes = datasets.load_svmlight_file(examples, numFeatures)
+        features = features.toarray()
         predictions = self.kerasModel.predict(features, 128, 1)
         predClasses = predictions.argmax(axis=-1)
 
@@ -134,6 +143,8 @@ class KerasClassifier(Classifier):
         self.model = self.connection.getRemotePath(outDir + "/model.hdf5", True)
         modelPath = self.connection.getRemotePath(outDir + "/model.hdf5", False)
         cp_cb = ModelCheckpoint(filepath=modelPath, save_best_only=True, verbose=1)
+        
+        #self.numFeatures = trainFeatures.shape[1]
         
 #         #print "SHAPE", trainFeatures.shape, trainClasses.shape, develFeatures.shape, develClasses.shape
 #         self.kerasModel.fit(trainFeatures, trainClasses,
