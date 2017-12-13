@@ -171,6 +171,9 @@ def train(output, task=None, detector=None, inputFiles=None, models=None, parse=
 def setDictDefaults(dictionary, defaults):
     if dictionary == None:
         return defaults.copy()
+    for key in dictionary:
+        if dictionary[key] == "None":
+            dictionary[key] = None
     for key in defaults:
         if key not in dictionary:
             dictionary[key] = defaults[key]
