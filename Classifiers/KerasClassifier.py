@@ -5,11 +5,29 @@ import json
 from Classifier import Classifier
 import Utils.Connection.Connection as Connection
 from Utils.Connection.UnixConnection import UnixConnection
-from sklearn import datasets
+from sklearn import datasets, preprocessing
 from keras.layers import Input, Dense
 from keras.models import Model, load_model
 from keras.optimizers import SGD, Adam
 from keras.callbacks import EarlyStopping, ModelCheckpoint
+import numpy as np
+
+def batch_generator(X, y, batch_size):
+    number_of_batches = X.shape[0] / batch_size #samples_per_epoch / batch_size
+    counter=0
+    shuffle_index = np.arange(np.shape(y)[0])
+    np.random.shuffle(shuffle_index)
+    X =  X[shuffle_index, :]
+    y =  y[shuffle_index]
+    while 1:
+        index_batch = shuffle_index[batch_size*counter:batch_size*(counter+1)]
+        X_batch = X[index_batch,:].todense()
+        y_batch = y[index_batch]
+        counter += 1
+        yield(np.array(X_batch),y_batch)
+        if (counter < number_of_batches):
+            np.random.shuffle(shuffle_index)
+            counter=0
 
 class KerasClassifier(Classifier):
     def __init__(self, connection=None):
@@ -66,15 +84,20 @@ class KerasClassifier(Classifier):
         
         trainFeatures, trainClasses = datasets.load_svmlight_file(examples)
         if classifyExamples != None:
-            develFeatures, develClasses = datasets.load_svmlight_file(classifyExamples)
+            develFeatures, develClasses = datasets.load_svmlight_file(classifyExamples, trainFeatures.shape[1])
+        binarizer = preprocessing.LabelBinarizer()
+        binarizer.fit(trainClasses)
+        trainClasses = binarizer.transform(trainClasses)
+        if classifyExamples != None:
+            develClasses = binarizer.transform(develClasses)
         
         classifier.kerasModel = classifier._defineModel(outDir, parameters, trainFeatures, trainClasses, develFeatures, develClasses)
         classifier._fitModel(outDir, trainFeatures, trainClasses, develFeatures, develClasses)
     
     def _defineModel(self, outDir, parameters, trainFeatures, trainClasses, develFeatures, develClasses):        
-        x = inputLayer = Input(shape=(trainFeatures.shape[0], trainFeatures.shape[1]))
+        x = inputLayer = Input(shape=(trainFeatures.shape[1],))
         x = Dense(1024, activation='relu')(x)
-        x = Dense(trainClasses.shape[0], activation='softmax')(x)
+        x = Dense(trainClasses.shape[1], activation='softmax')(x)
         kerasModel = Model(inputLayer, x)
         
         layersPath = self.connection.getRemotePath(outDir + "/layers.json", False)
@@ -87,7 +110,7 @@ class KerasClassifier(Classifier):
         
         print >> sys.stderr, "Compiling model"
         metrics = ["accuracy"]
-        kerasModel.compile(optimizer=optimizer, loss="categorical_crossentropy", metrics=metrics, sample_weight_mode="temporal") #, metrics=['accuracy'])
+        kerasModel.compile(optimizer=optimizer, loss="categorical_crossentropy", metrics=metrics) #, metrics=['accuracy'])
         
         kerasModel.summary()
         return kerasModel
@@ -106,12 +129,20 @@ class KerasClassifier(Classifier):
         modelPath = self.connection.getRemotePath(outDir + "/model.hdf5", False)
         cp_cb = ModelCheckpoint(filepath=modelPath, save_best_only=True, verbose=1)
         
-        self.kerasModel.fit(trainFeatures, trainClasses,
-            epochs=100, #100 if not "epochs" in self.styles else int(self.styles["epochs"]),
-            batch_size=64,
-            shuffle=True,
-            validation_data=(develFeatures, develClasses),
-            #sample_weight=self.arrays["train"]["mask"],
+#         #print "SHAPE", trainFeatures.shape, trainClasses.shape, develFeatures.shape, develClasses.shape
+#         self.kerasModel.fit(trainFeatures, trainClasses,
+#             epochs=100, #100 if not "epochs" in self.styles else int(self.styles["epochs"]),
+#             batch_size=64,
+#             shuffle=True,
+#             validation_data=(develFeatures, develClasses),
+#             #sample_weight=self.arrays["train"]["mask"],
+#             callbacks=[es_cb, cp_cb])
+        
+        self.kerasModel.fit_generator(generator=batch_generator(trainFeatures, trainClasses, 64),
+            epochs=100, 
+            samples_per_epoch=trainFeatures.shape[0],
+            validation_data=batch_generator(develFeatures, develClasses, 64),
+            validation_steps=develFeatures.shape[0] / 64,
             callbacks=[es_cb, cp_cb])
     
     def _serializeLayers(self, kerasModel, filePath, verbose=False):
