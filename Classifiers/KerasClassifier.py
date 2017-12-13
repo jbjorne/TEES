@@ -1,5 +1,7 @@
 import sys,os
 sys.path.append(os.path.dirname(os.path.abspath(__file__))+"/..")
+import copy
+import json
 from Classifier import Classifier
 from sklearn import datasets
 from keras.layers import Input, Dense
@@ -22,16 +24,33 @@ class KerasClassifier(Classifier):
         examples = self.getExampleFile(examples, dummy=dummy)
         classifyExamples = self.getExampleFile(classifyExamples, dummy=dummy)
         
+        # Return a new classifier instance for following the training process and using the model
+        classifier = copy.copy(self)
+        classifier.parameters = parameters
+        classifier._filesToRelease = [examples, classifyExamples]
+        
+        if not os.path.exists(outDir):
+            os.makedirs(outDir)
+        
         trainFeatures, trainClasses = datasets.load_svmlight_file(examples)
         if classifyExamples != None:
             develFeatures, develClasses = datasets.load_svmlight_file(classifyExamples)
         
+        classifier.kerasModel = classifier._defineModel(trainFeatures, trainClasses, develFeatures, develClasses)
+        classifier._fitModel(trainFeatures, trainClasses, develFeatures, develClasses)
+    
+    def _defineModel(self, outDir, parameters, trainFeatures, trainClasses, develFeatures, develClasses):
+        paramString, idStr = self._getParameterString(parameters)
+        self.parameterIdStr = idStr
+        self.model = self.connection.getRemotePath(outDir + "/model" + idStr, True)
+        modelPath = self.connection.getRemotePath(outDir + "/model" + idStr, False)
+        
         x = inputLayer = Input(shape=(trainFeatures.shape[0], trainFeatures.shape[1]))
         x = Dense(1024)(x)
         x = Dense(trainClasses.shape[0], activation='sigmoid')(x)
-        self.kerasModel = Model(inputLayer, x)
+        kerasModel = Model(inputLayer, x)
         
-        layersPath = self.workDir + self.tag + "layers.json"
+        layersPath = os.path.join(modelPath, "layers.json")
         print >> sys.stderr, "Saving layers to", layersPath
         self.serializeLayers(self.kerasModel, layersPath)
         
@@ -41,11 +60,11 @@ class KerasClassifier(Classifier):
         
         print >> sys.stderr, "Compiling model"
         metrics = ["accuracy"]
-        self.kerasModel.compile(optimizer=optimizer, loss="categorical_crossentropy", metrics=metrics, sample_weight_mode="temporal") #, metrics=['accuracy'])
+        kerasModel.compile(optimizer=optimizer, loss="categorical_crossentropy", metrics=metrics, sample_weight_mode="temporal") #, metrics=['accuracy'])
         
-        self.kerasModel.summary()
+        kerasModel.summary()
     
-    def _fitModel(self, trainFeatures, trainClasses, develFeatures, develClasses):
+    def _fitModel(self, outDir, trainFeatures, trainClasses, develFeatures, develClasses):
         """
         Fits the compiled Keras model to the adjacency matrix examples. The model is trained on the
         train set, validated on the devel set and finally the devel set is predicted using the model.
@@ -55,6 +74,7 @@ class KerasClassifier(Classifier):
         patience = int(self.styles.get("patience", 10))
         print >> sys.stderr, "Early stopping patience:", patience
         es_cb = EarlyStopping(monitor='val_loss', patience=patience, verbose=1)
+        modelPath = self.connection.getRemotePath(outDir + "/model" + idStr, False)
         bestModelPath = self.model.get(self.tag + "model.hdf5", True)
         cp_cb = ModelCheckpoint(filepath=bestModelPath, save_best_only=True, verbose=1)
         
@@ -67,3 +87,16 @@ class KerasClassifier(Classifier):
             callbacks=[es_cb, cp_cb])
         
         bestModelPath = self.model.get(self.tag + "model.hdf5", True)
+    
+    def _serializeLayers(self, kerasModel, filePath, verbose=False):
+        layers = []
+        for layer in kerasModel.layers:
+            layers.append({'class_name': layer.__class__.__name__, 'config': layer.get_config()})
+        if verbose:
+            print >> sys.stderr, "Layer configuration:"
+            print >> sys.stderr, "_________________________________________________________________"
+            for layer in layers:
+                print >> sys.stderr, layer
+            print >> sys.stderr, "_________________________________________________________________"
+        with open(filePath, "wt") as f:
+            json.dump(layers, f, indent=2)
