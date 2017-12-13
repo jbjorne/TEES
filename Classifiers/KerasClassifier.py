@@ -96,7 +96,7 @@ class KerasClassifier(Classifier):
     
     def _defineModel(self, outDir, parameters, trainFeatures, trainClasses, develFeatures, develClasses):        
         x = inputLayer = Input(shape=(trainFeatures.shape[1],))
-        x = Dense(1024, activation='relu')(x)
+        x = Dense(10, activation='relu')(x)
         x = Dense(trainClasses.shape[1], activation='softmax')(x)
         kerasModel = Model(inputLayer, x)
         
@@ -139,7 +139,7 @@ class KerasClassifier(Classifier):
 #             callbacks=[es_cb, cp_cb])
         
         self.kerasModel.fit_generator(generator=batch_generator(trainFeatures, trainClasses, 64),
-            epochs=100, 
+            epochs=1, 
             samples_per_epoch=trainFeatures.shape[0],
             validation_data=batch_generator(develFeatures, develClasses, 64),
             validation_steps=develFeatures.shape[0] / 64,
