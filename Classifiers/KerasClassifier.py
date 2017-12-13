@@ -66,6 +66,12 @@ class KerasClassifier(Classifier):
             f.write(predClasses)
     
     def optimize(self, examples, outDir, parameters, classifyExamples, classIds, step="BOTH", evaluator=None, determineThreshold=False, timeout=None, downloadAllModels=False):
+        assert step in ["BOTH", "SUBMIT", "RESULTS"], step
+        if step == "RESULTS": # Return already
+            classifier = copy.copy(self)
+            classifier.parameters = parameters
+            classifier.model = self.connection.getRemotePath(outDir + "/model.hdf5", True)
+            return classifier
         return self.train(examples, outDir, parameters, classifyExamples)
     
     def train(self, examples, outDir, parameters, classifyExamples=None, dummy=False):
@@ -96,7 +102,7 @@ class KerasClassifier(Classifier):
     
     def _defineModel(self, outDir, parameters, trainFeatures, trainClasses, develFeatures, develClasses):        
         x = inputLayer = Input(shape=(trainFeatures.shape[1],))
-        x = Dense(10, activation='relu')(x)
+        x = Dense(5, activation='relu')(x)
         x = Dense(trainClasses.shape[1], activation='softmax')(x)
         kerasModel = Model(inputLayer, x)
         
