@@ -72,7 +72,8 @@ class KerasClassifier(Classifier):
 
         predictionsPath = self.connection.getRemotePath(output, False)
         with open(predictionsPath, "wt") as f:
-            f.write(predClasses)
+            for i in range(predictions.shape[0]):
+                f.write(str(predClasses[i] + 1) + " " + " ".join([str(x) for x in  predictions[i]]) + "\n")                
     
     def optimize(self, examples, outDir, parameters, classifyExamples, classIds, step="BOTH", evaluator=None, determineThreshold=False, timeout=None, downloadAllModels=False):
         assert step in ["BOTH", "SUBMIT", "RESULTS"], step
