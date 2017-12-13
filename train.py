@@ -160,7 +160,7 @@ def train(output, task=None, detector=None, inputFiles=None, models=None, parse=
             print >> sys.stderr, "Skipping, test file", inputFiles["test"], "does not exist"
         else:
             #detector.bioNLPSTParams["scores"] = False # the evaluation server doesn't like additional files
-            detector.classify(inputFiles["test"], models["test"], "classification-test/test", fromStep=detectorSteps["TEST"], workDir="classification-test")
+            detector.classify(inputFiles["test"], models["test"] if models["test"] != None else models["devel"], "classification-test/test", fromStep=detectorSteps["TEST"], workDir="classification-test")
             if detector.bioNLPSTParams["convert"]:
                 extension = ".zip" if (detector.bioNLPSTParams["convert"] == "zip") else ".tar.gz" 
                 Utils.STFormat.Compare.compare("classification-test/test-events" + extension, "classification-devel/devel-events" + extension, "a2")
