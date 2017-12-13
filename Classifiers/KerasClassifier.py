@@ -3,6 +3,8 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__))+"/..")
 import copy
 import json
 from Classifier import Classifier
+import Utils.Connection.Connection as Connection
+from Utils.Connection.UnixConnection import UnixConnection
 from sklearn import datasets
 from keras.layers import Input, Dense
 from keras.models import Model, load_model
@@ -10,8 +12,17 @@ from keras.optimizers import SGD, Adam
 from keras.callbacks import EarlyStopping, ModelCheckpoint
 
 class KerasClassifier(Classifier):
-    def __init__(self):
-        pass
+    def __init__(self, connection=None):
+        self.defaultEvaluator = None
+        if connection == None:
+            self.connection = UnixConnection() # A local connection
+        else:
+            self.connection = connection
+        self._filesToRelease = []
+        
+        self.parameters = None
+        self.model = None
+        self.predictions = None
     
     def classify(self, examples, output, model=None, finishBeforeReturn=False, replaceRemoteFiles=True):
         print >> sys.stderr, "Predicting devel examples"
@@ -68,7 +79,7 @@ class KerasClassifier(Classifier):
         
         layersPath = self.connection.getRemotePath(outDir + "/layers.json", False)
         print >> sys.stderr, "Saving layers to", layersPath
-        self.serializeLayers(self.kerasModel, layersPath)
+        self._serializeLayers(kerasModel, layersPath)
         
         learningRate = 0.001 #float(self.styles.get("lr", 0.001))
         print >> sys.stderr, "Using learning rate", learningRate
