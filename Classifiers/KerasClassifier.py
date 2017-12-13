@@ -15,9 +15,29 @@ class KerasClassifier(Classifier):
     
     def classify(self, examples, output, model=None, finishBeforeReturn=False, replaceRemoteFiles=True):
         print >> sys.stderr, "Predicting devel examples"
-        modelPath = self.connection.getRemotePath(outDir + "/model.hdf5", False)
-        self.kerasModel = load_model(modelPath)
-        predictions = self.kerasModel.predict(self.arrays["devel"], 128, 1)
+        output = os.path.abspath(output)
+        # Return a new classifier instance for following the training process and using the model
+        classifier = copy.copy(self)
+        
+        if model == None:
+            classifier.model = model = self.model
+        model = os.path.abspath(model)
+        model = self.connection.upload(model, uncompress=True, replace=replaceRemoteFiles)
+        classifier.predictions = self.connection.getRemotePath(output, True)
+        examples = self.getExampleFile(examples, replaceRemote=replaceRemoteFiles)
+        classifier._filesToRelease = [examples]
+        
+        features, classes = datasets.load_svmlight_file(examples)
+        self.kerasModel = load_model(model)
+        predictions = self.kerasModel.predict(features, 128, 1)
+        predClasses = predictions.argmax(axis=-1)
+
+        predictionsPath = self.connection.getRemotePath(output, False)
+        with open(predictionsPath, "wt") as f:
+            f.write(predClasses)
+    
+    def optimize(self, examples, outDir, parameters, classifyExamples, classIds, step="BOTH", evaluator=None, determineThreshold=False, timeout=None, downloadAllModels=False):
+        return self.train(examples, outDir, parameters, classifyExamples)
     
     def train(self, examples, outDir, parameters, classifyExamples=None, dummy=False):
         outDir = os.path.abspath(outDir)
@@ -37,23 +57,20 @@ class KerasClassifier(Classifier):
         if classifyExamples != None:
             develFeatures, develClasses = datasets.load_svmlight_file(classifyExamples)
         
-        classifier.kerasModel = classifier._defineModel(trainFeatures, trainClasses, develFeatures, develClasses)
-        classifier._fitModel(trainFeatures, trainClasses, develFeatures, develClasses)
+        classifier.kerasModel = classifier._defineModel(outDir, parameters, trainFeatures, trainClasses, develFeatures, develClasses)
+        classifier._fitModel(outDir, trainFeatures, trainClasses, develFeatures, develClasses)
     
-    def _defineModel(self, outDir, parameters, trainFeatures, trainClasses, develFeatures, develClasses):
-        self.model = self.connection.getRemotePath(outDir + "/model.hdf5", True)
-        modelPath = self.connection.getRemotePath(outDir + "/model.hdf5", False)
-        
+    def _defineModel(self, outDir, parameters, trainFeatures, trainClasses, develFeatures, develClasses):        
         x = inputLayer = Input(shape=(trainFeatures.shape[0], trainFeatures.shape[1]))
-        x = Dense(1024)(x)
-        x = Dense(trainClasses.shape[0], activation='sigmoid')(x)
+        x = Dense(1024, activation='relu')(x)
+        x = Dense(trainClasses.shape[0], activation='softmax')(x)
         kerasModel = Model(inputLayer, x)
         
         layersPath = self.connection.getRemotePath(outDir + "/layers.json", False)
         print >> sys.stderr, "Saving layers to", layersPath
         self.serializeLayers(self.kerasModel, layersPath)
         
-        learningRate = float(self.styles.get("lr", 0.001))
+        learningRate = 0.001 #float(self.styles.get("lr", 0.001))
         print >> sys.stderr, "Using learning rate", learningRate
         optimizer = Adam(lr=learningRate)
         
@@ -71,18 +88,19 @@ class KerasClassifier(Classifier):
         """        
         print >> sys.stderr, "Fitting model"
         
-        patience = int(self.styles.get("patience", 10))
+        patience = 10 #int(self.styles.get("patience", 10))
         print >> sys.stderr, "Early stopping patience:", patience
         es_cb = EarlyStopping(monitor='val_loss', patience=patience, verbose=1)
+        self.model = self.connection.getRemotePath(outDir + "/model.hdf5", True)
         modelPath = self.connection.getRemotePath(outDir + "/model.hdf5", False)
         cp_cb = ModelCheckpoint(filepath=modelPath, save_best_only=True, verbose=1)
         
         self.kerasModel.fit(trainFeatures, trainClasses,
-            epochs=100 if not "epochs" in self.styles else int(self.styles["epochs"]),
+            epochs=100, #100 if not "epochs" in self.styles else int(self.styles["epochs"]),
             batch_size=64,
             shuffle=True,
             validation_data=(develFeatures, develClasses),
-            sample_weight=self.arrays["train"]["mask"],
+            #sample_weight=self.arrays["train"]["mask"],
             callbacks=[es_cb, cp_cb])
     
     def _serializeLayers(self, kerasModel, filePath, verbose=False):
