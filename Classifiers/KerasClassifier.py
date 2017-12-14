@@ -29,6 +29,16 @@ def batch_generator(X, y, batch_size):
             np.random.shuffle(shuffle_index)
             counter=0
 
+def predict_batch_generator(X, batch_size):
+    number_of_batches = X.shape[0] / batch_size
+    while 1:
+        for i in range(number_of_batches):
+            batchIndex = i * batch_size
+            #print "INDEX", (batchIndex, batchIndex + batch_size)
+            Xbatch = X[batchIndex:batchIndex + batch_size].todense()
+            #print Xbatch.shape
+            yield(np.array(Xbatch))
+
 class KerasClassifier(Classifier):
     def __init__(self, connection=None):
         self.defaultEvaluator = None
@@ -66,8 +76,9 @@ class KerasClassifier(Classifier):
         numFeatures = self.kerasModel.layers[0].get_input_shape_at(0)[1]
         
         features, classes = datasets.load_svmlight_file(examples, numFeatures)
-        features = features.toarray()
-        predictions = self.kerasModel.predict(features, 128, 1)
+        #features = features.toarray()
+        #predictions = self.kerasModel.predict(features, 128, 1)
+        predictions = self.kerasModel.predict_generator(predict_batch_generator(features, 1), features.shape[0] / 1)
         predClasses = predictions.argmax(axis=-1)
 
         predictionsPath = self.connection.getRemotePath(output, False)
