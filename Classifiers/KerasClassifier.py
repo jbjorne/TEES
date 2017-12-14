@@ -107,6 +107,7 @@ class KerasClassifier(Classifier):
         if classifyExamples != None:
             develClasses = binarizer.transform(develClasses)
         
+        np.random.seed(10)
         classifier.kerasModel = classifier._defineModel(outDir, parameters, trainFeatures, trainClasses, develFeatures, develClasses)
         classifier._fitModel(outDir, trainFeatures, trainClasses, develFeatures, develClasses)
     
