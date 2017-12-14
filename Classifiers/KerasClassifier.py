@@ -140,7 +140,7 @@ class KerasClassifier(Classifier):
         print >> sys.stderr, "Saving layers to", layersPath
         self._serializeLayers(kerasModel, layersPath)
         
-        learningRate = int(parameters["lr"]) #0.001 #float(self.styles.get("lr", 0.001))
+        learningRate = float(parameters["lr"]) #0.001 #float(self.styles.get("lr", 0.001))
         print >> sys.stderr, "Using learning rate", learningRate
         optimizer = Adam(lr=learningRate)
         
