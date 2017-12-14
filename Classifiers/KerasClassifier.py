@@ -2,9 +2,11 @@ import sys,os
 sys.path.append(os.path.dirname(os.path.abspath(__file__))+"/..")
 import copy
 import json
+import types
 from Classifier import Classifier
 import Utils.Connection.Connection as Connection
 from Utils.Connection.UnixConnection import UnixConnection
+import Utils.Parameters as Parameters
 from sklearn import datasets, preprocessing
 from keras.layers import Input, Dense
 from keras.models import Model, load_model
@@ -118,13 +120,19 @@ class KerasClassifier(Classifier):
         if classifyExamples != None:
             develClasses = binarizer.transform(develClasses)
         
+        print >> sys.stderr, "Training Keras model with parameters:", parameters
+        parameters = Parameters.get(parameters, {"TEES.classifier":"KerasClassifier", "layers":5, "lr":0.001, "epochs":1, "batch_size":64, "patience":10})
         np.random.seed(10)
         classifier.kerasModel = classifier._defineModel(outDir, parameters, trainFeatures, trainClasses, develFeatures, develClasses)
-        classifier._fitModel(outDir, trainFeatures, trainClasses, develFeatures, develClasses)
+        classifier._fitModel(outDir, parameters, trainFeatures, trainClasses, develFeatures, develClasses)
     
     def _defineModel(self, outDir, parameters, trainFeatures, trainClasses, develFeatures, develClasses):        
         x = inputLayer = Input(shape=(trainFeatures.shape[1],))
-        x = Dense(5, activation='relu')(x)
+        layers = parameters["layers"]
+        if type(layers) not in [types.ListType, types.TupleType]:
+            layers = [layers]
+        for layer in layers:
+            x = Dense(int(layer), activation='relu')(x)
         x = Dense(trainClasses.shape[1], activation='softmax')(x)
         kerasModel = Model(inputLayer, x)
         
@@ -132,7 +140,7 @@ class KerasClassifier(Classifier):
         print >> sys.stderr, "Saving layers to", layersPath
         self._serializeLayers(kerasModel, layersPath)
         
-        learningRate = 0.001 #float(self.styles.get("lr", 0.001))
+        learningRate = int(parameters["lr"]) #0.001 #float(self.styles.get("lr", 0.001))
         print >> sys.stderr, "Using learning rate", learningRate
         optimizer = Adam(lr=learningRate)
         
@@ -143,14 +151,14 @@ class KerasClassifier(Classifier):
         kerasModel.summary()
         return kerasModel
     
-    def _fitModel(self, outDir, trainFeatures, trainClasses, develFeatures, develClasses):
+    def _fitModel(self, outDir, parameters, trainFeatures, trainClasses, develFeatures, develClasses):
         """
         Fits the compiled Keras model to the adjacency matrix examples. The model is trained on the
         train set, validated on the devel set and finally the devel set is predicted using the model.
         """        
         print >> sys.stderr, "Fitting model"
         
-        patience = 10 #int(self.styles.get("patience", 10))
+        patience = int(parameters["patience"]) #10 #int(self.styles.get("patience", 10))
         print >> sys.stderr, "Early stopping patience:", patience
         es_cb = EarlyStopping(monitor='val_loss', patience=patience, verbose=1)
         self.model = self.connection.getRemotePath(outDir + "/model.hdf5", True)
@@ -168,11 +176,11 @@ class KerasClassifier(Classifier):
 #             #sample_weight=self.arrays["train"]["mask"],
 #             callbacks=[es_cb, cp_cb])
         
-        self.kerasModel.fit_generator(generator=batch_generator(trainFeatures, trainClasses, 64),
-            epochs=1, 
+        self.kerasModel.fit_generator(generator=batch_generator(trainFeatures, trainClasses, int(parameters["batch_size"])),
+            epochs=int(parameters["epochs"]), 
             samples_per_epoch=trainFeatures.shape[0],
-            validation_data=batch_generator(develFeatures, develClasses, 64),
-            validation_steps=develFeatures.shape[0] / 64,
+            validation_data=batch_generator(develFeatures, develClasses, int(parameters["batch_size"])),
+            validation_steps=develFeatures.shape[0] / int(parameters["batch_size"]),
             callbacks=[es_cb, cp_cb])
     
     def _serializeLayers(self, kerasModel, filePath, verbose=False):
