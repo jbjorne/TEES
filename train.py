@@ -20,7 +20,7 @@ from Core.Model import Model
 from Detectors.StepSelector import StepSelector
 from Detectors.Preprocessor import Preprocessor
 from Detectors.StructureAnalyzer import StructureAnalyzer
-from Detectors.SingleStageDetector import SingleStageDetector
+from Detectors.EventDetector import EventDetector
 
 def train(output, task=None, detector=None, inputFiles=None, models=None, parse=None,
           processUnmerging=None, processModifiers=None, 
@@ -115,7 +115,7 @@ def train(output, task=None, detector=None, inputFiles=None, models=None, parse=
         print >> sys.stderr, "----------------------------------------------------"
         print >> sys.stderr, "------------------ Train Detector ------------------"
         print >> sys.stderr, "----------------------------------------------------"
-        if isinstance(detector, SingleStageDetector):
+        if not isinstance(detector, EventDetector):
             detector.train(inputFiles["train"], inputFiles["devel"], models["devel"], models["test"],
                            exampleStyles["examples"], classifierParams["examples"], parse, None, task,
                            fromStep=detectorSteps["TRAIN"], workDir="training")

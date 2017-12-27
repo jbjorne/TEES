@@ -469,3 +469,4 @@ class Preprocessor(ToolChain):
 #             preprocessor.setIntermediateFiles(True)
 #         #preprocessor.stepArgs("PARSE")["requireEntities"] = options.requireEntities
 #         preprocessor.process(options.input, options.output, options.parameters, model=None, fromStep=options.fromStep, toStep=options.toStep, omitSteps=options.omitSteps, logPath=options.logPath)
+
