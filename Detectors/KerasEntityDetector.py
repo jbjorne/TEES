@@ -2,6 +2,7 @@ import sys, os
 from Detector import Detector
 import itertools
 from ExampleBuilders.KerasExampleBuilder import KerasExampleBuilder
+from Core.SentenceGraph import getCorpusIterator
 import numpy as np
 import xml.etree.ElementTree as ET
 import Utils.ElementTreeUtils as ETUtils
@@ -27,6 +28,8 @@ from itertools import product
 from functools import partial
 from numpy import reshape
 from collections import defaultdict
+import types
+from Utils.ProgressCounter import ProgressCounter
 
 class KerasDetector(Detector):
     """
@@ -75,35 +78,130 @@ class KerasDetector(Detector):
         self.arrays = None
         self.exitState()
     
-#     def classifyToXML(self, data, model, exampleFileName=None, tag="", classifierModel=None, goldData=None, parse=None, recallAdjust=None, compressExamples=True, exampleStyle=None, useExistingExamples=False):
-#         model = self.openModel(model, "r")
-#         if parse == None:
-#             parse = self.getStr(self.tag+"parse", model)
-#         if useExistingExamples:
-#             assert exampleFileName != None
-#             assert os.path.exists(exampleFileName)
-#         if exampleFileName == None:
-#             exampleFileName = tag+self.tag+"examples"
-#             if compressExamples:
-#                 exampleFileName += ".gz"
-#         if not useExistingExamples:
-#             self.buildExamples(model, [data], [exampleFileName], [goldData], parse=parse, exampleStyle=exampleStyle)
-#         if classifierModel == None:
-#             classifierModel = model.get(self.tag+"classifier-model", defaultIfNotExist=None)
-#         #else:
-#         #    assert os.path.exists(classifierModel), classifierModel
-#         classifier = self.getClassifier(model.getStr(self.tag+"classifier-parameter", defaultIfNotExist=None))()
-#         classifier.classify(exampleFileName, tag+self.tag+"classifications", classifierModel, finishBeforeReturn=True)
-#         threshold = model.getStr(self.tag+"threshold", defaultIfNotExist=None, asType=float)
-#         predictions = ExampleUtils.loadPredictions(tag+self.tag+"classifications", recallAdjust, threshold=threshold)
-#         evaluator = self.evaluator.evaluate(exampleFileName, predictions, model.get(self.tag+"ids.classes"))
-#         #outputFileName = tag+"-"+self.tag+"pred.xml.gz"
-#         #exampleStyle = self.exampleBuilder.getParameters(model.getStr(self.tag+"example-style"))
-#         if exampleStyle == None:
-#             exampleStyle = Parameters.get(model.getStr(self.tag+"example-style")) # no checking, but these should already have passed the ExampleBuilder
-#         self.structureAnalyzer.load(model)
-#         return self.exampleWriter.write(exampleFileName, predictions, data, tag+self.tag+"pred.xml.gz", model.get(self.tag+"ids.classes"), parse, exampleStyle=exampleStyle, structureAnalyzer=self.structureAnalyzer)
+    ###########################################################################
+    # Example Generation
+    ###########################################################################
+    
+    def getElementCounts(self, filename):
+        if type(filename) in types.StringTypes:
+            return {}
+        print >> sys.stderr, "Counting elements:",
+        if filename.endswith(".gz"):
+            f = gzip.open(filename, "rt")
+        else:
+            f = open(filename, "rt")
+        counts = {"documents":0, "sentences":0}
+        for line in f:
+            if "<document" in line:
+                counts["documents"] += 1
+            elif "<sentence" in line:
+                counts["sentences"] += 1
+        f.close()
+        print >> sys.stderr, counts
+        return counts
         
+    def processCorpus(self, input, output, gold=None):
+        # Create intermediate paths if needed
+        if os.path.dirname(output) != "" and not os.path.exists(os.path.dirname(output)):
+            os.makedirs(os.path.dirname(output))
+        # Open output file
+        
+        # Build examples
+        self.exampleCount = 0
+        if type(input) in types.StringTypes:
+            self.elementCounts = self.getElementCounts(input)
+            self.progress = ProgressCounter(self.elementCounts.get("sentences"), "Build examples")
+        
+        removeIntersentenceInteractions = True
+        inputIterator = getCorpusIterator(input, None, self.parse, self.tokenization, removeIntersentenceInteractions=removeIntersentenceInteractions)            
+        goldIterator = []
+        if gold != None:
+            goldIterator = getCorpusIterator(gold, None, self.parse, self.tokenization, removeIntersentenceInteractions=removeIntersentenceInteractions)
+        for inputSentences, goldSentences in itertools.izip_longest(inputIterator, goldIterator, fillvalue=None):
+            if gold != None:
+                assert goldSentences != None and inputSentences != None
+            self.processDocument(inputSentences, goldSentences, outfile, structureAnalyzer=structureAnalyzer)
+        outfile.close()
+        self.progress.endUpdate()
+        
+        # Show statistics
+        print >> sys.stderr, "Examples built:", self.exampleCount
+        print >> sys.stderr, "Features:", len(self.featureSet.getNames())
+        print >> sys.stderr, "Classes:", len(self.classSet.getNames())
+        print >> sys.stderr, "Style:", Utils.Parameters.toString(self.getParameters(self.styles))
+        if self.exampleStats.getExampleCount() > 0:
+            self.exampleStats.printStats()
+    
+    def processDocument(self, sentences, goldSentences, outfile, structureAnalyzer=None):
+        #calculatePredictedRange(self, sentences)            
+        for i in range(len(sentences)):
+            sentence = sentences[i]
+            goldSentence = None
+            if goldSentences != None:
+                goldSentence = goldSentences[i]
+            self.progress.update(1, "Building examples ("+sentence.sentence.get("id")+"): ")
+            self.processSentence(sentence, outfile, goldSentence, structureAnalyzer=structureAnalyzer)
+    
+    def processSentence(self, sentence, outfile, goldSentence=None, structureAnalyzer=None):
+        # Process the sentence
+        if sentence.sentenceGraph != None:
+            self.exampleCount += self.buildExamplesFromGraph(sentence.sentenceGraph, outfile, goldSentence.sentenceGraph if goldSentence != None else None, structureAnalyzer=structureAnalyzer)
+
+    def buildExamplesFromGraph(self, sentenceGraph, outfile, goldGraph=None, structureAnalyzer=None):
+        """
+        Build one example for each token of the sentence
+        """       
+        exampleIndex = 0
+        
+        # determine (manually or automatically) the setting for whether sentences with no given entities should be skipped
+        buildForNameless = False
+        if structureAnalyzer and not structureAnalyzer.hasGroupClass("GIVEN", "ENTITY"): # no given entities points to no separate NER program being used
+            buildForNameless = True
+        if self.styles["build_for_nameless"]: # manually force the setting
+            buildForNameless = True
+        if self.styles["skip_for_nameless"]: # manually force the setting
+            buildForNameless = False
+        
+        # determine whether sentences with no given entities should be skipped
+        namedEntityHeadTokens = []
+        if not self.styles["names"]:
+            namedEntityCount = 0
+            for entity in sentenceGraph.entities:
+                if entity.get("given") == "True": # known data which can be used for features
+                    namedEntityCount += 1
+            namedEntityCountFeature = "nameCount_" + str(namedEntityCount)
+            # NOTE!!! This will change the number of examples and omit
+            # all triggers (positive and negative) from sentences which
+            # have no NE:s, possibly giving a too-optimistic performance
+            # value. Such sentences can still have triggers from intersentence
+            # interactions, but as such events cannot be recovered anyway,
+            # looking for these triggers would be pointless.
+            if namedEntityCount == 0 and not buildForNameless: # no names, no need for triggers
+                return 0 #[]
+            
+            if self.styles["pos_pairs"]:
+                namedEntityHeadTokens = self.getNamedEntityHeadTokens(sentenceGraph)
+        else:
+            for key in sentenceGraph.tokenIsName.keys():
+                sentenceGraph.tokenIsName[key] = False
+        
+        for i in range(len(sentenceGraph.tokens)):
+            token = sentenceGraph.tokens[i]
+
+            # CLASS
+            if len(sentenceGraph.tokenIsEntityHead[token]) > 0:
+                categoryName, entityIds = self.getMergedEntityType(sentenceGraph.tokenIsEntityHead[token])
+            else:
+                categoryName, entityIds = "neg", None
+            self.exampleStats.beginExample(categoryName)
+            
+            example = (sentenceGraph.getSentenceId()+".x"+str(exampleIndex), category, features, extra)
+            ExampleUtils.appendExamples([example], outfile)
+            exampleIndex += 1
+            self.exampleStats.endExample()
+        #return examples
+        return exampleIndex
+    
     ###########################################################################
     # Main Pipeline Steps
     ###########################################################################
@@ -172,29 +270,6 @@ class KerasDetector(Detector):
         print >> sys.stderr, "Defining model", (dimMatrix, dimFeatures, dimFeatures)
         metrics = ["accuracy"]
         
-        #m = self.kerasModel = Sequential()
-        #m.add(Dense(300, input_shape=(dimMatrix, dimMatrix, dimSourceFeatures)))
-        #m.add(Conv2D(dimTargetFeatures, (1, 1), activation='sigmoid', padding='same'))
-        #m.add(Conv2D(dimTargetFeatures, (1, 1), activation='sigmoid', padding='same', input_shape=(dimMatrix, dimMatrix, dimSourceFeatures)))
-
-   
-#         x = Input(shape=(dimMatrix, dimMatrix, dimSourceFeatures))
-#         reshaped_x = Reshape((dimMatrix * dimMatrix, dimSourceFeatures))(x)
-#         xx = TimeDistributed(Dense(dimTargetFeatures, activation="sigmoid"))(reshaped_x)
-#         reshaped_xx = Reshape((dimMatrix, dimMatrix, dimTargetFeatures))(xx)
-#         self.kerasModel = Model(x, reshaped_xx)
-        
-#         x = inputLayer = Input(shape=(dimMatrix, dimMatrix, dimSourceFeatures))
-#         #x = Conv2D(dimTargetFeatures, (1, 3), activation='relu', padding='same')(x)
-#         x = Reshape((dimMatrix * dimMatrix * dimSourceFeatures,))(x)
-#         x = Dense(1024)(x)
-#         x = Dense(dimMatrix * dimMatrix * dimSourceFeatures, activation="sigmoid")(x)
-#         x = Reshape((dimMatrix, dimMatrix, dimTargetFeatures))(x)
-#         #x = Conv2D(dimTargetFeatures, (1, 1), activation='sigmoid', padding='same')(x)
-#         #x = Dense(12)(x)
-#         #x = Dense(dimTargetFeatures, activation='sigmoid')(x)
-#         self.kerasModel = Model(inputLayer, x)
-        
         inputs = []
         if self.styles.get("wv") != None:
             # Features
@@ -257,257 +332,11 @@ class KerasDetector(Detector):
         print >> sys.stderr, "Using learning rate", learningRate
         optimizer = Adam(lr=learningRate)
         
-#         w_array = np.ones((dimLabels,dimLabels))
-#         labelIds = IdSet(filename=self.model.get(self.tag+"ids.classes"), locked=True)
-#         negLabelIds = set([labelIds.getId(x) for x in ["Eneg", "Ineg", "[out]"]])
-#         negWeight = 0.001
-#         for i in range(dimLabels):
-#             for j in range(dimLabels):
-#                 if i in negLabelIds and j in negLabelIds:
-#                     w_array[i, j] = negWeight
-#                     w_array[j, i] = negWeight
-#         print >> sys.stderr, "Loss weights:", w_array
-#         
-#         ncce = partial(w_categorical_crossentropy, weights=w_array)
-#         ncce.__name__ = "w_categorical_crossentropy"
-        
         print >> sys.stderr, "Compiling model"
         self.kerasModel.compile(optimizer=optimizer, loss="categorical_crossentropy", metrics=metrics, sample_weight_mode="temporal") #, metrics=['accuracy'])
         
         self.kerasModel.summary()
-        
-#         inputShape = x = Input(shape=(dimMatrix, dimMatrix, dimSourceFeatures))
-#         #x = Conv2D(32, (3, 3), activation='relu', padding='same')(x)
-#         #x = Conv2D(16, (5, 5), activation='relu', padding='same')(x)
-#         #x = Conv2D(8, (1, 9), activation='relu', padding='same')(x)
-#         #x = MaxPooling2D((1, 2), padding='same')(x)
-#         #x = Conv2D(32, (1, 1), padding='same')(x)
-#         #x = MaxPooling2D((1, 2), padding='same')(x)
-#         #x = Conv2D(16, (1, 1), padding='same')(x)
-#         #x = UpSampling2D((1, 2))(x)
-#         #x = Conv2D(32, (1, 1), padding='same')(x)
-#         #x = UpSampling2D((1, 2))(x)
-#         #x = Conv2D(64, (1, 1), padding='same')(x)
-#         x = Dense(300, activation='tanh')(x)
-#         #x = Conv2D(16, (5, 1), activation='relu', padding='same')(x)
-#         x = Conv2D(dimTargetFeatures, (1, 1), activation='sigmoid', padding='same')(x)
-#         x = Conv2D(dimTargetFeatures, (1, 1), activation='softmax', padding='same')(x)
-#         self.kerasModel = Model(inputShape, x)
-
-        
-#         x = inputShape = Input(shape=(dimMatrix, dimMatrix, dimSourceFeatures))
-#         #x = Conv2D(dimSourceFeatures, (1, 1), activation="relu", padding='same')(x)
-#         #x = Dense(dimSourceFeatures, activation="relu")(x)
-#         #x = Conv2D(dimSourceFeatures, (3, 3), padding='same')(x)
-#         x = Conv2D(32, (1, 3), padding='same')(x)
-#         x = MaxPooling2D((2, 2))(x)
-#         x = Conv2D(32, (3, 1), padding='same')(x)
-#         x = MaxPooling2D((2, 2))(x)
-#         x = UpSampling2D((2, 2))(x)
-#         x = UpSampling2D((2, 2))(x)
-#         #x = Dropout(0.5)(x)
-#         #x = Conv2D(16, (1, 1), padding='same')(x)
-#         #x = Conv2D(16, (1, 1), padding='same')(x)
-#         #x = MaxPooling2D((2, 2))(x)
-#         #x = Dense(18)(x)
-#         #x = Dense(128)(x)
-#         #x = Dense(dimTargetFeatures, activation='sigmoid')(x)
-#         x = Conv2D(dimTargetFeatures, (1, 1), activation='sigmoid', padding='same')(x)
-#         #x = UpSampling2D((2, 2))(x)
-#         #x = Activation('softmax')(x)
-#         self.kerasModel = Model(inputShape, x)
-#         self.kerasModel.compile(optimizer="adadelta", loss='categorical_crossentropy', metrics=['accuracy'])
-        
-#         x = Conv2D(4, (3, 3), activation='relu', padding='same')(inputShape)
-#         x = MaxPooling2D((2, 2))(x)
-#         x = Conv2D(4, (3, 3), activation='relu', padding='same')(x)
-#         x = UpSampling2D((2, 2))(x)
-#         x = Conv2D(dimTargetFeatures, (3, 3), activation='relu', padding='same')(x)
-#         self.kerasModel = Model(inputShape, x)
-#         self.kerasModel.compile(optimizer="adadelta", loss='categorical_crossentropy', metrics=['accuracy'])
-        
-#         kernel = 3
-#         encoding_layers = [
-#             Conv2D(16, (kernel, kernel), padding='same', input_shape=(dimMatrix, dimMatrix, dimSourceFeatures)),
-#             BatchNormalization(),
-#             Activation('relu'),
-#             Conv2D(64, (kernel, kernel), padding='same'),
-#             BatchNormalization(),
-#             Activation('relu'),
-#             MaxPooling2D()]
-#      
-#         decoding_layers = [
-#             UpSampling2D(),
-#             Conv2D(dimTargetFeatures, (kernel, kernel), padding='same'),
-#             BatchNormalization(),
-#             Activation('relu'),
-#             Conv2D(dimTargetFeatures, (kernel, kernel), padding='same'),
-#             BatchNormalization(),
-#             Activation('relu'),
-#             Conv2D(dimTargetFeatures, (kernel, kernel), padding='same'),
-#             BatchNormalization(),
-#             Activation('relu')]
-#          
-#         self.kerasModel = Sequential()
-#         for l in encoding_layers + decoding_layers:
-#             self.kerasModel.add(l)
-        
-#         kernel = (1, 9)
-#         size = (1, 2)
-#          
-#         encoding_layers = [
-#             Conv2D(64, kernel, padding='same', input_shape=(dimMatrix, dimMatrix, dimSourceFeatures)),
-#             #BatchNormalization(),
-#             Activation('relu'),
-#             Conv2D(64, kernel, padding='same'),
-#             #BatchNormalization(),
-#             Activation('relu'),
-#             MaxPooling2D(pool_size=size),
-#          
-#             Conv2D(128, kernel, padding='same'),
-#             #BatchNormalization(),
-#             Activation('relu'),
-#             Conv2D(128, kernel, padding='same'),
-#             #BatchNormalization(),
-#             Activation('relu'),
-#             MaxPooling2D(pool_size=size),
-#          
-#             Conv2D(256, kernel, padding='same'),
-#             #BatchNormalization(),
-#             Activation('relu'),
-#             Conv2D(256, kernel, padding='same'),
-#             #BatchNormalization(),
-#             Activation('relu'),
-#             Conv2D(256, kernel, padding='same'),
-#             #BatchNormalization(),
-#             Activation('relu'),
-#             MaxPooling2D(pool_size=size),
-#          
-# #             Conv2D(512, kernel, kernel, border_mode='same'),
-# #             BatchNormalization(),
-# #             Activation('relu'),
-# #             Conv2D(512, kernel, kernel, border_mode='same'),
-# #             BatchNormalization(),
-# #             Activation('relu'),
-# #             Conv2D(512, kernel, kernel, border_mode='same'),
-# #             BatchNormalization(),
-# #             Activation('relu'),
-# #             MaxPooling2D(),
-# #         
-# #             Conv2D(512, kernel, kernel, border_mode='same'),
-# #             BatchNormalization(),
-# #             Activation('relu'),
-# #             Conv2D(512, kernel, kernel, border_mode='same'),
-# #             BatchNormalization(),
-# #             Activation('relu'),
-# #             Conv2D(512, kernel, kernel, border_mode='same'),
-# #             BatchNormalization(),
-# #             Activation('relu'),
-# #             MaxPooling2D(),
-#         ]
-#          
-#         self.kerasModel = Sequential()
-#         self.kerasModel.encoding_layers = encoding_layers
-#          
-#         for l in self.kerasModel.encoding_layers:
-#             self.kerasModel.add(l)
-#          
-#         decoding_layers = [
-# #             UpSampling2D(),
-# #             Conv2D(512, kernel, kernel, border_mode='same'),
-# #             BatchNormalization(),
-# #             Activation('relu'),
-# #             Conv2D(512, kernel, kernel, border_mode='same'),
-# #             BatchNormalization(),
-# #             Activation('relu'),
-# #             Conv2D(512, kernel, kernel, border_mode='same'),
-# #             BatchNormalization(),
-# #             Activation('relu'),
-# #         
-# #             UpSampling2D(),
-# #             Conv2D(512, kernel, kernel, border_mode='same'),
-# #             BatchNormalization(),
-# #             Activation('relu'),
-# #             Conv2D(512, kernel, kernel, border_mode='same'),
-# #             BatchNormalization(),
-# #             Activation('relu'),
-# #             Conv2D(256, kernel, kernel, border_mode='same'),
-# #             BatchNormalization(),
-# #             Activation('relu'),
-#          
-#             UpSampling2D(size=size),
-#             Conv2D(256, kernel, padding='same'),
-#             #BatchNormalization(),
-#             Activation('relu'),
-#             Conv2D(256, kernel, padding='same'),
-#             #BatchNormalization(),
-#             Activation('relu'),
-#             Conv2D(128, kernel, padding='same'),
-#             #BatchNormalization(),
-#             Activation('relu'),
-#          
-#             UpSampling2D(size=size),
-#             Conv2D(128, kernel, padding='same'),
-#             #BatchNormalization(),
-#             Activation('relu'),
-#             Conv2D(64, kernel, padding='same'),
-#             #BatchNormalization(),
-#             Activation('relu'),
-#          
-#             UpSampling2D(size=size),
-#             Conv2D(64, kernel, padding='same'),
-#             #BatchNormalization(),
-#             Activation('relu'),
-#             Conv2D(dimTargetFeatures, (1, 1), padding='valid'),
-#             #BatchNormalization(),
-#         ]
-#         self.kerasModel.decoding_layers = decoding_layers
-#         for l in self.kerasModel.decoding_layers:
-#             self.kerasModel.add(l)
-#           
-#         self.kerasModel.add(Activation('softmax'))
-#           
-#         print >> sys.stderr, "Compiling model"
-#         optimizer = SGD(lr=0.001, momentum=0.9, decay=0.0005, nesterov=False)
-#         self.kerasModel.compile(optimizer=optimizer, loss='categorical_crossentropy', metrics=['accuracy'])
-        
-        # Various attempts at neural networks: ##########################################        
-        
-        #         x = Conv2D(8, (4, 4), activation='relu', padding='same')(inputShape)
-        #         #x = UpSampling2D((2, 2))(x)
-        #         decoded = Conv2D(dimTargetFeatures, (3, 3), activation='sigmoid', padding='same')(x)
-         
-        #         x = Conv2D(16, (3, 3), activation='relu', padding='same')(inputShape)
-        #         x = MaxPooling2D((2, 2), padding='same')(x)
-        #         x = Conv2D(8, (3, 3), activation='relu', padding='same')(x)
-        #         x = MaxPooling2D((2, 2), padding='same')(x)
-        #         x = Conv2D(8, (3, 3), activation='relu', padding='same')(x)
-        #         encoded = MaxPooling2D((2, 2), padding='same')(x)
-        #          
-        #         # at this point the representation is (4, 4, 8) i.e. 128-dimensional
-        #          
-        #         x = Conv2D(8, (3, 3), activation='relu', padding='same')(encoded)
-        #         x = UpSampling2D((2, 2))(x)
-        #         x = Conv2D(8, (3, 3), activation='relu', padding='same')(x)
-        #         x = UpSampling2D((2, 2))(x)
-        #         x = Conv2D(16, (3, 3), activation='relu')(x)
-        #         x = UpSampling2D((2, 2))(x)
-        #         decoded = Conv2D(dimFeatures, (3, 3), activation='sigmoid', padding='same')(x)
-        
-        
-        #x = Conv2D(16, (3, 3), padding='same')(inputShape)
-        #output = Conv2D(dimTargetFeatures, (1, 1), activation='tanh', padding='same')(x)
-        
-        #x = Dense(100)(inputShape)
-        #x = Dense(18)(x)
-        
-        #x = Conv2D(100, (5, 5), padding='same')(inputShape)
-        #x = Conv2D(100, (3, 3), padding='same')(x)
-        #x = Conv2D(100, (2, 2), padding='same')(x)
-        #x = Conv2D(dimTargetFeatures, (1, 1), padding='same')(x)
-        
-        #self.kerasModel.compile(optimizer='adadelta', loss='binary_crossentropy', metrics=['accuracy'])
-    
+   
     def fitModel(self, exampleFiles):
         """
         Fits the compiled Keras model to the adjacency matrix examples. The model is trained on the
