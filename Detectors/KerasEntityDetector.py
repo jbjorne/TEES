@@ -73,6 +73,7 @@ class KerasEntityDetector(Detector):
         exampleFiles = {"devel":self.workDir+self.tag+"opt-examples.json.gz", "train":self.workDir+self.tag+"train-examples.json.gz"}
         if self.checkStep("EXAMPLES"): # Generate the adjacency matrices
             self.buildExamples(self.model, ["devel", "train"], [optData, trainData], [exampleFiles["devel"], exampleFiles["train"]], saveIdsToModel=True)
+        print self.examples["devel"][0:10]
         sys.exit()
         if self.checkStep("MODEL"): # Define and train the Keras model
             self.defineModel()
@@ -104,14 +105,14 @@ class KerasEntityDetector(Detector):
         print >> sys.stderr, counts
         return counts
         
-    def processCorpus(self, input, output, gold=None):
+    def processCorpus(self, input, examples, gold=None):
         self.exampleStats = ExampleStats()
-        print >> sys.stderr, "Saving examples to", output
+        #print >> sys.stderr, "Saving examples to", output
         # Create intermediate paths if needed
-        if os.path.dirname(output) != "" and not os.path.exists(os.path.dirname(output)):
-            os.makedirs(os.path.dirname(output))
+        #if os.path.dirname(output) != "" and not os.path.exists(os.path.dirname(output)):
+        #    os.makedirs(os.path.dirname(output))
         # Open output file
-        outfile = gzip.open(output, "wt") if output.endswith(".gz") else open(output, "wt")
+        #outfile = gzip.open(output, "wt") if output.endswith(".gz") else open(output, "wt")
         
         # Build examples
         self.exampleCount = 0
@@ -127,8 +128,8 @@ class KerasEntityDetector(Detector):
         for inputSentences, goldSentences in itertools.izip_longest(inputIterator, goldIterator, fillvalue=None):
             if gold != None:
                 assert goldSentences != None and inputSentences != None
-            self.processDocument(inputSentences, goldSentences, outfile)
-        outfile.close()
+            self.processDocument(inputSentences, goldSentences, examples)
+        #outfile.close()
         self.progress.endUpdate()
         
         # Show statistics
@@ -139,7 +140,7 @@ class KerasEntityDetector(Detector):
         if self.exampleStats.getExampleCount() > 0:
             self.exampleStats.printStats()
     
-    def processDocument(self, sentences, goldSentences, outfile, structureAnalyzer=None):
+    def processDocument(self, sentences, goldSentences, examples):
         #calculatePredictedRange(self, sentences)            
         for i in range(len(sentences)):
             sentence = sentences[i]
@@ -147,14 +148,14 @@ class KerasEntityDetector(Detector):
             if goldSentences != None:
                 goldSentence = goldSentences[i]
             self.progress.update(1, "Building examples ("+sentence.sentence.get("id")+"): ")
-            self.processSentence(sentence, outfile, goldSentence)
+            self.processSentence(sentence, examples, goldSentence)
     
-    def processSentence(self, sentence, outfile, goldSentence=None):
+    def processSentence(self, sentence, examples, goldSentence=None):
         # Process the sentence
         if sentence.sentenceGraph != None:
-            self.exampleCount += self.buildExamplesFromGraph(sentence.sentenceGraph, outfile, goldSentence.sentenceGraph if goldSentence != None else None)
+            self.exampleCount += self.buildExamplesFromGraph(sentence.sentenceGraph, examples, goldSentence.sentenceGraph if goldSentence != None else None)
 
-    def buildExamplesFromGraph(self, sentenceGraph, outfile, goldGraph=None):
+    def buildExamplesFromGraph(self, sentenceGraph, examples, goldGraph=None):
         """
         Build one example for each token of the sentence
         """       
@@ -192,7 +193,7 @@ class KerasEntityDetector(Detector):
             for key in sentenceGraph.tokenIsName.keys():
                 sentenceGraph.tokenIsName[key] = False
         
-        outfile.write("[")
+        #outfile.write("[")
         for i in range(len(sentenceGraph.tokens)):
             token = sentenceGraph.tokens[i]
 
@@ -208,14 +209,14 @@ class KerasEntityDetector(Detector):
                     self.embeddingIndex[text] = len(self.embeddings)
             vectorIndex = self.embeddingIndex[text] if text in self.embeddingIndex else self.embeddingIndex["[out]"]
             
-            example = {"id":sentenceGraph.getSentenceId()+".x"+str(exampleIndex), "labels":labels, "features":{"index":vectorIndex}} #, "extra":{"eIds":entityIds}}
-            outfile.write("\n")
-            if exampleIndex > 0:
-                outfile.write(",")
-            outfile.write(json.dumps(example))
+            examples.append({"id":sentenceGraph.getSentenceId()+".x"+str(exampleIndex), "labels":labels, "features":{"index":vectorIndex}}) #, "extra":{"eIds":entityIds}}
+            #outfile.write("\n")
+            #if exampleIndex > 0:
+            #    outfile.write(",")
+            #outfile.write(json.dumps(example))
             exampleIndex += 1
             self.exampleStats.endExample()
-        outfile.write("\n]")
+        #outfile.write("\n]")
         #return examples
         return exampleIndex
     
@@ -261,9 +262,10 @@ class KerasEntityDetector(Detector):
         self.embeddings = [None]
         self.embeddingIndex = {"[out]":0}
         # Make example for all input files
+        self.examples = {x:[] for x in setNames}
         for setName, data, output, gold in itertools.izip_longest(setNames, datas, outputs, golds, fillvalue=None):
-            print >> sys.stderr, "Example generation for set", setName, "to file", output  
-            self.processCorpus(data, output, gold)          
+            print >> sys.stderr, "Example generation for set", setName, "to file", output 
+            self.processCorpus(data, self.examples[setName], gold)          
         if hasattr(self.structureAnalyzer, "typeMap") and model.mode != "r":
             print >> sys.stderr, "Saving StructureAnalyzer.typeMap"
             self.structureAnalyzer.save(model)
