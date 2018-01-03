@@ -31,6 +31,7 @@ from collections import defaultdict
 import types
 from Utils.ProgressCounter import ProgressCounter
 from ExampleBuilders.ExampleStats import ExampleStats
+from Utils.Libraries.wvlib_light.lwvlib import WV
 
 class KerasEntityDetector(Detector):
     """
@@ -109,10 +110,7 @@ class KerasEntityDetector(Detector):
         if os.path.dirname(output) != "" and not os.path.exists(os.path.dirname(output)):
             os.makedirs(os.path.dirname(output))
         # Open output file
-        if output.endswith(".gz"):
-            outfile = gzip.open(output, "wt")
-        else:
-            outfile = open(output, "wt")
+        outfile = gzip.open(output, "wt") if output.endswith(".gz") else open(output, "wt")
         
         # Build examples
         self.exampleCount = 0
@@ -243,6 +241,14 @@ class KerasEntityDetector(Detector):
             parse = self.getStr(self.tag+"parse", model)
         self.structureAnalyzer.load(model)
         modelChanged = False
+        # Load word vectors
+        self.wv = None
+        if "wordvector" in self.styles and isinstance(self.styles["wordvector"], basestring):
+            wordVectorPath = self.styles["wordvector"]
+        else:
+            wordVectorPath = Settings.W2VFILE
+        print >> sys.stderr, "Loading word vectors from", wordVectorPath
+        self.wv = WV.load(wordVectorPath, 1000, 10000)
         # Make example for all input files
         for setName, data, output, gold in itertools.izip_longest(setNames, datas, outputs, golds, fillvalue=None):
             print >> sys.stderr, "Example generation for set", setName, "to file", output  
