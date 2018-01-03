@@ -9,6 +9,7 @@ import Utils.ElementTreeUtils as ETUtils
 from Core.IdSet import IdSet
 import Utils.Parameters
 import gzip
+from collections import OrderedDict
 import json
 from keras.layers import Input, Dense, Conv2D, MaxPooling2D, UpSampling2D
 from keras.models import Model, Sequential, load_model
@@ -199,7 +200,13 @@ class KerasEntityDetector(Detector):
             labels, entityIds = self.getEntityTypes(sentenceGraph.tokenIsEntityHead[token])
             self.exampleStats.beginExample(",".join(labels))
             
-            example = {"id":sentenceGraph.getSentenceId()+".x"+str(exampleIndex), "labels":labels, "features":{}, "extra":{"eIds":entityIds}}
+            text = token.get("text").lower()
+            if text not in self.embeddingIndex:
+                self.embeddings.append(self.wv.w_to_normv(text))
+                self.embeddingIndex[text] = len(self.embeddings)
+            vectorIndex = self.embeddingIndex[text]
+            
+            example = {"id":sentenceGraph.getSentenceId()+".x"+str(exampleIndex), "labels":labels, "features":{"index":vectorIndex}} #, "extra":{"eIds":entityIds}}
             outfile.write("\n")
             if exampleIndex > 0:
                 outfile.write(",")
@@ -249,6 +256,8 @@ class KerasEntityDetector(Detector):
             wordVectorPath = Settings.W2VFILE
         print >> sys.stderr, "Loading word vectors from", wordVectorPath
         self.wv = WV.load(wordVectorPath, 1000, 10000)
+        self.embeddings = []
+        self.embeddingIndex = {}
         # Make example for all input files
         for setName, data, output, gold in itertools.izip_longest(setNames, datas, outputs, golds, fillvalue=None):
             print >> sys.stderr, "Example generation for set", setName, "to file", output  
