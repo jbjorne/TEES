@@ -30,6 +30,7 @@ from numpy import reshape
 from collections import defaultdict
 import types
 from Utils.ProgressCounter import ProgressCounter
+from ExampleBuilders.ExampleStats import ExampleStats
 
 class KerasEntityDetector(Detector):
     """
@@ -102,6 +103,8 @@ class KerasEntityDetector(Detector):
         return counts
         
     def processCorpus(self, input, output, gold=None):
+        self.exampleStats = ExampleStats()
+        print >> sys.stderr, "Saving examples to", output
         # Create intermediate paths if needed
         if os.path.dirname(output) != "" and not os.path.exists(os.path.dirname(output)):
             os.makedirs(os.path.dirname(output))
@@ -131,9 +134,9 @@ class KerasEntityDetector(Detector):
         
         # Show statistics
         print >> sys.stderr, "Examples built:", self.exampleCount
-        print >> sys.stderr, "Features:", len(self.featureSet.getNames())
-        print >> sys.stderr, "Classes:", len(self.classSet.getNames())
-        print >> sys.stderr, "Style:", Utils.Parameters.toString(self.getParameters(self.styles))
+        #print >> sys.stderr, "Features:", len(self.featureSet.getNames())
+        #print >> sys.stderr, "Classes:", len(self.classSet.getNames())
+        #print >> sys.stderr, "Style:", Utils.Parameters.toString(self.getParameters(self.styles))
         if self.exampleStats.getExampleCount() > 0:
             self.exampleStats.printStats()
     
@@ -145,12 +148,12 @@ class KerasEntityDetector(Detector):
             if goldSentences != None:
                 goldSentence = goldSentences[i]
             self.progress.update(1, "Building examples ("+sentence.sentence.get("id")+"): ")
-            self.processSentence(sentence, outfile, goldSentence, structureAnalyzer=structureAnalyzer)
+            self.processSentence(sentence, outfile, goldSentence)
     
     def processSentence(self, sentence, outfile, goldSentence=None):
         # Process the sentence
         if sentence.sentenceGraph != None:
-            self.exampleCount += self.buildExamplesFromGraph(sentence.sentenceGraph, outfile, goldSentence.sentenceGraph if goldSentence != None else None, structureAnalyzer=structureAnalyzer)
+            self.exampleCount += self.buildExamplesFromGraph(sentence.sentenceGraph, outfile, goldSentence.sentenceGraph if goldSentence != None else None)
 
     def buildExamplesFromGraph(self, sentenceGraph, outfile, goldGraph=None):
         """
@@ -162,14 +165,14 @@ class KerasEntityDetector(Detector):
         buildForNameless = False
         if self.structureAnalyzer and not self.structureAnalyzer.hasGroupClass("GIVEN", "ENTITY"): # no given entities points to no separate NER program being used
             buildForNameless = True
-        if self.styles["build_for_nameless"]: # manually force the setting
+        if self.styles.get("build_for_nameless"): # manually force the setting
             buildForNameless = True
-        if self.styles["skip_for_nameless"]: # manually force the setting
+        if self.styles.get("skip_for_nameless"): # manually force the setting
             buildForNameless = False
         
         # determine whether sentences with no given entities should be skipped
         namedEntityHeadTokens = []
-        if not self.styles["names"]:
+        if not self.styles.get("names"):
             namedEntityCount = 0
             for entity in sentenceGraph.entities:
                 if entity.get("given") == "True": # known data which can be used for features
@@ -184,7 +187,7 @@ class KerasEntityDetector(Detector):
             if namedEntityCount == 0 and not buildForNameless: # no names, no need for triggers
                 return 0 #[]
             
-            if self.styles["pos_pairs"]:
+            if self.styles.get("pos_pairs"):
                 namedEntityHeadTokens = self.getNamedEntityHeadTokens(sentenceGraph)
         else:
             for key in sentenceGraph.tokenIsName.keys():
@@ -195,13 +198,10 @@ class KerasEntityDetector(Detector):
             token = sentenceGraph.tokens[i]
 
             # CLASS
-            if len(sentenceGraph.tokenIsEntityHead[token]) > 0:
-                categoryName, entityIds = self.getMergedEntityType(sentenceGraph.tokenIsEntityHead[token])
-            else:
-                categoryName, entityIds = "neg", None
-            self.exampleStats.beginExample(categoryName)
+            labels, entityIds = self.getEntityTypes(sentenceGraph.tokenIsEntityHead[token])
+            self.exampleStats.beginExample(",".join(labels))
             
-            example = {"id":sentenceGraph.getSentenceId()+".x"+str(exampleIndex), "labels":categoryName.split("---"), "features":{}, "extra":{"eIds":entityIds}}
+            example = {"id":sentenceGraph.getSentenceId()+".x"+str(exampleIndex), "labels":labels, "features":{}, "extra":{"eIds":entityIds}}
             outfile.write("\n")
             if exampleIndex > 0:
                 outfile.write(",")
@@ -211,6 +211,22 @@ class KerasEntityDetector(Detector):
         outfile.write("\n]")
         #return examples
         return exampleIndex
+    
+    def getEntityTypes(self, entities):
+        types = set()
+        entityIds = set()
+        for entity in entities:
+            eType = entity.get("type")
+            if entity.get("given") == "True" and self.styles.get("all_tokens"):
+                continue
+            if eType == "Entity" and self.styles.get("genia_task1"):
+                continue
+            else:
+                types.add(eType)
+                entityIds.add(entity.get("id"))
+        if len(types) == 0:
+            types.add("neg")
+        return sorted(types), sorted(entityIds)
     
     ###########################################################################
     # Main Pipeline Steps
