@@ -206,7 +206,7 @@ class KerasEntityDetector(Detector):
                 if vector is not None:
                     self.embeddings.append(self.wv.w_to_normv(text))
                     self.embeddingIndex[text] = len(self.embeddings)
-            vectorIndex = self.embeddingIndex[text] if text in self.embeddingIndex else -1
+            vectorIndex = self.embeddingIndex[text] if text in self.embeddingIndex else self.embeddingIndex["[out]"]
             
             example = {"id":sentenceGraph.getSentenceId()+".x"+str(exampleIndex), "labels":labels, "features":{"index":vectorIndex}} #, "extra":{"eIds":entityIds}}
             outfile.write("\n")
@@ -258,8 +258,8 @@ class KerasEntityDetector(Detector):
             wordVectorPath = Settings.W2VFILE
         print >> sys.stderr, "Loading word vectors from", wordVectorPath
         self.wv = WV.load(wordVectorPath, 1000, 10000)
-        self.embeddings = []
-        self.embeddingIndex = {}
+        self.embeddings = [None]
+        self.embeddingIndex = {"[out]":0}
         # Make example for all input files
         for setName, data, output, gold in itertools.izip_longest(setNames, datas, outputs, golds, fillvalue=None):
             print >> sys.stderr, "Example generation for set", setName, "to file", output  
