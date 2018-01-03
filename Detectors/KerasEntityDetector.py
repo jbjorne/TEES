@@ -31,7 +31,7 @@ from collections import defaultdict
 import types
 from Utils.ProgressCounter import ProgressCounter
 
-class KerasDetector(Detector):
+class KerasEntityDetector(Detector):
     """
     The KerasDetector replaces the default SVM-based learning with a pipeline where
     sentences from the XML corpora are converted into adjacency matrix examples which
@@ -42,7 +42,7 @@ class KerasDetector(Detector):
         Detector.__init__(self)
         self.STATE_COMPONENT_TRAIN = "COMPONENT_TRAIN"
         self.tag = "keras-"
-        self.exampleBuilder = KerasExampleBuilder
+        self.exampleBuilder = None #KerasExampleBuilder
         self.matrices = None
         self.arrays = None
     
@@ -70,6 +70,7 @@ class KerasDetector(Detector):
         exampleFiles = {"devel":self.workDir+self.tag+"opt-examples.json.gz", "train":self.workDir+self.tag+"train-examples.json.gz"}
         if self.checkStep("EXAMPLES"): # Generate the adjacency matrices
             self.buildExamples(self.model, ["devel", "train"], [optData, trainData], [exampleFiles["devel"], exampleFiles["train"]], saveIdsToModel=True)
+        sys.exit()
         if self.checkStep("MODEL"): # Define and train the Keras model
             self.defineModel()
             self.fitModel(exampleFiles)
@@ -105,6 +106,10 @@ class KerasDetector(Detector):
         if os.path.dirname(output) != "" and not os.path.exists(os.path.dirname(output)):
             os.makedirs(os.path.dirname(output))
         # Open output file
+        if output.endswith(".gz"):
+            outfile = gzip.open(output, "wt")
+        else:
+            outfile = open(output, "wt")
         
         # Build examples
         self.exampleCount = 0
@@ -120,7 +125,7 @@ class KerasDetector(Detector):
         for inputSentences, goldSentences in itertools.izip_longest(inputIterator, goldIterator, fillvalue=None):
             if gold != None:
                 assert goldSentences != None and inputSentences != None
-            self.processDocument(inputSentences, goldSentences, outfile, structureAnalyzer=structureAnalyzer)
+            self.processDocument(inputSentences, goldSentences, outfile)
         outfile.close()
         self.progress.endUpdate()
         
@@ -142,12 +147,12 @@ class KerasDetector(Detector):
             self.progress.update(1, "Building examples ("+sentence.sentence.get("id")+"): ")
             self.processSentence(sentence, outfile, goldSentence, structureAnalyzer=structureAnalyzer)
     
-    def processSentence(self, sentence, outfile, goldSentence=None, structureAnalyzer=None):
+    def processSentence(self, sentence, outfile, goldSentence=None):
         # Process the sentence
         if sentence.sentenceGraph != None:
             self.exampleCount += self.buildExamplesFromGraph(sentence.sentenceGraph, outfile, goldSentence.sentenceGraph if goldSentence != None else None, structureAnalyzer=structureAnalyzer)
 
-    def buildExamplesFromGraph(self, sentenceGraph, outfile, goldGraph=None, structureAnalyzer=None):
+    def buildExamplesFromGraph(self, sentenceGraph, outfile, goldGraph=None):
         """
         Build one example for each token of the sentence
         """       
@@ -155,7 +160,7 @@ class KerasDetector(Detector):
         
         # determine (manually or automatically) the setting for whether sentences with no given entities should be skipped
         buildForNameless = False
-        if structureAnalyzer and not structureAnalyzer.hasGroupClass("GIVEN", "ENTITY"): # no given entities points to no separate NER program being used
+        if self.structureAnalyzer and not self.structureAnalyzer.hasGroupClass("GIVEN", "ENTITY"): # no given entities points to no separate NER program being used
             buildForNameless = True
         if self.styles["build_for_nameless"]: # manually force the setting
             buildForNameless = True
@@ -185,6 +190,7 @@ class KerasDetector(Detector):
             for key in sentenceGraph.tokenIsName.keys():
                 sentenceGraph.tokenIsName[key] = False
         
+        outfile.write("[")
         for i in range(len(sentenceGraph.tokens)):
             token = sentenceGraph.tokens[i]
 
@@ -195,10 +201,14 @@ class KerasDetector(Detector):
                 categoryName, entityIds = "neg", None
             self.exampleStats.beginExample(categoryName)
             
-            example = (sentenceGraph.getSentenceId()+".x"+str(exampleIndex), category, features, extra)
-            ExampleUtils.appendExamples([example], outfile)
+            example = {"id":sentenceGraph.getSentenceId()+".x"+str(exampleIndex), "labels":categoryName.split("---"), "features":{}, "extra":{"eIds":entityIds}}
+            outfile.write("\n")
+            if exampleIndex > 0:
+                outfile.write(",")
+            outfile.write(json.dumps(example))
             exampleIndex += 1
             self.exampleStats.endExample()
+        outfile.write("\n]")
         #return examples
         return exampleIndex
     
@@ -216,31 +226,11 @@ class KerasDetector(Detector):
         if parse == None:
             parse = self.getStr(self.tag+"parse", model)
         self.structureAnalyzer.load(model)
-        self.exampleBuilder.structureAnalyzer = self.structureAnalyzer
-        self.matrices = {} # For the Python-dictionary matrices generated by KerasExampleBuilder
         modelChanged = False
         # Make example for all input files
         for setName, data, output, gold in itertools.izip_longest(setNames, datas, outputs, golds, fillvalue=None):
-            print >> sys.stderr, "Example generation for set", setName, "to file", output
-            if saveIdsToModel:
-                modelChanged = True
-            builder = self.exampleBuilder.run(data, output, parse, None, exampleStyle, model.get(self.tag+"ids.classes", 
-                True), model.get(self.tag+"ids.features", True), gold, False, saveIdsToModel,
-                structureAnalyzer=self.structureAnalyzer)
-            model.addStr("dimFeatures", str(len(builder.featureSet.Ids)))
-            model.addStr("dimLabels", str(len(builder.classSet.Ids)))
-            model.addStr("dimMatrix", str(builder.dimMatrix))
-            examples = {"features":builder.featureMatrices,
-                        "embeddings":builder.embeddingMatrices, 
-                        "labels":builder.labelMatrices, 
-                        "tokens":builder.tokenLists, 
-                        "setName":setName}
-            print >> sys.stderr, "Saving examples to", output
-            self.saveJSON(output, examples)
-            self.matrices[setName] = examples
-            if "html" in self.styles:
-                self.matricesToHTML(model, self.matrices[setName], output + ".html", int(self.styles["html"]))
-                    
+            print >> sys.stderr, "Example generation for set", setName, "to file", output  
+            self.processCorpus(data, output, gold)          
         if hasattr(self.structureAnalyzer, "typeMap") and model.mode != "r":
             print >> sys.stderr, "Saving StructureAnalyzer.typeMap"
             self.structureAnalyzer.save(model)
