@@ -202,9 +202,11 @@ class KerasEntityDetector(Detector):
             
             text = token.get("text").lower()
             if text not in self.embeddingIndex:
-                self.embeddings.append(self.wv.w_to_normv(text))
-                self.embeddingIndex[text] = len(self.embeddings)
-            vectorIndex = self.embeddingIndex[text]
+                vector = self.wv.w_to_normv(text)
+                if vector is not None:
+                    self.embeddings.append(self.wv.w_to_normv(text))
+                    self.embeddingIndex[text] = len(self.embeddings)
+            vectorIndex = self.embeddingIndex[text] if text in self.embeddingIndex else -1
             
             example = {"id":sentenceGraph.getSentenceId()+".x"+str(exampleIndex), "labels":labels, "features":{"index":vectorIndex}} #, "extra":{"eIds":entityIds}}
             outfile.write("\n")
