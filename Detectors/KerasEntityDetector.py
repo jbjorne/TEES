@@ -369,8 +369,8 @@ class KerasEntityDetector(Detector):
                 predictions[i][j] = 1 if predictions[i][j] > 0.5 else 0
         print predictions[0]
         scores = sklearn.metrics.precision_recall_fscore_support(labels["devel"], predictions, average=None)
-        for score in range(len(scores)):
-            print mlb.classes_[i], score
+        for i in range(len(mlb.classes_)):
+            print mlb.classes_[i], "prfs =", (scores[0][i], scores[1][i], scores[2][i], scores[3][i]) 
         #for prediction, gold in predictions, labels["devel"]:
         #    print prediction
         self.model.save()
