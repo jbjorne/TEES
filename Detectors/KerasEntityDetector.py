@@ -303,8 +303,8 @@ class KerasEntityDetector(Detector):
                 for label in example["labels"]:
                     labelSet.add(label)
         
-        x = inputLayer = Input(shape=(1,), dtype='int32')
-        Embedding(len(self.embeddings[0]), 
+        x = inputLayer = Input(shape=(1,))
+        Embedding(len(self.embeddings), 
                   self.embeddings[0].size, 
                   weights=[embedding_matrix], 
                   input_length=1,
