@@ -30,6 +30,7 @@ from functools import partial
 from numpy import reshape
 from collections import defaultdict
 import types
+import sklearn.metrics
 from Utils.ProgressCounter import ProgressCounter
 from ExampleBuilders.ExampleStats import ExampleStats
 from Utils.Libraries.wvlib_light.lwvlib import WV
@@ -337,7 +338,7 @@ class KerasEntityDetector(Detector):
             labels[dataSet] = [x["labels"] for x in self.examples[dataSet]]
         mlb.fit_transform(labels["train"] + labels["devel"])
         for dataSet in ("train", "devel"):
-            labels[dataSet] = mlb.transform(labels[dataSet])
+            labels[dataSet] = numpy.array(mlb.transform(labels[dataSet]))
         
         print >> sys.stderr, "Vectorizing features"
         features = {}
@@ -360,7 +361,18 @@ class KerasEntityDetector(Detector):
         bestModelPath = self.model.get(self.tag + "model.hdf5", True) 
         print >> sys.stderr, "Predicting devel examples"
         self.kerasModel = load_model(bestModelPath)
-        predictions = self.kerasModel.predict(self.arrays["devel"], 128, 1)
+        predictions = self.kerasModel.predict(features["devel"], 64, 1)
+        print >> sys.stderr, mlb.classes_
+        print labels["devel"][0]
+        for i in range(len(predictions)):
+            for j in range(len(predictions[i])):
+                predictions[i][j] = 1 if predictions[i][j] > 0.5 else 0
+        print predictions[0]
+        scores = sklearn.metrics.precision_recall_fscore_support(labels["devel"], predictions, average=None)
+        for score in range(len(scores)):
+            print mlb.classes_[i], score
+        #for prediction, gold in predictions, labels["devel"]:
+        #    print prediction
         self.model.save()
         
         # For now the training ends here, later the predicted matrices should be converted back to XML events
