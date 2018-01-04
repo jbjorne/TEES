@@ -348,11 +348,11 @@ class KerasEntityDetector(Detector):
         print >> sys.stderr, "Labels:", mlb.classes_
         labelWeights = {}
         for i in range(len(mlb.classes_)):
-            labelWeights[i] = 1.0 if mlb.classes_[i] != "neg" else 0.01
+            labelWeights[i] = 1.0 if mlb.classes_[i] != "neg" else 0.005
         print >> sys.stderr, "Label weights:", labelWeights
         #print >> sys.stderr, compute_sample_weight("balanced", [{i:x[i] for i in x} for x in labels["train"]])
-        labelWeights = {x[0]:x[1] for x in enumerate(compute_class_weight("balanced", np.unique(labels["train"]), labels["train"]))}
-        print >> sys.stderr, "Label weights:", labelWeights
+        #labelWeights = {x[0]:x[1] for x in enumerate(compute_class_weight("balanced", np.unique(labels["train"]), labels["train"]))}
+        #print >> sys.stderr, "Label weights:", labelWeights
         
         print >> sys.stderr, "Vectorizing features"
         features = {}
