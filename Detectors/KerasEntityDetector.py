@@ -33,6 +33,8 @@ import types
 from Utils.ProgressCounter import ProgressCounter
 from ExampleBuilders.ExampleStats import ExampleStats
 from Utils.Libraries.wvlib_light.lwvlib import WV
+import numpy
+from sklearn.preprocessing.label import MultiLabelBinarizer
 
 class KerasEntityDetector(Detector):
     """
@@ -74,7 +76,6 @@ class KerasEntityDetector(Detector):
         if self.checkStep("EXAMPLES"): # Generate the adjacency matrices
             self.buildExamples(self.model, ["devel", "train"], [optData, trainData], [exampleFiles["devel"], exampleFiles["train"]], saveIdsToModel=True)
         print self.examples["devel"][0:10]
-        sys.exit()
         if self.checkStep("MODEL"): # Define and train the Keras model
             self.defineModel()
             self.fitModel(exampleFiles)
@@ -201,12 +202,20 @@ class KerasEntityDetector(Detector):
             labels, entityIds = self.getEntityTypes(sentenceGraph.tokenIsEntityHead[token])
             self.exampleStats.beginExample(",".join(labels))
             
+            # Recognize only non-named entities (i.e. interaction words)
+            if sentenceGraph.tokenIsName[token] and not self.styles.get("names") and not self.styles.get("all_tokens"):
+                self.exampleStats.filter("name")
+                self.exampleStats.endExample()
+                continue
+            
             text = token.get("text").lower()
             if text not in self.embeddingIndex:
                 vector = self.wv.w_to_normv(text)
                 if vector is not None:
                     self.embeddings.append(self.wv.w_to_normv(text))
                     self.embeddingIndex[text] = len(self.embeddings)
+                    if self.embeddings[0] is None: # initialize the out-of-vocabulary vector
+                        self.embeddings[0] = numpy.zeros(self.embeddings[1].size)
             vectorIndex = self.embeddingIndex[text] if text in self.embeddingIndex else self.embeddingIndex["[out]"]
             
             examples.append({"id":sentenceGraph.getSentenceId()+".x"+str(exampleIndex), "labels":labels, "features":{"index":vectorIndex}}) #, "extra":{"eIds":entityIds}}
@@ -263,8 +272,8 @@ class KerasEntityDetector(Detector):
         self.embeddingIndex = {"[out]":0}
         # Make example for all input files
         self.examples = {x:[] for x in setNames}
-        for setName, data, output, gold in itertools.izip_longest(setNames, datas, outputs, golds, fillvalue=None):
-            print >> sys.stderr, "Example generation for set", setName, "to file", output 
+        for setName, data, gold in itertools.izip_longest(setNames, datas, golds, fillvalue=None):
+            print >> sys.stderr, "Example generation for set", setName #, "to file", output 
             self.processCorpus(data, self.examples[setName], gold)          
         if hasattr(self.structureAnalyzer, "typeMap") and model.mode != "r":
             print >> sys.stderr, "Saving StructureAnalyzer.typeMap"
@@ -273,8 +282,7 @@ class KerasEntityDetector(Detector):
         if modelChanged:
             model.save()
     
-    def makeEmbeddingMatrix(self):
-        vectors = self.wordvectors["vectors"]
+    def makeEmbeddingMatrix(self, vectors):
         dimWordVector = len(vectors[0])
         numWordVectors = len(vectors)
         embedding_matrix = np.zeros((numWordVectors, dimWordVector))
@@ -286,99 +294,55 @@ class KerasEntityDetector(Detector):
         """
         Defines the Keras model and compiles it.
         """
-        dimFeatures = int(self.model.getStr("dimFeatures")) # Number of channels in the source matrix
-        dimLabels = int(self.model.getStr("dimLabels")) # Number of channels in the target matrix
-        if "autoencode" in self.styles:
-            dimFeatures = dimLabels
-        dimMatrix = int(self.model.getStr("dimMatrix")) # The width/height of both the source and target matrix
+        print >> sys.stderr, "Making Embedding Matrix"
+        embedding_matrix = self.makeEmbeddingMatrix(self.embeddings)
         
-        print >> sys.stderr, "Defining model", (dimMatrix, dimFeatures, dimFeatures)
-        metrics = ["accuracy"]
+        labelSet = set()
+        for dataSet in ("train", "devel"):
+            for example in self.examples[dataSet]:
+                for label in example["labels"]:
+                    labelSet.add(label)
         
-        inputs = []
-        if self.styles.get("wv") != None:
-            # Features
-            x1 = input_features = Input(shape=(dimMatrix * dimMatrix, dimFeatures), name='features')
-            inputs.append(input_features)
-            x1 = Reshape((dimMatrix, dimMatrix, dimFeatures))(x1)
-            x1 = Conv2D(128, (1, 1), activation='relu', padding='same', name='X1_C2D_reduce')(x1)
-            x1 = Conv2D(32, (1, 9), activation='relu', padding='same', name='X1_C2D_C1')(x1)
-            x1 = Conv2D(32, (1, 5), activation='relu', padding='same', name='X1_C2D_C2')(x1)
-            x1 = Conv2D(32, (1, 3), activation='relu', padding='same', name='X1_C2D_C3')(x1)
-            
-            # Embeddings
-            dimEmbeddings = 2
-            self.wordvectors = self.loadEmbeddings(self.styles.get("wv"))
-            dimWordVector = len(self.wordvectors["vectors"][0])
-            numWordVectors = len(self.wordvectors["vectors"])
-            embedding_matrix = self.makeEmbeddingMatrix()
-            x2 = input_embeddings = Input(shape=(dimMatrix * dimMatrix, dimEmbeddings), name='embeddings')
-            inputs.append(input_embeddings)
-            x2 = Reshape((dimMatrix, dimMatrix, dimEmbeddings))(x2)
-            embedding_input_length = dimMatrix * dimMatrix * dimEmbeddings
-            x2 = Reshape((dimMatrix * dimMatrix * dimEmbeddings, ))(x2)
-            x2 = Embedding(numWordVectors, dimWordVector, weights=[embedding_matrix], 
-                          input_length=embedding_input_length, trainable=True)(x2)
-            x2 = Reshape((dimMatrix * dimMatrix, 2 * dimWordVector))(x2)
-            x2 = Reshape((dimMatrix, dimMatrix, 2 * dimWordVector))(x2)
-            #x = Reshape((dimMatrix, dimMatrix, dimEmbeddings))(x)
-            x2 = Conv2D(dimWordVector, (1, 9), activation='relu', padding='same', name='X2_C2D_C1')(x2)
-            x2 = Conv2D(dimWordVector, (1, 5), activation='relu', padding='same', name='X2_C2D_C2')(x2)
-            x2 = Conv2D(dimWordVector, (1, 3), activation='relu', padding='same', name='X2_C2D_C3')(x2)
-            
-            # Merge
-            x = merge([x1, x2], mode='concat')
-#             x = Conv2D(128, (1, 1), activation='relu', padding='same')(x)
-#             x = Conv2D(32, (1, 9), activation='relu', padding='same')(x)
-#             x = Conv2D(32, (1, 5), activation='relu', padding='same')(x)
-#             x = Conv2D(32, (1, 3), activation='relu', padding='same')(x)
-            #x = Concatenate([input_features, x])
-        else:
-            x = Input(shape=(dimMatrix, dimMatrix, dimFeatures), name='features')
-            inputs.append(x)
-            ##x = Conv2D(32, (3, 3), padding='same')(x)
-            #x = Conv2D(16, (3, 3), padding='same')(x)
-            #x = Conv2D(16, (1, 21), padding='same')(x)
-            x = Conv2D(128, (1, 1), activation='relu', padding='same')(x)
-            x = Conv2D(32, (1, 9), activation='relu', padding='same')(x)
-            x = Conv2D(32, (1, 5), activation='relu', padding='same')(x)
-            x = Conv2D(32, (1, 3), activation='relu', padding='same')(x)
+        x = inputLayer = Input(shape=(1,), dtype='int32')
+        Embedding(len(self.embeddings[0]), 
+                  self.embeddings[0].size, 
+                  weights=[embedding_matrix], 
+                  input_length=1,
+                  trainable=False)(x)
+        x = Dense(400, activation='relu')(x)
+        x = Dense(len(labelSet), activation='sigmoid')(x)
         
-        x = Conv2D(256, (1, 1), activation='relu', padding='same')(x)
-        x = Conv2D(dimLabels, (1, 1), activation='sigmoid', padding='same')(x)
-        x = Reshape((dimMatrix * dimMatrix, dimLabels), name='labels')(x)
-        self.kerasModel = Model(inputs, x)
-        
-        layersPath = self.workDir + self.tag + "layers.json"
-        print >> sys.stderr, "Saving layers to", layersPath
-        self.serializeLayers(self.kerasModel, layersPath)
+        self.kerasModel = Model(inputLayer, x)
         
         learningRate = float(self.styles.get("lr", 0.001))
         print >> sys.stderr, "Using learning rate", learningRate
         optimizer = Adam(lr=learningRate)
         
         print >> sys.stderr, "Compiling model"
-        self.kerasModel.compile(optimizer=optimizer, loss="categorical_crossentropy", metrics=metrics, sample_weight_mode="temporal") #, metrics=['accuracy'])
+        metrics = ["accuracy"]
+        self.kerasModel.compile(optimizer=optimizer, loss="binary_crossentropy", metrics=metrics)
         
         self.kerasModel.summary()
    
-    def fitModel(self, exampleFiles):
+    def fitModel(self):
         """
         Fits the compiled Keras model to the adjacency matrix examples. The model is trained on the
         train set, validated on the devel set and finally the devel set is predicted using the model.
         """
-        if self.matrices == None: # If program is run from the TRAIN.MODEL step matrices are loaded from files
-            self.matrices = {}
-            for setName in exampleFiles:
-                print >> sys.stderr, "Loading dataset", setName, "from", exampleFiles[setName]
-                self.matrices[setName] = self.loadJSON(exampleFiles[setName])
-        if self.arrays == None: # The Python dictionary matrices are converted into dense Numpy arrays
-            self.vectorizeMatrices(self.model, useMask=True)
-         
-#         targetIds = IdSet(filename=self.model.get(self.tag+"ids.classes"), locked=True)
-#         class_weight = {}
-#         for className in targetIds.Ids:
-#             class_weight[targetIds.getId(className)] = 1.0 if className != "neg" else 0.00001
+        
+        print >> sys.stderr, "Vectorizing labels"
+        mlb = MultiLabelBinarizer()
+        labels = {}
+        for dataSet in ("train", "devel"):
+            labels[dataSet] = [x["labels"] for x in self.examples[dataSet]]
+        mlb.fit_transform(labels["train"] + labels["devel"])
+        for dataSet in ("train", "devel"):
+            labels[dataSet] = mlb.transform(labels[dataSet])
+        
+        print >> sys.stderr, "Vectorizing features"
+        features = {}
+        for dataSet in ("train", "devel"):
+            features[dataSet] = [x["features"] for x in self.examples[dataSet]]
         
         print >> sys.stderr, "Fitting model"
         patience = int(self.styles.get("patience", 10))
@@ -386,20 +350,11 @@ class KerasEntityDetector(Detector):
         es_cb = EarlyStopping(monitor='val_loss', patience=patience, verbose=1)
         bestModelPath = self.model.get(self.tag + "model.hdf5", True) #self.workDir + self.tag + 'model.hdf5'
         cp_cb = ModelCheckpoint(filepath=bestModelPath, save_best_only=True, verbose=1)
-        #sourceData = "source"
-        #import pdb;pdb.set_trace()
-        #if "autoencode" in self.styles:
-        #    sourceData = "target"
-        #print >> sys.stderr, sourceData, "->", "target", ("(autoencode)" if "autoencode" in self.styles else "")
-        print >> sys.stderr, "Autoencoding:", self.styles.get("autoencode") != None
-        print >> sys.stderr, "Arrays:", {x:{y:self.arrays[x][y].shape for y in self.arrays[x]} for x in self.arrays}
-        self.kerasModel.fit(self.arrays["train"], self.arrays["train"], #[sourceData], self.arrays["train"]["target"],
+        self.kerasModel.fit((features["train"], labels["train"]), #[sourceData], self.arrays["train"]["target"],
             epochs=100 if not "epochs" in self.styles else int(self.styles["epochs"]),
             batch_size=64,
             shuffle=True,
-            validation_data=(self.arrays["devel"], self.arrays["devel"], self.arrays["devel"]["mask"]), #[sourceData], self.arrays["devel"]["target"]), #, self.arrays["devel"]["mask"]),
-            sample_weight=self.arrays["train"]["mask"],
-            #class_weight=class_weight,
+            validation_data=(features["devel"], labels["devel"]),
             callbacks=[es_cb, cp_cb])
         
         bestModelPath = self.model.get(self.tag + "model.hdf5", True) 
@@ -408,122 +363,8 @@ class KerasEntityDetector(Detector):
         predictions = self.kerasModel.predict(self.arrays["devel"], 128, 1)
         self.model.save()
         
-        # The predicted matrices are saved as an HTML heat map
-        predMatrices = self.loadJSON(exampleFiles["devel"])
-        predMatrices["predicted"] = self.devectorizePredictions(predictions)
-        if "save_predictions" in self.styles:
-            print >> sys.stderr, "Saving predictions to", self.workDir + self.tag + "devel-predictions.json.gz"
-            self.saveJSON(self.workDir + self.tag + "devel-predictions.json.gz", predMatrices)
-        if "html" in self.styles:
-            self.matricesToHTML(self.model, predMatrices, self.workDir + self.tag + "devel-predictions.html", int(self.styles["html"]), names = ["features", "labels", "predicted"])
-        
         # For now the training ends here, later the predicted matrices should be converted back to XML events
         sys.exit()
-    
-    ###########################################################################
-    # HTML Table visualization
-    ###########################################################################
-    
-    def matrixToTable(self, matrix, tokens, parent, name):
-        """
-        Converts a single Python dictionary adjacency matrix into an HTML table structure.
-        """
-        matrixRange = range(len(matrix) + 1)
-        table = ET.SubElement(parent, 'table', {"border":"1"})
-        outCount = 0
-        for i in matrixRange:
-            tr = ET.SubElement(table, 'tr')
-            for j in matrixRange:
-                td = ET.SubElement(tr, 'td')
-                if i == 0 or j == 0:
-                    if i != 0 and i > 0 and i <= len(tokens): td.text = tokens[i - 1]
-                    elif j != 0 and j > 0 and j <= len(tokens): td.text = tokens[j - 1]
-                else:
-                    if i == j: # This element is on the diagonal
-                        td.set("style", "font-weight:bold;")
-                    features = matrix[i - 1][j - 1]
-                    if "color" in features: # The 'color' is not a real feature, but rather defines this table element's background color
-                        td.set("bgcolor", features["color"])
-                    if name == "embeddings":
-                        featureNames = [x + "=" + str(features[x]) for x in features]
-                    else:
-                        featureNames = [x for x in features if x != "color"]
-                        td.set("weights", ",".join([x + "=" + str(features[x]) for x in featureNames]))
-                    featureNames.sort()
-                    td.text = ",".join([x for x in featureNames])
-                    if td.text == "[out]":
-                        outCount += 1
-                        td.text = ""
-        if outCount > 0:
-            ET.SubElement(parent, "p").text = "[out]: " + str(outCount)
-    
-    def matricesToHTML(self, model, data, filePath, cutoff=None, names=None):
-        """
-        Saves the source (features), target (labels) and predicted adjacency matrices
-        for a list of sentences as HTML tables.
-        """
-        print >> sys.stderr, "Writing adjacency matrix visualization to", os.path.abspath(filePath)
-        root = ET.Element('html')
-        if names == None:
-            names = ["embeddings", "features", "labels", "predicted"]
-        print >> sys.stderr, {x:(len(data.get(x)) if data.get(x) != None else None) for x in names}
-        tokenLists = data["tokens"]
-        for i in range(len(tokenLists)):
-            if cutoff is not None and i >= cutoff:
-                break
-            ET.SubElement(root, "h3").text = str(i) + ": " + " ".join(tokenLists[i])
-            for name in names:
-                if data.get(name) != None:
-                    ET.SubElement(root, "p").text = name
-                    assert i < len(data[name]) and i < len(tokenLists), (name, len(data[name]), len(tokenLists))
-                    self.matrixToTable(data[name][i], tokenLists[i], root, name)
-        ETUtils.write(root, filePath)
-        
-    def clamp(self, value, lower, upper):
-        return max(lower, min(value, upper))
-    
-    def getColor(self, value):
-        r = self.clamp(int((1.0 - value) * 255.0), 0, 255)
-        g = self.clamp(int(value * 255.0), 0, 255)
-        b = 0
-        return '#%02x%02x%02x' % (r, g, b)
-    
-    def getArrayShapes(self, arrayDict):
-        return {x:(arrayDict.get(x).shape if arrayDict.get(x) is not None else None) for x in arrayDict}
-    
-    ###########################################################################
-    # Serialization
-    ###########################################################################
-    
-    def saveJSON(self, filePath, data):
-        with gzip.open(filePath, "wt") as f:
-            json.dump(data, f, indent=2)
-    
-    def loadJSON(self, filePath):
-        with gzip.open(filePath, "rt") as f:
-            return json.load(f)
-    
-    def serializeLayers(self, kerasModel, filePath, verbose=False):
-        layers = []
-        for layer in kerasModel.layers:
-            layers.append({'class_name': layer.__class__.__name__, 'config': layer.get_config()})
-        if verbose:
-            print >> sys.stderr, "Layer configuration:"
-            print >> sys.stderr, "_________________________________________________________________"
-            for layer in layers:
-                print >> sys.stderr, layer
-            print >> sys.stderr, "_________________________________________________________________"
-        with open(filePath, "wt") as f:
-            json.dump(layers, f, indent=2)
-    
-    def loadEmbeddings(self, wvPath):
-        vectorPath = self.styles.get("wv") + "-vectors.json.gz"
-        if not os.path.exists(vectorPath):
-            vectorPath = os.path.join(Settings.DATAPATH, "wv", vectorPath)
-        print >> sys.stderr, "Loading word vector indices from", vectorPath
-        assert os.path.exists(vectorPath)
-        with gzip.open(vectorPath, "rt") as f:
-            return json.load(f)
     
     ###########################################################################
     # Vectorization
