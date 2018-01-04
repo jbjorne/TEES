@@ -78,7 +78,7 @@ class KerasEntityDetector(Detector):
         print self.examples["devel"][0:10]
         if self.checkStep("MODEL"): # Define and train the Keras model
             self.defineModel()
-            self.fitModel(exampleFiles)
+            self.fitModel()
         if workDir != None:
             self.setWorkDir("")
         self.arrays = None
@@ -342,7 +342,7 @@ class KerasEntityDetector(Detector):
         print >> sys.stderr, "Vectorizing features"
         features = {}
         for dataSet in ("train", "devel"):
-            features[dataSet] = [x["features"] for x in self.examples[dataSet]]
+            features[dataSet] = numpy.array([[x["features"]["index"]] for x in self.examples[dataSet]])
         
         print >> sys.stderr, "Fitting model"
         patience = int(self.styles.get("patience", 10))
@@ -350,7 +350,7 @@ class KerasEntityDetector(Detector):
         es_cb = EarlyStopping(monitor='val_loss', patience=patience, verbose=1)
         bestModelPath = self.model.get(self.tag + "model.hdf5", True) #self.workDir + self.tag + 'model.hdf5'
         cp_cb = ModelCheckpoint(filepath=bestModelPath, save_best_only=True, verbose=1)
-        self.kerasModel.fit((features["train"], labels["train"]), #[sourceData], self.arrays["train"]["target"],
+        self.kerasModel.fit(features["train"], labels["train"], #[sourceData], self.arrays["train"]["target"],
             epochs=100 if not "epochs" in self.styles else int(self.styles["epochs"]),
             batch_size=64,
             shuffle=True,
