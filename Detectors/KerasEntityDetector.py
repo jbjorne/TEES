@@ -268,7 +268,7 @@ class KerasEntityDetector(Detector):
         else:
             wordVectorPath = Settings.W2VFILE
         print >> sys.stderr, "Loading word vectors from", wordVectorPath
-        self.wv = WV.load(wordVectorPath, 1000, 10000)
+        self.wv = WV.load(wordVectorPath, 100000, 10000000)
         self.embeddings = [None]
         self.embeddingIndex = {"[out]":0}
         # Make example for all input files
@@ -297,6 +297,8 @@ class KerasEntityDetector(Detector):
         """
         print >> sys.stderr, "Making Embedding Matrix"
         embedding_matrix = self.makeEmbeddingMatrix(self.embeddings)
+        print >> sys.stderr, "Vocabulary size:", len(self.embeddings)
+        print >> sys.stderr, "Embedding size:", self.embeddings[0].size
         
         labelSet = set()
         for dataSet in ("train", "devel"):
