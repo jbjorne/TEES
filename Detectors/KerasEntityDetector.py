@@ -342,6 +342,12 @@ class KerasEntityDetector(Detector):
         for dataSet in ("train", "devel"):
             labels[dataSet] = numpy.array(mlb.transform(labels[dataSet]))
         
+        print >> sys.stderr, "Labels:", mlb.classes_
+        labelWeights = {}
+        for i in range(len(mlb.classes_)):
+            labelWeights[i] = 1.0 if mlb.classes_[i] != "neg" else 0.01
+        print >> sys.stderr, "Label weights:", labelWeights
+        
         print >> sys.stderr, "Vectorizing features"
         features = {}
         for dataSet in ("train", "devel"):
@@ -358,6 +364,7 @@ class KerasEntityDetector(Detector):
             batch_size=64,
             shuffle=True,
             validation_data=(features["devel"], labels["devel"]),
+            class_weight=labelWeights,
             callbacks=[es_cb, cp_cb])
         
         bestModelPath = self.model.get(self.tag + "model.hdf5", True) 
@@ -379,115 +386,3 @@ class KerasEntityDetector(Detector):
         
         # For now the training ends here, later the predicted matrices should be converted back to XML events
         sys.exit()
-    
-    ###########################################################################
-    # Vectorization
-    ###########################################################################
-    
-    def devectorizePredictions(self, predictions):
-        """
-        Converts a dense Numpy array of [examples][width][height][features] into
-        the corresponding Python list matrices where features are stored in a key-value
-        dictionary.
-        """
-        targetIds = IdSet(filename=self.model.get(self.tag+"ids.classes"), locked=True)
-        dimMatrix = int(self.model.getStr("dimMatrix"))
-        dimLabels = int(self.model.getStr("dimLabels"))
-        predictions = reshape(predictions, (predictions.shape[0], dimMatrix, dimMatrix, dimLabels))
-        rangeMatrix = range(dimMatrix)
-        labels = np.argmax(predictions, axis=-1)
-        values = np.max(predictions, axis=-1)
-        minValue = np.min(values)
-        maxValue = np.max(values)
-        valRange = maxValue - minValue
-        print "MINMAX", minValue, maxValue
-        devectorized = []
-        for exampleIndex in range(predictions.shape[0]):
-            #print predictions[exampleIndex]
-            devectorized.append([])
-            for i in rangeMatrix:
-                devectorized[-1].append([])
-                for j in rangeMatrix:
-                    features = {}
-                    devectorized[-1][-1].append(features)
-                    maxFeature = labels[exampleIndex][i][j]
-                    predValue = predictions[exampleIndex][i][j][maxFeature]
-                    features[targetIds.getName(maxFeature)] = float(predValue)
-                    features["color"] = self.getColor((predValue - minValue) / valRange)
-        return devectorized
-    
-    def vectorizeMatrices(self, model, useMask=False):
-        """
-        Converts the Python input matrices of the form [examples][width][height]{features} into
-        corresponding dense Numpy arrays.
-        """
-        counts = defaultdict(int)
-        self.arrays = {}
-        featureIds = IdSet(filename=model.get(self.tag+"ids.features"), locked=True)
-        labelIds = IdSet(filename=model.get(self.tag+"ids.classes"), locked=True)
-        #negLabelIds = set([labelIds.getId(x) for x in ["Eneg", "Ineg", "[out]"]])
-        negLabels = str(["Eneg", "Ineg", "[out]"])
-        dimFeatures = int(model.getStr("dimFeatures"))
-        dimLabels = int(model.getStr("dimLabels"))
-        dimMatrix = int(model.getStr("dimMatrix"))
-        rangeMatrix = range(dimMatrix)
-        dataSets = [(x, self.matrices[x]) for x in sorted(self.matrices.keys())]
-        self.matrices = None
-        while dataSets:
-            dataSetName, dataSetValue = dataSets.pop()
-            print >> sys.stderr, "Vectorizing dataset", dataSetName
-            featureMatrices = dataSetValue["features"]
-            labelMatrices = dataSetValue["labels"]
-            embeddingMatrices = None
-            assert len(featureMatrices) == len(labelMatrices)
-            numExamples = len(featureMatrices)
-            self.arrays[dataSetName] = {"features":np.zeros((numExamples, dimMatrix, dimMatrix, dimFeatures), dtype=np.float32), 
-                                        "labels":np.zeros((numExamples, dimMatrix, dimMatrix, dimLabels), dtype=np.float32)}
-            if self.styles.get("wv") != None:
-                embeddingMatrices = dataSetValue["embeddings"]
-                self.arrays[dataSetName]["embeddings"] = np.zeros((numExamples, dimMatrix, dimMatrix, 2), dtype=np.int32)
-            if useMask:
-                self.arrays[dataSetName]["mask"] = np.ones((numExamples, dimMatrix, dimMatrix), dtype=np.float32)
-            for exampleIndex in range(numExamples):
-                numTokens = len(dataSetValue["tokens"][exampleIndex])
-                featureArray = self.arrays[dataSetName]["features"][exampleIndex] #sourceArray = np.zeros((dimMatrix, dimMatrix, dimFeatures), dtype=np.float32)
-                labelArray = self.arrays[dataSetName]["labels"][exampleIndex] #targetArray = np.zeros((dimMatrix, dimMatrix, dimFeatures), dtype=np.float32)
-                if useMask:
-                    maskArray = self.arrays[dataSetName]["mask"][exampleIndex]
-                featureMatrix = featureMatrices.pop(0) #[exampleIndex]
-                labelMatrix = labelMatrices.pop(0) #[exampleIndex]
-                transfers = [(featureMatrix, featureArray, featureIds), (labelMatrix, labelArray, labelIds)]
-                for matrix, array, ids in transfers:
-                    for i in rangeMatrix:
-                        for j in rangeMatrix:
-                            features = matrix[i][j]
-                            #print features
-                            for featureName in features:
-                                array[i][j][ids.getId(featureName)] = features[featureName]
-                if useMask:
-                    for i in rangeMatrix:
-                        for j in rangeMatrix:
-                            if i > numTokens or j > numTokens:
-                                maskArray[i][j] = 0.0
-                                counts["masked-out"] += 1
-                            elif len(set(labelMatrix[i][j].keys()).union(negLabels)) > 0:
-                                maskArray[i][j] = 0.001
-                                counts["masked-neg"] += 1
-                if embeddingMatrices != None:
-                    embeddingMatrix = embeddingMatrices.pop(0)
-                    embeddingArray = self.arrays[dataSetName]["embeddings"][exampleIndex]
-                    for i in rangeMatrix:
-                        for j in rangeMatrix:
-                            embeddingArray[i][j][0] = embeddingMatrix[i][j]["0"]
-                            embeddingArray[i][j][1] = embeddingMatrix[i][j]["1"]
-            if self.styles.get("autoencode") != None:
-                print >> sys.stderr, "Autoencoding dataset", dataSetName
-                self.arrays[dataSetName]["features"] = self.arrays["labels"]
-            dimLast = {"features":dimFeatures, "labels":dimLabels, "embeddings":2, "mask":dimLabels}
-            for arrayName in self.arrays[dataSetName]:
-                if arrayName != "mask":
-                    targetShape = (numExamples, dimMatrix * dimMatrix, dimLast[arrayName])
-                else:
-                    targetShape = (numExamples, dimMatrix * dimMatrix)
-                self.arrays[dataSetName][arrayName] = reshape(self.arrays[dataSetName][arrayName], targetShape)
-            print >> sys.stderr, dataSetName, self.getArrayShapes(self.arrays[dataSetName]), dict(counts)
