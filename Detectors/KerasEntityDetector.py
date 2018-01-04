@@ -31,11 +31,14 @@ from numpy import reshape
 from collections import defaultdict
 import types
 import sklearn.metrics
+import sklearn
 from Utils.ProgressCounter import ProgressCounter
 from ExampleBuilders.ExampleStats import ExampleStats
 from Utils.Libraries.wvlib_light.lwvlib import WV
 import numpy
 from sklearn.preprocessing.label import MultiLabelBinarizer
+from sklearn.utils.class_weight import compute_sample_weight,\
+    compute_class_weight
 
 class KerasEntityDetector(Detector):
     """
@@ -346,6 +349,9 @@ class KerasEntityDetector(Detector):
         labelWeights = {}
         for i in range(len(mlb.classes_)):
             labelWeights[i] = 1.0 if mlb.classes_[i] != "neg" else 0.01
+        print >> sys.stderr, "Label weights:", labelWeights
+        #print >> sys.stderr, compute_sample_weight("balanced", [{i:x[i] for i in x} for x in labels["train"]])
+        labelWeights = {x[0]:x[1] for x in enumerate(compute_class_weight("balanced", np.unique(labels["train"]), labels["train"]))}
         print >> sys.stderr, "Label weights:", labelWeights
         
         print >> sys.stderr, "Vectorizing features"
