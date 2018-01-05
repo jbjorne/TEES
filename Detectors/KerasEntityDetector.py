@@ -206,7 +206,7 @@ class KerasEntityDetector(Detector):
         # Prepare the indices
         indices = []
         numTokens = len(sentenceGraph.tokens)
-        for i in range(max(numTokens, self.EXAMPLE_LENGTH)):
+        for i in range(self.EXAMPLE_LENGTH):
             if i < numTokens:
                 token = sentenceGraph.tokens[i]
                 text = token.get("text").lower()
