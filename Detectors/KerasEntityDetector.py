@@ -220,10 +220,11 @@ class KerasEntityDetector(Detector):
                     self.embeddingIndex[text] = len(self.embeddings)
                     self.embeddings.append(vector)
                     if self.embeddings[0] is None: # initialize the out-of-vocabulary vector
-                        self.embeddings[0] = numpy.zeros(self.embeddings[1].size)
+                        self.embeddings[0] = numpy.zeros(self.embeddings[-1].size)
             vectorIndex = self.embeddingIndex[text] if text in self.embeddingIndex else self.embeddingIndex["[out]"]
             
-            examples.append({"id":sentenceGraph.getSentenceId()+".x"+str(exampleIndex), "labels":labels, "features":{"index":vectorIndex}}) #, "extra":{"eIds":entityIds}}
+            features = {"index":vectorIndex, "binary":[[1]]}
+            examples.append({"id":sentenceGraph.getSentenceId()+".x"+str(exampleIndex), "labels":labels, "features":features}) #, "extra":{"eIds":entityIds}}
             #outfile.write("\n")
             #if exampleIndex > 0:
             #    outfile.write(",")
@@ -271,8 +272,10 @@ class KerasEntityDetector(Detector):
             wordVectorPath = self.styles["wordvector"]
         else:
             wordVectorPath = Settings.W2VFILE
-        print >> sys.stderr, "Loading word vectors from", wordVectorPath
-        self.wv = WV.load(wordVectorPath, 100000, 10000000)
+        wv_mem = int(self.styles.get("wv_mem", 100000))
+        wv_map = int(self.styles.get("wv_map", 10000000))
+        print >> sys.stderr, "Loading word vectors", (wv_mem, wv_map), "from", wordVectorPath
+        self.wv = WV.load(wordVectorPath, wv_mem, wv_map)
         self.embeddings = [None]
         self.embeddingIndex = {"[out]":0}
         # Make example for all input files
@@ -310,17 +313,24 @@ class KerasEntityDetector(Detector):
                 for label in example["labels"]:
                     labelSet.add(label)
         
-        x = inputLayer = Input(shape=(1,))
-        x = Embedding(len(self.embeddings), 
+        # The Embeddings
+        x1 = inputLayer1 = Input(shape=(1,), name='index')
+        x1 = Embedding(len(self.embeddings), 
                   self.embeddings[0].size, 
                   weights=[embedding_matrix], 
                   input_length=1,
-                  trainable=False)(x)
+                  trainable=False)(inputLayer1)
+        
+        # Other Features
+        x2 = inputLayer2 = Input(shape=(1,1), name='binary')
+        
+        # Main network
+        x = merge([x1, x2], mode='concat')
         x = Flatten()(x)
         x = Dense(400, activation='relu')(x)
         x = Dense(len(labelSet), activation='sigmoid')(x)
         
-        self.kerasModel = Model(inputLayer, x)
+        self.kerasModel = Model([inputLayer1, inputLayer2], x)
         
         learningRate = float(self.styles.get("lr", 0.001))
         print >> sys.stderr, "Using learning rate", learningRate
@@ -357,9 +367,10 @@ class KerasEntityDetector(Detector):
         #print >> sys.stderr, "Label weights:", labelWeights
         
         print >> sys.stderr, "Vectorizing features"
-        features = {}
+        features = {"train":{}, "devel":{}}
         for dataSet in ("train", "devel"):
-            features[dataSet] = numpy.array([[x["features"]["index"]] for x in self.examples[dataSet]])
+            features[dataSet]["index"] = numpy.array([[x["features"]["index"]] for x in self.examples[dataSet]])
+            features[dataSet]["binary"] = numpy.array([x["features"]["binary"] for x in self.examples[dataSet]])
         
         print >> sys.stderr, "Fitting model"
         patience = int(self.styles.get("patience", 10))
@@ -388,7 +399,7 @@ class KerasEntityDetector(Detector):
         scores = sklearn.metrics.precision_recall_fscore_support(labels["devel"], predictions, average=None)
         for i in range(len(mlb.classes_)):
             print mlb.classes_[i], "prfs =", (scores[0][i], scores[1][i], scores[2][i], scores[3][i])
-        posLabels = [x for x in range(len(mlb.classes_)) if mlb.classes_[i] != "neg"]
+        posLabels = [x for x in range(len(mlb.classes_)) if mlb.classes_[x] != "neg"]
         micro = sklearn.metrics.precision_recall_fscore_support(labels["devel"], predictions, labels=posLabels,  average="micro")
         print "micro =", micro
         print(classification_report(labels["devel"], predictions, target_names=mlb.classes_))
