@@ -57,6 +57,7 @@ class KerasEntityDetector(Detector):
         self.exampleBuilder = None #KerasExampleBuilder
         self.matrices = None
         self.arrays = None
+        self.EXAMPLE_LENGTH = 130
     
     ###########################################################################
     # Main Pipeline Interface
@@ -82,7 +83,7 @@ class KerasEntityDetector(Detector):
         exampleFiles = {"devel":self.workDir+self.tag+"opt-examples.json.gz", "train":self.workDir+self.tag+"train-examples.json.gz"}
         if self.checkStep("EXAMPLES"): # Generate the adjacency matrices
             self.buildExamples(self.model, ["devel", "train"], [optData, trainData], [exampleFiles["devel"], exampleFiles["train"]], saveIdsToModel=True)
-        print self.examples["devel"][0:10]
+        print self.examples["devel"][0:2]
         if self.checkStep("MODEL"): # Define and train the Keras model
             self.defineModel()
             self.fitModel()
@@ -200,13 +201,12 @@ class KerasEntityDetector(Detector):
         else:
             for key in sentenceGraph.tokenIsName.keys():
                 sentenceGraph.tokenIsName[key] = False
-        
-        EXAMPLE_LENGTH = 130
+
         #outfile.write("[")
         # Prepare the indices
         indices = []
         numTokens = len(sentenceGraph.tokens)
-        for i in range(max(numTokens, EXAMPLE_LENGTH)):
+        for i in range(max(numTokens, self.EXAMPLE_LENGTH)):
             if i < numTokens:
                 token = sentenceGraph.tokens[i]
                 text = token.get("text").lower()
@@ -237,7 +237,7 @@ class KerasEntityDetector(Detector):
                 continue
             
             binary = []
-            for j in range(EXAMPLE_LENGTH):
+            for j in range(self.EXAMPLE_LENGTH):
                 if i == j:
                     binary.append([1])
                 else:
@@ -309,6 +309,7 @@ class KerasEntityDetector(Detector):
             modelChanged = True
         if modelChanged:
             model.save()
+        self.wv = None # release the word vectors
     
     def makeEmbeddingMatrix(self, vectors):
         dimWordVector = len(vectors[0])
@@ -334,24 +335,21 @@ class KerasEntityDetector(Detector):
                     labelSet.add(label)
         
         # The Embeddings
-        x1 = inputLayer1 = Input(shape=(130,), name='index')
+        x1 = inputLayer1 = Input(shape=(self.EXAMPLE_LENGTH,), name='indices')
         x1 = Embedding(len(self.embeddings), 
                   self.embeddings[0].size, 
                   weights=[embedding_matrix], 
-                  input_length=1,
+                  input_length=self.EXAMPLE_LENGTH,
                   trainable=False)(inputLayer1)
         # Other Features
-        x2 = inputLayer2 = Input(shape=(130,1), name='binary')
+        x2 = inputLayer2 = Input(shape=(self.EXAMPLE_LENGTH,1), name='binary')
         # Merge the inputs
         x = merge([x1, x2], mode='concat')
         
         # Main network
         x = Conv1D(128, 5, activation='relu')(x)
-        x = MaxPooling1D(5)(x)
         x = Conv1D(128, 5, activation='relu')(x)
-        x = MaxPooling1D(5)(x)
         x = Conv1D(128, 5, activation='relu')(x)
-        x = MaxPooling1D(35)(x)  # global max pooling
         x = Flatten()(x)
         x = Dense(400, activation='relu')(x)
         x = Dense(len(labelSet), activation='sigmoid')(x)
@@ -393,10 +391,17 @@ class KerasEntityDetector(Detector):
         #print >> sys.stderr, "Label weights:", labelWeights
         
         print >> sys.stderr, "Vectorizing features"
+        for dataSet in ("train", "devel"):
+            for example in self.examples[dataSet]:
+                assert len(example["features"]["indices"]) == 130, example
+                assert len(example["features"]["binary"]) == 130, example
         features = {"train":{}, "devel":{}}
         for dataSet in ("train", "devel"):
-            features[dataSet]["index"] = numpy.array([[x["features"]["index"]] for x in self.examples[dataSet]])
+            features[dataSet]["indices"] = numpy.array([x["features"]["indices"] for x in self.examples[dataSet]])
             features[dataSet]["binary"] = numpy.array([x["features"]["binary"] for x in self.examples[dataSet]])
+        
+        for fType in ("indices", "binary"):
+            print fType, features["train"][fType].shape, features["train"][fType][0]
         
         print >> sys.stderr, "Fitting model"
         patience = int(self.styles.get("patience", 10))
