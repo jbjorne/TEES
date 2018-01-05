@@ -40,6 +40,8 @@ from sklearn.preprocessing.label import MultiLabelBinarizer
 from sklearn.utils.class_weight import compute_sample_weight,\
     compute_class_weight
 from sklearn.metrics.classification import classification_report
+from keras.layers import Conv1D
+from keras.layers.pooling import MaxPooling1D
 
 class KerasEntityDetector(Detector):
     """
@@ -199,7 +201,28 @@ class KerasEntityDetector(Detector):
             for key in sentenceGraph.tokenIsName.keys():
                 sentenceGraph.tokenIsName[key] = False
         
+        EXAMPLE_LENGTH = 130
         #outfile.write("[")
+        # Prepare the indices
+        indices = []
+        numTokens = len(sentenceGraph.tokens)
+        for i in range(max(numTokens, EXAMPLE_LENGTH)):
+            if i < numTokens:
+                token = sentenceGraph.tokens[i]
+                text = token.get("text").lower()
+                if text not in self.embeddingIndex:
+                    vector = self.wv.w_to_normv(text)
+                    if vector is not None:
+                        self.embeddingIndex[text] = len(self.embeddings)
+                        self.embeddings.append(vector)
+                        if self.embeddings[0] is None: # initialize the out-of-vocabulary vector
+                            self.embeddings[0] = numpy.zeros(vector.size)
+                            self.embeddings[1] = numpy.zeros(vector.size)
+                index = self.embeddingIndex[text] if text in self.embeddingIndex else self.embeddingIndex["[out]"]
+            else:
+                index = self.embeddingIndex["[padding]"]
+            indices.append(index)   
+        
         for i in range(len(sentenceGraph.tokens)):
             token = sentenceGraph.tokens[i]
 
@@ -213,17 +236,14 @@ class KerasEntityDetector(Detector):
                 self.exampleStats.endExample()
                 continue
             
-            text = token.get("text").lower()
-            if text not in self.embeddingIndex:
-                vector = self.wv.w_to_normv(text)
-                if vector is not None:
-                    self.embeddingIndex[text] = len(self.embeddings)
-                    self.embeddings.append(vector)
-                    if self.embeddings[0] is None: # initialize the out-of-vocabulary vector
-                        self.embeddings[0] = numpy.zeros(self.embeddings[-1].size)
-            vectorIndex = self.embeddingIndex[text] if text in self.embeddingIndex else self.embeddingIndex["[out]"]
+            binary = []
+            for j in range(EXAMPLE_LENGTH):
+                if i == j:
+                    binary.append([1])
+                else:
+                    binary.append([0])
             
-            features = {"index":vectorIndex, "binary":[[1]]}
+            features = {"indices":indices, "binary":binary}
             examples.append({"id":sentenceGraph.getSentenceId()+".x"+str(exampleIndex), "labels":labels, "features":features}) #, "extra":{"eIds":entityIds}}
             #outfile.write("\n")
             #if exampleIndex > 0:
@@ -276,8 +296,8 @@ class KerasEntityDetector(Detector):
         wv_map = int(self.styles.get("wv_map", 10000000))
         print >> sys.stderr, "Loading word vectors", (wv_mem, wv_map), "from", wordVectorPath
         self.wv = WV.load(wordVectorPath, wv_mem, wv_map)
-        self.embeddings = [None]
-        self.embeddingIndex = {"[out]":0}
+        self.embeddings = [None, None]
+        self.embeddingIndex = {"[out]":0, "[padding]":1}
         # Make example for all input files
         self.examples = {x:[] for x in setNames}
         for setName, data, gold in itertools.izip_longest(setNames, datas, golds, fillvalue=None):
@@ -314,18 +334,24 @@ class KerasEntityDetector(Detector):
                     labelSet.add(label)
         
         # The Embeddings
-        x1 = inputLayer1 = Input(shape=(1,), name='index')
+        x1 = inputLayer1 = Input(shape=(130,), name='index')
         x1 = Embedding(len(self.embeddings), 
                   self.embeddings[0].size, 
                   weights=[embedding_matrix], 
                   input_length=1,
                   trainable=False)(inputLayer1)
-        
         # Other Features
-        x2 = inputLayer2 = Input(shape=(1,1), name='binary')
+        x2 = inputLayer2 = Input(shape=(130,1), name='binary')
+        # Merge the inputs
+        x = merge([x1, x2], mode='concat')
         
         # Main network
-        x = merge([x1, x2], mode='concat')
+        x = Conv1D(128, 5, activation='relu')(x)
+        x = MaxPooling1D(5)(x)
+        x = Conv1D(128, 5, activation='relu')(x)
+        x = MaxPooling1D(5)(x)
+        x = Conv1D(128, 5, activation='relu')(x)
+        x = MaxPooling1D(35)(x)  # global max pooling
         x = Flatten()(x)
         x = Dense(400, activation='relu')(x)
         x = Dense(len(labelSet), activation='sigmoid')(x)
