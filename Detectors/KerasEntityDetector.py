@@ -41,7 +41,7 @@ from sklearn.utils.class_weight import compute_sample_weight,\
     compute_class_weight
 from sklearn.metrics.classification import classification_report
 from keras.layers import Conv1D
-from keras.layers.pooling import MaxPooling1D
+from keras.layers.pooling import MaxPooling1D, GlobalMaxPooling1D
 
 class KerasEntityDetector(Detector):
     """
@@ -57,7 +57,7 @@ class KerasEntityDetector(Detector):
         self.exampleBuilder = None #KerasExampleBuilder
         self.matrices = None
         self.arrays = None
-        self.EXAMPLE_LENGTH = 130
+        self.EXAMPLE_LENGTH = None #130
     
     ###########################################################################
     # Main Pipeline Interface
@@ -206,7 +206,8 @@ class KerasEntityDetector(Detector):
         # Prepare the indices
         indices = []
         numTokens = len(sentenceGraph.tokens)
-        for i in range(self.EXAMPLE_LENGTH):
+        exampleLength = self.EXAMPLE_LENGTH if self.EXAMPLE_LENGTH != None else numTokens
+        for i in range(exampleLength):
             if i < numTokens:
                 token = sentenceGraph.tokens[i]
                 text = token.get("text").lower()
@@ -237,7 +238,7 @@ class KerasEntityDetector(Detector):
                 continue
             
             binary = []
-            for j in range(self.EXAMPLE_LENGTH):
+            for j in range(exampleLength):
                 if i == j:
                     binary.append([1])
                 else:
@@ -350,7 +351,7 @@ class KerasEntityDetector(Detector):
         x = Conv1D(128, 5, activation='relu')(x)
         x = Conv1D(128, 5, activation='relu')(x)
         x = Conv1D(128, 5, activation='relu')(x)
-        x = Flatten()(x)
+        x = GlobalMaxPooling1D()(x) #x = Flatten()(x)
         x = Dense(400, activation='relu')(x)
         x = Dense(len(labelSet), activation='sigmoid')(x)
         
@@ -391,10 +392,11 @@ class KerasEntityDetector(Detector):
         #print >> sys.stderr, "Label weights:", labelWeights
         
         print >> sys.stderr, "Vectorizing features"
-        for dataSet in ("train", "devel"):
-            for example in self.examples[dataSet]:
-                assert len(example["features"]["indices"]) == 130, example
-                assert len(example["features"]["binary"]) == 130, example
+        if self.EXAMPLE_LENGTH != None:
+            for dataSet in ("train", "devel"):
+                for example in self.examples[dataSet]:
+                    for fType in ("indices", "binary"):
+                        assert len(example["features"][fType]) == self.EXAMPLE_LENGTH, example
         features = {"train":{}, "devel":{}}
         for dataSet in ("train", "devel"):
             features[dataSet]["indices"] = numpy.array([x["features"]["indices"] for x in self.examples[dataSet]])
