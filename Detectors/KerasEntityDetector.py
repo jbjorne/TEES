@@ -14,7 +14,7 @@ import json
 from keras.layers import Input, Dense, Conv2D, MaxPooling2D, UpSampling2D
 from keras.models import Model, Sequential, load_model
 from keras.layers.normalization import BatchNormalization
-from keras.layers.core import Activation, Reshape, Permute, Dropout
+from keras.layers.core import Activation, Reshape, Permute, Dropout, Flatten
 from keras.optimizers import SGD, Adam
 from keras.layers.local import LocallyConnected2D
 from keras.layers.wrappers import TimeDistributed
@@ -216,8 +216,8 @@ class KerasEntityDetector(Detector):
             if text not in self.embeddingIndex:
                 vector = self.wv.w_to_normv(text)
                 if vector is not None:
-                    self.embeddings.append(self.wv.w_to_normv(text))
                     self.embeddingIndex[text] = len(self.embeddings)
+                    self.embeddings.append(vector)
                     if self.embeddings[0] is None: # initialize the out-of-vocabulary vector
                         self.embeddings[0] = numpy.zeros(self.embeddings[1].size)
             vectorIndex = self.embeddingIndex[text] if text in self.embeddingIndex else self.embeddingIndex["[out]"]
@@ -310,11 +310,12 @@ class KerasEntityDetector(Detector):
                     labelSet.add(label)
         
         x = inputLayer = Input(shape=(1,))
-        Embedding(len(self.embeddings), 
+        x = Embedding(len(self.embeddings), 
                   self.embeddings[0].size, 
                   weights=[embedding_matrix], 
                   input_length=1,
                   trainable=False)(x)
+        x = Flatten()(x)
         x = Dense(400, activation='relu')(x)
         x = Dense(len(labelSet), activation='sigmoid')(x)
         
