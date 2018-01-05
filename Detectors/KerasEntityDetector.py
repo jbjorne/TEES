@@ -39,6 +39,7 @@ import numpy
 from sklearn.preprocessing.label import MultiLabelBinarizer
 from sklearn.utils.class_weight import compute_sample_weight,\
     compute_class_weight
+from sklearn.metrics.classification import classification_report
 
 class KerasEntityDetector(Detector):
     """
@@ -386,10 +387,19 @@ class KerasEntityDetector(Detector):
         print predictions[0]
         scores = sklearn.metrics.precision_recall_fscore_support(labels["devel"], predictions, average=None)
         for i in range(len(mlb.classes_)):
-            print mlb.classes_[i], "prfs =", (scores[0][i], scores[1][i], scores[2][i], scores[3][i]) 
+            print mlb.classes_[i], "prfs =", (scores[0][i], scores[1][i], scores[2][i], scores[3][i])
+        posLabels = [x for x in range(len(mlb.classes_)) if mlb.classes_[i] != "neg"]
+        micro = sklearn.metrics.precision_recall_fscore_support(labels["devel"], predictions, labels=posLabels,  average="micro")
+        print "micro =", micro
+        print(classification_report(labels["devel"], predictions, target_names=mlb.classes_))
         #for prediction, gold in predictions, labels["devel"]:
         #    print prediction
         self.model.save()
         
         # For now the training ends here, later the predicted matrices should be converted back to XML events
         sys.exit()
+    
+#     def evaluate(self, correct, predictions, labels):
+#         scores = sklearn.metrics.precision_recall_fscore_support(labels["devel"], predictions, average=None)
+#         for i in range(len(labels)):
+#             print labels[i], "prfs =", (scores[0][i], scores[1][i], scores[2][i], scores[3][i])
