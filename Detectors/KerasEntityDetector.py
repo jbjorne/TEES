@@ -258,7 +258,7 @@ class KerasEntityDetector(Detector):
         #return examples
         return exampleIndex
     
-    def getEntityTypes(self, entities):
+    def getEntityTypes(self, entities, useNeg=True):
         types = set()
         entityIds = set()
         for entity in entities:
@@ -270,7 +270,7 @@ class KerasEntityDetector(Detector):
             else:
                 types.add(eType)
                 entityIds.add(entity.get("id"))
-        if len(types) == 0:
+        if len(types) == 0 and useNeg:
             types.add("neg")
         return sorted(types), sorted(entityIds)
     
@@ -388,7 +388,7 @@ class KerasEntityDetector(Detector):
         print >> sys.stderr, "Labels:", mlb.classes_
         labelWeights = {}
         for i in range(len(mlb.classes_)):
-            labelWeights[i] = 1.0 if mlb.classes_[i] != "neg" else 0.005
+            labelWeights[i] = 1.0 if mlb.classes_[i] != "neg" else 0.001
         print >> sys.stderr, "Label weights:", labelWeights
         #print >> sys.stderr, compute_sample_weight("balanced", [{i:x[i] for i in x} for x in labels["train"]])
         #labelWeights = {x[0]:x[1] for x in enumerate(compute_class_weight("balanced", np.unique(labels["train"]), labels["train"]))}
@@ -436,9 +436,11 @@ class KerasEntityDetector(Detector):
         for i in range(len(mlb.classes_)):
             print mlb.classes_[i], "prfs =", (scores[0][i], scores[1][i], scores[2][i], scores[3][i])
         posLabels = [x for x in range(len(mlb.classes_)) if mlb.classes_[x] != "neg"]
+        print mlb.classes_, posLabels
         micro = sklearn.metrics.precision_recall_fscore_support(labels["devel"], predictions, labels=posLabels,  average="micro")
         print "micro =", micro
         print(classification_report(labels["devel"], predictions, target_names=mlb.classes_))
+        print(classification_report(labels["devel"], predictions, target_names=mlb.classes_, labels=posLabels))
         #for prediction, gold in predictions, labels["devel"]:
         #    print prediction
         self.model.save()
