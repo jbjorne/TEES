@@ -207,7 +207,7 @@ class KerasEntityDetector(Detector):
         # Prepare the indices
         indices = []
         numTokens = len(sentenceGraph.tokens)
-        self.exampleLength = 21 #5 #exampleLength = self.EXAMPLE_LENGTH if self.EXAMPLE_LENGTH != None else numTokens
+        self.exampleLength = 21 #9 #5 #exampleLength = self.EXAMPLE_LENGTH if self.EXAMPLE_LENGTH != None else numTokens
         for i in range(numTokens):
             if i < numTokens:
                 token = sentenceGraph.tokens[i]
@@ -241,11 +241,14 @@ class KerasEntityDetector(Detector):
             features = {"indices":[], "binary":[]}
             side = (self.exampleLength - 1) / 2
             for j in range(i - side, i + side + 1):
+                features["binary"].append([])
+                features["binary"][-1].append(1 if i == j else 0)
                 if j > 0 and j < numTokens:
                     features["indices"].append(indices[j])
+                    features["binary"][-1].append(1 if sentenceGraph.tokenIsName[sentenceGraph.tokens[j]] else 0)
                 else:
                     features["indices"].append(self.embeddingIndex["[out]"])
-                features["binary"].append([1] if i == j else [0])
+                    features["binary"][-1].append(0)
             
             examples.append({"id":sentenceGraph.getSentenceId()+".x"+str(exampleIndex), "labels":labels, "features":features}) #, "extra":{"eIds":entityIds}}
             #outfile.write("\n")
@@ -345,7 +348,7 @@ class KerasEntityDetector(Detector):
                   input_length=self.exampleLength,
                   trainable=False)(inputLayer1)
         # Other Features
-        x2 = inputLayer2 = Input(shape=(self.exampleLength,1), name='binary')
+        x2 = inputLayer2 = Input(shape=(self.exampleLength,2), name='binary')
         # Merge the inputs
         x = merge([x1, x2], mode='concat')
         
@@ -444,7 +447,7 @@ class KerasEntityDetector(Detector):
         micro = sklearn.metrics.precision_recall_fscore_support(labels["devel"], predictions, labels=posLabels,  average="micro")
         print "micro =", micro
         print(classification_report(labels["devel"], predictions, target_names=mlb.classes_))
-        print(classification_report(labels["devel"], predictions, target_names=mlb.classes_, labels=posLabels))
+        print(classification_report(labels["devel"], predictions, target_names=[x for x in mlb.classes_ if x != "neg"], labels=posLabels))
         #for prediction, gold in predictions, labels["devel"]:
         #    print prediction
         self.model.save()
