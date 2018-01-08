@@ -346,23 +346,33 @@ class KerasEntityDetector(Detector):
                   self.embeddings[0].size, 
                   weights=[embedding_matrix], 
                   input_length=self.exampleLength,
-                  trainable=False)(inputLayer1)
+                  trainable=True)(inputLayer1)
         # Other Features
         x2 = inputLayer2 = Input(shape=(self.exampleLength,2), name='binary')
         # Merge the inputs
-        x = merge([x1, x2], mode='concat')
+        merged_features = merge([x1, x2], mode='concat', name="merged_features")
         
-        # Main network
-        x = Conv1D(64, 11, activation='relu')(x)
-        x = Conv1D(64, 4, activation='relu')(x)
-        #x = MaxPooling1D(3)(x)
-        x = Conv1D(64, 4, activation='relu')(x)
-        #x = MaxPooling1D(3)(x)
-        #x = Conv1D(256, 3, activation='relu')(x)
-        #x = MaxPooling1D(3)(x)
+#         # Main network
+#         x = Conv1D(64, 11, activation='relu')(x)
+#         x = Conv1D(64, 4, activation='relu')(x)
+#         #x = MaxPooling1D(3)(x)
+#         x = Conv1D(64, 4, activation='relu')(x)
+#         #x = MaxPooling1D(3)(x)
+#         #x = Conv1D(256, 3, activation='relu')(x)
+#         #x = MaxPooling1D(3)(x)
+        
+        convOutputs = []
+        ngram_filters = [3, 5, 7]
+        for n_gram in ngram_filters:
+            subnet = Conv1D(64, n_gram, activation='relu', name='conv_' + str(n_gram))(merged_features)
+            subnet = MaxPooling1D(pool_length=self.exampleLength - n_gram + 1, name='maxpool_' + str(n_gram))(subnet)
+            subnet = Flatten(name='flat_' + str(n_gram))(subnet)
+            convOutputs.append(subnet)
+        
+        x = merge(convOutputs, mode='concat')
         
         # Classification layers
-        x = Flatten()(x)
+        #x = Flatten()(x)
         x = Dense(400, activation='relu')(x)
         x = Dense(len(labelSet), activation='sigmoid')(x)
         
@@ -424,7 +434,7 @@ class KerasEntityDetector(Detector):
         cp_cb = ModelCheckpoint(filepath=bestModelPath, save_best_only=True, verbose=1)
         self.kerasModel.fit(features["train"], labels["train"], #[sourceData], self.arrays["train"]["target"],
             epochs=100 if not "epochs" in self.styles else int(self.styles["epochs"]),
-            batch_size=128,
+            batch_size=64,
             shuffle=True,
             validation_data=(features["devel"], labels["devel"]),
             class_weight=labelWeights,
@@ -433,7 +443,7 @@ class KerasEntityDetector(Detector):
         bestModelPath = self.model.get(self.tag + "model.hdf5", True) 
         print >> sys.stderr, "Predicting devel examples"
         self.kerasModel = load_model(bestModelPath)
-        predictions = self.kerasModel.predict(features["devel"], 128, 1)
+        predictions = self.kerasModel.predict(features["devel"], 64, 1)
         print >> sys.stderr, mlb.classes_
         print labels["devel"][0]
         for i in range(len(predictions)):
