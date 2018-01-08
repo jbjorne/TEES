@@ -58,7 +58,7 @@ class Embeddings():
             for key in keys:
                 assert key not in self.embeddingIndex
                 self.embeddingIndex[key] = len(self.embeddings)
-                self.embeddings.append(numpy.random.randint(self.dimVector) if self.wv == None else None)
+                self.embeddings.append(numpy.random.randint(1, 1000, self.dimVector) if self.wv == None else None)
     
     def releaseWV(self):
         self.wv = None
@@ -71,28 +71,29 @@ class Embeddings():
                     self.embeddingIndex[key] = len(self.embeddings)
                     self.embeddings.append(vector)
                     if self.embeddings[self.embeddingIndex["[out]"]] is None: # initialize the out-of-vocabulary vector
-                        self.embeddings[self.embeddingIndex["[out]"]] = numpy.random.randint(vector.size)
+                        self.embeddings[self.embeddingIndex["[out]"]] = numpy.random.randint(1, 1000, vector.size)
                         self.dimVector = vector.size
             else:
                 self.embeddingIndex[key] = len(self.embeddings)
                 self.embeddings.append(numpy.ones(self.dimVector))
         return self.embeddingIndex[key] if key in self.embeddingIndex else self.embeddingIndex[default]
     
-    def getLayers(self, dimExample, name, trainable=True):
-        inputLayer = Input(shape=(dimExample,), name=name)
-        embeddingLayer = Embedding(len(self.embeddings), 
-                          self.embeddings[0].size, 
-                          weights=[self.getEmbeddingMatrix()], 
-                          input_length=self.exampleLength,
-                          trainable=trainable)(inputLayer)
-        return inputLayer, embeddingLayer
+    def makeLayers(self, dimExample, name, trainable=True):
+        self.inputLayer = Input(shape=(dimExample,), name=name)
+        self.embeddingLayer = Embedding(len(self.embeddings), 
+                              self.embeddings[0].size, 
+                              weights=[self.getEmbeddingMatrix(name)], 
+                              input_length=dimExample,
+                              trainable=trainable)(self.inputLayer)
+        return self.inputLayer, self.embeddingLayer
     
-    def getEmbeddingMatrix(self):
-        dimWordVector = len(self.vectors[0])
-        numWordVectors = len(self.vectors)
+    def getEmbeddingMatrix(self, name):
+        print >> sys.stderr, "Making Embedding Matrix", name, (len(self.embeddings), self.embeddings[0].size)
+        dimWordVector = len(self.embeddings[0])
+        numWordVectors = len(self.embeddings)
         embedding_matrix = np.zeros((numWordVectors, dimWordVector))
-        for i in range(len(self.vectors)):
-            embedding_matrix[i] = self.vectors[i]
+        for i in range(len(self.embeddings)):
+            embedding_matrix[i] = self.embeddings[i]
         return embedding_matrix
 
 class KerasEntityDetector(Detector):
@@ -258,7 +259,7 @@ class KerasEntityDetector(Detector):
         #outfile.write("[")
         # Prepare the indices
         numTokens = len(sentenceGraph.tokens)
-        indices = [self.embeddings["words"].getIndex(sentenceGraph.tokens[i], "[out]") for i in range(numTokens)]
+        indices = [self.embeddings["words"].getIndex(sentenceGraph.tokens[i].get("text").lower(), "[out]") for i in range(numTokens)]
         self.exampleLength = 9 #19 #21 #9 #5 #exampleLength = self.EXAMPLE_LENGTH if self.EXAMPLE_LENGTH != None else numTokens
 #         for i in range(numTokens):
 #             if i < numTokens:
@@ -364,13 +365,13 @@ class KerasEntityDetector(Detector):
             model.save()
         self.embeddings["words"].releaseWV()
     
-    def makeEmbeddingMatrix(self, vectors):
-        dimWordVector = len(vectors[0])
-        numWordVectors = len(vectors)
-        embedding_matrix = np.zeros((numWordVectors, dimWordVector))
-        for i in range(len(vectors)):
-            embedding_matrix[i] = vectors[i]
-        return embedding_matrix
+#     def makeEmbeddingMatrix(self, vectors):
+#         dimWordVector = len(vectors[0])
+#         numWordVectors = len(vectors)
+#         embedding_matrix = np.zeros((numWordVectors, dimWordVector))
+#         for i in range(len(vectors)):
+#             embedding_matrix[i] = vectors[i]
+#         return embedding_matrix
     
     def defineModel(self):
         """
@@ -395,7 +396,7 @@ class KerasEntityDetector(Detector):
 #                   input_length=self.exampleLength,
 #                   trainable=True)(inputLayer1)
         #wordsInput, wordsEmbedding = self.embeddings["words"].getInputLayer(trainable=True, name="indices")
-        self.embeddings["words"].makeLayers("indices", True)
+        self.embeddings["words"].makeLayers(self.exampleLength, "indices", True)
         # Other Features
         x2 = inputLayer2 = Input(shape=(self.exampleLength,2), name='binary')
         # Merge the inputs
