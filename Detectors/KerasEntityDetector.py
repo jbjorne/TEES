@@ -353,10 +353,10 @@ class KerasEntityDetector(Detector):
         x = merge([x1, x2], mode='concat')
         
         # Main network
-        x = Conv1D(202, 9, activation='relu')(x)
-        x = Conv1D(202, 6, activation='relu')(x)
+        x = Conv1D(64, 11, activation='relu')(x)
+        x = Conv1D(64, 4, activation='relu')(x)
         #x = MaxPooling1D(3)(x)
-        x = Conv1D(202, 3, activation='relu')(x)
+        x = Conv1D(64, 4, activation='relu')(x)
         #x = MaxPooling1D(3)(x)
         #x = Conv1D(256, 3, activation='relu')(x)
         #x = MaxPooling1D(3)(x)
@@ -424,7 +424,7 @@ class KerasEntityDetector(Detector):
         cp_cb = ModelCheckpoint(filepath=bestModelPath, save_best_only=True, verbose=1)
         self.kerasModel.fit(features["train"], labels["train"], #[sourceData], self.arrays["train"]["target"],
             epochs=100 if not "epochs" in self.styles else int(self.styles["epochs"]),
-            batch_size=64,
+            batch_size=128,
             shuffle=True,
             validation_data=(features["devel"], labels["devel"]),
             class_weight=labelWeights,
@@ -433,7 +433,7 @@ class KerasEntityDetector(Detector):
         bestModelPath = self.model.get(self.tag + "model.hdf5", True) 
         print >> sys.stderr, "Predicting devel examples"
         self.kerasModel = load_model(bestModelPath)
-        predictions = self.kerasModel.predict(features["devel"], 64, 1)
+        predictions = self.kerasModel.predict(features["devel"], 128, 1)
         print >> sys.stderr, mlb.classes_
         print labels["devel"][0]
         for i in range(len(predictions)):
