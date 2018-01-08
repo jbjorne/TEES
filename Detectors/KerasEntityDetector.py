@@ -353,10 +353,10 @@ class KerasEntityDetector(Detector):
         x = merge([x1, x2], mode='concat')
         
         # Main network
-        x = Conv1D(32, 2, activation='relu', padding='same')(x)
-        x = MaxPooling1D(3)(x)
-        x = Conv1D(32, 2, activation='relu', padding='same')(x)
-        x = MaxPooling1D(3)(x)
+        x = Conv1D(128, 3, activation='relu')(x)
+        #x = MaxPooling1D(3)(x)
+        x = Conv1D(128, 3, activation='relu')(x)
+        #x = MaxPooling1D(3)(x)
         #x = Conv1D(256, 3, activation='relu')(x)
         #x = MaxPooling1D(3)(x)
         
