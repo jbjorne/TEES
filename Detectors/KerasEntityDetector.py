@@ -91,7 +91,7 @@ class Embeddings():
         return self.inputLayer, self.embeddingLayer
     
     def getEmbeddingMatrix(self, name):
-        print >> sys.stderr, "Making Embedding Matrix", name, (len(self.embeddings), self.embeddings[0].size), self.embeddings[-1]
+        print >> sys.stderr, "Making Embedding Matrix", name, (len(self.embeddings), self.embeddings[0].size), self.embeddingIndex.keys()[0:50], self.embeddings[-1]
         dimWordVector = len(self.embeddings[0])
         numWordVectors = len(self.embeddings)
         embedding_matrix = np.zeros((numWordVectors, dimWordVector))
@@ -294,21 +294,22 @@ class KerasEntityDetector(Detector):
                 self.exampleStats.endExample()
                 continue
             
-            features = {"words":[], "positions":[], "named_entities":[]}
+            features = {"words":[], "positions":[], "named_entities":[], "POS":[]}
+            featureGroups = sorted(features.keys())
             side = (self.exampleLength - 1) / 2
             windowIndex = 0
             for j in range(i - side, i + side + 1):
                 #features["binary"].append([])
                 #features["binary"][-1].append(1 if i == j else 0)
-                if j > 0 and j < numTokens:
+                if j >= 0 and j < numTokens:
                     features["words"].append(indices[j])
                     features["positions"].append(self.embeddings["positions"].getIndex(windowIndex))
                     features["named_entities"].append(self.embeddings["named_entities"].getIndex(1 if sentenceGraph.tokenIsName[sentenceGraph.tokens[j]] else 0))
+                    features["POS"].append(self.embeddings["POS"].getIndex(sentenceGraph.tokens[j].get("POS")))
                     #features["binary"][-1].append(1 if sentenceGraph.tokenIsName[sentenceGraph.tokens[j]] else 0)
                 else:
-                    features["words"].append(self.embeddings["words"].getIndex("[padding]"))
-                    features["positions"].append(self.embeddings["positions"].getIndex("[padding]"))
-                    features["named_entities"].append(self.embeddings["named_entities"].getIndex("[padding]"))
+                    for featureGroup in featureGroups:
+                        features[featureGroup].append(self.embeddings[featureGroup].getIndex("[padding]"))
                     #features["binary"][-1].append(0)
                 windowIndex += 1
             
@@ -362,6 +363,7 @@ class KerasEntityDetector(Detector):
         self.embeddings["words"] = Embeddings(None, wordVectorPath, wv_mem, wv_map, ["[out]", "[padding]"])
         self.embeddings["positions"] = Embeddings(32, keys=["[padding]"])
         self.embeddings["named_entities"] = Embeddings(32, keys=["[padding]"])
+        self.embeddings["POS"] = Embeddings(32, keys=["[padding]"])
         # Make example for all input files
         self.examples = {x:[] for x in setNames}
         for setName, data, gold in itertools.izip_longest(setNames, datas, golds, fillvalue=None):
