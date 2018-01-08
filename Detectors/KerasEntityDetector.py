@@ -53,12 +53,13 @@ class Embeddings():
             self.wv = WV.load(wordVectorPath, wvMem, wvMap)
             self.dimVector = None
         else:
-            self.dimVector = dimVector 
-        if keys != None:
-            for key in keys:
-                assert key not in self.embeddingIndex
-                self.embeddingIndex[key] = len(self.embeddings)
-                self.embeddings.append(numpy.random.randint(1, 1000, self.dimVector) if self.wv == None else None)
+            self.dimVector = dimVector
+        self.initialKeys = [] if keys == None else keys
+        self.initialKeysInitialized = False
+        for key in self.initialKeys:
+            assert key not in self.embeddingIndex
+            self.embeddingIndex[key] = len(self.embeddings)
+            self.embeddings.append(numpy.zeros(self.dimVector) if self.wv == None else None)
     
     def releaseWV(self):
         self.wv = None
@@ -70,9 +71,10 @@ class Embeddings():
                 if vector is not None:
                     self.embeddingIndex[key] = len(self.embeddings)
                     self.embeddings.append(vector)
-                    if self.embeddings[self.embeddingIndex["[out]"]] is None: # initialize the out-of-vocabulary vector
-                        self.embeddings[self.embeddingIndex["[out]"]] = numpy.random.randint(1, 1000, vector.size)
-                        self.dimVector = vector.size
+                    if not self.initialKeysInitialized:
+                        for initialKey in self.initialKeys:
+                            self.embeddings[self.embeddingIndex[initialKey]] = numpy.zeros(vector.size)
+                        self.initialKeysInitialized = True
             else:
                 self.embeddingIndex[key] = len(self.embeddings)
                 self.embeddings.append(numpy.ones(self.dimVector))
