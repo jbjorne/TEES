@@ -263,7 +263,7 @@ class KerasEntityDetector(Detector):
         # Prepare the indices
         numTokens = len(sentenceGraph.tokens)
         indices = [self.embeddings["words"].getIndex(sentenceGraph.tokens[i].get("text").lower(), "[out]") for i in range(numTokens)]
-        self.exampleLength = 9 #19 #21 #9 #5 #exampleLength = self.EXAMPLE_LENGTH if self.EXAMPLE_LENGTH != None else numTokens
+        self.exampleLength = 3 #9 #19 #21 #9 #5 #exampleLength = self.EXAMPLE_LENGTH if self.EXAMPLE_LENGTH != None else numTokens
 #         for i in range(numTokens):
 #             if i < numTokens:
 #                 token = sentenceGraph.tokens[i]
@@ -425,19 +425,18 @@ class KerasEntityDetector(Detector):
 #         #x = Conv1D(256, 3, activation='relu')(x)
 #         #x = MaxPooling1D(3)(x)
         
-        convOutputs = []
-        kernelSizes = [3, 5, 7]
-        numFilters = 64
-        for kernel in kernelSizes:
-            subnet = Conv1D(numFilters, kernel, activation='relu', name='conv_' + str(kernel))(merged_features)
-            subnet = MaxPooling1D(pool_length=self.exampleLength - kernel + 1, name='maxpool_' + str(kernel))(subnet)
-            subnet = Flatten(name='flat_' + str(kernel))(subnet)
-            convOutputs.append(subnet)
-        
-        layer = merge(convOutputs, mode='concat')
+#         convOutputs = []
+#         kernelSizes = [3, 5, 7]
+#         numFilters = 512 #64
+#         for kernel in kernelSizes:
+#             subnet = Conv1D(numFilters, kernel, activation='relu', name='conv_' + str(kernel))(merged_features)
+#             subnet = MaxPooling1D(pool_length=self.exampleLength - kernel + 1, name='maxpool_' + str(kernel))(subnet)
+#             subnet = Flatten(name='flat_' + str(kernel))(subnet)
+#             convOutputs.append(subnet)       
+#         layer = merge(convOutputs, mode='concat')
         
         # Classification layers
-        #x = Flatten()(x)
+        layer = Flatten()(merged_features)
         layer = Dense(400, activation='relu')(layer)
         layer = Dense(len(labelSet), activation='sigmoid')(layer)
         
