@@ -43,6 +43,55 @@ from sklearn.metrics.classification import classification_report
 from keras.layers import Conv1D
 from keras.layers.pooling import MaxPooling1D, GlobalMaxPooling1D
 
+class Embeddings():
+    def __init__(self, dimVector=32, wordVectorPath=None, wvMem=100000, wvMap=10000000):
+        self.wv = None
+        if wordVectorPath != None:
+            print >> sys.stderr, "Loading word vectors", (wvMem, wvMap), "from", wordVectorPath
+            self.wv = WV.load(wordVectorPath, wvMem, wvMap)
+            self.embeddings = [None]
+            self.embeddingIndex = {"[out]":0}
+            self.dimVector = None
+        else:
+            self.dimVector = dimVector
+            self.embeddings = []
+            self.embeddingIndex = {}
+    
+    def releaseWV(self):
+        self.wv = None
+    
+    def getIndex(self, key):
+        if key not in self.embeddingIndex:
+            if self.wv != None:
+                vector = self.wv.w_to_normv(key)
+                if vector is not None:
+                    self.embeddingIndex[key] = len(self.embeddings)
+                    self.embeddings.append(vector)
+                    if self.embeddings[self.embeddingIndex["[out]"]] is None: # initialize the out-of-vocabulary vector
+                        self.embeddings[self.embeddingIndex["[out]"]] = numpy.zeros(vector.size)
+                        self.dimVector = vector.size
+            else:
+                self.embeddingIndex[key] = len(self.embeddings)
+                self.embeddings.append(numpy.ones(self.dimVector))
+        return self.embeddingIndex[key] if key in self.embeddingIndex else self.embeddingIndex["[out]"]
+    
+    def getInputLayer(self, dimExample, name, trainable=True):
+        layer = Input(shape=(dimExample,), name=name)
+        layer = Embedding(len(self.embeddings), 
+                          self.embeddings[0].size, 
+                          weights=[self.getEmbeddingMatrix()], 
+                          input_length=self.exampleLength,
+                          trainable=trainable)(layer)
+        return layer
+    
+    def getEmbeddingMatrix(self):
+        dimWordVector = len(self.vectors[0])
+        numWordVectors = len(self.vectors)
+        embedding_matrix = np.zeros((numWordVectors, dimWordVector))
+        for i in range(len(self.vectors)):
+            embedding_matrix[i] = self.vectors[i]
+        return embedding_matrix
+
 class KerasEntityDetector(Detector):
     """
     The KerasDetector replaces the default SVM-based learning with a pipeline where
@@ -223,7 +272,7 @@ class KerasEntityDetector(Detector):
                 index = self.embeddingIndex[text] if text in self.embeddingIndex else self.embeddingIndex["[out]"]
             else:
                 index = self.embeddingIndex["[padding]"]
-            indices.append(index)   
+            indices.append(index)
         
         for i in range(len(sentenceGraph.tokens)):
             token = sentenceGraph.tokens[i]
@@ -293,6 +342,7 @@ class KerasEntityDetector(Detector):
         self.structureAnalyzer.load(model)
         modelChanged = False
         # Load word vectors
+        self.embeddings = {}
         self.wv = None
         if "wordvector" in self.styles and isinstance(self.styles["wordvector"], basestring):
             wordVectorPath = self.styles["wordvector"]
@@ -300,10 +350,7 @@ class KerasEntityDetector(Detector):
             wordVectorPath = Settings.W2VFILE
         wv_mem = int(self.styles.get("wv_mem", 100000))
         wv_map = int(self.styles.get("wv_map", 10000000))
-        print >> sys.stderr, "Loading word vectors", (wv_mem, wv_map), "from", wordVectorPath
-        self.wv = WV.load(wordVectorPath, wv_mem, wv_map)
-        self.embeddings = [None, None]
-        self.embeddingIndex = {"[out]":0, "[padding]":1}
+        self.embeddings["words"] = Embeddings(None, wordVectorPath, wv_mem, wv_map)
         # Make example for all input files
         self.examples = {x:[] for x in setNames}
         for setName, data, gold in itertools.izip_longest(setNames, datas, golds, fillvalue=None):
