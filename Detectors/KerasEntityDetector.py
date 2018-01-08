@@ -294,7 +294,7 @@ class KerasEntityDetector(Detector):
                 self.exampleStats.endExample()
                 continue
             
-            features = {"words":[], "positions":[]}
+            features = {"words":[], "positions":[], "named_entities":[]}
             side = (self.exampleLength - 1) / 2
             windowIndex = 0
             for j in range(i - side, i + side + 1):
@@ -303,10 +303,12 @@ class KerasEntityDetector(Detector):
                 if j > 0 and j < numTokens:
                     features["words"].append(indices[j])
                     features["positions"].append(self.embeddings["positions"].getIndex(windowIndex))
+                    features["named_entities"].append(self.embeddings["named_entities"].getIndex(1 if sentenceGraph.tokenIsName[sentenceGraph.tokens[j]] else 0))
                     #features["binary"][-1].append(1 if sentenceGraph.tokenIsName[sentenceGraph.tokens[j]] else 0)
                 else:
                     features["words"].append(self.embeddings["words"].getIndex("[padding]"))
                     features["positions"].append(self.embeddings["positions"].getIndex("[padding]"))
+                    features["named_entities"].append(self.embeddings["named_entities"].getIndex("[padding]"))
                     #features["binary"][-1].append(0)
                 windowIndex += 1
             
@@ -359,6 +361,7 @@ class KerasEntityDetector(Detector):
         wv_map = int(self.styles.get("wv_map", 10000000))
         self.embeddings["words"] = Embeddings(None, wordVectorPath, wv_mem, wv_map, ["[out]", "[padding]"])
         self.embeddings["positions"] = Embeddings(32, keys=["[padding]"])
+        self.embeddings["named_entities"] = Embeddings(32, keys=["[padding]"])
         # Make example for all input files
         self.examples = {x:[] for x in setNames}
         for setName, data, gold in itertools.izip_longest(setNames, datas, golds, fillvalue=None):
@@ -403,12 +406,13 @@ class KerasEntityDetector(Detector):
 #                   input_length=self.exampleLength,
 #                   trainable=True)(inputLayer1)
         #wordsInput, wordsEmbedding = self.embeddings["words"].getInputLayer(trainable=True, name="indices")
-        self.embeddings["words"].makeLayers(self.exampleLength, "words", False)
-        self.embeddings["positions"].makeLayers(self.exampleLength, "positions", True)
+        embNames = sorted(self.embeddings.keys())
+        for embName in embNames:
+            self.embeddings[embName].makeLayers(self.exampleLength, embName, embName != "words")
         # Other Features
         #x2 = inputLayer2 = Input(shape=(self.exampleLength,2), name='binary')
         # Merge the inputs
-        merged_features = merge([self.embeddings["words"].embeddingLayer, self.embeddings["positions"].embeddingLayer], mode='concat', name="merged_features")
+        merged_features = merge([self.embeddings[x].embeddingLayer for x in embNames], mode='concat', name="merged_features")
         
 #         # Main network
 #         x = Conv1D(64, 11, activation='relu')(x)
@@ -435,7 +439,7 @@ class KerasEntityDetector(Detector):
         x = Dense(400, activation='relu')(x)
         x = Dense(len(labelSet), activation='sigmoid')(x)
         
-        self.kerasModel = Model([self.embeddings["words"].inputLayer, self.embeddings["positions"].inputLayer], x)
+        self.kerasModel = Model([self.embeddings[x].inputLayer for x in embNames], x)
         
         learningRate = float(self.styles.get("lr", 0.001))
         print >> sys.stderr, "Using learning rate", learningRate
