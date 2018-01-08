@@ -432,14 +432,14 @@ class KerasEntityDetector(Detector):
             subnet = Flatten(name='flat_' + str(kernel))(subnet)
             convOutputs.append(subnet)
         
-        x = merge(convOutputs, mode='concat')
+        layer = merge(convOutputs, mode='concat')
         
         # Classification layers
         #x = Flatten()(x)
-        x = Dense(400, activation='relu')(x)
-        x = Dense(len(labelSet), activation='sigmoid')(x)
+        layer = Dense(400, activation='relu')(layer)
+        layer = Dense(len(labelSet), activation='sigmoid')(layer)
         
-        self.kerasModel = Model([self.embeddings[x].inputLayer for x in embNames], x)
+        self.kerasModel = Model([self.embeddings[x].inputLayer for x in embNames], layer)
         
         learningRate = float(self.styles.get("lr", 0.001))
         print >> sys.stderr, "Using learning rate", learningRate
