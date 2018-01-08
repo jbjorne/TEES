@@ -207,7 +207,7 @@ class KerasEntityDetector(Detector):
         # Prepare the indices
         indices = []
         numTokens = len(sentenceGraph.tokens)
-        self.exampleLength = 19 #21 #9 #5 #exampleLength = self.EXAMPLE_LENGTH if self.EXAMPLE_LENGTH != None else numTokens
+        self.exampleLength = 9 #19 #21 #9 #5 #exampleLength = self.EXAMPLE_LENGTH if self.EXAMPLE_LENGTH != None else numTokens
         for i in range(numTokens):
             if i < numTokens:
                 token = sentenceGraph.tokens[i]
@@ -362,11 +362,12 @@ class KerasEntityDetector(Detector):
 #         #x = MaxPooling1D(3)(x)
         
         convOutputs = []
-        ngram_filters = [3, 5, 7]
-        for n_gram in ngram_filters:
-            subnet = Conv1D(64, n_gram, activation='relu', name='conv_' + str(n_gram))(merged_features)
-            subnet = MaxPooling1D(pool_length=self.exampleLength - n_gram + 1, name='maxpool_' + str(n_gram))(subnet)
-            subnet = Flatten(name='flat_' + str(n_gram))(subnet)
+        kernelSizes = [3, 5, 7]
+        numFilters = 64
+        for kernel in kernelSizes:
+            subnet = Conv1D(numFilters, kernel, activation='relu', name='conv_' + str(kernel))(merged_features)
+            subnet = MaxPooling1D(pool_length=self.exampleLength - kernel + 1, name='maxpool_' + str(kernel))(subnet)
+            subnet = Flatten(name='flat_' + str(kernel))(subnet)
             convOutputs.append(subnet)
         
         x = merge(convOutputs, mode='concat')
