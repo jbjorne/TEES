@@ -207,7 +207,7 @@ class KerasEntityDetector(Detector):
         # Prepare the indices
         indices = []
         numTokens = len(sentenceGraph.tokens)
-        self.exampleLength = 21 #9 #5 #exampleLength = self.EXAMPLE_LENGTH if self.EXAMPLE_LENGTH != None else numTokens
+        self.exampleLength = 9 #21 #9 #5 #exampleLength = self.EXAMPLE_LENGTH if self.EXAMPLE_LENGTH != None else numTokens
         for i in range(numTokens):
             if i < numTokens:
                 token = sentenceGraph.tokens[i]
@@ -353,9 +353,9 @@ class KerasEntityDetector(Detector):
         x = merge([x1, x2], mode='concat')
         
         # Main network
-        x = Conv1D(256, 3, activation='relu')(x)
+        x = Conv1D(32, 2, activation='relu', padding='same')(x)
         x = MaxPooling1D(3)(x)
-        x = Conv1D(256, 3, activation='relu')(x)
+        x = Conv1D(32, 2, activation='relu', padding='same')(x)
         x = MaxPooling1D(3)(x)
         #x = Conv1D(256, 3, activation='relu')(x)
         #x = MaxPooling1D(3)(x)
