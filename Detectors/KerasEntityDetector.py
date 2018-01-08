@@ -77,7 +77,7 @@ class Embeddings():
                         self.initialKeysInitialized = True
             else:
                 self.embeddingIndex[key] = len(self.embeddings)
-                self.embeddings.append(numpy.ones(self.dimVector))
+                self.embeddings.append(numpy.random.randint(1, 1000, self.dimVector))
         return self.embeddingIndex[key] if key in self.embeddingIndex else self.embeddingIndex[default]
     
     def makeLayers(self, dimExample, name, trainable=True):
@@ -86,7 +86,8 @@ class Embeddings():
                               self.embeddings[0].size, 
                               weights=[self.getEmbeddingMatrix(name)], 
                               input_length=dimExample,
-                              trainable=trainable)(self.inputLayer)
+                              trainable=trainable,
+                              name=name + "_embeddings")(self.inputLayer)
         return self.inputLayer, self.embeddingLayer
     
     def getEmbeddingMatrix(self, name):
@@ -293,17 +294,21 @@ class KerasEntityDetector(Detector):
                 self.exampleStats.endExample()
                 continue
             
-            features = {"indices":[], "binary":[]}
+            features = {"words":[], "positions":[]}
             side = (self.exampleLength - 1) / 2
+            windowIndex = 0
             for j in range(i - side, i + side + 1):
-                features["binary"].append([])
-                features["binary"][-1].append(1 if i == j else 0)
+                #features["binary"].append([])
+                #features["binary"][-1].append(1 if i == j else 0)
                 if j > 0 and j < numTokens:
-                    features["indices"].append(indices[j])
-                    features["binary"][-1].append(1 if sentenceGraph.tokenIsName[sentenceGraph.tokens[j]] else 0)
+                    features["words"].append(indices[j])
+                    features["positions"].append(self.embeddings["positions"].getIndex(windowIndex))
+                    #features["binary"][-1].append(1 if sentenceGraph.tokenIsName[sentenceGraph.tokens[j]] else 0)
                 else:
-                    features["indices"].append(self.embeddings["words"].getIndex("[padding]"))
-                    features["binary"][-1].append(0)
+                    features["words"].append(self.embeddings["words"].getIndex("[padding]"))
+                    features["positions"].append(self.embeddings["positions"].getIndex("[padding]"))
+                    #features["binary"][-1].append(0)
+                windowIndex += 1
             
             examples.append({"id":sentenceGraph.getSentenceId()+".x"+str(exampleIndex), "labels":labels, "features":features}) #, "extra":{"eIds":entityIds}}
             #outfile.write("\n")
@@ -353,7 +358,7 @@ class KerasEntityDetector(Detector):
         wv_mem = int(self.styles.get("wv_mem", 100000))
         wv_map = int(self.styles.get("wv_map", 10000000))
         self.embeddings["words"] = Embeddings(None, wordVectorPath, wv_mem, wv_map, ["[out]", "[padding]"])
-        #self.embeddings["position"] = Embeddings(32, keys=["[padding]"])
+        self.embeddings["positions"] = Embeddings(32, keys=["[padding]"])
         # Make example for all input files
         self.examples = {x:[] for x in setNames}
         for setName, data, gold in itertools.izip_longest(setNames, datas, golds, fillvalue=None):
@@ -398,11 +403,12 @@ class KerasEntityDetector(Detector):
 #                   input_length=self.exampleLength,
 #                   trainable=True)(inputLayer1)
         #wordsInput, wordsEmbedding = self.embeddings["words"].getInputLayer(trainable=True, name="indices")
-        self.embeddings["words"].makeLayers(self.exampleLength, "indices", True)
+        self.embeddings["words"].makeLayers(self.exampleLength, "words", False)
+        self.embeddings["positions"].makeLayers(self.exampleLength, "positions", True)
         # Other Features
-        x2 = inputLayer2 = Input(shape=(self.exampleLength,2), name='binary')
+        #x2 = inputLayer2 = Input(shape=(self.exampleLength,2), name='binary')
         # Merge the inputs
-        merged_features = merge([self.embeddings["words"].embeddingLayer, x2], mode='concat', name="merged_features")
+        merged_features = merge([self.embeddings["words"].embeddingLayer, self.embeddings["positions"]], mode='concat', name="merged_features")
         
 #         # Main network
 #         x = Conv1D(64, 11, activation='relu')(x)
@@ -429,7 +435,7 @@ class KerasEntityDetector(Detector):
         x = Dense(400, activation='relu')(x)
         x = Dense(len(labelSet), activation='sigmoid')(x)
         
-        self.kerasModel = Model([self.embeddings["words"].inputLayer, inputLayer2], x)
+        self.kerasModel = Model([self.embeddings["words"].inputLayer, self.embeddings["positions"].inputLayer], x)
         
         learningRate = float(self.styles.get("lr", 0.001))
         print >> sys.stderr, "Using learning rate", learningRate
@@ -465,19 +471,29 @@ class KerasEntityDetector(Detector):
         #labelWeights = {x[0]:x[1] for x in enumerate(compute_class_weight("balanced", np.unique(labels["train"]), labels["train"]))}
         #print >> sys.stderr, "Label weights:", labelWeights
         
-        print >> sys.stderr, "Vectorizing features"
-        if self.exampleLength != None:
-            for dataSet in ("train", "devel"):
-                for example in self.examples[dataSet]:
-                    for fType in ("indices", "binary"):
-                        assert len(example["features"][fType]) == self.exampleLength, example
+        featureGroups = sorted(self.examples["train"][0]["features"].keys())
+        print >> sys.stderr, "Vectorizing features:", featureGroups
         features = {"train":{}, "devel":{}}
-        for dataSet in ("train", "devel"):
-            features[dataSet]["indices"] = numpy.array([x["features"]["indices"] for x in self.examples[dataSet]])
-            features[dataSet]["binary"] = numpy.array([x["features"]["binary"] for x in self.examples[dataSet]])
+        for featureGroup in featureGroups:
+            for dataSet in ("train", "devel"):
+                if self.exampleLength != None:
+                    for example in self.examples[dataSet]:
+                        assert len(example["features"][featureGroup]) == self.exampleLength, example
+                features[dataSet][featureGroup] = numpy.array([x["features"][featureGroup] for x in self.examples[dataSet]])
+            print >> sys.stderr, featureGroup, features[dataSet][featureGroup].shape, features[dataSet][featureGroup][0]
         
-        for fType in ("indices", "binary"):
-            print fType, features["train"][fType].shape, features["train"][fType][0]
+#         if self.exampleLength != None:
+#             for dataSet in ("train", "devel"):
+#                 for example in self.examples[dataSet]:
+#                     for fType in ("indices", "binary"):
+#                         assert len(example["features"][fType]) == self.exampleLength, example
+#         features = {"train":{}, "devel":{}}
+#         for dataSet in ("train", "devel"):
+#             features[dataSet]["indices"] = numpy.array([x["features"]["indices"] for x in self.examples[dataSet]])
+#             features[dataSet]["binary"] = numpy.array([x["features"]["binary"] for x in self.examples[dataSet]])
+#         
+#         for fType in ("indices", "binary"):
+#             print fType, features["train"][fType].shape, features["train"][fType][0]
         
         print >> sys.stderr, "Fitting model"
         patience = int(self.styles.get("patience", 10))
