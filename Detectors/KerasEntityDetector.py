@@ -57,7 +57,8 @@ class KerasEntityDetector(Detector):
         self.exampleBuilder = None #KerasExampleBuilder
         self.matrices = None
         self.arrays = None
-        self.EXAMPLE_LENGTH = None #130
+        #self.EXAMPLE_LENGTH = 1 #None #130
+        self.exampleLength = -1
     
     ###########################################################################
     # Main Pipeline Interface
@@ -206,8 +207,8 @@ class KerasEntityDetector(Detector):
         # Prepare the indices
         indices = []
         numTokens = len(sentenceGraph.tokens)
-        exampleLength = self.EXAMPLE_LENGTH if self.EXAMPLE_LENGTH != None else numTokens
-        for i in range(exampleLength):
+        self.exampleLength = 5 #exampleLength = self.EXAMPLE_LENGTH if self.EXAMPLE_LENGTH != None else numTokens
+        for i in range(numTokens):
             if i < numTokens:
                 token = sentenceGraph.tokens[i]
                 text = token.get("text").lower()
@@ -237,14 +238,15 @@ class KerasEntityDetector(Detector):
                 self.exampleStats.endExample()
                 continue
             
-            binary = []
-            for j in range(exampleLength):
-                if i == j:
-                    binary.append([1])
+            features = {"indices":[], "binary":[]}
+            side = (self.exampleLength - 1) / 2
+            for j in range(i - side, i + side + 1):
+                if j > 0 and j < numTokens:
+                    features["indices"].append(indices[j])
                 else:
-                    binary.append([0])
+                    features["indices"].append(self.embeddingIndex["[out]"])
+                features["binary"].append([1] if i == j else [0])
             
-            features = {"indices":indices, "binary":binary}
             examples.append({"id":sentenceGraph.getSentenceId()+".x"+str(exampleIndex), "labels":labels, "features":features}) #, "extra":{"eIds":entityIds}}
             #outfile.write("\n")
             #if exampleIndex > 0:
@@ -336,22 +338,23 @@ class KerasEntityDetector(Detector):
                     labelSet.add(label)
         
         # The Embeddings
-        x1 = inputLayer1 = Input(shape=(self.EXAMPLE_LENGTH,), name='indices')
+        x1 = inputLayer1 = Input(shape=(self.exampleLength,), name='indices')
         x1 = Embedding(len(self.embeddings), 
                   self.embeddings[0].size, 
                   weights=[embedding_matrix], 
-                  input_length=self.EXAMPLE_LENGTH,
+                  input_length=self.exampleLength,
                   trainable=False)(inputLayer1)
         # Other Features
-        x2 = inputLayer2 = Input(shape=(self.EXAMPLE_LENGTH,1), name='binary')
+        x2 = inputLayer2 = Input(shape=(self.exampleLength,1), name='binary')
         # Merge the inputs
         x = merge([x1, x2], mode='concat')
         
         # Main network
-        x = Conv1D(128, 5, activation='relu')(x)
-        x = Conv1D(128, 5, activation='relu')(x)
-        x = Conv1D(128, 5, activation='relu')(x)
-        x = GlobalMaxPooling1D()(x) #x = Flatten()(x)
+        #x = Conv1D(128, 5, activation='relu')(x)
+        #x = Conv1D(128, 5, activation='relu')(x)
+        #x = Conv1D(128, 5, activation='relu')(x)
+        #x = GlobalMaxPooling1D()(x) #x = Flatten()(x)
+        x = Flatten()(x)
         x = Dense(400, activation='relu')(x)
         x = Dense(len(labelSet), activation='sigmoid')(x)
         
@@ -392,11 +395,11 @@ class KerasEntityDetector(Detector):
         #print >> sys.stderr, "Label weights:", labelWeights
         
         print >> sys.stderr, "Vectorizing features"
-        if self.EXAMPLE_LENGTH != None:
+        if self.exampleLength != None:
             for dataSet in ("train", "devel"):
                 for example in self.examples[dataSet]:
                     for fType in ("indices", "binary"):
-                        assert len(example["features"][fType]) == self.EXAMPLE_LENGTH, example
+                        assert len(example["features"][fType]) == self.exampleLength, example
         features = {"train":{}, "devel":{}}
         for dataSet in ("train", "devel"):
             features[dataSet]["indices"] = numpy.array([x["features"]["indices"] for x in self.examples[dataSet]])
