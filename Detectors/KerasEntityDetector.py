@@ -44,23 +44,26 @@ from keras.layers import Conv1D
 from keras.layers.pooling import MaxPooling1D, GlobalMaxPooling1D
 
 class Embeddings():
-    def __init__(self, dimVector=32, wordVectorPath=None, wvMem=100000, wvMap=10000000):
+    def __init__(self, dimVector=32, wordVectorPath=None, wvMem=100000, wvMap=10000000, keys=None):
         self.wv = None
+        self.embeddings = []
+        self.embeddingIndex = {}
         if wordVectorPath != None:
             print >> sys.stderr, "Loading word vectors", (wvMem, wvMap), "from", wordVectorPath
             self.wv = WV.load(wordVectorPath, wvMem, wvMap)
-            self.embeddings = [None]
-            self.embeddingIndex = {"[out]":0}
             self.dimVector = None
         else:
-            self.dimVector = dimVector
-            self.embeddings = []
-            self.embeddingIndex = {}
+            self.dimVector = dimVector 
+        if keys != None:
+            for key in keys:
+                assert key not in self.embeddingIndex
+                self.embeddingIndex[key] = len(self.embeddings)
+                self.embeddings.append(numpy.random.randint(self.dimVector) if self.wv == None else None)
     
     def releaseWV(self):
         self.wv = None
     
-    def getIndex(self, key):
+    def getIndex(self, key, default=None):
         if key not in self.embeddingIndex:
             if self.wv != None:
                 vector = self.wv.w_to_normv(key)
@@ -68,21 +71,21 @@ class Embeddings():
                     self.embeddingIndex[key] = len(self.embeddings)
                     self.embeddings.append(vector)
                     if self.embeddings[self.embeddingIndex["[out]"]] is None: # initialize the out-of-vocabulary vector
-                        self.embeddings[self.embeddingIndex["[out]"]] = numpy.zeros(vector.size)
+                        self.embeddings[self.embeddingIndex["[out]"]] = numpy.random.randint(vector.size)
                         self.dimVector = vector.size
             else:
                 self.embeddingIndex[key] = len(self.embeddings)
                 self.embeddings.append(numpy.ones(self.dimVector))
-        return self.embeddingIndex[key] if key in self.embeddingIndex else self.embeddingIndex["[out]"]
+        return self.embeddingIndex[key] if key in self.embeddingIndex else self.embeddingIndex[default]
     
-    def getInputLayer(self, dimExample, name, trainable=True):
-        layer = Input(shape=(dimExample,), name=name)
-        layer = Embedding(len(self.embeddings), 
+    def getLayers(self, dimExample, name, trainable=True):
+        inputLayer = Input(shape=(dimExample,), name=name)
+        embeddingLayer = Embedding(len(self.embeddings), 
                           self.embeddings[0].size, 
                           weights=[self.getEmbeddingMatrix()], 
                           input_length=self.exampleLength,
-                          trainable=trainable)(layer)
-        return layer
+                          trainable=trainable)(inputLayer)
+        return inputLayer, embeddingLayer
     
     def getEmbeddingMatrix(self):
         dimWordVector = len(self.vectors[0])
@@ -254,25 +257,25 @@ class KerasEntityDetector(Detector):
 
         #outfile.write("[")
         # Prepare the indices
-        indices = []
         numTokens = len(sentenceGraph.tokens)
+        indices = [self.embeddings["words"].getIndex(sentenceGraph.tokens[i], "[out]") for i in range(numTokens)]
         self.exampleLength = 9 #19 #21 #9 #5 #exampleLength = self.EXAMPLE_LENGTH if self.EXAMPLE_LENGTH != None else numTokens
-        for i in range(numTokens):
-            if i < numTokens:
-                token = sentenceGraph.tokens[i]
-                text = token.get("text").lower()
-                if text not in self.embeddingIndex:
-                    vector = self.wv.w_to_normv(text)
-                    if vector is not None:
-                        self.embeddingIndex[text] = len(self.embeddings)
-                        self.embeddings.append(vector)
-                        if self.embeddings[0] is None: # initialize the out-of-vocabulary vector
-                            self.embeddings[0] = numpy.zeros(vector.size)
-                            self.embeddings[1] = numpy.zeros(vector.size)
-                index = self.embeddingIndex[text] if text in self.embeddingIndex else self.embeddingIndex["[out]"]
-            else:
-                index = self.embeddingIndex["[padding]"]
-            indices.append(index)
+#         for i in range(numTokens):
+#             if i < numTokens:
+#                 token = sentenceGraph.tokens[i]
+#                 text = token.get("text").lower()
+#                 if text not in self.embeddingIndex:
+#                     vector = self.wv.w_to_normv(text)
+#                     if vector is not None:
+#                         self.embeddingIndex[text] = len(self.embeddings)
+#                         self.embeddings.append(vector)
+#                         if self.embeddings[0] is None: # initialize the out-of-vocabulary vector
+#                             self.embeddings[0] = numpy.zeros(vector.size)
+#                             self.embeddings[1] = numpy.zeros(vector.size)
+#                 index = self.embeddingIndex[text] if text in self.embeddingIndex else self.embeddingIndex["[out]"]
+#             else:
+#                 index = self.embeddingIndex["[padding]"]
+#             indices.append(index)
         
         for i in range(len(sentenceGraph.tokens)):
             token = sentenceGraph.tokens[i]
@@ -296,7 +299,7 @@ class KerasEntityDetector(Detector):
                     features["indices"].append(indices[j])
                     features["binary"][-1].append(1 if sentenceGraph.tokenIsName[sentenceGraph.tokens[j]] else 0)
                 else:
-                    features["indices"].append(self.embeddingIndex["[out]"])
+                    features["indices"].append(self.embeddings["words"].getIndex("[padding]"))
                     features["binary"][-1].append(0)
             
             examples.append({"id":sentenceGraph.getSentenceId()+".x"+str(exampleIndex), "labels":labels, "features":features}) #, "extra":{"eIds":entityIds}}
@@ -343,14 +346,11 @@ class KerasEntityDetector(Detector):
         modelChanged = False
         # Load word vectors
         self.embeddings = {}
-        self.wv = None
-        if "wordvector" in self.styles and isinstance(self.styles["wordvector"], basestring):
-            wordVectorPath = self.styles["wordvector"]
-        else:
-            wordVectorPath = Settings.W2VFILE
+        wordVectorPath = self.styles.get("wordvector", Settings.W2VFILE)
         wv_mem = int(self.styles.get("wv_mem", 100000))
         wv_map = int(self.styles.get("wv_map", 10000000))
-        self.embeddings["words"] = Embeddings(None, wordVectorPath, wv_mem, wv_map)
+        self.embeddings["words"] = Embeddings(None, wordVectorPath, wv_mem, wv_map, ["[out]", "[padding]"])
+        #self.embeddings["position"] = Embeddings(32, keys=["[padding]"])
         # Make example for all input files
         self.examples = {x:[] for x in setNames}
         for setName, data, gold in itertools.izip_longest(setNames, datas, golds, fillvalue=None):
@@ -362,7 +362,7 @@ class KerasEntityDetector(Detector):
             modelChanged = True
         if modelChanged:
             model.save()
-        self.wv = None # release the word vectors
+        self.embeddings["words"].releaseWV()
     
     def makeEmbeddingMatrix(self, vectors):
         dimWordVector = len(vectors[0])
@@ -376,10 +376,10 @@ class KerasEntityDetector(Detector):
         """
         Defines the Keras model and compiles it.
         """
-        print >> sys.stderr, "Making Embedding Matrix"
-        embedding_matrix = self.makeEmbeddingMatrix(self.embeddings)
-        print >> sys.stderr, "Vocabulary size:", len(self.embeddings)
-        print >> sys.stderr, "Embedding size:", self.embeddings[0].size
+#         print >> sys.stderr, "Making Embedding Matrix"
+#         embedding_matrix = self.makeEmbeddingMatrix(self.embeddings)
+#         print >> sys.stderr, "Vocabulary size:", len(self.embeddings)
+#         print >> sys.stderr, "Embedding size:", self.embeddings[0].size
         
         labelSet = set()
         for dataSet in ("train", "devel"):
@@ -388,16 +388,18 @@ class KerasEntityDetector(Detector):
                     labelSet.add(label)
         
         # The Embeddings
-        x1 = inputLayer1 = Input(shape=(self.exampleLength,), name='indices')
-        x1 = Embedding(len(self.embeddings), 
-                  self.embeddings[0].size, 
-                  weights=[embedding_matrix], 
-                  input_length=self.exampleLength,
-                  trainable=True)(inputLayer1)
+#         x1 = inputLayer1 = Input(shape=(self.exampleLength,), name='indices')
+#         x1 = Embedding(len(self.embeddings), 
+#                   self.embeddings[0].size, 
+#                   weights=[embedding_matrix], 
+#                   input_length=self.exampleLength,
+#                   trainable=True)(inputLayer1)
+        #wordsInput, wordsEmbedding = self.embeddings["words"].getInputLayer(trainable=True, name="indices")
+        self.embeddings["words"].makeLayers("indices", True)
         # Other Features
         x2 = inputLayer2 = Input(shape=(self.exampleLength,2), name='binary')
         # Merge the inputs
-        merged_features = merge([x1, x2], mode='concat', name="merged_features")
+        merged_features = merge([self.embeddings["words"].embeddingLayer, x2], mode='concat', name="merged_features")
         
 #         # Main network
 #         x = Conv1D(64, 11, activation='relu')(x)
@@ -424,7 +426,7 @@ class KerasEntityDetector(Detector):
         x = Dense(400, activation='relu')(x)
         x = Dense(len(labelSet), activation='sigmoid')(x)
         
-        self.kerasModel = Model([inputLayer1, inputLayer2], x)
+        self.kerasModel = Model([self.embeddings["words"].inputLayer, inputLayer2], x)
         
         learningRate = float(self.styles.get("lr", 0.001))
         print >> sys.stderr, "Using learning rate", learningRate
