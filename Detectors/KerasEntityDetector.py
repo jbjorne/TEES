@@ -77,7 +77,7 @@ class Embeddings():
                         self.initialKeysInitialized = True
             else:
                 self.embeddingIndex[key] = len(self.embeddings)
-                self.embeddings.append(numpy.random.randint(1, 1000, self.dimVector))
+                self.embeddings.append(numpy.random.uniform(-1.0, 1.0, self.dimVector))
         return self.embeddingIndex[key] if key in self.embeddingIndex else self.embeddingIndex[default]
     
     def makeLayers(self, dimExample, name, trainable=True):
@@ -91,7 +91,7 @@ class Embeddings():
         return self.inputLayer, self.embeddingLayer
     
     def getEmbeddingMatrix(self, name):
-        print >> sys.stderr, "Making Embedding Matrix", name, (len(self.embeddings), self.embeddings[0].size)
+        print >> sys.stderr, "Making Embedding Matrix", name, (len(self.embeddings), self.embeddings[0].size), self.embeddings[-1]
         dimWordVector = len(self.embeddings[0])
         numWordVectors = len(self.embeddings)
         embedding_matrix = np.zeros((numWordVectors, dimWordVector))
@@ -408,7 +408,7 @@ class KerasEntityDetector(Detector):
         # Other Features
         #x2 = inputLayer2 = Input(shape=(self.exampleLength,2), name='binary')
         # Merge the inputs
-        merged_features = merge([self.embeddings["words"].embeddingLayer, self.embeddings["positions"]], mode='concat', name="merged_features")
+        merged_features = merge([self.embeddings["words"].embeddingLayer, self.embeddings["positions"].embeddingLayer], mode='concat', name="merged_features")
         
 #         # Main network
 #         x = Conv1D(64, 11, activation='relu')(x)
