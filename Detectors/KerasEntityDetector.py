@@ -145,6 +145,7 @@ class KerasEntityDetector(Detector):
             self.structureAnalyzer.analyze([optData, trainData], self.model)
             print >> sys.stderr, self.structureAnalyzer.toString()
         self.styles = Utils.Parameters.get(exampleStyle)
+        self.pathDepth = int(self.styles.get("path", 3))
         self.model = self.openModel(model, "a") # Devel model already exists, with ids etc
         exampleFiles = {"devel":self.workDir+self.tag+"opt-examples.json.gz", "train":self.workDir+self.tag+"train-examples.json.gz"}
         if self.checkStep("EXAMPLES"): # Generate the adjacency matrices
@@ -231,12 +232,15 @@ class KerasEntityDetector(Detector):
             self.exampleCount += self.buildExamplesFromGraph(sentence.sentenceGraph, examples, goldSentence.sentenceGraph if goldSentence != None else None)
     
     def addPathEmbedding(self, token1, token2, dirGraph, undirGraph, edgeCounts, features):
+        if self.pathDepth <= 0:
+            return
+
         if token1 == token2:
-            keys = ["[d0]", "[d0]", "[d0]"]
+            keys = ["[d0]"] * self.pathDepth
         else:
             paths = undirGraph.getPaths(token1, token2)
             path = paths[0] if len(paths) > 0 else None
-            if path != None and len(path) <= 4:
+            if path != None and len(path) <= self.pathDepth + 1:
                 #key = "d" + str(len(paths[0]) - 1)
                 walks = dirGraph.getWalks(path)
                 walk = walks[0]
@@ -248,16 +252,15 @@ class KerasEntityDetector(Detector):
                     else:
                         assert edge[1] == path[i]
                         keys.append(edge[2].get("type") + "<")
-                while len(keys) < 3:
+                while len(keys) < self.pathDepth:
                     keys.append("[N/A]")
                 #key = "|".join(pattern)
             elif edgeCounts[token2] > 0: #len(graph.getInEdges(token2) + graph.getOutEdges(token2)) > 0:
-                keys = ["[dMax]", "[dMax]", "[dMax]"]
+                keys = ["[dMax]"] * self.pathDepth
             else:
-                keys = ["[unconnected]", "[unconnected]", "[unconnected]"]
-        features["path1"].append(self.embeddings["path1"].getIndex(keys[0]))
-        features["path2"].append(self.embeddings["path2"].getIndex(keys[1]))
-        features["path3"].append(self.embeddings["path3"].getIndex(keys[2]))
+                keys = ["[unconnected]"] * self.pathDepth
+        for i in range(self.pathDepth):
+            features["path" + str(i)].append(self.embeddings["path" + str(i)].getIndex(keys[i]))
     
     def buildExamplesFromGraph(self, sentenceGraph, examples, goldGraph=None):
         """
@@ -419,9 +422,8 @@ class KerasEntityDetector(Detector):
         self.embeddings["positions"] = Embeddings(dimEmbeddings, keys=["[padding]"])
         self.embeddings["named_entities"] = Embeddings(dimEmbeddings, keys=["[padding]"])
         self.embeddings["POS"] = Embeddings(dimEmbeddings, keys=["[padding]"])
-        self.embeddings["path1"] = Embeddings(dimEmbeddings, keys=["[padding]"])
-        self.embeddings["path2"] = Embeddings(dimEmbeddings, keys=["[padding]"])
-        self.embeddings["path3"] = Embeddings(dimEmbeddings, keys=["[padding]"])
+        for i in range(self.pathDepth):
+            self.embeddings["path" + str(i)] = Embeddings(dimEmbeddings, keys=["[padding]"])
         if self.debugGold:
             self.embeddings["gold"] = Embeddings(dimEmbeddings, keys=["[padding]"])
         # Make example for all input files
