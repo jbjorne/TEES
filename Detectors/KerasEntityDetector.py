@@ -48,6 +48,9 @@ def normalized(a, axis=-1, order=2):
     l2[l2==0] = 1
     return a / numpy.expand_dims(l2, axis)
 
+def f1ScoreMetric(y_true, y_pred):
+    return sklearn.metrics.f1_score(y_true, y_pred, average="micro")
+
 class Embeddings():
     def __init__(self, dimVector=32, wordVectorPath=None, wvMem=100000, wvMap=10000000, keys=None):
         self.wv = None
@@ -508,7 +511,7 @@ class KerasEntityDetector(Detector):
         optimizer = Adam(lr=learningRate)
         
         print >> sys.stderr, "Compiling model"
-        metrics = ["accuracy"]
+        metrics = ["accuracy"] #, f1ScoreMetric]
         self.kerasModel.compile(optimizer=optimizer, loss="binary_crossentropy", metrics=metrics)
         
         self.kerasModel.summary()
