@@ -226,7 +226,15 @@ class KerasEntityDetector(Detector):
         # Process the sentence
         if sentence.sentenceGraph != None:
             self.exampleCount += self.buildExamplesFromGraph(sentence.sentenceGraph, examples, goldSentence.sentenceGraph if goldSentence != None else None)
-
+    
+    def getPathFeatures(self, token1, token2, sentenceGraph):
+        emb = self.embeddings["paths"]
+        if token1 == token2:
+            return "d0"
+        elif sentenceGraph.dependencyGraph.
+        
+        
+    
     def buildExamplesFromGraph(self, sentenceGraph, examples, goldGraph=None):
         """
         Build one example for each token of the sentence
@@ -378,6 +386,7 @@ class KerasEntityDetector(Detector):
         self.embeddings["positions"] = Embeddings(dimEmbeddings, keys=["[padding]"])
         self.embeddings["named_entities"] = Embeddings(dimEmbeddings, keys=["[padding]"])
         self.embeddings["POS"] = Embeddings(dimEmbeddings, keys=["[padding]"])
+        self.embeddings["paths"] = Embeddings(dimEmbeddings, keys=["[padding]"])
         if self.debugGold:
             self.embeddings["gold"] = Embeddings(dimEmbeddings, keys=["[padding]"])
         # Make example for all input files
@@ -455,7 +464,7 @@ class KerasEntityDetector(Detector):
         
         # Classification layers
         #layer = Flatten()(merged_features)
-        #layer = Dense(400, activation='relu')(layer)
+        layer = Dense(400, activation='relu')(layer) #layer = Dense(800, activation='relu')(layer)
         layer = Dense(len(labelSet), activation='sigmoid')(layer)
         
         self.kerasModel = Model([self.embeddings[x].inputLayer for x in embNames], layer)
