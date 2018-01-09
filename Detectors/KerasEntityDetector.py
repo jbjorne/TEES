@@ -233,12 +233,12 @@ class KerasEntityDetector(Detector):
         else:
             paths = undirGraph.getPaths(token1, token2)
             path = paths[0] if len(paths) > 0 else None
-            if path != None: # and len(path) <= 4:
+            if path != None and len(path) <= 4:
                 #key = "d" + str(len(paths[0]) - 1)
                 walks = dirGraph.getWalks(path)
                 walk = walks[0]
                 keys = [] #pattern = []
-                for i in range(min(len(path)-1, 3)): # len(pathTokens) == len(walk)
+                for i in range(len(path)-1): # len(pathTokens) == len(walk)
                     edge = walk[i]
                     if edge[0] == path[i]:
                         keys.append(edge[2].get("type") + ">")
@@ -248,8 +248,8 @@ class KerasEntityDetector(Detector):
                 while len(keys) < 3:
                     keys.append("[N/A]")
                 #key = "|".join(pattern)
-            #elif edgeCounts[token2] > 0: #len(graph.getInEdges(token2) + graph.getOutEdges(token2)) > 0:
-            #    key = "dMax"
+            elif edgeCounts[token2] > 0: #len(graph.getInEdges(token2) + graph.getOutEdges(token2)) > 0:
+                keys = ["[dMax]", "[dMax]", "[dMax]"]
             else:
                 keys = ["[unconnected]", "[unconnected]", "[unconnected]"]
         features["path1"].append(self.embeddings["path1"].getIndex(keys[0]))
