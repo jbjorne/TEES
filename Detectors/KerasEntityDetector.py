@@ -263,6 +263,7 @@ class KerasEntityDetector(Detector):
         # Prepare the indices
         numTokens = len(sentenceGraph.tokens)
         indices = [self.embeddings["words"].getIndex(sentenceGraph.tokens[i].get("text").lower(), "[out]") for i in range(numTokens)]
+        labels = [self.getEntityTypes(sentenceGraph.tokenIsEntityHead[sentenceGraph.tokens[i]]) for i in range(numTokens)]
         self.exampleLength = 21 #5 #3 #9 #19 #21 #9 #5 #exampleLength = self.EXAMPLE_LENGTH if self.EXAMPLE_LENGTH != None else numTokens
 #         for i in range(numTokens):
 #             if i < numTokens:
@@ -285,8 +286,8 @@ class KerasEntityDetector(Detector):
             token = sentenceGraph.tokens[i]
 
             # CLASS
-            labels, entityIds = self.getEntityTypes(sentenceGraph.tokenIsEntityHead[token])
-            self.exampleStats.beginExample(",".join(labels))
+            #labels = self.getEntityTypes(sentenceGraph.tokenIsEntityHead[token])
+            self.exampleStats.beginExample(",".join(labels[i]))
             
             # Recognize only non-named entities (i.e. interaction words)
             if sentenceGraph.tokenIsName[token] and not self.styles.get("names") and not self.styles.get("all_tokens"):
@@ -295,7 +296,7 @@ class KerasEntityDetector(Detector):
                 continue
             
             tokens = []
-            features = {"words":[], "positions":[], "named_entities":[], "POS":[]}
+            features = {x:[] for x in self.embeddings.keys()} #{"words":[], "positions":[], "named_entities":[], "POS":[], "gold":[]}
             featureGroups = sorted(features.keys())
             side = (self.exampleLength - 1) / 2
             windowIndex = 0
@@ -305,6 +306,7 @@ class KerasEntityDetector(Detector):
                 if j >= 0 and j < numTokens:
                     token2 = sentenceGraph.tokens[j]
                     tokens.append(token2)
+                    features["gold"].append(self.embeddings["gold"].getIndex(",".join(labels[j])))
                     features["words"].append(indices[j])
                     features["positions"].append(self.embeddings["positions"].getIndex(windowIndex))
                     features["named_entities"].append(self.embeddings["named_entities"].getIndex(1 if (sentenceGraph.tokenIsEntityHead[token2] and sentenceGraph.tokenIsName[token2]) else 0))
@@ -317,7 +319,7 @@ class KerasEntityDetector(Detector):
                     #features["binary"][-1].append(0)
                 windowIndex += 1
             
-            examples.append({"id":sentenceGraph.getSentenceId()+".x"+str(exampleIndex), "labels":labels, "features":features, "tokens":tokens}) #, "extra":{"eIds":entityIds}}
+            examples.append({"id":sentenceGraph.getSentenceId()+".x"+str(exampleIndex), "labels":labels[i], "features":features, "tokens":tokens}) #, "extra":{"eIds":entityIds}}
             #outfile.write("\n")
             #if exampleIndex > 0:
             #    outfile.write(",")
@@ -342,7 +344,7 @@ class KerasEntityDetector(Detector):
                 entityIds.add(entity.get("id"))
         if len(types) == 0 and useNeg:
             types.add("neg")
-        return sorted(types), sorted(entityIds)
+        return sorted(types) #, sorted(entityIds)
     
     ###########################################################################
     # Main Pipeline Steps
@@ -369,6 +371,7 @@ class KerasEntityDetector(Detector):
         self.embeddings["positions"] = Embeddings(dimEmbeddings, keys=["[padding]"])
         self.embeddings["named_entities"] = Embeddings(dimEmbeddings, keys=["[padding]"])
         self.embeddings["POS"] = Embeddings(dimEmbeddings, keys=["[padding]"])
+        self.embeddings["gold"] = Embeddings(dimEmbeddings, keys=["[padding]"])
         # Make example for all input files
         self.examples = {x:[] for x in setNames}
         for setName, data, gold in itertools.izip_longest(setNames, datas, golds, fillvalue=None):
