@@ -229,14 +229,16 @@ class KerasEntityDetector(Detector):
     
     def getPathEmbedding(self, token1, token2, graph, edgeCounts):
         if token1 == token2:
-            return "d0"
-        paths = graph.getPaths(token1, token2)
-        if len(paths) > 0:
-            return "d" + str(len(paths[0]) - 1)
-        elif edgeCounts[token2] > 0: #len(graph.getInEdges(token2) + graph.getOutEdges(token2)) > 0:
-            return "dMax"
+            key = "d0"
         else:
-            return "unconnected"
+            paths = graph.getPaths(token1, token2)
+            if len(paths) > 0:
+                key = "d" + str(len(paths[0]) - 1)
+            elif edgeCounts[token2] > 0: #len(graph.getInEdges(token2) + graph.getOutEdges(token2)) > 0:
+                key = "dMax"
+            else:
+                key = "unconnected"
+        return self.embeddings["paths"].getIndex(key)
     
     def buildExamplesFromGraph(self, sentenceGraph, examples, goldGraph=None):
         """
