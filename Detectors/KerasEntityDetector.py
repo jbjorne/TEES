@@ -475,7 +475,7 @@ class KerasEntityDetector(Detector):
         #x2 = inputLayer2 = Input(shape=(self.exampleLength,2), name='binary')
         # Merge the inputs
         merged_features = merge([self.embeddings[x].embeddingLayer for x in embNames], mode='concat', name="merged_features")
-        merged_features = Dropout(0.1)(merged_features)
+        merged_features = Dropout(float(self.styles.get("do", 0.1)))(merged_features)
         
 #         # Main network
 #         x = Conv1D(64, 11, activation='relu')(x)
@@ -497,11 +497,11 @@ class KerasEntityDetector(Detector):
             subnet = Flatten(name='flat_' + str(kernel))(subnet)
             convOutputs.append(subnet)       
         layer = merge(convOutputs, mode='concat')
-        layer = Dropout(0.1)(layer)
+        layer = Dropout(float(self.styles.get("do", 0.1)))(layer)
         
         # Classification layers
         #layer = Flatten()(merged_features)
-        layer = Dense(400, activation='relu')(layer) #layer = Dense(800, activation='relu')(layer)
+        layer = Dense(int(self.styles.get("dense", 400)), activation='relu')(layer) #layer = Dense(800, activation='relu')(layer)
         layer = Dense(len(labelSet), activation='sigmoid')(layer)
         
         self.kerasModel = Model([self.embeddings[x].inputLayer for x in embNames], layer)
