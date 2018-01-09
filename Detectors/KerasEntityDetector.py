@@ -482,8 +482,10 @@ class KerasEntityDetector(Detector):
         numFilters = 32 #64
         for kernel in kernelSizes:
             subnet = Conv1D(numFilters, kernel, activation='relu', name='conv_' + str(kernel))(merged_features)
-            subnet = MaxPooling1D(pool_length=self.exampleLength - kernel + 1, name='maxpool_' + str(kernel))(subnet)
-            subnet = Flatten(name='flat_' + str(kernel))(subnet)
+            subnet = Conv1D(numFilters, kernel, activation='relu', name='conv2_' + str(kernel))(subnet)
+            #subnet = MaxPooling1D(pool_length=self.exampleLength - kernel + 1, name='maxpool_' + str(kernel))(subnet)
+            subnet = GlobalMaxPooling1D(name='maxpool_' + str(kernel))(subnet)
+            #subnet = Flatten(name='flat_' + str(kernel))(subnet)
             convOutputs.append(subnet)       
         layer = merge(convOutputs, mode='concat')
         layer = Dropout(0.1)(layer)
