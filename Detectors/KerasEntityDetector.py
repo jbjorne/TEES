@@ -302,7 +302,7 @@ class KerasEntityDetector(Detector):
         numTokens = len(sentenceGraph.tokens)
         indices = [self.embeddings["words"].getIndex(sentenceGraph.tokens[i].get("text").lower(), "[out]") for i in range(numTokens)]
         labels = [self.getEntityTypes(sentenceGraph.tokenIsEntityHead[sentenceGraph.tokens[i]]) for i in range(numTokens)]
-        self.exampleLength = 21 #5 #3 #9 #19 #21 #9 #5 #exampleLength = self.EXAMPLE_LENGTH if self.EXAMPLE_LENGTH != None else numTokens
+        self.exampleLength = int(self.styles.get("el", 21)) #31 #9 #21 #5 #3 #9 #19 #21 #9 #5 #exampleLength = self.EXAMPLE_LENGTH if self.EXAMPLE_LENGTH != None else numTokens
 #         for i in range(numTokens):
 #             if i < numTokens:
 #                 token = sentenceGraph.tokens[i]
@@ -415,7 +415,7 @@ class KerasEntityDetector(Detector):
         wv_mem = int(self.styles.get("wv_mem", 100000))
         wv_map = int(self.styles.get("wv_map", 10000000))
         self.embeddings["words"] = Embeddings(None, wordVectorPath, wv_mem, wv_map, ["[out]", "[padding]"])
-        dimEmbeddings = 8 #32
+        dimEmbeddings = int(self.styles.get("de", 8)) #8 #32
         self.embeddings["positions"] = Embeddings(dimEmbeddings, keys=["[padding]"])
         self.embeddings["named_entities"] = Embeddings(dimEmbeddings, keys=["[padding]"])
         self.embeddings["POS"] = Embeddings(dimEmbeddings, keys=["[padding]"])
@@ -488,7 +488,7 @@ class KerasEntityDetector(Detector):
         
         convOutputs = []
         kernelSizes = [1, 3, 5, 7]
-        numFilters = 32 #64
+        numFilters = int(self.styles.get("nf", 32)) #32 #64
         for kernel in kernelSizes:
             subnet = Conv1D(numFilters, kernel, activation='relu', name='conv_' + str(kernel))(merged_features)
             #subnet = Conv1D(numFilters, kernel, activation='relu', name='conv2_' + str(kernel))(subnet)
