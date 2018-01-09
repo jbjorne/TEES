@@ -227,13 +227,16 @@ class KerasEntityDetector(Detector):
         if sentence.sentenceGraph != None:
             self.exampleCount += self.buildExamplesFromGraph(sentence.sentenceGraph, examples, goldSentence.sentenceGraph if goldSentence != None else None)
     
-    def getPathFeatures(self, token1, token2, sentenceGraph):
-        emb = self.embeddings["paths"]
+    def getPathEmbedding(self, token1, token2, graph):
         if token1 == token2:
             return "d0"
-        elif sentenceGraph.dependencyGraph.
-        
-        
+        paths = graph.getPaths(token1, token2)
+        if len(paths) > 0:
+            return "d" + str(len(paths[0]))
+        elif len(graph.getInEdges(token2) + graph.getOutEdges(token2)) > 0:
+            return "dMax"
+        else:
+            return "unconnected"
     
     def buildExamplesFromGraph(self, sentenceGraph, examples, goldGraph=None):
         """
@@ -295,6 +298,11 @@ class KerasEntityDetector(Detector):
 #             else:
 #                 index = self.embeddingIndex["[padding]"]
 #             indices.append(index)
+
+        
+        undirected = None
+        if "paths" in self.embeddings:
+            undirected = sentenceGraph.dependencyGraph.toUndirected()
         
         for i in range(len(sentenceGraph.tokens)):
             token = sentenceGraph.tokens[i]
@@ -326,6 +334,7 @@ class KerasEntityDetector(Detector):
                     features["positions"].append(self.embeddings["positions"].getIndex(windowIndex))
                     features["named_entities"].append(self.embeddings["named_entities"].getIndex(1 if (sentenceGraph.tokenIsEntityHead[token2] and sentenceGraph.tokenIsName[token2]) else 0))
                     features["POS"].append(self.embeddings["POS"].getIndex(token2.get("POS")))
+                    features["paths"].append(self.getPathEmbedding(token, token2, undirected))
                     #features["binary"][-1].append(1 if sentenceGraph.tokenIsName[sentenceGraph.tokens[j]] else 0)
                 else:
                     tokens.append(None)
