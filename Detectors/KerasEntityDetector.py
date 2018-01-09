@@ -232,8 +232,20 @@ class KerasEntityDetector(Detector):
             key = "d0"
         else:
             paths = graph.getPaths(token1, token2)
-            if len(paths) > 0:
-                key = "d" + str(len(paths[0]) - 1)
+            path = paths[0] if len(paths) > 0 else None
+            if path != None and len(path) <= 4:
+                #key = "d" + str(len(paths[0]) - 1)
+                walks = graph.getWalks(path)
+                walk = walks[0]
+                pattern = []
+                for i in range(len(path)-1): # len(pathTokens) == len(walk)
+                    edge = walk[i]
+                    if edge[0] == path[i]:
+                        pattern.append(edge[2].get("type") + ">")
+                    else:
+                        assert edge[1] == path[i]
+                        pattern.append(edge[2].get("type") + "<")
+                key = "|".join(pattern)
             elif edgeCounts[token2] > 0: #len(graph.getInEdges(token2) + graph.getOutEdges(token2)) > 0:
                 key = "dMax"
             else:
