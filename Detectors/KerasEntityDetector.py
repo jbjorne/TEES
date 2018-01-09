@@ -43,6 +43,11 @@ from sklearn.metrics.classification import classification_report
 from keras.layers import Conv1D
 from keras.layers.pooling import MaxPooling1D, GlobalMaxPooling1D
 
+def normalized(a, axis=-1, order=2):
+    l2 = numpy.atleast_1d(numpy.linalg.norm(a, order, axis))
+    l2[l2==0] = 1
+    return a / numpy.expand_dims(l2, axis)
+
 class Embeddings():
     def __init__(self, dimVector=32, wordVectorPath=None, wvMem=100000, wvMap=10000000, keys=None):
         self.wv = None
@@ -77,7 +82,7 @@ class Embeddings():
                         self.initialKeysInitialized = True
             else:
                 self.embeddingIndex[key] = len(self.embeddings)
-                self.embeddings.append(numpy.random.uniform(-1.0, 1.0, self.dimVector))
+                self.embeddings.append(normalized(numpy.random.uniform(-1.0, 1.0, self.dimVector)))
         return self.embeddingIndex[key] if key in self.embeddingIndex else self.embeddingIndex[default]
     
     def makeLayers(self, dimExample, name, trainable=True):
@@ -115,6 +120,7 @@ class KerasEntityDetector(Detector):
         self.arrays = None
         #self.EXAMPLE_LENGTH = 1 #None #130
         self.exampleLength = -1
+        self.debugGold = False
     
     ###########################################################################
     # Main Pipeline Interface
@@ -306,7 +312,8 @@ class KerasEntityDetector(Detector):
                 if j >= 0 and j < numTokens:
                     token2 = sentenceGraph.tokens[j]
                     tokens.append(token2)
-                    features["gold"].append(self.embeddings["gold"].getIndex(",".join(labels[j])))
+                    if self.debugGold:
+                        features["gold"].append(self.embeddings["gold"].getIndex(",".join(labels[j])))
                     features["words"].append(indices[j])
                     features["positions"].append(self.embeddings["positions"].getIndex(windowIndex))
                     features["named_entities"].append(self.embeddings["named_entities"].getIndex(1 if (sentenceGraph.tokenIsEntityHead[token2] and sentenceGraph.tokenIsName[token2]) else 0))
@@ -371,7 +378,8 @@ class KerasEntityDetector(Detector):
         self.embeddings["positions"] = Embeddings(dimEmbeddings, keys=["[padding]"])
         self.embeddings["named_entities"] = Embeddings(dimEmbeddings, keys=["[padding]"])
         self.embeddings["POS"] = Embeddings(dimEmbeddings, keys=["[padding]"])
-        self.embeddings["gold"] = Embeddings(dimEmbeddings, keys=["[padding]"])
+        if self.debugGold:
+            self.embeddings["gold"] = Embeddings(dimEmbeddings, keys=["[padding]"])
         # Make example for all input files
         self.examples = {x:[] for x in setNames}
         for setName, data, gold in itertools.izip_longest(setNames, datas, golds, fillvalue=None):
