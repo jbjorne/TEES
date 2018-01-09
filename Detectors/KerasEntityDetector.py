@@ -337,7 +337,7 @@ class KerasEntityDetector(Detector):
         #return examples
         return exampleIndex
     
-    def getEntityTypes(self, entities, useNeg=True):
+    def getEntityTypes(self, entities, useNeg=False):
         types = set()
         entityIds = set()
         for entity in entities:
@@ -455,7 +455,7 @@ class KerasEntityDetector(Detector):
         
         # Classification layers
         #layer = Flatten()(merged_features)
-        layer = Dense(400, activation='relu')(layer)
+        #layer = Dense(400, activation='relu')(layer)
         layer = Dense(len(labelSet), activation='sigmoid')(layer)
         
         self.kerasModel = Model([self.embeddings[x].inputLayer for x in embNames], layer)
