@@ -227,30 +227,34 @@ class KerasEntityDetector(Detector):
         if sentence.sentenceGraph != None:
             self.exampleCount += self.buildExamplesFromGraph(sentence.sentenceGraph, examples, goldSentence.sentenceGraph if goldSentence != None else None)
     
-    def getPathEmbedding(self, token1, token2, dirGraph, undirGraph, edgeCounts):
+    def addPathEmbedding(self, token1, token2, dirGraph, undirGraph, edgeCounts, features):
         if token1 == token2:
-            key = "d0"
+            keys = ["[d0]", "[d0]", "[d0]"]
         else:
             paths = undirGraph.getPaths(token1, token2)
             path = paths[0] if len(paths) > 0 else None
-            if path != None and len(path) <= 4:
+            if path != None: # and len(path) <= 4:
                 #key = "d" + str(len(paths[0]) - 1)
                 walks = dirGraph.getWalks(path)
                 walk = walks[0]
-                pattern = []
-                for i in range(len(path)-1): # len(pathTokens) == len(walk)
+                keys = [] #pattern = []
+                for i in range(min(len(path)-1, 3)): # len(pathTokens) == len(walk)
                     edge = walk[i]
                     if edge[0] == path[i]:
-                        pattern.append(edge[2].get("type") + ">")
+                        keys.append(edge[2].get("type") + ">")
                     else:
                         assert edge[1] == path[i]
-                        pattern.append(edge[2].get("type") + "<")
-                key = "|".join(pattern)
-            elif edgeCounts[token2] > 0: #len(graph.getInEdges(token2) + graph.getOutEdges(token2)) > 0:
-                key = "dMax"
+                        keys.append(edge[2].get("type") + "<")
+                while len(keys) < 3:
+                    keys.append("[N/A]")
+                #key = "|".join(pattern)
+            #elif edgeCounts[token2] > 0: #len(graph.getInEdges(token2) + graph.getOutEdges(token2)) > 0:
+            #    key = "dMax"
             else:
-                key = "unconnected"
-        return self.embeddings["paths"].getIndex(key)
+                keys = ["[unconnected]", "[unconnected]", "[unconnected]"]
+        features["path1"].append(self.embeddings["path1"].getIndex(keys[0]))
+        features["path2"].append(self.embeddings["path2"].getIndex(keys[1]))
+        features["path3"].append(self.embeddings["path3"].getIndex(keys[2]))
     
     def buildExamplesFromGraph(self, sentenceGraph, examples, goldGraph=None):
         """
@@ -314,12 +318,12 @@ class KerasEntityDetector(Detector):
 #             indices.append(index)
 
         
-        undirected = None
-        edgeCounts = None
-        if "paths" in self.embeddings:
-            dg = sentenceGraph.dependencyGraph
-            undirected = dg.toUndirected()
-            edgeCounts = {x:len(dg.getInEdges(x) + dg.getOutEdges(x)) for x in sentenceGraph.tokens}
+        #undirected = None
+        #edgeCounts = None
+        #if "paths" in self.embeddings:
+        dg = sentenceGraph.dependencyGraph
+        undirected = dg.toUndirected()
+        edgeCounts = {x:len(dg.getInEdges(x) + dg.getOutEdges(x)) for x in sentenceGraph.tokens}
         
         for i in range(len(sentenceGraph.tokens)):
             token = sentenceGraph.tokens[i]
@@ -351,7 +355,7 @@ class KerasEntityDetector(Detector):
                     features["positions"].append(self.embeddings["positions"].getIndex(windowIndex))
                     features["named_entities"].append(self.embeddings["named_entities"].getIndex(1 if (sentenceGraph.tokenIsEntityHead[token2] and sentenceGraph.tokenIsName[token2]) else 0))
                     features["POS"].append(self.embeddings["POS"].getIndex(token2.get("POS")))
-                    features["paths"].append(self.getPathEmbedding(token, token2, sentenceGraph.dependencyGraph, undirected, edgeCounts))
+                    self.addPathEmbedding(token, token2, sentenceGraph.dependencyGraph, undirected, edgeCounts, features)
                     #features["binary"][-1].append(1 if sentenceGraph.tokenIsName[sentenceGraph.tokens[j]] else 0)
                 else:
                     tokens.append(None)
@@ -412,7 +416,9 @@ class KerasEntityDetector(Detector):
         self.embeddings["positions"] = Embeddings(dimEmbeddings, keys=["[padding]"])
         self.embeddings["named_entities"] = Embeddings(dimEmbeddings, keys=["[padding]"])
         self.embeddings["POS"] = Embeddings(dimEmbeddings, keys=["[padding]"])
-        self.embeddings["paths"] = Embeddings(dimEmbeddings, keys=["[padding]"])
+        self.embeddings["path1"] = Embeddings(dimEmbeddings, keys=["[padding]"])
+        self.embeddings["path2"] = Embeddings(dimEmbeddings, keys=["[padding]"])
+        self.embeddings["path3"] = Embeddings(dimEmbeddings, keys=["[padding]"])
         if self.debugGold:
             self.embeddings["gold"] = Embeddings(dimEmbeddings, keys=["[padding]"])
         # Make example for all input files
