@@ -307,7 +307,7 @@ class KerasEntityDetector(Detector):
                     tokens.append(token2)
                     features["words"].append(indices[j])
                     features["positions"].append(self.embeddings["positions"].getIndex(windowIndex))
-                    features["named_entities"].append(self.embeddings["named_entities"].getIndex(1 if sentenceGraph.tokenIsName[token2] else 0))
+                    features["named_entities"].append(self.embeddings["named_entities"].getIndex(1 if (sentenceGraph.tokenIsEntityHead[token2] and sentenceGraph.tokenIsName[token2]) else 0))
                     features["POS"].append(self.embeddings["POS"].getIndex(token2.get("POS")))
                     #features["binary"][-1].append(1 if sentenceGraph.tokenIsName[sentenceGraph.tokens[j]] else 0)
                 else:
@@ -365,9 +365,10 @@ class KerasEntityDetector(Detector):
         wv_mem = int(self.styles.get("wv_mem", 100000))
         wv_map = int(self.styles.get("wv_map", 10000000))
         self.embeddings["words"] = Embeddings(None, wordVectorPath, wv_mem, wv_map, ["[out]", "[padding]"])
-        self.embeddings["positions"] = Embeddings(32, keys=["[padding]"])
-        self.embeddings["named_entities"] = Embeddings(32, keys=["[padding]"])
-        self.embeddings["POS"] = Embeddings(32, keys=["[padding]"])
+        dimEmbeddings = 8 #32
+        self.embeddings["positions"] = Embeddings(dimEmbeddings, keys=["[padding]"])
+        self.embeddings["named_entities"] = Embeddings(dimEmbeddings, keys=["[padding]"])
+        self.embeddings["POS"] = Embeddings(dimEmbeddings, keys=["[padding]"])
         # Make example for all input files
         self.examples = {x:[] for x in setNames}
         for setName, data, gold in itertools.izip_longest(setNames, datas, golds, fillvalue=None):
@@ -419,7 +420,7 @@ class KerasEntityDetector(Detector):
         #x2 = inputLayer2 = Input(shape=(self.exampleLength,2), name='binary')
         # Merge the inputs
         merged_features = merge([self.embeddings[x].embeddingLayer for x in embNames], mode='concat', name="merged_features")
-        merged_features = Dropout(0.5)(merged_features)
+        merged_features = Dropout(0.1)(merged_features)
         
 #         # Main network
 #         x = Conv1D(64, 11, activation='relu')(x)
@@ -431,7 +432,7 @@ class KerasEntityDetector(Detector):
 #         #x = MaxPooling1D(3)(x)
         
         convOutputs = []
-        kernelSizes = [1, 3, 5, 7, 14]
+        kernelSizes = [1, 3, 5, 7]
         numFilters = 32 #64
         for kernel in kernelSizes:
             subnet = Conv1D(numFilters, kernel, activation='relu', name='conv_' + str(kernel))(merged_features)
@@ -439,7 +440,7 @@ class KerasEntityDetector(Detector):
             subnet = Flatten(name='flat_' + str(kernel))(subnet)
             convOutputs.append(subnet)       
         layer = merge(convOutputs, mode='concat')
-        layer = Dropout(0.5)(layer)
+        layer = Dropout(0.1)(layer)
         
         # Classification layers
         #layer = Flatten()(merged_features)
