@@ -263,7 +263,7 @@ class KerasEntityDetector(Detector):
         # Prepare the indices
         numTokens = len(sentenceGraph.tokens)
         indices = [self.embeddings["words"].getIndex(sentenceGraph.tokens[i].get("text").lower(), "[out]") for i in range(numTokens)]
-        self.exampleLength = 3 #9 #19 #21 #9 #5 #exampleLength = self.EXAMPLE_LENGTH if self.EXAMPLE_LENGTH != None else numTokens
+        self.exampleLength = 21 #5 #3 #9 #19 #21 #9 #5 #exampleLength = self.EXAMPLE_LENGTH if self.EXAMPLE_LENGTH != None else numTokens
 #         for i in range(numTokens):
 #             if i < numTokens:
 #                 token = sentenceGraph.tokens[i]
@@ -294,6 +294,7 @@ class KerasEntityDetector(Detector):
                 self.exampleStats.endExample()
                 continue
             
+            tokens = []
             features = {"words":[], "positions":[], "named_entities":[], "POS":[]}
             featureGroups = sorted(features.keys())
             side = (self.exampleLength - 1) / 2
@@ -302,18 +303,21 @@ class KerasEntityDetector(Detector):
                 #features["binary"].append([])
                 #features["binary"][-1].append(1 if i == j else 0)
                 if j >= 0 and j < numTokens:
+                    token2 = sentenceGraph.tokens[j]
+                    tokens.append(token2)
                     features["words"].append(indices[j])
                     features["positions"].append(self.embeddings["positions"].getIndex(windowIndex))
-                    features["named_entities"].append(self.embeddings["named_entities"].getIndex(1 if sentenceGraph.tokenIsName[sentenceGraph.tokens[j]] else 0))
-                    features["POS"].append(self.embeddings["POS"].getIndex(sentenceGraph.tokens[j].get("POS")))
+                    features["named_entities"].append(self.embeddings["named_entities"].getIndex(1 if sentenceGraph.tokenIsName[token2] else 0))
+                    features["POS"].append(self.embeddings["POS"].getIndex(token2.get("POS")))
                     #features["binary"][-1].append(1 if sentenceGraph.tokenIsName[sentenceGraph.tokens[j]] else 0)
                 else:
+                    tokens.append(None)
                     for featureGroup in featureGroups:
                         features[featureGroup].append(self.embeddings[featureGroup].getIndex("[padding]"))
                     #features["binary"][-1].append(0)
                 windowIndex += 1
             
-            examples.append({"id":sentenceGraph.getSentenceId()+".x"+str(exampleIndex), "labels":labels, "features":features}) #, "extra":{"eIds":entityIds}}
+            examples.append({"id":sentenceGraph.getSentenceId()+".x"+str(exampleIndex), "labels":labels, "features":features, "tokens":tokens}) #, "extra":{"eIds":entityIds}}
             #outfile.write("\n")
             #if exampleIndex > 0:
             #    outfile.write(",")
@@ -415,6 +419,7 @@ class KerasEntityDetector(Detector):
         #x2 = inputLayer2 = Input(shape=(self.exampleLength,2), name='binary')
         # Merge the inputs
         merged_features = merge([self.embeddings[x].embeddingLayer for x in embNames], mode='concat', name="merged_features")
+        merged_features = Dropout(0.5)(merged_features)
         
 #         # Main network
 #         x = Conv1D(64, 11, activation='relu')(x)
@@ -425,18 +430,19 @@ class KerasEntityDetector(Detector):
 #         #x = Conv1D(256, 3, activation='relu')(x)
 #         #x = MaxPooling1D(3)(x)
         
-#         convOutputs = []
-#         kernelSizes = [3, 5, 7]
-#         numFilters = 512 #64
-#         for kernel in kernelSizes:
-#             subnet = Conv1D(numFilters, kernel, activation='relu', name='conv_' + str(kernel))(merged_features)
-#             subnet = MaxPooling1D(pool_length=self.exampleLength - kernel + 1, name='maxpool_' + str(kernel))(subnet)
-#             subnet = Flatten(name='flat_' + str(kernel))(subnet)
-#             convOutputs.append(subnet)       
-#         layer = merge(convOutputs, mode='concat')
+        convOutputs = []
+        kernelSizes = [1, 3, 5, 7, 14]
+        numFilters = 32 #64
+        for kernel in kernelSizes:
+            subnet = Conv1D(numFilters, kernel, activation='relu', name='conv_' + str(kernel))(merged_features)
+            subnet = MaxPooling1D(pool_length=self.exampleLength - kernel + 1, name='maxpool_' + str(kernel))(subnet)
+            subnet = Flatten(name='flat_' + str(kernel))(subnet)
+            convOutputs.append(subnet)       
+        layer = merge(convOutputs, mode='concat')
+        layer = Dropout(0.5)(layer)
         
         # Classification layers
-        layer = Flatten()(merged_features)
+        #layer = Flatten()(merged_features)
         layer = Dense(400, activation='relu')(layer)
         layer = Dense(len(labelSet), activation='sigmoid')(layer)
         
@@ -477,6 +483,7 @@ class KerasEntityDetector(Detector):
         #print >> sys.stderr, "Label weights:", labelWeights
         
         featureGroups = sorted(self.examples["train"][0]["features"].keys())
+        print >> sys.stderr, [((x.get("text"), x.get("POS")) if x != None else None) for x  in self.examples["train"][0]["tokens"]]
         print >> sys.stderr, "Vectorizing features:", featureGroups
         features = {"train":{}, "devel":{}}
         for featureGroup in featureGroups:
@@ -485,7 +492,7 @@ class KerasEntityDetector(Detector):
                     for example in self.examples[dataSet]:
                         assert len(example["features"][featureGroup]) == self.exampleLength, example
                 features[dataSet][featureGroup] = numpy.array([x["features"][featureGroup] for x in self.examples[dataSet]])
-            print >> sys.stderr, featureGroup, features[dataSet][featureGroup].shape, features[dataSet][featureGroup][0]
+            print >> sys.stderr, featureGroup, features["train"][featureGroup].shape, features["train"][featureGroup][0]
         
 #         if self.exampleLength != None:
 #             for dataSet in ("train", "devel"):
