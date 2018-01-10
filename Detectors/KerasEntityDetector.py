@@ -56,6 +56,7 @@ class Embeddings():
         self.wv = None
         self.embeddings = []
         self.embeddingIndex = {}
+        self.keyByIndex = {}
         if wordVectorPath != None:
             print >> sys.stderr, "Loading word vectors", (wvMem, wvMap), "from", wordVectorPath
             self.wv = WV.load(wordVectorPath, wvMem, wvMap)
@@ -65,12 +66,18 @@ class Embeddings():
         self.initialKeys = [] if keys == None else keys
         self.initialKeysInitialized = False
         for key in self.initialKeys:
-            assert key not in self.embeddingIndex
-            self.embeddingIndex[key] = len(self.embeddings)
-            self.embeddings.append(numpy.zeros(self.dimVector) if self.wv == None else None)
+            self._addEmbedding(key, numpy.zeros(self.dimVector) if self.wv == None else None)
     
     def releaseWV(self):
         self.wv = None
+    
+    def _addEmbedding(self, key, vector):
+        index = len(self.embeddings)
+        assert key not in self.embeddingIndex
+        assert index not in self.keyByIndex
+        self.embeddingIndex[key] = len(self.embeddings)
+        self.keyByIndex[index] = key
+        self.embeddings.append(vector)
     
     def getIndex(self, key, default=None):
         if key not in self.embeddingIndex:
@@ -81,11 +88,11 @@ class Embeddings():
                     self.embeddings.append(vector)
                     if not self.initialKeysInitialized:
                         for initialKey in self.initialKeys:
+                            assert self.embeddings[self.embeddingIndex[initialKey]] is None
                             self.embeddings[self.embeddingIndex[initialKey]] = numpy.zeros(vector.size)
                         self.initialKeysInitialized = True
             else:
-                self.embeddingIndex[key] = len(self.embeddings)
-                self.embeddings.append(normalized(numpy.random.uniform(-1.0, 1.0, self.dimVector)))
+                self._addEmbedding(key, normalized(numpy.random.uniform(-1.0, 1.0, self.dimVector)))
         return self.embeddingIndex[key] if key in self.embeddingIndex else self.embeddingIndex[default]
     
     def makeLayers(self, dimExample, name, trainable=True):
