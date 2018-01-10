@@ -581,33 +581,39 @@ class KerasEntityDetector(Detector):
             class_weight=labelWeights,
             callbacks=[es_cb, cp_cb])
         
-        bestModelPath = self.model.get(self.tag + "model.hdf5", True) 
         print >> sys.stderr, "Predicting devel examples"
+        bestModelPath = self.model.get(self.tag + "model.hdf5", True) 
         self.kerasModel = load_model(bestModelPath)
-        predictions = self.kerasModel.predict(features["devel"], 64, 1)
-        print >> sys.stderr, mlb.classes_
-        print labels["devel"][0]
-        for i in range(len(predictions)):
-            for j in range(len(predictions[i])):
-                predictions[i][j] = 1 if predictions[i][j] > 0.5 else 0
-        print predictions[0]
-        scores = sklearn.metrics.precision_recall_fscore_support(labels["devel"], predictions, average=None)
-        for i in range(len(mlb.classes_)):
-            print mlb.classes_[i], "prfs =", (scores[0][i], scores[1][i], scores[2][i], scores[3][i])
-        posLabels = [x for x in range(len(mlb.classes_)) if mlb.classes_[x] != "neg"]
-        print mlb.classes_, posLabels
-        micro = sklearn.metrics.precision_recall_fscore_support(labels["devel"], predictions, labels=posLabels,  average="micro")
-        print "micro =", micro
-        print(classification_report(labels["devel"], predictions, target_names=mlb.classes_))
-        print(classification_report(labels["devel"], predictions, target_names=[x for x in mlb.classes_ if x != "neg"], labels=posLabels))
-        #for prediction, gold in predictions, labels["devel"]:
-        #    print prediction
+        confidences = self.kerasModel.predict(features["devel"], 64, 1)
+        
+        predictions = numpy.copy(confidences)
+        for i in range(len(confidences)):
+            for j in range(len(confidences[i])):
+                predictions[i][j] = 1 if confidences[i][j] > 0.5 else 0
+        print confidences[0], predictions[0]
+        
+        self.evaluate(predictions, predictions, mlb.classes_)
+        
+#         scores = sklearn.metrics.precision_recall_fscore_support(labels["devel"], predictions, average=None)
+#         for i in range(len(mlb.classes_)):
+#             print mlb.classes_[i], "prfs =", (scores[0][i], scores[1][i], scores[2][i], scores[3][i])
+#         posLabels = [x for x in range(len(mlb.classes_)) if mlb.classes_[x] != "neg"]
+#         print mlb.classes_, posLabels
+#         micro = sklearn.metrics.precision_recall_fscore_support(labels["devel"], predictions, labels=posLabels,  average="micro")
+#         print "micro =", micro
+#         print(classification_report(labels["devel"], predictions, target_names=mlb.classes_))
+#         print(classification_report(labels["devel"], predictions, target_names=[x for x in mlb.classes_ if x != "neg"], labels=posLabels))
+#         #for prediction, gold in predictions, labels["devel"]:
+#         #    print prediction
         self.model.save()
         
         # For now the training ends here, later the predicted matrices should be converted back to XML events
         sys.exit()
     
-#     def evaluate(self, correct, predictions, labels):
-#         scores = sklearn.metrics.precision_recall_fscore_support(labels["devel"], predictions, average=None)
-#         for i in range(len(labels)):
-#             print labels[i], "prfs =", (scores[0][i], scores[1][i], scores[2][i], scores[3][i])
+    def evaluate(self, correct, predictions, labels):
+        print "Evaluating, labels =", labels
+        scores = sklearn.metrics.precision_recall_fscore_support(correct, predictions, average=None)
+        for i in range(len(labels)):
+            print labels[i], "prfs =", (scores[0][i], scores[1][i], scores[2][i], scores[3][i])
+        print "micro prfs = ", sklearn.metrics.precision_recall_fscore_support(correct, predictions,  average="micro")
+        print(classification_report(labels["devel"], predictions, target_names=labels))
