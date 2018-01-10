@@ -397,6 +397,14 @@ class KerasEntityDetector(Detector):
             types.add("neg")
         return sorted(types) #, sorted(entityIds)
     
+    def showExample(self, example):
+        features = example["features"]
+        featureGroups = sorted(features.keys())
+        for i in range(len(features[featureGroups[0]])):
+            line = [1]
+            for group in featureGroups:
+                line.append(features[group])
+    
     ###########################################################################
     # Main Pipeline Steps
     ###########################################################################
