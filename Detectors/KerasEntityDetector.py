@@ -43,6 +43,34 @@ from sklearn.metrics.classification import classification_report
 from keras.layers import Conv1D
 from keras.layers.pooling import MaxPooling1D, GlobalMaxPooling1D
 
+###############################################################################
+import tensorflow as tf
+import random as rn
+# The below is necessary in Python 3.2.3 onwards to
+# have reproducible behavior for certain hash-based operations.
+# See these references for further details:
+# https://docs.python.org/3.4/using/cmdline.html#envvar-PYTHONHASHSEED
+# https://github.com/keras-team/keras/issues/2280#issuecomment-306959926
+os.environ['PYTHONHASHSEED'] = '0'
+# The below is necessary for starting Numpy generated random numbers
+# in a well-defined initial state.
+numpy.random.seed(42)
+# The below is necessary for starting core Python generated random numbers
+# in a well-defined state.
+rn.seed(12345)
+# Force TensorFlow to use single thread.
+# Multiple threads are a potential source of
+# non-reproducible results.
+# For further details, see: https://stackoverflow.com/questions/42022950/which-seeds-have-to-be-set-where-to-realize-100-reproducibility-of-training-res
+session_conf = tf.ConfigProto(intra_op_parallelism_threads=1, inter_op_parallelism_threads=1)
+# The below tf.set_random_seed() will make random number generation
+# in the TensorFlow backend have a well-defined initial state.
+# For further details, see: https://www.tensorflow.org/api_docs/python/tf/set_random_seed
+tf.set_random_seed(1234)
+sess = tf.Session(graph=tf.get_default_graph(), config=session_conf)
+K.set_session(sess)
+###############################################################################
+
 def normalized(a, axis=-1, order=2):
     l2 = numpy.atleast_1d(numpy.linalg.norm(a, order, axis))
     l2[l2==0] = 1
@@ -79,6 +107,9 @@ class Embeddings():
         self.embeddingIndex[key] = len(self.embeddings)
         self.keyByIndex[index] = key
         self.embeddings.append(vector)
+    
+    def getKey(self, index):
+        return self.keyByIndex[index]
     
     def getIndex(self, key, default=None):
         if key not in self.embeddingIndex:
@@ -376,7 +407,7 @@ class KerasEntityDetector(Detector):
                 else:
                     tokens.append(None)
                     for featureGroup in featureGroups:
-                        features[featureGroup].append(self.embeddings[featureGroup].getIndex("[padding]"))
+                        features[featureGroup].append(self.embeddings[featureGroup].getIndex("[pad]"))
                     #features["binary"][-1].append(0)
                 windowIndex += 1
             
@@ -407,16 +438,19 @@ class KerasEntityDetector(Detector):
             types.add("neg")
         return sorted(types) #, sorted(entityIds)
     
-    def showExample(self, example):
+    def showExample(self, example, showKeys=True):
         features = example["features"]
         featureGroups = sorted(features.keys())
         exampleLength = len(features[featureGroups[0]])
         print >> sys.stderr, example["id"]
-        print >> featureGroups
+        print >> sys.stderr, featureGroups
         for i in range(exampleLength):
             line = [i]
             for group in featureGroups:
-                line.append(features[group][i])
+                feature = features[group][i]
+                if group in self.embeddings and showKeys:
+                    feature = self.embeddings[group].getKey(feature)
+                line.append(feature)
             print >> sys.stderr, line
     
     ###########################################################################
@@ -439,15 +473,15 @@ class KerasEntityDetector(Detector):
         wordVectorPath = self.styles.get("wordvector", Settings.W2VFILE)
         wv_mem = int(self.styles.get("wv_mem", 100000))
         wv_map = int(self.styles.get("wv_map", 10000000))
-        self.embeddings["words"] = Embeddings(None, wordVectorPath, wv_mem, wv_map, ["[out]", "[padding]"])
+        self.embeddings["words"] = Embeddings(None, wordVectorPath, wv_mem, wv_map, ["[out]", "[pad]"])
         dimEmbeddings = int(self.styles.get("de", 8)) #8 #32
-        self.embeddings["positions"] = Embeddings(dimEmbeddings, keys=["[padding]"])
-        self.embeddings["named_entities"] = Embeddings(dimEmbeddings, keys=["[padding]"])
-        self.embeddings["POS"] = Embeddings(dimEmbeddings, keys=["[padding]"])
+        self.embeddings["positions"] = Embeddings(dimEmbeddings, keys=["[pad]"])
+        self.embeddings["named_entities"] = Embeddings(dimEmbeddings, keys=["[pad]"])
+        self.embeddings["POS"] = Embeddings(dimEmbeddings, keys=["[pad]"])
         for i in range(self.pathDepth):
-            self.embeddings["path" + str(i)] = Embeddings(dimEmbeddings, keys=["[padding]"])
+            self.embeddings["path" + str(i)] = Embeddings(dimEmbeddings, keys=["[pad]"])
         if self.debugGold:
-            self.embeddings["gold"] = Embeddings(dimEmbeddings, keys=["[padding]"])
+            self.embeddings["gold"] = Embeddings(dimEmbeddings, keys=["[pad]"])
         # Make example for all input files
         self.examples = {x:[] for x in setNames}
         for setName, data, gold in itertools.izip_longest(setNames, datas, golds, fillvalue=None):
