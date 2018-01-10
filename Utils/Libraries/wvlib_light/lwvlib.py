@@ -131,7 +131,8 @@ class WV(object):
         self.max_rank_mem,self.vsize=self.vectors.shape
         #normalization constants for every row
         self.norm_constants=numpy.linalg.norm(x=self.vectors,ord=None,axis=1)#.reshape(self.max_rank,1) #Column vector of norms
-
+        self.size = self.vectors[0].size
+    
     def __contains__(self,wrd):
         return wrd in self.w_to_dim
 

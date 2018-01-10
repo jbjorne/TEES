@@ -52,7 +52,7 @@ def f1ScoreMetric(y_true, y_pred):
     return sklearn.metrics.f1_score(y_true, y_pred, average="micro")
 
 class Embeddings():
-    def __init__(self, dimVector=32, wordVectorPath=None, wvMem=100000, wvMap=10000000, keys=None):
+    def __init__(self, dimVector=None, wordVectorPath=None, wvMem=100000, wvMap=10000000, keys=None):
         self.wv = None
         self.embeddings = []
         self.embeddingIndex = {}
@@ -60,13 +60,14 @@ class Embeddings():
         if wordVectorPath != None:
             print >> sys.stderr, "Loading word vectors", (wvMem, wvMap), "from", wordVectorPath
             self.wv = WV.load(wordVectorPath, wvMem, wvMap)
-            self.dimVector = None
+            assert dimVector == None or dimVector == self.wv.size
+            self.dimVector = self.wv.size
         else:
-            self.dimVector = dimVector
+            self.dimVector = dimVector if dimVector != None else 32
         self.initialKeys = [] if keys == None else keys
-        self.initialKeysInitialized = False
+        #self.initialKeysInitialized = False
         for key in self.initialKeys:
-            self._addEmbedding(key, numpy.zeros(self.dimVector) if self.wv == None else None)
+            self._addEmbedding(key, numpy.zeros(self.dimVector))
     
     def releaseWV(self):
         self.wv = None
@@ -84,13 +85,14 @@ class Embeddings():
             if self.wv != None:
                 vector = self.wv.w_to_normv(key)
                 if vector is not None:
-                    self.embeddingIndex[key] = len(self.embeddings)
-                    self.embeddings.append(vector)
-                    if not self.initialKeysInitialized:
-                        for initialKey in self.initialKeys:
-                            assert self.embeddings[self.embeddingIndex[initialKey]] is None
-                            self.embeddings[self.embeddingIndex[initialKey]] = numpy.zeros(vector.size)
-                        self.initialKeysInitialized = True
+                    #self.embeddingIndex[key] = len(self.embeddings)
+                    #self.embeddings.append(vector)
+                    self._addEmbedding(key, vector)
+#                     if not self.initialKeysInitialized:
+#                         for initialKey in self.initialKeys:
+#                             assert self.embeddings[self.embeddingIndex[initialKey]] is None
+#                             self.embeddings[self.embeddingIndex[initialKey]] = numpy.zeros(vector.size)
+#                         self.initialKeysInitialized = True
             else:
                 self._addEmbedding(key, normalized(numpy.random.uniform(-1.0, 1.0, self.dimVector)))
         return self.embeddingIndex[key] if key in self.embeddingIndex else self.embeddingIndex[default]
@@ -502,22 +504,24 @@ class KerasEntityDetector(Detector):
 #         #x = MaxPooling1D(3)(x)
 #         #x = Conv1D(256, 3, activation='relu')(x)
 #         #x = MaxPooling1D(3)(x)
-        
-        convOutputs = []
-        kernelSizes = [1, 3, 5, 7]
-        numFilters = int(self.styles.get("nf", 32)) #32 #64
-        for kernel in kernelSizes:
-            subnet = Conv1D(numFilters, kernel, activation='relu', name='conv_' + str(kernel))(merged_features)
-            #subnet = Conv1D(numFilters, kernel, activation='relu', name='conv2_' + str(kernel))(subnet)
-            subnet = MaxPooling1D(pool_length=self.exampleLength - kernel + 1, name='maxpool_' + str(kernel))(subnet)
-            #subnet = GlobalMaxPooling1D(name='maxpool_' + str(kernel))(subnet)
-            subnet = Flatten(name='flat_' + str(kernel))(subnet)
-            convOutputs.append(subnet)       
-        layer = merge(convOutputs, mode='concat')
-        layer = Dropout(float(self.styles.get("do", 0.1)))(layer)
+
+        if self.styles.get("kernels") != "skip":
+            convOutputs = []
+            kernelSizes = [int(x) for x in self.styles.get("kernels", [1, 3, 5, 7])]
+            numFilters = int(self.styles.get("nf", 32)) #32 #64
+            for kernel in kernelSizes:
+                subnet = Conv1D(numFilters, kernel, activation='relu', name='conv_' + str(kernel))(merged_features)
+                #subnet = Conv1D(numFilters, kernel, activation='relu', name='conv2_' + str(kernel))(subnet)
+                subnet = MaxPooling1D(pool_length=self.exampleLength - kernel + 1, name='maxpool_' + str(kernel))(subnet)
+                #subnet = GlobalMaxPooling1D(name='maxpool_' + str(kernel))(subnet)
+                subnet = Flatten(name='flat_' + str(kernel))(subnet)
+                convOutputs.append(subnet)       
+            layer = merge(convOutputs, mode='concat')
+            layer = Dropout(float(self.styles.get("do", 0.1)))(layer)
+        else:
+            layer = Flatten()(merged_features)
         
         # Classification layers
-        #layer = Flatten()(merged_features)
         layer = Dense(int(self.styles.get("dense", 400)), activation='relu')(layer) #layer = Dense(800, activation='relu')(layer)
         layer = Dense(len(labelSet), activation='sigmoid')(layer)
         
@@ -605,9 +609,9 @@ class KerasEntityDetector(Detector):
         for i in range(len(confidences)):
             for j in range(len(confidences[i])):
                 predictions[i][j] = 1 if confidences[i][j] > 0.5 else 0
-        print confidences[0], predictions[0]
+        print confidences[0], predictions[0], (confidences.shape, predictions.shape)
         
-        self.evaluate(predictions, predictions, mlb.classes_)
+        self.evaluate(labels["devel"], predictions, mlb.classes_)
         
 #         scores = sklearn.metrics.precision_recall_fscore_support(labels["devel"], predictions, average=None)
 #         for i in range(len(mlb.classes_)):
@@ -625,10 +629,10 @@ class KerasEntityDetector(Detector):
         # For now the training ends here, later the predicted matrices should be converted back to XML events
         sys.exit()
     
-    def evaluate(self, correct, predictions, labels):
-        print "Evaluating, labels =", labels
-        scores = sklearn.metrics.precision_recall_fscore_support(correct, predictions, average=None)
-        for i in range(len(labels)):
-            print labels[i], "prfs =", (scores[0][i], scores[1][i], scores[2][i], scores[3][i])
-        print "micro prfs = ", sklearn.metrics.precision_recall_fscore_support(correct, predictions,  average="micro")
-        print(classification_report(labels["devel"], predictions, target_names=labels))
+    def evaluate(self, labels, predictions, labelNames):
+        print "Evaluating, labels =", labelNames
+        scores = sklearn.metrics.precision_recall_fscore_support(labels, predictions, average=None)
+        for i in range(len(labelNames)):
+            print labelNames[i], "prfs =", (scores[0][i], scores[1][i], scores[2][i], scores[3][i])
+        print "micro prfs = ", sklearn.metrics.precision_recall_fscore_support(labels, predictions,  average="micro")
+        print(classification_report(labels, predictions, target_names=labelNames))
