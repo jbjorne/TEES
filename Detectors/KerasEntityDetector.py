@@ -125,7 +125,7 @@ class Embeddings():
 #                             self.embeddings[self.embeddingIndex[initialKey]] = numpy.zeros(vector.size)
 #                         self.initialKeysInitialized = True
             else:
-                self._addEmbedding(key, normalized(numpy.random.uniform(-1.0, 1.0, self.dimVector)))
+                self._addEmbedding(key, numpy.ones(self.dimVector)) #normalized(numpy.random.uniform(-1.0, 1.0, self.dimVector)))
         return self.embeddingIndex[key] if key in self.embeddingIndex else self.embeddingIndex[default]
     
     def makeLayers(self, dimExample, name, trainable=True):
