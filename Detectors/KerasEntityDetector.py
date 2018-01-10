@@ -159,7 +159,8 @@ class KerasEntityDetector(Detector):
         exampleFiles = {"devel":self.workDir+self.tag+"opt-examples.json.gz", "train":self.workDir+self.tag+"train-examples.json.gz"}
         if self.checkStep("EXAMPLES"): # Generate the adjacency matrices
             self.buildExamples(self.model, ["devel", "train"], [optData, trainData], [exampleFiles["devel"], exampleFiles["train"]], saveIdsToModel=True)
-        print self.examples["devel"][0:2]
+        #print self.examples["devel"][0:2]
+        self.showExample(self.examples["devel"][0])
         if self.checkStep("MODEL"): # Define and train the Keras model
             self.defineModel()
             self.fitModel()
@@ -409,10 +410,14 @@ class KerasEntityDetector(Detector):
     def showExample(self, example):
         features = example["features"]
         featureGroups = sorted(features.keys())
-        for i in range(len(features[featureGroups[0]])):
-            line = [1]
+        exampleLength = len(features[featureGroups[0]])
+        print >> sys.stderr, example["id"]
+        print >> featureGroups
+        for i in range(exampleLength):
+            line = [i]
             for group in featureGroups:
-                line.append(features[group])
+                line.append(features[group][i])
+            print >> sys.stderr, line
     
     ###########################################################################
     # Main Pipeline Steps
