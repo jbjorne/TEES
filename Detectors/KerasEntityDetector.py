@@ -443,7 +443,7 @@ class KerasEntityDetector(Detector):
         featureGroups = sorted(features.keys())
         exampleLength = len(features[featureGroups[0]])
         print >> sys.stderr, example["id"]
-        print >> sys.stderr, featureGroups
+        print >> sys.stderr, ["index"] + featureGroups
         for i in range(exampleLength):
             line = [i]
             for group in featureGroups:
@@ -470,7 +470,7 @@ class KerasEntityDetector(Detector):
         modelChanged = False
         # Load word vectors
         self.embeddings = {}
-        wordVectorPath = self.styles.get("wordvector", Settings.W2VFILE)
+        wordVectorPath = self.styles.get("wv", Settings.W2VFILE)
         wv_mem = int(self.styles.get("wv_mem", 100000))
         wv_map = int(self.styles.get("wv_map", 10000000))
         self.embeddings["words"] = Embeddings(None, wordVectorPath, wv_mem, wv_map, ["[out]", "[pad]"])
