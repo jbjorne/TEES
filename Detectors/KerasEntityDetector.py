@@ -111,8 +111,8 @@ class Embeddings():
         for key in self.initialKeys:
             self._addEmbedding(key, numpy.zeros(self.dimVector))
     
-    def _loadIndices(self, embeddingIndex):
-        self.embeddingIndex = embeddingIndex
+    def getSize(self):
+        return len(self.embeddingIndex)
     
     def serialize(self):
         if self.wvPath != None:
@@ -139,7 +139,7 @@ class Embeddings():
         return self.keyByIndex[index]
     
     def getIndex(self, key, default=None):
-        if key not in self.embeddingIndex:
+        if key not in self.embeddingIndex and self.embeddings != None:
             if self.wv != None:
                 vector = self.wv.w_to_normv(key)
                 if vector is not None:
@@ -151,7 +151,7 @@ class Embeddings():
 #                             assert self.embeddings[self.embeddingIndex[initialKey]] is None
 #                             self.embeddings[self.embeddingIndex[initialKey]] = numpy.zeros(vector.size)
 #                         self.initialKeysInitialized = True
-            elif self.embeddings != None:
+            else:
                 self._addEmbedding(key, numpy.ones(self.dimVector)) #normalized(numpy.random.uniform(-1.0, 1.0, self.dimVector)))
         return self.embeddingIndex[key] if key in self.embeddingIndex else self.embeddingIndex[default]
     
@@ -260,6 +260,7 @@ class KerasEntityDetector(Detector):
         if not useExistingExamples:
             self.buildExamples(model, ["classification"], [data], [exampleFileName], [goldData], parse=parse, exampleStyle=exampleStyle)
         examples = self.examples["classification"]
+        self.showExample(examples[0])
         if classifierModel == None:
             classifierModel = model.get(self.tag + "model.hdf5")
         labelSet = IdSet(filename = model.get(self.tag + "labels.ids", False), locked=True)
@@ -494,7 +495,7 @@ class KerasEntityDetector(Detector):
             extra = {"xtype":"token","t":token.get("id")}
             if entityIds[i] != None:
                 extra["goldIds"] = "/".join(entityIds[i]) # The entities to which this example corresponds
-            examples.append({"id":sentenceGraph.getSentenceId()+".x"+str(exampleIndex), "labels":labels[i], "features":features, "tokens":tokens, "extra":extra}) #, "extra":{"eIds":entityIds}}
+            examples.append({"id":sentenceGraph.getSentenceId()+".x"+str(exampleIndex), "labels":labels[i], "features":features, "extra":extra}) #, "extra":{"eIds":entityIds}}
             #outfile.write("\n")
             #if exampleIndex > 0:
             #    outfile.write(",")
@@ -554,7 +555,6 @@ class KerasEntityDetector(Detector):
         # Load word vectors
         embeddingsPath = model.get(self.tag + "embeddings.json", False, None)
         if embeddingsPath != None:
-            print >> sys.stderr, "Loading embedding indices from", embeddingsPath
             self.embeddings = self.loadEmbeddings(embeddingsPath)
         else:
             print >> sys.stderr, "Initialized embedding indices"
@@ -585,20 +585,30 @@ class KerasEntityDetector(Detector):
             print >> sys.stderr, "Saving embedding indices"
             self.saveEmbeddings(self.embeddings, model.get(self.tag + "embeddings.json", True))
             modelChanged = True
+        if self.styles.get("save"):
+            for dataSet in setNames:
+                examplePath = os.path.join(os.path.abspath(self.workDir), dataSet + "-examples.json")
+                if not os.path.exists(os.path.dirname(examplePath)):
+                    os.makedirs(os.path.dirname(examplePath))
+                print >> sys.stderr, "Saving", dataSet, "examples to", examplePath
+                with open(examplePath, "wt") as f:
+                    json.dump(self.examples[dataSet], f, indent=2, sort_keys=True)
         if modelChanged:
             model.save()
         self.embeddings["words"].releaseWV()
     
     def saveEmbeddings(self, embeddings, outPath):
         with open(outPath, "wt") as f:
-            json.dump([embeddings[x].serialize() for x in sorted(embeddings.keys())], f)
+            json.dump([embeddings[x].serialize() for x in sorted(embeddings.keys())], f, indent=2, sort_keys=True)
     
     def loadEmbeddings(self, inPath):
+        print >> sys.stderr, "Loading embedding indices from", inPath
         embeddings = {}
         with open(inPath, "rt") as f:
             for obj in json.load(f):
                 emb = Embeddings().deserialize(obj)
                 embeddings[emb.name] = emb
+        print >> sys.stderr, [(embeddings[x].name, embeddings[x].getSize()) for x in sorted(embeddings.keys())]
         return embeddings
     
 #     def makeEmbeddingMatrix(self, vectors):
@@ -787,7 +797,7 @@ class KerasEntityDetector(Detector):
     
     def vectorizeFeatures(self, examples, dataSets):
         featureGroups = sorted(self.examples[dataSets[0]][0]["features"].keys())
-        print >> sys.stderr, [((x.get("text"), x.get("POS")) if x != None else None) for x  in self.examples[dataSets[0]][0]["tokens"]]
+        #print >> sys.stderr, [((x.get("text"), x.get("POS")) if x != None else None) for x  in self.examples[dataSets[0]][0]["tokens"]]
         print >> sys.stderr, "Vectorizing features:", featureGroups
         features = {x:{} for x in dataSets}
         for featureGroup in featureGroups:
