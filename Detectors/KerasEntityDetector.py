@@ -48,6 +48,7 @@ from Evaluators import EvaluateInteractionXML
 from Core import ExampleUtils
 from Utils import Parameters
 from ExampleWriters.EntityExampleWriter import EntityExampleWriter
+from Evaluators.AveragingMultiClassEvaluator import AveragingMultiClassEvaluator
 
 # ###############################################################################
 # import tensorflow as tf
@@ -185,6 +186,7 @@ class KerasEntityDetector(Detector):
         self.STATE_COMPONENT_TRAIN = "COMPONENT_TRAIN"
         self.tag = "entity-"
         self.exampleWriter = EntityExampleWriter()
+        self.evaluator = AveragingMultiClassEvaluator
         #self.EXAMPLE_LENGTH = 1 #None #130
         self.exampleLength = -1
         self.debugGold = False
@@ -240,14 +242,14 @@ class KerasEntityDetector(Detector):
         else:
             shutil.copy2(workOutputTag+self.tag+"pred.xml.gz", output+"-pred.xml.gz")
         EvaluateInteractionXML.run(self.evaluator, xml, data, parse)
-        stParams = self.getBioNLPSharedTaskParams(self.bioNLPSTParams, model)
-        if stParams["convert"]: #self.useBioNLPSTFormat:
-            extension = ".zip" if (stParams["convert"] == "zip") else ".tar.gz" 
-            Utils.STFormat.ConvertXML.toSTFormat(xml, output+"-events" + extension, outputTag=stParams["a2Tag"], writeExtra=(stParams["scores"] == True))
-            if stParams["evaluate"]: #self.stEvaluator != None:
-                if task == None: 
-                    task = self.getStr(self.tag+"task", model)
-                self.stEvaluator.evaluate(output+"-events" + extension, task)
+#         stParams = self.getBioNLPSharedTaskParams(self.bioNLPSTParams, model)
+#         if stParams.get("convert"): #self.useBioNLPSTFormat:
+#             extension = ".zip" if (stParams["convert"] == "zip") else ".tar.gz" 
+#             Utils.STFormat.ConvertXML.toSTFormat(xml, output+"-events" + extension, outputTag=stParams["a2Tag"], writeExtra=(stParams["scores"] == True))
+#             if stParams["evaluate"]: #self.stEvaluator != None:
+#                 if task == None: 
+#                     task = self.getStr(self.tag+"task", model)
+#                 self.stEvaluator.evaluate(output+"-events" + extension, task)
         self.deleteTempWorkDir()
         self.exitState()
     
@@ -816,5 +818,7 @@ class KerasEntityDetector(Detector):
         scores = sklearn.metrics.precision_recall_fscore_support(labels, predictions, average=None)
         for i in range(len(labelNames)):
             print labelNames[i], "prfs =", (scores[0][i], scores[1][i], scores[2][i], scores[3][i])
-        print "micro prfs = ", sklearn.metrics.precision_recall_fscore_support(labels, predictions,  average="micro")
-        print(classification_report(labels, predictions, target_names=labelNames))
+        micro = sklearn.metrics.precision_recall_fscore_support(labels, predictions,  average="micro")
+        print "micro prfs = ", micro
+        if micro[2] != 0.0:
+            print(classification_report(labels, predictions, target_names=labelNames))
