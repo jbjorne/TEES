@@ -404,7 +404,7 @@ class KerasEntityDetector(Detector):
         # Prepare the indices
         numTokens = len(sentenceGraph.tokens)
         indices = [self.embeddings["words"].getIndex(sentenceGraph.tokens[i].get("text").lower(), "[out]") for i in range(numTokens)]
-        labels = [self.getEntityTypes(sentenceGraph.tokenIsEntityHead[sentenceGraph.tokens[i]]) for i in range(numTokens)]
+        labels, entityIds = zip(*[self.getEntityTypes(sentenceGraph.tokenIsEntityHead[sentenceGraph.tokens[i]]) for i in range(numTokens)])
         self.exampleLength = int(self.styles.get("el", 21)) #31 #9 #21 #5 #3 #9 #19 #21 #9 #5 #exampleLength = self.EXAMPLE_LENGTH if self.EXAMPLE_LENGTH != None else numTokens
 #         for i in range(numTokens):
 #             if i < numTokens:
@@ -470,7 +470,10 @@ class KerasEntityDetector(Detector):
                     #features["binary"][-1].append(0)
                 windowIndex += 1
             
-            examples.append({"id":sentenceGraph.getSentenceId()+".x"+str(exampleIndex), "labels":labels[i], "features":features, "tokens":tokens}) #, "extra":{"eIds":entityIds}}
+            extra = {"xtype":"token","t":token.get("id")}
+            if entityIds[i] != None:
+                extra["goldIds"] = entityIds[i] # The entities to which this example corresponds
+            examples.append({"id":sentenceGraph.getSentenceId()+".x"+str(exampleIndex), "labels":labels[i], "features":features, "tokens":tokens, "extra":extra}) #, "extra":{"eIds":entityIds}}
             #outfile.write("\n")
             #if exampleIndex > 0:
             #    outfile.write(",")
@@ -495,7 +498,7 @@ class KerasEntityDetector(Detector):
                 entityIds.add(entity.get("id"))
         if len(types) == 0 and useNeg:
             types.add("neg")
-        return sorted(types) #, sorted(entityIds)
+        return sorted(types), sorted(entityIds)
     
     def showExample(self, example, showKeys=True):
         features = example["features"]
