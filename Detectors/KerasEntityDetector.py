@@ -87,11 +87,14 @@ def f1ScoreMetric(y_true, y_pred):
 
 class Embeddings():
     def __init__(self, name, dimVector=None, wordVectorPath=None, wvMem=100000, wvMap=10000000, keys=None):
+        self._reset(name, dimVector, wordVectorPath, wvMem, wvMap, keys)
+    
+    def _reset(self, name, dimVector=None, wordVectorPath=None, wvMem=100000, wvMap=10000000, keys=None, embeddingIndex=None):
         self.name = None
         self.wv = None
-        self.embeddings = []
-        self.embeddingIndex = {}
-        self.keyByIndex = {}
+        self.embeddings = [] if embeddingIndex == None else None
+        self.embeddingIndex = {} if embeddingIndex == None else embeddingIndex
+        self.keyByIndex = {} if embeddingIndex == None else {embeddingIndex[x]:x for x in embeddingIndex.keys()}
         self.wvPath = None
         if wordVectorPath != None:
             self.wvPath = wordVectorPath
@@ -106,11 +109,17 @@ class Embeddings():
         for key in self.initialKeys:
             self._addEmbedding(key, numpy.zeros(self.dimVector))
     
+    def _loadIndices(self, embeddingIndex):
+        self.embeddingIndex = embeddingIndex
+    
     def serialize(self):
         if self.wvPath != None:
-            return {"name":self.name, "wvPath":self.wvPath, "wvMem":self.wvMem, "wvMap":self.wvMap}
+            return {"name":self.name, "dimVector":self.dimVector, "wvPath":self.wvPath, "wvMem":self.wvMem, "wvMap":self.wvMap}
         else:
-            return {"name":self.name, "index":self.embeddingIndex}
+            return {"name":self.name, "dimVector":self.dimVector, "index":self.embeddingIndex}
+    
+    def deserialize(self, obj):
+        self._reset(obj["name"], obj.get("dimVector"), obj.get("wvPath"), obj.get("wvMem"), obj.get("wvMap"), None, obj.get("index"))
     
     def releaseWV(self):
         self.wv = None
@@ -139,7 +148,7 @@ class Embeddings():
 #                             assert self.embeddings[self.embeddingIndex[initialKey]] is None
 #                             self.embeddings[self.embeddingIndex[initialKey]] = numpy.zeros(vector.size)
 #                         self.initialKeysInitialized = True
-            else:
+            elif self.embeddings != None:
                 self._addEmbedding(key, numpy.ones(self.dimVector)) #normalized(numpy.random.uniform(-1.0, 1.0, self.dimVector)))
         return self.embeddingIndex[key] if key in self.embeddingIndex else self.embeddingIndex[default]
     
@@ -246,8 +255,8 @@ class KerasEntityDetector(Detector):
         if parse == None:
             parse = self.getStr(self.tag+"parse", model)
         if not useExistingExamples:
-            self.buildExamples(model, [data], [exampleFileName], [goldData], parse=parse, exampleStyle=exampleStyle)
-        examples = self.examples[data]
+            self.buildExamples(model, ["classification"], [data], [exampleFileName], [goldData], parse=parse, exampleStyle=exampleStyle)
+        examples = self.examples["classification"]
         if classifierModel == None:
             classifierModel = model.get(self.tag+"model", defaultIfNotExist=None)
         labelSet = IdSet.load(filename = self.model.get(self.tag + "labels.ids", False), locked=True)
@@ -255,8 +264,8 @@ class KerasEntityDetector(Detector):
         for label in labelSet.Ids:
             labelNames[labelSet.Ids[label]] = label
         print >> sys.stderr, "Classification labels", labelNames
-        labels, _ = self.vectorizeLabels(examples, [data], labelNames)
-        features = self.vectorizeFeatures(examples, [data])
+        labels, _ = self.vectorizeLabels(examples, ["classification"], labelNames)
+        features = self.vectorizeFeatures(examples, ["classification"])
         predictions, confidences = self.predict(labels, features, labelNames, classifierModel)
         if exampleStyle == None:
             exampleStyle = Parameters.get(model.getStr(self.tag+"example-style")) # no checking, but these should already have passed the ExampleBuilder
@@ -540,8 +549,13 @@ class KerasEntityDetector(Detector):
         self.structureAnalyzer.load(model)
         modelChanged = False
         # Load word vectors
-        self.embeddings = self.loadEmbeddings()
-        if self.embeddings == None:
+        embeddingsPath = model.get(self.tag + "embeddings.json", False, None)
+        if embeddingsPath != None:
+            print >> sys.stderr, "Loading embedding indices from"
+            self.embeddings = self.loadEmbeddings(embeddingsPath)
+        else:
+            print >> sys.stderr, "Initialized embedding indices"
+            self.embeddings = {}
             wordVectorPath = self.styles.get("wv", Settings.W2VFILE)
             wv_mem = int(self.styles.get("wv_mem", 100000))
             wv_map = int(self.styles.get("wv_map", 10000000))
@@ -550,10 +564,10 @@ class KerasEntityDetector(Detector):
             self.embeddings["positions"] = Embeddings("positions", dimEmbeddings, keys=["[pad]"])
             self.embeddings["named_entities"] = Embeddings("named_entities", dimEmbeddings, keys=["[pad]"])
             self.embeddings["POS"] = Embeddings("POS", dimEmbeddings, keys=["[pad]"])
-        for i in range(self.pathDepth):
-            self.embeddings["path" + str(i)] = Embeddings(dimEmbeddings, keys=["[pad]"])
-        if self.debugGold:
-            self.embeddings["gold"] = Embeddings(dimEmbeddings, keys=["[pad]"])
+            for i in range(self.pathDepth):
+                self.embeddings["path" + str(i)] = Embeddings(dimEmbeddings, keys=["[pad]"])
+            if self.debugGold:
+                self.embeddings["gold"] = Embeddings(dimEmbeddings, keys=["[pad]"])
         # Make example for all input files
         self.examples = {x:[] for x in setNames}
         for setName, data, gold in itertools.izip_longest(setNames, datas, golds, fillvalue=None):
@@ -563,9 +577,23 @@ class KerasEntityDetector(Detector):
             print >> sys.stderr, "Saving StructureAnalyzer.typeMap"
             self.structureAnalyzer.save(model)
             modelChanged = True
+        if saveIdsToModel:
+            self.saveEmbeddings(self.embeddings, model.get(self.tag + "embeddings.json", True))
         if modelChanged:
             model.save()
         self.embeddings["words"].releaseWV()
+    
+    def saveEmbeddings(self, embeddings, outPath):
+        with open(outPath, "wt") as f:
+            json.dump([x.serialize() for x in embeddings], f)
+    
+    def loadEmbeddings(self, inPath):
+        embeddings = {}
+        with open(inPath, "rt") as f:
+            for obj in json.load(f):
+                emb = Embedding().deserialize(obj)
+                embeddings[emb.name] = emb
+        return embeddings
     
 #     def makeEmbeddingMatrix(self, vectors):
 #         dimWordVector = len(vectors[0])
@@ -735,9 +763,6 @@ class KerasEntityDetector(Detector):
 #         #    print prediction
         self.model.save()
         self.examples = None
-        
-        # For now the training ends here, later the predicted matrices should be converted back to XML events
-        sys.exit()
     
     def vectorizeLabels(self, examples, dataSets, labelNames=None):
         print >> sys.stderr, "Vectorizing labels"
