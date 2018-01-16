@@ -47,6 +47,7 @@ import shutil
 from Evaluators import EvaluateInteractionXML
 from Core import ExampleUtils
 from Utils import Parameters
+from ExampleWriters.EntityExampleWriter import EntityExampleWriter
 
 # ###############################################################################
 # import tensorflow as tf
@@ -163,6 +164,7 @@ class KerasEntityDetector(Detector):
         Detector.__init__(self)
         self.STATE_COMPONENT_TRAIN = "COMPONENT_TRAIN"
         self.tag = "entity-"
+        self.exampleWriter = EntityExampleWriter()
         #self.EXAMPLE_LENGTH = 1 #None #130
         self.exampleLength = -1
         self.debugGold = False
@@ -250,9 +252,12 @@ class KerasEntityDetector(Detector):
         if exampleStyle == None:
             exampleStyle = Parameters.get(model.getStr(self.tag+"example-style")) # no checking, but these should already have passed the ExampleBuilder
         self.structureAnalyzer.load(model)
+        outExamples = []
+        outPredictions = []
         for pred, conf, example in zip(predictions, confidences, self.examples[data]):
-            
-        return self.exampleWriter.write(exampleFileName, predictions, data, tag+self.tag+"pred.xml.gz", model.get(self.tag+"ids.classes"), parse, exampleStyle=exampleStyle, structureAnalyzer=self.structureAnalyzer)
+            outExamples.append([example["id"], None, None, example["extra"]])
+            outPredictions.append({"prediction":pred, "confidence":conf})
+        return self.exampleWriter.write(outExamples, outPredictions, data, tag+self.tag+"pred.xml.gz", labelSet, parse, exampleStyle=exampleStyle, structureAnalyzer=self.structureAnalyzer)
     
     ###########################################################################
     # Example Generation

@@ -199,7 +199,13 @@ class SentenceExampleWriter:
             else:
                 return [str(False)]
         else:
-            eTypes = classSet.getName(prediction[0]).split("---") # split merged types
+            if isinstance(prediction, dict):
+                encoded = prediction["prediction"]
+                eTypes = [classSet.getName(i) for i in range(len(encoded)) if encoded[i] == 1]
+                if len(eTypes) == None:
+                    eTypes = ["neg"] 
+            else:
+                eTypes = classSet.getName(prediction[0]).split("---") # split merged types
             if unmergeEPINegText != None: # an element text was provided
                 for i in range(len(eTypes)):
                     eTypes[i] = ResolveEPITriggerTypes.determineNewType(eTypes[i], unmergeEPINegText)
@@ -229,7 +235,13 @@ class SentenceExampleWriter:
             element.attrib["predictions"] = predictionString
     
     def getPredictionStrengthString(self, prediction, classSet, classIds, skipClasses=None):
-        classWeights = prediction[1:]
+        if isinstance(prediction, dict):
+            if "confidence" in prediction:
+                classWeights = prediction["confidence"]
+            else:
+                return None
+        else:
+            classWeights = prediction[1:]
         predictionString = ""
         for i in range(len(classWeights)):
             className = classSet.getName(classIds[i])
