@@ -202,7 +202,7 @@ class SentenceExampleWriter:
             if isinstance(prediction, dict):
                 encoded = prediction["prediction"]
                 eTypes = [classSet.getName(i) for i in range(len(encoded)) if encoded[i] == 1]
-                if len(eTypes) == None:
+                if len(eTypes) == 0:
                     eTypes = ["neg"] 
             else:
                 eTypes = classSet.getName(prediction[0]).split("---") # split merged types
@@ -236,10 +236,7 @@ class SentenceExampleWriter:
     
     def getPredictionStrengthString(self, prediction, classSet, classIds, skipClasses=None):
         if isinstance(prediction, dict):
-            if "confidence" in prediction:
-                classWeights = prediction["confidence"]
-            else:
-                return None
+            classWeights = prediction.get("confidence", [])
         else:
             classWeights = prediction[1:]
         predictionString = ""
