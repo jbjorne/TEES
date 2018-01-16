@@ -8,6 +8,7 @@ import xml.etree.ElementTree as ET
 import Utils.ElementTreeUtils as ETUtils
 from Core.IdSet import IdSet
 import Utils.Parameters
+import Utils.STFormat
 import gzip
 from collections import OrderedDict
 import json
@@ -42,6 +43,10 @@ from sklearn.utils.class_weight import compute_sample_weight,\
 from sklearn.metrics.classification import classification_report
 from keras.layers import Conv1D
 from keras.layers.pooling import MaxPooling1D, GlobalMaxPooling1D
+import shutil
+from Evaluators import EvaluateInteractionXML
+from Core import ExampleUtils
+from Utils import Parameters
 
 # ###############################################################################
 # import tensorflow as tf
@@ -157,10 +162,7 @@ class KerasEntityDetector(Detector):
     def __init__(self):
         Detector.__init__(self)
         self.STATE_COMPONENT_TRAIN = "COMPONENT_TRAIN"
-        self.tag = "keras-"
-        self.exampleBuilder = None #KerasExampleBuilder
-        self.matrices = None
-        self.arrays = None
+        self.tag = "entity-"
         #self.EXAMPLE_LENGTH = 1 #None #130
         self.exampleLength = -1
         self.debugGold = False
@@ -197,8 +199,50 @@ class KerasEntityDetector(Detector):
             self.fitModel()
         if workDir != None:
             self.setWorkDir("")
-        self.arrays = None
         self.exitState()
+    
+    def classify(self, data, model, output, parse=None, task=None, goldData=None, workDir=None, fromStep=None, omitSteps=None, validate=False):
+        model = self.openModel(model, "r")
+        self.enterState(self.STATE_CLASSIFY)
+        self.setWorkDir(workDir)
+        if workDir == None:
+            self.setTempWorkDir()
+        model = self.openModel(model, "r")
+        if parse == None: parse = self.getStr(self.tag+"parse", model)
+        workOutputTag = os.path.join(self.workDir, os.path.basename(output) + "-")
+        xml = self.classifyToXML(data, model, None, workOutputTag, 
+            model.get(self.tag+"classifier-model", defaultIfNotExist=None), goldData, parse, float(model.getStr("recallAdjustParameter", defaultIfNotExist=1.0)))
+        if (validate):
+            self.structureAnalyzer.load(model)
+            self.structureAnalyzer.validate(xml)
+            ETUtils.write(xml, output+"-pred.xml.gz")
+        else:
+            shutil.copy2(workOutputTag+self.tag+"pred.xml.gz", output+"-pred.xml.gz")
+        EvaluateInteractionXML.run(self.evaluator, xml, data, parse)
+        stParams = self.getBioNLPSharedTaskParams(self.bioNLPSTParams, model)
+        if stParams["convert"]: #self.useBioNLPSTFormat:
+            extension = ".zip" if (stParams["convert"] == "zip") else ".tar.gz" 
+            Utils.STFormat.ConvertXML.toSTFormat(xml, output+"-events" + extension, outputTag=stParams["a2Tag"], writeExtra=(stParams["scores"] == True))
+            if stParams["evaluate"]: #self.stEvaluator != None:
+                if task == None: 
+                    task = self.getStr(self.tag+"task", model)
+                self.stEvaluator.evaluate(output+"-events" + extension, task)
+        self.deleteTempWorkDir()
+        self.exitState()
+    
+    def classifyToXML(self, data, model, exampleFileName=None, tag="", classifierModel=None, goldData=None, parse=None, recallAdjust=None, compressExamples=True, exampleStyle=None, useExistingExamples=False):
+        model = self.openModel(model, "r")
+        if parse == None:
+            parse = self.getStr(self.tag+"parse", model)
+        if not useExistingExamples:
+            self.buildExamples(model, [data], [exampleFileName], [goldData], parse=parse, exampleStyle=exampleStyle)
+        if classifierModel == None:
+            classifierModel = model.get(self.tag+"model", defaultIfNotExist=None)        
+        predictions, confidences = self.predict(self.examples[], features, labelNames, classifierModel)
+        if exampleStyle == None:
+            exampleStyle = Parameters.get(model.getStr(self.tag+"example-style")) # no checking, but these should already have passed the ExampleBuilder
+        self.structureAnalyzer.load(model)
+        return self.exampleWriter.write(exampleFileName, predictions, data, tag+self.tag+"pred.xml.gz", model.get(self.tag+"ids.classes"), parse, exampleStyle=exampleStyle, structureAnalyzer=self.structureAnalyzer)
     
     ###########################################################################
     # Example Generation
@@ -638,19 +682,11 @@ class KerasEntityDetector(Detector):
             validation_data=(features["devel"], labels["devel"]),
             class_weight=labelWeights,
             callbacks=[es_cb, cp_cb])
+        self.kerasModel = None
         
         print >> sys.stderr, "Predicting devel examples"
-        bestModelPath = self.model.get(self.tag + "model.hdf5", True) 
-        self.kerasModel = load_model(bestModelPath)
-        confidences = self.kerasModel.predict(features["devel"], 64, 1)
-        
-        predictions = numpy.copy(confidences)
-        for i in range(len(confidences)):
-            for j in range(len(confidences[i])):
-                predictions[i][j] = 1 if confidences[i][j] > 0.5 else 0
-        print confidences[0], predictions[0], (confidences.shape, predictions.shape)
-        
-        self.evaluate(labels["devel"], predictions, mlb.classes_)
+        bestModelPath = self.model.get(self.tag + "model.hdf5", True)
+        self.predict(labels["devel"], features["devel"], mlb.classes_, bestModelPath)
         
 #         scores = sklearn.metrics.precision_recall_fscore_support(labels["devel"], predictions, average=None)
 #         for i in range(len(mlb.classes_)):
@@ -664,9 +700,24 @@ class KerasEntityDetector(Detector):
 #         #for prediction, gold in predictions, labels["devel"]:
 #         #    print prediction
         self.model.save()
+        self.examples = None
         
         # For now the training ends here, later the predicted matrices should be converted back to XML events
         sys.exit()
+    
+    def predict(self, labels, features, labelNames, kerasModelPath):
+        print >> sys.stderr, "Predicting devel examples"
+        kerasModel = load_model(kerasModelPath)
+        confidences = kerasModel.predict(features, 64, 1)
+        
+        predictions = numpy.copy(confidences)
+        for i in range(len(confidences)):
+            for j in range(len(confidences[i])):
+                predictions[i][j] = 1 if confidences[i][j] > 0.5 else 0
+        print confidences[0], predictions[0], (confidences.shape, predictions.shape)
+        
+        self.evaluate(labels, predictions, labelNames)
+        return predictions, confidences
     
     def evaluate(self, labels, predictions, labelNames):
         print "Evaluating, labels =", labelNames
