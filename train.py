@@ -366,7 +366,7 @@ def getTaskSettings(task, detector, bioNLPSTParams, preprocessorParams,
             corpusDir = Settings.CORPUS_DIR
         print >> sys.stderr, "Loading corpus", task, "from", corpusDir
         for dataset in ["devel", "train", "test"]:
-            if inputFiles[dataset] == None and inputFiles[dataset] != "None":
+            if inputFiles[dataset] == None:
                 if task.startswith("DDI13") and task != "DDI13":
                     if dataset in ["devel", "train"]:
                         inputFiles[dataset] = os.path.join(corpusDir, "DDI13-train.xml")
@@ -381,7 +381,7 @@ def getTaskSettings(task, detector, bioNLPSTParams, preprocessorParams,
                 else:
                     inputFiles[dataset] = os.path.join(corpusDir, task.replace("-FULL", "") + "-"+dataset+".xml")
                 
-            if inputFiles[dataset] == "None":
+            if inputFiles[dataset] == "skip":
                 inputFiles[dataset] = None
             if inputFiles[dataset] != None and not os.path.exists(inputFiles[dataset]):
                 fullPath = os.path.join(Settings.CORPUS_DIR, inputFiles[dataset])
