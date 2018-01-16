@@ -86,12 +86,15 @@ def f1ScoreMetric(y_true, y_pred):
     return sklearn.metrics.f1_score(y_true, y_pred, average="micro")
 
 class Embeddings():
-    def __init__(self, dimVector=None, wordVectorPath=None, wvMem=100000, wvMap=10000000, keys=None):
+    def __init__(self, name, dimVector=None, wordVectorPath=None, wvMem=100000, wvMap=10000000, keys=None):
+        self.name = None
         self.wv = None
         self.embeddings = []
         self.embeddingIndex = {}
         self.keyByIndex = {}
+        self.wvPath = None
         if wordVectorPath != None:
+            self.wvPath = wordVectorPath
             print >> sys.stderr, "Loading word vectors", (wvMem, wvMap), "from", wordVectorPath
             self.wv = WV.load(wordVectorPath, wvMem, wvMap)
             assert dimVector == None or dimVector == self.wv.size
@@ -102,6 +105,12 @@ class Embeddings():
         #self.initialKeysInitialized = False
         for key in self.initialKeys:
             self._addEmbedding(key, numpy.zeros(self.dimVector))
+    
+    def serialize(self):
+        if self.wvPath != None:
+            return {"name":self.name, "wvPath":self.wvPath, "wvMem":self.wvMem, "wvMap":self.wvMap}
+        else:
+            return {"name":self.name, "index":self.embeddingIndex}
     
     def releaseWV(self):
         self.wv = None
@@ -531,15 +540,16 @@ class KerasEntityDetector(Detector):
         self.structureAnalyzer.load(model)
         modelChanged = False
         # Load word vectors
-        self.embeddings = {}
-        wordVectorPath = self.styles.get("wv", Settings.W2VFILE)
-        wv_mem = int(self.styles.get("wv_mem", 100000))
-        wv_map = int(self.styles.get("wv_map", 10000000))
-        self.embeddings["words"] = Embeddings(None, wordVectorPath, wv_mem, wv_map, ["[out]", "[pad]"])
-        dimEmbeddings = int(self.styles.get("de", 8)) #8 #32
-        self.embeddings["positions"] = Embeddings(dimEmbeddings, keys=["[pad]"])
-        self.embeddings["named_entities"] = Embeddings(dimEmbeddings, keys=["[pad]"])
-        self.embeddings["POS"] = Embeddings(dimEmbeddings, keys=["[pad]"])
+        self.embeddings = self.loadEmbeddings()
+        if self.embeddings == None:
+            wordVectorPath = self.styles.get("wv", Settings.W2VFILE)
+            wv_mem = int(self.styles.get("wv_mem", 100000))
+            wv_map = int(self.styles.get("wv_map", 10000000))
+            self.embeddings["words"] = Embeddings(None, wordVectorPath, wv_mem, wv_map, ["[out]", "[pad]"])
+            dimEmbeddings = int(self.styles.get("de", 8)) #8 #32
+            self.embeddings["positions"] = Embeddings("positions", dimEmbeddings, keys=["[pad]"])
+            self.embeddings["named_entities"] = Embeddings("named_entities", dimEmbeddings, keys=["[pad]"])
+            self.embeddings["POS"] = Embeddings("POS", dimEmbeddings, keys=["[pad]"])
         for i in range(self.pathDepth):
             self.embeddings["path" + str(i)] = Embeddings(dimEmbeddings, keys=["[pad]"])
         if self.debugGold:
