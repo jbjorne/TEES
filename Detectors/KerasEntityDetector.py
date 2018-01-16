@@ -26,7 +26,7 @@ from keras.layers.embeddings import Embedding
 from keras.layers import merge
 from keras.layers.merge import Concatenate
 import keras.backend as K
-from itertools import product
+from itertools import product, chain
 from functools import partial
 from numpy import reshape
 from collections import defaultdict
@@ -236,12 +236,22 @@ class KerasEntityDetector(Detector):
             parse = self.getStr(self.tag+"parse", model)
         if not useExistingExamples:
             self.buildExamples(model, [data], [exampleFileName], [goldData], parse=parse, exampleStyle=exampleStyle)
+        examples = self.examples[data]
         if classifierModel == None:
-            classifierModel = model.get(self.tag+"model", defaultIfNotExist=None)        
-        predictions, confidences = self.predict(self.examples[], features, labelNames, classifierModel)
+            classifierModel = model.get(self.tag+"model", defaultIfNotExist=None)
+        labelSet = IdSet.load(filename = self.model.get(self.tag + "labels.ids", False), locked=True)
+        labelNames = [None] * len(labelSet.Ids)
+        for label in labelSet.Ids:
+            labelNames[labelSet.Ids[label]] = label
+        print >> sys.stderr, "Classification labels", labelNames
+        labels, _ = self.vectorizeLabels(examples, [data], labelNames)
+        features = self.vectorizeFeatures(examples, [data])
+        predictions, confidences = self.predict(labels, features, labelNames, classifierModel)
         if exampleStyle == None:
             exampleStyle = Parameters.get(model.getStr(self.tag+"example-style")) # no checking, but these should already have passed the ExampleBuilder
         self.structureAnalyzer.load(model)
+        for pred, conf, example in zip(predictions, confidences, self.examples[data]):
+            
         return self.exampleWriter.write(exampleFileName, predictions, data, tag+self.tag+"pred.xml.gz", model.get(self.tag+"ids.classes"), parse, exampleStyle=exampleStyle, structureAnalyzer=self.structureAnalyzer)
     
     ###########################################################################
@@ -626,35 +636,41 @@ class KerasEntityDetector(Detector):
         train set, validated on the devel set and finally the devel set is predicted using the model.
         """
         
-        print >> sys.stderr, "Vectorizing labels"
-        mlb = MultiLabelBinarizer()
-        labels = {}
-        for dataSet in ("train", "devel"):
-            labels[dataSet] = [x["labels"] for x in self.examples[dataSet]]
-        mlb.fit_transform(labels["train"] + labels["devel"])
-        for dataSet in ("train", "devel"):
-            labels[dataSet] = numpy.array(mlb.transform(labels[dataSet]))
+        labels, labelNames = self.vectorizeLabels(self.examples, ["train", "devel"])
+#         print >> sys.stderr, "Vectorizing labels"
+#         mlb = MultiLabelBinarizer()
+#         labels = {}
+#         for dataSet in ("train", "devel"):
+#             labels[dataSet] = [x["labels"] for x in self.examples[dataSet]]
+#         mlb.fit_transform(labels["train"] + labels["devel"])
+#         for dataSet in ("train", "devel"):
+#             labels[dataSet] = numpy.array(mlb.transform(labels[dataSet]))
         
-        print >> sys.stderr, "Labels:", mlb.classes_
+        print >> sys.stderr, "Labels:", labelNames
         labelWeights = {}
-        for i in range(len(mlb.classes_)):
-            labelWeights[i] = 1.0 if mlb.classes_[i] != "neg" else 0.001
+        for i in range(len(labelNames)):
+            labelWeights[i] = 1.0 if labelNames[i] != "neg" else 0.001
         print >> sys.stderr, "Label weights:", labelWeights
+        labelSet = IdSet(idDict={i:labelNames[i] for i in range(len(labelNames))})
+        labelFileName = self.model.get(self.tag + "labels.ids", True)
+        print >> sys.stderr, "Saving class names to", labelFileName
+        labelSet.write(labelFileName)
         #print >> sys.stderr, compute_sample_weight("balanced", [{i:x[i] for i in x} for x in labels["train"]])
         #labelWeights = {x[0]:x[1] for x in enumerate(compute_class_weight("balanced", np.unique(labels["train"]), labels["train"]))}
         #print >> sys.stderr, "Label weights:", labelWeights
         
-        featureGroups = sorted(self.examples["train"][0]["features"].keys())
-        print >> sys.stderr, [((x.get("text"), x.get("POS")) if x != None else None) for x  in self.examples["train"][0]["tokens"]]
-        print >> sys.stderr, "Vectorizing features:", featureGroups
-        features = {"train":{}, "devel":{}}
-        for featureGroup in featureGroups:
-            for dataSet in ("train", "devel"):
-                if self.exampleLength != None:
-                    for example in self.examples[dataSet]:
-                        assert len(example["features"][featureGroup]) == self.exampleLength, example
-                features[dataSet][featureGroup] = numpy.array([x["features"][featureGroup] for x in self.examples[dataSet]])
-            print >> sys.stderr, featureGroup, features["train"][featureGroup].shape, features["train"][featureGroup][0]
+        features = self.vectorizeFeatures(self.examples, ("train", "devel"))
+#         featureGroups = sorted(self.examples["train"][0]["features"].keys())
+#         print >> sys.stderr, [((x.get("text"), x.get("POS")) if x != None else None) for x  in self.examples["train"][0]["tokens"]]
+#         print >> sys.stderr, "Vectorizing features:", featureGroups
+#         features = {"train":{}, "devel":{}}
+#         for featureGroup in featureGroups:
+#             for dataSet in ("train", "devel"):
+#                 if self.exampleLength != None:
+#                     for example in self.examples[dataSet]:
+#                         assert len(example["features"][featureGroup]) == self.exampleLength, example
+#                 features[dataSet][featureGroup] = numpy.array([x["features"][featureGroup] for x in self.examples[dataSet]])
+#             print >> sys.stderr, featureGroup, features["train"][featureGroup].shape, features["train"][featureGroup][0]
         
 #         if self.exampleLength != None:
 #             for dataSet in ("train", "devel"):
@@ -686,7 +702,7 @@ class KerasEntityDetector(Detector):
         
         print >> sys.stderr, "Predicting devel examples"
         bestModelPath = self.model.get(self.tag + "model.hdf5", True)
-        self.predict(labels["devel"], features["devel"], mlb.classes_, bestModelPath)
+        self.predict(labels["devel"], features["devel"], labelNames, bestModelPath)
         
 #         scores = sklearn.metrics.precision_recall_fscore_support(labels["devel"], predictions, average=None)
 #         for i in range(len(mlb.classes_)):
@@ -704,6 +720,32 @@ class KerasEntityDetector(Detector):
         
         # For now the training ends here, later the predicted matrices should be converted back to XML events
         sys.exit()
+    
+    def vectorizeLabels(self, examples, dataSets, labelNames=None):
+        print >> sys.stderr, "Vectorizing labels"
+        mlb = MultiLabelBinarizer(labelNames)
+        labels = {}
+        for dataSet in dataSets:
+            labels[dataSet] = [x["labels"] for x in self.examples[dataSet]]
+        if labelNames == None:
+            mlb.fit_transform(chain.from_iterable([labels[x] for x in dataSets]))
+        for dataSet in dataSets:
+            labels[dataSet] = numpy.array(mlb.transform(labels[dataSet]))
+        return labels, mlb.classes_
+    
+    def vectorizeFeatures(self, examples, dataSets):
+        featureGroups = sorted(self.examples[dataSets[0]][0]["features"].keys())
+        print >> sys.stderr, [((x.get("text"), x.get("POS")) if x != None else None) for x  in self.examples[dataSets[0]][0]["tokens"]]
+        print >> sys.stderr, "Vectorizing features:", featureGroups
+        features = {x:{} for x in dataSets}
+        for featureGroup in featureGroups:
+            for dataSet in dataSets:
+                if self.exampleLength != None:
+                    for example in self.examples[dataSet]:
+                        assert len(example["features"][featureGroup]) == self.exampleLength, example
+                features[dataSet][featureGroup] = numpy.array([x["features"][featureGroup] for x in self.examples[dataSet]])
+            print >> sys.stderr, featureGroup, features["train"][featureGroup].shape, features["train"][featureGroup][0]
+        return features
     
     def predict(self, labels, features, labelNames, kerasModelPath):
         print >> sys.stderr, "Predicting devel examples"
