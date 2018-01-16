@@ -139,6 +139,7 @@ class Embeddings():
         return self.keyByIndex[index]
     
     def getIndex(self, key, default=None):
+        assert isinstance(key, basestring), key
         if key not in self.embeddingIndex and self.embeddings != None:
             if self.wv != None:
                 vector = self.wv.w_to_normv(key)
@@ -480,8 +481,8 @@ class KerasEntityDetector(Detector):
                     if self.debugGold:
                         features["gold"].append(self.embeddings["gold"].getIndex(",".join(labels[j]), "[out]"))
                     features["words"].append(indices[j])
-                    features["positions"].append(self.embeddings["positions"].getIndex(windowIndex, "[out]"))
-                    features["named_entities"].append(self.embeddings["named_entities"].getIndex(1 if (sentenceGraph.tokenIsEntityHead[token2] and sentenceGraph.tokenIsName[token2]) else 0, "[out]"))
+                    features["positions"].append(self.embeddings["positions"].getIndex(str(windowIndex), "[out]"))
+                    features["named_entities"].append(self.embeddings["named_entities"].getIndex("1" if (sentenceGraph.tokenIsEntityHead[token2] and sentenceGraph.tokenIsName[token2]) else "0", "[out]"))
                     features["POS"].append(self.embeddings["POS"].getIndex(token2.get("POS"), "[out]"))
                     self.addPathEmbedding(token, token2, sentenceGraph.dependencyGraph, undirected, edgeCounts, features)
                     #features["binary"][-1].append(1 if sentenceGraph.tokenIsName[sentenceGraph.tokens[j]] else 0)
