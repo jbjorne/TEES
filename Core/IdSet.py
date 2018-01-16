@@ -86,10 +86,10 @@ class IdSet:
         and the id must be smaller than the largest id already in the set. Usually this method
         is used only when inserting name/id pairs from an existing source.
         """
-        assert(not self.locked)
-        assert(not id in self.Ids.values())
-        assert(not name in self.Ids.keys())
-        assert(id < self.nextFreeId)
+        assert not self.locked, (name, id)
+        assert not id in self.Ids.values(), (name, id)
+        assert not name in self.Ids.keys(), (name, id)
+        assert id < self.nextFreeId, (name, id, self.nextFreeId)
         if name.strip() == "":
             raise Exception("Cannot define id for empty key")
         self.Ids[name] = id

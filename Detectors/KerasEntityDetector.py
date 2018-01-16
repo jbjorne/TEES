@@ -89,17 +89,18 @@ class Embeddings():
     def __init__(self, name, dimVector=None, wordVectorPath=None, wvMem=100000, wvMap=10000000, keys=None):
         self._reset(name, dimVector, wordVectorPath, wvMem, wvMap, keys)
     
-    def _reset(self, name, dimVector=None, wordVectorPath=None, wvMem=100000, wvMap=10000000, keys=None, embeddingIndex=None):
+    def _reset(self, name, dimVector=None, wvPath=None, wvMem=100000, wvMap=10000000, keys=None, embeddingIndex=None):
         self.name = None
         self.wv = None
         self.embeddings = [] if embeddingIndex == None else None
         self.embeddingIndex = {} if embeddingIndex == None else embeddingIndex
         self.keyByIndex = {} if embeddingIndex == None else {embeddingIndex[x]:x for x in embeddingIndex.keys()}
-        self.wvPath = None
-        if wordVectorPath != None:
-            self.wvPath = wordVectorPath
-            print >> sys.stderr, "Loading word vectors", (wvMem, wvMap), "from", wordVectorPath
-            self.wv = WV.load(wordVectorPath, wvMem, wvMap)
+        self.wvPath = wvPath
+        self.wvMem = wvMem
+        self.wvMap = wvMap
+        if self.wvPath != None:
+            print >> sys.stderr, "Loading word vectors", (wvMem, wvMap), "from", self.wvPath
+            self.wv = WV.load(self.wvPath, wvMem, wvMap)
             assert dimVector == None or dimVector == self.wv.size
             self.dimVector = self.wv.size
         else:
@@ -559,15 +560,15 @@ class KerasEntityDetector(Detector):
             wordVectorPath = self.styles.get("wv", Settings.W2VFILE)
             wv_mem = int(self.styles.get("wv_mem", 100000))
             wv_map = int(self.styles.get("wv_map", 10000000))
-            self.embeddings["words"] = Embeddings(None, wordVectorPath, wv_mem, wv_map, ["[out]", "[pad]"])
+            self.embeddings["words"] = Embeddings("words", None, wordVectorPath, wv_mem, wv_map, ["[out]", "[pad]"])
             dimEmbeddings = int(self.styles.get("de", 8)) #8 #32
             self.embeddings["positions"] = Embeddings("positions", dimEmbeddings, keys=["[pad]"])
             self.embeddings["named_entities"] = Embeddings("named_entities", dimEmbeddings, keys=["[pad]"])
             self.embeddings["POS"] = Embeddings("POS", dimEmbeddings, keys=["[pad]"])
             for i in range(self.pathDepth):
-                self.embeddings["path" + str(i)] = Embeddings(dimEmbeddings, keys=["[pad]"])
+                self.embeddings["path" + str(i)] = Embeddings("path" + str(i), dimEmbeddings, keys=["[pad]"])
             if self.debugGold:
-                self.embeddings["gold"] = Embeddings(dimEmbeddings, keys=["[pad]"])
+                self.embeddings["gold"] = Embeddings("gold", dimEmbeddings, keys=["[pad]"])
         # Make example for all input files
         self.examples = {x:[] for x in setNames}
         for setName, data, gold in itertools.izip_longest(setNames, datas, golds, fillvalue=None):
@@ -578,14 +579,16 @@ class KerasEntityDetector(Detector):
             self.structureAnalyzer.save(model)
             modelChanged = True
         if saveIdsToModel:
+            print >> sys.stderr, "Saving embedding indices"
             self.saveEmbeddings(self.embeddings, model.get(self.tag + "embeddings.json", True))
+            modelChanged = True
         if modelChanged:
             model.save()
         self.embeddings["words"].releaseWV()
     
     def saveEmbeddings(self, embeddings, outPath):
         with open(outPath, "wt") as f:
-            json.dump([x.serialize() for x in embeddings], f)
+            json.dump([embeddings[x].serialize() for x in sorted(embeddings.keys())], f)
     
     def loadEmbeddings(self, inPath):
         embeddings = {}
@@ -697,7 +700,7 @@ class KerasEntityDetector(Detector):
         for i in range(len(labelNames)):
             labelWeights[i] = 1.0 if labelNames[i] != "neg" else 0.001
         print >> sys.stderr, "Label weights:", labelWeights
-        labelSet = IdSet(idDict={i:labelNames[i] for i in range(len(labelNames))})
+        labelSet = IdSet(idDict={labelNames[i]:i for i in range(len(labelNames))})
         labelFileName = self.model.get(self.tag + "labels.ids", True)
         print >> sys.stderr, "Saving class names to", labelFileName
         labelSet.write(labelFileName)
