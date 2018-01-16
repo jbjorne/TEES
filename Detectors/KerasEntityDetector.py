@@ -86,18 +86,18 @@ def f1ScoreMetric(y_true, y_pred):
     return sklearn.metrics.f1_score(y_true, y_pred, average="micro")
 
 class Embeddings():
-    def __init__(self, name, dimVector=None, wordVectorPath=None, wvMem=100000, wvMap=10000000, keys=None):
+    def __init__(self, name=None, dimVector=None, wordVectorPath=None, wvMem=100000, wvMap=10000000, keys=None):
         self._reset(name, dimVector, wordVectorPath, wvMem, wvMap, keys)
     
     def _reset(self, name, dimVector=None, wvPath=None, wvMem=100000, wvMap=10000000, keys=None, embeddingIndex=None):
-        self.name = None
-        self.wv = None
+        self.name = name
         self.embeddings = [] if embeddingIndex == None else None
         self.embeddingIndex = {} if embeddingIndex == None else embeddingIndex
         self.keyByIndex = {} if embeddingIndex == None else {embeddingIndex[x]:x for x in embeddingIndex.keys()}
         self.wvPath = wvPath
         self.wvMem = wvMem
         self.wvMap = wvMap
+        self.wv = None
         if self.wvPath != None:
             print >> sys.stderr, "Loading word vectors", (wvMem, wvMap), "from", self.wvPath
             self.wv = WV.load(self.wvPath, wvMem, wvMap)
@@ -115,12 +115,13 @@ class Embeddings():
     
     def serialize(self):
         if self.wvPath != None:
-            return {"name":self.name, "dimVector":self.dimVector, "wvPath":self.wvPath, "wvMem":self.wvMem, "wvMap":self.wvMap}
+            return {"name":self.name, "dimVector":self.dimVector, "wvPath":self.wvPath, "wvMem":self.wvMem, "wvMap":self.wvMap, "index":self.embeddingIndex}
         else:
             return {"name":self.name, "dimVector":self.dimVector, "index":self.embeddingIndex}
     
     def deserialize(self, obj):
         self._reset(obj["name"], obj.get("dimVector"), obj.get("wvPath"), obj.get("wvMem"), obj.get("wvMap"), None, obj.get("index"))
+        return self
     
     def releaseWV(self):
         self.wv = None
@@ -223,7 +224,6 @@ class KerasEntityDetector(Detector):
         self.exitState()
     
     def classify(self, data, model, output, parse=None, task=None, goldData=None, workDir=None, fromStep=None, omitSteps=None, validate=False):
-        model = self.openModel(model, "r")
         self.enterState(self.STATE_CLASSIFY)
         self.setWorkDir(workDir)
         if workDir == None:
@@ -259,21 +259,21 @@ class KerasEntityDetector(Detector):
             self.buildExamples(model, ["classification"], [data], [exampleFileName], [goldData], parse=parse, exampleStyle=exampleStyle)
         examples = self.examples["classification"]
         if classifierModel == None:
-            classifierModel = model.get(self.tag+"model", defaultIfNotExist=None)
-        labelSet = IdSet.load(filename = self.model.get(self.tag + "labels.ids", False), locked=True)
+            classifierModel = model.get(self.tag + "model.hdf5")
+        labelSet = IdSet(filename = model.get(self.tag + "labels.ids", False), locked=True)
         labelNames = [None] * len(labelSet.Ids)
         for label in labelSet.Ids:
             labelNames[labelSet.Ids[label]] = label
         print >> sys.stderr, "Classification labels", labelNames
         labels, _ = self.vectorizeLabels(examples, ["classification"], labelNames)
         features = self.vectorizeFeatures(examples, ["classification"])
-        predictions, confidences = self.predict(labels, features, labelNames, classifierModel)
+        predictions, confidences = self.predict(labels["classification"], features["classification"], labelNames, classifierModel)
         if exampleStyle == None:
             exampleStyle = Parameters.get(model.getStr(self.tag+"example-style")) # no checking, but these should already have passed the ExampleBuilder
         self.structureAnalyzer.load(model)
         outExamples = []
         outPredictions = []
-        for pred, conf, example in zip(predictions, confidences, self.examples[data]):
+        for pred, conf, example in zip(predictions, confidences, examples):
             outExamples.append([example["id"], None, None, example["extra"]])
             outPredictions.append({"prediction":pred, "confidence":conf})
         return self.exampleWriter.write(outExamples, outPredictions, data, tag+self.tag+"pred.xml.gz", labelSet, parse, exampleStyle=exampleStyle, structureAnalyzer=self.structureAnalyzer)
@@ -300,7 +300,7 @@ class KerasEntityDetector(Detector):
         print >> sys.stderr, counts
         return counts
         
-    def processCorpus(self, input, examples, gold=None):
+    def processCorpus(self, input, examples, gold=None, parse=None, tokenization=None):
         self.exampleStats = ExampleStats()
         #print >> sys.stderr, "Saving examples to", output
         # Create intermediate paths if needed
@@ -316,10 +316,10 @@ class KerasEntityDetector(Detector):
             self.progress = ProgressCounter(self.elementCounts.get("sentences"), "Build examples")
         
         removeIntersentenceInteractions = True
-        inputIterator = getCorpusIterator(input, None, self.parse, self.tokenization, removeIntersentenceInteractions=removeIntersentenceInteractions)            
+        inputIterator = getCorpusIterator(input, None, parse, tokenization, removeIntersentenceInteractions=removeIntersentenceInteractions)            
         goldIterator = []
         if gold != None:
-            goldIterator = getCorpusIterator(gold, None, self.parse, self.tokenization, removeIntersentenceInteractions=removeIntersentenceInteractions)
+            goldIterator = getCorpusIterator(gold, None, parse, tokenization, removeIntersentenceInteractions=removeIntersentenceInteractions)
         for inputSentences, goldSentences in itertools.izip_longest(inputIterator, goldIterator, fillvalue=None):
             if gold != None:
                 assert goldSentences != None and inputSentences != None
@@ -379,7 +379,7 @@ class KerasEntityDetector(Detector):
             else:
                 keys = ["[unconnected]"] * self.pathDepth
         for i in range(self.pathDepth):
-            features["path" + str(i)].append(self.embeddings["path" + str(i)].getIndex(keys[i]))
+            features["path" + str(i)].append(self.embeddings["path" + str(i)].getIndex(keys[i], "[out]"))
     
     def buildExamplesFromGraph(self, sentenceGraph, examples, goldGraph=None):
         """
@@ -475,11 +475,11 @@ class KerasEntityDetector(Detector):
                     token2 = sentenceGraph.tokens[j]
                     tokens.append(token2)
                     if self.debugGold:
-                        features["gold"].append(self.embeddings["gold"].getIndex(",".join(labels[j])))
+                        features["gold"].append(self.embeddings["gold"].getIndex(",".join(labels[j]), "[out]"))
                     features["words"].append(indices[j])
-                    features["positions"].append(self.embeddings["positions"].getIndex(windowIndex))
-                    features["named_entities"].append(self.embeddings["named_entities"].getIndex(1 if (sentenceGraph.tokenIsEntityHead[token2] and sentenceGraph.tokenIsName[token2]) else 0))
-                    features["POS"].append(self.embeddings["POS"].getIndex(token2.get("POS")))
+                    features["positions"].append(self.embeddings["positions"].getIndex(windowIndex, "[out]"))
+                    features["named_entities"].append(self.embeddings["named_entities"].getIndex(1 if (sentenceGraph.tokenIsEntityHead[token2] and sentenceGraph.tokenIsName[token2]) else 0, "[out]"))
+                    features["POS"].append(self.embeddings["POS"].getIndex(token2.get("POS"), "[out]"))
                     self.addPathEmbedding(token, token2, sentenceGraph.dependencyGraph, undirected, edgeCounts, features)
                     #features["binary"][-1].append(1 if sentenceGraph.tokenIsName[sentenceGraph.tokens[j]] else 0)
                 else:
@@ -552,7 +552,7 @@ class KerasEntityDetector(Detector):
         # Load word vectors
         embeddingsPath = model.get(self.tag + "embeddings.json", False, None)
         if embeddingsPath != None:
-            print >> sys.stderr, "Loading embedding indices from"
+            print >> sys.stderr, "Loading embedding indices from", embeddingsPath
             self.embeddings = self.loadEmbeddings(embeddingsPath)
         else:
             print >> sys.stderr, "Initialized embedding indices"
@@ -560,20 +560,21 @@ class KerasEntityDetector(Detector):
             wordVectorPath = self.styles.get("wv", Settings.W2VFILE)
             wv_mem = int(self.styles.get("wv_mem", 100000))
             wv_map = int(self.styles.get("wv_map", 10000000))
-            self.embeddings["words"] = Embeddings("words", None, wordVectorPath, wv_mem, wv_map, ["[out]", "[pad]"])
+            initVectors = ["[out]", "[pad]"]
+            self.embeddings["words"] = Embeddings("words", None, wordVectorPath, wv_mem, wv_map, initVectors)
             dimEmbeddings = int(self.styles.get("de", 8)) #8 #32
-            self.embeddings["positions"] = Embeddings("positions", dimEmbeddings, keys=["[pad]"])
-            self.embeddings["named_entities"] = Embeddings("named_entities", dimEmbeddings, keys=["[pad]"])
-            self.embeddings["POS"] = Embeddings("POS", dimEmbeddings, keys=["[pad]"])
+            self.embeddings["positions"] = Embeddings("positions", dimEmbeddings, keys=initVectors)
+            self.embeddings["named_entities"] = Embeddings("named_entities", dimEmbeddings, keys=initVectors)
+            self.embeddings["POS"] = Embeddings("POS", dimEmbeddings, keys=initVectors)
             for i in range(self.pathDepth):
-                self.embeddings["path" + str(i)] = Embeddings("path" + str(i), dimEmbeddings, keys=["[pad]"])
+                self.embeddings["path" + str(i)] = Embeddings("path" + str(i), dimEmbeddings, keys=initVectors)
             if self.debugGold:
-                self.embeddings["gold"] = Embeddings("gold", dimEmbeddings, keys=["[pad]"])
+                self.embeddings["gold"] = Embeddings("gold", dimEmbeddings, keys=initVectors)
         # Make example for all input files
         self.examples = {x:[] for x in setNames}
         for setName, data, gold in itertools.izip_longest(setNames, datas, golds, fillvalue=None):
             print >> sys.stderr, "Example generation for set", setName #, "to file", output 
-            self.processCorpus(data, self.examples[setName], gold)          
+            self.processCorpus(data, self.examples[setName], gold, parse)          
         if hasattr(self.structureAnalyzer, "typeMap") and model.mode != "r":
             print >> sys.stderr, "Saving StructureAnalyzer.typeMap"
             self.structureAnalyzer.save(model)
@@ -594,7 +595,7 @@ class KerasEntityDetector(Detector):
         embeddings = {}
         with open(inPath, "rt") as f:
             for obj in json.load(f):
-                emb = Embedding().deserialize(obj)
+                emb = Embeddings().deserialize(obj)
                 embeddings[emb.name] = emb
         return embeddings
     
@@ -775,6 +776,9 @@ class KerasEntityDetector(Detector):
             labels[dataSet] = [x["labels"] for x in self.examples[dataSet]]
         if labelNames == None:
             mlb.fit_transform(chain.from_iterable([labels[x] for x in dataSets]))
+        else:
+            mlb.fit(None)
+            assert [x for x in mlb.classes_] == labelNames, (mlb.classes_, labelNames)
         for dataSet in dataSets:
             labels[dataSet] = numpy.array(mlb.transform(labels[dataSet]))
         return labels, mlb.classes_
@@ -790,7 +794,7 @@ class KerasEntityDetector(Detector):
                     for example in self.examples[dataSet]:
                         assert len(example["features"][featureGroup]) == self.exampleLength, example
                 features[dataSet][featureGroup] = numpy.array([x["features"][featureGroup] for x in self.examples[dataSet]])
-            print >> sys.stderr, featureGroup, features["train"][featureGroup].shape, features["train"][featureGroup][0]
+            print >> sys.stderr, featureGroup, features[dataSets[0]][featureGroup].shape, features[dataSets[0]][featureGroup][0]
         return features
     
     def predict(self, labels, features, labelNames, kerasModelPath):
