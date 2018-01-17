@@ -17,6 +17,7 @@ from Evaluators import EvaluateInteractionXML
 from Utils import Parameters
 from ExampleWriters.EntityExampleWriter import EntityExampleWriter
 from Evaluators.AveragingMultiClassEvaluator import AveragingMultiClassEvaluator
+import Utils.InteractionXML.InteractionXMLUtils as IXMLUtils
 import numpy
 from keras.layers import Dense
 from keras.models import Model, load_model
@@ -144,24 +145,6 @@ class KerasEntityDetector(Detector):
     ###########################################################################
     # Example Generation
     ###########################################################################
-    
-    def getElementCounts(self, filename):
-        if type(filename) in types.StringTypes:
-            return {}
-        print >> sys.stderr, "Counting elements:",
-        if filename.endswith(".gz"):
-            f = gzip.open(filename, "rt")
-        else:
-            f = open(filename, "rt")
-        counts = {"documents":0, "sentences":0}
-        for line in f:
-            if "<document" in line:
-                counts["documents"] += 1
-            elif "<sentence" in line:
-                counts["sentences"] += 1
-        f.close()
-        print >> sys.stderr, counts
-        return counts
         
     def processCorpus(self, input, examples, gold=None, parse=None, tokenization=None):
         self.exampleStats = ExampleStats()
@@ -169,7 +152,7 @@ class KerasEntityDetector(Detector):
         # Build examples
         self.exampleCount = 0
         if type(input) in types.StringTypes:
-            self.elementCounts = self.getElementCounts(input)
+            self.elementCounts = IXMLUtils.getElementCounts(input)
             self.progress = ProgressCounter(self.elementCounts.get("sentences"), "Build examples")
         
         removeIntersentenceInteractions = True
