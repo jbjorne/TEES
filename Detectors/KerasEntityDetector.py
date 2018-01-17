@@ -22,7 +22,6 @@ from keras.layers.wrappers import TimeDistributed
 from keras.callbacks import EarlyStopping, ModelCheckpoint
 from Detectors import SingleStageDetector
 import Utils.Settings as Settings
-from keras.layers.embeddings import Embedding
 from keras.layers import merge
 from keras.layers.merge import Concatenate
 import keras.backend as K
@@ -78,102 +77,8 @@ from Evaluators.AveragingMultiClassEvaluator import AveragingMultiClassEvaluator
 # K.set_session(sess)
 # ###############################################################################
 
-def normalized(a, axis=-1, order=2):
-    l2 = numpy.atleast_1d(numpy.linalg.norm(a, order, axis))
-    l2[l2==0] = 1
-    return a / numpy.expand_dims(l2, axis)
-
 def f1ScoreMetric(y_true, y_pred):
     return sklearn.metrics.f1_score(y_true, y_pred, average="micro")
-
-class EmbeddingIndex():
-    def __init__(self, name=None, dimVector=None, wordVectorPath=None, wvMem=100000, wvMap=10000000, keys=None):
-        self._reset(name, dimVector, wordVectorPath, wvMem, wvMap, keys)
-    
-    def _reset(self, name, dimVector=None, wvPath=None, wvMem=100000, wvMap=10000000, keys=None, embeddingIndex=None):
-        self.name = name
-        self.embeddings = [] if embeddingIndex == None else None
-        self.embeddingIndex = {} if embeddingIndex == None else embeddingIndex
-        self.keyByIndex = {} if embeddingIndex == None else {embeddingIndex[x]:x for x in embeddingIndex.keys()}
-        self.wvPath = wvPath
-        self.wvMem = wvMem
-        self.wvMap = wvMap
-        self.wv = None
-        if self.wvPath != None:
-            print >> sys.stderr, "Loading word vectors", (wvMem, wvMap), "from", self.wvPath
-            self.wv = WV.load(self.wvPath, wvMem, wvMap)
-            assert dimVector == None or dimVector == self.wv.size
-            self.dimVector = self.wv.size
-        else:
-            self.dimVector = dimVector if dimVector != None else 32
-        self.initialKeys = [] if keys == None else keys
-        #self.initialKeysInitialized = False
-        for key in self.initialKeys:
-            self._addEmbedding(key, numpy.zeros(self.dimVector))
-    
-    def getSize(self):
-        return len(self.embeddingIndex)
-    
-    def serialize(self):
-        if self.wvPath != None:
-            return {"name":self.name, "dimVector":self.dimVector, "wvPath":self.wvPath, "wvMem":self.wvMem, "wvMap":self.wvMap, "index":self.embeddingIndex}
-        else:
-            return {"name":self.name, "dimVector":self.dimVector, "index":self.embeddingIndex}
-    
-    def deserialize(self, obj):
-        self._reset(obj["name"], obj.get("dimVector"), obj.get("wvPath"), obj.get("wvMem"), obj.get("wvMap"), None, obj.get("index"))
-        return self
-    
-    def releaseWV(self):
-        self.wv = None
-    
-    def _addEmbedding(self, key, vector):
-        index = len(self.embeddings)
-        assert key not in self.embeddingIndex
-        assert index not in self.keyByIndex
-        self.embeddingIndex[key] = len(self.embeddings)
-        self.keyByIndex[index] = key
-        self.embeddings.append(vector)
-    
-    def getKey(self, index):
-        return self.keyByIndex[index]
-    
-    def getIndex(self, key, default=None):
-        assert isinstance(key, basestring), key
-        if key not in self.embeddingIndex and self.embeddings != None:
-            if self.wv != None:
-                vector = self.wv.w_to_normv(key)
-                if vector is not None:
-                    #self.embeddingIndex[key] = len(self.embeddings)
-                    #self.embeddings.append(vector)
-                    self._addEmbedding(key, vector)
-#                     if not self.initialKeysInitialized:
-#                         for initialKey in self.initialKeys:
-#                             assert self.embeddings[self.embeddingIndex[initialKey]] is None
-#                             self.embeddings[self.embeddingIndex[initialKey]] = numpy.zeros(vector.size)
-#                         self.initialKeysInitialized = True
-            else:
-                self._addEmbedding(key, numpy.ones(self.dimVector)) #normalized(numpy.random.uniform(-1.0, 1.0, self.dimVector)))
-        return self.embeddingIndex[key] if key in self.embeddingIndex else self.embeddingIndex[default]
-    
-    def makeLayers(self, dimExample, name, trainable=True):
-        self.inputLayer = Input(shape=(dimExample,), name=name)
-        self.embeddingLayer = Embedding(len(self.embeddings), 
-                              self.embeddings[0].size, 
-                              weights=[self.getEmbeddingMatrix(name)], 
-                              input_length=dimExample,
-                              trainable=trainable,
-                              name=name + "_embeddings")(self.inputLayer)
-        return self.inputLayer, self.embeddingLayer
-    
-    def getEmbeddingMatrix(self, name):
-        print >> sys.stderr, "Making Embedding Matrix", name, (len(self.embeddings), self.embeddings[0].size), self.embeddingIndex.keys()[0:50], self.embeddings[-1]
-        dimWordVector = len(self.embeddings[0])
-        numWordVectors = len(self.embeddings)
-        embedding_matrix = np.zeros((numWordVectors, dimWordVector))
-        for i in range(len(self.embeddings)):
-            embedding_matrix[i] = self.embeddings[i]
-        return embedding_matrix
 
 class KerasEntityDetector(Detector):
     """
