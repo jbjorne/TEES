@@ -500,7 +500,7 @@ class KerasEntityDetector(Detector):
             if self.model.hasMember(repModelPath):
                 os.remove(self.model.get(repModelPath))
             modelScores = [x["micro"][2] for x in modelScores]
-            print >> sys.stderr, "Replicates:", "/".join(["%.2f" % x for x in bestScore[:3]]), (numpy.mean(modelScores), numpy.var(modelScores)), modelScores
+            print >> sys.stderr, "Replicates:", ["%.2f" % x for x in bestScore[:3]], ("%.2f" % numpy.mean(modelScores), "%.2f" % numpy.var(modelScores)), ["%.2f" % x for x in modelScores]
         
         self.kerasModel = None
         self.model.save()
