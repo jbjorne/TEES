@@ -86,7 +86,7 @@ def normalized(a, axis=-1, order=2):
 def f1ScoreMetric(y_true, y_pred):
     return sklearn.metrics.f1_score(y_true, y_pred, average="micro")
 
-class Embeddings():
+class EmbeddingIndex():
     def __init__(self, name=None, dimVector=None, wordVectorPath=None, wvMem=100000, wvMap=10000000, keys=None):
         self._reset(name, dimVector, wordVectorPath, wvMem, wvMap, keys)
     
@@ -564,15 +564,15 @@ class KerasEntityDetector(Detector):
             wv_mem = int(self.styles.get("wv_mem", 100000))
             wv_map = int(self.styles.get("wv_map", 10000000))
             initVectors = ["[out]", "[pad]"]
-            self.embeddings["words"] = Embeddings("words", None, wordVectorPath, wv_mem, wv_map, initVectors)
+            self.embeddings["words"] = EmbeddingIndex("words", None, wordVectorPath, wv_mem, wv_map, initVectors)
             dimEmbeddings = int(self.styles.get("de", 8)) #8 #32
-            self.embeddings["positions"] = Embeddings("positions", dimEmbeddings, keys=initVectors)
-            self.embeddings["named_entities"] = Embeddings("named_entities", dimEmbeddings, keys=initVectors)
-            self.embeddings["POS"] = Embeddings("POS", dimEmbeddings, keys=initVectors)
+            self.embeddings["positions"] = EmbeddingIndex("positions", dimEmbeddings, keys=initVectors)
+            self.embeddings["named_entities"] = EmbeddingIndex("named_entities", dimEmbeddings, keys=initVectors)
+            self.embeddings["POS"] = EmbeddingIndex("POS", dimEmbeddings, keys=initVectors)
             for i in range(self.pathDepth):
-                self.embeddings["path" + str(i)] = Embeddings("path" + str(i), dimEmbeddings, keys=initVectors)
+                self.embeddings["path" + str(i)] = EmbeddingIndex("path" + str(i), dimEmbeddings, keys=initVectors)
             if self.debugGold:
-                self.embeddings["gold"] = Embeddings("gold", dimEmbeddings, keys=initVectors)
+                self.embeddings["gold"] = EmbeddingIndex("gold", dimEmbeddings, keys=initVectors)
         # Make example for all input files
         self.examples = {x:[] for x in setNames}
         for setName, data, gold in itertools.izip_longest(setNames, datas, golds, fillvalue=None):
@@ -607,7 +607,7 @@ class KerasEntityDetector(Detector):
         embeddings = {}
         with open(inPath, "rt") as f:
             for obj in json.load(f):
-                emb = Embeddings().deserialize(obj)
+                emb = EmbeddingIndex().deserialize(obj)
                 embeddings[emb.name] = emb
         print >> sys.stderr, [(embeddings[x].name, embeddings[x].getSize()) for x in sorted(embeddings.keys())]
         return embeddings
