@@ -496,8 +496,11 @@ class KerasEntityDetector(Detector):
                 print >> sys.stderr, "New best replicate", scores["micro"]
                 bestScore = scores["micro"]
                 shutil.copy2(self.model.get(repModelPath, True), self.model.get(self.tag + "model.hdf5", True))
-        if replicates > 1 and self.model.hasMember(repModelPath):
-            os.remove(self.model.get(repModelPath))
+        if replicates > 1:
+            if self.model.hasMember(repModelPath):
+                os.remove(self.model.get(repModelPath))
+            modelScores = [x["micro"][2] for x in modelScores]
+            print >> sys.stderr, "Replicates:", "/".join(["%.2f" % x for x in bestScore[:3]]), (numpy.mean(modelScores), numpy.var(modelScores)), modelScores
         
         self.kerasModel = None
         self.model.save()
@@ -532,7 +535,6 @@ class KerasEntityDetector(Detector):
         return features
     
     def predict(self, labels, features, labelNames, kerasModel):
-        print >> sys.stderr, "Predicting devel examples"
         if isinstance(kerasModel, basestring):
             kerasModel = load_model(kerasModel)
         confidences = kerasModel.predict(features, 64, 1)
