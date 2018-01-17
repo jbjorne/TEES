@@ -1,81 +1,35 @@
 import sys, os
-from Detector import Detector
+import shutil
+import gzip
+import json
 import itertools
-from ExampleBuilders.KerasExampleBuilder import KerasExampleBuilder
+import types
+from Detector import Detector
 from Core.SentenceGraph import getCorpusIterator
-import numpy as np
-import xml.etree.ElementTree as ET
 import Utils.ElementTreeUtils as ETUtils
 from Core.IdSet import IdSet
 import Utils.Parameters
-import Utils.STFormat
-import gzip
-from collections import OrderedDict
-import json
-from keras.layers import Input, Dense, Conv2D, MaxPooling2D, UpSampling2D
-from keras.models import Model, Sequential, load_model
-from keras.layers.normalization import BatchNormalization
-from keras.layers.core import Activation, Reshape, Permute, Dropout, Flatten
-from keras.optimizers import SGD, Adam
-from keras.layers.local import LocallyConnected2D
-from keras.layers.wrappers import TimeDistributed
-from keras.callbacks import EarlyStopping, ModelCheckpoint
-from Detectors import SingleStageDetector
 import Utils.Settings as Settings
-from keras.layers import merge
-from keras.layers.merge import Concatenate
-import keras.backend as K
-from itertools import product, chain
-from functools import partial
-from numpy import reshape
-from collections import defaultdict
-import types
-import sklearn.metrics
-import sklearn
+from Utils.EmbeddingIndex import EmbeddingIndex
 from Utils.ProgressCounter import ProgressCounter
 from ExampleBuilders.ExampleStats import ExampleStats
-from Utils.Libraries.wvlib_light.lwvlib import WV
-import numpy
-from sklearn.preprocessing.label import MultiLabelBinarizer
-from sklearn.utils.class_weight import compute_sample_weight,\
-    compute_class_weight
-from sklearn.metrics.classification import classification_report
-from keras.layers import Conv1D
-from keras.layers.pooling import MaxPooling1D, GlobalMaxPooling1D
-import shutil
 from Evaluators import EvaluateInteractionXML
-from Core import ExampleUtils
 from Utils import Parameters
 from ExampleWriters.EntityExampleWriter import EntityExampleWriter
 from Evaluators.AveragingMultiClassEvaluator import AveragingMultiClassEvaluator
-
-# ###############################################################################
-# import tensorflow as tf
-# import random as rn
-# # The below is necessary in Python 3.2.3 onwards to
-# # have reproducible behavior for certain hash-based operations.
-# # See these references for further details:
-# # https://docs.python.org/3.4/using/cmdline.html#envvar-PYTHONHASHSEED
-# # https://github.com/keras-team/keras/issues/2280#issuecomment-306959926
-# os.environ['PYTHONHASHSEED'] = '0'
-# # The below is necessary for starting Numpy generated random numbers
-# # in a well-defined initial state.
-# numpy.random.seed(42)
-# # The below is necessary for starting core Python generated random numbers
-# # in a well-defined state.
-# rn.seed(12345)
-# # Force TensorFlow to use single thread.
-# # Multiple threads are a potential source of
-# # non-reproducible results.
-# # For further details, see: https://stackoverflow.com/questions/42022950/which-seeds-have-to-be-set-where-to-realize-100-reproducibility-of-training-res
-# session_conf = tf.ConfigProto(intra_op_parallelism_threads=1, inter_op_parallelism_threads=1)
-# # The below tf.set_random_seed() will make random number generation
-# # in the TensorFlow backend have a well-defined initial state.
-# # For further details, see: https://www.tensorflow.org/api_docs/python/tf/set_random_seed
-# tf.set_random_seed(1234)
-# sess = tf.Session(graph=tf.get_default_graph(), config=session_conf)
-# K.set_session(sess)
-# ###############################################################################
+import numpy
+from keras.layers import Dense
+from keras.models import Model, load_model
+from keras.layers.core import Dropout, Flatten
+from keras.optimizers import Adam
+from keras.callbacks import EarlyStopping, ModelCheckpoint
+from keras.layers import merge
+from itertools import chain
+import sklearn.metrics
+from sklearn.preprocessing.label import MultiLabelBinarizer
+from sklearn.metrics.classification import classification_report
+from keras.layers import Conv1D
+from keras.layers.pooling import MaxPooling1D
 
 def f1ScoreMetric(y_true, y_pred):
     return sklearn.metrics.f1_score(y_true, y_pred, average="micro")
@@ -211,12 +165,6 @@ class KerasEntityDetector(Detector):
         
     def processCorpus(self, input, examples, gold=None, parse=None, tokenization=None):
         self.exampleStats = ExampleStats()
-        #print >> sys.stderr, "Saving examples to", output
-        # Create intermediate paths if needed
-        #if os.path.dirname(output) != "" and not os.path.exists(os.path.dirname(output)):
-        #    os.makedirs(os.path.dirname(output))
-        # Open output file
-        #outfile = gzip.open(output, "wt") if output.endswith(".gz") else open(output, "wt")
         
         # Build examples
         self.exampleCount = 0
@@ -233,19 +181,14 @@ class KerasEntityDetector(Detector):
             if gold != None:
                 assert goldSentences != None and inputSentences != None
             self.processDocument(inputSentences, goldSentences, examples)
-        #outfile.close()
         self.progress.endUpdate()
         
         # Show statistics
         print >> sys.stderr, "Examples built:", self.exampleCount
-        #print >> sys.stderr, "Features:", len(self.featureSet.getNames())
-        #print >> sys.stderr, "Classes:", len(self.classSet.getNames())
-        #print >> sys.stderr, "Style:", Utils.Parameters.toString(self.getParameters(self.styles))
         if self.exampleStats.getExampleCount() > 0:
             self.exampleStats.printStats()
     
     def processDocument(self, sentences, goldSentences, examples):
-        #calculatePredictedRange(self, sentences)            
         for i in range(len(sentences)):
             sentence = sentences[i]
             goldSentence = None
@@ -255,7 +198,6 @@ class KerasEntityDetector(Detector):
             self.processSentence(sentence, examples, goldSentence)
     
     def processSentence(self, sentence, examples, goldSentence=None):
-        # Process the sentence
         if sentence.sentenceGraph != None:
             self.exampleCount += self.buildExamplesFromGraph(sentence.sentenceGraph, examples, goldSentence.sentenceGraph if goldSentence != None else None)
     
@@ -306,13 +248,12 @@ class KerasEntityDetector(Detector):
             buildForNameless = False
         
         # determine whether sentences with no given entities should be skipped
-        namedEntityHeadTokens = []
         if not self.styles.get("names"):
             namedEntityCount = 0
             for entity in sentenceGraph.entities:
+                assert entity.get("given") in ("True", "False", None)
                 if entity.get("given") == "True": # known data which can be used for features
                     namedEntityCount += 1
-            namedEntityCountFeature = "nameCount_" + str(namedEntityCount)
             # NOTE!!! This will change the number of examples and omit
             # all triggers (positive and negative) from sentences which
             # have no NE:s, possibly giving a too-optimistic performance
@@ -321,9 +262,6 @@ class KerasEntityDetector(Detector):
             # looking for these triggers would be pointless.
             if namedEntityCount == 0 and not buildForNameless: # no names, no need for triggers
                 return 0 #[]
-            
-            if self.styles.get("pos_pairs"):
-                namedEntityHeadTokens = self.getNamedEntityHeadTokens(sentenceGraph)
         else:
             for key in sentenceGraph.tokenIsName.keys():
                 sentenceGraph.tokenIsName[key] = False
@@ -334,27 +272,7 @@ class KerasEntityDetector(Detector):
         indices = [self.embeddings["words"].getIndex(sentenceGraph.tokens[i].get("text").lower(), "[out]") for i in range(numTokens)]
         labels, entityIds = zip(*[self.getEntityTypes(sentenceGraph.tokenIsEntityHead[sentenceGraph.tokens[i]]) for i in range(numTokens)])
         self.exampleLength = int(self.styles.get("el", 21)) #31 #9 #21 #5 #3 #9 #19 #21 #9 #5 #exampleLength = self.EXAMPLE_LENGTH if self.EXAMPLE_LENGTH != None else numTokens
-#         for i in range(numTokens):
-#             if i < numTokens:
-#                 token = sentenceGraph.tokens[i]
-#                 text = token.get("text").lower()
-#                 if text not in self.embeddingIndex:
-#                     vector = self.wv.w_to_normv(text)
-#                     if vector is not None:
-#                         self.embeddingIndex[text] = len(self.embeddings)
-#                         self.embeddings.append(vector)
-#                         if self.embeddings[0] is None: # initialize the out-of-vocabulary vector
-#                             self.embeddings[0] = numpy.zeros(vector.size)
-#                             self.embeddings[1] = numpy.zeros(vector.size)
-#                 index = self.embeddingIndex[text] if text in self.embeddingIndex else self.embeddingIndex["[out]"]
-#             else:
-#                 index = self.embeddingIndex["[padding]"]
-#             indices.append(index)
 
-        
-        #undirected = None
-        #edgeCounts = None
-        #if "paths" in self.embeddings:
         dg = sentenceGraph.dependencyGraph
         undirected = dg.toUndirected()
         edgeCounts = {x:len(dg.getInEdges(x) + dg.getOutEdges(x)) for x in sentenceGraph.tokens}
@@ -378,8 +296,6 @@ class KerasEntityDetector(Detector):
             side = (self.exampleLength - 1) / 2
             windowIndex = 0
             for j in range(i - side, i + side + 1):
-                #features["binary"].append([])
-                #features["binary"][-1].append(1 if i == j else 0)
                 if j >= 0 and j < numTokens:
                     token2 = sentenceGraph.tokens[j]
                     tokens.append(token2)
@@ -390,26 +306,18 @@ class KerasEntityDetector(Detector):
                     features["named_entities"].append(self.embeddings["named_entities"].getIndex("1" if (sentenceGraph.tokenIsEntityHead[token2] and sentenceGraph.tokenIsName[token2]) else "0", "[out]"))
                     features["POS"].append(self.embeddings["POS"].getIndex(token2.get("POS"), "[out]"))
                     self.addPathEmbedding(token, token2, sentenceGraph.dependencyGraph, undirected, edgeCounts, features)
-                    #features["binary"][-1].append(1 if sentenceGraph.tokenIsName[sentenceGraph.tokens[j]] else 0)
                 else:
                     tokens.append(None)
                     for featureGroup in featureGroups:
                         features[featureGroup].append(self.embeddings[featureGroup].getIndex("[pad]"))
-                    #features["binary"][-1].append(0)
                 windowIndex += 1
             
             extra = {"xtype":"token","t":token.get("id")}
             if entityIds[i] != None:
                 extra["goldIds"] = "/".join(entityIds[i]) # The entities to which this example corresponds
             examples.append({"id":sentenceGraph.getSentenceId()+".x"+str(exampleIndex), "labels":labels[i], "features":features, "extra":extra}) #, "extra":{"eIds":entityIds}}
-            #outfile.write("\n")
-            #if exampleIndex > 0:
-            #    outfile.write(",")
-            #outfile.write(json.dumps(example))
             exampleIndex += 1
             self.exampleStats.endExample()
-        #outfile.write("\n]")
-        #return examples
         return exampleIndex
     
     def getEntityTypes(self, entities, useNeg=False):
@@ -517,23 +425,10 @@ class KerasEntityDetector(Detector):
         print >> sys.stderr, [(embeddings[x].name, embeddings[x].getSize()) for x in sorted(embeddings.keys())]
         return embeddings
     
-#     def makeEmbeddingMatrix(self, vectors):
-#         dimWordVector = len(vectors[0])
-#         numWordVectors = len(vectors)
-#         embedding_matrix = np.zeros((numWordVectors, dimWordVector))
-#         for i in range(len(vectors)):
-#             embedding_matrix[i] = vectors[i]
-#         return embedding_matrix
-    
     def defineModel(self):
         """
         Defines the Keras model and compiles it.
         """
-#         print >> sys.stderr, "Making Embedding Matrix"
-#         embedding_matrix = self.makeEmbeddingMatrix(self.embeddings)
-#         print >> sys.stderr, "Vocabulary size:", len(self.embeddings)
-#         print >> sys.stderr, "Embedding size:", self.embeddings[0].size
-        
         labelSet = set()
         for dataSet in ("train", "devel"):
             for example in self.examples[dataSet]:
@@ -541,31 +436,13 @@ class KerasEntityDetector(Detector):
                     labelSet.add(label)
         
         # The Embeddings
-#         x1 = inputLayer1 = Input(shape=(self.exampleLength,), name='indices')
-#         x1 = Embedding(len(self.embeddings), 
-#                   self.embeddings[0].size, 
-#                   weights=[embedding_matrix], 
-#                   input_length=self.exampleLength,
-#                   trainable=True)(inputLayer1)
-        #wordsInput, wordsEmbedding = self.embeddings["words"].getInputLayer(trainable=True, name="indices")
         embNames = sorted(self.embeddings.keys())
         for embName in embNames:
             self.embeddings[embName].makeLayers(self.exampleLength, embName, embName != "words")
-        # Other Features
-        #x2 = inputLayer2 = Input(shape=(self.exampleLength,2), name='binary')
-        # Merge the inputs
         merged_features = merge([self.embeddings[x].embeddingLayer for x in embNames], mode='concat', name="merged_features")
         merged_features = Dropout(float(self.styles.get("do", 0.1)))(merged_features)
         
 #         # Main network
-#         x = Conv1D(64, 11, activation='relu')(x)
-#         x = Conv1D(64, 4, activation='relu')(x)
-#         #x = MaxPooling1D(3)(x)
-#         x = Conv1D(64, 4, activation='relu')(x)
-#         #x = MaxPooling1D(3)(x)
-#         #x = Conv1D(256, 3, activation='relu')(x)
-#         #x = MaxPooling1D(3)(x)
-
         if self.styles.get("kernels") != "skip":
             convOutputs = []
             kernelSizes = [int(x) for x in self.styles.get("kernels", [1, 3, 5, 7])]
@@ -604,16 +481,7 @@ class KerasEntityDetector(Detector):
         train set, validated on the devel set and finally the devel set is predicted using the model.
         """
         
-        labels, labelNames = self.vectorizeLabels(self.examples, ["train", "devel"])
-#         print >> sys.stderr, "Vectorizing labels"
-#         mlb = MultiLabelBinarizer()
-#         labels = {}
-#         for dataSet in ("train", "devel"):
-#             labels[dataSet] = [x["labels"] for x in self.examples[dataSet]]
-#         mlb.fit_transform(labels["train"] + labels["devel"])
-#         for dataSet in ("train", "devel"):
-#             labels[dataSet] = numpy.array(mlb.transform(labels[dataSet]))
-        
+        labels, labelNames = self.vectorizeLabels(self.examples, ["train", "devel"])        
         print >> sys.stderr, "Labels:", labelNames
         labelWeights = {}
         for i in range(len(labelNames)):
@@ -623,35 +491,8 @@ class KerasEntityDetector(Detector):
         labelFileName = self.model.get(self.tag + "labels.ids", True)
         print >> sys.stderr, "Saving class names to", labelFileName
         labelSet.write(labelFileName)
-        #print >> sys.stderr, compute_sample_weight("balanced", [{i:x[i] for i in x} for x in labels["train"]])
-        #labelWeights = {x[0]:x[1] for x in enumerate(compute_class_weight("balanced", np.unique(labels["train"]), labels["train"]))}
-        #print >> sys.stderr, "Label weights:", labelWeights
         
         features = self.vectorizeFeatures(self.examples, ("train", "devel"))
-#         featureGroups = sorted(self.examples["train"][0]["features"].keys())
-#         print >> sys.stderr, [((x.get("text"), x.get("POS")) if x != None else None) for x  in self.examples["train"][0]["tokens"]]
-#         print >> sys.stderr, "Vectorizing features:", featureGroups
-#         features = {"train":{}, "devel":{}}
-#         for featureGroup in featureGroups:
-#             for dataSet in ("train", "devel"):
-#                 if self.exampleLength != None:
-#                     for example in self.examples[dataSet]:
-#                         assert len(example["features"][featureGroup]) == self.exampleLength, example
-#                 features[dataSet][featureGroup] = numpy.array([x["features"][featureGroup] for x in self.examples[dataSet]])
-#             print >> sys.stderr, featureGroup, features["train"][featureGroup].shape, features["train"][featureGroup][0]
-        
-#         if self.exampleLength != None:
-#             for dataSet in ("train", "devel"):
-#                 for example in self.examples[dataSet]:
-#                     for fType in ("indices", "binary"):
-#                         assert len(example["features"][fType]) == self.exampleLength, example
-#         features = {"train":{}, "devel":{}}
-#         for dataSet in ("train", "devel"):
-#             features[dataSet]["indices"] = numpy.array([x["features"]["indices"] for x in self.examples[dataSet]])
-#             features[dataSet]["binary"] = numpy.array([x["features"]["binary"] for x in self.examples[dataSet]])
-#         
-#         for fType in ("indices", "binary"):
-#             print fType, features["train"][fType].shape, features["train"][fType][0]
         
         print >> sys.stderr, "Fitting model"
         patience = int(self.styles.get("patience", 10))
@@ -672,17 +513,6 @@ class KerasEntityDetector(Detector):
         bestModelPath = self.model.get(self.tag + "model.hdf5", True)
         self.predict(labels["devel"], features["devel"], labelNames, bestModelPath)
         
-#         scores = sklearn.metrics.precision_recall_fscore_support(labels["devel"], predictions, average=None)
-#         for i in range(len(mlb.classes_)):
-#             print mlb.classes_[i], "prfs =", (scores[0][i], scores[1][i], scores[2][i], scores[3][i])
-#         posLabels = [x for x in range(len(mlb.classes_)) if mlb.classes_[x] != "neg"]
-#         print mlb.classes_, posLabels
-#         micro = sklearn.metrics.precision_recall_fscore_support(labels["devel"], predictions, labels=posLabels,  average="micro")
-#         print "micro =", micro
-#         print(classification_report(labels["devel"], predictions, target_names=mlb.classes_))
-#         print(classification_report(labels["devel"], predictions, target_names=[x for x in mlb.classes_ if x != "neg"], labels=posLabels))
-#         #for prediction, gold in predictions, labels["devel"]:
-#         #    print prediction
         self.model.save()
         self.examples = None
     
@@ -703,7 +533,6 @@ class KerasEntityDetector(Detector):
     
     def vectorizeFeatures(self, examples, dataSets):
         featureGroups = sorted(self.examples[dataSets[0]][0]["features"].keys())
-        #print >> sys.stderr, [((x.get("text"), x.get("POS")) if x != None else None) for x  in self.examples[dataSets[0]][0]["tokens"]]
         print >> sys.stderr, "Vectorizing features:", featureGroups
         features = {x:{} for x in dataSets}
         for featureGroup in featureGroups:
