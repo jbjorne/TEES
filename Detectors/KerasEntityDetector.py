@@ -31,6 +31,7 @@ from sklearn.preprocessing.label import MultiLabelBinarizer
 from sklearn.metrics.classification import classification_report
 from keras.layers import Conv1D
 from keras.layers.pooling import MaxPooling1D
+from __builtin__ import isinstance
 
 def f1ScoreMetric(y_true, y_pred):
     return sklearn.metrics.f1_score(y_true, y_pred, average="micro")
@@ -471,23 +472,35 @@ class KerasEntityDetector(Detector):
         
         print >> sys.stderr, "Fitting model"
         patience = int(self.styles.get("patience", 10))
+        replicates = int(self.styles.get("reps", 1))
         print >> sys.stderr, "Early stopping patience:", patience
-        es_cb = EarlyStopping(monitor='val_loss', patience=patience, verbose=1)
-        bestModelPath = self.model.get(self.tag + "model.hdf5", True) #self.workDir + self.tag + 'model.hdf5'
-        cp_cb = ModelCheckpoint(filepath=bestModelPath, save_best_only=True, verbose=1)
-        self.kerasModel.fit(features["train"], labels["train"], #[sourceData], self.arrays["train"]["target"],
-            epochs=100 if not "epochs" in self.styles else int(self.styles["epochs"]),
-            batch_size=64,
-            shuffle=True,
-            validation_data=(features["devel"], labels["devel"]),
-            class_weight=labelWeights,
-            callbacks=[es_cb, cp_cb])
+        bestScore = [0.0, 0.0, 0.0, 0]
+        modelScores = []
+        repModelPath = self.tag + "current-model.hdf5" if replicates > 1 else self.tag + "model.hdf5"
+        for i in range(replicates):
+            print >> sys.stderr, "***", "Replicate", i + 1, "/", replicates, "***"
+            es_cb = EarlyStopping(monitor='val_loss', patience=patience, verbose=1)
+            bestModelPath = self.model.get(repModelPath, True) #self.workDir + self.tag + 'model.hdf5'
+            cp_cb = ModelCheckpoint(filepath=bestModelPath, save_best_only=True, verbose=1)
+            self.kerasModel.fit(features["train"], labels["train"], #[sourceData], self.arrays["train"]["target"],
+                epochs=100 if not "epochs" in self.styles else int(self.styles["epochs"]),
+                batch_size=64,
+                shuffle=True,
+                validation_data=(features["devel"], labels["devel"]),
+                class_weight=labelWeights,
+                callbacks=[es_cb, cp_cb])
+            print >> sys.stderr, "Predicting devel examples"
+            bestModelPath = self.model.get(self.tag + "model.hdf5", True)
+            _, _, scores = self.predict(labels["devel"], features["devel"], labelNames, bestModelPath)
+            modelScores.append(scores)
+            if replicates > 1 and scores["micro"][3] > bestScore:
+                print >> sys.stderr, "New best replicate", scores["micro"]
+                bestScore = scores["micro"]
+                shutil.copy2(self.model.get(repModelPath, True), self.model.get(self.tag + "model.hdf5", True))
+        if replicates > 1 and self.model.hasMember(repModelPath):
+            os.remove(self.model.get(repModelPath))
+        
         self.kerasModel = None
-        
-        print >> sys.stderr, "Predicting devel examples"
-        bestModelPath = self.model.get(self.tag + "model.hdf5", True)
-        self.predict(labels["devel"], features["devel"], labelNames, bestModelPath)
-        
         self.model.save()
         self.examples = None
     
@@ -519,9 +532,10 @@ class KerasEntityDetector(Detector):
             print >> sys.stderr, featureGroup, features[dataSets[0]][featureGroup].shape, features[dataSets[0]][featureGroup][0]
         return features
     
-    def predict(self, labels, features, labelNames, kerasModelPath):
+    def predict(self, labels, features, labelNames, kerasModel):
         print >> sys.stderr, "Predicting devel examples"
-        kerasModel = load_model(kerasModelPath)
+        if isinstance(kerasModel, basestring):
+            kerasModel = load_model(kerasModel)
         confidences = kerasModel.predict(features, 64, 1)
         
         predictions = numpy.copy(confidences)
@@ -530,15 +544,18 @@ class KerasEntityDetector(Detector):
                 predictions[i][j] = 1 if confidences[i][j] > 0.5 else 0
         print confidences[0], predictions[0], (confidences.shape, predictions.shape)
         
-        self.evaluate(labels, predictions, labelNames)
-        return predictions, confidences
+        scores = self.evaluate(labels, predictions, labelNames)
+        return predictions, confidences, scores
     
     def evaluate(self, labels, predictions, labelNames):
         print "Evaluating, labels =", labelNames
-        scores = sklearn.metrics.precision_recall_fscore_support(labels, predictions, average=None)
+        scores = {"labels":{}, "micro":None}
+        scoreList = sklearn.metrics.precision_recall_fscore_support(labels, predictions, average=None)
         for i in range(len(labelNames)):
-            print labelNames[i], "prfs =", (scores[0][i], scores[1][i], scores[2][i], scores[3][i])
-        micro = sklearn.metrics.precision_recall_fscore_support(labels, predictions,  average="micro")
-        print "micro prfs = ", micro
-        if micro[2] != 0.0:
+            scores["labels"][labelNames[i]] = (scoreList[0][i], scoreList[1][i], scoreList[2][i], scoreList[3][i])
+            print labelNames[i], "prfs =", scores["labels"][labelNames[i]]
+        scores["micro"] = sklearn.metrics.precision_recall_fscore_support(labels, predictions,  average="micro")
+        print "micro prfs = ", scores["micro"]
+        if scores["micro"][2] != 0.0:
             print(classification_report(labels, predictions, target_names=labelNames))
+        return scores
