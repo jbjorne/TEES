@@ -148,21 +148,17 @@ class KerasEntityDetector(Detector):
         
     def processCorpus(self, input, examples, gold=None, parse=None, tokenization=None):
         self.exampleStats = ExampleStats()
-        
+    
         # Build examples
         self.exampleCount = 0
         if type(input) in types.StringTypes:
             self.elementCounts = IXMLUtils.getElementCounts(input)
             self.progress = ProgressCounter(self.elementCounts.get("sentences"), "Build examples")
         
-        removeIntersentenceInteractions = True
-        inputIterator = getCorpusIterator(input, None, parse, tokenization, removeIntersentenceInteractions=removeIntersentenceInteractions)            
-        goldIterator = []
-        if gold != None:
-            goldIterator = getCorpusIterator(gold, None, parse, tokenization, removeIntersentenceInteractions=removeIntersentenceInteractions)
+        inputIterator = getCorpusIterator(input, None, parse, tokenization, removeIntersentenceInteractions=True)            
+        goldIterator = getCorpusIterator(gold, None, parse, tokenization, removeIntersentenceInteractions=True) if gold != None else []
         for inputSentences, goldSentences in itertools.izip_longest(inputIterator, goldIterator, fillvalue=None):
-            if gold != None:
-                assert goldSentences != None and inputSentences != None
+            assert inputSentences != None and (goldSentences != None or gold == None)
             self.processDocument(inputSentences, goldSentences, examples)
         self.progress.endUpdate()
         
@@ -173,12 +169,8 @@ class KerasEntityDetector(Detector):
     
     def processDocument(self, sentences, goldSentences, examples):
         for i in range(len(sentences)):
-            sentence = sentences[i]
-            goldSentence = None
-            if goldSentences != None:
-                goldSentence = goldSentences[i]
-            self.progress.update(1, "Building examples ("+sentence.sentence.get("id")+"): ")
-            self.processSentence(sentence, examples, goldSentence)
+            self.progress.update(1, "Building examples ("+sentences[i].sentence.get("id")+"): ")
+            self.processSentence(sentences[i], examples, goldSentences[i] if goldSentences else None)
     
     def processSentence(self, sentence, examples, goldSentence=None):
         if sentence.sentenceGraph != None:
