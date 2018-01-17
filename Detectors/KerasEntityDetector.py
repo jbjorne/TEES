@@ -132,7 +132,7 @@ class KerasEntityDetector(Detector):
         print >> sys.stderr, "Classification labels", labelNames
         labels, _ = self.vectorizeLabels(examples, ["classification"], labelNames)
         features = self.vectorizeFeatures(examples, ["classification"])
-        predictions, confidences = self.predict(labels["classification"], features["classification"], labelNames, classifierModel)
+        predictions, confidences, _ = self.predict(labels["classification"], features["classification"], labelNames, classifierModel)
         if exampleStyle == None:
             exampleStyle = Parameters.get(model.getStr(self.tag+"example-style")) # no checking, but these should already have passed the ExampleBuilder
         self.structureAnalyzer.load(model)
@@ -480,8 +480,8 @@ class KerasEntityDetector(Detector):
         for i in range(replicates):
             print >> sys.stderr, "***", "Replicate", i + 1, "/", replicates, "***"
             es_cb = EarlyStopping(monitor='val_loss', patience=patience, verbose=1)
-            bestModelPath = self.model.get(repModelPath, True) #self.workDir + self.tag + 'model.hdf5'
-            cp_cb = ModelCheckpoint(filepath=bestModelPath, save_best_only=True, verbose=1)
+            modelPath = self.model.get(repModelPath, True) #self.workDir + self.tag + 'model.hdf5'
+            cp_cb = ModelCheckpoint(filepath=modelPath, save_best_only=True, verbose=1)
             self.kerasModel.fit(features["train"], labels["train"], #[sourceData], self.arrays["train"]["target"],
                 epochs=100 if not "epochs" in self.styles else int(self.styles["epochs"]),
                 batch_size=64,
@@ -490,10 +490,9 @@ class KerasEntityDetector(Detector):
                 class_weight=labelWeights,
                 callbacks=[es_cb, cp_cb])
             print >> sys.stderr, "Predicting devel examples"
-            bestModelPath = self.model.get(self.tag + "model.hdf5", True)
-            _, _, scores = self.predict(labels["devel"], features["devel"], labelNames, bestModelPath)
+            _, _, scores = self.predict(labels["devel"], features["devel"], labelNames, modelPath)
             modelScores.append(scores)
-            if replicates > 1 and scores["micro"][3] > bestScore:
+            if replicates > 1 and scores["micro"][2] > bestScore[2]:
                 print >> sys.stderr, "New best replicate", scores["micro"]
                 bestScore = scores["micro"]
                 shutil.copy2(self.model.get(repModelPath, True), self.model.get(self.tag + "model.hdf5", True))
@@ -554,7 +553,7 @@ class KerasEntityDetector(Detector):
         for i in range(len(labelNames)):
             scores["labels"][labelNames[i]] = (scoreList[0][i], scoreList[1][i], scoreList[2][i], scoreList[3][i])
             print labelNames[i], "prfs =", scores["labels"][labelNames[i]]
-        scores["micro"] = sklearn.metrics.precision_recall_fscore_support(labels, predictions,  average="micro")
+        scores["micro"] = sklearn.metrics.precision_recall_fscore_support(labels, predictions, average="micro")
         print "micro prfs = ", scores["micro"]
         if scores["micro"][2] != 0.0:
             print(classification_report(labels, predictions, target_names=labelNames))
