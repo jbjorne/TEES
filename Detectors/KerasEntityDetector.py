@@ -492,15 +492,17 @@ class KerasEntityDetector(Detector):
             print >> sys.stderr, "Predicting devel examples"
             _, _, scores = self.predict(labels["devel"], features["devel"], labelNames, modelPath)
             modelScores.append(scores)
-            if replicates > 1 and scores["micro"][2] > bestScore[2]:
-                print >> sys.stderr, "New best replicate", scores["micro"]
-                bestScore = scores["micro"]
-                shutil.copy2(self.model.get(repModelPath, True), self.model.get(self.tag + "model.hdf5", True))
-        if replicates > 1:
-            if self.model.hasMember(repModelPath):
-                os.remove(self.model.get(repModelPath))
-            modelScores = [x["micro"][2] for x in modelScores]
-            print >> sys.stderr, "Replicates:", ["%.2f" % x for x in bestScore[:3]], ("%.2f" % numpy.mean(modelScores), "%.2f" % numpy.var(modelScores)), ["%.2f" % x for x in modelScores]
+            if replicates > 1:
+                if scores["micro"][2] > bestScore[2]:
+                    print >> sys.stderr, "New best replicate", scores["micro"]
+                    bestScore = scores["micro"]
+                    shutil.copy2(self.model.get(repModelPath, True), self.model.get(self.tag + "model.hdf5", True))
+                else:
+                    bestScore = scores["micro"]
+        if replicates > 1 and self.model.hasMember(repModelPath):
+            os.remove(self.model.get(repModelPath))
+        modelScores = [x["micro"][2] for x in modelScores]
+        print >> sys.stderr, "Models:", json.dumps({"best":["%.4f" % x for x in bestScore[:3]], "mean":["%.4f" % numpy.mean(modelScores), "%.4f" % numpy.var(modelScores)], "replicates":["%.4f" % x for x in modelScores]}, sort_keys=True)
         
         self.kerasModel = None
         self.model.save()
