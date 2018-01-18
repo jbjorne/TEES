@@ -33,7 +33,7 @@ class ChemProtEvaluator(Evaluator):
             for example in examples:
                 if example[3] != None:
                     print >> sys.stderr, "ChemProt Evaluator:"
-                    self._calculate(examples, predictions)
+                    self._calculateExamples(examples, predictions)
                 else:
                     print >> sys.stderr, "No example extra info, skipping ChemProt evaluation"
                 break
@@ -87,20 +87,31 @@ class ChemProtEvaluator(Evaluator):
         self._writePredictions(examples, predictions, predFilePath)
         return predFilePath
     
-    def _calculate(self, examples, predictions):
+    def _calculateExamples(self, examples, predictions):
         tempDir = tempfile.mkdtemp()
         predFilePath = self._prepareEval(examples, predictions, tempDir)
-        results = self.evaluateTSV(predFilePath, "./data/chemprot_development_gold_standard.tsv", tempDir)
-        if math.isnan(results.get("F-score")):
-            print >> sys.stderr, "Development set F-score is NaN, attempting evaluation with test set"
-            predFilePath = self._prepareEval(examples, predictions, tempDir)
-            results = self.evaluateTSV(predFilePath, "./data/chemprot_test_gold_standard.tsv", tempDir)
+        self.evaluateTSV(predFilePath, tempDir)
         print >> sys.stderr, "Removing temporary evaluation directory", tempDir
         shutil.rmtree(tempDir)
+    
+    def evaluateTSV(self, predFilePath, tempDir=None):
+        removeTempDir = False
+        if tempDir == None:
+            tempDir = tempfile.mkdtemp()
+            removeTempDir = True
+        results = self._runEvaluator(predFilePath, "./data/chemprot_development_gold_standard.tsv")
+        if math.isnan(results.get("F-score")):
+            print >> sys.stderr, "Development set F-score is NaN, attempting evaluation with test set"
+            results = self._runEvaluator(predFilePath, "./data/chemprot_test_gold_standard.tsv")
+        if removeTempDir:
+            print >> sys.stderr, "Removing temporary evaluation directory", tempDir
+            shutil.rmtree(tempDir)
         print >> sys.stderr, "ChemProt results:", json.dumps(results)
         self.results = results
+        return results
     
-    def evaluateTSV(self, predFilePath, goldPath="./data/chemprot_development_gold_standard.tsv", tempDir=None):
+    def _runEvaluator(self, predFilePath, goldPath):
+        tempDir = tempfile.mkdtemp()
         evaluatorDir = os.path.join(Settings.DATAPATH, "tools", "evaluators", "ChemProtEvaluator")
         evaluatorTempDir = os.path.join(tempDir, "ChemProtEvaluator")
         shutil.copytree(evaluatorDir, evaluatorTempDir)
@@ -122,6 +133,7 @@ class ChemProtEvaluator(Evaluator):
                     value = float(value) if ("." in value or value == "NaN") else int(value)
                     assert key not in results
                     results[key] = value
+        shutil.rmtree(tempDir)
         return results
     
     def toStringConcise(self, indent="", title=None):

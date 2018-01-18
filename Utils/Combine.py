@@ -190,5 +190,8 @@ if __name__=="__main__":
     optparser.add_option("-m", "--mode", default="OR", dest="mode", help="The combination for the output (AND or OR).")
     optparser.add_option("-s", "--skip", default=None, dest="skip", help="Comma-separated list of interaction types to skip.")
     (options, args) = optparser.parse_args()
+    
+    if options.skip in ("ALL", "NEG", "NONEVAL"):
+        options.skip = {"ALL":None, "NEG":"neg", "NONEVAL":"neg,CPR:1,CPR:2,CPR:7,CPR:8,CPR:10"}[options.skip]
 
     combine(options.inputA, options.inputB, options.gold, options.output, options.mode, options.skip)
