@@ -104,8 +104,8 @@ class KerasEventDetector(EventDetector):
                 print >> sys.stderr, "Training combined model for modifier detection"
                 self.modifierDetector.beginModel(None, self.combinedModel, [self.workDir+self.modifierDetector.tag+"train-examples.gz", self.workDir+self.modifierDetector.tag+"opt-examples.gz"], self.workDir+self.modifierDetector.tag+"opt-examples.gz", self.model)
         self.trainUnmergingDetector()
-        #if self.checkStep("GRID"):
-        #    self.doGrid()
+        if self.checkStep("GRID"):
+            self.doGrid()
         if self.checkStep("BEGIN-COMBINED-MODEL-FULLGRID"):
             if self.fullGrid:
                 print >> sys.stderr, "Training combined model after grid search"
@@ -129,3 +129,8 @@ class KerasEventDetector(EventDetector):
         self.edgeDetector.exitState()
         self.unmergingDetector.exitState()
         self.modifierDetector.exitState()
+        
+    def doGrid(self):
+        # Save grid model
+        self.saveStr("recallAdjustParameter", str(1.0), self.model)
+        self.saveStr("recallAdjustParameter", str(1.0), self.combinedModel, False)
