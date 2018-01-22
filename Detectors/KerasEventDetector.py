@@ -1,11 +1,12 @@
 import sys, os
 from Detectors.EventDetector import EventDetector
 from Detectors.EntityDetector import EntityDetector
+from Detectors.KerasEntityDetector import KerasEntityDetector
 
 class KerasEventDetector(EventDetector):
     def __init__(self):
         EventDetector.__init__(self)
-        self.triggerDetector = EntityDetector
+        self.triggerDetector = KerasEntityDetector()
         self.tag = "event-"
     
     def train(self, trainData=None, optData=None, 
@@ -73,7 +74,7 @@ class KerasEventDetector(EventDetector):
                 self.structureAnalyzer.load(self.model)
             self.trainModifiers = self.structureAnalyzer.hasModifiers()
         if self.checkStep("EXAMPLES"):
-            self.triggerDetector.buildExamples(self.model, [optData.replace("-nodup", ""), trainData.replace("-nodup", "")], [self.workDir+self.triggerDetector.tag+"opt-examples.gz", self.workDir+self.triggerDetector.tag+"train-examples.gz"], saveIdsToModel=True)
+            #self.triggerDetector.buildExamples(self.model, [optData.replace("-nodup", ""), trainData.replace("-nodup", "")], [self.workDir+self.triggerDetector.tag+"opt-examples.gz", self.workDir+self.triggerDetector.tag+"train-examples.gz"], saveIdsToModel=True)
             self.edgeDetector.buildExamples(self.model, [optData.replace("-nodup", ""), trainData.replace("-nodup", "")], [self.workDir+self.edgeDetector.tag+"opt-examples.gz", self.workDir+self.edgeDetector.tag+"train-examples.gz"], saveIdsToModel=True)
             if self.trainModifiers:
                 self.modifierDetector.buildExamples(self.model, [optData, trainData], [self.workDir+self.modifierDetector.tag+"opt-examples.gz", self.workDir+self.modifierDetector.tag+"train-examples.gz"], saveIdsToModel=True)             
@@ -82,19 +83,20 @@ class KerasEventDetector(EventDetector):
             #    if model != None:
             #        model.addStr("BioNLPSTParams", Parameters.toString(self.bioNLPSTParams))
             self.triggerDetector.bioNLPSTParams = self.bioNLPSTParams
-            self.triggerDetector.beginModel(None, self.model, [self.workDir+self.triggerDetector.tag+"train-examples.gz"], self.workDir+self.triggerDetector.tag+"opt-examples.gz")
+            self.triggerDetector.train(trainData, optData, self.model, self.combinedModel, triggerExampleStyle, None, parse, tokenization, task)
+            #self.triggerDetector.beginModel(None, self.model, [self.workDir+self.triggerDetector.tag+"train-examples.gz"], self.workDir+self.triggerDetector.tag+"opt-examples.gz")
             self.edgeDetector.beginModel(None, self.model, [self.workDir+self.edgeDetector.tag+"train-examples.gz"], self.workDir+self.edgeDetector.tag+"opt-examples.gz")
             if self.trainModifiers:
                 self.modifierDetector.beginModel(None, self.model, [self.workDir+self.modifierDetector.tag+"train-examples.gz"], self.workDir+self.modifierDetector.tag+"opt-examples.gz")
         if self.checkStep("END-MODEL"):
-            self.triggerDetector.endModel(None, self.model, self.workDir+self.triggerDetector.tag+"opt-examples.gz")
+            #self.triggerDetector.endModel(None, self.model, self.workDir+self.triggerDetector.tag+"opt-examples.gz")
             self.edgeDetector.endModel(None, self.model, self.workDir+self.edgeDetector.tag+"opt-examples.gz")
             if self.trainModifiers:
                 self.modifierDetector.endModel(None, self.model, self.workDir+self.modifierDetector.tag+"opt-examples.gz")
         if self.checkStep("BEGIN-COMBINED-MODEL"):
             if not self.fullGrid:
                 print >> sys.stderr, "Training combined model before grid search"
-                self.triggerDetector.beginModel(None, self.combinedModel, [self.workDir+self.triggerDetector.tag+"train-examples.gz", self.workDir+self.triggerDetector.tag+"opt-examples.gz"], self.workDir+self.triggerDetector.tag+"opt-examples.gz", self.model)
+                #self.triggerDetector.beginModel(None, self.combinedModel, [self.workDir+self.triggerDetector.tag+"train-examples.gz", self.workDir+self.triggerDetector.tag+"opt-examples.gz"], self.workDir+self.triggerDetector.tag+"opt-examples.gz", self.model)
                 self.edgeDetector.beginModel(None, self.combinedModel, [self.workDir+self.edgeDetector.tag+"train-examples.gz", self.workDir+self.edgeDetector.tag+"opt-examples.gz"], self.workDir+self.edgeDetector.tag+"opt-examples.gz", self.model)
             else:
                 print >> sys.stderr, "Combined model will be trained after grid search"
@@ -102,12 +104,12 @@ class KerasEventDetector(EventDetector):
                 print >> sys.stderr, "Training combined model for modifier detection"
                 self.modifierDetector.beginModel(None, self.combinedModel, [self.workDir+self.modifierDetector.tag+"train-examples.gz", self.workDir+self.modifierDetector.tag+"opt-examples.gz"], self.workDir+self.modifierDetector.tag+"opt-examples.gz", self.model)
         self.trainUnmergingDetector()
-        if self.checkStep("GRID"):
-            self.doGrid()
+        #if self.checkStep("GRID"):
+        #    self.doGrid()
         if self.checkStep("BEGIN-COMBINED-MODEL-FULLGRID"):
             if self.fullGrid:
                 print >> sys.stderr, "Training combined model after grid search"
-                self.triggerDetector.beginModel(None, self.combinedModel, [self.workDir+self.triggerDetector.tag+"train-examples.gz", self.workDir+self.triggerDetector.tag+"opt-examples.gz"], self.workDir+self.triggerDetector.tag+"opt-examples.gz", self.model)
+                #self.triggerDetector.beginModel(None, self.combinedModel, [self.workDir+self.triggerDetector.tag+"train-examples.gz", self.workDir+self.triggerDetector.tag+"opt-examples.gz"], self.workDir+self.triggerDetector.tag+"opt-examples.gz", self.model)
                 self.edgeDetector.beginModel(None, self.combinedModel, [self.workDir+self.edgeDetector.tag+"train-examples.gz", self.workDir+self.edgeDetector.tag+"opt-examples.gz"], self.workDir+self.edgeDetector.tag+"opt-examples.gz", self.model)
                 if self.trainModifiers:
                     print >> sys.stderr, "Training combined model for modifier detection"
@@ -115,7 +117,7 @@ class KerasEventDetector(EventDetector):
             else:
                 print >> sys.stderr, "Combined model has been trained before grid search"
         if self.checkStep("END-COMBINED-MODEL"):
-            self.triggerDetector.endModel(None, self.combinedModel, self.workDir+self.triggerDetector.tag+"opt-examples.gz")
+            #self.triggerDetector.endModel(None, self.combinedModel, self.workDir+self.triggerDetector.tag+"opt-examples.gz")
             self.edgeDetector.endModel(None, self.combinedModel, self.workDir+self.edgeDetector.tag+"opt-examples.gz")
             if self.trainModifiers:
                 self.modifierDetector.endModel(None, self.combinedModel, self.workDir+self.modifierDetector.tag+"opt-examples.gz")

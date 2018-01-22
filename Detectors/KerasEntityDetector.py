@@ -62,13 +62,17 @@ class KerasEntityDetector(Detector):
               workDir=None):
         self.initVariables(trainData=trainData, optData=optData, model=model, combinedModel=combinedModel, exampleStyle=exampleStyle, classifierParameters=classifierParameters, parse=parse, tokenization=tokenization)
         self.setWorkDir(workDir)
-        self.enterState(self.STATE_TRAIN, ["ANALYZE", "EXAMPLES", "MODEL"], fromStep, toStep)
-        if self.checkStep("ANALYZE"):
+        self.model = model
+        assert model != None
+        if self.state != self.STATE_COMPONENT_TRAIN:
+            self.enterState(self.STATE_TRAIN, ["ANALYZE", "EXAMPLES", "MODEL"], fromStep, toStep)
+        if self.state == self.STATE_COMPONENT_TRAIN or self.checkStep("ANALYZE"):
             # General training initialization done at the beginning of the first state
             self.model = self.initModel(self.model, [("exampleStyle", self.tag+"example-style"), ("classifierParameters", self.tag+"classifier-parameters-train")])
             self.saveStr(self.tag+"parse", parse, self.model)
             if task != None:
                 self.saveStr(self.tag+"task", task, self.model)
+            model.save()
             # Perform structure analysis
             self.structureAnalyzer.analyze([optData, trainData], self.model)
             print >> sys.stderr, self.structureAnalyzer.toString()
@@ -76,11 +80,11 @@ class KerasEntityDetector(Detector):
         self.pathDepth = int(self.styles.get("path", 3))
         self.model = self.openModel(model, "a") # Devel model already exists, with ids etc
         exampleFiles = {"devel":self.workDir+self.tag+"opt-examples.json.gz", "train":self.workDir+self.tag+"train-examples.json.gz"}
-        if self.checkStep("EXAMPLES"): # Generate the adjacency matrices
+        if self.state == self.STATE_COMPONENT_TRAIN or self.checkStep("EXAMPLES"): # Generate the adjacency matrices
             self.buildExamples(self.model, ["devel", "train"], [optData, trainData], [exampleFiles["devel"], exampleFiles["train"]], saveIdsToModel=True)
         #print self.examples["devel"][0:2]
         self.showExample(self.examples["devel"][0])
-        if self.checkStep("MODEL"): # Define and train the Keras model
+        if self.state == self.STATE_COMPONENT_TRAIN or self.checkStep("MODEL"): # Define and train the Keras model
             self.defineModel()
             self.fitModel()
         if workDir != None:
