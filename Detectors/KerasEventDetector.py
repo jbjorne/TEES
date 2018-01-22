@@ -125,7 +125,7 @@ class KerasEventDetector(EventDetector):
         if workDir != None:
             self.setWorkDir("")
         self.exitState()
-        self.triggerDetector.exitState()
+        #self.triggerDetector.exitState()
         self.edgeDetector.exitState()
         self.unmergingDetector.exitState()
         self.modifierDetector.exitState()
