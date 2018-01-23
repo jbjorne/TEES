@@ -33,8 +33,9 @@ from keras.layers import Conv1D
 from keras.layers.pooling import MaxPooling1D
 from __builtin__ import isinstance
 from Detectors.KerasDetectorBase import KerasDetectorBase
+from ExampleWriters.EdgeExampleWriter import EdgeExampleWriter
 
-class KerasEntityDetector(KerasDetectorBase):
+class KerasEdgeDetector(KerasDetectorBase):
     """
     The KerasDetector replaces the default SVM-based learning with a pipeline where
     sentences from the XML corpora are converted into adjacency matrix examples which
@@ -43,113 +44,187 @@ class KerasEntityDetector(KerasDetectorBase):
 
     def __init__(self):
         KerasDetectorBase.__init__(self)
-        self.tag = "entity-"
-        self.exampleWriter = EntityExampleWriter()
+        self.tag = "edge-"
+        self.exampleWriter = EdgeExampleWriter()
 
     ###########################################################################
     # Example Generation
     ###########################################################################
         
     def buildExamplesFromGraph(self, sentenceGraph, examples, goldGraph=None):
-        """
-        Build one example for each token of the sentence
-        """       
         exampleIndex = 0
+        # example directionality
+        if self.styles.get("directed") == None and self.styles.get("undirected") == None: # determine directedness from corpus
+            examplesAreDirected = self.structureAnalyzer.hasDirectedTargets() if self.structureAnalyzer != None else True
+        elif self.styles.get("directed"):
+            assert self.styles.get("undirected") in [None, False]
+            examplesAreDirected = True
+        elif self.styles.get("undirected"):
+            assert self.styles.get("directed") in [None, False]
+            examplesAreDirected = False
+            
+        # Filter entities, if needed
+        sentenceGraph.mergeInteractionGraph(True)
+        entities = sentenceGraph.mergedEntities
+        entityToDuplicates = sentenceGraph.mergedEntityToDuplicates
+        self.exampleStats.addValue("Duplicate entities skipped", len(sentenceGraph.entities) - len(entities))
         
-        # determine (manually or automatically) the setting for whether sentences with no given entities should be skipped
-        buildForNameless = False
-        if self.structureAnalyzer and not self.structureAnalyzer.hasGroupClass("GIVEN", "ENTITY"): # no given entities points to no separate NER program being used
-            buildForNameless = True
-        if self.styles.get("build_for_nameless"): # manually force the setting
-            buildForNameless = True
-        if self.styles.get("skip_for_nameless"): # manually force the setting
-            buildForNameless = False
+        # Connect to optional gold graph
+        entityToGold = None
+        if goldGraph != None:
+            entityToGold = EvaluateInteractionXML.mapEntities(entities, goldGraph.entities)
         
-        # determine whether sentences with no given entities should be skipped
-        if not self.styles.get("names"):
-            namedEntityCount = 0
-            for entity in sentenceGraph.entities:
-                assert entity.get("given") in ("True", "False", None)
-                if entity.get("given") == "True": # known data which can be used for features
-                    namedEntityCount += 1
-            # NOTE!!! This will change the number of examples and omit
-            # all triggers (positive and negative) from sentences which
-            # have no NE:s, possibly giving a too-optimistic performance
-            # value. Such sentences can still have triggers from intersentence
-            # interactions, but as such events cannot be recovered anyway,
-            # looking for these triggers would be pointless.
-            if namedEntityCount == 0 and not buildForNameless: # no names, no need for triggers
-                return 0 #[]
+        paths = None
+        if not self.styles["no_path"]:
+            undirected = sentenceGraph.dependencyGraph.toUndirected()
+            paths = undirected
+            if self.styles["filter_shortest_path"] != None: # For DDI use filter_shortest_path=conj_and
+                paths.resetAnalyses() # just in case
+                paths.FloydWarshall(self.filterEdge, {"edgeTypes":self.styles["filter_shortest_path"]})
+        
+        # Generate examples based on interactions between entities or interactions between tokens
+        if self.styles["token_nodes"]:
+            loopRange = len(sentenceGraph.tokens)
         else:
-            for key in sentenceGraph.tokenIsName.keys():
-                sentenceGraph.tokenIsName[key] = False
-
-        #outfile.write("[")
-        # Prepare the indices
-        numTokens = len(sentenceGraph.tokens)
-        indices = [self.embeddings["words"].getIndex(sentenceGraph.tokens[i].get("text").lower(), "[out]") for i in range(numTokens)]
-        labels, entityIds = zip(*[self.getEntityTypes(sentenceGraph.tokenIsEntityHead[sentenceGraph.tokens[i]]) for i in range(numTokens)])
-        self.exampleLength = int(self.styles.get("el", 21)) #31 #9 #21 #5 #3 #9 #19 #21 #9 #5 #exampleLength = self.EXAMPLE_LENGTH if self.EXAMPLE_LENGTH != None else numTokens
-
-        dg = sentenceGraph.dependencyGraph
-        undirected = dg.toUndirected()
-        edgeCounts = {x:len(dg.getInEdges(x) + dg.getOutEdges(x)) for x in sentenceGraph.tokens}
-        
-        for i in range(len(sentenceGraph.tokens)):
-            token = sentenceGraph.tokens[i]
-
-            # CLASS
-            #labels = self.getEntityTypes(sentenceGraph.tokenIsEntityHead[token])
-            self.exampleStats.beginExample(",".join(labels[i]))
-            
-            # Recognize only non-named entities (i.e. interaction words)
-            if sentenceGraph.tokenIsName[token] and not self.styles.get("names") and not self.styles.get("all_tokens"):
-                self.exampleStats.filter("name")
-                self.exampleStats.endExample()
-                continue
-            
-            tokens = []
-            features = {x:[] for x in self.embeddings.keys()} #{"words":[], "positions":[], "named_entities":[], "POS":[], "gold":[]}
-            featureGroups = sorted(features.keys())
-            side = (self.exampleLength - 1) / 2
-            windowIndex = 0
-            for j in range(i - side, i + side + 1):
-                if j >= 0 and j < numTokens:
-                    token2 = sentenceGraph.tokens[j]
-                    tokens.append(token2)
-                    if self.debugGold:
-                        features["gold"].append(self.embeddings["gold"].getIndex(",".join(labels[j]), "[out]"))
-                    features["words"].append(indices[j])
-                    features["positions"].append(self.embeddings["positions"].getIndex(str(windowIndex), "[out]"))
-                    features["named_entities"].append(self.embeddings["named_entities"].getIndex("1" if (sentenceGraph.tokenIsEntityHead[token2] and sentenceGraph.tokenIsName[token2]) else "0", "[out]"))
-                    features["POS"].append(self.embeddings["POS"].getIndex(token2.get("POS"), "[out]"))
-                    self.addPathEmbedding(token, token2, sentenceGraph.dependencyGraph, undirected, edgeCounts, features)
+            loopRange = len(entities)
+        for i in range(loopRange-1):
+            for j in range(i+1,loopRange):
+                eI = None
+                eJ = None
+                if self.styles["token_nodes"]:
+                    tI = sentenceGraph.tokens[i]
+                    tJ = sentenceGraph.tokens[j]
                 else:
-                    tokens.append(None)
-                    for featureGroup in featureGroups:
-                        features[featureGroup].append(self.embeddings[featureGroup].getIndex("[pad]"))
-                windowIndex += 1
-            
-            extra = {"xtype":"token","t":token.get("id")}
-            if entityIds[i] != None:
-                extra["goldIds"] = "/".join(entityIds[i]) # The entities to which this example corresponds
-            examples.append({"id":sentenceGraph.getSentenceId()+".x"+str(exampleIndex), "labels":labels[i], "features":features, "extra":extra}) #, "extra":{"eIds":entityIds}}
-            exampleIndex += 1
-            self.exampleStats.endExample()
+                    eI = entities[i]
+                    eJ = entities[j]
+                    tI = sentenceGraph.entityHeadTokenByEntity[eI]
+                    tJ = sentenceGraph.entityHeadTokenByEntity[eJ]
+                    if eI.get("type") == "neg" or eJ.get("type") == "neg":
+                        continue
+                    if self.styles["skip_extra_triggers"]:
+                        if eI.get("source") != None or eJ.get("source") != None:
+                            continue
+                # only consider paths between entities (NOTE! entities, not only named entities)
+                if self.styles["headsOnly"]:
+                    if (len(sentenceGraph.tokenIsEntityHead[tI]) == 0) or (len(sentenceGraph.tokenIsEntityHead[tJ]) == 0):
+                        continue
+                
+                examples = self.buildExamplesForPair(tI, tJ, paths, sentenceGraph, goldGraph, entityToGold, eI, eJ, structureAnalyzer, examplesAreDirected)
+                for categoryName, features, extra in examples:
+                    # make example
+                    if self.styles["binary"]:
+                        if categoryName != "neg":
+                            category = 1
+                        else:
+                            category = -1
+                        extra["categoryName"] = "i"
+                    else:
+                        category = self.classSet.getId(categoryName)
+                    example = [sentenceGraph.getSentenceId()+".x"+str(exampleIndex), category, features, extra]
+                    ExampleUtils.appendExamples([example], outfile)
+                    exampleIndex += 1
+
         return exampleIndex
     
-    def getEntityTypes(self, entities, useNeg=False):
+    def buildExamplesForPair(self, token1, token2, paths, sentenceGraph, goldGraph, entityToGold, entity1=None, entity2=None, structureAnalyzer=None, isDirected=True):
+        # define forward
+        categoryName = self.getExampleCategoryName(entity1, entity2, token1, token2, sentenceGraph, goldGraph, entityToGold, isDirected, structureAnalyzer=structureAnalyzer)
+        # make forward
+        forwardExample = None
+        self.exampleStats.beginExample(categoryName)
+        if self.keepExample(entity1, entity2, categoryName, isDirected, structureAnalyzer):
+            forwardExample = self.buildExample(token1, token2, paths, sentenceGraph, categoryName, entity1, entity2, structureAnalyzer, isDirected)
+        
+        if isDirected: # build a separate reverse example (if that is valid)
+            self.exampleStats.endExample() # end forward example
+            # define reverse
+            categoryName = self.getExampleCategoryName(entity2, entity1, token2, token1, sentenceGraph, goldGraph, entityToGold, True, structureAnalyzer=structureAnalyzer)
+            # make reverse
+            self.exampleStats.beginExample(categoryName)
+            reverseExample = None
+            if self.keepExample(entity2, entity1, categoryName, True, structureAnalyzer):
+                reverseExample = self.buildExample(token2, token1, paths, sentenceGraph, categoryName, entity2, entity1, structureAnalyzer, isDirected)
+            self.exampleStats.endExample()
+            return filter(None, [forwardExample, reverseExample])
+        elif self.styles["se10t8_undirected"]: # undirected example with a directed type
+            self.exampleStats.endExample()
+            return [forwardExample]
+        elif forwardExample != None: # merge features from the reverse example to the forward one
+            reverseExample = self.buildExample(token2, token1, paths, sentenceGraph, categoryName, entity2, entity1, structureAnalyzer, isDirected)
+            forwardExample[1].update(reverseExample[1])
+            self.exampleStats.endExample() # end merged example
+            return [forwardExample]
+        else: # undirected example that was filtered
+            self.exampleStats.endExample() # end merged example
+            return []
+
+    ###########################################################################
+    # Example Labels
+    ###########################################################################
+    
+    def getExampleCategoryName(self, e1=None, e2=None, t1=None, t2=None, sentenceGraph=None, goldGraph=None, entityToGold=None, isDirected=True, structureAnalyzer=None):
+        if self.styles["token_nodes"]:
+            categoryName = self.getCategoryNameFromTokens(sentenceGraph, t1, t2, isDirected)
+        else:
+            categoryName = self.getCategoryName(sentenceGraph, e1, e2, isDirected)
+            if goldGraph != None:
+                categoryName = self.getGoldCategoryName(goldGraph, entityToGold, e1, e2, isDirected)
+        if self.styles["filter_types"] != None and categoryName in self.styles["filter_types"]:
+            categoryName = "neg"
+        if self.styles["se10t8_undirected"]:
+            assert e1.get("id").endswith(".e1")
+            assert e2.get("id").endswith(".e2")
+        #if self.styles["sdb_merge"]:
+        #    categoryName = self.mergeForSeeDev(categoryName, structureAnalyzer)
+        return categoryName
+    
+    def getCategoryNameFromTokens(self, sentenceGraph, t1, t2, directed=True):
+        """
+        Example class. Multiple overlapping edges create a merged type.
+        """
         types = set()
-        entityIds = set()
-        for entity in entities:
-            eType = entity.get("type")
-            if entity.get("given") == "True" and self.styles.get("all_tokens"):
+        intEdges = sentenceGraph.interactionGraph.getEdges(t1, t2)
+        if not directed:
+            intEdges = intEdges + sentenceGraph.interactionGraph.getEdges(t2, t1)
+        for intEdge in intEdges:
+            types.add(intEdge[2].get("type"))
+        types = list(types)
+        types.sort()
+        categoryName = ""
+        for name in types:
+            if categoryName != "":
+                categoryName += "---"
+            categoryName += name
+        if categoryName != "":
+            return categoryName
+        else:
+            return "neg"
+        
+    def getCategoryName(self, sentenceGraph, e1, e2, directed=True):
+        """
+        Example class. Multiple overlapping edges create a merged type.
+        """
+        interactions = sentenceGraph.getInteractions(e1, e2, True)
+        if not directed and not self.styles["se10t8_undirected"]:
+            interactions = interactions + sentenceGraph.getInteractions(e2, e1, True)
+        
+        types = set()
+        for interaction in interactions:
+            types.add(interaction[2].get("type"))
+        types = list(types)
+        types.sort()
+        categoryName = ""
+        for name in types:
+            if self.styles["causeOnly"] and name != "Cause":
                 continue
-            if eType == "Entity" and self.styles.get("genia_task1"):
+            if self.styles["themeOnly"] and name != "Theme":
                 continue
-            else:
-                types.add(eType)
-                entityIds.add(entity.get("id"))
-        if len(types) == 0 and useNeg:
-            types.add("neg")
-        return sorted(types), sorted(entityIds)
+            if categoryName != "":
+                categoryName += "---"
+            if self.styles["sdb_merge"]:
+                name = self.mergeForSeeDev(name, self.structureAnalyzer)
+            categoryName += name
+        if categoryName != "":
+            return categoryName
+        else:
+            return "neg"
