@@ -118,14 +118,14 @@ def train(output, task=None, detector=None, inputFiles=None, models=None, parse=
         if not isinstance(detector, EventDetector):
             detector.train(inputFiles["train"], inputFiles["devel"], models["devel"], models["test"],
                            exampleStyles["examples"], classifierParams["examples"], parse, None, task,
-                           fromStep=detectorSteps["TRAIN"], workDir="training")
+                           fromStep=detectorSteps["TRAIN"], workDir="training", testData=inputFiles["test"])
         else:
             detector.train(inputFiles["train"], inputFiles["devel"], models["devel"], models["test"],
                            exampleStyles["trigger"], exampleStyles["edge"], exampleStyles["unmerging"], exampleStyles["modifiers"],
                            classifierParams["trigger"], classifierParams["edge"], classifierParams["unmerging"], classifierParams["modifiers"],
                            classifierParams["recall"], processUnmerging, processModifiers, 
                            doFullGrid, task, parse, None,
-                           fromStep=detectorSteps["TRAIN"], workDir="training")
+                           fromStep=detectorSteps["TRAIN"], workDir="training", testData=inputFiles["test"])
         # Save the detector type
         for model in [models["devel"], models["test"]]:
             if model != None and os.path.exists(model):

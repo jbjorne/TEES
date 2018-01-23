@@ -94,7 +94,7 @@ class SingleStageDetector(Detector):
     
     def train(self, trainData=None, optData=None, model=None, combinedModel=None, exampleStyle=None, 
               classifierParameters=None, parse=None, tokenization=None, task=None, fromStep=None, toStep=None,
-              workDir=None):
+              workDir=None, testData=None):
         self.initVariables(trainData=trainData, optData=optData, model=model, combinedModel=combinedModel, exampleStyle=exampleStyle, classifierParameters=classifierParameters, parse=parse, tokenization=tokenization)
         self.setWorkDir(workDir)
         steps = ["ANALYZE", "EXAMPLES", "BEGIN-MODEL", "END-MODEL"]

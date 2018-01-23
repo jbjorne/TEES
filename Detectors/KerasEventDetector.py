@@ -18,7 +18,7 @@ class KerasEventDetector(EventDetector):
               fullGrid=False, task=None,
               parse=None, tokenization=None,
               fromStep=None, toStep=None,
-              workDir=None):
+              workDir=None, testData=None):
         # Initialize the training process ##############################
         self.initVariables(trainData=trainData, optData=optData, model=model, combinedModel=combinedModel,
                            triggerExampleStyle=triggerExampleStyle, edgeExampleStyle=edgeExampleStyle, 
@@ -83,7 +83,7 @@ class KerasEventDetector(EventDetector):
             #    if model != None:
             #        model.addStr("BioNLPSTParams", Parameters.toString(self.bioNLPSTParams))
             self.triggerDetector.bioNLPSTParams = self.bioNLPSTParams
-            self.triggerDetector.train(trainData, optData, self.model, self.combinedModel, triggerExampleStyle, None, parse, tokenization, task)
+            self.triggerDetector.train(trainData, optData, self.model, self.combinedModel, triggerExampleStyle, None, parse, tokenization, task, testData=testData)
             #self.triggerDetector.beginModel(None, self.model, [self.workDir+self.triggerDetector.tag+"train-examples.gz"], self.workDir+self.triggerDetector.tag+"opt-examples.gz")
             self.edgeDetector.beginModel(None, self.model, [self.workDir+self.edgeDetector.tag+"train-examples.gz"], self.workDir+self.edgeDetector.tag+"opt-examples.gz")
             if self.trainModifiers:
