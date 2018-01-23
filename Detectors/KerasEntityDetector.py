@@ -501,8 +501,8 @@ class KerasEntityDetector(Detector):
                     print >> sys.stderr, "New best replicate", scores["micro"]
                     bestScore = scores["micro"]
                     shutil.copy2(self.model.get(repModelPath, True), self.model.get(self.tag + "model.hdf5", True))
-                else:
-                    bestScore = scores["micro"]
+            else:
+                bestScore = scores["micro"]
         if replicates > 1 and self.model.hasMember(repModelPath):
             os.remove(self.model.get(repModelPath))
         modelScores = [x["micro"][2] for x in modelScores]
