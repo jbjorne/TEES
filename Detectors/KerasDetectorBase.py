@@ -90,7 +90,6 @@ class KerasDetectorBase(Detector):
         #print self.examples["devel"][0:2]
         self.showExample(self.examples["devel"][0])
         if self.state == self.STATE_COMPONENT_TRAIN or self.checkStep("MODEL"): # Define and train the Keras model
-            self.defineModel()
             self.fitModel()
         if workDir != None:
             self.setWorkDir("")
@@ -311,7 +310,7 @@ class KerasDetectorBase(Detector):
         print >> sys.stderr, [(embeddings[x].name, embeddings[x].getSize()) for x in sorted(embeddings.keys())]
         return embeddings
     
-    def defineModel(self):
+    def defineModel(self, verbose=False):
         """
         Defines the Keras model and compiles it.
         """
@@ -349,7 +348,7 @@ class KerasDetectorBase(Detector):
         layer = Dense(int(self.styles.get("dense", 400)), activation='relu')(layer) #layer = Dense(800, activation='relu')(layer)
         layer = Dense(len(labelSet), activation='sigmoid')(layer)
         
-        self.kerasModel = Model([self.embeddings[x].inputLayer for x in embNames], layer)
+        kerasModel = Model([self.embeddings[x].inputLayer for x in embNames], layer)
         
         learningRate = float(self.styles.get("lr", 0.001))
         print >> sys.stderr, "Using learning rate", learningRate
@@ -357,16 +356,17 @@ class KerasDetectorBase(Detector):
         
         print >> sys.stderr, "Compiling model"
         metrics = ["accuracy"] #, f1ScoreMetric]
-        self.kerasModel.compile(optimizer=optimizer, loss="binary_crossentropy", metrics=metrics)
+        kerasModel.compile(optimizer=optimizer, loss="binary_crossentropy", metrics=metrics)
         
-        self.kerasModel.summary()
+        if verbose:
+            kerasModel.summary()
+        return kerasModel
    
-    def fitModel(self):
+    def fitModel(self, verbose=True):
         """
         Fits the compiled Keras model to the adjacency matrix examples. The model is trained on the
         train set, validated on the devel set and finally the devel set is predicted using the model.
         """
-        
         labels, labelNames = self.vectorizeLabels(self.examples, ["train", "devel"])        
         print >> sys.stderr, "Labels:", labelNames
         labelWeights = {}
@@ -392,7 +392,8 @@ class KerasDetectorBase(Detector):
             es_cb = EarlyStopping(monitor='val_loss', patience=patience, verbose=1)
             modelPath = self.model.get(repModelPath, True) #self.workDir + self.tag + 'model.hdf5'
             cp_cb = ModelCheckpoint(filepath=modelPath, save_best_only=True, verbose=1)
-            self.kerasModel.fit(features["train"], labels["train"], #[sourceData], self.arrays["train"]["target"],
+            kerasModel = self.defineModel(verbose)
+            kerasModel.fit(features["train"], labels["train"], #[sourceData], self.arrays["train"]["target"],
                 epochs=100 if not "epochs" in self.styles else int(self.styles["epochs"]),
                 batch_size=64,
                 shuffle=True,
@@ -414,7 +415,6 @@ class KerasDetectorBase(Detector):
         modelScores = [x["micro"][2] for x in modelScores]
         print >> sys.stderr, "Models:", json.dumps({"best":["%.4f" % x for x in bestScore[:3]], "mean":["%.4f" % numpy.mean(modelScores), "%.4f" % numpy.var(modelScores)], "replicates":["%.4f" % x for x in modelScores]}, sort_keys=True)
         
-        self.kerasModel = None
         self.model.save()
         self.examples = None
     
