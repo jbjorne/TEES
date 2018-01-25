@@ -75,6 +75,8 @@ class KerasDetectorBase(Detector):
             # Perform structure analysis
             self.structureAnalyzer.analyze([optData, trainData], self.model)
             print >> sys.stderr, self.structureAnalyzer.toString()
+            self.distanceAnalyzer.analyze([optData, trainData], parse=parse)
+            print >> sys.stderr, self.distanceAnalyzer.toDict()
         self.styles = Utils.Parameters.get(exampleStyle)
         self.pathDepth = int(self.styles.get("path", 3))
         self.model = self.openModel(model, "a") # Devel model already exists, with ids etc
