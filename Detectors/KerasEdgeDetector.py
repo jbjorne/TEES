@@ -116,7 +116,7 @@ class KerasEdgeDetector(KerasDetectorBase):
         tokens = []
         for i in range(len(tokenElements)):
             element = tokenElements[i][1]
-            token = {"index":i, "token":element, "charOffset":tokenElements[i][0]}
+            token = {"index":i, "element":element, "charOffset":tokenElements[i][0]}
             token["words"] = self.embeddings["words"].getIndex(element.get("text").lower(), "[out]")
             token["POS"] = self.embeddings["POS"].getIndex(element.get("POS"), "[out]")
             entityLabels = "---".join(sorted(set([x.get("type") for x in sentenceGraph.tokenIsEntityHead[sentenceGraph.tokens[i]]])))
@@ -195,8 +195,8 @@ class KerasEdgeDetector(KerasDetectorBase):
                 features["entities"].append(token["entities"])
                 features["rel_token"].append(self.embeddings["rel_token"].getIndex("1" if (i == t1Index or i == t2Index) else "0"))
                 features["POS"].append(token["POS"])
-                self.addPathEmbedding(token1, token, sentenceGraph.dependencyGraph, undirected, edgeCounts, features, "path1_")
-                self.addPathEmbedding(token2, token, sentenceGraph.dependencyGraph, undirected, edgeCounts, features, "path2_")
+                self.addPathEmbedding(token1, token["element"], sentenceGraph.dependencyGraph, undirected, edgeCounts, features, "path1_")
+                self.addPathEmbedding(token2, token["element"], sentenceGraph.dependencyGraph, undirected, edgeCounts, features, "path2_")
             else:
                 for featureGroup in featureGroups:
                     features[featureGroup].append(self.embeddings[featureGroup].getIndex("[pad]"))
@@ -250,7 +250,7 @@ class KerasEdgeDetector(KerasDetectorBase):
         embeddings["POS"] = EmbeddingIndex("POS", dimEmbeddings, keys=initVectors)
         for i in range(self.pathDepth):
             for tag in ("path1_", "path2_"):
-                self.embeddings[tag + str(i)] = EmbeddingIndex(tag + str(i), dimEmbeddings, keys=initVectors)
+                embeddings[tag + str(i)] = EmbeddingIndex(tag + str(i), dimEmbeddings, keys=initVectors)
         if self.debugGold:
             embeddings["gold"] = EmbeddingIndex("gold", dimEmbeddings, keys=initVectors)
         return embeddings
