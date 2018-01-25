@@ -53,7 +53,7 @@ class KerasEdgeDetector(KerasDetectorBase):
     ###########################################################################
         
     def buildExamplesFromGraph(self, sentenceGraph, examples, goldGraph=None):
-        exampleIndex = 0
+        self.exampleIndex = 0
         # example directionality
         if self.styles.get("directed") == None and self.styles.get("undirected") == None: # determine directedness from corpus
             examplesAreDirected = self.structureAnalyzer.hasDirectedTargets() if self.structureAnalyzer != None else True
@@ -67,7 +67,7 @@ class KerasEdgeDetector(KerasDetectorBase):
         # Filter entities, if needed
         sentenceGraph.mergeInteractionGraph(True)
         entities = sentenceGraph.mergedEntities
-        entityToDuplicates = sentenceGraph.mergedEntityToDuplicates
+        #entityToDuplicates = sentenceGraph.mergedEntityToDuplicates
         self.exampleStats.addValue("Duplicate entities skipped", len(sentenceGraph.entities) - len(entities))
         
         # Connect to optional gold graph
@@ -75,16 +75,29 @@ class KerasEdgeDetector(KerasDetectorBase):
         if goldGraph != None:
             entityToGold = EvaluateInteractionXML.mapEntities(entities, goldGraph.entities)
         
-        paths = None
-        if not self.styles.get("no_path"):
-            undirected = sentenceGraph.dependencyGraph.toUndirected()
-            paths = undirected
-            if self.styles.get("filter_shortest_path") != None: # For DDI use filter_shortest_path=conj_and
-                paths.resetAnalyses() # just in case
-                paths.FloydWarshall(self.filterEdge, {"edgeTypes":self.styles["filter_shortest_path"]})
+#         paths = None
+#         if not self.styles.get("no_path"):
+#             undirected = sentenceGraph.dependencyGraph.toUndirected()
+#             paths = undirected
+#             if self.styles.get("filter_shortest_path") != None: # For DDI use filter_shortest_path=conj_and
+#                 paths.resetAnalyses() # just in case
+#                 paths.FloydWarshall(self.filterEdge, {"edgeTypes":self.styles["filter_shortest_path"]})
+
+        dg = sentenceGraph.dependencyGraph
+        undirected = dg.toUndirected()
+        edgeCounts = {x:len(dg.getInEdges(x) + dg.getOutEdges(x)) for x in sentenceGraph.tokens}
         
-        tokens = sorted([(Range.charOffsetToSingleTuple(x.get("charOffset")), x) for x in sentenceGraph.tokens])
-        tokenIndexById = {tokens[i][1].get("id"):i for i in range(len(tokens))}
+        # Pre-generate features for all tokens in the sentence
+        tokenElements = sorted([(Range.charOffsetToSingleTuple(x.get("charOffset")), x) for x in sentenceGraph.tokens])
+        tokens = []
+        for i in range(len(tokenElements)):
+            element = tokenElements[i]
+            token = {"index":i, "token":tokenElements[i]}
+            token["words"] = self.embeddings["words"].getIndex(element.get("text").lower(), "[out]")
+            token["POS"] = self.embeddings["POS"].getIndex(element.get("POS"), "[out]")
+            entityLabels = "---".join(sorted(set(sentenceGraph.tokenIsEntityHead[sentenceGraph.tokens[i]])))
+            token["entities"] = self.embeddings["POS"].getIndex(entityLabels if entityLabels != "" else "[N/A]", "[out]")         
+        tokenMap = {tokenElements[i]:tokens[i] for i in range(len(tokenElements))}
         
         # Generate examples based on interactions between entities or interactions between tokens
         if self.styles.get("token_nodes"):
@@ -114,50 +127,49 @@ class KerasEdgeDetector(KerasDetectorBase):
                         continue
                 
                 if examplesAreDirected:
-                    exampleIndex += self.buildExample(tI, tJ, eI, eJ, exampleIndex)
-                    exampleIndex += self.buildExample(tJ, tI, eJ, eI, exampleIndex)
+                    self.buildExample(examples, tI, tJ, eI, eJ, tokens, tokenMap, sentenceGraph, goldGraph, entityToGold, undirected, edgeCounts)
+                    self.buildExample(examples, tJ, tI, eJ, eI, tokens, tokenMap, sentenceGraph, goldGraph, entityToGold, undirected, edgeCounts)
                 else:
-                    if tokenIndexById(tI.get("id")) > tokenIndexById(tI.get("id")):
+                    if tokenMap[tJ]["index"] > tokenMap[tI]["index"]:
                         tI, tJ = tJ, tI
                         eI, eJ = eJ, eI
-                    exampleIndex += self.buildExample(tI, tJ, paths, sentenceGraph, eI, eJ)
-        return exampleIndex
+                    self.buildExample(examples, tI, tJ, eI, eJ, tokens, tokenMap, sentenceGraph, goldGraph, entityToGold, undirected, edgeCounts, False)
     
-    def buildExample(self, token1, token2, paths, sentenceGraph, categoryName, entity1=None, entity2=None, structureAnalyzer=None, isDirected=True):
+    def buildExample(self, examples, token1, token2, entity1, entity2, tokens, tokenMap, sentenceGraph, goldGraph, entityToGold, undirected, edgeCounts, isDirected=True):
         """
         Build a single directed example for the potential edge between token1 and token2
         """
-        labels = self.getExampleLabels(entity1, entity2, token1, token2, sentenceGraph, goldGraph, entityToGold, isDirected, structureAnalyzer=structureAnalyzer)
+        labels = self.getExampleLabels(entity1, entity2, token1, token2, sentenceGraph, goldGraph, entityToGold, isDirected)
         
         self.exampleStats.beginExample("---".join(labels))
         
-        t1Index = tokenIndexById(token1.get("id"))
-        t2Index = tokenIndexById(token2.get("id"))
+        t1Index = tokenMap[token1]["index"]
+        t2Index = tokenMap[token2]["index"]
         span = abs(t1Index - t2Index)
         if span > maxSpan:
             self.exampleStats.filter("span")
             self.exampleStats.endExample()
             return None
         
-        begin = min(t1Index, t2Index) - 5
+        begin = min(t1Index, t2Index) - self.outsideLength
         
-        features = {x:[] for x in self.embeddings.keys()}
-        windowIndex = 0
-        for i in range(begin, begin + exampleSpan):
+        featureGroups = sorted(self.embeddings.keys())
+        features = {x:[] for x in featureGroups}
+        numTokens = len(tokens)
+        for i in range(begin, begin + self.maxLength):
             if i >= 0 and i < numTokens:
-                token = sentenceGraph.tokens[j]
+                token = tokens[i]
                 #if self.debugGold:
                 #    features["gold"].append(self.embeddings["gold"].getIndex(",".join(labels[j]), "[out]"))
-                features["words"].append(wordIndices[j])
-                features["positions"].append(self.embeddings["positions"].getIndex(str(t1Distance) + "_" + str(t2Distance), "[out]"))
-                features["entities"].append(self.embeddings["named_entities"].getIndex("1" if (sentenceGraph.tokenIsEntityHead[token] and sentenceGraph.tokenIsName[token2]) else "0", "[out]"))
-                features["POS"].append(self.embeddings["POS"].getIndex(token.get("POS"), "[out]"))
-                self.addPathEmbedding(token, token2, sentenceGraph.dependencyGraph, undirected, edgeCounts, features)
+                features["words"].append(token["words"])
+                features["positions"].append(self.embeddings["positions"].getIndex(str(t1Index - i) + "_" + str(t2Index - i), "[out]"))
+                features["entities"].append(token["entities"])
+                features["POS"].append(token["POS"])
+                self.addPathEmbedding(token1, token, sentenceGraph.dependencyGraph, undirected, edgeCounts, features, "path1")
+                self.addPathEmbedding(token2, token, sentenceGraph.dependencyGraph, undirected, edgeCounts, features, "path1")
             else:
-                tokens.append(None)
                 for featureGroup in featureGroups:
                     features[featureGroup].append(self.embeddings[featureGroup].getIndex("[pad]"))
-            windowIndex += 1
         
         # define extra attributes
         extra = {}
@@ -169,7 +181,7 @@ class KerasEdgeDetector(KerasDetectorBase):
             extra["e2"] = entity2.get("id")
             if sentenceGraph.mergedEntityToDuplicates != None:
                 extra["e2DuplicateIds"] = ",".join([x.get("id") for x in sentenceGraph.mergedEntityToDuplicates[entity2]])
-        extra["categoryName"] = categoryName
+        extra["categoryName"] = "---".join(labels)
         if self.styles.get("bacteria_renaming"):
             if entity1.get("text") != None and entity1.get("text") != "":
                 extra["e1t"] = entity1.get("text").replace(" ", "---").replace(":","-COL-")
@@ -190,7 +202,8 @@ class KerasEdgeDetector(KerasDetectorBase):
             #print extra
         
         self.exampleStats.endExample()
-        return {"id":sentenceGraph.getSentenceId()+".x"+str(exampleIndex), "labels":labels, "features":features, "extra":extra}
+        examples.append({"id":sentenceGraph.getSentenceId()+".x"+str(self.exampleIndex), "labels":labels, "features":features, "extra":extra})
+        self.exampleIndex += 1
 
     ###########################################################################
     # Example Labels
