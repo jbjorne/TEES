@@ -47,6 +47,29 @@ class KerasEdgeDetector(KerasDetectorBase):
         KerasDetectorBase.__init__(self)
         self.tag = "edge-"
         self.exampleWriter = EdgeExampleWriter()
+        
+    ###########################################################################
+    # Example Filtering
+    ###########################################################################
+    
+    def isValidInteraction(self, e1, e2, structureAnalyzer,forceUndirected=False):
+        return len(structureAnalyzer.getValidEdgeTypes(e1.get("type"), e2.get("type"), forceUndirected=forceUndirected)) > 0
+    
+    def keepExample(self, e1, e2, labels, isDirected, structureAnalyzer):
+        makeExample = True
+        if (not self.styles.get("no_auto_limits")) and not self.isValidInteraction(e1, e2, structureAnalyzer, forceUndirected=not isDirected):
+            makeExample = False
+            self.exampleStats.filter("auto_limits")
+        if self.styles.get("genia_task1") and (e1.get("type") == "Entity" or e2.get("type") == "Entity"):
+            makeExample = False
+            self.exampleStats.filter("genia_task1")
+        if self.styles.get("pos_only") and len(labels) == 0 or (len(labels) == 1 and labels[0] == "neg"):
+            makeExample = False
+            self.exampleStats.filter("pos_only")
+        if self.styles.get("no_self_loops") and ((e1 == e2) or (e1.get("headOffset") == e2.get("headOffset"))):
+            makeExample = False
+            self.exampleStats.filter("no_self_loops")
+        return makeExample
 
     ###########################################################################
     # Example Generation
@@ -142,6 +165,10 @@ class KerasEdgeDetector(KerasDetectorBase):
         labels = self.getExampleLabels(entity1, entity2, token1, token2, sentenceGraph, goldGraph, entityToGold, isDirected)
         
         self.exampleStats.beginExample("---".join(labels))
+        
+        if not self.keepExample(entity1, entity2, labels, isDirected, self.structureAnalyzer):
+            self.exampleStats.endExample()
+            return
         
         t1Index = tokenMap[token1]["index"]
         t2Index = tokenMap[token2]["index"]
