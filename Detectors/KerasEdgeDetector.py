@@ -47,6 +47,8 @@ class KerasEdgeDetector(KerasDetectorBase):
         KerasDetectorBase.__init__(self)
         self.tag = "edge-"
         self.exampleWriter = EdgeExampleWriter()
+        self.outsideLength = 5
+        self.maxLength = 100
         
     ###########################################################################
     # Example Filtering
@@ -173,7 +175,7 @@ class KerasEdgeDetector(KerasDetectorBase):
         t1Index = tokenMap[token1]["index"]
         t2Index = tokenMap[token2]["index"]
         span = abs(t1Index - t2Index)
-        if span > maxSpan:
+        if span + 2 * self.outsideLength > self.maxLength:
             self.exampleStats.filter("span")
             self.exampleStats.endExample()
             return None
@@ -191,6 +193,7 @@ class KerasEdgeDetector(KerasDetectorBase):
                 features["words"].append(token["words"])
                 features["positions"].append(self.embeddings["positions"].getIndex(str(t1Index - i) + "_" + str(t2Index - i), "[out]"))
                 features["entities"].append(token["entities"])
+                features["rel_token"].append(self.embeddings["rel_token"].getIndex("1" if i == t1Index or i == t2Index else "2"))
                 features["POS"].append(token["POS"])
                 self.addPathEmbedding(token1, token, sentenceGraph.dependencyGraph, undirected, edgeCounts, features, "path1_")
                 self.addPathEmbedding(token2, token, sentenceGraph.dependencyGraph, undirected, edgeCounts, features, "path2_")
@@ -242,7 +245,8 @@ class KerasEdgeDetector(KerasDetectorBase):
         embeddings["words"] = EmbeddingIndex("words", None, wordVectorPath, wv_mem, wv_map, initVectors)
         dimEmbeddings = int(self.styles.get("de", 8)) #8 #32
         embeddings["positions"] = EmbeddingIndex("positions", dimEmbeddings, keys=initVectors)
-        embeddings["named_entities"] = EmbeddingIndex("named_entities", dimEmbeddings, keys=initVectors)
+        embeddings["entities"] = EmbeddingIndex("positions", dimEmbeddings, keys=initVectors)
+        embeddings["rel_token"] = EmbeddingIndex("rel_token", dimEmbeddings, keys=initVectors)
         embeddings["POS"] = EmbeddingIndex("POS", dimEmbeddings, keys=initVectors)
         for i in range(self.pathDepth):
             for tag in ("path1_", "path2_"):
