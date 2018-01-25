@@ -265,7 +265,7 @@ class KerasEdgeDetector(KerasDetectorBase):
         else:
             labels = self.getLabels(sentenceGraph, e1, e2, isDirected)
             if goldGraph != None:
-                labels = self.getGoldCategoryName(goldGraph, entityToGold, e1, e2, isDirected)
+                labels = self.getGoldLabels(goldGraph, entityToGold, e1, e2, isDirected)
         if len(labels) == 0 and useNeg:
             labels.add("neg")
         return labels
@@ -294,3 +294,8 @@ class KerasEdgeDetector(KerasDetectorBase):
         for interaction in interactions:
             labels.add(interaction[2].get("type"))
         return sorted(labels)
+    
+    def getGoldLabels(self, goldGraph, entityToGold, e1, e2, directed=True):
+        if len(entityToGold[e1]) > 0 and len(entityToGold[e2]) > 0:
+            return self.getLabels(goldGraph, entityToGold[e1][0], entityToGold[e2][0], directed=directed)
+        return []
