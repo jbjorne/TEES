@@ -202,7 +202,7 @@ class KerasEdgeDetector(KerasDetectorBase):
                     features[featureGroup].append(self.embeddings[featureGroup].getIndex("[pad]"))
         
         # define extra attributes
-        extra = {}
+        extra = {"xtype":"edge", "type":"i", "t1":token1.get("id"), "t2":token2.get("id")}
         if entity1 != None:
             extra["e1"] = entity1.get("id")
             if sentenceGraph.mergedEntityToDuplicates != None:
