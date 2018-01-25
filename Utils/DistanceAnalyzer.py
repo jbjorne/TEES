@@ -63,4 +63,15 @@ class DistanceAnalyzer():
             self.eventSpans[eventSpan] = self.eventSpans.get(eventSpan, 0) + 1
             self.eventSpan["min"] = min(self.eventSpan.get("min"), eventSpan)
             self.eventSpan["max"] = max(self.eventSpan.get("max"), eventSpan)
-        
+
+if __name__=="__main__":
+    print >> sys.stderr, "##### Element Distance Analysis #####"
+    from optparse import OptionParser
+    optparser = OptionParser(usage="%prog [options]\n")
+    optparser.add_option("-i", "--input", default=None)
+    optparser.add_option("-o", "--output", default=None)
+    (options, args) = optparser.parse_args()
+    
+    analyzer = DistanceAnalyzer()
+    analyzer.analyze(options.input.split(","), "McCC")
+    print >> sys.stderr, analyzer.toDict() 

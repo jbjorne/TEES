@@ -27,7 +27,7 @@ class Detector():
     """
     def __init__(self):
         self.structureAnalyzer = StructureAnalyzer()
-        self.distanceAnalyzer = DistanceAnalyzer()
+        #self.distanceAnalyzer = DistanceAnalyzer()
         self.exampleBuilder = None
         self.exampleWriter = None
         self.Classifier = None
