@@ -192,8 +192,8 @@ class KerasEdgeDetector(KerasDetectorBase):
                 features["positions"].append(self.embeddings["positions"].getIndex(str(t1Index - i) + "_" + str(t2Index - i), "[out]"))
                 features["entities"].append(token["entities"])
                 features["POS"].append(token["POS"])
-                self.addPathEmbedding(token1, token, sentenceGraph.dependencyGraph, undirected, edgeCounts, features, "path1")
-                self.addPathEmbedding(token2, token, sentenceGraph.dependencyGraph, undirected, edgeCounts, features, "path1")
+                self.addPathEmbedding(token1, token, sentenceGraph.dependencyGraph, undirected, edgeCounts, features, "path1_")
+                self.addPathEmbedding(token2, token, sentenceGraph.dependencyGraph, undirected, edgeCounts, features, "path2_")
             else:
                 for featureGroup in featureGroups:
                     features[featureGroup].append(self.embeddings[featureGroup].getIndex("[pad]"))
@@ -231,6 +231,24 @@ class KerasEdgeDetector(KerasDetectorBase):
         self.exampleStats.endExample()
         examples.append({"id":sentenceGraph.getSentenceId()+".x"+str(self.exampleIndex), "labels":labels, "features":features, "extra":extra})
         self.exampleIndex += 1
+    
+    def initEmbeddings(self):
+        print >> sys.stderr, "Initializing embedding indices"
+        embeddings = {}
+        wordVectorPath = self.styles.get("wv", Settings.W2VFILE)
+        wv_mem = int(self.styles.get("wv_mem", 100000))
+        wv_map = int(self.styles.get("wv_map", 10000000))
+        initVectors = ["[out]", "[pad]"]
+        embeddings["words"] = EmbeddingIndex("words", None, wordVectorPath, wv_mem, wv_map, initVectors)
+        dimEmbeddings = int(self.styles.get("de", 8)) #8 #32
+        embeddings["positions"] = EmbeddingIndex("positions", dimEmbeddings, keys=initVectors)
+        embeddings["named_entities"] = EmbeddingIndex("named_entities", dimEmbeddings, keys=initVectors)
+        embeddings["POS"] = EmbeddingIndex("POS", dimEmbeddings, keys=initVectors)
+        for i in range(self.pathDepth):
+            for tag in ("path1_", "path2_"):
+                self.embeddings[tag + str(i)] = EmbeddingIndex(tag + str(i), dimEmbeddings, keys=initVectors)
+        if self.debugGold:
+            embeddings["gold"] = EmbeddingIndex("gold", dimEmbeddings, keys=initVectors)
 
     ###########################################################################
     # Example Labels

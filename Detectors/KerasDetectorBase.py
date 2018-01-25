@@ -50,7 +50,6 @@ class KerasDetectorBase(Detector):
         self.exampleWriter = None
         self.evaluator = AveragingMultiClassEvaluator
         self.debugGold = False
-        self.focusTags = [""]
     
     ###########################################################################
     # Main Pipeline Interface
@@ -256,23 +255,7 @@ class KerasDetectorBase(Detector):
         if embeddingsPath != None:
             self.embeddings = self.loadEmbeddings(embeddingsPath)
         else:
-            print >> sys.stderr, "Initialized embedding indices"
-            self.embeddings = {}
-            wordVectorPath = self.styles.get("wv", Settings.W2VFILE)
-            wv_mem = int(self.styles.get("wv_mem", 100000))
-            wv_map = int(self.styles.get("wv_map", 10000000))
-            initVectors = ["[out]", "[pad]"]
-            self.embeddings["words"] = EmbeddingIndex("words", None, wordVectorPath, wv_mem, wv_map, initVectors)
-            dimEmbeddings = int(self.styles.get("de", 8)) #8 #32
-            for tag in self.focusTags:
-                self.embeddings["positions" + tag] = EmbeddingIndex("positions" + tag, dimEmbeddings, keys=initVectors)
-            self.embeddings["named_entities"] = EmbeddingIndex("named_entities", dimEmbeddings, keys=initVectors)
-            self.embeddings["POS"] = EmbeddingIndex("POS", dimEmbeddings, keys=initVectors)
-            for i in range(self.pathDepth):
-                for tag in self.focusTags:
-                    self.embeddings["path" + tag + str(i)] = EmbeddingIndex("path" + tag + str(i), dimEmbeddings, keys=initVectors)
-            if self.debugGold:
-                self.embeddings["gold"] = EmbeddingIndex("gold", dimEmbeddings, keys=initVectors)
+            self.embeddings = self.initEmbeddings()
         # Make example for all input files
         self.examples = {x:[] for x in setNames}
         for setName, data, gold in itertools.izip_longest(setNames, datas, golds, fillvalue=None):
@@ -297,6 +280,9 @@ class KerasDetectorBase(Detector):
         if modelChanged:
             model.save()
         self.embeddings["words"].releaseWV()
+        
+    def initEmbeddings(self):
+        raise NotImplementedError
     
     def saveEmbeddings(self, embeddings, outPath):
         with open(outPath, "wt") as f:
