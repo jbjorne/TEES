@@ -75,15 +75,15 @@ class KerasEdgeDetector(KerasDetectorBase):
             entityToGold = EvaluateInteractionXML.mapEntities(entities, goldGraph.entities)
         
         paths = None
-        if not self.styles["no_path"]:
+        if not self.styles.get("no_path"):
             undirected = sentenceGraph.dependencyGraph.toUndirected()
             paths = undirected
-            if self.styles["filter_shortest_path"] != None: # For DDI use filter_shortest_path=conj_and
+            if self.styles.get("filter_shortest_path") != None: # For DDI use filter_shortest_path=conj_and
                 paths.resetAnalyses() # just in case
                 paths.FloydWarshall(self.filterEdge, {"edgeTypes":self.styles["filter_shortest_path"]})
         
         # Generate examples based on interactions between entities or interactions between tokens
-        if self.styles["token_nodes"]:
+        if self.styles.get("token_nodes"):
             loopRange = len(sentenceGraph.tokens)
         else:
             loopRange = len(entities)
@@ -91,7 +91,7 @@ class KerasEdgeDetector(KerasDetectorBase):
             for j in range(i+1,loopRange):
                 eI = None
                 eJ = None
-                if self.styles["token_nodes"]:
+                if self.styles.get("token_nodes"):
                     tI = sentenceGraph.tokens[i]
                     tJ = sentenceGraph.tokens[j]
                 else:
@@ -101,18 +101,18 @@ class KerasEdgeDetector(KerasDetectorBase):
                     tJ = sentenceGraph.entityHeadTokenByEntity[eJ]
                     if eI.get("type") == "neg" or eJ.get("type") == "neg":
                         continue
-                    if self.styles["skip_extra_triggers"]:
+                    if self.styles.get("skip_extra_triggers"):
                         if eI.get("source") != None or eJ.get("source") != None:
                             continue
                 # only consider paths between entities (NOTE! entities, not only named entities)
-                if self.styles["headsOnly"]:
+                if self.styles.get("headsOnly"):
                     if (len(sentenceGraph.tokenIsEntityHead[tI]) == 0) or (len(sentenceGraph.tokenIsEntityHead[tJ]) == 0):
                         continue
                 
                 examples = self.buildExamplesForPair(tI, tJ, paths, sentenceGraph, goldGraph, entityToGold, eI, eJ, structureAnalyzer, examplesAreDirected)
                 for categoryName, features, extra in examples:
                     # make example
-                    if self.styles["binary"]:
+                    if self.styles.get("binary"):
                         if categoryName != "neg":
                             category = 1
                         else:
@@ -157,6 +157,60 @@ class KerasEdgeDetector(KerasDetectorBase):
         else: # undirected example that was filtered
             self.exampleStats.endExample() # end merged example
             return []
+    
+    def buildExample(self, token1, token2, paths, sentenceGraph, categoryName, entity1=None, entity2=None, structureAnalyzer=None, isDirected=True):
+        """
+        Build a single directed example for the potential edge between token1 and token2
+        """
+        # define features
+        if not self.styles.get("no_path"):
+            path = paths.getPaths(token1, token2)
+            if len(path) > 0:
+                path = path[0]
+                #pathExists = True
+            else:
+                path = [token1, token2]
+                #pathExists = False
+        else:
+            path = [token1, token2]
+            #pathExists = False
+        
+        # define extra attributes
+        if int(path[0].get("charOffset").split("-")[0]) < int(path[-1].get("charOffset").split("-")[0]):
+            extra = {"xtype":"edge","type":"i","t1":path[0].get("id"),"t2":path[-1].get("id")}
+            extra["deprev"] = False
+        else:
+            extra = {"xtype":"edge","type":"i","t1":path[-1].get("id"),"t2":path[0].get("id")}
+            extra["deprev"] = True
+        if entity1 != None:
+            extra["e1"] = entity1.get("id")
+            if sentenceGraph.mergedEntityToDuplicates != None:
+                extra["e1DuplicateIds"] = ",".join([x.get("id") for x in sentenceGraph.mergedEntityToDuplicates[entity1]])
+        if entity2 != None:
+            extra["e2"] = entity2.get("id")
+            if sentenceGraph.mergedEntityToDuplicates != None:
+                extra["e2DuplicateIds"] = ",".join([x.get("id") for x in sentenceGraph.mergedEntityToDuplicates[entity2]])
+        extra["categoryName"] = categoryName
+        if self.styles.get("bacteria_renaming"):
+            if entity1.get("text") != None and entity1.get("text") != "":
+                extra["e1t"] = entity1.get("text").replace(" ", "---").replace(":","-COL-")
+            if entity2.get("text") != None and entity2.get("text") != "":
+                extra["e2t"] = entity2.get("text").replace(" ", "---").replace(":","-COL-")
+        if self.styles.get("doc_extra"):
+            if hasattr(sentenceGraph, "documentElement") and sentenceGraph.documentElement.get("origId") != None:
+                extra["DOID"] = sentenceGraph.documentElement.get("origId")
+        if self.styles.get("entity_extra"):
+            if entity1.get("origId") != None: extra["e1OID"] = entity1.get("origId")
+            if entity2.get("origId") != None: extra["e2OID"] = entity2.get("origId")
+        sentenceOrigId = sentenceGraph.sentenceElement.get("origId")
+        if sentenceOrigId != None:
+            extra["SOID"] = sentenceOrigId 
+        extra["directed"] = str(isDirected)
+        if self.styles.get("sdb_merge"):
+            extra["sdb_merge"] = "True"
+            #print extra
+        
+        return (categoryName, features, extra)
 
     ###########################################################################
     # Example Labels
