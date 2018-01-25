@@ -48,7 +48,7 @@ class KerasEdgeDetector(KerasDetectorBase):
         self.tag = "edge-"
         self.exampleWriter = EdgeExampleWriter()
         self.outsideLength = 5
-        self.maxLength = 100
+        self.exampleLength = 100
         
     ###########################################################################
     # Example Filtering
@@ -120,7 +120,7 @@ class KerasEdgeDetector(KerasDetectorBase):
             token["words"] = self.embeddings["words"].getIndex(element.get("text").lower(), "[out]")
             token["POS"] = self.embeddings["POS"].getIndex(element.get("POS"), "[out]")
             entityLabels = "---".join(sorted(set([x.get("type") for x in sentenceGraph.tokenIsEntityHead[sentenceGraph.tokens[i]]])))
-            token["entities"] = self.embeddings["POS"].getIndex(entityLabels if entityLabels != "" else "[N/A]", "[out]")         
+            token["entities"] = self.embeddings["entities"].getIndex(entityLabels if entityLabels != "" else "[N/A]", "[out]")         
             tokens.append(token)
         tokenMap = {tokenElements[i][1]:tokens[i] for i in range(len(tokenElements))}
         
@@ -175,7 +175,7 @@ class KerasEdgeDetector(KerasDetectorBase):
         t1Index = tokenMap[token1]["index"]
         t2Index = tokenMap[token2]["index"]
         span = abs(t1Index - t2Index)
-        if span + 2 * self.outsideLength > self.maxLength:
+        if span + 2 * self.outsideLength > self.exampleLength:
             self.exampleStats.filter("span")
             self.exampleStats.endExample()
             return None
@@ -185,7 +185,7 @@ class KerasEdgeDetector(KerasDetectorBase):
         featureGroups = sorted(self.embeddings.keys())
         features = {x:[] for x in featureGroups}
         numTokens = len(tokens)
-        for i in range(begin, begin + self.maxLength):
+        for i in range(begin, begin + self.exampleLength):
             if i >= 0 and i < numTokens:
                 token = tokens[i]
                 #if self.debugGold:
@@ -193,7 +193,7 @@ class KerasEdgeDetector(KerasDetectorBase):
                 features["words"].append(token["words"])
                 features["positions"].append(self.embeddings["positions"].getIndex(str(t1Index - i) + "_" + str(t2Index - i), "[out]"))
                 features["entities"].append(token["entities"])
-                features["rel_token"].append(self.embeddings["rel_token"].getIndex("1" if i == t1Index or i == t2Index else "2"))
+                features["rel_token"].append(self.embeddings["rel_token"].getIndex("1" if (i == t1Index or i == t2Index) else "0"))
                 features["POS"].append(token["POS"])
                 self.addPathEmbedding(token1, token, sentenceGraph.dependencyGraph, undirected, edgeCounts, features, "path1_")
                 self.addPathEmbedding(token2, token, sentenceGraph.dependencyGraph, undirected, edgeCounts, features, "path2_")
@@ -245,7 +245,7 @@ class KerasEdgeDetector(KerasDetectorBase):
         embeddings["words"] = EmbeddingIndex("words", None, wordVectorPath, wv_mem, wv_map, initVectors)
         dimEmbeddings = int(self.styles.get("de", 8)) #8 #32
         embeddings["positions"] = EmbeddingIndex("positions", dimEmbeddings, keys=initVectors)
-        embeddings["entities"] = EmbeddingIndex("positions", dimEmbeddings, keys=initVectors)
+        embeddings["entities"] = EmbeddingIndex("entities", dimEmbeddings, keys=initVectors)
         embeddings["rel_token"] = EmbeddingIndex("rel_token", dimEmbeddings, keys=initVectors)
         embeddings["POS"] = EmbeddingIndex("POS", dimEmbeddings, keys=initVectors)
         for i in range(self.pathDepth):

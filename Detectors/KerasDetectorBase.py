@@ -224,15 +224,15 @@ class KerasDetectorBase(Detector):
         features = example["features"]
         featureGroups = sorted(features.keys())
         exampleLength = len(features[featureGroups[0]])
-        print >> sys.stderr, example["id"]
+        print >> sys.stderr, example["id"], example["labels"]
         print >> sys.stderr, ["index"] + featureGroups
         for i in range(exampleLength):
             line = [i]
             for group in featureGroups:
-                feature = features[group][i]
+                embeddingIndex = features[group][i]
                 if group in self.embeddings and showKeys:
-                    feature = self.embeddings[group].getKey(feature)
-                line.append(feature)
+                    embeddingName = self.embeddings[group].getKey(embeddingIndex)
+                line.append(embeddingName)
             print >> sys.stderr, line
     
     ###########################################################################

@@ -59,6 +59,7 @@ class EmbeddingIndex():
         self.embeddings.append(vector)
     
     def getKey(self, index):
+        assert index in self.keyByIndex, (index, self.name, len(self.embeddingIndex), len(self.keyByIndex), len(self.embeddings))
         return self.keyByIndex[index]
     
     def getIndex(self, key, default=None):
