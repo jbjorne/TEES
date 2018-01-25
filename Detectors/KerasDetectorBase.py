@@ -160,7 +160,7 @@ class KerasDetectorBase(Detector):
         self.exampleStats = ExampleStats()
     
         # Build examples
-        self.exampleCount = 0
+        self.exampleIndex = 0
         if type(input) in types.StringTypes:
             self.elementCounts = IXMLUtils.getElementCounts(input)
             self.progress = ProgressCounter(self.elementCounts.get("sentences"), "Build examples")
@@ -173,7 +173,7 @@ class KerasDetectorBase(Detector):
         self.progress.endUpdate()
         
         # Show statistics
-        print >> sys.stderr, "Examples built:", self.exampleCount
+        print >> sys.stderr, "Examples built:", self.exampleIndex
         if self.exampleStats.getExampleCount() > 0:
             self.exampleStats.printStats()
     
@@ -184,7 +184,7 @@ class KerasDetectorBase(Detector):
     
     def processSentence(self, sentence, examples, goldSentence=None):
         if sentence.sentenceGraph != None:
-            self.exampleCount += self.buildExamplesFromGraph(sentence.sentenceGraph, examples, goldSentence.sentenceGraph if goldSentence != None else None)
+            self.buildExamplesFromGraph(sentence.sentenceGraph, examples, goldSentence.sentenceGraph if goldSentence != None else None)
     
     def addPathEmbedding(self, token1, token2, dirGraph, undirGraph, edgeCounts, features, embName="path"):
         if self.pathDepth <= 0:

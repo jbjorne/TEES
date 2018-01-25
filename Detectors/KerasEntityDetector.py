@@ -53,9 +53,7 @@ class KerasEntityDetector(KerasDetectorBase):
     def buildExamplesFromGraph(self, sentenceGraph, examples, goldGraph=None):
         """
         Build one example for each token of the sentence
-        """       
-        exampleIndex = 0
-        
+        """
         # determine (manually or automatically) the setting for whether sentences with no given entities should be skipped
         buildForNameless = False
         if self.structureAnalyzer and not self.structureAnalyzer.hasGroupClass("GIVEN", "ENTITY"): # no given entities points to no separate NER program being used
@@ -133,10 +131,8 @@ class KerasEntityDetector(KerasDetectorBase):
             extra = {"xtype":"token","t":token.get("id")}
             if entityIds[i] != None:
                 extra["goldIds"] = "/".join(entityIds[i]) # The entities to which this example corresponds
-            examples.append({"id":sentenceGraph.getSentenceId()+".x"+str(exampleIndex), "labels":labels[i], "features":features, "extra":extra}) #, "extra":{"eIds":entityIds}}
-            exampleIndex += 1
+            examples.append({"id":sentenceGraph.getSentenceId()+".x"+str(self.exampleIndex), "labels":labels[i], "features":features, "extra":extra}) #, "extra":{"eIds":entityIds}}
             self.exampleStats.endExample()
-        return exampleIndex
     
     def getEntityTypes(self, entities, useNeg=False):
         types = set()

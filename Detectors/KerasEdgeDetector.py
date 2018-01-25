@@ -78,7 +78,6 @@ class KerasEdgeDetector(KerasDetectorBase):
     ###########################################################################
         
     def buildExamplesFromGraph(self, sentenceGraph, examples, goldGraph=None):
-        self.exampleIndex = 0
         # example directionality
         if self.styles.get("directed") == None and self.styles.get("undirected") == None: # determine directedness from corpus
             examplesAreDirected = self.structureAnalyzer.hasDirectedTargets() if self.structureAnalyzer != None else True
@@ -116,17 +115,18 @@ class KerasEdgeDetector(KerasDetectorBase):
         tokenElements = sorted([(Range.charOffsetToSingleTuple(x.get("charOffset")), x) for x in sentenceGraph.tokens])
         tokens = []
         for i in range(len(tokenElements)):
-            element = tokenElements[i]
-            token = {"index":i, "token":tokenElements[i]}
+            element = tokenElements[i][1]
+            token = {"index":i, "token":element, "charOffset":tokenElements[i][0]}
             token["words"] = self.embeddings["words"].getIndex(element.get("text").lower(), "[out]")
             token["POS"] = self.embeddings["POS"].getIndex(element.get("POS"), "[out]")
-            entityLabels = "---".join(sorted(set(sentenceGraph.tokenIsEntityHead[sentenceGraph.tokens[i]])))
+            entityLabels = "---".join(sorted(set([x.get("type") for x in sentenceGraph.tokenIsEntityHead[sentenceGraph.tokens[i]]])))
             token["entities"] = self.embeddings["POS"].getIndex(entityLabels if entityLabels != "" else "[N/A]", "[out]")         
-        tokenMap = {tokenElements[i]:tokens[i] for i in range(len(tokenElements))}
+            tokens.append(token)
+        tokenMap = {tokenElements[i][1]:tokens[i] for i in range(len(tokenElements))}
         
         # Generate examples based on interactions between entities or interactions between tokens
         if self.styles.get("token_nodes"):
-            loopRange = len(sentenceGraph.tokens)
+            loopRange = len(tokens)
         else:
             loopRange = len(entities)
         for i in range(loopRange-1):
@@ -134,8 +134,8 @@ class KerasEdgeDetector(KerasDetectorBase):
                 eI = None
                 eJ = None
                 if self.styles.get("token_nodes"):
-                    tI = sentenceGraph.tokens[i]
-                    tJ = sentenceGraph.tokens[j]
+                    tI = tokens[i]["element"]
+                    tJ = tokens[j]["element"]
                 else:
                     eI = entities[i]
                     eJ = entities[j]
@@ -253,6 +253,7 @@ class KerasEdgeDetector(KerasDetectorBase):
                 self.embeddings[tag + str(i)] = EmbeddingIndex(tag + str(i), dimEmbeddings, keys=initVectors)
         if self.debugGold:
             embeddings["gold"] = EmbeddingIndex("gold", dimEmbeddings, keys=initVectors)
+        return embeddings
 
     ###########################################################################
     # Example Labels
