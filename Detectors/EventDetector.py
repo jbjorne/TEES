@@ -55,7 +55,7 @@ class EventDetector(Detector):
               fullGrid=False, task=None,
               parse=None, tokenization=None,
               fromStep=None, toStep=None,
-              workDir=None):
+              workDir=None, testData=None):
         # Initialize the training process ##############################
         self.initVariables(trainData=trainData, optData=optData, model=model, combinedModel=combinedModel,
                            triggerExampleStyle=triggerExampleStyle, edgeExampleStyle=edgeExampleStyle, 
