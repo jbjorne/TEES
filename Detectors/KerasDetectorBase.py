@@ -277,28 +277,28 @@ class KerasDetectorBase(Detector):
         if modelChanged:
             model.save()
     
-#     def padExamples(self, model, examples):
-#         exampleSize = model.getStr(self.tag+"example-style")
-#         embNames = sorted(self.embeddings.keys())
-#         examples = [examples[x] for x in sorted(examples.keys())]
-#         dims = set([len(x["features"][embNames[0]]) for x in self.examples[dataSet]])
-#         maxDim = max(dims)
-#         if exampleSize == None:
-#             exampleSize = maxDim
-#             self.saveStr(self.tag+"task", exampleSize, model)
-#         if len(dims) != 1 or maxDim != exampleSize:
-#             if maxDim > exampleSize:
-#                 raise Exception("Example too long")
-#             paddings = {x:[self.embeddings[x].getIndex("[pad]")] for x in embNames}
-#             for example in examples:
-#                 features = example["features"]
-#                 for embName in embNames:
-#                     dim = len(features[embName])
-#                     if dim < exampleSize:
-#                         features[embName] += paddings[embName] * (dim - exampleSize)
-#                 
-#                         
-#         exampleSize = int(exampleSize)
+    def padExamples(self, model, examples):
+        exampleSize = model.getStr(self.tag + "example-length")
+        embNames = sorted(self.embeddings.keys())
+        examples = [x for x in [examples[dataSet] for dataSet in sorted(examples.keys())]]
+        dims = set([len(x["features"][embNames[0]]) for x in examples])
+        maxDim = max(dims)
+        if exampleSize == None:
+            exampleSize = maxDim
+            self.saveStr(self.tag + "example-length", exampleSize, model)
+        if len(dims) != 1 or maxDim != exampleSize:
+            if maxDim > exampleSize:
+                raise Exception("Example too long")
+            paddings = {x:[self.embeddings[x].getIndex("[pad]")] for x in embNames}
+            for example in examples:
+                features = example["features"]
+                dim = len(features[embNames[0]])
+                if dim < exampleSize:
+                    for embName in embNames:
+                        features[embName] += paddings[embName] * (dim - exampleSize)
+                 
+                         
+        exampleSize = int(exampleSize)
             
     ###########################################################################
     # Embeddings
