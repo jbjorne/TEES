@@ -282,7 +282,7 @@ class KerasDetectorBase(Detector):
         if modelChanged:
             model.save()
     
-    def padExamples(self, model, examples):
+    def padExamples(self, model, exampleSets):
         if self.exampleLength == None or self.exampleLength <= 0:
             self.exampleLength = model.getStr(self.tag + "example-length", None, int)
         elif model.getStr(self.tag + "example-length", None, int) == None:
@@ -291,8 +291,9 @@ class KerasDetectorBase(Detector):
          
         print >> sys.stderr, "Padding examples, length: " + str(self.exampleLength)
         embNames = sorted(self.embeddings.keys())
-        examples = list(itertools.chain.from_iterable([examples[x] for x in sorted(examples.keys())]))
-        dims = set([len(x["features"][embNames[0]]) for x in examples])
+        examples = list(itertools.chain.from_iterable([exampleSets[x] for x in sorted(exampleSets.keys())]))
+        # Get the dimensions of non-negative examples
+        dims = set([len(x["features"][embNames[0]]) for x in examples if (len(x["labels"]) > 0 and x["labels"][0] != "neg")])
         maxDim = max(dims)
         if self.exampleLength == None:
             print >> sys.stderr, "Defining example length as", maxDim
@@ -303,13 +304,23 @@ class KerasDetectorBase(Detector):
             print >> sys.stderr, "Padding examples to", self.exampleLength, "from dimensions", dims
             if maxDim > self.exampleLength:
                 raise Exception("Example too long")
+            counts = defaultdict(int)
             paddings = {x:[self.embeddings[x].getIndex("[pad]")] for x in embNames}
-            for example in examples:
-                features = example["features"]
-                dim = len(features[embNames[0]])
-                if dim < self.exampleLength:
-                    for embName in embNames:
-                        features[embName] += paddings[embName] * (self.exampleLength - dim)
+            for setName in sorted(exampleSets.keys()):
+                examples = []
+                for example in exampleSets[setName]:
+                    features = example["features"]
+                    dim = len(features[embNames[0]])
+                    if dim < self.exampleLength:
+                        for embName in embNames:
+                            features[embName] += paddings[embName] * (self.exampleLength - dim)
+                    if dim > self.exampleLength:
+                        assert len(example["labels"]) == 0 or example["labels"][0] == "neg", example
+                        counts["removed-neg-from-" + setName] += 1
+                    else:
+                        examples.append(example)
+                exampleSets[setName] = examples
+            print >> sys.stderr, dict(counts)
         else:
             print >> sys.stderr, "No padding added, all examples have the length", self.exampleLength
             
