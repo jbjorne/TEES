@@ -187,20 +187,17 @@ class KerasEdgeDetector(KerasDetectorBase):
         
         numTokens = len(tokens)
         begin = min(t1Index, t2Index) - outsideLength
-        if exampleLength > 0:
-            end = begin + exampleLength
-        else:
-            end = min(max(t1Index, t2Index) + 1 + outsideLength, numTokens)
-        span = end - begin
-        if exampleLength > 0 and span > exampleLength:
+        end = min(max(t1Index, t2Index) + 1 + outsideLength, numTokens)
+        if exampleLength > 0 and end - begin > exampleLength:
             self.exampleStats.filter("span")
             self.exampleStats.endExample()
             return None
+        rangeEnd = begin + exampleLength if exampleLength > 0 else end
         
         featureGroups = sorted(self.embeddings.keys())
         features = {x:[] for x in featureGroups}
-        for i in range(begin, end):
-            if i >= 0 and i < numTokens:
+        for i in range(begin, rangeEnd):
+            if i >= 0 and i < numTokens and i < end:
                 token = tokens[i]
                 #if self.debugGold:
                 #    features["gold"].append(self.embeddings["gold"].getIndex(",".join(labels[j]), "[out]"))
