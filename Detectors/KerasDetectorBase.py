@@ -33,6 +33,7 @@ from sklearn.metrics.classification import classification_report
 from keras.layers import Conv1D
 from keras.layers.pooling import MaxPooling1D
 from __builtin__ import isinstance
+from collections import defaultdict
 
 def f1ScoreMetric(y_true, y_pred):
     return sklearn.metrics.f1_score(y_true, y_pred, average="micro")
@@ -84,7 +85,8 @@ class KerasDetectorBase(Detector):
         if self.state == self.STATE_COMPONENT_TRAIN or self.checkStep("EXAMPLES"): # Generate the adjacency matrices
             self.initEmbeddings([optData, trainData, testData] if testData != None else [optData, trainData], parse)
             self.buildExamples(self.model, ["devel", "train"], [optData, trainData], [exampleFiles["devel"], exampleFiles["train"]], saveIdsToModel=True)
-            self.saveEmbeddings(self.embeddings, model.get(self.tag + "embeddings.json", True))
+            self.saveEmbeddings(self.embeddings, self.model.get(self.tag + "embeddings.json", True))
+            self.model.save()
             #if "test" in self.examples: # Test examples are generated here only for initializing the embeddings
             #    del self.examples["test"]
         #print self.examples["devel"][0:2]
@@ -296,17 +298,24 @@ class KerasDetectorBase(Detector):
         return embeddings
     
     def initVocabularies(self, embeddings, inputs, parseName):
+        print >> sys.stderr, "Initializing vocabularies using parse", parseName
         embNames = sorted(embeddings.keys())
         for xml in inputs:
             print >> sys.stderr, "Initializing embedding vocabularies from", xml
+            counts = defaultdict(int)
             for document in ETUtils.ETFromObj(xml).getiterator("document"):
+                counts["document"] += 1
                 for sentence in document.findall("sentence"):
+                    counts["sentence"] += 1
                     parse = IXMLUtils.getParseElement(sentence, parseName)
-                    tokenization = IXMLUtils.getTokenizationElement(sentence, parse.get("tokenized"))
-                    dependencies = [x for x in parse.findall("dependency")]
-                    tokens = [x for x in tokenization.findall("token")]
-                    for embName in embNames:
-                        embeddings[embName].addToVocabulary(tokens, dependencies)
+                    if parse != None:
+                        counts["parse"] += 1
+                        tokenization = IXMLUtils.getTokenizationElement(sentence, parse.get("tokenizer"))
+                        dependencies = [x for x in parse.findall("dependency")]
+                        tokens = [x for x in tokenization.findall("token")]
+                        for embName in embNames:
+                            embeddings[embName].addToVocabulary(tokens, dependencies)
+            print dict(counts)
         for embName in embNames:
             if embeddings[embName].vocabularyType == "words":
                 embeddings[embName].releaseWV()
