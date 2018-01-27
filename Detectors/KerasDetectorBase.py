@@ -207,7 +207,7 @@ class KerasDetectorBase(Detector):
                         keys.append(edge[2].get("type") + ">")
                     else:
                         assert edge[1] == path[i]
-                        keys.append(edge[2].get("type") + "<")
+                        keys.append("<" + edge[2].get("type"))
                 while len(keys) < self.pathDepth:
                     keys.append("[N/A]")
                 #key = "|".join(pattern)
@@ -276,6 +276,29 @@ class KerasDetectorBase(Detector):
                     json.dump(self.examples[dataSet], f, indent=2, sort_keys=True)
         if modelChanged:
             model.save()
+    
+#     def padExamples(self, model, examples):
+#         exampleSize = model.getStr(self.tag+"example-style")
+#         embNames = sorted(self.embeddings.keys())
+#         examples = [examples[x] for x in sorted(examples.keys())]
+#         dims = set([len(x["features"][embNames[0]]) for x in self.examples[dataSet]])
+#         maxDim = max(dims)
+#         if exampleSize == None:
+#             exampleSize = maxDim
+#             self.saveStr(self.tag+"task", exampleSize, model)
+#         if len(dims) != 1 or maxDim != exampleSize:
+#             if maxDim > exampleSize:
+#                 raise Exception("Example too long")
+#             paddings = {x:[self.embeddings[x].getIndex("[pad]")] for x in embNames}
+#             for example in examples:
+#                 features = example["features"]
+#                 for embName in embNames:
+#                     dim = len(features[embName])
+#                     if dim < exampleSize:
+#                         features[embName] += paddings[embName] * (dim - exampleSize)
+#                 
+#                         
+#         exampleSize = int(exampleSize)
             
     ###########################################################################
     # Embeddings
