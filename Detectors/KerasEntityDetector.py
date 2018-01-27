@@ -150,8 +150,8 @@ class KerasEntityDetector(KerasDetectorBase):
             types.add("neg")
         return sorted(types), sorted(entityIds)
     
-    def initEmbeddings(self):
-        print >> sys.stderr, "Initializing embedding indices"
+    def defineEmbeddings(self):
+        print >> sys.stderr, "Defining embedding indices"
         embeddings = {}
         wordVectorPath = self.styles.get("wv", Settings.W2VFILE)
         wv_mem = int(self.styles.get("wv_mem", 100000))
@@ -160,10 +160,10 @@ class KerasEntityDetector(KerasDetectorBase):
         embeddings["words"] = EmbeddingIndex("words", None, wordVectorPath, wv_mem, wv_map, initVectors)
         dimEmbeddings = int(self.styles.get("de", 8)) #8 #32
         embeddings["positions"] = EmbeddingIndex("positions", dimEmbeddings, keys=initVectors)
-        embeddings["named_entities"] = EmbeddingIndex("named_entities", dimEmbeddings, keys=initVectors)
+        embeddings["named_entities"] = EmbeddingIndex("named_entities", dimEmbeddings, keys=initVectors, vocabularyType="POS")
         embeddings["POS"] = EmbeddingIndex("POS", dimEmbeddings, keys=initVectors)
         for i in range(self.pathDepth):
-            embeddings["path" + str(i)] = EmbeddingIndex("path" + str(i), dimEmbeddings, keys=initVectors)
+            embeddings["path" + str(i)] = EmbeddingIndex("path" + str(i), dimEmbeddings, keys=initVectors, vocabularyType="directed_dependencies")
         if self.debugGold:
             embeddings["gold"] = EmbeddingIndex("gold", dimEmbeddings, keys=initVectors)
         return embeddings

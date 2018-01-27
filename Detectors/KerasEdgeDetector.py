@@ -235,8 +235,8 @@ class KerasEdgeDetector(KerasDetectorBase):
         examples.append({"id":sentenceGraph.getSentenceId()+".x"+str(self.exampleIndex), "labels":labels, "features":features, "extra":extra})
         self.exampleIndex += 1
     
-    def initEmbeddings(self):
-        print >> sys.stderr, "Initializing embedding indices"
+    def defineEmbeddings(self):
+        print >> sys.stderr, "Defining embedding indices"
         embeddings = {}
         wordVectorPath = self.styles.get("wv", Settings.W2VFILE)
         wv_mem = int(self.styles.get("wv_mem", 100000))
@@ -247,10 +247,10 @@ class KerasEdgeDetector(KerasDetectorBase):
         embeddings["positions"] = EmbeddingIndex("positions", dimEmbeddings, keys=initVectors)
         embeddings["entities"] = EmbeddingIndex("entities", dimEmbeddings, keys=initVectors)
         embeddings["rel_token"] = EmbeddingIndex("rel_token", dimEmbeddings, keys=initVectors)
-        embeddings["POS"] = EmbeddingIndex("POS", dimEmbeddings, keys=initVectors)
+        embeddings["POS"] = EmbeddingIndex("POS", dimEmbeddings, keys=initVectors, vocabularyType="POS")
         for i in range(self.pathDepth):
             for tag in ("path1_", "path2_"):
-                embeddings[tag + str(i)] = EmbeddingIndex(tag + str(i), dimEmbeddings, keys=initVectors)
+                embeddings[tag + str(i)] = EmbeddingIndex(tag + str(i), dimEmbeddings, keys=initVectors, vocabularyType="directed_dependencies")
         if self.debugGold:
             embeddings["gold"] = EmbeddingIndex("gold", dimEmbeddings, keys=initVectors)
         return embeddings

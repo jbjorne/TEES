@@ -3,6 +3,7 @@ import numpy
 from Utils.Libraries.wvlib_light.lwvlib import WV
 from keras.layers.embeddings import Embedding
 from keras.layers import Input
+import Utils.ElementTreeUtils as ETUtils
 
 def normalized(a, axis=-1, order=2):
     l2 = numpy.atleast_1d(numpy.linalg.norm(a, order, axis))
@@ -10,14 +11,17 @@ def normalized(a, axis=-1, order=2):
     return a / numpy.expand_dims(l2, axis)
 
 class EmbeddingIndex():
-    def __init__(self, name=None, dimVector=None, wordVectorPath=None, wvMem=100000, wvMap=10000000, keys=None):
+    def __init__(self, name=None, dimVector=None, wordVectorPath=None, wvMem=100000, wvMap=10000000, keys=None, vocabularyType="AUTO"):
         self._reset(name, dimVector, wordVectorPath, wvMem, wvMap, keys)
     
-    def _reset(self, name, dimVector=None, wvPath=None, wvMem=100000, wvMap=10000000, keys=None, embeddingIndex=None):
+    def _reset(self, name, dimVector=None, wvPath=None, wvMem=100000, wvMap=10000000, keys=None, embeddingIndex=None, vocabularyType="AUTO"):
         self.name = name
         self.embeddings = [] if embeddingIndex == None else None
         self.embeddingIndex = {} if embeddingIndex == None else embeddingIndex
         self.keyByIndex = {} if embeddingIndex == None else {embeddingIndex[x]:x for x in embeddingIndex.keys()}
+        self.vocabularyType = vocabularyType
+        if self.vocabularyType == "AUTO":
+            self.vocabularyType = "words" if wvPath != None else None 
         self.wvPath = wvPath
         self.wvMem = wvMem
         self.wvMap = wvMap
@@ -38,13 +42,13 @@ class EmbeddingIndex():
         return len(self.embeddingIndex)
     
     def serialize(self):
+        serialized = {"name":self.name, "dimVector":self.dimVector, "index":self.embeddingIndex, "vocabularyType":self.vocabularyType}
         if self.wvPath != None:
-            return {"name":self.name, "dimVector":self.dimVector, "wvPath":self.wvPath, "wvMem":self.wvMem, "wvMap":self.wvMap, "index":self.embeddingIndex}
-        else:
-            return {"name":self.name, "dimVector":self.dimVector, "index":self.embeddingIndex}
+            serialized.update({"wvPath":self.wvPath, "wvMem":self.wvMem, "wvMap":self.wvMap})
+        return serialized
     
     def deserialize(self, obj):
-        self._reset(obj["name"], obj.get("dimVector"), obj.get("wvPath"), obj.get("wvMem"), obj.get("wvMap"), None, obj.get("index"))
+        self._reset(obj["name"], obj.get("dimVector"), obj.get("wvPath"), obj.get("wvMem"), obj.get("wvMap"), None, obj.get("index"), obj.get("vocabularyType"))
         return self
     
     def releaseWV(self):
@@ -79,6 +83,22 @@ class EmbeddingIndex():
             else:
                 self._addEmbedding(key, numpy.ones(self.dimVector)) #normalized(numpy.random.uniform(-1.0, 1.0, self.dimVector)))
         return self.embeddingIndex[key] if key in self.embeddingIndex else self.embeddingIndex[default]
+    
+    def addToVocabulary(self, tokens, dependencies):
+        if self.vocabularyType == None:
+            return
+        if self.vocabularyType == "words":
+            for token in tokens:
+                self.getIndex(token.get("text").lower(), "[out]")
+        elif self.vocabularyType == "POS":
+            for token in tokens:
+                self.getIndex(token.get("POS"))
+        elif self.vocabularyType == "directed_dependencies":
+            for dependency in dependencies:
+                self.getIndex("<" + dependency.get("type"))
+                self.getIndex(dependency.get("type") + ">")
+        else:
+            raise Exception("Unknown vocabulary type '" + str(self.vocabularyType) + "'")
     
     def makeLayers(self, dimExample, name, trainable=True):
         self.inputLayer = Input(shape=(dimExample,), name=name)

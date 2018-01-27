@@ -7,6 +7,7 @@ import types
 from Detector import Detector
 from Core.SentenceGraph import getCorpusIterator
 import Utils.ElementTreeUtils as ETUtils
+import Utils.InteractionXML.InteractionXMLUtils as IXMLUtils
 from Core.IdSet import IdSet
 import Utils.Parameters
 import Utils.Settings as Settings
@@ -81,13 +82,11 @@ class KerasDetectorBase(Detector):
         self.model = self.openModel(model, "a") # Devel model already exists, with ids etc
         exampleFiles = {"devel":self.workDir+self.tag+"opt-examples.json.gz", "train":self.workDir+self.tag+"train-examples.json.gz"}
         if self.state == self.STATE_COMPONENT_TRAIN or self.checkStep("EXAMPLES"): # Generate the adjacency matrices
-            self.buildExamples(self.model, 
-                               ["devel", "train", "test"] if testData != None else ["devel", "train"], 
-                               [optData, trainData, testData] if testData != None else [optData, trainData], 
-                               [exampleFiles["devel"], exampleFiles["train"]], 
-                               saveIdsToModel=True)
-            if "test" in self.examples: # Test examples are generated here only for initializing the embeddings
-                del self.examples["test"]
+            self.initEmbeddings([optData, trainData, testData] if testData != None else [optData, trainData], parse)
+            self.buildExamples(self.model, ["devel", "train"], [optData, trainData], [exampleFiles["devel"], exampleFiles["train"]], saveIdsToModel=True)
+            self.saveEmbeddings(self.embeddings, model.get(self.tag + "embeddings.json", True))
+            #if "test" in self.examples: # Test examples are generated here only for initializing the embeddings
+            #    del self.examples["test"]
         #print self.examples["devel"][0:2]
         self.showExample(self.examples["devel"][0])
         if self.state == self.STATE_COMPONENT_TRAIN or self.checkStep("MODEL"): # Define and train the Keras model
@@ -250,12 +249,9 @@ class KerasDetectorBase(Detector):
             parse = self.getStr(self.tag+"parse", model)
         self.structureAnalyzer.load(model)
         modelChanged = False
-        # Load word vectors
-        embeddingsPath = model.get(self.tag + "embeddings.json", False, None)
-        if embeddingsPath != None:
-            self.embeddings = self.loadEmbeddings(embeddingsPath)
-        else:
-            self.embeddings = self.initEmbeddings()
+        # Load embeddings
+        if self.embeddings == None:
+            self.embeddings = self.loadEmbeddings(model.get(self.tag + "embeddings.json", False, None))
         # Make example for all input files
         self.examples = {x:[] for x in setNames}
         for setName, data, gold in itertools.izip_longest(setNames, datas, golds, fillvalue=None):
@@ -264,10 +260,6 @@ class KerasDetectorBase(Detector):
         if hasattr(self.structureAnalyzer, "typeMap") and model.mode != "r":
             print >> sys.stderr, "Saving StructureAnalyzer.typeMap"
             self.structureAnalyzer.save(model)
-            modelChanged = True
-        if saveIdsToModel:
-            print >> sys.stderr, "Saving embedding indices"
-            self.saveEmbeddings(self.embeddings, model.get(self.tag + "embeddings.json", True))
             modelChanged = True
         if self.styles.get("save"):
             for dataSet in setNames:
@@ -279,12 +271,17 @@ class KerasDetectorBase(Detector):
                     json.dump(self.examples[dataSet], f, indent=2, sort_keys=True)
         if modelChanged:
             model.save()
-        self.embeddings["words"].releaseWV()
-        
-    def initEmbeddings(self):
+    
+    def initEmbeddings(self, datas, parse):
+        print >> sys.stderr, "Initializing embeddings"
+        self.embeddings = self.defineEmbeddings()
+        self.initVocabularies(self.embeddings, datas, parse)
+    
+    def defineEmbeddings(self):
         raise NotImplementedError
     
     def saveEmbeddings(self, embeddings, outPath):
+        print >> sys.stderr, "Saving embedding indices"
         with open(outPath, "wt") as f:
             json.dump([embeddings[x].serialize() for x in sorted(embeddings.keys())], f, indent=2, sort_keys=True)
     
@@ -297,6 +294,22 @@ class KerasDetectorBase(Detector):
                 embeddings[emb.name] = emb
         print >> sys.stderr, [(embeddings[x].name, embeddings[x].getSize()) for x in sorted(embeddings.keys())]
         return embeddings
+    
+    def initVocabularies(self, embeddings, inputs, parseName):
+        embNames = sorted(embeddings.keys())
+        for xml in inputs:
+            print >> sys.stderr, "Initializing embedding vocabularies from", xml
+            for document in ETUtils.ETFromObj(xml).getiterator("document"):
+                for sentence in document.findall("sentence"):
+                    parse = IXMLUtils.getParseElement(sentence, parseName)
+                    tokenization = IXMLUtils.getTokenizationElement(sentence, parse.get("tokenized"))
+                    dependencies = [x for x in parse.findall("dependency")]
+                    tokens = [x for x in tokenization.findall("token")]
+                    for embName in embNames:
+                        embeddings[embName].addToVocabulary(tokens, dependencies)
+        for embName in embNames:
+            if embeddings[embName].vocabularyType == "words":
+                embeddings[embName].releaseWV()
     
     def defineModel(self, verbose=False):
         """
