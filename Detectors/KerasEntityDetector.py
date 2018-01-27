@@ -88,7 +88,7 @@ class KerasEntityDetector(KerasDetectorBase):
         indices = [self.embeddings["words"].getIndex(sentenceGraph.tokens[i].get("text").lower(), "[out]") for i in range(numTokens)]
         labels, entityIds = zip(*[self.getEntityTypes(sentenceGraph.tokenIsEntityHead[sentenceGraph.tokens[i]]) for i in range(numTokens)])
         self.exampleLength = int(self.styles.get("el", 21)) #31 #9 #21 #5 #3 #9 #19 #21 #9 #5 #exampleLength = self.EXAMPLE_LENGTH if self.EXAMPLE_LENGTH != None else numTokens
-
+        
         dg = sentenceGraph.dependencyGraph
         undirected = dg.toUndirected()
         edgeCounts = {x:len(dg.getInEdges(x) + dg.getOutEdges(x)) for x in sentenceGraph.tokens}
@@ -132,6 +132,7 @@ class KerasEntityDetector(KerasDetectorBase):
             if entityIds[i] != None:
                 extra["goldIds"] = "/".join(entityIds[i]) # The entities to which this example corresponds
             examples.append({"id":sentenceGraph.getSentenceId()+".x"+str(self.exampleIndex), "labels":labels[i], "features":features, "extra":extra}) #, "extra":{"eIds":entityIds}}
+            self.exampleIndex += 1
             self.exampleStats.endExample()
     
     def getEntityTypes(self, entities, useNeg=False):

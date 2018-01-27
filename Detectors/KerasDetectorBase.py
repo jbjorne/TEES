@@ -52,6 +52,7 @@ class KerasDetectorBase(Detector):
         self.exampleWriter = None
         self.evaluator = AveragingMultiClassEvaluator
         self.debugGold = False
+        self.exampleLength = None
     
     ###########################################################################
     # Main Pipeline Interface
@@ -85,6 +86,7 @@ class KerasDetectorBase(Detector):
         if self.state == self.STATE_COMPONENT_TRAIN or self.checkStep("EXAMPLES"): # Generate the adjacency matrices
             self.initEmbeddings([optData, trainData, testData] if testData != None else [optData, trainData], parse)
             self.buildExamples(self.model, ["devel", "train"], [optData, trainData], [exampleFiles["devel"], exampleFiles["train"]], saveIdsToModel=True)
+            self.padExamples(self.model, self.examples)
             self.saveEmbeddings(self.embeddings, self.model.get(self.tag + "embeddings.json", True))
             self.model.save()
             #if "test" in self.examples: # Test examples are generated here only for initializing the embeddings
@@ -131,6 +133,7 @@ class KerasDetectorBase(Detector):
             parse = self.getStr(self.tag+"parse", model)
         if not useExistingExamples:
             self.buildExamples(model, ["classification"], [data], [exampleFileName], [goldData], parse=parse, exampleStyle=exampleStyle)
+            self.padExamples(model, self.examples)
         examples = self.examples["classification"]
         self.showExample(examples[0])
         if classifierModel == None:
@@ -278,27 +281,33 @@ class KerasDetectorBase(Detector):
             model.save()
     
     def padExamples(self, model, examples):
-        exampleSize = model.getStr(self.tag + "example-length")
-        embNames = sorted(self.embeddings.keys())
-        examples = [x for x in [examples[dataSet] for dataSet in sorted(examples.keys())]]
-        dims = set([len(x["features"][embNames[0]]) for x in examples])
-        maxDim = max(dims)
-        if exampleSize == None:
-            exampleSize = maxDim
-            self.saveStr(self.tag + "example-length", exampleSize, model)
-        if len(dims) != 1 or maxDim != exampleSize:
-            if maxDim > exampleSize:
-                raise Exception("Example too long")
-            paddings = {x:[self.embeddings[x].getIndex("[pad]")] for x in embNames}
-            for example in examples:
-                features = example["features"]
-                dim = len(features[embNames[0]])
-                if dim < exampleSize:
-                    for embName in embNames:
-                        features[embName] += paddings[embName] * (dim - exampleSize)
-                 
-                         
-        exampleSize = int(exampleSize)
+        pass
+#         if self.exampleLength == None or self.exampleLength <= 0:
+#             self.exampleLength = model.getStr(self.tag + "example-length")
+#         elif model.getStr(self.tag + "example-length") == None:
+#             print >> sys.stderr, "Defining example length as", self.exampleLength
+#             self.saveStr(self.tag + "example-length", self.exampleLength, model)
+#         
+#         print >> sys.stderr, "Padding examples, length: " + str(self.exampleLength)
+#         embNames = sorted(self.embeddings.keys())
+#         examples = [x for x in [examples[dataSet] for dataSet in sorted(examples.keys())]]
+#         dims = set([len(x["features"][embNames[0]]) for x in examples])
+#         maxDim = max(dims)
+#         if self.exampleLength == None:
+#             print >> sys.stderr, "Defining example length as", maxDim
+#             self.exampleLength = maxDim
+#             self.saveStr(self.tag + "example-length", self.exampleLength, model)
+#         if len(dims) != 1 or maxDim != self.exampleLength:
+#             print >> sys.stderr, "Padding examples to", self.exampleLength, "from dimensions", dims
+#             if maxDim > self.exampleLength:
+#                 raise Exception("Example too long")
+#             paddings = {x:[self.embeddings[x].getIndex("[pad]")] for x in embNames}
+#             for example in examples:
+#                 features = example["features"]
+#                 dim = len(features[embNames[0]])
+#                 if dim < self.exampleLength:
+#                     for embName in embNames:
+#                         features[embName] += paddings[embName] * (dim - self.exampleLength)
             
     ###########################################################################
     # Embeddings
