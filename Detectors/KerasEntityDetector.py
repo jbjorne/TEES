@@ -160,8 +160,8 @@ class KerasEntityDetector(KerasDetectorBase):
         embeddings["words"] = EmbeddingIndex("words", None, wordVectorPath, wv_mem, wv_map, initVectors)
         dimEmbeddings = int(self.styles.get("de", 8)) #8 #32
         embeddings["positions"] = EmbeddingIndex("positions", dimEmbeddings, keys=initVectors)
-        embeddings["named_entities"] = EmbeddingIndex("named_entities", dimEmbeddings, keys=initVectors, vocabularyType="POS")
-        embeddings["POS"] = EmbeddingIndex("POS", dimEmbeddings, keys=initVectors)
+        embeddings["named_entities"] = EmbeddingIndex("named_entities", dimEmbeddings, keys=initVectors)
+        embeddings["POS"] = EmbeddingIndex("POS", dimEmbeddings, keys=initVectors, vocabularyType="POS")
         for i in range(self.pathDepth):
             embeddings["path" + str(i)] = EmbeddingIndex("path" + str(i), dimEmbeddings, keys=initVectors, vocabularyType="directed_dependencies")
         if self.debugGold:

@@ -12,16 +12,17 @@ def normalized(a, axis=-1, order=2):
 
 class EmbeddingIndex():
     def __init__(self, name=None, dimVector=None, wordVectorPath=None, wvMem=100000, wvMap=10000000, keys=None, vocabularyType="AUTO"):
-        self._reset(name, dimVector, wordVectorPath, wvMem, wvMap, keys)
+        self._reset(name, dimVector, wordVectorPath, wvMem, wvMap, keys, vocabularyType)
     
-    def _reset(self, name, dimVector=None, wvPath=None, wvMem=100000, wvMap=10000000, keys=None, embeddingIndex=None, vocabularyType="AUTO"):
+    def _reset(self, name, dimVector=None, wvPath=None, wvMem=100000, wvMap=10000000, keys=None, vocabularyType="AUTO", embeddingIndex=None, locked=False):
         self.name = name
         self.embeddings = [] if embeddingIndex == None else None
         self.embeddingIndex = {} if embeddingIndex == None else embeddingIndex
         self.keyByIndex = {} if embeddingIndex == None else {embeddingIndex[x]:x for x in embeddingIndex.keys()}
         self.vocabularyType = vocabularyType
         if self.vocabularyType == "AUTO":
-            self.vocabularyType = "words" if wvPath != None else None 
+            self.vocabularyType = "words" if wvPath != None else None
+        self.locked = locked
         self.wvPath = wvPath
         self.wvMem = wvMem
         self.wvMap = wvMap
@@ -42,13 +43,13 @@ class EmbeddingIndex():
         return len(self.embeddingIndex)
     
     def serialize(self):
-        serialized = {"name":self.name, "dimVector":self.dimVector, "index":self.embeddingIndex, "vocabularyType":self.vocabularyType}
+        serialized = {"name":self.name, "dimVector":self.dimVector, "index":self.embeddingIndex, "vocabularyType":self.vocabularyType, "locked":self.locked}
         if self.wvPath != None:
             serialized.update({"wvPath":self.wvPath, "wvMem":self.wvMem, "wvMap":self.wvMap})
         return serialized
     
     def deserialize(self, obj):
-        self._reset(obj["name"], obj.get("dimVector"), obj.get("wvPath"), obj.get("wvMem"), obj.get("wvMap"), None, obj.get("index"), obj.get("vocabularyType"))
+        self._reset(obj["name"], obj.get("dimVector"), obj.get("wvPath"), obj.get("wvMem"), obj.get("wvMap"), None, obj.get("vocabularyType"), obj.get("index"), obj.get("locked"))
         return self
     
     def releaseWV(self):
@@ -69,19 +70,14 @@ class EmbeddingIndex():
     def getIndex(self, key, default=None):
         assert isinstance(key, basestring), key
         if key not in self.embeddingIndex and self.embeddings != None:
-            if self.wv != None:
-                vector = self.wv.w_to_normv(key)
-                if vector is not None:
-                    #self.embeddingIndex[key] = len(self.embeddings)
-                    #self.embeddings.append(vector)
-                    self._addEmbedding(key, vector)
-#                     if not self.initialKeysInitialized:
-#                         for initialKey in self.initialKeys:
-#                             assert self.embeddings[self.embeddingIndex[initialKey]] is None
-#                             self.embeddings[self.embeddingIndex[initialKey]] = numpy.zeros(vector.size)
-#                         self.initialKeysInitialized = True
+            if self.wvPath != None:
+                vector = self.wv.w_to_normv(key) if self.wv != None else None
             else:
-                self._addEmbedding(key, numpy.ones(self.dimVector)) #normalized(numpy.random.uniform(-1.0, 1.0, self.dimVector)))
+                vector = numpy.ones(self.dimVector) #normalized(numpy.random.uniform(-1.0, 1.0, self.dimVector)))
+            if vector is not None:
+                if self.locked:
+                    raise Exception("Cannot expand locked vocabulary for embedding '" + self.name + "'")
+                self._addEmbedding(key, vector)
         return self.embeddingIndex[key] if key in self.embeddingIndex else self.embeddingIndex[default]
     
     def addToVocabulary(self, tokens, dependencies):

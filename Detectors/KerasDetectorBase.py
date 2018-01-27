@@ -263,6 +263,9 @@ class KerasDetectorBase(Detector):
             print >> sys.stderr, "Saving StructureAnalyzer.typeMap"
             self.structureAnalyzer.save(model)
             modelChanged = True
+        if saveIdsToModel:
+            self.saveEmbeddings(self.embeddings, model.get(self.tag + "embeddings.json", True))
+            modelChanged = True
         if self.styles.get("save"):
             for dataSet in setNames:
                 examplePath = os.path.join(os.path.abspath(self.workDir), dataSet + "-examples.json")
@@ -273,6 +276,10 @@ class KerasDetectorBase(Detector):
                     json.dump(self.examples[dataSet], f, indent=2, sort_keys=True)
         if modelChanged:
             model.save()
+            
+    ###########################################################################
+    # Embeddings
+    ###########################################################################
     
     def initEmbeddings(self, datas, parse):
         print >> sys.stderr, "Initializing embeddings"
@@ -315,8 +322,10 @@ class KerasDetectorBase(Detector):
                         tokens = [x for x in tokenization.findall("token")]
                         for embName in embNames:
                             embeddings[embName].addToVocabulary(tokens, dependencies)
-            print dict(counts)
+            print dict(counts), {x.name:len(x.embeddings) for x in embeddings.values()}
         for embName in embNames:
+            if embeddings[embName].vocabularyType != None:
+                embeddings[embName].locked = True
             if embeddings[embName].vocabularyType == "words":
                 embeddings[embName].releaseWV()
     
@@ -371,6 +380,10 @@ class KerasDetectorBase(Detector):
         if verbose:
             kerasModel.summary()
         return kerasModel
+    
+    ###########################################################################
+    # Keras Model
+    ###########################################################################
    
     def fitModel(self, verbose=True):
         """
