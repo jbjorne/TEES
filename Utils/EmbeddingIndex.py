@@ -14,7 +14,7 @@ class EmbeddingIndex():
     def __init__(self, name=None, dimVector=None, wordVectorPath=None, wvMem=100000, wvMap=10000000, keys=None, vocabularyType="AUTO"):
         self._reset(name, dimVector, wordVectorPath, wvMem, wvMap, keys, vocabularyType)
     
-    def _reset(self, name, dimVector=None, wvPath=None, wvMem=100000, wvMap=10000000, keys=None, vocabularyType="AUTO", embeddingIndex=None, locked=False):
+    def _reset(self, name, dimVector=None, wvPath=None, wvMem=100000, wvMap=10000000, keys=None, vocabularyType="AUTO", embeddingIndex=None, locked=None):
         self.name = name
         self.embeddings = [] if embeddingIndex == None else None
         self.embeddingIndex = {} if embeddingIndex == None else embeddingIndex
@@ -22,6 +22,7 @@ class EmbeddingIndex():
         self.vocabularyType = vocabularyType
         if self.vocabularyType == "AUTO":
             self.vocabularyType = "words" if wvPath != None else None
+        assert locked in (None, "all", "content")
         self.locked = locked
         self.wvPath = wvPath
         self.wvMem = wvMem
@@ -75,8 +76,11 @@ class EmbeddingIndex():
             else:
                 vector = numpy.ones(self.dimVector) #normalized(numpy.random.uniform(-1.0, 1.0, self.dimVector)))
             if vector is not None:
-                if self.locked and (key[0] != "[" or key[-1] != "]"):
-                    raise Exception("Cannot expand locked vocabulary with content key '" + key + "' for embedding '" + self.name + "'")
+                if self.locked != None:
+                    if self.locked == "content" and (key[0] != "[" or key[-1] != "]"):
+                        raise Exception("Cannot expand locked vocabulary with content key '" + key + "' for embedding '" + self.name + "'")
+                    else:
+                        raise Exception("Cannot expand locked vocabulary with key '" + key + "' for embedding '" + self.name + "'")
                 self._addEmbedding(key, vector)
         return self.embeddingIndex[key] if key in self.embeddingIndex else self.embeddingIndex[default]
     

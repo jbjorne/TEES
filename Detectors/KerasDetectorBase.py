@@ -338,6 +338,8 @@ class KerasDetectorBase(Detector):
     
     def saveEmbeddings(self, embeddings, outPath):
         print >> sys.stderr, "Saving embedding indices"
+        for embedding in self.embeddings.values():
+            embedding.locked = "all"
         with open(outPath, "wt") as f:
             json.dump([embeddings[x].serialize() for x in sorted(embeddings.keys())], f, indent=2, sort_keys=True)
     
@@ -372,7 +374,7 @@ class KerasDetectorBase(Detector):
             print dict(counts), {x.name:len(x.embeddings) for x in embeddings.values()}
         for embName in embNames:
             if embeddings[embName].vocabularyType != None:
-                embeddings[embName].locked = True
+                embeddings[embName].locked = "content"
             if embeddings[embName].vocabularyType == "words":
                 embeddings[embName].releaseWV()
     
