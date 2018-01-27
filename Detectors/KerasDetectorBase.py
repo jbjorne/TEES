@@ -88,6 +88,8 @@ class KerasDetectorBase(Detector):
             self.buildExamples(self.model, ["devel", "train"], [optData, trainData], [exampleFiles["devel"], exampleFiles["train"]], saveIdsToModel=True)
             self.padExamples(self.model, self.examples)
             self.saveEmbeddings(self.embeddings, self.model.get(self.tag + "embeddings.json", True))
+            if self.exampleLength != None and self.model.getStr(self.tag + "example-length", None, int) == None:
+                self.saveStr(self.tag + "example-length", str(self.exampleLength), self.model)
             self.model.save()
             #if "test" in self.examples: # Test examples are generated here only for initializing the embeddings
             #    del self.examples["test"]
@@ -281,33 +283,35 @@ class KerasDetectorBase(Detector):
             model.save()
     
     def padExamples(self, model, examples):
-        pass
-#         if self.exampleLength == None or self.exampleLength <= 0:
-#             self.exampleLength = model.getStr(self.tag + "example-length")
-#         elif model.getStr(self.tag + "example-length") == None:
-#             print >> sys.stderr, "Defining example length as", self.exampleLength
-#             self.saveStr(self.tag + "example-length", self.exampleLength, model)
-#         
-#         print >> sys.stderr, "Padding examples, length: " + str(self.exampleLength)
-#         embNames = sorted(self.embeddings.keys())
-#         examples = [x for x in [examples[dataSet] for dataSet in sorted(examples.keys())]]
-#         dims = set([len(x["features"][embNames[0]]) for x in examples])
-#         maxDim = max(dims)
-#         if self.exampleLength == None:
-#             print >> sys.stderr, "Defining example length as", maxDim
-#             self.exampleLength = maxDim
-#             self.saveStr(self.tag + "example-length", self.exampleLength, model)
-#         if len(dims) != 1 or maxDim != self.exampleLength:
-#             print >> sys.stderr, "Padding examples to", self.exampleLength, "from dimensions", dims
-#             if maxDim > self.exampleLength:
-#                 raise Exception("Example too long")
-#             paddings = {x:[self.embeddings[x].getIndex("[pad]")] for x in embNames}
-#             for example in examples:
-#                 features = example["features"]
-#                 dim = len(features[embNames[0]])
-#                 if dim < self.exampleLength:
-#                     for embName in embNames:
-#                         features[embName] += paddings[embName] * (dim - self.exampleLength)
+        if self.exampleLength == None or self.exampleLength <= 0:
+            self.exampleLength = model.getStr(self.tag + "example-length", None, int)
+        elif model.getStr(self.tag + "example-length", None, int) == None:
+            print >> sys.stderr, "Defining example length as", self.exampleLength
+            self.saveStr(self.tag + "example-length", str(self.exampleLength), model)
+         
+        print >> sys.stderr, "Padding examples, length: " + str(self.exampleLength)
+        embNames = sorted(self.embeddings.keys())
+        examples = list(itertools.chain.from_iterable([examples[x] for x in sorted(examples.keys())]))
+        dims = set([len(x["features"][embNames[0]]) for x in examples])
+        maxDim = max(dims)
+        if self.exampleLength == None:
+            print >> sys.stderr, "Defining example length as", maxDim
+            self.exampleLength = maxDim
+            self.saveStr(self.tag + "example-length", str(self.exampleLength), model)
+        
+        if len(dims) != 1 or maxDim != self.exampleLength:
+            print >> sys.stderr, "Padding examples to", self.exampleLength, "from dimensions", dims
+            if maxDim > self.exampleLength:
+                raise Exception("Example too long")
+            paddings = {x:[self.embeddings[x].getIndex("[pad]")] for x in embNames}
+            for example in examples:
+                features = example["features"]
+                dim = len(features[embNames[0]])
+                if dim < self.exampleLength:
+                    for embName in embNames:
+                        features[embName] += paddings[embName] * (self.exampleLength - dim)
+        else:
+            print >> sys.stderr, "No padding added, all examples have the length", self.exampleLength
             
     ###########################################################################
     # Embeddings
@@ -496,7 +500,9 @@ class KerasDetectorBase(Detector):
             for dataSet in dataSets:
                 if self.exampleLength != None:
                     for example in self.examples[dataSet]:
-                        assert len(example["features"][featureGroup]) == self.exampleLength, example
+                        fl = len(example["features"][featureGroup])
+                        if len(example["features"][featureGroup]) != self.exampleLength:
+                            raise Exception("Feature group '" + featureGroup + "' length differs from example length: " + str([fl, self.exampleLength, example["id"]]))
                 features[dataSet][featureGroup] = numpy.array([x["features"][featureGroup] for x in self.examples[dataSet]])
             print >> sys.stderr, featureGroup, features[dataSets[0]][featureGroup].shape, features[dataSets[0]][featureGroup][0]
         return features

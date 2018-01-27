@@ -47,8 +47,8 @@ class KerasEdgeDetector(KerasDetectorBase):
         KerasDetectorBase.__init__(self)
         self.tag = "edge-"
         self.exampleWriter = EdgeExampleWriter()
-        self.outsideLength = 5
-        self.exampleLength = 100
+        #self.outsideLength = 5
+        #self.exampleLength = 100
         
     ###########################################################################
     # Example Filtering
@@ -172,20 +172,34 @@ class KerasEdgeDetector(KerasDetectorBase):
             self.exampleStats.endExample()
             return
         
+        exampleLength = int(self.styles.get("el", -1)) if self.exampleLength == None else self.exampleLength
+        if self.exampleLength == None:
+            self.exampleLength = exampleLength
+        outsideLength = int(self.styles.get("ol", 5))
+        
         t1Index = tokenMap[token1]["index"]
         t2Index = tokenMap[token2]["index"]
-        span = abs(t1Index - t2Index)
-        if span + 2 * self.outsideLength > self.exampleLength:
+#         span = abs(t1Index - t2Index)
+#         if span + 2 * outsideLength > self.exampleLength:
+#             self.exampleStats.filter("span")
+#             self.exampleStats.endExample()
+#             return None
+        
+        numTokens = len(tokens)
+        begin = min(t1Index, t2Index) - outsideLength
+        if exampleLength > 0:
+            end = begin + exampleLength
+        else:
+            end = min(max(t1Index, t2Index) + 1 + outsideLength, numTokens)
+        span = end - begin
+        if exampleLength > 0 and span > exampleLength:
             self.exampleStats.filter("span")
             self.exampleStats.endExample()
             return None
         
-        begin = min(t1Index, t2Index) - self.outsideLength
-        
         featureGroups = sorted(self.embeddings.keys())
         features = {x:[] for x in featureGroups}
-        numTokens = len(tokens)
-        for i in range(begin, begin + self.exampleLength):
+        for i in range(begin, end):
             if i >= 0 and i < numTokens:
                 token = tokens[i]
                 #if self.debugGold:
