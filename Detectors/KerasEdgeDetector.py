@@ -205,7 +205,7 @@ class KerasEdgeDetector(KerasDetectorBase):
                 features["positions1"].append(self.embeddings["positions1"].getIndex(str(t1Index - i), "[out]"))
                 features["positions2"].append(self.embeddings["positions2"].getIndex(str(t2Index - i), "[out]"))
                 features["entities"].append(token["entities"])
-                features["rel_token"].append(self.embeddings["rel_token"].getIndex("1" if (i == t1Index or i == t2Index) else "0"))
+                features["rel_token"].append(self.embeddings["rel_token"].getIndex("e1" if i == t1Index else ("e2" if i == t2Index else "N/A")))
                 features["POS"].append(token["POS"])
                 self.addPathEmbedding(token1, token["element"], sentenceGraph.dependencyGraph, undirected, edgeCounts, features, "path1_")
                 self.addPathEmbedding(token2, token["element"], sentenceGraph.dependencyGraph, undirected, edgeCounts, features, "path2_")
