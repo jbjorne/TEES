@@ -184,6 +184,15 @@ class KerasEdgeDetector(KerasDetectorBase):
 #             self.exampleStats.filter("span")
 #             self.exampleStats.endExample()
 #             return None
+
+        # define features
+        pathTokens = set()
+        paths = undirected.getPaths(token1, token2)
+        if len(paths) == 0:
+            paths = [[token1, token2]]
+        for path in paths:
+            for node in path:
+                pathTokens.add(node)
         
         numTokens = len(tokens)
         begin = min(t1Index, t2Index) - outsideLength
@@ -207,6 +216,7 @@ class KerasEdgeDetector(KerasDetectorBase):
                 features["entities"].append(token["entities"])
                 features["rel_token"].append(self.embeddings["rel_token"].getIndex("e1" if i == t1Index else ("e2" if i == t2Index else "N/A")))
                 features["POS"].append(token["POS"])
+                features["shortest_path"].append(self.embeddings["shortest_path"].getIndex("1" if token["element"] in pathTokens else "0"))
                 self.addPathEmbedding(token1, token["element"], sentenceGraph.dependencyGraph, undirected, edgeCounts, features, "path1_")
                 self.addPathEmbedding(token2, token["element"], sentenceGraph.dependencyGraph, undirected, edgeCounts, features, "path2_")
             else:
@@ -261,6 +271,7 @@ class KerasEdgeDetector(KerasDetectorBase):
         embeddings["entities"] = EmbeddingIndex("entities", dimEmbeddings, keys=initVectors)
         embeddings["rel_token"] = EmbeddingIndex("rel_token", dimEmbeddings, keys=initVectors)
         embeddings["POS"] = EmbeddingIndex("POS", dimEmbeddings, keys=initVectors, vocabularyType="POS")
+        embeddings["shortest_path"] = EmbeddingIndex("shortest_path", dimEmbeddings, keys=initVectors)
         for i in range(self.pathDepth):
             for tag in ("path1_", "path2_"):
                 embeddings[tag + str(i)] = EmbeddingIndex(tag + str(i), dimEmbeddings, keys=initVectors, vocabularyType="directed_dependencies")
