@@ -202,7 +202,8 @@ class KerasEdgeDetector(KerasDetectorBase):
                 #if self.debugGold:
                 #    features["gold"].append(self.embeddings["gold"].getIndex(",".join(labels[j]), "[out]"))
                 features["words"].append(token["words"])
-                features["positions"].append(self.embeddings["positions"].getIndex(str(t1Index - i) + "_" + str(t2Index - i), "[out]"))
+                features["positions1"].append(self.embeddings["positions1"].getIndex(str(t1Index - i), "[out]"))
+                features["positions2"].append(self.embeddings["positions2"].getIndex(str(t2Index - i), "[out]"))
                 features["entities"].append(token["entities"])
                 features["rel_token"].append(self.embeddings["rel_token"].getIndex("1" if (i == t1Index or i == t2Index) else "0"))
                 features["POS"].append(token["POS"])
@@ -255,7 +256,8 @@ class KerasEdgeDetector(KerasDetectorBase):
         initVectors = ["[out]", "[pad]"]
         embeddings["words"] = EmbeddingIndex("words", None, wordVectorPath, wv_mem, wv_map, initVectors)
         dimEmbeddings = int(self.styles.get("de", 8)) #8 #32
-        embeddings["positions"] = EmbeddingIndex("positions", dimEmbeddings, keys=initVectors)
+        embeddings["positions1"] = EmbeddingIndex("positions1", dimEmbeddings, keys=initVectors)
+        embeddings["positions2"] = EmbeddingIndex("positions2", dimEmbeddings, keys=initVectors)
         embeddings["entities"] = EmbeddingIndex("entities", dimEmbeddings, keys=initVectors)
         embeddings["rel_token"] = EmbeddingIndex("rel_token", dimEmbeddings, keys=initVectors)
         embeddings["POS"] = EmbeddingIndex("POS", dimEmbeddings, keys=initVectors, vocabularyType="POS")
