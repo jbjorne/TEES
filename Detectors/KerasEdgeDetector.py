@@ -203,6 +203,19 @@ class KerasEdgeDetector(KerasDetectorBase):
             return None
         rangeEnd = begin + exampleLength if exampleLength > 0 else end
         
+        forward = t1Index < t2Index
+        relTokens = []
+        relMarker = "b" if forward else "r"
+        for i in range(numTokens):
+            if i == t1Index:
+                relTokens.append("e1")
+                relMarker = "m" if forward else "b"
+            elif i == t2Index:
+                relTokens.append("e2")
+                relMarker = "a" if forward else "m"
+            else:
+                relTokens.append(relMarker)
+        
         featureGroups = sorted(self.embeddings.keys())
         features = {x:[] for x in featureGroups}
         for i in range(begin, rangeEnd):
@@ -214,7 +227,7 @@ class KerasEdgeDetector(KerasDetectorBase):
                 features["positions1"].append(self.embeddings["positions1"].getIndex(str(t1Index - i), "[out]"))
                 features["positions2"].append(self.embeddings["positions2"].getIndex(str(t2Index - i), "[out]"))
                 features["entities"].append(token["entities"])
-                features["rel_token"].append(self.embeddings["rel_token"].getIndex("e1" if i == t1Index else ("e2" if i == t2Index else "N/A")))
+                features["rel_token"].append(self.embeddings["rel_token"].getIndex(relTokens[i])) #"e1" if i == t1Index else ("e2" if i == t2Index else "N/A")))
                 features["POS"].append(token["POS"])
                 features["shortest_path"].append(self.embeddings["shortest_path"].getIndex("1" if token["element"] in pathTokens else "0"))
                 self.addPathEmbedding(token1, token["element"], sentenceGraph.dependencyGraph, undirected, edgeCounts, features, "path1_")
