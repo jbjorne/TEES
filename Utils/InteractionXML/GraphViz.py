@@ -57,19 +57,22 @@ def groupDependencies(elements):
                     d1["child"] = d2
     return depStructs         
 
-def toGraphViz(xml, sentenceId, output=None, parse="McCC", color=None, colorNum=None, colorParse=None, colorNumParse=None, width=None, height=None):
+def toGraphViz(xml, sentenceRange, output=None, parse="McCC", color=None, colorNum=None, colorParse=None, colorNumParse=None, width=None, height=None):
     print >> sys.stderr, "====== Visualizing Sentences with GraphViz (www.graphviz.org) ======"
     
     #if output == None:
     #    output = os.path.join(tempfile.gettempdir(), id + ".gv")
     
-    begin, end = sentenceId, None
-    if "-" in sentenceId:
-        begin, end = sentenceId.split("-")
-        if begin.isdigit():
-            assert end.isdigit()
-            begin = int(begin)
-            end = int(end)
+    if sentenceRange == None:
+        begin, end = 0, sys.maxint
+    else:
+        begin, end = sentenceRange, None
+        if "-" in sentenceRange:
+            begin, end = sentenceRange.split("-")
+            if begin.isdigit():
+                assert end.isdigit()
+                begin = int(begin)
+                end = int(end)
     
     # Get the sentences
     xml = ETUtils.ETFromObj(xml)
@@ -96,7 +99,7 @@ def toGraphViz(xml, sentenceId, output=None, parse="McCC", color=None, colorNum=
     
     print >> sys.stderr, "Sentence Range:", (begin, end), len(sentences)
     if sentences == None:
-        print >> sys.stderr, "No sentences for ids", sentenceId
+        print >> sys.stderr, "No sentences for ids", sentenceRange
         return
     
     results = []
