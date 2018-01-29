@@ -102,6 +102,11 @@ class ChemProtEvaluator(Evaluator):
     
     def evaluateTSV(self, predFilePath, goldPath="./data/chemprot_development_gold_standard.tsv", tempDir=None):
         evaluatorDir = os.path.join(Settings.DATAPATH, "tools", "evaluators", "ChemProtEvaluator")
+        removeTemp = False
+        if tempDir == None:
+            tempDir = tempfile.mkdtemp()
+            removeTemp = True
+        print >> sys.stderr, "Using temporary evaluation directory", tempDir
         evaluatorTempDir = os.path.join(tempDir, "ChemProtEvaluator")
         shutil.copytree(evaluatorDir, evaluatorTempDir)
         currentDir = os.getcwd()
@@ -122,6 +127,9 @@ class ChemProtEvaluator(Evaluator):
                     value = float(value) if ("." in value or value == "NaN") else int(value)
                     assert key not in results
                     results[key] = value
+        if removeTemp:
+            print >> sys.stderr, "Removing temporary evaluation directory", tempDir
+            shutil.rmtree(tempDir)
         return results
     
     def toStringConcise(self, indent="", title=None):
