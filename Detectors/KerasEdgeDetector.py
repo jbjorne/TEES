@@ -193,22 +193,28 @@ class KerasEdgeDetector(KerasDetectorBase):
         else:
             path = paths[0]
             pathTokens = {x:[None, None] for x in path}
-            pathTokens[path[0]][0] = "[bgn]"
-            pathTokens[path[-1]][1] = "[end]"
-            walk = sentenceGraph.getWalks(path)[0]
-            for i in range(len(path)-1): # len(pathTokens) == len(walk)
-                edge = walk[i]
-                if edge[0] == path[i]:
-                    assert edge[1] == path[i + 1]
-                    dep = edge[2].get("type") + ">"
-                else:
-                    assert edge[0] == path[i + 1]
-                    assert edge[1] == path[i]
-                    dep = "<" + edge[2].get("type")
-                assert pathTokens[i][1] == None, pathTokens
-                assert pathTokens[i + 1][0] == None, pathTokens
-                pathTokens[i][1] = dep
-                pathTokens[i + 1][0] = dep
+            if len(path) == 2 and path[0] == path[1]: # self-loop
+                assert token1 == token2
+                pathTokens = {token1:["[bgn]", "[end]"]}
+            else:
+                pathTokens[path[0]][0] = "[bgn]"
+                pathTokens[path[-1]][1] = "[end]"
+                walks = sentenceGraph.dependencyGraph.getWalks(path)
+                assert len(walks) > 0, ((len(paths), len(path)), [x.attrib for x in path], [entity1.attrib, entity2.attrib], [token1.attrib, token2.attrib])
+                walk = walks[0]
+                for i in range(len(path)-1): # len(pathTokens) == len(walk)
+                    edge = walk[i]
+                    if edge[0] == path[i]:
+                        assert edge[1] == path[i + 1]
+                        dep = edge[2].get("type") + ">"
+                    else:
+                        assert edge[0] == path[i + 1]
+                        assert edge[1] == path[i]
+                        dep = "<" + edge[2].get("type")
+                    assert pathTokens[path[i]][1] == None, pathTokens
+                    assert pathTokens[path[i + 1]][0] == None, pathTokens
+                    pathTokens[path[i]][1] = dep
+                    pathTokens[path[i + 1]][0] = dep
         #for path in paths:
         #for node in path:
         #    pathTokens.add(node)
