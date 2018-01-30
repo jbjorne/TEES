@@ -6,7 +6,7 @@ import Utils.ElementTreeUtils as ETUtils
 from collections import defaultdict
 import types
 
-def getEmptyCorpus(xml, deletionRules=None, removeNames=False):
+def getEmptyCorpus(xml, deletionRules=None, scope="all"):
     """
     A convenience function for getting an empty corpus, useful for testing for information leaks
     in the event extraction process.
@@ -21,10 +21,15 @@ def getEmptyCorpus(xml, deletionRules=None, removeNames=False):
     if deletionRules == None: # use default rules for BioNLP Shared Task
         # We remove all interactions, and all entities that are not named entities. This leaves only
         # the gold standard protein/gene names
-        if removeNames:
+        print >> sys.stderr, "Using deletion rule set '" + str(scope) + "'"
+        if scope == "all":
             deletionRules = {"interaction":{},"entity":{}}
-        else:
+        elif scope == "non-given":
             deletionRules = {"interaction":{},"entity":{"given":(None, "False")}}
+        elif scope == "interactions":
+            deletionRules = {"interaction":{}}
+        else:
+            raise Exception("Unknown scope '" + str(scope) + "'")
     # Remove elements and return the emptied XML
     return processCorpus(xml, None, deletionRules)
     

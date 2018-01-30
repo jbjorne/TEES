@@ -151,7 +151,12 @@ def train(output, task=None, detector=None, inputFiles=None, models=None, parse=
         print >> sys.stderr, "------------ Empty devel classification ------------"
         print >> sys.stderr, "----------------------------------------------------"
         #detector.bioNLPSTParams["scores"] = False # the evaluation server doesn't like additional files
-        detector.classify(getEmptyCorpus(inputFiles["devel"], removeNames=("names" in str(exampleStyles["examples"]) or "names" in str(exampleStyles["trigger"])) ), models["devel"], "classification-empty/devel-empty", fromStep=detectorSteps["EMPTY"], workDir="classification-empty")
+        removalScope = "non-given"
+        if "names" in str(exampleStyles["examples"]) or "names" in str(exampleStyles["trigger"]):
+            removalScope = "all"
+        elif "Edge" in detector.__class__.__name__:
+            removalScope = "interactions"
+        detector.classify(getEmptyCorpus(inputFiles["devel"], scope=removalScope), models["devel"], "classification-empty/devel-empty", fromStep=detectorSteps["EMPTY"], workDir="classification-empty")
     if selector.check("TEST"):
         print >> sys.stderr, "----------------------------------------------------"
         print >> sys.stderr, "------------- Test set classification --------------"
