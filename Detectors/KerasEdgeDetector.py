@@ -230,7 +230,7 @@ class KerasEdgeDetector(KerasDetectorBase):
         
         forward = t1Index < t2Index
         relTokens = []
-        relMarker = "b" if forward else "r"
+        relMarker = "b" if forward else "a"
         for i in range(numTokens):
             if i == t1Index:
                 relTokens.append("e1")
