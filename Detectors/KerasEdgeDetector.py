@@ -186,13 +186,32 @@ class KerasEdgeDetector(KerasDetectorBase):
 #             return None
 
         # define features
-        pathTokens = set()
         paths = undirected.getPaths(token1, token2)
         if len(paths) == 0:
-            paths = [[token1, token2]]
-        for path in paths:
-            for node in path:
-                pathTokens.add(node)
+            path = [token1, token2]
+            pathTokens = {token1:["[bgn]", "[gap]"], token2:["[gap]", "[end]"]}
+        else:
+            path = paths[0]
+            pathTokens = {x:[None, None] for x in path}
+            pathTokens[path[0]][0] = "[bgn]"
+            pathTokens[path[-1]][1] = "[end]"
+            walk = sentenceGraph.getWalks(path)[0]
+            for i in range(len(path)-1): # len(pathTokens) == len(walk)
+                edge = walk[i]
+                if edge[0] == path[i]:
+                    assert edge[1] == path[i + 1]
+                    dep = edge[2].get("type") + ">"
+                else:
+                    assert edge[0] == path[i + 1]
+                    assert edge[1] == path[i]
+                    dep = "<" + edge[2].get("type")
+                assert pathTokens[i][1] == None, pathTokens
+                assert pathTokens[i + 1][0] == None, pathTokens
+                pathTokens[i][1] = dep
+                pathTokens[i + 1][0] = dep
+        #for path in paths:
+        #for node in path:
+        #    pathTokens.add(node)
         
         numTokens = len(tokens)
         begin = min(t1Index, t2Index) - outsideLength
@@ -229,7 +248,10 @@ class KerasEdgeDetector(KerasDetectorBase):
                 features["entities"].append(token["entities"])
                 features["rel_token"].append(self.embeddings["rel_token"].getIndex(relTokens[i])) #"e1" if i == t1Index else ("e2" if i == t2Index else "N/A")))
                 features["POS"].append(token["POS"])
-                features["shortest_path"].append(self.embeddings["shortest_path"].getIndex("1" if token["element"] in pathTokens else "0"))
+                pathToken = pathTokens.get(token["element"])
+                features["shortest_path"].append(self.embeddings["shortest_path"].getIndex("1" if pathToken != None else "0"))
+                features["sp_in"].append(self.embeddings["sp_in"].getIndex(pathToken[0] if pathToken != None else "[N/A]"))
+                features["sp_out"].append(self.embeddings["sp_out"].getIndex(pathToken[1] if pathToken != None else "[N/A]"))
                 self.addPathEmbedding(token1, token["element"], sentenceGraph.dependencyGraph, undirected, edgeCounts, features, "path1_")
                 self.addPathEmbedding(token2, token["element"], sentenceGraph.dependencyGraph, undirected, edgeCounts, features, "path2_")
             else:
@@ -285,6 +307,8 @@ class KerasEdgeDetector(KerasDetectorBase):
         embeddings["rel_token"] = EmbeddingIndex("rel_token", dimEmbeddings, keys=initVectors)
         embeddings["POS"] = EmbeddingIndex("POS", dimEmbeddings, keys=initVectors, vocabularyType="POS")
         embeddings["shortest_path"] = EmbeddingIndex("shortest_path", dimEmbeddings, keys=initVectors)
+        embeddings["sp_in"] = EmbeddingIndex("sp_in", dimEmbeddings, keys=initVectors)
+        embeddings["sp_out"] = EmbeddingIndex("sp_out", dimEmbeddings, keys=initVectors)
         for i in range(self.pathDepth):
             for tag in ("path1_", "path2_"):
                 embeddings[tag + str(i)] = EmbeddingIndex(tag + str(i), dimEmbeddings, keys=initVectors, vocabularyType="directed_dependencies")
