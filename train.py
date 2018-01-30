@@ -21,6 +21,7 @@ from Detectors.StepSelector import StepSelector
 from Detectors.Preprocessor import Preprocessor
 from Detectors.StructureAnalyzer import StructureAnalyzer
 from Detectors.EventDetector import EventDetector
+from Evaluators import EvaluateInteractionXML
 
 def train(output, task=None, detector=None, inputFiles=None, models=None, parse=None,
           processUnmerging=None, processModifiers=None, 
@@ -157,6 +158,8 @@ def train(output, task=None, detector=None, inputFiles=None, models=None, parse=
         elif "Edge" in detector.__class__.__name__:
             removalScope = "interactions"
         detector.classify(getEmptyCorpus(inputFiles["devel"], scope=removalScope), models["devel"], "classification-empty/devel-empty", fromStep=detectorSteps["EMPTY"], workDir="classification-empty")
+        print >> sys.stderr, "*** Evaluate empty devel classification ***"
+        EvaluateInteractionXML.run(detector.evaluator, "classification-empty/devel-empty-pred.xml.gz", inputFiles["devel"], parse)
     if selector.check("TEST"):
         print >> sys.stderr, "----------------------------------------------------"
         print >> sys.stderr, "------------- Test set classification --------------"
