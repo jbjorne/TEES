@@ -444,9 +444,10 @@ class KerasDetectorBase(Detector):
         """
         labels, labelNames = self.vectorizeLabels(self.examples, ["train", "devel"])        
         print >> sys.stderr, "Labels:", labelNames
-        labelWeights = {}
-        for i in range(len(labelNames)):
-            labelWeights[i] = 1.0 if labelNames[i] != "neg" else 0.001
+        labelWeights = None
+        if len(labelNames) > 1:
+            for i in range(len(labelNames)):
+                labelWeights[i] = 1.0 if labelNames[i] != "neg" else 0.001
         print >> sys.stderr, "Label weights:", labelWeights
         labelSet = IdSet(idDict={labelNames[i]:i for i in range(len(labelNames))})
         labelFileName = self.model.get(self.tag + "labels.ids", True)
