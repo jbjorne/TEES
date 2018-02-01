@@ -7,6 +7,7 @@ import shutil
 sys.path.append(os.path.dirname(os.path.abspath(__file__))+"/..")
 import Utils.Settings as Settings
 import Utils.ElementTreeUtils as ETUtils
+from Detectors.Preprocessor import Preprocessor
 from Core.IdSet import IdSet
 import Core.ExampleUtils as ExampleUtils
 from Evaluators.AveragingMultiClassEvaluator import AveragingMultiClassEvaluator
@@ -146,6 +147,13 @@ if __name__=="__main__":
     optparser.add_option("-c", "--classSet", default=None, dest="classSet", help="", metavar="FILE")
     (options, args) = optparser.parse_args()
     
+    if options.examples.endswith(".xml") or options.examples.endswith(".xml.gz"):
+        preprocessor = Preprocessor(steps="EXPORT_CHEMPROT")
+        tempDir = tempfile.mkdtemp()
+        tsvPath = os.path.join(tempDir, os.path.basename(options.examples) + ".tsv")
+        preprocessor.process(options.examples, tsvPath)
+        ChemProtEvaluator().evaluateTSV(tsvPath)
+        shutil.rmtree(tempDir)
     if options.examples.endswith(".tsv"):
         ChemProtEvaluator().evaluateTSV(options.examples)
     else:
