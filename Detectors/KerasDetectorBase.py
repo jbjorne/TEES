@@ -394,7 +394,7 @@ class KerasDetectorBase(Detector):
         # The Embeddings
         embNames = sorted(self.embeddings.keys())
         for embName in embNames:
-            self.embeddings[embName].makeLayers(self.exampleLength, embName, embName != "words")
+            self.embeddings[embName].makeLayers(self.exampleLength, embName, True if "wv_learn" in self.styles else "AUTO")
         merged_features = merge([self.embeddings[x].embeddingLayer for x in embNames], mode='concat', name="merged_features")
         merged_features = Dropout(float(self.styles.get("do", 0.1)))(merged_features)
         

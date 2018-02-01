@@ -99,7 +99,9 @@ class EmbeddingIndex():
         else:
             raise Exception("Unknown vocabulary type '" + str(self.vocabularyType) + "'")
     
-    def makeLayers(self, dimExample, name, trainable=True):
+    def makeLayers(self, dimExample, name, trainable="AUTO"):
+        if trainable == "AUTO":
+            trainable = True if self.wvPath == None else False
         self.inputLayer = Input(shape=(dimExample,), name=name)
         self.embeddingLayer = Embedding(len(self.embeddings), 
                               self.embeddings[0].size, 
