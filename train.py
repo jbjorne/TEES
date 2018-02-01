@@ -354,6 +354,8 @@ def learnSettings(inputFiles, detector, classifierParameters):
         cp["examples"] = Parameters.cat("c=1000,5000,10000,20000,50000,80000,100000,150000,180000,200000,250000,300000,350000,500000,1000000", cp["examples"], "Classifier parameters for entities")
     elif detector == "Detectors.EdgeDetector":
         cp["examples"] = Parameters.cat("c=1000,4500,5000,7500,10000,20000,25000,27500,28000,29000,30000,35000,40000,50000,60000,65000", cp["examples"], "Classifier parameters for edges")
+    elif detector == "Detectors.UnmergingDetector":
+        cp["examples"] = Parameters.cat("c=1,10,100,500,1000,1500,2500,5000,10000,20000,50000,80000,100000", cp["examples"], "Classifier parameters for unmerging")
 
     return detector
 
