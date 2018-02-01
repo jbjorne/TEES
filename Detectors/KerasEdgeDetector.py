@@ -155,7 +155,7 @@ class KerasEdgeDetector(KerasDetectorBase):
                     self.buildExample(examples, tI, tJ, eI, eJ, tokens, tokenMap, sentenceGraph, goldGraph, entityToGold, undirected, edgeCounts)
                     self.buildExample(examples, tJ, tI, eJ, eI, tokens, tokenMap, sentenceGraph, goldGraph, entityToGold, undirected, edgeCounts)
                 else:
-                    if tokenMap[tJ]["index"] > tokenMap[tI]["index"]:
+                    if tokenMap[tJ]["index"] < tokenMap[tI]["index"]:
                         tI, tJ = tJ, tI
                         eI, eJ = eJ, eI
                     self.buildExample(examples, tI, tJ, eI, eJ, tokens, tokenMap, sentenceGraph, goldGraph, entityToGold, undirected, edgeCounts, False)
