@@ -145,17 +145,21 @@ if __name__=="__main__":
     optparser.add_option("-e", "--examples", default=None, dest="examples", help="", metavar="FILE")
     optparser.add_option("-p", "--predictions", default=None, dest="predictions", help="", metavar="FILE")
     optparser.add_option("-c", "--classSet", default=None, dest="classSet", help="", metavar="FILE")
+    optparser.add_option("-d", "--dataSet", default="devel", dest="dataSet", help="", metavar="FILE")
     (options, args) = optparser.parse_args()
+    
+    assert options.dataSet in ("devel", "test")
+    options.dataSet = {"devel":"./data/chemprot_development_gold_standard.tsv", "test":"./data/chemprot_test_gold_standard.tsv"}[options.dataSet]
     
     if options.examples.endswith(".xml") or options.examples.endswith(".xml.gz"):
         preprocessor = Preprocessor(steps="EXPORT_CHEMPROT")
         tempDir = tempfile.mkdtemp()
         tsvPath = os.path.join(tempDir, os.path.basename(options.examples) + ".tsv")
         preprocessor.process(options.examples, tsvPath)
-        ChemProtEvaluator().evaluateTSV(tsvPath)
+        ChemProtEvaluator().evaluateTSV(tsvPath, options.dataSet)
         shutil.rmtree(tempDir)
     if options.examples.endswith(".tsv"):
-        ChemProtEvaluator().evaluateTSV(options.examples)
+        ChemProtEvaluator().evaluateTSV(options.examples, options.dataSet)
     else:
         ev = ChemProtEvaluator(options.examples, options.predictions, options.classSet)
     #print ev.toStringConcise()
