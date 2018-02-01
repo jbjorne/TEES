@@ -244,7 +244,7 @@ class KerasEdgeDetector(KerasDetectorBase):
         featureGroups = sorted(self.embeddings.keys())
         features = {x:[] for x in featureGroups}
         for i in range(begin, rangeEnd):
-            if i >= 0 and i < numTokens and i < end:
+            if (i >= 0 and i < numTokens) and (i >= begin and i < end):
                 token = tokens[i]
                 #if self.debugGold:
                 #    features["gold"].append(self.embeddings["gold"].getIndex(",".join(labels[j]), "[out]"))
