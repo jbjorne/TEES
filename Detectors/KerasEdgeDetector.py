@@ -354,7 +354,7 @@ class KerasEdgeDetector(KerasDetectorBase):
         Example class. Multiple overlapping edges create a merged type.
         """
         interactions = sentenceGraph.getInteractions(e1, e2, True)
-        if not directed and not self.styles["se10t8_undirected"]:
+        if not directed and not self.styles.get("se10t8_undirected"):
             interactions = interactions + sentenceGraph.getInteractions(e2, e1, True)
         
         labels = set()
