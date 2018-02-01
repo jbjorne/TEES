@@ -8,7 +8,7 @@ import SentenceElements
 from Core.SentenceGraph import SentenceGraph
 
 def getId(element, attribute="id"):
-    return element.get(attribute).replace(".", "_");
+    return element.get(attribute).replace(".", "_").replace("-", "_");
 
 def getColorScheme(scheme):
     if scheme != None:
@@ -67,8 +67,8 @@ def toGraphViz(xml, sentenceRange, output=None, parse="McCC", color=None, colorN
         begin, end = 0, sys.maxint
     else:
         begin, end = sentenceRange, None
-        if "-" in sentenceRange:
-            begin, end = sentenceRange.split("-")
+        if "," in sentenceRange:
+            begin, end = sentenceRange.split(",")
             if begin.isdigit():
                 assert end.isdigit()
                 begin = int(begin)
@@ -109,7 +109,7 @@ def toGraphViz(xml, sentenceRange, output=None, parse="McCC", color=None, colorN
         graph.mapInteractions(elements.entities, elements.interactions)
         
         s = ""
-        s += "digraph " + sentence.get("id").replace(".", "_") + " {\n"
+        s += "digraph " + sentence.get("id").replace(".", "_").replace("-", "_") + " {\n"
         #f.write("graph [label=\"Orthogonal edges\", splines=ortho, nodesep=0.1];\n")
         if width != None and height != None:
             s += "graph [nodesep=0.1,size=\"" + str(width) + "," + str(height) + "!\", resolution=1];\n"
