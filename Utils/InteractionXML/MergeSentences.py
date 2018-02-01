@@ -29,10 +29,18 @@ def mergeSentences(input, output, verbose=False):
         entityById = {}
         interactionById = {}
         combinedText = ""
+        calculatedOffset = (0, 0)
         for sentence in children:
             document.remove(sentence)
-            combinedText += sentence.get("head", "") + sentence.get("text", "") + sentence.get("tail", "")
-            sentOffset = Range.charOffsetToSingleTuple(sentence.get("charOffset"))
+            sentenceText = sentence.get("head", "") + sentence.get("text", "") + sentence.get("tail", "")
+            if sentence.get("charOffset") == None:
+                if sentence != children[-1]:
+                    sentenceText = sentenceText + " "
+                calculatedOffset = (calculatedOffset[1], calculatedOffset[1] + len(sentenceText))
+                sentOffset = calculatedOffset
+            else:
+                sentOffset = Range.charOffsetToSingleTuple(sentence.get("charOffset"))
+            combinedText += sentenceText
             # Collect and update the entity elements
             for entity in sentence.findall("entity"):
                 # Map sentence-level entity offsets to document level
