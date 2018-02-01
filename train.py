@@ -402,15 +402,16 @@ def getTaskSettings(task, detector, bioNLPSTParams, preprocessorParams,
                     print >> sys.stderr, "Input file", inputFiles[dataset], "for set '" + dataset + "' does not exist, skipping."
         assert inputFiles["train"] != None # at least training set must exist
         # Example generation parameters
-        if task == "CO11":
-            detector = "Detectors.CODetector"
-        elif task in ["BI11-FULL", "DDI11-FULL", "DDI13-FULL", "BB_EVENT_16-FULL"]:
-            detector = "Detectors.EventDetector"
-        elif task.startswith("DDI13"):
-            if task.endswith("T91"):
-                detector = "Detectors.EntityDetector"
-            elif task.endswith("T92") or task == "DDI13":
-                detector = "Detectors.EdgeDetector"
+        if detector == None:
+            if task == "CO11":
+                detector = "Detectors.CODetector"
+            elif task in ["BI11-FULL", "DDI11-FULL", "DDI13-FULL", "BB_EVENT_16-FULL"]:
+                detector = "Detectors.EventDetector"
+            elif task.startswith("DDI13"):
+                if task.endswith("T91"):
+                    detector = "Detectors.EntityDetector"
+                elif task.endswith("T92") or task == "DDI13":
+                    detector = "Detectors.EdgeDetector"
         
         #######################################################################
         # BioNLP Shared Task and preprocessing parameters
