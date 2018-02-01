@@ -313,8 +313,8 @@ class KerasEdgeDetector(KerasDetectorBase):
         embeddings["rel_token"] = EmbeddingIndex("rel_token", dimEmbeddings, keys=initVectors)
         embeddings["POS"] = EmbeddingIndex("POS", dimEmbeddings, keys=initVectors, vocabularyType="POS")
         embeddings["shortest_path"] = EmbeddingIndex("shortest_path", dimEmbeddings, keys=initVectors)
-        embeddings["sp_in"] = EmbeddingIndex("sp_in", dimEmbeddings, keys=initVectors)
-        embeddings["sp_out"] = EmbeddingIndex("sp_out", dimEmbeddings, keys=initVectors)
+        embeddings["sp_in"] = EmbeddingIndex("sp_in", dimEmbeddings, keys=initVectors, vocabularyType="directed_dependencies")
+        embeddings["sp_out"] = EmbeddingIndex("sp_out", dimEmbeddings, keys=initVectors, vocabularyType="directed_dependencies")
         for i in range(self.pathDepth):
             for tag in ("path1_", "path2_"):
                 embeddings[tag + str(i)] = EmbeddingIndex(tag + str(i), dimEmbeddings, keys=initVectors, vocabularyType="directed_dependencies")
