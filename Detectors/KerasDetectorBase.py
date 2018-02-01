@@ -368,10 +368,12 @@ class KerasDetectorBase(Detector):
                     if parse != None:
                         counts["parse"] += 1
                         tokenization = IXMLUtils.getTokenizationElement(sentence, parse.get("tokenizer"))
-                        dependencies = [x for x in parse.findall("dependency")]
-                        tokens = [x for x in tokenization.findall("token")]
-                        for embName in embNames:
-                            embeddings[embName].addToVocabulary(tokens, dependencies)
+                        if tokenization != None:
+                            counts["tokenization"] += 1
+                            dependencies = [x for x in parse.findall("dependency")]
+                            tokens = [x for x in tokenization.findall("token")]
+                            for embName in embNames:
+                                embeddings[embName].addToVocabulary(tokens, dependencies)
             print dict(counts), {x.name:len(x.embeddings) for x in embeddings.values()}
         for embName in embNames:
             if embeddings[embName].vocabularyType != None:
