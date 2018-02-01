@@ -33,13 +33,18 @@ def mergeSentences(input, output, verbose=False):
         for sentence in children:
             document.remove(sentence)
             sentenceText = sentence.get("head", "") + sentence.get("text", "") + sentence.get("tail", "")
-            if sentence.get("charOffset") == None:
+            sentOffset = sentence.get("charOffset")
+            if sentence == children[0]:
+                noDefinedOffsets = sentOffset == None
+            elif (sentOffset == None) != noDefinedOffsets:
+                raise Exception("Only some sentences in document '" + docId + "' have defined offsets")
+            if sentOffset == None:
                 if sentence != children[-1]:
                     sentenceText = sentenceText + " "
                 calculatedOffset = (calculatedOffset[1], calculatedOffset[1] + len(sentenceText))
                 sentOffset = calculatedOffset
             else:
-                sentOffset = Range.charOffsetToSingleTuple(sentence.get("charOffset"))
+                sentOffset = Range.charOffsetToSingleTuple(sentOffset)
             combinedText += sentenceText
             # Collect and update the entity elements
             for entity in sentence.findall("entity"):
