@@ -65,7 +65,7 @@ class KerasEdgeDetector(KerasDetectorBase):
         if self.styles.get("genia_task1") and (e1.get("type") == "Entity" or e2.get("type") == "Entity"):
             makeExample = False
             self.exampleStats.filter("genia_task1")
-        if self.styles.get("pos_only") and len(labels) == 0 or (len(labels) == 1 and labels[0] == "neg"):
+        if self.styles.get("pos_only") and (len(labels) == 0 or (len(labels) == 1 and labels[0] == "neg")):
             makeExample = False
             self.exampleStats.filter("pos_only")
         if self.styles.get("no_self_loops") and ((e1 == e2) or (e1.get("headOffset") == e2.get("headOffset"))):
@@ -164,7 +164,8 @@ class KerasEdgeDetector(KerasDetectorBase):
         """
         Build a single directed example for the potential edge between token1 and token2
         """
-        labels = self.getExampleLabels(entity1, entity2, token1, token2, sentenceGraph, goldGraph, entityToGold, isDirected)
+        useNeg = "neg" in self.styles
+        labels = self.getExampleLabels(entity1, entity2, token1, token2, sentenceGraph, goldGraph, entityToGold, isDirected, useNeg=useNeg)
         
         self.exampleStats.beginExample("---".join(labels))
         
@@ -334,7 +335,7 @@ class KerasEdgeDetector(KerasDetectorBase):
             if goldGraph != None:
                 labels = self.getGoldLabels(goldGraph, entityToGold, e1, e2, isDirected)
         if len(labels) == 0 and useNeg:
-            labels.add("neg")
+            labels.append("neg")
         return labels
     
     def getLabelsFromTokens(self, sentenceGraph, t1, t2, directed=True):

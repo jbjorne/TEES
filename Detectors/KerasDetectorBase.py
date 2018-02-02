@@ -446,6 +446,7 @@ class KerasDetectorBase(Detector):
         print >> sys.stderr, "Labels:", labelNames
         labelWeights = None
         if len(labelNames) > 1:
+            labelWeights = {}
             for i in range(len(labelNames)):
                 labelWeights[i] = 1.0 if labelNames[i] != "neg" else 0.001
         print >> sys.stderr, "Label weights:", labelWeights
