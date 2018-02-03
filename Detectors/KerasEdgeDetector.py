@@ -350,11 +350,12 @@ class KerasEdgeDetector(KerasDetectorBase):
         for wv in wordVectors:
             if os.path.exists(wv):
                 embName = "words" + str(wvCount)
+                embPath = wv
             else:
                 embName = wv
-                wv = Settings.W2V[wv]
-                assert os.path.exists(wv), wv
-            embeddings[embName] = EmbeddingIndex(embName, None, wv, wv_mem, wv_map, initVectors)
+                embPath = Settings.W2V[wv]
+            assert os.path.exists(embPath), (wv, embName, embPath)
+            embeddings[embName] = EmbeddingIndex(embName, None, embPath, wv_mem, wv_map, initVectors)
             wvCount += 1
         dimEmbeddings = int(self.styles.get("de", 8)) #8 #32
         embeddings["positions1"] = EmbeddingIndex("positions1", dimEmbeddings, keys=initVectors)
