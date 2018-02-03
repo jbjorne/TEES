@@ -34,6 +34,7 @@ from keras.layers import Conv1D
 from keras.layers.pooling import MaxPooling1D
 from __builtin__ import isinstance
 from collections import defaultdict
+from sklearn.utils.class_weight import compute_class_weight
 
 def f1ScoreMetric(y_true, y_pred):
     return sklearn.metrics.f1_score(y_true, y_pred, average="micro")
@@ -436,6 +437,22 @@ class KerasDetectorBase(Detector):
     ###########################################################################
     # Keras Model
     ###########################################################################
+    
+    def getBalancedWeights(self, labels, labelNames):
+        n_samples = 0
+        n_classes = len(labelNames)
+        counts = {x:0 for x in range(n_classes)}
+        for dataSet in labels:
+            n_samples += len(labels[dataSet])
+            for labelSet in labels[dataSet]:
+                for i in range(len(labelSet)):
+                    if labelSet[i] > 0:
+                        counts[i] += 1
+        print counts
+        weights = {}
+        for i in range(n_classes):
+            weights[i] = n_samples / (n_classes * counts[i])
+        return weights
    
     def fitModel(self, verbose=True):
         """
@@ -445,11 +462,19 @@ class KerasDetectorBase(Detector):
         labels, labelNames = self.vectorizeLabels(self.examples, ["train", "devel"])        
         print >> sys.stderr, "Labels:", labelNames
         labelWeights = None
-        if len(labelNames) > 1:
-            labelWeights = {}
-            for i in range(len(labelNames)):
-                labelWeights[i] = 1.0 if labelNames[i] != "neg" else 0.001
-        print >> sys.stderr, "Label weights:", labelWeights
+        weightStyle = self.styles.get("weights", "equal")
+        if weightStyle == "none":
+            pass
+        elif weightStyle == "equal":
+            if len(labelNames) > 1:
+                labelWeights = {}
+                for i in range(len(labelNames)):
+                    labelWeights[i] = 1.0 if labelNames[i] != "neg" else 0.001
+        elif weightStyle == "balanced":
+            labelWeights = self.getBalancedWeights(labels, labelNames) #dict(enumerate(compute_class_weight("balanced", [x for x in range(len(labelNames))], numpy.concatenate([labels["train"], labels["devel"]], axis=0))))
+        else:
+            raise Exception("Unknown weight style '" + weightStyle + "'")
+        print >> sys.stderr, "Label weights:", weightStyle, labelWeights
         labelSet = IdSet(idDict={labelNames[i]:i for i in range(len(labelNames))})
         labelFileName = self.model.get(self.tag + "labels.ids", True)
         print >> sys.stderr, "Saving class names to", labelFileName
