@@ -141,10 +141,12 @@ class KerasEdgeDetector(KerasDetectorBase):
         # Pre-generate features for all tokens in the sentence
         tokenElements = sorted([(Range.charOffsetToSingleTuple(x.get("charOffset")), x) for x in sentenceGraph.tokens])
         tokens = []
+        wordEmbeddings = sorted([x for x in self.embeddings.keys() if self.embeddings[x].wvPath != None])
         for i in range(len(tokenElements)):
             element = tokenElements[i][1]
             token = {"index":i, "element":element, "charOffset":tokenElements[i][0]}
-            token["words"] = self.embeddings["words"].getIndex(element.get("text").lower(), "[out]")
+            for wordEmbedding in wordEmbeddings:
+                token[wordEmbedding] = self.embeddings[wordEmbedding].getIndex(element.get("text").lower(), "[out]")
             token["POS"] = self.embeddings["POS"].getIndex(element.get("POS"), "[out]")
             entityLabels = "---".join(sorted(set([x.get("type") for x in sentenceGraph.tokenIsEntityHead[sentenceGraph.tokens[i]]])))
             token["entities"] = self.embeddings["entities"].getIndex(entityLabels if entityLabels != "" else "[N/A]", "[out]")         
@@ -274,6 +276,7 @@ class KerasEdgeDetector(KerasDetectorBase):
                 relTokens.append(relMarker)
         
         featureGroups = sorted(self.embeddings.keys())
+        wordEmbeddings = [x for x in featureGroups if self.embeddings[x].wvPath != None]
         features = {x:[] for x in featureGroups}
         maskMode = self.styles.get("ent_mask")
         for i in range(begin, rangeEnd):
@@ -281,7 +284,8 @@ class KerasEdgeDetector(KerasDetectorBase):
                 token = tokens[i]
                 #if self.debugGold:
                 #    features["gold"].append(self.embeddings["gold"].getIndex(",".join(labels[j]), "[out]"))
-                features["words"].append(self.getWord(tokenMap[token1], tokenMap[token2], token, maskMode, "words"))
+                for wordEmbedding in wordEmbeddings:
+                    features[wordEmbedding].append(self.getWord(tokenMap[token1], tokenMap[token2], token, maskMode, wordEmbedding))
                 features["positions1"].append(self.embeddings["positions1"].getIndex(str(t1Index - i), "[out]"))
                 features["positions2"].append(self.embeddings["positions2"].getIndex(str(t2Index - i), "[out]"))
                 features["entities"].append(token["entities"])
@@ -334,11 +338,24 @@ class KerasEdgeDetector(KerasDetectorBase):
     def defineEmbeddings(self):
         print >> sys.stderr, "Defining embedding indices"
         embeddings = {}
-        wordVectorPath = self.styles.get("wv", Settings.W2VFILE)
+        initVectors = ["[out]", "[pad]"]
         wv_mem = int(self.styles.get("wv_mem", 100000))
         wv_map = int(self.styles.get("wv_map", 10000000))
-        initVectors = ["[out]", "[pad]"]
-        embeddings["words"] = EmbeddingIndex("words", None, wordVectorPath, wv_mem, wv_map, initVectors)
+        wordVectors = self.styles.get("wv", Settings.W2VFILE)
+        if wordVectors == "skip":
+            wordVectors = []
+        elif isinstance(wordVectors, basestring):
+            wordVectors = wordVectors.split(",")
+        wvCount = 0
+        for wv in wordVectors:
+            if os.path.exists(wv):
+                embName = "words" + str(wvCount)
+            else:
+                embName = wv
+                wv = Settings.W2V[wv]
+                assert os.path.exists(wv), wv
+            embeddings[embName] = EmbeddingIndex(embName, None, wv, wv_mem, wv_map, initVectors)
+            wvCount += 1
         dimEmbeddings = int(self.styles.get("de", 8)) #8 #32
         embeddings["positions1"] = EmbeddingIndex("positions1", dimEmbeddings, keys=initVectors)
         embeddings["positions2"] = EmbeddingIndex("positions2", dimEmbeddings, keys=initVectors)
