@@ -89,6 +89,16 @@ class KerasEdgeDetector(KerasDetectorBase):
             self.exampleStats.filter("entities_list")
             return False
         return True
+    
+    def getWord(self, token1, token2, token, maskMode=None, embName="words"):
+        if maskMode == None:
+            return token["words"]
+        elif maskMode == "pos":
+            if token["element"] == token1["element"]: return self.embeddings[embName].getIndex("[e1]")
+            elif token["element"] == token2["element"]: return self.embeddings[embName].getIndex("[e2]")
+            else: return token["words"]
+        else:
+            raise Exception("Unknown masking mode '" + str(maskMode) + "'")
 
     ###########################################################################
     # Example Generation
@@ -265,12 +275,13 @@ class KerasEdgeDetector(KerasDetectorBase):
         
         featureGroups = sorted(self.embeddings.keys())
         features = {x:[] for x in featureGroups}
+        maskMode = self.styles.get("ent_mask")
         for i in range(begin, rangeEnd):
             if (i >= 0 and i < numTokens) and (i >= begin and i < end):
                 token = tokens[i]
                 #if self.debugGold:
                 #    features["gold"].append(self.embeddings["gold"].getIndex(",".join(labels[j]), "[out]"))
-                features["words"].append(token["words"])
+                features["words"].append(self.getWord(tokenMap[token1], tokenMap[token2], token, maskMode, "words"))
                 features["positions1"].append(self.embeddings["positions1"].getIndex(str(t1Index - i), "[out]"))
                 features["positions2"].append(self.embeddings["positions2"].getIndex(str(t2Index - i), "[out]"))
                 features["entities"].append(token["entities"])
@@ -328,6 +339,10 @@ class KerasEdgeDetector(KerasDetectorBase):
         wv_map = int(self.styles.get("wv_map", 10000000))
         initVectors = ["[out]", "[pad]"]
         embeddings["words"] = EmbeddingIndex("words", None, wordVectorPath, wv_mem, wv_map, initVectors)
+        maskMode = self.styles.get("ent_mask")
+        if maskMode == "pos":
+            embeddings["words"]._addEmbedding("[e1]", numpy.ones(embeddings["words"].dimVector))
+            embeddings["words"]._addEmbedding("[e2]", numpy.ones(embeddings["words"].dimVector))
         dimEmbeddings = int(self.styles.get("de", 8)) #8 #32
         embeddings["positions1"] = EmbeddingIndex("positions1", dimEmbeddings, keys=initVectors)
         embeddings["positions2"] = EmbeddingIndex("positions2", dimEmbeddings, keys=initVectors)
