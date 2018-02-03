@@ -68,10 +68,10 @@ class EmbeddingIndex():
         assert index in self.keyByIndex, (index, self.name, len(self.embeddingIndex), len(self.keyByIndex), len(self.embeddings))
         return self.keyByIndex[index]
     
-    def getIndex(self, key, default=None):
+    def getIndex(self, key, default=None, special=False):
         assert isinstance(key, basestring), key
         if key not in self.embeddingIndex and self.embeddings != None:
-            if self.wvPath != None:
+            if self.wvPath != None and not special:
                 vector = self.wv.w_to_normv(key) if self.wv != None else None
             else:
                 vector = numpy.ones(self.dimVector) #normalized(numpy.random.uniform(-1.0, 1.0, self.dimVector)))

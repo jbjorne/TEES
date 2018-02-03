@@ -92,11 +92,11 @@ class KerasEdgeDetector(KerasDetectorBase):
     
     def getWord(self, token1, token2, token, maskMode=None, embName="words"):
         if maskMode == None:
-            return token["words"]
+            return token[embName]
         elif maskMode == "pos":
-            if token["element"] == token1["element"]: return self.embeddings[embName].getIndex("[e1]")
-            elif token["element"] == token2["element"]: return self.embeddings[embName].getIndex("[e2]")
-            else: return token["words"]
+            if token["element"] == token1["element"]: return self.embeddings[embName].getIndex("[e1]", special=True)
+            elif token["element"] == token2["element"]: return self.embeddings[embName].getIndex("[e2]", special=True)
+            else: return token[embName]
         else:
             raise Exception("Unknown masking mode '" + str(maskMode) + "'")
 
@@ -339,10 +339,6 @@ class KerasEdgeDetector(KerasDetectorBase):
         wv_map = int(self.styles.get("wv_map", 10000000))
         initVectors = ["[out]", "[pad]"]
         embeddings["words"] = EmbeddingIndex("words", None, wordVectorPath, wv_mem, wv_map, initVectors)
-        maskMode = self.styles.get("ent_mask")
-        if maskMode == "pos":
-            embeddings["words"]._addEmbedding("[e1]", numpy.ones(embeddings["words"].dimVector))
-            embeddings["words"]._addEmbedding("[e2]", numpy.ones(embeddings["words"].dimVector))
         dimEmbeddings = int(self.styles.get("de", 8)) #8 #32
         embeddings["positions1"] = EmbeddingIndex("positions1", dimEmbeddings, keys=initVectors)
         embeddings["positions2"] = EmbeddingIndex("positions2", dimEmbeddings, keys=initVectors)
