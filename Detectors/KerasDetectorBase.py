@@ -54,6 +54,7 @@ class KerasDetectorBase(Detector):
         self.evaluator = AveragingMultiClassEvaluator
         self.debugGold = False
         self.exampleLength = None
+        self.cmode = None
     
     ###########################################################################
     # Main Pipeline Interface
@@ -418,7 +419,11 @@ class KerasDetectorBase(Detector):
         
         # Classification layers
         layer = Dense(int(self.styles.get("dense", 400)), activation='relu')(layer) #layer = Dense(800, activation='relu')(layer)
-        layer = Dense(len(labelSet), activation='sigmoid')(layer)
+        assert self.cmode in ("binary", "multiclass", "multilabel")
+        if self.cmode in ("binary", "multilabel"):
+            layer = Dense(len(labelSet), activation='sigmoid')(layer)
+        else:
+            layer = Dense(len(labelSet), activation='softmax')(layer)
         
         kerasModel = Model([self.embeddings[x].inputLayer for x in embNames], layer)
         
@@ -428,7 +433,11 @@ class KerasDetectorBase(Detector):
         
         print >> sys.stderr, "Compiling model"
         metrics = ["accuracy"] #, f1ScoreMetric]
-        kerasModel.compile(optimizer=optimizer, loss="binary_crossentropy", metrics=metrics)
+        if self.cmode in ("binary", "multilabel"):
+            loss = "binary_crossentropy"
+        else:
+            loss = "categorical_crossentropy"
+        kerasModel.compile(optimizer=optimizer, loss=loss, metrics=metrics)
         
         if verbose:
             kerasModel.summary()
@@ -437,6 +446,26 @@ class KerasDetectorBase(Detector):
     ###########################################################################
     # Keras Model
     ###########################################################################
+    
+    def defineClassificationMode(self, examples):
+        if self.cmode == None:
+            self.cmode = self.styles.get("cm", "auto")
+            if self.cmode == "auto":
+                labelSet = set()
+                maxlabels = 0
+                for dataSet in ("train", "devel"):
+                    for example in self.examples[dataSet]:
+                        maxlabels = max(maxlabels, len(example["labels"]))
+                        for label in example["labels"]:
+                            labelSet.add(label)
+                if len(labelSet) == 1:
+                    self.cmode = "binary"
+                elif maxlabels > 1:
+                    self.cmode = "multilabel"
+                else:
+                    self.cmode = "multiclass"           
+        assert self.cmode in ("binary", "multiclass", "multilabel"), self.cmode
+        print >> sys.stderr, "Using classification mode", self.cmode
     
     def getLabelCounts(self, labels, labelNames):
         counts = {x:0 for x in range(len(labelNames))}
@@ -488,7 +517,8 @@ class KerasDetectorBase(Detector):
         labelSet = IdSet(idDict={labelNames[i]:i for i in range(len(labelNames))})
         labelFileName = self.model.get(self.tag + "labels.ids", True)
         print >> sys.stderr, "Saving class names to", labelFileName
-        labelSet.write(labelFileName)
+        labelSet.write(labelFileName)   
+        self.defineClassificationMode(self.examples)
         
         features = self.vectorizeFeatures(self.examples, ("train", "devel"))
         
