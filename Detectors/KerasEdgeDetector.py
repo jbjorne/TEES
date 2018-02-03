@@ -72,6 +72,23 @@ class KerasEdgeDetector(KerasDetectorBase):
             makeExample = False
             self.exampleStats.filter("no_self_loops")
         return makeExample
+    
+    def keepDDI(self, token1, token2, entity1, entity2, tokens, tokenMap):
+        e1Text = entity1.get("text").lower()
+        e2Text = entity2.get("text").lower()
+        if e1Text == e2Text:
+            self.exampleStats.filter("entities_equal")
+            return False
+        e1Splits = e1Text.split()
+        e2Splits = e2Text.split()
+        if (len(e1Splits) == 1 and e1Splits[0] in e2Splits) or (len(e2Splits) == 1 and e2Splits[0] in e1Splits):
+            self.exampleStats.filter("entity_substring")
+            return False
+        between = tokens[tokenMap[token1]["index"] + 1:tokenMap[token2]["index"]]
+        if all([x.get("text") in (",", "(", ")", "or", "and", "-") for x in between]):
+            self.exampleStats.filter("entities_list")
+            return False
+        return True
 
     ###########################################################################
     # Example Generation
@@ -170,6 +187,10 @@ class KerasEdgeDetector(KerasDetectorBase):
         self.exampleStats.beginExample("---".join(labels))
         
         if not self.keepExample(entity1, entity2, labels, isDirected, self.structureAnalyzer):
+            self.exampleStats.endExample()
+            return
+        
+        if "ddi_filters" in self.styles and not self.keepDDI(token1, token2, entity1, entity2, tokens, tokenMap):
             self.exampleStats.endExample()
             return
         
