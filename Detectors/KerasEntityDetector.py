@@ -85,7 +85,7 @@ class KerasEntityDetector(KerasDetectorBase):
         #outfile.write("[")
         # Prepare the indices
         numTokens = len(sentenceGraph.tokens)
-        indices = [self.embeddings["words"].getIndex(sentenceGraph.tokens[i].get("text").lower(), "[out]") for i in range(numTokens)]
+        #indices = [self.embeddings["words"].getIndex(sentenceGraph.tokens[i].get("text").lower(), "[out]") for i in range(numTokens)]
         labels, entityIds = zip(*[self.getEntityTypes(sentenceGraph.tokenIsEntityHead[sentenceGraph.tokens[i]]) for i in range(numTokens)])
         self.exampleLength = int(self.styles.get("el", 21)) #31 #9 #21 #5 #3 #9 #19 #21 #9 #5 #exampleLength = self.EXAMPLE_LENGTH if self.EXAMPLE_LENGTH != None else numTokens
         
@@ -106,7 +106,9 @@ class KerasEntityDetector(KerasDetectorBase):
                 self.exampleStats.endExample()
                 continue
             
-            tokens = []
+            featureGroups = sorted(self.embeddings.keys())
+            wordEmbeddings = [x for x in featureGroups if self.embeddings[x].wvPath != None]
+            #tokens = []
             features = {x:[] for x in self.embeddings.keys()} #{"words":[], "positions":[], "named_entities":[], "POS":[], "gold":[]}
             featureGroups = sorted(features.keys())
             side = (self.exampleLength - 1) / 2
@@ -114,18 +116,19 @@ class KerasEntityDetector(KerasDetectorBase):
             for j in range(i - side, i + side + 1):
                 if j >= 0 and j < numTokens:
                     token2 = sentenceGraph.tokens[j]
-                    tokens.append(token2)
+                    #tokens.append(token2)
                     if self.debugGold:
-                        features["gold"].append(self.embeddings["gold"].getIndex(",".join(labels[j]), "[out]"))
-                    features["words"].append(indices[j])
-                    features["positions"].append(self.embeddings["positions"].getIndex(str(windowIndex), "[out]"))
-                    features["named_entities"].append(self.embeddings["named_entities"].getIndex("1" if (sentenceGraph.tokenIsEntityHead[token2] and sentenceGraph.tokenIsName[token2]) else "0", "[out]"))
-                    features["POS"].append(self.embeddings["POS"].getIndex(token2.get("POS"), "[out]"))
+                        self.addFeature("gold", features, ",".join(labels[j]), "[out]")
+                    for wordEmbedding in wordEmbeddings:
+                        self.addFeature(wordEmbedding, features, token2.get("text").lower(), "[out]")
+                    self.addFeature("positions", features, str(windowIndex), "[out]")
+                    self.addFeature("named_entities", features, "1" if (sentenceGraph.tokenIsEntityHead[token2] and sentenceGraph.tokenIsName[token2]) else "0", "[out]")
+                    self.addFeature("POS", features, token2.get("POS"), "[out]")
                     self.addPathEmbedding(token, token2, sentenceGraph.dependencyGraph, undirected, edgeCounts, features)
                 else:
-                    tokens.append(None)
+                    #tokens.append(None)
                     for featureGroup in featureGroups:
-                        features[featureGroup].append(self.embeddings[featureGroup].getIndex("[pad]"))
+                        self.addFeature(featureGroup, features, "[pad]")
                 windowIndex += 1
             
             extra = {"xtype":"token","t":token.get("id")}
@@ -151,20 +154,13 @@ class KerasEntityDetector(KerasDetectorBase):
             types.add("neg")
         return sorted(types), sorted(entityIds)
     
-    def defineEmbeddings(self):
+    def defineFeatureGroups(self):
         print >> sys.stderr, "Defining embedding indices"
-        embeddings = {}
-        wordVectorPath = self.styles.get("wv", Settings.W2VFILE)
-        wv_mem = int(self.styles.get("wv_mem", 100000))
-        wv_map = int(self.styles.get("wv_map", 10000000))
-        initVectors = ["[out]", "[pad]"]
-        embeddings["words"] = EmbeddingIndex("words", None, wordVectorPath, wv_mem, wv_map, initVectors)
-        dimEmbeddings = int(self.styles.get("de", 8)) #8 #32
-        embeddings["positions"] = EmbeddingIndex("positions", dimEmbeddings, keys=initVectors)
-        embeddings["named_entities"] = EmbeddingIndex("named_entities", dimEmbeddings, keys=initVectors)
-        embeddings["POS"] = EmbeddingIndex("POS", dimEmbeddings, keys=initVectors, vocabularyType="POS")
+        self.defineWordEmbeddings()
+        self.defineEmbedding("positions")
+        self.defineEmbedding("named_entities")
+        self.defineEmbedding("POS", vocabularyType="POS")
         for i in range(self.pathDepth):
-            embeddings["path" + str(i)] = EmbeddingIndex("path" + str(i), dimEmbeddings, keys=initVectors, vocabularyType="directed_dependencies")
+            self.defineEmbedding("path" + str(i), vocabularyType="directed_dependencies")
         if self.debugGold:
-            embeddings["gold"] = EmbeddingIndex("gold", dimEmbeddings, keys=initVectors)
-        return embeddings
+            self.defineEmbedding("gold")

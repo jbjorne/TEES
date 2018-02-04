@@ -224,7 +224,7 @@ class KerasDetectorBase(Detector):
             else:
                 keys = ["[unconnected]"] * self.pathDepth
         for i in range(self.pathDepth):
-            features[embName + str(i)].append(self.embeddings[embName + str(i)].getIndex(keys[i], "[out]"))
+            self.addFeature(embName + str(i), features, keys[i], "[out]")
     
     def buildExamplesFromGraph(self, sentenceGraph, examples, goldGraph=None):
         raise NotImplementedError
@@ -331,13 +331,61 @@ class KerasDetectorBase(Detector):
     # Embeddings
     ###########################################################################
     
+    def addFeature(self, group, features, key, default=None):
+        if group in self.embeddings:
+            features[group].append(self.embeddings[group].getIndex(key, default))
+    
     def initEmbeddings(self, datas, parse):
         print >> sys.stderr, "Initializing embeddings"
-        self.embeddings = self.defineEmbeddings()
+        self.embeddings = {}
+        self.skipGroups = self.styles.get("skip", None)
+        if isinstance(self.skipGroups, basestring):
+            self.skipGroups = self.skipGroups.split(",")
+        self.limitGroups = self.styles.get("limit", None)
+        if isinstance(self.limitGroups, basestring):
+            self.limitGroups = self.skipGroups.split(",")
+        self.defineFeatureGroups()
         self.initVocabularies(self.embeddings, datas, parse)
     
-    def defineEmbeddings(self):
+    def defineFeatureGroups(self):
         raise NotImplementedError
+    
+    def defineEmbedding(self, name, dim="AUTO", wvPath=None, wvMem=None, wvMap=None, initVectors="AUTO", vocabularyType="AUTO"):
+        assert name not in self.embeddings
+        if self.limitGroups != None and name not in self.limitGroups:
+            print >> sys.stderr, "Limits: skipping feature group", name, self.limitGroups
+            return
+        if self.skipGroups != None and name in self.skipGroups:
+            print >> sys.stderr, "Skip: skipping feature group", name, self.skipGroups
+            return
+        if initVectors == "AUTO":
+            initVectors = ["[out]", "[pad]"]
+        if dim == "AUTO":
+            dim = int(self.styles.get("de", 8)) if wvPath == None else None #8 #32
+        self.embeddings[name] = EmbeddingIndex(name, dim, wvPath, wvMem, wvMap, initVectors, vocabularyType)
+    
+    def defineWordEmbeddings(self, wordVectors=None, wv_mem=None, wv_map=None):
+        if wordVectors == None:
+            wordVectors = self.styles.get("wv", Settings.W2VFILE)
+        if wv_mem == None:
+            wv_mem = int(self.styles.get("wv_mem", 100000))
+        if wv_map == None:
+            wv_map = int(self.styles.get("wv_map", 10000000))
+        if wordVectors == "skip":
+            wordVectors = []
+        elif isinstance(wordVectors, basestring):
+            wordVectors = wordVectors.split(",")
+        wvCount = 0
+        for wv in wordVectors:
+            if os.path.exists(wv):
+                embName = "words" + (str(wvCount) if len(wordVectors) > 1 else "")
+                embPath = wv
+            else:
+                embName = wv
+                embPath = Settings.W2V[wv]
+            assert os.path.exists(embPath), (wv, embName, embPath)
+            self.defineEmbedding(embName, None, embPath, wv_mem, wv_map)
+            wvCount += 1
     
     def saveEmbeddings(self, embeddings, outPath):
         print >> sys.stderr, "Saving embedding indices"

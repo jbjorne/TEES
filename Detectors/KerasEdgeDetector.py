@@ -286,20 +286,20 @@ class KerasEdgeDetector(KerasDetectorBase):
                 #    features["gold"].append(self.embeddings["gold"].getIndex(",".join(labels[j]), "[out]"))
                 for wordEmbedding in wordEmbeddings:
                     features[wordEmbedding].append(self.getWord(tokenMap[token1], tokenMap[token2], token, maskMode, wordEmbedding))
-                features["positions1"].append(self.embeddings["positions1"].getIndex(str(t1Index - i), "[out]"))
-                features["positions2"].append(self.embeddings["positions2"].getIndex(str(t2Index - i), "[out]"))
-                features["entities"].append(token["entities"])
-                features["rel_token"].append(self.embeddings["rel_token"].getIndex(relTokens[i])) #"e1" if i == t1Index else ("e2" if i == t2Index else "N/A")))
-                features["POS"].append(token["POS"])
+                self.addFeature("positions1", features, str(t1Index - i), "[out]")
+                self.addFeature("positions2", features, str(t2Index - i), "[out]")
+                self.addFeature("entities", features, token["entities"])
+                self.addFeature("rel_token", features, relTokens[i]) #"e1" if i == t1Index else ("e2" if i == t2Index else "N/A")))
+                self.addFeature("POS", features, token["POS"])
                 pathToken = pathTokens.get(token["element"])
-                features["shortest_path"].append(self.embeddings["shortest_path"].getIndex("1" if pathToken != None else "0"))
-                features["sp_in"].append(self.embeddings["sp_in"].getIndex(pathToken[0] if pathToken != None else "[N/A]"))
-                features["sp_out"].append(self.embeddings["sp_out"].getIndex(pathToken[1] if pathToken != None else "[N/A]"))
+                self.addFeature("sp_mask", features, "1" if pathToken != None else "0")
+                self.addFeature("sp_in", features, pathToken[0] if pathToken != None else "[N/A]")
+                self.addFeature("sp_out", features, pathToken[1] if pathToken != None else "[N/A]")
                 self.addPathEmbedding(token1, token["element"], sentenceGraph.dependencyGraph, undirected, edgeCounts, features, "path1_")
                 self.addPathEmbedding(token2, token["element"], sentenceGraph.dependencyGraph, undirected, edgeCounts, features, "path2_")
             else:
                 for featureGroup in featureGroups:
-                    features[featureGroup].append(self.embeddings[featureGroup].getIndex("[pad]"))
+                    self.addFeature(featureGroup, features, "[pad]")
         
         # define extra attributes
         extra = {"xtype":"edge", "type":"i", "t1":token1.get("id"), "t2":token2.get("id")}
@@ -335,43 +335,22 @@ class KerasEdgeDetector(KerasDetectorBase):
         examples.append({"id":sentenceGraph.getSentenceId()+".x"+str(self.exampleIndex), "labels":labels, "features":features, "extra":extra})
         self.exampleIndex += 1
     
-    def defineEmbeddings(self):
+    def defineFeatureGroups(self):
         print >> sys.stderr, "Defining embedding indices"
-        embeddings = {}
-        initVectors = ["[out]", "[pad]"]
-        wv_mem = int(self.styles.get("wv_mem", 100000))
-        wv_map = int(self.styles.get("wv_map", 10000000))
-        wordVectors = self.styles.get("wv", Settings.W2VFILE)
-        if wordVectors == "skip":
-            wordVectors = []
-        elif isinstance(wordVectors, basestring):
-            wordVectors = wordVectors.split(",")
-        wvCount = 0
-        for wv in wordVectors:
-            if os.path.exists(wv):
-                embName = "words" + str(wvCount)
-                embPath = wv
-            else:
-                embName = wv
-                embPath = Settings.W2V[wv]
-            assert os.path.exists(embPath), (wv, embName, embPath)
-            embeddings[embName] = EmbeddingIndex(embName, None, embPath, wv_mem, wv_map, initVectors)
-            wvCount += 1
-        dimEmbeddings = int(self.styles.get("de", 8)) #8 #32
-        embeddings["positions1"] = EmbeddingIndex("positions1", dimEmbeddings, keys=initVectors)
-        embeddings["positions2"] = EmbeddingIndex("positions2", dimEmbeddings, keys=initVectors)
-        embeddings["entities"] = EmbeddingIndex("entities", dimEmbeddings, keys=initVectors)
-        embeddings["rel_token"] = EmbeddingIndex("rel_token", dimEmbeddings, keys=initVectors)
-        embeddings["POS"] = EmbeddingIndex("POS", dimEmbeddings, keys=initVectors, vocabularyType="POS")
-        embeddings["shortest_path"] = EmbeddingIndex("shortest_path", dimEmbeddings, keys=initVectors)
-        embeddings["sp_in"] = EmbeddingIndex("sp_in", dimEmbeddings, keys=initVectors, vocabularyType="directed_dependencies")
-        embeddings["sp_out"] = EmbeddingIndex("sp_out", dimEmbeddings, keys=initVectors, vocabularyType="directed_dependencies")
+        self.defineWordEmbeddings()
+        self.defineEmbedding("positions1")
+        self.defineEmbedding("positions2")
+        self.defineEmbedding("entities")
+        self.defineEmbedding("rel_token")
+        self.defineEmbedding("POS", vocabularyType="POS")
+        self.defineEmbedding("sp_mask")
+        self.defineEmbedding("sp_in", vocabularyType="directed_dependencies")
+        self.defineEmbedding("sp_out", vocabularyType="directed_dependencies")
         for i in range(self.pathDepth):
             for tag in ("path1_", "path2_"):
-                embeddings[tag + str(i)] = EmbeddingIndex(tag + str(i), dimEmbeddings, keys=initVectors, vocabularyType="directed_dependencies")
+                self.defineEmbedding(tag + str(i), vocabularyType="directed_dependencies")
         if self.debugGold:
-            embeddings["gold"] = EmbeddingIndex("gold", dimEmbeddings, keys=initVectors)
-        return embeddings
+            self.defineEmbedding("gold")
 
     ###########################################################################
     # Example Labels
