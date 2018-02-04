@@ -89,6 +89,9 @@ class KerasDetectorBase(Detector):
         if self.state == self.STATE_COMPONENT_TRAIN or self.checkStep("EXAMPLES"): # Generate the adjacency matrices
             self.initEmbeddings([optData, trainData, testData] if testData != None else [optData, trainData], parse)
             self.buildExamples(self.model, ["devel", "train"], [optData, trainData], [exampleFiles["devel"], exampleFiles["train"]], saveIdsToModel=True)
+            self.defineClassificationMode(self.examples)
+            self.saveLabels(["devel", "train"])
+            self.saveStr(self.tag + "classification-mode", self.cmode, self.model)
             self.defineExampleLength(model, self.examples)
             self.padExamples(self.model, self.examples)
             self.saveEmbeddings(self.embeddings, self.model.get(self.tag + "embeddings.json", True))
@@ -100,7 +103,8 @@ class KerasDetectorBase(Detector):
         #print self.examples["devel"][0:2]
         self.showExample(self.examples["devel"][0])
         if self.state == self.STATE_COMPONENT_TRAIN or self.checkStep("MODEL"): # Define and train the Keras model
-            self.fitModel()
+            labelNames = self.loadLabels(self.model)
+            self.fitModel(labelNames)
         if workDir != None:
             self.setWorkDir("")
         self.exitState()
@@ -135,6 +139,7 @@ class KerasDetectorBase(Detector):
     
     def classifyToXML(self, data, model, exampleFileName=None, tag="", classifierModel=None, goldData=None, parse=None, recallAdjust=None, compressExamples=True, exampleStyle=None, useExistingExamples=False):
         model = self.openModel(model, "r")
+        self.cmode = self.getStr(self.tag+"classification-mode", model)
         if parse == None:
             parse = self.getStr(self.tag+"parse", model)
         if not useExistingExamples:
@@ -144,12 +149,13 @@ class KerasDetectorBase(Detector):
         self.showExample(examples[0])
         if classifierModel == None:
             classifierModel = model.get(self.tag + "model.hdf5")
-        labelSet = IdSet(filename = model.get(self.tag + "labels.ids", False), locked=True)
-        labelNames = [None] * len(labelSet.Ids)
-        for label in labelSet.Ids:
-            labelNames[labelSet.Ids[label]] = label
-        print >> sys.stderr, "Classification labels", labelNames
-        labels, _ = self.vectorizeLabels(examples, ["classification"], labelNames)
+        #labelSet = IdSet(filename = model.get(self.tag + "labels.ids", False), locked=True)
+        #labelNames = [None] * len(labelSet.Ids)
+        #for label in labelSet.Ids:
+        #    labelNames[labelSet.Ids[label]] = label
+        #print >> sys.stderr, "Classification labels", labelNames
+        labelNames = self.loadLabels(model)
+        labels = self.vectorizeLabels(examples, ["classification"], labelNames)
         features = self.vectorizeFeatures(examples, ["classification"])
         predictions, confidences, _ = self.predict(labels["classification"], features["classification"], labelNames, classifierModel)
         if exampleStyle == None:
@@ -160,6 +166,7 @@ class KerasDetectorBase(Detector):
         for pred, conf, example in zip(predictions, confidences, examples):
             outExamples.append([example["id"], None, None, example["extra"]])
             outPredictions.append({"prediction":pred, "confidence":conf})
+        labelSet = IdSet(idDict={labelNames[i]:i for i in range(len(labelNames))})
         return self.exampleWriter.write(outExamples, outPredictions, data, tag+self.tag+"pred.xml.gz", labelSet, parse, exampleStyle=exampleStyle, structureAnalyzer=self.structureAnalyzer)
     
     ###########################################################################
@@ -348,6 +355,25 @@ class KerasDetectorBase(Detector):
             tokens.append(token)
         tokenMap = {tokenElements[i][1]:tokens[i] for i in range(len(tokenElements))}
         return tokens, tokenMap
+    
+    def saveLabels(self, dataSetNames):
+        labels = set()
+        for dataSet in self.examples:
+            for example in self.examples[dataSet]:
+                for label in example["labels"]:
+                    labels.add(label)
+        labels = sorted(labels)
+        assert self.cmode != None
+        if self.cmode == "multiclass" and "neg" not in labels:
+            labels = ["neg"] + labels
+        #labels = {i:labels[i] for i in range(len(labels))}
+        print >> sys.stderr, "Saving labels", labels
+        with open(self.model.get(self.tag + "labels.json", True), "wt") as f:
+            json.dump(labels, f, indent=2, sort_keys=True)
+    
+    def loadLabels(self, model):
+        with open(model.get(self.tag + "labels.json"), "rt") as f:
+            return json.load(f)
             
     ###########################################################################
     # Embeddings
@@ -457,18 +483,19 @@ class KerasDetectorBase(Detector):
             if embeddings[embName].vocabularyType == "words":
                 embeddings[embName].releaseWV()
     
-    def defineModel(self, verbose=False):
+    def defineModel(self, dimLabels, verbose=False):
         """
         Defines the Keras model and compiles it.
         """
-        labelSet = set()
-        for dataSet in ("train", "devel"):
-            for example in self.examples[dataSet]:
-                for label in example["labels"]:
-                    labelSet.add(label)
-        assert self.cmode != None
-        if self.cmode == "multiclass" and "neg" not in labelSet:
-            labelSet.add("neg")
+#         labelSet = set()
+#         for dataSet in ("train", "devel"):
+#             for example in self.examples[dataSet]:
+#                 for label in example["labels"]:
+#                     labelSet.add(label)
+#         assert self.cmode != None
+#         if self.cmode == "multiclass" and "neg" not in labelSet:
+#             labelSet.add("neg")
+        #labelNames = self.loadLabels()
         
         # The Embeddings
         embNames = sorted(self.embeddings.keys())
@@ -498,9 +525,9 @@ class KerasDetectorBase(Detector):
         layer = Dense(int(self.styles.get("dense", 400)), activation='relu')(layer) #layer = Dense(800, activation='relu')(layer)
         assert self.cmode in ("binary", "multiclass", "multilabel")
         if self.cmode in ("binary", "multilabel"):
-            layer = Dense(len(labelSet), activation='sigmoid')(layer)
+            layer = Dense(dimLabels, activation='sigmoid')(layer)
         else:
-            layer = Dense(len(labelSet), activation='softmax')(layer)
+            layer = Dense(dimLabels, activation='softmax')(layer)
         
         kerasModel = Model([self.embeddings[x].inputLayer for x in embNames], layer)
         
@@ -568,15 +595,8 @@ class KerasDetectorBase(Detector):
         for i in range(n_classes):
             weights[i] = counts[i] / minCount
         return weights
-   
-    def fitModel(self, verbose=True):
-        """
-        Fits the compiled Keras model to the adjacency matrix examples. The model is trained on the
-        train set, validated on the devel set and finally the devel set is predicted using the model.
-        """
-        self.defineClassificationMode(self.examples)
-        
-        labels, labelNames = self.vectorizeLabels(self.examples, ["train", "devel"])        
+    
+    def getLabelWeights(self, labels, labelNames):
         print >> sys.stderr, "Labels:", labelNames
         labelWeights = None
         weightStyle = self.styles.get("weights")
@@ -594,10 +614,22 @@ class KerasDetectorBase(Detector):
         else:
             raise Exception("Unknown weight style '" + str(weightStyle) + "'")
         print >> sys.stderr, "Label weights:", weightStyle, labelWeights
-        labelSet = IdSet(idDict={labelNames[i]:i for i in range(len(labelNames))})
-        labelFileName = self.model.get(self.tag + "labels.ids", True)
-        print >> sys.stderr, "Saving class names to", labelFileName
-        labelSet.write(labelFileName)   
+        return labelWeights
+   
+    def fitModel(self, labelNames, verbose=True):
+        """
+        Fits the compiled Keras model to the adjacency matrix examples. The model is trained on the
+        train set, validated on the devel set and finally the devel set is predicted using the model.
+        """
+        #self.defineClassificationMode(self.examples)
+        assert self.cmode != None
+        labels = self.vectorizeLabels(self.examples, ["train", "devel"], labelNames)
+        labelWeights = self.getLabelWeights(labels, labelNames)      
+        
+        #labelSet = IdSet(idDict={labelNames[i]:i for i in range(len(labelNames))})
+        #labelFileName = self.model.get(self.tag + "labels.ids", True)
+        #print >> sys.stderr, "Saving class names to", labelFileName
+        #labelSet.write(labelFileName)   
         
         features = self.vectorizeFeatures(self.examples, ("train", "devel"))
         
@@ -613,7 +645,7 @@ class KerasDetectorBase(Detector):
             es_cb = EarlyStopping(monitor='val_loss', patience=patience, verbose=1)
             modelPath = self.model.get(repModelPath, True) #self.workDir + self.tag + 'model.hdf5'
             cp_cb = ModelCheckpoint(filepath=modelPath, save_best_only=True, verbose=1)
-            kerasModel = self.defineModel(verbose)
+            kerasModel = self.defineModel(len(labelNames), verbose)
             kerasModel.fit(features["train"], labels["train"], #[sourceData], self.arrays["train"]["target"],
                 epochs=100 if not "epochs" in self.styles else int(self.styles["epochs"]),
                 batch_size=64,
@@ -639,11 +671,12 @@ class KerasDetectorBase(Detector):
         self.model.save()
         self.examples = None
     
-    def vectorizeLabels(self, examples, dataSets, labelNames=None):
+    def vectorizeLabels(self, examples, dataSets, labelNames):
         print >> sys.stderr, "Vectorizing labels"
         assert self.cmode != None
-        if labelNames != None and self.cmode == "multiclass" and "neg" not in labelNames:
-            labelNames = ["neg"] + labelNames
+        #if labelNames != None and self.cmode == "multiclass" and "neg" not in labelNames:
+        #    labelNames = ["neg"] + labelNames
+        #labelNames = self.loadLabels()
         mlb = MultiLabelBinarizer(labelNames)
         labels = {}
         for dataSet in dataSets:
@@ -651,14 +684,14 @@ class KerasDetectorBase(Detector):
                 labels[dataSet] = [x["labels"] if len(x["labels"]) > 0 else ["neg"] for x in self.examples[dataSet]]
             else:
                 labels[dataSet] = [x["labels"] for x in self.examples[dataSet]]
-        if labelNames == None:
-            mlb.fit_transform(chain.from_iterable([labels[x] for x in dataSets]))
-        else:
-            mlb.fit(None)
-            assert [x for x in mlb.classes_] == labelNames, (mlb.classes_, labelNames)
+        #if labelNames == None:
+        #    mlb.fit_transform(chain.from_iterable([labels[x] for x in dataSets]))
+        #else:
+        mlb.fit(None)
+        assert [x for x in mlb.classes_] == labelNames, (mlb.classes_, labelNames)
         for dataSet in dataSets:
             labels[dataSet] = numpy.array(mlb.transform(labels[dataSet]))
-        return labels, mlb.classes_
+        return labels #, labelNames
     
     def vectorizeFeatures(self, examples, dataSets):
         featureGroups = sorted(self.examples[dataSets[0]][0]["features"].keys())
@@ -714,5 +747,5 @@ class KerasDetectorBase(Detector):
             print >> sys.stderr, "all labels micro prfs = ", scores["micro-all"]
         print >> sys.stderr, "micro prfs = ", scores["micro"]
         if scores["micro"][2] != 0.0:
-            print >> sys.stderr, classification_report(labels, predictions, labels=posLabels, target_names=labelNames)
+            print >> sys.stderr, classification_report(labels, predictions, target_names=labelNames)
         return scores
