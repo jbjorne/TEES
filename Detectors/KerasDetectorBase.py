@@ -682,14 +682,11 @@ class KerasDetectorBase(Detector):
         
         predictions = numpy.copy(confidences)
         if self.cmode == "multiclass":
-            mlLabels = [numpy.argmax(x) for x in labels]
-            mlPredictions = [None] * len(labels)
             for i in range(len(confidences)):
                 maxIndex = numpy.argmax(confidences[i])
-                mlPredictions[i] = maxIndex
                 for j in range(len(confidences[i])):
                     predictions[i][j] = 1 if j == maxIndex else 0
-            scores = self.evaluate(mlLabels, mlPredictions, labelNames) 
+            scores = self.evaluate([numpy.argmax(x) for x in labels], [numpy.argmax(x) for x in predictions], labelNames) 
         else:
             for i in range(len(confidences)):
                 for j in range(len(confidences[i])):
@@ -711,10 +708,11 @@ class KerasDetectorBase(Detector):
             scores["micro"] = sklearn.metrics.precision_recall_fscore_support(labels, predictions, labels=posLabels, average="micro")
             print "positive labels", posLabels, scores["micro"]
         else:
+            posLabels = labelNames
             scores["micro"] = scores["micro-all"]
         if scores["micro"] != scores["micro-all"]:
-            print >> sys.stderr, "all labels micro prfs = ", scores["micro"]
+            print >> sys.stderr, "all labels micro prfs = ", scores["micro-all"]
         print >> sys.stderr, "micro prfs = ", scores["micro"]
         if scores["micro"][2] != 0.0:
-            print >> sys.stderr, classification_report(labels, predictions, target_names=labelNames)
+            print >> sys.stderr, classification_report(labels, predictions, labels=posLabels, target_names=labelNames)
         return scores
