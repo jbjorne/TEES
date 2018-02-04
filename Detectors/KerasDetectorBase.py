@@ -35,6 +35,7 @@ from keras.layers.pooling import MaxPooling1D
 from __builtin__ import isinstance
 from collections import defaultdict
 from sklearn.utils.class_weight import compute_class_weight
+import Utils.Range as Range
 
 def f1ScoreMetric(y_true, y_pred):
     return sklearn.metrics.f1_score(y_true, y_pred, average="micro")
@@ -326,10 +327,35 @@ class KerasDetectorBase(Detector):
                     examples.append(example)
             exampleSets[setName] = examples
         print >> sys.stderr, dict(counts)
+    
+    def getTokenFeatures(self, sentenceGraph):
+        # Pre-generate features for all tokens in the sentence
+        tokenElements = sorted([(Range.charOffsetToSingleTuple(x.get("charOffset")), x) for x in sentenceGraph.tokens])
+        tokens = []
+        wordEmbeddings = sorted([x for x in self.embeddings.keys() if self.embeddings[x].wvPath != None])
+        for i in range(len(tokenElements)):
+            element = tokenElements[i][1]
+            token = {"index":i, "element":element, "charOffset":tokenElements[i][0]}
+            for wordEmbedding in wordEmbeddings:
+                token[wordEmbedding] = self.embeddings[wordEmbedding].getIndex(element.get("text").lower(), "[out]")
+            if "POS" in self.embeddings:
+                token["POS"] = self.embeddings["POS"].getIndex(element.get("POS"), "[out]")
+            entityLabels = "---".join(sorted(set([x.get("type") for x in sentenceGraph.tokenIsEntityHead[sentenceGraph.tokens[i]]])))
+            if "entities" in self.embeddings:
+                token["entities"] = self.embeddings["entities"].getIndex(entityLabels if entityLabels != "" else "[N/A]", "[out]")         
+            if "named_entities" in self.embeddings:
+                token["named_entities"] = self.embeddings["named_entities"].getIndex("1" if (sentenceGraph.tokenIsEntityHead[element] and sentenceGraph.tokenIsName[element]) else "0")
+            tokens.append(token)
+        tokenMap = {tokenElements[i][1]:tokens[i] for i in range(len(tokenElements))}
+        return tokens, tokenMap
             
     ###########################################################################
     # Embeddings
     ###########################################################################
+    
+    def addIndex(self, group, features, index):
+        if group in self.embeddings:
+            features[group].append(index)
     
     def addFeature(self, group, features, key, default=None):
         if group in self.embeddings:

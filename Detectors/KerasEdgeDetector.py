@@ -138,20 +138,7 @@ class KerasEdgeDetector(KerasDetectorBase):
         undirected = dg.toUndirected()
         edgeCounts = {x:len(dg.getInEdges(x) + dg.getOutEdges(x)) for x in sentenceGraph.tokens}
         
-        # Pre-generate features for all tokens in the sentence
-        tokenElements = sorted([(Range.charOffsetToSingleTuple(x.get("charOffset")), x) for x in sentenceGraph.tokens])
-        tokens = []
-        wordEmbeddings = sorted([x for x in self.embeddings.keys() if self.embeddings[x].wvPath != None])
-        for i in range(len(tokenElements)):
-            element = tokenElements[i][1]
-            token = {"index":i, "element":element, "charOffset":tokenElements[i][0]}
-            for wordEmbedding in wordEmbeddings:
-                token[wordEmbedding] = self.embeddings[wordEmbedding].getIndex(element.get("text").lower(), "[out]")
-            token["POS"] = self.embeddings["POS"].getIndex(element.get("POS"), "[out]")
-            entityLabels = "---".join(sorted(set([x.get("type") for x in sentenceGraph.tokenIsEntityHead[sentenceGraph.tokens[i]]])))
-            token["entities"] = self.embeddings["entities"].getIndex(entityLabels if entityLabels != "" else "[N/A]", "[out]")         
-            tokens.append(token)
-        tokenMap = {tokenElements[i][1]:tokens[i] for i in range(len(tokenElements))}
+        tokens, tokenMap = self.getTokenFeatures(sentenceGraph)
         
         # Generate examples based on interactions between entities or interactions between tokens
         if self.styles.get("token_nodes"):
@@ -285,12 +272,12 @@ class KerasEdgeDetector(KerasDetectorBase):
                 #if self.debugGold:
                 #    features["gold"].append(self.embeddings["gold"].getIndex(",".join(labels[j]), "[out]"))
                 for wordEmbedding in wordEmbeddings:
-                    features[wordEmbedding].append(self.getWord(tokenMap[token1], tokenMap[token2], token, maskMode, wordEmbedding))
+                    self.addIndex(wordEmbedding, features, self.getWord(tokenMap[token1], tokenMap[token2], token, maskMode, wordEmbedding))
                 self.addFeature("positions1", features, str(t1Index - i), "[out]")
                 self.addFeature("positions2", features, str(t2Index - i), "[out]")
-                self.addFeature("entities", features, token["entities"])
+                self.addIndex("entities", features, token["entities"])
                 self.addFeature("rel_token", features, relTokens[i]) #"e1" if i == t1Index else ("e2" if i == t2Index else "N/A")))
-                self.addFeature("POS", features, token["POS"])
+                self.addIndex("POS", features, token["POS"])
                 pathToken = pathTokens.get(token["element"])
                 self.addFeature("sp_mask", features, "1" if pathToken != None else "0")
                 self.addFeature("sp_in", features, pathToken[0] if pathToken != None else "[N/A]")

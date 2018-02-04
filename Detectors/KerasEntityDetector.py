@@ -33,6 +33,7 @@ from keras.layers import Conv1D
 from keras.layers.pooling import MaxPooling1D
 from __builtin__ import isinstance
 from Detectors.KerasDetectorBase import KerasDetectorBase
+import Utils.Range as Range
 
 class KerasEntityDetector(KerasDetectorBase):
     """
@@ -89,6 +90,9 @@ class KerasEntityDetector(KerasDetectorBase):
         labels, entityIds = zip(*[self.getEntityTypes(sentenceGraph.tokenIsEntityHead[sentenceGraph.tokens[i]]) for i in range(numTokens)])
         self.exampleLength = int(self.styles.get("el", 21)) #31 #9 #21 #5 #3 #9 #19 #21 #9 #5 #exampleLength = self.EXAMPLE_LENGTH if self.EXAMPLE_LENGTH != None else numTokens
         
+        # Pre-generate features for all tokens in the sentence
+        tokens, tokenMap = self.getTokenFeatures(sentenceGraph)
+        
         dg = sentenceGraph.dependencyGraph
         undirected = dg.toUndirected()
         edgeCounts = {x:len(dg.getInEdges(x) + dg.getOutEdges(x)) for x in sentenceGraph.tokens}
@@ -115,16 +119,16 @@ class KerasEntityDetector(KerasDetectorBase):
             windowIndex = 0
             for j in range(i - side, i + side + 1):
                 if j >= 0 and j < numTokens:
-                    token2 = sentenceGraph.tokens[j]
+                    token2 = tokens[j]
                     #tokens.append(token2)
                     if self.debugGold:
                         self.addFeature("gold", features, ",".join(labels[j]), "[out]")
                     for wordEmbedding in wordEmbeddings:
-                        self.addFeature(wordEmbedding, features, token2.get("text").lower(), "[out]")
+                        self.addIndex(wordEmbedding, features, token2[wordEmbedding])
                     self.addFeature("positions", features, str(windowIndex), "[out]")
-                    self.addFeature("named_entities", features, "1" if (sentenceGraph.tokenIsEntityHead[token2] and sentenceGraph.tokenIsName[token2]) else "0", "[out]")
-                    self.addFeature("POS", features, token2.get("POS"), "[out]")
-                    self.addPathEmbedding(token, token2, sentenceGraph.dependencyGraph, undirected, edgeCounts, features)
+                    self.addIndex("named_entities", features, token2["named_entities"])
+                    self.addIndex("POS", features, token2["POS"])
+                    self.addPathEmbedding(token, token2["element"], sentenceGraph.dependencyGraph, undirected, edgeCounts, features)
                 else:
                     #tokens.append(None)
                     for featureGroup in featureGroups:
