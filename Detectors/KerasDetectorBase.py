@@ -672,7 +672,7 @@ class KerasDetectorBase(Detector):
         self.examples = None
     
     def vectorizeLabels(self, examples, dataSets, labelNames):
-        print >> sys.stderr, "Vectorizing labels"
+        print >> sys.stderr, "Vectorizing labels", labelNames
         assert self.cmode != None
         #if labelNames != None and self.cmode == "multiclass" and "neg" not in labelNames:
         #    labelNames = ["neg"] + labelNames
@@ -730,18 +730,18 @@ class KerasDetectorBase(Detector):
     
     def evaluate(self, labels, predictions, labelNames):
         print "Evaluating, labels =", labelNames
+        labelIndices = [i for i in range(len(labelNames))]
         scores = {"labels":{}, "micro":None}
-        scoreList = sklearn.metrics.precision_recall_fscore_support(labels, predictions, average=None)
+        scoreList = sklearn.metrics.precision_recall_fscore_support(labels, predictions, labels=labelIndices, average=None)
         for i in range(len(labelNames)):
             scores["labels"][labelNames[i]] = (scoreList[0][i], scoreList[1][i], scoreList[2][i], scoreList[3][i])
             print >> sys.stderr, labelNames[i], "prfs =", scores["labels"][labelNames[i]]
         scores["micro-all"] = sklearn.metrics.precision_recall_fscore_support(labels, predictions, average="micro")
         if "neg" in labelNames: #[labelNames[i] for i in range(len(labelNames))]:
-            posLabels = [i for i in range(len(labelNames)) if labelNames[i] != "neg"]
-            scores["micro"] = sklearn.metrics.precision_recall_fscore_support(labels, predictions, labels=posLabels, average="micro")
-            print "positive labels", posLabels, scores["micro"]
+            posLabelIndices = [i for i in range(len(labelNames)) if labelNames[i] != "neg"]
+            scores["micro"] = sklearn.metrics.precision_recall_fscore_support(labels, predictions, labels=posLabelIndices, average="micro")
+            #print "positive labels", posLabelIndices, scores["micro"]
         else:
-            posLabels = labelNames
             scores["micro"] = scores["micro-all"]
         if scores["micro"] != scores["micro-all"]:
             print >> sys.stderr, "all labels micro prfs = ", scores["micro-all"]
