@@ -57,7 +57,7 @@ class KerasDetectorBase(Detector):
         self.debugGold = False
         self.exampleLength = None
         self.cmode = None
-        KerasUtils.setRandomSeed(0)
+        #KerasUtils.setRandomSeed(0)
     
     ###########################################################################
     # Main Pipeline Interface
@@ -644,7 +644,7 @@ class KerasDetectorBase(Detector):
         repModelPath = self.tag + "current-model.hdf5" if replicates > 1 else self.tag + "model.hdf5"
         for i in range(replicates):
             print >> sys.stderr, "***", "Replicate", i + 1, "/", replicates, "***"
-            KerasUtils.setRandomSeed(i)
+            #KerasUtils.setRandomSeed(i)
             es_cb = EarlyStopping(monitor='val_loss', patience=patience, verbose=1)
             modelPath = self.model.get(repModelPath, True) #self.workDir + self.tag + 'model.hdf5'
             cp_cb = ModelCheckpoint(filepath=modelPath, save_best_only=True, verbose=1)
