@@ -466,6 +466,9 @@ class KerasDetectorBase(Detector):
             for example in self.examples[dataSet]:
                 for label in example["labels"]:
                     labelSet.add(label)
+        assert self.cmode != None
+        if self.cmode == "multiclass" and "neg" not in labelSet:
+            labelSet.add("neg")
         
         # The Embeddings
         embNames = sorted(self.embeddings.keys())
@@ -537,7 +540,8 @@ class KerasDetectorBase(Detector):
                 elif maxlabels > 1:
                     self.cmode = "multilabel"
                 else:
-                    self.cmode = "multiclass"           
+                    self.cmode = "multiclass"
+            #self.cmode = "multilabel"         
         assert self.cmode in ("binary", "multiclass", "multilabel"), self.cmode
         print >> sys.stderr, "Using classification mode", self.cmode
     
@@ -570,6 +574,8 @@ class KerasDetectorBase(Detector):
         Fits the compiled Keras model to the adjacency matrix examples. The model is trained on the
         train set, validated on the devel set and finally the devel set is predicted using the model.
         """
+        self.defineClassificationMode(self.examples)
+        
         labels, labelNames = self.vectorizeLabels(self.examples, ["train", "devel"])        
         print >> sys.stderr, "Labels:", labelNames
         labelWeights = None
@@ -592,7 +598,6 @@ class KerasDetectorBase(Detector):
         labelFileName = self.model.get(self.tag + "labels.ids", True)
         print >> sys.stderr, "Saving class names to", labelFileName
         labelSet.write(labelFileName)   
-        self.defineClassificationMode(self.examples)
         
         features = self.vectorizeFeatures(self.examples, ("train", "devel"))
         
@@ -636,10 +641,16 @@ class KerasDetectorBase(Detector):
     
     def vectorizeLabels(self, examples, dataSets, labelNames=None):
         print >> sys.stderr, "Vectorizing labels"
+        assert self.cmode != None
+        if labelNames != None and self.cmode == "multiclass" and "neg" not in labelNames:
+            labelNames = ["neg"] + labelNames
         mlb = MultiLabelBinarizer(labelNames)
         labels = {}
         for dataSet in dataSets:
-            labels[dataSet] = [x["labels"] for x in self.examples[dataSet]]
+            if self.cmode == "multiclass":
+                labels[dataSet] = [x["labels"] if len(x["labels"]) > 0 else ["neg"] for x in self.examples[dataSet]]
+            else:
+                labels[dataSet] = [x["labels"] for x in self.examples[dataSet]]
         if labelNames == None:
             mlb.fit_transform(chain.from_iterable([labels[x] for x in dataSets]))
         else:
@@ -670,9 +681,15 @@ class KerasDetectorBase(Detector):
         confidences = kerasModel.predict(features, 64, 1)
         
         predictions = numpy.copy(confidences)
-        for i in range(len(confidences)):
-            for j in range(len(confidences[i])):
-                predictions[i][j] = 1 if confidences[i][j] > 0.5 else 0
+        if self.cmode == "multiclass":
+            for i in range(len(confidences)):
+                maxIndex = numpy.argmax(confidences[i])
+                for j in range(len(confidences[i])):
+                    predictions[i][j] = 1 if j == maxIndex else 0     
+        else:
+            for i in range(len(confidences)):
+                for j in range(len(confidences[i])):
+                    predictions[i][j] = 1 if confidences[i][j] > 0.5 else 0       
         print confidences[0], predictions[0], (confidences.shape, predictions.shape)
         
         scores = self.evaluate(labels, predictions, labelNames)

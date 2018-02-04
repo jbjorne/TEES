@@ -35,6 +35,7 @@ from __builtin__ import isinstance
 from Detectors.KerasDetectorBase import KerasDetectorBase
 from ExampleWriters.EdgeExampleWriter import EdgeExampleWriter
 import Utils.Range as Range
+from collections import defaultdict
 
 class KerasEdgeDetector(KerasDetectorBase):
     """
@@ -73,22 +74,50 @@ class KerasEdgeDetector(KerasDetectorBase):
             self.exampleStats.filter("no_self_loops")
         return makeExample
     
-    def keepDDI(self, token1, token2, entity1, entity2, tokens, tokenMap):
-        e1Text = entity1.get("text").lower()
-        e2Text = entity2.get("text").lower()
-        if e1Text == e2Text:
-            self.exampleStats.filter("entities_equal")
-            return False
-        e1Splits = e1Text.split()
-        e2Splits = e2Text.split()
-        if (len(e1Splits) == 1 and e1Splits[0] in e2Splits) or (len(e2Splits) == 1 and e2Splits[0] in e1Splits):
-            self.exampleStats.filter("entity_substring")
-            return False
-        between = tokens[tokenMap[token1]["index"] + 1:tokenMap[token2]["index"]]
-        if all([x.get("text") in (",", "(", ")", "or", "and", "-") for x in between]):
-            self.exampleStats.filter("entities_list")
+    def keepDDI(self, token1, token2, entity1, entity2, tokens, tokenMap, sentenceGraph, labels):
+#         e1Type = entity1.get("type")
+#         e2Type = entity2.get("type")
+        entityTypes = defaultdict(int)
+        for entity in sentenceGraph.entities:
+            entityTypes[entity.get("type")] += 1
+#         sumAll = sum(entityTypes.values())
+#         sumNonDrug = sum([entityTypes[x] for x in entityTypes.keys() if x != "drug"])
+#         if sumNonDrug <= 1 and sumAll >= 6 and e1Type == "drug" and e2Type == "drug":
+#             self.exampleStats.filter("drug_pair")
+#         if e1Type == "drug_n" and e2Type == "drug_n":
+#             self.exampleStats.filter("pair/drug_n")
+#             print "pair/drug_n", dict(entityTypes)
+#             return False
+#         if e1Type == "brand" and e2Type == "brand":
+#             self.exampleStats.filter("pair/brand")
+#             print "pair/brand", dict(entityTypes)
+#             return False
+#         if e1Type == "group" and e2Type == "group":
+#             self.exampleStats.filter("pair/group")
+#             print "pair/group", dict(entityTypes)
+#             return False
+#         if len(entityTypes) == 1 and "drug" in entityTypes and entityTypes["drug"] >= 20:
+#             self.exampleStats.filter("max_drug")
+#             return False
+        if max(entityTypes.values()) > 30:
+            self.exampleStats.filter("max_val")
             return False
         return True
+#         e1Text = entity1.get("text").lower()
+#         e2Text = entity2.get("text").lower()
+#         if e1Text == e2Text:
+#             self.exampleStats.filter("entities_equal")
+#             return False
+#         e1Splits = e1Text.split()
+#         e2Splits = e2Text.split()
+#         if (len(e1Splits) == 1 and e1Splits[0] in e2Splits) or (len(e2Splits) == 1 and e2Splits[0] in e1Splits):
+#             self.exampleStats.filter("entity_substring")
+#             return False
+#         between = tokens[tokenMap[token1]["index"] + 1:tokenMap[token2]["index"]]
+#         if all([x.get("text") in (",", "(", ")", "or", "and", "-") for x in between]):
+#             self.exampleStats.filter("entities_list")
+#             return False
+#         return True
     
     def getWord(self, token1, token2, token, maskMode=None, embName="words"):
         if maskMode == None:
@@ -189,7 +218,7 @@ class KerasEdgeDetector(KerasDetectorBase):
             self.exampleStats.endExample()
             return
         
-        if "ddi_filters" in self.styles and not self.keepDDI(token1, token2, entity1, entity2, tokens, tokenMap):
+        if "ddi_filters" in self.styles and not self.keepDDI(token1, token2, entity1, entity2, tokens, tokenMap, sentenceGraph, labels):
             self.exampleStats.endExample()
             return
         
