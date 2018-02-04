@@ -80,6 +80,7 @@ class KerasEdgeDetector(KerasDetectorBase):
         entityTypes = defaultdict(int)
         for entity in sentenceGraph.entities:
             entityTypes[entity.get("type")] += 1
+        maxValLimit = int(self.styles.get("filter_max_val", 30))
 #         sumAll = sum(entityTypes.values())
 #         sumNonDrug = sum([entityTypes[x] for x in entityTypes.keys() if x != "drug"])
 #         if sumNonDrug <= 1 and sumAll >= 6 and e1Type == "drug" and e2Type == "drug":
@@ -99,7 +100,7 @@ class KerasEdgeDetector(KerasDetectorBase):
 #         if len(entityTypes) == 1 and "drug" in entityTypes and entityTypes["drug"] >= 20:
 #             self.exampleStats.filter("max_drug")
 #             return False
-        if max(entityTypes.values()) > 30:
+        if max(entityTypes.values()) > maxValLimit:
             self.exampleStats.filter("max_val")
             return False
         return True
