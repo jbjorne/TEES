@@ -682,17 +682,20 @@ class KerasDetectorBase(Detector):
         
         predictions = numpy.copy(confidences)
         if self.cmode == "multiclass":
+            mlLabels = [numpy.argmax(x) for x in labels]
+            mlPredictions = [None] * len(labels)
             for i in range(len(confidences)):
                 maxIndex = numpy.argmax(confidences[i])
+                mlPredictions[i] = maxIndex
                 for j in range(len(confidences[i])):
-                    predictions[i][j] = 1 if j == maxIndex else 0     
+                    predictions[i][j] = 1 if j == maxIndex else 0
+            scores = self.evaluate(mlLabels, mlPredictions, labelNames) 
         else:
             for i in range(len(confidences)):
                 for j in range(len(confidences[i])):
-                    predictions[i][j] = 1 if confidences[i][j] > 0.5 else 0       
-        print confidences[0], predictions[0], (confidences.shape, predictions.shape)
-        
-        scores = self.evaluate(labels, predictions, labelNames)
+                    predictions[i][j] = 1 if confidences[i][j] > 0.5 else 0
+            scores = self.evaluate(labels, predictions, labelNames)
+        print >> sys.stderr, confidences[0], predictions[0], (confidences.shape, predictions.shape)
         return predictions, confidences, scores
     
     def evaluate(self, labels, predictions, labelNames):
@@ -701,9 +704,17 @@ class KerasDetectorBase(Detector):
         scoreList = sklearn.metrics.precision_recall_fscore_support(labels, predictions, average=None)
         for i in range(len(labelNames)):
             scores["labels"][labelNames[i]] = (scoreList[0][i], scoreList[1][i], scoreList[2][i], scoreList[3][i])
-            print labelNames[i], "prfs =", scores["labels"][labelNames[i]]
-        scores["micro"] = sklearn.metrics.precision_recall_fscore_support(labels, predictions, average="micro")
-        print "micro prfs = ", scores["micro"]
+            print >> sys.stderr, labelNames[i], "prfs =", scores["labels"][labelNames[i]]
+        scores["micro-all"] = sklearn.metrics.precision_recall_fscore_support(labels, predictions, average="micro")
+        if "neg" in labelNames: #[labelNames[i] for i in range(len(labelNames))]:
+            posLabels = [i for i in range(len(labelNames)) if labelNames[i] != "neg"]
+            scores["micro"] = sklearn.metrics.precision_recall_fscore_support(labels, predictions, labels=posLabels, average="micro")
+            print "positive labels", posLabels, scores["micro"]
+        else:
+            scores["micro"] = scores["micro-all"]
+        if scores["micro"] != scores["micro-all"]:
+            print >> sys.stderr, "all labels micro prfs = ", scores["micro"]
+        print >> sys.stderr, "micro prfs = ", scores["micro"]
         if scores["micro"][2] != 0.0:
-            print(classification_report(labels, predictions, target_names=labelNames))
+            print >> sys.stderr, classification_report(labels, predictions, target_names=labelNames)
         return scores
