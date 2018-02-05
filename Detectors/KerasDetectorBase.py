@@ -23,7 +23,8 @@ import numpy
 from keras.layers import Dense
 from keras.models import Model, load_model
 from keras.layers.core import Dropout, Flatten
-from keras.optimizers import Adam
+from keras import optimizers
+#from keras.optimizers import Adam
 from keras.callbacks import EarlyStopping, ModelCheckpoint
 from keras.layers import merge
 from itertools import chain
@@ -31,7 +32,7 @@ import sklearn.metrics
 from sklearn.preprocessing.label import MultiLabelBinarizer
 from sklearn.metrics.classification import classification_report
 from keras.layers import Conv1D
-from keras.layers.pooling import MaxPooling1D
+from keras.layers.pooling import MaxPooling1D, GlobalMaxPool1D
 from __builtin__ import isinstance
 from collections import defaultdict
 from sklearn.utils.class_weight import compute_class_weight
@@ -499,32 +500,43 @@ class KerasDetectorBase(Detector):
 #             labelSet.add("neg")
         #labelNames = self.loadLabels()
         
+        dropout = float(self.styles.get("do", 0.1))
+        
         # The Embeddings
         embNames = sorted(self.embeddings.keys())
         for embName in embNames:
             self.embeddings[embName].makeLayers(self.exampleLength, embName, True if "wv_learn" in self.styles else "AUTO")
         merged_features = merge([self.embeddings[x].embeddingLayer for x in embNames], mode='concat', name="merged_features")
-        merged_features = Dropout(float(self.styles.get("do", 0.1)))(merged_features)
+        if dropout > 0.0:
+            merged_features = Dropout(dropout)(merged_features)
         
 #         # Main network
         if self.styles.get("kernels") != "skip":
             convOutputs = []
+            convAct = self.styles.get("cact", "relu")
             kernelSizes = [int(x) for x in self.styles.get("kernels", [1, 3, 5, 7])]
             numFilters = int(self.styles.get("nf", 32)) #32 #64
             for kernel in kernelSizes:
-                subnet = Conv1D(numFilters, kernel, activation='relu', name='conv_' + str(kernel))(merged_features)
+                subnet = Conv1D(numFilters, kernel, activation=convAct, name='conv_' + str(kernel))(merged_features)
                 #subnet = Conv1D(numFilters, kernel, activation='relu', name='conv2_' + str(kernel))(subnet)
-                subnet = MaxPooling1D(pool_length=self.exampleLength - kernel + 1, name='maxpool_' + str(kernel))(subnet)
-                #subnet = GlobalMaxPooling1D(name='maxpool_' + str(kernel))(subnet)
-                subnet = Flatten(name='flat_' + str(kernel))(subnet)
+                #subnet = MaxPooling1D(pool_length=self.exampleLength - kernel + 1, name='maxpool_' + str(kernel))(subnet)
+                subnet = GlobalMaxPool1D(name='maxpool_' + str(kernel))(subnet)
+                #subnet = Flatten(name='flat_' + str(kernel))(subnet)
                 convOutputs.append(subnet)       
             layer = merge(convOutputs, mode='concat')
-            layer = Dropout(float(self.styles.get("do", 0.1)))(layer)
+            if dropout > 0.0:
+                layer = Dropout(dropout)(layer)
         else:
             layer = Flatten()(merged_features)
         
         # Classification layers
-        layer = Dense(int(self.styles.get("dense", 400)), activation='relu')(layer) #layer = Dense(800, activation='relu')(layer)
+        denseSizes = self.styles.get("dense", "400")
+        if isinstance(denseSizes, basestring):
+            denseSizes = denseSizes.split(",")
+        denseSizes = [int(x) for x in denseSizes]
+        for denseSize in denseSizes:
+            if denseSize > 0:
+                layer = Dense(denseSize, activation='relu')(layer) #layer = Dense(800, activation='relu')(layer)
         assert self.cmode in ("binary", "multiclass", "multilabel")
         if self.cmode in ("binary", "multilabel"):
             layer = Dense(dimLabels, activation='sigmoid')(layer)
@@ -534,8 +546,10 @@ class KerasDetectorBase(Detector):
         kerasModel = Model([self.embeddings[x].inputLayer for x in embNames], layer)
         
         learningRate = float(self.styles.get("lr", 0.001))
-        print >> sys.stderr, "Using learning rate", learningRate
-        optimizer = Adam(lr=learningRate)
+        optName = self.styles.get("opt", "adam")
+        print >> sys.stderr, "Using learning rate", learningRate, "with optimizer", optName
+        optDict = {"adam":optimizers.Adam, "nadam":optimizers.Nadam, "sgd":optimizers.SGD, "adadelta":optimizers.Adadelta}
+        optimizer = optDict[optName](lr=learningRate)
         
         print >> sys.stderr, "Compiling model"
         metrics = ["accuracy"] #, f1ScoreMetric]
