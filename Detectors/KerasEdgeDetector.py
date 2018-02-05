@@ -308,6 +308,7 @@ class KerasEdgeDetector(KerasDetectorBase):
                 self.addIndex("entities", features, token.get("entities"))
                 self.addFeature("rel_token", features, relTokens[i]) #"e1" if i == t1Index else ("e2" if i == t2Index else "N/A")))
                 self.addIndex("POS", features, token.get("POS"))
+                self.addIndex("head_score", features, token.get("head_score"))
                 pathToken = pathTokens.get(token["element"])
                 self.addFeature("sp_mask", features, "1" if pathToken != None else "0")
                 self.addFeature("sp_in", features, pathToken[0] if pathToken != None else "[N/A]")
@@ -360,6 +361,8 @@ class KerasEdgeDetector(KerasDetectorBase):
         self.defineEmbedding("entities")
         self.defineEmbedding("rel_token")
         self.defineEmbedding("POS", vocabularyType="POS")
+        if "head_score" in self.styles:
+            self.defineEmbedding("head_score", vocabularyType="head_score")
         self.defineEmbedding("sp_mask")
         self.defineEmbedding("sp_in", vocabularyType="directed_dependencies")
         self.defineEmbedding("sp_out", vocabularyType="directed_dependencies")

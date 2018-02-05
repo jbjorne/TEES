@@ -98,6 +98,9 @@ class EmbeddingIndex():
         elif self.vocabularyType == "POS":
             for token in tokens:
                 self.getIndex(token.get("POS"))
+        elif self.vocabularyType == "head_score":
+            for token in tokens:
+                self.getIndex(token.get("headScore"))
         elif self.vocabularyType == "directed_dependencies":
             for dependency in dependencies:
                 self.getIndex("<" + dependency.get("type"))

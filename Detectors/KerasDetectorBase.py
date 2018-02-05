@@ -350,6 +350,8 @@ class KerasDetectorBase(Detector):
                 token[wordEmbedding] = self.embeddings[wordEmbedding].getIndex(element.get("text").lower(), "[out]")
             if "POS" in self.embeddings:
                 token["POS"] = self.embeddings["POS"].getIndex(element.get("POS"), "[out]")
+            if "head_score" in self.embeddings:
+                token["head_score"] = self.embeddings["head_score"].getIndex(element.get("headScore"), "[out]")
             entityLabels = "---".join(sorted(set([x.get("type") for x in sentenceGraph.tokenIsEntityHead[sentenceGraph.tokens[i]]])))
             if "entities" in self.embeddings:
                 token["entities"] = self.embeddings["entities"].getIndex(entityLabels if entityLabels != "" else "[N/A]", "[out]")         
