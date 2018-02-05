@@ -19,7 +19,7 @@ def getCounts(document):
         counts["interactions"][iType] += 1
         counts["total"] += 1
 
-def getFractions(documents, docCounts):
+def getTotals(documents, docCounts):
     totals = {}
     for document in documents:
         counts = docCounts[document]
@@ -27,6 +27,9 @@ def getFractions(documents, docCounts):
             if key not in totals:
                 totals[key] = 0
             totals[key] += counts[key]
+    return totals
+
+def getFractions(totals):
     total = sum(totals.values())
     fractions = {key:totals[key] / total for key in sorted(totals.keys())}
     return fractions
