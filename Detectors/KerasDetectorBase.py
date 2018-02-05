@@ -569,7 +569,7 @@ class KerasDetectorBase(Detector):
                 elif maxlabels > 1:
                     self.cmode = "multilabel"
                 else:
-                    self.cmode = "multiclass"
+                    self.cmode = "multilabel" #"multiclass"
             #self.cmode = "multilabel"         
         assert self.cmode in ("binary", "multiclass", "multilabel"), self.cmode
         print >> sys.stderr, "Using classification mode", self.cmode
