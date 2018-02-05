@@ -10,6 +10,12 @@ def normalized(a, axis=-1, order=2):
     l2[l2==0] = 1
     return a / numpy.expand_dims(l2, axis)
 
+def getRandomVector(dim, nor=False):
+    vector = numpy.random.uniform(-1.0, 1.0, dim)
+    if nor:
+        vector = normalized(vector)
+    return vector
+
 class EmbeddingIndex():
     def __init__(self, name=None, dimVector=None, wordVectorPath=None, wvMem=100000, wvMap=10000000, keys=None, vocabularyType="AUTO"):
         self._reset(name, dimVector, wordVectorPath, wvMem, wvMap, keys, vocabularyType)
@@ -38,7 +44,7 @@ class EmbeddingIndex():
         self.initialKeys = [] if keys == None else keys
         #self.initialKeysInitialized = False
         for key in self.initialKeys:
-            self._addEmbedding(key, numpy.zeros(self.dimVector))
+            self._addEmbedding(key, numpy.zeros(self.dimVector)) #getRandomVector(self.dimVector)) # numpy.ones(self.dimVector)) #numpy.zeros(self.dimVector))
     
     def getSize(self):
         return len(self.embeddingIndex)
@@ -74,7 +80,7 @@ class EmbeddingIndex():
             if self.wvPath != None and not special:
                 vector = self.wv.w_to_normv(key) if self.wv != None else None
             else:
-                vector = numpy.ones(self.dimVector) #normalized(numpy.random.uniform(-1.0, 1.0, self.dimVector)))
+                vector = numpy.ones(self.dimVector) #getRandomVector(self.dimVector) #numpy.ones(self.dimVector) #normalized(numpy.random.uniform(-1.0, 1.0, self.dimVector)))
             if vector is not None:
                 if self.locked == "all":
                     raise Exception("Cannot expand locked vocabulary with key '" + key + "' for embedding '" + self.name + "'")
