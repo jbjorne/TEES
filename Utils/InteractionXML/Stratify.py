@@ -17,6 +17,7 @@ def getCounts(document):
         if iType not in counts:
             counts[iType] = 0
         counts[iType] += 1
+    return counts
 
 def getTotals(documents, docCounts):
     totals = {}
@@ -29,7 +30,7 @@ def getTotals(documents, docCounts):
     return totals
 
 def getFractions(totals):
-    total = sum(totals.values())
+    total = float(sum(totals.values()))
     fractions = {key:totals[key] / total for key in sorted(totals.keys())}
     return fractions
 
@@ -53,8 +54,8 @@ def stratify(input, output, oldSetNames, newSetWeights):
     cutoff = 0.0
     cutoffs = []
     for key in newSetNames:
-        cutoffs.append({"cutoff":cutoff, "name":key})
         cutoff += newSetWeights[key] / sumWeights
+        cutoffs.append({"cutoff":cutoff, "name":key})
     print >> sys.stderr, "Cutoffs", cutoffs
     
     documents = []
@@ -73,9 +74,9 @@ def stratify(input, output, oldSetNames, newSetWeights):
     newSets = {x:[] for x in newSetNames}
     for document in documents:
         cutoff = random.random()
-        for i in range(1, len(cutoffs)):
+        for i in range(len(cutoffs)):
             if cutoff <= cutoffs[i]["cutoff"]:
-                newSets[cutoffs[i-1]["name"]].append(document)
+                newSets[cutoffs[i]["name"]].append(document)
                 break
             if i == len(cutoffs) - 1:
                 raise Exception("No set " + str(cutoff))
@@ -83,7 +84,7 @@ def stratify(input, output, oldSetNames, newSetWeights):
     fullFractions = getFractions(getTotals(documents, docCounts))
     print "Full fractions", fullFractions
     allKeys = sorted(fullFractions.keys())
-    setTotals = {x:getTotals(newSets[x]) for x in newSetNames}
+    setTotals = {x:getTotals(newSets[x], docCounts) for x in newSetNames}
     print "Initial set totals", setTotals
     setFractions = {x:getFractions(setTotals[x]) for x in newSetNames}
     print "Initial set fractions", setFractions
