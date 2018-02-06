@@ -11,13 +11,12 @@ import re
 from random import Random
 
 def getCounts(document):
-    counts = {"interactions":{}, "total":0}
+    counts = {}
     for interaction in document.getiterator("interaction"):
         iType = interaction.get("type")
         if iType not in counts:
-            counts["interactions"][iType] = 0
-        counts["interactions"][iType] += 1
-        counts["total"] += 1
+            counts[iType] = 0
+        counts += 1
 
 def getTotals(documents, docCounts):
     totals = {}
@@ -37,7 +36,7 @@ def getFractions(totals):
 def getDistance(fractionsA, fractionsB, allKeys):
     distances = []
     for key in allKeys:
-        distances.append(fractionsA[key] - fractionsB[key])
+        distances.append(abs(fractionsA[key] - fractionsB[key]))
     return sum(distances) / len(distances)
 
 def stratify(input, output, oldSetNames, newSetWeights):
@@ -47,7 +46,7 @@ def stratify(input, output, oldSetNames, newSetWeights):
     
     oldSetNames = re.compile(oldSetNames)
     if isinstance(newSetWeights, basestring):
-        newSetNames = eval(newSetWeights)
+        newSetWeights = eval(newSetWeights)
     sumWeights = sum(newSetWeights.values())
     newSetNames = sorted(newSetWeights.keys())
     cutoff = 0.0
@@ -73,22 +72,69 @@ def stratify(input, output, oldSetNames, newSetWeights):
             if cutoffs[j] > cutoff:
                 newSets[cutoffs[j-1][1]].append(document)
                 break
-    print "Initial counts", {x:len(newSets[x]) for x in newSets}
-    origFractions = getFractions(getTotals(documents, docCounts))
-    print "Initial fractions", origFractions
-    allKeys = sorted(origFractions.keys())
+    print "Initial document counts", {x:len(newSets[x]) for x in newSets}
+    fullFractions = getFractions(getTotals(documents, docCounts))
+    print "Full fractions", fullFractions
+    allKeys = sorted(fullFractions.keys())
     setTotals = [getTotals(newSets[x]) for x in newSetNames]
+    print "Initial set totals", setTotals
+    setFractions = [getFractions(setTotals[x]) for x in newSetNames]
+    print "Initial set fractions", setFractions
+    setDistances = {}
+    for i in range(len(newSetNames) - 1):
+        for j in range(i, len(newSetNames)):
+            distanceI = getDistance(setFractions[newSetNames[i]], fullFractions, allKeys)
+            distanceJ = getDistance(setFractions[newSetNames[i]], fullFractions, allKeys)
+            avgDistance = 0.5 * (distanceI + distanceJ)
+            a = newSetNames[i]
+            b = newSetNames[i]
+            if a > b:
+                a, b = b, a
+            if a not in setDistances:
+                setDistances[a] = {}
+            setDistances[a][b] = avgDistance
+    print "Initial distances", setDistances
     
     counts = defaultdict(int)
     for i in range(0, 100000):
         random.shuffle(newSetNames)
-        setNameA = newSetNames[0]
-        setNameB = newSetNames[1]
-        setA = newSets[setNameA]
-        setB = newSets[setNameB]
+        a = newSetNames[0]
+        b = newSetNames[1]
+        if a > b:
+            a, b = b, a
+        setA = newSets[a]
+        setB = newSets[b]
         docA = setA[random.randrange(0, len(setA))]
         docB = setB[random.randrange(0, len(setB))]
-        newTotalsA = {docTotals[]}
+        if len(docCounts[docA]) == 0 and len(docCounts[docB]) == 0:
+            counts["empty-pair"] += 1
+            continue 
+        newTotalsA = {x:setTotals[a][x] - docCounts[docA][x] + docCounts[docB][x] for x in allKeys}
+        newTotalsB = {x:setTotals[b][x] + docCounts[docA][x] - docCounts[docB][x] for x in allKeys}
+        newFractionsA = getFractions(newTotalsA)
+        newFractionsB = getFractions(newTotalsB)
+        distanceA = getDistance(setFractions[a], newFractionsA, allKeys)
+        distanceB = getDistance(setFractions[b], newFractionsB, allKeys)
+        newAvgDistance = 0.5 * (distanceA + distanceB)
+        if setDistances[a][b] > newAvgDistance:
+            setTotals[a] = newTotalsA
+            setTotals[b] = newTotalsB
+            setDistances[a][b] = newAvgDistance
+            setA.remove(docA)
+            setB.remove(docB)
+            setA.append(docB)
+            setB.append(docA)
+            counts["swaps"] += 1
+            counts["last-swap-round"] = i
+        counts["rounds"] += 1
+    
+    print dict(counts)
+    print "New document counts", {x:len(newSets[x]) for x in newSets}
+    print "Distances", setDistances
+    
+    for newSetName in newSetNames:
+        for document in newSets[newSetName]:
+            document.set("set", newSetName)
     
     if output != None:
         print >> sys.stderr, "Writing output to", output
@@ -97,26 +143,14 @@ def stratify(input, output, oldSetNames, newSetWeights):
 
 if __name__=="__main__":
     import sys
-    print >> sys.stderr, "##### Map attributes #####"
+    print >> sys.stderr, "##### Stratify Sets #####"
     
     from optparse import OptionParser
     optparser = OptionParser(usage="%prog [options]\n")
     optparser.add_option("-i", "--input", default=None, help="Corpus in interaction xml format", metavar="FILE")
     optparser.add_option("-o", "--output", default=None, help="Output file in interaction xml format.")
-    optparser.add_option("-s", "--sourceSets", default=None, help="dictionary of python dictionaries with attribute:value pairs.")    
-    optparser.add_option("-n", "--newSets", default=None, help="dictionary of python dictionaries with attribute:value pairs.")    
+    optparser.add_option("-s", "--sourceSets", default=None, help="")    
+    optparser.add_option("-n", "--newSets", default=None, help="")    
     (options, args) = optparser.parse_args()
-    
-    if options.input == None:
-        print >> sys.stderr, "Error, input file not defined."
-        optparser.print_help()
-        sys.exit(1)
-    if options.output == None:
-        print >> sys.stderr, "Error, output file not defined."
-        optparser.print_help()
-        sys.exit(1)
 
-    # Rules e.g. "{'element':{'attrname':{'oldvalue':'newvalue'}}}"
-    rules = eval(options.rules)
-    print >> sys.stderr, "Rules:", rules
-    stratify(options.input, options.output, rules)
+    stratify(options.input, options.output, options.sourceSets, options.newSets)
