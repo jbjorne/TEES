@@ -653,6 +653,7 @@ class KerasDetectorBase(Detector):
         
         print >> sys.stderr, "Fitting model"
         patience = int(self.styles.get("patience", 10))
+        batchSize = int(self.styles.get("batch", 64))
         replicates = int(self.styles.get("reps", 1))
         print >> sys.stderr, "Early stopping patience:", patience
         bestScore = [0.0, 0.0, 0.0, 0]
@@ -667,7 +668,7 @@ class KerasDetectorBase(Detector):
             kerasModel = self.defineModel(len(labelNames), verbose)
             kerasModel.fit(features["train"], labels["train"], #[sourceData], self.arrays["train"]["target"],
                 epochs=100 if not "epochs" in self.styles else int(self.styles["epochs"]),
-                batch_size=64,
+                batch_size=batchSize,
                 shuffle=True,
                 validation_data=(features["devel"], labels["devel"]),
                 class_weight=labelWeights,
