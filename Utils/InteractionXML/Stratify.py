@@ -40,6 +40,7 @@ def getDistance(fractionsA, fractionsB, allKeys):
     return sum(distances) / len(distances)
 
 def stratify(input, output, oldSetNames, newSetWeights):
+    print >> sys.stderr, "##### Stratify Sets #####"
     print >> sys.stderr, "Loading corpus file", input
     corpusTree = ETUtils.ETFromObj(input)
     corpusRoot = corpusTree.getroot()
@@ -54,37 +55,43 @@ def stratify(input, output, oldSetNames, newSetWeights):
     for key in newSetNames:
         cutoffs.append((cutoff, key))
         cutoff += newSetWeights[key] / sumWeights
+    print >> sys.stderr, "Cutoffs", cutoffs
     
     documents = []
+    numDocs = 0
     for document in corpusRoot.getiterator("document"):
+        numDocs += 1
         if document.get("set").match(oldSetNames) != None:
             documents.append(document)
+    print >> sys.stderr, "Matching documents", len(documents), "/", numDocs
     docCounts = {}
     for document in documents:
         docCounts[document] = getCounts(document)
     
     random = Random(1)
     
-    newSets = {x:[] for x in sorted(newSetNames.keys())}
+    newSets = {x:[] for x in newSetNames}
     for document in documents:
         cutoff = random.random()
         for j in range(1, len(cutoffs)):
-            if cutoffs[j] > cutoff:
+            if cutoffs[j] >= cutoff:
                 newSets[cutoffs[j-1][1]].append(document)
                 break
+            if j == len(cutoffs) - 1:
+                raise Exception("No set")
     print "Initial document counts", {x:len(newSets[x]) for x in newSets}
     fullFractions = getFractions(getTotals(documents, docCounts))
     print "Full fractions", fullFractions
     allKeys = sorted(fullFractions.keys())
-    setTotals = [getTotals(newSets[x]) for x in newSetNames]
+    setTotals = {x:getTotals(newSets[x]) for x in newSetNames}
     print "Initial set totals", setTotals
-    setFractions = [getFractions(setTotals[x]) for x in newSetNames]
+    setFractions = {x:getFractions(setTotals[x]) for x in newSetNames}
     print "Initial set fractions", setFractions
     setDistances = {}
     for i in range(len(newSetNames) - 1):
-        for j in range(i, len(newSetNames)):
+        for j in range(i + 1, len(newSetNames)):
             distanceI = getDistance(setFractions[newSetNames[i]], fullFractions, allKeys)
-            distanceJ = getDistance(setFractions[newSetNames[i]], fullFractions, allKeys)
+            distanceJ = getDistance(setFractions[newSetNames[j]], fullFractions, allKeys)
             avgDistance = 0.5 * (distanceI + distanceJ)
             a = newSetNames[i]
             b = newSetNames[i]
@@ -130,7 +137,7 @@ def stratify(input, output, oldSetNames, newSetWeights):
     
     print dict(counts)
     print "New document counts", {x:len(newSets[x]) for x in newSets}
-    print "Distances", setDistances
+    print "New distances", setDistances
     
     for newSetName in newSetNames:
         for document in newSets[newSetName]:
@@ -142,9 +149,6 @@ def stratify(input, output, oldSetNames, newSetWeights):
     return corpusTree
 
 if __name__=="__main__":
-    import sys
-    print >> sys.stderr, "##### Stratify Sets #####"
-    
     from optparse import OptionParser
     optparser = OptionParser(usage="%prog [options]\n")
     optparser.add_option("-i", "--input", default=None, help="Corpus in interaction xml format", metavar="FILE")
