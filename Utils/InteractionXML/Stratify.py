@@ -40,7 +40,7 @@ def getDistance(fractionsA, fractionsB, allKeys):
         distances.append(abs(fractionsA[key] - fractionsB[key]))
     return sum(distances) / len(distances)
 
-def stratify(input, output, oldSetNames, newSetWeights):
+def stratify(input, output, oldSetNames, newSetWeights, rounds=100000):
     print >> sys.stderr, "##### Stratify Sets #####"
     print >> sys.stderr, "Loading corpus file", input
     corpusTree = ETUtils.ETFromObj(input)
@@ -49,7 +49,7 @@ def stratify(input, output, oldSetNames, newSetWeights):
     oldSetNames = re.compile(oldSetNames)
     if isinstance(newSetWeights, basestring):
         newSetWeights = eval(newSetWeights)
-    sumWeights = sum(newSetWeights.values())
+    sumWeights = float(sum(newSetWeights.values()))
     newSetNames = sorted(newSetWeights.keys())
     cutoff = 0.0
     cutoffs = []
@@ -104,7 +104,7 @@ def stratify(input, output, oldSetNames, newSetWeights):
     print "Initial distances", setDistances
     
     counts = defaultdict(int)
-    for i in range(0, 100000):
+    for i in range(0, rounds):
         random.shuffle(newSetNames)
         a = newSetNames[0]
         b = newSetNames[1]
@@ -156,8 +156,9 @@ if __name__=="__main__":
     optparser = OptionParser(usage="%prog [options]\n")
     optparser.add_option("-i", "--input", default=None, help="Corpus in interaction xml format", metavar="FILE")
     optparser.add_option("-o", "--output", default=None, help="Output file in interaction xml format.")
-    optparser.add_option("-s", "--sourceSets", default=None, help="")    
-    optparser.add_option("-n", "--newSets", default=None, help="")    
+    optparser.add_option("-s", "--sourceSets", default=None, help="")
+    optparser.add_option("-n", "--newSets", default=None, help="")
+    optparser.add_option("-r", "--rounds", default=100000, type=int, help="")
     (options, args) = optparser.parse_args()
 
-    stratify(options.input, options.output, options.sourceSets, options.newSets)
+    stratify(options.input, options.output, options.sourceSets, options.newSets, options.rounds)
