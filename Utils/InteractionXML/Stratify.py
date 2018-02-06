@@ -90,11 +90,11 @@ def stratify(input, output, oldSetNames, newSetWeights):
     setDistances = {}
     for i in range(len(newSetNames) - 1):
         for j in range(i + 1, len(newSetNames)):
-            distanceI = getDistance(setFractions[newSetNames[i]], fullFractions, allKeys)
-            distanceJ = getDistance(setFractions[newSetNames[j]], fullFractions, allKeys)
-            avgDistance = 0.5 * (distanceI + distanceJ)
             a = newSetNames[i]
-            b = newSetNames[i]
+            b = newSetNames[j]
+            distanceA = getDistance(setFractions[a], fullFractions, allKeys)
+            distanceB = getDistance(setFractions[b], fullFractions, allKeys)
+            avgDistance = 0.5 * (distanceA + distanceB)
             if a > b:
                 a, b = b, a
             if a not in setDistances:
@@ -116,17 +116,17 @@ def stratify(input, output, oldSetNames, newSetWeights):
         if len(docCounts[docA]) == 0 and len(docCounts[docB]) == 0:
             counts["empty-pair"] += 1
             continue 
-        newTotalsA = {x:setTotals[a][x] - docCounts[docA][x] + docCounts[docB][x] for x in allKeys}
-        newTotalsB = {x:setTotals[b][x] + docCounts[docA][x] - docCounts[docB][x] for x in allKeys}
+        newTotalsA = {x:setTotals[a].get(x, 0) - docCounts[docA].get(x, 0) + docCounts[docB].get(x, 0) for x in allKeys}
+        newTotalsB = {x:setTotals[b].get(x, 0) + docCounts[docA].get(x, 0) - docCounts[docB].get(x, 0) for x in allKeys}
         newFractionsA = getFractions(newTotalsA)
         newFractionsB = getFractions(newTotalsB)
-        distanceA = getDistance(setFractions[a], newFractionsA, allKeys)
-        distanceB = getDistance(setFractions[b], newFractionsB, allKeys)
-        newAvgDistance = 0.5 * (distanceA + distanceB)
-        if setDistances[a][b] > newAvgDistance:
+        distanceA = getDistance(newFractionsA, fullFractions, allKeys)
+        distanceB = getDistance(newFractionsB, fullFractions, allKeys)
+        avgDistance = 0.5 * (distanceA + distanceB)
+        if setDistances[a][b] > avgDistance:
             setTotals[a] = newTotalsA
             setTotals[b] = newTotalsB
-            setDistances[a][b] = newAvgDistance
+            setDistances[a][b] = avgDistance
             setA.remove(docA)
             setB.remove(docB)
             setA.append(docB)
@@ -137,6 +137,8 @@ def stratify(input, output, oldSetNames, newSetWeights):
     
     print dict(counts)
     print "New document counts", {x:len(newSets[x]) for x in newSets}
+    print "New totals", setTotals
+    print "New fractions", {x:getFractions(setTotals[x]) for x in newSetNames}
     print "New distances", setDistances
     
     for newSetName in newSetNames:
