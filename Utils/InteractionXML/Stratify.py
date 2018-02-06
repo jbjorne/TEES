@@ -34,6 +34,12 @@ def getFractions(totals):
     fractions = {key:totals[key] / total for key in sorted(totals.keys())}
     return fractions
 
+def getDistance(fractionsA, fractionsB, allKeys):
+    distances = []
+    for key in allKeys:
+        distances.append(fractionsA[key] - fractionsB[key])
+    return sum(distances) / len(distances)
+
 def stratify(input, output, oldSetNames, newSetWeights):
     print >> sys.stderr, "Loading corpus file", input
     corpusTree = ETUtils.ETFromObj(input)
@@ -54,11 +60,13 @@ def stratify(input, output, oldSetNames, newSetWeights):
     for document in corpusRoot.getiterator("document"):
         if document.get("set").match(oldSetNames) != None:
             documents.append(document)
+    docCounts = {}
+    for document in documents:
+        docCounts[document] = getCounts(document)
     
     random = Random(1)
     
     newSets = {x:[] for x in sorted(newSetNames.keys())}
-    numDocuments = len(documents)
     for document in documents:
         cutoff = random.random()
         for j in range(1, len(cutoffs)):
@@ -66,10 +74,21 @@ def stratify(input, output, oldSetNames, newSetWeights):
                 newSets[cutoffs[j-1][1]].append(document)
                 break
     print "Initial counts", {x:len(newSets[x]) for x in newSets}
+    origFractions = getFractions(getTotals(documents, docCounts))
+    print "Initial fractions", origFractions
+    allKeys = sorted(origFractions.keys())
+    setTotals = [getTotals(newSets[x]) for x in newSetNames]
     
     counts = defaultdict(int)
     for i in range(0, 100000):
-        sourceSet = random.randrange(start, stop, step, _int, _maxwidth)
+        random.shuffle(newSetNames)
+        setNameA = newSetNames[0]
+        setNameB = newSetNames[1]
+        setA = newSets[setNameA]
+        setB = newSets[setNameB]
+        docA = setA[random.randrange(0, len(setA))]
+        docB = setB[random.randrange(0, len(setB))]
+        newTotalsA = {docTotals[]}
     
     if output != None:
         print >> sys.stderr, "Writing output to", output
