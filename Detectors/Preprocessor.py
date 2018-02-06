@@ -101,7 +101,7 @@ class Preprocessor(ToolChain):
         self.defStep("EXPORT_CHEMPROT", Utils.Convert.convertChemProt.exportChemProtPredictions, {"fileTypes":"predictions", "setNames":{"train":"chemprot_training", "devel":"chemprot_development"}}, {"input":"xml", "output":"outPath"})
         self.defStep("MAKE_SETS", Utils.InteractionXML.MakeSets.processCorpus, {"sourceSet":None, "newSets":None, "seed":1}, {"input":"inPath", "output":"outPath"})
         self.defStep("DELETE_ELEMENTS", Utils.InteractionXML.DeleteElements.processCorpus, {"rules":None, "reverse":False})
-        self.defStep("STRATIFY", Utils.InteractionXML.Stratify.stratify, {"oldSetNames":None, "newSetWeights":False})
+        self.defStep("STRATIFY", Utils.InteractionXML.Stratify.stratify, {"oldSetMatch":None, "newSetCutoffs":False, "rounds":100000, "seed":1})
         self.defGroup("Saving")
         self.defStep("DIVIDE_SETS", self.divideSets, {"saveCombined":False})
         self.defStep("SAVE", self.save)

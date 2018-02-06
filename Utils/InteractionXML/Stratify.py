@@ -40,36 +40,36 @@ def getDistance(fractionsA, fractionsB, allKeys):
         distances.append(abs(fractionsA[key] - fractionsB[key]))
     return sum(distances) / len(distances)
 
-def stratify(input, output, oldSetNames, newSetWeights, rounds=100000):
+def stratify(input, output, oldSetMatch, newSetCutoffs, rounds=100000, seed=1):
     print >> sys.stderr, "##### Stratify Sets #####"
     print >> sys.stderr, "Loading corpus file", input
     corpusTree = ETUtils.ETFromObj(input)
     corpusRoot = corpusTree.getroot()
     
-    oldSetNames = re.compile(oldSetNames)
-    if isinstance(newSetWeights, basestring):
-        newSetWeights = eval(newSetWeights)
-    sumWeights = float(sum(newSetWeights.values()))
-    newSetNames = sorted(newSetWeights.keys())
-    cutoff = 0.0
+    oldSetMatch = re.compile(oldSetMatch)
+    if isinstance(newSetCutoffs, basestring):
+        newSetCutoffs = eval(newSetCutoffs)
+    newSetNames = sorted(newSetCutoffs.keys())
     cutoffs = []
     for key in newSetNames:
-        cutoff += newSetWeights[key] / sumWeights
-        cutoffs.append({"cutoff":cutoff, "name":key})
+        assert newSetCutoffs[key] >= 0.0 and newSetCutoffs[key] <= 1.0, (key, newSetCutoffs[key])
+        cutoffs.append({"cutoff":newSetCutoffs[key], "name":key})
+    cutoffs.sort(key=lambda k: k['cutoff'])
     print >> sys.stderr, "Cutoffs", cutoffs
     
     documents = []
     numDocs = 0
     for document in corpusRoot.getiterator("document"):
         numDocs += 1
-        if oldSetNames.match(document.get("set")) != None:
+        if oldSetMatch.match(document.get("set")) != None:
             documents.append(document)
     print >> sys.stderr, "Matching documents", len(documents), "/", numDocs
     docCounts = {}
     for document in documents:
         docCounts[document] = getCounts(document)
     
-    random = Random(1)
+    print >> sys.stderr, "Using random seed", seed
+    random = Random(seed)
     
     newSets = {x:[] for x in newSetNames}
     for document in documents:
@@ -103,6 +103,7 @@ def stratify(input, output, oldSetNames, newSetWeights, rounds=100000):
             setDistances[a][b] = avgDistance
     print "Initial distances", setDistances
     
+    print >> sys.stderr, "Swapping documents for", rounds, "rounds"
     counts = defaultdict(int)
     for i in range(0, rounds):
         random.shuffle(newSetNames)
