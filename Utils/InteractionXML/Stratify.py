@@ -16,7 +16,7 @@ def getCounts(document):
         iType = interaction.get("type")
         if iType not in counts:
             counts[iType] = 0
-        counts += 1
+        counts[iType] += 1
 
 def getTotals(documents, docCounts):
     totals = {}
@@ -53,7 +53,7 @@ def stratify(input, output, oldSetNames, newSetWeights):
     cutoff = 0.0
     cutoffs = []
     for key in newSetNames:
-        cutoffs.append((cutoff, key))
+        cutoffs.append({"cutoff":cutoff, "name":key})
         cutoff += newSetWeights[key] / sumWeights
     print >> sys.stderr, "Cutoffs", cutoffs
     
@@ -61,7 +61,7 @@ def stratify(input, output, oldSetNames, newSetWeights):
     numDocs = 0
     for document in corpusRoot.getiterator("document"):
         numDocs += 1
-        if document.get("set").match(oldSetNames) != None:
+        if oldSetNames.match(document.get("set")) != None:
             documents.append(document)
     print >> sys.stderr, "Matching documents", len(documents), "/", numDocs
     docCounts = {}
@@ -73,12 +73,12 @@ def stratify(input, output, oldSetNames, newSetWeights):
     newSets = {x:[] for x in newSetNames}
     for document in documents:
         cutoff = random.random()
-        for j in range(1, len(cutoffs)):
-            if cutoffs[j] >= cutoff:
-                newSets[cutoffs[j-1][1]].append(document)
+        for i in range(1, len(cutoffs)):
+            if cutoff <= cutoffs[i]["cutoff"]:
+                newSets[cutoffs[i-1]["name"]].append(document)
                 break
-            if j == len(cutoffs) - 1:
-                raise Exception("No set")
+            if i == len(cutoffs) - 1:
+                raise Exception("No set " + str(cutoff))
     print "Initial document counts", {x:len(newSets[x]) for x in newSets}
     fullFractions = getFractions(getTotals(documents, docCounts))
     print "Full fractions", fullFractions
