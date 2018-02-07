@@ -1,4 +1,7 @@
 import sys, os
+import tempfile
+import shutil
+import subprocess
 thisPath = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.abspath(os.path.join(thisPath,"../..")))
 try:
@@ -7,6 +10,7 @@ except ImportError:
     import cElementTree as ET
 import Utils.ElementTreeUtils as ETUtils
 import Utils.Range as Range
+from Utils import Settings
 from collections import defaultdict
 
 #def loadEntities(filename):
@@ -24,6 +28,26 @@ from collections import defaultdict
 #        for ge in gold[id]:
 #            for ie in input[id]:
 #                Range.charOffsetToSingleTuple(charOffset, offsetSep)
+
+def evaluateXML(xml, goldPath=None, mode="interactions"):
+    print >> sys.stderr, "Evaluating DDI13", mode
+    evaluatorDir = Settings.EVALUATOR["DDI13"]
+    assert mode in ("interactions", "entities")
+    if goldPath == None:
+        goldPath = Settings.EVALUATOR[("DDI13T92" if mode == "interactions" else "DDI13T91") + "_TEST-gold"]
+    tempDir = tempfile.mkdtemp()
+    subFile = os.path.join(tempDir, "submission.txt")
+    makeDDI13SubmissionFile(input, subFile, mode)
+    command = "java -jar " + os.path.join(evaluatorDir, ("evaluateDDI.jar" if mode == "interactions" else "evaluteNER.jar")) + " " + goldPath + " " + subFile
+    print >> sys.stderr, command
+    #currentDir = os.getcwd()
+    #os.chdir(evaluatorDir)
+    p = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    for s in ["".join(x.readlines()).strip() for x in (p.stderr, p.stdout)]:
+        if s != "":
+            print >> sys.stderr, s
+    #os.chdir(currentDir)
+    shutil.rmtree(tempDir)
 
 def makeDDI13SubmissionFile(input, output, mode="interactions", idfilter=None):
     xml = ETUtils.ETFromObj(input)
@@ -269,5 +293,7 @@ if __name__=="__main__":
         addMTMX(options.input, options.add, options.output)
     elif options.action == "ADD_TEST_GOLD":
         addTestGold(options.input, options.add, options.output)
+    elif options.action == "EVALUATE_DDI13":
+        evaluateXML(options.input, None, options.mode)
     else:
         assert False, options.action
