@@ -31,23 +31,25 @@ from collections import defaultdict
 
 def evaluateXML(xml, goldPath=None, mode="interactions"):
     print >> sys.stderr, "Evaluating DDI13", mode
+    xml = ETUtils.ETFromObj(xml)
     evaluatorDir = Settings.EVALUATOR["DDI13"]
     assert mode in ("interactions", "entities")
     if goldPath == None:
         goldPath = Settings.EVALUATOR[("DDI13T92" if mode == "interactions" else "DDI13T91") + "_TEST-gold"]
     tempDir = tempfile.mkdtemp()
     subFile = os.path.join(tempDir, "submission.txt")
-    makeDDI13SubmissionFile(input, subFile, mode)
-    command = "java -jar " + os.path.join(evaluatorDir, ("evaluateDDI.jar" if mode == "interactions" else "evaluteNER.jar")) + " " + goldPath + " " + subFile
+    makeDDI13SubmissionFile(xml, subFile, mode)
+    command = "java -jar " + os.path.join(evaluatorDir, ("evaluateDDI.jar" if mode == "interactions" else "evaluteNER.jar")) + " '" + goldPath + "' " + subFile
     print >> sys.stderr, command
     #currentDir = os.getcwd()
     #os.chdir(evaluatorDir)
-    p = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    for s in ["".join(x.readlines()).strip() for x in (p.stderr, p.stdout)]:
-        if s != "":
-            print >> sys.stderr, s
+    p = subprocess.Popen(command, shell=True) #, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    p.communicate(input='\n')
+    #for s in ["".join(x.readlines()).strip() for x in (p.stderr, p.stdout)]:
+    #    if s != "":
+    #        print >> sys.stderr, s
     #os.chdir(currentDir)
-    shutil.rmtree(tempDir)
+    #shutil.rmtree(tempDir)
 
 def makeDDI13SubmissionFile(input, output, mode="interactions", idfilter=None):
     xml = ETUtils.ETFromObj(input)
@@ -91,6 +93,7 @@ def makeDDI13SubmissionFile(input, output, mode="interactions", idfilter=None):
                         outFile.write("1|" + interaction.get("type") + "\n")
                     else:
                         outFile.write("0|null\n")
+    outFile.close()
 
 def makeDDISubmissionFile(input, output):
     xml = ETUtils.ETFromObj(input)
