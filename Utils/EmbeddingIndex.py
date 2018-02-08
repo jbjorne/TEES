@@ -83,10 +83,13 @@ class EmbeddingIndex():
                 vector = numpy.ones(self.dimVector) #getRandomVector(self.dimVector) #numpy.ones(self.dimVector) #normalized(numpy.random.uniform(-1.0, 1.0, self.dimVector)))
             if vector is not None:
                 if self.locked == "all":
-                    raise Exception("Cannot expand locked vocabulary with key '" + key + "' for embedding '" + self.name + "'")
+                    #raise Exception("Cannot expand locked vocabulary with key '" + key + "' for embedding '" + self.name + "'")
+                    print >> sys.stderr, "Tried to expand locked vocabulary with key", key
                 elif self.locked == "content" and (key[0] != "[" or key[-1] != "]"):
-                    raise Exception("Cannot expand locked vocabulary with content key '" + key + "' for embedding '" + self.name + "'")
-                self._addEmbedding(key, vector)
+                    #raise Exception("Cannot expand locked vocabulary with content key '" + key + "' for embedding '" + self.name + "'")
+                    print >> sys.stderr, "Tried to expand locked vocabulary with content key", key
+                else:
+                    self._addEmbedding(key, vector)
         return self.embeddingIndex[key] if key in self.embeddingIndex else self.embeddingIndex[default]
     
     def addToVocabulary(self, tokens, dependencies):
