@@ -97,14 +97,14 @@ class KerasUnmergingDetector(KerasDetectorBase):
         # Get argument order
         self.interactionLenghts = self.getInteractionEdgeLengths(sentenceGraph, paths)
         
-        # Map tokens to character offsets
-        tokenByOffset = {}
-        for i in range(len(sentenceGraph.tokens)):
-            token = sentenceGraph.tokens[i]
-            if goldGraph != None: # check that the tokenizations match
-                goldToken = goldGraph.tokens[i]
-                assert token.get("id") == goldToken.get("id") and token.get("charOffset") == goldToken.get("charOffset")
-            tokenByOffset[token.get("charOffset")] = token.get("id")
+#         # Map tokens to character offsets
+#         tokenByOffset = {}
+#         for i in range(len(sentenceGraph.tokens)):
+#             token = sentenceGraph.tokens[i]
+#             if goldGraph != None: # check that the tokenizations match
+#                 goldToken = goldGraph.tokens[i]
+#                 assert token.get("id") == goldToken.get("id") and token.get("charOffset") == goldToken.get("charOffset")
+#             tokenByOffset[token.get("charOffset")] = token.get("id")
         
         # Map gold entities to their head offsets
         goldEntitiesByOffset = {}
@@ -299,21 +299,79 @@ class KerasUnmergingDetector(KerasDetectorBase):
             windowIndex += 1
         return features
     
-    def getEntityTypes(self, entities, useNeg=False):
-        types = set()
-        entityIds = set()
-        for entity in entities:
-            eType = entity.get("type")
-            if entity.get("given") == "True" and self.styles.get("all_tokens"):
+    def eventIsGold(self, entity, arguments, sentenceGraph, goldGraph, goldEntitiesByOffset, allGoldInteractions):
+        offset = entity.get("headOffset")
+        if not goldEntitiesByOffset.has_key(offset):
+            return False
+        eType = entity.get("type")
+        goldEntities = goldEntitiesByOffset[offset]
+        
+        # Check all gold entities for a match
+        for goldEntity in goldEntities:
+            isGold = True
+            
+            # The entity type must match
+            if goldEntity.get("type") != eType:
+                isGold = False
                 continue
-            if eType == "Entity" and self.styles.get("genia_task1"):
+            goldEntityId = goldEntity.get("id")
+            
+            # Collect the gold interactions
+            goldInteractions = []
+            for goldInteraction in allGoldInteractions: #goldGraph.interactions:
+                if goldInteraction.get("e1") == goldEntityId and goldInteraction.get("event") == "True":
+                    goldInteractions.append(goldInteraction)
+            
+            # Argument count rules
+            if len(goldInteractions) != len(arguments): # total number of edges differs
+                isGold = False
                 continue
-            else:
-                types.add(eType)
-                entityIds.add(entity.get("id"))
-        if len(types) == 0 and useNeg:
-            types.add("neg")
-        return sorted(types), sorted(entityIds)
+            # count number of edges per type
+            argTypeCounts = {}
+            for argument in arguments:
+                argType = argument.get("type")
+                if not argTypeCounts.has_key(argType): argTypeCounts[argType] = 0
+                argTypeCounts[argType] += 1
+            # count number of gold edges per type
+            goldTypeCounts = {}
+            for argument in goldInteractions:
+                argType = argument.get("type")
+                if not goldTypeCounts.has_key(argType): goldTypeCounts[argType] = 0
+                goldTypeCounts[argType] += 1
+            # argument edge counts per type must match
+            if argTypeCounts != goldTypeCounts:
+                isGold = False
+                continue
+            
+            # Exact argument matching
+            for argument in arguments: # check all edges
+                e1 = argument.get("e1")
+                e2 = argument.get("e2")
+                if e2 not in sentenceGraph.entitiesById: # intersentence argument, assumed to be correct
+                    found = True
+                    continue
+                e2Entity = sentenceGraph.entitiesById[e2]
+                e2Offset = e2Entity.get("headOffset")
+                e2Type = e2Entity.get("type")
+                argType = argument.get("type")
+                
+                found = False
+                for goldInteraction in goldInteractions:
+                    if goldInteraction.get("type") == argType:
+                        if goldInteraction.get("e2") in goldGraph.entitiesById: # if not, assume this goldInteraction is an intersentence interaction
+                            goldE2Entity = goldGraph.entitiesById[goldInteraction.get("e2")] 
+                            if goldE2Entity.get("headOffset") == e2Offset and goldE2Entity.get("type") == e2Type:
+                                found = True
+                                break
+                if found == False: # this edge did not have a corresponding gold edge
+                    isGold = False
+                    break
+
+            # Event is in gold
+            if isGold:
+                break
+        
+        return isGold
     
     def defineFeatureGroups(self):
         print >> sys.stderr, "Defining embedding indices"
