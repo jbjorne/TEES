@@ -249,12 +249,32 @@ class KerasUnmergingDetector(KerasDetectorBase):
         eventToken = tokenMap[self.sentenceGraph.entityHeadTokenByEntity[eventEntity]]
         eventIndex = eventToken["index"]
         
+        numTokens = len(tokens)
+        intTokenIndices = sorted([x["index"] for x in tokens if tokens.get("interaction") != None])
+        relTokens = []
+        relMarker = "b"
+        for i in range(numTokens):
+            if i == intTokenIndices[0]:
+                relMarker = "m"
+            elif i == intTokenIndices[-1]:
+                relMarker = "a"
+            
+            if i == eventToken:
+                relTokens.append("event")
+            elif i in intTokenIndices:
+                if tokens[i]["interaction"] in argSet:
+                    relTokens.append("arg")
+                else:
+                    relTokens.append("int")
+            else:
+                relTokens.append(relMarker)
+            relTokens.append(relMarker)
+        
         featureGroups = sorted(self.embeddings.keys())
         wordEmbeddings = [x for x in featureGroups if self.embeddings[x].wvPath != None]
         features = {}
         side = (self.exampleLength - 1) / 2
         windowIndex = 0
-        numTokens = len(tokens)
         for i in range(eventIndex - side, eventIndex + side + 1):
             if i >= 0 and i < numTokens:
                 token = tokens[i]
