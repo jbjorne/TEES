@@ -22,7 +22,7 @@ import Utils.InteractionXML.InteractionXMLUtils as IXMLUtils
 import numpy
 from keras.layers import Dense
 from keras.models import Model, load_model
-from keras.layers.core import Dropout, Flatten
+from keras.layers.core import Dropout, Flatten, Activation
 from keras import optimizers
 #from keras.optimizers import Adam
 from keras.callbacks import EarlyStopping, ModelCheckpoint, ReduceLROnPlateau
@@ -38,6 +38,7 @@ from collections import defaultdict
 from sklearn.utils.class_weight import compute_class_weight
 import Utils.Range as Range
 import Utils.KerasUtils as KerasUtils
+from keras.layers.normalization import BatchNormalization
 
 def f1ScoreMetric(y_true, y_pred):
     return sklearn.metrics.f1_score(y_true, y_pred, average="micro")
@@ -520,13 +521,15 @@ class KerasDetectorBase(Detector):
             kernelSizes = [int(x) for x in self.styles.get("kernels", [1, 3, 5, 7])]
             numFilters = int(self.styles.get("nf", 32)) #32 #64
             for kernel in kernelSizes:
-                subnet = Conv1D(numFilters, kernel, activation=convAct, name='conv_' + str(kernel))(merged_features)
+                subnet = Conv1D(numFilters, kernel, activation=None, name='conv_' + str(kernel))(merged_features)
                 #subnet = Conv1D(numFilters, kernel, activation='relu', name='conv2_' + str(kernel))(subnet)
                 #subnet = MaxPooling1D(pool_length=self.exampleLength - kernel + 1, name='maxpool_' + str(kernel))(subnet)
                 subnet = GlobalMaxPool1D(name='maxpool_' + str(kernel))(subnet)
                 #subnet = Flatten(name='flat_' + str(kernel))(subnet)
                 convOutputs.append(subnet)       
             layer = merge(convOutputs, mode='concat')
+            layer = BatchNormalization()(layer)
+            layer = Activation('relu')(layer)
             if dropout > 0.0:
                 layer = Dropout(dropout)(layer)
         else:
