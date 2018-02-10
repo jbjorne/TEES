@@ -503,6 +503,7 @@ class KerasDetectorBase(Detector):
         #labelNames = self.loadLabels()
         
         dropout = float(self.styles.get("do", 0.1))
+        #kernel_initializer = self.styles.get("init", "glorot_uniform")
         
         # The Embeddings
         embNames = sorted(self.embeddings.keys())
