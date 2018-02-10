@@ -25,7 +25,7 @@ from keras.models import Model, load_model
 from keras.layers.core import Dropout, Flatten
 from keras import optimizers
 #from keras.optimizers import Adam
-from keras.callbacks import EarlyStopping, ModelCheckpoint
+from keras.callbacks import EarlyStopping, ModelCheckpoint, ReduceLROnPlateau
 from keras.layers import merge
 from itertools import chain
 import sklearn.metrics
@@ -656,6 +656,7 @@ class KerasDetectorBase(Detector):
         patience = int(self.styles.get("patience", 10))
         batchSize = int(self.styles.get("batch", 64))
         replicates = int(self.styles.get("reps", 1))
+        #learningRate = float(self.styles.get("lr", 0.001))
         print >> sys.stderr, "Early stopping patience:", patience
         bestScore = [0.0, 0.0, 0.0, 0]
         modelScores = []
@@ -666,6 +667,7 @@ class KerasDetectorBase(Detector):
             es_cb = EarlyStopping(monitor='val_loss', patience=patience, verbose=1)
             modelPath = self.model.get(repModelPath, True) #self.workDir + self.tag + 'model.hdf5'
             cp_cb = ModelCheckpoint(filepath=modelPath, save_best_only=True, verbose=1)
+            #lr_cb = ReduceLROnPlateau(monitor='val_loss', factor=0.2, patience=int(0.5 * patience), min_lr=0.01 * learningRate)
             kerasModel = self.defineModel(len(labelNames), verbose)
             kerasModel.fit(features["train"], labels["train"], #[sourceData], self.arrays["train"]["target"],
                 epochs=100 if not "epochs" in self.styles else int(self.styles["epochs"]),
