@@ -704,6 +704,7 @@ class KerasDetectorBase(Detector):
             cp_cb = ModelCheckpoint(filepath=modelPath, save_best_only=True, verbose=1)
             #lr_cb = ReduceLROnPlateau(monitor='val_loss', factor=0.2, patience=int(0.5 * patience), min_lr=0.01 * learningRate)
             kerasModel = self.defineModel(len(labelNames), parameters, verbose = i == 0)
+            print >> sys.stderr, "Model parameters:", parameters
             kerasModel.fit(features["train"], labels["train"], #[sourceData], self.arrays["train"]["target"],
                 epochs=100 if not "epochs" in self.styles else int(self.styles["epochs"]),
                 batch_size=batchSize,
@@ -715,11 +716,12 @@ class KerasDetectorBase(Detector):
             _, _, scores = self.predictWithModel(labels["devel"], features["devel"], labelNames, modelPath, True)
             currentModel = {"filename":modelFileName, "scores":scores, "parameters":parameters, "index":i}
             models.append(currentModel)
-            models.sort(reverse=True, key=lambda k: k["micro"][2])
+            models.sort(reverse=True, key=lambda k: k["scores"]["micro"][2])
             if currentModel == models[0]:
                 print >> sys.stderr, "New best model", scores["micro"]
             for j in range(len(models)):
-                if j > numEnsemble and models[j]["path"] != None:
+                if j >= numEnsemble and models[j]["filename"] != None:
+                    print >> sys.stderr, "Removing model", models[j]["filename"]
                     os.remove(self.model.get(models[j]["filename"]))
                     models[j]["filename"] = None
         with open(self.model.get(self.tag + "models.json", True), "wt") as f:
