@@ -88,7 +88,12 @@ class KerasDetectorBase(Detector):
             #self.distanceAnalyzer.analyze([optData, trainData], parse=parse)
             #print >> sys.stderr, self.distanceAnalyzer.toDict()
         self.styles = Utils.Parameters.get(exampleStyle)
-        self.pathDepth = int(self.styles.get("path", 3))
+        self.pathDepth = self.styles.get("path", "3")
+        if isinstance(self.pathDepth, basestring):
+            self.pathDepth = int(self.pathDepth)
+        else:
+            self.pathDepth = max([int(x) for x in self.pathDepth])
+        print >> sys.stderr, "Path depth is", self.pathDepth
         self.model = self.openModel(model, "a") # Devel model already exists, with ids etc
         exampleFiles = {"devel":self.workDir+self.tag+"opt-examples.json.gz", "train":self.workDir+self.tag+"train-examples.json.gz"}
         if self.state == self.STATE_COMPONENT_TRAIN or self.checkStep("EXAMPLES"): # Generate the adjacency matrices
@@ -534,7 +539,10 @@ class KerasDetectorBase(Detector):
         
         # The Embeddings
         embNames = sorted(self.embeddings.keys())
-        for embName in embNames:
+        skipEmbeddings = []
+        maxPathDepth = self.getParameter("path", self.styles, self.pathDepth, parameters, 1)
+        skipEmbeddings += ["path" + str(i) for i in range(self.pathDepth) if i >= maxPathDepth]
+        for embName in [x for x in embNames if x not in set(skipEmbeddings)]:
             self.embeddings[embName].makeLayers(self.exampleLength, embName, True if "wv_learn" in self.styles else "AUTO", verbose=verbose)
         merged_features = merge([self.embeddings[x].embeddingLayer for x in embNames], mode='concat', name="merged_features")
         if dropout > 0.0:
@@ -696,11 +704,11 @@ class KerasDetectorBase(Detector):
             parameters = {}
             #KerasUtils.setRandomSeed(i)
             es_cb = EarlyStopping(monitor='val_loss', patience=patience, verbose=1)
-            modelFileName = self.tag + "model" + str(i) + ".hdf5"
+            modelFileName = self.tag + "model-" + str(i + 1) + ".hdf5"
             modelPath = self.model.get(modelFileName, True) #self.workDir + self.tag + 'model.hdf5'
             cp_cb = ModelCheckpoint(filepath=modelPath, save_best_only=True, verbose=1)
             #lr_cb = ReduceLROnPlateau(monitor='val_loss', factor=0.2, patience=int(0.5 * patience), min_lr=0.01 * learningRate)
-            kerasModel = self.defineModel(len(labelNames), parameters, verbose = i == 0)
+            kerasModel = self.defineModel(len(labelNames), parameters, verbose=True)
             print >> sys.stderr, "Model parameters:", parameters
             kerasModel.fit(features["train"], labels["train"], #[sourceData], self.arrays["train"]["target"],
                 epochs=100 if not "epochs" in self.styles else int(self.styles["epochs"]),
