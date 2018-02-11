@@ -39,6 +39,7 @@ from sklearn.utils.class_weight import compute_class_weight
 import Utils.Range as Range
 import Utils.KerasUtils as KerasUtils
 from keras.layers.normalization import BatchNormalization
+import random
 
 def f1ScoreMetric(y_true, y_pred):
     return sklearn.metrics.f1_score(y_true, y_pred, average="micro")
@@ -489,7 +490,31 @@ class KerasDetectorBase(Detector):
             if embeddings[embName].vocabularyType == "words":
                 embeddings[embName].releaseWV()
     
-    def defineModel(self, dimLabels, verbose=False):
+    def castValue(self, value):
+        assert isinstance(value, basestring)
+        if value.isdigit():
+            return int(value)
+        try:
+            return float(value)
+        except ValueError:
+            return float(value)
+    
+    def getParameter(self, name, styles, default, parameters=None, numRandom=None):
+        if name in styles:
+            if not isinstance(styles[name], basestring):
+                value = [self.castValue(x) for x in styles[name]]
+                if numRandom != None:
+                    assert numRandom >= 1
+                    value = random.choice(value) if numRandom == 1 else random.sample(value, numRandom)
+            else:
+                value = self.castValue(styles[name])
+        else:
+            value = default
+        if parameters != None:
+            parameters[name] = value
+        return value
+    
+    def defineModel(self, dimLabels, parameters=None, verbose=False):
         """
         Defines the Keras model and compiles it.
         """
@@ -503,7 +528,9 @@ class KerasDetectorBase(Detector):
 #             labelSet.add("neg")
         #labelNames = self.loadLabels()
         
-        dropout = float(self.styles.get("do", 0.1))
+        # Initialize the parameters
+        parameters = {}
+        dropout = self.getParameter("do", self.styles, 0.1, parameters, 1) #float(self.styles.get("do", 0.1))
         #kernel_initializer = self.styles.get("init", "glorot_uniform")
         
         # The Embeddings
@@ -514,13 +541,13 @@ class KerasDetectorBase(Detector):
         if dropout > 0.0:
             merged_features = Dropout(dropout)(merged_features)
         
-#         # Main network
-        if self.styles.get("kernels") != "skip":
+        # Main network
+        kernels = self.getParameter("kernels", self.styles, [1, 3, 5, 7], parameters)
+        if kernels != "skip":
             convOutputs = []
-            convAct = self.styles.get("cact", "relu")
-            kernelSizes = [int(x) for x in self.styles.get("kernels", [1, 3, 5, 7])]
-            numFilters = int(self.styles.get("nf", 32)) #32 #64
-            for kernel in kernelSizes:
+            convAct = self.getParameter("cact", self.styles, "relu", parameters, 1) #self.styles.get("cact", "relu")
+            numFilters = self.getParameter("nf", self.styles, 32, parameters, 1) #int(self.styles.get("nf", 32)) #32 #64
+            for kernel in kernels:
                 subnet = Conv1D(numFilters, kernel, activation=None, name='conv_' + str(kernel))(merged_features)
                 #subnet = Conv1D(numFilters, kernel, activation='relu', name='conv2_' + str(kernel))(subnet)
                 #subnet = MaxPooling1D(pool_length=self.exampleLength - kernel + 1, name='maxpool_' + str(kernel))(subnet)
@@ -529,20 +556,21 @@ class KerasDetectorBase(Detector):
                 convOutputs.append(subnet)       
             layer = merge(convOutputs, mode='concat')
             layer = BatchNormalization()(layer)
-            layer = Activation('relu')(layer)
+            layer = Activation(convAct)(layer)
             if dropout > 0.0:
                 layer = Dropout(dropout)(layer)
         else:
             layer = Flatten()(merged_features)
         
         # Classification layers
-        denseSizes = self.styles.get("dense", "400")
-        if isinstance(denseSizes, basestring):
-            denseSizes = denseSizes.split(",")
-        denseSizes = [int(x) for x in denseSizes]
-        for denseSize in denseSizes:
-            if denseSize > 0:
-                layer = Dense(denseSize, activation='relu')(layer) #layer = Dense(800, activation='relu')(layer)
+        denseSize = self.getParameter("dense", self.styles, 400, parameters, 1)
+        #denseSizes = self.styles.get("dense", "400")
+        #if isinstance(denseSizes, basestring):
+        #    denseSizes = denseSizes.split(",")
+        #denseSizes = [int(x) for x in denseSizes]
+        #for denseSize in denseSizes:
+        if denseSize > 0:
+            layer = Dense(denseSize, activation='relu')(layer) #layer = Dense(800, activation='relu')(layer)
         assert self.cmode in ("binary", "multiclass", "multilabel")
         if self.cmode in ("binary", "multilabel"):
             layer = Dense(dimLabels, activation='sigmoid')(layer)
@@ -551,8 +579,8 @@ class KerasDetectorBase(Detector):
         
         kerasModel = Model([self.embeddings[x].inputLayer for x in embNames], layer)
         
-        learningRate = float(self.styles.get("lr", 0.001))
-        optName = self.styles.get("opt", "adam")
+        learningRate = self.getParameter("lr", self.styles, 0.001, parameters, 1) #float(self.styles.get("lr", 0.001))
+        optName = self.getParameter("opt", self.styles, "adam", parameters, 1) #self.styles.get("opt", "adam")
         print >> sys.stderr, "Using learning rate", learningRate, "with optimizer", optName
         optDict = {"adam":optimizers.Adam, "nadam":optimizers.Nadam, "sgd":optimizers.SGD, "adadelta":optimizers.Adadelta}
         optimizer = optDict[optName](lr=learningRate)
@@ -658,20 +686,22 @@ class KerasDetectorBase(Detector):
         print >> sys.stderr, "Fitting model"
         patience = int(self.styles.get("patience", 10))
         batchSize = int(self.styles.get("batch", 64))
-        replicates = int(self.styles.get("reps", 1))
+        numModels = int(self.styles.get("mods", 1))
+        numEnsemble = int(self.styles.get("ens", 1))
         #learningRate = float(self.styles.get("lr", 0.001))
         print >> sys.stderr, "Early stopping patience:", patience
         bestScore = [0.0, 0.0, 0.0, 0]
-        modelScores = []
-        repModelPath = self.tag + "current-model.hdf5" if replicates > 1 else self.tag + "model.hdf5"
-        for i in range(replicates):
-            print >> sys.stderr, "***", "Replicate", i + 1, "/", replicates, "***"
+        models = [] #modelScores = []
+        for i in range(numModels):
+            print >> sys.stderr, "***", "Replicate", i + 1, "/", numModels, "***"
+            parameters = {}
             #KerasUtils.setRandomSeed(i)
             es_cb = EarlyStopping(monitor='val_loss', patience=patience, verbose=1)
-            modelPath = self.model.get(repModelPath, True) #self.workDir + self.tag + 'model.hdf5'
+            modelFileName = self.tag + "model" + str(i) + ".hdf5"
+            modelPath = self.model.get(modelFileName, True) #self.workDir + self.tag + 'model.hdf5'
             cp_cb = ModelCheckpoint(filepath=modelPath, save_best_only=True, verbose=1)
             #lr_cb = ReduceLROnPlateau(monitor='val_loss', factor=0.2, patience=int(0.5 * patience), min_lr=0.01 * learningRate)
-            kerasModel = self.defineModel(len(labelNames), verbose = i == 0)
+            kerasModel = self.defineModel(len(labelNames), parameters, verbose = i == 0)
             kerasModel.fit(features["train"], labels["train"], #[sourceData], self.arrays["train"]["target"],
                 epochs=100 if not "epochs" in self.styles else int(self.styles["epochs"]),
                 batch_size=batchSize,
@@ -681,6 +711,16 @@ class KerasDetectorBase(Detector):
                 callbacks=[es_cb, cp_cb])
             print >> sys.stderr, "Predicting devel examples"
             _, _, scores = self.predict(labels["devel"], features["devel"], labelNames, modelPath)
+            currentModel = {"filename":modelFileName, "scores":scores, "parameters":parameters}
+            models.append(currentModel)
+            models.sort(reverse=True, key=lambda k: k["micro"][2])
+            if currentModel == models[0]:
+                print >> sys.stderr, "New best model", scores["micro"]
+            for j in range(len(models)):
+                if j > numEnsemble and models[j]["path"] != None:
+                    os.remove(self.model.get(models[j]["filename"]))
+                    models[j]["filename"] = None
+            
             modelScores.append(scores)
             if replicates > 1:
                 if scores["micro"][2] > bestScore[2]:
