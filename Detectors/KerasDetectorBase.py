@@ -542,9 +542,10 @@ class KerasDetectorBase(Detector):
         skipEmbeddings = []
         maxPathDepth = self.getParameter("path", self.styles, self.pathDepth, parameters, 1)
         skipEmbeddings += ["path" + str(i) for i in range(self.pathDepth) if i >= maxPathDepth]
-        for embName in [x for x in embNames if x not in set(skipEmbeddings)]:
+        includedEmbeddings = [x for x in embNames if x not in set(skipEmbeddings)]
+        for embName in includedEmbeddings:
             self.embeddings[embName].makeLayers(self.exampleLength, embName, True if "wv_learn" in self.styles else "AUTO", verbose=verbose)
-        merged_features = merge([self.embeddings[x].embeddingLayer for x in embNames], mode='concat', name="merged_features")
+        merged_features = merge([self.embeddings[x].embeddingLayer for x in includedEmbeddings], mode='concat', name="merged_features")
         if dropout > 0.0:
             merged_features = Dropout(dropout)(merged_features)
         
@@ -584,7 +585,7 @@ class KerasDetectorBase(Detector):
         else:
             layer = Dense(dimLabels, activation='softmax')(layer)
         
-        kerasModel = Model([self.embeddings[x].inputLayer for x in embNames], layer)
+        kerasModel = Model([self.embeddings[x].inputLayer for x in includedEmbeddings], layer)
         
         learningRate = self.getParameter("lr", self.styles, 0.001, parameters, 1) #float(self.styles.get("lr", 0.001))
         optName = self.getParameter("opt", self.styles, "adam", parameters, 1) #self.styles.get("opt", "adam")
