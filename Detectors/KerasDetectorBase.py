@@ -509,7 +509,7 @@ class KerasDetectorBase(Detector):
         # The Embeddings
         embNames = sorted(self.embeddings.keys())
         for embName in embNames:
-            self.embeddings[embName].makeLayers(self.exampleLength, embName, True if "wv_learn" in self.styles else "AUTO")
+            self.embeddings[embName].makeLayers(self.exampleLength, embName, True if "wv_learn" in self.styles else "AUTO", verbose=verbose)
         merged_features = merge([self.embeddings[x].embeddingLayer for x in embNames], mode='concat', name="merged_features")
         if dropout > 0.0:
             merged_features = Dropout(dropout)(merged_features)
@@ -671,7 +671,7 @@ class KerasDetectorBase(Detector):
             modelPath = self.model.get(repModelPath, True) #self.workDir + self.tag + 'model.hdf5'
             cp_cb = ModelCheckpoint(filepath=modelPath, save_best_only=True, verbose=1)
             #lr_cb = ReduceLROnPlateau(monitor='val_loss', factor=0.2, patience=int(0.5 * patience), min_lr=0.01 * learningRate)
-            kerasModel = self.defineModel(len(labelNames), verbose)
+            kerasModel = self.defineModel(len(labelNames), verbose = i == 0)
             kerasModel.fit(features["train"], labels["train"], #[sourceData], self.arrays["train"]["target"],
                 epochs=100 if not "epochs" in self.styles else int(self.styles["epochs"]),
                 batch_size=batchSize,
