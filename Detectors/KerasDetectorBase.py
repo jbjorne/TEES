@@ -152,19 +152,21 @@ class KerasDetectorBase(Detector):
             self.padExamples(model, self.examples)
         examples = self.examples["classification"]
         self.showExample(examples[0])
-        if classifierModel == None:
-            classifierModel = model.get(self.tag + "model.hdf5")
+        #if classifierModel == None:
+        #    classifierModel = model.get(self.tag + "model.hdf5")
         #labelSet = IdSet(filename = model.get(self.tag + "labels.ids", False), locked=True)
         #labelNames = [None] * len(labelSet.Ids)
         #for label in labelSet.Ids:
         #    labelNames[labelSet.Ids[label]] = label
         #print >> sys.stderr, "Classification labels", labelNames
+        if exampleStyle == None:
+            exampleStyle = Parameters.get(model.getStr(self.tag+"example-style")) # no checking, but these should already have passed the ExampleBuilder
+        numEnsemble = int(exampleStyle.get("ens", 1))
         labelNames = self.loadLabels(model)
         labels = self.vectorizeLabels(examples, ["classification"], labelNames)
         features = self.vectorizeFeatures(examples, ["classification"])
-        predictions, confidences, _ = self.predict(labels["classification"], features["classification"], labelNames, classifierModel)
-        if exampleStyle == None:
-            exampleStyle = Parameters.get(model.getStr(self.tag+"example-style")) # no checking, but these should already have passed the ExampleBuilder
+        classifierModels = model.get(self.tag + "models.json")
+        predictions, confidences, _ = self.predict(labels["classification"], features["classification"], labelNames, classifierModels, numEnsemble)
         self.structureAnalyzer.load(model)
         outExamples = []
         outPredictions = []
@@ -690,10 +692,10 @@ class KerasDetectorBase(Detector):
         numEnsemble = int(self.styles.get("ens", 1))
         #learningRate = float(self.styles.get("lr", 0.001))
         print >> sys.stderr, "Early stopping patience:", patience
-        bestScore = [0.0, 0.0, 0.0, 0]
+        #bestScore = [0.0, 0.0, 0.0, 0]
         models = [] #modelScores = []
         for i in range(numModels):
-            print >> sys.stderr, "***", "Replicate", i + 1, "/", numModels, "***"
+            print >> sys.stderr, "***", "Model", i + 1, "/", numModels, "***"
             parameters = {}
             #KerasUtils.setRandomSeed(i)
             es_cb = EarlyStopping(monitor='val_loss', patience=patience, verbose=1)
@@ -711,7 +713,7 @@ class KerasDetectorBase(Detector):
                 callbacks=[es_cb, cp_cb])
             print >> sys.stderr, "Predicting devel examples"
             _, _, scores = self.predict(labels["devel"], features["devel"], labelNames, modelPath)
-            currentModel = {"filename":modelFileName, "scores":scores, "parameters":parameters}
+            currentModel = {"filename":modelFileName, "scores":scores, "parameters":parameters, "index":i}
             models.append(currentModel)
             models.sort(reverse=True, key=lambda k: k["micro"][2])
             if currentModel == models[0]:
@@ -720,19 +722,10 @@ class KerasDetectorBase(Detector):
                 if j > numEnsemble and models[j]["path"] != None:
                     os.remove(self.model.get(models[j]["filename"]))
                     models[j]["filename"] = None
-            
-            modelScores.append(scores)
-            if replicates > 1:
-                if scores["micro"][2] > bestScore[2]:
-                    print >> sys.stderr, "New best replicate", scores["micro"]
-                    bestScore = scores["micro"]
-                    shutil.copy2(self.model.get(repModelPath, True), self.model.get(self.tag + "model.hdf5", True))
-            else:
-                bestScore = scores["micro"]
-        if replicates > 1 and self.model.hasMember(repModelPath):
-            os.remove(self.model.get(repModelPath))
-        modelScores = [x["micro"][2] for x in modelScores]
-        print >> sys.stderr, "Models:", json.dumps({"best":["%.4f" % x for x in bestScore[:3]], "mean":["%.4f" % numpy.mean(modelScores), "%.4f" % numpy.var(modelScores)], "replicates":["%.4f" % x for x in modelScores]}, sort_keys=True)
+        with open(self.model.get(self.tag + "models.json", True), "wt") as f:
+            json.dump(models, f, indent=2, sort_keys=True)
+        modelScores = [x["scores"]["micro"][2] for x in sorted(models, key=lambda k: k["index"])]
+        print >> sys.stderr, "Models:", json.dumps({"best":["%.4f" % x for x in models[0]["scores"]["micro"][:3]], "mean":["%.4f" % numpy.mean(modelScores), "%.4f" % numpy.var(modelScores)], "replicates":["%.4f" % x for x in modelScores]}, sort_keys=True)
         
         self.model.save()
         self.examples = None
@@ -774,11 +767,26 @@ class KerasDetectorBase(Detector):
             print >> sys.stderr, featureGroup, features[dataSets[0]][featureGroup].shape, features[dataSets[0]][featureGroup][0]
         return features
     
-    def predict(self, labels, features, labelNames, kerasModel):
-        if isinstance(kerasModel, basestring):
-            kerasModel = load_model(kerasModel)
-        confidences = kerasModel.predict(features, 64, 1)
-        
+    def predict(self, labels, features, labelNames, model, numEnsemble=1, evalAll=True):
+        with open(model.get(self.tag + "models.json"), "rt") as f:
+            models = json.load(f)
+        confidences = numpy.zeros(len(labels))
+        for modelIndex in range(len(models)):
+            if modelIndex >= numEnsemble:
+                break
+            print >> sys.stderr, "Predicting with model", models[modelIndex]["filename"]
+            kerasModel = load_model(models[modelIndex]["filename"])
+            confidences = numpy.sum(confidences, kerasModel.predict(features, 64, 1), axis=0)
+            if evalAll and modelIndex < numEnsemble - 1:
+                print >> sys.stderr, "Results for ensemble size", modelIndex + 1
+                self.getPredictions(confidences / float(modelIndex + 1), labels, labelNames)
+            kerasModel = None
+        print >> sys.stderr, "*****", "Results for ensemble, size =", numEnsemble, "*****"
+        predictions, scores = self.getPredictions(confidences / float(numEnsemble), labels, labelNames)
+        #print >> sys.stderr, confidences[0], predictions[0], (confidences.shape, predictions.shape)
+        return predictions, confidences, scores
+    
+    def getPredictions(self, confidences, labels, labelNames):
         predictions = numpy.copy(confidences)
         if self.cmode == "multiclass":
             for i in range(len(confidences)):
@@ -791,8 +799,7 @@ class KerasDetectorBase(Detector):
                 for j in range(len(confidences[i])):
                     predictions[i][j] = 1 if confidences[i][j] > 0.5 else 0
             scores = self.evaluate(labels, predictions, labelNames)
-        print >> sys.stderr, confidences[0], predictions[0], (confidences.shape, predictions.shape)
-        return predictions, confidences, scores
+        return predictions, scores
     
     def evaluate(self, labels, predictions, labelNames):
         print "Evaluating, labels =", labelNames
