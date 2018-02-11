@@ -712,7 +712,7 @@ class KerasDetectorBase(Detector):
                 class_weight=labelWeights,
                 callbacks=[es_cb, cp_cb])
             print >> sys.stderr, "Predicting devel examples"
-            _, _, scores = self.predict(labels["devel"], features["devel"], labelNames, modelPath)
+            _, _, scores = self.predictWithModel(labels["devel"], features["devel"], labelNames, modelPath, True)
             currentModel = {"filename":modelFileName, "scores":scores, "parameters":parameters, "index":i}
             models.append(currentModel)
             models.sort(reverse=True, key=lambda k: k["micro"][2])
@@ -775,16 +775,24 @@ class KerasDetectorBase(Detector):
             if modelIndex >= numEnsemble:
                 break
             print >> sys.stderr, "Predicting with model", models[modelIndex]["filename"]
-            kerasModel = load_model(models[modelIndex]["filename"])
-            confidences = numpy.sum(confidences, kerasModel.predict(features, 64, 1), axis=0)
+            kerasModelPath = model.get(models[modelIndex]["filename"])
+            modelConfidences, _, _ = self.predictWithModel(labels, features, labelNames, kerasModelPath)
+            confidences = numpy.sum(confidences, modelConfidences, axis=0)
             if evalAll and modelIndex < numEnsemble - 1:
                 print >> sys.stderr, "Results for ensemble size", modelIndex + 1
                 self.getPredictions(confidences / float(modelIndex + 1), labels, labelNames)
-            kerasModel = None
         print >> sys.stderr, "*****", "Results for ensemble, size =", numEnsemble, "*****"
         predictions, scores = self.getPredictions(confidences / float(numEnsemble), labels, labelNames)
         #print >> sys.stderr, confidences[0], predictions[0], (confidences.shape, predictions.shape)
         return predictions, confidences, scores
+    
+    def predictWithModel(self, labels, features, labelNames, kerasModelPath, evaluation=False):
+        kerasModel = load_model(kerasModelPath)
+        confidences = kerasModel.predict(features, 64, 1)
+        predictions, scores = None, None
+        if evaluation:
+            predictions, scores = self.getPredictions(confidences, labels, labelNames)
+        return confidences, predictions, scores
     
     def getPredictions(self, confidences, labels, labelNames):
         predictions = numpy.copy(confidences)
