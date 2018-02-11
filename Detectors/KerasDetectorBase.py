@@ -165,8 +165,7 @@ class KerasDetectorBase(Detector):
         labelNames = self.loadLabels(model)
         labels = self.vectorizeLabels(examples, ["classification"], labelNames)
         features = self.vectorizeFeatures(examples, ["classification"])
-        classifierModels = model.get(self.tag + "models.json")
-        predictions, confidences, _ = self.predict(labels["classification"], features["classification"], labelNames, classifierModels, numEnsemble)
+        predictions, confidences, _ = self.predict(labels["classification"], features["classification"], labelNames, model, numEnsemble)
         self.structureAnalyzer.load(model)
         outExamples = []
         outPredictions = []
@@ -530,8 +529,6 @@ class KerasDetectorBase(Detector):
 #             labelSet.add("neg")
         #labelNames = self.loadLabels()
         
-        # Initialize the parameters
-        parameters = {}
         dropout = self.getParameter("do", self.styles, 0.1, parameters, 1) #float(self.styles.get("do", 0.1))
         #kernel_initializer = self.styles.get("init", "glorot_uniform")
         
@@ -724,8 +721,9 @@ class KerasDetectorBase(Detector):
                     print >> sys.stderr, "Removing model", models[j]["filename"]
                     os.remove(self.model.get(models[j]["filename"]))
                     models[j]["filename"] = None
-        with open(self.model.get(self.tag + "models.json", True), "wt") as f:
-            json.dump(models, f, indent=2, sort_keys=True)
+            # Save the updated model list after each new model
+            with open(self.model.get(self.tag + "models.json", True), "wt") as f:
+                json.dump(models, f, indent=2, sort_keys=True)
         modelScores = [x["scores"]["micro"][2] for x in sorted(models, key=lambda k: k["index"])]
         print >> sys.stderr, "Models:", json.dumps({"best":["%.4f" % x for x in models[0]["scores"]["micro"][:3]], "mean":["%.4f" % numpy.mean(modelScores), "%.4f" % numpy.var(modelScores)], "replicates":["%.4f" % x for x in modelScores]}, sort_keys=True)
         
@@ -772,25 +770,27 @@ class KerasDetectorBase(Detector):
     def predict(self, labels, features, labelNames, model, numEnsemble=1, evalAll=True):
         with open(model.get(self.tag + "models.json"), "rt") as f:
             models = json.load(f)
-        confidences = numpy.zeros(len(labels))
+        confidences = numpy.zeros((len(labels), len(labelNames)))
         for modelIndex in range(len(models)):
             if modelIndex >= numEnsemble:
                 break
-            print >> sys.stderr, "Predicting with model", models[modelIndex]["filename"]
+            print >> sys.stderr, "Predicting with model", modelIndex + 1, models[modelIndex]["filename"]
             kerasModelPath = model.get(models[modelIndex]["filename"])
             modelConfidences, _, _ = self.predictWithModel(labels, features, labelNames, kerasModelPath)
-            confidences = numpy.sum(confidences, modelConfidences, axis=0)
+            confidences = confidences + modelConfidences #numpy.sum([confidences, modelConfidences], axis=0)
             if evalAll and modelIndex < numEnsemble - 1:
                 print >> sys.stderr, "Results for ensemble size", modelIndex + 1
                 self.getPredictions(confidences / float(modelIndex + 1), labels, labelNames)
         print >> sys.stderr, "*****", "Results for ensemble, size =", numEnsemble, "*****"
-        predictions, scores = self.getPredictions(confidences / float(numEnsemble), labels, labelNames)
+        confidences = confidences / float(numEnsemble)
+        predictions, scores = self.getPredictions(confidences, labels, labelNames)
         #print >> sys.stderr, confidences[0], predictions[0], (confidences.shape, predictions.shape)
         return predictions, confidences, scores
     
     def predictWithModel(self, labels, features, labelNames, kerasModelPath, evaluation=False):
         kerasModel = load_model(kerasModelPath)
         confidences = kerasModel.predict(features, 64, 1)
+        print >> sys.stderr, ""
         predictions, scores = None, None
         if evaluation:
             predictions, scores = self.getPredictions(confidences, labels, labelNames)
