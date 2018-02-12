@@ -678,14 +678,17 @@ class KerasDetectorBase(Detector):
         assert self.cmode != None
         if trainSize > 0.0:
             print >> sys.stderr, "Redividing sets, train size =", trainSize
-            newExamples = {"train":[], "devel":[]}
             docSets = {}
             for dataSet in setNames:
                 for example in self.examples[dataSet]:
                     if example["doc"] not in docSets:
-                        docSets[example["doc"]] = "train" if random.random() < trainSize else "devel"
-                    newExamples[docSets[example["doc"]]].append(example)
-            examples = newExamples
+                        docSets[example["doc"]] = []
+                    docSets[example["doc"]].append(example)
+            docIds = sorted(docSets.keys())
+            random.shuffle(docIds)
+            cutoff = int(trainSize * len(docIds))
+            examples = {"train":list(itertools.chain.from_iterable([docSets[x] for x in docIds[:cutoff]])), 
+                        "devel":list(itertools.chain.from_iterable([docSets[x] for x in docIds[cutoff:]]))}
         print >> sys.stderr, "Vectorizing examples", {x:len(examples[x]) for x in setNames}
         labels = self.vectorizeLabels(examples, ("train", "devel"), labelNames)
         labelWeights = self.getLabelWeights(labels, labelNames)      
