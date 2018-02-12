@@ -138,7 +138,7 @@ class KerasEntityDetector(KerasDetectorBase):
             extra = {"xtype":"token","t":token.get("id")}
             if entityIds[i] != None:
                 extra["goldIds"] = "/".join(entityIds[i]) # The entities to which this example corresponds
-            examples.append({"id":sentenceGraph.getSentenceId()+".x"+str(self.exampleIndex), "labels":labels[i], "features":features, "extra":extra}) #, "extra":{"eIds":entityIds}}
+            examples.append({"id":sentenceGraph.getSentenceId()+".x"+str(self.exampleIndex), "labels":labels[i], "features":features, "extra":extra, "doc":sentenceGraph.documentElement.get("id")}) #, "extra":{"eIds":entityIds}}
             self.exampleIndex += 1
             self.exampleStats.endExample()
     

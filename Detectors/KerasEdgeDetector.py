@@ -350,7 +350,7 @@ class KerasEdgeDetector(KerasDetectorBase):
             #print extra
         
         self.exampleStats.endExample()
-        examples.append({"id":sentenceGraph.getSentenceId()+".x"+str(self.exampleIndex), "labels":labels, "features":features, "extra":extra})
+        examples.append({"id":sentenceGraph.getSentenceId()+".x"+str(self.exampleIndex), "labels":labels, "features":features, "extra":extra, "doc":sentenceGraph.documentElement.get("id")})
         self.exampleIndex += 1
     
     def defineFeatureGroups(self):

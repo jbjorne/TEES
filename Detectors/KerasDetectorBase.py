@@ -776,6 +776,18 @@ class KerasDetectorBase(Detector):
             print >> sys.stderr, featureGroup, features[dataSets[0]][featureGroup].shape, features[dataSets[0]][featureGroup][0]
         return features
     
+    def getDocSets(self, examples, dataSets, newSets):
+        docIds = set()
+        for dataSet in dataSets:
+            for example in self.examples[dataSet]:
+                assert example["doc"] not in docIds
+                docIds.add(example["doc"])
+        docIds = sorted(docIds)
+        return {docIds[i]:random.choice(newSets) for i in range(len(docIds))}
+    
+    def divideData(self, arrayBySet, dataSets):
+        arrays = numpy.concatenate([arrayBySet[x] for x in dataSets])
+    
     def predict(self, labels, features, labelNames, model, numEnsemble=1, evalAll=True):
         with open(model.get(self.tag + "models.json"), "rt") as f:
             models = json.load(f)
