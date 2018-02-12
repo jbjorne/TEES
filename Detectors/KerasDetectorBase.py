@@ -705,9 +705,10 @@ class KerasDetectorBase(Detector):
             print >> sys.stderr, "***", "Model", i + 1, "/", numModels, "***"
             parameters = {}
             if trainSize > 0.0:
-                setIndices = self.getDocSets(self.examples, ("train", "devel"), ("train", "devel"))
+                setIndices = self.getDocSets(self.examples, ("train", "devel"), ("train", "devel"), trainSize)
                 currentFeatures = self.divideData(features, ("train", "devel"), setIndices)
                 currentLabels = self.divideData(labels, ("train", "devel"), setIndices)
+                print >> sys.stderr, "Redivided sets", {x:len(setIndices[x]) for x in setIndices}, {x:currentFeatures[x].shape for x in currentFeatures}, {x:currentLabels[x].shape for x in currentLabels}
             else:
                 currentFeatures = features
                 currentLabels = labels
@@ -784,24 +785,21 @@ class KerasDetectorBase(Detector):
             print >> sys.stderr, featureGroup, features[dataSets[0]][featureGroup].shape, features[dataSets[0]][featureGroup][0]
         return features
     
-    def getDocSets(self, examples, dataSets, newSets):
+    def getDocSets(self, examples, dataSets, newSets, cutoff):
         examples = []
+        docSets = {}
         for dataSet in dataSets:
             for example in self.examples[dataSet]:
                 examples.append(example)
-        docIds = set()
-        for example in examples:
-            assert example["doc"] not in docIds
-            docIds.add(example["doc"])
-        docIds = sorted(docIds)
-        docSets = {docIds[i]:random.choice(newSets) for i in range(len(docIds))}
-        exampleSets = [docSets[examples[i]] for i in examples]
+                if example["doc"] not in docSets:
+                    docSets[example["doc"]] = "train" if random.random() < cutoff else "devel"
         setIndices = {"train":[], "devel":[]}
-        for i in range(len(exampleSets)):
-            setIndices[exampleSets[i]].append(i)
+        for i in range(len(examples)):
+            setIndices[docSets[example["doc"]]].append(i)
         return setIndices
     
     def divideData(self, arrayBySet, dataSets, setIndices):
+        print arrayBySet
         catenated = numpy.concatenate([arrayBySet[x] for x in dataSets])
         return {catenated.take(setIndices[x], axis=0) for x in dataSets}
     
