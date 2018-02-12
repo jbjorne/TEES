@@ -556,15 +556,15 @@ class KerasDetectorBase(Detector):
             convAct = self.getParameter("cact", self.styles, "relu", parameters, 1) #self.styles.get("cact", "relu")
             numFilters = self.getParameter("nf", self.styles, 32, parameters, 1) #int(self.styles.get("nf", 32)) #32 #64
             for kernel in kernels:
-                subnet = Conv1D(numFilters, kernel, activation=None, name='conv_' + str(kernel))(merged_features)
+                subnet = Conv1D(numFilters, kernel, activation=convAct, name='conv_' + str(kernel))(merged_features)
                 #subnet = Conv1D(numFilters, kernel, activation='relu', name='conv2_' + str(kernel))(subnet)
                 #subnet = MaxPooling1D(pool_length=self.exampleLength - kernel + 1, name='maxpool_' + str(kernel))(subnet)
                 subnet = GlobalMaxPool1D(name='maxpool_' + str(kernel))(subnet)
                 #subnet = Flatten(name='flat_' + str(kernel))(subnet)
                 convOutputs.append(subnet)       
             layer = merge(convOutputs, mode='concat')
-            layer = BatchNormalization()(layer)
-            layer = Activation(convAct)(layer)
+            #layer = BatchNormalization()(layer)
+            #layer = Activation(convAct)(layer)
             if dropout > 0.0:
                 layer = Dropout(dropout)(layer)
         else:
