@@ -673,30 +673,51 @@ class KerasDetectorBase(Detector):
             raise Exception("Unknown weight style '" + str(weightStyle) + "'")
         print >> sys.stderr, "Label weights:", weightStyle, labelWeights
         return labelWeights
+    
+    def getVectorized(self, examples, labelNames, setNames, trainSize=0.0):
+        assert self.cmode != None
+        if trainSize > 0.0:
+            print >> sys.stderr, "Redividing sets, train size =", trainSize
+            allExamples = []
+            docSets = {}
+            for dataSet in setNames:
+                for example in self.examples[dataSet]:
+                    allExamples.append(example)
+                    if example["doc"] not in docSets:
+                        docSets[example["doc"]] = "train" if random.random() < trainSize else "devel"
+            examples = {"train":[], "devel":[]}
+            for example in allExamples:
+                examples[docSets[example["doc"]]].append(example)
+        print >> sys.stderr, "Vectorizing examples", {examples:len(examples[x]) for x in setNames}
+        labels = self.vectorizeLabels(examples, ["train", "devel"], labelNames)
+        labelWeights = self.getLabelWeights(labels, labelNames)      
+        features = self.vectorizeFeatures(examples, ("train", "devel"))
+        return features, labels, labelWeights
    
     def fitModel(self, labelNames, verbose=True):
         """
         Fits the compiled Keras model to the adjacency matrix examples. The model is trained on the
         train set, validated on the devel set and finally the devel set is predicted using the model.
         """
-        #self.defineClassificationMode(self.examples)
-        assert self.cmode != None
-        labels = self.vectorizeLabels(self.examples, ["train", "devel"], labelNames)
-        labelWeights = self.getLabelWeights(labels, labelNames)      
-        
-        #labelSet = IdSet(idDict={labelNames[i]:i for i in range(len(labelNames))})
-        #labelFileName = self.model.get(self.tag + "labels.ids", True)
-        #print >> sys.stderr, "Saving class names to", labelFileName
-        #labelSet.write(labelFileName)   
-        
-        features = self.vectorizeFeatures(self.examples, ("train", "devel"))
-        
         print >> sys.stderr, "Fitting model"
+        #self.defineClassificationMode(self.examples)
+#         assert self.cmode != None
+#         labels = self.vectorizeLabels(self.examples, ["train", "devel"], labelNames)
+#         labelWeights = self.getLabelWeights(labels, labelNames)      
+#         
+#         #labelSet = IdSet(idDict={labelNames[i]:i for i in range(len(labelNames))})
+#         #labelFileName = self.model.get(self.tag + "labels.ids", True)
+#         #print >> sys.stderr, "Saving class names to", labelFileName
+#         #labelSet.write(labelFileName)   
+#         
+#         features = self.vectorizeFeatures(self.examples, ("train", "devel"))
+        trainSize = float(self.styles.get("train", 0.0))
+        if trainSize == 0.0:
+            features, labels, labelWeights = self.getVectorized(self.examples, labelNames, ("train", "devel"))
         patience = int(self.styles.get("patience", 10))
         batchSize = int(self.styles.get("batch", 64))
         numModels = int(self.styles.get("mods", 1))
         numEnsemble = int(self.styles.get("ens", 1))
-        trainSize = float(self.styles.get("train", 0.0))
         #learningRate = float(self.styles.get("lr", 0.001))
         print >> sys.stderr, "Early stopping patience:", patience
         #bestScore = [0.0, 0.0, 0.0, 0]
@@ -705,13 +726,14 @@ class KerasDetectorBase(Detector):
             print >> sys.stderr, "***", "Model", i + 1, "/", numModels, "***"
             parameters = {}
             if trainSize > 0.0:
-                setIndices = self.getDocSets(self.examples, ("train", "devel"), ("train", "devel"), trainSize)
-                currentFeatures = self.divideData(features, ("train", "devel"), setIndices)
-                currentLabels = self.divideData(labels, ("train", "devel"), setIndices)
-                print >> sys.stderr, "Redivided sets", {x:len(setIndices[x]) for x in setIndices}, {x:currentFeatures[x].shape for x in currentFeatures}, {x:currentLabels[x].shape for x in currentLabels}
-            else:
-                currentFeatures = features
-                currentLabels = labels
+                features, labels, labelWeights = self.getVectorized(self.examples, labelNames, ("train", "devel"), trainSize)
+                #setIndices = self.getDocSets(self.examples, ("train", "devel"), ("train", "devel"), trainSize)
+                #currentFeatures = self.divideData(features, ("train", "devel"), setIndices)
+                #currentLabels = self.divideData(labels, ("train", "devel"), setIndices)
+                #print >> sys.stderr, "Redivided sets", {x:len(setIndices[x]) for x in setIndices}, {x:currentFeatures[x].shape for x in currentFeatures}, {x:currentLabels[x].shape for x in currentLabels}
+            #else:
+            #    currentFeatures = features
+            #    currentLabels = labels
             #KerasUtils.setRandomSeed(i)
             es_cb = EarlyStopping(monitor='val_loss', patience=patience, verbose=1)
             modelFileName = self.tag + "model-" + str(i + 1) + ".hdf5"
@@ -720,11 +742,11 @@ class KerasDetectorBase(Detector):
             #lr_cb = ReduceLROnPlateau(monitor='val_loss', factor=0.2, patience=int(0.5 * patience), min_lr=0.01 * learningRate)
             kerasModel = self.defineModel(len(labelNames), parameters, verbose=True)
             print >> sys.stderr, "Model parameters:", parameters
-            kerasModel.fit(currentFeatures["train"], currentLabels["train"], #[sourceData], self.arrays["train"]["target"],
+            kerasModel.fit(features["train"], labels["train"], #[sourceData], self.arrays["train"]["target"],
                 epochs=100 if not "epochs" in self.styles else int(self.styles["epochs"]),
                 batch_size=batchSize,
                 shuffle=True,
-                validation_data=(currentFeatures["devel"], currentLabels["devel"]),
+                validation_data=(features["devel"], labels["devel"]),
                 class_weight=labelWeights,
                 callbacks=[es_cb, cp_cb])
             print >> sys.stderr, "Predicting devel examples"
@@ -785,23 +807,23 @@ class KerasDetectorBase(Detector):
             print >> sys.stderr, featureGroup, features[dataSets[0]][featureGroup].shape, features[dataSets[0]][featureGroup][0]
         return features
     
-    def getDocSets(self, examples, dataSets, newSets, cutoff):
-        examples = []
-        docSets = {}
-        for dataSet in dataSets:
-            for example in self.examples[dataSet]:
-                examples.append(example)
-                if example["doc"] not in docSets:
-                    docSets[example["doc"]] = "train" if random.random() < cutoff else "devel"
-        setIndices = {"train":[], "devel":[]}
-        for i in range(len(examples)):
-            setIndices[docSets[example["doc"]]].append(i)
-        return setIndices
-    
-    def divideData(self, arrayBySet, dataSets, setIndices):
-        print arrayBySet
-        catenated = numpy.concatenate([arrayBySet[x] for x in dataSets])
-        return {catenated.take(setIndices[x], axis=0) for x in dataSets}
+#     def getDocSets(self, examples, dataSets, newSets, cutoff):
+#         examples = []
+#         docSets = {}
+#         for dataSet in dataSets:
+#             for example in self.examples[dataSet]:
+#                 examples.append(example)
+#                 if example["doc"] not in docSets:
+#                     docSets[example["doc"]] = "train" if random.random() < cutoff else "devel"
+#         setIndices = {"train":[], "devel":[]}
+#         for i in range(len(examples)):
+#             setIndices[docSets[example["doc"]]].append(i)
+#         return setIndices
+#     
+#     def divideData(self, arrayBySet, dataSets, setIndices):
+#         print arrayBySet
+#         catenated = numpy.concatenate([arrayBySet[x] for x in dataSets])
+#         return {catenated.take(setIndices[x], axis=0) for x in dataSets}
     
     def predict(self, labels, features, labelNames, model, numEnsemble=1, evalAll=True):
         with open(model.get(self.tag + "models.json"), "rt") as f:
