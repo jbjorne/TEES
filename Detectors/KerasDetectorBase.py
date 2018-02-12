@@ -696,6 +696,7 @@ class KerasDetectorBase(Detector):
         batchSize = int(self.styles.get("batch", 64))
         numModels = int(self.styles.get("mods", 1))
         numEnsemble = int(self.styles.get("ens", 1))
+        trainSize = float(self.styles.get("train", 0.0))
         #learningRate = float(self.styles.get("lr", 0.001))
         print >> sys.stderr, "Early stopping patience:", patience
         #bestScore = [0.0, 0.0, 0.0, 0]
@@ -703,6 +704,13 @@ class KerasDetectorBase(Detector):
         for i in range(numModels):
             print >> sys.stderr, "***", "Model", i + 1, "/", numModels, "***"
             parameters = {}
+            if trainSize > 0.0:
+                setIndices = self.getDocSets(self.examples, ("train", "devel"), ("train", "devel"))
+                currentFeatures = self.divideData(features, ("train", "devel"), setIndices)
+                currentLabels = self.divideData(labels, ("train", "devel"), setIndices)
+            else:
+                currentFeatures = features
+                currentLabels = labels
             #KerasUtils.setRandomSeed(i)
             es_cb = EarlyStopping(monitor='val_loss', patience=patience, verbose=1)
             modelFileName = self.tag + "model-" + str(i + 1) + ".hdf5"
@@ -711,11 +719,11 @@ class KerasDetectorBase(Detector):
             #lr_cb = ReduceLROnPlateau(monitor='val_loss', factor=0.2, patience=int(0.5 * patience), min_lr=0.01 * learningRate)
             kerasModel = self.defineModel(len(labelNames), parameters, verbose=True)
             print >> sys.stderr, "Model parameters:", parameters
-            kerasModel.fit(features["train"], labels["train"], #[sourceData], self.arrays["train"]["target"],
+            kerasModel.fit(currentFeatures["train"], currentLabels["train"], #[sourceData], self.arrays["train"]["target"],
                 epochs=100 if not "epochs" in self.styles else int(self.styles["epochs"]),
                 batch_size=batchSize,
                 shuffle=True,
-                validation_data=(features["devel"], labels["devel"]),
+                validation_data=(currentFeatures["devel"], currentLabels["devel"]),
                 class_weight=labelWeights,
                 callbacks=[es_cb, cp_cb])
             print >> sys.stderr, "Predicting devel examples"
@@ -777,16 +785,25 @@ class KerasDetectorBase(Detector):
         return features
     
     def getDocSets(self, examples, dataSets, newSets):
-        docIds = set()
+        examples = []
         for dataSet in dataSets:
             for example in self.examples[dataSet]:
-                assert example["doc"] not in docIds
-                docIds.add(example["doc"])
+                examples.append(example)
+        docIds = set()
+        for example in examples:
+            assert example["doc"] not in docIds
+            docIds.add(example["doc"])
         docIds = sorted(docIds)
-        return {docIds[i]:random.choice(newSets) for i in range(len(docIds))}
+        docSets = {docIds[i]:random.choice(newSets) for i in range(len(docIds))}
+        exampleSets = [docSets[examples[i]] for i in examples]
+        setIndices = {"train":[], "devel":[]}
+        for i in range(len(exampleSets)):
+            setIndices[exampleSets[i]].append(i)
+        return setIndices
     
-    def divideData(self, arrayBySet, dataSets):
-        arrays = numpy.concatenate([arrayBySet[x] for x in dataSets])
+    def divideData(self, arrayBySet, dataSets, setIndices):
+        catenated = numpy.concatenate([arrayBySet[x] for x in dataSets])
+        return {catenated.take(setIndices[x], axis=0) for x in dataSets}
     
     def predict(self, labels, features, labelNames, model, numEnsemble=1, evalAll=True):
         with open(model.get(self.tag + "models.json"), "rt") as f:
