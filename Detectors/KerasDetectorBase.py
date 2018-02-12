@@ -680,7 +680,7 @@ class KerasDetectorBase(Detector):
             print >> sys.stderr, "Redividing sets, train size =", trainSize
             docSets = {}
             for dataSet in setNames:
-                for example in self.examples[dataSet]:
+                for example in examples[dataSet]:
                     if example["doc"] not in docSets:
                         docSets[example["doc"]] = []
                     docSets[example["doc"]].append(example)
@@ -781,9 +781,9 @@ class KerasDetectorBase(Detector):
         labels = {}
         for dataSet in dataSets:
             if self.cmode == "multiclass":
-                labels[dataSet] = [x["labels"] if len(x["labels"]) > 0 else ["neg"] for x in self.examples[dataSet]]
+                labels[dataSet] = [x["labels"] if len(x["labels"]) > 0 else ["neg"] for x in examples[dataSet]]
             else:
-                labels[dataSet] = [x["labels"] for x in self.examples[dataSet]]
+                labels[dataSet] = [x["labels"] for x in examples[dataSet]]
         #if labelNames == None:
         #    mlb.fit_transform(chain.from_iterable([labels[x] for x in dataSets]))
         #else:
@@ -794,17 +794,17 @@ class KerasDetectorBase(Detector):
         return labels #, labelNames
     
     def vectorizeFeatures(self, examples, dataSets):
-        featureGroups = sorted(self.examples[dataSets[0]][0]["features"].keys())
+        featureGroups = sorted(examples[dataSets[0]][0]["features"].keys())
         print >> sys.stderr, "Vectorizing features:", featureGroups
         features = {x:{} for x in dataSets}
         for featureGroup in featureGroups:
             for dataSet in dataSets:
                 if self.exampleLength != None:
-                    for example in self.examples[dataSet]:
+                    for example in examples[dataSet]:
                         fl = len(example["features"][featureGroup])
                         if len(example["features"][featureGroup]) != self.exampleLength:
                             raise Exception("Feature group '" + featureGroup + "' length differs from example length: " + str([fl, self.exampleLength, example["id"]]))
-                features[dataSet][featureGroup] = numpy.array([x["features"][featureGroup] for x in self.examples[dataSet]])
+                features[dataSet][featureGroup] = numpy.array([x["features"][featureGroup] for x in examples[dataSet]])
             print >> sys.stderr, featureGroup, features[dataSets[0]][featureGroup].shape, features[dataSets[0]][featureGroup][0]
         return features
     
