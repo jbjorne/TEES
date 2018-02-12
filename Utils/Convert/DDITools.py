@@ -33,13 +33,36 @@ def evaluateXML(xml, goldPath=None, mode="interactions"):
     print >> sys.stderr, "Evaluating DDI13", mode
     xml = ETUtils.ETFromObj(xml)
     evaluatorDir = Settings.EVALUATOR["DDI13"]
+    evaluatorProgram = "evaluateDDI.jar" if mode == "interactions" else "evaluteNER.jar"
     assert mode in ("interactions", "entities")
+    tempDir = tempfile.mkdtemp()
     if goldPath == None:
         goldPath = Settings.EVALUATOR[("DDI13T92" if mode == "interactions" else "DDI13T91") + "_TEST-gold"]
-    tempDir = tempfile.mkdtemp()
+    goldItems = [os.path.join(goldPath, x) for x in os.listdir(goldPath)]
+    goldSubDirs = [x for x in goldItems if os.path.isdir(x)]
+    if len(goldSubDirs) != len(goldItems) and len(goldSubDirs) > 0:
+        print goldItems, goldSubDirs
+        raise Exception("Gold directory " + goldPath + " contains both files and subdirectories")
+    goldTempDir = os.path.join(tempDir, "gold")
+    os.makedirs(goldTempDir)
+    counts = defaultdict(int)
+    if len(goldSubDirs) > 0:
+        for goldSubDir in goldSubDirs:
+            for item in os.listdir(goldSubDir):
+                shutil.copy2(os.path.join(goldSubDir, os.path.basename(item)), os.path.join(goldTempDir, os.path.basename(item)))
+                counts[goldSubDir] += 1
+    else:
+        for item in goldItems:
+            shutil.copy2(os.path.join(goldPath, os.path.basename(item)), os.path.join(goldTempDir, os.path.basename(item)))
+            counts[goldPath] += 1
+    print >> sys.stderr, "Copied gold items to", goldTempDir, dict(counts)
+    evaluatorTempDir = os.path.join(tempDir, "evaluator")
+    os.makedirs(evaluatorTempDir)
+    shutil.copy2(os.path.join(evaluatorDir, evaluatorProgram), os.path.join(evaluatorTempDir, evaluatorProgram))
+    print >> sys.stderr, "Copied evaluator", evaluatorProgram, "to", evaluatorTempDir
     subFile = os.path.join(tempDir, "submission.txt")
     makeDDI13SubmissionFile(xml, subFile, mode)
-    command = "java -jar " + os.path.join(evaluatorDir, ("evaluateDDI.jar" if mode == "interactions" else "evaluteNER.jar")) + " '" + goldPath + "' " + subFile
+    command = "java -jar " + os.path.join(evaluatorTempDir, evaluatorProgram) + " '" + goldTempDir + "' " + subFile
     print >> sys.stderr, command
     #currentDir = os.getcwd()
     #os.chdir(evaluatorDir)
