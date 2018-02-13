@@ -98,12 +98,12 @@ class KerasDetectorBase(Detector):
         exampleFiles = {"devel":self.workDir+self.tag+"opt-examples.json.gz", "train":self.workDir+self.tag+"train-examples.json.gz"}
         if self.state == self.STATE_COMPONENT_TRAIN or self.checkStep("EXAMPLES"): # Generate the adjacency matrices
             self.initEmbeddings([optData, trainData, testData] if testData != None else [optData, trainData], parse)
-            self.buildExamples(self.model, ["devel", "train"], [optData, trainData], [exampleFiles["devel"], exampleFiles["train"]], saveIdsToModel=True)
-            self.defineClassificationMode(self.examples)
-            self.saveLabels(["devel", "train"])
+            examples = self.buildExamples(self.model, ["devel", "train"], [optData, trainData], [exampleFiles["devel"], exampleFiles["train"]], saveIdsToModel=True)
+            self.defineClassificationMode(examples)
+            self.saveLabels(examples, ["devel", "train"])
             self.saveStr(self.tag + "classification-mode", self.cmode, self.model)
-            self.defineExampleLength(model, self.examples)
-            self.padExamples(self.model, self.examples)
+            self.defineExampleLength(model, examples)
+            self.padExamples(self.model, examples)
             self.saveEmbeddings(self.embeddings, self.model.get(self.tag + "embeddings.json", True))
             if self.exampleLength != None and self.model.getStr(self.tag + "example-length", None, int) == None:
                 self.saveStr(self.tag + "example-length", str(self.exampleLength), self.model)
@@ -111,10 +111,10 @@ class KerasDetectorBase(Detector):
             #if "test" in self.examples: # Test examples are generated here only for initializing the embeddings
             #    del self.examples["test"]
         #print self.examples["devel"][0:2]
-        self.showExample(self.examples["devel"][0])
+        self.showExample(examples["devel"][0])
         if self.state == self.STATE_COMPONENT_TRAIN or self.checkStep("MODEL"): # Define and train the Keras model
             labelNames = self.loadLabels(self.model)
-            self.fitModel(labelNames)
+            self.fitModel(examples, labelNames)
         if workDir != None:
             self.setWorkDir("")
         self.exitState()
@@ -153,10 +153,9 @@ class KerasDetectorBase(Detector):
         if parse == None:
             parse = self.getStr(self.tag+"parse", model)
         if not useExistingExamples:
-            self.buildExamples(model, ["classification"], [data], [exampleFileName], [goldData], parse=parse, exampleStyle=exampleStyle)
-            self.padExamples(model, self.examples)
-        examples = self.examples["classification"]
-        self.showExample(examples[0])
+            examples = self.buildExamples(model, ["classification"], [data], [exampleFileName], [goldData], parse=parse, exampleStyle=exampleStyle)
+            self.padExamples(model, examples)
+        self.showExample(examples["classification"][0])
         #if classifierModel == None:
         #    classifierModel = model.get(self.tag + "model.hdf5")
         #labelSet = IdSet(filename = model.get(self.tag + "labels.ids", False), locked=True)
@@ -174,7 +173,7 @@ class KerasDetectorBase(Detector):
         self.structureAnalyzer.load(model)
         outExamples = []
         outPredictions = []
-        for pred, conf, example in zip(predictions, confidences, examples):
+        for pred, conf, example in zip(predictions, confidences, examples["classification"]):
             outExamples.append([example["id"], None, None, example["extra"]])
             outPredictions.append({"prediction":pred, "confidence":conf})
         labelSet = IdSet(idDict={labelNames[i]:i for i in range(len(labelNames))})
@@ -282,10 +281,10 @@ class KerasDetectorBase(Detector):
         if self.embeddings == None:
             self.embeddings = self.loadEmbeddings(model.get(self.tag + "embeddings.json", False, None))
         # Make example for all input files
-        self.examples = {x:[] for x in setNames}
+        examples = {x:[] for x in setNames}
         for setName, data, gold in itertools.izip_longest(setNames, datas, golds, fillvalue=None):
             print >> sys.stderr, "Example generation for set", setName #, "to file", output 
-            self.processCorpus(data, self.examples[setName], gold, parse)          
+            self.processCorpus(data, examples[setName], gold, parse)          
         if hasattr(self.structureAnalyzer, "typeMap") and model.mode != "r":
             print >> sys.stderr, "Saving StructureAnalyzer.typeMap"
             self.structureAnalyzer.save(model)
@@ -300,9 +299,10 @@ class KerasDetectorBase(Detector):
                     os.makedirs(os.path.dirname(examplePath))
                 print >> sys.stderr, "Saving", dataSet, "examples to", examplePath
                 with open(examplePath, "wt") as f:
-                    json.dump(self.examples[dataSet], f, indent=2, sort_keys=True)
+                    json.dump(examples[dataSet], f, indent=2, sort_keys=True)
         if modelChanged:
             model.save()
+        return examples
     
     def defineExampleLength(self, model, exampleSets):
         print >> sys.stderr, "Defining example length"
@@ -369,10 +369,10 @@ class KerasDetectorBase(Detector):
         tokenMap = {tokenElements[i][1]:tokens[i] for i in range(len(tokenElements))}
         return tokens, tokenMap
     
-    def saveLabels(self, dataSetNames):
+    def saveLabels(self, examples, dataSetNames):
         labels = set()
-        for dataSet in self.examples:
-            for example in self.examples[dataSet]:
+        for dataSet in examples:
+            for example in examples[dataSet]:
                 for label in example["labels"]:
                     labels.add(label)
         labels = sorted(labels)
@@ -616,7 +616,7 @@ class KerasDetectorBase(Detector):
                 labelSet = set()
                 maxlabels = 0
                 for dataSet in ("train", "devel"):
-                    for example in self.examples[dataSet]:
+                    for example in examples[dataSet]:
                         maxlabels = max(maxlabels, len(example["labels"]))
                         for label in example["labels"]:
                             labelSet.add(label)
@@ -695,7 +695,7 @@ class KerasDetectorBase(Detector):
         features = self.vectorizeFeatures(examples, ("train", "devel"))
         return features, labels, labelWeights
    
-    def fitModel(self, labelNames, verbose=True):
+    def fitModel(self, examples, labelNames, verbose=True):
         """
         Fits the compiled Keras model to the adjacency matrix examples. The model is trained on the
         train set, validated on the devel set and finally the devel set is predicted using the model.
@@ -714,7 +714,7 @@ class KerasDetectorBase(Detector):
 #         features = self.vectorizeFeatures(self.examples, ("train", "devel"))
         trainSize = float(self.styles.get("train", 0.0))
         if trainSize == 0.0:
-            features, labels, labelWeights = self.getVectorized(self.examples, labelNames, ("train", "devel"))
+            features, labels, labelWeights = self.getVectorized(examples, labelNames, ("train", "devel"))
         patience = int(self.styles.get("patience", 10))
         batchSize = int(self.styles.get("batch", 64))
         numModels = int(self.styles.get("mods", 1))
@@ -727,7 +727,7 @@ class KerasDetectorBase(Detector):
             print >> sys.stderr, "***", "Model", i + 1, "/", numModels, "***"
             parameters = {}
             if trainSize > 0.0:
-                features, labels, labelWeights = self.getVectorized(self.examples, labelNames, ("train", "devel"), trainSize)
+                features, labels, labelWeights = self.getVectorized(examples, labelNames, ("train", "devel"), trainSize)
                 #setIndices = self.getDocSets(self.examples, ("train", "devel"), ("train", "devel"), trainSize)
                 #currentFeatures = self.divideData(features, ("train", "devel"), setIndices)
                 #currentLabels = self.divideData(labels, ("train", "devel"), setIndices)
@@ -769,7 +769,7 @@ class KerasDetectorBase(Detector):
         print >> sys.stderr, "Models:", json.dumps({"best":["%.4f" % x for x in models[0]["scores"]["micro"][:3]], "mean":["%.4f" % numpy.mean(modelScores), "%.4f" % numpy.var(modelScores)], "replicates":["%.4f" % x for x in modelScores]}, sort_keys=True)
         
         self.model.save()
-        self.examples = None
+        #self.examples = None
     
     def vectorizeLabels(self, examples, dataSets, labelNames):
         print >> sys.stderr, "Vectorizing labels", labelNames
