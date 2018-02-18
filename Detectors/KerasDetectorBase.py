@@ -131,21 +131,22 @@ class KerasDetectorBase(Detector):
         workOutputTag = os.path.join(self.workDir, os.path.basename(output) + "-")
         xml = self.classifyToXML(data, model, None, workOutputTag, 
             model.get(self.tag+"classifier-model", defaultIfNotExist=None), goldData, parse, float(model.getStr("recallAdjustParameter", defaultIfNotExist=1.0)))
-        if (validate):
-            self.structureAnalyzer.load(model)
-            self.structureAnalyzer.validate(xml)
-            ETUtils.write(xml, output+"-pred.xml.gz")
-        else:
-            shutil.copy2(workOutputTag+self.tag+"pred.xml.gz", output+"-pred.xml.gz")
-        EvaluateInteractionXML.run(self.evaluator, xml, data, parse)
-#         stParams = self.getBioNLPSharedTaskParams(self.bioNLPSTParams, model)
-#         if stParams.get("convert"): #self.useBioNLPSTFormat:
-#             extension = ".zip" if (stParams["convert"] == "zip") else ".tar.gz" 
-#             Utils.STFormat.ConvertXML.toSTFormat(xml, output+"-events" + extension, outputTag=stParams["a2Tag"], writeExtra=(stParams["scores"] == True))
-#             if stParams["evaluate"]: #self.stEvaluator != None:
-#                 if task == None: 
-#                     task = self.getStr(self.tag+"task", model)
-#                 self.stEvaluator.evaluate(output+"-events" + extension, task)
+        if xml != None:
+            if (validate):
+                self.structureAnalyzer.load(model)
+                self.structureAnalyzer.validate(xml)
+                ETUtils.write(xml, output+"-pred.xml.gz")
+            else:
+                shutil.copy2(workOutputTag+self.tag+"pred.xml.gz", output+"-pred.xml.gz")
+            EvaluateInteractionXML.run(self.evaluator, xml, data, parse)
+    #         stParams = self.getBioNLPSharedTaskParams(self.bioNLPSTParams, model)
+    #         if stParams.get("convert"): #self.useBioNLPSTFormat:
+    #             extension = ".zip" if (stParams["convert"] == "zip") else ".tar.gz" 
+    #             Utils.STFormat.ConvertXML.toSTFormat(xml, output+"-events" + extension, outputTag=stParams["a2Tag"], writeExtra=(stParams["scores"] == True))
+    #             if stParams["evaluate"]: #self.stEvaluator != None:
+    #                 if task == None: 
+    #                     task = self.getStr(self.tag+"task", model)
+    #                 self.stEvaluator.evaluate(output+"-events" + extension, task)
         self.deleteTempWorkDir()
         self.exitState()
     
@@ -157,7 +158,11 @@ class KerasDetectorBase(Detector):
         if not useExistingExamples:
             examples = self.buildExamples(model, ["classification"], [data], [exampleFileName], [goldData], parse=parse, exampleStyle=exampleStyle)
             self.padExamples(model, examples)
-        self.showExample(examples["classification"][0])
+        if len(examples["classification"]) > 0:
+            self.showExample(examples["classification"][0])
+        else:
+            print >> sys.stderr, "No examples to classify"
+            return None
         #if classifierModel == None:
         #    classifierModel = model.get(self.tag + "model.hdf5")
         #labelSet = IdSet(filename = model.get(self.tag + "labels.ids", False), locked=True)
@@ -297,7 +302,7 @@ class KerasDetectorBase(Detector):
         for setName, data, gold in itertools.izip_longest(setNames, datas, golds, fillvalue=None):
             print >> sys.stderr, "Example generation for set", setName #, "to file", output
             if not isinstance(data, (list, tuple)): data = [data]
-            if gold != None and not isinstance(gold, (list, tuple)): gold = [gold]
+            if not isinstance(gold, (list, tuple)): gold = [gold]
             for d, g in itertools.izip_longest(data, gold, fillvalue=None):
                 if d != None:
                     self.processCorpus(d, examples[setName], g if g != None else d, parse)          

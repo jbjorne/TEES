@@ -159,7 +159,10 @@ def train(output, task=None, detector=None, inputFiles=None, models=None, parse=
             removalScope = "interactions"
         detector.classify(getEmptyCorpus(inputFiles["devel"], scope=removalScope), models["devel"], "classification-empty/devel-empty", fromStep=detectorSteps["EMPTY"], workDir="classification-empty")
         print >> sys.stderr, "*** Evaluate empty devel classification ***"
-        EvaluateInteractionXML.run(detector.evaluator, "classification-empty/devel-empty-pred.xml.gz", inputFiles["devel"], parse)
+        if os.path.exists("classification-empty/devel-empty-pred.xml.gz"):
+            EvaluateInteractionXML.run(detector.evaluator, "classification-empty/devel-empty-pred.xml.gz", inputFiles["devel"], parse)
+        else:
+            print >> sys.stderr, "No output file for evaluation"
     if selector.check("TEST"):
         print >> sys.stderr, "----------------------------------------------------"
         print >> sys.stderr, "------------- Test set classification --------------"

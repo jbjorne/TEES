@@ -76,13 +76,24 @@ class UnmergingExampleWriter(SentenceExampleWriter):
             exampleByEntityId[eId].append(example)
         return exampleByEntityId
     
+    def isPredictionNegative(self, prediction):
+        if isinstance(prediction, dict):
+            encoded = prediction["prediction"]
+            if len([x for x in encoded if x == 1]) == 0: # negative
+                return True 
+        elif prediction[0] == 1: # negative
+            return True
+        else:
+            return False
+    
     def connectArgumentsToExamples(self, examples, predictionsByExample, interactionsById, entityById):
         # Gather arguments for predicted, unmerged events
         argumentsByExample = {}
         for example in examples:
-            #print predictionsByExample[example[0]]
-            if predictionsByExample[example[0]][0] == 1: # negative
+            # Check for negatives
+            if self.isPredictionNegative(predictionsByExample[example[0]]):
                 continue
+            # Get the arguments
             arguments = []
             for iId in example[3]["i"].split(","):
                 if iId == "": # For example Process events can have 0 arguments
@@ -116,7 +127,7 @@ class UnmergingExampleWriter(SentenceExampleWriter):
     def insertExamples(self, examples, predictionsByExample, argumentsByExample, sentenceObject, classSet, classIds, cutoff=100):
         positiveExamples = []
         for example in examples:
-            if predictionsByExample[example[0]][0] == 1: # negative
+            if self.isPredictionNegative(predictionsByExample[example[0]]): #predictionsByExample[example[0]][0] == 1: # negative
                 continue
             positiveExamples.append(example)
         # Loop until all positive examples are added. This process
@@ -570,7 +581,7 @@ class UnmergingExampleWriter(SentenceExampleWriter):
         prediction = predictionsByExample[example[0]]
         if len(prediction) == 1:
             return 0
-        predClass = prediction[0]
+        #predClass = prediction[0]
         #predictionStrength = [predClass]
         predictionStrength = self.getPredictionStrengthString(prediction, classSet, classIds)
         return predictionStrength
