@@ -300,7 +300,6 @@ class KerasUnmergingDetector(KerasDetectorBase):
         featureGroups = sorted(self.embeddings.keys())
         wordEmbeddings = [x for x in featureGroups if self.embeddings[x].wvPath != None]
         features = {x:[] for x in self.embeddings.keys()}
-        windowIndex = 0
         for i in range(eventRange[0] - outsideLength, eventRange[1] + outsideLength + 1):
             if i >= 0 and i < numTokens:
                 token = tokens[i]
@@ -314,7 +313,7 @@ class KerasUnmergingDetector(KerasDetectorBase):
                 self.addIndex("entities", features, token.get("entities"))
                 for wordEmbedding in wordEmbeddings:
                     self.addIndex(wordEmbedding, features, token[wordEmbedding])
-                self.addFeature("positions", features, str(windowIndex), "[out]")
+                self.addFeature("positions", features, str(i - eventIndex), "[out]")
                 self.addFeature("rel_token", features, relTokens[i])
                 #self.addIndex("named_entities", features, token["named_entities"])
                 self.addIndex("POS", features, token["POS"])
@@ -323,7 +322,6 @@ class KerasUnmergingDetector(KerasDetectorBase):
                 #tokens.append(None)
                 for featureGroup in featureGroups:
                     self.addFeature(featureGroup, features, "[pad]")
-            windowIndex += 1
         return features
     
     def eventIsGold(self, entity, arguments, sentenceGraph, goldGraph, goldEntitiesByOffset, allGoldInteractions):
