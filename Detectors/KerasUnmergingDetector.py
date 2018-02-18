@@ -276,18 +276,18 @@ class KerasUnmergingDetector(KerasDetectorBase):
         
         numTokens = len(tokens)
         intTokenIndices = sorted([x["index"] for x in tokens if x.get("interaction") != None])
+        eventRange = (eventIndex, eventIndex)
+        if len(intTokenIndices) > 0:
+            eventRange = (min(eventIndex, intTokenIndices[0]), max(eventIndex, intTokenIndices[-1]))
         relTokens = []
         relMarker = "b"
         for i in range(numTokens):
-            if len(intTokenIndices) > 0:
-                if i == intTokenIndices[0]:
-                    relMarker = "m"
-                elif i == intTokenIndices[-1]:
-                    relMarker = "a"
-            elif i == eventToken:
-                relMarker  = "a"
+            if i == eventRange[0]:
+                relMarker = "m"
+            elif i == eventRange[-1]:
+                relMarker = "a"
             
-            if i == eventToken:
+            if i == eventIndex:
                 relTokens.append("event")
             elif i in intTokenIndices:
                 if tokens[i]["interaction"] in argSet:
@@ -296,9 +296,6 @@ class KerasUnmergingDetector(KerasDetectorBase):
                     relTokens.append("int")
             else:
                 relTokens.append(relMarker)
-        eventRange = (eventIndex, eventIndex)
-        if len(intTokenIndices) > 0:
-            eventRange = (min(eventIndex, intTokenIndices[0]), max(eventIndex, intTokenIndices[-1]))
         
         featureGroups = sorted(self.embeddings.keys())
         wordEmbeddings = [x for x in featureGroups if self.embeddings[x].wvPath != None]
@@ -318,6 +315,7 @@ class KerasUnmergingDetector(KerasDetectorBase):
                 for wordEmbedding in wordEmbeddings:
                     self.addIndex(wordEmbedding, features, token[wordEmbedding])
                 self.addFeature("positions", features, str(windowIndex), "[out]")
+                self.addFeature("rel_token", features, relTokens[i])
                 #self.addIndex("named_entities", features, token["named_entities"])
                 self.addIndex("POS", features, token["POS"])
                 self.addPathEmbedding(eventToken["element"], token["element"], sentenceGraph.dependencyGraph, undirected, edgeCounts, features)
@@ -406,6 +404,7 @@ class KerasUnmergingDetector(KerasDetectorBase):
         print >> sys.stderr, "Defining embedding indices"
         self.defineWordEmbeddings()
         self.defineEmbedding("positions")
+        self.defineEmbedding("rel_token")
         #self.defineEmbedding("named_entities")
         self.defineEmbedding("entities")
         self.defineEmbedding("int_arg")
