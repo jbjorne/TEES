@@ -85,12 +85,17 @@ class KerasUnmergingDetector(KerasDetectorBase):
         KerasDetectorBase.__init__(self)
         self.tag = "unmerging-"
         self.exampleWriter = UnmergingExampleWriter()
+        self.useSeparateGold = True
+        self.defaultStyles = {"keep_intersentence_gold":True}
 
     ###########################################################################
     # Example Generation
     ###########################################################################
     
     def processDocument(self, sentences, goldSentences, examples):
+        if "keep_intersentence_gold" not in self.styles:
+            self.styles["keep_intersentence_gold"] = True
+        
         self.documentEntitiesById = {}
         for sentence in sentences:
             for entity in sentence.entities:
@@ -154,17 +159,19 @@ class KerasUnmergingDetector(KerasDetectorBase):
             interactions.sort(key=lambda k: k.get("id"))
             interactionCounts = defaultdict(int)
             validInteractionsByType = defaultdict(list)
+            for token in tokens:
+                token["interaction"] = None
             for interaction in interactions:
                 if interaction.get("event") != "True":
                     continue
                 e1 = sentenceGraph.entitiesById[interaction.get("e1")]
-                assert e1 == entity
+                #assert e1 == entity, (e1.attrib, entity.attrib)
                 if interaction.get("e2") in sentenceGraph.entitiesById:
                     e2 = sentenceGraph.entitiesById[interaction.get("e2")]
                     if interaction.get("type") in self.structureAnalyzer.getValidEdgeTypes(e1.get("type"), e2.get("type")):
                         validInteractionsByType[interaction.get("type")].append(interaction)
-                    e2Token = sentenceGraph.entityHeadTokenByEntity[e2]
-                    tokenMap[e2Token]["interaction"] = interaction
+                        e2Token = sentenceGraph.entityHeadTokenByEntity[e2]
+                        tokenMap[e2Token]["interaction"] = interaction
                 else: # intersentence
                     validInteractionsByType[interaction.get("type")].append(interaction)
                 interactionCounts[interaction.get("type")] += 1
@@ -272,10 +279,13 @@ class KerasUnmergingDetector(KerasDetectorBase):
         relTokens = []
         relMarker = "b"
         for i in range(numTokens):
-            if i == intTokenIndices[0]:
-                relMarker = "m"
-            elif i == intTokenIndices[-1]:
-                relMarker = "a"
+            if len(intTokenIndices) > 0:
+                if i == intTokenIndices[0]:
+                    relMarker = "m"
+                elif i == intTokenIndices[-1]:
+                    relMarker = "a"
+            elif i == eventToken:
+                relMarker  = "a"
             
             if i == eventToken:
                 relTokens.append("event")
@@ -286,11 +296,10 @@ class KerasUnmergingDetector(KerasDetectorBase):
                     relTokens.append("int")
             else:
                 relTokens.append(relMarker)
-            relTokens.append(relMarker)
         
         featureGroups = sorted(self.embeddings.keys())
         wordEmbeddings = [x for x in featureGroups if self.embeddings[x].wvPath != None]
-        features = {}
+        features = {x:[] for x in self.embeddings.keys()}
         windowIndex = 0
         for i in range(eventIndex - outsideLength, eventIndex + outsideLength + 1):
             if i >= 0 and i < numTokens:

@@ -60,6 +60,8 @@ class KerasDetectorBase(Detector):
         self.debugGold = False
         self.exampleLength = None
         self.cmode = None
+        self.useSeparateGold = False
+        self.defaultStyles = {}
         #KerasUtils.setRandomSeed(0)
     
     ###########################################################################
@@ -87,7 +89,7 @@ class KerasDetectorBase(Detector):
             print >> sys.stderr, self.structureAnalyzer.toString()
             #self.distanceAnalyzer.analyze([optData, trainData], parse=parse)
             #print >> sys.stderr, self.distanceAnalyzer.toDict()
-        self.styles = Utils.Parameters.get(exampleStyle)
+        self.styles = Utils.Parameters.get(exampleStyle, self.defaultStyles, allowNew=True)
         self.pathDepth = self.styles.get("path", "3")
         if isinstance(self.pathDepth, basestring):
             self.pathDepth = int(self.pathDepth)
@@ -98,7 +100,7 @@ class KerasDetectorBase(Detector):
         exampleFiles = {"devel":self.workDir+self.tag+"opt-examples.json.gz", "train":self.workDir+self.tag+"train-examples.json.gz"}
         if self.state == self.STATE_COMPONENT_TRAIN or self.checkStep("EXAMPLES"): # Generate the adjacency matrices
             self.initEmbeddings([optData, trainData, testData] if testData != None else [optData, trainData], parse)
-            examples = self.buildExamples(self.model, ["devel", "train"], [optData, trainData], [exampleFiles["devel"], exampleFiles["train"]], saveIdsToModel=True)
+            examples = self.buildExamples(self.model, ["devel", "train"], [optData, trainData], [exampleFiles["devel"], exampleFiles["train"]], [optData, trainData] if self.useSeparateGold else [], saveIdsToModel=True)
             self.defineClassificationMode(examples)
             self.saveLabels(examples, ["devel", "train"])
             self.saveStr(self.tag + "classification-mode", self.cmode, self.model)
@@ -184,6 +186,7 @@ class KerasDetectorBase(Detector):
     ###########################################################################
         
     def processCorpus(self, input, examples, gold=None, parse=None, tokenization=None):
+        print >> sys.stderr, "[input, gold] =", [input, gold]
         self.exampleStats = ExampleStats()
     
         # Build examples
@@ -192,8 +195,17 @@ class KerasDetectorBase(Detector):
             self.elementCounts = IXMLUtils.getElementCounts(input)
             self.progress = ProgressCounter(self.elementCounts.get("sentences"), "Build examples")
         
-        inputIterator = getCorpusIterator(input, None, parse, tokenization, removeIntersentenceInteractions=True)            
-        goldIterator = getCorpusIterator(gold, None, parse, tokenization, removeIntersentenceInteractions=True) if gold != None else []
+        removeIntersentenceInteractions = True
+        if "keep_intersentence" in self.styles and self.styles["keep_intersentence"]:
+            print >> sys.stderr, "Keeping intersentence interactions for input corpus"
+            removeIntersentenceInteractions = False
+        removeGoldIntersentenceInteractions = True
+        if gold != None and "keep_intersentence_gold" in self.styles and self.styles["keep_intersentence_gold"]:
+            print >> sys.stderr, "Keeping intersentence interactions for gold corpus"
+            removeGoldIntersentenceInteractions = False
+        
+        inputIterator = getCorpusIterator(input, None, parse, tokenization, removeIntersentenceInteractions=removeIntersentenceInteractions)            
+        goldIterator = getCorpusIterator(gold, None, parse, tokenization, removeIntersentenceInteractions=removeGoldIntersentenceInteractions) if gold != None else []
         for inputSentences, goldSentences in itertools.izip_longest(inputIterator, goldIterator, fillvalue=None):
             assert inputSentences != None and (goldSentences != None or gold == None)
             self.processDocument(inputSentences, goldSentences, examples)
@@ -283,8 +295,12 @@ class KerasDetectorBase(Detector):
         # Make example for all input files
         examples = {x:[] for x in setNames}
         for setName, data, gold in itertools.izip_longest(setNames, datas, golds, fillvalue=None):
-            print >> sys.stderr, "Example generation for set", setName #, "to file", output 
-            self.processCorpus(data, examples[setName], gold, parse)          
+            print >> sys.stderr, "Example generation for set", setName #, "to file", output
+            if not isinstance(data, (list, tuple)): data = [data]
+            if gold != None and not isinstance(gold, (list, tuple)): gold = [gold]
+            for d, g in itertools.izip_longest(data, gold, fillvalue=None):
+                if d != None:
+                    self.processCorpus(d, examples[setName], g if g != None else d, parse)          
         if hasattr(self.structureAnalyzer, "typeMap") and model.mode != "r":
             print >> sys.stderr, "Saving StructureAnalyzer.typeMap"
             self.structureAnalyzer.save(model)
