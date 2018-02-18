@@ -83,19 +83,32 @@ class KerasUnmergingDetector(KerasDetectorBase):
 
     def __init__(self):
         KerasDetectorBase.__init__(self)
-        self.tag = "entity-"
+        self.tag = "unmerging-"
         self.exampleWriter = UnmergingExampleWriter()
 
     ###########################################################################
     # Example Generation
     ###########################################################################
+    
+    def processDocument(self, sentences, goldSentences, examples):
+        self.documentEntitiesById = {}
+        for sentence in sentences:
+            for entity in sentence.entities:
+                assert entity.get("id") not in self.documentEntitiesById
+                self.documentEntitiesById[entity.get("id")] = entity
+                      
+        for i in range(len(sentences)):
+            self.progress.update(1, "Building examples ("+sentences[i].sentence.get("id")+"): ")
+            self.processSentence(sentences[i], examples, goldSentences[i] if goldSentences else None)
         
     def buildExamplesFromGraph(self, sentenceGraph, examples, goldGraph=None):
-        undirected = sentenceGraph.dependencyGraph.toUndirected()
+        dg = sentenceGraph.dependencyGraph
+        undirected = dg.toUndirected()
+        edgeCounts = {x:len(dg.getInEdges(x) + dg.getOutEdges(x)) for x in sentenceGraph.tokens}
         paths = undirected
         
         # Get argument order
-        self.interactionLenghts = self.getInteractionEdgeLengths(sentenceGraph, paths)
+        #self.interactionLengths = self.getInteractionEdgeLengths(sentenceGraph, paths)
         
 #         # Map tokens to character offsets
 #         tokenByOffset = {}
@@ -138,7 +151,7 @@ class KerasUnmergingDetector(KerasDetectorBase):
             eType = str(eType)
             
             interactions = [x[2] for x in sentenceGraph.getOutInteractions(entity, mergeInput)]
-            interactions = self.sortInteractionsById(interactions)
+            interactions.sort(key=lambda k: k.get("id"))
             interactionCounts = defaultdict(int)
             validInteractionsByType = defaultdict(list)
             for interaction in interactions:
@@ -212,7 +225,7 @@ class KerasUnmergingDetector(KerasDetectorBase):
                     self.exampleStats.filter("given-leaf:" + entity.get("type"))
                     if self.debug:
                         print >> sys.stderr, " ", ",".join(labels) +"("+eType+")", "arg combination", argCombination, "LEAF"
-                elif self.structureAnalyzer.isValidEntity(entity) or self.structureAnalyzer.isValidEvent(entity, argCombination, self.documentEntitiesById, noUpperLimitBeyondOne=self.styles["no_arg_count_upper_limit"], issues=issues):
+                elif self.structureAnalyzer.isValidEntity(entity) or self.structureAnalyzer.isValidEvent(entity, argCombination, self.documentEntitiesById, noUpperLimitBeyondOne = "no_arg_count_upper_limit" in self.styles, issues=issues):
                     if self.debug:
                         print >> sys.stderr, " ", ",".join(labels), "arg combination", argCombination, "VALID"
                     argString = ""
@@ -223,7 +236,7 @@ class KerasUnmergingDetector(KerasDetectorBase):
                     assert type(extra["etype"]) in types.StringTypes, extra
                     assert type(extra["class"]) in types.StringTypes, ",".join(labels)
                     assert type(extra["i"]) in types.StringTypes, argString
-                    features = self.buildFeatures(sentenceGraph, paths, entity, argCombination, interactions)
+                    features = self.buildFeatures(sentenceGraph, paths, entity, argCombination, interactions, tokens, tokenMap, undirected, edgeCounts)
                     examples.append({"id":sentenceGraph.getSentenceId()+".x"+str(self.exampleIndex), "labels":labels, "features":features, "extra":extra}) #, "extra":{"eIds":entityIds}}
                     self.exampleIndex += 1
                 else: # not a valid event or valid entity
@@ -241,16 +254,21 @@ class KerasUnmergingDetector(KerasDetectorBase):
         #return examples
         return exampleIndex
     
-    def buildFeatures(self, sentenceGraph, paths, eventEntity, argCombination, allInteractions, tokens, tokenMap): #themeEntities, causeEntities=None):
+    def buildFeatures(self, sentenceGraph, paths, eventEntity, argCombination, allInteractions, tokens, tokenMap, undirected, edgeCounts): #themeEntities, causeEntities=None):
         # NOTE!!!! TODO
         # add also features for arguments present, but not in this combination
         
         argSet = set(argCombination)
-        eventToken = tokenMap[self.sentenceGraph.entityHeadTokenByEntity[eventEntity]]
+        eventToken = tokenMap[sentenceGraph.entityHeadTokenByEntity[eventEntity]]
         eventIndex = eventToken["index"]
         
+        exampleLength = int(self.styles.get("el", -1)) if self.exampleLength == None else self.exampleLength
+        if self.exampleLength == None:
+            self.exampleLength = exampleLength
+        outsideLength = int(self.styles.get("ol", 5))
+        
         numTokens = len(tokens)
-        intTokenIndices = sorted([x["index"] for x in tokens if tokens.get("interaction") != None])
+        intTokenIndices = sorted([x["index"] for x in tokens if x.get("interaction") != None])
         relTokens = []
         relMarker = "b"
         for i in range(numTokens):
@@ -273,9 +291,8 @@ class KerasUnmergingDetector(KerasDetectorBase):
         featureGroups = sorted(self.embeddings.keys())
         wordEmbeddings = [x for x in featureGroups if self.embeddings[x].wvPath != None]
         features = {}
-        side = (self.exampleLength - 1) / 2
         windowIndex = 0
-        for i in range(eventIndex - side, eventIndex + side + 1):
+        for i in range(eventIndex - outsideLength, eventIndex + outsideLength + 1):
             if i >= 0 and i < numTokens:
                 token = tokens[i]
                 #tokens.append(token2)
