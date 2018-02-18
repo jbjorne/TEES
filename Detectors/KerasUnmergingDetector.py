@@ -296,12 +296,15 @@ class KerasUnmergingDetector(KerasDetectorBase):
                     relTokens.append("int")
             else:
                 relTokens.append(relMarker)
+        eventRange = (eventIndex, eventIndex)
+        if len(intTokenIndices) > 0:
+            eventRange = (min(eventIndex, intTokenIndices[0]), max(eventIndex, intTokenIndices[-1]))
         
         featureGroups = sorted(self.embeddings.keys())
         wordEmbeddings = [x for x in featureGroups if self.embeddings[x].wvPath != None]
         features = {x:[] for x in self.embeddings.keys()}
         windowIndex = 0
-        for i in range(eventIndex - outsideLength, eventIndex + outsideLength + 1):
+        for i in range(eventRange[0] - outsideLength, eventRange[1] + outsideLength + 1):
             if i >= 0 and i < numTokens:
                 token = tokens[i]
                 #tokens.append(token2)
