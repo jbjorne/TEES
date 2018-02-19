@@ -35,17 +35,11 @@ from __builtin__ import isinstance
 from Detectors.KerasDetectorBase import KerasDetectorBase
 import Utils.Range as Range
 
-class KerasEntityDetector(KerasDetectorBase):
-    """
-    The KerasDetector replaces the default SVM-based learning with a pipeline where
-    sentences from the XML corpora are converted into adjacency matrix examples which
-    are used to train the Keras model defined in the KerasDetector.
-    """
+class KerasTokenDetector(KerasDetectorBase):
 
     def __init__(self):
         KerasDetectorBase.__init__(self)
-        self.tag = "entity-"
-        self.exampleWriter = EntityExampleWriter()
+        self.useNonGiven = False
 
     ###########################################################################
     # Example Generation
@@ -126,7 +120,10 @@ class KerasEntityDetector(KerasDetectorBase):
                     for wordEmbedding in wordEmbeddings:
                         self.addIndex(wordEmbedding, features, token2[wordEmbedding])
                     self.addFeature("positions", features, str(windowIndex), "[out]")
-                    self.addIndex("named_entities", features, token2["named_entities"])
+                    if self.useNonGiven:
+                        self.addIndex("named_entities", features, token2["named_entities"])
+                    else:
+                        self.addIndex("entities", features, token2["entities"])
                     self.addIndex("POS", features, token2["POS"])
                     self.addPathEmbedding(token, token2["element"], sentenceGraph.dependencyGraph, undirected, edgeCounts, features)
                 else:
@@ -143,26 +140,16 @@ class KerasEntityDetector(KerasDetectorBase):
             self.exampleStats.endExample()
     
     def getEntityTypes(self, entities, useNeg=False):
-        types = set()
-        entityIds = set()
-        for entity in entities:
-            eType = entity.get("type")
-            if entity.get("given") == "True" and self.styles.get("all_tokens"):
-                continue
-            if eType == "Entity" and self.styles.get("genia_task1"):
-                continue
-            else:
-                types.add(eType)
-                entityIds.add(entity.get("id"))
-        if len(types) == 0 and useNeg:
-            types.add("neg")
-        return sorted(types), sorted(entityIds)
+        raise NotImplementedError
     
     def defineFeatureGroups(self):
         print >> sys.stderr, "Defining embedding indices"
         self.defineWordEmbeddings()
         self.defineEmbedding("positions")
-        self.defineEmbedding("named_entities")
+        if self.useNonGiven:
+            self.defineEmbedding("entities")
+        else:
+            self.defineEmbedding("named_entities")
         self.defineEmbedding("POS", vocabularyType="POS")
         for i in range(self.pathDepth):
             self.defineEmbedding("path" + str(i), vocabularyType="directed_dependencies")
