@@ -1,45 +1,13 @@
-import sys, os
-import shutil
-import gzip
-import json
-import itertools
-import types
-from Detector import Detector
-from Core.SentenceGraph import getCorpusIterator
-import Utils.ElementTreeUtils as ETUtils
-from Core.IdSet import IdSet
-import Utils.Parameters
-import Utils.Settings as Settings
-from Utils.EmbeddingIndex import EmbeddingIndex
-from Utils.ProgressCounter import ProgressCounter
-from ExampleBuilders.ExampleStats import ExampleStats
-from Evaluators import EvaluateInteractionXML
-from Utils import Parameters
-from ExampleWriters.EntityExampleWriter import EntityExampleWriter
-from Evaluators.AveragingMultiClassEvaluator import AveragingMultiClassEvaluator
-import Utils.InteractionXML.InteractionXMLUtils as IXMLUtils
-import numpy
-from keras.layers import Dense
-from keras.models import Model, load_model
-from keras.layers.core import Dropout, Flatten
-from keras.optimizers import Adam
-from keras.callbacks import EarlyStopping, ModelCheckpoint
-from keras.layers import merge
-from itertools import chain
-import sklearn.metrics
-from sklearn.preprocessing.label import MultiLabelBinarizer
-from sklearn.metrics.classification import classification_report
-from keras.layers import Conv1D
-from keras.layers.pooling import MaxPooling1D
-from __builtin__ import isinstance
+import sys
 from Detectors.KerasDetectorBase import KerasDetectorBase
-import Utils.Range as Range
 
 class KerasTokenDetector(KerasDetectorBase):
 
     def __init__(self):
         KerasDetectorBase.__init__(self)
         self.useNonGiven = False
+        self.exampleType = "token"
+        self.defaultExtra = {}
 
     ###########################################################################
     # Example Generation
@@ -81,7 +49,6 @@ class KerasTokenDetector(KerasDetectorBase):
         # Prepare the indices
         numTokens = len(sentenceGraph.tokens)
         #indices = [self.embeddings["words"].getIndex(sentenceGraph.tokens[i].get("text").lower(), "[out]") for i in range(numTokens)]
-        labels, entityIds = zip(*[self.getEntityTypes(sentenceGraph.tokenIsEntityHead[sentenceGraph.tokens[i]]) for i in range(numTokens)])
         self.exampleLength = int(self.styles.get("el", 21)) #31 #9 #21 #5 #3 #9 #19 #21 #9 #5 #exampleLength = self.EXAMPLE_LENGTH if self.EXAMPLE_LENGTH != None else numTokens
         
         # Pre-generate features for all tokens in the sentence
@@ -91,12 +58,25 @@ class KerasTokenDetector(KerasDetectorBase):
         undirected = dg.toUndirected()
         edgeCounts = {x:len(dg.getInEdges(x) + dg.getOutEdges(x)) for x in sentenceGraph.tokens}
         
-        for i in range(len(sentenceGraph.tokens)):
-            token = sentenceGraph.tokens[i]
+        exampleNodes = []
+        if self.exampleType == "entity":
+            exampleNodes = [{"entity":x, "token":sentenceGraph.entityHeadTokenByEntity[x]} for x in sentenceGraph.entities if not entity.get("given")]
+        else:
+            assert self.exampleType == "token"
+            exampleNodes = [{"entity":None, "token":x} for x in sentenceGraph.tokens]
+        
+        for i in range(len(exampleNodes)):
+            token = exampleNodes[i]["token"]
+            entity = exampleNodes[i]["entity"]
+            
+            if self.exampleType == "entity":
+                labels, entityIds = self.getEntityTypes([entity])
+            else:
+                labels, entityIds = self.getEntityTypes(sentenceGraph.tokenIsEntityHead[token])
 
             # CLASS
             #labels = self.getEntityTypes(sentenceGraph.tokenIsEntityHead[token])
-            self.exampleStats.beginExample(",".join(labels[i]))
+            self.exampleStats.beginExample(",".join(labels))
             
             # Recognize only non-named entities (i.e. interaction words)
             if sentenceGraph.tokenIsName[token] and not self.styles.get("names") and not self.styles.get("all_tokens"):
@@ -115,15 +95,15 @@ class KerasTokenDetector(KerasDetectorBase):
                 if j >= 0 and j < numTokens:
                     token2 = tokens[j]
                     #tokens.append(token2)
-                    if self.debugGold:
-                        self.addFeature("gold", features, ",".join(labels[j]), "[out]")
+                    #if self.debugGold:
+                    #    self.addFeature("gold", features, ",".join(labels[j]), "[out]")
                     for wordEmbedding in wordEmbeddings:
                         self.addIndex(wordEmbedding, features, token2[wordEmbedding])
                     self.addFeature("positions", features, str(windowIndex), "[out]")
                     if self.useNonGiven:
-                        self.addIndex("named_entities", features, token2["named_entities"])
-                    else:
                         self.addIndex("entities", features, token2["entities"])
+                    else:
+                        self.addIndex("named_entities", features, token2["named_entities"])
                     self.addIndex("POS", features, token2["POS"])
                     self.addPathEmbedding(token, token2["element"], sentenceGraph.dependencyGraph, undirected, edgeCounts, features)
                 else:
@@ -132,10 +112,11 @@ class KerasTokenDetector(KerasDetectorBase):
                         self.addFeature(featureGroup, features, "[pad]")
                 windowIndex += 1
             
-            extra = {"xtype":"token","t":token.get("id")}
-            if entityIds[i] != None:
-                extra["goldIds"] = "/".join(entityIds[i]) # The entities to which this example corresponds
-            examples.append({"id":sentenceGraph.getSentenceId()+".x"+str(self.exampleIndex), "labels":labels[i], "features":features, "extra":extra, "doc":sentenceGraph.documentElement.get("id")}) #, "extra":{"eIds":entityIds}}
+            extra = {"t":token.get("id"), "entity":entity.get("id") if entity != None else None}
+            extra.update(self.defaultExtra)
+            if entityIds != None:
+                extra["goldIds"] = "/".join(entityIds) # The entities to which this example corresponds
+            examples.append({"id":sentenceGraph.getSentenceId()+".x"+str(self.exampleIndex), "labels":labels, "features":features, "extra":extra, "doc":sentenceGraph.documentElement.get("id")}) #, "extra":{"eIds":entityIds}}
             self.exampleIndex += 1
             self.exampleStats.endExample()
     
@@ -153,5 +134,5 @@ class KerasTokenDetector(KerasDetectorBase):
         self.defineEmbedding("POS", vocabularyType="POS")
         for i in range(self.pathDepth):
             self.defineEmbedding("path" + str(i), vocabularyType="directed_dependencies")
-        if self.debugGold:
-            self.defineEmbedding("gold")
+        #if self.debugGold:
+        #    self.defineEmbedding("gold")

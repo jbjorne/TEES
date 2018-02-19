@@ -6,6 +6,7 @@ class KerasEntityDetector(KerasTokenDetector):
         KerasTokenDetector.__init__(self)
         self.tag = "entity-"
         self.useNonGiven = False
+        self.defaultExtra = {"xtype":"token"}
         self.exampleWriter = EntityExampleWriter()
     
     def getEntityTypes(self, entities, useNeg=False):
