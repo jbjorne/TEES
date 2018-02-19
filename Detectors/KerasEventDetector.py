@@ -113,12 +113,12 @@ class KerasEventDetector(EventDetector):
             else:
                 self.triggerDetector.beginModel(None, self.model, [self.workDir+self.triggerDetector.tag+"train-examples.gz"], self.workDir+self.triggerDetector.tag+"opt-examples.gz")
             if self.kerasComponents["edge"]:
-                self.edgeDetector.train(trainData, optData, self.model, self.combinedModel, triggerExampleStyle, None, parse, tokenization, task, testData=testData)
+                self.edgeDetector.train(trainData, optData, self.model, self.combinedModel, edgeExampleStyle, None, parse, tokenization, task, testData=testData)
             else:
                 self.edgeDetector.beginModel(None, self.model, [self.workDir+self.edgeDetector.tag+"train-examples.gz"], self.workDir+self.edgeDetector.tag+"opt-examples.gz")
             if self.trainModifiers:
                 if self.kerasComponents["modifier"]:
-                    self.modifierDetector.train(trainData, optData, self.model, self.combinedModel, triggerExampleStyle, None, parse, tokenization, task, testData=testData)
+                    self.modifierDetector.train(trainData, optData, self.model, self.combinedModel, modifierExampleStyle, None, parse, tokenization, task, testData=testData)
                 else:
                     self.modifierDetector.beginModel(None, self.model, [self.workDir+self.modifierDetector.tag+"train-examples.gz"], self.workDir+self.modifierDetector.tag+"opt-examples.gz")
         if self.checkStep("END-MODEL"):
