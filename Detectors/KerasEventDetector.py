@@ -1,8 +1,11 @@
 import sys, os
+import copy
 from Detectors.EventDetector import EventDetector
 from Detectors.KerasEntityDetector import KerasEntityDetector
 from Detectors.KerasEdgeDetector import KerasEdgeDetector
 from Detectors.KerasUnmergingDetector import KerasUnmergingDetector
+import Evaluators.EvaluateInteractionXML as EvaluateInteractionXML
+import Utils.Parameters as Parameters
 
 class KerasEventDetector(EventDetector):
     def __init__(self):
@@ -27,7 +30,7 @@ class KerasEventDetector(EventDetector):
               fromStep=None, toStep=None,
               workDir=None, testData=None):
         # Initialize the training process ##############################
-        self.initVariables(trainData=trainData, optData=optData, model=model, combinedModel=combinedModel,
+        self.initVariables(trainData=trainData, optData=optData, testData=testData, model=model, combinedModel=combinedModel,
                            triggerExampleStyle=triggerExampleStyle, edgeExampleStyle=edgeExampleStyle, 
                            unmergingExampleStyle=unmergingExampleStyle, modifierExampleStyle=modifierExampleStyle,
                            triggerClassifierParameters=triggerClassifierParameters, 
@@ -173,6 +176,68 @@ class KerasEventDetector(EventDetector):
         self.edgeDetector.exitState()
         self.unmergingDetector.exitState()
         self.modifierDetector.exitState()
+    
+    def trainUnmergingDetector(self):
+        xml = None
+        if not self.unmerging:
+            print >> sys.stderr, "No unmerging"
+        if self.checkStep("SELF-TRAIN-EXAMPLES-FOR-UNMERGING", self.unmerging) and self.unmerging:
+            # Self-classified train data for unmerging
+            if self.doUnmergingSelfTraining:
+                # This allows limiting to a subcorpus
+                triggerStyle = copy.copy(Parameters.get(self.triggerExampleStyle))
+                edgeStyle = copy.copy(Parameters.get(self.edgeExampleStyle))
+                unmergingStyle = Parameters.get(self.unmergingExampleStyle)
+                if "sentenceLimit" in unmergingStyle and unmergingStyle["sentenceLimit"]:
+                    triggerStyle["sentenceLimit"] = unmergingStyle["sentenceLimit"]
+                    edgeStyle["sentenceLimit"] = unmergingStyle["sentenceLimit"]
+                # Build the examples
+                xml = self.triggerDetector.classifyToXML(self.trainData, self.model, None, self.workDir+"unmerging-extra-", exampleStyle=triggerStyle)#, recallAdjust=0.5)
+                xml = self.edgeDetector.classifyToXML(xml, self.model, None, self.workDir+"unmerging-extra-", exampleStyle=edgeStyle)#, recallAdjust=0.5)
+                assert xml != None
+                EvaluateInteractionXML.run(self.edgeDetector.evaluator, xml, self.trainData, self.parse)
+            else:
+                print >> sys.stderr, "No self-training for unmerging"
+        if self.checkStep("UNMERGING-EXAMPLES", self.unmerging) and self.unmerging:
+            GOLD_OPT_FILE = self.optData.replace("-nodup", "")
+            GOLD_TRAIN_FILE = self.trainData.replace("-nodup", "")
+            if self.kerasComponents["unmerging"]:
+                extraData = None
+                if self.doUnmergingSelfTraining:
+                    extraData = [None, xml]
+                self.unmergingDetector.train(self.trainData.replace("-nodup", ""), self.optData.replace("-nodup", ""), self.model, self.combinedModel, self.unmergingExampleStyle, None, self.parse, self.tokenization, self.task, testData=self.testData, 
+                                           goldData=[GOLD_OPT_FILE, GOLD_TRAIN_FILE], extraData=extraData)
+            else:
+                # Unmerging example generation
+                if self.doUnmergingSelfTraining:
+                    if xml == None: 
+                        xml = self.workDir+"unmerging-extra-edge-pred.xml.gz"
+                    self.unmergingDetector.buildExamples(self.model, [self.optData.replace("-nodup", ""), [self.trainData.replace("-nodup", ""), xml]], 
+                                                         [self.workDir+"unmerging-opt-examples.gz", self.workDir+"unmerging-train-examples.gz"], 
+                                                         [GOLD_OPT_FILE, [GOLD_TRAIN_FILE, GOLD_TRAIN_FILE]], 
+                                                         exampleStyle=self.unmergingExampleStyle, saveIdsToModel=True)
+                    xml = None
+                else:
+                    self.unmergingDetector.buildExamples(self.model, [self.optData.replace("-nodup", ""), self.trainData.replace("-nodup", "")], 
+                                                         [self.workDir+"unmerging-opt-examples.gz", self.workDir+"unmerging-train-examples.gz"], 
+                                                         [GOLD_OPT_FILE, GOLD_TRAIN_FILE], 
+                                                         exampleStyle=self.unmergingExampleStyle, saveIdsToModel=True)
+                    xml = None
+                #UnmergingExampleBuilder.run("/home/jari/biotext/EventExtension/TrainSelfClassify/test-predicted-edges.xml", GOLD_TRAIN_FILE, UNMERGING_TRAIN_EXAMPLE_FILE, PARSE, TOK, UNMERGING_FEATURE_PARAMS, UNMERGING_IDS, append=True)
+        if self.checkStep("BEGIN-UNMERGING-MODEL", self.unmerging) and self.unmerging:
+            if not self.kerasComponents["unmerging"]:
+                self.unmergingDetector.beginModel(None, self.model, self.workDir+"unmerging-train-examples.gz", self.workDir+"unmerging-opt-examples.gz")
+        if self.checkStep("END-UNMERGING-MODEL", self.unmerging) and self.unmerging:
+            if not self.kerasComponents["unmerging"]:
+                self.unmergingDetector.endModel(None, self.model, self.workDir+"unmerging-opt-examples.gz")
+                print >> sys.stderr, "Adding unmerging classifier model to test-set event model"
+                if self.combinedModel != None:
+                    self.combinedModel.addStr("unmerging-example-style", self.model.getStr("unmerging-example-style"))
+                    self.combinedModel.insert(self.model.get("unmerging-ids.classes"), "unmerging-ids.classes")
+                    self.combinedModel.insert(self.model.get("unmerging-ids.features"), "unmerging-ids.features")
+                    self.unmergingDetector.addClassifierModel(self.combinedModel, self.model.get("unmerging-classifier-model", True), 
+                                                              self.model.getStr("unmerging-classifier-parameter"))
+                    self.combinedModel.save()
         
     def doGrid(self):
         # Save grid model

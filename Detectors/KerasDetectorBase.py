@@ -70,7 +70,7 @@ class KerasDetectorBase(Detector):
     
     def train(self, trainData=None, optData=None, model=None, combinedModel=None, exampleStyle=None, 
               classifierParameters=None, parse=None, tokenization=None, task=None, fromStep=None, toStep=None,
-              workDir=None, testData=None):
+              workDir=None, testData=None, goldData=None, extraData=None):
         self.initVariables(trainData=trainData, optData=optData, model=model, combinedModel=combinedModel, exampleStyle=exampleStyle, classifierParameters=classifierParameters, parse=parse, tokenization=tokenization)
         self.setWorkDir(workDir)
         self.model = model
@@ -103,7 +103,14 @@ class KerasDetectorBase(Detector):
         exampleFiles = {"devel":self.workDir+self.tag+"opt-examples.json.gz", "train":self.workDir+self.tag+"train-examples.json.gz"}
         if self.state == self.STATE_COMPONENT_TRAIN or self.checkStep("EXAMPLES"): # Generate the adjacency matrices
             self.initEmbeddings([optData, trainData, testData] if testData != None else [optData, trainData], parse)
-            examples = self.buildExamples(self.model, ["devel", "train"], [optData, trainData], [exampleFiles["devel"], exampleFiles["train"]], [optData, trainData] if self.useSeparateGold else [], saveIdsToModel=True)
+            datas = [optData, trainData]
+            golds = []
+            if self.useSeparateGold:
+                golds = goldData if goldData != None else [optData, trainData]
+            if extraData != None:
+                for i in range(len(datas)):
+                    datas[i] = (datas[i], extraData[i]) if extraData[i] != None else datas[i]
+            examples = self.buildExamples(self.model, ["devel", "train"], datas, [exampleFiles["devel"], exampleFiles["train"]], golds, saveIdsToModel=True)
             self.defineClassificationMode(examples)
             self.saveLabels(examples, ["devel", "train"])
             self.saveStr(self.tag + "classification-mode", self.cmode, self.model)
