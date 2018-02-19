@@ -37,6 +37,7 @@ from __builtin__ import isinstance
 from collections import defaultdict
 from sklearn.utils.class_weight import compute_class_weight
 import Utils.Range as Range
+import Utils.STFormat
 import Utils.KerasUtils as KerasUtils
 from keras.layers.normalization import BatchNormalization
 import random
@@ -93,6 +94,7 @@ class KerasDetectorBase(Detector):
             #self.distanceAnalyzer.analyze([optData, trainData], parse=parse)
             #print >> sys.stderr, self.distanceAnalyzer.toDict()
         self.styles = Utils.Parameters.get(exampleStyle, self.defaultStyles, allowNew=True)
+        self.saveStr(self.tag+"example-style", Utils.Parameters.toString(self.styles), self.model)
         self.pathDepth = self.styles.get("path", "3")
         if isinstance(self.pathDepth, basestring):
             self.pathDepth = int(self.pathDepth)
@@ -149,19 +151,22 @@ class KerasDetectorBase(Detector):
             else:
                 shutil.copy2(workOutputTag+self.tag+"pred.xml.gz", output+"-pred.xml.gz")
             EvaluateInteractionXML.run(self.evaluator, xml, data, parse)
-    #         stParams = self.getBioNLPSharedTaskParams(self.bioNLPSTParams, model)
-    #         if stParams.get("convert"): #self.useBioNLPSTFormat:
-    #             extension = ".zip" if (stParams["convert"] == "zip") else ".tar.gz" 
-    #             Utils.STFormat.ConvertXML.toSTFormat(xml, output+"-events" + extension, outputTag=stParams["a2Tag"], writeExtra=(stParams["scores"] == True))
-    #             if stParams["evaluate"]: #self.stEvaluator != None:
-    #                 if task == None: 
-    #                     task = self.getStr(self.tag+"task", model)
-    #                 self.stEvaluator.evaluate(output+"-events" + extension, task)
+            stParams = self.getBioNLPSharedTaskParams(self.bioNLPSTParams, model)
+            if stParams.get("convert"): #self.useBioNLPSTFormat:
+                extension = ".zip" if (stParams["convert"] == "zip") else ".tar.gz" 
+                Utils.STFormat.ConvertXML.toSTFormat(xml, output+"-events" + extension, outputTag=stParams["a2Tag"], writeExtra=(stParams["scores"] == True))
+                if stParams["evaluate"]: #self.stEvaluator != None:
+                    if task == None: 
+                        task = self.getStr(self.tag+"task", model)
+                    self.stEvaluator.evaluate(output+"-events" + extension, task)
         self.deleteTempWorkDir()
         self.exitState()
     
     def classifyToXML(self, data, model, exampleFileName=None, tag="", classifierModel=None, goldData=None, parse=None, recallAdjust=None, compressExamples=True, exampleStyle=None, useExistingExamples=False):
         model = self.openModel(model, "r")
+        if exampleStyle == None:
+            exampleStyle = Parameters.get(model.getStr(self.tag+"example-style")) # no checking, but these should already have passed the ExampleBuilder
+        self.styles = Utils.Parameters.get(exampleStyle, self.defaultStyles, allowNew=True)
         self.cmode = self.getStr(self.tag+"classification-mode", model)
         if parse == None:
             parse = self.getStr(self.tag+"parse", model)
@@ -180,8 +185,6 @@ class KerasDetectorBase(Detector):
         #for label in labelSet.Ids:
         #    labelNames[labelSet.Ids[label]] = label
         #print >> sys.stderr, "Classification labels", labelNames
-        if exampleStyle == None:
-            exampleStyle = Parameters.get(model.getStr(self.tag+"example-style")) # no checking, but these should already have passed the ExampleBuilder
         numEnsemble = int(exampleStyle.get("ens", 1))
         labelNames = self.loadLabels(model)
         labels = self.vectorizeLabels(examples, ["classification"], labelNames)
@@ -302,6 +305,13 @@ class KerasDetectorBase(Detector):
             exampleStyle = model.getStr(self.tag+"example-style")
         if parse == None:
             parse = self.getStr(self.tag+"parse", model)
+        self.skipLabels = []
+        if self.styles.get("skip_labels"):
+            self.skipLabels = self.styles.get("skip_labels")
+            if isinstance(self.skipLabels, basestring):
+                self.skipLabels = self.skipLabels.split(",")
+            self.skipLabels = set(self.skipLabels)
+            print >> sys.stderr, "Skipping labels", sorted(self.skipLabels)
         self.structureAnalyzer.load(model)
         modelChanged = False
         # Load embeddings
@@ -315,7 +325,9 @@ class KerasDetectorBase(Detector):
             if not isinstance(gold, (list, tuple)): gold = [gold]
             for d, g in itertools.izip_longest(data, gold, fillvalue=None):
                 if d != None:
-                    self.processCorpus(d, examples[setName], g if g != None else d, parse)          
+                    self.processCorpus(d, examples[setName], g if g != None else d, parse)
+        # Remove specific labels
+                 
         if hasattr(self.structureAnalyzer, "typeMap") and model.mode != "r":
             print >> sys.stderr, "Saving StructureAnalyzer.typeMap"
             self.structureAnalyzer.save(model)
