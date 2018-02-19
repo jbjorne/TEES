@@ -391,7 +391,8 @@ def learnSettings(inputFiles, detector, classifierParameters, task, exampleStyle
                 exampleStyles["examples"] = Parameters.cat("keras:epochs=500:patience=10:nf=512:path=0:do=0.2:ol=50:skip_labels=CPR\:0,CPR\:1,CPR\:2,CPR\:7,CPR\:8,CPR\:10:mods=20", exampleStyles["examples"])
             else:
                 exampleStyles["examples"] = Parameters.cat("keras:epochs=500:patience=10:nf=256:path=4:ol=15:mods=20", exampleStyles["examples"])
-    
+        print >> sys.stderr, "Keras example styles:", exampleStyles
+        
     return detector
 
 def getSubTask(task):
@@ -471,77 +472,79 @@ def getTaskSettings(task, detector, bioNLPSTParams, preprocessorParams,
         #######################################################################
         # Example style parameters
         #######################################################################
-        # Example style parameters for single-stage tasks #####################
-        msg = "Single-stage example style / " + fullTaskId
-        if task == "REN11":
-            exampleStyles["examples"] = Parameters.cat("undirected:bacteria_renaming:maskTypeAsProtein=Gene", exampleStyles["examples"], msg)
-        elif task == "DDI11":
-            exampleStyles["examples"] = Parameters.cat("drugbank_features:ddi_mtmx:filter_shortest_path=conj_and", exampleStyles["examples"], msg)
-        elif task.startswith("DDI13"):
-            if task.endswith("T91"):
-                exampleStyles["examples"] = Parameters.cat("names:build_for_nameless:ddi13_features:drugbank_features", exampleStyles["examples"], msg)
-            elif task.endswith("T92") or task == "DDI13":
-                exampleStyles["examples"] = Parameters.cat("keep_neg:drugbank_features:filter_shortest_path=conj_and", exampleStyles["examples"], msg)
-        elif task == "BI11":
-            exampleStyles["examples"] = Parameters.cat("bi_features", exampleStyles["examples"], msg)
-        elif task == "BB_EVENT_16":
-            exampleStyles["examples"] = Parameters.cat("keep_neg", exampleStyles["examples"], msg) #exampleStyles["examples"] = Parameters.cat("linear_features:keep_neg", exampleStyles["examples"], msg)
-        elif task == "SDB16":
-            exampleStyles["examples"] = Parameters.cat("sdb_merge:sdb_features", exampleStyles["examples"], msg)
-        # Edge style ##########################################################
-        msg = "Edge example style / " + fullTaskId
-        if task in ["GE09", "GE11", "GE13"] and subTask == 1:
-            exampleStyles["edge"] = Parameters.cat("genia_features:genia_task1", exampleStyles["edge"], msg)
-        elif task in ["GE09", "GE11", "GE13"]:
-            exampleStyles["edge"] = Parameters.cat("genia_features", exampleStyles["edge"], msg)
-        elif task == "REL11":
-            exampleStyles["edge"] = Parameters.cat("rel_features", exampleStyles["edge"], msg)
-        elif task == "DDI11-FULL":
-            exampleStyles["edge"] = Parameters.cat("drugbank_features:filter_shortest_path=conj_and", exampleStyles["edge"], msg)
-        elif task == "DDI13-FULL":
-            exampleStyles["edge"] = Parameters.cat("keep_neg:drugbank_features:filter_shortest_path=conj_and", exampleStyles["edge"], msg)
-        elif task == "CO11":
-            exampleStyles["edge"] = Parameters.cat("co_features", exampleStyles["edge"], msg)
-        elif task == "BI11-FULL":
-            exampleStyles["edge"] = Parameters.cat("bi_features", exampleStyles["edge"], msg)
-        # Trigger style #######################################################
-        msg = "Trigger example style / " + fullTaskId
-        if task in ["GE09", "GE11", "GE13"] and subTask == 1:
-            exampleStyles["trigger"] = Parameters.cat("genia_task1", exampleStyles["trigger"], msg)
-        elif task in ["EPI11", "PC13"]:
-            exampleStyles["trigger"] = Parameters.cat("epi_merge_negated", exampleStyles["trigger"], msg)
-        elif task == "BB11": # "bb_features:build_for_nameless:wordnet"
-            exampleStyles["trigger"] = Parameters.cat("bb_features", exampleStyles["trigger"], msg)
-        elif task == "BB13T3": # "bb_features:build_for_nameless:wordnet"
-            exampleStyles["trigger"] = Parameters.cat("bb_features", exampleStyles["trigger"], msg)
-        elif task == "REL11":
-            exampleStyles["trigger"] = Parameters.cat("rel_features", exampleStyles["trigger"], msg)
-        elif task in ["BI11-FULL", "DDI11-FULL"]:
-            exampleStyles["trigger"] = "names:build_for_nameless"
-        elif task == "DDI13-FULL":
-            exampleStyles["trigger"] = "names:build_for_nameless:ddi13_features:drugbank_features"
-        elif task == "BB_EVENT_16-FULL":
-            exampleStyles["trigger"] = Parameters.cat("bb_spans:bb_features:ontobiotope_features:build_for_nameless:all_tokens:only_types=Bacteria,Habitat,Geographical", exampleStyles["trigger"], msg)
-        elif task in "BB_EVENT_NER_16":
-            exampleStyles["trigger"] = Parameters.cat("bb_spans:bb_features:ontobiotope_features:build_for_nameless:all_tokens", exampleStyles["trigger"], msg)            
-            
-        #######################################################################
-        # Classifier parameters
-        #######################################################################
-        if task == "DDI11":
-            classifierParameters["examples"] = Parameters.cat("c=10,100,1000,2500,4000,5000,6000,7500,10000,20000,25000,50000:TEES.threshold", classifierParameters["examples"], "Classifier parameters for single-stage examples" + fullTaskId)
-        #elif task == "DDI13":
-        #    classifierParameters["examples"] = Parameters.cat("c=10,100,1000,2500,4000,5000,6000,7500,10000,20000,25000,50000:TEES.threshold", classifierParameters["examples"], "Classifier parameters for single-stage examples" + fullTaskId)
-        elif task == "CO11":
-            classifierParameters["edge"] = Parameters.cat("c=1000,4500,5000,7500,10000,20000,25000,27500,28000,29000,30000,35000,40000,50000,60000,65000", classifierParameters["edge"], "Classifier parameters for edges / " + fullTaskId)
-            classifierParameters["trigger"] = Parameters.cat("c=1000,5000,10000,20000,50000,80000,100000,150000,180000,200000,250000,300000,350000,500000,1000000", classifierParameters["trigger"], "Classifier parameters for triggers / " + fullTaskId)
-            classifierParameters["recall"] = Parameters.cat("0.8,0.9,0.95,1.0", classifierParameters["recall"], "Recall adjust / " + fullTaskId)
-        elif task == "BB_EVENT_16":
-            classifierParameters["examples"] = Parameters.cat("c=10,20,30,40,50,60,70,80,100,110,115,120,125,130,140,150,200,500,1000,2000,3000,4000,4500,5000,7500,10000,20000,25000,27500,28000,29000,30000,35000,40000,50000,60000,65000", classifierParameters["examples"], "Classifier parameters for edges / " + fullTaskId)
-        elif task in ("BB_EVENT_16-FULL", "BB_EVENT_NER_16"):
-            classifierParameters["edge"] = Parameters.cat("c=10,20,50,80,100,110,115,120,125,130,140,150,200,500,1000", classifierParameters["edge"], "Classifier parameters for edges / " + fullTaskId)
-        elif task == "SDB16":
-            classifierParameters["examples"] = Parameters.cat("c=1000,4500,5000,7500,10000,20000,25000,27500,28000,29000,30000,35000,40000,50000,60000,65000,80000,100000,150000", classifierParameters["examples"], "Classifier parameters for single-stage examples / " + fullTaskId)
+        if not useKerasDetector:
+            # Example style parameters for single-stage tasks #####################
+            msg = "Single-stage example style / " + fullTaskId
+            if task == "REN11":
+                exampleStyles["examples"] = Parameters.cat("undirected:bacteria_renaming:maskTypeAsProtein=Gene", exampleStyles["examples"], msg)
+            elif task == "DDI11":
+                exampleStyles["examples"] = Parameters.cat("drugbank_features:ddi_mtmx:filter_shortest_path=conj_and", exampleStyles["examples"], msg)
+            elif task.startswith("DDI13"):
+                if task.endswith("T91"):
+                    exampleStyles["examples"] = Parameters.cat("names:build_for_nameless:ddi13_features:drugbank_features", exampleStyles["examples"], msg)
+                elif task.endswith("T92") or task == "DDI13":
+                    exampleStyles["examples"] = Parameters.cat("keep_neg:drugbank_features:filter_shortest_path=conj_and", exampleStyles["examples"], msg)
+            elif task == "BI11":
+                exampleStyles["examples"] = Parameters.cat("bi_features", exampleStyles["examples"], msg)
+            elif task == "BB_EVENT_16":
+                exampleStyles["examples"] = Parameters.cat("keep_neg", exampleStyles["examples"], msg) #exampleStyles["examples"] = Parameters.cat("linear_features:keep_neg", exampleStyles["examples"], msg)
+            elif task == "SDB16":
+                exampleStyles["examples"] = Parameters.cat("sdb_merge:sdb_features", exampleStyles["examples"], msg)
+            # Edge style ##########################################################
+            msg = "Edge example style / " + fullTaskId
+            if task in ["GE09", "GE11", "GE13"] and subTask == 1:
+                exampleStyles["edge"] = Parameters.cat("genia_features:genia_task1", exampleStyles["edge"], msg)
+            elif task in ["GE09", "GE11", "GE13"]:
+                exampleStyles["edge"] = Parameters.cat("genia_features", exampleStyles["edge"], msg)
+            elif task == "REL11":
+                exampleStyles["edge"] = Parameters.cat("rel_features", exampleStyles["edge"], msg)
+            elif task == "DDI11-FULL":
+                exampleStyles["edge"] = Parameters.cat("drugbank_features:filter_shortest_path=conj_and", exampleStyles["edge"], msg)
+            elif task == "DDI13-FULL":
+                exampleStyles["edge"] = Parameters.cat("keep_neg:drugbank_features:filter_shortest_path=conj_and", exampleStyles["edge"], msg)
+            elif task == "CO11":
+                exampleStyles["edge"] = Parameters.cat("co_features", exampleStyles["edge"], msg)
+            elif task == "BI11-FULL":
+                exampleStyles["edge"] = Parameters.cat("bi_features", exampleStyles["edge"], msg)
+            # Trigger style #######################################################
+            msg = "Trigger example style / " + fullTaskId
+            if task in ["GE09", "GE11", "GE13"] and subTask == 1:
+                exampleStyles["trigger"] = Parameters.cat("genia_task1", exampleStyles["trigger"], msg)
+            elif task in ["EPI11", "PC13"]:
+                exampleStyles["trigger"] = Parameters.cat("epi_merge_negated", exampleStyles["trigger"], msg)
+            elif task == "BB11": # "bb_features:build_for_nameless:wordnet"
+                exampleStyles["trigger"] = Parameters.cat("bb_features", exampleStyles["trigger"], msg)
+            elif task == "BB13T3": # "bb_features:build_for_nameless:wordnet"
+                exampleStyles["trigger"] = Parameters.cat("bb_features", exampleStyles["trigger"], msg)
+            elif task == "REL11":
+                exampleStyles["trigger"] = Parameters.cat("rel_features", exampleStyles["trigger"], msg)
+            elif task in ["BI11-FULL", "DDI11-FULL"]:
+                exampleStyles["trigger"] = "names:build_for_nameless"
+            elif task == "DDI13-FULL":
+                exampleStyles["trigger"] = "names:build_for_nameless:ddi13_features:drugbank_features"
+            elif task == "BB_EVENT_16-FULL":
+                exampleStyles["trigger"] = Parameters.cat("bb_spans:bb_features:ontobiotope_features:build_for_nameless:all_tokens:only_types=Bacteria,Habitat,Geographical", exampleStyles["trigger"], msg)
+            elif task in "BB_EVENT_NER_16":
+                exampleStyles["trigger"] = Parameters.cat("bb_spans:bb_features:ontobiotope_features:build_for_nameless:all_tokens", exampleStyles["trigger"], msg)            
+                
+            #######################################################################
+            # Classifier parameters
+            #######################################################################
+            if task == "DDI11":
+                classifierParameters["examples"] = Parameters.cat("c=10,100,1000,2500,4000,5000,6000,7500,10000,20000,25000,50000:TEES.threshold", classifierParameters["examples"], "Classifier parameters for single-stage examples" + fullTaskId)
+            #elif task == "DDI13":
+            #    classifierParameters["examples"] = Parameters.cat("c=10,100,1000,2500,4000,5000,6000,7500,10000,20000,25000,50000:TEES.threshold", classifierParameters["examples"], "Classifier parameters for single-stage examples" + fullTaskId)
+            elif task == "CO11":
+                classifierParameters["edge"] = Parameters.cat("c=1000,4500,5000,7500,10000,20000,25000,27500,28000,29000,30000,35000,40000,50000,60000,65000", classifierParameters["edge"], "Classifier parameters for edges / " + fullTaskId)
+                classifierParameters["trigger"] = Parameters.cat("c=1000,5000,10000,20000,50000,80000,100000,150000,180000,200000,250000,300000,350000,500000,1000000", classifierParameters["trigger"], "Classifier parameters for triggers / " + fullTaskId)
+                classifierParameters["recall"] = Parameters.cat("0.8,0.9,0.95,1.0", classifierParameters["recall"], "Recall adjust / " + fullTaskId)
+            elif task == "BB_EVENT_16":
+                classifierParameters["examples"] = Parameters.cat("c=10,20,30,40,50,60,70,80,100,110,115,120,125,130,140,150,200,500,1000,2000,3000,4000,4500,5000,7500,10000,20000,25000,27500,28000,29000,30000,35000,40000,50000,60000,65000", classifierParameters["examples"], "Classifier parameters for edges / " + fullTaskId)
+            elif task in ("BB_EVENT_16-FULL", "BB_EVENT_NER_16"):
+                classifierParameters["edge"] = Parameters.cat("c=10,20,50,80,100,110,115,120,125,130,140,150,200,500,1000", classifierParameters["edge"], "Classifier parameters for edges / " + fullTaskId)
+            elif task == "SDB16":
+                classifierParameters["examples"] = Parameters.cat("c=1000,4500,5000,7500,10000,20000,25000,27500,28000,29000,30000,35000,40000,50000,60000,65000,80000,100000,150000", classifierParameters["examples"], "Classifier parameters for single-stage examples / " + fullTaskId)
+        
         # Training fold parameters ############################################
         if task.startswith("DDI13") and task != "DDI13":
             #folds["devel"]=["train1", "train2", "train3", "train4"]
