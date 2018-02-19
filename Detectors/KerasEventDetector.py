@@ -6,6 +6,7 @@ from Detectors.KerasEdgeDetector import KerasEdgeDetector
 from Detectors.KerasUnmergingDetector import KerasUnmergingDetector
 import Evaluators.EvaluateInteractionXML as EvaluateInteractionXML
 import Utils.Parameters as Parameters
+from Evaluators.AveragingMultiClassEvaluator import AveragingMultiClassEvaluator
 
 class KerasEventDetector(EventDetector):
     def __init__(self):
@@ -13,6 +14,7 @@ class KerasEventDetector(EventDetector):
         #self.triggerDetector = KerasEntityDetector()
         #self.tag = "event-"
         self.kerasComponents = {"trigger":False, "edge":False, "unmerging":False, "modifier":False}
+        self.evaluator = AveragingMultiClassEvaluator
         
     def hasKerasStyle(self, style):
         if style != None and "keras" in style:
@@ -193,7 +195,7 @@ class KerasEventDetector(EventDetector):
                     edgeStyle["sentenceLimit"] = unmergingStyle["sentenceLimit"]
                 # Build the examples
                 xml = self.triggerDetector.classifyToXML(self.trainData, self.model, None, self.workDir+"unmerging-extra-", exampleStyle=triggerStyle)#, recallAdjust=0.5)
-                xml = self.edgeDetector.classifyToXML(xml, self.model, None, self.workDir+"unmerging-extra-", exampleStyle=edgeStyle)#, recallAdjust=0.5)
+                xml = self.edgeDetector.classifyToXML(xml, self.model, None, self.workDir+"unmerging-extra-", exampleStyle=edgeStyle, goldData=self.trainData)#, recallAdjust=0.5)
                 assert xml != None
                 EvaluateInteractionXML.run(self.edgeDetector.evaluator, xml, self.trainData, self.parse)
             else:
@@ -203,10 +205,11 @@ class KerasEventDetector(EventDetector):
             GOLD_TRAIN_FILE = self.trainData.replace("-nodup", "")
             if self.kerasComponents["unmerging"]:
                 extraData = None
+                goldData=[GOLD_OPT_FILE, GOLD_TRAIN_FILE]
                 if self.doUnmergingSelfTraining:
                     extraData = [None, xml]
-                self.unmergingDetector.train(self.trainData.replace("-nodup", ""), self.optData.replace("-nodup", ""), self.model, self.combinedModel, self.unmergingExampleStyle, None, self.parse, self.tokenization, self.task, testData=self.testData, 
-                                           goldData=[GOLD_OPT_FILE, GOLD_TRAIN_FILE], extraData=extraData)
+                    goldData=[GOLD_OPT_FILE, [GOLD_TRAIN_FILE, GOLD_TRAIN_FILE]]
+                self.unmergingDetector.train(self.trainData.replace("-nodup", ""), self.optData.replace("-nodup", ""), self.model, self.combinedModel, self.unmergingExampleStyle, None, self.parse, self.tokenization, self.task, testData=self.testData, goldData=goldData, extraData=extraData)
             else:
                 # Unmerging example generation
                 if self.doUnmergingSelfTraining:
