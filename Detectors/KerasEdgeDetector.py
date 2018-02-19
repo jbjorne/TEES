@@ -383,6 +383,8 @@ class KerasEdgeDetector(KerasDetectorBase):
             labels = self.getLabels(sentenceGraph, e1, e2, isDirected)
             if goldGraph != None:
                 labels = self.getGoldLabels(goldGraph, entityToGold, e1, e2, isDirected)
+        if len(self.skipLabels) > 0:
+            labels = [x for x in labels if x not in self.skipLabels]
         if len(labels) == 0 and useNeg:
             labels.append("neg")
         return labels

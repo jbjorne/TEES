@@ -388,7 +388,7 @@ def learnSettings(inputFiles, detector, classifierParameters, task, exampleStyle
             if "DDI" in task:
                 exampleStyles["examples"] = Parameters.cat("keras:epochs=500:patience=10:nf=256:path=0:do=0.2:dense=800:ol=50:mods=20", exampleStyles["examples"])
             elif task == "CP17":
-                exampleStyles["examples"] = Parameters.cat("keras:epochs=500:patience=10:nf=512:path=0:do=0.2:ol=50:mods=20", exampleStyles["examples"])
+                exampleStyles["examples"] = Parameters.cat("keras:epochs=500:patience=10:nf=512:path=0:do=0.2:ol=50:skip_labels=CPR\:0,CPR\:1,CPR\:2,CPR\:7,CPR\:8,CPR\:10:mods=20", exampleStyles["examples"])
             else:
                 exampleStyles["examples"] = Parameters.cat("keras:epochs=500:patience=10:nf=256:path=4:ol=15:mods=20", exampleStyles["examples"])
     
