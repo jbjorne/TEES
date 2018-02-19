@@ -7,7 +7,7 @@ class KerasModifierDetector(KerasTokenDetector):
         self.tag = "modifier-"
         self.exampleType = "entity"
         self.useNonGiven = True
-        self.defaultExtra = {"xtype":"task3", "t3type":"multilabel"}
+        self.defaultExtra = {"xtype":"task3", "t3type":"multiclass"}
         self.exampleWriter = ModifierExampleWriter()
     
     def getEntityTypes(self, entities, useNeg=False):

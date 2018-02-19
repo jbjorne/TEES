@@ -54,15 +54,20 @@ class ModifierExampleWriter(SentenceExampleWriter):
         for example, prediction in itertools.izip(examples, predictions):
             assert example[3]["xtype"] == "task3"
             if example[3]["t3type"] == "multiclass":
-                predictedClassName = classSet.getName(prediction[0])
-                if predictedClassName != "neg":
-                    predictedModifiers = predictedClassName.split("---")
-                    if "negation" in predictedModifiers:
-                        assert not negMap.has_key(example[3]["entity"])
-                        negMap[example[3]["entity"]] = (True, prediction)
-                    if "speculation" in predictedModifiers:
-                        assert not specMap.has_key(example[3]["entity"])
-                        specMap[example[3]["entity"]] = (True, prediction)
+                if isinstance(prediction, dict):
+                    encoded = prediction["prediction"]
+                    predictedModifiers = [classSet.getName(i) for i in range(len(encoded)) if encoded[i] == 1]
+                else:
+                    predictedClassName = classSet.getName(prediction[0])
+                    predictedModifiers = ""
+                    if predictedClassName != "neg":
+                        predictedModifiers = predictedClassName.split("---")
+                if "negation" in predictedModifiers:
+                    assert not negMap.has_key(example[3]["entity"])
+                    negMap[example[3]["entity"]] = (True, prediction)
+                if "speculation" in predictedModifiers:
+                    assert not specMap.has_key(example[3]["entity"])
+                    specMap[example[3]["entity"]] = (True, prediction)
             else:
                 if example[3]["t3type"] == "speculation":
                     map = specMap
