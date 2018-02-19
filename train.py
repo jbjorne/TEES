@@ -70,7 +70,7 @@ def train(output, task=None, detector=None, inputFiles=None, models=None, parse=
     if detector.lower() == "keras":
         print >> sys.stderr, "Using a Keras Detector"
         useKerasDetector = True
-        detector = False
+        detector = None
     detector, bioNLPSTParams, preprocessorParams, folds = getTaskSettings(task, detector, 
         bioNLPSTParams, preprocessorParams, inputFiles, exampleStyles, classifierParams, folds, corpusDir=corpusDir)
     # Learn training settings from input files
@@ -342,6 +342,7 @@ def learnSettings(inputFiles, detector, classifierParameters, useKerasDetector=F
             detector = "Detectors.EdgeDetector"
         else:
             assert False, structureAnalyzer.targets
+
     if useKerasDetector and not "Keras" in detector:
         detector = detector.replace("Detectors.", "Detectors.Keras")
     print >> sys.stderr, "Using detector '" + str(detector) + "'"

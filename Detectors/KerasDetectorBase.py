@@ -77,6 +77,9 @@ class KerasDetectorBase(Detector):
         assert model != None
         if self.state != self.STATE_COMPONENT_TRAIN:
             self.enterState(self.STATE_TRAIN, ["ANALYZE", "EXAMPLES", "MODEL"], fromStep, toStep)
+        else:
+            self.state = None
+            self.enterState(self.STATE_COMPONENT_TRAIN, [self.STATE_COMPONENT_TRAIN])
         if self.state == self.STATE_COMPONENT_TRAIN or self.checkStep("ANALYZE"):
             # General training initialization done at the beginning of the first state
             self.model = self.initModel(self.model, [("exampleStyle", self.tag+"example-style"), ("classifierParameters", self.tag+"classifier-parameters-train")])

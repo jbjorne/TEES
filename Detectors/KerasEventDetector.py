@@ -1,8 +1,8 @@
 import sys, os
 from Detectors.EventDetector import EventDetector
-from Detectors.EntityDetector import EntityDetector
 from Detectors.KerasEntityDetector import KerasEntityDetector
-from Detectors import KerasEdgeDetector, KerasUnmergingDetector
+from Detectors.KerasEdgeDetector import KerasEdgeDetector
+from Detectors.KerasUnmergingDetector import KerasUnmergingDetector
 
 class KerasEventDetector(EventDetector):
     def __init__(self):
@@ -42,7 +42,7 @@ class KerasEventDetector(EventDetector):
                                            "SELF-TRAIN-EXAMPLES-FOR-UNMERGING", "UNMERGING-EXAMPLES", "BEGIN-UNMERGING-MODEL", "END-UNMERGING-MODEL", 
                                            "GRID", "BEGIN-COMBINED-MODEL-FULLGRID", "END-COMBINED-MODEL"], fromStep, toStep)
         if self.hasKerasStyle(triggerExampleStyle):
-            self.edgeDetector = KerasEntityDetector()
+            self.triggerDetector = KerasEntityDetector()
             self.kerasComponents["trigger"] = True
         if self.hasKerasStyle(edgeExampleStyle):
             self.edgeDetector = KerasEdgeDetector()
@@ -50,6 +50,7 @@ class KerasEventDetector(EventDetector):
         if self.hasKerasStyle(unmergingExampleStyle):
             self.unmergingDetector = KerasUnmergingDetector()
             self.kerasComponents["unmerging"] = True
+        print >> sys.stderr, "Keras components:", self.kerasComponents
         #if self.hasKerasStyle(modifierExampleStyle):
         #    self.edgeDetector = KerasEdgeDetector()
         self.triggerDetector.enterState(self.STATE_COMPONENT_TRAIN)
@@ -68,20 +69,24 @@ class KerasEventDetector(EventDetector):
                                           ("modifierExampleStyle", self.modifierDetector.tag+"example-style"), 
                                           ("modifierClassifierParameters", self.modifierDetector.tag+"classifier-parameters-train")])
             self.combinedModel = self.initModel(self.combinedModel)
-            self.model.debug = self.combinedModel.debug = self.debug
+            self.model.debug = self.debug
+            if self.combinedModel:
+                self.combinedModel.debug = self.debug
             tags = [self.triggerDetector.tag, self.edgeDetector.tag, self.unmergingDetector.tag, self.modifierDetector.tag]
             stringDict = {}
             for tag in tags:
                 stringDict[tag+"parse"] = parse
                 stringDict[tag+"task"] = task
             self.saveStrings(stringDict, self.model)
-            self.saveStrings(stringDict, self.combinedModel, False)
+            if self.combinedModel:
+                self.saveStrings(stringDict, self.combinedModel, False)
             # Perform structure analysis
             self.structureAnalyzer.analyze([optData, trainData], self.model)
             print >> sys.stderr, self.structureAnalyzer.toString()
         # (Re-)open models in case we start after the first ("ANALYZE") step
         self.model = self.openModel(model, "a")
-        self.combinedModel = self.openModel(combinedModel, "a")
+        if self.combinedModel:
+            self.combinedModel = self.openModel(combinedModel, "a")
         # Use structure analysis to define automatic parameters
         if self.unmerging == None:
             if not self.structureAnalyzer.isInitialized():
