@@ -74,7 +74,7 @@ def train(output, task=None, detector=None, inputFiles=None, models=None, parse=
     detector, bioNLPSTParams, preprocessorParams, folds = getTaskSettings(task, detector, 
         bioNLPSTParams, preprocessorParams, inputFiles, exampleStyles, classifierParams, folds, corpusDir=corpusDir, useKerasDetector=useKerasDetector)
     # Learn training settings from input files
-    detector = learnSettings(inputFiles, detector, classifierParams, useKerasDetector=useKerasDetector)   
+    detector = learnSettings(inputFiles, detector, classifierParams, task, exampleStyles, useKerasDetector=useKerasDetector)   
     # Get corpus subsets   
     getFolds(inputFiles, folds)
     getSubsets(inputFiles, subset)
@@ -318,7 +318,7 @@ def workdir(path, deleteIfExists=True, copyFrom=None, log="log.txt"):
         print >> sys.stderr, "No logging"
     return path
 
-def learnSettings(inputFiles, detector, classifierParameters, useKerasDetector=False):
+def learnSettings(inputFiles, detector, classifierParameters, task, exampleStyles, useKerasDetector=False):
     if detector == None:
         print >> sys.stderr, "*** Analyzing input files to determine training settings ***"
         structureAnalyzer = StructureAnalyzer()
@@ -367,7 +367,31 @@ def learnSettings(inputFiles, detector, classifierParameters, useKerasDetector=F
         cp["examples"] = Parameters.cat("c=1000,4500,5000,7500,10000,20000,25000,27500,28000,29000,30000,35000,40000,50000,60000,65000", cp["examples"], "Classifier parameters for edges")
     elif detector == "Detectors.UnmergingDetector":
         cp["examples"] = Parameters.cat("c=1,10,100,500,1000,1500,2500,5000,10000,20000,50000,80000,100000", cp["examples"], "Classifier parameters for unmerging")
-
+    
+    #######################################################################
+    # Keras example styles
+    #######################################################################
+    if useKerasDetector:
+        task, subTask = getSubTask(task)
+        msg = "Keras example style"
+        if "EventDetector" in detector:
+            exampleStyles["trigger"] = Parameters.cat("keras:epochs=500:patience=10:nf=512:path=4:el=41:mods=20", exampleStyles["trigger"])
+            if task in ["GE09", "GE11", "GE13"] and subTask == 1:
+                exampleStyles["edge"] = Parameters.cat("keras:genia_task1:epochs=500:patience=10:nf=256:path=4:ol=15:mods=20", exampleStyles["edge"])
+            else:
+                exampleStyles["edge"] = Parameters.cat("keras:epochs=500:patience=10:nf=256:path=4:ol=15:mods=20", exampleStyles["edge"])
+            exampleStyles["unmerging"] = Parameters.cat("keras:epochs=500:patience=10:nf=256:path=4:ol=15:mods=20", exampleStyles["unmerging"])
+            exampleStyles["modifiers"] = Parameters.cat("keras:epochs=500:patience=10:nf=256:path=4:el=41:mods=20", exampleStyles["modifiers"])
+        elif "EntityDetector" in detector:
+            exampleStyles["examples"] = Parameters.cat("keras:epochs=500:patience=10:nf=512:path=4:el=41:mods=20", exampleStyles["examples"])
+        elif "EdgeDetector" in detector:
+            if "DDI" in task:
+                exampleStyles["examples"] = Parameters.cat("keras:epochs=500:patience=10:nf=256:path=0:do=0.2:dense=800:ol=50:mods=20", exampleStyles["examples"])
+            elif task == "CP17":
+                exampleStyles["examples"] = Parameters.cat("keras:epochs=500:patience=10:nf=512:path=0:do=0.2:ol=50:mods=20", exampleStyles["examples"])
+            else:
+                exampleStyles["examples"] = Parameters.cat("keras:epochs=500:patience=10:nf=256:path=4:ol=15:mods=20", exampleStyles["examples"])
+    
     return detector
 
 def getSubTask(task):
@@ -499,31 +523,7 @@ def getTaskSettings(task, detector, bioNLPSTParams, preprocessorParams,
         elif task == "BB_EVENT_16-FULL":
             exampleStyles["trigger"] = Parameters.cat("bb_spans:bb_features:ontobiotope_features:build_for_nameless:all_tokens:only_types=Bacteria,Habitat,Geographical", exampleStyles["trigger"], msg)
         elif task in "BB_EVENT_NER_16":
-            exampleStyles["trigger"] = Parameters.cat("bb_spans:bb_features:ontobiotope_features:build_for_nameless:all_tokens", exampleStyles["trigger"], msg)
-        
-        #######################################################################
-        # Keras example styles
-        #######################################################################
-        if useKerasDetector:
-            msg = "Keras example style"
-            if "EventDetector" in detector:
-                exampleStyles["trigger"] = Parameters.cat("keras:epochs=500:patience=10:nf=512:path=4:el=41:mods=20", exampleStyles["trigger"])
-                if task in ["GE09", "GE11", "GE13"] and subTask == 1:
-                    exampleStyles["edge"] = Parameters.cat("keras:genia_task1:epochs=500:patience=10:nf=256:path=4:ol=15:mods=20", exampleStyles["edge"])
-                else:
-                    exampleStyles["edge"] = Parameters.cat("keras:epochs=500:patience=10:nf=256:path=4:ol=15:mods=20", exampleStyles["edge"])
-                exampleStyles["unmerging"] = Parameters.cat("keras:epochs=500:patience=10:nf=256:path=4:ol=15:mods=20", exampleStyles["unmerging"])
-                exampleStyles["modifier"] = Parameters.cat("keras:epochs=500:patience=10:nf=256:path=4:ol=15:mods=20", exampleStyles["modifier"])
-            elif "EntityDetector" in detector:
-                exampleStyles["examples"] = Parameters.cat("keras:epochs=500:patience=10:nf=512:path=4:el=41:mods=20", exampleStyles["examples"])
-            elif "EdgeDetector" in detector:
-                if "DDI" in task:
-                    exampleStyles["examples"] = Parameters.cat("keras:epochs=500:patience=10:nf=256:path=0:do=0.2:dense=800:ol=50:mods=20", exampleStyles["examples"])
-                elif task == "CP17":
-                    exampleStyles["examples"] = Parameters.cat("keras:epochs=500:patience=10:nf=512:path=0:do=0.2:ol=50:mods=20", exampleStyles["examples"])
-                else:
-                    exampleStyles["examples"] = Parameters.cat("keras:epochs=500:patience=10:nf=256:path=4:ol=15:mods=20", exampleStyles["examples"])
-            
+            exampleStyles["trigger"] = Parameters.cat("bb_spans:bb_features:ontobiotope_features:build_for_nameless:all_tokens", exampleStyles["trigger"], msg)            
             
         #######################################################################
         # Classifier parameters
@@ -544,8 +544,10 @@ def getTaskSettings(task, detector, bioNLPSTParams, preprocessorParams,
             classifierParameters["examples"] = Parameters.cat("c=1000,4500,5000,7500,10000,20000,25000,27500,28000,29000,30000,35000,40000,50000,60000,65000,80000,100000,150000", classifierParameters["examples"], "Classifier parameters for single-stage examples / " + fullTaskId)
         # Training fold parameters ############################################
         if task.startswith("DDI13") and task != "DDI13":
-            folds["devel"]=["train1", "train2", "train3", "train4"]
-            folds["train"]=["train5", "train6", "train7", "train8", "train9"]
+            #folds["devel"]=["train1", "train2", "train3", "train4"]
+            #folds["train"]=["train5", "train6", "train7", "train8", "train9"]
+            folds["devel"]=["train1", "train2", "train3"]
+            folds["train"]=["train4", "train5", "train6", "train7", "train8", "train9"]
         
     return detector, bioNLPSTParams, preprocessorParams, folds
 
