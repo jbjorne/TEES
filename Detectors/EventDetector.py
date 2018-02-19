@@ -15,6 +15,7 @@ import Evaluators.EvaluateInteractionXML as EvaluateInteractionXML
 import Utils.STFormat.ConvertXML
 import Utils.STFormat.Compare
 import Evaluators.BioNLP11GeniaTools
+from Evaluators.AveragingMultiClassEvaluator import AveragingMultiClassEvaluator
 
 class EventDetector(Detector):
     """
@@ -31,6 +32,7 @@ class EventDetector(Detector):
         #self.stWriteScores = False
         self.STATE_COMPONENT_TRAIN = "COMPONENT_TRAIN"
         self.tag = "event-"
+        self.evaluator = AveragingMultiClassEvaluator
     
     def setConnection(self, connection):
         self.triggerDetector.setConnection(connection)
