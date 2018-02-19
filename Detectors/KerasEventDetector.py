@@ -4,6 +4,7 @@ from Detectors.EventDetector import EventDetector
 from Detectors.KerasEntityDetector import KerasEntityDetector
 from Detectors.KerasEdgeDetector import KerasEdgeDetector
 from Detectors.KerasUnmergingDetector import KerasUnmergingDetector
+from Detectors.KerasModifierDetector import KerasModifierDetector
 import Evaluators.EvaluateInteractionXML as EvaluateInteractionXML
 import Utils.Parameters as Parameters
 from Evaluators.AveragingMultiClassEvaluator import AveragingMultiClassEvaluator
@@ -55,6 +56,9 @@ class KerasEventDetector(EventDetector):
         if self.hasKerasStyle(unmergingExampleStyle):
             self.unmergingDetector = KerasUnmergingDetector()
             self.kerasComponents["unmerging"] = True
+        if self.hasKerasStyle(modifierExampleStyle):
+            self.modifierDetector = KerasModifierDetector()
+            self.kerasComponents["modifier"] = True
         print >> sys.stderr, "Keras components:", self.kerasComponents
         #if self.hasKerasStyle(modifierExampleStyle):
         #    self.edgeDetector = KerasEdgeDetector()
