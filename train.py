@@ -67,7 +67,7 @@ def train(output, task=None, detector=None, inputFiles=None, models=None, parse=
     workdir(output, deleteOutput, copyFrom, log)
     # Get task specific parameters
     useKerasDetector = False
-    if detector.lower() == "keras":
+    if detector != None and detector.lower() == "keras":
         print >> sys.stderr, "Using a Keras Detector"
         useKerasDetector = True
         detector = None
