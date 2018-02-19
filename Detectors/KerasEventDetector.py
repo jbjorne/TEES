@@ -2,12 +2,19 @@ import sys, os
 from Detectors.EventDetector import EventDetector
 from Detectors.EntityDetector import EntityDetector
 from Detectors.KerasEntityDetector import KerasEntityDetector
+from Detectors import KerasEdgeDetector, KerasUnmergingDetector
 
 class KerasEventDetector(EventDetector):
     def __init__(self):
         EventDetector.__init__(self)
-        self.triggerDetector = KerasEntityDetector()
-        self.tag = "event-"
+        #self.triggerDetector = KerasEntityDetector()
+        #self.tag = "event-"
+        self.kerasComponents = {"trigger":False, "edge":False, "unmerging":False, "modifier":False}
+        
+    def hasKerasStyle(self, style):
+        if style != None and "keras" in style:
+            return True
+        return False
     
     def train(self, trainData=None, optData=None, 
               model=None, combinedModel=None,
@@ -34,6 +41,17 @@ class KerasEventDetector(EventDetector):
         self.enterState(self.STATE_TRAIN, ["ANALYZE", "EXAMPLES", "BEGIN-MODEL", "END-MODEL", "BEGIN-COMBINED-MODEL", 
                                            "SELF-TRAIN-EXAMPLES-FOR-UNMERGING", "UNMERGING-EXAMPLES", "BEGIN-UNMERGING-MODEL", "END-UNMERGING-MODEL", 
                                            "GRID", "BEGIN-COMBINED-MODEL-FULLGRID", "END-COMBINED-MODEL"], fromStep, toStep)
+        if self.hasKerasStyle(triggerExampleStyle):
+            self.edgeDetector = KerasEntityDetector()
+            self.kerasComponents["trigger"] = True
+        if self.hasKerasStyle(edgeExampleStyle):
+            self.edgeDetector = KerasEdgeDetector()
+            self.kerasComponents["edge"] = True
+        if self.hasKerasStyle(unmergingExampleStyle):
+            self.unmergingDetector = KerasUnmergingDetector()
+            self.kerasComponents["unmerging"] = True
+        #if self.hasKerasStyle(modifierExampleStyle):
+        #    self.edgeDetector = KerasEdgeDetector()
         self.triggerDetector.enterState(self.STATE_COMPONENT_TRAIN)
         self.edgeDetector.enterState(self.STATE_COMPONENT_TRAIN)
         self.unmergingDetector.enterState(self.STATE_COMPONENT_TRAIN)
@@ -74,52 +92,73 @@ class KerasEventDetector(EventDetector):
                 self.structureAnalyzer.load(self.model)
             self.trainModifiers = self.structureAnalyzer.hasModifiers()
         if self.checkStep("EXAMPLES"):
-            #self.triggerDetector.buildExamples(self.model, [optData.replace("-nodup", ""), trainData.replace("-nodup", "")], [self.workDir+self.triggerDetector.tag+"opt-examples.gz", self.workDir+self.triggerDetector.tag+"train-examples.gz"], saveIdsToModel=True)
-            self.edgeDetector.buildExamples(self.model, [optData.replace("-nodup", ""), trainData.replace("-nodup", "")], [self.workDir+self.edgeDetector.tag+"opt-examples.gz", self.workDir+self.edgeDetector.tag+"train-examples.gz"], saveIdsToModel=True)
-            if self.trainModifiers:
+            if not self.kerasComponents["trigger"]:
+                self.triggerDetector.buildExamples(self.model, [optData.replace("-nodup", ""), trainData.replace("-nodup", "")], [self.workDir+self.triggerDetector.tag+"opt-examples.gz", self.workDir+self.triggerDetector.tag+"train-examples.gz"], saveIdsToModel=True)
+            if not self.kerasComponents["edge"]:
+                self.edgeDetector.buildExamples(self.model, [optData.replace("-nodup", ""), trainData.replace("-nodup", "")], [self.workDir+self.edgeDetector.tag+"opt-examples.gz", self.workDir+self.edgeDetector.tag+"train-examples.gz"], saveIdsToModel=True)
+            if self.trainModifiers and not self.kerasComponents["modifier"]:
                 self.modifierDetector.buildExamples(self.model, [optData, trainData], [self.workDir+self.modifierDetector.tag+"opt-examples.gz", self.workDir+self.modifierDetector.tag+"train-examples.gz"], saveIdsToModel=True)             
         if self.checkStep("BEGIN-MODEL"):
             #for model in [self.model, self.combinedModel]:
             #    if model != None:
             #        model.addStr("BioNLPSTParams", Parameters.toString(self.bioNLPSTParams))
             self.triggerDetector.bioNLPSTParams = self.bioNLPSTParams
-            self.triggerDetector.train(trainData, optData, self.model, self.combinedModel, triggerExampleStyle, None, parse, tokenization, task, testData=testData)
-            #self.triggerDetector.beginModel(None, self.model, [self.workDir+self.triggerDetector.tag+"train-examples.gz"], self.workDir+self.triggerDetector.tag+"opt-examples.gz")
-            self.edgeDetector.beginModel(None, self.model, [self.workDir+self.edgeDetector.tag+"train-examples.gz"], self.workDir+self.edgeDetector.tag+"opt-examples.gz")
+            if self.kerasComponents["trigger"]:
+                self.triggerDetector.train(trainData, optData, self.model, self.combinedModel, triggerExampleStyle, None, parse, tokenization, task, testData=testData)
+            else:
+                self.triggerDetector.beginModel(None, self.model, [self.workDir+self.triggerDetector.tag+"train-examples.gz"], self.workDir+self.triggerDetector.tag+"opt-examples.gz")
+            if self.kerasComponents["edge"]:
+                self.edgeDetector.train(trainData, optData, self.model, self.combinedModel, triggerExampleStyle, None, parse, tokenization, task, testData=testData)
+            else:
+                self.edgeDetector.beginModel(None, self.model, [self.workDir+self.edgeDetector.tag+"train-examples.gz"], self.workDir+self.edgeDetector.tag+"opt-examples.gz")
             if self.trainModifiers:
-                self.modifierDetector.beginModel(None, self.model, [self.workDir+self.modifierDetector.tag+"train-examples.gz"], self.workDir+self.modifierDetector.tag+"opt-examples.gz")
+                if self.kerasComponents["modifier"]:
+                    self.modifierDetector.train(trainData, optData, self.model, self.combinedModel, triggerExampleStyle, None, parse, tokenization, task, testData=testData)
+                else:
+                    self.modifierDetector.beginModel(None, self.model, [self.workDir+self.modifierDetector.tag+"train-examples.gz"], self.workDir+self.modifierDetector.tag+"opt-examples.gz")
         if self.checkStep("END-MODEL"):
-            #self.triggerDetector.endModel(None, self.model, self.workDir+self.triggerDetector.tag+"opt-examples.gz")
-            self.edgeDetector.endModel(None, self.model, self.workDir+self.edgeDetector.tag+"opt-examples.gz")
-            if self.trainModifiers:
+            if not self.kerasComponents["trigger"]:
+                self.triggerDetector.endModel(None, self.model, self.workDir+self.triggerDetector.tag+"opt-examples.gz")
+            if not self.kerasComponents["edge"]:
+                self.edgeDetector.endModel(None, self.model, self.workDir+self.edgeDetector.tag+"opt-examples.gz")
+            if self.trainModifiers and not self.kerasComponents["modifier"]:
                 self.modifierDetector.endModel(None, self.model, self.workDir+self.modifierDetector.tag+"opt-examples.gz")
         if self.checkStep("BEGIN-COMBINED-MODEL"):
             if not self.fullGrid:
-                print >> sys.stderr, "Training combined model before grid search"
-                #self.triggerDetector.beginModel(None, self.combinedModel, [self.workDir+self.triggerDetector.tag+"train-examples.gz", self.workDir+self.triggerDetector.tag+"opt-examples.gz"], self.workDir+self.triggerDetector.tag+"opt-examples.gz", self.model)
-                self.edgeDetector.beginModel(None, self.combinedModel, [self.workDir+self.edgeDetector.tag+"train-examples.gz", self.workDir+self.edgeDetector.tag+"opt-examples.gz"], self.workDir+self.edgeDetector.tag+"opt-examples.gz", self.model)
+                if not self.kerasComponents["trigger"]:
+                    print >> sys.stderr, "Training combined trigger model before grid search"
+                    self.triggerDetector.beginModel(None, self.combinedModel, [self.workDir+self.triggerDetector.tag+"train-examples.gz", self.workDir+self.triggerDetector.tag+"opt-examples.gz"], self.workDir+self.triggerDetector.tag+"opt-examples.gz", self.model)
+                if not self.kerasComponents["edge"]:
+                    print >> sys.stderr, "Training combined edge model before grid search"
+                    self.edgeDetector.beginModel(None, self.combinedModel, [self.workDir+self.edgeDetector.tag+"train-examples.gz", self.workDir+self.edgeDetector.tag+"opt-examples.gz"], self.workDir+self.edgeDetector.tag+"opt-examples.gz", self.model)
             else:
                 print >> sys.stderr, "Combined model will be trained after grid search"
             if self.trainModifiers:
-                print >> sys.stderr, "Training combined model for modifier detection"
-                self.modifierDetector.beginModel(None, self.combinedModel, [self.workDir+self.modifierDetector.tag+"train-examples.gz", self.workDir+self.modifierDetector.tag+"opt-examples.gz"], self.workDir+self.modifierDetector.tag+"opt-examples.gz", self.model)
+                if not self.kerasComponents["modifier"]:
+                    print >> sys.stderr, "Training combined model for modifier detection"
+                    self.modifierDetector.beginModel(None, self.combinedModel, [self.workDir+self.modifierDetector.tag+"train-examples.gz", self.workDir+self.modifierDetector.tag+"opt-examples.gz"], self.workDir+self.modifierDetector.tag+"opt-examples.gz", self.model)
         self.trainUnmergingDetector()
         if self.checkStep("GRID"):
             self.doGrid()
         if self.checkStep("BEGIN-COMBINED-MODEL-FULLGRID"):
             if self.fullGrid:
-                print >> sys.stderr, "Training combined model after grid search"
-                #self.triggerDetector.beginModel(None, self.combinedModel, [self.workDir+self.triggerDetector.tag+"train-examples.gz", self.workDir+self.triggerDetector.tag+"opt-examples.gz"], self.workDir+self.triggerDetector.tag+"opt-examples.gz", self.model)
-                self.edgeDetector.beginModel(None, self.combinedModel, [self.workDir+self.edgeDetector.tag+"train-examples.gz", self.workDir+self.edgeDetector.tag+"opt-examples.gz"], self.workDir+self.edgeDetector.tag+"opt-examples.gz", self.model)
-                if self.trainModifiers:
+                if not self.kerasComponents["trigger"]:
+                    print >> sys.stderr, "Training combined trigger model after grid search"
+                    self.triggerDetector.beginModel(None, self.combinedModel, [self.workDir+self.triggerDetector.tag+"train-examples.gz", self.workDir+self.triggerDetector.tag+"opt-examples.gz"], self.workDir+self.triggerDetector.tag+"opt-examples.gz", self.model)
+                if not self.kerasComponents["edge"]:
+                    print >> sys.stderr, "Training combined edge model after grid search"
+                    self.edgeDetector.beginModel(None, self.combinedModel, [self.workDir+self.edgeDetector.tag+"train-examples.gz", self.workDir+self.edgeDetector.tag+"opt-examples.gz"], self.workDir+self.edgeDetector.tag+"opt-examples.gz", self.model)
+                if self.trainModifiers and not self.kerasComponents["modifier"]:
                     print >> sys.stderr, "Training combined model for modifier detection"
                     self.modifierDetector.beginModel(None, self.combinedModel, [self.workDir+self.modifierDetector.tag+"train-examples.gz", self.workDir+self.modifierDetector.tag+"opt-examples.gz"], self.workDir+self.modifierDetector.tag+"opt-examples.gz", self.model)
             else:
                 print >> sys.stderr, "Combined model has been trained before grid search"
         if self.checkStep("END-COMBINED-MODEL"):
-            #self.triggerDetector.endModel(None, self.combinedModel, self.workDir+self.triggerDetector.tag+"opt-examples.gz")
-            self.edgeDetector.endModel(None, self.combinedModel, self.workDir+self.edgeDetector.tag+"opt-examples.gz")
-            if self.trainModifiers:
+            if not self.kerasComponents["trigger"]:
+                self.triggerDetector.endModel(None, self.combinedModel, self.workDir+self.triggerDetector.tag+"opt-examples.gz")
+            if not self.kerasComponents["edge"]:
+                self.edgeDetector.endModel(None, self.combinedModel, self.workDir+self.edgeDetector.tag+"opt-examples.gz")
+            if self.trainModifiers and not self.kerasComponents["modifier"]:
                 self.modifierDetector.endModel(None, self.combinedModel, self.workDir+self.modifierDetector.tag+"opt-examples.gz")
         # End the training process ####################################
         if workDir != None:
