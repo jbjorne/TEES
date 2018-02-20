@@ -391,7 +391,7 @@ def learnSettings(inputFiles, detector, classifierParameters, task, exampleStyle
             #exampleStyles[key] = exampleStyles[key] if (exampleStyles[key] != None and not "override" in exampleStyles[key]) else None
         print >> sys.stderr, "Override styles:", overrideStyles
         if "EventDetector" in detector:
-            if task == ["EPI11"]:
+            if task == "EPI11":
                 exampleStyles["trigger"] = Parameters.cat("keras:epochs=500:patience=10:nf=512:path=4:el=41:mods=20:epi_merge_negated", exampleStyles["trigger"])
             else:
                 exampleStyles["trigger"] = Parameters.cat("keras:epochs=500:patience=10:nf=512:path=4:el=41:mods=20", exampleStyles["trigger"])
