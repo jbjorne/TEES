@@ -76,7 +76,6 @@ def train(output, task=None, detector=None, inputFiles=None, models=None, parse=
         bioNLPSTParams, preprocessorParams, inputFiles, exampleStyles, classifierParams, folds, corpusDir=corpusDir, useKerasDetector=useKerasDetector)
     # Learn training settings from input files
     detector = learnSettings(inputFiles, detector, classifierParams, task, exampleStyles, useKerasDetector=useKerasDetector)   
-    print "SADFSDFSDFDSFSDFSDFSDFSD", exampleStyles
     # Get corpus subsets   
     getFolds(inputFiles, folds)
     getSubsets(inputFiles, subset)
