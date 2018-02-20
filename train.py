@@ -76,6 +76,7 @@ def train(output, task=None, detector=None, inputFiles=None, models=None, parse=
         bioNLPSTParams, preprocessorParams, inputFiles, exampleStyles, classifierParams, folds, corpusDir=corpusDir, useKerasDetector=useKerasDetector)
     # Learn training settings from input files
     detector = learnSettings(inputFiles, detector, classifierParams, task, exampleStyles, useKerasDetector=useKerasDetector)   
+    print "SADFSDFSDFDSFSDFSDFSDFSD", exampleStyles
     # Get corpus subsets   
     getFolds(inputFiles, folds)
     getSubsets(inputFiles, subset)
@@ -375,8 +376,9 @@ def learnSettings(inputFiles, detector, classifierParameters, task, exampleStyle
     if useKerasDetector:
         task, subTask = getSubTask(task)
         msg = "Keras example style"
-        overrideStyles = {x:(Parameters.get(exampleStyles[x]) if "override" in exampleStyles[x] else {}) for x in exampleStyles}
-        exampleStyles = {x:(exampleStyles[x] if not "override" in exampleStyles[x] else None) for x in exampleStyles}
+        overrideStyles = {x:(Parameters.get(exampleStyles[x]) if (exampleStyles[x] != None and "override" in exampleStyles[x]) else {"override":True}) for x in exampleStyles}
+        for key in exampleStyles:
+            exampleStyles[key] = exampleStyles[key] if (exampleStyles[key] != None and not "override" in exampleStyles[key]) else None
         print >> sys.stderr, "Override styles:", overrideStyles
         if "EventDetector" in detector:
             if task == ["EPI11"]:
@@ -398,9 +400,14 @@ def learnSettings(inputFiles, detector, classifierParameters, task, exampleStyle
                 exampleStyles["examples"] = Parameters.cat("keras:epochs=500:patience=10:nf=512:path=0:do=0.2:ol=50:skip_labels=CPR\:0,CPR\:1,CPR\:2,CPR\:7,CPR\:8,CPR\:10:mods=20", exampleStyles["examples"])
             else:
                 exampleStyles["examples"] = Parameters.cat("keras:epochs=500:patience=10:nf=256:path=4:ol=15:mods=20", exampleStyles["examples"])
+        print >> sys.stderr, "Keras initial example styles:", exampleStyles
         for key in exampleStyles:
-            exampleStyles[key] = exampleStyles[key].union(overrideStyles[key])
-        print >> sys.stderr, "Keras example styles:", exampleStyles
+            if exampleStyles[key] != None:
+                exampleStyles[key] = Parameters.get(exampleStyles[key])
+                overrideStyles[key].pop("override")
+                exampleStyles[key].update(overrideStyles[key])
+                exampleStyles[key] = Parameters.toString(exampleStyles[key])
+            print >> sys.stderr, "Keras final example style for " + key + ": ", exampleStyles[key]
         
     return detector
 

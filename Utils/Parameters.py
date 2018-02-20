@@ -93,14 +93,14 @@ def toString(parameters, skipKeysWithValues=[None], skipValues=[True], skipDefau
             continue
         elif type(parameters[key]) in [types.ListType, types.TupleType]:
             if len(s) > 0: s += ":"
-            s += key + "=" + ",".join([str(x) for x in parameters[key]])
+            s += key + "=" + ",".join([str(x).replace(":", "\\:") for x in parameters[key]])
         else:
             if skipKeysWithValues == None or parameters[key] not in skipKeysWithValues: # skip defaults
                 if len(s) > 0: s += ":"
                 if skipValues != None and parameters[key] in skipValues:
                     s += key
                 else:
-                    s += key + "=" + str(parameters[key])
+                    s += key + "=" + str(parameters[key]).replace(":", "\\:")
     return s
 
 def get(parameters, defaults=None, allowNew=False, valueListKey=None, valueLimits=None, valueTypes=None):
